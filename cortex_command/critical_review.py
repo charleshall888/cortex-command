@@ -53,7 +53,8 @@ def validate_artifact_path(
     candidate: str,
     lifecycle_root: str | Sequence[str],
     feature: str | None = None,
-) -> str:
+    allow_adhoc: bool = False,
+) -> str | dict:
     """Validate ``candidate`` against under-root scoping (Fix 2).
 
     Implements ticket-255 Fix 2 (Phase 1):
@@ -76,6 +77,27 @@ def validate_artifact_path(
     false-positives sibling roots that share a prefix
     (e.g., ``/tmp/repository`` vs ``/tmp/repo``).
 
+    Candidate-string boundary validation (ticket-255 Fix 3, Phase 2):
+      - the candidate string MUST NOT contain a NUL byte (``\\x00``) — NUL
+        is the one byte POSIX paths cannot legally contain.
+      - the candidate string MUST NOT contain surrogate code points
+        produced by ``surrogateescape``-decoded argv carrying invalid
+        UTF-8 bytes (checked via ``candidate.encode('utf-8', errors='strict')``
+        — a ``UnicodeEncodeError`` raised means a surrogate is present).
+      - other ASCII control characters (newlines, tabs, ANSI escapes,
+        0x01-0x09, 0x0B-0x1F, 0x7F) are LEGAL and pass through unchanged.
+
+    Ad-hoc snapshot flow (ticket-255 Fix 3, Phase 2):
+      - when ``allow_adhoc`` is True and the candidate's realpath lies
+        outside ALL supplied roots, the helper snapshots the file into
+        ``cortex/_adhoc/<sha[:2]>/<sha[2:]>/<basename>`` (peer of
+        ``cortex/lifecycle/``, full-hash + 2-char fanout). The snapshot
+        write is atomic temp-rename: write to
+        ``cortex/_adhoc/<sha[:2]>/.staging-<sha[2:]>.<basename>`` first,
+        then ``os.rename`` to the final path. The repo root is derived
+        from the first supplied root by ``.parent.parent`` (which makes
+        ``cortex/_adhoc/`` a sibling of ``cortex/lifecycle/``).
+
     Args:
         candidate: Caller-supplied artifact path.
         lifecycle_root: One or more acceptable artifact roots. When a
@@ -84,14 +106,39 @@ def validate_artifact_path(
             a sequence (e.g. ``(cortex/lifecycle, cortex/research)``) when
             the artifact may live under either tree.
         feature: Optional feature slug to narrow the prefix.
+        allow_adhoc: When True, ad-hoc snapshot the candidate into
+            ``cortex/_adhoc/`` if its realpath lies outside all roots.
+            Default False (back-compat).
 
     Returns:
-        The resolved realpath as a string.
+        For non-adhoc paths (the back-compat path): the resolved realpath
+        as a string. For ad-hoc-snapshotted paths: a dict with keys
+        ``{"resolved_path", "source_path", "snapshot_sha"}`` where
+        ``resolved_path`` is the snapshot's path, ``source_path`` is the
+        original candidate string (preserved verbatim post-NUL/surrogate
+        validation), and ``snapshot_sha`` is the full hex SHA-256.
 
     Raises:
         ValueError: On any rejection. Message names the offending path
-            and the violated rule.
+            and the violated rule. Also raised on NUL-byte or surrogate
+            code points in the candidate string.
     """
+    # gate-class: hygiene
+    if "\x00" in candidate:
+        raise ValueError(
+            "Path validation failed: candidate contains NUL byte "
+            "(POSIX paths cannot legally contain NUL)."
+        )
+    try:
+        candidate.encode("utf-8", errors="strict")
+    except UnicodeEncodeError as e:
+        # gate-class: hygiene
+        raise ValueError(
+            f"Path validation failed: candidate contains surrogate "
+            f"code point (likely from surrogateescape-decoded argv "
+            f"with invalid UTF-8 bytes): {e}"
+        ) from e
+
     realpath = os.path.realpath(candidate)
 
     if isinstance(lifecycle_root, str):
@@ -142,6 +189,28 @@ def validate_artifact_path(
 
         return realpath
 
+    # No root accepted the candidate. If ad-hoc is allowed, snapshot.
+    if allow_adhoc:
+        # Reject non-regular files at the validation boundary even on the
+        # ad-hoc path — snapshotting a directory or device file is nonsense.
+        if not candidate_path.is_file():
+            # gate-class: security
+            raise ValueError(
+                f"Path validation failed: {realpath!r} is not a regular file."
+            )
+        # Derive repo root from the first supplied root. The roots resolve
+        # to e.g. ``<repo>/cortex/lifecycle`` and ``<repo>/cortex/research``;
+        # ``cortex/_adhoc/`` is a peer of ``cortex/lifecycle/``, so the
+        # repo root is the root's parent's parent.
+        first_root = Path(roots[0]).resolve()
+        repo_root = first_root.parent.parent
+        snapshot_path, full_sha = _snapshot_adhoc(candidate_path, repo_root)
+        return {
+            "resolved_path": str(snapshot_path),
+            "source_path": candidate,
+            "snapshot_sha": full_sha,
+        }
+
     if len(roots) > 1:
         # gate-class: hygiene
         raise ValueError(
@@ -150,6 +219,57 @@ def validate_artifact_path(
         )
     assert last_err is not None  # single-root loop always sets last_err on failure
     raise last_err
+
+
+# ---------------------------------------------------------------------------
+# Ad-hoc snapshot helper (Fix 3, Phase 2)
+# ---------------------------------------------------------------------------
+
+def _snapshot_adhoc(
+    candidate_realpath: Path,
+    repo_root: Path,
+) -> tuple[Path, str]:
+    """Snapshot ``candidate_realpath`` into ``cortex/_adhoc/<sha[:2]>/<sha[2:]>/<basename>``.
+
+    Uses atomic temp-rename: write content to
+    ``cortex/_adhoc/<sha[:2]>/.staging-<sha[2:]>.<basename>`` first, then
+    ``os.rename`` to the final path
+    ``cortex/_adhoc/<sha[:2]>/<sha[2:]>/<basename>`` after the destination
+    directory is created. The ``.staging-*`` filename is invisible to
+    ``cortex-clean --adhoc`` (which ignores ``.staging-*``); the
+    ``os.rename`` final step is atomic on the same filesystem.
+
+    Args:
+        candidate_realpath: The fully-resolved path of the file to snapshot.
+        repo_root: The repository root (parent of ``cortex/``).
+
+    Returns:
+        ``(snapshot_path, full_sha)`` where ``snapshot_path`` is the
+        absolute path to the final snapshot location and ``full_sha`` is
+        the lowercase hex SHA-256 of the file content.
+    """
+    full_sha = sha256_of_path(str(candidate_realpath))
+    basename = candidate_realpath.name
+    adhoc_root = repo_root / "cortex" / "_adhoc"
+    fanout_dir = adhoc_root / full_sha[:2]
+    final_dir = fanout_dir / full_sha[2:]
+    final_path = final_dir / basename
+    staging_path = fanout_dir / f".staging-{full_sha[2:]}.{basename}"
+
+    fanout_dir.mkdir(parents=True, exist_ok=True)
+
+    # Read source bytes and write to staging, then atomically rename into
+    # the final directory. ``os.makedirs(final_dir, exist_ok=True)`` is
+    # performed before the rename so the destination dir exists.
+    content = candidate_realpath.read_bytes()
+    with open(staging_path, "wb") as fh:
+        fh.write(content)
+        fh.flush()
+        os.fsync(fh.fileno())
+
+    final_dir.mkdir(parents=True, exist_ok=True)
+    os.rename(staging_path, final_path)
+    return (final_path, full_sha)
 
 
 # ---------------------------------------------------------------------------
@@ -173,6 +293,7 @@ def prepare_dispatch(
     candidate: str,
     lifecycle_root: str | Sequence[str],
     feature: str | None = None,
+    allow_adhoc: bool = False,
 ) -> dict:
     """Fuse path validation + SHA-256 into one operation.
 
@@ -181,15 +302,34 @@ def prepare_dispatch(
         lifecycle_root: One or more acceptable artifact roots. See
             ``validate_artifact_path`` for multi-root semantics.
         feature: Optional feature slug to narrow the prefix.
+        allow_adhoc: When True, allow validation to snapshot ad-hoc
+            inputs into ``cortex/_adhoc/`` if their realpath is outside
+            all roots. See ``validate_artifact_path`` for snapshot
+            semantics. Default False (back-compat).
 
     Returns:
-        ``{"resolved_path": <realpath>, "sha256": <hex>}``.
+        For non-adhoc paths: ``{"resolved_path": <realpath>, "sha256": <hex>}``.
+        For ad-hoc-snapshotted paths: ``{"resolved_path": <snapshot_path>,
+        "sha256": <hex>, "source_path": <original>, "snapshot_sha": <hex>}``.
 
     Raises:
         ValueError: On any path-validation rejection.
     """
-    resolved = validate_artifact_path(candidate, lifecycle_root, feature)
-    return {"resolved_path": resolved, "sha256": sha256_of_path(resolved)}
+    result = validate_artifact_path(
+        candidate, lifecycle_root, feature, allow_adhoc=allow_adhoc
+    )
+    if isinstance(result, dict):
+        # Ad-hoc snapshot path — result already carries source_path and
+        # snapshot_sha. Compute sha256 of the (snapshot) resolved_path so
+        # the existing prepare_dispatch return shape is preserved.
+        resolved = result["resolved_path"]
+        return {
+            "resolved_path": resolved,
+            "sha256": sha256_of_path(resolved),
+            "source_path": result["source_path"],
+            "snapshot_sha": result["snapshot_sha"],
+        }
+    return {"resolved_path": result, "sha256": sha256_of_path(result)}
 
 
 # ---------------------------------------------------------------------------
@@ -471,6 +611,7 @@ def _cmd_prepare_dispatch(args: argparse.Namespace) -> int:
             args.path,
             roots,
             feature=args.feature,
+            allow_adhoc=args.allow_adhoc,
         )
     except ValueError as e:
         print(str(e), file=sys.stderr)
@@ -644,6 +785,16 @@ def _build_parser() -> argparse.ArgumentParser:
         "--feature",
         default=None,
         help="Feature slug for auto-trigger flows (narrows the prefix check).",
+    )
+    pd.add_argument(
+        "--allow-adhoc",
+        action="store_true",
+        default=False,
+        help=(
+            "Allow ad-hoc inputs outside cortex/lifecycle/ and cortex/research/ "
+            "to be snapshotted into cortex/_adhoc/<sha[:2]>/<sha[2:]>/<basename>. "
+            "Default off — paths outside the canonical roots are rejected."
+        ),
     )
     pd.set_defaults(func=_cmd_prepare_dispatch)
 

@@ -382,3 +382,130 @@ def test_default_artifact_roots_returns_lifecycle_and_research(tmp_path: Path) -
     assert len(roots) == 2
     assert roots[0].endswith("/cortex/lifecycle")
     assert roots[1].endswith("/cortex/research")
+
+
+# ---------------------------------------------------------------------------
+# (4) Ad-hoc snapshot + candidate-string boundary tests (Phase 2, Fix 3)
+# ---------------------------------------------------------------------------
+
+
+def test_module_api_adhoc_snapshots_file_under_cortex_adhoc(
+    lifecycle_layout: dict,
+) -> None:
+    """Req 6 (Phase 2): ``--allow-adhoc`` snapshots a file outside both roots
+    into ``cortex/_adhoc/<sha[:2]>/<sha[2:]>/<basename>`` and returns a dict
+    with ``source_path`` (the original candidate path) and ``snapshot_sha``
+    (the full hex SHA-256 of the file content).
+
+    The ad-hoc snapshot landing directory is a peer of ``cortex/lifecycle/``
+    so the repo root is derived from the lifecycle root's ``.parent.parent``.
+    """
+    outside = lifecycle_layout["outside_file"]
+    roots = [
+        str(lifecycle_layout["lifecycle_root"]),
+        str(lifecycle_layout["research_root"]),
+    ]
+    expected_sha = hashlib.sha256(outside.read_bytes()).hexdigest()
+    expected_snapshot = (
+        lifecycle_layout["lifecycle_root"].parent
+        / "_adhoc"
+        / expected_sha[:2]
+        / expected_sha[2:]
+        / outside.name
+    )
+
+    result = validate_artifact_path(str(outside), roots, allow_adhoc=True)
+
+    # The result is a dict (extended shape on the ad-hoc path).
+    assert isinstance(result, dict), (
+        f"Expected dict result for ad-hoc snapshot; got {type(result).__name__}"
+    )
+    # (a) snapshot exists at the expected fanout path
+    assert expected_snapshot.exists(), (
+        f"Snapshot not found at expected path {expected_snapshot}"
+    )
+    # (b) snapshot bytes match the original
+    assert expected_snapshot.read_bytes() == outside.read_bytes()
+    # (c) returned validation result carries source_path and snapshot_sha
+    assert result["source_path"] == str(outside)
+    assert result["snapshot_sha"] == expected_sha
+    assert result["resolved_path"] == str(expected_snapshot)
+
+
+def test_module_api_rejects_nul_byte_in_path(lifecycle_layout: dict) -> None:
+    """Req 7 / Edge Case (Phase 2): NUL byte in the candidate string raises
+    ``ValueError`` at the validation boundary, before any realpath or
+    snapshot work. NUL is the one byte POSIX paths cannot legally contain.
+    """
+    roots = [str(lifecycle_layout["lifecycle_root"])]
+    bad = "/tmp/some\x00path/file.md"
+    with pytest.raises(ValueError) as exc_info:
+        validate_artifact_path(bad, roots, allow_adhoc=True)
+    msg = str(exc_info.value).lower()
+    assert "nul" in msg or "null" in msg, (
+        f"Expected NUL-byte rejection diagnostic in error message; got {exc_info.value!r}"
+    )
+
+
+def test_module_api_rejects_surrogate_codepoint_in_path(
+    lifecycle_layout: dict,
+) -> None:
+    """Req 7 / Edge Case (Phase 2): surrogate code points (from
+    ``surrogateescape``-decoded argv carrying invalid UTF-8 bytes) raise
+    ``ValueError`` at the validation boundary. Detected via
+    ``candidate.encode('utf-8', errors='strict')`` raising
+    ``UnicodeEncodeError``.
+    """
+    roots = [str(lifecycle_layout["lifecycle_root"])]
+    # Construct a string containing a lone surrogate (U+DCFF is in the
+    # low-surrogate range typically produced by surrogateescape decoding
+    # of invalid UTF-8 byte 0xFF).
+    bad = "/tmp/some\udcffpath/file.md"
+    with pytest.raises(ValueError) as exc_info:
+        validate_artifact_path(bad, roots, allow_adhoc=True)
+    msg = str(exc_info.value).lower()
+    assert "surrogate" in msg, (
+        f"Expected surrogate-codepoint rejection diagnostic; got {exc_info.value!r}"
+    )
+
+
+def test_module_api_accepts_newline_in_path(tmp_path: Path) -> None:
+    """Edge Case (Phase 2): newlines in path are LEGAL POSIX and accepted
+    at validation. They are preserved verbatim in ``source_path`` for
+    later JSON-escaping by ``json.dumps`` on events.log write.
+
+    Constructs a real file at a path containing a newline (POSIX permits
+    this), calls validation with ``--allow-adhoc``, and asserts the
+    snapshot succeeds and ``source_path`` preserves the newline byte.
+    """
+    # Build cortex/{lifecycle,research}/ scaffolding so the ad-hoc snapshot
+    # has a place to land (cortex/_adhoc/ is derived from the lifecycle
+    # root's grandparent).
+    lifecycle_root = tmp_path / "cortex" / "lifecycle"
+    lifecycle_root.mkdir(parents=True)
+    research_root = tmp_path / "cortex" / "research"
+    research_root.mkdir(parents=True)
+
+    # Create a real file at a path containing a newline. POSIX permits
+    # this; only NUL is forbidden in a path.
+    newline_dir = tmp_path / "weird\nname"
+    newline_dir.mkdir()
+    src = newline_dir / "input.md"
+    src.write_text("newline in path is legal\n", encoding="utf-8")
+
+    roots = [str(lifecycle_root), str(research_root)]
+    result = validate_artifact_path(str(src), roots, allow_adhoc=True)
+
+    assert isinstance(result, dict)
+    # The original candidate string (preserved verbatim, including newline)
+    # round-trips through source_path.
+    assert "\n" in result["source_path"], (
+        f"Expected newline preserved in source_path; got {result['source_path']!r}"
+    )
+    assert result["source_path"] == str(src)
+    # The snapshot's bytes match the original.
+    snapshot = Path(result["resolved_path"])
+    assert snapshot.exists()
+    assert snapshot.read_bytes() == src.read_bytes()
+    # The snapshot_sha is the full hex SHA-256 of the content.
+    assert result["snapshot_sha"] == hashlib.sha256(src.read_bytes()).hexdigest()
