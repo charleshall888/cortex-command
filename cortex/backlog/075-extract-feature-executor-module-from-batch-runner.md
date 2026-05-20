@@ -14,10 +14,8 @@ areas: [overnight-runner]
 discovery_source: cortex/research/implement-in-autonomous-worktree-overnight-component-reuse/research.md
 session_id: cc8a5677-ab5c-44be-8a50-d195df45f54a
 lifecycle_phase: complete
-lifecycle_slug: extract-feature-executor-module-from-batch-runner
 complexity: complex
 criticality: high
-spec: cortex/lifecycle/extract-feature-executor-module-from-batch-runner/spec.md
 ---
 
 ## Scope
