@@ -23,7 +23,7 @@ Phase 1 ships the shared `/backlog-author` sub-skill (with structurally-separate
 - **Complexity**: simple
 - **Context**: Frontmatter shape lives in `skills/backlog/SKILL.md:1–16` and `skills/research/SKILL.md` (cleaner argument-hint example). Subcommand-dispatch pattern lives in `skills/backlog/SKILL.md:38–48` (the "When invoked without a {{subcommand}}, present the available actions via AskUserQuestion" block). For backlog-author specifically, the dispatch is positional first-argument: `interview` or `compose`. SKILL.md size cap is 500 lines per `tests/test_skill_size_budget.py`.
 - **Verification**: `grep -q '^name: backlog-author$' skills/backlog-author/SKILL.md` AND `grep -cE '^### (interview|compose)' skills/backlog-author/SKILL.md` = 2 — pass if both return success.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Create the body template reference with Why-vs-Role disambiguation
 - **Files**: `skills/backlog-author/references/body-template.md`
@@ -32,7 +32,7 @@ Phase 1 ships the shared `/backlog-author` sub-skill (with structurally-separate
 - **Complexity**: simple
 - **Context**: Existing four-header template lives at `skills/discovery/references/decompose.md` lines 15–38. Spec Requirement 2 gives the exact disambiguation rule prose. arc42 Building Block View terminology: https://docs.arc42.org/section-5/ — Responsibility/Interface/Boundary. The new template is what discovery's decompose.md will Read after Phase 2.
 - **Verification**: `grep -c '^## \(Why\|Role\|Integration\|Edges\|Touch points\)' skills/backlog-author/references/body-template.md` ≥ 5 AND `grep -cE 'symptom.voice|Responsibility|Interface|Boundary' skills/backlog-author/references/body-template.md` ≥ 4 AND `grep -cE 'collapse.*Role|omit Why|Why-vs-Role' skills/backlog-author/references/body-template.md` ≥ 1 — pass if all three return success.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Populate the `interview` subcommand section
 - **Files**: `skills/backlog-author/SKILL.md`
@@ -59,7 +59,7 @@ Phase 1 ships the shared `/backlog-author` sub-skill (with structurally-separate
 - **Complexity**: simple
 - **Context**: Current shape verified in research: `FORBIDDEN_SECTIONS: frozenset[str] = frozenset({"Role", "Integration", "Edges"})` at line 46; `PERMITTED_SECTIONS: frozenset[str] = frozenset({"Touch points"})` at line 47; `SECTION_HEADING_RE = re.compile(r"^## (Role|Integration|Edges|Touch points)\s*$")` at line 66. Dual-source rule: edit canonical `bin/cortex-check-prescriptive-prose`; mirror under `plugins/cortex-core/bin/` regenerates via `just build-plugin`. SKILL.md-to-bin parity: the scanner is already referenced from `skills/discovery/references/decompose.md` — that reference covers the new extension as well.
 - **Verification**: `grep -c '"Why"' bin/cortex-check-prescriptive-prose` ≥ 2 AND a fixture body containing `## Why\n\n\`\`\`python\nfoo()\n\`\`\`\n## Role\n...` piped to `bin/cortex-check-prescriptive-prose --stdin` (or equivalent) exits non-zero — pass if both hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 6: Add `--body` flag to `cortex-create-backlog-item`
 - **Files**: `cortex_command/backlog/create_item.py`
@@ -68,7 +68,7 @@ Phase 1 ships the shared `/backlog-author` sub-skill (with structurally-separate
 - **Complexity**: simple
 - **Context**: Current signature at line 84: `def create_item(title, status, item_type, backlog_dir, priority="low", rework_of=None, parent=None) -> Path:`. The frontmatter is written via `lines.append("---\n")` at line 122; the body insertion point is immediately after that line. The CLI parser at lines 146–159 accepts `--title`, `--status`, `--type`, `--priority`, `--rework-of`, `--parent` — add `--body` parallel to these (note: `argparse` accepts multi-line strings; shell-side multiline passing is the caller's responsibility per spec Edge Case "Title with shell-unfriendly characters"). When `body` is absent, file content is unchanged from today.
 - **Verification**: `cortex-create-backlog-item --help 2>&1 | grep -c -- '--body'` ≥ 1 AND `cortex-create-backlog-item --title "test" --status backlog --type chore --body "## Why\nfixture body\n## Role\nfixture role" --backlog-dir $(mktemp -d)` creates a file whose body section contains `## Why` (verifiable via `grep -c '^## Why$' <created-file>` = 1) — pass if both hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 7: Add `new` subcommand to backlog SKILL.md
 - **Files**: `skills/backlog/SKILL.md`
