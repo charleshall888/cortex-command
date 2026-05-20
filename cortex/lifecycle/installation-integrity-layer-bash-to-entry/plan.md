@@ -145,14 +145,14 @@ Promote 13 skill-prose-referenced `bin/cortex-*` scripts to wheel-tier Python en
 - **Verification**: `python3 -c "import cortex_command.backlog.resolve_item; cortex_command.backlog.resolve_item.main"` exits 0. `grep -c '__init__.py:13-15' bin/cortex-resolve-backlog-item cortex_command/ 2>/dev/null` = 0. `python3 -m pytest tests/test_cortex_resolve_backlog_item_parity.py` exits 0.
 - **Status**: [x] done (commit `1f4852a8`, 12 tests pass; wrapper includes cortex-log-invocation shim line — pre-commit hook enforces it on all bin/cortex-* except log-invocation itself)
 
-### Task 10: Remove stale install_guard comment cross-references in any other locations
+### Task 10: Remove stale install_guard comment cross-references in any other locations [DONE]
 - **Files**: `cortex_command/common.py` (conditional — only if the stale comment crops up elsewhere), any other file matching `grep -rlE '__init__.py:13-15' .` post-Task-9
 - **What**: After Task 9 removes the stale comment from `bin/cortex-resolve-backlog-item`, sweep the repo for any other stale `__init__.py:13-15` cross-references (the lines no longer exist post-refactor). Remove them. If no other hits, this task is a no-op cleanup verification.
 - **Depends on**: [9]
 - **Complexity**: trivial
 - **Context**: This task exists as a defensive cleanup — the spec's requirement 6 acceptance says `grep -c '__init__.py:13-15' bin/ cortex_command/ 2>/dev/null` = 0 across the whole tree, not just the promoted file.
 - **Verification**: `grep -rc '__init__.py:13-15' bin/ cortex_command/ 2>/dev/null | grep -v ':0$' | wc -l` = 0 — pass if count = 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (no-op; Task 9 covered the only reference, verification passes with 0 hits)
 
 ### Task 11: Promote `cortex-auto-bump-version` [DONE]
 - **Files**: `cortex_command/auto_bump_version.py` (replaces Task 1's stub), `bin/cortex-auto-bump-version`, `tests/fixtures/cortex-auto-bump-version/` (new), `tests/test_cortex_auto_bump_version_parity.py` (new)
@@ -226,14 +226,14 @@ Promote 13 skill-prose-referenced `bin/cortex-*` scripts to wheel-tier Python en
 - **Verification**: `python3 -c "import cortex_command.git.sync_rebase"` exits 0. `python3 -m pytest tests/test_cortex_git_sync_rebase_parity.py` exits 0.
 - **Status**: [x] done (commit `132ee3e3`; 9 parity tests; checkpoint-time fix added `GIT_CONFIG_*` env overrides to disable commit.gpgsign in test subprocess scope — original agent's tests passed in worktree env, failed on main due to global gpgsign=true)
 
-### Task 19: Promote `cortex-lifecycle-counters`
+### Task 19: Promote `cortex-lifecycle-counters` [DONE]
 - **Files**: `cortex_command/lifecycle/counters.py` (replaces stub), `bin/cortex-lifecycle-counters`, `tests/fixtures/cortex-lifecycle-counters/` (new), `tests/test_cortex_lifecycle_counters_parity.py` (new)
 - **What**: Port `bin/cortex-lifecycle-counters` (83 lines bash) into `cortex_command/lifecycle/counters.py`. Replace `bin/` with wrapper. Capture ≥3 fixtures + README. Author parity test.
 - **Depends on**: [3, 5, 15]
 - **Complexity**: simple
 - **Context**: Depends on Task 15 only for the shared `cortex_command/lifecycle/__init__.py`; modules are otherwise independent. Aggregates counts across multiple lifecycle dirs' events.log files. Fixture cases: (a) zero lifecycles, (b) multiple lifecycles at different phases, (c) lifecycle with malformed events.log line. One of the four high-risk parity tests.
 - **Verification**: `python3 -c "import cortex_command.lifecycle.counters"` exits 0. `python3 -m pytest tests/test_cortex_lifecycle_counters_parity.py` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit `ee4528bb`, 9 tests pass; counters intentionally do NOT read events.log — verified by `malformed-events-log` fixture case)
 
 ### Task 20: Capture `cortex-lifecycle-state` torn-line + `--field` fixtures pre-deletion [DONE]
 - **Files**: `tests/fixtures/cortex-lifecycle-state/torn-line.*` quintuple (new); ≥3 representative-real-events.log fixtures; one fixture per supported `--field` value; `tests/fixtures/cortex-lifecycle-state/README.md` (new) enumerating the accepted `--field` set + applicable tolerances.
@@ -244,14 +244,14 @@ Promote 13 skill-prose-referenced `bin/cortex-*` scripts to wheel-tier Python en
 - **Verification**: `test -f tests/fixtures/cortex-lifecycle-state/torn-line.argv -a -f tests/fixtures/cortex-lifecycle-state/torn-line.stdout -a -f tests/fixtures/cortex-lifecycle-state/torn-line.stderr -a -f tests/fixtures/cortex-lifecycle-state/torn-line.exitcode` exits 0. `ls tests/fixtures/cortex-lifecycle-state/*.argv | wc -l` ≥ 8.
 - **Status**: [x] done (commit `f211cfe3`, 8 quintuples + .events.log companions; torn-line actually emits `null` not silent-skip — Task 21 must reproduce exactly)
 
-### Task 21: Promote `cortex-lifecycle-state`
+### Task 21: Promote `cortex-lifecycle-state` [DONE]
 - **Files**: `cortex_command/lifecycle/state_cli.py` (replaces stub), `bin/cortex-lifecycle-state`, `tests/test_cortex_lifecycle_state_parity.py` (new)
 - **What**: Port `bin/cortex-lifecycle-state` (101 lines bash + jq) into `cortex_command/lifecycle/state_cli.py`. Replace `bin/` with wrapper. Author parity test consuming Task 20 fixtures. Use `json.dumps(obj, ensure_ascii=False, separators=(",", ":"))` for stdout JSON. Apply the `error-formatter-shape` tolerance on stderr for the torn-line fixture; `--help` fixture (if captured) gets manual prose substitution rather than argparse auto-help (the bash version uses `sed -n '2,25p' "$0"` to extract the docblock — the Python port should output the SAME extracted prose as a literal string constant, NOT argparse's auto-generated help, to preserve byte-identical parity on the `--help` fixture).
 - **Depends on**: [3, 5, 15, 20]
 - **Complexity**: complex
 - **Context**: jq-based event-log reducer. Python port reads events.log line-by-line + JSON-decodes + applies `--field` reduction. Reuse `cortex_command/lifecycle_event.py` + `cortex_command/common.py` helpers. The canonical rule: `lifecycle_start.tier` superseded by most recent `complexity_override.to`. The `--help` shape decision (literal string vs argparse) is explicit to avoid critical-review's flagged hazard.
 - **Verification**: `python3 -c "import cortex_command.lifecycle.state_cli"` exits 0. `python3 -m pytest tests/test_cortex_lifecycle_state_parity.py` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit `017a8f0b`, 24 tests pass; torn-line emits `null\n` exactly via jq-1.8.1 reduce semantics; `--help` is a literal docblock string constant; PYTHONPATH override ensures local module loads under test)
 
 ### Task 22: Promote `cortex-morning-review-gc-demo-worktrees` [DONE]
 - **Files**: `cortex_command/overnight/gc_demo_worktrees.py` (replaces stub), `bin/cortex-morning-review-gc-demo-worktrees`, `tests/fixtures/cortex-morning-review-gc-demo-worktrees/` (new), `tests/test_cortex_morning_review_gc_demo_worktrees_parity.py` (new)
@@ -262,14 +262,14 @@ Promote 13 skill-prose-referenced `bin/cortex-*` scripts to wheel-tier Python en
 - **Verification**: `python3 -c "import cortex_command.overnight.gc_demo_worktrees"` exits 0. `python3 -m pytest tests/test_cortex_morning_review_gc_demo_worktrees_parity.py` exits 0.
 - **Status**: [x] done (commit `a2bb8167`, 12 tests pass; uses `<WT_PATH>` placeholder substitution for path-dependent stderr — `git worktree list --porcelain` returns resolved paths that differ from `tmp_path`)
 
-### Task 23: Create `cortex_command/doctor/path_self_test.py` module
+### Task 23: Create `cortex_command/doctor/path_self_test.py` module [DONE]
 - **Files**: `cortex_command/doctor/__init__.py` (new), `cortex_command/doctor/path_self_test.py` (new)
 - **What**: Implement the PATH self-test per spec requirements 11–14. Public entry `main(argv) -> int` (returns 0 on all paths). Logic: (1) check dogfooder skip predicates ((a) `CORTEX_DEV_MODE=1`, (b) `$CWD/pyproject.toml` matches `^name\s*=\s*"cortex-command"`) → silent exit 0; (2) enumerate `entry_points(group='console_scripts')` filtered against `bin/.parity-exceptions.md` (excluding all three category enum values); (3) check `shutil.which(name)` against current PATH; (4) on missing → emit `{"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": "<factual message>"}}` to stdout; (5) all error paths exit 0 silently. Phase 4 is best-effort secondary channel — the primary value floor is the wrapper's exit-2 message from Task 3, which fires at `command not found` time and is not subject to claude-code#16538's plugin-hook silent drop.
 - **Depends on**: [12]
 - **Complexity**: complex
 - **Context**: Dependency on Task 12 (parity-check promotion) is for the parity-exceptions parser — import a helper directly from `cortex_command.parity_check`, or if that module's parser isn't cleanly importable, factor a shared helper into `cortex_command/common.py` as part of Task 12. The advisory message uses factual phrasing per requirement 12 (no imperatives — Claude Code's prompt-injection defenses). Phase 4 SHOULD NOT be the primary remediation channel — Task 3's wrapper exit-2 message is. NEVER write a sentinel file under `cortex/.cache/`.
 - **Verification**: `python3 -c "import cortex_command.doctor.path_self_test"` exits 0. `python3 -m cortex_command.doctor.path_self_test 2>&1` exits 0 unconditionally.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit `b04b4dc1`, 247 lines; agent inlined a simpler parity-exceptions parser into the module rather than importing from parity_check.py — decouples doctor from linter's AllowlistRow/E001 internals)
 
 ### Task 24: Extend `cortex-session-start-path-bootstrap.sh` with the PATH self-test invocation
 - **Files**: `plugins/cortex-core/hooks/cortex-session-start-path-bootstrap.sh`
