@@ -57,19 +57,32 @@ Steps:
 
 ### compose
 
-<!-- Task 4 will populate this section with the full compose protocol prose. -->
-
 The compose subcommand authors a structured ticket body autonomously from a provided context block.
 It does not ask the user any questions — the caller supplies all necessary context.
 
-This subcommand operates under the following invocation contract: input is one piece's context
-(a structured block containing pre-resolved `why:`, `role:`, `integration:`, `edges:`, and optional
-`touch_points:` fields, OR free-form context from which Claude infers those fields); callers invoke
-compose per-piece (one piece per invocation when authoring N tickets). Frontmatter handling is owned
-by `cortex-create-backlog-item --body`, not by this sub-skill.
+**Input contract**: one piece's context per invocation. The context block may be structured
+(pre-resolved `why:`, `role:`, `integration:`, `edges:`, and optional `touch_points:` fields)
+or free-form (natural-language description from which Claude infers the field values). When a
+caller has N pieces to author, it invokes compose N times — one piece per invocation.
+
+**Output contract**: one complete five-section markdown body block (`## Why`, `## Role`,
+`## Integration`, `## Edges`, `## Touch points`). Frontmatter is owned by
+`cortex-create-backlog-item --body`, not by this sub-skill — emit only the body content.
+
+**Invocation contract**: callers pass the context block as the argument after `compose`. For
+body content containing quotes, backticks, or newlines, callers use heredoc-style passing or
+a temp-file redirect to avoid shell-escaping issues.
+
+The Edge-vs-Touch-point rebalance rule — "if an edge bullet would name a path or line to
+express its constraint, the path:line moves to `## Touch points`" — remains owned by the
+calling skill (such as decompose.md), not by this sub-skill.
 
 Steps:
-1. Read `skills/backlog-author/references/body-template.md` to load section-boundary criteria and grounding keywords.
-2. Parse the provided `{{context-block}}` to resolve Why, Role, Integration, Edges, and Touch points fields (infer from free-form context when fields are not explicitly labelled).
-3. Apply the Why-vs-Role disambiguation rule: if Why collapses to a single sentence restating Role's lead, omit Why.
-4. Compose the body using the five-section template. Emit it to stdout as a markdown block suitable for passing to `cortex-create-backlog-item --body`.
+1. Read `skills/backlog-author/references/body-template.md` to load section-boundary criteria,
+   the Why-vs-Role disambiguation rule, and grounding keywords.
+2. Parse the provided `{{context-block}}` to resolve Why, Role, Integration, Edges, and Touch
+   points fields. Infer fields from free-form context when not explicitly labelled.
+3. Apply the Why-vs-Role disambiguation rule: if Why collapses to a single sentence restating
+   Role's lead, omit Why.
+4. Compose the five-section body. Emit it to stdout as a markdown block for the caller to pass
+   to `cortex-create-backlog-item --body`.
