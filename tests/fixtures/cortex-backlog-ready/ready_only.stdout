@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "groups": [
+    {
+      "priority": "critical",
+      "items": [
+        {
+          "id": 1,
+          "title": "critical refined item",
+          "status": "refined",
+          "type": "feature",
+          "blocked_by": [],
+          "parent": null
+        }
+      ]
+    },
+    {
+      "priority": "high",
+      "items": [
+        {
+          "id": 2,
+          "title": "high backlog item",
+          "status": "backlog",
+          "type": "bug",
+          "blocked_by": [],
+          "parent": null
+        }
+      ]
+    },
+    {
+      "priority": "medium",
+      "items": [
+        {
+          "id": 3,
+          "title": "medium backlog item",
+          "status": "backlog",
+          "type": "chore",
+          "blocked_by": [],
+          "parent": null
+        }
+      ]
+    },
+    {
+      "priority": "low",
+      "items": []
+    },
+    {
+      "priority": "contingent",
+      "items": []
+    }
+  ]
+}
