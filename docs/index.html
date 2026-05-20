@@ -1836,19 +1836,11 @@
     padding-top: 28px;
     border-top: 1px solid var(--rule-soft);
     position: relative;
-    /* Extend wider than the standard column — match the pipeline diagram. */
+    /* Bleed beyond the column padding to give the diagram room, but stay
+       anchored to the .page frame so the section keeps the same width
+       relationship on ultrawide that it has at the 1280px design width. */
     margin-left: -32px;
     margin-right: -160px;
-  }
-  /* On wider viewports, extend further toward the viewport edges so the
-     gatefold diagram fills the available area (sized in viewport units so
-     the right edge stays clear of the fixed sidebar). Clamped so the SVG
-     doesn't get absurd on ultrawide displays. */
-  @media (min-width: 1600px) {
-    .hood {
-      margin-left: clamp(-540px, calc(592px - 50vw), -32px);
-      margin-right: clamp(-540px, calc(660px - 50vw), -160px);
-    }
   }
   @media (max-width: 1280px) {
     .hood { margin-right: -64px; }
