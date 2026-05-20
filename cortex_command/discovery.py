@@ -664,13 +664,29 @@ def _anchor_match(brief: str, tokens: tuple[str, ...]) -> bool:
 def validate_brief(brief: str) -> tuple[bool, str]:
     """Check a generated brief for decision-content anchors and word-cap tolerance.
 
-    Decision-content anchors (case-insensitive, word-boundary matched). The
-    brief must contain at least one token from each of the three canonical
-    floors:
+    Decision-content anchors. The brief must contain at least one token from
+    each of three canonical floors. Matching is case-insensitive and uses
+    Python's ``\\b`` word-boundary regex (via ``_anchor_match``): a token
+    matches only as a whole word, so ``decide`` does not match inside
+    ``undecided`` or ``decides``. The hyphen in ``trade-off`` is treated as
+    ``\\W`` by ``\\b``, so the hyphenated form matches as a single token. The
+    canonical sets are pinned by the parity test in
+    ``tests/test_discovery_gate_brief.py``; the authoritative tuples live at
+    module scope:
 
-    - decision: see ``_VALIDATE_BRIEF_DECISION_TOKENS`` (12 tokens)
-    - alternatives: see ``_VALIDATE_BRIEF_ALTERNATIVES_TOKENS`` (9 tokens)
-    - tradeoff: see ``_VALIDATE_BRIEF_TRADEOFF_TOKENS`` (9 tokens)
+    - decision (12 tokens, ``_VALIDATE_BRIEF_DECISION_TOKENS``): ``decide``,
+      ``decided``, ``decision``, ``decisions``, ``chose``, ``chosen``,
+      ``concluded``, ``settled``, ``selected``, ``picked``, ``opted``,
+      ``agreed``.
+    - alternatives (9 tokens, ``_VALIDATE_BRIEF_ALTERNATIVES_TOKENS``):
+      ``alternative``, ``alternatives``, ``option``, ``options``,
+      ``considered``, ``considerations``, ``weighed``, ``evaluated``,
+      ``rejected``. Both ``considered`` and ``considerations`` are listed
+      separately because ``\\bconsidered\\b`` does not match inside
+      ``considerations`` under word-boundary semantics.
+    - tradeoff (9 tokens, ``_VALIDATE_BRIEF_TRADEOFF_TOKENS``): ``tradeoff``,
+      ``trade-off``, ``cost``, ``drawback``, ``downside``, ``sacrifice``,
+      ``consequence``, ``compromise``, ``risk``.
 
     Word-cap tolerance: the brief must be at most ``GATE_BRIEF_WORD_CAP + 25``
     words (Req 5a).
