@@ -801,6 +801,225 @@
     fill: none; stroke: var(--blue); stroke-width: 4; stroke-linecap: round;
   }
 
+  /* ──── fig-prism / fig-calip · updated discovery & refine diagrams ──── */
+  .fig-prism .cap,
+  .fig-calip .cap {
+    font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-size: 7px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    fill: var(--ink-faint);
+  }
+  .fig-prism .tag,
+  .fig-calip .tag {
+    font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-size: 7.5px;
+    letter-spacing: 0.06em; fill: var(--ink-mute);
+    text-transform: lowercase;
+  }
+  .fig-prism .tag.dim, .fig-calip .tag.dim { fill: var(--ink-faint); }
+  .fig-prism .tag.bl,  .fig-calip .tag.bl  { fill: var(--blue); }
+
+  .fig-prism .ray-in    { stroke: var(--ink-50); stroke-width: 1; fill: none; }
+  .fig-prism .ray-out   { stroke: var(--blue);   stroke-width: 1.25; fill: none; opacity: 0.7; }
+  .fig-prism .prism-poly { fill: var(--paper); stroke: var(--ink); stroke-width: 1.2; }
+  .fig-prism .prism-facet { stroke: var(--ink-50); stroke-width: 0.5; opacity: 0.6; fill: none; }
+  .fig-prism .prism-mark  { stroke: var(--ink-mute); stroke-width: 0.6; opacity: 0.7; }
+  .fig-prism .res-star {
+    fill: var(--ochre); transform-origin: center; transform-box: fill-box;
+  }
+  .fig-prism .rs-1 { animation: rs-pulse 5s ease-in-out infinite; }
+  .fig-prism .rs-2 { animation: rs-pulse 5s ease-in-out infinite; animation-delay: 0.08s; }
+  .fig-prism .rs-3 { animation: rs-pulse 5s ease-in-out infinite; animation-delay: 0.16s; }
+  .fig-prism .rs-4 { animation: rs-pulse 5s ease-in-out infinite; animation-delay: 0.24s; }
+  @keyframes rs-pulse {
+    0%, 8%    { opacity: 0.15; transform: scale(0.6); }
+    14%       { opacity: 1;    transform: scale(1.4); }
+    20%, 30%  { opacity: 0.85; transform: scale(1); }
+    44%       { opacity: 0.4;  transform: scale(0.9); }
+    60%, 100% { opacity: 0.25; transform: scale(0.85); }
+  }
+  .fig-prism .photon-in { fill: var(--ochre); animation: photon-in 5s linear infinite; }
+  @keyframes photon-in {
+    0%   { transform: translate(64px, 78px);  opacity: 0; }
+    3%   { transform: translate(64px, 78px);  opacity: 1; }
+    10%  { transform: translate(120px, 75px); opacity: 1; }
+    13%  { transform: translate(120px, 75px); opacity: 0; }
+    100% { transform: translate(120px, 75px); opacity: 0; }
+  }
+  .fig-prism .photon-r1 { fill: var(--blue); animation: photon-out-1 5s linear infinite; }
+  .fig-prism .photon-r2 { fill: var(--blue); animation: photon-out-2 5s linear infinite; }
+  .fig-prism .photon-r3 { fill: var(--blue); animation: photon-out-3 5s linear infinite; }
+  @keyframes photon-out-1 {
+    0%, 32% { transform: translate(208px, 64px); opacity: 0; }
+    34%     { transform: translate(208px, 64px); opacity: 1; }
+    46%     { transform: translate(244px, 38px); opacity: 1; }
+    54%     { transform: translate(244px, 38px); opacity: 0; }
+    100%    { transform: translate(244px, 38px); opacity: 0; }
+  }
+  @keyframes photon-out-2 {
+    0%, 32% { transform: translate(210px, 75px); opacity: 0; }
+    34%     { transform: translate(210px, 75px); opacity: 1; }
+    46%     { transform: translate(244px, 75px); opacity: 1; }
+    54%     { transform: translate(244px, 75px); opacity: 0; }
+    100%    { transform: translate(244px, 75px); opacity: 0; }
+  }
+  @keyframes photon-out-3 {
+    0%, 32% { transform: translate(208px, 86px); opacity: 0; }
+    34%     { transform: translate(208px, 86px); opacity: 1; }
+    46%     { transform: translate(244px, 112px); opacity: 1; }
+    54%     { transform: translate(244px, 112px); opacity: 0; }
+    100%    { transform: translate(244px, 112px); opacity: 0; }
+  }
+  .fig-prism .tkt-plate { fill: var(--paper); stroke: var(--blue); stroke-width: 1.1; }
+  .fig-prism .tkt-1 { animation: tkt-in-1 5s ease-out infinite; }
+  .fig-prism .tkt-2 { animation: tkt-in-2 5s ease-out infinite; }
+  .fig-prism .tkt-3 { animation: tkt-in-3 5s ease-out infinite; }
+  @keyframes tkt-in-1 {
+    0%, 44%   { opacity: 0.2; }
+    50%       { opacity: 1; }
+    92%, 100% { opacity: 1; }
+  }
+  @keyframes tkt-in-2 {
+    0%, 46%   { opacity: 0.2; }
+    52%       { opacity: 1; }
+    92%, 100% { opacity: 1; }
+  }
+  @keyframes tkt-in-3 {
+    0%, 48%   { opacity: 0.2; }
+    54%       { opacity: 1; }
+    92%, 100% { opacity: 1; }
+  }
+  .fig-prism .cite-dot {
+    fill: var(--ochre); opacity: 0;
+    transform-origin: center; transform-box: fill-box;
+  }
+  .fig-prism .cd-1a { animation: cite-in 5s ease-out infinite; animation-delay: 0.0s; }
+  .fig-prism .cd-1b { animation: cite-in 5s ease-out infinite; animation-delay: 0.06s; }
+  .fig-prism .cd-2a { animation: cite-in 5s ease-out infinite; animation-delay: 0.12s; }
+  .fig-prism .cd-2b { animation: cite-in 5s ease-out infinite; animation-delay: 0.18s; }
+  @keyframes cite-in {
+    0%, 56%   { opacity: 0; transform: scale(0.5); }
+    62%       { opacity: 1; transform: scale(1.4); }
+    72%, 92%  { opacity: 1; transform: scale(1); }
+    100%      { opacity: 0; transform: scale(1); }
+  }
+
+  .fig-calip .jaw-line { stroke: var(--ink); stroke-width: 1.4; fill: none; stroke-linecap: square; }
+  .fig-calip .jaw-grad { stroke: var(--ink); stroke-width: 0.7; }
+  .fig-calip .jaw-grad.minor { stroke: var(--ink-50); stroke-width: 0.5; }
+  .fig-calip .jaw-top { animation: jaw-top 5s ease-in-out infinite; }
+  .fig-calip .jaw-bot { animation: jaw-bot 5s ease-in-out infinite; }
+  @keyframes jaw-top {
+    0%, 4%   { transform: translateY(0); }
+    8%, 24%  { transform: translateY(-3px); }
+    28%, 32% { transform: translateY(0); }
+    36%, 52% { transform: translateY(2px); }
+    56%, 76% { transform: translateY(4px); }
+    80%, 95% { transform: translateY(6px); }
+    100%     { transform: translateY(0); }
+  }
+  @keyframes jaw-bot {
+    0%, 4%   { transform: translateY(0); }
+    8%, 24%  { transform: translateY(3px); }
+    28%, 32% { transform: translateY(0); }
+    36%, 52% { transform: translateY(-2px); }
+    56%, 76% { transform: translateY(-4px); }
+    80%, 95% { transform: translateY(-6px); }
+    100%     { transform: translateY(0); }
+  }
+  .fig-calip .spec-blob { fill: var(--paper); stroke: var(--ink-50); stroke-width: 1; }
+  .fig-calip .spec-row-line {
+    font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-size: 6.5px;
+    letter-spacing: 0.04em; fill: var(--ink-mute);
+    text-transform: lowercase; opacity: 0;
+  }
+  .fig-calip .spec-row-mark {
+    fill: var(--ochre); opacity: 0;
+    transform-origin: center; transform-box: fill-box;
+  }
+  .fig-calip .row-1 { animation: row-in-1 5s ease-out infinite; }
+  .fig-calip .mk-1  { animation: mark-in-1 5s ease-out infinite; }
+  @keyframes row-in-1 {
+    0%, 12%   { opacity: 0; }
+    16%, 95%  { opacity: 1; }
+    100%      { opacity: 0; }
+  }
+  @keyframes mark-in-1 {
+    0%, 10%   { opacity: 0; transform: scale(0.5); }
+    14%       { opacity: 1; transform: scale(1.6); }
+    20%, 95%  { opacity: 1; transform: scale(1); }
+    100%      { opacity: 0; }
+  }
+  .fig-calip .row-2 { animation: row-in-2 5s ease-out infinite; }
+  .fig-calip .mk-2  { animation: mark-in-2 5s ease-out infinite; }
+  @keyframes row-in-2 {
+    0%, 38%   { opacity: 0; }
+    42%, 95%  { opacity: 1; }
+    100%      { opacity: 0; }
+  }
+  @keyframes mark-in-2 {
+    0%, 36%   { opacity: 0; transform: scale(0.5); }
+    40%       { opacity: 1; transform: scale(1.6); }
+    46%, 95%  { opacity: 1; transform: scale(1); }
+    100%      { opacity: 0; }
+  }
+  .fig-calip .row-3 { animation: row-in-3 5s ease-out infinite; }
+  .fig-calip .mk-3  { animation: mark-in-3 5s ease-out infinite; }
+  @keyframes row-in-3 {
+    0%, 62%   { opacity: 0; }
+    66%, 95%  { opacity: 1; }
+    100%      { opacity: 0; }
+  }
+  @keyframes mark-in-3 {
+    0%, 60%   { opacity: 0; transform: scale(0.5); }
+    64%       { opacity: 1; transform: scale(1.6); }
+    70%, 95%  { opacity: 1; transform: scale(1); }
+    100%      { opacity: 0; }
+  }
+  .fig-calip .detent-stop { stroke: var(--ink); stroke-width: 1; }
+  .fig-calip .detent-lit  { stroke: var(--blue); stroke-width: 1.4; opacity: 0; }
+  .fig-calip .det-1 { animation: det-1 5s ease-out infinite; }
+  .fig-calip .det-2 { animation: det-2 5s ease-out infinite; }
+  .fig-calip .det-3 { animation: det-3 5s ease-out infinite; }
+  @keyframes det-1 {
+    0%, 14%   { opacity: 0; }
+    18%, 95%  { opacity: 1; }
+    100%      { opacity: 0; }
+  }
+  @keyframes det-2 {
+    0%, 40%   { opacity: 0; }
+    44%, 95%  { opacity: 1; }
+    100%      { opacity: 0; }
+  }
+  @keyframes det-3 {
+    0%, 64%   { opacity: 0; }
+    68%, 95%  { opacity: 1; }
+    100%      { opacity: 0; }
+  }
+  .fig-calip .detent-label {
+    font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-size: 7px;
+    letter-spacing: 0.06em; text-transform: lowercase;
+    fill: var(--ink-faint);
+  }
+  .fig-calip .detent-label.lit { fill: var(--blue); opacity: 0; }
+  .fig-calip .det-label-1 { animation: det-1 5s ease-out infinite; }
+  .fig-calip .det-label-2 { animation: det-2 5s ease-out infinite; }
+  .fig-calip .det-label-3 { animation: det-3 5s ease-out infinite; }
+  .fig-calip .gauge-tk { fill: none; stroke: var(--rule-soft); stroke-width: 3; stroke-linecap: round; }
+  .fig-calip .gauge-fl {
+    fill: none; stroke: var(--blue); stroke-width: 3; stroke-linecap: round;
+    stroke-dasharray: 230; stroke-dashoffset: 230;
+    animation: gauge-calip 5s ease-in-out infinite;
+  }
+  @keyframes gauge-calip {
+    0%, 4%    { stroke-dashoffset: 230; }
+    24%       { stroke-dashoffset: 155; }
+    52%       { stroke-dashoffset:  78; }
+    78%, 95%  { stroke-dashoffset:   0; }
+    100%      { stroke-dashoffset: 230; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fig-prism *, .fig-calip * { animation-duration: 0.001s !important; animation-iteration-count: 1 !important; }
+  }
+
   .example-label {
     font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em;
     color: var(--ink-faint); margin: 12px 0 6px 0;
@@ -3777,51 +3996,70 @@
       <div class="ex">
         <span class="ex-num">01</span>
         <h2><code>/discovery</code> fires it off</h2>
-        <div class="ex-fig" data-fig="fig 1 · prompt → tickets" aria-hidden="true">
+        <div class="ex-fig fig-prism" data-fig="fig 1 · prompt → tickets" aria-hidden="true">
           <svg viewBox="0 0 360 130" preserveAspectRatio="xMidYMid meet">
-            <!-- prompt box (left) -->
-            <rect class="schem-rect" x="6" y="32" width="122" height="66" rx="2"/>
-            <text class="schem-cap" x="10" y="26">/discovery</text>
-            <text class="schem-tag" x="10" y="46">overnight fishing</text>
-            <text class="schem-tag" x="10" y="56">game where you</text>
-            <text class="schem-tag" x="10" y="66">set a nightline at</text>
-            <text class="schem-tag" x="10" y="76">dusk and check</text>
-            <text class="schem-tag" x="10" y="86">at dawn</text>
 
-            <!-- fork node into the epic -->
-            <line class="schem-line" x1="128" y1="65" x2="148" y2="65"/>
-            <polygon points="148,65 144,62 144,68" fill="var(--ink-50)"/>
+        <!-- entry caption + prompt -->
+        <text class="cap" x="8" y="38">/discovery</text>
+        <text class="tag dim" x="8" y="50">i want an overnight</text>
+        <text class="tag dim" x="8" y="60">fishing game · prep</text>
+        <text class="tag dim" x="8" y="70">at dusk, catch at dawn</text>
 
-            <!-- epic container: a labeled bracket holding the 3 tickets -->
-            <rect class="schem-rect" x="150" y="14" width="200" height="102" rx="3"/>
-            <text class="schem-cap" x="158" y="10">epic · nightline-game</text>
+        <!-- entry beam -->
+        <line class="ray-in" x1="8" y1="80" x2="124" y2="78"></line>
 
-            <!-- 3 tickets inside the epic, all reached in parallel from a vertical spine -->
-            <line class="schem-line solid-blue" x1="166" y1="32" x2="166" y2="98"/>
-            <!-- ticket 1: nightline-loop -->
-            <line class="schem-line solid-blue" x1="166" y1="34" x2="178" y2="34"/>
-            <polygon points="178,34 173,31 173,37" fill="var(--blue)"/>
-            <g>
-              <rect class="schem-rect tight" x="180" y="24" width="160" height="20" rx="2"/>
-              <text class="schem-tag blue" x="186" y="38">nightline-loop</text>
-              <text class="schem-tag blue" x="334" y="38" text-anchor="end">L</text>
-            </g>
-            <!-- ticket 2: dawn-reveal -->
-            <line class="schem-line solid-blue" x1="166" y1="65" x2="178" y2="65"/>
-            <polygon points="178,65 173,62 173,68" fill="var(--blue)"/>
-            <g>
-              <rect class="schem-rect tight" x="180" y="55" width="160" height="20" rx="2"/>
-              <text class="schem-tag blue" x="186" y="69">dawn-reveal</text>
-              <text class="schem-tag blue" x="334" y="69" text-anchor="end">M</text>
-            </g>
-            <!-- ticket 3: weather-tables -->
-            <line class="schem-line solid-blue" x1="166" y1="96" x2="178" y2="96"/>
-            <polygon points="178,96 173,93 173,99" fill="var(--blue)"/>
-            <g>
-              <rect class="schem-rect tight" x="180" y="86" width="160" height="20" rx="2"/>
-              <text class="schem-tag blue" x="186" y="100">weather-tables</text>
-              <text class="schem-tag blue" x="334" y="100" text-anchor="end">S</text>
-            </g>
+        <!-- prism (octagon w/ optical-bench instrument marks) -->
+        <polygon class="prism-poly" points="124,78 138,56 168,46 198,56 212,78 198,100 168,110 138,100"></polygon>
+        <line class="prism-facet" x1="124" y1="78" x2="198" y2="56"></line>
+        <line class="prism-facet" x1="124" y1="78" x2="198" y2="100"></line>
+        <line class="prism-facet" x1="212" y1="78" x2="138" y2="56"></line>
+        <line class="prism-facet" x1="212" y1="78" x2="138" y2="100"></line>
+        <line class="prism-facet" x1="168" y1="46" x2="168" y2="110"></line>
+        <line class="prism-mark" x1="124" y1="78" x2="120" y2="78"></line>
+        <line class="prism-mark" x1="212" y1="78" x2="216" y2="78"></line>
+        <line class="prism-mark" x1="168" y1="46" x2="168" y2="42"></line>
+        <line class="prism-mark" x1="168" y1="110" x2="168" y2="114"></line>
+
+        <!-- interior research stars -->
+        <circle class="res-star rs-1" cx="150" cy="68" r="1.7"></circle>
+        <circle class="res-star rs-2" cx="184" cy="68" r="1.7"></circle>
+        <circle class="res-star rs-3" cx="184" cy="90" r="1.7"></circle>
+        <circle class="res-star rs-4" cx="150" cy="90" r="1.7"></circle>
+
+        <!-- under-prism caption -->
+        <text class="cap" x="168" y="125" text-anchor="middle">research · adversarial review</text>
+
+        <!-- outgoing rays -->
+        <line class="ray-out" x1="212" y1="68" x2="252" y2="42"></line>
+        <line class="ray-out" x1="214" y1="78" x2="252" y2="78"></line>
+        <line class="ray-out" x1="212" y1="88" x2="252" y2="114"></line>
+
+        <!-- ticket plates with citation dots -->
+        <g class="tkt-1">
+          <rect class="tkt-plate" x="254" y="30" width="100" height="22" rx="1"></rect>
+          <text class="tag bl" x="260" y="44">nightline-loop</text>
+          <text class="tag bl" x="348" y="44" text-anchor="end">L</text>
+          <circle class="cite-dot cd-1a" cx="260" cy="58" r="1.2"></circle>
+          <circle class="cite-dot cd-1b" cx="266" cy="58" r="1.2"></circle>
+        </g>
+        <g class="tkt-2">
+          <rect class="tkt-plate" x="254" y="66" width="100" height="22" rx="1"></rect>
+          <text class="tag bl" x="260" y="80">dawn-reveal</text>
+          <text class="tag bl" x="348" y="80" text-anchor="end">M</text>
+          <circle class="cite-dot cd-2a" cx="260" cy="94" r="1.2"></circle>
+          <circle class="cite-dot cd-2b" cx="266" cy="94" r="1.2"></circle>
+        </g>
+        <g class="tkt-3">
+          <rect class="tkt-plate" x="254" y="102" width="100" height="22" rx="1"></rect>
+          <text class="tag bl" x="260" y="116">weather-tables</text>
+          <text class="tag bl" x="348" y="116" text-anchor="end">S</text>
+        </g>
+
+        <!-- traveling photons -->
+        <circle class="photon-in" r="2.2"></circle>
+        <circle class="photon-r1" r="2"></circle>
+        <circle class="photon-r2" r="2"></circle>
+        <circle class="photon-r3" r="2"></circle>
           </svg>
         </div>
         <p>One prompt. Discovery clarifies ambiguities, reviews adversarially, and spawns one ticket per scoped piece of work.</p>
@@ -3829,56 +4067,82 @@
       <div class="ex">
         <span class="ex-num">02</span>
         <h2><code>/refine</code> each ticket separately</h2>
-        <div class="ex-fig" data-fig="fig 2 · the loop, three times" aria-hidden="true">
+        <div class="ex-fig fig-calip" data-fig="fig 2 · the loop, three times" aria-hidden="true">
           <svg viewBox="0 0 360 130" preserveAspectRatio="xMidYMid meet">
-            <!-- 3 panels, sized to match fig 1's 130h viewBox -->
+        <text class="cap" x="12" y="14">/refine · close to tolerance</text>
 
-            <!-- panel 1: clarify -->
-            <g transform="translate(10, 8)">
-              <rect class="schem-rect" x="0" y="0" width="105" height="114" rx="3"/>
-              <text class="schem-cap" x="52" y="16" text-anchor="middle">01 · clarify</text>
-              <line class="schem-line" x1="8" y1="24" x2="97" y2="24" opacity="0.4"/>
-              <!-- what the agent does at this gate -->
-              <text class="schem-tag dim" x="52" y="40" text-anchor="middle">draft scope</text>
-              <text class="schem-tag dim" x="52" y="54" text-anchor="middle">flag unknowns</text>
-              <!-- divider -->
-              <line class="schem-line" x1="14" y1="68" x2="91" y2="68" opacity="0.4" stroke-dasharray="1.5 2"/>
-              <!-- what you do -->
-              <text class="schem-tag blue" x="52" y="86" text-anchor="middle">approve scope</text>
-              <text class="schem-tag dim" x="52" y="104" text-anchor="middle">or send back ↺</text>
-            </g>
+        <!-- upper jaw (moves down +6 across cycle) -->
+        <g class="jaw-top">
+          <line class="jaw-line" x1="44" y1="22" x2="316" y2="22"></line>
+          <line class="jaw-line" x1="44" y1="22" x2="44" y2="30"></line>
+          <line class="jaw-line" x1="316" y1="22" x2="316" y2="30"></line>
+          <line class="jaw-grad minor" x1="60" y1="22" x2="60" y2="28"></line>
+          <line class="jaw-grad" x1="84" y1="22" x2="84" y2="30"></line>
+          <line class="jaw-grad minor" x1="108" y1="22" x2="108" y2="28"></line>
+          <line class="jaw-grad" x1="132" y1="22" x2="132" y2="30"></line>
+          <line class="jaw-grad minor" x1="156" y1="22" x2="156" y2="28"></line>
+          <line class="jaw-grad" x1="180" y1="22" x2="180" y2="30"></line>
+          <line class="jaw-grad minor" x1="204" y1="22" x2="204" y2="28"></line>
+          <line class="jaw-grad" x1="228" y1="22" x2="228" y2="30"></line>
+          <line class="jaw-grad minor" x1="252" y1="22" x2="252" y2="28"></line>
+          <line class="jaw-grad" x1="276" y1="22" x2="276" y2="30"></line>
+          <line class="jaw-grad minor" x1="300" y1="22" x2="300" y2="28"></line>
+        </g>
 
-            <!-- arrow panel 1 → 2 -->
-            <line class="schem-line solid-blue" x1="116" y1="65" x2="124" y2="65"/>
-            <polygon points="124,65 119,62 119,68" fill="var(--blue)"/>
+        <!-- spec block · 3 distinct rows, header inside -->
+        <rect class="spec-blob" x="44" y="38" width="272" height="56" rx="2"></rect>
+        <text class="cap" x="48" y="48" style="font-size: 6.5px;">data-model.md</text>
+        <line stroke="var(--rule-soft)" stroke-width="0.6" x1="44" y1="52" x2="316" y2="52"></line>
+        <line stroke="var(--rule-soft)" stroke-width="0.6" x1="60" y1="66" x2="300" y2="66" opacity="0.5"></line>
+        <line stroke="var(--rule-soft)" stroke-width="0.6" x1="60" y1="80" x2="300" y2="80" opacity="0.5"></line>
 
-            <!-- panel 2: research -->
-            <g transform="translate(125, 8)">
-              <rect class="schem-rect" x="0" y="0" width="105" height="114" rx="3"/>
-              <text class="schem-cap" x="52" y="16" text-anchor="middle">02 · research</text>
-              <line class="schem-line" x1="8" y1="24" x2="97" y2="24" opacity="0.4"/>
-              <text class="schem-tag dim" x="52" y="40" text-anchor="middle">gather prior art</text>
-              <text class="schem-tag dim" x="52" y="54" text-anchor="middle">cite sources</text>
-              <line class="schem-line" x1="14" y1="68" x2="91" y2="68" opacity="0.4" stroke-dasharray="1.5 2"/>
-              <text class="schem-tag blue" x="52" y="86" text-anchor="middle">resolve tradeoffs</text>
-              <text class="schem-tag dim" x="52" y="104" text-anchor="middle">or send back ↺</text>
-            </g>
+        <!-- row 1 · scope -->
+        <circle class="spec-row-mark mk-1" cx="62" cy="60" r="1.7"></circle>
+        <text class="spec-row-line row-1" x="70" y="62">scope · in/out · sized L</text>
 
-            <!-- arrow panel 2 → 3 -->
-            <line class="schem-line solid-blue" x1="231" y1="65" x2="239" y2="65"/>
-            <polygon points="239,65 234,62 234,68" fill="var(--blue)"/>
+        <!-- row 2 · refs -->
+        <circle class="spec-row-mark mk-2" cx="62" cy="74" r="1.7"></circle>
+        <text class="spec-row-line row-2" x="70" y="76">prior art · 3 refs cited</text>
 
-            <!-- panel 3: specify -->
-            <g transform="translate(240, 8)">
-              <rect class="schem-rect" x="0" y="0" width="105" height="114" rx="3"/>
-              <text class="schem-cap" x="52" y="16" text-anchor="middle">03 · specify</text>
-              <line class="schem-line" x1="8" y1="24" x2="97" y2="24" opacity="0.4"/>
-              <text class="schem-tag dim" x="52" y="40" text-anchor="middle">draft acceptance</text>
-              <text class="schem-tag dim" x="52" y="54" text-anchor="middle">criteria</text>
-              <line class="schem-line" x1="14" y1="68" x2="91" y2="68" opacity="0.4" stroke-dasharray="1.5 2"/>
-              <text class="schem-tag blue" x="52" y="86" text-anchor="middle">sign · spec earned</text>
-              <text class="schem-tag dim" x="52" y="104" text-anchor="middle">or send back ↺</text>
-            </g>
+        <!-- row 3 · criteria -->
+        <circle class="spec-row-mark mk-3" cx="62" cy="88" r="1.7"></circle>
+        <text class="spec-row-line row-3" x="70" y="90">acceptance · 4 criteria</text>
+
+        <!-- lower jaw (moves up -6 across cycle) -->
+        <g class="jaw-bot">
+          <line class="jaw-line" x1="44" y1="104" x2="316" y2="104"></line>
+          <line class="jaw-line" x1="44" y1="98" x2="44" y2="104"></line>
+          <line class="jaw-line" x1="316" y1="98" x2="316" y2="104"></line>
+          <line class="jaw-grad minor" x1="60" y1="104" x2="60" y2="100"></line>
+          <line class="jaw-grad" x1="84" y1="104" x2="84" y2="98"></line>
+          <line class="jaw-grad minor" x1="108" y1="104" x2="108" y2="100"></line>
+          <line class="jaw-grad" x1="132" y1="104" x2="132" y2="98"></line>
+          <line class="jaw-grad minor" x1="156" y1="104" x2="156" y2="100"></line>
+          <line class="jaw-grad" x1="180" y1="104" x2="180" y2="98"></line>
+          <line class="jaw-grad minor" x1="204" y1="104" x2="204" y2="100"></line>
+          <line class="jaw-grad" x1="228" y1="104" x2="228" y2="98"></line>
+          <line class="jaw-grad minor" x1="252" y1="104" x2="252" y2="100"></line>
+          <line class="jaw-grad" x1="276" y1="104" x2="276" y2="98"></line>
+          <line class="jaw-grad minor" x1="300" y1="104" x2="300" y2="100"></line>
+        </g>
+
+        <!-- gauge with three detents and visible labels below -->
+        <path class="gauge-tk" d="M44,114 L316,114"></path>
+        <path class="gauge-fl" d="M44,114 L316,114"></path>
+
+        <line class="detent-stop" x1="111" y1="110" x2="111" y2="118"></line>
+        <line class="detent-lit det-1" x1="111" y1="110" x2="111" y2="118"></line>
+        <line class="detent-stop" x1="200" y1="110" x2="200" y2="118"></line>
+        <line class="detent-lit det-2" x1="200" y1="110" x2="200" y2="118"></line>
+        <line class="detent-stop" x1="289" y1="110" x2="289" y2="118"></line>
+        <line class="detent-lit det-3" x1="289" y1="110" x2="289" y2="118"></line>
+
+        <text class="detent-label" x="111" y="126" text-anchor="middle">clarify</text>
+        <text class="detent-label lit det-label-1" x="111" y="126" text-anchor="middle">clarify</text>
+        <text class="detent-label" x="200" y="126" text-anchor="middle">research</text>
+        <text class="detent-label lit det-label-2" x="200" y="126" text-anchor="middle">research</text>
+        <text class="detent-label" x="289" y="126" text-anchor="middle">specify</text>
+        <text class="detent-label lit det-label-3" x="289" y="126" text-anchor="middle">specify</text>
           </svg>
         </div>
         <p>Refinement turns a scoped ticket into a buildable spec. Each ticket lands with shared scope, cited prior art, and pinned acceptance criteria — the things that prevent rework once code starts.</p>
