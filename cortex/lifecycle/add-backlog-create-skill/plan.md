@@ -41,7 +41,7 @@ Phase 1 ships the shared `/backlog-author` sub-skill (with structurally-separate
 - **Complexity**: simple
 - **Context**: AskUserQuestion-driven interview patterns live in `skills/requirements-gather/SKILL.md` (the canonical "interview sub-skill" precedent). Cadence rule: one question per turn, no batching. The section is bounded by H3 headings; downstream tests (Task 9) will awk-scope between `^### interview` and `^### |^## ` to verify protocol presence + AskUserQuestion reference.
 - **Verification**: `awk '/^### interview/,/^### |^## /' skills/backlog-author/SKILL.md | wc -l` ≥ 10 AND `awk '/^### interview/,/^### |^## /' skills/backlog-author/SKILL.md | grep -c 'AskUserQuestion'` ≥ 1 — pass if both return success.
-- **Status**: [ ] pending
+- **Status**: [x] done (note: spec awk verifier has a BSD-awk quirk that collapses the range to 1 line; substantive content verified via alternate selector)
 
 ### Task 4: Populate the `compose` subcommand section with input/output contract
 - **Files**: `skills/backlog-author/SKILL.md`
@@ -50,7 +50,7 @@ Phase 1 ships the shared `/backlog-author` sub-skill (with structurally-separate
 - **Complexity**: simple
 - **Context**: Spec Requirement 6b gives the contract verbatim. Spec Requirement 6 requires the section contain zero `AskUserQuestion` references — this is a structural separation enforcement (CLAUDE.md "Prefer structural separation over prose-only enforcement"). The compose section reads body-template.md for the structural template but uses its own protocol prose for the inference flow.
 - **Verification**: `awk '/^### compose/,/^### |^## /' skills/backlog-author/SKILL.md | wc -l` ≥ 10 AND `awk '/^### compose/,/^### |^## /' skills/backlog-author/SKILL.md | grep -c 'AskUserQuestion'` = 0 AND `grep -cE '(input contract|invocation contract|compose contract|per-piece|one piece per)' skills/backlog-author/SKILL.md` ≥ 1 AND `grep -c 'cortex-create-backlog-item' skills/backlog-author/SKILL.md` ≥ 1 — pass if all four return success.
-- **Status**: [ ] pending
+- **Status**: [x] done (same BSD-awk quirk on wc -l; the other three checks pass; section content verified substantive)
 
 ### Task 5: Extend LEX-1 scanner to forbid prescription in `## Why`
 - **Files**: `bin/cortex-check-prescriptive-prose`, `plugins/cortex-core/bin/cortex-check-prescriptive-prose` (mirror; auto-regenerated)
@@ -77,7 +77,7 @@ Phase 1 ships the shared `/backlog-author` sub-skill (with structurally-separate
 - **Complexity**: simple
 - **Context**: Existing subcommand listing at `skills/backlog/SKILL.md:41–47`: "pick — list — add — ready — archive — reindex". Insert "new" between "pick" and "add". The `### add` section at lines 49–54 is the template for the new section's prose shape. The `new` section is intentionally tighter than `add` (it delegates to backlog-author, doesn't open the file for user edit — the body is already authored).
 - **Verification**: `awk '/^### new/,/^### |^## /' skills/backlog/SKILL.md | grep -c 'backlog-author interview'` ≥ 1 AND `awk '/^### new/,/^### |^## /' skills/backlog/SKILL.md | grep -c 'cortex-create-backlog-item'` ≥ 1 — pass if both hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 8: Author test fixtures and helpers
 - **Files**: `tests/test_backlog_author.py`, `tests/fixtures/backlog_author/` (new directory)
@@ -86,7 +86,7 @@ Phase 1 ships the shared `/backlog-author` sub-skill (with structurally-separate
 - **Complexity**: simple
 - **Context**: Test convention: `tests/test_*.py` with pytest. Existing test fixtures pattern lives in `tests/fixtures/` directories. The fixtures are read by Task 9's test functions; keep them under 30 lines each, focused on the specific signal being tested.
 - **Verification**: `test -f tests/test_backlog_author.py` AND `test -d tests/fixtures/backlog_author` AND `ls tests/fixtures/backlog_author/*.md | wc -l` ≥ 3 — pass if all three hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 9: Implement the five named test functions
 - **Files**: `tests/test_backlog_author.py`
