@@ -55,3 +55,6 @@ pytest-of-*/
 .archive-sample.txt
 cortex/.cortex-init
 cortex/.cortex-init-backup/
+
+# Ad-hoc snapshots from /critical-review --allow-adhoc; pruned by cortex-clean --adhoc
+cortex/_adhoc/
