@@ -271,14 +271,14 @@ Promote 13 skill-prose-referenced `bin/cortex-*` scripts to wheel-tier Python en
 - **Verification**: `python3 -c "import cortex_command.doctor.path_self_test"` exits 0. `python3 -m cortex_command.doctor.path_self_test 2>&1` exits 0 unconditionally.
 - **Status**: [x] done (commit `b04b4dc1`, 247 lines; agent inlined a simpler parity-exceptions parser into the module rather than importing from parity_check.py — decouples doctor from linter's AllowlistRow/E001 internals)
 
-### Task 24: Extend `cortex-session-start-path-bootstrap.sh` with the PATH self-test invocation
+### Task 24: Extend `cortex-session-start-path-bootstrap.sh` with the PATH self-test invocation [DONE]
 - **Files**: `plugins/cortex-core/hooks/cortex-session-start-path-bootstrap.sh`
 - **What**: After `AUGMENTED_PATH=...` (line 29) AND BEFORE the `$CLAUDE_ENV_FILE` write (lines 31–33), insert an inline `PATH="$AUGMENTED_PATH" python3 -m cortex_command.doctor.path_self_test 2>/dev/null || true` invocation. Capture stdout and pass through to the hook's own stdout so Claude Code receives any additionalContext.
 - **Depends on**: [23]
 - **Complexity**: simple
 - **Context**: Hook structure preserved (cortex-shape gate line 25, `AUGMENTED_PATH=` line 29, `$CLAUDE_ENV_FILE` write lines 31–33). New invocation lands BETWEEN lines 29 and 31. `PATH="$AUGMENTED_PATH"` is the subprocess-only assignment so the self-test sees augmented PATH without exporting it globally. The `|| true` is belt-and-suspenders; Task 23 already guarantees exit 0 on all paths.
 - **Verification**: `grep -E 'PATH="\$AUGMENTED_PATH".*path_self_test' plugins/cortex-core/hooks/cortex-session-start-path-bootstrap.sh` ≥ 1 — pass if count ≥ 1. `awk '/AUGMENTED_PATH=/{a=NR} /path_self_test/{p=NR} /CLAUDE_ENV_FILE/{c=NR} END{exit (a<p && p<c)?0:1}' plugins/cortex-core/hooks/cortex-session-start-path-bootstrap.sh` exits 0 (line order verified).
-- **Status**: [ ] pending
+- **Status**: [x] done (commit `03e4d3a9`; agent caught that canonical source is `claude/hooks/` — spec only named the plugin mirror)
 
 ### Task 25: Add `tests/test_path_self_test_enumeration.py` and `tests/test_path_self_test_hook_integration.py`
 - **Files**: `tests/test_path_self_test_enumeration.py` (new), `tests/test_path_self_test_hook_integration.py` (new)
@@ -298,14 +298,14 @@ Promote 13 skill-prose-referenced `bin/cortex-*` scripts to wheel-tier Python en
 - **Verification**: `grep -c CORTEX_COMMAND_FORCE_SOURCE cortex/requirements/project.md` = 1 — pass if count = 1.
 - **Status**: [x] done (commit `4de81868`)
 
-### Task 27: Sweep skill prose for path-qualified `bin/cortex-<name>` references → bare-name
+### Task 27: Sweep skill prose for path-qualified `bin/cortex-<name>` references → bare-name [DONE]
 - **Files**: any file under `skills/` matching `grep -rlE 'bin/cortex-(log-invocation|resolve-backlog-item|auto-bump-version|backlog-ready|check-parity|check-prescriptive-prose|commit-preflight|complexity-escalator|git-sync-rebase|lifecycle-counters|lifecycle-state|load-parent-epic|morning-review-gc-demo-worktrees)' skills/`. Known: `skills/refine/references/clarify-critic.md:16,65,198` for `bin/cortex-load-parent-epic`.
 - **What**: Rewrite every literal `bin/cortex-<name>` reference for the 13 promoted scripts to bare entry-point name. Do NOT rewrite references to non-promoted scripts.
 - **Depends on**: [9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22]
 - **Complexity**: simple
 - **Context**: Depends on all promotion tasks because the bare-name references resolve only after entries land. Anchor regex at word boundaries to avoid breaking `bin/cortex-load-parent-epic-something-else` (no such file today, but defensive).
 - **Verification**: `grep -rnE 'bin/cortex-(log-invocation|resolve-backlog-item|auto-bump-version|backlog-ready|check-parity|check-prescriptive-prose|commit-preflight|complexity-escalator|git-sync-rebase|lifecycle-counters|lifecycle-state|load-parent-epic|morning-review-gc-demo-worktrees)' skills/ | wc -l` = 0 — pass if count = 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit `c27a45f2`, 12 files; agent dispatched as worktree subagent died mid-edit after 3 of ~10 references — completed inline on orchestrator)
 
 ### Task 28: Verify `cortex-check-parity` passes post-migration
 - **Files**: `bin/.parity-exceptions.md` (conditional — only if new gaps need exception entries); any skill/doc/hook/justfile/test under repo root needing a wiring-signal touch-up (enumerated at task-execution time from W003/W005 warning output).

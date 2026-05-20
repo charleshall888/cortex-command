@@ -7,3 +7,4 @@
 {"ts":"2026-05-20T19:22:11Z","event":"batch_dispatch","feature":"installation-integrity-layer-bash-to-entry","batch":1,"tasks":[3,"4a","4b",6,8,20,26]}
 {"ts":"2026-05-20T19:50:10Z","event":"batch_dispatch","feature":"installation-integrity-layer-bash-to-entry","batch":2,"tasks":[7,9,11,12,13,14,15,16,17,18,22]}
 {"ts":"2026-05-20T20:29:44Z","event":"batch_dispatch","feature":"installation-integrity-layer-bash-to-entry","batch":3,"tasks":[10,19,21,23]}
+{"ts":"2026-05-20T20:42:20Z","event":"batch_dispatch","feature":"installation-integrity-layer-bash-to-entry","batch":4,"tasks":[24,27]}
