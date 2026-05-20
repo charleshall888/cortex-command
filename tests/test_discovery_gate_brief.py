@@ -772,3 +772,51 @@ def test_validate_brief_error_messages_name_broadened_anchors() -> None:
         f"of {sorted(broadened_tradeoff_tokens)}; found "
         f"{sorted(present_tradeoff)} in reason: {reason!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Test 8: retry-feedback covers every example token — Req 9
+#
+# Pins the rendered retry-feedback prose against the full agent-facing
+# example-token set (``_GATE_BRIEF_EXAMPLE_TOKENS``) so silent narrowing of
+# the retry vocabulary regresses a test. Closes the third-vertex drift
+# critical-review flagged: rubric → constant binding (Task 3) and validator
+# → 30-token floor (Task 4) were complete, but retry feedback still had a
+# hardcoded narrow enumeration prior to Task 6.
+# ---------------------------------------------------------------------------
+
+
+def test_retry_feedback_covers_example_tokens() -> None:
+    """Rendered retry feedback enumerates every token in ``_GATE_BRIEF_EXAMPLE_TOKENS``.
+
+    Imports the module-level retry template, renders it with a representative
+    ``reason`` argument, and asserts every token from each anchor's full
+    example set appears in the rendered prose.
+    """
+    from cortex_command.discovery import (
+        _GATE_BRIEF_EXAMPLE_TOKENS,
+        _GATE_BRIEF_RETRY_TEMPLATE,
+    )
+
+    rendered = _GATE_BRIEF_RETRY_TEMPLATE.format(
+        reason="representative validation failure for test"
+    )
+
+    # The dynamic reason must be interpolated into the rendered prose.
+    assert "representative validation failure for test" in rendered, (
+        "Expected the {reason} placeholder to interpolate the supplied "
+        f"reason into the rendered retry feedback; got: {rendered!r}"
+    )
+
+    # Every token from every anchor's example set must appear verbatim.
+    missing: list[tuple[str, str]] = []
+    for anchor, tokens in _GATE_BRIEF_EXAMPLE_TOKENS.items():
+        for token in tokens:
+            if token not in rendered:
+                missing.append((anchor, token))
+
+    assert not missing, (
+        "Rendered retry feedback is missing tokens from "
+        f"_GATE_BRIEF_EXAMPLE_TOKENS: {missing}\n"
+        f"Rendered prose:\n{rendered}"
+    )

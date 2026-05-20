@@ -361,6 +361,40 @@ prose so changes to the cap constant propagate without rewriting the rubric.
 """
 
 
+_GATE_BRIEF_RETRY_TEMPLATE: str = (
+    "Your previous attempt failed validation: {reason}\n"
+    "\n"
+    f"Rewrite at no more than {GATE_BRIEF_WORD_CAP} words "
+    f"(hard ceiling {GATE_BRIEF_WORD_CAP + 25}). The brief must contain all "
+    "three decision-content anchors. Use one of these tokens for the "
+    "decision anchor: "
+    f"{', '.join(_GATE_BRIEF_EXAMPLE_TOKENS['decision'])}. Use one of these "
+    "tokens for the alternatives anchor: "
+    f"{', '.join(_GATE_BRIEF_EXAMPLE_TOKENS['alternatives'])}. Use one of "
+    "these tokens for the tradeoff anchor: "
+    f"{', '.join(_GATE_BRIEF_EXAMPLE_TOKENS['tradeoff'])}. Include at least "
+    "one token from each anchor. Compress the alternatives section first if "
+    "you must trim — never drop the decision statement or the tradeoff "
+    "statement."
+)
+"""Retry-feedback template bound to ``_GATE_BRIEF_EXAMPLE_TOKENS``.
+
+The token enumerations for each anchor are interpolated from
+``_GATE_BRIEF_EXAMPLE_TOKENS`` at module load (single source of truth shared
+with ``GATE_BRIEF_RUBRIC``). The ``{reason}`` placeholder is a plain
+``str.format`` placeholder — it is NOT an f-string interpolation because
+``reason`` is dynamic per dispatch and is supplied at the call site via
+``_GATE_BRIEF_RETRY_TEMPLATE.format(reason=...)``.
+
+Per spec Req 9 / Adversarial Review §7: the verbatim "use one of these
+tokens" phrasing is preserved deliberately — retry is recovery, not
+teaching, and the verbatim phrasing maximizes recovery rate. The retry
+feedback exposes only the agent-facing representative subset (the example
+tokens), not the validator's full 30-token floor — this is an intentional
+asymmetry (see ``_GATE_BRIEF_EXAMPLE_TOKENS`` docstring).
+"""
+
+
 # ---------------------------------------------------------------------------
 # Event payload validators
 # ---------------------------------------------------------------------------
@@ -899,19 +933,7 @@ def _cmd_generate_brief(args: argparse.Namespace) -> int:
     # second dispatch with the specific failure as feedback recovers many
     # otherwise-rejected briefs without expanding the contract.
     if not valid:
-        cap = GATE_BRIEF_WORD_CAP + 25
-        feedback_lines = [
-            f"Your previous attempt failed validation: {reason}",
-            "",
-            f"Rewrite at no more than {GATE_BRIEF_WORD_CAP} words "
-            f"(hard ceiling {cap}). The brief must contain all three "
-            "decision-content anchors: the literal word 'decided' or "
-            "'decide', the word 'alternative' or 'options', and the "
-            "word 'tradeoff' or 'cost'. Compress the alternatives "
-            "section first if you must trim — never drop the decision "
-            "statement or the tradeoff statement.",
-        ]
-        retry_feedback = "\n".join(feedback_lines)
+        retry_feedback = _GATE_BRIEF_RETRY_TEMPLATE.format(reason=reason)
         try:
             brief = asyncio.run(
                 _run_brief_query(research_content, retry_feedback=retry_feedback)
