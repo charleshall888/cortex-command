@@ -390,6 +390,18 @@ check-path-hardcoding-audit:
 requirements-parity-audit:
     bin/cortex-requirements-parity-audit
 
+# Cross-cutting acceptance gate for the GATE_BRIEF rubric (feature
+# fix-validate-brief-substring-anchors-that, Phase 1 + Phase 2).
+# Runs the Phase 1 rubric-shape checks (Reqs 1, 2) and the Phase 2 anchor /
+# retry-feedback / validation-error tests (Reqs 3–10). Exits 0 only if every
+# sub-command exits 0.
+brief-gate-acceptance:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    uv run python -c "from cortex_command.discovery import GATE_BRIEF_RUBRIC; assert '250' in GATE_BRIEF_RUBRIC and 'GATE_BRIEF_WORD_CAP' not in GATE_BRIEF_RUBRIC"
+    uv run python -c "from cortex_command.discovery import GATE_BRIEF_RUBRIC, _GATE_BRIEF_EXAMPLE_TOKENS; assert all(tok in GATE_BRIEF_RUBRIC for tokens in _GATE_BRIEF_EXAMPLE_TOKENS.values() for tok in tokens)"
+    uv run pytest tests/test_discovery_gate_brief.py -v -k "validate_brief or retry_feedback or validation_failed or canonical_floor"
+
 # --- Testing ---
 
 # Run skill contract tests (validates SKILL.md frontmatter across all skills)
