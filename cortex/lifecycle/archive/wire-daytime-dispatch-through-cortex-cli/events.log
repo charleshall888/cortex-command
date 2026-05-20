@@ -4,3 +4,4 @@
 {"ts": "2026-05-16T15:26:30Z", "event": "lifecycle_start", "feature": "wire-daytime-dispatch-through-cortex-cli", "tier": "complex", "criticality": "high"}
 {"ts": "2026-05-16T15:51:32Z", "event": "plan_approved", "feature": "wire-daytime-dispatch-through-cortex-cli"}
 {"ts": "2026-05-16T15:51:32Z", "event": "phase_transition", "feature": "wire-daytime-dispatch-through-cortex-cli", "from": "plan", "to": "implement"}
+{"ts": "2026-05-20T14:22:48Z", "event": "feature_wontfix", "feature": "wire-daytime-dispatch-through-cortex-cli", "reason": "Superseded by backlog #246 (Remove daytime autonomous pipeline and cancel #228/#230). Parent backlog #228 marked status:superseded; foundation modules (daytime_pipeline.py + 16 related files, ~4213 lines) deleted in commit 2c45dbf7; tests/test_lifecycle_implement_md_daytime_free.py is the live regression guard against re-introduction."}
