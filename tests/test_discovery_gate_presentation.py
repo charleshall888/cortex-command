@@ -38,7 +38,7 @@ R3_DROP_DUAL_USE_MARKER_PHRASE = (
 )
 
 # Stable substring anchoring the brief-generation CLI invocation in SKILL.md.
-BRIEF_INVOCATION_MARKER_PHRASE = "python3 -m cortex_command.discovery generate-brief"
+BRIEF_INVOCATION_MARKER_PHRASE = "cortex-discovery generate-brief"
 
 # Stable substring from the --response argument example enumerating all four
 # gate options (unspaced pipe form as it appears on line 94 of SKILL.md).
