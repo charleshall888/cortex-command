@@ -1,0 +1,10 @@
+{"schema_version": 1, "ts": "2026-05-20T14:02:31Z", "event": "lifecycle_start", "feature": "gate-policy-taxonomy-and-critical-review", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-05-20T14:05:00Z", "event": "clarify_critic", "feature": "gate-policy-taxonomy-and-critical-review", "parent_epic_loaded": true, "findings_count": 8, "dispositions": {"apply": 2, "dismiss": 5, "ask": 1}, "applied_fixes_count": 2, "dismissals_count": 5, "status": "ok"}
+{"ts": "2026-05-20T14:24:49Z", "event": "complexity_override", "feature": "gate-policy-taxonomy-and-critical-review", "from": "simple", "to": "complex", "gate": "research_open_questions"}
+{"ts": "2026-05-20T14:25:00Z", "event": "criticality_override", "feature": "gate-policy-taxonomy-and-critical-review", "from": "medium", "to": "high"}
+{"ts":"2026-05-20T14:39:48Z","event":"sentinel_absence","feature":"gate-policy-taxonomy-and-critical-review","reviewer_angle":"Path-validation boundary contract change","reason":"absent","model_tier":"sonnet","expected_sha":"558587270143d8e537adfbc5c7194b93eda7d9df30898a06839c37da610fa909","observed_sha_or_null":null}
+{"ts": "2026-05-20T15:00:00Z", "event": "spec_approved", "feature": "gate-policy-taxonomy-and-critical-review"}
+{"ts":"2026-05-20T16:14:49Z","event":"sentinel_absence","feature":"gate-policy-taxonomy-and-critical-review","reviewer_angle":"angle-3","reason":"absent","model_tier":"sonnet","expected_sha":"14303601bfe7306ef730a90601fbd754ee51bab36738707d10d8e48368c6e629","observed_sha_or_null":null}
+{"ts":"2026-05-20T16:15:00Z","event":"sentinel_absence","feature":"gate-policy-taxonomy-and-critical-review","reviewer_angle":"Verifier-rename honesty goal vs sentinel-string divergence","reason":"absent","model_tier":"sonnet","expected_sha":"14303601bfe7306ef730a90601fbd754ee51bab36738707d10d8e48368c6e629","observed_sha_or_null":null}
+{"ts": "2026-05-20T16:30:27Z", "event": "plan_approved", "feature": "gate-policy-taxonomy-and-critical-review"}
+{"ts": "2026-05-20T16:30:27Z", "event": "phase_transition", "feature": "gate-policy-taxonomy-and-critical-review", "from": "plan", "to": "implement"}
