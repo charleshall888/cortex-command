@@ -6,12 +6,10 @@
 | 251 | Harness friction triage: distribution, contracts, slugs, gates | backlog | high | epic | — | — | — |
 | 252 | Installation integrity layer: bash-to-entry-point migration, PATH self-test, install-version pin probe | refined | high | feature | — | 251 | ✓ |
 | 255 | Gate-policy taxonomy and critical-review gate fixes | refined | high | feature | — | 251 | ✓ |
-| 256 | Fix validate_brief substring anchors that reject natural prose | refined | high | chore | — | 251 | ✓ |
 | 258 | Surface aggregated signal on daytime-pipeline sandbox/EPERM cascade failures | backlog | high | feature | — | — | — |
-| 260 | Revert TMPDIR worktree placement and restore .claude/worktrees/ default | in_progress | high | bug | — | — | — |
+| 260 | Revert TMPDIR worktree placement and restore .claude/worktrees/ default | refined | high | bug | — | — | ✓ |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 186 | Clarify-critic schema validator + warning-template runtime validator (per #178 R7 follow-on) | proposed | medium | feature | — | 178 | — |
-| 235 | Trigger cortex CLI reinstall at SessionStart on CLI_PIN drift | refined | medium | feature | — | — | ✓ |
 | 248 | Convert bin/cortex-* and skill-embedded python3 -c callsites to use the cortex CLI | backlog | medium | feature | — | — | — |
 | 250 | Lifecycle implement: auto-enter worktree via EnterWorktree (Approach A, deferred design surface) | backlog | medium | feature | — | — | — |
 | 253 | Skill-prose to CLI argparse contract lint | backlog | medium | feature | — | 251 | — |
@@ -26,8 +24,7 @@
 
 - **252** Installation integrity layer: bash-to-entry-point migration, PATH self-test, install-version pin probe
 - **255** Gate-policy taxonomy and critical-review gate fixes
-- **256** Fix validate_brief substring anchors that reject natural prose
-- **235** Trigger cortex CLI reinstall at SessionStart on CLI_PIN drift
+- **260** Revert TMPDIR worktree placement and restore .claude/worktrees/ default
 
 ## Backlog
 
@@ -44,7 +41,6 @@
 
 ## In-Progress
 
-- **260** Revert TMPDIR worktree placement and restore .claude/worktrees/ default (in_progress)
 
 ## Warnings
 

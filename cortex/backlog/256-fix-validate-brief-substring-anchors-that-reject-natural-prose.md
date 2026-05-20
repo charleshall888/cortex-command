@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: ef4e8d85-4723-442d-8009-5e99090381f3
 title: "Fix validate_brief substring anchors that reject natural prose"
-status: refined
+status: complete
 priority: high
 type: chore
 created: 2026-05-20
@@ -14,6 +14,7 @@ complexity: complex
 criticality: high
 spec: cortex/lifecycle/fix-validate-brief-substring-anchors-that/spec.md
 areas: [skills]
+session_id: null
 ---
 
 ## Role

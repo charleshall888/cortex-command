@@ -25,7 +25,7 @@ Two-phase implementation that ships the foundational fixes (rubric f-string subs
 - **Complexity**: simple
 - **Context**: `GATE_BRIEF_WORD_CAP: int = 250` at `cortex_command/discovery.py:267`. `GATE_BRIEF_RUBRIC` at `cortex_command/discovery.py:285-322`. The bug surface: the rubric body currently contains the literal token `GATE_BRIEF_WORD_CAP`, not `250`, because the assignment is `GATE_BRIEF_RUBRIC: str = """\` (no `f` prefix). The conversion mechanic is either an `f"""..."""` literal or a `"""...""".format(...)` call — implementer's choice, but the f-string form keeps the existing prose structure intact.
 - **Verification**: `python3 -c "from cortex_command.discovery import GATE_BRIEF_RUBRIC; assert '250' in GATE_BRIEF_RUBRIC and 'GATE_BRIEF_WORD_CAP' not in GATE_BRIEF_RUBRIC"` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 70d798c9)
 
 ### Task 2: Add `brief_excerpt` field to `gate_brief_generated` validation_failed events
 - **Files**: `cortex_command/discovery.py`, `tests/test_discovery_gate_brief.py`
@@ -34,7 +34,7 @@ Two-phase implementation that ships the foundational fixes (rubric f-string subs
 - **Complexity**: complex
 - **Context**: `_emit_event` is a nested closure inside `_cmd_generate_brief` that wraps `append_event` (imported from `cortex_command.common`). Its current signature is `_emit_event(status: str, word_count: int)`. Extend to `_emit_event(status: str, word_count: int, brief_text: str | None = None)` with the excerpt computed inside the helper (`brief_text[:200] if brief_text else None`); only inject the field on `status == "validation_failed"` with a non-empty excerpt, leaving the `"ok"`, `"empty"`, and `"validation_failed"`-without-text payloads schema-compatible with legacy readers. The test must exercise the validation_failed branch without invoking the live SDK — stub `_run_brief_query` via `monkeypatch.setattr` to return a deterministic non-empty brief that fails `validate_brief`, then assert on the events.log entry captured under `tmp_path`. Pattern reference: the `_REQUIRES_AUTH` skip marker at `tests/test_discovery_gate_brief.py:79` lists auth-gated tests; this new test must NOT use it. Use `tmp_path` fixture for the events log directory. Task 1 must land first because both tasks edit `cortex_command/discovery.py` — the `Depends on: [1]` annotation serializes them and prevents concurrent diff conflicts.
 - **Verification**: `python3 -m pytest tests/test_discovery_gate_brief.py::test_validation_failed_event_includes_brief_excerpt -v` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 87697a30)
 
 ### Task 3: Introduce `_GATE_BRIEF_EXAMPLE_TOKENS` constant and rewire `GATE_BRIEF_RUBRIC` to interpolate from it
 - **Files**: `cortex_command/discovery.py`
@@ -43,7 +43,7 @@ Two-phase implementation that ships the foundational fixes (rubric f-string subs
 - **Complexity**: simple
 - **Context**: `GATE_BRIEF_RUBRIC` at `cortex_command/discovery.py:285-322` currently embeds example verbs as literal tokens (e.g., `settled on` in the decision example, narrow vocabulary for the other two). After Task 1 the rubric is an f-string, so token-interpolation is a natural extension. F-string scope: `_GATE_BRIEF_EXAMPLE_TOKENS` must be defined before `GATE_BRIEF_RUBRIC` for f-string evaluation. Scope clarification: this constant is the single source of truth for **agent-facing tokens** (rubric examples + Task 6 retry feedback), NOT for the validator's accepted vocabulary — the validator is broadened to the full 30-token canonical floor independently in Task 4, and pinned by Task 7's frozen literal in the test file. The agent-facing / validator-accepted asymmetry is deliberate per spec §Technical Constraints' "Acknowledged limitation" and is the regression guard against lockstep shrinkage. Constraint from spec Req 7: every token in `_GATE_BRIEF_EXAMPLE_TOKENS` must appear in the rendered `GATE_BRIEF_RUBRIC` (verified below). Depends on Task 2 because both tasks edit `cortex_command/discovery.py`.
 - **Verification**: `python3 -c "from cortex_command.discovery import GATE_BRIEF_RUBRIC, _GATE_BRIEF_EXAMPLE_TOKENS; assert all(tok in GATE_BRIEF_RUBRIC for tokens in _GATE_BRIEF_EXAMPLE_TOKENS.values() for tok in tokens)"` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 5608ca75)
 
 ### Task 4: Broaden `validate_brief()` anchors to canonical floor with word-boundary regex; add paraphrase + FP tests
 - **Files**: `cortex_command/discovery.py`, `tests/test_discovery_gate_brief.py`
@@ -52,7 +52,7 @@ Two-phase implementation that ships the foundational fixes (rubric f-string subs
 - **Complexity**: complex
 - **Context**: Current implementation at `cortex_command/discovery.py:555-569` uses `lower = brief.lower()` + three `in` checks. Replace with three `re.search` calls per anchor (the `re` module is already imported at module top). Helper sketch: a small private helper `_anchor_match(brief: str, tokens: tuple[str, ...]) -> bool` that iterates `re.search(r"\b" + re.escape(tok) + r"\b", brief, re.IGNORECASE)` and short-circuits the per-anchor loop. Per spec edge case: `\bconsidered\b` does NOT match `considerations` (boundary at position 9 fails — both chars are `\w`); both are listed separately in the canonical floor. Hyphen handling: `\btrade-off\b` matches because `-` is `\W` under Python's `\b`. The parametrized paraphrase tests construct minimal briefs of the form `f"We {token} X. Two options were weighed. The compromise was Y."` (or analogous with the token slotted into the corresponding anchor's sentence). The FP test uses briefs containing only the FP token plus valid prose for the OTHER two anchors and asserts the failure reason names the FP-tested anchor. New tests must NOT use `_REQUIRES_AUTH`. Pattern reference: existing no-auth test at `tests/test_discovery_gate_brief.py:310-402`. Depends on Task 3 because both edit `cortex_command/discovery.py`. **Line-number drift contract**: cited line numbers above are pre-edit; after Tasks 1–3 land, locate the targets by grep on the semantic anchors named in parentheses rather than by line number.
 - **Verification**: `python3 -m pytest tests/test_discovery_gate_brief.py -v -k "anchor_paraphrases or word_boundary_false_positives"` — pass if exit 0 and all 4 test functions report as passing.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 1aeedb69)
 
 ### Task 5: Update `validate_brief()` anchor-missing error messages to name broadened anchors
 - **Files**: `cortex_command/discovery.py`, `tests/test_discovery_gate_brief.py`
@@ -61,7 +61,7 @@ Two-phase implementation that ships the foundational fixes (rubric f-string subs
 - **Complexity**: simple
 - **Context**: Task 4 leaves the error-message strings in place (or stubbed); this task swaps them out. The three reason strings should each name 3+ canonical-floor tokens per anchor; the implementer chooses which 3+ for each, but the test pins required substrings on ALL THREE anchors (extending the previous draft, which only pinned decision-anchor tokens — the cross-cutting acceptance gate (Task 8) now structurally enforces Req 10 across every anchor rather than relying on diff-inspection discipline). Depends on Task 4 because both edit `validate_brief()` body in `cortex_command/discovery.py`.
 - **Verification**: `python3 -m pytest tests/test_discovery_gate_brief.py::test_validate_brief_error_messages_name_broadened_anchors -v` — pass if exit 0 and the test asserts substring coverage on ALL THREE anchor failure reasons.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 43089d52)
 
 ### Task 6: Extract retry feedback to `_GATE_BRIEF_RETRY_TEMPLATE` bound to `_GATE_BRIEF_EXAMPLE_TOKENS`
 - **Files**: `cortex_command/discovery.py`, `tests/test_discovery_gate_brief.py`
@@ -70,7 +70,7 @@ Two-phase implementation that ships the foundational fixes (rubric f-string subs
 - **Complexity**: simple
 - **Context**: Current inline construction is a 12-line list/join over verbatim anchor enumerations (`decided / decide / alternative / options / tradeoff / cost` — the narrow vocabulary that calcified into the retry path). The two retry-feedback fields that vary at runtime: `reason` (the validate_brief failure string) and `cap`/`GATE_BRIEF_WORD_CAP` (constants — bake into the template at module load). Critical f-string scope guidance: if the implementer chooses the `str` constant form, the `{reason}` placeholder must NOT be interpolated at module-load time (since `reason` is dynamic per dispatch) — use a plain `str` with `{reason}` literal and `.format(reason=...)` at the call site, NOT an `f"..."` at module scope. The token enumerations from `_GATE_BRIEF_EXAMPLE_TOKENS` ARE module-load constants and can be baked into the template via f-string. Per spec Req 9 acceptance: "use one of these tokens" verbatim phrasing is preserved — retry is recovery, not teaching (Adversarial Review §7). Scope note: the retry feedback exposes only the agent-facing representative subset (`_GATE_BRIEF_EXAMPLE_TOKENS`), not the validator's full 30-token floor — this is intentional (spec §Technical Constraints' "Acknowledged limitation"). Depends on Task 5 because both edit `cortex_command/discovery.py`.
 - **Verification**: `python3 -m pytest tests/test_discovery_gate_brief.py::test_retry_feedback_covers_example_tokens -v` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit e1168149)
 
 ### Task 7: Add canonical-floor parity test pinning validator's accepted vocabulary
 - **Files**: `tests/test_discovery_gate_brief.py`
@@ -79,7 +79,7 @@ Two-phase implementation that ships the foundational fixes (rubric f-string subs
 - **Complexity**: simple
 - **Context**: This test is the durability guard against the regression mode the previous spec draft missed: it pins the validator's accepted vocabulary against a frozen literal set inside the test file, so even if a future commit shrinks both `_GATE_BRIEF_EXAMPLE_TOKENS` and the validator anchor sets in lockstep, the test still catches the regression. The "frozen literal" requirement is load-bearing — the canonical floor must NOT be imported from `cortex_command.discovery` (per spec Req 8). Token list source: Task 4's broadened anchor sets, verbatim (decision: 12, alternatives: 9, tradeoff: 9). The test uses `pytest.mark.parametrize` over the 30-token list and asserts `validate_brief(_minimal_brief_for(token)) == (True, "")` for each. Depends on Task 6 to serialize new test-function insertions into `tests/test_discovery_gate_brief.py` and avoid concurrent-write conflicts on the test module.
 - **Verification**: `python3 -m pytest tests/test_discovery_gate_brief.py::test_validate_brief_canonical_floor -v` — pass if exit 0 and all 30 parametrized cases report as passing.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 10b00e4c)
 
 ### Task 8: Add Phase 2 cross-cutting acceptance gate `just` recipe
 - **Files**: `justfile`
@@ -88,7 +88,7 @@ Two-phase implementation that ships the foundational fixes (rubric f-string subs
 - **Complexity**: simple
 - **Context**: `justfile` lives at the repo root. Pattern reference: existing `just test` recipe (operator runs `just --list` to enumerate current recipes). The recipe combines two `python3 -c` invocations and one pytest invocation under a single recipe body; on failure of any sub-command, `just` exits non-zero by default. The pytest `-k` filter `"validate_brief or retry_feedback or validation_failed or canonical_floor"` is per spec Req 11 — it selects every Phase 2 test added in Tasks 4, 5, 6, 7 plus the Phase 1 observability test added in Task 2. With Task 5 now extended to assert error-message coverage on ALL THREE anchors, the recipe structurally pins Req 10 end-to-end via test (c).
 - **Verification**: `just <recipe-name>` — pass if exit 0 and all sub-commands report success in the recipe output.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit f7497365; recipe: `just brief-gate-acceptance`)
 
 ### Task 9: Update `validate_brief()` docstring to reflect broadened anchors
 - **Files**: `cortex_command/discovery.py`
@@ -97,7 +97,7 @@ Two-phase implementation that ships the foundational fixes (rubric f-string subs
 - **Complexity**: trivial
 - **Context**: Docstring update only — no behavior change. The current docstring still names the narrow `decided / decide`, `alternative / options`, `tradeoff / cost` pairs and would mislead readers after Task 4 lands. Task 9 depends on BOTH Task 5 (which edits the same `validate_brief()` function body — error message strings) and Task 7 (which is the last test-side task touching the canonical floor authoritatively; Task 9's docstring should reference the same canonical floor literal). The double-dependency serializes Task 9 after both Phase 2 `validate_brief` edits so no two tasks diff-edit the function simultaneously.
 - **Verification**: Interactive/session-dependent: the docstring change has no behavior contract a command can pin without restating the docstring text; the implementer verifies by diff inspection that the canonical floor is named and the narrow three-pair phrasing is gone.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 38f27043)
 
 ## Risks
 

@@ -2,7 +2,7 @@
 feature: fix-validate-brief-substring-anchors-that
 parent_backlog_uuid: ef4e8d85-4723-442d-8009-5e99090381f3
 parent_backlog_id: 256
-artifacts: ["research", "spec", "plan"]
+artifacts: ["research", "spec", "plan", "review"]
 tags: [discovery, validator-bug, gate-policy]
 created: 2026-05-20
 updated: 2026-05-20
