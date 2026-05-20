@@ -1,4 +1,4 @@
-"""Unit and subprocess tests for ``bin/cortex-complexity-escalator``.
+"""Unit and subprocess tests for ``cortex-complexity-escalator``.
 
 Covers Requirements 3–12 plus Edge Case line 100 (downgrade-then-re-escalate):
 
@@ -13,14 +13,17 @@ Covers Requirements 3–12 plus Edge Case line 100 (downgrade-then-re-escalate):
   R11 Graceful no-ops (missing inputs, empty sections, missing events.log)
   R12 Announcement format strings
 
-Mixes importlib-loaded internal-function unit tests and subprocess-driven
+Mixes direct-import unit tests (importing from
+``cortex_command.lifecycle.complexity_escalator``) and subprocess-driven
 end-to-end exit-code tests per the ``test_resolve_backlog_item.py`` pattern.
+
+The ``escalator_module`` fixture returns the Python module directly (no longer
+loads the bin file, which is now a dual-channel bash wrapper after the
+Task 15 promotion).
 """
 
 from __future__ import annotations
 
-import importlib.machinery
-import importlib.util
 import json
 import subprocess
 import sys
@@ -28,20 +31,16 @@ from pathlib import Path
 
 import pytest
 
+import cortex_command.lifecycle.complexity_escalator as _escalator_module
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = REPO_ROOT / "bin" / "cortex-complexity-escalator"
 
 
 @pytest.fixture(scope="module")
 def escalator_module():
-    """Load the executable script as an importable module for unit tests."""
-    loader = importlib.machinery.SourceFileLoader(
-        "complexity_escalator", str(SCRIPT_PATH)
-    )
-    spec = importlib.util.spec_from_loader(loader.name, loader)
-    module = importlib.util.module_from_spec(spec)
-    loader.exec_module(module)
-    return module
+    """Return the complexity_escalator Python module for unit tests."""
+    return _escalator_module
 
 
 @pytest.fixture
