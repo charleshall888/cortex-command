@@ -88,7 +88,7 @@ Work through the report sections in sequence. Delegate the per-section interacti
 2. **Demo Setup** — if `demo-commands:` (list) or `demo-command:` (single string) is configured and the session is local, offer to spin up a demo worktree from the overnight branch; for `demo-commands:`, the agent reasons from Section 2 context to select the most relevant entry (or skips if none is relevant).
 3. **Lifecycle Advancement** — immediately after verification: append completion events to each feature's `cortex/lifecycle/{feature}/events.log`
 4. **Deferred Questions** — display each question and collect a user answer; write the answer back to the corresponding `deferred/` file
-5. **Failed Features** — display error summary and suggested next step; offer to create a backlog investigation item (should-have)
+5. **Failed Features** — display error summary and suggested next step; offer to create a backlog investigation item (should-have). When the user accepts, invoke `/backlog-author compose` with a context block derived from the failure summary (pre-resolved `why:` = what failed in observable terms, `role:` = investigate the root cause, `integration:` = affected lifecycle feature, `edges:` = non-goal: re-running the overnight session), capture the returned body, then call `cortex-create-backlog-item --title "investigate <feature-slug>" --body "<returned-body>"`.
 
 Skip any section that has no entries — do not display a placeholder or empty heading.
 
