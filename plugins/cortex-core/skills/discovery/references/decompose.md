@@ -12,32 +12,9 @@ Read `cortex/research/{topic}/research.md` for findings, feasibility assessment,
 
 Each bullet in the approved `### Pieces` sub-section becomes one ticket candidate. Do **not** re-derive pieces from raw findings — the Architecture section already names them by role. The piece-set is fixed at decompose entry; if the agent finds that the piece-set is wrong, return to the research phase rather than mutating the set silently.
 
-For each piece, author a ticket body under the **uniform template**:
+For each piece, invoke `/backlog-author compose` with the piece's context; the canonical body template lives at `skills/backlog-author/references/body-template.md`.
 
-```
-## Role
-
-What this piece does, named by role (not by mechanism). One paragraph.
-
-## Integration
-
-How this piece connects to the other pieces and to the existing system.
-Reference the Integration shape sub-section's contract surfaces.
-
-## Edges
-
-Structural constraints and boundary breaks. Each bullet names a contract
-surface by name (e.g., "phase-transition contract", "events-registry schema").
-Bullets do NOT cite file paths or section indices.
-
-## Touch points  (optional)
-
-Implementation locations: specific file paths with line numbers, section
-indices (§N, RN), or multi-line code excerpts. This is the sole permitted
-location for path:line citations and section-index citations.
-```
-
-The template applies uniformly to all pieces. There is no defect-vs-novel branching, no per-shape variation. Every ticket body produced from the architecture uses these four headers in this order.
+The template applies uniformly to all pieces. There is no defect-vs-novel branching, no per-shape variation. Every ticket body produced from the architecture uses the template's sections in order.
 
 **Edge-vs-Touch-point semantic distinction.** `## Edges` documents structural constraints between pieces, naming each contract surface by name without a file path. `## Touch points` documents implementation locations. If an edge bullet would name a path or line to express its constraint, the path:line moves to `## Touch points` and a structural-constraint summary naming the contract by name remains in `## Edges`.
 
