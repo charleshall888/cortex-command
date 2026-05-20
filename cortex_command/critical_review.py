@@ -54,14 +54,27 @@ def validate_artifact_path(
     lifecycle_root: str | Sequence[str],
     feature: str | None = None,
 ) -> str:
-    """Validate ``candidate`` against the realpath-based security gate.
+    """Validate ``candidate`` against under-root scoping (Fix 2).
 
-    Implements Requirement 9a-c:
-      - realpath(candidate) MUST byte-equal abspath(candidate) (no symlinks)
-      - resolved path MUST be a strict path-component prefix of at least
-        one root in ``lifecycle_root`` (rejects candidate equal to a root)
+    Implements ticket-255 Fix 2 (Phase 1):
+      - the candidate's realpath endpoint MUST live under at least one
+        root's realpath, regardless of whether the path traversed an
+        ancestor symlink. This replaces the prior ``realpath != abspath``
+        candidate-symlink gate (which false-positived sandbox-sanctioned
+        ancestors like ``/tmp/claude`` on macOS) AND the redundant
+        root-symlink gate (which pre-resolved each root and rejected
+        any ancestor-resolved root before the under-root check could run).
       - when ``feature`` is supplied (auto-trigger flow), the resolved
         path MUST additionally be under ``{matched-root}/{feature}/``
+      - the file at the resolved path MUST be a regular file (rejects
+        directories, symlinks-resolving-to-non-files, device files)
+
+    The under-root scoping uses ``Path(...).resolve().is_relative_to(...)``
+    with macOS APFS case-normcase handling (mirroring the canonical
+    in-house pattern at ``cortex_command/init/scaffold.py:113-172``).
+    The ``realpath().startswith()`` shape is explicitly rejected — it
+    false-positives sibling roots that share a prefix
+    (e.g., ``/tmp/repository`` vs ``/tmp/repo``).
 
     Args:
         candidate: Caller-supplied artifact path.
@@ -79,14 +92,7 @@ def validate_artifact_path(
         ValueError: On any rejection. Message names the offending path
             and the violated rule.
     """
-    abspath = os.path.abspath(candidate)
     realpath = os.path.realpath(candidate)
-    if realpath != abspath:
-        raise ValueError(
-            f"Path validation failed (Req 9a/9c): symlink detected in "
-            f"{candidate!r}; realpath={realpath!r} != abspath={abspath!r}. "
-            f"Artifact directories must not contain symlinks."
-        )
 
     if isinstance(lifecycle_root, str):
         roots: list[str] = [lifecycle_root]
@@ -98,33 +104,29 @@ def validate_artifact_path(
         )
 
     candidate_path = Path(realpath)
+    # macOS APFS preserves case but compares case-insensitively; ``resolve``
+    # does not normalize case. Normalize both sides before the containment
+    # check so the comparison matches filesystem semantics (mirrors the
+    # canonical in-house pattern at ``init/scaffold.py:159-167``).
+    candidate_norm = Path(os.path.normcase(str(candidate_path)))
     last_err: ValueError | None = None
     for root in roots:
-        root_abs = os.path.abspath(root)
-        root_real = os.path.realpath(root)
-        if root_real != root_abs:
-            last_err = ValueError(
-                f"Path validation failed (Req 9c): artifact root "
-                f"{root!r} resolves through a symlink "
-                f"(realpath={root_real!r} != abspath={root_abs!r})."
-            )
-            continue
-
-        root_path = Path(root_real)
+        root_path = Path(root).resolve()
+        root_norm = Path(os.path.normcase(str(root_path)))
         # Strict prefix: candidate must be *under* the root, not equal to it.
-        if candidate_path == root_path or not candidate_path.is_relative_to(root_path):
+        if candidate_norm == root_norm or not candidate_norm.is_relative_to(root_norm):
             last_err = ValueError(
                 f"Path validation failed (Req 9b): {realpath!r} is not "
-                f"strictly under {root_real!r}."
+                f"strictly under {str(root_path)!r}."
             )
             continue
 
         if feature is not None:
-            feature_root = root_path / feature
-            if not candidate_path.is_relative_to(feature_root):
+            feature_root_norm = Path(os.path.normcase(str(root_path / feature)))
+            if not candidate_norm.is_relative_to(feature_root_norm):
                 last_err = ValueError(
                     f"Path validation failed (Req 9b auto-trigger): {realpath!r} "
-                    f"is not under {feature_root!s}/."
+                    f"is not under {str(root_path / feature)!s}/."
                 )
                 continue
 
