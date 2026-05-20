@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: b0545923-2dac-42f3-977e-6b6307a816f7
 title: "Lead refine §4 complexity-value gate with recommended option + rationale"
-status: refined
+status: complete
 priority: medium
 type: chore
 tags: [skills, refine, lifecycle, ux]
