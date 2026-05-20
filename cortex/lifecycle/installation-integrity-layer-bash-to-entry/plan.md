@@ -280,14 +280,14 @@ Promote 13 skill-prose-referenced `bin/cortex-*` scripts to wheel-tier Python en
 - **Verification**: `grep -E 'PATH="\$AUGMENTED_PATH".*path_self_test' plugins/cortex-core/hooks/cortex-session-start-path-bootstrap.sh` ≥ 1 — pass if count ≥ 1. `awk '/AUGMENTED_PATH=/{a=NR} /path_self_test/{p=NR} /CLAUDE_ENV_FILE/{c=NR} END{exit (a<p && p<c)?0:1}' plugins/cortex-core/hooks/cortex-session-start-path-bootstrap.sh` exits 0 (line order verified).
 - **Status**: [x] done (commit `03e4d3a9`; agent caught that canonical source is `claude/hooks/` — spec only named the plugin mirror)
 
-### Task 25: Add `tests/test_path_self_test_enumeration.py` and `tests/test_path_self_test_hook_integration.py`
+### Task 25: Add `tests/test_path_self_test_enumeration.py` and `tests/test_path_self_test_hook_integration.py` [DONE]
 - **Files**: `tests/test_path_self_test_enumeration.py` (new), `tests/test_path_self_test_hook_integration.py` (new)
 - **What**: Two test files: (1) enumeration unit test: with a library-internal entry listed in `bin/.parity-exceptions.md`, it does NOT appear in the self-test's expected-binary set (mock `importlib.metadata.entry_points`); (2) hook integration test: feed fixture stdin to `cortex-session-start-path-bootstrap.sh` while overriding PATH to exclude an entry — assert stdout contains `additionalContext`, exit 0, no sentinel file (`test ! -e cortex/.cache/path-selftest.json`). Also covers: (a) `CORTEX_DEV_MODE=1` → no additionalContext; (b) `$CWD/pyproject.toml` names cortex-command → no additionalContext; (c) `PATH=/nonexistent` → hook exits 0 with empty stdout; (d) `importlib.metadata.PackageNotFoundError` simulation → exit 0 silently.
 - **Depends on**: [23, 24]
 - **Complexity**: complex
 - **Context**: Hook integration test invokes the bash hook via subprocess; temp-dir fixture must contain `cortex/lifecycle/` subdir to pass the cortex-shape gate. The integration test is best-effort because claude-code#16538 affects the **plugin-hook pipeline** (where Claude Code consumes the hook's output), NOT the hook's own emission — so the test can verify the hook emits additionalContext correctly, but it cannot verify Claude Code receives it.
 - **Verification**: `python3 -m pytest tests/test_path_self_test_enumeration.py tests/test_path_self_test_hook_integration.py` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit `0149a5e4`, 12 tests pass; clever shim design — placing python3 at `$HOME/.local/bin/python3` intercepts the hook's invocation since AUGMENTED_PATH puts that dir first)
 
 ### Task 26: Document `CORTEX_COMMAND_FORCE_SOURCE=1` in `cortex/requirements/project.md` [DONE]
 - **Files**: `cortex/requirements/project.md`
@@ -307,14 +307,14 @@ Promote 13 skill-prose-referenced `bin/cortex-*` scripts to wheel-tier Python en
 - **Verification**: `grep -rnE 'bin/cortex-(log-invocation|resolve-backlog-item|auto-bump-version|backlog-ready|check-parity|check-prescriptive-prose|commit-preflight|complexity-escalator|git-sync-rebase|lifecycle-counters|lifecycle-state|load-parent-epic|morning-review-gc-demo-worktrees)' skills/ | wc -l` = 0 — pass if count = 0.
 - **Status**: [x] done (commit `c27a45f2`, 12 files; agent dispatched as worktree subagent died mid-edit after 3 of ~10 references — completed inline on orchestrator)
 
-### Task 28: Verify `cortex-check-parity` passes post-migration
+### Task 28: Verify `cortex-check-parity` passes post-migration [DONE]
 - **Files**: `bin/.parity-exceptions.md` (conditional — only if new gaps need exception entries); any skill/doc/hook/justfile/test under repo root needing a wiring-signal touch-up (enumerated at task-execution time from W003/W005 warning output).
 - **What**: Run `cortex-check-parity --audit` and confirm exit 0. Resolve any wiring-signal gaps surfaced — preferably by adding wiring, else by `bin/.parity-exceptions.md` entry with real rationale (literal-bans still apply).
 - **Depends on**: [27]
 - **Complexity**: simple
 - **Context**: Migration's CI gate. Files conditional, finalized at task-execution time.
 - **Verification**: `cortex-check-parity --audit` exits 0 — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit `c28968cc` + checkpoint allowlist entries for Task 25 docstring refs; agent resolved 2 W-callsites via real wiring — `skills/discovery/SKILL.md` rewritten to use `cortex-discovery` console-script — and allowlisted 69 under `wrapper-script-r14-pending` (13 wrappers' internal `python3 -m` calls, deferred to R14 ticket #208))
 
 ## Risks
 
