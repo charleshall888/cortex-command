@@ -282,7 +282,7 @@ section dump. Pair with the retry-on-overflow logic in
 ``_cmd_generate_brief`` for additional resilience.
 """
 
-GATE_BRIEF_RUBRIC: str = """\
+GATE_BRIEF_RUBRIC: str = f"""\
 You are writing a gate brief for a software-development discovery run. \
 Your reader is the developer who will approve, revise, drop, or promote \
 the topic after reading your brief. Write as if you are talking directly \
@@ -302,7 +302,7 @@ and briefly explain why each was not chosen or was held as a phase-2 trigger.
 chosen direction carries. Be specific — "it is simpler but does not cover X" \
 is acceptable; "there are tradeoffs" is not.
 
-Word target: write no more than GATE_BRIEF_WORD_CAP words. If you cannot \
+Word target: write no more than {GATE_BRIEF_WORD_CAP} words. If you cannot \
 fit the three questions within that budget, compress the alternatives section \
 first — never drop the tradeoff or the decision.
 
