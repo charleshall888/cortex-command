@@ -9,3 +9,5 @@
 {"ts":"2026-05-20T20:29:44Z","event":"batch_dispatch","feature":"installation-integrity-layer-bash-to-entry","batch":3,"tasks":[10,19,21,23]}
 {"ts":"2026-05-20T20:42:20Z","event":"batch_dispatch","feature":"installation-integrity-layer-bash-to-entry","batch":4,"tasks":[24,27]}
 {"ts":"2026-05-20T20:47:29Z","event":"batch_dispatch","feature":"installation-integrity-layer-bash-to-entry","batch":5,"tasks":[25,28]}
+{"ts":"2026-05-20T21:01:43Z","event":"phase_transition","feature":"installation-integrity-layer-bash-to-entry","tier":"simple","from":"implement","to":"complete"}
+{"ts":"2026-05-20T21:11:46Z","event":"feature_complete","feature":"installation-integrity-layer-bash-to-entry","tasks_total":29,"rework_cycles":0,"merge_anchor":"merge","notes":"58 failures + 28 errors in just test cascade from pre-existing SourceFileLoader/subprocess patterns deferred to #261"}

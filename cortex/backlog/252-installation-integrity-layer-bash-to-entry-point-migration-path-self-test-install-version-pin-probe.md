@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: e60729f1-9799-4a4b-ba3f-d004a8840da5
 title: "Installation integrity layer: bash-to-entry-point migration, PATH self-test, install-version pin probe"
-status: backlog
+status: complete
 priority: high
 type: feature
 created: 2026-05-20
@@ -10,6 +10,11 @@ updated: 2026-05-20
 parent: "251"
 tags: [harness, cli, plugin-distribution]
 discovery_source: cortex/research/harness-friction-triage/research.md
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/installation-integrity-layer-bash-to-entry/spec.md
+areas: [skills,hooks]
+session_id: null
 ---
 
 ## Role

@@ -4,7 +4,6 @@
 |-----|-------|--------|----------|------|------------|--------|------|
 | 135 | Shared git index race between parallel Claude sessions causes wrong files to land in commits | backlog | high | bug | — | — | — |
 | 251 | Harness friction triage: distribution, contracts, slugs, gates | backlog | high | epic | — | — | — |
-| 252 | Installation integrity layer: bash-to-entry-point migration, PATH self-test, install-version pin probe | refined | high | feature | — | 251 | ✓ |
 | 258 | Surface aggregated signal on daytime-pipeline sandbox/EPERM cascade failures | backlog | high | feature | — | — | — |
 | 260 | Revert TMPDIR worktree placement and restore .claude/worktrees/ default | refined | high | bug | — | — | ✓ |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
@@ -14,6 +13,7 @@
 | 253 | Skill-prose to CLI argparse contract lint | backlog | medium | feature | — | 251 | — |
 | 254 | Unified backlog/lifecycle slug resolver: extend to cortex-update-item consumer | backlog | medium | feature | — | 251 | — |
 | 259 | Reconcile SessionStart lifecycle-phase summary against on-disk truth | backlog | medium | chore | — | — | — |
+| 261 | Fix test cascade from #252 migration (SourceFileLoader + subprocess patterns) | backlog | medium | chore | — | 252 | — |
 | 156 | Make cortex-check-parity context-aware (skip tokens inside fenced code blocks) | deferred | low | feature | — | — | — |
 | 205 | Auto-derive lifecycle slug from prose-style invocation args | foo | low | enhancement | — | — | ✓ |
 | 247 | Offer consolidation clusters before R15 gate in discovery decompose | backlog | low | feature | — | — | — |
@@ -21,7 +21,6 @@
 
 ## Refined
 
-- **252** Installation integrity layer: bash-to-entry-point migration, PATH self-test, install-version pin probe
 - **260** Revert TMPDIR worktree placement and restore .claude/worktrees/ default
 
 ## Backlog
@@ -34,6 +33,7 @@
 - **253** Skill-prose to CLI argparse contract lint
 - **254** Unified backlog/lifecycle slug resolver: extend to cortex-update-item consumer
 - **259** Reconcile SessionStart lifecycle-phase summary against on-disk truth
+- **261** Fix test cascade from #252 migration (SourceFileLoader + subprocess patterns)
 - **247** Offer consolidation clusters before R15 gate in discovery decompose
 - **257** Make cortex-update-item accept --flag value syntax for consistency with sibling CLIs
 
