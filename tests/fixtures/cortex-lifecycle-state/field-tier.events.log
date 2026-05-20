@@ -1,0 +1,4 @@
+{"schema_version": 1, "ts": "2026-05-20T14:02:31Z", "event": "lifecycle_start", "feature": "feat-criticality-override", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"ts": "2026-05-20T14:24:49Z", "event": "complexity_override", "feature": "feat-criticality-override", "from": "simple", "to": "complex", "gate": "research_open_questions"}
+{"ts": "2026-05-20T14:25:00Z", "event": "criticality_override", "feature": "feat-criticality-override", "from": "medium", "to": "high"}
+{"ts": "2026-05-20T15:00:00Z", "event": "spec_approved", "feature": "feat-criticality-override"}

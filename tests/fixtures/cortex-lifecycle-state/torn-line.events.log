@@ -1,0 +1,3 @@
+{"schema_version": 1, "ts": "2026-05-19T10:00:00Z", "event": "lifecycle_start", "feature": "feat-torn-line", "tier": "complex", "criticality": "high", "entry_point": "lifecycle"}
+{"ts": "2026-05-19T10:05:00Z", "event": "phase_transition", "feature": "feat-torn-line", "from": "research",
+{"ts": "2026-05-19T10:10:00Z", "event": "phase_transition", "feature": "feat-torn-line", "from": "specify", "to": "plan"}

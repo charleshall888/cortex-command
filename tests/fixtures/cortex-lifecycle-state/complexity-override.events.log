@@ -1,0 +1,3 @@
+{"schema_version": 1, "ts": "2026-05-19T19:16:48Z", "event": "lifecycle_start", "feature": "feat-complexity-override", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"ts": "2026-05-19T19:31:19Z", "event": "complexity_override", "feature": "feat-complexity-override", "from": "simple", "to": "complex", "gate": "research_open_questions"}
+{"ts": "2026-05-19T19:55:00Z", "event": "spec_approved", "feature": "feat-complexity-override"}

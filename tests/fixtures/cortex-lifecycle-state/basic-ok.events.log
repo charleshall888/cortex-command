@@ -1,0 +1,4 @@
+{"schema_version": 1, "ts": "2026-05-19T19:16:48Z", "event": "lifecycle_start", "feature": "feat-basic-ok", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"ts": "2026-05-19T19:20:00Z", "event": "phase_transition", "feature": "feat-basic-ok", "from": "clarify", "to": "research"}
+{"ts": "2026-05-19T19:31:19Z", "event": "phase_transition", "feature": "feat-basic-ok", "from": "research", "to": "specify"}
+{"ts": "2026-05-19T19:55:00Z", "event": "spec_approved", "feature": "feat-basic-ok"}
