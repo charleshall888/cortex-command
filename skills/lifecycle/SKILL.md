@@ -174,6 +174,10 @@ Proceed automatically — do not ask the user for confirmation at phase boundari
 - **Blockers**: Active blockers, escalations, or deferred questions (or "None")
 - **Next**: Next phase name and what it will do
 
+**A phase boundary is a mechanical transition, not a synchronization point.** The boundary fires when the gate condition above is satisfied (e.g., `plan.md` exists with all tasks `[x]`), not when the user gives input — so there is nothing to "wait for" once the gate has fired. If an earlier user instruction in the session asked you to "report" or "summarize" (at the end, between phases, between tasks), that modulates text-emission cadence — emit the transition summary as plain text and continue. It is not authorization to call `AskUserQuestion`, which is a syntactically different operation (yielding control to the user) rather than a text emission. When a user genuinely wants synchronization at a boundary, they will state it explicitly ("pause after Implement and wait for me before Review"); without such an explicit request, the auto-advance fires.
+
+`AskUserQuestion` at a phase boundary is authorized only by the Kept user pauses inventory below. The parity test `tests/test_lifecycle_kept_pauses_parity.py` keeps the inventory and the actual call sites in sync, catching file-level regressions — but it cannot catch runtime deviations. This paragraph is the runtime backstop.
+
 ### Per-phase completion rule
 
 "Completing a phase artifact" is defined per-phase. A phase is complete (and auto-advance fires) only when its gate condition is satisfied:

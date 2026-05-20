@@ -330,7 +330,7 @@ Append a `phase_transition` event to `cortex/lifecycle/{feature}/events.log`:
 ```
 The `"to"` field is determined by the gating matrix above.
 
-**Proceed automatically** — do not ask the user for confirmation before entering the next phase. Announce the transition briefly and continue.
+**Proceed automatically** — do not ask the user for confirmation before entering the next phase. The transition fires on the gate conditions (every task `[x]`, then the criticality matrix above), not on user input. Announce the transition briefly as plain text and continue. The Implement → Review/Complete boundary is not in the Kept user pauses inventory; see SKILL.md §Phase Transition for the umbrella reasoning.
 
 ## Constraints
 
