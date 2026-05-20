@@ -114,7 +114,7 @@ Promote 13 skill-prose-referenced `bin/cortex-*` scripts to wheel-tier Python en
 - **Verification**: `python3 -m pytest tests/test_cortex_log_invocation_parity.py` — pass if exit 0, all tests pass.
 - **Status**: [x] done (commit `528e36b2`, 16/16 tests pass; named tolerances applied to JSONL side-effect rather than empty streams)
 
-### Task 7: Add `tests/test_phase1_sibling_rewrite_smoke.py` covering both shebang classes
+### Task 7: Add `tests/test_phase1_sibling_rewrite_smoke.py` covering both shebang classes [DONE]
 - **Files**: `tests/test_phase1_sibling_rewrite_smoke.py` (new)
 - **What**: For each `bin/cortex-*` script rewritten in tasks 4a OR 4b, invoke it with a trivial argv (`--help` if argparse accepts it, else `--cortex-smoke-test-flag` — a flag the script's own argparse will reject with nonzero exit). Assert that:
   - No spurious `cortex-log-invocation failed:` warning appears on stderr under normal conditions (covers both bash idiom and Python idiom — both emit the same literal substring).
@@ -125,7 +125,7 @@ Promote 13 skill-prose-referenced `bin/cortex-*` scripts to wheel-tier Python en
 - **Complexity**: simple
 - **Context**: The literal stderr substring `cortex-log-invocation failed:` is identical across the bash and Python rewrite idioms by design (Task 4a's `echo` and Task 4b's `print(f"...")` both emit the same prefix), so one assertion covers both shebang classes. The `SyntaxError` check is the defensive verification against the critical-review-flagged hazard of accidentally inserting bash syntax into a Python script.
 - **Verification**: `python3 -m pytest tests/test_phase1_sibling_rewrite_smoke.py` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit `4cd1b39c`, 8 pass + 3 PEP 723 tests gated `@pytest.mark.slow`; `CORTEX_INVOCATION_LOG=/dev/null` env var the spec suggested isn't actually wired — agent used PATH isolation + HOME redirect as equivalent)
 
 ### Task 8: Capture `cortex-resolve-backlog-item` golden-replay fixtures pre-deletion [DONE]
 - **Files**: `tests/fixtures/cortex-resolve-backlog-item/` (new directory, ≥3 quintuples), `tests/fixtures/cortex-resolve-backlog-item/README.md` (new)
@@ -136,14 +136,14 @@ Promote 13 skill-prose-referenced `bin/cortex-*` scripts to wheel-tier Python en
 - **Verification**: `ls tests/fixtures/cortex-resolve-backlog-item/ | grep -cE '\.(stdin|argv|stdout|stderr|exitcode)$'` ≥ 12 — pass if count ≥ 12. `grep -c -E 'jq.*--version|LC_ALL=C|TZ=UTC' tests/fixtures/cortex-resolve-backlog-item/README.md` ≥ 3 — pass if count ≥ 3.
 - **Status**: [x] done (commit `892b325a`, 15 quintuple files; covers exit 0, 2, 3)
 
-### Task 9: Promote `cortex-resolve-backlog-item` to wheel entry point + remove stale install_guard comment
+### Task 9: Promote `cortex-resolve-backlog-item` to wheel entry point + remove stale install_guard comment [DONE]
 - **Files**: `cortex_command/backlog/resolve_item.py` (replaces Task 1's stub), `bin/cortex-resolve-backlog-item` (replace with wrapper using Task 3 template), `tests/test_cortex_resolve_backlog_item_parity.py` (new)
 - **What**: Port the PEP 723 logic (417 lines) into `cortex_command/backlog/resolve_item.py` exposing `main(argv) -> int`. Preserve the five-value exit-code contract (0/2/3/64/70). The `[project.scripts]` entry was pre-allocated in Task 1 — this task replaces the stub. Replace `bin/cortex-resolve-backlog-item` with the dual-channel wrapper (Task 3 template, exit-2 message substituting `cortex-resolve-backlog-item` for the binstub name). Author the parity test consuming Task 8 fixtures. The replacement wrapper drops the stale install_guard comment block (former lines 31–36 referencing `cortex_command/__init__.py:13-15`, which no longer exist).
 - **Depends on**: [3, 5, 8]
 - **Complexity**: complex
 - **Context**: Reuse `cortex_command/common.py`'s `slugify()` and frontmatter helpers. Use `json.dumps(obj, ensure_ascii=False, separators=(",", ":"))` per Task 1's prescription. The wrapper's exit-2 message is the user-facing missing-entry-point remediation channel.
 - **Verification**: `python3 -c "import cortex_command.backlog.resolve_item; cortex_command.backlog.resolve_item.main"` exits 0. `grep -c '__init__.py:13-15' bin/cortex-resolve-backlog-item cortex_command/ 2>/dev/null` = 0. `python3 -m pytest tests/test_cortex_resolve_backlog_item_parity.py` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit `1f4852a8`, 12 tests pass; wrapper includes cortex-log-invocation shim line — pre-commit hook enforces it on all bin/cortex-* except log-invocation itself)
 
 ### Task 10: Remove stale install_guard comment cross-references in any other locations
 - **Files**: `cortex_command/common.py` (conditional — only if the stale comment crops up elsewhere), any other file matching `grep -rlE '__init__.py:13-15' .` post-Task-9
@@ -154,77 +154,77 @@ Promote 13 skill-prose-referenced `bin/cortex-*` scripts to wheel-tier Python en
 - **Verification**: `grep -rc '__init__.py:13-15' bin/ cortex_command/ 2>/dev/null | grep -v ':0$' | wc -l` = 0 — pass if count = 0.
 - **Status**: [ ] pending
 
-### Task 11: Promote `cortex-auto-bump-version`
+### Task 11: Promote `cortex-auto-bump-version` [DONE]
 - **Files**: `cortex_command/auto_bump_version.py` (replaces Task 1's stub), `bin/cortex-auto-bump-version`, `tests/fixtures/cortex-auto-bump-version/` (new), `tests/test_cortex_auto_bump_version_parity.py` (new)
 - **What**: Port `bin/cortex-auto-bump-version` (220 lines, `#!/usr/bin/env python3`) into `cortex_command/auto_bump_version.py` exposing `main(argv) -> int`. Replace `bin/` with wrapper (Task 3 template). Capture ≥3 fixtures pre-deletion + README. Author parity test.
 - **Depends on**: [3, 5]
 - **Complexity**: simple
 - **Context**: Already Python; promotion is a file-move with `main()` extraction. Module at `cortex_command/` root (precedent: `cortex_command/discovery.py`). Pre-deletion capture against a synthetic pyproject.toml in `tmp_path`. JSON-emission uses Task 1's `ensure_ascii=False` prescription.
 - **Verification**: `python3 -c "import cortex_command.auto_bump_version"` exits 0. `python3 -m pytest tests/test_cortex_auto_bump_version_parity.py` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit `6cd68ba5`, 18 parity tests pass + 20 existing tests still pass)
 
-### Task 12: Promote `cortex-check-parity`
+### Task 12: Promote `cortex-check-parity` [DONE]
 - **Files**: `cortex_command/parity_check.py` (replaces Task 1's stub), `bin/cortex-check-parity`, `tests/fixtures/cortex-check-parity/` (new), `tests/test_cortex_check_parity_parity.py` (new)
 - **What**: Port `bin/cortex-check-parity` (1792 lines, `#!/usr/bin/env python3`) into `cortex_command/parity_check.py`. Replace `bin/` with wrapper. Capture ≥3 fixtures pre-deletion + README. Author parity test.
 - **Depends on**: [3, 5]
 - **Complexity**: complex
 - **Context**: **Largest task in Phase 3** — 1792-line port. Realistic effort budget: 60–90 min, not the typical 5–15 min target. The script is already Python; the migration is structurally a file-move with `main()` extraction. The script consumes `bin/.parity-exceptions.md`; the parsed-exceptions logic moves with the script (Task 24 reuses this parser). Fixture cases: (a) all-green state, (b) W003 orphan-bin, (c) W005 wired-but-allowlisted state.
 - **Verification**: `python3 -m cortex_command.parity_check --help` exits 0. `python3 -m pytest tests/test_cortex_check_parity_parity.py` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit `0970416a`, 12 parity tests pass; 1796-line port; agent's context exhausted after commit while composing exit report)
 
-### Task 13: Promote `cortex-check-prescriptive-prose`
+### Task 13: Promote `cortex-check-prescriptive-prose` [DONE]
 - **Files**: `cortex_command/lint/__init__.py` (new), `cortex_command/lint/prescriptive_prose.py` (replaces Task 1's stub), `bin/cortex-check-prescriptive-prose`, `tests/fixtures/cortex-check-prescriptive-prose/` (new), `tests/test_cortex_check_prescriptive_prose_parity.py` (new)
 - **What**: Port `bin/cortex-check-prescriptive-prose` (409 lines, `#!/usr/bin/env python3`) into `cortex_command/lint/prescriptive_prose.py`. Create `cortex_command/lint/__init__.py`. Replace `bin/` with wrapper. Capture ≥3 fixtures + README. Author parity test.
 - **Depends on**: [3, 5]
 - **Complexity**: simple
 - **Context**: New `lint/` subpackage; `__init__.py` is docstring-only. Fixture cases: (a) clean input, (b) input with prescriptive-prose hits, (c) input with `<!-- prescriptive-prose-allow -->` carve-out.
 - **Verification**: `python3 -c "import cortex_command.lint.prescriptive_prose"` exits 0. `python3 -m pytest tests/test_cortex_check_prescriptive_prose_parity.py` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit `ffa3f8d4`, 9 tests pass; spec carve-out fixture `<!-- prescriptive-prose-allow -->` doesn't match an actual feature — agent substituted `with_fenced_block` case)
 
-### Task 14: Promote `cortex-commit-preflight`
+### Task 14: Promote `cortex-commit-preflight` [DONE]
 - **Files**: `cortex_command/commit/__init__.py` (new), `cortex_command/commit/preflight.py` (replaces stub), `bin/cortex-commit-preflight`, `tests/fixtures/cortex-commit-preflight/` (new), `tests/test_cortex_commit_preflight_parity.py` (new)
 - **What**: Port `bin/cortex-commit-preflight` (150 lines, `#!/usr/bin/env python3`) into `cortex_command/commit/preflight.py`. Create `cortex_command/commit/__init__.py`. Replace `bin/` with wrapper. Capture ≥3 fixtures + README. Author parity test.
 - **Depends on**: [3, 5]
 - **Complexity**: simple
 - **Context**: New `commit/` subpackage with empty `__init__.py`. Fixture cases: (a) staged tree valid, (b) parity-check violation, (c) banned-pattern detected.
 - **Verification**: `python3 -c "import cortex_command.commit.preflight"` exits 0. `python3 -m pytest tests/test_cortex_commit_preflight_parity.py` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit `290f0edf`, 10 tests pass; spec fixture cases didn't match script's actual exit branches — agent substituted valid_git_repo / empty_repo / not_in_repo; latent id(tmp_path) aliasing hazard in Task 6's pattern flagged but not patched there)
 
-### Task 15: Promote `cortex-complexity-escalator`
+### Task 15: Promote `cortex-complexity-escalator` [DONE]
 - **Files**: `cortex_command/lifecycle/__init__.py` (new), `cortex_command/lifecycle/complexity_escalator.py` (replaces stub), `bin/cortex-complexity-escalator`, `tests/fixtures/cortex-complexity-escalator/` (new), `tests/test_cortex_complexity_escalator_parity.py` (new)
 - **What**: Port `bin/cortex-complexity-escalator` (344 lines, PEP 723) into `cortex_command/lifecycle/complexity_escalator.py`. Create `cortex_command/lifecycle/__init__.py`. Replace `bin/` with wrapper. Capture ≥3 fixtures + README. Author parity test. Move PEP 723 inline deps into `pyproject.toml [project] dependencies` if any are not already declared.
 - **Depends on**: [3, 5]
 - **Complexity**: complex
 - **Context**: Emits events to `events.log`; registry entry in `bin/.events-registry.md` remains pointing at same emitter name. Fixture cases: (a) escalation trigger met → `complexity_override` event emitted, (b) trigger not met → no emission, (c) ambiguous-tier path.
 - **Verification**: `python3 -c "import cortex_command.lifecycle.complexity_escalator"` exits 0. `python3 -m pytest tests/test_cortex_complexity_escalator_parity.py` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit `5f0d16eb`, 9 parity + 35 existing tests pass; agent also updated `tests/test_complexity_escalator.py` to import from module — repair for downstream regression from bin replacement)
 
-### Task 16: Promote `cortex-load-parent-epic`
+### Task 16: Promote `cortex-load-parent-epic` [DONE]
 - **Files**: `cortex_command/backlog/load_parent_epic.py` (replaces stub), `bin/cortex-load-parent-epic`, `tests/fixtures/cortex-load-parent-epic/` (new), `tests/test_cortex_load_parent_epic_parity.py` (new)
 - **What**: Port `bin/cortex-load-parent-epic` (473 lines, PEP 723) into `cortex_command/backlog/load_parent_epic.py`. Replace `bin/` with wrapper. Capture ≥3 fixtures + README. Author parity test. Move PEP 723 inline deps if needed.
 - **Depends on**: [3, 5]
 - **Complexity**: complex
 - **Context**: Reuses `cortex_command/backlog/build_epic_map.py` helpers where applicable. Fixture cases: (a) valid parent → structured JSON, (b) no parent → silent exit 0, (c) broken parent → nonzero with stderr diagnostic.
 - **Verification**: `python3 -c "import cortex_command.backlog.load_parent_epic"` exits 0. `python3 -m pytest tests/test_cortex_load_parent_epic_parity.py` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit `808c4772`, 12 tests pass; PEP 723 inline-dep `pyyaml>=6.0` migrated to pyproject.toml + uv.lock)
 
-### Task 17: Promote `cortex-backlog-ready`
+### Task 17: Promote `cortex-backlog-ready` [DONE]
 - **Files**: `cortex_command/backlog/ready.py` (replaces stub), `bin/cortex-backlog-ready`, `tests/fixtures/cortex-backlog-ready/` (new), `tests/test_cortex_backlog_ready_parity.py` (new)
 - **What**: Port `bin/cortex-backlog-ready` (17 lines bash) into `cortex_command/backlog/ready.py`. Replace `bin/` with wrapper. Capture ≥3 fixtures against frozen backlog snapshot. Author parity test.
 - **Depends on**: [3, 5]
 - **Complexity**: simple
 - **Context**: Short bash; Python rewrite reads `cortex/backlog/index.json` (or scans `cortex/backlog/*.md` if that's what bash does — inspect at task time). Capture against synthetic backlog snapshot committed under fixtures to avoid live-state drift. One of the four high-risk parity tests per requirement 7.
 - **Verification**: `python3 -c "import cortex_command.backlog.ready"` exits 0. `python3 -m pytest tests/test_cortex_backlog_ready_parity.py` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit `c065c73b`, 9 tests pass; added 2 entries to `bin/.path-hardcoding-allowlist.md` for user-facing JSON error literals containing `"backlog/"`)
 
-### Task 18: Promote `cortex-git-sync-rebase`
+### Task 18: Promote `cortex-git-sync-rebase` [DONE]
 - **Files**: `cortex_command/git/__init__.py` (new), `cortex_command/git/sync_rebase.py` (replaces stub), `bin/cortex-git-sync-rebase`, `tests/fixtures/cortex-git-sync-rebase/` (new), `tests/test_cortex_git_sync_rebase_parity.py` (new)
 - **What**: Port `bin/cortex-git-sync-rebase` (204 lines bash) into `cortex_command/git/sync_rebase.py`. Create `cortex_command/git/__init__.py`. Replace `bin/` with wrapper. Capture ≥3 fixtures + README. Author parity test.
 - **Depends on**: [3, 5]
 - **Complexity**: complex
 - **Context**: New `git/` subpackage. Retain `subprocess` invocations for git plumbing. Fixture cases: (a) clean rebase, (b) merge-conflict surfaced, (c) no-op. Capture against synthetic git repos in `tmp_path`.
 - **Verification**: `python3 -c "import cortex_command.git.sync_rebase"` exits 0. `python3 -m pytest tests/test_cortex_git_sync_rebase_parity.py` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit `132ee3e3`; 9 parity tests; checkpoint-time fix added `GIT_CONFIG_*` env overrides to disable commit.gpgsign in test subprocess scope — original agent's tests passed in worktree env, failed on main due to global gpgsign=true)
 
 ### Task 19: Promote `cortex-lifecycle-counters`
 - **Files**: `cortex_command/lifecycle/counters.py` (replaces stub), `bin/cortex-lifecycle-counters`, `tests/fixtures/cortex-lifecycle-counters/` (new), `tests/test_cortex_lifecycle_counters_parity.py` (new)
@@ -253,14 +253,14 @@ Promote 13 skill-prose-referenced `bin/cortex-*` scripts to wheel-tier Python en
 - **Verification**: `python3 -c "import cortex_command.lifecycle.state_cli"` exits 0. `python3 -m pytest tests/test_cortex_lifecycle_state_parity.py` exits 0.
 - **Status**: [ ] pending
 
-### Task 22: Promote `cortex-morning-review-gc-demo-worktrees`
+### Task 22: Promote `cortex-morning-review-gc-demo-worktrees` [DONE]
 - **Files**: `cortex_command/overnight/gc_demo_worktrees.py` (replaces stub), `bin/cortex-morning-review-gc-demo-worktrees`, `tests/fixtures/cortex-morning-review-gc-demo-worktrees/` (new), `tests/test_cortex_morning_review_gc_demo_worktrees_parity.py` (new)
 - **What**: Port `bin/cortex-morning-review-gc-demo-worktrees` (81 lines bash) into `cortex_command/overnight/gc_demo_worktrees.py`. Replace `bin/` with wrapper. Capture ≥3 fixtures + README. Author parity test.
 - **Depends on**: [3, 5]
 - **Complexity**: simple
 - **Context**: `overnight/` subpackage already exists. GC stale demo worktrees from `$TMPDIR/cortex-worktrees/`. Fixtures against synthetic state in `tmp_path`. One of four high-risk parity tests.
 - **Verification**: `python3 -c "import cortex_command.overnight.gc_demo_worktrees"` exits 0. `python3 -m pytest tests/test_cortex_morning_review_gc_demo_worktrees_parity.py` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit `a2bb8167`, 12 tests pass; uses `<WT_PATH>` placeholder substitution for path-dependent stderr — `git worktree list --porcelain` returns resolved paths that differ from `tmp_path`)
 
 ### Task 23: Create `cortex_command/doctor/path_self_test.py` module
 - **Files**: `cortex_command/doctor/__init__.py` (new), `cortex_command/doctor/path_self_test.py` (new)

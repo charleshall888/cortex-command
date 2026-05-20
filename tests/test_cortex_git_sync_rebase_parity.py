@@ -89,6 +89,9 @@ def _git(args: list[str], cwd: Path, env: Optional[dict] = None) -> subprocess.C
     base_env["GIT_AUTHOR_EMAIL"] = "test@example.com"
     base_env["GIT_COMMITTER_NAME"] = "Test"
     base_env["GIT_COMMITTER_EMAIL"] = "test@example.com"
+    base_env["GIT_CONFIG_COUNT"] = "1"
+    base_env["GIT_CONFIG_KEY_0"] = "commit.gpgsign"
+    base_env["GIT_CONFIG_VALUE_0"] = "false"
     if env:
         base_env.update(env)
     return subprocess.run(
@@ -259,10 +262,22 @@ def _invoke_case(case: str, tmp_path: Path) -> _CapturedResult:
     old_stderr = sys.stderr
     buf = io.StringIO()
     sys.stderr = buf
+    saved_env = {
+        k: os.environ.get(k)
+        for k in ("GIT_CONFIG_COUNT", "GIT_CONFIG_KEY_0", "GIT_CONFIG_VALUE_0")
+    }
+    os.environ["GIT_CONFIG_COUNT"] = "1"
+    os.environ["GIT_CONFIG_KEY_0"] = "commit.gpgsign"
+    os.environ["GIT_CONFIG_VALUE_0"] = "false"
     try:
         returncode = sync_rebase(repo_root=local_repo, allowlist_file=allowlist_file)
     finally:
         sys.stderr = old_stderr
+        for k, v in saved_env.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
 
     return _CapturedResult(returncode=returncode, stderr_text=buf.getvalue())
 
