@@ -52,7 +52,7 @@ Agentic workflow toolkit for AI-assisted software development on Claude Code: sk
 
 ### In Scope
 
-- AI workflow orchestration (skills, lifecycle, pipeline). Discovery and backlog are documented inline (no area docs): `skills/discovery/SKILL.md`, `cortex/backlog/index.md`.
+- AI workflow orchestration (skills, lifecycle, pipeline). Discovery and backlog are documented inline (no area docs): `skills/discovery/SKILL.md`, `cortex/backlog/index.md`. Ticket body authoring is enforced via `skills/backlog-author/` (the shared sub-skill) and validated at pre-commit by `bin/cortex-check-prescriptive-prose` (LEX-1 scanner, covering `## Why`, `## Role`, `## Integration`, `## Edges`).
 - Overnight execution: framework, sessions, scheduled launch, morning report
 - Dashboard (~1800 LOC FastAPI), conflict resolution pipeline (~2500 LOC), remote access (Tailscale/mosh/tmux/Cloudflare Tunnel)
 - Observability (statusline, notifications, metrics, cost); global agent config

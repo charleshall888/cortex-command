@@ -10,3 +10,4 @@
 {"ts": "2026-05-19T22:00:00Z", "event": "batch_dispatch", "feature": "add-backlog-create-skill", "batch": 0, "tasks": [1, 2, 5, 6]}
 {"ts": "2026-05-19T22:30:00Z", "event": "batch_dispatch", "feature": "add-backlog-create-skill", "batch": 1, "tasks": [3, 4, 7, 8]}
 {"ts": "2026-05-19T23:55:00Z", "event": "phase_transition", "feature": "add-backlog-create-skill", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-05-20T00:30:00Z", "event": "review_verdict", "feature": "add-backlog-create-skill", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
