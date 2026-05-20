@@ -3400,23 +3400,17 @@
     filter: brightness(1); transition: filter 2s ease;
   }
   /* SVG node label fills in carbon: stays cream on every dark SVG canvas */
-  html[data-stain="carbon"] .pipe-stage svg text.node-label,
-  html[data-stain="carbon"] .pg-canvas svg text.node-label { fill: var(--ink); }
-  html[data-stain="carbon"] .pipe-stage svg text.node-sub,
-  html[data-stain="carbon"] .pg-canvas svg text.node-sub { fill: var(--ink-2); }
+  html[data-stain="carbon"] .pipe-stage svg text.node-label { fill: var(--ink); }
+  html[data-stain="carbon"] .pipe-stage svg text.node-sub { fill: var(--ink-2); }
   html[data-stain="carbon"] .pipe-stage.night svg text.node-label { fill: var(--ink); }
   html[data-stain="carbon"] .pipe-stage.night svg text.node-sub { fill: var(--ink-2); opacity: 1; }
-  /* paint-order stroke for legibility against grid (both pipeline + playground) */
-  html[data-stain="carbon"] .pipe-stage svg text,
-  html[data-stain="carbon"] .pg-canvas svg text {
+  /* paint-order stroke for legibility against grid */
+  html[data-stain="carbon"] .pipe-stage svg text {
     paint-order: stroke fill;
     stroke: #07070a;
     stroke-width: 3px;
     stroke-linejoin: round;
   }
-  /* legibility: paint a dark stroke behind every pipeline label so the grid
-     never bleeds through the glyphs. paint-order ensures stroke draws first. */
-  /* (consolidated rule lives above with .pg-canvas variant) */
   /* rails clearer in carbon — base ink stroke at 35% so drawn rails are actually visible */
   html[data-stain="carbon"] .pipe-stage .rail { stroke: rgba(236, 230, 211, 0.35); opacity: 0.7; stroke-width: 1.6; }
   html[data-stain="carbon"] .pipe-stage .rail.drawn { stroke: rgba(236, 230, 211, 0.45); opacity: 1; }
@@ -3853,68 +3847,235 @@
     background: var(--parchment-2); padding: 1px 5px;
     border: 1px solid var(--rule-soft); border-radius: 2px;
   }
-  .playground-section .pg-body {
-    display: grid; grid-template-columns: 280px 1fr; gap: 36px; align-items: start;
+  /* ═════════════════════════════════════════════════════════════════
+     COMPARISON STRIP — two cards (simple vs load-bearing) showing the
+     spectrum in real numbers (gates · tokens · wall clock).
+     ═════════════════════════════════════════════════════════════════ */
+  .ax-compare {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
+    margin: 0 0 28px 0;
   }
-  @media (max-width: 900px) { .playground-section .pg-body { grid-template-columns: 1fr; } }
-  .playground-section .pg-controls .label {
-    font-family: var(--mono); font-size: 10px; text-transform: uppercase;
-    letter-spacing: 0.14em; color: var(--ink-faint); margin-bottom: 8px;
+  @media (max-width: 760px) { .ax-compare { grid-template-columns: 1fr; } }
+  .ax-compare-card {
+    background: var(--parchment-2);
+    border: 1px solid var(--rule-soft);
+    padding: 18px 22px;
+    display: flex; flex-direction: column; gap: 8px;
+    position: relative;
   }
-  .playground {
-    margin-top: 56px;
-    padding: 32px 0 8px;
-    border-top: 1px solid var(--rule-soft);
+  .ax-compare-card.simple   { box-shadow: inset 3px 0 0 var(--blue); }
+  .ax-compare-card.critical { box-shadow: inset 3px 0 0 var(--ochre); }
+  .ax-compare-h {
+    font-family: var(--mono); font-size: 9.5px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--ink-faint);
   }
-  .playground summary {
-    cursor: pointer;
-    list-style: none;
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--ink-mute);
-    letter-spacing: 0.04em;
-    padding: 4px 0;
-    border-bottom: 1px solid transparent;
-    width: fit-content;
-    transition: color 0.2s ease, border-color 0.2s ease;
+  .ax-compare-card.simple   .ax-compare-h { color: var(--blue); }
+  .ax-compare-card.critical .ax-compare-h { color: var(--ochre); }
+  .ax-compare-name {
+    font-family: var(--serif); font-weight: 350;
+    font-size: 22px; letter-spacing: -0.012em;
+    color: var(--ink); line-height: 1.15;
   }
-  .playground summary::-webkit-details-marker { display: none; }
-  .playground summary:hover { color: var(--ochre); border-bottom-color: var(--ochre); }
-  .playground[open] summary { color: var(--ink); }
-  .playground .pg-body { padding: 22px 0 8px; display: grid; grid-template-columns: 280px 1fr; gap: 36px; align-items: start; }
-  @media (max-width: 900px) { .playground .pg-body { grid-template-columns: 1fr; } }
-  .playground .pg-controls .label {
-    font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-faint); margin-bottom: 8px;
+  .ax-compare-stats {
+    display: flex; gap: 22px; flex-wrap: wrap; align-items: baseline;
+    padding: 4px 0 6px 0;
+    border-bottom: 1px dashed var(--rule-soft);
   }
-  .playground .pg-controls h4 {
-    font-family: var(--serif); font-weight: 400; font-size: 22px; margin: 0 0 10px 0; letter-spacing: -0.01em;
+  .ax-compare-stat { display: inline-flex; flex-direction: column; gap: 1px; }
+  .ax-compare-stat-v {
+    font-family: var(--mono); font-size: 18px; font-weight: 500;
+    color: var(--ink); letter-spacing: -0.005em;
+    font-variant-numeric: tabular-nums;
   }
-  .pg-slider { width: 100%; -webkit-appearance: none; appearance: none; height: 2px; background: var(--rule-soft); outline: none; margin: 18px 0 8px; }
-  .pg-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--blue); border: 1px solid var(--blue); cursor: grab; }
-  .pg-slider::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--blue); border: 1px solid var(--blue); cursor: grab; }
-  .pg-slider:focus-visible {
+  .ax-compare-card.simple   .ax-compare-stat-v { color: var(--blue); }
+  .ax-compare-card.critical .ax-compare-stat-v { color: var(--ochre); }
+  .ax-compare-stat-k {
+    font-family: var(--mono); font-size: 9px;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .ax-compare-extras {
+    font-family: var(--serif); font-style: italic;
+    font-size: 13px; line-height: 1.45;
+    color: var(--ink-mute); max-width: 44ch;
+  }
+
+  /* ═════════════════════════════════════════════════════════════════
+     ATLAS BODY — bench (active lifecycle) over two escalators
+     ═════════════════════════════════════════════════════════════════ */
+  .ax-body { display: flex; flex-direction: column; gap: 18px; }
+
+  /* ─── BENCH ────────────────────────────────────────────────────── */
+  .ax-bench {
+    background: var(--parchment-2);
+    border: 1px solid var(--rule-soft);
+    padding: 14px 22px;
+  }
+  .ax-bench-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 8px; margin-bottom: 4px;
+    border-bottom: 1px dashed var(--rule-soft);
+    font-family: var(--mono); font-size: 10.5px;
+    color: var(--ink-faint);
+    letter-spacing: 0.14em; text-transform: uppercase;
+  }
+  .ax-bench-head-l { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; }
+  .ax-bench-tag { color: var(--ochre); }
+  .ax-bench-config { display: flex; align-items: baseline; gap: 10px; }
+  .ax-config-axis { color: var(--ink-faint); }
+  .ax-config-val  { color: var(--blue); letter-spacing: 0.06em; }
+  .ax-config-sep  { color: var(--ink-faint); opacity: 0.5; }
+  .ax-bench-summary {
+    font-family: var(--serif); font-style: italic; font-size: 13px;
+    color: var(--ink-mute); letter-spacing: 0;
+    text-transform: none; text-align: right;
+  }
+  .ax-bench-svg { display: block; width: 100%; height: auto; max-height: 280px; }
+
+  /* ─── ESCALATORS ───────────────────────────────────────────────── */
+  .ax-controls {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
+  }
+  @media (max-width: 760px) { .ax-controls { grid-template-columns: 1fr; } }
+
+  .ax-esc {
+    background: var(--parchment-2);
+    border: 1px solid var(--rule-soft);
+    padding: 14px 22px 16px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .ax-esc-head {
+    display: flex; align-items: baseline; gap: 12px;
+    font-family: var(--mono); font-size: 10.5px;
+    color: var(--ink-faint);
+    letter-spacing: 0.14em; text-transform: uppercase;
+  }
+  .ax-esc-glyph {
+    width: 20px; height: 20px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--parchment-3);
+    border: 1px solid var(--rule-soft);
+    color: var(--ochre);
+    font-size: 12px; flex-shrink: 0;
+  }
+  .ax-esc-axis { color: var(--ink); flex: 1; }
+  .ax-esc-val {
+    font-family: var(--serif); font-style: italic; font-size: 13px;
+    color: var(--blue); letter-spacing: 0; text-transform: none;
+  }
+
+  .ax-esc-rail {
+    position: relative;
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    height: 64px; align-items: stretch;
+  }
+  .ax-esc-cable {
+    position: absolute;
+    left: 16px; right: 16px; top: 16px;
+    height: 2px; z-index: 0;
+  }
+  .ax-esc-cable-bg {
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(
+      to right, var(--rule-soft) 0 4px, transparent 4px 8px);
+    opacity: 0.7;
+  }
+  .ax-esc-cable-fill {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: linear-gradient(to right, var(--blue), var(--blue-soft));
+    box-shadow: 0 0 6px rgba(138, 166, 227, 0.6);
+    transition: width 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  }
+
+  .ax-esc-rung {
+    appearance: none; background: transparent; border: 0; padding: 0;
+    font: inherit; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    position: relative; z-index: 1;
+    color: var(--ink-faint);
+    transition: color 0.15s;
+  }
+  .ax-esc-rung:hover { color: var(--ink); }
+  .ax-esc-rung.on   { color: var(--ink); }
+  .ax-esc-rung.cur  { color: var(--blue); }
+  .ax-esc-rung:focus-visible {
     outline: 2px solid var(--blue);
     outline-offset: 4px;
     border-radius: 2px;
   }
-  .pg-ticks { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10px; color: var(--ink-faint); letter-spacing: 0.04em; text-transform: uppercase; }
-  .pg-ticks span.cur { color: var(--blue); }
-  .pg-readout { font-family: var(--serif); font-size: 14px; color: var(--ink-mute); margin-top: 16px; line-height: 1.5; max-width: 38ch; font-style: italic; }
 
-  .pg-canvas { position: relative; height: 240px; background: var(--parchment-2); border: 1px solid var(--rule-soft); }
-  .pg-canvas::before {
-    content: "";
-    position: absolute; inset: 0;
-    background-image:
-      linear-gradient(to right, var(--grid-tint) 1px, transparent 1px),
-      linear-gradient(to bottom, var(--grid-tint) 1px, transparent 1px);
-    background-size: 14px 14px; pointer-events: none;
+  .ax-esc-orb {
+    position: relative;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--parchment-3);
+    border: 1.4px solid var(--ink-faint);
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: background 0.18s, border-color 0.18s, transform 0.18s, box-shadow 0.18s;
   }
-  .pg-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .pg-svg text.node-sub { font-size: 10px; }
-  .pg-svg text.pg-branch-label { font-style: italic; fill: var(--blue); }
-  html[data-stain="carbon"] .pg-svg text.pg-branch-label { fill: var(--blue-soft); }
-  .pg-svg .pg-rail.dim { opacity: 0.6; }
+  .ax-esc-orb.lvl-1 { width: 20px; height: 20px; margin: -2px 0; }
+  .ax-esc-orb.lvl-2 { width: 24px; height: 24px; margin: -4px 0; }
+  .ax-esc-orb-inner {
+    width: 60%; height: 60%; border-radius: 50%;
+    background: transparent;
+    transition: background 0.18s, box-shadow 0.18s;
+  }
+  .ax-esc-rung.on .ax-esc-orb {
+    background: var(--parchment-lift);
+    border-color: var(--blue);
+  }
+  .ax-esc-rung.on .ax-esc-orb-inner {
+    background: var(--blue);
+    box-shadow: 0 0 4px rgba(138, 166, 227, 0.7);
+  }
+  .ax-esc-rung.cur .ax-esc-orb {
+    border-color: var(--blue);
+    box-shadow:
+      0 0 0 2px rgba(138, 166, 227, 0.18),
+      0 0 10px rgba(138, 166, 227, 0.35);
+    transform: scale(1.04);
+  }
+  .ax-esc-rung.cur .ax-esc-orb-inner {
+    background: var(--blue);
+    box-shadow: 0 0 8px rgba(138, 166, 227, 0.9);
+  }
+
+  .ax-esc-name {
+    font-family: var(--mono); font-size: 10px;
+    letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .ax-esc-tick {
+    font-family: var(--mono); font-size: 8px;
+    letter-spacing: 0.18em;
+    color: var(--ink-faint); opacity: 0.65;
+  }
+  .ax-esc-rung.cur .ax-esc-tick { color: var(--blue); opacity: 1; }
+
+  .ax-esc-foot {
+    font-family: var(--serif); font-style: italic;
+    font-size: 12.5px; line-height: 1.4;
+    color: var(--ink-mute);
+    padding-top: 8px;
+    border-top: 1px dashed var(--rule-soft);
+  }
+
+  /* ─── footer note ──────────────────────────────────────────────── */
+  .ax-footnote {
+    margin-top: 8px;
+    padding: 10px 0 0 0;
+    border-top: 1px dashed var(--rule-soft);
+    display: flex; gap: 14px; align-items: baseline;
+    font-family: var(--mono); font-size: 9.5px;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .ax-footnote strong { color: var(--ochre); font-weight: 500; }
+  .ax-footnote .ax-footnote-body {
+    font-family: var(--serif); font-style: italic; font-size: 12.5px;
+    letter-spacing: 0; text-transform: none; color: var(--ink-mute);
+    line-height: 1.4;
+  }
 
 
   /* ───────────── Second toast (First Light) ───────────── */
@@ -4214,28 +4375,40 @@
 
   </section>
 
-  <!-- ───────── Lifecycle playground (the framework's gate map — abstract first) ───────── -->
+  <!-- ───────── §02 · the patch atlas (complexity × criticality patches the lifecycle) ───────── -->
   <section class="playground-section" id="playground">
     <div class="pg-header">
-      <div class="marker">§02 · lifecycle playground</div>
-      <h2 class="pg-title">The same lifecycle, <em>three different gate sequences.</em></h2>
-      <p class="pg-lede">Frontmatter declares <code>complexity</code> and <code>criticality</code>. Those two values decide which gates fire. Drag the slider — a ghost-train runs the new sequence so you can see exactly which phases the framework runs.</p>
+      <div class="marker">§02 · the patch atlas</div>
+      <h2 class="pg-title">Complexity earns ceremony. <em>Simplicity skips it.</em></h2>
+      <p class="pg-lede">Two values in your spec — <code>complexity</code> and <code>criticality</code> — set how much rigor the work earns. The harness reads them and patches the lifecycle to match.</p>
     </div>
-    <div class="pg-body">
-      <div class="pg-controls">
-        <label for="pg-slider" class="label">complexity</label>
-        <input type="range" min="0" max="2" step="1" value="0" class="pg-slider" id="pg-slider" />
-        <div class="pg-ticks">
-          <span class="cur" id="pgt-0">simple</span>
-          <span id="pgt-1">complex</span>
-          <span id="pgt-2">critical</span>
+
+    <!-- Comparison strip: two ends of the spectrum, in real numbers. -->
+    <div class="ax-compare">
+      <div class="ax-compare-card simple">
+        <div class="ax-compare-h">a simple change</div>
+        <div class="ax-compare-name">adding a new lure</div>
+        <div class="ax-compare-stats">
+          <div class="ax-compare-stat"><span class="ax-compare-stat-v">5</span><span class="ax-compare-stat-k">gates</span></div>
+          <div class="ax-compare-stat"><span class="ax-compare-stat-v">~200k</span><span class="ax-compare-stat-k">tokens</span></div>
+          <div class="ax-compare-stat"><span class="ax-compare-stat-v">~10 min</span><span class="ax-compare-stat-k">wall clock</span></div>
         </div>
-        <div class="pg-readout" id="pg-readout">small change, low blast radius. skip the review gate; ship in one pass.</div>
+        <div class="ax-compare-extras">ships in one pass. no research gate, no critical-review fork, no parallel plans.</div>
       </div>
-      <div class="pg-canvas">
-        <svg class="pg-svg" id="pg-svg" viewBox="0 0 800 240" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="ax-compare-card critical">
+        <div class="ax-compare-h">a load-bearing change</div>
+        <div class="ax-compare-name">the nightline game loop</div>
+        <div class="ax-compare-stats">
+          <div class="ax-compare-stat"><span class="ax-compare-stat-v">10</span><span class="ax-compare-stat-k">gates</span></div>
+          <div class="ax-compare-stat"><span class="ax-compare-stat-v">~2M</span><span class="ax-compare-stat-k">tokens</span></div>
+          <div class="ax-compare-stat"><span class="ax-compare-stat-v">~90 min</span><span class="ax-compare-stat-k">wall clock</span></div>
+        </div>
+        <div class="ax-compare-extras">adversarial pre-plan review · two plans race for the winner · escalated Opus reviewer before merge.</div>
       </div>
     </div>
+
+    <!-- Atlas mount point — bench + escalators rendered into here by the script below. -->
+    <div id="atlas-root"></div>
   </section>
 
   <!-- ───────── Spec stream (locking) — concrete walkthrough of the gates above ───────── -->
@@ -5962,176 +6135,329 @@
     }
   }
 
-  // ─────────── Playground (ghost-train) ───────────
-  const pgSvg = document.getElementById('pg-svg');
-  const pgSlider = document.getElementById('pg-slider');
-  const pgReadout = document.getElementById('pg-readout');
+  // ─────────── §02 · the patch atlas ───────────
+  // State: two integers (cplx, crit) ∈ {0,1,2}. The active phase sequence is
+  // MATRIX[crit][cplx]. Bench renders the active lifecycle with module labels;
+  // two escalators below toggle the axes.
+  (function patchAtlas() {
+    const root = document.getElementById('atlas-root');
+    if (!root) return;
 
-  // Each lane is a graph: nodes have explicit (x,y) + label position, edges define the rail.
-  // viewBox is 800x220. Main rail at y=110. Branches above/below.
-  const PG_LANES = {
-    0: {
-      label: 'simple',
-      readout: "small change, low blast radius. skip the review gate; ship in one pass.",
-      nodes: [
-        { id: 'clarify',   x:  60, y: 110, label: 'clarify',   labY: -18 },
-        { id: 'research',  x: 200, y: 110, label: 'research',  labY: -18 },
-        { id: 'spec',      x: 340, y: 110, label: 'spec',      labY: -18 },
-        { id: 'plan',      x: 480, y: 110, label: 'plan',      labY: -18 },
-        { id: 'implement', x: 620, y: 110, label: 'implement', labY: -18 },
-        { id: 'complete',  x: 740, y: 110, label: 'complete',  labY:  24, gold: true },
-      ],
-      edges: [
-        ['clarify','research'], ['research','spec'], ['spec','plan'],
-        ['plan','implement'], ['implement','complete']
-      ],
-      skipped: [],
-      path: ['clarify','research','spec','plan','implement','complete'],
-    },
-    1: {
-      label: 'complex',
-      readout: "real surface area. challenge the spec adversarially before planning; never skip review.",
-      nodes: [
-        { id: 'clarify',   x:  50, y: 110, label: 'clarify',   labY: -18 },
-        { id: 'research',  x: 160, y: 110, label: 'research',  labY: 24 },
-        { id: 'spec',      x: 270, y: 110, label: 'spec',      labY: -18 },
-        // /critical-review forks ABOVE the rail between spec and plan
-        { id: 'review1',   x: 340, y:  50, label: '/critical-review', labY: -12, branch: true },
-        { id: 'plan',      x: 410, y: 110, label: 'plan',      labY: 24 },
-        { id: 'implement', x: 530, y: 110, label: 'implement', labY: -18 },
-        { id: 'review',    x: 640, y: 110, label: 'review',    labY: 24 },
-        { id: 'complete',  x: 750, y: 110, label: 'complete',  labY: -18, gold: true },
-      ],
-      edges: [
-        ['clarify','research'], ['research','spec'],
-        ['spec','review1','curve-up'], ['review1','plan','curve-down'],
-        ['spec','plan','dim'],
-        ['plan','implement'], ['implement','review'], ['review','complete'],
-      ],
-      skipped: [],
-      path: ['clarify','research','spec','review1','plan','implement','review','complete'],
-    },
-    2: {
-      label: 'critical',
-      readout: "the spec is load-bearing. force adversarial review, race two plans, escalate the reviewer.",
-      nodes: [
-        { id: 'clarify',   x:  40, y: 110, label: 'clarify',   labY: -18 },
-        { id: 'research',  x: 130, y: 110, label: 'research',  labY: 24 },
-        { id: 'spec',      x: 220, y: 110, label: 'spec',      labY: -18 },
-        { id: 'review1',   x: 310, y: 110, label: '/critical-review', labY: -18 },
-        // Two competing plans branch above + below
-        { id: 'planA',     x: 430, y:  50, label: 'plan A',    labY: -12, branch: true },
-        { id: 'planB',     x: 430, y: 170, label: 'plan B',    labY:  24, branch: true },
-        { id: 'implement', x: 540, y: 110, label: 'implement', labY: -18 },
-        { id: 'review',    x: 650, y: 110, label: 'review (Opus)', labY: 24 },
-        { id: 'complete',  x: 760, y: 110, label: 'complete',  labY: -18, gold: true },
-      ],
-      edges: [
-        ['clarify','research'], ['research','spec'], ['spec','review1'],
-        ['review1','planA','curve-up'], ['review1','planB','curve-down'],
-        ['planA','implement','curve-down'], ['planB','implement','curve-up'],
-        ['implement','review'], ['review','complete'],
-      ],
-      skipped: [],
-      path: ['clarify','research','spec','review1','planA','implement','review','complete'],
-      altPath: ['clarify','research','spec','review1','planB','implement','review','complete'],
-    },
-  };
+    const PHASES = {
+      clarify:   { label: 'clarify' },
+      research:  { label: 'research' },
+      spec:      { label: 'spec' },
+      review1:   { label: '/critical-review' },
+      plan:      { label: 'plan' },
+      planB:     { label: 'plan B' },
+      implement: { label: 'implement' },
+      review:    { label: 'review' },
+      reviewO:   { label: 'review · Opus' },
+      complete:  { label: 'complete' },
+    };
 
-  function buildPG(level) {
-    pgSvg.innerHTML = '';
-    const def = PG_LANES[level];
-    const nodeMap = Object.fromEntries(def.nodes.map(n => [n.id, n]));
+    // Indexed [criticality][complexity]. Full 3×3 possibility space.
+    const MATRIX = [
+      [
+        ['clarify','spec','plan','implement','complete'],
+        ['clarify','research','spec','plan','implement','review','complete'],
+        ['clarify','research','spec','review1','plan','implement','review','complete'],
+      ],
+      [
+        ['clarify','research','spec','plan','implement','review','complete'],
+        ['clarify','research','spec','review1','plan','implement','review','complete'],
+        ['clarify','research','spec','review1','plan','planB','implement','review','complete'],
+      ],
+      [
+        ['clarify','research','spec','review1','plan','implement','review','complete'],
+        ['clarify','research','spec','review1','plan','planB','implement','review','complete'],
+        ['clarify','research','spec','review1','plan','planB','implement','reviewO','complete'],
+      ],
+    ];
 
-    // edges (rails)
-    def.edges.forEach(([a, b, mod]) => {
-      const A = nodeMap[a], B = nodeMap[b];
-      let d;
-      if (mod === 'curve-up' || mod === 'curve-down') {
-        // smooth bezier between two points at different y
-        const cx1 = A.x + (B.x - A.x) * 0.4;
-        const cx2 = A.x + (B.x - A.x) * 0.6;
-        d = `M ${A.x} ${A.y} C ${cx1} ${A.y}, ${cx2} ${B.y}, ${B.x} ${B.y}`;
-      } else {
-        d = `M ${A.x} ${A.y} L ${B.x} ${B.y}`;
-      }
-      const p = el('path', {
-        class: 'pg-rail' + (mod === 'dim' ? ' dim' : ''),
-        d, fill: 'none',
-        stroke: mod === 'dim' ? 'rgba(30,64,175,0.18)' : '#1e40af',
-        'stroke-width': mod === 'dim' ? 1 : 1.4,
-        'stroke-dasharray': mod === 'dim' ? '3 4' : '',
-        'stroke-opacity': mod === 'dim' ? 1 : 0.55,
-      });
-      pgSvg.appendChild(p);
-    });
+    const AXIS = {
+      complexity:  ['simple',  'complex',  'critical'],
+      criticality: ['trivial', 'standard', 'load-bearing'],
+    };
 
-    // nodes
-    def.nodes.forEach(n => {
-      const c = el('circle', {
-        class: 'pg-node' + (n.gold ? ' gold' : '') + (n.branch ? ' branch' : ''),
-        cx: n.x, cy: n.y, r: n.gold ? 6 : 5,
-        fill: n.gold ? '#c2660a' : '#f7f4ec',
-        stroke: n.gold ? '#c2660a' : '#1e40af',
-        'stroke-width': 1.4,
-      });
-      pgSvg.appendChild(c);
-      const t = el('text', {
-        x: n.x, y: n.y + (n.labY ?? -18),
-        'text-anchor': 'middle',
-        class: 'node-sub' + (n.branch ? ' pg-branch-label' : ''),
-      });
-      t.textContent = n.label;
-      pgSvg.appendChild(t);
-    });
-
-    // ghost train: travels along path[] in sequence
-    const ghost = el('circle', {
-      class: 'pg-ghost',
-      cx: nodeMap[def.path[0]].x, cy: nodeMap[def.path[0]].y,
-      r: 4, fill: '#c2660a', 'fill-opacity': 0.92,
-    });
-    pgSvg.appendChild(ghost);
-    // For critical: a second ghost on alt path (planB)
-    let ghost2 = null;
-    if (def.altPath) {
-      ghost2 = el('circle', {
-        class: 'pg-ghost alt',
-        cx: nodeMap[def.altPath[0]].x, cy: nodeMap[def.altPath[0]].y,
-        r: 3.5, fill: '#1e40af', 'fill-opacity': 0.7,
-      });
-      pgSvg.appendChild(ghost2);
+    function summarize(seq) {
+      const set = new Set(seq);
+      const parts = [`${seq.length} phases`];
+      if (set.has('review1'))  parts.push('adversarial pre-plan');
+      if (set.has('planB'))    parts.push('race two plans');
+      if (set.has('reviewO'))  parts.push('escalated reviewer');
+      if (!set.has('review') && !set.has('review1') && !set.has('reviewO'))
+        parts.push('one-pass ship');
+      return parts.join(' · ');
     }
-    const start = performance.now();
-    const dur = 1800;
-    function travel(g, path) {
-      const segs = path.length - 1;
-      if (segs < 1) return;
-      function step(now) {
-        const t = Math.min(1, (now - start) / dur);
-        const segPos = t * segs;
-        const i = Math.min(Math.max(0, Math.floor(segPos)), segs - 1);
-        const frac = segPos - i;
-        const A = nodeMap[path[i]];
-        const B = nodeMap[path[i+1]];
-        if (!A || !B) { return; }
-        const x = A.x + (B.x - A.x) * frac;
-        const y = A.y + (B.y - A.y) * frac;
-        g.setAttribute('cx', x);
-        g.setAttribute('cy', y);
-        if (t < 1) requestAnimationFrame(step);
-        else g.setAttribute('opacity', 0.35);
-      }
-      requestAnimationFrame(step);
-    }
-    travel(ghost, def.path);
-    if (ghost2) travel(ghost2, def.altPath);
 
-    pgReadout.textContent = def.readout;
-    document.querySelectorAll('.pg-ticks span').forEach((s, i) => s.classList.toggle('cur', i === level));
-  }
-  buildPG(0);
-  pgSlider.addEventListener('input', e => buildPG(parseInt(e.target.value, 10)));
+    // ── BENCH layout ──
+    const BAY = [
+      { id: 'clarify',   col: 0, y:  0 },
+      { id: 'research',  col: 1, y:  0 },
+      { id: 'spec',      col: 2, y:  0 },
+      { id: 'review1',   col: 3, y: -1 },
+      { id: 'plan',      col: 4, y:  0 },
+      { id: 'planB',     col: 4, y:  1 },
+      { id: 'implement', col: 5, y:  0 },
+      { id: 'review',    col: 6, y:  0 },
+      { id: 'reviewO',   col: 6, y:  1 },
+      { id: 'complete',  col: 7, y:  0 },
+    ];
+    const BAY_COLS = 7;
+    const BAY_IDX = Object.fromEntries(BAY.map((m, i) => [m.id, i]));
+    const BIG = { W: 980, H: 220, railY: 80, fork: 34, modW: 40, modH: 26 };
+    const bigX = col  => 26 + col * ((BIG.W - 52) / BAY_COLS);
+    const bigY = lane => BIG.railY + lane * BIG.fork;
+    const node = id => ({ x: bigX(BAY[BAY_IDX[id]].col), y: bigY(BAY[BAY_IDX[id]].y) });
+
+    const LABELS = {
+      clarify:   ['clarify'],
+      research:  ['research'],
+      spec:      ['spec'],
+      review1:   ['/critical', 'review'],
+      plan:      ['plan'],
+      planB:     ['plan B'],
+      implement: ['implement'],
+      review:    ['review'],
+      reviewO:   ['review', '(Opus)'],
+      complete:  ['complete'],
+    };
+
+    // Cable topology: sequential through `seq`; when planB fires, fork
+    // between the node before plan and the node after planB to show the race.
+    function cablePath(seq) {
+      const edges = [];
+      for (let i = 0; i < seq.length - 1; i++) edges.push([seq[i], seq[i + 1]]);
+      if (seq.includes('planB')) {
+        const iPlan = seq.indexOf('plan');
+        const iB    = seq.indexOf('planB');
+        const pre   = seq[Math.min(iPlan, iB) - 1];
+        const post  = seq[Math.max(iPlan, iB) + 1];
+        const isRaceEdge = (a, b) =>
+          (a === pre && (b === 'plan' || b === 'planB')) ||
+          (a === 'plan' && b === 'planB') ||
+          (a === 'planB' && b === 'plan') ||
+          ((a === 'plan' || a === 'planB') && b === post);
+        const filtered = edges.filter(([a, b]) => !isRaceEdge(a, b));
+        filtered.push([pre, 'plan'], [pre, 'planB'], ['plan', post], ['planB', post]);
+        edges.length = 0;
+        edges.push(...filtered);
+      }
+      return edges.map(([a, b]) => {
+        const A = node(a), B = node(b);
+        const mx = (A.x + B.x) / 2;
+        const sag = Math.min(8, Math.max(2, Math.abs(B.x - A.x) * 0.16));
+        return `M ${A.x} ${A.y} C ${mx} ${A.y + sag}, ${mx} ${B.y + sag}, ${B.x} ${B.y}`;
+      }).join(' ');
+    }
+
+    function labelAbove(m) {
+      if (m.y < 0) return true;
+      if (m.y === 0 && BAY.some(o => o.col === m.col && o.y > 0)) return true;
+      return false;
+    }
+
+    // ── render helpers ──
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+    function svgEl(name, attrs) {
+      const e = document.createElementNS(SVG_NS, name);
+      for (const k in attrs) if (attrs[k] != null) e.setAttribute(k, attrs[k]);
+      return e;
+    }
+
+    // Static skeleton — build once, mutate on state change.
+    const skeleton = document.createElement('div');
+    skeleton.className = 'ax-body';
+    skeleton.innerHTML = `
+      <div class="ax-bench">
+        <div class="ax-bench-head">
+          <div class="ax-bench-head-l">
+            <span class="ax-bench-tag">current lifecycle</span>
+            <span class="ax-bench-config">
+              <span class="ax-config-axis">complexity</span>
+              <span class="ax-config-val" data-config="cplx"></span>
+              <span class="ax-config-sep">·</span>
+              <span class="ax-config-axis">criticality</span>
+              <span class="ax-config-val" data-config="crit"></span>
+            </span>
+          </div>
+          <span class="ax-bench-summary" data-summary></span>
+        </div>
+        <svg viewBox="0 0 ${BIG.W} ${BIG.H}" class="ax-bench-svg" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <pattern id="ax-grid" width="14" height="14" patternUnits="userSpaceOnUse">
+              <path d="M 14 0 L 0 0 0 14" fill="none" stroke="rgba(236,230,211,0.05)" stroke-width="0.5"/>
+            </pattern>
+            <filter id="ax-glow"><feGaussianBlur stdDeviation="1.6"/></filter>
+          </defs>
+          <rect x="0" y="0" width="${BIG.W}" height="${BIG.H}" fill="url(#ax-grid)"/>
+          <g data-lanes></g>
+          <path data-cable-glow fill="none" stroke="var(--blue)" stroke-width="2.4" stroke-opacity="0.85" stroke-linecap="round" filter="url(#ax-glow)"/>
+          <path data-cable fill="none" stroke="var(--blue)" stroke-width="1.5" stroke-linecap="round"/>
+          <g data-modules></g>
+        </svg>
+      </div>
+
+      <div class="ax-controls" data-controls></div>
+
+      <div class="ax-footnote">
+        <strong>teaches</strong>
+        <span class="ax-footnote-body">
+          The harness doesn't punish simple work with critical-tier ceremony — and it doesn't
+          ship critical work without it. Rigor is a budget; this is how it's spent.
+        </span>
+      </div>
+    `;
+    root.replaceChildren(skeleton);
+
+    // Lane guides
+    const lanes = skeleton.querySelector('[data-lanes]');
+    [-1, 0, 1].forEach(l => {
+      lanes.appendChild(svgEl('line', {
+        x1: 18, x2: BIG.W - 18, y1: bigY(l), y2: bigY(l),
+        stroke: 'var(--rule-soft)', 'stroke-width': 0.7, 'stroke-dasharray': '3 5',
+      }));
+    });
+
+    const modulesG = skeleton.querySelector('[data-modules]');
+    const cableEl  = skeleton.querySelector('[data-cable]');
+    const cableGlow = skeleton.querySelector('[data-cable-glow]');
+    const cplxEl   = skeleton.querySelector('[data-config="cplx"]');
+    const critEl   = skeleton.querySelector('[data-config="crit"]');
+    const summaryEl = skeleton.querySelector('[data-summary]');
+
+    // Build module groups once; toggle .on per render.
+    const modGroups = {};
+    BAY.forEach(m => {
+      const x = bigX(m.col), y = bigY(m.y);
+      const above = labelAbove(m);
+      const lines = LABELS[m.id] || [PHASES[m.id]?.label || m.id];
+      const labelY = above
+        ? y - BIG.modH / 2 - 8 - (lines.length - 1) * 12
+        : y + BIG.modH / 2 + 16;
+      const ledY = above ? y + BIG.modH / 2 + 6 : y - BIG.modH / 2 - 7;
+      const isGold = m.id === 'complete';
+
+      const g = svgEl('g', { 'data-mod': m.id });
+      const rect = svgEl('rect', {
+        x: x - BIG.modW / 2, y: y - BIG.modH / 2,
+        width: BIG.modW, height: BIG.modH, rx: 1.8,
+      });
+      const pin1 = svgEl('circle', { cx: x - BIG.modW / 2 + 6, cy: y, r: 2.6, fill: '#06060a', 'stroke-width': 0.6 });
+      const pin2 = svgEl('circle', { cx: x + BIG.modW / 2 - 6, cy: y, r: 2.6, fill: '#06060a', 'stroke-width': 0.6 });
+      const ledDot = svgEl('circle', { cx: x, cy: ledY, r: 2 });
+      const ledHalo = svgEl('circle', { cx: x, cy: ledY, r: 5, opacity: 0 });
+      const text = svgEl('text', {
+        x, y: labelY, 'text-anchor': 'middle',
+        'font-family': 'JetBrains Mono', 'font-size': 10,
+        'letter-spacing': '0.04em',
+      });
+      lines.forEach((line, li) => {
+        const ts = svgEl('tspan', { x, dy: li === 0 ? 0 : 12 });
+        ts.textContent = line;
+        text.appendChild(ts);
+      });
+      g.append(rect, pin1, pin2, ledDot, ledHalo, text);
+      modulesG.appendChild(g);
+      modGroups[m.id] = { g, rect, pin1, pin2, ledDot, ledHalo, text, isGold };
+    });
+
+    // Escalators
+    const controls = skeleton.querySelector('[data-controls]');
+    const escState = { complexity: { idx: 1 }, criticality: { idx: 1 } };
+    const escConfigs = [
+      { axis: 'complexity',  glyph: '◇', hint: 'how hard is the work?' },
+      { axis: 'criticality', glyph: '!', hint: 'how much will it hurt if it breaks?' },
+    ];
+    escConfigs.forEach(cfg => {
+      const esc = document.createElement('div');
+      esc.className = 'ax-esc';
+      esc.innerHTML = `
+        <div class="ax-esc-head">
+          <span class="ax-esc-glyph" aria-hidden="true">${cfg.glyph}</span>
+          <span class="ax-esc-axis">${cfg.axis}</span>
+          <span class="ax-esc-val" data-val></span>
+        </div>
+        <div class="ax-esc-rail" role="radiogroup" aria-label="${cfg.axis}">
+          <div class="ax-esc-cable">
+            <div class="ax-esc-cable-bg"></div>
+            <div class="ax-esc-cable-fill" data-fill></div>
+          </div>
+          ${[0,1,2].map(i => `
+            <button class="ax-esc-rung" type="button" role="radio" data-idx="${i}"
+                    aria-label="set ${cfg.axis} to ${AXIS[cfg.axis][i]}">
+              <span class="ax-esc-orb lvl-${i}"><span class="ax-esc-orb-inner"></span></span>
+              <span class="ax-esc-name">${AXIS[cfg.axis][i]}</span>
+              <span class="ax-esc-tick">${['I','II','III'][i]}</span>
+            </button>
+          `).join('')}
+        </div>
+        <div class="ax-esc-foot">${cfg.hint}</div>
+      `;
+      controls.appendChild(esc);
+      escState[cfg.axis].el = esc;
+      esc.querySelectorAll('.ax-esc-rung').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const i = parseInt(btn.dataset.idx, 10);
+          const cur = escState[cfg.axis].idx;
+          escState[cfg.axis].idx = (i === cur) ? (cur + 1) % 3 : i;
+          render();
+        });
+      });
+    });
+
+    function render() {
+      const cplx = escState.complexity.idx;
+      const crit = escState.criticality.idx;
+      const seq = MATRIX[crit][cplx];
+      const onSet = new Set(seq);
+
+      cplxEl.textContent = AXIS.complexity[cplx];
+      critEl.textContent = AXIS.criticality[crit];
+      summaryEl.textContent = summarize(seq);
+
+      const d = cablePath(seq);
+      cableEl.setAttribute('d', d);
+      cableGlow.setAttribute('d', d);
+
+      BAY.forEach(m => {
+        const refs = modGroups[m.id];
+        const on = onSet.has(m.id);
+        const gold = refs.isGold;
+        const fill = on ? 'var(--parchment-lift)' : 'var(--parchment-2)';
+        const stroke = on ? (gold ? 'var(--ochre)' : 'var(--blue)') : 'var(--rule-soft)';
+        refs.rect.setAttribute('fill', fill);
+        refs.rect.setAttribute('stroke', stroke);
+        refs.rect.setAttribute('stroke-width', on ? 1.3 : 0.8);
+        const pinStroke = on ? 'var(--blue)' : 'var(--ink-faint)';
+        refs.pin1.setAttribute('stroke', pinStroke);
+        refs.pin2.setAttribute('stroke', pinStroke);
+        const ledFill = on ? (gold ? 'var(--ochre)' : 'var(--blue)') : 'rgba(118,112,95,0.4)';
+        refs.ledDot.setAttribute('fill', ledFill);
+        refs.ledHalo.setAttribute('fill', gold ? 'var(--ochre)' : 'var(--blue)');
+        refs.ledHalo.setAttribute('opacity', on ? 0.25 : 0);
+        refs.text.setAttribute('fill', on ? (gold ? 'var(--ochre)' : 'var(--ink)') : 'var(--ink-faint)');
+        refs.text.setAttribute('font-weight', on ? 500 : 400);
+      });
+
+      ['complexity', 'criticality'].forEach(axis => {
+        const cur = escState[axis].idx;
+        const root = escState[axis].el;
+        root.querySelector('[data-val]').textContent = AXIS[axis][cur];
+        root.querySelector('[data-fill]').style.width = `${(cur / 2) * 100}%`;
+        root.querySelectorAll('.ax-esc-rung').forEach((btn, i) => {
+          const on = i <= cur;
+          const isCur = i === cur;
+          btn.classList.toggle('on', on);
+          btn.classList.toggle('cur', isCur);
+          btn.setAttribute('aria-checked', isCur ? 'true' : 'false');
+        });
+      });
+    }
+
+    render();
+  })();
 
   // ─────────── Sidebar compact ───────────
   function checkCompact() {
