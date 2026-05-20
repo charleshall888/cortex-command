@@ -1,0 +1,11 @@
+# Plan for feat-malformed-events
+
+### Task 1: First task
+
+- **Status**: [x] complete
+- **Files**: impl.py
+
+### Task 2: Second task
+
+- **Status**: [ ] pending
+- **Files**: tests/test_impl.py

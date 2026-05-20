@@ -1,83 +1,36 @@
 #!/usr/bin/env bash
-# cortex-lifecycle-counters — emit a feature's plan/review counters as JSON.
+# cortex-lifecycle-counters — dual-channel wrapper for the
+# cortex_command.lifecycle.counters module.
 #
-# Usage:
-#   cortex-lifecycle-counters --feature <slug>
-#
-# Output:
-#   {"tasks_total": <int>, "tasks_checked": <int>, "rework_cycles": <int>}
-#
-# Counter rules — pinned to common.py:detect_lifecycle_phase regexes for parity:
-#   tasks_total:   count of `**Status**: [ ]` or `**Status**: [x]` lines in
-#                  plan.md (matches `\*\*Status\*\*:.*\[[ x]\]` in common.py:182).
-#   tasks_checked: count of `**Status**: [x]` lines (matches
-#                  `\*\*Status\*\*:.*\[x\]` in common.py:183).
-#   rework_cycles: count of `"verdict": "<UPPER_SNAKE>"` matches in review.md
-#                  (same regex shape as cortex_command/common.py applies to
-#                  review.md verdict extraction). Known fragility: this regex
-#                  over-counts if review.md contains quoted/example verdict
-#                  strings in prose or code blocks. Behavior is intentionally
-#                  identical to the Python side; loosening would diverge.
-#
-# Missing files → field defaults: tasks_total=0, tasks_checked=0,
-# rework_cycles=0. Behavior matches common.py's read-time defaults for
-# absent plan.md / review.md.
-#
-# Note: spec R4's `^- \[ \]|^- \[x\]` regex was wrong — actual lifecycle
-# plans use `- **Status**: [ ]` task headers (per the plan.md template at
-# skills/lifecycle/references/plan.md), and common.py's regex was always
-# targeted at that header form. The bin script now matches common.py
-# exactly so Task 7 parity holds against real plans. Filed as a follow-up
-# spec correction in the Veto Surface.
-
-command -v jq >/dev/null || { echo "cortex-lifecycle-counters: jq is required but not installed" >&2; exit 2; }
-
-"$(dirname "$0")/cortex-log-invocation" "$0" "$@" || true
-
+# Branch order:
+#   (a) CORTEX_COMMAND_FORCE_SOURCE=1 → exec working-tree module directly via python3 -m
+#   (b) wheel-import probe succeeds   → exec via wheel (python3 -m cortex_command.lifecycle.counters)
+#   (c) working-tree pyproject.toml names cortex-command → exec via working-tree PYTHONPATH
+#   (d) nothing found                 → exit 2 with remediation message
 set -euo pipefail
 
-feature=""
-
-while [ $# -gt 0 ]; do
-    case "$1" in
-        --feature)
-            feature="${2:-}"
-            shift 2
-            ;;
-        -h|--help)
-            sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'
-            exit 0
-            ;;
-        *)
-            echo "cortex-lifecycle-counters: unknown argument: $1" >&2
-            exit 2
-            ;;
-    esac
-done
-
-if [ -z "$feature" ]; then
-    echo "cortex-lifecycle-counters: --feature <slug> is required" >&2
-    exit 2
+# Log invocation telemetry when cortex-log-invocation is available on PATH.
+if command -v cortex-log-invocation >/dev/null 2>&1; then
+    cortex-log-invocation "$0" "$@" || echo "cortex-log-invocation failed: $?" >&2
 fi
 
-plan="cortex/lifecycle/$feature/plan.md"
-review="cortex/lifecycle/$feature/review.md"
-
-tasks_total=0
-tasks_checked=0
-rework_cycles=0
-
-if [ -f "$plan" ]; then
-    tasks_total=$(grep -cE '\*\*Status\*\*:.*\[[ x]\]' "$plan" || true)
-    tasks_checked=$(grep -cE '\*\*Status\*\*:.*\[x\]' "$plan" || true)
+# Branch (a): force working-tree mode when CORTEX_COMMAND_FORCE_SOURCE=1 is set.
+if [ "${CORTEX_COMMAND_FORCE_SOURCE:-}" = "1" ]; then
+    _root="${CORTEX_COMMAND_ROOT:-$(dirname "$0")/..}"
+    exec env PYTHONPATH="${_root}:${PYTHONPATH:-}" python3 -m cortex_command.lifecycle.counters "$@"
 fi
 
-if [ -f "$review" ]; then
-    rework_cycles=$(grep -cE '"verdict"[[:space:]]*:[[:space:]]*"[A-Z_]+"' "$review" || true)
+# Branch (b): wheel-import probe — prefer the installed wheel.
+if python3 -c "import cortex_command.lifecycle.counters" 2>/dev/null; then
+    exec python3 -m cortex_command.lifecycle.counters "$@"
 fi
 
-jq -n \
-    --argjson a "$tasks_total" \
-    --argjson b "$tasks_checked" \
-    --argjson c "$rework_cycles" \
-    '{tasks_total: $a, tasks_checked: $b, rework_cycles: $c}'
+# Branch (c): working-tree fallback when pyproject.toml names cortex-command.
+_root="${CORTEX_COMMAND_ROOT:-$(dirname "$0")/..}"
+if grep -q '^name = "cortex-command"' "${_root}/pyproject.toml" 2>/dev/null; then
+    exec env PYTHONPATH="${_root}:${PYTHONPATH:-}" python3 -m cortex_command.lifecycle.counters "$@"
+fi
+
+# Branch (d): nothing found — emit remediation message and exit 2.
+echo "cortex-lifecycle-counters: cortex-command wheel not found on PATH. To fix: run 'uv tool install --reinstall --refresh git+https://github.com/charleshall880/cortex-command.git@<latest-tag>'. If this happens after a recent upgrade, your wheel may be stale." >&2
+exit 2

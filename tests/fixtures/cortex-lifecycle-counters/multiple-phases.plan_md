@@ -1,0 +1,26 @@
+# Plan for feat-multiple-phases
+
+### Task 1: Research phase
+
+- **Status**: [x] complete
+- **Files**: research.md
+
+### Task 2: Spec phase
+
+- **Status**: [x] complete
+- **Files**: spec.md
+
+### Task 3: Implementation
+
+- **Status**: [x] complete
+- **Files**: impl.py
+
+### Task 4: Tests
+
+- **Status**: [ ] pending
+- **Files**: tests/test_impl.py
+
+### Task 5: Review
+
+- **Status**: [ ] pending
+- **Files**: review.md

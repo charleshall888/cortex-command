@@ -1,0 +1,3 @@
+{"ts":"2026-05-20T10:00:00Z","event":"lifecycle_start","feature":"feat-malformed-events","tier":"simple","criticality":"medium"}
+MALFORMED LINE NOT JSON {{{
+{"ts":"2026-05-20T10:01:00Z","event":"complexity_override","feature":"feat-malformed-events","from":"simple","to":"complex"}
