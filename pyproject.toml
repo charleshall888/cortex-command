@@ -27,6 +27,7 @@ cortex-build-epic-map = "cortex_command.backlog.build_epic_map:main"
 # Phase 3 console-script sweep (R13): promoted from python3 -m callsites
 cortex-auth = "cortex_command.overnight.auth:_main"
 cortex-common = "cortex_command.common:main"
+cortex-clean = "cortex_command.clean:main"
 cortex-critical-review = "cortex_command.critical_review:main"
 cortex-dashboard-seed = "cortex_command.dashboard.seed:main"
 cortex-discovery = "cortex_command.discovery:main"
