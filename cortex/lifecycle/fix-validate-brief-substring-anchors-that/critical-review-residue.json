@@ -1,0 +1,30 @@
+{
+  "ts": "2026-05-20T18:30:00Z",
+  "feature": "fix-validate-brief-substring-anchors-that",
+  "artifact": "cortex/lifecycle/fix-validate-brief-substring-anchors-that/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "Task 6's retry-feedback contract preserves 'use one of these tokens' verbatim phrasing while binding to the representative subset only \u2014 the retry instructs the agent that the listed tokens are exhaustive when the validator accepts a strict superset, penalizing valid output paraphrases.",
+      "reviewer_angle": "_GATE_BRIEF_EXAMPLE_TOKENS representativeness vs. canonical floor asymmetry",
+      "evidence_quote": "\"use one of these tokens\" verbatim phrasing is preserved \u2014 retry is recovery, not teaching (Adversarial Review \u00a77)"
+    },
+    {
+      "class": "B",
+      "finding": "The plan's only acknowledgement of intra-discovery.py ordering is buried in Risks as informal prose advice rather than as a structural dependency annotation, leaving the dispatcher's view of the task graph misaligned with the implementer's intent.",
+      "reviewer_angle": "Dependency graph correctness and file-conflict serialization",
+      "evidence_quote": "Implementer-side discipline: land Task 2 cleanly before starting any Phase 2 task that edits cortex_command/discovery.py."
+    },
+    {
+      "class": "B",
+      "finding": "Downstream tasks cite line numbers in discovery.py (Task 5 at :559, 563, 569; Task 6 at :783-795; Task 2 at :803, 807, 825) that will drift once Task 1's rubric edit and Task 4's anchor rewrite land, but the plan provides no semantic-anchor fallback contract for re-locating them after upstream edits.",
+      "reviewer_angle": "Dependency graph correctness and file-conflict serialization",
+      "evidence_quote": "Modify the three `return False, \"brief is missing ... anchor (...)\"` lines in validate_brief() (post-Task-4 successor of cortex_command/discovery.py:559, 563, 569)"
+    }
+  ]
+}
