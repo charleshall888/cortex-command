@@ -2,12 +2,12 @@
 schema_version: "1"
 uuid: b0545923-2dac-42f3-977e-6b6307a816f7
 title: "Lead refine §4 complexity-value gate with recommended option + rationale"
-status: in_progress
+status: refined
 priority: medium
 type: chore
 tags: [skills, refine, lifecycle, ux]
 created: 2026-05-12
-updated: 2026-05-16
+updated: 2026-05-20
 complexity: simple
 criticality: high
 spec: cortex/lifecycle/lead-refine-4-complexity-value-gate/spec.md

@@ -1,5 +1,0 @@
-{
-  "action": "question",
-  "reason": "File edit completed and verified, but Bash tool sandbox fails to initialize on every call — git commit cannot be created.",
-  "question": "The kept-pauses inventory entry has been added to skills/lifecycle/SKILL.md (line 201, bullet for skills/refine/SKILL.md:162). However, the Bash tool sandbox fails to initialize on every invocation, making git status/commit impossible. Can the commit be created externally, or is there a way to restore Bash tool access so the commit step can complete?"
-}
