@@ -409,13 +409,12 @@ For each failed feature (in the order listed in the report):
    Create a backlog investigation item for this failure? [yes / skip]
    ```
 
-6. If the user says yes (or any affirmative), invoke `/backlog add` prefilled with:
-   - **Title**: `Investigate failure: {feature-name}`
-   - **Description**: the error summary and suggested next step from the report
-   - **Tags**: `overnight-failure`, `investigation`
-
-   Present the prefilled values to the user and let the `/backlog add` skill handle
-   confirmation and file creation.
+6. If the user says yes (or any affirmative), invoke `/backlog-author compose` with a
+   context block derived from the failure summary (pre-resolved `why:` = what failed in
+   observable terms, `role:` = investigate the root cause, `integration:` = affected
+   lifecycle feature, `edges:` = non-goal: re-running the overnight session), capture
+   the returned body, then call `cortex-create-backlog-item --title "investigate
+   <feature-slug>" --body "<returned-body>"` to write the ticket.
 
 7. If the user says skip, move on without creating a backlog item.
 
