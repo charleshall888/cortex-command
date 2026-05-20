@@ -5,7 +5,7 @@ parent_backlog_id: 209
 artifacts: ["research", "spec", "plan"]
 tags: [skills, refine, lifecycle, ux]
 created: 2026-05-12
-updated: 2026-05-13
+updated: 2026-05-20
 ---
 
 # [[209-lead-refine-4-complexity-value-gate-with-recommended-option-rationale|Lead refine §4 complexity-value gate with recommended option + rationale]]

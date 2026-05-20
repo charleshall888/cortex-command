@@ -199,6 +199,7 @@ The following user-facing pauses are deliberate and remain in scope. Each entry 
 - `skills/lifecycle/references/implement.md:49` — conditional pause: branch selection on main (trunk vs feature-branch-with-worktree vs feature branch). Suppressed when `lifecycle.config.md::branch-mode` is set AND the working tree is clean AND no concurrent live interactive worktree exists for the feature slug.
 - `skills/lifecycle/references/backlog-writeback.md:11` — backlog write-back complete-lifecycle prompt on a backlog item already marked complete.
 - `skills/lifecycle/references/complete.md:73` — phase-exit pause: merge-wait pause inside the multi-step Complete phase; user re-invokes /cortex-core:lifecycle complete <slug> after merging on GitHub.
+- `skills/refine/SKILL.md:166` — refine §4 complexity-value gate pick-menu — renders only when the orchestrator's recommendation diverges from full scope or confidence is low; otherwise the announcement folds into the regular approval surface.
 
 If the user invokes `/cortex-core:lifecycle <phase>` to jump to a specific phase, honor the request but warn if prerequisite artifacts are missing (e.g., entering Plan without research.md).
 
