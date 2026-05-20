@@ -1,0 +1,8 @@
+[git-sync-rebase] Fetching origin...
+[git-sync-rebase] 1 commit(s) behind origin/main — starting rebase
+[git-sync-rebase] Conflict resolution pass 1/10
+[git-sync-rebase] 1 conflicted file(s) found
+[git-sync-rebase]   Non-allowlist conflict: work.txt
+[git-sync-rebase] Resolved 0 file(s), 1 non-allowlist conflict(s) remain
+[git-sync-rebase] Error: 1 non-allowlist conflict(s) cannot be auto-resolved — aborting rebase
+[git-sync-rebase]   Unresolved: work.txt
