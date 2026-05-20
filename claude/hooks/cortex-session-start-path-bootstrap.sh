@@ -28,6 +28,8 @@ LIFECYCLE_DIR="$CWD/cortex/lifecycle"
 # (and the owning session's Bash tool) picks it up on the first tool call.
 AUGMENTED_PATH="$HOME/.local/bin:$HOME/.cargo/bin:/opt/homebrew/bin:/usr/local/bin:${PATH:-}"
 
+PATH="$AUGMENTED_PATH" python3 -m cortex_command.doctor.path_self_test 2>/dev/null || true
+
 if [[ -n "${CLAUDE_ENV_FILE:-}" ]]; then
   echo "export PATH='$AUGMENTED_PATH'" >> "$CLAUDE_ENV_FILE"
 fi
