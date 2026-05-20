@@ -1,4 +1,4 @@
-"""Unit tests for ``bin/cortex-auto-bump-version`` (spec R20).
+"""Unit tests for ``cortex_command.auto_bump_version`` (spec R20).
 
 The acceptance criterion calls for ≥10 cases. The tests are split between:
 
@@ -8,18 +8,21 @@ The acceptance criterion calls for ≥10 cases. The tests are split between:
     contract.
 
   * Fixture-replay tests that spin up a temporary git repo, plant a tag and
-    commit history, and exec the script via ``subprocess.run``. These
+    commit history, and exec the module via ``subprocess.run``. These
     exercise the actual ``git describe`` / ``git log --format=%B%x00``
     integration end-to-end (including the squash-merge body case).
 
 Together the file declares 13 test functions, exceeding the spec's ≥10
 "PASSED lines" floor.
+
+Note: ``bin/cortex-auto-bump-version`` is now a dual-channel bash wrapper
+(Task 11 of installation-integrity-layer-bash-to-entry). Pure-logic tests
+import directly from ``cortex_command.auto_bump_version``; subprocess
+invocation tests call the module via ``python3 -m``.
 """
 
 from __future__ import annotations
 
-import importlib.machinery
-import importlib.util
 import os
 import subprocess
 import sys
@@ -27,29 +30,10 @@ from pathlib import Path
 
 import pytest
 
+import cortex_command.auto_bump_version as MOD
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = REPO_ROOT / "bin" / "cortex-auto-bump-version"
-
-
-def _load_script_module():
-    """Load the script as an importable module for direct function tests.
-
-    The script lacks a ``.py`` extension (it's a deployed bin/ command), so
-    we instantiate the source-file loader explicitly rather than relying on
-    ``spec_from_file_location``'s extension-based suffix dispatch (which
-    returns ``None`` for non-``.py`` paths).
-    """
-    loader = importlib.machinery.SourceFileLoader(
-        "cortex_auto_bump_version", str(SCRIPT_PATH)
-    )
-    spec = importlib.util.spec_from_loader(loader.name, loader)
-    assert spec is not None
-    mod = importlib.util.module_from_spec(spec)
-    loader.exec_module(mod)
-    return mod
-
-
-MOD = _load_script_module()
 
 
 # ---------------------------------------------------------------------------
@@ -230,17 +214,20 @@ def _tag(tmp_path: Path, tag: str) -> None:
 
 
 def _run_script(tmp_path: Path, *args: str) -> subprocess.CompletedProcess:
-    """Run the helper script with cwd=tmp_path."""
+    """Run the module via python3 -m with cwd=tmp_path.
+
+    Invokes ``cortex_command.auto_bump_version`` directly (bypassing the
+    bin/ bash wrapper) so tests remain fast and hermetic. The bin/ wrapper
+    is exercised by the parity test (``test_cortex_auto_bump_version_parity.py``).
+    """
     env = {
         **os.environ,
-        # The cortex-log-invocation shim is fail-open; suppress its session
-        # writes during tests by leaving LIFECYCLE_SESSION_ID unset.
         "GIT_CONFIG_GLOBAL": "/dev/null",
         "GIT_CONFIG_SYSTEM": "/dev/null",
     }
     env.pop("LIFECYCLE_SESSION_ID", None)
     return subprocess.run(
-        [str(SCRIPT_PATH), *args],
+        [sys.executable, "-m", "cortex_command.auto_bump_version", *args],
         cwd=str(tmp_path), capture_output=True, text=True, env=env,
     )
 
