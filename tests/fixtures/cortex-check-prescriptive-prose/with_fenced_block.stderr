@@ -1,0 +1,1 @@
+tests/fixtures/cortex-check-prescriptive-prose/with_fenced_block.md:10: PRESCRIPTIVE_PROSE section='Why' pattern=quoted-prose-patch -- fenced block of 2 non-empty lines

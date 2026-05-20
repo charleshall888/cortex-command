@@ -1,0 +1,4 @@
+tests/fixtures/cortex-check-prescriptive-prose/with_violations.md:8: PRESCRIPTIVE_PROSE section='Why' pattern=path:line -- skills/some-skill/SKILL.md:42
+tests/fixtures/cortex-check-prescriptive-prose/with_violations.md:9: PRESCRIPTIVE_PROSE section='Why' pattern=section-index -- R3
+tests/fixtures/cortex-check-prescriptive-prose/with_violations.md:13: PRESCRIPTIVE_PROSE section='Role' pattern=section-index -- §2
+tests/fixtures/cortex-check-prescriptive-prose/with_violations.md:21: PRESCRIPTIVE_PROSE section='Edges' pattern=path:line -- docs/spec.md:10-15
