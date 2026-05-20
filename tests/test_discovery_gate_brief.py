@@ -683,3 +683,92 @@ def test_validate_brief_word_boundary_false_positives(
         f"Expected failure reason to name {target_anchor!r} anchor when "
         f"FP token {fp_token!r} fails to satisfy it; got reason: {reason!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Test 7: anchor-missing error messages enumerate broadened tokens — Req 10
+#
+# Pins ALL THREE anchor-missing failure reasons against representative
+# broadened-token substrings so silent narrowing of any reason regresses a
+# test. Critical-review found the previous draft only pinned decision-anchor
+# tokens; this test closes that gap (cross-cutting acceptance gate, Task 8).
+# ---------------------------------------------------------------------------
+
+
+def test_validate_brief_error_messages_name_broadened_anchors() -> None:
+    """validate_brief() anchor-missing reasons enumerate broadened canonical
+    tokens for all three anchors (decision, alternatives, tradeoff).
+    """
+    # (a) Decision-anchor failure: brief has valid alternatives + tradeoff
+    # anchors but no decision-anchor token. Reason must enumerate 'chose'
+    # AND 'settled' (broadened decision tokens beyond 'decided').
+    decision_missing_brief = (
+        "Two options were weighed. The compromise was Y."
+    )
+    ok, reason = validate_brief(decision_missing_brief)
+    assert not ok, (
+        "Expected validate_brief to reject brief missing decision anchor, "
+        f"but it passed.\nBrief: {decision_missing_brief!r}"
+    )
+    assert "decision" in reason, (
+        f"Expected decision-anchor failure reason to name 'decision'; "
+        f"got: {reason!r}"
+    )
+    assert "chose" in reason, (
+        f"Expected decision-anchor failure reason to enumerate 'chose' "
+        f"(broadened token); got: {reason!r}"
+    )
+    assert "settled" in reason, (
+        f"Expected decision-anchor failure reason to enumerate 'settled' "
+        f"(broadened token); got: {reason!r}"
+    )
+
+    # (b) Alternatives-anchor failure: brief has valid decision + tradeoff
+    # anchors but no alternatives-anchor token. Reason must enumerate at
+    # least 2 of {considered, weighed, evaluated, rejected} (broadened
+    # alternatives tokens beyond 'alternatives'/'options').
+    alternatives_missing_brief = (
+        "We decided on X. The compromise was Y."
+    )
+    ok, reason = validate_brief(alternatives_missing_brief)
+    assert not ok, (
+        "Expected validate_brief to reject brief missing alternatives "
+        f"anchor, but it passed.\nBrief: {alternatives_missing_brief!r}"
+    )
+    assert "alternatives" in reason, (
+        f"Expected alternatives-anchor failure reason to name "
+        f"'alternatives'; got: {reason!r}"
+    )
+    broadened_alt_tokens = {"considered", "weighed", "evaluated", "rejected"}
+    present_alt = {tok for tok in broadened_alt_tokens if tok in reason}
+    assert len(present_alt) >= 2, (
+        f"Expected alternatives-anchor failure reason to enumerate at "
+        f"least 2 of {sorted(broadened_alt_tokens)}; found {sorted(present_alt)} "
+        f"in reason: {reason!r}"
+    )
+
+    # (c) Tradeoff-anchor failure: brief has valid decision + alternatives
+    # anchors but no tradeoff-anchor token. Reason must enumerate at least
+    # 2 of {drawback, downside, compromise, risk} (broadened tradeoff
+    # tokens beyond 'tradeoff'/'cost').
+    tradeoff_missing_brief = (
+        "We decided on X. Two options were weighed."
+    )
+    ok, reason = validate_brief(tradeoff_missing_brief)
+    assert not ok, (
+        "Expected validate_brief to reject brief missing tradeoff anchor, "
+        f"but it passed.\nBrief: {tradeoff_missing_brief!r}"
+    )
+    assert "tradeoff" in reason, (
+        f"Expected tradeoff-anchor failure reason to name 'tradeoff'; "
+        f"got: {reason!r}"
+    )
+    broadened_tradeoff_tokens = {"drawback", "downside", "compromise", "risk"}
+    present_tradeoff = {
+        tok for tok in broadened_tradeoff_tokens if tok in reason
+    }
+    assert len(present_tradeoff) >= 2, (
+        f"Expected tradeoff-anchor failure reason to enumerate at least 2 "
+        f"of {sorted(broadened_tradeoff_tokens)}; found "
+        f"{sorted(present_tradeoff)} in reason: {reason!r}"
+    )

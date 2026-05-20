@@ -663,14 +663,15 @@ def validate_brief(brief: str) -> tuple[bool, str]:
     if not _anchor_match(brief, _VALIDATE_BRIEF_ALTERNATIVES_TOKENS):
         return False, (
             "brief is missing alternatives anchor (one of: "
-            "alternatives, options, considered, ...)"
+            "alternatives, options, considered, weighed, evaluated, "
+            "rejected, ...)"
         )
 
     # Tradeoff anchor
     if not _anchor_match(brief, _VALIDATE_BRIEF_TRADEOFF_TOKENS):
         return False, (
             "brief is missing tradeoff anchor (one of: "
-            "tradeoff, cost, compromise, ...)"
+            "tradeoff, cost, drawback, downside, compromise, risk, ...)"
         )
 
     # Word-cap tolerance
