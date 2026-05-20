@@ -556,8 +556,10 @@ def _build_sentinel_absence_event(
     model_tier: str,
     expected_sha: str,
     observed_sha: str | None,
+    source_path: str | None = None,
+    snapshot_sha: str | None = None,
 ) -> dict:
-    """Return the canonical 8-field ``sentinel_absence`` event dict.
+    """Return the canonical ``sentinel_absence`` event dict.
 
     This is the single schema source for ``sentinel_absence`` events,
     consumed by both ``_cmd_record_exclusion`` (manual operator path) and
@@ -575,13 +577,24 @@ def _build_sentinel_absence_event(
         observed_sha: Observed SHA on ``sha_mismatch``; ``None`` on the
             ``absent`` and ``read_failed`` paths (the signature enforces
             this convention via the caller-supplied argument).
+        source_path: Optional original caller-supplied path when the
+            artifact was ad-hoc-snapshotted (Requirement 6/7). When
+            ``None`` the field is omitted from the emitted dict.
+            Preserved verbatim from the candidate string post-NUL/
+            surrogate validation; ASCII control characters (including
+            newlines) are legal here and JSON-escaped on write.
+        snapshot_sha: Optional full hex SHA-256 of the ad-hoc snapshot
+            content (the pin token consumed by ``cortex clean --adhoc``
+            retention). When ``None`` the field is omitted from the
+            emitted dict.
 
     Returns:
-        Dict with exactly the keys ``{"ts", "event", "feature",
-        "reviewer_angle", "reason", "model_tier", "expected_sha",
-        "observed_sha_or_null"}``.
+        Dict with the base ``sentinel_absence`` keys; ``source_path`` and
+        ``snapshot_sha`` are appended only when the corresponding kwarg
+        is not ``None`` (field-additive extension; the events-registry
+        row declares both as optional).
     """
-    return {
+    event: dict = {
         "ts": _now_iso(),
         "event": "sentinel_absence",
         "feature": feature,
@@ -591,6 +604,11 @@ def _build_sentinel_absence_event(
         "expected_sha": expected_sha,
         "observed_sha_or_null": observed_sha,
     }
+    if source_path is not None:
+        event["source_path"] = source_path
+    if snapshot_sha is not None:
+        event["snapshot_sha"] = snapshot_sha
+    return event
 
 
 # ---------------------------------------------------------------------------
@@ -718,6 +736,8 @@ def _cmd_check_artifact_stable(args: argparse.Namespace) -> int:
         model_tier=args.model_tier,
         expected_sha=args.expected_sha,
         observed_sha=observed_for_event,
+        source_path=args.source_path,
+        snapshot_sha=args.snapshot_sha,
     )
 
     events_log = Path(lifecycle_root) / args.feature / "events.log"
@@ -747,6 +767,8 @@ def _cmd_record_exclusion(args: argparse.Namespace) -> int:
         model_tier=args.model_tier,
         expected_sha=args.expected_sha,
         observed_sha=args.observed_sha,
+        source_path=args.source_path,
+        snapshot_sha=args.snapshot_sha,
     )
     try:
         append_event(events_log, event)
@@ -840,6 +862,25 @@ def _build_parser() -> argparse.ArgumentParser:
         default=50,
         help="Leading lines of reviewer output to scan (default: 50).",
     )
+    vr.add_argument(
+        "--source-path",
+        default=None,
+        help=(
+            "Optional original caller-supplied path when the artifact was "
+            "ad-hoc-snapshotted (Req 7). Threads onto the sentinel_absence "
+            "event as the field-additive ``source_path`` extension."
+        ),
+    )
+    vr.add_argument(
+        "--snapshot-sha",
+        default=None,
+        help=(
+            "Optional full hex SHA-256 of the ad-hoc snapshot content "
+            "(Req 7). Threads onto the sentinel_absence event as the "
+            "field-additive ``snapshot_sha`` extension; consumed by "
+            "``cortex clean --adhoc`` retention pinning."
+        ),
+    )
     vr.set_defaults(func=_cmd_check_artifact_stable)
 
     re_ = sub.add_parser(
@@ -860,6 +901,25 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     re_.add_argument("--expected-sha", required=True)
     re_.add_argument("--observed-sha", default=None)
+    re_.add_argument(
+        "--source-path",
+        default=None,
+        help=(
+            "Optional original caller-supplied path when the artifact was "
+            "ad-hoc-snapshotted (Req 7). Threads onto the sentinel_absence "
+            "event as the field-additive ``source_path`` extension."
+        ),
+    )
+    re_.add_argument(
+        "--snapshot-sha",
+        default=None,
+        help=(
+            "Optional full hex SHA-256 of the ad-hoc snapshot content "
+            "(Req 7). Threads onto the sentinel_absence event as the "
+            "field-additive ``snapshot_sha`` extension; consumed by "
+            "``cortex clean --adhoc`` retention pinning."
+        ),
+    )
     re_.set_defaults(func=_cmd_record_exclusion)
 
     return p
