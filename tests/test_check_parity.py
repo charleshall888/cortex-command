@@ -1,4 +1,4 @@
-"""End-to-end tests for ``bin/cortex-check-parity`` driven by mini-repo fixtures.
+"""End-to-end tests for ``cortex_command.parity_check`` driven by mini-repo fixtures.
 
 Each subdirectory of ``tests/fixtures/parity/`` is a self-contained mini-repo
 exercising one wiring/violation scenario. The linter is invoked with that
@@ -13,11 +13,17 @@ asserted against expectations keyed on the fixture name's prefix:
 
 Tasks 5 and 6 add ``invalid-*`` and ``exclude-*`` fixtures into the same
 directory using this harness without modification.
+
+Note: ``bin/cortex-check-parity`` is now a dual-channel bash wrapper (promoted
+in Task 12 of installation-integrity-layer-bash-to-entry). The test now invokes
+the module directly via ``python3 -m cortex_command.parity_check`` to remain
+runnable in both wheel-installed and working-tree contexts.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -26,7 +32,6 @@ import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPT_PATH = REPO_ROOT / "bin" / "cortex-check-parity"
 FIXTURES_ROOT = Path(__file__).resolve().parent / "fixtures" / "parity"
 
 
@@ -43,11 +48,20 @@ def _fixture_dirs() -> list[Path]:
 )
 def test_parity_fixture(fixture: Path) -> None:
     """Run the linter against ``fixture`` and assert outcome by prefix."""
+    env = dict(os.environ)
+    # Ensure the working-tree module is used even when the installed wheel
+    # points to a different worktree (common in multi-worktree setups).
+    existing_pythonpath = env.get("PYTHONPATH", "")
+    if existing_pythonpath:
+        env["PYTHONPATH"] = f"{REPO_ROOT}:{existing_pythonpath}"
+    else:
+        env["PYTHONPATH"] = str(REPO_ROOT)
     result = subprocess.run(
-        [sys.executable, str(SCRIPT_PATH), "--json"],
+        [sys.executable, "-m", "cortex_command.parity_check", "--json"],
         cwd=str(fixture),
         capture_output=True,
         text=True,
+        env=env,
     )
 
     name = fixture.name
