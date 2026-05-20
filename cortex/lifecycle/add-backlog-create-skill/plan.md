@@ -95,7 +95,7 @@ Phase 1 ships the shared `/backlog-author` sub-skill (with structurally-separate
 - **Complexity**: complex
 - **Context**: Each test function has ≥1 `assert` statement. Test 1 (compose-mode body emission) requires invoking the sub-skill protocol — since sub-skills are model-invoked, the test asserts the SKILL.md's compose protocol structure (heading walk, output-format spec, body-template inclusion) rather than running the model. Tests 2/3 are structural awk-greps on SKILL.md. Test 4 invokes `bin/cortex-check-prescriptive-prose` as a subprocess. Test 5 invokes `cortex-create-backlog-item` as a subprocess with `--body` and reads the resulting file. Use `subprocess.run(check=False)` and assert on `returncode`.
 - **Verification**: `grep -cE '^def test_(compose_mode_emits_five_section_body|compose_mode_does_not_call_askuserquestion|interview_mode_routes_through_askuserquestion|lex1_rejects_code_block_in_why_section|create_item_accepts_body_flag)' tests/test_backlog_author.py` = 5 AND `grep -c '    assert' tests/test_backlog_author.py` ≥ 5 AND `just test` exits 0 — pass if all three hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 10: Regenerate plugin mirror and verify parity
 - **Files**: `plugins/cortex-core/skills/backlog-author/SKILL.md`, `plugins/cortex-core/skills/backlog-author/references/body-template.md`, `plugins/cortex-core/bin/cortex-check-prescriptive-prose` (all auto-regenerated)
@@ -113,7 +113,7 @@ Phase 1 ships the shared `/backlog-author` sub-skill (with structurally-separate
 - **Complexity**: complex
 - **Context**: The template at lines 15–38 has been editorially stable across 19 commits — the extraction must preserve the section semantics, not just the headings. The Edge-vs-Touch-point rebalance rule at line 42 remains owned by decompose.md (it's policy on the template, not the template itself). The worked example at lines 44–59 demonstrates the rebalance rule using the template as illustration; deciding whether to update or relocate it is a content judgment based on which file best owns the demo.
 - **Verification**: `grep -c 'backlog-author/references/body-template.md' skills/discovery/references/decompose.md` ≥ 1 AND `awk '/^## /{section=$0} /Role.*Integration.*Edges|## Role/{print NR": "$0}' skills/discovery/references/decompose.md | head -5` shows the canonical template definition is no longer present (i.e., the bullet table at lines 15–38 is replaced) — pass if both hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 12: Update decompose.md §5 LEX-1 enumeration to include Why (Req 7b)
 - **Files**: `skills/discovery/references/decompose.md`
@@ -140,7 +140,7 @@ Phase 1 ships the shared `/backlog-author` sub-skill (with structurally-separate
 - **Complexity**: simple
 - **Context**: Line 91 currently reads (paraphrase): "create a backlog investigation item with title 'investigate X' and body summarizing what was uncovered." The replacement directs Claude to use the compose subcommand explicitly — making the autonomous-vs-human routing structural per CLAUDE.md "Prefer structural separation over prose-only enforcement."
 - **Verification**: `grep -cE 'backlog-author[[:space:]]+compose|backlog-author compose' skills/morning-review/SKILL.md` ≥ 1 — pass if the file references the compose subcommand.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 15: Wire discovery promote-sub-topic to compose mode
 - **Files**: `skills/discovery/SKILL.md`
@@ -149,7 +149,7 @@ Phase 1 ships the shared `/backlog-author` sub-skill (with structurally-separate
 - **Complexity**: simple
 - **Context**: Line 87 currently creates a `needs-discovery` ticket via `cortex-create-backlog-item --title "investigate ..."` with a minimal body. The new flow runs the body through compose mode so it lands with the five-section structure.
 - **Verification**: `grep -cE 'backlog-author[[:space:]]+compose|backlog-author compose' skills/discovery/SKILL.md` ≥ 1 — pass if the file references compose.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 16: Wire dev-hub backlog-creation suggestions to `/cortex-core:backlog new`
 - **Files**: `skills/dev/SKILL.md`
@@ -158,7 +158,7 @@ Phase 1 ships the shared `/backlog-author` sub-skill (with structurally-separate
 - **Complexity**: simple
 - **Context**: Lines 149 and 231 currently mention creating backlog items (paraphrase: "the user can create new items via /cortex-core:backlog add"). Replace `add` with `new` at both line ranges. The `add` subcommand still exists; the dev hub just nudges users toward the disciplined path by default.
 - **Verification**: `grep -cE 'backlog new|/cortex-core:backlog new' skills/dev/SKILL.md` ≥ 1 — pass if the file references the new subcommand.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 17: Wire lifecycle Clarify Context B to offer `/cortex-core:backlog new`
 - **Files**: `skills/lifecycle/references/clarify.md`
@@ -167,7 +167,7 @@ Phase 1 ships the shared `/backlog-author` sub-skill (with structurally-separate
 - **Complexity**: simple
 - **Context**: Line 19 currently reads: "Switch to **Context B** (ad-hoc topic) and treat the input as the topic name. Offer to create a backlog item before continuing — if this seems impractical, note it and proceed without." Replace the bare "create a backlog item" with "invoke /cortex-core:backlog new to create a backlog item with the disciplined body template" (or similar).
 - **Verification**: `grep -cE 'backlog new|/cortex-core:backlog new' skills/lifecycle/references/clarify.md` ≥ 1 — pass if the file references the new subcommand.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 18: Grep-sweep audit + cleanup for missed touchpoints
 - **Files**: any file the audit surfaces (provisional list: docs/*, cortex/requirements/*, CLAUDE.md)
