@@ -40,6 +40,7 @@ Examples: `001-complete-phase-commits.md`, `014-add-search-feature.md`
 When invoked without a `{{subcommand}}` (just `/cortex-core:backlog`), present the available actions via `AskUserQuestion`:
 
 - **pick** — Select an open item to work on
+- **new** — Interview-driven backlog item creation
 - **list** — Show the backlog summary table
 - **add** — Create a new backlog item
 - **ready** — Show unblocked items ready to work on
@@ -52,6 +53,15 @@ Create a new backlog item from `{{title}}`.
 
 1. Run `cortex-create-backlog-item --title "{{title}}" --status backlog --type {{type}} --priority {{priority}}` (type defaults to `feature`, priority defaults to `medium` unless user specifies). Pass `--parent NNN` if the user specified a parent epic.
 2. Open the created file for the user to review or edit the body
+
+### new
+
+Interview-driven backlog item creation. Delegates body authoring to `/backlog-author`, then writes the item file.
+
+1. Invoke `/backlog-author interview "{{title}}"` to conduct a structured interview and obtain a fully authored body
+2. Run `cortex-create-backlog-item --title "{{title}}" --body "..."` with the body returned by `backlog-author interview`
+
+The body is already authored after step 1; the file is not opened for user editing (unlike `add`).
 
 ### list
 
