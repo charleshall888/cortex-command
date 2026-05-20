@@ -48,16 +48,16 @@ Promote 13 skill-prose-referenced `bin/cortex-*` scripts to wheel-tier Python en
 - **Verification**: `ls tests/fixtures/cortex-log-invocation/ | grep -cE '\.(stdin|argv|stdout|stderr|exitcode)$'` ≥ 12 — pass if count ≥ 12. `grep -c -E 'jq.*--version|LC_ALL=C|TZ=UTC' tests/fixtures/cortex-log-invocation/README.md` ≥ 3 — pass if count ≥ 3.
 - **Status**: [x] done (commit `51c9e67f`, count = 20 quintuples)
 
-### Task 3: Replace `bin/cortex-log-invocation` with canonical wrapper + ship the user-facing `command not found` remediation message
+### Task 3: Replace `bin/cortex-log-invocation` with canonical wrapper + ship the user-facing `command not found` remediation message [DONE]
 - **Files**: `bin/cortex-log-invocation`
 - **What**: Replace the existing bash script with the canonical dual-channel wrapper template. Branch order: (a) if `CORTEX_COMMAND_FORCE_SOURCE=1` is set, exec via `python3 -m cortex_command.log_invocation` (using `CORTEX_COMMAND_ROOT` if set, else `dirname "$0"/..`); (b) else try wheel-import probe (`python3 -c "import cortex_command.log_invocation"`) — on success, exec via wheel; (c) else fall back to working-tree mode if `pyproject.toml` names cortex-command; (d) else exit 2 with the **canonical remediation message**: `cortex-log-invocation: cortex-command wheel not found on PATH. To fix: run 'uv tool install --reinstall --refresh git+https://github.com/charleshall888/cortex-command.git@<latest-tag>'. If this happens after a recent upgrade, your wheel may be stale.` This branch (d) message is the **primary remediation channel** that bypasses claude-code#16538 — every wrapper in Tasks 9–21 includes the same message structure (with binstub name substituted). The wrapper itself is the script; no sibling-lookup applies.
 - **Depends on**: [1]
 - **Complexity**: simple
 - **Context**: The existing `bin/cortex-morning-review-complete-session` template does NOT honor `CORTEX_COMMAND_FORCE_SOURCE=1` (wheel-import wins unconditionally), regressing the working-tree escape hatch. The new template places `CORTEX_COMMAND_FORCE_SOURCE=1` FIRST per requirement 2. The branch-(d) message is new vs the existing template — it's where the missing-entry-point remediation hint surfaces to the user. Because this fires at the actual failure moment (a skill shelled out to a missing binstub), it's the channel that delivers value even if SessionStart's `additionalContext` is dropped by #16538. Preserve `set -euo pipefail` and `chmod +x`.
 - **Verification**: With `CORTEX_COMMAND_FORCE_SOURCE=1 CORTEX_COMMAND_ROOT=$(pwd) bin/cortex-log-invocation --help`, exit code 0 and stdout originates from `cortex_command/log_invocation.py`. With no wheel installed and no working tree, `bin/cortex-log-invocation` exits 2 with stderr containing the literal substring `uv tool install --reinstall --refresh`. `test -x bin/cortex-log-invocation` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit `7c05529c`)
 
-### Task 4a: Sibling-pattern rewrite — bash subset (non-promoted only)
+### Task 4a: Sibling-pattern rewrite — bash subset (non-promoted only) [DONE]
 - **Files**: bash-shebang `bin/cortex-*` scripts that are NOT being promoted in Phases 2–3 AND currently invoke sibling `cortex-log-invocation`. Re-enumerate at task-execution time via `for f in bin/cortex-*; do head -1 "$f" | grep -q '^#!.*bash' && grep -l 'cortex-log-invocation' "$f"; done | grep -vE '(log-invocation|resolve-backlog-item|auto-bump-version|backlog-ready|check-parity|check-prescriptive-prose|commit-preflight|complexity-escalator|git-sync-rebase|lifecycle-counters|lifecycle-state|load-parent-epic|morning-review-gc-demo-worktrees)$'`. Expected hits: `cortex-jcc`, `cortex-invocation-report` (if bash), and any other bash utility not in the promoted set.
 - **What**: For each in-scope bash script, locate the existing sibling-call line (which may be at line 2, 12, 28, 35, or another position — NOT presumed to be line 1–2). Replace it in place with:
   ```bash
@@ -70,9 +70,9 @@ Promote 13 skill-prose-referenced `bin/cortex-*` scripts to wheel-tier Python en
 - **Complexity**: simple
 - **Context**: Critical-review finding established that 7 of 13 promoted scripts use a Python `subprocess.run(...)` one-liner, not the bash pattern; those are handled by Task 4b. Critical-review further established that Task 3's wrapper template has no sibling-call, so Task 4 must NOT touch the promoted scripts (their bin/ files are replaced wholesale in Tasks 9–21). The in-place edit replaces the existing call at whatever line it lives on, not "lines 1–2" mechanically.
 - **Verification**: For every non-promoted bash script enumerated above: `grep -lE 'command -v cortex-log-invocation' <file>` returns the file path — pass if count = expected. `grep -c '"\$(dirname "\$0")/cortex-log-invocation"' bin/cortex-* | grep -v ':0$' | wc -l` = 0 — no non-promoted bash script retains the old pattern. The smoke test in Task 7 exercises each rewritten script.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit `d6e837d2`; rewrote `cortex-jcc` and `cortex-morning-review-complete-session`; `cortex-invocation-report` correctly skipped — string-literal-only)
 
-### Task 4b: Sibling-pattern rewrite — Python/PEP 723 subset (non-promoted only)
+### Task 4b: Sibling-pattern rewrite — Python/PEP 723 subset (non-promoted only) [DONE]
 - **Files**: `#!/usr/bin/env python3` or `#!/usr/bin/env -S uv run --script` `bin/cortex-*` scripts that are NOT being promoted AND currently invoke sibling `cortex-log-invocation` via a Python one-liner. Re-enumerate at task-execution time. Expected hits: `cortex-archive-rewrite-paths`, `cortex-archive-sample-select`, `cortex-audit-doc`, `cortex-check-events-registry`, `cortex-check-path-hardcoding`, `cortex-count-tokens`, `cortex-measure-l1-surface`, `cortex-requirements-parity-audit`, `cortex-rewrite-cli-pin` — modulo whichever are already in the promoted set.
 - **What**: For each in-scope Python/PEP 723 script, locate the existing `subprocess.run([os.path.join(os.path.dirname(os.path.realpath(__file__)), "cortex-log-invocation"), sys.argv[0], *sys.argv[1:]], check=False)` (or similar Python-form sibling-call). Replace with the canonical Python rewrite:
   ```python
@@ -89,7 +89,7 @@ Promote 13 skill-prose-referenced `bin/cortex-*` scripts to wheel-tier Python en
 - **Complexity**: simple
 - **Context**: This task addresses critical-review A-class finding: bash syntax is not valid Python. The Python rewrite uses `shutil.which()` (PATH-based lookup matching `command -v` semantics) and produces stderr line `cortex-log-invocation failed: <msg>` so Task 7's smoke-test assertion catches regressions in both shebang classes. Promoted-script files are NOT touched here (they're wholly replaced by wrappers in Tasks 9–21).
 - **Verification**: For every non-promoted Python/PEP 723 script enumerated above: `grep -lE 'shutil.which\("cortex-log-invocation"\)' <file>` returns the file path. `grep -lE 'cortex-log-invocation failed:' <file>` returns the file path. The smoke test in Task 7 exercises each rewritten script and asserts no spurious `cortex-log-invocation failed:` stderr appears under normal conditions.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit `7437f64c`; 9 scripts rewritten)
 
 ### Task 5: Add `tests/test_parity_contract.py` with broadened named-tolerance escape [DONE]
 - **Files**: `tests/test_parity_contract.py` (new)
@@ -105,14 +105,14 @@ Promote 13 skill-prose-referenced `bin/cortex-*` scripts to wheel-tier Python en
 - **Verification**: `python3 -m pytest tests/test_parity_contract.py` — pass if exit 0, all tests pass. The test file exercises EACH named tolerance category in both directions (passes under tolerance opt-in; fails when tolerance is not opted in).
 - **Status**: [x] done (commit `8e2c2bc5`, 30 tests pass)
 
-### Task 6: Add `tests/test_cortex_log_invocation_parity.py`
+### Task 6: Add `tests/test_cortex_log_invocation_parity.py` [DONE]
 - **Files**: `tests/test_cortex_log_invocation_parity.py` (new)
 - **What**: For each fixture quintuple in `tests/fixtures/cortex-log-invocation/`, invoke `python3 -m cortex_command.log_invocation` with the fixture's `.argv` and stdin, and assert byte-identical or named-tolerance-equivalent stdout/stderr/exit-code against the fixture's captured `.stdout`/`.stderr`/`.exitcode`. Use the `@pytest.mark.structural_equivalence` decorator on parity-class tests with the tolerances appropriate to each fixture (most fixtures need `["unicode-escape", "trailing-newline"]` at minimum for stdout-JSON).
 - **Depends on**: [1, 2, 5]
 - **Complexity**: simple
 - **Context**: Use `subprocess.run` with `env=...` to override `LC_ALL`, `TZ`, and other determinism-sensitive variables to match fixture-capture. The fixture README from Task 2 enumerates which tolerance categories the test declares.
 - **Verification**: `python3 -m pytest tests/test_cortex_log_invocation_parity.py` — pass if exit 0, all tests pass.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit `528e36b2`, 16/16 tests pass; named tolerances applied to JSONL side-effect rather than empty streams)
 
 ### Task 7: Add `tests/test_phase1_sibling_rewrite_smoke.py` covering both shebang classes
 - **Files**: `tests/test_phase1_sibling_rewrite_smoke.py` (new)
@@ -127,14 +127,14 @@ Promote 13 skill-prose-referenced `bin/cortex-*` scripts to wheel-tier Python en
 - **Verification**: `python3 -m pytest tests/test_phase1_sibling_rewrite_smoke.py` — pass if exit 0.
 - **Status**: [ ] pending
 
-### Task 8: Capture `cortex-resolve-backlog-item` golden-replay fixtures pre-deletion
+### Task 8: Capture `cortex-resolve-backlog-item` golden-replay fixtures pre-deletion [DONE]
 - **Files**: `tests/fixtures/cortex-resolve-backlog-item/` (new directory, ≥3 quintuples), `tests/fixtures/cortex-resolve-backlog-item/README.md` (new)
 - **What**: Pre-deletion of `bin/cortex-resolve-backlog-item`, capture ≥3 representative invocations under the determinism harness (jq pinned, `LC_ALL=C`, `TZ=UTC`). Required cases: (a) unambiguous match (exit 0, JSON on stdout), (b) ambiguous match (exit 2, candidates on stderr), (c) no match (exit 3). Write README documenting harness + applicable tolerance set (e.g., `unicode-escape`, `trailing-newline` for the JSON stdout).
 - **Depends on**: none
 - **Complexity**: simple
 - **Context**: The five-value exit-code closed set {0, 2, 3, 64, 70} — fixtures cover the three operationally-common values. Generate against backlog state at HEAD (commit the snapshot's JSON).
 - **Verification**: `ls tests/fixtures/cortex-resolve-backlog-item/ | grep -cE '\.(stdin|argv|stdout|stderr|exitcode)$'` ≥ 12 — pass if count ≥ 12. `grep -c -E 'jq.*--version|LC_ALL=C|TZ=UTC' tests/fixtures/cortex-resolve-backlog-item/README.md` ≥ 3 — pass if count ≥ 3.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit `892b325a`, 15 quintuple files; covers exit 0, 2, 3)
 
 ### Task 9: Promote `cortex-resolve-backlog-item` to wheel entry point + remove stale install_guard comment
 - **Files**: `cortex_command/backlog/resolve_item.py` (replaces Task 1's stub), `bin/cortex-resolve-backlog-item` (replace with wrapper using Task 3 template), `tests/test_cortex_resolve_backlog_item_parity.py` (new)
@@ -235,14 +235,14 @@ Promote 13 skill-prose-referenced `bin/cortex-*` scripts to wheel-tier Python en
 - **Verification**: `python3 -c "import cortex_command.lifecycle.counters"` exits 0. `python3 -m pytest tests/test_cortex_lifecycle_counters_parity.py` exits 0.
 - **Status**: [ ] pending
 
-### Task 20: Capture `cortex-lifecycle-state` torn-line + `--field` fixtures pre-deletion
+### Task 20: Capture `cortex-lifecycle-state` torn-line + `--field` fixtures pre-deletion [DONE]
 - **Files**: `tests/fixtures/cortex-lifecycle-state/torn-line.*` quintuple (new); ≥3 representative-real-events.log fixtures; one fixture per supported `--field` value; `tests/fixtures/cortex-lifecycle-state/README.md` (new) enumerating the accepted `--field` set + applicable tolerances.
 - **What**: BEFORE writing the Python re-implementation, run current `bin/cortex-lifecycle-state` against (a) a torn-line events.log fixture (capture WHATEVER bash does); (b) 3 representative real-shape fixtures; (c) one fixture per `--field` value bash accepts. Document the accepted `--field` set + applicable parity tolerances (`unicode-escape`, `key-reorder`, `number-format`, `error-formatter-shape` for the torn-line case). Run under determinism harness.
 - **Depends on**: none
 - **Complexity**: complex
 - **Context**: The torn-line fixture sets up the parity contract for whatever bash currently does on malformed input. The README enumerates which tolerance categories apply per-fixture. The `error-formatter-shape` tolerance is the explicit carve-out for jq's error messages — Task 21's Python port doesn't try to byte-replicate jq's diagnostic text, just produces equivalent behavior (nonzero exit + non-empty stderr OR silent skip, matching what bash does).
 - **Verification**: `test -f tests/fixtures/cortex-lifecycle-state/torn-line.argv -a -f tests/fixtures/cortex-lifecycle-state/torn-line.stdout -a -f tests/fixtures/cortex-lifecycle-state/torn-line.stderr -a -f tests/fixtures/cortex-lifecycle-state/torn-line.exitcode` exits 0. `ls tests/fixtures/cortex-lifecycle-state/*.argv | wc -l` ≥ 8.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit `f211cfe3`, 8 quintuples + .events.log companions; torn-line actually emits `null` not silent-skip — Task 21 must reproduce exactly)
 
 ### Task 21: Promote `cortex-lifecycle-state`
 - **Files**: `cortex_command/lifecycle/state_cli.py` (replaces stub), `bin/cortex-lifecycle-state`, `tests/test_cortex_lifecycle_state_parity.py` (new)
@@ -289,14 +289,14 @@ Promote 13 skill-prose-referenced `bin/cortex-*` scripts to wheel-tier Python en
 - **Verification**: `python3 -m pytest tests/test_path_self_test_enumeration.py tests/test_path_self_test_hook_integration.py` exits 0.
 - **Status**: [ ] pending
 
-### Task 26: Document `CORTEX_COMMAND_FORCE_SOURCE=1` in `cortex/requirements/project.md`
+### Task 26: Document `CORTEX_COMMAND_FORCE_SOURCE=1` in `cortex/requirements/project.md` [DONE]
 - **Files**: `cortex/requirements/project.md`
 - **What**: Add a paragraph to "Wheel-binstub vs working-tree invocation" (around lines 38–39) per requirement 15's literal text about `CORTEX_COMMAND_FORCE_SOURCE=1`.
 - **Depends on**: none
 - **Complexity**: trivial
 - **Context**: Documentation-grade addition; no ADR needed. Documents the escape hatch Task 3's wrapper template adds.
 - **Verification**: `grep -c CORTEX_COMMAND_FORCE_SOURCE cortex/requirements/project.md` = 1 — pass if count = 1.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit `4de81868`)
 
 ### Task 27: Sweep skill prose for path-qualified `bin/cortex-<name>` references → bare-name
 - **Files**: any file under `skills/` matching `grep -rlE 'bin/cortex-(log-invocation|resolve-backlog-item|auto-bump-version|backlog-ready|check-parity|check-prescriptive-prose|commit-preflight|complexity-escalator|git-sync-rebase|lifecycle-counters|lifecycle-state|load-parent-epic|morning-review-gc-demo-worktrees)' skills/`. Known: `skills/refine/references/clarify-critic.md:16,65,198` for `bin/cortex-load-parent-epic`.
