@@ -1,18 +1,28 @@
-"""Tests for ``cortex_command.clean.run_adhoc`` — Task 8 (ticket-255).
+"""Tests for ``cortex_command.clean.run_adhoc`` — Tasks 8 + 9 (ticket-255).
 
 Covers Requirement 9 of the gate-policy-taxonomy-and-critical-review
-spec for the ``cortex-clean --adhoc`` retention recipe. This task ships
-the skeleton + pin-set construction + retention basics; concurrency
-scenarios (d) and (e) are deferred to Task 9.
+spec for the ``cortex-clean --adhoc`` retention recipe. Tasks 8 ships
+the skeleton + pin-set construction + retention basics; Task 9 adds
+scenario (e) — the malformed-JSONL WARN exit-code-2 path — alongside
+the dedicated parity-style concurrency invariant file at
+``tests/test_clean_adhoc_concurrency_invariant.py``.
 
 Scenarios in this file:
 
   (a) old-and-unpinned snapshot is deleted
   (b) old-and-pinned-by-active-events.log snapshot retained
   (c) new-and-unpinned snapshot retained
+  (e) malformed JSONL row → exit code 2 + WARN stderr line; cleanup
+      continues with remaining rows
   (f) ``.staging-*`` and ``.tombstone-*`` paths are ignored
   (g) old-and-pinned-by-archived-events.log snapshot retained
   (h) old-and-pinned-by-sessions-events.log snapshot retained
+
+Scenario (d) — concurrent invocations do not error or half-delete — is
+shipped as a dedicated parity-style file at
+``tests/test_clean_adhoc_concurrency_invariant.py`` (precedent: the
+Phase 1 parity file). The dedicated file resists casual deletion in
+future test refactors via the file name + named-failure diagnostic.
 """
 
 from __future__ import annotations
@@ -340,3 +350,121 @@ def test_fresh_repo_without_archive_or_sessions_does_not_error(tmp_path: Path) -
     # No archive/, no sessions/, no snapshots, no events.log files.
     exit_code = run_adhoc(repo)
     assert exit_code == 0
+
+
+# ---------------------------------------------------------------------------
+# Scenario (e): malformed JSONL row triggers WARN + exit code 2 (Task 9)
+# ---------------------------------------------------------------------------
+
+
+def test_malformed_jsonl_row_emits_warn_and_returns_exit_code_2(
+    tmp_path: Path,
+) -> None:
+    """Spec Requirement 9 scenario (e): malformed JSONL → exit 2 + WARN.
+
+    Pin-set construction must tolerate malformed JSONL rows by emitting
+    a stderr line in the format
+    ``WARN: skipped malformed row at <path>:<lineno>: <reason>`` and
+    continuing with the remaining rows. The recipe exits with code 2
+    when any row was skipped.
+
+    This scenario is added in Task 9 (not Task 8) because the
+    WARN-and-continue pattern interacts with the deletion path that
+    Task 9 finalizes — verifying that a malformed row in one
+    events.log still allows pin-set construction to proceed with
+    correct ``snapshot_sha`` pins from other rows requires the
+    deletion path to be exercised end-to-end against the partial pin
+    set.
+
+    Fixture:
+      - One old-and-unpinned snapshot (the deletion target).
+      - One old-and-pinned snapshot, pinned by an events.log that
+        also contains a malformed JSONL row before the well-formed
+        pinning row. The malformed row must NOT prevent the
+        well-formed row's ``snapshot_sha`` from being added to the
+        pin set.
+
+    Asserts:
+      - Exit code is 2 (warning).
+      - Stderr contains a ``WARN: skipped malformed row`` line citing
+        the events.log path and the offending line number.
+      - The pinned snapshot is retained (cleanup continued past the
+        malformed row).
+      - The unpinned snapshot is deleted (the deletion path ran
+        despite the warning).
+    """
+    repo = _make_repo(tmp_path)
+
+    # The deletion target — old, not pinned by any events.log.
+    unpinned_leaf, _ = _make_snapshot(
+        repo, b"unpinned but old\n", age_seconds=RETENTION_SECONDS + 60
+    )
+
+    # The retention target — old, pinned by a well-formed row that
+    # appears AFTER a malformed row in the same events.log. If the
+    # parser bailed on the malformed row, this pin would be lost and
+    # the snapshot would be wrongly deleted.
+    pinned_leaf, pinned_sha = _make_snapshot(
+        repo, b"pinned by row after malformed\n", age_seconds=RETENTION_SECONDS + 60
+    )
+    events_log = repo / "cortex" / "lifecycle" / "feat-mixed" / "events.log"
+    events_log.parent.mkdir(parents=True, exist_ok=True)
+    # Row 1: malformed (truncated JSON).
+    # Row 2: well-formed; pins ``pinned_sha``.
+    # Row 3: empty line — silently skipped (no warning, no count).
+    malformed_row = '{"ts": "2026-05-19T00:00:00Z", "event": "sentinel_absence"'
+    wellformed_row = json.dumps(
+        {
+            "ts": "2026-05-19T00:00:01Z",
+            "event": "sentinel_absence",
+            "feature": "feat-mixed",
+            "snapshot_sha": pinned_sha,
+        }
+    )
+    events_log.write_text(
+        malformed_row + "\n" + wellformed_row + "\n" + "\n",
+        encoding="utf-8",
+    )
+
+    import io
+
+    stdout_buf = io.StringIO()
+    stderr_buf = io.StringIO()
+    exit_code = run_adhoc(repo, stdout=stdout_buf, stderr=stderr_buf)
+
+    # Exit code 2 = warning (malformed row).
+    assert exit_code == 2, (
+        f"expected exit code 2 (malformed-row warning); got {exit_code}"
+    )
+
+    # Stderr WARN line shape:
+    # ``WARN: skipped malformed row at <path>:<lineno>: <reason>``
+    stderr_text = stderr_buf.getvalue()
+    assert "WARN: skipped malformed row at " in stderr_text, (
+        f"expected `WARN: skipped malformed row at ...` line on stderr; "
+        f"got: {stderr_text!r}"
+    )
+    assert str(events_log) in stderr_text, (
+        f"expected events.log path {events_log!s} in WARN line; "
+        f"got: {stderr_text!r}"
+    )
+    # Line number 1 (the malformed row is the first line).
+    assert ":1:" in stderr_text, (
+        f"expected WARN line to cite ``:1:`` (lineno of malformed row); "
+        f"got: {stderr_text!r}"
+    )
+
+    # The pinned snapshot survives (parser continued past the malformed
+    # row and added the well-formed row's snapshot_sha to the pin set).
+    assert pinned_leaf.exists(), (
+        "snapshot pinned by a well-formed row AFTER a malformed row "
+        "must be retained — parser must continue past malformed rows."
+    )
+
+    # The unpinned snapshot was deleted (the deletion path ran despite
+    # the warning).
+    assert not unpinned_leaf.exists(), (
+        "unpinned-and-old snapshot must still be deleted when other "
+        "events.logs contain malformed rows — the WARN must not abort "
+        "the deletion pass."
+    )

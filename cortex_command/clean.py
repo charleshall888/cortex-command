@@ -1,8 +1,8 @@
 """``cortex-clean`` console script — ad-hoc snapshot retention recipe.
 
-Task 8 / Phase 2 of ticket-255 (gate-policy-taxonomy-and-critical-review).
-Ships the skeleton for the ``cortex clean --adhoc`` retention recipe
-specified in Requirement 9 of the spec. The ``--adhoc`` subcommand:
+Tasks 8 + 9 / Phase 2 of ticket-255 (gate-policy-taxonomy-and-critical-review).
+Implements the ``cortex clean --adhoc`` retention recipe specified in
+Requirement 9 of the spec. The ``--adhoc`` subcommand:
 
   1. Scans ``cortex/_adhoc/<sha[:2]>/<sha[2:]>/`` snapshot directories.
   2. Builds a pin set by walking all three iteration classes of
@@ -26,7 +26,27 @@ false-positive deletion of stray non-snapshot directories.
 In-flight snapshots (``.staging-*``, written by ``_snapshot_adhoc`` in
 ``cortex_command/critical_review.py`` before the final ``os.rename``)
 and queued deletions (``.tombstone-*``, used by Task 9's tombstone-rename
-atomicity logic) are ignored.
+atomicity logic) are ignored at enumeration time.
+
+Deletion uses a tombstone-rename two-pass pattern (Task 9 / Requirement
+9):
+
+  Pass 1: ``os.rename`` ``<sha[:2]>/<sha[2:]>/`` to
+          ``<sha[:2]>/.tombstone-<sha[2:]>/``. ``os.rename`` is atomic
+          within a filesystem — either the directory has the tombstone
+          name after the call, or it raises and the original name is
+          untouched.
+  Pass 2: ``shutil.rmtree`` the tombstone directory.
+
+Concurrent invocations of ``cortex-clean --adhoc`` cannot half-delete a
+snapshot because the rename is atomic and ``rm -rf`` operates on the
+tombstone (a name no other invocation will compete for). A second
+invocation that observes a ``.tombstone-*`` directory at enumeration
+time skips it silently — the first invocation owns the cleanup. If the
+rename itself fails because another invocation tombstoned the same
+snapshot first, the failure is caught and the directory is skipped
+(``FileNotFoundError`` and ``OSError`` from a vanished source are both
+benign concurrent-cleaner races).
 
 Malformed JSONL rows in any events.log are skipped with a stderr
 ``WARN: skipped malformed row at <path>:<lineno>: <reason>`` line; the
@@ -39,17 +59,14 @@ pin-set construction continues. Exit-code policy:
 
 ``--dry-run`` prints deletion candidates to stdout without modifying
 anything.
-
-Deferred to Task 9:
-  - Tombstone-rename concurrency invariant (Task 9 replaces the plain
-    ``shutil.rmtree`` here with rename-then-rmtree).
-  - Concurrency test scenarios (d) and (e) from the spec.
 """
 
 from __future__ import annotations
 
 import argparse
+import errno
 import json
+import os
 import re
 import shutil
 import sys
@@ -213,13 +230,82 @@ def _is_old(leaf_dir: Path, *, now: float, retention: int) -> bool:
 
 
 def _delete_snapshot(leaf_dir: Path) -> None:
-    """Delete the snapshot directory.
+    """Delete the snapshot directory using a tombstone-rename two-pass.
 
-    Task 8 uses plain ``shutil.rmtree``; Task 9 will replace this with
-    a tombstone-rename pattern for atomicity against concurrent readers
-    and concurrent cleaners.
+    Task 9 / Requirement 9 — tombstone-rename atomicity. The deletion
+    sequence is:
+
+      Pass 1: ``os.rename(leaf_dir, tombstone_dir)`` where
+              ``tombstone_dir`` is the same parent directory with name
+              ``.tombstone-<sha[2:]>``. ``os.rename`` is atomic within a
+              filesystem — the directory either has the new name or the
+              call raised and the original name is untouched.
+      Pass 2: ``shutil.rmtree(tombstone_dir)``. The tombstone name is
+              owned by this invocation; no concurrent cleaner will
+              compete for it.
+
+    Concurrency invariant: two concurrent ``cortex-clean --adhoc``
+    invocations cannot half-delete a snapshot. The atomicity comes from
+    ``os.rename``; the two-pass shape makes the ``rm -rf`` operate on a
+    name (the tombstone) that the current invocation owns.
+
+    Skip-on-race semantics:
+      - If the source vanished between enumeration and rename (a peer
+        cleaner already tombstoned and removed it), ``os.rename`` raises
+        ``FileNotFoundError`` — caught and treated as benign.
+      - If the rename target already exists (a peer cleaner tombstoned
+        the same snapshot first), the OS-specific error (``OSError``
+        with ``errno.EEXIST`` or ``errno.ENOTEMPTY`` on POSIX) is
+        caught and treated as benign — the peer owns the cleanup.
+
+    If the tombstone exists from a prior crashed invocation (no peer is
+    actively cleaning it), the rename collides; this branch reclaims
+    the tombstone by ``rm -rf``'ing it, then retries the rename once.
+    A second collision is treated as a benign race (a peer is
+    re-cleaning) and the snapshot is skipped.
     """
-    shutil.rmtree(leaf_dir, ignore_errors=False)
+    tombstone = leaf_dir.parent / (".tombstone-" + leaf_dir.name)
+
+    # Pass 1: atomic rename to the tombstone name.
+    try:
+        os.rename(leaf_dir, tombstone)
+    except FileNotFoundError:
+        # Source vanished — peer cleaner already removed it. Benign.
+        return
+    except OSError as exc:
+        # Rename target already exists OR the source is otherwise
+        # unrenamable. The two collision-y errnos under POSIX are
+        # EEXIST and ENOTEMPTY (target dir non-empty). On macOS the
+        # target-collision case typically surfaces as ENOTEMPTY.
+        if exc.errno in (errno.EEXIST, errno.ENOTEMPTY):
+            # A peer cleaner tombstoned this snapshot first OR a prior
+            # crashed invocation left a tombstone behind. Try to reclaim
+            # the orphaned tombstone, then retry once.
+            try:
+                shutil.rmtree(tombstone)
+            except FileNotFoundError:
+                # Peer just finished its second pass. Benign.
+                return
+            except OSError:
+                # Couldn't reclaim — peer is actively cleaning. Skip.
+                return
+            try:
+                os.rename(leaf_dir, tombstone)
+            except FileNotFoundError:
+                return
+            except OSError:
+                # Second collision; peer is faster. Skip.
+                return
+        else:
+            # Unexpected error — propagate to the caller, which converts
+            # to exit code 3.
+            raise
+
+    # Pass 2: rm -rf the tombstone. The tombstone name is owned by this
+    # invocation; concurrent cleaners that enumerated after our rename
+    # see ``.tombstone-*`` and skip it (via
+    # ``_enumerate_snapshot_dirs``'s prefix filter).
+    shutil.rmtree(tombstone)
 
 
 # ---------------------------------------------------------------------------
