@@ -1,0 +1,30 @@
+{
+  "ts": "2026-05-20T17:30:00Z",
+  "feature": "revert-tmpdir-worktree-placement-and-restore",
+  "artifact": "cortex/lifecycle/revert-tmpdir-worktree-placement-and-restore/spec.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 2,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "unregister() in settings_merge.py operates exclusively on sandbox.filesystem.allowWrite and never touches additionalDirectories. The migration predicate in the spec requires cleaning both arrays, but even if unregister() were wired into --update, the additionalDirectories stale entry would survive.",
+      "reviewer_angle": "Migration predicate breadth",
+      "evidence_quote": "removes orphaned entries: any value containing cortex-worktrees from sandbox.filesystem.allowWrite and additionalDirectories"
+    },
+    {
+      "class": "B",
+      "finding": "R5's allow_paths fix in seatbelt_probe.py must simultaneously cover TMPDIR (for probe result/output files written at lines 156-157) AND <repo>/.claude/worktrees/ (for branch (c) worktree creation inside the spawned claude session), but the spec's acceptance criterion only checks for a substring match in the allow_paths construction and does not verify that TMPDIR coverage is preserved.",
+      "reviewer_angle": "Overnight mixed-path correctness",
+      "evidence_quote": "The probe's allow_paths no longer relies solely on TMPDIR; grep -c 'claude/worktrees|repo_root|project_root' cortex_command/overnight/seatbelt_probe.py >= 1 in the allow_paths construction"
+    },
+    {
+      "class": "B",
+      "finding": "test_worktree_seatbelt.py is not listed in R8 update scope or R10 test sweep. After the revert, the test module docstring explicitly claims to validate TMPDIR/cortex-worktrees/<feature> semantics (the path being reverted away from), becoming factually inverted.",
+      "reviewer_angle": "Overnight mixed-path correctness",
+      "evidence_quote": "Update tests/test_worktree.py: revert branch-(c) assertions to expect .claude/worktrees/; delete branch-(b) sentinel tests; add a new integration test..."
+    }
+  ]
+}
