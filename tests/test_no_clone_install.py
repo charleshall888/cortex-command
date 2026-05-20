@@ -419,6 +419,19 @@ def test_mcp_first_install_hook(
         f"`uv tool install --reinstall …` was not invoked; "
         f"observed argvs: {install_argv_seen}"
     )
+    # The `--refresh-package cortex-command` pair must sit immediately
+    # after `--reinstall` so force-pushed release tags actually pull the
+    # new wheel (closes the stale-cache bug in the Layer-2 reinstall
+    # path). The URL must remain at index -1 (asserted below).
+    argv = install_calls[0]
+    reinstall_idx = argv.index("--reinstall")
+    assert argv[reinstall_idx + 1 : reinstall_idx + 3] == [
+        "--refresh-package",
+        "cortex-command",
+    ], (
+        f"install argv missing `--refresh-package cortex-command` adjacent "
+        f"to `--reinstall`; argv: {argv!r}"
+    )
     # The git URL trailer must reference CLI_PIN[0].
     final_arg = install_calls[0][-1]
     assert final_arg.startswith("git+"), (
@@ -509,6 +522,16 @@ def test_mcp_first_install_hook(
         success_argvs[0][: len(expected_install_prefix)]
         == expected_install_prefix
     ), f"phase-3 first call was not `uv tool install --reinstall`: {success_argvs[0]!r}"
+    # Same `--refresh-package cortex-command` adjacency check as the
+    # failure path above — guards against regression on the success path.
+    _phase3_argv = success_argvs[0]
+    _phase3_reinstall_idx = _phase3_argv.index("--reinstall")
+    assert _phase3_argv[
+        _phase3_reinstall_idx + 1 : _phase3_reinstall_idx + 3
+    ] == ["--refresh-package", "cortex-command"], (
+        f"phase-3 install argv missing `--refresh-package cortex-command` "
+        f"adjacent to `--reinstall`; argv: {_phase3_argv!r}"
+    )
     assert success_argvs[0][-1].endswith(f"@{server.CLI_PIN[0]}"), (
         f"phase-3 install URL does not pin CLI_PIN[0]: {success_argvs[0]!r}"
     )

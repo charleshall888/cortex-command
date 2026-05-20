@@ -182,6 +182,7 @@ def _check_version(payload: dict, *, verb: str) -> None:
             f"MCP requires major={required_major} "
             f"(MCP_REQUIRED_CLI_VERSION={MCP_REQUIRED_CLI_VERSION!r}); "
             f"downgrade plugin OR run `uv tool install --reinstall "
+            f"--refresh-package cortex-command "
             f"git+https://github.com/charleshall888/cortex-command.git"
             f"@{CLI_PIN[0]}` to upgrade cortex CLI to the matching version."
         )
@@ -627,6 +628,8 @@ def _run_install_and_verify(*, stage: str) -> None:
             "tool",
             "install",
             "--reinstall",
+            "--refresh-package",
+            "cortex-command",
             f"git+https://github.com/charleshall888/cortex-command.git"
             f"@{CLI_PIN[0]}",
         ]
@@ -652,6 +655,7 @@ def _run_install_and_verify(*, stage: str) -> None:
             )
             raise CortexInstallFailed(
                 f"cortex auto-install (`uv tool install --reinstall "
+                f"--refresh-package cortex-command "
                 f"git+...@{CLI_PIN[0]}`) failed: {error}"
             ) from exc
 
@@ -673,6 +677,7 @@ def _run_install_and_verify(*, stage: str) -> None:
             )
             raise CortexInstallFailed(
                 f"cortex auto-install (`uv tool install --reinstall "
+                f"--refresh-package cortex-command "
                 f"git+...@{CLI_PIN[0]}`) failed: {error}"
             )
 
@@ -838,6 +843,7 @@ def _ensure_cortex_installed() -> None:
             f"{int(_INSTALL_SENTINEL_WINDOW_SECONDS)}s); "
             f"not retrying. Prior failure: {prior}. "
             f"Run `uv tool install --reinstall "
+            f"--refresh-package cortex-command "
             f"git+https://github.com/charleshall888/cortex-command.git"
             f"@{CLI_PIN[0]}` manually to recover."
         )
@@ -1862,6 +1868,7 @@ def _schema_floor_violated(cortex_root_payload: dict[str, Any]) -> bool:
                 f"Schema-floor violation: installed CLI schema_version="
                 f"{cli_version}, required={CLI_PIN[1]}; run "
                 f"'uv tool install --reinstall "
+                f"--refresh-package cortex-command "
                 f"git+https://github.com/charleshall888/cortex-command.git"
                 f"@{CLI_PIN[0]}' to upgrade",
                 file=sys.stderr,

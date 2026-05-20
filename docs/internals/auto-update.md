@@ -14,7 +14,7 @@ Cortex-command ships as two halves that must stay paired in version: the `cortex
 
 The architecture is structured so the user never has to reason about which half is stale. The plugin carries an embedded `CLI_PIN` constant naming the CLI tag it expects; the next MCP tool call after a plugin refresh observes the mismatch between the installed CLI version and `CLI_PIN[0]` and runs `uv tool install --reinstall` synchronously before delegating to the CLI. The schema-floor check at `_schema_floor_violated` (see [Component map](#component-map)) hard-rejects any payload whose major schema-version differs from the plugin's baked-in floor, so a paired-but-incompatible plugin/CLI combination surfaces as an actionable remediation message rather than silent miscomputation.
 
-The auto-update flow is deliberately MCP-tool-call-gated: only invocations that route through the plugin's MCP server trigger the reinstall. Bash-tool subprocess dispatches that shell out to `cortex …` directly bypass this layer by design (see the [Bash-tool carve-out](#bash-tool-subprocess-carve-out) below). The `implement.md §1a` preflight surfaces the gap loudly when it bites, treating it as a fail-fast diagnostic rather than coverage that closes it.
+The auto-update flow is deliberately MCP-tool-call-gated on the **execution** side: only invocations that route through the plugin's MCP server trigger the reinstall. Bash-tool subprocess dispatches that shell out to `cortex …` directly therefore bypass the reinstall path. The **visibility** side of that gap, however, is now closed by the SessionStart drift-detector hook (#235), which probes the installed CLI against `CLI_PIN[0]` on session start and emits `additionalContext` so Claude warns about stale bare-shell `cortex …` calls before they fail. The `implement.md §1a` preflight remains a fail-fast diagnostic for any drift that survives the hook (dev-mode skips, throttle-window invocations, hook regressions). See the [Bash-tool carve-out](#bash-tool-subprocess-carve-out) below for the execution-vs-visibility split.
 
 ---
 
@@ -36,7 +36,9 @@ The reinstall fires only under `uv tool install`-style wheel installs. Editable 
 
 ### Bash-tool subprocess carve-out
 
-Bash-tool subprocess dispatches that shell out to `cortex …` directly — without going through the MCP server — do **not** trigger Layer 2. This is an intentional gap (see `#145`'s wontfix), not an oversight: routing every CLI subprocess through the MCP server would require either Claude Code-side instrumentation or a CLI-side phone-home, both of which violate the plugin-imports-zero-cortex-modules contract. The `implement.md §1a` preflight is a fail-fast diagnostic that surfaces the gap loudly when it bites.
+Bash-tool subprocess dispatches that shell out to `cortex …` directly — without going through the MCP server — do **not** trigger the Layer 2 reinstall. This is an intentional execution-side gap: routing every CLI subprocess through the MCP server would require either Claude Code-side instrumentation or a CLI-side phone-home, both of which violate the plugin-imports-zero-cortex-modules contract.
+
+The execution gap is bracketed by a visibility closure: the `cortex-cli-version-sync.sh` SessionStart hook (#235) probes the installed CLI against `CLI_PIN[0]` once per 30-minute throttle window and emits `additionalContext` to Claude on drift, so the next bare-shell `cortex …` call is preceded by a warning that names the expected and installed versions and the manual `uv tool install --reinstall --refresh-package cortex-command git+…@<tag>` remediation. The hook honors the same skip predicates as `_evaluate_skip_predicates` (`CORTEX_DEV_MODE=1`, dirty tree, non-`main` branch) so dogfooding sessions are not warned about expected drift. The `implement.md §1a` preflight remains the fail-fast diagnostic for any drift that survives the hook.
 
 ---
 
@@ -55,6 +57,7 @@ Each row names a load-bearing component, its file:line, and a one-sentence role.
 | `cortex --print-root` envelope | `cortex_command/cli.py:232` | Versioned JSON payload carrying `version` (package version) and `schema_version` (envelope floor) — the bootstrap call MCP consumers parse. |
 | `check_in_flight_install_core` | `cortex_command/install_guard.py:150` | Stdlib-only core that blocks reinstall when an overnight session is active; vendored as a byte-identical sibling at `plugins/cortex-overnight/install_guard.py:27`. |
 | CI lint (defense-in-depth) | `.github/workflows/release.yml:28` | Hard-fails the release job when `CLI_PIN[0]` does not match the pushed tag; subsumes #212's drift-lint goal. |
+| `cortex-cli-version-sync.sh` (#235) | `plugins/cortex-overnight/hooks/cortex-cli-version-sync.sh` | SessionStart drift-detector; regex-parses `CLI_PIN` from `server.py`, probes the installed CLI via `cortex --print-root --format json`, and emits `additionalContext` on drift. Visibility-only — does NOT reinstall. Honors a 30-minute freshness throttle and the same skip predicates as `_evaluate_skip_predicates`. |
 
 ---
 
@@ -107,8 +110,9 @@ The audit table below names the load-bearing components, their intended behavior
 The flow above closes the three structural gaps that motivated this ticket. The following risks remain explicitly out of scope:
 
 - **Marketplace fast-forward (Layer 1).** Anthropic owns the force-pushed-tag, session-restart-timing, and tag-not-yet-on-origin paths. The real-install test (R23) covers cortex-command-side mismatch detection only.
-- **Force-pushed release tag.** `uv tool install --reinstall` may serve a stale wheel from the uv cache when a release tag is force-pushed. Recommended remediation: `uv cache clean cortex-command` before reinstall on suspected force-push.
 - **Pre-v2.0.0 plugin paired with v2.0.0+ CLI.** Hard-fail by design; the old plugin's `_parse_major_minor` reads the new envelope's `version` field as a PEP 440 string and raises `ValueError`. One-time coordinated reinstall of both halves is required; the marketplace fast-forward (Layer 1) recovers within one session-restart cycle.
+
+Force-pushed-release-tag stale-wheel risk is now closed by `_run_install_and_verify`: the install argv carries `--refresh-package cortex-command` between `--reinstall` and the git URL (#235), so a force-pushed release tag invalidates the uv git cache entry for `cortex-command` without touching transitive PyPI caches. The same flag appears in every user-facing remediation string so the manual recovery path matches the auto-recovery argv.
 
 ---
 

@@ -407,6 +407,7 @@ test-hook-commit:
 # Run all hook regression tests
 test-hooks:
     bash tests/test_hooks.sh
+    bash tests/test_cli_version_sync_hook.sh
 
 # Run the uv-tool-topology smoke test for cortex-scan-lifecycle (spec req #7).
 # Skips with a clear message on non-uv-tool topology (dev-checkout); only
@@ -555,7 +556,7 @@ build-plugin:
             cortex-overnight)
                 BIN=()
                 SKILLS=(overnight morning-review)
-                HOOKS=(hooks/cortex-cleanup-session.sh hooks/cortex-scan-lifecycle.sh claude/hooks/cortex-tool-failure-tracker.sh claude/hooks/cortex-permission-audit-log.sh)
+                HOOKS=(hooks/cortex-cleanup-session.sh hooks/cortex-scan-lifecycle.sh hooks/cortex-cli-version-sync.sh claude/hooks/cortex-tool-failure-tracker.sh claude/hooks/cortex-permission-audit-log.sh)
                 ;;
             *)
                 echo "build-plugin: no manifest for $p" >&2

@@ -29,7 +29,7 @@ Ship a SessionStart drift-detector hook (bash trampoline + embedded Python hered
 - **Complexity**: simple
 - **Context**: Current file has a single SessionStart entry registering `cortex-scan-lifecycle.sh` at lines 3–12. The W003 parity check (`bin/cortex-check-parity`) allows referencing a not-yet-deployed script (only flags deployed-but-unreferenced), so this registration can land before Task 3.
 - **Verification**: `jq '.hooks.SessionStart | length' plugins/cortex-overnight/hooks/hooks.json` = 2 AND `jq -r '[.hooks.SessionStart[].hooks[].command] | join(",")' plugins/cortex-overnight/hooks/hooks.json | grep -c cortex-cli-version-sync` = 1 — pass if both checks succeed.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Add cortex-cli-version-sync.sh to just build-plugin HOOKS array
 - **Files**: `justfile`
@@ -38,7 +38,7 @@ Ship a SessionStart drift-detector hook (bash trampoline + embedded Python hered
 - **Complexity**: simple
 - **Context**: Existing recipe is at justfile:626–672. The HOOKS array for cortex-overnight currently lists `cortex-scan-lifecycle.sh`. The build-plugin command iterates the array and `cp hooks/<name> plugins/cortex-overnight/hooks/<name>`. New entry mirrors the same pattern.
 - **Verification**: `just --evaluate | grep -A 5 'build-plugin' >/dev/null && grep -q "cortex-cli-version-sync.sh" justfile` — pass if grep finds the new entry in the recipe. (The byte-identical-mirror cmp check is Task 3's verification responsibility, since the canonical source must exist for the recipe to copy.)
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Implement the SessionStart drift-detector hook
 - **Files**: `hooks/cortex-cli-version-sync.sh`
@@ -47,7 +47,7 @@ Ship a SessionStart drift-detector hook (bash trampoline + embedded Python hered
 - **Complexity**: complex
 - **Context**: Bash precedent: `plugins/cortex-overnight/hooks/cortex-scan-lifecycle.sh` (`set -euo pipefail` at line 2; `INPUT=$(cat)` + `jq -r '.cwd // empty'` at lines 5–13; PATH bootstrap from `claude/hooks/cortex-worktree-create.sh:18` is `export PATH="$HOME/.local/bin:$HOME/.cargo/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"`). Skip-predicate order mirrors `_evaluate_skip_predicates` at `plugins/cortex-overnight/server.py:1195-1249`. **Schema-floor message format** must include `--refresh-package cortex-command` (since Task 5 adds it to the production argv) — `Schema-floor violation: installed CLI schema_version={cli_version}, required={CLI_PIN[1]}; run 'uv tool install --reinstall --refresh-package cortex-command git+https://github.com/charleshall888/cortex-command.git@{CLI_PIN[0]}' to upgrade`. Drift-detection `additionalContext` template: `cortex CLI is drifted: installed v{installed}, expected v{expected}. The next MCP tool call will reinstall automatically. Bash 'cortex …' calls before then may fail with 'No such command' or import errors; if so, run 'uv tool install --reinstall --refresh-package cortex-command git+https://github.com/charleshall888/cortex-command.git@v{expected}' manually.`. Output contract: `jq -n --arg ctx "$context" '{hookSpecificOutput: {hookEventName: "SessionStart", additionalContext: $ctx}}'`. CLI_PIN regex anchors on the existing literal shape at `server.py:106` — matches `bin/cortex-rewrite-cli-pin`'s regex at lines 64-91.
 - **Verification**: (a) `bash -n hooks/cortex-cli-version-sync.sh` exits 0 (syntax valid); (b) `python3 -c "import sys; src = open('hooks/cortex-cli-version-sync.sh').read(); start = src.find('<<\\'PY\\'') + 6; end = src.find('PY', start); py_body = src[start:end]; exec(compile(py_body, '<heredoc>', 'exec'))"` exits 0 (Python heredoc body compiles); (c) **golden behavioral probe**: invoke the hook with a PATH-shimmed `cortex` that emits `{"version": "v0.0.1", "schema_version": "2.0", "root": "/tmp/cortex-test"}` against a known CLI_PIN of `v9.9.9` — assert hook stdout contains the literal `"cortex CLI is drifted"` and exit code = 0. This golden probe is the load-bearing verification; (a) and (b) are smoke tests. — pass if all three exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Add hook tests and fixtures
 - **Files**: `tests/test_cli_version_sync_hook.sh`, `tests/fixtures/hooks/cli-version-sync/claude-agent.json`, `tests/fixtures/hooks/cli-version-sync/cortex-print-root-drifted.json`, `tests/fixtures/hooks/cli-version-sync/cortex-print-root-current.json`, `tests/fixtures/hooks/cli-version-sync/cortex-print-root-schema-floor.json`, `tests/fixtures/hooks/cli-version-sync/expected-additional-context.txt`
@@ -56,7 +56,7 @@ Ship a SessionStart drift-detector hook (bash trampoline + embedded Python hered
 - **Complexity**: complex
 - **Context**: Precedent: `tests/test_hooks.sh` for shell-mock infrastructure. Fixture format mirrors `tests/fixtures/hooks/scan-lifecycle/claude-agent.json`. Mock cortex via `cat > "$TMPDIR/cortex" <<'EOF' ... EOF; chmod +x "$TMPDIR/cortex"`. The golden additionalContext fixture is a literal text file checked into the repo; the test asserts the produced JSON's `additionalContext` field equals the fixture's content (with templated `{installed}` / `{expected}` substitution applied to the fixture). This breaks the same-author tautology risk identified in critical-review.
 - **Verification**: `just test tests/test_cli_version_sync_hook.sh` exits 0 covering all six scenarios — pass if exit code = 0 AND test output names each of the six scenarios as passed.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Add --refresh-package cortex-command to _run_install_and_verify
 - **Files**: `plugins/cortex-overnight/server.py`
@@ -65,7 +65,7 @@ Ship a SessionStart drift-detector hook (bash trampoline + embedded Python hered
 - **Complexity**: simple
 - **Context**: Current argv shape: `["uv", "tool", "install", "--reinstall", f"git+https://github.com/charleshall888/cortex-command.git@{CLI_PIN[0]}"]`. Target shape: `["uv", "tool", "install", "--reinstall", "--refresh-package", "cortex-command", f"git+...@{CLI_PIN[0]}"]`. Caller enumeration: only `_run_install_and_verify` invokes `uv tool install --reinstall` in the production argv (verify via `grep -rn '"--reinstall"' --include='*.py' .`). Other matches in `bin/cortex-upgrade` call `uv tool install` without `--reinstall`; not affected. The argv-anchor test is `tests/test_no_clone_install.py:423-428` (`assert install_calls[0][-1].endswith(f"@{server.CLI_PIN[0]}")`) — preserved by insert-before-URL ordering. The monkey-patched test at `tests/test_mcp_auto_update_real_install.py:420, 501, 641` does NOT exercise the production argv (it replaces `_run_install_and_verify` with `_spy_install` entirely), so it neither protects against nor is broken by this change.
 - **Verification**: (a) `grep -E '"--refresh-package"' plugins/cortex-overnight/server.py` returns ≥1 match in the install argv list; (b) `python3 -c "import ast,sys; src=open('plugins/cortex-overnight/server.py').read(); assert '\"--refresh-package\"' in src and src.find('\"--refresh-package\"') < src.rfind('git+https://'), 'flag must precede URL'"` exits 0 — pass if both succeed.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Update test_no_clone_install.py argv assertion
 - **Files**: `tests/test_no_clone_install.py`
@@ -74,7 +74,7 @@ Ship a SessionStart drift-detector hook (bash trampoline + embedded Python hered
 - **Complexity**: simple
 - **Context**: Test fixture pattern at `tests/test_no_clone_install.py:411-430`: captures install argv via `install_calls = [...]`, then asserts on `final_arg = install_calls[0][-1]`. New assertion: locate `"--reinstall"` index, verify `install_calls[0][idx+1:idx+3] == ["--refresh-package", "cortex-command"]`. This defends against regressions where future edits accidentally drop the flag.
 - **Verification**: `just test tests/test_no_clone_install.py` exits 0 — pass if exit code = 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 7: Propagate --refresh-package to user-facing remediation strings
 - **Files**: `plugins/cortex-overnight/server.py`, `cortex_command/cli.py`
@@ -83,7 +83,7 @@ Ship a SessionStart drift-detector hook (bash trampoline + embedded Python hered
 - **Complexity**: simple
 - **Context**: Verified locations via `grep -n "uv tool install --reinstall" plugins/cortex-overnight/server.py cortex_command/cli.py`. Lines 654/675 in server.py are error-message format strings *describing what was tried* (not remediation strings) — they SHOULD also be updated for consistency with the actual argv. So this task touches 6 strings across 2 files: server.py:184, 654, 675, 840, 1864 + cli.py:327.
 - **Verification**: `grep -c -E "uv tool install --reinstall (--refresh-package cortex-command )?git\\+" plugins/cortex-overnight/server.py` ≥ 5 AND `grep -c "uv tool install --reinstall --refresh-package cortex-command" plugins/cortex-overnight/server.py cortex_command/cli.py` ≥ 6 — pass if all matches found.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 8: Update auto-update.md Bash-tool carve-out + component map + residual risks
 - **Files**: `docs/internals/auto-update.md`
@@ -92,7 +92,7 @@ Ship a SessionStart drift-detector hook (bash trampoline + embedded Python hered
 - **Complexity**: simple
 - **Context**: The file is the authoritative doc on the two-layer auto-update architecture (per CLAUDE.md). Existing text at line 17: "The auto-update flow is deliberately MCP-tool-call-gated: only invocations that route through the plugin's MCP server trigger the reinstall. Bash-tool subprocess dispatches that shell out to `cortex …` directly bypass this layer by design (see the [Bash-tool carve-out](#bash-tool-subprocess-carve-out) below)." Existing text at lines 37-39: see the verbatim block in research.md. Both passages need updates that distinguish visibility-gap-closure (now done by the hook) from execution-gap-status (still wontfix per the plugin-imports-zero-cortex-modules contract).
 - **Verification**: `grep -c "wontfix per #145" docs/internals/auto-update.md` = 0 AND `grep -c "#235" docs/internals/auto-update.md` ≥ 1 AND `grep -c "cortex-cli-version-sync" docs/internals/auto-update.md` ≥ 1 — pass if all three.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Risks
 

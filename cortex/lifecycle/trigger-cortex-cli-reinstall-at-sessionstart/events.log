@@ -8,3 +8,9 @@
 {"ts":"2026-05-18T16:15:29Z","event":"sentinel_absence","feature":"trigger-cortex-cli-reinstall-at-sessionstart","reviewer_angle":"--refresh flag side effects and bundling risk","reason":"absent","model_tier":"sonnet","expected_sha":"9b861d7741e15b5ee45145903d1f8100e34cf1dd10688230f9cbb672f1167e85","observed_sha_or_null":null}
 {"ts": "2026-05-18T16:47:48Z", "event": "plan_approved", "feature": "trigger-cortex-cli-reinstall-at-sessionstart"}
 {"ts": "2026-05-18T16:47:48Z", "event": "phase_transition", "feature": "trigger-cortex-cli-reinstall-at-sessionstart", "from": "plan", "to": "implement"}
+{"ts":"2026-05-20T14:22:45.974144+00:00","event":"interactive_lock_acquired","feature":"trigger-cortex-cli-reinstall-at-sessionstart","session_id":"2cfb3c02-bf18-4871-8c6e-333956af64f4","pid":6538,"start_time":1779286965.378,"acquired_at":"2026-05-20T14:22:45.974144+00:00","session_id_source":"env"}
+{"ts":"2026-05-20T14:23:27.514212+00:00","event":"interactive_lock_released","feature":"trigger-cortex-cli-reinstall-at-sessionstart","session_id":"2cfb3c02-bf18-4871-8c6e-333956af64f4","was_present":true}
+{"ts":"2026-05-20T16:34:14Z","event":"phase_transition","feature":"trigger-cortex-cli-reinstall-at-sessionstart","from":"implement","to":"review"}
+{"ts":"2026-05-20T16:39:00Z","event":"review_verdict","feature":"trigger-cortex-cli-reinstall-at-sessionstart","verdict":"APPROVED","cycle":1,"requirements_drift":"none"}
+{"ts":"2026-05-20T16:39:00Z","event":"phase_transition","feature":"trigger-cortex-cli-reinstall-at-sessionstart","from":"review","to":"complete"}
+{"ts":"2026-05-20T16:40:29Z","event":"feature_complete","feature":"trigger-cortex-cli-reinstall-at-sessionstart","tasks_total":8,"rework_cycles":0,"merge_anchor":"merge"}

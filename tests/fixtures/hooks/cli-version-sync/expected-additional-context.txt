@@ -1,0 +1,1 @@
+cortex CLI is drifted: installed v{installed}, expected v{expected}. The next MCP tool call will reinstall automatically. Bash 'cortex …' calls before then may fail with 'No such command' or import errors; if so, run 'uv tool install --reinstall --refresh-package cortex-command git+https://github.com/charleshall888/cortex-command.git@v{expected}' manually.

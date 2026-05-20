@@ -338,9 +338,10 @@ def _dispatch_upgrade(_args: argparse.Namespace) -> int:
         "Claude Code to upgrade via the MCP-driven path."
     )
     print(
-        "Or run `uv tool install --reinstall git+https://github.com/"
-        "charleshall888/cortex-command.git@<tag>` for the bare-shell path; "
-        "see https://github.com/charleshall888/cortex-command/releases for "
+        "Or run `uv tool install --reinstall --refresh-package cortex-command "
+        "git+https://github.com/charleshall888/cortex-command.git@<tag>` for "
+        "the bare-shell path; see "
+        "https://github.com/charleshall888/cortex-command/releases for "
         "current tags."
     )
     # Post-upgrade migration notice (R7 / Task 14). Proactive channel for
