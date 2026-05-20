@@ -228,6 +228,7 @@ dependencies = [
     { name = "markdown" },
     { name = "mcp" },
     { name = "psutil" },
+    { name = "pyyaml" },
     { name = "tiktoken" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -246,6 +247,7 @@ requires-dist = [
     { name = "markdown" },
     { name = "mcp", specifier = ">=1.27.0" },
     { name = "psutil", specifier = ">=5.9" },
+    { name = "pyyaml", specifier = ">=6.0" },
     { name = "tiktoken", specifier = ">=0.7.0,<1.0" },
     { name = "uvicorn", extras = ["standard"] },
 ]
