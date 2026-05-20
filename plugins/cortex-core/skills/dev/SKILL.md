@@ -146,7 +146,7 @@ Read `cortex/backlog/index.md` and extract the **Ready** section — items with 
 
 If no items are in the Ready section:
 - Report: "No ready items in the backlog."
-- Suggest: check blocked items for stale dependencies, or create new items with `/cortex-core:backlog add`.
+- Suggest: check blocked items for stale dependencies, or create new items with `/cortex-core:backlog new`.
 
 **Epic detection and child map construction** (must complete before any output is rendered):
 
@@ -228,7 +228,7 @@ After presenting both blocks, ask the user which item to pick up. Once chosen, r
 
 If `cortex/backlog/` contains no item files (or does not exist):
 - Report: "No backlog found."
-- Suggest: "Use `/cortex-core:backlog add <description>` to create items, or describe what you want to build and I'll route you directly."
+- Suggest: "Use `/cortex-core:backlog new` to create items, or describe what you want to build and I'll route you directly."
 
 ## Step 4: Direct Implementation Confirmation
 
