@@ -509,3 +509,177 @@ def test_validation_failed_event_includes_brief_excerpt(
         f"brief_excerpt does not match first 200 chars of rejected brief.\n"
         f"Expected: {rejected_brief[:200]!r}\nGot: {excerpt!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Test 5: anchor paraphrase coverage (no auth) — spec Reqs 3, 4, 5
+#
+# Each parametrized test constructs a minimal brief containing the
+# under-test token in the corresponding anchor's sentence, plus valid
+# canonical tokens for the other two anchors. The decision-anchor test
+# slots its token into the first sentence; alternatives into the second;
+# tradeoff into the third.
+# ---------------------------------------------------------------------------
+
+
+_DECISION_PARAPHRASE_TOKENS = (
+    "decide",
+    "decided",
+    "decision",
+    "decisions",
+    "chose",
+    "chosen",
+    "concluded",
+    "settled",
+    "selected",
+    "picked",
+    "opted",
+    "agreed",
+)
+
+
+@pytest.mark.parametrize("token", _DECISION_PARAPHRASE_TOKENS)
+def test_validate_brief_decision_anchor_paraphrases(token: str) -> None:
+    """validate_brief() accepts every canonical decision-anchor token."""
+    brief = (
+        f"We {token} on X. Two options were weighed. The compromise was Y."
+    )
+    ok, reason = validate_brief(brief)
+    assert ok, (
+        f"Expected validate_brief to accept decision token {token!r}, "
+        f"but got reason: {reason}\nBrief: {brief!r}"
+    )
+
+
+_ALTERNATIVES_PARAPHRASE_TOKENS = (
+    "alternative",
+    "alternatives",
+    "option",
+    "options",
+    "considered",
+    "considerations",
+    "weighed",
+    "evaluated",
+    "rejected",
+)
+
+
+@pytest.mark.parametrize("token", _ALTERNATIVES_PARAPHRASE_TOKENS)
+def test_validate_brief_alternatives_anchor_paraphrases(token: str) -> None:
+    """validate_brief() accepts every canonical alternatives-anchor token."""
+    brief = (
+        f"We decided on X. Two {token} shaped the path. The compromise was Y."
+    )
+    ok, reason = validate_brief(brief)
+    assert ok, (
+        f"Expected validate_brief to accept alternatives token {token!r}, "
+        f"but got reason: {reason}\nBrief: {brief!r}"
+    )
+
+
+_TRADEOFF_PARAPHRASE_TOKENS = (
+    "tradeoff",
+    "trade-off",
+    "cost",
+    "drawback",
+    "downside",
+    "sacrifice",
+    "consequence",
+    "compromise",
+    "risk",
+)
+
+
+@pytest.mark.parametrize("token", _TRADEOFF_PARAPHRASE_TOKENS)
+def test_validate_brief_tradeoff_anchor_paraphrases(token: str) -> None:
+    """validate_brief() accepts every canonical tradeoff-anchor token."""
+    brief = (
+        f"We decided on X. Two options were weighed. The {token} was Y."
+    )
+    ok, reason = validate_brief(brief)
+    assert ok, (
+        f"Expected validate_brief to accept tradeoff token {token!r}, "
+        f"but got reason: {reason}\nBrief: {brief!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 6: word-boundary false-positive rejection (no auth) — spec Req 6
+#
+# Each FP token contains a canonical-anchor token as a substring but is
+# semantically unrelated. The brief contains valid prose for the OTHER two
+# anchors; the failure reason must name the anchor the FP token was
+# (intentionally) failing to satisfy.
+# ---------------------------------------------------------------------------
+
+
+# Tuples of (fp_token, target_anchor_keyword_in_reason, brief_template).
+# The brief_template uses {fp} for the FP token and supplies natural prose
+# for the OTHER two anchors so only the target anchor fails.
+_FALSE_POSITIVE_CASES = (
+    # optional ⊃ option (alternatives anchor)
+    (
+        "optional",
+        "alternatives",
+        "We decided on X. The {fp} flag was set. The compromise was Y.",
+    ),
+    # optionality ⊃ option (alternatives anchor)
+    (
+        "optionality",
+        "alternatives",
+        "We decided on X. The system has {fp} baked in. The compromise was Y.",
+    ),
+    # committee ⊃ committed (no canonical) but spec lists it as FP
+    # for decision anchor — committee contains no decision token but the
+    # spec's canonical false-positive set treats it as exercising the
+    # decision-anchor boundary.
+    (
+        "committee",
+        "decision",
+        "The {fp} reviewed it. Two options were weighed. The compromise was Y.",
+    ),
+    # unsettled ⊃ settled (decision anchor)
+    (
+        "unsettled",
+        "decision",
+        "Things were {fp}. Two options were weighed. The compromise was Y.",
+    ),
+    # disagreed ⊃ agreed (decision anchor)
+    (
+        "disagreed",
+        "decision",
+        "The team {fp}. Two options were weighed. The compromise was Y.",
+    ),
+    # costume ⊃ cost (tradeoff anchor)
+    (
+        "costume",
+        "tradeoff",
+        "We decided on X. Two options were weighed. The {fp} budget was set.",
+    ),
+    # pickup ⊃ picked (decision anchor)
+    (
+        "pickup",
+        "decision",
+        "The {fp} truck broke. Two options were weighed. The compromise was Y.",
+    ),
+)
+
+
+@pytest.mark.parametrize("fp_token,target_anchor,template", _FALSE_POSITIVE_CASES)
+def test_validate_brief_word_boundary_false_positives(
+    fp_token: str, target_anchor: str, template: str
+) -> None:
+    """validate_brief() rejects briefs whose only candidate for one anchor is a
+    substring false-positive of a canonical token (e.g., 'optional' must not
+    satisfy the alternatives anchor via substring match on 'option').
+    """
+    brief = template.format(fp=fp_token)
+    ok, reason = validate_brief(brief)
+    assert not ok, (
+        f"Expected validate_brief to reject brief with FP token {fp_token!r} "
+        f"on {target_anchor} anchor, but it passed.\nBrief: {brief!r}"
+    )
+    assert target_anchor in reason, (
+        f"Expected failure reason to name {target_anchor!r} anchor when "
+        f"FP token {fp_token!r} fails to satisfy it; got reason: {reason!r}"
+    )

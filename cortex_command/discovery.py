@@ -556,14 +556,87 @@ def emit_prescriptive_check(
 # Brief validation helper (used by generator pre-persist and test suite)
 # ---------------------------------------------------------------------------
 
+_VALIDATE_BRIEF_DECISION_TOKENS: tuple[str, ...] = (
+    "decide",
+    "decided",
+    "decision",
+    "decisions",
+    "chose",
+    "chosen",
+    "concluded",
+    "settled",
+    "selected",
+    "picked",
+    "opted",
+    "agreed",
+)
+"""Canonical floor of decision-anchor tokens accepted by ``validate_brief()``.
+
+Frozen by spec Req 3 (fix-validate-brief-substring-anchors). The parity test
+in ``tests/test_discovery_gate_brief.py`` pins this set against an
+independently-declared literal so silent shrinkage is caught.
+"""
+
+_VALIDATE_BRIEF_ALTERNATIVES_TOKENS: tuple[str, ...] = (
+    "alternative",
+    "alternatives",
+    "option",
+    "options",
+    "considered",
+    "considerations",
+    "weighed",
+    "evaluated",
+    "rejected",
+)
+"""Canonical floor of alternatives-anchor tokens accepted by ``validate_brief()``.
+
+Frozen by spec Req 4. Both ``considered`` and ``considerations`` are
+enumerated separately — under word-boundary regex, ``\\bconsidered\\b`` does
+not match within ``considerations`` (boundary at position 9 fails because
+both adjacent chars are ``\\w``).
+"""
+
+_VALIDATE_BRIEF_TRADEOFF_TOKENS: tuple[str, ...] = (
+    "tradeoff",
+    "trade-off",
+    "cost",
+    "drawback",
+    "downside",
+    "sacrifice",
+    "consequence",
+    "compromise",
+    "risk",
+)
+"""Canonical floor of tradeoff-anchor tokens accepted by ``validate_brief()``.
+
+Frozen by spec Req 5. ``trade-off`` matches under Python's ``\\b`` because
+the hyphen is a ``\\W`` character.
+"""
+
+
+def _anchor_match(brief: str, tokens: tuple[str, ...]) -> bool:
+    """Return True if any token in ``tokens`` appears in ``brief`` as a whole word.
+
+    Matching is case-insensitive and uses Python's ``\\b`` word-boundary
+    semantics, which treats ``-`` as ``\\W`` (so hyphenated tokens like
+    ``trade-off`` match correctly).
+    """
+    for tok in tokens:
+        if re.search(r"\b" + re.escape(tok) + r"\b", brief, re.IGNORECASE):
+            return True
+    return False
+
+
 def validate_brief(brief: str) -> tuple[bool, str]:
     """Check a generated brief for decision-content anchors and word-cap tolerance.
 
-    Decision-content anchors (case-insensitive, any one of each pair sufficient):
+    Decision-content anchors (case-insensitive, word-boundary matched). The
+    brief must contain at least one token from each of the three canonical
+    floors:
 
-    - ``decided`` or ``decide``
-    - ``alternative`` or ``options``
-    - ``tradeoff`` or ``cost``
+    - decision: see ``_VALIDATE_BRIEF_DECISION_TOKENS`` (12 tokens)
+    - alternatives: see ``_VALIDATE_BRIEF_ALTERNATIVES_TOKENS`` (9 tokens)
+    - tradeoff: see ``_VALIDATE_BRIEF_TRADEOFF_TOKENS`` (9 tokens)
 
     Word-cap tolerance: the brief must be at most ``GATE_BRIEF_WORD_CAP + 25``
     words (Req 5a).
@@ -579,21 +652,26 @@ def validate_brief(brief: str) -> tuple[bool, str]:
     if not brief or not brief.strip():
         return False, "brief is empty"
 
-    lower = brief.lower()
-
-    # Decision anchor: decided / decide
-    if "decided" not in lower and "decide" not in lower:
-        return False, "brief is missing decision anchor ('decided' or 'decide')"
-
-    # Alternatives anchor: alternative / options
-    if "alternative" not in lower and "options" not in lower:
+    # Decision anchor
+    if not _anchor_match(brief, _VALIDATE_BRIEF_DECISION_TOKENS):
         return False, (
-            "brief is missing alternatives anchor ('alternative' or 'options')"
+            "brief is missing decision anchor (one of: "
+            "decided, chose, settled, ...)"
         )
 
-    # Tradeoff anchor: tradeoff / cost
-    if "tradeoff" not in lower and "cost" not in lower:
-        return False, "brief is missing tradeoff anchor ('tradeoff' or 'cost')"
+    # Alternatives anchor
+    if not _anchor_match(brief, _VALIDATE_BRIEF_ALTERNATIVES_TOKENS):
+        return False, (
+            "brief is missing alternatives anchor (one of: "
+            "alternatives, options, considered, ...)"
+        )
+
+    # Tradeoff anchor
+    if not _anchor_match(brief, _VALIDATE_BRIEF_TRADEOFF_TOKENS):
+        return False, (
+            "brief is missing tradeoff anchor (one of: "
+            "tradeoff, cost, compromise, ...)"
+        )
 
     # Word-cap tolerance
     word_count = len(brief.split())
