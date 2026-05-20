@@ -29,11 +29,11 @@ The template applies uniformly to all pieces. There is no defect-vs-novel branch
 ## Touch points
 
 - skills/lifecycle/SKILL.md §3 (phase-transition prose)
-- bin/cortex-lifecycle-state:42-58 (transition function)
+- cortex-lifecycle-state:42-58 (transition function)
 - bin/.events-registry.md (target enum for emitted events)
 ```
 
-The Edges bullets name contracts by name. The Touch points bullets cite paths and lines. The path:line citation `bin/cortex-lifecycle-state:42-58` belongs in Touch points; the structural summary "depends on the events-registry schema" belongs in Edges.
+The Edges bullets name contracts by name. The Touch points bullets cite paths and lines. The path:line citation `cortex-lifecycle-state:42-58` belongs in Touch points; the structural summary "depends on the events-registry schema" belongs in Edges.
 
 For each ticket, also capture:
 
@@ -74,7 +74,7 @@ In both zero-piece sub-cases, `decomposed.md` is **still written** as an audit t
 
 ### 5. Create Backlog Tickets
 
-Ticket bodies authored under the Role/Integration/Edges/Touch-points template are validated by `bin/cortex-check-prescriptive-prose` at pre-commit time (LEX-1 scanner). The scanner runs section-partitioned: path:line citations, `§N`/`RN` section-index citations, and multi-line fenced code blocks are permitted only in `## Touch points` and are flagged when they appear inside `## Role`, `## Integration`, or `## Edges`.
+Ticket bodies authored under the Role/Integration/Edges/Touch-points template are validated by `cortex-check-prescriptive-prose` at pre-commit time (LEX-1 scanner). The scanner runs section-partitioned: path:line citations, `§N`/`RN` section-index citations, and multi-line fenced code blocks are permitted only in `## Touch points` and are flagged when they appear inside `## Role`, `## Integration`, or `## Edges`.
 
 **LEX-1 regex specification** (the scanner's exact behavior, baked into this prose):
 

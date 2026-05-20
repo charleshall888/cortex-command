@@ -202,7 +202,7 @@ Each task must be self-contained — an implementer with no prior context should
 
 ### Wiring Co-Location
 
-When a task deploys a new `bin/cortex-*` script, the SAME task must include the consumer wiring — typically a SKILL.md mention, hook reference, or doc reference that names the script as inline code or a path-qualified token. The pre-commit parity check (`bin/cortex-check-parity`) emits W003 ("orphan: deployed but not referenced") and rejects intermediate commits where a script exists in `bin/` but no in-scope file references it. Splitting deployment from wiring across tasks forces `--no-verify`, which is discouraged.
+When a task deploys a new `bin/cortex-*` script, the SAME task must include the consumer wiring — typically a SKILL.md mention, hook reference, or doc reference that names the script as inline code or a path-qualified token. The pre-commit parity check (`cortex-check-parity`) emits W003 ("orphan: deployed but not referenced") and rejects intermediate commits where a script exists in `bin/` but no in-scope file references it. Splitting deployment from wiring across tasks forces `--no-verify`, which is discouraged.
 
 If wiring is too large to combine with deployment in one task, reorder so wiring lands first — a SKILL.md mention is fine even before the script exists, since the parity check flags `deployed-but-unreferenced` (W003), not `referenced-but-undeployed`.
 

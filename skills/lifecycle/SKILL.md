@@ -50,10 +50,10 @@ Determine the feature name from the invocation. Use lowercase-kebab-case for dir
 
 ### Resolve the originating backlog file once
 
-When `$ARGUMENTS` is non-empty, invoke `bin/cortex-resolve-backlog-item` once to find the matching backlog file. This single call replaces the previous pattern of independently re-scanning `cortex/backlog/[0-9]*-*{feature}*.md` in each of the four Step 2 sub-procedures (Backlog Status Check, Create index.md, Backlog Write-Back, Discovery Bootstrap). The four sub-procedures consume Step 1's resolver output — they do not re-scan the backlog directory.
+When `$ARGUMENTS` is non-empty, invoke `cortex-resolve-backlog-item` once to find the matching backlog file. This single call replaces the previous pattern of independently re-scanning `cortex/backlog/[0-9]*-*{feature}*.md` in each of the four Step 2 sub-procedures (Backlog Status Check, Create index.md, Backlog Write-Back, Discovery Bootstrap). The four sub-procedures consume Step 1's resolver output — they do not re-scan the backlog directory.
 
 ```bash
-bin/cortex-resolve-backlog-item {feature}
+cortex-resolve-backlog-item {feature}
 ```
 
 Route on the resolver's exit code:
