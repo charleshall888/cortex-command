@@ -5,9 +5,10 @@ multi-line fenced code blocks inside the Why section. For example:
 
 ```python
 FORBIDDEN_SECTIONS = {"Role", "Integration", "Edges"}
+PERMITTED_SECTIONS = {"Touch points"}
 ```
 
-This fixture should be rejected by LEX-1.
+This fixture should be rejected by LEX-1 (fenced code block with ≥2 non-empty lines).
 
 ## Role
 
