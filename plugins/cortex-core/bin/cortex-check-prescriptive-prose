@@ -5,9 +5,9 @@ Implements the lexical scanner specified in
 ``lifecycle/reframe-discovery-to-principal-architect-posture/spec.md`` R6/R7.
 Scans ticket-body / skill-prose markdown files and flags prescriptive content
 (``path:line`` citations, ``§N``/``RN`` section-index citations, multi-line
-fenced code blocks) appearing inside forbidden sections (``## Role``,
-``## Integration``, ``## Edges``). The ``## Touch points`` section is exempt
-— it is the sole permitted location for these tokens.
+fenced code blocks) appearing inside forbidden sections (``## Why``,
+``## Role``, ``## Integration``, ``## Edges``). The ``## Touch points``
+section is exempt — it is the sole permitted location for these tokens.
 
 Three modes:
 
@@ -43,7 +43,7 @@ SCAN_GLOBS: tuple[str, ...] = (
     "cortex/backlog/*.md",
 )
 
-FORBIDDEN_SECTIONS: frozenset[str] = frozenset({"Role", "Integration", "Edges"})
+FORBIDDEN_SECTIONS: frozenset[str] = frozenset({"Why", "Role", "Integration", "Edges"})
 PERMITTED_SECTIONS: frozenset[str] = frozenset({"Touch points"})
 
 # LEX-1 regex patterns from spec R6.
@@ -61,9 +61,11 @@ SECTION_INDEX_RE = re.compile(
 )
 
 # Section heading detection. A new section opens at lines like
-# ``## Role`` or ``## Touch points`` (sibling-level ## headings). Subsections
-# (`### foo`) belong to the parent.
-SECTION_HEADING_RE = re.compile(r"^## (Role|Integration|Edges|Touch points)\s*$")
+# ``## Why``, ``## Role``, or ``## Touch points`` (sibling-level ## headings).
+# Section names in FORBIDDEN_SECTIONS ("Why", "Role", "Integration", "Edges")
+# trigger violation checks; "Touch points" is the sole permitted section.
+# Subsections (`### foo`) belong to the parent.
+SECTION_HEADING_RE = re.compile(r"^## (Why|Role|Integration|Edges|Touch points)\s*$")
 SIBLING_HEADING_RE = re.compile(r"^## \S")
 
 # Fenced code block delimiters.
@@ -99,7 +101,7 @@ def scan_text(text: str, path: str) -> list[Violation]:
     """Scan ``text`` for LEX-1 violations in forbidden sections.
 
     Section model: a section begins at a line matching
-    ``^## (Role|Integration|Edges|Touch points)$`` and ends at the next line
+    ``^## (Why|Role|Integration|Edges|Touch points)$`` and ends at the next line
     matching ``^## `` (sibling-level heading) or EOF. Third-level subsections
     (``### foo``) belong to the parent. Fenced code blocks are tracked so the
     multi-line-fenced-block pattern (Pattern 3) can be detected.
@@ -342,7 +344,7 @@ def build_parser() -> argparse.ArgumentParser:
             "Section-partitioned prescriptive-prose scanner (LEX-1). "
             "Flags path:line, §N/RN, and multi-line fenced-block tokens "
             "appearing inside forbidden ticket-body sections "
-            "(## Role, ## Integration, ## Edges)."
+            "(## Why, ## Role, ## Integration, ## Edges)."
         ),
     )
     p.add_argument(
