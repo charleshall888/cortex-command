@@ -30,23 +30,23 @@ Promote 13 skill-prose-referenced `bin/cortex-*` scripts to wheel-tier Python en
 
 ## Tasks
 
-### Task 1: Pre-allocate all 13 `[project.scripts]` entries + create `cortex_command/log_invocation.py`
+### Task 1: Pre-allocate all 13 `[project.scripts]` entries + create `cortex_command/log_invocation.py` [DONE]
 - **Files**: `cortex_command/log_invocation.py` (new), `pyproject.toml`
 - **What**: In a single coordinated edit, add ALL 13 new `[project.scripts]` entries to `pyproject.toml` alphabetically-positioned with the existing block. Entry-to-module mapping (final paths confirmed): `cortex-auto-bump-version = "cortex_command.auto_bump_version:main"`, `cortex-backlog-ready = "cortex_command.backlog.ready:main"`, `cortex-check-parity = "cortex_command.parity_check:main"`, `cortex-check-prescriptive-prose = "cortex_command.lint.prescriptive_prose:main"`, `cortex-commit-preflight = "cortex_command.commit.preflight:main"`, `cortex-complexity-escalator = "cortex_command.lifecycle.complexity_escalator:main"`, `cortex-git-sync-rebase = "cortex_command.git.sync_rebase:main"`, `cortex-lifecycle-counters = "cortex_command.lifecycle.counters:main"`, `cortex-lifecycle-state = "cortex_command.lifecycle.state_cli:main"`, `cortex-load-parent-epic = "cortex_command.backlog.load_parent_epic:main"`, `cortex-log-invocation = "cortex_command.log_invocation:main"`, `cortex-morning-review-gc-demo-worktrees = "cortex_command.overnight.gc_demo_worktrees:main"`, `cortex-resolve-backlog-item = "cortex_command.backlog.resolve_item:main"`. Then port the bash logic of `bin/cortex-log-invocation` (76 lines — a thin JSONL invocation logger) into `cortex_command/log_invocation.py` exposing `main(argv: List[str] | None = None) -> int`. The other 12 module files are stubs in this task (a docstring + `def main(argv=None): raise NotImplementedError("...promoted in Task N")` placeholder is acceptable to avoid `importlib.metadata` returning entries for which the module does not yet exist — but the placeholder MUST `sys.exit(70)` rather than raise to keep the wheel installable from any intermediate commit).
 - **Depends on**: none
 - **Complexity**: complex
 - **Context**: Pre-allocating all 13 entries in one task eliminates the pyproject.toml-as-serialization-point conflict identified in critical review. Stub modules ship with `main()` placeholders so the wheel installs cleanly; subsequent tasks replace the stub with the real port + delete the placeholder. JSON-emission prescription: use `json.dumps(obj, ensure_ascii=False, separators=(",", ":"))` — the `ensure_ascii=False` is critical to match `jq -c`'s default UTF-8 emission for non-ASCII content (em-dashes, smart quotes, names with diacritics common throughout lifecycle/backlog content). Argparse parser `prog` matches the binstub name. Reuse `cortex_command/common.py` helpers where applicable.
 - **Verification**: `python3 -c "import cortex_command.log_invocation; assert callable(cortex_command.log_invocation.main)"` exits 0. After `uv tool install --reinstall --refresh git+<repo>@<branch>` (operator step), `python3 -c "import importlib.metadata as m; required={'cortex-auto-bump-version','cortex-backlog-ready','cortex-check-parity','cortex-check-prescriptive-prose','cortex-commit-preflight','cortex-complexity-escalator','cortex-git-sync-rebase','cortex-lifecycle-counters','cortex-lifecycle-state','cortex-load-parent-epic','cortex-log-invocation','cortex-morning-review-gc-demo-worktrees','cortex-resolve-backlog-item'}; eps={ep.name for ep in m.entry_points(group='console_scripts')}; assert required <= eps, sorted(required - eps)"` exits 0. `command -v cortex-log-invocation | grep -q '/.local/bin/'` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit `cde30477`)
 
-### Task 2: Capture `cortex-log-invocation` golden-replay fixtures + write determinism README
+### Task 2: Capture `cortex-log-invocation` golden-replay fixtures + write determinism README [DONE]
 - **Files**: `tests/fixtures/cortex-log-invocation/` (new directory, ≥3 `.argv`/`.stdin`/`.stdout`/`.stderr`/`.exitcode` quintuples), `tests/fixtures/cortex-log-invocation/README.md` (new)
 - **What**: Before deleting the bash version, run the current `bin/cortex-log-invocation` against 3–5 representative invocations under the determinism harness (`jq --version` recorded, `LC_ALL=C`, `TZ=UTC`, timestamps frozen via `sed` filter). Commit the captured `.argv`/`.stdin`/`.stdout`/`.stderr`/`.exitcode` quintuples. Author `README.md` documenting the determinism harness: jq version pinned, `LC_ALL=C`, `TZ=UTC`, timestamp-handling, **plus the named-tolerance categories the parity test consumes** (Unicode-escape, number-format, trailing-newline, key-reorder — see Task 5).
 - **Depends on**: none
 - **Complexity**: simple
 - **Context**: The README enumerates which divergence classes the parity test will tolerate per the broadened structural-equivalence rubric in Task 5. Fixtures themselves capture the bash version's literal output; the README is the contract that documents what tolerances are accepted at compare-time.
 - **Verification**: `ls tests/fixtures/cortex-log-invocation/ | grep -cE '\.(stdin|argv|stdout|stderr|exitcode)$'` ≥ 12 — pass if count ≥ 12. `grep -c -E 'jq.*--version|LC_ALL=C|TZ=UTC' tests/fixtures/cortex-log-invocation/README.md` ≥ 3 — pass if count ≥ 3.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit `51c9e67f`, count = 20 quintuples)
 
 ### Task 3: Replace `bin/cortex-log-invocation` with canonical wrapper + ship the user-facing `command not found` remediation message
 - **Files**: `bin/cortex-log-invocation`
@@ -91,7 +91,7 @@ Promote 13 skill-prose-referenced `bin/cortex-*` scripts to wheel-tier Python en
 - **Verification**: For every non-promoted Python/PEP 723 script enumerated above: `grep -lE 'shutil.which\("cortex-log-invocation"\)' <file>` returns the file path. `grep -lE 'cortex-log-invocation failed:' <file>` returns the file path. The smoke test in Task 7 exercises each rewritten script and asserts no spurious `cortex-log-invocation failed:` stderr appears under normal conditions.
 - **Status**: [ ] pending
 
-### Task 5: Add `tests/test_parity_contract.py` with broadened named-tolerance escape
+### Task 5: Add `tests/test_parity_contract.py` with broadened named-tolerance escape [DONE]
 - **Files**: `tests/test_parity_contract.py` (new)
 - **What**: Implement the parity contract per the revised tolerance rubric. Helper functions: `assert_byte_identical(actual, expected)` and `assert_structurally_equivalent(actual, expected, stream, tolerances)`. The `@pytest.mark.structural_equivalence(stream="stdout"|"stderr", tolerances=["unicode-escape", "number-format", "trailing-newline", "key-reorder"])` decorator opts a stream into a NAMED SET of tolerance categories. Categories:
   - `key-reorder`: intra-object JSON key ordering (e.g., `{"a":1,"b":2}` ↔ `{"b":2,"a":1}`)
@@ -103,7 +103,7 @@ Promote 13 skill-prose-referenced `bin/cortex-*` scripts to wheel-tier Python en
 - **Complexity**: simple
 - **Context**: This responds to critical-review finding that the prior "intra-object key reordering only" escape was too narrow to absorb the real jq→Python diff classes. The contract still holds the discipline (every tolerance is named, opt-in, and per-stream) but admits the empirically-realistic divergence categories. The `error-formatter-shape` tolerance is the explicit carve-out for jq error messages that Python's `json` module cannot byte-replicate without literal string forgery. Each parity test (Tasks 6, 9, 11–21, 20) MUST declare its tolerance set explicitly via the decorator — no implicit tolerances.
 - **Verification**: `python3 -m pytest tests/test_parity_contract.py` — pass if exit 0, all tests pass. The test file exercises EACH named tolerance category in both directions (passes under tolerance opt-in; fails when tolerance is not opted in).
-- **Status**: [ ] pending
+- **Status**: [x] done (commit `8e2c2bc5`, 30 tests pass)
 
 ### Task 6: Add `tests/test_cortex_log_invocation_parity.py`
 - **Files**: `tests/test_cortex_log_invocation_parity.py` (new)
