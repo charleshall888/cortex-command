@@ -219,10 +219,10 @@ class TestCriticalReviewDefaultLifecycleRootEnvPinned:
         assert rows[0]["event"] == "sentinel_absence"
         assert rows[0]["feature"] == "my-feature"
 
-    def test_verify_synth_output_explicit_lifecycle_root_uses_that_path(
+    def test_check_synth_stable_explicit_lifecycle_root_uses_that_path(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """verify-synth-output with explicit ``--lifecycle-root`` writes there.
+        """check-synth-stable with explicit ``--lifecycle-root`` writes there.
 
         A mismatch on the SHA triggers a ``synthesizer_drift`` event write.
         The resolved destination is ``{lifecycle_root}/{feature}/events.log``,
@@ -235,14 +235,14 @@ class TestCriticalReviewDefaultLifecycleRootEnvPinned:
         feature_dir.mkdir(parents=True)
 
         # Supply stdin with content that lacks the SYNTH_READ_OK sentinel
-        # so verify-synth-output detects an "absent" status and writes.
+        # so check-synth-stable detects an "absent" status and writes.
         monkeypatch.setattr("sys.stdin", __import__("io").StringIO("no sentinel here"))
 
         rc = cr_main(
             [
                 "--lifecycle-root",
                 str(lifecycle_root),
-                "verify-synth-output",
+                "check-synth-stable",
                 "--feature",
                 "sync-test",
                 "--expected-sha",

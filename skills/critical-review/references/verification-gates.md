@@ -30,14 +30,14 @@ If `prepare-dispatch` exits non-zero, surface its stderr verbatim to the user an
 
 After parallel reviewers (or the surviving subset) return, run a two-phase verification gate before Step 2d synthesis. Phase 1 verifies each reviewer's read-sentinel; Phase 2 extracts the JSON envelope only for reviewers that pass Phase 1.
 
-The orchestrator captures the pre-dispatch SHA-256 of the artifact into orchestrator context before fan-out (see the `verify-synth-output` subcommand for the canonical computation path). That captured SHA is the expected value compared against each reviewer's sentinel here.
+The orchestrator captures the pre-dispatch SHA-256 of the artifact into orchestrator context before fan-out (see the `check-synth-stable` subcommand for the canonical computation path). That captured SHA is the expected value compared against each reviewer's sentinel here.
 
 **Phase 1 — Sentinel verification (per reviewer):**
 
 For each reviewer, write the reviewer's raw stdout to a tempfile (do NOT pipe through stdin to avoid shell-quoting hazards on four parallel outputs), then invoke:
 
 ```bash
-cortex-critical-review verify-reviewer-output \
+cortex-critical-review check-artifact-stable \
     --feature <name> \
     --reviewer-angle <angle> \
     --expected-sha <hex> \
@@ -67,10 +67,10 @@ Excluded reviewers drop from ALL downstream tallies (A-class, B-class, C-class) 
 
 ## Step 2d.5: Post-Synthesis (atomic SHA verification)
 
-After the synthesizer agent returns, pipe its **full output** through the `verify-synth-output` subcommand before surfacing anything to the user or proceeding to Step 2e. This fuses sentinel-parse + SHA-match + drift-event append into one subprocess call; do NOT parse `SYNTH_READ_OK:` lines inline or append to `events.log` directly.
+After the synthesizer agent returns, pipe its **full output** through the `check-synth-stable` subcommand before surfacing anything to the user or proceeding to Step 2e. This fuses sentinel-parse + SHA-match + drift-event append into one subprocess call; do NOT parse `SYNTH_READ_OK:` lines inline or append to `events.log` directly.
 
 ```bash
-printf '%s' "$SYNTH_OUTPUT" | cortex-critical-review verify-synth-output \
+printf '%s' "$SYNTH_OUTPUT" | cortex-critical-review check-synth-stable \
     --feature <name> \
     --expected-sha <hex>
 ```
@@ -81,7 +81,7 @@ printf '%s' "$SYNTH_OUTPUT" | cortex-critical-review verify-synth-output \
 Routes based on exit code:
 
 - **Exit 0** — synthesizer's `SYNTH_READ_OK:` sentinel present and SHA matches. Surface the synthesizer's prose output to the user normally, then proceed to Step 2e.
-- **Exit 3** — sentinel absent OR SHA mismatch (drift). **Do NOT surface the synthesizer's prose output.** Instead, relay `verify-synth-output`'s own stdout verbatim to the user — its top-level diagnostic carries the `Critical-review pass invalidated` phrasing and the resolution instruction. The subcommand has already appended the `synthesizer_drift` event to `cortex/lifecycle/{feature}/events.log` atomically; the orchestrator must not duplicate that append.
+- **Exit 3** — sentinel absent OR SHA mismatch (drift). **Do NOT surface the synthesizer's prose output.** Instead, relay `check-synth-stable`'s own stdout verbatim to the user — its top-level diagnostic carries the `Critical-review pass invalidated` phrasing and the resolution instruction. The subcommand has already appended the `synthesizer_drift` event to `cortex/lifecycle/{feature}/events.log` atomically; the orchestrator must not duplicate that append.
 
 On Exit 3, do NOT proceed to Step 2e (residue write) — the critical-review pass is invalidated and a stale residue write would compound the drift.
 

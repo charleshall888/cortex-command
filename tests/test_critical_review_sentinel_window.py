@@ -1,4 +1,4 @@
-"""Unit tests for ``verify_reviewer_output`` in ``cortex_command.critical_review``.
+"""Unit tests for ``check_artifact_stable`` in ``cortex_command.critical_review``.
 
 Exercises the reviewer-side sentinel parser at the function-call layer
 (not the CLI surface — CLI coverage is implicit in the function tests).
@@ -34,7 +34,7 @@ from __future__ import annotations
 import json
 import pathlib
 
-from cortex_command.critical_review import verify_reviewer_output
+from cortex_command.critical_review import check_artifact_stable
 
 
 # ---------------------------------------------------------------------------
@@ -65,14 +65,14 @@ def test_sentinel_at_line_1_pass() -> None:
     """``case-ok-line-1`` — sentinel on line 1 returns ("ok", expected_sha)."""
     output, meta = _load_case("case-ok-line-1")
     expected_sha = meta["expected_sha"]
-    assert verify_reviewer_output(output, expected_sha) == ("ok", expected_sha)
+    assert check_artifact_stable(output, expected_sha) == ("ok", expected_sha)
 
 
 def test_sentinel_at_line_3_after_preamble_pass() -> None:
     """``case-ok-after-preamble`` — sentinel on line 3 returns ("ok", expected_sha)."""
     output, meta = _load_case("case-ok-after-preamble")
     expected_sha = meta["expected_sha"]
-    assert verify_reviewer_output(output, expected_sha) == ("ok", expected_sha)
+    assert check_artifact_stable(output, expected_sha) == ("ok", expected_sha)
 
 
 def test_sentinel_at_line_15_pass() -> None:
@@ -85,14 +85,14 @@ def test_sentinel_at_line_15_pass() -> None:
     """
     output, meta = _load_case("case-ok-deeper-preamble")
     expected_sha = meta["expected_sha"]
-    assert verify_reviewer_output(output, expected_sha) == ("ok", expected_sha)
+    assert check_artifact_stable(output, expected_sha) == ("ok", expected_sha)
 
 
 def test_sentinel_absent_returns_absent() -> None:
     """``case-absent`` — no sentinel anywhere returns ("absent", None)."""
     output, meta = _load_case("case-absent")
     expected_sha = meta["expected_sha"]
-    assert verify_reviewer_output(output, expected_sha) == ("absent", None)
+    assert check_artifact_stable(output, expected_sha) == ("absent", None)
 
 
 def test_sentinel_with_wrong_sha_returns_mismatch() -> None:
@@ -100,7 +100,7 @@ def test_sentinel_with_wrong_sha_returns_mismatch() -> None:
     output, meta = _load_case("case-mismatch")
     expected_sha = meta["expected_sha"]
     observed_sha = meta["observed_sha_in_fixture"]
-    assert verify_reviewer_output(output, expected_sha) == (
+    assert check_artifact_stable(output, expected_sha) == (
         "mismatch",
         observed_sha,
     )
@@ -116,7 +116,7 @@ def test_multiple_sentinels_first_matching_sha_wins() -> None:
     """
     output, meta = _load_case("case-adversarial-quoted-sha")
     expected_sha = meta["expected_sha"]
-    assert verify_reviewer_output(output, expected_sha) == ("ok", expected_sha)
+    assert check_artifact_stable(output, expected_sha) == ("ok", expected_sha)
 
 
 # ---------------------------------------------------------------------------
@@ -128,14 +128,14 @@ def test_sentinel_in_evidence_quote_past_window_returns_absent() -> None:
     """A sentinel at line 55 is outside the 50-line default window.
 
     Builds 54 lines of preamble (line numbers 1..54), then places the
-    sentinel on line 55. ``verify_reviewer_output`` should ignore it.
+    sentinel on line 55. ``check_artifact_stable`` should ignore it.
     """
     expected_sha = "0" * 64
     preamble = "\n".join([f"preamble line {i}" for i in range(1, 55)])
     output = preamble + f"\nREAD_OK: /p {expected_sha}\n"
     # Sanity-check: the sentinel is at line 55 (1-indexed).
     assert output.splitlines()[54] == f"READ_OK: /p {expected_sha}"
-    assert verify_reviewer_output(output, expected_sha) == ("absent", None)
+    assert check_artifact_stable(output, expected_sha) == ("absent", None)
 
 
 def test_quoted_read_failed_before_real_read_ok_returns_ok() -> None:
@@ -154,7 +154,7 @@ def test_quoted_read_failed_before_real_read_ok_returns_ok() -> None:
             f"READ_OK: /real/path {expected_sha}",
         ]
     )
-    assert verify_reviewer_output(output, expected_sha) == ("ok", expected_sha)
+    assert check_artifact_stable(output, expected_sha) == ("ok", expected_sha)
 
 
 def test_quoted_read_ok_wrong_sha_before_real_read_failed_returns_read_failed() -> None:
@@ -177,7 +177,7 @@ def test_quoted_read_ok_wrong_sha_before_real_read_failed_returns_read_failed() 
             "READ_FAILED: /real/path crashed",
         ]
     )
-    assert verify_reviewer_output(output, expected_sha) == ("read_failed", "crashed")
+    assert check_artifact_stable(output, expected_sha) == ("read_failed", "crashed")
 
 
 def test_blockquoted_sentinel_is_rejected() -> None:
@@ -188,7 +188,7 @@ def test_blockquoted_sentinel_is_rejected() -> None:
     """
     expected_sha = "d" * 64
     output = f"> READ_OK: /p {expected_sha}\n"
-    assert verify_reviewer_output(output, expected_sha) == ("absent", None)
+    assert check_artifact_stable(output, expected_sha) == ("absent", None)
 
 
 def test_bom_prefixed_first_line_pass() -> None:
@@ -199,14 +199,14 @@ def test_bom_prefixed_first_line_pass() -> None:
     """
     expected_sha = "e" * 64
     output = f"﻿some BOM-prefixed preamble\nREAD_OK: /p {expected_sha}\n"
-    assert verify_reviewer_output(output, expected_sha) == ("ok", expected_sha)
+    assert check_artifact_stable(output, expected_sha) == ("ok", expected_sha)
 
 
 def test_crlf_line_endings_pass() -> None:
     """CRLF line endings are normalized via ``splitlines()`` and the sentinel passes."""
     expected_sha = "f" * 64
     output = f"READ_OK: /p {expected_sha}\r\nsome trailing CRLF prose\r\n"
-    assert verify_reviewer_output(output, expected_sha) == ("ok", expected_sha)
+    assert check_artifact_stable(output, expected_sha) == ("ok", expected_sha)
 
 
 def test_read_failed_route() -> None:
@@ -219,7 +219,7 @@ def test_read_failed_route() -> None:
             "Trailing prose line 3.",
         ]
     )
-    assert verify_reviewer_output(output, expected_sha) == (
+    assert check_artifact_stable(output, expected_sha) == (
         "read_failed",
         "reason_token",
     )
@@ -230,8 +230,8 @@ def test_window_size_default_is_50() -> None:
     expected_sha = "1" * 64
     # 49 preamble lines + sentinel on line 50 (1-indexed).
     on_line_50 = "\n".join(["x"] * 49) + f"\nREAD_OK: /p {expected_sha}"
-    assert verify_reviewer_output(on_line_50, expected_sha) == ("ok", expected_sha)
+    assert check_artifact_stable(on_line_50, expected_sha) == ("ok", expected_sha)
 
     # One more preamble line pushes the sentinel to line 51 (outside window).
     on_line_51 = "\n".join(["x"] * 50) + f"\nREAD_OK: /p {expected_sha}"
-    assert verify_reviewer_output(on_line_51, expected_sha) == ("absent", None)
+    assert check_artifact_stable(on_line_51, expected_sha) == ("absent", None)

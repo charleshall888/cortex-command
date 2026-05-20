@@ -14,7 +14,7 @@ cannot perform half the ceremony because the operations are no longer
 addressable as independent steps:
 
   prepare-dispatch     -- realpath gate + SHA-256 in one call
-  verify-synth-output  -- sentinel-parse + SHA-match + drift-log in one call
+  check-synth-stable   -- sentinel-parse + SHA-match + drift-log in one call
   record-exclusion     -- atomic sentinel_absence event append
 
 Public functions are also importable for unit testing.
@@ -188,17 +188,31 @@ def prepare_dispatch(
 
 
 # ---------------------------------------------------------------------------
-# verify-synth-output (parse SYNTH_READ_OK + compare SHA)
+# check-synth-stable (parse SYNTH_READ_OK + compare SHA) — advisory gate
 # ---------------------------------------------------------------------------
 
 _SYNTH_RE = re.compile(r"^SYNTH_READ_OK: (\S+) ([0-9a-f]{64})$", re.MULTILINE)
 
 
-def verify_synth_output(
+def check_synth_stable(
     output: str,
     expected_sha: str,
 ) -> tuple[str, str | None]:
-    """Inspect a synthesizer's stdout for ``SYNTH_READ_OK: <path> <sha>``.
+    """Detect SHA drift of the artifact between dispatch and verification time.
+
+    Does NOT detect reviewer/synth engagement quality,
+    orchestrator-fabricated input, or coordinated injection — the
+    orchestrator-LLM controls both the SHA and the input file and can
+    satisfy this gate without dispatching a real reviewer/synth.
+    Engagement quality depends on reviewer/synth prompt fidelity, not on
+    this gate.
+
+    Sentinel-string divergence note: the wire-protocol sentinel
+    ``SYNTH_READ_OK:`` (and the reviewer-side ``READ_OK:``) is intentionally
+    unchanged despite this function's rename — renaming wire-protocol
+    sentinels would break every reviewer-fixture transcript and every
+    dispatching skill that emits the sentinel, which is out of ticket 255
+    scope.
 
     Args:
         output: The synthesizer's full stdout text.
@@ -215,23 +229,38 @@ def verify_synth_output(
     observed = m.group(2)
     if observed != expected_sha:
         return ("mismatch", observed)
+    # gate-class: advisory
     return ("ok", observed)
 
 
 # ---------------------------------------------------------------------------
-# verify-reviewer-output (parse READ_OK / READ_FAILED with OK-first precedence)
+# check-artifact-stable (parse READ_OK / READ_FAILED with OK-first precedence)
+# — advisory gate
 # ---------------------------------------------------------------------------
 
 _REVIEWER_OK_RE = re.compile(r"^READ_OK: (\S+) ([0-9a-f]{64})\s*$", re.MULTILINE)
 _REVIEWER_FAILED_RE = re.compile(r"^READ_FAILED: (\S+) (\S+)\s*$", re.MULTILINE)
 
 
-def verify_reviewer_output(
+def check_artifact_stable(
     output: str,
     expected_sha: str,
     window_lines: int = 50,
 ) -> tuple[str, str | None]:
-    """Inspect a reviewer's stdout for ``READ_OK`` / ``READ_FAILED`` sentinels.
+    """Detect SHA drift of the artifact between dispatch and verification time.
+
+    Does NOT detect reviewer/synth engagement quality,
+    orchestrator-fabricated input, or coordinated injection — the
+    orchestrator-LLM controls both the SHA and the input file and can
+    satisfy this gate without dispatching a real reviewer/synth.
+    Engagement quality depends on reviewer/synth prompt fidelity, not on
+    this gate.
+
+    Sentinel-string divergence note: the wire-protocol sentinels ``READ_OK:``
+    and ``READ_FAILED:`` are intentionally unchanged despite this function's
+    rename — renaming wire-protocol sentinels would break every reviewer-
+    fixture transcript and every dispatching skill that emits the sentinel,
+    which is out of ticket 255 scope.
 
     Uses **first-match-whose-SHA-equals-expected** (OK-first precedence)
     rather than earliest-position matching, so that adversarial preamble
@@ -270,6 +299,7 @@ def verify_reviewer_output(
         return ("read_failed", failed_matches[0].group(2))
     if ok_matches:
         return ("mismatch", ok_matches[0].group(2))
+    # gate-class: advisory
     return ("absent", None)
 
 
@@ -357,7 +387,7 @@ def _default_artifact_roots() -> tuple[str, str]:
     ``prepare-dispatch`` accepts artifacts produced by either the lifecycle
     state machine (``cortex/lifecycle/<feature>/``) or the discovery skill
     (``cortex/research/<topic>/``). Downstream telemetry subcommands
-    (``verify-synth-output``, ``record-exclusion``) remain single-root —
+    (``check-synth-stable``, ``record-exclusion``) remain single-root —
     the discovery flow's ``<path>``-arg invocation form omits ``--feature``
     and those telemetry calls are documented to be skipped in that mode.
     """
@@ -386,7 +416,7 @@ def _build_sentinel_absence_event(
 
     This is the single schema source for ``sentinel_absence`` events,
     consumed by both ``_cmd_record_exclusion`` (manual operator path) and
-    ``_cmd_verify_reviewer_output`` (atomic reviewer-side parse + classify
+    ``_cmd_check_artifact_stable`` (atomic reviewer-side parse + classify
     + telemetry path). Centralizing construction here eliminates schema
     duplication: future field additions or renames happen in exactly one
     place.
@@ -448,7 +478,7 @@ def _cmd_prepare_dispatch(args: argparse.Namespace) -> int:
     return 0
 
 
-def _cmd_verify_synth_output(args: argparse.Namespace) -> int:
+def _cmd_check_synth_stable(args: argparse.Namespace) -> int:
     try:
         lifecycle_root = args.lifecycle_root or _default_lifecycle_root()
     except RuntimeError as e:
@@ -456,7 +486,7 @@ def _cmd_verify_synth_output(args: argparse.Namespace) -> int:
         return 2
 
     output = sys.stdin.read()
-    status, observed = verify_synth_output(output, args.expected_sha)
+    status, observed = check_synth_stable(output, args.expected_sha)
 
     if status == "ok":
         sys.stdout.write(f"OK {observed}\n")
@@ -498,7 +528,7 @@ def _cmd_verify_synth_output(args: argparse.Namespace) -> int:
     return 3
 
 
-def _cmd_verify_reviewer_output(args: argparse.Namespace) -> int:
+def _cmd_check_artifact_stable(args: argparse.Namespace) -> int:
     try:
         lifecycle_root = args.lifecycle_root or _default_lifecycle_root()
     except RuntimeError as e:
@@ -510,12 +540,12 @@ def _cmd_verify_reviewer_output(args: argparse.Namespace) -> int:
             output = fh.read()
     except OSError as e:
         print(
-            f"verify-reviewer-output: cannot read {args.input_file!r}: {e}",
+            f"check-artifact-stable: cannot read {args.input_file!r}: {e}",
             file=sys.stderr,
         )
         return 2
 
-    status, observed = verify_reviewer_output(
+    status, observed = check_artifact_stable(
         output, args.expected_sha, args.window_lines
     )
 
@@ -524,7 +554,7 @@ def _cmd_verify_reviewer_output(args: argparse.Namespace) -> int:
         return 0
 
     # status is one of {"absent", "mismatch", "read_failed"}.
-    # Map verify_reviewer_output status -> record-exclusion reason enum.
+    # Map check_artifact_stable status -> record-exclusion reason enum.
     if status == "mismatch":
         reason = "sha_mismatch"
         observed_for_event: str | None = observed
@@ -613,7 +643,7 @@ def _build_parser() -> argparse.ArgumentParser:
     pd.set_defaults(func=_cmd_prepare_dispatch)
 
     vs = sub.add_parser(
-        "verify-synth-output",
+        "check-synth-stable",
         help=(
             "Read synthesizer output on stdin, verify SYNTH_READ_OK SHA, "
             "log synthesizer_drift on mismatch/absence."
@@ -621,10 +651,10 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     vs.add_argument("--feature", required=True)
     vs.add_argument("--expected-sha", required=True)
-    vs.set_defaults(func=_cmd_verify_synth_output)
+    vs.set_defaults(func=_cmd_check_synth_stable)
 
     vr = sub.add_parser(
-        "verify-reviewer-output",
+        "check-artifact-stable",
         help=(
             "Read reviewer output from --input-file, verify READ_OK SHA "
             "with OK-first precedence, log sentinel_absence on "
@@ -654,7 +684,7 @@ def _build_parser() -> argparse.ArgumentParser:
         default=50,
         help="Leading lines of reviewer output to scan (default: 50).",
     )
-    vr.set_defaults(func=_cmd_verify_reviewer_output)
+    vr.set_defaults(func=_cmd_check_artifact_stable)
 
     re_ = sub.add_parser(
         "record-exclusion",

@@ -1,15 +1,13 @@
 """Structural parity tests for ``cortex_command.critical_review`` gate policy.
 
 This file is established in Phase 1 (Task 1) of the
-``gate-policy-taxonomy-and-critical-review`` lifecycle. It currently
-ships ONE test, ``test_no_root_pre_resolution_gate``, which enforces
-the Phase 1 atomicity invariant for Fix 2 (Requirements 3 and 4 of the
-spec): the candidate-symlink gate at the prior ``:82-89`` and the
-redundant root-symlink gate at the prior ``:103-111`` must land or
-revert as a single commit. Phase 2 (Tasks 3 and 4) will extend this
-file with additional parity assertions for the ``# gate-class:``
-annotations and the renamed verifier docstring substrings, reusing
-the module-level ``_get_function_source`` helper.
+``gate-policy-taxonomy-and-critical-review`` lifecycle. It ships
+``test_no_root_pre_resolution_gate`` (Phase 1 atomicity invariant for
+Fix 2 / Requirements 3 and 4) and ``test_renamed_verifiers_have_caveat_substrings``
+(Task 3 / Requirement 2(b) — the renamed verifier docstring caveat
+contract). Future Phase 2 additions will extend this file with
+``# gate-class:`` annotation assertions, reusing the module-level
+``_get_function_source`` helper.
 
 Why a structural parity test (not prose convention):
   - The spec's Requirement 4 binds atomicity to executable check rather
@@ -17,6 +15,13 @@ Why a structural parity test (not prose convention):
     under-root scoping without restoring the root pre-resolution gate
     (or vice versa), the test fires immediately with a named failure
     message.
+  - Requirement 2(b) binds the renamed verifier docstrings' honesty
+    caveat to an executable check rather than to author intent. If a
+    future commit rewrites the docstring and drops the
+    ``Does NOT detect ... engagement`` caveat, the test fires
+    immediately so the rename's primary value (honesty: name +
+    docstring + ``advisory`` annotation match what the gate actually
+    delivers) cannot silently regress.
 """
 
 from __future__ import annotations
@@ -168,6 +173,56 @@ def test_no_root_pre_resolution_gate() -> None:
         "removed in the same commit that lands the under-root scoping "
         "fix. Restore atomicity by deleting the pre-resolution check."
     )
+
+
+# ---------------------------------------------------------------------------
+# Task 3 / Requirement 2(b): renamed-verifier docstring caveat contract
+# ---------------------------------------------------------------------------
+
+
+def test_renamed_verifiers_have_caveat_substrings() -> None:
+    """Renamed verifier docstrings must carry the three-substring honesty caveat.
+
+    Spec Requirement 2(b) / Task 3: the docstrings of
+    ``check_artifact_stable`` and ``check_synth_stable`` must each contain
+    ALL THREE of the substrings:
+
+      - ``Does NOT detect``
+      - ``orchestrator-fabricated input``
+      - ``engagement``
+
+    The multi-substring check resists single-word rephrasing — a future
+    docstring rewrite that drops any one substring fires the assertion.
+
+    Why these three substrings and not a single sentinel phrase:
+      - ``Does NOT detect`` pins the gate's negative-capability framing.
+      - ``orchestrator-fabricated input`` names the specific bypass
+        surface (the orchestrator-LLM controls both the SHA and the
+        input file).
+      - ``engagement`` names the property the gate cannot enforce
+        (reviewer/synth engagement quality).
+
+    Lands in the same commit as the docstring + ``# gate-class: advisory``
+    annotation per Task 3's atomicity constraint — no inter-commit drift
+    window between the docstring contract and the test that enforces it.
+    """
+    required_substrings = (
+        "Does NOT detect",
+        "orchestrator-fabricated input",
+        "engagement",
+    )
+
+    for func_name in ("check_artifact_stable", "check_synth_stable"):
+        func = getattr(critical_review, func_name)
+        doc = func.__doc__ or ""
+        missing = [s for s in required_substrings if s not in doc]
+        assert not missing, (
+            f"Renamed verifier ``{func_name}`` docstring missing required "
+            f"honesty-caveat substring(s) {missing!r}. Per spec Requirement "
+            f"2(b) the docstring must contain all of: {list(required_substrings)!r}. "
+            f"Restore the substrings (or update the spec — but the spec is "
+            f"the source of truth here)."
+        )
 
 
 # ---------------------------------------------------------------------------
