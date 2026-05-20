@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 1a01b03c-38b8-4ea8-b1e9-3ebe074a38aa
 title: "Gate-policy taxonomy and critical-review gate fixes"
-status: backlog
+status: complete
 priority: high
 type: feature
 created: 2026-05-20
@@ -10,6 +10,11 @@ updated: 2026-05-20
 parent: "251"
 tags: [critical-review, gate-policy]
 discovery_source: cortex/research/harness-friction-triage/research.md
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/gate-policy-taxonomy-and-critical-review/spec.md
+areas: [skills]
+session_id: null
 ---
 
 ## Role

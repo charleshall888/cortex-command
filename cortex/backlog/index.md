@@ -5,7 +5,6 @@
 | 135 | Shared git index race between parallel Claude sessions causes wrong files to land in commits | backlog | high | bug | — | — | — |
 | 251 | Harness friction triage: distribution, contracts, slugs, gates | backlog | high | epic | — | — | — |
 | 252 | Installation integrity layer: bash-to-entry-point migration, PATH self-test, install-version pin probe | refined | high | feature | — | 251 | ✓ |
-| 255 | Gate-policy taxonomy and critical-review gate fixes | refined | high | feature | — | 251 | ✓ |
 | 258 | Surface aggregated signal on daytime-pipeline sandbox/EPERM cascade failures | backlog | high | feature | — | — | — |
 | 260 | Revert TMPDIR worktree placement and restore .claude/worktrees/ default | refined | high | bug | — | — | ✓ |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
@@ -23,7 +22,6 @@
 ## Refined
 
 - **252** Installation integrity layer: bash-to-entry-point migration, PATH self-test, install-version pin probe
-- **255** Gate-policy taxonomy and critical-review gate fixes
 - **260** Revert TMPDIR worktree placement and restore .claude/worktrees/ default
 
 ## Backlog

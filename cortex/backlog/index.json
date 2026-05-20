@@ -85,35 +85,6 @@
     "repo": null
   },
   {
-    "id": 255,
-    "title": "Gate-policy taxonomy and critical-review gate fixes",
-    "status": "refined",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "critical-review",
-      "gate-policy"
-    ],
-    "areas": [
-      "skills"
-    ],
-    "created": "2026-05-20",
-    "updated": "2026-05-20",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "251",
-    "research": null,
-    "spec": "cortex/lifecycle/gate-policy-taxonomy-and-critical-review/spec.md",
-    "discovery_source": "cortex/research/harness-friction-triage/research.md",
-    "plan": null,
-    "uuid": "1a01b03c-38b8-4ea8-b1e9-3ebe074a38aa",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 258,
     "title": "Surface aggregated signal on daytime-pipeline sandbox/EPERM cascade failures",
     "status": "backlog",

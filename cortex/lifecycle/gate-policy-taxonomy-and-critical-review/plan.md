@@ -30,7 +30,7 @@ Land four targeted fixes to `cortex_command/critical_review.py` plus a source-di
   - Parity test structure: walk `validate_artifact_path`'s source via `inspect.getsource()`, assert via regex that the function contains exactly one `is_relative_to(...)` call on a `.resolve()`-d root path AND zero call sites of the pattern `os.path.realpath(<root>)` followed by inequality comparison with `abspath`. Failure message: `Phase 1 atomicity invariant violated — root pre-resolution gate present`.
   - The new file establishes a small module-level helper `_get_function_source(name: str) -> str` (signature only — implementer writes the body using `inspect.getsource()`) which Task 3 and Task 4 reuse. Tests in this file do not yet assert anything about `check_artifact_stable` or `check_synth_stable` — those gate sites don't exist until Task 3.
 - **Verification**: `pytest tests/test_critical_review_gate_class_parity.py::test_no_root_pre_resolution_gate -v` — pass if exit 0 with the test asserting both that the under-root call site is present and that no root pre-resolution gate exists; the test must fail with the named-failure message above if `realpath(root) != abspath(root)` is reintroduced anywhere in `validate_artifact_path`.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 7eb1d6d6)
 
 ### Task 2: Split path-validation tests and add ancestor-symlink accept/reject pair
 
@@ -44,7 +44,7 @@ Land four targeted fixes to `cortex_command/critical_review.py` plus a source-di
   - `tests/test_critical_review_path_validation.py:134-140` (`test_module_api_rejects_path_equal_to_lifecycle_root`) and `:153-162` (`test_module_api_prepare_dispatch_returns_sha_and_path`) remain unchanged.
   - The realpath-escapes-root case must verify the stderr message names the realpath endpoint (not the literal symlink path) — this is the contract for caller-debuggability.
 - **Verification**: `pytest tests/test_critical_review_path_validation.py -v` — pass if exit 0; AND `grep -c 'def test_module_api_accepts_ancestor_symlink_if_realpath_under_root\|def test_module_api_rejects_realpath_escaping_root' tests/test_critical_review_path_validation.py` = 2.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit e61692f9)
 
 ### Task 3: Rename verifier subcommands, update all callers, add `advisory` annotations, docstrings, and the matching parity-test assertion
 
@@ -64,7 +64,7 @@ Land four targeted fixes to `cortex_command/critical_review.py` plus a source-di
   - Annotation placement: `# gate-class: advisory` goes on the line immediately preceding the function's terminal `return` site (the canonical "gate fires" location). Per spec Req 1 this is the format the parity test will enforce.
   - The parity-test extension reuses Task 1's `_get_function_source` helper. The new test imports `cortex_command.critical_review.check_artifact_stable` and `check_synth_stable` directly, asserts each `.__doc__` contains all three required substrings.
 - **Verification**: `pytest tests/test_critical_review_gate_class_parity.py::test_no_root_pre_resolution_gate tests/test_critical_review_gate_class_parity.py::test_renamed_verifiers_have_caveat_substrings tests/test_critical_review_sentinel_window.py tests/test_variant_a_writer_sites_baseline.py -v` — pass if exit 0; AND `grep -c 'check-artifact-stable\|check-synth-stable' cortex_command/critical_review.py` ≥ 4; AND `grep -c 'verify-reviewer-output\|verify-synth-output' cortex_command/critical_review.py` = 0; AND `grep -rn 'verify-reviewer-output\|verify-synth-output' skills/ tests/ plugins/cortex-core/skills/ | grep -v '^cortex/lifecycle/' | wc -l` = 0; AND `grep -c '# gate-class: advisory' cortex_command/critical_review.py` ≥ 2.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 3a3af3c1)
 
 ### Task 4: Annotate remaining gates and ship the closed-set parity-test assertion
 
@@ -80,7 +80,7 @@ Land four targeted fixes to `cortex_command/critical_review.py` plus a source-di
   - Closed-set values: `security`, `hygiene`, `advisory`. The parity test asserts no other class names appear.
   - Walker shape: site-level regex `^[ ]+(raise GateError|return \(["\'](absent|mismatch|read_failed|ok)["\'])` matched against the source of the three named function bodies (via Task 1's `_get_function_source` helper). The 3-line annotation window is generous to allow blank lines and brief comments.
 - **Verification**: `grep -c '# gate-class:' cortex_command/critical_review.py` = 7 (5 from this task + 2 advisory from Task 3); AND `grep -c '# gate-class: security' cortex_command/critical_review.py` = 1; AND `grep -c '# gate-class: hygiene' cortex_command/critical_review.py` = 4; AND `grep -c '# gate-class: advisory' cortex_command/critical_review.py` = 2; AND `pytest tests/test_critical_review_gate_class_parity.py::test_every_gate_site_carries_in_scope_annotation -v` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 34cabdb0)
 
 ### Task 5: Add `--allow-adhoc` flag, NUL/surrogate validation, and snapshot helper
 
@@ -96,7 +96,7 @@ Land four targeted fixes to `cortex_command/critical_review.py` plus a source-di
   - NUL is the one POSIX byte paths cannot legally contain — rejection is universal. Surrogate code points come from `surrogateescape`-decoded argv carrying invalid UTF-8 bytes — the strict-encode check is the canonical detector. Other control chars (newlines, tabs, ANSI escapes) are legal POSIX and we preserve them; downstream consumer-side sanitization (terminal printing) is the consumer's responsibility, not the validation boundary's.
   - Helper signature for the snapshot worker: `_snapshot_adhoc(candidate_realpath: Path, repo_root: Path) -> tuple[Path, str]` returning `(snapshot_path, full_sha)`.
 - **Verification**: `pytest tests/test_critical_review_path_validation.py::test_module_api_adhoc_snapshots_file_under_cortex_adhoc tests/test_critical_review_path_validation.py::test_module_api_rejects_nul_byte_in_path tests/test_critical_review_path_validation.py::test_module_api_rejects_surrogate_codepoint_in_path tests/test_critical_review_path_validation.py::test_module_api_accepts_newline_in_path -v` — pass if exit 0 with all four tests green.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 90bd4a89)
 
 ### Task 6: Thread `source_path` + `snapshot_sha` through event emission and the events-registry
 
@@ -112,7 +112,7 @@ Land four targeted fixes to `cortex_command/critical_review.py` plus a source-di
   - Events-registry schema convention: optional fields are listed under the row with a `(optional)` qualifier; the existing schema-validation test (if present in `tests/test_events_registry_schema.py` or similar) tolerates field-additive extensions.
   - The round-trip test must construct a path containing `\n` (newline) and assert the events.log line is JSON-escaped (i.e., the literal `\\n` sequence appears in the events.log row when read as bytes, and `json.loads` of the row recovers the original `\n`-containing string).
 - **Verification**: `pytest tests/test_critical_review_event_emission.py -v` — pass if exit 0 with both tests green; AND `grep -c '"source_path"\|"snapshot_sha"' cortex_command/critical_review.py` ≥ 4 (two helper signature params + two event-dict writes); AND `grep -c 'source_path\|snapshot_sha' bin/.events-registry.md` ≥ 2.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 4eeb3176)
 
 ### Task 7: Gitignore `cortex/_adhoc/`
 
@@ -124,7 +124,7 @@ Land four targeted fixes to `cortex_command/critical_review.py` plus a source-di
 - **Context**:
   - The peer location (`cortex/_adhoc/`, NOT `cortex/lifecycle/_adhoc/`) avoids the lifecycle-slug-iterator collision documented in research Adversarial item 2 — multiple downstream consumers walk `cortex/lifecycle/*/` expecting per-feature directories.
 - **Verification**: `git check-ignore cortex/_adhoc/anything/file` — pass if exit 0 (i.e., the path is gitignored); AND `grep -c '^cortex/_adhoc/$' .gitignore` = 1.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit b3e992bb)
 
 ### Task 8: Ship `cortex-clean` skeleton with `--adhoc` pin-set + retention basics
 
@@ -142,7 +142,7 @@ Land four targeted fixes to `cortex_command/critical_review.py` plus a source-di
   - SHA derivation from directory path: `sha = parent_dir.name + leaf_dir.name` (the 2-char fanout + 62-char remainder). Snapshot directories not matching `^[0-9a-f]{2}/[0-9a-f]{62}/$` are skipped (no false-positive deletion of stray directories).
   - Test scenarios: (a) old-and-unpinned snapshot deleted; (b) old-and-pinned-by-active-events.log snapshot retained; (c) new-and-unpinned snapshot retained; (f) `.staging-*` and `.tombstone-*` paths are ignored; **(g) old-and-pinned-by-archived-events.log snapshot retained** (newly added in response to critical-review — constructs a snapshot, places a `snapshot_sha:` reference inside `cortex/lifecycle/archive/<feature>/events.log`, asserts the snapshot is NOT deleted after `cortex-clean --adhoc`); **(h) old-and-pinned-by-sessions-events.log snapshot retained** (newly added — same pattern with `cortex/lifecycle/sessions/<uuid>/events.log`). Concurrency scenarios (d and e from spec) move to Task 9.
 - **Verification**: `pytest tests/test_clean_adhoc.py -v` — pass if exit 0 with all six scenario tests green (a/b/c/f/g/h); AND `grep -c '^cortex-clean = ' pyproject.toml` = 1; AND `cortex-clean --adhoc --dry-run` against a synthetic tempdir fixture containing one pinned-by-archive snapshot retains it (covered by scenario g).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit b7fe4857)
 
 ### Task 9: Ship tombstone-rename concurrency invariant in a dedicated parity-style test file
 
@@ -159,7 +159,7 @@ Land four targeted fixes to `cortex_command/critical_review.py` plus a source-di
   - Parity-test file naming and diagnostic format mirror Task 1's pattern (`tests/test_critical_review_gate_class_parity.py` with `Phase 1 atomicity invariant violated — root pre-resolution gate present`). The named diagnostic surfaces in the test failure message immediately and is grep-discoverable from the source.
   - Scenario e (malformed JSONL row → exit code 2 + WARN stderr line) is added to `tests/test_clean_adhoc.py` in this task (not Task 8) because the WARN-and-continue pattern interacts with the deletion path that Task 9 finalizes.
 - **Verification**: `pytest tests/test_clean_adhoc_concurrency_invariant.py tests/test_clean_adhoc.py -v` — pass if exit 0 with both concurrency-invariant tests green and the (e) malformed-row scenario test green; AND the parity-style test fails with `Concurrency invariant violated — tombstone-rename atomicity broken` when `os.rename` is replaced with direct `shutil.rmtree` or the tombstone-skip branch is removed (verifier: a deliberate one-line edit to `clean.py` confirms the named-failure path fires).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 37c4f80a)
 
 ## Risks
 
@@ -172,4 +172,4 @@ Land four targeted fixes to `cortex_command/critical_review.py` plus a source-di
 
 ## Acceptance
 
-The four fixes (Fix 1 gate-class taxonomy, Fix 2 under-root scoping, Fix 3 auto-resolve helper, Fix 4 verifier rename + rescope) all land per the spec's Requirements 1-13: `pytest tests/test_critical_review_path_validation.py tests/test_critical_review_gate_class_parity.py tests/test_critical_review_sentinel_window.py tests/test_critical_review_event_emission.py tests/test_clean_adhoc.py tests/test_clean_adhoc_concurrency_invariant.py tests/test_variant_a_writer_sites_baseline.py -v` exits 0; `grep -c '# gate-class:' cortex_command/critical_review.py` = 7; `grep -rn 'verify-reviewer-output\|verify-synth-output' skills/ tests/ plugins/cortex-core/skills/ | grep -v '^cortex/lifecycle/' | wc -l` = 0; `git check-ignore cortex/_adhoc/anything/file` exits 0; the archived-pin scenario test from Task 8 (g) passes (a snapshot pinned by `cortex/lifecycle/archive/<feature>/events.log` is retained after `cortex-clean --adhoc`); the dedicated concurrency-invariant test file from Task 9 contains a named-failure diagnostic that fires on regression of the tombstone-rename pattern.
+The four fixes (Fix 1 gate-class taxonomy, Fix 2 under-root scoping, Fix 3 auto-resolve helper, Fix 4 verifier rename + rescope) all land per the spec's Requirements 1-13: `pytest tests/test_critical_review_path_validation.py tests/test_critical_review_gate_class_parity.py tests/test_critical_review_sentinel_window.py tests/test_critical_review_event_emission.py tests/test_clean_adhoc.py tests/test_clean_adhoc_concurrency_invariant.py tests/test_variant_a_writer_sites_baseline.py -v` exits 0; `grep -c '# gate-class:' cortex_command/critical_review.py` = 10 (drift from the spec's "exactly 7" because Task 5's `--allow-adhoc` work correctly annotates 3 new gate sites — NUL `hygiene`, surrogate `hygiene`, adhoc-is_file `security`; the structural intent is "every gate has an annotation from the closed set, enforced by the parity test", which is preserved); `grep -rn 'verify-reviewer-output\|verify-synth-output' skills/ tests/ plugins/cortex-core/skills/ | grep -v '^cortex/lifecycle/' | wc -l` = 0; `git check-ignore cortex/_adhoc/anything/file` exits 0; the archived-pin scenario test from Task 8 (g) passes (a snapshot pinned by `cortex/lifecycle/archive/<feature>/events.log` is retained after `cortex-clean --adhoc`); the dedicated concurrency-invariant test file from Task 9 contains a named-failure diagnostic (`Concurrency invariant violated — tombstone-rename atomicity broken`) that fires on regression of the tombstone-rename pattern.
