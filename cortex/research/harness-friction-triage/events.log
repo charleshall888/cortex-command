@@ -1,0 +1,3 @@
+{"ts":"2026-05-20T13:12:59Z","event":"gate_brief_generated","status":"validation_failed","brief_word_count":439,"patterns_detected_count":0}
+{"ts":"2026-05-20T13:34:22Z","event":"approval_checkpoint_responded","topic":"harness-friction-triage","checkpoint":"research-decompose","response":"approve","revision_round":0}
+{"ts":"2026-05-20T13:59:35Z","event":"approval_checkpoint_responded","topic":"harness-friction-triage","checkpoint":"decompose-commit","response":"approve-all","revision_round":0}
