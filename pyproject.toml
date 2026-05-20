@@ -70,6 +70,7 @@ xfail_strict = true
 markers = [
     "slow: opt-in tests that invoke live models (use --run-slow to enable)",
     "serial: tests that spawn real subprocesses and must not run in parallel against each other (R26 / Task 20)",
+    "structural_equivalence: declares the named-tolerance set a parity test opts into for a given stream (see tests/test_parity_contract.py)",
 ]
 
 [dependency-groups]
