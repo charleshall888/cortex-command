@@ -1,22 +1,225 @@
-"""Stub for cortex-auto-bump-version (promoted in a later task).
+"""Decide the next release tag from commit messages since the latest tag.
 
-This module exists so ``pyproject.toml``'s ``[project.scripts]`` entry can
-be pre-allocated without breaking wheel installation. ``main()`` exits
-``70`` (per the installation-integrity-layer-bash-to-entry plan) rather
-than raising, so any intermediate commit remains installable and the
-entry point is discoverable by ``importlib.metadata.entry_points``.
+Stdlib-only. No required args; supports ``--dry-run`` (read-only mode that
+performs no filesystem mutations and runs the same selection logic).
+
+Logic:
+    (i)   read latest tag via ``git describe --tags --abbrev=0`` (no tag →
+          default ``v0.1.0``).
+    (ii)  read full commit messages since the latest tag via
+          ``git log <latest-tag>..HEAD --format=%B%x00`` (NUL-delimited so
+          multi-line bodies are captured cleanly; matches GitHub squash-merge
+          semantics where per-commit markers land in the merge commit's body).
+    (iii) parse each message for a *positionally-anchored* marker matching
+          ``(?im)^\\s*\\[release-type:\\s*(major|minor)\\s*\\]\\s*$``.
+          The marker MUST occupy its own line (modulo whitespace); prose-
+          embedded mentions do not fire.
+    (iv)  precedence: major > minor > patch (default).
+    (v)   ``BREAKING:`` / ``BREAKING CHANGE:`` standalone-line fallback fires
+          a major-bump when no explicit ``[release-type: …]`` marker is found.
+    (vi)  on HEAD == latest-tag (empty range), emit ``no-bump\\n`` and exit 0.
+    (vii) otherwise emit ``vX.Y.Z\\n`` per bump scope.
 """
 
 from __future__ import annotations
 
+import argparse
+import re
+import subprocess
 import sys
 from typing import List, Optional
 
 
-def main(argv: Optional[List[str]] = None) -> int:
-    """Pre-allocation stub — real port lands in a later task."""
-    sys.stderr.write(
-        "cortex-auto-bump-version: stub entry point; real port lands in a "
-        "later task of installation-integrity-layer-bash-to-entry.\n"
+# Standalone-line marker regex. ``(?im)`` makes it case-insensitive and
+# multi-line so ``^``/``$`` anchor at line boundaries. The bracket pattern
+# must be the entire content of its line modulo surrounding whitespace —
+# this excludes prose-embedded mentions like
+# "we add a `[release-type: major]` marker to the commit".
+RELEASE_TYPE_RE = re.compile(
+    r"(?im)^\s*\[release-type:\s*(major|minor)\s*\]\s*$"
+)
+
+# Standalone-line BREAKING fallback. Matches ``BREAKING:`` or
+# ``BREAKING CHANGE:`` (case-insensitive) at column 0 of a line — the
+# Conventional Commits footer convention. We deliberately do NOT permit
+# leading whitespace: indented bullet continuations that happen to mention
+# ``BREAKING:`` (e.g., a bullet describing the BREAKING fallback as a
+# feature) are prose, not declarations, and must not fire the fallback.
+BREAKING_RE = re.compile(r"(?im)^BREAKING(?:\s+CHANGE)?:")
+
+# Tag-shape regex used when parsing the latest tag for bumping.
+TAG_RE = re.compile(r"^v(\d+)\.(\d+)\.(\d+)$")
+
+# Default tag when no tags exist in the repository at all.
+DEFAULT_TAG = "v0.1.0"
+
+# Precedence order: lowest index = highest precedence.
+PRECEDENCE: tuple[str, ...] = ("major", "minor", "patch")
+
+
+def _git(args: list[str]) -> tuple[int, str, str]:
+    """Run a git subcommand; return (rc, stdout, stderr) decoded as utf-8."""
+    try:
+        out = subprocess.run(
+            ["git", *args],
+            capture_output=True,
+            check=False,
+            text=True,
+        )
+    except (FileNotFoundError, OSError) as exc:
+        return 127, "", str(exc)
+    return out.returncode, out.stdout, out.stderr
+
+
+def latest_tag() -> str | None:
+    """Return the latest tag via ``git describe --tags --abbrev=0`` or None.
+
+    Returns None when the repository has no tags reachable from HEAD (git
+    exits non-zero with "No names found, cannot describe anything").
+    """
+    rc, stdout, _stderr = _git(["describe", "--tags", "--abbrev=0"])
+    if rc != 0:
+        return None
+    tag = stdout.strip()
+    return tag or None
+
+
+def head_sha() -> str | None:
+    rc, stdout, _stderr = _git(["rev-parse", "HEAD"])
+    if rc != 0:
+        return None
+    return stdout.strip() or None
+
+
+def tag_sha(tag: str) -> str | None:
+    rc, stdout, _stderr = _git(["rev-list", "-n", "1", tag])
+    if rc != 0:
+        return None
+    return stdout.strip() or None
+
+
+def commit_messages_since(tag: str | None) -> list[str]:
+    """Return the list of full commit messages since ``tag`` (exclusive).
+
+    When ``tag`` is None (no tags yet), walks the entire history reachable
+    from HEAD. Messages are NUL-delimited via ``--format=%B%x00`` so
+    multi-line bodies survive intact.
+    """
+    rev_range = f"{tag}..HEAD" if tag else "HEAD"
+    rc, stdout, _stderr = _git(["log", rev_range, "--format=%B%x00"])
+    if rc != 0:
+        return []
+    # Split on NUL; the trailing record after the last NUL is empty.
+    parts = stdout.split("\x00")
+    # Drop the trailing empty record, and trim each message of leading/
+    # trailing whitespace introduced by --format=%B's trailing newline.
+    return [p.strip("\n") for p in parts if p.strip("\n")]
+
+
+def classify_messages(messages: list[str]) -> str:
+    """Return the bump scope: one of ``major``, ``minor``, ``patch``.
+
+    Precedence: major > minor > patch. ``BREAKING:`` standalone-line fallback
+    fires a major-bump when no explicit ``[release-type: …]`` marker is
+    present, OR promotes an explicit ``minor`` to ``major`` as defense-in-
+    depth (breaking-change signal wins; promotion never demotion).
+    """
+    explicit: set[str] = set()
+    breaking = False
+    for msg in messages:
+        for m in RELEASE_TYPE_RE.finditer(msg):
+            explicit.add(m.group(1).lower())
+        if BREAKING_RE.search(msg):
+            breaking = True
+
+    if "major" in explicit:
+        return "major"
+    if breaking:
+        return "major"
+    if "minor" in explicit:
+        return "minor"
+    return "patch"
+
+
+def bump_tag(latest: str, scope: str) -> str:
+    """Return the next tag for ``latest`` under ``scope``.
+
+    ``scope`` must be one of major/minor/patch. ``latest`` must match
+    ``vX.Y.Z``; if it does not, falls back to DEFAULT_TAG semantics
+    (treat as v0.0.0 and bump accordingly).
+    """
+    m = TAG_RE.match(latest)
+    if not m:
+        major, minor, patch = 0, 0, 0
+    else:
+        major, minor, patch = (int(g) for g in m.groups())
+    if scope == "major":
+        return f"v{major + 1}.0.0"
+    if scope == "minor":
+        return f"v{major}.{minor + 1}.0"
+    return f"v{major}.{minor}.{patch + 1}"
+
+
+def decide(latest: str | None, messages: list[str], head: str | None) -> str:
+    """Return the stdout string the helper should emit (with trailing \\n).
+
+    Pure function for unit testing: no git, no I/O. The ``latest``/``head``
+    inputs encode the (vi) HEAD==latest-tag check — when ``latest`` is a
+    valid tag and ``head`` equals ``latest``'s sha (the caller has resolved
+    this), ``messages`` will be empty and the function returns ``no-bump\\n``.
+    """
+    if not messages:
+        return "no-bump\n"
+    scope = classify_messages(messages)
+    base = latest if latest is not None else "v0.0.0"
+    # No tags case: caller passes ``latest=None``; emit DEFAULT_TAG when
+    # any commits exist (the helper must still produce a tag — bumping is
+    # patch-by-default from the conceptual v0.0.0 baseline, which yields
+    # v0.0.1, but the spec calls for ``v0.1.0`` when there are NO tags
+    # AT ALL. Honor the spec: no-tags-but-commits → DEFAULT_TAG.
+    if latest is None:
+        return f"{DEFAULT_TAG}\n"
+    return f"{bump_tag(base, scope)}\n"
+
+
+def run(argv: Optional[List[str]] = None) -> int:
+    parser = argparse.ArgumentParser(
+        prog="cortex-auto-bump-version",
+        description=(
+            "Decide the next release tag from commit messages since the "
+            "latest tag. Emits 'vX.Y.Z' or 'no-bump' to stdout. "
+            "See spec R20."
+        ),
     )
-    sys.exit(70)
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help=(
+            "Read-only mode (same logic, same stdout output, no filesystem "
+            "mutations). Provided for symmetry with R20 — this helper "
+            "performs no mutations anyway, so the flag is informational."
+        ),
+    )
+    parser.parse_args(argv)
+
+    latest = latest_tag()
+    head = head_sha()
+    if latest is not None:
+        tsha = tag_sha(latest)
+        if tsha is not None and head is not None and tsha == head:
+            # HEAD == latest tag → no new commits since the tag.
+            sys.stdout.write("no-bump\n")
+            return 0
+
+    messages = commit_messages_since(latest)
+    sys.stdout.write(decide(latest, messages, head))
+    return 0
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    """Entry point for the cortex-auto-bump-version console script."""
+    return run(argv)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
