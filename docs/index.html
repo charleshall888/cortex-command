@@ -3204,15 +3204,31 @@
   @media (max-width: 900px) {
     .install .ship-grid { grid-template-columns: 1fr; }
   }
-  .install .ship-card.bundled {
-    margin: 22px 0 0 0;
+  .install .ship-bridge {
+    display: block;
+    width: 100%;
     max-width: 980px;
+    height: 56px;
+    margin: 4px 0 0 0;
+    overflow: visible;
+  }
+  .install .ship-bridge-line {
+    stroke: var(--rule);
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
+    fill: none;
+    vector-effect: non-scaling-stroke;
+  }
+  .install .ship-card.bundled {
+    max-width: 540px;
+    margin: 0 auto;
     border: 1px dashed var(--rule-soft);
     border-radius: 4px;
     background: transparent;
     box-shadow: none;
-    padding: 20px 22px 22px;
-    gap: 10px;
+    padding: 20px 24px 22px;
+    gap: 8px;
+    text-align: left;
   }
   .install .ship-card.bundled .ship-head {
     border-bottom: 1px solid var(--rule-soft);
@@ -3230,42 +3246,15 @@
   .install .ship-card.bundled .ship-name { color: var(--ink); margin-top: 4px; }
   .install .ship-card.bundled .ship-name code { font-size: 0.78em; }
   .install .ship-card.bundled .ship-desc { color: var(--ink-mute); }
-  .install .cli-commands {
-    display: grid;
-    grid-template-columns: max-content 1fr;
-    row-gap: 10px;
-    column-gap: 22px;
-    margin: 16px 0 0 0;
-    padding-top: 14px;
-    border-top: 1px dashed var(--rule-soft);
-    align-items: baseline;
-  }
-  .install .cli-commands dt,
-  .install .cli-commands dd { margin: 0; }
-  .install .cli-commands dt code {
-    font-family: var(--mono);
-    font-size: 12.5px;
-    color: var(--blue);
-    background: var(--grid-tint);
-    padding: 3px 9px;
-    border-radius: 2px;
-    white-space: nowrap;
-  }
-  .install .cli-commands dd {
-    font-family: var(--serif);
-    font-size: 14px;
-    color: var(--ink);
-    line-height: 1.5;
+  @media (max-width: 900px) {
+    .install .ship-bridge { display: none; }
+    .install .ship-card.bundled {
+      max-width: none;
+      margin: 22px 0 0 0;
+    }
   }
   @media (max-width: 600px) {
     .install .ship-card.bundled { padding: 18px 18px 20px; }
-    .install .cli-commands {
-      grid-template-columns: 1fr;
-      row-gap: 4px;
-      column-gap: 0;
-    }
-    .install .cli-commands dt { margin-top: 10px; }
-    .install .cli-commands dt:first-of-type { margin-top: 0; }
   }
   .install .repo-line {
     margin-top: 32px;
@@ -6679,20 +6668,19 @@
       </article>
     </div>
 
+    <svg class="ship-bridge" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">
+      <line class="ship-bridge-line" x1="25" y1="0" x2="25" y2="22"/>
+      <line class="ship-bridge-line" x1="76" y1="0" x2="76" y2="22"/>
+      <line class="ship-bridge-line" x1="25" y1="22" x2="76" y2="22"/>
+      <line class="ship-bridge-line" x1="50" y1="22" x2="50" y2="40"/>
+    </svg>
+
     <article class="ship-card bundled" data-surface="cli">
       <div class="ship-head">
         <span class="ship-opt">bundled &middot; auto-updated by the plugins</span>
       </div>
       <h3 class="ship-name">the <code>cortex</code> CLI</h3>
-      <p class="ship-desc">Your terminal surface &mdash; what you type when Claude Code isn&rsquo;t in the loop.</p>
-      <dl class="cli-commands">
-        <dt><code>cortex init</code></dt>
-        <dd>one-time umbrella-path setup</dd>
-        <dt><code>cortex overnight</code></dt>
-        <dd>kicks the orchestrator into an unattended run</dd>
-        <dt><code>cortex morning-review</code></dt>
-        <dd>wake-up review of what ran while you slept</dd>
-      </dl>
+      <p class="ship-desc">Your terminal surface for setup, autonomous runs, and morning review.</p>
     </article>
 
     <div class="repo-line">
