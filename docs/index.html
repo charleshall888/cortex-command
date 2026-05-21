@@ -382,10 +382,13 @@
     box-shadow: 0 0 0 2px var(--shadow-blue-soft);
   }
   .ms-gates li.active .ms-name { color: var(--blue); }
-  .ms-gates li.active::after {
-    content: ""; width: 5px; height: 5px;
+  .ms-gates li.active .ms-tick::before {
+    content: "";
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 4px; height: 4px;
+    transform: translate(-50%, -50%);
     background: var(--blue); border-radius: 50%;
-    align-self: center;
     animation: ms-pulse 1.4s ease-in-out infinite;
   }
   @keyframes ms-pulse { 0%,100% { opacity: 0.35; } 50% { opacity: 1; } }
@@ -1447,7 +1450,7 @@
     .self-correct .strike::after,
     .self-correct .replace { transition: none; }
     .hf-fork-halo,
-    .ms-gates li.active::after,
+    .ms-gates li.active .ms-tick::before,
     .term .body .cur::after { animation: none !important; }
   }
   .toast .icon {
@@ -4740,23 +4743,23 @@
       </li>
       <li data-section="playground">
         <span class="ms-tick" aria-hidden="true"></span>
-        <span class="ms-name">gates</span>
+        <span class="ms-name">research</span>
         <span class="ms-desc">complexity &middot; criticality &middot; what fires when</span>
       </li>
-      <li data-section="sec-research">
-        <span class="ms-tick" aria-hidden="true"></span>
-        <span class="ms-name">research</span>
-        <span class="ms-desc">cite prior art &middot; name the risks</span>
-      </li>
-      <li data-section="sec-specify">
+      <li data-section="spec-stream">
         <span class="ms-tick" aria-hidden="true"></span>
         <span class="ms-name">specify</span>
-        <span class="ms-desc">acceptance &middot; scope &middot; what &ldquo;done&rdquo; looks like</span>
+        <span class="ms-desc">clarify &middot; research &middot; specify &middot; plan, locked in scroll</span>
       </li>
       <li data-section="pipe-section">
         <span class="ms-tick" aria-hidden="true"></span>
         <span class="ms-name">implement</span>
         <span class="ms-desc">gates fire &middot; safety triggers &middot; written down</span>
+      </li>
+      <li data-section="trust-grid">
+        <span class="ms-tick" aria-hidden="true"></span>
+        <span class="ms-name">review</span>
+        <span class="ms-desc">the safety contract &middot; operational guarantees</span>
       </li>
       <li data-section="install">
         <span class="ms-tick" aria-hidden="true"></span>
@@ -7483,12 +7486,14 @@
     for (let i = 0; i < msTargets.length; i++) {
       const { li, el } = msTargets[i];
       const r = el.getBoundingClientRect();
-      // Last gate (ship/install) clears when its bottom passes viewport center —
-      // the install section is taller than the viewport, so use a more lenient
-      // threshold than the 0.45 anchor used for shorter sections.
+      // Last gate (ship/install) clears once the page footer enters the viewport —
+      // the install section is taller than the viewport, so its own bottom never
+      // crosses the 0.45 anchor used by shorter sections.
       const isLast = (i === msTargets.length - 1);
+      const footer = document.getElementById('page-footer');
+      const fr = isLast && footer ? footer.getBoundingClientRect() : null;
       const isCleared = isLast
-        ? r.bottom < window.innerHeight * 0.5
+        ? (fr ? fr.top < window.innerHeight : false)
         : r.bottom < anchor;
       const isActive = !isCleared && r.top < anchor;
       li.classList.toggle('cleared', isCleared);
