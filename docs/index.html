@@ -3257,8 +3257,12 @@
     .install .ship-card.bundled { padding: 18px 18px 20px; }
   }
   .install .repo-line {
-    margin-top: 32px;
-    display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap;
+    margin-top: 28px;
+    display: flex; align-items: baseline; gap: 18px 22px; flex-wrap: wrap;
+    justify-content: center;
+  }
+  @media (max-width: 900px) {
+    .install .repo-line { justify-content: flex-start; }
   }
   .install .repo-line a {
     font-family: var(--mono); font-size: 14px;
@@ -6680,7 +6684,7 @@
         <span class="ship-opt">bundled &middot; auto-updated by the plugins</span>
       </div>
       <h3 class="ship-name">the <code>cortex</code> CLI</h3>
-      <p class="ship-desc">Your terminal surface for setup, autonomous runs, and morning review.</p>
+      <p class="ship-desc">Your terminal verbs for setup, autonomous runs, and morning review &mdash; and the deterministic <code>cortex-*</code> toolkit your skills shell out to.</p>
     </article>
 
     <div class="repo-line">
