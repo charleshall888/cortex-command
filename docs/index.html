@@ -3229,8 +3229,9 @@
   /* ───────────── Footer ───────────── */
   footer {
     position: relative; /* so .redline children can be absolutely positioned */
-    margin-top: 72px;
-    padding: 32px 0 48px;
+    max-width: 1280px;
+    margin: 72px auto 0;
+    padding: 32px 320px 48px 80px; /* mirror .page so content aligns with article column and clears the fixed sidebar */
     border-top: 1px solid var(--rule-soft);
     display: flex;
     justify-content: space-between;
@@ -3240,6 +3241,12 @@
     font-family: var(--mono);
     font-size: 12px;
     color: var(--ink-mute);
+  }
+  @media (max-width: 1100px) {
+    footer { padding: 32px 32px 48px 32px; }
+  }
+  @media (max-width: 600px) {
+    footer { padding: 24px 16px 40px 16px; gap: 20px; }
   }
   footer .links { display: flex; gap: 22px; }
   footer .links a {
