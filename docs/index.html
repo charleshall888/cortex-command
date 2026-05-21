@@ -149,6 +149,8 @@
     --blue-faint: #4a567f;
     --ochre: #f0b870;
     --ochre-soft: #f5cb95;
+    --red: #f5a672;
+    --green: #82c79a;
     /* carbon-specific tints — light grids on dark paper */
     --grid-tint: rgba(236, 230, 211, 0.045);
     --grid-tint-soft: rgba(236, 230, 211, 0.03);
@@ -4079,6 +4081,675 @@
   }
   .toast.first-light .icon { background: var(--ochre); color: #fffbf2; }
   .toast.first-light .body .top { color: var(--ochre); }
+
+  /* ═════════════════════════════════════════════════════════════════
+     §07 · /cli · the bench (+ dive: SHA consensus walk-through)
+     ───────────────────────────────────────────────────────────────── */
+  .cli-section {
+    position: relative; z-index: 2;
+    padding: 56px 0 72px;
+    border-top: 1px solid var(--rule-soft);
+    margin-top: 24px;
+  }
+  .cli-section code {
+    font-family: var(--mono); font-size: 0.84em; color: var(--ink);
+    background: rgba(236,230,211,0.06); padding: 1px 5px;
+    border-radius: 2px; border: 1px solid rgba(236,230,211,0.08);
+  }
+  .cli-section .marker {
+    font-family: var(--mono); font-size: 10.5px;
+    text-transform: uppercase; letter-spacing: 0.18em;
+    color: var(--ink-faint); margin: 0 0 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .cli-section .marker em { font-style: normal; color: var(--ochre); }
+  .cli-section .marker .prompt-cursor {
+    display: inline-block; width: 6px; height: 11px;
+    background: var(--ochre); margin-left: 2px;
+    animation: cli-blink 1.05s steps(2) infinite; vertical-align: -1px;
+  }
+  @keyframes cli-blink { 50% { opacity: 0; } }
+  .cli-section h2.kicker {
+    font-family: var(--serif); font-weight: 300;
+    font-size: clamp(28px, 3.4vw, 46px); line-height: 1.04;
+    letter-spacing: -0.028em; margin: 0 0 14px;
+    text-wrap: balance; max-width: 24ch; color: var(--ink);
+  }
+  .cli-section h2.kicker em { font-style: italic; color: var(--ochre); font-weight: 400; }
+  .cli-section .lede {
+    font-family: var(--serif); font-size: 18px; line-height: 1.5;
+    color: var(--ink-2); max-width: 74ch; text-wrap: pretty;
+    margin: 0 0 20px; font-weight: 300;
+  }
+  .cli-section .lede em { font-style: italic; color: var(--ochre-soft); }
+
+  /* ─── benefit pills ─── */
+  .cli-section .benefits { display: flex; gap: 10px; margin-bottom: 26px; flex-wrap: wrap; }
+  .cli-section .benefit {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: #1a1a1f; border: 1px solid var(--rule-soft);
+    padding: 8px 14px;
+    transition: border-color .25s, background .25s, transform .25s;
+    position: relative; overflow: hidden;
+  }
+  .cli-section .benefit::before {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(110deg, transparent 30%, rgba(240,184,112,0.10) 50%, transparent 70%);
+    transform: translateX(-100%); transition: transform .65s ease-out;
+    pointer-events: none;
+  }
+  .cli-section .benefit:hover {
+    border-color: var(--ochre);
+    background: linear-gradient(180deg, #1a1a1f 0%, rgba(240,184,112,0.06) 100%);
+    transform: translateY(-1px);
+  }
+  .cli-section .benefit:hover::before { transform: translateX(100%); }
+  .cli-section .benefit .glyph {
+    font-family: var(--serif); font-style: italic; font-size: 18px;
+    color: var(--ochre); line-height: 1; width: 14px; text-align: center;
+    transition: transform .35s;
+  }
+  .cli-section .benefit:hover .glyph { transform: rotate(-8deg) scale(1.15); }
+  .cli-section .benefit .b-name {
+    font-family: var(--mono); font-size: 10.5px;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--ink); white-space: nowrap;
+  }
+  .cli-section .benefit .b-desc {
+    font-family: var(--mono); font-size: 10px;
+    letter-spacing: 0.04em; color: var(--ink-faint);
+    border-left: 1px solid var(--rule-soft);
+    padding-left: 10px; margin-left: 4px; white-space: nowrap;
+  }
+
+  /* ─── bench (group cards) ─── */
+  .cli-section .bench { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 18px; }
+  .cli-section .group {
+    background: #1a1a1f; border: 1px solid var(--rule-soft);
+    padding: 14px 16px 12px;
+    display: flex; flex-direction: column;
+    min-height: 260px; position: relative;
+    transition: border-color .3s, transform .3s, background .3s;
+  }
+  .cli-section .group:hover { border-color: var(--ink-faint); transform: translateY(-2px); }
+  .cli-section .group.spotlit {
+    border-color: var(--ochre);
+    background: linear-gradient(180deg, #1a1a1f 0%, rgba(240,184,112,0.06) 100%);
+    box-shadow: 0 0 0 1px rgba(240,184,112,0.18);
+    animation: spotlit-pulse 4.5s ease-in-out infinite;
+  }
+  @keyframes spotlit-pulse {
+    0%, 100% { box-shadow: 0 0 0 1px rgba(240,184,112,0.18), 0 0 0 0 rgba(240,184,112,0); }
+    50%      { box-shadow: 0 0 0 1px rgba(240,184,112,0.34), 0 0 28px -4px rgba(240,184,112,0.22); }
+  }
+  .cli-section .group .g-head {
+    display: flex; align-items: center; gap: 8px;
+    padding-bottom: 10px; margin-bottom: 12px;
+    border-bottom: 1px dotted rgba(236,230,211,0.16);
+  }
+  .cli-section .group .g-head .ix {
+    font-family: var(--mono); font-size: 9.5px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .cli-section .group .g-head .name {
+    flex: 1; font-family: var(--serif); font-style: italic;
+    font-size: 16px; line-height: 1.05;
+    color: var(--ink); letter-spacing: -0.005em; font-weight: 300;
+  }
+  .cli-section .group.spotlit .g-head .name { color: var(--ochre); }
+  .cli-section .group .g-head .star {
+    font-family: var(--mono); font-size: 9px;
+    color: var(--ochre); letter-spacing: 0.14em; white-space: nowrap;
+  }
+  .cli-section .g-icon { width: 34px; height: 18px; flex-shrink: 0; opacity: 0.7; transition: opacity .3s; }
+  .cli-section .group:hover .g-icon { opacity: 1; }
+  .cli-section .group.spotlit .g-icon { opacity: 0.9; }
+  .cli-section .g-icon svg { display: block; width: 100%; height: 100%; overflow: visible; }
+  .cli-section .g-icon .stroke { stroke: var(--ink-mute); fill: none; stroke-width: 1; }
+  .cli-section .group.spotlit .g-icon .stroke { stroke: var(--ochre); }
+  .cli-section .g-icon .fill { fill: var(--ink-mute); }
+  .cli-section .group.spotlit .g-icon .fill { fill: var(--ochre); }
+  .cli-section .g-icon .accent { fill: var(--ochre); }
+  .cli-section .ico-lifecycle .dot { transform-origin: center; transform-box: fill-box; }
+  .cli-section .ico-lifecycle .dot.active { animation: lc-pulse 2.4s ease-in-out infinite; }
+  .cli-section .ico-lifecycle .dot.dim { opacity: 0.4; }
+  @keyframes lc-pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: 0.7; } }
+  .cli-section .ico-backlog .bar { transform-origin: left center; transform-box: fill-box; }
+  .cli-section .group:hover .ico-backlog .bar.b1 { animation: bl-shift 1.6s ease-in-out infinite; }
+  @keyframes bl-shift { 0%,100% { transform: translateX(0); } 50% { transform: translateX(4px); } }
+  .cli-section .ico-events .tick { opacity: 0; }
+  .cli-section .ico-events .tick.t1 { animation: ev-show 3.6s steps(1) infinite; animation-delay: 0s; }
+  .cli-section .ico-events .tick.t2 { animation: ev-show 3.6s steps(1) infinite; animation-delay: 0.6s; }
+  .cli-section .ico-events .tick.t3 { animation: ev-show 3.6s steps(1) infinite; animation-delay: 1.2s; }
+  .cli-section .ico-events .tick.t4 { animation: ev-show 3.6s steps(1) infinite; animation-delay: 1.8s; }
+  @keyframes ev-show { 0%,84% { opacity: 1; } 85%,100% { opacity: 0; } }
+  .cli-section .ico-sha text {
+    font-family: var(--mono); font-size: 9px;
+    fill: var(--ochre); font-weight: 500; letter-spacing: 0.05em;
+  }
+  .cli-section .ico-git .node { fill: var(--ink-mute); }
+  .cli-section .group.spotlit .ico-git .node { fill: var(--ochre); }
+  .cli-section .ico-git .branch { stroke-dasharray: 24; stroke-dashoffset: 24; }
+  .cli-section .group:hover .ico-git .branch { animation: git-draw 1.8s ease-out forwards; }
+  @keyframes git-draw { to { stroke-dashoffset: 0; } }
+
+  .cli-section .group .commands { list-style: none; margin: 0; padding: 0; flex: 1; display: flex; flex-direction: column; gap: 7px; }
+  .cli-section .group .commands li {
+    font-family: var(--mono); font-size: 10.5px; line-height: 1.3;
+    color: var(--ink-2); display: flex; flex-direction: column; gap: 2px;
+    position: relative; padding-left: 9px;
+  }
+  .cli-section .group .commands li::before {
+    content: ""; position: absolute; left: 0; top: 5px;
+    width: 3px; height: 3px; background: var(--ink-faint);
+    border-radius: 50%; transition: background .25s, transform .25s;
+  }
+  .cli-section .group:hover .commands li:first-child::before { background: var(--ochre); transform: scale(1.4); }
+  .cli-section .group.spotlit .commands li::before { background: var(--ochre); opacity: 0.5; }
+  .cli-section .group .commands li .cmd {
+    color: var(--blue); letter-spacing: 0; font-weight: 500;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .cli-section .group.spotlit .commands li .cmd { color: var(--ochre); }
+  .cli-section .group .commands li .desc {
+    color: var(--ink-faint); font-size: 9.5px;
+    letter-spacing: 0; line-height: 1.4;
+  }
+  .cli-section .group .callers {
+    margin-top: 12px; padding-top: 10px;
+    border-top: 1px dotted rgba(236,230,211,0.12);
+    font-family: var(--mono); font-size: 9px;
+    letter-spacing: 0.04em; color: var(--ink-mute); line-height: 1.5;
+  }
+  .cli-section .group .callers::before {
+    content: "called by · "; color: var(--ink-faint);
+    font-size: 8.5px; letter-spacing: 0.14em; text-transform: uppercase;
+  }
+
+  /* ─── dive toggle (engraved nameplate) ─── */
+  .cli-section .dive-toggle {
+    all: unset; display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center; gap: 24px; width: 100%;
+    padding: 20px 24px 20px 22px;
+    background: #0a0a0e; border: 1px solid var(--rule-soft);
+    border-left: 2px solid var(--ochre); cursor: pointer;
+    position: relative;
+    transition: background .25s ease, box-shadow .25s ease, transform .25s ease;
+    box-shadow: 0 0 0 1px #0a0a0e inset, 0 1px 0 0 rgba(0,0,0,0.4), 0 6px 0 -3px rgba(240,184,112,0.08);
+  }
+  .cli-section .dive-toggle:focus-visible { outline: 2px solid var(--ochre); outline-offset: 2px; }
+  .cli-section .dive-toggle:hover {
+    background: #0e0e14;
+    box-shadow: 0 0 0 1px #0e0e14 inset, 0 1px 0 0 rgba(0,0,0,0.5), 0 8px 0 -3px rgba(240,184,112,0.16);
+  }
+  .cli-section .dive-toggle::before {
+    content: ""; position: absolute; inset: 4px;
+    border: 1px dashed rgba(236,230,211,0.10); pointer-events: none;
+  }
+  .cli-section .dive-toggle::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background:
+      linear-gradient(90deg,  var(--ochre) 0 8px, transparent 8px 0) top    left  / 10px 1px no-repeat,
+      linear-gradient(0deg,   var(--ochre) 0 8px, transparent 8px 0) top    left  / 1px 10px no-repeat,
+      linear-gradient(-90deg, var(--ochre) 0 8px, transparent 8px 0) top    right / 10px 1px no-repeat,
+      linear-gradient(0deg,   var(--ochre) 0 8px, transparent 8px 0) top    right / 1px 10px no-repeat,
+      linear-gradient(90deg,  var(--ochre) 0 8px, transparent 8px 0) bottom left  / 10px 1px no-repeat,
+      linear-gradient(180deg, var(--ochre) 0 8px, transparent 8px 0) bottom left  / 1px 10px no-repeat,
+      linear-gradient(-90deg, var(--ochre) 0 8px, transparent 8px 0) bottom right / 10px 1px no-repeat,
+      linear-gradient(180deg, var(--ochre) 0 8px, transparent 8px 0) bottom right / 1px 10px no-repeat;
+    opacity: 0.55;
+  }
+
+  /* ─── spur gears (reuse gearSpinA/B keyframes from the pop-the-hood CTA) ─── */
+  .cli-section .dive-gears { position: relative; width: 88px; height: 60px; flex: none; display: block; }
+  .cli-section .dive-gear { position: absolute; transform-origin: center; will-change: transform; }
+  .cli-section .dive-gear .cog {
+    fill: #0a0a0e; stroke: var(--ink); stroke-width: 1.1;
+    stroke-linejoin: miter; transition: stroke .3s, fill .3s;
+  }
+  .cli-section .dive-gear .hub {
+    fill: #0a0a0e; stroke: var(--ink); stroke-width: 0.9;
+    transition: stroke .3s, fill .3s;
+  }
+  .cli-section .dive-gear .hub-dot { fill: var(--ink); transition: fill .3s; }
+  .cli-section .dive-gear .spoke { fill: none; stroke: var(--ink-faint); stroke-width: 0.7; transition: stroke .3s; }
+  .cli-section .dive-gear.gear-a { left: 0; top: 4px; animation: gearSpinA 14s linear infinite; }
+  .cli-section .dive-gear.gear-b { right: 0; top: 12px; animation: gearSpinB 14s linear infinite; }
+  .cli-section .dive-toggle:hover .dive-gear.gear-a,
+  .cli-section .dive-toggle:hover .dive-gear.gear-b { animation-duration: 4s; }
+  .cli-section .dive-toggle.open .dive-gear.gear-a,
+  .cli-section .dive-toggle.open .dive-gear.gear-b { animation-duration: 1.4s; }
+  .cli-section .dive-toggle:hover .dive-gear .cog,
+  .cli-section .dive-toggle.open  .dive-gear .cog,
+  .cli-section .dive-toggle:hover .dive-gear .hub,
+  .cli-section .dive-toggle.open  .dive-gear .hub { stroke: var(--ochre); }
+  .cli-section .dive-toggle:hover .dive-gear .hub-dot,
+  .cli-section .dive-toggle.open  .dive-gear .hub-dot { fill: var(--ochre); }
+  .cli-section .dive-gears::after {
+    content: "12 T \00b7 16 T"; position: absolute;
+    bottom: -2px; left: 50%; transform: translateX(-50%);
+    font-family: var(--mono); font-size: 8px;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--ink-faint); white-space: nowrap;
+  }
+
+  /* ─── dive-toggle label stack ─── */
+  .cli-section .dive-toggle .hood-label { display: grid; gap: 4px; min-width: 0; }
+  .cli-section .dive-toggle .hood-marker {
+    font-family: var(--mono); font-size: 10px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .cli-section .dive-toggle .hood-marker em { font-style: normal; color: var(--ochre); margin-left: 6px; }
+  .cli-section .dive-toggle .hood-title {
+    font-family: var(--serif); font-weight: 300;
+    font-size: 22px; line-height: 1.1; color: var(--ink);
+    letter-spacing: -0.015em;
+  }
+  .cli-section .dive-toggle .hood-title em { font-style: italic; font-weight: 400; color: var(--ochre); }
+  .cli-section .dive-toggle .hood-sub {
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.04em; color: var(--ink-mute); line-height: 1.45;
+  }
+  .cli-section .dive-toggle .hood-chev {
+    width: 44px; height: 44px; border: 1px solid var(--ink-mute);
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .25s ease, background .25s ease, border-color .25s ease;
+    background: transparent; flex: none;
+  }
+  .cli-section .dive-toggle .hood-chev svg { display: block; }
+  .cli-section .dive-toggle .hood-chev path {
+    stroke: var(--ink-mute); stroke-width: 1.5; fill: none;
+    transition: stroke .25s ease;
+  }
+  .cli-section .dive-toggle:hover .hood-chev {
+    background: var(--ochre); border-color: var(--ochre);
+    transform: translateX(2px);
+  }
+  .cli-section .dive-toggle:hover .hood-chev path { stroke: #0a0a0e; }
+  .cli-section .dive-toggle.open .hood-chev {
+    transform: rotate(90deg); background: var(--ochre); border-color: var(--ochre);
+  }
+  .cli-section .dive-toggle.open .hood-chev path { stroke: #0a0a0e; }
+
+  /* ─── dive content ─── */
+  .cli-section .dive { height: 0; overflow: hidden; transition: height .55s cubic-bezier(.4,0,.2,1); }
+  .cli-section .dive-inner {
+    padding: 24px 26px 30px;
+    background: #13131a; border: 1px solid var(--rule-soft);
+    border-top: none; border-left: 2px solid var(--ochre);
+  }
+  .cli-section .dive.open .reveal { animation: reveal-up .55s cubic-bezier(.2,0,.2,1) both; }
+  .cli-section .dive.open .reveal:nth-child(1) { animation-delay: .05s; }
+  .cli-section .dive.open .reveal:nth-child(2) { animation-delay: .18s; }
+  .cli-section .dive.open .reveal:nth-child(3) { animation-delay: .30s; }
+  .cli-section .dive.open .reveal:nth-child(4) { animation-delay: .42s; }
+  .cli-section .dive.open .reveal:nth-child(5) { animation-delay: .54s; }
+  .cli-section .dive.open .reveal:nth-child(6) { animation-delay: .66s; }
+  @keyframes reveal-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .cli-section .dive-head { margin-bottom: 18px; }
+  .cli-section .dive-head .sub-marker {
+    font-family: var(--mono); font-size: 10.5px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--ochre); margin-bottom: 8px;
+  }
+  .cli-section .dive-head h3 {
+    font-family: var(--serif); font-weight: 300;
+    font-size: 34px; line-height: 1.05; letter-spacing: -0.025em;
+    margin: 0; max-width: 28ch; color: var(--ink);
+  }
+  .cli-section .dive-head h3 em { font-style: italic; color: var(--ochre); font-weight: 400; }
+
+  /* ─── why grid (problem → solution → outcome) ─── */
+  .cli-section .why {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 10px; margin-bottom: 22px; position: relative;
+  }
+  .cli-section .why-card {
+    background: #1a1a1f; border: 1px solid var(--rule-soft);
+    padding: 14px 16px;
+    display: flex; flex-direction: column; gap: 8px;
+    position: relative; min-height: 170px;
+    transition: transform .3s, border-color .3s;
+  }
+  .cli-section .why-card:hover { transform: translateY(-2px); }
+  .cli-section .why-card.problem { border-left: 2px solid var(--red); }
+  .cli-section .why-card.solution { border-left: 2px solid var(--blue); }
+  .cli-section .why-card.outcome {
+    border-left: 2px solid var(--ochre);
+    background: linear-gradient(180deg, #1a1a1f 0%, rgba(240,184,112,0.05) 100%);
+  }
+  .cli-section .why-card .ix {
+    font-family: var(--mono); font-size: 9.5px;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--ink-faint);
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .cli-section .why-card .ix em { font-style: normal; color: var(--ink-mute); }
+  .cli-section .why-card.problem .ix em { color: var(--red); }
+  .cli-section .why-card.solution .ix em { color: var(--blue); }
+  .cli-section .why-card.outcome .ix em { color: var(--ochre); }
+  .cli-section .why-card .title {
+    font-family: var(--serif); font-style: italic;
+    font-size: 17px; line-height: 1.15; letter-spacing: -0.01em;
+    color: var(--ink); font-weight: 300; text-wrap: balance;
+  }
+  .cli-section .why-card.outcome .title { color: var(--ochre); }
+  .cli-section .why-card .body {
+    font-family: var(--serif); font-size: 13.5px; line-height: 1.45;
+    color: var(--ink-mute); letter-spacing: 0; flex: 1; text-wrap: pretty;
+  }
+  .cli-section .why-card .body em { font-style: italic; color: var(--ochre-soft); }
+  .cli-section .why-card .body strong { font-weight: 400; color: var(--ink-2); }
+  .cli-section .why-card .body code {
+    font-size: 10.5px; padding: 0 4px; font-family: var(--mono);
+    color: var(--ink); background: rgba(236,230,211,0.05);
+    border: 1px solid rgba(236,230,211,0.08); border-radius: 2px;
+    letter-spacing: 0;
+  }
+  .cli-section .why-card:not(:last-child)::after {
+    content: "→"; position: absolute; right: -9px; top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--serif); font-style: italic; font-size: 18px;
+    color: var(--ochre); opacity: 0.5; z-index: 1; pointer-events: none;
+    background: #13131a; width: 14px; text-align: center; line-height: 1;
+    transition: transform .3s, opacity .3s;
+  }
+  .cli-section .dive.open .why-card:not(:last-child)::after { animation: arrow-nudge 2.4s ease-in-out infinite; }
+  .cli-section .dive.open .why-card:nth-child(2):not(:last-child)::after { animation-delay: .3s; }
+  .cli-section .dive.open .why-card:nth-child(3):not(:last-child)::after { animation-delay: .6s; }
+  @keyframes arrow-nudge {
+    0%,100% { transform: translateY(-50%) translateX(0); opacity: 0.5; }
+    50%     { transform: translateY(-50%) translateX(3px); opacity: 0.9; }
+  }
+
+  /* ─── collapse diagram ─── */
+  .cli-section .collapse {
+    background: #0a0a0e; border: 1px solid var(--rule-soft);
+    padding: 18px 20px; margin-bottom: 18px;
+    position: relative; overflow: hidden;
+  }
+  .cli-section .collapse-tag {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-family: var(--mono); font-size: 10px;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--ink-faint); margin-bottom: 14px;
+  }
+  .cli-section .collapse-tag em { font-style: normal; color: var(--ochre); }
+  .cli-section .collapse-rows {
+    display: grid; grid-template-columns: 1fr 70px 1fr;
+    gap: 14px; align-items: center;
+  }
+  .cli-section .collapse-side { display: flex; flex-direction: column; gap: 4px; }
+  .cli-section .collapse-side .label {
+    font-family: var(--mono); font-size: 9px;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--ink-faint); margin-bottom: 4px;
+  }
+  .cli-section .collapse-side .label em { font-style: normal; }
+  .cli-section .collapse-side.bad .label em { color: var(--red); }
+  .cli-section .collapse-side.good .label em { color: var(--blue); }
+  .cli-section .collapse-side .row {
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px;
+  }
+  .cli-section .collapse-side.good .row { grid-template-columns: repeat(3, 1fr); }
+  .cli-section .collapse-side .cell {
+    background: #1a1a1f; border: 1px solid var(--rule-soft);
+    padding: 6px 7px 7px;
+    font-family: var(--mono); font-size: 9px; color: var(--ink-2);
+    line-height: 1.3; min-height: 48px;
+    display: flex; flex-direction: column; gap: 1px;
+    position: relative;
+    transition: transform .5s cubic-bezier(.4,0,.2,1), opacity .5s;
+  }
+  .cli-section .collapse-side.bad .cell { border-left: 2px solid var(--red); }
+  .cli-section .collapse-side.good .cell {
+    border: 1px solid var(--blue);
+    background: linear-gradient(180deg, #1a1a1f 0%, rgba(138,166,227,0.07) 100%);
+  }
+  .cli-section .collapse-side .cell .n {
+    color: var(--ink-faint); font-size: 8px;
+    letter-spacing: 0.14em; text-transform: uppercase;
+  }
+  .cli-section .collapse-side .cell .name {
+    color: var(--ink); font-family: var(--serif); font-style: italic;
+    font-size: 11px; line-height: 1.1;
+    letter-spacing: -0.005em; font-weight: 300;
+  }
+  .cli-section .collapse-side.good .cell .name {
+    color: var(--blue); font-family: var(--mono);
+    font-size: 10px; font-style: normal; letter-spacing: 0; font-weight: 500;
+  }
+  .cli-section .collapse-side .cell .tag {
+    margin-top: auto; font-size: 8.5px;
+    font-family: var(--mono); color: var(--red);
+    letter-spacing: 0; line-height: 1.25;
+  }
+  .cli-section .collapse-side.good .cell .tag { color: var(--green); }
+  .cli-section .collapse.active .collapse-side.bad .cell { animation: fuse-shift 3s ease-in-out infinite; }
+  .cli-section .collapse.active .collapse-side.bad .cell:nth-child(2) { animation-delay: .1s; }
+  .cli-section .collapse.active .collapse-side.bad .cell:nth-child(3) { animation-delay: .2s; }
+  .cli-section .collapse.active .collapse-side.bad .cell:nth-child(4) { animation-delay: .3s; }
+  .cli-section .collapse.active .collapse-side.bad .cell:nth-child(5) { animation-delay: .4s; }
+  .cli-section .collapse.active .collapse-side.bad .cell:nth-child(6) { animation-delay: .5s; }
+  @keyframes fuse-shift {
+    0%,90%,100% { transform: translateX(0); border-color: var(--rule-soft); }
+    45%,60%     { transform: translateX(6px); border-left-color: var(--ochre); }
+  }
+  .cli-section .collapse.active .collapse-side.good .cell { animation: good-glow 3s ease-in-out infinite; }
+  .cli-section .collapse.active .collapse-side.good .cell:nth-child(3) { animation-delay: .3s; }
+  .cli-section .collapse.active .collapse-side.good .cell:nth-child(4) { animation-delay: .6s; }
+  @keyframes good-glow {
+    0%,100% { box-shadow: 0 0 0 0 rgba(138,166,227,0); }
+    50%     { box-shadow: 0 0 16px -4px rgba(138,166,227,0.4); }
+  }
+  .cli-section .collapse-gutter {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 4px;
+    font-family: var(--mono); font-size: 9px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .cli-section .collapse-gutter .arrow {
+    font-family: var(--serif); font-style: italic;
+    font-size: 30px; color: var(--ochre); line-height: 0.8;
+    animation: gutter-pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes gutter-pulse {
+    0%,100% { transform: translateX(0); opacity: 0.7; }
+    50%     { transform: translateX(3px); opacity: 1; }
+  }
+  .cli-section .collapse-gutter .ratio {
+    font-family: var(--serif); font-style: italic;
+    font-size: 15px; color: var(--ochre);
+    letter-spacing: -0.02em; text-transform: none;
+  }
+
+  /* ─── cost stamp ─── */
+  .cli-section .cost {
+    background: #0a0a0e; border: 1px solid var(--rule-soft);
+    padding: 16px 22px; margin-bottom: 18px;
+    display: grid; grid-template-columns: 1fr 110px 1fr;
+    gap: 24px; align-items: center; position: relative;
+  }
+  .cli-section .cost-tag {
+    grid-column: 1 / -1;
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-family: var(--mono); font-size: 10px;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--ink-faint);
+    padding-bottom: 10px;
+    border-bottom: 1px dotted rgba(236,230,211,0.12);
+    margin-bottom: 4px;
+  }
+  .cli-section .cost-tag em { font-style: normal; color: var(--ochre); }
+  .cli-section .cost-side { display: flex; flex-direction: column; gap: 6px; }
+  .cli-section .cost-side .label {
+    font-family: var(--mono); font-size: 9.5px;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .cli-section .cost-side .label em { font-style: normal; }
+  .cli-section .cost-side.bad .label em { color: var(--red); }
+  .cli-section .cost-side.good .label em { color: var(--blue); }
+  .cli-section .cost-side .total {
+    font-family: var(--serif); font-style: italic;
+    font-weight: 300; font-size: 46px; line-height: 0.9;
+    letter-spacing: -0.035em; margin: 2px 0 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .cli-section .cost-side.bad .total { color: var(--red); }
+  .cli-section .cost-side.good .total { color: var(--blue); }
+  .cli-section .cost-side .total .unit {
+    font-size: 18px; font-style: normal;
+    color: var(--ink-mute); letter-spacing: 0;
+    font-family: var(--mono); margin-left: 6px;
+  }
+  .cli-section .cost-side .note {
+    font-family: var(--mono); font-size: 10px;
+    color: var(--ink-faint); letter-spacing: 0.02em;
+    line-height: 1.5; margin-top: 2px;
+  }
+  .cli-section .cost-side .note em { font-style: normal; color: var(--ochre); }
+  .cli-section .cost-bar {
+    height: 4px; background: rgba(236,230,211,0.06);
+    position: relative; margin-top: 6px;
+    border: 1px solid rgba(236,230,211,0.05);
+    overflow: hidden;
+  }
+  .cli-section .cost-bar .fill {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 0;
+    transition: width 1.5s cubic-bezier(.2,0,.2,1);
+  }
+  .cli-section .cost-side.bad .cost-bar .fill { background: linear-gradient(90deg, var(--red), rgba(245,166,114,0.5)); }
+  .cli-section .cost-side.good .cost-bar .fill { background: linear-gradient(90deg, var(--blue), rgba(138,166,227,0.5)); }
+  .cli-section .dive.open .cost-side.bad .cost-bar .fill { width: 100%; }
+  .cli-section .dive.open .cost-side.good .cost-bar .fill { width: 3.3%; }
+
+  .cli-section .cost-gutter {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 6px; text-align: center;
+  }
+  .cli-section .cost-gutter .arrow {
+    font-family: var(--serif); font-style: italic;
+    font-size: 30px; color: var(--ochre); line-height: 0.8;
+    animation: gutter-pulse 2.4s ease-in-out infinite;
+  }
+  .cli-section .cost-gutter .ratio {
+    font-family: var(--serif); font-style: italic;
+    font-weight: 300; font-size: 28px; color: var(--ochre);
+    letter-spacing: -0.035em; line-height: 0.9;
+    font-variant-numeric: tabular-nums;
+  }
+  .cli-section .cost-gutter .ratio-note {
+    font-family: var(--mono); font-size: 9px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  /* ─── drift example (terminal trace) ─── */
+  .cli-section .drift {
+    background: #0a0a0e; border: 1px solid var(--rule-soft);
+    padding: 18px 20px; margin-bottom: 16px;
+    display: grid; grid-template-columns: 1fr 1.2fr;
+    gap: 24px; align-items: center;
+  }
+  .cli-section .drift-narrative {
+    font-family: var(--serif); font-size: 14.5px;
+    line-height: 1.5; color: var(--ink-mute); text-wrap: pretty;
+  }
+  .cli-section .drift-narrative .tag {
+    display: block; font-family: var(--mono);
+    font-size: 9.5px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--ochre); margin-bottom: 8px;
+  }
+  .cli-section .drift-narrative em { font-style: normal; color: var(--ochre-soft); }
+  .cli-section .drift-trace {
+    font-family: var(--mono); font-size: 10.5px;
+    line-height: 1.6; color: var(--ink-2);
+    background: #15151a; padding: 14px 16px;
+    border: 1px solid rgba(236,230,211,0.12);
+    position: relative; overflow: hidden;
+  }
+  .cli-section .drift-trace::before {
+    content: "● ● ●"; position: absolute;
+    top: 8px; right: 12px; font-size: 7px;
+    letter-spacing: 0.4em; color: rgba(236,230,211,0.18); line-height: 1;
+  }
+  .cli-section .drift-trace .ln {
+    display: grid; grid-template-columns: 18px 1fr;
+    gap: 6px; padding: 2px 0;
+    opacity: 0; transform: translateY(4px);
+    transition: opacity .25s ease-out, transform .25s ease-out;
+  }
+  .cli-section .drift-trace.playing .ln.shown { opacity: 1; transform: translateY(0); }
+  .cli-section .drift-trace .ln .n { color: var(--ink-faint); font-size: 9px; text-align: right; }
+  .cli-section .drift-trace .ln.ok  .tx { color: var(--green); }
+  .cli-section .drift-trace .ln.ok  .tx::before { content: "✓ "; color: var(--green); }
+  .cli-section .drift-trace .ln.bad .tx { color: var(--red); }
+  .cli-section .drift-trace .ln.bad .tx::before { content: "✗ "; color: var(--red); }
+  .cli-section .drift-trace .ln.cli .tx { color: var(--blue); }
+  .cli-section .drift-trace .ln.cli .tx::before { content: "$ "; color: var(--blue); }
+  .cli-section .drift-trace .ln.note .tx {
+    color: var(--ink-faint); font-style: italic;
+    font-family: var(--serif); font-size: 13px;
+  }
+  .cli-section .drift-trace .ln.note .tx::before { content: "· "; }
+  .cli-section .drift-trace .ln .tx .hash-bad {
+    color: var(--red); display: inline-block;
+    animation: hash-glitch 2.4s steps(1) infinite;
+  }
+  @keyframes hash-glitch {
+    0%,80%,100% { transform: translateX(0); filter: none; }
+    82% { transform: translateX(-1px); filter: hue-rotate(15deg); }
+    84% { transform: translateX(1px); }
+    86% { transform: translateX(0); }
+  }
+  .cli-section .drift-trace .cursor {
+    display: inline-block; width: 6px; height: 11px;
+    background: var(--green); vertical-align: -1px; margin-left: 2px;
+    animation: cli-blink 1.05s steps(2) infinite; opacity: 0;
+  }
+  .cli-section .drift-trace.done .cursor { opacity: 1; }
+
+  .cli-section .closer {
+    font-family: var(--serif); font-style: italic;
+    font-size: 17px; line-height: 1.4; color: var(--ink);
+    margin: 0; padding: 14px 22px;
+    border-left: 2px solid var(--ochre);
+    background: rgba(240,184,112,0.04);
+    text-wrap: pretty; position: relative; overflow: hidden;
+  }
+  .cli-section .closer::before {
+    content: ""; position: absolute;
+    left: -2px; top: 0; bottom: 0; width: 2px;
+    background: var(--ochre);
+    box-shadow: 0 0 12px rgba(240,184,112,0.6);
+    animation: edge-glow 2.6s ease-in-out infinite;
+  }
+  @keyframes edge-glow {
+    0%,100% { opacity: 0.5; }
+    50%     { opacity: 1; }
+  }
+  .cli-section .closer em { font-style: normal; color: var(--ochre); }
+
+  @media (max-width: 1180px) {
+    .cli-section .bench { grid-template-columns: repeat(3, 1fr); }
+    .cli-section .group { min-height: auto; }
+    .cli-section .why { grid-template-columns: repeat(2, 1fr); }
+    .cli-section .why-card:not(:last-child)::after { display: none; }
+    .cli-section .drift { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 760px) {
+    .cli-section .bench { grid-template-columns: repeat(2, 1fr); }
+    .cli-section .collapse-rows { grid-template-columns: 1fr; }
+    .cli-section .collapse-gutter { flex-direction: row; }
+    .cli-section .cost { grid-template-columns: 1fr; }
+    .cli-section .cost-gutter { flex-direction: row; }
+  }
 </style>
 </head>
 <body>
@@ -5588,6 +6259,361 @@
       });
     }, { threshold: 0.15 });
     cards.forEach(function(c){ io.observe(c); });
+  })();
+  </script>
+
+  <!-- ───────── §07 · /cli · the bench (atomic subcommands behind the prose) ───────── -->
+  <section class="cli-section" id="cli">
+    <div class="head">
+      <div class="marker">§07 · /cli · <em>the bench</em><span class="prompt-cursor"></span></div>
+      <h2 class="kicker">Prose skills wander. <em>The CLI is the toolkit that doesn't.</em></h2>
+      <p class="lede">A Cortex skill is prose — and prose, under fatigue or context drift, paraphrases, skips, coerces <em>"close enough."</em> Every skill shells out to deterministic <code>cortex-*</code> subcommands for the parts that can't. <em>Three guarantees a prose skill alone can never give you.</em></p>
+      <div class="benefits">
+        <span class="benefit"><span class="glyph">⊟</span><span class="b-name">consistent</span><span class="b-desc">atomic ops · same output every time</span></span>
+        <span class="benefit"><span class="glyph">⚡</span><span class="b-name">faster</span><span class="b-desc">one subprocess vs many tool calls</span></span>
+        <span class="benefit"><span class="glyph">¢</span><span class="b-name">token-efficient</span><span class="b-desc">pinned values · structured output</span></span>
+      </div>
+    </div>
+
+    <div class="bench">
+      <article class="group">
+        <div class="g-head">
+          <span class="ix">01</span>
+          <span class="name">lifecycle state</span>
+          <span class="g-icon ico-lifecycle" aria-hidden="true">
+            <svg viewBox="0 0 34 18">
+              <circle class="fill dot dim" cx="6" cy="9" r="2.2"></circle>
+              <circle class="fill dot active" cx="17" cy="9" r="2.2"></circle>
+              <circle class="fill dot dim" cx="28" cy="9" r="2.2"></circle>
+              <line class="stroke" x1="9" y1="9" x2="14" y2="9" stroke-dasharray="1 2"></line>
+              <line class="stroke" x1="20" y1="9" x2="25" y2="9" stroke-dasharray="1 2"></line>
+            </svg>
+          </span>
+        </div>
+        <ul class="commands">
+          <li><span class="cmd">cortex-lifecycle-state</span><span class="desc">tier · criticality · phase, from events.log</span></li>
+          <li><span class="cmd">cortex-common detect-phase</span><span class="desc">lifecycle dir → current phase, plan progress</span></li>
+        </ul>
+        <div class="callers">/lifecycle · /refine · /morning-review</div>
+      </article>
+
+      <article class="group">
+        <div class="g-head">
+          <span class="ix">02</span>
+          <span class="name">backlog i/o</span>
+          <span class="g-icon ico-backlog" aria-hidden="true">
+            <svg viewBox="0 0 34 18">
+              <rect class="fill bar b1" x="3" y="3" width="22" height="2.5"></rect>
+              <rect class="fill bar b2" x="3" y="8" width="28" height="2.5" opacity="0.6"></rect>
+              <rect class="fill bar b3" x="3" y="13" width="18" height="2.5" opacity="0.35"></rect>
+            </svg>
+          </span>
+        </div>
+        <ul class="commands">
+          <li><span class="cmd">cortex-resolve-backlog-item</span><span class="desc">id, slug, or title → filename</span></li>
+          <li><span class="cmd">cortex-update-item</span><span class="desc">atomic frontmatter write-back</span></li>
+          <li><span class="cmd">cortex-backlog-ready</span><span class="desc">readiness-gate filter</span></li>
+          <li><span class="cmd">cortex-load-parent-epic</span><span class="desc">walk discovery_source frontmatter</span></li>
+        </ul>
+        <div class="callers">/refine · /lifecycle · /overnight · /dev</div>
+      </article>
+
+      <article class="group">
+        <div class="g-head">
+          <span class="ix">03</span>
+          <span class="name">events · gates</span>
+          <span class="g-icon ico-events" aria-hidden="true">
+            <svg viewBox="0 0 34 18">
+              <path class="stroke tick t1" d="M2 9 L4 11 L8 7" stroke-width="1.3"></path>
+              <path class="stroke tick t2" d="M10 9 L12 11 L16 7" stroke-width="1.3"></path>
+              <path class="stroke tick t3" d="M18 9 L20 11 L24 7" stroke-width="1.3"></path>
+              <path class="stroke tick t4" d="M26 9 L28 11 L32 7" stroke-width="1.3"></path>
+            </svg>
+          </span>
+        </div>
+        <ul class="commands">
+          <li><span class="cmd">cortex-refine emit-lifecycle-start</span><span class="desc">seed lifecycle_start event</span></li>
+          <li><span class="cmd">cortex-lifecycle-counters</span><span class="desc">tally for morning report</span></li>
+          <li><span class="cmd">cortex-complexity-escalator</span><span class="desc">open-question threshold check</span></li>
+        </ul>
+        <div class="callers">/refine · /lifecycle · /morning-review</div>
+      </article>
+
+      <article class="group spotlit">
+        <div class="g-head">
+          <span class="ix">04</span>
+          <span class="name">sha consensus</span>
+          <span class="g-icon ico-sha" aria-hidden="true">
+            <svg viewBox="0 0 34 18">
+              <text class="hex-a" x="2" y="13">a7</text>
+              <text class="hex-b" x="13" y="13">c4</text>
+              <text class="hex-c" x="24" y="13">e1</text>
+            </svg>
+          </span>
+          <span class="star">★ DEEP DIVE ↓</span>
+        </div>
+        <ul class="commands">
+          <li><span class="cmd">prepare-dispatch</span><span class="desc">realpath + SHA-256 in one call</span></li>
+          <li><span class="cmd">check-artifact-stable</span><span class="desc">parse + match + atomic log</span></li>
+          <li><span class="cmd">check-synth-stable</span><span class="desc">synth SHA verify + drift log</span></li>
+          <li><span class="cmd">record-exclusion</span><span class="desc">manual sentinel_absence append</span></li>
+        </ul>
+        <div class="callers">/critical-review</div>
+      </article>
+
+      <article class="group">
+        <div class="g-head">
+          <span class="ix">05</span>
+          <span class="name">commit · git ops</span>
+          <span class="g-icon ico-git" aria-hidden="true">
+            <svg viewBox="0 0 34 18">
+              <path class="stroke branch" d="M3 14 Q 10 14, 13 9 T 23 4" stroke-width="1.2"></path>
+              <line class="stroke" x1="3" y1="14" x2="31" y2="14" stroke-dasharray="1 2"></line>
+              <circle class="node" cx="3" cy="14" r="2"></circle>
+              <circle class="node" cx="17" cy="9" r="1.8"></circle>
+              <circle class="node" cx="23" cy="4" r="2"></circle>
+              <circle class="node" cx="31" cy="14" r="2"></circle>
+            </svg>
+          </span>
+        </div>
+        <ul class="commands">
+          <li><span class="cmd">cortex-commit-preflight</span><span class="desc">commit-message gate</span></li>
+          <li><span class="cmd">cortex-git-sync-rebase</span><span class="desc">sync + clean rebase</span></li>
+          <li><span class="cmd">cortex-jcc</span><span class="desc">jit commit-and-checkout</span></li>
+        </ul>
+        <div class="callers">/commit · /pr · /lifecycle</div>
+      </article>
+    </div>
+
+    <button class="dive-toggle" id="cli-dive-toggle" type="button" aria-expanded="false" aria-controls="cli-dive-panel">
+      <span class="dive-gears" aria-hidden="true">
+        <svg id="cli-dive-gear-a" class="dive-gear gear-a" width="42" height="42" viewBox="-26 -26 52 52"></svg>
+        <svg id="cli-dive-gear-b" class="dive-gear gear-b" width="48" height="48" viewBox="-30 -30 60 60"></svg>
+      </span>
+      <span class="hood-label">
+        <span class="hood-marker">§07.5 · why <em>we built this</em></span>
+        <span class="hood-title">Pop the hood on an example — <em>SHA consensus on /critical-review</em></span>
+        <span class="hood-sub">five agents · one artifact · proof the binary enforces — not the prompt</span>
+      </span>
+      <span class="hood-chev" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 16 16"><path d="M5 3 L11 8 L5 13" stroke-linecap="square"></path></svg>
+      </span>
+    </button>
+
+    <div class="dive" id="cli-dive-panel">
+      <div class="dive-inner">
+        <div class="dive-head reveal">
+          <div class="sub-marker">§07.5 · why we built this</div>
+          <h3>Five agents must read the same bytes. <em>A prompt can't enforce that.</em></h3>
+        </div>
+
+        <div class="why reveal">
+          <div class="why-card">
+            <div class="ix"><span>01 · <em>setup</em></span></div>
+            <div class="title">Five agents, one artifact.</div>
+            <div class="body"><code>/critical-review</code> fans out <strong>four parallel reviewer angles</strong> plus an Opus synthesizer. All five must judge the <em>same bytes</em>.</div>
+          </div>
+
+          <div class="why-card problem">
+            <div class="ix"><span>02 · <em>problem</em></span></div>
+            <div class="title">The proof used to be prose.</div>
+            <div class="body">Six in-context steps — validate path, compute SHA, dispatch, capture each sentinel, verify, log drift. Each one is a place a tired LLM can <em>skip, paraphrase, or coerce</em> "close enough."</div>
+          </div>
+
+          <div class="why-card solution">
+            <div class="ix"><span>03 · <em>solution</em></span></div>
+            <div class="title">We fused them into three calls.</div>
+            <div class="body"><code>prepare-dispatch</code>, <code>check-artifact-stable</code>, <code>check-synth-stable</code>. Each call fuses validation + mutation in <em>one subprocess</em> — no longer addressable as independent steps.</div>
+          </div>
+
+          <div class="why-card outcome">
+            <div class="ix"><span>04 · <em>outcome</em></span></div>
+            <div class="title">Consensus is enforced by the binary.</div>
+            <div class="body">The orchestrator can't half-do the ceremony — <em>there's no half.</em> The proof that five agents read the same bytes lives outside the prompt.</div>
+          </div>
+        </div>
+
+        <div class="collapse reveal" id="cli-collapse-diagram">
+          <div class="collapse-tag"><span>the ceremony, collapsed</span><span><em>six prose steps</em> · three atomic calls</span></div>
+          <div class="collapse-rows">
+            <div class="collapse-side bad">
+              <div class="label">A · <em>without the CLI</em> · six in-context steps</div>
+              <div class="row">
+                <div class="cell"><span class="n">01</span><span class="name">validate path</span><span class="tag">⚠ paraphrased</span></div>
+                <div class="cell"><span class="n">02</span><span class="name">compute SHA</span><span class="tag">⚠ skipped</span></div>
+                <div class="cell"><span class="n">03</span><span class="name">dispatch ×5</span><span class="tag">⚠ kept</span></div>
+                <div class="cell"><span class="n">04</span><span class="name">capture sentinel</span><span class="tag">⚠ format drift</span></div>
+                <div class="cell"><span class="n">05</span><span class="name">verify SHA</span><span class="tag">⚠ close enough</span></div>
+                <div class="cell"><span class="n">06</span><span class="name">log drift</span><span class="tag">⚠ last-step amnesia</span></div>
+              </div>
+            </div>
+            <div class="collapse-gutter">
+              <span>fuses</span>
+              <span class="arrow">→</span>
+              <span class="ratio">3 calls</span>
+            </div>
+            <div class="collapse-side good">
+              <div class="label">B · <em>with the CLI</em> · three atomic subcommands</div>
+              <div class="row">
+                <div class="cell"><span class="name">prepare-dispatch</span><span class="tag">⊟ fuses 01 + 02</span></div>
+                <div class="cell"><span class="name">check-artifact-stable</span><span class="tag">⊟ fuses 04 + 05 + 06</span></div>
+                <div class="cell"><span class="name">check-synth-stable</span><span class="tag">⊟ fuses synth side</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cost reveal" id="cli-cost-block">
+          <div class="cost-tag"><span>cost · same review · with and without the CLI</span><span><em>per /critical-review pass</em></span></div>
+          <div class="cost-side bad">
+            <div class="label">A · <em>without the CLI</em> · prose ceremony</div>
+            <div class="total"><span class="count" data-target="15">0</span>k<span class="unit">tokens</span></div>
+            <div class="cost-bar"><div class="fill"></div></div>
+            <div class="note">six in-context steps × five agents · <em>all bookkeeping</em>, no review yet</div>
+          </div>
+          <div class="cost-gutter">
+            <span class="ratio-note">collapses to</span>
+            <span class="arrow">→</span>
+            <span class="ratio">~30×</span>
+            <span class="ratio-note">leaner</span>
+          </div>
+          <div class="cost-side good">
+            <div class="label">B · <em>with the CLI</em> · three subprocess calls</div>
+            <div class="total"><span class="count" data-target="0.5">0</span>k<span class="unit">tokens</span></div>
+            <div class="cost-bar"><div class="fill"></div></div>
+            <div class="note">structured output · <em>and every byte verifiable</em> across all five agents</div>
+          </div>
+        </div>
+
+        <div class="drift reveal">
+          <div class="drift-narrative">
+            <span class="tag">drift caught · the payoff in motion</span>
+            A reviewer's <code>READ_OK</code> sentinel carries a SHA. If the file moved while they were reading — concurrent edit, branch switch, partial save — that SHA won't match the pin from <code>prepare-dispatch</code>. <em>check-artifact-stable</em> notices, atomically appends <code>sentinel_absence</code> to <code>events.log</code>, and excludes the reviewer's findings from the synthesizer's payload. <em>No prose ceremony to forget.</em>
+          </div>
+          <div class="drift-trace" id="cli-drift-trace">
+            <div class="ln cli"><span class="n">01</span><span class="tx">cortex-critical-review prepare-dispatch plan.md</span></div>
+            <div class="ln ok"><span class="n">02</span><span class="tx">{ sha256: "<span class="hash-pin">a7c4e1f9b2d83e0f</span>…" } pinned into 5 prompts</span></div>
+            <div class="ln note"><span class="n">·</span><span class="tx">α, β, δ return READ_OK matching the pin</span></div>
+            <div class="ln bad"><span class="n">03</span><span class="tx">γ → READ_OK <span class="hash-bad">b2f1a0c3</span>… ≠ pin</span></div>
+            <div class="ln cli"><span class="n">04</span><span class="tx">check-artifact-stable --feature … --expected-sha …</span></div>
+            <div class="ln bad"><span class="n">05</span><span class="tx">exit 3 EXCLUDED sha_mismatch · events.log appended</span></div>
+            <div class="ln ok"><span class="n">06</span><span class="tx">synth proceeds on α + β + δ · consensus preserved<span class="cursor"></span></span></div>
+          </div>
+        </div>
+
+        <p class="closer reveal"><em>This pattern repeats across the whole bench.</em> Lifecycle state, backlog reads, atomic event appends, gate transitions — every operation that needs to be <em>the same</em> every time lives behind a subprocess. The CLI is how the framework makes <em>"consistent"</em> a property you can prove.</p>
+      </div>
+    </div>
+  </section>
+
+  <script>
+  (function() {
+    // ─── §07 · CLI bench · dive toggle + animations ───
+    var toggle = document.getElementById('cli-dive-toggle');
+    var dive   = document.getElementById('cli-dive-panel');
+    if (!toggle || !dive) return;
+    var inner  = dive.querySelector('.dive-inner');
+    var open   = false;
+
+    // Spur gears — same gearSpinA/B keyframes used by the pop-the-hood CTA.
+    var SVG_NS = 'http://www.w3.org/2000/svg';
+    function gearPath(teeth, R, h){
+      var outer = R + h, step = (Math.PI * 2) / teeth, d = '';
+      for (var i = 0; i < teeth; i++) {
+        var a = i * step;
+        var tooth = [[R, a + step * 0.00], [outer, a + step * 0.18], [outer, a + step * 0.42], [R, a + step * 0.60]];
+        for (var j = 0; j < tooth.length; j++) {
+          var r = tooth[j][0], ang = tooth[j][1];
+          d += (d ? ' L ' : 'M ') + (Math.cos(ang) * r).toFixed(2) + ' ' + (Math.sin(ang) * r).toFixed(2);
+        }
+      }
+      return d + ' Z';
+    }
+    function buildGear(svg, teeth, R, h, hubR){
+      if (!svg) return;
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+      var cog = document.createElementNS(SVG_NS, 'path');
+      cog.setAttribute('d', gearPath(teeth, R, h));
+      cog.setAttribute('class', 'cog');
+      svg.appendChild(cog);
+      var hub = document.createElementNS(SVG_NS, 'circle');
+      hub.setAttribute('r', hubR); hub.setAttribute('class', 'hub');
+      svg.appendChild(hub);
+      var spoke = document.createElementNS(SVG_NS, 'path');
+      spoke.setAttribute('d', 'M ' + (-(R - 2)) + ' 0 L ' + (R - 2) + ' 0 M 0 ' + (-(R - 2)) + ' L 0 ' + (R - 2));
+      spoke.setAttribute('class', 'spoke');
+      svg.appendChild(spoke);
+      var dot = document.createElementNS(SVG_NS, 'circle');
+      dot.setAttribute('r', '1.4'); dot.setAttribute('class', 'hub-dot');
+      svg.appendChild(dot);
+    }
+    buildGear(document.getElementById('cli-dive-gear-a'), 12, 15, 3.5, 4.5);
+    buildGear(document.getElementById('cli-dive-gear-b'), 16, 19, 4,   6);
+
+    toggle.addEventListener('click', function() {
+      open = !open;
+      dive.classList.toggle('open', open);
+      toggle.classList.toggle('open', open);
+      dive.style.height = open ? (inner.scrollHeight + 'px') : '0px';
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      var collapse = document.getElementById('cli-collapse-diagram');
+      if (open) {
+        setTimeout(runOpenAnimations, 250);
+        if (collapse) collapse.classList.add('active');
+      } else if (collapse) {
+        collapse.classList.remove('active');
+      }
+    });
+
+    // SHA hex cycler — card 04 ico-sha
+    var hexEls = document.querySelectorAll('.cli-section .ico-sha text');
+    var pairs = ['a7','c4','e1','f9','b2','d8','3e','0f','19','2c','6b','ad'];
+    function pick(){ return pairs[Math.floor(Math.random() * pairs.length)]; }
+    setInterval(function(){
+      hexEls.forEach(function(el, i){
+        setTimeout(function(){ el.textContent = pick(); }, i * 120);
+      });
+    }, 1400);
+
+    // Token counter — ease-out animation
+    function ease(t){ return 1 - Math.pow(1 - t, 3); }
+    function animateCount(el, target, dur){
+      var start = performance.now();
+      var isDecimal = target < 1;
+      function step(now){
+        var t = Math.min(1, (now - start) / dur);
+        var v = ease(t) * target;
+        el.textContent = isDecimal ? v.toFixed(1) : Math.round(v);
+        if (t < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
+    // Drift trace typewriter replay
+    var trace = document.getElementById('cli-drift-trace');
+    var traceLines = trace ? trace.querySelectorAll('.ln') : [];
+    function playTrace(){
+      if (!trace) return;
+      trace.classList.remove('done');
+      trace.classList.add('playing');
+      traceLines.forEach(function(l){ l.classList.remove('shown'); });
+      var delay = 0;
+      traceLines.forEach(function(ln, i){
+        var step = 240 + (ln.classList.contains('note') ? 380 : 0) + (ln.classList.contains('cli') ? 120 : 0);
+        setTimeout(function(){
+          ln.classList.add('shown');
+          if (i === traceLines.length - 1) trace.classList.add('done');
+        }, delay);
+        delay += step;
+      });
+    }
+
+    function runOpenAnimations(){
+      document.querySelectorAll('.cli-section .count').forEach(function(c){
+        animateCount(c, parseFloat(c.getAttribute('data-target')), 1300);
+      });
+      playTrace();
+    }
   })();
   </script>
 
