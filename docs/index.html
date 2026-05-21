@@ -1859,6 +1859,7 @@
      to mirror the interaction state. */
   .hood-cta {
     all: unset;
+    box-sizing: border-box;
     display: grid;
     grid-template-columns: auto 1fr auto;
     align-items: center;
@@ -2060,6 +2061,26 @@
   }
   .hood-cta[aria-expanded="true"] .hood-chev path,
   .hood-cta.open .hood-chev path { stroke: #0a0a0e; }
+
+  /* Mobile: the gears + label + chev layout can't fit at <600px, so we
+     shrink the chrome (padding, gap, gears, chev) and let the label
+     shrink and wrap. Without this, the label's min-content forces the
+     plate past the viewport edge. */
+  @media (max-width: 600px) {
+    .hood-cta {
+      padding: 18px 18px 18px 16px;
+      gap: 14px;
+    }
+    .hood-cta .hood-label { min-width: 0; }
+    .hood-cta .hood-marker { white-space: normal; line-height: 1.35; }
+    .hood-cta .hood-title { font-size: 19px; }
+    .hood-cta .hood-sub { white-space: normal; line-height: 1.4; }
+    .hood-gears { width: 58px; height: 44px; }
+    .hood-gears::after { display: none; }
+    .hood-gear.gear-a { left: -2px; top: 0; }
+    .hood-gear.gear-b { right: -2px; top: 6px; }
+    .hood-cta .hood-chev { width: 36px; height: 36px; }
+  }
 
   /* ── Panel (opened state) ─────────────────────────────────────── */
   .hood-panel {
@@ -4665,6 +4686,12 @@
   }
   .cli-section .closer em { font-style: normal; color: var(--ochre); }
 
+  /* `min-width: 0` lets group cards shrink inside the bench grid; without
+     it, the longest cortex-* command name sets a min-content floor that
+     pushes the right column past the viewport on phones. */
+  .cli-section .group { min-width: 0; }
+  .cli-section .why-card { min-width: 0; }
+
   @media (max-width: 1180px) {
     .cli-section .bench { grid-template-columns: repeat(3, 1fr); }
     .cli-section .group { min-height: auto; }
@@ -4678,6 +4705,18 @@
     .cli-section .collapse-gutter { flex-direction: row; }
     .cli-section .cost { grid-template-columns: 1fr; }
     .cli-section .cost-gutter { flex-direction: row; }
+  }
+  /* Phone: one column for everything that was still 2-col, and shrink the
+     cost-stamp typography so the 46px italic numerals stop forcing the
+     plate past the viewport edge. */
+  @media (max-width: 540px) {
+    .cli-section .bench { grid-template-columns: 1fr; }
+    .cli-section .why { grid-template-columns: 1fr; }
+    .cli-section .collapse-side .row { grid-template-columns: repeat(3, 1fr); }
+    .cli-section .collapse-side.good .row { grid-template-columns: 1fr; }
+    .cli-section .cost-side .total { font-size: 38px; }
+    .cli-section .dive-inner { padding: 20px 16px 24px; }
+    .cli-section .dive-head h3 { font-size: 26px; }
   }
 </style>
 </head>
