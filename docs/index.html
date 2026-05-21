@@ -1851,7 +1851,12 @@
     .hood { margin-left: 0; margin-right: 0; }
   }
 
-  /* ── CTA / nameplate (closed state) ─────────────────────────────── */
+  /* ── Pop-the-hood CTA / nameplate ─────────────────────────────────
+     Unified treatment shared by §04 (SDK harness gatefold) and §07.5
+     (CLI deep dive). Dark recessed plate with an ochre brand stripe
+     on the left, ochre engineering corner marks, circular chev that
+     warms to ochre on hover/open, gears that turn ochre and speed up
+     to mirror the interaction state. */
   .hood-cta {
     all: unset;
     display: grid;
@@ -1860,52 +1865,51 @@
     gap: 28px;
     width: 100%;
     padding: 22px 28px 22px 22px;
-    background: var(--paper);
-    border: 1px solid var(--ink);
-    border-radius: 2px;
+    background: #0a0a0e;
+    border: 1px solid var(--rule-soft);
+    border-left: 2px solid var(--ochre);
     cursor: pointer;
     position: relative;
     transition: background 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
     box-shadow:
-      0 0 0 1px var(--paper) inset,
-      0 1px 0 0 color-mix(in srgb, var(--ink) 18%, transparent),
-      0 6px 0 -3px color-mix(in srgb, var(--ink) 8%, transparent);
+      0 0 0 1px #0a0a0e inset,
+      0 1px 0 0 rgba(0, 0, 0, 0.4),
+      0 6px 0 -3px rgba(240, 184, 112, 0.08);
   }
   .hood-cta:focus-visible {
     outline: 2px solid var(--ochre);
     outline-offset: 2px;
   }
   .hood-cta:hover {
-    background: color-mix(in srgb, var(--ochre) 5%, var(--paper));
+    background: #0e0e14;
     box-shadow:
-      0 0 0 1px var(--paper) inset,
-      0 1px 0 0 color-mix(in srgb, var(--ink) 28%, transparent),
-      0 8px 0 -3px color-mix(in srgb, var(--ochre) 18%, transparent);
+      0 0 0 1px #0e0e14 inset,
+      0 1px 0 0 rgba(0, 0, 0, 0.5),
+      0 8px 0 -3px rgba(240, 184, 112, 0.16);
   }
-  /* faint engraved hairline runs along the inside of the plate */
+  /* faint dashed hairline along the inside of the plate */
   .hood-cta::before {
     content: "";
     position: absolute;
     inset: 4px;
-    border: 1px dashed color-mix(in srgb, var(--ink) 14%, transparent);
-    border-radius: 1px;
+    border: 1px dashed rgba(236, 230, 211, 0.10);
     pointer-events: none;
   }
-  /* corner registration marks — engineering plate detail */
+  /* corner registration marks — ochre engineering-plate detail */
   .hood-cta::after {
     content: "";
     position: absolute;
     inset: 0;
     pointer-events: none;
     background:
-      linear-gradient(90deg, var(--ink) 0 8px, transparent 8px 0) top    left  / 10px 1px no-repeat,
-      linear-gradient(0deg,  var(--ink) 0 8px, transparent 8px 0) top    left  / 1px 10px no-repeat,
-      linear-gradient(-90deg,var(--ink) 0 8px, transparent 8px 0) top    right / 10px 1px no-repeat,
-      linear-gradient(0deg,  var(--ink) 0 8px, transparent 8px 0) top    right / 1px 10px no-repeat,
-      linear-gradient(90deg, var(--ink) 0 8px, transparent 8px 0) bottom left  / 10px 1px no-repeat,
-      linear-gradient(180deg,var(--ink) 0 8px, transparent 8px 0) bottom left  / 1px 10px no-repeat,
-      linear-gradient(-90deg,var(--ink) 0 8px, transparent 8px 0) bottom right / 10px 1px no-repeat,
-      linear-gradient(180deg,var(--ink) 0 8px, transparent 8px 0) bottom right / 1px 10px no-repeat;
+      linear-gradient(90deg,  var(--ochre) 0 8px, transparent 8px 0) top    left  / 10px 1px no-repeat,
+      linear-gradient(0deg,   var(--ochre) 0 8px, transparent 8px 0) top    left  / 1px 10px no-repeat,
+      linear-gradient(-90deg, var(--ochre) 0 8px, transparent 8px 0) top    right / 10px 1px no-repeat,
+      linear-gradient(0deg,   var(--ochre) 0 8px, transparent 8px 0) top    right / 1px 10px no-repeat,
+      linear-gradient(90deg,  var(--ochre) 0 8px, transparent 8px 0) bottom left  / 10px 1px no-repeat,
+      linear-gradient(180deg, var(--ochre) 0 8px, transparent 8px 0) bottom left  / 1px 10px no-repeat,
+      linear-gradient(-90deg, var(--ochre) 0 8px, transparent 8px 0) bottom right / 10px 1px no-repeat,
+      linear-gradient(180deg, var(--ochre) 0 8px, transparent 8px 0) bottom right / 1px 10px no-repeat;
     opacity: 0.55;
   }
 
@@ -1924,21 +1928,24 @@
     will-change: transform;
   }
   .hood-gear .cog {
-    fill: var(--paper);
+    fill: #0a0a0e;
     stroke: var(--ink);
     stroke-width: 1.25;
     stroke-linejoin: miter;
+    transition: stroke 0.3s ease, fill 0.3s ease;
   }
   .hood-gear .hub {
-    fill: var(--paper);
+    fill: #0a0a0e;
     stroke: var(--ink);
     stroke-width: 1;
+    transition: stroke 0.3s ease, fill 0.3s ease;
   }
-  .hood-gear .hub-dot { fill: var(--ink); }
+  .hood-gear .hub-dot { fill: var(--ink); transition: fill 0.3s ease; }
   .hood-gear .spoke {
     fill: none;
     stroke: var(--ink-50);
     stroke-width: 0.8;
+    transition: stroke 0.3s ease;
   }
   .hood-gear.gear-a {
     left: 0; top: 4px;
@@ -1948,14 +1955,29 @@
     right: 0; top: 12px;
     animation: gearSpinB 14s linear infinite;
   }
-  /* lazy rotation by default; on hover or unfold-imminent, speeds up */
-  .hood-cta:hover .hood-gear.gear-a { animation-duration: 4s; }
+  /* speed mirrors the interaction state — lazy at rest, brisk on hover,
+     fast when priming or open */
+  .hood-cta:hover .hood-gear.gear-a,
   .hood-cta:hover .hood-gear.gear-b { animation-duration: 4s; }
-  .hood-cta.priming .hood-gear.gear-a { animation-duration: 0.9s; }
+  .hood-cta[aria-expanded="true"] .hood-gear.gear-a,
+  .hood-cta[aria-expanded="true"] .hood-gear.gear-b,
+  .hood-cta.open .hood-gear.gear-a,
+  .hood-cta.open .hood-gear.gear-b { animation-duration: 1.4s; }
+  .hood-cta.priming .hood-gear.gear-a,
   .hood-cta.priming .hood-gear.gear-b { animation-duration: 0.9s; }
+  /* gears warm to ochre on hover and when open */
+  .hood-cta:hover .hood-gear .cog,
+  .hood-cta:hover .hood-gear .hub,
+  .hood-cta[aria-expanded="true"] .hood-gear .cog,
+  .hood-cta[aria-expanded="true"] .hood-gear .hub,
+  .hood-cta.open .hood-gear .cog,
+  .hood-cta.open .hood-gear .hub { stroke: var(--ochre); }
+  .hood-cta:hover .hood-gear .hub-dot,
+  .hood-cta[aria-expanded="true"] .hood-gear .hub-dot,
+  .hood-cta.open .hood-gear .hub-dot { fill: var(--ochre); }
   @keyframes gearSpinA { from { transform: rotate(0deg); }   to { transform: rotate(360deg); } }
   @keyframes gearSpinB { from { transform: rotate(15deg); }  to { transform: rotate(-345deg); } }
-  /* tiny tooth count hint, etched in serif under the gears */
+  /* tiny tooth count etched under the gears */
   .hood-gears::after {
     content: "12 T · 16 T";
     position: absolute;
@@ -2005,25 +2027,39 @@
     font-family: var(--mono);
     font-size: 11px;
     letter-spacing: 0.04em;
-    color: var(--ink-faint);
+    color: var(--ink-mute);
   }
 
   .hood-cta .hood-chev {
     width: 44px; height: 44px;
-    border: 1px solid var(--ink);
+    border: 1px solid var(--ink-mute);
     border-radius: 999px;
     display: grid; place-items: center;
     flex: none;
-    transition: background 0.25s ease, transform 0.25s ease;
-    background: var(--paper);
+    background: transparent;
+    transition: background 0.25s ease, transform 0.25s ease, border-color 0.25s ease;
   }
   .hood-cta .hood-chev svg { display: block; }
-  .hood-cta .hood-chev path { stroke: var(--ink); stroke-width: 1.5; fill: none; }
-  .hood-cta:hover .hood-chev { background: var(--ink); transform: translateX(2px); }
-  .hood-cta:hover .hood-chev path { stroke: var(--paper); }
-
-  .hood-cta[aria-expanded="true"] .hood-chev { transform: rotate(90deg); background: var(--ink); }
-  .hood-cta[aria-expanded="true"] .hood-chev path { stroke: var(--paper); }
+  .hood-cta .hood-chev path {
+    stroke: var(--ink-mute);
+    stroke-width: 1.5;
+    fill: none;
+    transition: stroke 0.25s ease;
+  }
+  .hood-cta:hover .hood-chev {
+    background: var(--ochre);
+    border-color: var(--ochre);
+    transform: translateX(2px);
+  }
+  .hood-cta:hover .hood-chev path { stroke: #0a0a0e; }
+  .hood-cta[aria-expanded="true"] .hood-chev,
+  .hood-cta.open .hood-chev {
+    transform: rotate(90deg);
+    background: var(--ochre);
+    border-color: var(--ochre);
+  }
+  .hood-cta[aria-expanded="true"] .hood-chev path,
+  .hood-cta.open .hood-chev path { stroke: #0a0a0e; }
 
   /* ── Panel (opened state) ─────────────────────────────────────── */
   .hood-panel {
@@ -4267,114 +4303,7 @@
     font-size: 8.5px; letter-spacing: 0.14em; text-transform: uppercase;
   }
 
-  /* ─── dive toggle (engraved nameplate) ─── */
-  .cli-section .dive-toggle {
-    all: unset; display: grid;
-    grid-template-columns: auto 1fr auto;
-    align-items: center; gap: 24px; width: 100%;
-    padding: 20px 24px 20px 22px;
-    background: #0a0a0e; border: 1px solid var(--rule-soft);
-    border-left: 2px solid var(--ochre); cursor: pointer;
-    position: relative;
-    transition: background .25s ease, box-shadow .25s ease, transform .25s ease;
-    box-shadow: 0 0 0 1px #0a0a0e inset, 0 1px 0 0 rgba(0,0,0,0.4), 0 6px 0 -3px rgba(240,184,112,0.08);
-  }
-  .cli-section .dive-toggle:focus-visible { outline: 2px solid var(--ochre); outline-offset: 2px; }
-  .cli-section .dive-toggle:hover {
-    background: #0e0e14;
-    box-shadow: 0 0 0 1px #0e0e14 inset, 0 1px 0 0 rgba(0,0,0,0.5), 0 8px 0 -3px rgba(240,184,112,0.16);
-  }
-  .cli-section .dive-toggle::before {
-    content: ""; position: absolute; inset: 4px;
-    border: 1px dashed rgba(236,230,211,0.10); pointer-events: none;
-  }
-  .cli-section .dive-toggle::after {
-    content: ""; position: absolute; inset: 0; pointer-events: none;
-    background:
-      linear-gradient(90deg,  var(--ochre) 0 8px, transparent 8px 0) top    left  / 10px 1px no-repeat,
-      linear-gradient(0deg,   var(--ochre) 0 8px, transparent 8px 0) top    left  / 1px 10px no-repeat,
-      linear-gradient(-90deg, var(--ochre) 0 8px, transparent 8px 0) top    right / 10px 1px no-repeat,
-      linear-gradient(0deg,   var(--ochre) 0 8px, transparent 8px 0) top    right / 1px 10px no-repeat,
-      linear-gradient(90deg,  var(--ochre) 0 8px, transparent 8px 0) bottom left  / 10px 1px no-repeat,
-      linear-gradient(180deg, var(--ochre) 0 8px, transparent 8px 0) bottom left  / 1px 10px no-repeat,
-      linear-gradient(-90deg, var(--ochre) 0 8px, transparent 8px 0) bottom right / 10px 1px no-repeat,
-      linear-gradient(180deg, var(--ochre) 0 8px, transparent 8px 0) bottom right / 1px 10px no-repeat;
-    opacity: 0.55;
-  }
-
-  /* ─── spur gears (reuse gearSpinA/B keyframes from the pop-the-hood CTA) ─── */
-  .cli-section .dive-gears { position: relative; width: 88px; height: 60px; flex: none; display: block; }
-  .cli-section .dive-gear { position: absolute; transform-origin: center; will-change: transform; }
-  .cli-section .dive-gear .cog {
-    fill: #0a0a0e; stroke: var(--ink); stroke-width: 1.1;
-    stroke-linejoin: miter; transition: stroke .3s, fill .3s;
-  }
-  .cli-section .dive-gear .hub {
-    fill: #0a0a0e; stroke: var(--ink); stroke-width: 0.9;
-    transition: stroke .3s, fill .3s;
-  }
-  .cli-section .dive-gear .hub-dot { fill: var(--ink); transition: fill .3s; }
-  .cli-section .dive-gear .spoke { fill: none; stroke: var(--ink-faint); stroke-width: 0.7; transition: stroke .3s; }
-  .cli-section .dive-gear.gear-a { left: 0; top: 4px; animation: gearSpinA 14s linear infinite; }
-  .cli-section .dive-gear.gear-b { right: 0; top: 12px; animation: gearSpinB 14s linear infinite; }
-  .cli-section .dive-toggle:hover .dive-gear.gear-a,
-  .cli-section .dive-toggle:hover .dive-gear.gear-b { animation-duration: 4s; }
-  .cli-section .dive-toggle.open .dive-gear.gear-a,
-  .cli-section .dive-toggle.open .dive-gear.gear-b { animation-duration: 1.4s; }
-  .cli-section .dive-toggle:hover .dive-gear .cog,
-  .cli-section .dive-toggle.open  .dive-gear .cog,
-  .cli-section .dive-toggle:hover .dive-gear .hub,
-  .cli-section .dive-toggle.open  .dive-gear .hub { stroke: var(--ochre); }
-  .cli-section .dive-toggle:hover .dive-gear .hub-dot,
-  .cli-section .dive-toggle.open  .dive-gear .hub-dot { fill: var(--ochre); }
-  .cli-section .dive-gears::after {
-    content: "12 T \00b7 16 T"; position: absolute;
-    bottom: -2px; left: 50%; transform: translateX(-50%);
-    font-family: var(--mono); font-size: 8px;
-    letter-spacing: 0.16em; text-transform: uppercase;
-    color: var(--ink-faint); white-space: nowrap;
-  }
-
-  /* ─── dive-toggle label stack ─── */
-  .cli-section .dive-toggle .hood-label { display: grid; gap: 4px; min-width: 0; }
-  .cli-section .dive-toggle .hood-marker {
-    font-family: var(--mono); font-size: 10px;
-    letter-spacing: 0.18em; text-transform: uppercase;
-    color: var(--ink-faint);
-  }
-  .cli-section .dive-toggle .hood-marker em { font-style: normal; color: var(--ochre); margin-left: 6px; }
-  .cli-section .dive-toggle .hood-title {
-    font-family: var(--serif); font-weight: 300;
-    font-size: 22px; line-height: 1.1; color: var(--ink);
-    letter-spacing: -0.015em;
-  }
-  .cli-section .dive-toggle .hood-title em { font-style: italic; font-weight: 400; color: var(--ochre); }
-  .cli-section .dive-toggle .hood-sub {
-    font-family: var(--mono); font-size: 11px;
-    letter-spacing: 0.04em; color: var(--ink-mute); line-height: 1.45;
-  }
-  .cli-section .dive-toggle .hood-chev {
-    width: 44px; height: 44px; border: 1px solid var(--ink-mute);
-    display: flex; align-items: center; justify-content: center;
-    transition: transform .25s ease, background .25s ease, border-color .25s ease;
-    background: transparent; flex: none;
-  }
-  .cli-section .dive-toggle .hood-chev svg { display: block; }
-  .cli-section .dive-toggle .hood-chev path {
-    stroke: var(--ink-mute); stroke-width: 1.5; fill: none;
-    transition: stroke .25s ease;
-  }
-  .cli-section .dive-toggle:hover .hood-chev {
-    background: var(--ochre); border-color: var(--ochre);
-    transform: translateX(2px);
-  }
-  .cli-section .dive-toggle:hover .hood-chev path { stroke: #0a0a0e; }
-  .cli-section .dive-toggle.open .hood-chev {
-    transform: rotate(90deg); background: var(--ochre); border-color: var(--ochre);
-  }
-  .cli-section .dive-toggle.open .hood-chev path { stroke: #0a0a0e; }
-
-  /* ─── dive content ─── */
+  /* ─── dive content (the CTA itself reuses the global .hood-cta styles) ─── */
   .cli-section .dive { height: 0; overflow: hidden; transition: height .55s cubic-bezier(.4,0,.2,1); }
   .cli-section .dive-inner {
     padding: 24px 26px 30px;
@@ -6385,10 +6314,10 @@
       </article>
     </div>
 
-    <button class="dive-toggle" id="cli-dive-toggle" type="button" aria-expanded="false" aria-controls="cli-dive-panel">
-      <span class="dive-gears" aria-hidden="true">
-        <svg id="cli-dive-gear-a" class="dive-gear gear-a" width="42" height="42" viewBox="-26 -26 52 52"></svg>
-        <svg id="cli-dive-gear-b" class="dive-gear gear-b" width="48" height="48" viewBox="-30 -30 60 60"></svg>
+    <button class="hood-cta" id="cli-dive-toggle" type="button" aria-expanded="false" aria-controls="cli-dive-panel">
+      <span class="hood-gears" aria-hidden="true">
+        <svg id="cli-dive-gear-a" class="hood-gear gear-a" width="42" height="42" viewBox="-26 -26 52 52"></svg>
+        <svg id="cli-dive-gear-b" class="hood-gear gear-b" width="48" height="48" viewBox="-30 -30 60 60"></svg>
       </span>
       <span class="hood-label">
         <span class="hood-marker">§07.5 · why <em>we built this</em></span>
