@@ -549,6 +549,11 @@ def _scan_file_for_invocations(path: Path) -> list[Invocation]:
     # Track the preceding non-blank line for each line.
     prev_nonblank: str | None = None
 
+    # The non-blank line that immediately preceded the opening fence delimiter.
+    # Used as `preceding_line` for all invocations inside the fence so that
+    # a sentinel placed before the fence (not inside it) is correctly detected.
+    fence_preceding: str | None = None
+
     # Buffer for backslash continuation within fenced blocks.
     pending_fenced_line: str | None = None
     pending_fenced_lineno: int = 0
@@ -578,6 +583,10 @@ def _scan_file_for_invocations(path: Path) -> list[Invocation]:
             if not in_fence:
                 in_fence = True
                 fence_delim = m_fence.group(1)[0] * len(m_fence.group(1))
+                # Capture the non-blank line that preceded the opening fence.
+                # This is what the sentinel check must see: a comment placed
+                # before the fence block should suppress invocations inside it.
+                fence_preceding = prev_nonblank
                 # Flush any pending continuation line.
                 if pending_fenced_line is not None:
                     _emit_fenced(pending_fenced_line, pending_fenced_lineno, pending_fenced_preceding)
@@ -612,7 +621,9 @@ def _scan_file_for_invocations(path: Path) -> list[Invocation]:
                 if pending_fenced_line is None:
                     pending_fenced_line = content
                     pending_fenced_lineno = idx
-                    pending_fenced_preceding = prev_nonblank
+                    # Use fence_preceding so the sentinel placed before the
+                    # opening fence is visible to the validator.
+                    pending_fenced_preceding = fence_preceding
                 else:
                     pending_fenced_line += content
             else:
@@ -622,7 +633,9 @@ def _scan_file_for_invocations(path: Path) -> list[Invocation]:
                     _emit_fenced(combined, pending_fenced_lineno, pending_fenced_preceding)
                     pending_fenced_line = None
                 else:
-                    _emit_fenced(stripped, idx, prev_nonblank)
+                    # Pass fence_preceding (the line before the opening fence)
+                    # rather than prev_nonblank (which is the fence delimiter itself).
+                    _emit_fenced(stripped, idx, fence_preceding)
             if raw.strip():
                 prev_nonblank = raw
             continue
@@ -1138,14 +1151,21 @@ def extract_surface_map(root: Path | None = None) -> dict[str, ParserSurface]:
 # Sentinel marker
 # ---------------------------------------------------------------------------
 
-_SENTINEL_MARKER = "<!-- contract-lint:ignore-next -->"
+_SENTINEL_RE = re.compile(r"<!--\s*contract-lint:ignore-next\s*-->")
 
 
 def _has_sentinel(preceding_line: str | None) -> bool:
-    """Return True if the preceding non-blank line contains the sentinel."""
+    """Return True if the preceding non-blank line matches the sentinel marker.
+
+    The sentinel pattern is ``<!-- contract-lint:ignore-next -->`` with
+    optional internal whitespace (``\\s*`` on each side of the keyword).
+    An HTML comment placed on any line immediately before a fenced code
+    block or inline invocation suppresses the next invocation from
+    violation emission.
+    """
     if preceding_line is None:
         return False
-    return _SENTINEL_MARKER in preceding_line
+    return bool(_SENTINEL_RE.search(preceding_line))
 
 
 # ---------------------------------------------------------------------------
