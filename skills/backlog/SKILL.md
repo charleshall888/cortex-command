@@ -76,8 +76,8 @@ Present the current backlog summary.
 Update the item's status in place using `update_item.py`:
 
 ```bash
-cortex-update-item {{item}} status=complete               # mark complete
-cortex-update-item {{item}} status=abandoned              # mark abandoned
+cortex-update-item {{item}} --status complete             # mark complete
+cortex-update-item {{item}} --status abandoned            # mark abandoned
 ```
 
 This updates frontmatter in place (no file move), cascades `blocked-by` cleanup, auto-closes parent epics when all children are terminal, and regenerates the index.

@@ -101,7 +101,7 @@ After all sections are walked, close each completed feature's backlog ticket. No
 To resolve: read each feature's `backlog_id` field from `overnight-state.json` (the state file located in Step 0). Pass the zero-padded numeric ID to `cortex-update-item`:
 
 ```
-cortex-update-item 078 status=complete
+cortex-update-item 078 --status complete
 ```
 
 **Important**: IDs must be zero-padded to 3 digits (e.g., `078` not `78`). Unpadded IDs return "Item not found".
