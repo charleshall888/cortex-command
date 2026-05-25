@@ -2,7 +2,7 @@
 feature: lifecycle-implement-auto-enter-worktree-via
 parent_backlog_uuid: 6c945638-4fc4-4f1b-ad68-1c1e102c24b4
 parent_backlog_id: 250
-artifacts: ["research", "spec", "plan"]
+artifacts: ["research", "spec", "plan", "review"]
 tags: [lifecycle, worktree-interactive]
 created: 2026-05-25
 updated: 2026-05-25
