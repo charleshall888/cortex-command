@@ -143,7 +143,7 @@ def _extract_feature(argv: list[str]) -> str:
 # ---------------------------------------------------------------------------
 
 # Cache subprocess results per (case, tmp_path) to share across test functions.
-_result_cache: dict[tuple, subprocess.CompletedProcess] = {}
+_result_cache: dict[tuple[str, str], subprocess.CompletedProcess] = {}
 
 
 def _invoke_case(case: str, tmp_path: Path) -> subprocess.CompletedProcess:
@@ -153,7 +153,7 @@ def _invoke_case(case: str, tmp_path: Path) -> subprocess.CompletedProcess:
     directory and invokes the module with the captured argv. Results are cached
     per (case, tmp_path) so that stdout/stderr/exitcode tests share one run.
     """
-    cache_key = (id(tmp_path), case)
+    cache_key = (str(tmp_path), case)
     if cache_key in _result_cache:
         return _result_cache[cache_key]
 

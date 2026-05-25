@@ -333,7 +333,7 @@ def test_jsonl_side_effect_parity(case: str, tmp_path: Path) -> None:
 # function in pytest; a helper that returns deterministic results can be called
 # multiple times safely since all four fixture cases are independent.
 
-_result_cache: dict[tuple, subprocess.CompletedProcess] = {}
+_result_cache: dict[tuple[str, str], subprocess.CompletedProcess] = {}
 
 
 def _get_scratch_home(case: str, tmp_path: Path) -> Path:
@@ -367,7 +367,7 @@ def _invoke_case(case: str, tmp_path: Path) -> subprocess.CompletedProcess:
     (stdout, stderr, exitcode) share the same invocation.  The session dir and
     scratch home are set up fresh each time (tmp_path is unique per test fn).
     """
-    cache_key = (id(tmp_path), case)
+    cache_key = (str(tmp_path), case)
     if cache_key in _result_cache:
         return _result_cache[cache_key]
 

@@ -163,12 +163,12 @@ def _get_backlog_dir(case: str, tmp_path: Path) -> str:
 # Invocation helper (memoized per case+tmp_path)
 # ---------------------------------------------------------------------------
 
-_result_cache: dict[tuple, subprocess.CompletedProcess] = {}
+_result_cache: dict[tuple[str, str], subprocess.CompletedProcess] = {}
 
 
 def _invoke_case(case: str, tmp_path: Path) -> subprocess.CompletedProcess:
     """Run python3 -m cortex_command.backlog.load_parent_epic for the given fixture case."""
-    cache_key = (id(tmp_path), case)
+    cache_key = (str(tmp_path), case)
     if cache_key in _result_cache:
         return _result_cache[cache_key]
 
