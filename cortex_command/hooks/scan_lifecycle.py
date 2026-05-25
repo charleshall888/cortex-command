@@ -65,68 +65,29 @@ def _encode_phase(phase: str, checked: int, total: int, cycle: int) -> str:
         The wire-format encoded phase string.
     """
 
-    if phase == "implement":
-        if total > 0:
-            return f"implement:{checked}/{total}"
-        return "implement:0/0"
-    if phase == "implement-rework":
-        return f"implement-rework:{cycle}"
-    return phase
+    paused_suffix = "-paused" if phase.endswith("-paused") else ""
+    base_phase = phase.removesuffix("-paused")
+    if base_phase == "implement":
+        payload = f"{checked}/{total}" if total > 0 else "0/0"
+        return f"implement{paused_suffix}:{payload}"
+    if base_phase == "implement-rework":
+        return f"implement-rework{paused_suffix}:{cycle}"
+    return f"{base_phase}{paused_suffix}"
 
 
 def _phase_label(encoded_phase: str) -> str:
     """Translate an encoded phase string into a human-readable label.
 
-    Mirrors the bash ``phase_label`` helper at
-    ``hooks/cortex-scan-lifecycle.sh`` lines 204-218. Pure function: no
-    I/O, no side effects. Consumed by the ``additionalContext`` emitter
-    to produce strings like ``"Phase: Implement (3/5 tasks done)"``.
-
-    Mapping rules:
-
-    * ``"research"``                  -> ``"Research"``
-    * ``"specify"``                   -> ``"Specify"``
-    * ``"plan"``                      -> ``"Plan"``
-    * ``"implement:<x>/<y>"``         -> ``"Implement (<x>/<y> tasks done)"``
-    * ``"implement-rework:<n>"``      -> ``"Implement — rework (review cycle <n>)"``
-    * ``"review"``                    -> ``"Review"``
-    * ``"escalated"``                 -> ``"Escalated (REJECTED — needs user direction)"``
-    * ``"complete:awaiting-merge"``   -> ``"Complete (awaiting merge)"``
-    * ``"complete"``                  -> ``"Complete"``
-    * any other phase                 -> the encoded phase string verbatim
-
-    Parameters
-    ----------
-    encoded_phase:
-        Wire-format phase string as produced by :func:`_encode_phase`.
-
-    Returns
-    -------
-    str
-        The human-readable phase label.
+    Thin delegating wrapper around :func:`cortex_command.phase_labels.phase_label`,
+    the canonical mapping shared with the dashboard (registered as a
+    Jinja filter). Pure function: no I/O, no side effects. The bash
+    mirror lives at ``hooks/cortex-scan-lifecycle.sh`` and is covered by
+    ``tests/test_lifecycle_phase_parity.py``.
     """
 
-    if encoded_phase == "research":
-        return "Research"
-    if encoded_phase == "specify":
-        return "Specify"
-    if encoded_phase == "plan":
-        return "Plan"
-    if encoded_phase.startswith("implement:"):
-        progress = encoded_phase[len("implement:") :]
-        return f"Implement ({progress} tasks done)"
-    if encoded_phase.startswith("implement-rework:"):
-        cycle = encoded_phase[len("implement-rework:") :]
-        return f"Implement — rework (review cycle {cycle})"
-    if encoded_phase == "review":
-        return "Review"
-    if encoded_phase == "escalated":
-        return "Escalated (REJECTED — needs user direction)"
-    if encoded_phase == "complete:awaiting-merge":
-        return "Complete (awaiting merge)"
-    if encoded_phase == "complete":
-        return "Complete"
-    return encoded_phase
+    from cortex_command.phase_labels import phase_label
+
+    return phase_label(encoded_phase)
 
 
 def _interrupted_hint(encoded_phase: str, active_feature: str) -> str:
@@ -164,6 +125,12 @@ def _interrupted_hint(encoded_phase: str, active_feature: str) -> str:
         interrupted-state hint applies.
     """
 
+    # Strip the -paused marker so the existing startswith() prefix checks
+    # match paused features. The resume hint text is identical for active
+    # vs paused implement features (R10: operator action is the same).
+    if "-paused" in encoded_phase:
+        encoded_phase = encoded_phase.replace("-paused", "", 1)
+
     if encoded_phase.startswith("implement:"):
         progress = encoded_phase[len("implement:") :]
         if "/" not in progress:
@@ -194,6 +161,92 @@ def _interrupted_hint(encoded_phase: str, active_feature: str) -> str:
             f"cortex/lifecycle/{active_feature}/review.md for analysis."
         )
     return ""
+
+
+def _is_terminal_mismatch(
+    events_phase: str,
+    backlog_status: str | None,
+) -> bool:
+    """Return True when the events-derived phase and backlog status disagree
+    on whether the feature is terminally complete.
+
+    The two sources of truth — ``events.log`` (via ``detect_lifecycle_phase``)
+    and ``cortex/backlog/index.json``'s ``status:`` — should agree on
+    whether a feature is "done". A mismatch surfaces the cases that bit
+    us in the past:
+
+    - #075-shape: backlog ``status: complete`` but events.log still
+      pointing at ``implement`` (someone closed the ticket without
+      finishing the lifecycle).
+    - inverse #209-shape (pre-fix): events show ``feature_paused`` (now
+      "implement-paused" after T2) while backlog reads ``in_progress``,
+      and the SessionStart enumeration silently hides the divergence.
+
+    The predicate is symmetric: ``events_terminal != backlog_terminal``
+    fires in both directions. Pass ``backlog_status=None`` (no backlog
+    row) and the predicate returns False — no mismatch claim without
+    evidence.
+    """
+
+    events_terminal = (
+        events_phase in ("complete", "escalated")
+        or events_phase.startswith("complete:")
+    )
+    if backlog_status is None:
+        return False
+    from cortex_command.common import TERMINAL_STATUSES
+    backlog_terminal = backlog_status in TERMINAL_STATUSES
+    return events_terminal != backlog_terminal
+
+
+def _load_backlog_status_map(
+    repo_root: Path,
+) -> tuple[dict[str, str], list[str]]:
+    """Load ``cortex/backlog/index.json`` once and return a slug→status map.
+
+    Returns
+    -------
+    tuple[dict[str, str], list[str]]
+        The first element is the slug→status mapping (keys are
+        ``lifecycle_slug`` values from the index; null/absent slugs are
+        skipped). The second element lists ``lifecycle_slug`` values
+        that appeared more than once — for the duplicate slugs the
+        first-encountered status wins.
+
+    Fail-open: returns ``({}, [])`` when ``index.json`` is absent,
+    unreadable, malformed, or shaped unexpectedly. This is intentional
+    — the SessionStart hook treats the index as best-effort enrichment
+    and must never abort on its absence.
+    """
+
+    index_path = repo_root / "cortex" / "backlog" / "index.json"
+    try:
+        raw = index_path.read_text(encoding="utf-8")
+    except (OSError, ValueError):
+        return {}, []
+    try:
+        data = json.loads(raw)
+    except (json.JSONDecodeError, ValueError):
+        return {}, []
+    if not isinstance(data, list):
+        return {}, []
+
+    result: dict[str, str] = {}
+    duplicates: list[str] = []
+    for entry in data:
+        if not isinstance(entry, dict):
+            continue
+        slug = entry.get("lifecycle_slug")
+        if not isinstance(slug, str) or not slug:
+            continue
+        status = entry.get("status")
+        if not isinstance(status, str):
+            continue
+        if slug in result:
+            duplicates.append(slug)
+            continue
+        result[slug] = status
+    return result, duplicates
 
 
 def _events_log_has_event(events_log: Path, event_name: str) -> bool:
@@ -346,7 +399,7 @@ def _build_additional_context(
     pipeline_state: "PipelineState",
     active_feature: str,
     active_phase: str,
-    incomplete: list[tuple[str, str]],
+    incomplete: list[tuple[str, str, bool, str | None]],
     lifecycle_dir: Path,
     metrics_summary: str | None = None,
 ) -> str:
@@ -401,10 +454,62 @@ def _build_additional_context(
 
     context = ""
 
+    # Look up the active feature's mismatch state from the widened
+    # tuple so the active-feature header can carry its own annotation.
+    active_has_mismatch = False
+    active_backlog_status: str | None = None
+    if active_feature:
+        for slug, _phase, has_mismatch, backlog_status in incomplete:
+            if slug == active_feature:
+                active_has_mismatch = has_mismatch
+                active_backlog_status = backlog_status
+                break
+
+    # T13 helper: mismatch-first sort + soft-budget truncation for the
+    # enumerated lifecycle entries. Mismatches are never dropped; only
+    # non-mismatch entries get truncated from the end when the assembled
+    # context exceeds the 9,000-char soft budget.
+    def _sort_and_truncate(
+        entries: list[tuple[str, str, bool, str | None]],
+        overhead_chars: int,
+        budget: int = 9000,
+    ) -> tuple[list[str], int, int]:
+        # Stable mismatch-first sort (key: 0 if mismatch else 1, then
+        # original index).
+        indexed = list(enumerate(entries))
+        indexed.sort(key=lambda x: (0 if x[1][2] else 1, x[0]))
+        sorted_entries = [item for _, item in indexed]
+        mismatch_count = sum(1 for e in entries if e[2])
+
+        def _render(entry: tuple[str, str, bool, str | None]) -> str:
+            slug, phase, has_mismatch, backlog_status = entry
+            annot = (
+                f" [mismatch: backlog={backlog_status}]"
+                if has_mismatch
+                else ""
+            )
+            return f"  - {slug} ({_phase_label(phase)}){annot}"
+
+        full_lines = [_render(e) for e in sorted_entries]
+        max_droppable = len(sorted_entries) - mismatch_count
+        dropped = 0
+        while True:
+            kept = full_lines[: len(full_lines) - dropped] if dropped else list(full_lines)
+            tail = [f"  … +{dropped} more"] if dropped else []
+            block_size = overhead_chars + sum(len(l) + 1 for l in kept + tail)
+            if block_size <= budget or dropped >= max_droppable:
+                return kept + tail, mismatch_count, dropped
+            dropped += 1
+
     if active_feature:
         label = _phase_label(active_phase)
+        active_annot = (
+            f" [mismatch: backlog={active_backlog_status}]"
+            if active_has_mismatch
+            else ""
+        )
         context = (
-            f"Active lifecycle: {active_feature} | Phase: {label}\n"
+            f"Active lifecycle: {active_feature} | Phase: {label}{active_annot}\n"
             f"Artifacts: cortex/lifecycle/{active_feature}/"
         )
 
@@ -414,29 +519,46 @@ def _build_additional_context(
 
         # Note other incomplete features if any (bash lines 401-412).
         others = [
-            (slug, phase)
-            for slug, phase in incomplete
+            (slug, phase, has_mismatch, backlog_status)
+            for slug, phase, has_mismatch, backlog_status in incomplete
             if slug != active_feature
         ]
         if others:
-            context = f"{context}\nOther incomplete lifecycles:"
-            for slug, phase in others:
-                other_label = _phase_label(phase)
-                context = f"{context}\n  - {slug} ({other_label})"
-            context = (
-                f"{context}\nSwitch with /cortex-core:lifecycle resume "
-                f"<feature>."
+            # Provisional header — extended with mismatch fragment below.
+            mismatch_count = sum(1 for e in others if e[2])
+            header_line = "Other incomplete lifecycles:"
+            if mismatch_count >= 1:
+                header_line = (
+                    f"{header_line} — mismatches: {mismatch_count} total"
+                )
+            footer_line = (
+                "Switch with /cortex-core:lifecycle resume <feature>."
             )
+            # Overhead = current context + header + footer + 3 separators.
+            overhead = (
+                len(context) + len(header_line) + len(footer_line) + 3
+            )
+            entry_lines, _, _ = _sort_and_truncate(others, overhead)
+            context = f"{context}\n{header_line}"
+            for line in entry_lines:
+                context = f"{context}\n{line}"
+            context = f"{context}\n{footer_line}"
 
     elif len(incomplete) > 1:
         # Multiple incomplete, no session match (bash lines 414-424).
-        context = "Multiple incomplete lifecycles — select one to resume:"
-        for slug, phase in incomplete:
-            other_label = _phase_label(phase)
-            context = f"{context}\n  - {slug} ({other_label})"
-        context = (
-            f"{context}\nResume with /cortex-core:lifecycle resume <feature>."
-        )
+        mismatch_count = sum(1 for e in incomplete if e[2])
+        header_line = "Multiple incomplete lifecycles — select one to resume:"
+        if mismatch_count >= 1:
+            header_line = (
+                f"{header_line} — mismatches: {mismatch_count} total"
+            )
+        footer_line = "Resume with /cortex-core:lifecycle resume <feature>."
+        overhead = len(header_line) + len(footer_line) + 2
+        entry_lines, _, _ = _sort_and_truncate(incomplete, overhead)
+        context = header_line
+        for line in entry_lines:
+            context = f"{context}\n{line}"
+        context = f"{context}\n{footer_line}"
 
     # Prepend pipeline context (bash lines 428-435).
     pipeline_ctx = pipeline_state.context_string
@@ -655,8 +777,15 @@ def main(argv: list[str] | None = None) -> int:
         candidate_dirs.append(child)
         candidate_features.append(feature)
 
+    # --- Load backlog status map once (T11) ---
+    # Single read of cortex/backlog/index.json keyed by lifecycle_slug,
+    # consumed below by the per-candidate loop. Fail-open on missing /
+    # unparseable index — reconciliation degrades silently rather than
+    # blocking the hook.
+    backlog_status_map, _backlog_duplicate_slugs = _load_backlog_status_map(cwd)
+
     # --- Phase detection per candidate (bash precedent lines 249-326) ---
-    incomplete: list[tuple[str, str]] = []
+    incomplete: list[tuple[str, str, bool, str | None]] = []
     for feature_dir, feature in zip(candidate_dirs, candidate_features):
         try:
             r = detect_lifecycle_phase(feature_dir)
@@ -699,7 +828,9 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 continue
 
-        incomplete.append((feature, encoded))
+        backlog_status = backlog_status_map.get(feature)
+        has_mismatch = _is_terminal_mismatch(encoded, backlog_status)
+        incomplete.append((feature, encoded, has_mismatch, backlog_status))
 
     # No incomplete features and no pipeline context — nothing to inject.
     if not incomplete and not pipeline_state.context_string:
@@ -714,7 +845,7 @@ def main(argv: list[str] | None = None) -> int:
     active_phase = ""
 
     if session_id:
-        for feature, encoded in incomplete:
+        for feature, encoded, _has_mismatch, _backlog_status in incomplete:
             session_file = lifecycle_dir / feature / ".session"
             if not session_file.is_file():
                 continue
@@ -730,7 +861,7 @@ def main(argv: list[str] | None = None) -> int:
                 break
 
     if not active_feature and len(incomplete) == 1:
-        active_feature, active_phase = incomplete[0]
+        active_feature, active_phase, _has_mismatch, _backlog_status = incomplete[0]
         if session_id:
             # Crash-recovery claim under flock (bash precedent line 364
             # was a bare ``echo``; the Python port serializes via

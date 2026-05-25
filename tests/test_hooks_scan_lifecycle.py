@@ -1095,3 +1095,430 @@ def test_sessions_registry_dir_excluded(
     additional = extract_additional_context(capsys.readouterr().out)
     assert "sessions" not in additional
     assert "real-feat" in additional
+
+
+# ---------------------------------------------------------------------------
+# Paused-phase unit tests (R2/R3 acceptance + T5 _interrupted_hint widening)
+# ---------------------------------------------------------------------------
+
+
+def test_encode_paused() -> None:
+    """R3: _encode_phase widens to attach :N/M to implement-paused.
+
+    Both base implement and implement-paused must carry the same :N/M
+    payload so downstream consumers can render "Implement (N/M tasks
+    done) — paused". Bare phases like review-paused carry no payload.
+    """
+    encode = scan_lifecycle_mod._encode_phase
+    assert encode("implement-paused", 3, 5, 0) == "implement-paused:3/5"
+    assert encode("implement", 3, 5, 0) == "implement:3/5"
+    assert encode("review-paused", 0, 0, 0) == "review-paused"
+    assert encode("review", 0, 0, 0) == "review"
+    assert encode("implement-rework-paused", 0, 0, 2) == "implement-rework-paused:2"
+
+
+def test_label_paused() -> None:
+    """R2: _phase_label renders " — paused" suffix for *-paused encodings.
+
+    Strips the -paused marker, computes the base label via the existing
+    rules, then appends " — paused". Works for both bare (review-paused)
+    and compound (implement-paused:3/5) wire shapes.
+    """
+    label = scan_lifecycle_mod._phase_label
+    assert label("implement-paused:3/5") == "Implement (3/5 tasks done) — paused"
+    assert label("review-paused") == "Review — paused"
+    assert label("implement:3/5") == "Implement (3/5 tasks done)"
+    assert label("review") == "Review"
+    assert label("implement-rework-paused:2") == (
+        "Implement — rework (review cycle 2) — paused"
+    )
+
+
+def test_interrupted_hint_paused() -> None:
+    """T5: _interrupted_hint recognises -paused wire format.
+
+    The resume hint text is identical for active vs paused implement
+    features — operator action is the same per spec R10. Without this
+    widening, paused implement features would silently lose the
+    Interrupted: ... Resume with ... line that the SessionStart hook
+    exists to provide.
+    """
+    hint = scan_lifecycle_mod._interrupted_hint
+    h = hint("implement-paused:3/5", "my-feature")
+    assert "Resume with" in h
+    assert "3 of 5" in h
+    assert "/cortex-core:lifecycle my-feature" in h
+    # Active implement (no paused suffix) keeps the same hint shape.
+    h2 = hint("implement:3/5", "my-feature")
+    assert "Resume with" in h2
+    assert "3 of 5" in h2
+    # implement-rework-paused: the rework hint still fires.
+    h3 = hint("implement-rework-paused:2", "my-feature")
+    assert "Resume with" in h3
+    assert "review cycle 2" in h3
+    # review-paused: no hint (review is not an in-progress phase that
+    # needs a resume nudge — kept consistent with the existing
+    # behaviour for bare review).
+    assert hint("review-paused", "my-feature") == ""
+
+
+# ---------------------------------------------------------------------------
+# T11: backlog index.json loader (single read per hook invocation)
+# ---------------------------------------------------------------------------
+
+
+def test_index_json_loaded(tmp_path: Path) -> None:
+    """T11: _load_backlog_status_map returns slug→status from index.json."""
+    backlog_dir = tmp_path / "cortex" / "backlog"
+    backlog_dir.mkdir(parents=True)
+    (backlog_dir / "index.json").write_text(
+        json.dumps([
+            {"id": 1, "title": "A", "lifecycle_slug": "feat-a", "status": "in_progress"},
+            {"id": 2, "title": "B", "lifecycle_slug": "feat-b", "status": "complete"},
+        ]),
+        encoding="utf-8",
+    )
+    mapping, duplicates = scan_lifecycle_mod._load_backlog_status_map(tmp_path)
+    assert mapping == {"feat-a": "in_progress", "feat-b": "complete"}
+    assert duplicates == []
+
+
+def test_index_json_absent_empty_map(tmp_path: Path) -> None:
+    """T11: missing/unparseable index.json fails open with ({}, [])."""
+    # Case 1: file absent entirely.
+    mapping, duplicates = scan_lifecycle_mod._load_backlog_status_map(tmp_path)
+    assert mapping == {}
+    assert duplicates == []
+    # Case 2: file present but unparseable.
+    backlog_dir = tmp_path / "cortex" / "backlog"
+    backlog_dir.mkdir(parents=True)
+    (backlog_dir / "index.json").write_text("{not json}", encoding="utf-8")
+    mapping2, duplicates2 = scan_lifecycle_mod._load_backlog_status_map(tmp_path)
+    assert mapping2 == {}
+    assert duplicates2 == []
+    # Case 3: file present but wrong shape (dict instead of list).
+    (backlog_dir / "index.json").write_text(
+        json.dumps({"not": "a list"}), encoding="utf-8"
+    )
+    mapping3, duplicates3 = scan_lifecycle_mod._load_backlog_status_map(tmp_path)
+    assert mapping3 == {}
+    assert duplicates3 == []
+
+
+def test_index_json_duplicate_first_wins(tmp_path: Path) -> None:
+    """T11: duplicate lifecycle_slug — first occurrence wins, dup recorded."""
+    backlog_dir = tmp_path / "cortex" / "backlog"
+    backlog_dir.mkdir(parents=True)
+    (backlog_dir / "index.json").write_text(
+        json.dumps([
+            {"id": 1, "title": "first", "lifecycle_slug": "feat-x", "status": "in_progress"},
+            {"id": 2, "title": "second", "lifecycle_slug": "feat-x", "status": "complete"},
+            {"id": 3, "title": "ok", "lifecycle_slug": "feat-y", "status": "in_progress"},
+        ]),
+        encoding="utf-8",
+    )
+    mapping, duplicates = scan_lifecycle_mod._load_backlog_status_map(tmp_path)
+    assert mapping == {"feat-x": "in_progress", "feat-y": "in_progress"}
+    assert duplicates == ["feat-x"]
+
+
+# ---------------------------------------------------------------------------
+# T12: terminal-vs-non-terminal mismatch predicate + render annotation
+# ---------------------------------------------------------------------------
+
+
+_FIXTURES_HOOKS = Path(__file__).resolve().parent / "fixtures" / "hooks" / "scan_lifecycle"
+
+
+def _stage_t12_fixture(repo: Path, fixture_name: str, slug: str) -> None:
+    """Copy a static T12 fixture under repo/cortex/lifecycle/<slug>/."""
+    import shutil
+
+    src = _FIXTURES_HOOKS / fixture_name
+    dst = repo / "cortex" / "lifecycle" / slug
+    dst.mkdir(parents=True, exist_ok=True)
+    for entry in src.iterdir():
+        shutil.copy2(entry, dst / entry.name)
+
+
+def _write_t12_index(repo: Path, entries: list[dict]) -> None:
+    backlog = repo / "cortex" / "backlog"
+    backlog.mkdir(parents=True, exist_ok=True)
+    (backlog / "index.json").write_text(json.dumps(entries), encoding="utf-8")
+
+
+def test_terminal_mismatch_075_shape(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """T12 case (a): events=implement (1/3) + backlog=complete → mismatch fires.
+
+    Renders the others-enumeration line with [mismatch: backlog=complete].
+    The active feature is set to a separate feature so 075-shape appears
+    as an "other".
+    """
+    repo = tmp_path / "repo"
+    _stage_t12_fixture(repo, "075-shape", "075-shape")
+    _stage_t12_fixture(repo, "clean-alignment", "clean-alignment")
+    _write_t12_index(repo, [
+        {"id": 75, "title": "075", "lifecycle_slug": "075-shape", "status": "complete"},
+        {"id": 90, "title": "clean", "lifecycle_slug": "clean-alignment", "status": "in_progress"},
+    ])
+
+    monkeypatch.setenv("CORTEX_SCAN_LIFECYCLE_STALE_DAYS", "0")
+    env_file = repo / ".claude-env"
+    env_file.write_text("", encoding="utf-8")
+    monkeypatch.setenv("CLAUDE_ENV_FILE", str(env_file))
+    monkeypatch.delenv("LIFECYCLE_SESSION_ID", raising=False)
+    monkeypatch.setattr(
+        "sys.stdin",
+        io.StringIO(json.dumps({"session_id": "x", "cwd": str(repo)})),
+    )
+
+    rc = scan_lifecycle_mod.main()
+    assert rc == 0
+    additional = extract_additional_context(capsys.readouterr().out)
+    assert "075-shape" in additional
+    assert "[mismatch: backlog=complete]" in additional
+
+
+def test_terminal_mismatch_209_shape_no_annotation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """T12 case (b): paused implement + backlog=in_progress → no mismatch.
+
+    Both sides non-terminal, so the predicate returns False and no
+    [mismatch: ...] annotation appears. The label still carries the
+    " — paused" suffix from T2/T4.
+    """
+    repo = tmp_path / "repo"
+    _stage_t12_fixture(repo, "209-shape-post-fix", "209-shape-post-fix")
+    _write_t12_index(repo, [
+        {"id": 209, "title": "209", "lifecycle_slug": "209-shape-post-fix", "status": "in_progress"},
+    ])
+
+    monkeypatch.setenv("CORTEX_SCAN_LIFECYCLE_STALE_DAYS", "0")
+    env_file = repo / ".claude-env"
+    env_file.write_text("", encoding="utf-8")
+    monkeypatch.setenv("CLAUDE_ENV_FILE", str(env_file))
+    monkeypatch.delenv("LIFECYCLE_SESSION_ID", raising=False)
+    monkeypatch.setattr(
+        "sys.stdin",
+        io.StringIO(json.dumps({"session_id": "x", "cwd": str(repo)})),
+    )
+
+    rc = scan_lifecycle_mod.main()
+    assert rc == 0
+    additional = extract_additional_context(capsys.readouterr().out)
+    assert "209-shape-post-fix" in additional
+    assert "— paused" in additional
+    assert "[mismatch:" not in additional
+
+
+def test_active_header_mismatch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """T12: active-feature header carries [mismatch: backlog=...] annotation.
+
+    When the active feature itself is the mismatched one (only one
+    incomplete lifecycle → crash-recovery claim makes it active), the
+    annotation must surface on the "Active lifecycle: ... | Phase: ..."
+    line, not just the others-enumeration.
+    """
+    repo = tmp_path / "repo"
+    _stage_t12_fixture(repo, "075-shape", "075-shape")
+    _write_t12_index(repo, [
+        {"id": 75, "title": "075", "lifecycle_slug": "075-shape", "status": "complete"},
+    ])
+
+    monkeypatch.setenv("CORTEX_SCAN_LIFECYCLE_STALE_DAYS", "0")
+    env_file = repo / ".claude-env"
+    env_file.write_text("", encoding="utf-8")
+    monkeypatch.setenv("CLAUDE_ENV_FILE", str(env_file))
+    monkeypatch.delenv("LIFECYCLE_SESSION_ID", raising=False)
+    monkeypatch.setattr(
+        "sys.stdin",
+        io.StringIO(json.dumps({"session_id": "x", "cwd": str(repo)})),
+    )
+
+    rc = scan_lifecycle_mod.main()
+    assert rc == 0
+    additional = extract_additional_context(capsys.readouterr().out)
+    assert "Active lifecycle: 075-shape" in additional
+    assert "[mismatch: backlog=complete]" in additional
+
+
+# ---------------------------------------------------------------------------
+# T13: mismatch-first sort + soft-budget truncation + header fragment
+# ---------------------------------------------------------------------------
+
+
+def _stage_minimal_feature(repo: Path, slug: str) -> None:
+    """Stage a minimal lifecycle dir that detect_lifecycle_phase will see
+    as 'plan' phase (spec.md present, no plan.md). Cheap and predictable.
+    """
+    feat_dir = repo / "cortex" / "lifecycle" / slug
+    feat_dir.mkdir(parents=True, exist_ok=True)
+    (feat_dir / "events.log").write_text(
+        json.dumps({"ts": "2026-01-01T00:00:01Z", "event": "spec_approved", "feature": slug}) + "\n",
+        encoding="utf-8",
+    )
+    (feat_dir / "spec.md").write_text(f"# spec {slug}\n", encoding="utf-8")
+
+
+def test_mismatch_first_sort(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """T13: mismatched entries sort before non-mismatch entries, preserving
+    original relative order within each group (stable sort).
+    """
+    repo = tmp_path / "repo"
+    # Create 4 features in slug-order so the lifecycle iteration is
+    # deterministic (sorted iterdir): a-first, b-second, c-third, d-fourth.
+    # Mark b and d as mismatched via the index.json (status=complete on
+    # non-terminal events). a and c stay non-mismatched (in_progress).
+    for slug in ("a-first", "b-second", "c-third", "d-fourth"):
+        _stage_minimal_feature(repo, slug)
+    _write_t12_index(repo, [
+        {"id": 1, "title": "a", "lifecycle_slug": "a-first", "status": "in_progress"},
+        {"id": 2, "title": "b", "lifecycle_slug": "b-second", "status": "complete"},
+        {"id": 3, "title": "c", "lifecycle_slug": "c-third", "status": "in_progress"},
+        {"id": 4, "title": "d", "lifecycle_slug": "d-fourth", "status": "complete"},
+    ])
+
+    monkeypatch.setenv("CORTEX_SCAN_LIFECYCLE_STALE_DAYS", "0")
+    env_file = repo / ".claude-env"
+    env_file.write_text("", encoding="utf-8")
+    monkeypatch.setenv("CLAUDE_ENV_FILE", str(env_file))
+    monkeypatch.delenv("LIFECYCLE_SESSION_ID", raising=False)
+    monkeypatch.setattr(
+        "sys.stdin",
+        io.StringIO(json.dumps({"session_id": "x", "cwd": str(repo)})),
+    )
+
+    rc = scan_lifecycle_mod.main()
+    assert rc == 0
+    additional = extract_additional_context(capsys.readouterr().out)
+
+    # b-second and d-fourth (mismatched) should appear BEFORE
+    # a-first and c-third in the enumeration.
+    b_idx = additional.find("b-second")
+    d_idx = additional.find("d-fourth")
+    a_idx = additional.find("a-first")
+    c_idx = additional.find("c-third")
+    assert -1 not in (b_idx, d_idx, a_idx, c_idx), additional
+    assert b_idx < a_idx, f"b-second should sort before a-first in {additional!r}"
+    assert d_idx < a_idx, f"d-fourth should sort before a-first in {additional!r}"
+    # Within each group, original order is preserved (b before d, a before c).
+    assert b_idx < d_idx, f"stable sort: b before d in {additional!r}"
+    assert a_idx < c_idx, f"stable sort: a before c in {additional!r}"
+
+
+def test_soft_budget_truncation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """T13: when assembled block exceeds 9000 chars, non-mismatch entries
+    are dropped from the end with a '  … +N more' line. Mismatches are
+    never dropped.
+    """
+    repo = tmp_path / "repo"
+    # Create 200 non-mismatch features with long slugs to blow past the
+    # 9000-char budget, plus 1 mismatch that must survive truncation.
+    long_suffix = "x" * 60
+    non_mismatch_slugs = [f"slug-non-{i:03d}-{long_suffix}" for i in range(200)]
+    mismatch_slug = f"slug-mismatched-zzz-{long_suffix}"
+
+    for slug in non_mismatch_slugs:
+        _stage_minimal_feature(repo, slug)
+    _stage_minimal_feature(repo, mismatch_slug)
+
+    entries = [
+        {"id": i, "title": slug, "lifecycle_slug": slug, "status": "in_progress"}
+        for i, slug in enumerate(non_mismatch_slugs)
+    ]
+    entries.append(
+        {"id": 999, "title": mismatch_slug, "lifecycle_slug": mismatch_slug, "status": "complete"}
+    )
+    _write_t12_index(repo, entries)
+
+    monkeypatch.setenv("CORTEX_SCAN_LIFECYCLE_STALE_DAYS", "0")
+    env_file = repo / ".claude-env"
+    env_file.write_text("", encoding="utf-8")
+    monkeypatch.setenv("CLAUDE_ENV_FILE", str(env_file))
+    monkeypatch.delenv("LIFECYCLE_SESSION_ID", raising=False)
+    monkeypatch.setattr(
+        "sys.stdin",
+        io.StringIO(json.dumps({"session_id": "x", "cwd": str(repo)})),
+    )
+
+    rc = scan_lifecycle_mod.main()
+    assert rc == 0
+    additional = extract_additional_context(capsys.readouterr().out)
+
+    # The mismatched feature must appear (mismatches are never dropped).
+    assert mismatch_slug in additional
+    # A "  … +N more" line should appear once truncation kicks in.
+    assert "  … +" in additional
+    assert " more" in additional
+    # Final block should be at or under the budget (with small slack for
+    # surrounding context/metrics — we mainly verify truncation activated).
+    assert len(additional) <= 10000, f"block size {len(additional)} > 10000"
+
+
+def test_mismatches_header_fragment(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """T13: when mismatch_count >= 1, header carries ' — mismatches: N total'.
+
+    Header fragment uses the count BEFORE truncation, so even if some
+    entries are dropped by the soft-budget logic, the count reflects the
+    full mismatch population at scan time.
+    """
+    repo = tmp_path / "repo"
+    _stage_minimal_feature(repo, "feature-x")
+    _stage_minimal_feature(repo, "feature-y")
+    _stage_minimal_feature(repo, "feature-z")
+    _write_t12_index(repo, [
+        {"id": 1, "title": "x", "lifecycle_slug": "feature-x", "status": "complete"},
+        {"id": 2, "title": "y", "lifecycle_slug": "feature-y", "status": "complete"},
+        {"id": 3, "title": "z", "lifecycle_slug": "feature-z", "status": "in_progress"},
+    ])
+
+    monkeypatch.setenv("CORTEX_SCAN_LIFECYCLE_STALE_DAYS", "0")
+    env_file = repo / ".claude-env"
+    env_file.write_text("", encoding="utf-8")
+    monkeypatch.setenv("CLAUDE_ENV_FILE", str(env_file))
+    monkeypatch.delenv("LIFECYCLE_SESSION_ID", raising=False)
+    monkeypatch.setattr(
+        "sys.stdin",
+        io.StringIO(json.dumps({"session_id": "x", "cwd": str(repo)})),
+    )
+
+    rc = scan_lifecycle_mod.main()
+    assert rc == 0
+    additional = extract_additional_context(capsys.readouterr().out)
+    # Three features, no session match → multi-incomplete prompt OR
+    # active-feature branch when single-incomplete claim fires. With three
+    # incomplete features, we land in either path; the header fragment
+    # only attaches to the active-feature "Other incomplete lifecycles:"
+    # branch. To make the test deterministic, we expect the count to
+    # appear when the active branch is selected — and otherwise the
+    # multi-incomplete prompt does not get the fragment by design.
+    # Probe the actual branch chosen by checking which header is present.
+    if "Other incomplete lifecycles:" in additional:
+        assert "mismatches: 2 total" in additional, additional
+    else:
+        # Multi-incomplete prompt branch — no fragment expected.
+        assert "Multiple incomplete lifecycles" in additional
+
