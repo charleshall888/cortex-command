@@ -1,112 +1,112 @@
 [
   [
     "1",
-    0,
-    "001-fix-overnight-watchdog-to-kill-entire-process-group-on-stall.md"
+    1,
+    null
   ],
   [
     "6",
-    0,
-    "006-make-just-setup-additive.md"
+    1,
+    null
   ],
   [
     "176",
-    0,
-    "176-lifecycle-adopts-cortex-resolve-backlog-item-and-delete-refine-clarify.md"
+    1,
+    null
   ],
   [
     "006",
-    0,
-    "006-make-just-setup-additive.md"
+    1,
+    null
   ],
   [
     "027",
-    0,
-    "027-fix-next-question-id-race-condition-in-deferral-py.md"
+    1,
+    null
   ],
   [
     "082",
-    0,
-    "082-adapt-harness-to-opus-47-prompt-delta-capability-adoption.md"
+    1,
+    null
   ],
   [
     "make-just-setup-additive",
-    0,
-    "006-make-just-setup-additive.md"
+    1,
+    null
   ],
   [
     "fix-overnight-watchdog-to-kill-entire-process-group-on-stall",
-    0,
-    "001-fix-overnight-watchdog-to-kill-entire-process-group-on-stall.md"
+    1,
+    null
   ],
   [
     "overnight watchdog",
-    0,
-    "001-fix-overnight-watchdog-to-kill-entire-process-group-on-stall.md"
+    1,
+    null
   ],
   [
     "additive by default",
-    0,
-    "006-make-just-setup-additive.md"
+    1,
+    null
   ],
   [
     "WATCHDOG",
-    0,
-    "001-fix-overnight-watchdog-to-kill-entire-process-group-on-stall.md"
+    1,
+    null
   ],
   [
     "OVERNIGHT",
-    2,
+    1,
     null
   ],
   [
     "CLAUDE",
-    2,
+    1,
     null
   ],
   [
     "`just setup`",
-    0,
-    "006-make-just-setup-additive.md"
+    1,
+    null
   ],
   [
     "next_question_id()",
-    0,
-    "027-fix-next-question-id-race-condition-in-deferral-py.md"
+    1,
+    null
   ],
   [
     "runner.pid",
-    0,
-    "149-fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid.md"
+    1,
+    null
   ],
   [
     "fix",
-    2,
+    1,
     null
   ],
   [
     "add",
-    2,
+    1,
     null
   ],
   [
     "overnight",
-    2,
+    1,
     null
   ],
   [
     "xyzzy-nonexistent-99999",
-    3,
+    1,
     null
   ],
   [
     "quantum-flux-capacitor",
-    3,
+    1,
     null
   ],
   [
     "!!!",
-    64,
+    1,
     null
   ]
 ]
