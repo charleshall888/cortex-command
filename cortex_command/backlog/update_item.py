@@ -5,16 +5,7 @@ Replaces the file-move archival pattern from close-item.py with in-place
 frontmatter updates, sidecar event logging, and dependency cascade — all
 without moving any file.
 
-Usage:
-    cortex-update-item <slug-or-uuid> [--status STATUS] [--areas AREA ...] [--tags TAG ...] ...
-
-Examples:
-    cortex-update-item 030-cf-tunnel-fallback-polish --status complete
-    cortex-update-item 030-cf-tunnel-fallback-polish --status complete --session-id null
-    cortex-update-item 550e8400-... --lifecycle-phase implement
-
-Exit 0 = item updated successfully.
-Exit 1 = item not found or no fields provided.
+See 'cortex-update-item --help' for the full flag list.
 """
 
 from __future__ import annotations
