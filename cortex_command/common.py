@@ -260,6 +260,10 @@ def _detect_lifecycle_phase_inner(
     spec_transitioned_out = False
     plan_transitioned_out = False
     feature_wontfix_seen = False
+    # Line-position-last occurrence of the significant-event set drives the
+    # paused/resumed decision below. We track by line order (not parsed ts)
+    # because malformed/missing ts entries would otherwise mis-sort.
+    last_significant_event: str | None = None
     for line in events_content.splitlines():
         line = line.strip()
         if not line:
@@ -282,7 +286,29 @@ def _detect_lifecycle_phase_inner(
                 plan_transitioned_out = True
         elif event_type == "feature_wontfix":
             feature_wontfix_seen = True
+        if event_type in (
+            "phase_transition",
+            "feature_complete",
+            "feature_wontfix",
+            "feature_paused",
+        ):
+            last_significant_event = event_type
     cycle = review_verdict_count if review_verdict_count > 0 else 1
+    paused = last_significant_event == "feature_paused"
+
+    def _result(phase: str) -> dict[str, str | int]:
+        """Wrap a phase string into the dict result, applying -paused suffix
+        for non-terminal phases when the last significant event is feature_paused.
+        Terminal phases (complete, escalated) are never suffixed.
+        """
+        if paused and phase not in ("complete", "escalated"):
+            phase = f"{phase}-paused"
+        return {
+            "phase": phase,
+            "checked": checked,
+            "total": total,
+            "cycle": cycle,
+        }
 
     # Terminal-state check: feature_wontfix is the operator-decided
     # terminal marker (per skills/lifecycle/references/wontfix.md). Treat
@@ -292,12 +318,7 @@ def _detect_lifecycle_phase_inner(
     # substring scan at the next step, which stays as a fallback for
     # legacy logs.
     if feature_wontfix_seen:
-        return {
-            "phase": "complete",
-            "checked": checked,
-            "total": total,
-            "cycle": cycle,
-        }
+        return _result("complete")
 
     # Read review.md only for verdict-value extraction (Step 2 below).
     review_md = feature_dir / "review.md"
@@ -311,95 +332,40 @@ def _detect_lifecycle_phase_inner(
 
     # Step 1: event-based completion check
     if events_content and '"feature_complete"' in events_content:
-        return {
-            "phase": "complete",
-            "checked": checked,
-            "total": total,
-            "cycle": cycle,
-        }
+        return _result("complete")
 
     # Step 2: review.md verdict
     if verdict_matches:
         verdict = verdict_matches[-1]
         if verdict == "APPROVED":
-            return {
-                "phase": "complete",
-                "checked": checked,
-                "total": total,
-                "cycle": cycle,
-            }
+            return _result("complete")
         elif verdict == "CHANGES_REQUESTED":
-            return {
-                "phase": "implement-rework",
-                "checked": checked,
-                "total": total,
-                "cycle": cycle,
-            }
+            return _result("implement-rework")
         elif verdict == "REJECTED":
-            return {
-                "phase": "escalated",
-                "checked": checked,
-                "total": total,
-                "cycle": cycle,
-            }
+            return _result("escalated")
 
     # Step 3: plan.md task completion (gated by plan_approved or migration sentinel)
     if plan_md.is_file():
         if not (plan_approved or plan_transitioned_out):
             # Plan written but not approved — stay in plan phase.
-            return {
-                "phase": "plan",
-                "checked": checked,
-                "total": total,
-                "cycle": cycle,
-            }
+            return _result("plan")
         if total > 0 and checked == total:
-            return {
-                "phase": "review",
-                "checked": checked,
-                "total": total,
-                "cycle": cycle,
-            }
+            return _result("review")
         else:
-            return {
-                "phase": "implement",
-                "checked": checked,
-                "total": total,
-                "cycle": cycle,
-            }
+            return _result("implement")
 
     # Step 4: spec.md exists -> plan phase (gated by spec_approved or migration sentinel)
     if (feature_dir / "spec.md").is_file():
         if not (spec_approved or spec_transitioned_out):
-            return {
-                "phase": "specify",
-                "checked": checked,
-                "total": total,
-                "cycle": cycle,
-            }
-        return {
-            "phase": "plan",
-            "checked": checked,
-            "total": total,
-            "cycle": cycle,
-        }
+            return _result("specify")
+        return _result("plan")
 
     # Step 5: research.md exists -> specify phase
     if (feature_dir / "research.md").is_file():
-        return {
-            "phase": "specify",
-            "checked": checked,
-            "total": total,
-            "cycle": cycle,
-        }
+        return _result("specify")
 
     # Step 6: default -> research phase
-    return {
-        "phase": "research",
-        "checked": checked,
-        "total": total,
-        "cycle": cycle,
-    }
+    return _result("research")
 
 
 def detect_lifecycle_phase(feature_dir: Path) -> dict[str, str | int]:

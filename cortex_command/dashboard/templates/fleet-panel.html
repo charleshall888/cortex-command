@@ -15,7 +15,7 @@
     <div class="card-row">
       <strong>{{ slug }}</strong>
       {% if card.current_phase != '—' %}
-      <span class="phase-label">· {{ card.current_phase }}</span>
+      <span class="phase-label">· {{ card.current_phase | phase_label }}</span>
       {% endif %}
       {% if model %}
         {% set model_class = 'badge-purple' if model == 'opus' else ('badge-gray' if model == 'haiku' else 'badge-blue') %}

@@ -95,6 +95,8 @@ Reference table (one line per `phase` value):
 | `complete`         | `events.log` has a `feature_complete` event, or `review.md` verdict is `APPROVED` — feature done. |
 | `escalated`        | `review.md` verdict is `REJECTED`; present reviewer analysis and ask the user for direction.      |
 
+**Paused suffix**: when the detected phase ends in `-paused` (e.g. `implement-paused:3/5`, `review-paused`), strip the `-paused` portion for routing-table lookup above; display the full label including ` — paused` to the user. The `-paused` marker is set when `events.log`'s most recent significant event among `{phase_transition, feature_complete, feature_wontfix, feature_paused}` is `feature_paused`. A later `phase_transition` event resumes the feature and clears the marker. This rule survives future `-paused` variants without table updates.
+
 **Detect criticality**: After determining the phase, read criticality via `cortex-lifecycle-state --feature {feature} --field criticality` (emits JSON; defaults to `medium` when the key is absent or events.log is missing). Report the detected criticality alongside the detected phase when resuming.
 
 **Detect complexity tier**: After determining the phase, read the active complexity tier via `cortex-lifecycle-state --feature {feature} --field tier` (emits JSON applying the canonical rule that `lifecycle_start.tier` is superseded by the most recent `complexity_override.to`; defaults to `simple` when the key is absent). Report the detected tier alongside the detected phase when resuming.

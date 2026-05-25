@@ -189,6 +189,11 @@ templates.env.filters["format_duration_secs"] = _format_duration_secs
 templates.env.filters["badge_class"] = _badge_class
 templates.env.filters["badge_icon"] = _badge_icon
 templates.env.filters["format_date"] = _format_date
+# Canonical wire-format → human-readable phase label, shared with the
+# SessionStart hook so paused features render as "Implement — paused"
+# consistently across surfaces.
+from cortex_command.phase_labels import phase_label as _phase_label_filter
+templates.env.filters["phase_label"] = _phase_label_filter
 
 # ---------------------------------------------------------------------------
 # PID file path (XDG-compliant)

@@ -1187,14 +1187,17 @@ def compute_slow_flags(
         # Determine tier from pipeline_dispatch; fall back to "simple"
         tier: str = pipeline_dispatch.get(slug, {}).get("complexity") or "simple"
 
-        # Select phase key based on phase and tier
-        if current_phase in ("implement", "implement-rework"):
+        # Select phase key based on phase and tier. Strip -paused suffix
+        # first so a paused feature still hits the slow-flag classifier
+        # for its underlying phase (paused implement remains tracked).
+        base_phase = current_phase.removesuffix("-paused") if isinstance(current_phase, str) else current_phase
+        if base_phase in ("implement", "implement-rework"):
             if tier == "complex":
                 phase_key = "implement_to_review"
             else:
                 # simple or trivial
                 phase_key = "implement_to_complete"
-        elif current_phase == "review":
+        elif base_phase == "review":
             phase_key = "review_to_complete"
         else:
             # research, specify, plan, complete — no mapping

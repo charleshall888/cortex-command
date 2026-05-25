@@ -59,7 +59,7 @@
           {% if st == 'pending' %}
             <span class="phase-label">queued{% if feat.round_assigned %} · R{{ feat.round_assigned }}{% endif %}</span>
           {% else %}
-            <span class="phase-label">{{ current_phase }}</span>
+            <span class="phase-label">{{ current_phase | phase_label }}</span>
             {% if plan_prog and plan_prog[1] > 0 %}
             <span class="num num--sm" title="plan tasks complete">· {{ plan_prog[0] }} / {{ plan_prog[1] }} tasks</span>
             <span class="feature-row__bar" aria-hidden="true"><i style="--w: {{ (plan_prog[0] / plan_prog[1] * 100) | int }}%"></i></span>
@@ -107,7 +107,7 @@
           <dl>
             <dt>slug</dt><dd>{{ slug }}</dd>
             <dt>status</dt><dd>{{ st }}</dd>
-            <dt>phase</dt><dd>{{ current_phase }}</dd>
+            <dt>phase</dt><dd>{{ current_phase | phase_label }}</dd>
             {% if model %}<dt>model</dt><dd>{{ model }}</dd>{% endif %}
             {% if complexity %}<dt>complexity</dt><dd>{{ complexity }}</dd>{% endif %}
             {% if dispatch.criticality %}<dt>criticality</dt><dd>{{ dispatch.criticality }}</dd>{% endif %}

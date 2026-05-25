@@ -127,8 +127,9 @@ def _extract_statusline_ladder() -> str:
     The ladder content has shifted with documenting comments inserted by
     Task 10 above L377 — re-locate by content, not line number. The block
     starts with `_lc_phase=""` (the variable initialiser at the top of the
-    ladder) and ends with the `_lc_phase="research"` default fallback
-    line. We slice between those two anchors.
+    ladder) and ends just before the `# Skip completed features` marker
+    comment (so the slice includes the -paused suffix logic that runs
+    after the research-default fallback).
     """
     src = STATUSLINE_PATH.read_text()
     # Anchor on the literal `_lc_phase=""` initialiser. There is exactly
@@ -143,16 +144,18 @@ def _extract_statusline_ladder() -> str:
             "update the parity test extractor."
         )
     start = init_matches[0].start()
-    # End anchor: the `_lc_phase="research"` default. Match the line that
-    # contains it as a whole-line statement (not the case-arm).
-    end_pattern = r'_lc_phase="research"\s*$'
+    # End anchor: the `# Skip completed features` marker comment that
+    # comes after the research default AND the -paused suffix logic.
+    # Anchoring here keeps the slice contiguous with the canonical
+    # detector behaviour (including paused-state ripple).
+    end_pattern = r'^\s*# Skip completed features\s*$'
     end_match = re.search(end_pattern, src[start:], re.MULTILINE)
     if not end_match:
         raise RuntimeError(
-            f"Could not find `_lc_phase=\"research\"` end anchor in "
+            f"Could not find `# Skip completed features` end anchor in "
             f"{STATUSLINE_PATH} after the ladder init."
         )
-    end = start + end_match.end()
+    end = start + end_match.start()
     return src[start:end]
 
 
@@ -252,16 +255,20 @@ def _parse_statusline_phase(emitted: str) -> tuple[str, int, int]:
 
     The statusline emits one of:
       - bare phase string: "research", "specify", "plan", "review",
-        "complete", "escalated", "implement-rework"
-      - "implement:N/M" with progress fraction
+        "complete", "escalated", "implement-rework", or any of these with a
+        trailing "-paused" suffix (e.g. "review-paused").
+      - "implement:N/M" with progress fraction, or "implement-paused:N/M"
+        with the same progress payload on a paused implement feature.
 
     Cycle is NOT emitted by the ladder (structural cycle-blindness); the
     caller compares against the canonical detector's dict EXCLUDING cycle.
     """
-    if emitted.startswith("implement:"):
-        frac = emitted[len("implement:"):]
+    if emitted.startswith("implement:") or emitted.startswith("implement-paused:"):
+        prefix = "implement-paused:" if emitted.startswith("implement-paused:") else "implement:"
+        base_phase = "implement-paused" if prefix == "implement-paused:" else "implement"
+        frac = emitted[len(prefix):]
         checked_str, total_str = frac.split("/", 1)
-        return ("implement", int(checked_str), int(total_str))
+        return (base_phase, int(checked_str), int(total_str))
     # Bare phase string — checked/total default to 0 (no progress info on
     # the wire). The canonical detector reports the actual checked/total
     # for the phase, so we must skip those dimensions in the comparison
@@ -417,13 +424,14 @@ def _expected_wire_from_canonical(fixture_dir: Path) -> str:
     checked = int(r["checked"])
     total = int(r["total"])
     cycle = int(r["cycle"])
-    if phase == "implement":
-        if total > 0:
-            return f"implement:{checked}/{total}"
-        return "implement:0/0"
-    if phase == "implement-rework":
-        return f"implement-rework:{cycle}"
-    return phase
+    paused_suffix = "-paused" if phase.endswith("-paused") else ""
+    base = phase.removesuffix("-paused")
+    if base == "implement":
+        payload = f"{checked}/{total}" if total > 0 else "0/0"
+        return f"implement{paused_suffix}:{payload}"
+    if base == "implement-rework":
+        return f"implement-rework{paused_suffix}:{cycle}"
+    return f"{base}{paused_suffix}"
 
 
 def _label_to_wire(label: str) -> str:
@@ -435,14 +443,18 @@ def _label_to_wire(label: str) -> str:
     L207-220.
     """
     label = label.strip()
+    paused = label.endswith(" — paused")
+    if paused:
+        label = label[: -len(" — paused")]
+    paused_suffix = "-paused" if paused else ""
     # implement:N/M -> "Implement (N/M tasks done)"
     m = re.fullmatch(r"Implement \((\d+/\d+) tasks done\)", label)
     if m:
-        return f"implement:{m.group(1)}"
+        return f"implement{paused_suffix}:{m.group(1)}"
     # implement-rework:K -> "Implement — rework (review cycle K)"
     m = re.fullmatch(r"Implement — rework \(review cycle (\d+)\)", label)
     if m:
-        return f"implement-rework:{m.group(1)}"
+        return f"implement-rework{paused_suffix}:{m.group(1)}"
     # Bare phase labels.
     bare = {
         "Research": "research",
@@ -453,7 +465,7 @@ def _label_to_wire(label: str) -> str:
         "Escalated (REJECTED — needs user direction)": "escalated",
     }
     if label in bare:
-        return bare[label]
+        return f"{bare[label]}{paused_suffix}"
     raise AssertionError(f"Unrecognised hook phase label: {label!r}")
 
 

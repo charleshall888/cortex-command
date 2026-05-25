@@ -162,9 +162,19 @@ def collect_items(
         # "implement", "implement-rework", "review", "complete", "escalated"}.
         # `"implement-rework"` was added when phase detection was unified
         # around `claude/common.py`. See skills/backlog/references/schema.md
-        # for the full backlog schema.
+        # for the full backlog schema. The index.json `lifecycle_phase`
+        # field stores the BASE phase; the `-paused` state lives in the
+        # events.log and is recoverable via `cortex-common detect-phase`.
+        # Stripping at the write boundary keeps the closed-set invariant
+        # stable for downstream index.json readers (morning-review
+        # report, dashboard merges, etc.).
         if lc_dir and lc_dir.is_dir():
-            lifecycle_phase: str | None = detect_lifecycle_phase(lc_dir)["phase"]
+            detected_phase = detect_lifecycle_phase(lc_dir)["phase"]
+            lifecycle_phase: str | None = (
+                detected_phase.removesuffix("-paused")
+                if isinstance(detected_phase, str)
+                else detected_phase
+            )
         else:
             lifecycle_phase = _opt(fm, "lifecycle_phase")
 

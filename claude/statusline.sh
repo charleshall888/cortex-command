@@ -398,11 +398,25 @@ if [ -d "$_lc_base" ]; then
     _lc_plan_approved=0
     _lc_spec_transitioned_out=0
     _lc_plan_transitioned_out=0
+    _lc_paused=0
     if [ -f "$_lc_fdir/events.log" ]; then
       grep -q '"event"[[:space:]]*:[[:space:]]*"spec_approved"' "$_lc_fdir/events.log" 2>/dev/null && _lc_spec_approved=1
       grep -q '"event"[[:space:]]*:[[:space:]]*"plan_approved"' "$_lc_fdir/events.log" 2>/dev/null && _lc_plan_approved=1
       grep -qE '"event"[[:space:]]*:[[:space:]]*"phase_transition"[^}]*"from"[[:space:]]*:[[:space:]]*"specify"' "$_lc_fdir/events.log" 2>/dev/null && _lc_spec_transitioned_out=1
       grep -qE '"event"[[:space:]]*:[[:space:]]*"phase_transition"[^}]*"from"[[:space:]]*:[[:space:]]*"plan"' "$_lc_fdir/events.log" 2>/dev/null && _lc_plan_transitioned_out=1
+      # Mirror common._detect_lifecycle_phase_inner's feature_paused rung:
+      # if the most recent significant event (phase_transition,
+      # feature_complete, feature_wontfix, feature_paused) by line position
+      # is feature_paused, mark the feature paused and append -paused to the
+      # derived phase below. Full-file scan (not tail -50) to match Python's
+      # semantics.
+      # `|| true`: grep exits 1 when nothing matches, which would abort
+      # the script under `set -euo pipefail`. We treat "no significant
+      # event found" as "not paused" — the absence of a match is fine.
+      _lc_last_sig=$(grep -oE '"event"[[:space:]]*:[[:space:]]*"(phase_transition|feature_paused|feature_complete|feature_wontfix)"' "$_lc_fdir/events.log" 2>/dev/null | tail -1 || true)
+      case "$_lc_last_sig" in
+        *feature_paused*) _lc_paused=1 ;;
+      esac
     fi
 
     if [ -f "$_lc_fdir/events.log" ] && grep -q '"feature_complete"' "$_lc_fdir/events.log" 2>/dev/null; then
@@ -452,6 +466,21 @@ if [ -d "$_lc_base" ]; then
     fi
     [ -z "$_lc_phase" ] && [ -f "$_lc_fdir/research.md" ] && _lc_phase="specify"
     [ -z "$_lc_phase" ] && _lc_phase="research"
+
+    # Apply -paused suffix when the most recent significant event was
+    # feature_paused. Terminal phases (complete, escalated, awaiting-merge)
+    # are not suffixed — they bypass the paused state. The suffix inserts
+    # before any :N/M payload so wire-format stays implement-paused:3/5
+    # rather than implement:3/5-paused.
+    if [ "$_lc_paused" = "1" ] \
+        && [ "$_lc_phase" != "complete" ] \
+        && [ "$_lc_phase" != "escalated" ] \
+        && [ "$_lc_phase" != "complete:awaiting-merge" ]; then
+      case "$_lc_phase" in
+        *:*) _lc_phase="${_lc_phase%%:*}-paused:${_lc_phase#*:}" ;;
+        *)   _lc_phase="${_lc_phase}-paused" ;;
+      esac
+    fi
 
     # Skip completed features
     [ "$_lc_phase" = "complete" ] && continue
