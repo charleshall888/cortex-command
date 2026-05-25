@@ -346,6 +346,55 @@ def _emit_diag(record: dict) -> None:
         pass
 
 
+def _emit_candidate_diag(
+    feature_dir: Path,
+    feature: str,
+    decision: str,
+    exclude_reason: str | None,
+    encoded_phase: str | None,
+    backlog_status_map: dict[str, str],
+    stale_days: int,
+) -> None:
+    """Construct and emit one per-candidate JSONL diagnostic record.
+
+    R14 schema: ``ts``, ``feature``, ``decision`` ("included"/"excluded"),
+    ``exclude_reason`` (when excluded — "stale"/"morning_review"/
+    "complete_no_pr"), ``latest_event_ts``, ``threshold_days``,
+    ``last_event``, ``events_phase``, ``backlog_status``,
+    ``index_json_resolved``, ``mismatch``.
+
+    For excluded candidates that haven't reached phase detection (stale,
+    morning_review), ``encoded_phase`` is ``None`` and ``mismatch`` is
+    ``False``. For complete-no-PR exclusions, ``encoded_phase`` is the
+    detected ``complete`` value so the mismatch predicate can still
+    surface backlog disagreements (e.g., events=complete but
+    backlog=in_progress — the inverse of #075).
+    """
+
+    import datetime as _dt
+
+    meta = _events_log_meta(feature_dir)
+    backlog_status = backlog_status_map.get(feature)
+    has_mismatch = (
+        _is_terminal_mismatch(encoded_phase, backlog_status)
+        if encoded_phase is not None
+        else False
+    )
+    _emit_diag({
+        "ts": _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "feature": feature,
+        "decision": decision,
+        "exclude_reason": exclude_reason,
+        "latest_event_ts": meta.get("latest_ts"),
+        "threshold_days": stale_days,
+        "last_event": meta.get("last_event"),
+        "events_phase": encoded_phase,
+        "backlog_status": backlog_status,
+        "index_json_resolved": feature in backlog_status_map,
+        "mismatch": has_mismatch,
+    })
+
+
 def _is_stale(feature_dir: Path, threshold_days: int) -> bool:
     """Return True if the latest events.log event is older than threshold_days.
 
@@ -825,6 +874,15 @@ def main(argv: list[str] | None = None) -> int:
         stale_days = int(os.environ.get("CORTEX_SCAN_LIFECYCLE_STALE_DAYS", "30"))
     except (TypeError, ValueError):
         stale_days = 30
+
+    # --- Load backlog status map once (T11) ---
+    # Single read of cortex/backlog/index.json keyed by lifecycle_slug,
+    # consumed below by both candidate loops (for the included-feature
+    # mismatch annotation AND for the per-candidate JSONL diagnostic
+    # records). Fail-open on missing / unparseable index — reconciliation
+    # degrades silently rather than blocking the hook.
+    backlog_status_map, _ = _load_backlog_status_map(cwd)
+
     candidate_dirs: list[Path] = []
     candidate_features: list[str] = []
     try:
@@ -835,24 +893,27 @@ def main(argv: list[str] | None = None) -> int:
         if not child.is_dir():
             continue
         feature = child.name
+        # Non-lifecycle structural exclusions (archive, sessions registry,
+        # non-dir entries) are pre-candidate — no diagnostic emitted.
         if feature in ("archive", "sessions"):
             continue
         if _is_stale(child, stale_days):
+            _emit_candidate_diag(
+                child, feature, "excluded", "stale", None,
+                backlog_status_map, stale_days,
+            )
             continue
         # Suppress Morning Review batch features.
         if pipeline_state.morning_review_active and (
             feature in pipeline_state.morning_review_features
         ):
+            _emit_candidate_diag(
+                child, feature, "excluded", "morning_review", None,
+                backlog_status_map, stale_days,
+            )
             continue
         candidate_dirs.append(child)
         candidate_features.append(feature)
-
-    # --- Load backlog status map once (T11) ---
-    # Single read of cortex/backlog/index.json keyed by lifecycle_slug,
-    # consumed below by the per-candidate loop. Fail-open on missing /
-    # unparseable index — reconciliation degrades silently rather than
-    # blocking the hook.
-    backlog_status_map, _backlog_duplicate_slugs = _load_backlog_status_map(cwd)
 
     # --- Phase detection per candidate (bash precedent lines 249-326) ---
     incomplete: list[tuple[str, str, bool, str | None]] = []
@@ -896,31 +957,27 @@ def main(argv: list[str] | None = None) -> int:
             ):
                 encoded = "complete:awaiting-merge"
             else:
+                # Complete-no-PR exclusion: feature is suppressed from the
+                # incomplete enumeration, but the diagnostic still emits so
+                # an inverse-#075 case (events=complete + backlog non-terminal)
+                # surfaces in the JSONL for post-mortem review.
+                _emit_candidate_diag(
+                    feature_dir, feature, "excluded", "complete_no_pr",
+                    encoded, backlog_status_map, stale_days,
+                )
                 continue
 
         backlog_status = backlog_status_map.get(feature)
         has_mismatch = _is_terminal_mismatch(encoded, backlog_status)
         incomplete.append((feature, encoded, has_mismatch, backlog_status))
 
-        # T14 diagnostic: one record per rendered candidate. Excluded
-        # candidates (stale / morning-review-batch / complete-no-PR) are
-        # emitted separately below by the same loop body's continue
-        # branches; we only land here when the feature WILL appear in
-        # the incomplete list.
-        import datetime as _dt
-        meta = _events_log_meta(feature_dir)
-        _emit_diag({
-            "ts": _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "feature": feature,
-            "decision": "rendered",
-            "latest_event_ts": meta.get("latest_ts"),
-            "threshold_days": stale_days,
-            "last_event": meta.get("last_event"),
-            "events_phase": encoded,
-            "backlog_status": backlog_status,
-            "index_json_resolved": feature in backlog_status_map,
-            "mismatch": has_mismatch,
-        })
+        # T14 diagnostic: one record per included candidate. Excluded
+        # candidates (stale / morning_review / complete_no_pr) emit from
+        # their respective continue branches above.
+        _emit_candidate_diag(
+            feature_dir, feature, "included", None, encoded,
+            backlog_status_map, stale_days,
+        )
 
     # No incomplete features and no pipeline context — nothing to inject.
     if not incomplete and not pipeline_state.context_string:

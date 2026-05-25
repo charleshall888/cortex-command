@@ -1563,12 +1563,14 @@ def test_session_diagnostic_written(
     record = json.loads(lines[0])
     # Schema sanity: required fields present per spec R14.
     for key in (
-        "ts", "feature", "decision", "latest_event_ts", "threshold_days",
-        "last_event", "events_phase", "backlog_status",
+        "ts", "feature", "decision", "exclude_reason", "latest_event_ts",
+        "threshold_days", "last_event", "events_phase", "backlog_status",
         "index_json_resolved", "mismatch",
     ):
         assert key in record, f"diagnostic record missing {key!r}: {record!r}"
     assert record["feature"] == "diag-feat"
+    assert record["decision"] == "included"
+    assert record["exclude_reason"] is None
     assert record["events_phase"] == "plan"
     assert record["backlog_status"] == "in_progress"
     assert record["index_json_resolved"] is True
@@ -1669,3 +1671,70 @@ def test_e2e_session_start_envelope(
             assert "[mismatch:" not in line, (
                 f"clean-alignment feature should not carry mismatch annotation: {line!r}"
             )
+
+
+def test_session_diagnostic_excluded_stale(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """T14 rework: stale-excluded candidates also emit a diagnostic record
+    with decision='excluded' and exclude_reason='stale'.
+
+    Without this emission, post-mortem debug of "why did the SessionStart
+    enumeration silently drop this feature?" is impossible — exactly the
+    failure mode the R14 spec calls out under Non-Requirements ("future
+    #075 staleness-filter bypass debuggable").
+    """
+    import datetime as _dt
+
+    repo = tmp_path / "repo"
+    # Create a stale feature: events.log with an ancient ts so it falls
+    # outside the 30-day staleness window (default).
+    feat_dir = repo / "cortex" / "lifecycle" / "stale-feat"
+    feat_dir.mkdir(parents=True, exist_ok=True)
+    old_ts = (
+        _dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(days=120)
+    ).strftime("%Y-%m-%dT%H:%M:%SZ")
+    (feat_dir / "events.log").write_text(
+        json.dumps({"ts": old_ts, "event": "lifecycle_start", "feature": "stale-feat"}) + "\n",
+        encoding="utf-8",
+    )
+    (feat_dir / "research.md").write_text("# stale\n", encoding="utf-8")
+
+    # Default staleness threshold (30 days) applies; ensure env is unset.
+    monkeypatch.delenv("CORTEX_SCAN_LIFECYCLE_STALE_DAYS", raising=False)
+    env_file = repo / ".claude-env"
+    env_file.write_text("", encoding="utf-8")
+    monkeypatch.setenv("CLAUDE_ENV_FILE", str(env_file))
+    monkeypatch.setenv("LIFECYCLE_SESSION_ID", "stale-diag-uuid")
+    monkeypatch.chdir(repo)
+    monkeypatch.setattr(
+        "sys.stdin",
+        io.StringIO(json.dumps({"session_id": "x", "cwd": str(repo)})),
+    )
+
+    rc = scan_lifecycle_mod.main()
+    assert rc == 0
+
+    diag_path = (
+        repo / "cortex" / "lifecycle" / "sessions" / "stale-diag-uuid"
+        / "scan-lifecycle-diag.jsonl"
+    )
+    assert diag_path.is_file(), f"diagnostic not written at {diag_path}"
+    lines = [ln for ln in diag_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    # Locate the stale-feat record.
+    stale_records = [
+        json.loads(ln) for ln in lines
+        if json.loads(ln).get("feature") == "stale-feat"
+    ]
+    assert len(stale_records) == 1, (
+        f"expected exactly one diagnostic for stale-feat, got {stale_records!r}"
+    )
+    record = stale_records[0]
+    assert record["decision"] == "excluded", record
+    assert record["exclude_reason"] == "stale", record
+    # events_phase should be None for stale exclusions (phase detection skipped).
+    assert record["events_phase"] is None, record
+    # latest_event_ts surfaces the old ts so post-mortem can see WHY it's stale.
+    assert record["latest_event_ts"] == old_ts, record
+    assert record["threshold_days"] == 30, record
