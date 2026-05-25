@@ -36,6 +36,10 @@ if ! command -v cortex-worktree-resolve >/dev/null 2>&1; then
   exit 1
 fi
 
+# Resolves to <repo>/.claude/worktrees/$NAME for same-repo features (the new
+# default since #260) and to $TMPDIR/overnight-worktrees/<session>/$NAME for
+# cross-repo overnight features. Both paths route through the single
+# `resolve_worktree_root()` chokepoint in cortex_command/pipeline/worktree.py.
 if ! WORKTREE_PATH=$(cortex-worktree-resolve "$NAME"); then
   echo "WorktreeCreate hook error: cortex-worktree-resolve not on PATH or failed. Possible causes: (1) cortex-command not installed (install via 'uv tool install git+https://github.com/charleshall888/cortex-command.git@<tag>'); (2) Claude Code launched via Dock/Finder on macOS — launchd's minimal PATH may not include the cortex-tool bin dir; try launching Claude Code from Terminal, OR add the cortex-tool bin path to a launchd plist (see docs/setup.md)." >&2
   exit 1

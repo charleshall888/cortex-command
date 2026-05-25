@@ -1,5 +1,7 @@
 # Research: Change resolve_worktree_root() branch (c) default + retire R7
 
+> **Superseded by #260** — this lifecycle's empirical premise (Seatbelt deny blocks `git worktree add` into `.claude/`) was refuted on 2026-05-20. The `.mcp.json` deny mechanism sections are preserved as a historical misdiagnosis record.
+
 ## Topic
 
 Change `resolve_worktree_root()` branch (c) default at `cortex_command/pipeline/worktree.py:159-162` from `<repo>/.claude/worktrees/<feature>` to `$TMPDIR/cortex-worktrees/<feature>` so same-repo daytime/lifecycle dispatch produces a sandbox-friendly worktree path without requiring an env-prefix; remove `cortex init` Step 8 at `cortex_command/init/handler.py:201-211` (worktree-root allowWrite registration) since it cannot relieve the Seatbelt `.mcp.json` deny; add a structural regression test in `tests/test_worktree.py`; supersede R7 (must-have) of the `cortex/lifecycle/harden-autonomous-dispatch-path-for-interactive` lifecycle with empirical evidence.

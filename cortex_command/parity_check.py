@@ -62,16 +62,6 @@ RESERVED_NON_BIN_NAMES: frozenset[str] = frozenset(
         # docs/overnight-operations.md prose. Not deployable bin scripts.
         "cortex-seatbelt-output-",
         "cortex-seatbelt-result-",
-        # Same-repo worktree-root directory name introduced by the
-        # `restore-worktree-root-env-prefix` lifecycle: the resolver default is
-        # `$TMPDIR/cortex-worktrees/<feature>`. Referenced in docstrings, tests,
-        # and prose throughout the codebase; not a deployable script.
-        "cortex-worktrees",
-        # Sentinel suffix used to mark cortex-registered worktree-root entries
-        # in `~/.claude/settings.local.json::allowWrite` (entries take the
-        # shape `<path>#cortex-worktree-root`). Introduced by the same lifecycle
-        # above; replaces the prior fragile substring-match scheme. Not a script.
-        "cortex-worktree-root",
     }
 )
 

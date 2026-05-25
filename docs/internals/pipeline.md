@@ -29,7 +29,7 @@ The `cortex_command/pipeline/` module contains the execution machinery used by t
 | `conflict.py` | Merge conflict classification and repair agent dispatch; inspects unmerged files, aborts in-progress merges, provides `dispatch_repair_agent()` |
 | `merge_recovery.py` | Post-merge test-failure recovery loop; orchestrates flaky guard followed by up to two code-repair attempts with model escalation (sonnet → opus) |
 | `review_dispatch.py` | Post-merge review dispatcher; loads `prompts/review.md` via `_load_review_prompt()`, runs a review agent against the merged state, parses `APPROVED` / `CHANGES_REQUESTED` / `REJECTED` verdicts, and writes the rework deferral on cycle-2 non-`APPROVED` |
-| `worktree_resolve_cli.py` | The `cortex-worktree-resolve` console script — single chokepoint that resolves a feature name to its worktree path (`$TMPDIR/cortex-worktrees/<name>/`) for the worktree-create hook and recovery commands |
+| `worktree_resolve_cli.py` | The `cortex-worktree-resolve` console script — single chokepoint that resolves a feature name to its worktree path (`<repo>/.claude/worktrees/<name>/`) for the worktree-create hook and recovery commands |
 
 ---
 
@@ -138,9 +138,9 @@ This is a risk-targeted audit, not an exhaustive enumeration of every potential 
 ## Integration Branch
 
 Feature branches are named `pipeline/{feature}`. After `batch_runner.py` merges a feature branch,
-the source worktree at `$TMPDIR/cortex-worktrees/{feature}/` is cleaned up automatically by
-`worktree.py` (the path is resolved via the single `resolve_worktree_root()` chokepoint so the
-Seatbelt mandatory deny on `.mcp.json` cannot block in-repo writes).
+the source worktree at `<repo>/.claude/worktrees/{feature}/` is cleaned up automatically by
+`worktree.py` (the path is resolved via the single `resolve_worktree_root()` chokepoint —
+Anthropic-aligned repo-relative default, lives under the project's trust scope).
 
 For overnight sessions, merges target an integration branch `overnight/{session_id}`.
 

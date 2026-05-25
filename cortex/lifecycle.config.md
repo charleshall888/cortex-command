@@ -32,7 +32,7 @@ This project's frontmatter sets `branch-mode: prompt` to preserve the existing p
 
 ### Values (closed set)
 
-- `worktree-interactive` — skip the picker and proceed directly to the worktree-interactive path (creates a feature branch and a `$TMPDIR/cortex-worktrees/` worktree, hands off to a new Claude Code session in that worktree).
+- `worktree-interactive` — skip the picker and proceed directly to the worktree-interactive path (creates a feature branch and a `<repo>/.claude/worktrees/` worktree, hands off to a new Claude Code session in that worktree).
 - `trunk` — skip the picker and proceed on the current branch (commits land on `main`/`master`).
 - `feature-branch` — skip the picker and proceed to the feature-branch path (creates and checks out `feature/{slug}` in the current working tree).
 - `prompt` — picker fires every time (equivalent to leaving the field unset).

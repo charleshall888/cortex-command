@@ -16,7 +16,7 @@ Read `cortex/lifecycle/{feature}/plan.md` and identify pending tasks (those with
 **Branch selection**: If the current branch is `main` or `master`, prompt the user via AskUserQuestion with three options:
 
 - **Implement on current branch** (recommended) — trunk-based workflow, changes land directly on the current branch. **When to pick**: tiny, trunk-safe changes where a branch would be overhead.
-- **Implement on feature branch with worktree** — creates an `interactive/{slug}` worktree at `$TMPDIR/cortex-worktrees/interactive-{slug}/` and returns the path; the user then manually cd's into the worktree OR opens a fresh `claude --worktree=<path>` session to continue the implement phase there (Variant A vs Variant B dispatch is owned by epic #240; T10 ships only the create + handoff step). **When to pick**: medium/many-task features where you want an isolated branch with worktree but still need live steering. Proceeds to §1a below.
+- **Implement on feature branch with worktree** — creates an `interactive/{slug}` worktree at `<repo>/.claude/worktrees/interactive-{slug}/` and returns the path; the user then manually cd's into the worktree OR opens a fresh `claude --worktree=<path>` session to continue the implement phase there (Variant A vs Variant B dispatch is owned by epic #240; T10 ships only the create + handoff step). **When to pick**: medium/many-task features where you want an isolated branch with worktree but still need live steering. Proceeds to §1a below.
 - **Create feature branch** — create `feature/{lifecycle-slug}` for PR-based workflow. **When to pick**: you want a PR-based flow but cannot use a worktree (e.g., tooling that assumes a single checkout). NOTE: this runs `git checkout` on the main session and can corrupt parallel sessions in this repo.
 
 **Branch-mode dispatch preflight**: Before the uncommitted-changes guard and the runtime probe below, consult the per-repo `branch-mode` config. The `read_branch_mode` invocation here is the **structural marker** that the parity test (`tests/test_lifecycle_kept_pauses_parity.py`'s `conditional pause` sentinel) anchors against — its presence in this section is load-bearing for the documentation-parity test, in addition to gating the runtime dispatch.
@@ -125,61 +125,50 @@ from cortex_command.pipeline.worktree import create_worktree
 info = create_worktree(feature="interactive-{slug}", base_branch="main")
 ```
 
-The `interactive-` prefix causes `create_worktree` to resolve the branch as `interactive/{slug}` (via `_resolve_branch_name` with `prefix="interactive"`), and the worktree is materialized at `$TMPDIR/cortex-worktrees/interactive-{slug}/`. The function copies `.claude/settings.local.json` into the worktree and symlinks `.venv` as part of the standard post-creation steps.
+The `interactive-` prefix causes `create_worktree` to resolve the branch as `interactive/{slug}` (via `_resolve_branch_name` with `prefix="interactive"`), and the worktree is materialized at `<repo>/.claude/worktrees/interactive-{slug}/`. The function copies `.claude/settings.local.json` into the worktree and symlinks `.venv` as part of the standard post-creation steps.
 
 If creation fails (raises `ValueError`): surface the error to the user and exit §1a — do not proceed to handoff.
 
-**iv. Pre-flight check.** Verify that `~/.claude/settings.local.json` contains the worktree base path in both `sandbox.filesystem.allowWrite` and `additionalDirectories`. The worktree base path is `$CORTEX_WORKTREE_ROOT` if set, otherwise `$TMPDIR/cortex-worktrees/`. Run as a single Bash call:
+**iv. Pre-flight check.** Verify the resolved worktree path lives inside the repo root. Since #260 reverted same-repo worktrees to `<repo>/.claude/worktrees/<feature>`, the path is covered by the project's trust scope automatically — no per-shell `sandbox.filesystem.allowWrite` / `additionalDirectories` registration is required. Run as a single Bash call:
 
 ```bash
 python3 - <<'EOF'
-import json, os, sys
+import subprocess, sys
 from pathlib import Path
 
-settings_path = Path.home() / ".claude" / "settings.local.json"
-worktree_base = os.environ.get("CORTEX_WORKTREE_ROOT") or os.path.join(os.environ.get("TMPDIR", "/tmp"), "cortex-worktrees/")
-
-if not settings_path.exists():
+resolved = subprocess.run(
+    ["cortex-worktree-resolve", "interactive-{slug}"],
+    capture_output=True, text=True, check=False,
+)
+if resolved.returncode != 0:
     sys.stderr.write(
-        "Variant A requires the worktree base to be registered in your settings. "
-        "Re-run `cortex init` and retry. "
-        "See cortex/lifecycle/implement-variant-a-end-to-end/spec.md Edge Cases for context.\n"
+        "cortex-worktree-resolve failed; install cortex-core or set CORTEX_COMMAND_ROOT.\n"
     )
     sys.exit(2)
+worktree_path = Path(resolved.stdout.strip()).resolve()
+
+repo = subprocess.run(
+    ["git", "rev-parse", "--show-toplevel"],
+    capture_output=True, text=True, check=False,
+)
+if repo.returncode != 0:
+    sys.stderr.write("not inside a git repository.\n")
+    sys.exit(2)
+repo_root = Path(repo.stdout.strip()).resolve()
 
 try:
-    settings = json.loads(settings_path.read_text())
-except Exception:
+    worktree_path.relative_to(repo_root)
+except ValueError:
     sys.stderr.write(
-        "Variant A requires the worktree base to be registered in your settings. "
-        "Re-run `cortex init` and retry. "
-        "See cortex/lifecycle/implement-variant-a-end-to-end/spec.md Edge Cases for context.\n"
+        f"resolved worktree {worktree_path} is not inside repo root {repo_root}; "
+        "expected <repo>/.claude/worktrees/<feature>.\n"
     )
-    sys.exit(3)
-
-allow_write = settings.get("sandbox", {}).get("filesystem", {}).get("allowWrite", [])
-additional = settings.get("additionalDirectories", [])
-
-# Normalise: a path is considered registered if any entry is a prefix of worktree_base
-def is_registered(entries, path):
-    for e in entries:
-        if path.startswith(e) or e.startswith(path.rstrip("/").rstrip("\\")):
-            return True
-    return False
-
-if is_registered(allow_write, worktree_base) and is_registered(additional, worktree_base):
-    sys.exit(0)
-
-sys.stderr.write(
-    "Variant A requires the worktree base to be registered in your settings. "
-    "Re-run `cortex init` and retry. "
-    "See cortex/lifecycle/implement-variant-a-end-to-end/spec.md Edge Cases for context.\n"
-)
-sys.exit(2)
+    sys.exit(2)
+sys.exit(0)
 EOF
 ```
 
-Exit-code contract: exit 0 = settings are valid, proceed; exit 2 = worktree base not registered (operator should re-run `cortex init`); exit 3 = `settings.local.json` is malformed or unreadable (operator should re-run `cortex init` to recreate it). On exit 2 or 3, halt §1a — do not cd or emit the event.
+Exit-code contract: exit 0 = path is inside the repo, proceed; exit 2 = resolver failed, not in a git repo, or path escapes the repo root. On exit 2, halt §1a — do not cd or emit the event.
 
 **v. Cd handoff.** After the pre-flight check passes (exit 0), perform the following three steps in order:
 
@@ -195,7 +184,7 @@ Exit-code contract: exit 0 = settings are valid, proceed; exit 2 = worktree base
 
    The `cortex-lifecycle-event` CLI uses `_resolve_user_project_root_from_cwd()` (ignores `CORTEX_REPO_ROOT`), so the event row lands in the worktree's `cortex/lifecycle/{slug}/events.log` — not the main repo's.
 
-Variant A's cd affects only orchestrator-session Bash tool calls; sub-agent dispatch via `Agent(isolation: "worktree")` in §2 is unaffected — each sub-agent is independently rooted at `$TMPDIR/cortex-worktrees/{task-name}/`. The existing §2(e) Worktree Integration step (`implement.md:218-229`) runs `git merge worktree/{task-name}` from the feature-branch CWD (which under Variant A is `interactive/{slug}` post-cd) and then `git worktree remove` for each completed sub-agent worktree — Variant A inherits this merge-back behavior unchanged.
+Variant A's cd affects only orchestrator-session Bash tool calls; sub-agent dispatch via `Agent(isolation: "worktree")` in §2 is unaffected — each sub-agent is independently rooted at `<repo>/.claude/worktrees/{task-name}/`. The existing §2(e) Worktree Integration step (`implement.md:218-229`) runs `git merge worktree/{task-name}` from the feature-branch CWD (which under Variant A is `interactive/{slug}` post-cd) and then `git worktree remove` for each completed sub-agent worktree — Variant A inherits this merge-back behavior unchanged.
 
 **vi. Handoff.** Surface the worktree path to the user with the following message (substituting the actual resolved path from `info.path`):
 
@@ -253,7 +242,7 @@ For each task in the batch (in task order):
 1. **No-changes case**: If the task's Agent result shows no changes were made, the worktree was already auto-cleaned by the Agent tool. Skip merge and cleanup for that task.
 2. **Failed-commit case**: If `git log HEAD..worktree/{task-name} --oneline` showed zero lines (the task failed to produce a commit), skip the merge but still run cleanup: `git worktree remove "$(cortex-worktree-resolve {task-name})"` then `git branch -d worktree/{task-name}`.
 3. **Merge**: For tasks that passed the checkpoint (produced commits), run `git merge worktree/{task-name}` from the feature branch.
-4. **Cleanup**: After a successful merge, run `git worktree remove "$(cortex-worktree-resolve {task-name})"` then `git branch -d worktree/{task-name}`. The `cortex-worktree-resolve` console script returns the canonical worktree path (`$TMPDIR/cortex-worktrees/{task-name}/`) via the single resolver chokepoint.
+4. **Cleanup**: After a successful merge, run `git worktree remove "$(cortex-worktree-resolve {task-name})"` then `git branch -d worktree/{task-name}`. The `cortex-worktree-resolve` console script returns the canonical worktree path (`<repo>/.claude/worktrees/{task-name}/`) via the single resolver chokepoint.
 5. **Partial integration failure**: If `git merge worktree/{task-name}` produces a conflict, surface it as an integration error including the branch name `worktree/{task-name}`. Continue processing remaining tasks in the batch — do not roll back already-merged branches.
 
 **f. Report**: Summarize what the batch accomplished and any issues before dispatching the next batch.

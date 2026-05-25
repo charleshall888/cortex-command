@@ -122,7 +122,7 @@ Revert `resolve_worktree_root()` branch (c) from `$TMPDIR/cortex-worktrees/<feat
 - **Complexity**: simple
 - **Context**: `multi-agent.md:30` — "Outputs: Git worktree at `$TMPDIR/cortex-worktrees/{feature}/`". `multi-agent.md:77` — starts "Worktrees for the default repo are created at `$TMPDIR/cortex-worktrees/{feature}/`; ... Rationale: the Seatbelt mandatory deny on .mcp.json ... blocks `git worktree add`". `pipeline.md` lines 165–167 contain language asserting the deny "blocks `git worktree add`". `cortex/lifecycle.config.md:35` describes `worktree-interactive` mode: "creates a feature branch and a `$TMPDIR/cortex-worktrees/` worktree".
 - **Verification**: `grep -c "TMPDIR/cortex-worktrees" cortex/requirements/multi-agent.md` = 0; `grep -c "blocks.*git worktree add\|git worktree add.*block" cortex/requirements/pipeline.md` = 0; `grep -c "filename-scoped\|file-scoped" cortex/requirements/pipeline.md` ≥ 1; `grep -c "cortex-worktrees" cortex/lifecycle.config.md` = 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 13: Update skill references (implement.md, parallel-execution.md, overnight/SKILL.md)
 - **Files**: `skills/lifecycle/references/parallel-execution.md`, `skills/lifecycle/references/implement.md`, `skills/overnight/SKILL.md`
@@ -131,7 +131,7 @@ Revert `resolve_worktree_root()` branch (c) from `$TMPDIR/cortex-worktrees/<feat
 - **Complexity**: simple
 - **Context**: All three files have multiple references to `cortex-worktrees`. The `implement.md` pre-flight check currently verifies `settings.local.json` contains `TMPDIR/cortex-worktrees/` in `allowWrite`/`additionalDirectories`; after this ticket that registration no longer exists. The new pre-flight check verifies `$(cortex-worktree-resolve interactive-{slug})` is inside the repo root (use `cortex-worktree-resolve` to compute the expected path, then verify it starts with `git rev-parse --show-toplevel`). The plugin mirrors at `plugins/cortex-core/skills/lifecycle/references/` regenerate via the pre-commit hook (`just build-plugin`) — only edit the canonical sources.
 - **Verification**: `grep -rn "cortex-worktrees" skills/` = 0 matches.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 14: Update operational docs (`pipeline.md`, `sdk.md`)
 - **Files**: `docs/internals/pipeline.md`, `docs/internals/sdk.md`
@@ -140,7 +140,7 @@ Revert `resolve_worktree_root()` branch (c) from `$TMPDIR/cortex-worktrees/<feat
 - **Complexity**: simple
 - **Context**: `docs/internals/pipeline.md:32` — table row for `worktree_resolve_cli.py` names `$TMPDIR/cortex-worktrees/<name>/`. `docs/internals/sdk.md:29` — "Key constraint: worktree isolation is mandatory in sandbox. The Seatbelt mandatory deny... blocks `git worktree add` from checking out `.mcp.json` into any path under the repo `.claude/` scope." This rationale needs rewriting.
 - **Verification**: `grep -rn "cortex-worktrees" docs/` = 0 matches.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 15: Drop dead parity-check exceptions; update hook comment
 - **Files**: `cortex_command/parity_check.py`, `claude/hooks/cortex-worktree-create.sh`
@@ -149,7 +149,7 @@ Revert `resolve_worktree_root()` branch (c) from `$TMPDIR/cortex-worktrees/<feat
 - **Complexity**: simple
 - **Context**: `cortex_command/parity_check.py:67–75` holds the two exception entries with descriptive comments. The exceptions exist because the parity linter (`bin/cortex-check-parity` → `cortex_command.parity_check`) flags tokens matching `cortex-*` that appear in skills/docs/tests but lack a corresponding `bin/cortex-*` deployable. With both strings expunged from live code per Tasks 1, 8, 11, 12, 13, 14, the linter no longer encounters them and the exceptions become unreachable.
 - **Verification**: `grep -c "cortex-worktrees\|cortex-worktree-root" cortex_command/parity_check.py` = 0; `grep -c "claude/worktrees" claude/hooks/cortex-worktree-create.sh` ≥ 1; `cortex-check-parity` exits 0 (the parity check itself must pass without the exceptions); `just test` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 16: Annotate superseded lifecycle artifacts (R16) and add ADR-0005
 - **Files**: `cortex/lifecycle/restore-worktree-root-env-prefix/research.md`, `cortex/lifecycle/restore-worktree-root-env-prefix/spec.md`, `cortex/adr/0005-repo-relative-worktree-placement.md`
@@ -158,7 +158,7 @@ Revert `resolve_worktree_root()` branch (c) from `$TMPDIR/cortex-worktrees/<feat
 - **Complexity**: simple
 - **Context**: The Proposed ADR in `spec.md` under `## Proposed ADR` has the full content for `0005-repo-relative-worktree-placement`. The supersedes callout must appear at the top of both files (before any existing headings). `cortex/adr/README.md` has the three-criteria gate for ADR creation — confirm ADR-0005 meets it (load-bearing decision: yes — worktree placement is consulted by sandbox, scaffolding, and lifecycle cleanup; actively contested before this ticket: yes — the prior lifecycle moved it the other way; reversal risk non-trivial: yes — requires coordinated changes across resolver, init, tests, and docs).
 - **Verification**: `grep -c "superseded\|Superseded" cortex/lifecycle/restore-worktree-root-env-prefix/research.md` ≥ 1; `grep -c "superseded\|Superseded" cortex/lifecycle/restore-worktree-root-env-prefix/spec.md` ≥ 1; `test -f cortex/adr/0005-repo-relative-worktree-placement.md` exits 0; `head -5 cortex/adr/0005-repo-relative-worktree-placement.md | grep -c "^status: accepted$"` = 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Risks
 

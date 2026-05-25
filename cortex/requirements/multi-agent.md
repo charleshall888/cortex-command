@@ -27,7 +27,7 @@ The multi-agent area covers how the system spawns, isolates, and coordinates mul
 
 - **Description**: Each feature executes in an isolated git worktree, providing independent file state and a dedicated branch to prevent interference between parallel agents.
 - **Inputs**: Feature slug, repository root, session ID
-- **Outputs**: Git worktree at `$TMPDIR/cortex-worktrees/{feature}/` (default repo) or `$TMPDIR/overnight-worktrees/{session_id}/{feature}/` (cross-repo); branch `pipeline/{feature}` (with collision suffix `-2`, `-3` if needed)
+- **Outputs**: Git worktree at `<repo>/.claude/worktrees/{feature}/` (default repo) or `$TMPDIR/overnight-worktrees/{session_id}/{feature}/` (cross-repo); branch `pipeline/{feature}` (with collision suffix `-2`, `-3` if needed)
 - **Acceptance criteria**:
   - Worktree creation is idempotent (returns existing valid worktree if already present)
   - Feature branch naming follows `pipeline/{feature}` convention with automatic collision detection
@@ -74,7 +74,7 @@ The multi-agent area covers how the system spawns, isolates, and coordinates mul
 
 - Parallelism decisions are made by the overnight orchestrator, not by individual agents — agents do not spawn peer agents.
 - The tier-based concurrency limit (1–3 workers) is a hard limit enforced by `ConcurrencyManager`; it is not overridable at runtime by agents.
-- Worktrees for the default repo are created at `$TMPDIR/cortex-worktrees/{feature}/`; cross-repo worktrees go to `$TMPDIR/overnight-worktrees/{session_id}/{feature}/`. Rationale: the Seatbelt mandatory deny on .mcp.json (enforced by Anthropic's `sandbox-runtime`, below user-level `sandbox.filesystem.allowWrite`) blocks `git worktree add` from checking out `.mcp.json` into any path under the `.claude/` deny scope. Same-repo worktrees therefore live under the per-user `$TMPDIR` carve-out, resolved through a single chokepoint (`resolve_worktree_root()` in `cortex_command/pipeline/worktree.py`). See `cortex/lifecycle/restore-worktree-root-env-prefix/` for the empirical A/B probe and R7 supersession.
+- Worktrees for the default repo are created at `<repo>/.claude/worktrees/{feature}/`; cross-repo worktrees go to `$TMPDIR/overnight-worktrees/{session_id}/{feature}/`. Rationale: Anthropic-aligned repo-relative default — the worktree lives under the project's trust scope and needs no per-shell sandbox registration. The `.mcp.json` sandbox deny is filename-scoped (blocks agent writes to `.mcp.json`) and does NOT block `git worktree add` from creating the worktree directory or checking out other files into `.claude/worktrees/`. Resolved through a single chokepoint (`resolve_worktree_root()` in `cortex_command/pipeline/worktree.py`). The `restore-worktree-root-env-prefix/` lifecycle (which moved this to `$TMPDIR`) is superseded by #260 — its empirical premise was refuted on 2026-05-20.
 - The escalation ladder is fixed: haiku → sonnet → opus. There is no downgrade path within a session.
 
 ## Dependencies
