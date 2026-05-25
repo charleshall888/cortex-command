@@ -45,7 +45,7 @@ def _write_ticket(root: Path, rel: str, body: str) -> Path:
 def _run_staged(root: Path) -> subprocess.CompletedProcess[bytes]:
     """Invoke the scanner in --staged mode with --root override."""
     return subprocess.run(
-        [sys.executable, str(SCRIPT_PATH), "--staged", "--root", str(root)],
+        [sys.executable, "-m", "cortex_command.lint.prescriptive_prose", "--staged", "--root", str(root)],
         capture_output=True,
         check=False,
     )
@@ -54,7 +54,7 @@ def _run_staged(root: Path) -> subprocess.CompletedProcess[bytes]:
 def _run_file(file_path: Path, root: Path) -> subprocess.CompletedProcess[bytes]:
     """Invoke the scanner in single-file mode with --root override."""
     return subprocess.run(
-        [sys.executable, str(SCRIPT_PATH), "--root", str(root), str(file_path)],
+        [sys.executable, "-m", "cortex_command.lint.prescriptive_prose", "--root", str(root), str(file_path)],
         capture_output=True,
         check=False,
     )
