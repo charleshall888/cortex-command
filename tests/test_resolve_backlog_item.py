@@ -17,8 +17,6 @@ Total: ≥30 named test cases.
 
 from __future__ import annotations
 
-import importlib.machinery
-import importlib.util
 import json
 import os
 import subprocess
@@ -26,6 +24,8 @@ import sys
 from pathlib import Path
 
 import pytest
+
+import cortex_command.backlog.resolve_item as _resolver_module
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = REPO_ROOT / "bin" / "cortex-resolve-backlog-item"
@@ -110,28 +110,14 @@ CURATED_INPUTS: list[str] = [
 
 
 # ---------------------------------------------------------------------------
-# Module loader (mirrors tests/test_archive_rewrite_paths.py:37-54)
+# Module fixture (canonical Task 15 pattern — direct import)
 # ---------------------------------------------------------------------------
-
-
-def _load_module():
-    """Load bin/cortex-resolve-backlog-item as an importable module.
-
-    No ``.py`` suffix — must use SourceFileLoader to import it in-process.
-    """
-    loader = importlib.machinery.SourceFileLoader(
-        "cortex_resolve_backlog_item", str(SCRIPT_PATH)
-    )
-    spec = importlib.util.spec_from_loader(loader.name, loader)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 @pytest.fixture(scope="module")
 def resolver():
-    return _load_module()
+    """Return the cortex_command.backlog.resolve_item module for unit tests."""
+    return _resolver_module
 
 
 # ---------------------------------------------------------------------------
@@ -151,7 +137,7 @@ def _run(args: list[str], backlog_dir: Path) -> subprocess.CompletedProcess:
     """Run cortex-resolve-backlog-item via subprocess against a tmp backlog dir."""
     env = {"CORTEX_BACKLOG_DIR": str(backlog_dir), **os.environ}
     return subprocess.run(
-        [sys.executable, str(SCRIPT_PATH), *args],
+        [sys.executable, "-m", "cortex_command.backlog.resolve_item", *args],
         capture_output=True,
         text=True,
         env=env,
@@ -718,7 +704,7 @@ def _run_no_env(args: list[str], cwd: Path) -> subprocess.CompletedProcess:
     """Run the script with cwd set and CORTEX_BACKLOG_DIR removed from env."""
     env = {k: v for k, v in os.environ.items() if k != "CORTEX_BACKLOG_DIR"}
     return subprocess.run(
-        [sys.executable, str(SCRIPT_PATH), *args],
+        [sys.executable, "-m", "cortex_command.backlog.resolve_item", *args],
         capture_output=True,
         text=True,
         env=env,
@@ -775,7 +761,7 @@ def _run_live(input_str: str) -> subprocess.CompletedProcess:
     """Run the helper against the live backlog/ with CORTEX_BACKLOG_DIR set."""
     env = {"CORTEX_BACKLOG_DIR": str(BACKLOG_DIR), **os.environ}
     return subprocess.run(
-        [sys.executable, str(SCRIPT_PATH), input_str],
+        [sys.executable, "-m", "cortex_command.backlog.resolve_item", input_str],
         capture_output=True,
         text=True,
         env=env,
