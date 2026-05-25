@@ -1313,3 +1313,119 @@ def test_capture_3step_baseline():
     )
     assert isinstance(loaded, dict) and "source_sha" in loaded and "rows" in loaded
     assert len(loaded["rows"]) == len(CURATED_INPUTS)
+
+
+# ---------------------------------------------------------------------------
+# T4 (unified-backlog-lifecycle-slug-resolver-extend):
+# Order-drift regression test against the frozen 3-step baseline +
+# capture-ordering gate.
+#
+# Three checks, in sequence:
+#
+#   (i)  Capture-ordering gate. The fixture embeds the git-blob SHA of
+#        resolve_item.py at capture time (pre-mutation, 3-step resolver).
+#        T2/T3 then extended resolve_item.py to the 5-step order, which
+#        must change the file's SHA. Equality between the embedded
+#        source_sha and the current git-blob SHA means the resolver has
+#        NOT been mutated since capture — the drift gate cannot
+#        meaningfully test anything. Fail with a clear diagnostic.
+#
+#   (ii) Drift check. For every row in the baseline, run the input through
+#        the post-5-step resolver via _run_live and assert the outcome
+#        (exit code + resolved filename) matches the baseline. Drift is a
+#        hard failure UNLESS the input is pre-enumerated in
+#        documented_3step_to_5step_divergences.
+#
+#   (iii) Pre-committed divergence list. Per spec
+#         §Changes-to-Existing-Behavior, substring-ambiguity inputs ("fix",
+#         "add", "overnight") were anticipated at plan time to transition
+#         from silent first-match (3-step) to exit-2 ambiguous (5-step).
+#         Pre-enumerating them here locks the expected transition set at
+#         plan time — without it, the implementer's curation IS the spec,
+#         creating a tautology where any transition the new code produces
+#         is silently labeled "intended-by-spec." Allowlist semantics: an
+#         input in this list is permitted to either diverge OR match the
+#         baseline (over-inclusion is benign; under-inclusion blocks).
+# ---------------------------------------------------------------------------
+
+# Pre-committed divergence allowlist — spec-anticipated transitions.
+# Per task brief: substring-ambiguity inputs from CURATED_INPUTS whose
+# 3-step outcome was a silent first-match and whose 5-step outcome is
+# exit=2 ambiguous. Rationale: spec §Changes-to-Existing-Behavior
+# "Currently picks the first-sorted match silently; after the change,
+# surfaces ambiguity as exit-2." Each entry below is a load-bearing
+# pre-enumeration that locks the expected transition set at plan time.
+documented_3step_to_5step_divergences: list[str] = [
+    "fix",        # spec §Changes-to-Existing-Behavior: silent first-match → exit-2
+    "add",        # spec §Changes-to-Existing-Behavior: silent first-match → exit-2
+    "overnight",  # spec §Changes-to-Existing-Behavior: silent first-match → exit-2
+]
+
+
+def test_no_order_drift_against_baseline():
+    """Assert post-5-step resolver matches the frozen 3-step baseline.
+
+    Three checks in sequence:
+
+      (i)   Capture-ordering gate — embedded source_sha must differ from
+            current resolver source.
+      (ii)  Drift check — every baseline row must match the 5-step
+            resolver outcome unless pre-enumerated.
+      (iii) Pre-enumerated divergence allowlist — spec-anticipated
+            transitions locked at plan time.
+    """
+    assert PREDICATE_3STEP_BASELINE_FIXTURE.exists(), (
+        f"baseline fixture not found at {PREDICATE_3STEP_BASELINE_FIXTURE}; "
+        "run test_capture_3step_baseline first to generate it."
+    )
+    assert BACKLOG_DIR.is_dir(), f"live backlog not found at {BACKLOG_DIR}"
+
+    data = json.loads(
+        PREDICATE_3STEP_BASELINE_FIXTURE.read_text(encoding="utf-8")
+    )
+
+    # ---- Check (i): capture-ordering gate ------------------------------
+    baseline_sha = data["source_sha"]
+    current_sha = _compute_resolve_item_source_sha()
+    assert baseline_sha != current_sha, (
+        f"baseline source_sha matches current resolver — the gate has not "
+        f"been exercised; either Tasks 2-3 have not landed yet, or the "
+        f"baseline was captured post-mutation. "
+        f"baseline_sha={baseline_sha} current_sha={current_sha}"
+    )
+
+    # ---- Check (ii): drift check (with allowlist from check iii) -------
+    allowlist = set(documented_3step_to_5step_divergences)
+    failures: list[str] = []
+    for inp, expected_exit, expected_filename in data["rows"]:
+        result = _run_live(inp)
+        if result.returncode == 0:
+            try:
+                payload = json.loads(result.stdout)
+                resolved = payload["filename"]
+            except (json.JSONDecodeError, KeyError):
+                resolved = None
+        else:
+            resolved = None
+        post_outcome = (result.returncode, resolved)
+        baseline_outcome = (expected_exit, expected_filename)
+
+        if post_outcome == baseline_outcome:
+            continue  # no drift
+
+        # Drift detected — must appear in pre-enumerated divergence list
+        if inp in allowlist:
+            continue  # spec-anticipated transition
+
+        failures.append(
+            f"Input {inp!r}: post_outcome={post_outcome} differs from "
+            f"baseline_outcome={baseline_outcome} and is not in "
+            f"documented_3step_to_5step_divergences. Either fix the "
+            f"resolver to preserve the 3-step outcome or pre-enumerate "
+            f"this input in the divergence allowlist with a spec citation."
+        )
+
+    assert not failures, (
+        f"{len(failures)} uncurated drift(s) detected:\n"
+        + "\n".join(f"  {i+1}. {msg}" for i, msg in enumerate(failures))
+    )
