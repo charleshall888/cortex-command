@@ -27,12 +27,45 @@ import json
 import os
 import re
 import sys
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Literal, Optional, Tuple
 
 import yaml
 
 from cortex_command.common import slugify
+
+
+# ---------------------------------------------------------------------------
+# Public library surface — pure resolution result + error type
+# ---------------------------------------------------------------------------
+
+
+class ResolutionError(Exception):
+    """Raised by ``resolve()`` for IO or parse failures.
+
+    The CLI shim in ``main()`` catches this and maps it to exit-70. Library
+    callers are free to catch or propagate as they see fit.
+    """
+
+
+@dataclass(frozen=True)
+class ResolutionResult:
+    """Tagged result returned by ``resolve()``.
+
+    Attributes:
+        status:
+            ``"ok"``        — unambiguous match; ``item`` is the resolved path.
+            ``"ambiguous"`` — multiple matches; ``candidates`` holds all of them.
+            ``"not_found"`` — no match in any resolution step.
+        item: Resolved ``Path`` when ``status == "ok"``; ``None`` otherwise.
+        candidates: Full candidate list when ``status == "ambiguous"``; empty
+            otherwise.
+    """
+
+    status: Literal["ok", "ambiguous", "not_found"]
+    item: Optional[Path] = None
+    candidates: List[Path] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -273,7 +306,100 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 # ---------------------------------------------------------------------------
-# Main
+# Pure library function — 3-step resolution returning a tagged result.
+# Mirrors the 3-step order (numeric → kebab → title-phrase) verbatim from
+# the prior main() flow. IO/parse failures raise ResolutionError; usage-error
+# preconditions (empty input, slugifies-to-empty) are handled at the CLI
+# boundary, NOT inside the library — callers pass a non-empty input_str and
+# the library returns status="not_found" rather than encoding exit codes.
+# ---------------------------------------------------------------------------
+
+
+def resolve(input_str: str, backlog_dir: Path) -> ResolutionResult:
+    """Resolve a fuzzy backlog reference to a ``ResolutionResult``.
+
+    Applies the existing 3-step order verbatim:
+      1) Numeric ID  (input fullmatches ``\\d+``)
+      2) Kebab-stem  (filename stem after stripping ``^\\d+-``)
+      3) Title-phrase (slugify(input) ⊆ slugify(title))
+
+    Raises:
+        ResolutionError: backlog directory missing/empty, malformed frontmatter,
+            or any IO failure during the resolution sweep.
+
+    Returns:
+        ``ResolutionResult`` whose ``status`` is one of ``"ok"``,
+        ``"ambiguous"``, or ``"not_found"``. Usage errors (empty input,
+        slugifies-to-empty) are the caller's responsibility — the library
+        treats such inputs as ``"not_found"`` when they reach this far.
+    """
+    try:
+        if not backlog_dir.is_dir():
+            raise ResolutionError(
+                f"backlog directory not found at {backlog_dir}"
+            )
+
+        items = sorted(backlog_dir.glob("[0-9]*-*.md"))
+        if not items:
+            raise ResolutionError(
+                "backlog directory contains no NNN-*.md items"
+            )
+
+        is_numeric = bool(re.fullmatch(r"\d+", input_str))
+
+        # Step 1: Numeric dispatch
+        if is_numeric:
+            matches = _resolve_numeric(input_str, items)
+            if len(matches) == 1:
+                return ResolutionResult(status="ok", item=matches[0])
+            if len(matches) > 1:
+                return ResolutionResult(
+                    status="ambiguous", candidates=list(matches)
+                )
+            # n=0: fall through to kebab
+
+        # Step 2: Kebab dispatch (skip if pure numeric — already tried above)
+        if not is_numeric:
+            kebab_matches = _resolve_kebab(input_str, items)
+            if len(kebab_matches) == 1:
+                return ResolutionResult(status="ok", item=kebab_matches[0])
+            if len(kebab_matches) > 1:
+                return ResolutionResult(
+                    status="ambiguous", candidates=list(kebab_matches)
+                )
+            # n=0: fall through to title-phrase
+
+        # Step 3: Title-phrase — load frontmatter for all items
+        items_with_fm: List[Tuple[Path, dict]] = []
+        for p in items:
+            try:
+                items_with_fm.append((p, _parse_frontmatter(p)))
+            except Exception as exc:
+                raise ResolutionError(
+                    f"{p.name}: failed to parse frontmatter"
+                ) from exc
+
+        title_matches = _resolve_title_phrase(input_str, items_with_fm)
+
+        if len(title_matches) == 1:
+            return ResolutionResult(status="ok", item=title_matches[0])
+        if len(title_matches) > 1:
+            return ResolutionResult(
+                status="ambiguous", candidates=list(title_matches)
+            )
+
+        return ResolutionResult(status="not_found")
+
+    except ResolutionError:
+        raise
+    except Exception as exc:
+        raise ResolutionError(str(exc)) from exc
+
+
+# ---------------------------------------------------------------------------
+# CLI shim — translates ResolutionResult / ResolutionError to exit codes.
+# Owns usage-error preconditions (empty input → 64; slugifies-to-empty → 64)
+# and stdout/stderr formatting; the library function knows nothing of these.
 # ---------------------------------------------------------------------------
 
 def main(argv: List[str] | None = None) -> int:  # noqa: UP007 (Python 3.9 compat)
@@ -293,110 +419,65 @@ def main(argv: List[str] | None = None) -> int:  # noqa: UP007 (Python 3.9 compa
 
     try:
         backlog_dir = _backlog_dir()
+        result = resolve(input_str, backlog_dir)
+    except ResolutionError as exc:
+        print(str(exc), file=sys.stderr)
+        return 70
+    except Exception as exc:
+        print(
+            f"cortex-resolve-backlog-item: internal error: {exc}",
+            file=sys.stderr,
+        )
+        return 70
 
-        if not backlog_dir.is_dir():
+    if result.status == "ok":
+        path = result.item
+        assert path is not None  # status="ok" guarantees item is set
+        try:
+            fm = _parse_frontmatter(path)
+        except Exception as exc:
             print(
-                f"backlog directory not found at {backlog_dir}",
+                f"cortex-resolve-backlog-item: internal error: {exc}",
                 file=sys.stderr,
             )
             return 70
-
-        items = sorted(backlog_dir.glob("[0-9]*-*.md"))
-
-        if not items:
-            print(
-                "backlog directory contains no NNN-*.md items",
-                file=sys.stderr,
+        print(
+            json.dumps(
+                _build_json(path, fm),
+                ensure_ascii=False,
+                separators=(",", ":"),
             )
-            return 70
+        )
+        return 0
 
-        # Numeric dispatch
-        if re.fullmatch(r"\d+", input_str):
-            matches = _resolve_numeric(input_str, items)
-            if len(matches) == 1:
-                fm = _parse_frontmatter(matches[0])
-                print(json.dumps(_build_json(matches[0], fm), ensure_ascii=False, separators=(",", ":")))
-                return 0
-            if len(matches) > 1:
-                # Build items_with_fm for candidate formatter
-                items_with_fm = []
-                for p in matches:
-                    try:
-                        items_with_fm.append((p, _parse_frontmatter(p)))
-                    except Exception:
-                        items_with_fm.append((p, {}))
-                print(_format_candidates(matches, items_with_fm), file=sys.stderr)
-                return 2
-            # n=0: fall through to kebab
-
-        # Kebab dispatch (skip if pure numeric — already tried above and got 0)
-        if not re.fullmatch(r"\d+", input_str):
-            kebab_matches = _resolve_kebab(input_str, items)
-            if len(kebab_matches) == 1:
-                fm = _parse_frontmatter(kebab_matches[0])
-                print(json.dumps(_build_json(kebab_matches[0], fm), ensure_ascii=False, separators=(",", ":")))
-                return 0
-            if len(kebab_matches) > 1:
-                items_with_fm = []
-                for p in kebab_matches:
-                    try:
-                        items_with_fm.append((p, _parse_frontmatter(p)))
-                    except Exception:
-                        items_with_fm.append((p, {}))
-                print(_format_candidates(kebab_matches, items_with_fm), file=sys.stderr)
-                return 2
-            # n=0: fall through to title-phrase
-
-        # Exit 64: input slugifies to empty (e.g. "!!!" → "")
-        slug_input = slugify(input_str)
-        if not slug_input and not input_str.lower().strip():
-            print(
-                f"input '{input_str}' resolves to empty after normalization; "
-                "provide more characters",
-                file=sys.stderr,
-            )
-            return 64
-
-        # For pure-numeric input that got 0 matches, also try title-phrase
-        # Load frontmatter for all items (needed for title-phrase)
+    if result.status == "ambiguous":
         items_with_fm: List[Tuple[Path, dict]] = []
-        for p in items:
+        for p in result.candidates:
             try:
                 items_with_fm.append((p, _parse_frontmatter(p)))
             except Exception:
-                # Malformed frontmatter — surface as exit 70
-                print(f"{p.name}: failed to parse frontmatter", file=sys.stderr)
-                return 70
+                items_with_fm.append((p, {}))
+        print(
+            _format_candidates(result.candidates, items_with_fm),
+            file=sys.stderr,
+        )
+        return 2
 
-        # Empty-after-slugify check for title-phrase path
-        if not slug_input:
-            # empty slug_input means input slugifies to empty — exit 64
-            print(
-                f"input '{input_str}' resolves to empty after normalization; "
-                "provide more characters",
-                file=sys.stderr,
-            )
-            return 64
+    # result.status == "not_found"
+    # Exit 64: input slugifies to empty (e.g. "!!!" → ""). Checked after the
+    # resolve() sweep so a kebab/numeric match on a literal-special-char stem
+    # wins over the usage-error guard, mirroring the pre-extraction main()
+    # sequencing where this check sat between kebab and title-phrase.
+    if not re.fullmatch(r"\d+", input_str) and not slugify(input_str):
+        print(
+            f"input '{input_str}' resolves to empty after normalization; "
+            "provide more characters",
+            file=sys.stderr,
+        )
+        return 64
 
-        title_matches = _resolve_title_phrase(input_str, items_with_fm)
-
-        if len(title_matches) == 1:
-            path = title_matches[0]
-            fm = next(fm for p, fm in items_with_fm if p == path)
-            print(json.dumps(_build_json(path, fm), ensure_ascii=False, separators=(",", ":")))
-            return 0
-
-        if len(title_matches) > 1:
-            print(_format_candidates(title_matches, items_with_fm), file=sys.stderr)
-            return 2
-
-        # No match across all strategies
-        print(f"no match for '{input_str}'", file=sys.stderr)
-        return 3
-
-    except Exception as exc:
-        print(f"cortex-resolve-backlog-item: internal error: {exc}", file=sys.stderr)
-        return 70
+    print(f"no match for '{input_str}'", file=sys.stderr)
+    return 3
 
 
 if __name__ == "__main__":

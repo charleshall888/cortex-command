@@ -11,3 +11,5 @@
 {"ts":"2026-05-25T19:27:24Z","event":"sentinel_absence","feature":"unified-backlog-lifecycle-slug-resolver-extend","reviewer_angle":"_find_item API split & caller enumeration","reason":"absent","model_tier":"sonnet","expected_sha":"cc4436347b9f8483ea166fdb50f626a0d56d7f33ed830dd07f342cd71d83a4c6","observed_sha_or_null":null}
 {"ts": "2026-05-25T19:35:00Z", "event": "plan_approved", "feature": "unified-backlog-lifecycle-slug-resolver-extend"}
 {"ts": "2026-05-25T19:35:01Z", "event": "phase_transition", "feature": "unified-backlog-lifecycle-slug-resolver-extend", "from": "plan", "to": "implement"}
+{"ts": "2026-05-25T19:47:00Z", "event": "batch_dispatch", "feature": "unified-backlog-lifecycle-slug-resolver-extend", "batch": 0, "tasks": [1]}
+{"ts": "2026-05-25T19:51:00Z", "event": "batch_dispatch", "feature": "unified-backlog-lifecycle-slug-resolver-extend", "batch": 1, "tasks": [2]}
