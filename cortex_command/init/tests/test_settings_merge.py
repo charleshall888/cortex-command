@@ -947,15 +947,12 @@ def test_dual_registration_idempotent(
 
 # (d) single-entry: exactly one cortex/ entry per cortex init invocation.
 # Note: the former `test_dual_registration_order_lifecycle_first` test was
-# removed by the `restore-worktree-root-env-prefix` lifecycle (Phase 1) — it
-# asserted on the legacy in-repo `<repo>/.claude/...`-prefixed worktree-root
-# registration path produced by R7's Step 8 in `cortex init`, which Phase 2
-# of that lifecycle deletes entirely (the new resolver default is
-# `$TMPDIR/cortex-worktrees/<feature>`). The dual-registration test was
-# structurally tied to a step being retired; removing it here lets Phase 1's
-# atomic commit land without a transient `just test` red state. See
-# `cortex/lifecycle/restore-worktree-root-env-prefix/spec.md` (R7
-# supersession).
+# removed by the `restore-worktree-root-env-prefix` lifecycle (Phase 1) and
+# the three subsequent `test_worktree_base_*` tests were removed by #260
+# (this lifecycle), which deletes the worktree-base registration step in
+# `cortex init` Step 7b entirely. Worktrees now resolve to
+# `<repo>/.claude/worktrees/<feature>` under the project's trust scope and
+# need no per-shell sandbox registration.
 
 
 # (e) malformed-sandbox refusal: R14 gate still rejects
@@ -1060,100 +1057,79 @@ def test_dual_registration_partial_failure_recovery_via_update(
 
 
 # ---------------------------------------------------------------------------
-# Worktree base registration (spec R6, Phase 2)
+# unregister_matching migration (#260): cortex init --update drops stale
+# cortex-worktrees-prefixed entries left by a prior version of cortex.
 # ---------------------------------------------------------------------------
 
 
-def test_worktree_base_in_allow_write_and_additional_directories(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """R6: cortex init writes the worktree base path into both allowWrite and
-    additionalDirectories after a fresh run."""
-    fake_home = _isolate_home(monkeypatch, tmp_path)
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    _git_init(repo)
+class TestUnregisterMatchingMigration:
+    """Migration: cortex init --update expunges stale cortex-worktrees entries."""
 
-    # Set a deterministic TMPDIR so the expected path is stable.
-    fake_tmpdir = tmp_path / "tmp"
-    fake_tmpdir.mkdir()
-    monkeypatch.setenv("TMPDIR", str(fake_tmpdir))
-    # Unset CORTEX_WORKTREE_ROOT to exercise the default code path.
-    monkeypatch.delenv("CORTEX_WORKTREE_ROOT", raising=False)
+    def test_update_removes_cortex_worktrees_entries(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """--update on a settings file with cortex-worktrees-prefixed entries
+        in both allowWrite and additionalDirectories removes both."""
+        fake_home = _isolate_home(monkeypatch, tmp_path)
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        _git_init(repo)
 
-    rc = init_main(_make_args(repo))
-    assert rc == 0
+        # Seed settings with the legacy entries that #260 migrates away.
+        legacy_allow = "/private/var/folders/xx/T/cortex-worktrees/"
+        legacy_additional = "/private/var/folders/xx/T/cortex-worktrees/"
+        keep_allow = "/some/other/path"
+        keep_additional = "/some/other/dir"
+        settings = {
+            "sandbox": {
+                "filesystem": {
+                    "allowWrite": [legacy_allow, keep_allow],
+                }
+            },
+            "additionalDirectories": [legacy_additional, keep_additional],
+        }
+        _settings_path(fake_home).write_text(
+            json.dumps(settings, indent=2) + "\n", encoding="utf-8"
+        )
 
-    data = json.loads(_settings_path(fake_home).read_text(encoding="utf-8"))
-    expected_base = str(fake_tmpdir.resolve() / "cortex-worktrees") + "/"
+        rc = init_main(_make_args(repo, update=True))
+        assert rc == 0
 
-    allow = data["sandbox"]["filesystem"]["allowWrite"]
-    assert expected_base in allow, f"worktree base missing from allowWrite: {allow}"
+        data = json.loads(_settings_path(fake_home).read_text(encoding="utf-8"))
+        allow = data["sandbox"]["filesystem"]["allowWrite"]
+        additional = data.get("additionalDirectories", [])
+        assert legacy_allow not in allow, (
+            f"legacy cortex-worktrees entry survived in allowWrite: {allow}"
+        )
+        assert legacy_additional not in additional, (
+            f"legacy cortex-worktrees entry survived in additionalDirectories: {additional}"
+        )
+        assert keep_allow in allow
+        assert keep_additional in additional
 
-    additional = data.get("additionalDirectories", [])
-    assert expected_base in additional, (
-        f"worktree base missing from additionalDirectories: {additional}"
-    )
+    def test_update_idempotent_on_clean_settings(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """--update twice on a settings file without legacy entries leaves
+        the cortex-worktrees-related state unchanged across runs."""
+        fake_home = _isolate_home(monkeypatch, tmp_path)
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        _git_init(repo)
 
+        # First --update primes the settings (Step 7 registration).
+        assert init_main(_make_args(repo, update=True)) == 0
+        first = _settings_path(fake_home).read_text(encoding="utf-8")
+        # Second --update should be a no-op for the migration predicate.
+        assert init_main(_make_args(repo, update=True)) == 0
+        second = _settings_path(fake_home).read_text(encoding="utf-8")
+        assert first == second, "second --update mutated settings unexpectedly"
 
-def test_worktree_base_idempotent(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """R6: re-running cortex init does not duplicate the worktree base entry
-    in either allowWrite or additionalDirectories."""
-    fake_home = _isolate_home(monkeypatch, tmp_path)
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    _git_init(repo)
-
-    fake_tmpdir = tmp_path / "tmp"
-    fake_tmpdir.mkdir()
-    monkeypatch.setenv("TMPDIR", str(fake_tmpdir))
-    monkeypatch.delenv("CORTEX_WORKTREE_ROOT", raising=False)
-
-    assert init_main(_make_args(repo)) == 0
-    assert init_main(_make_args(repo, update=True)) == 0
-
-    data = json.loads(_settings_path(fake_home).read_text(encoding="utf-8"))
-    expected_base = str(fake_tmpdir.resolve() / "cortex-worktrees") + "/"
-
-    allow = data["sandbox"]["filesystem"]["allowWrite"]
-    assert allow.count(expected_base) == 1, (
-        f"worktree base duplicated in allowWrite: {allow}"
-    )
-    additional = data.get("additionalDirectories", [])
-    assert additional.count(expected_base) == 1, (
-        f"worktree base duplicated in additionalDirectories: {additional}"
-    )
-
-
-def test_worktree_base_uses_cortex_worktree_root_env(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """R6: when CORTEX_WORKTREE_ROOT is set, that value is registered instead
-    of the $TMPDIR/cortex-worktrees default."""
-    fake_home = _isolate_home(monkeypatch, tmp_path)
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    _git_init(repo)
-
-    custom_root = tmp_path / "custom-worktrees"
-    custom_root.mkdir()
-    monkeypatch.setenv("CORTEX_WORKTREE_ROOT", str(custom_root))
-
-    rc = init_main(_make_args(repo))
-    assert rc == 0
-
-    data = json.loads(_settings_path(fake_home).read_text(encoding="utf-8"))
-    expected_base = str(custom_root) + "/"
-
-    allow = data["sandbox"]["filesystem"]["allowWrite"]
-    assert expected_base in allow, f"custom worktree root missing from allowWrite: {allow}"
-
-    additional = data.get("additionalDirectories", [])
-    assert expected_base in additional, (
-        f"custom worktree root missing from additionalDirectories: {additional}"
-    )
+        data = json.loads(second)
+        allow = data["sandbox"]["filesystem"]["allowWrite"]
+        assert all("cortex-worktrees" not in str(e) for e in allow), allow
+        additional = data.get("additionalDirectories", [])
+        assert all("cortex-worktrees" not in str(e) for e in additional), additional
 
 
 def test_register_additional_directories_idempotent(

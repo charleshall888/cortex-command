@@ -23,7 +23,7 @@ Revert `resolve_worktree_root()` branch (c) from `$TMPDIR/cortex-worktrees/<feat
 - **Complexity**: simple
 - **Context**: `_repo_root()` already exists (subprocess `git rev-parse --show-toplevel`). Branch-(c) currently: `return Path(os.environ.get("TMPDIR", "/tmp")).resolve() / "cortex-worktrees" / feature`. Branch-(b) call site at line 208: `registered = _registered_worktree_root()` followed by `if registered: return (registered / feature).resolve()`. After deletion, branch flow is: (a) env-var override → (b) gone → (c) repo-relative → (d) cross-repo overnight.
 - **Verification**: `grep -c "cortex-worktrees" cortex_command/pipeline/worktree.py` = 0; `grep -c "_registered_worktree_root\|cortex-worktree-root" cortex_command/pipeline/worktree.py` = 0; `just test` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Add `unregister_matching()` to `settings_merge.py`
 - **Files**: `cortex_command/init/settings_merge.py`
@@ -32,7 +32,7 @@ Revert `resolve_worktree_root()` branch (c) from `$TMPDIR/cortex-worktrees/<feat
 - **Complexity**: simple
 - **Context**: `unregister()` signature at line 208: `def unregister(repo_root, cortex_target_path, home=None)`. The new `unregister_matching` operates on an already-loaded settings dict (not disk I/O) — the caller in `handler.py` owns the load/save cycle. Pattern: filter `[e for e in arr if predicate not in str(e)]` applied to both arrays under `settings["sandbox"]["filesystem"]["allowWrite"]` and `settings["additionalDirectories"]`.
 - **Verification**: Unit test: calling `unregister_matching("cortex-worktrees", settings_with_entry)` removes matching entries from both arrays and leaves non-matching entries untouched; `just test` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Delete Step 7b + `_resolve_worktree_base()`, wire migration in `handler.py`
 - **Files**: `cortex_command/init/handler.py`
@@ -41,7 +41,7 @@ Revert `resolve_worktree_root()` branch (c) from `$TMPDIR/cortex-worktrees/<feat
 - **Complexity**: simple
 - **Context**: `--update` branch in handler starts around line 157. The flock-guarded settings load/save pattern is at `settings_merge.py:load()` + `settings_merge.write_atomic()`. The `unregister()` function call site (line 132, `--unregister` path) shows the pattern.
 - **Verification**: `grep -c "_resolve_worktree_base\|cortex-worktrees" cortex_command/init/handler.py` = 0; `just test` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Add `.claude/worktrees/` to scaffold gitignore targets
 - **Files**: `cortex_command/init/scaffold.py`
@@ -50,7 +50,7 @@ Revert `resolve_worktree_root()` branch (c) from `$TMPDIR/cortex-worktrees/<feat
 - **Complexity**: simple
 - **Context**: `_GITIGNORE_TARGETS = ("cortex/.cortex-init", "cortex/.cortex-init-backup/")` — append `.claude/worktrees/` as a third entry.
 - **Verification**: `grep -c "claude/worktrees" cortex_command/init/scaffold.py` ≥ 1; `just test` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Fix seatbelt probe allow-set
 - **Files**: `cortex_command/overnight/seatbelt_probe.py`
@@ -59,7 +59,7 @@ Revert `resolve_worktree_root()` branch (c) from `$TMPDIR/cortex-worktrees/<feat
 - **Complexity**: simple
 - **Context**: Current line 164: `allow_paths=[str(tmpdir_resolved)]`. The probe spawns `claude -p` with these paths in the sandbox `allowWrite` allowlist. After the revert, `resolve_worktree_root()` returns `<repo>/.claude/worktrees/<feature>` — outside `$TMPDIR` — so the spawned claude will fail to create the worktree unless `.claude/worktrees/` is in `allow_paths`. `$TMPDIR` must remain because probe result files (`seatbelt-output-*`, `seatbelt-result-*`) are written there.
 - **Verification**: Inspect the `allow_paths` construction line (the assignment whose right-hand side flows into the `claude -p` invocation): `awk '/allow_paths\s*=/,/\]/' cortex_command/overnight/seatbelt_probe.py | grep -c "claude/worktrees"` ≥ 1 AND `awk '/allow_paths\s*=/,/\]/' cortex_command/overnight/seatbelt_probe.py | grep -c "tmpdir\|TMPDIR"` ≥ 1 (both the new repo-relative path AND $TMPDIR coverage must appear in the same construction). `just test` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Fix archive rewriter functional exclusion
 - **Files**: `bin/cortex-archive-rewrite-paths`, `plugins/cortex-core/bin/cortex-archive-rewrite-paths`
@@ -68,7 +68,7 @@ Revert `resolve_worktree_root()` branch (c) from `$TMPDIR/cortex-worktrees/<feat
 - **Complexity**: simple
 - **Context**: `EXCLUDED_DIR_NAMES = frozenset({".git", ".venv"})` at line 66 (both copies). The filter at line 110: `dirnames[:] = sorted(d for d in dirnames if d not in EXCLUDED_DIR_NAMES)` — matches on individual path component names, so `.claude` covers `.claude/worktrees/` entirely. Both files must stay in sync (dual-source enforcement via pre-commit drift check) — the canonical edit is `bin/cortex-archive-rewrite-paths`; `plugins/cortex-core/bin/cortex-archive-rewrite-paths` regenerates automatically via the pre-commit hook (`just build-plugin`), but verify both for safety.
 - **Verification**: `grep -c "\.claude" bin/cortex-archive-rewrite-paths` ≥ 1 in `EXCLUDED_DIR_NAMES` AND `grep -c "\.claude" plugins/cortex-core/bin/cortex-archive-rewrite-paths` ≥ 1 in `EXCLUDED_DIR_NAMES`; `just test` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 7: Fix `complete.md` cleanup prefix check
 - **Files**: `skills/lifecycle/references/complete.md`
@@ -77,7 +77,7 @@ Revert `resolve_worktree_root()` branch (c) from `$TMPDIR/cortex-worktrees/<feat
 - **Complexity**: simple
 - **Context**: `complete.md:183` currently checks porcelain output for `cortex-worktrees/interactive-{slug}`. After the revert, `create_worktree()` creates the worktree at `<repo>/.claude/worktrees/interactive-{slug}/` (resolved path), so porcelain will emit the resolved `.claude/worktrees/` path. The `.resolve()` requirement means the worktree IS at the resolved path, so the substring `.claude/worktrees/interactive-{slug}` will appear in the porcelain output.
 - **Verification**: `grep -c "claude/worktrees/interactive" skills/lifecycle/references/complete.md` ≥ 1; `grep -c "cortex-worktrees/interactive" skills/lifecycle/references/complete.md` = 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 8: Update `tests/test_worktree.py` — delete outdated tests, update assertions and mocking
 - **Files**: `tests/test_worktree.py`
@@ -86,7 +86,7 @@ Revert `resolve_worktree_root()` branch (c) from `$TMPDIR/cortex-worktrees/<feat
 - **Complexity**: simple
 - **Context**: `TestVerifyR5NegativeProperty` at line 632 patches `_registered_worktree_root` to `None` and `_repo_root` to `fake_repo`, then asserts `not str(result).startswith(str(fake_repo) + "/.claude/")`. Existing branch-(b) tests look for `cortex-worktree-root` or patch `_registered_worktree_root`. After deletion, `grep -c "_registered_worktree_root\|cortex-worktree-root" tests/test_worktree.py` = 0 is satisfied.
 - **Verification**: `grep -c "cortex-worktrees" tests/test_worktree.py` = 0; `grep -c "_registered_worktree_root\|cortex-worktree-root" tests/test_worktree.py` = 0; `just test` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 9: Add `test_mcp_json_propagation_and_deny_invariant`; update `test_worktree_seatbelt.py`
 - **Files**: `tests/test_worktree.py`, `tests/test_worktree_seatbelt.py`
@@ -95,7 +95,7 @@ Revert `resolve_worktree_root()` branch (c) from `$TMPDIR/cortex-worktrees/<feat
 - **Complexity**: simple
 - **Context**: `test_worktree_seatbelt.py` module docstring starts at line 1: `"""Seatbelt-active integration tests for both worktree dispatch paths. R10 of restore-worktree-root-env-prefix: prove the new branch-(c) default ($TMPDIR/cortex-worktrees/<feature>)...`. The `.mcp.json` deny is enforced by the Claude Code JS tool layer, not the kernel — `open()` inside pytest will not raise `PermissionError`. Scope the deny assertion to what IS testable in a subprocess (e.g., check `.mcp.json` exists but skip the write-deny half unless `sandbox-exec` is available).
 - **Verification**: `grep -c "cortex-worktrees\|TMPDIR/cortex" tests/test_worktree_seatbelt.py` = 0; `just test` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 10: Update `test_settings_merge.py` and `test_hooks.sh`; add migration integration test
 - **Files**: `cortex_command/init/tests/test_settings_merge.py`, `tests/test_hooks.sh`
@@ -104,7 +104,7 @@ Revert `resolve_worktree_root()` branch (c) from `$TMPDIR/cortex-worktrees/<feat
 - **Complexity**: simple
 - **Context**: The three `test_worktree_base_*` tests start around line 1067 and call `init_main()`. `TestUnregisterMatchingMigration` follows the `TestInitMergeSettings` pattern. The `--update` flag path in `handler.py` (post-Task 3) calls `unregister_matching("cortex-worktrees", settings)`.
 - **Verification**: `grep -c "cortex-worktrees\|test_worktree_base" cortex_command/init/tests/test_settings_merge.py` = 0; `grep -c "cortex-worktrees" tests/test_hooks.sh` = 0; `just test` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 11: Sweep remaining test files with hardcoded `cortex-worktrees` paths
 - **Files**: `tests/test_implement_option2_worktree_creation.py`, `tests/test_hooks_resolver_parity.sh`, `tests/test_archive_rewrite_paths.py`
@@ -113,7 +113,7 @@ Revert `resolve_worktree_root()` branch (c) from `$TMPDIR/cortex-worktrees/<feat
 - **Complexity**: simple
 - **Context**: `test_implement_option2_worktree_creation.py` asserts the path materialization for the interactive worktree creation flow. The hardcoded `cortex-worktrees` paths at lines 82 and 183 are real assertions — they will fail after Task 1 lands because `resolve_worktree_root()` will return `.claude/worktrees/` paths. The fixture and its computed `expected_path` must both update. `test_hooks_resolver_parity.sh` is a bash harness that creates and cleans up a worktree; the cleanup-path strings at lines 31/33/34 will silently no-op (no directory to clean) after revert. `test_archive_rewrite_paths.py:235` is a comment only.
 - **Verification**: `grep -c "cortex-worktrees" tests/test_implement_option2_worktree_creation.py tests/test_hooks_resolver_parity.sh tests/test_archive_rewrite_paths.py` = 0; `just test` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 12: Update requirements and lifecycle config files
 - **Files**: `cortex/requirements/multi-agent.md`, `cortex/requirements/pipeline.md`, `cortex/lifecycle.config.md`

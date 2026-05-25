@@ -1,13 +1,12 @@
 """Integration test for implement.md option 2: interactive worktree creation.
 
 Verifies that create_worktree(feature="interactive-test-fixture", base_branch="main")
-materializes a worktree at $TMPDIR/cortex-worktrees/interactive-test-fixture/ with:
+materializes a worktree at <repo>/.claude/worktrees/interactive-test-fixture/ with:
   - branch named interactive/test-fixture
   - .claude/settings.local.json copied from the repo root (when present)
   - .venv as a symlink (when .venv exists in the repo root)
 
-All tests run sandbox-aware under a temp-isolated $TMPDIR to avoid collisions
-with parallel test runs sharing the system tmpdir.
+Each test uses a fresh tempdir for the repo so parallel test runs don't collide.
 """
 
 from __future__ import annotations
@@ -68,21 +67,15 @@ class TestOption2InteractiveWorktreeCreation(unittest.TestCase):
     and asserts the worktree is materialized correctly at the expected path.
     """
 
-    def test_worktree_created_at_expected_tmpdir_path(self):
-        """Worktree lands at $TMPDIR/cortex-worktrees/interactive-test-fixture/."""
+    def test_worktree_created_at_expected_repo_relative_path(self):
+        """Worktree lands at <repo>/.claude/worktrees/interactive-test-fixture/."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            tmppath = Path(tmpdir)
+            tmppath = Path(tmpdir).resolve()
             base_branch = _init_git_repo(tmppath)
 
-            # Isolate $TMPDIR so branch (c)'s default resolves under the
-            # test sandbox, not the system-shared tmpdir.
-            isolated_tmpdir = (tmppath / "tmp").resolve()
-            isolated_tmpdir.mkdir()
+            expected_path = (tmppath / ".claude" / "worktrees" / "interactive-test-fixture").resolve()
 
-            expected_path = isolated_tmpdir / "cortex-worktrees" / "interactive-test-fixture"
-
-            with patch("cortex_command.pipeline.worktree._repo_root", return_value=tmppath), \
-                    patch.dict(os.environ, {"TMPDIR": str(isolated_tmpdir)}):
+            with patch("cortex_command.pipeline.worktree._repo_root", return_value=tmppath):
                 info = create_worktree(
                     feature="interactive-test-fixture",
                     base_branch=base_branch,
@@ -94,14 +87,10 @@ class TestOption2InteractiveWorktreeCreation(unittest.TestCase):
     def test_branch_named_interactive_test_fixture(self):
         """Branch is named interactive/test-fixture (interactive- prefix stripped, / inserted)."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            tmppath = Path(tmpdir)
+            tmppath = Path(tmpdir).resolve()
             base_branch = _init_git_repo(tmppath)
 
-            isolated_tmpdir = (tmppath / "tmp").resolve()
-            isolated_tmpdir.mkdir()
-
-            with patch("cortex_command.pipeline.worktree._repo_root", return_value=tmppath), \
-                    patch.dict(os.environ, {"TMPDIR": str(isolated_tmpdir)}):
+            with patch("cortex_command.pipeline.worktree._repo_root", return_value=tmppath):
                 info = create_worktree(
                     feature="interactive-test-fixture",
                     base_branch=base_branch,
@@ -112,7 +101,7 @@ class TestOption2InteractiveWorktreeCreation(unittest.TestCase):
     def test_settings_local_json_copied_to_worktree(self):
         """`.claude/settings.local.json` is copied from the repo into the worktree."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            tmppath = Path(tmpdir)
+            tmppath = Path(tmpdir).resolve()
             base_branch = _init_git_repo(tmppath)
 
             # Create a .claude/settings.local.json in the repo root.
@@ -121,11 +110,7 @@ class TestOption2InteractiveWorktreeCreation(unittest.TestCase):
             settings_content = json.dumps({"sandbox": {"filesystem": {"allowWrite": []}}})
             (claude_dir / "settings.local.json").write_text(settings_content, encoding="utf-8")
 
-            isolated_tmpdir = (tmppath / "tmp").resolve()
-            isolated_tmpdir.mkdir()
-
-            with patch("cortex_command.pipeline.worktree._repo_root", return_value=tmppath), \
-                    patch.dict(os.environ, {"TMPDIR": str(isolated_tmpdir)}):
+            with patch("cortex_command.pipeline.worktree._repo_root", return_value=tmppath):
                 info = create_worktree(
                     feature="interactive-test-fixture",
                     base_branch=base_branch,
@@ -145,17 +130,13 @@ class TestOption2InteractiveWorktreeCreation(unittest.TestCase):
     def test_venv_is_symlink_when_venv_present(self):
         """`.venv` inside the worktree is a symlink pointing to the repo's .venv."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            tmppath = Path(tmpdir)
+            tmppath = Path(tmpdir).resolve()
             base_branch = _init_git_repo(tmppath)
 
             # Create a .venv directory in the repo root.
             (tmppath / ".venv").mkdir()
 
-            isolated_tmpdir = (tmppath / "tmp").resolve()
-            isolated_tmpdir.mkdir()
-
-            with patch("cortex_command.pipeline.worktree._repo_root", return_value=tmppath), \
-                    patch.dict(os.environ, {"TMPDIR": str(isolated_tmpdir)}):
+            with patch("cortex_command.pipeline.worktree._repo_root", return_value=tmppath):
                 info = create_worktree(
                     feature="interactive-test-fixture",
                     base_branch=base_branch,
@@ -174,16 +155,12 @@ class TestOption2InteractiveWorktreeCreation(unittest.TestCase):
     def test_worktree_info_fields(self):
         """WorktreeInfo returned has the correct feature, branch, path, and exists=True."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            tmppath = Path(tmpdir)
+            tmppath = Path(tmpdir).resolve()
             base_branch = _init_git_repo(tmppath)
 
-            isolated_tmpdir = (tmppath / "tmp").resolve()
-            isolated_tmpdir.mkdir()
+            expected_path = (tmppath / ".claude" / "worktrees" / "interactive-test-fixture").resolve()
 
-            expected_path = isolated_tmpdir / "cortex-worktrees" / "interactive-test-fixture"
-
-            with patch("cortex_command.pipeline.worktree._repo_root", return_value=tmppath), \
-                    patch.dict(os.environ, {"TMPDIR": str(isolated_tmpdir)}):
+            with patch("cortex_command.pipeline.worktree._repo_root", return_value=tmppath):
                 info = create_worktree(
                     feature="interactive-test-fixture",
                     base_branch=base_branch,

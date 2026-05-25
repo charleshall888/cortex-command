@@ -50,7 +50,13 @@ _MARKER_FILENAME = ".cortex-init"
 _BACKUP_DIR_PATTERN = ".cortex-init-backup/"
 _BACKUP_DIR_ROOT = ".cortex-init-backup"
 # Per #202, both marker and backup-dir live under the cortex/ umbrella.
-_GITIGNORE_TARGETS = ("cortex/.cortex-init", "cortex/.cortex-init-backup/")
+# .claude/worktrees/ holds per-feature git worktrees created by the lifecycle
+# (interactive sessions and pipeline dispatch) and must never be committed.
+_GITIGNORE_TARGETS = (
+    "cortex/.cortex-init",
+    "cortex/.cortex-init-backup/",
+    ".claude/worktrees/",
+)
 
 # Target scaffold paths inspected by the content-aware decline gate (R19).
 # A populated non-marker repo with any of these present fires the gate.

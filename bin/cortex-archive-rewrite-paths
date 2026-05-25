@@ -63,11 +63,11 @@ from typing import Iterable, List
 # Directories to exclude from the walk. Matched on path components.
 # `.venv` excluded because virtual environments contain vendored markdown docs
 # from packages — not part of the project's citation graph.
-EXCLUDED_DIR_NAMES = frozenset({".git", ".venv"})
-# Worktrees themselves are not under the repo tree (they resolve to
-# `$TMPDIR/cortex-worktrees/{feature}/` via `resolve_worktree_root()` — outside
-# the deny scope of the Seatbelt mandatory deny on `.mcp.json`) so no in-repo
-# exclusion is needed; see `cortex/lifecycle/restore-worktree-root-env-prefix/`.
+EXCLUDED_DIR_NAMES = frozenset({".git", ".venv", ".claude"})
+# Worktrees now live at `<repo>/.claude/worktrees/{feature}/` (repo-relative
+# default per `resolve_worktree_root()`; #260 reverted the prior $TMPDIR
+# placement). The `.claude` exclusion stops the walker from descending into
+# worktree copies of lifecycle docs and mutating them in place.
 EXCLUDED_REL_PREFIXES = (
     Path("lifecycle") / "archive",
     Path("lifecycle") / "sessions",

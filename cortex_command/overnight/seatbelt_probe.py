@@ -156,12 +156,20 @@ def run_probe(
     output_path = Path(tmpdir) / f"cortex-seatbelt-output-{uuid.uuid4()}.txt"
     result_path = Path(tmpdir) / f"cortex-seatbelt-result-{uuid.uuid4()}.txt"
 
-    # Build sandbox settings: orchestrator deny-set + minimal $TMPDIR allow.
+    # Build sandbox settings: orchestrator deny-set + dual-path allow.
+    # The probe needs $TMPDIR (for the UUID-named result/output files it
+    # writes at lines 156-157) AND <repo>/.claude/worktrees/ (for branch
+    # (c) worktree creation by the spawned claude session, which after
+    # the #260 revert resolves same-repo worktrees to
+    # <repo>/.claude/worktrees/<feature>/).
     deny_paths = build_orchestrator_deny_paths(home_repo, integration_worktrees={})
     soft_fail = read_soft_fail_env()
     settings = build_sandbox_settings_dict(
         deny_paths,
-        allow_paths=[str(tmpdir_resolved)],
+        allow_paths=[
+            str(tmpdir_resolved),
+            str((home_repo / ".claude/worktrees").resolve()),
+        ],
         soft_fail=soft_fail,
     )
 

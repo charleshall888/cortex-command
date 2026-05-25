@@ -27,11 +27,18 @@ PARITY_TMPDIR=$(mktemp -d)
 export TMPDIR="$PARITY_TMPDIR"
 
 cleanup() {
-  # Best-effort cleanup of the worktree the hook created.
-  if [ -d "$PARITY_TMPDIR/cortex-worktrees/$FEATURE" ]; then
-    (cd "$PARITY_TMPDIR/repo" 2>/dev/null \
-      && git worktree remove --force "$PARITY_TMPDIR/cortex-worktrees/$FEATURE" >/dev/null 2>&1) || true
-    rm -rf "$PARITY_TMPDIR/cortex-worktrees/$FEATURE"
+  # Best-effort cleanup of the worktree the hook created. After #260 the
+  # worktree is placed at <repo>/.claude/worktrees/<feature>/ — resolve the
+  # actual path via the same resolver the hook uses so cleanup targets the
+  # right location regardless of repo placement.
+  local created_path
+  if command -v cortex-worktree-resolve >/dev/null 2>&1; then
+    created_path=$(cortex-worktree-resolve "$FEATURE" 2>/dev/null || true)
+    if [ -n "$created_path" ] && [ -d "$created_path" ]; then
+      (cd "$PARITY_TMPDIR/repo" 2>/dev/null \
+        && git worktree remove --force "$created_path" >/dev/null 2>&1) || true
+      rm -rf "$created_path"
+    fi
   fi
   rm -rf "$PARITY_TMPDIR"
 }

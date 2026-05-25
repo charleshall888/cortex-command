@@ -1,8 +1,8 @@
 """Seatbelt-active integration tests for both worktree dispatch paths.
 
-R10 of restore-worktree-root-env-prefix: prove the new branch-(c) default
-(``$TMPDIR/cortex-worktrees/<feature>``) passes the Seatbelt writability
-probe AND that the bash hook's path matches end-to-end.
+Validate that the branch-(c) default (``<repo>/.claude/worktrees/<feature>``,
+post-#260) passes the Seatbelt writability probe AND that the bash hook's
+path matches end-to-end.
 
 These tests skip outside an active sandbox via a kernel-level capability
 probe: the ``seatbelt_active`` fixture attempts to open ``<repo>/.git/HEAD``

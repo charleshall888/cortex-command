@@ -293,6 +293,70 @@ def unregister(
         os.close(lock_fd)
 
 
+def unregister_matching(predicate: str, settings: dict) -> dict:
+    """Remove entries containing ``predicate`` (substring match) from settings.
+
+    Filters both ``sandbox.filesystem.allowWrite`` and ``additionalDirectories``
+    in-place on the supplied dict and returns it. Used by the ``cortex init
+    --update`` migration path to expunge stale entries left by a prior version
+    of cortex that registered worktree-base paths in user settings.
+
+    Unlike :func:`unregister` (which uses exact-string equality, covers only
+    ``allowWrite``, and owns its own disk I/O via the sibling lockfile), this
+    helper operates purely on an already-loaded dict — the caller owns the
+    load/save cycle and the surrounding flock.
+
+    Args:
+        predicate: Substring to match. Any entry where ``predicate in str(e)``
+            is filtered out.
+        settings: The parsed settings dict (mutated in place and returned).
+
+    Returns:
+        The same dict with matching entries removed from both arrays.
+    """
+    sandbox = settings.get("sandbox")
+    if isinstance(sandbox, dict):
+        filesystem = sandbox.get("filesystem")
+        if isinstance(filesystem, dict):
+            allow = filesystem.get("allowWrite")
+            if isinstance(allow, list):
+                filesystem["allowWrite"] = [e for e in allow if predicate not in str(e)]
+
+    additional = settings.get("additionalDirectories")
+    if isinstance(additional, list):
+        settings["additionalDirectories"] = [e for e in additional if predicate not in str(e)]
+
+    return settings
+
+
+def unregister_matching_in_place(
+    predicate: str,
+    *,
+    home: Path | None = None,
+) -> None:
+    """Disk-wrapper: load settings under flock, drop matching entries, write back.
+
+    Thin wrapper around :func:`unregister_matching` that owns the flock + IO
+    cycle. No-op if the settings file is absent. Used by the ``cortex init
+    --update`` migration path.
+    """
+    settings_path = _settings_path(home)
+    if not settings_path.exists():
+        return
+
+    lock_fd = _acquire_lock(home)
+    try:
+        data = _read_settings(settings_path)
+        if not settings_path.exists():
+            return
+        _validate_sandbox_shape(data)
+        unregister_matching(predicate, data)
+        content = json.dumps(data, indent=2) + "\n"
+        atomic_write(settings_path, content)
+    finally:
+        os.close(lock_fd)
+
+
 def register_additional_directories(
     path: str,
     *,

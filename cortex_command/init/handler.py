@@ -197,41 +197,16 @@ def _run(args: argparse.Namespace) -> int:
     # at step 1.
     settings_merge.register(repo_root, cortex_target, home=home)
 
-    # Step 7b: register the worktree base path in both allowWrite and
-    # additionalDirectories (spec R6, Phase 2). The worktree base is
-    # $TMPDIR/cortex-worktrees/ by default, or the value of
-    # CORTEX_WORKTREE_ROOT if set.  Both registrations are additive and
-    # idempotent under the same flock discipline (ADR-0003).
-    #
-    # additionalDirectories controls Bash cd carry-over into directories
-    # outside the project root — without this, a Variant-A session that
-    # issues `cd <worktree>` would have its CWD reset by Claude Code.
-    worktree_base = _resolve_worktree_base()
-    settings_merge.register(repo_root, worktree_base, home=home)
-    settings_merge.register_additional_directories(worktree_base, home=home)
+    # Step 7b (migration): expunge stale "cortex-worktrees"-prefixed entries
+    # from a prior version of cortex that registered worktree-base paths in
+    # user settings. Same-repo worktrees now live at <repo>/.claude/worktrees/
+    # under the project's trust scope — no per-shell registration needed.
+    # Only fires on --update so a fresh init never touches a clean settings
+    # file.
+    if args.update:
+        settings_merge.unregister_matching_in_place("cortex-worktrees", home=home)
 
     return 0
-
-
-def _resolve_worktree_base() -> str:
-    """Resolve the worktree base path for sandbox registration.
-
-    Returns the worktree base path as a string with a trailing slash,
-    suitable for appending to ``sandbox.filesystem.allowWrite``.
-
-    Resolution order (mirrors ``cortex_command/pipeline/worktree.py``):
-        1. ``CORTEX_WORKTREE_ROOT`` env var (expanded via ``os.path.expandvars``).
-        2. Default: ``$TMPDIR/cortex-worktrees/``.
-
-    The returned path has a trailing slash (consistent with the cortex/
-    allowWrite registration pattern).
-    """
-    override = os.environ.get("CORTEX_WORKTREE_ROOT", "")
-    if override:
-        expanded = os.path.expandvars(override)
-        return str(Path(expanded)) + "/"
-    tmpdir = os.environ.get("TMPDIR", "/tmp")
-    return str(Path(tmpdir).resolve() / "cortex-worktrees") + "/"
 
 
 def main(args: argparse.Namespace) -> int:

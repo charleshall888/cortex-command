@@ -231,10 +231,10 @@ def _setup_repo(tmp_path: Path) -> Path:
     (root / ".git" / "COMMIT_EDITMSG.md").write_text(
         "lifecycle/foo (excluded git internal)\n", encoding="utf-8"
     )
-    # (Worktrees no longer live under the repo — they resolve to
-    # `$TMPDIR/cortex-worktrees/{feature}/` per
-    # `cortex/lifecycle/restore-worktree-root-env-prefix/` — so the rewriter
-    # never walks into them and no in-repo exclusion fixture is needed.)
+    # Worktrees live at `<repo>/.claude/worktrees/{feature}/` (repo-relative
+    # default, post-#260). The `.claude` exclusion in EXCLUDED_DIR_NAMES
+    # stops the rewriter from descending into worktree copies; the test
+    # fixture below seeds a `.claude/worktrees/` directory to exercise it.
     # Excluded: .venv (vendored package docs)
     (root / ".venv" / "lib").mkdir(parents=True)
     (root / ".venv" / "lib" / "package.md").write_text(

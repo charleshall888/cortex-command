@@ -141,20 +141,16 @@ class TestWorktreeCreateFailure(unittest.TestCase):
             tmppath = Path(tmpdir)
             branch = _init_git_repo(tmppath)
 
-            # Point TMPDIR at tmppath so branch (c)'s
-            # $TMPDIR/cortex-worktrees/<feature> default resolves under the
-            # test sandbox. Pre-create the target worktree dir as a NON-EMPTY
-            # non-worktree directory. The non-empty requirement is load-bearing:
-            # git accepts an empty existing directory as a valid worktree
-            # target, so an empty dir would not trigger the failure path.
-            tmpdir_path = tmppath / "tmpdir"
-            tmpdir_path.mkdir()
-            target_dir = tmpdir_path.resolve() / "cortex-worktrees" / "orphan-test"
+            # Branch (c) now resolves to <repo>/.claude/worktrees/<feature>.
+            # Pre-create the target worktree dir as a NON-EMPTY non-worktree
+            # directory. The non-empty requirement is load-bearing: git
+            # accepts an empty existing directory as a valid worktree target,
+            # so an empty dir would not trigger the failure path.
+            target_dir = (tmppath / ".claude" / "worktrees" / "orphan-test").resolve()
             target_dir.mkdir(parents=True)
             (target_dir / "sentinel.txt").write_text("block")
 
-            with patch("cortex_command.pipeline.worktree._repo_root", return_value=tmppath), \
-                    patch.dict(os.environ, {"TMPDIR": str(tmpdir_path)}):
+            with patch("cortex_command.pipeline.worktree._repo_root", return_value=tmppath):
                 with self.assertRaises(ValueError) as ctx:
                     create_worktree("orphan-test", base_branch=branch)
 
@@ -271,7 +267,7 @@ if __name__ == "__main__":
 
 # ---------------------------------------------------------------------------
 # Tests for resolve_worktree_root() — one test per resolution branch (R6).
-# Uses pytest monkeypatch to isolate env vars and patch settings.local.json.
+# Uses pytest monkeypatch to isolate env vars; branch (c) uses _repo_root.
 # ---------------------------------------------------------------------------
 
 class TestResolveWorktreeRoot:
@@ -297,75 +293,35 @@ class TestResolveWorktreeRoot:
 
         assert result == tmp_path / "worktrees" / "feat"
 
-    def test_branch_b_registered_path_from_settings(self, monkeypatch, tmp_path):
-        """Branch (b): sentinel-suffixed registered path used when env var absent."""
+    def test_branch_c_default_repo_relative(self, monkeypatch, tmp_path):
+        """Branch (c): default <repo>/.claude/worktrees/<feature> when no env var."""
         monkeypatch.delenv("CORTEX_WORKTREE_ROOT", raising=False)
-
-        # Write a fake settings.local.json with a sentinel-suffixed entry.
-        claude_dir = tmp_path / ".claude"
-        claude_dir.mkdir()
-        registered_root = tmp_path / "sandbox-worktrees"
-        settings = {
-            "sandbox": {
-                "filesystem": {
-                    "allowWrite": [
-                        str(tmp_path / "cortex"),
-                        f"{registered_root}#cortex-worktree-root",
-                    ]
-                }
-            }
-        }
-        (claude_dir / "settings.local.json").write_text(json.dumps(settings))
+        repo = tmp_path / "repo"
+        repo.mkdir()
 
         with patch(
-            "cortex_command.pipeline.worktree.Path.home",
-            return_value=tmp_path,
-        ):
-            result = resolve_worktree_root("feat", session_id=None)
-
-        # The sentinel-suffixed entry's leading segment is the registered
-        # root; feature is appended.
-        assert result == registered_root / "feat"
-
-    def test_branch_c_default_same_repo(self, monkeypatch, tmp_path):
-        """Branch (c): default $TMPDIR/cortex-worktrees/<feature> when no env var and no registered path."""
-        monkeypatch.delenv("CORTEX_WORKTREE_ROOT", raising=False)
-        monkeypatch.setenv("TMPDIR", str(tmp_path))
-
-        with patch(
-            "cortex_command.pipeline.worktree._registered_worktree_root",
-            return_value=None,
-        ), patch(
             "cortex_command.pipeline.worktree._repo_root",
-            return_value=tmp_path / "repo",
+            return_value=repo,
         ):
             result = resolve_worktree_root("my-feat", session_id=None)
 
-        assert result == tmp_path.resolve() / "cortex-worktrees" / "my-feat"
+        assert result == (repo / ".claude" / "worktrees" / "my-feat").resolve()
 
     def test_branch_d_cross_repo_tmpdir(self, monkeypatch, tmp_path):
         """Branch (d): cross-repo path uses $TMPDIR when session_id is provided."""
         monkeypatch.delenv("CORTEX_WORKTREE_ROOT", raising=False)
         monkeypatch.setenv("TMPDIR", str(tmp_path))
 
-        with patch(
-            "cortex_command.pipeline.worktree._registered_worktree_root",
-            return_value=None,
-        ):
-            result = resolve_worktree_root("feat", session_id="sess-42")
+        result = resolve_worktree_root("feat", session_id="sess-42")
 
         assert result == tmp_path / "overnight-worktrees" / "sess-42" / "feat"
 
-    def test_branch_a_wins_over_b_c_d(self, monkeypatch, tmp_path):
+    def test_branch_a_wins_over_c_d(self, monkeypatch, tmp_path):
         """Branch (a) takes priority over all other branches."""
         monkeypatch.setenv("CORTEX_WORKTREE_ROOT", str(tmp_path / "override"))
         monkeypatch.delenv("TMPDIR", raising=False)
 
-        registered_root = tmp_path / "registered" / "worktrees/"
         with patch(
-            "cortex_command.pipeline.worktree._registered_worktree_root",
-            return_value=registered_root,
-        ), patch(
             "cortex_command.pipeline.worktree._repo_root",
             return_value=tmp_path / "repo",
         ):
@@ -373,68 +329,18 @@ class TestResolveWorktreeRoot:
 
         assert result == tmp_path / "override" / "feat"
 
-    def test_branch_b_wins_over_c_d(self, monkeypatch, tmp_path):
-        """Branch (b) takes priority over (c) and (d) when env var is unset."""
+    def test_branch_d_wins_over_c_when_session_id_set(self, monkeypatch, tmp_path):
+        """Branch (d) takes priority over (c) when session_id is provided and no env var."""
         monkeypatch.delenv("CORTEX_WORKTREE_ROOT", raising=False)
         monkeypatch.setenv("TMPDIR", str(tmp_path / "tmp"))
 
-        registered_root = tmp_path / "registered-worktrees"
         with patch(
-            "cortex_command.pipeline.worktree._registered_worktree_root",
-            return_value=registered_root,
-        ), patch(
             "cortex_command.pipeline.worktree._repo_root",
             return_value=tmp_path / "repo",
         ):
             result = resolve_worktree_root("feat", session_id="sess-1")
 
-        assert result == registered_root / "feat"
-
-    def test_no_settings_file_falls_through_to_c(self, monkeypatch, tmp_path):
-        """When settings.local.json is absent, branch (b) returns None and (c) is used."""
-        monkeypatch.delenv("CORTEX_WORKTREE_ROOT", raising=False)
-        monkeypatch.setenv("TMPDIR", str(tmp_path))
-
-        with patch(
-            "cortex_command.pipeline.worktree.Path.home",
-            return_value=tmp_path,  # No .claude/settings.local.json here
-        ), patch(
-            "cortex_command.pipeline.worktree._repo_root",
-            return_value=tmp_path / "repo",
-        ):
-            result = resolve_worktree_root("feat", session_id=None)
-
-        assert result == tmp_path.resolve() / "cortex-worktrees" / "feat"
-
-    def test_settings_without_worktrees_marker_falls_through(self, monkeypatch, tmp_path):
-        """Settings entries without sentinel suffix don't match branch (b)."""
-        monkeypatch.delenv("CORTEX_WORKTREE_ROOT", raising=False)
-        monkeypatch.setenv("TMPDIR", str(tmp_path))
-
-        claude_dir = tmp_path / ".claude"
-        claude_dir.mkdir()
-        settings = {
-            "sandbox": {
-                "filesystem": {
-                    "allowWrite": [
-                        str(tmp_path / "cortex"),
-                        str(tmp_path / "other-path"),
-                    ]
-                }
-            }
-        }
-        (claude_dir / "settings.local.json").write_text(json.dumps(settings))
-
-        with patch(
-            "cortex_command.pipeline.worktree.Path.home",
-            return_value=tmp_path,
-        ), patch(
-            "cortex_command.pipeline.worktree._repo_root",
-            return_value=tmp_path / "repo",
-        ):
-            result = resolve_worktree_root("feat", session_id=None)
-
-        assert result == tmp_path.resolve() / "cortex-worktrees" / "feat"
+        assert result == (tmp_path / "tmp") / "overnight-worktrees" / "sess-1" / "feat"
 
 
 # ---------------------------------------------------------------------------
@@ -444,135 +350,61 @@ class TestResolveWorktreeRoot:
 # ---------------------------------------------------------------------------
 
 
-class TestVerifyR1BranchCTmpdirDefault:
-    """R1: branch (c) default returns $TMPDIR/cortex-worktrees/<feature>."""
+class TestVerifyR1BranchCRepoRelative:
+    """R1: branch (c) default returns <repo>/.claude/worktrees/<feature>."""
 
-    def test_branch_c_default_returns_tmpdir(self, monkeypatch, tmp_path):
-        """verify-r1: $TMPDIR/cortex-worktrees/<feature> is the new default."""
+    def test_branch_c_default_returns_repo_relative(self, monkeypatch, tmp_path):
+        """verify-r1: <repo>/.claude/worktrees/<feature> is the new default."""
         monkeypatch.delenv("CORTEX_WORKTREE_ROOT", raising=False)
-        monkeypatch.setenv("TMPDIR", str(tmp_path))
+        repo = tmp_path / "repo"
+        repo.mkdir()
 
         with patch(
-            "cortex_command.pipeline.worktree._registered_worktree_root",
-            return_value=None,
+            "cortex_command.pipeline.worktree._repo_root",
+            return_value=repo,
         ):
             result = resolve_worktree_root("verify-r1", session_id=None)
 
-        assert result == tmp_path.resolve() / "cortex-worktrees" / "verify-r1"
-
-    def test_branch_c_default_tmpdir_unset_falls_back_to_tmp(self, monkeypatch):
-        """verify-r1: $TMPDIR unset falls back to /tmp/cortex-worktrees/<feature>."""
-        monkeypatch.delenv("CORTEX_WORKTREE_ROOT", raising=False)
-        monkeypatch.delenv("TMPDIR", raising=False)
-
-        with patch(
-            "cortex_command.pipeline.worktree._registered_worktree_root",
-            return_value=None,
-        ):
-            result = resolve_worktree_root("verify-r1", session_id=None)
-
-        # /tmp on macOS is a symlink to /private/tmp; .resolve() canonicalizes.
-        assert result == Path("/tmp").resolve() / "cortex-worktrees" / "verify-r1"
+        assert result == (repo / ".claude" / "worktrees" / "verify-r1").resolve()
 
 
 class TestVerifyR2BranchCPathResolved:
     """R2: branch (c) canonicalizes via Path.resolve() so symlinks collapse."""
 
     def test_branch_c_path_is_resolved(self, monkeypatch, tmp_path):
-        """verify-r2: a symlinked $TMPDIR is canonicalized to its real target."""
+        """verify-r2: a symlinked repo_root is canonicalized to its real target."""
         monkeypatch.delenv("CORTEX_WORKTREE_ROOT", raising=False)
 
-        real_dir = tmp_path / "real"
-        real_dir.mkdir()
-        symlink_dir = tmp_path / "tmpdir-symlink"
-        symlink_dir.symlink_to(real_dir)
-
-        monkeypatch.setenv("TMPDIR", str(symlink_dir))
+        real_repo = tmp_path / "real-repo"
+        real_repo.mkdir()
+        symlink_repo = tmp_path / "repo-symlink"
+        symlink_repo.symlink_to(real_repo)
 
         with patch(
-            "cortex_command.pipeline.worktree._registered_worktree_root",
-            return_value=None,
+            "cortex_command.pipeline.worktree._repo_root",
+            return_value=symlink_repo,
         ):
             result = resolve_worktree_root("verify-r2", session_id=None)
 
-        # The result must use the resolved (canonical) form of TMPDIR,
+        # The result must use the resolved (canonical) form of repo_root,
         # not the symlink path itself.
-        assert str(result) == str(real_dir.resolve() / "cortex-worktrees" / "verify-r2")
+        assert str(result) == str((real_repo / ".claude" / "worktrees" / "verify-r2").resolve())
         # And explicitly NOT the symlink form.
-        assert str(result) != str(symlink_dir / "cortex-worktrees" / "verify-r2")
+        assert not str(result).startswith(str(symlink_repo) + "/")
 
     def test_branch_c_path_no_symlink_unchanged(self, monkeypatch, tmp_path):
-        """verify-r2 negative control: non-symlink $TMPDIR result is unchanged."""
+        """verify-r2 negative control: non-symlink repo_root result is unchanged."""
         monkeypatch.delenv("CORTEX_WORKTREE_ROOT", raising=False)
-        monkeypatch.setenv("TMPDIR", str(tmp_path))
+        repo = tmp_path / "repo"
+        repo.mkdir()
 
         with patch(
-            "cortex_command.pipeline.worktree._registered_worktree_root",
-            return_value=None,
+            "cortex_command.pipeline.worktree._repo_root",
+            return_value=repo,
         ):
             result = resolve_worktree_root("verify-r2-neg", session_id=None)
 
-        assert result == tmp_path.resolve() / "cortex-worktrees" / "verify-r2-neg"
-
-
-class TestVerifyR3BranchBSentinelSuffix:
-    """R3: branch (b) only matches sentinel-suffixed entries."""
-
-    def test_branch_b_ignores_unrelated_worktrees_substring(self, monkeypatch, tmp_path):
-        """verify-r3: a foreign /some/foreign/worktrees/path entry is ignored."""
-        monkeypatch.delenv("CORTEX_WORKTREE_ROOT", raising=False)
-        monkeypatch.setenv("TMPDIR", str(tmp_path))
-
-        claude_dir = tmp_path / ".claude"
-        claude_dir.mkdir()
-        settings = {
-            "sandbox": {
-                "filesystem": {
-                    "allowWrite": [
-                        "/some/foreign/worktrees/path",
-                    ]
-                }
-            }
-        }
-        (claude_dir / "settings.local.json").write_text(json.dumps(settings))
-
-        with patch(
-            "cortex_command.pipeline.worktree.Path.home",
-            return_value=tmp_path,
-        ):
-            result = resolve_worktree_root("verify-r3", session_id=None)
-
-        # The foreign entry must NOT have been treated as a registered root.
-        # We must fall through to branch (c) — $TMPDIR/cortex-worktrees/.
-        assert result == tmp_path.resolve() / "cortex-worktrees" / "verify-r3"
-        # Negative property: result is not the foreign path.
-        assert not str(result).startswith("/some/foreign/worktrees")
-
-    def test_branch_b_sentinel_suffix_matches(self, monkeypatch, tmp_path):
-        """verify-r3: a properly sentinel-suffixed entry IS honored."""
-        monkeypatch.delenv("CORTEX_WORKTREE_ROOT", raising=False)
-
-        claude_dir = tmp_path / ".claude"
-        claude_dir.mkdir()
-        registered = tmp_path / "sandbox-worktrees"
-        settings = {
-            "sandbox": {
-                "filesystem": {
-                    "allowWrite": [
-                        f"{registered}#cortex-worktree-root",
-                    ]
-                }
-            }
-        }
-        (claude_dir / "settings.local.json").write_text(json.dumps(settings))
-
-        with patch(
-            "cortex_command.pipeline.worktree.Path.home",
-            return_value=tmp_path,
-        ):
-            result = resolve_worktree_root("verify-r3-pos", session_id=None)
-
-        assert result == registered / "verify-r3-pos"
+        assert result == (repo / ".claude" / "worktrees" / "verify-r2-neg").resolve()
 
 
 class TestVerifyR4CleanupWorktreeRoutesThroughResolver:
@@ -627,29 +459,6 @@ class TestVerifyR4CleanupWorktreeRoutesThroughResolver:
 
         # When worktree_path is given, the resolver MUST NOT be consulted.
         assert calls == []
-
-
-class TestVerifyR5NegativeProperty:
-    """R5: branch (c) result never lives under <repo>/.claude/."""
-
-    def test_branch_c_result_not_under_repo_claude(self, monkeypatch, tmp_path):
-        """verify-r5: negative property — result is not under <repo>/.claude/."""
-        monkeypatch.delenv("CORTEX_WORKTREE_ROOT", raising=False)
-        monkeypatch.setenv("TMPDIR", str(tmp_path))
-
-        fake_repo = tmp_path / "repo"
-        fake_repo.mkdir()
-
-        with patch(
-            "cortex_command.pipeline.worktree._registered_worktree_root",
-            return_value=None,
-        ), patch(
-            "cortex_command.pipeline.worktree._repo_root",
-            return_value=fake_repo,
-        ):
-            result = resolve_worktree_root("foo", session_id=None)
-
-        assert not str(result).startswith(str(fake_repo) + "/.claude/")
 
 
 # R11: atime-touch guard on create_worktree()'s idempotent return branch.
@@ -763,3 +572,65 @@ class TestResolveBranchNamePrefix:
         )
         result = _resolve_branch_name("collision-feat", repo=tmp_path, prefix="interactive")
         assert result == "interactive/collision-feat-2"
+
+
+# ---------------------------------------------------------------------------
+# .mcp.json propagation invariant (#260): verify that git worktree add into
+# <repo>/.claude/worktrees/<feature>/ succeeds and propagates .mcp.json into
+# the worktree. The matching deny invariant (writes to .mcp.json blocked) is
+# enforced by the Claude Code JS tool layer, not the kernel — a pytest
+# subprocess open() will not raise PermissionError. The deny half is
+# documented here and observable end-to-end only inside a live Claude Code
+# session; this test pins the propagation half plus a best-effort note.
+# ---------------------------------------------------------------------------
+
+
+def test_mcp_json_propagation_and_deny_invariant(tmp_path):
+    """Verify .mcp.json propagates into a .claude/worktrees/<feature>/ worktree.
+
+    The deny invariant (sandbox blocks writes to .mcp.json) is enforced by
+    the Claude Code JS tool layer, not by Seatbelt at the kernel level. A
+    pytest subprocess open() will NOT raise PermissionError. The deny half
+    of this invariant is observable end-to-end only inside a live Claude
+    Code session; this test pins the propagation half so a regression in
+    git worktree add behavior (e.g. .mcp.json suddenly excluded) is caught.
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    branch = _init_git_repo(repo)
+
+    # Seed .mcp.json in the repo and commit it so git worktree add propagates
+    # the file to the new worktree's checkout.
+    mcp_content = '{"mcpServers": {}}\n'
+    (repo / ".mcp.json").write_text(mcp_content)
+    subprocess.run(
+        ["git", "add", ".mcp.json"],
+        check=True,
+        cwd=str(repo),
+        capture_output=True,
+    )
+    subprocess.run(
+        [
+            "git",
+            "-c", "commit.gpgsign=false",
+            "-c", "user.email=t@t",
+            "-c", "user.name=t",
+            "commit", "-m", "seed mcp",
+        ],
+        check=True,
+        cwd=str(repo),
+        capture_output=True,
+    )
+
+    with patch("cortex_command.pipeline.worktree._repo_root", return_value=repo):
+        info = create_worktree("probe-mcp", base_branch=branch)
+
+    # Propagation: the worktree contains a copy of .mcp.json with the
+    # committed contents.
+    worktree_mcp = info.path / ".mcp.json"
+    assert worktree_mcp.exists(), (
+        f"expected .mcp.json to propagate into worktree at {worktree_mcp}; "
+        "regression in git worktree add behavior would break sandbox "
+        "trust handoff for the spawned claude session."
+    )
+    assert worktree_mcp.read_text() == mcp_content
