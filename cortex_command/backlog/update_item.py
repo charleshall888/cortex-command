@@ -485,6 +485,29 @@ _SCALAR_DESTS: frozenset[str] = frozenset(
 )
 
 
+_LEGACY_POSITIONAL_RE = re.compile(r'^[a-z_][a-z_]*=')
+
+
+def _argv_preflight(argv: list[str]) -> None:
+    """Detect legacy positional ``key=value`` args and exit with a migration hint.
+
+    Scans ``argv[1:]`` (skipping the program name; positional order is not
+    assumed) for any token matching ``^[a-z_][a-z_]*=``. The first-char anchor
+    ``[a-z_]`` (no leading ``-``) prevents false-firing on argparse's
+    ``--status=complete`` equals form. On match, prints a migration hint to
+    stderr and exits with code 2.
+    """
+    for arg in argv[1:]:
+        if _LEGACY_POSITIONAL_RE.match(arg):
+            print(
+                f"Detected legacy positional argument '{arg}'. "
+                f"The CLI now requires --<key> <value>. "
+                f"See 'cortex-update-item --help' for the full flag list.",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+
+
 def _build_parser() -> argparse.ArgumentParser:
     """Build the argparse parser for ``cortex-update-item``."""
     parser = argparse.ArgumentParser(
@@ -511,6 +534,8 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     _telemetry.log_invocation("cortex-update-item")
+
+    _argv_preflight(sys.argv)
 
     parser = _build_parser()
     args = parser.parse_args()
