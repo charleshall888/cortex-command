@@ -79,6 +79,84 @@ def enumerate_plugin_skills() -> list[pathlib.Path]:
     )
 
 
+# ---------------------------------------------------------------------------
+# Shared backlog-resolution corpus + helper
+#
+# Promoted from tests/test_resolve_backlog_item.py (Task 5,
+# unified-backlog-lifecycle-slug-resolver-extend) so the new
+# tests/test_update_item_resolution.py (Task 7) can import the same
+# inputs and the same minimal-item builder without copy-paste drift.
+#
+# Promotion is verbatim — no entries are dropped or rewritten. The
+# helper that was named `_make_item` is exposed publicly as `make_item`
+# (no leading underscore) so cross-file imports are idiomatic.
+# ---------------------------------------------------------------------------
+
+
+BACKLOG_RESOLUTION_CORPUS: list[str] = [
+    # --- Numeric IDs (unpadded) ---
+    "1",    # item 001: Fix overnight watchdog to kill entire process group on stall
+    "6",    # item 006: Make `just setup` additive by default
+    "176",  # item 176: this feature ticket (Lifecycle adopts cortex-resolve-backlog-item)
+    # --- Numeric IDs (zero-padded) ---
+    "006",  # zero-padded: resolves same as "6" via int() comparison
+    "027",  # item 027: Fix next_question_id() race condition in deferral.py
+    "082",  # item 082: Adapt harness to Opus 4.7 (prompt delta + capability adoption)
+    # --- Kebab slugs ---
+    "make-just-setup-additive",  # exact kebab stem of item 006
+    "fix-overnight-watchdog-to-kill-entire-process-group-on-stall",  # full kebab item 001
+    # --- Title fuzzy matches ---
+    "overnight watchdog",           # matches item 001 via title phrase
+    "additive by default",          # matches item 006 via title phrase
+    # --- Uppercase inputs ---
+    "WATCHDOG",   # case-insensitive match → item 001 (Predicate A fires via lower())
+    "OVERNIGHT",  # ambiguous — multiple items contain 'overnight' (exit 2)
+    "CLAUDE",     # ambiguous — multiple items reference CLAUDE (exit 2)
+    # --- Predicate-A candidates (punctuation/special chars in titles) ---
+    "`just setup`",     # Pred-A candidate 1: backtick — item 006
+    "next_question_id()",  # Pred-A candidate 2: parens + underscore — item 027
+    "runner.pid",          # Pred-A candidate 3: dot identifier — item 149
+    # --- Ambiguous-multi inputs (exit 2) ---
+    "fix",       # matches dozens of 'fix' items (ambiguous)
+    "add",       # matches dozens of 'add' items (ambiguous)
+    "overnight", # matches many overnight-related items (ambiguous)
+    # --- No-match inputs (exit 3) ---
+    "xyzzy-nonexistent-99999",  # no item with this pattern
+    "quantum-flux-capacitor",   # no item with this pattern
+    # --- Empty-after-slugify (exit 64) ---
+    "!!!",  # all special chars → slugify gives "" → exit 64
+]
+
+
+@pytest.fixture
+def backlog_resolution_corpus() -> list[str]:
+    """Pytest fixture re-export of ``BACKLOG_RESOLUTION_CORPUS``.
+
+    Tests may either import the module-level constant directly or pull it in
+    as a fixture argument; both surface the same list object.
+    """
+    return BACKLOG_RESOLUTION_CORPUS
+
+
+def make_item(
+    backlog_dir: pathlib.Path,
+    filename: str,
+    title: str,
+    extra: str = "",
+) -> pathlib.Path:
+    """Write a minimal backlog item under ``backlog_dir`` and return its Path.
+
+    Promoted from ``tests/test_resolve_backlog_item.py`` (Task 5) so the new
+    ``tests/test_update_item_resolution.py`` (Task 7) can build fixture items
+    using the same helper. Verbatim behavior — frontmatter is a single
+    ``title:`` line plus the caller-supplied ``extra`` lines.
+    """
+    path = backlog_dir / filename
+    frontmatter = f"---\ntitle: {title!r}\n{extra}---\n"
+    path.write_text(frontmatter, encoding="utf-8")
+    return path
+
+
 def parse_skill_frontmatter(skill_path: pathlib.Path) -> dict:
     """Parse the ``---``-delimited YAML frontmatter at the top of a SKILL.md.
 

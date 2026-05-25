@@ -28,6 +28,12 @@ import pytest
 
 import cortex_command.backlog.resolve_item as _resolver_module
 
+from tests.conftest import (
+    BACKLOG_RESOLUTION_CORPUS,
+    backlog_resolution_corpus,  # noqa: F401 — re-exported for tests that prefer the fixture
+    make_item,
+)
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = REPO_ROOT / "bin" / "cortex-resolve-backlog-item"
 BACKLOG_DIR = REPO_ROOT / "cortex" / "backlog"
@@ -79,39 +85,11 @@ RESOLVE_ITEM_SOURCE = (
 # will assert post-removal (Predicate-B-only) outcomes match or carry judgment.
 # ---------------------------------------------------------------------------
 
-CURATED_INPUTS: list[str] = [
-    # --- Numeric IDs (unpadded) ---
-    "1",    # item 001: Fix overnight watchdog to kill entire process group on stall
-    "6",    # item 006: Make `just setup` additive by default
-    "176",  # item 176: this feature ticket (Lifecycle adopts cortex-resolve-backlog-item)
-    # --- Numeric IDs (zero-padded) ---
-    "006",  # zero-padded: resolves same as "6" via int() comparison
-    "027",  # item 027: Fix next_question_id() race condition in deferral.py
-    "082",  # item 082: Adapt harness to Opus 4.7 (prompt delta + capability adoption)
-    # --- Kebab slugs ---
-    "make-just-setup-additive",  # exact kebab stem of item 006
-    "fix-overnight-watchdog-to-kill-entire-process-group-on-stall",  # full kebab item 001
-    # --- Title fuzzy matches ---
-    "overnight watchdog",           # matches item 001 via title phrase
-    "additive by default",          # matches item 006 via title phrase
-    # --- Uppercase inputs ---
-    "WATCHDOG",   # case-insensitive match → item 001 (Predicate A fires via lower())
-    "OVERNIGHT",  # ambiguous — multiple items contain 'overnight' (exit 2)
-    "CLAUDE",     # ambiguous — multiple items reference CLAUDE (exit 2)
-    # --- Predicate-A candidates (punctuation/special chars in titles) ---
-    "`just setup`",     # Pred-A candidate 1: backtick — item 006
-    "next_question_id()",  # Pred-A candidate 2: parens + underscore — item 027
-    "runner.pid",          # Pred-A candidate 3: dot identifier — item 149
-    # --- Ambiguous-multi inputs (exit 2) ---
-    "fix",       # matches dozens of 'fix' items (ambiguous)
-    "add",       # matches dozens of 'add' items (ambiguous)
-    "overnight", # matches many overnight-related items (ambiguous)
-    # --- No-match inputs (exit 3) ---
-    "xyzzy-nonexistent-99999",  # no item with this pattern
-    "quantum-flux-capacitor",   # no item with this pattern
-    # --- Empty-after-slugify (exit 64) ---
-    "!!!",  # all special chars → slugify gives "" → exit 64
-]
+# The corpus formerly defined inline as ``CURATED_INPUTS`` was promoted to
+# tests/conftest.py as ``BACKLOG_RESOLUTION_CORPUS`` (Task 5,
+# unified-backlog-lifecycle-slug-resolver-extend) so the new
+# tests/test_update_item_resolution.py (Task 7) can share the same corpus
+# without copy-paste drift. The imported name is used everywhere below.
 
 
 # ---------------------------------------------------------------------------
@@ -130,12 +108,9 @@ def resolver():
 # ---------------------------------------------------------------------------
 
 
-def _make_item(backlog_dir: Path, filename: str, title: str, extra: str = "") -> Path:
-    """Write a minimal backlog item under backlog_dir and return its Path."""
-    path = backlog_dir / filename
-    frontmatter = f"---\ntitle: {title!r}\n{extra}---\n"
-    path.write_text(frontmatter, encoding="utf-8")
-    return path
+# ``_make_item`` was promoted to tests/conftest.py as ``make_item`` (no
+# leading underscore) so the new tests/test_update_item_resolution.py (Task 7)
+# can import it. References in this file use the imported public name.
 
 
 def _run(args: list[str], backlog_dir: Path) -> subprocess.CompletedProcess:
@@ -269,7 +244,7 @@ def test_numeric_resolves_109(resolver, tmp_path):
     """Input "109" matches a file whose name starts with "109-"."""
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
-    item = _make_item(
+    item = make_item(
         backlog,
         "109-extract-refine-resolution.md",
         "Extract /refine resolution into bin",
@@ -283,7 +258,7 @@ def test_numeric_999_no_match(resolver, tmp_path):
     """Input "999" returns empty list when no file starts with "999-"."""
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
-    _make_item(backlog, "109-some-ticket.md", "Some Ticket")
+    make_item(backlog, "109-some-ticket.md", "Some Ticket")
     items = sorted(backlog.glob("[0-9]*-*.md"))
     matches = resolver._resolve_numeric("999", items)
     assert matches == []
@@ -299,7 +274,7 @@ def test_kebab_resolves_extract_refine(resolver, tmp_path):
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
     slug = "extract-refine-resolution-into-bin-resolve-backlog-item-with-bailout"
-    item = _make_item(
+    item = make_item(
         backlog,
         f"109-{slug}.md",
         "Extract /refine resolution into bin/resolve-backlog-item with bailout",
@@ -313,7 +288,7 @@ def test_kebab_does_not_exist_no_match(resolver, tmp_path):
     """Non-existent kebab slug returns empty list."""
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
-    _make_item(backlog, "109-some-ticket.md", "Some Ticket")
+    make_item(backlog, "109-some-ticket.md", "Some Ticket")
     items = sorted(backlog.glob("[0-9]*-*.md"))
     matches = resolver._resolve_kebab("does-not-exist", items)
     assert matches == []
@@ -328,8 +303,8 @@ def test_title_phrase_uniquely_identifies(resolver, tmp_path):
     """Unique phrase matches exactly one item."""
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
-    item = _make_item(backlog, "001-unique-zorp.md", "Unique Zorp Widget")
-    _make_item(backlog, "002-other.md", "Other Item")
+    item = make_item(backlog, "001-unique-zorp.md", "Unique Zorp Widget")
+    make_item(backlog, "002-other.md", "Other Item")
     items_with_fm = [
         (p, resolver._parse_frontmatter(p))
         for p in sorted(backlog.glob("[0-9]*-*.md"))
@@ -342,8 +317,8 @@ def test_title_phrase_extract_multiple_ambiguous(resolver, tmp_path):
     """Input "extract" matches multiple items → ambiguous."""
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
-    a = _make_item(backlog, "001-extract-foo.md", "Extract foo from bar")
-    b = _make_item(backlog, "002-extract-baz.md", "Extract baz from qux")
+    a = make_item(backlog, "001-extract-foo.md", "Extract foo from bar")
+    b = make_item(backlog, "002-extract-baz.md", "Extract baz from qux")
     items_with_fm = [
         (p, resolver._parse_frontmatter(p))
         for p in sorted(backlog.glob("[0-9]*-*.md"))
@@ -357,7 +332,7 @@ def test_title_phrase_nonsense_no_match(resolver, tmp_path):
     """Input that matches nothing returns empty list."""
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
-    _make_item(backlog, "001-some-ticket.md", "Some Ticket")
+    make_item(backlog, "001-some-ticket.md", "Some Ticket")
     items_with_fm = [
         (p, resolver._parse_frontmatter(p))
         for p in sorted(backlog.glob("[0-9]*-*.md"))
@@ -456,8 +431,8 @@ def test_title_phrase_axis_predicate_a_only(resolver, tmp_path):
     # pred A: "4.7" in "upgrade to 4.7 stable" → True → match
     # This exercises predicate A firing regardless of B.
     # The test proves predicate A is part of the union — that's sufficient.
-    item = _make_item(backlog, "001-upgrade-4-7.md", "Upgrade to 4.7 stable")
-    _make_item(backlog, "002-unrelated.md", "Completely unrelated ticket")
+    item = make_item(backlog, "001-upgrade-4-7.md", "Upgrade to 4.7 stable")
+    make_item(backlog, "002-unrelated.md", "Completely unrelated ticket")
     items_with_fm = [
         (p, resolver._parse_frontmatter(p))
         for p in sorted(backlog.glob("[0-9]*-*.md"))
@@ -476,12 +451,12 @@ def test_title_phrase_axis_predicate_b_only(resolver, tmp_path):
     """
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
-    item = _make_item(
+    item = make_item(
         backlog,
         "108-extract-backlog-pick.md",
         "Extract /backlog pick ready-set into bin/backlog-ready",
     )
-    _make_item(backlog, "002-unrelated.md", "Completely unrelated ticket")
+    make_item(backlog, "002-unrelated.md", "Completely unrelated ticket")
     items_with_fm = [
         (p, resolver._parse_frontmatter(p))
         for p in sorted(backlog.glob("[0-9]*-*.md"))
@@ -498,8 +473,8 @@ def test_title_phrase_axis_mixed_case(resolver, tmp_path):
     """Predicate A matches case-insensitively (input "GPG" finds title with "GPG")."""
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
-    item = _make_item(backlog, "001-gpg-signing.md", "Enable GPG signing for commits")
-    _make_item(backlog, "002-other.md", "Unrelated ticket")
+    item = make_item(backlog, "001-gpg-signing.md", "Enable GPG signing for commits")
+    make_item(backlog, "002-other.md", "Unrelated ticket")
     items_with_fm = [
         (p, resolver._parse_frontmatter(p))
         for p in sorted(backlog.glob("[0-9]*-*.md"))
@@ -512,8 +487,8 @@ def test_title_phrase_axis_whitespace(resolver, tmp_path):
     """Predicate B fires for "create  skill" (double space) matching "Create skill"."""
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
-    item = _make_item(backlog, "001-create-skill.md", "Create skill")
-    _make_item(backlog, "002-other.md", "Unrelated ticket")
+    item = make_item(backlog, "001-create-skill.md", "Create skill")
+    make_item(backlog, "002-other.md", "Unrelated ticket")
     items_with_fm = [
         (p, resolver._parse_frontmatter(p))
         for p in sorted(backlog.glob("[0-9]*-*.md"))
@@ -535,7 +510,7 @@ def test_exit_codes_zero_unambiguous(tmp_path):
     """Unambiguous match → exit 0 with JSON on stdout."""
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
-    _make_item(backlog, "001-unique-zorp.md", "Unique Zorp Widget")
+    make_item(backlog, "001-unique-zorp.md", "Unique Zorp Widget")
     result = _run(["zorp"], backlog)
     assert result.returncode == 0
     assert result.stdout.strip()
@@ -547,8 +522,8 @@ def test_exit_codes_two_ambiguous(tmp_path):
     """Two matches → exit 2 with candidate list on stderr."""
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
-    _make_item(backlog, "001-extract-foo.md", "Extract foo from bar")
-    _make_item(backlog, "002-extract-baz.md", "Extract baz from qux")
+    make_item(backlog, "001-extract-foo.md", "Extract foo from bar")
+    make_item(backlog, "002-extract-baz.md", "Extract baz from qux")
     result = _run(["extract"], backlog)
     assert result.returncode == 2
     assert "ambiguous" in result.stderr
@@ -558,7 +533,7 @@ def test_exit_codes_three_no_match(tmp_path):
     """No match → exit 3 with no-match message on stderr."""
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
-    _make_item(backlog, "001-some-ticket.md", "Some Ticket")
+    make_item(backlog, "001-some-ticket.md", "Some Ticket")
     result = _run(["xyzzy-nonexistent-99999"], backlog)
     assert result.returncode == 3
     assert "no match" in result.stderr
@@ -568,7 +543,7 @@ def test_exit_codes_64_empty_input(tmp_path):
     """Input that slugifies to empty → exit 64."""
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
-    _make_item(backlog, "001-some-ticket.md", "Some Ticket")
+    make_item(backlog, "001-some-ticket.md", "Some Ticket")
     result = _run(["!!!"], backlog)
     assert result.returncode == 64
 
@@ -593,7 +568,7 @@ def test_json_schema_closed_set(tmp_path):
     """JSON output on exit 0 must have exactly the four expected keys."""
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
-    _make_item(backlog, "001-unique-zorp.md", "Unique Zorp Widget")
+    make_item(backlog, "001-unique-zorp.md", "Unique Zorp Widget")
     result = _run(["zorp"], backlog)
     assert result.returncode == 0
     d = json.loads(result.stdout)
@@ -609,7 +584,7 @@ def test_lifecycle_slug_frontmatter_wins(resolver, tmp_path):
     """lifecycle_slug frontmatter field is used when present."""
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
-    item = _make_item(
+    item = make_item(
         backlog,
         "001-some-ticket.md",
         "Some Ticket",
@@ -625,7 +600,7 @@ def test_lifecycle_slug_dirname_fallback(resolver, tmp_path):
     """spec/research dirname is used when no lifecycle_slug frontmatter."""
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
-    item = _make_item(
+    item = make_item(
         backlog,
         "001-some-ticket.md",
         "Some Ticket",
@@ -641,7 +616,7 @@ def test_lifecycle_slug_slugify_fallback(resolver, tmp_path):
     """slugify(title) is used when no lifecycle_slug and no spec/research dirname."""
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
-    item = _make_item(
+    item = make_item(
         backlog,
         "001-some-ticket.md",
         "Extract Refine Into Bin",
@@ -673,7 +648,7 @@ def test_edge_empty_after_slugify(tmp_path):
     """Input "!!!" (all special chars) → exit 64 (not a no-match exit 3)."""
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
-    _make_item(backlog, "001-some-ticket.md", "Some Ticket")
+    make_item(backlog, "001-some-ticket.md", "Some Ticket")
     result = _run(["!!!"], backlog)
     assert result.returncode == 64
 
@@ -686,8 +661,8 @@ def test_edge_empty_title_slugify(resolver, tmp_path):
     # guard rejects empty-string matches so the function returns []. Pre-#176 this
     # fired via Predicate A (raw "!!!" in raw "!!!"); post-#176 with A removed, no
     # match — consistent with main()'s exit-64 guard for empty-after-slugify input.
-    _make_item(backlog, "001-special.md", "!!!")
-    _make_item(backlog, "002-normal.md", "Normal ticket")
+    make_item(backlog, "001-special.md", "!!!")
+    make_item(backlog, "002-normal.md", "Normal ticket")
     items_with_fm = [
         (p, resolver._parse_frontmatter(p))
         for p in sorted(backlog.glob("[0-9]*-*.md"))
@@ -733,10 +708,10 @@ def test_uuid_prefix_minimum_length(
     """
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
-    _make_item(backlog, "001-alpha.md", "Alpha", extra=f"uuid: {_UUID_A}\n")
-    _make_item(backlog, "002-beta.md", "Beta", extra=f"uuid: {_UUID_B}\n")
-    _make_item(backlog, "003-gamma.md", "Gamma", extra=f"uuid: {_UUID_C}\n")
-    _make_item(backlog, "004-delta.md", "Delta", extra=f"uuid: {_UUID_D}\n")
+    make_item(backlog, "001-alpha.md", "Alpha", extra=f"uuid: {_UUID_A}\n")
+    make_item(backlog, "002-beta.md", "Beta", extra=f"uuid: {_UUID_B}\n")
+    make_item(backlog, "003-gamma.md", "Gamma", extra=f"uuid: {_UUID_C}\n")
+    make_item(backlog, "004-delta.md", "Delta", extra=f"uuid: {_UUID_D}\n")
 
     result = resolver.resolve(input_str, backlog)
     assert result.status == expected_status, (
@@ -757,7 +732,7 @@ def test_uuid_prefix_case_insensitive(resolver, tmp_path):
     """UUID-prefix match is case-insensitive — uppercase input resolves the same."""
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
-    _make_item(backlog, "001-delta.md", "Delta", extra=f"uuid: {_UUID_D}\n")
+    make_item(backlog, "001-delta.md", "Delta", extra=f"uuid: {_UUID_D}\n")
     # Use first 8 hex chars uppercased.
     result = resolver.resolve("DADAF6B6", backlog)
     assert result.status == "ok"
@@ -769,7 +744,7 @@ def test_uuid_prefix_non_hex_falls_through(resolver, tmp_path):
     """Input that fails the pure-hex predicate skips UUID-prefix entirely."""
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
-    _make_item(backlog, "001-delta.md", "Delta", extra=f"uuid: {_UUID_D}\n")
+    make_item(backlog, "001-delta.md", "Delta", extra=f"uuid: {_UUID_D}\n")
     # "zzzzzzzz" is 8 chars but not hex — must NOT short-circuit UUID-prefix
     # and falls through to subsequent steps (no match → not_found).
     result = resolver.resolve("zzzzzzzz", backlog)
@@ -796,8 +771,8 @@ def test_resolution_order(resolver, tmp_path, input_str, expected_filename):
     """Each positive case matches the expected step by construction."""
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
-    _make_item(backlog, "001-alpha.md", "Alpha", extra=f"uuid: {_UUID_A}\n")
-    _make_item(
+    make_item(backlog, "001-alpha.md", "Alpha", extra=f"uuid: {_UUID_A}\n")
+    make_item(
         backlog,
         "002-beta.md",
         "Beta unique title",
@@ -806,13 +781,13 @@ def test_resolution_order(resolver, tmp_path, input_str, expected_filename):
             "lifecycle_slug: step-four-lifecycle-slug\n"
         ),
     )
-    _make_item(
+    make_item(
         backlog,
         "003-gamma.md",
         "Gamma item with Gamma in title",
         extra=f"uuid: {_UUID_C}\n",
     )
-    _make_item(backlog, "004-delta.md", "Delta", extra=f"uuid: {_UUID_D}\n")
+    make_item(backlog, "004-delta.md", "Delta", extra=f"uuid: {_UUID_D}\n")
 
     result = resolver.resolve(input_str, backlog)
     assert result.status == "ok", (
@@ -840,8 +815,8 @@ def test_resolution_order_fall_through(
     """Negative/fall-through case per branch — non-matching input reaches step 5."""
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
-    _make_item(backlog, "001-alpha.md", "Alpha", extra=f"uuid: {_UUID_A}\n")
-    _make_item(
+    make_item(backlog, "001-alpha.md", "Alpha", extra=f"uuid: {_UUID_A}\n")
+    make_item(
         backlog,
         "002-beta.md",
         "Beta",
@@ -856,13 +831,13 @@ def test_lifecycle_slug_frontmatter_step(resolver, tmp_path):
     """Step 4: exact lifecycle_slug frontmatter equality (frontmatter-only)."""
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
-    item = _make_item(
+    item = make_item(
         backlog,
         "010-some-ticket.md",
         "Some Ticket",
         extra="lifecycle_slug: my-bespoke-lifecycle-slug\n",
     )
-    _make_item(backlog, "011-other.md", "Other Ticket")
+    make_item(backlog, "011-other.md", "Other Ticket")
 
     result = resolver.resolve("my-bespoke-lifecycle-slug", backlog)
     assert result.status == "ok"
@@ -877,7 +852,7 @@ def test_lifecycle_slug_frontmatter_step_no_directory_check(
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
     # Deliberately point at a slug whose lifecycle directory does NOT exist.
-    item = _make_item(
+    item = make_item(
         backlog,
         "010-some-ticket.md",
         "Some Ticket",
@@ -893,13 +868,13 @@ def test_lifecycle_slug_frontmatter_step_ambiguous(resolver, tmp_path):
     """Two items sharing a lifecycle_slug → exit-2 candidate list."""
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
-    _make_item(
+    make_item(
         backlog,
         "010-first.md",
         "First",
         extra="lifecycle_slug: shared-slug\n",
     )
-    _make_item(
+    make_item(
         backlog,
         "011-second.md",
         "Second",
@@ -915,8 +890,8 @@ def test_stem_with_or_without_prefix(resolver, tmp_path):
     """Step 3 symmetric strip: input ``foo`` matches both ``007-foo`` and ``107-foo``."""
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
-    a = _make_item(backlog, "007-foo.md", "Foo A")
-    b = _make_item(backlog, "107-foo.md", "Foo B")
+    a = make_item(backlog, "007-foo.md", "Foo A")
+    b = make_item(backlog, "107-foo.md", "Foo B")
 
     result = resolver.resolve("foo", backlog)
     assert result.status == "ambiguous"
@@ -933,7 +908,7 @@ def test_stem_with_or_without_prefix_input_has_prefix(resolver, tmp_path):
     """
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
-    item = _make_item(backlog, "007-foo.md", "Foo solo")
+    item = make_item(backlog, "007-foo.md", "Foo solo")
 
     result = resolver.resolve("007-foo", backlog)
     assert result.status == "ok"
@@ -949,9 +924,9 @@ def test_substring_ambiguity_exit_2(tmp_path):
     """
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
-    _make_item(backlog, "001-extract-foo.md", "Extract foo helper")
-    _make_item(backlog, "002-extract-bar.md", "Extract bar helper")
-    _make_item(backlog, "003-extract-baz.md", "Extract baz helper")
+    make_item(backlog, "001-extract-foo.md", "Extract foo helper")
+    make_item(backlog, "002-extract-bar.md", "Extract bar helper")
+    make_item(backlog, "003-extract-baz.md", "Extract baz helper")
 
     result = _run(["extract"], backlog)
     assert result.returncode == 2, (
@@ -990,7 +965,7 @@ def test_discovery_walks_up_from_cwd(tmp_path):
     """No env var: script walks from cwd, finds backlog/ at cwd root."""
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
-    _make_item(backlog, "001-unique-zorp.md", "Unique Zorp Widget")
+    make_item(backlog, "001-unique-zorp.md", "Unique Zorp Widget")
     result = _run_no_env(["zorp"], tmp_path)
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
@@ -1001,7 +976,7 @@ def test_discovery_walks_up_from_subdir(tmp_path):
     """No env var: script walks up from a deep subdir to find backlog/."""
     backlog = tmp_path / "cortex" / "backlog"
     backlog.mkdir(parents=True)
-    _make_item(backlog, "001-unique-zorp.md", "Unique Zorp Widget")
+    make_item(backlog, "001-unique-zorp.md", "Unique Zorp Widget")
     deep = tmp_path / "nested" / "sub" / "dir"
     deep.mkdir(parents=True)
     result = _run_no_env(["zorp"], deep)
@@ -1021,7 +996,7 @@ def test_discovery_no_backlog_exits_70(tmp_path):
 # ---------------------------------------------------------------------------
 # R5a: Pre-removal baseline capture
 # Spec: extend tests/test_resolve_backlog_item.py with test_predicate_a_baseline_capture
-# that runs CURATED_INPUTS against the current helper (Predicate-A∪B) over the live
+# that runs BACKLOG_RESOLUTION_CORPUS against the current helper (Predicate-A∪B) over the live
 # backlog/[0-9]*-*.md items and writes (input, exit-code, resolved-filename-or-None)
 # tuples to tests/fixtures/predicate_a_baseline.json.
 #
@@ -1043,9 +1018,9 @@ def _run_live(input_str: str) -> subprocess.CompletedProcess:
 
 
 def test_predicate_a_baseline_capture():
-    """Capture pre-removal Predicate-A∪B behavior on CURATED_INPUTS, write fixture.
+    """Capture pre-removal Predicate-A∪B behavior on BACKLOG_RESOLUTION_CORPUS, write fixture.
 
-    Runs each input in CURATED_INPUTS against the current helper over the live
+    Runs each input in BACKLOG_RESOLUTION_CORPUS against the current helper over the live
     backlog/[0-9]*-*.md items.  Records (input, exit_code, resolved_filename_or_None)
     tuples in tests/fixtures/predicate_a_baseline.json as the frozen baseline.
 
@@ -1061,7 +1036,7 @@ def test_predicate_a_baseline_capture():
     assert BACKLOG_DIR.is_dir(), f"live backlog not found at {BACKLOG_DIR}"
 
     baseline: list[list] = []  # list of [input, exit_code, filename_or_None]
-    for inp in CURATED_INPUTS:
+    for inp in BACKLOG_RESOLUTION_CORPUS:
         result = _run_live(inp)
         if result.returncode == 0:
             try:
@@ -1073,7 +1048,7 @@ def test_predicate_a_baseline_capture():
             resolved = None
         baseline.append([inp, result.returncode, resolved])
 
-    # Write fixture (deterministic: CURATED_INPUTS order is fixed)
+    # Write fixture (deterministic: BACKLOG_RESOLUTION_CORPUS order is fixed)
     FIXTURES_DIR.mkdir(parents=True, exist_ok=True)
     BASELINE_FIXTURE.write_text(
         json.dumps(baseline, indent=2) + "\n",
@@ -1086,22 +1061,22 @@ def test_predicate_a_baseline_capture():
     assert len(loaded) >= 10, (
         f"fixture has only {len(loaded)} entries; expected ≥10 (spec R5a)"
     )
-    assert len(loaded) == len(CURATED_INPUTS), (
-        f"fixture row count {len(loaded)} != len(CURATED_INPUTS) {len(CURATED_INPUTS)}"
+    assert len(loaded) == len(BACKLOG_RESOLUTION_CORPUS), (
+        f"fixture row count {len(loaded)} != len(BACKLOG_RESOLUTION_CORPUS) {len(BACKLOG_RESOLUTION_CORPUS)}"
     )
 
 
 # ---------------------------------------------------------------------------
 # R5b: Post-removal divergence assertion
 # Spec: extend tests/test_resolve_backlog_item.py with
-# test_predicate_a_divergences_match_judgment that re-runs CURATED_INPUTS
+# test_predicate_a_divergences_match_judgment that re-runs BACKLOG_RESOLUTION_CORPUS
 # against the post-removal (slugify-only / Predicate-B-only) helper and
 # asserts each (input → outcome) tuple either:
 #   (i)  matches the frozen baseline from tests/fixtures/predicate_a_baseline.json, or
 #   (ii) appears in documented_divergences with a per-case judgment.
 #
 # documented_divergences rows carry:
-#   input            — the CURATED_INPUTS entry that diverged
+#   input            — the BACKLOG_RESOLUTION_CORPUS entry that diverged
 #   baseline_outcome — [exit_code, filename_or_None] from the frozen baseline
 #   post_outcome     — [exit_code, filename_or_None] observed post-removal
 #   judgment         — "bug-shaped" or "legitimate-feature"
@@ -1120,7 +1095,7 @@ documented_divergences: list[dict] = []
 def test_predicate_a_divergences_match_judgment():
     """Assert post-removal outcomes match baseline or carry an explicit judgment.
 
-    Re-runs each input in CURATED_INPUTS against the current (post-Predicate-A-
+    Re-runs each input in BACKLOG_RESOLUTION_CORPUS against the current (post-Predicate-A-
     removal) helper over the live backlog and compares to the frozen baseline in
     tests/fixtures/predicate_a_baseline.json.
 
@@ -1150,7 +1125,7 @@ def test_predicate_a_divergences_match_judgment():
     }
 
     failures: list[str] = []
-    for inp in CURATED_INPUTS:
+    for inp in BACKLOG_RESOLUTION_CORPUS:
         result = _run_live(inp)
         if result.returncode == 0:
             try:
@@ -1204,7 +1179,7 @@ def test_predicate_a_divergences_match_judgment():
 # for sequential gates").
 #
 # Idempotence rules:
-#   • Fixture absent              → capture (run CURATED_INPUTS, write file).
+#   • Fixture absent              → capture (run BACKLOG_RESOLUTION_CORPUS, write file).
 #   • Fixture present, SHA match  → row-count parity assert + exit; do NOT rewrite.
 #   • Fixture present, SHA diverges → row-count parity assert + exit; do NOT rewrite.
 #                                     (Expected steady state on post-mutation branch.)
@@ -1229,7 +1204,7 @@ def _compute_resolve_item_source_sha() -> str:
 def test_capture_3step_baseline():
     """One-shot capture of the pre-mutation 3-step resolver baseline.
 
-    When the fixture is absent, runs every input in CURATED_INPUTS against the
+    When the fixture is absent, runs every input in BACKLOG_RESOLUTION_CORPUS against the
     live backlog via _run_live and writes
     tests/fixtures/predicate_3step_baseline.json with shape:
 
@@ -1240,7 +1215,7 @@ def test_capture_3step_baseline():
         }
 
     When the fixture is present, the test asserts row-count parity with
-    CURATED_INPUTS and exits — it does NOT rewrite. This is intentional:
+    BACKLOG_RESOLUTION_CORPUS and exits — it does NOT rewrite. This is intentional:
     re-capture requires `git rm tests/fixtures/predicate_3step_baseline.json`
     so regeneration leaves an audit trail in git history.
 
@@ -1266,9 +1241,9 @@ def test_capture_3step_baseline():
         assert "source_sha" in data, "fixture missing 'source_sha' field"
         assert "captured_at" in data, "fixture missing 'captured_at' field"
         assert "rows" in data, "fixture missing 'rows' field"
-        assert len(data["rows"]) == len(CURATED_INPUTS), (
+        assert len(data["rows"]) == len(BACKLOG_RESOLUTION_CORPUS), (
             f"fixture row count {len(data['rows'])} != "
-            f"len(CURATED_INPUTS) {len(CURATED_INPUTS)}; "
+            f"len(BACKLOG_RESOLUTION_CORPUS) {len(BACKLOG_RESOLUTION_CORPUS)}; "
             "delete the fixture with `git rm` to force regeneration."
         )
         # SHA may or may not match current resolver source; both states are
@@ -1280,7 +1255,7 @@ def test_capture_3step_baseline():
     captured_at = _datetime.datetime.now(_datetime.timezone.utc).isoformat()
 
     rows: list[list] = []
-    for inp in CURATED_INPUTS:
+    for inp in BACKLOG_RESOLUTION_CORPUS:
         result = _run_live(inp)
         if result.returncode == 0:
             try:
@@ -1312,7 +1287,7 @@ def test_capture_3step_baseline():
         PREDICATE_3STEP_BASELINE_FIXTURE.read_text(encoding="utf-8")
     )
     assert isinstance(loaded, dict) and "source_sha" in loaded and "rows" in loaded
-    assert len(loaded["rows"]) == len(CURATED_INPUTS)
+    assert len(loaded["rows"]) == len(BACKLOG_RESOLUTION_CORPUS)
 
 
 # ---------------------------------------------------------------------------
@@ -1349,7 +1324,7 @@ def test_capture_3step_baseline():
 # ---------------------------------------------------------------------------
 
 # Pre-committed divergence allowlist — spec-anticipated transitions.
-# Per task brief: substring-ambiguity inputs from CURATED_INPUTS whose
+# Per task brief: substring-ambiguity inputs from BACKLOG_RESOLUTION_CORPUS whose
 # 3-step outcome was a silent first-match and whose 5-step outcome is
 # exit=2 ambiguous. Rationale: spec §Changes-to-Existing-Behavior
 # "Currently picks the first-sorted match silently; after the change,

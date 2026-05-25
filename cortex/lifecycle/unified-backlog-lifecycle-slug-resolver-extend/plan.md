@@ -51,7 +51,7 @@ Extract a pure `resolve()` library function from `cortex_command/backlog/resolve
 - **Complexity**: simple
 - **Context**: Pattern follows `tests/test_resolve_backlog_item.py:820-918` (`test_predicate_a_divergences_match_judgment` + `documented_divergences` list) but with two structural additions: (1) the wrapped-object fixture shape (`{"source_sha":..., "rows":[...]}`) instead of bare-list; (2) the capture-ordering gate that asserts source_sha inequality. `_run_live` at `:760-768` issues against the real backlog directory. The pre-enumeration of `"fix"`, `"add"`, `"overnight"` is a load-bearing fix: without it, the implementer's curation IS the spec, creating a tautology where any transition the new code produces is silently labeled "intended-by-spec." Pre-enumeration locks the expected transition set at plan time.
 - **Verification**: `pytest tests/test_resolve_backlog_item.py -k "test_no_order_drift_against_baseline"` exits 0 AND `grep -cE "\"fix\"|\"add\"|\"overnight\"" tests/test_resolve_backlog_item.py` returns ≥3 inside the `documented_3step_to_5step_divergences` block (one citation per pre-enumerated divergence).
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 5: Promote `CURATED_INPUTS` to shared corpus fixture
 - **Files**: `tests/conftest.py`, `tests/test_resolve_backlog_item.py`
