@@ -10,3 +10,4 @@
 {"ts": "2026-05-25T17:49:40Z", "event": "phase_transition", "feature": "fix-test-cascade-from-252-migration", "tier": "complex", "from": "implement", "to": "review"}
 {"ts": "2026-05-25T18:01:31Z", "event": "review_verdict", "feature": "fix-test-cascade-from-252-migration", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
 {"ts": "2026-05-25T18:01:31Z", "event": "phase_transition", "feature": "fix-test-cascade-from-252-migration", "from": "review", "to": "complete"}
+{"ts": "2026-05-25T18:02:54Z", "event": "feature_complete", "feature": "fix-test-cascade-from-252-migration", "tasks_total": 11, "rework_cycles": 1, "merge_anchor": "merge"}

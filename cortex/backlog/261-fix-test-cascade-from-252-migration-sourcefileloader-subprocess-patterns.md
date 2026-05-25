@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: fa775672-f8c2-47ef-9bf3-933a1ba75ec3
 title: "Fix test cascade from #252 migration (SourceFileLoader + subprocess patterns)"
-status: refined
+status: complete
 priority: medium
 type: chore
 created: 2026-05-20

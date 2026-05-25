@@ -10,7 +10,6 @@
 | 250 | Lifecycle implement: auto-enter worktree via EnterWorktree (Approach A, deferred design surface) | refined | medium | feature | — | — | ✓ |
 | 254 | Unified backlog/lifecycle slug resolver: extend to cortex-update-item consumer | refined | medium | feature | — | 251 | ✓ |
 | 259 | Reconcile SessionStart lifecycle-phase summary against on-disk truth | refined | medium | chore | — | — | ✓ |
-| 261 | Fix test cascade from #252 migration (SourceFileLoader + subprocess patterns) | refined | medium | chore | — | 252 | ✓ |
 | 262 | Extend overnight circuit breaker to halt on systemic worker failures | refined | medium | chore | — | — | ✓ |
 | 156 | Make cortex-check-parity context-aware (skip tokens inside fenced code blocks) | deferred | low | feature | — | — | — |
 | 247 | Offer consolidation clusters before R15 gate in discovery decompose | refined | low | feature | — | — | ✓ |
@@ -21,7 +20,6 @@
 - **250** Lifecycle implement: auto-enter worktree via EnterWorktree (Approach A, deferred design surface)
 - **254** Unified backlog/lifecycle slug resolver: extend to cortex-update-item consumer
 - **259** Reconcile SessionStart lifecycle-phase summary against on-disk truth
-- **261** Fix test cascade from #252 migration (SourceFileLoader + subprocess patterns)
 - **262** Extend overnight circuit breaker to halt on systemic worker failures
 - **247** Offer consolidation clusters before R15 gate in discovery decompose
 
