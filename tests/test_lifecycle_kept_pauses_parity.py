@@ -39,7 +39,7 @@ _STEP_HEADING = re.compile(r"^#{1,4}\s+Step\s+(\d+)\b", re.MULTILINE)
 
 _PHASE_EXIT_PAUSE_TAG = "phase-exit pause"
 _CONDITIONAL_PAUSE_TAG = "conditional pause"
-_CONDITIONAL_PAUSE_MARKER = re.compile(r"\bread_branch_mode\b|\blifecycle_config\b")
+_CONDITIONAL_PAUSE_MARKER = re.compile(r"\bread_branch_mode\b|\blifecycle_config\b|\bcortex-lifecycle-branch-mode\b")
 
 
 def _parse_inventory() -> list[tuple[Path, int, str, str]]:
