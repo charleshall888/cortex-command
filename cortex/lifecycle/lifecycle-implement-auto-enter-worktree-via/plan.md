@@ -78,7 +78,7 @@ Land Approach A — mid-session auto-enter of the `interactive/{slug}` worktree 
 - **Complexity**: simple
 - **Context**: Live-session detection uses `glob.glob(repo_root / 'cortex/lifecycle/sessions/*.interactive.pid')` filtered for files whose contents map to live PIDs (per the existing liveness check pattern — search the codebase for `is_pid_alive` or similar). Removal mirrors `ensure_gitignore`'s atomic-write pattern. Exit code convention: 0 success, 2 refused-pre-condition.
 - **Verification**: `just test tests/test_init_claude_md_authorization.py::test_revoke_round_trip` exits 0 (test file authored in Task 8 covers all four branches).
-- **Status**: [ ] pending
+- **Status**: [x] completed (5 branches verified manually; pytest deferred to T8)
 
 ### Task 7: Add `cortex init --verify-worktree-auth` subcommand
 - **Files**: `cortex_command/init/handler.py`, `cortex_command/init/__main__.py`
@@ -87,7 +87,7 @@ Land Approach A — mid-session auto-enter of the `interactive/{slug}` worktree 
 - **Complexity**: simple
 - **Context**: Parsing logic shares the sigil-parser introduced in Task 5 (extract from the same module rather than re-deriving). No file mutation — read-only probe. Serialized after Task 6 to avoid concurrent edits to `handler.py` and `__main__.py`.
 - **Verification**: `just test tests/test_init_verify_worktree_auth.py` exits 0 covering (a) absent fence → exit 1, (b) current fence → exit 0, (c) stale fence → exit 2.
-- **Status**: [ ] pending
+- **Status**: [x] completed (3 branches verified manually; pytest deferred to T8)
 
 ### Task 8: Author init-handler test suite
 - **Files**: `tests/test_init_claude_md_authorization.py` (new), `tests/test_init_verify_worktree_auth.py` (new)
