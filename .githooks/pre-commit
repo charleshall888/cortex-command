@@ -153,7 +153,7 @@ entry_points_triggered=0
 while IFS= read -r f; do
     [ -z "$f" ] && continue
     case "$f" in
-        cortex_command/backlog/update_item.py|cortex_command/backlog/create_item.py|cortex_command/backlog/generate_index.py|cortex_command/backlog/build_epic_map.py|cortex_command/backlog/_telemetry.py)
+        cortex_command/backlog/update_item.py|cortex_command/backlog/create_item.py|cortex_command/backlog/generate_index.py|cortex_command/backlog/build_epic_map.py|cortex_command/backlog/ready.py|cortex_command/overnight/complete_morning_review_session.py|cortex_command/lifecycle/branch_mode_cli.py|cortex_command/lifecycle/picker_decision_cli.py|cortex_command/critical_review/resolve_feature_cli.py|cortex_command/critical_review/write_residue_cli.py|cortex_command/backlog/_telemetry.py)
             entry_points_triggered=1
             break
             ;;

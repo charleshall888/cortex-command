@@ -129,9 +129,21 @@ _check_entry_points() {
     # in pre-commit so a packaged-dispatch entry point can never
     # silently regress its bin-invocation telemetry.
     local checked=0 missing=0
-    local backlog_dir="$REPO_ROOT/cortex_command/backlog"
-    for module in update_item create_item generate_index build_epic_map; do
-        local path="$backlog_dir/$module.py"
+    local pair pkg mod
+    for pair in \
+        "backlog:update_item" \
+        "backlog:create_item" \
+        "backlog:generate_index" \
+        "backlog:build_epic_map" \
+        "backlog:ready" \
+        "overnight:complete_morning_review_session" \
+        "lifecycle:branch_mode_cli" \
+        "lifecycle:picker_decision_cli" \
+        "critical_review:resolve_feature_cli" \
+        "critical_review:write_residue_cli"; do
+        pkg="${pair%:*}"
+        mod="${pair#*:}"
+        local path="$REPO_ROOT/cortex_command/$pkg/$mod.py"
         if [ ! -f "$path" ]; then
             echo "$path: file missing" >&2
             missing=$((missing + 1))
