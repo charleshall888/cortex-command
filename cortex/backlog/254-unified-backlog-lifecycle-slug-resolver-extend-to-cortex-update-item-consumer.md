@@ -2,14 +2,18 @@
 schema_version: "1"
 uuid: f5887b4d-ad3e-485e-9c8e-a1269f5107b4
 title: "Unified backlog/lifecycle slug resolver: extend to cortex-update-item consumer"
-status: backlog
+status: refined
 priority: medium
 type: feature
 created: 2026-05-20
-updated: 2026-05-20
+updated: 2026-05-25
 parent: "251"
 tags: [backlog, lifecycle, slug-resolution]
 discovery_source: cortex/research/harness-friction-triage/research.md
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/unified-backlog-lifecycle-slug-resolver-extend/spec.md
+areas: [backlog,skills]
 ---
 
 ## Role

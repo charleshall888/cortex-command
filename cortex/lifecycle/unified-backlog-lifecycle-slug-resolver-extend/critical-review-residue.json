@@ -1,0 +1,27 @@
+{
+  "feature": "unified-backlog-lifecycle-slug-resolver-extend",
+  "phase": "specify",
+  "ts": "2026-05-25T11:35:00Z",
+  "b_findings": [
+    {
+      "angle": "Skill plugin-rollout coordination",
+      "text": "Cross-channel skew window — wheel and plugin distribution channels update asynchronously; spec frames the change as atomic PR but rollout splits across channels."
+    },
+    {
+      "angle": "Skill plugin-rollout coordination",
+      "text": "R10 grep-only acceptance verifies prose presence, not skill-behavior degradation across the cross-channel skew matrix."
+    },
+    {
+      "angle": "Skill plugin-rollout coordination",
+      "text": "Exit-2 user-action instruction ('ask the user to re-invoke with a disambiguated slug') has no autonomous-mode fallback for overnight runner."
+    },
+    {
+      "angle": "Phase dependency ordering coherence",
+      "text": "Phase 1 ships resolver returning ambiguous status via cortex-resolve-backlog-item but the footgun-source (update_item._find_item) is only fixed in Phase 2 — Phase 1 done / Phase 2 not started is a coherent failure mode."
+    },
+    {
+      "angle": "Phase dependency ordering coherence",
+      "text": "R2/R3 Phase 1 acceptance tests new branches against a controlled synthetic; canonical CURATED_INPUTS regression coverage of new branches lands in Phase 2 — test breadth lags by a phase."
+    }
+  ]
+}
