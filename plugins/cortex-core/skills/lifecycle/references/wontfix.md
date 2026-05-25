@@ -44,7 +44,7 @@ The `"event": "feature_wontfix"` literal is what both the events-registry scanne
 cortex-update-item {backlog-slug} --status wontfix --lifecycle-phase wontfix --session-id null
 ```
 
-This clears the originating backlog item's status so the dashboard, backlog index, and any operator-facing lists reflect the terminal decision. `session_id=null` releases any concurrent-session lock that was held by the lifecycle.
+This clears the originating backlog item's status so the dashboard, backlog index, and any operator-facing lists reflect the terminal decision. `session_id=null` releases any concurrent-session lock that was held by the lifecycle. If `cortex-update-item` exits with code 2, the slug was ambiguous: present the candidate list on stderr to the user and ask them to re-invoke with a disambiguated slug.
 
 ## Why the step order matters
 

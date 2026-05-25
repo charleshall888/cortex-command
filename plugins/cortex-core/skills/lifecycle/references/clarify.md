@@ -114,7 +114,7 @@ cortex-update-item {backlog-filename-slug} --complexity {value} --criticality {v
 
 Where `{backlog-filename-slug}` is the backlog file's name without the `.md` extension (e.g., `119-create-refine-skill`).
 
-If `cortex-update-item` fails, surface the error and ask the user to resolve it before proceeding. Do not silently skip write-backs.
+If `cortex-update-item` fails, surface the error and ask the user to resolve it before proceeding. Do not silently skip write-backs. If `cortex-update-item` exits with code 2, the slug was ambiguous: present the candidate list on stderr to the user and ask them to re-invoke with a disambiguated slug.
 
 For Context B (ad-hoc), skip this step — there is no backlog item to update.
 

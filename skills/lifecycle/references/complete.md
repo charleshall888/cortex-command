@@ -203,7 +203,7 @@ If a matching backlog item was identified earlier in the lifecycle, mark it comp
 cortex-update-item <slug> --status complete --session-id null
 ```
 
-If no backlog item was found, skip silently.
+If no backlog item was found, skip silently. If `cortex-update-item` exits with code 2, the slug was ambiguous: present the candidate list on stderr to the user and ask them to re-invoke with a disambiguated slug.
 
 ### Step 10 — Backlog Index Sync
 
