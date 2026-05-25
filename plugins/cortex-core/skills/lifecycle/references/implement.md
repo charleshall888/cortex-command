@@ -16,7 +16,7 @@ Read `cortex/lifecycle/{feature}/plan.md` and identify pending tasks (those with
 **Branch selection**: If the current branch is `main` or `master`, prompt the user via AskUserQuestion with three options:
 
 - **Implement on current branch** (recommended) — trunk-based workflow, changes land directly on the current branch. **When to pick**: tiny, trunk-safe changes where a branch would be overhead.
-- **Implement on feature branch with worktree** — creates an `interactive/{slug}` worktree at `<repo>/.claude/worktrees/interactive-{slug}/` and returns the path; the user then manually cd's into the worktree OR opens a fresh `claude --worktree=<path>` session to continue the implement phase there (Variant A vs Variant B dispatch is owned by epic #240; T10 ships only the create + handoff step). **When to pick**: medium/many-task features where you want an isolated branch with worktree but still need live steering. Proceeds to §1a below.
+- **Implement on feature branch with worktree** — creates an `interactive/{slug}` worktree at `<repo>/.claude/worktrees/interactive-{slug}/` and auto-enters it via the platform `EnterWorktree` tool so the orchestrator session continues implementation from inside the worktree. **When to pick**: medium/many-task features where you want an isolated branch with worktree but still need live steering. Proceeds to §1a below.
 - **Create feature branch** — create `feature/{lifecycle-slug}` for PR-based workflow. **When to pick**: you want a PR-based flow but cannot use a worktree (e.g., tooling that assumes a single checkout). NOTE: this runs `git checkout` on the main session and can corrupt parallel sessions in this repo.
 
 **Branch-mode dispatch preflight**: Before the uncommitted-changes guard and the runtime probe below, consult the per-repo `branch-mode` config. The `cortex-lifecycle-branch-mode` CLI invocation here is the **structural marker** that the parity test (`tests/test_lifecycle_kept_pauses_parity.py`'s `conditional pause` sentinel) anchors against — its presence in this section is load-bearing for the documentation-parity test, in addition to gating the runtime dispatch.
@@ -103,7 +103,7 @@ If the current branch is not `main`/`master` (already on a feature branch or res
 
 ### 1a. Interactive Worktree Creation (Alternate Path)
 
-This section runs **only** when the user selected "Implement on feature branch with worktree" in §1. It **replaces §2–§4 for the main session**: the main session creates the worktree, returns the path to the user, and exits `/cortex-core:lifecycle`. The user then continues implementation inside the worktree (Variant A: `cd` into it; Variant B: open a fresh `claude --worktree=<path>` session) — that handoff dispatch is owned by epic #240 and is out of scope here.
+This section runs **only** when the user selected "Implement on feature branch with worktree" in §1. The orchestrator session creates the `interactive/{slug}` worktree and then auto-enters it via the platform `EnterWorktree` tool, so subsequent §2 task dispatch executes from inside the worktree. The orchestrator session does not exit `/cortex-core:lifecycle` — it continues into §2 task dispatch with CWD now resolved against the worktree path.
 
 **i. Interactive worktree liveness check.** Two separate Bash calls (no compound commands):
 
@@ -202,21 +202,9 @@ After the pre-flight check passes (exit 0), perform the following five operation
 
 The auto-enter affects only orchestrator-session Bash tool calls; sub-agent dispatch via `Agent(isolation: "worktree")` in §2 is unaffected — each sub-agent is independently rooted at `<repo>/.claude/worktrees/{task-name}/`. The existing §2(e) Worktree Integration step (`implement.md:218-229`) runs `git merge worktree/{task-name}` from the feature-branch CWD (which under auto-enter is `interactive/{slug}` post-`EnterWorktree`) and then `git worktree remove` for each completed sub-agent worktree — auto-enter inherits this merge-back behavior unchanged.
 
-**vi. Handoff.** Surface the worktree path to the user with the following message (substituting the actual resolved path from `info.path`):
+**vi. Interactive worktree auto-entry.** After `EnterWorktree(path=...)` returns, the orchestrator session is rooted at `interactive/{slug}` for all subsequent Bash tool calls and sub-agent dispatch in this lifecycle session, and `EnterWorktree`'s cache-clear side effect (system prompt sections, memory files, plans directory) ensures the session state reflects the new working directory rather than the pre-entry repo root. Surface the worktree path to the user along with a single-line warning that on session exit the harness will prompt to **keep or remove** the worktree as context — selecting "remove" discards any uncommitted work in the worktree, so commit or push before exiting. When the user wants to leave the worktree mid-session, two restoration paths are available: run `ExitWorktree action="keep"` to clear `EnterWorktree` session state cleanly (preferred while the session is live, since it dismisses the session-exit prompt), or run `cd $(git rev-parse --show-toplevel)` to navigate back to the repo root while leaving the keep/remove prompt deferred until session end. See ADR-0004 for the design rationale behind mid-session auto-entry over the fresh-session alternative.
 
-```
-Interactive worktree created at: {info.path}
-Branch: interactive/{slug}
-
-Variant A (active): The orchestrator session has cd'd into the worktree.
-All subsequent Bash tool calls in this lifecycle session resolve relative
-to {info.path}. Your CWD before the cd was saved as _origin_pwd.
-
-(Variant B — open a fresh Claude Code session via `claude --worktree={info.path}` —
-is an alternative that was considered but not taken. Variant A is in effect.)
-```
-
-**vii. Continue to §2 Task Dispatch.** Do not exit `/cortex-core:lifecycle`. The orchestrator session is now inside the interactive worktree and proceeds to dispatch implementation tasks from §2 onward. (Note: the legacy §v exit-the-lifecycle behavior no longer applies — Variant A keeps the orchestrator session active and routes it into task dispatch.)
+**vii. Continue to §2 Task Dispatch.** Do not exit `/cortex-core:lifecycle`. The orchestrator session is now inside the interactive worktree and proceeds to dispatch implementation tasks from §2 onward.
 
 ### 2. Task Dispatch
 
