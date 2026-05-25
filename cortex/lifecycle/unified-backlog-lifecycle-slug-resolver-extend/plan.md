@@ -69,7 +69,7 @@ Extract a pure `resolve()` library function from `cortex_command/backlog/resolve
 - **Complexity**: complex
 - **Context**: `cortex_command/backlog/update_item.py:115-146` (`_find_item` — body rewrite, signature preserved). `:433-471` (`main()` — add the exit-2 branch via `_find_item_with_status`). `:139-144` (existing inline UUID-prefix loop — DELETE). `:135-137` (existing unranked substring branch — DELETE). **Caller enumeration** (per Plan reference's Caller Enumeration rule): `grep -rn "_find_item" cortex_command/` returns 6 hits across 3 files: (1) `cortex_command/backlog/update_item.py:107` (def) + `:562` (call from `main()`); (2) `cortex_command/overnight/outcome_router.py:321,356,376` (import + comment + call site, passes `feature` slug); (3) `cortex_command/overnight/tests/conftest.py:9,27` (import + patch for tests). The Adversarial review confirmed cascade does NOT call `_find_item`. The external callers in `outcome_router.py` pass pre-resolved feature slugs (not fuzzy operator input), so their behavior under the new ambiguous→None mapping is unchanged in practice — but listed here to satisfy the Caller Enumeration rule.
 - **Verification**: `grep -c "slug_or_uuid in p.stem" cortex_command/backlog/update_item.py` returns 0 AND `grep -c "uuid_val.startswith" cortex_command/backlog/update_item.py` returns 0 AND `grep -c "def _find_item_with_status" cortex_command/backlog/update_item.py` returns 1 AND `grep -c "_find_item_with_status\(.*BACKLOG_DIR" cortex_command/backlog/update_item.py` returns ≥1 (proves `main()` was rewired) AND `pytest tests/test_backlog_worktree_routing.py cortex_command/overnight/tests/` exits 0 (existing internal + external caller test suites continue to pass).
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 7: Create `tests/test_update_item_resolution.py`
 - **Files**: `tests/test_update_item_resolution.py` (NEW)
@@ -78,7 +78,7 @@ Extract a pure `resolve()` library function from `cortex_command/backlog/resolve
 - **Complexity**: complex
 - **Context**: `tests/test_resolve_backlog_item.py:136-144` (the `_run` subprocess pattern — copy it but invoke `cortex_command.backlog.update_item` and pass `CORTEX_REPO_ROOT` env, since `update_item.main()` uses `_resolve_user_project_root()` not `CORTEX_BACKLOG_DIR` per research §Tradeoffs Decision 5). The `mtime` check is `(path.stat().st_mtime_ns)` before/after — use `time.sleep(0.01)` between the snapshot and the CLI run if necessary to avoid same-tick comparison. Build the temp backlog dir with the shared `make_item` helper. The Adversarial-flagged backlog-dir-discovery divergence is intentional — the test honors it by setting `CORTEX_REPO_ROOT` pointing at a temp tree that contains `cortex/backlog/<NNN>-foo.md`.
 - **Verification**: `pytest tests/test_update_item_resolution.py` exits 0 AND `grep -c "backlog_resolution_corpus\|BACKLOG_RESOLUTION_CORPUS" tests/test_resolve_backlog_item.py tests/test_update_item_resolution.py` returns 2 (one citation per file, satisfying R9 acceptance).
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 8: Skill-prose exit-2 update — lifecycle references (3 files)
 - **Files**: `skills/lifecycle/references/clarify.md`, `skills/lifecycle/references/complete.md`, `skills/lifecycle/references/wontfix.md`
@@ -87,7 +87,7 @@ Extract a pure `resolve()` library function from `cortex_command/backlog/resolve
 - **Complexity**: simple
 - **Context**: R10's acceptance is a `grep -cE "exit[ -]?2|ambiguous|disambiguat" <files>` ≥6 across ALL six files (this task contributes 3 of the 6). Token-presence-only (no behavioral test). The cortex-core plugin mirror under `plugins/cortex-core/skills/` regenerates via the pre-commit dual-source hook — DO NOT edit mirrors. Skills/backlog/SKILL.md is OUT of scope per spec R10's enumeration (Lines 79-80 list `cortex-update-item ... --status complete|abandoned` but the spec narrows R10 to six files; the seventh would be a follow-up if needed).
 - **Verification**: `grep -cE "exit[ -]?2|ambiguous|disambiguat" skills/lifecycle/references/clarify.md skills/lifecycle/references/complete.md skills/lifecycle/references/wontfix.md` returns ≥3 (one per file).
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 9: Skill-prose exit-2 update — refine + backlog-writeback + morning-review (3 files)
 - **Files**: `skills/refine/SKILL.md`, `skills/lifecycle/references/backlog-writeback.md`, `skills/morning-review/SKILL.md`
@@ -96,7 +96,7 @@ Extract a pure `resolve()` library function from `cortex_command/backlog/resolve
 - **Complexity**: simple
 - **Context**: R10's acceptance is a `grep -cE "exit[ -]?2|ambiguous|disambiguat" <files>` ≥6 (this task contributes the remaining 3 files; Task 8 contributes 3). Token-presence-only. Plugin mirror regenerates via pre-commit; do not edit mirrors directly.
 - **Verification**: `grep -cE "exit[ -]?2|ambiguous|disambiguat" skills/refine/SKILL.md skills/lifecycle/references/backlog-writeback.md skills/morning-review/SKILL.md` returns ≥3 AND the combined acceptance for both tasks (Acceptance #4 in §Acceptance) — `grep -cE "exit[ -]?2|ambiguous|disambiguat"` across all six files — returns ≥6.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ## Risks
 
