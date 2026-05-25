@@ -697,6 +697,275 @@ def test_edge_empty_title_slugify(resolver, tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# T3: 5-step resolution order — UUID-prefix + lifecycle_slug-frontmatter +
+# symmetric kebab strip. Each new test covers one positive case for the step
+# under test plus one negative/fall-through case per branch.
+# ---------------------------------------------------------------------------
+
+
+# UUID values used across the T3 unit tests. The first three share an 8-char
+# prefix ("a3b9ae8a") so an 8-char input is ambiguous; the fourth ("dadaf6b6…")
+# is independent and lets us assert unique resolution at length 8.
+_UUID_A = "a3b9ae8a-1111-1111-1111-111111111111"
+_UUID_B = "a3b9ae8a-2222-2222-2222-222222222222"
+_UUID_C = "a3b9ae8a-3333-3333-3333-333333333333"
+_UUID_D = "dadaf6b6-431d-4c5a-92b5-6226be90d26b"
+
+
+@pytest.mark.parametrize(
+    "input_str,expected_status,expected_count",
+    [
+        # length 7 (pure hex) — must fall through; nothing matches downstream
+        ("a3b9ae8", "not_found", 0),
+        # length 8 (unique prefix of _UUID_D) — uniquely resolves
+        ("dadaf6b6", "ok", 1),
+        # length 8 (shared prefix of _UUID_A/B/C) — ambiguous with 3 candidates
+        ("a3b9ae8a", "ambiguous", 3),
+    ],
+)
+def test_uuid_prefix_minimum_length(
+    resolver, tmp_path, input_str, expected_status, expected_count
+):
+    """UUID-prefix step honors the ≥8-hex-char gate.
+
+    Length 7 falls through (eventually exits "not_found"); length 8 either
+    uniquely resolves or returns ambiguous candidates depending on the corpus.
+    """
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
+    _make_item(backlog, "001-alpha.md", "Alpha", extra=f"uuid: {_UUID_A}\n")
+    _make_item(backlog, "002-beta.md", "Beta", extra=f"uuid: {_UUID_B}\n")
+    _make_item(backlog, "003-gamma.md", "Gamma", extra=f"uuid: {_UUID_C}\n")
+    _make_item(backlog, "004-delta.md", "Delta", extra=f"uuid: {_UUID_D}\n")
+
+    result = resolver.resolve(input_str, backlog)
+    assert result.status == expected_status, (
+        f"input={input_str!r} expected status={expected_status} "
+        f"got {result.status}; candidates={result.candidates}"
+    )
+    if expected_status == "ok":
+        assert result.item is not None
+        assert expected_count == 1
+    elif expected_status == "ambiguous":
+        assert len(result.candidates) == expected_count
+    else:  # not_found
+        assert result.item is None
+        assert result.candidates == []
+
+
+def test_uuid_prefix_case_insensitive(resolver, tmp_path):
+    """UUID-prefix match is case-insensitive — uppercase input resolves the same."""
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
+    _make_item(backlog, "001-delta.md", "Delta", extra=f"uuid: {_UUID_D}\n")
+    # Use first 8 hex chars uppercased.
+    result = resolver.resolve("DADAF6B6", backlog)
+    assert result.status == "ok"
+    assert result.item is not None
+    assert result.item.name == "001-delta.md"
+
+
+def test_uuid_prefix_non_hex_falls_through(resolver, tmp_path):
+    """Input that fails the pure-hex predicate skips UUID-prefix entirely."""
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
+    _make_item(backlog, "001-delta.md", "Delta", extra=f"uuid: {_UUID_D}\n")
+    # "zzzzzzzz" is 8 chars but not hex — must NOT short-circuit UUID-prefix
+    # and falls through to subsequent steps (no match → not_found).
+    result = resolver.resolve("zzzzzzzz", backlog)
+    assert result.status == "not_found"
+
+
+@pytest.mark.parametrize(
+    "input_str,expected_filename",
+    [
+        # Step 1: UUID-prefix wins for ≥8 hex chars
+        ("dadaf6b6", "004-delta.md"),
+        # Step 2: numeric wins for pure digits
+        ("3", "003-gamma.md"),
+        # Step 3: kebab stem wins (with or without NNN- prefix)
+        ("alpha", "001-alpha.md"),
+        ("001-alpha", "001-alpha.md"),
+        # Step 4: exact lifecycle_slug frontmatter wins
+        ("step-four-lifecycle-slug", "002-beta.md"),
+        # Step 5: title-substring fallback wins when nothing earlier matches
+        ("Gamma", "003-gamma.md"),
+    ],
+)
+def test_resolution_order(resolver, tmp_path, input_str, expected_filename):
+    """Each positive case matches the expected step by construction."""
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
+    _make_item(backlog, "001-alpha.md", "Alpha", extra=f"uuid: {_UUID_A}\n")
+    _make_item(
+        backlog,
+        "002-beta.md",
+        "Beta unique title",
+        extra=(
+            f"uuid: {_UUID_B}\n"
+            "lifecycle_slug: step-four-lifecycle-slug\n"
+        ),
+    )
+    _make_item(
+        backlog,
+        "003-gamma.md",
+        "Gamma item with Gamma in title",
+        extra=f"uuid: {_UUID_C}\n",
+    )
+    _make_item(backlog, "004-delta.md", "Delta", extra=f"uuid: {_UUID_D}\n")
+
+    result = resolver.resolve(input_str, backlog)
+    assert result.status == "ok", (
+        f"input={input_str!r} expected ok, got {result.status}; "
+        f"candidates={result.candidates}"
+    )
+    assert result.item is not None
+    assert result.item.name == expected_filename
+
+
+@pytest.mark.parametrize(
+    "input_str,expected_status",
+    [
+        # numeric with no NNN- match falls through to next steps
+        ("999", "not_found"),
+        # kebab stem with no match falls through to lifecycle_slug then title
+        ("nonexistent-stem-xyz", "not_found"),
+        # lifecycle_slug without an exact frontmatter match falls through to title
+        ("no-such-lifecycle-slug-anywhere", "not_found"),
+    ],
+)
+def test_resolution_order_fall_through(
+    resolver, tmp_path, input_str, expected_status
+):
+    """Negative/fall-through case per branch — non-matching input reaches step 5."""
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
+    _make_item(backlog, "001-alpha.md", "Alpha", extra=f"uuid: {_UUID_A}\n")
+    _make_item(
+        backlog,
+        "002-beta.md",
+        "Beta",
+        extra=f"uuid: {_UUID_B}\nlifecycle_slug: some-other-slug\n",
+    )
+
+    result = resolver.resolve(input_str, backlog)
+    assert result.status == expected_status
+
+
+def test_lifecycle_slug_frontmatter_step(resolver, tmp_path):
+    """Step 4: exact lifecycle_slug frontmatter equality (frontmatter-only)."""
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
+    item = _make_item(
+        backlog,
+        "010-some-ticket.md",
+        "Some Ticket",
+        extra="lifecycle_slug: my-bespoke-lifecycle-slug\n",
+    )
+    _make_item(backlog, "011-other.md", "Other Ticket")
+
+    result = resolver.resolve("my-bespoke-lifecycle-slug", backlog)
+    assert result.status == "ok"
+    assert result.item is not None
+    assert result.item == item
+
+
+def test_lifecycle_slug_frontmatter_step_no_directory_check(
+    resolver, tmp_path
+):
+    """Step 4 reads frontmatter only — does NOT check cortex/lifecycle/{slug}/."""
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
+    # Deliberately point at a slug whose lifecycle directory does NOT exist.
+    item = _make_item(
+        backlog,
+        "010-some-ticket.md",
+        "Some Ticket",
+        extra="lifecycle_slug: nonexistent-lifecycle-dir\n",
+    )
+
+    result = resolver.resolve("nonexistent-lifecycle-dir", backlog)
+    assert result.status == "ok"
+    assert result.item == item
+
+
+def test_lifecycle_slug_frontmatter_step_ambiguous(resolver, tmp_path):
+    """Two items sharing a lifecycle_slug → exit-2 candidate list."""
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
+    _make_item(
+        backlog,
+        "010-first.md",
+        "First",
+        extra="lifecycle_slug: shared-slug\n",
+    )
+    _make_item(
+        backlog,
+        "011-second.md",
+        "Second",
+        extra="lifecycle_slug: shared-slug\n",
+    )
+
+    result = resolver.resolve("shared-slug", backlog)
+    assert result.status == "ambiguous"
+    assert len(result.candidates) == 2
+
+
+def test_stem_with_or_without_prefix(resolver, tmp_path):
+    """Step 3 symmetric strip: input ``foo`` matches both ``007-foo`` and ``107-foo``."""
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
+    a = _make_item(backlog, "007-foo.md", "Foo A")
+    b = _make_item(backlog, "107-foo.md", "Foo B")
+
+    result = resolver.resolve("foo", backlog)
+    assert result.status == "ambiguous"
+    assert a in result.candidates
+    assert b in result.candidates
+
+
+def test_stem_with_or_without_prefix_input_has_prefix(resolver, tmp_path):
+    """Step 3 symmetric strip: input ``007-foo`` also matches stem ``007-foo``.
+
+    Pre-change behavior stripped the filename side only — input ``007-foo`` did
+    not match because the input still had the prefix while the stem was stripped
+    to ``foo``. The symmetric strip widens the equality.
+    """
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
+    item = _make_item(backlog, "007-foo.md", "Foo solo")
+
+    result = resolver.resolve("007-foo", backlog)
+    assert result.status == "ok"
+    assert result.item == item
+
+
+def test_substring_ambiguity_exit_2(tmp_path):
+    """Substring-ambiguous input exits 2 with candidate list via the CLI shim.
+
+    Several backlog items share a 'extract' phrase in the title. Step 5 returns
+    multiple matches → status="ambiguous" → CLI exits 2 with the candidate list
+    on stderr (no silent first-match).
+    """
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
+    _make_item(backlog, "001-extract-foo.md", "Extract foo helper")
+    _make_item(backlog, "002-extract-bar.md", "Extract bar helper")
+    _make_item(backlog, "003-extract-baz.md", "Extract baz helper")
+
+    result = _run(["extract"], backlog)
+    assert result.returncode == 2, (
+        f"expected exit 2 (ambiguous), got {result.returncode}; "
+        f"stdout={result.stdout!r} stderr={result.stderr!r}"
+    )
+    assert "ambiguous" in result.stderr
+    # Candidate list should include all three matches (capped at 5).
+    assert "001-extract-foo.md" in result.stderr
+    assert "002-extract-bar.md" in result.stderr
+    assert "003-extract-baz.md" in result.stderr
+
+
+# ---------------------------------------------------------------------------
 # cwd-based backlog discovery — fixes the plugin-cache invocation bug where
 # __file__-anchored walk-up never finds the user's backlog/. Tests run with
 # CORTEX_BACKLOG_DIR explicitly stripped from env so the discovery branch is

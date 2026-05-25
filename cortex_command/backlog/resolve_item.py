@@ -164,11 +164,72 @@ def _resolve_numeric(input_str: str, items: List[Path]) -> List[Path]:
 
 
 def _resolve_kebab(input_str: str, items: List[Path]) -> List[Path]:
-    """Match items by filename stem after stripping ``^\\d+-`` prefix."""
+    """Match items by filename stem with-or-without ``^\\d+-`` prefix on BOTH sides.
+
+    Input ``foo-bar`` matches stem ``007-foo-bar`` (filename side stripped); input
+    ``007-foo-bar`` also matches stem ``007-foo-bar`` (input side stripped too).
+    The symmetric strip is the new step-3 semantics (was: filename-only strip).
+    """
+    input_stripped = re.sub(r"^\d+-", "", input_str)
     return [
         p for p in items
-        if re.sub(r"^\d+-", "", p.stem) == input_str
+        if re.sub(r"^\d+-", "", p.stem) == input_stripped
     ]
+
+
+# ---------------------------------------------------------------------------
+# UUID-prefix and lifecycle_slug-frontmatter resolution (5-step extension)
+# ---------------------------------------------------------------------------
+
+# Pure-hex (with optional hyphens) regex per spec R3
+_UUID_PREFIX_RE = re.compile(r"^[0-9a-fA-F]+(-[0-9a-fA-F]+)*$")
+# Minimum hex-character length (hyphens stripped) for UUID-prefix matching.
+# Empirical scan of 232 live UUIDs shows zero collisions at length 5+; 8 chars
+# chosen as a conservative safety margin per spec Decision 6.
+_UUID_PREFIX_MIN_HEX_LEN = 8
+
+
+def _resolve_uuid_prefix(
+    input_str: str,
+    items_with_fm: List[Tuple[Path, dict]],
+) -> List[Path]:
+    """Match items whose frontmatter ``uuid:`` begins with ``input_str``.
+
+    Predicate: ``input_str`` must match ``^[0-9a-fA-F]+(-[0-9a-fA-F]+)*$`` and
+    have ≥8 hex characters after stripping hyphens. Comparison is
+    case-insensitive. Inputs that fail either gate return ``[]`` so the caller
+    can fall through to subsequent resolution steps (skip, not error).
+    """
+    if not _UUID_PREFIX_RE.match(input_str):
+        return []
+    hex_only = input_str.replace("-", "")
+    if len(hex_only) < _UUID_PREFIX_MIN_HEX_LEN:
+        return []
+    needle = input_str.lower()
+    matches: List[Path] = []
+    for path, fm in items_with_fm:
+        uuid_val = fm.get("uuid", "")
+        if isinstance(uuid_val, str) and uuid_val.lower().startswith(needle):
+            matches.append(path)
+    return matches
+
+
+def _resolve_lifecycle_slug_frontmatter(
+    input_str: str,
+    items_with_fm: List[Tuple[Path, dict]],
+) -> List[Path]:
+    """Match items whose frontmatter ``lifecycle_slug:`` equals ``input_str`` exactly.
+
+    Frontmatter-only — does not verify that the corresponding lifecycle
+    directory exists on disk (spec R11). Empty or missing ``lifecycle_slug``
+    values never match.
+    """
+    matches: List[Path] = []
+    for path, fm in items_with_fm:
+        slug_val = fm.get("lifecycle_slug", "")
+        if isinstance(slug_val, str) and slug_val and slug_val == input_str:
+            matches.append(path)
+    return matches
 
 
 def _resolve_title_phrase(
@@ -290,7 +351,8 @@ def _build_parser() -> argparse.ArgumentParser:
             "      normalises to empty after slugify (e.g. '!!!').\n"
             "  70  Software/IO error — malformed frontmatter, missing or\n"
             "      empty backlog directory, file-permission failure.\n\n"
-            "Resolution order: numeric → kebab-slug → title-phrase.\n\n"
+            "Resolution order: uuid-prefix → numeric → kebab-slug (with-or-without "
+            "NNN- prefix) → lifecycle_slug-frontmatter → title-phrase.\n\n"
             "Numeric: matches filenames whose NNN- prefix equals the input.\n"
             "Leading zeros are matched literally (009 → 009-*.md, not 9-*.md).\n\n"
             "Title-phrase predicate: slugify(input) ⊆ slugify(title),\n"
@@ -306,9 +368,11 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 # ---------------------------------------------------------------------------
-# Pure library function — 3-step resolution returning a tagged result.
-# Mirrors the 3-step order (numeric → kebab → title-phrase) verbatim from
-# the prior main() flow. IO/parse failures raise ResolutionError; usage-error
+# Pure library function — 5-step resolution returning a tagged result.
+# Order: UUID-prefix → numeric → kebab (with-or-without NNN-) → lifecycle_slug
+# frontmatter → title-phrase. Each step returns on the first that produces ≥1
+# match; ≥2 matches surface as status="ambiguous" with the full candidate list
+# (no silent first-match). IO/parse failures raise ResolutionError; usage-error
 # preconditions (empty input, slugifies-to-empty) are handled at the CLI
 # boundary, NOT inside the library — callers pass a non-empty input_str and
 # the library returns status="not_found" rather than encoding exit codes.
@@ -318,10 +382,16 @@ def _build_parser() -> argparse.ArgumentParser:
 def resolve(input_str: str, backlog_dir: Path) -> ResolutionResult:
     """Resolve a fuzzy backlog reference to a ``ResolutionResult``.
 
-    Applies the existing 3-step order verbatim:
-      1) Numeric ID  (input fullmatches ``\\d+``)
-      2) Kebab-stem  (filename stem after stripping ``^\\d+-``)
-      3) Title-phrase (slugify(input) ⊆ slugify(title))
+    Applies the 5-step deterministic order:
+      1) UUID-prefix (≥8 hex chars, hyphens-stripped, case-insensitive, against
+         frontmatter ``uuid:``)
+      2) Numeric ID  (input fullmatches ``\\d+``)
+      3) Kebab-stem (filename stem matches input with NNN- prefix stripped on
+         BOTH sides — input ``foo-bar`` matches stem ``007-foo-bar``, and input
+         ``007-foo-bar`` matches stem ``007-foo-bar``)
+      4) Exact ``lifecycle_slug`` frontmatter equality (frontmatter-only — no
+         on-disk lifecycle-directory check)
+      5) Title-phrase (slugify(input) ⊆ slugify(title))
 
     Raises:
         ResolutionError: backlog directory missing/empty, malformed frontmatter,
@@ -345,31 +415,11 @@ def resolve(input_str: str, backlog_dir: Path) -> ResolutionResult:
                 "backlog directory contains no NNN-*.md items"
             )
 
-        is_numeric = bool(re.fullmatch(r"\d+", input_str))
-
-        # Step 1: Numeric dispatch
-        if is_numeric:
-            matches = _resolve_numeric(input_str, items)
-            if len(matches) == 1:
-                return ResolutionResult(status="ok", item=matches[0])
-            if len(matches) > 1:
-                return ResolutionResult(
-                    status="ambiguous", candidates=list(matches)
-                )
-            # n=0: fall through to kebab
-
-        # Step 2: Kebab dispatch (skip if pure numeric — already tried above)
-        if not is_numeric:
-            kebab_matches = _resolve_kebab(input_str, items)
-            if len(kebab_matches) == 1:
-                return ResolutionResult(status="ok", item=kebab_matches[0])
-            if len(kebab_matches) > 1:
-                return ResolutionResult(
-                    status="ambiguous", candidates=list(kebab_matches)
-                )
-            # n=0: fall through to title-phrase
-
-        # Step 3: Title-phrase — load frontmatter for all items
+        # Load frontmatter for all items once — steps 1 and 4 need ``uuid`` and
+        # ``lifecycle_slug`` respectively; step 5 needs ``title``. Steps 2 and 3
+        # operate on filename only, so they don't strictly require frontmatter
+        # — but loading it eagerly keeps the function shape simple and matches
+        # the prior 3-step flow that already loaded frontmatter for step 3.
         items_with_fm: List[Tuple[Path, dict]] = []
         for p in items:
             try:
@@ -379,6 +429,55 @@ def resolve(input_str: str, backlog_dir: Path) -> ResolutionResult:
                     f"{p.name}: failed to parse frontmatter"
                 ) from exc
 
+        # Step 1: UUID-prefix (≥8 hex chars). Pure-hex inputs shorter than 8
+        # chars fall through to subsequent steps (skip, not error — spec Edge
+        # Cases line 1).
+        uuid_matches = _resolve_uuid_prefix(input_str, items_with_fm)
+        if len(uuid_matches) == 1:
+            return ResolutionResult(status="ok", item=uuid_matches[0])
+        if len(uuid_matches) > 1:
+            return ResolutionResult(
+                status="ambiguous", candidates=list(uuid_matches)
+            )
+
+        is_numeric = bool(re.fullmatch(r"\d+", input_str))
+
+        # Step 2: Numeric dispatch
+        if is_numeric:
+            numeric_matches = _resolve_numeric(input_str, items)
+            if len(numeric_matches) == 1:
+                return ResolutionResult(status="ok", item=numeric_matches[0])
+            if len(numeric_matches) > 1:
+                return ResolutionResult(
+                    status="ambiguous", candidates=list(numeric_matches)
+                )
+            # n=0: fall through to kebab
+
+        # Step 3: Kebab dispatch (skip if pure numeric — already tried above).
+        # Symmetric NNN- strip per spec Decision 4A.
+        if not is_numeric:
+            kebab_matches = _resolve_kebab(input_str, items)
+            if len(kebab_matches) == 1:
+                return ResolutionResult(status="ok", item=kebab_matches[0])
+            if len(kebab_matches) > 1:
+                return ResolutionResult(
+                    status="ambiguous", candidates=list(kebab_matches)
+                )
+            # n=0: fall through to lifecycle_slug
+
+        # Step 4: Exact lifecycle_slug frontmatter equality. Frontmatter-only;
+        # does not verify the corresponding lifecycle directory exists (R11).
+        lifecycle_matches = _resolve_lifecycle_slug_frontmatter(
+            input_str, items_with_fm
+        )
+        if len(lifecycle_matches) == 1:
+            return ResolutionResult(status="ok", item=lifecycle_matches[0])
+        if len(lifecycle_matches) > 1:
+            return ResolutionResult(
+                status="ambiguous", candidates=list(lifecycle_matches)
+            )
+
+        # Step 5: Title-phrase fallback.
         title_matches = _resolve_title_phrase(input_str, items_with_fm)
 
         if len(title_matches) == 1:

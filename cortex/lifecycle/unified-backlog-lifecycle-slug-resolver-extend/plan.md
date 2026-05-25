@@ -33,7 +33,7 @@ Extract a pure `resolve()` library function from `cortex_command/backlog/resolve
 - **Complexity**: complex
 - **Context**: `cortex_command/backlog/resolve_item.py:116-165` (existing `_resolve_numeric`, `_resolve_kebab`, `_resolve_title_phrase`); `:279-399` (existing `main()` orchestration with embedded exit-code logic — this is what gets unwound into the library/CLI split). Use `from typing import Literal` (Python 3.9 compatible per existing module convention at line 29). Frozen dataclass via `@dataclass(frozen=True)`. The function must respect the existing usage-error preconditions (empty input → exit 64; slugifies-to-empty → exit 64) at the CLI boundary, NOT inside the library — the library is given a non-empty `input_str` and returns `not_found` (or raises) rather than encoding exit codes. Reuse `_format_candidates`, `_build_json`, `_parse_frontmatter`, `_resolve_numeric`, `_resolve_kebab`, `_resolve_title_phrase` unchanged.
 - **Verification**: `python3 -c "from cortex_command.backlog.resolve_item import resolve, ResolutionResult, ResolutionError; print('ok')"` exits 0 AND `pytest tests/test_resolve_backlog_item.py` exits 0 (every existing test passes — no behavior change).
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 3: Extend `resolve()` to the 5-step order
 - **Files**: `cortex_command/backlog/resolve_item.py`, `tests/test_resolve_backlog_item.py`
@@ -42,7 +42,7 @@ Extract a pure `resolve()` library function from `cortex_command/backlog/resolve
 - **Complexity**: complex
 - **Context**: `cortex_command/backlog/resolve_item.py:42-58` (`_parse_frontmatter` — reads `lifecycle_slug` and `uuid` keys; reuse). `:188-202` (`_format_candidates` — handles 5-cap + overflow; reuse). `:99-109` (existing `_resolve_lifecycle_slug` is the DERIVATION fallback chain, NOT the new step-4 — leave untouched per research §Codebase Analysis line 10). Existing tests use `_make_item(backlog_dir, filename, title, extra="")` (`tests/test_resolve_backlog_item.py:128-133`) — extend `extra` with `uuid:` and `lifecycle_slug:` lines for the new cases. Empirical UUID-prefix scan confirms 232 items, zero collisions at length 5+; 8-char minimum is conservative per Decision 6.
 - **Verification**: `pytest tests/test_resolve_backlog_item.py -k "test_uuid_prefix_minimum_length or test_resolution_order or test_lifecycle_slug_frontmatter_step or test_stem_with_or_without_prefix or test_substring_ambiguity_exit_2"` exits 0 (each parametrized over the new cases — one positive case per step, one negative/fall-through case per branch).
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 4: Order-drift regression test against frozen baseline + capture-ordering gate
 - **Files**: `tests/test_resolve_backlog_item.py`

@@ -13,3 +13,4 @@
 {"ts": "2026-05-25T19:35:01Z", "event": "phase_transition", "feature": "unified-backlog-lifecycle-slug-resolver-extend", "from": "plan", "to": "implement"}
 {"ts": "2026-05-25T19:47:00Z", "event": "batch_dispatch", "feature": "unified-backlog-lifecycle-slug-resolver-extend", "batch": 0, "tasks": [1]}
 {"ts": "2026-05-25T19:51:00Z", "event": "batch_dispatch", "feature": "unified-backlog-lifecycle-slug-resolver-extend", "batch": 1, "tasks": [2]}
+{"ts": "2026-05-25T19:55:00Z", "event": "batch_dispatch", "feature": "unified-backlog-lifecycle-slug-resolver-extend", "batch": 2, "tasks": [3]}
