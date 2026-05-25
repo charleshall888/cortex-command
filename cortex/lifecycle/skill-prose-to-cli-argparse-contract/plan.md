@@ -22,8 +22,8 @@ Build a stdlib-only pre-commit lint (`cortex_command/lint/contract.py`) that AST
 - **Depends on**: none
 - **Complexity**: complex
 - **Context**: `pyproject.toml` lines 21-57 enumerate `[project.scripts]` (~33 entries). The `ParserSurface` dataclass has fields `binary: str`, `module_path: Path`, `required_flags: set[str]`, `optional_flags: set[str]`, `subcommands: dict[str, "ParserSurface"]`, `extraction_status: Literal["ok","ast_error","ambiguous","not_argparse"]`. AST walking uses `ast.walk()` on the parsed tree; pattern-match on `ast.Call` nodes where `func` resolves to `argparse.ArgumentParser` or has `.add_argument`/`.add_subparsers`/`.add_parser` as the method name. Use `ast.unparse()` only for diagnostic emission, never to round-trip code. The `[project.scripts]` value format is `cortex-foo = "cortex_command.module.path:main"`; resolve the path via `importlib.util.find_spec()` (do NOT import the module) and read `spec.origin` as a `Path`. Do not run `importlib.import_module` — that triggers side-effect imports (`_telemetry.log_invocation`, `claude_agent_sdk`, `yaml`) per Tradeoffs section M2 / Technical Constraint #1.
-- **Verification**: `uv run python3 -c "from cortex_command.lint import contract; surface = contract.extract_surface(); s = surface['cortex-create-backlog-item']; assert '--status' in s.required_flags and '--type' in s.required_flags, s"` exits 0
-- **Status**: [ ] pending
+- **Verification**: `uv run python3 -c "from cortex_command.lint import contract; surface, _ = contract.extract_surface(); s = surface['cortex-create-backlog-item']; assert '--status' in s.required_flags and '--type' in s.required_flags, s"` exits 0
+- **Status**: [x] complete (commit f69f1cd1)
 
 ### Task 2: Code-fence-aware prose scanner with templated-placeholder tolerance
 - **Files**: `cortex_command/lint/contract.py`
@@ -32,7 +32,7 @@ Build a stdlib-only pre-commit lint (`cortex_command/lint/contract.py`) that AST
 - **Complexity**: complex
 - **Context**: The prescriptive-prose state machine handles tilde fences, backtick fences, indented blocks, and info-string variants — see lines 113-156. Templated placeholders matching `\{\{[^}]+\}\}`, `\{[^}]+\}`, or `<[^>]+>` are kept in `tail_tokens` as opaque strings; downstream validation skips value-shape checks on them but still validates that they appear in the binary's accepted-flag set when prefixed with `-`. Backslash-continued lines inside a fenced block are pre-joined before tokenizing; continuation across a fence boundary is not supported (extremely rare). Iteration over the scan corpus uses `pathlib.Path.glob()` per-pattern; deduplicate paths across overlapping globs.
 - **Verification**: `uv run python3 -c "import tempfile, pathlib; from cortex_command.lint import contract; td = pathlib.Path(tempfile.mkdtemp()); sk = td / 'skills' / 'X'; sk.mkdir(parents=True); (sk / 'SKILL.md').write_text('Prose.\n\`\`\`\ncortex-foo --bar baz\n\`\`\`\nInline \`cortex-baz --qux\` plus narrative cortex-mention text.\nBare \`cortex-bare\` is just a name.\n'); invs = contract.scan_corpus(td); real = [i for i in invs if i.tail_tokens]; assert len(real) == 2, [(i.binary, i.tail_tokens) for i in invs]"` exits 0
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 6f089093)
 
 ### Task 3: Invocation-to-surface validation + CLI entry point
 - **Files**: `cortex_command/lint/contract.py`
@@ -40,17 +40,17 @@ Build a stdlib-only pre-commit lint (`cortex_command/lint/contract.py`) that AST
 - **Depends on**: [1, 2]
 - **Complexity**: complex
 - **Context**: `Violation` dataclass mirrors `cortex_command/parity_check.py:Violation` (`path: str`, `line: int`, `col: int`, `code: str`, `message: str`, `format_text()` and `format_json_dict()` methods). The exception-ledger lookup (resolved in Task 4) suppresses violations whose `(binary, flag-or-subcommand, path-glob)` triple matches an entry. The sentinel-marker check (resolved in Task 5) suppresses the next invocation when the preceding non-blank line contains `<!-- contract-lint:ignore-next -->`. Argparse CLI shape follows `cortex_command/parity_check.py:main()` lines 600+ for the mutex group + JSON flag + exit-code pattern. The `--staged` mode resolves staged file content via `git show :<path>` to avoid the working-tree-vs-index mismatch hazard.
-- **Verification**: `uv run python3 -c "import tempfile, pathlib; from cortex_command.lint import contract; td = pathlib.Path(tempfile.mkdtemp()); sk = td / 'skills' / 'X'; sk.mkdir(parents=True); (sk / 'SKILL.md').write_text('\`\`\`\ncortex-create-backlog-item --title X --body Y\n\`\`\`\n'); surface = contract.extract_surface(); invs = contract.scan_corpus(td); violations = contract.validate(invs, surface, contract.ExceptionLedger.empty()); assert any(v.code == 'E101' and 'status' in v.message for v in violations), violations; assert any(v.code == 'E101' and 'type' in v.message for v in violations), violations"` exits 0
-- **Status**: [ ] pending
+- **Verification**: `uv run python3 -c "import tempfile, pathlib; from cortex_command.lint import contract; td = pathlib.Path(tempfile.mkdtemp()); sk = td / 'skills' / 'X'; sk.mkdir(parents=True); (sk / 'SKILL.md').write_text('\`\`\`\ncortex-create-backlog-item --title X --body Y\n\`\`\`\n'); surface, _ = contract.extract_surface(); invs = contract.scan_corpus(td); violations = contract.validate(invs, surface, contract.ExceptionLedger.empty()); assert any(v.code == 'E101' and 'status' in v.message for v in violations), violations; assert any(v.code == 'E101' and 'type' in v.message for v in violations), violations"` exits 0
+- **Status**: [x] complete (commit 5661c467)
 
-### Task 4: Exception ledger format + parser + validation
+### Task 4: Exception ledger format + parser + validation (commit 0a39884a)
 - **Files**: `cortex_command/lint/contract.py`
 - **What**: Add `parse_exception_ledger(path: Path) -> ExceptionLedger` that reads `bin/.contract-lint-exceptions.md` and parses the markdown table with columns `binary | flag-or-subcommand | path-glob | category | rationale | lifecycle_id | added_date`. Returns an `ExceptionLedger` dataclass exposing `match(binary: str, token: str, path: Path) -> bool`. Rationale validation: rationale must be ≥30 characters after strip; forbidden case-insensitive literals `{internal, misc, tbd, n/a, pending, temporary}` are rejected with `E301 ledger rationale too short` or `E302 ledger rationale uses forbidden literal`. Category must be one of the closed set `{non-argparse-module, migration-note, template-fragment, intentional-omission}`; other categories emit `E303 unknown category`. The `--validate-exceptions` CLI flag (wired in Task 3) invokes `parse_exception_ledger` and exits 0 only if every entry passes validation. Mirrors `cortex_command/parity_check.py:parse_parity_exceptions()` for the table-parsing pattern.
 - **Depends on**: [3]
 - **Complexity**: simple
 - **Context**: `bin/.parity-exceptions.md` is the structural reference for the markdown-table shape (5 cols there; 7 cols here). Parse via line-by-line iteration: skip lines not starting with `|`, skip the header row, skip the separator row (`|---|---|...`), parse remaining rows by splitting on `|` and stripping whitespace from each cell. Categorical exemption matching: when `(binary, flag-or-subcommand, path-glob)` is `(cortex-update-item, *, *)` the binary is wholly exempt; when `(cortex-create-backlog-item, --legacy-flag, skills/migration/**)` the specific flag is exempt only under the glob. `path-glob` uses `fnmatch.fnmatch()` against the violation's path (relative to repo root).
 - **Verification**: `uv run python3 -c "import tempfile, pathlib; from cortex_command.lint import contract; td = pathlib.Path(tempfile.mkdtemp()); (td / 'bin').mkdir(parents=True); (td / 'bin' / '.contract-lint-exceptions.md').write_text('| binary | flag-or-subcommand | path-glob | category | rationale | lifecycle_id | added_date |\n|---|---|---|---|---|---|---|\n| cortex-foo | * | * | non-argparse-module | tbd | 253 | 2026-05-25 |\n'); errors = contract.validate_exception_ledger(td / 'bin' / '.contract-lint-exceptions.md'); assert any(e.code == 'E302' for e in errors), errors"` exits 0
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Inline sentinel marker support
 - **Files**: `cortex_command/lint/contract.py`
@@ -58,8 +58,8 @@ Build a stdlib-only pre-commit lint (`cortex_command/lint/contract.py`) that AST
 - **Depends on**: [3]
 - **Complexity**: simple
 - **Context**: "Immediately preceding non-blank line" — walk backwards from the invocation line, skip blank lines, check whether the first non-blank line matches `r'<!--\s*contract-lint:ignore-next\s*-->'`. Implementation lives in the scanner (Task 2) so the validator stays declarative.
-- **Verification**: `uv run python3 -c "import tempfile, pathlib; from cortex_command.lint import contract; td = pathlib.Path(tempfile.mkdtemp()); sk = td / 'skills' / 'X'; sk.mkdir(parents=True); (sk / 'SKILL.md').write_text('<!-- contract-lint:ignore-next -->\n\`\`\`\ncortex-create-backlog-item --title X --body Y\n\`\`\`\n'); surface = contract.extract_surface(); invs = contract.scan_corpus(td); violations = contract.validate(invs, surface, contract.ExceptionLedger.empty()); assert not violations, violations"` exits 0
-- **Status**: [ ] pending
+- **Verification**: `uv run python3 -c "import tempfile, pathlib; from cortex_command.lint import contract; td = pathlib.Path(tempfile.mkdtemp()); sk = td / 'skills' / 'X'; sk.mkdir(parents=True); (sk / 'SKILL.md').write_text('<!-- contract-lint:ignore-next -->\n\`\`\`\ncortex-create-backlog-item --title X --body Y\n\`\`\`\n'); surface, _ = contract.extract_surface(); invs = contract.scan_corpus(td); violations = contract.validate(invs, surface, contract.ExceptionLedger.empty()); assert not violations, violations"` exits 0
+- **Status**: [x] complete (commit cdbdc2be)
 
 ### Task 6: bin wrapper + pyproject [project.scripts] + justfile recipes (wiring co-located)
 - **Files**: `bin/cortex-check-contract` (new), `pyproject.toml`, `justfile`
@@ -68,7 +68,7 @@ Build a stdlib-only pre-commit lint (`cortex_command/lint/contract.py`) that AST
 - **Complexity**: simple
 - **Context**: `bin/cortex-check-parity` lines 1-35 is the canonical wrapper template. The `[project.scripts]` table in `pyproject.toml` is at lines 21-57 (alphabetical). The justfile `check-*` recipes are at lines 349-389; the new recipes go alphabetically among them. The wrapper file's `--help` output (rendered by argparse) names the binary, which the parity check counts as a reference. `chmod +x` is required per CLAUDE.md convention. The plugins/cortex-core/bin/ mirror updates via the dual-source pre-commit hook (auto-mirrored on commit); do not hand-write the mirror.
 - **Verification**: `bin/cortex-check-contract --help` exits 0 AND `just --list 2>&1 | grep -cE '^[[:space:]]+check-contract( |-audit)'` returns `2`
-- **Status**: [ ] pending
+- **Status**: [x] complete (commits b0599ee6 + 4bebac27 mirror)
 
 ### Task 7: Test runner skeleton + 3 core fixtures
 - **Files**: `tests/test_check_contract.py` (new), `tests/fixtures/contract/valid-baseline/` (new directory with `pyproject.toml` + `cortex_command/lint/contract.py` symlink + `skills/X/SKILL.md`), `tests/fixtures/contract/invalid-missing-required-flag/` (new directory with the same scaffold + an invocation missing `--status`/`--type`), `tests/fixtures/contract/invalid-unknown-flag/` (new directory + an invocation with `--bogus-flag`)
@@ -77,16 +77,16 @@ Build a stdlib-only pre-commit lint (`cortex_command/lint/contract.py`) that AST
 - **Complexity**: complex
 - **Context**: `tests/test_check_parity.py:34-90` is the structural template — parametrize via `pytest.mark.parametrize("fixture_dir", [...])`, run the subprocess with `subprocess.run([...], capture_output=True, text=True)`, assert on returncode + JSON-parsed stdout. Fixtures live at `tests/fixtures/contract/<name>/`. The fixture's stub module exposes a minimal parser (just `add_argument("--title", required=True)`, `add_argument("--status", required=True)`, `add_argument("--type", required=True)`, `add_argument("--body")` — enough to validate the required-flag check). Test discovery uses `pathlib.Path("tests/fixtures/contract").glob("valid-*")` and `glob("invalid-*")` at module import time. Fixture pyproject.toml must be parseable by Task 1's extractor.
 - **Verification**: `uv run pytest tests/test_check_contract.py -v` exits 0 with exactly 3 parametrized cases passing
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 9781ece7)
 
-### Task 8: Additional 4 fixtures (sentinel, prose-only, ledger-suppress, non-argparse-exempt)
+### Task 8: Additional 4 fixtures (sentinel, prose-only, ledger-suppress, non-argparse-exempt) [x] complete (commit 69144e50)
 - **Files**: `tests/fixtures/contract/valid-sentinel-ignored/` (new directory + sentinel-suppressed invalid invocation), `tests/fixtures/contract/valid-prose-mention-only/` (new directory + prose mention of `cortex-create-backlog-item` outside any code fence/span), `tests/fixtures/contract/valid-ledger-suppresses/` (new directory + invalid invocation suppressed by a fixture-local `bin/.contract-lint-exceptions.md` entry), `tests/fixtures/contract/valid-non-argparse-exempt/` (new directory + invocation of a key=value-style stub that has no argparse parser, suppressed by `non-argparse-module` ledger category)
 - **What**: Extend the fixture suite to cover the remaining acceptance scenarios from spec Requirement 13. Each fixture is a self-contained mini-repo. The `valid-sentinel-ignored` fixture places `<!-- contract-lint:ignore-next -->` above a deliberately-invalid invocation. The `valid-prose-mention-only` fixture demonstrates that narrative prose mentions (e.g., "The `cortex-create-backlog-item` helper accepts...") without trailing tokens are not flagged. The `valid-ledger-suppresses` fixture has a `bin/.contract-lint-exceptions.md` with one row exempting the test's specific binary/flag/path-glob; the lint must skip the otherwise-invalid invocation. The `valid-non-argparse-exempt` fixture has a stub `cortex-key-value` binary whose source does not call `argparse.ArgumentParser` (e.g., uses `sys.argv` directly) and a fixture-local ledger entry with category `non-argparse-module`. The parametrize list in `tests/test_check_contract.py` (Task 7) is updated by `pathlib.Path.glob()` so no test-file edit is required for fixture additions to land in the run.
 - **Depends on**: [7]
 - **Complexity**: simple
 - **Context**: Each fixture directory has the same scaffold pattern as Task 7's fixtures: a `pyproject.toml`, a stub module path matching the `[project.scripts]` target, a `skills/X/SKILL.md` with the invocation under test, optionally a `bin/.contract-lint-exceptions.md`. The `valid-non-argparse-exempt` stub module's source uses `sys.argv[1:]` with manual `for token in argv: ...` parsing — the AST extractor must classify this as `extraction_status="not_argparse"`.
 - **Verification**: `uv run pytest tests/test_check_contract.py -v` exits 0 with exactly 7 parametrized cases passing
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 69144e50)
 
 ### Task 9: Seed initial exception ledger at bin/.contract-lint-exceptions.md
 - **Files**: `bin/.contract-lint-exceptions.md` (new)
@@ -95,7 +95,7 @@ Build a stdlib-only pre-commit lint (`cortex_command/lint/contract.py`) that AST
 - **Complexity**: simple
 - **Context**: Rationale examples (each ≥30 chars, no forbidden literals): for `cortex-update-item`: `"uses key=value positional pairs instead of argparse flags — backlog #257 tracks the syntax refactor to canonical flag form"`; for `cortex-lifecycle-state`: `"hand-rolled argv loop in state_cli.py iterates sys.argv directly — no argparse.ArgumentParser construction to introspect"`; analogous rationales for the other three. The file lives alongside `bin/.parity-exceptions.md` and follows the same governance pattern (5-col vs 7-col schema).
 - **Verification**: `grep -c "^| cortex-update-item " bin/.contract-lint-exceptions.md` returns `1` AND `grep -c "non-argparse-module" bin/.contract-lint-exceptions.md` returns `5`
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 0c722cee)
 
 ### Task 10: Fix in-PR drift callsites (4 files)
 - **Files**: `skills/morning-review/SKILL.md`, `skills/morning-review/references/walkthrough.md`, `skills/backlog/SKILL.md`, `skills/discovery/SKILL.md`
@@ -104,7 +104,7 @@ Build a stdlib-only pre-commit lint (`cortex_command/lint/contract.py`) that AST
 - **Complexity**: simple
 - **Context**: The four callsites are skill prose, not code — edits are textual additions to existing `cortex-create-backlog-item` lines. The `cortex_command/backlog/create_item.py:155-157` argparse parser is the canonical reference for the required-flag enumeration (`--title`, `--status`, `--type` are `required=True`; `--body` and others are optional). After this task, `bin/cortex-check-contract --audit` should exit 0 against the post-fix tree (assuming no other drift in scope of v1).
 - **Verification**: `bin/cortex-check-contract --audit` exits 0
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit d7cdacfa — also fixed audit-mode ledger loading, narrowed tests/** glob to *.md, added tests/fixtures/contract/ exclude, 3 intentional-omission ledger entries, 1 sentinel)
 
 ### Task 11: Pre-commit hook Phase 1.55 integration
 - **Files**: `.githooks/pre-commit`
@@ -113,7 +113,7 @@ Build a stdlib-only pre-commit lint (`cortex_command/lint/contract.py`) that AST
 - **Complexity**: simple
 - **Context**: The existing hook structure has phase blocks labeled `# Phase N.M — <name>` followed by `if echo "$STAGED_FILES" | grep -qE '...'; then <command> || exit 1; fi`. Mirror that pattern. The intersection regex: `'^(skills/|hooks/|justfile$|docs/|tests/|CLAUDE\.md$|cortex/requirements/)'`. The commit landing this task does not touch any scan-glob path, so Phase 1.55 does not fire against its own commit; subsequent commits with scan-glob touches will fire it.
 - **Verification**: `grep -n "Phase 1.55" .githooks/pre-commit` returns at least one match AND `awk '/Phase 1.55/,/Phase 1\.6 —/' .githooks/pre-commit | grep -c "just check-contract --staged"` returns `1`
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 2209c804)
 
 ## Risks
 

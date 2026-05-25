@@ -2,14 +2,19 @@
 schema_version: "1"
 uuid: 80dd19af-d75c-4d64-90c0-eddb18f9b2e1
 title: "Skill-prose to CLI argparse contract lint"
-status: backlog
+status: complete
 priority: medium
 type: feature
 created: 2026-05-20
-updated: 2026-05-20
+updated: 2026-05-25
 parent: "251"
 tags: [harness, skill-authoring, parity-lint]
 discovery_source: cortex/research/harness-friction-triage/research.md
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/skill-prose-to-cli-argparse-contract/spec.md
+areas: [hooks]
+session_id: null
 ---
 
 ## Role
