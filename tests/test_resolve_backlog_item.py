@@ -17,6 +17,7 @@ Total: ≥30 named test cases.
 
 from __future__ import annotations
 
+import datetime as _datetime
 import json
 import os
 import subprocess
@@ -32,6 +33,10 @@ SCRIPT_PATH = REPO_ROOT / "bin" / "cortex-resolve-backlog-item"
 BACKLOG_DIR = REPO_ROOT / "cortex" / "backlog"
 FIXTURES_DIR = REPO_ROOT / "tests" / "fixtures"
 BASELINE_FIXTURE = FIXTURES_DIR / "predicate_a_baseline.json"
+PREDICATE_3STEP_BASELINE_FIXTURE = FIXTURES_DIR / "predicate_3step_baseline.json"
+RESOLVE_ITEM_SOURCE = (
+    REPO_ROOT / "cortex_command" / "backlog" / "resolve_item.py"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -916,3 +921,126 @@ def test_predicate_a_divergences_match_judgment():
         f"{len(failures)} uncurated divergence(s) detected:\n"
         + "\n".join(f"  {i+1}. {msg}" for i, msg in enumerate(failures))
     )
+
+
+# ---------------------------------------------------------------------------
+# R5 (Task 1, unified-backlog-lifecycle-slug-resolver-extend):
+# Capture frozen 3-step baseline fixture with source-SHA provenance.
+#
+# This is the structural sequential gate for the 3→5 step resolver extension.
+# Capturing the baseline against the pre-mutation resolver, and embedding the
+# source's git-blob SHA into the fixture, lets downstream tasks assert
+# capture-then-mutate ordering without prose-only "MUST land before" rails
+# (per CLAUDE.md: "Prefer structural separation over prose-only enforcement
+# for sequential gates").
+#
+# Idempotence rules:
+#   • Fixture absent              → capture (run CURATED_INPUTS, write file).
+#   • Fixture present, SHA match  → row-count parity assert + exit; do NOT rewrite.
+#   • Fixture present, SHA diverges → row-count parity assert + exit; do NOT rewrite.
+#                                     (Expected steady state on post-mutation branch.)
+#
+# The test NEVER overwrites an existing fixture. Operators must
+# `git rm tests/fixtures/predicate_3step_baseline.json` to force regen,
+# producing an audit-trail-visible event in git history.
+# ---------------------------------------------------------------------------
+
+
+def _compute_resolve_item_source_sha() -> str:
+    """Return the current git-blob SHA of cortex_command/backlog/resolve_item.py."""
+    result = subprocess.run(
+        ["git", "hash-object", str(RESOLVE_ITEM_SOURCE)],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return result.stdout.strip()
+
+
+def test_capture_3step_baseline():
+    """One-shot capture of the pre-mutation 3-step resolver baseline.
+
+    When the fixture is absent, runs every input in CURATED_INPUTS against the
+    live backlog via _run_live and writes
+    tests/fixtures/predicate_3step_baseline.json with shape:
+
+        {
+          "source_sha": "<git hash-object of resolve_item.py at capture time>",
+          "captured_at": "<ISO-8601 UTC timestamp>",
+          "rows": [[input, exit_code, resolved_filename_or_None], ...]
+        }
+
+    When the fixture is present, the test asserts row-count parity with
+    CURATED_INPUTS and exits — it does NOT rewrite. This is intentional:
+    re-capture requires `git rm tests/fixtures/predicate_3step_baseline.json`
+    so regeneration leaves an audit trail in git history.
+
+    Mismatch between the fixture's embedded source_sha and the current
+    git-blob SHA of resolve_item.py is the expected steady state once
+    downstream tasks mutate the resolver (T2/T3). The test still exits
+    cleanly in that case — the source_sha divergence is the structural
+    proof that capture happened pre-mutation.
+    """
+    assert BACKLOG_DIR.is_dir(), f"live backlog not found at {BACKLOG_DIR}"
+    assert RESOLVE_ITEM_SOURCE.is_file(), (
+        f"resolver source not found at {RESOLVE_ITEM_SOURCE}"
+    )
+
+    if PREDICATE_3STEP_BASELINE_FIXTURE.exists():
+        # Fixture present: parity-check and exit. Never rewrite.
+        data = json.loads(
+            PREDICATE_3STEP_BASELINE_FIXTURE.read_text(encoding="utf-8")
+        )
+        assert isinstance(data, dict), (
+            f"fixture must be a JSON object, got {type(data).__name__}"
+        )
+        assert "source_sha" in data, "fixture missing 'source_sha' field"
+        assert "captured_at" in data, "fixture missing 'captured_at' field"
+        assert "rows" in data, "fixture missing 'rows' field"
+        assert len(data["rows"]) == len(CURATED_INPUTS), (
+            f"fixture row count {len(data['rows'])} != "
+            f"len(CURATED_INPUTS) {len(CURATED_INPUTS)}; "
+            "delete the fixture with `git rm` to force regeneration."
+        )
+        # SHA may or may not match current resolver source; both states are
+        # valid (match = pre-mutation branch; diverge = post-mutation branch).
+        return
+
+    # Fixture absent: capture against the live backlog and current resolver.
+    source_sha = _compute_resolve_item_source_sha()
+    captured_at = _datetime.datetime.now(_datetime.timezone.utc).isoformat()
+
+    rows: list[list] = []
+    for inp in CURATED_INPUTS:
+        result = _run_live(inp)
+        if result.returncode == 0:
+            try:
+                payload = json.loads(result.stdout)
+                resolved = payload["filename"]
+            except (json.JSONDecodeError, KeyError):
+                resolved = None
+        else:
+            resolved = None
+        rows.append([inp, result.returncode, resolved])
+
+    fixture = {
+        "source_sha": source_sha,
+        "captured_at": captured_at,
+        "rows": rows,
+    }
+
+    FIXTURES_DIR.mkdir(parents=True, exist_ok=True)
+    PREDICATE_3STEP_BASELINE_FIXTURE.write_text(
+        json.dumps(fixture, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    # Sanity assertions on the freshly written fixture.
+    assert PREDICATE_3STEP_BASELINE_FIXTURE.exists(), (
+        "fixture file was not written"
+    )
+    loaded = json.loads(
+        PREDICATE_3STEP_BASELINE_FIXTURE.read_text(encoding="utf-8")
+    )
+    assert isinstance(loaded, dict) and "source_sha" in loaded and "rows" in loaded
+    assert len(loaded["rows"]) == len(CURATED_INPUTS)
