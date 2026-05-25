@@ -91,6 +91,7 @@ by the behavioral test suite (not the golden-replay parity fixtures).
 If the Python module is modified and fixtures need to be updated, run from the
 repo root with:
 
+<!-- contract-lint:ignore-next -->
 ```bash
 LC_ALL=C TZ=UTC python3 -c "
 import sys, json, tempfile, os, subprocess

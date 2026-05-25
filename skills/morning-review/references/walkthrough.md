@@ -414,7 +414,7 @@ For each failed feature (in the order listed in the report):
    observable terms, `role:` = investigate the root cause, `integration:` = affected
    lifecycle feature, `edges:` = non-goal: re-running the overnight session), capture
    the returned body, then call `cortex-create-backlog-item --title "investigate
-   <feature-slug>" --body "<returned-body>"` to write the ticket.
+   <feature-slug>" --status should-have --type bug --body "<returned-body>"` to write the ticket.
 
 7. If the user says skip, move on without creating a backlog item.
 

@@ -59,7 +59,7 @@ Create a new backlog item from `{{title}}`.
 Interview-driven backlog item creation. Delegates body authoring to `/backlog-author`, then writes the item file.
 
 1. Invoke `/backlog-author interview "{{title}}"` to conduct a structured interview and obtain a fully authored body
-2. Run `cortex-create-backlog-item --title "{{title}}" --body "..."` with the body returned by `backlog-author interview`
+2. Run `cortex-create-backlog-item --title "{{title}}" --status backlog --type {{type}} --body "..."` with the body returned by `backlog-author interview`
 
 The body is already authored after step 1; the file is not opened for user editing (unlike `add`).
 

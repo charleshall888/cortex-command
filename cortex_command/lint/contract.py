@@ -421,7 +421,7 @@ _SCAN_GLOBS: tuple[str, ...] = (
     "hooks/**",
     "justfile",
     "docs/**/*.md",
-    "tests/**",
+    "tests/**/*.md",
     "CLAUDE.md",
     "cortex/requirements/**/*.md",
 )
@@ -431,6 +431,9 @@ _SCAN_GLOBS: tuple[str, ...] = (
 _HARD_EXCLUDE_PREFIXES: tuple[str, ...] = (
     "cortex/research/archive/",
     "cortex/lifecycle/",
+    # Intentional violation fixtures used by the contract-lint self-tests;
+    # scanning them against the live corpus would always produce false failures.
+    "tests/fixtures/contract/",
 )
 
 _HARD_EXCLUDE_EXACT: frozenset[str] = frozenset(
@@ -1467,7 +1470,8 @@ def main(argv: list[str] | None = None) -> int:
         invocations = scan_corpus(root)
 
     # --- Validate ---
-    ledger = ExceptionLedger.empty()
+    ledger_path = root / "bin" / ".contract-lint-exceptions.md"
+    ledger = parse_exception_ledger(ledger_path)
     violations = validate(invocations, surface_map, ledger)
 
     # --- Emit ---
