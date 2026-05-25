@@ -58,6 +58,7 @@ cortex-report = "cortex_command.overnight.report:main"
 cortex-resolve-backlog-item = "cortex_command.backlog.resolve_item:main"
 cortex-smoke-test = "cortex_command.overnight.smoke_test:main"
 cortex-worktree-resolve = "cortex_command.pipeline.worktree_resolve_cli:main"
+cortex-worktree-precondition = "cortex_command.worktree_precondition:main"
 cortex-interactive-lock = "cortex_command.interactive_lock:main"
 cortex-lifecycle-event = "cortex_command.lifecycle_event:main"
 
