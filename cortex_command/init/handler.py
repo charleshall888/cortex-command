@@ -22,13 +22,20 @@ runs the pre-flight gates in the ADR-3 sequence, and dispatches to
        and ``cortex init --update`` recovers idempotently).
 
 Exit codes:
-    0 -- success.
+    0 -- success. For ``--verify-worktree-auth``, also signals the
+         cortex-managed CLAUDE.md fence is present at the current
+         canonical version (R20).
     2 -- user-correctable gate failure (not-a-repo, submodule, clobber,
          malformed settings, symlink escape). Covers R2, R3, R6, R13,
          R14, R19. Translated from :class:`ScaffoldError` and
          :class:`SettingsMergeError` at the top level of :func:`main`.
+         Also returned by ``--verify-worktree-auth`` when the fence is
+         present but stale (in-fence ``version`` strictly below the
+         canonical version).
     1 -- unexpected runtime failure (disk full, permission error at write
-         time). Any other exception propagates here.
+         time). Any other exception propagates here. Also returned by
+         ``--verify-worktree-auth`` when the fence is absent (CLAUDE.md
+         missing or no opening sigil found).
 """
 
 from __future__ import annotations
@@ -184,6 +191,37 @@ def _run(args: argparse.Namespace) -> int:
         scaffold.revoke_claude_md_authorization(repo_root)
         return 0
 
+    # Step 0c: --verify-worktree-auth early-branch (R20). Verification is a
+    # read-only probe of the cortex-managed CLAUDE.md fence; it skips
+    # scaffold/settings entirely. The git-repo gate (R2) still runs so
+    # ``CLAUDE.md`` is resolved relative to a real repo root rather than
+    # an arbitrary CWD. Exit codes per R20: 0 fence present at canonical
+    # version, 1 fence absent (CLAUDE.md missing or no sigil), 2 fence
+    # present but stale (in-fence ``version=N`` strictly below canonical).
+    # Uses the same sigil parser as ensure/revoke so the three branches
+    # share one source of truth.
+    if getattr(args, "verify_worktree_auth", False):
+        repo_root = _resolve_repo_root(args.path)
+
+        claude_md_path = repo_root / "CLAUDE.md"
+        if not claude_md_path.exists():
+            return 1
+
+        content = claude_md_path.read_text(encoding="utf-8")
+        located = scaffold._find_claude_md_auth_fence(content)
+        if located is None:
+            return 1
+
+        _start, _end, version = located
+        if version < scaffold._CLAUDE_MD_AUTH_VERSION:
+            return 2
+        # Equal or future-version fences both count as "present at the current
+        # canonical version" from the probe's perspective: the lifecycle
+        # skill's §1a path only needs to know the gate is satisfied, and a
+        # future-version fence written by a newer cortex-command does satisfy
+        # it (the newer body is a superset commitment to the same surface).
+        return 0
+
     # Step 1: git-repo + submodule gates (R2, R3). Resolution is done
     # here exactly once; the resolved path threads through every later
     # step so no downstream helper calls resolve() independently.
@@ -283,15 +321,21 @@ def main(args: argparse.Namespace) -> int:
         unregister            -- bool, remove allowWrite entry and return.
         revoke_worktree_auth  -- bool, remove the cortex-managed CLAUDE.md
                                  authorization fence and return.
+        verify_worktree_auth  -- bool, probe the cortex-managed CLAUDE.md
+                                 authorization fence (read-only) and exit
+                                 with 0/1/2 per R20.
 
-    ``--update``, ``--unregister``, and ``--revoke-worktree-auth`` are
-    mutually exclusive at argparse time (Task 10); ``--force`` is a
-    modifier and may combine with the default invocation or with
-    ``--revoke-worktree-auth``. This handler does not re-check the mutex.
+    ``--update``, ``--unregister``, ``--revoke-worktree-auth``, and
+    ``--verify-worktree-auth`` are mutually exclusive at argparse time
+    (Task 10); ``--force`` is a modifier and may combine with the default
+    invocation or with ``--revoke-worktree-auth``. This handler does not
+    re-check the mutex.
 
     Returns:
-        Exit code -- 0 success, 2 user-correctable gate failure (incl. R7's
-        live-session refusal), 1 on unexpected runtime failure.
+        Exit code -- 0 success (or fence present at canonical version for
+        ``--verify-worktree-auth``), 2 user-correctable gate failure (incl.
+        R7's live-session refusal, R20's stale fence), 1 on unexpected
+        runtime failure (or R20's absent fence).
     """
     try:
         return _run(args)

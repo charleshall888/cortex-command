@@ -786,6 +786,17 @@ def _build_parser() -> argparse.ArgumentParser:
             "passed."
         ),
     )
+    init_verbs.add_argument(
+        "--verify-worktree-auth",
+        dest="verify_worktree_auth",
+        action="store_true",
+        help=(
+            "Probe consumer CLAUDE.md for the cortex-managed EnterWorktree "
+            "authorization fence. Exits 0 when present at the current "
+            "canonical version, 1 when absent, 2 when present but stale "
+            "(version below canonical). Read-only; never mutates files."
+        ),
+    )
     # ``--force`` is a modifier, not a verb. It combines with the default
     # scaffold (overwrite local edits) and with --revoke-worktree-auth
     # (bypass the live-session pre-condition); it has no effect with
