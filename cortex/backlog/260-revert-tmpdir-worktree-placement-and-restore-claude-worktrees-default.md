@@ -2,12 +2,12 @@
 schema_version: "1"
 uuid: ce0be7d3-669a-44e7-b1bd-3c1c89ec072a
 title: "Revert TMPDIR worktree placement and restore .claude/worktrees/ default"
-status: refined
+status: complete
 priority: high
 type: bug
 created: 2026-05-20
-updated: 2026-05-20
-session_id: 846c656c-5fbd-4ff2-bff4-57b4f78d8f6e
+updated: 2026-05-25
+session_id: null
 lifecycle_phase: research
 lifecycle_slug: revert-tmpdir-worktree-placement-and-restore
 complexity: complex
