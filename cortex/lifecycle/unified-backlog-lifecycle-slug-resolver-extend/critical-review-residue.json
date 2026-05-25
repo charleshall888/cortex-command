@@ -1,27 +1,24 @@
 {
+  "ts": "2026-05-25T19:30:00Z",
   "feature": "unified-backlog-lifecycle-slug-resolver-extend",
-  "phase": "specify",
-  "ts": "2026-05-25T11:35:00Z",
-  "b_findings": [
+  "artifact": "cortex/lifecycle/unified-backlog-lifecycle-slug-resolver-extend/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 2,
+    "dispatched": 4
+  },
+  "findings": [
     {
-      "angle": "Skill plugin-rollout coordination",
-      "text": "Cross-channel skew window — wheel and plugin distribution channels update asynchronously; spec frames the change as atomic PR but rollout splits across channels."
+      "class": "B",
+      "finding": "Task 4's drift test reads predicate_3step_baseline.json as ground truth with no provenance check (no embedded git SHA of resolve_item.py at capture time, no content hash). This leaves the drift detector unable to distinguish a pre-mutation baseline from a post-mutation one.",
+      "reviewer_angle": "Task sequencing enforcement vs procedural ordering",
+      "evidence_quote": "Add `test_no_order_drift_against_baseline` that loads `tests/fixtures/predicate_3step_baseline.json`, iterates each `(input, expected_exit, expected_filename)` triple, runs the input through the post-5-step resolver via `_run_live`, and asserts the outcome matches."
     },
     {
-      "angle": "Skill plugin-rollout coordination",
-      "text": "R10 grep-only acceptance verifies prose presence, not skill-behavior degradation across the cross-channel skew matrix."
-    },
-    {
-      "angle": "Skill plugin-rollout coordination",
-      "text": "Exit-2 user-action instruction ('ask the user to re-invoke with a disambiguated slug') has no autonomous-mode fallback for overnight runner."
-    },
-    {
-      "angle": "Phase dependency ordering coherence",
-      "text": "Phase 1 ships resolver returning ambiguous status via cortex-resolve-backlog-item but the footgun-source (update_item._find_item) is only fixed in Phase 2 — Phase 1 done / Phase 2 not started is a coherent failure mode."
-    },
-    {
-      "angle": "Phase dependency ordering coherence",
-      "text": "R2/R3 Phase 1 acceptance tests new branches against a controlled synthetic; canonical CURATED_INPUTS regression coverage of new branches lands in Phase 2 — test breadth lags by a phase."
+      "class": "B",
+      "finding": "Acceptance #4 only checks skill-file contents in this repo. No Acceptance item gates on PR-description content (where the Risks bullet says the skew 'must' be called out), on a version-pinning relationship between CLI wheel and plugin, or on a release-note artifact documenting the recommended update order.",
+      "reviewer_angle": "Cross-channel skew window for the exit-2 contract",
+      "evidence_quote": "grep -cE \"exit[ -]?2|ambiguous|disambiguat\" skills/lifecycle/references/clarify.md skills/refine/SKILL.md skills/lifecycle/references/complete.md skills/lifecycle/references/wontfix.md skills/lifecycle/references/backlog-writeback.md skills/morning-review/SKILL.md` returns \u22656."
     }
   ]
 }
