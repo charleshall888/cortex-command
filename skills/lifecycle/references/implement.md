@@ -172,13 +172,25 @@ EOF
 
 Exit-code contract: exit 0 = path is inside the repo, proceed; exit 2 = resolver failed, not in a git repo, or path escapes the repo root. On exit 2, halt §1a — do not cd or emit the event.
 
-**v. Cd handoff.** After the pre-flight check passes (exit 0), perform the following three steps in order:
+**Step v — Auto-enter sequence**
 
-1. **Capture origin pwd** — run a single Bash call: `_origin_pwd=$(pwd)`. Hold this value for the lifecycle session (it may be needed for restore at Complete phase).
+After the pre-flight check passes (exit 0), perform the following five operations in order. The order is load-bearing: `_origin_pwd` is captured first so we can restore CWD on fallback; the two cheap probes fast-fail before the platform tool call; `EnterWorktree` lands fourth; the event emission runs last so the row lands in the worktree's events.log via `_resolve_user_project_root_from_cwd()`.
 
-2. **Cd into worktree** — run a single Bash call: `cd $(cortex-worktree-resolve interactive/{slug})`. This sets the orchestrator session's CWD to the interactive worktree for all subsequent Bash tool calls in this lifecycle session.
+1. **Capture origin pwd** — run a single Bash call: `_origin_pwd=$(pwd)`. Hold this value for the lifecycle session (it may be needed for restore at Complete phase or on fallback below).
 
-3. **Emit event** — run a single Bash call after the cd has completed (path now resolves to the worktree):
+2. **Verify authorization clause** — run a single Bash call: `cortex init --verify-worktree-auth`. Exit 0 means the consumer's `CLAUDE.md` carries the cortex-managed fence at the current canonical version; exit 1 means the fence is absent; exit 2 means the fence is stale. On any non-zero exit, skip step 4 (`EnterWorktree`) and route to the fallback path below with a single-line diagnostic naming the probe result and pointing the user to `cortex init` to restore or refresh the clause.
+
+3. **Already-in-worktree probe** — run a single Bash call: `cortex-worktree-precondition`. Exit 0 means the current session is NOT already inside a worktree (proceed); exit 1 means the session IS already inside a worktree (skip step 4 and route to the fallback path with a single-line diagnostic naming the detected worktree). The shim compares `git rev-parse --show-toplevel` against `git rev-parse --git-common-dir` to detect the case where the user launched Claude Code with `--worktree=<path>` and would otherwise hit `EnterWorktree`'s "Must not already be in a worktree" rejection.
+
+4. **Auto-enter the worktree** — when both probes above returned exit 0, call the platform tool:
+
+   ```
+   EnterWorktree(path=<resolved-path>)
+   ```
+
+   where `<resolved-path>` is the value returned by `cortex-worktree-resolve interactive/{slug}` (never a hardcoded prefix per R3). This sets the orchestrator session's CWD to the interactive worktree for all subsequent Bash tool calls in this lifecycle session and clears CWD-dependent caches (system prompt sections, memory files, plans directory). If the tool errors (path not in `git worktree list`, schema rejection, or a "Must not already be in a worktree" race), route to the fallback path below.
+
+5. **Emit event** — run a single Bash call after `EnterWorktree` has completed (path now resolves to the worktree):
 
    ```bash
    cortex-lifecycle-event log --event interactive_worktree_entered --feature {slug} --worktree-path "$(pwd)"
@@ -186,7 +198,9 @@ Exit-code contract: exit 0 = path is inside the repo, proceed; exit 2 = resolver
 
    The `cortex-lifecycle-event` CLI uses `_resolve_user_project_root_from_cwd()` (ignores `CORTEX_REPO_ROOT`), so the event row lands in the worktree's `cortex/lifecycle/{slug}/events.log` — not the main repo's.
 
-Variant A's cd affects only orchestrator-session Bash tool calls; sub-agent dispatch via `Agent(isolation: "worktree")` in §2 is unaffected — each sub-agent is independently rooted at `<repo>/.claude/worktrees/{task-name}/`. The existing §2(e) Worktree Integration step (`implement.md:218-229`) runs `git merge worktree/{task-name}` from the feature-branch CWD (which under Variant A is `interactive/{slug}` post-cd) and then `git worktree remove` for each completed sub-agent worktree — Variant A inherits this merge-back behavior unchanged.
+**Fallback — `EnterWorktree skipped`.** If either probe in step 2 or step 3 returns non-zero, OR the `EnterWorktree` call in step 4 errors, OR the skill judges the gate unmet and declines to invoke the tool (silent non-invocation), fall back to the cd-shim handoff: run `cd $(cortex-worktree-resolve interactive/{slug})` and proceed to step 5 to emit the event. Surface a single-line diagnostic naming the failure mode (e.g., `EnterWorktree skipped: --verify-worktree-auth exit 1 (clause absent — run cortex init to restore)`, `EnterWorktree skipped: already inside worktree at <path>`, `EnterWorktree skipped: tool rejected path <path>`). The diagnostic's specific failure-mode strings vary; the structural marker `EnterWorktree skipped` is the anchor R10 and R14 scan for.
+
+The auto-enter affects only orchestrator-session Bash tool calls; sub-agent dispatch via `Agent(isolation: "worktree")` in §2 is unaffected — each sub-agent is independently rooted at `<repo>/.claude/worktrees/{task-name}/`. The existing §2(e) Worktree Integration step (`implement.md:218-229`) runs `git merge worktree/{task-name}` from the feature-branch CWD (which under auto-enter is `interactive/{slug}` post-`EnterWorktree`) and then `git worktree remove` for each completed sub-agent worktree — auto-enter inherits this merge-back behavior unchanged.
 
 **vi. Handoff.** Surface the worktree path to the user with the following message (substituting the actual resolved path from `info.path`):
 
