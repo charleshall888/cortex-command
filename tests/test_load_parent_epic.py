@@ -28,8 +28,6 @@ backlog directory.
 
 from __future__ import annotations
 
-import importlib.machinery
-import importlib.util
 import json
 import os
 import subprocess
@@ -38,8 +36,7 @@ from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPT_PATH = REPO_ROOT / "bin" / "cortex-load-parent-epic"
+import cortex_command.backlog.load_parent_epic as load_parent_epic_module
 
 
 # ---------------------------------------------------------------------------
@@ -58,7 +55,7 @@ def _run(slug: str, backlog_dir: Path) -> subprocess.CompletedProcess:
     """Invoke the helper via subprocess against ``backlog_dir`` for ``slug``."""
     env = {"CORTEX_BACKLOG_DIR": str(backlog_dir), **os.environ}
     return subprocess.run(
-        [sys.executable, str(SCRIPT_PATH), slug],
+        [sys.executable, "-m", "cortex_command.backlog.load_parent_epic", slug],
         capture_output=True,
         text=True,
         env=env,
@@ -371,7 +368,7 @@ def _run_no_env(slug: str, cwd: Path) -> subprocess.CompletedProcess:
     """Run the script with cwd set and CORTEX_BACKLOG_DIR removed from env."""
     env = {k: v for k, v in os.environ.items() if k != "CORTEX_BACKLOG_DIR"}
     return subprocess.run(
-        [sys.executable, str(SCRIPT_PATH), slug],
+        [sys.executable, "-m", "cortex_command.backlog.load_parent_epic", slug],
         capture_output=True,
         text=True,
         env=env,
@@ -420,14 +417,7 @@ def test_discovery_no_backlog_exits_1(tmp_path):
 
 
 def _load_script_module():
-    loader = importlib.machinery.SourceFileLoader(
-        "cortex_load_parent_epic", str(SCRIPT_PATH)
-    )
-    spec = importlib.util.spec_from_loader(loader.name, loader)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load_parent_epic_module
 
 
 def test_drift_normalize_parent():
