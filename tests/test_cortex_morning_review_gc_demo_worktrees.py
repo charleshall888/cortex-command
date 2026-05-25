@@ -1,15 +1,17 @@
-"""Fixture-replay tests for ``bin/cortex-morning-review-gc-demo-worktrees``.
+"""Fixture-replay tests for ``cortex_command.overnight.gc_demo_worktrees``.
 
 Covers the six C12 behavior cases from spec R11 of
 ``cortex/lifecycle/extract-morning-review-deterministic-sequences-c11-c15-bundle/spec.md``.
 
 Each test builds a real parent git repo + real worktrees in a pytest tmpdir
-(since the script invokes real ``git worktree``), invokes the script via
-``subprocess.run``, and asserts on worktree presence/absence + stderr line
-ordering. Stderr is filtered to lines starting with ``[gc-demo-worktrees]``
-before assertions because git itself emits untagged stderr (warnings,
-"Removing worktrees/...") that interleaves with the script's tagged log
-lines and is not stable across git versions.
+(since the module invokes real ``git worktree``), invokes the module via
+``subprocess.run`` with ``sys.executable -m
+cortex_command.overnight.gc_demo_worktrees`` (bypassing the bash wrapper's
+CLI-discovery cascade entirely), and asserts on worktree presence/absence +
+stderr line ordering. Stderr is filtered to lines starting with
+``[gc-demo-worktrees]`` before assertions because git itself emits untagged
+stderr (warnings, "Removing worktrees/...") that interleaves with the
+module's tagged log lines and is not stable across git versions.
 """
 
 from __future__ import annotations
@@ -18,15 +20,9 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import Iterable, List
+from typing import List
 
 import pytest
-
-SCRIPT_PATH = (
-    Path(__file__).resolve().parent.parent
-    / "bin"
-    / "cortex-morning-review-gc-demo-worktrees"
-)
 
 
 def _git(*args: str, cwd: Path) -> subprocess.CompletedProcess:
@@ -125,13 +121,19 @@ def gc_fixture(tmp_path: Path):
         )
 
 
-def _run_script(
+def _run_gc(
     parent_repo: Path,
     tmp_tmpdir: Path,
     active_session_id: str,
 ) -> subprocess.CompletedProcess:
+    """Invoke ``cortex_command.overnight.gc_demo_worktrees`` directly via
+    ``sys.executable -m``, bypassing the bash wrapper's CLI-discovery
+    cascade.  The stripped ``env=`` is kept to isolate the run from user
+    TMPDIR pollution while still allowing the module to locate git on PATH.
+    """
     return subprocess.run(
-        [str(SCRIPT_PATH), active_session_id],
+        [sys.executable, "-m", "cortex_command.overnight.gc_demo_worktrees",
+         active_session_id],
         cwd=str(parent_repo),
         env={"TMPDIR": str(tmp_tmpdir), "PATH": os.environ["PATH"]},
         capture_output=True,
@@ -139,9 +141,7 @@ def _run_script(
     )
 
 
-@pytest.mark.skipif(
-    sys.platform == "win32", reason="bash-only script; not supported on Windows"
-)
+
 def test_clean_matching_worktree_is_removed(gc_fixture) -> None:
     """A matching worktree with a clean working tree is removed; stderr
     contains a tagged ``removing`` line; exit 0 (spec R11.a)."""
@@ -152,7 +152,7 @@ def test_clean_matching_worktree_is_removed(gc_fixture) -> None:
     wt = add_worktree("demo-overnight-2026-04-28-0900-20260428T130000Z")
     assert wt.exists()
 
-    result = _run_script(parent_repo, tmp_tmpdir, "other-session")
+    result = _run_gc(parent_repo, tmp_tmpdir, "other-session")
 
     assert result.returncode == 0, (
         f"expected exit 0; got {result.returncode}\nstderr: {result.stderr}"
@@ -167,9 +167,7 @@ def test_clean_matching_worktree_is_removed(gc_fixture) -> None:
     ), f"expected a tagged 'removing' line in stderr; got tagged={tagged!r}"
 
 
-@pytest.mark.skipif(
-    sys.platform == "win32", reason="bash-only script; not supported on Windows"
-)
+
 def test_path_under_tmpdir_not_matching_prefix_is_left_alone(gc_fixture) -> None:
     """A worktree under ``$TMPDIR`` whose basename does NOT match
     ``demo-overnight-`` is left alone — no remove, no skip log
@@ -181,7 +179,7 @@ def test_path_under_tmpdir_not_matching_prefix_is_left_alone(gc_fixture) -> None
     wt = add_worktree("feature-something-20260428T130000Z")
     assert wt.exists()
 
-    result = _run_script(parent_repo, tmp_tmpdir, "other-session")
+    result = _run_gc(parent_repo, tmp_tmpdir, "other-session")
 
     assert result.returncode == 0
     assert wt.exists(), (
@@ -196,9 +194,7 @@ def test_path_under_tmpdir_not_matching_prefix_is_left_alone(gc_fixture) -> None
         )
 
 
-@pytest.mark.skipif(
-    sys.platform == "win32", reason="bash-only script; not supported on Windows"
-)
+
 def test_uncommitted_untracked_file_skips_with_stderr_log(gc_fixture) -> None:
     """A matching worktree containing an untracked file is SKIPPED
     with a tagged ``skipping ...: uncommitted state`` stderr log; the
@@ -210,7 +206,7 @@ def test_uncommitted_untracked_file_skips_with_stderr_log(gc_fixture) -> None:
     wt = add_worktree("demo-overnight-2026-04-28-0900-20260428T130000Z")
     (wt / "scratch.txt").write_text("untracked user work\n")
 
-    result = _run_script(parent_repo, tmp_tmpdir, "other-session")
+    result = _run_gc(parent_repo, tmp_tmpdir, "other-session")
 
     assert result.returncode == 0
     assert wt.exists(), (
@@ -235,9 +231,7 @@ def test_uncommitted_untracked_file_skips_with_stderr_log(gc_fixture) -> None:
     )
 
 
-@pytest.mark.skipif(
-    sys.platform == "win32", reason="bash-only script; not supported on Windows"
-)
+
 def test_tracked_dirty_worktree_is_skipped_or_remove_failure_logged(
     gc_fixture,
 ) -> None:
@@ -263,7 +257,7 @@ def test_tracked_dirty_worktree_is_skipped_or_remove_failure_logged(
     )
     tracked.write_text("v2 — dirty\n")
 
-    result = _run_script(parent_repo, tmp_tmpdir, "other-session")
+    result = _run_gc(parent_repo, tmp_tmpdir, "other-session")
 
     assert result.returncode == 0
     assert wt.exists(), (
@@ -286,9 +280,7 @@ def test_tracked_dirty_worktree_is_skipped_or_remove_failure_logged(
     )
 
 
-@pytest.mark.skipif(
-    sys.platform == "win32", reason="bash-only script; not supported on Windows"
-)
+
 def test_active_session_worktree_is_excluded_before_state_check(
     gc_fixture,
 ) -> None:
@@ -304,7 +296,7 @@ def test_active_session_worktree_is_excluded_before_state_check(
     wt = add_worktree(f"demo-{active_id}-20260428T130000Z")
     assert wt.exists()
 
-    result = _run_script(parent_repo, tmp_tmpdir, active_id)
+    result = _run_gc(parent_repo, tmp_tmpdir, active_id)
 
     assert result.returncode == 0
     assert wt.exists(), (
@@ -323,9 +315,7 @@ def test_active_session_worktree_is_excluded_before_state_check(
             )
 
 
-@pytest.mark.skipif(
-    sys.platform == "win32", reason="bash-only script; not supported on Windows"
-)
+
 def test_prune_runs_once_after_all_remove_calls_ordering_invariant(
     gc_fixture,
 ) -> None:
@@ -345,7 +335,7 @@ def test_prune_runs_once_after_all_remove_calls_ordering_invariant(
     for wt in wts:
         assert wt.exists()
 
-    result = _run_script(parent_repo, tmp_tmpdir, "other-session")
+    result = _run_gc(parent_repo, tmp_tmpdir, "other-session")
 
     assert result.returncode == 0
     for wt in wts:
