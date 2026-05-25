@@ -100,22 +100,284 @@ class Violation:
         }
 
 
+@dataclass
+class _LedgerEntry:
+    """One parsed row from the exception ledger table."""
+
+    binary: str
+    flag_or_subcommand: str
+    path_glob: str
+    category: str
+    rationale: str
+    lifecycle_id: str
+    added_date: str
+
+
+_LEDGER_ALLOWED_CATEGORIES: frozenset[str] = frozenset(
+    {
+        "non-argparse-module",
+        "migration-note",
+        "template-fragment",
+        "intentional-omission",
+    }
+)
+
+_LEDGER_FORBIDDEN_RATIONALE_LITERALS: frozenset[str] = frozenset(
+    {"internal", "misc", "tbd", "n/a", "pending", "temporary"}
+)
+
+
 class ExceptionLedger:
-    """Stub exception ledger (Task 4 will replace this with the full parser).
+    """Exception ledger parsed from ``bin/.contract-lint-exceptions.md``.
 
     The ledger suppresses violations whose ``(binary, flag-or-subcommand,
-    path-glob)`` triple matches a registered entry.  This stub always reports
-    no match so that the validator surfaces all violations.
+    path-glob)`` triple matches a registered entry.  Matching uses exact
+    comparison for *binary* and *flag-or-subcommand* (with ``*`` as a
+    wildcard) and ``fnmatch.fnmatch`` for *path-glob* against the
+    violation path relative to the repo root.
     """
 
+    def __init__(self, entries: list[_LedgerEntry] | None = None) -> None:
+        self._entries: list[_LedgerEntry] = entries or []
+
     def match(self, binary: str, flag_or_subcommand: str, path: str) -> bool:
-        """Return True if the triple is in the ledger (always False in stub)."""
+        """Return True if the triple ``(binary, flag_or_subcommand, path)`` is suppressed.
+
+        Parameters
+        ----------
+        binary:
+            The cortex-* binary name.
+        flag_or_subcommand:
+            The flag or subcommand token being checked (e.g., ``--status``,
+            ``<subcommand>``).
+        path:
+            The file path of the invocation (may be absolute or relative).
+        """
+        import fnmatch
+
+        for entry in self._entries:
+            # Binary match: exact or wildcard ``*``.
+            if entry.binary != "*" and entry.binary != binary:
+                continue
+            # Flag/subcommand match: exact or wildcard ``*``.
+            if entry.flag_or_subcommand != "*" and entry.flag_or_subcommand != flag_or_subcommand:
+                continue
+            # Path match: fnmatch against the provided path string.
+            if entry.path_glob != "*" and not fnmatch.fnmatch(path, entry.path_glob):
+                continue
+            return True
         return False
 
     @classmethod
     def empty(cls) -> "ExceptionLedger":
-        """Return an empty ledger (suppresses nothing)."""
-        return cls()
+        """Return an empty ledger (suppresses nothing).
+
+        Kept for backwards compatibility — many test callsites use this.
+        """
+        return cls(entries=[])
+
+
+def parse_exception_ledger(path: Path) -> "ExceptionLedger":
+    """Parse the markdown-table exception ledger at *path*.
+
+    Columns (7): ``binary | flag-or-subcommand | path-glob | category |
+    rationale | lifecycle_id | added_date``.
+
+    Rows that fail validation are silently skipped (callers wishing to
+    surface validation errors should call :func:`validate_exception_ledger`
+    instead, which returns :class:`Violation` objects).
+
+    Returns an :class:`ExceptionLedger` populated with all *valid* entries.
+    """
+    entries: list[_LedgerEntry] = []
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return ExceptionLedger(entries=[])
+
+    saw_header = False
+    saw_separator = False
+
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            # Reset table state when leaving a table block.
+            if saw_header or saw_separator:
+                saw_header = False
+                saw_separator = False
+            continue
+
+        cells = [c.strip() for c in stripped.strip("|").split("|")]
+
+        if not saw_header:
+            # Detect the canonical header row (case-insensitive).
+            normalized = [c.lower().replace("-", "_") for c in cells]
+            if normalized == [
+                "binary",
+                "flag_or_subcommand",
+                "path_glob",
+                "category",
+                "rationale",
+                "lifecycle_id",
+                "added_date",
+            ]:
+                saw_header = True
+            continue
+
+        if not saw_separator:
+            # Separator row: all cells consist of ``-``, ``:``, and space only.
+            if all(set(c) <= set("-: ") and "-" in c for c in cells):
+                saw_separator = True
+            else:
+                saw_header = False
+            continue
+
+        # Data row.
+        if len(cells) != 7:
+            continue
+
+        binary, flag_or_subcommand, path_glob, category, rationale, lifecycle_id, added_date = cells
+        # Strip backtick decoration commonly used in markdown tables.
+        binary = binary.strip("`").strip()
+        flag_or_subcommand = flag_or_subcommand.strip("`").strip()
+        path_glob = path_glob.strip("`").strip()
+        category = category.strip("`").strip()
+        rationale = rationale.strip()
+        lifecycle_id = lifecycle_id.strip("`").strip()
+        added_date = added_date.strip("`").strip()
+
+        # Validate (same rules as validate_exception_ledger); skip invalid rows.
+        if category not in _LEDGER_ALLOWED_CATEGORIES:
+            continue
+        if len(rationale) < 30:
+            continue
+        if rationale.lower() in _LEDGER_FORBIDDEN_RATIONALE_LITERALS:
+            continue
+
+        entries.append(
+            _LedgerEntry(
+                binary=binary,
+                flag_or_subcommand=flag_or_subcommand,
+                path_glob=path_glob,
+                category=category,
+                rationale=rationale,
+                lifecycle_id=lifecycle_id,
+                added_date=added_date,
+            )
+        )
+
+    return ExceptionLedger(entries=entries)
+
+
+def validate_exception_ledger(path: Path) -> list[Violation]:
+    """Validate every entry in the exception ledger at *path*.
+
+    Returns a list of :class:`Violation` objects for each failing entry.
+    Error codes:
+
+    - ``E301`` — rationale is fewer than 30 characters after strip.
+    - ``E302`` — rationale uses a forbidden literal (``tbd``, ``n/a``, etc.).
+    - ``E303`` — category is not in the closed set.
+
+    A missing file returns an empty list (no file = no entries to validate).
+    """
+    violations: list[Violation] = []
+    source = str(path)
+
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return []
+
+    saw_header = False
+    saw_separator = False
+
+    for idx, line in enumerate(text.splitlines(), start=1):
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            if saw_header or saw_separator:
+                saw_header = False
+                saw_separator = False
+            continue
+
+        cells = [c.strip() for c in stripped.strip("|").split("|")]
+
+        if not saw_header:
+            normalized = [c.lower().replace("-", "_") for c in cells]
+            if normalized == [
+                "binary",
+                "flag_or_subcommand",
+                "path_glob",
+                "category",
+                "rationale",
+                "lifecycle_id",
+                "added_date",
+            ]:
+                saw_header = True
+            continue
+
+        if not saw_separator:
+            if all(set(c) <= set("-: ") and "-" in c for c in cells):
+                saw_separator = True
+            else:
+                saw_header = False
+            continue
+
+        # Data row.
+        if len(cells) != 7:
+            continue
+
+        binary, flag_or_subcommand, path_glob, category, rationale, lifecycle_id, added_date = cells
+        category = category.strip("`").strip()
+        rationale = rationale.strip()
+
+        # E303: unknown category.
+        if category not in _LEDGER_ALLOWED_CATEGORIES:
+            violations.append(
+                Violation(
+                    path=source,
+                    line=idx,
+                    col=1,
+                    code="E303",
+                    message=(
+                        f"unknown category {category!r} — must be one of "
+                        f"{sorted(_LEDGER_ALLOWED_CATEGORIES)}"
+                    ),
+                )
+            )
+            continue
+
+        # E302: forbidden rationale literal (checked before length so the
+        # message is the most informative one for short forbidden literals).
+        if rationale.lower() in _LEDGER_FORBIDDEN_RATIONALE_LITERALS:
+            violations.append(
+                Violation(
+                    path=source,
+                    line=idx,
+                    col=1,
+                    code="E302",
+                    message=f"ledger rationale uses forbidden literal {rationale!r}",
+                )
+            )
+            continue
+
+        # E301: rationale too short.
+        if len(rationale) < 30:
+            violations.append(
+                Violation(
+                    path=source,
+                    line=idx,
+                    col=1,
+                    code="E301",
+                    message=(
+                        f"ledger rationale too short "
+                        f"({len(rationale)} chars, need ≥30)"
+                    ),
+                )
+            )
+            continue
+
+    return violations
 
 
 @dataclass
@@ -1147,10 +1409,17 @@ def main(argv: list[str] | None = None) -> int:
     if args.self_test:
         return _run_self_test()
 
-    # --- --validate-exceptions mode (stub; Task 4 will implement) ---
+    # --- --validate-exceptions mode ---
     if args.validate_exceptions:
-        print("--validate-exceptions: not yet implemented", file=sys.stderr)
-        return 2
+        root = Path(args.root).resolve() if args.root else Path.cwd().resolve()
+        ledger_path = root / "bin" / ".contract-lint-exceptions.md"
+        violations = validate_exception_ledger(ledger_path)
+        if args.as_json:
+            print(json.dumps([v.format_json_dict() for v in violations]))
+        else:
+            for v in violations:
+                print(v.format_text())
+        return 1 if violations else 0
 
     root = Path(args.root).resolve() if args.root else Path.cwd().resolve()
 
