@@ -32,11 +32,22 @@ Exposed surface (consumed by Tasks 4, 5, 6, 9):
         Idempotent splice of the cortex-managed ``EnterWorktree`` authorization
         fence into consumer ``CLAUDE.md`` (R5). Returns True if the file was
         written, False if the fence was already current.
+    revoke_claude_md_authorization(repo_root) -> bool
+        Idempotent removal of the cortex-managed authorization fence from
+        consumer ``CLAUDE.md`` (R7). Returns True if the file was written
+        (fence was present and removed), False if the fence was already
+        absent.
+    live_interactive_sessions(repo_root) -> list[Path]
+        Return ``cortex/lifecycle/sessions/*.interactive.pid`` files whose
+        contents map to live PIDs. Consumed by the ``--revoke-worktree-auth``
+        pre-condition check (R7).
 """
 
 from __future__ import annotations
 
 import datetime
+import errno
+import glob
 import importlib.metadata
 import json
 import os
@@ -620,3 +631,136 @@ def ensure_claude_md_authorization(repo_root: Path) -> bool:
     new_content = prefix + canonical + suffix
     atomic_write(claude_md_path, new_content)
     return True
+
+
+def revoke_claude_md_authorization(repo_root: Path) -> bool:
+    """Idempotently remove the cortex-managed authorization fence (R7).
+
+    Mirrors :func:`ensure_claude_md_authorization`'s atomic-write shape but in
+    reverse: strips the fence block from consumer ``CLAUDE.md`` when present,
+    no-ops when absent. User-authored prose outside the fence is never touched.
+
+    Removal semantics:
+        - If consumer ``CLAUDE.md`` is absent or empty, no-op (return False).
+        - If the fence is absent, no-op (return False).
+        - If the fence is present, slice it out (including the trailing
+          newline that followed the closing sigil) and rewrite the file. If
+          the resulting file ends with ``\\n\\n`` (double blank tail because
+          the fence was preceded by a blank-line separator), collapse the
+          trailing double-newline to a single newline so the rewritten file
+          stays clean.
+
+    Args:
+        repo_root: Target repo root. The fence is removed from
+            ``repo_root / CLAUDE.md``.
+
+    Returns:
+        ``True`` if the file was written (fence was present and removed),
+        ``False`` if the fence was already absent and no write occurred.
+    """
+    claude_md_path = repo_root / "CLAUDE.md"
+    if not claude_md_path.exists():
+        return False
+
+    original = claude_md_path.read_text(encoding="utf-8")
+    located = _find_claude_md_auth_fence(original)
+    if located is None:
+        return False
+
+    start, end, _version = located
+    prefix = original[:start]
+    suffix = original[end:]
+    # ``_find_claude_md_auth_fence`` returns ``end`` one past the closing
+    # sigil's last character — the trailing newline that followed the
+    # closing sigil is in ``suffix``. Drop one leading newline from
+    # ``suffix`` so the line that contained the closing sigil is removed
+    # entirely rather than leaving an empty line behind.
+    if suffix.startswith("\n"):
+        suffix = suffix[1:]
+
+    new_content = prefix + suffix
+
+    # Collapse a trailing blank-line pair left behind by the append-branch
+    # blank-line separator (``ensure_claude_md_authorization`` inserts a
+    # blank line before the fence). After removing the fence and its closing
+    # newline, the file may end with ``\n\n``; trim to a single trailing
+    # newline so the rewritten file matches the conventional line-oriented
+    # shape.
+    while new_content.endswith("\n\n"):
+        new_content = new_content[:-1]
+
+    atomic_write(claude_md_path, new_content)
+    return True
+
+
+def _pid_is_live(pid: int) -> bool:
+    """Probe whether ``pid`` corresponds to a live process.
+
+    Uses the canonical ``os.kill(pid, 0)`` pattern (see
+    ``cortex_command/interactive_lock.py:283`` and
+    ``cortex_command/lifecycle_implement.py:96``). ``ESRCH`` means dead;
+    any other ``OSError`` (notably ``EPERM`` — process exists but we lack
+    permission to signal it) is treated conservatively as live.
+    """
+    if pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except OSError as exc:
+        if exc.errno == errno.ESRCH:
+            return False
+        # EPERM or other errno: process exists, conservatively treat as live.
+        return True
+    return True
+
+
+def live_interactive_sessions(repo_root: Path) -> list[Path]:
+    """Return live ``cortex/lifecycle/sessions/*.interactive.pid`` files.
+
+    Scans the sessions directory for ``*.interactive.pid`` files; for each,
+    reads the first whitespace-delimited token and parses it as an integer
+    PID; filters out files whose contents are missing, malformed, or map to
+    dead PIDs. The returned list contains only files whose PID is currently
+    live per the canonical ``os.kill(pid, 0)`` liveness probe.
+
+    Used by the ``--revoke-worktree-auth`` pre-condition check (R7): when
+    this list is non-empty, revocation refuses with exit 2 unless ``--force``
+    is passed.
+
+    Args:
+        repo_root: Target repo root. Scans
+            ``repo_root / cortex/lifecycle/sessions/*.interactive.pid``.
+
+    Returns:
+        Sorted list of absolute paths whose contents map to live PIDs. Empty
+        list when the sessions directory does not exist, contains no pid
+        files, or all pid files are stale.
+    """
+    sessions_dir = repo_root / "cortex" / "lifecycle" / "sessions"
+    if not sessions_dir.exists():
+        return []
+
+    pattern = str(sessions_dir / "*.interactive.pid")
+    candidates = sorted(glob.glob(pattern))
+
+    live: list[Path] = []
+    for candidate in candidates:
+        path = Path(candidate)
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            # Unreadable pid file — treat conservatively as absent (skip).
+            continue
+        # The first whitespace-delimited token is the PID; tolerate
+        # trailing newlines or comments.
+        first = text.strip().split()
+        if not first:
+            continue
+        try:
+            pid = int(first[0])
+        except ValueError:
+            # Malformed pid file — treat as stale (skip).
+            continue
+        if _pid_is_live(pid):
+            live.append(path)
+    return live

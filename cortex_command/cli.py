@@ -771,14 +771,34 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Refresh managed files in an already-initialized repo",
     )
     init_verbs.add_argument(
-        "--force",
-        action="store_true",
-        help="Overwrite managed files, including local edits",
-    )
-    init_verbs.add_argument(
         "--unregister",
         action="store_true",
         help="Remove the repo from the Cortex registry without modifying files",
+    )
+    init_verbs.add_argument(
+        "--revoke-worktree-auth",
+        dest="revoke_worktree_auth",
+        action="store_true",
+        help=(
+            "Remove the cortex-managed EnterWorktree authorization fence "
+            "from consumer CLAUDE.md (idempotent; no-op if absent). Refuses "
+            "when a live interactive session is detected unless --force is "
+            "passed."
+        ),
+    )
+    # ``--force`` is a modifier, not a verb. It combines with the default
+    # scaffold (overwrite local edits) and with --revoke-worktree-auth
+    # (bypass the live-session pre-condition); it has no effect with
+    # --update or --unregister.
+    init.add_argument(
+        "--force",
+        action="store_true",
+        help=(
+            "Modifier. With the default invocation, overwrite managed "
+            "files (including local edits) and back them up under "
+            ".cortex-init-backup/. With --revoke-worktree-auth, bypass the "
+            "live-interactive-session refusal."
+        ),
     )
     init.set_defaults(func=init_main)
 

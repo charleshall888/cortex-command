@@ -135,6 +135,55 @@ def _run(args: argparse.Namespace) -> int:
         settings_merge.unregister(resolved_path, cortex_target_path, home=home)
         return 0
 
+    # Step 0b: --revoke-worktree-auth early-branch (R7). Revocation is a
+    # CLAUDE.md-rollback verb; it skips scaffold/settings entirely and only
+    # touches the cortex-managed fence. The git-repo gate (R2) still runs
+    # because the live-session pre-condition scans
+    # ``cortex/lifecycle/sessions/`` under ``repo_root`` — we need a
+    # resolved repo path. Submodule gate (R3) runs in
+    # ``_resolve_repo_root`` as a side effect.
+    if getattr(args, "revoke_worktree_auth", False):
+        repo_root = _resolve_repo_root(args.path)
+
+        claude_md_path = repo_root / "CLAUDE.md"
+        # No fence on disk → no-op success (idempotent absent → 0).
+        if claude_md_path.exists():
+            content = claude_md_path.read_text(encoding="utf-8")
+            fence_present = scaffold._find_claude_md_auth_fence(content) is not None
+        else:
+            fence_present = False
+        if not fence_present:
+            return 0
+
+        # Fence present: check the live-session pre-condition unless
+        # --force bypasses it. Live = a ``*.interactive.pid`` file whose
+        # contents map to a live PID per the canonical liveness probe.
+        if not getattr(args, "force", False):
+            live = scaffold.live_interactive_sessions(repo_root)
+            if live:
+                print(
+                    "`cortex init --revoke-worktree-auth`: refusing — "
+                    "live interactive session(s) depend on the "
+                    "EnterWorktree authorization fence:",
+                    file=sys.stderr,
+                )
+                for pid_file in live:
+                    print(f"  - {pid_file}", file=sys.stderr)
+                print(
+                    "",
+                    file=sys.stderr,
+                )
+                print(
+                    "Re-run with --force to revoke anyway "
+                    "(the live session's next EnterWorktree call will "
+                    "fail closed).",
+                    file=sys.stderr,
+                )
+                return 2
+
+        scaffold.revoke_claude_md_authorization(repo_root)
+        return 0
+
     # Step 1: git-repo + submodule gates (R2, R3). Resolution is done
     # here exactly once; the resolved path threads through every later
     # step so no downstream helper calls resolve() independently.
@@ -225,17 +274,24 @@ def main(args: argparse.Namespace) -> int:
     """Entry point called from ``cli.py`` (Task 10 replaces the stub).
 
     Expected ``args`` attributes (attached to the subparser in Task 10):
-        path       -- optional target directory (defaults to ``os.getcwd()``).
-        update     -- bool, additive scaffold + drift report.
-        force      -- bool, backup + overwrite scaffold.
-        unregister -- bool, remove allowWrite entry and return.
+        path                  -- optional target directory (defaults to ``os.getcwd()``).
+        update                -- bool, additive scaffold + drift report.
+        force                 -- bool modifier: with the default scaffold path,
+                                 enables backup + overwrite; with
+                                 ``--revoke-worktree-auth``, bypasses the
+                                 live-session pre-condition.
+        unregister            -- bool, remove allowWrite entry and return.
+        revoke_worktree_auth  -- bool, remove the cortex-managed CLAUDE.md
+                                 authorization fence and return.
 
-    ``--update``, ``--force``, and ``--unregister`` are mutually exclusive
-    at argparse time (Task 10); this handler does not re-check.
+    ``--update``, ``--unregister``, and ``--revoke-worktree-auth`` are
+    mutually exclusive at argparse time (Task 10); ``--force`` is a
+    modifier and may combine with the default invocation or with
+    ``--revoke-worktree-auth``. This handler does not re-check the mutex.
 
     Returns:
-        Exit code -- 0 success, 2 user-correctable gate failure, 1 on
-        unexpected runtime failure.
+        Exit code -- 0 success, 2 user-correctable gate failure (incl. R7's
+        live-session refusal), 1 on unexpected runtime failure.
     """
     try:
         return _run(args)
