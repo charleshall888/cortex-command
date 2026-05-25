@@ -2,13 +2,20 @@
 schema_version: "1"
 uuid: 417cdff6-c766-42da-9936-3d9e01c69ac0
 title: "Make cortex-update-item accept --flag value syntax for consistency with sibling CLIs"
-status: backlog
+status: complete
 priority: low
 type: chore
 created: 2026-05-20
-updated: 2026-05-20
+updated: 2026-05-25
 tags: [harness, cli, skill-authoring]
 discovery_source: cortex/research/harness-friction-triage/research.md
+session_id: 4e0f0814-7d4c-4551-b965-7a5306917c41
+lifecycle_phase: research
+lifecycle_slug: make-cortex-update-item-accept-flag
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/make-cortex-update-item-accept-flag/spec.md
+areas: [skills]
 ---
 ## Why
 

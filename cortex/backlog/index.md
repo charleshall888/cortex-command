@@ -14,7 +14,6 @@
 | 262 | Extend overnight circuit breaker to halt on systemic worker failures | refined | medium | chore | — | — | ✓ |
 | 156 | Make cortex-check-parity context-aware (skip tokens inside fenced code blocks) | deferred | low | feature | — | — | — |
 | 247 | Offer consolidation clusters before R15 gate in discovery decompose | refined | low | feature | — | — | ✓ |
-| 257 | Make cortex-update-item accept --flag value syntax for consistency with sibling CLIs | refined | low | chore | — | — | ✓ |
 
 ## Refined
 
@@ -25,7 +24,6 @@
 - **261** Fix test cascade from #252 migration (SourceFileLoader + subprocess patterns)
 - **262** Extend overnight circuit breaker to halt on systemic worker failures
 - **247** Offer consolidation clusters before R15 gate in discovery decompose
-- **257** Make cortex-update-item accept --flag value syntax for consistency with sibling CLIs
 
 ## Backlog
 
