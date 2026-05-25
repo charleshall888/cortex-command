@@ -360,6 +360,14 @@ emit-event event feature worktree_path="":
         uv run cortex-lifecycle-event log --event "{{ event }}" --feature "{{ feature }}"
     fi
 
+# Check argparse surfaces against skill-prose contract (staged-diff mode, R1/R2)
+check-contract *args:
+    bin/cortex-check-contract {{args}}
+
+# Audit entire repo for argparse-contract violations (off critical path)
+check-contract-audit:
+    bin/cortex-check-contract --audit
+
 # Check skill-prompt emissions are declared in bin/.events-registry.md (R5 staged-mode gate)
 check-events-registry:
     bin/cortex-check-events-registry --staged
