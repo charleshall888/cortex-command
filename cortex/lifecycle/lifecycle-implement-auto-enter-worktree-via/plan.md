@@ -169,7 +169,7 @@ Land Approach A — mid-session auto-enter of the `interactive/{slug}` worktree 
 - **Complexity**: trivial
 - **Context**: This task is observational — the parity test exists today and is expected to continue passing. The task exists as a checkpoint so Phase 4 explicitly verifies the kept-pauses inventory was not broken by the §1a edits.
 - **Verification**: `just test tests/test_lifecycle_kept_pauses_parity.py` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed (2 tests pass; no regressions from §1a edits)
 
 ### Task 17: Run R21 manual gate-firing verification
 - **Files**: `cortex/lifecycle/lifecycle-implement-auto-enter-worktree-via/events.log`

@@ -4,7 +4,7 @@
 |-----|-------|--------|----------|------|------------|--------|------|
 | 251 | Harness friction triage: distribution, contracts, slugs, gates | backlog | high | epic | — | — | — |
 | 258 | Surface aggregated signal on daytime-pipeline sandbox/EPERM cascade failures | archived | high | feature | — | — | — |
-| 263 | Extend cortex-cli-version-sync hook to perform background reinstall on drift | in_progress | high | feature | — | — | — |
+| 263 | Extend cortex-cli-version-sync hook to perform background reinstall on drift | refined | high | feature | — | — | ✓ |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 186 | Clarify-critic schema validator + warning-template runtime validator (per #178 R7 follow-on) | proposed | medium | feature | — | 178 | — |
 | 250 | Lifecycle implement: auto-enter worktree via EnterWorktree (Approach A, deferred design surface) | refined | medium | feature | — | — | ✓ |
@@ -16,6 +16,7 @@
 
 ## Refined
 
+- **263** Extend cortex-cli-version-sync hook to perform background reinstall on drift
 - **250** Lifecycle implement: auto-enter worktree via EnterWorktree (Approach A, deferred design surface)
 - **254** Unified backlog/lifecycle slug resolver: extend to cortex-update-item consumer
 - **262** Extend overnight circuit breaker to halt on systemic worker failures
@@ -28,7 +29,6 @@
 
 ## In-Progress
 
-- **263** Extend cortex-cli-version-sync hook to perform background reinstall on drift (in_progress)
 
 ## Warnings
 

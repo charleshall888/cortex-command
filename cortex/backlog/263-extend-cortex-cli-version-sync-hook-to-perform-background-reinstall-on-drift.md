@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 1b9ed218-01d7-4ad1-a699-26e2d8097d79
 title: "Extend cortex-cli-version-sync hook to perform background reinstall on drift"
-status: in_progress
+status: refined
 priority: high
 type: feature
 created: 2026-05-25
@@ -11,6 +11,8 @@ lifecycle_slug: extend-cortex-cli-version-sync-hook
 lifecycle_phase: research
 complexity: complex
 criticality: high
+spec: cortex/lifecycle/extend-cortex-cli-version-sync-hook/spec.md
+areas: ['overnight-runner', 'hooks']
 ---
 ## Problem
 

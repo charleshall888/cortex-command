@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "feature": "extend-cortex-cli-version-sync-hook",
+  "phase": "plan",
+  "artifact_sha256": "2d69a139f27adc514029aa1c99d553402b85342112decfb1c16be80a5e7bee70",
+  "partial_coverage_note": "Concurrent flock and marker semantics reviewer was excluded (sentinel absent); marker try/finally, last-install-uv timestamp collision, and 600s stale tolerance received no dedicated adversarial pass.",
+  "b_class_findings": [
+    {
+      "angle": "Unqualified-import contract fragility",
+      "finding": "Task 8 grep is symbol-specific (only `_run_install_and_verify`) and silently permits qualified access to other factored helpers (_acquire_install_flock, _write_install_failed_sentinel, _recent_install_failed_sentinel) that participate in the same patch-contract surface. Synthesizer downgraded A\u2192B: forward-looking coverage gap rather than present fix-invalidation."
+    },
+    {
+      "angle": "Unqualified-import contract fragility",
+      "finding": "Task 10 introduces new top-level function run_install_in_background() in install_core, but Task 8's unqualified-import list does not include it. By analogy with existing pattern, future tests will assume monkeypatch.setattr(server, 'run_install_in_background', spy) works, silent no-op."
+    },
+    {
+      "angle": "Unqualified-import contract fragility",
+      "finding": "CORTEX_AUTO_INSTALL carve-out helper described as 'a shared helper that both server.py and the new async hook can call' but its name and import style are unspecified. Mixed-style contract risk."
+    },
+    {
+      "angle": "Unqualified-import contract fragility",
+      "finding": "Plan does not forbid or surface test-side risk of monkeypatch.setattr(install_core, ...) divergence from monkeypatch.setattr(server, ...). Two distinct binding sites; MCP-call vs new hook path resolve to different objects."
+    },
+    {
+      "angle": "First-install bootstrap paradox",
+      "finding": "Warn-only path has no acceptance criterion and no recovery test. Task 15(d) tests only the additionalContext string emission \u2014 not multi-session warn-only stability nor recovery transition when user manually installs CLI."
+    },
+    {
+      "angle": "First-install bootstrap paradox",
+      "finding": "Task 10's skip-predicate list does not include a 'CLI absent / probe-failed' predicate. Async hook's drift-vs-no-drift heredoc leaves probe-failed-cannot-compute-drift undefined: silent dead-end OR contradicts Task 12(d)."
+    },
+    {
+      "angle": "Phase-boundary verifiability and supply-chain trust",
+      "finding": "Task 10 ships entire run_install_in_background with grep-only verification. Between commit-T10 and commit-T14, four tasks land with install code path live but behaviorally unverified. Subtle defects pass grep (try/finally lexical scope, unlink-before-release ordering, 600s tolerance placement) and ship."
+    },
+    {
+      "angle": "Phase-boundary verifiability and supply-chain trust",
+      "finding": "Plan asserts MCP-call-path behavior unchanged based on existing test pass \u2014 but never enumerates which tests/test_mcp_auto_update_real_install.py scenarios specifically cover version_mismatch_reinstall stage. A Task 8 refactor lifting under-lock re-check into a shared helper could pass tests while silently breaking R18 asymmetry."
+    },
+    {
+      "angle": "Phase-boundary verifiability and supply-chain trust",
+      "finding": "Task 13 documents GitHub Repository Ruleset as 'the immediate mitigation' for force-push attack but no plan task verifies the ruleset is configured on the upstream repo before this change ships. Operator-action gate is purely advisory."
+    }
+  ]
+}

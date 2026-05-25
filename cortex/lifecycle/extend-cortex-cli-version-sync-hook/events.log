@@ -5,3 +5,9 @@
 {"ts": "2026-05-25T19:20:00Z", "event": "phase_transition", "feature": "extend-cortex-cli-version-sync-hook", "from": "research", "to": "specify"}
 {"ts":"2026-05-25T20:27:49Z","event":"sentinel_absence","feature":"extend-cortex-cli-version-sync-hook","reviewer_angle":"CLI_PIN tuple-shape transition completeness","reason":"absent","model_tier":"sonnet","expected_sha":"fba6ee6122fc4f45382abd67898d2958194c9a7e3bbfd78c1b8cf4c7cdffa010","observed_sha_or_null":null}
 {"ts":"2026-05-25T20:28:25Z","event":"sentinel_absence","feature":"extend-cortex-cli-version-sync-hook","reviewer_angle":"Factor obstacles, import-time side effects, and contract preservation","reason":"absent","model_tier":"sonnet","expected_sha":"fba6ee6122fc4f45382abd67898d2958194c9a7e3bbfd78c1b8cf4c7cdffa010","observed_sha_or_null":null}
+{"ts": "2026-05-25T19:50:00Z", "event": "spec_approved", "feature": "extend-cortex-cli-version-sync-hook"}
+{"ts": "2026-05-25T19:50:00Z", "event": "phase_transition", "feature": "extend-cortex-cli-version-sync-hook", "from": "specify", "to": "plan"}
+{"ts":"2026-05-25T21:47:14Z","event":"sentinel_absence","feature":"extend-cortex-cli-version-sync-hook","reviewer_angle":"Concurrent flock and marker semantics","reason":"absent","model_tier":"sonnet","expected_sha":"2d69a139f27adc514029aa1c99d553402b85342112decfb1c16be80a5e7bee70","observed_sha_or_null":null}
+{"ts":"2026-05-25T21:47:23Z","event":"sentinel_absence","feature":"extend-cortex-cli-version-sync-hook","reviewer_angle":"Concurrent flock and marker semantics","reason":"absent","model_tier":"sonnet","expected_sha":"2d69a139f27adc514029aa1c99d553402b85342112decfb1c16be80a5e7bee70","observed_sha_or_null":null}
+{"ts": "2026-05-25T22:12:21Z", "event": "plan_approved", "feature": "extend-cortex-cli-version-sync-hook"}
+{"ts": "2026-05-25T22:12:21Z", "event": "phase_transition", "feature": "extend-cortex-cli-version-sync-hook", "from": "plan", "to": "implement"}
