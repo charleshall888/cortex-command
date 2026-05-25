@@ -1,0 +1,6 @@
+[project]
+name = "contract-fixture-valid-ledger-suppresses"
+version = "0.0.1"
+
+[project.scripts]
+cortex-create-backlog-item = "stub_create_backlog_item:main"

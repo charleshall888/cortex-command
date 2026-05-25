@@ -1,0 +1,6 @@
+[project]
+name = "contract-fixture-valid-non-argparse-exempt"
+version = "0.0.1"
+
+[project.scripts]
+cortex-update-item = "stub_update_item:main"
