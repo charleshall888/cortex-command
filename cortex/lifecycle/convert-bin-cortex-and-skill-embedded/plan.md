@@ -37,7 +37,7 @@ Pure `[project.scripts]` console-script migration for the four `python3 -c` skil
 - **Complexity**: trivial
 - **Context**: Closes the parallel-dispatch race surfaced by Critic 1 + Critic 3 (Tasks 2, 4 both `Depends on: [1]` previously could race on R13). The file lives under the lifecycle directory so it's discoverable by every subsequent task and survives across dispatch contexts. Format consistent with shell `source`-able assignment.
 - **Verification**: `test -f cortex/lifecycle/convert-bin-cortex-and-skill-embedded/.implementer-choices` exits 0 AND `grep -E '^r5_strategy=(a|b)$' cortex/lifecycle/convert-bin-cortex-and-skill-embedded/.implementer-choices | wc -l` = 1 AND `grep -E '^r13_strategy=(a|b)$' cortex/lifecycle/convert-bin-cortex-and-skill-embedded/.implementer-choices | wc -l` = 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 1: Resolve byte-equivalence regression strategy (R5)
 - **Files**: `cortex_command/backlog/_telemetry.py`, `cortex_command/backlog/tests/test_telemetry_byte_equivalence.py`
@@ -46,7 +46,7 @@ Pure `[project.scripts]` console-script migration for the four `python3 -c` skil
 - **Complexity**: simple
 - **Context**: `_telemetry.log_invocation()` is currently parameterless; reads `sys.argv` directly. Today's bash call `cortex-log-invocation "$0" "$@"` produces argv = [cortex-log-invocation, /path/to/wrapper, ...orig_args] so the helper sees `argv_count = len(sys.argv) - 1 = 1 + N`. In-process call from `main()` sees `sys.argv = [console-script, ...orig_args]` → `argv_count = N`. Strategy (a) signature: `log_invocation(script_name: str, argv_offset: int = 0) -> None`; in-process callers pass `argv_offset=1` to keep records comparable. Strategy (b) edits the test's assertion to expect the off-by-one when called in-process. Pattern reference: `cortex_command/backlog/_telemetry.py:11` ("Spec R12 requires byte-equivalence, not implementation reuse").
 - **Verification**: `pytest cortex_command/backlog/tests/test_telemetry_byte_equivalence.py -q` exits 0 after the chosen strategy is applied (test must pass without involving the bin/* wrappers, which are still present at this point).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Insert _telemetry.log_invocation() at top of two pre-existing main()s; apply R13 import resolution
 - **Files**: `cortex_command/backlog/ready.py`, `cortex_command/overnight/complete_morning_review_session.py`, `cortex_command/backlog/_telemetry.py` (conditional on R13 option-a), `cortex_command/backlog/update_item.py`, `cortex_command/backlog/create_item.py`, `cortex_command/backlog/generate_index.py`, `cortex_command/backlog/build_epic_map.py` (conditional on R13 option-a — all four backlog importers must update their `from . import _telemetry` line to `from cortex_command import _telemetry`)
@@ -55,7 +55,7 @@ Pure `[project.scripts]` console-script migration for the four `python3 -c` skil
 - **Complexity**: complex
 - **Context**: `cortex_command/backlog/ready.py:main()` currently begins with `args = _parse_args(argv)` at line ~410. `cortex_command/overnight/complete_morning_review_session.py:main()` currently begins with `parser = _build_parser()` at line ~119 (or thereabouts — verify). The awk gate at `bin/cortex-invocation-report` lines 140-170 strictly matches `_telemetry.log_invocation\(*` as the first non-trivial statement. R13 option-a importers to update (under `cortex_command/backlog/`): `update_item.py`, `create_item.py`, `generate_index.py`, `build_epic_map.py` — each imports `_telemetry` today; update each from `from . import _telemetry` to `from cortex_command import _telemetry`. R13 option-b: no other importers change.
 - **Verification**: BOTH modified modules import cleanly — `python3 -c "from cortex_command.backlog.ready import main"` exits 0 AND `python3 -c "from cortex_command.overnight.complete_morning_review_session import main"` exits 0 AND `pytest cortex_command/backlog/tests/test_telemetry_byte_equivalence.py -q` exits 0 (carries forward Task 1's gate; catches R13 option-a missed importer if any).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Delete two bin/* bash wrappers AND migrate three subprocess-by-path tests
 - **Files**: `bin/cortex-backlog-ready` (deletion), `bin/cortex-morning-review-complete-session` (deletion), `tests/test_backlog_ready_render.py`, `tests/test_cortex_morning_review_complete_session.py`, `tests/test_phase1_sibling_rewrite_smoke.py`
@@ -64,7 +64,7 @@ Pure `[project.scripts]` console-script migration for the four `python3 -c` skil
 - **Complexity**: complex
 - **Context**: Files exist today at `bin/cortex-backlog-ready` (21 lines, three-branch wrapper) and `bin/cortex-morning-review-complete-session` (21 lines, same shape). Mirror paths: `plugins/cortex-core/bin/cortex-backlog-ready`, `plugins/cortex-core/bin/cortex-morning-review-complete-session`. Pre-commit hook recipe at `.githooks/pre-commit` Phase 2 runs `just build-plugin`. Parity gate: `cortex_command/parity_check.py:254-282` — deployed set is `bin/` ∪ `[project.scripts]` keys; W003 won't fire. The three tests being migrated are pinned wire-contract tests; the migration preserves the contract intent (subprocess-exec the real entry point) but switches the discovery mechanism from filesystem path to PATH lookup. `shutil.which` returns None if the console-script isn't installed, so the pytest.skip path keeps CI green even in non-installed environments.
 - **Verification**: `ls bin/cortex-backlog-ready bin/cortex-morning-review-complete-session 2>/dev/null | wc -l` = 0 AND `ls plugins/cortex-core/bin/cortex-backlog-ready plugins/cortex-core/bin/cortex-morning-review-complete-session 2>/dev/null | wc -l` = 0 AND `cortex-check-parity --audit` exits 0 AND `grep -c 'shutil.which' tests/test_backlog_ready_render.py tests/test_cortex_morning_review_complete_session.py tests/test_phase1_sibling_rewrite_smoke.py | awk -F: '{s+=$2} END {print s}'` >= 3 AND `grep -c '/ "bin" /' tests/test_backlog_ready_render.py tests/test_cortex_morning_review_complete_session.py tests/test_phase1_sibling_rewrite_smoke.py | awk -F: '{s+=$2} END {print s}'` = 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Bootstrap critical_review package + create four new module files
 - **Files**: `cortex_command/critical_review/__init__.py`, `cortex_command/lifecycle/branch_mode_cli.py`, `cortex_command/lifecycle/picker_decision_cli.py`, `cortex_command/critical_review/resolve_feature_cli.py`, `cortex_command/critical_review/write_residue_cli.py`
@@ -73,7 +73,7 @@ Pure `[project.scripts]` console-script migration for the four `python3 -c` skil
 - **Complexity**: complex
 - **Context**: `cortex_command/critical_review/` does not exist today (R6). `cortex_command/lifecycle/` exists (contains `counters_cli.py`, etc. — pattern reference). Each module exposes exactly ONE `ArgumentParser` to satisfy sibling-lint R14 (avoid E202 ambiguous-parser). Internal helpers: `cortex_command.lifecycle_config.read_branch_mode(path: pathlib.Path) -> str | None`; `cortex_command.lifecycle_implement.should_fire_picker(path: pathlib.Path, slug: str, branch_mode: str | None) -> tuple[bool, str]` (REASONS closed set lives in `cortex_command.lifecycle_implement`); session-resolver globs `cortex/lifecycle/*/.session` for matching content (currently inline in residue-write.md:13-16); JSON writer uses `tempfile.NamedTemporaryFile(dir=str(final.parent))` + `os.replace` (currently inline in residue-write.md:28-38). For `picker-decision`: serialize tuple as `{"fire": fire, "reason": reason}` via `json.dumps`. For `write-residue`: argparse validates `--feature` against `^[a-z0-9][a-z0-9-]*$` (use `re.compile(r'^[a-z0-9][a-z0-9-]*$').fullmatch` in the type function; argparse calls `parser.error()` on rejection).
 - **Verification**: `python3 -m cortex_command.lifecycle.branch_mode_cli --help` exits 0 AND `python3 -m cortex_command.lifecycle.picker_decision_cli --help` exits 0 AND `python3 -m cortex_command.critical_review.resolve_feature_cli --help` exits 0 AND `python3 -m cortex_command.critical_review.write_residue_cli --help` exits 0 AND `ls cortex_command/critical_review/__init__.py` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Implement lifecycle helper modules (branch_mode_cli, picker_decision_cli)
 - **Files**: `cortex_command/lifecycle/branch_mode_cli.py`, `cortex_command/lifecycle/picker_decision_cli.py`
@@ -82,7 +82,7 @@ Pure `[project.scripts]` console-script migration for the four `python3 -c` skil
 - **Complexity**: simple
 - **Context**: Replaces snippets at `skills/lifecycle/references/implement.md:28-29` and `:37-38`. Today's snippet 1 prose: `python3 -c "import pathlib; from cortex_command.lifecycle_config import read_branch_mode; print(read_branch_mode(pathlib.Path('.')) or '')"`. Today's snippet 2 prose: `python3 -c "import pathlib; from cortex_command.lifecycle_implement import should_fire_picker; fire, reason = should_fire_picker(pathlib.Path('.'), '{slug}', '{branch_mode}' or None); print(f'{fire}\t{reason}')"`. The picker-decision output format CHANGES from `f'{fire}\t{reason}'` to JSON — bash consumer migration handled in Task 8.
 - **Verification**: `python3 -m cortex_command.lifecycle.branch_mode_cli .` exits 0 with stdout-as-string AND `python3 -m cortex_command.lifecycle.picker_decision_cli . test-slug 2>/dev/null | python3 -c "import json,sys; d=json.load(sys.stdin); assert 'fire' in d and 'reason' in d and isinstance(d['fire'], bool), d"` exits 0 AND `python3 -m cortex_command.lifecycle.picker_decision_cli . test-slug 2>/dev/null | jq -r '.fire' | grep -E '^(true|false)$'` exits 0 (asserts JSON-lowercase `true`/`false`, NOT Python's `True`/`False` — critical for jq downstream consumer). Note: JSON encoding uses `json.dumps({"fire": fire, "reason": reason})` with NO indent kwarg; resulting output is one compact line ending with newline.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Implement critical_review helper modules (resolve_feature_cli, write_residue_cli)
 - **Files**: `cortex_command/critical_review/resolve_feature_cli.py`, `cortex_command/critical_review/write_residue_cli.py`
@@ -91,7 +91,7 @@ Pure `[project.scripts]` console-script migration for the four `python3 -c` skil
 - **Complexity**: complex
 - **Context**: Replaces snippets at `skills/critical-review/references/residue-write.md:13-16` (resolve) and `:28-38` (write). Today's resolver: `MATCHES=$(python3 -c "import os, glob; sid = os.environ.get('LIFECYCLE_SESSION_ID', ''); print('\n'.join(p for p in glob.glob(os.path.join('$REPO_ROOT','lifecycle','*','.session')) if open(p).read().strip()==sid))")`. Today's writer: tempfile.NamedTemporaryFile + os.replace pattern (lines 28-38). Use `pathlib.Path('cortex/lifecycle')` (NOT `'lifecycle'` — the original snippet's `'$REPO_ROOT','lifecycle'` was relative to repo root which contained `lifecycle/` at top level; current repo has it at `cortex/lifecycle/` — verify by checking actual current location). Slug regex: `^[a-z0-9][a-z0-9-]*$`. Use `argparse.ArgumentParser` with a `type=` callable for `--feature` that does regex validation.
 - **Verification**: (a) negative-path slug validation: `echo '{}' | python3 -m cortex_command.critical_review.write_residue_cli --feature '../etc' 2>&1 1>/dev/null | grep -c 'invalid --feature'` >= 1 AND exit code = 2. (b) negative-path zero-match resolver: `python3 -m cortex_command.critical_review.resolve_feature_cli no-such-session-id-xyzzy-fixture 2>&1 1>/dev/null | grep -c 'no session'` >= 1. (c) POSITIVE-path resolver and writer using temp fixture: `TMP=$(mktemp -d) && mkdir -p "$TMP/cortex/lifecycle/test-feature" && echo "test-sid-fixture" > "$TMP/cortex/lifecycle/test-feature/.session" && (cd "$TMP" && python3 -m cortex_command.critical_review.resolve_feature_cli test-sid-fixture)` exits 0 AND prints `test-feature` AND `echo '{"k":"v"}' | python3 -m cortex_command.critical_review.write_residue_cli --feature test-feature` exits 0 (writes the residue file to the cwd's `cortex/lifecycle/test-feature/critical-review-residue.json`; verify via `test -f cortex/lifecycle/test-feature/critical-review-residue.json` inside the same cwd). Together, these positive-path checks reject stub implementations.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 7: Register four new [project.scripts] entries and reinstall
 - **Files**: `pyproject.toml`
@@ -100,7 +100,7 @@ Pure `[project.scripts]` console-script migration for the four `python3 -c` skil
 - **Complexity**: simple
 - **Context**: `pyproject.toml` `[project.scripts]` section spans lines 21-57. Existing `# Phase 3 console-script sweep (R13)` comment at line 28 anchors the cohort. Sort the four new entries alphabetically within the cohort or insert near related entries. Install-guard pattern: `CORTEX_ALLOW_INSTALL_DURING_RUN=1 <command>` (inline prefix, evaluated only for this command). If reinstall is genuinely impossible in the dispatch context (e.g., read-only filesystem), the alternative is to defer reinstall to a post-merge user step and skip Task 7's binstub-on-PATH verification — but this would defer all of Phase 3's verification too.
 - **Verification**: `grep -E '^(cortex-lifecycle-branch-mode|cortex-lifecycle-picker-decision|cortex-critical-review-resolve-feature|cortex-critical-review-write-residue) = ' pyproject.toml | wc -l` = 4 AND `cortex-lifecycle-branch-mode --help` exits 0 (verifies the lifecycle binstub regenerated and is on PATH) AND `cortex-backlog-ready --help 2>&1 | head -1` runs without ImportError (catches backlog-package import failures from Task 2's R13 option-a edits — localizes the regression at T7 rather than deferring to T10/T13).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 8: Rewrite implement.md snippets + bash consumer migration + line 22 prose update
 - **Files**: `skills/lifecycle/references/implement.md`
@@ -109,7 +109,7 @@ Pure `[project.scripts]` console-script migration for the four `python3 -c` skil
 - **Complexity**: complex
 - **Context**: Today's snippets and consumers visible at `implement.md:28-29` (branch-mode read), `:37-38` (picker-decision call), and consumer parser nearby. Existing prose at `implement.md:22` says "The `read_branch_mode` invocation here is the **structural marker**...". After rewrite, no `read_branch_mode` invocation exists in the section; prose becomes stale. R18 verification matches `grep -c 'cortex-lifecycle-branch-mode' skills/lifecycle/references/implement.md` >= 1. R16 verification matches `grep -c "IFS=\$'\\\\t'" skills/lifecycle/references/implement.md` = 0 (no tab-based parse for picker result) AND `grep -c 'jq' skills/lifecycle/references/implement.md` >= 1. The HTML comment preserving Python identifier provides redundancy with the parity-test regex extension in Task 11.
 - **Verification**: `grep -c 'cortex-lifecycle-branch-mode' skills/lifecycle/references/implement.md` >= 1 AND `grep -c 'cortex-lifecycle-picker-decision' skills/lifecycle/references/implement.md` >= 1 AND `grep -c 'python3 -c "import cortex_command' skills/lifecycle/references/implement.md` = 0 AND `grep -c 'jq' skills/lifecycle/references/implement.md` >= 1 AND `grep -c "IFS=\$'\\\\t'" skills/lifecycle/references/implement.md` = 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 9: Rewrite residue-write.md snippets AND update SKILL.md:92 narrative
 - **Files**: `skills/critical-review/references/residue-write.md`, `skills/critical-review/SKILL.md`
@@ -118,7 +118,7 @@ Pure `[project.scripts]` console-script migration for the four `python3 -c` skil
 - **Complexity**: simple
 - **Context**: Today's snippets at `residue-write.md:13-16` (resolver) and `:28-38` (writer). The resolver assigns to `MATCHES` via command substitution; rewrite to `FEATURE=$(cortex-critical-review-resolve-feature "$LIFECYCLE_SESSION_ID")`. The writer pipes `$PAYLOAD_JSON` via heredoc; rewrite to `cortex-critical-review-write-residue --feature "$FEATURE" <<< "$PAYLOAD_JSON"`. Handle the multi-match / zero-match error case in skill prose (the resolver script exits non-zero with stderr; the skill should propagate). SKILL.md:92's prose is the user-facing narrative summary; it's a documentation surface that must stay in sync with its referenced helper file.
 - **Verification**: `grep -c 'cortex-critical-review-resolve-feature' skills/critical-review/references/residue-write.md` >= 1 AND `grep -c 'cortex-critical-review-write-residue' skills/critical-review/references/residue-write.md` >= 1 AND `grep -c 'python3 -c "import cortex_command' skills/critical-review/references/residue-write.md` = 0 AND `grep -c 'inline.*python3 -c' skills/critical-review/SKILL.md` = 0 (SKILL.md:92 prose updated; no remaining "inline python3 -c" claim).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 10: Restructure --check-entry-points iteration + extend pre-commit trigger pattern
 - **Files**: `bin/cortex-invocation-report`, `.githooks/pre-commit`
@@ -127,7 +127,7 @@ Pure `[project.scripts]` console-script migration for the four `python3 -c` skil
 - **Complexity**: complex
 - **Context**: Current bash loop at `bin/cortex-invocation-report:133`. Bash tuple-iteration pattern: `for pair in "backlog:ready" "overnight:complete_morning_review_session" ...; do pkg="${pair%:*}"; mod="${pair#*:}"; path="$REPO_ROOT/cortex_command/$pkg/$mod.py"; ...`. The pre-commit trigger pattern lives in `.githooks/pre-commit` Phase 1.7 around line 152-168 as a pipe-alternation regex inside a bash case or grep filter. The trigger pattern fires `_check_entry_points` only when a staged file matches one of the alternatives — so adding new modules to the aggregator without extending the trigger leaves the gate unfired for those modules.
 - **Verification**: `grep -E 'lifecycle/branch_mode_cli|lifecycle/picker_decision_cli|critical_review/resolve_feature_cli|critical_review/write_residue_cli|overnight/complete_morning_review_session|backlog/ready' bin/cortex-invocation-report | wc -l` >= 6 AND `bin/cortex-invocation-report --check-entry-points` exits 0 AND `grep -E 'lifecycle/branch_mode_cli|lifecycle/picker_decision_cli|critical_review/resolve_feature_cli|critical_review/write_residue_cli|overnight/complete_morning_review_session|backlog/ready' .githooks/pre-commit | wc -l` >= 6 (pre-commit trigger pattern updated).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 11: Extend kept-pauses parity-test regex
 - **Files**: `tests/test_lifecycle_kept_pauses_parity.py`
@@ -136,7 +136,7 @@ Pure `[project.scripts]` console-script migration for the four `python3 -c` skil
 - **Complexity**: trivial
 - **Context**: Test at `tests/test_lifecycle_kept_pauses_parity.py:42`. The regex matches when ANY of the alternatives appears within ±35 lines of the inventory anchor at `skills/lifecycle/SKILL.md`'s "Kept user pauses" bullet referencing implement.md. The `\b` word-boundary at the hyphenated form's edges works correctly (verified by Critic 2 finding 4 confirmation): `re.search(r'\bcortex-lifecycle-branch-mode\b', 'cortex-lifecycle-branch-mode .')` matches.
 - **Verification**: `grep -c 'cortex-lifecycle-branch-mode' tests/test_lifecycle_kept_pauses_parity.py` >= 1 AND `pytest tests/test_lifecycle_kept_pauses_parity.py -q` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 12: CHANGELOG entry
 - **Files**: `CHANGELOG.md`
@@ -145,7 +145,7 @@ Pure `[project.scripts]` console-script migration for the four `python3 -c` skil
 - **Complexity**: simple
 - **Context**: `CHANGELOG.md` follows a release-section structure; identify the "Unreleased" or next-version section. Format consistent with existing entries (look at recent entries for tone/length).
 - **Verification**: `grep -c 'cortex-backlog-ready' CHANGELOG.md` >= 1 AND `grep -c 'uv tool install --reinstall' CHANGELOG.md` >= 1 AND `grep -c 'argv_count' CHANGELOG.md` >= 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 13: Run full test suite + diagnose-and-fix any failures
 - **Files**: (none predicted; conditional on failure-investigation outcomes — may touch any file the regression points to)
@@ -154,7 +154,7 @@ Pure `[project.scripts]` console-script migration for the four `python3 -c` skil
 - **Complexity**: complex
 - **Context**: `just test` runs the project's full test suite (per `justfile`). Likely failure surfaces: byte-equivalence test (Task 1 strategy may need re-tuning), parity gate behavior (Task 4-7 module shapes vs sibling-lint expectations), kept-pauses parity test (Task 8 line-number shifts vs Task 11 regex extension vs inventory anchor), dual-source mirror sync (Task 3 deletions), and any of the three migrated subprocess-by-path tests (Task 3 migration). Diagnosis budget per failing test: read the failing assertion, read the test source, read the SUT, identify the divergence; ~5-10 turns per failing test. With opus 30-turn budget, can resolve ~3 failing tests; if more fail, escalate by re-invoking `just test` after first batch of fixes and revisit.
 - **Verification**: `just test` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Risks
 

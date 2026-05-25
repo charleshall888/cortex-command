@@ -15,3 +15,7 @@
 {"ts": "2026-05-25T18:38:48Z", "event": "batch_dispatch", "feature": "convert-bin-cortex-and-skill-embedded", "batch": 4, "tasks": [7, 10, 12]}
 {"ts": "2026-05-25T19:02:31Z", "event": "batch_dispatch", "feature": "convert-bin-cortex-and-skill-embedded", "batch": 6, "tasks": [11]}
 {"ts": "2026-05-25T19:03:32Z", "event": "batch_dispatch", "feature": "convert-bin-cortex-and-skill-embedded", "batch": 7, "tasks": [13]}
+{"ts": "2026-05-25T19:21:29Z", "event": "phase_transition", "feature": "convert-bin-cortex-and-skill-embedded", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-05-25T19:54:55Z", "event": "review_verdict", "feature": "convert-bin-cortex-and-skill-embedded", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-05-25T19:54:55Z", "event": "phase_transition", "feature": "convert-bin-cortex-and-skill-embedded", "from": "review", "to": "complete"}
+{"ts": "2026-05-25T19:56:12Z", "event": "feature_complete", "feature": "convert-bin-cortex-and-skill-embedded", "tasks_total": 14, "rework_cycles": 1, "merge_anchor": "merge"}

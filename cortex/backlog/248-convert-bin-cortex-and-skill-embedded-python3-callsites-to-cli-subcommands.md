@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 8c7e1f4a-d92b-4a7e-8c1f-7b2a9f3e4d5c
 title: "Convert bin/cortex-* and skill-embedded python3 -c callsites to use the cortex CLI"
-status: refined
+status: complete
 priority: medium
 type: feature
 created: 2026-05-18
