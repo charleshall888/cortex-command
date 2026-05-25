@@ -2,13 +2,15 @@
 schema_version: "1"
 uuid: ebdcac83-1152-4caa-9aae-7499771961c1
 title: "Shared git index race between parallel Claude sessions causes wrong files to land in commits"
-status: backlog
+status: wontfix
 priority: high
 type: bug
 created: 2026-04-22
-updated: 2026-05-20
+updated: 2026-05-25
 complexity: complex
 criticality: high
+lifecycle_phase: wontfix
+session_id: null
 ---
 
 ## Problem

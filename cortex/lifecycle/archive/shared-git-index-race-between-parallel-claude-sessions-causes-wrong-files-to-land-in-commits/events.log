@@ -26,3 +26,4 @@
     - finding_index: 5
       rationale: "Test determinism is exactly the kind of implementation detail the spec phase is for. A research-then-spec gate that pre-decides test architecture would invert the gates."
   status: ok
+{"ts": "2026-05-25T11:35:48Z", "event": "feature_wontfix", "feature": "shared-git-index-race-between-parallel-claude-sessions-causes-wrong-files-to-land-in-commits", "reason": "Closed wontfix 2026-04-29 in favor of daytime-worktree-isolation epic; frontmatter sync 2026-05-25"}
