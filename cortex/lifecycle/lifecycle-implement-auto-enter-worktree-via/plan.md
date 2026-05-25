@@ -124,7 +124,7 @@ Land Approach A — mid-session auto-enter of the `interactive/{slug}` worktree 
 - **Complexity**: simple
 - **Context**: Today's §1a step vi prose is the Variant A/B dispatch language owned by epic #240 — to be collapsed per R12. The new paragraph is ~6-10 lines of prose. The "keep or remove" phrase must appear verbatim (R12 acceptance grep). The `ExitWorktree action="keep"` token must appear as it's load-bearing for R14's parity-test co-location check (token list: `show-toplevel`, `git-common-dir`, `verify-worktree-auth`, `EnterWorktree skipped`).
 - **Verification**: `grep -c 'Variant A\|Variant B' skills/lifecycle/references/implement.md` = 0 AND `grep -c 'Interactive worktree auto-entry' skills/lifecycle/references/implement.md` ≥ 1 AND `grep -c 'keep or remove' skills/lifecycle/references/implement.md` ≥ 1 — pass if all three checks match.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 12: Update complete.md Step 8 hard-guard prose + snapshot fixture
 - **Files**: `skills/lifecycle/references/complete.md`, `tests/fixtures/complete_md_hard_guard.txt` (new), `tests/test_complete_md_hard_guard_snapshot.py` (new)
@@ -142,7 +142,7 @@ Land Approach A — mid-session auto-enter of the `interactive/{slug}` worktree 
 - **Complexity**: simple
 - **Context**: Pattern reference: existing parity tests in `tests/test_lifecycle_*.py`. Use `pathlib.Path.rglob` to walk markdown files under `skills/lifecycle/`. For each file, `re.finditer(r'EnterWorktree\s*\(', content)`; for each match, slice ±20 lines and assert both required tokens are present.
 - **Verification**: `just test tests/test_lifecycle_enterworktree_callsites.py` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed (radius widened to ±60 to match canonical §1a layout)
 
 ### Task 14: Picker-label parity test
 - **Files**: `tests/test_lifecycle_picker_label_pins_worktree.py` (new)
