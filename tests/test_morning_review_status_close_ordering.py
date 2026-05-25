@@ -1,9 +1,9 @@
 """Structural ordering tests for morning-review walkthrough.md.
 
-Asserts that backlog ticket closure (cortex-update-item status=complete) is
-positioned AFTER the PR merge step (gh pr merge) in walkthrough.md source
-order, and that the closure section is conditioned on a successful merge so
-it is NOT reached on the unmerged-PR path.
+Asserts that backlog ticket closure (python3 -m cortex_command.backlog.update_item
+<id> --status complete) is positioned AFTER the PR merge step (gh pr merge) in
+walkthrough.md source order, and that the closure section is conditioned on a
+successful merge so it is NOT reached on the unmerged-PR path.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ WALKTHROUGH = (
 
 MERGE_LITERAL = "gh pr merge"
 CLOSE_LITERAL = "cortex-update-item"
-CLOSE_ARG = "status=complete"
+CLOSE_ARG = "--status complete"
 
 
 def _load_lines() -> list[str]:
@@ -51,12 +51,13 @@ def _section_6_pr_review_start(lines: list[str]) -> int | None:
 
 
 # ---------------------------------------------------------------------------
-# Ordering test — gh pr merge appears before cortex-update-item status=complete
+# Ordering test — gh pr merge appears before
+# python3 -m cortex_command.backlog.update_item <id> --status complete
 # ---------------------------------------------------------------------------
 
 
 def test_status_complete_appears_after_merge_in_source_order() -> None:
-    """cortex-update-item status=complete appears strictly after gh pr merge in walkthrough."""
+    """python3 -m cortex_command.backlog.update_item <id> --status complete appears strictly after gh pr merge in walkthrough."""
     lines = _load_lines()
 
     merge_line = _first_occurrence(lines, MERGE_LITERAL)
@@ -69,7 +70,7 @@ def test_status_complete_appears_after_merge_in_source_order() -> None:
         f"'{CLOSE_LITERAL}' not found in {WALKTHROUGH.relative_to(REPO_ROOT)}"
     )
 
-    # Confirm the close line also carries status=complete (not just cortex-update-item)
+    # Confirm the close line also carries --status complete (not just cortex-update-item)
     close_line_text = lines[close_line - 1]
     assert CLOSE_ARG in close_line_text, (
         f"Line {close_line} contains '{CLOSE_LITERAL}' but not '{CLOSE_ARG}': "
@@ -126,7 +127,8 @@ def test_section_6b_is_gated_on_successful_merge() -> None:
 
     When the PR has not yet been merged (i.e., the user declined, skipped, or
     the PR was already closed/merged before this review session), the morning-
-    review walkthrough must NOT invoke cortex-update-item status=complete.
+    review walkthrough must NOT invoke
+    python3 -m cortex_command.backlog.update_item <id> --status complete.
     This test verifies that Section 6b contains explicit prose conditioning
     its execution on a successful merge, so the unmerged-PR path cannot reach
     the closure step.
