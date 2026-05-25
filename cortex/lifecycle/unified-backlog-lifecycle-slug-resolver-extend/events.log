@@ -9,3 +9,5 @@
 {"ts": "2026-05-25T11:40:00Z", "event": "spec_approved", "feature": "unified-backlog-lifecycle-slug-resolver-extend"}
 {"ts":"2026-05-25T19:27:22Z","event":"sentinel_absence","feature":"unified-backlog-lifecycle-slug-resolver-extend","reviewer_angle":"Order-drift semantics across the 5-step resolution","reason":"absent","model_tier":"sonnet","expected_sha":"cc4436347b9f8483ea166fdb50f626a0d56d7f33ed830dd07f342cd71d83a4c6","observed_sha_or_null":null}
 {"ts":"2026-05-25T19:27:24Z","event":"sentinel_absence","feature":"unified-backlog-lifecycle-slug-resolver-extend","reviewer_angle":"_find_item API split & caller enumeration","reason":"absent","model_tier":"sonnet","expected_sha":"cc4436347b9f8483ea166fdb50f626a0d56d7f33ed830dd07f342cd71d83a4c6","observed_sha_or_null":null}
+{"ts": "2026-05-25T19:35:00Z", "event": "plan_approved", "feature": "unified-backlog-lifecycle-slug-resolver-extend"}
+{"ts": "2026-05-25T19:35:01Z", "event": "phase_transition", "feature": "unified-backlog-lifecycle-slug-resolver-extend", "from": "plan", "to": "implement"}

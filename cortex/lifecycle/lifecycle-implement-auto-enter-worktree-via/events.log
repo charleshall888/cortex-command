@@ -10,3 +10,4 @@
 {"ts": "2026-05-25T12:30:00Z", "event": "phase_transition", "feature": "lifecycle-implement-auto-enter-worktree-via", "from": "specify", "to": "plan"}
 {"ts": "2026-05-25T13:15:00Z", "event": "plan_approved", "feature": "lifecycle-implement-auto-enter-worktree-via"}
 {"ts": "2026-05-25T13:15:00Z", "event": "phase_transition", "feature": "lifecycle-implement-auto-enter-worktree-via", "from": "plan", "to": "implement"}
+{"ts": "2026-05-25T21:23:17Z", "event": "batch_dispatch", "feature": "lifecycle-implement-auto-enter-worktree-via", "batch": 0, "tasks": [1, 2, 3, 4, 9, 14, 15]}

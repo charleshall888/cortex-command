@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 69a8b0fc-c833-42ba-a317-a597c6bbd79b
 title: "Reconcile SessionStart lifecycle-phase summary against on-disk truth"
-status: refined
+status: complete
 priority: medium
 type: chore
 created: 2026-05-20

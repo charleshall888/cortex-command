@@ -206,37 +206,6 @@
     "repo": null
   },
   {
-    "id": 259,
-    "title": "Reconcile SessionStart lifecycle-phase summary against on-disk truth",
-    "status": "refined",
-    "priority": "medium",
-    "type": "chore",
-    "tags": [
-      "harness",
-      "hook",
-      "observability",
-      "lifecycle"
-    ],
-    "areas": [
-      "hooks"
-    ],
-    "created": "2026-05-20",
-    "updated": "2026-05-25",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "cortex/lifecycle/reconcile-sessionstart-lifecycle-phase-summary-against/spec.md",
-    "discovery_source": "cortex/research/harness-friction-triage/research.md",
-    "plan": null,
-    "uuid": "69a8b0fc-c833-42ba-a317-a597c6bbd79b",
-    "lifecycle_slug": "reconcile-sessionstart-lifecycle-phase-summary-against",
-    "session_id": "a34c9d97-2dfe-4bcc-a1ff-17308805fe4f",
-    "lifecycle_phase": "complete",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 262,
     "title": "Extend overnight circuit breaker to halt on systemic worker failures",
     "status": "refined",

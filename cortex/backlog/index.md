@@ -9,7 +9,6 @@
 | 186 | Clarify-critic schema validator + warning-template runtime validator (per #178 R7 follow-on) | proposed | medium | feature | — | 178 | — |
 | 250 | Lifecycle implement: auto-enter worktree via EnterWorktree (Approach A, deferred design surface) | refined | medium | feature | — | — | ✓ |
 | 254 | Unified backlog/lifecycle slug resolver: extend to cortex-update-item consumer | refined | medium | feature | — | 251 | ✓ |
-| 259 | Reconcile SessionStart lifecycle-phase summary against on-disk truth | refined | medium | chore | — | — | ✓ |
 | 262 | Extend overnight circuit breaker to halt on systemic worker failures | refined | medium | chore | — | — | ✓ |
 | 156 | Make cortex-check-parity context-aware (skip tokens inside fenced code blocks) | deferred | low | feature | — | — | — |
 | 247 | Offer consolidation clusters before R15 gate in discovery decompose | refined | low | feature | — | — | ✓ |
@@ -19,7 +18,6 @@
 
 - **250** Lifecycle implement: auto-enter worktree via EnterWorktree (Approach A, deferred design surface)
 - **254** Unified backlog/lifecycle slug resolver: extend to cortex-update-item consumer
-- **259** Reconcile SessionStart lifecycle-phase summary against on-disk truth
 - **262** Extend overnight circuit breaker to halt on systemic worker failures
 - **247** Offer consolidation clusters before R15 gate in discovery decompose
 

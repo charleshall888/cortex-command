@@ -3,3 +3,5 @@
 {"ts": "2026-05-25T19:14:00Z", "event": "lifecycle_start", "feature": "extend-cortex-cli-version-sync-hook", "tier": "complex", "criticality": "high"}
 {"ts": "2026-05-25T19:14:00Z", "event": "phase_transition", "feature": "extend-cortex-cli-version-sync-hook", "from": "clarify", "to": "research"}
 {"ts": "2026-05-25T19:20:00Z", "event": "phase_transition", "feature": "extend-cortex-cli-version-sync-hook", "from": "research", "to": "specify"}
+{"ts":"2026-05-25T20:27:49Z","event":"sentinel_absence","feature":"extend-cortex-cli-version-sync-hook","reviewer_angle":"CLI_PIN tuple-shape transition completeness","reason":"absent","model_tier":"sonnet","expected_sha":"fba6ee6122fc4f45382abd67898d2958194c9a7e3bbfd78c1b8cf4c7cdffa010","observed_sha_or_null":null}
+{"ts":"2026-05-25T20:28:25Z","event":"sentinel_absence","feature":"extend-cortex-cli-version-sync-hook","reviewer_angle":"Factor obstacles, import-time side effects, and contract preservation","reason":"absent","model_tier":"sonnet","expected_sha":"fba6ee6122fc4f45382abd67898d2958194c9a7e3bbfd78c1b8cf4c7cdffa010","observed_sha_or_null":null}
