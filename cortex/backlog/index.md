@@ -13,6 +13,7 @@
 | 262 | Extend overnight circuit breaker to halt on systemic worker failures | refined | medium | chore | — | — | ✓ |
 | 156 | Make cortex-check-parity context-aware (skip tokens inside fenced code blocks) | deferred | low | feature | — | — | — |
 | 247 | Offer consolidation clusters before R15 gate in discovery decompose | refined | low | feature | — | — | ✓ |
+| 264 | Re-establish perf budget for cortex-log-invocation post dual-channel-wrapper rewrite | backlog | low | chore | — | — | — |
 
 ## Refined
 
@@ -25,6 +26,7 @@
 ## Backlog
 
 - **251** Harness friction triage: distribution, contracts, slugs, gates
+- **264** Re-establish perf budget for cortex-log-invocation post dual-channel-wrapper rewrite
 
 ## In-Progress
 
