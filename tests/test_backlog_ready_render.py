@@ -32,11 +32,14 @@ blocker.
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPT = REPO_ROOT / "bin" / "cortex-backlog-ready"
+SCRIPT = shutil.which("cortex-backlog-ready")
 FIXTURE = Path(__file__).resolve().parent / "fixtures" / "backlog_ready_render.json"
 
 
@@ -202,8 +205,9 @@ def _build_fixture_backlog(tmp_path: Path) -> Path:
 
 
 def _run_script(cwd: Path, *args: str) -> subprocess.CompletedProcess:
+    assert SCRIPT is not None  # guarded by test-level pytest.skip
     return subprocess.run(
-        [str(SCRIPT), *args],
+        [SCRIPT, *args],
         cwd=str(cwd),
         capture_output=True,
         text=True,
@@ -219,6 +223,9 @@ def test_backlog_ready_render_snapshot(tmp_path: Path) -> None:
     blocker (ineligible/blocker), and an internal non-terminal blocker
     (ineligible/blocker via the partition_ready sentinel).
     """
+    if SCRIPT is None:
+        pytest.skip("console-script not installed; run uv tool install -e . --force")
+
     _build_fixture_backlog(tmp_path)
 
     result = _run_script(tmp_path, "--include-blocked")

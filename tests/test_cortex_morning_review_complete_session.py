@@ -1,9 +1,10 @@
-"""Fixture-replay tests for ``bin/cortex-morning-review-complete-session``.
+"""Fixture-replay tests for ``cortex-morning-review-complete-session``.
 
 Covers the six C11 behaviour cases enumerated in the lifecycle spec
 (R6 of ``extract-morning-review-deterministic-sequences-c11-c15-bundle``).
-Each test invokes the real bash shim via ``subprocess.run`` and asserts on
-filesystem state, exit code, and stderr — no mocking of the Python helper.
+Each test invokes the real console-script entry point via ``subprocess.run``
+and asserts on filesystem state, exit code, and stderr — no mocking of the
+Python helper.
 
 Cases:
     (a) phase=executing + --pointer -> state becomes complete; pointer
@@ -25,6 +26,7 @@ bringing the total ``def test_`` count to seven.
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -32,10 +34,11 @@ import pytest
 
 from cortex_command.overnight.state import OvernightState, load_state, save_state
 
-SCRIPT_PATH = (
-    Path(__file__).resolve().parent.parent
-    / "bin"
-    / "cortex-morning-review-complete-session"
+SCRIPT_PATH = shutil.which("cortex-morning-review-complete-session")
+
+pytestmark = pytest.mark.skipif(
+    SCRIPT_PATH is None,
+    reason="console-script not installed; run uv tool install -e . --force",
 )
 
 
@@ -60,9 +63,16 @@ def _make_state_with_phase(phase: str, session_id: str = "test-session") -> Over
 
 
 def _run_shim(*args: str) -> subprocess.CompletedProcess:
-    """Invoke the real bash shim (not python3 directly) with the given args."""
+    """Invoke the real console-script entry point with the given args.
+
+    The wheel-generated binstub IS the real entry path under
+    ``uv tool install`` — it directly invokes ``main()`` in
+    ``cortex_command.overnight.complete_morning_review_session`` with no
+    intermediate bash wrapper. ``shutil.which`` resolves it on PATH.
+    """
+    assert SCRIPT_PATH is not None  # guarded by module-level pytestmark
     return subprocess.run(
-        [str(SCRIPT_PATH), *args],
+        [SCRIPT_PATH, *args],
         text=True,
         capture_output=True,
     )

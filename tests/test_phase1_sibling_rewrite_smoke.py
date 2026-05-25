@@ -33,6 +33,8 @@ Covered scripts (Tasks 4a and 4b)
 -----------------------------------
 Task 4a (bash):
   - cortex-jcc
+
+Console-script entry point (wheel-generated binstub; bash wrapper retired):
   - cortex-morning-review-complete-session
 
 Task 4b (Python ``#!/usr/bin/env python3``):
@@ -174,8 +176,16 @@ def test_cortex_jcc_no_log_invocation_warning(tmp_path: Path) -> None:
 
 
 def test_cortex_morning_review_complete_session_no_log_invocation_warning(tmp_path: Path) -> None:
-    """cortex-morning-review-complete-session: silently skips log-invocation; --help exits 0."""
-    script = BIN_DIR / "cortex-morning-review-complete-session"
+    """cortex-morning-review-complete-session: silently skips log-invocation; --help exits 0.
+
+    After the bash wrapper deletion, the wheel-generated binstub IS the
+    real entry path under ``uv tool install -e .``. ``shutil.which`` resolves
+    it on PATH; absence triggers pytest.skip rather than a failure so this
+    smoke test stays green in non-installed environments.
+    """
+    script = shutil.which("cortex-morning-review-complete-session")
+    if script is None:
+        pytest.skip("console-script not installed; run uv tool install -e . --force")
     env = _base_env(str(tmp_path))
     result = _run([script, "--help"], env=env)
     _assert_no_log_invocation_warning(result, "cortex-morning-review-complete-session")
