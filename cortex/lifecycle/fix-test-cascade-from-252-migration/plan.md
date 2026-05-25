@@ -31,7 +31,7 @@ Apply canonical Task 11/12/15 patterns from #252's lifecycle file-by-file across
 - **Complexity**: simple
 - **Context**: Task 15's canonical model is at `tests/test_complexity_escalator.py` (commit 5f0d16eb) — `import cortex_command.lifecycle.complexity_escalator as _escalator_module` plus a `@pytest.fixture` returning the module. Promoted module is `cortex_command.backlog.resolve_item` with `main()` per pyproject.toml `[project.scripts]`. The `resolver` fixture must continue to expose every module-private symbol the tests consume; enumerate at task-start by grep.
 - **Verification**: `.venv/bin/pytest tests/test_resolve_backlog_item.py --tb=short` exits 0 — pass if all collected tests pass and exit code = 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 2: Rewrite tests/test_load_parent_epic.py
 - **Files**: `tests/test_load_parent_epic.py`
@@ -40,7 +40,7 @@ Apply canonical Task 11/12/15 patterns from #252's lifecycle file-by-file across
 - **Complexity**: simple
 - **Context**: Promoted module `cortex_command.backlog.load_parent_epic` with `main()`. Same canonical-model reference as Task 1. The file has both SourceFileLoader (L423) and subprocess (L60, L373) patterns. Check whether the file uses a `_load_script_module` helper or accesses the loaded module by a specific local name before choosing the import alias.
 - **Verification**: `.venv/bin/pytest tests/test_load_parent_epic.py --tb=short` exits 0 — pass if exit code = 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 3: Rewrite tests/test_superseded_frontmatter_tolerance.py
 - **Files**: `tests/test_superseded_frontmatter_tolerance.py`
@@ -49,7 +49,7 @@ Apply canonical Task 11/12/15 patterns from #252's lifecycle file-by-file across
 - **Complexity**: simple
 - **Context**: This file exercises both load_parent_epic and resolve_item modules. Read the two `SCRIPT_PATH` constants near the top of the file to determine which subprocess callsite targets which module. Reuse the import shape from Tasks 1 and 2. Module-private symbols (`_parse_frontmatter`) remain accessible after direct import — they are only "private" by convention, not by enforcement.
 - **Verification**: `.venv/bin/pytest tests/test_superseded_frontmatter_tolerance.py --tb=short` exits 0 — pass if exit code = 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 4: Rewrite tests/test_variant_a_writer_sites_baseline.py
 - **Files**: `tests/test_variant_a_writer_sites_baseline.py`
@@ -58,7 +58,7 @@ Apply canonical Task 11/12/15 patterns from #252's lifecycle file-by-file across
 - **Complexity**: simple
 - **Context**: Direct mirror of Task 15's fix at `tests/test_complexity_escalator.py`. Same promoted module. The wrapper-direct argv shape (`[str(ESCALATOR_SCRIPT), …]` instead of `[sys.executable, str(ESCALATOR_SCRIPT), …]`) is the pre-#252 invocation idiom — the wrapper's shebang (`#!/usr/bin/env bash`) handles the runtime. After conversion to `-m`, `sys.executable` is the Python that runs the test.
 - **Verification**: `.venv/bin/pytest tests/test_variant_a_writer_sites_baseline.py --tb=short` exits 0 — pass if exit code = 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 5: Rewrite tests/test_check_prescriptive_prose.py
 - **Files**: `tests/test_check_prescriptive_prose.py`
@@ -67,7 +67,7 @@ Apply canonical Task 11/12/15 patterns from #252's lifecycle file-by-file across
 - **Complexity**: simple
 - **Context**: Promoted module is `cortex_command.lint.prescriptive_prose` with `main()`. Subprocess-only file; smallest rewrite of the eight.
 - **Verification**: `.venv/bin/pytest tests/test_check_prescriptive_prose.py --tb=short` exits 0 — pass if exit code = 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 6: Rewrite tests/test_commit_preflight.py with helper-split + SCRIPT_PATH re-point
 - **Files**: `tests/test_commit_preflight.py`
@@ -81,7 +81,7 @@ Apply canonical Task 11/12/15 patterns from #252's lifecycle file-by-file across
 - **Complexity**: complex
 - **Context**: Promoted module is `cortex_command.commit.preflight` with `main()`. The wrapper `bin/cortex-commit-preflight` is a 34-line bash script with the `cortex-log-invocation` shim at lines 12–14 — the shim is wrapper-only (research verified: `grep -rn 'cortex-log-invocation\|log_invocation' cortex_command/commit/` returns nothing). The AST-walker test reads `SCRIPT_PATH.read_text()` and crashes on `set -euo pipefail` from the bash wrapper. The canonical Python source it should audit is `cortex_command/commit/preflight.py`.
 - **Verification**: `.venv/bin/pytest tests/test_commit_preflight.py --tb=short` exits 0 with all five subprocess-dependent tests AND `test_git_env_hardening` passing — pass if exit code = 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 7: Rewrite tests/test_clarify_critic_alignment_integration.py
 - **Files**: `tests/test_clarify_critic_alignment_integration.py`
@@ -90,7 +90,7 @@ Apply canonical Task 11/12/15 patterns from #252's lifecycle file-by-file across
 - **Complexity**: simple
 - **Context**: Promoted module is `cortex_command.backlog.load_parent_epic`. Single subprocess callsite; simplest rewrite.
 - **Verification**: `.venv/bin/pytest tests/test_clarify_critic_alignment_integration.py --tb=short` exits 0 — pass if exit code = 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 8: Repair tests/test_cortex_morning_review_gc_demo_worktrees.py via -m conversion
 - **Files**: `tests/test_cortex_morning_review_gc_demo_worktrees.py`
@@ -99,7 +99,7 @@ Apply canonical Task 11/12/15 patterns from #252's lifecycle file-by-file across
 - **Complexity**: simple
 - **Context**: The canonical module is `cortex_command.overnight.gc_demo_worktrees` (NOT `cortex_command.morning_review.gc_demo_worktrees` — pyproject.toml `[project.scripts]:49` maps `cortex-morning-review-gc-demo-worktrees = "cortex_command.overnight.gc_demo_worktrees:main"`, and the file exists at `cortex_command/overnight/gc_demo_worktrees.py` with `main()` and `__main__`). The wrapper itself execs `python3 -m cortex_command.overnight.gc_demo_worktrees`. The test's six assertions are purely behavioral (returncode, worktree presence/absence, tagged-stderr line prefixes/order) — none depend on bash-wrapper-specific behavior, so `-m` conversion preserves all test assertions identically.
 - **Verification**: `.venv/bin/pytest tests/test_cortex_morning_review_gc_demo_worktrees.py --tb=short` exits 0 — pass if all 6 currently-failing tests now pass.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 9: Replace id(tmp_path) cache keys in 4 parity files (auto_bump_version, backlog_ready, complexity_escalator, lifecycle_counters)
 - **Files**: `tests/test_cortex_auto_bump_version_parity.py`, `tests/test_cortex_backlog_ready_parity.py`, `tests/test_cortex_complexity_escalator_parity.py`, `tests/test_cortex_lifecycle_counters_parity.py`
@@ -108,7 +108,7 @@ Apply canonical Task 11/12/15 patterns from #252's lifecycle file-by-file across
 - **Complexity**: simple
 - **Context**: The canonical already-fixed template is at `tests/test_cortex_commit_preflight_parity.py:317` (note the inline comment "(avoids id(tmp_path) cache collision)"). All four files in this task carry the identical pattern with a module-level `_result_cache` dict and three test functions sharing one memoized subprocess invocation.
 - **Verification**: `grep -nE "cache_key = \(id\(tmp_path\)" tests/test_cortex_auto_bump_version_parity.py tests/test_cortex_backlog_ready_parity.py tests/test_cortex_complexity_escalator_parity.py tests/test_cortex_lifecycle_counters_parity.py` returns no matches, pass if exit code = 1.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 10: Replace id(tmp_path) cache keys in 3 parity files (lifecycle_state, load_parent_epic, log_invocation)
 - **Files**: `tests/test_cortex_lifecycle_state_parity.py`, `tests/test_cortex_load_parent_epic_parity.py`, `tests/test_cortex_log_invocation_parity.py`
@@ -117,7 +117,7 @@ Apply canonical Task 11/12/15 patterns from #252's lifecycle file-by-file across
 - **Complexity**: simple
 - **Context**: Same canonical template as Task 9 (`tests/test_cortex_commit_preflight_parity.py:317`). These three files complete the 7-site widening surfaced by critical review.
 - **Verification**: `grep -nE "cache_key = \(id\(tmp_path\)" tests/test_cortex_lifecycle_state_parity.py tests/test_cortex_load_parent_epic_parity.py tests/test_cortex_log_invocation_parity.py` returns no matches, pass if exit code = 1. The combined Task 9 + 10 closeout `grep -rnE "cache_key = \(id\(tmp_path\)" tests/` also returns no matches.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 11: Closeout verification — direct pytest invocation
 - **Files**: (no file modifications; verification only)
