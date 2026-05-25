@@ -69,7 +69,7 @@ Land Approach A — mid-session auto-enter of the `interactive/{slug}` worktree 
 - **Complexity**: complex
 - **Context**: Pattern reference: `cortex_command/init/scaffold.py:374-443` (`ensure_gitignore` — atomic read/mutate/write with line-exact membership checks). Function returns a bool indicating whether the file was written. The fence comment opens with a stable sigil naming the cortex-managed surface and the canonical clause version (incremented when the clause body changes); the exact comment syntax and regex are implementer choices within the constraint that the predicate must parse both the sigil and the version cleanly. The canonical version starts at `1`. Template file pattern: see existing templates under `cortex_command/init/templates/cortex/`. Body content invariant: must contain the literal word "worktree" (R6 enforces ≥ 2 occurrences).
 - **Verification**: `just test tests/test_init_claude_md_authorization.py` exits 0. Test file is authored in Task 8; the test exercises a tmp_path consumer repo through write/no-op/replace/in-fence-edit-replaced branches against actual filesystem state (independent oracle).
-- **Status**: [ ] pending
+- **Status**: [x] completed (manual branches verified; pytest deferred to T8)
 
 ### Task 6: Add `cortex init --revoke-worktree-auth` subcommand
 - **Files**: `cortex_command/init/handler.py`, `cortex_command/init/scaffold.py`, `cortex_command/init/__main__.py` (or equivalent CLI entry)
@@ -133,7 +133,7 @@ Land Approach A — mid-session auto-enter of the `interactive/{slug}` worktree 
 - **Complexity**: simple
 - **Context**: Today's hard-guard prose (verified via `sed -n '170,200p' skills/lifecycle/references/complete.md`) is anchored by "**Hard guard**:". The new prose preserves the anchor and the structural "must exit" instruction; it adds a sentence enumerating both exit paths with the recommended one (`ExitWorktree action="keep"`) named first. Fixture format: the exact bytes of the paragraph between the `**Hard guard**:` heading and the next `**` boundary. Snapshot test pattern: `assert path.read_text() == fixture.read_text()` with a clear message naming the fixture path for intentional updates.
 - **Verification**: `grep -c 'ExitWorktree action' skills/lifecycle/references/complete.md` ≥ 1 AND `grep -c 'Do not auto-cd' skills/lifecycle/references/complete.md` = 1 AND `just test tests/test_complete_md_hard_guard_snapshot.py` exits 0 — pass if all three checks match.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 13: EnterWorktree call-site parity test
 - **Files**: `tests/test_lifecycle_enterworktree_callsites.py` (new)
