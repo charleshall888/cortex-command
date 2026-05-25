@@ -96,7 +96,7 @@ Land Approach A — mid-session auto-enter of the `interactive/{slug}` worktree 
 - **Complexity**: complex
 - **Context**: Pytest fixture pattern: see existing init tests in `tests/` (e.g., `tests/test_init_*.py`). Each test creates a tmp_path consumer repo, writes a CLAUDE.md (or not), invokes the function/subcommand, asserts the post-state and exit code. For revoke-with-live-session, the test writes a fake `.interactive.pid` file with a live PID (current process PID is safe to use) and asserts exit 2; with `--force`, asserts exit 0 and fence removed.
 - **Verification**: `just test tests/test_init_claude_md_authorization.py tests/test_init_verify_worktree_auth.py` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 9: Create `cortex-worktree-precondition` shim
 - **Files**: `cortex_command/worktree_precondition.py` (new), `pyproject.toml` (project.scripts entry), `tests/test_worktree_precondition.py` (new)
