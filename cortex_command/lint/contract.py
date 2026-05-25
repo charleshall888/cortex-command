@@ -8,6 +8,9 @@ for ``argparse.ArgumentParser(...)`` constructors and
 calls.
 
 Error codes emitted by this module:
+  E101  missing required flag --X for cortex-Y
+  E102  unknown flag --X for cortex-Y
+  E103  missing required subcommand for cortex-Y
   E201  cannot AST-parse module source for cortex-X at path Y
   E202  ambiguous main parser for cortex-X (tied add_argument counts)
 
@@ -19,7 +22,10 @@ from __future__ import annotations
 
 import ast
 import importlib.util
+import json
 import re
+import shlex
+import subprocess
 import sys
 import tomllib
 from dataclasses import dataclass, field
@@ -65,6 +71,51 @@ class ExtractionError:
 
     def format_text(self) -> str:
         return f"{self.code} {self.message}"
+
+
+@dataclass(frozen=True)
+class Violation:
+    """A lint violation produced by ``validate()``.
+
+    Shape mirrors ``cortex_command.parity_check.Violation`` so that downstream
+    consumers can treat both interchangeably.
+    """
+
+    path: str
+    line: int
+    col: int
+    code: str
+    message: str
+
+    def format_text(self) -> str:
+        return f"{self.path}:{self.line}:{self.col}: {self.code} {self.message}"
+
+    def format_json_dict(self) -> dict[str, object]:
+        return {
+            "path": self.path,
+            "line": self.line,
+            "col": self.col,
+            "code": self.code,
+            "message": self.message,
+        }
+
+
+class ExceptionLedger:
+    """Stub exception ledger (Task 4 will replace this with the full parser).
+
+    The ledger suppresses violations whose ``(binary, flag-or-subcommand,
+    path-glob)`` triple matches a registered entry.  This stub always reports
+    no match so that the validator surfaces all violations.
+    """
+
+    def match(self, binary: str, flag_or_subcommand: str, path: str) -> bool:
+        """Return True if the triple is in the ledger (always False in stub)."""
+        return False
+
+    @classmethod
+    def empty(cls) -> "ExceptionLedger":
+        """Return an empty ledger (suppresses nothing)."""
+        return cls()
 
 
 @dataclass
@@ -822,57 +873,322 @@ def extract_surface_map(root: Path | None = None) -> dict[str, ParserSurface]:
 
 
 # ---------------------------------------------------------------------------
-# CLI (minimal for this task — subsequent tasks add scanner/validator/output)
+# Sentinel marker
+# ---------------------------------------------------------------------------
+
+_SENTINEL_MARKER = "<!-- contract-lint:ignore-next -->"
+
+
+def _has_sentinel(preceding_line: str | None) -> bool:
+    """Return True if the preceding non-blank line contains the sentinel."""
+    if preceding_line is None:
+        return False
+    return _SENTINEL_MARKER in preceding_line
+
+
+# ---------------------------------------------------------------------------
+# Validator
+# ---------------------------------------------------------------------------
+
+
+def validate(
+    invocations: list[Invocation],
+    surface: dict[str, ParserSurface],
+    exceptions: ExceptionLedger,
+) -> list[Violation]:
+    """Validate a list of invocations against the extracted parser surfaces.
+
+    For each invocation the validator:
+
+    1. Skips if the preceding non-blank line contains the sentinel marker.
+    2. Skips if the binary is not in ``surface`` or the surface has a non-ok
+       extraction status (module is not argparse-shaped or had an extraction
+       error).
+    3. Tokenizes ``tail_tokens`` with ``shlex.split(comments=False)`` when not
+       already split (the scanner delivers pre-tokenized tokens, so this is a
+       safety re-split on joined strings — in practice the list is already
+       split and is joined then re-split to normalise shell quoting).
+    4. Classifies tokens as:
+       - subcommand: a positional that matches a subcommand choice in the
+         resolved surface (only when the parser has subcommands).
+       - flag: any token starting with ``-``.
+       - value: any other token (flag value, positional argument).
+    5. Skips value-shape validation on templated placeholders
+       (``{{...}}``, ``{...}``, ``<...>``).
+    6. Validates:
+       (a) Every observed flag exists in the accepted set → E102.
+       (b) Every ``required=True`` flag is present → E101.
+       (c) The resolved surface has subcommands and none is supplied AND the
+           subparser is required → E103.
+
+    Exception-ledger suppression is applied per flag/subcommand.
+    """
+    violations: list[Violation] = []
+
+    for inv in invocations:
+        # Sentinel marker suppression.
+        if _has_sentinel(inv.preceding_line):
+            continue
+
+        # Skip if binary has no surface or non-ok status.
+        surf = surface.get(inv.binary)
+        if surf is None or surf.extraction_status != "ok":
+            continue
+
+        path_str = str(inv.path)
+
+        # Re-tokenize via shlex for shell-quoting normalisation.  The scanner
+        # stores tokens pre-split, so join then re-split is idempotent for
+        # well-formed input but normalises quoted values.
+        raw_tail = " ".join(inv.tail_tokens)
+        try:
+            tokens = shlex.split(raw_tail, comments=False)
+        except ValueError:
+            # Unclosed quote or similar — fall back to pre-split tokens.
+            tokens = list(inv.tail_tokens)
+
+        # Resolve subcommand: look for the first positional that matches a
+        # known subcommand choice.
+        resolved_surface = surf
+        found_subcommand: str | None = None
+        if surf.subcommands:
+            for tok in tokens:
+                if not tok.startswith("-") and not _PLACEHOLDER_RE.fullmatch(tok):
+                    if tok in surf.subcommands:
+                        found_subcommand = tok
+                        resolved_surface = surf.subcommands[tok]
+                        break
+
+        # Collect observed flags from the token list.
+        observed_flags: list[str] = []
+        for tok in tokens:
+            if tok.startswith("-") and not _PLACEHOLDER_RE.fullmatch(tok):
+                # Strip value part from --flag=value form.
+                flag_part = tok.split("=", 1)[0]
+                observed_flags.append(flag_part)
+
+        # Accepted flag set for the resolved surface.
+        accepted_flags: set[str] = (
+            resolved_surface.required_flags | resolved_surface.optional_flags
+        )
+
+        # (a) Unknown flags → E102.
+        for flag in observed_flags:
+            if flag not in accepted_flags:
+                if not exceptions.match(inv.binary, flag, path_str):
+                    violations.append(Violation(
+                        path=path_str,
+                        line=inv.line,
+                        col=inv.col,
+                        code="E102",
+                        message=f"unknown flag {flag} for {inv.binary}",
+                    ))
+
+        # (b) Missing required flags → E101.
+        for req_flag in sorted(resolved_surface.required_flags):
+            # Check whether any observed flag matches (long or short form).
+            # For simplicity, exact match only (--flag); short-form aliases
+            # are in optional_flags/required_flags as declared in the parser.
+            if req_flag not in observed_flags:
+                # Skip if any token is a placeholder (could supply the flag).
+                has_placeholder_flags = any(
+                    _PLACEHOLDER_RE.fullmatch(tok) for tok in tokens
+                )
+                if not has_placeholder_flags:
+                    if not exceptions.match(inv.binary, req_flag, path_str):
+                        violations.append(Violation(
+                            path=path_str,
+                            line=inv.line,
+                            col=inv.col,
+                            code="E101",
+                            message=f"missing required flag {req_flag} for {inv.binary}",
+                        ))
+
+        # (c) Missing required subcommand → E103.
+        if surf.subcommands and found_subcommand is None:
+            # Check if any token is a placeholder (could be the subcommand).
+            has_placeholder_positional = any(
+                _PLACEHOLDER_RE.fullmatch(tok)
+                for tok in tokens
+                if not tok.startswith("-")
+            )
+            if not has_placeholder_positional:
+                if not exceptions.match(inv.binary, "<subcommand>", path_str):
+                    violations.append(Violation(
+                        path=path_str,
+                        line=inv.line,
+                        col=inv.col,
+                        code="E103",
+                        message=f"missing required subcommand for {inv.binary}",
+                    ))
+
+    return violations
+
+
+# ---------------------------------------------------------------------------
+# Staged-mode helpers
+# ---------------------------------------------------------------------------
+
+
+def _staged_paths(root: Path) -> list[str]:
+    """Return relative paths of staged files."""
+    try:
+        out = subprocess.run(
+            ["git", "diff", "--cached", "--name-only"],
+            cwd=str(root),
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return []
+    return [ln for ln in out.stdout.splitlines() if ln]
+
+
+def _read_staged_blob(rel_path: str, root: Path) -> bytes | None:
+    """Return the staged blob bytes for ``rel_path``, or None."""
+    try:
+        out = subprocess.run(
+            ["git", "show", f":{rel_path}"],
+            cwd=str(root),
+            capture_output=True,
+            check=True,
+        )
+        return out.stdout
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
+
+
+def _scan_staged(root: Path) -> list[Invocation]:
+    """Scan staged files and return invocations from their staged blobs."""
+    import tempfile
+
+    invocations: list[Invocation] = []
+    for rel in _staged_paths(root):
+        # Filter to scan-glob paths only.
+        rel_path = Path(rel)
+        in_scope = False
+        for glob in _SCAN_GLOBS:
+            if rel_path.match(glob):
+                in_scope = True
+                break
+        if not in_scope:
+            continue
+        if _is_hard_excluded(rel):
+            continue
+
+        blob = _read_staged_blob(rel, root)
+        if blob is None:
+            continue
+
+        # Write blob to a temp file so _scan_file_for_invocations can read it.
+        suffix = rel_path.suffix or ".md"
+        with tempfile.NamedTemporaryFile(
+            suffix=suffix, delete=False, mode="wb"
+        ) as fh:
+            fh.write(blob)
+            tmp_path = Path(fh.name)
+
+        try:
+            file_invs = _scan_file_for_invocations(tmp_path)
+            # Fix up path to the real relative path.
+            real_path = root / rel
+            patched: list[Invocation] = []
+            for inv in file_invs:
+                patched.append(Invocation(
+                    path=real_path,
+                    line=inv.line,
+                    col=inv.col,
+                    binary=inv.binary,
+                    tail_tokens=inv.tail_tokens,
+                    fence_kind=inv.fence_kind,
+                    preceding_line=inv.preceding_line,
+                ))
+            invocations.extend(patched)
+        finally:
+            try:
+                tmp_path.unlink()
+            except OSError:
+                pass
+
+    return invocations
+
+
+# ---------------------------------------------------------------------------
+# CLI (full implementation for Task 3)
 # ---------------------------------------------------------------------------
 
 
 def main(argv: list[str] | None = None) -> int:
     import argparse as _argparse
-    import json as _json
 
     p = _argparse.ArgumentParser(
         prog="cortex-check-contract",
         description="Skill-prose to CLI argparse contract lint",
     )
-    p.add_argument("--root", default=None, help="Repository root (default: cwd)")
+    p.add_argument("--root", default=None,
+                   help="Repository root (default: cwd)")
     p.add_argument("--json", dest="as_json", action="store_true",
-                   help="Emit JSON output")
+                   help="Emit violations as a JSON array")
     p.add_argument("--self-test", action="store_true",
                    help="Run inline self-test fixtures and exit")
-    p.add_argument("--staged", action="store_true",
-                   help="Operate on git staged diff")
-    p.add_argument("--audit", action="store_true",
-                   help="Operate on the full repo corpus")
     p.add_argument("--validate-exceptions", action="store_true",
-                   help="Validate the exception ledger and exit")
+                   help="Validate the exception ledger format and exit")
+
+    mode_group = p.add_mutually_exclusive_group()
+    mode_group.add_argument("--staged", action="store_true",
+                            help="Scan git-staged blobs only")
+    mode_group.add_argument("--audit", action="store_true",
+                            help="Scan the full repo corpus")
 
     args = p.parse_args(argv)
 
+    # --- --self-test mode ---
     if args.self_test:
         return _run_self_test()
 
+    # --- --validate-exceptions mode (stub; Task 4 will implement) ---
+    if args.validate_exceptions:
+        print("--validate-exceptions: not yet implemented", file=sys.stderr)
+        return 2
+
     root = Path(args.root).resolve() if args.root else Path.cwd().resolve()
+
+    # --- Extract surface ---
     surface_map, extraction_errors = extract_surface(root)
 
-    if args.as_json:
-        payload = {
-            binary: {
-                "status": s.extraction_status,
-                "required_flags": sorted(s.required_flags),
-                "optional_flags": sorted(s.optional_flags),
-                "subcommands": sorted(s.subcommands.keys()),
-            }
-            for binary, s in sorted(surface_map.items())
-        }
-        print(_json.dumps(payload))
-    else:
+    # Configuration error: every module failed to extract.
+    if surface_map and all(
+        s.extraction_status in ("ast_error",) for s in surface_map.values()
+    ):
         for err in extraction_errors:
             print(err.format_text(), file=sys.stderr)
-        ok = sum(1 for s in surface_map.values() if s.extraction_status == "ok")
-        total = len(surface_map)
-        print(f"Extracted {ok}/{total} argparse surfaces")
+        return 2
 
-    return 0
+    # Emit extraction errors to stderr (non-fatal).
+    for err in extraction_errors:
+        print(err.format_text(), file=sys.stderr)
+
+    # --- Gather invocations ---
+    if args.staged:
+        invocations = _scan_staged(root)
+    else:
+        # Default to audit (full corpus) when neither --staged nor --audit is
+        # given, so bare invocation without flags still works.
+        invocations = scan_corpus(root)
+
+    # --- Validate ---
+    ledger = ExceptionLedger.empty()
+    violations = validate(invocations, surface_map, ledger)
+
+    # --- Emit ---
+    if args.as_json:
+        print(json.dumps([v.format_json_dict() for v in violations]))
+    else:
+        for v in violations:
+            print(v.format_text())
+
+    return 1 if violations else 0
 
 
 # ---------------------------------------------------------------------------
@@ -882,17 +1198,14 @@ def main(argv: list[str] | None = None) -> int:
 
 def _run_self_test() -> int:
     """Run inline self-test fixtures; return 0 on pass, 1 on fail."""
-    failures: list[str] = []
-
-    # Fixture 1: fenced code invocation must be validated (not skipped).
-    # Fixture 2: inline-code invocation must be validated.
-    # Fixture 3: prose mention must be skipped.
-    # (Full scanner not in this task; this self-test covers extract_surface basics.)
-
-    # Basic extraction self-test: create a minimal in-memory AST and verify
-    # that _collect_parser_nodes and _build_surface work correctly.
+    import tempfile
     import textwrap
 
+    failures: list[str] = []
+
+    # -----------------------------------------------------------------------
+    # Fixture A: AST extraction — verify _collect_parser_nodes / _build_surface
+    # -----------------------------------------------------------------------
     sample_source = textwrap.dedent("""
         import argparse
         def main():
@@ -906,27 +1219,128 @@ def _run_self_test() -> int:
     try:
         tree = ast.parse(sample_source)
     except SyntaxError as exc:
-        failures.append(f"self-test sample parse failed: {exc}")
+        failures.append(f"self-test A: sample parse failed: {exc}")
     else:
         pnodes = _collect_parser_nodes(tree)
         if not pnodes:
-            failures.append("self-test: no parser nodes found in sample")
+            failures.append("self-test A: no parser nodes found in sample")
         else:
             main_pn, ambiguous = _pick_main_parser(pnodes)
             if ambiguous:
-                failures.append("self-test: unexpected ambiguity in sample parser")
+                failures.append("self-test A: unexpected ambiguity in sample parser")
             elif main_pn is None:
-                failures.append("self-test: main_pn is None for sample")
+                failures.append("self-test A: main_pn is None for sample")
             else:
                 surf = _build_surface("cortex-test", Path("/dev/null"), main_pn)
                 if "--status" not in surf.required_flags:
-                    failures.append(f"self-test: --status not in required_flags: {surf.required_flags}")
+                    failures.append(f"self-test A: --status not in required_flags: {surf.required_flags}")
                 if "--type" not in surf.required_flags:
-                    failures.append(f"self-test: --type not in required_flags: {surf.required_flags}")
+                    failures.append(f"self-test A: --type not in required_flags: {surf.required_flags}")
                 if "--title" not in surf.required_flags:
-                    failures.append(f"self-test: --title not in required_flags: {surf.required_flags}")
+                    failures.append(f"self-test A: --title not in required_flags: {surf.required_flags}")
                 if "--priority" not in surf.optional_flags:
-                    failures.append(f"self-test: --priority not in optional_flags: {surf.optional_flags}")
+                    failures.append(f"self-test A: --priority not in optional_flags: {surf.optional_flags}")
+
+    # -----------------------------------------------------------------------
+    # Build a synthetic surface for fixtures B–E (scanner + validator).
+    # cortex-selftest requires --status (required) and --type (required);
+    # --title is optional.
+    # -----------------------------------------------------------------------
+    synth_surf = ParserSurface(
+        binary="cortex-selftest",
+        module_path=Path("/dev/null"),
+        required_flags={"--status", "--type"},
+        optional_flags={"--title"},
+        extraction_status="ok",
+    )
+    surface_map: dict[str, ParserSurface] = {"cortex-selftest": synth_surf}
+    ledger = ExceptionLedger.empty()
+
+    # -----------------------------------------------------------------------
+    # Fixture B: fenced code invocation with valid flags → no violations.
+    # -----------------------------------------------------------------------
+    fence_valid_md = textwrap.dedent("""\
+        ```
+        cortex-selftest --status ok --type bug
+        ```
+    """)
+    with tempfile.NamedTemporaryFile(
+        suffix=".md", delete=False, mode="w", encoding="utf-8"
+    ) as fh_b:
+        fh_b.write(fence_valid_md)
+        path_b = Path(fh_b.name)
+    try:
+        invs_b = _scan_file_for_invocations(path_b)
+        viols_b = validate(invs_b, surface_map, ledger)
+        if not invs_b:
+            failures.append("self-test B: fenced invocation not detected")
+        if viols_b:
+            failures.append(f"self-test B: unexpected violations: {viols_b}")
+    finally:
+        path_b.unlink(missing_ok=True)
+
+    # -----------------------------------------------------------------------
+    # Fixture C: fenced code invocation with missing required flag → E101.
+    # -----------------------------------------------------------------------
+    fence_invalid_md = textwrap.dedent("""\
+        ```
+        cortex-selftest --title hello
+        ```
+    """)
+    with tempfile.NamedTemporaryFile(
+        suffix=".md", delete=False, mode="w", encoding="utf-8"
+    ) as fh_c:
+        fh_c.write(fence_invalid_md)
+        path_c = Path(fh_c.name)
+    try:
+        invs_c = _scan_file_for_invocations(path_c)
+        viols_c = validate(invs_c, surface_map, ledger)
+        e101_codes = [v for v in viols_c if v.code == "E101"]
+        if not invs_c:
+            failures.append("self-test C: fenced invocation not detected")
+        if len(e101_codes) < 2:
+            failures.append(
+                f"self-test C: expected ≥2 E101 violations, got {viols_c}"
+            )
+    finally:
+        path_c.unlink(missing_ok=True)
+
+    # -----------------------------------------------------------------------
+    # Fixture D: inline-code invocation with valid flags → no violations.
+    # -----------------------------------------------------------------------
+    inline_valid_md = "Run `cortex-selftest --status ok --type bug` to check.\n"
+    with tempfile.NamedTemporaryFile(
+        suffix=".md", delete=False, mode="w", encoding="utf-8"
+    ) as fh_d:
+        fh_d.write(inline_valid_md)
+        path_d = Path(fh_d.name)
+    try:
+        invs_d = _scan_file_for_invocations(path_d)
+        viols_d = validate(invs_d, surface_map, ledger)
+        if not invs_d:
+            failures.append("self-test D: inline-code invocation not detected")
+        if viols_d:
+            failures.append(f"self-test D: unexpected violations: {viols_d}")
+    finally:
+        path_d.unlink(missing_ok=True)
+
+    # -----------------------------------------------------------------------
+    # Fixture E: prose mention only → scanner must skip it (no invocations).
+    # -----------------------------------------------------------------------
+    prose_only_md = "The cortex-selftest helper is documented elsewhere.\n"
+    with tempfile.NamedTemporaryFile(
+        suffix=".md", delete=False, mode="w", encoding="utf-8"
+    ) as fh_e:
+        fh_e.write(prose_only_md)
+        path_e = Path(fh_e.name)
+    try:
+        invs_e = _scan_file_for_invocations(path_e)
+        if invs_e:
+            failures.append(
+                f"self-test E: prose mention must not produce invocations, got {invs_e}"
+            )
+    finally:
+        path_e.unlink(missing_ok=True)
 
     if failures:
         for f in failures:
