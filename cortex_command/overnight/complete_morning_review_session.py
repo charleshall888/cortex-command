@@ -30,6 +30,7 @@ import json
 import sys
 from pathlib import Path
 
+from cortex_command.backlog import _telemetry
 from cortex_command.overnight.state import load_state, save_state, transition
 
 
@@ -62,6 +63,8 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    _telemetry.log_invocation("cortex-morning-review-complete-session")
+
     parser = _build_parser()
     args = parser.parse_args(argv)
 

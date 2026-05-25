@@ -50,7 +50,7 @@ import types
 from pathlib import Path
 from typing import Any
 
-from cortex_command.backlog import partition_ready
+from cortex_command.backlog import _telemetry, partition_ready
 from cortex_command.common import TERMINAL_STATUSES  # noqa: F401
 
 BACKLOG_DIR = Path.cwd() / "cortex" / "backlog"
@@ -407,6 +407,8 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> int:
+    _telemetry.log_invocation("cortex-backlog-ready")
+
     args = _parse_args(argv)
 
     try:
