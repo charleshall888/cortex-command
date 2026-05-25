@@ -96,7 +96,7 @@ def _run_helper(slug: str, backlog_dir: Path) -> subprocess.CompletedProcess:
     """Invoke ``bin/cortex-load-parent-epic`` against a synthetic backlog dir."""
     env = {"CORTEX_BACKLOG_DIR": str(backlog_dir), **os.environ}
     return subprocess.run(
-        [sys.executable, str(SCRIPT_PATH), slug],
+        [sys.executable, "-m", "cortex_command.backlog.load_parent_epic", slug],
         capture_output=True,
         text=True,
         env=env,
@@ -177,7 +177,7 @@ def _build_dispatch_prompt(
         filename = f"{int(parent_id):03d}-*.md"
         body_placeholder = (
             "{sanitized parent epic body returned by "
-            "`bin/cortex-load-parent-epic`}"
+            "`cortex-load-parent-epic`}"
         )
         rendered = alignment_template.replace(
             "{parent_filename}", filename
