@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: c89de1af-5086-4d00-b459-f7455b872523
 title: "Harness friction triage: distribution, contracts, slugs, gates"
-status: backlog
+status: complete
 priority: high
 type: epic
 created: 2026-05-20
-updated: 2026-05-20
+updated: 2026-05-25
 tags: [harness, cli, plugin-distribution, skill-authoring, gate-policy]
 discovery_source: cortex/research/harness-friction-triage/research.md
 ---

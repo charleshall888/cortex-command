@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: f5887b4d-ad3e-485e-9c8e-a1269f5107b4
 title: "Unified backlog/lifecycle slug resolver: extend to cortex-update-item consumer"
-status: refined
+status: complete
 priority: medium
 type: feature
 created: 2026-05-20

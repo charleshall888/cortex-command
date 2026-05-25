@@ -1,35 +1,5 @@
 [
   {
-    "id": 251,
-    "title": "Harness friction triage: distribution, contracts, slugs, gates",
-    "status": "backlog",
-    "priority": "high",
-    "type": "epic",
-    "tags": [
-      "harness",
-      "cli",
-      "plugin-distribution",
-      "skill-authoring",
-      "gate-policy"
-    ],
-    "areas": [],
-    "created": "2026-05-20",
-    "updated": "2026-05-20",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": null,
-    "discovery_source": "cortex/research/harness-friction-triage/research.md",
-    "plan": null,
-    "uuid": "c89de1af-5086-4d00-b459-f7455b872523",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 258,
     "title": "Surface aggregated signal on daytime-pipeline sandbox/EPERM cascade failures",
     "status": "archived",
@@ -142,37 +112,6 @@
     "discovery_source": null,
     "plan": null,
     "uuid": "067e739f-eda7-4ea6-88c9-c4c76e219e68",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 254,
-    "title": "Unified backlog/lifecycle slug resolver: extend to cortex-update-item consumer",
-    "status": "refined",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "backlog",
-      "lifecycle",
-      "slug-resolution"
-    ],
-    "areas": [
-      "backlog",
-      "skills"
-    ],
-    "created": "2026-05-20",
-    "updated": "2026-05-25",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "251",
-    "research": null,
-    "spec": "cortex/lifecycle/unified-backlog-lifecycle-slug-resolver-extend/spec.md",
-    "discovery_source": "cortex/research/harness-friction-triage/research.md",
-    "plan": null,
-    "uuid": "f5887b4d-ad3e-485e-9c8e-a1269f5107b4",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
