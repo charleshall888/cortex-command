@@ -173,7 +173,7 @@ def _build_fixture_backlog(tmp_path: Path) -> Path:
 # Invocation helper
 # ---------------------------------------------------------------------------
 
-_result_cache: dict[tuple, subprocess.CompletedProcess] = {}
+_result_cache: dict[tuple[str, str], subprocess.CompletedProcess] = {}
 
 
 def _get_cwd(case: str, tmp_path: Path) -> Path:
@@ -187,7 +187,7 @@ def _get_cwd(case: str, tmp_path: Path) -> Path:
 
 def _invoke_case(case: str, tmp_path: Path) -> subprocess.CompletedProcess:
     """Run python3 -m cortex_command.backlog.ready for the given fixture case."""
-    cache_key = (id(tmp_path), case)
+    cache_key = (str(tmp_path), case)
     if cache_key in _result_cache:
         return _result_cache[cache_key]
 
