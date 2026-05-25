@@ -15,6 +15,9 @@ runs the pre-flight gates in the ADR-3 sequence, and dispatches to
     4. marker-present / content-aware decline gates (R6, R19).
     5. scaffold writes + backup (``--force``) / drift (``--update``).
     6. ``ensure_gitignore``.
+    6b. ``ensure_claude_md_authorization`` — splice the cortex-managed
+        ``EnterWorktree`` authorization fence into consumer ``CLAUDE.md``
+        (R5).
     7. ``settings_merge.register`` (last — if it fails, repo is scaffolded
        and ``cortex init --update`` recovers idempotently).
 
@@ -190,6 +193,15 @@ def _run(args: argparse.Namespace) -> int:
     # Step 6: idempotent .gitignore append (R4). Always runs — scaffold
     # branches above may or may not have touched .gitignore.
     scaffold.ensure_gitignore(repo_root)
+
+    # Step 6b: idempotent CLAUDE.md authorization-fence splice (R5). Writes
+    # the cortex-managed ``EnterWorktree`` authorization clause to consumer
+    # CLAUDE.md when absent or when the in-fence version is stale; no-op when
+    # the fence is already at the canonical version. Runs after ensure_gitignore
+    # so any new CLAUDE.md write does not race the gitignore append, and before
+    # settings_merge.register so a settings-merge failure still leaves a
+    # well-formed CLAUDE.md the lifecycle skill can read on the next run.
+    scaffold.ensure_claude_md_authorization(repo_root)
 
     # Step 7: register allowWrite entry last (ADR-3). A single umbrella
     # cortex/ grant covers all cortex-managed state under the repo root;
