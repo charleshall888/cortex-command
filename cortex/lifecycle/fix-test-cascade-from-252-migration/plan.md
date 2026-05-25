@@ -126,7 +126,7 @@ Apply canonical Task 11/12/15 patterns from #252's lifecycle file-by-file across
 - **Complexity**: simple
 - **Context**: Requirement 4 is the binding closeout contract. The Implement phase's final task; no further file modifications, only verification. The closeout commit body should include the `just test` exit code, the failure set (if non-empty), and a brief note on any unmasked secondary failures for Review's attention. Direct pytest invocation bypasses the `just test` recipe's `echo "$output" | sed 's/^/       /'` indent (justfile L474–503), which would otherwise prevent `^FAILED ` line-anchor greps from matching.
 - **Verification**: `just test` exits 0 OR (`just test` exits non-zero AND `.venv/bin/pytest tests/ --tb=no -q --no-header 2>&1 | grep -E "^(ERROR|FAILED) " | grep -v "tests/test_log_invocation_perf\.py" | wc -l` equals 0) — pass if either branch holds.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ## Risks
 

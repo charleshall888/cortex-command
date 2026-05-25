@@ -7,3 +7,4 @@
 {"ts": "2026-05-25T17:14:10Z", "event": "plan_approved", "feature": "fix-test-cascade-from-252-migration"}
 {"ts": "2026-05-25T17:14:10Z", "event": "phase_transition", "feature": "fix-test-cascade-from-252-migration", "from": "plan", "to": "implement"}
 {"ts": "2026-05-25T17:23:27Z", "event": "batch_dispatch", "feature": "fix-test-cascade-from-252-migration", "batch": 0, "tasks": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], "dispatch_mode": "sequential_no_worktree"}
+{"ts": "2026-05-25T17:49:40Z", "event": "phase_transition", "feature": "fix-test-cascade-from-252-migration", "tier": "complex", "from": "implement", "to": "review"}
