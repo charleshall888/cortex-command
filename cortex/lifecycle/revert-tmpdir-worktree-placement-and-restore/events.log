@@ -11,3 +11,5 @@
 {"ts":"2026-05-20T16:15:02Z","event":"sentinel_absence","feature":"revert-tmpdir-worktree-placement-and-restore","reviewer_angle":"Phase 1 atomicity and test vacuousness","reason":"absent","model_tier":"sonnet","expected_sha":"297763b10a3a00c233bff01c79a99d3e96115719ba50d6b5dfb422c9e707e887","observed_sha_or_null":null}
 {"ts":"2026-05-20T16:27:22Z","event":"spec_approved","feature":"revert-tmpdir-worktree-placement-and-restore"}
 {"ts":"2026-05-20T16:27:22Z","event":"phase_transition","feature":"revert-tmpdir-worktree-placement-and-restore","from":"specify","to":"plan"}
+{"ts":"2026-05-25T11:25:11Z","event":"plan_approved","feature":"revert-tmpdir-worktree-placement-and-restore"}
+{"ts":"2026-05-25T11:25:11Z","event":"phase_transition","feature":"revert-tmpdir-worktree-placement-and-restore","from":"plan","to":"implement"}

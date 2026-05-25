@@ -2,17 +2,17 @@
 
 ## Overview
 
-Revert `resolve_worktree_root()` branch (c) from `$TMPDIR/cortex-worktrees/<feature>` to `<repo>/.claude/worktrees/<feature>`, delete the dead branch-(b) sentinel machinery and `cortex init` Step 7b registration, and sweep all code/docs/tests/requirements that assert the old TMPDIR placement. Phase 1 is a single atomic code commit; Phase 2 is a single atomic docs commit.
+Revert `resolve_worktree_root()` branch (c) from `$TMPDIR/cortex-worktrees/<feature>` to `<repo>/.claude/worktrees/<feature>`, delete the dead branch-(b) sentinel machinery and `cortex init` Step 7b registration, drop the now-historical parity-check exceptions, and sweep all code/docs/tests/requirements/config that assert the old TMPDIR placement. Phase 1 is a single atomic code+test commit; Phase 2 is a single atomic docs+config commit.
 
 ## Outline
 
-### Phase 1: Core code, tests, and critical fixes (tasks: 1–10)
-**Goal**: Make the resolver return the repo-relative path, remove dead code, add migration helper, fix all test assertions — everything `just test` covers.
-**Checkpoint**: `just test` exits 0; `grep -rn "cortex-worktrees" cortex_command/` = 0 matches; phase 1 committed atomically.
+### Phase 1: Core code, tests, and migration (tasks: 1–11)
+**Goal**: Make the resolver return the repo-relative path, remove dead code and dead exceptions, add migration helper, fix all test assertions — everything `just test` covers.
+**Checkpoint**: `just test` exits 0; `grep -rn "cortex-worktrees" cortex_command/ tests/` = 0 matches; phase 1 committed atomically.
 
-### Phase 2: Docs and requirements sweep (tasks: 11–15)
-**Goal**: Update all prose, skill references, docs, requirements, and superseded lifecycle annotations so no TMPDIR-placement language survives in live documents.
-**Checkpoint**: `grep -rn "cortex-worktrees" cortex/requirements/ skills/ docs/ bin/ claude/hooks/` = 0 matches; phase 2 committed atomically.
+### Phase 2: Docs, config, and requirements sweep (tasks: 12–16)
+**Goal**: Update all prose, skill references, docs, requirements, config, hook comments, and superseded lifecycle annotations so no TMPDIR-placement language survives in live documents.
+**Checkpoint**: `grep -rn "cortex-worktrees" cortex/requirements/ skills/ docs/ claude/hooks/ cortex/lifecycle.config.md` = 0 matches; phase 2 committed atomically.
 
 ## Tasks
 
@@ -58,7 +58,7 @@ Revert `resolve_worktree_root()` branch (c) from `$TMPDIR/cortex-worktrees/<feat
 - **Depends on**: none
 - **Complexity**: simple
 - **Context**: Current line 164: `allow_paths=[str(tmpdir_resolved)]`. The probe spawns `claude -p` with these paths in the sandbox `allowWrite` allowlist. After the revert, `resolve_worktree_root()` returns `<repo>/.claude/worktrees/<feature>` — outside `$TMPDIR` — so the spawned claude will fail to create the worktree unless `.claude/worktrees/` is in `allow_paths`. `$TMPDIR` must remain because probe result files (`seatbelt-output-*`, `seatbelt-result-*`) are written there.
-- **Verification**: `grep -c "claude/worktrees\|repo_root\|project_root" cortex_command/overnight/seatbelt_probe.py` ≥ 1 in the `allow_paths` construction; `just test` exits 0.
+- **Verification**: Inspect the `allow_paths` construction line (the assignment whose right-hand side flows into the `claude -p` invocation): `awk '/allow_paths\s*=/,/\]/' cortex_command/overnight/seatbelt_probe.py | grep -c "claude/worktrees"` ≥ 1 AND `awk '/allow_paths\s*=/,/\]/' cortex_command/overnight/seatbelt_probe.py | grep -c "tmpdir\|TMPDIR"` ≥ 1 (both the new repo-relative path AND $TMPDIR coverage must appear in the same construction). `just test` exits 0.
 - **Status**: [ ] pending
 
 ### Task 6: Fix archive rewriter functional exclusion
@@ -66,8 +66,8 @@ Revert `resolve_worktree_root()` branch (c) from `$TMPDIR/cortex-worktrees/<feat
 - **What**: Add `.claude` to `EXCLUDED_DIR_NAMES` in both copies of the archive rewriter. After the revert, worktrees are inside the repo tree under `.claude/worktrees/`; without exclusion the rewriter walks into worktree copies of lifecycle docs and mutates them. Update the comment block at lines 62–66 to reflect that worktrees are now repo-relative and the exclusion is needed.
 - **Depends on**: none
 - **Complexity**: simple
-- **Context**: `EXCLUDED_DIR_NAMES = frozenset({".git", ".venv"})` at line 60. The filter at line 104: `dirnames[:] = sorted(d for d in dirnames if d not in EXCLUDED_DIR_NAMES)` — matches on individual path component names, so `.claude` covers `.claude/worktrees/` entirely. Both files must stay in sync (dual-source enforcement via pre-commit drift check).
-- **Verification**: `grep -c "\.claude" bin/cortex-archive-rewrite-paths` ≥ 1 in `EXCLUDED_DIR_NAMES`; `just test` exits 0.
+- **Context**: `EXCLUDED_DIR_NAMES = frozenset({".git", ".venv"})` at line 66 (both copies). The filter at line 110: `dirnames[:] = sorted(d for d in dirnames if d not in EXCLUDED_DIR_NAMES)` — matches on individual path component names, so `.claude` covers `.claude/worktrees/` entirely. Both files must stay in sync (dual-source enforcement via pre-commit drift check) — the canonical edit is `bin/cortex-archive-rewrite-paths`; `plugins/cortex-core/bin/cortex-archive-rewrite-paths` regenerates automatically via the pre-commit hook (`just build-plugin`), but verify both for safety.
+- **Verification**: `grep -c "\.claude" bin/cortex-archive-rewrite-paths` ≥ 1 in `EXCLUDED_DIR_NAMES` AND `grep -c "\.claude" plugins/cortex-core/bin/cortex-archive-rewrite-paths` ≥ 1 in `EXCLUDED_DIR_NAMES`; `just test` exits 0.
 - **Status**: [ ] pending
 
 ### Task 7: Fix `complete.md` cleanup prefix check
@@ -90,7 +90,7 @@ Revert `resolve_worktree_root()` branch (c) from `$TMPDIR/cortex-worktrees/<feat
 
 ### Task 9: Add `test_mcp_json_propagation_and_deny_invariant`; update `test_worktree_seatbelt.py`
 - **Files**: `tests/test_worktree.py`, `tests/test_worktree_seatbelt.py`
-- **What**: In `tests/test_worktree.py`, add `test_mcp_json_propagation_and_deny_invariant`: calls `git worktree add .claude/worktrees/probe-test` in a tmp repo, asserts `.mcp.json` is present in the worktree (propagation), and asserts that a direct write to `.mcp.json` is denied (best-effort: use `pytest.raises(PermissionError)` under a `sandbox-exec`-wrapped subprocess if available, or document why the deny half requires a live Claude Code session and omit the runtime assertion while leaving the intent comment). In `tests/test_worktree_seatbelt.py`: update module docstring lines 3–5, replacing `$TMPDIR/cortex-worktrees/<feature>` with `.claude/worktrees/<feature>`.
+- **What**: In `tests/test_worktree.py`, add `test_mcp_json_propagation_and_deny_invariant`: calls `git worktree add .claude/worktrees/probe-test` in a tmp repo, asserts `.mcp.json` is present in the worktree (propagation), and asserts that a direct write to `.mcp.json` is denied (best-effort: use `pytest.raises(PermissionError)` under a `sandbox-exec`-wrapped subprocess if available, or document why the deny half requires a live Claude Code session and omit the runtime assertion while leaving the intent comment). In `tests/test_worktree_seatbelt.py`: update module docstring lines 3–5, replacing `$TMPDIR/cortex-worktrees/<feature>` with `.claude/worktrees/<feature>`. The test bodies import `resolve_worktree_root` and use the returned path dynamically — no body assertions hardcode the old path, so the docstring update is the entire scope for this file.
 - **Depends on**: [1]
 - **Complexity**: simple
 - **Context**: `test_worktree_seatbelt.py` module docstring starts at line 1: `"""Seatbelt-active integration tests for both worktree dispatch paths. R10 of restore-worktree-root-env-prefix: prove the new branch-(c) default ($TMPDIR/cortex-worktrees/<feature>)...`. The `.mcp.json` deny is enforced by the Claude Code JS tool layer, not the kernel — `open()` inside pytest will not raise `PermissionError`. Scope the deny assertion to what IS testable in a subprocess (e.g., check `.mcp.json` exists but skip the write-deny half unless `sandbox-exec` is available).
@@ -106,25 +106,34 @@ Revert `resolve_worktree_root()` branch (c) from `$TMPDIR/cortex-worktrees/<feat
 - **Verification**: `grep -c "cortex-worktrees\|test_worktree_base" cortex_command/init/tests/test_settings_merge.py` = 0; `grep -c "cortex-worktrees" tests/test_hooks.sh` = 0; `just test` exits 0.
 - **Status**: [ ] pending
 
-### Task 10: Update requirements files (`multi-agent.md`, `pipeline.md`)
-- **Files**: `cortex/requirements/multi-agent.md`, `cortex/requirements/pipeline.md`
-- **What**: In `multi-agent.md`: replace `$TMPDIR/cortex-worktrees/{feature}/` with `<repo>/.claude/worktrees/{feature}/` at lines 30 and 77; rewrite the line-77 rationale from "Seatbelt mandatory deny blocks `git worktree add`" to "Anthropic-aligned repo-relative default; project trust covers the path; no per-shell registration needed"; annotate the `restore-worktree-root-env-prefix/` reference as "superseded by #260". In `pipeline.md`: update lines 165–167 to clarify the `.mcp.json` deny is filename-scoped (blocks agent writes to `.mcp.json`) and does NOT block `git worktree add` creating the worktree directory or checking out other files.
-- **Depends on**: none
+### Task 11: Sweep remaining test files with hardcoded `cortex-worktrees` paths
+- **Files**: `tests/test_implement_option2_worktree_creation.py`, `tests/test_hooks_resolver_parity.sh`, `tests/test_archive_rewrite_paths.py`
+- **What**: (a) `tests/test_implement_option2_worktree_creation.py`: update the module docstring at line 4 and the test method docstring at line 72 to describe `<repo>/.claude/worktrees/interactive-test-fixture/`; rewrite `expected_path` at lines 82 and 183 from `isolated_tmpdir / "cortex-worktrees" / "interactive-test-fixture"` to compute via `_repo_root() / ".claude" / "worktrees" / "interactive-test-fixture"` (use the same `_repo_root()` helper the production code uses, or call `subprocess.run(['git','rev-parse','--show-toplevel'])`). The fixture `isolated_tmpdir` may no longer be the right base — review the fixture and adjust setup so the test runs against the repo-relative path that `resolve_worktree_root()` actually returns. (b) `tests/test_hooks_resolver_parity.sh`: update lines 31, 33, 34 — replace `$PARITY_TMPDIR/cortex-worktrees/$FEATURE` with the repo-relative path that `resolve_worktree_root` returns under test conditions (or substitute the mock-resolver path the script uses for `WT_TMPDIR` setup). (c) `tests/test_archive_rewrite_paths.py:235`: update the comment from `$TMPDIR/cortex-worktrees/{feature}/` to `<repo>/.claude/worktrees/{feature}/`.
+- **Depends on**: [1]
 - **Complexity**: simple
-- **Context**: `multi-agent.md:30` — "Outputs: Git worktree at `$TMPDIR/cortex-worktrees/{feature}/`". `multi-agent.md:77` — starts "Worktrees for the default repo are created at `$TMPDIR/cortex-worktrees/{feature}/`; ... Rationale: the Seatbelt mandatory deny on .mcp.json ... blocks `git worktree add`". `pipeline.md` lines 165–167 contain language asserting the deny "blocks `git worktree add`".
-- **Verification**: `grep -c "TMPDIR/cortex-worktrees" cortex/requirements/multi-agent.md` = 0; `grep -c "blocks.*git worktree add\|git worktree add.*block" cortex/requirements/pipeline.md` = 0; `grep -c "filename-scoped\|file-scoped" cortex/requirements/pipeline.md` ≥ 1.
+- **Context**: `test_implement_option2_worktree_creation.py` asserts the path materialization for the interactive worktree creation flow. The hardcoded `cortex-worktrees` paths at lines 82 and 183 are real assertions — they will fail after Task 1 lands because `resolve_worktree_root()` will return `.claude/worktrees/` paths. The fixture and its computed `expected_path` must both update. `test_hooks_resolver_parity.sh` is a bash harness that creates and cleans up a worktree; the cleanup-path strings at lines 31/33/34 will silently no-op (no directory to clean) after revert. `test_archive_rewrite_paths.py:235` is a comment only.
+- **Verification**: `grep -c "cortex-worktrees" tests/test_implement_option2_worktree_creation.py tests/test_hooks_resolver_parity.sh tests/test_archive_rewrite_paths.py` = 0; `just test` exits 0.
 - **Status**: [ ] pending
 
-### Task 11: Update skill references (implement.md, parallel-execution.md, overnight/SKILL.md)
+### Task 12: Update requirements and lifecycle config files
+- **Files**: `cortex/requirements/multi-agent.md`, `cortex/requirements/pipeline.md`, `cortex/lifecycle.config.md`
+- **What**: In `multi-agent.md`: replace `$TMPDIR/cortex-worktrees/{feature}/` with `<repo>/.claude/worktrees/{feature}/` at lines 30 and 77; rewrite the line-77 rationale from "Seatbelt mandatory deny blocks `git worktree add`" to "Anthropic-aligned repo-relative default; project trust covers the path; no per-shell registration needed"; annotate the `restore-worktree-root-env-prefix/` reference as "superseded by #260". In `pipeline.md`: update lines 165–167 to clarify the `.mcp.json` deny is filename-scoped (blocks agent writes to `.mcp.json`) and does NOT block `git worktree add` creating the worktree directory or checking out other files. In `cortex/lifecycle.config.md`: update line 35 — replace `$TMPDIR/cortex-worktrees/` with `.claude/worktrees/` in the `worktree-interactive` mode description.
+- **Depends on**: none
+- **Complexity**: simple
+- **Context**: `multi-agent.md:30` — "Outputs: Git worktree at `$TMPDIR/cortex-worktrees/{feature}/`". `multi-agent.md:77` — starts "Worktrees for the default repo are created at `$TMPDIR/cortex-worktrees/{feature}/`; ... Rationale: the Seatbelt mandatory deny on .mcp.json ... blocks `git worktree add`". `pipeline.md` lines 165–167 contain language asserting the deny "blocks `git worktree add`". `cortex/lifecycle.config.md:35` describes `worktree-interactive` mode: "creates a feature branch and a `$TMPDIR/cortex-worktrees/` worktree".
+- **Verification**: `grep -c "TMPDIR/cortex-worktrees" cortex/requirements/multi-agent.md` = 0; `grep -c "blocks.*git worktree add\|git worktree add.*block" cortex/requirements/pipeline.md` = 0; `grep -c "filename-scoped\|file-scoped" cortex/requirements/pipeline.md` ≥ 1; `grep -c "cortex-worktrees" cortex/lifecycle.config.md` = 0.
+- **Status**: [ ] pending
+
+### Task 13: Update skill references (implement.md, parallel-execution.md, overnight/SKILL.md)
 - **Files**: `skills/lifecycle/references/parallel-execution.md`, `skills/lifecycle/references/implement.md`, `skills/overnight/SKILL.md`
 - **What**: In `parallel-execution.md`: update lines 14 and 17 — replace `$TMPDIR/cortex-worktrees/{feature}/` with `<repo>/.claude/worktrees/{feature}/` and rewrite the rationale (`.mcp.json` deny is file-scoped; `git worktree add` into `.claude/worktrees/` succeeds). In `implement.md`: update worktree path references at lines 128 and 256 from `$TMPDIR/cortex-worktrees/` to `.claude/worktrees/`; rewrite the pre-flight check at lines 132–182 to verify the worktree path is inside the project root (not check for `additionalDirectories` registration, which no longer exists). In `overnight/SKILL.md`: update line 133 — replace `$TMPDIR/cortex-worktrees/{feature}/` with `<repo>/.claude/worktrees/{feature}/` and rewrite the deny-blocks-git-worktree rationale.
 - **Depends on**: none
 - **Complexity**: simple
-- **Context**: All three files have multiple references to `cortex-worktrees`. The `implement.md` pre-flight check currently verifies `settings.local.json` contains `TMPDIR/cortex-worktrees/` in `allowWrite`/`additionalDirectories`; after this ticket that registration no longer exists. The new pre-flight check verifies `$(cortex-worktree-resolve interactive-{slug})` is inside the repo root (use `cortex-worktree-resolve` to compute the expected path, then verify it starts with `git rev-parse --show-toplevel`).
+- **Context**: All three files have multiple references to `cortex-worktrees`. The `implement.md` pre-flight check currently verifies `settings.local.json` contains `TMPDIR/cortex-worktrees/` in `allowWrite`/`additionalDirectories`; after this ticket that registration no longer exists. The new pre-flight check verifies `$(cortex-worktree-resolve interactive-{slug})` is inside the repo root (use `cortex-worktree-resolve` to compute the expected path, then verify it starts with `git rev-parse --show-toplevel`). The plugin mirrors at `plugins/cortex-core/skills/lifecycle/references/` regenerate via the pre-commit hook (`just build-plugin`) — only edit the canonical sources.
 - **Verification**: `grep -rn "cortex-worktrees" skills/` = 0 matches.
 - **Status**: [ ] pending
 
-### Task 12: Update operational docs (`pipeline.md`, `sdk.md`)
+### Task 14: Update operational docs (`pipeline.md`, `sdk.md`)
 - **Files**: `docs/internals/pipeline.md`, `docs/internals/sdk.md`
 - **What**: Update worktree-placement text at cited lines: `docs/internals/pipeline.md` line 32 (table entry for `worktree_resolve_cli.py` — update `$TMPDIR/cortex-worktrees/<name>/` to `.claude/worktrees/<name>/`) and line 141 (update path reference); `docs/internals/sdk.md` lines 29, 144, and 160 — replace TMPDIR-placement language and update the deny-blocks-git-worktree rationale.
 - **Depends on**: none
@@ -133,30 +142,32 @@ Revert `resolve_worktree_root()` branch (c) from `$TMPDIR/cortex-worktrees/<feat
 - **Verification**: `grep -rn "cortex-worktrees" docs/` = 0 matches.
 - **Status**: [ ] pending
 
-### Task 13: Update utility scripts and hooks
-- **Files**: `bin/cortex-check-parity`, `claude/hooks/cortex-worktree-create.sh`
-- **What**: In `bin/cortex-check-parity` at lines 67–72: update the comment block explaining why `cortex-worktrees` is in the parity-exceptions set — replace `$TMPDIR/cortex-worktrees/<feature>` with `.claude/worktrees/<feature>` and note the token is now a historical reference (the active code no longer uses it after this ticket). In `claude/hooks/cortex-worktree-create.sh` at lines 39–42: add a short comment naming `.claude/worktrees/` as the new default for grep-discoverability.
-- **Depends on**: none
+### Task 15: Drop dead parity-check exceptions; update hook comment
+- **Files**: `cortex_command/parity_check.py`, `claude/hooks/cortex-worktree-create.sh`
+- **What**: In `cortex_command/parity_check.py`: delete BOTH exception entries `"cortex-worktrees"` (lines 67–72: comment block + entry) and `"cortex-worktree-root"` (lines 71–75: comment block + entry). After this ticket, neither string has live references in the codebase, so the exceptions are dead config — keeping them as historical tombstones adds maintenance debt and tempts future contributors to re-introduce the path. In `claude/hooks/cortex-worktree-create.sh` at lines 39–42: add a short comment naming `.claude/worktrees/` as the new default for grep-discoverability.
+- **Depends on**: [1, 8, 11, 12, 13, 14] — all live references must already be removed before dropping the exceptions, or the parity check will fail
 - **Complexity**: simple
-- **Context**: `bin/cortex-check-parity:69` — comment at lines 67–72 describes `cortex-worktrees` as the resolver default path. The exception entry `"cortex-worktrees"` at line 71 should remain (it prevents the parity checker from flagging the now-historical string as a missing deployable script). The hook file at `claude/hooks/cortex-worktree-create.sh` currently has no comment naming the worktree path; add one.
-- **Verification**: `grep -c "TMPDIR/cortex-worktrees" bin/cortex-check-parity` = 0; `just test` exits 0.
+- **Context**: `cortex_command/parity_check.py:67–75` holds the two exception entries with descriptive comments. The exceptions exist because the parity linter (`bin/cortex-check-parity` → `cortex_command.parity_check`) flags tokens matching `cortex-*` that appear in skills/docs/tests but lack a corresponding `bin/cortex-*` deployable. With both strings expunged from live code per Tasks 1, 8, 11, 12, 13, 14, the linter no longer encounters them and the exceptions become unreachable.
+- **Verification**: `grep -c "cortex-worktrees\|cortex-worktree-root" cortex_command/parity_check.py` = 0; `grep -c "claude/worktrees" claude/hooks/cortex-worktree-create.sh` ≥ 1; `cortex-check-parity` exits 0 (the parity check itself must pass without the exceptions); `just test` exits 0.
 - **Status**: [ ] pending
 
-### Task 14: Annotate superseded lifecycle artifacts (R16) and add ADR-0005
+### Task 16: Annotate superseded lifecycle artifacts (R16) and add ADR-0005
 - **Files**: `cortex/lifecycle/restore-worktree-root-env-prefix/research.md`, `cortex/lifecycle/restore-worktree-root-env-prefix/spec.md`, `cortex/adr/0005-repo-relative-worktree-placement.md`
-- **What**: Prepend a `> **Superseded by #260** — this lifecycle's empirical premise (Seatbelt deny blocks \`git worktree add\` into \`.claude/\`) was refuted on 2026-05-20. The \`.mcp.json\` deny mechanism sections are preserved as a historical misdiagnosis record.` callout to both files. Write `cortex/adr/0005-repo-relative-worktree-placement.md` using the Proposed ADR from the spec verbatim. (ADR-0005 is cited in spec but not yet created.)
+- **What**: Prepend a `> **Superseded by #260** — this lifecycle's empirical premise (Seatbelt deny blocks \`git worktree add\` into \`.claude/\`) was refuted on 2026-05-20. The \`.mcp.json\` deny mechanism sections are preserved as a historical misdiagnosis record.` callout to both files. Write `cortex/adr/0005-repo-relative-worktree-placement.md` using the Proposed ADR from the spec verbatim, with the frontmatter shape `status: accepted` per `cortex/adr/README.md`. (ADR-0005 is cited in spec but not yet created; `cortex/adr/` currently has 0001–0004.)
 - **Depends on**: none
 - **Complexity**: simple
-- **Context**: The Proposed ADR in `spec.md` under `## Proposed ADR` has the full content for `0005-repo-relative-worktree-placement`. The supersedes callout must appear at the top of both files (before any existing headings). `cortex/adr/README.md` has the three-criteria gate for ADR creation — confirm ADR-0005 meets it (load-bearing decision, actively contested before this ticket, reversal risk non-trivial).
-- **Verification**: `grep -c "superseded" cortex/lifecycle/restore-worktree-root-env-prefix/research.md` ≥ 1; `grep -c "superseded" cortex/lifecycle/restore-worktree-root-env-prefix/spec.md` ≥ 1; `test -f cortex/adr/0005-repo-relative-worktree-placement.md` exits 0.
+- **Context**: The Proposed ADR in `spec.md` under `## Proposed ADR` has the full content for `0005-repo-relative-worktree-placement`. The supersedes callout must appear at the top of both files (before any existing headings). `cortex/adr/README.md` has the three-criteria gate for ADR creation — confirm ADR-0005 meets it (load-bearing decision: yes — worktree placement is consulted by sandbox, scaffolding, and lifecycle cleanup; actively contested before this ticket: yes — the prior lifecycle moved it the other way; reversal risk non-trivial: yes — requires coordinated changes across resolver, init, tests, and docs).
+- **Verification**: `grep -c "superseded\|Superseded" cortex/lifecycle/restore-worktree-root-env-prefix/research.md` ≥ 1; `grep -c "superseded\|Superseded" cortex/lifecycle/restore-worktree-root-env-prefix/spec.md` ≥ 1; `test -f cortex/adr/0005-repo-relative-worktree-placement.md` exits 0; `head -5 cortex/adr/0005-repo-relative-worktree-placement.md | grep -c "^status: accepted$"` = 1.
 - **Status**: [ ] pending
 
 ## Risks
 
 - **`test_mcp_json_propagation_and_deny_invariant` deny assertion**: The `.mcp.json` deny is enforced by the Claude Code JS layer, not the kernel. Inside a pytest subprocess the `open()` call will not raise `PermissionError`. The test should document this limitation and scope the deny assertion to the mechanism that IS testable (filesystem path existence, not sandbox enforce). The invariant itself is preserved by the non-Requirement "any change to `.mcp.json` sandbox deny is prohibited" — the test pins `.mcp.json` propagation and a best-effort deny check.
-- **Dual-source bin/**: both `bin/cortex-archive-rewrite-paths` and `plugins/cortex-core/bin/cortex-archive-rewrite-paths` must be updated identically in Task 6. Missing one will fail the drift pre-commit hook.
+- **Dual-source bin/**: both `bin/cortex-archive-rewrite-paths` and `plugins/cortex-core/bin/cortex-archive-rewrite-paths` must be updated identically in Task 6. The pre-commit hook regenerates `plugins/cortex-core/bin/` from `bin/` via `just build-plugin`, so editing the canonical `bin/` copy is sufficient — but verify both for safety.
 - **`cortex init --update` call path**: Task 3 wires `unregister_matching` into the `--update` branch. Verify the settings load/save is flock-guarded (ADR-0003) — the existing flock pattern from `init_main` should already wrap the `--update` branch.
+- **Task 15 dependency chain**: Dropping the parity-check exceptions requires that Tasks 1, 8, 11, 12, 13, 14 have already removed every live `cortex-worktrees` reference in code, tests, docs, and skills. If any sweep is incomplete, the parity linter will fail closed. The dependency annotation enforces ordering — do not parallelize Task 15 ahead of its prerequisites.
+- **Test fixture path resolution in Task 11**: `tests/test_implement_option2_worktree_creation.py` currently uses `isolated_tmpdir` as the base for the expected path. After the revert, the fixture must compute the expected path from the repo root (the same way `resolve_worktree_root` does) — if the fixture's setup creates a fake repo at `isolated_tmpdir` and chdirs into it, the repo-root resolution should work; otherwise the fixture setup needs adjustment.
 
 ## Acceptance
 
-`grep -rn "cortex-worktrees" cortex_command/ skills/ docs/ cortex/requirements/ bin/cortex-check-parity claude/hooks/` = 0 matches; `python3 -c "from cortex_command.pipeline.worktree import resolve_worktree_root; import subprocess; r=subprocess.run(['git','rev-parse','--show-toplevel'],capture_output=True,text=True); print(resolve_worktree_root('probe'))"` prints a path under `.claude/worktrees/`; `just test` exits 0; `cortex init --update` on a settings file with a `cortex-worktrees`-prefixed entry removes it.
+`grep -rn "cortex-worktrees" cortex_command/ skills/ docs/ cortex/requirements/ cortex/lifecycle.config.md tests/ claude/hooks/` = 0 matches; `python3 -c "from cortex_command.pipeline.worktree import resolve_worktree_root; import subprocess; r=subprocess.run(['git','rev-parse','--show-toplevel'],capture_output=True,text=True); print(resolve_worktree_root('probe'))"` prints a path under `.claude/worktrees/`; `just test` exits 0; `cortex init --update` on a settings file with a `cortex-worktrees`-prefixed entry removes it; `cortex-check-parity` exits 0 with both dead exception entries removed.
