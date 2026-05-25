@@ -91,3 +91,5 @@ cortex-update-item <path> --lifecycle-slug {lifecycle-slug}
 This `lifecycle_slug` write-back runs only when `phase = none`. The status write-back runs on all phases when a match is found.
 
 If Step 1's resolver returned exit 3 (no backlog match), skip this step silently — lifecycles can exist independently of the backlog.
+
+If any `cortex-update-item` invocation in this file (the close-lifecycle call, the in-progress status write-back, or the lifecycle-slug write-back) exits 2, that signals an ambiguous slug match. Present the candidate list emitted on stderr to the user and ask them to re-invoke with a disambiguated slug.

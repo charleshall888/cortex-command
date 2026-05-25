@@ -84,7 +84,7 @@ After complexity and criticality are determined, run the write-back immediately 
 cortex-update-item {backlog-filename-slug} --complexity {value} --criticality {value}
 ```
 
-If `cortex-update-item` fails, surface the error and wait for the user to resolve before continuing.
+If `cortex-update-item` fails, surface the error and wait for the user to resolve before continuing. Exit 2 indicates an ambiguous slug — present the candidate list on stderr to the user and ask them to re-invoke with a disambiguated slug.
 
 ## Step 4: Research Phase
 
@@ -193,7 +193,7 @@ cortex-update-item {backlog-filename-slug} --areas area1 area2
 
 For empty areas: `cortex-update-item {backlog-filename-slug} --areas` (passing `--areas` with no values clears the list).
 
-If either `cortex-update-item` call fails, surface the error and wait for the user to resolve. Do not proceed silently.
+If either `cortex-update-item` call fails, surface the error and wait for the user to resolve. Do not proceed silently. Exit 2 indicates an ambiguous slug — present the candidate list on stderr to the user and ask them to re-invoke with a disambiguated slug.
 
 ## Step 6: Completion
 

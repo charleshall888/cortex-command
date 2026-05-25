@@ -108,9 +108,12 @@ cortex-update-item 078 --status complete
 
 If `backlog_id` is not set for a feature, fall back to passing the lifecycle slug — `cortex-update-item` does substring matching and may still find a match.
 
+If `cortex-update-item` exits with code 2, the slug was ambiguous: present the candidate list emitted on stderr to the user and ask them to re-invoke with a disambiguated slug.
+
 For each feature report one of:
 - `closed #ID` — ticket was found and updated
 - `no ticket found` — `update_item.py` exited 1 (item not found or already terminal)
+- `ambiguous slug` — `cortex-update-item` exited 2; surface the candidate list for the user to disambiguate
 
 Report the results as a summary list before proceeding to Step 5.
 
