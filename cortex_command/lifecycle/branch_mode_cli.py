@@ -13,9 +13,12 @@ mode is recorded, then exits 0.
 from __future__ import annotations
 
 import argparse
+import pathlib
+import sys
 from typing import List, Optional
 
 from cortex_command.backlog import _telemetry
+from cortex_command.lifecycle_config import read_branch_mode
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -37,8 +40,11 @@ def _build_parser() -> argparse.ArgumentParser:
 def main(argv: Optional[List[str]] = None) -> int:
     _telemetry.log_invocation("cortex-lifecycle-branch-mode")
     parser = _build_parser()
-    parser.parse_args(argv)
-    raise NotImplementedError("filled in by T5")
+    args = parser.parse_args(argv)
+    path = pathlib.Path(args.path)
+    mode = read_branch_mode(path)
+    sys.stdout.write((mode or "") + "\n")
+    return 0
 
 
 if __name__ == "__main__":

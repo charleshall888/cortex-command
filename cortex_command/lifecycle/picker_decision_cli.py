@@ -15,9 +15,13 @@ vocabulary is the verbatim ``cortex_command.lifecycle_implement.REASONS`` set.
 from __future__ import annotations
 
 import argparse
+import json
+import pathlib
+import sys
 from typing import List, Optional
 
 from cortex_command.backlog import _telemetry
+from cortex_command.lifecycle_implement import should_fire_picker
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -50,8 +54,15 @@ def _build_parser() -> argparse.ArgumentParser:
 def main(argv: Optional[List[str]] = None) -> int:
     _telemetry.log_invocation("cortex-lifecycle-picker-decision")
     parser = _build_parser()
-    parser.parse_args(argv)
-    raise NotImplementedError("filled in by T5")
+    args = parser.parse_args(argv)
+    path = pathlib.Path(args.path)
+    # Treat empty string as None — the legacy snippet substituted
+    # '{branch_mode}' or None which produced an empty string when
+    # read_branch_mode returned None.
+    mode = args.mode if args.mode else None
+    fire, reason = should_fire_picker(path, args.slug, mode)
+    sys.stdout.write(json.dumps({"fire": fire, "reason": reason}) + "\n")
+    return 0
 
 
 if __name__ == "__main__":
