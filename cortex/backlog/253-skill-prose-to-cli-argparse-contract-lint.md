@@ -10,8 +10,8 @@ updated: 2026-05-25
 parent: "251"
 tags: [harness, skill-authoring, parity-lint]
 discovery_source: cortex/research/harness-friction-triage/research.md
-complexity: complex
-criticality: high
+complexity: simple
+criticality: medium
 spec: cortex/lifecycle/skill-prose-to-cli-argparse-contract/spec.md
 areas: [hooks]
 session_id: null
