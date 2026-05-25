@@ -19,11 +19,12 @@ from __future__ import annotations
 
 import ast
 import importlib.util
+import re
 import sys
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
+from typing import Iterable, Literal
 
 
 # ---------------------------------------------------------------------------
@@ -64,6 +65,331 @@ class ExtractionError:
 
     def format_text(self) -> str:
         return f"{self.code} {self.message}"
+
+
+@dataclass
+class Invocation:
+    """A detected cortex-* invocation in the scan corpus."""
+
+    path: Path
+    """File where the invocation was found."""
+
+    line: int
+    """1-based line number."""
+
+    col: int
+    """0-based column offset of the binary name."""
+
+    binary: str
+    """The cortex-* binary name matched (e.g. ``cortex-foo``)."""
+
+    tail_tokens: list[str]
+    """Whitespace-separated tokens after the binary name.
+
+    Templated placeholders (``{{...}}``, ``{...}``, ``<...>``) are kept
+    as opaque strings.  Empty when the binary appears alone (bare name).
+    """
+
+    fence_kind: Literal["fenced", "inline"]
+    """How the invocation was found: inside a fenced code block or an
+    inline-code span."""
+
+    preceding_line: str | None
+    """The raw text of the immediately preceding non-blank line, or None
+    if no such line exists.  Used by the sentinel-marker check."""
+
+
+# ---------------------------------------------------------------------------
+# Scan corpus globs and exclusions
+# ---------------------------------------------------------------------------
+
+_SCAN_GLOBS: tuple[str, ...] = (
+    "skills/**/*.md",
+    "hooks/**",
+    "justfile",
+    "docs/**/*.md",
+    "tests/**",
+    "CLAUDE.md",
+    "cortex/requirements/**/*.md",
+)
+
+# Hard exclusion patterns — checked against path relative to root.
+# Paths matching any of these prefixes (or exact names) are skipped.
+_HARD_EXCLUDE_PREFIXES: tuple[str, ...] = (
+    "cortex/research/archive/",
+    "cortex/lifecycle/",
+)
+
+_HARD_EXCLUDE_EXACT: frozenset[str] = frozenset(
+    {
+        "CHANGELOG.md",
+    }
+)
+
+_HARD_EXCLUDE_GLOBS: tuple[str, ...] = (
+    "bin/.audit-*-allowlist.md",
+    "bin/.parity-exceptions.md",
+)
+
+# Regex for cortex-* binary names.
+_BINARY_RE = re.compile(r"cortex-[a-z][a-z0-9-]*")
+
+# Fence delimiter regex (backtick or tilde runs of ≥3).
+_FENCE_RE = re.compile(r"^(`{3,}|~{3,})")
+
+# Inline code span regex — matches `...` (single-backtick) spans on a line.
+_INLINE_CODE_RE = re.compile(r"`([^`]+)`")
+
+# Templated placeholder patterns kept as opaque tokens.
+_PLACEHOLDER_RE = re.compile(r"(\{\{[^}]+\}\}|\{[^}]+\}|<[^>]+>)")
+
+
+def _is_hard_excluded(rel: str) -> bool:
+    """Return True if ``rel`` (relative path string) is hard-excluded."""
+    for prefix in _HARD_EXCLUDE_PREFIXES:
+        if rel.startswith(prefix):
+            return True
+    if rel in _HARD_EXCLUDE_EXACT:
+        return True
+    # Check glob-like patterns for bin/ exclusions.
+    p = Path(rel)
+    for pat in _HARD_EXCLUDE_GLOBS:
+        if p.match(pat):
+            return True
+    return False
+
+
+def _gather_corpus_paths(root: Path) -> list[Path]:
+    """Return deduplicated paths under ``root`` matching the scan globs."""
+    seen: set[Path] = set()
+    out: list[Path] = []
+    for glob in _SCAN_GLOBS:
+        for p in root.glob(glob):
+            if not p.is_file():
+                continue
+            rp = p.resolve()
+            if rp in seen:
+                continue
+            try:
+                rel = str(p.relative_to(root))
+            except ValueError:
+                rel = str(p)
+            if _is_hard_excluded(rel):
+                continue
+            seen.add(rp)
+            out.append(p)
+    return sorted(out, key=lambda p: str(p))
+
+
+def _tokenize_tail(tail: str) -> list[str]:
+    """Split ``tail`` (text after the binary name) into tokens.
+
+    Preserves templated placeholders as opaque tokens.  Uses simple
+    whitespace splitting after extracting placeholder spans.
+    """
+    tokens: list[str] = []
+    # Walk through the tail, extracting placeholder and regular tokens.
+    pos = 0
+    tail = tail.strip()
+    while pos < len(tail):
+        # Try matching a placeholder at current position.
+        m = _PLACEHOLDER_RE.match(tail, pos)
+        if m:
+            tokens.append(m.group(0))
+            pos = m.end()
+            # Skip whitespace after placeholder.
+            while pos < len(tail) and tail[pos].isspace():
+                pos += 1
+            continue
+        # Find the next whitespace or placeholder boundary.
+        end = pos
+        while end < len(tail):
+            if tail[end].isspace():
+                break
+            # Stop before a placeholder start.
+            if tail[end] in ('{', '<') and _PLACEHOLDER_RE.match(tail, end):
+                break
+            end += 1
+        if end > pos:
+            tokens.append(tail[pos:end])
+        # Skip whitespace.
+        pos = end
+        while pos < len(tail) and tail[pos].isspace():
+            pos += 1
+    return tokens
+
+
+def _scan_file_for_invocations(path: Path) -> list[Invocation]:
+    """Scan a single file and return all detected invocations."""
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+
+    lines = text.splitlines()
+    invocations: list[Invocation] = []
+
+    # Fence state machine (ported from prescriptive_prose.py:113-156).
+    in_fence = False
+    fence_delim: str | None = None
+
+    # Track the preceding non-blank line for each line.
+    prev_nonblank: str | None = None
+
+    # Buffer for backslash continuation within fenced blocks.
+    pending_fenced_line: str | None = None
+    pending_fenced_lineno: int = 0
+    pending_fenced_preceding: str | None = None
+
+    def _emit_fenced(combined: str, lineno: int, preceding: str | None) -> None:
+        """Detect invocations in a fenced-block line (already continuation-joined)."""
+        for m in _BINARY_RE.finditer(combined):
+            binary = m.group(0)
+            col = m.start()
+            tail = combined[m.end():]
+            tail_tokens = _tokenize_tail(tail)
+            invocations.append(Invocation(
+                path=path,
+                line=lineno,
+                col=col,
+                binary=binary,
+                tail_tokens=tail_tokens,
+                fence_kind="fenced",
+                preceding_line=preceding,
+            ))
+
+    for idx, raw in enumerate(lines, start=1):
+        # --- Fence state machine ---
+        m_fence = _FENCE_RE.match(raw)
+        if m_fence:
+            if not in_fence:
+                in_fence = True
+                fence_delim = m_fence.group(1)[0] * len(m_fence.group(1))
+                # Flush any pending continuation line.
+                if pending_fenced_line is not None:
+                    _emit_fenced(pending_fenced_line, pending_fenced_lineno, pending_fenced_preceding)
+                    pending_fenced_line = None
+            else:
+                # Closing fence: delimiter must match the opening character and
+                # length must be ≥ opening length.
+                opener_char = fence_delim[0]
+                opener_len = len(fence_delim)
+                raw_stripped = raw.rstrip()
+                if (
+                    raw_stripped
+                    and all(c == opener_char for c in raw_stripped)
+                    and len(raw_stripped) >= opener_len
+                ):
+                    # Flush any pending continuation.
+                    if pending_fenced_line is not None:
+                        _emit_fenced(pending_fenced_line, pending_fenced_lineno, pending_fenced_preceding)
+                        pending_fenced_line = None
+                    in_fence = False
+                    fence_delim = None
+            if raw.strip():
+                prev_nonblank = raw
+            continue
+
+        if in_fence:
+            # Handle backslash continuation within fenced blocks.
+            stripped = raw.rstrip("\n\r")
+            if stripped.endswith("\\"):
+                # Line continues — accumulate.
+                content = stripped[:-1]
+                if pending_fenced_line is None:
+                    pending_fenced_line = content
+                    pending_fenced_lineno = idx
+                    pending_fenced_preceding = prev_nonblank
+                else:
+                    pending_fenced_line += content
+            else:
+                # No continuation — flush accumulated + current.
+                if pending_fenced_line is not None:
+                    combined = pending_fenced_line + stripped
+                    _emit_fenced(combined, pending_fenced_lineno, pending_fenced_preceding)
+                    pending_fenced_line = None
+                else:
+                    _emit_fenced(stripped, idx, prev_nonblank)
+            if raw.strip():
+                prev_nonblank = raw
+            continue
+
+        # --- Outside fenced blocks: scan inline-code spans ---
+        for m_inline in _INLINE_CODE_RE.finditer(raw):
+            span_content = m_inline.group(1)
+            span_start = m_inline.start(1)
+            # Find cortex-* binary in the span.
+            for m_bin in _BINARY_RE.finditer(span_content):
+                binary = m_bin.group(0)
+                col = span_start + m_bin.start()
+                tail = span_content[m_bin.end():]
+                tail_tokens = _tokenize_tail(tail)
+                # Edge Case 5: bare-name inline-code (no trailing tokens) is skipped.
+                if not tail_tokens:
+                    continue
+                invocations.append(Invocation(
+                    path=path,
+                    line=idx,
+                    col=col,
+                    binary=binary,
+                    tail_tokens=tail_tokens,
+                    fence_kind="inline",
+                    preceding_line=prev_nonblank,
+                ))
+
+        if raw.strip():
+            prev_nonblank = raw
+
+    # Flush any unclosed continuation at EOF.
+    if pending_fenced_line is not None:
+        _emit_fenced(pending_fenced_line, pending_fenced_lineno, pending_fenced_preceding)
+
+    return invocations
+
+
+def scan_corpus(
+    root: Path,
+    paths: Iterable[Path] | None = None,
+) -> list[Invocation]:
+    """Walk the scan corpus and return all detected cortex-* invocations.
+
+    Parameters
+    ----------
+    root:
+        Repository root used to resolve scan globs and exclusions.
+    paths:
+        Explicit path list to scan instead of the default glob walk.
+        Hard-exclusion filtering is still applied.  Useful for staged-mode
+        scanning where the caller already has the path list.
+
+    Returns
+    -------
+    list[Invocation]
+        All invocations found in fenced code blocks or inline-code spans.
+        Prose mentions (bare binary name outside code context) are omitted.
+    """
+    if paths is not None:
+        candidates: list[Path] = []
+        seen: set[Path] = set()
+        for p in paths:
+            rp = p.resolve()
+            if rp in seen:
+                continue
+            try:
+                rel = str(p.relative_to(root))
+            except ValueError:
+                rel = str(p)
+            if _is_hard_excluded(rel):
+                continue
+            seen.add(rp)
+            candidates.append(p)
+    else:
+        candidates = _gather_corpus_paths(root)
+
+    all_invocations: list[Invocation] = []
+    for p in candidates:
+        all_invocations.extend(_scan_file_for_invocations(p))
+    return all_invocations
 
 
 # ---------------------------------------------------------------------------
