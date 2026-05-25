@@ -21,6 +21,13 @@ from pathlib import Path
 from typing import Any
 
 from cortex_command.backlog import _telemetry
+from cortex_command.backlog.resolve_item import (
+    ResolutionError,
+    ResolutionResult,
+    _format_candidates,
+    _parse_frontmatter,
+    resolve,
+)
 from cortex_command.common import TERMINAL_STATUSES, _resolve_user_project_root, atomic_write
 
 
@@ -105,45 +112,41 @@ def _parse_inline_str_list(val: str) -> list[str]:
 # ---------------------------------------------------------------------------
 
 def _find_item(slug_or_uuid: str, backlog_dir: Path) -> Path | None:
-    """Find a backlog item by slug substring or UUID prefix.
+    """Find a backlog item via the shared 5-step ``resolve()`` library.
 
-    Search order:
-      1. Exact filename match (``NNN-slug.md``)
-      2. Exact numeric prefix match (pure-digit queries) or substring match (slug queries)
-      3. UUID field match (prefix or full)
+    Preserves the historic ``Path | None`` signature for external callers
+    (``outcome_router._find_backlog_item_path``, the overnight test conftest).
+    Maps ``ResolutionResult.status``:
+      - ``"ok"``         → return the resolved path
+      - ``"not_found"``  → return ``None``
+      - ``"ambiguous"``  → return ``None`` (legacy callers don't carry exit-2
+        semantics; ambiguity degrades to "no match", which is safer than the
+        historic silent-first-match behavior being replaced)
+
+    For the CLI's ambiguity surfacing (exit-2 + candidate list), see
+    ``_find_item_with_status``.
     """
     if backlog_dir is None:
         raise TypeError("backlog_dir is required")
     if not backlog_dir.is_dir():
         return None
 
-    # Try exact filename match first
-    for p in sorted(backlog_dir.glob("[0-9]*-*.md")):
-        # Strip the .md extension and compare
-        stem = p.stem  # e.g. "030-cf-tunnel-fallback-polish"
-        if stem == slug_or_uuid:
-            return p
+    try:
+        result = resolve(slug_or_uuid, backlog_dir)
+    except ResolutionError:
+        return None
 
-    # For pure-numeric queries, match the exact ID prefix to avoid "100" matching
-    # "1000-foo.md" when "100-foo.md" has been archived.
-    if slug_or_uuid.isdigit():
-        for p in sorted(backlog_dir.glob("[0-9]*-*.md")):
-            if p.stem.startswith(f"{slug_or_uuid}-"):
-                return p
-    else:
-        # Try filename substring match for slug queries
-        for p in sorted(backlog_dir.glob("[0-9]*-*.md")):
-            if slug_or_uuid in p.stem:
-                return p
-
-    # Try UUID match (reading frontmatter)
-    for p in sorted(backlog_dir.glob("[0-9]*-*.md")):
-        text = p.read_text()
-        uuid_val = _get_frontmatter_value(text, "uuid")
-        if uuid_val and uuid_val.startswith(slug_or_uuid):
-            return p
-
+    if result.status == "ok":
+        return result.item
     return None
+
+
+def _find_item_with_status(slug_or_uuid: str, backlog_dir: Path) -> ResolutionResult:
+    """Return the full ``ResolutionResult`` from the shared 5-step library.
+
+    Used by ``main()`` to surface ambiguity as exit-2 + stderr candidate list.
+    """
+    return resolve(slug_or_uuid, backlog_dir)
 
 
 # ---------------------------------------------------------------------------
@@ -558,11 +561,35 @@ def main() -> int:
                 continue
         fields[fm_key] = value
 
-    # Find the item
-    item_path = _find_item(slug_or_uuid, BACKLOG_DIR)
-    if item_path is None:
+    # Find the item via the shared 5-step resolver. On ambiguity, surface the
+    # candidate list to stderr and exit 2 (no file mutation). On not_found,
+    # preserve the historic exit-1 behavior.
+    try:
+        result = _find_item_with_status(slug_or_uuid, BACKLOG_DIR)
+    except ResolutionError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+
+    if result.status == "ambiguous":
+        items_with_fm = []
+        for p in result.candidates:
+            try:
+                items_with_fm.append((p, _parse_frontmatter(p)))
+            except Exception:
+                items_with_fm.append((p, {}))
+        print(
+            _format_candidates(result.candidates, items_with_fm),
+            file=sys.stderr,
+        )
+        return 2
+
+    if result.status == "not_found":
         print(f"Item not found: {slug_or_uuid}", file=sys.stderr)
         return 1
+
+    # status == "ok"
+    item_path = result.item
+    assert item_path is not None  # status="ok" guarantees item is set
 
     update_item(item_path, fields, BACKLOG_DIR, session_id=session_id)
     print(f"Updated: {item_path}")

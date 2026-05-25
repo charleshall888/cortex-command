@@ -60,7 +60,7 @@ Extract a pure `resolve()` library function from `cortex_command/backlog/resolve
 - **Complexity**: simple
 - **Context**: `tests/conftest.py` is currently 108 lines and already imports `pathlib`, `yaml`; adding a list constant is a 30-line append. The `_make_item` fixture-helper at `tests/test_resolve_backlog_item.py:128-133` should also be promoted to `conftest.py` in the same task (Task 7 needs it) — promote as a public helper function (no `_` prefix) so the new test file can import it directly.
 - **Verification**: `python3 -c "from tests.conftest import BACKLOG_RESOLUTION_CORPUS; assert len(BACKLOG_RESOLUTION_CORPUS) >= 22; print('ok')"` exits 0 AND `pytest tests/test_resolve_backlog_item.py` exits 0 (corpus reference moved cleanly).
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 6: Retrofit `update_item._find_item` to call `resolve()`; add `_find_item_with_status` + exit-2 in `main()`
 - **Files**: `cortex_command/backlog/update_item.py`, `cortex_command/overnight/outcome_router.py`, `cortex_command/overnight/tests/conftest.py`
