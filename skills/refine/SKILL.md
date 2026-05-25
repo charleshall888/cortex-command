@@ -81,7 +81,7 @@ Key outputs from Clarify (record these for use in subsequent phases):
 After complexity and criticality are determined, run the write-back immediately (Context A only):
 
 ```bash
-cortex-update-item {backlog-filename-slug} complexity={value} criticality={value}
+cortex-update-item {backlog-filename-slug} --complexity {value} --criticality {value}
 ```
 
 If `cortex-update-item` fails, surface the error and wait for the user to resolve before continuing.
@@ -184,16 +184,14 @@ After user approves the spec:
 **Infer areas**: Identify which subsystem the feature primarily modifies. Canonical area names: `overnight-runner`, `backlog`, `skills`, `lifecycle`, `hooks`, `report`, `tests`, `docs`. Use the primary subsystem only — the one where most files change. If the feature spans 4+ subsystems with no clear primary, use `areas=[]`.
 
 ```bash
-cortex-update-item {backlog-filename-slug} status=refined spec=cortex/lifecycle/{lifecycle-slug}/spec.md
+cortex-update-item {backlog-filename-slug} --status refined --spec cortex/lifecycle/{lifecycle-slug}/spec.md
 ```
 
 ```bash
-cortex-update-item {backlog-filename-slug} "areas=[area1,area2]"
+cortex-update-item {backlog-filename-slug} --areas area1 area2
 ```
 
-For empty areas: `cortex-update-item {backlog-filename-slug} "areas=[]"`. The quoted string preserves the list format through shell argument parsing.
-
-Keep these as two separate sequential `cortex-update-item` calls — do not combine them into one invocation to avoid argument-parsing ambiguity with list values.
+For empty areas: `cortex-update-item {backlog-filename-slug} --areas` (passing `--areas` with no values clears the list).
 
 If either `cortex-update-item` call fails, surface the error and wait for the user to resolve. Do not proceed silently.
 
