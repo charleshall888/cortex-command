@@ -17,3 +17,5 @@
 {"ts": "2026-05-25T21:53:55Z", "event": "batch_dispatch", "feature": "lifecycle-implement-auto-enter-worktree-via", "batch": 4, "tasks": [8]}
 {"ts": "2026-05-25T22:00:58Z", "event": "batch_dispatch", "feature": "lifecycle-implement-auto-enter-worktree-via", "batch": 5, "tasks": [10]}
 {"ts": "2026-05-25T22:05:10Z", "event": "batch_dispatch", "feature": "lifecycle-implement-auto-enter-worktree-via", "batch": 6, "tasks": [11, 13]}
+{"ts": "2026-05-25T22:44:44Z", "event": "manual_verification_deferred", "feature": "lifecycle-implement-auto-enter-worktree-via", "deferred_tasks": [17, 18, 19], "reason": "user_decision_skip_with_investigation_on_failure"}
+{"ts": "2026-05-25T22:44:44Z", "event": "phase_transition", "feature": "lifecycle-implement-auto-enter-worktree-via", "tier": "complex", "from": "implement", "to": "review"}
