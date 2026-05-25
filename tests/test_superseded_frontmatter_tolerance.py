@@ -52,8 +52,6 @@ field did not corrupt sibling keys).
 
 from __future__ import annotations
 
-import importlib.machinery
-import importlib.util
 import json
 import os
 import subprocess
@@ -62,26 +60,14 @@ from pathlib import Path
 
 import pytest
 
-
-REPO_ROOT = Path(__file__).resolve().parent.parent
-LOAD_PARENT_EPIC = REPO_ROOT / "bin" / "cortex-load-parent-epic"
-RESOLVE_BACKLOG_ITEM = REPO_ROOT / "bin" / "cortex-resolve-backlog-item"
+import cortex_command.backlog.load_parent_epic as _load_parent_epic_module
+import cortex_command.backlog.resolve_item as _resolve_item_module
 
 
 # Sample frontmatter blob the new R13 artifact would carry. Mirrors the
 # shape documented in skills/discovery/SKILL.md Step 2:
 #   superseded: cortex/research/<prior-topic>/research.md
 SAMPLE_SUPERSEDED_VALUE = "cortex/research/plugin-system/research.md"
-
-
-def _load_module_from_path(name: str, path: Path):
-    """Load a module-by-path so dashed-name scripts can be imported."""
-    loader = importlib.machinery.SourceFileLoader(name, str(path))
-    spec = importlib.util.spec_from_loader(name, loader)
-    assert spec is not None
-    module = importlib.util.module_from_spec(spec)
-    loader.exec_module(module)
-    return module
 
 
 # ---------------------------------------------------------------------------
@@ -106,7 +92,7 @@ def test_clarify_critic_loader_tolerates_superseded_on_child(tmp_path: Path) -> 
 
     env = {"CORTEX_BACKLOG_DIR": str(tmp_path), **os.environ}
     result = subprocess.run(
-        [sys.executable, str(LOAD_PARENT_EPIC), "300-test-child"],
+        [sys.executable, "-m", "cortex_command.backlog.load_parent_epic", "300-test-child"],
         capture_output=True,
         text=True,
         env=env,
@@ -125,9 +111,7 @@ def test_clarify_critic_loader_helper_returns_superseded_value(tmp_path: Path) -
     when invoked on a file whose frontmatter carries ``superseded:``, the
     helper returns the field's value alongside all other keys.
     """
-    module = _load_module_from_path(
-        "cortex_load_parent_epic_for_test", LOAD_PARENT_EPIC
-    )
+    module = _load_parent_epic_module
 
     artifact = tmp_path / "research.md"
     artifact.write_text(
@@ -169,7 +153,7 @@ def test_discovery_bootstrap_loader_tolerates_superseded_on_backlog_item(
     )
 
     result = subprocess.run(
-        [sys.executable, str(RESOLVE_BACKLOG_ITEM), "supersede-test"],
+        [sys.executable, "-m", "cortex_command.backlog.resolve_item", "supersede-test"],
         capture_output=True,
         text=True,
         cwd=tmp_path.parent,
@@ -185,7 +169,7 @@ def test_discovery_bootstrap_loader_tolerates_superseded_on_backlog_item(
         item2 = backlog_dir / "300-supersede-test.md"
         item2.write_text(item.read_text(encoding="utf-8"), encoding="utf-8")
         result = subprocess.run(
-            [sys.executable, str(RESOLVE_BACKLOG_ITEM), "supersede-test"],
+            [sys.executable, "-m", "cortex_command.backlog.resolve_item", "supersede-test"],
             capture_output=True,
             text=True,
             cwd=tmp_path,
@@ -206,9 +190,7 @@ def test_discovery_bootstrap_loader_helper_returns_superseded_value(
     parsing a file with ``superseded:`` returns the field's value alongside
     siblings.
     """
-    module = _load_module_from_path(
-        "cortex_resolve_backlog_item_for_test", RESOLVE_BACKLOG_ITEM
-    )
+    module = _resolve_item_module
 
     artifact = tmp_path / "research.md"
     artifact.write_text(
