@@ -7,7 +7,6 @@
 | 263 | Extend cortex-cli-version-sync hook to perform background reinstall on drift | refined | high | feature | — | — | ✓ |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 186 | Clarify-critic schema validator + warning-template runtime validator (per #178 R7 follow-on) | proposed | medium | feature | — | 178 | — |
-| 250 | Lifecycle implement: auto-enter worktree via EnterWorktree (Approach A, deferred design surface) | refined | medium | feature | — | — | ✓ |
 | 254 | Unified backlog/lifecycle slug resolver: extend to cortex-update-item consumer | refined | medium | feature | — | 251 | ✓ |
 | 262 | Extend overnight circuit breaker to halt on systemic worker failures | refined | medium | chore | — | — | ✓ |
 | 156 | Make cortex-check-parity context-aware (skip tokens inside fenced code blocks) | deferred | low | feature | — | — | — |
@@ -17,7 +16,6 @@
 ## Refined
 
 - **263** Extend cortex-cli-version-sync hook to perform background reinstall on drift
-- **250** Lifecycle implement: auto-enter worktree via EnterWorktree (Approach A, deferred design surface)
 - **254** Unified backlog/lifecycle slug resolver: extend to cortex-update-item consumer
 - **262** Extend overnight circuit breaker to halt on systemic worker failures
 - **247** Offer consolidation clusters before R15 gate in discovery decompose

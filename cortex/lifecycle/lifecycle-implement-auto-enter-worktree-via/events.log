@@ -21,3 +21,4 @@
 {"ts": "2026-05-25T22:44:44Z", "event": "phase_transition", "feature": "lifecycle-implement-auto-enter-worktree-via", "tier": "complex", "from": "implement", "to": "review"}
 {"ts": "2026-05-25T22:50:27Z", "event": "review_verdict", "feature": "lifecycle-implement-auto-enter-worktree-via", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
 {"ts": "2026-05-25T22:50:27Z", "event": "phase_transition", "feature": "lifecycle-implement-auto-enter-worktree-via", "from": "review", "to": "complete"}
+{"ts": "2026-05-25T22:54:05Z", "event": "feature_complete", "feature": "lifecycle-implement-auto-enter-worktree-via", "tasks_total": 19, "rework_cycles": 1, "merge_anchor": "merge"}

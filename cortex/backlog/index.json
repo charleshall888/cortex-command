@@ -81,7 +81,7 @@
     "uuid": "1b9ed218-01d7-4ad1-a699-26e2d8097d79",
     "lifecycle_slug": "extend-cortex-cli-version-sync-hook",
     "session_id": null,
-    "lifecycle_phase": "plan",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
@@ -145,35 +145,6 @@
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 250,
-    "title": "Lifecycle implement: auto-enter worktree via EnterWorktree (Approach A, deferred design surface)",
-    "status": "refined",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "lifecycle",
-      "worktree-interactive"
-    ],
-    "areas": [
-      "skills"
-    ],
-    "created": "2026-05-19",
-    "updated": "2026-05-25",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "cortex/lifecycle/lifecycle-implement-auto-enter-worktree-via/spec.md",
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "6c945638-4fc4-4f1b-ad68-1c1e102c24b4",
-    "lifecycle_slug": "lifecycle-implement-auto-enter-worktree-via",
-    "session_id": "2cbb69a0-e944-44fb-9100-930a9ed63327",
-    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },

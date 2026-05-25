@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 6c945638-4fc4-4f1b-ad68-1c1e102c24b4
 title: "Lifecycle implement: auto-enter worktree via EnterWorktree (Approach A, deferred design surface)"
-status: refined
+status: complete
 priority: medium
 type: feature
 created: 2026-05-19
