@@ -6,12 +6,12 @@ frontmatter updates, sidecar event logging, and dependency cascade — all
 without moving any file.
 
 Usage:
-    cortex-update-item <slug-or-uuid> key=value [key=value ...]
+    cortex-update-item <slug-or-uuid> [--status STATUS] [--areas AREA ...] [--tags TAG ...] ...
 
 Examples:
-    cortex-update-item 030-cf-tunnel-fallback-polish status=complete
-    cortex-update-item 030-cf-tunnel-fallback-polish status=complete session_id=null
-    cortex-update-item 550e8400-... lifecycle_phase=implement
+    cortex-update-item 030-cf-tunnel-fallback-polish --status complete
+    cortex-update-item 030-cf-tunnel-fallback-polish --status complete --session-id null
+    cortex-update-item 550e8400-... --lifecycle-phase implement
 
 Exit 0 = item updated successfully.
 Exit 1 = item not found or no fields provided.
@@ -19,6 +19,7 @@ Exit 1 = item not found or no fields provided.
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import re
@@ -430,35 +431,116 @@ def update_item(
 # CLI
 # ---------------------------------------------------------------------------
 
+# Scalar flags whose argparse `dest` matches the frontmatter key directly.
+_SCALAR_FLAGS: tuple[tuple[str, str | None], ...] = (
+    # (flag, dest-override)
+    ("--status", None),
+    ("--priority", None),
+    ("--type", "item_type"),
+    ("--complexity", None),
+    ("--criticality", None),
+    ("--spec", None),
+    ("--lifecycle-slug", "lifecycle_slug"),
+    ("--lifecycle-phase", "lifecycle_phase"),
+    ("--session-id", "session_id"),
+    ("--parent", None),
+    ("--blocked-by", "blocked_by"),
+    ("--rework-of", "rework_of"),
+)
+
+# Mapping from argparse `dest` (Namespace attribute) to the frontmatter key
+# that update_item() writes. For most flags these are identical; --type maps
+# to a different frontmatter key.
+_DEST_TO_FRONTMATTER_KEY: dict[str, str] = {
+    "status": "status",
+    "priority": "priority",
+    "item_type": "type",
+    "complexity": "complexity",
+    "criticality": "criticality",
+    "spec": "spec",
+    "lifecycle_slug": "lifecycle_slug",
+    "lifecycle_phase": "lifecycle_phase",
+    "parent": "parent",
+    "blocked_by": "blocked-by",
+    "rework_of": "rework_of",
+    "areas": "areas",
+    "tags": "tags",
+}
+
+# Scalar dests that should null/none/"" → Python None coerce.
+_SCALAR_DESTS: frozenset[str] = frozenset(
+    {
+        "status",
+        "priority",
+        "item_type",
+        "complexity",
+        "criticality",
+        "spec",
+        "lifecycle_slug",
+        "lifecycle_phase",
+        "parent",
+        "blocked_by",
+        "rework_of",
+    }
+)
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    """Build the argparse parser for ``cortex-update-item``."""
+    parser = argparse.ArgumentParser(
+        prog="cortex-update-item",
+        allow_abbrev=False,
+        description=(
+            "Update a backlog item's frontmatter fields atomically in place. "
+            "All flags are optional; a no-flag invocation is a no-op."
+        ),
+    )
+    parser.add_argument(
+        "slug",
+        help="Slug, numeric ID, or UUID prefix identifying the backlog item.",
+    )
+    for flag, dest_override in _SCALAR_FLAGS:
+        kwargs: dict[str, Any] = {"default": None}
+        if dest_override is not None:
+            kwargs["dest"] = dest_override
+        parser.add_argument(flag, **kwargs)
+    parser.add_argument("--areas", nargs="*", default=None)
+    parser.add_argument("--tags", nargs="*", default=None)
+    return parser
+
+
 def main() -> int:
     _telemetry.log_invocation("cortex-update-item")
-    if len(sys.argv) < 3:
-        print(
-            "Usage: cortex-update-item <slug-or-uuid> key=value [key=value ...]",
-            file=sys.stderr,
-        )
-        return 1
+
+    parser = _build_parser()
+    args = parser.parse_args()
 
     # CLI-layer resolver routing — internal callers must pass backlog_dir
     # explicitly (see spec R3 / update_item signature). Routes through
     # _resolve_user_project_root() so the CLI works from any subdirectory.
     BACKLOG_DIR = _resolve_user_project_root() / "cortex" / "backlog"
 
-    slug_or_uuid = sys.argv[1]
-    field_args = sys.argv[2:]
+    slug_or_uuid = args.slug
+    session_id = args.session_id
 
-    # Parse key=value pairs
+    # session_id `null`/`none`/`""` coerces to Python None (preserves legacy
+    # CLI semantics for the value, while routing it as a separate kwarg to
+    # update_item() rather than as a member of fields_dict).
+    if session_id is not None and session_id.lower() in ("null", "none", ""):
+        session_id = None
+
+    # Collect non-None namespace attrs (except session_id) into fields_dict,
+    # remapped to their frontmatter keys.
     fields: dict[str, Any] = {}
-    for arg in field_args:
-        if "=" not in arg:
-            print(f"Invalid argument (expected key=value): {arg}", file=sys.stderr)
-            return 1
-        key, value = arg.split("=", 1)
-        # Handle null/None values
-        if value.lower() in ("null", "none", ""):
-            fields[key] = None
-        else:
-            fields[key] = value
+    for dest, fm_key in _DEST_TO_FRONTMATTER_KEY.items():
+        value = getattr(args, dest, None)
+        if value is None:
+            continue
+        if dest in _SCALAR_DESTS and isinstance(value, str):
+            if value.lower() in ("null", "none", ""):
+                fields[fm_key] = None
+                continue
+        fields[fm_key] = value
 
     # Find the item
     item_path = _find_item(slug_or_uuid, BACKLOG_DIR)
@@ -466,7 +548,7 @@ def main() -> int:
         print(f"Item not found: {slug_or_uuid}", file=sys.stderr)
         return 1
 
-    update_item(item_path, fields, BACKLOG_DIR)
+    update_item(item_path, fields, BACKLOG_DIR, session_id=session_id)
     print(f"Updated: {item_path}")
     return 0
 

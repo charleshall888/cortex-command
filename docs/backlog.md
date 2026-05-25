@@ -104,8 +104,8 @@ Reads `cortex/backlog/index.md` and presents items from the Ready section (items
 Updates item status in place using `cortex-update-item`:
 
 ```bash
-cortex-update-item <item> status=complete
-cortex-update-item <item> status=abandoned
+cortex-update-item <item> --status complete
+cortex-update-item <item> --status abandoned
 ```
 
 No file is moved. The script cascades `blocked-by` cleanup across the backlog and auto-closes parent epics when all children reach a terminal status.
@@ -163,12 +163,12 @@ This coupling means that features discovered via `/cortex-core:discovery` arrive
 `cortex-update-item` (registered as a console script in `pyproject.toml`; canonical source lives at `cortex/backlog/update_item.py`) is the canonical tool for automated write-backs to backlog frontmatter. It is used by the `/cortex-core:refine` skill, lifecycle hooks, and the overnight pipeline to update items without manual editing.
 
 ```
-cortex-update-item <slug-or-uuid> key=value [key=value ...]
+cortex-update-item <slug-or-uuid> [--flag value ...]
 ```
 
 **Lookup.** The first argument is matched against item filenames (exact stem, then substring), then against `uuid` fields. UUID prefix matching is supported.
 
-**Field updates.** Each `key=value` argument sets a frontmatter field. The `updated` field is always set to today's date automatically. Use `key=null` or `key=none` to clear a field.
+**Field updates.** Each `--flag value` argument sets a frontmatter field. The `updated` field is always set to today's date automatically. Use `--flag null` or `--flag none` to clear a field.
 
 **Side effects on every update:**
 - Writes the updated file atomically (write-then-rename).
@@ -185,16 +185,16 @@ cortex-update-item <slug-or-uuid> key=value [key=value ...]
 
 ```bash
 # Mark an item complete by slug
-cortex-update-item 030-cf-tunnel-fallback-polish status=complete
+cortex-update-item 030-cf-tunnel-fallback-polish --status complete
 
 # Update lifecycle phase by UUID
-cortex-update-item 550e8400-... lifecycle_phase=implement
+cortex-update-item 550e8400-... --lifecycle-phase implement
 
 # Clear the session_id field
-cortex-update-item 030-cf-tunnel-fallback-polish session_id=null
+cortex-update-item 030-cf-tunnel-fallback-polish --session-id null
 
 # Update multiple fields at once
-cortex-update-item 030-cf-tunnel-fallback-polish status=complete session_id=null
+cortex-update-item 030-cf-tunnel-fallback-polish --status complete --session-id null
 ```
 
 ---
