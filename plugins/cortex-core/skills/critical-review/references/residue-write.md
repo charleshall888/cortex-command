@@ -9,33 +9,21 @@ B-class findings remain.
 Resolve `{feature}` from `$LIFECYCLE_SESSION_ID` against `cortex/lifecycle/*/.session` files (whitespace-stripped match):
 
 ```bash
-REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
-[ -z "$REPO_ROOT" ] || MATCHES=$(python3 -c "
-import os, glob
-sid = os.environ.get('LIFECYCLE_SESSION_ID', '')
-print('\n'.join(p for p in glob.glob(os.path.join('$REPO_ROOT','lifecycle','*','.session')) if open(p).read().strip()==sid))")
+FEATURE=$(cortex-critical-review-resolve-feature "$LIFECYCLE_SESSION_ID")
 ```
 
-- **One match**: `{feature}` = parent dir of matched `.session`; proceed to atomic write.
-- **Zero matches** (or no `REPO_ROOT`): ad-hoc mode — if B-class findings exist, emit `Note: B-class residue not written — no active lifecycle context.`; skip write.
-- **Multiple matches**: emit `Note: multiple active lifecycle sessions matched $LIFECYCLE_SESSION_ID; B-class residue write skipped.`; skip write.
+The `cortex-critical-review-resolve-feature` console-script prints the resolved feature slug on stdout (exit 0) when exactly one `.session` file matches. On zero matches or multiple matches it exits non-zero and writes a diagnostic to stderr; the skill must propagate the failure:
+
+- **One match** (exit 0): `$FEATURE` = resolved slug; proceed to atomic write.
+- **Zero matches** (non-zero exit, or no repo root): ad-hoc mode — if B-class findings exist, emit `Note: B-class residue not written — no active lifecycle context.`; skip write.
+- **Multiple matches** (non-zero exit): emit `Note: multiple active lifecycle sessions matched $LIFECYCLE_SESSION_ID; B-class residue write skipped.`; skip write.
 
 ## Atomic Write
 
-Only when `{feature}` resolved AND ≥1 B-class finding — inline `python3 -c` performing a tempfile + `os.replace` atomic rename to `cortex/lifecycle/{feature}/critical-review-residue.json`:
+Only when `{feature}` resolved AND ≥1 B-class finding — invoke the `cortex-critical-review-write-residue` console-script, which performs a tempfile + `os.replace` atomic rename to `cortex/lifecycle/{feature}/critical-review-residue.json`. The payload JSON is piped in via stdin:
 
 ```bash
-python3 -c "
-import json, os, sys, tempfile
-from pathlib import Path
-final = Path('$REPO_ROOT')/'lifecycle'/'$FEATURE'/'critical-review-residue.json'
-final.parent.mkdir(parents=True, exist_ok=True)
-data = json.dumps(json.loads(sys.stdin.read()), indent=2)+'\n'
-with tempfile.NamedTemporaryFile('w', dir=str(final.parent), delete=False) as tmp:
-    tmp.write(data)
-    tmp_path = tmp.name
-os.replace(tmp_path, final)
-" <<< "$PAYLOAD_JSON"
+cortex-critical-review-write-residue --feature "$FEATURE" <<< "$PAYLOAD_JSON"
 ```
 
 ## Payload Schema (R4)

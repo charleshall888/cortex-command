@@ -89,7 +89,7 @@ Full invocation contract and resolution instructions: `${CLAUDE_SKILL_DIR}/refer
 
 ### Step 2e: Residue Write
 
-After synthesis (or Step 2c.5 pass-through), atomically write any B-class findings to a sidecar JSON for the morning report. Skip silently when zero B-class findings remain. Resolve `{feature}` from `$LIFECYCLE_SESSION_ID` against `cortex/lifecycle/*/.session` files; on multiple-match or zero-match, emit the documented note and skip the write. The write is an inline `python3 -c` tempfile + `os.replace` atomic rename to `cortex/lifecycle/{feature}/critical-review-residue.json`.
+After synthesis (or Step 2c.5 pass-through), atomically write any B-class findings to a sidecar JSON for the morning report. Skip silently when zero B-class findings remain. Resolve `{feature}` from `$LIFECYCLE_SESSION_ID` against `cortex/lifecycle/*/.session` files; on multiple-match or zero-match, emit the documented note and skip the write. The write is performed via the `cortex-critical-review-write-residue` console-script, which performs a tempfile + `os.replace` atomic rename to `cortex/lifecycle/{feature}/critical-review-residue.json`.
 
 Resolver script, payload schema (R4), and gating rules: `${CLAUDE_SKILL_DIR}/references/residue-write.md`.
 

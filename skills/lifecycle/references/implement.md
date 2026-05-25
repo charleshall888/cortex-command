@@ -19,25 +19,27 @@ Read `cortex/lifecycle/{feature}/plan.md` and identify pending tasks (those with
 - **Implement on feature branch with worktree** — creates an `interactive/{slug}` worktree at `<repo>/.claude/worktrees/interactive-{slug}/` and returns the path; the user then manually cd's into the worktree OR opens a fresh `claude --worktree=<path>` session to continue the implement phase there (Variant A vs Variant B dispatch is owned by epic #240; T10 ships only the create + handoff step). **When to pick**: medium/many-task features where you want an isolated branch with worktree but still need live steering. Proceeds to §1a below.
 - **Create feature branch** — create `feature/{lifecycle-slug}` for PR-based workflow. **When to pick**: you want a PR-based flow but cannot use a worktree (e.g., tooling that assumes a single checkout). NOTE: this runs `git checkout` on the main session and can corrupt parallel sessions in this repo.
 
-**Branch-mode dispatch preflight**: Before the uncommitted-changes guard and the runtime probe below, consult the per-repo `branch-mode` config. The `read_branch_mode` invocation here is the **structural marker** that the parity test (`tests/test_lifecycle_kept_pauses_parity.py`'s `conditional pause` sentinel) anchors against — its presence in this section is load-bearing for the documentation-parity test, in addition to gating the runtime dispatch.
+**Branch-mode dispatch preflight**: Before the uncommitted-changes guard and the runtime probe below, consult the per-repo `branch-mode` config. The `cortex-lifecycle-branch-mode` CLI invocation here is the **structural marker** that the parity test (`tests/test_lifecycle_kept_pauses_parity.py`'s `conditional pause` sentinel) anchors against — its presence in this section is load-bearing for the documentation-parity test, in addition to gating the runtime dispatch.
 
 Run two Bash calls (no compound commands):
 
 1. Read the configured `branch-mode` value:
 
    ```bash
-   python3 -c "import pathlib; from cortex_command.lifecycle_config import read_branch_mode; print(read_branch_mode(pathlib.Path('.')) or '')"
+   cortex-lifecycle-branch-mode .
    ```
 
-   The primitive returns the raw whitespace-stripped string from `cortex/lifecycle.config.md`'s YAML frontmatter, or empty (treated as `None`) when the file is missing, the field is absent, or the frontmatter is malformed. Caller-side closed-set validation is deferred to `should_fire_picker` below — invalid values fall through to the picker via the `branch_mode_unset_or_invalid` reason.
+   The CLI calls `cortex_command.lifecycle_config.read_branch_mode` and prints the raw whitespace-stripped string from `cortex/lifecycle.config.md`'s YAML frontmatter, or empty (treated as `None`) when the file is missing, the field is absent, or the frontmatter is malformed. Caller-side closed-set validation is deferred to `should_fire_picker` below — invalid values fall through to the picker via the `branch_mode_unset_or_invalid` reason.
 
-2. Decide whether the picker fires, given the value above and the current preflight state:
+2. Decide whether the picker fires, given the value above and the current preflight state. The CLI emits a JSON object `{"fire": <bool>, "reason": "<closed-set-token>"}`; parse it with `jq` by capturing stdout once and then extracting each field via a separate `jq` invocation:
 
    ```bash
-   python3 -c "import pathlib; from cortex_command.lifecycle_implement import should_fire_picker; fire, reason = should_fire_picker(pathlib.Path('.'), '{slug}', '{branch_mode}' or None); print(f'{fire}\t{reason}')"
+   DECISION=$(cortex-lifecycle-picker-decision . {slug} {branch_mode})
+   FIRE=$(printf '%s' "$DECISION" | jq -r '.fire')
+   REASON=$(printf '%s' "$DECISION" | jq -r '.reason')
    ```
 
-   `should_fire_picker` returns `(True, reason)` when any of these hold (first match wins): `branch_mode` is `None` or outside the closed set `{"worktree-interactive", "trunk", "feature-branch", "prompt"}`; `branch_mode == "prompt"`; `git status --porcelain` is non-empty (dirty-tree carve-out — the existing line 22 demote-and-warn guard handles the user-facing cue when the picker subsequently fires); `cortex/lifecycle/sessions/{slug}.interactive.pid` exists with a live PID (concurrent interactive worktree carve-out — defensively re-checked at §1a:78–82). Otherwise it returns `(False, "suppressed")`.
+   The third positional argument (`{branch_mode}`) is the value emitted by step 1; omit it when the branch-mode value is empty. `FIRE` holds the lowercase JSON literal `true` or `false` — branch on it with `[ "$FIRE" = "true" ]` (or, equivalently, use jq's exit-code semantics directly: `printf '%s' "$DECISION" | jq -e '.fire' >/dev/null && ... || ...`). `should_fire_picker` returns `(True, reason)` when any of these hold (first match wins): `branch_mode` is `None` or outside the closed set `{"worktree-interactive", "trunk", "feature-branch", "prompt"}`; `branch_mode == "prompt"`; `git status --porcelain` is non-empty (dirty-tree carve-out — the existing line 22 demote-and-warn guard handles the user-facing cue when the picker subsequently fires); `cortex/lifecycle/sessions/{slug}.interactive.pid` exists with a live PID (concurrent interactive worktree carve-out — defensively re-checked at §1a:78–82). Otherwise it returns `(False, "suppressed")`.
 
 **Routing on the result.** Each of the four closed-set values has an explicit destination:
 
