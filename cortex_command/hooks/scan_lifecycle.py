@@ -276,6 +276,76 @@ def _events_log_has_event(events_log: Path, event_name: str) -> bool:
     return needle_no_space in content
 
 
+def _events_log_meta(feature_dir: Path) -> dict[str, str | None]:
+    """Return ``{"latest_ts": str|None, "last_event": str|None}`` for the
+    feature's ``events.log``.
+
+    ``latest_ts`` is the maximum ``ts`` field across parseable JSON
+    lines (ISO 8601, Z-suffix accepted). ``last_event`` is the
+    ``event`` field of the line-position-last JSON event (used by the
+    diagnostic, distinct from :func:`_is_stale`'s ts-based staleness).
+    Missing / unreadable / unparseable events.log returns
+    ``{"latest_ts": None, "last_event": None}`` — fail-open so the
+    caller can render a partial diagnostic.
+    """
+
+    events_log = feature_dir / "events.log"
+    try:
+        content = events_log.read_text(encoding="utf-8")
+    except (OSError, ValueError):
+        return {"latest_ts": None, "last_event": None}
+
+    latest_ts: str | None = None
+    last_event: str | None = None
+    for line in content.splitlines():
+        line = line.strip()
+        if not line.startswith("{"):
+            continue
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(event, dict):
+            continue
+        ts_str = event.get("ts")
+        if isinstance(ts_str, str) and ts_str:
+            if latest_ts is None or ts_str > latest_ts:
+                latest_ts = ts_str
+        event_type = event.get("event")
+        if isinstance(event_type, str) and event_type:
+            last_event = event_type
+    return {"latest_ts": latest_ts, "last_event": last_event}
+
+
+def _emit_diag(record: dict) -> None:
+    """Append a single-line JSON record to the session-bound diagnostic.
+
+    Destination: ``cortex/lifecycle/sessions/${LIFECYCLE_SESSION_ID}/scan-lifecycle-diag.jsonl``
+    (relative to the current working directory). Fail-open: never raises.
+    Silent no-op when ``LIFECYCLE_SESSION_ID`` is unset or empty — the
+    diagnostic is best-effort observability, not load-bearing.
+    """
+
+    session_id = os.environ.get("LIFECYCLE_SESSION_ID", "")
+    if not session_id:
+        return
+    try:
+        diag_dir = (
+            Path(os.getcwd())
+            / "cortex"
+            / "lifecycle"
+            / "sessions"
+            / session_id
+        )
+        diag_dir.mkdir(parents=True, exist_ok=True)
+        diag_path = diag_dir / "scan-lifecycle-diag.jsonl"
+        with diag_path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(record, separators=(",", ":")) + "\n")
+    except (OSError, ValueError, TypeError):
+        # Best-effort: diagnostics must never break the hook.
+        pass
+
+
 def _is_stale(feature_dir: Path, threshold_days: int) -> bool:
     """Return True if the latest events.log event is older than threshold_days.
 
@@ -831,6 +901,26 @@ def main(argv: list[str] | None = None) -> int:
         backlog_status = backlog_status_map.get(feature)
         has_mismatch = _is_terminal_mismatch(encoded, backlog_status)
         incomplete.append((feature, encoded, has_mismatch, backlog_status))
+
+        # T14 diagnostic: one record per rendered candidate. Excluded
+        # candidates (stale / morning-review-batch / complete-no-PR) are
+        # emitted separately below by the same loop body's continue
+        # branches; we only land here when the feature WILL appear in
+        # the incomplete list.
+        import datetime as _dt
+        meta = _events_log_meta(feature_dir)
+        _emit_diag({
+            "ts": _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "feature": feature,
+            "decision": "rendered",
+            "latest_event_ts": meta.get("latest_ts"),
+            "threshold_days": stale_days,
+            "last_event": meta.get("last_event"),
+            "events_phase": encoded,
+            "backlog_status": backlog_status,
+            "index_json_resolved": feature in backlog_status_map,
+            "mismatch": has_mismatch,
+        })
 
     # No incomplete features and no pipeline context — nothing to inject.
     if not incomplete and not pipeline_state.context_string:

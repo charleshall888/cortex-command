@@ -1522,3 +1522,150 @@ def test_mismatches_header_fragment(
         # Multi-incomplete prompt branch — no fragment expected.
         assert "Multiple incomplete lifecycles" in additional
 
+
+# ---------------------------------------------------------------------------
+# T14: session-bound JSONL diagnostic
+# ---------------------------------------------------------------------------
+
+
+def test_session_diagnostic_written(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """T14: per-candidate JSONL diagnostic appended under the session dir."""
+    repo = tmp_path / "repo"
+    _stage_minimal_feature(repo, "diag-feat")
+    _write_t12_index(repo, [
+        {"id": 1, "title": "diag", "lifecycle_slug": "diag-feat", "status": "in_progress"},
+    ])
+
+    monkeypatch.setenv("CORTEX_SCAN_LIFECYCLE_STALE_DAYS", "0")
+    env_file = repo / ".claude-env"
+    env_file.write_text("", encoding="utf-8")
+    monkeypatch.setenv("CLAUDE_ENV_FILE", str(env_file))
+    monkeypatch.setenv("LIFECYCLE_SESSION_ID", "test-session-uuid")
+    monkeypatch.chdir(repo)
+    monkeypatch.setattr(
+        "sys.stdin",
+        io.StringIO(json.dumps({"session_id": "x", "cwd": str(repo)})),
+    )
+
+    rc = scan_lifecycle_mod.main()
+    assert rc == 0
+
+    diag_path = (
+        repo / "cortex" / "lifecycle" / "sessions" / "test-session-uuid"
+        / "scan-lifecycle-diag.jsonl"
+    )
+    assert diag_path.is_file(), f"diagnostic not written at {diag_path}"
+    lines = [ln for ln in diag_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    assert len(lines) >= 1, f"expected ≥1 diagnostic record, got {lines!r}"
+    record = json.loads(lines[0])
+    # Schema sanity: required fields present per spec R14.
+    for key in (
+        "ts", "feature", "decision", "latest_event_ts", "threshold_days",
+        "last_event", "events_phase", "backlog_status",
+        "index_json_resolved", "mismatch",
+    ):
+        assert key in record, f"diagnostic record missing {key!r}: {record!r}"
+    assert record["feature"] == "diag-feat"
+    assert record["events_phase"] == "plan"
+    assert record["backlog_status"] == "in_progress"
+    assert record["index_json_resolved"] is True
+    assert record["mismatch"] is False
+
+
+def test_session_diagnostic_silent_when_session_id_unset(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """T14: with LIFECYCLE_SESSION_ID unset, no diagnostic file is written."""
+    repo = tmp_path / "repo"
+    _stage_minimal_feature(repo, "silent-feat")
+
+    monkeypatch.setenv("CORTEX_SCAN_LIFECYCLE_STALE_DAYS", "0")
+    env_file = repo / ".claude-env"
+    env_file.write_text("", encoding="utf-8")
+    monkeypatch.setenv("CLAUDE_ENV_FILE", str(env_file))
+    monkeypatch.delenv("LIFECYCLE_SESSION_ID", raising=False)
+    monkeypatch.chdir(repo)
+    monkeypatch.setattr(
+        "sys.stdin",
+        io.StringIO(json.dumps({"session_id": "", "cwd": str(repo)})),
+    )
+
+    rc = scan_lifecycle_mod.main()
+    assert rc == 0
+    # The sessions directory should not exist OR should not contain a
+    # diag file (no session id → silent no-op per spec).
+    sessions_dir = repo / "cortex" / "lifecycle" / "sessions"
+    if sessions_dir.is_dir():
+        for child in sessions_dir.iterdir():
+            assert not (child / "scan-lifecycle-diag.jsonl").exists(), (
+                f"diagnostic unexpectedly written under {child}"
+            )
+
+
+# ---------------------------------------------------------------------------
+# T15: end-to-end SessionStart envelope integration
+# ---------------------------------------------------------------------------
+
+
+def test_e2e_session_start_envelope(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """T15: full integration — paused label + mismatch annotation + header.
+
+    Stages three lifecycle dirs:
+      (a) implement (1/3 done) with backlog=complete  → terminal mismatch
+      (b) paused implement (0/3 done) with backlog=in_progress → no mismatch
+      (c) implement (1/3 done) with backlog=in_progress → clean alignment
+
+    Then invokes scan_lifecycle.main() with the standard SessionStart
+    envelope and asserts the rendered additionalContext satisfies all
+    four acceptance criteria simultaneously.
+    """
+    repo = tmp_path / "repo"
+    # (a) terminal-mismatch
+    _stage_t12_fixture(repo, "075-shape", "a-mismatch")
+    # (b) paused implement
+    _stage_t12_fixture(repo, "209-shape-post-fix", "b-paused")
+    # (c) clean alignment
+    _stage_t12_fixture(repo, "clean-alignment", "c-clean")
+    _write_t12_index(repo, [
+        {"id": 1, "title": "a", "lifecycle_slug": "a-mismatch", "status": "complete"},
+        {"id": 2, "title": "b", "lifecycle_slug": "b-paused", "status": "in_progress"},
+        {"id": 3, "title": "c", "lifecycle_slug": "c-clean", "status": "in_progress"},
+    ])
+
+    monkeypatch.setenv("CORTEX_SCAN_LIFECYCLE_STALE_DAYS", "0")
+    env_file = repo / ".claude-env"
+    env_file.write_text("", encoding="utf-8")
+    monkeypatch.setenv("CLAUDE_ENV_FILE", str(env_file))
+    monkeypatch.delenv("LIFECYCLE_SESSION_ID", raising=False)
+    monkeypatch.setattr(
+        "sys.stdin",
+        io.StringIO(json.dumps({"session_id": "x", "cwd": str(repo)})),
+    )
+
+    rc = scan_lifecycle_mod.main()
+    assert rc == 0
+    additional = extract_additional_context(capsys.readouterr().out)
+
+    # (1) paused feature carries " — paused" label.
+    assert "b-paused" in additional
+    assert "— paused" in additional
+    # (2) mismatched feature carries [mismatch: backlog=complete].
+    assert "a-mismatch" in additional
+    assert "[mismatch: backlog=complete]" in additional
+    # (3) header fragment reports 1 total mismatch.
+    assert "mismatches: 1 total" in additional
+    # (4) clean feature has no mismatch annotation on its line.
+    # Pick the c-clean entry line and verify no [mismatch:] on it.
+    for line in additional.splitlines():
+        if "c-clean" in line:
+            assert "[mismatch:" not in line, (
+                f"clean-alignment feature should not carry mismatch annotation: {line!r}"
+            )

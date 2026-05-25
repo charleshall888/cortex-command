@@ -18,3 +18,4 @@
 {"ts":"2026-05-25T12:34:04Z","event":"sentinel_absence","feature":"reconcile-sessionstart-lifecycle-phase-summary-against","reviewer_angle":"plan-caller-enumeration","reason":"absent","model_tier":"sonnet","expected_sha":"0dd2253238ecdc04c769f6f9d21f5f014e660c627db655a70afcbfab3c9275d3","observed_sha_or_null":null}
 {"schema_version": 1, "ts": "2026-05-25T17:13:47Z", "event": "plan_approved", "feature": "reconcile-sessionstart-lifecycle-phase-summary-against"}
 {"schema_version": 1, "ts": "2026-05-25T17:13:47Z", "event": "phase_transition", "feature": "reconcile-sessionstart-lifecycle-phase-summary-against", "from": "plan", "to": "implement"}
+{"schema_version": 1, "ts": "2026-05-25T20:50:12Z", "event": "phase_transition", "feature": "reconcile-sessionstart-lifecycle-phase-summary-against", "from": "implement", "to": "review"}

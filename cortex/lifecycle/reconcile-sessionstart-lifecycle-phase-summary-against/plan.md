@@ -27,7 +27,7 @@ Extend the canonical phase detector with a `feature_paused` rung emitting `{phas
 - **Complexity**: complex
 - **Context**: Existing fixture pattern under `tests/fixtures/lifecycle_phase_parity/` shows the schema (events.log NDJSON + plan.md markdown). `_expected_wire_from_canonical` (tests/test_lifecycle_phase_parity.py:409) maps canonical Python output to wire format; needs to recognize `implement-paused` → `implement-paused:N/M` and `review-paused` → `review-paused`. `_label_to_wire` (line 429) maps human-readable labels back to wire; needs to recognize `Implement (3/5 tasks done) — paused` → `implement-paused:3/5` and `Review — paused` → `review-paused`. The `Unrecognised hook phase label` AssertionError at line 457 is the failure mode if the helpers aren't widened.
 - **Verification**: `ls tests/fixtures/lifecycle_phase_parity/paused-implement tests/fixtures/lifecycle_phase_parity/paused-review tests/fixtures/lifecycle_phase_parity/paused-then-resumed` exits 0 AND `python3 -m pytest tests/test_lifecycle_phase_parity.py --collect-only -q 2>&1 | grep -c "paused"` ≥ 3 (positive collection assertion — fixtures must produce ≥3 paused test cases) — pass if both.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Extend `_detect_lifecycle_phase_inner` with `feature_paused` rung
 - **Files**: `cortex_command/common.py` (modify `_detect_lifecycle_phase_inner` lines 223-402; factor existing rung 3-6 into a `_derive_base_phase()` helper if it simplifies; touch helper `_events_log_has_event` only if it needs `feature_paused` support)
@@ -36,7 +36,7 @@ Extend the canonical phase detector with a `feature_paused` rung emitting `{phas
 - **Complexity**: complex
 - **Context**: Current ladder structure at common.py:223-402 is a sequence of independent rungs. The line-position determination uses the events.log file ordering (last occurrence of any event in the significant set wins). The output JSON shape from `detect_lifecycle_phase` is `{"phase": str, "checked": int, "total": int, "cycle": int}` per docstring at line 405 — keep `checked`/`total` populated when the base phase is `implement` so consumers can render `Implement (3/5 tasks done) — paused`.
 - **Verification**: `python3 -m pytest tests/test_lifecycle_phase_parity.py -k paused 2>&1 | grep -E "passed|FAILED"` shows `passed` (Task 1's RED tests turn GREEN) AND `python3 -m pytest tests/test_lifecycle_phase_parity.py -k paused --collect-only 2>&1 | grep -c paused` ≥ 3 (positive collection assertion guarding against zero-collected pass) — pass if both.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Extend `_encode_phase` to attach `:N/M` to `implement-paused`
 - **Files**: `cortex_command/hooks/scan_lifecycle.py` (modify `_encode_phase` lines 60-74)
@@ -45,7 +45,7 @@ Extend the canonical phase detector with a `feature_paused` rung emitting `{phas
 - **Complexity**: simple
 - **Context**: `_encode_phase(phase, checked, total, cycle)` signature at line 47; current logic returns `f"implement:{checked}/{total}"` only when `phase == "implement"`. Preserve both wire shapes: `implement:3/5` (existing) and `implement-paused:3/5` (new). The implementer chooses the idiom (`.removesuffix("-paused")`, regex, or explicit split).
 - **Verification**: `python3 -c "from cortex_command.hooks.scan_lifecycle import _encode_phase; assert _encode_phase('implement-paused', 3, 5, 0) == 'implement-paused:3/5'; assert _encode_phase('implement', 3, 5, 0) == 'implement:3/5'; assert _encode_phase('review-paused', 0, 0, 0) == 'review-paused'"` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 4: Extend `_phase_label` to render `-paused` suffix
 - **Files**: `cortex_command/hooks/scan_lifecycle.py` (modify `_phase_label` lines 77-129)
@@ -54,7 +54,7 @@ Extend the canonical phase detector with a `feature_paused` rung emitting `{phas
 - **Complexity**: simple
 - **Context**: `_phase_label(encoded_phase)` signature at line 77; current rules at lines 109-129 use exact-equality and `.startswith()`. Recursion bottoms out on existing rules; no new wire shapes besides `*-paused` and `*-paused:N/M`.
 - **Verification**: `python3 -c "from cortex_command.hooks.scan_lifecycle import _phase_label; assert _phase_label('implement-paused:3/5') == 'Implement (3/5 tasks done) — paused'; assert _phase_label('review-paused') == 'Review — paused'"` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5: Extend `_interrupted_hint` to recognize `-paused` wire format
 - **Files**: `cortex_command/hooks/scan_lifecycle.py` (modify `_interrupted_hint` lines 132-191)
@@ -63,7 +63,7 @@ Extend the canonical phase detector with a `feature_paused` rung emitting `{phas
 - **Complexity**: simple
 - **Context**: Without this fix, paused implement features lose the "Interrupted: implementation in progress (3 of 5 tasks done). Resume with /cortex-core:lifecycle ..." line silently — exactly the user-visible affordance the SessionStart hook exists to provide. The fix mirrors Task 3's `_encode_phase` widening pattern.
 - **Verification**: `python3 -c "from cortex_command.hooks.scan_lifecycle import _interrupted_hint; h = _interrupted_hint('implement-paused:3/5', 'my-feature'); assert 'Resume with' in h and '3 of 5' in h"` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 6: Add unit tests for `_encode_phase`, `_phase_label`, `_interrupted_hint`
 - **Files**: `tests/test_hooks_scan_lifecycle.py` (add `test_encode_paused`, `test_label_paused`, `test_interrupted_hint_paused`)
@@ -72,7 +72,7 @@ Extend the canonical phase detector with a `feature_paused` rung emitting `{phas
 - **Complexity**: simple
 - **Context**: Existing test patterns in `tests/test_hooks_scan_lifecycle.py` show pytest case structure. Each new test is a one-liner assertion using the function directly.
 - **Verification**: `python3 -m pytest tests/test_hooks_scan_lifecycle.py -k 'encode_paused or label_paused or interrupted_hint_paused'` exits 0 AND `python3 -m pytest tests/test_hooks_scan_lifecycle.py -k 'encode_paused or label_paused or interrupted_hint_paused' --collect-only 2>&1 | grep -c "test_" ` ≥ 3 — pass if both.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 7: Extend statusline bash mirror with `feature_paused` rung
 - **Files**: `claude/statusline.sh` (modify phase-detection ladder at lines 395-454)
@@ -81,7 +81,7 @@ Extend the canonical phase detector with a `feature_paused` rung emitting `{phas
 - **Complexity**: simple
 - **Context**: The structural-exception comment at claude/statusline.sh:382-394 acknowledges the bash mirror MUST stay in parity. The "most recent significant event" determination in bash should NOT use `tail -50` (truncation cap risk); instead, read the full events.log and grep across all lines for the significant-event set. For example: `_lc_last_sig=$(grep -oE '"event":"(phase_transition|feature_paused|feature_complete|feature_wontfix)"' "$_lc_fdir/events.log" 2>/dev/null | tail -1)` — scans the full file, takes the last match. Matches Python's full-file scan semantics in Task 2.
 - **Verification**: `python3 -m pytest tests/test_lifecycle_phase_parity.py::test_statusline_ladder_matches_canonical` exits 0 — pass if exit 0. (Task 1 fixtures + Task 2's Python detector are upstream prereqs.)
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 8: Widen dashboard `data.py` slow-flag classifier for `-paused`
 - **Files**: `cortex_command/dashboard/data.py` (modify slow-flag classifier at lines 1191, 1197), `tests/test_dashboard_data.py` (add or create `test_slow_flag_paused`)
@@ -90,7 +90,7 @@ Extend the canonical phase detector with a `feature_paused` rung emitting `{phas
 - **Complexity**: simple
 - **Context**: Closed-set membership at data.py:1191; the fix mirrors Task 3's `_encode_phase` widening. Check first whether `tests/test_dashboard_data.py` exists; create if absent.
 - **Verification**: `python3 -m pytest tests/test_dashboard_data.py -k slow_flag_paused --collect-only 2>&1 | grep -c "test_" ` ≥ 1 AND `python3 -m pytest tests/test_dashboard_data.py -k slow_flag_paused` exits 0 — pass if both. (The collection check guards against the empty-test-suite pass.)
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 9: Hoist phase-label rule into shared module + update dashboard template
 - **Files**: `cortex_command/phase_labels.py` (new module — pure function `phase_label(encoded_phase: str) -> str` extracted from `_phase_label`), `cortex_command/hooks/scan_lifecycle.py` (replace `_phase_label` body with delegation to `phase_labels.phase_label`; keep `_phase_label` as a re-export for backward compat), `cortex_command/dashboard/templates/feature_cards.html` (replace raw `{{ current_phase }}` at lines 62 and 110 with `{{ current_phase | phase_label }}`), `cortex_command/dashboard/__init__.py` (or the FastAPI app factory — register the Jinja filter)
@@ -99,7 +99,7 @@ Extend the canonical phase detector with a `feature_paused` rung emitting `{phas
 - **Complexity**: complex
 - **Context**: This task REFACTORS Task 4's `_phase_label` (turns it into a delegator) — flagged here explicitly so the implementer doesn't treat Task 9 as purely additive. The dashboard's Jinja2 environment setup lives in `cortex_command/dashboard/__init__.py` or the FastAPI app factory; filter registration is via `app.jinja_env.filters["phase_label"] = phase_label`. The `phase_order` list at templates/feature_cards.html:3 is a sort key and falls back gracefully on unknown values per Jinja's `|sort` semantics — confirm by manual inspection. The `fleet_cards` render path at data.py:523-527 also flows `current_phase` to a template; if that template renders raw, apply the same `| phase_label` filter (deferred check during implementation).
 - **Verification**: `grep -c "phase_label" cortex_command/dashboard/templates/feature_cards.html` ≥ 2 AND `python3 -c "from cortex_command.phase_labels import phase_label; assert phase_label('implement-paused:3/5') == 'Implement (3/5 tasks done) — paused'"` exits 0 AND `python3 -c "from cortex_command.hooks.scan_lifecycle import _phase_label; assert _phase_label('implement-paused:3/5') == 'Implement (3/5 tasks done) — paused'"` exits 0 — pass if all three.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 10: Update lifecycle SKILL.md routing table + backlog index generator for `-paused` vocabulary
 - **Files**: `skills/lifecycle/SKILL.md` (modify phase routing table at lines 93-96), `cortex_command/backlog/generate_index.py` (modify lines 161-165 closed-set comment and line 167 `detect_lifecycle_phase` consumer)
@@ -108,7 +108,7 @@ Extend the canonical phase detector with a `feature_paused` rung emitting `{phas
 - **Complexity**: simple
 - **Context**: SKILL.md lines 93-96 are a markdown table. Per CLAUDE.md, edit canonical only — the mirror at `plugins/cortex-core/skills/` regenerates via pre-commit. The parity test `tests/test_lifecycle_kept_pauses_parity.py` is about `AskUserQuestion` call sites, not the routing table — running it is sanity-check only. For `generate_index.py:167`, the strip-on-write pattern is: `phase = detect_lifecycle_phase(lc_dir)["phase"]; lifecycle_phase = phase.removesuffix("-paused") if phase else None`.
 - **Verification**: `grep -c "paused" skills/lifecycle/SKILL.md` ≥ 1 AND `python3 -m pytest tests/test_lifecycle_kept_pauses_parity.py` exits 0 AND `grep -c "removesuffix\|paused" cortex_command/backlog/generate_index.py` ≥ 1 — pass if all three.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 11: Load `index.json` once per hook invocation
 - **Files**: `cortex_command/hooks/scan_lifecycle.py` (add helper `_load_backlog_status_map() -> dict[str, str]`; call in `main()` before per-candidate phase-detection loop), `tests/test_hooks_scan_lifecycle.py` (add `test_index_json_loaded`, `test_index_json_absent_empty_map`, `test_index_json_duplicate_first_wins`)
@@ -117,7 +117,7 @@ Extend the canonical phase detector with a `feature_paused` rung emitting `{phas
 - **Complexity**: simple
 - **Context**: Repo root resolution via existing helper in scan_lifecycle.py. `index.json` schema: top-level array of objects with `id`, `title`, `lifecycle_slug`, `status` fields (verified against live file). Return signature: either `dict[str, str]` plus duplicates list as a tuple, or a dict subclass with `duplicates` attribute.
 - **Verification**: `python3 -m pytest tests/test_hooks_scan_lifecycle.py -k 'index_json' --collect-only 2>&1 | grep -c "test_index_json"` ≥ 3 AND `python3 -m pytest tests/test_hooks_scan_lifecycle.py -k 'index_json'` exits 0 — pass if both.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 12: Implement terminal-vs-non-terminal mismatch predicate + render annotation
 - **Files**: `cortex_command/hooks/scan_lifecycle.py` (add `_is_terminal_mismatch(events_phase, backlog_status) -> bool`; modify `_build_additional_context` lines 345-457 to consume the predicate + the map from Task 11), `tests/test_hooks_scan_lifecycle.py` (add `test_terminal_mismatch_075_shape`, `test_terminal_mismatch_209_shape_no_annotation`, `test_active_header_mismatch`), `tests/fixtures/hooks/scan_lifecycle/075-shape/{events.log,plan.md}`, `tests/fixtures/hooks/scan_lifecycle/209-shape-post-fix/{events.log,plan.md}`, `tests/fixtures/hooks/scan_lifecycle/clean-alignment/{events.log,plan.md}`
@@ -126,7 +126,7 @@ Extend the canonical phase detector with a `feature_paused` rung emitting `{phas
 - **Complexity**: complex
 - **Context**: `_build_additional_context(incomplete: list[tuple[str, str]], ...)` signature. Extend the per-entry tuple to `(feature, encoded_phase, has_mismatch, backlog_status_or_None)`. Import `TERMINAL_STATUSES` from `cortex_command.common`. `_interrupted_hint()` text remains driven by events-derived phase per R10.
 - **Verification**: `python3 -m pytest tests/test_hooks_scan_lifecycle.py -k 'terminal_mismatch or active_header_mismatch' --collect-only 2>&1 | grep -c "test_"` ≥ 3 AND `python3 -m pytest tests/test_hooks_scan_lifecycle.py -k 'terminal_mismatch or active_header_mismatch'` exits 0 — pass if both.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 13: Implement mismatch-first sort + soft-budget truncation + `mismatches: N total` header fragment
 - **Files**: `cortex_command/hooks/scan_lifecycle.py` (modify `_build_additional_context`), `tests/test_hooks_scan_lifecycle.py` (add `test_mismatch_first_sort`, `test_soft_budget_truncation`, `test_mismatches_header_fragment`)
@@ -135,7 +135,7 @@ Extend the canonical phase detector with a `feature_paused` rung emitting `{phas
 - **Complexity**: complex
 - **Context**: Block size = `len("\n".join(lines))` over all four contributors (active header + pipeline-state prepend + others enumeration + diagnostic summary). 9,000-char threshold leaves ~1,000 chars headroom over measured ~700-char actual overhead.
 - **Verification**: `python3 -m pytest tests/test_hooks_scan_lifecycle.py -k 'mismatch_first_sort or soft_budget_truncation or mismatches_header_fragment' --collect-only 2>&1 | grep -c "test_"` ≥ 3 AND `python3 -m pytest tests/test_hooks_scan_lifecycle.py -k 'mismatch_first_sort or soft_budget_truncation or mismatches_header_fragment'` exits 0 — pass if both.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 14: Implement session-bound JSONL diagnostic + expose `_is_stale` fields
 - **Files**: `cortex_command/hooks/scan_lifecycle.py` (add `_emit_diag(record: dict) -> None`; refactor `_is_stale` to expose `latest_event_ts` and `last_event` as side outputs OR add a sibling helper that returns the same; call `_emit_diag` from the per-candidate loop in `main()`), `tests/test_hooks_scan_lifecycle.py` (add `test_session_diagnostic_written`, `test_session_diagnostic_silent_when_session_id_unset`)
@@ -144,7 +144,7 @@ Extend the canonical phase detector with a `feature_paused` rung emitting `{phas
 - **Complexity**: complex
 - **Context**: `_is_stale` at scan_lifecycle.py:226-260 currently reads events.log and computes max-ts; expand to also return the most-recent-event-name. The diagnostic destination pattern matches existing `cortex/lifecycle/sessions/<id>/` files (per observability.md). `monkeypatch.setenv("LIFECYCLE_SESSION_ID", str(tmp_path))` is the test idiom; the diagnostic file lands at `{tmp_path}/scan-lifecycle-diag.jsonl`.
 - **Verification**: `python3 -m pytest tests/test_hooks_scan_lifecycle.py -k 'session_diagnostic' --collect-only 2>&1 | grep -c "test_"` ≥ 2 AND `python3 -m pytest tests/test_hooks_scan_lifecycle.py -k 'session_diagnostic'` exits 0 — pass if both.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 15: End-to-end integration test for SessionStart envelope
 - **Files**: `tests/test_hooks_scan_lifecycle.py` (add `test_e2e_session_start_envelope`)
@@ -153,7 +153,7 @@ Extend the canonical phase detector with a `feature_paused` rung emitting `{phas
 - **Complexity**: complex
 - **Context**: This is the end-to-end gate the spec's whole-feature Acceptance criterion implicitly requires. Without it, `just test` proves unit helpers work but does not prove the integrated hook envelope renders correctly. Existing pytest patterns show subprocess invocation; alternatively call `main()` in-process with mocked stdin and a captured stdout context.
 - **Verification**: `python3 -m pytest tests/test_hooks_scan_lifecycle.py::test_e2e_session_start_envelope --collect-only 2>&1 | grep -c "test_e2e_session_start_envelope"` ≥ 1 AND `python3 -m pytest tests/test_hooks_scan_lifecycle.py::test_e2e_session_start_envelope` exits 0 — pass if both.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 16: Latency microbenchmark + capture in PR description
 - **Files**: `scripts/benchmark_scan_lifecycle.py` (new)
@@ -162,7 +162,7 @@ Extend the canonical phase detector with a `feature_paused` rung emitting `{phas
 - **Complexity**: simple
 - **Context**: Use `time.perf_counter()`; synthesize fixtures via tmp_path + loop generating ~90 lifecycle dirs with varied phase shapes. Stdin envelope: minimal `{"session_id": "bench", "cwd": str(tmp_path)}`. Output format example: `iterations=10 p50=120ms p99=450ms n_candidates=90`.
 - **Verification**: `python3 scripts/benchmark_scan_lifecycle.py 2>&1 | grep -cE 'p50=|p99='` ≥ 2 — pass if exit 0. Threshold-free per spec ("no fixed numeric target; instead, the PR description must include the measurement").
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 17: Reconciliation regression fixtures recorded as canonical
 - **Files**: ensure `tests/fixtures/hooks/scan_lifecycle/{075-shape,209-shape-post-fix,clean-alignment}/` (created in Task 12) are referenced from `tests/test_hooks_scan_lifecycle.py` from at least one passing test
@@ -171,7 +171,7 @@ Extend the canonical phase detector with a `feature_paused` rung emitting `{phas
 - **Complexity**: trivial
 - **Context**: `ls tests/fixtures/hooks/scan_lifecycle/` should show the three named dirs. `grep -r "075-shape\|209-shape-post-fix\|clean-alignment" tests/` should find references in test files.
 - **Verification**: `ls tests/fixtures/hooks/scan_lifecycle/ | grep -cE '075|209|clean'` ≥ 3 AND `grep -rc "075-shape\|209-shape" tests/test_hooks_scan_lifecycle.py` ≥ 1 — pass if both.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ## Risks
 
