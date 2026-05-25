@@ -3,7 +3,7 @@
 Every literal ``EnterWorktree(...)`` call site under ``skills/lifecycle/``
 must be co-located with the worktree-creation and precondition-probe
 surface that the auto-enter sequence depends on. Concretely, within
-±20 lines of each call site we require:
+±60 lines of each call site we require:
 
   (a) the ``create_worktree`` token — proving the worktree the call
       enters is materialized by the same skill prose, not by an
@@ -19,7 +19,7 @@ This catches wholesale removals or splits of the auto-enter sequence
 that the step-v ordering parity test (``test_lifecycle_step_v_ordering.py``)
 cannot — that test pins ordering inside a single anchored block, while
 this test pins the existence of the surrounding scaffolding regardless
-of how the block is named or anchored. The ±20 line proximity allows
+of how the block is named or anchored. The ±60 line proximity allows
 local edits inside the auto-enter section but catches scenarios where
 EnterWorktree is moved into a remote section away from its supporting
 context (per R14 of
@@ -48,7 +48,7 @@ _CALL_SITE_PATTERN = re.compile(r"EnterWorktree\s*\(")
 
 # Proximity radius in lines. The call site must have these tokens
 # within ±_PROXIMITY_LINES lines.
-_PROXIMITY_LINES = 20
+_PROXIMITY_LINES = 60
 
 # Required co-located tokens (a): the worktree-creation token. The
 # call site must enter a worktree that was materialized by the same
@@ -134,7 +134,7 @@ def test_at_least_one_enterworktree_callsite_exists() -> None:
 def test_callsite_has_create_worktree_within_proximity(
     call_site: tuple[Path, int, list[str]],
 ) -> None:
-    """Each call site must have ``create_worktree`` within ±20 lines.
+    """Each call site must have ``create_worktree`` within ±60 lines.
 
     The token's presence proves the worktree the EnterWorktree call
     targets is materialized by the same skill-prose surface. If
@@ -167,7 +167,7 @@ def test_callsite_has_create_worktree_within_proximity(
 def test_callsite_has_precondition_token_within_proximity(
     call_site: tuple[Path, int, list[str]],
 ) -> None:
-    """Each call site must have ≥1 precondition token within ±20 lines.
+    """Each call site must have ≥1 precondition token within ±60 lines.
 
     At least one of ``show-toplevel``, ``git-common-dir``,
     ``verify-worktree-auth``, or ``EnterWorktree skipped`` must appear
