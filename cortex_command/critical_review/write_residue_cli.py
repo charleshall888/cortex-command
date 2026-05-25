@@ -16,7 +16,12 @@ Slug validation closes the path-traversal vector flagged in spec F4.
 from __future__ import annotations
 
 import argparse
+import json
+import os
 import re
+import sys
+import tempfile
+from pathlib import Path
 from typing import List, Optional
 
 from cortex_command.backlog import _telemetry
@@ -54,9 +59,26 @@ def _build_parser() -> argparse.ArgumentParser:
 def main(argv: Optional[List[str]] = None) -> int:
     _telemetry.log_invocation("cortex-critical-review-write-residue")
     parser = _build_parser()
-    parser.parse_args(argv)
-    raise NotImplementedError("filled in by T6")
+    args = parser.parse_args(argv)
+
+    raw = sys.stdin.read()
+    if not raw.strip():
+        print("no payload on stdin", file=sys.stderr)
+        return 2
+
+    payload = json.loads(raw)
+    data = json.dumps(payload, indent=2) + "\n"
+
+    final = Path("cortex/lifecycle") / args.feature / "critical-review-residue.json"
+    final.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(
+        "w", dir=str(final.parent), delete=False
+    ) as tmp:
+        tmp.write(data)
+        tmp_path = tmp.name
+    os.replace(tmp_path, final)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

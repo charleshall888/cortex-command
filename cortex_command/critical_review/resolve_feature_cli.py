@@ -15,6 +15,8 @@ exits non-zero with a clear stderr message.
 from __future__ import annotations
 
 import argparse
+import sys
+from pathlib import Path
 from typing import List, Optional
 
 from cortex_command.backlog import _telemetry
@@ -41,9 +43,32 @@ def _build_parser() -> argparse.ArgumentParser:
 def main(argv: Optional[List[str]] = None) -> int:
     _telemetry.log_invocation("cortex-critical-review-resolve-feature")
     parser = _build_parser()
-    parser.parse_args(argv)
-    raise NotImplementedError("filled in by T6")
+    args = parser.parse_args(argv)
+    session_id = args.session_id
+
+    matches: List[Path] = []
+    for session_file in Path("cortex/lifecycle").glob("*/.session"):
+        try:
+            contents = session_file.read_text().strip()
+        except OSError:
+            continue
+        if contents == session_id:
+            matches.append(session_file)
+
+    if len(matches) == 0:
+        print(f"no session matching {session_id}", file=sys.stderr)
+        return 1
+    if len(matches) > 1:
+        slugs = ", ".join(sorted(p.parent.name for p in matches))
+        print(
+            f"multiple sessions matching {session_id}: {slugs}",
+            file=sys.stderr,
+        )
+        return 1
+
+    print(matches[0].parent.name)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
