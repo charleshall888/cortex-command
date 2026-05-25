@@ -109,7 +109,7 @@ When Research phase entry evaluates an existing `cortex/lifecycle/{slug}/researc
 After the user confirms complexity and criticality, write them to the backlog item:
 
 ```bash
-cortex-update-item {backlog-filename-slug} complexity={value} criticality={value}
+cortex-update-item {backlog-filename-slug} --complexity {value} --criticality {value}
 ```
 
 Where `{backlog-filename-slug}` is the backlog file's name without the `.md` extension (e.g., `119-create-refine-skill`).

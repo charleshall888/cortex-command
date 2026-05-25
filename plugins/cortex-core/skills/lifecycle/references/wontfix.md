@@ -41,7 +41,7 @@ The `"event": "feature_wontfix"` literal is what both the events-registry scanne
 ### (c) Third — update the backlog item
 
 ```bash
-cortex-update-item {backlog-slug} status=wontfix lifecycle_phase=wontfix session_id=null
+cortex-update-item {backlog-slug} --status wontfix --lifecycle-phase wontfix --session-id null
 ```
 
 This clears the originating backlog item's status so the dashboard, backlog index, and any operator-facing lists reflect the terminal decision. `session_id=null` releases any concurrent-session lock that was held by the lifecycle.

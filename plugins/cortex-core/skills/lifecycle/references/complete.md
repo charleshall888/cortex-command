@@ -200,7 +200,7 @@ No `force=True`. If cleanup fails, report the error and retain the worktree — 
 If a matching backlog item was identified earlier in the lifecycle, mark it complete and clear the session:
 
 ```bash
-cortex-update-item <slug> status=complete session_id=null
+cortex-update-item <slug> --status complete --session-id null
 ```
 
 If no backlog item was found, skip silently.
