@@ -1,0 +1,6 @@
+[project]
+name = "contract-fixture-invalid-not-argparse-no-ledger"
+version = "0.0.1"
+
+[project.scripts]
+cortex-update-item = "stub_update_item:main"

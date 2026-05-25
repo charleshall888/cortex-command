@@ -1215,9 +1215,30 @@ def validate(
         if _has_sentinel(inv.preceding_line):
             continue
 
-        # Skip if binary has no surface or non-ok status.
+        # Skip if binary has no surface (not in [project.scripts] — not the
+        # lint's concern; could be a third-party CLI).
         surf = surface.get(inv.binary)
-        if surf is None or surf.extraction_status != "ok":
+        if surf is None:
+            continue
+
+        # Binary is in [project.scripts] but extraction failed/skipped. Require
+        # an explicit ledger entry to suppress; otherwise emit E104 so the
+        # operator either documents the exemption or fixes the parser.
+        if surf.extraction_status != "ok":
+            if not exceptions.match(inv.binary, "*", str(inv.path)):
+                violations.append(
+                    Violation(
+                        path=str(inv.path),
+                        line=inv.line,
+                        col=inv.col,
+                        code="E104",
+                        message=(
+                            f"{inv.binary} extraction_status="
+                            f"{surf.extraction_status} requires an explicit "
+                            f"bin/.contract-lint-exceptions.md entry to suppress"
+                        ),
+                    )
+                )
             continue
 
         path_str = str(inv.path)
