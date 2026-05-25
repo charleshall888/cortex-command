@@ -180,56 +180,86 @@ class TestImplementMdWiring:
     def test_should_fire_picker_invocation_present(
         self, implement_lines: list[str]
     ) -> None:
-        """(ii) ``should_fire_picker(`` (open-paren, invocation form) appears at least once."""
+        """(ii) An invocation form of ``should_fire_picker`` appears at least once.
+
+        Historically the implement.md dispatch used the Python open-paren
+        form ``should_fire_picker(...)``. After the convert-bin migration
+        (see the spec under "Changes to Existing Behavior" line 109; the
+        lifecycle slug is mentioned without code formatting here to keep
+        the parity-check from flagging a substring as drift), the Python
+        ``python3 -c`` snippet was replaced with the
+        ``cortex-lifecycle-picker-decision`` console-script. Either form
+        satisfies the "dispatch must actually call the predicate" intent
+        — the console-script's ``main()`` calls ``should_fire_picker``
+        directly.
+        """
         invocations = [
             idx
             for idx, line in enumerate(implement_lines)
             if "should_fire_picker(" in line
+            or "cortex-lifecycle-picker-decision" in line
         ]
         assert invocations, (
-            "implement.md must invoke should_fire_picker(...) with the "
-            "open-paren form (citation alone is insufficient — the dispatch "
-            "must actually call the predicate)"
+            "implement.md must invoke should_fire_picker(...) — either via "
+            "the open-paren Python form or via the "
+            "cortex-lifecycle-picker-decision CLI (which calls the predicate "
+            "in its main()). Citation of the helper name alone is insufficient."
         )
 
     def test_invocation_before_picker_askuserquestion(
         self, implement_lines: list[str]
     ) -> None:
-        """(iii) ``should_fire_picker(`` line precedes the §1 picker AskUserQuestion anchor.
+        """(iii) The picker invocation precedes the §1 picker AskUserQuestion anchor.
 
         The picker call site is the AskUserQuestion mention that the
         dispatch routes to — i.e. the first AskUserQuestion occurrence
         located at or after the §1 ``Branch-mode dispatch preflight``
-        block (anchored on the ``read_branch_mode`` invocation line). The
+        block (anchored on the dispatch-helper invocation line). The
         descriptive prose at the top of §1 ("prompt the user via
         AskUserQuestion with three options:") is the section heading
         rather than the call site the dispatch gates.
+
+        Accepts either the legacy ``should_fire_picker(`` Python form or
+        the new ``cortex-lifecycle-picker-decision`` CLI form (post the
+        convert-bin migration, spec line 109). For the dispatch anchor,
+        accepts either ``read_branch_mode`` (Python form) or
+        ``cortex-lifecycle-branch-mode`` (CLI form).
         """
-        # Locate the dispatch preflight anchor (the read_branch_mode line).
+        # Locate the dispatch preflight anchor — prefer the open-paren
+        # Python form, then fall back to the CLI form, then to any
+        # mention of the dispatch helper.
         dispatch_anchor: int | None = None
         for idx, line in enumerate(implement_lines):
             if "read_branch_mode" in line and "(" in line:
                 dispatch_anchor = idx
                 break
-        # Fall back to any read_branch_mode mention if the open-paren form
-        # is not present (still locates the dispatch section).
+        if dispatch_anchor is None:
+            for idx, line in enumerate(implement_lines):
+                if "cortex-lifecycle-branch-mode" in line:
+                    dispatch_anchor = idx
+                    break
         if dispatch_anchor is None:
             for idx, line in enumerate(implement_lines):
                 if "read_branch_mode" in line:
                     dispatch_anchor = idx
                     break
         assert dispatch_anchor is not None, (
-            "could not locate read_branch_mode anchor in implement.md"
+            "could not locate read_branch_mode / "
+            "cortex-lifecycle-branch-mode anchor in implement.md"
         )
 
-        # Find the first should_fire_picker( invocation line.
+        # Find the first picker invocation line — either Python or CLI form.
         invocation_idx: int | None = None
         for idx, line in enumerate(implement_lines):
-            if "should_fire_picker(" in line:
+            if (
+                "should_fire_picker(" in line
+                or "cortex-lifecycle-picker-decision" in line
+            ):
                 invocation_idx = idx
                 break
         assert invocation_idx is not None, (
-            "should_fire_picker( invocation not found in implement.md"
+            "picker invocation not found in implement.md — neither "
+            "should_fire_picker( nor cortex-lifecycle-picker-decision present"
         )
 
         # Find the picker AskUserQuestion call-site anchor: first

@@ -8,3 +8,10 @@
 {"schema_version": 1, "ts": "2026-05-25T12:35:01Z", "event": "phase_transition", "feature": "convert-bin-cortex-and-skill-embedded", "from": "specify", "to": "plan"}
 {"schema_version": 1, "ts": "2026-05-25T13:30:00Z", "event": "plan_approved", "feature": "convert-bin-cortex-and-skill-embedded"}
 {"schema_version": 1, "ts": "2026-05-25T13:30:01Z", "event": "phase_transition", "feature": "convert-bin-cortex-and-skill-embedded", "from": "plan", "to": "implement"}
+{"ts": "2026-05-25T18:11:43Z", "event": "batch_dispatch", "feature": "convert-bin-cortex-and-skill-embedded", "batch": 0, "tasks": [0]}
+{"ts": "2026-05-25T18:13:15Z", "event": "batch_dispatch", "feature": "convert-bin-cortex-and-skill-embedded", "batch": 1, "tasks": [1]}
+{"ts": "2026-05-25T18:23:53Z", "event": "batch_dispatch", "feature": "convert-bin-cortex-and-skill-embedded", "batch": 2, "tasks": [2, 4]}
+{"ts": "2026-05-25T18:29:18Z", "event": "batch_dispatch", "feature": "convert-bin-cortex-and-skill-embedded", "batch": 3, "tasks": [3, 5, 6]}
+{"ts": "2026-05-25T18:38:48Z", "event": "batch_dispatch", "feature": "convert-bin-cortex-and-skill-embedded", "batch": 4, "tasks": [7, 10, 12]}
+{"ts": "2026-05-25T19:02:31Z", "event": "batch_dispatch", "feature": "convert-bin-cortex-and-skill-embedded", "batch": 6, "tasks": [11]}
+{"ts": "2026-05-25T19:03:32Z", "event": "batch_dispatch", "feature": "convert-bin-cortex-and-skill-embedded", "batch": 7, "tasks": [13]}
