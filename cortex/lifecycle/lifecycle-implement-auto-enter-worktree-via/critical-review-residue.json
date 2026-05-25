@@ -1,0 +1,42 @@
+{
+  "ts": "2026-05-25T13:00:00Z",
+  "feature": "lifecycle-implement-auto-enter-worktree-via",
+  "artifact": "cortex/lifecycle/lifecycle-implement-auto-enter-worktree-via/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 3,
+    "dispatched": 3
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "T17 missing dep on T8: empirical bet observation could be misattributed to init bugs",
+      "reviewer_angle": "Dependency graph correctness and parallelizability",
+      "evidence_quote": "T17 depends on [1, 2, 5, 6, 7, 10, 11] but NOT on T8"
+    },
+    {
+      "class": "B",
+      "finding": "T16 missing deps on T3, T11 (anchor displacement risk)",
+      "reviewer_angle": "Dependency graph correctness and parallelizability",
+      "evidence_quote": "T16 only depends on [10]"
+    },
+    {
+      "class": "B",
+      "finding": "T13->T11 is a false edge (T11 contributes no scanned tokens)",
+      "reviewer_angle": "Dependency graph correctness and parallelizability",
+      "evidence_quote": "T13 -> T11 is unnecessary"
+    },
+    {
+      "class": "B",
+      "finding": "T8 dictates test design (fixture choice, structure, stratagem)",
+      "reviewer_angle": "Code-budget violations and implementer-context insufficiency",
+      "evidence_quote": "For revoke-with-live-session, the test writes a fake .interactive.pid file with a live PID"
+    },
+    {
+      "class": "B",
+      "finding": "T17/T18 under-scaffold the load-bearing empirical-bet observation rubric (downgraded from A by synthesizer)",
+      "reviewer_angle": "Code-budget violations and implementer-context insufficiency",
+      "evidence_quote": "observe that the session CWD changes to the worktree path AND interactive_worktree_entered lands in events.log"
+    }
+  ]
+}

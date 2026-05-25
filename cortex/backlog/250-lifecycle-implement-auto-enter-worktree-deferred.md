@@ -2,16 +2,19 @@
 schema_version: "1"
 uuid: 6c945638-4fc4-4f1b-ad68-1c1e102c24b4
 title: "Lifecycle implement: auto-enter worktree via EnterWorktree (Approach A, deferred design surface)"
-status: backlog
+status: refined
 priority: medium
 type: feature
 created: 2026-05-19
-updated: 2026-05-19
+updated: 2026-05-25
 tags: [lifecycle, worktree-interactive]
 areas: [skills]
-session_id: null
-lifecycle_phase: null
-lifecycle_slug: null
+session_id: 2cbb69a0-e944-44fb-9100-930a9ed63327
+lifecycle_phase: research
+lifecycle_slug: lifecycle-implement-auto-enter-worktree-via
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/lifecycle-implement-auto-enter-worktree-via/spec.md
 ---
 
 ## Problem

@@ -2,16 +2,19 @@
 schema_version: "1"
 uuid: fafa9ddc-f2b3-4a7f-9401-c92932e2d367
 title: "Offer consolidation clusters before R15 gate in discovery decompose"
-status: backlog
+status: refined
 priority: low
 type: feature
 created: 2026-05-18
-updated: 2026-05-18
+updated: 2026-05-25
 tags: [discovery, skills, decompose]
-areas: [skills, discovery]
-session_id: null
-lifecycle_phase: null
-lifecycle_slug: null
+areas: [skills,discovery]
+session_id: a9ac483c-9938-4cd8-97ff-10007f5d9962
+lifecycle_phase: research
+lifecycle_slug: offer-consolidation-clusters-before-r15-gate
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/offer-consolidation-clusters-before-r15-gate/spec.md
 ---
 
 ## Problem

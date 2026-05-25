@@ -1,0 +1,8 @@
+{"schema_version": 1, "ts": "2026-05-25T11:26:46Z", "event": "lifecycle_start", "feature": "fix-test-cascade-from-252-migration", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-05-25T11:30:04Z", "event": "clarify_critic", "feature": "fix-test-cascade-from-252-migration", "parent_epic_loaded": false, "findings_count": 5, "dispositions": {"apply": 1, "dismiss": 4, "ask": 0}, "applied_fixes_count": 1, "dismissals_count": 4, "status": "ok"}
+{"ts": "2026-05-25T11:38:37Z", "event": "complexity_override", "feature": "fix-test-cascade-from-252-migration", "from": "simple", "to": "complex", "gate": "research_open_questions"}
+{"ts": "2026-05-25T11:39:00Z", "event": "phase_transition", "feature": "fix-test-cascade-from-252-migration", "from": "research", "to": "specify"}
+{"ts": "2026-05-25T12:12:18Z", "event": "spec_approved", "feature": "fix-test-cascade-from-252-migration"}
+{"ts": "2026-05-25T12:12:18Z", "event": "phase_transition", "feature": "fix-test-cascade-from-252-migration", "from": "specify", "to": "plan"}
+{"ts": "2026-05-25T17:14:10Z", "event": "plan_approved", "feature": "fix-test-cascade-from-252-migration"}
+{"ts": "2026-05-25T17:14:10Z", "event": "phase_transition", "feature": "fix-test-cascade-from-252-migration", "from": "plan", "to": "implement"}

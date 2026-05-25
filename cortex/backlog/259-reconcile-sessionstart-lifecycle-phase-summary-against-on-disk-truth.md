@@ -2,13 +2,20 @@
 schema_version: "1"
 uuid: 69a8b0fc-c833-42ba-a317-a597c6bbd79b
 title: "Reconcile SessionStart lifecycle-phase summary against on-disk truth"
-status: backlog
+status: refined
 priority: medium
 type: chore
 created: 2026-05-20
-updated: 2026-05-20
+updated: 2026-05-25
 tags: [harness, hook, observability, lifecycle]
 discovery_source: cortex/research/harness-friction-triage/research.md
+session_id: a34c9d97-2dfe-4bcc-a1ff-17308805fe4f
+lifecycle_phase: research
+lifecycle_slug: reconcile-sessionstart-lifecycle-phase-summary-against
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/reconcile-sessionstart-lifecycle-phase-summary-against/spec.md
+areas: [hooks]
 ---
 ## Why
 

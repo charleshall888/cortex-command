@@ -2,12 +2,19 @@
 schema_version: "1"
 uuid: fa775672-f8c2-47ef-9bf3-933a1ba75ec3
 title: "Fix test cascade from #252 migration (SourceFileLoader + subprocess patterns)"
-status: backlog
+status: refined
 priority: medium
 type: chore
 created: 2026-05-20
-updated: 2026-05-20
+updated: 2026-05-25
 parent: "252"
+session_id: d3fae964-910f-4ac0-b8a8-7525d413c743
+lifecycle_phase: research
+lifecycle_slug: fix-test-cascade-from-252-migration
+complexity: complex
+criticality: medium
+spec: cortex/lifecycle/fix-test-cascade-from-252-migration/spec.md
+areas: [tests]
 ---
 ## Why
 
