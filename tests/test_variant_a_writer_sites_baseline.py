@@ -33,14 +33,14 @@ case, matching the env-var assertion structure in
 
 from __future__ import annotations
 
-import importlib.machinery
-import importlib.util
 import json
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
+
+import cortex_command.lifecycle.complexity_escalator as _escalator_module
 
 # ---------------------------------------------------------------------------
 # Module-level helpers
@@ -52,14 +52,8 @@ ESCALATOR_SCRIPT = REPO_ROOT / "bin" / "cortex-complexity-escalator"
 
 @pytest.fixture(scope="module")
 def escalator_module():
-    """Load ``bin/cortex-complexity-escalator`` as an importable module."""
-    loader = importlib.machinery.SourceFileLoader(
-        "complexity_escalator", str(ESCALATOR_SCRIPT)
-    )
-    spec = importlib.util.spec_from_loader(loader.name, loader)
-    module = importlib.util.module_from_spec(spec)
-    loader.exec_module(module)
-    return module
+    """Return the complexity_escalator Python module for unit tests."""
+    return _escalator_module
 
 
 def _read_jsonl(path: Path) -> list[dict]:
@@ -290,7 +284,7 @@ class TestComplexityEscalatorCwdPinned:
         )
 
         result = subprocess.run(
-            [str(ESCALATOR_SCRIPT), feature, "--gate", "research_open_questions"],
+            [sys.executable, "-m", "cortex_command.lifecycle.complexity_escalator", feature, "--gate", "research_open_questions"],
             cwd=str(tmp_path),
             capture_output=True,
             text=True,
@@ -321,7 +315,9 @@ class TestComplexityEscalatorCwdPinned:
             )
             result = subprocess.run(
                 [
-                    str(ESCALATOR_SCRIPT),
+                    sys.executable,
+                    "-m",
+                    "cortex_command.lifecycle.complexity_escalator",
                     feature,
                     "--gate",
                     "research_open_questions",
@@ -354,7 +350,9 @@ class TestComplexityEscalatorCwdPinned:
 
         result = subprocess.run(
             [
-                str(ESCALATOR_SCRIPT),
+                sys.executable,
+                "-m",
+                "cortex_command.lifecycle.complexity_escalator",
                 feature,
                 "--gate",
                 "research_open_questions",
