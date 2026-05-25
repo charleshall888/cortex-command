@@ -90,18 +90,42 @@ def _git_init_with_identity(repo: Path, *, bare: bool = False) -> None:
     )
 
 
-def _invoke(repo: Path, env: dict | None = None) -> subprocess.CompletedProcess:
-    """Run ``bin/cortex-commit-preflight`` with ``cwd=repo``.
+def _invoke_module(repo: Path, env: dict | None = None) -> subprocess.CompletedProcess:
+    """Run ``cortex_command.commit.preflight`` via ``python -m`` with ``cwd=repo``.
 
-    Captures stdout/stderr as bytes and decodes here so callers can
-    assert against text without each test needing to repeat the dance.
+    Uses the promoted module path rather than the bash wrapper, so this
+    helper exercises the canonical Python implementation directly.
+    Captures stdout/stderr as bytes; callers assert against decoded text.
     """
     full_env = os.environ.copy()
     full_env.pop("CORTEX_REPO_ROOT", None)
     if env:
         full_env.update(env)
     return subprocess.run(
-        [sys.executable, str(SCRIPT_PATH)],
+        [sys.executable, "-m", "cortex_command.commit.preflight"],
+        cwd=str(repo),
+        env=full_env,
+        capture_output=True,
+        check=False,
+    )
+
+
+def _invoke_wrapper(repo: Path, env: dict | None = None) -> subprocess.CompletedProcess:
+    """Run ``bin/cortex-commit-preflight`` (the bash wrapper) with ``cwd=repo``.
+
+    Used ONLY by ``test_shim_records_invocation`` because the wrapper's
+    ``cortex-log-invocation`` shim at wrapper lines 12–14 is what writes
+    the JSONL record that test asserts.  All other behavior tests use
+    ``_invoke_module`` instead.
+
+    Captures stdout/stderr as bytes; callers assert against decoded text.
+    """
+    full_env = os.environ.copy()
+    full_env.pop("CORTEX_REPO_ROOT", None)
+    if env:
+        full_env.update(env)
+    return subprocess.run(
+        [str(SCRIPT_PATH)],
         cwd=str(repo),
         env=full_env,
         capture_output=True,
@@ -133,7 +157,7 @@ def test_normal_repo_emits_valid_json(tmp_path: Path) -> None:
     # Working-tree change so ``git diff HEAD`` has content.
     seed.write_text("seed\nmore\n", encoding="utf-8")
 
-    proc = _invoke(repo)
+    proc = _invoke_module(repo)
     assert proc.returncode == 0, (
         f"non-zero exit: {proc.returncode!r}; stderr={proc.stderr!r}"
     )
@@ -154,7 +178,7 @@ def test_bare_repo_exits_3(tmp_path: Path) -> None:
     bare = tmp_path / "bare.git"
     _git_init_with_identity(bare, bare=True)
 
-    proc = _invoke(bare)
+    proc = _invoke_module(bare)
     assert proc.returncode == 3, (
         f"expected exit 3, got {proc.returncode!r}; stderr={proc.stderr!r}"
     )
@@ -168,7 +192,7 @@ def test_empty_repo_emits_empty_repo_note(tmp_path: Path) -> None:
     _git_init_with_identity(repo)
     # Deliberately do NOT make any commit -- HEAD must not resolve.
 
-    proc = _invoke(repo)
+    proc = _invoke_module(repo)
     assert proc.returncode == 0, (
         f"non-zero exit: {proc.returncode!r}; stderr={proc.stderr!r}"
     )
@@ -215,7 +239,7 @@ def test_binary_diff_no_crash(tmp_path: Path) -> None:
     # continuation byte.
     target.write_bytes(b"hello \xc3\x28 world\n")
 
-    proc = _invoke(repo)
+    proc = _invoke_module(repo)
     assert proc.returncode == 0, (
         f"non-zero exit: {proc.returncode!r}; stderr={proc.stderr!r}"
     )
@@ -275,7 +299,7 @@ def test_shim_records_invocation(tmp_path: Path) -> None:
         )
 
     before = _count_records()
-    proc = _invoke(repo, env={"LIFECYCLE_SESSION_ID": session_id})
+    proc = _invoke_wrapper(repo, env={"LIFECYCLE_SESSION_ID": session_id})
     assert proc.returncode == 0, (
         f"non-zero exit: {proc.returncode!r}; stderr={proc.stderr!r}"
     )
@@ -310,6 +334,10 @@ _GIT_PREFIX_EXPECTED = [
     "log.decorate=auto",
     "--no-pager",
 ]
+
+# ``SCRIPT_PATH`` points at the bash wrapper after #252.  The AST walker in
+# ``test_git_env_hardening`` must read the canonical Python source instead.
+_PYTHON_SCRIPT_PATH = REPO_ROOT / "cortex_command" / "commit" / "preflight.py"
 
 
 def _is_subprocess_run_call(node: ast.Call) -> bool:
@@ -391,7 +419,9 @@ def _dict_literal_keys(d: ast.Dict) -> set[str]:
 def test_git_env_hardening() -> None:
     """Every git subprocess call uses the hardened argv prefix + env dict.
 
-    Walks the AST of ``bin/cortex-commit-preflight`` and:
+    Walks the AST of ``cortex_command/commit/preflight.py`` (the canonical
+    Python source, not the bash wrapper at ``bin/cortex-commit-preflight``
+    which was promoted post-#252) and:
       1. Finds every ``subprocess.run``/``check_output``/``Popen`` call
          whose first positional arg is a list literal starting with
          ``"git"``.
@@ -403,8 +433,8 @@ def test_git_env_hardening() -> None:
       4. Asserts AT LEAST ONE git argv literal exists (defends against
          vacuous pass when zero list literals match).
     """
-    source = SCRIPT_PATH.read_text(encoding="utf-8")
-    tree = ast.parse(source, filename=str(SCRIPT_PATH))
+    source = _PYTHON_SCRIPT_PATH.read_text(encoding="utf-8")
+    tree = ast.parse(source, filename=str(_PYTHON_SCRIPT_PATH))
 
     git_argv_matches: list[tuple[ast.Call, ast.List]] = []
     env_names_seen: set[str] = set()
@@ -457,7 +487,7 @@ def test_git_env_hardening() -> None:
 
     # (4) vacuous-pass defense: at least one match must exist.
     assert len(git_argv_matches) >= 1, (
-        "no git argv list literals found in bin/cortex-commit-preflight; "
+        "no git argv list literals found in cortex_command/commit/preflight.py; "
         "AST walker would pass vacuously. Refactor must keep at least one "
         "list literal beginning with 'git' visible to ast.walk."
     )
