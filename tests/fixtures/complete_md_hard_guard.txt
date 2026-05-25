@@ -1,0 +1,5 @@
+**Hard guard**: before running cleanup, compare `realpath "$PWD"` with the worktree path. If the session is running from inside the target worktree, exit with:
+
+> cd out of the worktree before running cleanup; current PWD is the worktree being removed.
+
+Do not auto-cd. The user must exit the worktree and re-invoke. Two exit paths are available: `ExitWorktree action="keep"` is preferred when EnterWorktree session state is live (it clears the keep/remove prompt at session end), and `cd $(git rev-parse --show-toplevel)` works in both same-session and cross-session contexts (but defers the keep/remove prompt to session end when state is live).
