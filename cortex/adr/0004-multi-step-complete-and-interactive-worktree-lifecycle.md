@@ -1,5 +1,5 @@
 ---
-Status: accepted
+status: accepted
 ---
 
 # Multi-step Complete phase and interactive worktree lifecycle

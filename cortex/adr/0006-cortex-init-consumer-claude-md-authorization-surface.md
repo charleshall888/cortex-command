@@ -2,8 +2,6 @@
 status: accepted
 ---
 
-Status: accepted
-
 # `cortex init` consumer `CLAUDE.md` authorization surface
 
 ## Context

@@ -7,8 +7,10 @@ Land Approach A — mid-session auto-enter of the `interactive/{slug}` worktree 
 ## Outline
 
 ### Phase 1: Foundations (tasks: 1, 2, 3, 4)
-**Goal**: Promote ADR-0004 to `accepted` with the resolved-decisions amendment, introduce ADR-0005 for the CLAUDE.md surface extension, and fix the `cortex-worktrees/` → `.claude/worktrees/` path drift in implement.md and complete.md so subsequent phases have a clean substrate.
-**Checkpoint**: ADR-0004 status is `accepted`, ADR-0005 exists at `accepted`, `grep -c 'cortex-worktrees' skills/lifecycle/references/{implement,complete}.md` = 0 for both files.
+**Goal**: Promote ADR-0004 to `accepted` with the resolved-decisions amendment, introduce ADR-0006 for the CLAUDE.md surface extension, and fix the `cortex-worktrees/` → `.claude/worktrees/` path drift in implement.md and complete.md so subsequent phases have a clean substrate.
+**Checkpoint**: ADR-0004 status is `accepted`, ADR-0006 exists at `accepted`, `grep -c 'cortex-worktrees' skills/lifecycle/references/{implement,complete}.md` = 0 for both files.
+
+> Note: Numbering collision resolved — what the spec/plan originally called "ADR-0005" was renumbered to ADR-0006 because `cortex/adr/0005-repo-relative-worktree-placement.md` already exists. The `status:` field was also normalized to lowercase across both new ADR-0006 and the promoted ADR-0004 to match ADR-README convention.
 
 ### Phase 2: Authorization plumbing (tasks: 5, 6, 7, 8)
 **Goal**: Extend `cortex init` with the `ensure_claude_md_authorization()` write-path, the `--revoke-worktree-auth` rollback subcommand (refusing on live session without `--force`), and the `--verify-worktree-auth` precondition probe with three exit codes (0 OK / 1 absent / 2 stale).
@@ -26,21 +28,21 @@ Land Approach A — mid-session auto-enter of the `interactive/{slug}` worktree 
 
 ### Task 1: Promote ADR-0004 + append resolved-decisions amendment
 - **Files**: `cortex/adr/0004-multi-step-complete-and-interactive-worktree-lifecycle.md`
-- **What**: Change `Status: proposed` to `Status: accepted`. Append a new `## Approach A resolved decisions` section recording the three decisions per R17 (1 cross-session-exit interaction model, 2a authorization shape, 2b WorktreeCreate-bypass non-expansion verification).
+- **What**: Change `status: proposed` to `status: accepted`. Append a new `## Approach A resolved decisions` section recording the three decisions per R17 (1 cross-session-exit interaction model, 2a authorization shape, 2b WorktreeCreate-bypass non-expansion verification).
 - **Depends on**: none
 - **Complexity**: simple
 - **Context**: ADR-0004 lives at the named path. The amendment is appended after the existing `## branch-mode default (Approach C) + Approach A deferred design surface` section (currently around lines 27–41). Each of the three resolved decisions is one paragraph naming the decision, the load-bearing schema clause or constraint, and the spec requirement(s) that codify the resolution. Per ADR-README, an ADR amendment landing on a `proposed` ADR co-promotes it to `accepted` if the merge happens in the same commit.
-- **Verification**: `grep -c '^Status: accepted$' cortex/adr/0004-multi-step-complete-and-interactive-worktree-lifecycle.md` = 1 AND `grep -c '^## Approach A resolved decisions' cortex/adr/0004-multi-step-complete-and-interactive-worktree-lifecycle.md` = 1 — pass if both counts match.
-- **Status**: [ ] pending
+- **Verification**: `grep -c '^status: accepted$' cortex/adr/0004-multi-step-complete-and-interactive-worktree-lifecycle.md` = 1 AND `grep -c '^## Approach A resolved decisions' cortex/adr/0004-multi-step-complete-and-interactive-worktree-lifecycle.md` = 1 — pass if both counts match.
+- **Status**: [x] completed
 
-### Task 2: Create ADR-0005
-- **Files**: `cortex/adr/0005-cortex-init-consumer-claude-md-authorization-surface.md`
-- **What**: Author ADR-0005 with `Status: accepted` and the four required sections per spec R2: (a) three-criteria-gate rationale, (b) fenced-block shape with `version=N` attribute, (c) lifecycle of the clause (write / verify / revoke / uninstall), (d) alternatives considered and rejected.
+### Task 2: Create ADR-0006
+- **Files**: `cortex/adr/0006-cortex-init-consumer-claude-md-authorization-surface.md`
+- **What**: Author ADR-0006 with `status: accepted` and the four required sections per spec R2: (a) three-criteria-gate rationale, (b) fenced-block shape with `version=N` attribute, (c) lifecycle of the clause (write / verify / revoke / uninstall), (d) alternatives considered and rejected.
 - **Depends on**: none
 - **Complexity**: simple
-- **Context**: ADR-README's three-criteria gate (`cortex/adr/README.md:19-27`) defines the test (Hard to reverse + Surprising without context + Real trade-off). The spec's Proposed ADR section contains the canonical body — Task 2 transcribes it into ADR-0005 file with appropriate ADR frontmatter (Date, Authors). Section (c) MUST literally contain the word `uninstall` per R2 acceptance.
-- **Verification**: file exists AND `grep -c '^Status: accepted$' cortex/adr/0005-cortex-init-consumer-claude-md-authorization-surface.md` = 1 AND `grep -ci 'uninstall' cortex/adr/0005-cortex-init-consumer-claude-md-authorization-surface.md` ≥ 1 — pass if all three checks match.
-- **Status**: [ ] pending
+- **Context**: ADR-README's three-criteria gate (`cortex/adr/README.md:19-27`) defines the test (Hard to reverse + Surprising without context + Real trade-off). The spec's Proposed ADR section contains the canonical body — Task 2 transcribes it into ADR-0006 file with appropriate ADR frontmatter (Date, Authors). Section (c) MUST literally contain the word `uninstall` per R2 acceptance.
+- **Verification**: file exists AND `grep -c '^status: accepted$' cortex/adr/0006-cortex-init-consumer-claude-md-authorization-surface.md` = 1 AND `grep -ci 'uninstall' cortex/adr/0006-cortex-init-consumer-claude-md-authorization-surface.md` ≥ 1 — pass if all three checks match.
+- **Status**: [x] completed (renumbered from 0005 due to collision)
 
 ### Task 3: Doc-drift fix in implement.md
 - **Files**: `skills/lifecycle/references/implement.md`
@@ -49,7 +51,7 @@ Land Approach A — mid-session auto-enter of the `interactive/{slug}` worktree 
 - **Complexity**: simple
 - **Context**: `cortex_command/pipeline/worktree.py:167` returns `(repo / ".claude" / "worktrees" / feature).resolve()`. Today's §1a step iii (around lines 122–130) mentions the stale path. The resolver shim `cortex-worktree-resolve interactive/{slug}` is the canonical lookup — used elsewhere in §1a step v (lines 184–198).
 - **Verification**: `grep -c 'cortex-worktrees' skills/lifecycle/references/implement.md` = 0 — pass if count is 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed (no-op — file was already canonical)
 
 ### Task 4: Doc-drift fix in complete.md
 - **Files**: `skills/lifecycle/references/complete.md`
@@ -58,7 +60,7 @@ Land Approach A — mid-session auto-enter of the `interactive/{slug}` worktree 
 - **Complexity**: simple
 - **Context**: complete.md Step 8 prefix check (line ~183) reads "checking `git worktree list --porcelain` for a path matching `.claude/worktrees/interactive-{slug}` (or the resolved worktree root)" — verify this matches the current convention and remove any stale prefix mentions elsewhere.
 - **Verification**: `grep -c 'cortex-worktrees' skills/lifecycle/references/complete.md` = 0 — pass if count is 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed (no-op — file was already canonical)
 
 ### Task 5: Implement `ensure_claude_md_authorization()` + canonical fence body
 - **Files**: `cortex_command/init/scaffold.py`, `cortex_command/init/templates/claude_md_authorization.md` (new), `cortex_command/init/handler.py`
@@ -103,7 +105,7 @@ Land Approach A — mid-session auto-enter of the `interactive/{slug}` worktree 
 - **Complexity**: simple
 - **Context**: Pattern reference: existing console scripts under `cortex_command/` registered in `pyproject.toml`'s `[project.scripts]` section (e.g. `cortex-init`, `cortex-worktree-resolve`). The probe distinguishes "CWD is the main checkout" from "CWD is inside a linked worktree"; the implementer chooses the git interrogation strategy from `git rev-parse` (`--show-toplevel`, `--git-common-dir`, `--git-dir`, etc.). Test approach: exercise against tmp_path repos with both a main checkout and a `git worktree add`ed sibling — pattern reference: existing pytest fixtures under `tests/` that use `tmp_path` for git-state setup.
 - **Verification**: `just test tests/test_worktree_precondition.py` exits 0; the test exercises real `git worktree add` ground truth (independent oracle, not self-sealing).
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 10: Wire EnterWorktree + precondition probes in implement.md §1a
 - **Files**: `skills/lifecycle/references/implement.md`
@@ -149,7 +151,7 @@ Land Approach A — mid-session auto-enter of the `interactive/{slug}` worktree 
 - **Complexity**: simple
 - **Context**: Today's picker option is "**Implement on feature branch with worktree**" — passes today. The test is forward-looking: catches label renames that would break the authorization gate. Pattern: `assert any('worktree' in opt.lower() for opt in extracted_option_labels)`.
 - **Verification**: `just test tests/test_lifecycle_picker_label_pins_worktree.py` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 15: WorktreeCreate-bypass implementation test
 - **Files**: `tests/test_create_worktree_bypass.py` (new)
@@ -158,7 +160,7 @@ Land Approach A — mid-session auto-enter of the `interactive/{slug}` worktree 
 - **Complexity**: simple
 - **Context**: The actual invariant ADR-0004's bypass clause protects is that `create_worktree` invokes `git worktree add` directly via subprocess (not via the platform's `claude --worktree` launch path). Read the function source via `inspect.getsource(create_worktree)`; assert the relevant tokens appear / don't appear. The defensive hooks.json check catches a future hook registration on the EnterWorktree event but is not the load-bearing assertion.
 - **Verification**: `just test tests/test_create_worktree_bypass.py` exits 0 and contains both assertions.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 16: Kept-pauses inventory regression check (no edits expected)
 - **Files**: `tests/test_lifecycle_kept_pauses_parity.py` (existing — no edits expected)
@@ -199,8 +201,8 @@ Land Approach A — mid-session auto-enter of the `interactive/{slug}` worktree 
 ## Risks
 
 - **R21/R22/R15 empirical bet may fail**: the load-bearing assumption that Claude honors a tooling-authored cortex-managed CLAUDE.md fence as satisfying the schema's "project instructions" clause is unverified until T17 lands. If `gate_fires: false`, the spec re-opens — likely requiring a revised authorization shape (e.g., switching to a different memory surface, or surfacing an explicit prompt). Plan to fall back to a documented manual instruction path if the empirical bet fails twice.
-- **ADR-0004 promotion sequencing**: encoded as DAG edge T10 → T1 (resolves the prior prose-only mitigation per plan critical review). ADR-0005 cross-references T6/T7 subcommands in its body; T6/T7 land in this same lifecycle but a split PR carries the risk that ADR-0005 documents subcommands that don't exist yet. Mitigation: bundle T2/T5/T6/T7 in a single commit train (Phase 1 commits 1–2, Phase 2 commits 1–3) or land T2 last within Phase 1 so ADR-0005's authoritative claims align with deployed code.
-- **In-fence user edits silently overwritten**: by design (R5's "latest writer wins" policy). Users who customize the cortex-managed clause lose their edits on the next `cortex init` run. Document this in the ADR-0005 rollback section and the clause itself ("This clause is regenerated by `cortex init` — do not edit inline").
+- **ADR-0004 promotion sequencing**: encoded as DAG edge T10 → T1 (resolves the prior prose-only mitigation per plan critical review). ADR-0006 cross-references T6/T7 subcommands in its body; T6/T7 land in this same lifecycle but a split PR carries the risk that ADR-0006 documents subcommands that don't exist yet. Mitigation: bundle T2/T5/T6/T7 in a single commit train (Phase 1 commits 1–2, Phase 2 commits 1–3) or land T2 last within Phase 1 so ADR-0006's authoritative claims align with deployed code.
+- **In-fence user edits silently overwritten**: by design (R5's "latest writer wins" policy). Users who customize the cortex-managed clause lose their edits on the next `cortex init` run. Document this in the ADR-0006 rollback section and the clause itself ("This clause is regenerated by `cortex init` — do not edit inline").
 - **Snapshot-fixture drift**: Task 12's snapshot test fixture must be updated when intentional hard-guard prose edits land. Document the update protocol in the test file's docstring; the fixture path is referenced in `complete.md` for discoverability.
 - **`cortex-worktree-precondition` shim cross-platform behavior**: the shim relies on `git rev-parse` outputs which are git-version-sensitive. Test against the project's pinned git version and document the minimum-git-version assumption in the shim.
 
