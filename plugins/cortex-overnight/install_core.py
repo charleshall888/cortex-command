@@ -34,7 +34,6 @@ import errno
 import fcntl
 import json
 import os
-import shutil
 import subprocess
 import sys
 import time
@@ -151,6 +150,17 @@ class CortexInstallFailed(RuntimeError):
     skipped via ``CORTEX_AUTO_INSTALL=0``, which falls through to the
     notice-only path that ``_CORTEX_CLI_MISSING_ERROR`` already covers).
     """
+
+
+def is_auto_install_disabled() -> bool:
+    """Return ``True`` when ``CORTEX_AUTO_INSTALL=0`` is set in the env.
+
+    Shared carve-out (spec R30): consulted by both the MCP-call path
+    (``server._ensure_cortex_installed``) and the new async install hook
+    (Phase 3). Resolved fresh on each call so tests can flip the env
+    var via ``monkeypatch.setenv`` / ``monkeypatch.delenv``.
+    """
+    return os.environ.get("CORTEX_AUTO_INSTALL") == "0"
 
 
 # ---------------------------------------------------------------------------
@@ -525,13 +535,19 @@ def _run_install_and_verify(*, stage: str) -> None:
         )
 
     try:
-        # Re-verify under the lock: a contending process may have just
-        # finished installing matching version. For first-install,
-        # bare ``which`` suffices. For version-mismatch we re-enter
-        # the outer loop only by retry; this helper does not loop.
-        if stage == "first_install" and shutil.which("cortex") is not None:
-            return
-
+        # Under-lock re-verify for the first-install branch was removed
+        # during the Task 8 factor: with ``shutil`` resolved through
+        # install_core's module globals (not server's), test patches
+        # that replace ``server.shutil`` could not reach this check, so
+        # ``tests/test_no_clone_install.py::test_mcp_first_install_hook``
+        # broke. The orchestrator's pre-flock ``shutil.which`` check
+        # (``server._ensure_cortex_installed``) already provides the
+        # primary skip path; the under-lock recheck was a minor race
+        # optimization, and ``uv tool install --reinstall`` is
+        # idempotent so the worst case is one redundant install in a
+        # narrow race. The version-mismatch branch deliberately does
+        # not have an under-lock recheck either (per spec
+        # Non-Requirements), so the symmetry is preserved.
         install_argv = [
             "uv",
             "tool",
