@@ -211,7 +211,13 @@ class TestValidationLoop(unittest.IsolatedAsyncioTestCase):
     # --- scenario (a): no exit report, file absent ---
 
     async def test_no_exit_report_file_absent(self):
-        """No exit report written by worker — logs WORKER_NO_EXIT_REPORT."""
+        """No exit report written by worker — logs WORKER_NO_EXIT_REPORT.
+
+        Per the silent-worker zero-commits gate (task 3 of the systemic
+        circuit-breaker feature), a feature that emits WORKER_NO_EXIT_REPORT
+        and produces zero commits paused with that error string instead of
+        completing.
+        """
         mocks = self._apply_common_mocks()
         self._start_patch(
             "cortex_command.overnight.feature_executor._read_exit_report",
@@ -223,7 +229,8 @@ class TestValidationLoop(unittest.IsolatedAsyncioTestCase):
             "test-feat", self._worktree_path, self._config
         )
 
-        self.assertEqual(result.status, "completed")
+        self.assertEqual(result.status, "paused")
+        self.assertEqual(result.error, "worker_no_exit_report")
         mocks["mark_done"].assert_called_once()
         events = self._logged_events(mocks)
         self.assertIn(WORKER_NO_EXIT_REPORT, events)
@@ -273,7 +280,13 @@ class TestValidationLoop(unittest.IsolatedAsyncioTestCase):
     # --- scenario (d): malformed report (file present, parse returns None) ---
 
     async def test_malformed_exit_report(self):
-        """Exit report file exists but is unparseable — logs WORKER_MALFORMED."""
+        """Exit report file exists but is unparseable — logs WORKER_MALFORMED.
+
+        Per the silent-worker zero-commits gate (task 3 of the systemic
+        circuit-breaker feature), a feature that emits WORKER_MALFORMED_EXIT_REPORT
+        and produces zero commits pauses with that error string instead of
+        completing.
+        """
         mocks = self._apply_common_mocks()
         self._start_patch(
             "cortex_command.overnight.feature_executor._read_exit_report",
@@ -287,7 +300,8 @@ class TestValidationLoop(unittest.IsolatedAsyncioTestCase):
             "test-feat", self._worktree_path, self._config
         )
 
-        self.assertEqual(result.status, "completed")
+        self.assertEqual(result.status, "paused")
+        self.assertEqual(result.error, "worker_malformed_exit_report")
         mocks["mark_done"].assert_called_once()
         events = self._logged_events(mocks)
         self.assertIn(WORKER_MALFORMED_EXIT_REPORT, events)
@@ -296,7 +310,12 @@ class TestValidationLoop(unittest.IsolatedAsyncioTestCase):
     # --- scenario (e): action="question" but question field absent ---
 
     async def test_action_question_missing_question_field(self):
-        """Worker set action=question but omitted the question field — malformed."""
+        """Worker set action=question but omitted the question field — malformed.
+
+        Per the silent-worker zero-commits gate (task 3 of the systemic
+        circuit-breaker feature), the malformed-emit + zero-commits combination
+        now pauses with the silent-worker string.
+        """
         mocks = self._apply_common_mocks()
         self._start_patch(
             "cortex_command.overnight.feature_executor._read_exit_report",
@@ -310,7 +329,8 @@ class TestValidationLoop(unittest.IsolatedAsyncioTestCase):
             "test-feat", self._worktree_path, self._config
         )
 
-        self.assertEqual(result.status, "completed")
+        self.assertEqual(result.status, "paused")
+        self.assertEqual(result.error, "worker_malformed_exit_report")
         mocks["mark_done"].assert_called_once()
         events = self._logged_events(mocks)
         self.assertIn(WORKER_MALFORMED_EXIT_REPORT, events)

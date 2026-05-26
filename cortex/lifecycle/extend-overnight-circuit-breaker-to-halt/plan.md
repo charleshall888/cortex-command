@@ -22,7 +22,7 @@ Add a session-halting systemic-cascade detector to the overnight orchestrator. P
 - **Complexity**: simple
 - **Context**: Edit site is the `RetryResult(...)` constructor call inside `if recovery_path == "pause_human":` (currently lines 370–377). The sibling `pause_session` branch (lines 391–399) already includes `error_type=error_type` — copy that one keyword to the earlier branch. `error_type` is in scope: it's assigned at `error_type = result.error_type or "unknown"` two blocks earlier. New test asserts: when `ERROR_RECOVERY` returns `pause_human` for `infrastructure_failure`, the resulting `RetryResult.error_type == "infrastructure_failure"` (today it is `None`).
 - **Verification**: `grep -c "error_type=error_type" cortex_command/pipeline/retry.py` ≥ 2 — pass if count ≥ 2; `python -m pytest cortex_command/pipeline/tests/test_retry.py -k pause_human_error_type -x` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 2: feature_executor.py — add `_SYSTEMIC_ERROR_TYPES` tuple + brain-triage fallthrough guard
 - **Files**: `cortex_command/overnight/feature_executor.py`, `tests/test_feature_executor.py`
@@ -31,7 +31,7 @@ Add a session-halting systemic-cascade detector to the overnight orchestrator. P
 - **Complexity**: simple
 - **Context**: The session-halt check at line 688 (`if getattr(result, "error_type", None) in _SESSION_HALT_ERROR_TYPES`) is the structural template — same `getattr(...)` pattern, different tuple, same `status="paused"`. Position the new guard *after* `_handle_failed_task` returns `None` (line 705) and *before* the generic fallthrough at line 707. The brain-triage path runs first; the systemic guard only fires when brain triage declined to override. New test asserts: a `RetryResult(success=False, paused=True, error_type="infrastructure_failure")` propagated through `_run_feature_tasks` (mock `_handle_failed_task` to return `None`) yields `FeatureResult(status="paused", error="infrastructure_failure")` rather than the generic "Task N failed after M attempts" string.
 - **Verification**: `grep -n "_SYSTEMIC_ERROR_TYPES = " cortex_command/overnight/feature_executor.py` returns one line with the three-string tuple — pass if exactly one match with the expected literal; `grep -c "result.error_type in _SYSTEMIC_ERROR_TYPES" cortex_command/overnight/feature_executor.py` ≥ 1 — pass if count ≥ 1; `python -m pytest tests/test_feature_executor.py -k systemic_fallthrough -x` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed (impl uses `getattr(result, "error_type", None) in _SYSTEMIC_ERROR_TYPES` per the session-halt structural template; verification grep string is imprecise but test passes)
 
 ### Task 3: feature_executor.py — exit-report validation: track per-feature silent-worker events + zero-commits gate
 - **Files**: `cortex_command/overnight/feature_executor.py`, `tests/test_feature_executor.py`
@@ -40,7 +40,7 @@ Add a session-halting systemic-cascade detector to the overnight orchestrator. P
 - **Complexity**: complex
 - **Context**: The silent-worker emit sites are the two `overnight_log_event(WORKER_MALFORMED_EXIT_REPORT, ...)` / `overnight_log_event(WORKER_NO_EXIT_REPORT, ...)` calls inside the `if report_action is None or ...` block at lines 758–779. The `task_commit_count` variable already exists at line 685 (`task, result, task_commit_count = item`). Accumulator pattern: initialize `silent_worker_error: Optional[str] = None` and `total_commits = 0` just before the `for batch in batches:` loop; update inside the loop next to the existing emit sites (`silent_worker_error = silent_worker_error or "worker_no_exit_report"`) and after the task is marked done (`total_commits += max(0, task_commit_count)` — `-1` is the git-error sentinel, treat as 0). At the final return, replace the unconditional `FeatureResult(status="completed")` with the conditional return described above. Three new test cases in `tests/test_feature_executor.py` (use existing fixtures; mock `_read_exit_report` to return `(None, None, None)` for the silent-worker case): (a) feature emits `WORKER_NO_EXIT_REPORT` on task 1, task 2 produces a commit → `status="completed"`; (b) feature emits `WORKER_NO_EXIT_REPORT` on its only commit-producing task and produces zero commits → `status="paused", error="worker_no_exit_report"`; (c) same but with the malformed-report path → `status="paused", error="worker_malformed_exit_report"`.
 - **Verification**: `grep -c "silent_worker_error" cortex_command/overnight/feature_executor.py` ≥ 3 — pass if count ≥ 3 (init + two assignments); `python -m pytest tests/test_feature_executor.py -k "silent_worker" -x` — pass if exit 0 and all three new cases pass.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 4: types.py + constants.py — counter field + threshold constant
 - **Files**: `cortex_command/overnight/types.py`, `cortex_command/overnight/constants.py`
@@ -49,7 +49,7 @@ Add a session-halting systemic-cascade detector to the overnight orchestrator. P
 - **Complexity**: simple
 - **Context**: `CircuitBreakerState` is constructed once per batch inside `orchestrator.py:run_batch()` (line 351) — no migration; the new field defaults to 0 and the in-memory lifetime matches the existing counter. `constants.py` imports nothing from `cortex_command.overnight.*` (preserve that; the new constant is a plain int). No new field for `recent_systemic_errors` — `cause_class` will be derived from `batch_result.features_paused` in Task 6.
 - **Verification**: `grep -n "systemic_pauses_in_batch: int = 0" cortex_command/overnight/types.py` returns one line — pass if exactly one match; `grep -n "SYSTEMIC_FAILURE_THRESHOLD = 3" cortex_command/overnight/constants.py` returns one line — pass if exactly one match with the value `3`.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 5: events.py + bin/.events-registry.md — register `pipeline_systemic_failure` event
 - **Files**: `cortex_command/overnight/events.py`, `bin/.events-registry.md`
@@ -58,7 +58,7 @@ Add a session-halting systemic-cascade detector to the overnight orchestrator. P
 - **Complexity**: simple
 - **Context**: The events.py pattern is constant + EVENT_TYPES tuple append. `worker_no_exit_report` (line 53) and `worker_malformed_exit_report` (line 54) are the closest siblings — same shape, same registry treatment. The registry row template lives at `bin/.events-registry.md:45`. The producer line is forward-referenced; Task 6 records the actual emit site once the threshold-trip block is in place.
 - **Verification**: `grep -n "PIPELINE_SYSTEMIC_FAILURE = " cortex_command/overnight/events.py` returns one line with value `"pipeline_systemic_failure"` — pass if exactly one match; `grep -c "PIPELINE_SYSTEMIC_FAILURE," cortex_command/overnight/events.py` ≥ 1 (EVENT_TYPES entry) — pass if count ≥ 1; `grep -c "pipeline_systemic_failure" bin/.events-registry.md` ≥ 1 — pass if count ≥ 1; `just events-registry-audit` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 6: outcome_router.py — apply conditional systemic-increment guard at all six pause sites
 - **Files**: `cortex_command/overnight/outcome_router.py`, `cortex_command/overnight/tests/test_outcome_router.py`
@@ -67,7 +67,7 @@ Add a session-halting systemic-cascade detector to the overnight orchestrator. P
 - **Complexity**: simple
 - **Context**: Each existing increment site is followed by event-logging and `_write_back_to_backlog` calls under `ctx.lock` (`async with ctx.lock` is held across `_apply_feature_result`; the recovery-failure block at line 1042 re-acquires the lock). The new systemic increment goes inside the same lock scope as each `consecutive_pauses += 1`. At sites 509/536/657/1098 the local `error` variable that lands in `features_paused` is a wrapped string and will never match the tuple — the guard naturally no-ops there. Only the `else: # paused` branch at line 725 will increment the systemic counter in practice, once Phase 1's R1/R3 wiring is in place. Apply the guard uniformly per spec R5's literal reading.
 - **Verification**: `grep -c "systemic_pauses_in_batch += 1" cortex_command/overnight/outcome_router.py` ≥ 6 — pass if count ≥ 6 (six increment-site guards); `grep -c "systemic_pauses_in_batch = 0" cortex_command/overnight/outcome_router.py` = 0 — pass if count == 0 (no reset sites); `python -m pytest cortex_command/overnight/tests/test_outcome_router.py -k systemic_increment -x` — pass if exit 0 and both new cases pass.
-- **Status**: [ ] pending
+- **Status**: [x] completed (deviation: moved `_SYSTEMIC_ERROR_TYPES` to `constants.py` to break circular import; `feature_executor` re-exports it so the spec's import contract holds)
 
 ### Task 7: outcome_router.py — threshold-trip block (emit event, derive cause_class, set global_abort_signal)
 - **Files**: `cortex_command/overnight/outcome_router.py`, `cortex_command/overnight/tests/test_outcome_router.py`
@@ -76,7 +76,7 @@ Add a session-halting systemic-cascade detector to the overnight orchestrator. P
 - **Complexity**: simple
 - **Context**: The threshold check sites (lines 739 and 1106) already perform the class-blind `CIRCUIT_BREAKER` event emission and set `circuit_breaker_fired`; the new systemic block is a structurally separate `if` immediately after the existing one — both can fire on the same pause, both events get logged, only the systemic block sets `global_abort_signal`. `features_paused` is `ctx.batch_result.features_paused`, a list of `{"name", "error"}` dicts appended at each pause site — derive `cause_class` from it rather than adding a new state field. The derivation depends on Task 6's invariant: every systemic increment is preceded by a `features_paused.append({"name": ..., "error": ...})` with `error in _SYSTEMIC_ERROR_TYPES`. Idempotency: gate on `not ctx.batch_result.global_abort_signal` so the systemic event fires once even if a fourth systemic pause arrives before the pre-dispatch gate halts new features.
 - **Verification**: `grep -c "PIPELINE_SYSTEMIC_FAILURE" cortex_command/overnight/outcome_router.py` ≥ 1 — pass if count ≥ 1; `grep -c "global_abort_signal = True" cortex_command/overnight/outcome_router.py` ≥ 1 — pass if count ≥ 1 (new threshold-trip site); `python -m pytest cortex_command/overnight/tests/test_outcome_router.py -k "systemic_threshold or systemic_total_in_batch" -x` — pass if exit 0 and all three new cases pass.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 8: orchestrator integration test — total-in-batch halt + `global_abort_signal` propagation through `run_batch()`
 - **Files**: `cortex_command/overnight/tests/test_orchestrator.py`

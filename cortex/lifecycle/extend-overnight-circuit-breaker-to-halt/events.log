@@ -3,3 +3,8 @@
 {"ts": "2026-05-25T11:55:00Z", "event": "spec_approved", "feature": "extend-overnight-circuit-breaker-to-halt"}
 {"ts": "2026-05-25T23:30:34Z", "event": "plan_approved", "feature": "extend-overnight-circuit-breaker-to-halt"}
 {"ts": "2026-05-25T23:30:34Z", "event": "phase_transition", "feature": "extend-overnight-circuit-breaker-to-halt", "from": "plan", "to": "implement"}
+{"ts":"2026-05-26T02:10:08Z","event":"batch_dispatch","feature":"extend-overnight-circuit-breaker-to-halt","batch":0,"tasks":[1,4,5]}
+{"ts":"2026-05-26T02:14:44Z","event":"batch_dispatch","feature":"extend-overnight-circuit-breaker-to-halt","batch":1,"tasks":[2]}
+{"ts":"2026-05-26T02:17:50Z","event":"batch_dispatch","feature":"extend-overnight-circuit-breaker-to-halt","batch":2,"tasks":[3,6]}
+{"ts":"2026-05-26T02:23:16Z","event":"batch_dispatch","feature":"extend-overnight-circuit-breaker-to-halt","batch":3,"tasks":[7]}
+{"ts":"2026-05-26T02:27:17Z","event":"batch_dispatch","feature":"extend-overnight-circuit-breaker-to-halt","batch":4,"tasks":[8]}
