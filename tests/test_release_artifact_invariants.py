@@ -4,7 +4,7 @@ This test enforces two invariants on release artifacts (spec R24):
 
 (a) **CLI_PIN[0] tag-lockstep**: at any annotated tag matching ``v*.*.*``
     whose tag-date is later than the ``v1.0.2`` tag-date, the
-    ``CLI_PIN[0]`` literal at ``plugins/cortex-overnight/server.py``
+    ``CLI_PIN[0]`` literal at ``plugins/cortex-overnight/cli_pin.py``
     equals the tag string. This is the property the auto-release
     workflow (``.github/workflows/auto-release.yml``, spec R19) maintains
     going forward, and the CI lint (release.yml, spec R18) enforces as
@@ -54,7 +54,7 @@ import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SERVER_PY_RELATIVE = "plugins/cortex-overnight/server.py"
+CLI_PIN_PY_RELATIVE = "plugins/cortex-overnight/cli_pin.py"
 
 #: The four historical tags that violated the CLI_PIN[0] tag-lockstep
 #: invariant. These are documented as the rationale for date-scoping the
@@ -134,17 +134,17 @@ def _post_boundary_tags() -> list[tuple[str, int]]:
 
 
 def _cli_pin_at_tag(tag: str) -> str:
-    """Read ``CLI_PIN[0]`` from ``server.py`` at the given tag.
+    """Read ``CLI_PIN[0]`` from ``cli_pin.py`` at the given tag.
 
     Uses ``git show <tag>:<path>`` so the working tree is not touched.
     Returns the matched tag string. Fails the test loudly on 0-or-≥2
     matches in the file at that revision (the same fail-loud contract
     as ``bin/cortex-rewrite-cli-pin``, spec R19.5).
     """
-    blob = _run_git("show", f"{tag}:{SERVER_PY_RELATIVE}")
+    blob = _run_git("show", f"{tag}:{CLI_PIN_PY_RELATIVE}")
     matches = _CLI_PIN_RE.findall(blob)
     assert len(matches) == 1, (
-        f"expected exactly one CLI_PIN literal in {SERVER_PY_RELATIVE} at "
+        f"expected exactly one CLI_PIN literal in {CLI_PIN_PY_RELATIVE} at "
         f"tag {tag!r}, found {len(matches)}: {matches!r}"
     )
     return matches[0]
