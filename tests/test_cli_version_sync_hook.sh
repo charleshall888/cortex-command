@@ -47,13 +47,13 @@ make_clean_repo() {
   )
 }
 
-# Write a fake plugin-root server.py carrying a chosen CLI_PIN tuple.
+# Write a fake plugin-root cli_pin.py carrying a chosen CLI_PIN tuple.
 make_plugin_root() {
   local plugin_root="$1"
   local tag="$2"
   local schema="$3"
   mkdir -p "$plugin_root"
-  cat > "$plugin_root/server.py" <<EOF
+  cat > "$plugin_root/cli_pin.py" <<EOF
 # Synthesized fixture for cli-version-sync hook test
 CLI_PIN = ("$tag", "$schema")
 EOF

@@ -2,7 +2,7 @@
 # SessionStart hook: cortex CLI version drift detector (#235).
 #
 # Probes the installed CLI against ``CLI_PIN`` (regex-parsed from the
-# cortex-overnight plugin's server.py) and emits ``additionalContext``
+# cortex-overnight plugin's cli_pin.py) and emits ``additionalContext``
 # on drift so Claude warns about stale Bash-subprocess ``cortex …``
 # calls. Visibility-only — does NOT reinstall. The next MCP tool call
 # into cortex-overnight triggers the real reinstall via
@@ -84,12 +84,12 @@ def touch_sentinel(state_dir, sentinel):
         pass
 
 
-def parse_cli_pin(server_py):
+def parse_cli_pin(cli_pin_py):
     """Regex-match the ``CLI_PIN = ("vX.Y.Z", "M.m")`` literal in
-    server.py. Format-tolerant — anchors on the same shape as
+    cli_pin.py. Format-tolerant — anchors on the same shape as
     ``bin/cortex-rewrite-cli-pin``'s ``CLI_PIN_RE``."""
     try:
-        src = server_py.read_text()
+        src = cli_pin_py.read_text()
     except OSError:
         return None
     m = re.search(
@@ -183,16 +183,16 @@ try:
     STATE_DIR = pathlib.Path(state_dir_str)
     SENTINEL = pathlib.Path(sentinel_str)
     PLUGIN_ROOT = pathlib.Path(plugin_root_str)
-    SERVER_PATH = PLUGIN_ROOT / "server.py"
+    CLI_PIN_PATH = PLUGIN_ROOT / "cli_pin.py"
 
     # Skip predicates fire BEFORE sentinel write so next session retries
     # if the operator switches off dev-mode or back onto main.
     if skip_predicate_fires(cwd):
         sys.exit(0)
 
-    pin = parse_cli_pin(SERVER_PATH)
+    pin = parse_cli_pin(CLI_PIN_PATH)
     if pin is None:
-        # server.py missing or CLI_PIN refactored — do NOT write
+        # cli_pin.py missing or CLI_PIN refactored — do NOT write
         # sentinel; next session retries when fixed upstream.
         sys.exit(0)
     expected_tag, expected_schema = pin
