@@ -34,7 +34,7 @@ The orchestrator captures the pre-dispatch SHA-256 of the artifact into orchestr
 
 **Phase 1 — Sentinel verification (per reviewer):**
 
-For each reviewer, write the reviewer's raw stdout to a tempfile (do NOT pipe through stdin to avoid shell-quoting hazards on four parallel outputs), then invoke:
+For each reviewer, write the reviewer's raw stdout to a tempfile (do NOT pipe through stdin to avoid shell-quoting hazards on four parallel outputs); use a tempfile path unique to this critical-review invocation. Sharing a path across invocations causes concurrent runs to corrupt each other's stdout (silent), and stale leftovers from prior sessions trip the Write tool's read-before-overwrite guard (noisy). Derive the path from `$LIFECYCLE_SESSION_ID` or `mktemp -d`. Then invoke:
 
 ```bash
 cortex-critical-review check-artifact-stable \
