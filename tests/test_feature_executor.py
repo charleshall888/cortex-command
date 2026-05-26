@@ -216,5 +216,122 @@ class TestCrossRepoIntegrationBasePath(unittest.IsolatedAsyncioTestCase):
         )
 
 
+class TestSystemicFallthrough(unittest.IsolatedAsyncioTestCase):
+    """Verify that a systemic error_type propagated through _run_feature_tasks
+    yields FeatureResult(status='paused', error=error_type) rather than the
+    generic 'Task N failed after M attempts' string.
+
+    Covers: _SYSTEMIC_ERROR_TYPES guard inserted after brain-triage returns None.
+    """
+
+    def setUp(self) -> None:
+        self._tmpdir = tempfile.TemporaryDirectory()
+        self._tmp = Path(self._tmpdir.name)
+        self._config = BatchConfig(
+            batch_id=1,
+            plan_path=self._tmp / "plan.md",
+            overnight_events_path=self._tmp / "overnight.log",
+            pipeline_events_path=self._tmp / "pipeline.log",
+            overnight_state_path=self._tmp / "state.json",
+            session_id="test-session",
+            session_dir=self._tmp,
+        )
+        self._feature_plan = FeaturePlan(
+            feature="test-feat",
+            overview="",
+            tasks=[
+                FeatureTask(
+                    number=1,
+                    description="do something",
+                    depends_on=[],
+                    files=["test.py"],
+                    complexity="simple",
+                )
+            ],
+        )
+
+    def tearDown(self) -> None:
+        self._tmpdir.cleanup()
+
+    async def test_systemic_fallthrough_infrastructure_failure(self) -> None:
+        """A RetryResult(success=False, paused=True, error_type='infrastructure_failure')
+        where _handle_failed_task returns None produces
+        FeatureResult(status='paused', error='infrastructure_failure').
+        """
+        systemic_retry = RetryResult(
+            success=False,
+            attempts=3,
+            final_output="",
+            paused=True,
+            idempotency_skipped=False,
+            error_type="infrastructure_failure",
+        )
+
+        overnight_state = OvernightState(
+            session_id="test-session",
+            integration_worktrees={},
+            integration_branches={},
+            features={
+                "test-feat": OvernightFeatureStatus(status="pending")
+            },
+        )
+
+        patches = [
+            patch.object(
+                feature_executor_module,
+                "load_state",
+                return_value=overnight_state,
+            ),
+            patch.object(
+                feature_executor_module,
+                "parse_feature_plan",
+                return_value=self._feature_plan,
+            ),
+            patch.object(
+                feature_executor_module,
+                "retry_task",
+                new=AsyncMock(return_value=systemic_retry),
+            ),
+            # Brain triage returns None — systemic guard should fire
+            patch.object(
+                feature_executor_module,
+                "_handle_failed_task",
+                new=AsyncMock(return_value=None),
+            ),
+            patch.object(feature_executor_module, "pipeline_log_event"),
+            patch.object(feature_executor_module, "overnight_log_event"),
+            patch.object(
+                feature_executor_module, "read_criticality", return_value="medium"
+            ),
+            patch.object(
+                feature_executor_module,
+                "_render_template",
+                return_value="stub system prompt",
+            ),
+            patch.object(
+                feature_executor_module,
+                "read_events",
+                return_value=[],
+            ),
+        ]
+
+        with patches[0], patches[1], patches[2], patches[3], patches[4], \
+             patches[5], patches[6], patches[7], patches[8]:
+            result = await feature_executor_module.execute_feature(
+                feature="test-feat",
+                worktree_path=self._tmp / "worktree",
+                config=self._config,
+                repo_path=None,
+            )
+
+        self.assertEqual(result.status, "paused")
+        self.assertEqual(result.error, "infrastructure_failure")
+        self.assertNotIn(
+            "failed after",
+            result.error or "",
+            "Generic fallthrough string should not appear for systemic errors",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
