@@ -69,6 +69,15 @@ IMPLEMENT_TEMPLATE = importlib.resources.files("cortex_command.pipeline.prompts"
 # checks across the session-halt path.
 _SESSION_HALT_ERROR_TYPES = ("budget_exhausted", "api_rate_limit")
 
+# Error types that indicate systemic infrastructure failures. When brain
+# triage declines to override (returns None), these flow to a paused
+# FeatureResult rather than the generic "Task N failed" fallthrough.
+_SYSTEMIC_ERROR_TYPES = (
+    "infrastructure_failure",
+    "worker_no_exit_report",
+    "worker_malformed_exit_report",
+)
+
 
 # ---------------------------------------------------------------------------
 # Internal: prompt rendering
@@ -703,6 +712,15 @@ async def execute_feature(
                 )
                 if brain_result:
                     return brain_result
+
+                # Systemic errors surface as paused with the error_type string
+                # so Phase 2's cascade detector can count them across the batch.
+                if getattr(result, "error_type", None) in _SYSTEMIC_ERROR_TYPES:
+                    return FeatureResult(
+                        name=feature,
+                        status="paused",
+                        error=result.error_type,
+                    )
 
                 return FeatureResult(
                     name=feature,
