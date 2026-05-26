@@ -40,6 +40,6 @@ Fix #1 is preferred — it avoids relying on undocumented harness behavior.
 
 ## Done When
 
-- Critical-review's reviewer-tempfile staging step works without manual heredoc workaround.
-- `grep -c 'mktemp' skills/critical-review/references/verification-gates.md` ≥ 1 OR an equivalent session-unique-path mechanism is documented.
+- Critical-review's reviewer-tempfile staging step works without manual heredoc workaround across consecutive invocations in the same `$TMPDIR`.
+- Either: (a) `skills/critical-review/references/verification-gates.md` Step 2c.5 names a session-unique tempdir mechanism (e.g. derived from `$LIFECYCLE_SESSION_ID` or `mktemp -d`); or (b) the canonical heredoc-via-Bash idiom for landing reviewer tempfiles is explicitly documented in that file.
 - A regression test or doc test verifies the tempfile path is collision-free across consecutive critical-review invocations.
