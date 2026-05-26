@@ -333,5 +333,273 @@ class TestSystemicFallthrough(unittest.IsolatedAsyncioTestCase):
         )
 
 
+class TestSilentWorkerExitReport(unittest.IsolatedAsyncioTestCase):
+    """Task 3: silent-worker zero-commits gate.
+
+    Covers three cases described in the task spec:
+    (a) WORKER_NO_EXIT_REPORT on task 1 but task 2 produces commits -> completed
+    (b) WORKER_NO_EXIT_REPORT on only task, zero commits -> paused/worker_no_exit_report
+    (c) WORKER_MALFORMED_EXIT_REPORT on only task, zero commits -> paused/worker_malformed_exit_report
+    """
+
+    def setUp(self) -> None:
+        self._tmpdir = tempfile.TemporaryDirectory()
+        self._tmp = Path(self._tmpdir.name)
+        self._config = BatchConfig(
+            batch_id=1,
+            plan_path=self._tmp / "plan.md",
+            overnight_events_path=self._tmp / "overnight.log",
+            pipeline_events_path=self._tmp / "pipeline.log",
+            overnight_state_path=self._tmp / "state.json",
+            session_id="test-session",
+            session_dir=self._tmp,
+        )
+
+    def tearDown(self) -> None:
+        self._tmpdir.cleanup()
+
+    def _make_two_task_plan(self) -> FeaturePlan:
+        return FeaturePlan(
+            feature="test-feat",
+            overview="",
+            tasks=[
+                FeatureTask(
+                    number=1,
+                    description="task one",
+                    depends_on=[],
+                    files=["a.py"],
+                    complexity="simple",
+                ),
+                FeatureTask(
+                    number=2,
+                    description="task two",
+                    depends_on=[1],
+                    files=["b.py"],
+                    complexity="simple",
+                ),
+            ],
+        )
+
+    def _make_single_task_plan(self) -> FeaturePlan:
+        return FeaturePlan(
+            feature="test-feat",
+            overview="",
+            tasks=[
+                FeatureTask(
+                    number=1,
+                    description="task one",
+                    depends_on=[],
+                    files=["a.py"],
+                    complexity="simple",
+                ),
+            ],
+        )
+
+    def _good_retry_result(self) -> RetryResult:
+        return RetryResult(
+            success=True,
+            attempts=1,
+            final_output="done",
+            paused=False,
+            idempotency_skipped=False,
+        )
+
+    def _base_patches(self, mock_retry):
+        overnight_state = OvernightState(
+            session_id="test-session",
+            integration_worktrees={},
+            integration_branches={},
+            features={"test-feat": OvernightFeatureStatus(status="pending")},
+        )
+        return [
+            patch.object(feature_executor_module, "load_state", return_value=overnight_state),
+            patch.object(feature_executor_module, "retry_task", new=mock_retry),
+            patch.object(feature_executor_module, "mark_task_done_in_plan"),
+            patch.object(feature_executor_module, "pipeline_log_event"),
+            patch.object(feature_executor_module, "overnight_log_event"),
+            patch.object(feature_executor_module, "read_criticality", return_value="medium"),
+            patch.object(feature_executor_module, "_render_template", return_value="stub"),
+            patch.object(feature_executor_module, "read_events", return_value=[]),
+        ]
+
+    async def test_silent_worker_no_exit_report_with_later_commit_completes(self) -> None:
+        """Case (a): task 1 has no exit report (zero commits), task 2 produces a
+        commit. Because total_commits > 0, the feature should return completed.
+        """
+        feature_plan = self._make_two_task_plan()
+
+        call_count = 0
+
+        async def _retry_side_effect(**kwargs):
+            nonlocal call_count
+            call_count += 1
+            return self._good_retry_result()
+
+        mock_retry = AsyncMock(side_effect=_retry_side_effect)
+
+        # subprocess.run: first two calls are for task 1 (status=0 commits),
+        # second two calls are for task 2 (status=1 commit).
+        run_call_count = 0
+
+        def _run_side_effect(*args, **kwargs):
+            nonlocal run_call_count
+            run_call_count += 1
+            # git status call (odd-numbered within each task pair)
+            if run_call_count % 2 == 1:
+                return MagicMock(returncode=0, stdout="", stderr="")
+            # git rev-list call: task 1 -> 0 commits, task 2 -> 1 commit
+            task_n = (run_call_count // 2)
+            count = "0\n" if task_n == 0 else "1\n"
+            return MagicMock(returncode=0, stdout=count, stderr="")
+
+        # _read_exit_report: task 1 returns (None, None, None) to trigger no-exit-report path;
+        # task 2 returns ("complete", None, None).
+        exit_report_call_count = 0
+
+        def _exit_report_side_effect(feature, task_number, worktree_path=None):
+            if task_number == 1:
+                return (None, None, None)
+            return ("complete", None, None)
+
+        patches = self._base_patches(mock_retry)
+        patches.append(
+            patch.object(
+                feature_executor_module,
+                "parse_feature_plan",
+                return_value=feature_plan,
+            )
+        )
+        patches.append(
+            patch.object(
+                feature_executor_module,
+                "_read_exit_report",
+                side_effect=_exit_report_side_effect,
+            )
+        )
+        patches.append(
+            patch(
+                "subprocess.run",
+                side_effect=_run_side_effect,
+            )
+        )
+
+        with patches[0], patches[1], patches[2], patches[3], patches[4], \
+             patches[5], patches[6], patches[7], patches[8], patches[9], patches[10]:
+            result = await feature_executor_module.execute_feature(
+                feature="test-feat",
+                worktree_path=self._tmp / "worktree",
+                config=self._config,
+                repo_path=None,
+            )
+
+        self.assertEqual(result.status, "completed",
+                         f"Expected completed, got {result.status!r} (error={result.error!r})")
+
+    async def test_silent_worker_no_exit_report_zero_commits_pauses(self) -> None:
+        """Case (b): single task with WORKER_NO_EXIT_REPORT and zero commits ->
+        FeatureResult(status='paused', error='worker_no_exit_report').
+        """
+        feature_plan = self._make_single_task_plan()
+        mock_retry = AsyncMock(return_value=self._good_retry_result())
+
+        patches = self._base_patches(mock_retry)
+        patches.append(
+            patch.object(
+                feature_executor_module,
+                "parse_feature_plan",
+                return_value=feature_plan,
+            )
+        )
+        # No exit report file -> no-exit-report path
+        patches.append(
+            patch.object(
+                feature_executor_module,
+                "_read_exit_report",
+                return_value=(None, None, None),
+            )
+        )
+        # git rev-list returns 0 commits; git status returns empty
+        patches.append(
+            patch(
+                "subprocess.run",
+                side_effect=[
+                    MagicMock(returncode=0, stdout="", stderr=""),   # git status
+                    MagicMock(returncode=0, stdout="0\n", stderr=""),  # git rev-list
+                ],
+            )
+        )
+
+        with patches[0], patches[1], patches[2], patches[3], patches[4], \
+             patches[5], patches[6], patches[7], patches[8], patches[9], patches[10]:
+            result = await feature_executor_module.execute_feature(
+                feature="test-feat",
+                worktree_path=self._tmp / "worktree",
+                config=self._config,
+                repo_path=None,
+            )
+
+        self.assertEqual(result.status, "paused")
+        self.assertEqual(result.error, "worker_no_exit_report")
+
+    async def test_silent_worker_malformed_exit_report_zero_commits_pauses(self) -> None:
+        """Case (c): single task with WORKER_MALFORMED_EXIT_REPORT and zero commits ->
+        FeatureResult(status='paused', error='worker_malformed_exit_report').
+        """
+        feature_plan = self._make_single_task_plan()
+        mock_retry = AsyncMock(return_value=self._good_retry_result())
+
+        # Create the exit-report file so the malformed branch fires
+        exit_reports_dir = Path("cortex/lifecycle/test-feat/exit-reports")
+        exit_reports_dir.mkdir(parents=True, exist_ok=True)
+        (exit_reports_dir / "1.json").write_text('{"action": "unknown_action"}', encoding="utf-8")
+
+        try:
+            patches = self._base_patches(mock_retry)
+            patches.append(
+                patch.object(
+                    feature_executor_module,
+                    "parse_feature_plan",
+                    return_value=feature_plan,
+                )
+            )
+            # _read_exit_report returns (None, None, None) — malformed report
+            patches.append(
+                patch.object(
+                    feature_executor_module,
+                    "_read_exit_report",
+                    return_value=(None, None, None),
+                )
+            )
+            # Make report_path.is_file() return True by patching Path.is_file within
+            # the feature_executor module's check. We achieve this by having the
+            # actual file exist and patching only _read_exit_report above while
+            # not patching Path.is_file — the file we created above will be found.
+            # git subprocess calls
+            patches.append(
+                patch(
+                    "subprocess.run",
+                    side_effect=[
+                        MagicMock(returncode=0, stdout="", stderr=""),   # git status
+                        MagicMock(returncode=0, stdout="0\n", stderr=""),  # git rev-list
+                    ],
+                )
+            )
+
+            with patches[0], patches[1], patches[2], patches[3], patches[4], \
+                 patches[5], patches[6], patches[7], patches[8], patches[9], patches[10]:
+                result = await feature_executor_module.execute_feature(
+                    feature="test-feat",
+                    worktree_path=self._tmp / "worktree",
+                    config=self._config,
+                    repo_path=None,
+                )
+
+            self.assertEqual(result.status, "paused")
+            self.assertEqual(result.error, "worker_malformed_exit_report")
+        finally:
+            import shutil
+            shutil.rmtree("cortex/lifecycle/test-feat", ignore_errors=True)
+
+
 if __name__ == "__main__":
     unittest.main()
