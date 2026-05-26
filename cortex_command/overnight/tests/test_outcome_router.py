@@ -421,5 +421,55 @@ class TestApplyFeatureResultReviewGating(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(ctx.recovery_attempts_map["feat-a"], 1)
 
 
+class TestSystemicIncrementGuard(unittest.IsolatedAsyncioTestCase):
+    """systemic_pauses_in_batch increments only for errors in _SYSTEMIC_ERROR_TYPES."""
+
+    async def test_systemic_increment_both_counters_on_systemic_error(self):
+        """A paused FeatureResult with error='worker_no_exit_report' (a member of
+        _SYSTEMIC_ERROR_TYPES) increments both consecutive_pauses and
+        systemic_pauses_in_batch."""
+        ctx = _make_ctx(pauses=0)
+        ctx.batch_result.global_abort_signal = True  # short-circuit budget branch
+
+        with (
+            patch("cortex_command.overnight.outcome_router.merge_feature"),
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch("cortex_command.overnight.outcome_router.overnight_log_event"),
+        ):
+            await apply_feature_result(
+                "feat-a",
+                FeatureResult(name="feat-a", status="paused", error="worker_no_exit_report"),
+                ctx,
+            )
+
+        self.assertEqual(ctx.cb_state.consecutive_pauses, 1)
+        self.assertEqual(ctx.cb_state.systemic_pauses_in_batch, 1)
+
+    async def test_systemic_increment_only_consecutive_on_non_systemic_error(self):
+        """A paused FeatureResult with error='merge recovery failed: ...' (a wrapped
+        string not in _SYSTEMIC_ERROR_TYPES) increments only consecutive_pauses;
+        systemic_pauses_in_batch stays at 0."""
+        ctx = _make_ctx(pauses=0)
+        ctx.batch_result.global_abort_signal = True  # short-circuit budget branch
+
+        with (
+            patch("cortex_command.overnight.outcome_router.merge_feature"),
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch("cortex_command.overnight.outcome_router.overnight_log_event"),
+        ):
+            await apply_feature_result(
+                "feat-a",
+                FeatureResult(
+                    name="feat-a",
+                    status="paused",
+                    error="merge recovery failed: test suite timed out",
+                ),
+                ctx,
+            )
+
+        self.assertEqual(ctx.cb_state.consecutive_pauses, 1)
+        self.assertEqual(ctx.cb_state.systemic_pauses_in_batch, 0)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -24,7 +24,7 @@ from cortex_command.common import (
     read_tier,
     requires_review,
 )
-from cortex_command.overnight.constants import CIRCUIT_BREAKER_THRESHOLD
+from cortex_command.overnight.constants import CIRCUIT_BREAKER_THRESHOLD, _SYSTEMIC_ERROR_TYPES
 from cortex_command.overnight.deferral import (
     DEFAULT_DEFERRED_DIR,
     SEVERITY_BLOCKING,
@@ -507,6 +507,8 @@ def _apply_feature_result(
             error = f"repair_ff_merge_failed: {ff_result.stderr.strip()}"
             ctx.batch_result.features_paused.append({"name": name, "error": error})
             ctx.cb_state.consecutive_pauses += 1
+            if error in _SYSTEMIC_ERROR_TYPES:
+                ctx.cb_state.systemic_pauses_in_batch += 1
             overnight_log_event(
                 FEATURE_PAUSED,
                 ctx.config.batch_id,
@@ -534,6 +536,8 @@ def _apply_feature_result(
                 error = f"completed with no new commits (branch: {branch_label})"
             ctx.batch_result.features_paused.append({"name": name, "error": error})
             ctx.cb_state.consecutive_pauses += 1
+            if error in _SYSTEMIC_ERROR_TYPES:
+                ctx.cb_state.systemic_pauses_in_batch += 1
             overnight_log_event(
                 FEATURE_PAUSED,
                 ctx.config.batch_id,
@@ -655,6 +659,8 @@ def _apply_feature_result(
             error = merge_result.error or "merge failed"
             ctx.batch_result.features_paused.append({"name": name, "error": error})
             ctx.cb_state.consecutive_pauses += 1
+            if error in _SYSTEMIC_ERROR_TYPES:
+                ctx.cb_state.systemic_pauses_in_batch += 1
             if merge_result.conflict and merge_result.classification is not None:
                 overnight_log_event(
                     "merge_conflict_classified",
@@ -704,6 +710,8 @@ def _apply_feature_result(
         })
         if not result.parse_error:
             ctx.cb_state.consecutive_pauses += 1
+            if result.error in _SYSTEMIC_ERROR_TYPES:
+                ctx.cb_state.systemic_pauses_in_batch += 1
         overnight_log_event(
             FEATURE_FAILED,
             ctx.config.batch_id,
@@ -723,6 +731,8 @@ def _apply_feature_result(
             "error": result.error or "task paused",
         })
         ctx.cb_state.consecutive_pauses += 1
+        if result.error in _SYSTEMIC_ERROR_TYPES:
+            ctx.cb_state.systemic_pauses_in_batch += 1
         overnight_log_event(
             FEATURE_PAUSED,
             ctx.config.batch_id,
@@ -1096,6 +1106,8 @@ async def apply_feature_result(
                     "error": f"merge recovery failed: {error}",
                 })
                 ctx.cb_state.consecutive_pauses += 1
+                if f"merge recovery failed: {error}" in _SYSTEMIC_ERROR_TYPES:
+                    ctx.cb_state.systemic_pauses_in_batch += 1
                 _write_back_to_backlog(
                     name, "paused", ctx.config.batch_id,
                     ctx.config.overnight_events_path,

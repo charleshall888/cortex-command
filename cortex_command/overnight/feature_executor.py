@@ -58,7 +58,10 @@ from cortex_command.overnight.outcome_router import _effective_merge_repo_path
 from cortex_command.overnight.state import load_state, save_state
 from cortex_command.overnight.throttle import ConcurrencyManager
 from cortex_command.overnight.types import CircuitBreakerState, FeatureResult
-from cortex_command.overnight.constants import CIRCUIT_BREAKER_THRESHOLD
+from cortex_command.overnight.constants import (
+    CIRCUIT_BREAKER_THRESHOLD,
+    _SYSTEMIC_ERROR_TYPES,  # re-exported; defined in constants to avoid circular import
+)
 
 logger = logging.getLogger(__name__)
 
@@ -68,15 +71,6 @@ IMPLEMENT_TEMPLATE = importlib.resources.files("cortex_command.pipeline.prompts"
 # Imported by orchestrator.py and runner.py for consistent set-membership
 # checks across the session-halt path.
 _SESSION_HALT_ERROR_TYPES = ("budget_exhausted", "api_rate_limit")
-
-# Error types that indicate systemic infrastructure failures. When brain
-# triage declines to override (returns None), these flow to a paused
-# FeatureResult rather than the generic "Task N failed" fallthrough.
-_SYSTEMIC_ERROR_TYPES = (
-    "infrastructure_failure",
-    "worker_no_exit_report",
-    "worker_malformed_exit_report",
-)
 
 
 # ---------------------------------------------------------------------------
