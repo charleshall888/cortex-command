@@ -312,6 +312,7 @@ from install_core import (  # noqa: E402
     _INSTALL_VERIFY_TIMEOUT_SECONDS,
     _NDJSON_ERROR_STAGES,
     _append_error_ndjson,
+    _is_cortex_command_repo,
     _last_error_log_path,
     _recent_install_failed_sentinel,
     _run_install_and_verify,
@@ -762,8 +763,11 @@ def _evaluate_skip_predicates(cortex_root: str) -> Optional[str]:
     short-circuits before any subprocess shell-out (R9 ordering):
 
     (a) ``CORTEX_DEV_MODE=1``        — explicit dev-mode bypass.
-    (b) ``git status --porcelain``   — non-empty means uncommitted changes.
-    (c) ``git rev-parse --abbrev-ref HEAD != "main"`` — feature branch.
+    (b) ``git status --porcelain``   — non-empty means uncommitted changes
+        (R26: narrowed — only fires when ``cortex_root`` is inside a
+        cortex-command source checkout).
+    (c) ``git rev-parse --abbrev-ref HEAD != "main"`` — feature branch
+        (R26: narrowed in tandem with (b); only fires inside cortex-command).
 
     On a firing predicate, log the reason once to stderr (per-process
     latch) and return the reason string. The caller should proceed with
@@ -774,6 +778,15 @@ def _evaluate_skip_predicates(cortex_root: str) -> Optional[str]:
     if os.environ.get("CORTEX_DEV_MODE") == "1":
         _log_skip_reason_once("CORTEX_DEV_MODE=1")
         return "CORTEX_DEV_MODE=1"
+
+    # R26: predicates (b) and (c) only apply when the checkout we're
+    # about to skip on is actually a cortex-command source checkout.
+    # Dirty trees / feature branches in unrelated repos (e.g. a user's
+    # downstream project that happens to invoke a cortex-overnight tool)
+    # must NOT skip the auto-update — that's the entire reason for
+    # daytime-only auto-install.
+    if not _is_cortex_command_repo(Path(cortex_root)):
+        return None
 
     # Predicate (b): dirty tree.
     try:
