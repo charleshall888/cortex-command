@@ -24,7 +24,7 @@ from cortex_command.common import (
     read_tier,
     requires_review,
 )
-from cortex_command.overnight.constants import CIRCUIT_BREAKER_THRESHOLD, _SYSTEMIC_ERROR_TYPES
+from cortex_command.overnight.constants import CIRCUIT_BREAKER_THRESHOLD, SYSTEMIC_FAILURE_THRESHOLD, _SYSTEMIC_ERROR_TYPES
 from cortex_command.overnight.deferral import (
     DEFAULT_DEFERRED_DIR,
     SEVERITY_BLOCKING,
@@ -44,6 +44,7 @@ from cortex_command.overnight.events import (
     MERGE_RECOVERY_FLAKY,
     MERGE_RECOVERY_START,
     MERGE_RECOVERY_SUCCESS,
+    PIPELINE_SYSTEMIC_FAILURE,
     REPAIR_AGENT_RESOLVED,
     TRIVIAL_CONFLICT_RESOLVED,
     log_event as overnight_log_event,
@@ -764,6 +765,23 @@ def _apply_feature_result(
             },
             log_path=ctx.config.overnight_events_path,
         )
+    if (
+        ctx.cb_state.systemic_pauses_in_batch >= SYSTEMIC_FAILURE_THRESHOLD
+        and not ctx.batch_result.global_abort_signal
+    ):
+        trailing = ctx.batch_result.features_paused[-SYSTEMIC_FAILURE_THRESHOLD:]
+        cause_class = [
+            entry["error"] for entry in trailing
+            if entry["error"] in _SYSTEMIC_ERROR_TYPES
+        ]
+        overnight_log_event(
+            PIPELINE_SYSTEMIC_FAILURE,
+            ctx.config.batch_id,
+            feature=name,
+            details={"cause_class": cause_class, "threshold": SYSTEMIC_FAILURE_THRESHOLD},
+            log_path=ctx.config.overnight_events_path,
+        )
+        ctx.batch_result.global_abort_signal = True
 
 
 # ---------------------------------------------------------------------------
@@ -1133,3 +1151,20 @@ async def apply_feature_result(
                         },
                         log_path=ctx.config.overnight_events_path,
                     )
+                if (
+                    ctx.cb_state.systemic_pauses_in_batch >= SYSTEMIC_FAILURE_THRESHOLD
+                    and not ctx.batch_result.global_abort_signal
+                ):
+                    trailing = ctx.batch_result.features_paused[-SYSTEMIC_FAILURE_THRESHOLD:]
+                    cause_class = [
+                        entry["error"] for entry in trailing
+                        if entry["error"] in _SYSTEMIC_ERROR_TYPES
+                    ]
+                    overnight_log_event(
+                        PIPELINE_SYSTEMIC_FAILURE,
+                        ctx.config.batch_id,
+                        feature=name,
+                        details={"cause_class": cause_class, "threshold": SYSTEMIC_FAILURE_THRESHOLD},
+                        log_path=ctx.config.overnight_events_path,
+                    )
+                    ctx.batch_result.global_abort_signal = True
