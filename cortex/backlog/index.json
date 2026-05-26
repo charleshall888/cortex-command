@@ -92,32 +92,6 @@
     "repo": null
   },
   {
-    "id": 262,
-    "title": "Extend overnight circuit breaker to halt on systemic worker failures",
-    "status": "refined",
-    "priority": "medium",
-    "type": "chore",
-    "tags": [],
-    "areas": [
-      "overnight-runner"
-    ],
-    "created": "2026-05-25",
-    "updated": "2026-05-25",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "cortex/lifecycle/extend-overnight-circuit-breaker-to-halt/spec.md",
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "b2e12ee3-3499-4e17-8cca-d798b6aadf09",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 156,
     "title": "Make cortex-check-parity context-aware (skip tokens inside fenced code blocks)",
     "status": "deferred",

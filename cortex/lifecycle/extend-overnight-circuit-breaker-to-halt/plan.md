@@ -85,7 +85,7 @@ Add a session-halting systemic-cascade detector to the overnight orchestrator. P
 - **Complexity**: simple
 - **Context**: Existing `run_batch()` tests in `cortex_command/overnight/tests/test_orchestrator.py` provide the fixture template — mock `execute_feature` (the per-feature dispatcher) to return canned `FeatureResult`s. The `_SESSION_HALT_ERROR_TYPES`-based session-halt path has companion tests in `test_lead_unit.py` (search for `global_abort_signal` to find the fixture pattern) and `test_outcome_router.py`; the new test follows the same pattern but exercises the systemic-class path. Verify oldest-first ordering: with pause sequence `[infrastructure_failure, worker_no_exit_report, success, worker_malformed_exit_report]`, the emitted `cause_class` should be `["infrastructure_failure", "worker_no_exit_report", "worker_malformed_exit_report"]`.
 - **Verification**: `python -m pytest cortex_command/overnight/tests/test_orchestrator.py -k systemic_total_in_batch -x` — pass if exit 0; `just test` — pass if exit 0, all tests pass.
-- **Status**: [ ] pending
+- **Status**: [x] completed (Task 3 contract change surfaced 3 pre-existing test_exit_report regressions; fixed in followup commit)
 
 ## Risks
 

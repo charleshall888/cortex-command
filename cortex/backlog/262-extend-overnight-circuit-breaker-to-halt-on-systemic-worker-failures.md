@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: b2e12ee3-3499-4e17-8cca-d798b6aadf09
 title: "Extend overnight circuit breaker to halt on systemic worker failures"
-status: refined
+status: complete
 priority: medium
 type: chore
 created: 2026-05-25
-updated: 2026-05-25
+updated: 2026-05-26
 complexity: complex
 criticality: high
 spec: cortex/lifecycle/extend-overnight-circuit-breaker-to-halt/spec.md
