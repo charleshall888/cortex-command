@@ -213,6 +213,49 @@ def test_emit_checkpoint_response_writes_jsonl_and_validates_response(
         )
 
 
+def test_emit_checkpoint_response_accepts_consolidate_pieces_at_decompose_commit(
+    repo_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R15 positive-path: ``consolidate-pieces`` is a valid response at the
+    ``decompose-commit`` checkpoint.
+
+    Mirrors the structural template of
+    ``test_emit_checkpoint_response_writes_jsonl_and_validates_response``
+    (the R4-path test above) but with R15 payload values. Confirms:
+
+    (a) ``_validate_checkpoint_payload('topic-slug', 'decompose-commit',
+        'consolidate-pieces', 0)`` does not raise.
+    (b) ``emit_checkpoint_response`` writes a JSONL line with
+        ``"response": "consolidate-pieces"`` and
+        ``"checkpoint": "decompose-commit"`` to the resolved events log.
+    """
+    from cortex_command.discovery import _validate_checkpoint_payload
+
+    monkeypatch.delenv("LIFECYCLE_SESSION_ID", raising=False)
+
+    # (a) Validation does not raise.
+    _validate_checkpoint_payload(
+        "topic-slug", "decompose-commit", "consolidate-pieces", 0
+    )
+
+    # (b) emit writes a JSONL line with the R15 payload values.
+    target = emit_checkpoint_response(
+        topic="topic-slug",
+        checkpoint="decompose-commit",
+        response="consolidate-pieces",
+        revision_round=0,
+        repo_root=repo_root,
+    )
+    assert target.exists()
+    events = _read_jsonl(target)
+    assert len(events) >= 1
+    ev = events[-1]
+    assert ev["event"] == "approval_checkpoint_responded"
+    assert ev["response"] == "consolidate-pieces"
+    assert ev["checkpoint"] == "decompose-commit"
+    assert ev["revision_round"] == 0
+
+
 def test_emit_prescriptive_check_writes_nested_flag_locations(
     repo_root: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
