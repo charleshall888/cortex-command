@@ -25,12 +25,8 @@ enforced by ``main`` returning 0 on every code path.
 
 from __future__ import annotations
 
-import json
 import os
-import subprocess
 import sys
-from datetime import datetime, timezone
-from pathlib import Path
 from typing import List, Optional
 
 
@@ -40,6 +36,8 @@ _BREADCRUMB_REL = ".cache/cortex/log-invocation-errors.log"
 
 def _utc_now_iso() -> str:
     """Return the current UTC timestamp in the bash-script's format."""
+    from datetime import datetime, timezone
+
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
@@ -48,6 +46,8 @@ def _log_breadcrumb(category: str, snippet: str = "") -> None:
 
     Silent on every error — the breadcrumb logger is itself fail-open.
     """
+    from pathlib import Path
+
     home = os.environ.get(_BREADCRUMB_DIR_ENV)
     if not home:
         return
@@ -61,14 +61,20 @@ def _log_breadcrumb(category: str, snippet: str = "") -> None:
         return
 
 
-def _resolve_repo_root() -> Optional[Path]:
-    """Resolve the repo root using ``CORTEX_REPO_ROOT`` then ``git rev-parse``.
+def _resolve_repo_root() -> Optional["Path"]:
+    """Resolve the repo root using ``CORTEX_REPO_ROOT`` then a pure-Python walk.
 
     Returns ``None`` when neither path yields a usable root. Mirrors the
     bash original's logic precisely: trust ``CORTEX_REPO_ROOT`` only when
     it points at a directory containing a ``.git`` entry (file or dir),
-    else fall back to ``git rev-parse --show-toplevel``.
+    else walk ``[Path.cwd(), *Path.cwd().parents]`` searching for a
+    ``.git`` directory or file (worktree case).
+
+    ``GIT_DIR`` and ``core.worktree`` are intentionally not honoured —
+    accepted divergences per the spec's Changes to Existing Behavior.
     """
+    from pathlib import Path
+
     env_root = os.environ.get("CORTEX_REPO_ROOT")
     if env_root:
         candidate = Path(env_root)
@@ -76,31 +82,36 @@ def _resolve_repo_root() -> Optional[Path]:
         if git_marker.is_dir() or git_marker.is_file():
             return candidate
 
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "--show-toplevel"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return None
-    if result.returncode != 0:
-        return None
-    stripped = result.stdout.strip()
-    if not stripped:
-        return None
-    return Path(stripped)
+    cwd = Path.cwd()
+    for candidate in [cwd, *cwd.parents]:
+        git_marker = candidate / ".git"
+        if git_marker.is_dir() or git_marker.is_file():
+            return candidate
+
+    return None
 
 
 def main(argv: Optional[List[str]] = None) -> int:
     """Fail-open invocation logger.
 
     Always returns 0. Records a breadcrumb on every non-write code path.
+
+    # LIFECYCLE_SESSION_ID check MUST remain the first executable statement —
+    # see backlog #264 for rationale and
+    # `tests/test_log_invocation_imports.py::test_log_invocation_main_session_id_check_first`
+    # for the enforcing test.
     """
+    # LIFECYCLE_SESSION_ID check MUST remain the first executable statement —
+    # see backlog #264 for rationale and
+    # `tests/test_log_invocation_imports.py::test_log_invocation_main_session_id_check_first`
+    # for the enforcing test.
+    session_id = os.environ.get("LIFECYCLE_SESSION_ID", "")
+
+    import json
+    from pathlib import Path
+
     args = list(sys.argv[1:] if argv is None else argv)
 
-    session_id = os.environ.get("LIFECYCLE_SESSION_ID", "")
     if not session_id:
         _log_breadcrumb("no_session_id", "")
         return 0

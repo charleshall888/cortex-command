@@ -32,7 +32,6 @@ MODULE_PATH = REPO_ROOT / "cortex_command" / "log_invocation.py"
 _HEAVY_MODULES = ("subprocess", "datetime", "json", "pathlib")
 
 
-@pytest.mark.skip(reason="awaiting refactor in task 4")
 def test_log_invocation_no_top_level_heavy_imports() -> None:
     """Importing the module must not bring subprocess/datetime/json/pathlib into sys.modules.
 
@@ -62,7 +61,6 @@ def test_log_invocation_no_top_level_heavy_imports() -> None:
     )
 
 
-@pytest.mark.skip(reason="awaiting refactor in task 4")
 def test_log_invocation_main_session_id_check_first() -> None:
     """The first executable statement in main() must assign os.environ.get("LIFECYCLE_SESSION_ID", ...).
 
