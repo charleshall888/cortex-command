@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rewrite the ``CLI_PIN[0]`` literal in ``plugins/cortex-overnight/server.py``.
+"""Rewrite the ``CLI_PIN[0]`` literal in ``plugins/cortex-overnight/cli_pin.py``.
 
 Stdlib-only. Takes one positional arg (the new tag in ``vX.Y.Z`` form) and
 performs a pattern-based, format-tolerant, read-modify-write of the
@@ -25,7 +25,7 @@ Contract (per spec R19.5 in cortex/lifecycle/close-plugin-cli-auto-update-gaps):
     (v)   **idempotent on no-op input** — when invoked with a tag equal to
           the current ``CLI_PIN[0]`` value, exits 0 with no file changes.
     (vi)  **post-rewrite verification** — after rewrite, the rewriter calls
-          ``git diff plugins/cortex-overnight/server.py`` and validates that
+          ``git diff plugins/cortex-overnight/cli_pin.py`` and validates that
           exactly one line changed AND the diff matches the expected shape
           (old line contains the old tag, new line contains the new tag,
           both have the same ``CLI_PIN[1]`` value); fails non-zero on diff
@@ -50,7 +50,7 @@ from pathlib import Path
 # Default target path (relative to cwd). Caller may override via --path for
 # tests; the auto-release workflow at R19 invokes the helper from repo root
 # so the default is the canonical target.
-DEFAULT_TARGET = "plugins/cortex-overnight/server.py"
+DEFAULT_TARGET = "plugins/cortex-overnight/cli_pin.py"
 
 # Tag-shape validation: ``vX.Y.Z`` where X/Y/Z are non-negative integers.
 TAG_RE = re.compile(r"^v\d+\.\d+\.\d+$")
@@ -274,7 +274,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="cortex-rewrite-cli-pin",
         description=(
-            "Rewrite plugins/cortex-overnight/server.py's CLI_PIN[0] "
+            "Rewrite plugins/cortex-overnight/cli_pin.py's CLI_PIN[0] "
             "literal to a new tag. Pattern-based; preserves CLI_PIN[1]. "
             "See spec R19.5."
         ),
@@ -287,7 +287,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--path",
         default=DEFAULT_TARGET,
         help=(
-            "Target file (default: plugins/cortex-overnight/server.py). "
+            "Target file (default: plugins/cortex-overnight/cli_pin.py). "
             "Resolved relative to cwd."
         ),
     )

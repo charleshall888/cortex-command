@@ -223,7 +223,7 @@ def test_script_idempotent_on_no_op(tmp_path: Path):
     Exit code 0; file unmodified (no diff).
     """
     _init_git_repo(tmp_path)
-    rel_path = "plugins/cortex-overnight/server.py"
+    rel_path = "plugins/cortex-overnight/cli_pin.py"
     initial = 'CLI_PIN = ("v0.1.0", "2.0")\n'
     _commit_initial(tmp_path, rel_path, initial)
     result = _run_script(tmp_path, "v0.1.0")
@@ -235,7 +235,7 @@ def test_script_idempotent_on_no_op(tmp_path: Path):
 def test_script_rewrites_and_passes_diff_verification(tmp_path: Path):
     """Happy path end-to-end: rewrite + git diff verification both succeed."""
     _init_git_repo(tmp_path)
-    rel_path = "plugins/cortex-overnight/server.py"
+    rel_path = "plugins/cortex-overnight/cli_pin.py"
     initial = (
         "# prelude\n"
         '#: comment about the pin\n'
@@ -253,7 +253,7 @@ def test_script_rewrites_and_passes_diff_verification(tmp_path: Path):
 def test_script_fails_on_zero_matches(tmp_path: Path):
     """Contract (iv): zero CLI_PIN declarations → non-zero exit, clear message."""
     _init_git_repo(tmp_path)
-    rel_path = "plugins/cortex-overnight/server.py"
+    rel_path = "plugins/cortex-overnight/cli_pin.py"
     initial = "# this file has no CLI_PIN at all\nfoo = 1\n"
     _commit_initial(tmp_path, rel_path, initial)
     result = _run_script(tmp_path, "v2.0.0")
@@ -266,7 +266,7 @@ def test_script_fails_on_zero_matches(tmp_path: Path):
 def test_script_fails_on_two_matches(tmp_path: Path):
     """Contract (iv): two CLI_PIN declarations → non-zero exit, clear message."""
     _init_git_repo(tmp_path)
-    rel_path = "plugins/cortex-overnight/server.py"
+    rel_path = "plugins/cortex-overnight/cli_pin.py"
     initial = (
         'CLI_PIN = ("v0.1.0", "2.0")\n'
         "# duplicate (real second declaration to trip the guard):\n"
@@ -283,7 +283,7 @@ def test_script_fails_on_two_matches(tmp_path: Path):
 def test_script_invalid_tag_form_rejected(tmp_path: Path):
     """Tag must match vX.Y.Z; malformed input is rejected before any I/O."""
     _init_git_repo(tmp_path)
-    rel_path = "plugins/cortex-overnight/server.py"
+    rel_path = "plugins/cortex-overnight/cli_pin.py"
     initial = 'CLI_PIN = ("v0.1.0", "2.0")\n'
     _commit_initial(tmp_path, rel_path, initial)
     result = _run_script(tmp_path, "not-a-tag")
