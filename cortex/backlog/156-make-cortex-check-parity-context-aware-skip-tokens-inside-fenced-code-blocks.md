@@ -8,9 +8,9 @@ type: feature
 tags: [tooling, parity-linter, hooks]
 areas: [tooling]
 created: 2026-05-01
-updated: 2026-05-04
+updated: 2026-05-26
 session_id: null
-lifecycle_phase: null
+lifecycle_phase: wontfix
 lifecycle_slug: make-cortex-check-parity-context-aware-skip-tokens-inside-fenced-code-blocks
 complexity: complex
 criticality: high

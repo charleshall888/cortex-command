@@ -106,7 +106,7 @@
       "tooling"
     ],
     "created": "2026-05-01",
-    "updated": "2026-05-04",
+    "updated": "2026-05-26",
     "blocks": [],
     "blocked_by": [],
     "parent": null,
@@ -117,7 +117,7 @@
     "uuid": "9cfcaf29-ad85-460c-a44b-aab95905f16b",
     "lifecycle_slug": "make-cortex-check-parity-context-aware-skip-tokens-inside-fenced-code-blocks",
     "session_id": null,
-    "lifecycle_phase": "specify",
+    "lifecycle_phase": "wontfix",
     "schema_version": "1",
     "repo": null
   },

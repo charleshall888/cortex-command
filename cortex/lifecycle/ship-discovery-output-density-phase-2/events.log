@@ -1,1 +1,0 @@
-{"schema_version": 3, "ts": "2026-05-18T12:30:00Z", "event": "clarify_critic", "feature": "ship-discovery-output-density-phase-2", "parent_epic_loaded": false, "findings_count": 7, "dispositions": {"apply": 7, "dismiss": 0, "ask": 0}, "applied_fixes_count": 1, "dismissals_count": 0, "status": "ok"}

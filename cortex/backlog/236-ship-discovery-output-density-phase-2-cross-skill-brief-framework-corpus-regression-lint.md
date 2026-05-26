@@ -7,10 +7,11 @@ priority: medium
 type: feature
 tags: [discovery, lifecycle, skills, prose-density]
 created: 2026-05-18
-updated: 2026-05-18
+updated: 2026-05-26
 parent: "232"
 complexity: complex
 criticality: high
+lifecycle_phase: wontfix
 ---
 
 # Ship discovery-output-density Phase 2: cross-skill brief framework + corpus regression lint
