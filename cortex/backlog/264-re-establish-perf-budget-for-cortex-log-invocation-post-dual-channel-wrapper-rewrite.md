@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 84bee538-707f-4e78-974a-13fb2c6961d8
 title: "Re-establish perf budget for cortex-log-invocation post dual-channel-wrapper rewrite"
-status: refined
+status: complete
 priority: low
 type: chore
 created: 2026-05-25

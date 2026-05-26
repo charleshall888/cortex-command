@@ -17,3 +17,4 @@
 {"ts": "2026-05-26T15:32:30Z", "event": "phase_transition", "feature": "re-establish-perf-budget-for-cortex", "from": "implement-rework", "to": "review"}
 {"ts": "2026-05-26T15:34:44Z", "event": "review_verdict", "feature": "re-establish-perf-budget-for-cortex", "verdict": "APPROVED", "cycle": 2, "requirements_drift": "none"}
 {"ts": "2026-05-26T15:34:44Z", "event": "phase_transition", "feature": "re-establish-perf-budget-for-cortex", "from": "review", "to": "complete"}
+{"ts": "2026-05-26T15:38:27Z", "event": "feature_complete", "feature": "re-establish-perf-budget-for-cortex", "tasks_total": 8, "rework_cycles": 1, "merge_anchor": "merge"}

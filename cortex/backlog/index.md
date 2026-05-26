@@ -7,11 +7,9 @@
 | 186 | Clarify-critic schema validator + warning-template runtime validator (per #178 R7 follow-on) | proposed | medium | feature | — | 178 | — |
 | 265 | critical-review Step 2c.5 tempfile-write collides with Write-tool read-first guard | backlog | medium | bug | — | — | — |
 | 156 | Make cortex-check-parity context-aware (skip tokens inside fenced code blocks) | deferred | low | feature | — | — | — |
-| 264 | Re-establish perf budget for cortex-log-invocation post dual-channel-wrapper rewrite | refined | low | chore | — | — | ✓ |
 
 ## Refined
 
-- **264** Re-establish perf budget for cortex-log-invocation post dual-channel-wrapper rewrite
 
 ## Backlog
 
