@@ -83,6 +83,15 @@ def _enforce_plugin_root() -> None:
 _enforce_plugin_root()
 
 
+# Make the plugin directory importable so the sibling modules ``cli_pin``
+# and ``install_core`` resolve regardless of how server.py was loaded
+# (PEP 723 single-file ``uv run`` adds it; in-process pytest module loaders
+# do not). Both siblings are imported below this point.
+_PLUGIN_DIR = str(Path(__file__).resolve().parent)
+if _PLUGIN_DIR not in sys.path:
+    sys.path.insert(0, _PLUGIN_DIR)
+
+
 # Import MCP machinery lazily so the confused-deputy check above runs
 # first (and so static imports of this file do not require ``mcp`` to
 # be present, which matters for test discovery on machines where the
@@ -301,10 +310,6 @@ _CORTEX_ROOT_CACHE: Optional[dict[str, Any]] = None
 # (used inside ``_ensure_cortex_installed``) relies on the same path
 # preparation today.
 # ---------------------------------------------------------------------------
-
-_PLUGIN_DIR = str(Path(__file__).resolve().parent)
-if _PLUGIN_DIR not in sys.path:
-    sys.path.insert(0, _PLUGIN_DIR)
 
 from install_core import (  # noqa: E402
     CortexInstallFailed,
