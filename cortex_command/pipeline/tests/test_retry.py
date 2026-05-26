@@ -188,5 +188,48 @@ class TestRetryThreadsKwargs(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(kwargs["model_override"], "opus", "attempt 4 should remain on Opus")
 
 
+class TestPauseHumanErrorType(unittest.IsolatedAsyncioTestCase):
+    """Verify that the pause_human branch sets error_type on RetryResult.
+
+    Before the fix, the RetryResult returned from pause_human omitted
+    error_type=error_type, so RetryResult.error_type was always None for
+    infrastructure_failure and agent_refusal paths.
+    """
+
+    async def test_pause_human_error_type_propagated(self):
+        """infrastructure_failure triggers pause_human; RetryResult.error_type must match."""
+        async def mock_dispatch(**kwargs) -> DispatchResult:
+            return _failed("infrastructure_failure")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with (
+                patch("cortex_command.pipeline.retry.dispatch_task", new=mock_dispatch),
+                patch("cortex_command.pipeline.retry.cleanup_stale_lock"),
+                patch(
+                    "cortex_command.pipeline.retry._get_worktree_diff",
+                    return_value="some-diff",
+                ),
+            ):
+                result = await retry_task(
+                    feature="feat",
+                    task="do something",
+                    worktree_path=Path(tmp),
+                    complexity="simple",
+                    criticality="medium",
+                    system_prompt="",
+                    learnings_dir=Path(tmp) / "learnings",
+                    max_retries=3,
+                    skill="implement",
+                )
+
+        self.assertFalse(result.success, "pause_human result must be failure")
+        self.assertTrue(result.paused, "pause_human result must be paused")
+        self.assertEqual(
+            result.error_type,
+            "infrastructure_failure",
+            f"expected error_type='infrastructure_failure', got {result.error_type!r}",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
