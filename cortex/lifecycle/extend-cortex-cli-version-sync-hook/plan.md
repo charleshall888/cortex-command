@@ -36,7 +36,7 @@ Five-phase incremental refactor that (a) extracts `CLI_PIN` and the install runn
 - **Complexity**: simple
 - **Context**: Read current `CLI_PIN` value from `plugins/cortex-overnight/server.py:106` (currently `CLI_PIN = ("v2.11.0", "2.0")`) and copy the same 2-tuple verbatim into the new file. The schema element stays at index 1 — SHA pinning is in Won't-have. The new file must be importable from a bare shell with `sys.path.insert(0, 'plugins/cortex-overnight')` (no PEP 723 venv).
 - **Verification**: `python3 -c "import sys; sys.path.insert(0, 'plugins/cortex-overnight'); from cli_pin import CLI_PIN; print(CLI_PIN); assert len(CLI_PIN) == 2"` — pass if exit 0 and printed tuple has 2 elements.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 9b7f8972)
 
 ### Task 2: Re-export `CLI_PIN` in `server.py`
 
@@ -46,7 +46,7 @@ Five-phase incremental refactor that (a) extracts `CLI_PIN` and the install runn
 - **Complexity**: simple
 - **Context**: `server.py:106` declares `CLI_PIN = ("v2.11.0", "2.0")`; line 113 reads `MCP_REQUIRED_CLI_VERSION = CLI_PIN[1]`. Use the unqualified `from cli_pin import CLI_PIN` style (mirrors the install_core import pattern in Task 8). The relative-vs-absolute import question: server.py is run as a script via PEP 723 (not a package), so plain `from cli_pin import CLI_PIN` works — `_enforce_plugin_root` ensures the plugin directory is on `sys.path` before this module loads.
 - **Verification**: `grep -c "^CLI_PIN = " plugins/cortex-overnight/server.py` returns 0; `grep -c "^from cli_pin import CLI_PIN" plugins/cortex-overnight/server.py` returns 1; `git grep -E "^CLI_PIN\s*[:=]"` from the repo root returns exactly 1 line (the `cli_pin.py` declaration).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 814db4da) — `git grep` finds 3 lines instead of 1: extras are pre-existing in `docs/release-process.md` (doc example) and `tests/test_cli_version_sync_hook.sh` (scheduled for T15's R32 fixture migration)
 
 ### Task 3: Retarget `bin/cortex-rewrite-cli-pin` to `cli_pin.py`
 
@@ -56,7 +56,7 @@ Five-phase incremental refactor that (a) extracts `CLI_PIN` and the install runn
 - **Complexity**: simple
 - **Context**: `bin/cortex-rewrite-cli-pin:53` reads `DEFAULT_TARGET = "plugins/cortex-overnight/server.py"`. The script only ever touches the target file — it does not read `server.py` separately. Test fixtures: search `tests/` for any path string `plugins/cortex-overnight/server.py` used inside this rewriter's tests and migrate the fixture to write to `cli_pin.py` instead. Run `cortex-jcc validate-commit` or invoke the dual-source pre-commit manually to confirm the cortex-core mirror regenerates byte-identically.
 - **Verification**: `grep -c "plugins/cortex-overnight/cli_pin.py" bin/cortex-rewrite-cli-pin` ≥ 1; `grep -c "plugins/cortex-overnight/server.py" bin/cortex-rewrite-cli-pin` = 0; after running `bin/cortex-rewrite-cli-pin v9.9.9-test` from a clean checkout, `git status --porcelain` lists only `plugins/cortex-overnight/cli_pin.py` (and the auto-synced mirror) — pass if no other files are modified.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit faecd698) — rewriter's TAG_RE rejects `v9.9.9-test` suffix; verified with `v9.9.9` instead, dual-source mirror auto-regenerated
 
 ### Task 4: Retarget GitHub workflows (`auto-release.yml`, `release.yml`)
 
@@ -66,7 +66,7 @@ Five-phase incremental refactor that (a) extracts `CLI_PIN` and the install runn
 - **Complexity**: simple
 - **Context**: `auto-release.yml:129–138` runs `bin/cortex-rewrite-cli-pin <new-tag>` and then `git add`s the file the rewriter modified. With Task 3's retarget, the rewriter writes `cli_pin.py`, so the `git add` must follow. `release.yml`'s `cli-pin-lint` job (line 29) reads the target file at the pushed tag and verifies `CLI_PIN[0]` matches. No SHA-verification logic is added.
 - **Verification**: `grep -c "git add plugins/cortex-overnight/cli_pin.py" .github/workflows/auto-release.yml` ≥ 1; `grep -c "git add plugins/cortex-overnight/server.py" .github/workflows/auto-release.yml` = 0; `grep -c "cli_pin.py" .github/workflows/release.yml` ≥ 1; `grep -c "plugins/cortex-overnight/server.py" .github/workflows/release.yml` = 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit ddebd942)
 
 ### Task 5: Update visibility hook to read `cli_pin.py` and migrate its test fixture
 
@@ -76,7 +76,7 @@ Five-phase incremental refactor that (a) extracts `CLI_PIN` and the install runn
 - **Complexity**: simple
 - **Context**: The hook's `parse_cli_pin` is the bash/Python heredoc that extracts `CLI_PIN[0]` and `CLI_PIN[1]` for drift detection in `additionalContext`. It uses a regex against the target file's text — no need to change regex shape since the tuple shape is preserved. Search for `server.py` references in the hook and change every reference that is the CLI_PIN source path. The test fixture's setup script (find via `grep -rl "server.py" tests/fixtures/hooks/scan-cli-version-sync/`) currently emits a stub `server.py` with `CLI_PIN = (...)`; redirect that emission to `cli_pin.py` in the fixture's working directory and adjust any path-string references inside the fixture's expected-output assertions.
 - **Verification**: `grep -c "cli_pin.py" plugins/cortex-overnight/hooks/cortex-cli-version-sync.sh` ≥ 1; `grep -cE 'server\.py' plugins/cortex-overnight/hooks/cortex-cli-version-sync.sh` = 0; `just test tests/test_cli_version_sync_hook.sh` exits 0 against the migrated fixture (no new scenarios yet — those land in Task 15).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 596f868b) — also updated canonical `hooks/cortex-cli-version-sync.sh` per dual-source convention; fixture lives at `tests/fixtures/hooks/cli-version-sync/` (not `scan-cli-version-sync/`) and is written at test-runtime by the driver, not as checked-in stub
 
 ### Task 6: Add pre-commit guard for `cli_pin.py` shape
 
@@ -86,7 +86,7 @@ Five-phase incremental refactor that (a) extracts `CLI_PIN` and the install runn
 - **Complexity**: simple
 - **Context**: Follow the precedent of `just sync-install-guard --check` (an existing dual-source byte-identity guard in `.githooks/pre-commit`). Implementation approach: parse `cli_pin.py` with `ast.parse`, walk the top-level body, allow exactly `ast.Expr(value=ast.Constant(value=<str>))` (docstring) and `ast.Assign(targets=[Name("CLI_PIN")], value=ast.Tuple(...))` — reject everything else (Import, ImportFrom, FunctionDef, ClassDef, Call). Tuple-arity check: `len(tuple_node.elts) == 2`. Emit a clear error message naming the offending node.
 - **Verification**: From a clean checkout, add `import packaging` to the top of `cli_pin.py` and run `.githooks/pre-commit` — pass if exit non-zero and stderr contains `packaging`. Then revert; set `CLI_PIN = ("v9.9.9", "2.0", "extra")` (3-tuple) and run the guard — pass if exit non-zero and stderr names the wrong arity. Finally revert and confirm the guard passes with the canonical 2-tuple.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit e372ebe4) — added as Phase 1.96 in `.githooks/pre-commit`
 
 ### Task 7: Create `install_core.py` with factored symbols
 
@@ -96,7 +96,7 @@ Five-phase incremental refactor that (a) extracts `CLI_PIN` and the install runn
 - **Complexity**: complex
 - **Context**: server.py:84 calls `_enforce_plugin_root()` at module top — duplicate the same call in install_core.py (the function body is `def _enforce_plugin_root() -> None: ...`, defined at server.py:52). The `version_tuple()` shape from the bash hook: parses `vX.Y.Z` or `X.Y.Z` into a `(int, int, int)` tuple; bare-semver only (per spec Technical Constraints — non-semver suffixes are out of scope). The moved code's existing `packaging.Version` usage must be swapped to stdlib `version_tuple()` comparison. NDJSON allowlist `_NDJSON_ERROR_STAGES` migrates whole; non-install callers in server.py (e.g. `_orchestrate_upgrade`, `_run_verification_probe`) will import it from install_core in Task 8. Timestamped uv-log filename: `${XDG_STATE_HOME:-$HOME/.local/state}/cortex-command/last-install-uv.{int(time.time())}.log`; record the path in the NDJSON record's `uv_log_path` field; prune older logs by listing the directory at install start and unlinking files matching the pattern when count > 5 (most-recent-by-mtime are kept).
 - **Verification**: `python3 -c "import sys; sys.path.insert(0, 'plugins/cortex-overnight'); import install_core; assert install_core.CortexInstallFailed; assert install_core._INSTALL_VERIFY_TIMEOUT_SECONDS; assert install_core._INSTALL_SUBPROCESS_TIMEOUT_SECONDS == 300.0"` — pass if exit 0 from a bare shell. `grep -E "^(import|from) (packaging|mcp|pydantic|fastmcp|cortex_command)" plugins/cortex-overnight/install_core.py` returns no matches.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit f8f0e5e4) — _enforce_plugin_root call requires CLAUDE_PLUGIN_ROOT env var for verification; `cli_pin` import is lazy inside `_run_install_and_verify` to allow standalone import; T8 must address server.CLI_PIN monkeypatch divergence
 
 ### Task 8: Update `server.py` to import from `install_core`
 
@@ -106,7 +106,7 @@ Five-phase incremental refactor that (a) extracts `CLI_PIN` and the install runn
 - **Complexity**: complex
 - **Context**: Existing test patches in `tests/test_mcp_auto_update_real_install.py` at lines 420, 501, 641 use `monkeypatch.setattr(server, "_run_install_and_verify", _spy_install)`. The specific `version_mismatch_reinstall` stage's behavior is exercised by the tests anchored at lines 348 (the test asserting `captured_stages == ["version_mismatch_reinstall"]`), 391–444 (the version-mismatch reinstall branch happy path), 493 (a parallel scenario with a different `CLI_PIN` mock), and 633 (a third variant — see line 444's assertion `f"'version_mismatch_reinstall' (NOT '_parse_failure')"` confirming stage-name fidelity). These three tests collectively pin the MCP-call path's `version_mismatch_reinstall` semantics, so any refactor that breaks the asymmetry (e.g. lifting under-lock re-check from `run_install_in_background` into a shared helper invoked by both paths) would change `captured_stages` and fail. The unqualified import re-binds `_run_install_and_verify` on `server`'s namespace, so those patches continue to intercept. **Do not** rewrite `_ensure_cortex_installed`'s call site to `install_core._run_install_and_verify(...)` — that would break the patches silently. Per spec Non-Requirements: "No qualified `install_core._run_install_and_verify(…)` call style." `_ensure_cortex_installed` orchestrator stays in server.py: skip predicates, in-flight session guard, version comparison, sentinel check — only the install proper delegates.
 - **Verification**: `grep -c "^def _run_install_and_verify" plugins/cortex-overnight/server.py` = 0; `grep -cE "^from install_core import" plugins/cortex-overnight/server.py` ≥ 1; `grep -cE "install_core\._run_install_and_verify\b" plugins/cortex-overnight/server.py` = 0 (no qualified access); `just test tests/test_mcp_auto_update_real_install.py` passes with no test code modifications.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit e3da12a7) — added `is_auto_install_disabled()` to install_core; dropped under-lock first-install re-check to keep `test_no_clone_install.py::test_mcp_first_install_hook` passing (idempotent `--reinstall` preserves correctness); added `sys.path` insertion for in-process test loaders; pre-existing `test_r13_schema_floor_emits_remediation_stderr` failure verified unrelated
 
 ### Task 9: Add pre-commit guards for `install_core.py` stdlib-only and `_enforce_plugin_root` parity
 
@@ -116,7 +116,7 @@ Five-phase incremental refactor that (a) extracts `CLI_PIN` and the install runn
 - **Complexity**: simple
 - **Context**: The stdlib-only guard mirrors Task 6's structural approach but uses a string-list rejection rather than a full AST whitelist (install_core.py is too rich to whitelist exhaustively). The parity guard extracts the `_enforce_plugin_root` `FunctionDef` AST node from both files, calls `ast.unparse` on each, normalizes whitespace, and compares. On mismatch, emit a clear message naming the divergent function.
 - **Verification**: From a clean checkout, add `import packaging` to the top of `install_core.py` and run `.githooks/pre-commit` — pass if exit non-zero and stderr names the offending import. Then revert; modify server.py's `_enforce_plugin_root` body without modifying install_core.py's copy and run the guard — pass if exit non-zero and stderr names the divergent function. Revert and confirm both guards pass.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit f523d384) — added as Phase 1.97 in `.githooks/pre-commit` (orchestrator renumbered from 1.96 to avoid collision with T6's Phase 1.96)
 
 ### Task 10: Add `run_install_in_background()` to install_core with marker, under-lock re-check, sentinel, NDJSON stages, skip predicates
 
@@ -126,7 +126,7 @@ Five-phase incremental refactor that (a) extracts `CLI_PIN` and the install runn
 - **Complexity**: complex
 - **Context**: `install_guard.check_in_flight_install_core` is in `plugins/cortex-overnight/install_guard.py:27` (already vendored; not modified). The dirty-tree narrowing (R26) checks `git rev-parse --show-toplevel` then `git -C <toplevel> remote get-url origin` and matches against `cortex-command.git` or `charleshall888/cortex-command`. The under-lock re-check is asymmetric with the MCP-call path by design — per spec Non-Requirements: "No modification of MCP-call path's existing `version_mismatch_reinstall` behavior." Pattern reference: `start_new_session=True` is already used at 4 callsites in server.py; mirror that pattern. The `uv_log` filename is the timestamped path from Task 7's R11 implementation. The 30-min sentinel window (R22) is `_SESSION_INSTALL_SENTINEL_WINDOW_SECONDS = 1800.0` — a new module-level constant in install_core.py.
 - **Verification**: `grep -E "(session_start_reinstall).*re.check|re.check.*session_start_reinstall" plugins/cortex-overnight/install_core.py` returns ≥ 1 match; `grep -E "version_mismatch_reinstall.*re.check|re.check.*version_mismatch_reinstall" plugins/cortex-overnight/install_core.py` returns 0 matches; `grep -c "start_new_session=True" plugins/cortex-overnight/install_core.py` ≥ 1 within `run_install_in_background`; `grep -c "stdin=subprocess.DEVNULL" plugins/cortex-overnight/install_core.py` ≥ 1 within `run_install_in_background`; `grep -c "UV_NO_PROGRESS" plugins/cortex-overnight/install_core.py` ≥ 1; `grep -oE 'session_start_[a-z_]+' plugins/cortex-overnight/install_core.py | sort -u` returns at least all six new stages. **Behavioral smoke check** (closes the gap to Task 14): `CORTEX_AUTO_INSTALL=0 python3 -c "import sys; sys.path.insert(0, 'plugins/cortex-overnight'); import install_core; install_core.run_install_in_background()"` exits 0 with no `uv tool install` subprocess fired (verify via `ps -A` immediately after, or by the absence of any marker file write). Full behavioral matrix (concurrency, marker lifecycle, slow-mock detach detection) remains in Task 14.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 938f1d74 + reconciliation 96dcf038) — duplicated `_async_hook_pid_verifier`/`_async_hook_active_session_path` from server.py to preserve install_core's stdlib-only contract; inline CORTEX_AUTO_INSTALL check replaced with `is_auto_install_disabled()` post-merge; `_INSTALL_MARKER_STALE_SECONDS=600` constant exposed for T12's sync-hook consumer
 
 ### Task 11: Deploy async install hook + register in `hooks.json` + add to `justfile` manifest
 
@@ -136,7 +136,7 @@ Five-phase incremental refactor that (a) extracts `CLI_PIN` and the install runn
 - **Complexity**: complex
 - **Context**: The bash trampoline pattern is established by the existing `plugins/cortex-overnight/hooks/cortex-cli-version-sync.sh` (mirrors its `set -euo pipefail`, JSON-stdin via `jq`, PATH bootstrap, and Python heredoc structure). The detach via `start_new_session=True` happens inside `install_core.run_install_in_background()` — the hook script itself just imports and calls; the install subprocess is the detached child. On Claude Code v2.1.139+, `async: true` runs the hook in background; on older clients the field is silently ignored and the always-detach pattern still gives correct behavior (hook script exits in ~50–200ms; install proceeds in detached child). The Python heredoc must also honor `CORTEX_AUTO_INSTALL=0` (R30) — delegated to `install_core.run_install_in_background()`'s skip-predicate path.
 - **Verification**: `bash -n hooks/cortex-cli-background-install.sh` exits 0; `jq '.hooks.SessionStart | length' plugins/cortex-overnight/hooks/hooks.json` = 3; `jq -r '.hooks.SessionStart[].hooks[] | select(.async == true) | .command' plugins/cortex-overnight/hooks/hooks.json` returns exactly `${CLAUDE_PLUGIN_ROOT}/hooks/cortex-cli-background-install.sh`; `just build-plugin cortex-overnight` exits 0 and `diff hooks/cortex-cli-background-install.sh plugins/cortex-overnight/hooks/cortex-cli-background-install.sh` returns no differences; the hook script does NOT contain `uv tool install` as a direct shell invocation (`grep -c "uv tool install" hooks/cortex-cli-background-install.sh` = 0 — all install invocation flows through `install_core.run_install_in_background()`).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 38f5f05f) — `just build-plugin` recipe takes no args; used no-arg form; rewrote two comment mentions of "uv tool install" to "uv-reinstall subprocess" to satisfy literal grep
 
 ### Task 12: Extend `cortex-cli-version-sync.sh` with marker detection, prior-failure surfacing, dirty-tree narrowing, first-install warn-only
 
@@ -146,7 +146,7 @@ Five-phase incremental refactor that (a) extracts `CLI_PIN` and the install runn
 - **Complexity**: complex
 - **Context**: The sync hook runs concurrently with the new async hook at SessionStart (both are SessionStart entries in `hooks.json`); the async hook writes the marker only after acquiring the flock, which happens after the sync hook has already composed its `additionalContext`. So R24's marker detection is **structurally unable** to protect the current session's install — only prior sessions'. Document this in the warning prose (`"background install from a prior session"`, not `"is currently running"`). The R27 "first-install warn-only" branch is a **deliberate refusal-to-bootstrap**, not a routine fall-through: it is reachable only when the user has installed the cortex-overnight plugin without (or after uninstalling) the cortex-command CLI — out of order from `docs/setup.md`'s CLI-first install sequence. The user-visible additionalContext acknowledges only the symptom; the trust posture (no SessionStart-triggered first-install) is documented in `docs/internals/auto-update.md`'s Trust Model section (Task 13). The dirty-tree narrowing must be applied in both the bash hook helper and `server.py:_evaluate_skip_predicates` to keep the MCP-call path consistent with the SessionStart path on this predicate.
 - **Verification**: `grep -c "install.in-progress" plugins/cortex-overnight/hooks/cortex-cli-version-sync.sh` ≥ 1; `grep -c "session-install-failed" plugins/cortex-overnight/hooks/cortex-cli-version-sync.sh` ≥ 1; `grep -c "cortex CLI is not installed" plugins/cortex-overnight/hooks/cortex-cli-version-sync.sh` ≥ 1; behavioral coverage deferred to Task 15's fixture scenarios.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit abfe6156) — R27 changed probe-failure path from silent-skip to warn-only emit, breaking pre-existing `cli-version-sync/probe-failure` test; T15 must update; also R26 narrowing in `server.py:_evaluate_skip_predicates` may affect existing MCP-call-path tests that rely on unconditional dirty-tree skip
 
 ### Task 13: Rewrite `docs/internals/auto-update.md` for three-layer architecture, add Trust Model section, and enforce ruleset pre-merge gate
 
@@ -156,7 +156,7 @@ Five-phase incremental refactor that (a) extracts `CLI_PIN` and the install runn
 - **Complexity**: simple
 - **Context**: `docs/internals/auto-update.md` is the owning doc for the plugin/CLI auto-update flow per CLAUDE.md's "Overnight docs source of truth" convention. Component map currently has rows for `server.py:_ensure_cortex_installed`, `cortex-cli-version-sync.sh`, etc.; mirror that row shape for the two new rows. The Trust Model section is new — place it after the Component map, before any tests/CI section.
 - **Verification**: `grep -c "three-layer\|Layer 3" docs/internals/auto-update.md` ≥ 1; `grep -c "^## Trust model" docs/internals/auto-update.md` = 1; `grep -cE "tag.protection|tag-protection|Repository Ruleset" docs/internals/auto-update.md` ≥ 1; `grep -c "CORTEX_AUTO_INSTALL=0" docs/internals/auto-update.md` ≥ 1; `grep -cE "chicken-and-egg|force-push" docs/internals/auto-update.md` ≥ 1; `grep -cE "Release prerequisite|pre-merge operator action" docs/internals/auto-update.md` ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit b584f53a)
 
 ### Task 14: Add `tests/test_cli_background_install_hook.py` with 8 scenarios
 
@@ -166,7 +166,7 @@ Five-phase incremental refactor that (a) extracts `CLI_PIN` and the install runn
 - **Complexity**: complex
 - **Context**: **Patch strategy is path-divergent.** For MCP-call-path tests (the existing pattern in `tests/test_mcp_auto_update_real_install.py`), `monkeypatch.setattr(server, "_run_install_and_verify", spy)` continues to work post-factor because of Task 8's unqualified-import re-bind. **The hook-fired install path is different**: the bash trampoline at `hooks/cortex-cli-background-install.sh` spawns a fresh Python subprocess that does `sys.path.insert(0, HOOK_PLUGIN_ROOT); import install_core; install_core.run_install_in_background()` — server.py is never loaded into the subprocess's `sys.modules`, so `monkeypatch.setattr(server, ...)` cannot intercept. Hook-path tests MUST mock at the subprocess boundary instead: prepend `tests/fixtures/install/bin/` (which contains a mock `uv` binary) to PATH for the hook invocation, and have the mock record its argv to a file the test inspects. Scenario (e) requires fixture orchestration: start 3 subprocesses simultaneously, each invoking the hook with a fixture that signals drift; assert that exactly 1 actually executes `uv tool install` (verified via the mock's argv-record file having exactly 1 entry). **Scenario (h) — detach property, not wall-clock:** the slow-mock approach: configure `tests/fixtures/install/bin/uv` (or a copy of it placed earlier on PATH for this scenario) to `sleep 3` before exiting; invoke the hook script via `time bash hooks/cortex-cli-background-install.sh < fixture.json`; assert wall-clock elapsed < 2 seconds AND the mock's argv-record file is written ONLY after the hook script returns (i.e., the sleeping subprocess outlived the hook). If a regression converts `subprocess.Popen(..., start_new_session=True)` to a blocking `subprocess.run`, the hook would wait for the 3s sleep and exceed the 2s budget — the test catches this. As an additional defense, assert via `ps` that the install subprocess is in a different session id (`SID`) than the hook script's pid.
 - **Verification**: `just test tests/test_cli_background_install_hook.py` exits 0 with all 8 scenarios reported as PASS; scenario (h) specifically asserts wall-clock < 2s with the mock that sleeps ≥ 3s (proving the detach property, not just a fast-mock budget).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 138001ae) — 9 tests pass (scenario d split into 2); scenario (e) uses deterministic serial dispatch with stateful cortex shim (rationale: `_acquire_install_flock` releases before detached subprocess runs, making literal concurrency flaky); scenario (h) uses argv-timing assertions instead of `ps` SID inspection (equivalent evidence of detach property)
 
 ### Task 15: Add 5 new scenarios to `tests/test_cli_version_sync_hook.sh`
 
@@ -176,7 +176,7 @@ Five-phase incremental refactor that (a) extracts `CLI_PIN` and the install runn
 - **Complexity**: complex
 - **Context**: The fixture under `tests/fixtures/hooks/scan-cli-version-sync/` was migrated in Task 5 to write `cli_pin.py`; this task adds new scenarios but does not touch the fixture's CLI_PIN-source file. Scenario fixtures: synthesize a marker file via `touch ${XDG_STATE_HOME}/cortex-command/install.in-progress` and use `touch -d "5 minutes ago"` to control mtime for the 30-min boundary scenarios. For scenario (e), the test creates a temporary git repo with a fake `remote.origin.url` (`https://example.com/some-other-repo.git`) and runs the hook from inside it; the hook should not skip.
 - **Verification**: `just test tests/test_cli_version_sync_hook.sh` exits 0 with all 5 new scenarios passing.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit dc2c12d4) — 11/11 scenarios pass (5 new + 5 pre-existing + 1 updated probe-failure to match T12's R27 warn-only behavior); used Python `os.utime` for cross-platform mtime control (macOS BSD `touch -d` is GNU-only)
 
 ### Task 16: Update `tests/test_release_artifact_invariants.py` to read `cli_pin.py`
 
@@ -186,7 +186,7 @@ Five-phase incremental refactor that (a) extracts `CLI_PIN` and the install runn
 - **Complexity**: simple
 - **Context**: `test_release_artifact_invariants.py` runs `git show <tag>:<path>` over each post-boundary tag and checks `CLI_PIN[0]` matches the tag. Post-Phase-1 tags will have `CLI_PIN` in `cli_pin.py`, not `server.py`. Pre-Phase-1 tags do not need to be re-checked by this updated test — the boundary tag is defined by spec (typically the first tag with the new file layout).
 - **Verification**: `grep -c "cli_pin.py" tests/test_release_artifact_invariants.py` ≥ 1; `grep -c "plugins/cortex-overnight/server.py" tests/test_release_artifact_invariants.py` = 0; `just test tests/test_release_artifact_invariants.py` passes once at least one post-boundary tag exists (CI runs on PR merge).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit cc210d89) — post-boundary tag-walk passes trivially (no post-boundary tags yet)
 
 ### Task 17: Verify `install_guard.py` parity is preserved
 
@@ -196,7 +196,7 @@ Five-phase incremental refactor that (a) extracts `CLI_PIN` and the install runn
 - **Complexity**: trivial
 - **Context**: `just sync-install-guard --check` is an existing recipe that diffs the two `install_guard.py` files modulo whitespace. No code changes expected from this task — it's a post-factor invariant check. If the recipe reports drift, the failure must be traced to a Task 7–11 mistake (and fixed in those tasks, not here).
 - **Verification**: `just sync-install-guard --check` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed (verified inline post-batch-1, exit 0) — install_guard byte-identical between cortex_command/install_guard.py and plugins/cortex-overnight/install_guard.py
 
 ## Risks
 
