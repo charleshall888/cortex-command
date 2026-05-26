@@ -99,7 +99,7 @@ The helper resolves the correct events.log target (lifecycle-attached, R13 re-ru
 
 ### Decompose-commit batch-review gate
 
-Within the Decompose phase, a user-blocking post-decompose batch-review gate (`checkpoint: decompose-commit`) fires after all ticket bodies are authored and the prescriptive-prose scanner has passed, BEFORE any tickets commit to `cortex/backlog/`. The gate offers `approve-all`, `revise-piece <N>`, and `drop-piece <N>` options and emits an `approval_checkpoint_responded` event per response. See decompose.md §5 for the gate semantics.
+Within the Decompose phase, a user-blocking post-decompose batch-review gate (`checkpoint: decompose-commit`) fires after all ticket bodies are authored and the prescriptive-prose scanner has passed, BEFORE any tickets commit to `cortex/backlog/`. The gate offers `approve-all`, `revise-piece <N>`, `drop-piece <N>`, and `consolidate-pieces <N,M,...>` options and emits an `approval_checkpoint_responded` event per response. See decompose.md §5 for the gate semantics.
 
 ## Phase Transition
 
