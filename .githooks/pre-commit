@@ -277,6 +277,163 @@ if [ "$install_guard_triggered" -eq 1 ]; then
 fi
 
 # -----------------------------------------------------------------------------
+# Phase 1.96 — install_core.py stdlib-only + _enforce_plugin_root parity (R10 / R13 / T9)
+# -----------------------------------------------------------------------------
+# When any staged path is install_core.py or server.py (the source of the
+# duplicated _enforce_plugin_root), run two structural guards on
+# plugins/cortex-overnight/install_core.py:
+#   (a) import-allowlist: reject `cortex_command`, `packaging`, `mcp`,
+#       `pydantic`, `fastmcp`. Mirrors Task 6's structural approach but uses
+#       a string-list rejection (install_core.py is too rich to whitelist
+#       exhaustively).
+#   (b) byte-identity parity: extract the `_enforce_plugin_root` FunctionDef
+#       AST node from both files, call ast.unparse on each, and compare —
+#       normalizing whitespace inside the body the same way the existing
+#       `just sync-install-guard --check` precedent does for its duplicated
+#       function. On mismatch, name the divergent function.
+install_core_triggered=0
+while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    case "$f" in
+        plugins/cortex-overnight/install_core.py|plugins/cortex-overnight/server.py)
+            install_core_triggered=1
+            break
+            ;;
+    esac
+done < <(git diff --cached --name-only --diff-filter=ACMR)
+
+if [ "$install_core_triggered" -eq 1 ]; then
+    if ! python3 - <<'PYEOF'
+import ast
+import sys
+from pathlib import Path
+
+REPO = Path.cwd()
+INSTALL_CORE = REPO / "plugins" / "cortex-overnight" / "install_core.py"
+SERVER = REPO / "plugins" / "cortex-overnight" / "server.py"
+
+FORBIDDEN_ROOTS = {"cortex_command", "packaging", "mcp", "pydantic", "fastmcp"}
+
+if not INSTALL_CORE.exists():
+    # install_core.py is not yet materialized; nothing to guard.
+    sys.exit(0)
+
+install_core_src = INSTALL_CORE.read_text(encoding="utf-8")
+try:
+    install_core_tree = ast.parse(install_core_src, filename=str(INSTALL_CORE))
+except SyntaxError as exc:
+    print(
+        f"pre-commit: install_core.py failed to parse: {exc}",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+# ---------------------------------------------------------------------------
+# Guard (a): stdlib-only import allowlist (rejection list)
+# ---------------------------------------------------------------------------
+def _root(name: str) -> str:
+    return name.split(".", 1)[0] if name else ""
+
+violations: list[str] = []
+for node in ast.walk(install_core_tree):
+    if isinstance(node, ast.Import):
+        for alias in node.names:
+            root = _root(alias.name)
+            if root in FORBIDDEN_ROOTS:
+                violations.append(
+                    f"  line {node.lineno}: import {alias.name} (forbidden root '{root}')"
+                )
+    elif isinstance(node, ast.ImportFrom):
+        # ImportFrom with module=None is a relative `from . import x`; treat
+        # the bare relative form as allowed (no root to reject).
+        if node.module is None:
+            continue
+        root = _root(node.module)
+        if root in FORBIDDEN_ROOTS:
+            names = ", ".join(alias.name for alias in node.names)
+            violations.append(
+                f"  line {node.lineno}: from {node.module} import {names} (forbidden root '{root}')"
+            )
+
+if violations:
+    print(
+        "pre-commit: install_core.py imports a forbidden module.\n"
+        "install_core.py must be stdlib-only (plus the sibling install_guard\n"
+        "and cli_pin modules) so the bare-stdlib hook Python can load it\n"
+        "without resolving the plugin's PEP 723 deps. Offending import(s):",
+        file=sys.stderr,
+    )
+    for v in violations:
+        print(v, file=sys.stderr)
+    sys.exit(1)
+
+# ---------------------------------------------------------------------------
+# Guard (b): _enforce_plugin_root byte-identity (whitespace normalized via
+# ast.unparse) between server.py and install_core.py.
+# ---------------------------------------------------------------------------
+if not SERVER.exists():
+    # server.py absent — skip parity guard (install_core stdlib check already ran).
+    sys.exit(0)
+
+server_src = SERVER.read_text(encoding="utf-8")
+try:
+    server_tree = ast.parse(server_src, filename=str(SERVER))
+except SyntaxError as exc:
+    print(
+        f"pre-commit: server.py failed to parse: {exc}",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+def _find_function(tree: ast.Module, name: str) -> ast.FunctionDef | None:
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == name:
+            return node
+    return None
+
+server_fn = _find_function(server_tree, "_enforce_plugin_root")
+install_core_fn = _find_function(install_core_tree, "_enforce_plugin_root")
+
+if server_fn is None:
+    print(
+        "pre-commit: _enforce_plugin_root not found at module top level in\n"
+        "plugins/cortex-overnight/server.py — the parity guard cannot run.",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+if install_core_fn is None:
+    print(
+        "pre-commit: _enforce_plugin_root not found at module top level in\n"
+        "plugins/cortex-overnight/install_core.py — per spec R10 this\n"
+        "function must be duplicated from server.py.",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+server_unparsed = ast.unparse(server_fn)
+install_core_unparsed = ast.unparse(install_core_fn)
+
+if server_unparsed != install_core_unparsed:
+    print(
+        "pre-commit: _enforce_plugin_root has drifted between\n"
+        "plugins/cortex-overnight/server.py and\n"
+        "plugins/cortex-overnight/install_core.py.\n"
+        "These copies must stay byte-identical (modulo whitespace inside\n"
+        "the body, normalized via ast.unparse). Update both copies\n"
+        "together or revert the divergent change.",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+sys.exit(0)
+PYEOF
+    then
+        exit 1
+    fi
+fi
+
+# -----------------------------------------------------------------------------
 # Phase 2 — Short-circuit decision
 # -----------------------------------------------------------------------------
 staged=$(git diff --cached --name-only --diff-filter=ACMR)
