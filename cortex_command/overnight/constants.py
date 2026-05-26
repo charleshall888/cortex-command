@@ -5,3 +5,4 @@ imports here without checking the Phase 2 import graph.
 """
 
 CIRCUIT_BREAKER_THRESHOLD = 3
+SYSTEMIC_FAILURE_THRESHOLD = 3

@@ -36,3 +36,4 @@ class CircuitBreakerState:
     """Tracks circuit breaker state across feature executions."""
 
     consecutive_pauses: int = 0
+    systemic_pauses_in_batch: int = 0
