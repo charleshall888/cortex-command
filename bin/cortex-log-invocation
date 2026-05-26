@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # cortex-log-invocation — dual-channel wrapper for the cortex_command.log_invocation module.
 #
-# Branch order:
+# Branch order (optimized to avoid wheel-probe cost on working-tree checkouts):
 #   (a) CORTEX_COMMAND_FORCE_SOURCE=1 → exec working-tree module directly via python3 -m
-#   (b) wheel-import probe succeeds   → exec via wheel (python3 -m cortex_command.log_invocation)
-#   (c) working-tree pyproject.toml names cortex-command → exec via working-tree PYTHONPATH
+#   (b) working-tree pyproject.toml names cortex-command → exec via working-tree PYTHONPATH
+#       (checked before the wheel-import probe to avoid the double Python boot on dev checkouts)
+#   (c) wheel-import probe succeeds   → exec via wheel (python3 -m cortex_command.log_invocation)
 #   (d) nothing found                 → exit 2 with remediation message
 set -euo pipefail
 
@@ -14,15 +15,16 @@ if [ "${CORTEX_COMMAND_FORCE_SOURCE:-}" = "1" ]; then
     exec env PYTHONPATH="${_root}:${PYTHONPATH:-}" python3 -m cortex_command.log_invocation "$@"
 fi
 
-# Branch (b): wheel-import probe — prefer the installed wheel.
-if python3 -c "import cortex_command.log_invocation" 2>/dev/null; then
-    exec python3 -m cortex_command.log_invocation "$@"
-fi
-
-# Branch (c): working-tree fallback when pyproject.toml names cortex-command.
+# Branch (b): working-tree fallback when pyproject.toml names cortex-command.
+# Uses a name-match grep (not a file-presence check) to avoid routing under unrelated pyproject.toml.
 _root="${CORTEX_COMMAND_ROOT:-$(dirname "$0")/..}"
 if grep -q '^name = "cortex-command"' "${_root}/pyproject.toml" 2>/dev/null; then
     exec env PYTHONPATH="${_root}:${PYTHONPATH:-}" python3 -m cortex_command.log_invocation "$@"
+fi
+
+# Branch (c): wheel-import probe — prefer the installed wheel.
+if python3 -c "import cortex_command.log_invocation" 2>/dev/null; then
+    exec python3 -m cortex_command.log_invocation "$@"
 fi
 
 # Branch (d): nothing found — emit remediation message and exit 2.
