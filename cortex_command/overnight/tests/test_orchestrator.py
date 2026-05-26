@@ -12,6 +12,10 @@ Covers:
      invoked for that feature.
   5. Heartbeat lifecycle — the background heartbeat task created via
      ``create_task`` is cancelled before ``run_batch`` returns.
+  6. Systemic total-in-batch halt — three systemic-class pauses with an
+     interleaved success set ``global_abort_signal`` and write exactly one
+     ``pipeline_systemic_failure`` event; the pre-dispatch gate blocks
+     features queued after the third systemic pause.
 
 All patch targets live on ``cortex_command.overnight.orchestrator`` (or
 ``cortex_command.overnight.outcome_router`` for ``apply_feature_result``).  The
@@ -27,7 +31,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from cortex_command.overnight.constants import CIRCUIT_BREAKER_THRESHOLD
+from cortex_command.overnight.constants import CIRCUIT_BREAKER_THRESHOLD, SYSTEMIC_FAILURE_THRESHOLD
+from cortex_command.overnight.events import PIPELINE_SYSTEMIC_FAILURE, read_events
 from cortex_command.overnight.orchestrator import BatchConfig
 from cortex_command.overnight.types import CircuitBreakerState, FeatureResult
 
@@ -394,6 +399,232 @@ class TestOrchestratorRunBatch(unittest.IsolatedAsyncioTestCase):
         self.addCleanup(lambda: asyncio.get_event_loop().run_until_complete(
             _drain()
         ) if not hb_task.done() else None)
+
+
+    # ------------------------------------------------------------------
+    # Scenario 6 — systemic total-in-batch halt
+    # ------------------------------------------------------------------
+
+    async def test_systemic_total_in_batch_halt_and_gate(self):
+        """Sequence [S, S, success, S, queued] trips global_abort_signal on
+        the third systemic pause and blocks the post-trip feature at the
+        pre-dispatch gate (R8 integration test).
+
+        Proves total-in-batch semantics: the class-blind ``consecutive_pauses``
+        counter resets on the success, but ``systemic_pauses_in_batch`` does
+        not.  The fifth feature (feat-e) is blocked by the pre-dispatch gate
+        at orchestrator.py:357 set by the third systemic pause (feat-d).
+
+        Sequence: infrastructure_failure → worker_no_exit_report → success →
+        worker_malformed_exit_report → [blocked].
+
+        Asserts:
+          - ``batch_result.global_abort_signal is True``
+          - events log contains exactly one ``pipeline_systemic_failure`` event
+          - ``details.cause_class`` length == SYSTEMIC_FAILURE_THRESHOLD and
+            oldest-first: [infrastructure_failure, worker_no_exit_report,
+            worker_malformed_exit_report]
+          - ``execute_feature`` was NOT called for feat-e (gate fired)
+        """
+        import cortex_command.overnight.outcome_router as _router_mod
+        from cortex_command.pipeline.merge import MergeResult
+        from cortex_command.overnight.orchestrator import run_batch
+
+        assert SYSTEMIC_FAILURE_THRESHOLD == 3, "test assumes threshold=3"
+
+        feature_names = ["feat-a", "feat-b", "feat-c", "feat-d", "feat-e"]
+
+        execute_results = {
+            "feat-a": FeatureResult(
+                name="feat-a", status="paused", error="infrastructure_failure"
+            ),
+            "feat-b": FeatureResult(
+                name="feat-b", status="paused", error="worker_no_exit_report"
+            ),
+            "feat-c": FeatureResult(name="feat-c", status="completed"),
+            "feat-d": FeatureResult(
+                name="feat-d", status="paused", error="worker_malformed_exit_report"
+            ),
+            # feat-e would not be executed if the gate fires correctly
+            "feat-e": FeatureResult(name="feat-e", status="completed"),
+        }
+
+        # Events signalled after each feature's apply_feature_result completes;
+        # execute_feature for feat-{b,c,d,e} waits for the previous feature to
+        # finish processing so the sequence is strictly ordered.
+        processed: dict[str, asyncio.Event] = {n: asyncio.Event() for n in feature_names}
+        prereqs: dict[str, str] = {
+            "feat-b": "feat-a",
+            "feat-c": "feat-b",
+            "feat-d": "feat-c",
+            "feat-e": "feat-d",
+        }
+
+        # Capture whether execute_feature was ever called for feat-e.
+        execute_called: set[str] = set()
+
+        async def _execute_side(feature, *args, **kwargs):
+            execute_called.add(feature)
+            if feature in prereqs:
+                await processed[prereqs[feature]].wait()
+            return execute_results[feature]
+
+        # Wrap the real apply_feature_result to signal completion; lets the
+        # systemic threshold logic run for real.
+        _real_apply = _router_mod.apply_feature_result
+
+        async def _apply_and_signal(name, result, ctx, **kwargs):
+            try:
+                await _real_apply(name, result, ctx, **kwargs)
+            finally:
+                processed[name].set()
+
+        # --- patches ---
+
+        self._start_patch(
+            "cortex_command.overnight.orchestrator.parse_master_plan",
+            return_value=self._make_plan(feature_names),
+        )
+        self._start_patch(
+            "cortex_command.overnight.orchestrator.create_worktree",
+            side_effect=lambda name, *a, **kw: self._make_worktree_info(name),
+        )
+        self._start_patch(
+            "cortex_command.overnight.orchestrator.load_state",
+            return_value=self._make_state(feature_names),
+        )
+        self._start_patch("cortex_command.overnight.orchestrator.save_state")
+        self._start_patch("cortex_command.overnight.orchestrator.save_batch_result")
+        self._start_patch("cortex_command.overnight.orchestrator.transition")
+        self._start_patch(
+            "cortex_command.overnight.orchestrator.load_throttle_config",
+            return_value=MagicMock(),
+        )
+
+        mock_manager = MagicMock()
+        mock_manager.acquire = AsyncMock()
+        mock_manager.release = MagicMock()
+        mock_manager.stats = {}
+        self._start_patch(
+            "cortex_command.overnight.orchestrator.ConcurrencyManager",
+            return_value=mock_manager,
+        )
+
+        self._start_patch(
+            "cortex_command.overnight.orchestrator.execute_feature",
+            autospec=True,
+            side_effect=_execute_side,
+        )
+
+        # Wrap (not fully replace) apply_feature_result so the systemic
+        # threshold logic runs for real while we capture completion events.
+        self._start_patch(
+            "cortex_command.overnight.outcome_router.apply_feature_result",
+            side_effect=_apply_and_signal,
+        )
+
+        # Patch outcome_router inner helpers so the paused/completed paths
+        # don't require real git or backlog filesystem access.
+        self._start_patch(
+            "cortex_command.overnight.outcome_router._write_back_to_backlog"
+        )
+        self._start_patch(
+            "cortex_command.overnight.outcome_router.cleanup_worktree"
+        )
+
+        # feat-c (completed) will go through the merge path; mock its
+        # dependencies so it succeeds cleanly.
+        def _changed_files_side(name, *args, **kwargs):
+            return ["src/foo.py"] if name == "feat-c" else []
+
+        self._start_patch(
+            "cortex_command.overnight.outcome_router._get_changed_files",
+            side_effect=_changed_files_side,
+        )
+        merge_ok = MergeResult(success=True, feature="feat-c", conflict=False)
+        self._start_patch(
+            "cortex_command.overnight.outcome_router.merge_feature",
+            return_value=merge_ok,
+        )
+        self._start_patch(
+            "cortex_command.overnight.outcome_router.requires_review",
+            return_value=False,
+        )
+        self._start_patch(
+            "cortex_command.overnight.outcome_router.read_tier",
+            return_value="S",
+        )
+        self._start_patch(
+            "cortex_command.overnight.outcome_router.read_criticality",
+            return_value="low",
+        )
+
+        # Heartbeat: let the real create_task run (same spy as other tests).
+        captured: list[asyncio.Task] = []
+
+        def _create_task_spy(coro, *args, **kwargs):
+            task = asyncio.get_event_loop().create_task(coro, *args, **kwargs)
+            captured.append(task)
+            return task
+
+        self._start_patch(
+            "cortex_command.overnight.orchestrator.create_task",
+            side_effect=_create_task_spy,
+        )
+
+        # --- run ---
+        batch_result = await run_batch(self._config)
+
+        # --- assertions ---
+
+        # R8-a: global_abort_signal must be True after three systemic pauses.
+        self.assertTrue(
+            batch_result.global_abort_signal,
+            "batch_result.global_abort_signal should be True after three "
+            "systemic pauses",
+        )
+
+        # R8-b: events log contains exactly one pipeline_systemic_failure event.
+        events = read_events(self._config.overnight_events_path)
+        systemic_events = [
+            e for e in events if e.get("event") == PIPELINE_SYSTEMIC_FAILURE
+        ]
+        self.assertEqual(
+            len(systemic_events),
+            1,
+            f"Expected exactly 1 pipeline_systemic_failure event, got "
+            f"{len(systemic_events)}: {systemic_events}",
+        )
+
+        # R8-c: cause_class has length == SYSTEMIC_FAILURE_THRESHOLD, oldest-first.
+        cause_class = systemic_events[0]["details"]["cause_class"]
+        self.assertEqual(
+            len(cause_class),
+            SYSTEMIC_FAILURE_THRESHOLD,
+            f"cause_class length should be {SYSTEMIC_FAILURE_THRESHOLD}, got "
+            f"{len(cause_class)}: {cause_class}",
+        )
+        self.assertEqual(
+            cause_class,
+            ["infrastructure_failure", "worker_no_exit_report", "worker_malformed_exit_report"],
+            "cause_class should be oldest-first: "
+            "[infrastructure_failure, worker_no_exit_report, "
+            "worker_malformed_exit_report]",
+        )
+
+        # R8-d: pre-dispatch gate blocked feat-e — execute_feature not called.
+        self.assertNotIn(
+            "feat-e",
+            execute_called,
+            "execute_feature should NOT have been called for feat-e; "
+            "the pre-dispatch gate (global_abort_signal) should have blocked it",
+        )
+
+        # Sanity: the four non-blocked features were attempted.
+        self.assertIn("feat-a", execute_called)
+        self.assertIn("feat-b", execute_called)
+        self.assertIn("feat-c", execute_called)
+        self.assertIn("feat-d", execute_called)
 
 
 if __name__ == "__main__":
