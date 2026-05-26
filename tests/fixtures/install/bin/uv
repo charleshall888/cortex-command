@@ -2,8 +2,23 @@
 # Stub `uv` for install.sh integration tests.
 # Default: append argv to $STUB_LOG_DIR/uv.argv and exit 0.
 # Dispatch via STUB_UV_FAIL=1 → write to stderr and exit 1.
+#
+# Extended for tests/test_cli_background_install_hook.py (Task 14):
+#  - STUB_UV_RECORD_ENV=1 — additionally append the value of
+#    UV_NO_PROGRESS to $STUB_LOG_DIR/uv.env so the test can assert
+#    the install_core background path propagates the var.
+#  - STUB_UV_SLEEP=<seconds> — sleep that many seconds before
+#    writing the argv record (scenario (h)'s detach-property regression
+#    test: the slow-mock approach forces the install subprocess to
+#    outlive the hook script if detachment is broken).
 log_dir="${STUB_LOG_DIR:-/tmp}"
+if [ -n "${STUB_UV_SLEEP:-}" ]; then
+	sleep "$STUB_UV_SLEEP"
+fi
 printf '%s\n' "$*" >> "$log_dir/uv.argv"
+if [ "${STUB_UV_RECORD_ENV:-0}" = "1" ]; then
+	printf 'UV_NO_PROGRESS=%s\n' "${UV_NO_PROGRESS:-}" >> "$log_dir/uv.env"
+fi
 if [ "${STUB_UV_FAIL:-0}" = "1" ]; then
 	printf 'stub uv: simulated failure\n' >&2
 	exit 1
