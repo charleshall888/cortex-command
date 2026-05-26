@@ -11,3 +11,4 @@
 {"ts": "2026-05-26T15:14:14Z", "event": "batch_dispatch", "feature": "re-establish-perf-budget-for-cortex", "batch": 1, "tasks": [4, 6]}
 {"ts": "2026-05-26T15:17:01Z", "event": "batch_dispatch", "feature": "re-establish-perf-budget-for-cortex", "batch": 2, "tasks": [7]}
 {"ts": "2026-05-26T15:18:42Z", "event": "batch_dispatch", "feature": "re-establish-perf-budget-for-cortex", "batch": 3, "tasks": [8]}
+{"ts": "2026-05-26T15:24:30Z", "event": "phase_transition", "feature": "re-establish-perf-budget-for-cortex", "tier": "complex", "from": "implement", "to": "review"}

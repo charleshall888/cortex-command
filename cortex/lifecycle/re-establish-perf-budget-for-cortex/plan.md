@@ -96,7 +96,7 @@ Refactor `cortex_command/log_invocation.py` to defer heavy imports and remove th
 - **Complexity**: simple
 - **Context**: Task 2 fixes `_p95` BEFORE this task runs — so the calibration measurement uses the correct 95th-percentile statistic. Task 4 lands the Python module optimization and Task 5 lands the bash wrapper reorder — both must be in place for the measured floor to reflect the optimized state. Task 7 removes the delta test so `just test` for this file has no stale failing/flaky tests that could falsify Task 8's verification. The budget test's existing constants live at the top of `tests/test_log_invocation_perf.py` (`FAST_PATH_N`, `WARMUP`, and the budget thresholds). Measurement methodology: use the existing `_run_shim` helper which times via `time.perf_counter()` around `subprocess.run([bin_path, "cortex-test", "arg1"])`. The `@pytest.mark.skip` decorator is on `test_log_invocation_fast_path_budget` near lines ~78–90 (verify with `grep -n '@pytest.mark.skip' tests/test_log_invocation_perf.py`). Remove the decorator and update budget constants to measured values. Update the test's docstring to reference the local-only regression-detection framing from the spec.
 - **Verification**: `just test -- tests/test_log_invocation_perf.py::test_log_invocation_fast_path_budget` exits 0 on dev hardware (Apple Silicon).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Risks
 
