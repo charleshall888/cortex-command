@@ -324,6 +324,200 @@ def test_jsonl_side_effect_parity(case: str, tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Edge-case tests for _resolve_repo_root() — worktree file, env-var override,
+# no-repo breadcrumb.  These tests run isolated subprocesses (not fixture
+# replay) and verify the three invariants that the future pure-Python walk
+# must also satisfy.
+# ---------------------------------------------------------------------------
+
+
+def _run_log_invocation(
+    *,
+    cwd: Path,
+    home: Path,
+    env_overrides: dict[str, str],
+) -> subprocess.CompletedProcess:
+    """Invoke cortex_command.log_invocation as a subprocess.
+
+    Sets a stable LIFECYCLE_SESSION_ID so the invocation proceeds past the
+    no_session_id gate and reaches _resolve_repo_root().  Callers supply
+    env_overrides that are merged on top of a clean inherited environment
+    (with CORTEX_REPO_ROOT and LIFECYCLE_SESSION_ID removed first).
+    """
+    env = dict(os.environ)
+    env.update(_DETERMINISM_ENV_OVERRIDES)
+    env["HOME"] = str(home)
+    env.pop("CORTEX_REPO_ROOT", None)
+    env.pop("LIFECYCLE_SESSION_ID", None)
+    # Default session id so we reach _resolve_repo_root(); callers may override.
+    env["LIFECYCLE_SESSION_ID"] = "edge-case-session"
+    env.update(env_overrides)
+    return subprocess.run(
+        [sys.executable, "-m", "cortex_command.log_invocation",
+         "/opt/cortex-log-invocation"],
+        capture_output=True,
+        cwd=str(cwd),
+        env=env,
+    )
+
+
+def _read_breadcrumb_log(home: Path) -> str:
+    """Return the contents of the breadcrumb error log, or '' if absent."""
+    log_path = home / ".cache" / "cortex" / "log-invocation-errors.log"
+    if not log_path.exists():
+        return ""
+    return log_path.read_text(encoding="utf-8")
+
+
+def test_resolve_repo_root_worktree_file(tmp_path: Path) -> None:
+    """_resolve_repo_root() accepts .git-as-file (worktree pointer).
+
+    A worktree's .git is a plain file containing 'gitdir: <target>'.
+    The implementation checks .git.is_file() in addition to .git.is_dir(),
+    so CORTEX_REPO_ROOT pointing at such a directory should be accepted and
+    the invocation should succeed (JSONL written, no breadcrumb emitted).
+    """
+    # Build a directory whose .git is a FILE (worktree format).
+    worktree_dir = tmp_path / "worktree-repo"
+    worktree_dir.mkdir(parents=True)
+    (worktree_dir / ".git").write_text("gitdir: ../some-target\n", encoding="utf-8")
+    assert (worktree_dir / ".git").is_file(), "fixture: .git should be a file"
+
+    scratch_home = tmp_path / "home-worktree"
+    scratch_home.mkdir(parents=True)
+
+    result = _run_log_invocation(
+        cwd=worktree_dir,
+        home=scratch_home,
+        env_overrides={"CORTEX_REPO_ROOT": str(worktree_dir)},
+    )
+
+    assert result.returncode == 0, (
+        f"invocation must exit 0 (fail-open contract); got {result.returncode}; "
+        f"stderr: {result.stderr!r}"
+    )
+    # With CORTEX_REPO_ROOT pointing at a dir whose .git is a file, the
+    # implementation should accept it and proceed to write JSONL — not emit a
+    # no_repo_root breadcrumb.
+    breadcrumb = _read_breadcrumb_log(scratch_home)
+    assert "no_repo_root" not in breadcrumb, (
+        f"_resolve_repo_root() should accept .git-as-file but emitted "
+        f"'no_repo_root' breadcrumb: {breadcrumb!r}"
+    )
+    # JSONL must be written under the worktree repo, confirming the root was resolved.
+    session_dir = worktree_dir / "cortex" / "lifecycle" / "sessions" / "edge-case-session"
+    jsonl_file = session_dir / "bin-invocations.jsonl"
+    assert jsonl_file.exists(), (
+        f"expected JSONL at {jsonl_file} to be written when .git is a file; "
+        f"breadcrumb log: {breadcrumb!r}"
+    )
+
+
+def test_resolve_repo_root_env_var_honored(tmp_path: Path) -> None:
+    """CORTEX_REPO_ROOT short-circuits the CWD walk.
+
+    When CORTEX_REPO_ROOT is set to path X and CWD is at a different path Y
+    (both contain a valid .git directory), the resolved repo root must be X,
+    not Y.  JSONL is written under X, not Y.
+    """
+    # Path X: the repo the env var points at.
+    repo_x = tmp_path / "repo-x"
+    repo_x.mkdir(parents=True)
+    (repo_x / ".git").mkdir()
+
+    # Path Y: a different repo that CWD is set to.
+    repo_y = tmp_path / "repo-y"
+    repo_y.mkdir(parents=True)
+    (repo_y / ".git").mkdir()
+
+    scratch_home = tmp_path / "home-envvar"
+    scratch_home.mkdir(parents=True)
+
+    result = _run_log_invocation(
+        cwd=repo_y,
+        home=scratch_home,
+        env_overrides={
+            "CORTEX_REPO_ROOT": str(repo_x),
+        },
+    )
+
+    assert result.returncode == 0, (
+        f"invocation must exit 0; got {result.returncode}; "
+        f"stderr: {result.stderr!r}"
+    )
+    # JSONL must appear under repo_x (env-var wins), not repo_y (CWD).
+    jsonl_under_x = (
+        repo_x / "cortex" / "lifecycle" / "sessions" / "edge-case-session"
+        / "bin-invocations.jsonl"
+    )
+    jsonl_under_y = (
+        repo_y / "cortex" / "lifecycle" / "sessions" / "edge-case-session"
+        / "bin-invocations.jsonl"
+    )
+    assert jsonl_under_x.exists(), (
+        f"JSONL should be written under CORTEX_REPO_ROOT (repo_x={repo_x}), "
+        f"but {jsonl_under_x} does not exist"
+    )
+    assert not jsonl_under_y.exists(), (
+        f"JSONL must NOT be written under CWD (repo_y={repo_y}) when "
+        f"CORTEX_REPO_ROOT overrides it; {jsonl_under_y} unexpectedly exists"
+    )
+    # The resolved root must be X — confirm by reading the JSONL.
+    records = [
+        json.loads(line)
+        for line in jsonl_under_x.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert len(records) == 1, (
+        f"expected exactly one JSONL record under repo_x; got {records!r}"
+    )
+    assert records[0].get("session_id") == "edge-case-session"
+
+
+def test_resolve_repo_root_no_repo_root_breadcrumb(tmp_path: Path) -> None:
+    """no_repo_root breadcrumb fires when CWD is outside any git repo.
+
+    When CORTEX_REPO_ROOT is unset and CWD (and all its parents) contain no
+    .git directory or file, _resolve_repo_root() returns None and the
+    invocation emits the 'no_repo_root' breadcrumb to
+    $HOME/.cache/cortex/log-invocation-errors.log.
+    """
+    # Create a directory tree under tmp_path with no .git anywhere.
+    # tmp_path itself is under $TMPDIR which is outside the project checkout,
+    # so no ancestor contains a .git directory.
+    no_git_dir = tmp_path / "no-git" / "subdir"
+    no_git_dir.mkdir(parents=True)
+    # Confirm no .git is present in this subtree or any ancestor up to tmp_path.
+    check = no_git_dir
+    while check != check.parent:
+        assert not (check / ".git").exists(), (
+            f"fixture pre-condition violated: {check / '.git'} exists"
+        )
+        if check == tmp_path:
+            break
+        check = check.parent
+
+    scratch_home = tmp_path / "home-no-repo"
+    scratch_home.mkdir(parents=True)
+
+    result = _run_log_invocation(
+        cwd=no_git_dir,
+        home=scratch_home,
+        env_overrides={},  # CORTEX_REPO_ROOT deliberately left unset
+    )
+
+    assert result.returncode == 0, (
+        f"invocation must exit 0 (fail-open contract); got {result.returncode}; "
+        f"stderr: {result.stderr!r}"
+    )
+    breadcrumb = _read_breadcrumb_log(scratch_home)
+    assert "no_repo_root" in breadcrumb, (
+        f"expected 'no_repo_root' breadcrumb when CWD has no .git; "
+        f"breadcrumb log content: {breadcrumb!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
 # Invocation helper (cached per case+tmp_path via module-level dict)
 # ---------------------------------------------------------------------------
 
