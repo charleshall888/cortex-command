@@ -31,7 +31,7 @@ Refactor `cortex_command/log_invocation.py` to defer heavy imports and remove th
 - **Complexity**: complex
 - **Context**: Existing parity-test pattern at `tests/test_cortex_log_invocation_parity.py`: fixture construction via dict-config approach (see lines 380-410). `scratch_repo` is the parent directory; `(scratch_repo / ".git").mkdir(exist_ok=True)` creates `.git`-as-directory at line 387. For `.git`-as-file, construct as `(scratch_repo / ".git").write_text("gitdir: ../some-target\n")` instead. For the env-var fixture, set both `CORTEX_REPO_ROOT` in `env_overrides` and construct two separate `.git`-containing directories. For the no-breadcrumb-path fixture, ensure the fixture's chosen `cwd` and all its parents lack `.git` — use a path under `$TMPDIR` whose tree is freshly created. The breadcrumb log lives at `$HOME/.cache/cortex/log-invocation-errors.log` — use the existing test helper if one exists, or directly read and assert against the file. Tests must run isolated (each test's `$HOME` should be a tmp_path or otherwise isolated to prevent crosstalk). Each new test MUST include an `assert` statement that binds the stated invariant on the test output — the verification will grep for both the test function name AND an `assert` keyword within the test function body.
 - **Verification**: `grep -c 'def test_.*worktree_file' tests/test_cortex_log_invocation_parity.py` ≥ 1; `grep -c 'def test_.*env_var_honored' tests/test_cortex_log_invocation_parity.py` ≥ 1; `grep -c 'def test_.*no_repo_root_breadcrumb' tests/test_cortex_log_invocation_parity.py` ≥ 1; `just test -- tests/test_cortex_log_invocation_parity.py` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Fix `_p95` percentile-rank computation in `tests/test_log_invocation_perf.py`
 - **Files**: `tests/test_log_invocation_perf.py`
@@ -40,7 +40,7 @@ Refactor `cortex_command/log_invocation.py` to defer heavy imports and remove th
 - **Complexity**: trivial
 - **Context**: `_p95` lives at `tests/test_log_invocation_perf.py` lines ~71–75 (current; verify with `grep -n '_p95' tests/test_log_invocation_perf.py`). Add `import math` at the top of the file if not already present. The function signature is unchanged.
 - **Verification**: `grep -c 'math.ceil' tests/test_log_invocation_perf.py` ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Add pytest tests for top-level-import discipline AND session-id-first ordering
 - **Files**: `tests/test_log_invocation_imports.py` (new file)
@@ -51,7 +51,7 @@ Refactor `cortex_command/log_invocation.py` to defer heavy imports and remove th
 - **Complexity**: simple
 - **Context**: Test (1) must use subprocess isolation because the parent pytest process may have already imported these modules in other tests. Pattern: `subprocess.run([sys.executable, "-c", "import sys; import cortex_command.log_invocation; result = [m for m in ('subprocess', 'datetime', 'json', 'pathlib') if m in sys.modules]; sys.exit(1 if result else 0)"], check=False)` then assert `result.returncode == 0`. Note: this test enforces TOP-LEVEL discipline, not "function-scoped imports never run" — those imports will appear in `sys.modules` once `main()` runs. Test (2) uses pure Python `ast` (standard library): `tree = ast.parse(Path("cortex_command/log_invocation.py").read_text())`; find the `FunctionDef` node where `node.name == "main"`; skip a leading `ast.Expr` whose value is `ast.Constant(str)` (docstring); inspect the next statement. Accept either `ast.Assign` with `value` matching `os.environ.get(...)` with first arg constant `"LIFECYCLE_SESSION_ID"`, OR a direct `ast.Expr` calling the same. Assertion is structural — no subprocess, no runtime cost. Together, test (1) binds top-level absence and test (2) binds main()'s first-statement contract — closing the two perf-load-bearing invariants Task 4 introduces.
 - **Verification**: `grep -c 'def test_log_invocation_no_top_level_heavy_imports' tests/test_log_invocation_imports.py` ≥ 1; `grep -c 'def test_log_invocation_main_session_id_check_first' tests/test_log_invocation_imports.py` ≥ 1; both tests exist and are discoverable (either xfail or skip — Task 4 will activate both).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Refactor `cortex_command/log_invocation.py` — defer imports, remove subprocess, pure-Python walk, reorder main()
 - **Files**: `cortex_command/log_invocation.py`, `tests/test_log_invocation_imports.py`
@@ -69,7 +69,7 @@ Refactor `cortex_command/log_invocation.py` to defer heavy imports and remove th
 - **Complexity**: simple
 - **Context**: Current branch order (in `bin/cortex-log-invocation` lines 11-31): (a) force-source check; (b) wheel-import probe (expensive); (c) working-tree pyproject grep; (d) exit-2 remediation. After this task: (a) force-source; (b) working-tree pyproject grep [moved up]; (c) wheel-import probe [moved down]; (d) exit-2. `_root` is derived via `_root="${CORTEX_COMMAND_ROOT:-$(dirname "$0")/..}"` — do not change this. The `exec` semantics in each branch are preserved verbatim — only the branch ordering changes. To regenerate the plugin mirror, either let the dual-source pre-commit hook regenerate at commit time (run `just setup-githooks` first if not already done) or use `cp bin/cortex-log-invocation plugins/cortex-core/bin/cortex-log-invocation` manually. Both files in the same `git add` + `git commit`.
 - **Verification**: `bash -n bin/cortex-log-invocation` exits 0; `grep -c 'wheel-probe cost' bin/cortex-log-invocation` ≥ 1; `grep -c 'double Python boot' bin/cortex-log-invocation` ≥ 1; `diff bin/cortex-log-invocation plugins/cortex-core/bin/cortex-log-invocation` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Add structural branch-order test for the bash wrapper
 - **Files**: `tests/test_log_invocation_branch_order.py` (new file)
