@@ -1,20 +1,12 @@
 """Perf-budget regression test for ``bin/cortex-log-invocation`` (#198).
 
-Two assertions gate the trim:
+``test_log_invocation_fast_path_budget`` — on the cooperating-parent
+fast path (``CORTEX_REPO_ROOT`` set and validated), p50 wall time
+stays under 15ms, mean under 18ms, and p95 under 25ms. Multi-statistic
+gating catches additive single-fork regressions and tail-latency
+growth that a median-only assertion would miss.
 
-1. ``test_log_invocation_fast_path_budget`` — on the cooperating-parent
-   fast path (``CORTEX_REPO_ROOT`` set and validated), p50 wall time
-   stays under 15ms, mean under 18ms, and p95 under 25ms. Multi-statistic
-   gating catches additive single-fork regressions and tail-latency
-   growth that a median-only assertion would miss.
-
-2. ``test_log_invocation_fast_path_faster_than_slow`` — the fast path's
-   median is at least 2ms below the slow path's median. This delta
-   assertion catches silent fall-through: if a future commit breaks the
-   env-var branch, both paths converge and the delta disappears, tripping
-   the test even when the absolute fast-path budget would still pass.
-
-Both functions discard the first 5 invocations (warm-up; the first call
+The function discards the first 5 invocations (warm-up; the first call
 in a fresh tmp repo pays the ``mkdir`` cost which is excluded from the
 hot-path measurement per spec).
 """
@@ -36,11 +28,9 @@ BASH_SHIM = REPO_ROOT / "bin" / "cortex-log-invocation"
 
 WARMUP = 5
 FAST_PATH_N = 30
-DELTA_N = 20
 P50_BUDGET = 0.015
 MEAN_BUDGET = 0.018
 P95_BUDGET = 0.025
-MIN_DELTA = 0.002
 
 
 def _run_shim(env: dict[str, str], cwd: Path) -> float:
@@ -128,59 +118,3 @@ def test_log_invocation_fast_path_budget(tmp_path: Path) -> None:
         f"fast-path p95 budget exceeded: {p95*1000:.2f}ms > {P95_BUDGET*1000}ms"
     )
 
-
-@pytest.mark.skip(
-    reason=(
-        "Premise invalidated by shim paradigm shift in commit 7c05529c. "
-        "The fast-vs-slow delta assertion exists to catch silent fall-through "
-        "between the bash CORTEX_REPO_ROOT fast-path and the git-rev-parse "
-        "slow-path. The dual-channel wrapper has no bash fast-path — both "
-        "paths invoke `python3 -m cortex_command.log_invocation` and converge "
-        "to the same Python boot cost, so the delta is structurally zero. "
-        "Re-establish a budget against the dual-channel-wrapper implementation "
-        "in a follow-up ticket before re-enabling."
-    )
-)
-@pytest.mark.skipif(
-    not BASH_SHIM.is_file(),
-    reason="bin/cortex-log-invocation not present (CLI tier not installed)",
-)
-@pytest.mark.skipif(
-    shutil.which("git") is None,
-    reason="git not on PATH",
-)
-def test_log_invocation_fast_path_faster_than_slow(tmp_path: Path) -> None:
-    """Fast-path median is at least MIN_DELTA seconds below slow-path median.
-
-    Detects silent fall-through: if a future edit breaks the env-var
-    branch, both paths converge to the same git-rev-parse cost and the
-    delta vanishes. Absolute budgets alone cannot catch that regression.
-    """
-    fake_repo = _make_fake_repo(tmp_path)
-    fake_home = tmp_path / "home"
-    fake_home.mkdir(parents=True, exist_ok=True)
-
-    fast_env = {
-        "PATH": os.environ.get("PATH", ""),
-        "HOME": str(fake_home),
-        "LIFECYCLE_SESSION_ID": "perf-test-fast",
-        "CORTEX_REPO_ROOT": str(fake_repo),
-    }
-    slow_env = {
-        "PATH": os.environ.get("PATH", ""),
-        "HOME": str(fake_home),
-        "LIFECYCLE_SESSION_ID": "perf-test-slow",
-    }
-
-    fast_durations = [_run_shim(fast_env, fake_repo) for _ in range(DELTA_N)]
-    slow_durations = [_run_shim(slow_env, fake_repo) for _ in range(DELTA_N)]
-
-    fast_median = statistics.median(fast_durations[WARMUP:])
-    slow_median = statistics.median(slow_durations[WARMUP:])
-    delta = slow_median - fast_median
-
-    assert delta >= MIN_DELTA, (
-        f"fast-path/slow-path delta below {MIN_DELTA*1000}ms: "
-        f"fast={fast_median*1000:.2f}ms slow={slow_median*1000:.2f}ms "
-        f"delta={delta*1000:.2f}ms — silent fall-through suspected"
-    )
