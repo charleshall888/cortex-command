@@ -175,16 +175,29 @@ def _make_subprocess_recorder(
     status_porcelain: str = "",
     branch: str = "main",
     raise_on_ls_remote: BaseException | None = None,
+    origin_url: str = "https://github.com/charleshall888/cortex-command.git",
 ):
     """Build a fake ``subprocess.run`` recorder.
 
     Returns ``(fake_run, calls_list)`` where ``calls_list`` accumulates
     every argv passed to the shim. The shim dispatches by argv prefix:
 
-    * ``["git", "ls-remote", ...]``                 → recorded line.
-    * ``["git", "-C", *, "status", "--porcelain"]`` → ``status_porcelain``.
-    * ``["git", "-C", *, "rev-parse", ...]``        → ``branch + "\n"``.
-    * other                                         → empty success.
+    * ``["git", "ls-remote", ...]``                       → recorded line.
+    * ``["git", "-C", *, "status", "--porcelain"]``       → ``status_porcelain``.
+    * ``["git", "-C", *, "rev-parse", "--show-toplevel"]``→ ``cwd + "\n"`` so
+        :func:`install_core._is_cortex_command_repo` can resolve a toplevel.
+    * ``["git", "-C", *, "rev-parse", ...]``              → ``branch + "\n"``
+        (covers ``--abbrev-ref HEAD``).
+    * ``["git", "-C", *, "remote", "get-url", "origin"]`` → ``origin_url``;
+        defaulted to a cortex-command URL so R26's predicate-narrowing
+        gate opens by default for skip-predicate tests.
+    * other                                               → empty success.
+
+    The ``origin_url`` default keeps the dirty-tree (R9 predicate b) and
+    feature-branch (R9 predicate c) suppression behavior testable without
+    per-test fixture work — the recorder mocks the world as a cortex-command
+    checkout. Tests covering the R26-negative case (non-cortex repos do
+    NOT suppress) can override with a non-cortex URL.
     """
     calls: list[list[str]] = []
 
@@ -207,8 +220,28 @@ def _make_subprocess_recorder(
             and argv[0] == "git"
             and argv[1] == "-C"
             and argv[3] == "rev-parse"
+            and argv[4] == "--show-toplevel"
+        ):
+            # R26's _is_cortex_command_repo resolves the toplevel first;
+            # return the recorder's cwd argument verbatim so step 2's
+            # `git -C <toplevel> remote get-url origin` matches below.
+            return _completed(stdout=f"{argv[2]}\n")
+        if (
+            len(argv) >= 5
+            and argv[0] == "git"
+            and argv[1] == "-C"
+            and argv[3] == "rev-parse"
         ):
             return _completed(stdout=f"{branch}\n")
+        if (
+            len(argv) >= 6
+            and argv[0] == "git"
+            and argv[1] == "-C"
+            and argv[3] == "remote"
+            and argv[4] == "get-url"
+            and argv[5] == "origin"
+        ):
+            return _completed(stdout=f"{origin_url}\n")
         # Default for any other call (tool-dispatch shell-outs etc.):
         # return success with empty stdout.
         return _completed(stdout="", returncode=0)
@@ -421,11 +454,14 @@ def test_skip_predicate_feature_branch_suppresses_ls_remote(
 
     assert result is None
     assert _ls_remote_calls(calls) == []
-    # Predicate (c) shells out to `git rev-parse`; assert it ran.
-    revparse_calls = [
-        c for c in calls if len(c) >= 4 and c[3] == "rev-parse"
+    # Predicate (c) shells out to `git rev-parse --abbrev-ref HEAD`; assert
+    # it ran. (Post-R26, `_is_cortex_command_repo` also issues a separate
+    # `git rev-parse --show-toplevel` call, so filter on the subcommand.)
+    abbrev_calls = [
+        c for c in calls
+        if len(c) >= 5 and c[3] == "rev-parse" and c[4] == "--abbrev-ref"
     ]
-    assert len(revparse_calls) == 1
+    assert len(abbrev_calls) == 1
 
 
 def test_skip_reason_latched_to_one_stderr_log(
