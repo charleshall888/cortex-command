@@ -374,6 +374,7 @@ async def retry_task(
                 learnings_path=learnings_path,
                 paused=True,
                 total_cost_usd=total_cost,
+                error_type=error_type,
             )
 
         elif recovery_path == "pause_session":
