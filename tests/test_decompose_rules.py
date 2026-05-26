@@ -251,13 +251,14 @@ def test_uniform_template_edge_vs_touchpoint_distinction(sections: dict[str, str
 
 # ---- R15 post-decompose batch-review gate (2 tests) ----
 
-def test_r15_batch_review_gate_three_options_documented(sections: dict[str, str]) -> None:
-    """§5 documents the R15 gate's three options (approve-all/revise-piece/drop-piece)."""
+def test_r15_batch_review_gate_options_documented(sections: dict[str, str]) -> None:
+    """§5 documents the R15 gate options including approve-all, revise-piece, drop-piece, and consolidate-pieces."""
     body = _find_section(sections, "Create Backlog Tickets")
     # All three options appear by literal name.
     assert "approve-all" in body, "R15 gate must document the approve-all option"
     assert "revise-piece" in body, "R15 gate must document the revise-piece <N> option"
     assert "drop-piece" in body, "R15 gate must document the drop-piece <N> option"
+    assert "consolidate-pieces" in body, "R15 gate must document the consolidate-pieces <N,M,...> option"
     # The gate is user-blocking before any tickets commit.
     assert "user-blocking" in body.lower(), (
         "R15 gate must be documented as user-blocking"
