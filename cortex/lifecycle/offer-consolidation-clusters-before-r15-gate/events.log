@@ -9,3 +9,7 @@
 {"ts": "2026-05-25T12:45:01Z", "event": "phase_transition", "feature": "offer-consolidation-clusters-before-r15-gate", "from": "plan", "to": "implement"}
 {"ts": "2026-05-26T10:54:54Z", "event": "batch_dispatch", "feature": "offer-consolidation-clusters-before-r15-gate", "batch": 0, "tasks": [1, 3, 4]}
 {"ts": "2026-05-26T10:58:24Z", "event": "batch_dispatch", "feature": "offer-consolidation-clusters-before-r15-gate", "batch": 1, "tasks": [2, 5]}
+{"ts": "2026-05-26T11:01:13Z", "event": "phase_transition", "feature": "offer-consolidation-clusters-before-r15-gate", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-05-26T11:04:25Z", "event": "review_verdict", "feature": "offer-consolidation-clusters-before-r15-gate", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-05-26T11:04:25Z", "event": "phase_transition", "feature": "offer-consolidation-clusters-before-r15-gate", "from": "review", "to": "complete"}
+{"ts": "2026-05-26T11:08:07Z", "event": "feature_complete", "feature": "offer-consolidation-clusters-before-r15-gate", "tasks_total": 5, "rework_cycles": 1, "merge_anchor": "merge"}

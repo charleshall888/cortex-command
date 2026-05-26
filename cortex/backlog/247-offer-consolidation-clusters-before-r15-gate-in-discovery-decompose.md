@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: fafa9ddc-f2b3-4a7f-9401-c92932e2d367
 title: "Offer consolidation clusters before R15 gate in discovery decompose"
-status: refined
+status: complete
 priority: low
 type: feature
 created: 2026-05-18
-updated: 2026-05-25
+updated: 2026-05-26
 tags: [discovery, skills, decompose]
 areas: [skills,discovery]
 session_id: a9ac483c-9938-4cd8-97ff-10007f5d9962

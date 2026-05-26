@@ -122,37 +122,6 @@
     "repo": null
   },
   {
-    "id": 247,
-    "title": "Offer consolidation clusters before R15 gate in discovery decompose",
-    "status": "refined",
-    "priority": "low",
-    "type": "feature",
-    "tags": [
-      "discovery",
-      "skills",
-      "decompose"
-    ],
-    "areas": [
-      "skills",
-      "discovery"
-    ],
-    "created": "2026-05-18",
-    "updated": "2026-05-25",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "cortex/lifecycle/offer-consolidation-clusters-before-r15-gate/spec.md",
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "fafa9ddc-f2b3-4a7f-9401-c92932e2d367",
-    "lifecycle_slug": "offer-consolidation-clusters-before-r15-gate",
-    "session_id": "a9ac483c-9938-4cd8-97ff-10007f5d9962",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 264,
     "title": "Re-establish perf budget for cortex-log-invocation post dual-channel-wrapper rewrite",
     "status": "backlog",
