@@ -60,7 +60,7 @@ Refactor `cortex_command/log_invocation.py` to defer heavy imports and remove th
 - **Complexity**: complex
 - **Context**: The current `_resolve_repo_root()` lives at `cortex_command/log_invocation.py:64–93`; it shells out via `subprocess.run(["git", "rev-parse", "--show-toplevel"], ...)` when `CORTEX_REPO_ROOT` is unset or fails the `.git`-marker validation. The replacement walk MUST include `Path.cwd()` itself as the first candidate, not just `.parents`. The walk accepts both `.git`-as-directory and `.git`-as-file (worktree case). The function returns `None` when no `.git` is found in CWD or any parent, falling through to the existing `no_repo_root` breadcrumb. Do NOT honor `GIT_DIR` or `core.worktree` — accepted divergences per the spec's Changes to Existing Behavior. The `main()` function lives at `cortex_command/log_invocation.py:96–...`; the existing `LIFECYCLE_SESSION_ID = os.environ.get("LIFECYCLE_SESSION_ID")` check is partway through main — move it to be the first executable statement, before any conditional `import` runs. Function-scoped imports go INSIDE `main()` but AFTER the session-id guard. Lazy-import pattern reference: `cortex_command/interactive_lock.py:141` and `cortex_command/cli.py:714`. Activate Task 3's test: remove the `@pytest.mark.xfail` (or `@pytest.mark.skip`) decorator from `test_log_invocation_no_top_level_heavy_imports`.
 - **Verification**: `just test -- tests/test_log_invocation_imports.py tests/test_cortex_log_invocation_parity.py` exits 0 — this exercises (a) top-level-import discipline (Task 3's test now passes), (b) extended parity fixtures including walk-edges from Task 1, (c) all existing parity coverage unchanged.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Reorder `bin/cortex-log-invocation` branches + add header comment + regenerate plugin mirror (atomic commit)
 - **Files**: `bin/cortex-log-invocation`, `plugins/cortex-core/bin/cortex-log-invocation`
@@ -78,7 +78,7 @@ Refactor `cortex_command/log_invocation.py` to defer heavy imports and remove th
 - **Complexity**: simple
 - **Context**: Pattern: read the bash file into a list of lines (`Path("bin/cortex-log-invocation").read_text().splitlines()`); find the index where `'^name = "cortex-command"'` appears; find the index where `'import cortex_command.log_invocation"'` appears; assert the first index < the second. Use exact substring matching. The test must be a `def test_*` function in a `test_*.py` file so pytest's default discovery collects it.
 - **Verification**: `grep -c 'def test_bash_branch_order' tests/test_log_invocation_branch_order.py` ≥ 1; `just test -- tests/test_log_invocation_branch_order.py` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 7: Delete `test_log_invocation_fast_path_faster_than_slow`
 - **Files**: `tests/test_log_invocation_perf.py`

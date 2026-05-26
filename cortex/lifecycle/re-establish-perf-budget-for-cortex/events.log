@@ -9,3 +9,4 @@
 {"ts": "2026-05-26T14:47:56Z", "event": "phase_transition", "feature": "re-establish-perf-budget-for-cortex", "from": "plan", "to": "implement"}
 {"ts": "2026-05-26T15:06:19Z", "event": "batch_dispatch", "feature": "re-establish-perf-budget-for-cortex", "batch": 0, "tasks": [1, 2, 3, 5]}
 {"ts": "2026-05-26T15:14:14Z", "event": "batch_dispatch", "feature": "re-establish-perf-budget-for-cortex", "batch": 1, "tasks": [4, 6]}
+{"ts": "2026-05-26T15:17:01Z", "event": "batch_dispatch", "feature": "re-establish-perf-budget-for-cortex", "batch": 2, "tasks": [7]}
