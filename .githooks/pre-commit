@@ -277,6 +277,119 @@ if [ "$install_guard_triggered" -eq 1 ]; then
 fi
 
 # -----------------------------------------------------------------------------
+# Phase 1.96 — cli_pin.py structural integrity (R8)
+# -----------------------------------------------------------------------------
+# When the canonical CLI pin sibling is staged, verify its AST contains only a
+# docstring (optional) and a single CLI_PIN = (tag, schema) 2-tuple assignment.
+# Reject third-party imports, function/class definitions, top-level calls, or
+# any tuple arity other than 2. The hook layer imports cli_pin.py without
+# invoking server.py's side effects, so this guard locks in that invariant.
+cli_pin_triggered=0
+while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    case "$f" in
+        plugins/cortex-overnight/cli_pin.py)
+            cli_pin_triggered=1
+            break
+            ;;
+    esac
+done < <(git diff --cached --name-only --diff-filter=ACMR)
+
+if [ "$cli_pin_triggered" -eq 1 ]; then
+    if ! python3 - <<'PYEOF'
+import ast
+import sys
+from pathlib import Path
+
+TARGET = Path("plugins/cortex-overnight/cli_pin.py")
+
+try:
+    source = TARGET.read_text(encoding="utf-8")
+except OSError as exc:
+    print(f"pre-commit: cannot read {TARGET}: {exc}", file=sys.stderr)
+    sys.exit(1)
+
+try:
+    tree = ast.parse(source, filename=str(TARGET))
+except SyntaxError as exc:
+    print(f"pre-commit: {TARGET} failed to parse: {exc}", file=sys.stderr)
+    sys.exit(1)
+
+seen_assign = False
+for node in tree.body:
+    # Allow a leading docstring: ast.Expr wrapping an ast.Constant string.
+    if (
+        isinstance(node, ast.Expr)
+        and isinstance(node.value, ast.Constant)
+        and isinstance(node.value.value, str)
+    ):
+        continue
+    # Allow exactly one top-level assignment: CLI_PIN = (<tag>, <schema>).
+    if isinstance(node, ast.Assign):
+        if len(node.targets) != 1 or not (
+            isinstance(node.targets[0], ast.Name)
+            and node.targets[0].id == "CLI_PIN"
+        ):
+            print(
+                f"pre-commit: {TARGET} line {node.lineno}: only `CLI_PIN = (...)` "
+                "is allowed at module top level.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        if not isinstance(node.value, ast.Tuple):
+            print(
+                f"pre-commit: {TARGET} line {node.lineno}: CLI_PIN must be a tuple literal.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        if len(node.value.elts) != 2:
+            print(
+                f"pre-commit: {TARGET} line {node.lineno}: CLI_PIN tuple must have "
+                f"exactly 2 elements (got {len(node.value.elts)}).",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        if seen_assign:
+            print(
+                f"pre-commit: {TARGET} line {node.lineno}: only one CLI_PIN "
+                "assignment is allowed.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        seen_assign = True
+        continue
+    # Anything else — Import, ImportFrom, FunctionDef, ClassDef, Expr(Call), If,
+    # For, With, Try, AnnAssign, AugAssign, etc. — is rejected.
+    kind = type(node).__name__
+    detail = ""
+    if isinstance(node, (ast.Import, ast.ImportFrom)):
+        names = ", ".join(
+            (alias.name if isinstance(node, ast.Import) else f"{node.module or ''}.{alias.name}")
+            for alias in node.names
+        )
+        detail = f" (import: {names})"
+    print(
+        f"pre-commit: {TARGET} line {node.lineno}: disallowed top-level "
+        f"{kind}{detail}. Only a docstring and `CLI_PIN = (tag, schema)` are permitted.",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+if not seen_assign:
+    print(
+        f"pre-commit: {TARGET}: missing required `CLI_PIN = (tag, schema)` assignment.",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+sys.exit(0)
+PYEOF
+    then
+        exit 1
+    fi
+fi
+
+# -----------------------------------------------------------------------------
 # Phase 2 — Short-circuit decision
 # -----------------------------------------------------------------------------
 staged=$(git diff --cached --name-only --diff-filter=ACMR)
