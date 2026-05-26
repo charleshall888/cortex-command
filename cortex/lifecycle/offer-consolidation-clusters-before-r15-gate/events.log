@@ -7,3 +7,5 @@
 {"ts": "2026-05-25T12:15:01Z", "event": "phase_transition", "feature": "offer-consolidation-clusters-before-r15-gate", "from": "specify", "to": "plan"}
 {"ts": "2026-05-25T12:45:00Z", "event": "plan_approved", "feature": "offer-consolidation-clusters-before-r15-gate"}
 {"ts": "2026-05-25T12:45:01Z", "event": "phase_transition", "feature": "offer-consolidation-clusters-before-r15-gate", "from": "plan", "to": "implement"}
+{"ts": "2026-05-26T10:54:54Z", "event": "batch_dispatch", "feature": "offer-consolidation-clusters-before-r15-gate", "batch": 0, "tasks": [1, 3, 4]}
+{"ts": "2026-05-26T10:58:24Z", "event": "batch_dispatch", "feature": "offer-consolidation-clusters-before-r15-gate", "batch": 1, "tasks": [2, 5]}

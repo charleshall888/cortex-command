@@ -23,7 +23,7 @@ Add a fourth response value `consolidate-pieces` to R15's option set with no det
 - **Complexity**: simple
 - **Context**: `_RESPONSE_VALUES` is defined as `frozenset({...})` containing seven entries: `approve`, `revise`, `drop`, `promote-sub-topic`, `approve-all`, `revise-piece`, `drop-piece`. Insert `consolidate-pieces` among the R15-group entries (`approve-all`, `revise-piece`, `drop-piece`) — the existing set is gate-grouped, not alphabetic. The frozenset is the single source of truth for both validation and CLI choices.
 - **Verification**: `python3 -c "from cortex_command.discovery import _RESPONSE_VALUES; assert 'consolidate-pieces' in _RESPONSE_VALUES"` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 2: Add helper-module test coverage for `consolidate-pieces`
 - **Files**: `tests/test_discovery_module.py`
@@ -32,7 +32,7 @@ Add a fourth response value `consolidate-pieces` to R15's option set with no det
 - **Complexity**: simple
 - **Context**: This is the FIRST R15-path test for `emit_checkpoint_response` in this file — the existing `test_emit_checkpoint_response_writes_jsonl_and_validates_response` at line ~176 exercises only the R4 path (`response="approve"`, `checkpoint="research-decompose"`). Use that test's structure as the structural template (fixture wiring, JSONL parse, assertion shape) but with R15 payload values. Shape: build a `tmp_path`-based `repo_root` (mirror the existing fixture); call `emit_checkpoint_response(topic, 'decompose-commit', 'consolidate-pieces', 0, repo_root)`; assert the returned path exists, read the last JSONL line, assert `event == 'approval_checkpoint_responded'`, `response == 'consolidate-pieces'`, `checkpoint == 'decompose-commit'`, `revision_round == 0`. `emit_checkpoint_response` signature: `(topic: str, checkpoint: str, response: str, revision_round: int, repo_root: Path) -> Path` from `cortex_command/discovery.py:537–559`. pytest's `pythonpath = ["."]` in `pyproject.toml:82` resolves `cortex_command` imports to the working tree — no wheel reinstall needed between Task 1 and Task 2.
 - **Verification**: `pytest tests/test_discovery_module.py -k consolidate -q` — pass if exit 0 AND ≥1 test selected (pass count = collected count).
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 3: Update R15 option list in `decompose.md` with `consolidate-pieces` bullet and `## Consolidation Notes` recording prose
 - **Files**: `skills/discovery/references/decompose.md`
@@ -41,7 +41,7 @@ Add a fourth response value `consolidate-pieces` to R15's option set with no det
 - **Complexity**: simple
 - **Context**: The R15 option list is at `skills/discovery/references/decompose.md:104–108` under the `#### Post-decompose batch-review gate (R15)` heading. Existing bullets follow the pattern `- **\`<option-name> <args>\`** — <one-paragraph semantics>`. Match this format. Do NOT modify `decompose.md:46–52` (the existing `## Consolidation Review` section); that section covers a different case (reverse-detection of research-phase merger misses) per spec Non-Requirements. The two headings (`## Consolidation Review` at line 46, the new `## Consolidation Notes` reference at line ~108) live in different surfaces (one in decompose protocol, one in the R15 bullet) but share a name-prefix — the verification grep distinguishes via the `Notes` vs `Review` suffix.
 - **Verification**: `grep -c "consolidate-pieces <N,M,...>" skills/discovery/references/decompose.md` ≥ 1 AND `grep -Eo "lowest-index|renumber|re-presents" skills/discovery/references/decompose.md | sort -u | wc -l` ≥ 3 (all three anchor phrases present) AND `grep -c "## Consolidation Notes" skills/discovery/references/decompose.md` ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 4: Update `SKILL.md:102` enumeration to include `consolidate-pieces`
 - **Files**: `skills/discovery/SKILL.md`
@@ -50,7 +50,7 @@ Add a fourth response value `consolidate-pieces` to R15's option set with no det
 - **Complexity**: simple
 - **Context**: `skills/discovery/SKILL.md:102` currently reads: "The gate offers `approve-all`, `revise-piece <N>`, and `drop-piece <N>` options and emits an `approval_checkpoint_responded` event per response. See decompose.md §5 for the gate semantics." The change preserves the "emits…event" clause and the "See decompose.md §5" clause — only the option list changes.
 - **Verification**: `grep -c "consolidate-pieces" skills/discovery/SKILL.md` ≥ 1 OR `grep -c "See decompose.md" skills/discovery/SKILL.md` ≥ 1 (whichever form was chosen — both satisfy Req 9).
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 5: Update parity test in `test_decompose_rules.py` to cover four options
 - **Files**: `tests/test_decompose_rules.py`
@@ -59,7 +59,7 @@ Add a fourth response value `consolidate-pieces` to R15's option set with no det
 - **Complexity**: simple
 - **Context**: `tests/test_decompose_rules.py:254` is the existing parity test for the R15 option enumeration in `decompose.md`. It locates the relevant section via `_find_section(sections, "Create Backlog Tickets")` and asserts presence of each option's literal name in the body. The new assertion follows the existing pattern verbatim. Keep the existing assertions (`approve-all`, `revise-piece`, `drop-piece`, `user-blocking`, `FULL`) unchanged.
 - **Verification**: `pytest tests/test_decompose_rules.py::test_r15_batch_review_gate_options_documented -q` — pass if exit 0; `grep -c "consolidate-pieces" tests/test_decompose_rules.py` ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ## Risks
 
