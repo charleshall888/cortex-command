@@ -14,7 +14,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from cortex_command.overnight.constants import CIRCUIT_BREAKER_THRESHOLD
+from cortex_command.overnight.constants import CIRCUIT_BREAKER_THRESHOLD, SYSTEMIC_FAILURE_THRESHOLD
 from cortex_command.overnight.outcome_router import OutcomeContext, apply_feature_result
 from cortex_command.overnight.types import CircuitBreakerState, FeatureResult
 
@@ -469,6 +469,187 @@ class TestSystemicIncrementGuard(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(ctx.cb_state.consecutive_pauses, 1)
         self.assertEqual(ctx.cb_state.systemic_pauses_in_batch, 0)
+
+
+class TestSystemicThreshold(unittest.IsolatedAsyncioTestCase):
+    """Systemic failure threshold tests (R10): PIPELINE_SYSTEMIC_FAILURE event
+    and global_abort_signal behavior around SYSTEMIC_FAILURE_THRESHOLD."""
+
+    def _make_ctx_with_systemic_pauses(self, systemic_count: int) -> OutcomeContext:
+        """Build a context with systemic_pauses_in_batch pre-loaded and
+        features_paused populated with matching systemic error entries."""
+        ctx = _make_ctx(pauses=systemic_count)
+        ctx.cb_state.systemic_pauses_in_batch = systemic_count
+        ctx.batch_result.global_abort_signal = False
+        # Pre-populate features_paused with systemic entries so derivation works
+        for i in range(systemic_count):
+            ctx.batch_result.features_paused.append({
+                "name": f"feat-pre-{i}",
+                "error": "worker_no_exit_report",
+            })
+        return ctx
+
+    async def test_systemic_threshold_below_does_not_emit_event(self):
+        """R10 no-op-below-threshold: two systemic pauses do NOT emit
+        PIPELINE_SYSTEMIC_FAILURE and do NOT set global_abort_signal."""
+        assert SYSTEMIC_FAILURE_THRESHOLD == 3, "test assumes threshold=3"
+        ctx = _make_ctx(pauses=0)
+        ctx.batch_result.global_abort_signal = False
+
+        logged_events = []
+
+        def _capture_event(event_type, *args, **kwargs):
+            logged_events.append(event_type)
+
+        with (
+            patch("cortex_command.overnight.outcome_router.merge_feature"),
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch(
+                "cortex_command.overnight.outcome_router.overnight_log_event",
+                side_effect=_capture_event,
+            ),
+        ):
+            # First systemic pause
+            await apply_feature_result(
+                "feat-a",
+                FeatureResult(name="feat-a", status="paused", error="worker_no_exit_report"),
+                ctx,
+            )
+            # Second systemic pause
+            ctx.feature_names = ["feat-a", "feat-b"]
+            await apply_feature_result(
+                "feat-b",
+                FeatureResult(name="feat-b", status="paused", error="infrastructure_failure"),
+                ctx,
+            )
+
+        self.assertEqual(ctx.cb_state.systemic_pauses_in_batch, 2)
+        self.assertFalse(ctx.batch_result.global_abort_signal)
+        self.assertNotIn("pipeline_systemic_failure", logged_events)
+
+    async def test_systemic_threshold_at_threshold_emits_event_and_sets_abort(self):
+        """Three systemic pauses DO emit PIPELINE_SYSTEMIC_FAILURE with
+        cause_class of length 3 in oldest-first order and set global_abort_signal=True."""
+        assert SYSTEMIC_FAILURE_THRESHOLD == 3, "test assumes threshold=3"
+        ctx = self._make_ctx_with_systemic_pauses(SYSTEMIC_FAILURE_THRESHOLD - 1)
+        # Two pauses already present; the third will trip the threshold.
+        ctx.feature_names = ["feat-a", "feat-b", "feat-c"]
+
+        logged_events = []
+        logged_details = []
+
+        def _capture_event(event_type, *args, **kwargs):
+            logged_events.append(event_type)
+            logged_details.append(kwargs.get("details", {}))
+
+        with (
+            patch("cortex_command.overnight.outcome_router.merge_feature"),
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch(
+                "cortex_command.overnight.outcome_router.overnight_log_event",
+                side_effect=_capture_event,
+            ),
+        ):
+            await apply_feature_result(
+                "feat-c",
+                FeatureResult(name="feat-c", status="paused", error="worker_malformed_exit_report"),
+                ctx,
+            )
+
+        self.assertEqual(ctx.cb_state.systemic_pauses_in_batch, SYSTEMIC_FAILURE_THRESHOLD)
+        self.assertTrue(ctx.batch_result.global_abort_signal)
+        self.assertIn("pipeline_systemic_failure", logged_events)
+
+        # Locate the systemic failure event details
+        idx = logged_events.index("pipeline_systemic_failure")
+        details = logged_details[idx]
+        cause_class = details["cause_class"]
+        self.assertEqual(len(cause_class), SYSTEMIC_FAILURE_THRESHOLD)
+        # Oldest-first: first two entries from pre-populated list, third from this pause
+        self.assertEqual(cause_class[0], "worker_no_exit_report")
+        self.assertEqual(cause_class[1], "worker_no_exit_report")
+        self.assertEqual(cause_class[2], "worker_malformed_exit_report")
+        self.assertEqual(details["threshold"], SYSTEMIC_FAILURE_THRESHOLD)
+
+    async def test_systemic_total_in_batch_semantics(self):
+        """[S, S, success, S] sequence: does not trip on pause 2, does not trip
+        on the success, and trips on the fourth feature — proving total-in-batch
+        (not consecutive) semantics."""
+        assert SYSTEMIC_FAILURE_THRESHOLD == 3, "test assumes threshold=3"
+        ctx = _make_ctx(pauses=0)
+        ctx.batch_result.global_abort_signal = False
+        ctx.feature_names = ["feat-a", "feat-b", "feat-c", "feat-d"]
+
+        logged_events = []
+
+        def _capture_event(event_type, *args, **kwargs):
+            logged_events.append(event_type)
+
+        merge_result = MagicMock(
+            success=True, error=None, conflict=False, test_result=None,
+        )
+
+        with (
+            patch(
+                "cortex_command.overnight.outcome_router.merge_feature",
+                return_value=merge_result,
+            ),
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch(
+                "cortex_command.overnight.outcome_router.overnight_log_event",
+                side_effect=_capture_event,
+            ),
+            patch("cortex_command.overnight.outcome_router.requires_review", return_value=False),
+            patch("cortex_command.overnight.outcome_router.read_tier", return_value="S"),
+            patch("cortex_command.overnight.outcome_router.read_criticality", return_value="low"),
+            patch(
+                "cortex_command.overnight.outcome_router._get_changed_files",
+                return_value=[],
+            ),
+            patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+        ):
+            # S (systemic pause 1) — should NOT trip
+            await apply_feature_result(
+                "feat-a",
+                FeatureResult(name="feat-a", status="paused", error="worker_no_exit_report"),
+                ctx,
+            )
+            self.assertEqual(ctx.cb_state.systemic_pauses_in_batch, 1)
+            self.assertFalse(ctx.batch_result.global_abort_signal)
+            self.assertNotIn("pipeline_systemic_failure", logged_events)
+
+            # S (systemic pause 2) — should NOT trip
+            await apply_feature_result(
+                "feat-b",
+                FeatureResult(name="feat-b", status="paused", error="infrastructure_failure"),
+                ctx,
+            )
+            self.assertEqual(ctx.cb_state.systemic_pauses_in_batch, 2)
+            self.assertFalse(ctx.batch_result.global_abort_signal)
+            self.assertNotIn("pipeline_systemic_failure", logged_events)
+
+            # success — resets consecutive_pauses but NOT systemic_pauses_in_batch;
+            # should NOT trip
+            ctx.cb_state.consecutive_pauses = 0  # simulate the reset that happens on merge
+            await apply_feature_result(
+                "feat-c",
+                FeatureResult(name="feat-c", status="completed"),
+                ctx,
+            )
+            self.assertEqual(ctx.cb_state.systemic_pauses_in_batch, 2)
+            self.assertFalse(ctx.batch_result.global_abort_signal)
+            self.assertNotIn("pipeline_systemic_failure", logged_events)
+
+            # S (systemic pause 3 total in batch) — SHOULD trip
+            await apply_feature_result(
+                "feat-d",
+                FeatureResult(name="feat-d", status="paused", error="worker_malformed_exit_report"),
+                ctx,
+            )
+
+        self.assertEqual(ctx.cb_state.systemic_pauses_in_batch, SYSTEMIC_FAILURE_THRESHOLD)
+        self.assertTrue(ctx.batch_result.global_abort_signal)
+        self.assertIn("pipeline_systemic_failure", logged_events)
 
 
 if __name__ == "__main__":
