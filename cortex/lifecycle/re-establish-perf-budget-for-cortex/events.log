@@ -5,3 +5,5 @@
 {"ts": "2026-05-26T13:59:25Z", "event": "complexity_override", "feature": "re-establish-perf-budget-for-cortex", "from": "simple", "to": "complex", "gate": "research_open_questions"}
 {"ts": "2026-05-26T14:30:00Z", "event": "spec_approved", "feature": "re-establish-perf-budget-for-cortex"}
 {"ts": "2026-05-26T14:30:05Z", "event": "phase_transition", "feature": "re-establish-perf-budget-for-cortex", "from": "specify", "to": "plan"}
+{"ts": "2026-05-26T14:47:56Z", "event": "plan_approved", "feature": "re-establish-perf-budget-for-cortex"}
+{"ts": "2026-05-26T14:47:56Z", "event": "phase_transition", "feature": "re-establish-perf-budget-for-cortex", "from": "plan", "to": "implement"}

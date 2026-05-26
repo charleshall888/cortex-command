@@ -1,0 +1,48 @@
+{
+  "ts": "2026-05-26T17:35:00Z",
+  "feature": "re-establish-perf-budget-for-cortex",
+  "artifact": "cortex/lifecycle/re-establish-perf-budget-for-cortex/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "Task 4 conflates test-activation and behavior-change in one commit (removes xfail/skip AND lands the refactor).",
+      "reviewer_angle": "Bundled Task 4 Risk Concentration",
+      "evidence_quote": "Activate the Task-3 test by removing its @pytest.mark.xfail / @pytest.mark.skip decorator"
+    },
+    {
+      "class": "B",
+      "finding": "Task 6 grep anchors do not assert absence of new expensive operations between or before anchors.",
+      "reviewer_angle": "Coverage Equivalence Assertion",
+      "evidence_quote": "asserts the former < the latter"
+    },
+    {
+      "class": "B",
+      "finding": "Task 1 parity fixtures use shallow tmp_path; pathological deep-walk cost undetectable.",
+      "reviewer_angle": "Coverage Equivalence Assertion",
+      "evidence_quote": "use a path under $TMPDIR whose tree is freshly created"
+    },
+    {
+      "class": "B",
+      "finding": "Single-machine calibration on Apple Silicon treated as universal; cross-machine/CI variance unaddressed.",
+      "reviewer_angle": "Budget Calibration Failure Mode",
+      "evidence_quote": "exits 0 on dev hardware (Apple Silicon)"
+    },
+    {
+      "class": "B",
+      "finding": "Regression-detection headroom asserted but not operationalized as a formula.",
+      "reviewer_angle": "Budget Calibration Failure Mode",
+      "evidence_quote": "adjust if measurement diverges materially"
+    },
+    {
+      "class": "B",
+      "finding": "Task 8 deps omit Task 6; calibration could measure pre-lock branch order.",
+      "reviewer_angle": "Budget Calibration Failure Mode",
+      "evidence_quote": "Depends on: [2, 4, 5, 7]"
+    }
+  ]
+}
