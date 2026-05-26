@@ -107,14 +107,13 @@ def main(argv: Optional[List[str]] = None) -> int:
     # for the enforcing test.
     session_id = os.environ.get("LIFECYCLE_SESSION_ID", "")
 
-    import json
-    from pathlib import Path
-
     args = list(sys.argv[1:] if argv is None else argv)
 
     if not session_id:
         _log_breadcrumb("no_session_id", "")
         return 0
+
+    import json
 
     repo_root = _resolve_repo_root()
     if repo_root is None:
