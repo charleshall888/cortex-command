@@ -87,7 +87,7 @@ Refactor `cortex_command/log_invocation.py` to defer heavy imports and remove th
 - **Complexity**: trivial
 - **Context**: The function is at `tests/test_log_invocation_perf.py` lines ~131–185 (verify by `grep -n 'def test_log_invocation_fast_path_faster_than_slow' tests/test_log_invocation_perf.py`). Per the originating ticket #264, both perf tests are currently `@pytest.mark.skip`'d. Delete the function definition, any `@pytest.mark.skip` decorator immediately preceding it, and any docstring/comment block tied exclusively to it. Do NOT delete shared helpers (`_run_shim`, `_p95`, `FAST_PATH_N`, `WARMUP`) that the budget test also uses.
 - **Verification**: `grep -c "test_log_invocation_fast_path_faster_than_slow" tests/test_log_invocation_perf.py` = 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 8: Measure new floor + un-skip `test_log_invocation_fast_path_budget` with calibrated budgets
 - **Files**: `tests/test_log_invocation_perf.py`
