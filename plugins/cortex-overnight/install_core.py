@@ -931,11 +931,8 @@ def run_install_in_background() -> None:
     Skip predicates (consulted in order; each silent-skips):
 
     1. ``CORTEX_DEV_MODE=1`` — explicit dev bypass.
-    2. ``CORTEX_AUTO_INSTALL=0`` — per-user opt-out (R30). Note: this
-       is an inline check rather than a call to
-       :func:`is_auto_install_disabled` because that helper is being
-       added by a parallel task (Task 8). The inline-vs-import collision
-       is resolved post-merge.
+    2. ``CORTEX_AUTO_INSTALL=0`` — per-user opt-out (R30), checked via
+       :func:`is_auto_install_disabled`.
     3. Probe failure on ``cortex --print-root --format json`` — binary
        absent, non-zero exit, or invalid JSON. Drift cannot be computed,
        so silent-skip mirrors Task 13(d)'s warn-only no-install policy.
@@ -987,10 +984,7 @@ def run_install_in_background() -> None:
         return
 
     # (2) CORTEX_AUTO_INSTALL=0 — per-user opt-out (R30).
-    # NOTE: parallel Task 8 introduces ``is_auto_install_disabled()`` as
-    # the shared helper. Until that merges, the inline check below is
-    # equivalent. Post-merge, replace with ``if is_auto_install_disabled():``.
-    if os.environ.get("CORTEX_AUTO_INSTALL", "").strip() == "0":
+    if is_auto_install_disabled():
         return
 
     # (3) Probe-failure modes silent-skip — drift cannot be computed.
