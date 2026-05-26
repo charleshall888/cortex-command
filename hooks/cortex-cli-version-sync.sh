@@ -55,12 +55,14 @@ export HOOK_CWD HOOK_STATE_DIR="$STATE_DIR" HOOK_SENTINEL="$SENTINEL" HOOK_PLUGI
 # occurrence of that marker and assumes the next character is a newline.
 set +e
 python3 - <<'PY'
+import datetime as _datetime
 import json
 import os
 import pathlib
 import re
 import subprocess
 import sys
+import time
 
 
 def emit_context(text):
@@ -102,11 +104,63 @@ def parse_cli_pin(cli_pin_py):
     return m.group(1), m.group(2)
 
 
+def is_cortex_command_repo(cwd):
+    """Return True iff ``cwd`` is inside a cortex-command checkout (R26).
+
+    Resolves the git toplevel of ``cwd``, then reads the origin remote
+    URL. Matches against the canonical substrings ``cortex-command.git``
+    or ``charleshall888/cortex-command``. Any git error or unrelated
+    remote returns False so the dirty-tree predicate only fires inside
+    cortex-command repos. Mirrors install_core._is_cortex_command_repo
+    so the sync hook and the async hook narrow the predicate identically.
+    """
+    try:
+        toplevel = subprocess.run(
+            ["git", "-C", cwd, "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        return False
+    if toplevel.returncode != 0:
+        return False
+    toplevel_str = toplevel.stdout.strip()
+    if not toplevel_str:
+        return False
+    try:
+        remote = subprocess.run(
+            ["git", "-C", toplevel_str, "remote", "get-url", "origin"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        return False
+    if remote.returncode != 0:
+        return False
+    remote_url = remote.stdout.strip()
+    return (
+        "cortex-command.git" in remote_url
+        or "charleshall888/cortex-command" in remote_url
+    )
+
+
 def skip_predicate_fires(cwd):
-    """Mirror server._evaluate_skip_predicates: dev-mode, dirty-tree,
-    non-main branch. git failures are conservative skips."""
+    """Mirror server._evaluate_skip_predicates: dev-mode, dirty-tree
+    (narrowed per R26 — only fires inside the cortex-command source
+    repo), non-main branch (also narrowed to cortex-command repos). git
+    failures inside cortex-command are conservative skips; non-cortex
+    repos never skip on dirty-tree or branch — the whole point of the
+    auto-install is to support daytime-only users editing OTHER repos.
+    """
     if os.environ.get("CORTEX_DEV_MODE") == "1":
         return True
+    # R26: dirty-tree + non-main-branch predicates only fire inside a
+    # cortex-command checkout. In unrelated repos those predicates are
+    # silently no-ops so the hook continues to evaluate drift/markers.
+    if not is_cortex_command_repo(cwd):
+        return False
     try:
         status = subprocess.run(
             ["git", "-C", cwd, "status", "--porcelain"],
@@ -130,6 +184,59 @@ def skip_predicate_fires(cwd):
     if branch.returncode != 0 or branch.stdout.strip() != "main":
         return True
     return False
+
+
+def install_in_progress_warning(state_dir):
+    """Return the prior-session-install warning text if the marker file
+    at ``${XDG_STATE_HOME}/cortex-command/install.in-progress`` exists
+    AND its mtime is within 600s of now (R20 staleness cutoff). Returns
+    ``None`` otherwise.
+
+    The wording is honest about which session's install is being
+    surfaced: the sync hook runs concurrently with the async install
+    hook within a single SessionStart, so the marker can only ever
+    correspond to a **prior session's** in-flight install (R24).
+    """
+    marker = state_dir / "install.in-progress"
+    try:
+        mtime = marker.stat().st_mtime
+    except OSError:
+        return None
+    if time.time() - mtime > 600.0:
+        return None
+    return (
+        "background install from a prior session is still running; "
+        "bash `cortex …` calls may fail until it completes"
+    )
+
+
+def recent_session_install_failure(state_dir):
+    """Return ``(mtime, path)`` of the most-recent ``session-install-failed.*``
+    sentinel within 1800s (30-minute window, R25 — aligned to R22's
+    retry-throttle so the warning fires only while retries are also
+    throttled). Returns ``None`` when the state dir is missing or no
+    qualifying sentinel exists.
+    """
+    if not state_dir.is_dir():
+        return None
+    cutoff = time.time() - 1800.0
+    candidates = []
+    try:
+        for entry in state_dir.iterdir():
+            if not entry.name.startswith("session-install-failed."):
+                continue
+            try:
+                mtime = entry.stat().st_mtime
+            except OSError:
+                continue
+            if mtime >= cutoff:
+                candidates.append((mtime, entry))
+    except OSError:
+        return None
+    if not candidates:
+        return None
+    candidates.sort(reverse=True)
+    return candidates[0]
 
 
 def probe_installed():
@@ -202,25 +309,47 @@ try:
     # failure) so a broken cortex install doesn't hot-loop the probe on
     # every SessionStart. Per-session retry comes after the 1800s window.
     touch_sentinel(STATE_DIR, SENTINEL)
+
+    # First-install warn-only branch (R27): probe failure means cortex
+    # is not installed (or is broken). Emit a warning pointing at the
+    # manual remediation OR the MCP-call auto-install path; do NOT
+    # trigger a SessionStart background install in this case. The
+    # decision to refuse SessionStart-triggered first-install is
+    # documented in docs/internals/auto-update.md's Trust Model section.
     if payload is None:
+        emit_context(
+            "cortex CLI is not installed. Run `uv tool install --reinstall "
+            "--refresh-package cortex-command "
+            "git+https://github.com/charleshall888/cortex-command.git"
+            "@{expected_tag}` to install, or invoke any cortex-overnight MCP "
+            "tool to auto-install.".format(expected_tag=expected_tag)
+        )
         sys.exit(0)
 
     installed_version = payload.get("version") or ""
     installed_schema = payload.get("schema_version") or ""
     cortex_root = payload.get("root") or ""
 
+    # Drift detection: schema-floor + version-tuple comparison decide
+    # whether the installed CLI lags CLI_PIN. The composed
+    # additionalContext is emitted at the end so the marker (R24) and
+    # prior-failure (R25) lines append to the drift line when both
+    # signals fire in the same session.
+    context_lines = []
+
     # Schema-floor branch: wheel-only (no .git at cortex_root). Major
     # mismatch is hard-rejected per the CLI_PIN schema contract.
     expected_major = schema_major(expected_schema)
     installed_major = schema_major(installed_schema)
     is_wheel = bool(cortex_root) and not (pathlib.Path(cortex_root) / ".git").is_dir()
-    if (
+    schema_floor_violated = (
         is_wheel
         and expected_major is not None
         and installed_major is not None
         and installed_major < expected_major
-    ):
-        emit_context(
+    )
+    if schema_floor_violated:
+        context_lines.append(
             "Schema-floor violation: installed CLI "
             "schema_version={installed_schema}, required={expected_schema}; "
             "run 'uv tool install --reinstall --refresh-package cortex-command "
@@ -231,16 +360,18 @@ try:
                 expected_tag=expected_tag,
             )
         )
-        sys.exit(0)
 
     # Drift branch: strict less-than on parsed version tuple. Empty
     # tuples (unparseable version strings) short-circuit to no-drift.
     expected_v = version_tuple(expected_tag)
     installed_v = version_tuple(installed_version)
-    if installed_v and expected_v and installed_v < expected_v:
+    drift_detected = bool(
+        installed_v and expected_v and installed_v < expected_v
+    )
+    if drift_detected and not schema_floor_violated:
         installed_disp = installed_version.lstrip("v")
         expected_disp = expected_tag.lstrip("v")
-        emit_context(
+        context_lines.append(
             "cortex CLI is drifted: installed v{installed}, "
             "expected v{expected}. The next MCP tool call will reinstall "
             "automatically. Bash 'cortex …' calls before then may fail "
@@ -252,7 +383,50 @@ try:
                 expected=expected_disp,
             )
         )
-        sys.exit(0)
+
+    # R24: install-in-progress marker — only surface when drift was
+    # detected (the warning is otherwise irrelevant). Reframed for prior
+    # sessions per spec: the sync hook runs concurrently with the async
+    # install hook within the current SessionStart, so the marker — if
+    # present — necessarily belongs to a prior session's still-in-flight
+    # install.
+    if drift_detected or schema_floor_violated:
+        marker_warning = install_in_progress_warning(STATE_DIR)
+        if marker_warning:
+            context_lines.append(marker_warning)
+
+        # R25: prior-failure surfacing aligned to R22's 1800s retry
+        # window. Cite the failure's timestamp (UTC), the
+        # expected/installed versions, and the manual remediation
+        # command so the user can recover without waiting for the next
+        # retry window.
+        recent_failure = recent_session_install_failure(STATE_DIR)
+        if recent_failure is not None:
+            failure_mtime, _failure_path = recent_failure
+            failure_iso = (
+                _datetime.datetime.fromtimestamp(
+                    failure_mtime, tz=_datetime.timezone.utc
+                )
+                .isoformat()
+                .replace("+00:00", "Z")
+            )
+            installed_disp = installed_version.lstrip("v") or "<unknown>"
+            expected_disp = expected_tag.lstrip("v")
+            context_lines.append(
+                "Previous background install attempt failed at "
+                "{ts}; installed v{installed}, expected v{expected}. "
+                "Manual remediation: `uv tool install --reinstall "
+                "--refresh-package cortex-command "
+                "git+https://github.com/charleshall888/cortex-command.git"
+                "@v{expected}`".format(
+                    ts=failure_iso,
+                    installed=installed_disp,
+                    expected=expected_disp,
+                )
+            )
+
+    if context_lines:
+        emit_context("\n\n".join(context_lines))
 
     sys.exit(0)
 except Exception:
