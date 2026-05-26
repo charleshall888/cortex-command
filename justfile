@@ -578,7 +578,7 @@ build-plugin:
             cortex-overnight)
                 BIN=()
                 SKILLS=(overnight morning-review)
-                HOOKS=(hooks/cortex-cleanup-session.sh hooks/cortex-scan-lifecycle.sh hooks/cortex-cli-version-sync.sh claude/hooks/cortex-tool-failure-tracker.sh claude/hooks/cortex-permission-audit-log.sh)
+                HOOKS=(hooks/cortex-cleanup-session.sh hooks/cortex-scan-lifecycle.sh hooks/cortex-cli-version-sync.sh hooks/cortex-cli-background-install.sh claude/hooks/cortex-tool-failure-tracker.sh claude/hooks/cortex-permission-audit-log.sh)
                 ;;
             *)
                 echo "build-plugin: no manifest for $p" >&2

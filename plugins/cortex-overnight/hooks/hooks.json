@@ -16,6 +16,15 @@
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/cortex-cli-version-sync.sh"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/cortex-cli-background-install.sh",
+            "async": true
+          }
+        ]
       }
     ],
     "SessionEnd": [
