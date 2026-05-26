@@ -29,33 +29,6 @@
     "repo": null
   },
   {
-    "id": 263,
-    "title": "Extend cortex-cli-version-sync hook to perform background reinstall on drift",
-    "status": "refined",
-    "priority": "high",
-    "type": "feature",
-    "tags": [],
-    "areas": [
-      "overnight-runner",
-      "hooks"
-    ],
-    "created": "2026-05-25",
-    "updated": "2026-05-25",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "cortex/lifecycle/extend-cortex-cli-version-sync-hook/spec.md",
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "1b9ed218-01d7-4ad1-a699-26e2d8097d79",
-    "lifecycle_slug": "extend-cortex-cli-version-sync-hook",
-    "session_id": null,
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 8,
     "title": "Auto-rename Claude Code session to active lifecycle feature name",
     "status": "backlog",
