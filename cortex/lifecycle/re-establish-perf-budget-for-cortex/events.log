@@ -1,0 +1,7 @@
+{"schema_version": 1, "ts": "2026-05-26T13:47:30Z", "event": "lifecycle_start", "feature": "re-establish-perf-budget-for-cortex", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-05-26T13:48:00Z", "event": "clarify_critic", "feature": "re-establish-perf-budget-for-cortex", "parent_epic_loaded": false, "findings_count": 9, "dispositions": {"apply": 6, "dismiss": 2, "ask": 1}, "applied_fixes_count": 4, "dismissals_count": 2, "status": "ok"}
+{"ts": "2026-05-26T13:50:30Z", "event": "phase_transition", "feature": "re-establish-perf-budget-for-cortex", "from": "clarify", "to": "research"}
+{"ts": "2026-05-26T14:05:00Z", "event": "phase_transition", "feature": "re-establish-perf-budget-for-cortex", "from": "research", "to": "specify"}
+{"ts": "2026-05-26T13:59:25Z", "event": "complexity_override", "feature": "re-establish-perf-budget-for-cortex", "from": "simple", "to": "complex", "gate": "research_open_questions"}
+{"ts": "2026-05-26T14:30:00Z", "event": "spec_approved", "feature": "re-establish-perf-budget-for-cortex"}
+{"ts": "2026-05-26T14:30:05Z", "event": "phase_transition", "feature": "re-establish-perf-budget-for-cortex", "from": "specify", "to": "plan"}

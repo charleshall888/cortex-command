@@ -6,14 +6,14 @@
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 186 | Clarify-critic schema validator + warning-template runtime validator (per #178 R7 follow-on) | proposed | medium | feature | — | 178 | — |
 | 156 | Make cortex-check-parity context-aware (skip tokens inside fenced code blocks) | deferred | low | feature | — | — | — |
-| 264 | Re-establish perf budget for cortex-log-invocation post dual-channel-wrapper rewrite | backlog | low | chore | — | — | — |
+| 264 | Re-establish perf budget for cortex-log-invocation post dual-channel-wrapper rewrite | refined | low | chore | — | — | ✓ |
 
 ## Refined
 
+- **264** Re-establish perf budget for cortex-log-invocation post dual-channel-wrapper rewrite
 
 ## Backlog
 
-- **264** Re-establish perf budget for cortex-log-invocation post dual-channel-wrapper rewrite
 
 ## In-Progress
 
