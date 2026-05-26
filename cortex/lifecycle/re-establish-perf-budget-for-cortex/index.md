@@ -2,7 +2,7 @@
 feature: re-establish-perf-budget-for-cortex
 parent_backlog_uuid: 84bee538-707f-4e78-974a-13fb2c6961d8
 parent_backlog_id: 264
-artifacts: ["research", "spec"]
+artifacts: ["research", "spec", "review"]
 tags: []
 created: 2026-05-26
 updated: 2026-05-26
