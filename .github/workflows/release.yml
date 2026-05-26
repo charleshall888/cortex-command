@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   # Defense-in-depth lint per spec R18: verify that the CLI_PIN[0] literal in
-  # plugins/cortex-overnight/server.py matches the pushed tag. The auto-release
+  # plugins/cortex-overnight/cli_pin.py matches the pushed tag. The auto-release
   # workflow (auto-release.yml) bumps CLI_PIN on every push to main, so on the
   # happy path this lint is redundant. It catches drift on manual emergency
   # tag pushes (PAT revoked, workflow disabled, etc.) and blocks the release
@@ -39,7 +39,7 @@ jobs:
           python3 - <<'PY'
           import os, re, sys
           tag = os.environ["TAG"]
-          path = "plugins/cortex-overnight/server.py"
+          path = "plugins/cortex-overnight/cli_pin.py"
           with open(path, encoding="utf-8") as f:
               text = f.read()
           # Same regex shape as bin/cortex-rewrite-cli-pin: format-tolerant,

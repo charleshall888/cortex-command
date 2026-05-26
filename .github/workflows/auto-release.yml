@@ -135,7 +135,7 @@ jobs:
         run: |
           set -euo pipefail
           NEXT_TAG="${{ steps.bump.outputs.next_tag }}"
-          git add plugins/cortex-overnight/server.py
+          git add plugins/cortex-overnight/cli_pin.py
           git commit -m "Release ${NEXT_TAG}"
 
       - name: Create tag at release commit
