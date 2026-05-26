@@ -2,14 +2,19 @@
 # tests/test_cli_version_sync_hook.sh — regression tests for the
 # SessionStart drift-detector hook (#235).
 #
-# Six scenarios, each isolated under $TMPDIR with its own state dir,
+# Eleven scenarios, each isolated under $TMPDIR with its own state dir,
 # plugin root, cortex shim, and clean-tree git repo on main:
-#   (a) no-drift          — installed == expected → no additionalContext, sentinel written
-#   (b) drift-golden      — installed < expected  → drift message matches checked-in fixture
-#   (c) schema-floor      — wheel + major mismatch → schema-floor message with --refresh-package
-#   (d) dev-mode-skip     — CORTEX_DEV_MODE=1     → silent, NO sentinel write
-#   (e) probe-failure     — cortex absent on PATH → silent, exit 0
-#   (f) throttle-hit      — sentinel within 1800s → silent, fast exit
+#   (a) no-drift              — installed == expected → no additionalContext, sentinel written
+#   (b) drift-golden          — installed < expected  → drift message matches checked-in fixture
+#   (c) schema-floor          — wheel + major mismatch → schema-floor message with --refresh-package
+#   (d) dev-mode-skip         — CORTEX_DEV_MODE=1     → silent, NO sentinel write
+#   (e) probe-failure         — cortex absent on PATH → R27 warn-only additionalContext (T12)
+#   (f) throttle-hit          — sentinel within 1800s → silent, fast exit
+#   (g) marker-prior-session  — install.in-progress marker fresh + drift → "prior session" line (R24, T12)
+#   (h) prior-failure-recent  — session-install-failed.<ts> within 30 min + drift → "Previous … failed" line (R25, T12)
+#   (i) prior-failure-stale   — session-install-failed.<ts> older than 30 min + drift → no failure line (R25, T12)
+#   (j) first-install-warn    — cortex absent → R27 warn-only additionalContext, no install spawned (T12)
+#   (k) dirty-tree-narrowing  — dirty non-cortex repo does NOT skip; dirty cortex-command repo DOES skip (R26, T12)
 #
 # Exit 0 if all pass, 1 if any fail.
 
@@ -181,6 +186,10 @@ run_hook() {
 }
 
 # --- (e) probe-failure -----------------------------------------------------
+# R27 (T12) changed the probe-failure branch from silent-skip to warn-only:
+# when ``cortex --print-root`` fails (binary missing / non-zero exit), the
+# hook emits a warn-only ``additionalContext`` pointing at the manual
+# remediation command. The hook does NOT trigger a SessionStart install.
 {
   N="cli-version-sync/probe-failure"
   T="$CV_BASE/e"
@@ -191,10 +200,11 @@ run_hook() {
   mkdir -p "$T/state"
   output=$(run_hook "$T/repo" "$T/plugin-root" "$T/state" "$T/bin-empty" 2>/dev/null)
   exit_code=$?
-  if [[ $exit_code -eq 0 && -z "$output" ]]; then
+  ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // empty' 2>/dev/null)
+  if [[ $exit_code -eq 0 && "$ctx" == *"cortex CLI is not installed"* && "$ctx" == *"uv tool install"* ]]; then
     pass "$N"
   else
-    fail "$N" "exit=$exit_code stdout='$output'"
+    fail "$N" "exit=$exit_code ctx='$ctx'"
   fi
 }
 
@@ -223,6 +233,198 @@ run_hook() {
     pass "$N (elapsed=${elapsed_ms}ms)"
   else
     fail "$N" "exit=$exit_code stdout='$output' elapsed=${elapsed_ms}ms"
+  fi
+}
+
+# --- (g) marker-prior-session ----------------------------------------------
+# R24 (T12): when the install-in-progress marker exists with fresh mtime
+# (<600s) AND drift is detected, the hook appends a "prior session" warning
+# line to ``additionalContext``. The marker write happens inside the async
+# install hook's flock — by the time the sync hook composes its context,
+# any marker it sees necessarily belongs to a prior session's in-flight
+# install (the current session's marker, if any, races ahead concurrently).
+{
+  N="cli-version-sync/marker-prior-session"
+  T="$CV_BASE/g"
+  mkdir -p "$T"
+  make_clean_repo "$T/repo"
+  make_plugin_root "$T/plugin-root" "v9.9.9" "2.0"
+  CORTEX_SRC="$T/cortex-source"
+  mkdir -p "$CORTEX_SRC/.git"
+  make_cortex_shim "$T/bin" "$FIXTURE_DIR/cortex-print-root-drifted.json" "$CORTEX_SRC"
+  mkdir -p "$T/state/cortex-command"
+  # Touch marker with current mtime (well within the 600s freshness window).
+  touch "$T/state/cortex-command/install.in-progress"
+  output=$(run_hook "$T/repo" "$T/plugin-root" "$T/state" "$T/bin" 2>/dev/null)
+  exit_code=$?
+  ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // empty' 2>/dev/null)
+  if [[ $exit_code -eq 0 && "$ctx" == *"prior session"* && "$ctx" == *"bash \`cortex"* ]]; then
+    pass "$N"
+  else
+    fail "$N" "exit=$exit_code ctx='$ctx'"
+  fi
+}
+
+# --- (h) prior-failure-recent ----------------------------------------------
+# R25 (T12): a ``session-install-failed.<ts>`` sentinel within the 1800s
+# (30-min) window — aligned to R22's retry-throttle — surfaces a "Previous
+# background install attempt failed" line on the next session's drift
+# warning, citing the failure timestamp and manual remediation command.
+{
+  N="cli-version-sync/prior-failure-recent"
+  T="$CV_BASE/h"
+  mkdir -p "$T"
+  make_clean_repo "$T/repo"
+  make_plugin_root "$T/plugin-root" "v9.9.9" "2.0"
+  CORTEX_SRC="$T/cortex-source"
+  mkdir -p "$CORTEX_SRC/.git"
+  make_cortex_shim "$T/bin" "$FIXTURE_DIR/cortex-print-root-drifted.json" "$CORTEX_SRC"
+  mkdir -p "$T/state/cortex-command"
+  # Sentinel with mtime 5 minutes in the past (well within the 1800s window).
+  # Python used for cross-platform mtime control — BSD ``touch -d`` lacks
+  # relative-time support.
+  SENTINEL_RECENT="$T/state/cortex-command/session-install-failed.111111"
+  touch "$SENTINEL_RECENT"
+  python3 -c "import os, time; os.utime('$SENTINEL_RECENT', (time.time() - 300, time.time() - 300))"
+  output=$(run_hook "$T/repo" "$T/plugin-root" "$T/state" "$T/bin" 2>/dev/null)
+  exit_code=$?
+  ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // empty' 2>/dev/null)
+  if [[ $exit_code -eq 0 && "$ctx" == *"Previous background install attempt failed"* && "$ctx" == *"uv tool install"* ]]; then
+    pass "$N"
+  else
+    fail "$N" "exit=$exit_code ctx='$ctx'"
+  fi
+}
+
+# --- (i) prior-failure-stale -----------------------------------------------
+# R25 (T12) boundary: a ``session-install-failed.<ts>`` sentinel older than
+# 1800s does NOT produce the "Previous … failed" warning. Aligned to R22 so
+# the warning fires only while retries are also throttled.
+{
+  N="cli-version-sync/prior-failure-stale"
+  T="$CV_BASE/i"
+  mkdir -p "$T"
+  make_clean_repo "$T/repo"
+  make_plugin_root "$T/plugin-root" "v9.9.9" "2.0"
+  CORTEX_SRC="$T/cortex-source"
+  mkdir -p "$CORTEX_SRC/.git"
+  make_cortex_shim "$T/bin" "$FIXTURE_DIR/cortex-print-root-drifted.json" "$CORTEX_SRC"
+  mkdir -p "$T/state/cortex-command"
+  # Sentinel mtime ~31 minutes ago (just past the 1800s cutoff).
+  SENTINEL_STALE="$T/state/cortex-command/session-install-failed.222222"
+  touch "$SENTINEL_STALE"
+  python3 -c "import os, time; os.utime('$SENTINEL_STALE', (time.time() - 1860, time.time() - 1860))"
+  output=$(run_hook "$T/repo" "$T/plugin-root" "$T/state" "$T/bin" 2>/dev/null)
+  exit_code=$?
+  ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // empty' 2>/dev/null)
+  # Drift line still present (sanity), but the prior-failure line is absent.
+  if [[ $exit_code -eq 0 && "$ctx" == *"cortex CLI is drifted"* && "$ctx" != *"Previous background install attempt failed"* ]]; then
+    pass "$N"
+  else
+    fail "$N" "exit=$exit_code ctx='$ctx'"
+  fi
+}
+
+# --- (j) first-install-warn ------------------------------------------------
+# R27 (T12): ``cortex`` not installed → warn-only ``additionalContext``
+# pointing at the manual ``uv tool install`` remediation OR the MCP-call
+# auto-install path. SessionStart does NOT spawn an install. Distinct from
+# scenario (e) (which exercises the same branch) by being a labelled T12-
+# coverage test independent of the pre-existing probe-failure regression.
+{
+  N="cli-version-sync/first-install-warn"
+  T="$CV_BASE/j"
+  mkdir -p "$T"
+  make_clean_repo "$T/repo"
+  make_plugin_root "$T/plugin-root" "v9.9.9" "2.0"
+  mkdir -p "$T/bin-empty"  # no cortex shim → probe failure → R27 warn branch
+  mkdir -p "$T/state"
+  output=$(run_hook "$T/repo" "$T/plugin-root" "$T/state" "$T/bin-empty" 2>/dev/null)
+  exit_code=$?
+  ctx=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // empty' 2>/dev/null)
+  # Warn-only assertions: the message names the missing CLI and cites the
+  # remediation command; the hook does NOT spawn ``uv tool install`` (the
+  # absence of any uv invocation is enforced by the sync hook never
+  # calling subprocess for install — visibility-only contract).
+  if [[ $exit_code -eq 0 \
+        && "$ctx" == *"cortex CLI is not installed"* \
+        && "$ctx" == *"uv tool install --reinstall --refresh-package cortex-command"* \
+        && "$ctx" == *"cortex-overnight MCP"* ]]; then
+    pass "$N"
+  else
+    fail "$N" "exit=$exit_code ctx='$ctx'"
+  fi
+}
+
+# --- (k) dirty-tree-narrowing ----------------------------------------------
+# R26 (T12): the dirty-tree skip predicate now only fires when ``cwd``
+# resolves into the cortex-command source repo (detected via the origin
+# remote URL matching ``cortex-command.git`` or
+# ``charleshall888/cortex-command``). Verified in two halves:
+#   (k1) dirty NON-cortex-command tree does NOT skip → drift line emitted
+#   (k2) dirty cortex-command tree DOES skip       → no additionalContext
+{
+  N="cli-version-sync/dirty-tree-narrowing"
+  T="$CV_BASE/k"
+  mkdir -p "$T"
+  make_plugin_root "$T/plugin-root" "v9.9.9" "2.0"
+  CORTEX_SRC="$T/cortex-source"
+  mkdir -p "$CORTEX_SRC/.git"
+  make_cortex_shim "$T/bin" "$FIXTURE_DIR/cortex-print-root-drifted.json" "$CORTEX_SRC"
+
+  # (k1) Dirty non-cortex-command repo (origin remote points elsewhere).
+  OTHER_REPO="$T/other-repo"
+  mkdir -p "$OTHER_REPO"
+  (
+    cd "$OTHER_REPO"
+    git init -q -b main
+    git -c commit.gpgsign=false \
+        -c user.email="cv@cv.test" \
+        -c user.name="cv-test" \
+        -c core.hooksPath=/dev/null \
+        commit --allow-empty -q -m "Init non-cortex repo"
+    git remote add origin "https://example.com/some-other-repo.git"
+    # Make the tree dirty so the (narrowed) dirty-tree predicate would
+    # fire if R26 narrowing were missing.
+    echo "dirty" > untracked.txt
+  )
+  mkdir -p "$T/state-k1"
+  output_k1=$(run_hook "$OTHER_REPO" "$T/plugin-root" "$T/state-k1" "$T/bin" 2>/dev/null)
+  exit_k1=$?
+  ctx_k1=$(echo "$output_k1" | jq -r '.hookSpecificOutput.additionalContext // empty' 2>/dev/null)
+  k1_ok=0
+  if [[ $exit_k1 -eq 0 && "$ctx_k1" == *"cortex CLI is drifted"* ]]; then
+    k1_ok=1
+  fi
+
+  # (k2) Dirty cortex-command repo (origin remote matches canonical URL).
+  CORTEX_REPO="$T/cortex-command-repo"
+  mkdir -p "$CORTEX_REPO"
+  (
+    cd "$CORTEX_REPO"
+    git init -q -b main
+    git -c commit.gpgsign=false \
+        -c user.email="cv@cv.test" \
+        -c user.name="cv-test" \
+        -c core.hooksPath=/dev/null \
+        commit --allow-empty -q -m "Init cortex-command repo"
+    git remote add origin "https://github.com/charleshall888/cortex-command.git"
+    echo "dirty" > untracked.txt
+  )
+  mkdir -p "$T/state-k2"
+  output_k2=$(run_hook "$CORTEX_REPO" "$T/plugin-root" "$T/state-k2" "$T/bin" 2>/dev/null)
+  exit_k2=$?
+  # Skip predicate fires → empty stdout, exit 0, no sentinel (sentinel
+  # write happens after probe; skip-predicate gate is before probe).
+  k2_ok=0
+  if [[ $exit_k2 -eq 0 && -z "$output_k2" && ! -f "$T/state-k2/cortex-command/last-version-check" ]]; then
+    k2_ok=1
+  fi
+
+  if (( k1_ok == 1 && k2_ok == 1 )); then
+    pass "$N"
+  else
+    fail "$N" "k1_ok=$k1_ok (exit=$exit_k1 ctx_k1='$ctx_k1') k2_ok=$k2_ok (exit=$exit_k2 stdout='$output_k2')"
   fi
 }
 
