@@ -21,6 +21,7 @@ hot-path measurement per spec).
 
 from __future__ import annotations
 
+import math
 import os
 import shutil
 import statistics
@@ -71,8 +72,8 @@ def _make_fake_repo(tmp_path: Path) -> Path:
 def _p95(samples: list[float]) -> float:
     """Return the 95th percentile via nearest-rank on a sorted copy."""
     sorted_samples = sorted(samples)
-    index = max(0, min(len(sorted_samples) - 1, int(0.95 * len(sorted_samples)) - 1))
-    return sorted_samples[index]
+    n = len(sorted_samples)
+    return sorted_samples[min(n - 1, int(math.ceil(0.95 * n)) - 1)]
 
 
 @pytest.mark.skip(
