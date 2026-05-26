@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 4db31ffe-3956-405f-bab1-a31509ff8d61
 title: "critical-review Step 2c.5 tempfile-write collides with Write-tool read-first guard"
-status: backlog
+status: complete
 priority: medium
 type: bug
 created: 2026-05-26
