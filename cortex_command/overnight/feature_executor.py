@@ -557,6 +557,9 @@ async def execute_feature(
             error=f"Dependency error: {exc}",
         )
 
+    silent_worker_error: Optional[str] = None
+    total_commits = 0
+
     for batch in batches:
         async def _run_task(task: FeatureTask) -> tuple[FeatureTask, object, int]:
             plan_task_lines = [
@@ -787,6 +790,7 @@ async def execute_feature(
                         details={"task_number": task.number},
                         log_path=config.overnight_events_path,
                     )
+                    silent_worker_error = silent_worker_error or "worker_malformed_exit_report"
                 else:
                     overnight_log_event(
                         WORKER_NO_EXIT_REPORT,
@@ -795,9 +799,13 @@ async def execute_feature(
                         details={"task_number": task.number},
                         log_path=config.overnight_events_path,
                     )
+                    silent_worker_error = silent_worker_error or "worker_no_exit_report"
 
             # action == "complete", missing, or malformed — fall through
+            total_commits += max(0, task_commit_count)
             mark_task_done_in_plan(Path(f"cortex/lifecycle/{feature}/plan.md"), task.number)
 
-    # All tasks passed — feature complete
+    # All tasks passed — check for silent-worker bookkeeping failures
+    if silent_worker_error is not None and total_commits == 0:
+        return FeatureResult(name=feature, status="paused", error=silent_worker_error)
     return FeatureResult(name=feature, status="completed")
