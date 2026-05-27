@@ -1,0 +1,72 @@
+{
+  "ts": "2026-05-27T01:30:00Z",
+  "feature": "gate-worktree-option-on-console-script",
+  "artifact": "cortex/lifecycle/gate-worktree-option-on-console-script/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "Section 1 routing prose enumerates three dispositions but none covers PATH-reachable wrapper that fails at use-time; only compensating surface is repr(exc) on stderr.",
+      "reviewer_angle": "gate-symmetry",
+      "evidence_quote": "exit 0 binary reachable all three options"
+    },
+    {
+      "class": "B",
+      "finding": "--base-branch main hardcoded; in repos whose default is master or trunk command -v exits 0 but cortex-worktree-create fails.",
+      "reviewer_angle": "gate-symmetry",
+      "evidence_quote": "cortex-worktree-create --feature interactive-slug --base-branch main"
+    },
+    {
+      "class": "B",
+      "finding": "Rule 2 behavior in narrative prose is not specified; no negative fixture for in-prose Rule 2.",
+      "reviewer_angle": "lint-coverage",
+      "evidence_quote": "Inside any python-source region run the regex"
+    },
+    {
+      "class": "B",
+      "finding": "Heredoc regex anchored at line start; heredocs prefixed by command-substitution, wrapper invocations, or env-var preamble will not match.",
+      "reviewer_angle": "lint-coverage",
+      "evidence_quote": "Heredoc extraction regex captures the heredoc opener and marker"
+    },
+    {
+      "class": "B",
+      "finding": "Task 4 bin shim probe path depends on Task 3 wheel being reinstalled; plan does not enforce reinstall between Tasks 3 and 4.",
+      "reviewer_angle": "phase2-ordering",
+      "evidence_quote": "copy bin cortex-check-contract verbatim"
+    },
+    {
+      "class": "B",
+      "finding": "Self-circular pre-commit firing risk; Task 4 commit triggers Phase 1.86 against itself.",
+      "reviewer_angle": "phase2-ordering",
+      "evidence_quote": "Phase 1.86 will trigger because bin cortex-check-bare-python-import IS in the trigger pattern"
+    },
+    {
+      "class": "B",
+      "finding": "Cross-task parallelism between Task 1 and Task 2 unhandled.",
+      "reviewer_angle": "phase2-ordering",
+      "evidence_quote": "module reads implement.md text once at module scope"
+    },
+    {
+      "class": "B",
+      "finding": "Plan does not handle uv tool install --reinstall failing mid-task.",
+      "reviewer_angle": "phase2-ordering",
+      "evidence_quote": "Wheel-reinstall ordering Task 1 adds the project.scripts entry"
+    },
+    {
+      "class": "B",
+      "finding": "Authorial contract for stacked sentinels is unspecified; no doc edit in plan file list.",
+      "reviewer_angle": "sentinel-ambiguity",
+      "evidence_quote": "the sentinel provides a documented escape hatch for intentional documentation quotes"
+    },
+    {
+      "class": "B",
+      "finding": "prev_nonblank blank-line accommodation widens sentinel reach; closing-fence-delimiter behavior conflated between prev_nonblank and fence_preceding mechanisms.",
+      "reviewer_angle": "sentinel-ambiguity",
+      "evidence_quote": "the scanner uses the prev_nonblank pattern from contract.py 553"
+    }
+  ]
+}

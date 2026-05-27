@@ -1,0 +1,6 @@
+{"schema_version": 1, "ts": "2026-05-27T00:03:31Z", "event": "lifecycle_start", "feature": "gate-worktree-option-on-console-script", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-05-27T00:05:30Z", "event": "clarify_critic", "feature": "gate-worktree-option-on-console-script", "parent_epic_loaded": false, "findings_count": 8, "dispositions": {"apply": 2, "dismiss": 6, "ask": 0}, "applied_fixes_count": 2, "dismissals_count": 6, "status": "ok"}
+{"ts": "2026-05-27T00:14:00Z", "event": "complexity_override", "feature": "gate-worktree-option-on-console-script", "from": "simple", "to": "complex", "gate": "research_open_questions"}
+{"schema_version": 1, "ts": "2026-05-27T00:45:00Z", "event": "spec_approved", "feature": "gate-worktree-option-on-console-script"}
+{"schema_version": 1, "ts": "2026-05-27T01:53:59Z", "event": "plan_approved", "feature": "gate-worktree-option-on-console-script"}
+{"schema_version": 1, "ts": "2026-05-27T01:53:59Z", "event": "phase_transition", "feature": "gate-worktree-option-on-console-script", "from": "plan", "to": "implement"}
