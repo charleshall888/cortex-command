@@ -156,6 +156,8 @@ The Clarify, Research, and Spec phases are delegated to `/cortex-core:refine`. T
 
 5. **Complexity escalation gates**: run the Research → Specify and Specify → Plan complexity-escalator gates per [complexity-escalation.md](${CLAUDE_SKILL_DIR}/references/complexity-escalation.md).
 
+6. **Post-refine commit**: after the `phase_transition specify→plan` row is logged (happy path) or after the `lifecycle_cancelled` row is logged (cancel path) — and before auto-advancing to Plan — read [post-refine-commit.md](${CLAUDE_SKILL_DIR}/references/post-refine-commit.md) and follow it. This is the canonical commit site for the refine→plan boundary; refine §5 explicitly delegates `commit-artifacts` to the caller, which is this step. The reference encodes the halt-before-Plan gate: on commit failure, halt and do not auto-advance.
+
 The Research and Spec phases are handled by the /cortex-core:refine delegation block above. The following phases run directly in the lifecycle context:
 
 | Phase | Reference | Artifact Produced |
@@ -230,4 +232,5 @@ Beyond the per-phase references in the table above, these references cover cross
 - [complexity-escalation.md](${CLAUDE_SKILL_DIR}/references/complexity-escalation.md) — `cortex-complexity-escalator` gates at phase transitions
 - [discovery-bootstrap.md](${CLAUDE_SKILL_DIR}/references/discovery-bootstrap.md) — epic-research detection from backlog frontmatter, epic-context injection during refine
 - [backlog-writeback.md](${CLAUDE_SKILL_DIR}/references/backlog-writeback.md) — backlog status check, index.md creation, and write-back to the originating backlog item
+- [post-refine-commit.md](${CLAUDE_SKILL_DIR}/references/post-refine-commit.md) — canonical commit site for the refine→plan boundary; halt-before-Plan gate prevents commit failures from bundling refine artifacts under a later Plan-titled commit
 - [wontfix.md](${CLAUDE_SKILL_DIR}/references/wontfix.md) — three-step terminal-state workflow (`git mv` to `archive/` → emit `feature_wontfix` event → `cortex-update-item --status wontfix`) for operator-decided lifecycle termination
