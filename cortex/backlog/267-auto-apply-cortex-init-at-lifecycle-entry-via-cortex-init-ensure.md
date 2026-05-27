@@ -2,14 +2,17 @@
 schema_version: "1"
 uuid: 0d2e27e0-5977-4c7e-a55a-524f117c1d3e
 title: "Auto-apply cortex init at /lifecycle entry via cortex init --ensure"
-status: backlog
+status: complete
 priority: medium
 type: feature
 created: 2026-05-26
-updated: 2026-05-26
+updated: 2026-05-27
 discovery_source: cortex/research/auto-init-and-update/research.md
 tags: [auto-init-and-update, install, lifecycle]
 areas: ['install', 'lifecycle']
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/auto-apply-cortex-init-at-lifecycle/spec.md
 ---
 ## Why
 

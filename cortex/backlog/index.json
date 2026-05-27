@@ -92,37 +92,6 @@
     "repo": null
   },
   {
-    "id": 267,
-    "title": "Auto-apply cortex init at /lifecycle entry via cortex init --ensure",
-    "status": "backlog",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "auto-init-and-update",
-      "install",
-      "lifecycle"
-    ],
-    "areas": [
-      "install",
-      "lifecycle"
-    ],
-    "created": "2026-05-26",
-    "updated": "2026-05-26",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": null,
-    "discovery_source": "cortex/research/auto-init-and-update/research.md",
-    "plan": null,
-    "uuid": "0d2e27e0-5977-4c7e-a55a-524f117c1d3e",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 156,
     "title": "Make cortex-check-parity context-aware (skip tokens inside fenced code blocks)",
     "status": "deferred",

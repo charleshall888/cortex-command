@@ -20,3 +20,4 @@
 {"ts": "2026-05-27T13:14:13Z", "event": "phase_transition", "feature": "auto-apply-cortex-init-at-lifecycle", "tier": "complex", "from": "implement", "to": "review"}
 {"ts": "2026-05-27T13:18:21Z", "event": "review_verdict", "feature": "auto-apply-cortex-init-at-lifecycle", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
 {"ts": "2026-05-27T13:18:21Z", "event": "phase_transition", "feature": "auto-apply-cortex-init-at-lifecycle", "from": "review", "to": "complete"}
+{"ts": "2026-05-27T13:26:40Z", "event": "feature_complete", "feature": "auto-apply-cortex-init-at-lifecycle", "tasks_total": 9, "rework_cycles": 1, "merge_anchor": "merge"}
