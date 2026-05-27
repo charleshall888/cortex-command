@@ -454,7 +454,10 @@ def _matches_scan_glob(rel_path: str) -> bool:
     """Return True if *rel_path* matches any of the corpus globs."""
     p = Path(rel_path)
     for glob in _SCAN_GLOBS:
-        if p.match(glob):
+        # full_match handles recursive ** correctly; Path.match treats ** as a single
+        # component, so skills/lifecycle/references/implement.md would not match
+        # skills/**/*.md and the pre-commit hook would silently skip the corpus.
+        if p.full_match(glob):
             return True
     return False
 

@@ -249,3 +249,24 @@ def test_negative_import_stdlib_in_labeled_fence() -> None:
     text = "```python\nimport sys\nimport os\n```\n"
     violations = scan_text(text, Path("test.md"))
     assert violations == [], f"Stdlib imports in labeled fence should not flag, got: {violations}"
+
+
+def test_staged_glob_matches_deep_skills_path() -> None:
+    """Regression: --staged mode must recognize deep skills/ paths via ** recursion.
+
+    Path.match("skills/**/*.md") treats ** as a single component and returns False
+    for skills/lifecycle/references/implement.md — silently skipping the actual
+    scan corpus during pre-commit. _matches_scan_glob must use full_match.
+    """
+    from cortex_command.lint.bare_python_import import _matches_scan_glob
+
+    assert _matches_scan_glob("skills/lifecycle/references/implement.md"), (
+        "deep skills/ path must match skills/**/*.md glob — pre-commit hook depends on it"
+    )
+    assert _matches_scan_glob("docs/internals/pipeline.md"), (
+        "deep docs/ path must match docs/**/*.md glob"
+    )
+    assert _matches_scan_glob("CLAUDE.md"), "root CLAUDE.md must match"
+    assert not _matches_scan_glob("cortex_command/lint/bare_python_import.py"), (
+        "python source files outside the corpus must not match"
+    )
