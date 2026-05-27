@@ -9,3 +9,14 @@
 {"ts":"2026-05-27T12:27:31Z","event":"synthesizer_drift","feature":"auto-apply-cortex-init-at-lifecycle","expected_sha":"588a09b18611fcd2f65b9bb2ec84ac3937d1b95fd273fc16d96e456383092064","observed_sha_or_null":null}
 {"ts": "2026-05-27T12:43:21Z", "event": "plan_approved", "feature": "auto-apply-cortex-init-at-lifecycle"}
 {"ts": "2026-05-27T12:43:21Z", "event": "phase_transition", "feature": "auto-apply-cortex-init-at-lifecycle", "from": "plan", "to": "implement"}
+{"ts": "2026-05-27T12:46:26Z", "event": "batch_dispatch", "feature": "auto-apply-cortex-init-at-lifecycle", "batch": 0, "tasks": [1]}
+{"ts": "2026-05-27T12:48:18Z", "event": "batch_dispatch", "feature": "auto-apply-cortex-init-at-lifecycle", "batch": 1, "tasks": [4]}
+{"ts": "2026-05-27T12:51:28Z", "event": "batch_dispatch", "feature": "auto-apply-cortex-init-at-lifecycle", "batch": 2, "tasks": [2]}
+{"ts": "2026-05-27T12:53:13Z", "event": "batch_dispatch", "feature": "auto-apply-cortex-init-at-lifecycle", "batch": 3, "tasks": [3]}
+{"ts": "2026-05-27T12:55:24Z", "event": "batch_dispatch", "feature": "auto-apply-cortex-init-at-lifecycle", "batch": 4, "tasks": [5]}
+{"ts": "2026-05-27T13:00:57Z", "event": "batch_dispatch", "feature": "auto-apply-cortex-init-at-lifecycle", "batch": 5, "tasks": [6, 7]}
+{"ts": "2026-05-27T13:08:23Z", "event": "batch_dispatch", "feature": "auto-apply-cortex-init-at-lifecycle", "batch": 6, "tasks": [8]}
+{"ts": "2026-05-27T13:09:46Z", "event": "batch_dispatch", "feature": "auto-apply-cortex-init-at-lifecycle", "batch": 7, "tasks": [9]}
+{"ts": "2026-05-27T13:14:13Z", "event": "phase_transition", "feature": "auto-apply-cortex-init-at-lifecycle", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-05-27T13:18:21Z", "event": "review_verdict", "feature": "auto-apply-cortex-init-at-lifecycle", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
+{"ts": "2026-05-27T13:18:21Z", "event": "phase_transition", "feature": "auto-apply-cortex-init-at-lifecycle", "from": "review", "to": "complete"}
