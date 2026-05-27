@@ -72,5 +72,5 @@ The halt gate is what prevents the failure path from re-creating the original "m
 ## Constraints
 
 - This reference does **not** introduce new event types (no `commit_authored`, `artifacts_committed`, `commit_failed` — see `bin/.events-registry.md`). Commit success is observable via `git log`; commit failure is surfaced by `/cortex-core:commit`'s own error path.
-- This reference does **not** add a new `AskUserQuestion` site. The kept-pauses inventory at `skills/lifecycle/SKILL.md` and `tests/test_lifecycle_kept_pauses_parity.py` remain unchanged.
+- This reference does **not** add a new user-pause call site. The kept-pauses inventory at `skills/lifecycle/SKILL.md` and `tests/test_lifecycle_kept_pauses_parity.py` remain unchanged.
 - Resume-and-edit assumption: if an operator manually edits `research.md`, `spec.md`, `index.md`, or the backlog file between session end and re-invocation, those edits will be staged and committed under the Refine subject (which may misdescribe the diff). The canonical workflow is to re-invoke `/cortex-core:lifecycle` (which routes through refine) rather than hand-edit refine artifacts.
