@@ -52,24 +52,17 @@ When `should_fire_picker` returns `(True, reason)` for any reason (`branch_mode_
 
 **Uncommitted-changes guard**: Immediately before the `AskUserQuestion` call, run `git status --porcelain` (no path filter, no additional flags). If non-empty output is returned, the option that keeps the user on the current branch is demoted in place: (a) prepend the fixed warning `Warning: uncommitted changes in working tree — this will mix them into the commit on main.` as a one-line prefix to that option's description, and (b) strip the `(recommended)` suffix from that option's label if present. The option remains selectable and stays at its existing position — no removal, no gating pre-question. If `git status --porcelain` exits non-zero (e.g., missing `.git`, corrupt index, bisect/rebase state), the guard does not fire — neither the demotion nor the warning prefix are applied — a single-line diagnostic `uncommitted-changes guard skipped: git status failed` is surfaced alongside the prompt, and the pre-flight continues normally as a fallback.
 
-**Runtime probe**: After the uncommitted-changes guard and before assembling the prompt's options array, run a single Bash call that probes for the top-level `cortex_command` package via `importlib.util.find_spec` against that top-level module name. The probe is wrapped in an explicit `try/except` so that an exception inside the import machinery cannot collide with the absence-signaling exit 1:
+**Runtime probe**: After the uncommitted-changes guard and before assembling the prompt's options array, run a single Bash call that probes whether the `cortex-worktree-create` console-script is reachable on PATH:
 
-```
-python3 -c "
-import sys
-try:
-    import importlib.util
-    sys.exit(0 if importlib.util.find_spec('cortex_command') is not None else 1)
-except Exception:
-    sys.exit(2)
-"
+```bash
+command -v cortex-worktree-create >/dev/null 2>&1
 ```
 
 Route by exit code into one of three menu dispositions:
 
-- **exit 0** → the `cortex_command` module is present → all three options remain unchanged: `Implement on current branch`, `Implement on feature branch with worktree`, and `Create feature branch`.
-- **exit 1** → the module is absent → remove `Implement on feature branch with worktree` from the options array; this is a silent hide, with no diagnostic surfaced. The post-degrade option set is `Implement on current branch` and `Create feature branch`.
-- **any other exit** (including 2 and 127) → the probe failed → fail open: all three options remain, and the literal diagnostic string `runtime probe skipped: import probe failed` is surfaced alongside the prompt.
+- **exit 0** → the binary is reachable on PATH → all three options remain unchanged: `Implement on current branch`, `Implement on feature branch with worktree`, and `Create feature branch`.
+- **exit 1** → the binary is not on PATH → remove `Implement on feature branch with worktree` from the options array; this is a silent hide, with no diagnostic surfaced. The post-degrade option set is `Implement on current branch` and `Create feature branch`.
+- **Bash tool execution failure (sandbox rejection, missing /bin/sh, shell unavailable) OR `command -v` exit code other than 0 or 1** → fail open: all three options remain, and the literal diagnostic string `runtime probe skipped: console-script probe failed` is surfaced alongside the prompt.
 
 After the probe completes and the options array has been resolved per the routing rules above, the resolved options array is then passed to `AskUserQuestion`.
 
@@ -120,16 +113,15 @@ cat skills/lifecycle/references/_interactive_overnight_check.sh | bash -s -- "Ov
 
 Sidecar exit codes: `0` = no overnight active, proceed normally; `1` = overnight live for this repo, surface the wording and exit §1a; `2` = stale runner detected (runner.pid absent or process dead), surface a warn-and-continue diagnostic and proceed.
 
-**iii. Worktree creation.** Single Bash call invoking `create_worktree` from `cortex_command.pipeline.worktree`:
+**iii. Worktree creation.** Single Bash call invoking `cortex-worktree-create`:
 
-```python
-from cortex_command.pipeline.worktree import create_worktree
-info = create_worktree(feature="interactive-{slug}", base_branch="main")
+```bash
+worktree_path=$(cortex-worktree-create --feature interactive-{slug} --base-branch main)
 ```
 
-The `interactive-` prefix causes `create_worktree` to resolve the branch as `interactive/{slug}` (via `_resolve_branch_name` with `prefix="interactive"`), and the worktree is materialized at `<repo>/.claude/worktrees/interactive-{slug}/`. The function copies `.claude/settings.local.json` into the worktree and symlinks `.venv` as part of the standard post-creation steps.
+The `interactive-` prefix causes `create_worktree` to resolve the branch as `interactive/{slug}` (via `_resolve_branch_name` with `prefix="interactive"`), and the worktree is materialized at `<repo>/.claude/worktrees/interactive-{slug}/`. The wrapper copies `.claude/settings.local.json` into the worktree and symlinks `.venv` as part of the standard post-creation steps. The wrapper prints exactly the absolute worktree path to stdout (captured via `$(...)`); all informational output is on stderr.
 
-If creation fails (raises `ValueError`): surface the error to the user and exit §1a — do not proceed to handoff.
+If creation fails: the wrapper writes `repr(exc)` to stderr and exits 1. Surface the stderr output to the user and exit §1a — do not proceed to handoff.
 
 **iv. Pre-flight check.** Verify the resolved worktree path lives inside the repo root. Since #260 reverted same-repo worktrees to `<repo>/.claude/worktrees/<feature>`, the path is covered by the project's trust scope automatically — no per-shell `sandbox.filesystem.allowWrite` / `additionalDirectories` registration is required. Run as a single Bash call:
 
