@@ -48,6 +48,7 @@ from __future__ import annotations
 import datetime
 import errno
 import glob
+import hashlib
 import importlib.metadata
 import json
 import os
@@ -71,6 +72,19 @@ _GITIGNORE_TARGETS = (
     "cortex/.cortex-init",
     "cortex/.cortex-init-backup/",
     ".claude/worktrees/",
+)
+
+# Explicit ordered list of every template path whose bytes feed the init
+# artifacts hash (Task 1). Paths are POSIX-relative from ``_TEMPLATE_ROOT``.
+# Enumerated verbatim so the hash is deterministic across installs and does
+# not silently expand if new templates are added. Update this tuple when a
+# template is added or removed and bump the hash version accordingly.
+_HASH_INPUT_TEMPLATES: tuple[str, ...] = (
+    "cortex/lifecycle.config.md",
+    "cortex/backlog/README.md",
+    "cortex/lifecycle/README.md",
+    "cortex/requirements/project.md",
+    "claude_md_authorization.md",
 )
 
 # Target scaffold paths inspected by the content-aware decline gate (R19).
@@ -101,6 +115,40 @@ _CLAUDE_MD_AUTH_FENCE_CLOSE = "<!-- cortex-managed end -->"
 _CLAUDE_MD_AUTH_FENCE_OPEN_RE = re.compile(
     r"<!--\s*cortex-managed:\s*lifecycle-worktree-auth\s+version=(\d+)\s*-->"
 )
+
+
+def _compute_init_artifacts_hash() -> str:
+    """Return a deterministic content hash over all init artifact inputs.
+
+    Iterates ``_HASH_INPUT_TEMPLATES`` verbatim (no ``iterdir()``), reads each
+    template's bytes via ``_TEMPLATE_ROOT.joinpath(...)``, normalizes each to
+    a canonical form (CRLF→LF, BOM strip, single trailing newline), then
+    feeds serialized literals that also affect init outputs:
+    ``repr(_GITIGNORE_TARGETS)``, ``str(_CLAUDE_MD_AUTH_VERSION)``, and
+    the fixed string ``b"cortex/"``.
+
+    The hash covers every user-visible init output so that ``cortex init
+    --ensure`` can detect drift across CLI releases without a version bump.
+
+    Returns:
+        ``"v1:<sha256-hexdigest>"``
+    """
+    h = hashlib.sha256()
+    for rel_posix in _HASH_INPUT_TEMPLATES:
+        raw = _TEMPLATE_ROOT.joinpath(rel_posix).read_bytes()
+        # Strip UTF-8 BOM if present.
+        if raw.startswith(b"\xef\xbb\xbf"):
+            raw = raw[3:]
+        # Normalize CRLF → LF.
+        normalized = raw.replace(b"\r\n", b"\n")
+        # Ensure exactly one trailing newline.
+        normalized = normalized.rstrip(b"\n") + b"\n"
+        h.update(normalized)
+    # Append serialized literals that affect user-visible init outputs.
+    h.update(repr(_GITIGNORE_TARGETS).encode())
+    h.update(str(_CLAUDE_MD_AUTH_VERSION).encode())
+    h.update(b"cortex/")
+    return f"v1:{h.hexdigest()}"
 
 
 class ScaffoldError(Exception):
