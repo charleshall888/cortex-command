@@ -22,8 +22,8 @@ Exposed surface (consumed by Tasks 4, 5, 6, 9):
         → ``\\n`` line-ending normalization. Consumed by ``--update`` for
         R9's drift report.
     write_marker(repo_root, *, refresh) -> None
-        Write or refresh ``.cortex-init`` JSON marker with ``cortex_version``
-        and ``initialized_at``.
+        Write or refresh ``.cortex-init`` JSON marker with ``cortex_version``,
+        ``initialized_at``, and ``init_artifacts_hash``.
     ensure_gitignore(repo_root) -> None
         Idempotent ``.gitignore`` append of ``.cortex-init`` and
         ``.cortex-init-backup/``. Repairs orphan-prefix fragments left by a
@@ -451,8 +451,9 @@ def write_marker(repo_root: Path, *, refresh: bool) -> None:
     """Write or refresh the ``.cortex-init`` marker file.
 
     The marker is a JSON object with ``cortex_version`` (from the installed
-    package metadata) and ``initialized_at`` (ISO-8601 UTC timestamp). R20
-    requires that ``--update`` refresh both fields unconditionally; the
+    package metadata), ``initialized_at`` (ISO-8601 UTC timestamp), and
+    ``init_artifacts_hash`` (``v1:<sha256>`` over all init artifact inputs).
+    R20 requires that ``--update`` refresh all fields unconditionally; the
     default invocation writes the marker only when absent.
 
     Args:
@@ -467,6 +468,7 @@ def write_marker(repo_root: Path, *, refresh: bool) -> None:
     data = {
         "cortex_version": importlib.metadata.version("cortex-command"),
         "initialized_at": datetime.datetime.now(datetime.UTC).isoformat(),
+        "init_artifacts_hash": _compute_init_artifacts_hash(),
     }
     content = json.dumps(data, indent=2) + "\n"
     marker_path.parent.mkdir(parents=True, exist_ok=True)
