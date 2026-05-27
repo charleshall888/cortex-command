@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 350677ba-faa6-4aef-98ce-c6f6faab0edd
 title: "Gate worktree option on console-script reachability, not bare-Python importability"
-status: refined
+status: complete
 priority: medium
 type: feature
 created: 2026-05-26
-updated: 2026-05-26
+updated: 2026-05-27
 complexity: complex
 criticality: high
 spec: cortex/lifecycle/gate-worktree-option-on-console-script/spec.md

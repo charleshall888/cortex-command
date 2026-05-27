@@ -92,32 +92,6 @@
     "repo": null
   },
   {
-    "id": 266,
-    "title": "Gate worktree option on console-script reachability, not bare-Python importability",
-    "status": "refined",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [],
-    "areas": [
-      "lifecycle"
-    ],
-    "created": "2026-05-26",
-    "updated": "2026-05-26",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "cortex/lifecycle/gate-worktree-option-on-console-script/spec.md",
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "350677ba-faa6-4aef-98ce-c6f6faab0edd",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 267,
     "title": "Auto-apply cortex init at /lifecycle entry via cortex init --ensure",
     "status": "backlog",

@@ -10,3 +10,4 @@
 {"ts": "2026-05-27T11:15:19Z", "event": "phase_transition", "feature": "gate-worktree-option-on-console-script", "tier": "complex", "from": "implement", "to": "review"}
 {"ts": "2026-05-27T11:22:13Z", "event": "review_verdict", "feature": "gate-worktree-option-on-console-script", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
 {"ts": "2026-05-27T11:22:25Z", "event": "phase_transition", "feature": "gate-worktree-option-on-console-script", "from": "review", "to": "complete"}
+{"ts": "2026-05-27T11:27:34Z", "event": "feature_complete", "feature": "gate-worktree-option-on-console-script", "tasks_total": 4, "rework_cycles": 1, "merge_anchor": "merge"}
