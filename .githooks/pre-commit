@@ -223,6 +223,33 @@ if [ "$prescriptive_prose_triggered" -eq 1 ]; then
 fi
 
 # -----------------------------------------------------------------------------
+# Phase 1.86 — Bare-python cortex_command import scanner (L201, R6)
+# -----------------------------------------------------------------------------
+# When any staged path matches skill prose, backlog ticket bodies, or the shim
+# itself, invoke the bare-python-import linter against the staged blob view.
+# The linter exits non-zero when a file contains a bare `python3 -c "import
+# cortex_command` or `python3 -m cortex_command` callsite without a
+# <!-- bare-python-lint:ignore-next --> sentinel. Runs AFTER prescriptive-prose
+# (Phase 1.85) so infrastructure-level violations surface first.
+bare_python_import_triggered=0
+while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    case "$f" in
+        skills/*|cortex/backlog/*.md|bin/cortex-check-bare-python-import)
+            bare_python_import_triggered=1
+            break
+            ;;
+    esac
+done < <(git diff --cached --name-only --diff-filter=ACMR)
+
+if [ "$bare_python_import_triggered" -eq 1 ]; then
+    if ! just check-bare-python-import; then
+        echo "pre-commit: bare-python cortex_command import check failed — convert to a cortex-* console-script call, or add the <!-- bare-python-lint:ignore-next --> sentinel if the bare-Python form is intentional." >&2
+        exit 1
+    fi
+fi
+
+# -----------------------------------------------------------------------------
 # Phase 1.9 — Path-hardcoding scanner (#203)
 # -----------------------------------------------------------------------------
 # When any staged path matches the path-hardcoding trigger pattern, invoke the

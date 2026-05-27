@@ -19,8 +19,8 @@ if [ "${CORTEX_COMMAND_FORCE_SOURCE:-}" = "1" ]; then
 fi
 
 # Branch (b): wheel-import probe — prefer the installed wheel.
-if uv run python -c "import cortex_command.lint.bare_python_import" 2>/dev/null; then
-    exec uv run python -m cortex_command.lint.bare_python_import "$@"
+if python3 -c "import cortex_command.lint.bare_python_import" 2>/dev/null; then
+    exec python3 -m cortex_command.lint.bare_python_import "$@"
 fi
 
 # Branch (c): working-tree fallback when pyproject.toml names cortex-command.

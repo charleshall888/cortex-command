@@ -376,6 +376,14 @@ check-events-registry:
 check-prescriptive-prose *args:
     bin/cortex-check-prescriptive-prose --staged {{args}}
 
+# Check skills and backlog for bare cortex_command Python imports (L201, staged-diff mode)
+check-bare-python-import *args:
+    bin/cortex-check-bare-python-import --staged {{args}}
+
+# Audit entire repo for bare cortex_command Python imports (off critical path)
+check-bare-python-import-audit:
+    bin/cortex-check-bare-python-import --audit
+
 # Measure per-skill combined description: + when_to_use: UTF-8 byte size (L1 boot-context surface)
 measure-l1-surface:
     bin/cortex-measure-l1-surface
