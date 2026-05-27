@@ -11,8 +11,10 @@ Covers the full dispatch matrix and acceptance bundles from the spec:
 - R8 cases: truncated marker with cortex_version (warning + refresh), marker
   without cortex_version (exit 2 foreign-artifact), malformed cortex_version
   (exit 2 foreign-artifact), non-JSON content (exit 2 unparseable JSON), R8
-  recovery over foreign cortex/ content (exit 2 R5 boundary), unwritable
-  cortex/ (exit non-zero with path-named diagnostic).
+  recovery with extra cortex/ content (warning + refresh — covers the
+  one-time post-Phase-3 migration storm where existing cortex repos have
+  backlog/lifecycle/requirements subdirs alongside the pre-Phase-1 marker),
+  unwritable cortex/ (exit non-zero with path-named diagnostic).
 
 Most tests call ``handler._run_ensure`` directly (or ``handler.main`` with a
 stubbed ``args.path``) to avoid the subprocess + sandbox blocker on
@@ -514,12 +516,21 @@ def test_r8_bundle4_non_json_marker_exit2(
     assert "unparseable" in captured.err.lower() or "json" in captured.err.lower()
 
 
-def test_r8_bundle5_recovery_over_foreign_cortex_content_exit2(
+def test_r8_bundle5_recovery_with_extra_cortex_content_refreshes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """R8 bundle 5: cortex_version-only marker AND foreign cortex/ content → exit 2 R5 boundary."""
+    """R8 bundle 5: cortex_version-only marker + existing cortex/ content → warning + refresh.
+
+    Mirrors the real-world migration scenario: a previously-initialized cortex
+    repo has accumulated content under cortex/ (backlog items, lifecycle dirs,
+    etc.) and now hits the new --ensure flow with a pre-Phase-1 marker. The
+    cortex_version discrimination at _read_marker_provenance() establishes
+    prior cortex authorship, so R5 (scoped to marker-absent cases per spec.md:30)
+    does not re-fire. Spec.md:66 anticipates this as the one-time migration
+    storm and treats it as an accepted-cost transparent refresh.
+    """
     repo = tmp_path / "repo"
     repo.mkdir()
     _git_init(repo)
@@ -532,17 +543,26 @@ def test_r8_bundle5_recovery_over_foreign_cortex_content_exit2(
     # Marker has cortex_version but NO init_artifacts_hash (R8 recovery path).
     _write_marker(repo, init_artifacts_hash=None, cortex_version="1.2.3")
 
-    # And cortex/ contains foreign content beyond the marker.
-    (cortex_dir / "some-foreign.md").write_text(
-        "foreign content\n", encoding="utf-8"
+    # cortex/ has accumulated content from prior cortex use (a real repo would
+    # have cortex/backlog/, cortex/lifecycle/, etc.).
+    (cortex_dir / "some-pre-existing.md").write_text(
+        "pre-existing cortex-managed content\n", encoding="utf-8"
     )
 
     rc = init_main(_make_ensure_args(repo))
-    assert rc == 2
+    assert rc == 0
 
     captured = capsys.readouterr()
-    # R5 boundary fires: check_content_decline raises the R19 diagnostic.
-    assert "cortex init" in captured.err or "pre-existing content" in captured.err
+    # Warning about missing init_artifacts_hash must appear on stderr.
+    assert "init_artifacts_hash" in captured.err
+
+    # Marker must now be refreshed (init_artifacts_hash present).
+    data = json.loads((repo / "cortex" / ".cortex-init").read_text(encoding="utf-8"))
+    assert "init_artifacts_hash" in data
+    # Pre-existing content must remain untouched.
+    assert (cortex_dir / "some-pre-existing.md").read_text(encoding="utf-8") == (
+        "pre-existing cortex-managed content\n"
+    )
 
 
 @pytest.mark.skipif(

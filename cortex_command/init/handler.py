@@ -186,27 +186,20 @@ def _run_ensure(args: argparse.Namespace) -> int:
 
     elif cortex_version is not None:
         # Case (v): R8 recovery — marker-present + missing init_artifacts_hash +
-        # cortex_version-present-and-parseable.
-        # Emit the R8 stderr warning so the user is aware a recovery write occurred.
+        # cortex_version-present-and-parseable. The cortex_version discrimination
+        # at _read_marker_provenance() establishes prior cortex authorship, so
+        # this branch dispatches identically to case (ii) — additive scaffold +
+        # write_marker(refresh=True) — without re-firing R5's content-decline.
+        # R5 is scoped to marker-absent + cortex/-has-content (spec.md:30); a
+        # present marker, even one lacking init_artifacts_hash, is outside its
+        # boundary. The stderr warning surfaces the one-time migration to the
+        # user (spec.md:66 "one-time storm at Phase 3 release ... accepted
+        # cost").
         print(
             "cortex init --ensure: .cortex-init missing init_artifacts_hash "
             "field; refreshing",
             file=sys.stderr,
         )
-        # R5 boundary: if cortex/ contains anything beyond the marker file itself,
-        # fire check_content_decline so a hand-edited marker cannot silently refresh
-        # templates over foreign cortex/ content.
-        marker_path = repo_root / "cortex" / ".cortex-init"
-        cortex_has_non_marker_content = (
-            cortex_dir.exists()
-            and any(
-                child for child in cortex_dir.iterdir() if child != marker_path
-            )
-        )
-        if cortex_has_non_marker_content:
-            scaffold.check_content_decline(repo_root)
-        # On pass (cortex/ has only the marker or the decline was not fired),
-        # dispatch through the --update code path.
         scaffold.scaffold(repo_root, overwrite=False, backup_dir=None)
         scaffold.write_marker(repo_root, refresh=True)
         drifted = scaffold.drift_files(repo_root)
