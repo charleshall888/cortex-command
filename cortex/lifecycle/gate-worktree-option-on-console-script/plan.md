@@ -48,7 +48,7 @@ Replace the bare-Python `find_spec('cortex_command')` probe at `implement.md` §
   - `cortex-worktree-create --feature {transient-fixture-name} --base-branch main` materializes a worktree at `<repo>/.claude/worktrees/{transient-fixture-name}/`, prints exactly the absolute path followed by `\n` to stdout, exits 0 — pass if all three conditions hold. (Cleanup after the test via `git worktree remove --force <repo>/.claude/worktrees/{transient-fixture-name}` then `git branch -D interactive/{transient-fixture-name}`.)
   - Second invocation with the same `--feature` — pass if stdout is identical, stderr contains `worktree already exists`, exit 0.
   - `cortex-worktree-create --feature {transient-fixture-name} --base-branch nonexistent-branch-xyz` — pass if stderr contains a `repr(exc)`-shaped error (e.g., `CalledProcessError(...)` or `ValueError('...')`), exit 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit a9b7a21a)
 
 ### Task 2: Add gate↔gated-path pairing test in `test_implement_worktree_interactive_contract.py`
 - **Files**: `tests/test_implement_worktree_interactive_contract.py`
@@ -66,7 +66,7 @@ Replace the bare-Python `find_spec('cortex_command')` probe at `implement.md` §
   - `grep -c "test_gate_and_gated_path_use_same_binary" tests/test_implement_worktree_interactive_contract.py` ≥ 1 — pass if count ≥ 1.
   - `pytest tests/test_implement_worktree_interactive_contract.py::test_gate_and_gated_path_use_same_binary -v` — pass if exit 0.
   - `pytest tests/test_implement_worktree_interactive_contract.py -v` — pass if exit 0 (4 tests collected, 4 passing — the 3 existing plus the new one).
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit e4ea5a25; regex broadened to `^(?:\w+=\$\()?(\S+?)\s+--feature\s+interactive-` to handle the `worktree_path=$(cortex-worktree-create ...)` shell-capture shape Task 1 emitted)
 
 ### Task 3: Implement `cortex_command/lint/bare_python_import.py` + tests + fixtures + pyproject entry
 - **Files**:
@@ -102,7 +102,7 @@ Replace the bare-Python `find_spec('cortex_command')` probe at `implement.md` §
   - **Precondition step**: run `uv tool install -e . --reinstall` to expose the new `cortex-check-bare-python-import` console-script on PATH. Pass if exit 0. (Required before the next two steps; without it the audit invocation returns exit 127.)
   - After the precondition step: `pytest tests/test_bare_python_import_lint.py -v` — pass if exit 0 AND ≥8 positive tests pass + ≥6 negative tests pass + the live-corpus test passes + `test_find_spec_regression_caught` passes.
   - After the precondition step: `cortex-check-bare-python-import --audit` against the live tree — pass if exit 0 (post-Phase-1 `implement.md` is the only file that contained a bare-Python `cortex_command` import in `skills/`, and it has been removed).
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit f34bac0f; 22/22 pytest pass; audit exit 0). Note: scope leak — sub-agent created `bin/cortex-check-bare-python-import` shim + plugin mirror + `bin/.parity-exceptions.md` allowlist entry to satisfy parity W003. Task 4 must (a) verify/correct the shim (it uses `uv run python` where spec says copy `cortex-check-contract` verbatim — `python3`), and (b) remove the parity-exceptions allowlist entry once the justfile + pre-commit wiring lands.
 
 ### Task 4: Add `bin/cortex-check-bare-python-import` shim + justfile recipes + pre-commit Phase-1.86 stanza
 - **Files**:
@@ -133,7 +133,7 @@ Replace the bare-Python `find_spec('cortex_command')` probe at `implement.md` §
   - Staging a temporary fixture under a path matching `skills/*` (e.g., `skills/_lint_fixture_temp.md`) containing the line `python3 -c "import cortex_command"`, then running the source hook directly via `bash .githooks/pre-commit` (NOT `.git/hooks/pre-commit`; the source path executes the script under test regardless of installed-hook wiring state) — pass if exit non-zero AND stderr contains the R6 diagnostic substring `bare-python cortex_command import check failed`. (Cleanup: `git restore --staged skills/_lint_fixture_temp.md && rm skills/_lint_fixture_temp.md`.)
   - `just check-bare-python-import-audit` — pass if exit 0 against the live tree.
   - `bin/cortex-check-parity --audit` after this task — pass if exit 0 (no orphan deployed-but-unreferenced violations for the new binary).
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 8bad2307 wires shim/justfile/pre-commit + removes interim parity allowlist entry; orchestrator follow-up 9eb1590e fixes a glob-matching bug in Task 3's `_matches_scan_glob` — `Path.match` does not recurse on `**`, switched to `Path.full_match` and added `test_staged_glob_matches_deep_skills_path` regression test; pre-commit fixture-staging test now correctly catches `skills/_lint_fixture_temp.md` with R6 diagnostic; parity audit exits 0)
 
 ## Risks
 
