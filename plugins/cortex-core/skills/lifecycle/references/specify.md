@@ -203,8 +203,6 @@ On `Approve`, append a `phase_transition` event to `cortex/lifecycle/{feature}/e
 {"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "from": "specify", "to": "plan"}
 ```
 
-If `commit-artifacts` is enabled in project config (default), stage `cortex/lifecycle/{feature}/` and commit using `/cortex-core:commit`.
-
 After approval, proceed to Plan automatically — do not ask the user for confirmation.
 
 ## Hard Gate
