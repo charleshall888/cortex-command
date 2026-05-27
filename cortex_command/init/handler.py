@@ -44,9 +44,14 @@ import argparse
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from cortex_command.init import scaffold, settings_merge
+from cortex_command.init.install_state import (
+    INSTALL_MARKER_STALE_SECONDS,
+    install_in_progress_marker_path,
+)
 from cortex_command.init.scaffold import ScaffoldError
 from cortex_command.init.settings_merge import SettingsMergeError
 
@@ -119,6 +124,221 @@ def _emit_drift_report(drifted: list[Path]) -> None:
         print(f"  - {rel}", file=sys.stderr)
     print("", file=sys.stderr)
     print("Overwrite all with shipped: cortex init --force", file=sys.stderr)
+
+
+def _run_ensure(args: argparse.Namespace) -> int:
+    """Inner body for ``--ensure`` — hash-compare dispatch with R19 narrow-bypass.
+
+    Called by :func:`_run` when ``args.ensure`` is True.  Implements the
+    ordered gate sequence described in spec R4–R8.
+
+    Raises:
+        ScaffoldError: On worktree-attached refusal, install-in-progress
+            timeout, marker provenance failure, or R19/R5 foreign-content
+            decline.  Caller (:func:`main`) translates to exit 2.
+    """
+    home: Path | None = None  # Settings-merge functions default to Path.home().
+
+    # (a) CORTEX_AUTO_ENSURE=0 opt-out (R7). First check; writes nothing.
+    if os.environ.get("CORTEX_AUTO_ENSURE") == "0":
+        return 0
+
+    # (b) Worktree-attached refusal (R11 CLI-surface mirror).
+    # Mirrors the probe in Task 7's skill-helper module — duplication is
+    # intentional structural defense-in-depth (``cortex init --ensure`` is
+    # reachable from the bare CLI surface before Task 8 wires the helper).
+    _check_not_attached_worktree()
+
+    # (c) Install-in-progress lock-check (R6).
+    _wait_for_install_complete()
+
+    # R2/R3: resolve the repo root (same as the standard init path).
+    repo_root = _resolve_repo_root(args.path)
+
+    # R13: symlink-safety gate.
+    scaffold.check_symlink_safety(repo_root)
+    cortex_target = str(repo_root / "cortex") + "/"
+
+    # R14: malformed-settings pre-flight.
+    settings_merge.validate_settings(home)
+
+    # (d) Compute the installed hash and read marker provenance (R1, R8).
+    installed_hash = scaffold._compute_init_artifacts_hash()
+    marker_hash, cortex_version = scaffold._read_marker_provenance(repo_root)
+    # _read_marker_provenance raises ScaffoldError on JSON parse failure or
+    # foreign-artifact discrimination (both translate to exit 2 via main()).
+
+    cortex_dir = repo_root / "cortex"
+
+    # (e) Five-case dispatch.
+    if marker_hash is not None:
+        # Case (i): marker-present + hash-matches → no-op.
+        if marker_hash == installed_hash:
+            return 0
+
+        # Case (ii): marker-present + hash-mismatch → refresh via --update path.
+        # Marker presence establishes prior cortex authorship; R5 is not relevant.
+        scaffold.scaffold(repo_root, overwrite=False, backup_dir=None)
+        scaffold.write_marker(repo_root, refresh=True)
+        drifted = scaffold.drift_files(repo_root)
+        if drifted:
+            _emit_drift_report(drifted)
+
+    elif cortex_version is not None:
+        # Case (v): R8 recovery — marker-present + missing init_artifacts_hash +
+        # cortex_version-present-and-parseable.
+        # Emit the R8 stderr warning so the user is aware a recovery write occurred.
+        print(
+            "cortex init --ensure: .cortex-init missing init_artifacts_hash "
+            "field; refreshing",
+            file=sys.stderr,
+        )
+        # R5 boundary: if cortex/ contains anything beyond the marker file itself,
+        # fire check_content_decline so a hand-edited marker cannot silently refresh
+        # templates over foreign cortex/ content.
+        marker_path = repo_root / "cortex" / ".cortex-init"
+        cortex_has_non_marker_content = (
+            cortex_dir.exists()
+            and any(
+                child for child in cortex_dir.iterdir() if child != marker_path
+            )
+        )
+        if cortex_has_non_marker_content:
+            scaffold.check_content_decline(repo_root)
+        # On pass (cortex/ has only the marker or the decline was not fired),
+        # dispatch through the --update code path.
+        scaffold.scaffold(repo_root, overwrite=False, backup_dir=None)
+        scaffold.write_marker(repo_root, refresh=True)
+        drifted = scaffold.drift_files(repo_root)
+        if drifted:
+            _emit_drift_report(drifted)
+
+    else:
+        # marker_hash is None and cortex_version is None → marker absent.
+        # (Both fields are None only when _read_marker_provenance returned
+        # (None, None), which means the marker file does not exist.)
+
+        # Case (iii): marker-absent + cortex/ absent or empty → bootstrap.
+        # "empty" means no child entries at all.
+        cortex_absent_or_empty = (
+            not cortex_dir.exists() or not any(cortex_dir.iterdir())
+        )
+        if cortex_absent_or_empty:
+            # Skip check_content_decline: R19 would no-op anyway on an empty dir.
+            scaffold.scaffold(repo_root, overwrite=False, backup_dir=None)
+            scaffold.write_marker(repo_root, refresh=False)
+        else:
+            # Case (iv): marker-absent + cortex/ has content → R5 boundary.
+            # Fire R19 to preserve the foreign-repo / wrong-window protection.
+            scaffold.check_content_decline(repo_root)
+            # Unreachable — check_content_decline raises when content found.
+
+    # Post-dispatch: idempotent gitignore, CLAUDE.md fence, and settings
+    # registration (same ADR-3 ordering as the standard init path).
+    scaffold.ensure_gitignore(repo_root)
+    scaffold.ensure_claude_md_authorization(repo_root)
+    settings_merge.register(repo_root, cortex_target, home=home)
+
+    # Migration: expunge stale "cortex-worktrees"-prefixed entries (mirrors
+    # the --update step in the standard path; --ensure routes through additive
+    # scaffold on drift so the migration applies here as well).
+    settings_merge.unregister_matching_in_place("cortex-worktrees", home=home)
+
+    return 0
+
+
+def _check_not_attached_worktree() -> None:
+    """Refuse if the CWD is inside an attached ``git worktree add`` worktree.
+
+    Mirrors the probe in ``cortex_command/lifecycle/init_ensure.py`` (Task 7).
+    Duplication is intentional structural defense-in-depth per spec R11: the
+    CLI surface is reachable before the skill-helper is wired (Task 8), so both
+    layers independently enforce the worktree guard.
+
+    Raises:
+        ScaffoldError: when CWD is inside an attached worktree (not the primary
+            worktree).  The message names the F9 data-loss diagnostic.
+    """
+    common_dir_proc = subprocess.run(
+        ["git", "rev-parse", "--git-common-dir"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if common_dir_proc.returncode != 0:
+        # Not inside a git repo at all; _resolve_repo_root will surface R2.
+        return
+
+    git_dir_proc = subprocess.run(
+        ["git", "rev-parse", "--git-dir"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if git_dir_proc.returncode != 0:
+        return
+
+    common_dir = Path(common_dir_proc.stdout.strip()).resolve()
+    git_dir = Path(git_dir_proc.stdout.strip()).resolve()
+
+    # In the primary worktree, ``--git-common-dir`` == ``--git-dir`` (both
+    # resolve to ``<repo>/.git``).  In an attached worktree, ``--git-dir``
+    # resolves to ``<repo>/.git/worktrees/<name>`` while ``--git-common-dir``
+    # still resolves to ``<repo>/.git``.
+    if common_dir != git_dir:
+        # Resolve the worktree root for the diagnostic.
+        worktree_root = git_dir.parent.parent.parent  # .git/worktrees/<name>/../../../
+        primary_root = common_dir.parent  # .git/..
+        raise ScaffoldError(
+            f"`cortex init --ensure`: invoked inside a git worktree "
+            f"({worktree_root}); run from the primary worktree ({primary_root}) "
+            "to bootstrap or refresh cortex/. Scaffolding inside an attached "
+            "worktree risks data loss (F9): cortex/ content written here will "
+            "be silently destroyed when the worktree is removed."
+        )
+
+
+def _wait_for_install_complete() -> None:
+    """Poll until the install-in-progress marker is absent or stale (R6).
+
+    Reads ``install_in_progress_marker_path()`` and checks:
+        - If absent or stale (mtime > ``INSTALL_MARKER_STALE_SECONDS`` ago):
+          return immediately.
+        - If fresh: poll at 50 ms intervals for up to 5 seconds (100 iterations).
+          On still-fresh after the budget: raise ``ScaffoldError`` with the R6
+          diagnostic (translated to exit 2 by :func:`main`).
+
+    Raises:
+        ScaffoldError: when a fresh install-in-progress marker persists for the
+            full 5-second polling budget.
+    """
+    marker = install_in_progress_marker_path()
+    max_iterations = 100
+    sleep_seconds = 0.05  # 50 ms
+
+    for _ in range(max_iterations):
+        if not marker.exists():
+            return
+        try:
+            mtime = marker.stat().st_mtime
+        except OSError:
+            # File disappeared between exists() and stat() — treat as absent.
+            return
+        age = time.time() - mtime
+        if age > INSTALL_MARKER_STALE_SECONDS:
+            # Stale marker (catastrophic-failure remnant) — proceed.
+            return
+        time.sleep(sleep_seconds)
+
+    # Still fresh after the full budget.
+    try:
+        mtime_ts = marker.stat().st_mtime
+    except OSError:
+        return  # Disappeared — safe to proceed.
+    raise ScaffoldError(
+        f"cortex init --ensure: Layer-3 install in progress "
+        f"(marker mtime {mtime_ts}); rerun after install completes."
+    )
 
 
 def _run(args: argparse.Namespace) -> int:
@@ -222,6 +442,16 @@ def _run(args: argparse.Namespace) -> int:
         # it (the newer body is a superset commitment to the same surface).
         return 0
 
+    # Step 0d: --ensure early-branch (R4–R8). Hash-compare dispatch for
+    # automated drift recovery. Ordered gate sequence:
+    # (a) CORTEX_AUTO_ENSURE=0 opt-out → silent no-op (R7).
+    # (b) Worktree-attached refusal (R11 CLI-surface mirror).
+    # (c) Install-in-progress lock-check (R6).
+    # (d) Hash computation + marker-provenance read (R1, R8).
+    # (e) Five-case dispatch (R4 + R8 recovery case).
+    if getattr(args, "ensure", False):
+        return _run_ensure(args)
+
     # Step 1: git-repo + submodule gates (R2, R3). Resolution is done
     # here exactly once; the resolved path threads through every later
     # step so no downstream helper calls resolve() independently.
@@ -324,12 +554,18 @@ def main(args: argparse.Namespace) -> int:
         verify_worktree_auth  -- bool, probe the cortex-managed CLAUDE.md
                                  authorization fence (read-only) and exit
                                  with 0/1/2 per R20.
+        ensure                -- bool, hash-compare dispatch: no-op when
+                                 hash matches; refresh when mismatch;
+                                 bootstrap when cortex/ absent/empty;
+                                 decline when cortex/ has content but no
+                                 marker (R4–R8). Honors
+                                 ``CORTEX_AUTO_ENSURE=0`` opt-out.
 
-    ``--update``, ``--unregister``, ``--revoke-worktree-auth``, and
-    ``--verify-worktree-auth`` are mutually exclusive at argparse time
-    (Task 10); ``--force`` is a modifier and may combine with the default
-    invocation or with ``--revoke-worktree-auth``. This handler does not
-    re-check the mutex.
+    ``--update``, ``--unregister``, ``--revoke-worktree-auth``,
+    ``--verify-worktree-auth``, and ``--ensure`` are mutually exclusive at
+    argparse time; ``--force`` is a modifier and may combine with the
+    default invocation or with ``--revoke-worktree-auth``. This handler
+    does not re-check the mutex.
 
     Returns:
         Exit code -- 0 success (or fence present at canonical version for

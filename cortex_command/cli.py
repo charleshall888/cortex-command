@@ -797,6 +797,18 @@ def _build_parser() -> argparse.ArgumentParser:
             "(version below canonical). Read-only; never mutates files."
         ),
     )
+    init_verbs.add_argument(
+        "--ensure",
+        action="store_true",
+        help=(
+            "Hash-compare dispatch: exit 0 when the installed init artifacts "
+            "hash matches the marker (no-op); refresh when the hash differs "
+            "(additive scaffold + marker refresh); bootstrap when cortex/ is "
+            "absent or empty; decline (exit 2) when cortex/ has content but "
+            "no marker. Honors CORTEX_AUTO_ENSURE=0 opt-out. Used by the "
+            "lifecycle skill to auto-apply drift recovery before phase dispatch."
+        ),
+    )
     # ``--force`` is a modifier, not a verb. It combines with the default
     # scaffold (overwrite local edits) and with --revoke-worktree-auth
     # (bypass the live-session pre-condition); it has no effect with

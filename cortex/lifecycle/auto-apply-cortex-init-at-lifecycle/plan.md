@@ -26,7 +26,7 @@ Land `cortex init --ensure` as a structural drift-recovery helper composed of (a
 - **Complexity**: simple
 - **Context**: Add the constant near line 70 alongside `_GITIGNORE_TARGETS`. The helper follows the `hashlib.sha256` idiom used in `cortex_command/overnight/plan.py:104` and `cortex_command/critical_review/__init__.py`. Template paths: `cortex/lifecycle.config.md`, `cortex/backlog/README.md`, `cortex/lifecycle/README.md`, `cortex/requirements/project.md`, and `claude_md_authorization.md` (verify by running `find cortex_command/init/templates -type f`). The helper signature is `def _compute_init_artifacts_hash() -> str:`. Do NOT include `importlib.metadata.version("cortex-command")` in inputs (F4). The `_TEMPLATE_ROOT` resource handle is already defined at scaffold.py:62.
 - **Verification**: `python3 -c "from cortex_command.init.scaffold import _compute_init_artifacts_hash; print(_compute_init_artifacts_hash())"` invoked in two separate subprocesses returns the same string (compare via `diff <(python3 -c ...) <(python3 -c ...)` — pass if exit 0).
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 2: Extend `write_marker()` to persist `init_artifacts_hash`
 - **Files**: `cortex_command/init/scaffold.py`
@@ -35,7 +35,7 @@ Land `cortex init --ensure` as a structural drift-recovery helper composed of (a
 - **Complexity**: simple
 - **Context**: The current `write_marker` builds a dict at scaffold.py:419-422; insert the new key alongside the existing two. The marker is the single source of truth for the per-repo installed hash and is read by `--ensure` (Task 5) and by R8's marker-recovery path. Atomic-write via `atomic_write(marker_path, content)` at scaffold.py:425 is unchanged.
 - **Verification**: After `cortex init --force` in a scratch repo created via `mktemp -d && cd "$_" && git init`, `jq -r .init_artifacts_hash cortex/.cortex-init` returns a string matching the regex `^v1:[0-9a-f]{64}$` — pass if `grep -Eq '^v1:[0-9a-f]{64}$'` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 3: Contract test enforcing the explicit hash-input list
 - **Files**: `tests/test_init_artifacts_hash_inputs.py`
@@ -44,7 +44,7 @@ Land `cortex init --ensure` as a structural drift-recovery helper composed of (a
 - **Complexity**: simple
 - **Context**: Test file pattern follows existing `cortex_command/init/tests/test_scaffold.py`. Imports: `from cortex_command.init import scaffold`, `from cortex_command.init.scaffold import _compute_init_artifacts_hash, _HASH_INPUT_TEMPLATES`. The `os.walk` traversal anchors at `pathlib.Path(__file__).parent.parent / "cortex_command/init/templates/cortex"` plus the fence template. Use `subprocess.run([sys.executable, "-c", "..."], capture_output=True)` for the cross-process determinism check. The BOM fixture uses `monkeypatch.setattr` on the helper's read function or a `tempfile.NamedTemporaryFile`-injected synthetic templates directory.
 - **Verification**: `pytest tests/test_init_artifacts_hash_inputs.py -q` exits 0 — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 4: Create stdlib-only `install_state.py` shared marker-path module + plugin parity
 - **Files**: `cortex_command/init/install_state.py`, `plugins/cortex-overnight/install_core.py`, `tests/test_install_state_path_parity.py`
@@ -53,7 +53,7 @@ Land `cortex init --ensure` as a structural drift-recovery helper composed of (a
 - **Complexity**: simple
 - **Context**: The new module is stdlib-only (imports: `os`, `pathlib.Path`). The plugin-side function at install_core.py:752 currently delegates to `_install_state_dir()` (install_core.py:304-311); the replacement reads from `cortex_command.init.install_state`. The constraint is that `cortex_command/init/` MUST NOT import from `plugins/cortex-overnight/install_core.py` (which `sys.exit(1)`s on import when `CLAUDE_PLUGIN_ROOT` is unset) — the direction is plugin → wheel. The parity test imports `from cortex_command.init.install_state import install_in_progress_marker_path as wheel_fn` and `from plugins.cortex_overnight.install_core import _install_in_progress_marker_path as plugin_fn` (or whatever module path the plugin resolves to) and asserts `wheel_fn() == plugin_fn()`.
 - **Verification**: `pytest tests/test_install_state_path_parity.py -q` exits 0 AND `python3 -c "from cortex_command.init.install_state import install_in_progress_marker_path; print(install_in_progress_marker_path())"` runs without raising — both pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 5: Add `cortex init --ensure` flag with hash-dispatch, R19 narrow-bypass, opt-out, and marker recovery
 - **Files**: `cortex_command/init/handler.py`, `cortex_command/init/scaffold.py`

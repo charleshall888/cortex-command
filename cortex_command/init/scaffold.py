@@ -475,6 +475,80 @@ def write_marker(repo_root: Path, *, refresh: bool) -> None:
     atomic_write(marker_path, content)
 
 
+_PEP440_APPROX_RE = re.compile(r"^\d+\.\d+")
+"""Lightweight PEP 440 version heuristic — checks that the string starts with
+``<major>.<minor>`` (e.g. ``"1.2.3"``, ``"0.1.0.dev4"``). Not a full PEP 440
+validator; sufficient to discriminate a cortex provenance signal from an
+obviously-foreign value.  See spec R8 and plan Risks §PEP 440."""
+
+
+def _read_marker_provenance(
+    repo_root: Path,
+) -> tuple[str | None, str | None]:
+    """Read ``.cortex-init`` and return ``(init_artifacts_hash, cortex_version)``.
+
+    R8 discrimination logic:
+        - Marker absent → ``(None, None)`` (marker-absent signal; caller uses
+          this to distinguish the first-init path from a recovery path).
+        - Marker present but JSON unparseable (``JSONDecodeError``) → raises
+          :class:`ScaffoldError` naming "unparseable JSON" so truncated writes
+          and hand-edit syntax errors surface cleanly rather than silently
+          mis-routing to the recovery path.
+        - Marker present + valid JSON + ``init_artifacts_hash`` field present →
+          ``(hash_value, cortex_version_or_None)`` (fully-populated marker).
+        - Marker present + valid JSON + ``init_artifacts_hash`` absent +
+          ``cortex_version`` present-and-parseable-PEP-440 → ``(None, version)``
+          (signals R8 recovery-via-refresh; the caller emits the refresh warning
+          and routes through the ``--update`` code path).
+        - Marker present + valid JSON + ``init_artifacts_hash`` absent +
+          ``cortex_version`` absent-or-malformed → raises :class:`ScaffoldError`
+          with the R8 foreign-artifact diagnostic (no silent dispatch).
+
+    Args:
+        repo_root: Target repo root.
+
+    Returns:
+        A ``(init_artifacts_hash, cortex_version)`` pair where either element
+        may be ``None``.  Both ``None`` means the marker is absent.
+
+    Raises:
+        ScaffoldError: On JSON parse failure or foreign-artifact discrimination.
+    """
+    marker_path = repo_root / "cortex" / _MARKER_FILENAME
+    if not marker_path.exists():
+        return (None, None)
+
+    try:
+        data = json.loads(marker_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ScaffoldError(
+            f"`cortex init --ensure`: {marker_path} contains unparseable JSON "
+            f"({exc}); cannot determine cortex provenance. Remove the file and "
+            "run `cortex init` to reinitialize, or `cortex init --force` to "
+            "overwrite."
+        ) from exc
+
+    init_hash = data.get("init_artifacts_hash")  # may be None
+    cortex_version = data.get("cortex_version")
+
+    if init_hash is not None:
+        # Fully-populated marker: return both fields.
+        return (str(init_hash), str(cortex_version) if cortex_version is not None else None)
+
+    # init_artifacts_hash missing — R8 provenance discrimination.
+    if cortex_version is not None and _PEP440_APPROX_RE.match(str(cortex_version)):
+        # Looks like a legitimate pre-Phase-1 cortex marker; route to recovery.
+        return (None, str(cortex_version))
+
+    # cortex_version absent or malformed — treat as foreign artifact.
+    raise ScaffoldError(
+        "`cortex init --ensure`: cortex/.cortex-init exists but lacks "
+        "`cortex_version` field (or the value is not a recognizable version "
+        "string); this does not look like a cortex marker. Run `cortex init` "
+        "manually to confirm scaffolding intent."
+    )
+
+
 def ensure_gitignore(repo_root: Path) -> None:
     """Idempotently append marker patterns to ``.gitignore`` with orphan repair.
 
