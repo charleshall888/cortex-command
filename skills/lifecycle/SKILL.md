@@ -123,6 +123,10 @@ These four sub-procedures all read or update the originating backlog item and (f
 
 Run them in this order: Backlog Status Check → Create index.md → Backlog Write-Back → Discovery Bootstrap.
 
+### Auto-apply init drift refresh
+
+Run `cortex-lifecycle-init-ensure` before advancing to Step 3. If the command exits non-zero, halt and surface its diagnostic to the user — do not proceed to phase execution. This wiring encodes the halt-on-non-zero contract structurally rather than as a prose instruction the model must interpret.
+
 ## Step 3: Execute Current Phase
 
 ### /cortex-core:refine Delegation
