@@ -138,3 +138,23 @@ def read_commit_artifacts(repo_root: _pathlib.Path) -> bool:
         file=_sys.stderr,
     )
     return _COMMIT_ARTIFACTS_DEFAULT
+
+
+def _main() -> int:
+    """CLI entry point — prints ``true`` or ``false`` for the commit-artifacts flag.
+
+    Invoked via ``python3 -m cortex_command.lifecycle_config`` or the
+    ``cortex-read-commit-artifacts`` binstub. Resolves the repo root from
+    ``$CORTEX_COMMAND_ROOT`` when set, otherwise the current working directory.
+    Output is lowercase with a trailing newline so shell consumers can match
+    against ``true`` / ``false`` with a plain ``=`` comparison.
+    """
+    import os as _os
+
+    root = _pathlib.Path(_os.environ.get("CORTEX_COMMAND_ROOT") or _os.getcwd())
+    _sys.stdout.write("true\n" if read_commit_artifacts(root) else "false\n")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(_main())

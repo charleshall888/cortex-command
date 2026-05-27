@@ -303,7 +303,7 @@ On `Approve`, append a `phase_transition` event to `cortex/lifecycle/{feature}/e
 {"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "from": "plan", "to": "implement"}
 ```
 
-If `commit-artifacts` is enabled in project config (default), stage `cortex/lifecycle/{feature}/` and commit using `/cortex-core:commit`.
+Run `cortex-read-commit-artifacts` to read the `commit-artifacts` flag from project config. If stdout is `true` (the default), stage `cortex/lifecycle/{feature}/` and commit using `/cortex-core:commit`. If stdout is `false`, skip the commit silently.
 
 After approval, proceed to Implement automatically — do not ask the user for confirmation.
 

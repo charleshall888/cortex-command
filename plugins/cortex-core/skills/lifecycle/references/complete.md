@@ -16,7 +16,7 @@ If tests fail, report the failures and do not proceed until they are resolved. F
 
 ### Step 2 — Commit Lifecycle Artifacts
 
-Stage `cortex/lifecycle/{slug}/` artifacts alongside any uncommitted source changes, then use `/cortex-core:commit` to create the commit. If `cortex/lifecycle.config.md` specifies `commit-artifacts: false`, exclude lifecycle artifacts from staging.
+Run `cortex-read-commit-artifacts` to read the `commit-artifacts` flag from project config. If stdout is `true` (the default), stage `cortex/lifecycle/{slug}/` artifacts alongside any uncommitted source changes, then use `/cortex-core:commit` to create the commit. If stdout is `false`, exclude lifecycle artifacts from staging (commit only the uncommitted source changes via `/cortex-core:commit`).
 
 **On-main short-circuit**: if the current branch is `main` or `master`, skip Steps 2–5 (no PR needed for direct-to-main work) and proceed to Step 7 with pr.json absent and no orphan-PR probe needed — treat as first-run path jumping directly to Steps 9–12.
 
