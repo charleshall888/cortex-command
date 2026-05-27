@@ -27,7 +27,7 @@ Extract a `read_commit_artifacts()` Python helper, route the two live consumers 
   - Test file pattern: follow the structure of any existing `tests/test_lifecycle_config_*.py` (use `tmp_path` fixture to write a `cortex/lifecycle.config.md` with controlled frontmatter and assert the return value).
   - Docstring update: change `"This module exposes exactly one public symbol: :func:`read_branch_mode`."` to enumerate both public symbols.
 - **Verification**: run `python3 -m pytest tests/test_lifecycle_config_commit_artifacts.py -v` — pass if exit 0 and all three branches assert True/True/False respectively; and `grep -c "def read_commit_artifacts" cortex_command/lifecycle_config.py` = 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit `0d2a4a2d`)
 
 ### Task 2: Create `cortex-read-commit-artifacts` binstub + add `__main__` block + wire `plan.md` and `complete.md`
 - **Files**: `bin/cortex-read-commit-artifacts`, `plugins/cortex-core/bin/cortex-read-commit-artifacts`, `cortex_command/lifecycle_config.py`, `skills/lifecycle/references/plan.md`, `skills/lifecycle/references/complete.md`
@@ -42,7 +42,7 @@ Extract a `read_commit_artifacts()` Python helper, route the two live consumers 
   - `plan.md:306` and `complete.md:19` rewrite: replace `"If commit-artifacts is enabled in project config (default), stage cortex/lifecycle/{feature}/ and commit using /cortex-core:commit."` with prose along the lines of: `"Read the commit-artifacts flag: \`cortex-read-commit-artifacts\`. If it prints \`true\`, stage cortex/lifecycle/{feature}/ and commit using /cortex-core:commit; if it prints \`false\`, skip the commit."` Preserve `complete.md`'s additional sentences about staging uncommitted source changes and `commit-artifacts: false` exclusion semantics — rewrite only the flag-check sentence.
   - Wiring co-location: this task deploys a new binstub AND references it from both consumer files in the same commit, satisfying `cortex-check-parity`'s W003 ("orphan: deployed but not referenced") rule.
 - **Verification**: `grep -c "cortex-read-commit-artifacts" skills/lifecycle/references/plan.md skills/lifecycle/references/complete.md` ≥ 2 — pass if combined count ≥ 2; `test -x bin/cortex-read-commit-artifacts && test -x plugins/cortex-core/bin/cortex-read-commit-artifacts` — pass if both exit 0; `bin/cortex-read-commit-artifacts` (run from repo root) — pass if stdout is `true` (current `cortex/lifecycle.config.md` has `commit-artifacts: true`); `diff bin/cortex-read-commit-artifacts plugins/cortex-core/bin/cortex-read-commit-artifacts` — pass if no output (dual-source parity); and `just test` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit `12d3f419`; also added `cortex-read-commit-artifacts` to `[project.scripts]` for production install parity with `cortex-lifecycle-branch-mode`)
 
 ### Task 3: Delete dead inline commit step from `specify.md`
 - **Files**: `skills/lifecycle/references/specify.md`
@@ -54,7 +54,7 @@ Extract a `read_commit_artifacts()` Python helper, route the two live consumers 
   - Per the Non-Requirements in the spec, this does NOT alter `/cortex-core:refine` and does NOT change behavior for any live invocation. Standalone `/cortex-core:specify` direct invocation is recognized as having no live entry point today.
   - Avoid touching the `phase_transition` event block above the deleted sentence — that block remains canonical specify-phase logic.
 - **Verification**: `grep -c "commit-artifacts" skills/lifecycle/references/specify.md` = 0 — pass if exact count 0; and `just test` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit `bb838aaf`)
 
 ### Task 4: Author `skills/lifecycle/references/post-refine-commit.md`
 - **Files**: `skills/lifecycle/references/post-refine-commit.md`
@@ -72,7 +72,7 @@ Extract a `read_commit_artifacts()` Python helper, route the two live consumers 
   - Do NOT introduce new event types (per Non-Requirements). Do NOT introduce new `AskUserQuestion` calls (per Non-Requirements and the kept-pauses parity test).
   - This reference is invoked from `lifecycle/SKILL.md` Step 3 §4 (wired in Task 5) using `${CLAUDE_SKILL_DIR}/references/post-refine-commit.md` path convention.
 - **Verification**: `test -f skills/lifecycle/references/post-refine-commit.md` — pass if exit 0; `grep -c "cortex-read-commit-artifacts" skills/lifecycle/references/post-refine-commit.md` ≥ 1; `grep -c "/cortex-core:commit" skills/lifecycle/references/post-refine-commit.md` ≥ 1; `grep -ci "halt\|do not auto-advance\|do not advance" skills/lifecycle/references/post-refine-commit.md` ≥ 1; `grep -ci "since the last commit\|since last commit\|most recent" skills/lifecycle/references/post-refine-commit.md` ≥ 1; `grep -ci "cancelled\|cancel" skills/lifecycle/references/post-refine-commit.md` ≥ 1 — all greps must hit per R4 and R6 acceptance rules.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit `9557cb67`; all 5 content-grep targets verified: 1/5/4/6/5 hits respectively)
 
 ### Task 5: Wire `lifecycle/SKILL.md` Step 3 to invoke `post-refine-commit.md`
 - **Files**: `skills/lifecycle/SKILL.md`
@@ -86,7 +86,7 @@ Extract a `read_commit_artifacts()` Python helper, route the two live consumers 
   - Do NOT modify the Kept user pauses inventory — no new `AskUserQuestion` call is added by this feature, so the inventory and parity test remain unchanged.
   - Do NOT introduce new `phase_transition` event emissions; the existing block already covers the happy path and `lifecycle_cancelled` is emitted from refine's spec approval Cancel branch.
 - **Verification**: `grep -c "post-refine-commit" skills/lifecycle/SKILL.md` ≥ 2 — pass if combined count ≥ 2 (one Step 3 §4 reference plus one Reference Files bullet); `python3 -c "import pathlib;t=pathlib.Path('skills/lifecycle/SKILL.md').read_text().splitlines();pt=[i for i,l in enumerate(t) if 'phase_transition' in l and 'specify' in l and 'plan' in l];pr=[i for i,l in enumerate(t) if 'post-refine-commit' in l];import sys;assert pt and pr,'phase_transition or post-refine-commit not found';assert any(p>min(pt) and p-min(pt)<=50 for p in pr),'post-refine-commit reference must appear within 50 lines after the phase_transition specify→plan block, not anywhere in the file'"` — pass if no AssertionError (replaces the earlier DOTALL regex, which was over-permissive about structural placement); and `just test` exits 0 (kept-pauses parity test in particular must still pass).
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit `bb9eb8fe`; both grep ≥ 2 and the line-distance assertion pass)
 
 ### Task 6: Add `tests/test_post_refine_commit_wired.py` wiring + content test
 - **Files**: `tests/test_post_refine_commit_wired.py`
@@ -100,7 +100,7 @@ Extract a `read_commit_artifacts()` Python helper, route the two live consumers 
   - Also read `skills/lifecycle/references/post-refine-commit.md` and assert it contains all five required content tokens (mirrors Task 4's verification greps): `cortex-read-commit-artifacts`, `/cortex-core:commit`, at least one of {`halt`, `do not auto-advance`, `do not advance`}, at least one of {`since the last commit`, `since last commit`, `most recent`}, and at least one of {`cancelled`, `cancel`}. This converts the test from `.exists()`-only to a durable content guard so that post-merge regressions deleting the halt clause, the cancel-subject contract, or the binstub invocation cause CI failure.
   - Do NOT attempt to invoke `/cortex-core:lifecycle` or `/cortex-core:refine` from the test — those require interactive user input at approval surfaces and are not amenable to test-driven invocation.
 - **Verification**: `python3 -m pytest tests/test_post_refine_commit_wired.py -v` — pass if exit 0 and the test passes; and `just test` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (3/3 tests pass: reference_exists + wires_post_refine_commit_within_distance + contains_required_tokens)
 
 > **Note on Task 6 content checks**: the test's body must also assert that the new reference file contains the substantive R4/R6 phrases — at minimum `cortex-read-commit-artifacts`, `/cortex-core:commit`, one of {`halt`, `do not auto-advance`, `do not advance`}, one of {`since the last commit`, `since last commit`, `most recent`}, and one of {`cancelled`, `cancel`}. These mirror Task 4's verification greps and protect against post-merge regressions in `post-refine-commit.md` that a bare `.exists()` check would silently pass. The five phrase checks are cheap in implementation (five `assert` lines) but high-value: they convert the wiring test from "file is named" to "file still encodes the gate."
 
