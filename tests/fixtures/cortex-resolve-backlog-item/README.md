@@ -19,7 +19,7 @@ Each test case is stored as five flat sibling files:
 | Case                      | Scenario                                         | Input            | Exit | JSON on stdout? | Candidates on stderr? |
 |---------------------------|--------------------------------------------------|------------------|------|-----------------|-----------------------|
 | `numeric_unambiguous`     | Numeric ID with exactly one match                | `252`            | 0    | yes             | no                    |
-| `title_phrase_ambiguous`  | Title-phrase with more than one match            | `lifecycle`      | 2    | no              | yes (31 matches)      |
+| `title_phrase_ambiguous`  | Title-phrase with more than one match            | `lifecycle`      | 2    | no              | yes (32 matches)      |
 | `no_match`                | Input that matches zero items across all strategies | `nonexistent-item-xyz-123` | 3 | no        | no (stderr message)   |
 
 ### Exit-code surface
@@ -103,17 +103,17 @@ If the script is restored from history and re-captured, run from the
 repo root with:
 
 ```bash
-LC_ALL=C TZ=UTC CORTEX_BACKLOG_DIR="$(pwd)/cortex/backlog" uv run --script bin/cortex-resolve-backlog-item 252 \
+LC_ALL=C TZ=UTC CORTEX_BACKLOG_DIR="$(pwd)/cortex/backlog" cortex-resolve-backlog-item 252 \
   > tests/fixtures/cortex-resolve-backlog-item/numeric_unambiguous.stdout \
   2> tests/fixtures/cortex-resolve-backlog-item/numeric_unambiguous.stderr
 echo $? > tests/fixtures/cortex-resolve-backlog-item/numeric_unambiguous.exitcode
 
-LC_ALL=C TZ=UTC CORTEX_BACKLOG_DIR="$(pwd)/cortex/backlog" uv run --script bin/cortex-resolve-backlog-item lifecycle \
+LC_ALL=C TZ=UTC CORTEX_BACKLOG_DIR="$(pwd)/cortex/backlog" cortex-resolve-backlog-item lifecycle \
   > tests/fixtures/cortex-resolve-backlog-item/title_phrase_ambiguous.stdout \
   2> tests/fixtures/cortex-resolve-backlog-item/title_phrase_ambiguous.stderr
 echo $? > tests/fixtures/cortex-resolve-backlog-item/title_phrase_ambiguous.exitcode
 
-LC_ALL=C TZ=UTC CORTEX_BACKLOG_DIR="$(pwd)/cortex/backlog" uv run --script bin/cortex-resolve-backlog-item nonexistent-item-xyz-123 \
+LC_ALL=C TZ=UTC CORTEX_BACKLOG_DIR="$(pwd)/cortex/backlog" cortex-resolve-backlog-item nonexistent-item-xyz-123 \
   > tests/fixtures/cortex-resolve-backlog-item/no_match.stdout \
   2> tests/fixtures/cortex-resolve-backlog-item/no_match.stderr
 echo $? > tests/fixtures/cortex-resolve-backlog-item/no_match.exitcode
