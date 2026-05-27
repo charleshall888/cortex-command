@@ -1,0 +1,54 @@
+{
+  "ts": "2026-05-27T01:40:46Z",
+  "feature": "refine-commits-lifecycle-artifacts",
+  "artifact": "cortex/lifecycle/refine-commits-lifecycle-artifacts/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 3,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "No test exercises orchestrator behavior on commit non-zero exit; halt-clause grep cannot detect a regression where the halt prose is read but the agent advances anyway.",
+      "reviewer_angle": "Halt-before-Plan gate enforcement",
+      "evidence_quote": "Per R5 acceptance, full end-to-end refine\u2192commit testing is interactive/session-dependent; the substring assertion plus the /cortex-core:commit skill's own tests are the binary-checkable surface."
+    },
+    {
+      "class": "B",
+      "finding": "MUST language in Task 4 halt clause lacks the events.log F-row or transcript-excerpt evidence the project's MUST-escalation policy requires; per policy the escalation is rejected at review.",
+      "reviewer_angle": "Halt-before-Plan gate enforcement",
+      "evidence_quote": "The MUST language in R4 is the escalation lever; the prose currently uses MUST sparingly per the post-Opus-4.7 policy."
+    },
+    {
+      "class": "B",
+      "finding": "CLAUDE.md prescribes structural separation over prose-only enforcement for sequential gates; the plan chose prose-only co-located with the orchestrator that must obey it and proposes no structural mitigation.",
+      "reviewer_angle": "Halt-before-Plan gate enforcement",
+      "evidence_quote": "Halt-before-Plan gate is prose-only: Task 4's gate relies on the orchestrator reading and following the documented procedure."
+    },
+    {
+      "class": "B",
+      "finding": "Stranded events.log row recovery path does not specify interaction with the most-recent-event detection rule when a stranded row from a prior failed attempt is already present alongside a fresh row.",
+      "reviewer_angle": "Halt-before-Plan gate enforcement",
+      "evidence_quote": "The stranded phase_transition row remains uncommitted in the working tree until the operator resolves the underlying failure (resolve conflict, re-run /cortex-core:commit, or revert) and re-invokes /cortex-core:lifecycle."
+    },
+    {
+      "class": "B",
+      "finding": "The silent no-op short-circuit emits no event, no log line, and no operator-visible artifact when it fires; incorrect short-circuit decisions are undiagnosable post-hoc and the Risks section does not list this observability gap.",
+      "reviewer_angle": "No-op short-circuit bypasses preconditions and may misroute manual edits",
+      "evidence_quote": "No-op short-circuit: if git status --porcelain -- cortex/lifecycle/{feature}/ reports no changes, the orchestrator silently proceeds without invoking /cortex-core:commit"
+    },
+    {
+      "class": "B",
+      "finding": "Acceptance section verifies only the happy path manually; the halt-before-Plan gate has no acceptance check, neither automated nor manual.",
+      "reviewer_angle": "Substring assertion is a thin verification surface for the behavioral wiring change",
+      "evidence_quote": "a manual end-to-end refine\u2192commit invocation against a fresh feature slug produces one new git commit with subject Refine {feature}: research and spec (approval path) or Refine {feature}: cancelled at spec approval (cancel path)"
+    },
+    {
+      "class": "B",
+      "finding": "Task 2's dual-source binstub parity check is one-shot at implementation time, not regression-protected via just test; reliance falls back to cortex-check-parity pre-commit hook which the plan does not cite.",
+      "reviewer_angle": "Substring assertion is a thin verification surface for the behavioral wiring change",
+      "evidence_quote": "diff bin/cortex-read-commit-artifacts plugins/cortex-core/bin/cortex-read-commit-artifacts -- pass if no output (dual-source parity)"
+    }
+  ]
+}
