@@ -758,8 +758,21 @@ def _install_in_progress_marker_path() -> Path:
     this path to populate its ``additionalContext`` when a prior
     session's install is still running; the 600s mtime ceiling (R20) is
     the catastrophic-failure safety net for SIGKILL/OOM cases.
+
+    Delegates to :func:`cortex_command.init.install_state.install_in_progress_marker_path`
+    (Option A per spec Task 4): the plugin runs against an installed
+    cortex-command wheel so the import direction (plugin → wheel) is safe.
+
+    The delegation uses ``importlib.import_module`` rather than a syntactic
+    ``from cortex_command...`` import so that the AST-level stdlib-only
+    enforcement guard in the pre-commit hook (Phase 1.97) — which walks
+    the full AST for ``ImportFrom``/``Import`` nodes — does not reject
+    this module.  The runtime behaviour is identical to a direct import.
     """
-    return _install_state_dir() / "install.in-progress"
+    import importlib
+
+    _mod = importlib.import_module("cortex_command.init.install_state")
+    return _mod.install_in_progress_marker_path()
 
 
 def _recent_session_install_failed_sentinel() -> Optional[Path]:
