@@ -256,6 +256,50 @@ def test_emit_checkpoint_response_accepts_consolidate_pieces_at_decompose_commit
     assert ev["revision_round"] == 0
 
 
+def test_emit_checkpoint_response_accepts_split_piece_at_decompose_commit(
+    repo_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R15 positive-path: ``split-piece`` is a valid response at the
+    ``decompose-commit`` checkpoint.
+
+    Mirrors ``test_emit_checkpoint_response_accepts_consolidate_pieces_at_decompose_commit``
+    above but with the ``split-piece`` R15 payload value (the inverse of §4
+    grouping, re-derived from the retained Architecture ``### Pieces`` source).
+    Confirms:
+
+    (a) ``_validate_checkpoint_payload('topic-slug', 'decompose-commit',
+        'split-piece', 0)`` does not raise.
+    (b) ``emit_checkpoint_response`` reuses the existing
+        ``approval_checkpoint_responded`` event (no new event literal),
+        writing a JSONL line with ``"response": "split-piece"`` and
+        ``"checkpoint": "decompose-commit"`` to the resolved events log.
+    """
+    from cortex_command.discovery import _validate_checkpoint_payload
+
+    monkeypatch.delenv("LIFECYCLE_SESSION_ID", raising=False)
+
+    # (a) Validation does not raise.
+    _validate_checkpoint_payload("topic-slug", "decompose-commit", "split-piece", 0)
+
+    # (b) emit writes a JSONL line with the R15 split-piece payload values.
+    target = emit_checkpoint_response(
+        topic="topic-slug",
+        checkpoint="decompose-commit",
+        response="split-piece",
+        revision_round=0,
+        repo_root=repo_root,
+    )
+    assert target.exists()
+    events = _read_jsonl(target)
+    assert len(events) >= 1
+    ev = events[-1]
+    # Reuses the existing event literal — no new event type.
+    assert ev["event"] == "approval_checkpoint_responded"
+    assert ev["response"] == "split-piece"
+    assert ev["checkpoint"] == "decompose-commit"
+    assert ev["revision_round"] == 0
+
+
 def test_emit_prescriptive_check_writes_nested_flag_locations(
     repo_root: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
