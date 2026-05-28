@@ -92,6 +92,8 @@ Then:
 
 ### 5. Create Backlog Tickets
 
+**Authoring a grouped ticket's body.** For a child that wraps a single piece, author the body straight from the §2 uniform template. For a child that wraps *multiple* grouped pieces (§4), author **one merged body** that covers the whole group — mirroring the R15 `consolidate-pieces` body-merge convention (§5, the R15 gate sub-section below): the grouped pieces' `## Why`, `## Role`, and `## Integration` are **prose-merged** into one coherent narrative (not concatenated piece-by-piece), and their `## Edges` and `## Touch points` bullets are **unioned and deduplicated**. When the grouped pieces carried a `blocked-by` ordering among themselves (§4), fold that surviving order into the merged body as an explicit intra-ticket sequence note, framed as an internal phase boundary rather than a cross-ticket dependency. The research-phase Architecture `### Pieces` source in `research.md` is **not** touched by this merge — it stays unchanged as the authoritative per-piece record, so the retained source is exactly what a later `split-piece <N>` re-derives the constituent piece bodies from.
+
 Ticket bodies authored under the Role/Integration/Edges/Touch-points template are validated by `cortex-check-prescriptive-prose` at pre-commit time (LEX-1 scanner). The scanner runs section-partitioned: path:line citations, `§N`/`RN` section-index citations, and multi-line fenced code blocks are permitted only in `## Touch points` and are flagged when they appear inside `## Role`, `## Integration`, or `## Edges`.
 
 **LEX-1 regex specification** (the scanner's exact behavior, baked into this prose):
@@ -163,10 +165,15 @@ Create `cortex/research/{topic}/decomposed.md` to record what was produced:
 ## Suggested Implementation Order
 [Brief description of the recommended sequence]
 
+## Grouping Notes
+- **Ticket NNN** ← pieces P, Q, R. [One-sentence rationale for why these pieces are one unit of work.] Intra-group order: P → Q (Q was `blocked-by` P among the grouped pieces; preserved as an internal phase boundary inside the ticket, not a cross-ticket dependency).
+
 ## Created Files
 - `cortex/backlog/NNN-slug.md` — [title]
 - `cortex/backlog/NNN-slug.md` — [title]
 ```
+
+`## Grouping Notes` is parallel to the R15-gate `## Consolidation Notes` / `## Dropped Items` headings. When §4 groups pieces into a ticket, record one entry per grouped ticket naming (i) which pieces were grouped into which ticket, (ii) a one-sentence rationale for why the group is one unit, and (iii) any **surviving intra-group ordering** — when grouped pieces carried `blocked-by` relationships *among themselves*, that order is preserved as an explicit intra-ticket sequence note (an internal phase boundary, mirroring the corpus precedent at `cortex/research/swap-daytime-autonomous-for-worktree-interactive/decomposed.md`), never silently dropped. This makes every grouping — including an all-N-pieces-into-one-ticket collapse — auditable, and gives `split-piece <N>` the recorded ordering to restore when it re-derives the constituent pieces. Omit the heading entirely when no grouping occurred (the no-coupling 1:1 fallback produces no entries). The `### Pieces` source in `research.md` stays unchanged regardless; `## Grouping Notes` records only the packaging decision, not a mutation of the analytical set.
 
 For the single-piece branch, omit the Epic subsection and list one ticket. For the zero-piece branch, write `decomposition_verdict: zero-piece` in frontmatter and include either a `## Fold-into` or `## Verdict` section instead of Work Items.
 
