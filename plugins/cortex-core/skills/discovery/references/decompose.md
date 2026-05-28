@@ -6,11 +6,13 @@ Break the approved Architecture section into backlog tickets. This is the core v
 
 ### 1. Load Context
 
-Read `cortex/research/{topic}/research.md` for findings, feasibility assessment, decision records, and — most importantly — the approved `## Architecture` section. The Architecture section's `### Pieces`, `### Integration shape`, and `### Seam-level edges` sub-sections are the source-of-truth input to decompose. The research→decompose approval gate (per `skills/discovery/SKILL.md`) must have fired before this phase runs.
+Read `cortex/research/{topic}/research.md` for findings, feasibility assessment, decision records, and — most importantly — the approved `## Architecture` section. The Architecture section's `### Pieces` sub-section (one role bullet per piece) and `### How they connect` sub-section (the connection/boundary prose) are the source-of-truth input to decompose: `### Pieces` names the analytical piece-set, and `### How they connect` carries the relationships from which dependencies are derived. The research→decompose approval gate (per `skills/discovery/SKILL.md`) must have fired before this phase runs.
+
+> See ADR `cortex/adr/0007-decompose-groups-pieces-into-tickets.md` for why §4 groups coupled pieces into tickets (M pieces → 1 ticket) and the residual anchoring risk that `split-piece` at the R15 gate reduces.
 
 ### 2. Consume the Architecture Section
 
-Each bullet in the approved `### Pieces` sub-section becomes one ticket candidate. Do **not** re-derive pieces from raw findings — the Architecture section already names them by role. The piece-set is fixed at decompose entry; if the agent finds that the piece-set is wrong, return to the research phase rather than mutating the set silently.
+Each bullet in the approved `### Pieces` sub-section is a piece. A piece is not always a ticket: §4 groups tightly-coupled pieces into ticket units, so M pieces may map to 1 ticket. Pieces that share no coupling each become one ticket of their own. Do **not** re-derive pieces from raw findings — the Architecture section already names them by role. The analytical piece-set is fixed at decompose entry; if the agent finds that the piece-set itself is *wrong* (a piece is missing, mis-named, or wrongly split at the analytical level), return to the research phase rather than mutating the set silently. Grouping pieces into ticket units at §4 is a packaging decision over the *right* set, not a mutation of the set — the two are distinct (see §3 and §4).
 
 For each piece, invoke `/backlog-author compose` with the piece's context; the canonical body template lives at `skills/backlog-author/references/body-template.md`.
 
@@ -41,19 +43,22 @@ For each ticket, also capture:
 - **Priority**: Derived from research signals — Low effort/Low risk → high priority; High effort or High risk → lower priority unless explicitly critical in decision records
 - **Type**: Usually `feature`, but may be `chore` or `spike`
 - **Size**: S/M/L (informs ordering, not stored in backlog)
-- **Dependencies**: From the Integration shape and Seam-level edges sub-sections
+- **Dependencies**: Derived from the `### How they connect` sub-section — the connection and boundary relationships it describes are what one piece depends on from another
 
 ### 3. Consolidation Review
 
-The Architecture section's falsification gate (research-phase R3) has already run the structural-coherence merge test. Do not re-run it here. The piece-set at decompose entry is the merged set.
+The Architecture section's falsification gate (research-phase R3) has already run the structural-coherence merge test. Do not re-run it here. The analytical piece-set at decompose entry is the merged set.
 
-If during ticket authoring the agent finds that two pieces share identical Touch points and identical Role paragraphs, that is a signal the research-phase merger missed a case — surface this to the user with the option to return to research rather than silently consolidating at decompose time.
+Two outcomes are distinct here:
 
-If no consolidation candidates surface, proceed to §4.
+- **The piece-set is *wrong* (research owns this).** If the agent finds that two pieces share identical Touch points and identical Role paragraphs — i.e. they are not really two distinct pieces — that is a signal the research-phase merger *missed a case* at the analytical level. Surface this to the user with the option to return to the research phase rather than silently re-deriving or mutating the set at decompose time. The `### Pieces` set is research-owned and must not be rewritten here.
+- **The piece-set is *right but over-split for ticketing* (§4 owns this).** Distinct pieces that are nonetheless tightly coupled — they share a connection seam, sit in one integration cluster, carry near-identical roles, or only deliver value when shipped together — are not a research defect. They are a *packaging* question, handled by §4 grouping, which coarsens ticket units without touching the analytical `### Pieces` set.
+
+Proceed to §4. Grouping in §4 is the explicit packaging step; it is never a silent consolidation of the analytical set.
 
 ### 4. Determine Grouping
 
-The grouping is determined by piece_count from the approved Architecture section.
+Grouping decides how the analytical pieces are *packaged* into tickets. It reads only the approved Architecture content — `### Pieces` (the role bullets) and `### How they connect` (the connection/boundary prose) — and the dependency relationships derived from them. It never rewrites the `### Pieces` set; it only coarsens ticket units over the *right* set (per §3). See ADR `cortex/adr/0007-decompose-groups-pieces-into-tickets.md`.
 
 **Single-piece branch** (piece_count = 1): Create one backlog ticket directly. **No epic.** The single ticket is the entire output. Skip to §5.
 
@@ -64,13 +69,26 @@ The grouping is determined by piece_count from the approved Architecture section
 
 In both zero-piece sub-cases, `decomposed.md` is **still written** as an audit trail. The frontmatter line `decomposition_verdict: zero-piece` makes the branch machine-readable.
 
-**Epic + children** (piece_count ≥ 2):
+**Epic + children** (piece_count ≥ 2): First group the pieces into ticket units, then create one epic and one child per *group*.
+
+**Group tightly-coupled pieces into single tickets.** Before deciding ticket count, weigh the pieces against each other for tight coupling, reasoning over the emitted Architecture content (`### Pieces` roles + `### How they connect` prose) plus the derived dependencies. Group pieces into one ticket when the connection content shows they are obviously one unit of work. Infer the coupling from these indicators, any one of which is enough to consider a group:
+
+- **Shared connection seam** — the pieces meet at the same boundary or contract described in `### How they connect`, so changing one without the other leaves a half-built seam.
+- **One integration cluster** — `### How they connect` describes them as a single cluster that integrates together rather than as independently-landing units.
+- **Near-identical role** — their `### Pieces` role bullets describe substantially the same job, differing only in detail an implementer would naturally handle together.
+- **Value only when shipped together** — neither piece delivers operator-visible value on its own; the value appears only once both land. This is an inferred judgment from the roles and connections, not a literal field the template emits.
+
+Grouping is **opportunistic, never forced**: group only the *gross*, architecture-visible over-splitting (pieces obviously one unit by role or connection). When no coupling is evident, fall back to the 1:1 mapping — one piece, one ticket. Subtle couplings that surface only once bodies are drafted are not §4's job; they remain the manual `consolidate-pieces` fallback's domain at the R15 gate (§5). Grouping is an explicit packaging decision, surfaced to the operator at R15 with its rationale — it is never a silent mutation of the `### Pieces` set, which stays unchanged in `research.md` as the authoritative per-piece record that `split-piece` re-derives from.
+
+**Preserve intra-group ordering.** When grouped pieces have `blocked-by` relationships *among themselves*, the cross-piece ordering does not disappear — it becomes an intra-ticket ordering constraint. Carry it into the grouped body as an explicit sequence note and record it in `## Grouping Notes` (§6), mirroring the corpus precedent's internal phase boundary. Dependencies from *outside* the group retarget the surviving grouped ticket. (Edge case: if all N pieces group into one ticket, the output collapses to a single ticket with no epic, reusing the single-piece branch semantics; the `## Grouping Notes` record still makes the N→1 collapse auditable.)
+
+Then:
 
 1. Create an epic ticket first — a parent backlog item summarizing the full scope
    - `type: epic`
    - `discovery_source: cortex/research/{topic}/research.md`
    - Body references the research artifact
-2. Create child tickets — one per piece, each with `parent: <epic-id>` and body authored under the §2 uniform template
+2. Create child tickets — one per *group* (an ungrouped piece is its own group of one), each with `parent: <epic-id>`. A child wrapping multiple pieces gets one coherent merged body (§5); a single-piece child uses the §2 uniform template directly.
 
 ### 5. Create Backlog Tickets
 
@@ -170,7 +188,7 @@ Show the user:
 
 ## Constraints
 
-- **Architecture-section-driven**: The piece-set is the approved `### Pieces` sub-section from research. Do not re-derive pieces from raw findings; do not silently mutate the set at decompose time.
+- **Architecture-section-driven**: The analytical piece-set is the approved `### Pieces` sub-section from research, and dependencies derive from the `### How they connect` sub-section — the headings the research template actually emits. Do not re-derive pieces from raw findings; do not silently mutate the analytical set at decompose time. Grouping pieces into ticket units (§4) is permitted and distinct: it is an explicit, R15-surfaced packaging decision that coarsens ticket *count* without touching the `### Pieces` set, which stays unchanged as the per-piece record `split-piece` re-derives from. See ADR `cortex/adr/0007-decompose-groups-pieces-into-tickets.md`.
 - **Uniform body template**: All tickets use `## Role`, `## Integration`, `## Edges`, and optional `## Touch points`. No per-shape branching.
 - **Touch-points exclusivity**: Path:line citations and section-index citations live only in `## Touch points`. The pre-commit scanner enforces this.
 - **No implementation planning**: Don't specify HOW to build each piece — that's `/cortex-core:lifecycle`'s plan phase. Ticket bodies describe role, integration, and structural edges; the plan phase fills in mechanism.
