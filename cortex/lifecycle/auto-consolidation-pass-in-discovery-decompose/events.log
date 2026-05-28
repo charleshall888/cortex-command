@@ -1,0 +1,8 @@
+{"schema_version": 1, "ts": "2026-05-28T19:18:10Z", "event": "lifecycle_start", "feature": "auto-consolidation-pass-in-discovery-decompose", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"ts": "2026-05-28T19:23:52Z", "event": "complexity_override", "feature": "auto-consolidation-pass-in-discovery-decompose", "from": "simple", "to": "complex"}
+{"ts": "2026-05-28T19:23:52Z", "event": "criticality_override", "feature": "auto-consolidation-pass-in-discovery-decompose", "from": "medium", "to": "high"}
+{"schema_version": 3, "ts": "2026-05-28T19:23:52Z", "event": "clarify_critic", "feature": "auto-consolidation-pass-in-discovery-decompose", "parent_epic_loaded": false, "findings_count": 7, "dispositions": {"apply": 2, "dismiss": 5, "ask": 0}, "applied_fixes_count": 2, "dismissals_count": 5, "status": "ok"}
+{"ts": "2026-05-28T19:24:24Z", "event": "phase_transition", "feature": "auto-consolidation-pass-in-discovery-decompose", "from": "clarify", "to": "research"}
+{"ts": "2026-05-28T20:48:42Z", "event": "phase_transition", "feature": "auto-consolidation-pass-in-discovery-decompose", "from": "research", "to": "specify"}
+{"ts": "2026-05-28T21:45:10Z", "event": "spec_approved", "feature": "auto-consolidation-pass-in-discovery-decompose"}
+{"ts": "2026-05-28T21:45:19Z", "event": "phase_transition", "feature": "auto-consolidation-pass-in-discovery-decompose", "from": "specify", "to": "plan"}
