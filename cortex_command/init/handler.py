@@ -134,11 +134,17 @@ def _run_ensure(args: argparse.Namespace) -> int:
 
     Raises:
         ScaffoldError: On worktree-attached refusal, install-in-progress
-            timeout, marker provenance failure, or R19/R5 foreign-content
-            decline.  Caller (:func:`main`) translates to exit 2.
-    """
-    home: Path | None = None  # Settings-merge functions default to Path.home().
+            timeout, marker provenance failure, marker-absent clean-repo
+            refusal (#273: directs the user to terminal ``cortex init``),
+            or R19/R5 foreign-content decline.  Caller (:func:`main`)
+            translates to exit 2.
 
+    Per #273 this in-session path performs **no** ``~/.claude/`` write:
+    the pre-flight ``validate_settings`` and the post-dispatch
+    ``register`` / ``unregister_matching_in_place`` calls are removed so
+    ``--ensure`` never trips the session sandbox. Repo-scope writes
+    (``cortex/`` scaffold, ``.gitignore``, ``CLAUDE.md`` fence) remain.
+    """
     # (a) CORTEX_AUTO_ENSURE=0 opt-out (R7). First check; writes nothing.
     if os.environ.get("CORTEX_AUTO_ENSURE") == "0":
         return 0
@@ -157,10 +163,6 @@ def _run_ensure(args: argparse.Namespace) -> int:
 
     # R13: symlink-safety gate.
     scaffold.check_symlink_safety(repo_root)
-    cortex_target = str(repo_root / "cortex") + "/"
-
-    # R14: malformed-settings pre-flight.
-    settings_merge.validate_settings(home)
 
     # (d) Compute the installed hash and read marker provenance (R1, R8).
     installed_hash = scaffold._compute_init_artifacts_hash()
@@ -211,31 +213,38 @@ def _run_ensure(args: argparse.Namespace) -> int:
         # (Both fields are None only when _read_marker_provenance returned
         # (None, None), which means the marker file does not exist.)
 
-        # Case (iii): marker-absent + cortex/ absent or empty → bootstrap.
-        # "empty" means no child entries at all.
+        # Case (iii): marker-absent + cortex/ absent or empty → refuse (#273).
+        # "empty" means no child entries at all. In-session `--ensure` no
+        # longer bootstraps a clean repo: bootstrap requires the `~/.claude/`
+        # grant write that terminal `cortex init` carries the user's explicit
+        # consent for. Raise before any scaffold so no `cortex/`, `CLAUDE.md`,
+        # or `.gitignore` write occurs on the refuse path (R3). ScaffoldError
+        # routes through main()'s user-correctable-refusal path → exit 2. The
+        # "not yet initialized" substring is verifiably absent from the R19
+        # decline and both R8 marker-corruption messages.
         cortex_absent_or_empty = (
             not cortex_dir.exists() or not any(cortex_dir.iterdir())
         )
         if cortex_absent_or_empty:
-            # Skip check_content_decline: R19 would no-op anyway on an empty dir.
-            scaffold.scaffold(repo_root, overwrite=False, backup_dir=None)
-            scaffold.write_marker(repo_root, refresh=False)
+            raise ScaffoldError(
+                "`cortex init --ensure`: this repo is not yet initialized for "
+                "cortex (no `cortex/`). Run `cortex init` in your terminal, "
+                "then re-run /lifecycle."
+            )
         else:
             # Case (iv): marker-absent + cortex/ has content → R5 boundary.
             # Fire R19 to preserve the foreign-repo / wrong-window protection.
             scaffold.check_content_decline(repo_root)
             # Unreachable — check_content_decline raises when content found.
 
-    # Post-dispatch: idempotent gitignore, CLAUDE.md fence, and settings
-    # registration (same ADR-3 ordering as the standard init path).
+    # Post-dispatch: idempotent repo-scope writes only (#273). The standard
+    # init path additionally writes the `~/.claude/` grant and runs the
+    # cortex-worktrees migration here; in-session `--ensure` omits both —
+    # they target `~/.claude/`, which an in-session AI helper may not mutate
+    # under the session sandbox. Terminal `cortex init`/`--update` still
+    # performs the grant write and the migration.
     scaffold.ensure_gitignore(repo_root)
     scaffold.ensure_claude_md_authorization(repo_root)
-    settings_merge.register(repo_root, cortex_target, home=home)
-
-    # Migration: expunge stale "cortex-worktrees"-prefixed entries (mirrors
-    # the --update step in the standard path; --ensure routes through additive
-    # scaffold on drift so the migration applies here as well).
-    settings_merge.unregister_matching_in_place("cortex-worktrees", home=home)
 
     return 0
 

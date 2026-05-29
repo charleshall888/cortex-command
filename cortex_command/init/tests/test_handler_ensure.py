@@ -78,6 +78,25 @@ def _make_ensure_args(path: Path) -> argparse.Namespace:
     )
 
 
+def _make_update_args(path: Path) -> argparse.Namespace:
+    """Build a Namespace for the terminal ``cortex init --update`` path.
+
+    Used to plant a real marker-present ``cortex/`` as a test precondition,
+    since #273 removed in-session ``--ensure`` clean-repo bootstrap. The
+    terminal ``--update`` path scaffolds + writes the marker (and the
+    ``~/.claude/`` grant, harmless under an isolated HOME).
+    """
+    return argparse.Namespace(
+        path=str(path),
+        update=True,
+        force=False,
+        unregister=False,
+        revoke_worktree_auth=False,
+        verify_worktree_auth=False,
+        ensure=False,
+    )
+
+
 def _write_marker(
     repo_root: Path,
     *,
@@ -149,8 +168,9 @@ def test_r4_case_i_marker_present_hash_match_no_op(
     # Suppress install-in-progress marker.
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg-state"))
 
-    # Bootstrap with a real init first.
-    rc = init_main(_make_ensure_args(repo))
+    # Plant a marker-present cortex/ via the terminal --update path (#273:
+    # in-session --ensure no longer bootstraps a clean repo).
+    rc = init_main(_make_update_args(repo))
     assert rc == 0
     marker_path = repo / "cortex" / ".cortex-init"
     assert marker_path.exists()
@@ -176,8 +196,9 @@ def test_r4_case_ii_marker_present_hash_mismatch_refresh(
     _isolate_home(monkeypatch, tmp_path)
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg-state"))
 
-    # Bootstrap with real init.
-    rc = init_main(_make_ensure_args(repo))
+    # Plant a marker-present cortex/ via the terminal --update path (#273:
+    # in-session --ensure no longer bootstraps a clean repo).
+    rc = init_main(_make_update_args(repo))
     assert rc == 0
     marker_path = repo / "cortex" / ".cortex-init"
     mtime_before = marker_path.stat().st_mtime
@@ -207,9 +228,16 @@ def test_r4_case_ii_marker_present_hash_mismatch_refresh(
 
 
 def test_r4_case_iii_a_clean_scratch_repo(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """R4 case (iii-a): marker-absent + no cortex/ directory → bootstrap."""
+    """R4 case (iii-a): marker-absent + no cortex/ → refuse, exit 2 (#273).
+
+    In-session ``--ensure`` no longer bootstraps a clean repo; it refuses
+    with a directive pointing the user to terminal ``cortex init`` and
+    writes nothing (no ``cortex/``, ``CLAUDE.md``, or ``.gitignore``).
+    """
     repo = tmp_path / "repo"
     repo.mkdir()
     _git_init(repo)
@@ -219,19 +247,32 @@ def test_r4_case_iii_a_clean_scratch_repo(
     assert not (repo / "cortex").exists()
 
     rc = init_main(_make_ensure_args(repo))
-    assert rc == 0
+    assert rc == 2
 
-    marker_path = repo / "cortex" / ".cortex-init"
-    assert marker_path.exists()
-    data = json.loads(marker_path.read_text(encoding="utf-8"))
-    assert "cortex_version" in data
-    assert "init_artifacts_hash" in data
+    captured = capsys.readouterr()
+    assert "not yet initialized" in captured.err
+
+    # No new/modified files in the working tree.
+    status = subprocess.run(
+        ["git", "-C", str(repo), "status", "--porcelain"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert status.stdout == ""
+    assert not (repo / "cortex").exists()
 
 
 def test_r4_case_iii_b_empty_cortex_dir(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """R4 case (iii-b): marker-absent + empty cortex/ directory → bootstrap."""
+    """R4 case (iii-b): marker-absent + empty cortex/ → refuse, exit 2 (#273).
+
+    Same refuse-with-directive behavior as (iii-a); the pre-existing empty
+    ``cortex/`` dir is the only entry and it is left untouched.
+    """
     repo = tmp_path / "repo"
     repo.mkdir()
     _git_init(repo)
@@ -243,12 +284,23 @@ def test_r4_case_iii_b_empty_cortex_dir(
     assert not any((repo / "cortex").iterdir())
 
     rc = init_main(_make_ensure_args(repo))
-    assert rc == 0
+    assert rc == 2
 
-    marker_path = repo / "cortex" / ".cortex-init"
-    assert marker_path.exists()
-    data = json.loads(marker_path.read_text(encoding="utf-8"))
-    assert "init_artifacts_hash" in data
+    captured = capsys.readouterr()
+    assert "not yet initialized" in captured.err
+
+    # No marker was written; cortex/ is still empty.
+    assert not (repo / "cortex" / ".cortex-init").exists()
+    assert not any((repo / "cortex").iterdir())
+    # An empty untracked dir is invisible to git status --porcelain, so no
+    # new/modified tracked files appear either.
+    status = subprocess.run(
+        ["git", "-C", str(repo), "status", "--porcelain"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert status.stdout == ""
 
 
 def test_r4_case_iv_foreign_cortex_content_exit2(
@@ -338,6 +390,11 @@ def test_r6_bundle2_no_marker_proceeds_normally(
     # Redirect XDG_STATE_HOME to a clean dir — no marker file present.
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg-state-clean"))
 
+    # Plant a marker-present cortex/ via terminal --update so --ensure
+    # reaches the case-(i) no-op (#273: clean-repo --ensure now refuses).
+    assert init_main(_make_update_args(repo)) == 0
+    assert (repo / "cortex" / ".cortex-init").exists()
+
     rc = init_main(_make_ensure_args(repo))
     assert rc == 0
     assert (repo / "cortex" / ".cortex-init").exists()
@@ -355,6 +412,13 @@ def test_r6_bundle3_mid_poll_clear(
     repo.mkdir()
     _git_init(repo)
     _isolate_home(monkeypatch, tmp_path)
+
+    # Plant a marker-present cortex/ via terminal --update so --ensure reaches
+    # the case-(i) no-op once the install lock clears (#273: clean-repo
+    # --ensure now refuses). --update is the terminal path and is not subject
+    # to the install lock-check, so it can run before the marker is planted.
+    assert init_main(_make_update_args(repo)) == 0
+    assert (repo / "cortex" / ".cortex-init").exists()
 
     marker = _fresh_install_marker(monkeypatch, tmp_path)
 
@@ -589,9 +653,21 @@ def test_r8_bundle6_unwritable_cortex_exit_nonzero(
     _isolate_home(monkeypatch, tmp_path)
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg-state"))
 
+    # Plant a marker-present cortex/ via terminal --update so --ensure routes
+    # to the case-(ii) refresh write rather than the case-(iii) clean-repo
+    # refuse (#273: clean-repo --ensure now refuses before any write). A
+    # forced hash mismatch makes --ensure attempt a refresh write into cortex/.
+    assert init_main(_make_update_args(repo)) == 0
     cortex_dir = repo / "cortex"
-    cortex_dir.mkdir()
-    # Make the cortex/ directory read-only so writes inside it fail.
+    assert (cortex_dir / ".cortex-init").exists()
+
+    monkeypatch.setattr(
+        scaffold,
+        "_compute_init_artifacts_hash",
+        lambda: "v1:" + "f" * 64,
+    )
+
+    # Make the cortex/ directory read-only so the refresh write inside it fails.
     cortex_dir.chmod(0o500)
 
     try:
