@@ -1,0 +1,6 @@
+{"schema_version": 1, "ts": "2026-05-29T03:12:20Z", "event": "lifecycle_start", "feature": "backlog-index-surface-deferred-parked-state", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-05-29T03:17:36Z", "event": "clarify_critic", "feature": "backlog-index-surface-deferred-parked-state", "parent_epic_loaded": false, "findings_count": 6, "dispositions": {"apply": 5, "dismiss": 0, "ask": 1}, "applied_fixes_count": 4, "dismissals_count": 0, "status": "ok"}
+{"ts": "2026-05-29T03:44:55Z", "event": "complexity_override", "feature": "backlog-index-surface-deferred-parked-state", "from": "simple", "to": "complex", "gate": "research_open_questions"}
+{"ts": "2026-05-29T03:55:00Z", "event": "spec_approved", "feature": "backlog-index-surface-deferred-parked-state"}
+{"ts": "2026-05-29T12:49:32Z", "event": "plan_approved", "feature": "backlog-index-surface-deferred-parked-state"}
+{"ts": "2026-05-29T12:49:32Z", "event": "phase_transition", "feature": "backlog-index-surface-deferred-parked-state", "from": "plan", "to": "implement"}
