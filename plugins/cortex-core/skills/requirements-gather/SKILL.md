@@ -30,7 +30,7 @@ Every question carries a **Recommended answer:** line stating the position the m
 
 ### Ask one at a time
 
-Ask interview questions one at a time, waiting for the user's response before posing the next. The previous answer is the gate to the next question, so each question can be shaped by what just landed. Avoid batching multiple questions into a single turn — batched questions invite partial answers, hide decision-tree branches that should resolve sequentially, and create respondent fatigue. Mirrored in `skills/lifecycle/references/specify.md` §2 — when editing this rule, update the other surface too.
+Conduct the interview one question at a time, following the canonical one-at-a-time cadence rule in `skills/interview/references/loop.md` — pose a single question, wait for the answer, and let it shape the next. The previous answer gates the next, so questions are not batched into a single turn.
 
 ### Lazy artifact creation
 
