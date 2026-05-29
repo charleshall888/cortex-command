@@ -10,3 +10,5 @@
 {"ts":"2026-05-29T13:45:18.768545+00:00","event":"batch_dispatch","feature":"resolve-user-project-root-stops-at","batch":2,"tasks":[3,4]}
 {"ts":"2026-05-29T13:49:08.088159+00:00","event":"batch_dispatch","feature":"resolve-user-project-root-stops-at","batch":3,"tasks":[5]}
 {"ts":"2026-05-29T14:01:45.954503+00:00","event":"phase_transition","feature":"resolve-user-project-root-stops-at","tier":"complex","from":"implement","to":"review"}
+{"ts":"2026-05-29T14:09:45.052612+00:00","event":"review_verdict","feature":"resolve-user-project-root-stops-at","verdict":"APPROVED","cycle":1,"requirements_drift":"none"}
+{"ts":"2026-05-29T14:09:45.074949+00:00","event":"phase_transition","feature":"resolve-user-project-root-stops-at","from":"review","to":"complete"}
