@@ -175,31 +175,5 @@
     "lifecycle_phase": "wontfix",
     "schema_version": "1",
     "repo": null
-  },
-  {
-    "id": 270,
-    "title": "Retire or re-establish the orphaned has_why_n_justification discovery subsystem",
-    "status": "refined",
-    "priority": "low",
-    "type": "chore",
-    "tags": [],
-    "areas": [
-      "skills"
-    ],
-    "created": "2026-05-28",
-    "updated": "2026-05-29",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "cortex/lifecycle/retire-or-re-establish-the-orphaned/spec.md",
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "b900be81-682f-49bb-aace-aeb16c94d47b",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
   }
 ]

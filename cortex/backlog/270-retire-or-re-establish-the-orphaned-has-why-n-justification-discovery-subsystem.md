@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: b900be81-682f-49bb-aace-aeb16c94d47b
 title: "Retire or re-establish the orphaned has_why_n_justification discovery subsystem"
-status: refined
+status: complete
 priority: low
 type: chore
 created: 2026-05-28
