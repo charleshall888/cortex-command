@@ -2,11 +2,14 @@
 
 Validates the load-bearing assumption that ``cortex init``'s allowWrite
 registration (which covers the main repo's ``cortex/`` umbrella) permits
-writes that originate from a worktree-CWD subprocess.  This is the
-Seatbelt-specific claim that ``_resolve_user_project_root()`` upward-walks
-through the worktree's ``.git`` file to the main repo, producing a
-main-repo-absolute path, and that path falls under the allowWrite subpath
-in the sandbox profile.
+writes that originate from a worktree-CWD subprocess.  The lock's main-repo
+anchoring is provided by ``interactive_lock._resolve_main_repo_root()`` (see
+#271) — which eagerly parses the worktree ``.git`` file's ``gitdir:`` pointer
+to reach ``<main>`` — NOT by ``_resolve_user_project_root()`` (the shared
+resolver does not ascend through a worktree ``.git``; it would stop at a
+co-located ``cortex/``).  The Seatbelt-specific claim under test is that the
+resulting main-repo-absolute path falls under the allowWrite subpath in the
+sandbox profile.
 
 The test explicitly invokes ``sandbox-exec -p <inline-SBPL>`` rather than
 relying on any ambient sandbox at the pytest level — so the Seatbelt
@@ -144,9 +147,11 @@ def test_lock_write_from_worktree_cwd(tmp_path: Path) -> None:
     ``tmp_path/worktree/probe/`` — synthetic worktree (.git file → main)
 
     ``CORTEX_REPO_ROOT`` is deliberately unset so
-    ``_resolve_user_project_root()`` walks the ``.git`` file boundary upward
-    from the worktree CWD, ultimately resolving the main-repo root (which
-    contains ``cortex/``).
+    ``interactive_lock._resolve_main_repo_root()`` parses the worktree's
+    ``.git`` file (``gitdir:`` pointer) from the worktree CWD to anchor the
+    lock at the main-repo root (which contains ``cortex/``).  The shared
+    ``_resolve_user_project_root()`` is NOT what reaches main here — it would
+    accept the worktree's own ``cortex/`` if one were co-located (see #271).
 
     The subprocess
     --------------

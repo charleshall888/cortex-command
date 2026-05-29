@@ -1,12 +1,29 @@
 """Interactive-session concurrency lock for the worktree-interactive mode.
 
 Provides per-feature ``interactive.pid`` lock acquisition, liveness
-verification, stale recovery, and release.  The lock's path functions
-(``_lock_path`` / ``_events_log_path``) resolve via
-``_resolve_main_repo_root()`` so the lock file always lands under the
-**main** repo root's ``cortex/`` tree regardless of the CWD — which may
-be a git worktree carrying its own co-located ``cortex/`` under the
-Variant A interactive model (see #271).
+verification, stale recovery, and release.  ``acquire``, ``read``,
+``inspect``, and ``force-release`` all resolve their lock/events paths to
+the **main repo root** via ``_resolve_main_repo_root()`` regardless of the
+CWD — which may be a git worktree carrying its own co-located, git-tracked
+``cortex/`` under the Variant A interactive model (see #271).  That
+convergence is what lets ``acquire`` (run pre-``EnterWorktree`` from the
+main CWD) and ``read_lock`` (re-invoked from inside a worktree by
+``complete.md`` Step 3's Variant-A detection) agree on the same lock file
+rather than reading a worktree-local one and falsely detecting "no lock".
+
+The lock keeps a resolver **separate** from
+``common._resolve_user_project_root`` on purpose: the shared resolver
+accepts the first ``cortex/``-bearing ancestor (the worktree itself, from a
+worktree CWD), so consolidating the two would silently reintroduce the
+worktree false-negative.  The structural guard against that regression is
+``tests/test_interactive_lock.py::test_resolve_main_repo_root_worktree_with_cortex_resolves_to_main``,
+which fails on any walk-first implementation or a revert of the
+``_lock_path`` / ``_events_log_path`` wiring.
+
+``scan_live_locks`` is the deliberate exception: it does not call
+``_resolve_main_repo_root()`` but takes ``project_root`` from its caller and
+stays main-anchored via the overnight orchestrator's ``CORTEX_REPO_ROOT=main``
+env-pin (intentionally unchanged).
 
 Lock file schema (``cortex/lifecycle/{slug}/interactive.pid``):
 
