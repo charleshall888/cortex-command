@@ -5,3 +5,5 @@
 {"ts": "2026-05-29T02:12:49Z", "event": "complexity_override", "feature": "extract-interview-skill", "from": "simple", "to": "complex", "gate": "research_open_questions"}
 {"ts": "2026-05-29T03:03:49Z", "event": "spec_approved", "feature": "extract-interview-skill"}
 {"ts": "2026-05-29T03:03:56Z", "event": "phase_transition", "feature": "extract-interview-skill", "from": "specify", "to": "plan"}
+{"ts": "2026-05-29T03:35:33Z", "event": "plan_approved", "feature": "extract-interview-skill"}
+{"ts": "2026-05-29T03:35:33Z", "event": "phase_transition", "feature": "extract-interview-skill", "from": "plan", "to": "implement"}
