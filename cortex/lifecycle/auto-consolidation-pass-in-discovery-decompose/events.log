@@ -8,3 +8,14 @@
 {"ts": "2026-05-28T21:45:19Z", "event": "phase_transition", "feature": "auto-consolidation-pass-in-discovery-decompose", "from": "specify", "to": "plan"}
 {"ts": "2026-05-28T22:31:32Z", "event": "plan_approved", "feature": "auto-consolidation-pass-in-discovery-decompose"}
 {"ts": "2026-05-28T22:31:32Z", "event": "phase_transition", "feature": "auto-consolidation-pass-in-discovery-decompose", "from": "plan", "to": "implement"}
+{"ts": "2026-05-28T22:59:29Z", "event": "batch_dispatch", "feature": "auto-consolidation-pass-in-discovery-decompose", "batch": 0, "tasks": [1]}
+{"ts": "2026-05-28T23:04:08Z", "event": "batch_dispatch", "feature": "auto-consolidation-pass-in-discovery-decompose", "batch": 0, "tasks": [5]}
+{"ts": "2026-05-28T23:08:14Z", "event": "batch_dispatch", "feature": "auto-consolidation-pass-in-discovery-decompose", "batch": 1, "tasks": [2]}
+{"ts": "2026-05-28T23:19:58Z", "event": "batch_dispatch", "feature": "auto-consolidation-pass-in-discovery-decompose", "batch": 2, "tasks": [3]}
+{"ts": "2026-05-28T23:25:59Z", "event": "batch_dispatch", "feature": "auto-consolidation-pass-in-discovery-decompose", "batch": 3, "tasks": [4]}
+{"ts": "2026-05-28T23:42:01Z", "event": "batch_dispatch", "feature": "auto-consolidation-pass-in-discovery-decompose", "batch": 3, "tasks": [6]}
+{"ts": "2026-05-28T23:52:57Z", "event": "batch_dispatch", "feature": "auto-consolidation-pass-in-discovery-decompose", "batch": 4, "tasks": [7]}
+{"ts": "2026-05-29T00:01:06Z", "event": "phase_transition", "feature": "auto-consolidation-pass-in-discovery-decompose", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-05-29T00:07:42Z", "event": "review_verdict", "feature": "auto-consolidation-pass-in-discovery-decompose", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-05-29T00:07:42Z", "event": "phase_transition", "feature": "auto-consolidation-pass-in-discovery-decompose", "from": "review", "to": "complete"}
+{"ts": "2026-05-29T00:09:29Z", "event": "feature_complete", "feature": "auto-consolidation-pass-in-discovery-decompose", "tasks_total": 7, "rework_cycles": 1, "merge_anchor": "merge"}

@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 88ed3e3d-5025-40f4-94a5-0b1fadb20d44
 title: "Auto-consolidation pass in /discovery decompose phase"
-status: refined
+status: complete
 priority: medium
 type: discovery
 created: 2026-05-28

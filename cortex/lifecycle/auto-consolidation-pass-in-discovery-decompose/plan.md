@@ -23,7 +23,7 @@ Make `/discovery` decompose §4 group tightly-coupled research pieces into singl
 - **Complexity**: simple
 - **Context**: Follow the format of existing ADRs (e.g. `cortex/adr/0006-cortex-init-consumer-claude-md-authorization-surface.md`) and the three-criteria gate + consumer rules in `cortex/adr/README.md` (enforcement is prose-only/PR-review — no automated link gate, and project.md does not register every ADR, so no index edit is required). Source content is the `## Proposed ADR: 0007-decompose-groups-pieces-into-tickets` block in `…/spec.md` (context, decision, trade-off, alternatives A/B rejected, residual anchoring risk). Status: Accepted. Cross-reference #268 and #247.
 - **Verification**: `test -f cortex/adr/0007-decompose-groups-pieces-into-tickets.md && grep -c "decompose" cortex/adr/0007-decompose-groups-pieces-into-tickets.md` ≥ 1 — pass if file exists and matches; AND `just test` exits 0 (pass if exit code = 0).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Rewrite decompose.md §1/§2/§3/§4 + Constraints for grouping (incl. input-contract reconciliation)
 - **Files**: `skills/discovery/references/decompose.md` (canonical; the `plugins/cortex-core/skills/discovery/references/decompose.md` mirror regenerates via the pre-commit `just build-plugin` hook and is staged at commit time)
@@ -32,7 +32,7 @@ Make `/discovery` decompose §4 group tightly-coupled research pieces into singl
 - **Complexity**: complex
 - **Context**: Edit sites in `decompose.md`: §1 (line ~9, "source-of-truth input"), §2 (line ~13 "each bullet … becomes one ticket candidate" AND line ~44 "Dependencies: From the Integration shape and Seam-level edges sub-sections"), §3 "Consolidation Review" (lines ~46–52), §4 "Determine Grouping" (lines ~54–74), Constraints bullet (line ~173). This makes decompose.md *internally* consistent; it does NOT fix the upstream `research.md` template (the deferred drift per spec Non-Requirements). Express grouping as decision-criteria + output-shape per spec R1 — name the inferred coupling indicators (shared connection seam, one integration cluster, near-identical role, value-only-when-shipped-together) drawn from the emitted sub-sections. Soft positive-routing phrasing (MUST-escalation policy). The epic+children branch keeps "one ticket per *group*".
 - **Verification**: differential + test — `grep -c "becomes one ticket candidate" skills/discovery/references/decompose.md` = 0 (old 1:1 wording removed) AND `grep -c "From the Integration shape and Seam-level edges" skills/discovery/references/decompose.md` = 0 (the §2 dependency-source line reconciled) AND `grep -nE "How they connect" skills/discovery/references/decompose.md` returns a hit in the §1/§4 input-contract region; AND `just test` exits 0 (Task 4's test asserts the semantic content).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: decompose.md §5/§6 grouped-body authoring + Grouping Notes + edge cases
 - **Files**: `skills/discovery/references/decompose.md` (mirror regenerates via build-plugin hook, staged at commit)
@@ -41,7 +41,7 @@ Make `/discovery` decompose §4 group tightly-coupled research pieces into singl
 - **Complexity**: simple
 - **Context**: Edit `decompose.md` §5 "Create Backlog Tickets" (lines ~75–98; the R15 sub-section is Task 6's), §6 "Write Decomposition Record" (lines ~129–153). `## Grouping Notes` parallels the existing `## Consolidation Notes` / `## Dropped Items` headings. Intra-group ordering: when grouped pieces had `blocked-by` among themselves, record it as an explicit intra-ticket sequence note (mirror the "internal phase boundary" precedent at `cortex/research/swap-daytime-autonomous-for-worktree-interactive/decomposed.md`), per spec R5.
 - **Verification**: differential + test — `grep -c "Grouping Notes" skills/discovery/references/decompose.md` ≥ 1 (new §6 heading) AND `grep -nE "retain|unchanged" skills/discovery/references/decompose.md` shows the §5 retained-Architecture-source note AND `grep -nE "prose-merge|union" skills/discovery/references/decompose.md` shows the merge-convention reference in §5; AND `just test` exits 0 (Task 4's test asserts §5/§6 content).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Add substantive §1–§6 grouping tests
 - **Files**: `tests/test_decompose_rules.py`
@@ -50,7 +50,7 @@ Make `/discovery` decompose §4 group tightly-coupled research pieces into singl
 - **Complexity**: simple
 - **Context**: Follow the existing section-aware patterns in `tests/test_decompose_rules.py` — the `_parse_sections` helper splits on `##`/`### N.` headings; existing tests use `assert "<literal>" in section_body` and negative `assert "<literal>" not in body`. Use the negative-assertion idiom for (b)/(c) so the tests catch a *missing* edit, not just a present keyword. Section-scope assertions to the relevant section body (not the whole file) so pre-existing occurrences elsewhere don't mask a missing edit.
 - **Verification**: `grep -cE "def test_.*grou(p|ping)" tests/test_decompose_rules.py` ≥ 1 AND `grep -c "not in" tests/test_decompose_rules.py` increased over baseline (the negative assertions exist) AND `just test` exits 0 — pass if the new substantive tests exist and the suite is green.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Add `split-piece` to discovery.py `_RESPONSE_VALUES`
 - **Files**: `cortex_command/discovery.py`
@@ -59,7 +59,7 @@ Make `/discovery` decompose §4 group tightly-coupled research pieces into singl
 - **Complexity**: simple
 - **Context**: `cortex_command/discovery.py:403–412` defines `_RESPONSE_VALUES = frozenset({...})`; add one entry. Confirmed sole consumers: the frozenset def (403), validation (`if response not in _RESPONSE_VALUES`, 458–460), and argparse `choices=sorted(_RESPONSE_VALUES)` (1324) — all in this file; no other reader and no test hard-codes the full set, so the auto-derivation holds. No new event type or checkpoint value (spec R8).
 - **Verification**: `grep -c '"split-piece"' cortex_command/discovery.py` = 1 — pass if exactly one occurrence in the frozenset; AND `just test` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Document `split-piece <N>` in decompose.md R15 + SKILL.md inventory
 - **Files**: `skills/discovery/references/decompose.md`, `skills/discovery/SKILL.md` (both mirrors regenerate via the build-plugin hook, staged at commit)
@@ -68,7 +68,7 @@ Make `/discovery` decompose §4 group tightly-coupled research pieces into singl
 - **Complexity**: simple
 - **Context**: `decompose.md` R15 sub-section under §5 (lines ~100–115) lists `approve-all`/`revise-piece`/`drop-piece`/`consolidate-pieces`; add `split-piece <N>` mirroring their format. `SKILL.md` R15 gate option inventory (line ~102). Emphasize re-derivation FROM the Architecture source (NOT reconstruction from the lossy merged body). Reuses `approval_checkpoint_responded` with `checkpoint: decompose-commit` and `response: split-piece` (Task 5 added the value).
 - **Verification**: `grep -c "split-piece" skills/discovery/references/decompose.md` ≥ 1 AND `grep -c "split-piece" skills/discovery/SKILL.md` ≥ 1 AND `grep -nE "from the .*Architecture|retained Architecture|not .*merged body" skills/discovery/references/decompose.md` shows the re-derivation-source semantics in the R15 prose; AND `just test` exits 0 (Task 7 asserts the R15 option + semantics).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 7: Tests for `split-piece` (R15 option + helper validation) in the established suites
 - **Files**: `tests/test_decompose_rules.py`, `tests/test_discovery_module.py`
@@ -77,7 +77,7 @@ Make `/discovery` decompose §4 group tightly-coupled research pieces into singl
 - **Complexity**: simple
 - **Context**: NOTE — the real `emit_checkpoint_response` tests live in `tests/test_discovery_module.py` (NOT `tests/test_discovery_events.py`, which does not exist — the events-registry consumer column lists a stale path). Mirror `test_emit_checkpoint_response_accepts_consolidate_pieces_at_decompose_commit` (tests/test_discovery_module.py:216) and `test_emit_checkpoint_response_writes_jsonl_and_validates_response` (:176). `emit_checkpoint_response` is at `cortex_command/discovery.py` ~538–560. Update `test_r15_batch_review_gate_options_documented` (test_decompose_rules.py ~254–261) to include `split-piece`.
 - **Verification**: `grep -c "split-piece" tests/test_decompose_rules.py` ≥ 1 AND `grep -c "split-piece" tests/test_discovery_module.py` ≥ 1 AND `just test` exits 0 — pass if both established suites reference split-piece and the suite is green.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Risks
 
