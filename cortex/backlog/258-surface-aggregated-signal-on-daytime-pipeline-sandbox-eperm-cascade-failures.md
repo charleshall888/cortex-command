@@ -6,7 +6,7 @@ status: archived
 priority: high
 type: feature
 created: 2026-05-20
-updated: 2026-05-25
+updated: 2026-05-29
 tags: [overnight-runner, pipeline, observability, sandbox]
 discovery_source: cortex/research/harness-friction-triage/research.md
 ---
@@ -17,6 +17,8 @@ On 2026-05-16 the daytime pipeline ran 5 tasks for feature #209 (lead-refine-4-c
 The failure mode is silent at the pipeline level: each task emits an individual failure (or doesn't), but no aggregated signal fires when the entire run is blocked on the same systemic issue.
 
 Live evidence the broader sandbox problem persists: `cortex/lifecycle/seatbelt-probe.log` shows 10+ `seatbelt_probe` failures with `result: failed` between 12:31-12:32 on 2026-05-20 (today), `softfail_active: false`. Commit `a338437c` excluded `git:*` from sandbox restrictions which may help the specific git-commit failure mode, but the seatbelt-probe layer is still reporting hard failures.
+
+> **Note (2026-05-29):** the seatbelt-probe layer was retired and `cortex/lifecycle/seatbelt-probe.log` deleted (see #220). Those `result: failed` entries were **not** evidence of an environment EPERM cascade — the probe never executed the test at all because Claude Code denies its compound `uv run pytest` Bash command under an enforcing sandbox in non-interactive `-p` mode. So this specific evidence pointer is withdrawn; it does **not** bear on the broader daytime-pipeline EPERM-cascade observability concern that is this ticket's actual subject, which stands on the feature-#209 task-failure data above.
 
 ## Role
 
@@ -37,6 +39,6 @@ Sits inside the daytime/overnight pipeline orchestrator. Reads per-task exit rep
 - `cortex_command/overnight/batch_runner.py` or successor module
 - Exit-report schema and `worker_no_exit_report` event handling
 - `bin/.events-registry.md` (register the new event)
-- `cortex/lifecycle/seatbelt-probe.log` (recent failures dated 2026-05-20)
+- ~~`cortex/lifecycle/seatbelt-probe.log` (recent failures dated 2026-05-20)~~ — retired and deleted 2026-05-29 (see #220); withdrawn as evidence per the Why note above
 - `cortex/lifecycle/lead-refine-4-complexity-value-gate/exit-reports/` (historical — now cleaned, but the failure pattern was documented in those reports)
 - Commit `a338437c` (Pass excludedCommands=['git:*'] to orchestrator + feature-worker sandboxes — partial mitigation already shipped)

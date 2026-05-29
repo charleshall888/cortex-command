@@ -7,10 +7,12 @@ priority: should-have
 type: feature
 tags: [overnight, sandbox, worktree, evidence-durability]
 created: 2026-05-15
-updated: 2026-05-16
+updated: 2026-05-29
 spec: cortex/lifecycle/re-validate-test-worktree-seatbeltpy-on/spec.md
 session_id: null
 ---
+
+> **Retired 2026-05-29.** Delivered as **Shape B** (`cortex_command/overnight/seatbelt_probe.py`, invoked once per session-start by the overnight runner) and subsequently retired — the module, the runner session-start block, the `report.py` header renderer, and the top-level `cortex/lifecycle/seatbelt-probe.log` were all deleted. Reason: the probe could never pass. Under an enforcing sandbox in non-interactive `claude -p` mode, Claude Code denies the compound `uv run pytest … | tee …; printf` Bash command the probe issued (`--dangerously-skip-permissions` does not override a sandbox-driven denial), so every logged run (0 `ok` / 1922 `failed`) ended without executing the test. The bind is structural: the test must run *inside* the enforcing sandbox to detect enforcement, but relaxing the sandbox enough to run the test harness makes the inner test skip. **Consequence:** this ticket's recurring-automated-re-validation goal is no longer in place — the supported check is on-demand `pytest tests/test_worktree_seatbelt.py -q` from an active (sandboxed) Claude Code session, and the per-spawn sandbox settings remain the production enforcement mechanism. If the recurring canary is ever rebuilt, the durable shape is a single sandbox-analyzable write-attempt with the verdict read from `claude`'s JSON output — not a spawned pytest run. See `docs/overnight-operations.md` → "Seatbelt sandbox verification" → "Retired: automated session-start probe", and the `deprecated-pending-removal` `seatbelt_probe` row in `bin/.events-registry.md`.
 
 Originated from critical-review of `cortex/lifecycle/restore-worktree-root-env-prefix/plan.md` (Objection: R10/R11 evidence chain not re-validated after lifecycle close).
 

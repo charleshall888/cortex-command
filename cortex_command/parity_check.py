@@ -57,11 +57,6 @@ RESERVED_NON_BIN_NAMES: frozenset[str] = frozenset(
         # documented in docs/internals/pipeline.md and docs/overnight-operations.md; the trailing
         # dash captures the token-regex tail. Not a deployable script.
         "cortex-sandbox-",
-        # $TMPDIR-resident output/result file prefixes used by
-        # `cortex_command/overnight/seatbelt_probe.py`; documented in
-        # docs/overnight-operations.md prose. Not deployable bin scripts.
-        "cortex-seatbelt-output-",
-        "cortex-seatbelt-result-",
     }
 )
 
