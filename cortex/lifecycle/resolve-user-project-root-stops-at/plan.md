@@ -36,7 +36,7 @@ Add a lock-scoped `_resolve_main_repo_root()` to `interactive_lock.py` (pure-Pyt
   - `grep -c '_resolve_user_project_root' cortex_command/interactive_lock.py` ≥ 2 — pass if ≥ 2 (#241 R2 grandfather).
   - `grep -nE 'subprocess|rev-parse' cortex_command/interactive_lock.py` returns no match inside the new resolver — pass if absent (manual diff check).
   - `python3 -m pytest tests/test_interactive_lock_sandbox.py::test_lock_write_from_worktree_cwd -q` exits 0 — pass if exit 0. **CI-only integration proof, NOT an implement-time behavioral gate** (critical-review Objection 2): this test `pytest.skip`s before building any fixture in a nested Seatbelt sandbox (the implementer's environment), so its exit 0 there means "skipped," not "passed" — it cannot distinguish a correct resolver from a stub. The behavioral proof of `_resolve_main_repo_root` that *does* run at implement time is Task 2's `test_resolve_main_repo_root_*` unit suite (which depends on this task). Do NOT treat Task 1 as behaviorally verified on the sandbox-test skip alone; the resolver is confirmed when Task 2's unit tests pass on this host, and the sandbox path is confirmed only on vanilla macOS CI.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Phase-1 resolver unit tests (collision guard incl. read_lock, env-first, non-git fallback)
 - **Files**: `tests/test_interactive_lock.py`
@@ -53,7 +53,7 @@ Add a lock-scoped `_resolve_main_repo_root()` to `interactive_lock.py` (pure-Pyt
   - `python3 -m pytest tests/test_interactive_lock.py -k 'worktree_with_cortex_resolves_to_main' -q` exits 0 — pass if exit 0 (this case carries all three assertions, including the `read_lock`-from-worktree convergence check).
   - `python3 -m pytest tests/test_interactive_lock.py -k 'env' -q` exits 0 — pass if exit 0 (the env-first test is the only "env"-substring test, so the filter resolves to exactly it).
   - `python3 -m pytest tests/test_interactive_lock.py -k 'no_git_cortex_fallback' -q` exits 0 — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Broaden the resolver edge-case suite (hand-built fixtures only)
 - **Files**: `tests/test_interactive_lock.py`
@@ -68,7 +68,7 @@ Add a lock-scoped `_resolve_main_repo_root()` to `interactive_lock.py` (pure-Pyt
   - `test_resolve_main_repo_root_bfail_inside_worktree_degrades_to_local` (critical-review Objection 1 — the documented step-(c) limitation): build the Task-2 collision geometry (a `<wt>` with its own `cortex/`) but with a **corrupt** worktree pointer that fails branch (b) (e.g. a `gitdir:` whose target's `commondir` resolves to a path with no `cortex/`); `chdir(<wt>)`, `CORTEX_REPO_ROOT` unset; assert `_resolve_main_repo_root()` returns the **worktree** root — encoding the accepted limitation that a (b)-failure inside a worktree degrades to worktree-local resolution (pre-fix behavior, unreachable for well-formed `git worktree add` output). This pins the behavior so a future change that silently alters it is caught.
   - Req 8b (real-worktree `commondir` shape → `<main>`) is already covered by Task 2's collision test; no separate case needed.
 - **Verification**: `python3 -m pytest tests/test_interactive_lock.py -k resolve_main_repo_root -q` exits 0 AND `-k resolve_main_repo_root` collects ≥ 5 cases — pass if exit 0 and collected ≥ 5 (read the pytest "collected"/"passed" summary line). The threshold is a floor, not the contract: each collected case must map to a *distinct* enumerated behavior (Task 2: env-first, non-git fallback, worktree-collision incl. read_lock; Task 3: synthetic-direct, malformed-fallback, no-cortex-fallback, bfail-degrades-to-local = 7 distinct cases), not near-duplicates padding the count (critical-review concern R3-3).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 4: Reconcile the false contract claim and document the main-root guarantee
 - **Files**: `cortex/lifecycle/add-bidirectional-concurrency-guards-for-interactive/spec.md`, `tests/test_interactive_lock_sandbox.py`, `cortex_command/interactive_lock.py`
@@ -86,7 +86,7 @@ Add a lock-scoped `_resolve_main_repo_root()` to `interactive_lock.py` (pure-Pyt
   - `grep -c '_resolve_main_repo_root' tests/test_interactive_lock_sandbox.py` ≥ 1 — pass if ≥ 1 (currently 0).
   - `grep -c 'main repo root' cortex_command/interactive_lock.py` ≥ 1 — pass if ≥ 1; the docstring names both `_resolve_main_repo_root` and `scan_live_locks` (manual diff check).
   - `git diff tests/test_interactive_lock_sandbox.py` shows changes confined to docstrings — pass if no edits to fixture construction, `subprocess.run` argv, or `assert` lines (manual check).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5: Full suite green
 - **Files**: (none — integration gate; if a failure surfaces, fix it in the implicated test or source file and note the edit)
@@ -95,7 +95,8 @@ Add a lock-scoped `_resolve_main_repo_root()` to `interactive_lock.py` (pure-Pyt
 - **Complexity**: simple
 - **Context**: `just test` runs the working tree (editable install), so no `CORTEX_COMMAND_FORCE_SOURCE` is needed. The shared `common.py` resolvers are deliberately unchanged (a Non-Requirement), so `test_resolve_user_project_root_git_file_boundary_terminates_walk` must remain green. The sandbox test will skip in a nested Seatbelt environment — a skip is a non-failure.
 - **Verification**: `just test` exit code = 0 — pass if 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
+- **Implementation note (worktree-context caveat)**: Run from inside the interactive worktree under the Claude command-sandbox, `2449` tests pass across two invocations (`pytest tests/` = 1653 passed; `pytest cortex_command/*/tests` = 796 passed), with **zero** failures in any file this feature touches or in the resolver/`.resolve()` blast radius (`test_interactive_lock.py` incl. the 7 new cases, the `common.py` `.git`-boundary guardrail `test_resolve_user_project_root_git_file_boundary_terminates_walk`, and the overnight lock/`scan_live_locks` suites). Every observed failure is an execution-context artifact, mechanistically confirmed: `test_runner_pr_gating.py` (11) = command-sandbox blocking `git write-tree` (13/13 green sandbox-off); `test_worktree_seatbelt.py` (2) = the `seatbelt_active` fixture probing `<repo>/.git/HEAD` while `.git` is a *file* in a worktree (skips on a primary checkout); `cortex_command/init/tests/test_handler_ensure.py` + `lifecycle/tests/test_init_ensure.py` (14) = `cortex init --ensure`'s F9 guard refusing to run inside a worktree. None are regressions. A literal `just test` exit-0 cannot be produced from inside a worktree; the canonical run is deferred to the primary checkout at the Complete/merge step.
 
 ## Risks
 - **Step (c) is a best-effort fallback, not a universal main-root guarantee** (critical-review Objection 1): the spec mandates the literal `_resolve_user_project_root()` fallback (Req 3), which from inside a worktree-with-`cortex/` returns the *worktree* root. For a well-formed real `git worktree add`, branch (b) always succeeds and returns `<main>`, so (c) is reached only for non-worktree projects, `.git`-directory repos, or corrupt/incomplete worktree git state. In that last pathological case the resolver degrades to worktree-local resolution (pre-fix behavior, no worse than today). This is an accepted, documented limitation — pinned by `test_resolve_main_repo_root_bfail_inside_worktree_degrades_to_local` (Task 3) so it cannot change silently. Changing it would require touching `common.py` (a Non-Requirement) or a non-literal fallback (would break Req 3's grep ≥2).

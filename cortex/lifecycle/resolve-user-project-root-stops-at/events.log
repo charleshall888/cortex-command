@@ -4,3 +4,12 @@
 {"ts": "2026-05-29T12:50:04Z", "event": "spec_approved", "feature": "resolve-user-project-root-stops-at"}
 {"ts":"2026-05-29T13:20:52.659873Z","event":"plan_approved","feature":"resolve-user-project-root-stops-at"}
 {"ts":"2026-05-29T13:20:52.659873Z","event":"phase_transition","feature":"resolve-user-project-root-stops-at","from":"plan","to":"implement"}
+{"schema_version":1,"ts":"2026-05-29T13:35:38.589043+00:00","event":"interactive_worktree_entered","feature":"resolve-user-project-root-stops-at","worktree_path":"/Users/charlie.hall/Workspaces/cortex-command/.claude/worktrees/interactive-resolve-user-project-root-stops-at"}
+{"schema_version":1,"ts":"2026-05-29T13:37:35.330497+00:00","event":"batch_dispatch","feature":"resolve-user-project-root-stops-at","worktree_path":null}
+{"ts":"2026-05-29T13:37:35.363893+00:00","event":"batch_dispatch","feature":"resolve-user-project-root-stops-at","batch":0,"tasks":[1]}
+{"ts":"2026-05-29T13:45:18.768545+00:00","event":"batch_dispatch","feature":"resolve-user-project-root-stops-at","batch":2,"tasks":[3,4]}
+{"ts":"2026-05-29T13:49:08.088159+00:00","event":"batch_dispatch","feature":"resolve-user-project-root-stops-at","batch":3,"tasks":[5]}
+{"ts":"2026-05-29T14:01:45.954503+00:00","event":"phase_transition","feature":"resolve-user-project-root-stops-at","tier":"complex","from":"implement","to":"review"}
+{"ts":"2026-05-29T14:09:45.052612+00:00","event":"review_verdict","feature":"resolve-user-project-root-stops-at","verdict":"APPROVED","cycle":1,"requirements_drift":"none"}
+{"ts":"2026-05-29T14:09:45.074949+00:00","event":"phase_transition","feature":"resolve-user-project-root-stops-at","from":"review","to":"complete"}
+{"schema_version":1,"ts":"2026-05-29T14:24:35.209606+00:00","event":"pr_opened","feature":"resolve-user-project-root-stops-at","number":18,"url":"https://github.com/charleshall888/cortex-command/pull/18","head_branch":"interactive/resolve-user-project-root-stops-at","repo":"charleshall888/cortex-command"}
