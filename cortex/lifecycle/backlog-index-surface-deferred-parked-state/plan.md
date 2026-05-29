@@ -46,7 +46,7 @@ schema doc carries the `deferred`-tag note.
   helpers (`_parse_inline_str_list` at 63–71) so Task 2 can call it by name. Do NOT touch `generate_json`
   (lines 210–212) or `collect_items` (the `item['status']` field stays the raw enum).
 - **Verification**: `python3 -c "from cortex_command.backlog.generate_index import generate_md; mk=lambda t:dict(id=1,title='T',status='backlog',priority='low',type='chore',tags=t,areas=[],blocked_by=[],parent=None,spec=None); yes=generate_md([mk(['Deferred'])],set(),set(),[mk(['Deferred'])]); no=generate_md([mk(['deferred-feature-work'])],set(),set(),[mk(['deferred-feature-work'])]); print('OK' if ('| backlog (deferred) |' in yes and '(deferred)' not in no) else 'FAIL')"` — pass if it prints `OK`. This pins BOTH Req 1 axes in the smoke gate: the case-insensitive `Deferred` positive AND the whole-element negative (`deferred-feature-work` must NOT annotate, so a substring regression prints `FAIL`). Durable coverage is in Task 3; this gate does not depend on the test file.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Suppress deferred-tagged items from ## Refined and ## Backlog
 - **Files**: `cortex_command/backlog/generate_index.py`
@@ -65,7 +65,7 @@ schema doc carries the `deferred`-tag note.
   over-fire on `deferred-feature-work`). Leave `## In-Progress`
   (270–274) and `## Warnings` (276–306) untouched (Non-Requirements: in-progress/warnings out of scope).
 - **Verification**: `python3 -c "from cortex_command.backlog.generate_index import generate_md; mk=lambda i,t:dict(id=i,title='T',status='backlog',priority='low',type='chore',tags=t,areas=[],blocked_by=[],parent=None,spec=None); items=[mk(1,['deferred']),mk(2,['deferred-feature-work'])]; out=generate_md(items,set(),set(),items); seg=out.split('## Backlog')[1].split('## In-Progress')[0]; print('OK' if ('- **1**' not in seg and '- **2**' in seg and '| backlog (deferred) |' in out) else 'FAIL')"` — pass if it prints `OK` (the `deferred` item is absent from the `## Backlog` grouping yet still an annotated table row, while the whole-element-negative `deferred-feature-work` item is NOT suppressed). Durable coverage in Task 3.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Pin behavior with a new test file
 - **Files**: `tests/test_generate_backlog_index.py`
@@ -100,7 +100,7 @@ schema doc carries the `deferred`-tag note.
   the durable Req 6 guarantee). AND `git diff --name-only "$(git merge-base HEAD main)" -- cortex_command/`
   lists `cortex_command/backlog/generate_index.py` as the sole `cortex_command/` entry (Req 6 boundary
   check; merge-base, not live `main` tip).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 4: Document the deferred-tag convention in the schema doc
 - **Files**: `skills/backlog/references/schema.md`
@@ -118,7 +118,7 @@ schema doc carries the `deferred`-tag note.
   is deployed, so the `cortex-check-parity` (W003) orphan check does not apply.
 - **Verification**: `grep -c 'deferred' skills/backlog/references/schema.md` ≥ 1 AND a read confirms
   the note sits within the `tags`-field region (grep count alone does not prove placement, per Req 8).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ## Risks
 - **Compound Status cell (`backlog (deferred)`) breaks a consumer**: Mitigated — research confirmed no

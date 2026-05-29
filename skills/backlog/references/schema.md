@@ -14,7 +14,7 @@ Every backlog item file uses this YAML frontmatter contract. Frontmatter must be
 | `status` | enum | yes | `backlog`, `ready`, `refined`, `in_progress`, `implementing`, `review`, `complete`, `abandoned` |
 | `priority` | enum | yes | `critical`, `high`, `medium`, `low` |
 | `type` | enum | yes | `feature`, `bug`, `chore`, `spike`, `idea`, `epic` (epics are non-implementable, produced by /cortex-core:discovery) |
-| `tags` | array | no | Inline YAML only: `[tag1, tag2]` |
+| `tags` | array | no | Inline YAML only: `[tag1, tag2]`. The `deferred` tag is recognized by the index generator as a parked-state signal: in the master table the item's Status cell renders `<status> (deferred)`, and the item is excluded from the `## Refined` and `## Backlog` actionable groupings. This is an index-view flag only — it does NOT affect overnight selection (`is_item_ready`). To fully park an item from overnight, set a non-eligible `status` (e.g. `abandoned`). |
 | `areas` | list[str] | no | Inline YAML only: `[overnight-runner, backlog]`. Area-separation constraint for overnight scheduling — features with overlapping areas are assigned to different rounds. Written by `/cortex-core:refine` at spec approval time. If absent or empty, separation constraint is silently skipped (identical to current algorithm). When all items in a session share an area, every item runs in its own single-item batch (fully serialized execution) — this is intended. Zero effect until populated; protection scales with how many items have the field. Canonical names: `overnight-runner`, `backlog`, `skills`, `lifecycle`, `hooks`, `report`, `tests`, `docs` |
 | `created` | date | yes | `YYYY-MM-DD` |
 | `updated` | date | yes | `YYYY-MM-DD` |
