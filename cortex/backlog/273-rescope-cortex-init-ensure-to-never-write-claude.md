@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: a66a9fe8-67c4-4243-8f31-f80e289a6528
 title: "Rescope cortex init --ensure to never write ~/.claude/"
-status: refined
+status: complete
 priority: high
 type: feature
 created: 2026-05-29

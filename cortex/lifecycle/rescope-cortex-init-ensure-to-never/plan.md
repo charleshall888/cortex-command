@@ -87,7 +87,7 @@ page's cortex-core start-here block.
   - Sibling `cortex_command/lifecycle/tests/test_init_ensure.py` needs no behavioral change
     (it monkeypatches `handler.main()` and asserts only exit-code pass-through) — re-run it to confirm.
 - **Verification**: run `python3 -m pytest cortex_command/init/tests/test_handler_ensure.py cortex_command/lifecycle/tests/test_init_ensure.py -q` — pass if exit 0; run `just test` — pass if exit 0; run `sed -n '/^def _run_ensure/,/^def /p' cortex_command/init/handler.py | grep -c -E 'settings_merge\.(register|validate_settings|unregister_matching_in_place)'` — pass if output is `0`.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Add the R1 no-`~/.claude/`-write spy and byte-identity tests
 - **Files**: `cortex_command/init/tests/test_handler_ensure.py`
@@ -118,7 +118,7 @@ page's cortex-core start-here block.
     "still absent" can pass trivially). Use the `_isolate_home` fixture (:58) for the temp HOME.
   - Do not modify `handler.py` in this task — it is test-only, layered on Task 1's behavior.
 - **Verification**: run `python3 -m pytest cortex_command/init/tests/test_handler_ensure.py -q` — pass if exit 0; run `grep -c "settings.local.json.lock" cortex_command/init/tests/test_handler_ensure.py` — pass if ≥ 1 (the lockfile-absence assertion is present); run `grep -c "unregister_matching_in_place" cortex_command/init/tests/test_handler_ensure.py` — pass if ≥ 1 (the spy references the call by name); run `just test` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Amend the auto-apply-cortex-init-at-lifecycle spec to the new contract
 - **Files**: `cortex/lifecycle/auto-apply-cortex-init-at-lifecycle/spec.md`
@@ -146,7 +146,7 @@ page's cortex-core start-here block.
     lifecycle's `plan.md` / `review.md` — they are historical records; the superseding pointer is the
     reconciliation signal.
 - **Verification**: `grep -c -E "exits 0 and writes|bootstrap automatically" cortex/lifecycle/auto-apply-cortex-init-at-lifecycle/spec.md` — pass if `0` (sites b + c revised); `grep -c "dispatch through clean first-init" cortex/lifecycle/auto-apply-cortex-init-at-lifecycle/spec.md` — pass if `0` (site a, the case-(iii) row's old-behavior phrase, revised); `grep -c "273" cortex/lifecycle/auto-apply-cortex-init-at-lifecycle/spec.md` — pass if ≥ 1; `grep -c "bootstrap a clean one" cortex/lifecycle/auto-apply-cortex-init-at-lifecycle/spec.md` — pass if `1` (R5 statement preserved, not accidentally stripped).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Correct first-contact docs so terminal `cortex init` precedes `/lifecycle`
 - **Files**: `README.md`, `docs/index.html`
@@ -168,7 +168,7 @@ page's cortex-core start-here block.
     required step inside the skills article (before/alongside the `/lifecycle` mention), matching the
     existing `<p class="ship-when">` markup style.
 - **Verification**: `grep -c "OPTIONAL - In each project" README.md` — pass if `0` (the `cortex init`-step OPTIONAL annotation is removed; this anchors the specific edit, not a brittle total-token count); `grep -c "OPTIONAL - autonomous overnight" README.md` — pass if `1` (overnight-plugin OPTIONAL preserved); extract the `data-surface="skills"` article block and confirm it contains the literal `cortex init`: `awk '/data-surface=\"skills\"/{f=1} f; /<\/article>/{if(f)exit}' docs/index.html | grep -c "cortex init"` — pass if ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Risks
 - **Deviation from the spec's phase labels (deliberate).** The spec assigns R8 (test

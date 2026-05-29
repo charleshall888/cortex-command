@@ -29,37 +29,6 @@
     "repo": null
   },
   {
-    "id": 273,
-    "title": "Rescope cortex init --ensure to never write ~/.claude/",
-    "status": "refined",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "cortex-init",
-      "distribution",
-      "sandbox",
-      "in-session"
-    ],
-    "areas": [
-      "skills"
-    ],
-    "created": "2026-05-29",
-    "updated": "2026-05-29",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "cortex/lifecycle/rescope-cortex-init-ensure-to-never/spec.md",
-    "discovery_source": "cortex/research/cortex-init-scope-reduction/research.md",
-    "plan": null,
-    "uuid": "a66a9fe8-67c4-4243-8f31-f80e289a6528",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 8,
     "title": "Auto-rename Claude Code session to active lifecycle feature name",
     "status": "backlog",

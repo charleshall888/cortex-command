@@ -6,3 +6,12 @@
 {"ts":"2026-05-29T18:40:58Z","event":"sentinel_absence","feature":"rescope-cortex-init-ensure-to-never","reviewer_angle":"Test-breakage blast radius vs. Task 1's Files list","reason":"absent","model_tier":"opus","expected_sha":"d7ca53d07c31af9db090e63e12d31ddcd7dfdb2e23c5f6d571414b428699c32a","observed_sha_or_null":null}
 {"ts": "2026-05-29T18:48:46Z", "event": "plan_approved", "feature": "rescope-cortex-init-ensure-to-never"}
 {"ts": "2026-05-29T18:48:46Z", "event": "phase_transition", "feature": "rescope-cortex-init-ensure-to-never", "from": "plan", "to": "implement"}
+{"ts": "2026-05-29T18:54:05Z", "event": "batch_dispatch", "feature": "rescope-cortex-init-ensure-to-never", "batch": 0, "tasks": [1]}
+{"ts": "2026-05-29T19:05:22Z", "event": "batch_dispatch", "feature": "rescope-cortex-init-ensure-to-never", "batch": 1, "tasks": [2, 3, 4]}
+{"ts": "2026-05-29T19:17:47Z", "event": "phase_transition", "feature": "rescope-cortex-init-ensure-to-never", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-05-29T19:26:23Z", "event": "review_verdict", "feature": "rescope-cortex-init-ensure-to-never", "verdict": "CHANGES_REQUESTED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-05-29T19:26:23Z", "event": "phase_transition", "feature": "rescope-cortex-init-ensure-to-never", "from": "review", "to": "implement-rework"}
+{"ts": "2026-05-29T19:33:21Z", "event": "phase_transition", "feature": "rescope-cortex-init-ensure-to-never", "from": "implement-rework", "to": "review"}
+{"ts": "2026-05-29T19:37:44Z", "event": "review_verdict", "feature": "rescope-cortex-init-ensure-to-never", "verdict": "APPROVED", "cycle": 2, "requirements_drift": "none"}
+{"ts": "2026-05-29T19:37:44Z", "event": "phase_transition", "feature": "rescope-cortex-init-ensure-to-never", "from": "review", "to": "complete"}
+{"ts": "2026-05-29T19:41:39Z", "event": "feature_complete", "feature": "rescope-cortex-init-ensure-to-never", "tasks_total": 4, "rework_cycles": 1, "merge_anchor": "merge"}

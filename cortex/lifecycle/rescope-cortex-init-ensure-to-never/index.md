@@ -2,7 +2,7 @@
 feature: rescope-cortex-init-ensure-to-never
 parent_backlog_uuid: a66a9fe8-67c4-4243-8f31-f80e289a6528
 parent_backlog_id: 273
-artifacts: ["research", "spec", "plan"]
+artifacts: ["research", "spec", "plan", "review"]
 tags: [cortex-init, distribution, sandbox, in-session]
 created: 2026-05-29
 updated: 2026-05-29
