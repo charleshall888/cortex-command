@@ -395,6 +395,20 @@ def test_grouping_section_1_input_contract_omits_non_emitted_headings(
     )
 
 
+def test_decompose_body_omits_removed_research_phase_r3_gate(raw_text: str) -> None:
+    """decompose.md no longer names the removed `research-phase R3` gate.
+
+    Negative assertion: §3's dangling cross-reference to the now-removed
+    falsification gate (`research-phase R3`) was reconciled away while
+    preserving the "piece-set is final; do not re-derive/re-merge" intent.
+    The dead gate naming must not silently re-drift back in.
+    """
+    assert "research-phase R3" not in raw_text, (
+        "decompose.md must not name the removed `research-phase R3` gate — the "
+        "§3 cross-reference was reconciled to drop the dead gate naming"
+    )
+
+
 def test_grouping_section_3_distinguishes_wrong_set_from_over_split(
     sections: dict[str, str],
 ) -> None:
