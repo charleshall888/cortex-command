@@ -6,3 +6,5 @@
 {"ts": "2026-05-29T00:51:43Z", "event": "phase_transition", "feature": "reconcile-discovery-skillmd-architecture-vocabulary-with", "from": "research", "to": "specify"}
 {"ts": "2026-05-29T01:24:17Z", "event": "spec_approved", "feature": "reconcile-discovery-skillmd-architecture-vocabulary-with"}
 {"ts": "2026-05-29T01:24:23Z", "event": "phase_transition", "feature": "reconcile-discovery-skillmd-architecture-vocabulary-with", "from": "specify", "to": "plan"}
+{"ts": "2026-05-29T01:41:14Z", "event": "plan_approved", "feature": "reconcile-discovery-skillmd-architecture-vocabulary-with"}
+{"ts": "2026-05-29T01:41:14Z", "event": "phase_transition", "feature": "reconcile-discovery-skillmd-architecture-vocabulary-with", "from": "plan", "to": "implement"}
