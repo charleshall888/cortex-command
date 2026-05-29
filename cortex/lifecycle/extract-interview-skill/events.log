@@ -8,3 +8,5 @@
 {"ts": "2026-05-29T03:35:33Z", "event": "plan_approved", "feature": "extract-interview-skill"}
 {"ts": "2026-05-29T03:35:33Z", "event": "phase_transition", "feature": "extract-interview-skill", "from": "plan", "to": "implement"}
 {"ts": "2026-05-29T13:05:00Z", "event": "phase_transition", "feature": "extract-interview-skill", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-05-29T13:08:00Z", "event": "review_dispatch", "feature": "extract-interview-skill", "criticality": "high", "dimensions": ["correctness", "completeness", "quality"]}
+{"ts": "2026-05-29T13:20:00Z", "event": "review_verdict", "feature": "extract-interview-skill", "verdict": "APPROVED", "cycle": 1}
