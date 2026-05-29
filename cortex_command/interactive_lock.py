@@ -1,10 +1,12 @@
 """Interactive-session concurrency lock for the worktree-interactive mode.
 
 Provides per-feature ``interactive.pid`` lock acquisition, liveness
-verification, stale recovery, and release.  All path resolution flows
-through ``_resolve_user_project_root()`` so the lock file always lands
-under the main repo's ``cortex/`` tree regardless of the CWD (which
-may be a git worktree under the Variant A interactive model).
+verification, stale recovery, and release.  The lock's path functions
+(``_lock_path`` / ``_events_log_path``) resolve via
+``_resolve_main_repo_root()`` so the lock file always lands under the
+**main** repo root's ``cortex/`` tree regardless of the CWD — which may
+be a git worktree carrying its own co-located ``cortex/`` under the
+Variant A interactive model (see #271).
 
 Lock file schema (``cortex/lifecycle/{slug}/interactive.pid``):
 
@@ -69,18 +71,128 @@ _START_TIME_TOLERANCE_SECONDS = 2.0
 # ---------------------------------------------------------------------------
 
 
+def _main_root_from_gitfile(git_file: Path) -> Optional[Path]:
+    """Resolve the MAIN repo root from a worktree ``.git`` *file*.
+
+    A git worktree's ``.git`` is a file containing ``gitdir: <$GIT_DIR>``
+    (the worktree's admin dir, ``<main>/.git/worktrees/<id>``). The main
+    repo's ``.git`` is found via the ``commondir`` file inside ``$GIT_DIR``
+    (relative pointer, typically ``../..``). The main repo root is that
+    common ``.git``'s ``.parent``.
+
+    Pure-Python parse only — no ``git rev-parse`` subprocess (empirically
+    ``git rev-parse --git-common-dir`` exits 128 against a hand-built
+    fixture and against non-``.git`` ``cortex/`` projects, per #271 research).
+
+    Returns the candidate main root, or ``None`` when the gitfile is
+    unreadable, the ``gitdir:`` line is malformed/missing, or the
+    ``commondir`` file is present-but-unreadable. The caller applies the
+    ``cortex/``-existence guard before trusting the result.
+    """
+    try:
+        content = git_file.read_text(encoding="utf-8")
+    except OSError:
+        return None
+
+    gitdir_target: Optional[str] = None
+    for line in content.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("gitdir:"):
+            gitdir_target = stripped[len("gitdir:"):].strip()
+            break
+    if not gitdir_target:
+        return None
+
+    git_dir = Path(gitdir_target)
+    if not git_dir.is_absolute():
+        # Relative ``gitdir:`` pointers resolve against the ``.git`` file's dir.
+        git_dir = git_file.parent / git_dir
+    git_dir = git_dir.resolve()
+
+    commondir_file = git_dir / "commondir"
+    if commondir_file.is_file():
+        try:
+            common_pointer = commondir_file.read_text(encoding="utf-8").strip()
+        except OSError:
+            return None
+        if not common_pointer:
+            return None
+        common = Path(common_pointer)
+        if not common.is_absolute():
+            # ``commondir`` pointers resolve relative to ``$GIT_DIR``.
+            common = git_dir / common
+        # ``common`` is now ``<main>/.git``; the main root is its parent.
+        return common.resolve().parent
+
+    # No ``commondir`` → synthetic direct ``gitdir: <main>/.git`` shape;
+    # the main root is the gitdir target's parent.
+    return git_dir.parent
+
+
+def _resolve_main_repo_root() -> Path:
+    """Resolve the MAIN repo root regardless of CWD (lock-scoped resolver).
+
+    Distinct from ``common._resolve_user_project_root()`` (whose upward walk
+    accepts the first ``cortex/``-bearing ancestor and so returns the
+    *worktree* root when a git-tracked ``cortex/`` is co-located there). The
+    interactive lock must agree on the **main** repo root from any CWD, so
+    that ``acquire`` (run pre-``EnterWorktree`` from main) and ``read_lock``
+    (re-invoked from inside a worktree) converge on the same lock file.
+
+    Order is load-bearing (eager worktree-detect, NOT walk-first):
+
+    (a) If ``CORTEX_REPO_ROOT`` is set, return it ``.resolve()``-canonicalized
+        verbatim (no ``.git`` parse, no subprocess) — preserves the overnight
+        env-pin.
+    (b) Else eagerly walk from ``Path.cwd().resolve()`` upward; on the first
+        ``.git`` entry that is a **file** (a worktree gitfile), parse it via
+        :func:`_main_root_from_gitfile`. This branch takes precedence over any
+        co-located ``cortex/``. A ``.git`` *directory* is a real-repo boundary
+        — it never enters the parse branch; the walk stops and routes to (c),
+        preserving #201's anti-leak boundary (an unrelated nested git repo
+        with no ``cortex/`` still raises via (c)'s bounded walk).
+    (b-guard) Only return the parsed candidate when ``(<candidate>/"cortex")``
+        is a dir; a malformed/missing pointer or a non-``cortex/`` candidate
+        falls through to (c).
+    (c) Otherwise return a literal ``_resolve_user_project_root()`` call (the
+        shared resolver — also keeps #241 R2's reference-count grep ≥ 2).
+    """
+    env_root = os.environ.get("CORTEX_REPO_ROOT")
+    if env_root:
+        return Path(env_root).resolve()
+
+    current = Path.cwd().resolve()
+    while True:
+        git_entry = current / ".git"
+        if git_entry.is_file():
+            candidate = _main_root_from_gitfile(git_entry)
+            if candidate is not None and (candidate / "cortex").is_dir():
+                return candidate.resolve()
+            # Malformed pointer or candidate lacks cortex/ → step (c).
+            break
+        if git_entry.is_dir():
+            # Real-repo boundary; a .git directory never enters branch (b).
+            break
+        parent = current.parent
+        if parent == current:
+            break
+        current = parent
+
+    return _resolve_user_project_root()
+
+
 def _lock_path(feature_slug: str) -> Path:
     """Return the absolute lock file path for a given feature slug.
 
     Path is always resolved against the main repo root (never CWD-relative).
     """
-    root = _resolve_user_project_root()
+    root = _resolve_main_repo_root()
     return root / "cortex" / "lifecycle" / feature_slug / "interactive.pid"
 
 
 def _events_log_path(feature_slug: str) -> Path:
     """Return the absolute events.log path for a given feature slug."""
-    root = _resolve_user_project_root()
+    root = _resolve_main_repo_root()
     return root / "cortex" / "lifecycle" / feature_slug / "events.log"
 
 
