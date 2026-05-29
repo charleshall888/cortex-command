@@ -1,0 +1,2 @@
+{"ts":"2026-05-28T22:56:18Z","event":"gate_brief_generated","status":"ok","brief_word_count":251,"patterns_detected_count":0}
+{"ts":"2026-05-29T00:15:12Z","event":"approval_checkpoint_responded","topic":"gitbutler-workflow-integration","checkpoint":"research-decompose","response":"drop","revision_round":0}
