@@ -121,32 +121,6 @@
     "repo": null
   },
   {
-    "id": 271,
-    "title": "_resolve_user_project_root stops at worktree .git-file boundary (interactive-lock test fails on CI)",
-    "status": "in_progress",
-    "priority": "medium",
-    "type": "bug",
-    "tags": [],
-    "areas": [
-      "lifecycle"
-    ],
-    "created": "2026-05-28",
-    "updated": "2026-05-29",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "cortex/lifecycle/resolve-user-project-root-stops-at/spec.md",
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "e1e36524-ec46-4937-aced-d8f415db603f",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": "plan",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 156,
     "title": "Make cortex-check-parity context-aware (skip tokens inside fenced code blocks)",
     "status": "deferred",

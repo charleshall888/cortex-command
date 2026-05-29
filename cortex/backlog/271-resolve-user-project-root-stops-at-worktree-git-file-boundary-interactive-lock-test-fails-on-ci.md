@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: e1e36524-ec46-4937-aced-d8f415db603f
 title: "_resolve_user_project_root stops at worktree .git-file boundary (interactive-lock test fails on CI)"
-status: in_progress
+status: complete
 priority: medium
 type: bug
 created: 2026-05-28
