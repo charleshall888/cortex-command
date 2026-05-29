@@ -24,8 +24,9 @@ claude /plugin marketplace add charleshall888/cortex-command
 claude /plugin install cortex-core@cortex-command        # Base skills + hooks
 claude /plugin install cortex-overnight@cortex-command   # OPTIONAL - autonomous overnight runs
 
-# 3. OPTIONAL - In each project where you want cortex active.
-# Validation rules, settings, demo-commands, etc.
+# 3. In each project, before running /lifecycle. Required per-project setup.
+# Registers Cortex's umbrella path with the repo's Claude Code sandbox;
+# installs validation rules, settings, demo-commands, etc.
 cd <your-project>
 cortex init
 ```
