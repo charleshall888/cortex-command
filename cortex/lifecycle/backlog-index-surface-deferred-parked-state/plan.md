@@ -46,7 +46,7 @@ schema doc carries the `deferred`-tag note.
   helpers (`_parse_inline_str_list` at 63–71) so Task 2 can call it by name. Do NOT touch `generate_json`
   (lines 210–212) or `collect_items` (the `item['status']` field stays the raw enum).
 - **Verification**: `python3 -c "from cortex_command.backlog.generate_index import generate_md; mk=lambda t:dict(id=1,title='T',status='backlog',priority='low',type='chore',tags=t,areas=[],blocked_by=[],parent=None,spec=None); yes=generate_md([mk(['Deferred'])],set(),set(),[mk(['Deferred'])]); no=generate_md([mk(['deferred-feature-work'])],set(),set(),[mk(['deferred-feature-work'])]); print('OK' if ('| backlog (deferred) |' in yes and '(deferred)' not in no) else 'FAIL')"` — pass if it prints `OK`. This pins BOTH Req 1 axes in the smoke gate: the case-insensitive `Deferred` positive AND the whole-element negative (`deferred-feature-work` must NOT annotate, so a substring regression prints `FAIL`). Durable coverage is in Task 3; this gate does not depend on the test file.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Suppress deferred-tagged items from ## Refined and ## Backlog
 - **Files**: `cortex_command/backlog/generate_index.py`
@@ -118,7 +118,7 @@ schema doc carries the `deferred`-tag note.
   is deployed, so the `cortex-check-parity` (W003) orphan check does not apply.
 - **Verification**: `grep -c 'deferred' skills/backlog/references/schema.md` ≥ 1 AND a read confirms
   the note sits within the `tags`-field region (grep count alone does not prove placement, per Req 8).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ## Risks
 - **Compound Status cell (`backlog (deferred)`) breaks a consumer**: Mitigated — research confirmed no

@@ -250,6 +250,8 @@ def generate_md(
     for item in items:
         if item["status"] != "refined":
             continue
+        if _is_deferred(item):
+            continue
         ready, _ = is_item_ready(
             SimpleNamespace(**item),
             all_items_ns,
@@ -263,6 +265,8 @@ def generate_md(
     lines += ["", "## Backlog", ""]
     for item in items:
         if item["status"] not in ("backlog", "open", "blocked"):
+            continue
+        if _is_deferred(item):
             continue
         ready, _ = is_item_ready(
             SimpleNamespace(**item),
