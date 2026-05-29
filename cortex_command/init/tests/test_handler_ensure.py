@@ -326,6 +326,82 @@ def test_r4_case_iv_foreign_cortex_content_exit2(
     assert "cortex init" in captured.err or "pre-existing content" in captured.err
 
 
+def test_r3_clean_repo_directive_distinct_from_refusal_messages(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """R3 distinctness gate: the clean-repo directive's unique marker substring
+    (``"not yet initialized"``) is ABSENT from every sibling refusal message.
+
+    Spec R3 (spec.md) requires the clean-repo case-(iii) directive to carry a
+    unique substring NOT present in the R19 foreign-content message, "asserted
+    against both messages in one test, so reusing the R19 text verbatim fails
+    the gate." The existing case-(iii) tests assert only PRESENCE of the
+    substring in clean-repo stderr; this regression test asserts its ABSENCE
+    from the R19 decline and (spec-additive, per the plan) from both R8
+    marker-corruption messages. If a future edit rewords the clean-repo
+    directive to reuse any of those messages' phrasing, this test fails.
+    """
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg-state"))
+
+    # --- Capture the clean-repo case-(iii) directive (the message under guard). ---
+    repo_clean = tmp_path / "repo-clean"
+    repo_clean.mkdir()
+    _git_init(repo_clean)
+    _isolate_home(monkeypatch, tmp_path)
+    assert not (repo_clean / "cortex").exists()
+    assert init_main(_make_ensure_args(repo_clean)) == 2
+    clean_directive = capsys.readouterr().err
+    # Sanity: the directive carries the unique marker substring (PRESENCE half,
+    # mirroring the existing case-(iii) assertions).
+    assert "not yet initialized" in clean_directive
+
+    # --- R19 (foreign-content decline) message: capture via check_content_decline. ---
+    repo_r19 = tmp_path / "repo-r19"
+    cortex_dir = repo_r19 / "cortex"
+    cortex_dir.mkdir(parents=True)
+    (cortex_dir / "foreign.md").write_text("content\n", encoding="utf-8")
+    with pytest.raises(ScaffoldError) as r19_exc:
+        scaffold.check_content_decline(repo_r19)
+    r19_message = str(r19_exc.value)
+    # Sanity: this is the R19 message (its distinctive phrase).
+    assert "pre-existing content" in r19_message
+
+    # HARD GATE (spec R3): the clean-repo directive's unique marker substring
+    # must NOT appear in the R19 message.
+    assert "not yet initialized" not in r19_message
+
+    # --- R8 message A: unparseable JSON → "reinitialize". Triggered via --ensure
+    #     against a non-JSON marker (mirrors test_r8_bundle4_non_json_marker). ---
+    repo_r8_json = tmp_path / "repo-r8-json"
+    repo_r8_json.mkdir()
+    _git_init(repo_r8_json)
+    r8_json_cortex = repo_r8_json / "cortex"
+    r8_json_cortex.mkdir(parents=True)
+    (r8_json_cortex / ".cortex-init").write_text("this is not json\n", encoding="utf-8")
+    assert init_main(_make_ensure_args(repo_r8_json)) == 2
+    r8_unparseable_message = capsys.readouterr().err
+    assert "unparseable" in r8_unparseable_message.lower()
+    assert "not yet initialized" not in r8_unparseable_message
+
+    # --- R8 message B: marker lacks cortex_version → "cortex init manually".
+    #     Triggered via --ensure against a cortex_version-less marker (mirrors
+    #     test_r8_bundle2_marker_without_cortex_version). ---
+    repo_r8_ver = tmp_path / "repo-r8-ver"
+    repo_r8_ver.mkdir()
+    _git_init(repo_r8_ver)
+    r8_ver_cortex = repo_r8_ver / "cortex"
+    r8_ver_cortex.mkdir(parents=True)
+    (r8_ver_cortex / ".cortex-init").write_text(
+        json.dumps({"some_foreign_key": "value"}) + "\n", encoding="utf-8"
+    )
+    assert init_main(_make_ensure_args(repo_r8_ver)) == 2
+    r8_version_message = capsys.readouterr().err
+    assert "cortex_version" in r8_version_message
+    assert "not yet initialized" not in r8_version_message
+
+
 # ---------------------------------------------------------------------------
 # Mutex error: --ensure --update rejected by argparse
 # ---------------------------------------------------------------------------
