@@ -133,12 +133,6 @@ Named contract surfaces:
 - Piece 3: edges land on 8+ skill source files, `tests/test_clarify_critic_alignment_integration.py`, `tests/fixtures/clarify_critic_v1.json`, `tests/fixtures/jsonl_emission_cutoff.txt`.
 - Piece 4: edges land on `cortex_command/overnight/orchestrator_context.py`, `cortex_command/overnight/prompts/orchestrator-round.md`, `cortex_command/overnight/tests/` (update `aggregate_round_context` tests).
 
-### Why N pieces
-
-Piece count is 4. Template R3 gate fires only when piece_count > 5; gate does not fire.
-
-Decomposition history: original was 6 pieces (separate pieces for registry, gate, dead-scan tool, per-event audit, coordinated deletion, and `escalations.jsonl` fix). Walked back per template rule R1 across two iterations: dead-scan tool merged into gate (Piece 2) because both share the `skills/**/*.md` scan surface and can be described in one Role/Integration/Edges paragraph without losing distinguishing detail → merged; per-event audit merged into dead-deletion (Piece 3) because the audit is the input to deletion and shares no separate named contract surface → merged. Final count: 4.
-
 ## Decision Records
 
 ### DR-1: Partition skill-side and session-side registries; do not merge logs

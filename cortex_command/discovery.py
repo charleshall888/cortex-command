@@ -1,30 +1,24 @@
 """Atomic CLI helpers for the /cortex-core:discovery skill.
 
-The discovery skill emits three new event types per spec R8b:
+The discovery skill emits the ``approval_checkpoint_responded`` event per
+spec R8b (R4 research->decompose gate AND R15 decompose->commit batch-review
+gate).
 
-  - ``architecture_section_written``    (research-phase Architecture write)
-  - ``approval_checkpoint_responded``   (R4 research->decompose gate AND
-                                         R15 decompose->commit batch-review gate)
-  - ``prescriptive_check_run``          (decompose-phase ticket-body scan)
+The event carries a small but non-trivial payload that meets the project.md
+L33 "skill-helper module" paraphrase-vulnerability threshold: authoring the
+JSON inline in skill prose invites the orchestrator-LLM to silently drop
+fields.
 
-Each event carries a small but non-trivial payload (e.g. the
-``prescriptive_check_run.flag_locations[]`` nested array) that meets the
-project.md L33 "skill-helper module" paraphrase-vulnerability threshold:
-authoring the JSON inline in skill prose invites the orchestrator-LLM to
-silently drop fields or fold the array shape.
-
-This module collapses each emission into one atomic CLI subcommand that
+This module collapses the emission into one atomic CLI subcommand that
 fuses input validation + JSONL append + path resolution. The orchestrator
 invokes:
 
-  python3 -m cortex_command.discovery emit-architecture-written ...
   python3 -m cortex_command.discovery emit-checkpoint-response  ...
-  python3 -m cortex_command.discovery emit-prescriptive-check   ...
   python3 -m cortex_command.discovery resolve-events-log-path   ...
 
-The first three emit-* subcommands internally call ``resolve-events-log-path``
-to pick the correct events.log target -- never hardcoded. Path resolution
-rules (spec R9 + R13 + EVT-1):
+The emit-checkpoint-response subcommand internally calls
+``resolve-events-log-path`` to pick the correct events.log target -- never
+hardcoded. Path resolution rules (spec R9 + R13 + EVT-1):
 
   1. If ``LIFECYCLE_SESSION_ID`` is set in the env AND a lifecycle directory
      under ``{repo_root}/cortex/lifecycle/`` contains a ``.session`` (or
@@ -411,37 +405,6 @@ _RESPONSE_VALUES = frozenset({
     "consolidate-pieces",
     "split-piece",
 })
-_STATUS_VALUES = frozenset({"draft", "approved", "revised", "walk-back"})
-
-
-def _validate_architecture_payload(
-    topic: str,
-    piece_count: int,
-    has_why_n_justification: bool,
-    status: str,
-    re_walk_attempt: int | None,
-) -> None:
-    _validate_topic_slug(topic)
-    if not isinstance(piece_count, int) or piece_count < 0:
-        raise ValueError(
-            f"piece_count must be a non-negative int: got {piece_count!r}"
-        )
-    if not isinstance(has_why_n_justification, bool):
-        raise ValueError(
-            "has_why_n_justification must be bool: got "
-            f"{type(has_why_n_justification).__name__}"
-        )
-    if status not in _STATUS_VALUES:
-        raise ValueError(
-            f"status must be one of {sorted(_STATUS_VALUES)}: got {status!r}"
-        )
-    if re_walk_attempt is not None and (
-        not isinstance(re_walk_attempt, int) or re_walk_attempt < 0
-    ):
-        raise ValueError(
-            f"re_walk_attempt must be a non-negative int or None: "
-            f"got {re_walk_attempt!r}"
-        )
 
 
 def _validate_checkpoint_payload(
@@ -467,74 +430,9 @@ def _validate_checkpoint_payload(
         )
 
 
-def _validate_prescriptive_payload(
-    topic: str,
-    tickets_checked: int,
-    flagged_count: int,
-    flag_locations: list,
-) -> None:
-    _validate_topic_slug(topic)
-    if not isinstance(tickets_checked, int) or tickets_checked < 0:
-        raise ValueError(
-            f"tickets_checked must be a non-negative int: got "
-            f"{tickets_checked!r}"
-        )
-    if not isinstance(flagged_count, int) or flagged_count < 0:
-        raise ValueError(
-            f"flagged_count must be a non-negative int: got {flagged_count!r}"
-        )
-    if not isinstance(flag_locations, list):
-        raise ValueError(
-            f"flag_locations must be a list: got "
-            f"{type(flag_locations).__name__}"
-        )
-    for i, loc in enumerate(flag_locations):
-        if not isinstance(loc, dict):
-            raise ValueError(
-                f"flag_locations[{i}] must be a dict: got "
-                f"{type(loc).__name__}"
-            )
-        for required_key in ("ticket", "section", "signal"):
-            if required_key not in loc:
-                raise ValueError(
-                    f"flag_locations[{i}] missing required key "
-                    f"{required_key!r}: {loc!r}"
-                )
-
-
 # ---------------------------------------------------------------------------
 # Emit helpers (importable)
 # ---------------------------------------------------------------------------
-
-def emit_architecture_written(
-    topic: str,
-    piece_count: int,
-    has_why_n_justification: bool,
-    status: str,
-    repo_root: Path,
-    re_walk_attempt: int | None = None,
-) -> Path:
-    """Validate + emit one ``architecture_section_written`` event.
-
-    Returns the events.log path written to.
-    """
-    _validate_architecture_payload(
-        topic, piece_count, has_why_n_justification, status, re_walk_attempt
-    )
-    events_log = resolve_events_log_path(topic, repo_root)
-    event: dict = {
-        "ts": _now_iso(),
-        "event": "architecture_section_written",
-        "topic": topic,
-        "piece_count": piece_count,
-        "has_why_n_justification": has_why_n_justification,
-        "status": status,
-    }
-    if re_walk_attempt is not None:
-        event["re_walk_attempt"] = re_walk_attempt
-    append_event(events_log, event)
-    return events_log
-
 
 def emit_checkpoint_response(
     topic: str,
@@ -556,33 +454,6 @@ def emit_checkpoint_response(
         "checkpoint": checkpoint,
         "response": response,
         "revision_round": revision_round,
-    }
-    append_event(events_log, event)
-    return events_log
-
-
-def emit_prescriptive_check(
-    topic: str,
-    tickets_checked: int,
-    flagged_count: int,
-    flag_locations: list,
-    repo_root: Path,
-) -> Path:
-    """Validate + emit one ``prescriptive_check_run`` event.
-
-    Returns the events.log path written to.
-    """
-    _validate_prescriptive_payload(
-        topic, tickets_checked, flagged_count, flag_locations
-    )
-    events_log = resolve_events_log_path(topic, repo_root)
-    event = {
-        "ts": _now_iso(),
-        "event": "prescriptive_check_run",
-        "topic": topic,
-        "tickets_checked": tickets_checked,
-        "flagged_count": flagged_count,
-        "flag_locations": flag_locations,
     }
     append_event(events_log, event)
     return events_log
@@ -1161,30 +1032,6 @@ def _cmd_resolve_events_log_path(args: argparse.Namespace) -> int:
     return 0
 
 
-def _cmd_emit_architecture_written(args: argparse.Namespace) -> int:
-    repo_root = _resolve_repo_root_arg(args)
-    if repo_root is None:
-        return 2
-    try:
-        target = emit_architecture_written(
-            topic=args.topic,
-            piece_count=args.piece_count,
-            has_why_n_justification=args.has_why_n_justification,
-            status=args.status,
-            repo_root=repo_root,
-            re_walk_attempt=args.re_walk_attempt,
-        )
-    except ValueError as e:
-        print(str(e), file=sys.stderr)
-        return 2
-    except OSError as e:
-        print(f"Failed to append architecture_section_written event: {e}",
-              file=sys.stderr)
-        return 2
-    sys.stdout.write(str(target) + "\n")
-    return 0
-
-
 def _cmd_emit_checkpoint_response(args: argparse.Namespace) -> int:
     repo_root = _resolve_repo_root_arg(args)
     if repo_root is None:
@@ -1202,39 +1049,6 @@ def _cmd_emit_checkpoint_response(args: argparse.Namespace) -> int:
         return 2
     except OSError as e:
         print(f"Failed to append approval_checkpoint_responded event: {e}",
-              file=sys.stderr)
-        return 2
-    sys.stdout.write(str(target) + "\n")
-    return 0
-
-
-def _cmd_emit_prescriptive_check(args: argparse.Namespace) -> int:
-    repo_root = _resolve_repo_root_arg(args)
-    if repo_root is None:
-        return 2
-    # flag_locations comes in as a JSON string on the CLI (stdin or arg).
-    if args.flag_locations_json == "-":
-        raw = sys.stdin.read()
-    else:
-        raw = args.flag_locations_json
-    try:
-        flag_locations = json.loads(raw) if raw.strip() else []
-    except json.JSONDecodeError as e:
-        print(f"--flag-locations-json must be valid JSON: {e}", file=sys.stderr)
-        return 2
-    try:
-        target = emit_prescriptive_check(
-            topic=args.topic,
-            tickets_checked=args.tickets_checked,
-            flagged_count=args.flagged_count,
-            flag_locations=flag_locations,
-            repo_root=repo_root,
-        )
-    except ValueError as e:
-        print(str(e), file=sys.stderr)
-        return 2
-    except OSError as e:
-        print(f"Failed to append prescriptive_check_run event: {e}",
               file=sys.stderr)
         return 2
     sys.stdout.write(str(target) + "\n")
@@ -1277,36 +1091,6 @@ def _build_parser() -> argparse.ArgumentParser:
     rp.add_argument("--topic", required=True, help="Discovery topic slug.")
     rp.set_defaults(func=_cmd_resolve_events_log_path)
 
-    # emit-architecture-written
-    ea = sub.add_parser(
-        "emit-architecture-written",
-        help="Validate and emit one architecture_section_written event.",
-    )
-    _add_repo_root_arg(ea)
-    ea.add_argument("--topic", required=True)
-    ea.add_argument("--piece-count", required=True, type=int)
-    ea.add_argument(
-        "--has-why-n-justification",
-        required=True,
-        choices=("true", "false"),
-    )
-    ea.add_argument(
-        "--status",
-        required=True,
-        choices=sorted(_STATUS_VALUES),
-    )
-    ea.add_argument(
-        "--re-walk-attempt",
-        type=int,
-        default=None,
-        help="Optional R12 re-walk attempt counter.",
-    )
-    ea.set_defaults(
-        func=lambda a: _cmd_emit_architecture_written(
-            _coerce_bool_namespace(a, "has_why_n_justification")
-        )
-    )
-
     # emit-checkpoint-response
     ec = sub.add_parser(
         "emit-checkpoint-response",
@@ -1331,25 +1115,6 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Revision-loop counter (0 for the first response).",
     )
     ec.set_defaults(func=_cmd_emit_checkpoint_response)
-
-    # emit-prescriptive-check
-    ep = sub.add_parser(
-        "emit-prescriptive-check",
-        help="Validate and emit one prescriptive_check_run event.",
-    )
-    _add_repo_root_arg(ep)
-    ep.add_argument("--topic", required=True)
-    ep.add_argument("--tickets-checked", required=True, type=int)
-    ep.add_argument("--flagged-count", required=True, type=int)
-    ep.add_argument(
-        "--flag-locations-json",
-        required=True,
-        help=(
-            "JSON list of {ticket, section, signal} dicts. Pass '-' to read "
-            "JSON from stdin."
-        ),
-    )
-    ep.set_defaults(func=_cmd_emit_prescriptive_check)
 
     # generate-brief
     gb = sub.add_parser(
@@ -1424,13 +1189,6 @@ def _build_parser() -> argparse.ArgumentParser:
     sc.set_defaults(func=_cmd_score_corpus)
 
     return p
-
-
-def _coerce_bool_namespace(args: argparse.Namespace, name: str) -> argparse.Namespace:
-    """Coerce a "true"/"false" argparse string into a real Python bool."""
-    raw = getattr(args, name)
-    setattr(args, name, raw == "true")
-    return args
 
 
 def main(argv: list[str] | None = None) -> int:

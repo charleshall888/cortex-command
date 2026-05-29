@@ -5,3 +5,12 @@
 {"ts": "2026-05-29T12:06:56Z", "event": "spec_approved", "feature": "retire-or-re-establish-the-orphaned"}
 {"ts": "2026-05-29T12:56:13Z", "event": "plan_approved", "feature": "retire-or-re-establish-the-orphaned"}
 {"ts": "2026-05-29T12:56:13Z", "event": "phase_transition", "feature": "retire-or-re-establish-the-orphaned", "from": "plan", "to": "implement"}
+{"schema_version":1,"ts":"2026-05-29T13:14:19.880682+00:00","event":"interactive_worktree_entered","feature":"retire-or-re-establish-the-orphaned","worktree_path":"/Users/charlie.hall/Workspaces/cortex-command/.claude/worktrees/interactive-retire-or-re-establish-the-orphaned"}
+{"ts": "2026-05-29T13:42:24Z", "event": "batch_dispatch", "feature": "retire-or-re-establish-the-orphaned", "batch": 0, "tasks": [1, 3]}
+{"ts": "2026-05-29T13:42:24Z", "event": "batch_dispatch", "feature": "retire-or-re-establish-the-orphaned", "batch": 1, "tasks": [2]}
+{"ts": "2026-05-29T13:42:24Z", "event": "batch_dispatch", "feature": "retire-or-re-establish-the-orphaned", "batch": 2, "tasks": [4]}
+{"ts": "2026-05-29T13:42:24Z", "event": "batch_dispatch", "feature": "retire-or-re-establish-the-orphaned", "batch": 3, "tasks": [5]}
+{"ts": "2026-05-29T13:42:24Z", "event": "phase_transition", "feature": "retire-or-re-establish-the-orphaned", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-05-29T13:46:49Z", "event": "review_verdict", "feature": "retire-or-re-establish-the-orphaned", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-05-29T13:46:49Z", "event": "phase_transition", "feature": "retire-or-re-establish-the-orphaned", "from": "review", "to": "complete"}
+{"schema_version": 1, "ts": "2026-05-29T13:59:14Z", "event": "pr_opened", "feature": "retire-or-re-establish-the-orphaned", "number": 17, "url": "https://github.com/charleshall888/cortex-command/pull/17", "head_branch": "interactive/retire-or-re-establish-the-orphaned", "repo": "charleshall888/cortex-command"}

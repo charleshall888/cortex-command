@@ -27,7 +27,7 @@ Hard-delete the two fully-orphaned discovery events (`architecture_section_writt
   - The module docstring (`:3-22`): change "emits three new event types" to reflect that only `approval_checkpoint_responded` survives; remove the `architecture_section_written` (`:5`), `prescriptive_check_run` (`:8`), and `flag_locations[]` (`:11`) bullets and the `emit-architecture-written` (`:20`) / `emit-prescriptive-check` (`:22`) CLI-usage lines.
   - **Do NOT touch** the surviving live path: `emit_checkpoint_response` (`:539`), `_validate_checkpoint_payload` (`:447`), `_cmd_emit_checkpoint_response` (`:1188`), `emit-checkpoint-response` subparser, or the genuinely shared helpers `resolve_events_log_path` (`:153`) and `append_event` (`:216`). (`_STATUS_VALUES` is NOT shared with the surviving path — `_validate_checkpoint_payload` does not read it — so it is removed above, not preserved.) Caller enumeration (repo-wide grep) confirms no skill prose, hook, bin script, or other Python module invokes the removed subcommands/functions — the only non-test reference is a historical lifecycle research artifact, which is left untouched.
 - **Verification**: `grep -c 'architecture_section_written\|has_why_n_justification\|emit-architecture-written' cortex_command/discovery.py` = 0 AND `grep -c 'prescriptive_check_run\|emit-prescriptive-check' cortex_command/discovery.py` = 0 AND `grep -c '_coerce_bool_namespace\|_validate_architecture_payload\|_validate_prescriptive_payload\|_STATUS_VALUES' cortex_command/discovery.py` = 0 (this dead-residue grep extends the spec's `_coerce_bool_namespace` criterion to the two validators and the orphaned `_STATUS_VALUES` constant) AND `python3 -m cortex_command.discovery --help` exits 0 (module still imports and parses after deletion; the help text lists neither retired subcommand). **Do NOT run `just test` for this task** — it will fail at collection until Task 3 lands (documented import coupling); test-suite green is Task 3's gate.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Hard-delete both orphan registry rows and repoint the surviving consumer reference in `bin/.events-registry.md`
 - **Files**: `bin/.events-registry.md`
@@ -36,7 +36,7 @@ Hard-delete the two fully-orphaned discovery events (`architecture_section_writt
 - **Complexity**: simple
 - **Context**: Only row 116 survives among the three sibling rows, so the family-wide dangling-ref fix reduces to repointing that one remaining row. The events-registry gate validates row schema and that staged skill-prompt emissions reference registered events — it does not stat producer/consumer files and does not scan Python, so deleting rows whose events no skill emits is safe. Leave row 116's `category` (`audit-affordance`), `rationale`, and all other cells unchanged — edit only its `consumers` cell. Pre-commit runs `just check-events-registry` when this file is staged.
 - **Verification**: `grep -c 'architecture_section_written\|prescriptive_check_run' bin/.events-registry.md` = 0 AND `grep -c 'approval_checkpoint_responded' bin/.events-registry.md` = 1 AND `grep -c 'test_discovery_events.py' bin/.events-registry.md` = 0 AND `just check-events-registry` exits 0 AND `just check-events-registry-audit` exits 0 — pass if all five hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Reconcile `tests/test_discovery_module.py` to the surviving single emitter
 - **Files**: `tests/test_discovery_module.py`
@@ -50,7 +50,7 @@ Hard-delete the two fully-orphaned discovery events (`architecture_section_writt
   - Resolve the shared path-routing test `test_emit_subcommands_honor_resolve_events_log_path` (`:359-413`): it co-asserts all three sibling emitters (`len == 3`, name-set of all three at `:410-412`). With only `approval_checkpoint_responded` surviving, the *cross-emitter parity* property (three emitters resolve the same path) is no longer expressible — **intentionally retire** that property (a single emitter cannot diverge from itself). But the retired test ALSO uniquely holds a *single-emitter* property that survives and still matters: under an active-lifecycle override (it sets `LIFECYCLE_SESSION_ID` + writes a `.session` file at `:369-370`), it asserts `emit_checkpoint_response` returns `feature_dir / "events.log"` (`:398`) and NOT `cortex/research/<topic>/events.log` (`:402-403`) — i.e. the surviving emitter delegates to `resolve_events_log_path` rather than hardcoding the research path. The existing `test_emit_checkpoint_response_*` tests (`:176`/`:216`/`:259`) do NOT cover this: each runs `monkeypatch.delenv("LIFECYCLE_SESSION_ID")` (override unset) and asserts only `.exists()`, never the returned path value. Therefore: when retiring the multi-emitter test, **add a dedicated single-emitter test** (this is mandatory, not "or fold into existing coverage" — folding into the existing checkpoint tests would silently drop the property to zero coverage) that sets `LIFECYCLE_SESSION_ID` + writes `.session`, calls `emit_checkpoint_response`, and asserts the returned target equals the lifecycle `events.log` path AND that the research-path file does not exist. This is sanctioned retirement of the now-impossible parity property with preservation of the still-provable override-delegation property (spec Req 6).
   - **Do NOT** modify `tests/test_discovery_gate_presentation.py`'s `DRIFTED_VOCAB_TOKENS` drift-guard (Non-Requirement — it asserts the retired token stays absent from `skills/discovery/SKILL.md`, which is already true; it stays green).
 - **Verification**: `just test` exits 0 (suite green now that Task 1 has landed — pass if exit 0, all tests pass) AND `grep -c 'architecture_section_written\|prescriptive_check_run' tests/test_discovery_module.py` = 0 AND the override-delegation property is still covered for the surviving emitter — observable state: a test function exists that contains both `setenv("LIFECYCLE_SESSION_ID"` and a call to `emit_checkpoint_response` and an `assert`-equality on the returned path against a `cortex/lifecycle/<slug>/events.log` target (verify via `grep -n 'setenv("LIFECYCLE_SESSION_ID"' tests/test_discovery_module.py` returning a line inside a function that also calls `emit_checkpoint_response`) — pass if all three hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 4: Conform the one stale fixture heading
 - **Files**: `tests/fixtures/discovery-brief/complex-topic/research.md`
@@ -59,7 +59,7 @@ Hard-delete the two fully-orphaned discovery events (`architecture_section_writt
 - **Complexity**: simple
 - **Context**: The fixture is consumed by `test_discovery_gate_brief.py` via `generate-brief`, which asserts on `### Pieces` and never on `### Why N pieces`, so removing the section is safe. Remove the whole section (heading + body) rather than leaving an orphaned-body fragment under the preceding `### Seam-level edges` section.
 - **Verification**: `grep -c '### Why N pieces' tests/fixtures/discovery-brief/complex-topic/research.md` = 0 AND `grep -rc '### Why N pieces' tests/fixtures/discovery-brief/` sums to 0 across all three fixture files — pass if both hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5: Record the retirement in `CHANGELOG.md` under `## [Unreleased]`
 - **Files**: `CHANGELOG.md`
@@ -68,7 +68,7 @@ Hard-delete the two fully-orphaned discovery events (`architecture_section_writt
 - **Complexity**: simple
 - **Context**: The `## [Unreleased]` heading is at `:48`; the next `## [` heading is `## [v0.1.0]` at `:90`. The entry must land strictly between them — not at the file top (which is a shipped `## [v2.0.0]` block) and not inside a versioned block. Do NOT author a `grep -c "architecture_section_written"` style Done-When anywhere in the `cortex/backlog/270-*.md` body — after retirement the token resolves in neither the registry nor `cortex_command/`, and `test_backlog_grep_targets_resolve.py` would fail (this task touches only `CHANGELOG.md`, so the constraint is a guardrail, not an action).
 - **Verification**: `grep -c 'architecture_section_written' CHANGELOG.md` ≥ 1 AND the new entry's line number (from `grep -n 'architecture_section_written' CHANGELOG.md`) is greater than the `## [Unreleased]` line (`grep -n '## \[Unreleased\]' CHANGELOG.md`) and less than the first `## [` heading appearing after `## [Unreleased]` (i.e. `## [v0.1.0]`) — pass if both the count and the placement hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ## Risks
 

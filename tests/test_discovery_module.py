@@ -22,9 +22,7 @@ from pathlib import Path
 import pytest
 
 from cortex_command.discovery import (
-    emit_architecture_written,
     emit_checkpoint_response,
-    emit_prescriptive_check,
     resolve_events_log_path,
 )
 
@@ -132,45 +130,6 @@ def test_resolve_path_env_unset_falls_back_to_research(
 # ---------------------------------------------------------------------------
 # (i) emit-* validation + emission
 # ---------------------------------------------------------------------------
-
-
-def test_emit_architecture_written_writes_jsonl(
-    repo_root: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.delenv("LIFECYCLE_SESSION_ID", raising=False)
-    target = emit_architecture_written(
-        topic="my-topic",
-        piece_count=9,
-        has_why_n_justification=True,
-        status="approved",
-        repo_root=repo_root,
-        re_walk_attempt=1,
-    )
-    assert target == repo_root / "cortex" / "research" / "my-topic" / "events.log"
-    events = _read_jsonl(target)
-    assert len(events) == 1
-    ev = events[0]
-    assert ev["event"] == "architecture_section_written"
-    assert ev["topic"] == "my-topic"
-    assert ev["piece_count"] == 9
-    assert ev["has_why_n_justification"] is True
-    assert ev["status"] == "approved"
-    assert ev["re_walk_attempt"] == 1
-    assert "ts" in ev
-
-
-def test_emit_architecture_written_validation_rejects_negative_piece_count(
-    repo_root: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.delenv("LIFECYCLE_SESSION_ID", raising=False)
-    with pytest.raises(ValueError, match="piece_count"):
-        emit_architecture_written(
-            topic="my-topic",
-            piece_count=-1,
-            has_why_n_justification=False,
-            status="draft",
-            repo_root=repo_root,
-        )
 
 
 def test_emit_checkpoint_response_writes_jsonl_and_validates_response(
@@ -300,82 +259,35 @@ def test_emit_checkpoint_response_accepts_split_piece_at_decompose_commit(
     assert ev["revision_round"] == 0
 
 
-def test_emit_prescriptive_check_writes_nested_flag_locations(
-    repo_root: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.delenv("LIFECYCLE_SESSION_ID", raising=False)
-    flag_locations = [
-        {"ticket": "210", "section": "Edges", "signal": "path:line"},
-        {"ticket": "210", "section": "Integration", "signal": "section-index"},
-    ]
-    target = emit_prescriptive_check(
-        topic="my-topic",
-        tickets_checked=3,
-        flagged_count=2,
-        flag_locations=flag_locations,
-        repo_root=repo_root,
-    )
-    events = _read_jsonl(target)
-    assert len(events) == 1
-    ev = events[0]
-    assert ev["event"] == "prescriptive_check_run"
-    assert ev["tickets_checked"] == 3
-    assert ev["flagged_count"] == 2
-    assert ev["flag_locations"] == flag_locations
-
-
-def test_emit_prescriptive_check_rejects_malformed_flag_locations(
-    repo_root: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.delenv("LIFECYCLE_SESSION_ID", raising=False)
-    # Missing the 'signal' key.
-    with pytest.raises(ValueError, match="signal"):
-        emit_prescriptive_check(
-            topic="my-topic",
-            tickets_checked=1,
-            flagged_count=1,
-            flag_locations=[{"ticket": "210", "section": "Edges"}],
-            repo_root=repo_root,
-        )
-    # Non-list payload.
-    with pytest.raises(ValueError, match="flag_locations"):
-        emit_prescriptive_check(
-            topic="my-topic",
-            tickets_checked=1,
-            flagged_count=1,
-            flag_locations="not-a-list",  # type: ignore[arg-type]
-            repo_root=repo_root,
-        )
-
-
 # ---------------------------------------------------------------------------
-# (iv) emit-* subcommands route through resolve-events-log-path, NOT a
-#      hardcoded cortex/research/{topic}/events.log path. We assert this by
-#      activating the lifecycle env override and verifying every emit-*
-#      writes to the cortex/lifecycle/<slug>/events.log target.
+# (iv) the surviving emit-checkpoint-response routes through
+#      resolve-events-log-path, NOT a hardcoded cortex/research/{topic}/events.log
+#      path. We assert this by activating the lifecycle env override and
+#      verifying the emit writes to the cortex/lifecycle/<slug>/events.log target.
+#
+#      This is the single-emitter override-delegation property that survives
+#      the retirement of the multi-emitter parity test (cross-emitter parity
+#      is unprovable with one surviving emitter). It is NOT covered by the
+#      test_emit_checkpoint_response_* tests above: those run with
+#      LIFECYCLE_SESSION_ID deleted and assert only ``.exists()``, never the
+#      returned lifecycle path nor the absence of the research-path file.
 # ---------------------------------------------------------------------------
 
 
-def test_emit_subcommands_honor_resolve_events_log_path(
+def test_emit_checkpoint_response_honors_resolve_events_log_path(
     repo_root: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """If the emit-* helpers hardcoded ``cortex/research/{topic}/events.log``, an
-    active-lifecycle env override would NOT redirect their output. This
-    test fails any such hardcode by activating the env override and
-    asserting all three emit-* targets resolve under ``cortex/lifecycle/<slug>/``.
+    """If ``emit_checkpoint_response`` hardcoded ``cortex/research/{topic}/events.log``,
+    an active-lifecycle env override would NOT redirect its output. This test
+    fails any such hardcode by activating the env override and asserting the
+    emit target resolves under ``cortex/lifecycle/<slug>/`` and that the
+    research-path file is never created.
     """
     feature_dir = repo_root / "cortex" / "lifecycle" / "active-feature"
     feature_dir.mkdir(parents=True)
     (feature_dir / ".session").write_text("active-id", encoding="utf-8")
     monkeypatch.setenv("LIFECYCLE_SESSION_ID", "active-id")
 
-    arch_target = emit_architecture_written(
-        topic="some-topic",
-        piece_count=1,
-        has_why_n_justification=False,
-        status="draft",
-        repo_root=repo_root,
-    )
     chk_target = emit_checkpoint_response(
         topic="some-topic",
         checkpoint="research-decompose",
@@ -383,38 +295,24 @@ def test_emit_subcommands_honor_resolve_events_log_path(
         revision_round=0,
         repo_root=repo_root,
     )
-    pre_target = emit_prescriptive_check(
-        topic="some-topic",
-        tickets_checked=0,
-        flagged_count=0,
-        flag_locations=[],
-        repo_root=repo_root,
-    )
 
-    # All three write to the SAME lifecycle events.log -- proves the path
-    # is shared via resolve_events_log_path and not derived per-emitter.
+    # The emit writes to the lifecycle events.log -- proves the path is
+    # resolved via resolve_events_log_path and not hardcoded to research/.
     expected = feature_dir / "events.log"
-    assert arch_target == expected
     assert chk_target == expected
-    assert pre_target == expected
 
     # And NOT to cortex/research/some-topic/events.log.
     standalone = repo_root / "cortex" / "research" / "some-topic" / "events.log"
     assert not standalone.exists()
 
-    # All three events landed in the lifecycle log.
+    # The event landed in the lifecycle log.
     events = _read_jsonl(expected)
-    assert len(events) == 3
-    names = {e["event"] for e in events}
-    assert names == {
-        "architecture_section_written",
-        "approval_checkpoint_responded",
-        "prescriptive_check_run",
-    }
+    assert len(events) == 1
+    assert events[0]["event"] == "approval_checkpoint_responded"
 
 
 # ---------------------------------------------------------------------------
-# CLI smoke tests (the four subcommands are addressable end-to-end)
+# CLI smoke tests (the surviving subcommands are addressable end-to-end)
 # ---------------------------------------------------------------------------
 
 
@@ -427,9 +325,7 @@ def test_cli_help_exits_zero() -> None:
     assert proc.returncode == 0
     for sub in (
         "resolve-events-log-path",
-        "emit-architecture-written",
         "emit-checkpoint-response",
-        "emit-prescriptive-check",
     ):
         assert sub in proc.stdout
 
@@ -456,35 +352,3 @@ def test_cli_resolve_events_log_path_standalone_topic(
     assert proc.stdout.strip() == str(
         repo_root / "cortex" / "research" / "my-topic" / "events.log"
     )
-
-
-def test_cli_emit_architecture_written_appends_event(
-    repo_root: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.delenv("LIFECYCLE_SESSION_ID", raising=False)
-    proc = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "cortex_command.discovery",
-            "emit-architecture-written",
-            "--repo-root",
-            str(repo_root),
-            "--topic",
-            "cli-topic",
-            "--piece-count",
-            "3",
-            "--has-why-n-justification",
-            "false",
-            "--status",
-            "approved",
-        ],
-        capture_output=True,
-        text=True,
-    )
-    assert proc.returncode == 0, proc.stderr
-    events_log = repo_root / "cortex" / "research" / "cli-topic" / "events.log"
-    events = _read_jsonl(events_log)
-    assert len(events) == 1
-    assert events[0]["event"] == "architecture_section_written"
-    assert events[0]["has_why_n_justification"] is False
