@@ -47,7 +47,7 @@ For each ticket, also capture:
 
 ### 3. Consolidation Review
 
-The Architecture section's falsification gate (research-phase R3) has already run the structural-coherence merge test. Do not re-run it here. The analytical piece-set at decompose entry is the merged set.
+The research phase has already settled the structural-coherence merge question and delivered a final `### Pieces` set. Do not re-derive or re-merge it here. The analytical piece-set at decompose entry is the merged set.
 
 Two outcomes are distinct here:
 
