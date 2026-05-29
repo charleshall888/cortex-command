@@ -63,6 +63,20 @@ KNOWN_PROSE_COLLISIONS: tuple[tuple[str, str], ...] = (
         "discovery",
         "cortex/lifecycle/audit-cortex-coreresearch-skill-output-shape-for-token-waste-in-researchmd-sections/review.md",
     ),
+    # Worktree-context implementation note abbreviates the real test path
+    # ``cortex_command/lifecycle/tests/test_init_ensure.py`` to
+    # ``lifecycle/tests/...``; ``tests`` is not a feature slug.
+    (
+        "tests",
+        "cortex/lifecycle/resolve-user-project-root-stops-at/plan.md",
+    ),
+    # Audit rubric prose lists subsystem names ("lifecycle/backlog/overnight
+    # critical path"); ``backlog`` here is a slash-joined prose token, not a
+    # lifecycle feature citation.
+    (
+        "backlog",
+        "cortex/research/cortex-init-scope-reduction/gap2-load-bearing-decomposition.md",
+    ),
 )
 # When prose abbreviates `skills/lifecycle/references/<file>.md` to
 # `lifecycle/references/<file>.md`, the slug `references` is a path component
