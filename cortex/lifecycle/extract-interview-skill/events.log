@@ -7,3 +7,4 @@
 {"ts": "2026-05-29T03:03:56Z", "event": "phase_transition", "feature": "extract-interview-skill", "from": "specify", "to": "plan"}
 {"ts": "2026-05-29T03:35:33Z", "event": "plan_approved", "feature": "extract-interview-skill"}
 {"ts": "2026-05-29T03:35:33Z", "event": "phase_transition", "feature": "extract-interview-skill", "from": "plan", "to": "implement"}
+{"ts": "2026-05-29T13:05:00Z", "event": "phase_transition", "feature": "extract-interview-skill", "tier": "complex", "from": "implement", "to": "review"}
