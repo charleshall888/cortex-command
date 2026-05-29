@@ -71,6 +71,11 @@ def _parse_inline_str_list(raw: str) -> list[str]:
     return [raw] if raw else []
 
 
+def _is_deferred(item: dict) -> bool:
+    """Return True iff the item carries a ``deferred`` tag (whole-element match)."""
+    return any(tag.strip().lower() == "deferred" for tag in item.get("tags", []))
+
+
 def _opt(fm: dict[str, str], key: str) -> str | None:
     """Return frontmatter value for key, or None if absent/empty/null."""
     v = fm.get(key, "").strip().strip("\"'")
@@ -227,8 +232,9 @@ def generate_md(
         blocked_display = ", ".join(item["blocked_by"]) if item["blocked_by"] else "\u2014"
         parent_display = item["parent"] if item["parent"] else "\u2014"
         spec_display = "\u2713" if item["spec"] else "\u2014"
+        status_display = f"{item['status']} (deferred)" if _is_deferred(item) else item["status"]
         lines.append(
-            f"| {item['id']} | {item['title']} | {item['status']} | "
+            f"| {item['id']} | {item['title']} | {status_display} | "
             f"{item['priority']} | {item['type']} | {blocked_display} | "
             f"{parent_display} | {spec_display} |"
         )
