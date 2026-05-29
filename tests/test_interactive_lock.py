@@ -443,3 +443,96 @@ def test_resolve_main_repo_root_no_git_cortex_fallback(
     monkeypatch.chdir(proj)
 
     assert il._resolve_main_repo_root() == proj.resolve()
+
+
+def test_resolve_main_repo_root_synthetic_direct_gitdir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Req 8a: synthetic direct ``gitdir: <main>/.git`` (no commondir, no
+    worktree-local cortex/) → <main>.  Matches the existing CI fixture shape."""
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    monkeypatch.delenv("CLAUDE_CODE_SESSION_ID", raising=False)
+    main = tmp_path / "main"
+    (main / ".git").mkdir(parents=True)
+    (main / ".git" / "HEAD").write_text("ref: refs/heads/main\n", encoding="utf-8")
+    (main / "cortex").mkdir()
+    wt = tmp_path / "wt"
+    wt.mkdir()
+    (wt / ".git").write_text(f"gitdir: {main / '.git'}\n", encoding="utf-8")
+    monkeypatch.chdir(wt)
+
+    assert il._resolve_main_repo_root() == main.resolve()
+
+
+def test_resolve_main_repo_root_malformed_gitdir_fallback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Req 8e: a malformed/empty ``gitdir:`` line falls back via step (c) to a
+    reachable cortex/ ancestor — no raise, no non-cortex path returned."""
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    monkeypatch.delenv("CLAUDE_CODE_SESSION_ID", raising=False)
+    fx = _build_worktree_skeleton(tmp_path, with_worktree_cortex=True)
+    wt = fx["wt"]
+    # Overwrite the .git file with an empty gitdir target (malformed).
+    (wt / ".git").write_text("gitdir:\n", encoding="utf-8")
+    monkeypatch.chdir(wt)
+
+    result = il._resolve_main_repo_root()
+    # (b) parse returns None → (b-guard) fails → (c) finds the worktree's cortex/.
+    assert result == wt.resolve()
+    assert (result / "cortex").is_dir()
+
+
+def test_resolve_main_repo_root_worktree_pointer_no_cortex_fallback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Req 8e: a well-formed worktree pointer whose resolved main root has NO
+    cortex/, and no cortex/ ancestor anywhere → (b-guard) fails and step (c)
+    raises CortexProjectRootError (never returns a non-cortex path)."""
+    from cortex_command.common import CortexProjectRootError
+
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    monkeypatch.delenv("CLAUDE_CODE_SESSION_ID", raising=False)
+    main = tmp_path / "main"
+    main_git = main / ".git"
+    wt_admin = main_git / "worktrees" / "wt-id"
+    wt_admin.mkdir(parents=True)
+    (main_git / "HEAD").write_text("ref: refs/heads/main\n", encoding="utf-8")
+    (wt_admin / "commondir").write_text("../..\n", encoding="utf-8")
+    # NO <main>/cortex and NO worktree cortex — nothing cortex-bearing anywhere.
+    wt = tmp_path / "wt"
+    wt.mkdir()
+    (wt / ".git").write_text(f"gitdir: {wt_admin}\n", encoding="utf-8")
+    monkeypatch.chdir(wt)
+
+    with pytest.raises(CortexProjectRootError):
+        il._resolve_main_repo_root()
+
+
+def test_resolve_main_repo_root_bfail_inside_worktree_degrades_to_local(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Documented limitation (critical-review Objection 1): a (b)-failure from
+    INSIDE a worktree that carries its own cortex/ degrades to worktree-local
+    resolution (pre-fix behavior) — unreachable for well-formed
+    ``git worktree add`` output, but pinned here so it cannot change silently.
+
+    The pointer is well-formed but its resolved main root has no cortex/, so
+    the (b-guard) fails; the worktree's own cortex/ then wins via step (c)."""
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    monkeypatch.delenv("CLAUDE_CODE_SESSION_ID", raising=False)
+    main = tmp_path / "main"
+    main_git = main / ".git"
+    wt_admin = main_git / "worktrees" / "wt-id"
+    wt_admin.mkdir(parents=True)
+    (main_git / "HEAD").write_text("ref: refs/heads/main\n", encoding="utf-8")
+    (wt_admin / "commondir").write_text("../..\n", encoding="utf-8")
+    # NO <main>/cortex → the parsed candidate fails the (b-guard).
+    wt = tmp_path / "wt"
+    wt.mkdir()
+    (wt / ".git").write_text(f"gitdir: {wt_admin}\n", encoding="utf-8")
+    (wt / "cortex").mkdir()  # the worktree's OWN cortex/ (the collision)
+    monkeypatch.chdir(wt)
+
+    # (b-guard) fails on the no-cortex main → step (c) returns the worktree root.
+    assert il._resolve_main_repo_root() == wt.resolve()
