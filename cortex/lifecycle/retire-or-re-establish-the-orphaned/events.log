@@ -1,0 +1,7 @@
+{"schema_version": 1, "ts": "2026-05-29T03:05:16Z", "event": "lifecycle_start", "feature": "retire-or-re-establish-the-orphaned", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"ts": "2026-05-29T03:16:04Z", "event": "complexity_override", "feature": "retire-or-re-establish-the-orphaned", "from": "simple", "to": "complex"}
+{"ts": "2026-05-29T03:16:04Z", "event": "criticality_override", "feature": "retire-or-re-establish-the-orphaned", "from": "medium", "to": "high"}
+{"schema_version": 3, "ts": "2026-05-29T03:16:04Z", "event": "clarify_critic", "feature": "retire-or-re-establish-the-orphaned", "parent_epic_loaded": false, "findings_count": 5, "dispositions": {"apply": 5, "dismiss": 0, "ask": 0}, "applied_fixes_count": 5, "dismissals_count": 0, "status": "ok"}
+{"ts": "2026-05-29T12:06:56Z", "event": "spec_approved", "feature": "retire-or-re-establish-the-orphaned"}
+{"ts": "2026-05-29T12:56:13Z", "event": "plan_approved", "feature": "retire-or-re-establish-the-orphaned"}
+{"ts": "2026-05-29T12:56:13Z", "event": "phase_transition", "feature": "retire-or-re-establish-the-orphaned", "from": "plan", "to": "implement"}
