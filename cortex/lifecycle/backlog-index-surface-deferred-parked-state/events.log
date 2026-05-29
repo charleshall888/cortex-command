@@ -9,3 +9,5 @@
 {"ts": "2026-05-29T12:58:28Z", "event": "batch_dispatch", "feature": "backlog-index-surface-deferred-parked-state", "batch": 1, "tasks": [2]}
 {"ts": "2026-05-29T13:01:47Z", "event": "batch_dispatch", "feature": "backlog-index-surface-deferred-parked-state", "batch": 2, "tasks": [3]}
 {"ts": "2026-05-29T13:08:37Z", "event": "phase_transition", "feature": "backlog-index-surface-deferred-parked-state", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-05-29T13:12:04Z", "event": "review_verdict", "feature": "backlog-index-surface-deferred-parked-state", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-05-29T13:12:04Z", "event": "phase_transition", "feature": "backlog-index-surface-deferred-parked-state", "from": "review", "to": "complete"}
