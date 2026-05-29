@@ -629,6 +629,182 @@ def test_r8_bundle5_recovery_with_extra_cortex_content_refreshes(
     )
 
 
+# ---------------------------------------------------------------------------
+# R1: no-``~/.claude/``-write spy + temp-HOME byte-identity (#273)
+# ---------------------------------------------------------------------------
+
+
+class _CallCounter:
+    """Records the number of times it is invoked (settings_merge spy)."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def __call__(self, *args: object, **kwargs: object) -> None:
+        self.calls += 1
+
+
+def _install_settings_merge_spy(
+    monkeypatch: pytest.MonkeyPatch,
+) -> dict[str, _CallCounter]:
+    """Monkeypatch the three ``~/.claude/``-touching ``settings_merge`` calls.
+
+    Returns the counters keyed by function name. ``register`` and
+    ``unregister_matching_in_place`` were the post-dispatch grant + migration
+    writes; ``validate_settings`` was the pre-flight read. #273 removed all
+    three from ``--ensure`` — the counters prove they never fire.
+    """
+    counters = {
+        "register": _CallCounter(),
+        "validate_settings": _CallCounter(),
+        "unregister_matching_in_place": _CallCounter(),
+    }
+    from cortex_command.init import settings_merge
+
+    for name, counter in counters.items():
+        monkeypatch.setattr(settings_merge, name, counter)
+    return counters
+
+
+def test_r1_ensure_makes_no_claude_settings_calls(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """R1: ``--ensure`` never calls register/validate_settings/unregister.
+
+    Exercises the cases that previously reached the post-dispatch
+    ``register``/``unregister`` block — case (ii) marker-present + hash-mismatch
+    (refresh), case (iii) marker-absent + clean (refuse), and case (v) R8
+    recovery — plus the case (i) early-return and case (iv) R19 decline. All
+    three ``settings_merge`` calls must register zero invocations. Cases (ii)
+    and (v) are exercised (not only the early-return case (i)) so the
+    post-dispatch assertion is non-trivial.
+    """
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg-state"))
+
+    # --- case (ii): marker-present + hash-mismatch → refresh ---
+    repo_ii = tmp_path / "repo-ii"
+    repo_ii.mkdir()
+    _git_init(repo_ii)
+    _isolate_home(monkeypatch, tmp_path)
+    assert init_main(_make_update_args(repo_ii)) == 0  # plant marker via --update
+    counters = _install_settings_merge_spy(monkeypatch)
+    monkeypatch.setattr(
+        scaffold, "_compute_init_artifacts_hash", lambda: "v1:" + "f" * 64
+    )
+    assert init_main(_make_ensure_args(repo_ii)) == 0
+    # register / unregister_matching_in_place were post-dispatch; they ran on
+    # case (ii) before #273. Now zero.
+    assert counters["register"].calls == 0
+    assert counters["unregister_matching_in_place"].calls == 0
+    # validate_settings was a pre-flight call on every non-early path; zero too.
+    assert counters["validate_settings"].calls == 0
+
+    # --- case (v): R8 recovery (cortex_version-only marker) → refresh ---
+    repo_v = tmp_path / "repo-v"
+    repo_v.mkdir()
+    _git_init(repo_v)
+    _write_marker(repo_v, init_artifacts_hash=None, cortex_version="1.2.3")
+    counters_v = _install_settings_merge_spy(monkeypatch)
+    assert init_main(_make_ensure_args(repo_v)) == 0
+    assert counters_v["register"].calls == 0
+    assert counters_v["unregister_matching_in_place"].calls == 0
+    assert counters_v["validate_settings"].calls == 0
+
+    # --- case (iii): marker-absent + clean → refuse (exit 2) ---
+    repo_iii = tmp_path / "repo-iii"
+    repo_iii.mkdir()
+    _git_init(repo_iii)
+    counters_iii = _install_settings_merge_spy(monkeypatch)
+    assert init_main(_make_ensure_args(repo_iii)) == 2
+    assert counters_iii["register"].calls == 0
+    assert counters_iii["unregister_matching_in_place"].calls == 0
+    # validate_settings was pre-flight on every non-early path; on a refuse it
+    # must also be zero (the refuse raises before any post-dispatch block, but
+    # validate_settings is the pre-flight read removed by #273).
+    assert counters_iii["validate_settings"].calls == 0
+
+    # --- case (i): marker-present + hash-match → early return (no-op) ---
+    repo_i = tmp_path / "repo-i"
+    repo_i.mkdir()
+    _git_init(repo_i)
+    assert init_main(_make_update_args(repo_i)) == 0  # plant matching marker
+    counters_i = _install_settings_merge_spy(monkeypatch)
+    assert init_main(_make_ensure_args(repo_i)) == 0
+    # validate_settings was a PRE-FLIGHT call reached on every non-early path —
+    # assert zero on the early-return case (i) too.
+    assert counters_i["validate_settings"].calls == 0
+    assert counters_i["register"].calls == 0
+    assert counters_i["unregister_matching_in_place"].calls == 0
+
+    # --- case (iv): marker-absent + foreign content → R19 decline (exit 2) ---
+    repo_iv = tmp_path / "repo-iv"
+    repo_iv.mkdir()
+    _git_init(repo_iv)
+    (repo_iv / "cortex").mkdir()
+    (repo_iv / "cortex" / "foreign.md").write_text("x\n", encoding="utf-8")
+    counters_iv = _install_settings_merge_spy(monkeypatch)
+    assert init_main(_make_ensure_args(repo_iv)) == 2
+    # validate_settings (pre-flight) zero on the R19 decline path too.
+    assert counters_iv["validate_settings"].calls == 0
+    assert counters_iv["register"].calls == 0
+    assert counters_iv["unregister_matching_in_place"].calls == 0
+
+
+def test_r1_ensure_temp_home_byte_identical(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """R1: ``~/.claude/settings.local.json`` is byte-identical after ``--ensure``.
+
+    Uses a marker-present drifted repo (case (ii)) so dispatch reaches the
+    post-dispatch block — the site that wrote the ``~/.claude/`` grant before
+    #273. Captures the settings file bytes (or its absence) before ``--ensure``
+    and asserts they are unchanged afterward. ALSO asserts the sibling lockfile
+    ``~/.claude/.settings.local.json.lock`` is never created: today
+    ``validate_settings`` → ``_acquire_lock`` creates it, so its absence is a
+    fixture-independent signal that no ``~/.claude/`` access occurred (the
+    bytes-absent check alone is fixture-dependent — ``_isolate_home``
+    pre-creates ``~/.claude/``, so "still absent" can pass trivially).
+    """
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg-state"))
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git_init(repo)
+    fake_home = _isolate_home(monkeypatch, tmp_path)
+
+    # Plant a marker-present cortex/ via terminal --update (which legitimately
+    # writes the grant under the isolated HOME), then capture the post-update
+    # baseline so the byte-identity assertion targets --ensure's behavior only.
+    assert init_main(_make_update_args(repo)) == 0
+
+    settings_path = fake_home / ".claude" / "settings.local.json"
+    lockfile_path = fake_home / ".claude" / ".settings.local.json.lock"
+    before = settings_path.read_bytes() if settings_path.exists() else None
+
+    # The terminal --update baseline legitimately acquired the lock (creating
+    # the sibling lockfile). Remove it so the post-`--ensure` assertion below
+    # tests whether `--ensure` *re-creates* it — not whether `--update` left it.
+    lockfile_path.unlink(missing_ok=True)
+
+    # Force a hash mismatch so --ensure drives case (ii) → reaches post-dispatch.
+    monkeypatch.setattr(
+        scaffold, "_compute_init_artifacts_hash", lambda: "v1:" + "f" * 64
+    )
+    assert init_main(_make_ensure_args(repo)) == 0
+
+    after = settings_path.read_bytes() if settings_path.exists() else None
+    assert after == before, "--ensure must not modify ~/.claude/settings.local.json"
+
+    # The sibling lockfile is only created by _acquire_lock (reached via the
+    # removed validate_settings/register/unregister calls). Its absence is a
+    # fixture-independent proof that --ensure touched nothing under ~/.claude/.
+    assert not lockfile_path.exists(), (
+        "--ensure must not create the ~/.claude/ settings lockfile"
+    )
+
+
 @pytest.mark.skipif(
     os.geteuid() == 0 or sys.platform == "win32",
     reason="chmod 0o500 ineffective for root / not portable on Windows",
