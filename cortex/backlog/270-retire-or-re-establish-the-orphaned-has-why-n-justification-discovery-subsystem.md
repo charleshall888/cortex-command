@@ -2,11 +2,15 @@
 schema_version: "1"
 uuid: b900be81-682f-49bb-aace-aeb16c94d47b
 title: "Retire or re-establish the orphaned has_why_n_justification discovery subsystem"
-status: backlog
+status: refined
 priority: low
 type: chore
 created: 2026-05-28
-updated: 2026-05-28
+updated: 2026-05-29
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/retire-or-re-establish-the-orphaned/spec.md
+areas: ['skills']
 ---
 ## Why
 
