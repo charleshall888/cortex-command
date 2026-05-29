@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 79dc52ed-1d0b-4148-86cb-d0e015113892
 title: "Reconcile discovery SKILL.md Architecture vocabulary with emitted research template"
-status: in_progress
+status: complete
 priority: medium
 type: bug
 created: 2026-05-28

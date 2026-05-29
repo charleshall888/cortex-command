@@ -26,7 +26,7 @@ Conform `skills/discovery/SKILL.md`'s two operator-facing surfaces (GATE-2 fallb
   - Line 85 (a single physical line, the `revise` bullet beginning `- **\`revise\`**`) currently reads: `... The agent re-walks the Architecture write protocol per spec R4 GATE-2 (iii) (re-emit \`### Pieces\`, re-run \`### Integration shape\` and \`### Seam-level edges\`, re-run the \`### Why N pieces\` falsification gate if piece_count > 5), re-presents the gate ...`. Replace this clause so it (a) points the agent at the live template in `references/research.md` §6, (b) names re-emitting `### Pieces` (per the role-naming convention) then `### How they connect`, and (c) carries the piece-count concern as the template's soft "consider merging" guidance — with NO `### Why N pieces` gate and NO `spec R4 GATE-2` pointer. Use soft positive-routing phrasing (MUST-escalation policy); describe the output shape and intent, not step-by-step method. Preserve the rest of the bullet (the `approval_checkpoint_responded` event emission, `revision_round` increment, loop semantics) unchanged.
   - **Interface contract for Task 4 (corrected)**: `references/research.md` is NOT a file-unique token — it already appears at SKILL.md line 67 (the Step 3 phase-reference table). Therefore the rewritten `revise` bullet (the single physical line containing `` `revise` ``) MUST itself contain, on that one line: the `references/research.md` §6 pointer, `### Pieces`, and `### How they connect`. Task 4 asserts these scoped to the `revise` line (not a file-wide check).
 - **Verification**: `grep -c "Integration shape" skills/discovery/SKILL.md` = 0 AND `grep -c "Seam-level edges" skills/discovery/SKILL.md` = 0 AND `grep -c "Why N pieces" skills/discovery/SKILL.md` = 0 AND `grep -c "spec R4 GATE-2" skills/discovery/SKILL.md` = 0 AND the `revise` bullet line itself carries the pointer: `grep -cE '`revise`.*references/research\.md' skills/discovery/SKILL.md` = 1 — pass if all hold.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 5fffbfb1)
 
 ### Task 2: Reconcile the dangling gate reference in decompose.md (line 50)
 - **Files**: `skills/discovery/references/decompose.md`
@@ -38,7 +38,7 @@ Conform `skills/discovery/SKILL.md`'s two operator-facing surfaces (GATE-2 fallb
   - Reword to drop the `falsification gate (research-phase R3)` naming while keeping the instruction that the analytical piece-set delivered by research is final and must not be re-derived or re-merged at decompose. Match the existing register (the surrounding §3 prose describes the piece-set as research-owned and final). Do NOT re-open decompose.md §1/§2/§4 (already reconciled by #268) — line 50 is the only edit.
   - Note: line 122's "the prior R3 per-item-ack flow" is a DIFFERENT, historical R3 (a superseded per-item-ack flow) — leave it untouched. The negative assertion in Task 5 targets the literal `research-phase R3`, which appears only on line 50.
 - **Verification**: `grep -c "research-phase R3" skills/discovery/references/decompose.md` = 0 AND the §3 Consolidation Review section still instructs against re-deriving/re-merging the piece-set (observable: the "Do not re-run it here" / "piece-set ... is the merged set" intent survives in §3) — pass if both hold.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit afcbf8ca)
 
 ### Task 3: Regenerate and stage both plugin mirrors
 - **Files**: `plugins/cortex-core/skills/discovery/SKILL.md`, `plugins/cortex-core/skills/discovery/references/decompose.md`
@@ -49,7 +49,7 @@ Conform `skills/discovery/SKILL.md`'s two operator-facing surfaces (GATE-2 fallb
   - The pre-commit dual-source drift hook (`.githooks/pre-commit`) runs `just build-plugin` and blocks the commit on mirror drift; `tests/test_dual_source_reference_parity.py` (covers `discovery` per its PLUGINS dict) independently fails `just test` on canonical/mirror byte-parity mismatch. Regenerate before the phase commit and before any `just test`-based verification.
   - `just build-plugin` is a whole-skill-directory rsync, not a two-file operation. After running it, confirm via `git status --porcelain plugins/cortex-core/skills/discovery/` that ONLY the two intended mirror files (`SKILL.md`, `references/decompose.md`) show changes. If any other discovery mirror file (`references/clarify.md`, `references/orchestrator-review.md`, `references/research.md`) shows unexpected drift, stop and surface it (pre-existing drift, out of scope) rather than staging it. Stage ONLY the two intended mirror paths explicitly (not `git add plugins/`).
 - **Verification**: `diff -q skills/discovery/SKILL.md plugins/cortex-core/skills/discovery/SKILL.md` exits 0 AND `diff -q skills/discovery/references/decompose.md plugins/cortex-core/skills/discovery/references/decompose.md` exits 0 — pass if both identical.
-- **Status**: [ ] pending
+- **Status**: [x] completed (mirrors regenerated + staged within commits 5fffbfb1 and afcbf8ca; both pairs byte-identical, no residual drift)
 
 ### Task 4: Pin SKILL.md vocabulary with a revise-bullet-scoped regression test
 - **Files**: `tests/test_discovery_gate_presentation.py`
@@ -62,7 +62,7 @@ Conform `skills/discovery/SKILL.md`'s two operator-facing surfaces (GATE-2 fallb
   - Positive assertion (revise-bullet-SCOPED — NOT a file-wide `in text` check): a file-wide `"references/research.md" in text` is hollow because that token already appears at SKILL.md line 67 (the Step 3 phase-reference table). Instead, iterate `text.splitlines()`, locate the line containing `` `revise` `` (the bullet), and assert that SAME line contains `references/research.md` AND `### Pieces` AND `### How they connect`. This enforces the Task 1 interface contract and closes the spec's Edge Case 2 (degenerate `revise`-bullet edit).
   - Add the new function alongside the existing tests; edit nothing existing.
 - **Verification**: `just test` exits 0 with the new scoped test present and passing — pass if exit code = 0. (Requires Task 3: `test_dual_source_reference_parity.py` fails on stale discovery mirrors until then.)
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 06413ae1)
 
 ### Task 5: Pin the decompose.md reconciliation with a regression assertion
 - **Files**: `tests/test_decompose_rules.py`
@@ -73,7 +73,7 @@ Conform `skills/discovery/SKILL.md`'s two operator-facing surfaces (GATE-2 fallb
   - `tests/test_decompose_rules.py` is where decompose.md heading/vocabulary assertions already live (e.g. `test_grouping_section_1_input_contract_omits_non_emitted_headings`, ~lines 371–395) — it reads the decompose.md body and runs negative assertions. Add a negative assertion `"research-phase R3" not in body` using that file's existing read pattern.
   - Do NOT modify the existing failure-message strings that intentionally name `### Integration shape`/`### Seam-level edges` (those are test scaffolding explaining what is guarded, per the spec Non-Requirements).
 - **Verification**: `just test` exits 0 with the new assertion present and passing — pass if exit code = 0. (Requires Task 3: the discovery-mirror parity test must pass for the full suite to be green.)
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit d58cfd0e)
 
 ## Risks
 

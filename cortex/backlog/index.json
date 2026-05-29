@@ -92,15 +92,13 @@
     "repo": null
   },
   {
-    "id": 269,
-    "title": "Reconcile discovery SKILL.md Architecture vocabulary with emitted research template",
+    "id": 271,
+    "title": "_resolve_user_project_root stops at worktree .git-file boundary (interactive-lock test fails on CI)",
     "status": "backlog",
     "priority": "medium",
     "type": "bug",
     "tags": [],
-    "areas": [
-      "skills"
-    ],
+    "areas": [],
     "created": "2026-05-28",
     "updated": "2026-05-28",
     "blocks": [],
@@ -110,7 +108,7 @@
     "spec": null,
     "discovery_source": null,
     "plan": null,
-    "uuid": "79dc52ed-1d0b-4148-86cb-d0e015113892",
+    "uuid": "e1e36524-ec46-4937-aced-d8f415db603f",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
@@ -144,6 +142,30 @@
     "lifecycle_slug": "make-cortex-check-parity-context-aware-skip-tokens-inside-fenced-code-blocks",
     "session_id": null,
     "lifecycle_phase": "wontfix",
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 270,
+    "title": "Retire or re-establish the orphaned has_why_n_justification discovery subsystem",
+    "status": "backlog",
+    "priority": "low",
+    "type": "chore",
+    "tags": [],
+    "areas": [],
+    "created": "2026-05-28",
+    "updated": "2026-05-28",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": null,
+    "plan": null,
+    "uuid": "b900be81-682f-49bb-aace-aeb16c94d47b",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
     "schema_version": "1",
     "repo": null
   }
