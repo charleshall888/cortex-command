@@ -1,0 +1,14 @@
+{"schema_version": 1, "ts": "2026-05-29T03:12:20Z", "event": "lifecycle_start", "feature": "backlog-index-surface-deferred-parked-state", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-05-29T03:17:36Z", "event": "clarify_critic", "feature": "backlog-index-surface-deferred-parked-state", "parent_epic_loaded": false, "findings_count": 6, "dispositions": {"apply": 5, "dismiss": 0, "ask": 1}, "applied_fixes_count": 4, "dismissals_count": 0, "status": "ok"}
+{"ts": "2026-05-29T03:44:55Z", "event": "complexity_override", "feature": "backlog-index-surface-deferred-parked-state", "from": "simple", "to": "complex", "gate": "research_open_questions"}
+{"ts": "2026-05-29T03:55:00Z", "event": "spec_approved", "feature": "backlog-index-surface-deferred-parked-state"}
+{"ts": "2026-05-29T12:49:32Z", "event": "plan_approved", "feature": "backlog-index-surface-deferred-parked-state"}
+{"ts": "2026-05-29T12:49:32Z", "event": "phase_transition", "feature": "backlog-index-surface-deferred-parked-state", "from": "plan", "to": "implement"}
+{"schema_version":1,"ts":"2026-05-29T12:53:58.935962+00:00","event":"interactive_worktree_entered","feature":"backlog-index-surface-deferred-parked-state","worktree_path":"/Users/charlie.hall/Workspaces/cortex-command/.claude/worktrees/interactive-backlog-index-surface-deferred-parked-state"}
+{"ts": "2026-05-29T12:55:16Z", "event": "batch_dispatch", "feature": "backlog-index-surface-deferred-parked-state", "batch": 0, "tasks": [1, 4]}
+{"ts": "2026-05-29T12:58:28Z", "event": "batch_dispatch", "feature": "backlog-index-surface-deferred-parked-state", "batch": 1, "tasks": [2]}
+{"ts": "2026-05-29T13:01:47Z", "event": "batch_dispatch", "feature": "backlog-index-surface-deferred-parked-state", "batch": 2, "tasks": [3]}
+{"ts": "2026-05-29T13:08:37Z", "event": "phase_transition", "feature": "backlog-index-surface-deferred-parked-state", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-05-29T13:12:04Z", "event": "review_verdict", "feature": "backlog-index-surface-deferred-parked-state", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-05-29T13:12:04Z", "event": "phase_transition", "feature": "backlog-index-surface-deferred-parked-state", "from": "review", "to": "complete"}
+{"schema_version": 1, "ts": "2026-05-29T13:31:29Z", "event": "pr_opened", "feature": "backlog-index-surface-deferred-parked-state", "number": 15, "url": "https://github.com/charleshall888/cortex-command/pull/15", "head_branch": "interactive/backlog-index-surface-deferred-parked-state", "repo": "charleshall888/cortex-command"}

@@ -252,13 +252,22 @@ def test_uniform_template_edge_vs_touchpoint_distinction(sections: dict[str, str
 # ---- R15 post-decompose batch-review gate (2 tests) ----
 
 def test_r15_batch_review_gate_options_documented(sections: dict[str, str]) -> None:
-    """§5 documents the R15 gate options including approve-all, revise-piece, drop-piece, and consolidate-pieces."""
+    """§5 documents the R15 gate options including approve-all, revise-piece, drop-piece, consolidate-pieces, and split-piece."""
     body = _find_section(sections, "Create Backlog Tickets")
-    # All three options appear by literal name.
+    # All options appear by literal name.
     assert "approve-all" in body, "R15 gate must document the approve-all option"
     assert "revise-piece" in body, "R15 gate must document the revise-piece <N> option"
     assert "drop-piece" in body, "R15 gate must document the drop-piece <N> option"
     assert "consolidate-pieces" in body, "R15 gate must document the consolidate-pieces <N,M,...> option"
+    assert "split-piece" in body, "R15 gate must document the split-piece <N> option"
+    # split-piece re-derives the constituent pieces from the retained Architecture
+    # `### Pieces` source, NOT from the lossy merged body.
+    assert "### Pieces" in body, (
+        "split-piece must re-derive from the retained Architecture `### Pieces` source"
+    )
+    assert "re-deriv" in body.lower(), (
+        "R15 gate must describe split-piece as re-deriving pieces from the Architecture source"
+    )
     # The gate is user-blocking before any tickets commit.
     assert "user-blocking" in body.lower(), (
         "R15 gate must be documented as user-blocking"
@@ -310,4 +319,124 @@ def test_prescriptive_prose_check_section_partitioning(sections: dict[str, str])
     )
     assert "## Touch points" in body, (
         "§5 must name `## Touch points` as the permitted section literal"
+    )
+
+
+# ---- §1–§6 substantive grouping content (auto-consolidation-pass) (5 tests) ----
+#
+# These assert the *semantic* content of the §1–§6 grouping rewrite (not just
+# keyword presence). Tests (b) and (c) use the negative-assertion idiom so a
+# *missing* edit is caught, not just a present keyword. Each assertion is
+# scoped to the relevant section body so pre-existing occurrences elsewhere
+# cannot mask a missing edit.
+
+def test_grouping_criteria_named_in_section_4(sections: dict[str, str]) -> None:
+    """(a) §4 "Determine Grouping" names the coupling/grouping criteria to weigh."""
+    body = _find_section(sections, "Determine Grouping")
+    # The grouping criteria are the inferred coupling indicators.
+    assert "Shared connection seam" in body, (
+        "§4 must name the shared-connection-seam grouping criterion"
+    )
+    assert "One integration cluster" in body, (
+        "§4 must name the one-integration-cluster grouping criterion"
+    )
+    assert "Near-identical role" in body, (
+        "§4 must name the near-identical-role grouping criterion"
+    )
+    assert "Value only when shipped together" in body, (
+        "§4 must name the value-only-when-shipped-together grouping criterion"
+    )
+
+
+def test_grouping_section_2_no_longer_says_becomes_one_ticket_candidate(
+    sections: dict[str, str],
+) -> None:
+    """(b) §2 NO LONGER contains the pre-rewrite "becomes one ticket candidate" wording.
+
+    Negative assertion: the 1:1 piece→ticket framing was rewritten so M pieces
+    may map to 1 ticket. The literal "becomes one ticket candidate" must be gone
+    from §2's body (its presence would prove the rewrite did not land).
+    """
+    body = _find_section(sections, "Consume the Architecture Section")
+    assert "becomes one ticket candidate" not in body, (
+        "§2 must no longer say a bullet 'becomes one ticket candidate' — the "
+        "1:1 piece→ticket framing was rewritten (M pieces may map to 1 ticket)"
+    )
+    # And the rewritten framing must be present: a piece is not always a ticket.
+    assert "M pieces may map to 1 ticket" in body, (
+        "§2 must state the rewritten framing that M pieces may map to 1 ticket"
+    )
+
+
+def test_grouping_section_1_input_contract_omits_non_emitted_headings(
+    sections: dict[str, str],
+) -> None:
+    """(c) §1 input-contract does not name the non-emitted Architecture headings.
+
+    Negative assertion: the input contract was reconciled to read the
+    *emitted* `### Pieces` / `### How they connect` content. The headings the
+    research template does NOT emit (`### Integration shape` /
+    `### Seam-level edges`) must be absent from §1's input-contract body so the
+    contract no longer hard-depends on drifted vocabulary.
+    """
+    body = _find_section(sections, "Load Context")
+    assert "Integration shape" not in body, (
+        "§1 input contract must not name `### Integration shape` (a heading the "
+        "research template does not emit)"
+    )
+    assert "Seam-level edges" not in body, (
+        "§1 input contract must not name `### Seam-level edges` (a heading the "
+        "research template does not emit)"
+    )
+    # The reconciled contract reads the emitted headings instead.
+    assert "### Pieces" in body and "### How they connect" in body, (
+        "§1 input contract must name the emitted `### Pieces` and "
+        "`### How they connect` sub-sections as the source-of-truth input"
+    )
+
+
+def test_decompose_body_omits_removed_research_phase_r3_gate(raw_text: str) -> None:
+    """decompose.md no longer names the removed `research-phase R3` gate.
+
+    Negative assertion: §3's dangling cross-reference to the now-removed
+    falsification gate (`research-phase R3`) was reconciled away while
+    preserving the "piece-set is final; do not re-derive/re-merge" intent.
+    The dead gate naming must not silently re-drift back in.
+    """
+    assert "research-phase R3" not in raw_text, (
+        "decompose.md must not name the removed `research-phase R3` gate — the "
+        "§3 cross-reference was reconciled to drop the dead gate naming"
+    )
+
+
+def test_grouping_section_3_distinguishes_wrong_set_from_over_split(
+    sections: dict[str, str],
+) -> None:
+    """(d) §3 distinguishes the wrong-set (return-to-research) case from over-split (§4)."""
+    body = _find_section(sections, "Consolidation Review")
+    # Wrong-set case: research owns it, return to research.
+    assert "wrong" in body and "return to the research phase" in body, (
+        "§3 must keep the wrong-piece-set case routed to return-to-research"
+    )
+    # Over-split case: §4 grouping owns it (packaging, not re-research).
+    assert "right but over-split" in body, (
+        "§3 must name the right-but-over-split-for-ticketing case"
+    )
+    assert "§4 grouping" in body or "§4 owns this" in body, (
+        "§3 must route the over-split case to §4 grouping (not return-to-research)"
+    )
+
+
+def test_grouping_notes_in_section_6_and_merge_convention_in_section_5(
+    sections: dict[str, str],
+) -> None:
+    """(e) §6 records `## Grouping Notes`; §5 references the consolidate-pieces merge convention."""
+    section_6 = _find_section(sections, "Write Decomposition Record")
+    assert "## Grouping Notes" in section_6, (
+        "§6 must record groupings under a dedicated `## Grouping Notes` heading"
+    )
+    section_5 = _find_section(sections, "Create Backlog Tickets")
+    assert "consolidate-pieces" in section_5 and "merge convention" in section_5, (
+        "§5 must author grouped bodies by mirroring the existing R15 "
+        "`consolidate-pieces` body-merge convention"
     )

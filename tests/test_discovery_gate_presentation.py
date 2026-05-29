@@ -114,3 +114,67 @@ def test_r3_drop_description_has_dual_use_marker() -> None:
                 f"`drop` option specifically. Offending line: {line!r}"
             )
             break
+
+
+# Drifted Architecture-vocabulary tokens that the
+# reconcile-discovery-skillmd-architecture-vocabulary-with ticket removed from
+# SKILL.md's GATE-2 fallback (line 82) and `revise` re-walk (line 85). The
+# template (`references/research.md` §6) emits only `### Pieces` +
+# `### How they connect`; these four tokens named headings/pointers it no
+# longer produces, so their reappearance signals silent re-drift.
+DRIFTED_VOCAB_TOKENS = (
+    "Integration shape",
+    "Seam-level edges",
+    "Why N pieces",
+    "spec R4 GATE-2",
+)
+
+
+def test_revise_bullet_vocabulary_conformed_to_emitted_template() -> None:
+    """Pin SKILL.md to the emitted Architecture vocabulary.
+
+    File-wide: the four drifted tokens must be absent. Scoped to the `revise`
+    bullet line specifically: it must carry the live-template pointer
+    (`references/research.md`) and the emitted headings (`### Pieces`,
+    `### How they connect`). The scoped check closes the spec's Edge Case 2 —
+    a degenerate edit that fixes the GATE-2 fallback but stubs/deletes the
+    `revise` bullet would leave a file-wide `references/research.md` token
+    present (it also appears in the Step 3 phase-reference table) yet break the
+    `revise` interface contract; this test fails in that case.
+    """
+    assert DISCOVERY_SKILL.is_file(), (
+        f"Expected discovery skill at {DISCOVERY_SKILL.relative_to(REPO_ROOT)}"
+    )
+    text = DISCOVERY_SKILL.read_text(encoding="utf-8")
+
+    # File-wide negative assertions: none of the drifted tokens may return.
+    for token in DRIFTED_VOCAB_TOKENS:
+        assert token not in text, (
+            f"Drift check: {DISCOVERY_SKILL.relative_to(REPO_ROOT)} must NOT "
+            f"contain the drifted Architecture-vocabulary token {token!r}. The "
+            "emitted template (references/research.md §6) produces only "
+            "`### Pieces` + `### How they connect`; this token names a heading "
+            "or pointer the template no longer emits."
+        )
+
+    # `revise`-bullet-SCOPED positive assertion. A file-wide
+    # `references/research.md` check is hollow: that token also appears in the
+    # Step 3 phase-reference table. Locate the `revise` bullet line and assert
+    # the live-template pointer and both emitted headings live on it.
+    revise_line = next(
+        (line for line in text.splitlines() if "`revise`" in line),
+        None,
+    )
+    assert revise_line is not None, (
+        f"revise-bullet check: {DISCOVERY_SKILL.relative_to(REPO_ROOT)} must "
+        "contain a `revise` gate-option bullet. The bullet was stubbed or "
+        "deleted — the GATE-2 fallback may have been conformed in isolation."
+    )
+
+    for required in ("references/research.md", "### Pieces", "### How they connect"):
+        assert required in revise_line, (
+            f"revise-bullet check: the `revise` bullet in "
+            f"{DISCOVERY_SKILL.relative_to(REPO_ROOT)} must name {required!r} so "
+            "the re-walk points at the live template and re-emits the emitted "
+            f"headings. Offending line: {revise_line!r}"
+        )

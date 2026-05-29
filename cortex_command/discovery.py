@@ -409,6 +409,7 @@ _RESPONSE_VALUES = frozenset({
     "revise-piece",
     "drop-piece",
     "consolidate-pieces",
+    "split-piece",
 })
 _STATUS_VALUES = frozenset({"draft", "approved", "revised", "walk-back"})
 
