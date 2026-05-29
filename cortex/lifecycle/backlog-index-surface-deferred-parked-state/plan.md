@@ -100,7 +100,7 @@ schema doc carries the `deferred`-tag note.
   the durable Req 6 guarantee). AND `git diff --name-only "$(git merge-base HEAD main)" -- cortex_command/`
   lists `cortex_command/backlog/generate_index.py` as the sole `cortex_command/` entry (Req 6 boundary
   check; merge-base, not live `main` tip).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 4: Document the deferred-tag convention in the schema doc
 - **Files**: `skills/backlog/references/schema.md`
