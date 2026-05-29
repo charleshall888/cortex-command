@@ -10,3 +10,6 @@
 {"ts": "2026-05-29T13:05:00Z", "event": "phase_transition", "feature": "extract-interview-skill", "tier": "complex", "from": "implement", "to": "review"}
 {"ts": "2026-05-29T13:08:00Z", "event": "review_dispatch", "feature": "extract-interview-skill", "criticality": "high", "dimensions": ["correctness", "completeness", "quality"]}
 {"ts": "2026-05-29T13:20:00Z", "event": "review_verdict", "feature": "extract-interview-skill", "verdict": "APPROVED", "cycle": 1}
+{"ts": "2026-05-29T15:17:30Z", "event": "phase_transition", "feature": "extract-interview-skill", "from": "review", "to": "complete"}
+{"schema_version": 1, "ts": "2026-05-29T15:17:30Z", "event": "pr_opened", "feature": "extract-interview-skill", "number": 16, "url": "https://github.com/charleshall888/cortex-command/pull/16", "head_branch": "interactive/extract-interview-skill", "repo": "charleshall888/cortex-command"}
+{"ts": "2026-05-29T15:17:40Z", "event": "feature_complete", "feature": "extract-interview-skill", "tasks_total": 6, "rework_cycles": 0, "merge_anchor": "merge"}
