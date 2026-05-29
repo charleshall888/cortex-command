@@ -92,6 +92,32 @@
     "repo": null
   },
   {
+    "id": 269,
+    "title": "Reconcile discovery SKILL.md Architecture vocabulary with emitted research template",
+    "status": "backlog",
+    "priority": "medium",
+    "type": "bug",
+    "tags": [],
+    "areas": [
+      "skills"
+    ],
+    "created": "2026-05-28",
+    "updated": "2026-05-28",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": null,
+    "plan": null,
+    "uuid": "79dc52ed-1d0b-4148-86cb-d0e015113892",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
     "id": 156,
     "title": "Make cortex-check-parity context-aware (skip tokens inside fenced code blocks)",
     "status": "deferred",
