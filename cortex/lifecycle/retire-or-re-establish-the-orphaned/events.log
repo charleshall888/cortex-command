@@ -11,3 +11,5 @@
 {"ts": "2026-05-29T13:42:24Z", "event": "batch_dispatch", "feature": "retire-or-re-establish-the-orphaned", "batch": 2, "tasks": [4]}
 {"ts": "2026-05-29T13:42:24Z", "event": "batch_dispatch", "feature": "retire-or-re-establish-the-orphaned", "batch": 3, "tasks": [5]}
 {"ts": "2026-05-29T13:42:24Z", "event": "phase_transition", "feature": "retire-or-re-establish-the-orphaned", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-05-29T13:46:49Z", "event": "review_verdict", "feature": "retire-or-re-establish-the-orphaned", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-05-29T13:46:49Z", "event": "phase_transition", "feature": "retire-or-re-establish-the-orphaned", "from": "review", "to": "complete"}
