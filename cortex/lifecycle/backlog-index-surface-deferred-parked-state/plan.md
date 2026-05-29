@@ -65,7 +65,7 @@ schema doc carries the `deferred`-tag note.
   over-fire on `deferred-feature-work`). Leave `## In-Progress`
   (270–274) and `## Warnings` (276–306) untouched (Non-Requirements: in-progress/warnings out of scope).
 - **Verification**: `python3 -c "from cortex_command.backlog.generate_index import generate_md; mk=lambda i,t:dict(id=i,title='T',status='backlog',priority='low',type='chore',tags=t,areas=[],blocked_by=[],parent=None,spec=None); items=[mk(1,['deferred']),mk(2,['deferred-feature-work'])]; out=generate_md(items,set(),set(),items); seg=out.split('## Backlog')[1].split('## In-Progress')[0]; print('OK' if ('- **1**' not in seg and '- **2**' in seg and '| backlog (deferred) |' in out) else 'FAIL')"` — pass if it prints `OK` (the `deferred` item is absent from the `## Backlog` grouping yet still an annotated table row, while the whole-element-negative `deferred-feature-work` item is NOT suppressed). Durable coverage in Task 3.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Pin behavior with a new test file
 - **Files**: `tests/test_generate_backlog_index.py`
