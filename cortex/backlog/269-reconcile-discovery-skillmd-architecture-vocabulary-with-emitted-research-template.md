@@ -2,12 +2,17 @@
 schema_version: "1"
 uuid: 79dc52ed-1d0b-4148-86cb-d0e015113892
 title: "Reconcile discovery SKILL.md Architecture vocabulary with emitted research template"
-status: backlog
+status: in_progress
 priority: medium
 type: bug
 created: 2026-05-28
 updated: 2026-05-28
 areas: ['skills']
+lifecycle_phase: plan
+lifecycle_slug: reconcile-discovery-skillmd-architecture-vocabulary-with
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/reconcile-discovery-skillmd-architecture-vocabulary-with/spec.md
 ---
 ## Why
 
