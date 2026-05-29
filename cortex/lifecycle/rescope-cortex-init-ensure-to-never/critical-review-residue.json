@@ -1,0 +1,18 @@
+{
+  "ts": "2026-05-29T18:44:09Z",
+  "feature": "rescope-cortex-init-ensure-to-never",
+  "artifact": "cortex/lifecycle/rescope-cortex-init-ensure-to-never/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 3,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "Task 2's byte-identity test asserts a negative (settings.local.json never appears) whose meaningfulness rests on the _isolate_home fixture pre-creating ~/.claude/, not on the code under test; it would pass trivially and mask a regression if the fixture later stopped pre-creating .claude/. Add an assertion that the lockfile ~/.claude/.settings.local.json.lock is never created (validate_settings->_acquire_lock creates it today) as a fixture-independent signal.",
+      "reviewer_angle": "Hidden pre-flight dependency on the removed validate_settings",
+      "evidence_quote": "assert the file is byte-identical (or still absent) afterward. Use the _isolate_home fixture (:58) for the temp HOME."
+    }
+  ]
+}
