@@ -1,0 +1,42 @@
+{
+  "ts": "2026-05-29T13:05:00Z",
+  "feature": "resolve-user-project-root-stops-at",
+  "artifact": "cortex/lifecycle/resolve-user-project-root-stops-at/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "Task 2 collision fixture's commondir is described only as 'pointing back to <main>/.git' without pinning the relative '../..' shape real git emits; an absolute commondir fixture would pass against a resolver that mishandles the relative production shape.",
+      "reviewer_angle": "Resolver algorithm soundness across git geometries",
+      "evidence_quote": "build `<main>/.git/worktrees/<id>/` containing a `commondir` file pointing back to `<main>/.git`"
+    },
+    {
+      "class": "B",
+      "finding": "The 'is a file' predicate for step (b) is stated once at line 27 but not restated at the step-(c) enumeration; a clarity note so two readers don't diverge on whether a .git directory terminates or is skipped.",
+      "reviewer_angle": "Resolver algorithm soundness across git geometries",
+      "evidence_quote": "else eagerly walk `Path.cwd().resolve()` and ancestors for the first `.git` entry that is a **file**"
+    },
+    {
+      "class": "B",
+      "finding": "The '>=5 collected' gate counts name-prefix matches rather than coverage of the five distinct Req-8 edge behaviors; a verification-coverage gap, not a resolver defect.",
+      "reviewer_angle": "Verification adequacy & test-as-proof",
+      "evidence_quote": "`-k resolve_main_repo_root` collects \u2265 5 cases"
+    },
+    {
+      "class": "B",
+      "finding": "The -k 'env' filter discriminates the env-first case only because no current function name contains 'env'; an unpinned filename-set invariant.",
+      "reviewer_angle": "Verification adequacy & test-as-proof",
+      "evidence_quote": "`python3 -m pytest tests/test_interactive_lock.py -k 'env' -q` exits 0"
+    },
+    {
+      "class": "B",
+      "finding": "The per-phase commit model never accounts for the .githooks/pre-commit parity gate (fires on staged tests/*) or path-hardcoding gate (fires on cortex_command/**/*.py); both pass today but the plan gives no failure-mode pointer.",
+      "reviewer_angle": "Task decomposition, phasing & pre-commit gate interactions",
+      "evidence_quote": "### Phase 2: Durability & contract reconciliation (tasks: 3, 4, 5)"
+    }
+  ]
+}
