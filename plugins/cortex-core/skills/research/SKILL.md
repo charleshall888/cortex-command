@@ -3,8 +3,9 @@ name: research
 description: >
   Parallel research orchestrator. Use when the user says "/cortex-core:research", "research this topic",
   "investigate this feature", "gather research for", or when /cortex-core:refine delegates its research
-  phase. Dispatches 3–5 parallel agents across independent angles (codebase, web, constraints,
-  tradeoffs, adversarial), synthesizes into research.md or conversation output.
+  phase. Dispatches 3–10 parallel agents — sized by a tier×criticality matrix — across independent
+  angles (core: codebase, web, constraints; plus task-chosen angles such as tradeoffs and an
+  always-last adversarial pass for high/critical), synthesizes into research.md or conversation output.
 inputs:
   - "topic: string (required) — feature or topic to research"
   - "lifecycle-slug: string (optional) — determines lifecycle mode; if present, writes cortex/lifecycle/{slug}/research.md"
@@ -46,15 +47,11 @@ Defaults:
 
 ## Step 2: Determine Agent Count
 
-Apply this matrix to compute `agent_count`:
+`agent_count` is the cell where the task's `tier` (row) meets its `criticality` (column) in the count matrix at [`../lifecycle/references/fanout.md`](../lifecycle/references/fanout.md) — the canonical, shared source for the grid (do not re-inline it here). The floor cell (simple+low) is 3; the corner cell (complex+critical) is 10. Both axes raise the count monotonically.
 
-```
-tier_count:        simple→3, complex→4
-criticality_count: low→3, medium→4, high→5, critical→5
-agent_count = max(tier_count, criticality_count)
-```
+The count is an **upper bound on investigation breadth, not a quota** — dispatch fewer if the task offers fewer genuinely distinct angles than its cell allows; do not pad with redundant agents.
 
-Examples: `tier=simple, criticality=high` → `max(3, 5)` = 5. `tier=complex, criticality=low` → `max(4, 3)` = 4.
+Examples: `tier=complex, criticality=critical` → 10. `tier=simple, criticality=low` → 3.
 
 ## Step 3: Dispatch Agents
 
