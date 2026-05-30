@@ -14,9 +14,11 @@ The user's criticality setting is always final. No automated process (including 
 
 | Criticality | Review phase (023) | Orchestrator review (024) | Scaled behaviors (025) | Model selection |
 |-------------|-------------------|--------------------------|----------------------|----------------|
-| low | Tier-based (skip for simple) | Skipped for simple; active for complex | Single research, single plan | Haiku explore, Sonnet build/review |
-| medium | Tier-based (skip for simple) | Active at phase boundaries | Single research, single plan | Haiku explore, Sonnet build/review |
-| high | Forced regardless of tier | Active at all phase boundaries | Single research, single plan | Sonnet explore, Opus build/review |
-| critical | Forced regardless of tier | Active at all phase boundaries | Parallel research, competing plans | Sonnet explore/research/plan, Opus build/review |
+| low | Tier-based (skip for simple) | Skipped for simple; active for complex | Parallel research (sized by fan-out matrix), single plan | Haiku explore, Sonnet build/review |
+| medium | Tier-based (skip for simple) | Active at phase boundaries | Parallel research (sized by fan-out matrix), single plan | Haiku explore, Sonnet build/review |
+| high | Forced regardless of tier | Active at all phase boundaries | Parallel research (sized by fan-out matrix), single plan | Sonnet explore, Opus build/review |
+| critical | Forced regardless of tier | Active at all phase boundaries | Parallel research (sized by fan-out matrix), competing plans | Sonnet explore/research/plan, Opus build/review |
 
 All three tickets (023, 024, 025) are implemented. The Review phase column reflects tier-based skip logic, the Orchestrator review column reflects boundary-checking behavior, and the Scaled behaviors column reflects criticality-conditional dispatch in the research and plan reference files. The Model selection column reflects which models are used at each criticality level.
+
+Research is **always parallel** at every criticality; the agent count is sized by the tier × criticality fan-out matrix — see `references/fanout.md` for the count-source-of-truth and dispatch protocol. Competing **plans** remain critical-only (single plan at low/medium/high).

@@ -13,7 +13,7 @@ Centralized reference for model routing across lifecycle and pipeline agent disp
 | Task Type | low | medium | high | critical |
 |---|---|---|---|---|
 | Codebase exploration | haiku | haiku | sonnet | sonnet |
-| Parallel research agents | — | — | — | sonnet |
+| Parallel research agents | sonnet | sonnet | sonnet | sonnet |
 | Competing plan agents | — | — | — | sonnet |
 | Builder sub-task | sonnet | sonnet | opus | opus |
 | Review sub-task | sonnet | sonnet | opus | opus |
@@ -55,7 +55,7 @@ Pipeline review dispatch follows the lifecycle review row (sonnet for low/medium
 
 ## Design Rationale
 
-- **Parallel agents always sonnet**: Parallel research and competing plans (critical-only) benefit from breadth across multiple agents, not maximum depth per agent. The orchestrator synthesizes outputs, so individual quality need not be maximal.
+- **Parallel agents always sonnet**: Parallel research (all criticalities, agent count sized by the tier × criticality fan-out matrix — see `references/fanout.md`) and competing plans (critical-only) benefit from breadth across multiple agents, not maximum depth per agent. The orchestrator synthesizes outputs, so individual quality need not be maximal.
 - **Exploration always haiku (unless high/critical)**: Read-only pattern discovery is Haiku's sweet spot. At high/critical, upgrade to sonnet for more nuanced analysis since findings feed all downstream phases.
 - **Complex + low/medium → sonnet (not opus)**: Sonnet 4.6 benchmarks show the gap with Opus is < 2% on coding tasks. Sonnet's faster latency and lower over-engineering tendency make it the better default. Reserve opus for when criticality demands maximum quality.
 - **Reviews follow criticality, not complexity**: Review quality depends on how much the bugs matter, not how many files were changed. High/critical features warrant opus review regardless of implementation complexity.
