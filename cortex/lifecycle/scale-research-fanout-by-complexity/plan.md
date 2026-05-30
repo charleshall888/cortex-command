@@ -24,7 +24,7 @@ PLAN-OF-THE-PLAN (recorded per high-criticality rule; proceeded automatically):
 ## Tasks
 
 ### Task 1: Create the canonical fan-out reference
-**Status**: [ ]
+**Status**: [x]
 **Depends on**: none
 **Files**: `skills/lifecycle/references/fanout.md` (new)
 **Context**: New shared reference, sibling to existing shared references `skills/lifecycle/references/load-requirements.md` and `orchestrator-review.md` (both consumed by multiple skills). It must contain three things: (a) the **count matrix** (spec R1) — an 8-cell table, rows `simple`/`complex` × columns `low`/`medium`/`high`/`critical`, values `simple{3,4,5,6}` and `complex{5,6,8,10}`; (b) the **hybrid angle-selection** rule (spec R3) — mandatory core = Codebase, Web, Requirements & Constraints (always); an Adversarial/critique agent always present for high/critical, dispatched last over a summary of the others' findings; the remaining matrix-bought slots chosen by the orchestrator per task as distinct, non-redundant angles, with one illustrative subdivision example (e.g. codebase-by-subsystem) and no topic→angle keyword router; (c) a **dispatch protocol** — parallel core first, then the always-last adversarial wave for high/critical. Write in What/Why-not-How register; soft routing (no new MUST). State the cap-10 rationale (concurrency/diminishing-returns ceiling) in one line.
@@ -32,7 +32,7 @@ PLAN-OF-THE-PLAN (recorded per high-criticality rule; proceeded automatically):
 **Verification**: `test -f skills/lifecycle/references/fanout.md` && `grep -c 'mandatory core' skills/lifecycle/references/fanout.md` ≥ 1 && the table contains a `10` in the complex+critical position and `3` in simple+low (manual scan / `grep -E '\*\*complex\*\*.*10' skills/lifecycle/references/fanout.md` returns the complex row).
 
 ### Task 2: Rewrite /research Step 2 (count) + frontmatter to consume the matrix
-**Status**: [ ]
+**Status**: [x]
 **Depends on**: 1
 **Files**: `skills/research/SKILL.md`
 **Context**: Step 2 ("Determine Agent Count", lines ~47–57) currently holds `tier_count`/`criticality_count`/`agent_count = max(...)`. Replace it with a citation to `skills/lifecycle/references/fanout.md` and the 2D matrix lookup (read tier × criticality → count from the matrix). Remove the `max()` formula entirely. Also update the frontmatter `description` (line ~6) "3–5 parallel agents" range to the new range (3–10).

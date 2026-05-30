@@ -7,3 +7,6 @@
 {"schema_version": 1, "ts": "2026-05-30T19:10:01Z", "event": "phase_transition", "feature": "scale-research-fanout-by-complexity", "from": "specify", "to": "plan"}
 {"schema_version": 1, "ts": "2026-05-30T19:20:00Z", "event": "plan_approved", "feature": "scale-research-fanout-by-complexity"}
 {"schema_version": 1, "ts": "2026-05-30T19:20:01Z", "event": "phase_transition", "feature": "scale-research-fanout-by-complexity", "from": "plan", "to": "implement"}
+{"schema_version": 1, "ts": "2026-05-30T19:25:00Z", "event": "batch_dispatch", "feature": "scale-research-fanout-by-complexity", "batch": 0, "tasks": [1]}
+{"schema_version": 1, "ts": "2026-05-30T19:30:00Z", "event": "batch_dispatch", "feature": "scale-research-fanout-by-complexity", "batch": 1, "tasks": [2]}
+{"schema_version": 1, "ts": "2026-05-30T19:40:00Z", "event": "batch_dispatch", "feature": "scale-research-fanout-by-complexity", "batch": 2, "tasks": [3]}
