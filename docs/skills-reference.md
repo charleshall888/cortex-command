@@ -44,7 +44,7 @@ Ideation research for topics not ready for implementation. Investigates the prob
 ---
 
 ### research
-Parallel research orchestrator for pre-implementation investigation. Dispatches 3–5 agents across independent angles (codebase, web, requirements, tradeoffs, adversarial) and synthesizes findings into a structured `research.md` artifact. Used directly via `/cortex-core:research` or invoked automatically by `/cortex-core:refine` and `/cortex-core:lifecycle`.
+Parallel research orchestrator for pre-implementation investigation. Dispatches 3–10 agents (sized by a tier×criticality matrix) across independent angles (codebase, web, requirements, tradeoffs, adversarial) and synthesizes findings into a structured `research.md` artifact. Used directly via `/cortex-core:research` or invoked automatically by `/cortex-core:refine` and `/cortex-core:lifecycle`.
 
 [skills/research/SKILL.md](../skills/research/SKILL.md)
 
