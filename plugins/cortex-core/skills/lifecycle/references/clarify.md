@@ -96,8 +96,8 @@ When Research phase entry evaluates an existing `cortex/lifecycle/{slug}/researc
 **Research is sufficient if none of the following signals are present:**
 
 - (a) The research.md was clearly written for a different feature scope — the goal described in the research differs materially from the clarified intent statement.
-- (b) Files named in the backlog item's description or acceptance criteria do not appear in research.md's codebase analysis.
-- (c) research.md's codebase analysis is empty or generic — no specific file paths or patterns for this feature are mentioned.
+- (b) Files named in the backlog item's description or acceptance criteria do not appear in research.md's codebase findings (the codebase-angle content, wherever it appears in the artifact).
+- (c) research.md's codebase findings are empty or generic — no specific file paths or patterns for this feature are mentioned.
 - (d) Requirements context has changed significantly since the research was written — judge by comparing the research content against the current requirements files.
 
 **If none of (a)–(d) apply**: treat existing research as sufficient; skip re-running research and proceed directly to Spec.
