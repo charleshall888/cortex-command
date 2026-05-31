@@ -67,6 +67,18 @@ Write or present the following outputs — this is the handoff package for Resea
    
    When boundaries cannot be pre-locked (topic is too exploratory, or scope itself is part of what Research must determine), emit "No envelope needed" with a one-line reason. Fire when boundaries are tractable; skip when they are not.
 
+### Persist the research-sizing assessment
+
+Discovery supports independent phase entry — a user can run `/cortex-core:discovery research <topic>` in a fresh session, without Clarify's conversation context. So the two research-sizing values above (outputs 5–6) must be persisted now, while you have them, so Research can read them back across that boundary. Conversation memory alone does not survive a phase-resume.
+
+Persist the assessment by invoking:
+
+```
+cortex-discovery emit-research-sizing --topic <topic> --complexity <simple|complex> --criticality <low|medium|high|critical>
+```
+
+This records a durable `discovery_research_sizing` entry on the topic's events.log (the helper resolves the correct path — never hardcode it). Research reads it back at entry to size its fan-out.
+
 ## Constraints
 
 | Thought | Reality |

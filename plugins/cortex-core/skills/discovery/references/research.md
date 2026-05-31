@@ -28,6 +28,16 @@ Load requirements using the shared tag-based loading protocol — read `../../li
 
 If a concept you need is not yet defined in the glossary, treat the absence as a signal to surface the term in the next requirements interview.
 
+### 1b. Read the Research-Sizing Assessment
+
+Research can be entered independently of Clarify (a fresh `/cortex-core:discovery research <topic>` session), so read the complexity/criticality assessment back from the topic's events.log rather than relying on conversation memory:
+
+```
+cortex-discovery read-research-sizing --topic <topic>
+```
+
+This returns the assessment Clarify persisted (`complexity` + `criticality`). When none was persisted — a legacy discovery directory, or Research entered before Clarify ran — it returns discovery's floor default `{"complexity":"simple","criticality":"medium"}` (criticality floors at `medium`, never `low`, per discovery's upward bias) and never errors. These two values size the research fan-out for the steps below.
+
 ### 2. Codebase Analysis
 
 Launch a focused codebase exploration to investigate:

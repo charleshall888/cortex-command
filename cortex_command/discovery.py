@@ -15,6 +15,18 @@ invokes:
 
   python3 -m cortex_command.discovery emit-checkpoint-response  ...
   python3 -m cortex_command.discovery resolve-events-log-path   ...
+  python3 -m cortex_command.discovery emit-research-sizing      ...
+  python3 -m cortex_command.discovery read-research-sizing      ...
+
+The ``emit-research-sizing`` subcommand persists the discovery Clarify
+phase's research-sizing assessment (complexity + criticality) as a
+``discovery_research_sizing`` event so it survives the clarify->research
+phase-resume boundary. ``read-research-sizing`` prints the most recent such
+assessment as JSON; when none is present (legacy directory, or Research
+entered before Clarify ran) it prints discovery's floor default --
+``{"complexity": "simple", "criticality": "medium"}`` (criticality floors
+at ``medium`` per discovery's upward bias, never ``low``) -- and exits 0
+without erroring.
 
 The emit-checkpoint-response subcommand internally calls
 ``resolve-events-log-path`` to pick the correct events.log target -- never
@@ -1006,6 +1018,91 @@ def _cmd_score_corpus(args: argparse.Namespace) -> int:
 
 
 # ---------------------------------------------------------------------------
+# Research-sizing persistence (spec R9): emit at Clarify, read at Research entry
+# ---------------------------------------------------------------------------
+
+# Discovery's floor default when no research-sizing assessment has been
+# persisted (legacy directory, or Research entered before Clarify ran).
+# Criticality floors at ``medium`` -- never ``low`` -- per discovery's
+# upward bias (clarify.md output 6): discovery sets an epic's initial
+# direction, so a missing assessment defaults to the cautious floor rather
+# than the absolute minimum.
+DEFAULT_RESEARCH_SIZING: dict = {"complexity": "simple", "criticality": "medium"}
+
+_RESEARCH_SIZING_COMPLEXITY = ("simple", "complex")
+_RESEARCH_SIZING_CRITICALITY = ("low", "medium", "high", "critical")
+
+
+def emit_research_sizing(
+    topic: str,
+    complexity: str,
+    criticality: str,
+    repo_root: Path,
+) -> Path:
+    """Validate + emit one ``discovery_research_sizing`` event.
+
+    Returns the events.log path written to.
+    """
+    _validate_topic_slug(topic)
+    if complexity not in _RESEARCH_SIZING_COMPLEXITY:
+        raise ValueError(
+            f"complexity must be one of {list(_RESEARCH_SIZING_COMPLEXITY)}: "
+            f"got {complexity!r}"
+        )
+    if criticality not in _RESEARCH_SIZING_CRITICALITY:
+        raise ValueError(
+            f"criticality must be one of {list(_RESEARCH_SIZING_CRITICALITY)}: "
+            f"got {criticality!r}"
+        )
+    events_log = resolve_events_log_path(topic, repo_root)
+    event = {
+        "ts": _now_iso(),
+        "event": "discovery_research_sizing",
+        "topic": topic,
+        "complexity": complexity,
+        "criticality": criticality,
+    }
+    append_event(events_log, event)
+    return events_log
+
+
+def read_research_sizing(topic: str, repo_root: Path) -> dict:
+    """Return the most recent persisted research-sizing assessment.
+
+    Scans the resolved events.log for the latest ``discovery_research_sizing``
+    row and returns ``{"complexity": ..., "criticality": ...}``. When the log
+    is missing/empty or contains no such row, returns
+    ``DEFAULT_RESEARCH_SIZING`` (discovery's simple/medium floor) so a missing
+    assessment is never an unhandled error -- it is the documented default.
+
+    Malformed JSONL lines are skipped (Tolerant Reader).
+    """
+    events_log = resolve_events_log_path(topic, repo_root)
+    latest: dict | None = None
+    if events_log.is_file():
+        try:
+            lines = events_log.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            lines = []
+        for raw in lines:
+            raw = raw.strip()
+            if not raw:
+                continue
+            try:
+                row = json.loads(raw)
+            except (json.JSONDecodeError, ValueError):
+                continue
+            if isinstance(row, dict) and row.get("event") == "discovery_research_sizing":
+                latest = row
+    if latest is None:
+        return dict(DEFAULT_RESEARCH_SIZING)
+    return {
+        "complexity": latest.get("complexity", DEFAULT_RESEARCH_SIZING["complexity"]),
+        "criticality": latest.get("criticality", DEFAULT_RESEARCH_SIZING["criticality"]),
+    }
+
+
+# ---------------------------------------------------------------------------
 # CLI subcommand dispatch
 # ---------------------------------------------------------------------------
 
@@ -1052,6 +1149,42 @@ def _cmd_emit_checkpoint_response(args: argparse.Namespace) -> int:
               file=sys.stderr)
         return 2
     sys.stdout.write(str(target) + "\n")
+    return 0
+
+
+def _cmd_emit_research_sizing(args: argparse.Namespace) -> int:
+    repo_root = _resolve_repo_root_arg(args)
+    if repo_root is None:
+        return 2
+    try:
+        emit_research_sizing(
+            topic=args.topic,
+            complexity=args.complexity,
+            criticality=args.criticality,
+            repo_root=repo_root,
+        )
+    except ValueError as e:
+        print(str(e), file=sys.stderr)
+        return 2
+    except OSError as e:
+        print(f"Failed to append discovery_research_sizing event: {e}",
+              file=sys.stderr)
+        return 2
+    sizing = {"complexity": args.complexity, "criticality": args.criticality}
+    sys.stdout.write(json.dumps(sizing, separators=(",", ":"), sort_keys=True) + "\n")
+    return 0
+
+
+def _cmd_read_research_sizing(args: argparse.Namespace) -> int:
+    repo_root = _resolve_repo_root_arg(args)
+    if repo_root is None:
+        return 2
+    try:
+        sizing = read_research_sizing(topic=args.topic, repo_root=repo_root)
+    except ValueError as e:
+        print(str(e), file=sys.stderr)
+        return 2
+    sys.stdout.write(json.dumps(sizing, separators=(",", ":"), sort_keys=True) + "\n")
     return 0
 
 
@@ -1187,6 +1320,42 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     sc.set_defaults(func=_cmd_score_corpus)
+
+    # emit-research-sizing
+    ers = sub.add_parser(
+        "emit-research-sizing",
+        help=(
+            "Validate and emit one discovery_research_sizing event persisting "
+            "the Clarify phase's complexity/criticality assessment."
+        ),
+    )
+    _add_repo_root_arg(ers)
+    ers.add_argument("--topic", required=True, help="Discovery topic slug.")
+    ers.add_argument(
+        "--complexity",
+        required=True,
+        choices=list(_RESEARCH_SIZING_COMPLEXITY),
+        help="Research-sizing complexity.",
+    )
+    ers.add_argument(
+        "--criticality",
+        required=True,
+        choices=list(_RESEARCH_SIZING_CRITICALITY),
+        help="Research-sizing criticality.",
+    )
+    ers.set_defaults(func=_cmd_emit_research_sizing)
+
+    # read-research-sizing
+    rrs = sub.add_parser(
+        "read-research-sizing",
+        help=(
+            "Print the most recent discovery_research_sizing assessment as "
+            "JSON, or the simple/medium floor default when none is persisted."
+        ),
+    )
+    _add_repo_root_arg(rrs)
+    rrs.add_argument("--topic", required=True, help="Discovery topic slug.")
+    rrs.set_defaults(func=_cmd_read_research_sizing)
 
     return p
 
