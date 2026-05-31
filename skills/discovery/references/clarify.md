@@ -53,7 +53,15 @@ Write or present the following outputs — this is the handoff package for Resea
 
 4. **Open questions for research**: Bulleted list of questions to carry into Research (may be empty). These are questions best resolved by investigation — not user answers.
 
-5. **Scope envelope** (optional): The agent decides per topic whether to produce this. When the topic's boundaries are tractable at clarify time, emit in-scope/out-of-scope bullets to constrain what Research investigates:
+5. **Research-sizing complexity**: `simple` or `complex`. This sizes the research fan-out ONLY — it is *not* the implementation-complexity that /cortex-core:refine or /cortex-core:lifecycle assess later when a ticket is ready to build. It feeds the shared fan-out matrix at `../../lifecycle/references/fanout.md` (the tier axis), which discovery's Research phase reads to decide how many parallel agents to dispatch.
+
+   Skew toward `complex` for any topic that is multi-faceted or seeds a whole epic. Discovery sits at the top of an epic and sets its initial direction; an under-sized research pass here risks a shallow, wrong direction that then propagates across every ticket the discovery spawns. Because that divergence is expensive to unwind, prefer the wider investigation when the topic is anything beyond a single, self-contained question. State the assessment with brief reasoning and proceed.
+
+6. **Research-sizing criticality**: `low | medium | high | critical`. Like the complexity output above, this sizes the research fan-out ONLY (it feeds the criticality axis of the same `../../lifecycle/references/fanout.md` matrix) and is distinct from the implementation-criticality assessed later by /refine or /lifecycle.
+
+   Discovery's research-sizing assessment is deliberately biased *upward* relative to how the same topic would rate under refine/lifecycle, because discovery is high-leverage: it sets the direction the whole epic inherits, and a wrong direction is costly to reverse once tickets are spawned. So criticality **floors at `medium`** — never rate a discovery topic `low`. Raise it to `high` or `critical` when the topic seeds a whole epic or sets direction across multiple tickets. Apply judgment to where on that range the topic lands rather than a mechanical lookup. State the assessment with brief reasoning and proceed.
+
+7. **Scope envelope** (optional): The agent decides per topic whether to produce this. When the topic's boundaries are tractable at clarify time, emit in-scope/out-of-scope bullets to constrain what Research investigates:
    - **In scope**: bulleted list of areas/questions Research should pursue
    - **Out of scope**: bulleted list of adjacent concerns explicitly excluded from this discovery
    
@@ -63,6 +71,6 @@ Write or present the following outputs — this is the handoff package for Resea
 
 | Thought | Reality |
 |---------|---------|
-| "I should assess complexity and criticality" | Discovery Clarify does not assess implementation complexity — there is nothing to implement yet. That assessment happens in /cortex-core:refine or /cortex-core:lifecycle when a ticket is ready to build. |
+| "I should assess complexity and criticality" | Discovery Clarify assesses a *research-sizing* complexity/criticality only (§4, outputs 5–6) — its sole job is sizing the research fan-out, biased upward because discovery sets an epic's initial direction. It does not assess *implementation* complexity; that assessment happens in /cortex-core:refine or /cortex-core:lifecycle when a ticket is ready to build. |
 | "I should look for a backlog item to match" | Discovery produces backlog items; it does not start from them. The backlog coverage check (§3) looks for overlap to avoid duplicating existing work, not to resolve an input. |
 | "I should research feasibility here" | That is Research's job. Clarify only checks aim, domain, novelty, and alignment. |
