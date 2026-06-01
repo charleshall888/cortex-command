@@ -6,3 +6,10 @@
 {"ts":"2026-06-01T23:03:24Z","event":"synthesizer_drift","feature":"reconcile-lifecycle-complete-phase-on-main","expected_sha":"f9dfe95b7d228f1f42684a4a5dbd4532e3f0715d1c765319642f019fea6a335b","observed_sha_or_null":null}
 {"ts": "2026-06-01T23:19:15Z", "event": "plan_approved", "feature": "reconcile-lifecycle-complete-phase-on-main"}
 {"ts": "2026-06-01T23:19:15Z", "event": "phase_transition", "feature": "reconcile-lifecycle-complete-phase-on-main", "from": "plan", "to": "implement"}
+{"ts": "2026-06-01T23:26:45Z", "event": "batch_dispatch", "feature": "reconcile-lifecycle-complete-phase-on-main", "batch": 0, "tasks": [1]}
+{"ts": "2026-06-01T23:29:05Z", "event": "batch_dispatch", "feature": "reconcile-lifecycle-complete-phase-on-main", "batch": 1, "tasks": [2]}
+{"ts": "2026-06-01T23:33:10Z", "event": "batch_dispatch", "feature": "reconcile-lifecycle-complete-phase-on-main", "batch": 2, "tasks": [3]}
+{"ts": "2026-06-01T23:33:29Z", "event": "phase_transition", "feature": "reconcile-lifecycle-complete-phase-on-main", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-06-01T23:40:58Z", "event": "review_verdict", "feature": "reconcile-lifecycle-complete-phase-on-main", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
+{"ts": "2026-06-01T23:40:58Z", "event": "phase_transition", "feature": "reconcile-lifecycle-complete-phase-on-main", "from": "review", "to": "complete"}
+{"ts": "2026-06-01T23:46:58Z", "event": "feature_complete", "feature": "reconcile-lifecycle-complete-phase-on-main", "tasks_total": 3, "rework_cycles": 1, "merge_anchor": "merge"}

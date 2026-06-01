@@ -34,7 +34,7 @@ Insert a single flag-gated, stage-first artifact-commit step at the lifecycle Co
   - Placement-after-Step-11 rationale (Edge Cases): the closing `feature_complete` row lands inside the commit, preserving terminal design history; the commit-fail-after-append window is status-quo-equivalent.
   - Do **not** edit the Step 8 `**Hard guard**:` paragraph — `tests/test_complete_md_hard_guard_snapshot.py` byte-pins it; the insertion is downstream of that region.
 - **Verification**: After the edit, all of the following hold (run as one Bash check, pass if every clause passes): `grep -c 'finalization-commit-step' skills/lifecycle/references/complete.md` ≥ 1 AND `grep -c 'cortex-read-commit-artifacts' skills/lifecycle/references/complete.md` = 2 AND `grep -c 'git diff --cached --quiet' skills/lifecycle/references/complete.md` ≥ 1 AND `grep -c '/cortex-core:commit' skills/lifecycle/references/complete.md` ≥ 2 AND `git diff skills/lifecycle/references/complete.md | grep -E '^\+' | grep -cE '\b(MUST|CRITICAL|REQUIRED)\b'` = 0 AND the text between the `finalization-commit-step` markers references the `main`/`master` non-default-branch advisory AND contains no `git push`, no `gh pr create`, and no `git add cortex/lifecycle/` directory-glob.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Add scoped structural guard test for the anchored step
 - **Files**: `tests/test_complete_md_finalization_commit.py`
@@ -43,7 +43,7 @@ Insert a single flag-gated, stage-first artifact-commit step at the lifecycle Co
 - **Complexity**: simple
 - **Context**: Pattern source `tests/test_post_refine_commit_wired.py` — `_repo_root()` via `pathlib.Path(__file__).resolve().parents[1]`; read the canonical file (not the plugin mirror) with `read_text(encoding="utf-8")`; extract the anchored substring by locating the two marker comments and slicing between them; assert the region is non-empty before sub-asserting (a missing anchor must fail loudly, not vacuously pass). Negative assertions check `"git push" not in region`, `"gh pr create" not in region`, and that no `cortex/lifecycle/`-prefixed directory-glob `git add` appears (e.g. assert the literal `git add cortex/lifecycle/` directory form is absent while the enumerated filenames are present). Keep assertions substring-based on the sliced region, consistent with the precedent test's `_line_indices` substring style.
 - **Verification**: `python3 -m pytest tests/test_complete_md_finalization_commit.py -q` — pass if exit code = 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Regenerate cortex-core mirror and confirm full suite green
 - **Files**: `plugins/cortex-core/skills/lifecycle/references/complete.md`
@@ -52,7 +52,7 @@ Insert a single flag-gated, stage-first artifact-commit step at the lifecycle Co
 - **Complexity**: simple
 - **Context**: Run `just build-plugin` (regenerates build-output plugin trees from top-level `skills/`); this rewrites `plugins/cortex-core/skills/lifecycle/references/complete.md` to byte-match canonical. The pre-commit dual-source hook also performs this regen on commit, but regenerating explicitly here lets `just test` pass before the implement-phase commit. R9 holds by construction (a tail insertion after Step 11 cannot move the upstream Step 5/Step 6 pause headings beyond the ±35-line kept-pauses tolerance) but is verified, not assumed.
 - **Verification**: Run in sequence, pass if all exit 0: `just build-plugin` then `python3 -m pytest tests/test_dual_source_reference_parity.py tests/test_lifecycle_kept_pauses_parity.py tests/test_complete_md_finalization_commit.py tests/test_complete_md_hard_guard_snapshot.py -q` then `just test`.
-- **Status**: [ ] pending
+- **Status**: [x] complete — `build-plugin` no-op (mirror synced by Task 1's dual-source hook); the 4 targeted tests pass (61 passed). Full `just test` = 1 failed / 1697 passed; the lone failure (`test_cortex_resolve_backlog_item_parity::test_stderr_parity[title_phrase_ambiguous]`, `ambiguous: 34 vs 33`) is an orthogonal, pre-existing backlog-drift fixture fragility (tracked by backlog #276), triggered by untracked co-mingled backlog items #277/#278 — not by this feature's changes (which touch only `complete.md`, its mirror, and the new test).
 
 ## Risks
 - **Feature-branch flow commits to the merged feature branch, not `main`.** On the discouraged `feature/{slug}` no-worktree PR flow, the finalization commit lands the post-merge tail on `feature/{slug}` (already merged) rather than `main`. This plan commits it there + surfaces the R13 advisory rather than auto-`checkout main` (which risks conflicts and entangles with local-merge state). Branch normalization is deferred to the Step 7 routing follow-up. The artifacts are committed-and-reachable, not left dirty — better than status quo, imperfect on placement.
