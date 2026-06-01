@@ -706,6 +706,20 @@ def _cmd_check_synth_stable(args: argparse.Namespace) -> int:
         }
 
     sys.stdout.write(diagnostic + "\n")
+    # gate-class: hygiene
+    # Write-guard: suppress the dir-creating append when the target lifecycle
+    # dir is absent (a non-feature <path>-arg review), so telemetry cannot
+    # create a phantom lifecycle dir. Verdict-preserving: the genuine drift was
+    # already reported on stdout above; we return EXIT_TELEMETRY_SKIPPED (4),
+    # observably distinct from the real-invalidation exit (3), instead of
+    # fabricating either a clean or a recorded result.
+    if not _lifecycle_dir_exists(lifecycle_root, args.feature):
+        print(
+            f"telemetry skipped: lifecycle dir absent for feature "
+            f"{args.feature!r}; synthesizer_drift event not recorded",
+            file=sys.stderr,
+        )
+        return EXIT_TELEMETRY_SKIPPED
     try:
         append_event(events_log, event)
     except OSError as e:
@@ -763,6 +777,20 @@ def _cmd_check_artifact_stable(args: argparse.Namespace) -> int:
 
     events_log = Path(lifecycle_root) / args.feature / "events.log"
     sys.stdout.write(f"EXCLUDED {reason}\n")
+    # gate-class: hygiene
+    # Write-guard: suppress the dir-creating append when the target lifecycle
+    # dir is absent (a non-feature <path>-arg review), so telemetry cannot
+    # create a phantom lifecycle dir. Verdict-preserving: the genuine absence
+    # was already reported on stdout above; we return EXIT_TELEMETRY_SKIPPED (4),
+    # observably distinct from the real-invalidation exit (3), instead of
+    # fabricating either a clean or a recorded result.
+    if not _lifecycle_dir_exists(lifecycle_root, args.feature):
+        print(
+            f"telemetry skipped: lifecycle dir absent for feature "
+            f"{args.feature!r}; sentinel_absence event not recorded",
+            file=sys.stderr,
+        )
+        return EXIT_TELEMETRY_SKIPPED
     try:
         append_event(events_log, event)
     except OSError as e:
@@ -791,6 +819,20 @@ def _cmd_record_exclusion(args: argparse.Namespace) -> int:
         source_path=args.source_path,
         snapshot_sha=args.snapshot_sha,
     )
+    # gate-class: hygiene
+    # Write-guard: suppress the dir-creating append when the target lifecycle
+    # dir is absent (a non-feature <path>-arg review), so telemetry cannot
+    # create a phantom lifecycle dir. A skipped record MUST NOT signal that an
+    # exclusion was persisted: returning EXIT_TELEMETRY_SKIPPED (4) instead of
+    # the success exit (0) keeps the skip observably distinct from a recorded
+    # exclusion.
+    if not _lifecycle_dir_exists(lifecycle_root, args.feature):
+        print(
+            f"telemetry skipped: lifecycle dir absent for feature "
+            f"{args.feature!r}; sentinel_absence exclusion not recorded",
+            file=sys.stderr,
+        )
+        return EXIT_TELEMETRY_SKIPPED
     try:
         append_event(events_log, event)
     except OSError as e:
