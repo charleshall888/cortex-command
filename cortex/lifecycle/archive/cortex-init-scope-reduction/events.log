@@ -1,1 +1,2 @@
 {"ts":"2026-05-29T03:56:51Z","event":"synthesizer_drift","feature":"cortex-init-scope-reduction","expected_sha":"e5a8592a3c82dc38593cdd6edcf0d00217b6a125d7a081e5ea751ee2e65b5bff","observed_sha_or_null":null}
+{"ts": "2026-06-01T11:54:31Z", "event": "feature_wontfix", "feature": "cortex-init-scope-reduction", "reason": "discovery complete; shipped via backlog #273, no feature lifecycle"}
