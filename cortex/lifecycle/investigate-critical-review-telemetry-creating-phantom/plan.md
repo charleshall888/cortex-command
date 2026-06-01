@@ -29,7 +29,7 @@ dir with a *recent* timestamp.
 - **Complexity**: simple
 - **Context**: `_default_lifecycle_root()` is at `:524`; `append_event` (the unconditional `mkdir(parents=True, exist_ok=True)`) at `:455-469`. Exit codes currently in use across the handlers: `0` (clean/recorded), `2` (OSError), `3` (drift/absence); `4` is unused (verified). Do NOT put the guard inside `append_event` — it must keep creating the dir for the legitimate fresh-lifecycle first-write at Site A (`refine.py`).
 - **Verification**: `grep -c 'gate-class: hygiene' cortex_command/critical_review/__init__.py` ≥ 1 increase over baseline; `python3 -c "from cortex_command.critical_review import _lifecycle_dir_exists"` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Wire the guard into the three telemetry writers (write-only, verdict-preserving)
 - **Files**: `cortex_command/critical_review/__init__.py`
@@ -38,7 +38,7 @@ dir with a *recent* timestamp.
 - **Complexity**: complex
 - **Context**: Each writer computes `events_log = Path(lifecycle_root) / args.feature / "events.log"` with `lifecycle_root = args.lifecycle_root or _default_lifecycle_root()` (`:647/:659`, `:697/:743`, `:757/:762`). **Real consumer surface to keep consistent** (there is NO inter-subcommand internal call — each of the three `_cmd_*` calls `append_event` directly; the four registered subparsers are `prepare-dispatch`/`check-synth-stable`/`check-artifact-stable`/`record-exclusion` at `:801/:823/:834/:886`; `verify-reviewer-output` does NOT exist — it was renamed to `check-artifact-stable` by #255, so do not search for it): (a) the prose routing in `skills/critical-review/references/verification-gates.md` and `SKILL.md` (Task 4 updates these to route exit 4); (b) `tests/test_variant_a_writer_sites_baseline.py`, which asserts `rc == 3` on a synth-drift writer path and exists to pin the writers' current dir-creating side effect — confirm its assertions pre-create the feature dir (so exit 4 never fires there) and, if any assertion would otherwise observe a dir-absent path, reconcile it in Task 3.
 - **Verification**: `python3 -m pytest tests/test_critical_review_phantom_guard.py -q` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Unit tests for the write-guard
 - **Files**: `tests/test_critical_review_phantom_guard.py`
@@ -47,7 +47,7 @@ dir with a *recent* timestamp.
 - **Complexity**: simple
 - **Context**: Use a `tmp_path` lifecycle root and pass `--lifecycle-root` to the subcommands. Mirror existing `tests/test_critical_review*` invocation idioms (call the `_cmd_*` functions or the argparse entry point).
 - **Verification**: `python3 -m pytest tests/test_critical_review_phantom_guard.py tests/test_variant_a_writer_sites_baseline.py -q` exits 0; the new module reports ≥ 4 tests.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 4: Route exit 4 in the orchestrator gate, tighten the contract prose, and regenerate the mirror in-commit
 - **Files**: `skills/critical-review/references/verification-gates.md`, `skills/critical-review/SKILL.md`, `plugins/cortex-core/skills/critical-review/references/verification-gates.md`, `plugins/cortex-core/skills/critical-review/SKILL.md`
@@ -56,7 +56,7 @@ dir with a *recent* timestamp.
 - **Complexity**: simple
 - **Context**: Phase-1 routing bullets at `verification-gates.md:53-54`; Step 2d.5 at `:83-84`. `just build-plugin` (`justfile:574-597`) rsyncs every `skills/$s` into `plugins/$p/skills/$s`; run it (or `just setup-githooks` so the hook does) before committing. `tests/test_plugin_mirror_parity.py` byte-compares every `*.md` under `skills/critical-review/references/` against the mirror.
 - **Verification**: `grep -ci 'exit 4\|skipped\|structurally' skills/critical-review/references/verification-gates.md` ≥ 1; `sed -n '1,7p' skills/critical-review/references/verification-gates.md | grep -c 'MUST'` equals baseline; `diff -r skills/critical-review/ plugins/cortex-core/skills/critical-review/` exits 0; `python3 -m pytest tests/test_plugin_mirror_parity.py -q` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5: Phantom predicate (branch (i) only; empty case delegated to `_is_stale`)
 - **Files**: `cortex_command/common.py`
@@ -65,7 +65,7 @@ dir with a *recent* timestamp.
 - **Complexity**: complex
 - **Context**: `_is_stale` (`scan_lifecycle.py:398`) runs first in the candidate loop and returns True (stale → excluded) immediately for a missing/unreadable/empty events.log or one with no parseable `ts` (`:417-420` `except (OSError, ValueError): return True`; `:445-446` `latest is None: return True`) — regardless of age. So the empty/absent case needs no predicate branch. The gap `_is_stale` leaves is a telemetry-only dir whose events carry a *recent* `ts` (`synthesizer_drift`/`sentinel_absence` both carry `ts`): it passes `_is_stale` and `detect_lifecycle_phase` defaults it to "research" (`common.py:367-368`). Branch (i) closes exactly that. The existing readers are JSONL-only (`_detect_lifecycle_phase_inner:271` parses any non-empty line; `scan_lifecycle.py:302,425` gate on `startswith("{")`) — match the `json.loads`-per-line approach; do not assume a YAML-tolerant reader (none exists). Add a code comment: predicate complements `_is_stale` (which owns empty/absent) by covering the recent-ts telemetry-only window.
 - **Verification**: `python3 -m pytest tests/test_phantom_dir_discriminator.py -q` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 6: Wire the predicate into SessionStart enumeration, after `_is_stale`
 - **Files**: `cortex_command/hooks/scan_lifecycle.py`
@@ -74,7 +74,7 @@ dir with a *recent* timestamp.
 - **Complexity**: simple
 - **Context**: The candidate loop is around `scan_lifecycle.py:886-980`; `_is_stale(child, stale_days)` is at `:900-903`; `detect_lifecycle_phase`'s default-to-research is `common.py:367-368`. The predicate gate must run after `_is_stale` and before the dir is surfaced. Import `is_phantom_lifecycle_dir` from `cortex_command.common`.
 - **Verification**: `python3 -m pytest tests/test_phantom_dir_discriminator.py -q` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 7: Discriminator tests
 - **Files**: `tests/test_phantom_dir_discriminator.py`
@@ -83,7 +83,7 @@ dir with a *recent* timestamp.
 - **Complexity**: simple
 - **Context**: Build fixtures under `tmp_path`; encode synthetic JSONL fixtures rather than reading live archive paths. The `synthesizer_drift`/`sentinel_absence` JSONL shapes can be referenced from `cortex/lifecycle/archive/doc-audit-2026-05-18/events.log` but encoded synthetically with a recent ts.
 - **Verification**: `python3 -m pytest tests/test_phantom_dir_discriminator.py -q` exits 0 and reports ≥ 4 tests.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 8: Fix stale events-registry pointers (module path AND line ranges) + record sibling-gate audit
 - **Files**: `bin/.events-registry.md`
@@ -92,7 +92,7 @@ dir with a *recent* timestamp.
 - **Complexity**: simple
 - **Context**: Rows at `bin/.events-registry.md:113` (`sentinel_absence`) and `:114` (`synthesizer_drift`), `target: per-feature-events-log`, `scan_coverage: manual`. Editing `bin/.events-registry.md` does NOT trigger the plugin-mirror build (it is not under `skills/` nor a `bin/cortex-*` file), but it DOES trigger `cortex-check-events-registry` (referential event-name validation only — it does not resolve producer pointers, so the pointer fix is review-enforced, not gate-enforced). Verify the corrected line ranges by reading the current `__init__.py` before editing.
 - **Verification**: `grep -c 'critical_review/__init__.py' bin/.events-registry.md` ≥ 2 (both rows); `grep -c 'critical_review.py:' bin/.events-registry.md` = 0 (no bare-module pointer remains); `grep -ci 'residue-write\|already guarded\|R11\|sibling' bin/.events-registry.md` ≥ 1; the events-registry audit recipe (if present) exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 9: Final suite + parity verification
 - **Files**: (verification-only; no new source edits — any mirror regen already landed in Task 4)
@@ -101,7 +101,7 @@ dir with a *recent* timestamp.
 - **Complexity**: simple
 - **Context**: `tests/test_plugin_mirror_parity.py` enforces mirror byte-identity (Task 4 owns the critical-review mirror regen). `just test` runs the whole suite.
 - **Verification**: `python3 -m pytest tests/test_plugin_mirror_parity.py -q` exits 0; `just test` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ## Risks
 

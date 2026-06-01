@@ -1,0 +1,18 @@
+{
+  "ts": "2026-06-01T13:32:08Z",
+  "feature": "investigate-critical-review-telemetry-creating-phantom",
+  "artifact": "cortex/lifecycle/investigate-critical-review-telemetry-creating-phantom/spec.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "'Suppress from enumeration entirely' silently hides a legitimate early-phase lifecycle in the standalone/manual critical-review path: prepare-dispatch <path> --feature <slug> against an operator-created dir before lifecycle_start passes the Phase-1 write-guard (dir exists) and may write only synthesizer_drift/sentinel_absence, making a real dir's event-set a subset of the allow-set, so SessionStart suppresses a dir the operator would want surfaced. Weigh 'classify as non-lifecycle but still report' vs silent suppression.",
+      "reviewer_angle": "Discriminator boundary",
+      "evidence_quote": "SessionStart lifecycle enumeration no longer surfaces artifact-less, telemetry-only dirs as \"research\"-phase lifecycles."
+    }
+  ]
+}

@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: c8d1e170-7149-49eb-8f50-c78984b0601f
 title: "Investigate critical-review telemetry creating phantom lifecycle dirs (+ related verification-gate issues)"
-status: in_progress
+status: complete
 priority: medium
 type: spike
 created: 2026-06-01
