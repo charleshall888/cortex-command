@@ -6,7 +6,7 @@ status: complete
 priority: low
 type: chore
 created: 2026-05-28
-updated: 2026-05-29
+updated: 2026-05-31
 complexity: complex
 criticality: medium
 spec: cortex/lifecycle/backlog-index-surface-deferred-parked-state/spec.md

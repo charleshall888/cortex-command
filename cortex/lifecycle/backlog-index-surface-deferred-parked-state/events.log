@@ -12,3 +12,4 @@
 {"ts": "2026-05-29T13:12:04Z", "event": "review_verdict", "feature": "backlog-index-surface-deferred-parked-state", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
 {"ts": "2026-05-29T13:12:04Z", "event": "phase_transition", "feature": "backlog-index-surface-deferred-parked-state", "from": "review", "to": "complete"}
 {"schema_version": 1, "ts": "2026-05-29T13:31:29Z", "event": "pr_opened", "feature": "backlog-index-surface-deferred-parked-state", "number": 15, "url": "https://github.com/charleshall888/cortex-command/pull/15", "head_branch": "interactive/backlog-index-surface-deferred-parked-state", "repo": "charleshall888/cortex-command"}
+{"ts": "2026-06-01T02:45:42Z", "event": "feature_complete", "feature": "backlog-index-surface-deferred-parked-state", "tasks_total": 4, "rework_cycles": 1, "merge_anchor": "merge"}
