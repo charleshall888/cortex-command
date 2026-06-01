@@ -45,6 +45,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
+# Exit code emitted when a telemetry write is suppressed because the target
+# lifecycle dir does not exist. Distinct from 0 (clean/recorded), 2 (OSError),
+# and 3 (drift/absence) so a skipped write is observably distinguishable from a
+# real invalidation and from a successful record.
+EXIT_TELEMETRY_SKIPPED = 4
+
+
 # ---------------------------------------------------------------------------
 # Path validation (Requirement 9)
 # ---------------------------------------------------------------------------
@@ -524,6 +531,20 @@ def _git_toplevel() -> str:
 def _default_lifecycle_root() -> str:
     """Resolve ``{git toplevel}/cortex/lifecycle`` as the default lifecycle root."""
     return str(Path(_git_toplevel()) / "cortex" / "lifecycle")
+
+
+# gate-class: hygiene
+def _lifecycle_dir_exists(lifecycle_root: str, feature: str) -> bool:
+    """Return whether ``Path(lifecycle_root) / feature`` is an existing directory.
+
+    Used by the telemetry write-guard: the three critical-review telemetry
+    writers suppress their dir-creating ``append_event`` side effect when this
+    returns ``False``, so a non-feature (``<path>``-arg) review cannot create a
+    phantom lifecycle dir. The guard lives in the callers, NOT in
+    ``append_event`` (which must keep creating the dir for the legitimate
+    fresh-lifecycle first-write at Site A, ``refine.py``).
+    """
+    return (Path(lifecycle_root) / feature).is_dir()
 
 
 def _default_artifact_roots() -> tuple[str, str]:
