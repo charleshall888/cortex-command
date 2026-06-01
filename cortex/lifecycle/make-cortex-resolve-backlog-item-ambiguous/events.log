@@ -1,0 +1,8 @@
+{"schema_version": 1, "ts": "2026-06-01T21:34:46Z", "event": "lifecycle_start", "feature": "make-cortex-resolve-backlog-item-ambiguous", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-01T21:40:03Z", "event": "clarify_critic", "feature": "make-cortex-resolve-backlog-item-ambiguous", "parent_epic_loaded": false, "findings_count": 5, "dispositions": {"apply": 4, "dismiss": 1, "ask": 0}, "applied_fixes_count": 4, "dismissals_count": 1, "status": "ok"}
+{"ts": "2026-06-01T21:49:55Z", "event": "complexity_override", "feature": "make-cortex-resolve-backlog-item-ambiguous", "from": "simple", "to": "complex", "gate": "research_open_questions"}
+{"ts": "2026-06-01T22:56:51Z", "event": "spec_approved", "feature": "make-cortex-resolve-backlog-item-ambiguous"}
+{"ts":"2026-06-01T23:14:49Z","event":"sentinel_absence","feature":"make-cortex-resolve-backlog-item-ambiguous","reviewer_angle":"No-op weakening despite the mutation guard","reason":"absent","model_tier":"sonnet","expected_sha":"8704bf7b47139bf80516d1c01a1d02254581a1f4fc0194700bf3278b9daccbf2","observed_sha_or_null":null}
+{"ts":"2026-06-01T23:14:50Z","event":"sentinel_absence","feature":"make-cortex-resolve-backlog-item-ambiguous","reviewer_angle":"Task verification commands are weaker than they appear","reason":"absent","model_tier":"sonnet","expected_sha":"8704bf7b47139bf80516d1c01a1d02254581a1f4fc0194700bf3278b9daccbf2","observed_sha_or_null":null}
+{"ts": "2026-06-01T23:30:51Z", "event": "plan_approved", "feature": "make-cortex-resolve-backlog-item-ambiguous"}
+{"ts": "2026-06-01T23:30:51Z", "event": "phase_transition", "feature": "make-cortex-resolve-backlog-item-ambiguous", "from": "plan", "to": "implement"}

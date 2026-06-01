@@ -1,0 +1,18 @@
+{
+  "ts": "2026-06-01T23:17:13Z",
+  "feature": "make-cortex-resolve-backlog-item-ambiguous",
+  "artifact": "cortex/lifecycle/make-cortex-resolve-backlog-item-ambiguous/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 2,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "Task 4's verification gate checks only that 'title_phrase_ambiguous.stderr' and '32 matches' are absent from the README; it never asserts the 'numeric_unambiguous.stdout' redirect was removed from the recapture recipe. A maintainer can pass both greps while leaving the numeric stdout-snapshot resurrection vector intact.",
+      "reviewer_angle": "Parity-contract erosion and the half-quintuple fixture state",
+      "evidence_quote": "grep -c 'title_phrase_ambiguous.stderr' tests/fixtures/cortex-resolve-backlog-item/README.md == 0 (the recapture command for that snapshot is removed) \u2014 pass if both counts are 0."
+    }
+  ]
+}
