@@ -1,0 +1,7 @@
+{"schema_version": 1, "ts": "2026-06-01T21:35:08Z", "event": "lifecycle_start", "feature": "scheduled-overnight-runs-fire-but-the", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-01T21:42:59Z", "event": "clarify_critic", "feature": "scheduled-overnight-runs-fire-but-the", "parent_epic_loaded": false, "findings_count": 5, "dispositions": {"apply": 3, "dismiss": 1, "ask": 1}, "applied_fixes_count": 3, "dismissals_count": 1, "status": "ok"}
+{"ts": "2026-06-01T21:56:44Z", "event": "complexity_override", "feature": "scheduled-overnight-runs-fire-but-the", "from": "simple", "to": "complex", "gate": "clarify"}
+{"ts": "2026-06-01T21:56:44Z", "event": "criticality_override", "feature": "scheduled-overnight-runs-fire-but-the", "from": "medium", "to": "high"}
+{"ts": "2026-06-01T22:52:34Z", "event": "spec_approved", "feature": "scheduled-overnight-runs-fire-but-the"}
+{"ts": "2026-06-01T23:47:36Z", "event": "plan_approved", "feature": "scheduled-overnight-runs-fire-but-the"}
+{"ts": "2026-06-01T23:47:36Z", "event": "phase_transition", "feature": "scheduled-overnight-runs-fire-but-the", "from": "plan", "to": "implement"}
