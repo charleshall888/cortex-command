@@ -40,7 +40,7 @@ PLAN-OF-THE-PLAN (recorded per high-criticality rule; proceeded automatically):
 **Verification**: `grep -c 'max(tier_count' skills/research/SKILL.md` = 0 && `grep -c 'fanout.md' skills/research/SKILL.md` ≥ 1 && `grep -c '3–5\|3-5' skills/research/SKILL.md` = 0.
 
 ### Task 3: Rewrite /research Step 3 (dispatch) + Step 4 (dynamic output) + line-194 self-doc
-**Status**: [ ]
+**Status**: [x]
 **Depends on**: 1, 2
 **Files**: `skills/research/SKILL.md`
 **Context**: Step 3 ("Dispatch Agents") currently hardcodes Agents 1–5 with a count-keyed dispatch protocol; rewrite it to reference the hybrid angle selection + dispatch protocol in fanout.md (mandatory core, orchestrator-chosen remaining angles, always-last adversarial for high/critical). PRESERVE verbatim: the `{INJECTION_RESISTANCE_INSTRUCTION}` fragment and the per-agent `research-considerations` injection rules. Step 4 ("Synthesize Findings", output structure ~lines 211–244) currently lists fixed headings; change it to emit one section per *dispatched* angle (mandatory core always; chosen angles labeled by selected angle; Adversarial when present). PRESERVE the `## Open Questions` heading and its semantics (consumed by `cortex_command/lifecycle/complexity_escalator.py`) and the empty/failed-agent + contradiction handling. Reword the self-doc at line ~194 ("Step 4's `### Output structure` block is the canonical schema source") to state the schema is angle-driven and only `## Open Questions` is a fixed contract heading.
@@ -48,7 +48,7 @@ PLAN-OF-THE-PLAN (recorded per high-criticality rule; proceeded automatically):
 **Verification**: `grep -c 'Open Questions' skills/research/SKILL.md` ≥ 1 && `grep -c 'INJECTION_RESISTANCE_INSTRUCTION' skills/research/SKILL.md` ≥ 1 && `grep -c 'canonical schema source' skills/research/SKILL.md` = 0 && `just test` exits 0 (size-budget + dual-source parity hold).
 
 ### Task 4: Add the matrix-invariants regression test
-**Status**: [ ]
+**Status**: [x]
 **Depends on**: 1
 **Files**: `tests/test_research_fanout_matrix.py` (new)
 **Context**: No regression test asserts the agent count today (confirmed: grep of `tests/` for count vars is empty). The test parses the 8-cell grid from `skills/lifecycle/references/fanout.md` and asserts spec R2 invariants: (a) every cell ≥ its left neighbor and ≥ its upper neighbor (monotonic on both axes); (b) floor (simple+low) = 3; (c) corner (complex+critical) = 10; (d) no cell exceeds 10. Follow existing test conventions in `tests/` (pytest, repo-root-relative path resolution).
@@ -56,7 +56,7 @@ PLAN-OF-THE-PLAN (recorded per high-criticality rule; proceeded automatically):
 **Verification**: `python3 -m pytest tests/test_research_fanout_matrix.py -q` exits 0; `just test` exits 0.
 
 ### Task 5: Reconcile lifecycle-side stale single-vs-parallel docs
-**Status**: [ ]
+**Status**: [x]
 **Depends on**: 1
 **Files**: `skills/lifecycle/references/criticality-matrix.md`, `skills/lifecycle/assets/model-selection.md`
 **Context**: `criticality-matrix.md` Scaled-behaviors column (lines ~17–20) says "Single research" for low/medium/high and "Parallel research" only for critical — already wrong under the graduated formula. `model-selection.md` (lines ~16, ~58) implies parallel research is critical-only. Update both to reference the matrix in fanout.md (research is parallel and matrix-sized at every tier/criticality; "single" framing removed).
@@ -64,7 +64,7 @@ PLAN-OF-THE-PLAN (recorded per high-criticality rule; proceeded automatically):
 **Verification**: `grep -ci 'single research' skills/lifecycle/references/criticality-matrix.md` = 0 && both files reference the matrix/fanout concept (`grep -c 'fanout\|matrix' skills/lifecycle/references/criticality-matrix.md skills/lifecycle/assets/model-selection.md` ≥ 1 each).
 
 ### Task 6: Reconcile docs-side stale claims
-**Status**: [ ]
+**Status**: [x]
 **Depends on**: 1
 **Files**: `docs/agentic-layer.md`, `docs/skills-reference.md`
 **Context**: `docs/agentic-layer.md` criticality table (lines ~116–119) carries the same binary "Single / Parallel" framing. `docs/skills-reference.md:47` says "Dispatches 3–5 agents" — stale range. Update both to the matrix-based reality (range 3–10, scaled by tier × criticality).
@@ -72,7 +72,7 @@ PLAN-OF-THE-PLAN (recorded per high-criticality rule; proceeded automatically):
 **Verification**: `grep -c '3–5\|3-5' docs/skills-reference.md` = 0 && the agentic-layer criticality table's research column no longer reads "Single" for any row (`grep -nE '\| *(low|medium|high)\b.*Single' docs/agentic-layer.md` returns no research-column match) && `just test` exits 0.
 
 ### Task 7: Decouple research-sufficiency signals from the fixed Codebase-Analysis heading
-**Status**: [ ]
+**Status**: [x]
 **Depends on**: 1, 3
 **Files**: `skills/lifecycle/references/clarify.md`
 **Context**: Signals (b) and (c) of the Research Sufficiency Criteria (lines ~99–100) reference "research.md's codebase analysis", which assumes the fixed `## Codebase Analysis` heading that Task 3 makes angle-driven. Reword to "codebase findings present anywhere in research.md" so the sufficiency check survives the dynamic schema.
@@ -80,7 +80,7 @@ PLAN-OF-THE-PLAN (recorded per high-criticality rule; proceeded automatically):
 **Verification**: `grep -c 'codebase findings' skills/lifecycle/references/clarify.md` ≥ 1 && the sufficiency signals (b)/(c) no longer contain the literal "codebase analysis" phrase (`grep -ci 'codebase analysis' skills/lifecycle/references/clarify.md` reflects no sufficiency-signal usage); `just test` exits 0.
 
 ### Task 8: Add upward-biased research-sizing assessment to discovery Clarify
-**Status**: [ ]
+**Status**: [x]
 **Depends on**: 1 (and Phase 1 complete — hard boundary)
 **Files**: `skills/discovery/references/clarify.md`
 **Context**: Discovery Clarify currently emits no complexity/criticality and explicitly refuses to (Thought/Reality row at lines ~62–66: "Discovery Clarify does not assess implementation complexity"). Add two named clarify outputs: complexity (`simple|complex`) and criticality (`low|medium|high|critical`), scoped as **research-sizing only** (distinct from implementation-complexity). Encode the user's upward-bias directive (spec R7): criticality floors at `medium` (never `low`), rises to `high`/`critical` when the topic seeds a whole epic or sets multi-ticket direction; complexity skews `complex` for multi-faceted/epic-seeding topics. State the *why* (discovery sets epic direction; wrong direction propagates) so the model applies judgment. Reword the stale Thought/Reality row to scope the carve-out.
@@ -88,7 +88,7 @@ PLAN-OF-THE-PLAN (recorded per high-criticality rule; proceeded automatically):
 **Verification**: `grep -ci 'research-sizing\|research sizing' skills/discovery/references/clarify.md` ≥ 1 && `grep -ci 'epic' skills/discovery/references/clarify.md` ≥ 1 && `grep -ci 'does not assess implementation complexity' skills/discovery/references/clarify.md` = 0.
 
 ### Task 9: Persist the discovery assessment across the clarify→research boundary
-**Status**: [ ]
+**Status**: [x]
 **Depends on**: 8
 **Files**: `skills/discovery/references/clarify.md`, `skills/discovery/references/research.md`, `skills/discovery/SKILL.md` and/or `cortex_command/discovery.py` (mechanism-dependent)
 **Context**: Discovery supports independent phase entry (`/cortex-core:discovery research`), so the assessment must survive a resume — conversation context alone is insufficient (integration review's one concrete data-flow hole). Persist at Clarify time and read at Research entry. Mechanism is left to implementation (What/Why-not-How): either discovery's `events.log` via a `cortex-discovery` helper subcommand (mirroring lifecycle's `lifecycle_start`/`complexity_override`) or a small clarify-output store — pick the lower-friction option consistent with how discovery already routes events through `cortex_command/discovery.py`. Define the default: if Research is entered with no persisted assessment (legacy dirs or direct phase-jump before Clarify), fall back to the floor (simple/medium given the discovery `medium` floor) or re-prompt — never an unhandled missing-input failure. If a new event type is added, register it in `bin/.events-registry.md`.
@@ -96,7 +96,7 @@ PLAN-OF-THE-PLAN (recorded per high-criticality rule; proceeded automatically):
 **Verification**: a write exists at Clarify and a read exists at Research entry (`grep` in the discovery references and/or `cortex_command/discovery.py` shows both sides); `just test` exits 0.
 
 ### Task 10: Rewrite discovery Research to use the shared fan-out engine, keep its schema
-**Status**: [ ]
+**Status**: [x]
 **Depends on**: 1, 9
 **Files**: `skills/discovery/references/research.md`
 **Context**: Discovery's Research phase (`skills/discovery/references/research.md`) is today a sequential single-orchestrator §2–§5 investigation. Rewrite it to dispatch parallel agents sized by the matrix in `fanout.md`, using the persisted assessment (Task 9). PRESERVE the existing synthesis schema exactly — `## Architecture` with `### Pieces` and `### How they connect`, plus Research Questions / Feasibility — because `cortex_command/discovery.py` machine-parses `## Architecture`/`### Pieces`/`### How they connect` (and `## Headline Finding`, a pre-existing parse target — do not drop it if present) for the R4 brief and `score-corpus`, and decompose.md treats `### Pieces` as the decomposition source of record. Discovery shares the fan-out *engine* (count + angle selection), not `/research`'s output schema.
@@ -104,7 +104,7 @@ PLAN-OF-THE-PLAN (recorded per high-criticality rule; proceeded automatically):
 **Verification**: `grep -c 'fanout' skills/discovery/references/research.md` ≥ 1 && `grep -c '### Pieces' skills/discovery/references/research.md` ≥ 1 && `grep -c '### How they connect' skills/discovery/references/research.md` ≥ 1 && `just test` exits 0.
 
 ### Task 11: Tests — brief generation + resume-without-assessment default
-**Status**: [ ]
+**Status**: [x]
 **Depends on**: 9, 10
 **Files**: `tests/` (extend `tests/test_discovery_brief.py` if present, else new test), and the resume-default assertion for Task 9
 **Context**: Confirm the discovery research rewrite did not break the machine-parsed Architecture contract: `cortex-discovery generate-brief` must still succeed against a discovery research.md shaped by the new schema (Architecture/Pieces/How-they-connect intact). Also cover Task 9's safe default: entering Research with no persisted assessment yields the floor default (not a crash).

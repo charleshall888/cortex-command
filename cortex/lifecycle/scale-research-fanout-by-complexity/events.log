@@ -10,3 +10,16 @@
 {"schema_version": 1, "ts": "2026-05-30T19:25:00Z", "event": "batch_dispatch", "feature": "scale-research-fanout-by-complexity", "batch": 0, "tasks": [1]}
 {"schema_version": 1, "ts": "2026-05-30T19:30:00Z", "event": "batch_dispatch", "feature": "scale-research-fanout-by-complexity", "batch": 1, "tasks": [2]}
 {"schema_version": 1, "ts": "2026-05-30T19:40:00Z", "event": "batch_dispatch", "feature": "scale-research-fanout-by-complexity", "batch": 2, "tasks": [3]}
+{"schema_version": 1, "ts": "2026-05-30T19:55:00Z", "event": "batch_dispatch", "feature": "scale-research-fanout-by-complexity", "batch": 3, "tasks": [4]}
+{"schema_version": 1, "ts": "2026-05-30T20:05:00Z", "event": "batch_dispatch", "feature": "scale-research-fanout-by-complexity", "batch": 4, "tasks": [5]}
+{"schema_version": 1, "ts": "2026-05-30T20:20:00Z", "event": "batch_dispatch", "feature": "scale-research-fanout-by-complexity", "batch": 5, "tasks": [6]}
+{"schema_version": 1, "ts": "2026-05-30T20:35:00Z", "event": "batch_dispatch", "feature": "scale-research-fanout-by-complexity", "batch": 6, "tasks": [7]}
+{"schema_version": 1, "ts": "2026-05-30T20:10:00Z", "event": "batch_dispatch", "feature": "scale-research-fanout-by-complexity", "batch": 7, "tasks": [8]}
+{"schema_version": 1, "ts": "2026-05-30T20:25:00Z", "event": "batch_dispatch", "feature": "scale-research-fanout-by-complexity", "batch": 8, "tasks": [9]}
+{"schema_version": 1, "ts": "2026-05-30T20:40:00Z", "event": "batch_dispatch", "feature": "scale-research-fanout-by-complexity", "batch": 9, "tasks": [10]}
+{"ts":"2026-06-01T00:57:18Z","event":"gate_brief_generated","status":"ok","brief_word_count":198,"patterns_detected_count":0}
+{"schema_version": 1, "ts": "2026-05-30T20:55:00Z", "event": "batch_dispatch", "feature": "scale-research-fanout-by-complexity", "batch": 10, "tasks": [11]}
+{"schema_version": 1, "ts": "2026-05-31T08:00:00Z", "event": "phase_transition", "feature": "scale-research-fanout-by-complexity", "tier": "complex", "from": "implement", "to": "review"}
+{"schema_version": 1, "ts": "2026-05-31T08:15:00Z", "event": "review_verdict", "feature": "scale-research-fanout-by-complexity", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"schema_version": 1, "ts": "2026-05-31T08:15:01Z", "event": "phase_transition", "feature": "scale-research-fanout-by-complexity", "from": "review", "to": "complete"}
+{"schema_version": 1, "ts": "2026-05-31T08:20:00Z", "event": "feature_complete", "feature": "scale-research-fanout-by-complexity", "tasks_total": 11, "rework_cycles": 1, "merge_anchor": "merge"}
