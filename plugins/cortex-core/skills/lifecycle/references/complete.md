@@ -18,7 +18,7 @@ If tests fail, report the failures and do not proceed until they are resolved. F
 
 Run `cortex-read-commit-artifacts` to read the `commit-artifacts` flag from project config. If stdout is `true` (the default), stage `cortex/lifecycle/{slug}/` artifacts alongside any uncommitted source changes, then use `/cortex-core:commit` to create the commit. If stdout is `false`, exclude lifecycle artifacts from staging (commit only the uncommitted source changes via `/cortex-core:commit`).
 
-**On-main short-circuit**: if the current branch is `main` or `master`, skip Steps 2–5 (no PR needed for direct-to-main work) and proceed to Step 7 with pr.json absent and no orphan-PR probe needed — treat as first-run path jumping directly to Steps 9–12.
+**On-main short-circuit**: if the current branch is `main` or `master`, skip Steps 2–5 (no PR needed for direct-to-main work) and proceed to Step 7 with pr.json absent and no orphan-PR probe needed — treat as first-run path jumping directly to Steps 9–12. The finalization-tail artifact commit (Step 11a) runs on this path; its stage-first guard ensures nothing is double-committed.
 
 ### Step 3 — Push Branch and Create PR
 
@@ -230,6 +230,60 @@ Read `tasks_total` and `rework_cycles` by running `cortex-lifecycle-counters --f
 The `merge_anchor: "merge"` field identifies this event as post-restructure regime (distinct from pre-restructure events which emit `merge_anchor: "review"` or omit the field). Readers tolerate the field's absence on legacy events (default to `"review"`).
 
 This event closes the event log for the feature.
+
+<!-- finalization-commit-step -->
+### Step 11a — Commit Finalization Artifacts
+
+Run `cortex-read-commit-artifacts` to read the `commit-artifacts` flag from project config. The binstub prints `true` or `false` on stdout; when the file or field is absent, treat the result as `true`.
+
+**Flag is `false`**: skip the commit entirely. Note inline that lifecycle artifacts and any uncommitted source are left in the working tree for the operator to commit deliberately.
+
+**Flag is `true`**: stage the artifact set below and proceed to the stage-first guard.
+
+Stage the lifecycle dir by enumerated paths (those present on disk):
+
+```
+git add -- cortex/lifecycle/{slug}/research.md \
+            cortex/lifecycle/{slug}/spec.md \
+            cortex/lifecycle/{slug}/plan.md \
+            cortex/lifecycle/{slug}/review.md \
+            cortex/lifecycle/{slug}/index.md \
+            cortex/lifecycle/{slug}/events.log
+```
+
+Stage by enumerated paths only — a directory-scoped add on the lifecycle dir would sweep in un-gitignored residue such as `critical-review-residue.json` and `learnings/*`.
+
+Stage the backlog write-back with a directory-scoped add, which captures the resolved item `.md`, the regenerated `index.json`/`index.md`, and any sibling/parent `.md` files rewritten by `cortex-update-item`'s terminal-status cascade:
+
+```
+git add cortex/backlog/
+```
+
+The gitignored `cortex/backlog/*.events.jsonl` sidecar is excluded automatically.
+
+**Stage-first idempotent guard**: after staging, run:
+
+```
+git diff --cached --quiet
+```
+
+- Exit 0 (nothing staged): nothing new to commit — skip `/cortex-core:commit` silently and continue to Step 12. This covers the worktree-interactive post-merge path, where the lifecycle artifacts are already on `main` via the merge and the targeted `git add` stages nothing.
+- Exit 1 (something staged): proceed to commit.
+
+Invoke `/cortex-core:commit` with an imperative ≤72-char subject, for example:
+
+```
+Complete {slug}: lifecycle artifacts and backlog write-back
+```
+
+If `/cortex-core:commit` exits non-zero, surface the error and stop before the Step 12 summary — a summary implying the artifacts were committed should not be emitted until the commit succeeds. The operator resolves the underlying failure and re-invokes; Branch 2 of Step 7 (`feature_complete` present) will short-circuit to Step 12 on retry, leaving the stage-first guard to no-op.
+
+After a successful commit, if the current branch is not `main` or `master`, surface a one-line advisory:
+
+> Artifacts committed on `<branch>` rather than the default branch — move them to `main` if appropriate.
+
+This covers the feature-branch (no-worktree) flow, where the finalization tail runs on `feature/{slug}` after merge. No automatic branch switch — branch normalization is deferred.
+<!-- /finalization-commit-step -->
 
 ### Step 12 — Summarize and Preserve Lifecycle Directory
 
