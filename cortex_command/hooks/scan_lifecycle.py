@@ -782,7 +782,10 @@ def main(argv: list[str] | None = None) -> int:
     # Lazy-imports per the module docstring's discipline. Keeping these
     # inside ``main`` means ``cortex hooks scan-lifecycle --help`` and
     # the cwd-early-exit path do not pay the package-import cost.
-    from cortex_command.common import detect_lifecycle_phase
+    from cortex_command.common import (
+        detect_lifecycle_phase,
+        is_phantom_lifecycle_dir,
+    )
     from cortex_command.hooks._pipeline_state import PipelineState
     from cortex_command.hooks._session_state import (
         claim_single_feature,
@@ -900,6 +903,18 @@ def main(argv: list[str] | None = None) -> int:
         if _is_stale(child, stale_days):
             _emit_candidate_diag(
                 child, feature, "excluded", "stale", None,
+                backlog_status_map, stale_days,
+            )
+            continue
+        # Phantom guard (runs AFTER _is_stale, so the empty/absent/unparseable
+        # case is already excluded). Closes the recent-ts gap _is_stale leaves
+        # open: a telemetry-only dir whose events carry a recent ts would
+        # otherwise default to "research" and surface as an incomplete
+        # lifecycle. is_phantom_lifecycle_dir classifies it as a phantom and
+        # we suppress it here before it is ever surfaced.
+        if is_phantom_lifecycle_dir(child):
+            _emit_candidate_diag(
+                child, feature, "excluded", "phantom", None,
                 backlog_status_map, stale_days,
             )
             continue
