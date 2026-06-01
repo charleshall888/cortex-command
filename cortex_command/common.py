@@ -418,6 +418,85 @@ detect_lifecycle_phase.__wrapped__ = _detect_lifecycle_phase_inner  # type: igno
 
 
 # ---------------------------------------------------------------------------
+# is_phantom_lifecycle_dir
+# ---------------------------------------------------------------------------
+
+# Event types that critical-review's telemetry writers emit. A dir whose
+# entire event-type set falls inside this allow-set (and which holds no real
+# lifecycle artifact) is a phantom: a lifecycle dir created purely as the
+# side effect of a telemetry write, with no genuine feature work behind it.
+_TELEMETRY_ONLY_EVENT_TYPES: frozenset[str] = frozenset({
+    "synthesizer_drift",
+    "sentinel_absence",
+})
+
+
+def is_phantom_lifecycle_dir(feature_dir: Path) -> bool:
+    """Return True iff ``feature_dir`` is a telemetry-only phantom lifecycle dir.
+
+    A phantom is a directory holding only critical-review telemetry events and
+    no real lifecycle artifact — the residue left when a ``--feature``-scoped
+    telemetry write lands under ``cortex/lifecycle/{topic}/`` for an artifact
+    that was never a feature. Classified True iff **both**:
+
+      * the dir has no ``research.md`` / ``spec.md`` / ``plan.md``, AND
+      * the set of ``event`` types parsed from ``events.log`` (as JSONL) is
+        **non-empty and a subset of** ``_TELEMETRY_ONLY_EVENT_TYPES``.
+
+    This predicate covers **only** branch (i) of the spec's phantom definition
+    (the recent-ts telemetry-only window). It deliberately has **no**
+    empty/absent/unparseable branch: that case is already owned by
+    ``scan_lifecycle._is_stale``, which runs first in the candidate loop and
+    returns True (stale → excluded) immediately for a missing/unreadable/empty
+    events.log or one with no parseable ``ts`` — regardless of age. The gap
+    ``_is_stale`` leaves open is precisely a telemetry-only dir whose events
+    carry a *recent* ``ts`` (``synthesizer_drift``/``sentinel_absence`` both
+    carry ``ts``): it passes ``_is_stale`` and ``detect_lifecycle_phase``
+    defaults it to "research". This predicate complements ``_is_stale`` (which
+    owns the empty/absent case) by covering exactly that recent-ts window.
+
+    ``events.log`` is read as JSONL: one ``json.loads`` per non-empty line,
+    skipping any line that does not parse. A legacy YAML-block-only file thus
+    yields an empty JSONL event-type set, so the non-empty-subset test is
+    False and the dir is correctly NOT classified as a phantom.
+
+    Args:
+        feature_dir: Path to the lifecycle feature directory
+                     (e.g. ``Path("cortex/lifecycle/my-feature")``).
+
+    Returns:
+        True if the dir is a telemetry-only phantom; False otherwise.
+    """
+    for artifact in ("research.md", "spec.md", "plan.md"):
+        if (feature_dir / artifact).is_file():
+            return False
+
+    events_log = feature_dir / "events.log"
+    try:
+        content = events_log.read_text(encoding="utf-8")
+    except (OSError, ValueError):
+        # Empty/absent/unparseable is owned by _is_stale, not this predicate.
+        return False
+
+    event_types: set[str] = set()
+    for line in content.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(event, dict):
+            continue
+        event_type = event.get("event")
+        if isinstance(event_type, str) and event_type:
+            event_types.add(event_type)
+
+    return bool(event_types) and event_types <= _TELEMETRY_ONLY_EVENT_TYPES
+
+
+# ---------------------------------------------------------------------------
 # read_criticality
 # ---------------------------------------------------------------------------
 
