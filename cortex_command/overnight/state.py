@@ -614,6 +614,77 @@ def update_feature_status(
     return state
 
 
+# Statuses considered terminal for a feature within a session. A terminal
+# feature has stopped work and will not be re-dispatched this session.
+_TERMINAL_FEATURE_STATUSES = ("merged", "failed", "deferred")
+
+
+def sweep_blocker_failed_dependents(state: OvernightState) -> OvernightState:
+    """Fail every not-yet-terminal dependent of a terminally-``failed`` blocker.
+
+    Performs an end-of-round dependent-failure sweep over the canonical
+    :class:`OvernightState`: any feature that is **not** already at a terminal
+    status (``merged``/``failed``/``deferred``) and whose
+    ``intra_session_blocked_by`` lists at least one feature currently at
+    terminal ``failed`` is transitioned to ``failed`` with
+    ``error="blocker_failed"`` via :func:`update_feature_status`.
+
+    Two distinct status sets are at play and must not be conflated:
+
+    * The **blocker** trigger fires only when a blocker is at terminal
+      ``failed``. A ``paused`` blocker may still merge later this session, so
+      it must NOT cascade (Edge: "Blocker paused, not failed"); ``deferred``
+      likewise does not trigger.
+    * The **dependent** eligibility is every non-terminal dependent —
+      ``pending``, ``running``, AND ``paused``. A ``paused`` dependent of a
+      ``failed`` blocker is not recoverable: its blocker will never merge this
+      session, so its ``intra_session_blocked_by`` can never clear, and the
+      runner's pending count includes ``paused`` features. Leaving it would
+      churn the round loop forever, so sweeping it to terminal ``failed`` is
+      correct.
+
+    Multi-blocker rule: ANY blocker at terminal ``failed`` fails the dependent
+    (Edge: "Multi-blocker"). The sweep re-applies to a fixpoint so transitive
+    chains (``A → B → C``) fully resolve within a single call (Edge:
+    "Transitive dependents").
+
+    This helper is pure over its argument: it takes and returns the state
+    object and performs no persistence. Persisting the result is the caller's
+    responsibility.
+
+    Args:
+        state: The overnight state to sweep (mutated in place and returned).
+
+    Returns:
+        The same OvernightState, with dependents of failed blockers
+        transitioned to ``failed`` (``error="blocker_failed"``).
+    """
+    while True:
+        failed_blockers = {
+            name
+            for name, fs in state.features.items()
+            if fs.status == "failed"
+        }
+
+        transitioned_any = False
+        for name, fs in state.features.items():
+            if fs.status in _TERMINAL_FEATURE_STATUSES:
+                continue
+            if any(
+                blocker in failed_blockers
+                for blocker in fs.intra_session_blocked_by
+            ):
+                update_feature_status(
+                    state, name, "failed", error="blocker_failed"
+                )
+                transitioned_any = True
+
+        if not transitioned_any:
+            break
+
+    return state
+
+
 # ---------------------------------------------------------------------------
 # Resume capability
 # ---------------------------------------------------------------------------

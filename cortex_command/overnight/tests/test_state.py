@@ -16,7 +16,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from cortex_command.overnight.state import OvernightState, load_state, save_state
+from cortex_command.overnight.state import (
+    OvernightFeatureStatus,
+    OvernightState,
+    load_state,
+    save_state,
+    sweep_blocker_failed_dependents,
+)
 
 
 class TestIntegrationBranchesPersistence(unittest.TestCase):
@@ -117,6 +123,84 @@ class TestIntegrationWorktreesPersistence(unittest.TestCase):
         loaded = load_state(tmp_path)
 
         self.assertEqual(loaded.integration_worktrees, {})
+
+
+class TestSweepBlockerFailedDependents(unittest.TestCase):
+    """Tests for the end-of-round dependent-failure sweep helper."""
+
+    @staticmethod
+    def _state(features: dict[str, OvernightFeatureStatus]) -> OvernightState:
+        return OvernightState(
+            session_id="overnight-2026-01-01-0000",
+            plan_ref="cortex/lifecycle/overnight-plan.md",
+            phase="executing",
+            features=features,
+        )
+
+    def test_pending_dependent_of_failed_blocker_fails(self):
+        """A pending dependent of a failed blocker becomes failed (blocker_failed)."""
+        state = self._state({
+            "A": OvernightFeatureStatus(status="failed"),
+            "B": OvernightFeatureStatus(
+                status="pending", intra_session_blocked_by=["A"]
+            ),
+        })
+
+        sweep_blocker_failed_dependents(state)
+
+        self.assertEqual(state.features["B"].status, "failed")
+        self.assertEqual(state.features["B"].error, "blocker_failed")
+
+    def test_transitive_chain_fully_resolves(self):
+        """A→B→C: when A fails, both B and C cascade to failed in one sweep."""
+        state = self._state({
+            "A": OvernightFeatureStatus(status="failed"),
+            "B": OvernightFeatureStatus(
+                status="pending", intra_session_blocked_by=["A"]
+            ),
+            "C": OvernightFeatureStatus(
+                status="pending", intra_session_blocked_by=["B"]
+            ),
+        })
+
+        sweep_blocker_failed_dependents(state)
+
+        self.assertEqual(state.features["B"].status, "failed")
+        self.assertEqual(state.features["B"].error, "blocker_failed")
+        self.assertEqual(state.features["C"].status, "failed")
+        self.assertEqual(state.features["C"].error, "blocker_failed")
+
+    def test_paused_blocker_does_not_cascade(self):
+        """A paused blocker (recoverable) leaves its dependent untouched."""
+        state = self._state({
+            "A": OvernightFeatureStatus(status="paused"),
+            "B": OvernightFeatureStatus(
+                status="pending", intra_session_blocked_by=["A"]
+            ),
+        })
+
+        sweep_blocker_failed_dependents(state)
+
+        self.assertEqual(state.features["B"].status, "pending")
+        self.assertIsNone(state.features["B"].error)
+
+    def test_paused_dependent_of_failed_blocker_is_swept(self):
+        """A paused dependent of a failed blocker IS swept to failed.
+
+        Distinct from a paused *blocker*: a paused dependent's blocker will
+        never merge this session, so it is not recoverable and must terminate.
+        """
+        state = self._state({
+            "A": OvernightFeatureStatus(status="failed"),
+            "B": OvernightFeatureStatus(
+                status="paused", intra_session_blocked_by=["A"]
+            ),
+        })
+
+        sweep_blocker_failed_dependents(state)
+
+        self.assertEqual(state.features["B"].status, "failed")
+        self.assertEqual(state.features["B"].error, "blocker_failed")
 
 
 if __name__ == "__main__":
