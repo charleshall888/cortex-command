@@ -2,11 +2,15 @@
 schema_version: "1"
 uuid: b70b19f9-3325-44a6-987e-cd938f244f4a
 title: "Stabilize test_no_clone_install::test_target_state against uv-cache-lock timeout flake"
-status: backlog
+status: complete
 priority: medium
 type: bug
 created: 2026-06-02
 updated: 2026-06-02
+complexity: simple
+criticality: medium
+spec: cortex/lifecycle/stabilize-test-no-clone-installtest-target/spec.md
+areas: ['tests']
 ---
 **Why:** `tests/test_no_clone_install.py::test_target_state` intermittently fails with `subprocess.Timeout` during the full `just test` run. Observed during #279's Complete gate (1 failed / 1729 passed), then green on immediate re-run (6/6). It passes in isolation in ~5.5s. The flake makes `just test` non-deterministically red, which can block lifecycle Complete gates and CI on changes that are actually sound.
 

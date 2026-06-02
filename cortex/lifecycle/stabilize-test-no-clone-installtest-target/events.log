@@ -6,3 +6,4 @@
 {"ts": "2026-06-02T18:12:56Z", "event": "batch_dispatch", "feature": "stabilize-test-no-clone-installtest-target", "batch": 0, "tasks": [1, 2]}
 {"ts": "2026-06-02T18:15:32Z", "event": "batch_dispatch", "feature": "stabilize-test-no-clone-installtest-target", "batch": 1, "tasks": [3]}
 {"ts": "2026-06-02T18:22:41Z", "event": "phase_transition", "feature": "stabilize-test-no-clone-installtest-target", "tier": "simple", "from": "implement", "to": "complete"}
+{"ts": "2026-06-02T18:24:28Z", "event": "feature_complete", "feature": "stabilize-test-no-clone-installtest-target", "tasks_total": 3, "rework_cycles": 0, "merge_anchor": "merge"}
