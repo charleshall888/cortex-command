@@ -4777,6 +4777,412 @@
     .cli-section .dive-inner { padding: 20px 16px 24px; }
     .cli-section .dive-head h3 { font-size: 26px; }
   }
+  /* ════════════════════════════════════════════════════════════════
+     Imported island · §01 The Run + §02 The Interrogation Bench
+     Namespaced under .run-req / .rr-* so it can't collide with the page's
+     own .sec / .ex-fig / .cap / .tag rules. Tokens (--ink, --ochre, …) and
+     fonts inherit from the page; only --display (Fraunces) is supplied here
+     because the page maps display type to --serif rather than --display.
+     ═══════════════════════════════════════════════════════════════ */
+  .run-req {
+    --display: "Fraunces", "Iowan Old Style", Georgia, serif;
+    margin: 4px 0 8px;
+  }
+  /* ───── section heads ───── */
+  .rr-sec {
+    margin-top: 76px;
+    padding-top: 30px;
+    border-top: 1px solid var(--rule-soft);
+  }
+  .rr-sec-eyebrow {
+    font-family: var(--mono); font-size: 10px;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--ochre); margin-bottom: 12px;
+  }
+  .rr-sec h2 {
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(28px, 3vw, 38px); margin: 0 0 6px;
+    letter-spacing: -0.015em; line-height: 1.1;
+  }
+  .rr-sec h2 em { font-style: italic; }
+  .rr-sec h2 code {
+    font-family: var(--mono); font-size: 0.6em;
+    color: var(--blue);
+    background: var(--parchment-2); padding: 2px 8px; border-radius: 3px;
+    border: 1px solid var(--rule-soft);
+    vertical-align: 0.18em;
+    font-weight: 400;
+  }
+  .rr-sec .rr-lede {
+    font-family: var(--display); font-size: 15.5px;
+    color: var(--ink-mute); max-width: 66ch;
+    margin: 12px 0 32px; font-style: italic;
+  }
+  .rr-sec .rr-lede em { color: var(--ink); font-style: italic; }
+
+  /* ───── figure box ───── */
+  .rr-ex-fig {
+    position: relative;
+    padding: 18px 14px 14px;
+    border: 1px solid var(--rule-soft);
+    background: var(--parchment-2);
+    overflow: hidden;
+  }
+  .rr-ex-fig::before {
+    content: attr(data-fig);
+    position: absolute;
+    top: 6px; left: 10px;
+    font-family: var(--mono); font-size: 8.5px;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .rr-ex-fig svg { display: block; width: 100%; height: auto; overflow: visible; }
+
+  /* ───── 2-col compare card layout ───── */
+  .rr-compare {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    gap: 36px;
+    margin-bottom: 36px;
+  }
+  @media (max-width: 880px) { .rr-compare { grid-template-columns: 1fr; gap: 24px; } }
+  .rr-compare .rr-left .rr-vname {
+    font-family: var(--display); font-style: italic;
+    font-size: 20px; color: var(--ink);
+    letter-spacing: -0.01em; margin: 0 0 10px;
+  }
+  .rr-compare .rr-tag-row {
+    display: flex; gap: 10px; align-items: baseline;
+    font-family: var(--mono); font-size: 10px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--ink-faint); margin-bottom: 12px;
+  }
+  .rr-compare .rr-tag-row .rr-letter {
+    color: var(--ochre);
+    border: 1px solid var(--ochre);
+    padding: 2px 7px;
+  }
+  .rr-compare .rr-left .rr-undercap {
+    font-family: var(--mono); font-size: 10px; color: var(--ink-faint);
+    letter-spacing: 0.04em; margin: 10px 2px 0; line-height: 1.5;
+  }
+  .rr-compare .rr-left .rr-undercap b { color: var(--blue); font-weight: 500; }
+  .rr-compare .rr-right { padding-top: 6px; }
+  .rr-compare .rr-right h4 {
+    font-family: var(--mono); font-size: 10px;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--ink-faint); margin: 0 0 10px; font-weight: 500;
+  }
+  .rr-compare .rr-right ul { list-style: none; padding: 0; margin: 0 0 18px; }
+  .rr-compare .rr-right li {
+    font-family: var(--display); font-size: 14px;
+    line-height: 1.55; color: var(--ink-mute);
+    padding: 6px 0 6px 18px; position: relative;
+    border-bottom: 1px dotted var(--rule-soft);
+  }
+  .rr-compare .rr-right li:last-child { border-bottom: none; }
+  .rr-compare .rr-right li::before {
+    content: "";
+    position: absolute; left: 0; top: 14px;
+    width: 8px; height: 8px;
+    border: 1px solid var(--blue); border-radius: 50%;
+  }
+  .rr-compare .rr-right li.rr-done::before { background: var(--blue); }
+  .rr-compare .rr-right li b { color: var(--ink); font-weight: 500; font-style: normal; }
+  .rr-compare .rr-right li em { font-style: italic; color: var(--ink-2); }
+  .rr-compare .rr-right .rr-note {
+    font-family: var(--display); font-size: 13.5px;
+    line-height: 1.55; color: var(--ink-mute);
+    font-style: italic; margin: 0;
+    padding: 14px 14px;
+    border-left: 2px solid var(--ochre);
+    background: var(--parchment-3);
+  }
+  .rr-compare .rr-right .rr-note strong { font-style: normal; color: var(--ink); font-weight: 500; }
+  /* ───── shared svg primitives ───── */
+  .rr-ln    { fill: none; stroke: var(--ink-50);  stroke-width: 1; }
+  .rr-ln-d  { fill: none; stroke: var(--ink-50);  stroke-width: 1; stroke-dasharray: 3 2.5; }
+  .rr-ln-bl { fill: none; stroke: var(--blue);    stroke-width: 1.25; }
+  .rr-ln-faint { fill: none; stroke: var(--ink-30); stroke-width: 0.8; }
+  .rr-rct   { fill: var(--paper); stroke: var(--ink-50); stroke-width: 1; }
+  .rr-rct-b { fill: var(--paper); stroke: var(--blue);   stroke-width: 1.25; }
+  .rr-fill-bl  { fill: var(--blue); }
+  .rr-fill-oc  { fill: var(--ochre); }
+  .rr-fill-ink { fill: var(--ink); }
+  .rr-cap {
+    font-family: var(--mono); font-size: 7px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    fill: var(--ink-faint);
+  }
+  .rr-cap.rr-lg { font-size: 7.5px; fill: var(--ink-mute); }
+  .rr-tag {
+    font-family: var(--mono); font-size: 7.5px;
+    letter-spacing: 0.06em; fill: var(--ink-mute);
+    text-transform: lowercase;
+  }
+  .rr-tag.rr-dim { fill: var(--ink-faint); }
+  .rr-tag.rr-bl  { fill: var(--blue); }
+  .rr-tag.rr-oc  { fill: var(--ochre); }
+
+  /* ═════════════════════════════════════════════════════════════════
+     §01  PRIMARY · "THE INTERROGATION BENCH"  ( /requirements )
+     -----------------------------------------------------------------
+     6s cycle. A vague brief on the left is interrogated by a graduated
+     sight that fires a rapid sequence of question-beams; each answered
+     question stamps a row onto project.rr-md (the charter), which then
+     locks scope.
+     Beats (s):
+       0.0–0.4  brief sits, vague
+       0.4–2.4  QUESTIONING — 6 question-beams flash in fast sequence;
+                question-meter tallies them
+       1.5–3.8  4 charter rows stamp in, each behind an answer photon
+       3.9–4.3  glossary mints a term
+       4.3–4.8  scope corners snap · "charter ✓"
+       4.8–6.0  hold, reset
+     ═════════════════════════════════════════════════════════════════ */
+  .rr-fig-bench .rr-brief-box { fill: var(--paper); stroke: var(--ink-30); stroke-width: 0.8; stroke-dasharray: 2.5 2; }
+  .rr-fig-bench .rr-instr-col   { stroke: var(--ink); stroke-width: 1.1; }
+  .rr-fig-bench .rr-instr-grad  { stroke: var(--ink-50); stroke-width: 0.6; }
+  .rr-fig-bench .rr-sight        { fill: var(--paper); stroke: var(--ink); stroke-width: 1.1; }
+  .rr-fig-bench .rr-sight-cross  { stroke: var(--ink-mute); stroke-width: 0.6; }
+  .rr-fig-bench .rr-sight        { animation: sight-rock 6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes sight-rock {
+    0%, 6%   { transform: rotate(0deg); }
+    14%      { transform: rotate(-9deg); }
+    22%      { transform: rotate(7deg); }
+    30%      { transform: rotate(-5deg); }
+    38%, 100%{ transform: rotate(0deg); }
+  }
+
+  /* question-beams — rapid question burst (transient flashes via delay) */
+  .rr-fig-bench .rr-q-ray { stroke: var(--ochre); stroke-width: 1; fill: none; opacity: 0; }
+  .rr-fig-bench .rr-q-1 { animation: q-flash 6s linear infinite; animation-delay: 0.40s; }
+  .rr-fig-bench .rr-q-2 { animation: q-flash 6s linear infinite; animation-delay: 0.72s; }
+  .rr-fig-bench .rr-q-3 { animation: q-flash 6s linear infinite; animation-delay: 1.04s; }
+  .rr-fig-bench .rr-q-4 { animation: q-flash 6s linear infinite; animation-delay: 1.36s; }
+  .rr-fig-bench .rr-q-5 { animation: q-flash 6s linear infinite; animation-delay: 1.68s; }
+  .rr-fig-bench .rr-q-6 { animation: q-flash 6s linear infinite; animation-delay: 2.00s; }
+  @keyframes q-flash {
+    0%   { opacity: 0; }
+    2%   { opacity: 1; }
+    7%   { opacity: 0.85; }
+    12%  { opacity: 0; }
+    100% { opacity: 0; }
+  }
+  /* the little "?" that pops at the brief as each beam lands */
+  .rr-fig-bench .rr-q-mark { fill: var(--ochre); opacity: 0; font-family: var(--mono); font-size: 8px; font-weight: 500; }
+  .rr-fig-bench .rr-qm-1 { animation: q-pop 6s ease-out infinite; animation-delay: 0.44s; }
+  .rr-fig-bench .rr-qm-2 { animation: q-pop 6s ease-out infinite; animation-delay: 1.08s; }
+  .rr-fig-bench .rr-qm-3 { animation: q-pop 6s ease-out infinite; animation-delay: 1.72s; }
+  @keyframes q-pop {
+    0%   { opacity: 0; }
+    2%   { opacity: 1; }
+    9%   { opacity: 0.9; }
+    16%  { opacity: 0; }
+    100% { opacity: 0; }
+  }
+
+  /* question meter — stepped fill tallies the questioning */
+  .rr-fig-bench .rr-q-meter-fill {
+    fill: var(--ochre);
+    transform-box: fill-box; transform-origin: left center;
+    animation: q-meter 6s linear infinite;
+  }
+  @keyframes q-meter {
+    0%   { transform: scaleX(0); }
+    7%   { transform: scaleX(0.17); }
+    12%  { transform: scaleX(0.34); }
+    17%  { transform: scaleX(0.5); }
+    22%  { transform: scaleX(0.67); }
+    27%  { transform: scaleX(0.84); }
+    33%  { transform: scaleX(1); }
+    90%  { transform: scaleX(1); }
+    100% { transform: scaleX(0); }
+  }
+
+  /* charter doc — always present, subtle pulse-in at start */
+  .rr-fig-bench .rr-ch-doc { fill: var(--paper); stroke: var(--ink-50); stroke-width: 1; }
+  .rr-fig-bench .rr-ch-head-rule { stroke: var(--rule-soft); stroke-width: 0.7; }
+
+  /* answer photons travel sight → row */
+  .rr-fig-bench .rr-ans-photon { fill: var(--blue); opacity: 0; }
+  .rr-fig-bench .rr-ap-1 { animation: ap-1 6s ease-in infinite; }
+  .rr-fig-bench .rr-ap-2 { animation: ap-2 6s ease-in infinite; }
+  .rr-fig-bench .rr-ap-3 { animation: ap-3 6s ease-in infinite; }
+  .rr-fig-bench .rr-ap-4 { animation: ap-4 6s ease-in infinite; }
+  @keyframes ap-1 {
+    0%,22%   { transform: translate(0,0);     opacity: 0; }
+    24%      { transform: translate(0,0);     opacity: 1; }
+    30%      { transform: translate(56px,7px);  opacity: 1; }
+    33%      { transform: translate(56px,7px);  opacity: 0; }
+    100%     { transform: translate(56px,7px);  opacity: 0; }
+  }
+  @keyframes ap-2 {
+    0%,32%   { transform: translate(0,0);     opacity: 0; }
+    34%      { transform: translate(0,0);     opacity: 1; }
+    40%      { transform: translate(56px,21px); opacity: 1; }
+    43%      { transform: translate(56px,21px); opacity: 0; }
+    100%     { transform: translate(56px,21px); opacity: 0; }
+  }
+  @keyframes ap-3 {
+    0%,42%   { transform: translate(0,0);     opacity: 0; }
+    44%      { transform: translate(0,0);     opacity: 1; }
+    50%      { transform: translate(56px,35px); opacity: 1; }
+    53%      { transform: translate(56px,35px); opacity: 0; }
+    100%     { transform: translate(56px,35px); opacity: 0; }
+  }
+  @keyframes ap-4 {
+    0%,52%   { transform: translate(0,0);     opacity: 0; }
+    54%      { transform: translate(0,0);     opacity: 1; }
+    60%      { transform: translate(56px,49px); opacity: 1; }
+    63%      { transform: translate(56px,49px); opacity: 0; }
+    100%     { transform: translate(56px,49px); opacity: 0; }
+  }
+
+  /* charter rows — mark fills + line lights as its answer photon lands */
+  .rr-fig-bench .rr-ch-mark { fill: var(--paper); stroke: var(--blue); stroke-width: 1; }
+  .rr-fig-bench .rr-ch-line { fill: var(--blue); opacity: 0.15; }
+  .rr-fig-bench .rr-cr-1 .rr-ch-mark { animation: mark-fill 6s ease-out infinite; }
+  .rr-fig-bench .rr-cr-2 .rr-ch-mark { animation: mark-fill 6s ease-out infinite; animation-delay: 0.6s; }
+  .rr-fig-bench .rr-cr-3 .rr-ch-mark { animation: mark-fill 6s ease-out infinite; animation-delay: 1.2s; }
+  .rr-fig-bench .rr-cr-4 .rr-ch-mark { animation: mark-fill 6s ease-out infinite; animation-delay: 1.8s; }
+  @keyframes mark-fill {
+    0%,30%   { fill: var(--paper); }
+    32%      { fill: var(--blue); }
+    100%     { fill: var(--blue); }
+  }
+  .rr-fig-bench .rr-cr-1 .rr-ch-line { animation: line-light 6s ease-out infinite; }
+  .rr-fig-bench .rr-cr-2 .rr-ch-line { animation: line-light 6s ease-out infinite; animation-delay: 0.6s; }
+  .rr-fig-bench .rr-cr-3 .rr-ch-line { animation: line-light 6s ease-out infinite; animation-delay: 1.2s; }
+  .rr-fig-bench .rr-cr-4 .rr-ch-line { animation: line-light 6s ease-out infinite; animation-delay: 1.8s; }
+  @keyframes line-light {
+    0%,30%   { opacity: 0.15; }
+    33%      { opacity: 1; }
+    100%     { opacity: 1; }
+  }
+
+  /* glossary chip mints (the WORDS layer) */
+  .rr-fig-bench .rr-gloss { opacity: 0; animation: gloss-in 6s ease-out infinite; }
+  @keyframes gloss-in {
+    0%,60%   { opacity: 0; }
+    64%      { opacity: 1; }
+    100%     { opacity: 1; }
+  }
+  .rr-fig-bench .rr-gloss-box { fill: none; stroke: var(--ochre); stroke-width: 0.8; }
+
+  /* ADR card mints (the WHY layer) — a constraint that clears the
+     three-criteria gate spins off cortex/adr/NNNN, status: proposed */
+  .rr-fig-bench .rr-adr { opacity: 0; animation: adr-in 6s ease-out infinite; }
+  @keyframes adr-in {
+    0%,62%   { opacity: 0; }
+    66%      { opacity: 1; }
+    100%     { opacity: 1; }
+  }
+  .rr-fig-bench .rr-adr-box  { fill: none; stroke: var(--ochre); stroke-width: 0.8; }
+  /* gate dots fill one-by-one as each criterion clears */
+  .rr-fig-bench .rr-gate-dot { fill: var(--paper); stroke: var(--ochre); stroke-width: 0.7; }
+  .rr-fig-bench .rr-gd-1 { animation: gate-fill 6s ease-out infinite; }
+  .rr-fig-bench .rr-gd-2 { animation: gate-fill 6s ease-out infinite; animation-delay: 0.18s; }
+  .rr-fig-bench .rr-gd-3 { animation: gate-fill 6s ease-out infinite; animation-delay: 0.36s; }
+  @keyframes gate-fill {
+    0%,68%   { fill: var(--paper); }
+    71%      { fill: var(--ochre); }
+    100%     { fill: var(--ochre); }
+  }
+  /* "proposed" promotes to "accepted" right at the end of the cycle */
+  .rr-fig-bench .rr-adr-status-proposed { animation: status-swap 6s steps(1) infinite; }
+  @keyframes status-swap { 0%,86%{opacity:1;} 88%,100%{opacity:0;} }
+  .rr-fig-bench .rr-adr-status-accepted { opacity: 0; animation: status-swap2 6s steps(1) infinite; }
+  @keyframes status-swap2 { 0%,86%{opacity:0;} 88%,100%{opacity:1;} }
+  /* back-pointer (→ 0007) appears on the constraints row — no-duplication rule */
+  .rr-fig-bench .rr-backref { opacity: 0; animation: adr-in 6s ease-out infinite; }
+  /* feeder from constraints row down to the ADR card */
+  .rr-fig-bench .rr-adr-feed { stroke: var(--ochre); stroke-width: 0.7; stroke-dasharray: 2 2; opacity: 0; animation: adr-in 6s ease-out infinite; }
+
+  /* scope corner brackets snap in + final stamp */
+  .rr-fig-bench .rr-scope-cnr { stroke: var(--ochre); stroke-width: 1.4; fill: none; opacity: 0; animation: scope-snap 6s ease-out infinite; }
+  @keyframes scope-snap {
+    0%,80%   { opacity: 0; }
+    84%      { opacity: 1; }
+    100%     { opacity: 1; }
+  }
+  .rr-fig-bench .rr-stamp { opacity: 0; animation: stamp-in 6s ease-out infinite; }
+  @keyframes stamp-in {
+    0%,85%   { opacity: 0; }
+    89%      { opacity: 1; }
+    100%     { opacity: 1; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rr-ex-fig * { animation: none !important; }
+    .rr-fig-bench .rr-ch-mark { fill: var(--blue); }
+    .rr-fig-bench .rr-ch-line { opacity: 1; }
+    .rr-fig-bench .rr-gloss, .rr-fig-bench .rr-scope-cnr, .rr-fig-bench .rr-stamp { opacity: 1; }
+    .rr-fig-bench .rr-adr, .rr-fig-bench .rr-backref, .rr-fig-bench .rr-adr-feed { opacity: 1; }
+    .rr-fig-bench .rr-gate-dot { fill: var(--ochre); }
+    .rr-fig-bench .rr-adr-status-proposed { opacity: 0; }
+    .rr-fig-bench .rr-adr-status-accepted { opacity: 1; }
+    .rr-fig-bench .rr-q-meter-fill { transform: scaleX(1); }
+    .rr-fig-rail .rr-charter-base { opacity: 1; }
+    .rr-fig-rail .rr-charter-trace { stroke-dashoffset: 0; opacity: 0; }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     WORKFLOW RAIL
+     ═══════════════════════════════════════════════════════════════ */
+  .rr-fig-rail .rr-rail-spine  { stroke: var(--ink-50); stroke-width: 1; }
+  .rr-fig-rail .rr-rail-arrow  { fill: var(--ink-50); }
+  .rr-fig-rail .rr-rail-doc    { fill: var(--paper); stroke: var(--ochre); stroke-width: 1.2; }
+  .rr-fig-rail .rr-rail-glyph  { fill: var(--paper); stroke: var(--ink); stroke-width: 1.1; }
+  .rr-fig-rail .rr-rail-facet  { stroke: var(--ink-50); stroke-width: 0.5; opacity: 0.6; }
+  .rr-fig-rail .rr-rail-jaw    { stroke: var(--ink); stroke-width: 1.1; }
+  .rr-fig-rail .rr-rail-spec   { fill: var(--paper); stroke: var(--blue); stroke-width: 1; }
+  .rr-fig-rail .rr-rail-loop   { fill: none; stroke: var(--ink); stroke-width: 1.1; }
+  .rr-fig-rail .rr-rail-name   { font-family: var(--mono); font-size: 9px; letter-spacing: 0.04em; fill: var(--ink-2); }
+  .rr-fig-rail .rr-rail-name.rr-oc{ fill: var(--ochre); }
+  .rr-fig-rail .rr-rail-sub    { font-family: var(--mono); font-size: 7px; letter-spacing: 0.06em; fill: var(--ink-faint); text-transform: lowercase; }
+  /* lifecycle container + nested refine */
+  .rr-fig-rail .rr-rail-bar    { fill: var(--paper); stroke: var(--ink-50); stroke-width: 1; }
+  .rr-fig-rail .rr-seg-div     { stroke: var(--ink-30); stroke-width: 0.6; }
+  .rr-fig-rail .rr-seg-div.rr-bound { stroke: var(--blue); stroke-width: 1.1; stroke-dasharray: 2 2; }
+  .rr-fig-rail .rr-rf-seg      { fill: var(--blue-faint); opacity: 0.30; }
+  .rr-fig-rail .rr-phase-lbl   { font-family: var(--mono); font-size: 6px; fill: var(--ink-mute); text-transform: lowercase; }
+  .rr-fig-rail .rr-rail-brace  { stroke: var(--blue); stroke-width: 1; fill: none; }
+  .rr-fig-rail .rr-rail-name.rr-bl{ fill: var(--blue); }
+  .rr-fig-rail .rr-charter-base{ stroke: var(--ochre); stroke-width: 1.2; opacity: 0.30; }
+  /* bright trace draws left→right locked to the pulse dot's timing */
+  .rr-fig-rail .rr-charter-trace {
+    stroke: var(--ochre); stroke-width: 1.7; fill: none;
+    stroke-dasharray: 638;
+    animation: charter-trace 4.5s ease-in-out infinite;
+  }
+  @keyframes charter-trace {
+    0%   { stroke-dashoffset: 609; opacity: 0; }
+    5%   { opacity: 1; }
+    14%  { stroke-dashoffset: 488; }
+    32%  { stroke-dashoffset: 363; }
+    78%  { stroke-dashoffset: 33;  opacity: 1; }
+    90%  { stroke-dashoffset: 33;  opacity: 1; }
+    96%  { opacity: 0; }
+    100% { stroke-dashoffset: 609; opacity: 0; }
+  }
+  .rr-fig-rail .rr-charter-tick{ stroke: var(--ochre); stroke-width: 0.8; }
+  .rr-fig-rail .rr-rail-base-label { font-family: var(--mono); font-size: 7.5px; letter-spacing: 0.1em; fill: var(--ochre); text-transform: uppercase; }
+  .rr-fig-rail .rr-reads       { stroke: var(--ochre); stroke-width: 0.8; stroke-dasharray: 2.5 2.5; opacity: 0.25; }
+  .rr-fig-rail .rr-rd-1 { animation: reads-pulse 4.5s ease-in-out infinite; animation-delay: 0.4s; }
+  .rr-fig-rail .rr-rd-2 { animation: reads-pulse 4.5s ease-in-out infinite; animation-delay: 0.8s; }
+  .rr-fig-rail .rr-rd-3 { animation: reads-pulse 4.5s ease-in-out infinite; animation-delay: 1.2s; }
+  @keyframes reads-pulse { 0%,100%{opacity:0.25;} 40%{opacity:0.9;} }
+  .rr-fig-rail .rr-rail-pulse  { fill: var(--ochre); animation: rail-travel 4.5s ease-in-out infinite; }
+  @keyframes rail-travel {
+    0%   { transform: translateX(0);    opacity: 0; }
+    5%   { opacity: 1; }
+    14%  { transform: translateX(121px); }
+    32%  { transform: translateX(246px); }
+    78%  { transform: translateX(576px); }
+    90%  { transform: translateX(576px); opacity: 1; }
+    96%, 100% { transform: translateX(576px); opacity: 0; }
+  }
 </style>
 </head>
 <body>
@@ -4844,6 +5250,237 @@
 
     <h1>A Claude Code harness <em>that earns its autonomy.</em></h1>
     <p class="sub">Deep research, then interrogation — until the spec is extracted from your head onto the page. <em>An orchestrator agent with a tight spec and a solid harness can be trusted to work while you sleep.</em></p>
+
+    <!-- ───── Imported: §01 The Run + §02 The Interrogation Bench ───── -->
+    <div class="run-req">
+  <!-- ════════════════════════════════════════════════════════════
+       §01 · THE RUN — top-level summary (workflow rail leads)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="rr-sec" style="border-top: none; padding-top: 0; margin-top: 44px;">
+    <div class="rr-sec-eyebrow">§01 · the run</div>
+    <h2>What gets <em>run</em></h2>
+    <p class="rr-lede">You invoke these in order. <code>/requirements</code> sets the charter, <code>/discovery</code> fans it into tickets, <code>/lifecycle</code> carries one from spec to shipped — its front phases run alone as <code>/refine</code>. Underneath runs the charter — <em>project.md</em> — which every stage reads to stay on course.</p>
+
+    <div class="rr-ex-fig rr-fig-rail" data-fig="fig · the run — /refine is the spec-earning front of /lifecycle" style="padding: 22px 18px 16px;">
+      <svg viewBox="0 0 720 170" preserveAspectRatio="xMidYMid meet" style="height: 168px;">
+
+        <!-- flow arrows between the three invoked commands -->
+        <line class="rr-rail-spine" x1="110" y1="64" x2="168" y2="64"></line>
+        <polygon class="rr-rail-arrow" points="172,64 165,61 165,67"></polygon>
+        <line class="rr-rail-spine" x1="230" y1="64" x2="286" y2="64"></line>
+        <polygon class="rr-rail-arrow" points="290,64 283,61 283,67"></polygon>
+
+        <!-- ── command 1 · /requirements (origin, writes the charter) ── -->
+        <g>
+          <rect class="rr-rail-doc" x="50" y="46" width="58" height="40" rx="2"></rect>
+          <line x1="56" y1="58" x2="102" y2="58" stroke="var(--ochre)" stroke-width="1"></line>
+          <line x1="56" y1="66" x2="98" y2="66" stroke="var(--rule-soft)" stroke-width="0.8"></line>
+          <line x1="56" y1="74" x2="100" y2="74" stroke="var(--rule-soft)" stroke-width="0.8"></line>
+          <text class="rr-rail-name rr-oc" x="79" y="22" text-anchor="middle">/requirements</text>
+          <text class="rr-rail-sub" x="79" y="102" text-anchor="middle">interview → charter</text>
+        </g>
+
+        <!-- ── command 2 · /discovery (prism) ── -->
+        <g>
+          <polygon class="rr-rail-glyph" points="176,64 184,52 200,48 216,52 224,64 216,76 200,80 184,76"></polygon>
+          <line class="rr-rail-facet" x1="176" y1="64" x2="216" y2="52"></line>
+          <line class="rr-rail-facet" x1="176" y1="64" x2="216" y2="76"></line>
+          <line class="rr-rail-facet" x1="200" y1="48" x2="200" y2="80"></line>
+          <text class="rr-rail-name" x="200" y="22" text-anchor="middle">/discovery</text>
+          <text class="rr-rail-sub" x="200" y="102" text-anchor="middle">research → tickets</text>
+        </g>
+
+        <!-- ── command 3 · /lifecycle (container) — its front phases ARE /refine ── -->
+        <text class="rr-rail-name" x="490" y="22" text-anchor="middle">/lifecycle</text>
+
+        <!-- the lifecycle box: the whole phase track -->
+        <rect class="rr-rail-bar" x="292" y="52" width="396" height="28" rx="3"></rect>
+
+        <!-- refine front-phases tinted -->
+        <rect class="rr-rf-seg" x="293" y="53" width="65" height="26"></rect>
+        <rect class="rr-rf-seg" x="358" y="53" width="66" height="26"></rect>
+        <rect class="rr-rf-seg" x="424" y="53" width="66" height="26"></rect>
+
+        <!-- segment dividers (the spec→plan boundary is the refine|build line) -->
+        <line class="rr-seg-div" x1="358" y1="52" x2="358" y2="80"></line>
+        <line class="rr-seg-div" x1="424" y1="52" x2="424" y2="80"></line>
+        <line class="rr-seg-div rr-bound" x1="490" y1="50" x2="490" y2="82"></line>
+        <line class="rr-seg-div" x1="556" y1="52" x2="556" y2="80"></line>
+        <line class="rr-seg-div" x1="622" y1="52" x2="622" y2="80"></line>
+
+        <!-- phase labels -->
+        <text class="rr-phase-lbl" x="325" y="69" text-anchor="middle">clarify</text>
+        <text class="rr-phase-lbl" x="391" y="69" text-anchor="middle">research</text>
+        <text class="rr-phase-lbl" x="457" y="69" text-anchor="middle">specify</text>
+        <text class="rr-phase-lbl" x="523" y="69" text-anchor="middle">plan</text>
+        <text class="rr-phase-lbl" x="589" y="69" text-anchor="middle">implement</text>
+        <text class="rr-phase-lbl" x="655" y="69" text-anchor="middle">review</text>
+
+        <!-- /refine inner bracket over the first three phases -->
+        <path class="rr-rail-brace" d="M296 46 L296 42 L486 42 L486 46"></path>
+        <text class="rr-rail-name rr-bl" x="391" y="38" text-anchor="middle" style="font-size: 8px;">/refine</text>
+
+        <!-- lifecycle sub: states the nesting in words + the output -->
+        <text class="rr-rail-sub" x="490" y="102" text-anchor="middle">refine earns the spec → plan · build · review → PR</text>
+
+        <!-- output arrow off the end -->
+        <line class="rr-rail-spine" x1="688" y1="64" x2="702" y2="64"></line>
+
+        <!-- ── the charter (project.md) as a baseline under everything ── -->
+        <line class="rr-charter-base" x1="50" y1="128" x2="688" y2="128"></line>
+        <line class="rr-charter-trace" x1="50" y1="128" x2="688" y2="128"></line>
+        <line class="rr-charter-tick" x1="79" y1="125" x2="79" y2="131"></line>
+        <line class="rr-charter-tick" x1="200" y1="125" x2="200" y2="131"></line>
+        <line class="rr-charter-tick" x1="490" y1="125" x2="490" y2="131"></line>
+        <text class="rr-rail-base-label" x="50" y="146">project.md (the charter) — every stage reads it to stay on course</text>
+
+        <!-- "reads charter" connectors -->
+        <line class="rr-reads rr-rd-1" x1="200" y1="110" x2="200" y2="125"></line>
+        <line class="rr-reads rr-rd-2" x1="490" y1="110" x2="490" y2="125"></line>
+
+        <!-- traveling pulse along the flow -->
+        <circle class="rr-rail-pulse" cx="79" cy="64" r="3"></circle>
+      </svg>
+    </div>
+
+    <p class="rr-undercap" style="font-family: var(--mono); font-size: 10px; color: var(--ink-faint); letter-spacing: 0.04em; margin: 22px 2px 0; line-height: 1.5;">Get <b style="color: var(--blue); font-weight: 500;">step zero</b> right and everything after it stays on course. Skip it and discovery fans out on guesses, every spec earns the wrong edges, and the overnight build ships the wrong thing — fast.</p>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════
+       §02 · THE INTERROGATION BENCH (requirements deep-dive)
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="rr-sec">
+    <div class="rr-sec-eyebrow">§02 · step zero, up close</div>
+    <h2><em>The interrogation bench</em> &nbsp;·&nbsp; <code>/requirements</code></h2>
+    <div class="rr-compare">
+      <!-- LEFT · subtitle + figure -->
+      <div class="rr-left">
+        <p class="rr-lede" style="margin-top: 0;">Give it a brief — vague or detailed — and it returns a rapid sequence of questions that draw the real requirements out of your head and onto <em>project.md</em>. Watch the charter densify, a glossary term get minted, and an ADR spin off the moment a decision clears the gate.</p>
+        <div class="rr-ex-fig rr-fig-bench" data-fig="fig · brief in → charter, glossary &amp; ADR out">
+          <svg viewBox="0 0 360 148" preserveAspectRatio="xMidYMid meet" style="height: 148px;">
+
+            <!-- entry caption + vague brief -->
+            <text class="rr-cap" x="8" y="14">/requirements</text>
+            <rect class="rr-brief-box" x="6" y="40" width="74" height="56" rx="2"></rect>
+            <text class="rr-tag rr-dim" x="12" y="54">i want an</text>
+            <text class="rr-tag rr-dim" x="12" y="65">overnight</text>
+            <text class="rr-tag rr-dim" x="12" y="76">fishing game</text>
+            <text class="rr-tag rr-dim" x="12" y="90" style="fill: var(--ochre);">…someday?</text>
+            <text class="rr-cap" x="6" y="108">vague brief</text>
+
+            <!-- question "?" pops at the brief -->
+            <text class="rr-q-mark rr-qm-1" x="60" y="50">?</text>
+            <text class="rr-q-mark rr-qm-2" x="64" y="72">?</text>
+            <text class="rr-q-mark rr-qm-3" x="58" y="86">?</text>
+
+            <!-- the interrogation sight on a graduated column -->
+            <line class="rr-instr-col" x1="112" y1="44" x2="112" y2="104"></line>
+            <line class="rr-instr-col" x1="102" y1="104" x2="122" y2="104"></line>
+            <line class="rr-instr-grad" x1="112" y1="56" x2="117" y2="56"></line>
+            <line class="rr-instr-grad" x1="112" y1="68" x2="117" y2="68"></line>
+            <line class="rr-instr-grad" x1="112" y1="80" x2="117" y2="80"></line>
+            <line class="rr-instr-grad" x1="112" y1="92" x2="117" y2="92"></line>
+            <g class="rr-sight">
+              <circle cx="112" cy="42" r="7" fill="var(--paper)" stroke="var(--ink)" stroke-width="1.1"></circle>
+              <line class="rr-sight-cross" x1="105" y1="42" x2="119" y2="42"></line>
+              <line class="rr-sight-cross" x1="112" y1="35" x2="112" y2="49"></line>
+            </g>
+
+            <!-- question beams firing left at the brief -->
+            <line class="rr-q-ray rr-q-1" x1="106" y1="44" x2="78" y2="52"></line>
+            <line class="rr-q-ray rr-q-2" x1="106" y1="46" x2="78" y2="66"></line>
+            <line class="rr-q-ray rr-q-3" x1="106" y1="48" x2="78" y2="80"></line>
+            <line class="rr-q-ray rr-q-4" x1="106" y1="44" x2="78" y2="58"></line>
+            <line class="rr-q-ray rr-q-5" x1="106" y1="46" x2="78" y2="72"></line>
+            <line class="rr-q-ray rr-q-6" x1="106" y1="48" x2="78" y2="86"></line>
+
+            <!-- question meter -->
+            <rect x="96" y="116" width="34" height="3" rx="1.5" fill="none" stroke="var(--rule-soft)" stroke-width="0.7"></rect>
+            <rect class="rr-q-meter-fill" x="96.6" y="116.6" width="32.8" height="1.8" rx="0.9"></rect>
+            <text class="rr-cap" x="96" y="128">questions</text>
+
+            <!-- ─── CHARTER · project.md (the RULES layer) ─── -->
+            <rect class="rr-ch-doc" x="158" y="22" width="168" height="76" rx="2"></rect>
+            <text class="rr-cap" x="164" y="36" style="fill: var(--ink-mute);">project.md</text>
+            <text class="rr-stamp rr-tag rr-oc" x="320" y="36" text-anchor="end" style="font-size: 6.5px;">scope ✓</text>
+            <line class="rr-ch-head-rule" x1="162" y1="40" x2="322" y2="40"></line>
+
+            <g class="rr-cr-1">
+              <rect class="rr-ch-line" x="176" y="47" width="124" height="6" rx="1"></rect>
+              <circle class="rr-ch-mark" cx="168" cy="50" r="2"></circle>
+              <text class="rr-tag" x="178" y="51.5" style="fill: var(--paper); font-size: 6px;">philosophy · human-shaped</text>
+            </g>
+            <g class="rr-cr-2">
+              <rect class="rr-ch-line" x="176" y="61" width="116" height="6" rx="1"></rect>
+              <circle class="rr-ch-mark" cx="168" cy="64" r="2"></circle>
+              <text class="rr-tag" x="178" y="65.5" style="fill: var(--paper); font-size: 6px;">constraints · no servers</text>
+              <text class="rr-backref rr-tag rr-oc" x="320" y="65.5" text-anchor="end" style="font-size: 6px;">→ 0007</text>
+            </g>
+            <g class="rr-cr-3">
+              <rect class="rr-ch-line" x="176" y="75" width="130" height="6" rx="1"></rect>
+              <circle class="rr-ch-mark" cx="168" cy="78" r="2"></circle>
+              <text class="rr-tag" x="178" y="79.5" style="fill: var(--paper); font-size: 6px;">boundaries · in / out / deferred</text>
+            </g>
+            <g class="rr-cr-4">
+              <rect class="rr-ch-line" x="176" y="89" width="104" height="6" rx="1"></rect>
+              <circle class="rr-ch-mark" cx="168" cy="92" r="2"></circle>
+              <text class="rr-tag" x="178" y="93.5" style="fill: var(--paper); font-size: 6px;">quality · ships overnight</text>
+            </g>
+
+            <!-- feeder: constraints row → ADR card -->
+            <path class="rr-adr-feed" d="M300 64 C314 64 250 100 250 106"></path>
+
+            <!-- glossary chip (the WORDS layer) -->
+            <g class="rr-gloss">
+              <rect class="rr-gloss-box" x="158" y="106" width="78" height="30" rx="1"></rect>
+              <text class="rr-tag rr-oc" x="163" y="116" style="font-size: 6px;">glossary.md +1</text>
+              <text class="rr-tag" x="163" y="126" style="font-size: 5.8px; fill: var(--ink-mute);">phase-transition</text>
+              <text class="rr-cap" x="163" y="134" style="font-size: 5px;">the words</text>
+            </g>
+
+            <!-- ADR card (the WHY layer) -->
+            <g class="rr-adr">
+              <rect class="rr-adr-box" x="244" y="106" width="82" height="30" rx="1"></rect>
+              <text class="rr-tag rr-oc" x="249" y="116" style="font-size: 6px;">adr/0007</text>
+              <text class="rr-adr-status-proposed rr-tag" x="321" y="116" text-anchor="end" style="font-size: 5.6px; fill: var(--ink-50);">proposed</text>
+              <text class="rr-adr-status-accepted rr-tag" x="321" y="116" text-anchor="end" style="font-size: 5.6px; fill: var(--blue);">accepted</text>
+              <!-- three-criteria gate -->
+              <circle class="rr-gate-dot rr-gd-1" cx="250" cy="125" r="2"></circle>
+              <circle class="rr-gate-dot rr-gd-2" cx="258" cy="125" r="2"></circle>
+              <circle class="rr-gate-dot rr-gd-3" cx="266" cy="125" r="2"></circle>
+              <text class="rr-tag" x="273" y="127" style="font-size: 5.4px; fill: var(--ink-mute);">3-criteria gate</text>
+              <text class="rr-cap" x="249" y="134" style="font-size: 5px;">the why</text>
+            </g>
+
+            <!-- answer photons -->
+            <circle class="rr-ans-photon rr-ap-1" cx="120" cy="51" r="2"></circle>
+            <circle class="rr-ans-photon rr-ap-2" cx="120" cy="51" r="2"></circle>
+            <circle class="rr-ans-photon rr-ap-3" cx="120" cy="51" r="2"></circle>
+            <circle class="rr-ans-photon rr-ap-4" cx="120" cy="51" r="2"></circle>
+
+            <!-- scope corner brackets framing the charter -->
+            <path class="rr-scope-cnr" d="M154 18 L154 28 M154 18 L164 18"></path>
+            <path class="rr-scope-cnr" d="M330 18 L330 28 M330 18 L320 18"></path>
+            <path class="rr-scope-cnr" d="M154 102 L154 92 M154 102 L164 102"></path>
+            <path class="rr-scope-cnr" d="M330 102 L330 92 M330 102 L320 102"></path>
+          </svg>
+        </div>
+
+        <p class="rr-undercap">Three durable layers, one interview: <b>project.md</b> holds the rules, <b>glossary.md</b> the words, <b>cortex/adr/</b> the why.</p>
+      </div>
+
+      <!-- RIGHT · what it shows -->
+      <div class="rr-right">
+        <h4>HOW IT WORKS</h4>
+        <ul>
+          <li class="rr-done">Relentless questioning. Question-beams fire one at a time and a meter tallies them. Keep asking until the gaps are addressed.</li>
+          <li class="rr-done">An ADR spins off at the gate. When a decision is hard to reverse · surprising · a real trade-off, the interview proposes an ADR (lands proposed, promotes to accepted at merge). The project.md row keeps only a → 0007 back-pointer; the ADR owns the rationale.</li>
+          <li class="rr-done">Progressive disclosure keeps context lean. project.md stays terse and always-loaded; the why lives in ADRs and the words in the glossary, pulled in on demand only when a stage needs them. Downstream agents read the rule, not the whole backstory.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+    </div>
 
     <div class="hero-explain">
       <div class="ex">
