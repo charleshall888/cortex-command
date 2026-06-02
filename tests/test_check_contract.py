@@ -123,3 +123,173 @@ def test_contract_fixture(fixture: Path) -> None:
         f"{name}: unrecognized fixture-name prefix; "
         f"expected one of valid-*, invalid-*"
     )
+
+
+# ---------------------------------------------------------------------------
+# _in_scan_scope unit tests (R8 — membership across all glob shapes)
+# ---------------------------------------------------------------------------
+
+
+def test_in_scan_scope_imports() -> None:
+    """_in_scan_scope is importable from the working-tree module."""
+    import importlib
+    mod = importlib.import_module("cortex_command.lint.contract")
+    assert hasattr(mod, "_in_scan_scope"), "_in_scan_scope helper must be exported"
+
+
+@pytest.mark.parametrize("rel,expected", [
+    # skills/**/*.md — depth-1 (zero mid-dirs)
+    ("skills/demo.md", True),
+    # skills/**/*.md — depth-2
+    ("skills/demo/SKILL.md", True),
+    # skills/**/*.md — depth-3+ (the lifecycle/references case from spec)
+    ("skills/lifecycle/references/implement.md", True),
+    # docs/**/*.md — depth-1 (zero mid-dirs)
+    ("docs/agentic-layer.md", True),
+    # docs/**/*.md — depth-2
+    ("docs/internals/pipeline.md", True),
+    # tests/**/*.md — depth-2
+    ("tests/fixtures/contract/README.md", True),
+    # hooks/** — depth-1 file (no extension)
+    ("hooks/my-hook", True),
+    # hooks/** — depth-2 file
+    ("hooks/subdir/my-hook", True),
+    # exact-name — justfile
+    ("justfile", True),
+    # exact-name — CLAUDE.md
+    ("CLAUDE.md", True),
+    # cortex/requirements/**/*.md — depth-1 under that prefix
+    ("cortex/requirements/project.md", True),
+    # out-of-scope: .py file
+    ("cortex_command/lint/contract.py", False),
+    # out-of-scope: markdown outside declared roots
+    ("README.md", False),
+    # hooks/** matches ALL files under hooks/ (including .sh)
+    ("hooks/my-hook.sh", True),
+    # out-of-scope: non-md under skills
+    ("skills/demo/SKILL.yaml", False),
+])
+def test_in_scan_scope(rel: str, expected: bool) -> None:
+    """_in_scan_scope returns expected membership for each distinct glob shape."""
+    import importlib
+    mod = importlib.import_module("cortex_command.lint.contract")
+    _in_scan_scope = mod._in_scan_scope  # type: ignore[attr-defined]
+    result = _in_scan_scope(rel)
+    assert result == expected, (
+        f"_in_scan_scope({rel!r}) expected {expected}, got {result}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# End-to-end staged test: depth-≥3 file carrying a real violation is flagged
+# ---------------------------------------------------------------------------
+
+
+def test_staged_deep_file_violation_detected(tmp_path: Path) -> None:
+    """A staged depth-3 in-scope file carrying an E101 violation is flagged.
+
+    Sets up a minimal git repo with the contract-checker stub, stages a file
+    at depth 3 (skills/lifecycle/references/SKILL.md) that contains a real
+    missing-required-flag invocation, then asserts --staged exits 1 with E101.
+    """
+    import shutil
+    import stat
+    import textwrap
+
+    # ── Set up minimal git repo ──────────────────────────────────────────────
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    # Init git
+    subprocess.run(["git", "init", str(repo)], check=True, capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.email", "test@test.com"],
+        cwd=str(repo), check=True, capture_output=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "Test"],
+        cwd=str(repo), check=True, capture_output=True,
+    )
+
+    # Stub module
+    stub_src = (REPO_ROOT / "tests" / "fixtures" / "contract"
+                / "invalid-missing-required-flag" / "stub_create_backlog_item.py")
+    shutil.copy(str(stub_src), str(repo / "stub_create_backlog_item.py"))
+
+    # pyproject.toml
+    (repo / "pyproject.toml").write_text(textwrap.dedent("""\
+        [project]
+        name = "staged-deep-test"
+        version = "0.0.1"
+
+        [project.scripts]
+        cortex-create-backlog-item = "stub_create_backlog_item:main"
+    """), encoding="utf-8")
+
+    # Initial commit (so HEAD exists and --staged works)
+    subprocess.run(
+        ["git", "add", "pyproject.toml", "stub_create_backlog_item.py"],
+        cwd=str(repo), check=True, capture_output=True,
+    )
+    subprocess.run(
+        ["git", "-c", "commit.gpgsign=false", "commit", "-m", "init"],
+        cwd=str(repo), check=True, capture_output=True,
+    )
+
+    # Create depth-3 in-scope file carrying a violation (missing --status, --type)
+    deep_dir = repo / "skills" / "lifecycle" / "references"
+    deep_dir.mkdir(parents=True)
+    deep_file = deep_dir / "implement.md"
+    deep_file.write_text(textwrap.dedent("""\
+        ---
+        name: implement
+        description: Deep skill reference
+        ---
+
+        Run:
+
+        ```bash
+        cortex-create-backlog-item --title "My feature"
+        ```
+    """), encoding="utf-8")
+
+    # Stage the deep file
+    subprocess.run(
+        ["git", "add", str(deep_file.relative_to(repo))],
+        cwd=str(repo), check=True, capture_output=True,
+    )
+
+    # ── Run cortex-check-contract --staged ──────────────────────────────────
+    env = dict(os.environ)
+    existing_pythonpath = env.get("PYTHONPATH", "")
+    path_entries = [str(REPO_ROOT), str(repo)]
+    if existing_pythonpath:
+        path_entries.append(existing_pythonpath)
+    env["PYTHONPATH"] = os.pathsep.join(path_entries)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "cortex_command.lint.contract",
+            "--staged",
+            "--root",
+            str(repo),
+            "--json",
+        ],
+        capture_output=True,
+        text=True,
+        env=env,
+        cwd=str(repo),
+    )
+
+    assert result.returncode == 1, (
+        f"Expected exit 1 from --staged on depth-3 violation, got {result.returncode}\n"
+        f"stdout={result.stdout!r}\nstderr={result.stderr!r}"
+    )
+    violations = json.loads(result.stdout.strip())
+    codes = [v["code"] for v in violations]
+    assert "E101" in codes, (
+        f"Expected E101 from depth-3 staged file, got codes={codes}\n"
+        f"violations={violations}\nstderr={result.stderr!r}"
+    )
