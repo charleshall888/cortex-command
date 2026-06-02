@@ -118,34 +118,6 @@
     "repo": null
   },
   {
-    "id": 282,
-    "title": "Pre-commit gates silently skip deep-nested files: Path.match('**') under-scan in check-parity / check-prescriptive-prose / check-events-registry + bare-python-import 3.12 break",
-    "status": "refined",
-    "priority": "medium",
-    "type": "bug",
-    "tags": [],
-    "areas": [
-      "hooks"
-    ],
-    "created": "2026-06-02",
-    "updated": "2026-06-02",
-    "blocks": [],
-    "blocked_by": [
-      "279"
-    ],
-    "parent": null,
-    "research": null,
-    "spec": "cortex/lifecycle/pre-commit-gates-silently-skip-deep/spec.md",
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "68318507-7d0f-4d6a-9de3-e896c9438481",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 284,
     "title": "Surface built-but-merge-blocked overnight features as recoverable, not failed/zero-progress (split from #281 Phase 2)",
     "status": "refined",
