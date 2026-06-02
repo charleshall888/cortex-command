@@ -32,6 +32,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Literal
 
+from ._globs import matches_any_glob
+
 
 # ---------------------------------------------------------------------------
 # Data classes
@@ -427,59 +429,14 @@ _SCAN_GLOBS: tuple[str, ...] = (
 )
 
 
-def _glob_to_regex(glob: str) -> re.Pattern[str]:
-    """Translate a ``_SCAN_GLOBS`` entry to a compiled regex.
-
-    ``**`` is treated as *zero or more* path segments, so
-    ``skills/**/*.md`` matches both ``skills/foo.md`` (depth-1, zero mid-dirs)
-    and ``skills/a/b/foo.md`` (depth-≥3).  Safe on Python 3.12+.
-
-    Safe on Python 3.12+: does not use ``PurePath`` pattern methods added in
-    3.13, and avoids the bare-``**`` semantics of ``Path.match`` / ``root.glob``
-    which vary by version and treat ``**`` as exactly one segment on 3.12.
-    """
-
-    def _esc_segment(s: str) -> str:
-        """Regex-escape a glob segment, then convert ``*`` → ``[^/]*``."""
-        return re.escape(s).replace(r"\*", "[^/]*")
-
-    if glob.endswith("/**"):
-        # e.g. "hooks/**" → match anything (at any depth) under hooks/
-        prefix = re.escape(glob[:-3])
-        return re.compile(rf"^{prefix}/.+$")
-
-    if "**" not in glob:
-        # No wildcard — exact match with single-* support.
-        return re.compile(rf"^{_esc_segment(glob)}$")
-
-    # Glob contains **/ (zero-or-more path segments).
-    # Split on "**/" to get anchored prefix/suffix pieces; each piece may
-    # still contain single-* wildcards.
-    segments = glob.split("**/")
-    regex_parts = [_esc_segment(s) for s in segments]
-    # "**/" between two parts → zero or more "<name>/" repetitions.
-    pattern = "(?:[^/]+/)*".join(regex_parts)
-    return re.compile(rf"^{pattern}$")
-
-
-# Pre-compile scan-scope patterns once at import time.
-_SCAN_GLOB_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
-    _glob_to_regex(g) for g in _SCAN_GLOBS
-)
-
-
 def _in_scan_scope(rel: str) -> bool:
     """Return True iff *rel* (repo-relative POSIX path) matches any ``_SCAN_GLOBS`` entry.
 
-    Uses a regex-based recursive-glob matcher that treats ``**`` as zero or
-    more path segments, so depth-1, depth-2, and depth-≥3 in-scope paths are
-    all admitted — unlike ``PurePath.match`` which treats ``**`` as exactly one
-    segment on Python 3.12.
+    Delegates to the shared ``cortex_command.lint._globs`` matcher — the single
+    canonical ``**``=zero-or-more-segments implementation shared across all five
+    checkers — so contract.py carries no independent glob-membership matcher.
     """
-    for pat in _SCAN_GLOB_PATTERNS:
-        if pat.match(rel):
-            return True
-    return False
+    return matches_any_glob(rel, _SCAN_GLOBS)
 
 
 # Hard exclusion patterns — checked against path relative to root.
