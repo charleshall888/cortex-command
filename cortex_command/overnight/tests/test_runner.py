@@ -25,6 +25,7 @@ from pathlib import Path
 from unittest import mock
 
 from cortex_command.overnight import runner
+from cortex_command.overnight import state as state_module
 from cortex_command.overnight.state import (
     OvernightFeatureStatus,
     OvernightState,
@@ -291,6 +292,55 @@ class TestPlanCommitWorktreeAbsent(unittest.TestCase):
                 state, state.features["feat-a"]
             )
             self.assertIsNone(resolved)
+
+
+class TestRoundLoopSweepDrainsFailedSubtree(unittest.TestCase):
+    """The round-loop sweep drains a failed blocker's subtree to terminal.
+
+    Integration-style assertion for R6: the runner wires
+    ``state_module.sweep_blocker_failed_dependents`` into the round loop at the
+    branch re-convergence point. After the sweep over a state whose only
+    non-terminal features are dependents of a failed blocker,
+    ``runner._count_pending(state) == 0`` so the next iteration takes the clean
+    ``pending == 0`` exit instead of churning to the stall breaker.
+    """
+
+    def test_pending_reaches_zero_after_sweep_over_failed_subtree(self) -> None:
+        # A: terminally failed blocker. B blocked-by A; C blocked-by B
+        # (transitive). The failed subtree (B, C) is the only non-terminal
+        # work, so the sweep must drain pending to 0.
+        state = OvernightState(
+            session_id="overnight-test-0000",
+            plan_ref="cortex/lifecycle/overnight-plan.md",
+            phase="executing",
+            features={
+                "feat-a": OvernightFeatureStatus(status="failed"),
+                "feat-b": OvernightFeatureStatus(
+                    status="pending",
+                    intra_session_blocked_by=["feat-a"],
+                ),
+                "feat-c": OvernightFeatureStatus(
+                    status="running",
+                    intra_session_blocked_by=["feat-b"],
+                ),
+            },
+            worktree_path=None,
+            integration_worktrees={},
+        )
+
+        # Before the sweep, the failed subtree still counts as pending.
+        self.assertGreater(runner._count_pending(state), 0)
+
+        # This is the exact call the runner round loop performs at the
+        # branch re-convergence point.
+        state = state_module.sweep_blocker_failed_dependents(state)
+
+        # The clean exit precondition: no pending/running/paused work remains.
+        self.assertEqual(runner._count_pending(state), 0)
+        self.assertEqual(state.features["feat-b"].status, "failed")
+        self.assertEqual(state.features["feat-b"].error, "blocker_failed")
+        self.assertEqual(state.features["feat-c"].status, "failed")
+        self.assertEqual(state.features["feat-c"].error, "blocker_failed")
 
 
 if __name__ == "__main__":

@@ -2548,8 +2548,23 @@ def run(
                         flush=True,
                     )
 
-            # Count merged delta for the progress circuit breaker.
+            # End-of-round dependent-failure sweep (R5/R6). Runs every round
+            # — including no-batch-plan rounds — at the branch re-convergence
+            # point, after results are mapped into state and before the
+            # merged/pending evaluation. Fails every non-terminal dependent of
+            # a terminally-``failed`` blocker to ``failed`` (``blocker_failed``)
+            # to a fixpoint, then persists the mutated state atomically so the
+            # next iteration's ``pending == 0`` check (and ``_count_merged``
+            # below) read the swept state. The sweep merges nothing, so its
+            # round still increments ``stall_count`` via ``merged_delta <= 0``;
+            # the stall breaker remains the backstop for genuinely-churning
+            # independent work. The clean ``pending == 0`` exit is reached only
+            # when the failed subtree is the remaining pending work.
             state = state_module.load_state(state_path)
+            state = state_module.sweep_blocker_failed_dependents(state)
+            _save_state_locked(state, state_path, coord)
+
+            # Count merged delta for the progress circuit breaker.
             merged_after = _count_merged(state)
             merged_delta = merged_after - merged_before
             print(
