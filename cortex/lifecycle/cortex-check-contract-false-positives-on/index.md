@@ -2,7 +2,7 @@
 feature: cortex-check-contract-false-positives-on
 parent_backlog_uuid: 69b4c348-5c4a-476d-a056-e3a2cfaf47e6
 parent_backlog_id: 279
-artifacts: ["research", "spec"]
+artifacts: ["research", "spec", "plan"]
 tags: []
 created: 2026-06-02
 updated: 2026-06-02
@@ -14,3 +14,4 @@ Feature lifecycle for [[279-cortex-check-contract-false-positives-on-hook-script
 
 - Research: [[cortex-check-contract-false-positives-on/research|research.md]]
 - Spec: [[cortex-check-contract-false-positives-on/spec|spec.md]]
+- Plan: [[cortex-check-contract-false-positives-on/plan|plan.md]]

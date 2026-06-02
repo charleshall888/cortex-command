@@ -3,3 +3,5 @@
 {"ts": "2026-06-02T12:33:52Z", "event": "complexity_override", "feature": "cortex-check-contract-false-positives-on", "from": "simple", "to": "complex", "gate": "clarify_assessment"}
 {"ts": "2026-06-02T13:31:07Z", "event": "spec_approved", "feature": "cortex-check-contract-false-positives-on"}
 {"ts": "2026-06-02T14:49:11Z", "event": "phase_transition", "feature": "cortex-check-contract-false-positives-on", "from": "specify", "to": "plan"}
+{"ts": "2026-06-02T15:23:11Z", "event": "plan_approved", "feature": "cortex-check-contract-false-positives-on"}
+{"ts": "2026-06-02T15:23:11Z", "event": "phase_transition", "feature": "cortex-check-contract-false-positives-on", "from": "plan", "to": "implement"}
