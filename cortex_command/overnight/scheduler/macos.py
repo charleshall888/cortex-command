@@ -273,6 +273,17 @@ class MacOSLaunchAgentBackend:
     :meth:`schedule`.
     """
 
+    # Per-invocation advisory flag (R10). Set True by ``schedule()`` when
+    # the post-bootstrap liveness probe was inconclusive (a
+    # ``LaunchctlVerifyError`` from ``_bootstrap_and_verify``). The probe
+    # is advisory — it never aborts bookkeeping — so the bootstrapped job
+    # is still recorded (sidecar + ``scheduled_start``) and the command
+    # returns exit 0. The CLI handler reads this attribute after
+    # ``schedule()`` returns to surface a non-fatal stderr warning. A
+    # fresh backend instance is created per CLI invocation
+    # (``get_backend()``), so this instance attribute is invocation-local.
+    last_verify_inconclusive: bool = False
+
     # ------------------------------------------------------------------
     # Public surface
     # ------------------------------------------------------------------
@@ -304,10 +315,24 @@ class MacOSLaunchAgentBackend:
             repo_root: Absolute path to the repository the runner should
                 operate on.
 
+        The post-bootstrap liveness probe is **advisory** (R10): an
+        inconclusive ``launchctl print`` raises
+        :class:`LaunchctlVerifyError` from ``_bootstrap_and_verify``, but
+        that error is caught inside ``_mint_and_install`` and recorded on
+        :attr:`last_verify_inconclusive` instead of aborting. Bookkeeping
+        (the sidecar entry here, plus the ``scheduled_start`` state-file
+        write in the CLI handler) therefore always completes for a
+        correctly-armed-but-unconfirmed job, and the command returns
+        exit 0 with a non-fatal stderr warning.
+
         Returns:
             ScheduledHandle describing the scheduled job.
         """
         from cortex_command.overnight.state import session_dir
+
+        # Reset the advisory flag for this invocation. ``_mint_and_install``
+        # flips it True if the liveness probe was inconclusive.
+        self.last_verify_inconclusive = False
 
         if target <= datetime.now():
             raise ValueError("target time is in the past")
@@ -467,6 +492,24 @@ class MacOSLaunchAgentBackend:
 
             try:
                 self._bootstrap_and_verify(plist_path, label)
+            except LaunchctlVerifyError as exc:
+                # The liveness probe is ADVISORY (R10): bootstrap
+                # succeeded (the job IS armed) but ``launchctl print`` did
+                # not confirm the armed-state line within the poll budget.
+                # An inconclusive probe must NOT abort — bookkeeping
+                # (sidecar + ``scheduled_start``) must still complete so a
+                # correctly-armed job is recorded and the command returns
+                # exit 0. Record the advisory and treat the install as
+                # successful; the CLI handler surfaces a stderr warning.
+                logger.warning(
+                    "launchctl print did not confirm an armed job for "
+                    "label %s within the verify budget; recording the "
+                    "schedule anyway (probe is advisory): %s",
+                    label,
+                    exc,
+                )
+                self.last_verify_inconclusive = True
+                return label, plist_path, launcher_path
             except LaunchctlBootstrapError as exc:
                 # On collision-suspected failures, retry once with
                 # epoch+1. If we've already retried, surface.

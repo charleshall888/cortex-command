@@ -24,6 +24,7 @@ import io
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -239,3 +240,158 @@ def test_schedule_malformed_target_rejected(
 
     assert rc != 0
     assert "invalid format" in captured.err
+
+
+# ---------------------------------------------------------------------------
+# (d) advisory liveness probe — bookkeeping completes (Task 8 / R10)
+# ---------------------------------------------------------------------------
+
+
+def _make_completed(returncode: int = 0, stdout: bytes = b"", stderr: bytes = b""):
+    """Minimal stand-in for ``subprocess.CompletedProcess`` shaped for the
+    macos backend's ``returncode``/``stdout``/``stderr`` reads.
+    """
+    return SimpleNamespace(
+        returncode=returncode, stdout=stdout, stderr=stderr
+    )
+
+
+def _install_inconclusive_probe_backend(
+    monkeypatch: pytest.MonkeyPatch,
+    home: Path,
+) -> "object":
+    """Wire ``handle_schedule`` to a real macOS backend whose post-bootstrap
+    liveness probe is inconclusive.
+
+    Isolates the sidecar/lock (``HOME``) and plist dir (``TMPDIR``) under
+    ``home`` and forces ``launchctl bootstrap`` to succeed while
+    ``launchctl print`` never confirms the armed-state line within the
+    verify budget — driving the advisory ``LaunchctlVerifyError`` path
+    inside ``_bootstrap_and_verify`` (now caught by ``_mint_and_install``).
+    Returns the backend instance so callers can inspect
+    ``last_verify_inconclusive``.
+    """
+    from cortex_command.overnight import scheduler as _scheduler_pkg
+    from cortex_command.overnight.scheduler import macos as _macos
+
+    # Isolate sidecar + lock (Path.home()) and the plist dir ($TMPDIR).
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("TMPDIR", str(home / "tmp"))
+    (home / "tmp").mkdir(parents=True, exist_ok=True)
+
+    backend = _macos.MacOSLaunchAgentBackend()
+    # Force the macOS-only gate true on any host so handle_schedule reaches
+    # the real schedule() body.
+    monkeypatch.setattr(backend, "is_supported", lambda: True)
+    monkeypatch.setattr(_scheduler_pkg, "get_backend", lambda: backend)
+
+    def _fake_run(argv, *args, **kwargs):
+        verb = argv[1] if len(argv) > 1 else ""
+        if verb == "bootstrap":
+            # Bootstrap succeeds — the job IS armed.
+            return _make_completed(returncode=0)
+        if verb == "print":
+            # Probe is inconclusive: clean exit but no armed-state line and
+            # no calendar block, so _print_confirms_armed() is False.
+            return _make_completed(returncode=0, stdout=b"state = running\n")
+        return _make_completed(returncode=0)
+
+    # Collapse the verify poll: monotonic jumps past the deadline so the
+    # loop raises LaunchctlVerifyError on the first failed probe.
+    monotonic_values = iter([0.0, 5.0, 10.0])
+
+    def _fake_monotonic() -> float:
+        try:
+            return next(monotonic_values)
+        except StopIteration:
+            return 999.0
+
+    monkeypatch.setattr(_macos.subprocess, "run", _fake_run)
+    monkeypatch.setattr(_macos.time, "sleep", lambda *_a, **_k: None)
+    monkeypatch.setattr(_macos.time, "monotonic", _fake_monotonic)
+
+    return backend
+
+
+def test_schedule_inconclusive_probe_completes_bookkeeping(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
+    """An inconclusive liveness probe is advisory: bookkeeping completes.
+
+    Drives the real ``schedule()`` body with ``launchctl bootstrap``
+    succeeding but ``launchctl print`` never confirming the armed-state
+    line. Asserts (R10) that:
+
+      - ``handle_schedule`` returns exit 0 (advisory, not fatal),
+      - the ``scheduled_start`` state-file write completed (non-null),
+      - a sidecar entry for the session exists,
+      - the inconclusive probe surfaced as a non-fatal stderr warning.
+    """
+    from cortex_command.overnight import state as state_module
+    from cortex_command.overnight.scheduler import sidecar as sidecar_module
+
+    session_id = "overnight-2026-05-04-2200"
+    sessions_root = tmp_path / "cortex" / "lifecycle" / "sessions"
+    session_dir = sessions_root / session_id
+    state_path = _write_state_file(session_dir, session_id)
+
+    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda: tmp_path)
+    backend = _install_inconclusive_probe_backend(monkeypatch, tmp_path / "home")
+
+    args = _make_args(
+        target_time=_future_hhmm(),
+        state=str(state_path),
+        dry_run=False,
+        fmt="human",
+    )
+
+    rc = cli_handler.handle_schedule(args)
+    captured = capsys.readouterr()
+
+    # Exit 0 even though the probe was inconclusive.
+    assert rc == 0, f"expected exit 0; stderr={captured.err!r}"
+
+    # The probe was recorded as inconclusive (advisory, not fatal).
+    assert backend.last_verify_inconclusive is True
+    assert "inconclusive" in captured.err
+
+    # scheduled_start bookkeeping completed (cli_handler.py write).
+    reloaded = state_module.load_state(state_path)
+    assert reloaded.scheduled_start is not None
+
+    # Sidecar bookkeeping completed (macos.py _write_sidecar_entry).
+    entries = sidecar_module.read_sidecar()
+    assert any(h.session_id == session_id for h in entries), (
+        f"expected a sidecar entry for {session_id}; got {entries!r}"
+    )
+
+
+def test_schedule_inconclusive_probe_does_not_raise(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``backend.schedule()`` itself does not raise on an inconclusive probe.
+
+    Calls the backend directly (bypassing the CLI handler) to pin the
+    contract that ``LaunchctlVerifyError`` no longer propagates out of
+    ``schedule()`` — the sidecar entry lands and the advisory flag is set.
+    """
+    from cortex_command.overnight.scheduler import sidecar as sidecar_module
+
+    session_id = "overnight-2026-05-04-2300"
+    backend = _install_inconclusive_probe_backend(monkeypatch, tmp_path / "home2")
+
+    target = datetime.now() + timedelta(hours=1)
+
+    # Must not raise.
+    handle = backend.schedule(
+        target=target,
+        session_id=session_id,
+        env={"PATH": "/usr/bin"},
+        repo_root=tmp_path,
+    )
+
+    assert handle.session_id == session_id
+    assert backend.last_verify_inconclusive is True
+
+    entries = sidecar_module.read_sidecar()
+    assert any(h.label == handle.label for h in entries)

@@ -1758,6 +1758,24 @@ def handle_schedule(args: argparse.Namespace) -> int:
             flush=True,
         )
 
+    # The post-bootstrap liveness probe is advisory (R10): if it was
+    # inconclusive, the job is still armed and bookkeeping above has
+    # completed, so we exit 0 — but surface the inconclusive probe as a
+    # non-fatal stderr warning so the operator knows confirmation was not
+    # obtained.
+    verify_inconclusive = bool(
+        getattr(backend, "last_verify_inconclusive", False)
+    )
+    if verify_inconclusive:
+        print(
+            "warning: scheduled job armed but the launchd liveness probe "
+            "was inconclusive (launchctl print did not confirm it within "
+            "the verify budget); the schedule was recorded and will still "
+            "fire",
+            file=sys.stderr,
+            flush=True,
+        )
+
     # (8) Emit the success envelope.
     if fmt == "json":
         _emit_json(
@@ -1766,6 +1784,7 @@ def handle_schedule(args: argparse.Namespace) -> int:
                 "session_id": handle.session_id,
                 "label": handle.label,
                 "scheduled_for_iso": handle.scheduled_for_iso,
+                "verify_inconclusive": verify_inconclusive,
             }
         )
     else:
