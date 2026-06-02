@@ -5,3 +5,10 @@
 {"ts": "2026-06-01T22:52:34Z", "event": "spec_approved", "feature": "scheduled-overnight-runs-fire-but-the"}
 {"ts": "2026-06-01T23:47:36Z", "event": "plan_approved", "feature": "scheduled-overnight-runs-fire-but-the"}
 {"ts": "2026-06-01T23:47:36Z", "event": "phase_transition", "feature": "scheduled-overnight-runs-fire-but-the", "from": "plan", "to": "implement"}
+{"ts": "2026-06-02T01:52:24Z", "event": "batch_dispatch", "feature": "scheduled-overnight-runs-fire-but-the", "batch": 0, "tasks": [1, 2, 4, 7, 9, 10, 13, 14, 15, 17]}
+{"ts": "2026-06-02T03:05:06Z", "event": "batch_dispatch", "feature": "scheduled-overnight-runs-fire-but-the", "batch": 1, "tasks": [3, 5, 8, 11, 16]}
+{"ts": "2026-06-02T11:24:04Z", "event": "batch_dispatch", "feature": "scheduled-overnight-runs-fire-but-the", "batch": 2, "tasks": [6, 12, 18]}
+{"ts": "2026-06-02T11:52:30Z", "event": "phase_transition", "feature": "scheduled-overnight-runs-fire-but-the", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-06-02T12:02:01Z", "event": "review_verdict", "feature": "scheduled-overnight-runs-fire-but-the", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-06-02T12:02:01Z", "event": "phase_transition", "feature": "scheduled-overnight-runs-fire-but-the", "from": "review", "to": "complete"}
+{"ts": "2026-06-02T12:04:17Z", "event": "feature_complete", "feature": "scheduled-overnight-runs-fire-but-the", "tasks_total": 18, "rework_cycles": 1, "merge_anchor": "merge"}

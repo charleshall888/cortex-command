@@ -40,7 +40,7 @@ Fix the chain of defects that makes scheduled overnight runs fire-but-do-nothing
 - **Complexity**: complex
 - **Context**: Current template at `launcher.sh:125-175` (detach block 137-158, invocation 145-153, false comment 128-143). Markers `@@SESSION_DIR@@`/`@@CORTEX_BIN@@`/`@@LABEL@@`/`@@SESSION_ID@@`/`@@PLIST_PATH@@`/`@@LAUNCHER_PATH@@` are unchanged (no `_install_launcher_script` marker-set change needed: `--state` is derived as `${SESSION_DIR}/overnight-state.json`, which is absolute because `SESSION_DIR` is). The per-session state file is at `session_dir/overnight-state.json` (see `_auto_discover_state` glob, `cli_handler.py:170`). `--force` bypasses only the launcher's own pending-schedule guard (`cli_handler.py:527-531`), not live-runner protection. `--format json` is mandatory so the run-now `concurrent_runner` refusal (`cli_handler.py:578`) is not skipped (Edge Case: run-now holds the lock at fire). `start` rejects `--session-id` (argparse exit 2) — the F1 root cause. The detach is synchronous at `Popen(start_new_session=True)` (posix_spawn performs `setsid` before returning), so the runner is in its own session before the foreground launcher's handshake wait begins — the launcher staying alive during the wait cannot reap it (see Risks: foreground-wait detach). Keep `@@SESSION_ID@@` for the marker `session_id` field only. Doc owner: `docs/overnight-operations.md` per CLAUDE.md overnight-docs source-of-truth.
 - **Verification**: `grep -c "reparents to PID 1" cortex_command/overnight/scheduler/launcher.sh` = 0 AND `grep -c '\-\-session-id' cortex_command/overnight/scheduler/launcher.sh` = 0 — pass if both 0. (Argv parse-validity and routing are asserted by Task 3.)
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Bind caffeinate's idle-sleep assertion to the runner's lifetime as a child
 - **Files**: `cortex_command/overnight/runner.py`, `cortex_command/overnight/tests/test_runner_caffeinate.py`
@@ -49,7 +49,7 @@ Fix the chain of defects that makes scheduled overnight runs fire-but-do-nothing
 - **Complexity**: complex
 - **Context**: Runner entry is `runner_module.run(...)`; `os.getpid()` there is the session-leader pid (the runner was spawned with `start_new_session=True` at `cli_handler.py:377-384`). The runner writes `runner.pid` later, at `runner.py:856` (`_start_session`), after `load_state` (`~runner.py:815`) and the takeover-lock polling loop (`~runner.py:850`) — that load+lock span is exactly the post-wake/cold-cache slow window, so caffeinate must be asserted *before* it. caffeinate(8): `-i` asserts no-idle-sleep for the spawned process's lifetime; `-w <pid>` makes it run until `<pid>` exits. Best-effort spawn (a missing `caffeinate` must not crash the runner). Was: launcher-level `caffeinate -i` dropped at handshake return (F3).
 - **Verification**: `just test` — pass if exit 0 and the new test asserts (a) the caffeinate child is alive after the `_SPAWN_HANDSHAKE_TIMEOUT_SECONDS` window and exits when the runner exits, AND (b) the negative invariant: the caffeinate process is NOT the session leader / `Popen` target and is NOT a child of the `_spawn_runner_async` shim (assert its parent is the runner pid and it is distinct from the session-leader-establishing spawn).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Phase-1 regression guards — launcher-argv render test, routing test, and session-leader detach test
 - **Files**: `cortex_command/overnight/tests/test_launcher_argv.py`, `cortex_command/overnight/tests/test_spawn_session_leader.py`
@@ -58,7 +58,7 @@ Fix the chain of defects that makes scheduled overnight runs fire-but-do-nothing
 - **Complexity**: simple
 - **Context**: Harness pattern in `cortex_command/overnight/tests/test_launcher_fail_marker.py` (renders the real template, monkeypatches `_resolve_cortex_bin`) — but that file is darwin-gated; these new tests must NOT be gated. Parse against the real `start` subparser built in `cortex_command/cli.py:406-465`. **Why (b) is required**: `os.getsid(pid)==pid` is a POSIX-invariant proxy that holds for ANY `start_new_session=True` child — including the fake child the existing `test_spawn_handshake.py` harness substitutes via monkeypatched `_build_async_spawn_argv`, which itself re-adds `--launchd` (`cli_handler.py:243`) for the real runner child. So (a) (a string check) and (c) (a session check on a possibly-faked spawn) do NOT by themselves prove the launcher routes to the async-spawn path; (b) closes that gap by asserting the `handle_start` branch taken for a no-`--launchd` argv. Do NOT claim these run in GitHub Actions (`validate.yml` runs only skill+callgraph validators today — CI-wiring is an out-of-scope follow-up).
 - **Verification**: `just test` — pass if exit 0 and all three new assertions (argv-render, routing-dispatch, session-leader) pass.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 4: Spawn discriminator (launcher-robust), non-kill-on-live timeout, and fire-path budget
 - **Files**: `cortex_command/overnight/cli_handler.py`, `cortex_command/cli.py`, `cortex_command/overnight/tests/test_spawn_handshake.py`
@@ -67,7 +67,7 @@ Fix the chain of defects that makes scheduled overnight runs fire-but-do-nothing
 - **Complexity**: complex
 - **Context**: `_spawn_runner_async` at `cli_handler.py:317-457`; unconditional `_terminate_orphan_child` on timeout at `cli_handler.py:451`; `_SPAWN_HANDSHAKE_TIMEOUT_SECONDS = 5.0` at `cli_handler.py:45`; `handle_start` returns `0 if started else 1` at `cli_handler.py:637` (so exit 1 is emitted for BOTH dead and advisory — the launcher must NOT key its marker decision on the exit code; Task 5). `start` subparser + flags at `cli.py:406-465`. Atomic write via `ipc._atomic_write_json`/the `O_CREAT|O_EXCL` pattern. Exact budget value, discriminator field name, and outcome-file format are method-level; each must satisfy R6/R8 acceptance. Do NOT bump the `runner.pid` `schema_version` — `verify_runner_pid` (`ipc.py:392-437`) does not inspect `pgid`.
 - **Verification**: `just test` — pass if exit 0 and a new test, using a **controllable child** (a stub `_build_async_spawn_argv` pointing at a sleeper that sleeps well beyond a test-shortened handshake budget and never writes `runner.pid`), simulates a live-child timeout and asserts (a) no `killpg`/`SIGKILL` sent, (b) `child.poll() is None` (runner left alive), (c) a non-failure (`spawn_unconfirmed`) envelope returned AND the `spawn-outcome` token file written; AND asserts `_FIRE_HANDSHAKE_TIMEOUT_SECONDS > 5.0`. The sleeper duration ≫ test budget makes "left alive" deterministic, not timing-flaky.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5: Launcher reads the robust discriminator and writes failure vs advisory markers
 - **Files**: `cortex_command/overnight/scheduler/launcher.sh`, `cortex_command/overnight/tests/test_launcher_envelope.py`
@@ -76,7 +76,7 @@ Fix the chain of defects that makes scheduled overnight runs fire-but-do-nothing
 - **Complexity**: complex
 - **Context**: Current `write_fail_marker`/`handle_failure` at `launcher.sh:51-110` (today fires only on pre-background exec failure; exit-1 → `error_class="EPERM"` at line 100, discarding the real class — this exit-code mapping must no longer fire for a `start` that ran). Marker JSON shape `{ts, error_class, error_text, label, session_id}`; the launcher has `@@LABEL@@` + `@@SESSION_ID@@` for those fields. Reading a single-token file via `cat`/`[ -f ]` needs no interpreter and no PATH (shell builtins / `/bin`), so it is robust under launchd's `cwd=/` and whatever PATH the plist injects — this is why the discriminator is a token file, not an in-bash JSON parse. The advisory marker is a marker FILE, not a new `events.log` event (Non-Requirements) — distinct filename or a `kind` field (method-level).
 - **Verification**: `just test` — pass if exit 0 and the new test (platform-agnostic; runs the rendered launcher under `bash` with a stub `CORTEX_BIN` that writes a canned `spawn-outcome` token + exits 1) asserts (a) `spawn_died` token → a `scheduled-fire-failed.json` with the real `error_class` (NOT `EPERM`), and (b) `spawn_unconfirmed` token → a distinct advisory (non-failure) marker, and (c) a `started` token + exit 1 does NOT write a failure marker.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 6: Status + morning report render failure vs advisory distinctly, and escalate stale advisories
 - **Files**: `cortex_command/overnight/fail_markers.py`, `cortex_command/overnight/cli_handler.py`, `cortex_command/overnight/report.py`, `cortex_command/overnight/tests/test_report_fire_failures.py`
@@ -85,7 +85,7 @@ Fix the chain of defects that makes scheduled overnight runs fire-but-do-nothing
 - **Complexity**: complex
 - **Context**: `fail_markers.scan_session_dirs` globs only `sessions/*/scheduled-fire-failed.json` (`fail_markers.py:136`) and enforces a fixed `required = ("ts","error_class","error_text","label","session_id")` tuple (`fail_markers.py:165`) — so an advisory marker must either reuse those keys + a `kind` field (scanned by the same glob if same filename) or get a sibling scanner (if a distinct filename). Consumers: `report.render_scheduled_fire_failures` (`report.py:1614-1649`, scanned at `report.py:210`) and `cli_handler.handle_status` (`cli_handler.py:730,775`). Status/morning-report surfaces are read-only (observability.md:93) — escalation is inferred at read time; markers are WRITTEN only by the launcher path (Task 5). Keep the existing failure-render path working (regression). The escalation threshold is method-level; set it comfortably above the fire-path handshake budget.
 - **Verification**: `just test` — pass if exit 0 and tests assert (a) a `spawn_died` marker renders as a failure in status + report, (b) a fresh advisory marker renders as a non-failure advisory in status + report and is excluded from the failure tally, and (c) a stale advisory (age > threshold, no live `runner.pid`, not executing) renders as a failure.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 7: Durable schedule verifier — stop false-failing on Darwin 25+
 - **Files**: `cortex_command/overnight/scheduler/macos.py`, `cortex_command/overnight/tests/test_scheduler_e2e.py`
@@ -94,7 +94,7 @@ Fix the chain of defects that makes scheduled overnight runs fire-but-do-nothing
 - **Complexity**: simple
 - **Context**: `_bootstrap_and_verify` at `macos.py:569-606`; the substring check at `macos.py:599-602` against `_VERIFY_STATE_SUBSTRING` (`macos.py:65`); `_VERIFY_POLL_BUDGET_SEC = 1.0` (line 68). `launchctl print` is explicitly "NOT API" (Apple) — the durable parse (calendar block + enabled via `launchctl print-disabled`) is the solution-horizon-correct fix; widening the allowlist is an acceptable interim. `test_scheduler_e2e.py` mocks `launchctl` via `subprocess.run` returning `state = waiting` (155-182); note its module-level `skipif(sys.platform != "darwin")` (`test_scheduler_e2e.py:46`) means this variant runs only on macOS (see Risks: test reachability). The bookkeeping-completes half is Task 8.
 - **Verification**: `just test` — pass if exit 0 and a `test_scheduler_e2e` variant where `launchctl print` returns `state = not running` for a correctly-armed agent verifies successfully (exit 0). (Darwin-gated; see Risks.)
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 8: Make the liveness probe advisory so bookkeeping always completes
 - **Files**: `cortex_command/overnight/scheduler/macos.py`, `cortex_command/overnight/cli_handler.py`, `cortex_command/overnight/tests/test_cli_schedule.py`
@@ -103,7 +103,7 @@ Fix the chain of defects that makes scheduled overnight runs fire-but-do-nothing
 - **Complexity**: complex
 - **Context**: In `schedule()` (`macos.py:307-333`), the sequence inside `schedule_lock()` is `_gc_pass` → `_mint_and_install` (which calls `_bootstrap_and_verify` at `macos.py:447`) → `_write_sidecar_entry` (331). A `LaunchctlVerifyError` raised at 605 propagates through `_mint_and_install` → `schedule()` → the blanket `except Exception → return 1` at `cli_handler.py:1614`, skipping BOTH the sidecar write (331) AND the `scheduled_start` write (1628). The sidecar write must stay inside the `fcntl.LOCK_EX` critical section. State-field naming: `scheduled_start` is the state-file field (`state.py:198`); `scheduled_for_iso` is the sidecar field — both must land. The `schedule()`/macos backend is darwin-only (`test_cli_schedule.py:154` shows the off-darwin non-zero path), so the bookkeeping assertions are the platform-portable part (they can be exercised by mocking the verify probe); the live `cortex overnight schedule` exit-0 is darwin-gated (see Risks).
 - **Verification**: `just test` — pass if exit 0 and a test mocking an inconclusive probe asserts `scheduled_start` is non-null AND a sidecar entry exists AND the `schedule()` call does not raise (the bookkeeping completes); on darwin, `cortex overnight schedule` exits 0 with an armed-but-inconclusive job.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 9: Gate prep-time session_start to the run-now branch; runner is sole fire-time author
 - **Files**: `skills/overnight/references/new-session-flow.md`, `skills/overnight/SKILL.md`, `plugins/cortex-overnight/skills/overnight/references/new-session-flow.md`, `plugins/cortex-overnight/skills/overnight/SKILL.md`, `cortex_command/overnight/tests/test_runner_session_start.py`
@@ -112,7 +112,7 @@ Fix the chain of defects that makes scheduled overnight runs fire-but-do-nothing
 - **Complexity**: simple
 - **Context**: Pre-logged at `skills/overnight/references/new-session-flow.md:163` (step 5) and referenced at `skills/overnight/SKILL.md:75` (step 7.5), BEFORE the run-now/schedule branch (step 7), via `log_event` where `LIFECYCLE_SESSION_ID` is unset → `session_id:"manual"` (`events.py:226`). Runner re-logs at `runner.py:885` with the correct id. Dual-source: edit canonical only; `.githooks/pre-commit:601` runs `just build-plugin` itself and the drift gate compares the rebuilt tree to the index, so the task must `git add` the regenerated mirror. SKILL.md ≤ 500 lines (`tests/test_skill_size_budget.py`). This task edits the step-5/7.x region of the same two skill files Task 16 also edits — Task 16 `Depends on` this task to serialize those edits. Research rates R11 cosmetic (degrades only `time_limit`/`max_rounds` display) — low risk if it slips, but in scope.
 - **Verification**: `just test` — pass if exit 0 and (a) a skill-flow assertion confirms the step-5 `session_start` log is gated to the run-now branch, AND (b) a runner test asserts the post-fire session `events.log` contains exactly one `session_start` whose `session_id` is the real id (not `manual`); AND `git diff --quiet plugins/cortex-overnight/skills/overnight/` after `just build-plugin` (mirror staged, zero drift).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 10: Runner clears scheduled_start on fire
 - **Files**: `cortex_command/overnight/runner.py`, `cortex_command/overnight/tests/test_runner_clear_scheduled_start.py`
@@ -121,7 +121,7 @@ Fix the chain of defects that makes scheduled overnight runs fire-but-do-nothing
 - **Complexity**: simple
 - **Context**: `scheduled_start` field at `state.py:198,238`; set at `cli_handler.py:1628`; currently cleared only by `cancel`. Atomic write via `save_state` (`state.py:388`). This is a plain field write, NOT a phase transition. Using the explicit per-session path keeps R13 decoupled from R19's symlink.
 - **Verification**: `just test` — pass if exit 0 and a test asserts `scheduled_start` is `None` in the session state file after the runner reaches its session-start.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 11: Status renders a display-only scheduled-dormant state
 - **Files**: `cortex_command/overnight/status.py`, `cortex_command/overnight/tests/test_status_scheduled_start.py`
@@ -130,7 +130,7 @@ Fix the chain of defects that makes scheduled overnight runs fire-but-do-nothing
 - **Complexity**: complex
 - **Context**: `render_status` at `status.py:229-385` has no `runner.pid` liveness check; watchdog block gated on `state.phase == "executing"` (`status.py:315-325`); it already loads an explicit resolved state path (`status.py:232-238`), so R12 does not depend on R19. `scheduled_start` already read/rendered (`cli_handler.py:740,768-770`). `PHASES = ("planning","executing","complete","paused","starting")` (`state.py:32-41`); `starting` is the precedent for an observable-but-unpersisted display state. The predicate MUST be conjunctive (F5) to survive clock skew near the fire boundary; R13 (Task 10) clears `scheduled_start` on fire so a fired run is never shown dormant.
 - **Verification**: `just test` — pass if exit 0 and tests assert (a) a future `scheduled_start` + no live `runner.pid` renders the dormant line and omits the elapsed/watchdog block, AND (b) `len(PHASES) == 5` AND `"scheduled_dormant" not in PHASES` AND `"scheduled" not in PHASES`.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 12: Launcher boots out its own spent one-shot job after a successful fire
 - **Files**: `cortex_command/overnight/scheduler/launcher.sh`, `cortex_command/overnight/tests/test_scheduler_bootout_on_fire.py`
@@ -139,7 +139,7 @@ Fix the chain of defects that makes scheduled overnight runs fire-but-do-nothing
 - **Complexity**: simple
 - **Context**: `StartCalendarInterval` has no `Year` key (the rendered `Year` at `macos.py:529` is inert) → recurs annually; the only existing `bootout` is user-initiated `cancel()` (`macos.py:355-365`). The launcher already self-cleans the plist/launcher files at `launcher.sh:88-93` (`cleanup_self`) but a registered launchd job refires without the plist file. The launcher knows its label via `@@LABEL@@`. Best-effort bootout (already-gone job is fine). GC backstop is Task 13.
 - **Verification**: `just test` — pass if exit 0 and a darwin-gated integration test schedules a near-future fire, lets it fire, and asserts the label is no longer registered (`launchctl print` exits non-zero for it). (Darwin-gated; see Risks.)
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 13: GC reaps spent schedules by past timestamp
 - **Files**: `cortex_command/overnight/scheduler/macos.py`, `cortex_command/overnight/tests/test_plist_gc.py`
@@ -148,7 +148,7 @@ Fix the chain of defects that makes scheduled overnight runs fire-but-do-nothing
 - **Complexity**: simple
 - **Context**: `_gc_pass()` runs inside `schedule_lock()` at `macos.py:308`; sidecar fields include `scheduled_for_iso`. `_plist_dir()` resolves `$TMPDIR/cortex-overnight-launch/` (`macos.py:612-616`). This is the backstop for Task 12's bootout. The GC-by-timestamp logic is platform-portable and testable on any OS (it operates on the sidecar + files, not `launchctl`).
 - **Verification**: `just test` — pass if exit 0 and a test seeds a past-`scheduled_for_iso` sidecar entry plus its plist/launcher files and asserts the next `schedule()` removes all three and the sidecar entry.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 14: Document the inert Year key and caffeinate-no-wake reality
 - **Files**: `docs/overnight-operations.md`
@@ -157,7 +157,7 @@ Fix the chain of defects that makes scheduled overnight runs fire-but-do-nothing
 - **Complexity**: simple
 - **Context**: `docs/overnight-operations.md` is the overnight round-loop/orchestrator source-of-truth (CLAUDE.md). launchd does not wake the Mac (Apple); missed intervals coalesce on wake. Orthogonal to the detach fix but a documented limitation.
 - **Verification**: `grep -c "Year" docs/overnight-operations.md` ≥ 1 AND `grep -ci "caffeinate" docs/overnight-operations.md` ≥ 1 — pass if both notes are present (manual read confirms they state inert-Year and no-wake).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 15: Promote planning helpers to `cortex overnight launch` + `prepare` CLI verbs
 - **Files**: `cortex_command/cli.py`, `cortex_command/overnight/cli_handler.py`, `cortex_command/overnight/tests/test_cli_launch_prepare.py`
@@ -166,7 +166,7 @@ Fix the chain of defects that makes scheduled overnight runs fire-but-do-nothing
 - **Complexity**: complex
 - **Context**: Existing overnight subparsers (`cli.py:406-662`): `start|status|cancel|logs|list-sessions|schedule`; `start` flags at `cli.py:411-465`. Planning helpers with no CLI surface, to be wrapped: `select_overnight_batch` (`backlog.py:1020`), `validate_target_repos`/`render_session_plan`/`bootstrap_session`/`extract_batch_specs` (`plan.py:99/148/523/651`), `log_event` (`events.py:196`). `launch` is the single mutating umbrella verb (fuses select→plan→bootstrap→telemetry); `prepare` is read-only and renders the plan JSON. The gate that checks skill-prose↔argparse is `cortex-check-contract` (pre-commit Phase 1.55) — NOT `cortex-check-parity`, which tracks only `bin/cortex-*` + `[project.scripts]` tokens and does not model `cortex overnight` subcommands. Bare-Python prohibition L201 (`cortex-check-bare-python-import`) is the canonical justification for the CLI surface.
 - **Verification**: `cortex overnight launch --help` and `cortex overnight prepare --help` exit 0 — run both, pass if both exit 0; AND `just test` exit 0 with a handler test asserting `launch` returns a structured envelope and `prepare` renders plan JSON without mutating state.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 16: Skill-flow cleanup — call the new verbs and drop the stale $CORTEX_COMMAND_ROOT
 - **Files**: `skills/overnight/SKILL.md`, `skills/overnight/references/new-session-flow.md`
@@ -175,7 +175,7 @@ Fix the chain of defects that makes scheduled overnight runs fire-but-do-nothing
 - **Complexity**: simple
 - **Context**: `$CORTEX_COMMAND_ROOT` usage at `skills/overnight/SKILL.md:78-79,86` and `new-session-flow.md:9,185,193`; correct source `cortex --print-root` (`cli.py:_dispatch_print_root` 195-240; `root = _resolve_user_project_root()`). Session paths actually resolve via cwd/git, not the env var. **`Depends on` Task 9**: Task 9 edits the step-5/7.x region of these same two files first; depending on it serializes the edits so the second rebases on the first rather than colliding on the same hunks across phase task-branches. **`Depends on` Task 15**: the verbs must be deployed before this prose references them (so `cortex-check-contract` sees them deployed). SKILL.md ≤ 500 lines (`tests/test_skill_size_budget.py`). Edit canonical only (dual-source); Task 18 regenerates/stages `plugins/cortex-overnight/`.
 - **Verification**: `grep -c "CORTEX_COMMAND_ROOT" skills/overnight/SKILL.md skills/overnight/references/new-session-flow.md` = 0 for session-path usage (pass if 0); AND `cortex-check-bare-python-import skills/overnight/` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 17: bootstrap_session creates the top-level overnight-state.json symlink
 - **Files**: `cortex_command/overnight/plan.py`, `cortex_command/overnight/tests/test_bootstrap_symlink.py`
@@ -184,7 +184,7 @@ Fix the chain of defects that makes scheduled overnight runs fire-but-do-nothing
 - **Complexity**: simple
 - **Context**: `bootstrap_session` at `plan.py:551-560` writes the per-session `state_dir/overnight-state.json` but creates no top-level symlink (zero `os.symlink`/`symlink_to` callsites in the package). `load_state()` no-arg defaults to `_default_state_path()` (`state.py:265`) and raises `FileNotFoundError` (`state.py:331`). This serves no-arg `load_state` consumers only — R12/R13 use explicit per-session paths and do NOT depend on it, so this can be the last task without breaking Phase 4.
 - **Verification**: `just test` — pass if exit 0 and a test asserts the symlink exists after `bootstrap_session` and that `load_state()` (no args) returns the session state.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 18: Stage the dual-source mirror and confirm contract + parity + registry gates
 - **Files**: `plugins/cortex-overnight/skills/overnight/SKILL.md`, `plugins/cortex-overnight/skills/overnight/references/new-session-flow.md`
@@ -193,7 +193,7 @@ Fix the chain of defects that makes scheduled overnight runs fire-but-do-nothing
 - **Complexity**: simple
 - **Context**: `.githooks/pre-commit:601` runs `just build-plugin` itself whenever a `skills/` path is staged and the drift gate then compares the rebuilt tree to the index — so the operative requirement is that the regenerated mirror is **staged** (`git add`), not which task "owns" the regen. (Phase 4's Task 9 stages its own mirror because it commits separately; this task stages Phase 6's.) The fire-time advisory/failure diagnostics are marker files (R6/R8), NOT new `events.log` event types — no `EVENT_TYPES` (`events.py:91`) addition and no `bin/.events-registry.md` registration, so `just check-events-registry` passes trivially. `cortex-check-contract` (pre-commit Phase 1.55) is the gate that validates the `launch`/`prepare` verbs are referenced-and-deployed consistently; `cortex-check-parity` covers `bin/cortex-*`/`[project.scripts]` tokens (unaffected here).
 - **Verification**: Run `just check-events-registry` (pass if exit 0) AND `git diff --quiet plugins/cortex-overnight/skills/overnight/` after `just build-plugin` (pass if no diff) AND `cortex-check-contract` (pass if exit 0) AND `cortex-check-parity` (pass if exit 0).
-- **Status**: [ ] pending
+- **Status**: [x] done — events-registry PASS, mirror-drift PASS (none), parity PASS. `cortex-check-contract` exits 1 on 12 PRE-EXISTING, unrelated violations (cortex-worktree-create `--feature` refs in docs/agentic-layer.md, docs/internals/sdk.md, skills/lifecycle/references/{implement,parallel-execution}.md; cortex-discovery flags in skills/discovery/) — none in 277-touched files, zero about the launch/prepare verbs. 277 adds no new contract violations; the pre-existing debt is out of scope (suggest a separate cleanup ticket).
 
 ## Risks
 - **Fire-path budget + discriminator ownership (Task 4).** Task 4 owns the `--scheduled` flag, the `_FIRE_HANDSHAKE_TIMEOUT_SECONDS` constant, AND the launcher-robust discriminator emission (the `spawn-outcome` token file); Task 5 only reads them. This keeps the selector from dangling across tasks. If the reviewer prefers no new flag, a plist `EnvironmentVariables` signal read by `_spawn_runner_async` is the fallback — but it is less testable.

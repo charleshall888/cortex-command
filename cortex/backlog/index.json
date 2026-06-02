@@ -29,32 +29,6 @@
     "repo": null
   },
   {
-    "id": 277,
-    "title": "Scheduled overnight runs fire but the runner is silently killed (no setsid on macOS) + launch-flow observability gaps",
-    "status": "refined",
-    "priority": "high",
-    "type": "bug",
-    "tags": [],
-    "areas": [
-      "overnight-runner"
-    ],
-    "created": "2026-06-01",
-    "updated": "2026-06-01",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "cortex/lifecycle/scheduled-overnight-runs-fire-but-the/spec.md",
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "a2356508-a71f-42c1-81a0-2f9d32954c85",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 8,
     "title": "Auto-rename Claude Code session to active lifecycle feature name",
     "status": "backlog",
