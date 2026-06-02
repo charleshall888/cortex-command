@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 69b4c348-5c4a-476d-a056-e3a2cfaf47e6
 title: "cortex-check-contract false-positives on hook-script mentions and subcommand flags"
-status: refined
+status: complete
 priority: medium
 type: bug
 created: 2026-06-02

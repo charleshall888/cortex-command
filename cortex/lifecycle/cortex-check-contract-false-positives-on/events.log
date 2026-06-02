@@ -5,3 +5,11 @@
 {"ts": "2026-06-02T14:49:11Z", "event": "phase_transition", "feature": "cortex-check-contract-false-positives-on", "from": "specify", "to": "plan"}
 {"ts": "2026-06-02T15:23:11Z", "event": "plan_approved", "feature": "cortex-check-contract-false-positives-on"}
 {"ts": "2026-06-02T15:23:11Z", "event": "phase_transition", "feature": "cortex-check-contract-false-positives-on", "from": "plan", "to": "implement"}
+{"ts": "2026-06-02T15:54:51Z", "event": "batch_dispatch", "feature": "cortex-check-contract-false-positives-on", "batch": 0, "tasks": [1, 2]}
+{"ts": "2026-06-02T16:03:02Z", "event": "batch_dispatch", "feature": "cortex-check-contract-false-positives-on", "batch": 1, "tasks": [3, 4, 5, 6, 7, 8]}
+{"ts": "2026-06-02T16:19:38Z", "event": "batch_dispatch", "feature": "cortex-check-contract-false-positives-on", "batch": 2, "tasks": [9]}
+{"ts": "2026-06-02T16:22:00Z", "event": "batch_dispatch", "feature": "cortex-check-contract-false-positives-on", "batch": 3, "tasks": [10]}
+{"ts": "2026-06-02T16:24:16Z", "event": "phase_transition", "feature": "cortex-check-contract-false-positives-on", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-06-02T16:33:31Z", "event": "review_verdict", "feature": "cortex-check-contract-false-positives-on", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
+{"ts": "2026-06-02T16:33:52Z", "event": "phase_transition", "feature": "cortex-check-contract-false-positives-on", "from": "review", "to": "complete"}
+{"ts": "2026-06-02T17:17:20Z", "event": "feature_complete", "feature": "cortex-check-contract-false-positives-on", "tasks_total": 10, "rework_cycles": 1, "merge_anchor": "merge"}

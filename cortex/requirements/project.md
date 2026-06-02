@@ -89,5 +89,5 @@ Agentic workflow toolkit for AI-assisted software development on Claude Code: sk
 Content here is prunable under token pressure — skip without losing spec-required guidance.
 
 - **Sandbox preflight gate**: `bin/cortex-check-parity` validates `cortex/lifecycle/{feature}/preflight.md` on sandbox-source diffs; fails on missing/invalid preflight or `claude --version` drift.
-- **Two-mode gate pattern**: pre-commit gates pair `--staged` (diff schema) with `--audit` (time/repo-wide, `just <recipe>-audit`). See `bin/cortex-check-events-registry`.
+- **Two-mode gate pattern**: pre-commit gates pair `--staged` (diff schema) with `--audit` (time/repo-wide, `just <recipe>-audit`). See `bin/cortex-check-events-registry`; the `--staged` mode membership must be corpus-congruent with `--audit` (same files in scope at all depths) — enforced by `_in_scan_scope` in `cortex_command/lint/contract.py` using a recursive-glob matcher safe on Python 3.12+.
 - **Workflow trimming**: unearned workflows are removed wholesale. Retirements in `CHANGELOG.md`.

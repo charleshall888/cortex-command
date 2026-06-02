@@ -31,7 +31,7 @@ Make `cortex-check-contract` precise by adding a per-match command-position pred
 
    Do NOT touch `validate()`/E101 emit (`:1305-1311`), the E104 early-`continue` (`:1227-1242`), or the ledger match-key `(binary, flag, path)`. Heuristic regex/string predicate only — no `shlex`/`bashlex`/`tree-sitter`. Wheel-only; no `plugins/` mirror obligation.
 - **Verification**: run the canonical working-tree `AUDIT` command from the Verification-channel note — `PYTHONPATH="$(git rev-parse --show-toplevel)" .venv/bin/python -m cortex_command.lint.contract --audit --root "$(git rev-parse --show-toplevel)"` — and assert **`grep -c E101` of the output = 0** (the 8 `E101` cleared; down from 8 at baseline). Via `.venv` the run is clean so it also exits 0; do NOT gate on exit code alone (a `yaml`-less interpreter would add 2 out-of-scope `E104`). `.venv/bin/pytest tests/test_check_contract.py -q` exits 0 is the authoritative wheel-immune corroborating signal.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Exact-set `invalid-*` assertion (R4)
 - **Files**: `tests/test_check_contract.py`, `tests/fixtures/contract/invalid-missing-required-flag/expected.json`, `tests/fixtures/contract/invalid-not-argparse-no-ledger/expected.json`, `tests/fixtures/contract/invalid-unknown-flag/expected.json`
@@ -40,7 +40,7 @@ Make `cortex-check-contract` precise by adding a per-match command-position pred
 - **Complexity**: simple
 - **Context**: assertion block at `tests/test_check_contract.py:98-117`; `actual_codes = [v["code"] for v in violations]` is already computed at `:109`. Use `sorted(actual_codes) == sorted(expected_codes)` or equivalent multiset equality (`collections.Counter`). Existing invalid fixtures each list exactly one code (`["E101"]`, `["E104"]`, `["E102"]`) and are single-invocation mini-repos, so they should already satisfy exact-set — run them to confirm and adjust `expected.json` if any over-fires. Only this harness reads `expected.json` (no other caller).
 - **Verification**: `grep -c "any(code in expected_codes" tests/test_check_contract.py` = 0 AND `.venv/bin/pytest tests/test_check_contract.py -q` exits 0 (the harness now asserts multiset equality and all existing fixtures still pass).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: `--staged` membership reaches deep files (R8)
 - **Files**: `cortex_command/lint/contract.py`, `tests/test_check_contract.py`
@@ -49,7 +49,7 @@ Make `cortex-check-contract` precise by adding a per-match command-position pred
 - **Complexity**: complex
 - **Context**: membership loop at `contract.py:1377-1380`; `_SCAN_GLOBS` at `:419-427` = `skills/**/*.md`, `hooks/**`, `justfile`, `docs/**/*.md`, `tests/**/*.md`, `CLAUDE.md`, `cortex/requirements/**/*.md`. **Do NOT specify the target as "congruent with `root.glob`"** — `root.glob`'s bare-`**` semantics are version-dependent (`root.glob("hooks/**")` returns files on 3.13+ but **directories-only / zero files on 3.12**), so pinning to it is fragile and for `hooks/**` would *regress* the depth-1 hook coverage the current `rel_path.match("hooks/**")` already provides. Specify the desired set directly: a staged rel path is in-scope iff it satisfies its glob with `**`=zero-or-more-segments. Pitfalls the matcher must clear: (a) **bare `fnmatch.fnmatch(rel, glob)` is insufficient** — verified `fnmatch("docs/agentic-layer.md", "docs/**/*.md")` is `False` (depth-1, zero mid-dirs) though the depth-1 file IS in scope; (b) the extensionless **`hooks/**`** shape must keep depth-1+ hook files in-scope (no regression); (c) exact-name **`justfile`/`CLAUDE.md`** must match exactly. MUST be 3.12-safe: do **not** use `PurePath.full_match` (added 3.13). Robust options: translate each glob to a regex where `**/` becomes an optionally-empty "(any segments)/" and trailing `**` becomes "any", or reuse the corpus membership decision. Recommend factoring into a helper (e.g. `_in_scan_scope(rel: str) -> bool`) so tests call it directly; the end-to-end variant builds a temp git repo, stages files, and runs `--staged`. Keep `_is_hard_excluded` after the membership test as today.
 - **Verification**: `.venv/bin/pytest tests/test_check_contract.py -q` exits 0 (including the new membership tests covering depth-1 `.md`, depth-≥3 `.md`, `hooks/**`, and an exact-name) AND `grep -c "full_match" cortex_command/lint/contract.py` = 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 4: valid-* hook-filename false-positive fixtures (R3, part 1)
 - **Files**: `tests/fixtures/contract/valid-hook-filename-inline/` (`pyproject.toml`, `stub_worktree_create.py`, `skills/demo/SKILL.md`), `tests/fixtures/contract/valid-hook-filename-table/` (same three), `tests/fixtures/contract/valid-hook-filename-fenced/` (same three)
@@ -58,7 +58,7 @@ Make `cortex-check-contract` precise by adding a per-match command-position pred
 - **Complexity**: simple
 - **Context**: follow the layout of `tests/fixtures/contract/invalid-missing-required-flag/`. The stub `pyproject.toml` maps `cortex-worktree-create = "stub_worktree_create:main"`; `stub_worktree_create.py` defines an argparse parser with `--feature` **required** and `--base-branch` optional (so a real missing-`--feature` run WOULD flag `E101` — proving these fixtures pass on command-position, not on absence of a parser). The three `SKILL.md` bodies each mention a hook path such as `claude/hooks/cortex-worktree-create.sh` in inline / table-cell / fenced form respectively. `valid-*` fixtures need NO `expected.json`; the harness auto-discovers by directory prefix (`valid-*` ⇒ exit 0 + empty array).
 - **Verification**: `.venv/bin/pytest tests/test_check_contract.py -q` exits 0 (the three new `valid-*` fixtures yield exit 0 with empty violations).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5: valid-* probe fixtures + mixed-span (R3, part 2)
 - **Files**: `tests/fixtures/contract/valid-command-v-probe/` (3 files), `tests/fixtures/contract/valid-which-type-hash-probe/` (3 files), `tests/fixtures/contract/invalid-mixed-span/` (`pyproject.toml`, `stub_worktree_create.py`, `skills/demo/SKILL.md`, `expected.json`)
@@ -67,7 +67,7 @@ Make `cortex-check-contract` precise by adding a per-match command-position pred
 - **Complexity**: simple
 - **Context**: same `cortex-worktree-create` stub as Task 4 (`--feature` required). `invalid-mixed-span/expected.json` = `["E101"]`. The mixed-span fixture exercises the per-match predicate (path-mention dropped, real run kept) and relies on the Task 2 exact-set assertion to catch any spurious extra code (e.g. an `E102`). Probe fixtures are `valid-*` (no `expected.json`). **`valid-command-v-probe` must reproduce the real-corpus shape — a fenced `command -v cortex-worktree-create >/dev/null 2>&1` with a non-empty (redirection) tail** — so it genuinely exercises probe rule (3); an inline empty-tail probe would pass via the pre-existing bare-no-tail skip (`:657`) instead, leaving rule (3) unlocked by any fixture (the live corpus probe at `implement.md:58` is exactly this fenced+redirection shape).
 - **Verification**: `.venv/bin/pytest tests/test_check_contract.py -q` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 6: invalid-* true-positive fixtures, part 1 (R2)
 - **Files**: `tests/fixtures/contract/invalid-missing-feature-baseline/`, `tests/fixtures/contract/invalid-missing-feature-positional/`, `tests/fixtures/contract/invalid-missing-feature-piped/` (each: `pyproject.toml`, `stub_worktree_create.py`, `skills/demo/SKILL.md`, `expected.json`)
@@ -76,7 +76,7 @@ Make `cortex-check-contract` precise by adding a per-match command-position pred
 - **Complexity**: simple
 - **Context**: same `cortex-worktree-create` stub (`--feature` required). The positional case is the false-negative trap — the path-rejection rule must key on the **token** (`cortex-worktree-create` is not itself a path component here), not on the path-like tail. Reference research §"True-positives that MUST keep working."
 - **Verification**: `.venv/bin/pytest tests/test_check_contract.py -q` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 7: invalid-* true-positive fixtures, part 2 (R2)
 - **Files**: `tests/fixtures/contract/invalid-missing-feature-envprefix/` (4 files), `tests/fixtures/contract/invalid-missing-feature-bin-path/` (4 files)
@@ -85,7 +85,7 @@ Make `cortex-check-contract` precise by adding a per-match command-position pred
 - **Complexity**: simple
 - **Context**: same stub. These are the two trap shapes the `=`-RHS rule (must not reject space-separated env-prefix) and the path-tail rule (must not reject a path-prefixed token that is followed by flags) must avoid. Reference spec Edge Cases for both lines.
 - **Verification**: `.venv/bin/pytest tests/test_check_contract.py -q` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 8: Defect B verification + regression-lock fixtures (R5)
 - **Files**: `tests/fixtures/contract/valid-subcommand-flag/` (`pyproject.toml`, stub-with-subparsers, `skills/demo/SKILL.md`), `tests/fixtures/contract/invalid-unknown-subcommand-flag/` (same three + `expected.json`)
@@ -94,7 +94,7 @@ Make `cortex-check-contract` precise by adding a per-match command-position pred
 - **Complexity**: simple
 - **Context**: the stub defines a parser using `add_subparsers()` with a subcommand carrying a required flag — model it on `cortex-discovery emit-research-sizing --topic/--complexity/--criticality` (research §"`cortex-discovery` structure", `discovery.py:1203-1360`). The valid fixture documents a correct subcommand+flag invocation; the invalid one adds a bogus flag (e.g. `--nope`) to the real subcommand. `invalid-unknown-subcommand-flag/expected.json` = `["E102"]`. Defect B already works (shipped `5661c467`) — this is verify-and-lock, not a build; it does not depend on Task 1 (the scanner guard) because subparser resolution lives in `validate()` (`:1256-1291`), a separate path.
 - **Verification**: `.venv/bin/pytest tests/test_check_contract.py -q` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 9: Document deferred latent items + stale-wheel protocol (R7)
 - **Files**: `cortex_command/lint/contract.py`
@@ -103,7 +103,7 @@ Make `cortex-check-contract` precise by adding a per-match command-position pred
 - **Complexity**: simple
 - **Context**: place the four comments at **four distinct sites** in `contract.py` (a bare ≥4 count is not enough — each must annotate its own latent item): (i) unknown-subcommand fall-through and (iv) parent-flag-loss both cluster at the subcommand-resolution branch in `validate()` (`:1256-1291`, where matching a subcommand switches `resolved_surface` to the subparser); (ii) `allow_abbrev` prefix matching, at the flag-validation site (note explicitly: exact-match is the **intended** contract, not a bug); (iii) helper-injected-flag AST blindness, at the **AST surface-extractor** in `contract.py` — `_collect_parser_nodes` (`:851-962`) / `_build_surface` (`:985-1023`), which never sees flags added by a helper call like discovery's `_add_repo_root_arg` (**that helper lives in `cortex_command/discovery.py:1195`, NOT in `contract.py`** — do not search `contract.py` for the symbol; the site to annotate is the walker that would miss such helper-injected flags). The stale-wheel protocol comment goes at the scan-mode/`main` dispatch site (`:1428+`): verify against the working tree via the repo wrapper `./bin/cortex-check-contract` with `CORTEX_COMMAND_FORCE_SOURCE=1` (NOT the PATH console-script, which runs the wheel) or a reinstall, and treat `.venv/bin/pytest tests/test_check_contract.py` as the authoritative wheel-immune signal. Documentation only.
 - **Verification**: `grep -c "DEFERRED (#279)" cortex_command/lint/contract.py` ≥ 4 AND `grep -c "CORTEX_COMMAND_FORCE_SOURCE" cortex_command/lint/contract.py` ≥ 1. (The count gate is per spec R7; the implementer is responsible for placing the four comments at the four distinct sites named in Context, not clustered.)
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 10: Regression sweep + orphaned-ledger reconciliation (R6 + Edge Case)
 - **Files**: `bin/.contract-lint-exceptions.md` (edited only if an orphaned row is found)
@@ -112,7 +112,7 @@ Make `cortex-check-contract` precise by adding a per-match command-position pred
 - **Complexity**: simple
 - **Context**: runs after all code and fixtures land. The orphaned-row check (spec Edge Case): a row in `bin/.contract-lint-exceptions.md` that suppressed a mention the guard now drops becomes dead — no test detects orphans, so inspect manually and remove if found. `--validate-exceptions` must still pass after any removal. The E104 early-`continue` and ledger match-key `(binary, flag, path)` are untouched by the scanner guard, so this task is a verification gate plus a conditional one-line ledger edit.
 - **Verification**: `.venv/bin/pytest tests/test_check_contract.py -q` exits 0 (authoritative, wheel-immune) AND `.venv/bin/python -m cortex_command.lint.contract --self-test` exits 0 AND `.venv/bin/python -m cortex_command.lint.contract --validate-exceptions` exits 0 (working-tree `.venv` interpreter — the PATH console-script would run the stale wheel).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ## Risks
 - **R8 matcher subtlety (highest)**: the bug is not just depth — it is glob *shape* × version-dependent `**` semantics. A naive `fnmatch.fnmatch(rel, glob)` swap misses depth-1 `.md` files (verified: `docs/agentic-layer.md` vs `docs/**/*.md` → `False`); and `root.glob` is itself version-dependent for the extensionless `hooks/**` (files on 3.13+, directories-only on the 3.12 floor), so the matcher must NOT be pinned to `root.glob` (doing so would regress depth-1 hook coverage the current code provides). Task 3 specifies the membership set directly (`**`=zero-or-more-segments) and its test must cover depth-1 `.md`, depth-≥3 `.md`, a `hooks/**` file, and an exact-name — not just the depth-3 `.md` case the spec's R8 acceptance names.
