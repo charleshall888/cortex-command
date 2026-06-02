@@ -118,32 +118,6 @@
     "repo": null
   },
   {
-    "id": 284,
-    "title": "Surface built-but-merge-blocked overnight features as recoverable, not failed/zero-progress (split from #281 Phase 2)",
-    "status": "refined",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [],
-    "areas": [
-      "overnight-runner"
-    ],
-    "created": "2026-06-02",
-    "updated": "2026-06-02",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "cortex/lifecycle/surface-built-but-merge-blocked-overnight/spec.md",
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "f04521e4-474d-447e-9035-c9d46a2176eb",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 287,
     "title": "cortex-lifecycle-state collapses to null on any malformed events.log line, silently skipping the spec-phase gates (diverges from common.py tolerant skip)",
     "status": "backlog",

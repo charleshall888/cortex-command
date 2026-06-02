@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: f04521e4-474d-447e-9035-c9d46a2176eb
 title: "Surface built-but-merge-blocked overnight features as recoverable, not failed/zero-progress (split from #281 Phase 2)"
-status: refined
+status: complete
 priority: medium
 type: feature
 created: 2026-06-02

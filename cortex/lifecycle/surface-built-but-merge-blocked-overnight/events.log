@@ -7,3 +7,5 @@
 {"ts": "2026-06-02T18:59:38Z", "event": "phase_transition", "feature": "surface-built-but-merge-blocked-overnight", "from": "plan", "to": "implement"}
 {"ts": "2026-06-02T20:30:01Z", "event": "phase_transition", "feature": "surface-built-but-merge-blocked-overnight", "tier": "complex", "from": "implement", "to": "review"}
 {"ts": "2026-06-02T20:36:42Z", "event": "review_verdict", "feature": "surface-built-but-merge-blocked-overnight", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
+{"ts": "2026-06-02T20:37:04Z", "event": "phase_transition", "feature": "surface-built-but-merge-blocked-overnight", "from": "review", "to": "complete"}
+{"ts": "2026-06-02T20:38:27Z", "event": "feature_complete", "feature": "surface-built-but-merge-blocked-overnight", "tasks_total": 9, "rework_cycles": 1, "merge_anchor": "merge"}
