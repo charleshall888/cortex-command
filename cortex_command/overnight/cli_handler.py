@@ -1772,4 +1772,306 @@ def handle_schedule(args: argparse.Namespace) -> int:
         print(f"session_id: {handle.session_id}")
         print(f"label: {handle.label}")
         print(f"scheduled_for_iso: {handle.scheduled_for_iso}")
+
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# launch / prepare (R18) — promote the planning helpers to CLI verbs.
+#
+# The skill flow (skills/overnight/references/new-session-flow.md) previously
+# shelled into internal Python APIs — ``select_overnight_batch``,
+# ``render_session_plan``, ``validate_target_repos``, ``bootstrap_session``,
+# ``extract_batch_specs``, ``log_event`` — which is fragile and prohibited by
+# the bare-Python-import gate (cortex-check-bare-python-import, L201). These two
+# verbs wrap those helpers behind a stable CLI surface:
+#
+#   - ``prepare`` is READ-ONLY: select → render plan → emit plan JSON for the
+#     human Approve gate. It bootstraps nothing and writes no state.
+#   - ``launch`` is MUTATING: select → validate target repos → render plan →
+#     bootstrap session → extract batch specs → telemetry, returning a
+#     structured envelope describing the bootstrapped session.
+# ---------------------------------------------------------------------------
+
+
+def _resolve_backlog_dir(args: argparse.Namespace, repo_path: Path) -> Path:
+    """Resolve the backlog directory for ``launch`` / ``prepare``.
+
+    Honors an explicit ``--backlog-dir`` (expanded + resolved); otherwise
+    defaults to ``<repo>/cortex/backlog`` so the verbs work from any cwd
+    (the launchd cwd is ``/``; auto-discovery via cwd cannot be relied on —
+    mirrors the ``--state`` resolution discipline in :func:`handle_start`).
+    """
+    explicit = getattr(args, "backlog_dir", None)
+    if explicit is not None:
+        return Path(explicit).expanduser().resolve()
+    return repo_path / "cortex" / "backlog"
+
+
+def _selection_summary_payload(selection) -> dict:
+    """Build a JSON-serializable summary of a ``SelectionResult``.
+
+    Carries the human-readable summary string plus a structured per-batch
+    breakdown so a JSON consumer (the skill-flow Approve gate, an MCP tool)
+    can render the plan without re-parsing the markdown.
+    """
+    batches: list[dict] = []
+    for batch in selection.batches:
+        batches.append(
+            {
+                "batch_id": batch.batch_id,
+                "batch_context": batch.batch_context,
+                "items": [
+                    {
+                        "id": item.id,
+                        "title": item.title,
+                        "slug": item.resolve_slug(),
+                        "type": item.type,
+                        "priority": item.priority,
+                        "repo": item.repo,
+                    }
+                    for item in batch.items
+                ],
+            }
+        )
+    ineligible: list[dict] = [
+        {"id": item.id, "title": item.title, "reason": reason}
+        for item, reason in selection.ineligible
+    ]
+    total_selected = sum(len(b.items) for b in selection.batches)
+    return {
+        "summary": selection.summary,
+        "batch_count": len(selection.batches),
+        "selected_count": total_selected,
+        "batches": batches,
+        "ineligible": ineligible,
+        "intra_session_deps": dict(selection.intra_session_deps),
+    }
+
+
+def handle_prepare(args: argparse.Namespace) -> int:
+    """Implement ``cortex overnight prepare`` (R18, read-only).
+
+    Selects eligible backlog items and renders the session plan as JSON for
+    the human Approve gate. Performs NO mutation: no bootstrap, no worktree
+    creation, no state write, no telemetry. The mutating umbrella verb is
+    :func:`handle_launch`.
+
+    Emits a JSON envelope carrying the rendered plan markdown plus a
+    structured selection summary. Returns 0 on success (including the
+    "nothing ready" case, which is a valid read result with zero batches);
+    returns non-zero only when selection or rendering raises.
+    """
+    fmt = getattr(args, "format", "json")
+    repo_path = _resolve_repo_path()
+    backlog_dir = _resolve_backlog_dir(args, repo_path)
+    time_limit_hours = int(getattr(args, "time_limit_hours", 6) or 6)
+    batch_size_cap = int(getattr(args, "batch_size_cap", 5) or 5)
+
+    from cortex_command.overnight import backlog as backlog_module
+    from cortex_command.overnight import plan as plan_module
+
+    try:
+        selection = backlog_module.select_overnight_batch(
+            backlog_dir=backlog_dir,
+            batch_size_cap=batch_size_cap,
+        )
+    except Exception as exc:  # noqa: BLE001 — surface any selection failure
+        message = f"failed to select backlog batch: {exc}"
+        if fmt == "json":
+            _emit_json({"error": "selection_failed", "message": message})
+        else:
+            print(message, file=sys.stderr, flush=True)
+        return 1
+
+    try:
+        plan_content = plan_module.render_session_plan(
+            selection=selection,
+            time_limit_hours=time_limit_hours,
+        )
+    except Exception as exc:  # noqa: BLE001 — surface any render failure
+        message = f"failed to render session plan: {exc}"
+        if fmt == "json":
+            _emit_json({"error": "render_failed", "message": message})
+        else:
+            print(message, file=sys.stderr, flush=True)
+        return 1
+
+    payload = {
+        "prepared": True,
+        "plan_markdown": plan_content,
+        "selection": _selection_summary_payload(selection),
+    }
+    if fmt == "json":
+        _emit_json(payload)
+    else:
+        print(plan_content)
+
+    return 0
+
+
+def handle_launch(args: argparse.Namespace) -> int:
+    """Implement ``cortex overnight launch`` (R18, mutating umbrella verb).
+
+    Fuses the four prep steps the skill flow previously shelled into internal
+    Python APIs for:
+
+      1. ``select_overnight_batch`` — select + group eligible backlog items.
+      2. ``validate_target_repos`` — confirm every ``repo:`` path is a git
+         working tree; a non-empty failure list aborts before any mutation.
+      3. ``render_session_plan`` — render the markdown session plan.
+      4. ``bootstrap_session`` — create state + plan + manifest + worktree
+         and persist the session state file.
+      5. ``extract_batch_specs`` — write per-feature lifecycle specs into the
+         worktree for batch-spec items.
+      6. ``log_event(session_start)`` — fire-time telemetry.
+
+    Returns a structured envelope carrying the bootstrapped ``session_id``,
+    ``state_dir``, ``state_path``, the selection summary, and the list of
+    extracted spec paths so the caller can hand off to ``cortex overnight
+    start`` / ``schedule``.
+    """
+    fmt = getattr(args, "format", "json")
+    repo_path = _resolve_repo_path()
+    backlog_dir = _resolve_backlog_dir(args, repo_path)
+    time_limit_hours = int(getattr(args, "time_limit_hours", 6) or 6)
+    batch_size_cap = int(getattr(args, "batch_size_cap", 5) or 5)
+
+    from cortex_command.overnight import backlog as backlog_module
+    from cortex_command.overnight import events as events_module
+    from cortex_command.overnight import plan as plan_module
+
+    # (1) Select.
+    try:
+        selection = backlog_module.select_overnight_batch(
+            backlog_dir=backlog_dir,
+            batch_size_cap=batch_size_cap,
+        )
+    except Exception as exc:  # noqa: BLE001 — surface any selection failure
+        message = f"failed to select backlog batch: {exc}"
+        if fmt == "json":
+            _emit_json({"error": "selection_failed", "message": message})
+        else:
+            print(message, file=sys.stderr, flush=True)
+        return 1
+
+    if not selection.batches:
+        message = "nothing ready for overnight execution"
+        if fmt == "json":
+            _emit_json(
+                {
+                    "error": "nothing_ready",
+                    "message": message,
+                    "selection": _selection_summary_payload(selection),
+                }
+            )
+        else:
+            print(message, file=sys.stderr, flush=True)
+        return 1
+
+    # (2) Validate target repos BEFORE any mutation.
+    repo_failures = plan_module.validate_target_repos(selection)
+    if repo_failures:
+        message = (
+            "target repo validation failed for: " + ", ".join(repo_failures)
+        )
+        if fmt == "json":
+            _emit_json(
+                {
+                    "error": "invalid_target_repos",
+                    "message": message,
+                    "repos": repo_failures,
+                }
+            )
+        else:
+            print(message, file=sys.stderr, flush=True)
+        return 1
+
+    # (3) Render plan.
+    try:
+        plan_content = plan_module.render_session_plan(
+            selection=selection,
+            time_limit_hours=time_limit_hours,
+        )
+    except Exception as exc:  # noqa: BLE001 — surface any render failure
+        message = f"failed to render session plan: {exc}"
+        if fmt == "json":
+            _emit_json({"error": "render_failed", "message": message})
+        else:
+            print(message, file=sys.stderr, flush=True)
+        return 1
+
+    # (4) Bootstrap session (state + plan + manifest + worktree).
+    try:
+        state, state_dir = plan_module.bootstrap_session(
+            selection,
+            plan_content,
+            project_root=repo_path,
+        )
+    except Exception as exc:  # noqa: BLE001 — bootstrap covers worktree/IO
+        # On bootstrap failure the session id is unknown, so a leaked
+        # worktree cannot be targeted here; the skill-flow / operator runs
+        # ``git worktree prune`` (documented in new-session-flow.md). Surface
+        # the error and abort.
+        message = f"failed to bootstrap overnight session: {exc}"
+        if fmt == "json":
+            _emit_json({"error": "bootstrap_failed", "message": message})
+        else:
+            print(message, file=sys.stderr, flush=True)
+        return 1
+
+    # (5) Extract per-feature batch specs into the worktree (best-effort;
+    # a failure here does not unwind the bootstrapped session).
+    extracted: list[str] = []
+    extract_warning: Optional[str] = None
+    worktree_path = state.worktree_path or str(repo_path)
+    try:
+        extracted = [
+            str(p)
+            for p in plan_module.extract_batch_specs(state, Path(worktree_path))
+        ]
+    except Exception as exc:  # noqa: BLE001 — extraction is non-fatal
+        extract_warning = f"batch-spec extraction failed: {exc}"
+        print(f"warning: {extract_warning}", file=sys.stderr, flush=True)
+
+    # (6) Telemetry: log the fire-time session_start (best-effort).
+    telemetry_warning: Optional[str] = None
+    try:
+        events_module.log_event(
+            event="session_start",
+            round=1,
+            details={
+                "session_id": state.session_id,
+                "feature_count": len(state.features),
+                "time_limit_hours": time_limit_hours,
+            },
+            log_path=state_dir / "overnight-events.log",
+        )
+    except Exception as exc:  # noqa: BLE001 — telemetry is non-fatal
+        telemetry_warning = f"session_start telemetry failed: {exc}"
+        print(f"warning: {telemetry_warning}", file=sys.stderr, flush=True)
+
+    payload: dict = {
+        "launched": True,
+        "session_id": state.session_id,
+        "state_dir": str(state_dir),
+        "state_path": str(state_dir / "overnight-state.json"),
+        "worktree_path": state.worktree_path,
+        "extracted_specs": extracted,
+        "selection": _selection_summary_payload(selection),
+    }
+    if extract_warning is not None:
+        payload["extract_warning"] = extract_warning
+    if telemetry_warning is not None:
+        payload["telemetry_warning"] = telemetry_warning
+
+    if fmt == "json":
+        _emit_json(payload)
+    else:
+        print(f"session_id: {state.session_id}")
+        print(f"state_dir: {state_dir}")
+        print(f"worktree_path: {state.worktree_path}")
+        print(f"extracted_specs: {len(extracted)}")
+
+    return 0
     return 0

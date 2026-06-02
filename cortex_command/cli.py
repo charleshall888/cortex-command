@@ -81,6 +81,18 @@ def _dispatch_overnight_schedule(args: argparse.Namespace) -> int:
     return cli_handler.handle_schedule(args)
 
 
+def _dispatch_overnight_launch(args: argparse.Namespace) -> int:
+    from cortex_command.overnight import cli_handler
+
+    return cli_handler.handle_launch(args)
+
+
+def _dispatch_overnight_prepare(args: argparse.Namespace) -> int:
+    from cortex_command.overnight import cli_handler
+
+    return cli_handler.handle_prepare(args)
+
+
 # ---------------------------------------------------------------------------
 # Auth dispatchers — lazy-import the auth submodules so `cortex --help`
 # (and unrelated subcommands) do not pay the import cost when the user
@@ -680,6 +692,97 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Output format (default: human)",
     )
     schedule.set_defaults(func=_dispatch_overnight_schedule)
+
+    # cortex overnight prepare (R18) — read-only: render the selected
+    # session plan as JSON for the human Approve gate. Wraps the
+    # planning helpers (select_overnight_batch + render_session_plan)
+    # without mutating state, so the skill flow can present the plan for
+    # approval without shelling into internal Python APIs. The mutating
+    # half is ``launch``; this verb performs no bootstrap, no worktree
+    # creation, and no telemetry write.
+    prepare = overnight_sub.add_parser(
+        "prepare",
+        help="Render the selected overnight plan as JSON (read-only)",
+        description=(
+            "Select eligible backlog items and render the session plan as "
+            "JSON for the human Approve gate. Read-only: bootstraps nothing, "
+            "writes no state, and creates no worktree."
+        ),
+    )
+    prepare.add_argument(
+        "--backlog-dir",
+        dest="backlog_dir",
+        type=str,
+        default=None,
+        help="Path to the backlog directory (default: <repo>/cortex/backlog)",
+    )
+    prepare.add_argument(
+        "--time-limit-hours",
+        dest="time_limit_hours",
+        type=int,
+        default=6,
+        help="Wall-clock budget in hours for the rendered plan (default: 6)",
+    )
+    prepare.add_argument(
+        "--batch-size-cap",
+        dest="batch_size_cap",
+        type=int,
+        default=5,
+        help="Maximum backlog items per batch (default: 5)",
+    )
+    prepare.add_argument(
+        "--format",
+        choices=("human", "json"),
+        default="json",
+        help="Output format (default: json)",
+    )
+    prepare.set_defaults(func=_dispatch_overnight_prepare)
+
+    # cortex overnight launch (R18) — mutating umbrella verb. Fuses the
+    # four prep steps the skill flow previously shelled into internal
+    # Python APIs for: select → validate target repos → render plan →
+    # bootstrap session → extract batch specs → telemetry
+    # (``session_start``). Returns a structured envelope carrying the
+    # bootstrapped session_id, state_dir, and feature/batch summary so the
+    # caller can hand off to ``cortex overnight start`` / ``schedule``.
+    launch = overnight_sub.add_parser(
+        "launch",
+        help="Select, plan, and bootstrap an overnight session",
+        description=(
+            "Mutating umbrella verb: select eligible backlog items, render "
+            "the session plan, bootstrap the session (state + plan + "
+            "manifest + worktree), extract batch specs, and log the "
+            "fire-time telemetry — returning a structured envelope."
+        ),
+    )
+    launch.add_argument(
+        "--backlog-dir",
+        dest="backlog_dir",
+        type=str,
+        default=None,
+        help="Path to the backlog directory (default: <repo>/cortex/backlog)",
+    )
+    launch.add_argument(
+        "--time-limit-hours",
+        dest="time_limit_hours",
+        type=int,
+        default=6,
+        help="Wall-clock budget in hours for the rendered plan (default: 6)",
+    )
+    launch.add_argument(
+        "--batch-size-cap",
+        dest="batch_size_cap",
+        type=int,
+        default=5,
+        help="Maximum backlog items per batch (default: 5)",
+    )
+    launch.add_argument(
+        "--format",
+        choices=("human", "json"),
+        default="json",
+        help="Output format (default: json)",
+    )
+    launch.set_defaults(func=_dispatch_overnight_launch)
 
     # -------------------------------------------------------------------
     # cortex auth — subscription OAuth bootstrap + diagnostics.
