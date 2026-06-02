@@ -1,0 +1,6 @@
+[project]
+name = "contract-fixture-valid-command-v-probe"
+version = "0.0.1"
+
+[project.scripts]
+cortex-worktree-create = "stub_worktree_create:main"
