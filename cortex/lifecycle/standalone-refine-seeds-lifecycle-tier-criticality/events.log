@@ -1,0 +1,7 @@
+{"schema_version": 1, "ts": "2026-06-02T17:09:49Z", "event": "lifecycle_start", "feature": "standalone-refine-seeds-lifecycle-tier-criticality", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-02T17:15:35Z", "event": "clarify_critic", "feature": "standalone-refine-seeds-lifecycle-tier-criticality", "parent_epic_loaded": false, "findings_count": 6, "dispositions": {"apply": 2, "dismiss": 4, "ask": 0}, "applied_fixes_count": 2, "dismissals_count": 4, "status": "ok"}
+{"ts": "2026-06-02T17:15:35Z", "event": "complexity_override", "feature": "standalone-refine-seeds-lifecycle-tier-criticality", "from": "simple", "to": "complex", "reason": "Manual Clarify reconciliation (dogfooding #285 workaround): seed read simple pre-Clarify; Clarify assessed complex."}
+{"ts": "2026-06-02T17:15:35Z", "event": "criticality_override", "feature": "standalone-refine-seeds-lifecycle-tier-criticality", "from": "medium", "to": "high", "reason": "Manual Clarify reconciliation (dogfooding #285 workaround): Clarify assessed high."}
+{"ts": "2026-06-02T17:59:09Z", "event": "spec_approved", "feature": "standalone-refine-seeds-lifecycle-tier-criticality"}
+{"ts": "2026-06-02T18:29:16Z", "event": "plan_approved", "feature": "standalone-refine-seeds-lifecycle-tier-criticality"}
+{"ts": "2026-06-02T18:29:16Z", "event": "phase_transition", "feature": "standalone-refine-seeds-lifecycle-tier-criticality", "from": "plan", "to": "implement"}
