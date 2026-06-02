@@ -29,7 +29,7 @@ Add a structural `cortex-refine reconcile-clarify` subcommand that appends `to`-
   - Comparator ordering: tier `simple < complex`; criticality `low < medium < high < critical`. Per field, append an override ONLY when desired ≠ current AND desired is strictly higher than current (no-downgrade). Emit nothing for a field that already matches or where desired is lower.
   - Row shape (append, never rewrite): `{"ts": _now_iso(), "event": "complexity_override", "feature": <lifecycle_slug>, "from": <current_tier>, "to": <desired_tier>, "gate": "clarify_reconcile"}` and the `criticality_override` analog (`from`/`to` are the criticality values). Values lowercase. **Omit `schema_version`** to match the canonical override producer `cortex_command/lifecycle/complexity_escalator.py:_emit_event`, which emits no `schema_version` on override rows — do not invent a third convention (no consumer reads the field on these rows; the seed fixture happens to stamp `3`, the escalator omits it, so `1` would be a novel non-monotonic value). Reuse `_now_iso()` (refine.py:79) and the append + `PermissionError/OSError → exit 70` idiom from `_cmd_emit_lifecycle_start` (refine.py:135–146). Never touch the `lifecycle_start` row. Behavioral correctness — including the Context-A backlog-sourcing branch — is verified by Task 2.
 - **Verification**: `.venv/bin/python -c "from cortex_command.refine import _build_parser; a=_build_parser().parse_args(['reconcile-clarify','--lifecycle-slug','s','--complexity','complex','--criticality','high']); assert a.func.__name__=='_cmd_reconcile_clarify'"` — pass if exit 0 (the subcommand parser is wired to its handler with the documented flags).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Add R1–R7 emitter unit tests to `tests/test_refine_module.py`
 - **Files**: `tests/test_refine_module.py`
@@ -48,7 +48,7 @@ Add a structural `cortex-refine reconcile-clarify` subcommand that appends `to`-
   - R6 append-only: assert the original `lifecycle_start` line is byte-identical present after reconciliation.
   - R7 provenance: `grep -c '"gate": "clarify_reconcile"'` equals the number of fields actually reconciled in the scenario.
 - **Verification**: `.venv/bin/pytest tests/test_refine_module.py -q` — pass if exit 0 and all R1–R7 cases pass.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Wire `reconcile-clarify` into `skills/refine/SKILL.md` Step 5 + add static wiring guard test
 - **Files**: `skills/refine/SKILL.md`, `tests/test_refine_reconcile_wiring.py`
@@ -61,7 +61,7 @@ Add a structural `cortex-refine reconcile-clarify` subcommand that appends `to`-
   - No bare-Python import — invoke via the `cortex-refine` console script only (constraint L201). This is a CLI call, not new prose telling the model to emit JSON, satisfying structural-over-prose.
   - Guard test: model on `tests/test_refine_lifecycle_start_wiring.py` (resolves repo root via `git rev-parse --show-toplevel`, reads `skills/refine/SKILL.md`). Assert `"cortex-refine reconcile-clarify"` is present AND `content.index("cortex-refine reconcile-clarify") < content.index("specify.md")` (the §5 delegation line `Read … specify.md and follow it`). The positional assertion makes the ordering guarantee — reconcile runs before the §3a/§3b reads that live inside the delegated `specify.md` — structurally enforced rather than prose-only (per CLAUDE.md "prefer structural separation over prose-only enforcement for sequential gates"), and binds the requirement that reconcile precede §3a (the *earliest* tier/criticality read), not merely §3b.
 - **Verification**: `.venv/bin/pytest tests/test_refine_reconcile_wiring.py -q` exits 0 — pass if exit 0 (the test asserts both literal presence AND position before the `specify.md` delegation).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 4: Add `cortex_command/refine.py` as a producer to the override events-registry rows
 - **Files**: `bin/.events-registry.md`
@@ -74,7 +74,7 @@ Add a structural `cortex-refine reconcile-clarify` subcommand that appends `to`-
   - `complexity_override` row (bin/.events-registry.md:101): producers currently `bin/cortex-complexity-escalator:197` — append `; cortex_command/refine.py`.
   - Follow the existing precedent in the `lifecycle_start` row, which already lists `cortex_command/refine.py:128` as a producer. The events-registry gate scans only `.md` skill/prompt corpus for `"event":` literals (Python emitters are `scan_coverage: manual`), so no scanned literal is introduced and no new row is needed.
 - **Verification**: `.venv/bin/pytest tests/test_check_events_registry.py -q` exits 0 AND `grep -c 'cortex_command/refine.py' bin/.events-registry.md` ≥ 3 — pass if both hold (lifecycle_start + two override rows).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5: Document the optional `gate` field in the criticality-matrix `criticality_override` shape
 - **Files**: `skills/lifecycle/references/criticality-matrix.md`
@@ -83,7 +83,7 @@ Add a structural `cortex-refine reconcile-clarify` subcommand that appends `to`-
 - **Complexity**: simple
 - **Context**: At criticality-matrix.md:5–8, the doc shows the override append shape. Add a note that a Clarify-driven reconciliation also carries `gate: "clarify_reconcile"` (optional; escalator-emitted overrides carry their own gate vocabulary), so consumers that inspect `gate` can distinguish provenance. Separately, the doc asserts (criticality-matrix.md:11) "The user's criticality setting is always final. No automated process … may override the user's choice." Task 1 introduces an automated `criticality_override` producer, so add a one-clause carve-out reconciling the two: the Clarify reconciliation is **not** a user-override — it transcribes the Clarify-determined criticality (which the user can correct *during* Clarify) into lifecycle state, is monotonic-up-only (never lowers), and is `gate`-marked `clarify_reconcile`; an explicit user criticality request still wins via the existing user-override path. Keep the user-final principle intact for explicit user choices; do not change any emission instruction.
 - **Verification**: `grep -c 'clarify_reconcile' skills/lifecycle/references/criticality-matrix.md` ≥ 1 — pass if count ≥ 1 (both the `gate`-marker note and the automated-emitter carve-out reference the marker).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 6: Add end-to-end regression + delegated-path no-op test
 - **Files**: `tests/test_refine_reconcile_clarify.py`
@@ -95,7 +95,7 @@ Add a structural `cortex-refine reconcile-clarify` subcommand that appends `to`-
   - Delegated half (R12): write two rows — `lifecycle_start(simple/medium)` then `lifecycle_start(complex/high)` (lifecycle's correct post-Clarify seed, logged before Research). Capture the override-row count, invoke `reconcile-clarify` with `complex/high`, assert the override-row count is unchanged (the no-op guard R3 suppresses it because the reduced state already reads `complex/high` — NOT via supersession) and the final reduce is `complex/high`. The assertion must reflect that reconcile is the would-be most-recent write the no-op guard suppresses, not an authoritative write.
   - Note: live `cortex-refine` reads the installed wheel; in-process `main([...])` / direct module import exercises the source without a wheel reinstall, so prefer the in-process surface (or set `CORTEX_COMMAND_FORCE_SOURCE=1` for any subprocess CLI invocation).
 - **Verification**: `.venv/bin/pytest tests/test_refine_reconcile_clarify.py -q` — pass if exit 0 and both scenarios pass.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 7: Re-verify kept-pauses parity and regenerate the dual-source plugin mirror
 - **Files**: `plugins/cortex-core/skills/refine/SKILL.md`, `skills/lifecycle/SKILL.md`, `tests/test_lifecycle_kept_pauses_parity.py`
@@ -106,7 +106,7 @@ Add a structural `cortex-refine reconcile-clarify` subcommand that appends `to`-
   - Mirror (R11): `just build-plugin` regenerates `plugins/cortex-core/skills/refine/SKILL.md` from the canonical `skills/refine/SKILL.md`. `cortex_command/` is NOT mirrored (ships via the wheel). Stage the regenerated mirror so the dual-source pre-commit drift hook passes.
   - Kept-pauses (R10): the inventory entry `skills/refine/SKILL.md:166 — refine §4 complexity-value gate pick-menu` and the parity test enforce a ±35-line tolerance. Task 3 inserts ~5–10 lines above line 166, shifting the §4 pick-menu down — expected to stay within tolerance, so no inventory/test edit is anticipated. Only if the drift exceeds ±35 lines: update both `skills/lifecycle/SKILL.md`'s inventory anchor and `tests/test_lifecycle_kept_pauses_parity.py` in lockstep. (`skills/lifecycle/SKILL.md` and the parity test are listed in Files solely to authorize that conditional edit; leave them untouched if parity already passes.)
 - **Verification**: `.venv/bin/pytest tests/test_lifecycle_kept_pauses_parity.py -q` exits 0 AND `diff skills/refine/SKILL.md plugins/cortex-core/skills/refine/SKILL.md` is empty — pass if both hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ## Risks
 - **Reusing `complexity_override`/`criticality_override` overloads their semantics.** The `complexity_override` event also drives the dashboard "complexity override" badge (`parse_complexity_overrides` reads `from`/`to`/`ts`, never `gate`/`schema_version`), so the `gate: "clarify_reconcile"` marker (R7) breaks no consumer and the escalator's `read_effective_tier` is gate-agnostic. The genuinely-new `criticality_override` Python emitter has a narrower blast radius still: there is **no** dashboard `criticality_override` consumer at all — its only readers are `common.py` (reads `.to` only) and `state_cli.py` (reads `.to or .criticality`), both of which honor a `to`-keyed row identically (the R2 both-readers-agree test pins exactly this). Relabeling the dashboard badge is an explicit Non-Requirement (cosmetic follow-up).

@@ -5,3 +5,7 @@
 {"ts": "2026-06-02T17:59:09Z", "event": "spec_approved", "feature": "standalone-refine-seeds-lifecycle-tier-criticality"}
 {"ts": "2026-06-02T18:29:16Z", "event": "plan_approved", "feature": "standalone-refine-seeds-lifecycle-tier-criticality"}
 {"ts": "2026-06-02T18:29:16Z", "event": "phase_transition", "feature": "standalone-refine-seeds-lifecycle-tier-criticality", "from": "plan", "to": "implement"}
+{"ts": "2026-06-02T18:37:38Z", "event": "batch_dispatch", "feature": "standalone-refine-seeds-lifecycle-tier-criticality", "batch": 0, "tasks": [1]}
+{"ts": "2026-06-02T18:49:00Z", "event": "batch_dispatch", "feature": "standalone-refine-seeds-lifecycle-tier-criticality", "batch": 1, "tasks": [2, 3, 4, 5, 6]}
+{"ts": "2026-06-02T18:49:37Z", "event": "batch_dispatch", "feature": "standalone-refine-seeds-lifecycle-tier-criticality", "batch": 2, "tasks": [7]}
+{"ts": "2026-06-02T18:49:56Z", "event": "phase_transition", "feature": "standalone-refine-seeds-lifecycle-tier-criticality", "tier": "complex", "from": "implement", "to": "review"}
