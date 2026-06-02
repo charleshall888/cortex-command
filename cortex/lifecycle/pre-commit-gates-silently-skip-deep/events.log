@@ -1,0 +1,9 @@
+{"schema_version": 1, "ts": "2026-06-02T14:44:11Z", "event": "lifecycle_start", "feature": "pre-commit-gates-silently-skip-deep", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-02T14:50:49Z", "event": "clarify_critic", "feature": "pre-commit-gates-silently-skip-deep", "parent_epic_loaded": false, "findings_count": 6, "dispositions": {"apply": 5, "dismiss": 1, "ask": 0}, "applied_fixes_count": 5, "dismissals_count": 1, "status": "ok"}
+{"ts": "2026-06-02T15:19:46Z", "event": "complexity_override", "feature": "pre-commit-gates-silently-skip-deep", "from": "simple", "to": "complex", "gate": "research_open_questions"}
+{"ts": "2026-06-02T16:14:48Z", "event": "spec_approved", "feature": "pre-commit-gates-silently-skip-deep"}
+{"ts": "2026-06-02T17:58:00Z", "event": "criticality_override", "feature": "pre-commit-gates-silently-skip-deep", "from": "medium", "to": "high"}
+{"ts":"2026-06-02T18:20:45Z","event":"sentinel_absence","feature":"pre-commit-gates-silently-skip-deep","reviewer_angle":"collateral-damage","reason":"absent","model_tier":"sonnet","expected_sha":"44c67cb9f29a79650f6bbe9096ae411d0fd10fd28dcc6e32307122e9249175b3","observed_sha_or_null":null}
+{"ts":"2026-06-02T18:20:45Z","event":"sentinel_absence","feature":"pre-commit-gates-silently-skip-deep","reviewer_angle":"vendor-plumbing","reason":"absent","model_tier":"sonnet","expected_sha":"44c67cb9f29a79650f6bbe9096ae411d0fd10fd28dcc6e32307122e9249175b3","observed_sha_or_null":null}
+{"ts": "2026-06-02T18:33:40Z", "event": "plan_approved", "feature": "pre-commit-gates-silently-skip-deep"}
+{"ts": "2026-06-02T18:33:40Z", "event": "phase_transition", "feature": "pre-commit-gates-silently-skip-deep", "from": "plan", "to": "implement"}

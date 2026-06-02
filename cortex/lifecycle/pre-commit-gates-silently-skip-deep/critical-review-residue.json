@@ -1,0 +1,42 @@
+{
+  "ts": "2026-06-02T18:26:33Z",
+  "feature": "pre-commit-gates-silently-skip-deep",
+  "artifact": "cortex/lifecycle/pre-commit-gates-silently-skip-deep/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "matches_any_glob(rel_path, globs: Iterable[str]) admits one-shot generators with no barrier; a reused exhausted generator silently returns False. No current caller at risk (all pass module-level tuples). Consider Sequence[str] or a docstring note.",
+      "reviewer_angle": "matcher-fidelity",
+      "evidence_quote": "Expose the public predicate `matches_any_glob(rel_path: str, globs: Iterable[str]) -> bool`"
+    },
+    {
+      "class": "B",
+      "finding": "The mandatory depth-1 synthetic parity test inherits the dual-corpus false-lock: a pre-existing depth-1 file is found via root.glob regardless of whether _matches_scan_glob matches it at depth-1.",
+      "reviewer_angle": "r5-lock",
+      "evidence_quote": "a depth-1 synthetic in-scope file (e.g. `skills/foo.md` against `skills/**/*.md`) is mandatory for every checker whose globs contain a `**` glob"
+    },
+    {
+      "class": "B",
+      "finding": "prose/bare-python have no working-tree fallback unlike parity; the uniform 'no collateral damage' claim is asymmetric \u2014 parity already read deep files via root.glob (implicitly clean), but prose/bare-python were blind to the 44 newly-in-scope skills/**/*.md files until the fix.",
+      "reviewer_angle": "collateral-damage",
+      "evidence_quote": "the corrected matcher surfaces no latent findings in this repo's deep files"
+    },
+    {
+      "class": "B",
+      "finding": "At Task 2 the fixed parity_check newly scans tests/test_lint_globs.py (depth-1, in-scope). Safe (no cortex-* refs) but the plan presents the Task1->Task2 dependency as purely mechanical without documenting the changed scan surface.",
+      "reviewer_angle": "collateral-damage",
+      "evidence_quote": "Task 2: Route the three importable checkers through `matches_any_glob`, delete old membership calls ... Depends on: [1]"
+    },
+    {
+      "class": "B",
+      "finding": "Task 4's 'set an env guard' alternative is a dead end: the script (lines 28-34) has no env-guard branch; adding one requires modifying the script, which Task 3 forbids and which is outside Task 4's new-test-file scope.",
+      "reviewer_angle": "vendor-plumbing",
+      "evidence_quote": "monkeypatch `shutil.which` -> `None`, or set an env guard"
+    }
+  ]
+}
