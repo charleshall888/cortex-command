@@ -2,7 +2,7 @@
 feature: standalone-refine-seeds-lifecycle-tier-criticality
 parent_backlog_uuid: f83a53ca-7f6f-43ca-b5b8-e03c6cf968cf
 parent_backlog_id: 285
-artifacts: ["research", "spec", "plan"]
+artifacts: ["research", "spec", "plan", "review"]
 tags: []
 created: 2026-06-02
 updated: 2026-06-02
