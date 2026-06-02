@@ -100,6 +100,7 @@ def test_plugin_path_mismatch_exits_nonzero(tmp_path: Path) -> None:
 
     attacker_root = tmp_path / "attacker-controlled"
     attacker_root.mkdir()
+    (tmp_path / "uv_cache").mkdir(parents=True, exist_ok=True)
 
     completed = subprocess.run(
         ["uv", "run", "--script", str(SERVER_PATH)],
@@ -110,6 +111,7 @@ def test_plugin_path_mismatch_exits_nonzero(tmp_path: Path) -> None:
             "PATH": os.environ.get("PATH", ""),
             "HOME": os.environ.get("HOME", ""),
             "CLAUDE_PLUGIN_ROOT": str(attacker_root),
+            "UV_CACHE_DIR": str(tmp_path / "uv_cache"),
         },
     )
 
