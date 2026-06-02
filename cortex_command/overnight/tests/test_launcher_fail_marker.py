@@ -13,10 +13,12 @@ found on the cortex binary), the launcher must:
   3. Remove its own plist file and launcher copy from ``$TMPDIR/...``.
   4. Exit non-zero so launchd records the failure.
 
-On the success path, the launcher detaches the runner via
-``setsid nohup caffeinate -i`` and removes the plist + launcher AFTER
-the runner is backgrounded. We assert the same self-cleanup invariant
-plus the existence of the runner stdout/stderr log files.
+On the success path, the launcher invokes ``cortex overnight start
+--scheduled`` in the foreground (cortex performs the
+``start_new_session`` detach) and decides success from the single-token
+``spawn-outcome`` discriminator (a ``started`` token), then removes the
+plist + launcher. We assert the same self-cleanup invariant plus the
+existence of the runner stdout/stderr log files.
 
 Each test renders the bash template via
 :meth:`MacOSLaunchAgentBackend._install_launcher_script`, with a
@@ -42,12 +44,13 @@ from cortex_command.overnight.scheduler.macos import MacOSLaunchAgentBackend
 
 
 # ---------------------------------------------------------------------------
-# Skip on non-darwin: bash + setsid are POSIX, so the launcher itself runs
-# fine on Linux too, but `caffeinate` is macOS-only and `osascript` only
-# exists on macOS. The success-path test exec()s the cortex stub through
-# `setsid nohup caffeinate -i ...`; on platforms without `caffeinate`
-# this fails with command-not-found and the failure-path tests would
-# misclassify. We therefore skip the whole module on non-darwin.
+# Skip on non-darwin: bash is POSIX, so the launcher itself runs fine on
+# Linux too, but the failure path calls `/usr/bin/osascript` (macOS-only)
+# for the fire-time notification. These tests historically stubbed only
+# part of that surface and remain darwin-gated for stability. The
+# platform-agnostic discriminator-branch guards live in
+# ``test_launcher_envelope.py`` (which stubs osascript on PATH and runs
+# everywhere the suite runs).
 # ---------------------------------------------------------------------------
 
 _PLATFORM_SUPPORTED = sys.platform == "darwin"
@@ -95,6 +98,8 @@ def _write_cortex_stub(
     exit_code: int = 0,
     sleep_seconds: float = 0.0,
     log_path: Path | None = None,
+    spawn_outcome_token: str | None = None,
+    session_dir: Path | None = None,
 ) -> None:
     """Write an executable shell stub that simulates the cortex binary.
 
@@ -108,12 +113,26 @@ def _write_cortex_stub(
         log_path: Optional path for the stub to touch on invocation.
             Used by the success-path test to confirm the launcher
             actually exec'd the binary (vs. silently skipping).
+        spawn_outcome_token: Optional single-token discriminator the real
+            ``start --scheduled`` writes to ``<session_dir>/spawn-outcome``.
+            The launcher decides success/dead/advisory from THIS token
+            (R6/R8), not from the stub's exit code, so the success-path
+            test must emit ``started`` here to model a confirmed fire.
+        session_dir: Required when ``spawn_outcome_token`` is set — the
+            directory the stub writes the ``spawn-outcome`` file into.
     """
     body = [
         "#!/bin/bash",
     ]
     if log_path is not None:
         body.append(f'echo "stub-invoked $$" >> "{log_path}"')
+    if spawn_outcome_token is not None:
+        if session_dir is None:
+            raise ValueError("session_dir is required when spawn_outcome_token is set")
+        body.append(f'mkdir -p "{session_dir}"')
+        body.append(
+            f'printf %s {spawn_outcome_token!r} > "{session_dir / "spawn-outcome"}"'
+        )
     if sleep_seconds > 0:
         body.append(f"sleep {sleep_seconds}")
     body.append(f"exit {exit_code}")
@@ -374,14 +393,17 @@ class TestLauncherSuccessPath(unittest.TestCase):
 
             cortex_bin = tmp / "cortex-stub"
             invocation_log = tmp / "stub-invocations.log"
-            # Stub sleeps briefly to keep the backgrounded child alive
-            # past the launcher's exit, which is the realistic detached
-            # surface (PPID-1 reparenting on success).
+            # The launcher decides success from the ``started`` token the
+            # real ``start --scheduled`` writes to ``spawn-outcome`` (R6/R8),
+            # NOT from the stub's exit code. Emit the token so the
+            # discriminator branch resolves to the success path.
             _write_cortex_stub(
                 cortex_bin,
                 exit_code=0,
                 sleep_seconds=2.0,
                 log_path=invocation_log,
+                spawn_outcome_token="started",
+                session_dir=session_dir,
             )
 
             _render_launcher(
