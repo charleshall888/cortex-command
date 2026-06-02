@@ -2,7 +2,7 @@
 feature: pre-commit-gates-silently-skip-deep
 parent_backlog_uuid: 68318507-7d0f-4d6a-9de3-e896c9438481
 parent_backlog_id: 282
-artifacts: ["research", "spec", "plan"]
+artifacts: ["research", "spec", "plan", "review"]
 tags: []
 created: 2026-06-02
 updated: 2026-06-02
