@@ -160,9 +160,7 @@ On user approval, execute these steps in order:
 
    **Error**: If `git add` or `git commit` fails, report: "Batch spec commit failed: {error}. Proceeding without committing batch spec sections — they may be extracted during runner startup." Continue — the runner can still function without the pre-commit.
 
-5. **Log session start**: Call `log_event()` from `cortex_command.overnight.events` with `event='session_start'`, `round=1`, and `details` including the session ID, feature count, and time limit. Pass `log_path=state_dir / "overnight-events.log"` so the event log lands in the MC lifecycle session directory alongside the other session artifacts. Note: the parameter is `event` (not `event_type`) and event names are lowercase strings (e.g., `'session_start'`, not `'SESSION_START'`).
-
-   **Error**: If `log_event()` fails, report: "Failed to log session start event: {error}." Continue — logging failure is non-fatal.
+5. **Session start logging (deferred to the launch branch)**: Do **not** log `session_start` here. The prep-time `session_start` log is gated to the **run-now** branch of step 7 only (see sub-step 7's "Run now" path) — when the runner launches immediately, `LIFECYCLE_SESSION_ID` is unset in this prep context, so logging here would tag the event `session_id:"manual"` and the runner re-logs the real `session_start` at fire. On the **schedule** branch, do not pre-log at all: the fire happens ~hours later and the runner is the sole author of the single `session_start` (logged with the real session id at fire time). This avoids the early/duplicate `session_start` that a scheduled run would otherwise produce.
 
 6. **Launch the dashboard** (if not already running): Check whether the dashboard is live by reading `${XDG_CACHE_HOME:-$HOME/.cache}/cortex/dashboard.pid`. If the file exists and the stored PID is alive (`kill -0 $(cat "${XDG_CACHE_HOME:-$HOME/.cache}/cortex/dashboard.pid")` exits 0), the dashboard is already running — note the URL and skip launch. Otherwise, instruct the user to run `cortex dashboard` (installer-tier) or `just dashboard` (clone-only) in a separate terminal before starting the runner, or explain that they can launch it at any time during the session. Poll `GET http://localhost:8080/health` for a 200 response (up to 5 seconds, 1-second intervals); if successful, note "Dashboard available at http://localhost:8080" in the session start message.
 
@@ -179,7 +177,9 @@ On user approval, execute these steps in order:
 
     > **Usage context (dormant)**: No programmatic access to Claude Code's subscription usage data (remaining tokens, reset time) currently exists from within an agent context. When such access becomes available (e.g., a `/usage` API, a `usage-cache.json` file, or an environment variable), auto-display it alongside the scheduling prompt to help the user choose a launch time. Until then, no usage information is shown.
 
-    **Run now (option 1)**: Execute via Bash tool with `dangerouslyDisableSandbox: true` (substitute actual `{session_id}` and time limit):
+    **Run now (option 1)**: First, log the prep-time `session_start` (run-now branch only): call `log_event()` from `cortex_command.overnight.events` with `event='session_start'`, `round=1`, and `details` including the session ID, feature count, and time limit. Pass `log_path=state_dir / "overnight-events.log"` so the event log lands in the MC lifecycle session directory alongside the other session artifacts. Note: the parameter is `event` (not `event_type`) and event names are lowercase strings (e.g., `'session_start'`, not `'SESSION_START'`). **Error**: If `log_event()` fails, report: "Failed to log session start event: {error}." Continue — logging failure is non-fatal. (The schedule branch does NOT perform this log — the runner is the sole fire-time author of the single `session_start`.)
+
+    Then execute via Bash tool with `dangerouslyDisableSandbox: true` (substitute actual `{session_id}` and time limit):
 
     ```
     cortex overnight start --state $CORTEX_COMMAND_ROOT/cortex/lifecycle/sessions/{session_id}/overnight-state.json --time-limit 21600

@@ -72,11 +72,11 @@ Operational sequence — execute in order. Full per-step detail (error handling,
    - 7.2 `bootstrap_session(selection, plan_content)` — writes `overnight-state.json`, `overnight-plan.md`, `session.json`; creates worktree at `$TMPDIR/overnight-worktrees/{session_id}/` on branch `overnight/{session_id}`.
    - 7.3 `latest-overnight` symlink — deferred to runner startup.
    - 7.4 `extract_batch_specs(state, worktree_path)` — stage and commit returned paths on the integration branch.
-   - 7.5 `log_event(event='session_start', round=1, ...)` from `cortex_command.overnight.events` (lowercase event names; param is `event`, not `event_type`).
+   - 7.5 Do **not** log `session_start` here — it is gated to the run-now branch of 7.7 (where `LIFECYCLE_SESSION_ID` is unset, so the prep log would be `session_id:"manual"` and the runner re-logs the real one at fire). The schedule branch reaches the launch without pre-logging; the runner is the sole fire-time author of the single `session_start`.
    - 7.6 Launch dashboard if not running; poll `localhost:8080/health`. Dashboard is optional.
    - 7.7 Ask run-now vs. schedule-for-later. Run via Bash with `dangerouslyDisableSandbox: true`:
-     - Run now: `cortex overnight start --state $CORTEX_COMMAND_ROOT/cortex/lifecycle/sessions/{session_id}/overnight-state.json --time-limit 21600`
-     - Schedule: `cortex overnight schedule <target-time> --state $CORTEX_COMMAND_ROOT/cortex/lifecycle/sessions/{session_id}/overnight-state.json`
+     - Run now: log the prep-time `session_start` first — `log_event(event='session_start', round=1, ...)` from `cortex_command.overnight.events` (lowercase event names; param is `event`, not `event_type`) — then `cortex overnight start --state $CORTEX_COMMAND_ROOT/cortex/lifecycle/sessions/{session_id}/overnight-state.json --time-limit 21600`.
+     - Schedule (no prep-time `session_start` log): `cortex overnight schedule <target-time> --state $CORTEX_COMMAND_ROOT/cortex/lifecycle/sessions/{session_id}/overnight-state.json`
    - 7.8 Inform the user; the runner takes over from here.
 
 ## Resume Flow (`/overnight resume`)
