@@ -14,6 +14,8 @@ assert the resolved ``integration_base_path``.
 
 from __future__ import annotations
 
+import asyncio
+import json
 import subprocess
 import tempfile
 import unittest
@@ -456,7 +458,7 @@ class TestSilentWorkerExitReport(unittest.IsolatedAsyncioTestCase):
         # task 2 returns ("complete", None, None).
         exit_report_call_count = 0
 
-        def _exit_report_side_effect(feature, task_number, worktree_path=None):
+        def _exit_report_side_effect(feature, task_number, worktree_path=None, **kwargs):
             if task_number == 1:
                 return (None, None, None)
             return ("complete", None, None)
@@ -599,6 +601,146 @@ class TestSilentWorkerExitReport(unittest.IsolatedAsyncioTestCase):
         finally:
             import shutil
             shutil.rmtree("cortex/lifecycle/test-feat", ignore_errors=True)
+
+
+class TestRootResolvedLifecycleReads:
+    """Task 7: the dispatch path's plan read and ``read_criticality`` read
+    resolve against ``_resolve_user_project_root()`` (via ``CORTEX_REPO_ROOT``),
+    not the CWD.
+
+    Reproduces the production env-set / CWD-divergent branch: ``CORTEX_REPO_ROOT``
+    points at a fixture root containing ``cortex/lifecycle/{feature}/`` while the
+    process CWD is a *different* directory. A pre-fix dispatch path would read
+    ``cortex/lifecycle/{feature}/plan.md`` relative to the divergent CWD (missing →
+    parse error) and ``read_criticality`` would fall back to the ``medium`` default.
+    """
+
+    def _write_fixture(self, root: Path, feature: str, criticality: str) -> None:
+        lifecycle = root / "cortex" / "lifecycle" / feature
+        lifecycle.mkdir(parents=True, exist_ok=True)
+        (lifecycle / "plan.md").write_text(
+            "# Plan: "
+            + feature
+            + "\n\n## Overview\nDo a thing.\n\n"
+            + "### Task 1: do something\n"
+            + "- **Files**: a.py\n"
+            + "- **Depends on**: None\n"
+            + "- **Complexity**: simple\n",
+            encoding="utf-8",
+        )
+        (lifecycle / "events.log").write_text(
+            json.dumps(
+                {
+                    "event": "lifecycle_start",
+                    "feature": feature,
+                    "criticality": criticality,
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+    def test_env_set_cwd_divergent_reads_resolve_against_root(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        feature = "root-resolve-feat"
+        declared_criticality = "critical"  # NOT the "medium" default
+
+        # Fixture root holds the lifecycle dir; CWD diverges to an empty dir.
+        repo_root = tmp_path / "repo-root"
+        elsewhere = tmp_path / "elsewhere"
+        elsewhere.mkdir()
+        self._write_fixture(repo_root, feature, declared_criticality)
+
+        # Reproduce the production branch: env set, CWD elsewhere.
+        monkeypatch.setenv("CORTEX_REPO_ROOT", str(repo_root))
+        monkeypatch.chdir(elsewhere)
+
+        # read_criticality is lru_cached on the events.log stat key; clear to
+        # avoid cross-test contamination on the (path, exists, mtime, size) key.
+        import cortex_command.common as common_module
+        common_module._read_criticality_inner.cache_clear()
+
+        session_dir = tmp_path / "session"
+        session_dir.mkdir()
+        config = BatchConfig(
+            batch_id=1,
+            plan_path=session_dir / "plan.md",
+            overnight_events_path=session_dir / "overnight.log",
+            pipeline_events_path=session_dir / "pipeline.log",
+            overnight_state_path=session_dir / "state.json",
+            session_id="test-session",
+            session_dir=session_dir,
+        )
+
+        overnight_state = OvernightState(
+            session_id="test-session",
+            integration_worktrees={},
+            integration_branches={},
+            features={feature: OvernightFeatureStatus(status="pending")},
+        )
+
+        captured: dict = {}
+
+        async def _capture(**kwargs):
+            captured.update(kwargs)
+            return RetryResult(
+                success=True,
+                attempts=1,
+                final_output="done",
+                paused=False,
+                idempotency_skipped=False,
+            )
+
+        mock_retry = AsyncMock(side_effect=_capture)
+
+        # Real parse_feature_plan and real read_criticality run against the
+        # fixture root — only the dispatch-incidental helpers are mocked.
+        with patch.object(
+            feature_executor_module, "load_state", return_value=overnight_state
+        ), patch.object(
+            feature_executor_module, "retry_task", new=mock_retry
+        ), patch.object(
+            feature_executor_module,
+            "_read_exit_report",
+            return_value=("complete", None, None),
+        ), patch.object(
+            feature_executor_module, "mark_task_done_in_plan"
+        ), patch.object(
+            feature_executor_module, "pipeline_log_event"
+        ), patch.object(
+            feature_executor_module, "overnight_log_event"
+        ), patch.object(
+            feature_executor_module, "_render_template", return_value="stub"
+        ), patch.object(
+            feature_executor_module, "read_events", return_value=[]
+        ), patch.object(
+            subprocess,
+            "run",
+            return_value=MagicMock(returncode=0, stdout="0\n", stderr=""),
+        ):
+            result = asyncio.run(
+                execute_feature(
+                    feature=feature,
+                    worktree_path=tmp_path / "worktree",
+                    config=config,
+                    repo_path=None,
+                )
+            )
+
+        # The plan parsed (no parse_error) — it was found under the fixture root,
+        # not the divergent CWD.
+        assert result.parse_error is False, (
+            f"plan read failed under divergent CWD: {result.error!r}"
+        )
+        assert captured.get("complexity") == "simple", (
+            "plan was not parsed from the root-resolved path"
+        )
+        # read_criticality returned the declared value, not the medium default.
+        assert captured.get("criticality") == declared_criticality, (
+            f"expected {declared_criticality!r}, got "
+            f"{captured.get('criticality')!r} (medium default = CWD-relative bug)"
+        )
 
 
 if __name__ == "__main__":

@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from cortex_command.overnight.orchestrator import BatchConfig
 
 from cortex_command.common import (
+    _resolve_user_project_root,
     compute_dependency_batches,
     mark_task_done_in_plan,
     read_criticality,
@@ -86,42 +87,67 @@ def _render_template(template_path: Path, variables: dict[str, str]) -> str:
     return template
 
 
-def _get_spec_path(feature: str, spec_path: Optional[str] = None) -> str:
+def _resolve_lifecycle_base() -> Path:
+    """Return the project-root-anchored ``cortex/lifecycle`` base directory.
+
+    Resolves against ``_resolve_user_project_root()`` (which honors
+    ``CORTEX_REPO_ROOT`` verbatim in the overnight path) so per-feature
+    lifecycle reads/writes do not resolve relative to a non-home CWD or
+    integration worktree.
+    """
+    return _resolve_user_project_root() / "cortex" / "lifecycle"
+
+
+def _get_spec_path(
+    feature: str,
+    spec_path: Optional[str] = None,
+    *,
+    lifecycle_base: Path = Path("cortex/lifecycle"),
+) -> str:
     """Return an absolute path to the spec file for a feature.
 
     Resolution order: explicit *spec_path* first, then the per-feature
-    lifecycle spec.  Always returns an absolute path string (even when the
-    underlying file might not exist).
+    lifecycle spec under *lifecycle_base*.  Always returns an absolute path
+    string (even when the underlying file might not exist).
     """
     if spec_path:
         p = Path(spec_path)
         if p.exists():
             return str(p.resolve())
-    lifecycle_path = Path(f"cortex/lifecycle/{feature}/spec.md")
+    lifecycle_path = lifecycle_base / feature / "spec.md"
     return str(lifecycle_path.resolve())
 
 
-def _read_spec_content(feature: str, spec_path: Optional[str] = None) -> str:
+def _read_spec_content(
+    feature: str,
+    spec_path: Optional[str] = None,
+    *,
+    lifecycle_base: Path = Path("cortex/lifecycle"),
+) -> str:
     """Read and return the full text of the spec file for a feature.
 
     Uses `_get_spec_path` for resolution, then reads the file.  Returns a
     fallback string when the resolved path does not exist on disk.
     """
-    resolved = _get_spec_path(feature, spec_path)
+    resolved = _get_spec_path(feature, spec_path, lifecycle_base=lifecycle_base)
     p = Path(resolved)
     if p.exists():
         return p.read_text(encoding="utf-8")
     return "(No specification file found.)"
 
 
-def _read_learnings(feature: str) -> str:
+def _read_learnings(
+    feature: str,
+    *,
+    lifecycle_base: Path = Path("cortex/lifecycle"),
+) -> str:
     parts: list[str] = []
-    progress_path = Path(f"cortex/lifecycle/{feature}/learnings/progress.txt")
+    progress_path = lifecycle_base / feature / "learnings" / "progress.txt"
     if progress_path.exists():
         content = progress_path.read_text(encoding="utf-8")
         if content.strip():
             parts.append(content)
-    note_path = Path(f"cortex/lifecycle/{feature}/learnings/orchestrator-note.md")
+    note_path = lifecycle_base / feature / "learnings" / "orchestrator-note.md"
     if note_path.exists():
         content = note_path.read_text(encoding="utf-8")
         if content.strip():
@@ -143,16 +169,18 @@ def _read_exit_report(
     feature: str,
     task_number: int,
     worktree_path: Optional[Path] = None,
+    *,
+    lifecycle_base: Path = Path("cortex/lifecycle"),
 ) -> tuple[str | None, str | None, str | None]:
     """Read a worker exit report for a single task.
 
     Returns ``(action, reason, question)`` extracted from
-    ``cortex/lifecycle/{feature}/exit-reports/{task_number}.json``.
+    ``{lifecycle_base}/{feature}/exit-reports/{task_number}.json``.
 
     Checks two locations in order:
-    1. Primary: ``cortex/lifecycle/{feature}/exit-reports/{task_number}.json``
-       relative to the batch runner's CWD (the integration worktree in overnight
-       sessions).
+    1. Primary: ``{lifecycle_base}/{feature}/exit-reports/{task_number}.json``
+       resolved against the project root (the integration worktree in overnight
+       sessions when *lifecycle_base* is root-anchored).
     2. Fallback: ``worktree_path / "cortex" / "lifecycle" / feature / "exit-reports" /
        "{task_number}.json"`` — the absolute path inside the feature worktree,
        used when the worker wrote artifacts to its own CWD rather than the
@@ -162,7 +190,7 @@ def _read_exit_report(
     contains malformed JSON, is missing the ``action`` key, or declares an
     unrecognised action string.
     """
-    report_path = Path(f"cortex/lifecycle/{feature}/exit-reports/{task_number}.json")
+    report_path = lifecycle_base / feature / "exit-reports" / f"{task_number}.json"
     if not report_path.is_file():
         if worktree_path is not None:
             fallback_path = worktree_path / "cortex" / "lifecycle" / feature / "exit-reports" / f"{task_number}.json"
@@ -199,6 +227,7 @@ async def _handle_failed_task(
     round: int = 0,
     log_path: Path = Path("cortex/lifecycle/overnight-events.log"),
     *,
+    lifecycle_base: Path = Path("cortex/lifecycle"),
     deferred_dir: Path = DEFAULT_DEFERRED_DIR,
 ) -> Optional[FeatureResult]:
     """Handle a failed task via brain agent triage.
@@ -220,7 +249,7 @@ async def _handle_failed_task(
         feature=feature,
         task_description=task.description,
         retry_count=getattr(retry_result, 'attempts', 0),
-        learnings=_read_learnings(feature),
+        learnings=_read_learnings(feature, lifecycle_base=lifecycle_base),
         spec_excerpt=spec_excerpt,
         last_attempt_output=getattr(retry_result, 'final_output', '') or '',
         has_dependents=has_dependents,
@@ -245,7 +274,7 @@ async def _handle_failed_task(
 
     # Map BrainDecision to return values
     if decision.action == BrainAction.SKIP:
-        mark_task_done_in_plan(Path(f"cortex/lifecycle/{feature}/plan.md"), task.number)
+        mark_task_done_in_plan(lifecycle_base / feature / "plan.md", task.number)
         return None  # Continue to next task
 
     if decision.action == BrainAction.DEFER:
@@ -374,6 +403,11 @@ async def execute_feature(
     Uses ConcurrencyManager for throttle-aware dispatch if provided.
     """
     integration_branches = integration_branches or {}
+    # Resolve all per-feature lifecycle reads/writes against the project root
+    # (honors CORTEX_REPO_ROOT in the overnight path) so a non-home CWD or
+    # integration worktree does not yield missing-plan parse errors or the
+    # `medium` criticality default.
+    lifecycle_base = _resolve_lifecycle_base()
     # --- Conflict recovery policy (ticket 157) ---
     # At batch entry, check whether a merge_conflict_classified event exists for
     # this feature.  If so, apply the tiered decision: trivial fast-path first,
@@ -526,7 +560,7 @@ async def execute_feature(
                         )
     # --- End conflict recovery policy ---
 
-    plan_path = Path(f"cortex/lifecycle/{feature}/plan.md")
+    plan_path = lifecycle_base / feature / "plan.md"
     plan_hash = _compute_plan_hash(plan_path)
     try:
         feature_plan = parse_feature_plan(plan_path)
@@ -538,9 +572,9 @@ async def execute_feature(
             parse_error=True,
         )
 
-    spec_path_resolved = _get_spec_path(feature, spec_path)
-    spec_content = _read_spec_content(feature, spec_path)
-    learnings_dir = Path(f"cortex/lifecycle/{feature}/learnings")
+    spec_path_resolved = _get_spec_path(feature, spec_path, lifecycle_base=lifecycle_base)
+    spec_content = _read_spec_content(feature, spec_path, lifecycle_base=lifecycle_base)
+    learnings_dir = lifecycle_base / feature / "learnings"
 
     try:
         batches = compute_dependency_batches(feature_plan.tasks)
@@ -562,12 +596,12 @@ async def execute_feature(
                 f"- **Complexity**: {task.complexity}",
             ]
             plan_task = "\n".join(plan_task_lines)
-            progress_path = Path(f"cortex/lifecycle/{feature}/learnings/progress.txt")
-            note_path = Path(f"cortex/lifecycle/{feature}/learnings/orchestrator-note.md")
+            progress_path = lifecycle_base / feature / "learnings" / "progress.txt"
+            note_path = lifecycle_base / feature / "learnings" / "orchestrator-note.md"
             has_progress = progress_path.exists() and progress_path.read_text(encoding="utf-8").strip()
             has_note = note_path.exists() and note_path.read_text(encoding="utf-8").strip()
             if has_progress or has_note:
-                learnings = _read_learnings(feature)
+                learnings = _read_learnings(feature, lifecycle_base=lifecycle_base)
             else:
                 learnings = "(No prior learnings.)"
 
@@ -582,7 +616,7 @@ async def execute_feature(
                 "integration_worktree_path": str(Path.cwd()),
             })
 
-            activity_log_path = Path(f"cortex/lifecycle/{feature}/agent-activity.jsonl")
+            activity_log_path = lifecycle_base / feature / "agent-activity.jsonl"
 
             token = _make_idempotency_token(feature, task.number, plan_hash)
             if _check_task_completed(config.pipeline_events_path, token):
@@ -621,7 +655,7 @@ async def execute_feature(
                 task=task.description,
                 worktree_path=worktree_path,
                 complexity=task.complexity,
-                criticality=read_criticality(feature),
+                criticality=read_criticality(feature, lifecycle_base=lifecycle_base),
                 system_prompt=system_prompt,
                 learnings_dir=learnings_dir,
                 log_path=config.pipeline_events_path,
@@ -705,6 +739,7 @@ async def execute_feature(
                     spec_content, result, cb_state_eff, manager,
                     round=config.batch_id,
                     log_path=config.overnight_events_path,
+                    lifecycle_base=lifecycle_base,
                     deferred_dir=deferred_dir,
                 )
                 if brain_result:
@@ -726,12 +761,13 @@ async def execute_feature(
                 )
 
             if result.idempotency_skipped:
-                mark_task_done_in_plan(Path(f"cortex/lifecycle/{feature}/plan.md"), task.number)
+                mark_task_done_in_plan(lifecycle_base / feature / "plan.md", task.number)
                 continue
 
             # --- Exit-report validation (R1, R2, R3) ---
             report_action, report_reason, report_question = _read_exit_report(
                 feature, task.number, worktree_path=worktree_path,
+                lifecycle_base=lifecycle_base,
             )
 
             if report_action == "question" and report_question:
@@ -773,8 +809,8 @@ async def execute_feature(
             if report_action is None or (
                 report_action == "question" and not report_question
             ):
-                report_path = Path(
-                    f"cortex/lifecycle/{feature}/exit-reports/{task.number}.json"
+                report_path = (
+                    lifecycle_base / feature / "exit-reports" / f"{task.number}.json"
                 )
                 if report_path.is_file():
                     overnight_log_event(
@@ -797,7 +833,7 @@ async def execute_feature(
 
             # action == "complete", missing, or malformed — fall through
             total_commits += max(0, task_commit_count)
-            mark_task_done_in_plan(Path(f"cortex/lifecycle/{feature}/plan.md"), task.number)
+            mark_task_done_in_plan(lifecycle_base / feature / "plan.md", task.number)
 
     # All tasks passed — check for silent-worker bookkeeping failures
     if silent_worker_error is not None and total_commits == 0:
