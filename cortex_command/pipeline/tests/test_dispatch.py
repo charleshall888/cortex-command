@@ -34,6 +34,7 @@ from cortex_command.pipeline.tests.conftest import _install_sdk_stub
 _install_sdk_stub()
 
 import cortex_command.pipeline.dispatch as _dispatch_module
+from cortex_command.pipeline.parser import parse_feature_plan
 
 # Pull stub exception types so isinstance checks match exactly.
 _sdk = sys.modules["claude_agent_sdk"]
@@ -958,6 +959,63 @@ def test_effort_runtime_guard_rejects_unsupported_effort_for_model(monkeypatch):
             skill="implement",
             model="haiku",
         )
+
+
+# ---------------------------------------------------------------------------
+# Tests: dispatch enum guard remains an invariant backstop after parser
+# normalization of out-of-vocabulary complexity (OOV-complexity hardening)
+# ---------------------------------------------------------------------------
+
+def test_resolve_model_raises_on_directly_passed_unknown_tier():
+    """The enum guard at ``resolve_model`` still fires for a directly-passed
+    out-of-vocabulary tier (R3 invariant backstop preserved).
+
+    Parser-boundary normalization (Task 1) coerces a present-but-OOV
+    ``**Complexity**`` to ``complex`` before it reaches dispatch — but the
+    ``resolve_model`` ``ValueError`` is an independent invariant assertion that
+    must keep firing for any unknown value reaching it directly. ``"medium"``
+    is the canonical OOV value: it is a valid *criticality* but not a member of
+    the ``{trivial, simple, complex}`` complexity vocabulary.
+    """
+    with pytest.raises(ValueError, match="Unknown complexity tier"):
+        _dispatch_module.resolve_model("medium", "high")
+
+
+def test_normalized_plan_never_triggers_resolve_model_guard(tmp_path):
+    """An end-to-end normalized plan never reaches the enum guard on the normal
+    path: a present-but-OOV ``**Complexity**: medium`` is normalized to
+    ``complex`` by ``parse_feature_plan`` (Task 1), so ``resolve_model`` on the
+    parsed tier returns without raising.
+
+    This proves the guard is a backstop, not a live failure mode, once
+    normalization is in place.
+    """
+    plan = tmp_path / "plan.md"
+    plan.write_text(
+        "# Plan: OOV complexity normalization\n"
+        "\n"
+        "## Overview\n"
+        "\n"
+        "Exercise parser-boundary normalization of an OOV complexity tier.\n"
+        "\n"
+        "## Tasks\n"
+        "\n"
+        "### Task 1: Do the thing\n"
+        "- **Files**: foo.py\n"
+        "- **Complexity**: medium\n",
+        encoding="utf-8",
+    )
+
+    parsed = parse_feature_plan(plan)
+
+    # Sanity: the parser recorded the OOV coercion and normalized to complex.
+    assert parsed.normalized_complexities == [{"task": 1, "original": "medium"}]
+    task = parsed.tasks[0]
+    assert task.complexity == "complex"
+
+    # The normalized tier reaches resolve_model without tripping the guard.
+    model = _dispatch_module.resolve_model(task.complexity, "high")
+    assert model in {"haiku", "sonnet", "opus"}
 
 
 if __name__ == "__main__":
