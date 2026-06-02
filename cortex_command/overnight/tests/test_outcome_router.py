@@ -17,6 +17,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from cortex_command.overnight.constants import CIRCUIT_BREAKER_THRESHOLD, SYSTEMIC_FAILURE_THRESHOLD
 from cortex_command.overnight.outcome_router import (
     OutcomeContext,
+    _apply_feature_result,
     _find_backlog_item_path,
     _write_back_to_backlog,
     apply_feature_result,
@@ -782,6 +783,148 @@ class TestRecoverableWriteBack(unittest.TestCase):
         self.assertNotRegex(text, r"(?m)^status: backlog$")
         # The recovery branch is recorded on the item.
         self.assertIn("pipeline/recoverable-feat", text)
+
+
+class TestMergeConflictRecoverableRouting(unittest.TestCase):
+    """Task 4 — genuine merge conflict routes to recoverable deferred.
+
+    Drives ``_apply_feature_result`` (the convergent terminus) with a mocked
+    ``merge_feature`` per the test-fidelity requirement, so routing is computed
+    from the merge result the function itself produces, not a hand-built one.
+    """
+
+    def _patches(self, merge_result):
+        from unittest.mock import patch as _patch
+
+        return (
+            _patch(
+                "cortex_command.overnight.outcome_router._get_changed_files",
+                return_value=["src/a.py"],
+            ),
+            _patch(
+                "cortex_command.overnight.outcome_router.merge_feature",
+                return_value=merge_result,
+            ),
+            _patch(
+                "cortex_command.overnight.outcome_router._write_back_to_backlog",
+            ),
+            _patch("cortex_command.overnight.outcome_router.overnight_log_event"),
+        )
+
+    def test_merge_conflict_recoverable(self):
+        """conflict=True → features_deferred w/ recoverable_branch, not paused."""
+        ctx = _make_ctx(pauses=0)
+        ctx.worktree_branches = {"feat-a": "pipeline/feat-a-2"}
+        merge_result = MagicMock(
+            success=False, conflict=True, error="merge_conflict", classification=None
+        )
+        p_changed, p_merge, p_wb, p_log = self._patches(merge_result)
+        with p_changed, p_merge, p_wb as m_wb, p_log:
+            _apply_feature_result(
+                "feat-a", FeatureResult(name="feat-a", status="completed"), ctx
+            )
+
+        self.assertEqual(ctx.batch_result.features_paused, [])
+        self.assertEqual(len(ctx.batch_result.features_deferred), 1)
+        entry = ctx.batch_result.features_deferred[0]
+        self.assertEqual(entry["name"], "feat-a")
+        self.assertEqual(entry["recoverable_branch"], "pipeline/feat-a-2")
+        # Recoverable routing must NOT feed the circuit breaker.
+        self.assertEqual(ctx.cb_state.consecutive_pauses, 0)
+        self.assertEqual(ctx.cb_state.systemic_pauses_in_batch, 0)
+        # Write-back called with status 'deferred' + recoverable_branch.
+        deferred_wbs = [
+            c for c in m_wb.call_args_list
+            if len(c.args) >= 2 and c.args[1] == "deferred"
+        ]
+        self.assertEqual(len(deferred_wbs), 1)
+        self.assertEqual(
+            deferred_wbs[0].kwargs.get("recoverable_branch"), "pipeline/feat-a-2"
+        )
+
+    def test_non_conflict_still_paused(self):
+        """conflict=False systemic error → paused + systemic counter bumped."""
+        ctx = _make_ctx(pauses=0)
+        merge_result = MagicMock(
+            success=False,
+            conflict=False,
+            error="infrastructure_failure",
+            classification=None,
+        )
+        p_changed, p_merge, p_wb, p_log = self._patches(merge_result)
+        with p_changed, p_merge, p_wb, p_log:
+            _apply_feature_result(
+                "feat-a", FeatureResult(name="feat-a", status="completed"), ctx
+            )
+
+        self.assertEqual(ctx.batch_result.features_deferred, [])
+        self.assertEqual(len(ctx.batch_result.features_paused), 1)
+        self.assertEqual(ctx.cb_state.consecutive_pauses, 1)
+        self.assertEqual(ctx.cb_state.systemic_pauses_in_batch, 1)
+
+    def _route_conflict_to_state(self, worktree_branches):
+        """Run the conflict path, then flow the entry through _map_results_to_state."""
+        import tempfile
+        from pathlib import Path as _Path
+
+        from cortex_command.overnight.map_results import _map_results_to_state
+        from cortex_command.overnight.state import (
+            OvernightState,
+            load_state,
+            save_state,
+        )
+
+        ctx = _make_ctx()
+        ctx.worktree_branches = dict(worktree_branches)
+        merge_result = MagicMock(
+            success=False, conflict=True, error="merge_conflict", classification=None
+        )
+        p_changed, p_merge, p_wb, p_log = self._patches(merge_result)
+        with p_changed, p_merge, p_wb, p_log:
+            _apply_feature_result(
+                "feat-a", FeatureResult(name="feat-a", status="completed"), ctx
+            )
+
+        results = {
+            "features_merged": [],
+            "features_paused": [],
+            "features_deferred": list(ctx.batch_result.features_deferred),
+            "features_failed": [],
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            state_path = _Path(tmp) / "state.json"
+            save_state(OvernightState(session_id="s", features={}), state_path)
+            _map_results_to_state(results, state_path, batch_id=1)
+            loaded = load_state(state_path)
+            return loaded.features["feat-a"].recoverable_branch
+
+    def test_recoverable_branch_suffix(self):
+        """A suffixed worktree branch persists verbatim through the carrier."""
+        persisted = self._route_conflict_to_state({"feat-a": "pipeline/feat-a-2"})
+        self.assertEqual(persisted, "pipeline/feat-a-2")
+
+    def test_recoverable_branch_absent(self):
+        """No worktree branch → persisted None, never a bare reconstruction."""
+        persisted = self._route_conflict_to_state({})
+        self.assertIsNone(persisted)
+
+    def test_recoverable_not_redispatched(self):
+        """A recoverable deferred feature is excluded from the pending count."""
+        from cortex_command.overnight.runner import _count_pending
+        from cortex_command.overnight.state import (
+            OvernightFeatureStatus,
+            OvernightState,
+        )
+
+        state = OvernightState(
+            session_id="s",
+            features={
+                "feat-a": OvernightFeatureStatus(
+                    status="deferred", recoverable_branch="pipeline/feat-a-2"
+                ),
+            },
+        )
+        self.assertEqual(_count_pending(state), 0)
 
 
 if __name__ == "__main__":

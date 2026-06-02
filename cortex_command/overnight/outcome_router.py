@@ -679,13 +679,21 @@ def _apply_feature_result(
                 ctx.config.overnight_events_path,
                 backlog_id=ctx.backlog_ids.get(name),
             )
-        else:
+        elif merge_result.conflict:
+            # Genuine merge conflict that exhausted automated repair: the
+            # feature is BUILT but merge-blocked. Route to a recoverable
+            # `deferred` disposition carrying its actual branch rather than
+            # `paused` — it must not auto-retry, must not feed the systemic
+            # circuit-breaker, and must not be counted as a pause. The branch
+            # is `actual_branch` when known (suffix-correct, e.g.
+            # pipeline/<name>-2) and None otherwise — never a bare
+            # f"pipeline/{name}" reconstruction. Safe without a has-commits
+            # assertion *only while* this terminus stays gated on
+            # conflict=True: an empty pipeline/<name>-N branch merges cleanly
+            # (conflict=False) and never reaches here.
             error = merge_result.error or "merge failed"
-            ctx.batch_result.features_paused.append({"name": name, "error": error})
-            ctx.cb_state.consecutive_pauses += 1
-            if error in _SYSTEMIC_ERROR_TYPES:
-                ctx.cb_state.systemic_pauses_in_batch += 1
-            if merge_result.conflict and merge_result.classification is not None:
+            recoverable_branch = actual_branch or None
+            if merge_result.classification is not None:
                 overnight_log_event(
                     "merge_conflict_classified",
                     ctx.config.batch_id,
@@ -696,6 +704,34 @@ def _apply_feature_result(
                     },
                     log_path=ctx.config.overnight_events_path,
                 )
+            ctx.batch_result.features_deferred.append({
+                "name": name,
+                "question_count": 0,
+                "recoverable_branch": recoverable_branch,
+            })
+            overnight_log_event(
+                FEATURE_DEFERRED,
+                ctx.config.batch_id,
+                feature=name,
+                details={
+                    "error": error,
+                    "conflict": True,
+                    "recoverable_branch": recoverable_branch,
+                },
+                log_path=ctx.config.overnight_events_path,
+            )
+            _write_back_to_backlog(
+                name, "deferred", ctx.config.batch_id,
+                ctx.config.overnight_events_path,
+                backlog_id=ctx.backlog_ids.get(name),
+                recoverable_branch=recoverable_branch,
+            )
+        else:
+            error = merge_result.error or "merge failed"
+            ctx.batch_result.features_paused.append({"name": name, "error": error})
+            ctx.cb_state.consecutive_pauses += 1
+            if error in _SYSTEMIC_ERROR_TYPES:
+                ctx.cb_state.systemic_pauses_in_batch += 1
             overnight_log_event(
                 FEATURE_PAUSED,
                 ctx.config.batch_id,
