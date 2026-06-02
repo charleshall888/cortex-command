@@ -14,15 +14,59 @@ import json
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import NamedTuple, Optional
 
 from cortex_command.common import _resolve_user_project_root
 from cortex_command.overnight import ipc
 from cortex_command.overnight.state import (
+    OvernightFeatureStatus,
     latest_symlink_path,
     load_state,
     session_dir,
 )
+
+
+class FeatureBuckets(NamedTuple):
+    """Per-feature grouping for the live status view.
+
+    A feature with ``recoverable_branch`` set is the built-but-merge-blocked
+    recoverable sub-case and is bucketed into ``recoverable`` rather than
+    ``failed`` — surfaced distinctly so the operator sees it as recoverable on
+    its branch, not as a plain failure.
+    """
+
+    running: list[tuple[str, Optional[str]]]
+    pending: list[str]
+    completed: list[str]
+    failed: list[str]
+    recoverable: list[str]
+
+
+def bucket_features(features: dict[str, OvernightFeatureStatus]) -> FeatureBuckets:
+    """Group features by status for the live status view.
+
+    The ``recoverable_branch`` discriminator is checked first so a recoverable
+    feature is never lumped into ``failed``.
+    """
+    running: list[tuple[str, Optional[str]]] = []
+    pending: list[str] = []
+    completed: list[str] = []
+    failed: list[str] = []
+    recoverable: list[str] = []
+
+    for name, fs in features.items():
+        if fs.recoverable_branch is not None:
+            recoverable.append(name)
+        elif fs.status == "running":
+            running.append((name, fs.started_at))
+        elif fs.status == "pending":
+            pending.append(name)
+        elif fs.status in ("merged",):
+            completed.append(name)
+        elif fs.status in ("failed", "deferred", "paused"):
+            failed.append(name)
+
+    return FeatureBuckets(running, pending, completed, failed, recoverable)
 
 
 # ---------------------------------------------------------------------------
@@ -320,20 +364,7 @@ def render_status() -> None:
             time_remaining_str = "0s (expired)"
 
     # --- Feature grouping ---
-    running: list[tuple[str, str | None]] = []   # (name, started_at)
-    pending: list[str] = []
-    completed: list[str] = []  # merged
-    failed: list[str] = []
-
-    for name, fs in state.features.items():
-        if fs.status == "running":
-            running.append((name, fs.started_at))
-        elif fs.status == "pending":
-            pending.append(name)
-        elif fs.status in ("merged",):
-            completed.append(name)
-        elif fs.status in ("failed", "deferred", "paused"):
-            failed.append(name)
+    running, pending, completed, failed, recoverable = bucket_features(state.features)
 
     # --- Last event ---
     last_event_str = "none"
@@ -444,6 +475,13 @@ def render_status() -> None:
             if fs.error:
                 suffix += f"  error: {fs.error[:60]}"
             print(f"  - {name}{suffix}")
+
+    if recoverable:
+        print()
+        print(f"Recoverable ({len(recoverable)}):")
+        for name in recoverable:
+            fs = state.features[name]
+            print(f"  - {name}  built, merge-blocked, recoverable on {fs.recoverable_branch}")
 
 
 def main() -> None:
