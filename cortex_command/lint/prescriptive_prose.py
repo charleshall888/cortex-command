@@ -34,6 +34,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
 
+from ._globs import matches_any_glob
+
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -241,11 +243,7 @@ def gather_scan_files(root: Path) -> list[Path]:
 
 
 def _matches_scan_glob(rel_path: str) -> bool:
-    p = Path(rel_path)
-    for glob in SCAN_GLOBS:
-        if p.match(glob):
-            return True
-    return False
+    return matches_any_glob(rel_path, SCAN_GLOBS)
 
 
 def _staged_paths(root: Path) -> list[str]:

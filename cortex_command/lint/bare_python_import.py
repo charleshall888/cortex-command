@@ -48,6 +48,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
 
+from ._globs import matches_any_glob
+
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -451,15 +453,14 @@ def discover_files(roots: list[Path], staged: bool = False) -> list[Path]:
 
 
 def _matches_scan_glob(rel_path: str) -> bool:
-    """Return True if *rel_path* matches any of the corpus globs."""
-    p = Path(rel_path)
-    for glob in _SCAN_GLOBS:
-        # full_match handles recursive ** correctly; Path.match treats ** as a single
-        # component, so skills/lifecycle/references/implement.md would not match
-        # skills/**/*.md and the pre-commit hook would silently skip the corpus.
-        if p.full_match(glob):
-            return True
-    return False
+    """Return True if *rel_path* matches any of the corpus globs.
+
+    Delegates to the shared ``**``=zero-or-more-segments matcher. This replaces
+    the former 3.13-only ``PurePath`` full-match call, which raised
+    ``AttributeError`` on Python 3.12 (the floor of ``requires-python``) — the
+    shared matcher is stdlib-only and behaves identically across versions.
+    """
+    return matches_any_glob(rel_path, _SCAN_GLOBS)
 
 
 def _staged_paths(root: Path) -> list[str]:

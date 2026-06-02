@@ -22,6 +22,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Iterable
 
+from cortex_command.lint._globs import matches_any_glob
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -683,16 +685,14 @@ def _staged_paths(root: Path) -> list[str]:
 
 
 def _matches_scan_glob(rel_path: str) -> bool:
-    """True if ``rel_path`` matches any R7 glob (used by --staged)."""
-    p = Path(rel_path)
-    for glob in SCAN_GLOBS:
-        if "*" not in glob:
-            if str(p) == glob:
-                return True
-            continue
-        if p.match(glob):
-            return True
-    return False
+    """True if ``rel_path`` matches any R7 glob (used by --staged).
+
+    Delegates to the shared ``**``=zero-or-more-segments matcher, which
+    subsumes the former literal fast-path (a glob with no wildcard compiles to
+    an anchored exact match) and admits depth-1/depth-≥3 in-scope files that
+    ``Path.match`` silently dropped.
+    """
+    return matches_any_glob(rel_path, SCAN_GLOBS)
 
 
 # ---------------------------------------------------------------------------
