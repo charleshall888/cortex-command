@@ -1068,6 +1068,16 @@ def _collect_parser_nodes(tree: ast.Module) -> list[_ParserNode]:
 
     This is necessarily heuristic for complex modules; the spec says to pick
     the parser with the most ``.add_argument`` calls as the main parser.
+
+    DEFERRED (#279): (iii) helper-injected-flag AST blindness — this walker only
+    sees add_argument calls made directly in the module being parsed. If a helper
+    function in a *different* module mutates the parser (e.g. discovery.py's
+    ``_add_repo_root_arg(parser)`` which injects ``--repo-root``), those flags are
+    invisible to this walker and will not appear in the extracted ParserSurface.
+    Any invocation using a helper-injected flag will produce a false-positive E102.
+    The helper itself (``_add_repo_root_arg``) lives in ``cortex_command/discovery.py``
+    — do not search this file for it. The fix requires cross-module call-graph
+    analysis or a supplemental flag-injection registry. Filed as a separate ticket.
     """
     # Phase 1: find all ArgumentParser assignments and inline constructions.
     # We do a single flat walk; subparser tracking is best-effort.
@@ -1471,8 +1481,22 @@ def validate(
                 if not tok.startswith("-") and not _PLACEHOLDER_RE.fullmatch(tok):
                     if tok in surf.subcommands:
                         found_subcommand = tok
+                        # DEFERRED (#279): (iv) parent-flag-loss — when a subcommand is
+                        # matched, resolved_surface switches to the subparser surface and
+                        # loses parent-parser flags (those registered on the main parser
+                        # before add_subparsers). Flags that appear on the parent and are
+                        # also valid after the subcommand would be incorrectly flagged E102.
+                        # Filed as a separate ticket; the accepted_flags set below only covers
+                        # the subcommand surface. No behavior change here.
                         resolved_surface = surf.subcommands[tok]
                         break
+            # DEFERRED (#279): (i) unknown-subcommand fall-through — if the first
+            # non-flag positional token does not match any known subcommand choice,
+            # the loop above exits without setting found_subcommand and
+            # resolved_surface stays as surf (the parent). The validator then checks
+            # the token's flags against the parent-parser surface rather than
+            # emitting an unknown-subcommand error. This is a latent false-negative
+            # (unknown subcommand silently passes). Filed as a separate ticket.
 
         # Collect observed flags from the token list.
         observed_flags: list[str] = []
@@ -1488,6 +1512,15 @@ def validate(
         )
 
         # (a) Unknown flags → E102.
+        # DEFERRED (#279): (ii) allow_abbrev prefix matching — argparse defaults to
+        # allow_abbrev=True, which accepts unambiguous prefix abbreviations of long
+        # flags at runtime (e.g. `--sta` resolves to `--status`). The contract lint
+        # uses exact-match here (flag not in accepted_flags), which is the INTENDED
+        # behavior: prose examples should use the full canonical flag name. A doc
+        # that uses an abbreviated flag would be flagged E102. This is not a bug —
+        # abbreviations in docs are unclear and should be caught — but the latent
+        # risk is that a legitimate abbreviation could produce a false positive if
+        # ever needed. Filed as a separate ticket for explicit policy documentation.
         for flag in observed_flags:
             if flag not in accepted_flags:
                 if not exceptions.match(inv.binary, flag, path_str):
@@ -1690,6 +1723,14 @@ def main(argv: list[str] | None = None) -> int:
         print(err.format_text(), file=sys.stderr)
 
     # --- Gather invocations ---
+    # STALE-WHEEL PROTOCOL: The PATH console-script `cortex-check-contract` runs
+    # the installed wheel and is blind to working-tree edits. To verify against
+    # the working tree, use either:
+    #   (a) CORTEX_COMMAND_FORCE_SOURCE=1 ./bin/cortex-check-contract [flags]
+    #   (b) reinstall: uv pip install -e . && cortex-check-contract [flags]
+    # The authoritative wheel-immune signal is:
+    #   .venv/bin/pytest tests/test_check_contract.py
+    # which always runs source directly and is unaffected by stale installed wheels.
     if args.staged:
         invocations = _scan_staged(root)
     else:
