@@ -1500,6 +1500,21 @@ def _count_merged_home_repo(state: state_module.OvernightState) -> int:
     )
 
 
+def _count_built_merge_blocked_home_repo(state: state_module.OvernightState) -> int:
+    """Count home-repo features that are built-but-merge-blocked (recoverable).
+
+    Mirrors ``_count_merged_home_repo`` but keys off ``recoverable_branch``:
+    a home-repo feature whose work is built and recoverable on its branch is
+    real progress, so a session containing one must not be labeled
+    ``[ZERO PROGRESS]`` even though it merged nothing.
+    """
+    return sum(
+        1
+        for fs in state.features.values()
+        if fs.recoverable_branch is not None and fs.repo_path is None
+    )
+
+
 def _integration_commit_count(
     integration_branch: str, repo_path: Path
 ) -> int:
@@ -1687,6 +1702,7 @@ def _post_loop(
             pass
 
         mc_merged_count = _count_merged_home_repo(state)
+        mc_recoverable_count = _count_built_merge_blocked_home_repo(state)
         integration_degraded = state.integration_degraded
         commit_count = _integration_commit_count(
             integration_branch, repo_path
@@ -1714,8 +1730,10 @@ def _post_loop(
             # Determine DRAFT_FLAG, PR_TITLE, PR body
             # (runner.sh:1177-1194; Edge Cases line 245).
             draft_flag = ""
-            if mc_merged_count == 0:
+            if mc_merged_count == 0 and mc_recoverable_count == 0:
                 # [ZERO PROGRESS] draft PR — self-enforcing merge block.
+                # Built-but-merge-blocked recoverable home work is real
+                # progress, so it lifts the inner label even with 0 merges.
                 draft_flag = "--draft"
                 pr_title = (
                     f"[ZERO PROGRESS] Overnight session: "
@@ -1865,7 +1883,9 @@ def _post_loop(
                         state.integration_pr_flipped_once
                     )
                     mc_intended_draft = (
-                        "true" if mc_merged_count == 0 else "false"
+                        "true"
+                        if mc_merged_count == 0 and mc_recoverable_count == 0
+                        else "false"
                     )
 
                     if mc_flipped_once:
