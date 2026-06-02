@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Optional
 
 from cortex_command.common import _resolve_user_project_root
+from cortex_command.overnight import ipc
 from cortex_command.overnight.state import (
     latest_symlink_path,
     load_state,
@@ -91,6 +92,49 @@ def _resolve_events_log(session_id: str) -> Path | None:
         return per_session
 
     return None
+
+
+def _is_runner_pid_live(session_dir_path: Path) -> bool:
+    """Return True iff a live runner has claimed ``runner.pid`` in the dir.
+
+    Reads the explicit per-session ``runner.pid`` and validates it via
+    :func:`ipc.verify_runner_pid`. Returns False when no PID file exists,
+    the payload is malformed, or the recorded process is not alive.
+    """
+    pid_data = ipc.read_runner_pid(session_dir_path)
+    if pid_data is None:
+        return False
+    return ipc.verify_runner_pid(pid_data)
+
+
+def _is_scheduled_dormant(state, session_dir_path: Path, now: datetime) -> bool:
+    """Return True iff the session should render as scheduled-dormant.
+
+    Display-only state inferred at read time (Task 11 / R12). The predicate
+    is **conjunctive** (F5) so a just-fired run — which clears
+    ``scheduled_start`` (R13) and/or claims ``runner.pid`` — is never shown
+    dormant despite clock skew near the fire boundary:
+
+      1. ``scheduled_start`` is set and strictly in the future, AND
+      2. no live ``runner.pid`` claims the session, AND
+      3. the session is not executing or complete.
+
+    No value is added to the persisted ``PHASES`` tuple and no new ``phase``
+    field value is written — the dormant state is purely a render-time
+    inference, mirroring the ``starting`` display precedent.
+    """
+    scheduled_start = getattr(state, "scheduled_start", None)
+    if not scheduled_start:
+        return False
+    try:
+        fires_at = _parse_iso(scheduled_start)
+    except ValueError:
+        return False
+    if fires_at <= now:
+        return False
+    if state.phase in ("executing", "complete"):
+        return False
+    return not _is_runner_pid_live(session_dir_path)
 
 
 def _read_last_event(log_path: Path) -> dict | None:
@@ -247,6 +291,14 @@ def render_status() -> None:
     now = _now()
     session_elapsed = (now - _parse_iso(state.started_at)).total_seconds()
 
+    # --- Scheduled-dormant inference (Task 11 / R12) ---
+    # Display-only state inferred at read time from the explicit per-session
+    # state path (state_path.parent is the session dir holding runner.pid).
+    # When dormant, the session is merely waiting to fire — so the
+    # executing/elapsed-watchdog block is suppressed and a dormant line is
+    # rendered instead.
+    is_dormant = _is_scheduled_dormant(state, state_path.parent, now)
+
     # Read SESSION_START for time_limit_hours and max_rounds
     time_limit_hours: int | None = None
     max_rounds: int | None = None
@@ -311,8 +363,11 @@ def render_status() -> None:
         stall_count = _count_zero_progress_rounds(log_path)
 
     # --- Watchdog ---
+    # Suppressed in the scheduled-dormant state: a run merely waiting to fire
+    # has no live runner, so an "elapsed since last event" watchdog would be a
+    # misleading alarm (R12).
     watchdog_str: str | None = None
-    if state.phase == "executing" and log_path is not None:
+    if not is_dormant and state.phase == "executing" and log_path is not None:
         last_ts = _read_last_event_ts(log_path)
         if last_ts is not None:
             try:
@@ -332,12 +387,19 @@ def render_status() -> None:
     print(f"Overnight Session: {state.session_id}")
     print(f"Phase            : {state.phase}")
     print(f"Round            : {round_display}")
-    print(f"Elapsed          : {_format_elapsed(session_elapsed)}")
-    print(f"Time remaining   : {time_remaining_str}")
-    print(f"Stall counter    : {stall_count}/2")
-    print(f"Last event       : {last_event_str}")
-    if watchdog_str is not None:
-        print(f"Watchdog         : {watchdog_str}")
+    if is_dormant:
+        # Display-only scheduled-dormant render: no live runner, fire pending.
+        # Suppress the Elapsed/Time-remaining/Stall/Watchdog block — those are
+        # executing-run metrics that would read as an alarm while merely
+        # waiting to fire (R12).
+        print(f"Scheduled (dormant) — fires at {state.scheduled_start}")
+    else:
+        print(f"Elapsed          : {_format_elapsed(session_elapsed)}")
+        print(f"Time remaining   : {time_remaining_str}")
+        print(f"Stall counter    : {stall_count}/2")
+        print(f"Last event       : {last_event_str}")
+        if watchdog_str is not None:
+            print(f"Watchdog         : {watchdog_str}")
     print()
 
     if running:
