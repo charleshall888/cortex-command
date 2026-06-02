@@ -18,6 +18,7 @@ R7 acceptance cases covered (per spec):
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -185,3 +186,75 @@ def test_single_file_mode(tmp_path: Path) -> None:
     assert result.returncode == 1
     stderr = result.stderr.decode("utf-8", errors="replace")
     assert "foo.py:42" in stderr
+
+
+# ---------------------------------------------------------------------------
+# R5 behavioral regression lock — real-git --staged path (NOT --root).
+#
+# The cases above use --root, which routes through the already-correct
+# root.glob audit path and never reaches _matches_scan_glob — so they cannot
+# detect the deep-file under-scan bug. This test uses real git staging WITHOUT
+# --root, so a deep-≥3 (and depth-1) in-scope file with a genuine
+# prescriptive-prose violation must trip the gate. Under the old Path.match
+# semantics the deep files are dropped from the staged scan and the gate
+# silently exits 0 — so this test goes RED if the bug returns.
+# ---------------------------------------------------------------------------
+
+
+def _git(root: Path, *args: str) -> None:
+    subprocess.run(["git", *args], cwd=root, check=True, capture_output=True, text=True)
+
+
+def _init_real_repo(root: Path) -> None:
+    """Init a hermetic git repo — hooks disabled so no cortex hook interferes."""
+    (root / ".no-hooks").mkdir()
+    _git(root, "init", "-q")
+    _git(root, "config", "user.email", "test@example.com")
+    _git(root, "config", "user.name", "Test")
+    _git(root, "config", "core.hooksPath", str(root / ".no-hooks"))
+    _git(root, "config", "commit.gpgsign", "false")  # sandbox: gpg signing unavailable
+    _git(root, "commit", "--allow-empty", "-q", "-m", "Initialize test repo")
+
+
+def _write_inscope(root: Path, rel: str, body: str) -> None:
+    path = root / rel
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(body, encoding="utf-8")
+
+
+def _staged_env() -> dict[str, str]:
+    """Env that forces the working-tree cortex_command (not a stale wheel)."""
+    env = dict(os.environ)
+    existing = env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = f"{REPO_ROOT}:{existing}" if existing else str(REPO_ROOT)
+    return env
+
+
+def test_staged_deep_nested_file_flags_via_real_git(tmp_path: Path) -> None:
+    """Real --staged run: deep-≥3 AND depth-1 skill files both trip the gate.
+
+    Asserts a non-zero exit AND that each deep file's path appears in the
+    reported violation — a bare non-zero exit alone is as weak as a grep.
+    """
+    _init_real_repo(tmp_path)
+    deep = "skills/lifecycle/references/deep_probe.md"  # depth-≥3
+    shallow = "skills/depth1_probe.md"  # depth-1 (** = zero segments)
+    violation = (
+        "## Role\n\nThis piece must update decompose.md:147 to replace the ban.\n"
+    )
+    _write_inscope(tmp_path, deep, violation)
+    _write_inscope(tmp_path, shallow, violation)
+    _git(tmp_path, "add", deep, shallow)
+
+    result = subprocess.run(
+        [sys.executable, "-m", "cortex_command.lint.prescriptive_prose", "--staged"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        env=_staged_env(),
+    )
+    out = result.stdout + result.stderr
+    assert result.returncode != 0, f"expected non-zero exit, got 0\n{out}"
+    assert "PRESCRIPTIVE_PROSE" in out, out
+    assert deep in out, f"deep path missing from violation output\n{out}"
+    assert shallow in out, f"depth-1 path missing from violation output\n{out}"

@@ -108,3 +108,100 @@ def test_parity_fixture(fixture: Path) -> None:
         f"{name}: unrecognized fixture-name prefix; "
         f"expected one of valid-*, invalid-*, exclude-*"
     )
+
+
+# ---------------------------------------------------------------------------
+# R5 behavioral regression lock — real-git --staged path (NOT --root).
+#
+# parity_check.lint() overlays staged blobs onto a working-tree root.glob
+# enumeration, and _matches_scan_glob gates ONLY the overlay. So a violation
+# present in BOTH the staged blob and the on-disk copy would fire via the disk
+# path even with the bug present (a false lock). This test makes the violation
+# reachable ONLY through the staged blob: commit the deep files clean, stage a
+# modification that adds the orphan reference, then restore the working-tree
+# copy to clean (index=violation, worktree=clean). Under the old Path.match
+# semantics the deep (and depth-1) files are dropped from the overlay, only the
+# clean worktree copy is scanned, the checker exits 0 — so this test goes RED.
+# It deliberately avoids --root, which routes through the already-correct
+# root.glob audit path and never reaches _matches_scan_glob.
+# ---------------------------------------------------------------------------
+
+
+def _git(root: Path, *args: str) -> None:
+    subprocess.run(["git", *args], cwd=root, check=True, capture_output=True, text=True)
+
+
+def _init_real_repo(root: Path) -> None:
+    """Init a hermetic git repo — hooks disabled so no cortex hook interferes."""
+    (root / ".no-hooks").mkdir()
+    _git(root, "init", "-q")
+    _git(root, "config", "user.email", "test@example.com")
+    _git(root, "config", "user.name", "Test")
+    _git(root, "config", "core.hooksPath", str(root / ".no-hooks"))
+    _git(root, "config", "commit.gpgsign", "false")  # sandbox: gpg signing unavailable
+    _git(root, "commit", "--allow-empty", "-q", "-m", "Initialize test repo")
+
+
+def _write_inscope(root: Path, rel: str, body: str) -> None:
+    path = root / rel
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(body, encoding="utf-8")
+
+
+def _staged_env() -> dict[str, str]:
+    """Env that forces the working-tree cortex_command (not a stale wheel)."""
+    env = dict(os.environ)
+    existing = env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = f"{REPO_ROOT}:{existing}" if existing else str(REPO_ROOT)
+    return env
+
+
+def test_staged_deep_nested_file_flags_via_real_git(tmp_path: Path) -> None:
+    """Real --staged run with a staged-blob-only divergence.
+
+    A depth-≥3 AND a depth-1 in-scope file each gain an orphan cortex-* drift
+    reference present ONLY in the staged blob (worktree restored to clean).
+    Asserts a non-zero exit AND that each deep file's path appears in the
+    reported E002 violation — a bare non-zero exit alone is as weak as a grep.
+    """
+    _init_real_repo(tmp_path)
+    deep = "skills/lifecycle/references/deep_probe.md"  # depth-≥3
+    shallow = "skills/depth1_probe.md"  # depth-1 (** = zero segments)
+    clean = "# Skill\n\nNothing references a script here.\n"
+    # Assemble the orphan script names from fragments and interpolate them, so
+    # the contiguous cortex-* tokens exist only at runtime — inside the staged
+    # blob the temp repo scans — and never appear as a literal backtick span in
+    # THIS file, which the parity gate itself scans (tests/**/*.py) and would
+    # otherwise flag as E002 self-drift.
+    fake_deep = "cortex-" + "fake-deep-probe"
+    fake_shallow = "cortex-" + "fake-depth1-probe"
+    deep_dirty = f"# Skill\n\nRun `{fake_deep}` to do the thing.\n"
+    shallow_dirty = f"# Skill\n\nRun `{fake_shallow}` to do the thing.\n"
+
+    # 1. Commit both files CLEAN (no cortex-* reference on disk at HEAD).
+    _write_inscope(tmp_path, deep, clean)
+    _write_inscope(tmp_path, shallow, clean)
+    _git(tmp_path, "add", deep, shallow)
+    _git(tmp_path, "commit", "-q", "-m", "Add clean deep files")
+
+    # 2. Stage a modification that introduces the orphan reference.
+    _write_inscope(tmp_path, deep, deep_dirty)
+    _write_inscope(tmp_path, shallow, shallow_dirty)
+    _git(tmp_path, "add", deep, shallow)
+
+    # 3. Restore the working-tree copies to clean — index=violation, worktree=clean.
+    _write_inscope(tmp_path, deep, clean)
+    _write_inscope(tmp_path, shallow, clean)
+
+    result = subprocess.run(
+        [sys.executable, "-m", "cortex_command.parity_check", "--staged"],
+        cwd=str(tmp_path),
+        capture_output=True,
+        text=True,
+        env=_staged_env(),
+    )
+    out = result.stdout + result.stderr
+    assert result.returncode != 0, f"expected non-zero exit, got 0\n{out}"
+    assert "E002" in out, out
+    assert deep in out, f"deep path missing from violation output\n{out}"
+    assert shallow in out, f"depth-1 path missing from violation output\n{out}"
