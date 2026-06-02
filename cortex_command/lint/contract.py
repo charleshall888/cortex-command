@@ -459,6 +459,148 @@ _INLINE_CODE_RE = re.compile(r"`([^`]+)`")
 # Templated placeholder patterns kept as opaque tokens.
 _PLACEHOLDER_RE = re.compile(r"(\{\{[^}]+\}\}|\{[^}]+\}|<[^>]+>)")
 
+# ---------------------------------------------------------------------------
+# Command-position predicate helpers (R1)
+# ---------------------------------------------------------------------------
+
+# Extension suffix: token immediately followed by '.' + alpha run (e.g. .sh, .py, .json).
+_EXT_SUFFIX_RE = re.compile(r"^\.[a-zA-Z]+")
+
+# Shell separators that place a token in command position when they appear in
+# the left-context (after optional whitespace).
+_SHELL_SEP_RE = re.compile(
+    r"(?:"
+    r"\|\|"           # ||
+    r"|&&"            # &&
+    r"|\|"            # |
+    r"|;"             # ;
+    r"|\$\("          # $(
+    r"|`"             # backtick
+    r"|\("            # (
+    r"|\{"            # {
+    r"|\bthen\b"      # then
+    r"|\bdo\b"        # do
+    r"|\belse\b"      # else
+    r")\s*$"
+)
+
+# Shell prompt prefix stripped before command-position check.
+_PROMPT_PREFIX_RE = re.compile(r"^[$%]\s+")
+
+# Probe commands that make a token a probe-operand (not an invocation):
+# 'command -v', 'command -V', 'which', 'type', 'hash'.
+# 'command <tok>' (bare, no flag) is NOT a probe — it executes.
+_PROBE_HEAD_RE = re.compile(
+    r"(?:^|(?<=\s))"
+    r"(?:"
+    r"command\s+-[vV]"  # command -v / command -V
+    r"|which"           # which
+    r"|type"            # type
+    r"|hash"            # hash
+    r")\s+$"
+)
+
+# Path-segment prefix: character immediately before the token is '/'.
+_PATH_PREFIX_CHARS = frozenset("/")
+
+# argv token: a flag (starts with '-') or a non-whitespace word after whitespace.
+# Used to determine whether a path-prefixed token is a real run vs. a bare path tail.
+_ARGV_TOKEN_RE = re.compile(r"^\s+\S")
+
+# Env-var prefix chain: one or more VAR=VALUE assignments (possibly with a
+# preceding shell-prompt) that make the following token the command word.
+# Matches the entire left-context when it is only env assignments + optional prompt.
+_ENV_PREFIX_RE = re.compile(r"^(?:[$%]\s+)?(?:[A-Za-z_][A-Za-z0-9_]*=[^\s]* +)+$")
+
+# Bare 'command' builtin (no flag): executes its first positional argument.
+# Matches left-context that ends with whitespace-separated 'command'.
+_BARE_COMMAND_RE = re.compile(r"(?:^|[\s|;&({\`])command\s+$")
+
+
+def _is_invocation(left: str, token: str, right: str) -> bool:
+    """Return True if the matched token is a genuine command invocation.
+
+    Parameters
+    ----------
+    left:
+        Text immediately before the token in the span/line (left-context).
+    token:
+        The matched cortex-* binary name.
+    right:
+        Text immediately after the token in the span/line (right-context / raw tail).
+
+    Rule precedence: rejection rules (extension, probe, =-RHS) take priority
+    over command-position acceptance — see R1 spec.
+    """
+    # ------------------------------------------------------------------
+    # Rule 1a: Extension-suffix rejection.
+    # Token is immediately followed by '.' + alpha-run → path filename.
+    # This is unconditional; wins over command-position acceptance.
+    # ------------------------------------------------------------------
+    if _EXT_SUFFIX_RE.match(right):
+        return False
+
+    # ------------------------------------------------------------------
+    # Rule 1b: Path-prefix handling.
+    # Token is immediately preceded by '/'.
+    # - If NOT followed by argv tokens: bare path tail → reject.
+    # - If followed by argv tokens: path-prefixed real run (e.g.
+    #   bin/cortex-worktree-create --base-branch main) → accept after
+    #   checking higher-priority rejection rules 3/4.
+    # ------------------------------------------------------------------
+    _path_prefixed_with_argv = False
+    if left and left[-1] in _PATH_PREFIX_CHARS:
+        has_argv = bool(_ARGV_TOKEN_RE.match(right))
+        if not has_argv:
+            return False
+        _path_prefixed_with_argv = True
+
+    # ------------------------------------------------------------------
+    # Rule 3: Probe-operand rejection.
+    # The left-context ends with a probe head (which/type/hash/command -v).
+    # This must win over command-position acceptance.
+    # ------------------------------------------------------------------
+    if _PROBE_HEAD_RE.search(left):
+        return False
+
+    # ------------------------------------------------------------------
+    # Rule 4: =-RHS bare-value rejection.
+    # Token is the immediate RHS of '=' with no intervening space.
+    # Exempt: '=(' and '=`' (command-substitution forms are real runs).
+    # Exempt: space-separated env-prefix form ('FOO=1 cortex-…').
+    # ------------------------------------------------------------------
+    if left and left[-1] == "=" and right[:1] not in ("(", "`"):
+        return False
+
+    # Path-prefixed with argv tokens is a real run (rules 3/4 did not reject).
+    if _path_prefixed_with_argv:
+        return True
+
+    # ------------------------------------------------------------------
+    # Rule 2: Command-position acceptance.
+    # Accept when the normalized left-context is empty (span/line start)
+    # or ends with a shell separator.
+    # Also accept: env-var prefix chain ('FOO=1 cortex-…') and bare
+    # 'command' builtin ('command cortex-…').
+    # ------------------------------------------------------------------
+    # Strip shell-prompt prefix ('$ ' / '% ') from the left edge.
+    stripped_left = _PROMPT_PREFIX_RE.sub("", left)
+    # Span/line start (possibly after prompt strip).
+    if not stripped_left or not stripped_left.strip():
+        return True
+    # After a shell separator.
+    if _SHELL_SEP_RE.search(stripped_left):
+        return True
+    # Env-var prefix chain: 'FOO=1 ', 'A=x B=y ', etc.
+    if _ENV_PREFIX_RE.match(stripped_left):
+        return True
+    # Bare 'command' builtin (no -v/-V flag).
+    if _BARE_COMMAND_RE.search(stripped_left):
+        return True
+
+    # Not in command position — not an invocation.
+    return False
+
 
 def _is_hard_excluded(rel: str) -> bool:
     """Return True if ``rel`` (relative path string) is hard-excluded."""
@@ -566,9 +708,16 @@ def _scan_file_for_invocations(path: Path) -> list[Invocation]:
         """Detect invocations in a fenced-block line (already continuation-joined)."""
         for m in _BINARY_RE.finditer(combined):
             binary = m.group(0)
+            left_ctx = combined[:m.start()]
+            raw_tail = combined[m.end():]
+            # R1: Command-position guard — skip if not a genuine invocation.
+            if not _is_invocation(left_ctx, binary, raw_tail):
+                continue
             col = m.start()
-            tail = combined[m.end():]
-            tail_tokens = _tokenize_tail(tail)
+            tail_tokens = _tokenize_tail(raw_tail)
+            # Symmetric with inline: skip bare-name (no tail tokens) matches.
+            if not tail_tokens:
+                continue
             invocations.append(Invocation(
                 path=path,
                 line=lineno,
@@ -650,10 +799,14 @@ def _scan_file_for_invocations(path: Path) -> list[Invocation]:
             # Find cortex-* binary in the span.
             for m_bin in _BINARY_RE.finditer(span_content):
                 binary = m_bin.group(0)
+                left_ctx = span_content[:m_bin.start()]
+                raw_tail = span_content[m_bin.end():]
+                # R1: Command-position guard — skip if not a genuine invocation.
+                if not _is_invocation(left_ctx, binary, raw_tail):
+                    continue
                 col = span_start + m_bin.start()
-                tail = span_content[m_bin.end():]
-                tail_tokens = _tokenize_tail(tail)
-                # Edge Case 5: bare-name inline-code (no trailing tokens) is skipped.
+                tail_tokens = _tokenize_tail(raw_tail)
+                # Edge Case 5 / symmetric with fenced: bare-name (no tail tokens) skipped.
                 if not tail_tokens:
                     continue
                 invocations.append(Invocation(
