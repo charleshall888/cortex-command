@@ -659,12 +659,14 @@ class TestSystemicThreshold(unittest.IsolatedAsyncioTestCase):
 
 
 class TestFindBacklogItemPathLifecycleSlug(unittest.TestCase):
-    """Task 8 — the runtime resolver routes through the canonical resolver.
+    """Task 8 — the runtime resolver resolves slug != filename-stem.
 
     Covers the common case where a feature's lifecycle-slug differs from the
-    backlog filename stem: the exact-stem, backlog_id, and substring strategies
-    miss, so resolution must fall through to ``resolve_item.resolve``, which
-    matches on ``lifecycle_slug`` frontmatter.
+    backlog filename stem: the exact-stem and backlog_id strategies miss, so
+    resolution falls through to ``_find_item`` → ``resolve_item.resolve``, which
+    matches on ``lifecycle_slug`` frontmatter. (Regression coverage retained
+    after the redundant explicit strategy-4 wrapper was removed — strategy-3
+    already routes through the same canonical resolver.)
     """
 
     SLUG = "build-the-grinder-agnostic-knowledge-layer"
@@ -707,8 +709,8 @@ class TestFindBacklogItemPathLifecycleSlug(unittest.TestCase):
         self._tmp.cleanup()
 
     def test_resolves_when_lifecycle_slug_differs_from_stem(self) -> None:
-        # Feature slug != filename stem, no backlog_id → strategies 1-3 miss and
-        # the canonical resolver (strategy 4) matches on lifecycle_slug.
+        # Feature slug != filename stem, no backlog_id → strategies 1-2 miss and
+        # strategy 3 (_find_item → canonical resolve) matches on lifecycle_slug.
         resolved = _find_backlog_item_path(self.SLUG)
         self.assertEqual(resolved, self.item)
 
