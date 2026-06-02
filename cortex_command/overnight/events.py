@@ -87,6 +87,7 @@ SYNTHESIZER_VALIDATED_OVERNIGHT = "synthesizer_validated_overnight"
 SYNTHESIZER_CIRCUIT_BREAKER_FIRED = "synthesizer_circuit_breaker_fired"
 SYNTHESIZER_ERROR = "synthesizer_error"
 PIPELINE_SYSTEMIC_FAILURE = "pipeline_systemic_failure"
+COMPLEXITY_NORMALIZED = "complexity_normalized"
 
 EVENT_TYPES = (
     SESSION_START,
@@ -147,6 +148,7 @@ EVENT_TYPES = (
     SYNTHESIZER_CIRCUIT_BREAKER_FIRED,
     SYNTHESIZER_ERROR,
     PIPELINE_SYSTEMIC_FAILURE,
+    COMPLEXITY_NORMALIZED,
 )
 
 

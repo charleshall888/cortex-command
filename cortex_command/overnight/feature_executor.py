@@ -48,6 +48,7 @@ from cortex_command.overnight.deferral import (
 )
 from cortex_command.overnight.events import (
     BRAIN_DECISION,
+    COMPLEXITY_NORMALIZED,
     FEATURE_DEFERRED,
     MERGE_CONFLICT_CLASSIFIED,
     WORKER_MALFORMED_EXIT_REPORT,
@@ -570,6 +571,21 @@ async def execute_feature(
             status="failed",
             error=f"Plan parse error: {exc}",
             parse_error=True,
+        )
+
+    # Surface every OOV complexity normalization (recorded by parse_feature_plan
+    # as {"task", "original"} dicts) as a loud, report-visible event so the
+    # mis-authored plan is corrected at source rather than silently over-provisioned.
+    # execute_feature runs per-feature per round, so a paused-then-resumed feature
+    # re-parses and re-emits the same (feature, task, original); the report renderer
+    # de-duplicates by that key.
+    for _norm in feature_plan.normalized_complexities:
+        overnight_log_event(
+            COMPLEXITY_NORMALIZED,
+            config.batch_id,
+            feature=feature,
+            details={"task": _norm["task"], "original": _norm["original"]},
+            log_path=config.overnight_events_path,
         )
 
     spec_path_resolved = _get_spec_path(feature, spec_path, lifecycle_base=lifecycle_base)

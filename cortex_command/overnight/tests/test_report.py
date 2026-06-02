@@ -4,7 +4,7 @@
 import pytest
 from pathlib import Path
 
-from cortex_command.overnight.report import ReportData, render_completed_features, render_executive_summary, render_failed_features
+from cortex_command.overnight.report import ReportData, render_complexity_normalized, render_completed_features, render_executive_summary, render_failed_features
 from cortex_command.overnight.state import OvernightFeatureStatus, OvernightState
 from cortex_command.common import read_tier
 
@@ -718,5 +718,59 @@ class TestTenFixtureVerificationRendering:
         assert _read_last_phase_checkpoint(feature) == ""
         # Generic fallback rendered — loud, visible degradation.
         assert _render_how_to_try(feature) == GENERIC_FALLBACK
+
+
+# ---------------------------------------------------------------------------
+# complexity_normalized rendering (backlog #278)
+# ---------------------------------------------------------------------------
+
+def _complexity_normalized_event(feature: str, task: int, original: str) -> dict:
+    return {
+        "event": "complexity_normalized",
+        "round": 1,
+        "feature": feature,
+        "details": {"task": task, "original": original},
+    }
+
+
+def test_render_complexity_normalized_names_feature_and_original() -> None:
+    """The report names the OOV feature and its original complexity value."""
+    data = ReportData()
+    data.events = [
+        _complexity_normalized_event("oov-feature", 3, "medium"),
+    ]
+    output = render_complexity_normalized(data)
+
+    assert "oov-feature" in output, f"got: {output!r}"
+    assert "medium" in output, f"got: {output!r}"
+    # Normalization direction is shown (-> complex).
+    assert "complex" in output, f"got: {output!r}"
+
+
+def test_render_complexity_normalized_dedups_resumed_feature() -> None:
+    """Two identical (feature, task, original) events render exactly once.
+
+    execute_feature re-parses and re-emits the same normalization each round
+    for a paused-then-resumed feature; the renderer must collapse duplicates.
+    """
+    data = ReportData()
+    data.events = [
+        _complexity_normalized_event("oov-feature", 3, "medium"),
+        _complexity_normalized_event("oov-feature", 3, "medium"),
+    ]
+    output = render_complexity_normalized(data)
+
+    # The (feature, task, original) line appears exactly once.
+    assert output.count("oov-feature") == 1, f"got: {output!r}"
+    assert output.count("`medium`") == 1, f"got: {output!r}"
+    # Section count reflects one unique normalization, not two events.
+    assert "## Complexity Normalizations (1)" in output, f"got: {output!r}"
+
+
+def test_render_complexity_normalized_empty_when_no_events() -> None:
+    """The section is omitted entirely when no normalizations occurred."""
+    data = ReportData()
+    data.events = [{"event": "round_start", "round": 1}]
+    assert render_complexity_normalized(data) == ""
 
 

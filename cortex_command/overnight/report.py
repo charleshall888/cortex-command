@@ -1940,6 +1940,58 @@ def render_sandbox_denials(data: ReportData) -> str:
     return "\n".join(lines)
 
 
+def render_complexity_normalized(data: ReportData) -> str:
+    """Render the OOV-complexity-normalization section (backlog #278).
+
+    Scans ``data.events`` for ``complexity_normalized`` entries emitted by
+    ``feature_executor.execute_feature`` when ``parse_feature_plan`` coerced a
+    present-but-out-of-vocabulary per-task ``**Complexity**`` value to
+    ``complex``. Each entry carries the feature, the task number, and the
+    original OOV value so the mis-authored plan can be corrected at source.
+
+    ``execute_feature`` re-parses and re-emits each round, so a
+    paused-then-resumed feature produces duplicate events for the same
+    ``(feature, task, original)`` normalization. This renderer de-duplicates by
+    that key and renders each unique normalization exactly once.
+
+    Returns the empty string when no normalizations were recorded so the
+    section is omitted entirely from the report.
+    """
+    seen: set[tuple] = set()
+    rows: list[tuple] = []
+    for evt in data.events:
+        if evt.get("event") != "complexity_normalized":
+            continue
+        feature = evt.get("feature")
+        details = evt.get("details", {}) or {}
+        task = details.get("task")
+        original = details.get("original")
+        key = (feature, task, original)
+        if key in seen:
+            continue
+        seen.add(key)
+        rows.append(key)
+
+    if not rows:
+        return ""
+
+    total = len(rows)
+    lines: list[str] = [f"## Complexity Normalizations ({total})", ""]
+    lines.append(
+        "Each task below declared an out-of-vocabulary `**Complexity**` value "
+        "that was normalized to `complex` (safe over-provision) so the feature "
+        "could still run. Correct the plan.md at source so the mis-authoring "
+        "does not recur."
+    )
+    lines.append("")
+    for feature, task, original in rows:
+        lines.append(
+            f"- **{feature}** task {task}: `{original}` -> `complex`"
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
 # ---------------------------------------------------------------------------
 # Top-level report generation
 # ---------------------------------------------------------------------------
@@ -1969,6 +2021,11 @@ def generate_report(data: ReportData) -> str:
         render_action_checklist(data),
         render_run_statistics(data),
     ])
+    # Complexity-normalization section (backlog #278) — omitted entirely when
+    # no OOV per-task complexity was normalized this session.
+    complexity_normalized_section = render_complexity_normalized(data)
+    if complexity_normalized_section:
+        sections.append(complexity_normalized_section)
     # Scheduled-fire failures section is omitted entirely when empty.
     fire_failures_section = render_scheduled_fire_failures(data)
     if fire_failures_section:
