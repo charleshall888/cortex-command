@@ -34,7 +34,7 @@ from cortex_command.overnight.deferral import (
 )
 from cortex_command.overnight.events import _default_log_path, read_events
 from cortex_command.overnight import fail_markers as fail_markers_module
-from cortex_command.overnight.fail_markers import FailedFire
+from cortex_command.overnight.fail_markers import FailedFire, FireAdvisory
 from cortex_command.overnight.state import OvernightState, _default_state_path, load_state, session_dir
 
 
@@ -93,6 +93,7 @@ class ReportData:
     tool_failures: dict[str, dict] = field(default_factory=dict)
     pr_urls: dict[str, str] = field(default_factory=dict)
     scheduled_fire_failures: list[FailedFire] = field(default_factory=list)
+    scheduled_fire_advisories: list[FireAdvisory] = field(default_factory=list)
     sandbox_denials: dict[str, int] = field(default_factory=dict)
 
 
@@ -207,14 +208,23 @@ def collect_report_data(
         data.tool_failures = collect_tool_failures(date_key)
         data.sandbox_denials = collect_sandbox_denials(date_key)
 
-    # Scan sibling session dirs for scheduled-fire-failed.json markers
-    # written by the launchd-fired launcher script when fire-time spawn
-    # fails (Task 3, spec §R13). The morning report surfaces these in a
-    # dedicated section so TCC denials and missing-binary failures don't
-    # hide behind the macOS notification alone.
-    data.scheduled_fire_failures = fail_markers_module.scan_session_dirs(
+    # Scan sibling session dirs for scheduled-fire markers written by the
+    # launchd-fired launcher script (spec §R6/§R7/§R13). The morning
+    # report surfaces a genuine failure in a dedicated section so TCC
+    # denials, missing-binary failures, and dead fires don't hide behind
+    # the macOS notification alone; a live-but-slow advisory renders as a
+    # distinct non-failure line and is kept OUT of the failure tally.
+    # A stale advisory (old + no live runner.pid + session not
+    # executing/complete) escalates to a failure at read time and joins
+    # the failure tally.
+    failures = fail_markers_module.scan_session_dirs(lifecycle_root)
+    advisories, escalated = fail_markers_module.scan_advisory_dirs(
         lifecycle_root,
     )
+    combined_failures = list(failures) + list(escalated)
+    combined_failures.sort(key=lambda f: f.ts)
+    data.scheduled_fire_failures = combined_failures
+    data.scheduled_fire_advisories = advisories
 
     return data
 
@@ -1640,14 +1650,19 @@ def _classify_sandbox_denial(
 
 
 def render_scheduled_fire_failures(data: ReportData) -> str:
-    """Render the scheduled-fire failures section (spec §R13).
+    """Render the scheduled-fire failures section (spec §R6/§R7/§R13).
 
-    When the launchd-fired launcher script (Task 3) cannot spawn the
-    cortex binary at fire time (TCC EPERM, missing binary, etc.), it
-    writes a sentinel ``<session_dir>/scheduled-fire-failed.json``. This
-    section surfaces every such marker found by
-    :func:`fail_markers.scan_session_dirs`, with timestamp, error class,
-    session id, and the absolute path to the marker JSON for diagnostics.
+    Surfaces every genuine fire failure found by
+    :func:`fail_markers.scan_session_dirs` (``kind == "failure"`` — TCC
+    EPERM, missing binary, or a ``spawn_died`` dead fire) PLUS any stale
+    advisory escalated to a failure by :func:`fail_markers.scan_advisory_dirs`
+    (``kind == "advisory_escalated"`` — a runner that wedged before its
+    round loop). Each entry carries timestamp, error class, session id,
+    and the absolute path to the marker JSON for diagnostics.
+
+    Fresh (non-stale) advisories are NOT in ``scheduled_fire_failures`` —
+    they render separately via :func:`render_scheduled_fire_advisories`
+    and are excluded from this failure tally.
 
     Returns the empty string when the list is empty so the section is
     omitted entirely from the report.
@@ -1660,20 +1675,77 @@ def render_scheduled_fire_failures(data: ReportData) -> str:
     plural = "s" if total != 1 else ""
     lines: list[str] = [f"## Scheduled-Fire Failures ({total})", ""]
     lines.append(
-        "The launchd-fired launcher could not spawn the cortex runner at fire "
-        f"time for {total} scheduled overnight{plural}. Inspect each marker "
-        "for the error class and text, then grant Full Disk Access to the "
-        "cortex binary or fix the binary path before the next schedule."
+        "The launchd-fired launcher could not spawn a surviving cortex runner "
+        f"at fire time for {total} scheduled overnight{plural} (a dead fire, a "
+        "missing/denied binary, or a runner that wedged before its round "
+        "loop). Inspect each marker for the error class and text, then grant "
+        "Full Disk Access to the cortex binary or fix the binary path before "
+        "the next schedule."
     )
     lines.append("")
 
     for failure in failures:
-        marker_path = Path(failure.session_dir) / "scheduled-fire-failed.json"
+        # An escalated advisory's marker file is the advisory marker, not
+        # the failure marker — render the right path so the user can open it.
+        marker_filename = (
+            "scheduled-fire-advisory.json"
+            if getattr(failure, "kind", "failure") == "advisory_escalated"
+            else "scheduled-fire-failed.json"
+        )
+        marker_path = Path(failure.session_dir) / marker_filename
         lines.append(f"### {failure.session_id} — {failure.error_class}")
         lines.append(f"- Time: {failure.ts}")
         lines.append(f"- Error class: {failure.error_class}")
         lines.append(f"- Error text: {failure.error_text}")
         lines.append(f"- launchd label: `{failure.label}`")
+        lines.append(f"- Marker: `{marker_path}`")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def render_scheduled_fire_advisories(data: ReportData) -> str:
+    """Render the live-but-slow scheduled-fire advisories (spec §R6/§R7).
+
+    A fresh advisory marker (``scheduled-fire-advisory.json``) records a
+    fire that started but had not yet claimed ``runner.pid`` when the
+    handshake budget elapsed — the runner is alive and coming up. This is
+    NOT a failure, so it renders in its own non-failure section ("scheduled
+    fire started — awaiting confirmation") and is excluded from the
+    failure tally. A stale advisory is escalated to a failure upstream
+    (:func:`fail_markers.scan_advisory_dirs`) and renders in the failures
+    section instead, so it never reaches here.
+
+    Returns the empty string when there are no fresh advisories so the
+    section is omitted entirely from the report.
+    """
+    advisories = data.scheduled_fire_advisories
+    if not advisories:
+        return ""
+
+    total = len(advisories)
+    plural = "s" if total != 1 else ""
+    lines: list[str] = [
+        f"## Scheduled Fires Awaiting Confirmation ({total})",
+        "",
+    ]
+    lines.append(
+        f"{total} scheduled overnight fire{plural} started — awaiting "
+        "confirmation. The runner was alive but had not yet claimed "
+        "runner.pid when the fire-time handshake budget elapsed (a normal "
+        "slow start after wake / cold caches). This is not a failure; the "
+        "runner should confirm shortly. A stale advisory is escalated to a "
+        "failure automatically."
+    )
+    lines.append("")
+
+    for advisory in advisories:
+        marker_path = Path(advisory.session_dir) / "scheduled-fire-advisory.json"
+        lines.append(f"### {advisory.session_id} — {advisory.error_class}")
+        lines.append(f"- Time: {advisory.ts}")
+        lines.append(f"- Status: scheduled fire started — awaiting confirmation")
+        lines.append(f"- Error text: {advisory.error_text}")
+        lines.append(f"- launchd label: `{advisory.label}`")
         lines.append(f"- Marker: `{marker_path}`")
         lines.append("")
 
@@ -2058,6 +2130,11 @@ def generate_report(data: ReportData) -> str:
     fire_failures_section = render_scheduled_fire_failures(data)
     if fire_failures_section:
         sections.append(fire_failures_section)
+    # Scheduled-fire advisories (live-but-slow fires awaiting confirmation)
+    # render as a distinct non-failure section; omitted entirely when empty.
+    fire_advisories_section = render_scheduled_fire_advisories(data)
+    if fire_advisories_section:
+        sections.append(fire_advisories_section)
     # Tool failures section is omitted entirely when there are no failures
     tool_failures_section = render_tool_failures(data)
     if tool_failures_section:

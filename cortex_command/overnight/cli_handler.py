@@ -843,12 +843,25 @@ def handle_status(args: argparse.Namespace) -> int:
         and not (resolved_session_dir / "runner.pid").exists()
     )
 
-    # Scan sibling session dirs for scheduled-fire-failed.json markers
-    # (Task 12, spec §R13). The lifecycle root is the parent of the
-    # sessions root; resolve it from the current state_path's grandparent
+    # Scan sibling session dirs for scheduled-fire markers (spec
+    # §R6/§R7/§R13). The lifecycle root is the parent of the sessions
+    # root; resolve it from the current state_path's grandparent
     # (state_path is always <state_root>/sessions/<session_id>/overnight-state.json).
+    # A failure marker (spawn_died, EPERM, etc.) is a genuine failure; a
+    # fresh advisory marker (spawn_unconfirmed) is a live-but-slow fire
+    # rendered as a distinct non-failure line and kept OUT of the failure
+    # tally; a STALE advisory (old + no live runner.pid + session not
+    # executing/complete) is escalated to a failure at read time and joins
+    # the failure tally.
     state_root_for_scan = resolved_session_dir.parent.parent
-    fire_failures = fail_markers_module.scan_session_dirs(state_root_for_scan)
+    fire_failures = list(
+        fail_markers_module.scan_session_dirs(state_root_for_scan)
+    )
+    fire_advisories, escalated_advisories = (
+        fail_markers_module.scan_advisory_dirs(state_root_for_scan)
+    )
+    fire_failures.extend(escalated_advisories)
+    fire_failures.sort(key=lambda f: f.ts)
 
     # Emit status.
     if fmt == "json":
@@ -868,6 +881,7 @@ def handle_status(args: argparse.Namespace) -> int:
                 scheduled_start if isinstance(scheduled_start, str) else None
             ),
             "fire_failures": [f.to_dict() for f in fire_failures],
+            "fire_advisories": [a.to_dict() for a in fire_advisories],
         }
         print(json.dumps(payload))
         return 0
@@ -890,17 +904,33 @@ def handle_status(args: argparse.Namespace) -> int:
     if isinstance(scheduled_start, str) and scheduled_start:
         print(f"Scheduled fire: {scheduled_start}")
 
-    # Surface scheduled-fire failures (Task 12, spec §R13). One-line
-    # summary pointing the user at the full marker via `cortex overnight
-    # logs` or the absolute marker path on disk.
+    # Surface scheduled-fire failures (spec §R7/§R13). One-line summary
+    # pointing the user at the full marker. An escalated advisory's marker
+    # file is the advisory marker, not the failure marker.
     if fire_failures:
         n = len(fire_failures)
-        latest_marker = (
-            Path(fire_failures[-1].session_dir) / "scheduled-fire-failed.json"
+        latest = fire_failures[-1]
+        latest_filename = (
+            "scheduled-fire-advisory.json"
+            if getattr(latest, "kind", "failure") == "advisory_escalated"
+            else "scheduled-fire-failed.json"
         )
+        latest_marker = Path(latest.session_dir) / latest_filename
         print(
             f"⚠ Recent scheduled-fire failures: {n} "
             f"(run `cortex overnight logs` or see `{latest_marker}` for details)"
+        )
+
+    # Surface fresh (live-but-slow) advisories as a DISTINCT non-failure
+    # line (spec §R6/§R7): the fire started and the runner is coming up.
+    if fire_advisories:
+        n = len(fire_advisories)
+        latest_advisory_marker = (
+            Path(fire_advisories[-1].session_dir) / "scheduled-fire-advisory.json"
+        )
+        print(
+            f"… Scheduled fire started — awaiting confirmation: {n} "
+            f"(runner alive, not yet confirmed; see `{latest_advisory_marker}`)"
         )
     return 0
 
