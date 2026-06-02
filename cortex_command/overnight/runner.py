@@ -1063,6 +1063,18 @@ def _start_session(
     except OSError:
         pass
 
+    # R13: clear ``scheduled_start`` now that this runner has fired. A plain
+    # field write (NOT a phase transition) persisted via the atomic
+    # ``save_state`` (tempfile + ``os.replace``), reading/writing the explicit
+    # per-session ``state_path`` rather than the no-arg ``load_state`` —
+    # keeping R13 decoupled from R19's top-level symlink. Without this, the
+    # read-time scheduled-dormant predicate (R12) could false-positive on a
+    # live, completed, or crashed run whose ``scheduled_start`` still points at
+    # the (now past) fire time.
+    if state.scheduled_start is not None:
+        state.scheduled_start = None
+        state_module.save_state(state, state_path)
+
     events.log_event(
         events.SESSION_START,
         round=state.current_round,
