@@ -10,3 +10,6 @@
 {"ts": "2026-06-02T00:08:47Z", "event": "batch_dispatch", "feature": "make-cortex-resolve-backlog-item-ambiguous", "batch": 1, "tasks": [2]}
 {"ts": "2026-06-02T00:08:47Z", "event": "batch_dispatch", "feature": "make-cortex-resolve-backlog-item-ambiguous", "batch": 2, "tasks": [3]}
 {"ts": "2026-06-02T00:27:00Z", "event": "phase_transition", "feature": "make-cortex-resolve-backlog-item-ambiguous", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-06-02T00:38:05Z", "event": "review_verdict", "feature": "make-cortex-resolve-backlog-item-ambiguous", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-06-02T00:38:05Z", "event": "phase_transition", "feature": "make-cortex-resolve-backlog-item-ambiguous", "from": "review", "to": "complete"}
+{"ts": "2026-06-02T00:39:26Z", "event": "feature_complete", "feature": "make-cortex-resolve-backlog-item-ambiguous", "tasks_total": 4, "rework_cycles": 1, "merge_anchor": "merge"}

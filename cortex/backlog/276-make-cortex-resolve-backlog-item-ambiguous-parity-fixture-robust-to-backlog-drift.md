@@ -2,11 +2,15 @@
 schema_version: "1"
 uuid: 43a366cf-e5f4-499e-90cb-0bbddec77bf7
 title: "Make cortex-resolve-backlog-item ambiguous parity fixture robust to backlog drift"
-status: backlog
+status: complete
 priority: low
 type: chore
 created: 2026-06-01
 updated: 2026-06-01
+complexity: complex
+criticality: medium
+spec: cortex/lifecycle/make-cortex-resolve-backlog-item-ambiguous/spec.md
+areas: ['tests']
 ---
 **Why:** `tests/test_cortex_resolve_backlog_item_parity.py::test_stderr_parity[title_phrase_ambiguous]` byte-compares `cortex-resolve-backlog-item lifecycle` stderr against a recorded golden fixture that snapshots the exact ambiguous-match count ("ambiguous: N matches" + first 5 filenames + "... (N more)"). Because the query term is "lifecycle", every backlog item whose title contains "lifecycle" that is added or removed drifts the count and breaks `just test` with a failure unrelated to whatever change is under test. Already re-captured twice for ambient drift (c582a84e, then 904bb80f during #274) — a recurring maintenance tax.
 
