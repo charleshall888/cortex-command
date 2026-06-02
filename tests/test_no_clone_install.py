@@ -68,9 +68,13 @@ def built_wheel(tmp_path_factory: pytest.TempPathFactory) -> Path:
         pytest.skip("`uv` not on PATH; cannot build wheel for target-state probe")
 
     out_dir = tmp_path_factory.mktemp("wheel_dist")
+    cache_dir = tmp_path_factory.mktemp("uv_cache")
+    env = os.environ.copy()
+    env["UV_CACHE_DIR"] = str(cache_dir)
     proc = subprocess.run(
         ["uv", "build", "--wheel", "--out-dir", str(out_dir)],
         cwd=str(REPO_ROOT),
+        env=env,
         capture_output=True,
         text=True,
         timeout=180,
@@ -121,12 +125,15 @@ def _install_wheel_isolated(wheel_path: Path, tmp_path: Path) -> dict[str, str]:
     """
     tool_dir = tmp_path / "uv_tools"
     bin_dir = tmp_path / "uv_bin"
+    cache_dir = tmp_path / "uv_cache"
     tool_dir.mkdir(parents=True, exist_ok=True)
     bin_dir.mkdir(parents=True, exist_ok=True)
+    cache_dir.mkdir(parents=True, exist_ok=True)
 
     env = os.environ.copy()
     env["UV_TOOL_DIR"] = str(tool_dir)
     env["UV_TOOL_BIN_DIR"] = str(bin_dir)
+    env["UV_CACHE_DIR"] = str(cache_dir)
     env["PATH"] = f"{bin_dir}{os.pathsep}{env.get('PATH', '')}"
 
     proc = subprocess.run(
