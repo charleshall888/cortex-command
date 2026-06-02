@@ -474,8 +474,8 @@
   .hero {
     position: relative;
     padding-top: 24px;
-    padding-bottom: 64px;
-    border-bottom: 1px solid var(--rule-soft);
+    padding-bottom: 10px;
+    border-bottom: none;
   }
   .hero .doc-meta {
     font-family: var(--mono);
@@ -1488,7 +1488,7 @@
     text-transform: lowercase;
   }
 
-  /* ───────────── Trust grid (§05) ─────────────
+  /* ───────────── Trust grid (§3.2) ─────────────
      Card grid that lives between the pipeline diagram and the install
      section. Each card is a self-contained mini-figure (FIG 3..9) showing
      ONE behavior of the harness. Vocabulary intentionally rhymes with
@@ -1821,7 +1821,7 @@
     .tg-card svg * { animation: none !important; }
   }
 
-  /* ───────────── Gatefold · POP THE HOOD (§05 deep-dive) ─────────────
+  /* ───────────── Gatefold · POP THE HOOD (§4.2 deep-dive) ─────────────
      Lives at the bottom of the trust-grid section. The card grid above
      answers SEVEN questions about the harness one figure at a time.
      This is the eighth answer — the whole machine, running.
@@ -1855,7 +1855,7 @@
   }
 
   /* ── Pop-the-hood CTA / nameplate ─────────────────────────────────
-     Unified treatment shared by §04 (SDK harness gatefold) and §07.5
+     Unified treatment shared by the SDK harness gatefold and §4.2
      (CLI deep dive). Dark recessed plate with an ochre brand stripe
      on the left, ochre engineering corner marks, circular chev that
      warms to ochre on hover/open, gears that turn ochre and speed up
@@ -4199,7 +4199,7 @@
   .toast.first-light .body .top { color: var(--ochre); }
 
   /* ═════════════════════════════════════════════════════════════════
-     §07 · /cli · the bench (+ dive: SHA consensus walk-through)
+     §4.1 · /cli · the bench (+ dive: SHA consensus walk-through)
      ───────────────────────────────────────────────────────────────── */
   .cli-section {
     position: relative; z-index: 2;
@@ -4778,7 +4778,44 @@
     .cli-section .dive-head h3 { font-size: 26px; }
   }
   /* ════════════════════════════════════════════════════════════════
-     Imported island · §01 The Run + §02 The Interrogation Bench
+     Part dividers — top-level grouping of the page into four Parts.
+     Styled as lightweight spec page-breaks (a hairline + ochre tab +
+     Fraunces title + one-line dek), NOT full-height splash cards, so
+     they punctuate the scroll without stuttering it. Each divider is
+     also the scroll anchor the sidebar tracker observes (#part-1..4).
+     ═══════════════════════════════════════════════════════════════ */
+  .part-divider { margin: 92px 0 38px; scroll-margin-top: 32px; }
+  .part-divider:first-of-type { margin-top: 60px; }
+  .part-divider .pd-rule {
+    position: relative; height: 1px; background: var(--rule-soft);
+    margin-bottom: 18px;
+  }
+  .part-divider .pd-rule::before {
+    content: ""; position: absolute; left: 0; top: -1.5px;
+    width: 66px; height: 3px; background: var(--ochre);
+  }
+  .part-divider .pd-row { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; }
+  .part-divider .pd-num {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.24em;
+    text-transform: uppercase; color: var(--ochre); white-space: nowrap;
+  }
+  .part-divider .pd-title {
+    font-family: var(--serif); font-weight: 400;
+    font-size: clamp(27px, 3.4vw, 42px); letter-spacing: -0.02em;
+    line-height: 1.04; color: var(--ink);
+    font-variation-settings: "opsz" 120, "SOFT" 30;
+  }
+  .part-divider .pd-dek {
+    font-family: var(--serif); font-size: 15px; line-height: 1.5;
+    color: var(--ink-mute); margin: 12px 0 0; max-width: 60ch; font-weight: 350;
+  }
+  @media (max-width: 600px) {
+    .part-divider { margin: 60px 0 30px; }
+    .part-divider:first-of-type { margin-top: 40px; }
+  }
+
+  /* ════════════════════════════════════════════════════════════════
+     Imported island · §1.1 The Run + §1.2 The Interrogation Bench
      Namespaced under .run-req / .rr-* so it can't collide with the page's
      own .sec / .ex-fig / .cap / .tag rules. Tokens (--ink, --ochre, …) and
      fonts inherit from the page; only --display (Fraunces) is supplied here
@@ -4925,7 +4962,7 @@
   .rr-tag.rr-oc  { fill: var(--ochre); }
 
   /* ═════════════════════════════════════════════════════════════════
-     §01  PRIMARY · "THE INTERROGATION BENCH"  ( /requirements )
+     §1.2  PRIMARY · "THE INTERROGATION BENCH"  ( /requirements )
      -----------------------------------------------------------------
      6s cycle. A vague brief on the left is interrogated by a graduated
      sight that fires a rapid sequence of question-beams; each answered
@@ -5198,39 +5235,29 @@
       <span class="ms-rev">R3</span>
     </div>
     <ol class="ms-gates" id="ms-gates">
-      <li data-section="hero">
+      <li data-section="part-1">
         <span class="ms-tick" aria-hidden="true"></span>
-        <span class="ms-name">clarify</span>
-        <span class="ms-desc">the claim &middot; receipts in five gates</span>
+        <span class="ms-name">the method</span>
+        <span class="ms-desc">requirements &rarr; discovery &rarr; refine &middot; pick the harness</span>
       </li>
-      <li data-section="playground">
+      <li data-section="part-2">
         <span class="ms-tick" aria-hidden="true"></span>
-        <span class="ms-name">research</span>
-        <span class="ms-desc">complexity &times; criticality &middot; which gates fire</span>
+        <span class="ms-name">the rigor</span>
+        <span class="ms-desc">complexity &times; criticality &middot; the phases up close</span>
       </li>
-      <li data-section="spec-stream">
+      <li data-section="part-3">
         <span class="ms-tick" aria-hidden="true"></span>
-        <span class="ms-name">specify</span>
-        <span class="ms-desc">drafting &rarr; locked &middot; one phase per scroll</span>
+        <span class="ms-name">the proof</span>
+        <span class="ms-desc">overnight handoff &middot; the safety contract</span>
       </li>
-      <li data-section="pipe-section">
+      <li data-section="part-4">
         <span class="ms-tick" aria-hidden="true"></span>
-        <span class="ms-name">implement</span>
-        <span class="ms-desc">the overnight pipeline &middot; scrub to play</span>
-      </li>
-      <li data-section="trust-grid">
-        <span class="ms-tick" aria-hidden="true"></span>
-        <span class="ms-name">review</span>
-        <span class="ms-desc">circuit breakers &middot; model ladder &middot; calm stop</span>
-      </li>
-      <li data-section="install">
-        <span class="ms-tick" aria-hidden="true"></span>
-        <span class="ms-name">ship</span>
-        <span class="ms-desc">cortex-core &middot; cortex-overnight &middot; pick the surface</span>
+        <span class="ms-name">the bench</span>
+        <span class="ms-desc">the CLI &middot; why we built it &middot; install</span>
       </li>
     </ol>
     <div class="ms-progress"><span class="ms-progress-fill" id="ms-progress-fill"></span></div>
-    <div class="ms-status" id="ms-status">spec drafting &middot; 0 of 6 cleared</div>
+    <div class="ms-status" id="ms-status">part 1 of 4 &middot; the method</div>
   </div>
 
   <div style="display:flex; flex-direction:column; gap:6px; margin-top:14px;">
@@ -5250,14 +5277,25 @@
 
     <h1>A Claude Code harness <em>that earns its autonomy.</em></h1>
     <p class="sub">Deep research, then interrogation — until the spec is extracted from your head onto the page. <em>An orchestrator agent with a tight spec and a solid harness can be trusted to work while you sleep.</em></p>
+  </section>
 
-    <!-- ───── Imported: §01 The Run + §02 The Interrogation Bench ───── -->
-    <div class="run-req">
+  <!-- ═══════════════════ PART 1 · THE METHOD ═══════════════════ -->
+  <div class="part-divider" id="part-1">
+    <div class="pd-rule"></div>
+    <div class="pd-row">
+      <span class="pd-num">Part 1</span>
+      <span class="pd-title">The Method</span>
+    </div>
+    <p class="pd-dek">The commands you invoke, in order — turning a vague brief into a spec worth trusting, then a fork: hand it to the night, or ship it beside you.</p>
+  </div>
+
+  <!-- ───── §1.1 The Run · §1.2 The Interrogation Bench ───── -->
+  <div class="run-req">
   <!-- ════════════════════════════════════════════════════════════
-       §01 · THE RUN — top-level summary (workflow rail leads)
+       §1.1 · THE RUN — top-level summary (workflow rail leads)
        ═══════════════════════════════════════════════════════════ -->
   <section class="rr-sec" style="border-top: none; padding-top: 0; margin-top: 44px;">
-    <div class="rr-sec-eyebrow">§01 · the run</div>
+    <div class="rr-sec-eyebrow">§1.1 · the run</div>
     <h2>What gets <em>run</em></h2>
     <p class="rr-lede">You invoke these in order. <code>/requirements</code> sets the charter, <code>/discovery</code> fans it into tickets, <code>/lifecycle</code> carries one from spec to shipped — its front phases run alone as <code>/refine</code>. Underneath runs the charter — <em>project.md</em> — which every stage reads to stay on course.</p>
 
@@ -5347,10 +5385,10 @@
   </section>
 
   <!-- ════════════════════════════════════════════════════════════
-       §02 · THE INTERROGATION BENCH (requirements deep-dive)
+       §1.2 · THE INTERROGATION BENCH (requirements deep-dive)
        ═══════════════════════════════════════════════════════════ -->
   <section class="rr-sec">
-    <div class="rr-sec-eyebrow">§02 · step zero, up close</div>
+    <div class="rr-sec-eyebrow">§1.2 · step zero · the interrogation bench</div>
     <h2><em>The interrogation bench</em> &nbsp;·&nbsp; <code>/requirements</code></h2>
     <div class="rr-compare">
       <!-- LEFT · subtitle + figure -->
@@ -5484,7 +5522,7 @@
 
     <div class="hero-explain">
       <div class="ex">
-        <span class="ex-num">01</span>
+        <span class="ex-num">§1.3</span>
         <h2><code>/discovery</code> fires it off</h2>
         <div class="ex-fig fig-prism" data-fig="fig 1 · prompt → tickets" aria-hidden="true">
           <svg viewBox="0 0 360 130" preserveAspectRatio="xMidYMid meet">
@@ -5555,7 +5593,7 @@
         <p>One prompt. Discovery clarifies ambiguities, reviews adversarially, and spawns one ticket per scoped piece of work.</p>
       </div>
       <div class="ex">
-        <span class="ex-num">02</span>
+        <span class="ex-num">§1.4</span>
         <h2><code>/refine</code> each ticket separately</h2>
         <div class="ex-fig fig-calip" data-fig="fig 2 · the loop, three times" aria-hidden="true">
           <svg viewBox="0 0 360 130" preserveAspectRatio="xMidYMid meet">
@@ -5641,7 +5679,7 @@
 
     <div class="hero-fork" aria-labelledby="hf-h">
       <div class="hf-head">
-        <span class="hf-num">03</span>
+        <span class="hf-num">§1.5</span>
         <h2>Earn the spec, <em>pick the harness.</em></h2>
       </div>
 
@@ -5702,12 +5740,20 @@
       </div>
     </div>
 
-  </section>
+  <!-- ═══════════════════ PART 2 · THE RIGOR ═══════════════════ -->
+  <div class="part-divider" id="part-2">
+    <div class="pd-rule"></div>
+    <div class="pd-row">
+      <span class="pd-num">Part 2</span>
+      <span class="pd-title">The Rigor</span>
+    </div>
+    <p class="pd-dek">The same machine right-sizes itself — how much ceremony the work earns, and the phases that actually write the spec.</p>
+  </div>
 
-  <!-- ───────── §02 · the patch atlas (complexity × criticality patches the lifecycle) ───────── -->
+  <!-- ───────── §2.1 · the patch atlas (complexity × criticality patches the lifecycle) ───────── -->
   <section class="playground-section" id="playground">
     <div class="pg-header">
-      <div class="marker">§02 · the patch atlas</div>
+      <div class="marker">§2.1 · the patch atlas</div>
       <h2 class="pg-title">Complexity earns ceremony. <em>Simplicity skips it.</em></h2>
       <p class="pg-lede">Two values in your spec — <code>complexity</code> and <code>criticality</code> — set how much rigor the work earns. The harness reads them and patches the lifecycle to match.</p>
     </div>
@@ -5743,7 +5789,7 @@
   <!-- ───────── Spec stream (locking) — concrete walkthrough of the gates above ───────── -->
   <section class="spec-stream" id="spec-stream">
     <div class="stream-header">
-      <span>§03 · /refine writes the spec · scrolls to lock</span>
+      <span>§2.2 · /refine writes the spec · scrolls to lock</span>
       <span>4 gates · 0 of 4 cleared</span>
     </div>
 
@@ -5837,12 +5883,22 @@
     </article>
   </section>
 
+  <!-- ═══════════════════ PART 3 · THE PROOF ═══════════════════ -->
+  <div class="part-divider" id="part-3">
+    <div class="pd-rule"></div>
+    <div class="pd-row">
+      <span class="pd-num">Part 3</span>
+      <span class="pd-title">The Proof</span>
+    </div>
+    <p class="pd-dek">What happens after you walk away — the overnight handoff in motion, and the safety contract that makes “work while you sleep” a claim you can check.</p>
+  </div>
+
   <!-- ───────── Pipeline activation (sticky scrub) ───────── -->
   <section class="pipe-wrap" id="pipe-section">
     <div class="pipe-stage" id="pipe-stage">
       <div class="starfield" aria-hidden="true"></div>
 
-      <div class="pipe-header">§04 · the overnight payoff · scroll to scrub</div>
+      <div class="pipe-header">§3.1 · the overnight payoff · scroll to scrub</div>
       <h2 class="pipe-title">If a spec earns it, <em>this is what handoff looks like.</em></h2>
 
       <svg class="pipe-svg" id="pipe-svg" viewBox="0 0 1800 960" preserveAspectRatio="xMidYMid meet"></svg>
@@ -5946,9 +6002,9 @@
 
   <!-- Playground moved up to sit with the lifecycle/spec section -->
 
-  <!-- ───────── §05 · Trust grid · what the harness does when you're not watching ───────── -->
+  <!-- ───────── §3.2 · Trust grid · what the harness does when you're not watching ───────── -->
   <section class="trust-grid" id="trust-grid" aria-labelledby="tg-h">
-    <div class="marker">§05 · /overnight · operational guarantees</div>
+    <div class="marker">§3.2 · /overnight · the safety contract</div>
     <h2 id="tg-h">Inside <code style="font-family:var(--mono); font-size:0.78em; font-weight:500; letter-spacing:0;">/overnight</code> · <em>the safety contract.</em></h2>
     <div class="tg-cards">
 
@@ -6926,10 +6982,20 @@
   })();
   </script>
 
-  <!-- ───────── §07 · /cli · the bench (atomic subcommands behind the prose) ───────── -->
+  <!-- ═══════════════ PART 4 · THE BENCH & THE ASK ═══════════════ -->
+  <div class="part-divider" id="part-4">
+    <div class="pd-rule"></div>
+    <div class="pd-row">
+      <span class="pd-num">Part 4</span>
+      <span class="pd-title">The Bench &amp; the Ask</span>
+    </div>
+    <p class="pd-dek">The deterministic toolkit underneath the prose, why it had to exist — then the one command that installs all of it.</p>
+  </div>
+
+  <!-- ───────── §4.1 · /cli · the bench (atomic subcommands behind the prose) ───────── -->
   <section class="cli-section" id="cli">
     <div class="head">
-      <div class="marker">§07 · /cli · <em>the bench</em><span class="prompt-cursor"></span></div>
+      <div class="marker">§4.1 · /cli · <em>the bench</em><span class="prompt-cursor"></span></div>
       <h2 class="kicker">Prose skills wander. <em>The CLI is the toolkit that doesn't.</em></h2>
       <p class="lede">A Cortex skill is prose — and prose, under fatigue or context drift, paraphrases, skips, coerces <em>"close enough."</em> Every skill shells out to deterministic <code>cortex-*</code> subcommands for the parts that can't. <em>Three guarantees a prose skill alone can never give you.</em></p>
       <div class="benefits">
@@ -7055,7 +7121,7 @@
         <svg id="cli-dive-gear-b" class="hood-gear gear-b" width="48" height="48" viewBox="-30 -30 60 60"></svg>
       </span>
       <span class="hood-label">
-        <span class="hood-marker">§07.5 · why <em>we built this</em></span>
+        <span class="hood-marker">§4.2 · why <em>we built this</em></span>
         <span class="hood-title">Pop the hood on an example — <em>SHA consensus on /critical-review</em></span>
         <span class="hood-sub">five agents · one artifact · proof the binary enforces — not the prompt</span>
       </span>
@@ -7067,7 +7133,7 @@
     <div class="dive" id="cli-dive-panel">
       <div class="dive-inner">
         <div class="dive-head reveal">
-          <div class="sub-marker">§07.5 · why we built this</div>
+          <div class="sub-marker">§4.2 · why we built this</div>
           <h3>Five agents must read the same bytes. <em>A prompt can't enforce that.</em></h3>
         </div>
 
@@ -7172,7 +7238,7 @@
 
   <script>
   (function() {
-    // ─── §07 · CLI bench · dive toggle + animations ───
+    // ─── §4.1 · CLI bench · dive toggle + animations ───
     var toggle = document.getElementById('cli-dive-toggle');
     var dive   = document.getElementById('cli-dive-panel');
     if (!toggle || !dive) return;
@@ -7283,7 +7349,7 @@
 
   <!-- ───────── What ships ───────── -->
   <section class="install" id="install">
-    <div class="marker">§06 · what installs · 2 plugins · CLI + MCP auto-bundle</div>
+    <div class="marker">§4.3 · what installs · 2 plugins · CLI + MCP auto-bundle</div>
     <h2>Start with the skills. <em>Add overnight when you want autonomy.</em></h2>
 
     <div class="ship-grid two-col">
@@ -7833,7 +7899,7 @@
     }
   }
 
-  // ─────────── §02 · the patch atlas ───────────
+  // ─────────── §2.1 · the patch atlas ───────────
   // State: two integers (cplx, crit) ∈ {0,1,2}. The active phase sequence is
   // MATRIX[crit][cplx]. Bench renders the active lifecycle with module labels;
   // two escalators below toggle the axes.
@@ -8188,40 +8254,45 @@
 
   function updateMetaSpec() {
     const anchor = window.innerHeight * 0.45;
-    let cleared = 0;
+    const total = msTargets.length;
+    if (!total) return;
+    const footer = document.getElementById('page-footer');
+    // Waypoint model: each target is a Part divider (a thin band, so the old
+    // "bottom < anchor" clear test would fire instantly). The active Part is the
+    // last divider whose top has crossed the anchor; earlier Parts are cleared.
+    // The final Part clears only once the page footer enters view — its content
+    // runs taller than the viewport, like the old install gate.
     let activeIdx = -1;
-    for (let i = 0; i < msTargets.length; i++) {
-      const { li, el } = msTargets[i];
-      const r = el.getBoundingClientRect();
-      // Last gate (ship/install) clears once the page footer enters the viewport —
-      // the install section is taller than the viewport, so its own bottom never
-      // crosses the 0.45 anchor used by shorter sections.
-      const isLast = (i === msTargets.length - 1);
-      const footer = document.getElementById('page-footer');
+    for (let i = 0; i < total; i++) {
+      if (msTargets[i].el.getBoundingClientRect().top <= anchor) activeIdx = i;
+      else break;
+    }
+    let cleared = 0;
+    for (let i = 0; i < total; i++) {
+      const isLast = (i === total - 1);
       const fr = isLast && footer ? footer.getBoundingClientRect() : null;
       const isCleared = isLast
         ? (fr ? fr.top < window.innerHeight : false)
-        : r.bottom < anchor;
-      const isActive = !isCleared && r.top < anchor;
-      li.classList.toggle('cleared', isCleared);
-      li.classList.toggle('active', isActive);
+        : (i < activeIdx);
+      const isActive = (i === activeIdx) && !isCleared;
+      msTargets[i].li.classList.toggle('cleared', isCleared);
+      msTargets[i].li.classList.toggle('active', isActive);
       if (isCleared) cleared++;
-      if (isActive && activeIdx === -1) activeIdx = i;
     }
-    if (msFill) msFill.style.width = `${(cleared / msTargets.length) * 100}%`;
+    if (msFill) msFill.style.width = `${(cleared / total) * 100}%`;
     if (msStatus) {
-      if (cleared === msTargets.length) {
-        msStatus.textContent = 'spec shipped · 6 of 6 cleared';
+      if (cleared === total) {
+        msStatus.textContent = `spec shipped · ${total} of ${total} cleared`;
         msStatus.classList.add('shipped');
       } else if (activeIdx >= 0) {
         const phase = msTargets[activeIdx].li.querySelector('.ms-name').textContent;
-        msStatus.textContent = `${phase} · ${cleared} of 6 cleared`;
+        msStatus.textContent = `${phase} · ${cleared} of ${total} cleared`;
         msStatus.classList.remove('shipped');
       } else if (cleared === 0) {
-        msStatus.textContent = 'spec drafting · 0 of 6 cleared';
+        msStatus.textContent = `spec drafting · 0 of ${total} cleared`;
         msStatus.classList.remove('shipped');
       } else {
-        msStatus.textContent = `between gates · ${cleared} of 6 cleared`;
+        msStatus.textContent = `between parts · ${cleared} of ${total} cleared`;
         msStatus.classList.remove('shipped');
       }
     }
