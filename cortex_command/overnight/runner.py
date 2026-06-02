@@ -24,6 +24,7 @@ from __future__ import annotations
 import fcntl
 import json
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -525,6 +526,139 @@ def _commit_followup_in_worktree(
                 pass
     except (OSError, subprocess.SubprocessError):
         pass
+
+
+def _resolve_feature_integration_worktree(
+    state: "state_module.OvernightState",
+    fs: "state_module.OvernightFeatureStatus",
+) -> Optional[Path]:
+    """Resolve the integration worktree a feature's plan commit lands in.
+
+    The home repo's integration worktree lives in ``state.worktree_path``
+    (``plan.py`` skips the home repo when populating
+    ``state.integration_worktrees``), while ``state.integration_worktrees``
+    holds only the *cross-repo* worktrees. A feature targets the home repo
+    when its ``repo_path`` is ``None`` (the project default); otherwise it
+    targets the cross-repo worktree keyed by its resolved ``repo_path``.
+
+    Returns ``None`` when no worktree is recorded for the feature's repo so
+    the caller can skip it without crashing.
+    """
+    if fs.repo_path is None:
+        return Path(state.worktree_path) if state.worktree_path else None
+    repo_key = str(Path(fs.repo_path).expanduser().resolve())
+    wt = state.integration_worktrees.get(repo_key)
+    if wt is None:
+        # Fall back to the raw (un-normalized) key in case the state was
+        # written without resolving the path.
+        wt = state.integration_worktrees.get(fs.repo_path)
+    return Path(wt) if wt else None
+
+
+def _commit_round_plans_in_worktree(
+    state: "state_module.OvernightState",
+    home_repo_path: Path,
+    session_id: str,
+    events_path: Path,
+) -> None:
+    """Commit this round's generated ``plan.md`` files in their integration worktrees.
+
+    Replaces the orchestrator agent's prose ``/commit`` step (which ran in
+    the home-repo CWD on ``main``). For each feature, the orchestrator wrote
+    ``plan.md`` into the home working tree; this helper copies that file into
+    the feature's integration worktree and runs ``git add``/``git commit``
+    there (``cwd`` = the worktree, ``env`` without ``GIT_DIR``) so the plan
+    commit lands on ``overnight/{session_id}`` rather than home ``main``.
+
+    The home-tree copy is intentionally left in place (and uncommitted): the
+    dispatch path root-resolves its ``plan.md`` read to the home tree, so
+    removing it would starve the next pipeline stage.
+
+    Worktree resolution is per-feature (``_resolve_feature_integration_worktree``):
+    home-repo features land in ``state.worktree_path``; cross-repo features
+    land in their ``state.integration_worktrees`` entry. Features whose
+    worktree is absent/torn-down are skipped (the helper never crashes and
+    never emits the ticket's ``followup_commit_failed`` rc=128 against a
+    removed worktree).
+    """
+    env = {k: v for k, v in os.environ.items() if k != "GIT_DIR"}
+    # Group the round's relative plan paths by their target worktree so each
+    # worktree gets a single staged commit.
+    by_worktree: dict[Path, list[str]] = {}
+    for name, fs in state.features.items():
+        rel_plan = f"cortex/lifecycle/{name}/plan.md"
+        src = home_repo_path / rel_plan
+        if not src.is_file():
+            continue
+        worktree_path = _resolve_feature_integration_worktree(state, fs)
+        # Edge: integration worktree absent/torn-down — fail safe, surface,
+        # never crash and never the ticket's followup_commit_failed rc=128.
+        if worktree_path is None or not worktree_path.is_dir():
+            if worktree_path is not None:
+                try:
+                    events.log_event(
+                        events.INTEGRATION_WORKTREE_MISSING,
+                        round=0,
+                        details={
+                            "session_id": session_id,
+                            "feature": name,
+                            "worktree_path": str(worktree_path),
+                            "context": "plan_commit",
+                        },
+                        log_path=events_path,
+                    )
+                except Exception:
+                    pass
+            continue
+        try:
+            dst = worktree_path / rel_plan
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+        except OSError:
+            continue
+        by_worktree.setdefault(worktree_path, []).append(rel_plan)
+
+    for worktree_path, rel_plans in by_worktree.items():
+        try:
+            subprocess.run(
+                ["git", "add", *rel_plans],
+                cwd=str(worktree_path),
+                env=env,
+                check=False,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            diff = subprocess.run(
+                ["git", "diff", "--cached", "--quiet"],
+                cwd=str(worktree_path),
+                env=env,
+                check=False,
+            )
+            if diff.returncode == 0:
+                continue
+            commit_result = subprocess.run(
+                [
+                    "git",
+                    "commit",
+                    "-m",
+                    f"Overnight session {session_id}: commit generated plans",
+                ],
+                cwd=str(worktree_path),
+                env=env,
+                check=False,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            if commit_result.returncode != 0:
+                print(
+                    f"runner: plan commit failed for session={session_id} "
+                    f"worktree={worktree_path} rc={commit_result.returncode}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+        except (OSError, subprocess.SubprocessError):
+            continue
 
 
 def _commit_morning_report_in_repo(
@@ -2296,6 +2430,26 @@ def run(
                         o_proc.stdout.close()
                     except Exception:
                         pass
+
+            # -----------------------------------------------------------
+            # Commit the round's generated plan.md files inside each
+            # feature's integration worktree (replaces the orchestrator
+            # agent's prose /commit step, which landed on home main).
+            # Reload state to pick up the plans the orchestrator just
+            # wrote and the features it marked this round.
+            # -----------------------------------------------------------
+            try:
+                _commit_round_plans_in_worktree(
+                    state=state_module.load_state(state_path),
+                    home_repo_path=repo_path,
+                    session_id=session_id,
+                    events_path=events_path,
+                )
+            except Exception as exc:
+                print(
+                    f"Warning: plan commit failed: {exc}",
+                    flush=True,
+                )
 
             # -----------------------------------------------------------
             # Spawn batch_runner + watchdog (if a batch plan was produced).

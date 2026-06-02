@@ -436,7 +436,7 @@ On success, output only this JSON on the last line of your response:
   3. Exclude it from this round
 - For each sub-agent that crashed or produced no status line: mark the feature `failed` with error "plan generation sub-agent did not complete"
 
-**Step 3d — Commit generated plans**: If any new `plan.md` files were written, stage and commit them using `/commit` before proceeding.
+Do NOT commit the generated `plan.md` files yourself. The runner commits them into each feature's integration worktree after this round returns; committing them here would land them on the home repo's `main`.
 
 **Step 3e — Final validation**: Confirm all remaining features have their `plan_path` on disk. Any still missing at this point are marked `failed`.
 
