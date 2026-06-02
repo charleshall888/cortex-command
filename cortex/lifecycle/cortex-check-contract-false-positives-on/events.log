@@ -1,0 +1,3 @@
+{"schema_version": 1, "ts": "2026-06-02T12:24:17Z", "event": "lifecycle_start", "feature": "cortex-check-contract-false-positives-on", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-02T12:28:34Z", "event": "clarify_critic", "feature": "cortex-check-contract-false-positives-on", "parent_epic_loaded": false, "findings_count": 6, "dispositions": {"apply": 0, "dismiss": 6, "ask": 0}, "applied_fixes_count": 0, "dismissals_count": 6, "status": "ok"}
+{"ts": "2026-06-02T12:33:52Z", "event": "complexity_override", "feature": "cortex-check-contract-false-positives-on", "from": "simple", "to": "complex", "gate": "clarify_assessment"}

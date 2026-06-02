@@ -7,6 +7,8 @@ priority: medium
 type: bug
 created: 2026-06-02
 updated: 2026-06-02
+complexity: complex
+criticality: high
 ---
 **Why:** `cortex-check-contract` exits 1 on 12 false-positive violations — none are real doc or code errors. Two distinct checker limitations cause all of them:
 
