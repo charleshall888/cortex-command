@@ -35,10 +35,12 @@ if _li is not None:
 
 import argparse
 import datetime
+import functools
 import os
 import re
 import subprocess
 import sys
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -387,12 +389,49 @@ def gather_scan_files(root: Path) -> list[Path]:
     return sorted(out, key=lambda p: str(p))
 
 
+# ---------------------------------------------------------------------------
+# Inline-vendored glob-membership matcher.
+#
+# This standalone script cannot import the package, so it carries a byte-for-
+# byte copy of cortex_command/lint/_globs.py's matcher. The two symbols below
+# (_glob_to_regex and the two-arg matches_any_glob) are pinned to the shared
+# helper by tests/test_events_registry_glob_parity.py over the full
+# nine-shape truth-table corpus — keep them logically identical to that module.
+# ``**`` is zero-or-more path segments; stdlib-only ``re``, Python-3.12-safe.
+# ---------------------------------------------------------------------------
+
+
+@functools.lru_cache(maxsize=None)
+def _glob_to_regex(glob: str) -> "re.Pattern[str]":
+    """Translate one scan-scope glob to a compiled regex (``**`` = 0+ segments)."""
+
+    def _esc_segment(s: str) -> str:
+        """Regex-escape a glob segment, then convert ``*`` → ``[^/]*``."""
+        return re.escape(s).replace(r"\*", "[^/]*")
+
+    if glob.endswith("/**"):
+        # e.g. "hooks/**" → match anything (at any depth) under hooks/
+        prefix = re.escape(glob[:-3])
+        return re.compile(rf"^{prefix}/.+$")
+
+    if "**" not in glob:
+        # No wildcard — exact match with single-* support.
+        return re.compile(rf"^{_esc_segment(glob)}$")
+
+    # Glob contains **/ (zero-or-more path segments).
+    segments = glob.split("**/")
+    regex_parts = [_esc_segment(s) for s in segments]
+    pattern = "(?:[^/]+/)*".join(regex_parts)
+    return re.compile(rf"^{pattern}$")
+
+
+def matches_any_glob(rel_path: str, globs: Sequence[str]) -> bool:
+    """Return True iff *rel_path* matches any glob in *globs* (re-iterable)."""
+    return any(_glob_to_regex(glob).match(rel_path) for glob in globs)
+
+
 def _matches_scan_glob(rel_path: str) -> bool:
-    p = Path(rel_path)
-    for glob in SCAN_GLOBS:
-        if p.match(glob):
-            return True
-    return False
+    return matches_any_glob(rel_path, SCAN_GLOBS)
 
 
 def _staged_paths(root: Path) -> list[str]:
