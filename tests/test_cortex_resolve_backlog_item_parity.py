@@ -28,6 +28,7 @@ error-formatter-shape is NOT opted in: the script's stderr messages in cases
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -143,6 +144,51 @@ def _invoke_case(case: str) -> subprocess.CompletedProcess:
 
 
 # ---------------------------------------------------------------------------
+# Structural assertion helpers (drift-immune; see fixture README + plan #276)
+# ---------------------------------------------------------------------------
+
+
+def _assert_ambiguous_stderr_structure(result: subprocess.CompletedProcess) -> None:
+    """Assert the ``ambiguous: N matches`` stderr *format* against live output.
+
+    Pins the format contract of ``_format_candidates`` (header, candidate
+    ``filename<TAB>title`` shape, and the ``... (N-5 more)`` truncation
+    arithmetic) without byte-pinning the volatile match count or titles, which
+    drift whenever a "lifecycle"-titled backlog item is added or removed.
+    """
+    assert result.returncode == 2, f"expected exit 2, got {result.returncode}"
+    lines = result.stderr.decode("utf-8").splitlines()
+    assert lines, "expected non-empty stderr"
+
+    header = re.match(r"^ambiguous: (\d+) matches$", lines[0])
+    assert header is not None, f"header line did not match: {lines[0]!r}"
+    n = int(header.group(1))
+    assert n > 1, f"ambiguous case requires N > 1, got {n}"
+
+    expected_candidates = min(n, 5)
+    candidate_lines = lines[1 : 1 + expected_candidates]
+    assert len(candidate_lines) == expected_candidates, (
+        f"expected {expected_candidates} candidate lines, got {len(candidate_lines)}"
+    )
+    for cand in candidate_lines:
+        filename, tab, title = cand.partition("\t")
+        assert tab == "\t", f"candidate line missing TAB separator: {cand!r}"
+        assert filename.endswith(".md"), f"candidate filename not .md: {filename!r}"
+        assert title, f"candidate title empty: {cand!r}"
+
+    remaining = lines[1 + expected_candidates :]
+    if n > 5:
+        assert len(remaining) == 1, f"expected one truncation line, got {remaining!r}"
+        trunc = re.match(r"^\.\.\. \((\d+) more\)$", remaining[0])
+        assert trunc is not None, f"truncation line did not match: {remaining[0]!r}"
+        assert int(trunc.group(1)) == n - 5, (
+            f"truncation count {trunc.group(1)} != {n - 5}"
+        )
+    else:
+        assert not remaining, f"unexpected trailing lines for N<=5: {remaining!r}"
+
+
+# ---------------------------------------------------------------------------
 # Parametrized parity tests
 # ---------------------------------------------------------------------------
 
@@ -160,15 +206,52 @@ def test_exitcode_parity(case: str) -> None:
 
 @pytest.mark.parametrize("case", _discover_cases())
 def test_stderr_parity(case: str) -> None:
-    """stderr is byte-identical to the fixture capture.
+    """stderr is byte-identical to the fixture capture, except for the
+    structurally-asserted ``title_phrase_ambiguous`` case.
 
-    The script's stderr messages (ambiguous-candidate list and no-match
-    diagnostic) are fixed-format strings the port must reproduce exactly.
-    No tolerance is opted in for stderr.
+    ``no_match``'s stderr is a fixed-format string reproduced byte-for-byte.
+    ``title_phrase_ambiguous`` embeds the live ambiguous-match count and a
+    candidate listing, so it is asserted *structurally* against live output
+    rather than byte-compared (its ``.stderr`` snapshot is de-pinned). The
+    structural branch runs first so the deleted snapshot is never read.
     """
+    if case == "title_phrase_ambiguous":
+        _assert_ambiguous_stderr_structure(_invoke_case(case))
+        return
     expected_stderr = _read_expected_stderr(case)
     actual_stderr = _invoke_case(case).stderr
     assert_byte_identical(actual_stderr, expected_stderr)
+
+
+def test_ambiguous_structure_rejects_malformed() -> None:
+    """No-op-freedom guard: the ambiguous structural assertion must reject real
+    ``_format_candidates`` regressions, not merely confirm a non-empty stderr.
+
+    Feeds crafted bad stderr (reworded header, space-for-TAB separator, wrong
+    truncation count) and asserts each raises ``AssertionError``; one
+    well-formed sample must pass. This is the automatable realization of the
+    spec's mutation-resistance requirement (no resolver mutation needed).
+    """
+
+    def _cp(stderr: str, returncode: int = 2) -> subprocess.CompletedProcess:
+        return subprocess.CompletedProcess(
+            args=[], returncode=returncode, stdout=b"", stderr=stderr.encode("utf-8")
+        )
+
+    candidates = "\n".join(f"00{i}-item.md\tTitle {i}" for i in range(1, 6))
+    good = f"ambiguous: 7 matches\n{candidates}\n... (2 more)"
+    _assert_ambiguous_stderr_structure(_cp(good))  # must not raise
+
+    bad_header = f"ambig: 7 match\n{candidates}\n... (2 more)"
+    bad_separator = (
+        "ambiguous: 7 matches\n"
+        + "\n".join(f"00{i}-item.md Title {i}" for i in range(1, 6))
+        + "\n... (2 more)"
+    )
+    bad_truncation = f"ambiguous: 7 matches\n{candidates}\n... (99 more)"
+    for bad in (bad_header, bad_separator, bad_truncation):
+        with pytest.raises(AssertionError):
+            _assert_ambiguous_stderr_structure(_cp(bad))
 
 
 @pytest.mark.parametrize("case", _discover_cases())
