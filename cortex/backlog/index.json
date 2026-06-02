@@ -55,32 +55,6 @@
     "repo": null
   },
   {
-    "id": 278,
-    "title": "Overnight feature crashes with 'Unknown complexity tier medium' — backlog-lookup failure defaults criticality, which mis-routes into the complexity arg",
-    "status": "refined",
-    "priority": "high",
-    "type": "bug",
-    "tags": [],
-    "areas": [
-      "overnight-runner"
-    ],
-    "created": "2026-06-01",
-    "updated": "2026-06-01",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "cortex/lifecycle/overnight-feature-crashes-with-unknown-complexity/spec.md",
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "bdefeb63-516d-4ddc-9508-fe8a0b263d3c",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 8,
     "title": "Auto-rename Claude Code session to active lifecycle feature name",
     "status": "backlog",
@@ -170,32 +144,6 @@
     "lifecycle_slug": "make-cortex-check-parity-context-aware-skip-tokens-inside-fenced-code-blocks",
     "session_id": null,
     "lifecycle_phase": "wontfix",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 276,
-    "title": "Make cortex-resolve-backlog-item ambiguous parity fixture robust to backlog drift",
-    "status": "refined",
-    "priority": "low",
-    "type": "chore",
-    "tags": [],
-    "areas": [
-      "tests"
-    ],
-    "created": "2026-06-01",
-    "updated": "2026-06-01",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "cortex/lifecycle/make-cortex-resolve-backlog-item-ambiguous/spec.md",
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "43a366cf-e5f4-499e-90cb-0bbddec77bf7",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
     "schema_version": "1",
     "repo": null
   }

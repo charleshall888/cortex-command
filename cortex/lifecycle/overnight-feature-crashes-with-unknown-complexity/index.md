@@ -6,7 +6,7 @@ parent_backlog_id: 278
 tags: []
 tier: complex
 criticality: high
-artifacts: ["research", "spec", "plan"]
+artifacts: ["research", "spec", "plan", "review"]
 created: 2026-06-01
 updated: 2026-06-01
 ---

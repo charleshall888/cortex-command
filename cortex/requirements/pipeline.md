@@ -39,6 +39,7 @@ The pipeline area covers the overnight execution framework: how sessions are orc
   - `deferred` means awaiting explicit human decision — deferred features do not auto-retry. Sources: ambiguous intent (exit report `action: "question"`), CI gate block, or non-APPROVED post-merge review verdict after rework exhaustion
   - One feature's failure does not block other features in the same round (fail-forward model)
   - Per-feature recovery metadata is tracked: `recovery_attempts` and `recovery_depth` counters
+  - When a feature reaches terminal `failed`, an end-of-round sweep transitions every not-yet-terminal feature whose `intra_session_blocked_by` lists it to `failed` with reason `blocker_failed`, re-applying to a fixpoint so transitive chains resolve. A `paused` blocker (recoverable) does not cascade; only terminal `failed` triggers it.
 - **Priority**: must-have
 
 ### Conflict Resolution
