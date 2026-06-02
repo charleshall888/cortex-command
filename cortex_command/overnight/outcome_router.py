@@ -391,6 +391,8 @@ def _write_back_to_backlog(
     round_number: int,
     log_path: Path,
     backlog_id: Optional[int] = None,
+    *,
+    recoverable_branch: Optional[str] = None,
 ) -> None:
     """Best-effort write of canonical status back to the backlog item.
 
@@ -398,9 +400,15 @@ def _write_back_to_backlog(
     and calls ``update_item()`` from ``cortex/backlog/update_item.py``. All
     exceptions are caught, logged to the overnight events log, and silently
     swallowed so the overnight session never aborts on a backlog write failure.
+
+    When *recoverable_branch* is set (the built-but-merge-blocked recoverable
+    sub-case), the ``_OVERNIGHT_TO_BACKLOG`` mapping is bypassed: the item is
+    written ``status: in_progress`` and records the recovery branch, keeping it
+    out of the from-scratch-rebuild pool the ``deferred → backlog`` mapping
+    would otherwise re-queue it into.
     """
     mapping = _OVERNIGHT_TO_BACKLOG.get(overnight_status)
-    if mapping is None:
+    if mapping is None and not recoverable_branch:
         return  # No write-back defined for this status (e.g. "pending")
 
     try:
@@ -413,12 +421,20 @@ def _write_back_to_backlog(
 
         # Build the fields dict, replacing the session_id sentinel
         session_id = os.environ.get("LIFECYCLE_SESSION_ID", "manual")
-        fields: dict[str, Any] = {}
-        for key, value in mapping.items():
-            if value == "_CURRENT_":
-                fields[key] = session_id
-            else:
-                fields[key] = value
+        fields: dict[str, Any]
+        if recoverable_branch:
+            fields = {
+                "status": "in_progress",
+                "session_id": None,
+                "recoverable_branch": recoverable_branch,
+            }
+        else:
+            fields = {}
+            for key, value in mapping.items():
+                if value == "_CURRENT_":
+                    fields[key] = session_id
+                else:
+                    fields[key] = value
 
         backlog_dir = _backlog_dir if _backlog_dir is not None else _resolve_user_project_root() / "cortex" / "backlog"
         _backlog_update_item(

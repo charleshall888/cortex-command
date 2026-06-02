@@ -734,5 +734,55 @@ class TestFindBacklogItemPathLifecycleSlug(unittest.TestCase):
         self.assertNotIn("backlog_write_failed", contents)
 
 
+class TestRecoverableWriteBack(unittest.TestCase):
+    """Task 3 — recoverable write-back records in_progress + the branch.
+
+    A built-but-merge-blocked recoverable feature must NOT be re-queued as
+    ``status: backlog`` (the default deferred mapping), which would feed it to
+    the from-scratch-rebuild pool. With ``recoverable_branch`` set it is written
+    ``status: in_progress`` and the recovery branch is recorded on the item.
+    """
+
+    SLUG = "recoverable-feat"
+    STEM = "010-recoverable-feat"
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.backlog_dir = Path(self._tmp.name)
+        self.item = self.backlog_dir / f"{self.STEM}.md"
+        self.item.write_text(
+            "---\n"
+            "uuid: 0123abcd-aaaa-bbbb-cccc-000000000010\n"
+            "title: Recoverable feature\n"
+            f"lifecycle_slug: {self.SLUG}\n"
+            "status: refined\n"
+            "---\n"
+            "Body.\n",
+            encoding="utf-8",
+        )
+        set_backlog_dir(self.backlog_dir)
+
+    def tearDown(self) -> None:
+        set_backlog_dir(None)  # type: ignore[arg-type]
+        self._tmp.cleanup()
+
+    def test_recoverable_writeback_positive(self) -> None:
+        log_path = self.backlog_dir / "events.log"
+        _write_back_to_backlog(
+            self.SLUG,
+            overnight_status="deferred",
+            round_number=1,
+            log_path=log_path,
+            recoverable_branch="pipeline/recoverable-feat-2",
+        )
+
+        text = self.item.read_text(encoding="utf-8")
+        # status is in_progress, NOT the deferred→backlog mapping default.
+        self.assertRegex(text, r"(?m)^status: in_progress$")
+        self.assertNotRegex(text, r"(?m)^status: backlog$")
+        # The recovery branch is recorded on the item.
+        self.assertIn("pipeline/recoverable-feat", text)
+
+
 if __name__ == "__main__":
     unittest.main()
