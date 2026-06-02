@@ -151,13 +151,14 @@ def plist_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return plists
 
 
-@pytest.fixture()
-def fake_launchctl(monkeypatch: pytest.MonkeyPatch):
+def _install_fake_launchctl(
+    monkeypatch: pytest.MonkeyPatch, print_stdout: bytes
+) -> None:
     """Stub ``subprocess.run`` at the macOS-backend boundary so no real
     ``launchctl`` binary is invoked.
 
     bootstrap → exit 0
-    print     → exit 0, stdout contains "state = waiting"
+    print     → exit 0, stdout = ``print_stdout``
     bootout   → exit 0
     """
 
@@ -170,9 +171,7 @@ def fake_launchctl(monkeypatch: pytest.MonkeyPatch):
         if subverb == "bootstrap":
             return subprocess.CompletedProcess(cmd, 0, b"", b"")
         if subverb == "print":
-            return subprocess.CompletedProcess(
-                cmd, 0, b"state = waiting\n", b""
-            )
+            return subprocess.CompletedProcess(cmd, 0, print_stdout, b"")
         if subverb == "bootout":
             return subprocess.CompletedProcess(cmd, 0, b"", b"")
         # Any other subverb — succeed silently.
@@ -181,6 +180,27 @@ def fake_launchctl(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(
         "cortex_command.overnight.scheduler.macos.subprocess.run",
         _fake_run,
+    )
+
+
+@pytest.fixture()
+def fake_launchctl(monkeypatch: pytest.MonkeyPatch):
+    """Stub ``launchctl`` whose ``print`` reports the Darwin <25 armed
+    line ``state = waiting``.
+    """
+    _install_fake_launchctl(monkeypatch, b"state = waiting\n")
+
+
+@pytest.fixture()
+def fake_launchctl_not_running(monkeypatch: pytest.MonkeyPatch):
+    """Stub ``launchctl`` whose ``print`` reports the Darwin 25 / macOS 26
+    armed line ``state = not running`` for an armed-but-dormant
+    StartCalendarInterval agent — the case the volatile ``state = waiting``
+    check used to false-fail (R9).
+    """
+    _install_fake_launchctl(
+        monkeypatch,
+        b"\tstate = not running\n\tcom.apple.xpc.launchd.calendarinterval = {\n",
     )
 
 
@@ -296,6 +316,60 @@ def test_schedule_then_cancel_full_lifecycle(
     assert state_data_after.get("scheduled_start") is None, (
         f"scheduled_start not cleared after cancel; got {state_data_after.get('scheduled_start')!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Test 1b: Darwin 25 / macOS 26 — `state = not running` armed agent verifies
+# ---------------------------------------------------------------------------
+
+
+def test_schedule_verifies_on_darwin25_not_running(
+    tmp_path: Path,
+    home_redirect: Path,
+    plist_dir: Path,
+    fake_launchctl_not_running,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture,
+) -> None:
+    """On Darwin 25 / macOS 26 an armed-but-dormant StartCalendarInterval
+    agent reports ``state = not running`` from ``launchctl print``. The
+    verifier must accept this durable armed fact and the schedule must
+    succeed (exit 0) instead of false-failing on the missing volatile
+    ``state = waiting`` substring (R9).
+    """
+    session_id = "overnight-2026-05-04-2200"
+    sessions_root = tmp_path / "cortex" / "lifecycle" / "sessions"
+    session_dir = sessions_root / session_id
+    state_path = _write_state(session_dir, session_id)
+
+    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda: tmp_path)
+
+    def _fake_session_dir(sid: str) -> Path:
+        d = sessions_root / sid
+        d.mkdir(parents=True, exist_ok=True)
+        return d
+
+    monkeypatch.setattr(
+        "cortex_command.overnight.state.session_dir",
+        _fake_session_dir,
+    )
+
+    schedule_args = _make_schedule_args(
+        target_time=_future_hhmm(),
+        state_path=state_path,
+        fmt="json",
+    )
+    rc_schedule = cli_handler.handle_schedule(schedule_args)
+    captured = capsys.readouterr()
+
+    assert rc_schedule == 0, (
+        "schedule false-failed on Darwin-25 'state = not running'; "
+        f"stdout={captured.out!r} stderr={captured.err!r}"
+    )
+
+    sched_payload = json.loads(captured.out.strip())
+    assert sched_payload["scheduled"] is True
+    assert sched_payload["session_id"] == session_id
 
 
 # ---------------------------------------------------------------------------

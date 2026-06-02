@@ -3,8 +3,10 @@
 Renders a launchd plist via stdlib :mod:`plistlib`, validates it via a
 ``dumps``/``loads`` round-trip, writes it to ``$TMPDIR/cortex-overnight-launch/``,
 bootstraps the agent via ``launchctl bootstrap gui/$(id -u)``, then
-verifies registration via ``launchctl print`` (looking for the
-``state = waiting`` substring).
+verifies registration via ``launchctl print`` by confirming the durable
+armed fact (an armed-state line — ``state = waiting`` on Darwin <25 or
+``state = not running`` on Darwin 25 / macOS 26 — or the registered
+calendar block).
 
 Task 2 filled in plist render, env snapshot, target-time validation,
 and bootstrap-and-verify. Task 3 filled the launcher-script seam.
@@ -61,8 +63,27 @@ _OPTIONAL_ENV_KEYS = (
     "CORTEX_WORKTREE_ROOT",
 )
 
-# Substring to look for in the post-bootstrap `launchctl print` output.
-_VERIFY_STATE_SUBSTRING = b"state = waiting"
+# Durable armed-state substrings to accept in the post-bootstrap
+# `launchctl print` output. The job's runtime `state` is volatile across
+# Darwin versions: an armed-but-dormant ``StartCalendarInterval`` agent
+# reports ``state = waiting`` on Darwin <25 but ``state = not running``
+# on Darwin 25 / macOS 26. Both are the same durable fact — the agent is
+# registered and armed, just not currently executing — so the verifier
+# accepts either rather than requiring the volatile ``waiting`` literal.
+# ``launchctl print`` is documented by Apple as "NOT API", so we also
+# corroborate the armed fact structurally via the registered calendar
+# block (see ``_print_confirms_armed``).
+_VERIFY_STATE_SUBSTRINGS = (
+    b"state = not running",
+    b"state = waiting",
+)
+
+# Structural corroboration of the durable armed fact: a correctly-armed
+# StartCalendarInterval agent's `launchctl print` output carries its
+# calendar trigger block. Presence of this section (alongside a clean
+# exit) confirms the agent is registered and armed independent of the
+# volatile runtime `state` line.
+_VERIFY_CALENDAR_SUBSTRING = b"calendarinterval"
 
 # Total wallclock budget for the post-bootstrap verify poll, in seconds.
 _VERIFY_POLL_BUDGET_SEC = 1.0
@@ -114,14 +135,15 @@ class LaunchctlBootstrapError(Exception):
 
 
 class LaunchctlVerifyError(Exception):
-    """Raised when post-bootstrap ``launchctl print`` does not yield
-    ``state = waiting`` within the verify-poll budget.
+    """Raised when post-bootstrap ``launchctl print`` does not confirm the
+    job is armed (a durable armed-state line or the registered calendar
+    block) within the verify-poll budget.
     """
 
     def __init__(self, label: str) -> None:
         self.label = label
         super().__init__(
-            f"launchctl print did not report 'state = waiting' for "
+            f"launchctl print did not confirm an armed job for "
             f"label {label!r} within {_VERIFY_POLL_BUDGET_SEC:.2f}s"
         )
 
@@ -573,10 +595,21 @@ class MacOSLaunchAgentBackend:
     ) -> None:
         """Run ``launchctl bootstrap`` then verify with ``launchctl print``.
 
+        The verify step confirms the durable fact that the agent is armed
+        — registered and dormant-or-waiting — rather than the volatile
+        ``state = waiting`` literal that Darwin <25 happened to report.
+        Darwin 25 / macOS 26 reports ``state = not running`` for an
+        armed-but-dormant ``StartCalendarInterval`` agent, so a literal
+        ``waiting`` check false-fails a correctly-armed job. The verifier
+        accepts either armed-state line, and also accepts a clean
+        ``print`` exit whose output carries the registered calendar block
+        (structural corroboration, since ``launchctl print`` is "NOT API"
+        per Apple and its exact phrasing is not contractual).
+
         Raises:
             LaunchctlBootstrapError: bootstrap returned non-zero.
-            LaunchctlVerifyError: bootstrap succeeded but the registered
-                job did not appear with ``state = waiting`` within the
+            LaunchctlVerifyError: bootstrap succeeded but ``launchctl
+                print`` did not confirm an armed job within the
                 verify-poll budget.
         """
         uid = os.getuid()
@@ -589,17 +622,15 @@ class MacOSLaunchAgentBackend:
                 result.stderr, result.returncode
             )
 
-        # Poll launchctl print up to the budget for the state substring.
+        # Poll launchctl print up to the budget for the durable armed
+        # fact (an armed-state line or the registered calendar block).
         deadline = time.monotonic() + _VERIFY_POLL_BUDGET_SEC
         while True:
             print_result = subprocess.run(
                 ["launchctl", "print", f"gui/{uid}/{label}"],
                 capture_output=True,
             )
-            if (
-                print_result.returncode == 0
-                and _VERIFY_STATE_SUBSTRING in print_result.stdout
-            ):
+            if _print_confirms_armed(print_result):
                 return
             if time.monotonic() >= deadline:
                 raise LaunchctlVerifyError(label)
@@ -808,6 +839,32 @@ def _read_launcher_template() -> str:
     """
     template_path = Path(__file__).resolve().parent / "launcher.sh"
     return template_path.read_text(encoding="utf-8")
+
+
+def _print_confirms_armed(
+    print_result: subprocess.CompletedProcess,
+) -> bool:
+    """Return True iff a ``launchctl print`` result confirms the job is armed.
+
+    The "armed" fact is durable across Darwin versions even though the
+    runtime ``state`` line is not. A correctly-armed but dormant
+    ``StartCalendarInterval`` agent reports ``state = waiting`` on
+    Darwin <25 and ``state = not running`` on Darwin 25 / macOS 26 — both
+    mean "registered, armed, not currently executing". We accept either,
+    and additionally accept a clean ``print`` exit whose output carries
+    the registered calendar trigger block (structural corroboration that
+    does not depend on the volatile state phrasing, since ``launchctl
+    print`` is documented by Apple as "NOT API").
+    """
+    if print_result.returncode != 0:
+        return False
+    stdout = print_result.stdout or b""
+    if any(token in stdout for token in _VERIFY_STATE_SUBSTRINGS):
+        return True
+    # Structural corroboration: the calendar block proves the job is the
+    # armed StartCalendarInterval agent we just bootstrapped, regardless
+    # of how this Darwin version phrases the runtime state line.
+    return _VERIFY_CALENDAR_SUBSTRING in stdout.lower()
 
 
 def _is_launchctl_registered(label: str, uid: int) -> bool:
