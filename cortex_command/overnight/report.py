@@ -371,7 +371,14 @@ def render_executive_summary(data: ReportData) -> str:
     features = data.state.features
     total = len(features)
     merged = sum(1 for f in features.values() if f.status == "merged")
-    deferred = sum(1 for f in features.values() if f.status == "deferred")
+    # Built-but-merge-blocked recoverable features are deferred-status but are
+    # surfaced in their own recoverable section, so they are excluded from the
+    # "questions need answers" deferred count.
+    deferred = sum(
+        1
+        for f in features.values()
+        if f.status == "deferred" and f.recoverable_branch is None
+    )
     failed = sum(1 for f in features.values() if f.status in ("failed", "paused"))
 
     # Circuit breaker check
@@ -1205,6 +1212,47 @@ def render_failed_features(data: ReportData) -> str:
             lines.append(f"- **{name}** (reason: `blocker_failed`)")
         lines.append("")
 
+    return "\n".join(lines)
+
+
+def render_built_merge_blocked(data: ReportData) -> str:
+    """Render the built-but-merge-blocked recoverable features section.
+
+    Each feature carrying ``recoverable_branch`` built successfully but hit a
+    genuine merge conflict that exhausted repair, so its work lives on that
+    branch and is recoverable — surfaced positively here rather than as a
+    failure or zero-progress. Distinct from question-deferrals, which never
+    carry ``recoverable_branch``.
+
+    Returns the empty string when no feature is recoverable so the section is
+    omitted entirely from the report.
+    """
+    if data.state is None:
+        return ""
+
+    recoverable = {
+        name: fs
+        for name, fs in data.state.features.items()
+        if fs.recoverable_branch is not None
+    }
+    if not recoverable:
+        return ""
+
+    total = len(recoverable)
+    lines: list[str] = [f"## Built, Merge-Blocked (Recoverable) ({total})", ""]
+    lines.append(
+        "These features built successfully but hit a genuine merge conflict "
+        "that exhausted automated repair. Their work is **not lost** — it is "
+        "recoverable on the branch named below. Resolve the conflict and merge, "
+        "rather than rebuilding from scratch."
+    )
+    lines.append("")
+    for name, fs in sorted(recoverable.items()):
+        lines.append(
+            f"- **{name}**: built, merge-blocked, recoverable on "
+            f"`{fs.recoverable_branch}`"
+        )
+    lines.append("")
     return "\n".join(lines)
 
 
@@ -2123,6 +2171,7 @@ def generate_report(data: ReportData) -> str:
         render_pending_drift(data),
         render_deferred_questions(data),
         render_critical_review_residue(data),
+        render_built_merge_blocked(data),
         render_failed_features(data),
         render_new_backlog_items(data),
         render_action_checklist(data),

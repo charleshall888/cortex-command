@@ -849,3 +849,53 @@ def test_recoverable_no_rebuild_followup(tmp_path) -> None:
     assert list(tmp_path.glob("*-feat-question.md"))
 
 
+# ---------------------------------------------------------------------------
+# Task 7: recoverable features surfaced positively + excluded from deferred count
+# ---------------------------------------------------------------------------
+
+def test_recoverable_surface_positive() -> None:
+    """Recoverable feature surfaced positively; deferred count excludes it.
+
+    render_deferred_questions output stays byte-identical for the genuine
+    question-deferral.
+    """
+    from cortex_command.overnight.report import (
+        generate_report,
+        render_deferred_questions,
+    )
+    from cortex_command.overnight.deferral import DeferralQuestion, SEVERITY_BLOCKING
+
+    dq = DeferralQuestion(
+        feature="feat-question",
+        question_id=1,
+        severity=SEVERITY_BLOCKING,
+        context="implementing X",
+        question="Which API endpoint should be used?",
+    )
+    features = {
+        "feat-question": OvernightFeatureStatus(status="deferred"),
+        "feat-recoverable": OvernightFeatureStatus(
+            status="deferred", recoverable_branch="pipeline/feat-recoverable-2"
+        ),
+    }
+    data = _pytest_make_data(features)
+    data.deferrals = [dq]
+
+    # (a) Report body positively surfaces the recoverable feature + its branch.
+    body = generate_report(data)
+    assert "Built, Merge-Blocked (Recoverable)" in body
+    assert "pipeline/feat-recoverable-2" in body
+
+    # (b) Exec-summary deferred-questions count is 1 (the question-deferral),
+    #     not 2 — the recoverable feature is excluded.
+    assert "- Features deferred: 1 (questions need answers)" in body
+
+    # (c) render_deferred_questions is byte-identical to a baseline that lacks
+    #     the recoverable feature in state — it is deferrals-driven, status-blind.
+    baseline = _pytest_make_data(
+        {"feat-question": OvernightFeatureStatus(status="deferred")}
+    )
+    baseline.deferrals = [dq]
+    assert render_deferred_questions(data) == render_deferred_questions(baseline)
+
+
