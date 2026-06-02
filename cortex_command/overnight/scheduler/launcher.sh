@@ -23,12 +23,19 @@
 #   3. Self-clean by removing the plist file and this launcher copy.
 #   4. Exit non-zero so launchd records the failure in its own logs.
 #
-# On the success path: detach via `setsid nohup` wrapping
-# `/usr/bin/caffeinate -i` wrapping the cortex binary invoked with
-# `overnight start --launchd --session-id <id>`, redirect stdin from
-# /dev/null and stdout/stderr to per-session log files, then disown and
-# exit 0. The plist + launcher are removed AFTER the runner is
-# successfully backgrounded.
+# On the success path: invoke the cortex binary in the FOREGROUND with
+# `overnight start --state <abs> --format json --force` (and none of the
+# legacy launchd/session-id flags). Detachment now happens inside
+# cortex: `start` routes through `_spawn_runner_async`'s `subprocess.Popen(...,
+# start_new_session=True)`, which makes the runner its own session
+# leader so it survives launchd's process-group SIGTERM when the
+# launcher exits. The launcher therefore does NOT background, setsid, or
+# disown anything — it stays in the foreground only long enough for
+# `start`'s spawn handshake, captures the JSON envelope on stdout for
+# the fire-time liveness discriminator read, and then removes the plist
+# + launcher and exits. `caffeinate` is no longer the launcher's
+# concern; the idle-sleep assertion is held by a runner-lifetime-bound
+# child of the runner itself.
 
 set -u
 
@@ -114,62 +121,72 @@ handle_failure() {
 # ---------------------------------------------------------------------------
 #
 # Catching command-not-found (exit 127) up-front gives us a clean error
-# class without depending on shell-trap subtleties around how `setsid`
-# propagates child exit codes. EPERM on exec() shows up as exit 126 in
-# bash; we map both 1 and 126/127 to the failure handler.
+# class without depending on shell-trap subtleties around how the
+# foreground `start` invocation propagates child exit codes. EPERM on
+# exec() shows up as exit 126 in bash; we map both 1 and 126/127 to the
+# failure handler.
 
 if [ ! -x "${CORTEX_BIN}" ]; then
     handle_failure 127
 fi
 
 # ---------------------------------------------------------------------------
-# Detach the runner.
+# Start the runner (foreground; cortex performs the detach).
 # ---------------------------------------------------------------------------
 #
-# `setsid nohup caffeinate -i <cortex> overnight start --launchd
-#  --session-id <id>` reparents the runner to PID 1 (init) so launchd
-# considers the launcher complete after fork. Redirect stdin from
-# /dev/null and append stdout/stderr to per-session log files so the
-# runner does not hold the launchd-provided pipes open.
+# We invoke `cortex overnight start` in the FOREGROUND and let cortex
+# detach the runner for us. `start` routes through
+# `_spawn_runner_async`'s `subprocess.Popen(..., start_new_session=True)`,
+# which calls setsid before returning, so the runner is already its own
+# session leader by the time the spawn handshake begins — it survives
+# launchd's process-group SIGTERM when this launcher exits. The launcher
+# stays in the foreground only for the handshake; because the runner is
+# already in its own session, the foreground wait cannot reap it.
+#
+# Flags (each load-bearing):
+#   --state <abs>   Absolute per-session state path. cwd is `/` under
+#                   launchd, so cwd-based auto-discovery cannot be used.
+#   --format json   Mandatory: the JSON envelope on stdout is read by the
+#                   fire-time liveness discriminator, and `--format json`
+#                   keeps the run-now `concurrent_runner` refusal active so
+#                   a live runner holding the lock is not clobbered.
+#   --force         Bypasses ONLY the launcher's own pending-schedule
+#                   guard, never live-runner protection.
+#
+# The legacy launchd flag (which re-implemented the broken bash detach)
+# is gone, as is the session-id flag (`start` rejects it — argparse exit
+# 2). The session is identified by the `--state` path; @@SESSION_ID@@ is
+# still substituted into the fail-marker `session_id` field above.
 
 mkdir -p "${SESSION_DIR}" 2>/dev/null || true
 
-# Detach. The spec (R9) says "setsid nohup ..."; stock macOS lacks
-# setsid (it's a util-linux binary), so we prefer it when available
-# (e.g. brew install util-linux) and fall back to plain `nohup` + `&` +
-# `disown` otherwise. nohup + bash backgrounding + disown is the
-# canonical macOS daemonization recipe; the resulting child is
-# signal-immune and reparents to PID 1 once the parent (launchd-fired
-# launcher) exits.
-if command -v setsid >/dev/null 2>&1; then
-    setsid nohup /usr/bin/caffeinate -i \
-        "${CORTEX_BIN}" overnight start --launchd --session-id "${SESSION_ID}" \
+STATE_PATH="${SESSION_DIR}/overnight-state.json"
+
+# Capture stdout (the JSON envelope) for the fire-time liveness
+# discriminator read; tee stderr to a per-session log for diagnostics.
+START_ENVELOPE="$(
+    "${CORTEX_BIN}" overnight start \
+        --state "${STATE_PATH}" \
+        --format json \
+        --force \
         </dev/null \
-        >>"${SESSION_DIR}/runner-stdout.log" \
-        2>>"${SESSION_DIR}/runner-stderr.log" \
-        &
-else
-    nohup /usr/bin/caffeinate -i \
-        "${CORTEX_BIN}" overnight start --launchd --session-id "${SESSION_ID}" \
-        </dev/null \
-        >>"${SESSION_DIR}/runner-stdout.log" \
-        2>>"${SESSION_DIR}/runner-stderr.log" \
-        &
+        2>>"${SESSION_DIR}/runner-stderr.log"
+)"
+start_rc=$?
+
+if [ "${start_rc}" -ne 0 ]; then
+    # cortex itself exited non-zero (binary EPERM, argparse error,
+    # spawn failure, etc.). Route through the failure handler so the
+    # morning report gets a diagnostic.
+    handle_failure "${start_rc}"
 fi
 
-spawn_rc=$?
-if [ "${spawn_rc}" -ne 0 ]; then
-    # The shell could not background the command at all (rare — usually
-    # an EPERM on the setsid/caffeinate binaries themselves). Map to
-    # EPERM so the morning report classifies it correctly.
-    handle_failure 1
-fi
+# Persist the envelope for the liveness discriminator / morning report.
+printf '%s\n' "${START_ENVELOPE}" >>"${SESSION_DIR}/runner-stdout.log"
 
-disown 2>/dev/null || true
-
-# Successful spawn — remove the plist and launcher copy. The runner
-# itself is now responsible for its own lifecycle; we exit 0 so launchd
-# marks the agent run complete.
+# Successful start — remove the plist and launcher copy. The runner is
+# now its own session leader, responsible for its own lifecycle; we exit
+# 0 so launchd marks the agent run complete.
 cleanup_self
 
 exit 0
