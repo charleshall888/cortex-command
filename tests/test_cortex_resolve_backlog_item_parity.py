@@ -27,6 +27,7 @@ error-formatter-shape is NOT opted in: the script's stderr messages in cases
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import subprocess
@@ -35,10 +36,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.test_parity_contract import (
-    assert_byte_identical,
-    assert_structurally_equivalent,
-)
+from tests.test_parity_contract import assert_byte_identical
 
 
 # ---------------------------------------------------------------------------
@@ -188,6 +186,27 @@ def _assert_ambiguous_stderr_structure(result: subprocess.CompletedProcess) -> N
         assert not remaining, f"unexpected trailing lines for N<=5: {remaining!r}"
 
 
+def _assert_numeric_stdout_structure(result: subprocess.CompletedProcess) -> None:
+    """Assert the resolved-JSON *shape* for the numeric case against live output.
+
+    Pins the exit-0 object's key set and the ``252-`` id prefix without
+    byte-pinning item 252's live title, which drifts if the item is retitled.
+    Slug-priority is covered by ``tests/test_resolve_backlog_item.py``.
+    """
+    assert result.returncode == 0, f"expected exit 0, got {result.returncode}"
+    payload = json.loads(result.stdout)
+    for key in ("filename", "backlog_filename_slug", "title", "lifecycle_slug"):
+        assert key in payload, f"missing key {key!r} in {payload!r}"
+    assert re.match(r"^252-", payload["filename"]), payload["filename"]
+    assert re.match(r"^252-", payload["backlog_filename_slug"]), (
+        payload["backlog_filename_slug"]
+    )
+    assert isinstance(payload["title"], str) and payload["title"], (
+        "title must be a non-empty str"
+    )
+    assert payload["lifecycle_slug"], "lifecycle_slug must be present and non-empty"
+
+
 # ---------------------------------------------------------------------------
 # Parametrized parity tests
 # ---------------------------------------------------------------------------
@@ -256,27 +275,20 @@ def test_ambiguous_structure_rejects_malformed() -> None:
 
 @pytest.mark.parametrize("case", _discover_cases())
 def test_stdout_parity(case: str) -> None:
-    """stdout is byte-identical or structurally equivalent per declared tolerances.
+    """stdout is byte-identical except for the structurally-asserted numeric case.
 
-    For ``numeric_unambiguous`` (exit 0, JSON output): structural equivalence
-    under key-reorder, unicode-escape, and trailing-newline tolerances.
-
-    For all other cases (no stdout): byte-identical (trivially empty).
+    ``numeric_unambiguous`` (exit 0, JSON) is asserted *structurally* (key set +
+    ``252-`` id prefix) because its stdout embeds item 252's live title; its
+    ``.stdout`` snapshot is de-pinned. The structural branch runs first so the
+    deleted snapshot is never read. All other cases have empty stdout and stay
+    byte-identical.
     """
+    if case == "numeric_unambiguous":
+        _assert_numeric_stdout_structure(_invoke_case(case))
+        return
     expected_stdout = _read_expected_stdout(case)
     actual_stdout = _invoke_case(case).stdout
-
-    if case == "numeric_unambiguous":
-        # JSON stdout: apply structural-equivalence tolerances per fixture README.
-        assert_structurally_equivalent(
-            actual_stdout,
-            expected_stdout,
-            stream="stdout",
-            tolerances=["key-reorder", "unicode-escape", "trailing-newline"],
-        )
-    else:
-        # Empty stdout cases: byte-identical.
-        assert_byte_identical(actual_stdout, expected_stdout)
+    assert_byte_identical(actual_stdout, expected_stdout)
 
 
 # ---------------------------------------------------------------------------
