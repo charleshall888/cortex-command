@@ -6,3 +6,7 @@
 {"ts":"2026-06-01T23:14:50Z","event":"sentinel_absence","feature":"make-cortex-resolve-backlog-item-ambiguous","reviewer_angle":"Task verification commands are weaker than they appear","reason":"absent","model_tier":"sonnet","expected_sha":"8704bf7b47139bf80516d1c01a1d02254581a1f4fc0194700bf3278b9daccbf2","observed_sha_or_null":null}
 {"ts": "2026-06-01T23:30:51Z", "event": "plan_approved", "feature": "make-cortex-resolve-backlog-item-ambiguous"}
 {"ts": "2026-06-01T23:30:51Z", "event": "phase_transition", "feature": "make-cortex-resolve-backlog-item-ambiguous", "from": "plan", "to": "implement"}
+{"ts": "2026-06-02T00:08:47Z", "event": "batch_dispatch", "feature": "make-cortex-resolve-backlog-item-ambiguous", "batch": 0, "tasks": [1, 4]}
+{"ts": "2026-06-02T00:08:47Z", "event": "batch_dispatch", "feature": "make-cortex-resolve-backlog-item-ambiguous", "batch": 1, "tasks": [2]}
+{"ts": "2026-06-02T00:08:47Z", "event": "batch_dispatch", "feature": "make-cortex-resolve-backlog-item-ambiguous", "batch": 2, "tasks": [3]}
+{"ts": "2026-06-02T00:27:00Z", "event": "phase_transition", "feature": "make-cortex-resolve-backlog-item-ambiguous", "tier": "complex", "from": "implement", "to": "review"}
