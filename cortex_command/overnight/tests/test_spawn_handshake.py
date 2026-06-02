@@ -296,22 +296,28 @@ def test_async_spawn_slow_handshake_within_budget(
                 pass
 
 
-def test_async_spawn_timeout_terminates_orphan(
+def test_async_spawn_timeout_live_child_left_running(
     fake_runner_env: dict,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture,
 ) -> None:
-    """Child never writes runner.pid; parent times out and kills the orphan.
+    """A live-but-slow child that never writes runner.pid is LEFT RUNNING.
+
+    Spec R8: the old code unconditionally killed the orphan on timeout —
+    THAT was the original fire-but-do-nothing bug. The handshake budget
+    elapsing on a still-alive child must NOT killpg the runner; it returns
+    the non-failure advisory ``spawn_unconfirmed`` (``child_alive: True``)
+    and leaves the runner coming up.
 
     Verifies:
-      - return value is ``started: false`` with ``error_class:
-        spawn_timeout``;
-      - the spawn-pending sentinel is cleaned up;
-      - no late runner.pid appears (asserted by re-checking after a
-        post-return grace).
+      - return is ``started: false`` with ``error_class: spawn_unconfirmed``
+        and ``child_alive: True`` (a distinct, non-failure envelope);
+      - the runner process is still alive after the shim returns;
+      - the spawn-pending sentinel is cleaned up.
     """
     session_dir: Path = fake_runner_env["session_dir"]
-    # Child sleeps long without writing runner.pid.
+    # Child sleeps well beyond the (shortened) budget without writing
+    # runner.pid — so it is deterministically still alive at timeout.
     script = "import time; time.sleep(30)"
 
     def fake_argv(args, state_path):  # type: ignore[no-untyped-def]
@@ -320,7 +326,7 @@ def test_async_spawn_timeout_terminates_orphan(
     monkeypatch.setattr(
         cli_handler, "_build_async_spawn_argv", fake_argv
     )
-    # Tighten the handshake budget so the test finishes in <2s.
+    # Tighten the handshake budget so the test finishes quickly.
     monkeypatch.setattr(
         cli_handler, "_SPAWN_HANDSHAKE_TIMEOUT_SECONDS", 0.5
     )
@@ -333,16 +339,137 @@ def test_async_spawn_timeout_terminates_orphan(
 
     assert rc == 1
     assert payload.get("started") is False
-    assert payload.get("error_class") == "spawn_timeout"
+    assert payload.get("error_class") == "spawn_unconfirmed"
+    assert payload.get("child_alive") is True
     assert not (session_dir / "runner.spawn-pending").exists()
 
-    # The kill-pgid path may take a moment; sleep briefly then assert
-    # no late runner.pid wrote.
-    time.sleep(0.5)
-    assert not (session_dir / "runner.pid").exists(), (
-        "runner.pid materialized post-timeout — orphan-kill was not "
-        "synchronous before return"
+    # The sleeper is still running — find and reap it so the test does not
+    # leak a process. We do not know its PID from the envelope (the runner
+    # never claimed runner.pid), so kill by the unique script marker.
+    subprocess.run(
+        ["pkill", "-f", "time.sleep(30)"],
+        check=False,
     )
+
+
+def test_fire_handshake_budget_exceeds_run_now_budget() -> None:
+    """The fire-path handshake budget is a named constant > 5.0 (R8).
+
+    At fire the runner does more cold-start work (state load, lock
+    acquisition, post-sleep cold caches), so the scheduled path must wait
+    longer than the run-now ``_SPAWN_HANDSHAKE_TIMEOUT_SECONDS = 5.0``
+    before declaring the handshake inconclusive.
+    """
+    assert cli_handler._FIRE_HANDSHAKE_TIMEOUT_SECONDS > 5.0
+    assert cli_handler._SPAWN_HANDSHAKE_TIMEOUT_SECONDS == 5.0
+
+
+def test_scheduled_live_child_timeout_left_alive_and_outcome_written(
+    fake_runner_env: dict,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture,
+) -> None:
+    """``--scheduled`` live-child timeout: no kill, runner alive, token file.
+
+    Spec R6/R8, Task 4 verification. Uses a CONTROLLABLE child — a stub
+    ``_build_async_spawn_argv`` pointing at a sleeper that sleeps ≫ the
+    test-shortened fire budget and never writes ``runner.pid`` — so the
+    "child is still alive at timeout" outcome is deterministic, not
+    timing-flaky.
+
+    Asserts:
+      (a) no ``killpg``/``SIGKILL`` is sent (``_terminate_orphan_child``
+          is never invoked, and ``os.killpg`` is never called);
+      (b) ``child.poll() is None`` — the runner is left alive;
+      (c) the JSON envelope is the non-failure ``spawn_unconfirmed``
+          advisory (``child_alive: True``) AND the single-token
+          ``<session_dir>/spawn-outcome`` file is written with
+          ``spawn_unconfirmed``.
+    """
+    session_dir: Path = fake_runner_env["session_dir"]
+
+    # Controllable child: sleeps far beyond the shortened fire budget and
+    # never writes runner.pid → deterministically alive at timeout.
+    script = "import time; time.sleep(30)"
+
+    def fake_argv(args, state_path):  # type: ignore[no-untyped-def]
+        return [sys.executable, "-c", script]
+
+    monkeypatch.setattr(cli_handler, "_build_async_spawn_argv", fake_argv)
+
+    # Shorten the FIRE budget (the scheduled path uses this constant) so
+    # the live-child timeout fires quickly. The sleeper (30s) ≫ this.
+    monkeypatch.setattr(
+        cli_handler, "_FIRE_HANDSHAKE_TIMEOUT_SECONDS", 0.5
+    )
+
+    # (a) Record whether the orphan-kill path is ever taken.
+    terminate_calls: list = []
+    monkeypatch.setattr(
+        cli_handler,
+        "_terminate_orphan_child",
+        lambda child: terminate_calls.append(child),
+    )
+    killpg_calls: list = []
+    real_killpg = os.killpg
+    monkeypatch.setattr(
+        os,
+        "killpg",
+        lambda pgid, sig: killpg_calls.append((pgid, sig)),
+    )
+
+    # (b) Capture the child handle so we can probe ``child.poll()``.
+    captured_children: list = []
+    real_popen = subprocess.Popen
+
+    def recording_popen(*popen_args, **popen_kwargs):  # type: ignore[no-untyped-def]
+        child = real_popen(*popen_args, **popen_kwargs)
+        captured_children.append(child)
+        return child
+
+    monkeypatch.setattr(subprocess, "Popen", recording_popen)
+
+    args = _build_args(fake_runner_env["state_path"], scheduled=True)
+
+    try:
+        rc = cli_handler.handle_start(args)
+        captured = capsys.readouterr()
+        payload = json.loads(captured.out)
+
+        # (c) Non-failure advisory envelope.
+        assert rc == 1
+        assert payload.get("started") is False
+        assert payload.get("error_class") == "spawn_unconfirmed"
+        assert payload.get("child_alive") is True
+
+        # (a) No kill of the live child — neither the orphan-kill helper
+        # nor os.killpg fired.
+        assert terminate_calls == [], (
+            "live child was terminated on timeout — the kill-on-timeout "
+            "regression has returned"
+        )
+        assert killpg_calls == [], "os.killpg was called on a live child"
+
+        # (b) The runner child is still alive.
+        assert len(captured_children) == 1
+        child = captured_children[0]
+        assert child.poll() is None, "runner child is not alive after timeout"
+
+        # (c) The launcher-robust single-token discriminator was written.
+        outcome_path = session_dir / "spawn-outcome"
+        assert outcome_path.exists()
+        assert outcome_path.read_text(encoding="utf-8").strip() == "spawn_unconfirmed"
+    finally:
+        # Reap the controllable child via the real APIs.
+        for child in captured_children:
+            try:
+                real_killpg(os.getpgid(child.pid), signal.SIGKILL)
+            except (ProcessLookupError, OSError):
+                pass
+            try:
+                child.wait(timeout=2.0)
+            except subprocess.TimeoutExpired:
+                pass
 
 
 def test_async_spawn_runner_died_returns_spawn_died(

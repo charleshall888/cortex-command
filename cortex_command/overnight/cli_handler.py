@@ -44,6 +44,23 @@ _SPAWN_PENDING_SENTINEL = "runner.spawn-pending"
 # ``error_class: spawn_timeout`` / ``spawn_died`` if the handshake fails.
 _SPAWN_HANDSHAKE_TIMEOUT_SECONDS: float = 5.0
 
+# Fire-path async-spawn handshake budget (spec R8). At fire time the
+# runner does more cold-start work than a run-now start — state load,
+# lock acquisition, and post-sleep cold caches — so the scheduled
+# (``--scheduled``) path waits longer before declaring the handshake
+# inconclusive. Set deliberately above the run-now
+# :data:`_SPAWN_HANDSHAKE_TIMEOUT_SECONDS` (5.0); exceeding the budget on
+# a live child yields a non-failure ``spawn_unconfirmed`` advisory, never
+# a kill.
+_FIRE_HANDSHAKE_TIMEOUT_SECONDS: float = 20.0
+
+# Single-token spawn-outcome discriminator file (spec R6/R8). Under
+# ``--scheduled`` the handler writes one of ``started`` / ``spawn_died`` /
+# ``spawn_unconfirmed`` to ``<session_dir>/spawn-outcome`` so the bash
+# launcher can branch via shell builtins under launchd's degraded
+# environment without parsing the full JSON envelope.
+_SPAWN_OUTCOME_FILENAME = "spawn-outcome"
+
 # Grace window after ``SIGTERM`` before escalating to ``SIGKILL`` when
 # tearing down an orphan runner that did not write ``runner.pid`` within
 # the handshake budget.
@@ -298,6 +315,56 @@ def _terminate_orphan_child(child: subprocess.Popen) -> None:
         pass
 
 
+def _write_spawn_outcome(session_dir: Path, outcome: str) -> None:
+    """Atomically write the single-token spawn-outcome discriminator.
+
+    Spec R6/R8: under ``--scheduled``, the launcher needs a launcher-robust
+    discriminator it can read with shell builtins under launchd's degraded
+    environment — without parsing the JSON envelope. This writes one token
+    (``started`` / ``spawn_died`` / ``spawn_unconfirmed``) to
+    ``<session_dir>/spawn-outcome`` via a tempfile + ``os.replace`` so the
+    launcher never reads a torn file. Best-effort: a write failure here does
+    not change the JSON envelope the caller already returns (the launcher's
+    JSON path remains the richer fallback).
+    """
+    import tempfile
+
+    from cortex_command.common import durable_fsync
+
+    target = session_dir / _SPAWN_OUTCOME_FILENAME
+    try:
+        session_dir.mkdir(parents=True, exist_ok=True)
+        tmp = tempfile.NamedTemporaryFile(
+            mode="w",
+            dir=session_dir,
+            prefix=f".{_SPAWN_OUTCOME_FILENAME}-",
+            suffix=".tmp",
+            delete=False,
+            encoding="utf-8",
+        )
+        tmp_path = Path(tmp.name)
+        try:
+            tmp.write(outcome)
+            tmp.flush()
+            durable_fsync(tmp.fileno())
+            tmp.close()
+            os.replace(tmp_path, target)
+        except BaseException:
+            try:
+                tmp.close()
+            except OSError:
+                pass
+            try:
+                tmp_path.unlink()
+            except OSError:
+                pass
+            raise
+    except OSError:
+        # Best-effort: the JSON envelope is the authoritative answer; the
+        # launcher falls back to it when the token file is absent.
+        pass
+
+
 def _cleanup_spawn_sentinel(session_dir: Path) -> None:
     """Best-effort unlink of the spawn-pending sentinel.
 
@@ -323,7 +390,7 @@ def _spawn_runner_async(
 ) -> dict:
     """Fork the runner and return after the liveness-checked handshake.
 
-    Implements the spec R2 / R18 async-spawn contract:
+    Implements the spec R2 / R18 async-spawn contract, extended by R6/R8:
 
     1. Write ``<session_dir>/runner.spawn-pending`` so a concurrent
        ``cortex overnight status`` call can report ``phase: starting``.
@@ -331,18 +398,38 @@ def _spawn_runner_async(
        ``stdin=DEVNULL``, and stdout/stderr redirected to per-session
        log files. The child re-invokes the CLI with ``--launchd`` so it
        skips the handshake fork.
-    3. Poll for ``<session_dir>/runner.pid`` appearance up to
-       :data:`_SPAWN_HANDSHAKE_TIMEOUT_SECONDS` via
-       :func:`wait_for_pid_file`, which performs the
-       ``os.kill(pid, 0)`` liveness probe before returning.
+    3. Poll for ``<session_dir>/runner.pid`` appearance up to the
+       handshake budget via :func:`wait_for_pid_file`, which performs the
+       ``os.kill(pid, 0)`` liveness probe before returning. The budget is
+       :data:`_FIRE_HANDSHAKE_TIMEOUT_SECONDS` when ``args.scheduled`` is
+       set (the runner does more cold-start work at fire) and
+       :data:`_SPAWN_HANDSHAKE_TIMEOUT_SECONDS` otherwise.
+
+    Timeout discrimination (R8): when the handshake budget elapses, a
+    DEAD child is terminated and surfaced as ``spawn_died``; a child that
+    is still ALIVE is LEFT RUNNING (no ``killpg``/SIGKILL) and surfaced as
+    the non-failure advisory ``spawn_unconfirmed`` — the old unconditional
+    kill-on-timeout was the original fire-but-do-nothing bug.
 
     Returns a dict matching the JSON envelope shape:
       - on success: ``{"started": True, "session_id": ..., "pid": ...}``;
       - on liveness-probe failure: ``{"started": False, "error_class":
         "spawn_died", "session_id": ...}``;
-      - on timeout: ``{"started": False, "error_class":
-        "spawn_timeout", "session_id": ...}``.
+      - on dead-child timeout: ``{"started": False, "error_class":
+        "spawn_died", "session_id": ...}``;
+      - on live-child timeout (advisory): ``{"started": False,
+        "error_class": "spawn_unconfirmed", "child_alive": True,
+        "session_id": ...}``.
+
+    Under ``--scheduled`` a single-token discriminator is also written to
+    ``<session_dir>/spawn-outcome`` for the launcher (R6/R8).
     """
+    scheduled = bool(getattr(args, "scheduled", False))
+    handshake_timeout = (
+        _FIRE_HANDSHAKE_TIMEOUT_SECONDS
+        if scheduled
+        else _SPAWN_HANDSHAKE_TIMEOUT_SECONDS
+    )
     session_id = state_path.parent.name
     sentinel_path = session_dir / _SPAWN_PENDING_SENTINEL
     pid_path = session_dir / "runner.pid"
@@ -357,6 +444,8 @@ def _spawn_runner_async(
     try:
         sentinel_path.write_text("", encoding="utf-8")
     except OSError as exc:
+        if scheduled:
+            _write_spawn_outcome(session_dir, "spawn_died")
         return {
             "started": False,
             "error_class": "spawn_sentinel_write_failed",
@@ -388,6 +477,8 @@ def _spawn_runner_async(
         finally:
             stderr_fd.close()
         _cleanup_spawn_sentinel(session_dir)
+        if scheduled:
+            _write_spawn_outcome(session_dir, "spawn_died")
         return {
             "started": False,
             "error_class": "spawn_failed",
@@ -407,10 +498,11 @@ def _spawn_runner_async(
         except OSError:
             pass
 
-    # (5) Poll for runner.pid + liveness.
+    # (5) Poll for runner.pid + liveness. Fire-path uses the longer
+    # cold-start budget (R8); run-now keeps the 5s budget.
     pid = wait_for_pid_file(
         pid_path,
-        timeout=_SPAWN_HANDSHAKE_TIMEOUT_SECONDS,
+        timeout=handshake_timeout,
     )
 
     if pid is not None:
@@ -418,6 +510,8 @@ def _spawn_runner_async(
         # delete it, but the parent's cleanup is the authoritative one
         # the spec contract guarantees) and return started: true.
         _cleanup_spawn_sentinel(session_dir)
+        if scheduled:
+            _write_spawn_outcome(session_dir, "started")
         return {
             "started": True,
             "session_id": session_id,
@@ -441,18 +535,45 @@ def _spawn_runner_async(
         # have left grandchildren alive. Best-effort group-kill anyway.
         _terminate_orphan_child(child)
         _cleanup_spawn_sentinel(session_dir)
+        if scheduled:
+            _write_spawn_outcome(session_dir, "spawn_died")
         return {
             "started": False,
             "error_class": "spawn_died",
             "session_id": session_id,
         }
 
-    # Timeout-with-orphan-kill (spec R18 step 7).
+    # (7) Handshake budget elapsed without a runner.pid. Split the old
+    # conflated ``spawn_timeout`` envelope on a live-vs-dead discriminator
+    # (spec R8): the unconditional kill-on-timeout here was the original
+    # fire-but-do-nothing bug — a slow-but-healthy runner was reaped just
+    # as it was coming up.
+    #
+    #   - DEAD child  → terminate (best-effort group-kill of any orphaned
+    #     grandchildren) and surface ``spawn_died``;
+    #   - LIVE child  → leave the runner RUNNING (no killpg/SIGKILL) and
+    #     surface the non-failure advisory ``spawn_unconfirmed``.
+    if child.poll() is None:
+        # Live but slow — do NOT kill. The runner is coming up; let it
+        # finish its cold-start work and claim runner.pid on its own.
+        _cleanup_spawn_sentinel(session_dir)
+        if scheduled:
+            _write_spawn_outcome(session_dir, "spawn_unconfirmed")
+        return {
+            "started": False,
+            "error_class": "spawn_unconfirmed",
+            "child_alive": True,
+            "session_id": session_id,
+        }
+
+    # Dead child that never wrote runner.pid — genuinely failed fire.
     _terminate_orphan_child(child)
     _cleanup_spawn_sentinel(session_dir)
+    if scheduled:
+        _write_spawn_outcome(session_dir, "spawn_died")
     return {
         "started": False,
-        "error_class": "spawn_timeout",
+        "error_class": "spawn_died",
         "session_id": session_id,
     }
 

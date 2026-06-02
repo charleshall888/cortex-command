@@ -456,6 +456,20 @@ def _build_parser() -> argparse.ArgumentParser:
             "session. Does NOT cancel the schedule — both will run."
         ),
     )
+    start.add_argument(
+        "--scheduled",
+        dest="scheduled",
+        action="store_true",
+        default=False,
+        help=(
+            "Mark this as a scheduled (LaunchAgent fire-time) start (R6/R8): "
+            "the async-spawn handshake uses the longer fire budget because "
+            "the runner does more cold-start work at fire (state load, lock "
+            "acquisition, post-sleep cold caches), and a single-token "
+            "spawn-outcome discriminator file is emitted so the launcher can "
+            "branch without parsing the JSON envelope."
+        ),
+    )
     # Internal flag used by the async-spawn fork in
     # ``cli_handler._spawn_runner_async`` and by the LaunchAgent
     # launcher script (Task 3). Signals to ``handle_start`` that the
