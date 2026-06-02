@@ -1,0 +1,36 @@
+{
+  "ts": "2026-06-02T18:47:22Z",
+  "feature": "surface-built-but-merge-blocked-overnight",
+  "artifact": "cortex/lifecycle/surface-built-but-merge-blocked-overnight/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "Task 4 leaves the outer async handler's conflict-divert at outcome_router.py:1019-1022 unexamined/undocumented; the recoverable routing now depends on the inner _apply_feature_result re-deriving conflict=True. Consider routing the recoverable disposition at the outer layer where the first merge_result already exists.",
+      "reviewer_angle": "Terminus correctness",
+      "evidence_quote": "Change shape: when merge_result.conflict is True, append {...recoverable_branch: actual_branch or None} to ctx.batch_result.features_deferred"
+    },
+    {
+      "class": "B",
+      "finding": "The recoverable_branch contract guards only falsy actual_branch, not stale-but-truthy; research #7's assert-non-empty/has-commits mitigation was dropped. Safe today only because conflict implies a real non-empty branch (empty branch cannot conflict) \u2014 but that invariant is left implicit and would be too weak if the terminus broadened beyond conflict is True.",
+      "reviewer_angle": "recoverable_branch provenance fragility",
+      "evidence_quote": "The recoverable_branch value MUST be actual_branch when truthy and MUST be None (never f\"pipeline/{name}\") when empty/absent."
+    },
+    {
+      "class": "B",
+      "finding": "Task 7 narrows the exec-summary deferred count to recoverable_branch is None but leaves the '(questions need answers)' label; the count stays divergent from render_deferred_questions's file-driven len(data.deferrals). Acceptance never asserts exec-summary/render_deferred_questions parity.",
+      "reviewer_angle": "Disjointness & never-built dependents",
+      "evidence_quote": "at report.py:367 change deferred = sum(... if f.status == deferred) to also require f.recoverable_branch is None"
+    },
+    {
+      "class": "B",
+      "finding": "No task test exercises the live producer->carrier->consumer path; the consumers' contract (key off fs.recoverable_branch is not None) is verified only against fabricated state, never against the value Task 4 emits via _map_results_to_state.",
+      "reviewer_angle": "Per-commit incremental safety & dependency-graph completeness",
+      "evidence_quote": "Test (keyed recoverable_no_rebuild_followup): one recoverable feature + one genuine question-deferral"
+    }
+  ]
+}
