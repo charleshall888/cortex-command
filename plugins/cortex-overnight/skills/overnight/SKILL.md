@@ -62,28 +62,27 @@ Operational sequence — execute in order. Full per-step detail (error handling,
 
 1. **Check for existing session** — `load_state()` from `cortex_command.overnight.state`. If a non-`complete` session exists, offer resume or abandon.
 2. **Pre-selection index regeneration** — run `cortex-generate-backlog-index`, stage `cortex/backlog/index.json` and `cortex/backlog/index.md`, commit if changed.
-3. **Select eligible features** — `select_overnight_batch()` from `cortex_command.overnight.backlog`. Eligibility requires `cortex/lifecycle/{slug}/research.md` and `cortex/lifecycle/{slug}/spec.md` on disk and `type != epic`. Missing `plan.md` is generated during the session.
-4. **Present selection summary** — `selection.summary` shows eligible items, batches, and ineligible items with reasons.
-5. **Render session plan** — `render_session_plan(selection, time_limit_hours=6)` from `cortex_command.overnight.plan`.
-6. **Unified plan + spec review** — display rendered plan, then each `cortex/lifecycle/{slug}/spec.md` inline. Prompt for `[A]pprove / [R]emove / [T]ime-limit / [Q]uit`. Re-render on Remove/Time-limit.
+3. **Select eligible features** — handled by `cortex overnight prepare` (Step 5), which selects and groups eligible items. Eligibility requires `cortex/lifecycle/{slug}/research.md` and `cortex/lifecycle/{slug}/spec.md` on disk and `type != epic`. Missing `plan.md` is generated during the session.
+4. **Present selection summary** — read the `selection` field from the `cortex overnight prepare` envelope; it lists eligible items, batches, and ineligible items with reasons.
+5. **Render session plan** — run `cortex overnight prepare --format json` (read-only). Read `plan_markdown` from the JSON envelope; no state is mutated.
+6. **Unified plan + spec review** — display the rendered `plan_markdown`, then each `cortex/lifecycle/{slug}/spec.md` inline. Prompt for `[A]pprove / [R]emove / [T]ime-limit / [Q]uit`. Re-run `cortex overnight prepare` (adjusting `--time-limit-hours`/`--batch-size-cap`) on Remove/Time-limit.
 7. **Launch** — on approval, in order:
-   - 7.0 `validate_target_repos(selection)` — stop if any repo path is invalid.
    - 7.1 Pre-flight: block on uncommitted `cortex/lifecycle/` or `cortex/backlog/` files; offer `/commit`.
-   - 7.2 `bootstrap_session(selection, plan_content)` — writes `overnight-state.json`, `overnight-plan.md`, `session.json`; creates worktree at `$TMPDIR/overnight-worktrees/{session_id}/` on branch `overnight/{session_id}`.
+   - 7.2 Run `cortex overnight launch --format json` (validates target repos, bootstraps the session, extracts batch specs). It stops on invalid repo paths, writes `overnight-state.json`, `overnight-plan.md`, `session.json`, and creates the worktree on branch `overnight/{session_id}`. Read `state_path`, `state_dir`, `session_id`, `worktree_path`, and `extracted_specs` from the returned envelope — use `state_path` for the start/schedule `--state` value (do **not** rebuild the path from a hard-coded prefix).
    - 7.3 `latest-overnight` symlink — deferred to runner startup.
-   - 7.4 `extract_batch_specs(state, worktree_path)` — stage and commit returned paths on the integration branch.
+   - 7.4 If `extracted_specs` is non-empty, `cd` to `worktree_path` and stage + commit those paths on the integration branch.
    - 7.5 Do **not** log `session_start` here — it is gated to the run-now branch of 7.7 (where `LIFECYCLE_SESSION_ID` is unset, so the prep log would be `session_id:"manual"` and the runner re-logs the real one at fire). The schedule branch reaches the launch without pre-logging; the runner is the sole fire-time author of the single `session_start`.
    - 7.6 Launch dashboard if not running; poll `localhost:8080/health`. Dashboard is optional.
    - 7.7 Ask run-now vs. schedule-for-later. Run via Bash with `dangerouslyDisableSandbox: true`:
-     - Run now: log the prep-time `session_start` first — `log_event(event='session_start', round=1, ...)` from `cortex_command.overnight.events` (lowercase event names; param is `event`, not `event_type`) — then `cortex overnight start --state $CORTEX_COMMAND_ROOT/cortex/lifecycle/sessions/{session_id}/overnight-state.json --time-limit 21600`.
-     - Schedule (no prep-time `session_start` log): `cortex overnight schedule <target-time> --state $CORTEX_COMMAND_ROOT/cortex/lifecycle/sessions/{session_id}/overnight-state.json`
+     - Run now: log the prep-time `session_start` first — `log_event(event='session_start', round=1, ...)` from `cortex_command.overnight.events` (lowercase event names; param is `event`, not `event_type`) — then `cortex overnight start --state {state_path} --time-limit 21600` (using the `state_path` from 7.2's envelope).
+     - Schedule (no prep-time `session_start` log): `cortex overnight schedule <target-time> --state {state_path}`
    - 7.8 Inform the user; the runner takes over from here.
 
 ## Resume Flow (`/overnight resume`)
 
 Operational sequence — full per-step detail in `${CLAUDE_SKILL_DIR}/references/resume-flow.md`.
 
-1. **Load existing state** — scan `$CORTEX_COMMAND_ROOT/cortex/lifecycle/sessions/*/overnight-state.json` by mtime; load the first non-`complete` file via `load_state(state_path=<path>)`.
+1. **Load existing state** — resolve the project root from `cortex --print-root`'s `root` field, then scan `{root}/cortex/lifecycle/sessions/*/overnight-state.json` by mtime; load the first non-`complete` file via `load_state(state_path=<path>)`.
 2. **Report session state** — phase, per-feature statuses, rounds completed, current round. When `phase: paused`, surface `paused_reason` with contextual guidance.
 3. **Check for deferred questions** — `read_deferrals()` + `summarize_deferrals()` from `cortex_command.overnight.deferral`.
 4. **Determine next action** based on phase:

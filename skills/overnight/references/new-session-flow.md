@@ -6,7 +6,7 @@
 
 ## Step 1: Check for Existing Session
 
-Call `load_state()` from `cortex_command.overnight.state` (no arguments — uses its default path at `$CORTEX_COMMAND_ROOT/cortex/lifecycle/overnight-state.json`).
+Call `load_state()` from `cortex_command.overnight.state` (no arguments — it resolves its own default path under the project root, the top-level `cortex/lifecycle/overnight-state.json` symlink, which `bootstrap_session` maintains). To resolve the project root explicitly for any sibling path, read the `root` field from `cortex --print-root` rather than an environment variable.
 
 - **If found with phase other than `complete`**: Warn the user that an active overnight session exists. Report the phase and feature count. Ask whether to resume the existing session (switch to the Resume Flow) or abandon it and start fresh.
 - **If found with `complete` phase**: Treat as no active session. Proceed as new.
@@ -51,23 +51,19 @@ The summary string is available as `selection.summary` on the `SelectionResult` 
 
 ## Step 5: Render Session Plan
 
-Call `render_session_plan()` from `cortex_command.overnight.plan` with the selection result and default configuration:
+Run the read-only `cortex overnight prepare --format json` verb (default `--time-limit-hours 6`) via Bash. This selects eligible backlog items and renders the session plan without mutating any state — no bootstrap, no worktree, no telemetry — so it is safe to re-run during the Approve gate.
 
-```python
-render_session_plan(
-    selection=selection,
-    time_limit_hours=6,
-)
+```
+cortex overnight prepare --format json
 ```
 
-This produces a formatted markdown session plan with:
-- Selected features table (round, feature, backlog number, type, priority, pre-work status)
-- Execution strategy (rounds, tier-based concurrency cap, feature count)
-- Not-ready items with reasons
-- Risk assessment (file overlap, dependency concerns)
-- Stop conditions (zero progress in a round, time limit)
+Parse the JSON envelope and read:
+- `plan_markdown` — the formatted markdown session plan (selected-features table, execution strategy, not-ready items, risk assessment, stop conditions). Display this in Step 6.
+- `selection` — the structured selection summary (eligible items, batches, ineligible items with reasons) used for Step 4.
 
-**Error**: If `render_session_plan()` raises an exception, report: "Failed to render session plan: {error}." → stop.
+To re-render with a different time limit or batch cap (e.g. on a Time-limit adjustment in Step 6), re-run with `--time-limit-hours <N>` or `--batch-size-cap <N>`.
+
+**Error**: If `cortex overnight prepare` exits non-zero, it emits a JSON `error`/`message` envelope (e.g. `selection_failed`, `render_failed`). Report: "Failed to render session plan: {message}." → stop.
 
 ## Step 6: Unified Plan + Spec Review
 
@@ -115,14 +111,14 @@ Approve this plan and specs?
 
 On user approval, execute these steps in order:
 
-0. **Validate target repos**: Call `validate_target_repos(selection)` from `cortex_command.overnight.plan`. If the returned list is non-empty, report:
+0. **Target-repo validation (performed by `cortex overnight launch` in sub-step 2)**: The `launch` verb validates every backlog `repo:` path before any mutation. If a path is not a valid git working tree, `launch` exits non-zero with a JSON envelope `{"error": "invalid_target_repos", "repos": [...]}` and writes no artifacts, creates no worktree, and marks no session `executing`. When you see that error, report:
    ```
    Cannot start overnight session: the following repo: paths are not valid git repositories:
      - {path1}
      - {path2}
    Run `git clone <url> <path>` or correct the repo: field in the affected backlog items.
    ```
-   Do not write any artifacts, create any worktrees, or mark the session `executing`. → stop.
+   → stop.
 
 1. **Pre-flight: uncommitted cortex/lifecycle/backlog files**: Run `git status --porcelain -- cortex/lifecycle/ cortex/backlog/` and capture the output.
 
@@ -143,20 +139,31 @@ On user approval, execute these steps in order:
 
    **Error**: If `git status` fails (unexpected git error), report the error and stop. In practice this cannot occur — the git repository check in Input Validation (`.git/` exists) runs before Step 7.
 
-2. **Bootstrap the session**: Call `bootstrap_session(selection, plan_content)` from `cortex_command.overnight.plan` with the approved selection and the rendered plan string from Step 5. Returns `(state, state_dir)` with `overnight-state.json`, `overnight-plan.md`, and `session.json` already written on disk.
+2. **Bootstrap the session**: Run the mutating `cortex overnight launch --format json` verb via Bash. It fuses the prep work into one call — target-repo validation (sub-step 0), session bootstrap, and batch-spec extraction (sub-step 4) — so the skill does not shell into internal Python APIs.
 
-   This performs all initialization atomically:
+   ```
+   cortex overnight launch --format json
+   ```
+
+   This performs all initialization atomically and then emits a JSON envelope. Internally it:
    - Creates a timestamp-based session ID (`overnight-{YYYY-MM-DD}-{HHmm}`) with collision-avoidance
    - Sets all selected features to `pending` status with round assignments matching batch numbers
    - Sets phase to `executing`
    - Creates a git worktree at `$TMPDIR/overnight-worktrees/{session_id}/` with a new `overnight/{session_id}` integration branch; the user's active branch is not changed
    - Writes `overnight-plan.md`, `session.json`, and `overnight-state.json` into the MC lifecycle session directory
 
-   **Error**: If `bootstrap_session()` raises (worktree creation, disk write, or save failure), report the error and stop. Clean up any orphaned worktree: run `git worktree prune` and then `ls $TMPDIR/overnight-worktrees/` to identify and remove any leftover directory (`rm -rf $TMPDIR/overnight-worktrees/<session_id>`). The session ID is inside the directory name — check modification time to find the orphan.
+   Parse the envelope and capture these fields for the later sub-steps — do **not** reconstruct any path from a hard-coded prefix or environment variable:
+   - `session_id` — the bootstrapped session id
+   - `state_dir` — the session directory under `cortex/lifecycle/sessions/{session_id}/`
+   - `state_path` — the absolute path to `overnight-state.json` (pass this as `--state` in sub-step 7)
+   - `worktree_path` — the integration-branch worktree (used in sub-step 4)
+   - `extracted_specs` — list of batch-spec paths written into the worktree (used in sub-step 4)
+
+   **Error**: If `cortex overnight launch` exits non-zero, it emits a JSON `error`/`message` envelope (`invalid_target_repos` → handle per sub-step 0; `bootstrap_failed` → report the message and stop). On `bootstrap_failed`, clean up any orphaned worktree: run `git worktree prune`, then `ls $TMPDIR/overnight-worktrees/` and remove any leftover directory (`rm -rf $TMPDIR/overnight-worktrees/<session_id>`); the session ID is inside the directory name — check modification time to find the orphan.
 
 3. **latest-overnight symlink**: Handled by the runner on startup. The skill does not create this symlink — it writes to the repo root which is outside the sandbox's write allowlist in sandboxed projects.
 
-4. **Extract batch spec sections**: Read the worktree path from the initialized state (`state.worktree_path`). Call `extract_batch_specs(state, Path(worktree_path))` from `cortex_command.overnight.plan`, passing the worktree path instead of the repository root so that extracted specs are written into the worktree's `cortex/lifecycle/` directory. If the returned list is non-empty, `cd` to the worktree directory, stage each returned path with `git add` (paths are relative to the worktree, not the repo root), and commit using `/commit` with message `"Extract batch spec sections for overnight session {session_id}"` (substituting the actual session ID). This commits the specs on the integration branch, not on main. If the list is empty, skip the commit — no batch-spec items were selected.
+4. **Commit extracted batch spec sections**: `cortex overnight launch` (sub-step 2) already wrote any batch-spec sections into the worktree's `cortex/lifecycle/` directory and returned them as `extracted_specs`. If `extracted_specs` is non-empty, `cd` to `worktree_path` (from the envelope), stage each returned path with `git add` (paths are relative to the worktree, not the repo root), and commit using `/commit` with message `"Extract batch spec sections for overnight session {session_id}"` (substituting the actual session ID). This commits the specs on the integration branch, not on main. If `extracted_specs` is empty, skip the commit — no batch-spec items were selected.
 
    **Error**: If `git add` or `git commit` fails, report: "Batch spec commit failed: {error}. Proceeding without committing batch spec sections — they may be extracted during runner startup." Continue — the runner can still function without the pre-commit.
 
@@ -179,18 +186,18 @@ On user approval, execute these steps in order:
 
     **Run now (option 1)**: First, log the prep-time `session_start` (run-now branch only): call `log_event()` from `cortex_command.overnight.events` with `event='session_start'`, `round=1`, and `details` including the session ID, feature count, and time limit. Pass `log_path=state_dir / "overnight-events.log"` so the event log lands in the MC lifecycle session directory alongside the other session artifacts. Note: the parameter is `event` (not `event_type`) and event names are lowercase strings (e.g., `'session_start'`, not `'SESSION_START'`). **Error**: If `log_event()` fails, report: "Failed to log session start event: {error}." Continue — logging failure is non-fatal. (The schedule branch does NOT perform this log — the runner is the sole fire-time author of the single `session_start`.)
 
-    Then execute via Bash tool with `dangerouslyDisableSandbox: true` (substitute actual `{session_id}` and time limit):
+    Then execute via Bash tool with `dangerouslyDisableSandbox: true`, passing the `state_path` captured from the `cortex overnight launch` envelope in sub-step 2 (substitute the actual value; do **not** reconstruct it from a hard-coded prefix or environment variable):
 
     ```
-    cortex overnight start --state $CORTEX_COMMAND_ROOT/cortex/lifecycle/sessions/{session_id}/overnight-state.json --time-limit 21600
+    cortex overnight start --state {state_path} --time-limit 21600
     ```
 
-    Args are flagged — pass `--state <absolute path>` and `--time-limit <seconds>` (e.g., `21600` for 6 hours). `cortex overnight start` launches the runner detached and returns immediately.
+    Args are flagged — pass `--state <absolute path>` (the envelope's `state_path`) and `--time-limit <seconds>` (e.g., `21600` for 6 hours). `cortex overnight start` launches the runner detached and returns immediately.
 
-    **Schedule for specific time (option 2)**: Prompt the user for a target time. Accept either `HH:MM` (24-hour local time) or `YYYY-MM-DDTHH:MM` (ISO 8601 date + time with `T` separator). Execute via Bash tool with `dangerouslyDisableSandbox: true` (substitute actual `{session_id}` and target time):
+    **Schedule for specific time (option 2)**: Prompt the user for a target time. Accept either `HH:MM` (24-hour local time) or `YYYY-MM-DDTHH:MM` (ISO 8601 date + time with `T` separator). Execute via Bash tool with `dangerouslyDisableSandbox: true`, passing the `state_path` captured from the `cortex overnight launch` envelope in sub-step 2 (substitute the actual value and target time; do **not** reconstruct the path from a hard-coded prefix or environment variable):
 
     ```
-    cortex overnight schedule <target-time> --state $CORTEX_COMMAND_ROOT/cortex/lifecycle/sessions/{session_id}/overnight-state.json
+    cortex overnight schedule <target-time> --state {state_path}
     ```
 
     `cortex overnight schedule` registers a one-shot LaunchAgent (no tmux) that fires the runner at the target time and returns immediately. The Bash tool call MUST set `dangerouslyDisableSandbox: true` so the harness can reach `launchctl`.
