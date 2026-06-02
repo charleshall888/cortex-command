@@ -203,5 +203,62 @@ class TestSweepBlockerFailedDependents(unittest.TestCase):
         self.assertEqual(state.features["B"].error, "blocker_failed")
 
 
+class TestRecoverableBranchPersistence(unittest.TestCase):
+    """Tests for recoverable_branch serialization and backward compatibility."""
+
+    def test_recoverable_branch_roundtrip(self):
+        """A non-None recoverable_branch survives a save_state/load_state cycle."""
+        state = OvernightState(
+            session_id="overnight-2026-01-01-0000",
+            plan_ref="cortex/lifecycle/overnight-plan.md",
+            phase="executing",
+            features={
+                "feat-a": OvernightFeatureStatus(
+                    status="deferred", recoverable_branch="pipeline/feat-a-2"
+                ),
+            },
+        )
+
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
+            tmp_path = Path(tmp.name)
+        self.addCleanup(tmp_path.unlink, missing_ok=True)
+
+        save_state(state, tmp_path)
+        loaded = load_state(tmp_path)
+
+        self.assertEqual(
+            loaded.features["feat-a"].recoverable_branch, "pipeline/feat-a-2"
+        )
+
+    def test_load_state_defaults_recoverable_branch_none(self):
+        """A feature dict lacking recoverable_branch loads with the field None."""
+        minimal_state = {
+            "session_id": "overnight-2025-12-31-2359",
+            "plan_ref": "cortex/lifecycle/overnight-plan.md",
+            "plan_hash": None,
+            "current_round": 1,
+            "phase": "executing",
+            "features": {
+                # NOTE: recoverable_branch key is intentionally absent
+                "feat-a": {"status": "deferred", "deferred_questions": 2},
+            },
+            "round_history": [],
+            "started_at": "2025-12-31T23:59:00+00:00",
+            "updated_at": "2025-12-31T23:59:00+00:00",
+            "paused_from": None,
+            "integration_branch": "overnight/overnight-2025-12-31-2359",
+            "worktree_path": None,
+        }
+
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode="w") as tmp:
+            json.dump(minimal_state, tmp)
+            tmp_path = Path(tmp.name)
+        self.addCleanup(tmp_path.unlink, missing_ok=True)
+
+        loaded = load_state(tmp_path)
+
+        self.assertIsNone(loaded.features["feat-a"].recoverable_branch)
+
+
 if __name__ == "__main__":
     unittest.main()

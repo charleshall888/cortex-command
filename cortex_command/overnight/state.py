@@ -86,6 +86,11 @@ class OvernightFeatureStatus:
         intra_session_blocked_by: Slugs of other in-session features that must
             reach status "merged" before this feature can be dispatched.
             Empty list means no intra-session blockers.
+        recoverable_branch: For a built-but-merge-blocked feature, the actual
+            branch (e.g. "pipeline/<name>-2") its completed work lives on. When
+            set on a "deferred" feature, marks the recoverable sub-case (work is
+            built and recoverable on this branch), distinct from a question
+            deferral. None for all other features.
     """
 
     status: str = "pending"
@@ -100,6 +105,7 @@ class OvernightFeatureStatus:
     recovery_attempts: int = 0
     recovery_depth: int = 0
     repo_path: Optional[str] = None
+    recoverable_branch: Optional[str] = None
     intra_session_blocked_by: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
