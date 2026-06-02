@@ -1,28 +1,42 @@
 """Parity test: cortex_command.backlog.resolve_item vs bash cortex-resolve-backlog-item.
 
 Golden-replay fixture test asserting that the Python wheel-tier port produces
-byte-identical (or structurally-equivalent under declared tolerances) stdout,
-stderr, and exit-code output compared to the captured bash/PEP-723 original.
+byte-identical output (or, for the two cases whose output embeds live backlog
+data, structurally-asserted output) on stdout, stderr, and exit code compared
+to the captured bash/PEP-723 original.
 
-Each fixture quintuple in tests/fixtures/cortex-resolve-backlog-item/ contains:
+Each fixture case in tests/fixtures/cortex-resolve-backlog-item/ is stored as
+flat sibling files:
   <case>.argv      one argv element per line (line 1 is sys.argv[1])
   <case>.stdin     literal bytes to pipe to stdin (empty for all current cases)
   <case>.stdout    captured stdout bytes
   <case>.stderr    captured stderr bytes
   <case>.exitcode  decimal exit status + trailing newline
 
+Most cases carry the full five-file quintuple. The two structurally-asserted
+cases below OMIT their de-pinned snapshot: title_phrase_ambiguous has no
+.stderr file and numeric_unambiguous has no .stdout file (both removed as
+drift sources). Their .argv/.exitcode/.stdin and the empty sibling stream
+remain, so the cases stay discovered (_discover_cases globs *.argv) and their
+other streams stay byte-exact.
+
 Three golden-replay cases are defined (exit codes 0/2/3):
   numeric_unambiguous     — numeric ID resolves to one match (exit 0, JSON stdout)
   title_phrase_ambiguous  — title phrase resolves to >1 matches (exit 2, candidates stderr)
   no_match                — input matches nothing (exit 3, stderr message)
 
-Named-tolerance categories per the fixture README:
-  numeric_unambiguous stdout:  ["key-reorder", "unicode-escape", "trailing-newline"]
-  all other streams:           byte-identical (no tolerance opted in)
+Structural exceptions (Abseil Tip #135 — test the contract, not the
+implementation): title_phrase_ambiguous (stderr) and numeric_unambiguous
+(stdout) embed live backlog data — the ambiguous match count plus candidate
+listing, and item 252's live title — so they are asserted STRUCTURALLY against
+live output (format/shape pinned; the incidental count, titles, and ordering
+deliberately not pinned) rather than byte-compared. This evolves these two
+cases from byte-exact migration snapshots toward format-contract regression
+guards; the rationale is recorded here and in the fixture README.
 
-error-formatter-shape is NOT opted in: the script's stderr messages in cases
-2 and 3 are fixed-format strings that the port must reproduce byte-for-byte
-(subject to trailing-newline tolerance which is stdout-only per contract).
+no_match's stderr (`no match for '<input>'`) echoes only the input argument,
+is independent of backlog content, and is the one case still reproduced
+byte-for-byte.
 """
 
 from __future__ import annotations
