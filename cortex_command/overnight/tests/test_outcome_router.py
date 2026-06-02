@@ -15,7 +15,13 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from cortex_command.overnight.constants import CIRCUIT_BREAKER_THRESHOLD, SYSTEMIC_FAILURE_THRESHOLD
-from cortex_command.overnight.outcome_router import OutcomeContext, apply_feature_result
+from cortex_command.overnight.outcome_router import (
+    OutcomeContext,
+    _find_backlog_item_path,
+    _write_back_to_backlog,
+    apply_feature_result,
+    set_backlog_dir,
+)
 from cortex_command.overnight.types import CircuitBreakerState, FeatureResult
 
 
@@ -650,6 +656,80 @@ class TestSystemicThreshold(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(ctx.cb_state.systemic_pauses_in_batch, SYSTEMIC_FAILURE_THRESHOLD)
         self.assertTrue(ctx.batch_result.global_abort_signal)
         self.assertIn("pipeline_systemic_failure", logged_events)
+
+
+class TestFindBacklogItemPathLifecycleSlug(unittest.TestCase):
+    """Task 8 — the runtime resolver routes through the canonical resolver.
+
+    Covers the common case where a feature's lifecycle-slug differs from the
+    backlog filename stem: the exact-stem, backlog_id, and substring strategies
+    miss, so resolution must fall through to ``resolve_item.resolve``, which
+    matches on ``lifecycle_slug`` frontmatter.
+    """
+
+    SLUG = "build-the-grinder-agnostic-knowledge-layer"
+    STEM = "025-grinder-agnostic-knowledge-layer"
+
+    def _make_backlog(self, backlog_dir: Path) -> Path:
+        item = backlog_dir / f"{self.STEM}.md"
+        item.write_text(
+            "---\n"
+            "uuid: 0123abcd-aaaa-bbbb-cccc-000000000025\n"
+            f"title: Grinder agnostic knowledge layer\n"
+            f"lifecycle_slug: {self.SLUG}\n"
+            "status: refined\n"
+            "---\n"
+            "Body.\n",
+            encoding="utf-8",
+        )
+        # A decoy item so resolution isn't trivially unique by directory size and
+        # so a stray substring match against the wrong file would be caught.
+        (backlog_dir / "099-unrelated-other-feature.md").write_text(
+            "---\n"
+            "uuid: 0123abcd-aaaa-bbbb-cccc-000000000099\n"
+            "title: Unrelated other feature\n"
+            "lifecycle_slug: unrelated-other-feature\n"
+            "status: refined\n"
+            "---\n"
+            "Body.\n",
+            encoding="utf-8",
+        )
+        return item
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.backlog_dir = Path(self._tmp.name)
+        self.item = self._make_backlog(self.backlog_dir)
+        set_backlog_dir(self.backlog_dir)
+
+    def tearDown(self) -> None:
+        set_backlog_dir(None)  # type: ignore[arg-type]
+        self._tmp.cleanup()
+
+    def test_resolves_when_lifecycle_slug_differs_from_stem(self) -> None:
+        # Feature slug != filename stem, no backlog_id → strategies 1-3 miss and
+        # the canonical resolver (strategy 4) matches on lifecycle_slug.
+        resolved = _find_backlog_item_path(self.SLUG)
+        self.assertEqual(resolved, self.item)
+
+    def test_write_back_emits_no_backlog_write_failed(self) -> None:
+        log_path = self.backlog_dir / "events.log"
+        with patch(
+            "cortex_command.overnight.outcome_router._backlog_update_item"
+        ) as mock_update:
+            _write_back_to_backlog(
+                self.SLUG,
+                overnight_status="failed",
+                round_number=1,
+                log_path=log_path,
+            )
+
+        # The canonical resolver found the item, so update_item was called with it
+        # and no best-effort failure event was logged.
+        mock_update.assert_called_once()
+        self.assertEqual(mock_update.call_args.args[0], self.item)
+        contents = log_path.read_text(encoding="utf-8") if log_path.exists() else ""
+        self.assertNotIn("backlog_write_failed", contents)
 
 
 if __name__ == "__main__":

@@ -320,6 +320,10 @@ def set_backlog_dir(path: Path) -> None:
 
 from cortex_command.backlog.update_item import update_item as _backlog_update_item  # noqa: E402
 from cortex_command.backlog.update_item import _find_item as _backlog_find_item  # noqa: E402
+from cortex_command.backlog.resolve_item import (  # noqa: E402
+    ResolutionError as _BacklogResolutionError,
+    resolve as _backlog_resolve,
+)
 
 # Mapping from overnight internal status to canonical backlog fields (R13).
 # Keys: overnight status; Values: dict of backlog fields to write.
@@ -355,6 +359,12 @@ def _find_backlog_item_path(feature: str, backlog_id: Optional[int] = None) -> O
       1. Exact match: ``cortex/backlog/NNN-{feature}.md``
       2. If *backlog_id* is provided, match ``cortex/backlog/{NNN}-*.md``
       3. Substring match via ``_find_item(feature)``
+      4. Canonical frontmatter resolution via ``resolve_item.resolve`` — maps the
+         feature's lifecycle-slug to its item by ``uuid``/``backlog_id``/
+         ``lifecycle_slug`` frontmatter, covering the common case where the
+         lifecycle slug differs from the backlog filename stem. On an ambiguous
+         or no-match result return ``None`` so the caller's best-effort swallow
+         applies.
     """
     backlog_dir = _backlog_dir if _backlog_dir is not None else _resolve_user_project_root() / "cortex" / "backlog"
 
@@ -375,7 +385,20 @@ def _find_backlog_item_path(feature: str, backlog_id: Optional[int] = None) -> O
 
     # 3. Fallback: substring match via update_item's finder
     result = _backlog_find_item(feature, backlog_dir=backlog_dir)
-    return result
+    if result is not None:
+        return result
+
+    # 4. Final fallback: canonical frontmatter resolution. Maps the feature's
+    #    lifecycle-slug → item via uuid/backlog_id/lifecycle_slug frontmatter,
+    #    which the strategies above ignore. ResolutionError or a non-"ok" result
+    #    (ambiguous / not_found) yields None so the best-effort swallow applies.
+    try:
+        resolution = _backlog_resolve(feature, backlog_dir)
+    except _BacklogResolutionError:
+        return None
+    if resolution.status == "ok":
+        return resolution.item
+    return None
 
 
 def _write_back_to_backlog(
