@@ -1,0 +1,30 @@
+{
+  "ts": "2026-06-01T23:42:20.324127+00:00",
+  "feature": "overnight-feature-crashes-with-unknown-complexity",
+  "artifact": "cortex/lifecycle/overnight-feature-crashes-with-unknown-complexity/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "Task 9 unit test asserts only that git runs with cwd=worktree; it cannot detect a production no-op (absent home-repo worktree key) or a helper that stages the wrong files. No integration test is added.",
+      "reviewer_angle": "R10 plan-commit worktree mechanism: implementability and regression risk",
+      "evidence_quote": "Add a unit test asserting the helper runs `git` with `cwd` = the integration worktree"
+    },
+    {
+      "class": "B",
+      "finding": "An OOV feature batch_plan.py excludes during round setup never reaches feature_executor, so the sole guaranteed complexity_normalized emission never fires and the normalization is silently lost.",
+      "reviewer_angle": "OOV normalization event surfacing",
+      "evidence_quote": "Also emit from the pre-flight `batch_plan.py` path **only if** an overnight-events-log path is threaded there"
+    },
+    {
+      "class": "B",
+      "finding": "execute_feature runs per-feature per-round and parse_feature_plan runs unconditionally inside it, so a resumed/re-dispatched feature re-emits the same complexity_normalized event each round with no idempotency guard, inflating the report.",
+      "reviewer_angle": "OOV normalization event surfacing",
+      "evidence_quote": "after a successful parse, iterate `feature_plan.normalized_complexities`"
+    }
+  ]
+}

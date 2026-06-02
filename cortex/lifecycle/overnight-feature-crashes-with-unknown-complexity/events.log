@@ -1,0 +1,7 @@
+{"schema_version": 1, "ts": "2026-06-01T21:34:57Z", "event": "lifecycle_start", "feature": "overnight-feature-crashes-with-unknown-complexity", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-01T21:42:38Z", "event": "clarify_critic", "feature": "overnight-feature-crashes-with-unknown-complexity", "parent_epic_loaded": false, "findings_count": 6, "dispositions": {"apply": 4, "dismiss": 0, "ask": 2}, "applied_fixes_count": 3, "dismissals_count": 0, "status": "ok"}
+{"ts": "2026-06-01T22:46:34Z", "event": "complexity_override", "feature": "overnight-feature-crashes-with-unknown-complexity", "from": "simple", "to": "complex", "gate": "clarify"}
+{"ts": "2026-06-01T22:46:34Z", "event": "criticality_override", "feature": "overnight-feature-crashes-with-unknown-complexity", "from": "medium", "to": "high"}
+{"ts": "2026-06-01T23:10:28Z", "event": "spec_approved", "feature": "overnight-feature-crashes-with-unknown-complexity"}
+{"ts": "2026-06-02T00:08:36Z", "event": "plan_approved", "feature": "overnight-feature-crashes-with-unknown-complexity"}
+{"ts": "2026-06-02T00:08:36Z", "event": "phase_transition", "feature": "overnight-feature-crashes-with-unknown-complexity", "from": "plan", "to": "implement"}
