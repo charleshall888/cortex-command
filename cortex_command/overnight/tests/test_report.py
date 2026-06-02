@@ -819,3 +819,33 @@ def test_render_complexity_normalized_empty_when_no_events() -> None:
     assert render_complexity_normalized(data) == ""
 
 
+# ---------------------------------------------------------------------------
+# Task 6: recoverable features get no from-scratch-rebuild follow-up
+# ---------------------------------------------------------------------------
+
+def test_recoverable_no_rebuild_followup(tmp_path) -> None:
+    """A recoverable deferred feature produces no 'Retry deferred' item.
+
+    The genuine question-deferral still gets its existing follow-up.
+    """
+    from cortex_command.overnight.report import create_followup_backlog_items
+
+    features = {
+        "feat-recoverable": OvernightFeatureStatus(
+            status="deferred", recoverable_branch="pipeline/feat-recoverable-2"
+        ),
+        "feat-question": OvernightFeatureStatus(status="deferred"),
+    }
+    data = _pytest_make_data(features)
+
+    items = create_followup_backlog_items(data, backlog_dir=tmp_path)
+
+    titles = [it.title for it in items]
+    # Recoverable feature: NO rebuild follow-up.
+    assert "Retry deferred: feat-recoverable" not in titles
+    assert not list(tmp_path.glob("*-feat-recoverable.md"))
+    # Genuine question-deferral: existing follow-up unchanged.
+    assert "Retry deferred: feat-question" in titles
+    assert list(tmp_path.glob("*-feat-question.md"))
+
+

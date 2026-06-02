@@ -264,6 +264,13 @@ def create_followup_backlog_items(
         if fs.status not in ("failed", "paused", "deferred"):
             continue
 
+        # Built-but-merge-blocked recoverable features are surfaced via the
+        # recoverable write-back (status: in_progress) and the report's
+        # recoverable section — they must NOT get a from-scratch-rebuild
+        # "Retry deferred" follow-up. Genuine question-deferrals fall through.
+        if fs.recoverable_branch is not None:
+            continue
+
         item_id = _next_backlog_id(backlog_dir)
         slug = name  # feature names already use kebab-case
         tags = _find_backlog_tags(name, backlog_dir)
