@@ -1,0 +1,6 @@
+[project]
+name = "contract-fixture-invalid-unknown-subcommand-flag"
+version = "0.0.1"
+
+[project.scripts]
+cortex-discovery = "stub_discovery:main"
