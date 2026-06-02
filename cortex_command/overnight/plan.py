@@ -20,7 +20,13 @@ from pathlib import Path
 
 from cortex_command.common import _resolve_user_project_root, atomic_write, slugify
 from cortex_command.overnight.backlog import BacklogItem, Batch, SelectionResult
-from cortex_command.overnight.state import OvernightFeatureStatus, OvernightState, save_state, session_dir
+from cortex_command.overnight.state import (
+    OvernightFeatureStatus,
+    OvernightState,
+    _default_state_path,
+    save_state,
+    session_dir,
+)
 
 
 def _default_plan_path() -> Path:
@@ -527,9 +533,19 @@ def bootstrap_session(
 ) -> tuple[OvernightState, Path]:
     """Initialize a complete overnight session from a selection and plan.
 
-    Collapses the five discrete initialization steps into a single call:
+    Collapses the discrete initialization steps into a single call:
     create state, resolve session directory, write plan, write manifest,
-    and persist state.
+    persist the per-session state, and point the top-level
+    ``cortex/lifecycle/overnight-state.json`` symlink at it.
+
+    The top-level symlink (R19) is a single-active-session pointer,
+    overwritten on each bootstrap (consistent with the host-global
+    active-session model; concurrent multi-session bootstrap is not a
+    supported overnight mode). It ensures no-arg ``load_state()`` —
+    which defaults to ``_default_state_path()`` — resolves to this
+    session's state file rather than raising ``FileNotFoundError`` in the
+    bootstrap→fire window. Per-session consumers pass explicit paths and
+    do not depend on this pointer.
 
     Note: ``initialize_overnight_state`` (step a) creates a git worktree as
     a side effect.  If any subsequent step (b--e) raises, that worktree is a
@@ -557,7 +573,21 @@ def bootstrap_session(
         features=list(state.features),
         session_dir=state_dir,
     )
-    save_state(state, state_dir / "overnight-state.json")
+    session_state_path = state_dir / "overnight-state.json"
+    save_state(state, session_state_path)
+
+    # R19: point the top-level ``cortex/lifecycle/overnight-state.json``
+    # symlink at this session's state file so no-arg ``load_state()`` does
+    # not raise ``FileNotFoundError`` in the bootstrap→fire window. This is
+    # a single-active-session pointer, overwritten on each bootstrap.
+    top_level_state_path = _default_state_path()
+    top_level_state_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        top_level_state_path.unlink()
+    except FileNotFoundError:
+        pass
+    top_level_state_path.symlink_to(session_state_path)
+
     return (state, state_dir)
 
 
