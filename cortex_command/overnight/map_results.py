@@ -115,6 +115,9 @@ def _map_results_to_state(
             continue
         fs.status = "deferred"
         fs.deferred_questions = entry.get("question_count", 0)
+        # Built-but-merge-blocked recoverable sub-case carries its branch here;
+        # genuine question-deferrals lack the key and stay None.
+        fs.recoverable_branch = entry.get("recoverable_branch")
 
     # Failed features — has "name" and "error"
     for entry in results.get("features_failed", []):

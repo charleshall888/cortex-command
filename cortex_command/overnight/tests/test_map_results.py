@@ -438,5 +438,60 @@ class TestRoundHistoryPopulation(unittest.TestCase):
         self.assertEqual(state.round_history[0].features_merged, ["feat-x"])
 
 
+class TestRecoverableBranchCarrier(unittest.TestCase):
+    """_map_results_to_state copies recoverable_branch from deferred entries."""
+
+    def setUp(self):
+        self._tmpdir = tempfile.TemporaryDirectory()
+        self._tmp = Path(self._tmpdir.name)
+        self._state_path = self._tmp / "overnight-state.json"
+        state = _make_state(
+            features={
+                "feat-recoverable": OvernightFeatureStatus(status="pending"),
+                "feat-question": OvernightFeatureStatus(status="pending"),
+            }
+        )
+        _write_state(state, self._state_path)
+
+    def tearDown(self):
+        self._tmpdir.cleanup()
+
+    def test_recoverable_branch_copied_from_deferred_entry(self):
+        """A deferred entry with recoverable_branch persists it onto the status."""
+        results = {
+            "features_merged": [],
+            "features_paused": [],
+            "features_deferred": [
+                {
+                    "name": "feat-recoverable",
+                    "question_count": 0,
+                    "recoverable_branch": "pipeline/feat-recoverable-2",
+                },
+            ],
+            "features_failed": [],
+        }
+        _map_results_to_state(results, self._state_path, batch_id=1)
+        state = load_state(self._state_path)
+        fs = state.features["feat-recoverable"]
+        self.assertEqual(fs.status, "deferred")
+        self.assertEqual(fs.recoverable_branch, "pipeline/feat-recoverable-2")
+
+    def test_recoverable_branch_none_for_question_deferral(self):
+        """A deferred entry without the key leaves recoverable_branch None."""
+        results = {
+            "features_merged": [],
+            "features_paused": [],
+            "features_deferred": [
+                {"name": "feat-question", "question_count": 2},
+            ],
+            "features_failed": [],
+        }
+        _map_results_to_state(results, self._state_path, batch_id=1)
+        state = load_state(self._state_path)
+        fs = state.features["feat-question"]
+        self.assertEqual(fs.status, "deferred")
+        self.assertIsNone(fs.recoverable_branch)
+
+
 if __name__ == "__main__":
     unittest.main()
