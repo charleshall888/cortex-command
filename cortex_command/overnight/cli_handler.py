@@ -1808,8 +1808,9 @@ def handle_schedule(args: argparse.Namespace) -> int:
 #   - ``prepare`` is READ-ONLY: select → render plan → emit plan JSON for the
 #     human Approve gate. It bootstraps nothing and writes no state.
 #   - ``launch`` is MUTATING: select → validate target repos → render plan →
-#     bootstrap session → extract batch specs → telemetry, returning a
-#     structured envelope describing the bootstrapped session.
+#     bootstrap session → extract batch specs, returning a structured
+#     envelope describing the bootstrapped session. It does NOT log
+#     ``session_start`` — the runner logs that once at fire time (R11).
 # ---------------------------------------------------------------------------
 
 
@@ -1943,7 +1944,11 @@ def handle_launch(args: argparse.Namespace) -> int:
          and persist the session state file.
       5. ``extract_batch_specs`` — write per-feature lifecycle specs into the
          worktree for batch-spec items.
-      6. ``log_event(session_start)`` — fire-time telemetry.
+
+    This verb runs at PREP time and deliberately does NOT log
+    ``session_start``: the runner emits exactly one fire-time
+    ``session_start`` when the session actually starts (R11). Pre-logging it
+    here would double-log on the schedule path and triple-log on run-now.
 
     Returns a structured envelope carrying the bootstrapped ``session_id``,
     ``state_dir``, ``state_path``, the selection summary, and the list of
@@ -1957,7 +1962,6 @@ def handle_launch(args: argparse.Namespace) -> int:
     batch_size_cap = int(getattr(args, "batch_size_cap", 5) or 5)
 
     from cortex_command.overnight import backlog as backlog_module
-    from cortex_command.overnight import events as events_module
     from cortex_command.overnight import plan as plan_module
 
     # (1) Select.
@@ -2053,22 +2057,8 @@ def handle_launch(args: argparse.Namespace) -> int:
         extract_warning = f"batch-spec extraction failed: {exc}"
         print(f"warning: {extract_warning}", file=sys.stderr, flush=True)
 
-    # (6) Telemetry: log the fire-time session_start (best-effort).
-    telemetry_warning: Optional[str] = None
-    try:
-        events_module.log_event(
-            event="session_start",
-            round=1,
-            details={
-                "session_id": state.session_id,
-                "feature_count": len(state.features),
-                "time_limit_hours": time_limit_hours,
-            },
-            log_path=state_dir / "overnight-events.log",
-        )
-    except Exception as exc:  # noqa: BLE001 — telemetry is non-fatal
-        telemetry_warning = f"session_start telemetry failed: {exc}"
-        print(f"warning: {telemetry_warning}", file=sys.stderr, flush=True)
+    # NOTE: launch does NOT log ``session_start`` here — the runner logs
+    # exactly one fire-time ``session_start`` when the session starts (R11).
 
     payload: dict = {
         "launched": True,
@@ -2081,8 +2071,6 @@ def handle_launch(args: argparse.Namespace) -> int:
     }
     if extract_warning is not None:
         payload["extract_warning"] = extract_warning
-    if telemetry_warning is not None:
-        payload["telemetry_warning"] = telemetry_warning
 
     if fmt == "json":
         _emit_json(payload)
@@ -2092,5 +2080,4 @@ def handle_launch(args: argparse.Namespace) -> int:
         print(f"worktree_path: {state.worktree_path}")
         print(f"extracted_specs: {len(extracted)}")
 
-    return 0
     return 0

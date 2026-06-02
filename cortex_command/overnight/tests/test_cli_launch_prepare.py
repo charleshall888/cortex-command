@@ -2,14 +2,16 @@
 
 These two verbs promote the planning helpers
 (``select_overnight_batch``, ``render_session_plan``,
-``validate_target_repos``, ``bootstrap_session``, ``extract_batch_specs``,
-``log_event``) to a stable CLI surface so the ``/overnight`` skill flow no
-longer shells into internal Python APIs (prohibited by the bare-Python-import
-gate). This module asserts the verb-deployment contract:
+``validate_target_repos``, ``bootstrap_session``, ``extract_batch_specs``)
+to a stable CLI surface so the ``/overnight`` skill flow no longer shells
+into internal Python APIs (prohibited by the bare-Python-import gate). This
+module asserts the verb-deployment contract:
 
   - ``launch`` is the mutating umbrella verb — select → validate repos →
-    render → bootstrap → extract → telemetry — and returns a structured
-    envelope describing the bootstrapped session.
+    render → bootstrap → extract — and returns a structured envelope
+    describing the bootstrapped session. It does NOT log ``session_start``:
+    the runner logs exactly one fire-time ``session_start`` at session start
+    (R11), so pre-logging here would double-/triple-log.
   - ``prepare`` is read-only — select → render — and emits the rendered plan
     as JSON WITHOUT mutating any state (no bootstrap, no worktree, no
     telemetry).
@@ -17,8 +19,8 @@ gate). This module asserts the verb-deployment contract:
 The planning helpers are monkeypatched at their source-module attributes so
 the tests are hermetic: no real worktree is created and no real backlog is
 read. The handlers import those helpers lazily as
-``backlog_module``/``plan_module``/``events_module``, so patching the source
-module attribute is the seam the lazy import resolves through.
+``backlog_module``/``plan_module``, so patching the source module attribute
+is the seam the lazy import resolves through.
 """
 
 from __future__ import annotations
@@ -159,7 +161,11 @@ def test_prepare_selection_failure_exits_nonzero(
 def test_launch_returns_structured_envelope(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
 ) -> None:
-    """``launch`` fuses select→validate→render→bootstrap→extract→telemetry."""
+    """``launch`` fuses select→validate→render→bootstrap→extract.
+
+    It deliberately does NOT log ``session_start`` at prep time — the runner
+    logs exactly one fire-time ``session_start`` (R11).
+    """
     selection = _make_selection()
     monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda: tmp_path)
     monkeypatch.setattr(
@@ -173,7 +179,7 @@ def test_launch_returns_structured_envelope(
     monkeypatch.setattr(plan_module, "validate_target_repos", lambda sel: [])
 
     # Stub bootstrap_session: return a state-like object plus a real on-disk
-    # session dir so the handler's telemetry write lands somewhere writable.
+    # session dir mirroring what the real helper persists.
     session_id = "overnight-2026-06-01-2200"
     state_dir = tmp_path / "cortex" / "lifecycle" / "sessions" / session_id
     state_dir.mkdir(parents=True, exist_ok=True)
@@ -203,6 +209,8 @@ def test_launch_returns_structured_envelope(
 
     monkeypatch.setattr(plan_module, "extract_batch_specs", _fake_extract)
 
+    # Tripwire: launch must NOT pre-log session_start (R11). Record any
+    # log_event call so we can assert no session_start was written.
     log_calls: list = []
 
     def _fake_log(*, event, round, details=None, log_path=None):
@@ -223,13 +231,15 @@ def test_launch_returns_structured_envelope(
     assert payload["worktree_path"] == worktree_path
     assert payload["extracted_specs"] == ["cortex/lifecycle/first-feature/spec.md"]
     assert payload["selection"]["selected_count"] == 2
+    # No prep-time telemetry warning is emitted (launch logs nothing).
+    assert "telemetry_warning" not in payload
 
     # The umbrella verb actually drove each fused step.
     assert len(bootstrap_calls) == 1
     assert bootstrap_calls[0][2] == tmp_path  # project_root forwarded
     assert extract_calls and extract_calls[0][1] == Path(worktree_path)
-    assert log_calls and log_calls[0][0] == "session_start"
-    assert log_calls[0][2]["session_id"] == session_id
+    # launch does NOT pre-log session_start — the runner logs it at fire (R11).
+    assert not any(call[0] == "session_start" for call in log_calls)
 
 
 def test_launch_aborts_before_mutation_on_invalid_repos(
