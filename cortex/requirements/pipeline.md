@@ -53,7 +53,7 @@ The pipeline area covers the overnight execution framework: how sessions are orc
   - Complex conflicts dispatch a Sonnet repair agent on an isolated worktree
   - If Sonnet fails (unresolved markers or deferral in exit report), escalate once to Opus
   - Repair attempt cap is a fixed architectural constraint: single escalation (Sonnet → Opus) for merge conflicts
-  - If repair fails after escalation, feature is paused; in-progress merge is aborted before returning
+  - If repair fails after escalation on a genuine merge conflict, the in-progress merge is aborted before returning and the feature is routed to recoverable `deferred` with its `recoverable_branch` set (built-but-merge-blocked: not re-queued, not auto-retried, surfaced positively); non-conflict / systemic merge failures remain `paused` and feed the systemic circuit breaker
   - Test gate runs after any resolution; on gate failure, repair branch is cleaned up
 - **Priority**: must-have
 
