@@ -258,10 +258,16 @@ case "${SPAWN_TOKEN}" in
         # lifecycle. Self-clean and exit 0 so launchd marks the agent run
         # complete.
         #
-        # SEAM (Task 12): the spent one-shot `launchctl bootout
-        # gui/$(id -u)/${LABEL}` belongs HERE, before cleanup_self, so a
-        # successful fire tears down its own (annually-recurring) schedule
-        # and cannot refire ~a year later. Not implemented yet.
+        # Spent one-shot teardown (R14): the rendered StartCalendarInterval
+        # block has no `Year` key, so launchd treats this as an
+        # annually-recurring job that would refire ~a year later. Boot out
+        # our own label BEFORE the plist/launcher self-clean so the spent
+        # job is deregistered from launchd, not merely missing its plist
+        # file. Best-effort: an already-gone job (e.g. raced by the GC
+        # backstop) makes bootout exit non-zero, which is fine — never fail
+        # the launcher on it. The GC pass at next schedule time (R15) reaps
+        # any stragglers if this bootout is missed.
+        launchctl bootout "gui/$(id -u)/${LABEL}" >/dev/null 2>&1 || true
         cleanup_self
         exit 0
         ;;
