@@ -17,7 +17,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install pyyaml
+        run: pip install pyyaml pytest
 
       - name: Validate plugin skills
         run: |
@@ -34,3 +34,21 @@ jobs:
             plugins/cortex-core/skills \
             plugins/cortex-overnight/skills \
             plugins/android-dev-extras/skills
+
+      - name: Contract checker tests (blocking)
+        run: pytest tests/test_check_contract.py
+
+      - name: Contract audit signal (non-blocking)
+        continue-on-error: true
+        run: |
+          set +e
+          audit_output=$(CORTEX_COMMAND_FORCE_SOURCE=1 bin/cortex-check-contract --audit 2>&1)
+          rc=$?
+          {
+            echo "### Contract audit (non-blocking signal)"
+            echo ""
+            echo '```'
+            echo "$audit_output"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $rc
