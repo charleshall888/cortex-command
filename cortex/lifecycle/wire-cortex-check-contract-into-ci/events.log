@@ -3,3 +3,6 @@
 {"ts": "2026-06-02T15:19:34Z", "event": "spec_approved", "feature": "wire-cortex-check-contract-into-ci"}
 {"ts": "2026-06-02T15:48:18Z", "event": "plan_approved", "feature": "wire-cortex-check-contract-into-ci"}
 {"ts": "2026-06-02T15:48:18Z", "event": "phase_transition", "feature": "wire-cortex-check-contract-into-ci", "from": "plan", "to": "implement"}
+{"ts": "2026-06-02T17:25:18Z", "event": "batch_dispatch", "feature": "wire-cortex-check-contract-into-ci", "batch": 0, "tasks": [1, 2, 3]}
+{"ts": "2026-06-02T17:25:39Z", "event": "phase_transition", "feature": "wire-cortex-check-contract-into-ci", "tier": "simple", "from": "implement", "to": "complete"}
+{"ts": "2026-06-02T17:29:08Z", "event": "feature_complete", "feature": "wire-cortex-check-contract-into-ci", "tasks_total": 3, "rework_cycles": 0, "merge_anchor": "merge"}

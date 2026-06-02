@@ -146,32 +146,6 @@
     "repo": null
   },
   {
-    "id": 283,
-    "title": "Wire cortex-check-contract into CI: run contract fixtures + --audit (source mode) in validate.yml",
-    "status": "refined",
-    "priority": "medium",
-    "type": "chore",
-    "tags": [],
-    "areas": [
-      "tests"
-    ],
-    "created": "2026-06-02",
-    "updated": "2026-06-02",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "cortex/lifecycle/wire-cortex-check-contract-into-ci/spec.md",
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "ab06b8e4-de55-4fca-92d3-0a62634ce663",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 284,
     "title": "Surface built-but-merge-blocked overnight features as recoverable, not failed/zero-progress (split from #281 Phase 2)",
     "status": "backlog",
