@@ -22,7 +22,7 @@ Isolate the uv cache for the two genuine default-run real-`uv` tests by setting 
   - Precedent to mirror exactly: `tests/test_mcp_auto_update_real_install.py:165,206,408` (cache dir under tmp, `mkdir(parents=True, exist_ok=True)`, `env["UV_CACHE_DIR"] = str(cache_dir)`, no process-env monkeypatch).
   - Constraint: do NOT add any `except subprocess.TimeoutExpired` or timeout-skip branch; do NOT alter the fixture's module scope, the six `PACKAGE_INTERNAL_SITES` probes, or the install helper's `UV_TOOL_DIR`/`UV_TOOL_BIN_DIR` isolation.
 - **Verification**: `grep -c 'UV_CACHE_DIR' tests/test_no_clone_install.py` — pass if count ≥ 2 (one in the build fixture, one in the install helper). AND `grep -c 'TimeoutExpired' tests/test_no_clone_install.py` — pass if count = 0 (no masking branch added).
-- **Status**: [ ] pending
+- **Status**: [x] done — commit d0a739f6 (grep UV_CACHE_DIR=2, TimeoutExpired=0)
 
 ### Task 2: Isolate the uv cache in `test_mcp_subprocess_contract.py` (`uv run --script`)
 - **Files**: `tests/test_mcp_subprocess_contract.py`
@@ -33,7 +33,7 @@ Isolate the uv cache for the two genuine default-run real-`uv` tests by setting 
   - The existing `uv`-not-on-PATH skip (L96-97), the `SERVER_PATH.exists()` assert (L99), and both downstream assertions (L116-124) are unchanged.
   - Constraint: do NOT add any timeout-handling/`TimeoutExpired` branch; do NOT lengthen the 60s timeout.
 - **Verification**: `grep -c 'UV_CACHE_DIR' tests/test_mcp_subprocess_contract.py` — pass if count ≥ 1. AND `grep -c 'TimeoutExpired' tests/test_mcp_subprocess_contract.py` — pass if count = 0.
-- **Status**: [ ] pending
+- **Status**: [x] done — commit 56a72454 (grep UV_CACHE_DIR=1, TimeoutExpired=0)
 
 ### Task 3: Verify isolated targets pass cold, measure cold-cache cost, and confirm full suite green
 - **Files**: `cortex/lifecycle/stabilize-test-no-clone-installtest-target/plan.md` (implementation-notes append only — record measured timings)
@@ -46,9 +46,26 @@ Isolate the uv cache for the two genuine default-run real-`uv` tests by setting 
   - R6 blocker rule: if the contract test's cold resolve is NOT comfortably under 60s, HALT and surface it as a blocker — do NOT lengthen the timeout to absorb it.
   - Full default suite: `just test` (runs sub-suites + hermetic `bash tests/test_install.sh` + `.venv/bin/pytest tests/ -q`; `@slow` excluded).
 - **Verification**: `.venv/bin/pytest "tests/test_no_clone_install.py::test_target_state" "tests/test_mcp_subprocess_contract.py::test_plugin_path_mismatch_exits_nonzero" -q` — pass if exit code = 0 (R5). AND `just test` — pass if exit code = 0 (R7). AND the contract test's recorded cold resolve is < 30s and `test_target_state`'s build+install < 180s, recorded in the implementation-notes append (R6).
-- **Status**: [ ] pending
+- **Status**: [x] done — both targets pass (R5), `just test` 6/6 green (R7), cold-cache timings within budget (R6, see Implementation Notes)
 
 ## Risks
 - **Cold-cache cost is the one new failure mode isolation could introduce.** Research rates a cold `UV_CACHE_DIR` build+install of this small pure-Python wheel at seconds (well under 180s), but found no published number for this exact operation — hence R6's measured gate (Task 3). If the contract test's cold `uv run --script` resolve approaches 60s on a slow network, the spec mandates surfacing it as a blocker, not bumping the timeout. This is a deliberate, accepted gate, not an open design choice.
 - **Scope deliberately excludes the two `@slow` latent-gap tests** (`test_mcp_auto_update_orchestration.py::test_verification_probe_fails_on_corrupt_install`, `test_release_artifact_invariants.py::test_wheel_package_version_matches_git_describe`). They share the failure mode but are opt-in and excluded from the default run — documented as a known latent gap, intentionally not fixed here.
 - **`@pytest.mark.serial` deliberately not added.** It is inert today (no `pytest-xdist`) and does nothing against the out-of-process trigger; `UV_CACHE_DIR` is the load-bearing mechanism. Adding `serial` would be forward-compat speculation against the project's "simpler wins" default.
+
+## Implementation Notes
+
+**Commits**: Task 1 `d0a739f6` (test_no_clone_install.py — build fixture + install helper), Task 2 `56a72454` (test_mcp_subprocess_contract.py — uv run --script).
+
+**R6 cold-cache measurement** (each pytest run uses a fresh `tmp_path`, so `UV_CACHE_DIR` is cold every run — these timings are cold-cache, network-enabled):
+
+| Target | Cold-cache wall-clock | Budget | Margin |
+|---|---|---|---|
+| `test_mcp_subprocess_contract::test_plugin_path_mismatch_exits_nonzero` (`uv run --script` resolve of mcp+pydantic+packaging) | 0.61s call | 60s (R6 target < 30s) | comfortably under ✓ |
+| `test_no_clone_install::test_target_state` (`uv build` + `uv tool install`) | 4.49s call + 0.84s setup | 180s | comfortably under ✓ |
+
+R6 blocker rule (surface-don't-absorb if cold resolve nears 60s) **not triggered** — cold resolve is ~0.6s, two orders of magnitude under budget.
+
+**R5 / R7**: `.venv/bin/pytest <both targets> -q` → 2 passed. `just test` → 6/6 sub-suites passed (test-pipeline, test-overnight, test-init, test-install, tests, tests-takeover-stress).
+
+**Cache-isolation confirmed by a sandbox run**: under an egress-blocked sandbox, the contract test failed with a PyPI DNS error (`uv` reaching for `pydantic` over the network) rather than riding a warm shared cache — direct proof that `UV_CACHE_DIR` now isolates the cache (a cold private cache has nothing cached, so uv fetches). Consequence (spec edge case, accepted): the contract test now requires network on every run (no egress-skip guard of its own, unlike `built_wheel`); in the de-flake's target environments (overnight Complete gate, CI, dev machines with network) the cold resolve is sub-second. This is in-scope-excluded per spec R4 (skip logic byte-unchanged) and the "Sandbox blocks PyPI/GitHub egress" edge case.
