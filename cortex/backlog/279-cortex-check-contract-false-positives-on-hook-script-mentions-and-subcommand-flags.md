@@ -2,13 +2,15 @@
 schema_version: "1"
 uuid: 69b4c348-5c4a-476d-a056-e3a2cfaf47e6
 title: "cortex-check-contract false-positives on hook-script mentions and subcommand flags"
-status: backlog
+status: refined
 priority: medium
 type: bug
 created: 2026-06-02
 updated: 2026-06-02
 complexity: complex
 criticality: high
+spec: cortex/lifecycle/cortex-check-contract-false-positives-on/spec.md
+areas: ['hooks']
 ---
 **Why:** `cortex-check-contract` exits 1 on 12 false-positive violations — none are real doc or code errors. Two distinct checker limitations cause all of them:
 
