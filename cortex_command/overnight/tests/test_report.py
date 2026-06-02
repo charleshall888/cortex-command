@@ -284,6 +284,51 @@ def test_render_failed_features_recovery_branch_shown_when_no_conflicted_files()
     )
 
 
+def test_render_failed_features_separates_blocker_failed_cascade_casualty() -> None:
+    """A blocker_failed cascade casualty renders distinctly from a primary failure.
+
+    Witnesses Task 6: the end-of-round sweep sets ``error == "blocker_failed"``
+    on dependents it auto-fails. The morning report must group those casualties
+    in a labelled section tagged with the ``blocker_failed`` reason so one OOV
+    blocker with N dependents does not read as N+1 independent failures.
+    """
+    features = {
+        "blocker": OvernightFeatureStatus(
+            status="failed", error="Unknown complexity tier 'medium'"
+        ),
+        "dependent": OvernightFeatureStatus(
+            status="failed", error="blocker_failed"
+        ),
+    }
+    data = _pytest_make_data(features)
+    data.events = []
+    output = render_failed_features(data)
+
+    # The cascade casualty is labelled/separated into its own subsection and
+    # tagged with the blocker_failed reason.
+    assert "Cascade casualties (blocker failed)" in output, (
+        f"Expected a labelled cascade-casualties subsection, got:\n{output[:800]}"
+    )
+    assert "blocker_failed" in output, (
+        f"Expected the blocker_failed reason tag in output, got:\n{output[:800]}"
+    )
+    assert "**dependent** (reason: `blocker_failed`)" in output, (
+        f"Expected the dependent rendered as a tagged casualty, got:\n{output[:800]}"
+    )
+
+    # The primary failure renders ahead of the casualty section, and the
+    # dependent is NOT rendered as a primary `### dependent:` failure heading.
+    assert "### blocker:" in output, (
+        f"Expected the primary failure heading, got:\n{output[:800]}"
+    )
+    assert "### dependent:" not in output, (
+        f"Casualty must not render as a primary failure heading, got:\n{output[:800]}"
+    )
+    assert output.index("### blocker:") < output.index(
+        "Cascade casualties (blocker failed)"
+    ), "Primary failures should render before the cascade-casualties section"
+
+
 # ---------------------------------------------------------------------------
 # Tests for paused_reason rendering in the morning-report executive summary
 # ---------------------------------------------------------------------------

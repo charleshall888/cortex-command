@@ -1073,6 +1073,19 @@ def render_failed_features(data: ReportData) -> str:
         lines.append("")
         return "\n".join(lines)
 
+    # Separate cascade casualties from primary failures. The end-of-round sweep
+    # (Phase 2) sets ``error == "blocker_failed"`` only on non-terminal
+    # dependents it itself terminates — a dependent that was dispatched and
+    # failed on its own work keeps its own error and is a primary failure. We
+    # render casualties in a distinct, labelled group so one OOV blocker with N
+    # dependents does not read as N+1 independent failures.
+    cascade_casualties = {
+        name: fs for name, fs in failed.items() if fs.error == "blocker_failed"
+    }
+    primary_failures = {
+        name: fs for name, fs in failed.items() if fs.error != "blocker_failed"
+    }
+
     # Collect circuit breaker info from batch results
     cb_features: set[str] = set()
     for br in data.batch_results:
@@ -1105,7 +1118,7 @@ def render_failed_features(data: ReportData) -> str:
             if feat:
                 merged_to_integration.add(feat)
 
-    for name, fs in sorted(failed.items()):
+    for name, fs in sorted(primary_failures.items()):
         error = fs.error or "unknown error"
         lines.append(f"### {name}: {error}")
         retries = retry_counts.get(name, 0)
@@ -1158,6 +1171,21 @@ def render_failed_features(data: ReportData) -> str:
             snippet = ""
         if snippet:
             lines.append(f"- **Last worker output**: {snippet}")
+        lines.append("")
+
+    # Cascade casualties: dependents auto-failed by the end-of-round sweep
+    # because a blocker failed. Grouped and labelled separately so they read as
+    # downstream consequences of an upstream failure, not independent failures.
+    if cascade_casualties:
+        lines.append(f"### Cascade casualties (blocker failed) ({len(cascade_casualties)})")
+        lines.append(
+            "These features were auto-failed because a feature they were "
+            "blocked on failed this session. They did not fail on their own "
+            "work; fix the upstream blocker and re-run."
+        )
+        lines.append("")
+        for name, fs in sorted(cascade_casualties.items()):
+            lines.append(f"- **{name}** (reason: `blocker_failed`)")
         lines.append("")
 
     return "\n".join(lines)
