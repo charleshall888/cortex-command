@@ -102,6 +102,53 @@ DESCENDANT_GRACEFUL_SHUTDOWN_SECONDS: float = 6.0
 
 
 # ---------------------------------------------------------------------------
+# Idle-sleep assertion bound to the runner's lifetime (R4)
+# ---------------------------------------------------------------------------
+
+def _spawn_caffeinate_bound_to_runner() -> Optional[subprocess.Popen]:
+    """Spawn ``caffeinate -i -w <runner_pid>`` bound to this runner's life.
+
+    Holds the macOS no-idle-sleep assertion (``-i``) for exactly as long as
+    the runner runs by binding caffeinate's lifetime to the runner's pid
+    (``-w <pid>`` makes caffeinate exit when ``<pid>`` exits). This is the
+    R4 process-tree contract:
+
+    * The **runner** remains the ``start_new_session=True`` session leader
+      (R2) — caffeinate is a child of the runner, NOT the ``Popen`` target
+      / session leader, so it cannot break the detach.
+    * caffeinate is spawned **by the runner**, NOT by the ~5s
+      ``_spawn_runner_async`` shim — the shim returns at the handshake and
+      a shim-owned assertion would drop there (the F3 bug). Binding to the
+      runner pid makes the assertion outlive the handshake window and last
+      for the runner's full lifetime.
+
+    Called as the earliest action in :func:`run` — before ``load_state``
+    and the takeover-lock acquisition — so the unasserted window is the
+    sub-second ``Popen``→entry gap rather than the slow post-wake / cold-
+    cache state-load + lock span. ``-i`` is the assertion; a bare ``-w``
+    would hold NO assertion and is wrong.
+
+    Best-effort: a missing ``caffeinate`` binary (non-macOS, stripped
+    environments) must not crash the runner. Returns the ``Popen`` handle
+    on success (so callers/tests can observe the child), or ``None`` if
+    the binary is absent or the spawn fails. The child is left
+    unsupervised — it self-exits when the runner pid exits via ``-w``.
+    """
+    try:
+        return subprocess.Popen(
+            ["caffeinate", "-i", "-w", str(os.getpid())],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            close_fds=True,
+        )
+    except (OSError, ValueError):
+        # Missing binary / spawn failure — idle-sleep prevention is
+        # best-effort and must never crash the runner.
+        return None
+
+
+# ---------------------------------------------------------------------------
 # SIGTERM descendant tree-walk (R12 / Task 3)
 # ---------------------------------------------------------------------------
 
@@ -2080,6 +2127,15 @@ def run(
         concurrent-start collision, dry-run rejection, or propagated
         signal exit.
     """
+    # Earliest action (R4): bind a no-idle-sleep assertion to this runner's
+    # lifetime as a child, BEFORE state load and takeover-lock acquisition.
+    # Spawning first minimizes the unasserted window to the sub-second
+    # Popen→entry gap rather than spanning the slow post-wake / cold-cache
+    # state-load + lock window below. The runner stays the session leader
+    # (caffeinate is a bound child, not the Popen target); best-effort spawn
+    # so a missing ``caffeinate`` binary cannot crash the runner.
+    _spawn_caffeinate_bound_to_runner()
+
     # Load once for concurrent-start guard and startup logging.
     state = state_module.load_state(state_path)
     session_id = state.session_id
