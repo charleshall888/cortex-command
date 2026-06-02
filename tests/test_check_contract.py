@@ -107,10 +107,13 @@ def test_contract_fixture(fixture: Path) -> None:
         )
         expected_codes = json.loads(expected_path.read_text(encoding="utf-8"))
         actual_codes = [v["code"] for v in violations]
-        # Assert that at least one violation has a code that appears in the
-        # expected codes list.
-        assert any(code in expected_codes for code in actual_codes), (
-            f"{name}: no violation with expected code(s) {expected_codes}\n"
+        # Assert multiset equality: the emitted codes must match expected
+        # exactly (same codes, same multiplicity) so that over-firing fixtures
+        # (spurious extra codes) are detected as failures.
+        assert sorted(actual_codes) == sorted(expected_codes), (
+            f"{name}: violation codes mismatch\n"
+            f"expected (sorted)={sorted(expected_codes)}\n"
+            f"actual   (sorted)={sorted(actual_codes)}\n"
             f"actual violations={violations}\n"
             f"stdout={result.stdout!r}\nstderr={result.stderr!r}"
         )
