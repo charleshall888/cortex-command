@@ -143,7 +143,7 @@ class TestMixedSeparators(unittest.TestCase):
         """Four tasks with different separators all parse successfully."""
         body = (
             _task_block("### Task 1: Colon task", Complexity="simple")
-            + _task_block("### Task 2 \u2014 Em dash task", Complexity="moderate")
+            + _task_block("### Task 2 \u2014 Em dash task", Complexity="complex")
             + _task_block("### Task 3\u2013 En dash task", Complexity="simple")
             + _task_block("### Task 4 - Hyphen task", Complexity="simple")
         )
@@ -157,6 +157,49 @@ class TestMixedSeparators(unittest.TestCase):
         self.assertEqual(plan.tasks[2].description, "En dash task")
         self.assertEqual(plan.tasks[3].number, 4)
         self.assertEqual(plan.tasks[3].description, "Hyphen task")
+
+
+class TestOOVComplexityNormalization(unittest.TestCase):
+    """R1: a present-but-out-of-vocabulary complexity normalizes to ``complex``.
+
+    Feeds a task with ``**Complexity**: medium`` (an OOV criticality-flavored
+    value) and asserts (a) the constructed ``FeatureTask.complexity`` is coerced
+    to ``complex`` and (b) the returned plan records the original ``"medium"``
+    against that task so the caller can emit a report-visible event.
+    """
+
+    def setUp(self):
+        self._tmpdir = tempfile.TemporaryDirectory()
+
+    def tearDown(self):
+        self._tmpdir.cleanup()
+
+    def _parse(self, tasks_body: str) -> FeaturePlan:
+        plan_path = Path(self._tmpdir.name) / "plan.md"
+        plan_path.write_text(_make_plan(tasks_body), encoding="utf-8")
+        return parse_feature_plan(plan_path)
+
+    def test_present_oov_complexity_normalizes_to_complex_and_records_original(self):
+        """``medium`` coerces to ``complex`` and the original is recorded."""
+        plan = self._parse(_task_block(
+            "### Task 1: Build the widget",
+            Complexity="medium",
+        ))
+        self.assertEqual(len(plan.tasks), 1)
+        # (a) the constructed FeatureTask carries the coerced value.
+        self.assertEqual(plan.tasks[0].complexity, "complex")
+        # (b) the returned plan records the original OOV value + task identity.
+        self.assertEqual(
+            plan.normalized_complexities,
+            [{"task": 1, "original": "medium"}],
+        )
+
+    def test_absent_complexity_keeps_simple_default_and_records_nothing(self):
+        """An absent ``**Complexity**`` field keeps ``simple`` (Edge: absent vs present)."""
+        plan = self._parse("### Task 1: Build the widget\n")
+        self.assertEqual(len(plan.tasks), 1)
+        self.assertEqual(plan.tasks[0].complexity, "simple")
+        self.assertEqual(plan.normalized_complexities, [])
 
 
 class TestNormalizationIdempotent(unittest.TestCase):
@@ -423,7 +466,8 @@ class TestOutlineSectionAndH3PhasesRegression(unittest.TestCase):
         self.assertEqual(plan.tasks[1].number, 2)
         self.assertEqual(plan.tasks[1].description, "Second task")
         self.assertEqual(plan.tasks[1].files, ["src/b.py"])
-        self.assertEqual(plan.tasks[1].complexity, "moderate")
+        # Authored "moderate" is OOV and normalizes to "complex".
+        self.assertEqual(plan.tasks[1].complexity, "complex")
 
     def test_h3_phase_headings_inside_outline_do_not_truncate_tasks(self):
         """``### Phase N:`` H3s inside ``## Outline`` leave task bodies intact.
@@ -469,7 +513,8 @@ class TestOutlineSectionAndH3PhasesRegression(unittest.TestCase):
         self.assertEqual(plan.tasks[1].number, 2)
         self.assertEqual(plan.tasks[1].description, "Second task")
         self.assertEqual(plan.tasks[1].files, ["src/b.py"])
-        self.assertEqual(plan.tasks[1].complexity, "moderate")
+        # Authored "moderate" is OOV and normalizes to "complex".
+        self.assertEqual(plan.tasks[1].complexity, "complex")
 
     def test_unrelated_h2_after_last_task_truncates_task_body(self):
         """Lock-in: a ``## SomeOther`` H2 after the last task truncates that
@@ -485,10 +530,11 @@ class TestOutlineSectionAndH3PhasesRegression(unittest.TestCase):
         than do so by accident.
         """
         # Two ``### Task N:`` blocks with an unrelated ``## SomeOther`` H2
-        # placed AFTER the last task. The ``## SomeOther`` body intentionally
-        # contains a ``- **Complexity**: critical`` row that would corrupt
-        # Task 2's parsed Complexity if the H2-anchor terminator failed to
-        # fire.
+        # placed AFTER the last task. The sentinel pair is in-vocabulary
+        # (``trivial`` for Task 2, ``complex`` under ``## SomeOther``) so OOV
+        # normalization does not erase the H2-leak diagnostic: if the H2-anchor
+        # terminator failed to fire, the ``complex`` row would leak in and flip
+        # Task 2's Complexity from ``trivial`` to ``complex``.
         tasks_body = (
             _task_block(
                 "### Task 1: First task",
@@ -501,12 +547,12 @@ class TestOutlineSectionAndH3PhasesRegression(unittest.TestCase):
                 "### Task 2: Second task",
                 Files="`src/b.py`",
                 What="do thing two",
-                Complexity="moderate",
+                Complexity="trivial",
             )
             + "\n"
             "## SomeOther\n"
             "This unrelated H2 sits after the last task.\n\n"
-            "- **Complexity**: critical\n"
+            "- **Complexity**: complex\n"
         )
         plan_text = _make_plan(tasks_body)
 
@@ -520,10 +566,10 @@ class TestOutlineSectionAndH3PhasesRegression(unittest.TestCase):
         self.assertEqual(plan.tasks[0].files, ["src/a.py"])
 
         # Task 2's body was truncated at the ``## SomeOther`` H2, so its
-        # Complexity remains "moderate" — the ``critical`` value sitting
+        # Complexity remains "trivial" — the ``complex`` value sitting
         # under ``## SomeOther`` did NOT leak into Task 2's parsed fields.
         self.assertEqual(plan.tasks[1].number, 2)
-        self.assertEqual(plan.tasks[1].complexity, "moderate")
+        self.assertEqual(plan.tasks[1].complexity, "trivial")
         self.assertEqual(plan.tasks[1].files, ["src/b.py"])
 
 

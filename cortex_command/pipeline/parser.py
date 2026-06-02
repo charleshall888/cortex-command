@@ -13,6 +13,12 @@ from pathlib import Path
 from typing import Optional
 
 
+# The accepted per-task complexity vocabulary. A present-but-out-of-vocabulary
+# value is normalized to ``complex`` (safe over-provision) at the parser
+# boundary; an absent field keeps the ``simple`` default.
+VALID_COMPLEXITIES = frozenset({"trivial", "simple", "complex"})
+
+
 # ---------------------------------------------------------------------------
 # Dataclasses
 # ---------------------------------------------------------------------------
@@ -64,6 +70,12 @@ class FeaturePlan:
     feature: str
     overview: str
     tasks: list[FeatureTask] = field(default_factory=list)
+    # Records each present-but-out-of-vocabulary complexity that was coerced to
+    # ``complex`` at the parser boundary. Each entry is
+    # ``{"task": <task-number>, "original": <oov-string>}``. The parser itself
+    # does no logging; the caller (which holds the session-events-log handle)
+    # reads this to emit a report-visible normalization event.
+    normalized_complexities: list[dict] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -259,9 +271,14 @@ def parse_feature_plan(path: Path) -> FeaturePlan:
     overview = overview_text.strip() if overview_text else ""
 
     # -- Parse tasks --
-    tasks = _parse_tasks(text, path)
+    tasks, normalized_complexities = _parse_tasks(text, path)
 
-    return FeaturePlan(feature=feature_name, overview=overview, tasks=tasks)
+    return FeaturePlan(
+        feature=feature_name,
+        overview=overview,
+        tasks=tasks,
+        normalized_complexities=normalized_complexities,
+    )
 
 
 def _normalize_task_separators(text: str) -> str:
@@ -279,9 +296,15 @@ def _normalize_task_separators(text: str) -> str:
     )
 
 
-def _parse_tasks(text: str, path: Path) -> list[FeatureTask]:
-    """Parse all ### Task N: sections from a feature plan."""
+def _parse_tasks(text: str, path: Path) -> tuple[list[FeatureTask], list[dict]]:
+    """Parse all ### Task N: sections from a feature plan.
+
+    Returns the parsed tasks plus a list of out-of-vocabulary complexity
+    normalizations (``{"task": <number>, "original": <oov-string>}``) so the
+    caller can surface each coercion as a report-visible event.
+    """
     tasks: list[FeatureTask] = []
+    normalized_complexities: list[dict] = []
 
     # Normalize separator variants (em dash, en dash, hyphen) to colon
     text = _normalize_task_separators(text)
@@ -314,7 +337,15 @@ def _parse_tasks(text: str, path: Path) -> list[FeatureTask]:
 
         files = _parse_field_files(task_body)
         depends_on = _parse_field_depends_on(task_body, task_num, path)
+        # An absent Complexity field keeps the ``simple`` default; only a
+        # present-but-out-of-vocabulary value normalizes to ``complex``
+        # (safe over-provision) and is recorded for the caller to surface.
         complexity = _parse_field_string(task_body, "Complexity") or "simple"
+        if complexity not in VALID_COMPLEXITIES:
+            normalized_complexities.append(
+                {"task": task_num, "original": complexity}
+            )
+            complexity = "complex"
         status = _parse_field_status(task_body)
 
         tasks.append(FeatureTask(
@@ -326,7 +357,7 @@ def _parse_tasks(text: str, path: Path) -> list[FeatureTask]:
             status=status,
         ))
 
-    return tasks
+    return tasks, normalized_complexities
 
 
 def _parse_field_files(body: str) -> list[str]:
