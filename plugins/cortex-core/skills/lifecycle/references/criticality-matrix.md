@@ -8,7 +8,9 @@ The user can change criticality at any time by requesting it explicitly. When ov
 {"ts": "<ISO 8601>", "event": "criticality_override", "feature": "<name>", "from": "<old>", "to": "<new>"}
 ```
 
-The user's criticality setting is always final. No automated process (including future orchestrator additions) may override the user's choice.
+An automated **Clarify reconciliation** (emitted by `cortex-refine reconcile-clarify --lifecycle-slug {slug}` at Spec-phase entry) additionally carries an optional `gate: "clarify_reconcile"` field, so consumers that inspect `gate` can distinguish its provenance from a user-driven override (which omits `gate`) or an escalator-emitted override (which carries its own gate vocabulary). Consumers that read only `from`/`to` (e.g. `common.py`, `state_cli`) are unaffected.
+
+The user's criticality setting is always final. No automated process (including future orchestrator additions) may override the user's *explicit* choice. The Clarify reconciliation above is **not** such an override: it transcribes the Clarify-determined criticality — which the user can correct *during* Clarify — into lifecycle state, is monotonic-up-only (never lowers a value), and is `gate`-marked `clarify_reconcile`. An explicit user criticality request still wins via the user-override path above (its later, ungated `criticality_override` row supersedes the reconciliation by recency).
 
 ## Criticality Behavior Matrix
 
