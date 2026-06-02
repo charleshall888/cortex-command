@@ -64,14 +64,25 @@ def _mk_label(suffix: str) -> str:
     )
 
 
-def _mk_handle(suffix: str, plist_dir: Path) -> ScheduledHandle:
+def _mk_handle(
+    suffix: str,
+    plist_dir: Path,
+    scheduled_for_iso: str | None = None,
+) -> ScheduledHandle:
     label = _mk_label(suffix)
+    # Default to a FUTURE fire time so the fixture represents an
+    # active, not-yet-spent schedule. The spent-by-timestamp GC path
+    # (R15) reaps any entry whose scheduled_for_iso is in the past
+    # regardless of launchctl registration, so a fixed past literal
+    # would make these registration-state fixtures spuriously reaped.
+    if scheduled_for_iso is None:
+        scheduled_for_iso = (datetime.now() + timedelta(hours=12)).isoformat()
     return ScheduledHandle(
         label=label,
         session_id=f"sess-{suffix}",
         plist_path=plist_dir / f"{label}.plist",
         launcher_path=plist_dir / f"launcher-{label}.sh",
-        scheduled_for_iso="2026-05-04T23:00:00",
+        scheduled_for_iso=scheduled_for_iso,
         created_at_iso="2026-05-04T22:00:00",
     )
 
@@ -303,6 +314,173 @@ class TestGCPass(_GCTestCase):
         self.assertEqual(first, 0)
         self.assertEqual(second, 0)
         self.assertEqual(third, 0)
+
+
+# ---------------------------------------------------------------------------
+# Spent-schedule reaping by past scheduled_for_iso (R15)
+# ---------------------------------------------------------------------------
+
+
+class TestGCSpentByTimestamp(_GCTestCase):
+    """GC reaps spent schedules by a past ``scheduled_for_iso``.
+
+    A spent one-shot fire (past timestamp) is reaped — plist, launcher,
+    AND sidecar entry — regardless of ``launchctl print`` registration
+    state, so a missed/failed post-fire bootout (R14) is still cleaned
+    up. The reaping logic is platform-portable (operates on the sidecar
+    + files, not ``launchctl``), so these tests run on any OS.
+    """
+
+    @staticmethod
+    def _past_iso() -> str:
+        return (datetime.now() - timedelta(hours=2)).isoformat()
+
+    @staticmethod
+    def _future_iso() -> str:
+        return (datetime.now() + timedelta(hours=2)).isoformat()
+
+    def test_schedule_reaps_spent_entry_files_and_sidecar(self) -> None:
+        """The next schedule() removes a spent entry's plist, launcher, and record."""
+        backend = MacOSLaunchAgentBackend()
+
+        # Seed a spent (past) sidecar entry plus its plist/launcher.
+        spent = _mk_handle(
+            "spent", self.plist_dir, scheduled_for_iso=self._past_iso()
+        )
+        sidecar.add_entry(spent)
+        spent_plist, spent_launcher = _touch_plist(self.plist_dir, spent.label)
+
+        # Mock launchctl so the spent agent still reports REGISTERED
+        # (exit 0) — proving the reap happens regardless of
+        # registration state. Drive schedule()'s bootstrap+verify to
+        # succeed for the new fire being scheduled.
+        sessions_root = self._home / "sessions"
+
+        def _fake_session_dir(session_id: str) -> Path:
+            d = sessions_root / session_id
+            d.mkdir(parents=True, exist_ok=True)
+            return d
+
+        def _fake_run(argv, *args, **kwargs):
+            verb = argv[1]
+            if verb == "bootstrap":
+                return _make_completed(returncode=0)
+            if verb == "print":
+                # Always-registered: returncode 0. If GC consulted
+                # launchctl for the spent entry it would PRESERVE it;
+                # the spent-by-timestamp reap must win regardless.
+                return _make_completed(
+                    returncode=0, stdout=b"state = waiting\n"
+                )
+            raise AssertionError(f"unexpected argv: {argv!r}")
+
+        with patch(
+            "cortex_command.overnight.scheduler.macos.subprocess.run",
+            side_effect=_fake_run,
+        ), patch(
+            "cortex_command.overnight.state.session_dir",
+            side_effect=_fake_session_dir,
+        ):
+            backend.schedule(
+                target=datetime.now() + timedelta(hours=1),
+                session_id="fresh",
+                env={},
+                repo_root=Path("/repo"),
+            )
+
+        # All three are gone: plist, launcher, and the sidecar entry.
+        self.assertFalse(
+            spent_plist.exists(), "spent plist was not reaped"
+        )
+        self.assertFalse(
+            spent_launcher.exists(), "spent launcher was not reaped"
+        )
+        sidecar_labels = {h.label for h in sidecar.read_sidecar()}
+        self.assertNotIn(
+            spent.label,
+            sidecar_labels,
+            "spent sidecar entry was not reaped",
+        )
+
+    def test_gc_reaps_spent_regardless_of_registration(self) -> None:
+        """_gc_pass reaps a spent entry even when launchctl says registered."""
+        backend = MacOSLaunchAgentBackend()
+        spent = _mk_handle(
+            "spent", self.plist_dir, scheduled_for_iso=self._past_iso()
+        )
+        sidecar.add_entry(spent)
+        plist, launcher = _touch_plist(self.plist_dir, spent.label)
+
+        with patch(
+            "cortex_command.overnight.scheduler.macos.subprocess.run",
+            return_value=_make_completed(
+                returncode=0, stdout=b"state = waiting\n"
+            ),
+        ):
+            backend._gc_pass()
+
+        self.assertFalse(plist.exists())
+        self.assertFalse(launcher.exists())
+        self.assertNotIn(
+            spent.label, {h.label for h in sidecar.read_sidecar()}
+        )
+
+    def test_gc_preserves_future_entry(self) -> None:
+        """A future scheduled_for_iso is NOT reaped by the spent-timestamp path."""
+        backend = MacOSLaunchAgentBackend()
+        future = _mk_handle(
+            "future", self.plist_dir, scheduled_for_iso=self._future_iso()
+        )
+        sidecar.add_entry(future)
+        plist, launcher = _touch_plist(self.plist_dir, future.label)
+
+        # launchctl reports registered (exit 0): the future entry must
+        # be preserved by both the spent check and the registration
+        # check.
+        with patch(
+            "cortex_command.overnight.scheduler.macos.subprocess.run",
+            return_value=_make_completed(
+                returncode=0, stdout=b"state = waiting\n"
+            ),
+        ):
+            backend._gc_pass()
+
+        self.assertTrue(plist.exists())
+        self.assertTrue(launcher.exists())
+        self.assertIn(
+            future.label, {h.label for h in sidecar.read_sidecar()}
+        )
+
+    def test_gc_reaps_spent_sidecar_entry_when_plist_already_gone(self) -> None:
+        """A spent entry whose plist file is already gone is still swept."""
+        backend = MacOSLaunchAgentBackend()
+        # Seed a future entry so the sidecar is non-empty and a plist
+        # exists (otherwise the glob loop has nothing to iterate, but
+        # the post-loop sweep must still reap the spent record).
+        future = _mk_handle(
+            "future", self.plist_dir, scheduled_for_iso=self._future_iso()
+        )
+        sidecar.add_entry(future)
+        _touch_plist(self.plist_dir, future.label)
+
+        # Spent entry: record present, but no plist/launcher on disk
+        # (e.g. launcher removed them post-fire but bootout was missed).
+        spent = _mk_handle(
+            "spent", self.plist_dir, scheduled_for_iso=self._past_iso()
+        )
+        sidecar.add_entry(spent)
+
+        with patch(
+            "cortex_command.overnight.scheduler.macos.subprocess.run",
+            return_value=_make_completed(
+                returncode=0, stdout=b"state = waiting\n"
+            ),
+        ):
+            backend._gc_pass()
+
+        labels = {h.label for h in sidecar.read_sidecar()}
+        self.assertNotIn(spent.label, labels, "spent record not swept")
+        self.assertIn(future.label, labels, "future record wrongly swept")
 
 
 # ---------------------------------------------------------------------------

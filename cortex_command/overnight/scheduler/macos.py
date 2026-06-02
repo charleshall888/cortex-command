@@ -714,6 +714,19 @@ class MacOSLaunchAgentBackend:
             of whether it exists (it may have been removed already by
             the launcher itself per R9).
 
+        Spent-schedule reaping (R15): a sidecar entry whose
+        ``scheduled_for_iso`` is in the past is a spent one-shot fire.
+        It is reaped — plist + launcher + the sidecar entry itself —
+        **regardless of ``launchctl print`` registration state**, so a
+        missed or failed post-fire ``bootout`` (R14) is still cleaned
+        up. This is the GC backstop for the runner/launcher self-bootout:
+        even if the agent remains registered with launchd, a past
+        ``scheduled_for_iso`` proves the one-shot window has passed and
+        the entry will never legitimately re-fire (the
+        ``StartCalendarInterval`` ``Year`` key is inert — see R16). Spent
+        entries whose plist file is already gone are still swept from the
+        sidecar so the index does not accumulate dead records.
+
         Corruption guard: if :func:`sidecar.read_sidecar` returns an
         empty list because the file is corrupt (warning logged
         internally), we cannot distinguish "no schedules" from "lost
@@ -751,7 +764,13 @@ class MacOSLaunchAgentBackend:
         # plists until corruption is repaired by the next successful
         # add_entry write).
         sidecar_file = _sidecar.sidecar_path()
-        tracked_labels = {h.label for h in _sidecar.read_sidecar()}
+        sidecar_handles = _sidecar.read_sidecar()
+        tracked_labels = {h.label for h in sidecar_handles}
+        # Map label -> scheduled_for_iso so the loop can detect spent
+        # one-shot fires (past timestamp) regardless of registration.
+        scheduled_for_by_label = {
+            h.label: h.scheduled_for_iso for h in sidecar_handles
+        }
         if sidecar_file.exists() and not tracked_labels:
             if _sidecar_json_is_corrupt(sidecar_file):
                 logger.warning(
@@ -762,6 +781,10 @@ class MacOSLaunchAgentBackend:
 
         removed = 0
         uid = os.getuid()
+        # Labels reaped because their one-shot window is spent; their
+        # sidecar entries are removed after the plist sweep below.
+        spent_labels_reaped: set[str] = set()
+        now = datetime.now()
         for plist_path in sorted(plist_dir.glob("*.plist")):
             label = plist_path.stem
             # Validate that the label looks like one of ours; ignore
@@ -772,6 +795,19 @@ class MacOSLaunchAgentBackend:
                 continue
 
             if label in tracked_labels:
+                # Spent one-shot fire: a past scheduled_for_iso means the
+                # window has passed and the entry can never legitimately
+                # re-fire (R15). Reap plist + launcher + sidecar entry
+                # regardless of launchctl registration state — this is
+                # the backstop for a missed/failed post-fire bootout.
+                if _is_spent(scheduled_for_by_label.get(label), now):
+                    if _safe_unlink(plist_path):
+                        removed += 1
+                    launcher_path = plist_path.parent / f"launcher-{label}.sh"
+                    if _safe_unlink(launcher_path):
+                        removed += 1
+                    spent_labels_reaped.add(label)
+                    continue
                 # Tracked — but still GC if launchctl confirms it's
                 # not registered (e.g. fired and completed without a
                 # cancel call). Probe launchctl print.
@@ -789,6 +825,23 @@ class MacOSLaunchAgentBackend:
             launcher_path = plist_path.parent / f"launcher-{label}.sh"
             if _safe_unlink(launcher_path):
                 removed += 1
+
+        # Sweep spent sidecar entries whose plist file was already gone
+        # (e.g. the launcher removed it post-fire but bootout was missed):
+        # the entry itself must still be reaped so the index does not
+        # accumulate dead records.
+        for label, scheduled_for_iso in scheduled_for_by_label.items():
+            if label in spent_labels_reaped:
+                continue
+            if _is_spent(scheduled_for_iso, now):
+                # Best-effort unlink of any straggler files; the entry
+                # removal below is the load-bearing reap.
+                _safe_unlink(plist_dir / f"{label}.plist")
+                _safe_unlink(plist_dir / f"launcher-{label}.sh")
+                spent_labels_reaped.add(label)
+
+        for label in spent_labels_reaped:
+            self._remove_sidecar_entry(label)
 
         if removed:
             logger.info(
@@ -865,6 +918,37 @@ def _print_confirms_armed(
     # armed StartCalendarInterval agent we just bootstrapped, regardless
     # of how this Darwin version phrases the runtime state line.
     return _VERIFY_CALENDAR_SUBSTRING in stdout.lower()
+
+
+def _is_spent(scheduled_for_iso: str | None, now: datetime) -> bool:
+    """Return True iff ``scheduled_for_iso`` is a parseable past timestamp.
+
+    A spent one-shot fire (R15) is one whose resolved fire time has
+    already passed: GC reaps its plist + launcher + sidecar entry
+    regardless of ``launchctl`` registration state, as the backstop for
+    a missed or failed post-fire ``bootout``. ``scheduled_for_iso`` is
+    the naive-local ISO 8601 string written by ``schedule()`` via
+    ``target.isoformat()``, so it is compared against a naive-local
+    ``datetime.now()``.
+
+    Conservative on unparseable / missing input: returns ``False`` so a
+    record we cannot interpret is never reaped on a spurious "past"
+    reading (it falls through to the registration-state checks instead).
+    """
+    if not scheduled_for_iso:
+        return False
+    try:
+        scheduled_for = datetime.fromisoformat(scheduled_for_iso)
+    except ValueError:
+        return False
+    # Compare on the same naive/aware footing as the stored value. A
+    # tz-aware stored value (forward-compat) is compared against an
+    # aware "now" in the same offset; a naive value against naive now.
+    if scheduled_for.tzinfo is not None and now.tzinfo is None:
+        now = now.astimezone(scheduled_for.tzinfo)
+    elif scheduled_for.tzinfo is None and now.tzinfo is not None:
+        scheduled_for = scheduled_for.replace(tzinfo=now.tzinfo)
+    return scheduled_for < now
 
 
 def _is_launchctl_registered(label: str, uid: int) -> bool:
