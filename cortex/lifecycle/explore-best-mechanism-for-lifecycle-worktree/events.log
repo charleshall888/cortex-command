@@ -1,0 +1,8 @@
+{"schema_version": 1, "ts": "2026-06-03T16:53:00Z", "event": "lifecycle_start", "feature": "explore-best-mechanism-for-lifecycle-worktree", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-03T16:57:18Z", "event": "clarify_critic", "feature": "explore-best-mechanism-for-lifecycle-worktree", "parent_epic_loaded": false, "findings_count": 6, "dispositions": {"apply": 2, "dismiss": 3, "ask": 1}, "applied_fixes_count": 2, "dismissals_count": 3, "status": "ok"}
+{"schema_version": 1, "ts": "2026-06-03T17:04:33Z", "event": "lifecycle_start", "feature": "explore-best-mechanism-for-lifecycle-worktree", "tier": "complex", "criticality": "high"}
+{"schema_version": 1, "ts": "2026-06-03T17:04:33Z", "event": "phase_transition", "feature": "explore-best-mechanism-for-lifecycle-worktree", "from": "clarify", "to": "research"}
+{"ts": "2026-06-03T17:31:34Z", "event": "complexity_override", "feature": "explore-best-mechanism-for-lifecycle-worktree", "from": "simple", "to": "complex", "gate": "research_open_questions"}
+{"schema_version": 1, "ts": "2026-06-03T17:31:54Z", "event": "phase_transition", "feature": "explore-best-mechanism-for-lifecycle-worktree", "from": "research", "to": "specify"}
+{"schema_version": 1, "ts": "2026-06-03T18:41:26Z", "event": "spec_approved", "feature": "explore-best-mechanism-for-lifecycle-worktree"}
+{"schema_version": 1, "ts": "2026-06-03T18:41:45Z", "event": "phase_transition", "feature": "explore-best-mechanism-for-lifecycle-worktree", "from": "specify", "to": "plan"}
