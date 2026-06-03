@@ -9,6 +9,7 @@ so these tests continue to pass after batch_runner's copies are removed.
 from __future__ import annotations
 
 import asyncio
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -926,6 +927,338 @@ class TestMergeConflictRecoverableRouting(unittest.TestCase):
             },
         )
         self.assertEqual(_count_pending(state), 0)
+
+
+class TestHomeMergeWorktreeCollision(unittest.IsolatedAsyncioTestCase):
+    """Task 4 — on-disk worktree-collision acceptance tests.
+
+    These tests create a REAL second git worktree (via a tmp-dir fixture)
+    checked out to ``overnight/<id>`` and drive a home-repo merge / a
+    repair-completed home re-merge through the UN-mocked production merge
+    path. The collision the lifecycle fixes lives INSIDE ``merge_feature``
+    (`git checkout <base_branch>` with ``cwd=repo_path``) and the
+    ``repair_completed`` subprocess block (`git checkout overnight/<id>`),
+    so neither ``merge_feature`` nor ``outcome_router.subprocess.run`` is
+    mocked here — a mock-only test would pass while the real collision
+    ships. The merge/checkout layer must run for real so the actual
+    ``git checkout overnight/<id>`` executes against the worktree.
+
+    The only patches applied are to NON-merge helpers: ``_get_changed_files``
+    (a git-diff helper with no ``repo_path`` parameter, which would read the
+    test-runner's cwd rather than the temp repo), ``cleanup_worktree`` (avoids
+    tearing the temp worktree down mid-assertion), ``requires_review`` (avoids
+    a real review dispatch on the merged path), and ``pipeline.merge._check_ci_status``
+    (returns ``"skipped"`` so the CI gate proceeds without invoking ``gh``).
+    """
+
+    def _git(self, cwd: Path, *args: str) -> str:
+        return subprocess.run(
+            ["git", *args],
+            cwd=str(cwd),
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+
+    def _build_repo(self, td: Path, session_id: str) -> tuple[Path, Path, str, str]:
+        """Initialize a home repo with main + a feature branch + integration
+        branch, plus a real second worktree owning ``overnight/<id>``.
+
+        Returns ``(home, worktree, feature_branch, feature_commit_sha)``.
+        """
+        home = td / "home"
+        home.mkdir()
+        branch = f"overnight/{session_id}"
+
+        # Initialize a real home repo on main with an initial commit.
+        self._git(home, "init", "-q", "-b", "main")
+        self._git(home, "config", "user.email", "t@example.com")
+        self._git(home, "config", "user.name", "Test")
+        self._git(home, "config", "commit.gpgsign", "false")
+        (home / "README.md").write_text("seed\n")
+        self._git(home, "add", "README.md")
+        self._git(home, "commit", "-q", "-m", "seed")
+
+        # Feature branch carrying a commit, off the seed.
+        feature_branch = f"pipeline/{session_id}-feat"
+        self._git(home, "checkout", "-q", "-b", feature_branch)
+        (home / "feature.txt").write_text("feature work\n")
+        self._git(home, "add", "feature.txt")
+        self._git(home, "commit", "-q", "-m", "feature commit")
+        feature_sha = self._git(home, "rev-parse", "HEAD")
+
+        # Integration branch at the seed (so the feature merges cleanly, non-ff).
+        self._git(home, "checkout", "-q", "main")
+        self._git(home, "branch", branch, "main")
+
+        # Second worktree owning overnight/<id> — this is what the home tree
+        # would collide with if the merge ran against the home working tree.
+        wt = td / "integration-worktree"
+        self._git(home, "worktree", "add", "-q", str(wt), branch)
+
+        # Restore the home tree to main (the live working tree the buggy
+        # path would wrongly target).
+        self._git(home, "checkout", "-q", "main")
+
+        return home, wt, feature_branch, feature_sha
+
+    def _make_ctx(
+        self,
+        *,
+        home: Path,
+        worktree: Path | None,
+        session_id: str,
+        feature: str,
+        feature_branch: str,
+        repo_path: Path | None = None,
+    ) -> "OutcomeContext":
+        from cortex_command.overnight.orchestrator import BatchConfig, BatchResult
+
+        base_branch = f"overnight/{session_id}"
+        events = home / "overnight-events.log"
+        pipeline = home / "pipeline-events.log"
+        state = home / "overnight-state.json"
+        config = BatchConfig(
+            batch_id=1,
+            plan_path=home / "plan.md",
+            test_command=None,
+            base_branch=base_branch,
+            overnight_state_path=state,
+            overnight_events_path=events,
+            result_dir=home,
+            pipeline_events_path=pipeline,
+            session_id=session_id,
+        )
+        return OutcomeContext(
+            batch_result=BatchResult(batch_id=1),
+            lock=asyncio.Lock(),
+            cb_state=CircuitBreakerState(consecutive_pauses=0),
+            recovery_attempts_map={},
+            worktree_paths={},
+            worktree_branches={feature: feature_branch},
+            repo_path_map={feature: repo_path},
+            integration_worktrees={},
+            integration_branches={},
+            session_id=session_id,
+            backlog_ids={},
+            feature_names=[feature],
+            config=config,
+            home_worktree_path=worktree,
+        )
+
+    async def test_home_repo_merge_worktree(self):
+        """A home feature (repo_path=None) merges through the UN-mocked
+        merge_feature against the integration worktree — no collision, and
+        the worktree's overnight/<id> HEAD advances to include the feature
+        commit. NOTE: merge_feature and subprocess are deliberately NOT
+        patched here (the merge/checkout layer runs for real)."""
+        with tempfile.TemporaryDirectory() as _td:
+            td = Path(_td)
+            session_id = "overnight-test-merge"
+            feature = f"{session_id}-feat"
+            home, wt, feature_branch, feature_sha = self._build_repo(td, session_id)
+
+            ctx = self._make_ctx(
+                home=home,
+                worktree=wt,
+                session_id=session_id,
+                feature=feature,
+                feature_branch=feature_branch,
+            )
+
+            int_head_before = self._git(wt, "rev-parse", "HEAD")
+
+            with (
+                patch(
+                    "cortex_command.overnight.outcome_router._get_changed_files",
+                    return_value=["feature.txt"],
+                ),
+                patch(
+                    "cortex_command.overnight.outcome_router.requires_review",
+                    return_value=False,
+                ),
+                patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+                patch(
+                    "cortex_command.pipeline.merge._check_ci_status",
+                    return_value="skipped",
+                ),
+            ):
+                await apply_feature_result(
+                    feature,
+                    FeatureResult(name=feature, status="completed"),
+                    ctx,
+                )
+
+            # No "already used by worktree" collision surfaced.
+            paused_errors = [d.get("error", "") for d in ctx.batch_result.features_paused]
+            for err in paused_errors:
+                self.assertNotIn("already used by worktree", err)
+            self.assertEqual(ctx.batch_result.features_paused, [])
+
+            # The feature merged...
+            self.assertIn(feature, ctx.batch_result.features_merged)
+
+            # ...and the observable post-merge git effect: the worktree's
+            # overnight/<id> HEAD advanced to include the feature commit.
+            int_head_after = self._git(wt, "rev-parse", "HEAD")
+            self.assertNotEqual(int_head_before, int_head_after)
+            merged_shas = self._git(wt, "rev-list", "HEAD").splitlines()
+            self.assertIn(feature_sha, merged_shas)
+
+    async def test_repair_completed_home_remerge(self):
+        """A repair_completed home feature ff-merges its repair branch through
+        the UN-mocked outcome_router.subprocess.run block — the real
+        git checkout overnight/<id> targets the integration worktree, not the
+        home tree, so no collision occurs and the worktree HEAD advances."""
+        with tempfile.TemporaryDirectory() as _td:
+            td = Path(_td)
+            session_id = "overnight-test-repair"
+            feature = f"{session_id}-feat"
+            home, wt, feature_branch, _feature_sha = self._build_repo(td, session_id)
+
+            # A repair branch that fast-forwards overnight/<id>: branch it off
+            # the integration head and add a commit.
+            base_branch = f"overnight/{session_id}"
+            repair_branch = f"repair/{feature}"
+            self._git(wt, "checkout", "-q", "-b", repair_branch)
+            (wt / "repair.txt").write_text("repair work\n")
+            self._git(wt, "add", "repair.txt")
+            self._git(wt, "commit", "-q", "-m", "repair commit")
+            repair_sha = self._git(wt, "rev-parse", "HEAD")
+            # Put the worktree back on the integration branch (the production
+            # checkout will switch to it; leaving it elsewhere is realistic).
+            self._git(wt, "checkout", "-q", base_branch)
+
+            ctx = self._make_ctx(
+                home=home,
+                worktree=wt,
+                session_id=session_id,
+                feature=feature,
+                feature_branch=feature_branch,
+            )
+
+            with patch("cortex_command.overnight.outcome_router.cleanup_worktree"):
+                await apply_feature_result(
+                    feature,
+                    FeatureResult(
+                        name=feature,
+                        status="repair_completed",
+                        repair_branch=repair_branch,
+                    ),
+                    ctx,
+                )
+
+            # No collision; the repair ff-merge succeeded.
+            paused_errors = [d.get("error", "") for d in ctx.batch_result.features_paused]
+            for err in paused_errors:
+                self.assertNotIn("already used by worktree", err)
+            self.assertEqual(ctx.batch_result.features_paused, [])
+            self.assertIn(feature, ctx.batch_result.features_merged)
+
+            # Observable effect: the worktree's overnight/<id> HEAD is now the
+            # repair commit (fast-forwarded).
+            int_head_after = self._git(wt, "rev-parse", base_branch)
+            self.assertEqual(int_head_after, repair_sha)
+
+    def test_cross_repo_resolution_unchanged(self):
+        """For a cross-repo feature (repo_path != None), the resolver returns
+        exactly what _effective_merge_repo_path returns — byte-for-byte."""
+        from cortex_command.overnight.outcome_router import (
+            _effective_merge_repo_path,
+            _merge_target_repo_path,
+        )
+
+        with tempfile.TemporaryDirectory() as _td:
+            td = Path(_td)
+            session_id = "overnight-test-cross"
+            feature = f"{session_id}-feat"
+            home, wt, feature_branch, _ = self._build_repo(td, session_id)
+
+            # A cross-repo target: another initialized repo with the
+            # integration branch + a registered integration worktree.
+            cross = td / "cross"
+            cross.mkdir()
+            self._git(cross, "init", "-q", "-b", "main")
+            self._git(cross, "config", "user.email", "t@example.com")
+            self._git(cross, "config", "user.name", "Test")
+            self._git(cross, "config", "commit.gpgsign", "false")
+            (cross / "README.md").write_text("seed\n")
+            self._git(cross, "add", "README.md")
+            self._git(cross, "commit", "-q", "-m", "seed")
+            cross_branch = f"overnight/{session_id}-cross"
+            self._git(cross, "branch", cross_branch, "main")
+            cross_wt = td / "cross-worktree"
+            self._git(cross, "worktree", "add", "-q", str(cross_wt), cross_branch)
+
+            from cortex_command.overnight.state import _normalize_repo_key
+
+            key = _normalize_repo_key(str(cross))
+            ctx = self._make_ctx(
+                home=home,
+                worktree=wt,
+                session_id=session_id,
+                feature=feature,
+                feature_branch=feature_branch,
+                repo_path=cross,
+            )
+            ctx.integration_worktrees[key] = str(cross_wt)
+            ctx.integration_branches[key] = cross_branch
+
+            resolved = _merge_target_repo_path(ctx, feature)
+            expected = _effective_merge_repo_path(
+                cross,
+                ctx.integration_worktrees,
+                ctx.integration_branches,
+                session_id,
+            )
+            self.assertEqual(resolved, expected)
+            self.assertEqual(resolved, cross_wt)
+
+    async def test_unresolved_home_worktree_pauses(self):
+        """A home feature (repo_path=None) whose home worktree is unresolved
+        (home_worktree_path=None) is surfaced as PAUSED with the
+        'integration worktree unresolved' error — and NO home-tree merge runs
+        (the home tree is never advanced)."""
+        with tempfile.TemporaryDirectory() as _td:
+            td = Path(_td)
+            session_id = "overnight-test-unresolved"
+            feature = f"{session_id}-feat"
+            home, wt, feature_branch, _ = self._build_repo(td, session_id)
+
+            # Capture the home tree's current branch HEAD to prove no merge ran.
+            home_main_before = self._git(home, "rev-parse", "main")
+
+            ctx = self._make_ctx(
+                home=home,
+                worktree=None,  # unresolved
+                session_id=session_id,
+                feature=feature,
+                feature_branch=feature_branch,
+            )
+
+            with (
+                patch(
+                    "cortex_command.overnight.outcome_router._get_changed_files",
+                    return_value=["feature.txt"],
+                ),
+                patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+            ):
+                await apply_feature_result(
+                    feature,
+                    FeatureResult(name=feature, status="completed"),
+                    ctx,
+                )
+
+            # Surfaced as paused with the unresolved-worktree error.
+            self.assertEqual(ctx.batch_result.features_merged, [])
+            self.assertEqual(len(ctx.batch_result.features_paused), 1)
+            entry = ctx.batch_result.features_paused[0]
+            self.assertEqual(entry["name"], feature)
+            self.assertEqual(entry["error"], "integration worktree unresolved")
+
+            # No home-tree merge ran: the home main HEAD is unchanged.
+            home_main_after = self._git(home, "rev-parse", "main")
+            self.assertEqual(home_main_before, home_main_after)
 
 
 if __name__ == "__main__":
