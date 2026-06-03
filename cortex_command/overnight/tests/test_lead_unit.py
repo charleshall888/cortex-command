@@ -80,6 +80,11 @@ def _make_outcome_ctx(
         backlog_ids=backlog_ids if backlog_ids is not None else {},
         feature_names=list(feature_names),
         config=config,
+        # Home features in production always have an integration worktree
+        # (plan.py creates it); a non-None value keeps the merge-target
+        # resolver's unresolved-home pause guard from firing in these
+        # merge_feature-mocked unit tests.
+        home_worktree_path=Path("/tmp/test-home-integration-worktree"),
     )
 from cortex_command.overnight.events import (
     FEATURE_COMPLETE,
@@ -377,6 +382,7 @@ class TestRecoveryDispatchPersistence(unittest.IsolatedAsyncioTestCase):
         initial_state = OvernightState(
             session_id="s-persist",
             plan_ref="plan.md",
+            worktree_path=str(Path(tmp) / "home-wt"),
             features={feat_name: OvernightFeatureStatus(recovery_attempts=0)},
         )
         save_state(initial_state, state_path)
@@ -1461,6 +1467,10 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
         return self._OvernightState(
             session_id="s1",
             plan_ref="plan.md",
+            # Home features resolve their merge target to this integration
+            # worktree; without it the unresolved-home pause guard fires for
+            # completed home features that should merge.
+            worktree_path="/tmp/test-home-integration-worktree",
             features={
                 n: self._OvernightFeatureStatus(recovery_attempts=0)
                 for n in feature_names

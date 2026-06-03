@@ -91,6 +91,10 @@ class TestOrchestratorRunBatch(unittest.IsolatedAsyncioTestCase):
         return self._OvernightState(
             session_id="s1",
             plan_ref="plan.md",
+            # Home features resolve their merge target to this integration
+            # worktree; without it the unresolved-home pause guard fires for
+            # completed home features that should merge.
+            worktree_path=str(self._tmp / "home-integration-wt"),
             features={
                 n: self._OvernightFeatureStatus(recovery_attempts=0)
                 for n in feature_names
