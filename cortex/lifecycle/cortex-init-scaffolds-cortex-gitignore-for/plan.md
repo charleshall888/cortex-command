@@ -60,7 +60,7 @@ Ship a corrected `cortex/.gitignore` as a plain scaffold template under `cortex_
 - **Complexity**: simple
 - **Context**: The stale claim is `skills/lifecycle/references/complete.md:254` ("would sweep in un-gitignored residue such as `critical-review-residue.json` and `learnings/*`"). Trim ONLY the residue half — `learnings/*` is NOT stale (the narrow `recovery-log.md` rule leaves `learnings/outline.md` etc. swept by a dir-add), so keep its rationale (research Adversarial "Prose-trim precision"). `post-refine-commit.md:23,53` references residue/scratch JSONs in a different (staging-set) argument that remains valid — review and leave substantively intact unless it makes the bare universal "un-gitignored" claim. `lifecycle` is in the cortex-core SKILLS list, so the `.githooks/pre-commit` drift hook FIRES: run `just build-plugin` and stage the regenerated mirror in the SAME commit as the canonical edit (committing canonical-only fails the drift hook — see the shared-checkout coupling constraint). Keep edits free of new MUST language and of bare `cortex-*` subcommand prose invocations that would trip the contract checker (E101/E103).
 - **Verification**: `grep -c 'enumerated' skills/lifecycle/references/complete.md` ≥ 1 AND `grep -c 'un-gitignored residue' skills/lifecycle/references/complete.md` = 0 AND `just build-plugin` then `git diff --quiet plugins/cortex-core/skills/lifecycle/references/` exits 0. Pass if all three hold (Spec Req 8).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 6: Fix the stale `.gitignore:41` code-comment reference
 - **Files**: `cortex_command/overnight/runner.py`

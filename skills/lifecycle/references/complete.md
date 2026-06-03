@@ -251,7 +251,7 @@ git add -- cortex/lifecycle/{slug}/research.md \
             cortex/lifecycle/{slug}/events.log
 ```
 
-Stage by enumerated paths only — a directory-scoped add on the lifecycle dir would sweep in un-gitignored residue such as `critical-review-residue.json` and `learnings/*`.
+Stage by enumerated paths only — a directory-scoped add on the lifecycle dir would sweep in residue that is un-ignored *or* already-tracked: `learnings/*` siblings such as `outline.md` (the narrow `recovery-log.md` ignore rule never covers them, so a dir-add catches them in every repo), plus `critical-review-residue.json` (now gitignored in fresh consumer repos by the shipped `cortex/.gitignore`, but still tracked-and-swept in this repo's already-committed history).
 
 Stage the backlog write-back with a directory-scoped add, which captures the resolved item `.md`, the regenerated `index.json`/`index.md`, and any sibling/parent `.md` files rewritten by `cortex-update-item`'s terminal-status cascade:
 
