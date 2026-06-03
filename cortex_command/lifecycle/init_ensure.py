@@ -128,8 +128,6 @@ def main(argv: Optional[List[str]] = None) -> int:
         update=False,
         force=False,
         unregister=False,
-        revoke_worktree_auth=False,
-        verify_worktree_auth=False,
         path=None,
     )
     return handler.main(ns)
