@@ -6,3 +6,5 @@
 {"ts": "2026-06-03T00:07:26Z", "event": "criticality_override", "feature": "untrack-backlog-index-cache", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
 {"schema_version": 1, "ts": "2026-06-03T00:26:32Z", "event": "spec_approved", "feature": "untrack-backlog-index-cache"}
 {"schema_version": 1, "ts": "2026-06-03T00:26:32Z", "event": "phase_transition", "feature": "untrack-backlog-index-cache", "from": "specify", "to": "plan"}
+{"schema_version": 1, "ts": "2026-06-03T00:39:27Z", "event": "plan_approved", "feature": "untrack-backlog-index-cache"}
+{"schema_version": 1, "ts": "2026-06-03T00:39:27Z", "event": "phase_transition", "feature": "untrack-backlog-index-cache", "from": "plan", "to": "implement"}
