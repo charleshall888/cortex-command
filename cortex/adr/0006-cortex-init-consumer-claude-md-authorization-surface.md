@@ -1,8 +1,11 @@
 ---
-status: accepted
+status: superseded
+superseded_by: 0008
 ---
 
 # `cortex init` consumer `CLAUDE.md` authorization surface
+
+> **Superseded by [ADR-0008](0008-picker-selection-authorizes-enterworktree.md).** The consumer-`CLAUDE.md` authorization fence described below was removed: `cortex init` no longer writes any fence, and the lifecycle implement phase authorizes `EnterWorktree` via the user's live selection of the worktree picker option instead. The decision body is retained verbatim as historical record.
 
 ## Context
 
