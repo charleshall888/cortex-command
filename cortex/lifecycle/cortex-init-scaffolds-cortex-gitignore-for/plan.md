@@ -69,7 +69,7 @@ Ship a corrected `cortex/.gitignore` as a plain scaffold template under `cortex_
 - **Complexity**: trivial
 - **Context**: The stale reference is at `cortex_command/overnight/runner.py:730` ("intentionally skipped: it is gitignored at `.gitignore:41` by design"). Generalize the wording to name the rule/file without a line number (the de-dup shifts root `.gitignore` line numbers and moves the actual ignore into the nested `cortex/.gitignore`). Single-comment edit, no behavior change, no other callers reference the `:41` anchor (Spec Req 9).
 - **Verification**: `grep -c 'gitignore:41' cortex_command/overnight/runner.py` = 0. Pass if count = 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ## Risks
 - **Copy-if-absent means existing consumers never auto-receive the bug-fixed globs** — only `cortex init --force` applies the corrected content. Be precise about the staleness signal: adding the template to `_HASH_INPUT_TEMPLATES` makes every already-initialized consumer hit `--ensure` Case (ii) once on the release that ships it, which advances the stored `init_artifacts_hash` while `scaffold(overwrite=False)` skips the existing file — and the `--ensure` drift report is emitted to (buried) stderr. So the divergence is only surfaced where a human sees it when someone runs `cortex init --update` in a terminal; the auto-`--ensure` path reaches a stable, silently-stale state. This is the spec's deliberate Non-Requirement (departs from the ticket's literal "replace-on-version-bump"); the operator chose it. Revisit only if silent upgrade of the archive-depth fix to existing installs is considered required.

@@ -727,10 +727,10 @@ def _commit_morning_report_in_repo(
     Stages only the tracked top-level copy ``cortex/lifecycle/morning-report.md``
     (the load-bearing path per ticket 129's relocation). The per-session
     path ``cortex/lifecycle/sessions/<session_id>/morning-report.md`` is
-    intentionally skipped: it is gitignored at ``.gitignore:41`` by design
-    as a session-archive artifact, so attempting to ``git add`` it would
-    be a no-op without ``-f`` and the archive is not meant to land in
-    history.
+    intentionally skipped: it is gitignored by the ``lifecycle/sessions/``
+    rule in the umbrella ``cortex/.gitignore`` by design as a session-archive
+    artifact, so attempting to ``git add`` it would be a no-op without ``-f``
+    and the archive is not meant to land in history.
 
     On non-zero ``git commit`` exit, emits a structured
     ``morning_report_commit_failed`` event to ``events_path``; on success

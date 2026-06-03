@@ -8,3 +8,4 @@
 {"ts": "2026-06-03T19:15:14Z", "event": "phase_transition", "feature": "cortex-init-scaffolds-cortex-gitignore-for", "from": "plan", "to": "implement"}
 {"ts": "2026-06-03T19:30:00Z", "event": "batch_dispatch", "feature": "cortex-init-scaffolds-cortex-gitignore-for", "batch": 0, "tasks": [1, 5]}
 {"ts": "2026-06-03T19:45:00Z", "event": "batch_dispatch", "feature": "cortex-init-scaffolds-cortex-gitignore-for", "batch": 1, "tasks": [2, 3, 4]}
+{"ts": "2026-06-03T20:00:00Z", "event": "batch_dispatch", "feature": "cortex-init-scaffolds-cortex-gitignore-for", "batch": 2, "tasks": [6]}
