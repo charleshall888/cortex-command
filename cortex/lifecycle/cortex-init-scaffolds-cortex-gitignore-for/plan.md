@@ -51,7 +51,7 @@ Ship a corrected `cortex/.gitignore` as a plain scaffold template under `cortex_
 - **Complexity**: simple
 - **Context**: The cortex-scoped lines to remove are at `.gitignore:6-9,28-30,33,36-37,40,43,64` (verify by `grep -n 'cortex/' .gitignore` before editing). The `.cortex-init` markers (`.gitignore:60-61`) and `.claude/worktrees/` (`.gitignore:2`) live OUTSIDE the `cortex/` umbrella scope and MUST stay (Spec Req 7, Technical Constraint "root de-dup safe ordering"). Safe because the nested file (Task 1) covers every removed rule — the only de-dup hazard is un-ignore, never double-ignore; removing a rule the nested file already matches changes nothing about effective ignore state. Do NOT touch the root `# cortex/` umbrella toggle (Spec Non-Requirement).
 - **Verification**: `grep -c 'cortex/lifecycle/\*/\.session' .gitignore` = 0 AND `grep -c '.cortex-init' .gitignore` ≥ 1 AND `git check-ignore --no-index cortex/lifecycle/feat/.session` exits 0 (still matched via the nested file). Pass if all three hold (Spec Req 7).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5: Reconcile residue wording in references + regenerate plugin mirror
 - **Files**: `skills/lifecycle/references/complete.md`, `skills/lifecycle/references/post-refine-commit.md`, `plugins/cortex-core/skills/lifecycle/references/complete.md`, `plugins/cortex-core/skills/lifecycle/references/post-refine-commit.md`
