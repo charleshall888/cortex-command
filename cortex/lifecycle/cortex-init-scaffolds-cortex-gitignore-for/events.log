@@ -6,3 +6,4 @@
 {"ts": "2026-06-03T18:50:07Z", "event": "phase_transition", "feature": "cortex-init-scaffolds-cortex-gitignore-for", "from": "specify", "to": "plan"}
 {"ts": "2026-06-03T19:15:14Z", "event": "plan_approved", "feature": "cortex-init-scaffolds-cortex-gitignore-for"}
 {"ts": "2026-06-03T19:15:14Z", "event": "phase_transition", "feature": "cortex-init-scaffolds-cortex-gitignore-for", "from": "plan", "to": "implement"}
+{"ts": "2026-06-03T19:30:00Z", "event": "batch_dispatch", "feature": "cortex-init-scaffolds-cortex-gitignore-for", "batch": 0, "tasks": [1, 5]}

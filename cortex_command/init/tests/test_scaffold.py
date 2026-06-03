@@ -601,15 +601,20 @@ def test_partial_scaffold_update_recovery(
     _isolate_home(monkeypatch, tmp_path)
 
     # Monkeypatch scaffold.atomic_write to raise after writing 3 of the 4
-    # template files (mirrors Task 12's partial_failure_recovery_step2,
-    # scoped to scaffold only — no marker write reached).
+    # tracked SCAFFOLD_FILES templates (mirrors Task 12's
+    # partial_failure_recovery_step2, scoped to scaffold only — no marker
+    # write reached). The shipped ``cortex/.gitignore`` template sorts first
+    # in the scaffold write order but is deliberately excluded from the
+    # injection counter so this test keeps exercising the "3 of 4 land, 1
+    # missing" partial-failure recovery over the four README/config templates.
     real_atomic_write = scaffold.atomic_write
     call_log: list[Path] = []
 
     def failing_atomic_write(path: Path, content: str, *args, **kwargs) -> None:
-        # Only count template scaffold writes (not .gitignore, not backup).
+        # Count only the four tracked SCAFFOLD_FILES writes (exact match) —
+        # not cortex/.gitignore, not the root .gitignore, not backup.
         rel = str(path.relative_to(repo)) if path.is_absolute() and repo in path.parents else str(path)
-        if any(rel == s or rel.startswith(s.rsplit("/", 1)[0] + "/") for s in SCAFFOLD_FILES):
+        if rel in SCAFFOLD_FILES:
             call_log.append(path)
             if len(call_log) > 3:
                 raise OSError("simulated disk full")

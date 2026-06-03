@@ -65,6 +65,7 @@ _GITIGNORE_TARGETS = (
 # not silently expand if new templates are added. Update this tuple when a
 # template is added or removed and bump the hash version accordingly.
 _HASH_INPUT_TEMPLATES: tuple[str, ...] = (
+    "cortex/.gitignore",
     "cortex/lifecycle.config.md",
     "cortex/backlog/README.md",
     "cortex/lifecycle/README.md",
