@@ -265,11 +265,13 @@ async def run_batch(config: BatchConfig) -> BatchResult:
     integration_branches: dict[str, str] = {}
     integration_worktrees: dict[str, str] = {}
     session_id: str = os.environ.get("LIFECYCLE_SESSION_ID", "manual")
+    home_worktree_path: Path | None = None
     try:
         overnight_state = load_state(config.overnight_state_path)
         session_id = overnight_state.session_id
         integration_branches = overnight_state.integration_branches
         integration_worktrees = overnight_state.integration_worktrees
+        home_worktree_path = Path(overnight_state.worktree_path) if overnight_state.worktree_path else None
         if overnight_state.worktree_path:
             outcome_router.set_backlog_dir(Path(overnight_state.worktree_path) / "cortex" / "backlog")
         for name in feature_names:
@@ -440,7 +442,7 @@ async def run_batch(config: BatchConfig) -> BatchResult:
             backlog_ids=backlog_ids,
             feature_names=feature_names,
             config=config,
-            home_worktree_path=Path(overnight_state.worktree_path) if overnight_state.worktree_path else None,
+            home_worktree_path=home_worktree_path,
         )
         await outcome_router.apply_feature_result(name, result, ctx)
 
@@ -532,7 +534,7 @@ async def run_batch(config: BatchConfig) -> BatchResult:
                 backlog_ids=backlog_ids,
                 feature_names=feature_names,
                 config=config,
-                home_worktree_path=Path(overnight_state.worktree_path) if overnight_state.worktree_path else None,
+                home_worktree_path=home_worktree_path,
             )
             await outcome_router.apply_feature_result(n, failed_result, ctx)
 
