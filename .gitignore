@@ -32,6 +32,10 @@ cortex/lifecycle/*/learnings/recovery-log.md
 # Backlog audit logs
 cortex/backlog/*.events.jsonl
 
+# Backlog derived index — regenerated on demand, not version-controlled
+cortex/backlog/index.json
+cortex/backlog/index.md
+
 # Overnight session archives
 cortex/lifecycle/sessions/
 
