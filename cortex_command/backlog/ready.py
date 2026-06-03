@@ -30,8 +30,10 @@ With ``--include-blocked`` each ineligible item additionally carries
 
 Stale-index warnings (``cortex/backlog/[0-9]*-*.md`` newer than
 ``cortex/backlog/index.json``) are written to stderr but do not affect
-exit status. On missing or malformed input the script emits
-``{"error": "...", "schema_version": 1}`` to stdout and exits 1.
+exit status. A missing ``index.json`` is treated as a cache miss and
+regenerated in-memory from the backlog ``.md`` files. On malformed input
+the script emits ``{"error": "...", "schema_version": 1}`` to stdout and
+exits 1.
 
 Usage::
 
@@ -427,7 +429,21 @@ def main(argv: list[str] | None = None) -> int:
             with index_path.open("r", encoding="utf-8") as fh:
                 records = json.load(fh)
         except FileNotFoundError:
-            return _emit_error("backlog/index.json not found")
+            # A missing index is a cache miss, not an error: regenerate the
+            # records in-memory from the backlog ``.md`` files (no disk
+            # write) and continue. The index is a regenerated local cache,
+            # not a source of truth. This runs inside the outer ``try`` so
+            # any I/O error during regeneration falls through to the
+            # canonical ``_emit_error`` path below.
+            from cortex_command.backlog.generate_index import (
+                collect_items,
+                generate_json,
+            )
+
+            items, _active_ids, _archive_ids, _all_items = collect_items(
+                BACKLOG_DIR, BACKLOG_DIR.parent / "lifecycle"
+            )
+            records = json.loads(generate_json(items))
         except json.JSONDecodeError as exc:
             return _emit_error(f"backlog/index.json is malformed: {exc.msg}")
 
