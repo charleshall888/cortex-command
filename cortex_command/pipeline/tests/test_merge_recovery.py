@@ -504,15 +504,18 @@ class TestDirtyBaseCheck(unittest.IsolatedAsyncioTestCase):
     """Dirty-base check uses --untracked-files=no so lifecycle artifacts don't block recovery."""
 
     async def test_dirty_base_check_ignores_untracked_files(self):
-        """git status call must include --untracked-files=no."""
-        captured_cmds = []
-
-        def _capturing_side_effect(cmd, **kwargs):
-            if isinstance(cmd, list):
-                captured_cmds.append(cmd)
-            return _subprocess_side_effect(cmd, **kwargs)
-
+        """git status call must include --untracked-files=no and run in the integration worktree."""
         with tempfile.TemporaryDirectory() as tmp:
+            repo_path = Path(tmp)
+            captured = []
+
+            def _capturing_side_effect(cmd, **kwargs):
+                if isinstance(cmd, list):
+                    captured.append((cmd, kwargs.get("cwd")))
+                if isinstance(cmd, list) and "--show-toplevel" in cmd:
+                    return _make_proc(returncode=0, stdout=f"{repo_path}\n")
+                return _subprocess_side_effect(cmd, **kwargs)
+
             with patch(
                 "cortex_command.pipeline.merge_recovery.subprocess.run",
                 side_effect=_capturing_side_effect,
@@ -522,33 +525,68 @@ class TestDirtyBaseCheck(unittest.IsolatedAsyncioTestCase):
                     return_value=_merge_success(),
                 ):
                     await recover_test_failure(
-                        **{**_COMMON_KWARGS, "learnings_dir": Path(tmp)},
+                        **{
+                            **_COMMON_KWARGS,
+                            "learnings_dir": repo_path,
+                            "repo_path": repo_path,
+                        },
                     )
 
-        status_calls = [c for c in captured_cmds if "--porcelain" in c]
+        status_calls = [(cmd, cwd) for cmd, cwd in captured if "--porcelain" in cmd]
         self.assertTrue(status_calls, "Expected at least one git status --porcelain call")
-        for cmd in status_calls:
+        for cmd, cwd in status_calls:
             self.assertIn("--untracked-files=no", cmd,
                           f"git status call missing --untracked-files=no: {cmd}")
+            self.assertEqual(str(cwd), str(repo_path),
+                             f"git status call did not run in the integration worktree: cwd={cwd}")
+
+        toplevel_calls = [(cmd, cwd) for cmd, cwd in captured if "--show-toplevel" in cmd]
+        self.assertTrue(toplevel_calls, "Expected a git rev-parse --show-toplevel call")
+        for cmd, cwd in toplevel_calls:
+            self.assertEqual(str(cwd), str(repo_path),
+                             f"git rev-parse call did not run in the integration worktree: cwd={cwd}")
 
     async def test_dirty_base_check_blocked_by_tracked_changes(self):
         """Tracked file changes (not untracked) must still block recovery."""
-        def _dirty_tracked_side_effect(cmd, **kwargs):
-            if isinstance(cmd, list) and "--porcelain" in cmd:
-                return _make_proc(returncode=0, stdout=" M some-file.py\n")
-            return _subprocess_side_effect(cmd, **kwargs)
-
         with tempfile.TemporaryDirectory() as tmp:
+            repo_path = Path(tmp)
+            captured = []
+
+            def _dirty_tracked_side_effect(cmd, **kwargs):
+                if isinstance(cmd, list):
+                    captured.append((cmd, kwargs.get("cwd")))
+                if isinstance(cmd, list) and "--show-toplevel" in cmd:
+                    return _make_proc(returncode=0, stdout=f"{repo_path}\n")
+                if isinstance(cmd, list) and "--porcelain" in cmd:
+                    return _make_proc(returncode=0, stdout=" M some-file.py\n")
+                return _subprocess_side_effect(cmd, **kwargs)
+
             with patch(
                 "cortex_command.pipeline.merge_recovery.subprocess.run",
                 side_effect=_dirty_tracked_side_effect,
             ):
                 result = await recover_test_failure(
-                    **{**_COMMON_KWARGS, "learnings_dir": Path(tmp)},
+                    **{
+                        **_COMMON_KWARGS,
+                        "learnings_dir": repo_path,
+                        "repo_path": repo_path,
+                    },
                 )
 
         self.assertFalse(result.success)
-        self.assertEqual(result.error, "dirty base branch after revert")
+        self.assertEqual(result.error, "dirty integration worktree blocks recovery")
+
+        status_calls = [(cmd, cwd) for cmd, cwd in captured if "--porcelain" in cmd]
+        self.assertTrue(status_calls, "Expected at least one git status --porcelain call")
+        for cmd, cwd in status_calls:
+            self.assertEqual(str(cwd), str(repo_path),
+                             f"git status call did not run in the integration worktree: cwd={cwd}")
+
+        toplevel_calls = [(cmd, cwd) for cmd, cwd in captured if "--show-toplevel" in cmd]
+        self.assertTrue(toplevel_calls, "Expected a git rev-parse --show-toplevel call")
+        for cmd, cwd in toplevel_calls:
+            self.assertEqual(str(cwd), str(repo_path),
+                             f"git rev-parse call did not run in the integration worktree: cwd={cwd}")
 
 
 if __name__ == "__main__":

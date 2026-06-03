@@ -256,7 +256,7 @@ async def recover_test_failure(
                 attempts=0,
                 paused=True,
                 flaky=False,
-                error="dirty base branch after revert",
+                error="dirty integration worktree blocks recovery",
             )
 
         # --- Flaky guard: re-merge with no feature changes ---
