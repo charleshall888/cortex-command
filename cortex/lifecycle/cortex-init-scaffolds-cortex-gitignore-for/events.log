@@ -1,0 +1,6 @@
+{"schema_version": 1, "ts": "2026-06-03T17:10:21Z", "event": "lifecycle_start", "feature": "cortex-init-scaffolds-cortex-gitignore-for", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-03T17:16:04Z", "event": "clarify_critic", "feature": "cortex-init-scaffolds-cortex-gitignore-for", "parent_epic_loaded": false, "findings_count": 7, "dispositions": {"apply": 6, "dismiss": 1, "ask": 0}, "applied_fixes_count": 6, "dismissals_count": 1, "status": "ok"}
+{"ts": "2026-06-03T17:36:22Z", "event": "complexity_override", "feature": "cortex-init-scaffolds-cortex-gitignore-for", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-06-03T17:36:22Z", "event": "criticality_override", "feature": "cortex-init-scaffolds-cortex-gitignore-for", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-06-03T18:12:19Z", "event": "spec_approved", "feature": "cortex-init-scaffolds-cortex-gitignore-for"}
+{"ts": "2026-06-03T18:50:07Z", "event": "phase_transition", "feature": "cortex-init-scaffolds-cortex-gitignore-for", "from": "specify", "to": "plan"}

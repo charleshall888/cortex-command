@@ -2,12 +2,15 @@
 schema_version: "1"
 uuid: 2cfdcb31-bca3-489e-a0b6-0ca7e84cf9b9
 title: "cortex init scaffolds cortex/.gitignore for umbrella transient artifacts"
-status: backlog
+status: refined
 priority: medium
 type: feature
-areas: [install]
+areas: ['install']
 created: 2026-06-03
 updated: 2026-06-03
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/cortex-init-scaffolds-cortex-gitignore-for/spec.md
 ---
 **Why:** Critical-review writes `critical-review-residue.json`, and the lifecycle/overnight runtime writes `.session`, `.lock`, `.dispatching`, `agent-activity.jsonl`, `metrics.json`, `learnings/recovery-log.md`, `backlog/*.events.jsonl`, and `_adhoc/` into the `cortex/` umbrella. In this dogfooding repo those are ignored by the root `.gitignore`, but the per-repo scaffolder's `ensure_gitignore` (`cortex_command/init/scaffold.py:552`) only appends the `.cortex-init` markers plus a commented `# cortex/` all-or-nothing toggle to a consumer's **root** `.gitignore` (`_GITIGNORE_TARGETS` is just the markers + `.claude/worktrees/`). So a consumer gets a binary choice: commit the entire umbrella (the default — which sweeps every transient scratch file into history alongside real backlog/lifecycle/requirements artifacts) or uncomment `# cortex/` and ignore the whole umbrella including their project state. There is no selective middle setting. `critical-review-residue.json` is the artifact that surfaced this (it is read off-disk by `cortex_command/overnight/report.py`, never via git, so it never needs tracking), but it is one of ~8 transient artifacts that leak in every consumer repo.
 
