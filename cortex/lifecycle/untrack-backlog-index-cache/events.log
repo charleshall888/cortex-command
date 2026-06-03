@@ -8,3 +8,7 @@
 {"schema_version": 1, "ts": "2026-06-03T00:26:32Z", "event": "phase_transition", "feature": "untrack-backlog-index-cache", "from": "specify", "to": "plan"}
 {"schema_version": 1, "ts": "2026-06-03T00:39:27Z", "event": "plan_approved", "feature": "untrack-backlog-index-cache"}
 {"schema_version": 1, "ts": "2026-06-03T00:39:27Z", "event": "phase_transition", "feature": "untrack-backlog-index-cache", "from": "plan", "to": "implement"}
+{"schema_version": 1, "ts": "2026-06-03T01:03:56Z", "event": "phase_transition", "feature": "untrack-backlog-index-cache", "tier": "complex", "from": "implement", "to": "review"}
+{"schema_version": 1, "ts": "2026-06-03T01:10:16Z", "event": "review_verdict", "feature": "untrack-backlog-index-cache", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"schema_version": 1, "ts": "2026-06-03T01:10:16Z", "event": "phase_transition", "feature": "untrack-backlog-index-cache", "from": "review", "to": "complete"}
+{"ts": "2026-06-03T01:10:58Z", "event": "feature_complete", "feature": "untrack-backlog-index-cache", "tasks_total": 6, "rework_cycles": 1, "merge_anchor": "merge"}
