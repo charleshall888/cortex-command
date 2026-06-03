@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: dc4fee16-1ced-4158-98dd-d70634b71d00
 title: "Explore: best mechanism for lifecycle worktree entry without cortex writing to consumer CLAUDE.md"
-status: refined
+status: complete
 priority: medium
 type: feature
 created: 2026-06-03

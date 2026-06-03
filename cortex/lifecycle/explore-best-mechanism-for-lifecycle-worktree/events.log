@@ -12,3 +12,4 @@
 {"ts": "2026-06-03T19:57:26Z", "event": "phase_transition", "feature": "explore-best-mechanism-for-lifecycle-worktree", "tier": "complex", "from": "implement", "to": "review"}
 {"ts": "2026-06-03T20:02:39Z", "event": "review_verdict", "feature": "explore-best-mechanism-for-lifecycle-worktree", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
 {"ts": "2026-06-03T20:02:39Z", "event": "phase_transition", "feature": "explore-best-mechanism-for-lifecycle-worktree", "from": "review", "to": "complete"}
+{"ts": "2026-06-03T20:03:34Z", "event": "feature_complete", "feature": "explore-best-mechanism-for-lifecycle-worktree", "tasks_total": 11, "rework_cycles": 1, "merge_anchor": "merge"}
