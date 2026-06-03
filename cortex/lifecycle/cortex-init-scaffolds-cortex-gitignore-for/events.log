@@ -4,3 +4,5 @@
 {"ts": "2026-06-03T17:36:22Z", "event": "criticality_override", "feature": "cortex-init-scaffolds-cortex-gitignore-for", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
 {"ts": "2026-06-03T18:12:19Z", "event": "spec_approved", "feature": "cortex-init-scaffolds-cortex-gitignore-for"}
 {"ts": "2026-06-03T18:50:07Z", "event": "phase_transition", "feature": "cortex-init-scaffolds-cortex-gitignore-for", "from": "specify", "to": "plan"}
+{"ts": "2026-06-03T19:15:14Z", "event": "plan_approved", "feature": "cortex-init-scaffolds-cortex-gitignore-for"}
+{"ts": "2026-06-03T19:15:14Z", "event": "phase_transition", "feature": "cortex-init-scaffolds-cortex-gitignore-for", "from": "plan", "to": "implement"}
