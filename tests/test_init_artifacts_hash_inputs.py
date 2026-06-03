@@ -7,9 +7,9 @@ outputs must be in the hash inputs."
     across two consecutive in-process invocations AND across two subprocess
     invocations (PYTHONHASHSEED independence).
 (b) Template coverage: ``_HASH_INPUT_TEMPLATES`` enumerates EVERY file under
-    ``cortex_command/init/templates/cortex/**`` plus ``claude_md_authorization.md``
-    — verified by ``os.walk``-ing the templates directory. Adding a new template
-    without updating ``_HASH_INPUT_TEMPLATES`` fails this test.
+    ``cortex_command/init/templates/cortex/**`` — verified by ``os.walk``-ing
+    the templates directory. Adding a new template without updating
+    ``_HASH_INPUT_TEMPLATES`` fails this test.
 (c) BOM-strip and trailing-newline normalization: the helper produces the same
     hash for BOM-present vs BOM-absent variants of a template.
 """
@@ -34,7 +34,6 @@ from cortex_command.init.scaffold import (
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _TEMPLATES_CORTEX_DIR = _REPO_ROOT / "cortex_command" / "init" / "templates" / "cortex"
-_FENCE_TEMPLATE_NAME = "claude_md_authorization.md"
 
 
 # ---------------------------------------------------------------------------
@@ -116,8 +115,6 @@ def _discover_template_files() -> set[str]:
 
     The returned paths are relative to the templates/ root (i.e., prefixed
     with ``cortex/``), matching the convention in ``_HASH_INPUT_TEMPLATES``.
-    Also includes the fence template (``claude_md_authorization.md``) which
-    lives at the templates root, not under ``cortex/``.
     """
     templates_root = _TEMPLATES_CORTEX_DIR.parent  # cortex_command/init/templates/
     discovered: set[str] = set()
@@ -129,16 +126,11 @@ def _discover_template_files() -> set[str]:
             rel = abs_path.relative_to(templates_root)
             discovered.add(rel.as_posix())
 
-    # Add the fence template that lives at the templates/ root.
-    fence_path = templates_root / _FENCE_TEMPLATE_NAME
-    if fence_path.exists():
-        discovered.add(_FENCE_TEMPLATE_NAME)
-
     return discovered
 
 
 def test_hash_input_templates_covers_all_template_files() -> None:
-    """_HASH_INPUT_TEMPLATES enumerates every file under templates/cortex/** + fence.
+    """_HASH_INPUT_TEMPLATES enumerates every file under templates/cortex/**.
 
     Fails with a named diagnostic when the sets diverge — either because a new
     template was added without updating _HASH_INPUT_TEMPLATES (F10 enforcement),

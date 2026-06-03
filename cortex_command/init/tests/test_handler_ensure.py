@@ -72,8 +72,6 @@ def _make_ensure_args(path: Path) -> argparse.Namespace:
         update=False,
         force=False,
         unregister=False,
-        revoke_worktree_auth=False,
-        verify_worktree_auth=False,
         ensure=True,
     )
 
@@ -91,8 +89,6 @@ def _make_update_args(path: Path) -> argparse.Namespace:
         update=True,
         force=False,
         unregister=False,
-        revoke_worktree_auth=False,
-        verify_worktree_auth=False,
         ensure=False,
     )
 

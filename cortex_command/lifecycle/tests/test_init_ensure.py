@@ -218,8 +218,7 @@ def test_r9c_namespace_shape_equivalence(
     # Namespace shape is caught here as an explicit regression rather than a
     # silent equality pass.
     expected_keys = frozenset(
-        {"ensure", "update", "force", "unregister", "revoke_worktree_auth",
-         "verify_worktree_auth", "path"}
+        {"ensure", "update", "force", "unregister", "path"}
     )
     assert set(ns_console.keys()) == expected_keys, (
         f"Unexpected Namespace keys: {set(ns_console.keys())} != {expected_keys}"
@@ -228,8 +227,6 @@ def test_r9c_namespace_shape_equivalence(
     assert ns_console["update"] is False
     assert ns_console["force"] is False
     assert ns_console["unregister"] is False
-    assert ns_console["revoke_worktree_auth"] is False
-    assert ns_console["verify_worktree_auth"] is False
     assert ns_console["path"] is None
 
 
