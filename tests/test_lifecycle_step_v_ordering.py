@@ -58,7 +58,7 @@ _BLOCK_PATTERN = re.compile(
     re.MULTILINE | re.DOTALL,
 )
 
-# The five operation tokens in the order they must appear in the step v
+# The four operation tokens in the order they must appear in the step v
 # block. Each token is a literal substring search (case-sensitive) —
 # they are anchored to specific shell-callable names, CLI flags, tool
 # call syntax, and event names that the implementation depends on.
@@ -105,7 +105,7 @@ def test_step_v_block_extractable() -> None:
 
 
 def test_step_v_block_contains_all_required_tokens() -> None:
-    """All five operation tokens must appear in the step v block.
+    """All four operation tokens must appear in the step v block.
 
     This is the presence half of the contract; ordering is tested
     separately. Splitting the assertions surfaces a clearer failure
@@ -123,7 +123,7 @@ def test_step_v_block_contains_all_required_tokens() -> None:
 def test_step_v_operations_appear_in_required_order() -> None:
     """Pin the load-bearing order of the auto-enter sequence operations.
 
-    The five tokens must appear in the order specified by R11 of the
+    The four tokens must appear in the order specified by R11 of the
     spec. Re-ordering any pair silently changes observable behavior
     (e.g., event emission lands in the wrong events.log if it precedes
     the EnterWorktree call). This test catches such regressions.
