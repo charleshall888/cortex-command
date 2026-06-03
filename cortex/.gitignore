@@ -1,0 +1,34 @@
+# Cortex umbrella — transient tool state, not project history.
+#
+# This file ships with the cortex/ umbrella so these ignore rules travel to
+# every repo the agentic layer runs in, independent of the host repo's root
+# .gitignore (which only carries the `.cortex-init` markers + the all-or-nothing
+# `# cortex/` toggle). Paths below are relative to this cortex/ directory.
+#
+# Already-committed copies of these artifacts in existing repos are not
+# untracked by this file — git only applies ignore rules to untracked paths.
+
+# Lifecycle ephemeral session / lock files
+lifecycle/*/.session
+lifecycle/*/.session-owner
+lifecycle/*/.dispatching
+lifecycle/*/.lock
+
+# Lifecycle runtime artifacts
+lifecycle/*/agent-activity.jsonl
+lifecycle/*/learnings/recovery-log.md
+lifecycle/overnight-events-*.log
+lifecycle/metrics.json
+lifecycle/sessions/
+
+# Critical-review residue — written for the morning report, read off-disk by
+# overnight/report.py (never via git), so it is transient working-tree scratch.
+lifecycle/*/critical-review-residue.json
+
+# Backlog audit log + regenerated index cache
+backlog/*.events.jsonl
+backlog/index.json
+backlog/index.md
+
+# Ad-hoc critical-review snapshots (pruned by cortex-clean --adhoc)
+_adhoc/
