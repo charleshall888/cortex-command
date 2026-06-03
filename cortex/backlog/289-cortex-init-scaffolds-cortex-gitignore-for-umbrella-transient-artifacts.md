@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 2cfdcb31-bca3-489e-a0b6-0ca7e84cf9b9
 title: "cortex init scaffolds cortex/.gitignore for umbrella transient artifacts"
-status: refined
+status: complete
 priority: medium
 type: feature
 areas: ['install']
