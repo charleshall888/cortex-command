@@ -14,6 +14,9 @@ complexity: complex
 criticality: high
 spec: cortex/lifecycle/auto-apply-cortex-init-at-lifecycle/spec.md
 ---
+
+> **Reconciliation (ADR-0008):** The CLAUDE.md authorization-fence writer (`ensure_claude_md_authorization`) named in the Touch-points below was **removed by ADR-0008** (cortex writes no consumer-`CLAUDE.md` fence). The planned flock-on-fence follow-up is therefore **obsolete** — there is no fence read-splice-write left to serialize. The settings-merge flock this ticket also delivered is unaffected. Frontmatter status unchanged; the touch-point reference is historical.
+
 ## Why
 
 Users currently must manually run `cortex init` to bootstrap a new repo and `cortex init --update` to refresh per-repo init artifacts after the CLI bumps its template inventory, gitignore targets, CLAUDE.md fence version, or allowWrite shape. The existing 3-layer CLI/plugin auto-update story covers the CLI binary and the plugin clone but leaves per-repo init artifacts unhandled — users on previously-initialized repos stay drifted indefinitely until they remember the manual verb. Historical churn shows roughly one schema-level change every two months over the past sixteen months that would have required users to re-run the update verb; bundling that knowledge into the user's existing engagement with cortex eliminates the manual verb from the user's mental model. Concurrently, the existing CLAUDE.md authorization-fence read-splice-write sequence lacks the flock that its sibling settings-merge writer uses; the race is latent today but is amplified by any auto-apply path that introduces concurrent-write pressure.

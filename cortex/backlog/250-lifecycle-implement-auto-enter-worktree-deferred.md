@@ -17,6 +17,8 @@ criticality: high
 spec: cortex/lifecycle/lifecycle-implement-auto-enter-worktree-via/spec.md
 ---
 
+> **Reconciliation (ADR-0008):** This ticket's deferred **(2a)** consumer-authorization decision — "should `cortex init` write a `CLAUDE.md` clause, or does the user's picker selection carry authorization on its own?" — is now **resolved by ADR-0008 in favor of picker-selection** (no persisted clause), the very option (2a) enumerated. This ticket framed that as an open, deferred decision and shipped **no** fence machinery; the fence apparatus landed separately and has since been removed under lifecycle `explore-best-mechanism-for-lifecycle-worktree`. Frontmatter status unchanged.
+
 ## Problem
 
 Approach A — mid-session auto-enter of the `interactive/{slug}` worktree via the platform `EnterWorktree(path=...)` tool — was deferred from the `lifecycle-implement-auto-enter-worktree-drop` lifecycle (the per-repo `branch-mode: worktree-interactive` default, "Approach C"). ADR-0004 (amended in commit `93654e07`) records the C/A split framing and forward-references this ticket by slug `lifecycle-implement-auto-enter-worktree-deferred`.

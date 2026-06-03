@@ -15,6 +15,9 @@ criticality: high
 spec: cortex/lifecycle/explore-best-mechanism-for-lifecycle-worktree/spec.md
 areas: ['lifecycle']
 ---
+
+> **Reconciliation (ADR-0008):** Option B was chosen and implemented under this lifecycle (`explore-best-mechanism-for-lifecycle-worktree`): cortex writes no consumer-`CLAUDE.md` fence; the user's live picker selection authorizes `EnterWorktree`; the suppressed-picker path routes structurally to the cd-shim (ADR-0008). The touch-points below that name `live_interactive_sessions`, the `claude_md_authorization.md` template, the `--verify-worktree-auth` probe, and `handler.py` steps 0b/0c/6b are **historical** — that fence apparatus was removed. The Complete phase sets this ticket's final status.
+
 ## Why
 
 `cortex init` currently splices a cortex-managed `EnterWorktree` authorization fence into a repo's `CLAUDE.md` (ADR-0006, `accepted`). The operator's objection: cortex should not be editing **other repos'** human-curated `CLAUDE.md` files. This breaches ADR-0003's "the only write cortex makes outside its own tree is `~/.claude/settings.local.json`" invariant for consumer repos.

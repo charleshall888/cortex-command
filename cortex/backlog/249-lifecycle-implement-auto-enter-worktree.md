@@ -17,6 +17,8 @@ criticality: high
 spec: cortex/lifecycle/lifecycle-implement-auto-enter-worktree-drop/spec.md
 ---
 
+> **Reconciliation (ADR-0008):** Auto-enter via `EnterWorktree` survives on the picker-fired path. The "Authorization framing" open question below is now answered — the user's live picker selection carries the authorization, with no persisted `CLAUDE.md` clause (the fence model ADR-0006 introduced was removed by ADR-0008). Frontmatter status unchanged.
+
 ## Problem
 
 When the lifecycle implement phase offers the worktree-interactive option (`skills/lifecycle/references/implement.md` §1 / §1a), the user-visible flow today is:
