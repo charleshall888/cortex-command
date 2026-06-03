@@ -67,9 +67,9 @@ The body is already authored after step 1; the file is not opened for user editi
 
 Present the current backlog summary.
 
-1. Read `cortex/backlog/index.md`
-2. Present the summary table to the user
-3. If `cortex/backlog/index.md` does not exist, suggest running `reindex` first
+1. If `cortex/backlog/index.md` does not exist, run `cortex-generate-backlog-index` to regenerate it (the index is a local cache, not version-controlled)
+2. Read `cortex/backlog/index.md`
+3. Present the summary table to the user
 
 ### archive
 
@@ -89,7 +89,7 @@ regardless of current status.
 
 Interactive item selector. Presents open backlog items as a selectable list.
 
-1. Run `cortex-backlog-ready`. If exit code is non-zero, parse the error JSON and report the message — suggest running `/cortex-core:backlog reindex` if the error indicates a missing or malformed backlog index.
+1. Run `cortex-backlog-ready`. If exit code is non-zero, parse the error JSON and report the message — suggest running `/cortex-core:backlog reindex` if the error indicates a malformed backlog index.
 2. Iterate `groups` in order (`critical → contingent`); within each group, iterate `items`. The first non-empty group's items form the selection set. (Group ordering preserves `critical → low` priority; within a group, refined items come first.)
 3. If no actionable items exist, report that the backlog is clear
 4. If only 1 item exists, present it directly and ask if the user wants to start it
@@ -106,7 +106,7 @@ Interactive item selector. Presents open backlog items as a selectable list.
 
 Report which items are ready to work on.
 
-1. Run `cortex-backlog-ready`. If exit code is non-zero, parse the error JSON and report the message — suggest running `/cortex-core:backlog reindex` if the error indicates a missing or malformed backlog index.
+1. Run `cortex-backlog-ready`. If exit code is non-zero, parse the error JSON and report the message — suggest running `/cortex-core:backlog reindex` if the error indicates a malformed backlog index.
 2. For each non-empty group in `groups`, render a markdown subsection: `### {Priority Title}` heading (e.g. `### Critical`, `### High`, `### Medium`, `### Low`, `### Contingent`) followed by `- **{id}** {title}` bullets, in iteration order. If all groups are empty, report `Backlog is clear`.
 
 ### reindex
