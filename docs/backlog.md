@@ -89,7 +89,7 @@ Creates a new backlog item from a title.
 
 ### `list`
 
-Reads `cortex/backlog/index.md` and presents the summary table. Suggests running `reindex` if the index does not exist.
+Reads `cortex/backlog/index.md` and presents the summary table. If the index is absent it is regenerated on demand (the index is a local cache, not version-controlled).
 
 ### `pick`
 
@@ -173,7 +173,7 @@ cortex-update-item <slug-or-uuid> [--flag value ...]
 **Side effects on every update:**
 - Writes the updated file atomically (write-then-rename).
 - Appends `status_changed` or `phase_changed` events to the sidecar `{stem}.events.jsonl` log.
-- Regenerates `cortex/backlog/index.json` and `cortex/backlog/index.md` via the `cortex-generate-backlog-index` console script (canonical source `cortex/backlog/generate_index.py`; users invoke the console script, not the file directly).
+- Regenerates `cortex/backlog/index.json` and `cortex/backlog/index.md` via the `cortex-generate-backlog-index` console script (canonical source `cortex/backlog/generate_index.py`; users invoke the console script, not the file directly). These index files are a **regenerated local cache and are not version-controlled** (gitignored): they are rebuilt on every `cortex-update-item` and on demand by consumers that read them, so they never need to be committed.
 
 **Additional side effects for terminal status transitions** (`complete`, `abandoned`, `done`, `resolved`, `wontfix`, `wont-do`, `won't-do` — full list in `cortex_command/common.py`):
 - Removes the closed item's ID and UUID from `blocked-by` arrays across all active backlog items.
