@@ -6,3 +6,4 @@
 {"ts": "2026-06-03T15:57:38Z", "event": "plan_approved", "feature": "overnight-merge-recovery-strands-a-successfully"}
 {"ts": "2026-06-03T15:57:38Z", "event": "phase_transition", "feature": "overnight-merge-recovery-strands-a-successfully", "from": "plan", "to": "implement"}
 {"ts": "2026-06-03T16:05:37Z", "event": "batch_dispatch", "feature": "overnight-merge-recovery-strands-a-successfully", "batch": 0, "tasks": [1]}
+{"ts": "2026-06-03T16:11:34Z", "event": "batch_dispatch", "feature": "overnight-merge-recovery-strands-a-successfully", "batch": 1, "tasks": [2, 3]}

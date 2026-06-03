@@ -62,6 +62,7 @@ def _make_ctx(pauses: int | None = None) -> OutcomeContext:
         backlog_ids={},
         feature_names=["feat-a"],
         config=config,
+        home_worktree_path=Path("/tmp/unused-home-integration-worktree"),
     )
 
 

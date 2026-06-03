@@ -599,13 +599,35 @@ def _apply_feature_result(
 
         # Auto-merge to main
         effective_branch = _effective_base_branch(repo_path, ctx.integration_branches, ctx.config.base_branch)
+        merge_target = _merge_target_repo_path(ctx, name)
+        if ctx.repo_path_map.get(name) is None and merge_target is None:
+            # Home feature whose integration worktree could not be resolved
+            # (degraded path: TMPDIR wiped / resumed session). Pause and surface
+            # rather than passing repo_path=None onward and falling back to the
+            # home working tree, which would re-create the worktree collision.
+            error = "integration worktree unresolved"
+            ctx.batch_result.features_paused.append({"name": name, "error": error})
+            ctx.cb_state.consecutive_pauses += 1
+            overnight_log_event(
+                FEATURE_PAUSED,
+                ctx.config.batch_id,
+                feature=name,
+                details={"error": error},
+                log_path=ctx.config.overnight_events_path,
+            )
+            _write_back_to_backlog(
+                name, "paused", ctx.config.batch_id,
+                ctx.config.overnight_events_path,
+                backlog_id=ctx.backlog_ids.get(name),
+            )
+            return
         merge_result = merge_feature(
             feature=name,
             base_branch=effective_branch,
             test_command=ctx.config.test_command,
             log_path=ctx.config.pipeline_events_path,
             branch=actual_branch,
-            repo_path=_effective_merge_repo_path(repo_path, ctx.integration_worktrees, ctx.integration_branches, ctx.session_id),
+            repo_path=merge_target,
         )
 
         if merge_result.success:
@@ -915,15 +937,35 @@ async def apply_feature_result(
         effective_branch = _effective_base_branch(
             repo_path, ctx.integration_branches, ctx.config.base_branch,
         )
+        merge_target = _merge_target_repo_path(ctx, name)
+        if ctx.repo_path_map.get(name) is None and merge_target is None:
+            # Home feature whose integration worktree could not be resolved
+            # (degraded path: TMPDIR wiped / resumed session). Pause and surface
+            # rather than passing repo_path=None onward and falling back to the
+            # home working tree, which would re-create the worktree collision.
+            error = "integration worktree unresolved"
+            ctx.batch_result.features_paused.append({"name": name, "error": error})
+            ctx.cb_state.consecutive_pauses += 1
+            overnight_log_event(
+                FEATURE_PAUSED,
+                ctx.config.batch_id,
+                feature=name,
+                details={"error": error},
+                log_path=ctx.config.overnight_events_path,
+            )
+            _write_back_to_backlog(
+                name, "paused", ctx.config.batch_id,
+                ctx.config.overnight_events_path,
+                backlog_id=ctx.backlog_ids.get(name),
+            )
+            return
         merge_result = merge_feature(
             feature=name,
             base_branch=effective_branch,
             test_command=ctx.config.test_command,
             log_path=ctx.config.pipeline_events_path,
             branch=actual_branch,
-            repo_path=_effective_merge_repo_path(
-                repo_path, ctx.integration_worktrees, ctx.integration_branches, ctx.session_id,
-            ),
+            repo_path=merge_target,
         )
 
         if merge_result.success:
@@ -949,9 +991,7 @@ async def apply_feature_result(
                         base_branch=_effective_base_branch(
                             repo_path, ctx.integration_branches, ctx.config.base_branch,
                         ),
-                        repo_path=_effective_merge_repo_path(
-                            repo_path, ctx.integration_worktrees, ctx.integration_branches, ctx.session_id,
-                        ),
+                        repo_path=merge_target,
                         log_path=ctx.config.pipeline_events_path,
                     )
                     if rr.deferred:
@@ -1129,6 +1169,29 @@ async def apply_feature_result(
 
     # --- Recovery (outside the lock) ---
     if need_recovery:
+        merge_target = _merge_target_repo_path(ctx, name)
+        if ctx.repo_path_map.get(name) is None and merge_target is None:
+            # Home feature whose integration worktree could not be resolved
+            # (degraded path: TMPDIR wiped / resumed session). Pause and surface
+            # rather than passing repo_path=None onward to the recovery precheck
+            # (cwd=None falls back to the home working tree).
+            error = "integration worktree unresolved"
+            async with ctx.lock:
+                ctx.batch_result.features_paused.append({"name": name, "error": error})
+                ctx.cb_state.consecutive_pauses += 1
+                overnight_log_event(
+                    FEATURE_PAUSED,
+                    ctx.config.batch_id,
+                    feature=name,
+                    details={"error": error},
+                    log_path=ctx.config.overnight_events_path,
+                )
+                _write_back_to_backlog(
+                    name, "paused", ctx.config.batch_id,
+                    ctx.config.overnight_events_path,
+                    backlog_id=ctx.backlog_ids.get(name),
+                )
+            return
         recovery_result = await recover_test_failure(
             feature=name,
             base_branch=ctx.config.base_branch,
@@ -1141,9 +1204,7 @@ async def apply_feature_result(
             learnings_dir=Path(f"cortex/lifecycle/{name}/learnings"),
             test_command=ctx.config.test_command,
             pipeline_log_path=ctx.config.pipeline_events_path,
-            repo_path=_effective_merge_repo_path(
-                repo_path, ctx.integration_worktrees, ctx.integration_branches, ctx.session_id,
-            ),
+            repo_path=merge_target,
         )
 
         # Re-acquire the lock to route the recovery result
