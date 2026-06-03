@@ -1,0 +1,2 @@
+{"ts": "2026-06-03T15:57:44.898873Z", "event": "lifecycle_start", "feature": "init-skip-foreign-claude-md", "tier": "complex", "criticality": "high"}
+{"ts": "2026-06-03T16:50:06.930673Z", "event": "feature_wontfix", "feature": "init-skip-foreign-claude-md", "reason": "superseded by #288 \u2014 reframed as a neutral exploration ticket (do not pre-decide full removal)", "superseded_by": 288}
