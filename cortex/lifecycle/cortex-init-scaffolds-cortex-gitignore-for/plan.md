@@ -33,7 +33,7 @@ Ship a corrected `cortex/.gitignore` as a plain scaffold template under `cortex_
 - **Complexity**: simple
 - **Context**: Follow the init-test conventions in `cortex_command/init/tests/test_scaffold.py` — `_git_init` real tmp repo helper, write the template bytes to `<tmp>/cortex/.gitignore`, invoke `git check-ignore --no-index <path>` via `subprocess` and assert on returncode (0 = ignored, 1 = not). Source the template bytes via `importlib.resources.files("cortex_command.init.templates").joinpath("cortex/.gitignore")` (the same `_TEMPLATE_ROOT` handle scaffold uses) rather than hardcoding. Cover every path enumerated in Spec Req 1 and Req 2, AND add archive-depth exit-0 probes for the widened rules the spec matrix omits — at minimum `lifecycle/archive/x/learnings/recovery-log.md`, `lifecycle/archive/x/.session-owner`, `lifecycle/archive/x/.lock`, `lifecycle/archive/x/.dispatching`, `lifecycle/archive/x/agent-activity.jsonl` — so a regression that leaves any widened rule single-level (the failure mode where `learnings/recovery-log.md` stays `lifecycle/*/...` and silently passes the spec matrix) is caught. Include the archive-depth `learnings/outline.md` exit-1 must-track case (the proof the narrow rule does not over-match siblings). New file (not an extension of `test_scaffold.py`) so it can run independently of Task 3.
 - **Verification**: `.venv/bin/pytest cortex_command/init/tests/test_cortex_gitignore_template.py -q` exits 0. Pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Scaffold + handler no-clobber / backup / drift tests
 - **Files**: `cortex_command/init/tests/test_scaffold.py`, `cortex_command/init/tests/test_handler_ensure.py`
