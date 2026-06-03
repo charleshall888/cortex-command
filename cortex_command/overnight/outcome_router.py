@@ -78,6 +78,7 @@ class OutcomeContext:
     backlog_ids: dict[str, int | None]
     feature_names: list[str]
     config: BatchConfig
+    home_worktree_path: Path | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -243,6 +244,26 @@ def _effective_merge_repo_path(
     # Unknown failure.
     raise RuntimeError(
         f"Failed to create integration worktree for {repo_path!s}: {stderr}"
+    )
+
+
+def _merge_target_repo_path(ctx: OutcomeContext, name: str) -> Path | None:
+    """Resolve the merge/recovery/review target worktree for a feature.
+
+    Home-repo features (``repo_path is None``) target the home integration
+    worktree recorded in ``ctx.home_worktree_path`` so merges run against the
+    long-lived integration worktree that already owns
+    ``overnight/<session_id>`` instead of the user's live working tree.
+    Cross-repo features delegate byte-for-byte to
+    ``_effective_merge_repo_path``.
+    """
+    if ctx.repo_path_map.get(name) is None:
+        return ctx.home_worktree_path
+    return _effective_merge_repo_path(
+        ctx.repo_path_map.get(name),
+        ctx.integration_worktrees,
+        ctx.integration_branches,
+        ctx.session_id,
     )
 
 

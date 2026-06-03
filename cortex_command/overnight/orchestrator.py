@@ -440,6 +440,7 @@ async def run_batch(config: BatchConfig) -> BatchResult:
             backlog_ids=backlog_ids,
             feature_names=feature_names,
             config=config,
+            home_worktree_path=Path(overnight_state.worktree_path) if overnight_state.worktree_path else None,
         )
         await outcome_router.apply_feature_result(name, result, ctx)
 
@@ -531,6 +532,7 @@ async def run_batch(config: BatchConfig) -> BatchResult:
                 backlog_ids=backlog_ids,
                 feature_names=feature_names,
                 config=config,
+                home_worktree_path=Path(overnight_state.worktree_path) if overnight_state.worktree_path else None,
             )
             await outcome_router.apply_feature_result(n, failed_result, ctx)
 
