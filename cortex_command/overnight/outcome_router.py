@@ -498,7 +498,29 @@ def _apply_feature_result(
     review_result: "ReviewResult | None" = None
     if result.status == "repair_completed":
         # Fast-forward merge the repair branch into base_branch.
-        repo = Path.cwd()
+        repo = _merge_target_repo_path(ctx, name)
+        if ctx.repo_path_map.get(name) is None and repo is None:
+            # Home feature whose integration worktree could not be resolved
+            # (degraded path: TMPDIR wiped / resumed session). Pause and surface
+            # rather than falling back to Path.cwd() / the home working tree,
+            # whose git checkout overnight/<id> would collide with the
+            # integration worktree that already owns that branch.
+            error = "integration worktree unresolved"
+            ctx.batch_result.features_paused.append({"name": name, "error": error})
+            ctx.cb_state.consecutive_pauses += 1
+            overnight_log_event(
+                FEATURE_PAUSED,
+                ctx.config.batch_id,
+                feature=name,
+                details={"error": error},
+                log_path=ctx.config.overnight_events_path,
+            )
+            _write_back_to_backlog(
+                name, "paused", ctx.config.batch_id,
+                ctx.config.overnight_events_path,
+                backlog_id=ctx.backlog_ids.get(name),
+            )
+            return
         subprocess.run(
             ["git", "checkout", ctx.config.base_branch],
             cwd=repo,

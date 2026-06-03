@@ -33,7 +33,7 @@ Home-repo features (`repo_path=None`) resolve their merge/recovery/review target
 - **Complexity**: simple
 - **Context**: The four call sites (current lines): `outcome_router.py:587` (`merge_feature` auto-merge), `:903` (`merge_feature` second path), `:931` (`dispatch_review` `repo_path=`), `:1123` (`recover_test_failure` `repo_path=` — feeds `merge_recovery.py`'s precheck `cwd`). Each has `name` and `ctx` in scope. The `None`-surface guard mirrors the existing pause pattern at `outcome_router.py:560-577` (`ctx.batch_result.features_paused.append(...)` + `overnight_log_event(FEATURE_PAUSED, ...)` + `_write_back_to_backlog(name, "paused", ...)` + early `return`). In normal sessions home features always have `state.worktree_path` set (`plan.py:406-410`), so `None` is the degraded path (TMPDIR wiped / resumed session); pausing-and-surfacing is the safe default, never a home-tree merge. Cross-repo features never resolve to `None` (the resolver lazily creates or raises). After this change `_effective_merge_repo_path(` appears exactly twice in the file: the `def` (line 116) and the single cross-repo delegation inside the Task-1 helper. Do not alter `_effective_base_branch` call sites (`:580`, `:895`, `:928`).
 - **Verification**: `grep -c '_effective_merge_repo_path(' cortex_command/overnight/outcome_router.py` = 2 — pass if count = 2; AND `grep -c 'integration worktree unresolved' cortex_command/overnight/outcome_router.py` ≥ 1 (the home `None`-surface guard exists) — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Fix the `repair_completed` block to target the integration worktree, surfacing (not home-tree-falling-back) on an unresolved home worktree
 - **Files**: `cortex_command/overnight/outcome_router.py`
