@@ -14,12 +14,11 @@ Call `load_state()` from `cortex_command.overnight.state` (no arguments — it r
 
 ## Step 2: Pre-selection Index Regeneration
 
-Regenerate the backlog index so that feature selection in Step 3 operates on up-to-date metadata.
+Regenerate the backlog index so that feature selection in Step 3 operates on up-to-date metadata. The index (`cortex/backlog/index.json` / `index.md`) is a regenerated local cache and is **not committed** — regenerate it, but do not stage or commit it.
 
 1. Run `cortex-generate-backlog-index` from the project root. If the command exits with a non-zero status, report: "Backlog index regeneration failed (exit {code}). Fix the issue and retry `/overnight`." → halt.
-2. Stage the regenerated index files: `git add cortex/backlog/index.json cortex/backlog/index.md`.
-3. If there are staged changes (i.e., the index actually changed), commit with message "Regenerate backlog index". If the commit fails, report: "Failed to commit regenerated backlog index: {error}." → halt.
-4. If there are no staged changes, skip the commit — the index is already current.
+
+The regenerated files are gitignored, so they do not appear in the uncommitted-files pre-flight below and need no commit step.
 
 ## Step 3: Select Eligible Features
 

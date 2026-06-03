@@ -61,7 +61,7 @@ Validate inputs before entering any flow:
 Operational sequence — execute in order. Full per-step detail (error handling, sub-steps, function signatures) lives in `${CLAUDE_SKILL_DIR}/references/new-session-flow.md`.
 
 1. **Check for existing session** — `load_state()` from `cortex_command.overnight.state`. If a non-`complete` session exists, offer resume or abandon.
-2. **Pre-selection index regeneration** — run `cortex-generate-backlog-index`, stage `cortex/backlog/index.json` and `cortex/backlog/index.md`, commit if changed.
+2. **Pre-selection index regeneration** — run `cortex-generate-backlog-index` (regenerate only; the index is a gitignored local cache and is not staged or committed).
 3. **Select eligible features** — handled by `cortex overnight prepare` (Step 5), which selects and groups eligible items. Eligibility requires `cortex/lifecycle/{slug}/research.md` and `cortex/lifecycle/{slug}/spec.md` on disk and `type != epic`. Missing `plan.md` is generated during the session.
 4. **Present selection summary** — read the `selection` field from the `cortex overnight prepare` envelope; it lists eligible items, batches, and ineligible items with reasons.
 5. **Render session plan** — run `cortex overnight prepare --format json` (read-only). Read `plan_markdown` from the JSON envelope; no state is mutated.
