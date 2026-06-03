@@ -7,3 +7,8 @@
 {"ts": "2026-06-03T15:57:38Z", "event": "phase_transition", "feature": "overnight-merge-recovery-strands-a-successfully", "from": "plan", "to": "implement"}
 {"ts": "2026-06-03T16:05:37Z", "event": "batch_dispatch", "feature": "overnight-merge-recovery-strands-a-successfully", "batch": 0, "tasks": [1]}
 {"ts": "2026-06-03T16:11:34Z", "event": "batch_dispatch", "feature": "overnight-merge-recovery-strands-a-successfully", "batch": 1, "tasks": [2, 3]}
+{"ts": "2026-06-03T16:19:17Z", "event": "batch_dispatch", "feature": "overnight-merge-recovery-strands-a-successfully", "batch": 2, "tasks": [4, 5]}
+{"ts": "2026-06-03T16:36:48Z", "event": "phase_transition", "feature": "overnight-merge-recovery-strands-a-successfully", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-06-03T16:40:39Z", "event": "review_verdict", "feature": "overnight-merge-recovery-strands-a-successfully", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-06-03T16:40:39Z", "event": "phase_transition", "feature": "overnight-merge-recovery-strands-a-successfully", "from": "review", "to": "complete"}
+{"ts": "2026-06-03T16:41:41Z", "event": "feature_complete", "feature": "overnight-merge-recovery-strands-a-successfully", "tasks_total": 5, "rework_cycles": 1, "merge_anchor": "merge"}

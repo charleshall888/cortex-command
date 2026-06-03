@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 9486d024-5a83-4382-874c-6c3f4448bfdc
 title: "Overnight merge-recovery strands a successfully-built feature: 'dirty base branch after revert' (0 attempts) + round-2 'branch already used by worktree' collision"
-status: in_progress
+status: complete
 priority: high
 type: bug
 created: 2026-06-02
