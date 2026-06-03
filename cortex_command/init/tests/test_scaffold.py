@@ -20,6 +20,7 @@ import os
 import platform
 import subprocess
 import sys
+from importlib.resources import files
 from pathlib import Path
 
 import pytest
@@ -68,6 +69,14 @@ SCAFFOLD_FILES = (
     "cortex/backlog/README.md",
     "cortex/requirements/project.md",
     "cortex/lifecycle.config.md",
+)
+
+# Shipped bytes of the cortex/.gitignore template, sourced from the same
+# package resource handle the scaffolder reads (never a hardcoded copy).
+_SHIPPED_GITIGNORE = (
+    files("cortex_command.init.templates")
+    .joinpath("cortex/.gitignore")
+    .read_text(encoding="utf-8")
 )
 
 
@@ -711,3 +720,74 @@ def test_unregister_accepts_non_git_path(
 
     data = json.loads(settings_path.read_text(encoding="utf-8"))
     assert target_path not in data["sandbox"]["filesystem"]["allowWrite"]
+
+
+# ---------------------------------------------------------------------------
+# cortex/.gitignore copy-if-absent / --force backup (Spec Req 3, 5)
+# ---------------------------------------------------------------------------
+
+
+def test_cortex_gitignore_fresh_write(tmp_path: Path) -> None:
+    """Spec Req 3: a fresh scaffold lays down cortex/.gitignore, non-empty."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git_init(repo)
+
+    scaffold.scaffold(repo, overwrite=False, backup_dir=None)
+
+    gitignore = repo / "cortex" / ".gitignore"
+    assert gitignore.exists()
+    assert gitignore.stat().st_size > 0
+    # The on-disk file equals the shipped template bytes.
+    assert gitignore.read_text(encoding="utf-8") == _SHIPPED_GITIGNORE
+
+
+def test_cortex_gitignore_sentinel_survives_copy_if_absent(tmp_path: Path) -> None:
+    """Spec Req 3: an existing cortex/.gitignore is never overwritten (overwrite=False).
+
+    scaffold()'s `if dest.exists() and not overwrite: continue` is the
+    copy-if-absent primitive — a hand-edited file survives byte-identical.
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git_init(repo)
+
+    gitignore = repo / "cortex" / ".gitignore"
+    gitignore.parent.mkdir(parents=True)
+    sentinel = "# hand-edited by the consumer\nlifecycle/**/.session\n"
+    gitignore.write_text(sentinel, encoding="utf-8")
+
+    scaffold.scaffold(repo, overwrite=False, backup_dir=None)
+
+    # Copy-if-absent left the hand-edited file untouched.
+    assert gitignore.read_text(encoding="utf-8") == sentinel
+
+
+def test_cortex_gitignore_force_backs_up_and_overwrites(tmp_path: Path) -> None:
+    """Spec Req 5: --force backs up the prior cortex/.gitignore, then overwrites.
+
+    scaffold(overwrite=True, backup_dir=None) copies each existing destination
+    into cortex/.cortex-init-backup/<ts>/<rel> before rewriting it with the
+    shipped bytes.
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git_init(repo)
+
+    gitignore = repo / "cortex" / ".gitignore"
+    gitignore.parent.mkdir(parents=True)
+    sentinel = "# prior consumer content to be backed up\n_adhoc/\n"
+    gitignore.write_text(sentinel, encoding="utf-8")
+
+    scaffold.scaffold(repo, overwrite=True, backup_dir=None)
+
+    # Live file now equals the shipped template.
+    assert gitignore.read_text(encoding="utf-8") == _SHIPPED_GITIGNORE
+
+    # The prior content was backed up under a timestamped backup dir, mirroring
+    # the repo-relative path cortex/.gitignore.
+    backup_root = repo / "cortex" / ".cortex-init-backup"
+    assert backup_root.exists()
+    backups = sorted(backup_root.glob("*/cortex/.gitignore"))
+    assert backups, "expected a backed-up cortex/.gitignore under .cortex-init-backup/"
+    assert backups[-1].read_text(encoding="utf-8") == sentinel

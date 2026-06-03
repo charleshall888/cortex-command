@@ -926,3 +926,82 @@ def test_r8_bundle6_unwritable_cortex_exit_nonzero(
     finally:
         # Restore permissions so tmp_path cleanup can succeed.
         cortex_dir.chmod(0o700)
+
+
+# ---------------------------------------------------------------------------
+# cortex/.gitignore copy-if-absent under --update / --ensure (Spec Req 4)
+# ---------------------------------------------------------------------------
+
+
+def test_cortex_gitignore_update_drift_report_names_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Spec Req 4(b): a diverged cortex/.gitignore is named in the --update drift report.
+
+    The drift report is pinned to the operator-facing ``cortex init --update``
+    path (handler._run, not the auto-fired --ensure Case (ii)). The assertion is
+    path-specific — the diverged file's relative path must appear in captured
+    stderr — not a bare exit-0 check.
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git_init(repo)
+    _isolate_home(monkeypatch, tmp_path)
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg-state"))
+
+    # Plant a marker-present cortex/ via terminal --update (writes the shipped
+    # cortex/.gitignore + marker).
+    assert init_main(_make_update_args(repo)) == 0
+    gitignore = repo / "cortex" / ".gitignore"
+    assert gitignore.exists()
+
+    # Diverge the on-disk file from the shipped template.
+    diverged = "# locally diverged\nlifecycle/**/.session\n*.tmp\n"
+    gitignore.write_text(diverged, encoding="utf-8")
+
+    capsys.readouterr()  # flush prior output
+    assert init_main(_make_update_args(repo)) == 0
+    captured = capsys.readouterr()
+
+    # The diverged file is named in the drift report...
+    assert "cortex/.gitignore" in captured.err
+    # ...and copy-if-absent left it un-overwritten (drift report is read-only;
+    # --force is the apply path).
+    assert gitignore.read_text(encoding="utf-8") == diverged
+
+
+def test_cortex_gitignore_ensure_preserves_hand_edit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Spec Req 4: --ensure never auto-overwrites a hand-edited cortex/.gitignore.
+
+    Forces a hash mismatch so --ensure drives Case (ii) — the refresh path whose
+    scaffold pass actually runs — proving copy-if-absent (overwrite=False) still
+    protects the existing file even when the scaffold pass executes.
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git_init(repo)
+    _isolate_home(monkeypatch, tmp_path)
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg-state"))
+
+    # Plant a marker-present cortex/ via terminal --update.
+    assert init_main(_make_update_args(repo)) == 0
+    gitignore = repo / "cortex" / ".gitignore"
+
+    # Hand-edit the file after init.
+    hand_edited = "# consumer additions\nlifecycle/**/.session\nmy-scratch/\n"
+    gitignore.write_text(hand_edited, encoding="utf-8")
+
+    # Force a hash mismatch so --ensure reaches Case (ii) (scaffold pass runs).
+    monkeypatch.setattr(
+        scaffold, "_compute_init_artifacts_hash", lambda: "v1:" + "f" * 64
+    )
+
+    assert init_main(_make_ensure_args(repo)) == 0
+
+    # Never auto-overwritten on --ensure, even when the refresh scaffold pass ran.
+    assert gitignore.read_text(encoding="utf-8") == hand_edited
