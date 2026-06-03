@@ -8,3 +8,5 @@
 {"schema_version": 1, "ts": "2026-06-03T18:41:45Z", "event": "phase_transition", "feature": "explore-best-mechanism-for-lifecycle-worktree", "from": "specify", "to": "plan"}
 {"ts": "2026-06-03T19:15:12Z", "event": "plan_approved", "feature": "explore-best-mechanism-for-lifecycle-worktree"}
 {"ts": "2026-06-03T19:15:12Z", "event": "phase_transition", "feature": "explore-best-mechanism-for-lifecycle-worktree", "from": "plan", "to": "implement"}
+{"ts": "2026-06-03T19:30:00Z", "event": "batch_dispatch", "feature": "explore-best-mechanism-for-lifecycle-worktree", "batch": 0, "tasks": [1, 3, 5, 6, 8], "mode": "orchestrator-direct-sequential"}
+{"ts": "2026-06-03T19:57:26Z", "event": "phase_transition", "feature": "explore-best-mechanism-for-lifecycle-worktree", "tier": "complex", "from": "implement", "to": "review"}

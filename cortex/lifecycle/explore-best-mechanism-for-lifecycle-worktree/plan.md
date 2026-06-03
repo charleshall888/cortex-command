@@ -24,7 +24,7 @@ Implement Option B: delete the consumer-`CLAUDE.md` authorization-fence apparatu
 - **Complexity**: simple
 - **Context**: `_run_ensure` is at `handler.py:129`; the `_run_ensure` fence call is `handler.py:247`; step 0b revoke-branch `handler.py:367–414` (calls `scaffold.live_interactive_sessions(repo_root)` at 391); step 0c verify-branch `handler.py:416–453`; step 6b `handler.py:516–523`. Also drop the docstring step descriptions (handler.py:18 "6b. ensure_claude_md_authorization", and the `revoke_worktree_auth`/`verify_worktree_auth` arg docstrings at ~554–556). Leave the surviving init flow (scaffold + sandbox-register + `--ensure`) intact.
 - **Verification**: `grep -cE "ensure_claude_md_authorization|revoke_worktree_auth|verify_worktree_auth" cortex_command/init/handler.py` = 0 — pass if count is 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Remove fence functions/constants/helpers from scaffold + delete the template
 - **Files**: `cortex_command/init/scaffold.py`, `cortex_command/init/templates/claude_md_authorization.md`
@@ -33,7 +33,7 @@ Implement Option B: delete the consumer-`CLAUDE.md` authorization-fence apparatu
 - **Complexity**: complex
 - **Context**: Symbol map from discovery — defs at `scaffold.py:624` (`_read_claude_md_auth_template`), `637` (`_render_claude_md_auth_block`), `649` (`_find_claude_md_auth_fence`), `678` (`ensure_claude_md_authorization`), `760` (`revoke_claude_md_authorization`), `820` (`_pid_is_live`), `841` (`live_interactive_sessions`); constants at `82` (`_HASH_INPUT_TEMPLATES`, line 87 is the template entry), `99/106/110/111/115` (`_CLAUDE_MD_AUTH_*`); hash-input usage at `123–149`. `live_interactive_sessions`/`_pid_is_live` exist solely for the deleted revoke precondition — Task 1 removed their only caller, so they are safe to delete. NOTE on the hash test: because Task 2 removes the template from `_HASH_INPUT_TEMPLATES` AND deletes the file symmetrically, the coverage test in Task 4 needs no value/golden change — there is no hard-coded hash anywhere (verified: only `hash==hash` determinism + the `v1:`+64-hex shape are asserted). The residue Task 4 must clean is the test-file's own fence special-casing, not a stored hash.
 - **Verification**: `grep -cE "ensure_claude_md_authorization|revoke_claude_md_authorization|_find_claude_md_auth_fence|_render_claude_md_auth_block|_read_claude_md_auth_template|_CLAUDE_MD_AUTH|def live_interactive_sessions|def _pid_is_live|claude_md_authorization.md" cortex_command/init/scaffold.py` = 0 AND `test -f cortex_command/init/templates/claude_md_authorization.md; echo $?` = 1 — pass if grep count is 0 and the file is absent.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Remove the two CLI verbs + the init-ensure namespace flags
 - **Files**: `cortex_command/cli.py`, `cortex_command/lifecycle/init_ensure.py`
@@ -42,7 +42,7 @@ Implement Option B: delete the consumer-`CLAUDE.md` authorization-fence apparatu
 - **Complexity**: simple
 - **Context**: cli.py arg defs at `896–908` (revoke at 896, verify at 907); mutex `--update` 886, `--unregister` 891, `--ensure` 918; `--force` modifier block 929–939 (revoke mention at 932/939). `init_ensure.py` builds the args namespace handed to `handler._run_ensure`; after Task 1 the handler no longer reads these fields, so removing them here keeps the namespace honest. Caller check: the only constructors of these dests are cli.py (argparse) and init_ensure.py (namespace) — both in this task's Files.
 - **Verification**: `grep -cE "verify-worktree-auth|revoke-worktree-auth" cortex_command/cli.py` = 0 AND `grep -cE "verify_worktree_auth|revoke_worktree_auth" cortex_command/lifecycle/init_ensure.py` = 0 — pass if both counts are 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 4: Delete the fence/verify tests, strip the test-side fence special-casing, and restore green
 - **Files**: `tests/test_init_claude_md_authorization.py`, `tests/test_init_verify_worktree_auth.py`, `tests/test_init_artifacts_hash_inputs.py`, `cortex_command/init/tests/test_handler_ensure.py`, `cortex_command/lifecycle/tests/test_init_ensure.py`
@@ -51,7 +51,7 @@ Implement Option B: delete the consumer-`CLAUDE.md` authorization-fence apparatu
 - **Complexity**: complex
 - **Context**: These five files are the `.py` dependent set from `grep -rl "verify_worktree_auth\|revoke_worktree_auth\|ensure_claude_md_authorization\|claude_md_authorization" --include="*.py" tests/ cortex_command/` minus the three production modules (scaffold/handler/cli) and `init_ensure.py` (Task 3). Two further `.py` test files carry the *hyphenated* CLI token (`test_lifecycle_step_v_ordering.py`, `test_lifecycle_enterworktree_callsites.py`) — those are `.md`-anchoring lifecycle tests handled in Task 7, not here. Before finalizing, re-run the grep over the FULL deleted-symbol set (add `live_interactive_sessions`, `_pid_is_live`, `_CLAUDE_MD_AUTH`, the hyphenated verb forms, `lifecycle-worktree-auth`) to confirm no other `.py` member references a deleted symbol.
 - **Verification**: `just test` — pass if exit 0 and the full suite passes.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5: Remove this repo's own stranded authorization fence
 - **Files**: `CLAUDE.md`
@@ -60,7 +60,7 @@ Implement Option B: delete the consumer-`CLAUDE.md` authorization-fence apparatu
 - **Complexity**: simple
 - **Context**: Block spans `CLAUDE.md:83–89` (open sigil 83, heading 84, body 86, lifecycle-note 88, close sigil 89). The picker-fired authorization model (Task 6) means EnterWorktree stays authorized in this repo via picker selection — removing the standing clause is safe (this repo's `branch-mode` is `prompt`, so the suppressed-picker path never fires here). Verified by the research session's live gate test, which revoked this exact fence and confirmed picker-selection authorization.
 - **Verification**: `grep -c "lifecycle-worktree-auth" CLAUDE.md` = 0 — pass if count is 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 6: Rewire implement.md §1a with a structural suppressed-picker branch + regenerate the mirror
 - **Files**: `skills/lifecycle/references/implement.md`, `plugins/cortex-core/skills/lifecycle/references/implement.md`
@@ -73,7 +73,7 @@ Implement Option B: delete the consumer-`CLAUDE.md` authorization-fence apparatu
 - **Complexity**: complex
 - **Context**: §1a entry at `implement.md:97`; §1 branch-mode preflight + `should_fire_picker` semantics at `22–46` (suppressed → "proceed directly to §1a"; the `FIRE`/`REASON` shell values computed there are the natural carrier for the entry-mode marker); step-v block at `167–197` (verify probe operation 2 at `173`; precondition probe operation 3 at `175`; EnterWorktree operation 4 at `177–183`; emit-event operation 5 at `185`; fallback marker + diagnostic at `193`; auto-entry note vi at `197`). The existing `EnterWorktree skipped` literal and the `show-toplevel`/`git-common-dir` precondition tokens are anchored by `tests/test_lifecycle_enterworktree_callsites.py` — keep them. Authoring policy: What/Why-not-How, soft positive routing, no new MUST. Do not introduce any new hyphenated `cortex-*` invocation without its required flags (contract-checker E101/E103); the retained `cortex-worktree-*`/`cortex-lifecycle-branch-mode` invocations are unchanged. Follow `just build-plugin` then commit both files in one commit ([[feedback_drift_hook_shared_checkout_coupling]]).
 - **Verification**: `grep -c "EnterWorktree" skills/lifecycle/references/implement.md` ≥ 1 AND `grep -c "verify-worktree-auth" skills/lifecycle/references/implement.md` = 0 AND `grep -c "cortex-worktree-precondition" skills/lifecycle/references/implement.md` ≥ 1 AND `grep -c "suppressed-picker" skills/lifecycle/references/implement.md` ≥ 1 (the structural-branch marker) AND `diff -q skills/lifecycle/references/implement.md plugins/cortex-core/skills/lifecycle/references/implement.md` reports identical — pass if all hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 7: Pin the step-v order AND the suppressed-picker structural branch in tests
 - **Files**: `tests/test_lifecycle_step_v_ordering.py`, `tests/test_lifecycle_enterworktree_callsites.py`
@@ -82,7 +82,7 @@ Implement Option B: delete the consumer-`CLAUDE.md` authorization-fence apparatu
 - **Complexity**: simple
 - **Context**: `test_lifecycle_step_v_ordering.py` currently pins the `verify-worktree-auth` + `EnterWorktree(` order against `implement.md`; the new required order is `cortex-worktree-precondition` → `EnterWorktree`. `test_lifecycle_enterworktree_callsites.py` already greps §1a prose for structural markers (`show-toplevel`/`git-common-dir`/`EnterWorktree skipped` at its `_PRECONDITION_TOKENS`), proving a token assertion on the suppressed branch is feasible. `test_lifecycle_implement_branch_mode.py` tests `should_fire_picker`'s Python return value (`reason == "suppressed"`), NOT §1a's prose routing — so it does not cover R8; the new assertion in this task is what pins the structural branch.
 - **Verification**: `just test` (or the lifecycle subset) — pass if `test_lifecycle_step_v_ordering.py`, `test_lifecycle_enterworktree_callsites.py`, `test_lifecycle_picker_label_pins_worktree.py`, and `test_lifecycle_kept_pauses_parity.py` all pass, the step-v required-order list includes `cortex-worktree-precondition` and `EnterWorktree` and excludes `verify-worktree-auth`, AND a new assertion fails on a §1a missing the `suppressed-picker` skip marker.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 8: Supersede ADR-0006 and author the new ADR-0008
 - **Files**: `cortex/adr/0006-cortex-init-consumer-claude-md-authorization-surface.md`, `cortex/adr/0008-picker-selection-authorizes-enterworktree.md`
@@ -91,7 +91,7 @@ Implement Option B: delete the consumer-`CLAUDE.md` authorization-fence apparatu
 - **Complexity**: simple
 - **Context**: ADR numbering — 0007 is taken (`decompose-groups-pieces-into-tickets`), so the new ADR is **0008**. Follow the supersession protocol in `cortex/adr/README.md` (`status: superseded` + `superseded_by:` + new ADR). ADR-0006's three-subcommand decision body (5 subcommand references) is the superseded content. Match the existing ADR file shape (frontmatter `status:` + `# Title` + `## Context` / `## Decision` / `## Three-criteria gate clearance`).
 - **Verification**: `grep -c "status: superseded" cortex/adr/0006-*.md` = 1 AND `grep -c "superseded_by" cortex/adr/0006-*.md` = 1 AND `test -f cortex/adr/0008-*.md; echo $?` = 0 — pass if all hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 9: Reconcile ADR-0004 (both fence references) and ADR-0003
 - **Files**: `cortex/adr/0004-multi-step-complete-and-interactive-worktree-lifecycle.md`, `cortex/adr/0003-per-repo-sandbox-registration.md`
@@ -100,7 +100,7 @@ Implement Option B: delete the consumer-`CLAUDE.md` authorization-fence apparatu
 - **Complexity**: simple
 - **Context**: ADR-0004 is `accepted`; `ADR-0005` appears exactly once (line 49, the genuine mis-citation — ADR-0005 is "Repo-relative worktree placement", unrelated to the fence shape), so the `grep -c "ADR-0005" = 0` acceptance is safe. The fence is referenced in TWO places: Decision 2a (line 49) and section (c)(i) (line ~37); spec R15's "no accepted ADR asserts the fence write as a *live* decision" is satisfied by the 2a annotation, but leaving (c)(i) unannotated would strand a second stale fence reference. ADR-0003's invariant is at line 7; rejected-alternatives at 12.
 - **Verification**: `grep -c "ADR-0005" cortex/adr/0004-*.md` = 0 (in the fence-shape citation context) AND `cortex/adr/0003-*.md` contains a note referencing ADR-0008 that the consumer-`CLAUDE.md` write was removed AND both ADR-0004 fence references (lines ~37 and ~49) carry an ADR-0008 supersession annotation (verify by reading 0004 — Interactive/session-dependent: prose reconciliation a reader must confirm). Pass if the grep is 0 and all three prose notes are present.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 10: Reconcile backlog #249/#250/#267/#288 and project.md
 - **Files**: `cortex/backlog/250-lifecycle-implement-auto-enter-worktree-deferred.md`, `cortex/backlog/267-auto-apply-cortex-init-at-lifecycle-entry-via-cortex-init-ensure.md`, `cortex/backlog/288-explore-best-mechanism-for-lifecycle-worktree-entry-without-cortex-writing-to-consumer-claudemd.md`, `cortex/requirements/project.md`, `cortex/backlog/249-lifecycle-implement-auto-enter-worktree.md`
@@ -114,7 +114,7 @@ Implement Option B: delete the consumer-`CLAUDE.md` authorization-fence apparatu
 - **Complexity**: complex
 - **Context**: `project.md:41` currently reads "`cortex init` now appends a cortex-managed fenced `EnterWorktree` authorization clause … Three subcommands manage the clause lifetime (`cortex init` writes/replaces by version, `--revoke-worktree-auth` removes, `--verify-worktree-auth` probes). → ADR-0006". Rewrite to the no-fence / picker-selection model → ADR-0008. **Spec/reality note**: spec R16 labels #250 "the fence shipper" — verified false against the ticket (it is the deferred-decision ticket); this task writes the accurate note while still satisfying R16's acceptance (250 carries a supersession/resolution note referencing 0008). The `grep -c` acceptance is guarded by `tests/test_backlog_grep_targets_resolve.py` (which only checks lowercase-`[a-z_]` tokens — `0008` and the hyphenated verbs are filtered out, so the new notes do not trip it).
 - **Verification**: `grep -c "status: complete" cortex/backlog/249-*.md` = 1 AND `cortex/backlog/250-*.md` carries a resolution note (`grep -c "0008\|resolved\|superseded" cortex/backlog/250-*.md` ≥ 1) AND `cortex/backlog/267-*.md` carries a note referencing the fence-writer removal (`grep -c "0008\|removed\|obsolete" cortex/backlog/267-*.md` ≥ 1) AND `grep -c "revoke-worktree-auth\|verify-worktree-auth" cortex/requirements/project.md` = 0 AND `grep -rEl "ensure_claude_md_authorization|live_interactive_sessions|claude_md_authorization\.md|verify-worktree-auth|revoke-worktree-auth" cortex/backlog/` returns only tickets carrying an explicit historical/reconciliation note (no silent dangling reference) — pass if all hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 11: Final integration gate + confirm R11 is a no-op
 - **Files**: `tests/fixtures/complete_md_hard_guard.txt`, `skills/lifecycle/references/complete.md`, `docs/internals/sdk.md`
@@ -123,7 +123,7 @@ Implement Option B: delete the consumer-`CLAUDE.md` authorization-fence apparatu
 - **Complexity**: simple
 - **Context**: This task makes no edits to the three listed files — it asserts they require none (the R11 deviation surfaced in Risks). If `test_complete_md_hard_guard_snapshot.py` were to fail, that would signal an unexpected `complete.md` change introduced upstream and must be investigated before closing.
 - **Verification**: `just test` — pass if exit 0 and the full suite passes with no change to `complete.md`, `sdk.md`, or `complete_md_hard_guard.txt`.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ## Risks
 - **R11 deviation (spec says "update", plan says "no-op")**: Spec R11 directs updating `complete.md`/`sdk.md` exit prose to the manual `cd` exit and regenerating the snapshot. That text was carried from the Option-A (full-removal) blast radius, where `EnterWorktree`/`ExitWorktree` are deleted. Under **Option B those tools survive**, `complete.md:181`'s only reference is already conditional ("when EnterWorktree session state is live"), and `sdk.md:216` has no exit prose at all — so both are no-ops and the snapshot is unchanged (Task 11). Operator: confirm this reading; if you want the exit prose reworded for any other reason, say so and it becomes an edit task.
