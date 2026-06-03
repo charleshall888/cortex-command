@@ -1,29 +1,34 @@
 """Parity test pinning the operation order of implement.md §1a step v.
 
 The implement-phase reference at ``skills/lifecycle/references/implement.md``
-§1a step v (the "Auto-enter sequence") performs five operations in a
-load-bearing order:
+§1a step v (the "Auto-enter sequence") performs four operations on the
+``selected`` (picker-fired) entry-mode path in a load-bearing order:
 
   1. capture ``_origin_pwd`` (so we can restore CWD on fallback),
-  2. probe authorization via ``cortex init --verify-worktree-auth``
-     (cheap fast-fail when the consumer's CLAUDE.md fence is absent or
-     stale),
-  3. probe already-in-worktree state via ``cortex-worktree-precondition``
+  2. probe already-in-worktree state via ``cortex-worktree-precondition``
      (cheap fast-fail before EnterWorktree's "Must not already be in a
      worktree" rejection race),
-  4. call ``EnterWorktree(path=...)`` (the actual auto-enter), and
-  5. emit the ``interactive_worktree_entered`` event from inside the
+  3. call ``EnterWorktree(path=...)`` (the actual auto-enter), and
+  4. emit the ``interactive_worktree_entered`` event from inside the
      worktree (so ``_resolve_user_project_root_from_cwd()`` lands the row
      in the worktree's events.log, not the main repo's).
 
-Re-ordering any of these silently breaks observable behavior — e.g.,
-emitting the event before EnterWorktree completes would land the row in
-the wrong events.log; probing after EnterWorktree would either be
-redundant (verify-worktree-auth) or impossible to use as a fast-fail
-(cortex-worktree-precondition). This test extracts the step v block from
-``implement.md`` between the ``**Step v — Auto-enter sequence**`` anchor
-and the next ``**`` line-start boundary, then asserts the five tokens
-appear in the expected order.
+Under ADR-0008 the consumer-CLAUDE.md authorization fence was removed, so
+the former ``cortex init --verify-worktree-auth`` probe is gone — this
+module asserts the token is ABSENT. The ``suppressed`` (picker-suppressed,
+branch-mode: worktree-interactive) entry mode skips the precondition probe
+AND the EnterWorktree call entirely and routes structurally to the
+cd-shim; ``test_step_v_pins_suppressed_picker_skip`` pins that structural
+skip so a soft-gate implementation (one that keeps the EnterWorktree call
+and declines only at runtime) fails the suite.
+
+Re-ordering any of the four operations silently breaks observable behavior
+— e.g., emitting the event before EnterWorktree completes would land the
+row in the wrong events.log; probing after EnterWorktree would be
+impossible to use as a fast-fail (cortex-worktree-precondition). This test
+extracts the step v block from ``implement.md`` between the
+``**Step v — Auto-enter sequence**`` anchor and the next ``**`` line-start
+boundary, then asserts the four tokens appear in the expected order.
 
 The test catches operation-sequence regressions that the presence-only
 greps in T10's verification cannot catch (R11 of
@@ -59,11 +64,23 @@ _BLOCK_PATTERN = re.compile(
 # call syntax, and event names that the implementation depends on.
 _REQUIRED_ORDER = (
     "_origin_pwd",
-    "verify-worktree-auth",
     "cortex-worktree-precondition",
     "EnterWorktree(",
     "interactive_worktree_entered",
 )
+
+# The suppressed-picker structural-skip marker. Per ADR-0008, when §1's
+# branch-mode preflight suppresses the picker (branch-mode:
+# worktree-interactive), §1a step v must skip the EnterWorktree call
+# STRUCTURALLY and route to the cd-shim — not keep the call and decline it
+# at runtime. This literal anchors that structural skip; a soft-gate-only
+# implementation omits it and fails test_step_v_pins_suppressed_picker_skip.
+_SUPPRESSED_SKIP_MARKER = "EnterWorktree skipped: suppressed-picker"
+
+# The removed fence-probe token. ADR-0008 deleted the consumer-CLAUDE.md
+# fence, so ``cortex init --verify-worktree-auth`` no longer exists; the
+# step v block must not reference it.
+_REMOVED_VERIFY_TOKEN = "verify-worktree-auth"
 
 
 def _extract_step_v_block() -> str:
@@ -136,3 +153,41 @@ def test_step_v_operations_appear_in_required_order() -> None:
             "before EnterWorktree completes lands the row in the wrong "
             "events.log). Restore the canonical order."
         )
+
+
+def test_step_v_omits_removed_verify_probe() -> None:
+    """The deleted ``--verify-worktree-auth`` probe must not reappear.
+
+    ADR-0008 removed the consumer-CLAUDE.md authorization fence and the
+    ``cortex init --verify-worktree-auth`` probe that read it. A regression
+    re-adding the probe to the auto-enter sequence would reintroduce the
+    fence dependency this lifecycle removed.
+    """
+    block = _extract_step_v_block()
+    assert _REMOVED_VERIFY_TOKEN not in block, (
+        f"§1a step v references the removed token {_REMOVED_VERIFY_TOKEN!r}. "
+        "ADR-0008 deleted the consumer-CLAUDE.md fence and its "
+        "verify-worktree-auth probe — the auto-enter sequence must not "
+        "depend on it. Remove the reference from implement.md §1a step v."
+    )
+
+
+def test_step_v_pins_suppressed_picker_skip() -> None:
+    """Pin the suppressed-picker entry mode's STRUCTURAL EnterWorktree skip.
+
+    Per ADR-0008, when §1's branch-mode preflight suppresses the picker
+    (branch-mode: worktree-interactive), §1a step v must skip the
+    EnterWorktree call structurally and route to the cd-shim. The marker
+    ``EnterWorktree skipped: suppressed-picker`` is the anchor: a soft-gate
+    implementation that keeps the EnterWorktree call and relies only on the
+    runtime fallback would omit it. This test fails such an implementation.
+    """
+    block = _extract_step_v_block()
+    assert _SUPPRESSED_SKIP_MARKER in block, (
+        "§1a step v is missing the suppressed-picker structural-skip marker "
+        f"{_SUPPRESSED_SKIP_MARKER!r}. The suppressed entry mode "
+        "(branch-mode: worktree-interactive) must skip the EnterWorktree "
+        "call structurally and route to the cd-shim (ADR-0008) — not keep "
+        "the call and decline it at runtime. Restore the structural branch "
+        "in implement.md §1a step v operation 2."
+    )

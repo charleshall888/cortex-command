@@ -9,11 +9,10 @@ surface that the auto-enter sequence depends on. Concretely, within
       enters is materialized by the same skill prose, not by an
       out-of-band path, and
   (b) at least one of the structural precondition tokens
-      (``show-toplevel``, ``git-common-dir``, ``verify-worktree-auth``,
-      ``EnterWorktree skipped``) — proving the precondition probes
-      and fallback diagnostic are co-located with the call rather
-      than separated into a remote section that could be removed
-      without the call site noticing.
+      (``show-toplevel``, ``git-common-dir``, ``EnterWorktree skipped``)
+      — proving the precondition probes and fallback diagnostic are
+      co-located with the call rather than separated into a remote
+      section that could be removed without the call site noticing.
 
 This catches wholesale removals or splits of the auto-enter sequence
 that the step-v ordering parity test (``test_lifecycle_step_v_ordering.py``)
@@ -63,7 +62,6 @@ _CREATE_WORKTREE_TOKEN = "create_worktree"
 _PRECONDITION_TOKENS = (
     "show-toplevel",
     "git-common-dir",
-    "verify-worktree-auth",
     "EnterWorktree skipped",
 )
 
@@ -169,10 +167,10 @@ def test_callsite_has_precondition_token_within_proximity(
 ) -> None:
     """Each call site must have ≥1 precondition token within ±60 lines.
 
-    At least one of ``show-toplevel``, ``git-common-dir``,
-    ``verify-worktree-auth``, or ``EnterWorktree skipped`` must appear
-    in the proximity window. Their absence indicates the precondition
-    probes and fallback diagnostic have been split from the call site —
+    At least one of ``show-toplevel``, ``git-common-dir``, or
+    ``EnterWorktree skipped`` must appear in the proximity window. Their
+    absence indicates the precondition probes and fallback diagnostic
+    have been split from the call site —
     a structural regression that would let the EnterWorktree call fire
     without its supporting authorization and already-in-worktree probes
     (or without a documented fallback when they fail).
