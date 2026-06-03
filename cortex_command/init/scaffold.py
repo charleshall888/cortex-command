@@ -28,26 +28,11 @@ Exposed surface (consumed by Tasks 4, 5, 6, 9):
         Idempotent ``.gitignore`` append of ``.cortex-init`` and
         ``.cortex-init-backup/``. Repairs orphan-prefix fragments left by a
         truncated prior append.
-    ensure_claude_md_authorization(repo_root) -> bool
-        Idempotent splice of the cortex-managed ``EnterWorktree`` authorization
-        fence into consumer ``CLAUDE.md`` (R5). Returns True if the file was
-        written, False if the fence was already current.
-    revoke_claude_md_authorization(repo_root) -> bool
-        Idempotent removal of the cortex-managed authorization fence from
-        consumer ``CLAUDE.md`` (R7). Returns True if the file was written
-        (fence was present and removed), False if the fence was already
-        absent.
-    live_interactive_sessions(repo_root) -> list[Path]
-        Return ``cortex/lifecycle/sessions/*.interactive.pid`` files whose
-        contents map to live PIDs. Consumed by the ``--revoke-worktree-auth``
-        pre-condition check (R7).
 """
 
 from __future__ import annotations
 
 import datetime
-import errno
-import glob
 import hashlib
 import importlib.metadata
 import json
@@ -84,37 +69,11 @@ _HASH_INPUT_TEMPLATES: tuple[str, ...] = (
     "cortex/backlog/README.md",
     "cortex/lifecycle/README.md",
     "cortex/requirements/project.md",
-    "claude_md_authorization.md",
 )
 
 # Target scaffold paths inspected by the content-aware decline gate (R19).
 # A populated non-marker repo with any of these present fires the gate.
 _CONTENT_DECLINE_TARGETS = ("cortex",)
-
-# Authorization-fence template lives under templates/ but is NOT a scaffold
-# target — it is read directly by ``ensure_claude_md_authorization`` and spliced
-# into consumer CLAUDE.md, never copied to the repo root verbatim. Excluded
-# from ``_iter_template_files`` so ``scaffold()`` and ``drift_files()`` ignore
-# it.
-_CLAUDE_MD_AUTH_TEMPLATE = "claude_md_authorization.md"
-
-# Canonical version of the cortex-managed CLAUDE.md authorization fence. The
-# stale predicate compares the in-fence ``version=N`` attribute against this
-# constant: when the in-fence version is strictly less, the fence is rewritten
-# from the current template body. Increment when the template body changes so
-# existing installs pick up the new clause on the next ``cortex init`` run.
-_CLAUDE_MD_AUTH_VERSION = 1
-
-# Fence sigils. The opening fence carries a ``version=N`` attribute parsed by
-# ``_parse_claude_md_auth_fence``; the closing fence is fixed text.
-_CLAUDE_MD_AUTH_FENCE_OPEN_PREFIX = "<!-- cortex-managed: lifecycle-worktree-auth"
-_CLAUDE_MD_AUTH_FENCE_CLOSE = "<!-- cortex-managed end -->"
-# Matches the full opening sigil and captures the integer version. The trailing
-# ``-->`` is the literal HTML-comment close; whitespace between tokens is
-# permitted but the structure is fixed.
-_CLAUDE_MD_AUTH_FENCE_OPEN_RE = re.compile(
-    r"<!--\s*cortex-managed:\s*lifecycle-worktree-auth\s+version=(\d+)\s*-->"
-)
 
 
 def _compute_init_artifacts_hash() -> str:
@@ -124,8 +83,7 @@ def _compute_init_artifacts_hash() -> str:
     template's bytes via ``_TEMPLATE_ROOT.joinpath(...)``, normalizes each to
     a canonical form (CRLF→LF, BOM strip, single trailing newline), then
     feeds serialized literals that also affect init outputs:
-    ``repr(_GITIGNORE_TARGETS)``, ``str(_CLAUDE_MD_AUTH_VERSION)``, and
-    the fixed string ``b"cortex/"``.
+    ``repr(_GITIGNORE_TARGETS)`` and the fixed string ``b"cortex/"``.
 
     The hash covers every user-visible init output so that ``cortex init
     --ensure`` can detect drift across CLI releases without a version bump.
@@ -146,7 +104,6 @@ def _compute_init_artifacts_hash() -> str:
         h.update(normalized)
     # Append serialized literals that affect user-visible init outputs.
     h.update(repr(_GITIGNORE_TARGETS).encode())
-    h.update(str(_CLAUDE_MD_AUTH_VERSION).encode())
     h.update(b"cortex/")
     return f"v1:{h.hexdigest()}"
 
@@ -292,14 +249,6 @@ def _iter_template_files() -> list[tuple[Traversable, Path]]:
         for child in node.iterdir():
             child_rel = rel / child.name
             if child.is_file():
-                # Skip the authorization-fence template: it is spliced into
-                # consumer CLAUDE.md by ``ensure_claude_md_authorization``,
-                # not copied to the repo root as a scaffold target.
-                if (
-                    rel == Path()
-                    and child.name == _CLAUDE_MD_AUTH_TEMPLATE
-                ):
-                    continue
                 results.append((child, child_rel))
             elif child.is_dir():
                 _walk(child, child_rel)
@@ -619,272 +568,3 @@ def ensure_gitignore(repo_root: Path) -> None:
     if "# cortex/" not in existing_lines:
         new_content += "# cortex/\n"
     atomic_write(gitignore_path, new_content)
-
-
-def _read_claude_md_auth_template() -> str:
-    """Return the canonical authorization-clause body (without fence sigils).
-
-    The template lives under ``cortex_command/init/templates/`` and is read via
-    ``importlib.resources`` so the lookup works under both editable and
-    non-editable wheel installs. Trailing whitespace is stripped from the body
-    so the rendered fence has a deterministic shape regardless of how the
-    template file is saved.
-    """
-    body = (_TEMPLATE_ROOT / _CLAUDE_MD_AUTH_TEMPLATE).read_text(encoding="utf-8")
-    return body.rstrip("\n")
-
-
-def _render_claude_md_auth_block(version: int) -> str:
-    """Render the cortex-managed fence block at ``version``.
-
-    The block is the opening sigil with ``version=N``, the canonical body, and
-    the closing sigil — joined by newlines, terminated with a trailing newline
-    so consumer CLAUDE.md keeps a clean line-oriented shape after the splice.
-    """
-    body = _read_claude_md_auth_template()
-    open_sigil = f"<!-- cortex-managed: lifecycle-worktree-auth version={version} -->"
-    return f"{open_sigil}\n{body}\n{_CLAUDE_MD_AUTH_FENCE_CLOSE}\n"
-
-
-def _find_claude_md_auth_fence(content: str) -> tuple[int, int, int] | None:
-    """Locate the cortex-managed authorization fence inside ``content``.
-
-    Returns a ``(start, end, version)`` triple when present, where ``start``
-    is the index of the opening sigil's first character, ``end`` is the index
-    one past the closing sigil's last character (so ``content[start:end]``
-    yields the full fence block), and ``version`` is the parsed integer from
-    the opening sigil. The slice intentionally does not include the trailing
-    newline that follows the closing sigil — splice callers handle separator
-    fixup explicitly.
-
-    Returns ``None`` when no opening sigil is found, or when an opening sigil
-    is found but no closing sigil follows it (malformed fence — treat as
-    absent so the next ``cortex init`` run rewrites the block cleanly).
-    """
-    open_match = _CLAUDE_MD_AUTH_FENCE_OPEN_RE.search(content)
-    if open_match is None:
-        return None
-    close_idx = content.find(_CLAUDE_MD_AUTH_FENCE_CLOSE, open_match.end())
-    if close_idx == -1:
-        # Opening sigil with no closing sigil — treat as absent so the
-        # next run rewrites a well-formed fence. The orphan opening sigil
-        # is overwritten by the splice in ensure_claude_md_authorization.
-        return None
-    end = close_idx + len(_CLAUDE_MD_AUTH_FENCE_CLOSE)
-    version = int(open_match.group(1))
-    return open_match.start(), end, version
-
-
-def ensure_claude_md_authorization(repo_root: Path) -> bool:
-    """Idempotently splice the cortex-managed authorization fence into CLAUDE.md.
-
-    Mirrors :func:`ensure_gitignore`'s additive-idempotent shape (R5). On each
-    invocation:
-
-    - If consumer ``CLAUDE.md`` is absent, create it containing only the fence
-      block (callers that want to preserve a missing-file invariant should
-      gate the call upstream — this function treats absence as "write fresh").
-    - If the fence is absent, append the canonical fence block (with a
-      leading blank-line separator when the existing content does not already
-      end with a newline pair).
-    - If the fence is present with ``version`` equal to the canonical version,
-      no-op (return False).
-    - If the fence is present with ``version`` strictly less than the
-      canonical version, replace the entire fence block with the current
-      canonical body. In-fence user edits are NOT preserved by design —
-      this is the "latest writer wins" policy declared in ADR-0006.
-
-    User-authored prose OUTSIDE the fence is never touched.
-
-    Args:
-        repo_root: Target repo root. The fence is spliced into
-            ``repo_root / CLAUDE.md``.
-
-    Returns:
-        ``True`` if the file was written (created, appended, or replaced),
-        ``False`` if the fence was already current and no write occurred.
-    """
-    claude_md_path = repo_root / "CLAUDE.md"
-    canonical = _render_claude_md_auth_block(_CLAUDE_MD_AUTH_VERSION)
-
-    if not claude_md_path.exists():
-        atomic_write(claude_md_path, canonical)
-        return True
-
-    original = claude_md_path.read_text(encoding="utf-8")
-    located = _find_claude_md_auth_fence(original)
-
-    if located is None:
-        # Append branch: fence absent, splice canonical block at end. Ensure
-        # there is a blank line separator between any prior user content and
-        # the fence so the spliced block stands on its own.
-        if original and not original.endswith("\n"):
-            original += "\n"
-        if original and not original.endswith("\n\n"):
-            original += "\n"
-        new_content = original + canonical
-        atomic_write(claude_md_path, new_content)
-        return True
-
-    start, end, version = located
-    if version == _CLAUDE_MD_AUTH_VERSION:
-        # Present-and-current: no-op. In-fence user edits are not detected
-        # here by design (R5's "latest writer wins, no in-fence user edits
-        # respected" policy — the version sigil is the only signal).
-        return False
-
-    if version > _CLAUDE_MD_AUTH_VERSION:
-        # Future-version fence (e.g., consumer ran a newer cortex-command and
-        # then downgraded). Treat as current — refuse to silently rewrite a
-        # newer fence with our older canonical body. No-op.
-        return False
-
-    # Replace branch: strip the existing fence range and splice the canonical
-    # block in its place. The slice excludes the trailing newline that
-    # followed the closing sigil; preserve it via the prefix/suffix join so
-    # the surrounding line structure is intact.
-    prefix = original[:start]
-    suffix = original[end:]
-    # The canonical block already ends with ``\n``. If the prior suffix
-    # started immediately after the closing sigil with no newline (the fence
-    # sat at end-of-file with no trailing newline), the canonical's own
-    # trailing newline absorbs that case cleanly. If the suffix begins with
-    # ``\n``, drop one to avoid a double blank line.
-    if suffix.startswith("\n"):
-        suffix = suffix[1:]
-    new_content = prefix + canonical + suffix
-    atomic_write(claude_md_path, new_content)
-    return True
-
-
-def revoke_claude_md_authorization(repo_root: Path) -> bool:
-    """Idempotently remove the cortex-managed authorization fence (R7).
-
-    Mirrors :func:`ensure_claude_md_authorization`'s atomic-write shape but in
-    reverse: strips the fence block from consumer ``CLAUDE.md`` when present,
-    no-ops when absent. User-authored prose outside the fence is never touched.
-
-    Removal semantics:
-        - If consumer ``CLAUDE.md`` is absent or empty, no-op (return False).
-        - If the fence is absent, no-op (return False).
-        - If the fence is present, slice it out (including the trailing
-          newline that followed the closing sigil) and rewrite the file. If
-          the resulting file ends with ``\\n\\n`` (double blank tail because
-          the fence was preceded by a blank-line separator), collapse the
-          trailing double-newline to a single newline so the rewritten file
-          stays clean.
-
-    Args:
-        repo_root: Target repo root. The fence is removed from
-            ``repo_root / CLAUDE.md``.
-
-    Returns:
-        ``True`` if the file was written (fence was present and removed),
-        ``False`` if the fence was already absent and no write occurred.
-    """
-    claude_md_path = repo_root / "CLAUDE.md"
-    if not claude_md_path.exists():
-        return False
-
-    original = claude_md_path.read_text(encoding="utf-8")
-    located = _find_claude_md_auth_fence(original)
-    if located is None:
-        return False
-
-    start, end, _version = located
-    prefix = original[:start]
-    suffix = original[end:]
-    # ``_find_claude_md_auth_fence`` returns ``end`` one past the closing
-    # sigil's last character — the trailing newline that followed the
-    # closing sigil is in ``suffix``. Drop one leading newline from
-    # ``suffix`` so the line that contained the closing sigil is removed
-    # entirely rather than leaving an empty line behind.
-    if suffix.startswith("\n"):
-        suffix = suffix[1:]
-
-    new_content = prefix + suffix
-
-    # Collapse a trailing blank-line pair left behind by the append-branch
-    # blank-line separator (``ensure_claude_md_authorization`` inserts a
-    # blank line before the fence). After removing the fence and its closing
-    # newline, the file may end with ``\n\n``; trim to a single trailing
-    # newline so the rewritten file matches the conventional line-oriented
-    # shape.
-    while new_content.endswith("\n\n"):
-        new_content = new_content[:-1]
-
-    atomic_write(claude_md_path, new_content)
-    return True
-
-
-def _pid_is_live(pid: int) -> bool:
-    """Probe whether ``pid`` corresponds to a live process.
-
-    Uses the canonical ``os.kill(pid, 0)`` pattern (see
-    ``cortex_command/interactive_lock.py:283`` and
-    ``cortex_command/lifecycle_implement.py:96``). ``ESRCH`` means dead;
-    any other ``OSError`` (notably ``EPERM`` — process exists but we lack
-    permission to signal it) is treated conservatively as live.
-    """
-    if pid <= 0:
-        return False
-    try:
-        os.kill(pid, 0)
-    except OSError as exc:
-        if exc.errno == errno.ESRCH:
-            return False
-        # EPERM or other errno: process exists, conservatively treat as live.
-        return True
-    return True
-
-
-def live_interactive_sessions(repo_root: Path) -> list[Path]:
-    """Return live ``cortex/lifecycle/sessions/*.interactive.pid`` files.
-
-    Scans the sessions directory for ``*.interactive.pid`` files; for each,
-    reads the first whitespace-delimited token and parses it as an integer
-    PID; filters out files whose contents are missing, malformed, or map to
-    dead PIDs. The returned list contains only files whose PID is currently
-    live per the canonical ``os.kill(pid, 0)`` liveness probe.
-
-    Used by the ``--revoke-worktree-auth`` pre-condition check (R7): when
-    this list is non-empty, revocation refuses with exit 2 unless ``--force``
-    is passed.
-
-    Args:
-        repo_root: Target repo root. Scans
-            ``repo_root / cortex/lifecycle/sessions/*.interactive.pid``.
-
-    Returns:
-        Sorted list of absolute paths whose contents map to live PIDs. Empty
-        list when the sessions directory does not exist, contains no pid
-        files, or all pid files are stale.
-    """
-    sessions_dir = repo_root / "cortex" / "lifecycle" / "sessions"
-    if not sessions_dir.exists():
-        return []
-
-    pattern = str(sessions_dir / "*.interactive.pid")
-    candidates = sorted(glob.glob(pattern))
-
-    live: list[Path] = []
-    for candidate in candidates:
-        path = Path(candidate)
-        try:
-            text = path.read_text(encoding="utf-8")
-        except OSError:
-            # Unreadable pid file — treat conservatively as absent (skip).
-            continue
-        # The first whitespace-delimited token is the PID; tolerate
-        # trailing newlines or comments.
-        first = text.strip().split()
-        if not first:
-            continue
-        try:
-            pid = int(first[0])
-        except ValueError:
-            # Malformed pid file — treat as stale (skip).
-            continue
-        if _pid_is_live(pid):
-            live.append(path)
-    return live
