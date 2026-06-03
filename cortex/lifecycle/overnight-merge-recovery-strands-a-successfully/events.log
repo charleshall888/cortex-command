@@ -3,3 +3,5 @@
 {"ts": "2026-06-02T15:47:24Z", "event": "complexity_override", "feature": "overnight-merge-recovery-strands-a-successfully", "to": "complex", "rationale": "Reconcile lifecycle state with Clarify assessment (5+ files across pipeline+overnight, shared failure-recovery orchestration); seed lifecycle_start defaulted to simple before Clarify ran"}
 {"ts": "2026-06-02T15:47:24Z", "event": "criticality_override", "feature": "overnight-merge-recovery-strands-a-successfully", "to": "high", "rationale": "Reconcile lifecycle state with Clarify assessment (overnight-runner failure-recovery infrastructure); seed lifecycle_start defaulted to medium before Clarify ran"}
 {"ts": "2026-06-02T16:07:07Z", "event": "spec_approved", "feature": "overnight-merge-recovery-strands-a-successfully"}
+{"ts": "2026-06-03T15:57:38Z", "event": "plan_approved", "feature": "overnight-merge-recovery-strands-a-successfully"}
+{"ts": "2026-06-03T15:57:38Z", "event": "phase_transition", "feature": "overnight-merge-recovery-strands-a-successfully", "from": "plan", "to": "implement"}

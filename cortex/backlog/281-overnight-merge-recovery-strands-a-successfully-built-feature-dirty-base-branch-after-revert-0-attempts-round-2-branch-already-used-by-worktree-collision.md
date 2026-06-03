@@ -2,15 +2,16 @@
 schema_version: "1"
 uuid: 9486d024-5a83-4382-874c-6c3f4448bfdc
 title: "Overnight merge-recovery strands a successfully-built feature: 'dirty base branch after revert' (0 attempts) + round-2 'branch already used by worktree' collision"
-status: refined
+status: in_progress
 priority: high
 type: bug
 created: 2026-06-02
-updated: 2026-06-02
+updated: 2026-06-03
 complexity: complex
 criticality: high
 spec: cortex/lifecycle/overnight-merge-recovery-strands-a-successfully/spec.md
 areas: ['overnight-runner']
+lifecycle_phase: plan
 ---
 **Why:** In overnight session `overnight-2026-06-02-1312` (2026-06-02), feature 025 (`build-the-grinder-agnostic-knowledge-layer`) implemented its **full spec correctly** — 12 clean commits, +520/-24 across 12 files (notation contract, DF64V quick-ref + deep-dive companion, per-grinder template, CLAUDE.md index entry, and the de-Setting of 6 shared knowledge files) on `pipeline/build-the-grinder-agnostic-knowledge-layer`. But it **never merged**, and the session reported `0/3` and opened a `[ZERO PROGRESS]` PR. The merge layer failed in two stages:
 
