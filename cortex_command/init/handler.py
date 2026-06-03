@@ -15,27 +15,17 @@ runs the pre-flight gates in the ADR-3 sequence, and dispatches to
     4. marker-present / content-aware decline gates (R6, R19).
     5. scaffold writes + backup (``--force``) / drift (``--update``).
     6. ``ensure_gitignore``.
-    6b. ``ensure_claude_md_authorization`` — splice the cortex-managed
-        ``EnterWorktree`` authorization fence into consumer ``CLAUDE.md``
-        (R5).
     7. ``settings_merge.register`` (last — if it fails, repo is scaffolded
        and ``cortex init --update`` recovers idempotently).
 
 Exit codes:
-    0 -- success. For ``--verify-worktree-auth``, also signals the
-         cortex-managed CLAUDE.md fence is present at the current
-         canonical version (R20).
+    0 -- success.
     2 -- user-correctable gate failure (not-a-repo, submodule, clobber,
          malformed settings, symlink escape). Covers R2, R3, R6, R13,
          R14, R19. Translated from :class:`ScaffoldError` and
          :class:`SettingsMergeError` at the top level of :func:`main`.
-         Also returned by ``--verify-worktree-auth`` when the fence is
-         present but stale (in-fence ``version`` strictly below the
-         canonical version).
     1 -- unexpected runtime failure (disk full, permission error at write
-         time). Any other exception propagates here. Also returned by
-         ``--verify-worktree-auth`` when the fence is absent (CLAUDE.md
-         missing or no opening sigil found).
+         time). Any other exception propagates here.
 """
 
 from __future__ import annotations
@@ -143,7 +133,7 @@ def _run_ensure(args: argparse.Namespace) -> int:
     the pre-flight ``validate_settings`` and the post-dispatch
     ``register`` / ``unregister_matching_in_place`` calls are removed so
     ``--ensure`` never trips the session sandbox. Repo-scope writes
-    (``cortex/`` scaffold, ``.gitignore``, ``CLAUDE.md`` fence) remain.
+    (``cortex/`` scaffold, ``.gitignore``) remain.
     """
     # (a) CORTEX_AUTO_ENSURE=0 opt-out (R7). First check; writes nothing.
     if os.environ.get("CORTEX_AUTO_ENSURE") == "0":
@@ -244,7 +234,6 @@ def _run_ensure(args: argparse.Namespace) -> int:
     # under the session sandbox. Terminal `cortex init`/`--update` still
     # performs the grant write and the migration.
     scaffold.ensure_gitignore(repo_root)
-    scaffold.ensure_claude_md_authorization(repo_root)
 
     return 0
 
@@ -364,86 +353,6 @@ def _run(args: argparse.Namespace) -> int:
         settings_merge.unregister(resolved_path, cortex_target_path, home=home)
         return 0
 
-    # Step 0b: --revoke-worktree-auth early-branch (R7). Revocation is a
-    # CLAUDE.md-rollback verb; it skips scaffold/settings entirely and only
-    # touches the cortex-managed fence. The git-repo gate (R2) still runs
-    # because the live-session pre-condition scans
-    # ``cortex/lifecycle/sessions/`` under ``repo_root`` — we need a
-    # resolved repo path. Submodule gate (R3) runs in
-    # ``_resolve_repo_root`` as a side effect.
-    if getattr(args, "revoke_worktree_auth", False):
-        repo_root = _resolve_repo_root(args.path)
-
-        claude_md_path = repo_root / "CLAUDE.md"
-        # No fence on disk → no-op success (idempotent absent → 0).
-        if claude_md_path.exists():
-            content = claude_md_path.read_text(encoding="utf-8")
-            fence_present = scaffold._find_claude_md_auth_fence(content) is not None
-        else:
-            fence_present = False
-        if not fence_present:
-            return 0
-
-        # Fence present: check the live-session pre-condition unless
-        # --force bypasses it. Live = a ``*.interactive.pid`` file whose
-        # contents map to a live PID per the canonical liveness probe.
-        if not getattr(args, "force", False):
-            live = scaffold.live_interactive_sessions(repo_root)
-            if live:
-                print(
-                    "`cortex init --revoke-worktree-auth`: refusing — "
-                    "live interactive session(s) depend on the "
-                    "EnterWorktree authorization fence:",
-                    file=sys.stderr,
-                )
-                for pid_file in live:
-                    print(f"  - {pid_file}", file=sys.stderr)
-                print(
-                    "",
-                    file=sys.stderr,
-                )
-                print(
-                    "Re-run with --force to revoke anyway "
-                    "(the live session's next EnterWorktree call will "
-                    "fail closed).",
-                    file=sys.stderr,
-                )
-                return 2
-
-        scaffold.revoke_claude_md_authorization(repo_root)
-        return 0
-
-    # Step 0c: --verify-worktree-auth early-branch (R20). Verification is a
-    # read-only probe of the cortex-managed CLAUDE.md fence; it skips
-    # scaffold/settings entirely. The git-repo gate (R2) still runs so
-    # ``CLAUDE.md`` is resolved relative to a real repo root rather than
-    # an arbitrary CWD. Exit codes per R20: 0 fence present at canonical
-    # version, 1 fence absent (CLAUDE.md missing or no sigil), 2 fence
-    # present but stale (in-fence ``version=N`` strictly below canonical).
-    # Uses the same sigil parser as ensure/revoke so the three branches
-    # share one source of truth.
-    if getattr(args, "verify_worktree_auth", False):
-        repo_root = _resolve_repo_root(args.path)
-
-        claude_md_path = repo_root / "CLAUDE.md"
-        if not claude_md_path.exists():
-            return 1
-
-        content = claude_md_path.read_text(encoding="utf-8")
-        located = scaffold._find_claude_md_auth_fence(content)
-        if located is None:
-            return 1
-
-        _start, _end, version = located
-        if version < scaffold._CLAUDE_MD_AUTH_VERSION:
-            return 2
-        # Equal or future-version fences both count as "present at the current
-        # canonical version" from the probe's perspective: the lifecycle
-        # skill's §1a path only needs to know the gate is satisfied, and a
-        # future-version fence written by a newer cortex-command does satisfy
-        # it (the newer body is a superset commitment to the same surface).
-        return 0
-
     # Step 0d: --ensure early-branch (R4–R8). Hash-compare dispatch for
     # automated drift recovery. Ordered gate sequence:
     # (a) CORTEX_AUTO_ENSURE=0 opt-out → silent no-op (R7).
@@ -513,15 +422,6 @@ def _run(args: argparse.Namespace) -> int:
     # branches above may or may not have touched .gitignore.
     scaffold.ensure_gitignore(repo_root)
 
-    # Step 6b: idempotent CLAUDE.md authorization-fence splice (R5). Writes
-    # the cortex-managed ``EnterWorktree`` authorization clause to consumer
-    # CLAUDE.md when absent or when the in-fence version is stale; no-op when
-    # the fence is already at the canonical version. Runs after ensure_gitignore
-    # so any new CLAUDE.md write does not race the gitignore append, and before
-    # settings_merge.register so a settings-merge failure still leaves a
-    # well-formed CLAUDE.md the lifecycle skill can read on the next run.
-    scaffold.ensure_claude_md_authorization(repo_root)
-
     # Step 7: register allowWrite entry last (ADR-3). A single umbrella
     # cortex/ grant covers all cortex-managed state under the repo root;
     # no TOCTOU re-resolve is needed because repo_root was resolved once
@@ -547,15 +447,8 @@ def main(args: argparse.Namespace) -> int:
         path                  -- optional target directory (defaults to ``os.getcwd()``).
         update                -- bool, additive scaffold + drift report.
         force                 -- bool modifier: with the default scaffold path,
-                                 enables backup + overwrite; with
-                                 ``--revoke-worktree-auth``, bypasses the
-                                 live-session pre-condition.
+                                 enables backup + overwrite.
         unregister            -- bool, remove allowWrite entry and return.
-        revoke_worktree_auth  -- bool, remove the cortex-managed CLAUDE.md
-                                 authorization fence and return.
-        verify_worktree_auth  -- bool, probe the cortex-managed CLAUDE.md
-                                 authorization fence (read-only) and exit
-                                 with 0/1/2 per R20.
         ensure                -- bool, hash-compare dispatch: no-op when
                                  hash matches; refresh when mismatch;
                                  bootstrap when cortex/ absent/empty;
@@ -563,17 +456,13 @@ def main(args: argparse.Namespace) -> int:
                                  marker (R4–R8). Honors
                                  ``CORTEX_AUTO_ENSURE=0`` opt-out.
 
-    ``--update``, ``--unregister``, ``--revoke-worktree-auth``,
-    ``--verify-worktree-auth``, and ``--ensure`` are mutually exclusive at
-    argparse time; ``--force`` is a modifier and may combine with the
-    default invocation or with ``--revoke-worktree-auth``. This handler
-    does not re-check the mutex.
+    ``--update``, ``--unregister``, and ``--ensure`` are mutually exclusive
+    at argparse time; ``--force`` is a modifier and may combine with the
+    default invocation. This handler does not re-check the mutex.
 
     Returns:
-        Exit code -- 0 success (or fence present at canonical version for
-        ``--verify-worktree-auth``), 2 user-correctable gate failure (incl.
-        R7's live-session refusal, R20's stale fence), 1 on unexpected
-        runtime failure (or R20's absent fence).
+        Exit code -- 0 success, 2 user-correctable gate failure, 1 on
+        unexpected runtime failure.
     """
     try:
         return _run(args)
