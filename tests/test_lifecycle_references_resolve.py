@@ -77,6 +77,14 @@ KNOWN_PROSE_COLLISIONS: tuple[tuple[str, str], ...] = (
         "backlog",
         "cortex/research/cortex-init-scope-reduction/gap2-load-bearing-decomposition.md",
     ),
+    # Review prose names test-suite categories ("the lifecycle/init/snapshot
+    # suites"); ``init`` is a slash-joined prose token for a test-suite group,
+    # not a feature slug. The doc is a completed-lifecycle artifact (immutable
+    # history), so it is exempted here rather than reworded.
+    (
+        "init",
+        "cortex/lifecycle/explore-best-mechanism-for-lifecycle-worktree/review.md",
+    ),
 )
 # When prose abbreviates `skills/lifecycle/references/<file>.md` to
 # `lifecycle/references/<file>.md`, the slug `references` is a path component
