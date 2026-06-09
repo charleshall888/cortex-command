@@ -2,7 +2,7 @@
 feature: morning-report-scans-all-lifecycle-dirs
 parent_backlog_uuid: e7baef47-a98a-4125-8ac3-9de563bff1db
 parent_backlog_id: 294
-artifacts: ["research", "spec", "plan"]
+artifacts: ["research", "spec", "plan", "review"]
 tags: []
 created: 2026-06-09
 updated: 2026-06-09
