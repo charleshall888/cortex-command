@@ -882,5 +882,49 @@ class TestR9FieldNameRenameDriftGuard(_PlanParseMixin, unittest.TestCase):
         self.assertEqual(plan.tasks[0].depends_on, [1])
 
 
+class TestSubTaskHeadingFailLoud(unittest.TestCase):
+    """Letter-suffixed sub-task headings (### Task Na) fail loud rather than
+    silently absorbing the sub-task into the preceding integer task."""
+
+    def setUp(self):
+        self._tmpdir = tempfile.TemporaryDirectory()
+
+    def tearDown(self):
+        self._tmpdir.cleanup()
+
+    def _parse(self, tasks_body: str) -> FeaturePlan:
+        plan_path = Path(self._tmpdir.name) / "plan.md"
+        plan_path.write_text(_make_plan(tasks_body), encoding="utf-8")
+        return parse_feature_plan(plan_path)
+
+    def test_subtask_heading_colon_raises(self):
+        """A ### Task 2a: sub-task heading raises (would otherwise be absorbed)."""
+        body = (
+            _task_block("### Task 1: Parent", Files="a.py", **{"Depends on": "none"})
+            + _task_block("### Task 2a: Sub-task", Files="b.py", **{"Depends on": "[1]"})
+        )
+        with self.assertRaises(ValueError):
+            self._parse(body)
+
+    def test_subtask_heading_dash_separator_raises(self):
+        """### Task 2b — Desc also raises; the separator normalizer leaves the
+        letter suffix intact, so the integer pattern still cannot capture it."""
+        body = (
+            _task_block("### Task 1: Parent", Files="a.py", **{"Depends on": "none"})
+            + "### Task 2b — Sub-task\n- **Files**: c.py\n- **Depends on**: [1]\n"
+        )
+        with self.assertRaises(ValueError):
+            self._parse(body)
+
+    def test_integer_only_plan_does_not_raise(self):
+        """Control: a plan with only integer task headings parses cleanly."""
+        body = (
+            _task_block("### Task 1: First", Files="a.py", **{"Depends on": "none"})
+            + _task_block("### Task 2: Second", Files="b.py", **{"Depends on": "[1]"})
+        )
+        plan = self._parse(body)
+        self.assertEqual([t.number for t in plan.tasks], [1, 2])
+
+
 if __name__ == "__main__":
     unittest.main()

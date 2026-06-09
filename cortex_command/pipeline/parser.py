@@ -316,6 +316,25 @@ def _parse_tasks(text: str, path: Path) -> tuple[list[FeatureTask], list[dict]]:
     )
     matches = list(task_pattern.finditer(text))
 
+    # Letter-suffixed sub-task headings like ``### Task 3a:`` are not captured
+    # by the integer-only ``task_pattern`` above; their bodies would be
+    # silently absorbed into the preceding integer task, dropping the
+    # sub-task's Files/Depends-on metadata from dispatch ordering. Fail loud
+    # rather than silently mis-parse — the same posture #293 took for the
+    # field parsers. Recognizing 3a/3b as first-class ordered units is a
+    # deferred data-model change (FeatureTask.number is an int and
+    # compute_dependency_batches keys on it); until then a letter-suffixed
+    # task heading is unrecoverable drift.
+    subtask = re.compile(r"^###\s+Task\s+\d+[A-Za-z]", re.MULTILINE).search(text)
+    if subtask is not None:
+        offending = subtask.group(0).strip()
+        raise ValueError(
+            f"Feature plan at {path} uses an unsupported sub-task heading "
+            f"({offending!r}); letter-suffixed task numbers (### Task Na) are "
+            f"not yet parseable and would silently drop the sub-task from "
+            f"dispatch ordering. Use integer task numbers."
+        )
+
     if not matches:
         raise ValueError(f"Feature plan at {path} has no task sections")
 
