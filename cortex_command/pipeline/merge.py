@@ -61,6 +61,30 @@ def _repo_root() -> Path:
     return Path(result.stdout.strip())
 
 
+def _revert_in_progress(repo: Path) -> bool:
+    """Return True iff a half-applied ``git revert`` is in progress in *repo*.
+
+    Resolves ``REVERT_HEAD`` via ``git rev-parse --git-path`` so the check is
+    correct for both a plain repo (``.git/REVERT_HEAD``) and a linked worktree
+    (``.git/worktrees/<name>/REVERT_HEAD``). A present ``REVERT_HEAD`` marks a
+    genuine conflicting revert mid-flight; its absence after a non-zero
+    ``git revert`` means the revert was a no-op (the merge was already
+    reverted), not a conflict.
+    """
+    result = subprocess.run(
+        ["git", "rev-parse", "--git-path", "REVERT_HEAD"],
+        capture_output=True,
+        text=True,
+        cwd=repo,
+    )
+    if result.returncode != 0:
+        return False
+    revert_head = result.stdout.strip()
+    if not revert_head:
+        return False
+    return (Path(repo) / revert_head).exists()
+
+
 def run_tests(test_command: str = None, cwd: str = None) -> TestResult:
     """Run the test command and return the result.
 
@@ -362,18 +386,27 @@ class RevertResult:
     """Result of attempting to revert a specific merge commit by SHA.
 
     ``success`` is True when ``git revert -m 1 <merge_sha>`` netted out the
-    merge cleanly (a revert commit now sits on the branch). On a conflicting
-    revert — typically because a later feature merged code that textually
-    depends on the reverted one (the dependent-conflict R-edge) —
-    ``revert_merge`` runs ``git revert --abort`` so no half-applied revert is
-    left behind, sets ``aborted=True``, and returns ``success=False`` so the
-    caller escalates to a blocking deferral. The merge genuinely remains on
-    the branch in that case.
+    merge cleanly (a revert commit now sits on the branch) OR when the merge
+    was *already* reverted before this call ran — in the latter case
+    ``already_reverted`` is also True and no new revert commit was created.
+    The already-reverted no-op arises on the rework path: ``merge_feature``
+    inline-reverts a cycle-1 re-merge on a post-merge test failure (logging
+    ``merge_revert_error``), so a subsequent rollback of that same re-merge
+    SHA would otherwise attempt a doomed double-revert. ``revert_merge``
+    queries branch state and reports this as success rather than escalating.
+
+    On a genuine conflicting revert — typically because a later feature merged
+    code that textually depends on the reverted one (the dependent-conflict
+    R-edge) — ``revert_merge`` runs ``git revert --abort`` so no half-applied
+    revert is left behind, sets ``aborted=True``, and returns
+    ``success=False`` so the caller escalates to a blocking deferral. The merge
+    genuinely remains on the branch in that case.
     """
 
     success: bool
     merge_sha: str
     aborted: bool = False
+    already_reverted: bool = False
     error: Optional[str] = None
 
 
@@ -394,10 +427,25 @@ def revert_merge(
     physical checkout shared across concurrently-running features and a
     concurrent ``git revert`` would corrupt the index.
 
-    The revert is captured, not ``check=True``: on a non-zero exit (a revert
-    conflict) this runs ``git revert --abort`` to leave no half-applied
-    revert, then returns ``RevertResult(success=False, aborted=True)`` so the
-    caller can escalate to a blocking deferral rather than crashing.
+    The revert is captured, not ``check=True``: on a non-zero exit this query
+    inspects actual branch state (``.git/REVERT_HEAD``) to tell two outcomes
+    apart, because both exit non-zero:
+
+    - **Already reverted** (no ``REVERT_HEAD``, clean tree, git prints
+      "nothing to commit"): the target merge was undone before this call —
+      e.g. the rework re-merge that ``merge_feature`` already inline-reverted
+      on a post-merge test failure. Returns
+      ``RevertResult(success=True, already_reverted=True)`` with no abort and
+      no escalation; attempting to revert it again would be a doomed
+      double-revert.
+    - **Genuine conflict** (``REVERT_HEAD`` present, half-applied revert):
+      runs ``git revert --abort`` so nothing half-applied remains, then
+      returns ``RevertResult(success=False, aborted=True)`` so the caller
+      escalates to a blocking deferral.
+
+    Because the caller holds ``ctx.lock``, no concurrent feature can advance
+    ``HEAD`` between the revert attempt and the ``REVERT_HEAD`` state query, so
+    this is not a TOCTOU race.
 
     Args:
         merge_sha: The merge commit SHA to revert (a two-parent ``--no-ff``
@@ -409,8 +457,9 @@ def revert_merge(
         feature: Feature name, recorded on logged events for identification.
 
     Returns:
-        RevertResult describing whether the revert landed, was aborted on
-        conflict, or failed for another reason.
+        RevertResult describing whether the revert landed, was a no-op because
+        the merge was already reverted, was aborted on conflict, or failed for
+        another reason.
     """
     repo = repo_path if repo_path is not None else _repo_root()
 
@@ -427,7 +476,32 @@ def revert_merge(
 
     if revert_result.returncode != 0:
         revert_error = revert_result.stderr.strip() or revert_result.stdout.strip()
-        # Abort so no half-applied revert remains in the shared index.
+
+        # Distinguish an already-reverted no-op from a genuine conflict by
+        # querying real branch state: a conflicting revert leaves a
+        # ``REVERT_HEAD`` (a half-applied revert), whereas reverting an
+        # already-reverted merge exits non-zero with a clean tree and no
+        # ``REVERT_HEAD`` ("nothing to commit"). Querying state here — rather
+        # than blindly aborting + escalating — avoids a failed double-revert
+        # escalating to a spurious blocking deferral on the rework path.
+        # ``git rev-parse --git-path`` resolves REVERT_HEAD's location for both
+        # a plain repo (``.git/REVERT_HEAD``) and a linked worktree (under
+        # ``.git/worktrees/<name>/``), so the check is worktree-layout-safe.
+        if not _revert_in_progress(repo):
+            _log({
+                "event": "merge_reverted",
+                "feature": feature,
+                "merge_sha": merge_sha,
+                "already_reverted": True,
+            })
+            return RevertResult(
+                success=True,
+                merge_sha=merge_sha,
+                already_reverted=True,
+            )
+
+        # Genuine conflict: abort so no half-applied revert remains in the
+        # shared index.
         subprocess.run(
             ["git", "revert", "--abort"],
             capture_output=True,
