@@ -1,0 +1,9 @@
+{"schema_version": 1, "ts": "2026-06-09T12:20:20Z", "event": "lifecycle_start", "feature": "overnight-plan-parser-drops-per-task", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-09T12:26:22Z", "event": "clarify_critic", "feature": "overnight-plan-parser-drops-per-task", "parent_epic_loaded": false, "findings_count": 5, "dispositions": {"apply": 5, "dismiss": 0, "ask": 0}, "applied_fixes_count": 5, "dismissals_count": 0, "status": "ok"}
+{"ts": "2026-06-09T12:41:11Z", "event": "complexity_override", "feature": "overnight-plan-parser-drops-per-task", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-06-09T12:41:11Z", "event": "criticality_override", "feature": "overnight-plan-parser-drops-per-task", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-06-09T13:34:45Z", "event": "spec_approved", "feature": "overnight-plan-parser-drops-per-task"}
+{"ts":"2026-06-09T13:50:08Z","event":"synthesizer_drift","feature":"overnight-plan-parser-drops-per-task","expected_sha":"1899a929541c541ff4025608536113d33f1373d54da508d5959526498243f468","observed_sha_or_null":null}
+{"ts":"2026-06-09T13:51:18Z","event":"synthesizer_drift","feature":"overnight-plan-parser-drops-per-task","expected_sha":"1899a929541c541ff4025608536113d33f1373d54da508d5959526498243f468","observed_sha_or_null":null}
+{"ts": "2026-06-09T13:59:16Z", "event": "plan_approved", "feature": "overnight-plan-parser-drops-per-task"}
+{"ts": "2026-06-09T13:59:16Z", "event": "phase_transition", "feature": "overnight-plan-parser-drops-per-task", "from": "plan", "to": "implement"}
