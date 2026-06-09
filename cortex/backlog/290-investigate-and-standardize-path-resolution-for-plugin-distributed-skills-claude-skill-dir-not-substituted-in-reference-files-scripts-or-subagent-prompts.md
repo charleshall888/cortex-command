@@ -2,11 +2,17 @@
 schema_version: "1"
 uuid: 57cc39ed-be4a-4338-b988-a4ae2052de20
 title: "Investigate and standardize path resolution for plugin-distributed skills (CLAUDE_SKILL_DIR not substituted in reference files, scripts, or subagent prompts)"
-status: backlog
+status: in_progress
 priority: medium
 type: spike
 created: 2026-06-03
-updated: 2026-06-03
+updated: 2026-06-08
+lifecycle_phase: research
+lifecycle_slug: investigate-and-standardize-path-resolution-for
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/investigate-and-standardize-path-resolution-for/spec.md
+areas: ['skills']
 ---
 ## Problem
 
