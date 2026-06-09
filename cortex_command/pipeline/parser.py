@@ -360,44 +360,171 @@ def _parse_tasks(text: str, path: Path) -> tuple[list[FeatureTask], list[dict]]:
     return tasks, normalized_complexities
 
 
-def _parse_field_files(body: str) -> list[str]:
-    """Extract the Files field value as a list of file paths."""
-    match = re.search(
-        r"[-*]\s+\*\*Files\*\*:\s*(.+?)(?:\n[-*]\s+\*\*|\n###|\n##|\Z)",
-        body, re.DOTALL
+# ---------------------------------------------------------------------------
+# Per-task field parsers
+# ---------------------------------------------------------------------------
+#
+# The known-safe dialect family (R1): every per-task field may appear with an
+# optional leading bullet (``-``/``*``) and the colon either inside the bold
+# (``**Files:**``) or outside it (``**Files**:``). The canonical form
+# (``- **Files**:``) is one member of this family. Recovery is silent (the
+# parser does no logging); only genuinely-unrecoverable drift raises ValueError
+# so a malformed plan fails exactly one feature loudly rather than collapsing
+# its dependency ordering silently.
+
+
+def _field_match_shape(label: str) -> str:
+    """Return the relaxed bullet/colon match shape for a bold field label.
+
+    Accepts an optional leading bullet and the colon inside *or* outside the
+    bold, i.e. all of ``**Files**:`` / ``**Files:**`` / ``- **Files**:`` /
+    ``- **Files:**``. The whitespace inside the label tolerates the
+    ``Depends on`` two-word form via the caller's ``\\s+`` between words.
+    """
+    return (
+        r"(?:[-*]\s+)?"          # optional leading bullet
+        r"(?:"
+        rf"\*\*\s*{label}\s*:\s*\*\*"   # colon inside the bold
+        r"|"
+        rf"\*\*\s*{label}\s*\*\*\s*:"   # colon outside the bold
+        r")"
     )
-    if not match:
+
+
+def _field_label_present(body: str, label: str) -> bool:
+    """Return True iff ``label`` appears as a line-leading field bullet.
+
+    A field label is a bold token (``**Files**``/``**Files:**``) immediately
+    colon-adjacent, anchored at start-of-line (under ``re.MULTILINE``) with at
+    most an optional ``[-*]\\s+`` bullet prefix — NOT arbitrary leading
+    indentation. The start-of-line anchor (no indentation) is what excludes a
+    nested Context sub-bullet (``  - **Depends on**: see Task 1``) and the
+    colon-adjacency requirement excludes a colon-free prose mention
+    (``- **Files** are frozen per Task 1``).
+    """
+    pattern = r"^" + _field_match_shape(label)
+    return re.search(pattern, body, re.MULTILINE) is not None
+
+
+def _parse_field_files(body: str) -> list[str]:
+    """Extract the Files field value as a list of file paths.
+
+    Preserves the multi-line (``re.DOTALL``) capture so the multi-line Files
+    dialect (``- **Files**:`` at EOL followed by nested ``  - path`` bullets)
+    parses to its path list. Raises ValueError when a line-leading colon-
+    adjacent ``Files`` label is present but the captured value is empty
+    (R2: fail-loud rather than silently dropping to ``[]``).
+    """
+    match = re.search(
+        r"^" + _field_match_shape("Files")
+        + r"[^\S\n]*(.*?)(?=\n(?:[-*]\s+)?\*\*|\n###|\n##|\Z)",
+        body, re.DOTALL | re.MULTILINE
+    )
+    raw = match.group(1).strip() if match else ""
+
+    if not raw:
+        # An empty captured value with a present field label is unrecoverable
+        # drift (R2): the label promised a value and none was extractable.
+        if _field_label_present(body, "Files"):
+            raise ValueError(
+                "'Files' field label present but no usable value extracted"
+            )
         return []
 
-    raw = match.group(1).strip()
-    if not raw or raw.lower() == "none":
+    if raw.lower() == "none":
         return []
 
-    # Files may be comma-separated or on separate lines
-    # Handle both: "path/a, path/b" and multi-line with backticks
-    # Strip backticks and split on commas or newlines
+    # Files may be comma-separated or on separate lines (the multi-line dialect
+    # nests ``  - path`` bullets). Strip backticks, split on commas/newlines,
+    # and strip any leading nested-bullet marker from each part.
     raw = raw.replace("`", "")
     parts = re.split(r"[,\n]+", raw)
-    return [p.strip() for p in parts if p.strip()]
+    cleaned = [re.sub(r"^[-*]\s+", "", p.strip()).strip() for p in parts]
+    return [p for p in cleaned if p]
+
+
+# A list-conformant Depends-on value, after annotations are stripped: ``none``
+# or a comma-separated sequence of task identifiers, each either bracketed
+# (``[1]``, ``[1, 2]``) or bare. A task identifier is a digit run with an
+# optional trailing letter-suffix (``3a``, ``13b``) — the live corpus's
+# sub-task decomposition dialect. This accepts every canonical-template form
+# (``[N]``, ``[N, M]``, ``N``, ``N, M``) plus the corpus's multi-bracket
+# (``[1], [4]``) and sub-task (``[1, 3a, 3b]``) forms. Free prose that merely
+# contains an incidental digit does not match and raises (R4).
+_DEPENDS_ON_TASK_ID = r"\d+[a-z]?"
+_DEPENDS_ON_ITEM = (
+    rf"(?:\[\s*{_DEPENDS_ON_TASK_ID}(?:\s*,\s*{_DEPENDS_ON_TASK_ID})*\s*\]"
+    rf"|{_DEPENDS_ON_TASK_ID})"
+)
+_DEPENDS_ON_LIST_CONFORMANT = re.compile(
+    rf"^(?:none|{_DEPENDS_ON_ITEM}(?:\s*,\s*{_DEPENDS_ON_ITEM})*)$",
+    re.IGNORECASE,
+)
+
+# A trailing free-text annotation the corpus appends after a complete list,
+# delimited by an em dash, en dash, or spaced double-hyphen (``[1, 8] — note``).
+# Stripped before the conformance check; not a single hyphen, which appears
+# inside ordinary hyphenated prose.
+_DEPENDS_ON_TRAILING_ANNOTATION = re.compile(r"\s+(?:[—–]|--)\s.*$")
 
 
 def _parse_field_depends_on(
     body: str, task_num: int, path: Path
 ) -> list[int]:
-    """Extract the Depends on field as a list of task numbers."""
+    """Extract the Depends on field as a list of task numbers.
+
+    Tolerates the live corpus's annotation dialects — parenthetical
+    (``[1] (console-script must exist), [4] (...)``) and trailing em-dash notes
+    (``[1, 8] — all live references must be removed``) — by stripping them
+    before checking list-conformance (R4). Extracts dependency numbers only
+    from the stripped, list-conformant remainder — so
+    ``none (parallel-eligible with Task 1)`` resolves to ``[]`` rather than the
+    phantom ``[1]`` the prior digit-scrape produced. A present label whose
+    value is empty or non-list-conformant prose raises (R2/R4).
+    """
     match = re.search(
-        r"[-*]\s+\*\*Depends\s+on\*\*:\s*(.+)", body
+        r"^" + _field_match_shape("Depends\\s+on") + r"\s*(.+)",
+        body, re.MULTILINE
     )
     if not match:
+        if _field_label_present(body, "Depends\\s+on"):
+            raise ValueError(
+                f"Task {task_num} in {path}: 'Depends on' field label present "
+                f"but no usable value extracted"
+            )
         return []
 
     raw = match.group(1).strip()
-    if raw.lower() == "none":
+
+    if not raw:
+        raise ValueError(
+            f"Task {task_num} in {path}: 'Depends on' field label present "
+            f"but no usable value extracted"
+        )
+
+    # Strip the corpus's annotation spans — parenthetical ``(...)`` anywhere and
+    # a trailing em/en-dash free-text note — then require the remainder to be
+    # list-conformant before extracting task numbers.
+    stripped = re.sub(r"\([^)]*\)", "", raw)
+    stripped = _DEPENDS_ON_TRAILING_ANNOTATION.sub("", stripped)
+    stripped = stripped.strip().rstrip(".").strip()
+
+    if not _DEPENDS_ON_LIST_CONFORMANT.match(stripped):
+        raise ValueError(
+            f"Task {task_num} in {path}: 'Depends on' value is not "
+            f"list-conformant: {raw!r}"
+        )
+
+    if stripped.lower() == "none":
         return []
 
-    # Parse formats: [1, 3], [1], 1, 3, or just numbers
-    numbers = re.findall(r"\d+", raw)
-    if not numbers and raw.lower() != "none":
+    # Extract the integer portion of each task identifier. A letter-suffixed
+    # sub-task id (``3a``) collapses to its integer (``3``) here because
+    # ``depends_on`` is ``list[int]`` — the same integer the pre-existing
+    # digit-scrape produced; faithful sub-task ordering is out of this parser's
+    # scope (the ``### Task Na`` heading itself is not recognized upstream).
+    numbers = re.findall(r"\d+", stripped)
+    if not numbers:
         raise ValueError(
             f"Task {task_num} in {path}: cannot parse 'Depends on' value: {raw!r}"
         )
@@ -407,17 +534,23 @@ def _parse_field_depends_on(
 
 def _parse_field_string(body: str, field_name: str) -> Optional[str]:
     """Extract a simple string field value (e.g., Complexity)."""
-    pattern = rf"[-*]\s+\*\*{re.escape(field_name)}\*\*:\s*(.+)"
-    match = re.search(pattern, body)
+    pattern = r"^" + _field_match_shape(re.escape(field_name)) + r"\s*(.+)"
+    match = re.search(pattern, body, re.MULTILINE)
     if not match:
         return None
     return match.group(1).strip()
 
 
 def _parse_field_status(body: str) -> str:
-    """Extract the Status field and return 'pending' or 'done'."""
+    """Extract the Status field and return 'pending' or 'done'.
+
+    A missing Status legitimately defaults to ``pending`` — Status is NOT
+    fail-loud (R2 applies only to Files/Depends-on). The relaxed dialect shape
+    (R1) lets ``**Status:** [x]`` / no-bullet ``**Status**: [x]`` survive.
+    """
     match = re.search(
-        r"[-*]\s+\*\*Status\*\*:\s*(.+)", body
+        r"^" + _field_match_shape("Status") + r"\s*(.+)",
+        body, re.MULTILINE
     )
     if not match:
         return "pending"

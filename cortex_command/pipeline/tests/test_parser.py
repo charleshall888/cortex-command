@@ -573,5 +573,278 @@ class TestOutlineSectionAndH3PhasesRegression(unittest.TestCase):
         self.assertEqual(plan.tasks[1].files, ["src/b.py"])
 
 
+class _PlanParseMixin:
+    """Shared TemporaryDirectory + parse helper for the field-parser tests."""
+
+    def setUp(self):
+        self._tmpdir = tempfile.TemporaryDirectory()
+
+    def tearDown(self):
+        self._tmpdir.cleanup()
+
+    def _parse(self, tasks_body: str) -> FeaturePlan:
+        plan_path = Path(self._tmpdir.name) / "plan.md"
+        plan_path.write_text(_make_plan(tasks_body), encoding="utf-8")
+        return parse_feature_plan(plan_path)
+
+
+# Canonical reference block: leading bullet, colon outside the bold. The R1
+# dialect variants below must parse to the same files/depends_on as this.
+_CANONICAL_TASK = (
+    "### Task 1: Build the widget\n"
+    "- **Files**: `src/a.py`, `src/b.py`\n"
+    "- **Depends on**: [1, 2]\n"
+    "- **Complexity**: simple\n"
+)
+
+
+class TestR1DialectEquivalence(_PlanParseMixin, unittest.TestCase):
+    """R1: the recovered bullet/colon dialect variants parse to the same
+    files/depends_on as the canonical form."""
+
+    def test_canonical_baseline(self):
+        plan = self._parse(_CANONICAL_TASK)
+        self.assertEqual(plan.tasks[0].files, ["src/a.py", "src/b.py"])
+        self.assertEqual(plan.tasks[0].depends_on, [1, 2])
+
+    def test_no_bullet_form_equivalent(self):
+        """``**Files**: x`` / ``**Depends on**: [1, 2]`` (no leading bullet)."""
+        plan = self._parse(
+            "### Task 1: Build the widget\n"
+            "**Files**: `src/a.py`, `src/b.py`\n"
+            "**Depends on**: [1, 2]\n"
+            "**Complexity**: simple\n"
+        )
+        self.assertEqual(plan.tasks[0].files, ["src/a.py", "src/b.py"])
+        self.assertEqual(plan.tasks[0].depends_on, [1, 2])
+
+    def test_bulleted_colon_inside_equivalent(self):
+        """``- **Files:** x`` / ``- **Depends on:** [1, 2]`` (colon inside bold)."""
+        plan = self._parse(
+            "### Task 1: Build the widget\n"
+            "- **Files:** `src/a.py`, `src/b.py`\n"
+            "- **Depends on:** [1, 2]\n"
+            "- **Complexity:** simple\n"
+        )
+        self.assertEqual(plan.tasks[0].files, ["src/a.py", "src/b.py"])
+        self.assertEqual(plan.tasks[0].depends_on, [1, 2])
+
+    def test_no_bullet_colon_inside_equivalent(self):
+        """``**Files:** x`` (no bullet, colon inside bold)."""
+        plan = self._parse(
+            "### Task 1: Build the widget\n"
+            "**Files:** `src/a.py`, `src/b.py`\n"
+            "**Depends on:** [1, 2]\n"
+            "**Complexity:** simple\n"
+        )
+        self.assertEqual(plan.tasks[0].files, ["src/a.py", "src/b.py"])
+        self.assertEqual(plan.tasks[0].depends_on, [1, 2])
+
+
+class TestR1MultiLineFiles(_PlanParseMixin, unittest.TestCase):
+    """R1: the multi-line Files dialect parses to its path list (no raise)."""
+
+    def test_multiline_files_parses_to_path_list(self):
+        plan = self._parse(
+            "### Task 1: Build the widget\n"
+            "- **Files**:\n"
+            "  - `cortex_command/interactive_lock.py` (new)\n"
+            "  - `pyproject.toml` (modify)\n"
+            "- **What**: foundation module\n"
+            "- **Depends on**: none\n"
+            "- **Complexity**: complex\n"
+        )
+        self.assertEqual(len(plan.tasks), 1)
+        self.assertEqual(
+            plan.tasks[0].files,
+            [
+                "cortex_command/interactive_lock.py (new)",
+                "pyproject.toml (modify)",
+            ],
+        )
+        self.assertEqual(plan.tasks[0].depends_on, [])
+
+
+class TestR1StatusDialect(_PlanParseMixin, unittest.TestCase):
+    """R1: a recovered-dialect Status line parses to ``done``."""
+
+    def test_no_bullet_status_done(self):
+        body = "**Status**: [x] complete\n"
+        self.assertEqual(_parse_field_status(body), "done")
+
+    def test_colon_inside_status_done(self):
+        body = "- **Status:** [x] complete\n"
+        self.assertEqual(_parse_field_status(body), "done")
+
+
+class TestR2FailLoud(_PlanParseMixin, unittest.TestCase):
+    """R2: a colon-adjacent label present but yielding no usable value raises."""
+
+    def test_empty_files_value_raises(self):
+        """``- **Files**:`` immediately followed by the next field -> raise."""
+        with self.assertRaises(ValueError):
+            self._parse(
+                "### Task 1: Build the widget\n"
+                "- **Files**:\n"
+                "- **What**: do the thing\n"
+                "- **Depends on**: none\n"
+                "- **Complexity**: simple\n"
+            )
+
+    def test_empty_depends_on_value_raises(self):
+        """``- **Depends on**:`` with nothing after the colon -> raise."""
+        with self.assertRaises(ValueError):
+            self._parse(
+                "### Task 1: Build the widget\n"
+                "- **Files**: `src/a.py`\n"
+                "- **Depends on**:\n"
+                "- **Complexity**: simple\n"
+            )
+
+
+class TestR4DependsOnListConformance(_PlanParseMixin, unittest.TestCase):
+    """R4: list-conformance gate + trailing-annotation tolerance."""
+
+    def test_non_list_conformant_prose_raises(self):
+        """``after Phase 1 is green`` has an incidental digit -> raise, not [1]."""
+        with self.assertRaises(ValueError):
+            self._parse(
+                "### Task 1: Build the widget\n"
+                "- **Files**: `src/a.py`\n"
+                "- **Depends on**: after Phase 1 is green\n"
+                "- **Complexity**: simple\n"
+            )
+
+    def test_trailing_parenthetical_annotations_tolerated(self):
+        """``[1] (...), [4] (...)`` -> [1, 4] after stripping annotations."""
+        plan = self._parse(
+            "### Task 1: Build the widget\n"
+            "- **Files**: `src/a.py`\n"
+            "- **Depends on**: [1] (console-script must exist), [4] (sidecar)\n"
+            "- **Complexity**: simple\n"
+        )
+        self.assertEqual(plan.tasks[0].depends_on, [1, 4])
+
+    def test_none_with_parenthetical_resolves_to_empty(self):
+        """``none (parallel-eligible with Task 1)`` -> [] (not phantom [1])."""
+        plan = self._parse(
+            "### Task 1: Build the widget\n"
+            "- **Files**: `src/a.py`\n"
+            "- **Depends on**: none (parallel-eligible with Task 1)\n"
+            "- **Complexity**: simple\n"
+        )
+        self.assertEqual(plan.tasks[0].depends_on, [])
+
+    def test_multi_bracket_form_tolerated(self):
+        """``[1], [4]`` (corpus multi-bracket form) -> [1, 4]."""
+        plan = self._parse(
+            "### Task 1: Build the widget\n"
+            "- **Files**: `src/a.py`\n"
+            "- **Depends on**: [1], [4]\n"
+            "- **Complexity**: simple\n"
+        )
+        self.assertEqual(plan.tasks[0].depends_on, [1, 4])
+
+    def test_subtask_letter_suffix_tolerated(self):
+        """``[1, 3a, 3b]`` (corpus sub-task dialect) parses; suffixes collapse
+        to their integer (depends_on is list[int])."""
+        plan = self._parse(
+            "### Task 1: Build the widget\n"
+            "- **Files**: `src/a.py`\n"
+            "- **Depends on**: [1, 3a, 3b]\n"
+            "- **Complexity**: simple\n"
+        )
+        self.assertEqual(plan.tasks[0].depends_on, [1, 3, 3])
+
+    def test_trailing_em_dash_annotation_tolerated(self):
+        """``[1, 8] — all refs must be removed`` -> [1, 8] (em-dash note stripped)."""
+        plan = self._parse(
+            "### Task 1: Build the widget\n"
+            "- **Files**: `src/a.py`\n"
+            "- **Depends on**: [1, 8] — all live references must be removed\n"
+            "- **Complexity**: simple\n"
+        )
+        self.assertEqual(plan.tasks[0].depends_on, [1, 8])
+
+
+class TestR3NonTriggers(_PlanParseMixin, unittest.TestCase):
+    """R3: legitimately-absent / prose-mention inputs must NOT raise."""
+
+    def test_depends_on_none_no_raise(self):
+        plan = self._parse(
+            "### Task 1: Build the widget\n"
+            "- **Files**: `src/a.py`\n"
+            "- **Depends on**: none\n"
+            "- **Complexity**: simple\n"
+        )
+        self.assertEqual(plan.tasks[0].depends_on, [])
+
+    def test_no_label_at_all_no_raise(self):
+        plan = self._parse(
+            "### Task 1: Build the widget\n"
+            "- **Complexity**: simple\n"
+        )
+        self.assertEqual(plan.tasks[0].files, [])
+        self.assertEqual(plan.tasks[0].depends_on, [])
+
+    def test_nested_files_prose_bullet_no_raise(self):
+        """A nested Context bullet ``  - **Files** are frozen`` (no colon)."""
+        plan = self._parse(
+            "### Task 1: Build the widget\n"
+            "- **Depends on**: none\n"
+            "- **Context**: notes\n"
+            "  - **Files** are frozen per Task 1\n"
+            "- **Complexity**: simple\n"
+        )
+        self.assertEqual(plan.tasks[0].files, [])
+
+    def test_nested_colon_adjacent_depends_on_subbullet_no_raise(self):
+        """A nested ``  - **Depends on**: see Task 1`` Context sub-bullet.
+
+        Indented >=2 spaces -> not a line-leading field bullet -> not a label.
+        It is, however, captured by the value regex, so it must be either a
+        no-raise non-trigger by the anchoring (label-not-present) when no
+        top-level Depends-on exists. Here the top-level ``none`` wins; the
+        nested sub-bullet must not corrupt or trigger.
+        """
+        plan = self._parse(
+            "### Task 1: Build the widget\n"
+            "- **Depends on**: none\n"
+            "- **Context**: notes\n"
+            "  - **Depends on**: see Task 1\n"
+            "- **Complexity**: simple\n"
+        )
+        self.assertEqual(plan.tasks[0].depends_on, [])
+
+    def test_colon_inside_prose_span_no_raise(self):
+        """``- **Files: frozen** below`` is a colon-inside prose span, not a field."""
+        plan = self._parse(
+            "### Task 1: Build the widget\n"
+            "- **Depends on**: none\n"
+            "- **Files: frozen** below\n"
+            "- **Complexity**: simple\n"
+        )
+        self.assertEqual(plan.tasks[0].files, [])
+
+    def test_multi_task_all_none_no_raise(self):
+        """Every task declares ``none`` -> all parse to [] with no raise."""
+        body = (
+            _task_block(
+                "### Task 1: First",
+                Files="`src/a.py`",
+                **{"Depends on": "none"},
+            )
+            + _task_block(
+                "### Task 2: Second",
+                Files="`src/b.py`",
+                **{"Depends on": "none"},
+            )
+        )
+        plan = self._parse(body)
+        self.assertEqual(len(plan.tasks), 2)
+        self.assertEqual(plan.tasks[0].depends_on, [])
+        self.assertEqual(plan.tasks[1].depends_on, [])
+
+
 if __name__ == "__main__":
     unittest.main()
