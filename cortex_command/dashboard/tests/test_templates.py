@@ -1,25 +1,39 @@
 """Integration tests for Jinja2 template rendering.
 
-Tests construct DashboardState with synthetic data, render base.html directly
-via the Jinja2 environment (bypassing HTTP), and assert expected strings appear
+Tests construct DashboardState with synthetic data and render templates directly
+via the Jinja2 environment (bypassing HTTP), then assert expected strings appear
 in the rendered HTML.
 
+Since the 2026-05-18 htmx redesign, base.html ships only empty section shells and
+loads each panel's real content at runtime via ``hx-get="/partials/..."``. Panel
+content tests therefore render the matching partial directly (mirroring the
+``/partials/*`` route handler's template + context), while structural tests still
+render base.html to assert the section shells exist.
+
 Covers:
-  - session panel with overnight data shows session_id
+  - session panel with overnight data shows session_id and "round · N"
   - pipeline panel shows feature name and status badge
-  - feature cards show "—" for None plan_progress
-  - round history table shows round number
-  - absent overnight renders "No active session."
-  - absent pipeline renders "No active pipeline."
-  - round_history empty list renders "No completed rounds yet."
+  - feature cards show task ratio "N / M tasks" and feature slugs
+  - round history table shows the round id span and merged count
+  - absent overnight renders "no active session"
+  - absent pipeline renders "no pipeline · refinement queue empty"
+  - round_history empty list renders "no rounds cleared yet"
 """
 
 from __future__ import annotations
 
+import types
 import unittest
 
 from cortex_command.dashboard.app import templates
 from cortex_command.dashboard.poller import DashboardState
+
+
+def _fake_request(path: str = "/") -> types.SimpleNamespace:
+    """Minimal stand-in for the Starlette Request the app injects via request-first
+    TemplateResponse. base.html reads only ``request.url.path`` (for nav highlighting),
+    so a namespace exposing ``.url.path`` is sufficient for direct-render tests."""
+    return types.SimpleNamespace(url=types.SimpleNamespace(path=path))
 
 
 def _make_overnight_fixture() -> dict:
@@ -63,7 +77,19 @@ def _make_feature_states_fixture() -> dict:
 
 def _render(state: DashboardState) -> str:
     """Render base.html with the given state, returning the HTML string."""
-    return templates.env.get_template("base.html").render(state=state)
+    return templates.env.get_template("base.html").render(state=state, request=_fake_request())
+
+
+def _render_partial(name: str, **context: object) -> str:
+    """Render a panel partial directly, mirroring how the matching ``/partials/*``
+    route handler renders it.
+
+    Since the 2026-05-18 htmx redesign, base.html only ships empty section shells
+    and loads each panel's real content at runtime via ``hx-get="/partials/..."``.
+    Direct-render tests therefore target the partial, not base.html. ``request`` is
+    always supplied to match the handlers' context contract (the handlers pass it
+    unconditionally even though these partial bodies don't read it)."""
+    return templates.env.get_template(name).render(request=_fake_request(), **context)
 
 
 class TestSessionPanel(unittest.TestCase):
@@ -73,21 +99,24 @@ class TestSessionPanel(unittest.TestCase):
         state = DashboardState()
         state.overnight = _make_overnight_fixture()
         state.feature_states = _make_feature_states_fixture()
-        html = _render(state)
+        html = _render_partial("session_panel.html", state=state, last_session=None)
         self.assertIn("test-session-001", html)
 
     def test_shows_current_round(self):
         state = DashboardState()
         state.overnight = _make_overnight_fixture()
         state.feature_states = _make_feature_states_fixture()
-        html = _render(state)
-        self.assertIn("Round 2", html)
+        html = _render_partial("session_panel.html", state=state, last_session=None)
+        # Redesign emits the round as the "round · N" stream-line token rather than
+        # the pre-redesign "Round N" heading.
+        self.assertIn("round · 2", html)
 
     def test_shows_no_active_session_when_overnight_absent(self):
         state = DashboardState()
         # state.overnight is None by default
-        html = _render(state)
-        self.assertIn("No active session", html)
+        html = _render_partial("session_panel.html", state=state, last_session=None)
+        # Redesign empty-state copy is lowercase with no trailing period.
+        self.assertIn("no active session", html)
 
     def test_merged_badge_appears_when_feature_merged(self):
         state = DashboardState()
@@ -112,8 +141,9 @@ class TestPipelinePanel(unittest.TestCase):
     def test_shows_no_active_pipeline_when_absent(self):
         state = DashboardState()
         # state.pipeline is None by default
-        html = _render(state)
-        self.assertIn("No active pipeline.", html)
+        html = _render_partial("pipeline_panel.html", state=state)
+        # Redesign empty-state copy replaced "No active pipeline." with this string.
+        self.assertIn("no pipeline · refinement queue empty", html)
 
     def test_shows_phase(self):
         state = DashboardState()
@@ -165,21 +195,23 @@ class TestFeatureCards(unittest.TestCase):
                 "plan_progress": None,
             },
         }
-        html = _render(state)
-        self.assertIn("3/5 tasks", html)
+        html = _render_partial("feature_cards.html", state=state)
+        # Redesign renders the plan ratio spaced as "N / M tasks" (was "N/M tasks").
+        self.assertIn("3 / 5 tasks", html)
 
     def test_shows_feature_slug(self):
         state = DashboardState()
         state.overnight = _make_overnight_fixture()
         state.feature_states = _make_feature_states_fixture()
-        html = _render(state)
+        html = _render_partial("feature_cards.html", state=state)
         self.assertIn("feat-alpha", html)
         self.assertIn("feat-beta", html)
 
     def test_shows_no_features_active_when_overnight_absent(self):
         state = DashboardState()
-        html = _render(state)
-        self.assertIn("No features active.", html)
+        html = _render_partial("feature_cards.html", state=state)
+        # Redesign empty-state copy replaced "No features active." with this string.
+        self.assertIn("no features in play · awaiting next round", html)
 
 
 class TestRoundHistory(unittest.TestCase):
@@ -200,8 +232,9 @@ class TestRoundHistory(unittest.TestCase):
         ]
         state.overnight = overnight
         state.feature_states = _make_feature_states_fixture()
-        html = _render(state)
-        self.assertIn("<td>1</td>", html)
+        html = _render_partial("round_history.html", state=state)
+        # Redesign renders the round number as an "R{n}" id span, not a bare "<td>1</td>".
+        self.assertIn('<span class="round-id">R1</span>', html)
 
     def test_shows_merged_count(self):
         state = DashboardState()
@@ -218,8 +251,10 @@ class TestRoundHistory(unittest.TestCase):
         ]
         state.overnight = overnight
         state.feature_states = _make_feature_states_fixture()
-        html = _render(state)
-        self.assertIn("<td>2</td>", html)
+        html = _render_partial("round_history.html", state=state)
+        # Redesign renders the merged count inside a round-cell span ("2 · <slugs>"),
+        # not a bare "<td>2</td>".
+        self.assertIn('class="round-cell round-cell--good">2 · ', html)
 
     def test_shows_no_completed_rounds_when_history_empty(self):
         state = DashboardState()
@@ -227,13 +262,15 @@ class TestRoundHistory(unittest.TestCase):
         overnight["round_history"] = []
         state.overnight = overnight
         state.feature_states = _make_feature_states_fixture()
-        html = _render(state)
-        self.assertIn("No completed rounds yet.", html)
+        html = _render_partial("round_history.html", state=state)
+        # Redesign empty-state copy replaced "No completed rounds yet." with this string.
+        self.assertIn("no rounds cleared yet", html)
 
     def test_shows_no_completed_rounds_when_overnight_absent(self):
         state = DashboardState()
-        html = _render(state)
-        self.assertIn("No completed rounds yet.", html)
+        html = _render_partial("round_history.html", state=state)
+        # Redesign empty-state copy replaced "No completed rounds yet." with this string.
+        self.assertIn("no rounds cleared yet", html)
 
 
 class TestStructuralElements(unittest.TestCase):
