@@ -1060,14 +1060,31 @@ def render_critical_review_residue(data: ReportData) -> str:
     """Render the critical review residue section from lifecycle residue files."""
     lifecycle_root = _resolve_user_project_root() / "cortex/lifecycle"
     residue_paths = sorted(lifecycle_root.glob("*/critical-review-residue.json"))
+
+    # Session-scope: render only residue whose lifecycle DIRECTORY name (the
+    # stable join key against state.features — not the writer-controlled
+    # payload["feature"]) is an in-session feature. Filter FIRST so the count and
+    # the empty-section early-return are computed from the filtered set. When
+    # data.state is None (state unloadable) leave it unfiltered as a degraded
+    # fallback; present-but-empty features ({}) filters to empty and renders (0).
+    session_features = set(data.state.features) if data.state is not None else None
+    filtered = session_features is not None
+    if filtered:
+        residue_paths = [p for p in residue_paths if p.parent.name in session_features]
+
     total = len(residue_paths)
     lines: list[str] = [f"## Critical Review Residue ({total})", ""]
 
     if total == 0:
-        lines.append(
-            "No residue files this cycle. Absence may indicate: zero B-class findings, "
-            "no lifecycle-context runs, or total reviewer failure (which does not write a residue file)."
-        )
+        if filtered:
+            # Residue files may exist on disk but none belong to this session —
+            # render an accurate empty body rather than falsely claiming absence.
+            lines.append("No in-session critical-review residue this cycle.")
+        else:
+            lines.append(
+                "No residue files this cycle. Absence may indicate: zero B-class findings, "
+                "no lifecycle-context runs, or total reviewer failure (which does not write a residue file)."
+            )
         lines.append("")
         return "\n".join(lines)
 
