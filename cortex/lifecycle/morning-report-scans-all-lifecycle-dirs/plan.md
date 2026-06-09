@@ -30,7 +30,7 @@ Two independent defect fixes in the overnight morning-report path. **Bug B**: se
 - **Depends on**: none
 - **Context**: `create_item.py:~107-119` builds frontmatter in a pinned field order (`schema_version`, `uuid`, `title`, `status`, ...). Serialize only the `title` scalar per the same sanitize-then-serialize contract as Task 1 (single physical line, split on first `": "`, no `...`, no `json.dumps`); leave the surrounding field order untouched. Per spec Non-Requirements **no shared serializer is extracted** — implement the serialization inline at this site (accepted duplication with Task 1). Test in `tests/test_create_backlog_item.py` (the public creator is `create_item.create_item` at `create_item.py:84` — there is no `create_backlog_item`): call `create_item.create_item(...)` with (a) a title containing an embedded `"` and a `:`, and (b) a title containing an apostrophe and a `:` (e.g. `Fix: it's broken`), read each written file, and assert `resolve_item._parse_frontmatter` returns the exact title without raising. The strict round-trip is the R2 contract; for the apostrophe+colon case the backlog index may show a cosmetic doubled quote (accepted per spec Edge Cases) — do not assert tolerant-parser exactness on the embedded-quote inputs.
 - **Verification**: run `.venv/bin/pytest tests/test_create_backlog_item.py -q` — pass if exit 0 and all tests pass.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Session-scope the residue section and recompute its count (Bug A, render_critical_review_residue)
 - **Files**: `cortex_command/overnight/report.py`, `tests/test_report.py`

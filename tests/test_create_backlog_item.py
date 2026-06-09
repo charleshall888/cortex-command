@@ -56,3 +56,37 @@ def test_zero_pads_small_ids(tmp_path: Path) -> None:
     _stub(tmp_path, "001-foo.md")
 
     assert _get_next_id(tmp_path) == "002"
+
+
+# ---------------------------------------------------------------------------
+# R2: create_item serializes the title as a YAML-safe single-line scalar so
+# embedded quotes/colons round-trip through the strict backlog parser.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        'Weird: a "quoted" thing',   # embedded double-quote + colon
+        "Fix: it's broken",          # embedded apostrophe + colon
+    ],
+)
+def test_create_item_title_round_trips_strict(
+    title: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R2: a created item's title round-trips exactly through the REAL strict
+    parser (yaml.safe_load) without raising, even with embedded quote + colon."""
+    from cortex_command.backlog import create_item, resolve_item
+
+    # Neutralize the post-write index regeneration so the test stays hermetic
+    # (it would otherwise regenerate the real repo's backlog index).
+    monkeypatch.setattr(create_item.subprocess, "run", lambda *a, **k: None)
+
+    item_path = create_item.create_item(
+        title=title,
+        status="backlog",
+        item_type="chore",
+        backlog_dir=tmp_path,
+    )
+
+    fm = resolve_item._parse_frontmatter(item_path)
+    assert fm["title"] == title

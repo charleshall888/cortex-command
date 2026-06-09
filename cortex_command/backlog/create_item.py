@@ -25,6 +25,8 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+import yaml
+
 from cortex_command.backlog import _telemetry
 from cortex_command.common import _resolve_user_project_root, atomic_write, slugify
 
@@ -46,6 +48,31 @@ def _get_next_id(backlog_dir: Path) -> str:
 
 
 _slugify = slugify  # Use canonical slugify from cortex_command.common
+
+
+def _yaml_safe_title_value(title: str) -> str:
+    """Serialize ``title`` as a single-line YAML scalar for a ``title:`` field.
+
+    A title carrying a ``: `` or an embedded ``"`` makes a naively-quoted
+    ``title: "{title}"`` line invalid YAML, which aborts the eager whole-backlog
+    scan in ``resolve_item.resolve`` and blocks all backlog tooling until the
+    bad file is removed. Sanitize-then-serialize (ordering is load-bearing):
+    first collapse any CR/LF/control characters to a single space so no
+    block-folding can occur, then emit one physical line via ``yaml.safe_dump``
+    and return just the scalar value (split on the first ``": "``). The result
+    round-trips exactly through the strict ``resolve_item._parse_frontmatter``
+    (``yaml.safe_load``) and never raises. Implemented inline here rather than
+    shared with the overnight report writer — see spec Non-Requirements.
+    """
+    sanitized = re.sub(r"[\r\n\x00-\x1f\x7f]+", " ", title)
+    dumped = yaml.safe_dump(
+        {"title": sanitized},
+        default_flow_style=False,
+        width=float("inf"),
+        allow_unicode=True,
+    ).rstrip("\n")
+    assert "\n" not in dumped, "title must serialize to a single physical line"
+    return dumped.split(": ", 1)[1]
 
 
 # ---------------------------------------------------------------------------
@@ -109,7 +136,7 @@ def create_item(
         "---\n",
         f'schema_version: "1"\n',
         f"uuid: {item_uuid}\n",
-        f'title: "{title}"\n',
+        f"title: {_yaml_safe_title_value(title)}\n",
         f"status: {status}\n",
         f"priority: {priority}\n",
         f"type: {item_type}\n",
