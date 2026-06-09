@@ -899,3 +899,157 @@ def test_recoverable_surface_positive() -> None:
     assert render_deferred_questions(data) == render_deferred_questions(baseline)
 
 
+# ---------------------------------------------------------------------------
+# Bug B: generated-ticket titles serialize as YAML-safe single-line scalars
+# (R1 strict round-trip, R3 tolerant round-trip, R4 single-line sanitize,
+# R5 layout preserved, plus the whole-backlog resolve() integration symptom).
+# ---------------------------------------------------------------------------
+
+def _frontmatter_keys_in_order(text: str) -> list[str]:
+    """Return frontmatter keys in document order (first ``---`` block)."""
+    lines = text.splitlines()
+    assert lines[0] == "---"
+    keys: list[str] = []
+    for ln in lines[1:]:
+        if ln == "---":
+            break
+        if ln and not ln.startswith(" ") and ":" in ln:
+            keys.append(ln.split(":", 1)[0])
+    return keys
+
+
+def test_generated_titles_round_trip_strict(tmp_path) -> None:
+    """R1: colon-bearing failed + deferred titles round-trip via the strict parser.
+
+    Uses the REAL ``resolve_item._parse_frontmatter`` (yaml.safe_load) — the
+    parser whose failure aborts the whole-backlog scan — and asserts the title
+    returns exactly without raising.
+    """
+    from cortex_command.overnight.report import create_followup_backlog_items
+    from cortex_command.backlog import resolve_item
+
+    features = {
+        "feat-fail:colon": OvernightFeatureStatus(status="failed", error="boom"),
+        "feat-defer:colon": OvernightFeatureStatus(status="deferred"),
+    }
+    data = _pytest_make_data(features)
+    items = create_followup_backlog_items(data, backlog_dir=tmp_path)
+
+    by_title = {it.title: it for it in items}
+    assert "Follow up: feat-fail:colon" in by_title
+    assert "Retry deferred: feat-defer:colon" in by_title
+    for title, it in by_title.items():
+        fm = resolve_item._parse_frontmatter(tmp_path / it.filename)
+        assert fm["title"] == title
+
+
+def test_generated_title_tolerant_round_trip(tmp_path) -> None:
+    """R3: realistic kebab title round-trips exactly through the tolerant index
+    parser, on one physical line, with no YAML document-end (``...``) marker."""
+    from cortex_command.overnight.report import create_followup_backlog_items
+    from cortex_command.backlog import generate_index
+
+    features = {"climb-gated-locomotion": OvernightFeatureStatus(status="deferred")}
+    data = _pytest_make_data(features)
+    items = create_followup_backlog_items(data, backlog_dir=tmp_path)
+    it = items[0]
+    title = "Retry deferred: climb-gated-locomotion"
+    assert it.title == title
+
+    text = (tmp_path / it.filename).read_text(encoding="utf-8")
+    lines = text.splitlines()
+    title_idx = next(i for i, ln in enumerate(lines) if ln.startswith("title:"))
+    # The title occupies exactly one physical line (next key follows immediately).
+    assert lines[title_idx + 1].startswith("status:")
+    # No YAML document-end marker anywhere.
+    assert all(ln.strip() != "..." for ln in lines)
+
+    parsed = generate_index._parse_frontmatter(text)
+    # generate_index strips wrapping quotes from the value (report.py consumer at
+    # generate_index.py:162); mirror that to assert the exact round-trip.
+    assert parsed["title"].strip("\"'") == title
+
+
+def test_generated_title_newline_sanitized_single_line(tmp_path) -> None:
+    """R4: an embedded newline in the feature name is collapsed so the title
+    field is a single physical line the strict parser accepts (no raise)."""
+    from cortex_command.overnight.report import create_followup_backlog_items
+    from cortex_command.backlog import resolve_item
+
+    features = {"line\nbreak": OvernightFeatureStatus(status="deferred")}
+    data = _pytest_make_data(features)
+    items = create_followup_backlog_items(data, backlog_dir=tmp_path)
+    it = items[0]
+
+    text = (tmp_path / it.filename).read_text(encoding="utf-8")
+    lines = text.splitlines()
+    title_idx = next(i for i, ln in enumerate(lines) if ln.startswith("title:"))
+    # Single physical line: the very next line is the following key, so the
+    # embedded newline did not fold the title across lines.
+    assert lines[title_idx + 1].startswith("status:")
+
+    # The strict parser (yaml.safe_load) accepts the serialized title scalar in
+    # isolation and yields the sanitized one-line value. (Scope is the title
+    # scalar only — lifecycle_slug carries the raw name but is never newline-
+    # bearing in the real overnight flow, per spec Non-Requirements.)
+    title_only = tmp_path / "title-only.md"
+    title_only.write_text(f"---\n{lines[title_idx]}\n---\n", encoding="utf-8")
+    fm = resolve_item._parse_frontmatter(title_only)
+    assert fm["title"] == "Retry deferred: line break"
+
+
+def test_generated_frontmatter_layout_preserved(tmp_path) -> None:
+    """R5: only the title scalar is serialized — inline ``tags: [...]`` and the
+    pre-fix field order are untouched."""
+    from cortex_command.overnight.report import create_followup_backlog_items
+
+    features = {"layout-feat": OvernightFeatureStatus(status="deferred")}
+    data = _pytest_make_data(features)
+    items = create_followup_backlog_items(data, backlog_dir=tmp_path)
+    text = (tmp_path / items[0].filename).read_text(encoding="utf-8")
+
+    # tags rendered inline exactly once.
+    assert text.count("tags: [") == 1
+    # Field order matches the pre-fix layout.
+    assert _frontmatter_keys_in_order(text) == [
+        "title", "status", "priority", "type", "tags", "created", "updated",
+        "blocks", "blocked-by", "schema_version", "uuid", "lifecycle_slug",
+        "session_id",
+    ]
+
+
+def test_whole_backlog_resolve_survives_colon_title(tmp_path) -> None:
+    """Integration (the real Bug B symptom): the eager whole-backlog
+    ``resolve()`` scan does not abort on a colon-titled generated ticket
+    sitting beside a normal item."""
+    from cortex_command.overnight.report import create_followup_backlog_items
+    from cortex_command.backlog import resolve_item
+
+    # A normal, valid backlog item.
+    (tmp_path / "099-normal-item.md").write_text(
+        "---\n"
+        "title: A normal item\n"
+        "status: backlog\n"
+        "uuid: 11111111-1111-1111-1111-111111111111\n"
+        "---\n\nbody\n",
+        encoding="utf-8",
+    )
+
+    features = {
+        "feat-fail:colon": OvernightFeatureStatus(status="failed", error="boom"),
+        "feat-defer:colon": OvernightFeatureStatus(status="deferred"),
+    }
+    data = _pytest_make_data(features)
+    create_followup_backlog_items(data, backlog_dir=tmp_path)
+
+    # The eager loop (resolve_item.py:423-431) parses EVERY file before routing.
+    # Pre-fix it raised "failed to parse frontmatter" on the colon title, aborting
+    # the whole backlog. Post-fix it must not.
+    try:
+        resolve_item.resolve("definitely-no-such-item-xyz", backlog_dir=tmp_path)
+    except resolve_item.ResolutionError as exc:
+        assert "failed to parse frontmatter" not in str(exc), (
+            f"whole-backlog resolve() aborted on a generated ticket: {exc}"
+        )
+
+

@@ -22,6 +22,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
+import yaml
+
 from cortex_command.common import _resolve_user_project_root, atomic_write, read_tier, slugify
 
 from cortex_command.overnight.deferral import (
@@ -233,6 +235,35 @@ def _today() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
 
+def _yaml_safe_title_value(name: str) -> str:
+    """Serialize ``name`` as a single-line YAML scalar for a ``title:`` field.
+
+    The generated retry/follow-up tickets embed the feature name in a
+    ``Follow up: {name}`` / ``Retry deferred: {name}`` title, so the value
+    carries a ``: `` that makes an unquoted ``title:`` line invalid YAML — which
+    aborts the eager whole-backlog scan in ``resolve_item.resolve`` and blocks
+    all backlog tooling until the bad file is removed. Sanitize-then-serialize
+    (ordering is load-bearing): first collapse any CR/LF/control characters in
+    ``name`` to a single space so block-folding cannot occur, then emit one
+    physical line via ``yaml.safe_dump`` and return just the scalar value (split
+    on the first ``": "``). The result round-trips exactly through the strict
+    ``resolve_item._parse_frontmatter`` (``yaml.safe_load``) and never raises;
+    for the realistic kebab-slug titles it also round-trips exactly through the
+    tolerant ``generate_index`` parser. Forbidden: ``json.dumps`` (backslash
+    escapes leak through the tolerant index parser) and the bare
+    ``yaml.safe_dump(value)`` scalar form (emits a ``...`` document-end marker).
+    """
+    sanitized = re.sub(r"[\r\n\x00-\x1f\x7f]+", " ", name)
+    dumped = yaml.safe_dump(
+        {"title": sanitized},
+        default_flow_style=False,
+        width=float("inf"),
+        allow_unicode=True,
+    ).rstrip("\n")
+    assert "\n" not in dumped, "title must serialize to a single physical line"
+    return dumped.split(": ", 1)[1]
+
+
 def create_followup_backlog_items(
     data: ReportData,
     backlog_dir: Path,
@@ -304,7 +335,7 @@ def create_followup_backlog_items(
         lifecycle_slug = name  # Use original feature slug, not slugify("Follow up: ...")
         frontmatter = (
             "---\n"
-            f"title: {title}\n"
+            f"title: {_yaml_safe_title_value(title)}\n"
             f"status: backlog\n"
             f"priority: medium\n"
             f"type: {item_type}\n"

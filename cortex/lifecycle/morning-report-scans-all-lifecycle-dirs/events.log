@@ -5,3 +5,4 @@
 {"ts": "2026-06-09T13:29:23Z", "event": "spec_approved", "feature": "morning-report-scans-all-lifecycle-dirs"}
 {"ts": "2026-06-09T14:01:52Z", "event": "plan_approved", "feature": "morning-report-scans-all-lifecycle-dirs"}
 {"ts": "2026-06-09T14:01:52Z", "event": "phase_transition", "feature": "morning-report-scans-all-lifecycle-dirs", "from": "plan", "to": "implement"}
+{"ts": "2026-06-09T14:38:08Z", "event": "batch_dispatch", "feature": "morning-report-scans-all-lifecycle-dirs", "batch": 0, "tasks": [1, 2]}
