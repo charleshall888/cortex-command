@@ -1,0 +1,7 @@
+{"schema_version": 1, "ts": "2026-06-09T12:20:30Z", "event": "lifecycle_start", "feature": "morning-report-scans-all-lifecycle-dirs", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-09T12:24:43Z", "event": "clarify_critic", "feature": "morning-report-scans-all-lifecycle-dirs", "parent_epic_loaded": false, "findings_count": 5, "dispositions": {"apply": 1, "dismiss": 4, "ask": 0}, "applied_fixes_count": 1, "dismissals_count": 4, "status": "ok"}
+{"ts": "2026-06-09T12:38:34Z", "event": "complexity_override", "feature": "morning-report-scans-all-lifecycle-dirs", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-06-09T12:38:34Z", "event": "criticality_override", "feature": "morning-report-scans-all-lifecycle-dirs", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-06-09T13:29:23Z", "event": "spec_approved", "feature": "morning-report-scans-all-lifecycle-dirs"}
+{"ts": "2026-06-09T14:01:52Z", "event": "plan_approved", "feature": "morning-report-scans-all-lifecycle-dirs"}
+{"ts": "2026-06-09T14:01:52Z", "event": "phase_transition", "feature": "morning-report-scans-all-lifecycle-dirs", "from": "plan", "to": "implement"}
