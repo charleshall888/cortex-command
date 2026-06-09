@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # Skill path-resolution for plugin-distributed skills: body-propagation
