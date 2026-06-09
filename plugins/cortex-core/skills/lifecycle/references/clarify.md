@@ -50,7 +50,7 @@ For Context B (ad-hoc), assess requirements alignment as "no requirements files 
 
 ### 3a. Critic Review
 
-Read `../../refine/references/clarify-critic.md` and follow its protocol. After the critic completes, the orchestrator writes the `clarify_critic` event to `cortex/lifecycle/{feature}/events.log` with the post-critic status.
+Read the **clarify-critic** sibling reference at the absolute path the lifecycle body resolved and propagated (the `${CLAUDE_SKILL_DIR}/../refine/references/clarify-critic.md` target established in lifecycle SKILL.md's "Reference-path propagation" subsection) and follow its protocol. After the critic completes, the orchestrator writes the `clarify_critic` event to `cortex/lifecycle/{feature}/events.log` with the post-critic status.
 
 ### 4. Question Threshold
 

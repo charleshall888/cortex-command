@@ -72,8 +72,10 @@ Dispatch by selection:
   **Step A — Overnight-active rejection mirror**: Source the overnight-probe sidecar and surface interactive-tailored wording on exit 1:
 
   ```
-  cat skills/lifecycle/references/_interactive_overnight_check.sh | bash -s -- "Overnight runner is active (session {session_id}, PID {pid}, phase: executing) — wait for the run to complete (`cortex overnight status`), or open a different feature." "$(_resolve_user_project_root)"
+  cat ${CLAUDE_SKILL_DIR}/references/_interactive_overnight_check.sh | bash -s -- "Overnight runner is active (session {session_id}, PID {pid}, phase: executing) — wait for the run to complete (`cortex overnight status`), or open a different feature." "$(_resolve_user_project_root)"
   ```
+
+  where `${CLAUDE_SKILL_DIR}/references/_interactive_overnight_check.sh` is the body-resolved absolute sidecar path from lifecycle SKILL.md's "Reference-path propagation" subsection — substitute that absolute path here (a bare `skills/lifecycle/…` path resolves against CWD and breaks off-repo).
 
   Sidecar exit codes: `0` = no overnight active, proceed to Step B; `1` = overnight live for this repo, surface the wording above and exit §1 without creating a worktree; `2` = stale runner detected, surface a warn-and-continue diagnostic and proceed to Step B.
 
@@ -105,11 +107,13 @@ This section runs in **two** entry modes: when the user **selected** "Implement 
 
 If `kill -0` exits 0 (process alive): reject with "An interactive worktree session is already live for `{slug}` (PID {pid}). Resolve it before creating a new worktree." and exit §1a without creating a worktree. If the exit code is non-zero or the file was absent/empty: proceed.
 
-**ii. Overnight concurrent guard.** Run the overnight-active probe sidecar via `cat`-then-eval. The four-bash-call sequence (read `active-session.json`, parse `repo_path` and `session_dir`, read `{session_dir}/runner.pid`, parse `pid` from the JSON via `python3 -c "import json,sys; print(json.load(sys.stdin)['pid'])" < {session_dir}/runner.pid`) is extracted into the sidecar at `skills/lifecycle/references/_interactive_overnight_check.sh` and invoked as:
+**ii. Overnight concurrent guard.** Run the overnight-active probe sidecar via `cat`-then-eval. The four-bash-call sequence (read `active-session.json`, parse `repo_path` and `session_dir`, read `{session_dir}/runner.pid`, parse `pid` from the JSON via `python3 -c "import json,sys; print(json.load(sys.stdin)['pid'])" < {session_dir}/runner.pid`) is extracted into the sidecar at the body-resolved absolute path `${CLAUDE_SKILL_DIR}/references/_interactive_overnight_check.sh` (the `_interactive_overnight_check.sh` target established in lifecycle SKILL.md's "Reference-path propagation" subsection) and invoked as:
 
 ```
-cat skills/lifecycle/references/_interactive_overnight_check.sh | bash -s -- "Overnight runner is active for this repo — wait for it to complete before creating an interactive worktree." "$(pwd)"
+cat ${CLAUDE_SKILL_DIR}/references/_interactive_overnight_check.sh | bash -s -- "Overnight runner is active for this repo — wait for it to complete before creating an interactive worktree." "$(pwd)"
 ```
+
+Substitute the body-resolved absolute sidecar path above — a bare `skills/lifecycle/…` path resolves against CWD and breaks off-repo.
 
 Sidecar exit codes: `0` = no overnight active, proceed normally; `1` = overnight live for this repo, surface the wording and exit §1a; `2` = stale runner detected (runner.pid absent or process dead), surface a warn-and-continue diagnostic and proceed.
 

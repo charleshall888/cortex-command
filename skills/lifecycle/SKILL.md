@@ -173,6 +173,13 @@ The Research and Spec phases are handled by the /cortex-core:refine delegation b
 
 Read **only** the reference for the current phase. Do not preload other phases.
 
+### Reference-path propagation (load-bearing)
+
+A reference file cannot itself resolve `${CLAUDE_SKILL_DIR}` (the substitution happens only in this SKILL.md body), and a shell line inside a reference file gets no substitution pass at all — so a bare `skills/…` or `../` path written in a reference file resolves against CWD, which breaks off-repo. Resolve these targets here in the body (where `${CLAUDE_SKILL_DIR}` resolves) and carry the absolute paths into the phase. When you read the current-phase reference, substitute these body-resolved absolute paths wherever it directs you to one of these targets:
+
+- **clarify-critic** (consulted in Clarify §3a) → `${CLAUDE_SKILL_DIR}/../refine/references/clarify-critic.md` (the critic protocol lives in the **refine** sibling skill; `${CLAUDE_SKILL_DIR}/../refine/…` resolves here, a bare `../` in the reference file does not).
+- **overnight-check sidecar** (executed in Implement §1 Step A and §1a.ii) → `${CLAUDE_SKILL_DIR}/references/_interactive_overnight_check.sh` (lifecycle's OWN `references/` sibling). The Implement reference invokes it as `cat ${CLAUDE_SKILL_DIR}/references/_interactive_overnight_check.sh | bash -s -- "<message>" "<root>"` using this body-resolved absolute path — not a bare `skills/lifecycle/…` path, which resolves against CWD and breaks off-repo. Preserve the existing `bash -s --` message and root arguments verbatim.
+
 ## Phase Transition
 
 Proceed automatically — do not ask the user for confirmation at phase boundaries. Announce the transition and continue to the next phase. Between phases, include these minimum fields in the transition summary:
