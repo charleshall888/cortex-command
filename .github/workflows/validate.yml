@@ -38,6 +38,21 @@ jobs:
       - name: Contract checker tests (blocking)
         run: pytest tests/test_check_contract.py
 
+      - name: Dashboard route smoke test (fresh resolve, Starlette floored at >=1.0)
+        run: |
+          # Constraints-free fresh install: no -c/constraints file, so the
+          # web stack re-resolves from PyPI against pyproject's new bounds
+          # (which lands Starlette >=1.0). This is what makes the gate
+          # discriminating — the route test must exercise the real
+          # TemplateResponse render path on a >=1.0 resolve, where the
+          # pre-rewrite name-first form 500s.
+          pip install . httpx packaging
+          # Assert the freshly-resolved Starlette is >=1.0. The <2.0 cap
+          # permits but does not require >=1.0, so fail loudly if the
+          # resolve ever lands <1.0 (a non-discriminating run).
+          python -c "import starlette; from packaging.version import Version; assert Version(starlette.__version__) >= Version('1.0'), starlette.__version__"
+          pytest cortex_command/dashboard/tests/test_routes_smoke.py
+
       - name: Contract audit signal (non-blocking)
         continue-on-error: true
         run: |
