@@ -7,3 +7,6 @@
 {"ts":"2026-06-09T13:51:18Z","event":"synthesizer_drift","feature":"overnight-plan-parser-drops-per-task","expected_sha":"1899a929541c541ff4025608536113d33f1373d54da508d5959526498243f468","observed_sha_or_null":null}
 {"ts": "2026-06-09T13:59:16Z", "event": "plan_approved", "feature": "overnight-plan-parser-drops-per-task"}
 {"ts": "2026-06-09T13:59:16Z", "event": "phase_transition", "feature": "overnight-plan-parser-drops-per-task", "from": "plan", "to": "implement"}
+{"ts": "2026-06-09T17:05:00Z", "event": "batch_dispatch", "feature": "overnight-plan-parser-drops-per-task", "batch": 0, "tasks": [1]}
+{"ts": "2026-06-09T17:35:00Z", "event": "batch_dispatch", "feature": "overnight-plan-parser-drops-per-task", "batch": 1, "tasks": [6]}
+{"ts": "2026-06-09T17:45:00Z", "event": "phase_transition", "feature": "overnight-plan-parser-drops-per-task", "tier": "complex", "from": "implement", "to": "review"}

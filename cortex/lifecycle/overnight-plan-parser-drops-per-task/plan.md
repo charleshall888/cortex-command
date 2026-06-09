@@ -30,7 +30,7 @@ Rework the per-task field parsers in `cortex_command/pipeline/parser.py` so they
   - **Routing**: the raise must propagate through `parse_feature_plan` (`:246`); do NOT route through `compute_dependency_batches`. Module does no logging (`parser.py` docstring) — recovery is silent; only unrecoverable drift raises. `FeatureTask` defaults (`:54-64`) and the sole caller `_parse_tasks` (`:338-349`) are unchanged.
   - **Tests** (extend `_task_block` `test_parser.py:37-42` to emit the alternate dialects; reuse `_make_plan` `:27-34` and the `TemporaryDirectory` `_parse` pattern `:48-57`; assert via `parse_feature_plan`, imported `:18-24`): (R1 equivalence) no-bullet, bulleted colon-inside, and no-bullet colon-inside forms parse to the same `files`/`depends_on` as canonical; (R1 multi-line) the multi-line `Files` dialect parses to its path list and does NOT raise; (R1 Status) a recovered-dialect `Status` line parses to `done`; (R2 raise) empty-value `Files` and empty `Depends on` with a present line-leading colon-adjacent label `assertRaises(ValueError)`; (R4 raise) `**Depends on**: after Phase 1 is green` raises (not `[1]`); (R4 tolerate) `[1] (console-script must exist), [4] (...)` → `[1, 4]` and `none (parallel-eligible with Task 1)` → `[]`; (R3 non-trigger, no raise) `none` / no label / a nested `  - **Files** are frozen per Task 1` Context bullet (no colon) / a nested colon-adjacent `  - **Depends on**: see Task 1` Context sub-bullet / a colon-inside prose span (`- **Files: frozen** below`) / a multi-task plan where every task declares `none`.
 - **Verification**: (a) run `just test` — pass if exit 0 (all new R1/R2/R3/R4 parser cases pass alongside the existing suite); AND (b) live-corpus audit — write and run a throwaway script that loops over `sorted(glob.glob('cortex/lifecycle/*/plan.md'))`, calls `parse_feature_plan(p)` for each inside `try/except ValueError`, collects the path + message of any that raise, prints the offenders, and exits non-zero iff the offender list is non-empty. Pass if it exits 0 (every currently-merging active plan still parses with no raise). Any offender it surfaces is either a real latent drop to fix or a regression to correct before the task is done.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Pin parser ValueError → parse_error=True routing test
 - **Files**: `cortex_command/overnight/tests/test_lead_unit.py`
@@ -39,7 +39,7 @@ Rework the per-task field parsers in `cortex_command/pipeline/parser.py` so they
 - **Complexity**: simple
 - **Context**: Add to the existing `TestExecuteFeature(unittest.IsolatedAsyncioTestCase)` class (`test_lead_unit.py:1050`). Reuse its `setUp` `BatchConfig`/`_feature_plan` fixtures and the `_base_patches` helper (`:1090-1108`), but override the `parse_feature_plan` patch (`:1095`) to `side_effect=ValueError("simulated parse failure")` instead of `return_value`, and await `execute_feature(feature=..., worktree_path=..., config=...)` (signature pattern `:1123-1127`). Assert `result.status == "failed"` AND `result.parse_error is True`. This test pins the **consumer half** of the contract (the `except (FileNotFoundError, ValueError)` block at `feature_executor.py:568` maps `ValueError → parse_error=True`); the **producer half** (that the real `parse_feature_plan` raises `ValueError` specifically) is pinned by Task 1's `assertRaises(ValueError)` cases — a `ValueError` subclass is still caught by `except ValueError`, and a non-`ValueError` type would fail Task 1's assertion, so the two tasks jointly pin both halves. Sibling routing tests exist for the no-parse-error counter behavior (`test_parse_errors_do_not_increment_counter`, `:298`).
 - **Verification**: run `just test` — pass if exit 0 (the new routing test passes).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Direct tests for compute_dependency_batches
 - **Files**: `cortex_command/tests/test_common.py`
@@ -48,7 +48,7 @@ Rework the per-task field parsers in `cortex_command/pipeline/parser.py` so they
 - **Complexity**: simple
 - **Context**: `compute_dependency_batches(tasks: list) -> list[list]` (`common.py:670-706`) takes objects exposing `.number`, `.status`, `.depends_on`; reuse `FeatureTask` from `cortex_command.pipeline.parser` (or a minimal stand-in) to build inputs. Add a new `unittest.TestCase` to the existing `cortex_command/tests/test_common.py`. Chain case: tasks 1 (`depends_on=[]`), 2 (`[1]`), 3 (`[2]`) → assert three batches each `[n]` in order. Collapse case: three tasks all `depends_on=[]` → assert a single batch of all three (the vacuous-true collapse at `:695`). Cycle case: tasks 1 (`[2]`) and 2 (`[1]`) → `assertRaises(ValueError)`. Status-skip note: `done` tasks are excluded (`:689`).
 - **Verification**: run `just test` — pass if exit 0 (the three new `compute_dependency_batches` cases pass).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 4: Pin canonical plan field syntax in the overnight generator prompt
 - **Files**: `cortex_command/overnight/prompts/orchestrator-round.md`
@@ -57,7 +57,7 @@ Rework the per-task field parsers in `cortex_command/pipeline/parser.py` so they
 - **Complexity**: simple
 - **Context**: The target prose is at `orchestrator-round.md:411-414` ("Follow the lifecycle plan phase protocol… using the standard plan.md format (Overview, Tasks with Files/What/Depends on/Context/Verification/Status fields, …)"). Replace the paraphrase with a literal field-syntax example and a citation of `skills/lifecycle/references/plan.md`. This file is package prompt data (shipped via the CLI), not a dual-source-mirrored skill/hook/bin file — single source, no mirror to update. Preserve the surrounding `{{feature_*}}` double-brace tokens and the substitution contract (`:400-401`) verbatim; do not introduce session-level single-brace tokens into the edited lines.
 - **Verification**: `grep -c -- '- \*\*Depends on\*\*:' cortex_command/overnight/prompts/orchestrator-round.md` ≥ 1 AND `grep -c 'references/plan.md' cortex_command/overnight/prompts/orchestrator-round.md` ≥ 1 — pass if both counts ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5: Document intra-feature ordering in pipeline requirements
 - **Files**: `cortex/requirements/pipeline.md`
@@ -66,7 +66,7 @@ Rework the per-task field parsers in `cortex_command/pipeline/parser.py` so they
 - **Complexity**: simple
 - **Context**: The section is `pipeline.md:31-44` ("Feature Execution and Failure Handling"), an acceptance-criteria bullet list (`:36-43`). Add one acceptance-criteria bullet (or a short adjacent line) naming `compute_dependency_batches` and the fail-loud-on-unparseable-ordering posture. Keep consistent with the existing bullet style and the "fail-forward model" / graceful-partial-failure language already present (`:41`).
 - **Verification**: `grep -c 'compute_dependency_batches' cortex/requirements/pipeline.md` ≥ 1 — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 6: Field-name rename-drift guard test
 - **Files**: `cortex_command/pipeline/tests/test_parser.py`
@@ -75,7 +75,7 @@ Rework the per-task field parsers in `cortex_command/pipeline/parser.py` so they
 - **Complexity**: simple
 - **Context**: Same file as Task 1's parser tests (`test_parser.py`) — sequenced after Task 1 to avoid same-file conflict and to reuse the `_task_block`/`_make_plan`/`_parse` fixtures. Render a minimal plan whose task uses the template's literal `Files` and `Depends on` field labels with non-empty values (e.g. `Files`=`a.py`, `Depends on`=`[1]`) and assert the parser returns the expected non-empty `files`/`depends_on`. Scope is the two ordering-critical field names only — NOT a full SKILL↔parser parity harness (explicit Non-Requirement, spec). The test's purpose is that a field-label rename surfaces as a failing assertion, not silent `[]`.
 - **Verification**: run `just test` — pass if exit 0 (the rename-drift guard passes against the current canonical field labels).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ## Risks
 - **The label detector's line-leading anchor is the load-bearing discriminator (R2/R3).** The raise/benign-absent decision hinges on `_field_label_present` matching a top-level field bullet but NOT a nested Context sub-bullet or a colon-free prose mention. Task 1's R3 non-trigger suite now includes a nested colon-adjacent bullet and a colon-inside prose span specifically to exercise the anchor (not just colon-adjacency). If those tests prove the anchor insufficient, tighten it before the task is done.
