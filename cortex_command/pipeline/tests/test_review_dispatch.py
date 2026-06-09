@@ -273,3 +273,105 @@ class TestCycleThreading(unittest.IsolatedAsyncioTestCase):
             call2 = mock_dispatch.call_args_list[2]
             self.assertEqual(call2.kwargs["skill"], "review-fix")
             self.assertEqual(call2.kwargs["cycle"], 2)
+
+
+class TestCouldNotRunWritesDeferral(unittest.IsolatedAsyncioTestCase):
+    """R6a: the live ERROR (could-not-run) path writes a SEVERITY_BLOCKING
+    deferral file carrying the verdict — it previously wrote none, so a
+    crashed/errored review was invisible in the morning report."""
+
+    async def test_error_verdict_writes_blocking_deferral_file(self):
+        """An ERROR verdict (review subprocess could not produce a parseable
+        review.md) writes exactly one deferral file into the deferred dir and
+        returns a deferred ReviewResult with verdict 'ERROR'."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            feature = "feat-could-not-run"
+            lifecycle_base = tmp_path / "cortex" / "lifecycle"
+            feature_dir = lifecycle_base / feature
+            feature_dir.mkdir(parents=True)
+
+            spec_path = feature_dir / "spec.md"
+            spec_path.write_text("# Spec\n\nSpec content.\n", encoding="utf-8")
+
+            # Leave review.md absent so parse_verdict() returns the ERROR
+            # sentinel — the could-not-run path.
+            deferred_dir = tmp_path / "deferred"
+
+            async def fake_dispatch(**kwargs) -> DispatchResult:
+                return DispatchResult(success=True, output="ok", cost_usd=0.01)
+
+            with patch.object(
+                _review_dispatch_module, "dispatch_task",
+                new=AsyncMock(side_effect=fake_dispatch),
+            ):
+                result = await dispatch_review(
+                    feature=feature,
+                    worktree_path=tmp_path / "worktree",
+                    branch="pipeline/feat-could-not-run",
+                    spec_path=spec_path,
+                    complexity="complex",
+                    criticality="high",
+                    lifecycle_base=lifecycle_base,
+                    deferred_dir=deferred_dir,
+                    base_branch="main",
+                )
+
+            self.assertFalse(result.approved)
+            self.assertTrue(result.deferred)
+            self.assertEqual(result.verdict, "ERROR")
+
+            # Exactly one deferral file written for this feature (R6a).
+            written = sorted(deferred_dir.glob(f"{feature}-q*.md"))
+            self.assertEqual(
+                len(written), 1,
+                f"expected exactly one deferral file; found {written}",
+            )
+            body = written[0].read_text(encoding="utf-8")
+            self.assertIn("blocking", body)
+            self.assertIn("ERROR", body)
+
+    async def test_rejected_verdict_still_writes_deferral_file(self):
+        """Guard: a substantive REJECTED verdict (review ran and said no) also
+        writes a deferral — confirming the ERROR-path addition did not regress
+        the pre-existing REJECTED deferral write."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            feature = "feat-rejected"
+            lifecycle_base = tmp_path / "cortex" / "lifecycle"
+            feature_dir = lifecycle_base / feature
+            feature_dir.mkdir(parents=True)
+
+            spec_path = feature_dir / "spec.md"
+            spec_path.write_text("# Spec\n\nSpec content.\n", encoding="utf-8")
+
+            review_md_path = feature_dir / "review.md"
+            review_md_path.write_text(
+                "# Review\n\n```json\n"
+                + json.dumps({"verdict": "REJECTED", "cycle": 1, "issues": ["nope"]})
+                + "\n```\n",
+                encoding="utf-8",
+            )
+            deferred_dir = tmp_path / "deferred"
+
+            async def fake_dispatch(**kwargs) -> DispatchResult:
+                return DispatchResult(success=True, output="ok", cost_usd=0.01)
+
+            with patch.object(
+                _review_dispatch_module, "dispatch_task",
+                new=AsyncMock(side_effect=fake_dispatch),
+            ):
+                result = await dispatch_review(
+                    feature=feature,
+                    worktree_path=tmp_path / "worktree",
+                    branch="pipeline/feat-rejected",
+                    spec_path=spec_path,
+                    complexity="complex",
+                    criticality="high",
+                    lifecycle_base=lifecycle_base,
+                    deferred_dir=deferred_dir,
+                    base_branch="main",
+                )
+
+            self.assertEqual(result.verdict, "REJECTED")
+            self.assertEqual(len(list(deferred_dir.glob(f"{feature}-q*.md"))), 1)

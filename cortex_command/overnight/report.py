@@ -1045,6 +1045,23 @@ def render_deferred_questions(data: ReportData) -> str:
             if feat:
                 merged_to_integration.add(feat)
 
+    # Collect features whose live merge was successfully reverted off the
+    # integration branch (fail-safe rollback on a non-APPROVED/could-not-run
+    # review). For these the "still on the integration branch — do NOT re-run"
+    # annotation is FALSE post-revert and must be reconciled to "merge reverted
+    # — safe to re-review/re-run". The legacy "do NOT re-run" text is retained
+    # only when the revert ABORTED (the dependent-conflict R-edge), where the
+    # merge genuinely remains; such features have merge_reverted=False and so
+    # are NOT in this set.
+    reverted_from_integration: set[str] = set()
+    for evt in data.events:
+        if evt.get("event") == "feature_deferred":
+            details = evt.get("details", {}) or {}
+            if details.get("merge_reverted") is True:
+                feat = evt.get("feature", "")
+                if feat:
+                    reverted_from_integration.add(feat)
+
     for dq in sorted_deferrals:
         lines.append(f"### {dq.feature}: {dq.question} [{dq.severity}]")
         lines.append(f"> {dq.question}")
@@ -1052,7 +1069,14 @@ def render_deferred_questions(data: ReportData) -> str:
         lines.append(f"> Full details: `deferred/{dq.feature}-q{dq.question_id:03d}.md`")
 
         if dq.severity == SEVERITY_BLOCKING:
-            if dq.feature in merged_to_integration:
+            if dq.feature in reverted_from_integration:
+                action = (
+                    "Merge reverted — safe to re-review/re-run. The feature's merge "
+                    "was rolled back off the integration branch after the review could "
+                    "not run (or did not approve), so no unreviewed code remains. "
+                    "Triage the deferral and re-run when ready."
+                )
+            elif dq.feature in merged_to_integration:
                 action = (
                     "Feature is on the integration branch — do NOT re-run. "
                     "Investigate the post-merge failure (see error details above and overnight-events.log). "

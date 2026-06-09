@@ -290,6 +290,31 @@ def _get_changed_files(feature: str, base_branch: str, branch: str | None = None
     return []
 
 
+def _overlapping_features(
+    feature: str,
+    changed_files: list[str],
+    key_files_changed: dict[str, list[str]],
+) -> list[str]:
+    """Return in-batch features (other than *feature*) whose changed files
+    overlap *changed_files*.
+
+    Used to name the dependent feature(s) Y in the dependent-conflict R-edge
+    deferral: when reverting *feature*'s merge conflicts, the conflicting code
+    is shared with whichever later-merged feature touched the same files. A
+    file-set intersection is a deterministic, git-output-independent way to
+    surface that dependency to morning triage.
+    """
+    own = set(changed_files)
+    if not own:
+        return []
+    dependents = [
+        other
+        for other, files in key_files_changed.items()
+        if other != feature and own.intersection(files or [])
+    ]
+    return sorted(dependents)
+
+
 def _classify_no_commit(feature: str, branch: str, base_branch: str) -> str:
     """Classify why a feature completed with no new commits.
 
@@ -1001,6 +1026,13 @@ async def apply_feature_result(
                             getattr(rr, "merge_sha", None) or merge_result.merge_sha
                         )
                         revert_aborted = False
+                        # Track whether the live merge was actually reverted off
+                        # the integration branch so the morning report can
+                        # reconcile its surface: a successful revert means the
+                        # feature is no longer on the branch ("safe to
+                        # re-review"), whereas an aborted revert (the R-edge)
+                        # leaves it merged ("do NOT re-run").
+                        merge_reverted = False
                         if live_merge_sha is not None:
                             revert_outcome = revert_merge(
                                 live_merge_sha,
@@ -1009,6 +1041,7 @@ async def apply_feature_result(
                                 feature=name,
                             )
                             revert_aborted = revert_outcome.aborted
+                            merge_reverted = revert_outcome.success
                         if revert_aborted:
                             # Dependent-conflict R-edge: the revert conflicted
                             # (a later feature merged code depending on this
@@ -1016,7 +1049,20 @@ async def apply_feature_result(
                             # genuinely REMAINS on the integration branch.
                             # Escalate a blocking deferral with the legacy
                             # "do NOT re-run" annotation (accurate in this
-                            # one case).
+                            # one case). Name the dependent feature(s) Y — any
+                            # other in-batch feature whose changed files overlap
+                            # this one's — so triage can see what now references
+                            # the code that would have been reverted.
+                            dependents = _overlapping_features(
+                                name, changed_files, ctx.batch_result.key_files_changed,
+                            )
+                            if dependents:
+                                dependent_clause = (
+                                    "Dependent feature(s) referencing the reverted code: "
+                                    + ", ".join(f"'{d}'" for d in dependents) + ". "
+                                )
+                            else:
+                                dependent_clause = "A later feature likely depends on it. "
                             conflict_deferral = DeferralQuestion(
                                 feature=name,
                                 question_id=_next_escalation_n(
@@ -1027,12 +1073,12 @@ async def apply_feature_result(
                                     f"Review deferred (verdict {rr.verdict!r}); the rollback "
                                     f"of merge {live_merge_sha} conflicted and was aborted. The "
                                     "merge is still on the integration branch — do NOT re-run; "
-                                    "manual rollback needed."
+                                    f"manual rollback needed. {dependent_clause}"
                                 ),
                                 question=(
                                     f"Feature '{name}' was deferred at review but its merge could "
-                                    "not be reverted (revert conflict — a later feature likely "
-                                    "depends on it). How should this be manually rolled back?"
+                                    "not be reverted (revert conflict — a later feature depends "
+                                    f"on it). {dependent_clause}How should this be manually rolled back?"
                                 ),
                                 options_considered=["manual revert + re-review", "keep merged and re-review in place"],
                                 pipeline_attempted="revert_merge() in apply_feature_result() (deferred path)",
@@ -1042,15 +1088,39 @@ async def apply_feature_result(
                             "name": name,
                             "question_count": 1,
                         })
+                        # Distinguish a could-not-run review (verdict STRING
+                        # "ERROR" — the crash/error path) from a review that ran
+                        # and said no (REJECTED / CHANGES_REQUESTED), so morning
+                        # triage can separate an infra crash from substantive
+                        # review feedback (R9). Detection keys off the verdict
+                        # string, never `cycle` (the cycle:0 value is cosmetic).
+                        deferred_details: dict = {
+                            "review_verdict": rr.verdict,
+                            "review_cycle": rr.cycle,
+                            # Reconciliation signal for the morning report: when
+                            # the merge was successfully reverted the surface
+                            # must NOT carry the "still on the integration
+                            # branch — do NOT re-run" annotation (it is false
+                            # post-revert); that annotation is reserved for the
+                            # R-edge where the revert aborted and the merge
+                            # genuinely remains.
+                            "merge_reverted": merge_reverted,
+                        }
+                        if rr.verdict == "ERROR":
+                            deferred_details["review_dispatch_crashed"] = True
+                            deferred_details["could_not_run"] = True
                         overnight_log_event(
                             FEATURE_DEFERRED,
                             ctx.config.batch_id,
                             feature=name,
-                            details={"review_verdict": rr.verdict, "review_cycle": rr.cycle},
+                            details=deferred_details,
                             log_path=ctx.config.overnight_events_path,
                         )
+                        # Use the valid OvernightState status `deferred` (R8) —
+                        # `in_progress` is not a valid status and reads as
+                        # ordinary active work.
                         _write_back_to_backlog(
-                            name, "in_progress", ctx.config.batch_id,
+                            name, "deferred", ctx.config.batch_id,
                             ctx.config.overnight_events_path,
                             backlog_id=ctx.backlog_ids.get(name),
                         )

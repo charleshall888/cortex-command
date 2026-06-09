@@ -37,6 +37,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from cortex_command.overnight.deferral import SEVERITY_BLOCKING
 from cortex_command.overnight.outcome_router import OutcomeContext, apply_feature_result
+from cortex_command.overnight.report import ReportData, render_deferred_questions
+from cortex_command.overnight.state import OvernightFeatureStatus, OvernightState
 from cortex_command.overnight.types import CircuitBreakerState, FeatureResult
 from cortex_command.pipeline.merge import revert_merge
 
@@ -394,6 +396,121 @@ class TestRevertMergeRealGit(unittest.IsolatedAsyncioTestCase):
             # A SEVERITY_BLOCKING deferral was escalated.
             self.assertEqual(len(captured_deferrals), 1)
             self.assertEqual(captured_deferrals[0].severity, SEVERITY_BLOCKING)
+
+    async def test_aborted_revert_surface_names_dependent_and_says_do_not_rerun(self):
+        """R6d: a feature whose revert ABORTS on a real conflict produces a
+        blocking deferral whose RENDERED morning-report surface (a) carries the
+        legacy 'do NOT re-run' annotation (accurate here — the merge genuinely
+        remains) and (b) names the dependent feature Y that references the
+        reverted code. Drives the conflict via the real-git harness.
+        """
+        with TemporaryDirectory() as td:
+            repo = Path(td) / "repo"
+            repo.mkdir()
+            session_dir = Path(td) / "session"
+            session_dir.mkdir()
+            wt = RealGitWorktree(repo)
+
+            # Feature X writes shared.txt; merge it.
+            x_branch = wt.feature_branch("feat-x", {"shared.txt": "line from X\n"})
+            x_merge_sha = wt.merge_no_ff(x_branch)
+
+            # Dependent feature Y rewrites the SAME line so reverting X conflicts.
+            _git("checkout", "main", cwd=repo)
+            (repo / "shared.txt").write_text("line rewritten by feat-y\n")
+            _git("add", "shared.txt", cwd=repo)
+            _git("commit", "-m", "feat-y rewrites shared.txt", cwd=repo)
+
+            ctx = _make_real_ctx(repo, session_dir)
+            ctx.worktree_branches["feat-x"] = x_branch
+            # Y is an in-batch feature touching the same file → identified as
+            # the dependent by the file-set intersection.
+            ctx.batch_result.key_files_changed["feat-y"] = ["shared.txt"]
+
+            merge_result = MagicMock(
+                success=True, error=None, conflict=False, test_result=None,
+                merge_sha=x_merge_sha,
+            )
+            review_result = MagicMock(
+                deferred=True, verdict="REJECTED", cycle=1, merge_sha=None,
+            )
+
+            captured_deferrals: list = []
+
+            def _capture_write_deferral(deferral, deferred_dir=None):
+                captured_deferrals.append(deferral)
+
+            with (
+                patch(
+                    "cortex_command.overnight.outcome_router._get_changed_files",
+                    return_value=["shared.txt"],
+                ),
+                patch(
+                    "cortex_command.overnight.outcome_router.merge_feature",
+                    return_value=merge_result,
+                ),
+                patch(
+                    "cortex_command.overnight.outcome_router.requires_review",
+                    return_value=True,
+                ),
+                patch(
+                    "cortex_command.overnight.outcome_router.dispatch_review",
+                    new=AsyncMock(return_value=review_result),
+                ),
+                patch(
+                    "cortex_command.overnight.outcome_router._next_escalation_n",
+                    return_value=1,
+                ),
+                patch(
+                    "cortex_command.overnight.outcome_router.write_deferral",
+                    side_effect=_capture_write_deferral,
+                ),
+                patch("cortex_command.overnight.outcome_router.read_tier", return_value="L"),
+                patch(
+                    "cortex_command.overnight.outcome_router.read_criticality",
+                    return_value="high",
+                ),
+                patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+                patch("cortex_command.overnight.outcome_router.overnight_log_event"),
+                patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+            ):
+                await apply_feature_result(
+                    "feat-x",
+                    FeatureResult(name="feat-x", status="completed"),
+                    ctx,
+                )
+
+            # A blocking conflict deferral was escalated and names Y.
+            self.assertEqual(len(captured_deferrals), 1)
+            dq = captured_deferrals[0]
+            self.assertEqual(dq.severity, SEVERITY_BLOCKING)
+            self.assertIn("feat-y", dq.context)
+
+            # Render the deferral through the report: the surface must NOT be
+            # reconciled (the revert aborted → no merge_reverted=True signal),
+            # so it retains the legacy "do NOT re-run" annotation.
+            state = OvernightState(session_id="s-real")
+            state.features["feat-x"] = OvernightFeatureStatus(status="deferred")
+            data = ReportData()
+            data.state = state
+            # feature_merged present (the merge landed) + a feature_deferred with
+            # merge_reverted False (the abort), as the live router would emit.
+            data.events = [
+                {"event": "feature_merged", "feature": "feat-x"},
+                {
+                    "event": "feature_deferred",
+                    "feature": "feat-x",
+                    "details": {"review_verdict": "REJECTED", "merge_reverted": False},
+                },
+            ]
+            data.deferrals = [dq]
+
+            surface = render_deferred_questions(data)
+            self.assertIn("do NOT re-run", surface)
+            self.assertIn("on the integration branch", surface)
+            # The dependent feature Y is named in the rendered surface (it
+            # appears in the deferral question text the renderer echoes).
+            self.assertIn("feat-y", surface)
 
     def test_revert_merge_unit_aborts_on_conflict(self):
         """Direct unit check of the rewritten ``revert_merge`` abort branch over

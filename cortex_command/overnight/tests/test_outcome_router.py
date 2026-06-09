@@ -1436,5 +1436,106 @@ class TestReviewNonApprovedRevertsLiveSha(unittest.IsolatedAsyncioTestCase):
         m_write_deferral.assert_called_once()
 
 
+class TestReviewDeferredSurfacingCorrections(unittest.IsolatedAsyncioTestCase):
+    """Task 6 — R8 (`deferred` backlog status) and R9 (could-not-run marker)
+    on the review-deferred path."""
+
+    async def _run_deferred_path(self, verdict: str):
+        """Drive apply_feature_result's rr.deferred path for the given verdict
+        with a successful revert; return the captured write-back and
+        overnight-event calls."""
+        ctx = _make_ctx(pauses=0)
+        ctx.worktree_branches["feat-a"] = "pipeline/feat-a"
+
+        live_sha = "deadbeefcafe1234deadbeefcafe1234deadbeef"
+        merge_result = MagicMock(
+            success=True, error=None, conflict=False, test_result=None,
+            merge_sha=live_sha,
+        )
+        review_result = MagicMock(
+            deferred=True, verdict=verdict, cycle=(0 if verdict == "ERROR" else 1),
+            merge_sha=None,
+        )
+        revert_outcome = MagicMock(success=True, aborted=False, merge_sha=live_sha)
+
+        with (
+            patch(
+                "cortex_command.overnight.outcome_router._get_changed_files",
+                return_value=["src/a.py"],
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.merge_feature",
+                return_value=merge_result,
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.requires_review",
+                return_value=True,
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.dispatch_review",
+                new=AsyncMock(return_value=review_result),
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.revert_merge",
+                return_value=revert_outcome,
+            ),
+            patch("cortex_command.overnight.outcome_router.read_tier", return_value="M"),
+            patch(
+                "cortex_command.overnight.outcome_router.read_criticality",
+                return_value="high",
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router._write_back_to_backlog",
+            ) as m_write_back,
+            patch(
+                "cortex_command.overnight.outcome_router.overnight_log_event",
+            ) as m_log_event,
+            patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+        ):
+            await apply_feature_result(
+                "feat-a",
+                FeatureResult(name="feat-a", status="completed"),
+                ctx,
+            )
+        return m_write_back, m_log_event
+
+    async def test_review_deferred_writes_back_status_deferred(self):
+        """R8: the review-deferred write-back uses status 'deferred', not the
+        invalid 'in_progress'."""
+        m_write_back, _ = await self._run_deferred_path("REJECTED")
+        # Positional second arg is the backlog status.
+        statuses = [
+            c.args[1] for c in m_write_back.call_args_list if len(c.args) >= 2
+        ]
+        self.assertIn("deferred", statuses)
+        self.assertNotIn("in_progress", statuses)
+
+    async def test_error_verdict_event_carries_could_not_run_marker(self):
+        """R9: a could-not-run review (verdict STRING 'ERROR') tags the
+        FEATURE_DEFERRED event with the distinguishing marker."""
+        _, m_log_event = await self._run_deferred_path("ERROR")
+        deferred_details = self._deferred_event_details(m_log_event)
+        self.assertTrue(deferred_details.get("review_dispatch_crashed"))
+        self.assertTrue(deferred_details.get("could_not_run"))
+
+    async def test_rejected_verdict_event_has_no_could_not_run_marker(self):
+        """R9: a review that RAN and said no (REJECTED) does NOT carry the
+        could-not-run marker — triage can separate the two."""
+        _, m_log_event = await self._run_deferred_path("REJECTED")
+        deferred_details = self._deferred_event_details(m_log_event)
+        self.assertNotIn("review_dispatch_crashed", deferred_details)
+        self.assertNotIn("could_not_run", deferred_details)
+
+    @staticmethod
+    def _deferred_event_details(m_log_event) -> dict:
+        """Extract the details dict from the FEATURE_DEFERRED overnight_log_event
+        call (the first positional arg is the event type constant)."""
+        from cortex_command.overnight.outcome_router import FEATURE_DEFERRED
+        for call in m_log_event.call_args_list:
+            if call.args and call.args[0] == FEATURE_DEFERRED:
+                return call.kwargs.get("details", {}) or {}
+        raise AssertionError("no FEATURE_DEFERRED event was emitted")
+
+
 if __name__ == "__main__":
     unittest.main()

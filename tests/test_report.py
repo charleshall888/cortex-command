@@ -133,6 +133,78 @@ class TestMergedFeatureAnnotations:
         assert "Answer this question and re-run the feature" in output
 
 
+class TestRevertReconciledSurfacing:
+    """Task 6 (R6b/R6c): the morning report renders a could-not-run/deferred
+    feature in the Deferred Questions section and reconciles its surface to the
+    post-revert state — a successfully-reverted feature does NOT carry the
+    legacy 'on the integration branch — do NOT re-run' annotation, while a
+    feature whose revert aborted (R-edge) retains it."""
+
+    def _data_with_deferral(self, *, merge_reverted: bool | None) -> ReportData:
+        """Build ReportData for a feature that merged then deferred at review.
+
+        ``merge_reverted`` controls the reconciliation signal carried on the
+        feature_deferred event details: True → revert succeeded (safe to
+        re-review), False → revert aborted (R-edge: merge remains), None →
+        legacy events with no signal.
+        """
+        state = OvernightState(
+            session_id="test-session",
+            integration_branch="overnight/test",
+        )
+        state.features["feat-x"] = OvernightFeatureStatus(status="deferred")
+
+        details: dict = {"review_verdict": "ERROR", "review_cycle": 0}
+        if merge_reverted is not None:
+            details["merge_reverted"] = merge_reverted
+
+        data = ReportData()
+        data.state = state
+        data.events = [
+            {"event": "feature_merged", "feature": "feat-x"},
+            {"event": "feature_deferred", "feature": "feat-x", "details": details},
+        ]
+        data.deferrals = [
+            DeferralQuestion(
+                feature="feat-x",
+                question_id=1,
+                severity=SEVERITY_BLOCKING,
+                context="Review cycle 0 returned verdict: ERROR",
+                question="Feature feat-x received ERROR during overnight review.",
+                pipeline_attempted="Overnight review agent returned ERROR at cycle 0.",
+            )
+        ]
+        return data
+
+    def test_could_not_run_feature_rendered_in_deferred_section(self):
+        """R6b: the review-ERROR feature is rendered in Deferred Questions."""
+        data = self._data_with_deferral(merge_reverted=True)
+        output = render_deferred_questions(data)
+
+        assert "## Deferred Questions (1)" in output
+        assert "feat-x" in output
+
+    def test_reverted_feature_omits_do_not_rerun_annotation(self):
+        """R6c: a successfully-reverted feature does NOT carry the
+        'on the integration branch — do NOT re-run' annotation (it is false
+        post-revert) and instead says the merge was reverted."""
+        data = self._data_with_deferral(merge_reverted=True)
+        output = render_deferred_questions(data)
+
+        assert "on the integration branch" not in output
+        assert "do NOT re-run" not in output
+        assert "Merge reverted" in output
+
+    def test_aborted_revert_feature_retains_do_not_rerun_annotation(self):
+        """R6c complement: a feature whose revert ABORTED (R-edge — merge
+        genuinely remains) retains the legacy 'do NOT re-run' annotation."""
+        data = self._data_with_deferral(merge_reverted=False)
+        output = render_deferred_questions(data)
+
+        assert "on the integration branch" in output
+        assert "do NOT re-run" in output
+
+
 # ---------------------------------------------------------------------------
 # Helper: build a minimal valid R4 residue payload
 # ---------------------------------------------------------------------------

@@ -154,8 +154,10 @@ async def dispatch_review(
         - **APPROVED**: writes review_verdict, phase_transition
           review->complete, and feature_complete events; returns
           ``ReviewResult(approved=True)``.
-        - **ERROR** (agent failure or unparseable verdict): writes
-          review_verdict ERROR event; returns
+        - **ERROR** (agent failure or unparseable verdict — the
+          could-not-run path): writes the review_verdict ERROR event AND a
+          SEVERITY_BLOCKING deferral file carrying the verdict so the crash
+          surfaces in the morning report; returns
           ``ReviewResult(deferred=True)``.
         - **REJECTED** (any cycle): writes deferral file; returns
           ``ReviewResult(deferred=True)``.
@@ -305,7 +307,10 @@ async def dispatch_review(
             issues=issues,
         )
 
-    # (7) Handle ERROR (agent failure or unparseable verdict)
+    # (7) Handle ERROR (agent failure or unparseable verdict) — the
+    # could-not-run path. Write a SEVERITY_BLOCKING deferral file carrying
+    # the verdict (R6) so a crashed/errored review surfaces in the morning
+    # report rather than silently passing as a bare FEATURE_DEFERRED event.
     if verdict_str == "ERROR":
         log_event(feature_events_log, {
             "event": "review_verdict",
@@ -314,6 +319,7 @@ async def dispatch_review(
             "cycle": cycle,
             "issues": issues,
         })
+        _write_review_deferral(feature, verdict_str, cycle, issues, deferred_dir)
         return ReviewResult(
             approved=False,
             deferred=True,
@@ -605,9 +611,17 @@ def _write_review_deferral(
 ) -> Path:
     """Write a deferral file for a non-APPROVED review verdict.
 
+    Used for every could-not-run / review-said-no outcome (ERROR, REJECTED,
+    or a non-cycle-1 CHANGES_REQUESTED). The deferral does not assert that the
+    feature still sits on the integration branch: the caller reverts the live
+    merge before surfacing, so the post-revert surface ("reverted — safe to
+    re-review") is reconciled by the report, not hard-coded here. The legacy
+    "do NOT re-run" annotation is reserved for the dependent-conflict abort
+    case, which the caller escalates separately when the revert genuinely fails.
+
     Args:
         feature: Feature name.
-        verdict: The review verdict (REJECTED or CHANGES_REQUESTED).
+        verdict: The review verdict (ERROR, REJECTED, or CHANGES_REQUESTED).
         cycle: Review cycle number.
         issues: List of issue descriptions from the review.
         deferred_dir: Directory for deferral files.
