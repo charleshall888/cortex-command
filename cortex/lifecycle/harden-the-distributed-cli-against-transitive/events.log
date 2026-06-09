@@ -1,0 +1,7 @@
+{"schema_version": 1, "ts": "2026-06-09T02:51:48Z", "event": "lifecycle_start", "feature": "harden-the-distributed-cli-against-transitive", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-09T02:57:09Z", "event": "clarify_critic", "feature": "harden-the-distributed-cli-against-transitive", "parent_epic_loaded": false, "findings_count": 8, "dispositions": {"apply": 4, "dismiss": 4, "ask": 0}, "applied_fixes_count": 4, "dismissals_count": 4, "status": "ok"}
+{"ts": "2026-06-09T03:17:24Z", "event": "complexity_override", "feature": "harden-the-distributed-cli-against-transitive", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-06-09T03:17:24Z", "event": "criticality_override", "feature": "harden-the-distributed-cli-against-transitive", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-06-09T11:08:20Z", "event": "spec_approved", "feature": "harden-the-distributed-cli-against-transitive"}
+{"ts": "2026-06-09T11:40:01Z", "event": "plan_approved", "feature": "harden-the-distributed-cli-against-transitive"}
+{"ts": "2026-06-09T11:40:01Z", "event": "phase_transition", "feature": "harden-the-distributed-cli-against-transitive", "from": "plan", "to": "implement"}
