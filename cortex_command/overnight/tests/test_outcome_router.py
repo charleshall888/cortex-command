@@ -1537,5 +1537,308 @@ class TestReviewDeferredSurfacingCorrections(unittest.IsolatedAsyncioTestCase):
         raise AssertionError("no FEATURE_DEFERRED event was emitted")
 
 
+class TestRecoveryPathReviewGate(unittest.IsolatedAsyncioTestCase):
+    """R10 — the post-merge test-recovery success path routes a review-qualifying
+    feature through review before marking ``merged``, reverts+defers on a
+    non-APPROVED/crash outcome, and runs the recovery re-merge under the
+    re-acquired ``ctx.lock``."""
+
+    def _failing_merge_then_recovery_ctx(self):
+        """Build a ctx whose initial merge reports a test failure (drives the
+        recovery path) with recovery_attempts_map empty so the gate passes."""
+        ctx = _make_ctx(pauses=0)
+        ctx.worktree_branches["feat-a"] = "pipeline/feat-a"
+        ctx.worktree_paths["feat-a"] = Path("/tmp/unused-feat-a-worktree")
+        return ctx
+
+    @staticmethod
+    def _test_failure_merge_result() -> MagicMock:
+        return MagicMock(
+            success=False,
+            error="test_failure",
+            conflict=False,
+            test_result=MagicMock(output="FAILED: test_foo"),
+        )
+
+    async def test_recovery_success_dispatches_review_for_qualifying_feature(self):
+        """A complex/high feature that passes only after test recovery routes
+        through dispatch_review on the recovery success path."""
+        ctx = self._failing_merge_then_recovery_ctx()
+
+        recovery_result = MagicMock(
+            success=True, flaky=False, attempts=1,
+            merge_sha="recoverysha111111111111111111111111111111",
+        )
+        review_result = MagicMock(deferred=False, verdict="APPROVED", cycle=1, merge_sha=None)
+
+        with (
+            patch(
+                "cortex_command.overnight.outcome_router._get_changed_files",
+                return_value=["src/a.py"],
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.merge_feature",
+                return_value=self._test_failure_merge_result(),
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.recover_test_failure",
+                new=AsyncMock(return_value=recovery_result),
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.requires_review",
+                return_value=True,
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.dispatch_review",
+                new=AsyncMock(return_value=review_result),
+            ) as m_dispatch,
+            patch("cortex_command.overnight.outcome_router.read_tier", return_value="complex"),
+            patch(
+                "cortex_command.overnight.outcome_router.read_criticality",
+                return_value="high",
+            ),
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch("cortex_command.overnight.outcome_router.overnight_log_event"),
+            patch("cortex_command.overnight.outcome_router.load_state"),
+            patch("cortex_command.overnight.outcome_router.save_state"),
+            patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+        ):
+            await apply_feature_result(
+                "feat-a",
+                FeatureResult(name="feat-a", status="completed"),
+                ctx,
+            )
+
+        m_dispatch.assert_awaited_once()
+        kwargs = m_dispatch.await_args.kwargs
+        self.assertEqual(kwargs["feature"], "feat-a")
+        # Review approved → feature proceeds to merged.
+        self.assertIn("feat-a", ctx.batch_result.features_merged)
+
+    async def test_recovery_flaky_success_dispatches_review_for_qualifying_feature(self):
+        """The flaky-recovery success branch also routes a qualifying feature
+        through review."""
+        ctx = self._failing_merge_then_recovery_ctx()
+
+        recovery_result = MagicMock(
+            success=True, flaky=True, attempts=0,
+            merge_sha="flakysha2222222222222222222222222222222222",
+        )
+        review_result = MagicMock(deferred=False, verdict="APPROVED", cycle=1, merge_sha=None)
+
+        with (
+            patch(
+                "cortex_command.overnight.outcome_router._get_changed_files",
+                return_value=["src/a.py"],
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.merge_feature",
+                return_value=self._test_failure_merge_result(),
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.recover_test_failure",
+                new=AsyncMock(return_value=recovery_result),
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.requires_review",
+                return_value=True,
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.dispatch_review",
+                new=AsyncMock(return_value=review_result),
+            ) as m_dispatch,
+            patch("cortex_command.overnight.outcome_router.read_tier", return_value="complex"),
+            patch(
+                "cortex_command.overnight.outcome_router.read_criticality",
+                return_value="critical",
+            ),
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch("cortex_command.overnight.outcome_router.overnight_log_event"),
+            patch("cortex_command.overnight.outcome_router.load_state"),
+            patch("cortex_command.overnight.outcome_router.save_state"),
+            patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+        ):
+            await apply_feature_result(
+                "feat-a",
+                FeatureResult(name="feat-a", status="completed"),
+                ctx,
+            )
+
+        m_dispatch.assert_awaited_once()
+        self.assertIn("feat-a", ctx.batch_result.features_merged)
+
+    async def test_recovery_qualifying_feature_not_merged_without_approved(self):
+        """A review-qualifying feature on the recovery path is NOT marked merged
+        when review defers; the recovery re-merge SHA is reverted and the
+        feature is deferred."""
+        ctx = self._failing_merge_then_recovery_ctx()
+
+        recovery_sha = "recoverysha333333333333333333333333333333"
+        recovery_result = MagicMock(
+            success=True, flaky=False, attempts=1, merge_sha=recovery_sha,
+        )
+        review_result = MagicMock(deferred=True, verdict="REJECTED", cycle=1, merge_sha=None)
+        revert_outcome = MagicMock(success=True, aborted=False, merge_sha=recovery_sha)
+
+        with (
+            patch(
+                "cortex_command.overnight.outcome_router._get_changed_files",
+                return_value=["src/a.py"],
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.merge_feature",
+                return_value=self._test_failure_merge_result(),
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.recover_test_failure",
+                new=AsyncMock(return_value=recovery_result),
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.requires_review",
+                return_value=True,
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.dispatch_review",
+                new=AsyncMock(return_value=review_result),
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.revert_merge",
+                return_value=revert_outcome,
+            ) as m_revert,
+            patch("cortex_command.overnight.outcome_router.read_tier", return_value="complex"),
+            patch(
+                "cortex_command.overnight.outcome_router.read_criticality",
+                return_value="high",
+            ),
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch("cortex_command.overnight.outcome_router.overnight_log_event"),
+            patch("cortex_command.overnight.outcome_router.load_state"),
+            patch("cortex_command.overnight.outcome_router.save_state"),
+            patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+        ):
+            await apply_feature_result(
+                "feat-a",
+                FeatureResult(name="feat-a", status="completed"),
+                ctx,
+            )
+
+        # Not merged — deferred instead.
+        self.assertNotIn("feat-a", ctx.batch_result.features_merged)
+        self.assertIn("feat-a", [d["name"] for d in ctx.batch_result.features_deferred])
+        # The recovery re-merge SHA was reverted (R3).
+        m_revert.assert_called_once()
+        self.assertEqual(m_revert.call_args.args[0], recovery_sha)
+
+    async def test_recovery_non_qualifying_feature_skips_review_and_merges(self):
+        """A feature for which requires_review is False is the ONLY recovery
+        path that skips review (a legitimate non-review, not a blanket escape)
+        and proceeds to merged."""
+        ctx = self._failing_merge_then_recovery_ctx()
+
+        recovery_result = MagicMock(
+            success=True, flaky=False, attempts=1, merge_sha="sha444",
+        )
+
+        with (
+            patch(
+                "cortex_command.overnight.outcome_router._get_changed_files",
+                return_value=["src/a.py"],
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.merge_feature",
+                return_value=self._test_failure_merge_result(),
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.recover_test_failure",
+                new=AsyncMock(return_value=recovery_result),
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.requires_review",
+                return_value=False,
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.dispatch_review",
+                new=AsyncMock(),
+            ) as m_dispatch,
+            patch("cortex_command.overnight.outcome_router.read_tier", return_value="simple"),
+            patch(
+                "cortex_command.overnight.outcome_router.read_criticality",
+                return_value="low",
+            ),
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch("cortex_command.overnight.outcome_router.overnight_log_event"),
+            patch("cortex_command.overnight.outcome_router.load_state"),
+            patch("cortex_command.overnight.outcome_router.save_state"),
+            patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+        ):
+            await apply_feature_result(
+                "feat-a",
+                FeatureResult(name="feat-a", status="completed"),
+                ctx,
+            )
+
+        m_dispatch.assert_not_awaited()
+        self.assertIn("feat-a", ctx.batch_result.features_merged)
+
+    async def test_recovery_remerge_runs_under_held_lock(self):
+        """The recovery re-merge (recover_test_failure) executes while ctx.lock
+        is held — not released across it. An instrumented lock records whether
+        it was held at the moment recover_test_failure ran."""
+        ctx = self._failing_merge_then_recovery_ctx()
+
+        recovery_result = MagicMock(
+            success=True, flaky=False, attempts=1,
+            merge_sha="recoverysha555555555555555555555555555555",
+        )
+        review_result = MagicMock(deferred=False, verdict="APPROVED", cycle=1, merge_sha=None)
+
+        lock_held_during_recovery: list[bool] = []
+
+        async def _recover_observing_lock(**kwargs):
+            lock_held_during_recovery.append(ctx.lock.locked())
+            return recovery_result
+
+        with (
+            patch(
+                "cortex_command.overnight.outcome_router._get_changed_files",
+                return_value=["src/a.py"],
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.merge_feature",
+                return_value=self._test_failure_merge_result(),
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.recover_test_failure",
+                new=AsyncMock(side_effect=_recover_observing_lock),
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.requires_review",
+                return_value=True,
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.dispatch_review",
+                new=AsyncMock(return_value=review_result),
+            ),
+            patch("cortex_command.overnight.outcome_router.read_tier", return_value="complex"),
+            patch(
+                "cortex_command.overnight.outcome_router.read_criticality",
+                return_value="high",
+            ),
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch("cortex_command.overnight.outcome_router.overnight_log_event"),
+            patch("cortex_command.overnight.outcome_router.load_state"),
+            patch("cortex_command.overnight.outcome_router.save_state"),
+            patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+        ):
+            await apply_feature_result(
+                "feat-a",
+                FeatureResult(name="feat-a", status="completed"),
+                ctx,
+            )
+
+        # The recovery re-merge ran exactly once, with the lock held.
+        self.assertEqual(lock_held_during_recovery, [True])
+
+
 if __name__ == "__main__":
     unittest.main()

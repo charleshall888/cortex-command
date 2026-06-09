@@ -908,6 +908,211 @@ def _apply_feature_result(
 
 
 # ---------------------------------------------------------------------------
+# Recovery-path review gate (R10)
+# ---------------------------------------------------------------------------
+
+
+async def _recovery_review_gate(
+    name: str,
+    ctx: OutcomeContext,
+    *,
+    recovery_merge_sha: Optional[str],
+    actual_branch: Optional[str],
+    repo_path: Path | None,
+    merge_target: Path | None,
+    deferred_dir: Path,
+) -> bool:
+    """Route a test-recovery success through review before marking ``merged``.
+
+    Called from both recovery success branches (flaky and recovered) while the
+    re-acquired ``ctx.lock`` is held, so the recovery re-merge that produced
+    ``recovery_merge_sha`` (R2), this review, and any R3 revert all execute
+    serialized against sibling features' in-lock checkout/merge/revert on the
+    shared integration worktree.
+
+    For a feature where ``requires_review(tier, criticality)`` is True, dispatch
+    review. On a non-APPROVED (``rr.deferred``) verdict OR a dispatch crash, the
+    recovery re-merge is reverted SHA-anchored (R3) and the feature is deferred
+    (a blocking deferral file + ``deferred`` backlog status), mirroring the
+    primary-merge path. A feature for which ``requires_review`` is already False
+    skips review as a legitimate non-review (logged), never a blanket escape.
+
+    Returns:
+        ``True`` when the feature was deferred on this path (the caller must NOT
+        mark it ``merged``); ``False`` when it may proceed to ``merged`` (review
+        approved, or review was legitimately not required).
+    """
+    tier = read_tier(name)
+    criticality = read_criticality(name)
+    if not requires_review(tier, criticality):
+        # Legitimate non-review: this feature does not qualify for the gate, so
+        # the recovery merge proceeds to `merged`. Logged as a deliberate skip,
+        # not a blanket escape.
+        overnight_log_event(
+            FEATURE_MERGED,
+            ctx.config.batch_id,
+            feature=name,
+            details={
+                "review_skipped": True,
+                "review_required": False,
+                "path": "test_recovery",
+            },
+            log_path=ctx.config.overnight_events_path,
+        )
+        return False
+
+    try:
+        rr = await dispatch_review(
+            feature=name,
+            worktree_path=ctx.worktree_paths.get(name, Path(f"worktrees/{name}")),
+            branch=actual_branch or f"pipeline/{name}",
+            spec_path=Path(f"cortex/lifecycle/{name}/spec.md"),
+            complexity=tier,
+            criticality=criticality,
+            base_branch=_effective_base_branch(
+                repo_path, ctx.integration_branches, ctx.config.base_branch,
+            ),
+            repo_path=merge_target,
+            log_path=ctx.config.pipeline_events_path,
+        )
+        if not rr.deferred:
+            # Review approved — the recovery merge may proceed to `merged`.
+            return False
+
+        # Fail-safe rollback: revert the recovery re-merge's LIVE merge commit
+        # (SHA-anchored, under the held ctx.lock). Prefer a cycle-1 re-merge SHA
+        # threaded onto the ReviewResult when present, else the recovery merge
+        # SHA captured by recover_test_failure (R2).
+        live_merge_sha = getattr(rr, "merge_sha", None) or recovery_merge_sha
+        revert_aborted = False
+        merge_reverted = False
+        if live_merge_sha is not None:
+            revert_outcome = revert_merge(
+                live_merge_sha,
+                repo_path=merge_target,
+                log_path=ctx.config.pipeline_events_path,
+                feature=name,
+            )
+            revert_aborted = revert_outcome.aborted
+            merge_reverted = revert_outcome.success
+        if revert_aborted:
+            # Dependent-conflict R-edge: the revert conflicted and was aborted,
+            # so the recovery merge genuinely REMAINS on the integration branch.
+            dependents = _overlapping_features(
+                name,
+                ctx.batch_result.key_files_changed.get(name, []),
+                ctx.batch_result.key_files_changed,
+            )
+            if dependents:
+                dependent_clause = (
+                    "Dependent feature(s) referencing the reverted code: "
+                    + ", ".join(f"'{d}'" for d in dependents) + ". "
+                )
+            else:
+                dependent_clause = "A later feature likely depends on it. "
+            conflict_deferral = DeferralQuestion(
+                feature=name,
+                question_id=_next_escalation_n(
+                    name, ctx.config.batch_id, ctx.config.session_dir,
+                ),
+                severity=SEVERITY_BLOCKING,
+                context=(
+                    f"Review deferred (verdict {rr.verdict!r}) after test recovery; "
+                    f"the rollback of recovery merge {live_merge_sha} conflicted and "
+                    "was aborted. The merge is still on the integration branch — do "
+                    f"NOT re-run; manual rollback needed. {dependent_clause}"
+                ),
+                question=(
+                    f"Feature '{name}' was deferred at post-recovery review but its "
+                    "merge could not be reverted (revert conflict — a later feature "
+                    f"depends on it). {dependent_clause}How should this be manually "
+                    "rolled back?"
+                ),
+                options_considered=["manual revert + re-review", "keep merged and re-review in place"],
+                pipeline_attempted="revert_merge() in _recovery_review_gate() (recovery path)",
+            )
+            write_deferral(conflict_deferral, deferred_dir=deferred_dir)
+
+        ctx.batch_result.features_deferred.append({
+            "name": name,
+            "question_count": 1,
+        })
+        deferred_details: dict = {
+            "review_verdict": rr.verdict,
+            "review_cycle": rr.cycle,
+            "merge_reverted": merge_reverted,
+            "path": "test_recovery",
+        }
+        if rr.verdict == "ERROR":
+            deferred_details["review_dispatch_crashed"] = True
+            deferred_details["could_not_run"] = True
+        overnight_log_event(
+            FEATURE_DEFERRED,
+            ctx.config.batch_id,
+            feature=name,
+            details=deferred_details,
+            log_path=ctx.config.overnight_events_path,
+        )
+        _write_back_to_backlog(
+            name, "deferred", ctx.config.batch_id,
+            ctx.config.overnight_events_path,
+            backlog_id=ctx.backlog_ids.get(name),
+        )
+        return True
+
+    except Exception as exc:
+        # Fail-safe rollback on a review-dispatch crash: revert the recovery
+        # re-merge's LIVE merge commit (SHA-anchored, under the held ctx.lock)
+        # before surfacing the deferral.
+        if recovery_merge_sha is not None:
+            revert_merge(
+                recovery_merge_sha,
+                repo_path=merge_target,
+                log_path=ctx.config.pipeline_events_path,
+                feature=name,
+            )
+        overnight_log_event(
+            FEATURE_DEFERRED,
+            ctx.config.batch_id,
+            feature=name,
+            details={
+                "error": f"dispatch_review raised {type(exc).__name__}: {exc}",
+                "review_dispatch_crashed": True,
+                "path": "test_recovery",
+            },
+            log_path=ctx.config.overnight_events_path,
+        )
+        deferral = DeferralQuestion(
+            feature=name,
+            question_id=0,
+            severity=SEVERITY_BLOCKING,
+            context=(
+                "Feature merged successfully after test recovery but post-merge "
+                "review dispatch raised an unexpected exception: "
+                f"{type(exc).__name__}: {exc}"
+            ),
+            question=(
+                f"Feature '{name}' merged after test recovery but the review "
+                "dispatch crashed. Should this feature be marked complete "
+                "(skipping review) or held for manual review?"
+            ),
+            options_considered=["mark complete (skip review)", "hold for manual review"],
+            pipeline_attempted="dispatch_review() in _recovery_review_gate()",
+        )
+        write_deferral(deferral, deferred_dir=deferred_dir, idempotent=True)
+        ctx.batch_result.features_deferred.append({
+            "name": name,
+            "question_count": 1,
+        })
+        _write_back_to_backlog(
+            name, "deferred", ctx.config.batch_id,
+            ctx.config.overnight_events_path,
+            backlog_id=ctx.backlog_ids.get(name),
+        )
+        return True
+
+
+# ---------------------------------------------------------------------------
 # Async public entry point: apply_feature_result
 # ---------------------------------------------------------------------------
 
@@ -923,9 +1128,13 @@ async def apply_feature_result(
 
     Owns the lock acquisition and the two-phase lock structure: the first
     lock block dispatches the outcome (including merge + review gating for
-    completed features), and if test recovery is needed the lock is
-    released for the ``recover_test_failure()`` call and re-acquired to
-    route the recovery result.
+    completed features), and if test recovery is needed the lock is released
+    between the two blocks but RE-ACQUIRED to cover the recovery re-merge
+    itself — the ``recover_test_failure()`` call, the R2 recovery-SHA capture,
+    the R10 review, and the R3 revert all run under that re-acquired lock,
+    because the recovery merge mutates the one shared physical integration
+    checkout and an unlocked merge would race sibling features' in-lock
+    checkout/merge/revert and corrupt the index.
 
     Callers must NOT hold ``ctx.lock`` when invoking this function.
     """
@@ -1324,23 +1533,30 @@ async def apply_feature_result(
                     backlog_id=ctx.backlog_ids.get(name),
                 )
             return
-        recovery_result = await recover_test_failure(
-            feature=name,
-            base_branch=ctx.config.base_branch,
-            test_output=(
-                merge_result.test_result.output
-                if merge_result and merge_result.test_result else ""
-            ),
-            branch=actual_branch or f"pipeline/{name}",
-            worktree_path=ctx.worktree_paths.get(name),
-            learnings_dir=Path(f"cortex/lifecycle/{name}/learnings"),
-            test_command=ctx.config.test_command,
-            pipeline_log_path=ctx.config.pipeline_events_path,
-            repo_path=merge_target,
-        )
-
-        # Re-acquire the lock to route the recovery result
+        # Re-acquire the lock to cover the recovery re-merge ITSELF (the
+        # `git checkout` + `git merge --no-ff` inside recover_test_failure that
+        # mutates the one shared physical integration checkout), the R2
+        # recovery-SHA capture, the R10 review, AND the R3 revert. Holding the
+        # lock across the merge — not only the post-merge steps — prevents a
+        # sibling feature's in-lock checkout/merge/revert from racing this
+        # recovery merge and corrupting the shared index (spec Technical
+        # Constraints).
         async with ctx.lock:
+            recovery_result = await recover_test_failure(
+                feature=name,
+                base_branch=ctx.config.base_branch,
+                test_output=(
+                    merge_result.test_result.output
+                    if merge_result and merge_result.test_result else ""
+                ),
+                branch=actual_branch or f"pipeline/{name}",
+                worktree_path=ctx.worktree_paths.get(name),
+                learnings_dir=Path(f"cortex/lifecycle/{name}/learnings"),
+                test_command=ctx.config.test_command,
+                pipeline_log_path=ctx.config.pipeline_events_path,
+                repo_path=merge_target,
+            )
+
             if recovery_result.success and recovery_result.flaky:
                 overnight_log_event(
                     MERGE_RECOVERY_FLAKY,
@@ -1349,6 +1565,25 @@ async def apply_feature_result(
                     details={"attempts": recovery_result.attempts},
                     log_path=ctx.config.overnight_events_path,
                 )
+                # R10: route a review-qualifying feature through review before
+                # marking merged; defer (revert + surface) on a non-APPROVED or
+                # crashed review. The re-merge, this review, and any revert all
+                # run under the lock re-acquired above.
+                deferred = await _recovery_review_gate(
+                    name,
+                    ctx,
+                    recovery_merge_sha=recovery_result.merge_sha,
+                    actual_branch=actual_branch,
+                    repo_path=repo_path,
+                    merge_target=merge_target,
+                    deferred_dir=deferred_dir,
+                )
+                if deferred:
+                    try:
+                        cleanup_worktree(name, branch=f"pipeline/{name}", repo_path=repo_path, worktree_path=worktree_path)
+                    except Exception:
+                        pass
+                    return
                 ctx.batch_result.features_merged.append(name)
                 ctx.cb_state.consecutive_pauses = 0
                 _write_back_to_backlog(
@@ -1368,6 +1603,25 @@ async def apply_feature_result(
                     details={"attempts": recovery_result.attempts},
                     log_path=ctx.config.overnight_events_path,
                 )
+                # R10: route a review-qualifying feature through review before
+                # marking merged; defer (revert + surface) on a non-APPROVED or
+                # crashed review. The re-merge, this review, and any revert all
+                # run under the lock re-acquired above.
+                deferred = await _recovery_review_gate(
+                    name,
+                    ctx,
+                    recovery_merge_sha=recovery_result.merge_sha,
+                    actual_branch=actual_branch,
+                    repo_path=repo_path,
+                    merge_target=merge_target,
+                    deferred_dir=deferred_dir,
+                )
+                if deferred:
+                    try:
+                        cleanup_worktree(name, branch=f"pipeline/{name}", repo_path=repo_path, worktree_path=worktree_path)
+                    except Exception:
+                        pass
+                    return
                 ctx.batch_result.features_merged.append(name)
                 ctx.cb_state.consecutive_pauses = 0
                 _write_back_to_backlog(
