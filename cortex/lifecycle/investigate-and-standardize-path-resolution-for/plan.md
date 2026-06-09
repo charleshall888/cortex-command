@@ -26,7 +26,7 @@ Fix the `${CLAUDE_SKILL_DIR}` path-resolution defects that break plugin-distribu
 - **Complexity**: simple
 - **Context**: Body currently says "read `${CLAUDE_SKILL_DIR}/references/protocol.md`" (~line 44). `${CLAUDE_SKILL_DIR}` resolves in a SKILL.md body (verified). Respect the 500-line SKILL.md size cap (`tests/test_skill_size_budget.py`): do NOT inline the rubric/output-format *content* into the standing body — the body instructs the Read+inline at dispatch time (the composed Stage-4 prompt carries the content, not the standing file). pr-review is hand-maintained (no cortex-core mirror).
 - **Verification**: `grep -ci 'rubric.md' plugins/cortex-pr-review/skills/pr-review/SKILL.md` ≥ 1 AND `grep -ci 'output-format.md' plugins/cortex-pr-review/skills/pr-review/SKILL.md` ≥ 1 AND `grep -ci 'inline' plugins/cortex-pr-review/skills/pr-review/SKILL.md` ≥ 1 (the Read-and-inline instruction is present) AND `uv run pytest tests/test_skill_size_budget.py -q` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: pr-review protocol.md — Stage 3.5 path fix + concrete loud/distinct guard + Stage-4 prompt inlining
 - **Files**: `plugins/cortex-pr-review/skills/pr-review/references/protocol.md`
@@ -35,7 +35,7 @@ Fix the `${CLAUDE_SKILL_DIR}` path-resolution defects that break plugin-distribu
 - **Complexity**: complex
 - **Context**: Stage 3.5 invocation at line 521; failure-handling at 527–531; degraded-mode fallback "Synthesis-failure fallback" at 735–742. BEGIN fence at line 559, END fence at line 748. OUT of scope: lines 540/542 (main-agent dispatch *prose* before the block — main-agent-resolvable) and the `:-$TMPDIR` cache/diff paths (28–29, 32, 58, 63, 68). The stderr contract (~line 492) requires `2>/dev/null` stays — so the distinct sentinel MUST go to stdout, not stderr, or the retained redirect re-swallows it (the original bug was exactly a stderr-swallow aliasing to empty stdout). `evidence-ground.sh` is self-contained and stdin-driven. Follow critical-review's existing pattern of substituting Read content into a verbatim prompt placeholder.
 - **Verification**: `grep -c 'CLAUDE_SKILL_DIR:-$TMPDIR}/scripts/evidence-ground.sh' plugins/cortex-pr-review/skills/pr-review/references/protocol.md` = 0; `grep -c '2>/dev/null' .../protocol.md` ≥ 1; scoped to the prompt block — `awk '/<!-- BEGIN SUBAGENT PROMPT -->/,/<!-- END SUBAGENT PROMPT -->/' .../protocol.md | grep -c 'rubric.md'` = 0 AND `| grep -c 'output-format.md'` = 0 AND `| grep -c 'CLAUDE_SKILL_DIR'` = 0. Behavioral (happy path): `printf '%s' '{"critics":{"agent1":{"findings":[]}},"diff_path":"/dev/null"}' | bash plugins/cortex-pr-review/skills/pr-review/scripts/evidence-ground.sh` exits 0 and emits non-empty `{"grounded":…}` JSON. Behavioral (absent-script, the load-bearing case): running the specified guard form against a nonexistent path emits the distinct sentinel on stdout and is non-empty — e.g. `bash -c '[ -f /nonexistent/evidence-ground.sh ] || echo GROUNDING_SCRIPT_MISSING'` prints `GROUNDING_SCRIPT_MISSING` (a non-empty, non-grounded marker that cannot alias to empty-stdout) — AND the guard's sentinel token appears verbatim in protocol.md's Stage 3.5 (`grep -c '<sentinel-token>' .../protocol.md` ≥ 1, naming the same token).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: critical-review — remove raw token from synthesizer-prompt, body-propagate the rubric
 - **Files**: `skills/critical-review/references/synthesizer-prompt.md`, `skills/critical-review/SKILL.md`, `plugins/cortex-core/skills/critical-review/references/synthesizer-prompt.md`, `plugins/cortex-core/skills/critical-review/SKILL.md`
@@ -44,7 +44,7 @@ Fix the `${CLAUDE_SKILL_DIR}` path-resolution defects that break plugin-distribu
 - **Complexity**: simple
 - **Context**: `SKILL.md:78` dispatches `synthesizer-prompt.md` verbatim, substituting `{artifact_path}`, `{artifact_sha256}`, and the reviewer-findings payload at runtime — `{a_to_b_rubric}` joins that substitution set. `SKILL.md:80` references the rubric in body prose (`${CLAUDE_SKILL_DIR}` resolves there — leave it; it can carry the Read instruction). The only broken site is inside `synthesizer-prompt.md` (it reaches the fresh Opus synthesizer subagent). Mirror regen: `just build-plugin`, then stage `plugins/cortex-core/skills/critical-review/` in the same commit (memory `feedback_drift_hook_shared_checkout_coupling` — canonical+mirror together). This task is the head of the mirror-serial chain (see Outline note).
 - **Verification**: `grep -c 'CLAUDE_SKILL_DIR' skills/critical-review/references/synthesizer-prompt.md` = 0; after `just build-plugin`, `git diff --exit-code plugins/cortex-core/skills/critical-review/` exits 0 (mirror clean).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 4: diagnose — remove unresolvable raw token from phase-1-investigation reference
 - **Files**: `skills/diagnose/references/phase-1-investigation.md`, `plugins/cortex-core/skills/diagnose/references/phase-1-investigation.md`
@@ -53,7 +53,7 @@ Fix the `${CLAUDE_SKILL_DIR}` path-resolution defects that break plugin-distribu
 - **Complexity**: simple
 - **Context**: `phase-1-investigation.md:49` = "See `${CLAUDE_SKILL_DIR}/references/techniques.md` (Backward Root-Cause Tracing)"; line 51 already gives the inline "Quick version" of the technique. The diagnose SKILL.md body (`SKILL.md:40`) already points at `techniques.md` via a body-resolved token — the reference-file duplicate at line 49 is the broken one (the main agent reads the reference file, where `${CLAUDE_SKILL_DIR}` is not substituted). Mirror regen via `just build-plugin`, staged in the same commit. `Depends on: [3]` serializes mirror regen (see Outline note) — not a content dependency.
 - **Verification**: `grep -c 'CLAUDE_SKILL_DIR' skills/diagnose/references/phase-1-investigation.md` = 0; after `just build-plugin`, `git diff --exit-code plugins/cortex-core/skills/diagnose/` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5a: Class-2 sweep — research + refine SKILL.md bodies
 - **Files**: `skills/research/SKILL.md`, `skills/refine/SKILL.md`, `plugins/cortex-core/skills/research/SKILL.md`, `plugins/cortex-core/skills/refine/SKILL.md`
@@ -62,7 +62,7 @@ Fix the `${CLAUDE_SKILL_DIR}` path-resolution defects that break plugin-distribu
 - **Complexity**: simple
 - **Context**: `research/SKILL.md:50,72,189` use `[`../lifecycle/references/fanout.md`](../lifecycle/references/fanout.md)` in a Read-target context (prose says "the agent must read the matrix" / "Apply it") — both the inline-code token and the markdown href convert. `refine/SKILL.md:39,70,93` use bare `../lifecycle/references/clarify.md`, `../lifecycle/SKILL.md`, `../lifecycle/references/load-requirements.md` in "Read … and follow" contexts (lines 168/177 ALREADY use the correct `${CLAUDE_SKILL_DIR}/../` form — leave them). The fix form `${CLAUDE_SKILL_DIR}/../lifecycle/…` contains a `../` segment; the Req-6 lint's D2 MUST exempt a `../` carried by a resolved `${CLAUDE_SKILL_DIR}/` prefix (co-specified with Task 6a) — otherwise this task's output would self-trip the audit. `Depends on: [4]` serializes mirror regen. The implement task enumerates the exact per-file token.
 - **Verification**: `grep -c '](../lifecycle/references/fanout.md)' skills/research/SKILL.md` = 0 AND `grep -c '`../lifecycle/references/clarify.md`' skills/refine/SKILL.md` = 0 AND `grep -c '`../lifecycle/references/load-requirements.md`' skills/refine/SKILL.md` = 0; after `just build-plugin`, `git diff --exit-code plugins/cortex-core/skills/research/ plugins/cortex-core/skills/refine/` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5b: Class-2 sweep — discovery (body propagates sibling path; reference files consume it)
 - **Files**: `skills/discovery/SKILL.md`, `skills/discovery/references/clarify.md`, `skills/discovery/references/research.md`, `plugins/cortex-core/skills/discovery/SKILL.md`, `plugins/cortex-core/skills/discovery/references/clarify.md`, `plugins/cortex-core/skills/discovery/references/research.md` (three canonical files hand-edited; the three mirror files are regenerated by `just build-plugin`, not hand-edited)
@@ -71,7 +71,7 @@ Fix the `${CLAUDE_SKILL_DIR}` path-resolution defects that break plugin-distribu
 - **Complexity**: complex
 - **Context**: `discovery/references/clarify.md:15` → `../../lifecycle/references/load-requirements.md`; `:56,:60` → `../../lifecycle/references/fanout.md`. `discovery/references/research.md:25,41` → same matrix ref. **Critical subtlety (from critical review)**: `${CLAUDE_SKILL_DIR}` does NOT resolve inside a reference file, AND the discovery body only ever resolves its OWN dir (`${CLAUDE_SKILL_DIR}/references/…`, body lines 66–68) — it knows nothing of the lifecycle sibling dir. So "resolve relative to the dir the body knows" is insufficient: the body must explicitly propagate the **sibling** absolute path `${CLAUDE_SKILL_DIR}/../lifecycle/references/…` (which the body CAN resolve), and the reference file refers back to that body-established path. A body edit IS required here. `Depends on: [5a]` serializes mirror regen.
 - **Verification**: `grep -c '../../lifecycle/references/load-requirements.md' skills/discovery/references/clarify.md` = 0 AND `grep -c '../../lifecycle/references/fanout.md' skills/discovery/references/clarify.md` = 0 AND `grep -c '../../lifecycle/references/fanout.md' skills/discovery/references/research.md` = 0 AND `grep -c 'CLAUDE_SKILL_DIR}/../lifecycle' skills/discovery/SKILL.md` ≥ 1 (the body now propagates the sibling path); after `just build-plugin`, `git diff --exit-code plugins/cortex-core/skills/discovery/` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5c: Class-2/3 sweep — lifecycle (body propagates own dir for the shell helper; references consume it)
 - **Files**: `skills/lifecycle/SKILL.md`, `skills/lifecycle/references/clarify.md`, `skills/lifecycle/references/implement.md`, `plugins/cortex-core/skills/lifecycle/SKILL.md`, `plugins/cortex-core/skills/lifecycle/references/clarify.md`, `plugins/cortex-core/skills/lifecycle/references/implement.md` (three canonical files hand-edited; three mirror files regenerated by `just build-plugin`)
@@ -80,7 +80,7 @@ Fix the `${CLAUDE_SKILL_DIR}` path-resolution defects that break plugin-distribu
 - **Complexity**: complex
 - **Context**: `clarify.md:53` carries a bare `../` cross-skill ref. `implement.md:75,111` invoke `cat skills/lifecycle/references/_interactive_overnight_check.sh | bash -s -- "<message>" "<root>"`; the helper is at `skills/lifecycle/references/_interactive_overnight_check.sh` (lifecycle's OWN references). **Highest-design-risk site (from critical review)**: a reference-file shell line gets no `${CLAUDE_SKILL_DIR}` substitution pass, so the body must propagate the absolute helper path explicitly and `implement.md` must reference it; this is body-propagation per spec Req 5 (NOT a new console script). Residual prose-dependence is acknowledged in Risks — but unlike the cross-sibling case, the lifecycle body DOES resolve the helper's dir, so the information exists. `Depends on: [5b]` serializes mirror regen (tail of the chain).
 - **Verification**: `grep -c 'cat skills/lifecycle/references/_interactive_overnight_check.sh | bash' skills/lifecycle/references/implement.md` = 0 AND the `clarify.md:53` pre-fix bare token grep returns 0; `test -f skills/lifecycle/references/_interactive_overnight_check.sh` (helper still present, exit 0); after `just build-plugin`, `git diff --exit-code plugins/cortex-core/skills/lifecycle/` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5d: Class-3 sweep — android-dev-extras hrefs (hand-maintained)
 - **Files**: `plugins/android-dev-extras/skills/r8-analyzer/SKILL.md`, `plugins/android-dev-extras/skills/android-cli/SKILL.md`
@@ -89,7 +89,16 @@ Fix the `${CLAUDE_SKILL_DIR}` path-resolution defects that break plugin-distribu
 - **Complexity**: simple
 - **Context**: `r8-analyzer/SKILL.md:21-29` and `android-cli/SKILL.md:30,33` carry bare `](references/x.md)` hrefs that are load targets. These are SKILL.md bodies so `${CLAUDE_SKILL_DIR}` resolves. android-dev-extras has no cortex-core mirror (`HAND_MAINTAINED_PLUGINS` in justfile), so this task is NOT in the mirror-serial chain.
 - **Verification**: `grep -c '](references/' plugins/android-dev-extras/skills/r8-analyzer/SKILL.md` = 0 AND `grep -c '](references/' plugins/android-dev-extras/skills/android-cli/SKILL.md` = 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
+
+### Task 5e: Class-2 sweep — sites surfaced by the Task-6a lint audit (added mid-implement)
+- **Files**: `skills/backlog-author/SKILL.md`, `skills/interview/SKILL.md`, `skills/lifecycle/SKILL.md`, `skills/lifecycle/references/clarify.md`, `skills/lifecycle/references/review.md`, `skills/lifecycle/references/specify.md` (six canonical files hand-edited; the `plugins/cortex-core/skills/{backlog-author,interview,lifecycle}/` mirrors are regenerated by `just build-plugin`, not hand-edited)
+- **What**: Task 6a's `--audit` flagged seven genuine bare-relative Read sites the enumerated Req-5 file list missed. Convert each to the body-propagated robust form: own-dir body sites → `${CLAUDE_SKILL_DIR}/references/…`; cross-sibling body site → `${CLAUDE_SKILL_DIR}/../<sibling>/…`; reference-file sites → the lifecycle SKILL.md body propagates `${CLAUDE_SKILL_DIR}/references/load-requirements.md` and the reference files consult that body-established path (same pattern as Task 5c). Regenerate the mirror in the same commit.
+- **Depends on**: [6a]
+- **Complexity**: complex
+- **Context**: The seven sites: `backlog-author/SKILL.md:46,91` (`skills/backlog-author/references/body-template.md`, own-dir body); `interview/SKILL.md:14` (`skills/interview/references/loop.md`, own-dir body); `lifecycle/SKILL.md:142` (`skills/refine/SKILL.md`, cross-sibling body → `${CLAUDE_SKILL_DIR}/../refine/SKILL.md`); `lifecycle/references/{clarify.md:33,review.md:12,specify.md:9}` (bare `references/load-requirements.md` in a read context inside reference files — needs body propagation of `${CLAUDE_SKILL_DIR}/references/load-requirements.md` via the lifecycle SKILL.md "Reference-path propagation" subsection that Task 5c created). The reference files contain `AskUserQuestion` sites tracked by `tests/test_lifecycle_kept_pauses_parity.py` (±35-line tolerance) — keep edits minimal so call sites don't move; run the parity test.
+- **Verification**: `uv run python -m cortex_command.lint.skill_path --audit` exits 0 on the real tree; `uv run pytest tests/test_lifecycle_kept_pauses_parity.py -q` exits 0; after `just build-plugin`, `git diff --exit-code plugins/cortex-core/skills/backlog-author/ plugins/cortex-core/skills/interview/ plugins/cortex-core/skills/lifecycle/` exits 0.
+- **Status**: [x] done
 
 ### Task 6a: Structural lint — detector module + fixtures + fixture-based test
 - **Files**: `cortex_command/lint/skill_path.py`, `tests/test_check_skill_path.py`, `tests/fixtures/skill_path/` (positive + false-positive fixture files)
@@ -99,16 +108,16 @@ Fix the `${CLAUDE_SKILL_DIR}` path-resolution defects that break plugin-distribu
 - **Context**: Mirror `cortex_command/lint/bare_python_import.py`: `_SENTINEL_RE` (line 111), `Violation` dataclass with `format_text`/`format_json_dict` (123–145), `scan_text(text, path)` (208), `discover_files`/`run_audit`/`run_staged_gate` (416/503/519), argparse `_parser` with `--staged`/`--audit` (536+), `main`. Sentinel regex `<!--\s*skill-path-lint:ignore-next\s*-->`. Violation codes e.g. `SP001` (D1), `SP002` (D2). NOT flagged: raw `${CLAUDE_SKILL_DIR}` in a SKILL.md body or in main-agent shell with a working `:-$TMPDIR` fallback; a `${CLAUDE_SKILL_DIR}/`-prefixed relative segment; markdown-citation links the surrounding prose marks "do not load." The D2 exemption is precise (`${CLAUDE_SKILL_DIR}/`-prefixed only) — do NOT broaden to "any line containing `${CLAUDE_SKILL_DIR}`", which would reintroduce token-less Class-2 false-negatives (spec Edge Case). Fixtures dir convention: `tests/fixtures/bare_python_import/`. Test convention: `tests/test_bare_python_import_lint.py`.
 - **Context budget**: function signatures, code constants, and pattern references only — no function bodies copied from the sibling.
 - **Verification**: `uv run pytest tests/test_check_skill_path.py -q` exits 0 (positive fixtures flagged non-zero by the detector; ALL false-positive fixtures pass, INCLUDING the `${CLAUDE_SKILL_DIR}/../lifecycle/references/specify.md`-in-Read-context case).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 6b: Structural lint — console-script wiring + real-tree audit
 - **Files**: `pyproject.toml`, `bin/cortex-check-skill-path`, `justfile`, `.githooks/pre-commit`, `plugins/cortex-core/bin/cortex-check-skill-path`
 - **What**: Wire the lint as a console script and gate. Add `cortex-check-skill-path = "cortex_command.lint.skill_path:main"` to pyproject `[project.scripts]`; create the `bin/cortex-check-skill-path` dual-channel wrapper (copy the sibling, point at `cortex_command.lint.skill_path`); add a `check-skill-path` justfile recipe with `--staged`/`--audit`; add a `.githooks/pre-commit` trigger block (glob-match staged `skills/*`, `plugins/*`, `cortex_command/lint/skill_path.py`, `bin/cortex-check-skill-path` → `just check-skill-path --staged`); regenerate the `plugins/cortex-core/bin/` mirror via `just build-plugin`. The justfile/hook/test references satisfy `cortex-check-parity` W003 (no `.parity-exceptions.md` entry needed). `chmod +x bin/cortex-check-skill-path`.
-- **Depends on**: [1, 2, 3, 4, 5a, 5b, 5c, 5d, 6a]
+- **Depends on**: [1, 2, 3, 4, 5a, 5b, 5c, 5d, 5e, 6a]
 - **Complexity**: complex
 - **Context**: pyproject `[project.scripts]` block at lines 34–37 (`cortex-check-*` entries). bin wrapper template = `bin/cortex-check-bare-python-import` (dual-channel branches a–d, `CORTEX_COMMAND_FORCE_SOURCE` / wheel-probe / working-tree / fail). justfile recipe template at lines 377–385 (`bin/cortex-check-bare-python-import --staged {{args}}` / `--audit`). pre-commit trigger templates: the prescriptive-prose block (~201–220) and bare-python block (~229–247) — glob-match staged paths, then `just check-<name> --staged`. `build-plugin` mirrors `bin/cortex-*` into `plugins/cortex-core/bin/` via `BIN=(cortex-)` rsync. Depends on every source-fix task so the real-tree `--audit` is clean — including the `${CLAUDE_SKILL_DIR}/../` body forms that D2 must NOT flag (Task 6a's exemption). Wiring co-location: this task deploys the bin script AND adds its justfile/hook references together.
 - **Verification**: `uv run pytest tests/test_check_parity.py -q` exits 0 (new script wired, no W003 orphan); `bin/cortex-check-skill-path --audit` exits 0 on the post-fix tree (all sites fixed; no false-positive on the pre-existing/new `${CLAUDE_SKILL_DIR}/../` forms); `test -x bin/cortex-check-skill-path` (exit 0); after `just build-plugin`, `git diff --exit-code plugins/cortex-core/bin/` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 7: CLAUDE.md authoring convention (positive-routing, mechanically checked)
 - **Files**: `CLAUDE.md`
@@ -117,7 +126,7 @@ Fix the `${CLAUDE_SKILL_DIR}` path-resolution defects that break plugin-distribu
 - **Complexity**: simple
 - **Context**: Model on CLAUDE.md's existing "Design principle: prescribe What and Why, not How" and "MUST-escalation policy" sections (soft positive-routing tone). MUST-escalation policy forbids a new MUST/REQUIRED/CRITICAL token in the added lines. Point at the deployed script name `cortex-check-skill-path` and `cortex/adr/0009-*.md` (both exist by the time this task runs, per Depends on).
 - **Verification**: `grep -c 'CLAUDE_SKILL_DIR' CLAUDE.md` ≥ 1 AND `git diff CLAUDE.md | grep '^+' | grep -cE 'MUST|REQUIRED|CRITICAL'` = 0 (no new uppercase escalation token in the added hunk).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 8: ADR-0009 — record the path-resolution decision
 - **Files**: `cortex/adr/0009-skill-path-resolution-for-plugin-distributed-skills.md`
@@ -126,7 +135,7 @@ Fix the `${CLAUDE_SKILL_DIR}` path-resolution defects that break plugin-distribu
 - **Complexity**: simple
 - **Context**: ADR body content is supplied in `spec.md` "Proposed ADR" section (lines 78–82). Frontmatter shape per `cortex/adr/README.md` (`status: proposed`; no `area:` field). Next number = 0009 (existing 0001–0008). No-content-duplication discipline: ADR is the canonical home; CLAUDE.md (Task 7) back-points to it by number.
 - **Verification**: `cortex/adr/0009-*.md` exists AND `grep -c 'status: proposed' cortex/adr/0009-*.md` ≥ 1 AND `grep -ci 'rejected' cortex/adr/0009-*.md` ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ## Risks
 

@@ -2,7 +2,7 @@
 feature: investigate-and-standardize-path-resolution-for
 parent_backlog_uuid: 57cc39ed-be4a-4338-b988-a4ae2052de20
 parent_backlog_id: 290
-artifacts: ["research", "spec", "plan"]
+artifacts: ["research", "spec", "plan", "review"]
 tags: []
 created: 2026-06-08
 updated: 2026-06-08

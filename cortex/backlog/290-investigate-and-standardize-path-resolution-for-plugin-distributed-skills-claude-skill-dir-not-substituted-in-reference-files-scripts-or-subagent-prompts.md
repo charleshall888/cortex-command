@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 57cc39ed-be4a-4338-b988-a4ae2052de20
 title: "Investigate and standardize path resolution for plugin-distributed skills (CLAUDE_SKILL_DIR not substituted in reference files, scripts, or subagent prompts)"
-status: in_progress
+status: complete
 priority: medium
 type: spike
 created: 2026-06-03
