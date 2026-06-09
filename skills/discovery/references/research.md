@@ -22,7 +22,7 @@ Present questions to the user for review. Add any questions they raise.
 
 ### 1a. Load Requirements Context
 
-Load requirements using the shared tag-based loading protocol — read `../../lifecycle/references/load-requirements.md` and follow it. Use requirements to inform research — identify where this topic intersects with established requirements and constraints. If no `cortex/requirements/` directory or files exist, note this and skip this step.
+Load requirements using the shared tag-based loading protocol — read the **load-requirements** sibling reference at the absolute path the discovery body resolved and propagated (the `${CLAUDE_SKILL_DIR}/../lifecycle/references/load-requirements.md` target established in discovery SKILL.md Step 3) and follow it. Use requirements to inform research — identify where this topic intersects with established requirements and constraints. If no `cortex/requirements/` directory or files exist, note this and skip this step.
 
 If a concept you need is not yet defined in the glossary, treat the absence as a signal to surface the term in the next requirements interview.
 
@@ -38,7 +38,7 @@ This returns the assessment Clarify persisted (`complexity` + `criticality`). Wh
 
 ### 2. Size and Dispatch the Research Fan-Out
 
-Discovery's research gathers its findings the same way `/cortex-core:research` does — a sized wave of parallel, angle-specialized agents — but synthesizes them into discovery's own artifact schema (§4), not /research's. The sizing and dispatch engine is shared so the two entry points cannot drift: the authority for the count matrix, the mandatory-core set, the always-last adversarial rule, and the hybrid angle-selection rules is [`../../lifecycle/references/fanout.md`](../../lifecycle/references/fanout.md). Apply that file; do not re-derive the matrix or the selection rule here.
+Discovery's research gathers its findings the same way `/cortex-core:research` does — a sized wave of parallel, angle-specialized agents — but synthesizes them into discovery's own artifact schema (§4), not /research's. The sizing and dispatch engine is shared so the two entry points cannot drift: the authority for the count matrix, the mandatory-core set, the always-last adversarial rule, and the hybrid angle-selection rules is the **fanout** sibling reference at the absolute path the discovery body resolved and propagated (the `${CLAUDE_SKILL_DIR}/../lifecycle/references/fanout.md` target established in discovery SKILL.md Step 3). Apply that file; do not re-derive the matrix or the selection rule here.
 
 **Size it.** Look up `agent_count` in the fanout.md count matrix using the `complexity` (tier row) and `criticality` (column) returned by the §1b read-back. The count is an upper bound on investigation breadth, not a quota — dispatch fewer if the topic offers fewer genuinely distinct angles than its cell allows.
 
