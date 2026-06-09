@@ -46,7 +46,7 @@ Common boundaries to check:
 
 ### 5. Trace Backward to Root Cause
 
-See `${CLAUDE_SKILL_DIR}/references/techniques.md` (Backward Root-Cause Tracing).
+Apply the Backward Root-Cause Tracing technique.
 
 Quick version: where does the bad value or wrong behavior originate? Trace backward through callers until you find the source. Fix at the source, not the symptom.
 
