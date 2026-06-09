@@ -795,6 +795,12 @@ async def dispatch_task(
     except (ProcessError, CLIConnectionError, asyncio.TimeoutError) as exc:
         error_type = classify_error(exc, "\n".join(output_parts) + ("\n" + "\n".join(_stderr_lines) if _stderr_lines else ""))
         error_detail = f"{type(exc).__name__}: {exc}"
+        # The real child stderr lives in _stderr_lines (already redacted/capped
+        # by _on_stderr), NOT in ProcessError.stderr — the SDK hardcodes the
+        # latter to a placeholder. exit_code is present on ProcessError and
+        # absent (None) on CLIConnectionError / TimeoutError.
+        child_stderr = "\n".join(_stderr_lines)
+        exit_code = getattr(exc, "exit_code", None)
 
         if log_path:
             log_event(log_path, {
@@ -802,6 +808,8 @@ async def dispatch_task(
                 "feature": feature,
                 "error_type": error_type,
                 "error_detail": error_detail,
+                "child_stderr": child_stderr,
+                "exit_code": exit_code,
             })
 
         return DispatchResult(
@@ -814,6 +822,8 @@ async def dispatch_task(
 
     except Exception as exc:
         error_detail = f"{type(exc).__name__}: {exc}\n{traceback.format_exc()}"
+        child_stderr = "\n".join(_stderr_lines)
+        exit_code = getattr(exc, "exit_code", None)
 
         if log_path:
             log_event(log_path, {
@@ -821,6 +831,8 @@ async def dispatch_task(
                 "feature": feature,
                 "error_type": "unknown",
                 "error_detail": error_detail,
+                "child_stderr": child_stderr,
+                "exit_code": exit_code,
             })
 
         return DispatchResult(

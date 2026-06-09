@@ -136,6 +136,81 @@ class TestStderrAccumulatorIntegration(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
+# Test 3b: dispatch_error payload captures child stderr + exit code (R1)
+# ---------------------------------------------------------------------------
+
+class TestDispatchErrorCapturesStderrAndExitCode(unittest.TestCase):
+    """On the ProcessError branch, the emitted ``dispatch_error`` event payload
+    carries the real child stderr (accumulated in ``_stderr_lines``, not the
+    SDK's hardcoded ProcessError.stderr placeholder) plus a non-null exit_code.
+
+    A regression that drops the real child stderr — emitting an empty or
+    placeholder-only payload — must fail this test.
+    """
+
+    def test_process_error_payload_has_seeded_stderr_and_exit_code(self):
+        marker = "CORTEX_TEST_STDERR_MARKER_xyz"
+
+        async def _run(log_path: Path):
+            captured_options: dict = {}
+            _original_cls = ClaudeAgentOptions
+
+            class _CapturingOptions(_original_cls):
+                def __init__(self, **kwargs):
+                    super().__init__(**kwargs)
+                    captured_options["stderr"] = kwargs.get("stderr")
+
+            async def mock_query(**kwargs):
+                # Feed a recognizable line to the real stderr accumulator, then
+                # raise ProcessError carrying a non-null exit_code.
+                stderr_cb = captured_options.get("stderr")
+                if stderr_cb is not None:
+                    stderr_cb(f"{marker}: child exited abnormally")
+                exc = ProcessError("Command failed with exit code 1")
+                exc.exit_code = 1
+                raise exc
+                yield  # pragma: no cover -- never reached
+
+            with patch("cortex_command.pipeline.dispatch.ClaudeAgentOptions", new=_CapturingOptions):
+                with patch("cortex_command.pipeline.dispatch.query", new=mock_query):
+                    return await _dispatch_module.dispatch_task(
+                        feature="stderr-capture-test",
+                        task="do something",
+                        worktree_path=Path("/tmp"),
+                        complexity="simple",
+                        system_prompt="test",
+                        skill="implement",
+                        log_path=log_path,
+                    )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            log_path = Path(tmpdir) / "events.log"
+            result = asyncio.run(_run(log_path))
+
+            self.assertFalse(result.success)
+
+            events = [
+                json.loads(line)
+                for line in log_path.read_text(encoding="utf-8").splitlines()
+                if line.strip()
+            ]
+            errors = [e for e in events if e.get("event") == "dispatch_error"]
+            self.assertEqual(len(errors), 1, f"expected one dispatch_error event, got {events!r}")
+            payload = errors[0]
+
+            # The exact seeded marker (redaction does not transform this line)
+            # survives into the emitted child_stderr field.
+            self.assertIn(
+                marker,
+                payload.get("child_stderr", ""),
+                f"seeded stderr marker missing from dispatch_error payload: {payload!r}",
+            )
+            # A non-null exit_code is recorded.
+            self.assertIsNotNone(payload.get("exit_code"))
+            self.assertEqual(payload["exit_code"], 1)
+
+
+# ---------------------------------------------------------------------------
 # Helpers for sandbox-settings dispatch tests (Req 5, 6, 15)
 # ---------------------------------------------------------------------------
 
