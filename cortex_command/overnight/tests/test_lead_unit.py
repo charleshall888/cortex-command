@@ -1219,6 +1219,39 @@ class TestExecuteFeature(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.status, "paused")
         self.assertEqual(result.name, "test-feat")
 
+    async def test_parse_feature_plan_valueerror_returns_failed_parse_error(self):
+        """R5: when parse_feature_plan raises ValueError (unrecoverable per-task
+        field drift), execute_feature's except (FileNotFoundError, ValueError)
+        block returns FeatureResult(status='failed', parse_error=True) — keeping
+        a malformed plan circuit-breaker-exempt so one bad plan fails just that
+        feature with nothing merged. Pins the consumer half of the parser
+        contract; the producer half (parse_feature_plan raising ValueError) is
+        pinned by Task 1's assertRaises(ValueError) cases."""
+        retry_result = RetryResult(
+            success=True,
+            attempts=1,
+            final_output="done",
+            paused=False,
+            idempotency_skipped=False,
+        )
+        patches = self._base_patches(retry_result)
+        # Override the parse_feature_plan patch (index 1) to raise instead of return.
+        patches[1] = patch.object(
+            feature_executor_module,
+            "parse_feature_plan",
+            side_effect=ValueError("simulated parse failure"),
+        )
+        with patches[0], patches[1], patches[2], patches[3], patches[4], \
+             patches[5], patches[6], patches[7], patches[8], patches[9]:
+            result = await execute_feature(
+                feature="test-feat",
+                worktree_path=self._tmp,
+                config=self._config,
+            )
+
+        self.assertEqual(result.status, "failed")
+        self.assertIs(result.parse_error, True)
+
 
 # ---------------------------------------------------------------------------
 # Task 5 (R6): TestConflictRecoveryBranching — trivial / repair-agent / budget
