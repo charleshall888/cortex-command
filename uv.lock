@@ -229,6 +229,7 @@ dependencies = [
     { name = "mcp" },
     { name = "psutil" },
     { name = "pyyaml" },
+    { name = "starlette" },
     { name = "tiktoken" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -242,14 +243,15 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "claude-agent-sdk", specifier = ">=0.1.46,<0.1.47" },
-    { name = "fastapi" },
+    { name = "fastapi", specifier = "<1.0" },
     { name = "jinja2" },
-    { name = "markdown" },
+    { name = "markdown", specifier = "<4" },
     { name = "mcp", specifier = ">=1.27.0" },
-    { name = "psutil", specifier = ">=5.9" },
+    { name = "psutil", specifier = ">=5.9,<8" },
     { name = "pyyaml", specifier = ">=6.0" },
+    { name = "starlette", specifier = ">=0.49.1,<2.0" },
     { name = "tiktoken", specifier = ">=0.7.0,<1.0" },
-    { name = "uvicorn", extras = ["standard"] },
+    { name = "uvicorn", extras = ["standard"], specifier = "<1.0" },
 ]
 
 [package.metadata.requires-dev]
