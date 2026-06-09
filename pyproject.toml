@@ -104,4 +104,7 @@ markers = [
 dev = [
     "pytest>=8.0",
     "pytest-repeat>=0.9.3",
+    # httpx backs starlette.testclient.TestClient (dashboard route smoke test);
+    # declared direct so it is not an incidental transitive of mcp.
+    "httpx",
 ]
