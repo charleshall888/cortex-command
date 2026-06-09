@@ -846,5 +846,41 @@ class TestR3NonTriggers(_PlanParseMixin, unittest.TestCase):
         self.assertEqual(plan.tasks[1].depends_on, [])
 
 
+class TestR9FieldNameRenameDriftGuard(_PlanParseMixin, unittest.TestCase):
+    """R9: pin the ordering-critical field labels against template/parser rename drift.
+
+    The parser keys extraction on the literal ``Files`` / ``Depends on`` tokens.
+    R2's fail-loud invariant cannot catch a *rename* of an ordering-critical
+    field in the canonical template (``skills/lifecycle/references/plan.md``):
+    if ``Depends on`` were renamed to e.g. ``Prerequisites`` there, the label
+    would no longer be present, so R2 would not fire and ``depends_on`` would
+    silently drop to ``[]``.
+
+    This guard renders a minimal task using the template's *literal* ``Files``
+    and ``Depends on`` field labels with non-empty values and asserts the parser
+    returns the expected non-empty ``files``/``depends_on``. Renaming either
+    ordering-critical label in the canonical template (without updating the
+    parser) surfaces here as a failing assertion at commit time rather than as
+    a silent ordering-loss in the overnight runner.
+
+    Scope is the two ordering-critical field names only (Files, Depends on) —
+    NOT a full SKILL<->parser parity harness (explicit Non-Requirement, spec).
+    """
+
+    def test_ordering_critical_field_labels_extract_non_empty(self):
+        """``- **Files**: a.py`` / ``- **Depends on**: [1]`` extract non-empty."""
+        plan = self._parse(
+            "### Task 1: Build the widget\n"
+            "- **Files**: a.py\n"
+            "- **Depends on**: [1]\n"
+            "- **Complexity**: simple\n"
+        )
+        self.assertEqual(len(plan.tasks), 1)
+        # A field-label rename in the canonical template would drop these to
+        # [] (R2 cannot catch a rename); pin them to non-empty values.
+        self.assertEqual(plan.tasks[0].files, ["a.py"])
+        self.assertEqual(plan.tasks[0].depends_on, [1])
+
+
 if __name__ == "__main__":
     unittest.main()
