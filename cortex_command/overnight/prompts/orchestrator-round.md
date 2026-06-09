@@ -409,9 +409,20 @@ Read the following files:
 - Recovery history: cortex/lifecycle/{{feature_slug}}/learnings/recovery-log.md (if it exists — skip gracefully if not; if present, note in the plan what was previously tried and why it failed so the new plan avoids repeating those approaches)
 
 Follow the lifecycle plan phase protocol: design an implementation approach, then
-write a complete plan to {{feature_plan_path}} using the standard plan.md format (Overview,
-Tasks with Files/What/Depends on/Context/Verification/Status fields,
-Verification Strategy).
+write a complete plan to {{feature_plan_path}} using the canonical plan.md format defined
+in skills/lifecycle/references/plan.md. Each task's per-field lines use a leading bullet
+with the colon OUTSIDE the bold span — emit them in exactly this literal syntax:
+
+- **Files**: {exact paths to create or modify}
+- **What**: {what this task accomplishes in 1-2 sentences}
+- **Depends on**: [N] (or `none`)
+- **Complexity**: trivial|simple|complex
+- **Context**: {structural context for the implementer}
+- **Verification**: {command + expected output + pass/fail, or file/pattern check}
+- **Status**: [ ] pending
+
+Do not paraphrase these field names or move the colon inside the bold span — the overnight
+plan parser keys on this exact syntax.
 
 Prohibited in verification steps: self-sealing verification — do not write verification
 fields that check artifacts the executing task creates solely to satisfy verification
