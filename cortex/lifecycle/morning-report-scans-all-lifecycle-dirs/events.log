@@ -12,3 +12,4 @@
 {"ts": "2026-06-09T15:01:25Z", "event": "phase_transition", "feature": "morning-report-scans-all-lifecycle-dirs", "tier": "complex", "from": "implement", "to": "review"}
 {"ts": "2026-06-09T15:13:33Z", "event": "review_verdict", "feature": "morning-report-scans-all-lifecycle-dirs", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
 {"ts": "2026-06-09T15:13:33Z", "event": "phase_transition", "feature": "morning-report-scans-all-lifecycle-dirs", "from": "review", "to": "complete"}
+{"ts": "2026-06-09T15:15:40Z", "event": "feature_complete", "feature": "morning-report-scans-all-lifecycle-dirs", "tasks_total": 5, "rework_cycles": 1, "merge_anchor": "merge"}
