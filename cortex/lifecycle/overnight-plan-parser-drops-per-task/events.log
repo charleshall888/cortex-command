@@ -10,3 +10,6 @@
 {"ts": "2026-06-09T17:05:00Z", "event": "batch_dispatch", "feature": "overnight-plan-parser-drops-per-task", "batch": 0, "tasks": [1]}
 {"ts": "2026-06-09T17:35:00Z", "event": "batch_dispatch", "feature": "overnight-plan-parser-drops-per-task", "batch": 1, "tasks": [6]}
 {"ts": "2026-06-09T17:45:00Z", "event": "phase_transition", "feature": "overnight-plan-parser-drops-per-task", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-06-09T17:55:00Z", "event": "review_verdict", "feature": "overnight-plan-parser-drops-per-task", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-06-09T17:55:01Z", "event": "phase_transition", "feature": "overnight-plan-parser-drops-per-task", "from": "review", "to": "complete"}
+{"ts": "2026-06-09T18:00:00Z", "event": "feature_complete", "feature": "overnight-plan-parser-drops-per-task", "tasks_total": 7, "rework_cycles": 1, "merge_anchor": "merge"}

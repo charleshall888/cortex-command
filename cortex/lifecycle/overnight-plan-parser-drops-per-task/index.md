@@ -2,7 +2,7 @@
 feature: overnight-plan-parser-drops-per-task
 parent_backlog_uuid: d1b862d0-1b46-44ca-98cc-f59983e900b3
 parent_backlog_id: 293
-artifacts: ["research", "spec", "plan"]
+artifacts: ["research", "spec", "plan", "review"]
 tags: []
 created: 2026-06-09
 updated: 2026-06-09
