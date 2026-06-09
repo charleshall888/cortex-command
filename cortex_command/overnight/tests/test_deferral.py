@@ -20,6 +20,7 @@ from pathlib import Path
 from cortex_command.overnight.deferral import (
     DeferralQuestion,
     EscalationEntry,
+    _existing_deferral_for_feature,
     _next_escalation_n,
     next_question_id,
     read_deferrals,
@@ -267,6 +268,95 @@ class TestWriteEscalation(unittest.TestCase):
             write_escalation(entry, session_dir=session_dir)
             n_after = _next_escalation_n("feat", 1, session_dir)
             self.assertEqual(n_after, 2)
+
+
+# ---------------------------------------------------------------------------
+# Task 7 (R7): resume-idempotent deferral write + single reconciled ID source
+# ---------------------------------------------------------------------------
+
+
+class TestWriteDeferralIdempotent(unittest.TestCase):
+    """Tests for write_deferral(idempotent=True) and the reconciled ID source.
+
+    Re-running the defer path for the same feature (e.g. on session resume)
+    must not mint a duplicate -q00N.md file. The deferred-dir scan is the
+    single reconciled question-id source shared by the review-defer and
+    except-crash paths.
+    """
+
+    def _make_question(self, feature: str = "feat") -> DeferralQuestion:
+        return DeferralQuestion(
+            feature=feature,
+            question_id=0,
+            severity="blocking",
+            context="ctx",
+            question="q?",
+        )
+
+    def test_existing_deferral_for_feature_none_when_absent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            self.assertIsNone(_existing_deferral_for_feature(d, "feat"))
+
+    def test_existing_deferral_for_feature_returns_lowest_id(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            (d / "feat-q002.md").touch()
+            (d / "feat-q005.md").touch()
+            (d / "other-q001.md").touch()
+            found = _existing_deferral_for_feature(d, "feat")
+            self.assertEqual(found.name, "feat-q002.md")
+
+    def test_idempotent_second_write_returns_existing_no_duplicate(self):
+        """Two idempotent writes for the same feature yield exactly one file."""
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            p1 = write_deferral(self._make_question(), d, idempotent=True)
+            p2 = write_deferral(self._make_question(), d, idempotent=True)
+            self.assertEqual(p1, p2)
+            files = list(d.glob("feat-q*.md"))
+            self.assertEqual(len(files), 1, msg=f"expected 1 file, got {files}")
+
+    def test_non_idempotent_default_still_mints_distinct_files(self):
+        """Default (idempotent=False) preserves the original accumulate behavior."""
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            write_deferral(self._make_question(), d)
+            write_deferral(self._make_question(), d)
+            self.assertEqual(len(list(d.glob("feat-q*.md"))), 2)
+
+    def test_idempotent_preserves_first_file_contents(self):
+        """The short-circuit returns the original file untouched (no overwrite)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            first = DeferralQuestion(
+                feature="feat", question_id=0, severity="blocking",
+                context="FIRST-CONTEXT", question="q1?",
+            )
+            p1 = write_deferral(first, d, idempotent=True)
+            second = DeferralQuestion(
+                feature="feat", question_id=0, severity="blocking",
+                context="SECOND-CONTEXT", question="q2?",
+            )
+            p2 = write_deferral(second, d, idempotent=True)
+            self.assertEqual(p1, p2)
+            self.assertIn("FIRST-CONTEXT", p1.read_text(encoding="utf-8"))
+            self.assertNotIn("SECOND-CONTEXT", p1.read_text(encoding="utf-8"))
+
+    def test_idempotent_short_circuits_a_preexisting_file(self):
+        """An existing deferral file (e.g. from the review-defer path) blocks a
+        later idempotent write (e.g. from the except-crash path) for the same
+        feature — exactly one file results regardless of which path wrote first.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            # Simulate the review-defer path having written first via the same
+            # reconciled scan source (question_id=0).
+            write_deferral(self._make_question(), d, idempotent=True)
+            # The except-crash path (also question_id=0, idempotent=True) must
+            # not mint a second file on resume.
+            write_deferral(self._make_question(), d, idempotent=True)
+            self.assertEqual(len(list(d.glob("feat-q*.md"))), 1)
 
 
 if __name__ == "__main__":

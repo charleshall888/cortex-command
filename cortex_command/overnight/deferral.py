@@ -111,6 +111,33 @@ def next_question_id(deferred_dir: Path, feature: str) -> int:
     return max_id + 1
 
 
+def _existing_deferral_for_feature(
+    deferred_dir: Path, feature: str
+) -> Optional[Path]:
+    """Return the lowest-ID existing deferral file for *feature*, or None.
+
+    Scans ``deferred_dir`` for ``{feature}-q{NNN}.md`` files and returns the
+    one with the smallest numeric ID (the canonical existing deferral). Used to
+    short-circuit :func:`write_deferral` when ``idempotent=True`` so that
+    re-running the defer path for an already-deferred feature does not mint a
+    duplicate file.
+    """
+    if not deferred_dir.is_dir():
+        return None
+
+    id_re = re.compile(rf"^{re.escape(feature)}-q(\d+)\.md$")
+    matches: list[tuple[int, Path]] = []
+    for path in deferred_dir.glob(f"{feature}-q*.md"):
+        m = id_re.match(path.name)
+        if m:
+            matches.append((int(m.group(1)), path))
+
+    if not matches:
+        return None
+    matches.sort(key=lambda pair: pair[0])
+    return matches[0][1]
+
+
 def _format_deferral_markdown(question: DeferralQuestion) -> str:
     """Format a DeferralQuestion as a structured markdown string.
 
@@ -152,6 +179,7 @@ def write_deferral(
     question: DeferralQuestion,
     deferred_dir: Path = DEFAULT_DEFERRED_DIR,
     _max_attempts: int = 100,
+    idempotent: bool = False,
 ) -> Path:
     """Write a DeferralQuestion as a structured markdown file.
 
@@ -163,15 +191,30 @@ def write_deferral(
     retrying with incremented IDs on collision.  This eliminates the TOCTOU
     race inherent in a scan-then-write pattern.
 
+    When ``idempotent`` is True, an existing deferral file for the same
+    *feature* short-circuits the write: the first matching ``{feature}-q*.md``
+    file (lowest ID) is returned unchanged instead of minting a duplicate.
+    This makes the review-defer path resume-safe — re-running the defer path
+    for an already-deferred feature (e.g. on session resume) does not append a
+    second ``-q00N.md`` file. ``deferred_dir`` is the single reconciled
+    question-id source for both the review-defer and ``except``-crash paths.
+
     Args:
         question: The deferral question to persist.
         deferred_dir: Directory to write the markdown file into.
         _max_attempts: Maximum number of IDs to try before raising.
+        idempotent: When True, return an existing deferral file for the
+            feature (if any) rather than minting a new one.
 
     Returns:
         Path to the written markdown file.
     """
     deferred_dir.mkdir(parents=True, exist_ok=True)
+
+    if idempotent:
+        existing = _existing_deferral_for_feature(deferred_dir, question.feature)
+        if existing is not None:
+            return existing
 
     # Use the scan as a starting-point hint (avoids unnecessary retries)
     if question.question_id == 0:

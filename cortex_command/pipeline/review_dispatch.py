@@ -643,4 +643,9 @@ def _write_review_deferral(
         ],
         pipeline_attempted=f"Overnight review agent returned {verdict} at cycle {cycle}.\n\nIssues:\n{issues_text}",
     )
-    return write_deferral(question, deferred_dir)
+    # Resume-idempotent: re-running the defer path for an already-deferred
+    # feature (e.g. on session resume) returns the existing deferral file rather
+    # than minting a duplicate -q00N.md. The deferred-dir scan (question_id=0)
+    # is the single reconciled question-id source shared with the except-crash
+    # path in outcome_router.
+    return write_deferral(question, deferred_dir, idempotent=True)

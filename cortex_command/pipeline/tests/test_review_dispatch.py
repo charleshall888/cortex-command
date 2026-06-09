@@ -375,3 +375,50 @@ class TestCouldNotRunWritesDeferral(unittest.IsolatedAsyncioTestCase):
 
             self.assertEqual(result.verdict, "REJECTED")
             self.assertEqual(len(list(deferred_dir.glob(f"{feature}-q*.md"))), 1)
+
+    async def test_defer_path_twice_for_same_feature_is_idempotent(self):
+        """R7: re-running the defer path for the same feature (e.g. on session
+        resume) does not mint a duplicate -q00N.md file — exactly one deferral
+        file exists for the feature after two invocations."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            feature = "feat-resumed"
+            lifecycle_base = tmp_path / "cortex" / "lifecycle"
+            feature_dir = lifecycle_base / feature
+            feature_dir.mkdir(parents=True)
+
+            spec_path = feature_dir / "spec.md"
+            spec_path.write_text("# Spec\n\nSpec content.\n", encoding="utf-8")
+
+            # review.md absent → ERROR (could-not-run) defer path both times.
+            deferred_dir = tmp_path / "deferred"
+
+            async def fake_dispatch(**kwargs) -> DispatchResult:
+                return DispatchResult(success=True, output="ok", cost_usd=0.01)
+
+            async def _run_defer_once():
+                return await dispatch_review(
+                    feature=feature,
+                    worktree_path=tmp_path / "worktree",
+                    branch="pipeline/feat-resumed",
+                    spec_path=spec_path,
+                    complexity="complex",
+                    criticality="high",
+                    lifecycle_base=lifecycle_base,
+                    deferred_dir=deferred_dir,
+                    base_branch="main",
+                )
+
+            with patch.object(
+                _review_dispatch_module, "dispatch_task",
+                new=AsyncMock(side_effect=fake_dispatch),
+            ):
+                await _run_defer_once()
+                await _run_defer_once()
+
+            written = sorted(deferred_dir.glob(f"{feature}-q*.md"))
+            self.assertEqual(
+                len(written), 1,
+                f"expected exactly one deferral file after a resumed defer; "
+                f"found {written}",
+            )

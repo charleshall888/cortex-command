@@ -1153,11 +1153,17 @@ async def apply_feature_result(
                         },
                         log_path=ctx.config.overnight_events_path,
                     )
+                    # Single reconciled question-id source: question_id=0 lets
+                    # write_deferral's deferred-dir scan assign the ID (the same
+                    # source as the review-defer path), instead of the
+                    # escalations.jsonl counter (_next_escalation_n) used
+                    # elsewhere. idempotent=True makes the write resume-safe:
+                    # if this feature was already deferred (e.g. the review-defer
+                    # path ran before the crash, or on session resume), no
+                    # duplicate -q00N.md is minted.
                     deferral = DeferralQuestion(
                         feature=name,
-                        question_id=_next_escalation_n(
-                            name, ctx.config.batch_id, ctx.config.session_dir,
-                        ),
+                        question_id=0,
                         severity=SEVERITY_BLOCKING,
                         context=(
                             "Feature merged successfully but post-merge review dispatch "
@@ -1171,7 +1177,7 @@ async def apply_feature_result(
                         options_considered=["mark complete (skip review)", "hold for manual review"],
                         pipeline_attempted="dispatch_review() in apply_feature_result()",
                     )
-                    write_deferral(deferral, deferred_dir=deferred_dir)
+                    write_deferral(deferral, deferred_dir=deferred_dir, idempotent=True)
                     ctx.batch_result.features_deferred.append({
                         "name": name,
                         "question_count": 1,
