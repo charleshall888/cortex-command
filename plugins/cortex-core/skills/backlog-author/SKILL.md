@@ -43,7 +43,7 @@ When invoked without a `{{subcommand}}`, present the available modes via `AskUse
 
 ### interview
 
-Read `skills/backlog-author/references/body-template.md` before beginning the interview. The template's section-boundary criteria, the Why-vs-Role disambiguation rule, and the Touch-points prose-only constraint all inform which questions to ask and how to apply answers.
+Read `${CLAUDE_SKILL_DIR}/references/body-template.md` before beginning the interview. The template's section-boundary criteria, the Why-vs-Role disambiguation rule, and the Touch-points prose-only constraint all inform which questions to ask and how to apply answers.
 
 The interview guides a human author through constructing a structured ticket body. Use `AskUserQuestion` to present each question interactively — not as plain markdown text. Ask one question at a time, waiting for the user's response before posing the next. The previous answer is the gate to the next question so each question can be shaped by what just landed. Avoid batching multiple questions into a single turn.
 
@@ -88,7 +88,7 @@ express its constraint, the path:line moves to `## Touch points`" — remains ow
 calling skill (such as decompose.md), not by this sub-skill.
 
 Steps:
-1. Read `skills/backlog-author/references/body-template.md` to load section-boundary criteria,
+1. Read `${CLAUDE_SKILL_DIR}/references/body-template.md` to load section-boundary criteria,
    the Why-vs-Role disambiguation rule, and grounding keywords.
 2. Parse the provided `{{context-block}}` to resolve Why, Role, Integration, Edges, and Touch
    points fields. Infer fields from free-form context when not explicitly labelled.

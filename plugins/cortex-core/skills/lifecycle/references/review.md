@@ -9,7 +9,7 @@ Two-stage review: spec compliance first, then code quality. Complex tier only. T
 - Read `cortex/lifecycle/{feature}/spec.md` for requirements
 - Identify files changed during implementation by reading the git log for commits since the lifecycle started, or by comparing plan.md's file lists
 - Read `cortex/lifecycle/{feature}/plan.md` for the verification strategy
-- Load requirements docs using the shared tag-based loading protocol — read `references/load-requirements.md` and follow it. Record the full list of loaded requirements files (project.md + matched area docs) for injection into the reviewer prompt; when the fallback applies (no tags match or no area docs are found), note: "no area docs matched for tags: {tags}; drift check covers project.md only".
+- Load requirements docs using the shared tag-based loading protocol — read the protocol at the absolute path the lifecycle body resolved and propagated (the `${CLAUDE_SKILL_DIR}/references/load-requirements.md` target established in lifecycle SKILL.md's "Reference-path propagation" subsection) and follow it. Record the full list of loaded requirements files (project.md + matched area docs) for injection into the reviewer prompt; when the fallback applies (no tags match or no area docs are found), note: "no area docs matched for tags: {tags}; drift check covers project.md only".
 - If a concept you need is not yet defined in the glossary, treat the absence as a signal to surface the term in the next requirements interview.
 
 ### 2. Launch Review Sub-Task

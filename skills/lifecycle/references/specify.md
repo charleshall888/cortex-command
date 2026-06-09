@@ -6,7 +6,7 @@ Structured interview to surface hidden requirements, edge cases, and priorities 
 
 ### 1. Load Context
 
-Read `cortex/lifecycle/{feature}/research.md` for codebase analysis and open questions. If `cortex/lifecycle.config.md` exists at the project root, read it for project-specific constraints. Load requirements using the shared tag-based loading protocol — read `references/load-requirements.md` and follow it. If no `cortex/requirements/` directory or files exist, note this and proceed. Use requirements to avoid re-asking settled questions — focus the interview on feature-specific details that requirements don't already cover.
+Read `cortex/lifecycle/{feature}/research.md` for codebase analysis and open questions. If `cortex/lifecycle.config.md` exists at the project root, read it for project-specific constraints. Load requirements using the shared tag-based loading protocol — read the protocol at the absolute path the lifecycle body resolved and propagated (the `${CLAUDE_SKILL_DIR}/references/load-requirements.md` target established in lifecycle SKILL.md's "Reference-path propagation" subsection) and follow it. If no `cortex/requirements/` directory or files exist, note this and proceed. Use requirements to avoid re-asking settled questions — focus the interview on feature-specific details that requirements don't already cover.
 
 If a concept you need is not yet defined in the glossary, treat the absence as a signal to surface the term in the next requirements interview.
 

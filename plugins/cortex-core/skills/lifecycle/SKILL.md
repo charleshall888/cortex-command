@@ -139,7 +139,7 @@ The Clarify, Research, and Spec phases are delegated to `/cortex-core:refine`. T
 
 **If `cortex/lifecycle/{feature}/spec.md` does not exist**: delegate to `/cortex-core:refine` as follows:
 
-1. **Read `skills/refine/SKILL.md` verbatim.** Do not paraphrase or reconstruct `/cortex-core:refine`'s protocol from training context. The file read is mandatory — this ensures lifecycle stays in sync as `/cortex-core:refine` evolves.
+1. **Read `${CLAUDE_SKILL_DIR}/../refine/SKILL.md` verbatim.** Do not paraphrase or reconstruct `/cortex-core:refine`'s protocol from training context. The file read is mandatory — this ensures lifecycle stays in sync as `/cortex-core:refine` evolves.
 
 2. **Epic context injection** (applies when `epic_research_path` was recorded in Discovery Bootstrap): follow the Epic Context Injection protocol in [discovery-bootstrap.md](${CLAUDE_SKILL_DIR}/references/discovery-bootstrap.md).
 
@@ -179,6 +179,7 @@ A reference file cannot itself resolve `${CLAUDE_SKILL_DIR}` (the substitution h
 
 - **clarify-critic** (consulted in Clarify §3a) → `${CLAUDE_SKILL_DIR}/../refine/references/clarify-critic.md` (the critic protocol lives in the **refine** sibling skill; `${CLAUDE_SKILL_DIR}/../refine/…` resolves here, a bare `../` in the reference file does not).
 - **overnight-check sidecar** (executed in Implement §1 Step A and §1a.ii) → `${CLAUDE_SKILL_DIR}/references/_interactive_overnight_check.sh` (lifecycle's OWN `references/` sibling). The Implement reference invokes it as `cat ${CLAUDE_SKILL_DIR}/references/_interactive_overnight_check.sh | bash -s -- "<message>" "<root>"` using this body-resolved absolute path — not a bare `skills/lifecycle/…` path, which resolves against CWD and breaks off-repo. Preserve the existing `bash -s --` message and root arguments verbatim.
+- **load-requirements protocol** (consulted in Specify §1, Review §1, and Clarify §2) → `${CLAUDE_SKILL_DIR}/references/load-requirements.md` (lifecycle's OWN `references/` sibling; `${CLAUDE_SKILL_DIR}/references/…` resolves here, a bare `references/load-requirements.md` in the reference file resolves against CWD and breaks off-repo). Read this body-resolved absolute path for the shared tag-based requirements-loading protocol and follow it.
 
 ## Phase Transition
 
