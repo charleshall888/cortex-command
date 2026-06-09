@@ -562,3 +562,123 @@ class TestResidueSessionScope:
         assert "feat-a: residue file malformed, skipped." in out
         assert "## Critical Review Residue (1)" in out
         assert "old-dir" not in out
+
+
+# ---------------------------------------------------------------------------
+# Bug A: drift section is session-scoped + the drift path is CWD-independent
+# (R7 narrowing gate, R11 re-anchor). This function had no prior coverage.
+# ---------------------------------------------------------------------------
+
+def _write_review_with_drift(lifecycle_root: Path, dir_name: str) -> Path:
+    """Write a review.md with a detected Requirements Drift section."""
+    d = lifecycle_root / dir_name
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "review.md").write_text(
+        "# Review\n\n"
+        "## Requirements Drift\n\n"
+        "**State**: detected\n"
+        "**Findings**:\n"
+        "- a requirement drifted\n",
+        encoding="utf-8",
+    )
+    return d
+
+
+class TestDriftSessionScope:
+    """render_pending_drift narrows to the session set and resolves off-CWD."""
+
+    def test_in_session_drift_renders_unrelated_excluded(self, tmp_path, monkeypatch):
+        """R7: an in-session feature's drift renders; an unrelated one is excluded."""
+        from cortex_command.overnight.report import render_pending_drift
+
+        root = tmp_path / "cortex" / "lifecycle"
+        _write_review_with_drift(root, "feat-a")
+        _write_review_with_drift(root, "old-unrelated")
+        monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
+
+        data = ReportData()
+        data.state = _state({"feat-a": OvernightFeatureStatus(status="deferred")})
+        out = render_pending_drift(data)
+
+        assert "### feat-a" in out
+        assert "old-unrelated" not in out
+
+    def test_merged_feature_still_excluded(self, tmp_path, monkeypatch):
+        """R7: the narrowing gate is AND-composed — a merged in-session feature
+        is still excluded by the pre-existing merged exclusion."""
+        from cortex_command.overnight.report import render_pending_drift
+
+        root = tmp_path / "cortex" / "lifecycle"
+        _write_review_with_drift(root, "feat-merged")
+        monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
+
+        data = ReportData()
+        data.state = _state({"feat-merged": OvernightFeatureStatus(status="merged")})
+        out = render_pending_drift(data)
+
+        # merged → omitted from drift; with nothing else, the section is empty.
+        assert "feat-merged" not in out
+
+    def test_drift_render_is_cwd_independent(self, tmp_path, monkeypatch):
+        """R11: with CWD set elsewhere and CORTEX_REPO_ROOT at the fixture, the
+        in-session drift still resolves (enumerator + per-feature read off-CWD)."""
+        from cortex_command.overnight.report import render_pending_drift
+
+        root = tmp_path / "cortex" / "lifecycle"
+        _write_review_with_drift(root, "feat-a")
+        elsewhere = tmp_path / "elsewhere"
+        elsewhere.mkdir()
+        monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
+        monkeypatch.chdir(elsewhere)  # CWD != fixture root
+
+        data = ReportData()
+        data.state = _state({"feat-a": OvernightFeatureStatus(status="deferred")})
+        out = render_pending_drift(data)
+
+        assert "### feat-a" in out
+
+    def test_reimplementing_exclusion_is_cwd_independent(self, tmp_path, monkeypatch):
+        """R11: the reimplementing pre-scan (read via the events path) still fires
+        off-CWD — a feature whose latest phase_transition is `implement` stays
+        excluded from drift even when CWD != root, while a sibling in-session
+        feature with no such event still renders. The sibling makes this a
+        two-sided discriminator: a broken pre-scan would WRONGLY surface the
+        reimplementing feature rather than leaving the output empty."""
+        from cortex_command.overnight.report import render_pending_drift
+
+        root = tmp_path / "cortex" / "lifecycle"
+        d = _write_review_with_drift(root, "feat-reimpl")
+        (d / "events.log").write_text(
+            json.dumps({"event": "phase_transition", "to": "implement"}) + "\n",
+            encoding="utf-8",
+        )
+        _write_review_with_drift(root, "feat-ok")  # in-session, NOT reimplementing
+        elsewhere = tmp_path / "elsewhere"
+        elsewhere.mkdir()
+        monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
+        monkeypatch.chdir(elsewhere)  # CWD != fixture root
+
+        data = ReportData()
+        data.state = _state({
+            "feat-reimpl": OvernightFeatureStatus(status="deferred"),
+            "feat-ok": OvernightFeatureStatus(status="deferred"),
+        })
+        out = render_pending_drift(data)
+
+        # The sibling renders (enumerator resolved off-CWD); the reimplementing
+        # one is excluded (pre-scan read its events.log off-CWD). A CWD-relative
+        # pre-scan would have missed the event and surfaced feat-reimpl.
+        assert "### feat-ok" in out
+        assert "feat-reimpl" not in out
+
+    def test_present_empty_state_scopes_drift_to_zero(self, tmp_path, monkeypatch):
+        """R10 parity: present-but-empty state ({}) scopes drift to zero."""
+        from cortex_command.overnight.report import render_pending_drift
+
+        root = tmp_path / "cortex" / "lifecycle"
+        _write_review_with_drift(root, "some-old-feature")
+        monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
+
+        data = ReportData()
+        data.state = _state({})  # present but empty → scope to zero
+        assert render_pending_drift(data) == ""

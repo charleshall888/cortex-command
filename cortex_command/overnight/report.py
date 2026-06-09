@@ -681,11 +681,21 @@ def render_pending_drift(data: ReportData) -> str:
             if fs.status == "merged":
                 merged.add(name)
 
+    # Session feature set — an ADDITIONAL narrowing gate AND-composed with the
+    # merged/reimplementing exclusions below. None (state unloadable) renders
+    # unfiltered; present-but-empty ({}) scopes to zero (R10 parity with residue).
+    session_features = set(data.state.features) if data.state is not None else None
+
+    # All cortex/lifecycle reads resolve against the user project root (R3c:
+    # resolve at call time, never module-level) so the entire drift render path
+    # — enumerator and per-feature reads — is CWD-independent.
+    lifecycle_root = _resolve_user_project_root() / "cortex/lifecycle"
+
     # 2. Re-implementing features — review.md is stale from a prior cycle
     reimplementing: set[str] = set()
-    for review_path in sorted(Path("cortex/lifecycle").glob("*/review.md")):
+    for review_path in sorted(lifecycle_root.glob("*/review.md")):
         feature = review_path.parent.name
-        events_path = Path(f"cortex/lifecycle/{feature}/events.log")
+        events_path = lifecycle_root / feature / "events.log"
         if not events_path.exists():
             continue
         events = read_events(events_path)
@@ -699,9 +709,13 @@ def render_pending_drift(data: ReportData) -> str:
     # 3. Scan cortex/lifecycle/*/review.md, skip merged and re-implementing
     drift_features: list[tuple[str, dict]] = []
     breach_features: list[tuple[str, list[dict]]] = []
-    for review_path in sorted(Path("cortex/lifecycle").glob("*/review.md")):
+    for review_path in sorted(lifecycle_root.glob("*/review.md")):
         feature = review_path.parent.name
         if feature in merged or feature in reimplementing:
+            continue
+        # Session-scope narrowing gate (AND-composed with the exclusions above;
+        # monotonic — a continue never re-includes an already-excluded feature).
+        if session_features is not None and feature not in session_features:
             continue
         drift = _read_requirements_drift(feature)
         if drift is not None and drift.get("state") == "detected":
@@ -904,7 +918,7 @@ def _read_requirements_drift(feature: str) -> dict | None:
         {"state": "malformed", "findings": []}  – section exists but no **State**: line.
         {"state": <value>, "findings": [<bullet strings>]}  – valid section.
     """
-    review_path = Path(f"cortex/lifecycle/{feature}/review.md")
+    review_path = _resolve_user_project_root() / "cortex/lifecycle" / feature / "review.md"
     if not review_path.exists():
         return None
 
@@ -960,7 +974,7 @@ def _read_drift_protocol_breaches(feature: str) -> list[dict]:
     reads the review.md section; breaches travel through events.log, not
     review.md frontmatter.
     """
-    events_path = Path(f"cortex/lifecycle/{feature}/events.log")
+    events_path = _resolve_user_project_root() / "cortex/lifecycle" / feature / "events.log"
     if not events_path.exists():
         return []
     events = read_events(events_path)
