@@ -384,6 +384,14 @@ check-bare-python-import *args:
 check-bare-python-import-audit:
     bin/cortex-check-bare-python-import --audit
 
+# Check skills/plugins/docs for ${CLAUDE_SKILL_DIR} path-resolution defects (SP001/SP002, staged-diff mode)
+check-skill-path *args:
+    bin/cortex-check-skill-path --staged {{args}}
+
+# Audit entire repo for ${CLAUDE_SKILL_DIR} path-resolution defects (off critical path)
+check-skill-path-audit:
+    bin/cortex-check-skill-path --audit
+
 # Measure per-skill combined description: + when_to_use: UTF-8 byte size (L1 boot-context surface)
 measure-l1-surface:
     bin/cortex-measure-l1-surface

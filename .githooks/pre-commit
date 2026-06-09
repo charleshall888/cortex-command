@@ -250,6 +250,34 @@ if [ "$bare_python_import_triggered" -eq 1 ]; then
 fi
 
 # -----------------------------------------------------------------------------
+# Phase 1.87 — Skill-path resolution scanner (SP001/SP002)
+# -----------------------------------------------------------------------------
+# When any staged path matches skill prose, plugin trees, the detector module,
+# or the wrapper itself, invoke the skill-path scanner against the staged blob
+# view. The scanner exits non-zero when a raw ${CLAUDE_SKILL_DIR} token or bare
+# *.md consult-ref appears inside a subagent prompt (D1/SP001), or a
+# bare-relative Read/execute path is not carried by a resolved
+# ${CLAUDE_SKILL_DIR}/ prefix (D2/SP002). Runs AFTER bare-python-import
+# (Phase 1.86) so infrastructure-level violations surface first.
+skill_path_triggered=0
+while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    case "$f" in
+        skills/*|plugins/*|cortex_command/lint/skill_path.py|bin/cortex-check-skill-path)
+            skill_path_triggered=1
+            break
+            ;;
+    esac
+done < <(git diff --cached --name-only --diff-filter=ACMR)
+
+if [ "$skill_path_triggered" -eq 1 ]; then
+    if ! just check-skill-path; then
+        echo "pre-commit: skill-path check failed — body-propagate \${CLAUDE_SKILL_DIR} tokens (inline content or resolved absolute path) and prefix bare-relative Read/execute paths with \${CLAUDE_SKILL_DIR}/, or add the <!-- skill-path-lint:ignore-next --> sentinel if intentional." >&2
+        exit 1
+    fi
+fi
+
+# -----------------------------------------------------------------------------
 # Phase 1.9 — Path-hardcoding scanner (#203)
 # -----------------------------------------------------------------------------
 # When any staged path matches the path-hardcoding trigger pattern, invoke the
