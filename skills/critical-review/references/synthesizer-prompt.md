@@ -1,9 +1,12 @@
 # Opus Synthesizer Prompt Template
 
 This is the canonical synthesizer prompt for Step 2d. Substitute
-`{artifact_path}`, `{artifact_sha256}`, and the reviewer-findings payload at
-runtime. The A→B downgrade rubric and its 8 worked examples are extracted to
-`a-to-b-downgrade-rubric.md` (this prompt references that file by topic).
+`{artifact_path}`, `{artifact_sha256}`, `{a_to_b_rubric}`, and the
+reviewer-findings payload at runtime. The A→B downgrade rubric and its 8 worked
+examples live in `a-to-b-downgrade-rubric.md`; the dispatching SKILL.md body
+Reads that file and inlines its content into `{a_to_b_rubric}` before dispatch
+(the rubric is body-propagated, not referenced by path — a fresh subagent
+cannot resolve a skill-dir path).
 
 ---
 
@@ -27,7 +30,11 @@ When the Read fails or returns empty content, emit `SYNTH_READ_FAILED: <absolute
 
 1. Read all reviewer findings carefully.
 2. Find the through-lines — claims or concerns that appear across multiple angles **within the same class**. A-class through-lines, B-class through-lines, and C-class through-lines are distinct; do not merge them.
-3. Before accepting any finding's class tag, re-read its `evidence_quote` field against the in-context Read result of `{artifact_path}` performed at the start of synthesis. For A-class findings, also re-read the `"fix_invalidation_argument"` field — apply the A→B downgrade rubric in `${CLAUDE_SKILL_DIR}/references/a-to-b-downgrade-rubric.md`. If the evidence supports a different class, re-classify and surface a note: `Synthesizer re-classified finding N from B→A: <rationale>` (upgrade) or `Synthesizer re-classified finding N from A→B: <rationale>` (downgrade). Downgrades commonly fire on straddle-rationale findings where the evidence only supports the adjacent concern.
+3. Before accepting any finding's class tag, re-read its `evidence_quote` field against the in-context Read result of `{artifact_path}` performed at the start of synthesis. For A-class findings, also re-read the `"fix_invalidation_argument"` field, then apply the A→B downgrade rubric inlined below. After applying the rubric, if the evidence supports a different class, re-classify and surface a note: `Synthesizer re-classified finding N from B→A: <rationale>` (upgrade) or `Synthesizer re-classified finding N from A→B: <rationale>` (downgrade). Downgrades commonly fire on straddle-rationale findings where the evidence only supports the adjacent concern.
+
+### A→B downgrade rubric
+
+{a_to_b_rubric}
 4. After evidence re-examination, count A-class findings from well-formed envelopes only — untagged prose blocks (from malformed envelopes per Step 2c.5) do NOT count toward the A-class tally. If the count is zero, do NOT emit an `## Objections` section. B-class findings in the absence of any A-class finding surface under `## Concerns` at most.
 5. Surface tensions where angles conflict or pull in different directions.
 6. Synthesize into a single coherent challenge. Do not produce a per-angle dump.
