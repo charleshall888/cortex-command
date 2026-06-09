@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import unittest
 from pathlib import Path
 
 import pytest
@@ -11,7 +12,9 @@ from cortex_command.common import (
     CortexProjectRootError,
     _resolve_user_project_root,
     _resolve_user_project_root_from_cwd,
+    compute_dependency_batches,
 )
+from cortex_command.pipeline.parser import FeatureTask
 
 
 # ---------------------------------------------------------------------------
@@ -116,3 +119,53 @@ class TestResolveUserProjectRootFromCwd:
 
         with pytest.raises(CortexProjectRootError):
             _resolve_user_project_root_from_cwd()
+
+
+# ---------------------------------------------------------------------------
+# compute_dependency_batches
+# ---------------------------------------------------------------------------
+
+class TestComputeDependencyBatches(unittest.TestCase):
+    """Tests for the topological dependency-batching of feature tasks.
+
+    ``compute_dependency_batches`` feeds the overnight runner's intra-feature
+    task ordering; the per-task ``Depends on`` metadata the plan parser
+    extracts flows directly into this function. These are the first direct
+    tests of that batching mechanism.
+    """
+
+    def test_dependency_chain_yields_ordered_single_task_batches(self) -> None:
+        """A 1->2->3 chain produces three ordered batches, each a single task."""
+        t1 = FeatureTask(number=1, description="t1", depends_on=[])
+        t2 = FeatureTask(number=2, description="t2", depends_on=[1])
+        t3 = FeatureTask(number=3, description="t3", depends_on=[2])
+
+        batches = compute_dependency_batches([t1, t2, t3])
+
+        self.assertEqual([[t.number for t in batch] for batch in batches], [[1], [2], [3]])
+
+    def test_all_empty_depends_on_collapse_to_single_batch(self) -> None:
+        """All-empty ``depends_on`` tasks collapse into one concurrent batch.
+
+        This documents the vacuous-true collapse (``common.py``: every task's
+        empty ``depends_on`` satisfies ``all(...)`` against the empty assigned
+        set, so all tasks land in batch 0). For label-present plans this case
+        is now unreachable because R2/R4 raise upstream in the parser; it
+        remains reachable only for legitimately-fully-parallel plans.
+        """
+        t1 = FeatureTask(number=1, description="t1", depends_on=[])
+        t2 = FeatureTask(number=2, description="t2", depends_on=[])
+        t3 = FeatureTask(number=3, description="t3", depends_on=[])
+
+        batches = compute_dependency_batches([t1, t2, t3])
+
+        self.assertEqual(len(batches), 1)
+        self.assertEqual([t.number for t in batches[0]], [1, 2, 3])
+
+    def test_dependency_cycle_raises_value_error(self) -> None:
+        """A mutual 1<->2 dependency cycle cannot be batched and raises."""
+        t1 = FeatureTask(number=1, description="t1", depends_on=[2])
+        t2 = FeatureTask(number=2, description="t2", depends_on=[1])
+
+        with self.assertRaises(ValueError):
+            compute_dependency_batches([t1, t2])
