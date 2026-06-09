@@ -15,6 +15,7 @@ import subprocess
 from dataclasses import dataclass, field
 from importlib.resources import files
 from pathlib import Path
+from typing import Optional
 
 from cortex_command.overnight.deferral import DeferralQuestion, write_deferral
 from cortex_command.pipeline.dispatch import dispatch_task
@@ -36,6 +37,13 @@ class ReviewResult:
             REJECTED, or ERROR).
         cycle: Review cycle number (0 for errors, 1-2 for real reviews).
         issues: List of issue descriptions from the review agent.
+        merge_sha: The live integration-branch merge commit from the
+            cycle-1 rework re-merge, threaded from the re-merge's
+            ``MergeResult.merge_sha`` so a later rollback reverts the
+            re-merge SHA rather than the original first-merge SHA. It is
+            ``None`` on every path that did not perform a successful
+            rework re-merge (no rework, fix-agent failure, or the re-merge
+            itself failed).
     """
 
     approved: bool
@@ -43,6 +51,7 @@ class ReviewResult:
     verdict: str
     cycle: int
     issues: list[str] = field(default_factory=list)
+    merge_sha: Optional[str] = None
 
 
 _ERROR_RESULT: dict = {"verdict": "ERROR", "cycle": 0, "issues": []}
@@ -543,6 +552,7 @@ async def dispatch_review(
                 verdict="APPROVED",
                 cycle=cycle2_cycle,
                 issues=cycle2_issues,
+                merge_sha=remerge_result.merge_sha,
             )
 
         # (9i) Non-APPROVED cycle 2 — write deferral and return deferred
@@ -562,6 +572,7 @@ async def dispatch_review(
             verdict=cycle2_verdict_str,
             cycle=cycle2_cycle,
             issues=cycle2_issues,
+            merge_sha=remerge_result.merge_sha,
         )
 
     # Unexpected verdict value — treat as ERROR

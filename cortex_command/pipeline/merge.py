@@ -29,7 +29,17 @@ class TestResult:
 
 @dataclass
 class MergeResult:
-    """Result of attempting to merge a feature branch."""
+    """Result of attempting to merge a feature branch.
+
+    ``merge_sha`` carries the integration-branch ``--no-ff`` merge commit
+    (the SHA of ``HEAD`` on the base branch in the integration repo,
+    captured immediately after a successful merge). It is populated only
+    when a merge actually landed and survived the post-merge test gate;
+    it is ``None`` on every non-success path, including the inline
+    revert-on-test-failure path where ``merge.py`` already undid the
+    merge. The captured value is a merge commit (two parents), so a later
+    ``git revert -m 1 <merge_sha>`` is valid.
+    """
 
     success: bool
     feature: str
@@ -37,6 +47,7 @@ class MergeResult:
     test_result: Optional[TestResult] = None
     error: Optional[str] = None
     classification: Optional[ConflictClassification] = None
+    merge_sha: Optional[str] = None
 
 
 def _repo_root() -> Path:
@@ -288,6 +299,19 @@ def merge_feature(
 
     _log({"event": "merge_complete", "feature": feature})
 
+    # Capture the live integration-branch merge commit (the --no-ff merge
+    # commit on the base branch) so a later rollback can revert this exact
+    # SHA under the lock even after concurrent features advance HEAD. Only
+    # surfaced on the success return below — never on the test-failure revert
+    # path, where the merge is undone before returning.
+    merge_sha_result = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        capture_output=True,
+        text=True,
+        cwd=repo,
+    )
+    merge_sha = merge_sha_result.stdout.strip() if merge_sha_result.returncode == 0 else None
+
     # Run tests after successful merge
     test_result = run_tests(test_command, cwd=str(repo))
 
@@ -329,6 +353,7 @@ def merge_feature(
         feature=feature,
         conflict=False,
         test_result=test_result,
+        merge_sha=merge_sha,
     )
 
 

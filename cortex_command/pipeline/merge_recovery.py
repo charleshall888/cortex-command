@@ -27,6 +27,12 @@ class MergeRecoveryResult:
         paused: True if the feature should be paused for human triage.
         flaky: True if the re-merge passed without any code changes.
         error: Description of what went wrong, or None on success.
+        merge_sha: The live integration-branch merge commit from the
+            recovery re-merge that succeeded (the ``--no-ff`` merge commit
+            on the base branch, threaded from the recovery
+            ``MergeResult.merge_sha`` — NOT the feature-branch tip, which
+            is not a merge commit and would fail ``git revert -m 1``). It
+            is ``None`` on every non-success path.
     """
 
     success: bool
@@ -34,6 +40,7 @@ class MergeRecoveryResult:
     paused: bool
     flaky: bool
     error: Optional[str]
+    merge_sha: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -283,6 +290,7 @@ async def recover_test_failure(
                 paused=False,
                 flaky=True,
                 error=None,
+                merge_sha=flaky_result.merge_sha,
             )
 
         # --- Repair cycle (up to 2 attempts) ---
@@ -388,6 +396,7 @@ async def recover_test_failure(
                     paused=False,
                     flaky=False,
                     error=None,
+                    merge_sha=merge_result.merge_sha,
                 )
 
             # 8. Write learnings
