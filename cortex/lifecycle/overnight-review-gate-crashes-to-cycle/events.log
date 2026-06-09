@@ -1,0 +1,7 @@
+{"schema_version": 1, "ts": "2026-06-09T12:20:14Z", "event": "lifecycle_start", "feature": "overnight-review-gate-crashes-to-cycle", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-09T12:28:19Z", "event": "clarify_critic", "feature": "overnight-review-gate-crashes-to-cycle", "parent_epic_loaded": false, "findings_count": 7, "dispositions": {"apply": 5, "dismiss": 1, "ask": 1}, "applied_fixes_count": 5, "dismissals_count": 1, "status": "ok"}
+{"ts": "2026-06-09T13:32:22Z", "event": "complexity_override", "feature": "overnight-review-gate-crashes-to-cycle", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-06-09T13:32:22Z", "event": "criticality_override", "feature": "overnight-review-gate-crashes-to-cycle", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-06-09T14:02:26Z", "event": "spec_approved", "feature": "overnight-review-gate-crashes-to-cycle"}
+{"ts": "2026-06-09T14:35:45Z", "event": "plan_approved", "feature": "overnight-review-gate-crashes-to-cycle"}
+{"ts": "2026-06-09T14:35:45Z", "event": "phase_transition", "feature": "overnight-review-gate-crashes-to-cycle", "from": "plan", "to": "implement"}
