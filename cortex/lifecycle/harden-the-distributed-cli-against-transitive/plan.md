@@ -48,7 +48,7 @@ follow-up backlog ticket filed.
 - **Verification**: `grep -c 'TemplateResponse(' cortex_command/dashboard/app.py` = 13 (no call
   added or removed) — pass if count = 13. Definitive ≥1.0 correctness is gated by Task 4's route test
   on a fresh resolve (Tasks 5 and 7).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Promote `starlette` to a direct bounded dep and cap the drift-prone web stack
 - **Files**: `pyproject.toml`, `uv.lock`
@@ -84,7 +84,7 @@ follow-up backlog ticket filed.
   `[project.dependencies]` list contains the bounds, and `uv lock` exit code = 0. (The explanatory
   comment must not embed the literal `starlette>=0.49.1,<2.0` token, or the anchored quote-form grep
   is what keeps the count at 1 regardless.)
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Declare `httpx` as a dev/test dependency
 - **Files**: `pyproject.toml`, `uv.lock`
@@ -97,7 +97,7 @@ follow-up backlog ticket filed.
   `[project.dependencies]` that Task 2 edits — depends on [2] only to serialize the same-file write).
   Regenerate `uv.lock` after the edit.
 - **Verification**: `grep -c 'httpx' pyproject.toml` ≥ 1 — pass if count ≥ 1; `uv lock` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Add a route-level `TestClient` smoke test exercising the real render path
 - **Files**: `cortex_command/dashboard/tests/test_routes_smoke.py`
@@ -123,7 +123,7 @@ follow-up backlog ticket filed.
 - **Verification**: `pytest cortex_command/dashboard/tests/test_routes_smoke.py` exits 0 — pass if
   exit code = 0 and no test hangs/leaks; and `grep -cE 'partials|/sessions|status_code|404|200'
   cortex_command/dashboard/tests/test_routes_smoke.py` ≥ 1 confirming the route assertions exist.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Wire the route test into `validate.yml` (fresh resolve) and into `just test`
 - **Files**: `.github/workflows/validate.yml`, `justfile`
@@ -152,7 +152,7 @@ follow-up backlog ticket filed.
   step that installs the package and invokes `pytest`; pass if both counts ≥ 1; and (b)
   `just test 2>&1 | grep -c 'test_routes_smoke'` ≥ 1 (the route test is actually collected/run under
   `just test`) — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Record the discrimination check (test catches the regression on ≥1.0)
 - **Files**: `cortex/lifecycle/harden-the-distributed-cli-against-transitive/discrimination-check.md`
@@ -177,7 +177,7 @@ follow-up backlog ticket filed.
   branch, so no single repeatable command captures it; pass when `discrimination-check.md` records a
   non-zero exit **and a quoted `TypeError: unhashable type: 'dict'` traceback excerpt** for the
   pre-rewrite code at a named ≥1.0 starlette version.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 7: Verify a clean fresh install renders the dashboard end-to-end on both install paths
 - **Files**: `cortex/lifecycle/harden-the-distributed-cli-against-transitive/fresh-install-verification.md`
@@ -202,7 +202,7 @@ follow-up backlog ticket filed.
   two install paths cannot be reduced to a single repeatable repo command; pass when
   `fresh-install-verification.md` records `GET /` → 200 with a ≥1.0 resolved starlette for both the
   bare `uv tool install` and the `install.sh` paths.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 8: File the deferred keep-current / drift-automation follow-up ticket
 - **Files**: `cortex/backlog/` (new `NNN-*.md` via `cortex-create-backlog-item`)
@@ -217,7 +217,7 @@ follow-up backlog ticket filed.
   Non-Requirements.
 - **Verification**: `grep -rl 'capped-out major' cortex/backlog/` returns ≥ 1 file — pass if ≥ 1
   matching backlog file exists.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Risks
 

@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 3710acc6-61ee-4484-a8f6-6c41132125cd
 title: "Harden the distributed CLI against transitive-dependency drift (dashboard 500'd on a fresh install when Starlette auto-resolved to 1.x)"
-status: refined
+status: complete
 priority: medium
 type: spike
 created: 2026-06-08
