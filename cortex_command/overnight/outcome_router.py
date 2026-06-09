@@ -554,6 +554,13 @@ def _apply_feature_result(
             text=True,
         )
         if ff_result.returncode == 0:
+            # R12 runtime guard: this sync ff-merge success arm is provably
+            # unreachable for a review-qualifying feature — apply_feature_result
+            # intercepts repair_completed and routes it through
+            # _repair_completed_review_gate before it can delegate here. Fail
+            # loudly if that invariant is ever violated (a review-qualifying
+            # feature must never be marked `merged` here un-reviewed).
+            _guard_no_review_qualifying_sync_merge(name, "repair_completed ff-merge")
             ctx.batch_result.features_merged.append(name)
             ctx.cb_state.consecutive_pauses = 0
             if result.trivial_resolved:
@@ -674,9 +681,18 @@ def _apply_feature_result(
         )
 
         if merge_result.success:
-            # Review runs only in the async ``apply_feature_result`` path; this
-            # sync function never dispatches review, so a merged feature here
-            # always proceeds straight to FEATURE_COMPLETE.
+            # R12 runtime guard: this sync ``completed`` merge-success arm is
+            # provably unreachable for a review-qualifying feature. Every
+            # delegation into this branch from apply_feature_result has already
+            # proven the merge non-successful for this feature — the no-commit
+            # guard (empty changed_files), a merge conflict, or a test failure
+            # with recovery exhausted — so a re-attempted merge_feature() here
+            # cannot succeed for a review-qualifying feature whose async merge
+            # already failed. The review gate lives in the async layer; this
+            # sync function never dispatches review, so a review-qualifying
+            # feature reaching `merged` here would ship un-reviewed. Fail loudly
+            # if that invariant is ever violated.
+            _guard_no_review_qualifying_sync_merge(name, "completed merge-success")
             ctx.batch_result.features_merged.append(name)
             ctx.cb_state.consecutive_pauses = 0
             overnight_log_event(
@@ -1113,6 +1129,363 @@ async def _recovery_review_gate(
 
 
 # ---------------------------------------------------------------------------
+# Repair-completed review gate (R12)
+# ---------------------------------------------------------------------------
+
+
+# Sentinel error used when a review-qualifying feature reaches a sync
+# merge-to-`merged` write site that the async layer is supposed to have
+# intercepted. The two sync merge-success sites (the ``repair_completed``
+# ff-merge and the ``completed`` merge-success branch in
+# ``_apply_feature_result``) are provably unreachable for a feature where
+# ``requires_review(tier, criticality)`` is True: ``apply_feature_result``
+# intercepts ``repair_completed`` (routing it through
+# ``_repair_completed_review_gate``) before it can delegate to the sync
+# function, and every delegation into the sync ``completed`` branch has
+# already proven the merge non-successful (no-commit guard, conflict, or a
+# test failure with recovery exhausted), so its ``merge_result.success``
+# arm never fires for a review-qualifying feature. These are LIVE code
+# paths, not dead branches, so per R12 they carry a runtime guard that
+# RAISES loudly if a review-qualifying feature ever reaches them — closing
+# the un-reviewed-merge invariant by assertion rather than by annotation.
+_REVIEW_QUALIFYING_SYNC_MERGE_MSG = (
+    "review-qualifying feature {feature!r} reached the sync {site} "
+    "merge-to-`merged` write site un-reviewed; the async layer must route "
+    "review-qualifying features through review before this site is reached "
+    "(R12 invariant: no review-qualifying feature reaches `merged` "
+    "un-reviewed via any path)"
+)
+
+
+def _guard_no_review_qualifying_sync_merge(name: str, site: str) -> None:
+    """Raise if a review-qualifying feature reaches a sync merge-success site.
+
+    The runtime guard for the two LIVE sync merge-to-``merged`` write sites
+    (R12). It fails loudly rather than silently marking a review-qualifying
+    feature ``merged`` without a review, preserving the invariant that no
+    review-qualifying feature reaches ``merged`` un-reviewed via any path.
+    A feature for which ``requires_review`` is already False passes through
+    silently (it never qualified for the gate).
+    """
+    if requires_review(read_tier(name), read_criticality(name)):
+        raise RuntimeError(
+            _REVIEW_QUALIFYING_SYNC_MERGE_MSG.format(feature=name, site=site)
+        )
+
+
+async def _repair_completed_review_gate(
+    name: str,
+    result: FeatureResult,
+    ctx: OutcomeContext,
+    *,
+    deferred_dir: Path,
+) -> None:
+    """Fast-forward merge a ``repair_completed`` feature, gating on review (R12).
+
+    This is the async owner of the ``repair_completed`` ff-merge: it performs
+    the ``git merge --ff-only`` of the resolved-conflict repair branch and,
+    for a feature where ``requires_review(tier, criticality)`` is True,
+    dispatches review before marking ``merged``. On a non-APPROVED
+    (``rr.deferred``) verdict OR a dispatch crash, the ff-merge is rolled back
+    (``git reset --hard`` to the pre-ff base tip — the ff-merge produces no
+    merge commit, so ``revert_merge -m 1`` does not apply) and the feature is
+    deferred with a blocking deferral, mirroring the primary-merge and
+    recovery gates. A feature for which ``requires_review`` is False skips
+    review as a legitimate non-review (logged), never a blanket escape.
+
+    The caller (``apply_feature_result``) holds ``ctx.lock`` across this whole
+    call, so the ff-merge, the review, and any reset run serialized against
+    sibling features' in-lock checkout/merge/revert on the shared integration
+    worktree (spec Technical Constraints).
+    """
+    repo_path = ctx.repo_path_map.get(name)
+    worktree_path = ctx.worktree_paths.get(name)
+    repo = _merge_target_repo_path(ctx, name)
+    if ctx.repo_path_map.get(name) is None and repo is None:
+        # Home feature whose integration worktree could not be resolved
+        # (degraded path: TMPDIR wiped / resumed session). Pause and surface
+        # rather than falling back to Path.cwd() / the home working tree,
+        # whose git checkout overnight/<id> would collide with the
+        # integration worktree that already owns that branch.
+        error = "integration worktree unresolved"
+        ctx.batch_result.features_paused.append({"name": name, "error": error})
+        ctx.cb_state.consecutive_pauses += 1
+        overnight_log_event(
+            FEATURE_PAUSED,
+            ctx.config.batch_id,
+            feature=name,
+            details={"error": error},
+            log_path=ctx.config.overnight_events_path,
+        )
+        _write_back_to_backlog(
+            name, "paused", ctx.config.batch_id,
+            ctx.config.overnight_events_path,
+            backlog_id=ctx.backlog_ids.get(name),
+        )
+        return
+
+    subprocess.run(
+        ["git", "checkout", ctx.config.base_branch],
+        cwd=repo,
+        capture_output=True,
+    )
+    # Capture the pre-ff base tip so a review-defer can roll the ff-merge back
+    # (a fast-forward leaves no merge commit, so the rollback is a `git reset
+    # --hard <pre_ff_base>` rather than `git revert -m 1`).
+    pre_ff_head = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+    )
+    pre_ff_base_sha = pre_ff_head.stdout.strip() if pre_ff_head.returncode == 0 else None
+    ff_result = subprocess.run(
+        ["git", "merge", "--ff-only", result.repair_branch],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+    )
+    if ff_result.returncode != 0:
+        error = f"repair_ff_merge_failed: {ff_result.stderr.strip()}"
+        ctx.batch_result.features_paused.append({"name": name, "error": error})
+        ctx.cb_state.consecutive_pauses += 1
+        if error in _SYSTEMIC_ERROR_TYPES:
+            ctx.cb_state.systemic_pauses_in_batch += 1
+        overnight_log_event(
+            FEATURE_PAUSED,
+            ctx.config.batch_id,
+            feature=name,
+            details={"error": error},
+            log_path=ctx.config.overnight_events_path,
+        )
+        _write_back_to_backlog(
+            name, "paused", ctx.config.batch_id,
+            ctx.config.overnight_events_path,
+            backlog_id=ctx.backlog_ids.get(name),
+        )
+        return
+
+    # ff-merge landed. Gate on review before marking `merged` (R12/R10 gate).
+    tier = read_tier(name)
+    criticality = read_criticality(name)
+    if requires_review(tier, criticality):
+        deferred = await _repair_review_or_revert(
+            name,
+            ctx,
+            repo=repo,
+            pre_ff_base_sha=pre_ff_base_sha,
+            actual_branch=(ctx.worktree_branches or {}).get(name),
+            repo_path=repo_path,
+            deferred_dir=deferred_dir,
+        )
+        if deferred:
+            # Rolled back + surfaced: do NOT mark merged, do NOT delete the
+            # repair branch (the work is no longer merged and triage may need it).
+            try:
+                cleanup_worktree(name, branch=f"pipeline/{name}", repo_path=repo_path, worktree_path=worktree_path)
+            except Exception:
+                pass
+            return
+
+    # Review approved, or review not required (legitimate non-review) — finalize.
+    ctx.batch_result.features_merged.append(name)
+    ctx.cb_state.consecutive_pauses = 0
+    if result.trivial_resolved:
+        overnight_log_event(
+            TRIVIAL_CONFLICT_RESOLVED,
+            ctx.config.batch_id,
+            feature=name,
+            details={
+                "resolved_files": result.resolved_files,
+                "strategy": "trivial_fast_path",
+            },
+            log_path=ctx.config.overnight_events_path,
+        )
+    else:
+        overnight_log_event(
+            REPAIR_AGENT_RESOLVED,
+            ctx.config.batch_id,
+            feature=name,
+            details={"repair_branch": result.repair_branch},
+            log_path=ctx.config.overnight_events_path,
+        )
+    _write_back_to_backlog(
+        name, "merged", ctx.config.batch_id,
+        ctx.config.overnight_events_path,
+        backlog_id=ctx.backlog_ids.get(name),
+    )
+    # Delete repair branch.
+    subprocess.run(
+        ["git", "branch", "-d", result.repair_branch],
+        cwd=repo,
+        capture_output=True,
+    )
+    # Clean up the stale prior-round worktree (failed merge left it intact).
+    try:
+        cleanup_worktree(name, branch=f"pipeline/{name}", repo_path=repo_path, worktree_path=worktree_path)
+    except Exception:
+        pass
+
+
+async def _repair_review_or_revert(
+    name: str,
+    ctx: OutcomeContext,
+    *,
+    repo: Path | None,
+    pre_ff_base_sha: Optional[str],
+    actual_branch: Optional[str],
+    repo_path: Path | None,
+    deferred_dir: Path,
+) -> bool:
+    """Dispatch review for a freshly ff-merged repair feature; revert on defer.
+
+    Mirrors the recovery/primary gate but rolls the ff-merge back with a
+    ``git reset --hard <pre_ff_base_sha>`` (the ff-merge has no merge commit).
+    Returns ``True`` when the feature was deferred (caller must NOT mark it
+    ``merged``); ``False`` when review approved and it may proceed.
+    """
+    tier = read_tier(name)
+    criticality = read_criticality(name)
+    try:
+        rr = await dispatch_review(
+            feature=name,
+            worktree_path=ctx.worktree_paths.get(name, Path(f"worktrees/{name}")),
+            branch=actual_branch or f"pipeline/{name}",
+            spec_path=Path(f"cortex/lifecycle/{name}/spec.md"),
+            complexity=tier,
+            criticality=criticality,
+            base_branch=_effective_base_branch(
+                repo_path, ctx.integration_branches, ctx.config.base_branch,
+            ),
+            repo_path=repo,
+            log_path=ctx.config.pipeline_events_path,
+        )
+        if not rr.deferred:
+            return False
+
+        # Fail-safe rollback of the ff-merge: reset the base branch back to its
+        # pre-ff tip so the unreviewed repair work is no longer on the
+        # integration branch.
+        merge_reverted = _reset_ff_merge(repo, pre_ff_base_sha)
+        ctx.batch_result.features_deferred.append({
+            "name": name,
+            "question_count": 1,
+        })
+        deferred_details: dict = {
+            "review_verdict": rr.verdict,
+            "review_cycle": rr.cycle,
+            "merge_reverted": merge_reverted,
+            "path": "repair_completed",
+        }
+        if rr.verdict == "ERROR":
+            deferred_details["review_dispatch_crashed"] = True
+            deferred_details["could_not_run"] = True
+        overnight_log_event(
+            FEATURE_DEFERRED,
+            ctx.config.batch_id,
+            feature=name,
+            details=deferred_details,
+            log_path=ctx.config.overnight_events_path,
+        )
+        deferral = DeferralQuestion(
+            feature=name,
+            question_id=0,
+            severity=SEVERITY_BLOCKING,
+            context=(
+                f"Feature '{name}' resolved a merge conflict and was ff-merged, "
+                f"but post-merge review deferred (verdict {rr.verdict!r}). The "
+                + (
+                    "ff-merge was rolled back — safe to re-review/re-run."
+                    if merge_reverted
+                    else "ff-merge could NOT be rolled back — manual rollback needed; do NOT re-run."
+                )
+            ),
+            question=(
+                f"Feature '{name}' was deferred at post-repair review. How "
+                "should it be handled?"
+            ),
+            options_considered=["re-review after fixes", "discard the repair branch"],
+            pipeline_attempted="dispatch_review() in _repair_completed_review_gate()",
+        )
+        write_deferral(deferral, deferred_dir=deferred_dir, idempotent=True)
+        _write_back_to_backlog(
+            name, "deferred", ctx.config.batch_id,
+            ctx.config.overnight_events_path,
+            backlog_id=ctx.backlog_ids.get(name),
+        )
+        return True
+
+    except Exception as exc:
+        # Fail-safe rollback on a review-dispatch crash.
+        merge_reverted = _reset_ff_merge(repo, pre_ff_base_sha)
+        overnight_log_event(
+            FEATURE_DEFERRED,
+            ctx.config.batch_id,
+            feature=name,
+            details={
+                "error": f"dispatch_review raised {type(exc).__name__}: {exc}",
+                "review_dispatch_crashed": True,
+                "merge_reverted": merge_reverted,
+                "path": "repair_completed",
+            },
+            log_path=ctx.config.overnight_events_path,
+        )
+        deferral = DeferralQuestion(
+            feature=name,
+            question_id=0,
+            severity=SEVERITY_BLOCKING,
+            context=(
+                f"Feature '{name}' was ff-merged after conflict repair but the "
+                f"post-merge review dispatch crashed: {type(exc).__name__}: {exc}. "
+                + (
+                    "The ff-merge was rolled back — safe to re-review/re-run."
+                    if merge_reverted
+                    else "The ff-merge could NOT be rolled back — manual rollback needed."
+                )
+            ),
+            question=(
+                f"Feature '{name}' was ff-merged after repair but the review "
+                "dispatch crashed. Should it be marked complete (skipping "
+                "review) or held for manual review?"
+            ),
+            options_considered=["mark complete (skip review)", "hold for manual review"],
+            pipeline_attempted="dispatch_review() in _repair_completed_review_gate()",
+        )
+        write_deferral(deferral, deferred_dir=deferred_dir, idempotent=True)
+        ctx.batch_result.features_deferred.append({
+            "name": name,
+            "question_count": 1,
+        })
+        _write_back_to_backlog(
+            name, "deferred", ctx.config.batch_id,
+            ctx.config.overnight_events_path,
+            backlog_id=ctx.backlog_ids.get(name),
+        )
+        return True
+
+
+def _reset_ff_merge(repo: Path | None, pre_ff_base_sha: Optional[str]) -> bool:
+    """Roll a ``repair_completed`` ff-merge back to its pre-ff base tip.
+
+    A fast-forward leaves no merge commit, so the rollback is a ``git reset
+    --hard <pre_ff_base_sha>`` rather than ``git revert -m 1``. Runs under the
+    caller's held ``ctx.lock``. Returns True when the reset succeeded (the
+    unreviewed repair work is no longer on the integration branch), False when
+    the pre-ff SHA was unavailable or the reset failed (the merge genuinely
+    remains — surfaced as a manual-rollback deferral).
+    """
+    if not pre_ff_base_sha:
+        return False
+    reset_result = subprocess.run(
+        ["git", "reset", "--hard", pre_ff_base_sha],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+    )
+    return reset_result.returncode == 0
+
+
+# ---------------------------------------------------------------------------
 # Async public entry point: apply_feature_result
 # ---------------------------------------------------------------------------
 
@@ -1145,6 +1518,20 @@ async def apply_feature_result(
     worktree_path = ctx.worktree_paths.get(name)
 
     async with ctx.lock:
+        if result.status == "repair_completed":
+            # R12: the repair_completed ff-merge is a LIVE merge-to-`merged`
+            # write site that can carry a review-qualifying feature (a
+            # conflict-resolved complex/high feature). Route it through the
+            # async review-or-revert gate here — the async layer owns review
+            # dispatch — so the sync _apply_feature_result never reaches its
+            # repair_completed merge-success arm for a review-qualifying
+            # feature (that arm now carries a runtime guard).
+            await _repair_completed_review_gate(
+                name, result, ctx, deferred_dir=deferred_dir,
+            )
+            if result.repair_agent_used:
+                ctx.recovery_attempts_map[name] = ctx.recovery_attempts_map.get(name, 0) + 1
+            return
         if result.status != "completed":
             # Non-completed: delegate entirely to _apply_feature_result
             _apply_feature_result(name, result, ctx, deferred_dir=deferred_dir)

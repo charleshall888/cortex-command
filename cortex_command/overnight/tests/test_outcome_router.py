@@ -216,16 +216,24 @@ class TestApplyFeatureResultStatusDispatch(unittest.IsolatedAsyncioTestCase):
         appended, counter reset)."""
         ctx = _make_ctx(pauses=1)
 
+        # The repair_completed ff-merge now runs in _repair_completed_review_gate
+        # (R12): checkout base, capture pre-ff HEAD (rev-parse), ff-merge, then —
+        # for a non-review-qualifying feature — branch-delete.
         ff_proc = MagicMock(returncode=0, stderr="")
         checkout_proc = MagicMock(returncode=0, stderr="")
+        revparse_proc = MagicMock(returncode=0, stdout="basesha000\n", stderr="")
         del_proc = MagicMock(returncode=0, stderr="")
 
         with (
             patch(
                 "cortex_command.overnight.outcome_router.subprocess.run",
-                side_effect=[checkout_proc, ff_proc, del_proc],
+                side_effect=[checkout_proc, revparse_proc, ff_proc, del_proc],
             ) as m_sp,
             patch("cortex_command.overnight.outcome_router.merge_feature") as m_merge,
+            patch(
+                "cortex_command.overnight.outcome_router.requires_review",
+                return_value=False,
+            ),
             patch(
                 "cortex_command.overnight.outcome_router._write_back_to_backlog",
             ) as m_wb,
@@ -1838,6 +1846,386 @@ class TestRecoveryPathReviewGate(unittest.IsolatedAsyncioTestCase):
 
         # The recovery re-merge ran exactly once, with the lock held.
         self.assertEqual(lock_held_during_recovery, [True])
+
+
+class TestRepairCompletedReviewGate(unittest.IsolatedAsyncioTestCase):
+    """R12 — the repair_completed ff-merge is a LIVE merge-to-`merged` site.
+    A review-qualifying feature is routed through dispatch_review before being
+    marked `merged`; on a non-APPROVED/crash outcome the ff-merge is rolled
+    back (git reset --hard to the pre-ff base) and the feature is deferred."""
+
+    @staticmethod
+    def _ff_subprocess_side_effect():
+        """checkout base, rev-parse pre-ff HEAD, ff-merge (success). The
+        branch-delete only runs on the merged (non-deferred) path."""
+        checkout = MagicMock(returncode=0, stderr="")
+        revparse = MagicMock(returncode=0, stdout="preffbase00\n", stderr="")
+        ff = MagicMock(returncode=0, stderr="")
+        delete = MagicMock(returncode=0, stderr="")
+        reset = MagicMock(returncode=0, stderr="")
+        return checkout, revparse, ff, delete, reset
+
+    async def test_repair_qualifying_feature_routed_through_review(self):
+        """A review-qualifying repair_completed feature dispatches review before
+        being marked merged; APPROVED → merged."""
+        ctx = _make_ctx(pauses=1)
+        checkout, revparse, ff, delete, _reset = self._ff_subprocess_side_effect()
+        review_result = MagicMock(deferred=False, verdict="APPROVED", cycle=1, merge_sha=None)
+
+        with (
+            patch(
+                "cortex_command.overnight.outcome_router.subprocess.run",
+                side_effect=[checkout, revparse, ff, delete],
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.requires_review",
+                return_value=True,
+            ),
+            patch("cortex_command.overnight.outcome_router.read_tier", return_value="complex"),
+            patch("cortex_command.overnight.outcome_router.read_criticality", return_value="high"),
+            patch(
+                "cortex_command.overnight.outcome_router.dispatch_review",
+                new=AsyncMock(return_value=review_result),
+            ) as m_dispatch,
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch("cortex_command.overnight.outcome_router.overnight_log_event"),
+            patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+        ):
+            await apply_feature_result(
+                "feat-a",
+                FeatureResult(
+                    name="feat-a", status="repair_completed", repair_branch="repair/feat-a",
+                ),
+                ctx,
+            )
+
+        m_dispatch.assert_awaited_once()
+        self.assertEqual(m_dispatch.await_args.kwargs["feature"], "feat-a")
+        # APPROVED → merged.
+        self.assertIn("feat-a", ctx.batch_result.features_merged)
+
+    async def test_repair_qualifying_feature_deferred_reverts_ff_merge(self):
+        """A review-qualifying repair_completed feature whose review DEFERS is
+        NOT marked merged: the ff-merge is rolled back via git reset --hard to
+        the captured pre-ff base, and the feature is deferred."""
+        ctx = _make_ctx(pauses=1)
+        checkout, revparse, ff, _delete, reset = self._ff_subprocess_side_effect()
+        review_result = MagicMock(deferred=True, verdict="REJECTED", cycle=1, merge_sha=None)
+
+        with (
+            patch(
+                "cortex_command.overnight.outcome_router.subprocess.run",
+                side_effect=[checkout, revparse, ff, reset],
+            ) as m_sp,
+            patch(
+                "cortex_command.overnight.outcome_router.requires_review",
+                return_value=True,
+            ),
+            patch("cortex_command.overnight.outcome_router.read_tier", return_value="complex"),
+            patch("cortex_command.overnight.outcome_router.read_criticality", return_value="high"),
+            patch(
+                "cortex_command.overnight.outcome_router.dispatch_review",
+                new=AsyncMock(return_value=review_result),
+            ) as m_dispatch,
+            patch("cortex_command.overnight.outcome_router.write_deferral") as m_defer,
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog") as m_wb,
+            patch("cortex_command.overnight.outcome_router.overnight_log_event"),
+            patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+        ):
+            await apply_feature_result(
+                "feat-a",
+                FeatureResult(
+                    name="feat-a", status="repair_completed", repair_branch="repair/feat-a",
+                ),
+                ctx,
+            )
+
+        m_dispatch.assert_awaited_once()
+        # NOT merged — deferred instead.
+        self.assertNotIn("feat-a", ctx.batch_result.features_merged)
+        self.assertIn("feat-a", [d["name"] for d in ctx.batch_result.features_deferred])
+        m_defer.assert_called_once()
+        # The ff-merge was rolled back via git reset --hard <pre-ff base>.
+        reset_calls = [
+            c for c in m_sp.call_args_list
+            if c.args and c.args[0][:3] == ["git", "reset", "--hard"]
+        ]
+        self.assertEqual(len(reset_calls), 1)
+        self.assertEqual(reset_calls[0].args[0][3], "preffbase00")
+        # Backlog write-back used `deferred` status (not `merged`).
+        deferred_wbs = [c for c in m_wb.call_args_list if len(c.args) >= 2 and c.args[1] == "deferred"]
+        self.assertEqual(len(deferred_wbs), 1)
+        merged_wbs = [c for c in m_wb.call_args_list if len(c.args) >= 2 and c.args[1] == "merged"]
+        self.assertEqual(len(merged_wbs), 0)
+
+    async def test_repair_qualifying_feature_review_crash_reverts_ff_merge(self):
+        """A review-dispatch crash on the repair_completed path also rolls back
+        the ff-merge and defers (the except arm)."""
+        ctx = _make_ctx(pauses=1)
+        checkout, revparse, ff, _delete, reset = self._ff_subprocess_side_effect()
+
+        with (
+            patch(
+                "cortex_command.overnight.outcome_router.subprocess.run",
+                side_effect=[checkout, revparse, ff, reset],
+            ) as m_sp,
+            patch(
+                "cortex_command.overnight.outcome_router.requires_review",
+                return_value=True,
+            ),
+            patch("cortex_command.overnight.outcome_router.read_tier", return_value="complex"),
+            patch("cortex_command.overnight.outcome_router.read_criticality", return_value="critical"),
+            patch(
+                "cortex_command.overnight.outcome_router.dispatch_review",
+                new=AsyncMock(side_effect=RuntimeError("review subprocess exited 1")),
+            ) as m_dispatch,
+            patch("cortex_command.overnight.outcome_router.write_deferral") as m_defer,
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch("cortex_command.overnight.outcome_router.overnight_log_event"),
+            patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+        ):
+            await apply_feature_result(
+                "feat-a",
+                FeatureResult(
+                    name="feat-a", status="repair_completed", repair_branch="repair/feat-a",
+                ),
+                ctx,
+            )
+
+        m_dispatch.assert_awaited_once()
+        self.assertNotIn("feat-a", ctx.batch_result.features_merged)
+        self.assertIn("feat-a", [d["name"] for d in ctx.batch_result.features_deferred])
+        m_defer.assert_called_once()
+        reset_calls = [
+            c for c in m_sp.call_args_list
+            if c.args and c.args[0][:3] == ["git", "reset", "--hard"]
+        ]
+        self.assertEqual(len(reset_calls), 1)
+
+    async def test_repair_non_qualifying_feature_skips_review_and_merges(self):
+        """A non-review-qualifying repair_completed feature skips review (a
+        legitimate non-review) and proceeds straight to merged."""
+        ctx = _make_ctx(pauses=1)
+        checkout, revparse, ff, delete, _reset = self._ff_subprocess_side_effect()
+
+        with (
+            patch(
+                "cortex_command.overnight.outcome_router.subprocess.run",
+                side_effect=[checkout, revparse, ff, delete],
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.requires_review",
+                return_value=False,
+            ),
+            patch("cortex_command.overnight.outcome_router.read_tier", return_value="simple"),
+            patch("cortex_command.overnight.outcome_router.read_criticality", return_value="low"),
+            patch(
+                "cortex_command.overnight.outcome_router.dispatch_review",
+                new=AsyncMock(),
+            ) as m_dispatch,
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch("cortex_command.overnight.outcome_router.overnight_log_event"),
+            patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+        ):
+            await apply_feature_result(
+                "feat-a",
+                FeatureResult(
+                    name="feat-a", status="repair_completed", repair_branch="repair/feat-a",
+                ),
+                ctx,
+            )
+
+        m_dispatch.assert_not_awaited()
+        self.assertIn("feat-a", ctx.batch_result.features_merged)
+
+
+class TestSyncMergeSiteRuntimeGuards(unittest.IsolatedAsyncioTestCase):
+    """R12 — the two LIVE sync merge-to-`merged` write sites in
+    _apply_feature_result are provably unreachable for a review-qualifying
+    feature, so each carries a runtime guard that RAISES (not a prose
+    annotation) if a review-qualifying feature ever reaches it un-reviewed."""
+
+    async def test_sync_completed_merge_success_guard_raises_for_qualifying(self):
+        """Driving a review-qualifying feature into the sync `completed`
+        merge-success arm (merge_feature returns success) raises the runtime
+        guard rather than silently marking it merged un-reviewed."""
+        ctx = _make_ctx(pauses=0)
+        ctx.worktree_branches["feat-a"] = "pipeline/feat-a"
+        merge_ok = MagicMock(success=True, error=None, conflict=False, merge_sha="sha", classification=None)
+
+        with (
+            patch(
+                "cortex_command.overnight.outcome_router._get_changed_files",
+                return_value=["src/a.py"],
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.merge_feature",
+                return_value=merge_ok,
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.requires_review",
+                return_value=True,
+            ),
+            patch("cortex_command.overnight.outcome_router.read_tier", return_value="complex"),
+            patch("cortex_command.overnight.outcome_router.read_criticality", return_value="high"),
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch("cortex_command.overnight.outcome_router.overnight_log_event"),
+            patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+        ):
+            from cortex_command.overnight.outcome_router import _apply_feature_result
+            with self.assertRaises(RuntimeError) as cm:
+                _apply_feature_result(
+                    "feat-a",
+                    FeatureResult(name="feat-a", status="completed"),
+                    ctx,
+                )
+        self.assertIn("review-qualifying", str(cm.exception))
+        self.assertIn("completed merge-success", str(cm.exception))
+        self.assertNotIn("feat-a", ctx.batch_result.features_merged)
+
+    async def test_sync_repair_completed_ff_merge_guard_raises_for_qualifying(self):
+        """Driving a review-qualifying feature into the sync `repair_completed`
+        ff-merge success arm (bypassing the async interception by calling
+        _apply_feature_result directly) raises the runtime guard."""
+        ctx = _make_ctx(pauses=0)
+        checkout = MagicMock(returncode=0, stderr="")
+        ff = MagicMock(returncode=0, stderr="")
+
+        with (
+            patch(
+                "cortex_command.overnight.outcome_router.subprocess.run",
+                side_effect=[checkout, ff],
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.requires_review",
+                return_value=True,
+            ),
+            patch("cortex_command.overnight.outcome_router.read_tier", return_value="complex"),
+            patch("cortex_command.overnight.outcome_router.read_criticality", return_value="high"),
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch("cortex_command.overnight.outcome_router.overnight_log_event"),
+            patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+        ):
+            from cortex_command.overnight.outcome_router import _apply_feature_result
+            with self.assertRaises(RuntimeError) as cm:
+                _apply_feature_result(
+                    "feat-a",
+                    FeatureResult(
+                        name="feat-a", status="repair_completed", repair_branch="repair/feat-a",
+                    ),
+                    ctx,
+                )
+        self.assertIn("review-qualifying", str(cm.exception))
+        self.assertIn("repair_completed ff-merge", str(cm.exception))
+        self.assertNotIn("feat-a", ctx.batch_result.features_merged)
+
+
+class TestMergeToMergedSiteExhaustiveness(unittest.TestCase):
+    """R12 exhaustiveness pin (UNCONDITIONAL) — the complete set of
+    merge-to-`merged` write sites in outcome_router.py is exactly the known
+    set, each either review-gated or carrying a runtime guard. A sixth-style
+    un-gated `features_merged`-append / `"merged"` write-back added later (the
+    Bug-D enumeration-drift failure mode) fails this pin loudly."""
+
+    @staticmethod
+    def _source_tree():
+        import ast
+        from cortex_command.overnight import outcome_router
+        src_path = Path(outcome_router.__file__)
+        return ast.parse(src_path.read_text(encoding="utf-8")), src_path
+
+    @staticmethod
+    def _enclosing_funcname(tree, lineno):
+        import ast
+        best = None
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                if node.lineno <= lineno and (best is None or node.lineno > best[0]):
+                    end = getattr(node, "end_lineno", None)
+                    if end is None or lineno <= end:
+                        best = (node.lineno, node.name)
+        return best[1] if best else None
+
+    def test_merge_to_merged_write_sites_are_exactly_the_known_set(self):
+        import ast
+
+        tree, src_path = self._source_tree()
+
+        # Enumerate every `ctx.batch_result.features_merged.append(...)` call,
+        # attributed to its enclosing function.
+        append_sites: dict[str, int] = {}
+        merged_writeback_sites: dict[str, int] = {}
+        guard_calls: dict[str, int] = {}
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call):
+                # features_merged.append(...)
+                func = node.func
+                if (
+                    isinstance(func, ast.Attribute)
+                    and func.attr == "append"
+                    and isinstance(func.value, ast.Attribute)
+                    and func.value.attr == "features_merged"
+                ):
+                    fn = self._enclosing_funcname(tree, node.lineno)
+                    append_sites[fn] = append_sites.get(fn, 0) + 1
+                # _write_back_to_backlog(name, "merged", ...)
+                if (
+                    isinstance(func, ast.Name)
+                    and func.id == "_write_back_to_backlog"
+                    and len(node.args) >= 2
+                    and isinstance(node.args[1], ast.Constant)
+                    and node.args[1].value == "merged"
+                ):
+                    fn = self._enclosing_funcname(tree, node.lineno)
+                    merged_writeback_sites[fn] = merged_writeback_sites.get(fn, 0) + 1
+                # _guard_no_review_qualifying_sync_merge(name, site)
+                if (
+                    isinstance(func, ast.Name)
+                    and func.id == "_guard_no_review_qualifying_sync_merge"
+                ):
+                    fn = self._enclosing_funcname(tree, node.lineno)
+                    guard_calls[fn] = guard_calls.get(fn, 0) + 1
+
+        # The complete, exhaustive set of merge-to-`merged` write sites:
+        #   sync `_apply_feature_result`     — 2 (repair_completed ff-merge,
+        #                                        completed merge-success), each
+        #                                        runtime-GUARDED for qualifying
+        #   `_repair_completed_review_gate`  — 1 (review-GATED)
+        #   `apply_feature_result`           — 3 (async primary, recovery flaky,
+        #                                        recovery success), all review-GATED
+        expected_append = {
+            "_apply_feature_result": 2,
+            "_repair_completed_review_gate": 1,
+            "apply_feature_result": 3,
+        }
+        self.assertEqual(
+            append_sites,
+            expected_append,
+            "merge-to-`merged` append-site set drifted — a new "
+            "features_merged.append was added or moved without routing it "
+            "through review/guard (Bug-D enumeration drift). Update the gate "
+            "AND this pin together.",
+        )
+
+        # The `"merged"` write-back sites must co-locate with the append sites
+        # (one `merged` write-back per append site).
+        expected_writeback = dict(expected_append)
+        self.assertEqual(
+            merged_writeback_sites,
+            expected_writeback,
+            'merged write-back site set drifted from the append-site set.',
+        )
+
+        # The two sync sites each carry exactly one runtime guard.
+        self.assertEqual(
+            guard_calls,
+            {"_apply_feature_result": 2},
+            "the two sync merge-success arms must each carry a "
+            "_guard_no_review_qualifying_sync_merge runtime guard (R12).",
+        )
+
+        # Total count pinned: six write sites — two guarded, four review-gated.
+        self.assertEqual(sum(append_sites.values()), 6)
 
 
 if __name__ == "__main__":
