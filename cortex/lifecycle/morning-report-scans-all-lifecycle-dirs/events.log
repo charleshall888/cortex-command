@@ -8,3 +8,4 @@
 {"ts": "2026-06-09T14:38:08Z", "event": "batch_dispatch", "feature": "morning-report-scans-all-lifecycle-dirs", "batch": 0, "tasks": [1, 2]}
 {"ts": "2026-06-09T14:40:25Z", "event": "batch_dispatch", "feature": "morning-report-scans-all-lifecycle-dirs", "batch": 1, "tasks": [3]}
 {"ts": "2026-06-09T14:42:17Z", "event": "batch_dispatch", "feature": "morning-report-scans-all-lifecycle-dirs", "batch": 2, "tasks": [4]}
+{"ts": "2026-06-09T14:46:14Z", "event": "batch_dispatch", "feature": "morning-report-scans-all-lifecycle-dirs", "batch": 3, "tasks": [5]}
