@@ -69,6 +69,10 @@ The reasoning: capable models (Opus 4.7 and later) determine method themselves g
 
 This principle is the conceptual partner to the MUST-escalation policy below: both protect against over-specification — the escalation policy guards against over-constraining model behavior with imperative language; this principle guards against over-constraining it with procedural narration.
 
+## Design principle: resolve `${CLAUDE_SKILL_DIR}` in the body, then propagate
+
+Author skills so that only the SKILL.md body resolves `${CLAUDE_SKILL_DIR}` (its own directory directly, a sibling via `${CLAUDE_SKILL_DIR}/../<sibling>`), then propagate the resolved absolute path — or the inlined content — to every reference file, shell line, and composed subagent prompt that needs it. Keep raw `${CLAUDE_SKILL_DIR}` and bare consult-ref instructions out of subagent prompts, and avoid bare-relative Read/execute paths, since bare relative paths resolve against the working directory on the current Claude Code version rather than the skill's install location. The `cortex-check-skill-path` lint catches these patterns as a pre-commit gate, and `cortex/adr/0009-skill-path-resolution-for-plugin-distributed-skills.md` records the rationale and the off-repo failure mode behind it.
+
 ## MUST-escalation policy (post-Opus 4.7)
 
 Default to soft positive-routing phrasing for new authoring under epic #82's post-4.7 harness adaptation; pre-existing MUST language is grandfathered until specifically audited (per #85). To add a new MUST/CRITICAL/REQUIRED escalation, you must include in the commit body OR PR description a link to one evidence artifact: (a) `cortex/lifecycle/<feature>/events.log` path + line of an F-row showing Claude skipped the soft form, OR (b) a commit-linked transcript URL or quoted excerpt. Without one of these artifact links, the escalation is rejected at review.
