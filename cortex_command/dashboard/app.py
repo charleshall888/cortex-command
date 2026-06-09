@@ -266,6 +266,7 @@ async def index(request: Request):
     """Render the main dashboard page."""
     last_session = parse_last_session(_root() / "cortex" / "lifecycle")
     return templates.TemplateResponse(
+        request,
         "base.html",
         {"request": request, "state": state, "last_session": last_session},
     )
@@ -276,6 +277,7 @@ async def sessions_list(request: Request):
     """Render the session history list page."""
     sessions = parse_session_list(_root() / "cortex" / "lifecycle")
     return templates.TemplateResponse(
+        request,
         "sessions_list.html",
         {"request": request, "sessions": sessions},
     )
@@ -287,6 +289,7 @@ async def session_detail(session_id: str, request: Request):
     detail = parse_session_detail(session_id, _root() / "cortex" / "lifecycle")
     status_code = 404 if detail is None else 200
     return templates.TemplateResponse(
+        request,
         "session_detail.html",
         {"request": request, "detail": detail},
         status_code=status_code,
@@ -297,6 +300,7 @@ async def session_detail(session_id: str, request: Request):
 async def fleet_panel(request: Request):
     """Return the agent fleet panel HTML fragment for HTMX polling."""
     return templates.TemplateResponse(
+        request,
         "fleet-panel.html",
         {"request": request, "state": state},
     )
@@ -306,6 +310,7 @@ async def fleet_panel(request: Request):
 async def alerts_banner(request: Request):
     """Return the alerts banner HTML fragment for HTMX polling."""
     return templates.TemplateResponse(
+        request,
         "alerts_banner.html",
         {"request": request, "state": state},
     )
@@ -316,6 +321,7 @@ async def session_panel(request: Request):
     """Return the session panel HTML fragment for HTMX polling."""
     last_session = parse_last_session(_root() / "cortex" / "lifecycle")
     return templates.TemplateResponse(
+        request,
         "session_panel.html",
         {"request": request, "state": state, "last_session": last_session},
     )
@@ -325,6 +331,7 @@ async def session_panel(request: Request):
 async def feature_cards(request: Request):
     """Return the feature cards HTML fragment for HTMX polling."""
     return templates.TemplateResponse(
+        request,
         "feature_cards.html",
         {"request": request, "state": state},
     )
@@ -334,6 +341,7 @@ async def feature_cards(request: Request):
 async def round_history(request: Request):
     """Return the round history HTML fragment for HTMX polling."""
     return templates.TemplateResponse(
+        request,
         "round_history.html",
         {"request": request, "state": state},
     )
@@ -343,6 +351,7 @@ async def round_history(request: Request):
 async def escalations_panel(request: Request):
     """Return the escalations / open-questions panel for HTMX polling."""
     return templates.TemplateResponse(
+        request,
         "escalations_panel.html",
         {"request": request, "state": state},
     )
@@ -352,6 +361,7 @@ async def escalations_panel(request: Request):
 async def activity_stream(request: Request):
     """Return the recent overnight events stream panel for HTMX polling."""
     return templates.TemplateResponse(
+        request,
         "activity_stream.html",
         {"request": request, "state": state},
     )
@@ -361,6 +371,7 @@ async def activity_stream(request: Request):
 async def backlog_panel(request: Request):
     """Return the backlog ledger panel for HTMX polling."""
     return templates.TemplateResponse(
+        request,
         "backlog_panel.html",
         {"request": request, "state": state},
     )
@@ -370,6 +381,7 @@ async def backlog_panel(request: Request):
 async def metrics_baseline(request: Request):
     """Return the phase-baseline metrics panel for HTMX polling."""
     return templates.TemplateResponse(
+        request,
         "metrics_baseline.html",
         {"request": request, "state": state},
     )
@@ -385,6 +397,7 @@ async def swim_lane(request: Request):
         _root() / "cortex" / "lifecycle",
     )
     return templates.TemplateResponse(
+        request,
         "swim-lane.html",
         {
             "request": request,
