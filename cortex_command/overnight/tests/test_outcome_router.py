@@ -1261,5 +1261,180 @@ class TestHomeMergeWorktreeCollision(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(home_main_before, home_main_after)
 
 
+class TestReviewNonApprovedRevertsLiveSha(unittest.IsolatedAsyncioTestCase):
+    """R3a mock-spy: revert_merge is invoked with the feature's live captured
+    merge SHA on BOTH the review-deferred path and the review-crash except
+    path."""
+
+    async def test_deferred_path_reverts_live_merge_sha(self):
+        ctx = _make_ctx(pauses=0)
+        ctx.worktree_branches["feat-a"] = "pipeline/feat-a"
+
+        live_sha = "deadbeefcafe1234deadbeefcafe1234deadbeef"
+        merge_result = MagicMock(
+            success=True, error=None, conflict=False, test_result=None,
+            merge_sha=live_sha,
+        )
+        # Deferred review with no rework re-merge SHA (primary-merge SHA wins).
+        review_result = MagicMock(deferred=True, verdict="REJECTED", cycle=1, merge_sha=None)
+        revert_outcome = MagicMock(success=True, aborted=False, merge_sha=live_sha)
+
+        with (
+            patch(
+                "cortex_command.overnight.outcome_router._get_changed_files",
+                return_value=["src/a.py"],
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.merge_feature",
+                return_value=merge_result,
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.requires_review",
+                return_value=True,
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.dispatch_review",
+                new=AsyncMock(return_value=review_result),
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.revert_merge",
+                return_value=revert_outcome,
+            ) as m_revert,
+            patch("cortex_command.overnight.outcome_router.read_tier", return_value="M"),
+            patch(
+                "cortex_command.overnight.outcome_router.read_criticality",
+                return_value="high",
+            ),
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch("cortex_command.overnight.outcome_router.overnight_log_event"),
+            patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+        ):
+            await apply_feature_result(
+                "feat-a",
+                FeatureResult(name="feat-a", status="completed"),
+                ctx,
+            )
+
+        m_revert.assert_called_once()
+        # Positional first arg is the live merge SHA.
+        self.assertEqual(m_revert.call_args.args[0], live_sha)
+        self.assertIn("feat-a", [d["name"] for d in ctx.batch_result.features_deferred])
+
+    async def test_deferred_path_prefers_rework_remerge_sha(self):
+        """When the deferred ReviewResult carries a cycle-1 re-merge SHA, the
+        rollback targets that live re-merge SHA, not the primary-merge SHA."""
+        ctx = _make_ctx(pauses=0)
+        ctx.worktree_branches["feat-a"] = "pipeline/feat-a"
+
+        primary_sha = "1111111111111111111111111111111111111111"
+        remerge_sha = "2222222222222222222222222222222222222222"
+        merge_result = MagicMock(
+            success=True, error=None, conflict=False, test_result=None,
+            merge_sha=primary_sha,
+        )
+        review_result = MagicMock(deferred=True, verdict="CHANGES_REQUESTED", cycle=2, merge_sha=remerge_sha)
+        revert_outcome = MagicMock(success=True, aborted=False, merge_sha=remerge_sha)
+
+        with (
+            patch(
+                "cortex_command.overnight.outcome_router._get_changed_files",
+                return_value=["src/a.py"],
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.merge_feature",
+                return_value=merge_result,
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.requires_review",
+                return_value=True,
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.dispatch_review",
+                new=AsyncMock(return_value=review_result),
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.revert_merge",
+                return_value=revert_outcome,
+            ) as m_revert,
+            patch("cortex_command.overnight.outcome_router.read_tier", return_value="M"),
+            patch(
+                "cortex_command.overnight.outcome_router.read_criticality",
+                return_value="high",
+            ),
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch("cortex_command.overnight.outcome_router.overnight_log_event"),
+            patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+        ):
+            await apply_feature_result(
+                "feat-a",
+                FeatureResult(name="feat-a", status="completed"),
+                ctx,
+            )
+
+        m_revert.assert_called_once()
+        self.assertEqual(m_revert.call_args.args[0], remerge_sha)
+
+    async def test_except_path_reverts_live_merge_sha(self):
+        """A dispatch_review crash routes to the except path, which reverts the
+        primary live merge SHA and writes a blocking deferral."""
+        ctx = _make_ctx(pauses=0)
+        ctx.worktree_branches["feat-a"] = "pipeline/feat-a"
+
+        live_sha = "abc123abc123abc123abc123abc123abc123abc1"
+        merge_result = MagicMock(
+            success=True, error=None, conflict=False, test_result=None,
+            merge_sha=live_sha,
+        )
+        revert_outcome = MagicMock(success=True, aborted=False, merge_sha=live_sha)
+
+        with (
+            patch(
+                "cortex_command.overnight.outcome_router._get_changed_files",
+                return_value=["src/a.py"],
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.merge_feature",
+                return_value=merge_result,
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.requires_review",
+                return_value=True,
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.dispatch_review",
+                new=AsyncMock(side_effect=RuntimeError("review subprocess exited 1")),
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.revert_merge",
+                return_value=revert_outcome,
+            ) as m_revert,
+            patch(
+                "cortex_command.overnight.outcome_router._next_escalation_n",
+                return_value=1,
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.write_deferral",
+            ) as m_write_deferral,
+            patch("cortex_command.overnight.outcome_router.read_tier", return_value="M"),
+            patch(
+                "cortex_command.overnight.outcome_router.read_criticality",
+                return_value="high",
+            ),
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch("cortex_command.overnight.outcome_router.overnight_log_event"),
+            patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+        ):
+            await apply_feature_result(
+                "feat-a",
+                FeatureResult(name="feat-a", status="completed"),
+                ctx,
+            )
+
+        m_revert.assert_called_once()
+        self.assertEqual(m_revert.call_args.args[0], live_sha)
+        # The except path still surfaces a blocking deferral.
+        m_write_deferral.assert_called_once()
+
+
 if __name__ == "__main__":
     unittest.main()

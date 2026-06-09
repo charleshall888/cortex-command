@@ -357,36 +357,95 @@ def merge_feature(
     )
 
 
-def revert_merge(feature: str, base_branch: str = "main", repo_path: Path | None = None) -> None:
-    """Revert the most recent merge commit on the base branch.
+@dataclass
+class RevertResult:
+    """Result of attempting to revert a specific merge commit by SHA.
 
-    This is a fallback for reverting a merge outside the normal
-    merge_feature flow. Checks out the base branch and reverts HEAD,
-    which is assumed to be a merge commit (requires -m 1).
+    ``success`` is True when ``git revert -m 1 <merge_sha>`` netted out the
+    merge cleanly (a revert commit now sits on the branch). On a conflicting
+    revert — typically because a later feature merged code that textually
+    depends on the reverted one (the dependent-conflict R-edge) —
+    ``revert_merge`` runs ``git revert --abort`` so no half-applied revert is
+    left behind, sets ``aborted=True``, and returns ``success=False`` so the
+    caller escalates to a blocking deferral. The merge genuinely remains on
+    the branch in that case.
+    """
+
+    success: bool
+    merge_sha: str
+    aborted: bool = False
+    error: Optional[str] = None
+
+
+def revert_merge(
+    merge_sha: str,
+    repo_path: Path | None = None,
+    log_path: Path | None = None,
+    feature: str | None = None,
+) -> RevertResult:
+    """Revert a specific merge commit by SHA (position-independent).
+
+    Runs ``git revert -m 1 --no-edit <merge_sha>``. ``-m 1`` keeps the first
+    parent (the integration branch the feature was merged *into*), so the
+    revert undoes the feature's changes regardless of where ``<merge_sha>``
+    sits in history — later merges stacked on top do not move it. This is the
+    fail-safe rollback for a non-APPROVED/crashed post-merge review; the
+    caller MUST hold ``ctx.lock`` because the integration worktree is a single
+    physical checkout shared across concurrently-running features and a
+    concurrent ``git revert`` would corrupt the index.
+
+    The revert is captured, not ``check=True``: on a non-zero exit (a revert
+    conflict) this runs ``git revert --abort`` to leave no half-applied
+    revert, then returns ``RevertResult(success=False, aborted=True)`` so the
+    caller can escalate to a blocking deferral rather than crashing.
 
     Args:
-        feature: Feature name (used for logging/identification only).
-        base_branch: Branch to revert on (default: main).
-        repo_path: Explicit repository path for git operations. When
-            None (default), falls back to ``_repo_root()`` discovery.
+        merge_sha: The merge commit SHA to revert (a two-parent ``--no-ff``
+            merge commit, e.g. ``MergeResult.merge_sha``).
+        repo_path: Explicit repository path for git operations. When None
+            (default), falls back to ``_repo_root()`` discovery.
+        log_path: Path to JSONL event log. When provided, ``merge_reverted``
+            / ``merge_revert_error`` events are logged via state.log_event.
+        feature: Feature name, recorded on logged events for identification.
 
-    Raises:
-        subprocess.CalledProcessError: If checkout or revert fails.
+    Returns:
+        RevertResult describing whether the revert landed, was aborted on
+        conflict, or failed for another reason.
     """
     repo = repo_path if repo_path is not None else _repo_root()
 
-    subprocess.run(
-        ["git", "checkout", base_branch],
+    def _log(event_dict: dict) -> None:
+        if log_path is not None:
+            state_mod.log_event(log_path, event_dict)
+
+    revert_result = subprocess.run(
+        ["git", "revert", "-m", "1", "--no-edit", merge_sha],
         capture_output=True,
         text=True,
-        check=True,
         cwd=repo,
     )
 
-    subprocess.run(
-        ["git", "revert", "-m", "1", "--no-edit", "HEAD"],
-        capture_output=True,
-        text=True,
-        check=True,
-        cwd=repo,
-    )
+    if revert_result.returncode != 0:
+        revert_error = revert_result.stderr.strip() or revert_result.stdout.strip()
+        # Abort so no half-applied revert remains in the shared index.
+        subprocess.run(
+            ["git", "revert", "--abort"],
+            capture_output=True,
+            text=True,
+            cwd=repo,
+        )
+        _log({
+            "event": "merge_revert_error",
+            "feature": feature,
+            "merge_sha": merge_sha,
+            "error": revert_error,
+        })
+        return RevertResult(
+            success=False,
+            merge_sha=merge_sha,
+            aborted=True,
+            error=revert_error,
+        )
+
+    _log({"event": "merge_reverted", "feature": feature, "merge_sha": merge_sha})
+    return RevertResult(success=True, merge_sha=merge_sha)

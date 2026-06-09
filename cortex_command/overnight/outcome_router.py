@@ -51,7 +51,7 @@ from cortex_command.overnight.events import (
 )
 from cortex_command.overnight.state import _normalize_repo_key, load_state, save_state
 from cortex_command.overnight.types import CircuitBreakerState, FeatureResult
-from cortex_command.pipeline.merge import merge_feature
+from cortex_command.pipeline.merge import merge_feature, revert_merge
 from cortex_command.pipeline.merge_recovery import recover_test_failure
 from cortex_command.pipeline.review_dispatch import dispatch_review
 from cortex_command.pipeline.worktree import cleanup_worktree
@@ -1017,6 +1017,53 @@ async def apply_feature_result(
                         log_path=ctx.config.pipeline_events_path,
                     )
                     if rr.deferred:
+                        # Fail-safe rollback: revert the feature's LIVE merge
+                        # commit (SHA-anchored, under the held ctx.lock) before
+                        # worktree cleanup so unreviewed code does not ship on
+                        # the integration branch. Prefer the cycle-1 re-merge
+                        # SHA when present (it is the most recent merge of this
+                        # feature), else the primary merge SHA.
+                        live_merge_sha = (
+                            getattr(rr, "merge_sha", None) or merge_result.merge_sha
+                        )
+                        revert_aborted = False
+                        if live_merge_sha is not None:
+                            revert_outcome = revert_merge(
+                                live_merge_sha,
+                                repo_path=merge_target,
+                                log_path=ctx.config.pipeline_events_path,
+                                feature=name,
+                            )
+                            revert_aborted = revert_outcome.aborted
+                        if revert_aborted:
+                            # Dependent-conflict R-edge: the revert conflicted
+                            # (a later feature merged code depending on this
+                            # one), so `git revert --abort` ran and the merge
+                            # genuinely REMAINS on the integration branch.
+                            # Escalate a blocking deferral with the legacy
+                            # "do NOT re-run" annotation (accurate in this
+                            # one case).
+                            conflict_deferral = DeferralQuestion(
+                                feature=name,
+                                question_id=_next_escalation_n(
+                                    name, ctx.config.batch_id, ctx.config.session_dir,
+                                ),
+                                severity=SEVERITY_BLOCKING,
+                                context=(
+                                    f"Review deferred (verdict {rr.verdict!r}); the rollback "
+                                    f"of merge {live_merge_sha} conflicted and was aborted. The "
+                                    "merge is still on the integration branch — do NOT re-run; "
+                                    "manual rollback needed."
+                                ),
+                                question=(
+                                    f"Feature '{name}' was deferred at review but its merge could "
+                                    "not be reverted (revert conflict — a later feature likely "
+                                    "depends on it). How should this be manually rolled back?"
+                                ),
+                                options_considered=["manual revert + re-review", "keep merged and re-review in place"],
+                                pipeline_attempted="revert_merge() in apply_feature_result() (deferred path)",
+                            )
+                            write_deferral(conflict_deferral, deferred_dir=deferred_dir)
                         ctx.batch_result.features_deferred.append({
                             "name": name,
                             "question_count": 1,
@@ -1039,6 +1086,19 @@ async def apply_feature_result(
                             pass
                         return
                 except Exception as exc:
+                    # Fail-safe rollback on a review-dispatch crash: revert the
+                    # feature's LIVE merge commit (SHA-anchored, under the held
+                    # ctx.lock) before surfacing the deferral, so a crashed
+                    # review never leaves unreviewed code on the integration
+                    # branch.
+                    live_merge_sha = merge_result.merge_sha
+                    if live_merge_sha is not None:
+                        revert_merge(
+                            live_merge_sha,
+                            repo_path=merge_target,
+                            log_path=ctx.config.pipeline_events_path,
+                            feature=name,
+                        )
                     overnight_log_event(
                         FEATURE_DEFERRED,
                         ctx.config.batch_id,
