@@ -56,9 +56,6 @@ from cortex_command.pipeline.merge_recovery import recover_test_failure
 from cortex_command.pipeline.review_dispatch import dispatch_review
 from cortex_command.pipeline.worktree import cleanup_worktree
 
-if TYPE_CHECKING:
-    from cortex_command.pipeline.review_dispatch import ReviewResult  # noqa: F401
-
 
 logger = logging.getLogger(__name__)
 
@@ -495,7 +492,6 @@ def _apply_feature_result(
     """
     repo_path = ctx.repo_path_map.get(name)
     worktree_path = ctx.worktree_paths.get(name)
-    review_result: "ReviewResult | None" = None
     if result.status == "repair_completed":
         # Fast-forward merge the repair branch into base_branch.
         repo = _merge_target_repo_path(ctx, name)
@@ -653,31 +649,9 @@ def _apply_feature_result(
         )
 
         if merge_result.success:
-            # Review gating: if review was required and deferred, handle early return
-            if review_result is not None and review_result.deferred:
-                ctx.batch_result.features_deferred.append({
-                    "name": name,
-                    "question_count": 1,
-                })
-                overnight_log_event(
-                    FEATURE_DEFERRED,
-                    ctx.config.batch_id,
-                    feature=name,
-                    details={"review_verdict": review_result.verdict, "review_cycle": review_result.cycle},
-                    log_path=ctx.config.overnight_events_path,
-                )
-                _write_back_to_backlog(
-                    name, "in_progress", ctx.config.batch_id,
-                    ctx.config.overnight_events_path,
-                    backlog_id=ctx.backlog_ids.get(name),
-                )
-                try:
-                    cleanup_worktree(name, branch=f"pipeline/{name}", repo_path=repo_path, worktree_path=worktree_path)
-                except Exception:
-                    pass
-                return
-
-            # review_result is None (no review needed) or approved — continue to FEATURE_COMPLETE
+            # Review runs only in the async ``apply_feature_result`` path; this
+            # sync function never dispatches review, so a merged feature here
+            # always proceeds straight to FEATURE_COMPLETE.
             ctx.batch_result.features_merged.append(name)
             ctx.cb_state.consecutive_pauses = 0
             overnight_log_event(
