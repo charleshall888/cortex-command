@@ -43,9 +43,30 @@ for follow-up questions.
 
 ## Protocol
 
+The skill directory is `${CLAUDE_SKILL_DIR}` — an absolute path that resolves only here, in
+this SKILL.md body. Every script and reference path in this pipeline is anchored at that
+directory; reference files and composed subagent prompts cannot resolve the token themselves,
+so this body resolves it and propagates the absolute value (or inlined content) to whatever
+needs it.
+
 Before doing anything else, read `${CLAUDE_SKILL_DIR}/references/protocol.md` in full. It defines every stage
 of the pipeline: exact commands, verbatim prompt templates for each subagent, and failure
 handling for every error scenario. Do not proceed without reading it.
+
+Two propagation steps the body owns, because their consumers run in contexts where
+`${CLAUDE_SKILL_DIR}` is unset:
+
+- **Stage 4 dispatch — inline the rubric and output-format content.** Before composing the
+  Stage-4 synthesizer prompt, Read `${CLAUDE_SKILL_DIR}/references/rubric.md` and
+  `${CLAUDE_SKILL_DIR}/references/output-format.md` in full, and inline their content into the
+  composed subagent prompt at dispatch time. The fresh Stage-4 subagent cannot resolve the
+  token or follow a bare `rubric.md` / `output-format.md` consult-pointer, so it must receive
+  the actual content inlined — never a path it would have to resolve. (Do not paste that
+  content into this standing body; it belongs only in the dispatched prompt.)
+- **Stage 3.5 shell invocation — propagate the absolute skill-dir path.** The evidence-grounding
+  pre-step runs in a shell where `${CLAUDE_SKILL_DIR}` is unset. Resolve the absolute skill-dir
+  path here and substitute it into protocol.md's Stage 3.5 shell command in place of the
+  unresolvable token before running it.
 
 ## Constraints
 
