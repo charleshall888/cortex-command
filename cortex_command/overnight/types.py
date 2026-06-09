@@ -12,7 +12,7 @@ FeatureResult status-to-field mapping:
 """
 
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import List, Optional
 
 
 @dataclass
@@ -33,7 +33,18 @@ class FeatureResult:
 
 @dataclass
 class CircuitBreakerState:
-    """Tracks circuit breaker state across feature executions."""
+    """Tracks circuit breaker state across feature executions.
+
+    ``review_crash_classes`` records the cause-class label of every
+    review-dispatch crash deferral (R11). Review crashes route a feature to
+    ``features_deferred`` rather than ``features_paused``, so the systemic
+    threshold derivation cannot read them off ``features_paused``; this list is
+    the structure the systemic-failure block reads to compute a ``cause_class``
+    attributable to the review-dispatch crashes (not an unrelated paused
+    feature). Each entry is ``REVIEW_DISPATCH_CRASH`` (a member of
+    ``_SYSTEMIC_ERROR_TYPES``).
+    """
 
     consecutive_pauses: int = 0
     systemic_pauses_in_batch: int = 0
+    review_crash_classes: List[str] = field(default_factory=list)

@@ -669,6 +669,178 @@ class TestSystemicThreshold(unittest.IsolatedAsyncioTestCase):
         self.assertIn("pipeline_systemic_failure", logged_events)
 
 
+class TestSystemicReviewCrashCircuitBreaker(unittest.IsolatedAsyncioTestCase):
+    """R11: systemic review-dispatch crashes trip the circuit breaker coherently.
+
+    A review-dispatch crash (verdict ERROR / a raised dispatch exception) routes
+    a feature to ``features_deferred``, not ``features_paused`` — so it is
+    invisible to the paused-path systemic blocks. These tests pin that such
+    crashes feed the systemic counter AND that the emitted
+    ``PIPELINE_SYSTEMIC_FAILURE`` event carries a ``cause_class`` genuinely
+    attributable to the review-dispatch crashes, not one accidentally derived
+    from an unrelated paused feature.
+    """
+
+    async def _drive_review_error_crash(self, ctx: OutcomeContext, name: str,
+                                        capture_event) -> None:
+        """Drive one ``apply_feature_result`` whose review returns verdict ERROR.
+
+        merge succeeds, review is required, and ``dispatch_review`` returns a
+        deferred ERROR verdict — the could-not-run crash path. ``merge_sha`` is
+        None so the revert is skipped (keeps the test focused on the systemic
+        counter, not the revert machinery covered by Task 3)."""
+        ctx.worktree_branches[name] = f"pipeline/{name}"
+        ctx.feature_names = list(ctx.feature_names) + [name]
+        merge_result = MagicMock(
+            success=True, error=None, conflict=False, test_result=None,
+            merge_sha=None,
+        )
+        review_result = MagicMock(
+            deferred=True, verdict="ERROR", cycle=0, merge_sha=None,
+        )
+        with (
+            patch(
+                "cortex_command.overnight.outcome_router._get_changed_files",
+                return_value=["src/a.py"],
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.merge_feature",
+                return_value=merge_result,
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.requires_review",
+                return_value=True,
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.dispatch_review",
+                new=AsyncMock(return_value=review_result),
+            ),
+            patch("cortex_command.overnight.outcome_router.read_tier", return_value="complex"),
+            patch(
+                "cortex_command.overnight.outcome_router.read_criticality",
+                return_value="high",
+            ),
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch(
+                "cortex_command.overnight.outcome_router.overnight_log_event",
+                side_effect=capture_event,
+            ),
+            patch("cortex_command.overnight.outcome_router.write_deferral"),
+            patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+        ):
+            await apply_feature_result(
+                name,
+                FeatureResult(name=name, status="completed"),
+                ctx,
+            )
+
+    async def test_threshold_review_crashes_trip_breaker_with_review_cause(self):
+        """SYSTEMIC_FAILURE_THRESHOLD review-dispatch ERROR crashes set
+        global_abort_signal=True AND emit PIPELINE_SYSTEMIC_FAILURE whose
+        cause_class is the review-crash cause (REVIEW_DISPATCH_CRASH)."""
+        from cortex_command.overnight.constants import REVIEW_DISPATCH_CRASH
+
+        ctx = _make_ctx(pauses=0)
+        ctx.batch_result.global_abort_signal = False
+        ctx.feature_names = []
+
+        logged_events: list[str] = []
+        logged_details: list[dict] = []
+
+        def _capture(event_type, *args, **kwargs):
+            logged_events.append(event_type)
+            logged_details.append(kwargs.get("details", {}))
+
+        for i in range(SYSTEMIC_FAILURE_THRESHOLD - 1):
+            await self._drive_review_error_crash(ctx, f"feat-crash-{i}", _capture)
+            self.assertFalse(
+                ctx.batch_result.global_abort_signal,
+                "breaker tripped before threshold",
+            )
+            self.assertNotIn("pipeline_systemic_failure", logged_events)
+
+        # The threshold-th crash trips it.
+        await self._drive_review_error_crash(
+            ctx, f"feat-crash-{SYSTEMIC_FAILURE_THRESHOLD - 1}", _capture,
+        )
+
+        self.assertEqual(
+            ctx.cb_state.systemic_pauses_in_batch, SYSTEMIC_FAILURE_THRESHOLD,
+        )
+        self.assertTrue(ctx.batch_result.global_abort_signal)
+        self.assertIn("pipeline_systemic_failure", logged_events)
+
+        idx = logged_events.index("pipeline_systemic_failure")
+        details = logged_details[idx]
+        cause_class = details["cause_class"]
+        self.assertEqual(details["threshold"], SYSTEMIC_FAILURE_THRESHOLD)
+        # cause_class must be NON-EMPTY and equal to the review-crash cause —
+        # not an unrelated paused feature's error and not an empty flag-only flip.
+        self.assertTrue(cause_class, "cause_class must be non-empty")
+        self.assertEqual(
+            cause_class,
+            [REVIEW_DISPATCH_CRASH] * SYSTEMIC_FAILURE_THRESHOLD,
+        )
+
+    async def test_below_threshold_review_crashes_do_not_trip(self):
+        """Fewer than SYSTEMIC_FAILURE_THRESHOLD review crashes do NOT set
+        global_abort_signal and do NOT emit PIPELINE_SYSTEMIC_FAILURE."""
+        ctx = _make_ctx(pauses=0)
+        ctx.batch_result.global_abort_signal = False
+        ctx.feature_names = []
+
+        logged_events: list[str] = []
+
+        def _capture(event_type, *args, **kwargs):
+            logged_events.append(event_type)
+
+        for i in range(SYSTEMIC_FAILURE_THRESHOLD - 1):
+            await self._drive_review_error_crash(ctx, f"feat-crash-{i}", _capture)
+
+        self.assertEqual(
+            ctx.cb_state.systemic_pauses_in_batch, SYSTEMIC_FAILURE_THRESHOLD - 1,
+        )
+        self.assertFalse(ctx.batch_result.global_abort_signal)
+        self.assertNotIn("pipeline_systemic_failure", logged_events)
+
+    async def test_cause_class_not_derived_from_unrelated_paused_feature(self):
+        """With an unrelated NON-systemic paused feature also present, a batch of
+        review crashes still trips with a cause_class of REVIEW_DISPATCH_CRASH —
+        proving the cause is attributable to the crashes, not the paused
+        feature. (A regression deriving cause_class solely from features_paused
+        for review crashes would yield an empty/wrong cause and fail here.)"""
+        from cortex_command.overnight.constants import REVIEW_DISPATCH_CRASH
+
+        ctx = _make_ctx(pauses=0)
+        ctx.batch_result.global_abort_signal = False
+        ctx.feature_names = []
+        # Seed an unrelated paused feature with a NON-systemic error so it would
+        # NOT contribute to a correct cause_class even if read off
+        # features_paused — the review crashes are the only systemic cause.
+        ctx.batch_result.features_paused.append(
+            {"name": "feat-unrelated", "error": "task paused"}
+        )
+
+        logged_events: list[str] = []
+        logged_details: list[dict] = []
+
+        def _capture(event_type, *args, **kwargs):
+            logged_events.append(event_type)
+            logged_details.append(kwargs.get("details", {}))
+
+        for i in range(SYSTEMIC_FAILURE_THRESHOLD):
+            await self._drive_review_error_crash(ctx, f"feat-crash-{i}", _capture)
+
+        self.assertTrue(ctx.batch_result.global_abort_signal)
+        idx = logged_events.index("pipeline_systemic_failure")
+        cause_class = logged_details[idx]["cause_class"]
+        self.assertEqual(
+            cause_class,
+            [REVIEW_DISPATCH_CRASH] * SYSTEMIC_FAILURE_THRESHOLD,
+        )
+        self.assertNotIn("task paused", cause_class)
+
+
 class TestFindBacklogItemPathLifecycleSlug(unittest.TestCase):
     """Task 8 — the runtime resolver resolves slug != filename-stem.
 

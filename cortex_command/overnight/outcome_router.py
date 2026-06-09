@@ -24,7 +24,12 @@ from cortex_command.common import (
     read_tier,
     requires_review,
 )
-from cortex_command.overnight.constants import CIRCUIT_BREAKER_THRESHOLD, SYSTEMIC_FAILURE_THRESHOLD, _SYSTEMIC_ERROR_TYPES
+from cortex_command.overnight.constants import (
+    CIRCUIT_BREAKER_THRESHOLD,
+    REVIEW_DISPATCH_CRASH,
+    SYSTEMIC_FAILURE_THRESHOLD,
+    _SYSTEMIC_ERROR_TYPES,
+)
 from cortex_command.overnight.deferral import (
     DEFAULT_DEFERRED_DIR,
     SEVERITY_BLOCKING,
@@ -924,6 +929,64 @@ def _apply_feature_result(
 
 
 # ---------------------------------------------------------------------------
+# Systemic review-crash circuit breaker (R11)
+# ---------------------------------------------------------------------------
+
+
+def _record_review_crash_systemic(name: str, ctx: OutcomeContext) -> None:
+    """Feed a review-dispatch crash deferral into the systemic circuit breaker.
+
+    A single systemic review-dispatch failure mode can crash multiple features
+    byte-identically (the observed bug). Such a crash routes the feature to
+    ``features_deferred`` — invisible to the paused-path systemic blocks, which
+    read ``features_paused`` — so this records the crash where the threshold
+    derivation can see it:
+
+      1. Increment ``cb_state.systemic_pauses_in_batch`` (the threshold counter).
+      2. Append ``REVIEW_DISPATCH_CRASH`` to ``cb_state.review_crash_classes``
+         (the structure the threshold block reads to compute a ``cause_class``
+         attributable to the review-dispatch crashes, not an unrelated paused
+         feature).
+
+    When the threshold is reached it emits ``PIPELINE_SYSTEMIC_FAILURE`` with a
+    non-empty ``cause_class`` and sets ``global_abort_signal`` — coherently,
+    because the derived cause is the review-crash class, never a flag flipped
+    with an empty cause. Call this on every review-dispatch crash deferral path
+    (verdict ``ERROR`` or a raised dispatch exception); a review that ran and
+    said no (REJECTED / CHANGES_REQUESTED) is substantive feedback, not a
+    crash, and does NOT feed this breaker.
+    """
+    ctx.cb_state.systemic_pauses_in_batch += 1
+    ctx.cb_state.review_crash_classes.append(REVIEW_DISPATCH_CRASH)
+    if (
+        ctx.cb_state.systemic_pauses_in_batch >= SYSTEMIC_FAILURE_THRESHOLD
+        and not ctx.batch_result.global_abort_signal
+    ):
+        # Derive the trailing cause_class from the combined arrival of systemic
+        # paused errors and review-crash classes, taking the trailing window.
+        # The review-crash classes are appended last so an all-crash batch
+        # yields a cause_class of REVIEW_DISPATCH_CRASH entries — the class
+        # genuinely attributable to the review-dispatch crashes (R11 coherence
+        # requirement), never one accidentally derived from an unrelated paused
+        # feature.
+        paused_systemic = [
+            entry["error"]
+            for entry in ctx.batch_result.features_paused
+            if entry["error"] in _SYSTEMIC_ERROR_TYPES
+        ]
+        combined = paused_systemic + list(ctx.cb_state.review_crash_classes)
+        cause_class = combined[-SYSTEMIC_FAILURE_THRESHOLD:]
+        overnight_log_event(
+            PIPELINE_SYSTEMIC_FAILURE,
+            ctx.config.batch_id,
+            feature=name,
+            details={"cause_class": cause_class, "threshold": SYSTEMIC_FAILURE_THRESHOLD},
+            log_path=ctx.config.overnight_events_path,
+        )
+        ctx.batch_result.global_abort_signal = True
+
+
+# ---------------------------------------------------------------------------
 # Recovery-path review gate (R10)
 # ---------------------------------------------------------------------------
 
@@ -1069,6 +1132,10 @@ async def _recovery_review_gate(
             details=deferred_details,
             log_path=ctx.config.overnight_events_path,
         )
+        # R11: a could-not-run review (verdict ERROR) on the recovery path is a
+        # review-dispatch crash — feed it into the systemic circuit breaker.
+        if rr.verdict == "ERROR":
+            _record_review_crash_systemic(name, ctx)
         _write_back_to_backlog(
             name, "deferred", ctx.config.batch_id,
             ctx.config.overnight_events_path,
@@ -1120,6 +1187,9 @@ async def _recovery_review_gate(
             "name": name,
             "question_count": 1,
         })
+        # R11: a raised dispatch exception on the recovery path is a
+        # review-dispatch crash — feed it into the systemic circuit breaker.
+        _record_review_crash_systemic(name, ctx)
         _write_back_to_backlog(
             name, "deferred", ctx.config.batch_id,
             ctx.config.overnight_events_path,
@@ -1387,6 +1457,10 @@ async def _repair_review_or_revert(
             details=deferred_details,
             log_path=ctx.config.overnight_events_path,
         )
+        # R11: a could-not-run review (verdict ERROR) on the repair_completed
+        # path is a review-dispatch crash — feed it into the systemic breaker.
+        if rr.verdict == "ERROR":
+            _record_review_crash_systemic(name, ctx)
         deferral = DeferralQuestion(
             feature=name,
             question_id=0,
@@ -1456,6 +1530,9 @@ async def _repair_review_or_revert(
             "name": name,
             "question_count": 1,
         })
+        # R11: a raised dispatch exception on the repair_completed path is a
+        # review-dispatch crash — feed it into the systemic circuit breaker.
+        _record_review_crash_systemic(name, ctx)
         _write_back_to_backlog(
             name, "deferred", ctx.config.batch_id,
             ctx.config.overnight_events_path,
@@ -1712,6 +1789,14 @@ async def apply_feature_result(
                             details=deferred_details,
                             log_path=ctx.config.overnight_events_path,
                         )
+                        # R11: a could-not-run review (verdict ERROR) is a
+                        # review-dispatch crash — feed it into the systemic
+                        # circuit breaker so SYSTEMIC_FAILURE_THRESHOLD identical
+                        # crashes in a batch trip it coherently. A review that
+                        # ran and said no (REJECTED / CHANGES_REQUESTED) is
+                        # substantive feedback, not a crash, and is excluded.
+                        if rr.verdict == "ERROR":
+                            _record_review_crash_systemic(name, ctx)
                         # Use the valid OvernightState status `deferred` (R8) —
                         # `in_progress` is not a valid status and reads as
                         # ordinary active work.
@@ -1778,6 +1863,9 @@ async def apply_feature_result(
                         "name": name,
                         "question_count": 1,
                     })
+                    # R11: a raised dispatch exception is a review-dispatch
+                    # crash — feed it into the systemic circuit breaker.
+                    _record_review_crash_systemic(name, ctx)
                     _write_back_to_backlog(
                         name, "in_progress", ctx.config.batch_id,
                         ctx.config.overnight_events_path,
