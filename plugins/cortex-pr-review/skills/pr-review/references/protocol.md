@@ -510,25 +510,50 @@ the critics JSON to a temp file via heredoc (single-quoted delimiter to disable 
 variable expansion), then compose the pre-step input via `jq` so `quoted_text` content
 is passed through as a JSON string rather than concatenated into the shell command.
 
+The script path is `<skill-dir>/scripts/evidence-ground.sh`, where `<skill-dir>` is the
+absolute skill directory the SKILL.md body resolves from `${CLAUDE_SKILL_DIR}` and
+substitutes into this command before running it (a reference file and the shell cannot
+resolve the token — only the body can — so the body propagates the resolved absolute
+path here in place of the old unresolvable `${CLAUDE_SKILL_DIR:-$TMPDIR}` form).
+
+Before invoking, run a pre-invocation existence check on the resolved path. If the script
+does not exist (path unresolved or missing), emit the distinct sentinel
+`GROUNDING_SCRIPT_MISSING` on **stdout** and halt this stage — do NOT fall through to the
+invocation. This sentinel is deliberately non-empty and distinct so it cannot alias to the
+empty-stdout → synthesis-failure route; it surfaces a real script-absence error loudly. It
+goes to stdout (not stderr) because the `2>/dev/null` redirect below suppresses stderr, so a
+stderr marker would be swallowed — the original bug was exactly that swallow aliasing to
+empty stdout.
+
 ```bash
 # Main agent invocation (between Stage 3 and Stage 4).
 # critics_file is produced by writing each critic's findings[] JSON to
 # /tmp/pr-review-critics.json using a heredoc with a single-quoted delimiter.
 # diff_path is the Stage 1 pipeline-state variable.
+# <skill-dir> is the absolute skill directory propagated by the SKILL.md body.
+[ -f "<skill-dir>/scripts/evidence-ground.sh" ] || { echo "GROUNDING_SCRIPT_MISSING"; exit 0; }
 jq -nc --slurpfile critics /tmp/pr-review-critics.json \
        --arg diff_path "$diff_path" \
        '{critics: $critics[0], diff_path: $diff_path}' \
-  | bash "${CLAUDE_SKILL_DIR:-$TMPDIR}/scripts/evidence-ground.sh" 2>/dev/null
+  | bash "<skill-dir>/scripts/evidence-ground.sh" 2>/dev/null
 ```
+
+The `2>/dev/null` redirect on the pipeline stays (the Contract above requires stderr be
+discarded for main-agent JSON-parse hygiene); the existence-check sentinel is therefore on
+stdout, the one channel the redirect does not touch.
 
 The main agent captures stdout, parses the JSON, and passes `grounded` and `drops` as
 input variables to the Stage 4 dispatch.
 
-**Failure handling.** On any of: non-zero exit, malformed JSON output, empty stdout, or
-stdout exceeding a sanity threshold (~1 MB) → route to the synthesis-failure fallback
-(see Stage 4 failure handling). A successful exit with zero grounded findings is NOT a
-failure — it is a normal empty-findings outcome (Verdict = APPROVE, footer reports
-`0 surfaced, N considered, M dropped`).
+**Failure handling.** Three distinct outcomes, kept on separate branches:
+- **Script absent / path unresolved** → the pre-invocation existence check emits the
+  distinct sentinel `GROUNDING_SCRIPT_MISSING` on stdout and halts (loud, surfaced error).
+  This is NOT the empty-stdout → synthesis-failure route and must NOT be conflated with it:
+  a missing script is a setup/path defect, not a degraded synthesis.
+- **Empty stdout** (or non-zero exit, malformed JSON output, or stdout exceeding a sanity
+  threshold ~1 MB) → route to the synthesis-failure fallback (see Stage 4 failure handling).
+- **Ran, returned zero grounded findings** → NOT a failure; a normal empty-findings outcome
+  (Verdict = APPROVE, footer reports `0 surfaced, N considered, M dropped`).
 
 ---
 
@@ -614,15 +639,19 @@ pre-step; `quoted_text` content is never slash-normalized (code strings may legi
 contain `\` for Windows path literals). Rejected-by-path-guard findings are recorded as
 `over-cap`-adjacent silent drops (not surfaced; not counted in visible drops).
 
+## Rubric
+
+{rubric}
+
 ## Rubric scoring
 
-Score each surviving finding along the three axes defined in `rubric.md`:
+Score each surviving finding along the three axes defined in the rubric above:
 
 - **severity** ∈ {must-fix, should-fix, nit, unknown}
 - **solidness** ∈ {solid, plausible, thin} (solid requires a concrete next action)
 - **signal** ∈ {high, medium, low}
 
-Then apply the per-finding-type gate thresholds from `rubric.md`:
+Then apply the per-finding-type gate thresholds from the rubric above:
 
 - `must-fix + solidness≥plausible` → `issue (blocking):`
 - `should-fix + solid + signal≥medium` → `suggestion:`
@@ -636,7 +665,7 @@ Apply caps after gating: `nitpick:` ≤ 3 per review, `praise:` ≤ 2, `cross-cu
 Tie-break for nitpick overflow: file path alphabetical, then line ascending. Overflow
 findings are dropped with reason `over-cap`.
 
-Drop-reason taxonomy (from `rubric.md`):
+Drop-reason taxonomy (from the rubric above):
 
 - `evidence-not-found` — finding's `quoted_text` did not appear on any diff line (silent drop)
 - `evidence-context-mismatch` — matched only a context line, not a changed line (visible drop)
@@ -650,7 +679,7 @@ For any finding whose `evidence.matched_side == "-"` (the quoted text is a remov
 line), demote severity: `must-fix` or `should-fix` becomes `question:` (reframe the
 finding as asking about the rationale for the deletion) OR drop the finding with reason
 `low-signal` if the original claim no longer applies once the line is gone. You own
-this judgment; `rubric.md` provides the rationale.
+this judgment; the rubric above provides the rationale.
 
 ## Verdict derivation
 
@@ -660,11 +689,15 @@ The first line of your output is a single `Verdict:` header:
 
 Derivation rule: if any surfaced finding has label `issue (blocking):` then Verdict is `REQUEST_CHANGES`; otherwise Verdict is `APPROVE`.
 
+## Output format reference
+
+{output_format}
+
 ## Output structure
 
 After the Verdict header, emit a flat list of Conventional Comments-labeled findings —
-one per surviving finding. Each finding uses the labels defined in
-`${CLAUDE_SKILL_DIR}/references/output-format.md`:
+one per surviving finding. Each finding uses the labels defined in the output-format
+reference above:
 
 - `issue (blocking):` / `issue (non-blocking):`
 - `suggestion:`
@@ -681,8 +714,8 @@ Do NOT emit the legacy fixed sections — no heading blocks for grouped issues,
 observations, architectural assessment, or consensus positives. The output is the
 Verdict header plus the flat labeled-finding list.
 
-Follow the voice rules in `output-format.md`: no em-dashes, no AI-tell vocabulary, no
-validation openers, no closing fluff.
+Follow the voice rules in the output-format reference above: no em-dashes, no AI-tell
+vocabulary, no validation openers, no closing fluff.
 
 ## Observability footer
 
@@ -740,6 +773,13 @@ unavailable. This same fallback triggers when the Stage 3.5 pre-step fails in an
 of the following ways: the pre-step exits non-zero, emits malformed JSON on
 stdout, emits empty stdout, or exceeds the 150-second Bash-tool timeout. Any of
 these grounding failure modes routes to the raw-Sonnet presentation path.
+
+The Stage 3.5 script-absent case is a SEPARATE branch and does NOT route here: when
+the pre-invocation existence check finds no script at the resolved path, it emits the
+distinct sentinel `GROUNDING_SCRIPT_MISSING` on stdout and halts with a surfaced,
+loud error. Because that sentinel is non-empty, it does not alias to the empty-stdout
+→ synthesis-failure path above — surface it as a distinct script-absence/path-resolution
+error, not as a degraded synthesis.
 
 Zero findings surviving grounding is NOT a synthesis failure — it is a normal
 empty-findings output (footer reports `0 findings posted, N dropped`;
