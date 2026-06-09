@@ -36,7 +36,7 @@ Branch on the exit code:
 
 - **Exit 0** — unambiguous match. Parse stdout JSON; the object contains exactly four fields: `filename`, `backlog_filename_slug`, `title`, `lifecycle_slug`. Use these directly in Step 2 and subsequent phases. Do not re-derive slugs from scratch.
 - **Exit 2** — ambiguous match. Read the `<filename>\t<title>` candidate lines from stderr. Present them to the user and ask them to select one. Re-invoke `cortex-resolve-backlog-item` with the chosen filename slug, or treat the user's selection directly as the resolved item.
-- **Exit 3** — no match. Switch to Context B (ad-hoc topic) per `../lifecycle/references/clarify.md` §1 and treat the input as the topic name. When the input is prose rather than a valid kebab-case slug (`^[a-z0-9]+(-[a-z0-9]+)*$`), apply the prose-derivation prescription from `../lifecycle/SKILL.md` Step 1 before treating it as the topic name — derive a 3–6 word kebab-case slug for `{lifecycle-slug}`, announce it, and proceed. Do not ask the user to confirm the derived slug.
+- **Exit 3** — no match. Switch to Context B (ad-hoc topic) per `${CLAUDE_SKILL_DIR}/../lifecycle/references/clarify.md` §1 and treat the input as the topic name. When the input is prose rather than a valid kebab-case slug (`^[a-z0-9]+(-[a-z0-9]+)*$`), apply the prose-derivation prescription from `${CLAUDE_SKILL_DIR}/../lifecycle/SKILL.md` Step 1 before treating it as the topic name — derive a 3–6 word kebab-case slug for `{lifecycle-slug}`, announce it, and proceed. Do not ask the user to confirm the derived slug.
 - **Exit 64** — usage error (e.g., empty or malformed input). Halt and surface the stderr usage diagnostic to the user. Do NOT fall through to disambiguation.
 - **Exit 70** — internal software error (malformed frontmatter, missing backlog directory, or other IO failure). Halt and surface the stderr diagnostic to the user. Do NOT fall through to disambiguation.
 
@@ -67,7 +67,7 @@ After determining the resume point, invoke `cortex-refine emit-lifecycle-start -
 
 ## Step 3: Clarify Phase
 
-Read `../lifecycle/references/clarify.md` and follow its full protocol (§2–§7). Requirements loading within Clarify uses the shared tag-based loading protocol at `../lifecycle/references/load-requirements.md` (the citation chain is refine SKILL.md → lifecycle clarify.md → load-requirements.md).
+Read `${CLAUDE_SKILL_DIR}/../lifecycle/references/clarify.md` and follow its full protocol (§2–§7). Requirements loading within Clarify uses the shared tag-based loading protocol at `${CLAUDE_SKILL_DIR}/../lifecycle/references/load-requirements.md` (the citation chain is refine SKILL.md → lifecycle clarify.md → load-requirements.md).
 
 If a concept you need is not yet defined in the glossary, treat the absence as a signal to surface the term in the next requirements interview.
 
@@ -90,7 +90,7 @@ If `cortex-update-item` fails, surface the error and wait for the user to resolv
 
 ### Sufficiency Check
 
-If `cortex/lifecycle/{lifecycle-slug}/research.md` already exists, apply the Research Sufficiency Criteria defined in `../lifecycle/references/clarify.md` §6. Use the clarified intent statement and scope from Clarify as the benchmark.
+If `cortex/lifecycle/{lifecycle-slug}/research.md` already exists, apply the Research Sufficiency Criteria defined in `${CLAUDE_SKILL_DIR}/../lifecycle/references/clarify.md` §6. Use the clarified intent statement and scope from Clarify as the benchmark.
 
 **Path guard** (explicit rules for what satisfies the Sufficiency Check):
 
