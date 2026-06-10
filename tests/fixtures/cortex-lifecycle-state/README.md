@@ -84,7 +84,7 @@ and declares an explicit, opt-in tolerance set per fixture.
 | `field-tier` | none | single-key object; key-reorder is vacuous |
 | `missing-events-log` | none | output is `{}` — trivially byte-identical |
 | `no-start-event` | none | output is `{}` — trivially byte-identical |
-| `torn-line` | `error-formatter-shape`, `key-reorder` | see below |
+| `torn-line` | `key-reorder` | stdout key-reorder; stderr is byte-identical (the per-line warning is pinned exactly) |
 
 ### Named-tolerance categories
 
@@ -99,10 +99,11 @@ and declares an explicit, opt-in tolerance set per fixture.
   values are strings.
 
 - **`error-formatter-shape`** — Carve-out for diagnostic stderr on malformed
-  input: the port must match the fixture's stdout AND exit code, while stderr
-  content may differ. For `torn-line`, the tolerant reducer recovers
-  `{"criticality":"high","tier":"complex"}` on stdout with exit 0 and currently
-  emits empty stderr.
+  input: the port matches the fixture's stdout AND exit code, while stderr content
+  may differ. No current fixture uses it — `torn-line` now byte-compares its
+  stderr, since the tolerant reducer recovers `{"criticality":"high","tier":"complex"}`
+  on stdout (exit 0) and the CLI emits a deterministic, cwd-relative "skipped
+  unusable line" warning that the fixture pins exactly.
 
 ## Determinism harness
 
