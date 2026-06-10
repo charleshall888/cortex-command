@@ -224,6 +224,12 @@ The `**Complexity**` field drives model and turn-limit selection in the overnigh
 
 Every task requires a `**Depends on**` field between **What** and **Context**. Use `[N, M]` (bracketed task numbers) for tasks with dependencies, or `none` for independent tasks. The implement phase uses these annotations to dispatch independent tasks in parallel — omitting or misformatting the field blocks parallel execution.
 
+### Sub-task headings (`### Task Na`)
+
+A task may be decomposed into ordered sub-units with a single lowercase letter suffix on the heading: `### Task 3a:`, `### Task 3b:`. These parse as first-class, independently-dispatchable units with a distinct identity (`3` < `3a` < `3b` < `4`); the integer part accepts `0` and a sub-task group need not start at `a` (an orphan `8b` is valid). Reference a sub-task in `Depends on` by its full id (`[3a]`, `[13a, 13b]`) — a bare `[3]` means the literal task `3` only and is **not** auto-expanded to the group, so enumerate sub-task dependencies explicitly. Only a single lowercase letter is supported; multi-letter (`3ab`), uppercase (`3A`), and space-separated (`3 a`) suffixes fail loud.
+
+**Same-batch sub-tasks must declare disjoint `Files`.** Sibling sub-tasks that share a `Depends on` (e.g. `13a`/`13b`/`13c` all depending on `[10]`) co-schedule in one batch. In the overnight runner a batch dispatches into one shared worktree, so same-batch tasks writing the same file race (last-writer-wins). Give same-batch sub-tasks disjoint `Files` lists, or serialize them with an explicit `Depends on` edge (`3b` depends on `[3a]`).
+
 ### Files/Verification Consistency
 
 Every file that Verification implies must be listed in Files. If Verification says "write a test," the test file must appear in Files. Builders are instructed not to modify files outside their Files list — contradicting this with Verification creates an impossible constraint.

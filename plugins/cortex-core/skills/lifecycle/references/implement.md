@@ -211,6 +211,8 @@ Compute batches from the dependency graph using topological level grouping:
 
 If all tasks are linearly dependent, this naturally produces one task per batch (sequential execution).
 
+Batching keys on each task's full identity, including letter-suffixed sub-task headings (`### Task 3a:`, `### Task 3b:`) which are first-class units (see plan.md's "Sub-task headings" section). **Sub-task siblings that co-schedule in the same batch must have disjoint `Files`**: a batch dispatches into one shared worktree, so same-batch tasks writing the same file race (last-writer-wins). If two same-parent sub-tasks must touch the same file, serialize them with an explicit `Depends on` edge so they land in different batches.
+
 For each batch, in order:
 
 **a. Extract task texts**: For every task in the batch, copy its full task block from plan.md (everything between `### Task N:` and the next task heading).
