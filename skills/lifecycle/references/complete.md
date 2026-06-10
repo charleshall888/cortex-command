@@ -211,7 +211,7 @@ After the `cortex-update-item` call (regardless of whether it succeeded, failed,
 
 1. If `cortex-update-item` was not found (`command -v cortex-update-item` failed), emit: `"WARNING: cortex-update-item not found — backlog item status may not be updated."`
 2. Attempt index regeneration in order:
-   - Run `test -f cortex_command/backlog/generate_index.py` — if it exists, run `python3 cortex_command/backlog/generate_index.py` and emit: `"Index regenerated via cortex_command/backlog/generate_index.py"`
+   - Run `test -f cortex_command/backlog/generate_index.py` — if it exists, run `python3 -m cortex_command.backlog.generate_index` and emit: `"Index regenerated via cortex_command/backlog/generate_index.py"`
    - Else run `command -v cortex-generate-backlog-index` — if found on PATH, run `cortex-generate-backlog-index` and emit: `"Index regenerated via cortex-generate-backlog-index"`
    - Else emit: `"WARNING: Could not regenerate backlog index — no generate_index.py script found. Index may be stale."`
 
@@ -253,13 +253,20 @@ git add -- cortex/lifecycle/{slug}/research.md \
 
 Stage by enumerated paths only — a directory-scoped add on the lifecycle dir would sweep in residue that is un-ignored *or* already-tracked: `learnings/*` siblings such as `outline.md` (the narrow `recovery-log.md` ignore rule never covers them, so a dir-add catches them in every repo), plus `critical-review-residue.json` (now gitignored in fresh consumer repos by the shipped `cortex/.gitignore`, but still tracked-and-swept in this repo's already-committed history).
 
-Stage the backlog write-back with a directory-scoped add, which captures the resolved item `.md`, the regenerated `index.json`/`index.md`, and any sibling/parent `.md` files rewritten by `cortex-update-item`'s terminal-status cascade:
+Stage the review-phase requirements-drift file, if one was auto-applied, by its exact recorded path — never with a directory-scoped add on `cortex/requirements/`:
 
-```
-git add cortex/backlog/
-```
+- Read the `## Suggested Requirements Update` section from `cortex/lifecycle/{slug}/review.md` and extract its `**File**:` value (the path the review phase recorded per review.md §4a — fields `File` / `Section` / `Content`).
+- `git add -- <that File path>`.
+- If no `## Suggested Requirements Update` section exists (no drift was applied), skip this staging silently.
 
-The gitignored `cortex/backlog/*.events.jsonl` sidecar is excluded automatically.
+Do **not** stage with a directory-scoped add on the `cortex/requirements/` tree (neither the tracked-modified `-u` form nor a bare directory add): on the guard-less trunk path that would sweep an unrelated in-flight `project.md` (or other tracked-modified requirements file) into the finalization commit. Stage only the exact `File` path review.md recorded.
+
+Stage the backlog write-back so it captures the `cortex-update-item` terminal-status cascade rewrites of pre-tracked sibling/parent files (and the resolved item itself, even when it was created-but-not-yet-committed) without sweeping in unrelated untracked tickets:
+
+- `git add -u cortex/backlog/` — tracked-modified only; this captures the cascade rewrites (all of which modify pre-tracked files) while skipping any untracked unrelated tickets.
+- Stage the resolved backlog item by its **resolved filename**: capture it via `cortex-resolve-backlog-item {slug}` (exit-0 stdout, the `filename` field — the same resolver Step 9 relies on, which does title-subset matching), then `git add -- cortex/backlog/<resolved-filename>`. This covers the Edge Case where the resolved item itself is untracked, which `git add -u` alone cannot.
+
+Do **not** stage with a bare directory-scoped add on the `cortex/backlog/` tree (it would sweep unrelated untracked tickets), and do **not** rely on a tail-anchored slug-glob (`{slug}.md` suffixed under `cortex/backlog/`): the lifecycle `{slug}` is a truncated prefix of the backlog filename slug, so that glob matches zero files. Use the resolver's `filename` instead. The gitignored `cortex/backlog/*.events.jsonl` sidecar is excluded automatically.
 
 **Stage-first idempotent guard**: after staging, run:
 
