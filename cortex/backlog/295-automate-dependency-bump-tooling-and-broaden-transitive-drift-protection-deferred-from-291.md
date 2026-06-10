@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 8420af8c-79e6-45bb-9d76-856abea6a442
 title: "Automate dependency-bump tooling and broaden transitive-drift protection (deferred from #291)"
-status: backlog
+status: deferred
 priority: low
 type: feature
 created: 2026-06-09
-updated: 2026-06-09
+updated: 2026-06-10
 ---
 **Why:** Feature #291 (harden-the-distributed-cli-against-transitive) hardened the distributed CLI against transitive-dependency drift by *bounding the named web stack* (`starlette`, `fastapi`, `uvicorn`, `markdown`, `psutil`) via wheel metadata plus a route-level smoke test. That scope consciously **deferred** two broader goals stated in #291's spec Non-Requirements: (a) automated dependency-bump tooling (Renovate has native `uv.lock` support; Dependabot is the alternative) so the manual caps don't rot and security updates still flow, and (b) general-class drift protection against an arbitrary *unnamed* future transitive (`jinja2`/`pyyaml`/`mcp`) breaking in a novel, non-render-path way. This ticket records that deferral so the decision and its reopen triggers are not lost.
 
