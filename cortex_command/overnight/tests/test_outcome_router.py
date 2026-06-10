@@ -1706,6 +1706,66 @@ class TestReviewDeferredSurfacingCorrections(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("review_dispatch_crashed", deferred_details)
         self.assertNotIn("could_not_run", deferred_details)
 
+    async def _run_crash_raise_path(self):
+        """Drive apply_feature_result's `except` path where dispatch_review
+        RAISES an exception (distinct from a returned ERROR verdict). merge_sha
+        is None so the revert is skipped — the focus is the backlog write-back
+        status on the crash arm."""
+        ctx = _make_ctx(pauses=0)
+        ctx.worktree_branches["feat-a"] = "pipeline/feat-a"
+
+        merge_result = MagicMock(
+            success=True, error=None, conflict=False, test_result=None,
+            merge_sha=None,
+        )
+        with (
+            patch(
+                "cortex_command.overnight.outcome_router._get_changed_files",
+                return_value=["src/a.py"],
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.merge_feature",
+                return_value=merge_result,
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.requires_review",
+                return_value=True,
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.dispatch_review",
+                new=AsyncMock(side_effect=RuntimeError("review dispatch boom")),
+            ),
+            patch("cortex_command.overnight.outcome_router.read_tier", return_value="M"),
+            patch(
+                "cortex_command.overnight.outcome_router.read_criticality",
+                return_value="high",
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router._write_back_to_backlog",
+            ) as m_write_back,
+            patch("cortex_command.overnight.outcome_router.overnight_log_event"),
+            patch("cortex_command.overnight.outcome_router.write_deferral"),
+            patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+        ):
+            await apply_feature_result(
+                "feat-a",
+                FeatureResult(name="feat-a", status="completed"),
+                ctx,
+            )
+        return m_write_back
+
+    async def test_review_crash_raise_writes_back_status_deferred(self):
+        """A review dispatch that RAISES (the `except` crash arm, distinct from a
+        returned ERROR verdict) defers the feature — the backlog write-back uses
+        status 'deferred', not the invalid 'in_progress' that reads as ordinary
+        active work despite the feature landing in features_deferred."""
+        m_write_back = await self._run_crash_raise_path()
+        statuses = [
+            c.args[1] for c in m_write_back.call_args_list if len(c.args) >= 2
+        ]
+        self.assertIn("deferred", statuses)
+        self.assertNotIn("in_progress", statuses)
+
     @staticmethod
     def _deferred_event_details(m_log_event) -> dict:
         """Extract the details dict from the FEATURE_DEFERRED overnight_log_event

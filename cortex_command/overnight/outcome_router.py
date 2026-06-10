@@ -1866,8 +1866,13 @@ async def apply_feature_result(
                     # R11: a raised dispatch exception is a review-dispatch
                     # crash — feed it into the systemic circuit breaker.
                     _record_review_crash_systemic(name, ctx)
+                    # Mirror the review-deferred path (R8): a crashed review
+                    # defers the feature (FEATURE_DEFERRED emitted, blocking
+                    # deferral written, feature in features_deferred), so the
+                    # backlog status is `deferred` — not `in_progress`, which
+                    # reads as ordinary active work despite the deferral.
                     _write_back_to_backlog(
-                        name, "in_progress", ctx.config.batch_id,
+                        name, "deferred", ctx.config.batch_id,
                         ctx.config.overnight_events_path,
                         backlog_id=ctx.backlog_ids.get(name),
                     )
