@@ -3,3 +3,7 @@
 {"ts": "2026-06-10T19:40:00Z", "event": "phase_transition", "feature": "harness-token-efficiency-trim", "from": "research", "to": "specify"}
 {"ts": "2026-06-10T19:55:00Z", "event": "spec_approved", "feature": "harness-token-efficiency-trim"}
 {"ts": "2026-06-10T19:55:00Z", "event": "phase_transition", "feature": "harness-token-efficiency-trim", "from": "specify", "to": "plan"}
+{"ts":"2026-06-10T18:54:08Z","event":"sentinel_absence","feature":"harness-token-efficiency-trim","reviewer_angle":"Structural-move ordering and byte-accounting integrity","reason":"absent","model_tier":"opus","expected_sha":"ccf98ef1093db44f5eadf9c0e16398fa9107d96372152cf1caada69c884fc852","observed_sha_or_null":null}
+{"ts":"2026-06-10T18:54:08Z","event":"sentinel_absence","feature":"harness-token-efficiency-trim","reviewer_angle":"Verification gameability","reason":"absent","model_tier":"opus","expected_sha":"ccf98ef1093db44f5eadf9c0e16398fa9107d96372152cf1caada69c884fc852","observed_sha_or_null":null}
+{"ts": "2026-06-10T19:06:00Z", "event": "plan_approved", "feature": "harness-token-efficiency-trim"}
+{"ts": "2026-06-10T19:06:00Z", "event": "phase_transition", "feature": "harness-token-efficiency-trim", "from": "plan", "to": "implement"}
