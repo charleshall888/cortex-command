@@ -36,6 +36,7 @@ from cortex_command.common import (
     read_tier,
 )
 from cortex_command.lifecycle.counters import count_rework_cycles
+from cortex_command.refine import _reduce_current_state
 
 
 REPO_ROOT = Path(__file__).parent.parent
@@ -171,4 +172,125 @@ def test_bin_lifecycle_counters_matches_python(slug: str, tmp_path: Path) -> Non
     assert bin_out["rework_cycles"] == expected_rework, (
         f"rework_cycles mismatch for {slug}: "
         f"bin={bin_out['rework_cycles']} python={expected_rework}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Multi-reader agreement matrix (R12) — state_cli (via the bin wrapper),
+# read_tier/read_criticality, and refine._reduce_current_state must return
+# identical EFFECTIVE values (each reader's value after its own default
+# projection) across the corruption/encoding/override axes. Non-UTF-8 axes are
+# built with write_bytes because they cannot live as git text fixtures.
+# ---------------------------------------------------------------------------
+
+# axis id, events.log bytes (None → no file), expected tier, criticality, corrupted
+_AGREEMENT_AXES = [
+    (
+        "torn-mid-file",
+        b'{"event":"lifecycle_start","tier":"complex","criticality":"high"}\n'
+        b'{"event":"phase_transition","from":"resea\n',
+        "complex",
+        "high",
+        False,
+    ),
+    (
+        "torn-start-only",
+        b'{"event":"lifecycle_start","tier":"comp\n',
+        "simple",
+        "medium",
+        True,
+    ),
+    (
+        "non-utf8-structure",
+        b"\xff\xfe structure-break \xfa\n",
+        "simple",
+        "medium",
+        True,
+    ),
+    (
+        "non-utf8-in-string-vocab",
+        b'{"event":"lifecycle_start","tier":"\xff","criticality":"high"}\n',
+        "simple",
+        "high",
+        True,
+    ),
+    (
+        "to-keyed-override",
+        b'{"event":"lifecycle_start","tier":"simple","criticality":"medium"}\n'
+        b'{"event":"complexity_override","to":"complex"}\n'
+        b'{"event":"criticality_override","to":"high"}\n',
+        "complex",
+        "high",
+        False,
+    ),
+    ("missing-file", None, "simple", "medium", False),
+    ("empty-valid", b"", "simple", "medium", False),
+]
+
+
+def _stage_events_bytes(slug: str, tmp_path: Path, data: bytes | None) -> Path:
+    """Write events.log bytes under tmp_path/cortex/lifecycle/<slug>/.
+
+    ``data is None`` creates the feature directory without an events.log (the
+    missing-file axis). Byte-oriented so non-UTF-8 axes survive intact.
+    """
+    fdir = tmp_path / "cortex" / "lifecycle" / slug
+    fdir.mkdir(parents=True, exist_ok=True)
+    if data is not None:
+        (fdir / "events.log").write_bytes(data)
+    return tmp_path
+
+
+@pytest.mark.parametrize(
+    "axis,data,exp_tier,exp_crit,exp_corrupted",
+    _AGREEMENT_AXES,
+    ids=[a[0] for a in _AGREEMENT_AXES],
+)
+def test_all_readers_agree_on_effective_state(
+    axis: str,
+    data: bytes | None,
+    exp_tier: str,
+    exp_crit: str,
+    exp_corrupted: bool,
+    tmp_path: Path,
+) -> None:
+    slug = f"feat-{axis}"
+    cwd = _stage_events_bytes(slug, tmp_path, data)
+    lifecycle_base = cwd / "cortex" / "lifecycle"
+    events_log = lifecycle_base / slug / "events.log"
+
+    # state_cli via the bin wrapper, pinned to working-tree code.
+    result = subprocess.run(
+        [str(BIN_STATE), "--feature", slug],
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        check=True,
+        env=_pinned_env(),
+    )
+    bin_out = json.loads(result.stdout)
+    assert isinstance(bin_out, dict), (
+        f"bin emitted non-object for {axis}: {result.stdout!r}"
+    )
+    bin_tier = bin_out.get("tier", "simple")
+    bin_crit = bin_out.get("criticality", "medium")
+
+    # Python readers, each with its own default projection.
+    py_tier = read_tier(slug, lifecycle_base=lifecycle_base)
+    py_crit = read_criticality(slug, lifecycle_base=lifecycle_base)
+    refine_tier, refine_crit = _reduce_current_state(events_log)
+
+    assert bin_tier == py_tier == refine_tier == exp_tier, (
+        f"tier disagreement on {axis}: bin={bin_tier!r} read_tier={py_tier!r} "
+        f"refine={refine_tier!r} expected={exp_tier!r}"
+    )
+    assert bin_crit == py_crit == refine_crit == exp_crit, (
+        f"criticality disagreement on {axis}: bin={bin_crit!r} "
+        f"read_criticality={py_crit!r} refine={refine_crit!r} expected={exp_crit!r}"
+    )
+
+    # The machine-readable corruption signal is pinned on the bin output.
+    assert (bin_out.get("corrupted") is True) == exp_corrupted, (
+        f"corruption signal mismatch on {axis}: bin_out={bin_out!r} "
+        f"expected_corrupted={exp_corrupted}"
     )
