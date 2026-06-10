@@ -1,20 +1,20 @@
-# Backlog Status Check, index.md Creation, and Backlog Write-Back
+# Backlog Status Check and Backlog Write-Back
 
-Three closely related Step 2 sub-procedures: check whether the backlog item is already complete, create `index.md` for new lifecycles, and write the lifecycle start back to the originating backlog item.
+Two Step 2 sub-procedures: check whether the backlog item is already complete, and write the lifecycle start back to the originating backlog item. (`index.md` creation for new lifecycles is handled in `discovery-bootstrap.md`.)
 
 ## Backlog Status Check
 
 Before creating any artifacts or performing write-back, check whether the originating backlog item has already been marked complete outside the lifecycle. **Do not re-scan the backlog directory in this sub-procedure** — Step 1's `cortex-resolve-backlog-item` call already located the file and parsed its frontmatter; consume that result here.
 
 1. **Use** the `{backlog-file}` resolved by Step 1 (or the resolver's no-match signal, exit code 3).
-2. **If no match was found** (resolver exit 3), or the parsed `status` field is not `complete`: skip this section silently and fall through to "Create index.md" and subsequent sections as normal.
+2. **If no match was found** (resolver exit 3), or the parsed `status` field is not `complete`: skip this section silently and fall through to subsequent sections as normal.
 3. **If a match was found and the parsed `status` is `complete`**: present a prompt using `AskUserQuestion` with two options:
    - **"Close lifecycle"**
    - **"Continue from current phase"**
 
    If `AskUserQuestion` is unavailable (e.g., overnight batch context where no interactive prompt is possible), default to **Continue** — never auto-close.
 
-4. **On "Continue"** (or if the check was skipped): fall through to "Create index.md" and "Backlog Write-Back" sections as normal. No further action from this section.
+4. **On "Continue"** (or if the check was skipped): fall through to "Backlog Write-Back" and subsequent sections as normal. No further action from this section.
 
 5. **On "Close lifecycle"**: the behavior depends on the current phase:
 
@@ -29,46 +29,10 @@ Before creating any artifacts or performing write-back, check whether the origin
         cortex-update-item <slug> --status complete --lifecycle-phase complete --session-id null
         ```
         Where `<slug>` is the backlog filename stem (e.g., `1043-add-backlog-status-detection-to-lifecycle-resume`).
-     3. **Exit immediately.** Do not proceed to "Create index.md", "Backlog Write-Back", "Discovery Bootstrap", or any subsequent Step 2 sections or later steps. The lifecycle is closed.
+     3. **Exit immediately.** Do not proceed to "Backlog Write-Back", "Discovery Bootstrap", or any subsequent Step 2 sections or later steps. The lifecycle is closed.
 
    - **If `phase = none`** (no `cortex/lifecycle/{feature}/` directory exists):
      1. **Exit immediately** without creating any lifecycle artifacts (no directory, no events.log, no index.md) and without calling `cortex-update-item`. The backlog item is already complete and no lifecycle artifacts need to exist.
-
-## Create index.md (New Lifecycle Only)
-
-When `phase = none` (no prior `cortex/lifecycle/{slug}/` directory exists), create `cortex/lifecycle/{slug}/index.md` as follows. **Do not re-scan the backlog directory in this sub-procedure** — consume Step 1's resolved `{backlog-file}` and parsed frontmatter.
-
-**Guard**: If `cortex/lifecycle/{slug}/index.md` already exists, skip this entire block — do not overwrite.
-
-Use Step 1's resolver result: if a `{backlog-file}` was resolved (exit 0), use its parsed frontmatter (`uuid`, `tags`, plus the filename's numeric prefix and slug stem) to populate the fields below. If Step 1's resolver returned exit 3 (no match), set null fields.
-
-Write `cortex/lifecycle/{slug}/index.md` with all seven required frontmatter fields:
-
-```yaml
----
-feature: {lifecycle-slug}
-parent_backlog_uuid: {uuid from backlog item, or null}
-parent_backlog_id: {numeric ID prefix from backlog filename, or null}
-artifacts: []
-tags: {inline array from backlog item tags field, or []}
-created: {today's date in ISO 8601, e.g. 2026-03-23}
-updated: {today's date in ISO 8601}
----
-```
-
-If a matching backlog item was found, append the wikilink body:
-
-```
-# [[{NNN}-{backlog-slug}|{backlog title}]]
-
-Feature lifecycle for [[{NNN}-{backlog-slug}]].
-```
-
-Where `{NNN}` is the zero-padded numeric prefix exactly as it appears in the backlog filename (e.g. `030`, `1048`), and `{backlog-slug}` is the filename without its `.md` extension and numeric prefix (e.g. `cf-tunnel-fallback-polish` from `030-cf-tunnel-fallback-polish.md`). Use the full filename stem (numeric prefix + slug) in the wikilink, e.g. `[[1048-lifecycle-feature-index|...]]`.
-
-If no matching backlog item was found, omit the heading and body line entirely.
-
-`artifacts: []` must always use inline YAML array notation — never block notation.
 
 ## Backlog Write-Back (Lifecycle Start)
 

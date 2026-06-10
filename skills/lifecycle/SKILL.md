@@ -118,8 +118,8 @@ Surface both signals as terse lines (one each) above the continue/restart prompt
 
 These four sub-procedures all read or update the originating backlog item and (for new lifecycles) seed `index.md` and epic context. Read the reference for the protocol:
 
-- [backlog-writeback.md](${CLAUDE_SKILL_DIR}/references/backlog-writeback.md) — Backlog Status Check, Create index.md (new lifecycle only), and Backlog Write-Back (Lifecycle Start)
-- [discovery-bootstrap.md](${CLAUDE_SKILL_DIR}/references/discovery-bootstrap.md) — Detect epic cortex/research/spec from backlog frontmatter and record paths for refine context injection (do not copy epic content)
+- [backlog-writeback.md](${CLAUDE_SKILL_DIR}/references/backlog-writeback.md) — Backlog Status Check and Backlog Write-Back (Lifecycle Start)
+- [discovery-bootstrap.md](${CLAUDE_SKILL_DIR}/references/discovery-bootstrap.md) — Create index.md (new lifecycle only), detect epic cortex/research/spec from backlog frontmatter, and record paths for refine context injection (do not copy epic content). Read only when `phase = none` (new lifecycle) or `phase = research`.
 
 Run them in this order: Backlog Status Check → Create index.md → Backlog Write-Back → Discovery Bootstrap.
 
@@ -137,30 +137,7 @@ The Clarify, Research, and Spec phases are delegated to `/cortex-core:refine`. T
 
 **If `cortex/lifecycle/{feature}/spec.md` exists but `cortex/lifecycle/{feature}/research.md` does not**: warn that the lifecycle is in an inconsistent state — spec exists without research, and overnight requires both. Delegate to `/cortex-core:refine` normally; `/cortex-core:refine`'s Step 2 will detect the missing research.md and route to the research phase.
 
-**If `cortex/lifecycle/{feature}/spec.md` does not exist**: delegate to `/cortex-core:refine` as follows:
-
-1. **Read `${CLAUDE_SKILL_DIR}/../refine/SKILL.md` verbatim.** Do not paraphrase or reconstruct `/cortex-core:refine`'s protocol from training context. The file read is mandatory — this ensures lifecycle stays in sync as `/cortex-core:refine` evolves.
-
-2. **Epic context injection** (applies when `epic_research_path` was recorded in Discovery Bootstrap): follow the Epic Context Injection protocol in [discovery-bootstrap.md](${CLAUDE_SKILL_DIR}/references/discovery-bootstrap.md).
-
-3. **Determine the starting point for `/cortex-core:refine`:** follow the Refine Starting-Point Rules in [discovery-bootstrap.md](${CLAUDE_SKILL_DIR}/references/discovery-bootstrap.md).
-
-4. **Event logging during delegation**: lifecycle owns `cortex/lifecycle/{feature}/events.log`. Log these events as `/cortex-core:refine` completes each phase:
-
-   - After the full Clarify phase completes (including §3a critic review and any Q&A) — **before Research begins** — log `lifecycle_start` (tier and criticality come from the post-critic, post-Q&A values in context):
-     ```json
-     {"ts": "<ISO 8601>", "event": "lifecycle_start", "feature": "<name>", "tier": "simple|complex", "criticality": "<level>"}
-     ```
-   - After each phase completes, log a `phase_transition` event:
-     ```json
-     {"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "from": "clarify", "to": "research"}
-     {"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "from": "research", "to": "specify"}
-     {"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "from": "specify", "to": "plan"}
-     ```
-
-5. **Complexity escalation gates**: run the Research → Specify and Specify → Plan complexity-escalator gates per [complexity-escalation.md](${CLAUDE_SKILL_DIR}/references/complexity-escalation.md).
-
-6. **Post-refine commit**: after the `phase_transition specify→plan` row is logged (happy path) or after the `lifecycle_cancelled` row is logged (cancel path) — and before auto-advancing to Plan — read [post-refine-commit.md](${CLAUDE_SKILL_DIR}/references/post-refine-commit.md) and follow it. This is the canonical commit site for the refine→plan boundary; refine §5 explicitly delegates `commit-artifacts` to the caller, which is this step. The reference encodes the halt-before-Plan gate: on commit failure, halt and do not auto-advance.
+**If `cortex/lifecycle/{feature}/spec.md` does not exist**: read [refine-delegation.md](${CLAUDE_SKILL_DIR}/references/refine-delegation.md) and follow it, substituting the body-resolved paths from the Reference-path propagation manifest below.
 
 The Research and Spec phases are handled by the /cortex-core:refine delegation block above. The following phases run directly in the lifecycle context:
 
@@ -180,6 +157,10 @@ A reference file cannot itself resolve `${CLAUDE_SKILL_DIR}` (the substitution h
 - **clarify-critic** (consulted in Clarify §3a) → `${CLAUDE_SKILL_DIR}/../refine/references/clarify-critic.md` (the critic protocol lives in the **refine** sibling skill; `${CLAUDE_SKILL_DIR}/../refine/…` resolves here, a bare `../` in the reference file does not).
 - **overnight-check sidecar** (executed in Implement §1 Step A and §1a.ii) → `${CLAUDE_SKILL_DIR}/references/_interactive_overnight_check.sh` (lifecycle's OWN `references/` sibling). The Implement reference invokes it as `cat ${CLAUDE_SKILL_DIR}/references/_interactive_overnight_check.sh | bash -s -- "<message>" "<root>"` using this body-resolved absolute path — not a bare `skills/lifecycle/…` path, which resolves against CWD and breaks off-repo. Preserve the existing `bash -s --` message and root arguments verbatim.
 - **load-requirements protocol** (consulted in Specify §1, Review §1, and Clarify §2) → `${CLAUDE_SKILL_DIR}/references/load-requirements.md` (lifecycle's OWN `references/` sibling; `${CLAUDE_SKILL_DIR}/references/…` resolves here, a bare `references/load-requirements.md` in the reference file resolves against CWD and breaks off-repo). Read this body-resolved absolute path for the shared tag-based requirements-loading protocol and follow it.
+- **refine SKILL.md** (read verbatim in refine-delegation.md Step 1) → `${CLAUDE_SKILL_DIR}/../refine/SKILL.md` (the refine sibling skill; `${CLAUDE_SKILL_DIR}/../refine/…` resolves here). Substitute as `<REFINE_SKILL_MD>` in refine-delegation.md.
+- **discovery-bootstrap** (read in refine-delegation.md Steps 2–3) → `${CLAUDE_SKILL_DIR}/references/discovery-bootstrap.md`. Substitute as `<DISCOVERY_BOOTSTRAP_MD>` in refine-delegation.md.
+- **complexity-escalation** (run in refine-delegation.md Step 5) → `${CLAUDE_SKILL_DIR}/references/complexity-escalation.md`. Substitute as `<COMPLEXITY_ESCALATION_MD>` in refine-delegation.md.
+- **post-refine-commit** (read in refine-delegation.md Step 6) → `${CLAUDE_SKILL_DIR}/references/post-refine-commit.md`. Substitute as `<POST_REFINE_COMMIT_MD>` in refine-delegation.md.
 
 ## Phase Transition
 
@@ -242,7 +223,8 @@ Beyond the per-phase references in the table above, these references cover cross
 - [parallel-execution.md](${CLAUDE_SKILL_DIR}/references/parallel-execution.md) — running multiple features in parallel via `Agent(isolation: "worktree")`, worktree-inspection invariant
 - [criticality-matrix.md](${CLAUDE_SKILL_DIR}/references/criticality-matrix.md) — criticality override event, behavior matrix across review/orchestrator/dispatch/model dimensions
 - [complexity-escalation.md](${CLAUDE_SKILL_DIR}/references/complexity-escalation.md) — `cortex-complexity-escalator` gates at phase transitions
-- [discovery-bootstrap.md](${CLAUDE_SKILL_DIR}/references/discovery-bootstrap.md) — epic-research detection from backlog frontmatter, epic-context injection during refine
-- [backlog-writeback.md](${CLAUDE_SKILL_DIR}/references/backlog-writeback.md) — backlog status check, index.md creation, and write-back to the originating backlog item
-- [post-refine-commit.md](${CLAUDE_SKILL_DIR}/references/post-refine-commit.md) — canonical commit site for the refine→plan boundary; halt-before-Plan gate prevents commit failures from bundling refine artifacts under a later Plan-titled commit
-- [wontfix.md](${CLAUDE_SKILL_DIR}/references/wontfix.md) — three-step terminal-state workflow (`git mv` to `archive/` → emit `feature_wontfix` event → `cortex-update-item --status wontfix`) for operator-decided lifecycle termination
+- [refine-delegation.md](${CLAUDE_SKILL_DIR}/references/refine-delegation.md) — delegation steps for the Clarify/Research/Specify phases (read when spec.md does not exist; uses body-resolved paths from the manifest above)
+- [discovery-bootstrap.md](${CLAUDE_SKILL_DIR}/references/discovery-bootstrap.md) — index.md creation (new lifecycle only), epic-research detection from backlog frontmatter, epic-context injection during refine
+- [backlog-writeback.md](${CLAUDE_SKILL_DIR}/references/backlog-writeback.md) — backlog status check and write-back to the originating backlog item
+- [post-refine-commit.md](${CLAUDE_SKILL_DIR}/references/post-refine-commit.md) — canonical commit site for the refine→plan boundary
+- [wontfix.md](${CLAUDE_SKILL_DIR}/references/wontfix.md) — terminal-state workflow for operator-decided lifecycle termination

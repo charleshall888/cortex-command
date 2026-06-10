@@ -1,5 +1,43 @@
 # Discovery Bootstrap
 
+## Create index.md (New Lifecycle Only)
+
+When `phase = none` (no prior `cortex/lifecycle/{slug}/` directory exists), create `cortex/lifecycle/{slug}/index.md` as follows. **Do not re-scan the backlog directory in this sub-procedure** — consume Step 1's resolved `{backlog-file}` and parsed frontmatter.
+
+**Guard**: If `cortex/lifecycle/{slug}/index.md` already exists, skip this entire block — do not overwrite.
+
+Populate from Step 1's parsed frontmatter; on resolver exit 3, set null fields.
+
+Write `cortex/lifecycle/{slug}/index.md` with all seven required frontmatter fields:
+
+```yaml
+---
+feature: {lifecycle-slug}
+parent_backlog_uuid: {uuid from backlog item, or null}
+parent_backlog_id: {numeric ID prefix from backlog filename, or null}
+artifacts: []
+tags: {inline array from backlog item tags field, or []}
+created: {today's date in ISO 8601, e.g. 2026-03-23}
+updated: {today's date in ISO 8601}
+---
+```
+
+If a matching backlog item was found, append the wikilink body:
+
+```
+# [[{NNN}-{backlog-slug}|{backlog title}]]
+
+Feature lifecycle for [[{NNN}-{backlog-slug}]].
+```
+
+Where `{NNN}` is the zero-padded numeric prefix exactly as it appears in the backlog filename (e.g. `030`, `1048`), and `{backlog-slug}` is the filename without its `.md` extension and numeric prefix (e.g. `cf-tunnel-fallback-polish` from `030-cf-tunnel-fallback-polish.md`). Use the full filename stem (numeric prefix + slug) in the wikilink, e.g. `[[1048-lifecycle-feature-index|...]]`.
+
+If no matching backlog item was found, omit the heading and body line entirely.
+
+`artifacts: []` must always use inline YAML array notation — never block notation.
+
+## Epic Research Detection
+
 When `phase = research` (no lifecycle directory exists yet), check whether discovery already produced epic-level artifacts for this feature. **Do not re-scan the backlog directory in this sub-procedure** — consume Step 1's resolved `{backlog-file}` and parsed frontmatter.
 
 ```
