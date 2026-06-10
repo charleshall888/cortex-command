@@ -293,6 +293,8 @@ def _detect_lifecycle_phase_inner(
             "feature_paused",
         ):
             last_significant_event = event_type
+    # Review-cycle number (1-based, never 0); distinct from rework_cycles (the
+    # CHANGES_REQUESTED count in cortex_command/lifecycle/counters.py).
     cycle = review_verdict_count if review_verdict_count > 0 else 1
     paused = last_significant_event == "feature_paused"
 
