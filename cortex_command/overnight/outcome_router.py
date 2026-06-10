@@ -22,6 +22,7 @@ from cortex_command.common import (
     _resolve_user_project_root,
     read_criticality,
     read_tier,
+    reduce_lifecycle_state,
     requires_review,
 )
 from cortex_command.overnight.constants import (
@@ -986,6 +987,23 @@ def _record_review_crash_systemic(name: str, ctx: OutcomeContext) -> None:
         ctx.batch_result.global_abort_signal = True
 
 
+def _review_required(name: str) -> bool:
+    """Whether a feature must go through post-merge review.
+
+    A single ``reduce_lifecycle_state`` pass gives the OR's two legs snapshot
+    coherence: ``requires_review(tier, criticality)`` on the matrix axes, OR the
+    corruption signal when a torn or out-of-vocabulary events.log left the gate
+    input unknowable (spec R8a — fail safe toward review). Separate
+    read_tier / read_criticality / predicate calls would take up to three
+    independent stat+reads of the same file, and a write landing between them
+    could invert the fail-safe.
+    """
+    reduction = reduce_lifecycle_state(Path(f"cortex/lifecycle/{name}/events.log"))
+    tier = reduction.state.get("tier", "simple")
+    criticality = reduction.state.get("criticality", "medium")
+    return requires_review(tier, criticality) or reduction.corrupted
+
+
 # ---------------------------------------------------------------------------
 # Recovery-path review gate (R10)
 # ---------------------------------------------------------------------------
@@ -1023,10 +1041,11 @@ async def _recovery_review_gate(
     """
     tier = read_tier(name)
     criticality = read_criticality(name)
-    if not requires_review(tier, criticality):
+    if not _review_required(name):
         # Legitimate non-review: this feature does not qualify for the gate, so
         # the recovery merge proceeds to `merged`. Logged as a deliberate skip,
-        # not a blanket escape.
+        # not a blanket escape. Corrupted state ORs in via _review_required so
+        # an unknowable gate input fails safe toward review (spec R8a).
         overnight_log_event(
             FEATURE_MERGED,
             ctx.config.batch_id,
@@ -1336,9 +1355,8 @@ async def _repair_completed_review_gate(
         return
 
     # ff-merge landed. Gate on review before marking `merged` (R12/R10 gate).
-    tier = read_tier(name)
-    criticality = read_criticality(name)
-    if requires_review(tier, criticality):
+    # Corrupted state ORs in via _review_required → fail safe toward review (R8a).
+    if _review_required(name):
         deferred = await _repair_review_or_revert(
             name,
             ctx,
@@ -1670,10 +1688,11 @@ async def apply_feature_result(
                 details={"integration_branch": effective_branch},
                 log_path=ctx.config.overnight_events_path,
             )
-            # Review gating: check if post-merge review is required
+            # Review gating: check if post-merge review is required. Corrupted
+            # state ORs in via _review_required → fail safe toward review (R8a).
             tier = read_tier(name)
             criticality = read_criticality(name)
-            if requires_review(tier, criticality):
+            if _review_required(name):
                 try:
                     rr = await dispatch_review(
                         feature=name,

@@ -247,6 +247,22 @@ class TestRequiresReview:
         assert requires_review("complex", "critical") is True
 
 
+def test_requires_review_corrupt_routes_to_review(tmp_path, monkeypatch):
+    """R8a: a torn-lifecycle_start-only events.log is gate-corrupting, so the
+    overnight gate helper ORs in the corruption signal and routes to review,
+    even though requires_review('simple', 'medium') alone is False."""
+    from cortex_command.overnight.outcome_router import _review_required
+
+    monkeypatch.chdir(tmp_path)
+    feature_dir = tmp_path / "cortex" / "lifecycle" / "feat-corrupt"
+    feature_dir.mkdir(parents=True)
+    (feature_dir / "events.log").write_bytes(
+        b'{"event":"lifecycle_start","tier":"comp\n'
+    )
+    assert requires_review("simple", "medium") is False
+    assert _review_required("feat-corrupt") is True
+
+
 # ---------------------------------------------------------------------------
 # mark_task_done_in_plan — idempotency over already-marked Status fields (R12)
 # ---------------------------------------------------------------------------
