@@ -277,6 +277,8 @@ After orchestrator review passes, read the active tier and criticality:
 - `cortex-lifecycle-state --feature {feature} --field tier` — canonical rule: `lifecycle_start.tier` is superseded by the most recent `complexity_override.to`; defaults to `simple` when absent.
 - `cortex-lifecycle-state --feature {feature} --field criticality` — defaults to `medium` when absent.
 
+If either read's output contains `"corrupted": true`, the events.log is corrupted and the gate input is unknowable — treat the feature as requiring review (run the critical review) rather than defaulting to `simple`/`medium` and skipping.
+
 **Run** when `tier = complex` AND `criticality ∈ {medium, high, critical}`: invoke the `critical-review` skill with the plan artifact. Present the synthesis to the user before plan approval.
 
 **Skip** otherwise. When the skip is because `tier = complex` AND `criticality = low`, first append a `lifecycle_critical_review_skipped` event to `cortex/lifecycle/{feature}/events.log` so the skip rate is observable, then proceed to user approval:
