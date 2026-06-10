@@ -2,12 +2,16 @@
 schema_version: "1"
 uuid: 716e4a05-93c5-4e53-88bc-e2db3ca753b7
 title: "Plan parser: support sub-task headings (### Task Na) as first-class ordered units"
-status: backlog
+status: complete
 priority: low
 type: feature
 created: 2026-06-09
-updated: 2026-06-09
+updated: 2026-06-10
 parent: "293"
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/plan-parser-support-sub-task-headings/spec.md
+areas: ['overnight-runner']
 ---
 As of commit 87239c4b the plan parser fails loud on letter-suffixed sub-task headings; this ticket adds real support for them.
 

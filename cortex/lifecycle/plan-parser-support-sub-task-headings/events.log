@@ -10,3 +10,4 @@
 {"ts": "2026-06-10T15:34:04Z", "event": "phase_transition", "feature": "plan-parser-support-sub-task-headings", "tier": "complex", "from": "implement", "to": "review"}
 {"ts": "2026-06-10T15:49:42Z", "event": "review_verdict", "feature": "plan-parser-support-sub-task-headings", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
 {"ts": "2026-06-10T15:49:42Z", "event": "phase_transition", "feature": "plan-parser-support-sub-task-headings", "from": "review", "to": "complete"}
+{"ts": "2026-06-10T15:50:24Z", "event": "feature_complete", "feature": "plan-parser-support-sub-task-headings", "tasks_total": 7, "rework_cycles": 0, "merge_anchor": "merge"}
