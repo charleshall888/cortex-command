@@ -20,3 +20,6 @@
 {"ts": "2026-06-10T20:55:54Z", "event": "batch_dispatch", "feature": "harness-token-efficiency-trim", "batch": 11, "tasks": [11]}
 {"ts": "2026-06-10T21:08:11Z", "event": "batch_dispatch", "feature": "harness-token-efficiency-trim", "batch": 12, "tasks": [12]}
 {"ts": "2026-06-10T21:11:19Z", "event": "batch_dispatch", "feature": "harness-token-efficiency-trim", "batch": 13, "tasks": [13]}
+{"ts": "2026-06-10T21:28:05Z", "event": "phase_transition", "feature": "harness-token-efficiency-trim", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-06-10T21:41:49Z", "event": "review_verdict", "feature": "harness-token-efficiency-trim", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
+{"ts": "2026-06-10T21:41:49Z", "event": "phase_transition", "feature": "harness-token-efficiency-trim", "from": "review", "to": "complete"}

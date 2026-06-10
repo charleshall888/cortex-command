@@ -8,6 +8,7 @@ artifacts:
   - spec.md
   - evidence.json
   - plan.md
+  - review.md
 updated: 2026-06-10
 ---
 # harness-token-efficiency-trim

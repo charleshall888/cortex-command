@@ -128,7 +128,7 @@ Apply the adversarially-verified token trim to the lifecycle/refine skill family
 - **Complexity**: simple
 - **Context**: Baselines in `evidence.json → l1_surface_baseline` (17 skills + total). Ratchet direction only — equal-or-lower passes; no description text changes in this feature. The citation-pin list is small and hardcoded with a comment naming each citing site (orchestrator-round.md:242,302,413; lifecycle_config.py:8-9,95-96; report.py:965).
 - **Verification**: `uv run pytest tests/test_l1_surface_ratchet.py tests/test_skill_section_citations.py` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (23/23: 18 ratchet cases all at baseline, 5 citation pins)
 
 ### Task 13: Final audit — citation sweep, byte accounting, full suite
 - **Files**: `cortex/lifecycle/harness-token-efficiency-trim/implementation-notes.md` (new)
@@ -137,7 +137,7 @@ Apply the adversarially-verified token trim to the lifecycle/refine skill family
 - **Complexity**: simple
 - **Context**: Known citing sites in research.md F5. The ≥30KB floor accounts for measured give-backs (two new reference files, manifest growth, pointer lines) against the 36.5KB verified-safe + ~9KB dedup gross.
 - **Verification**: `just test` — pass if exit 0; implementation-notes.md contains the per-file table, the signed total ≥ 30KB net reduction across `skills/`, and a ledger section with zero undispositioned proposals.
-- **Status**: [ ] pending
+- **Status**: [x] complete (−40,169B net, 19.2%; 195/195 dispositions; 1 environmental failure proven pre-existing)
 
 ## Risks
 
