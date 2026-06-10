@@ -981,5 +981,61 @@ class TestSubTaskHeadingParse(unittest.TestCase):
         self.assertEqual([t.task_id for t in plan.tasks], ["1", "2"])
 
 
+class TestMalformedSubTaskHeading(unittest.TestCase):
+    """#297 Req 8: malformed suffixes (multi-letter, uppercase, space-separated)
+    fail loud rather than silently absorbing into the preceding task."""
+
+    def setUp(self):
+        self._tmpdir = tempfile.TemporaryDirectory()
+
+    def tearDown(self):
+        self._tmpdir.cleanup()
+
+    def _parse(self, tasks_body: str) -> FeaturePlan:
+        plan_path = Path(self._tmpdir.name) / "plan.md"
+        plan_path.write_text(_make_plan(tasks_body), encoding="utf-8")
+        return parse_feature_plan(plan_path)
+
+    def test_multi_letter_suffix_raises(self):
+        body = (
+            _task_block("### Task 1: Parent", Files="a.py", **{"Depends on": "none"})
+            + "### Task 3ab: Sub\n- **Files**: b.py\n- **Depends on**: [1]\n"
+        )
+        with self.assertRaises(ValueError):
+            self._parse(body)
+
+    def test_uppercase_suffix_raises(self):
+        body = (
+            _task_block("### Task 1: Parent", Files="a.py", **{"Depends on": "none"})
+            + "### Task 3A: Sub\n- **Files**: b.py\n- **Depends on**: [1]\n"
+        )
+        with self.assertRaises(ValueError):
+            self._parse(body)
+
+    def test_space_separated_suffix_raises(self):
+        body = (
+            _task_block("### Task 1: Parent", Files="a.py", **{"Depends on": "none"})
+            + "### Task 3 a: Sub\n- **Files**: b.py\n- **Depends on**: [1]\n"
+        )
+        with self.assertRaises(ValueError):
+            self._parse(body)
+
+    def test_valid_single_lowercase_suffix_does_not_raise(self):
+        body = (
+            _task_block("### Task 1: Parent", Files="a.py", **{"Depends on": "none"})
+            + _task_block("### Task 3a: Sub", Files="b.py", **{"Depends on": "[1]"})
+        )
+        plan = self._parse(body)
+        self.assertIn("3a", [t.task_id for t in plan.tasks])
+
+    def test_two_digit_integer_does_not_raise(self):
+        body = (
+            _task_block("### Task 1: Parent", Files="a.py", **{"Depends on": "none"})
+            + _task_block("### Task 30: Sub", Files="b.py", **{"Depends on": "[1]"})
+        )
+        plan = self._parse(body)
+        self.assertIn(30, [t.number for t in plan.tasks])
+
+
 if __name__ == "__main__":
     unittest.main()

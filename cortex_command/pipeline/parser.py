@@ -345,6 +345,29 @@ def _parse_tasks(text: str, path: Path) -> tuple[list[FeatureTask], list[dict]]:
     )
     matches = list(task_pattern.finditer(text))
 
+    # Malformed-suffix guard (#297 Req 8): a heading shaped like a task
+    # (### Task <digits> ... <separator>) whose identifier is neither a bare
+    # integer nor a single lowercase-letter suffix \u2014 i.e. multi-letter (3ab),
+    # uppercase (3A), or space-separated (3 a). These are not captured by
+    # task_pattern above; reject them loudly rather than silently absorbing the
+    # body into the preceding task (no regression to the pre-87239c4b silent
+    # drop). The trailing separator requirement keeps prose headings that merely
+    # mention a number (### Task 3 and 4 merged) from being mis-flagged.
+    malformed = re.search(
+        r"^###\s+Task\s+\d+(?:[a-z][A-Za-z]+|[A-Z][A-Za-z]*|\s+[A-Za-z])\s*[:\u2014\u2013-]",
+        text,
+        re.MULTILINE,
+    )
+    if malformed is not None:
+        offending = malformed.group(0).strip()
+        raise ValueError(
+            f"Feature plan at {path} uses a malformed sub-task heading "
+            f"({offending!r}); only a single lowercase letter suffix is "
+            f"supported (e.g. ### Task 3a). Multi-letter (3ab), uppercase "
+            f"(3A), and space-separated (3 a) suffixes are rejected \u2014 use a "
+            f"single lowercase suffix or an integer."
+        )
+
     if not matches:
         raise ValueError(f"Feature plan at {path} has no task sections")
 
