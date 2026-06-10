@@ -1,21 +1,23 @@
-"""cortex-lifecycle-counters — emit a feature's plan/review counters as JSON.
+"""cortex-lifecycle-counters — emit a feature's plan/events counters as JSON.
 
-Port of ``bin/cortex-lifecycle-counters`` (bash+jq). Reads
-``cortex/lifecycle/<feature>/plan.md`` and ``review.md`` and emits:
+Reads ``cortex/lifecycle/<feature>/plan.md`` and ``events.log`` and emits:
 
     {"tasks_total": <int>, "tasks_checked": <int>, "rework_cycles": <int>}
 
-Counter rules (pinned to the same regexes as ``common.py:182-183``):
+Counter rules:
 
 - ``tasks_total``   — count of ``**Status**: [ ]`` or ``**Status**: [x]``
   lines in ``plan.md`` (``\\*\\*Status\\*\\*:.*\\[[ x]\\]``).
 - ``tasks_checked`` — count of ``**Status**: [x]`` lines
   (``\\*\\*Status\\*\\*:.*\\[x\\]``).
-- ``rework_cycles`` — count of ``"verdict": "<UPPER_SNAKE>"`` matches in
-  ``review.md`` (``"verdict"\\s*:\\s*"[A-Z_]+"``).
+- ``rework_cycles`` — count of ``review_verdict`` events with
+  ``verdict == "CHANGES_REQUESTED"`` in ``events.log``. Each line is parsed
+  defensively (non-JSON / malformed lines are skipped, not raised on),
+  mirroring the events.log tolerant-reader convention in
+  ``common.py``'s ``_detect_lifecycle_phase_inner``. A clean first-pass
+  approval (a synthetic ``APPROVED`` verdict, or no review at all) reports 0.
 
-Missing files default to 0 for all three fields — identical to the bash
-behavior.
+Missing/empty files default to 0 for all three fields.
 """
 
 from __future__ import annotations
@@ -30,7 +32,6 @@ from typing import List, Optional
 
 RE_TASKS_TOTAL = re.compile(r"\*\*Status\*\*:.*\[[ x]\]")
 RE_TASKS_CHECKED = re.compile(r"\*\*Status\*\*:.*\[x\]")
-RE_VERDICT = re.compile(r'"verdict"\s*:\s*"[A-Z_]+"')
 
 
 def count_tasks(plan_path: Path) -> tuple[int, int]:
@@ -49,18 +50,39 @@ def count_tasks(plan_path: Path) -> tuple[int, int]:
     return total, checked
 
 
-def count_rework_cycles(review_path: Path) -> int:
-    """Return rework_cycles from review.md.
+def count_rework_cycles(events_log_path: Path) -> int:
+    """Return rework_cycles from events.log.
 
-    Returns 0 when the file does not exist or cannot be read.
+    Counts ``review_verdict`` events whose ``verdict`` is
+    ``"CHANGES_REQUESTED"``. Each line is parsed defensively: non-JSON /
+    malformed lines are skipped rather than raised on (the events.log
+    tolerant-reader convention, mirroring ``common.py``'s
+    ``_detect_lifecycle_phase_inner``).
+
+    Returns 0 when the file does not exist, is empty, or cannot be read.
     """
-    if not review_path.exists():
+    if not events_log_path.exists():
         return 0
     try:
-        text = review_path.read_text(encoding="utf-8")
+        text = events_log_path.read_text(encoding="utf-8")
     except OSError:
         return 0
-    return len(RE_VERDICT.findall(text))
+    count = 0
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            event = json.loads(line)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        if not isinstance(event, dict):
+            continue
+        if event.get("event") == "review_verdict" and (
+            event.get("verdict") == "CHANGES_REQUESTED"
+        ):
+            count += 1
+    return count
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -96,10 +118,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     feature_dir = lifecycle_dir / feature
 
     plan_path = feature_dir / "plan.md"
-    review_path = feature_dir / "review.md"
+    events_log_path = feature_dir / "events.log"
 
     tasks_total, tasks_checked = count_tasks(plan_path)
-    rework_cycles = count_rework_cycles(review_path)
+    rework_cycles = count_rework_cycles(events_log_path)
 
     result = {
         "tasks_total": tasks_total,

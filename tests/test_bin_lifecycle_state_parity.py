@@ -34,6 +34,7 @@ from cortex_command.common import (
     read_criticality,
     read_tier,
 )
+from cortex_command.lifecycle.counters import count_rework_cycles
 
 
 REPO_ROOT = Path(__file__).parent.parent
@@ -41,11 +42,11 @@ FIXTURES_DIR = REPO_ROOT / "tests" / "fixtures" / "bin_parity"
 BIN_STATE = REPO_ROOT / "bin" / "cortex-lifecycle-state"
 BIN_COUNTERS = REPO_ROOT / "bin" / "cortex-lifecycle-counters"
 
-# Pinned regexes — mirror cortex_command/common.py:182-183 exactly so this
-# test reflects the source-of-truth contract.
+# Pinned task regexes — mirror cortex_command/common.py:182-183 exactly so this
+# test reflects the source-of-truth contract. rework_cycles is no longer
+# regex-sourced; it is computed via count_rework_cycles over events.log.
 RE_TASKS_TOTAL = re.compile(r"\*\*Status\*\*:.*\[[ x]\]")
 RE_TASKS_CHECKED = re.compile(r"\*\*Status\*\*:.*\[x\]")
-RE_VERDICT = re.compile(r'"verdict"\s*:\s*"[A-Z_]+"')
 
 
 @pytest.fixture(autouse=True)
@@ -117,14 +118,16 @@ def test_bin_lifecycle_counters_matches_python(slug: str, tmp_path: Path) -> Non
 
     feat_dir = cwd / "cortex" / "lifecycle" / slug
     plan_path = feat_dir / "plan.md"
-    review_path = feat_dir / "review.md"
+    events_log_path = feat_dir / "events.log"
 
     plan_text = plan_path.read_text(encoding="utf-8") if plan_path.exists() else ""
-    review_text = review_path.read_text(encoding="utf-8") if review_path.exists() else ""
 
     expected_total = len(RE_TASKS_TOTAL.findall(plan_text))
     expected_checked = len(RE_TASKS_CHECKED.findall(plan_text))
-    expected_rework = len(RE_VERDICT.findall(review_text))
+    # rework_cycles is sourced from events.log via the same module the bin
+    # wrapper execs, so this verifies wrapper<->module plumbing parity.
+    # Counter correctness is owned by cortex_command/lifecycle/tests/test_counters.py.
+    expected_rework = count_rework_cycles(events_log_path)
 
     assert bin_out["tasks_total"] == expected_total, (
         f"tasks_total mismatch for {slug}: "

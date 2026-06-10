@@ -1,3 +1,5 @@
 {"event": "lifecycle_start", "tier": "simple", "criticality": "high"}
 {"event": "complexity_override", "to": "complex"}
 {"event": "criticality_override", "to": "medium", "criticality": "medium"}
+{"event": "review_verdict", "verdict": "CHANGES_REQUESTED", "cycle": 1}
+{"event": "review_verdict", "verdict": "APPROVED", "cycle": 2}

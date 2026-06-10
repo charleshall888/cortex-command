@@ -14,49 +14,58 @@ Each test case is stored as five flat sibling files plus optional sidecar input 
 <case>.exitcode    the exit status as a single decimal integer + trailing newline
 <case>.plan_md     (optional) content to place in plan.md for the case
 <case>.review_md   (optional) content to place in review.md for the case
+                   (no longer read for rework_cycles; kept to prove review.md
+                   is not the source)
 <case>.events_log  (optional) content to place in events.log for the case
-                   (ignored by counters; present to verify counters do not read it)
+                   (the rework_cycles source: count of review_verdict events
+                   with verdict == "CHANGES_REQUESTED")
 ```
 
 ## Cases captured
 
 | Case | Scenario | plan.md | review.md | events.log | stdout | exit |
 |------|----------|---------|-----------|------------|--------|------|
-| `zero-lifecycle` | No plan.md or review.md exist | absent | absent | absent | `{"tasks_total": 0, "tasks_checked": 0, "rework_cycles": 0}` | 0 |
-| `multiple-phases` | plan.md with 5 tasks (3 checked, 2 pending), review.md with 2 verdicts | 5 tasks | 2 verdicts | absent | `{"tasks_total": 5, "tasks_checked": 3, "rework_cycles": 2}` | 0 |
-| `malformed-events-log` | plan.md with 2 tasks (1 checked), no review.md, malformed events.log (ignored) | 2 tasks | absent | torn line 2 | `{"tasks_total": 2, "tasks_checked": 1, "rework_cycles": 0}` | 0 |
+| `zero-lifecycle` | No plan.md or events.log exist | absent | absent | absent | `{"tasks_total": 0, "tasks_checked": 0, "rework_cycles": 0}` | 0 |
+| `multiple-phases` | plan.md with 5 tasks (3 checked, 2 pending); events.log with 1 CHANGES_REQUESTED + 1 APPROVED review_verdict (= 1 rework); review.md present but not read | 5 tasks | 2 verdicts (not read) | 1 CHANGES_REQUESTED + 1 APPROVED | `{"tasks_total": 5, "tasks_checked": 3, "rework_cycles": 1}` | 0 |
+| `malformed-events-log` | plan.md with 2 tasks (1 checked), no review.md, events.log with a torn line and zero review_verdict events (per-line tolerance) | 2 tasks | absent | torn line 2, 0 verdicts | `{"tasks_total": 2, "tasks_checked": 1, "rework_cycles": 0}` | 0 |
 
 ## Fixture semantics
 
 ### `zero-lifecycle`
 
-No `plan.md` or `review.md` exist in the feature directory. Both files are absent
+No `plan.md` or `events.log` exist in the feature directory. Both files are absent
 (the feature directory itself may not exist). The counters script defaults all
 three fields to 0.
 
 ### `multiple-phases`
 
 `plan.md` contains 5 tasks at different phases: 3 with `**Status**: [x]` (complete)
-and 2 with `**Status**: [ ]` (pending). `review.md` contains 2 verdict entries
-(`REWORK` and `APPROVED`). Exercises the full counter path for all three fields.
+and 2 with `**Status**: [ ]` (pending). `events.log` contains 2 `review_verdict`
+events — one `CHANGES_REQUESTED` and one `APPROVED` — so `rework_cycles` is 1
+(only the `CHANGES_REQUESTED` verdict counts). `review.md` is also present and
+contains 2 verdict entries, but it is **no longer read** for `rework_cycles`;
+keeping it here positively proves the counter is sourced from `events.log` (which
+yields 1) and not from `review.md` (which would yield 2). Exercises the full
+counter path for all three fields.
 
 ### `malformed-events-log`
 
 `plan.md` contains 2 tasks (1 checked). No `review.md`. `events.log` contains a
-malformed (non-JSON) line in the middle. Since `cortex-lifecycle-counters` reads
-only `plan.md` and `review.md` (never `events.log`), the malformed line has no
-effect on output. This fixture verifies that the Python port does not accidentally
-read `events.log` and that the malformed content does not cause any error.
+malformed (non-JSON) line in the middle and zero `review_verdict` events. Because
+`count_rework_cycles` now reads `events.log` line-by-line and parses each line
+defensively, the malformed line is skipped (not raised on) and `rework_cycles` is
+0. This fixture asserts the per-line tolerance of the events.log reader.
 
-## Counter regex contract
+## Counter contract
 
-Regexes are pinned to match `cortex_command/common.py:182-183` exactly:
+The `plan.md` task counters are regex-based; `rework_cycles` is sourced from
+`events.log` (no regex):
 
-| Counter | Regex |
-|---------|-------|
-| `tasks_total` | `\*\*Status\*\*:.*\[[ x]\]` |
-| `tasks_checked` | `\*\*Status\*\*:.*\[x\]` |
-| `rework_cycles` | `"verdict"\s*:\s*"[A-Z_]+"` |
+| Counter | Source | Rule |
+|---------|--------|------|
+| `tasks_total` | `plan.md` | regex `\*\*Status\*\*:.*\[[ x]\]` |
+| `tasks_checked` | `plan.md` | regex `\*\*Status\*\*:.*\[x\]` |
+| `rework_cycles` | `events.log` | count of `review_verdict` events with `verdict == "CHANGES_REQUESTED"` (lines parsed defensively; malformed lines skipped) |
 
 ## Applicable parity tolerances per fixture
 
@@ -70,7 +79,7 @@ but the tolerance is declared defensively.
 |---------|---------------------|-------|
 | `zero-lifecycle` | `key-reorder` | All values are 0; key order is the only diff class |
 | `multiple-phases` | `key-reorder` | Integer values; key order is the only diff class |
-| `malformed-events-log` | `key-reorder` | Same; events.log is ignored entirely |
+| `malformed-events-log` | `key-reorder` | Same; events.log read with per-line tolerance (torn line skipped) |
 
 ## Determinism harness
 

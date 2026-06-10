@@ -1,0 +1,3 @@
+{"ts": "2026-05-20T10:00:00Z", "event": "lifecycle_start", "feature": "feat-multiple-phases", "tier": "simple", "criticality": "medium"}
+{"ts": "2026-05-20T11:00:00Z", "event": "review_verdict", "feature": "feat-multiple-phases", "verdict": "CHANGES_REQUESTED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-05-20T12:00:00Z", "event": "review_verdict", "feature": "feat-multiple-phases", "verdict": "APPROVED", "cycle": 2, "requirements_drift": "none"}
