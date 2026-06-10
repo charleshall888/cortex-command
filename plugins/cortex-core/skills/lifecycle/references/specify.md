@@ -160,16 +160,16 @@ None considered.
 
 ### 3a. Orchestrator Review
 
-Before presenting the artifact to the user, read and follow `references/orchestrator-review.md` for the `specify` phase. The orchestrator review must pass before proceeding to user approval.
+Before presenting the artifact to the user, read and follow the orchestrator-review protocol (use the body-resolved absolute path from lifecycle SKILL.md's Reference-path propagation manifest: the **orchestrator-review** target) for the `specify` phase. The orchestrator review must pass before proceeding to user approval.
 
 ### 3b. Critical Review
 
-After orchestrator review passes, read the active tier and criticality:
+After orchestrator review passes, read the active tier and criticality (rules: criticality-matrix.md §Reading lifecycle state — use the body-resolved absolute path from lifecycle SKILL.md's Reference-path propagation manifest):
 
-- `cortex-lifecycle-state --feature {feature} --field tier` — canonical rule: `lifecycle_start.tier` is superseded by the most recent `complexity_override.to`; defaults to `simple` when absent.
-- `cortex-lifecycle-state --feature {feature} --field criticality` — defaults to `medium` when absent.
+- `cortex-lifecycle-state --feature {feature} --field tier`
+- `cortex-lifecycle-state --feature {feature} --field criticality`
 
-If either read's output contains `"corrupted": true`, the events.log is corrupted and the gate input is unknowable — treat the feature as requiring review (run the critical review) rather than defaulting to `simple`/`medium` and skipping.
+If either read's output contains `"corrupted": true`, treat the feature as requiring review (run the critical review).
 
 **Run** when `tier = complex` AND `criticality ∈ {medium, high, critical}`: invoke the `critical-review` skill with the spec artifact. Present the synthesis to the user before spec approval.
 

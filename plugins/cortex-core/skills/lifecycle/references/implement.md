@@ -302,7 +302,7 @@ Append a `phase_transition` event to `cortex/lifecycle/{feature}/events.log` to 
 
 ### 4. Transition
 
-When all tasks are `[x]`, determine the next phase using both complexity tier and criticality. Read criticality by running `cortex-lifecycle-state --feature {feature} --field criticality` (emits JSON; defaults to `medium` when the key is absent or events.log is missing).
+When all tasks are `[x]`, determine the next phase using both complexity tier and criticality. Read criticality by running `cortex-lifecycle-state --feature {feature} --field criticality` (rules: criticality-matrix.md §Reading lifecycle state).
 
 **Review gating matrix:**
 

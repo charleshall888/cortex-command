@@ -97,9 +97,9 @@ Reference table (one line per `phase` value):
 
 **Paused suffix**: when the detected phase ends in `-paused` (e.g. `implement-paused:3/5`, `review-paused`), strip the `-paused` portion for routing-table lookup above; display the full label including ` — paused` to the user. The `-paused` marker is set when `events.log`'s most recent significant event among `{phase_transition, feature_complete, feature_wontfix, feature_paused}` is `feature_paused`. A later `phase_transition` event resumes the feature and clears the marker. This rule survives future `-paused` variants without table updates.
 
-**Detect criticality**: After determining the phase, read criticality via `cortex-lifecycle-state --feature {feature} --field criticality` (emits JSON; defaults to `medium` when the key is absent or events.log is missing). Report the detected criticality alongside the detected phase when resuming.
+**Detect criticality**: After determining the phase, run `cortex-lifecycle-state --feature {feature} --field criticality` (rules: [criticality-matrix.md §Reading lifecycle state](${CLAUDE_SKILL_DIR}/references/criticality-matrix.md)). Report the detected criticality alongside the detected phase when resuming.
 
-**Detect complexity tier**: After determining the phase, read the active complexity tier via `cortex-lifecycle-state --feature {feature} --field tier` (emits JSON applying the canonical rule that `lifecycle_start.tier` is superseded by the most recent `complexity_override.to`; defaults to `simple` when the key is absent). Report the detected tier alongside the detected phase when resuming.
+**Detect complexity tier**: After determining the phase, run `cortex-lifecycle-state --feature {feature} --field tier` (rules: [criticality-matrix.md §Reading lifecycle state](${CLAUDE_SKILL_DIR}/references/criticality-matrix.md)). Report the detected tier alongside the detected phase when resuming.
 
 **Register session**: After identifying the feature (whether new or existing), register this session by writing the session file:
 
@@ -161,6 +161,8 @@ A reference file cannot itself resolve `${CLAUDE_SKILL_DIR}` (the substitution h
 - **discovery-bootstrap** (read in refine-delegation.md Steps 2–3) → `${CLAUDE_SKILL_DIR}/references/discovery-bootstrap.md`. Substitute as `<DISCOVERY_BOOTSTRAP_MD>` in refine-delegation.md.
 - **complexity-escalation** (run in refine-delegation.md Step 5) → `${CLAUDE_SKILL_DIR}/references/complexity-escalation.md`. Substitute as `<COMPLEXITY_ESCALATION_MD>` in refine-delegation.md.
 - **post-refine-commit** (read in refine-delegation.md Step 6) → `${CLAUDE_SKILL_DIR}/references/post-refine-commit.md`. Substitute as `<POST_REFINE_COMMIT_MD>` in refine-delegation.md.
+- **criticality-matrix** (§Reading lifecycle state rules cited by Detect criticality/tier in Step 2, and §Criticality Behavior Matrix cited at end of Phase Transition) → `${CLAUDE_SKILL_DIR}/references/criticality-matrix.md`.
+- **orchestrator-review** (read at Specify §3a and Plan §3a) → `${CLAUDE_SKILL_DIR}/references/orchestrator-review.md`. Substitute this body-resolved absolute path wherever a phase reference says `read and follow references/orchestrator-review.md` — a bare relative path resolves against CWD and breaks off-repo.
 
 ## Phase Transition
 
