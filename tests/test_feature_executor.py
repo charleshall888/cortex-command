@@ -375,7 +375,7 @@ class TestSilentWorkerExitReport(unittest.IsolatedAsyncioTestCase):
                 FeatureTask(
                     number=2,
                     description="task two",
-                    depends_on=[1],
+                    depends_on=["1"],
                     files=["b.py"],
                     complexity="simple",
                 ),

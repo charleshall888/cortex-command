@@ -343,6 +343,48 @@ class TestHandleFailedTaskBrainActions(unittest.IsolatedAsyncioTestCase):
         mock_mark_done.assert_called_once()
         mock_write_deferral.assert_not_called()
 
+    async def test_has_dependents_true_for_subtask_reference(self):
+        """has_dependents is True when another task's depends_on names this
+        task by its task_id (``3a``) — guards the int-in-list[str] silent-False
+        path the migration must close (#297 Req 7 AC c)."""
+        sub = FeatureTask(
+            number=3, suffix="a", description="3a",
+            depends_on=[], files=[], complexity="simple",
+        )
+        downstream = FeatureTask(
+            number=4, description="4",
+            depends_on=["3a"], files=[], complexity="simple",
+        )
+        retry_result = MagicMock(attempts=1, final_output="err")
+
+        mock_request_brain = self._start_patch(
+            "cortex_command.overnight.feature_executor.request_brain_decision",
+            new_callable=AsyncMock,
+        )
+        mock_request_brain.return_value = BrainDecision(
+            action=BrainAction.SKIP, reasoning="r", confidence=0.9
+        )
+        self._start_patch("cortex_command.overnight.feature_executor.overnight_log_event")
+        self._start_patch("cortex_command.overnight.feature_executor.mark_task_done_in_plan")
+        self._start_patch("cortex_command.overnight.feature_executor.write_deferral")
+        self._start_patch(
+            "cortex_command.overnight.feature_executor._read_learnings",
+            return_value="(No prior learnings.)",
+        )
+
+        await _handle_failed_task(
+            feature="test-feat",
+            task=sub,
+            all_tasks=[sub, downstream],
+            spec_excerpt="s",
+            retry_result=retry_result,
+            cb_state=CircuitBreakerState(),
+            manager=None,
+        )
+
+        ctx = mock_request_brain.call_args.args[0]
+        self.assertTrue(ctx.has_dependents)
+
     async def test_defer_action_writes_deferral_and_returns_deferred_result(self):
         """DEFER action → returns FeatureResult(status='deferred') and write_deferral was called."""
         task = self._make_task()

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -13,6 +14,7 @@ from cortex_command.common import (
     _resolve_user_project_root,
     _resolve_user_project_root_from_cwd,
     compute_dependency_batches,
+    mark_task_done_in_plan,
 )
 from cortex_command.pipeline.parser import FeatureTask
 
@@ -137,8 +139,8 @@ class TestComputeDependencyBatches(unittest.TestCase):
     def test_dependency_chain_yields_ordered_single_task_batches(self) -> None:
         """A 1->2->3 chain produces three ordered batches, each a single task."""
         t1 = FeatureTask(number=1, description="t1", depends_on=[])
-        t2 = FeatureTask(number=2, description="t2", depends_on=[1])
-        t3 = FeatureTask(number=3, description="t3", depends_on=[2])
+        t2 = FeatureTask(number=2, description="t2", depends_on=["1"])
+        t3 = FeatureTask(number=3, description="t3", depends_on=["2"])
 
         batches = compute_dependency_batches([t1, t2, t3])
 
@@ -164,8 +166,109 @@ class TestComputeDependencyBatches(unittest.TestCase):
 
     def test_dependency_cycle_raises_value_error(self) -> None:
         """A mutual 1<->2 dependency cycle cannot be batched and raises."""
-        t1 = FeatureTask(number=1, description="t1", depends_on=[2])
-        t2 = FeatureTask(number=2, description="t2", depends_on=[1])
+        t1 = FeatureTask(number=1, description="t1", depends_on=["2"])
+        t2 = FeatureTask(number=2, description="t2", depends_on=["1"])
 
         with self.assertRaises(ValueError):
             compute_dependency_batches([t1, t2])
+
+
+class TestSubTaskBatching(unittest.TestCase):
+    """#297: dependency batching keys on task_id (str), so letter-suffixed
+    sub-tasks form distinct nodes whose membership cannot collide."""
+
+    def test_subtask_serial_chain_3a_3b(self) -> None:
+        """3a (no deps) then 3b (deps [3a]) yields two ordered batches."""
+        t3a = FeatureTask(number=3, suffix="a", description="3a", depends_on=[])
+        t3b = FeatureTask(number=3, suffix="b", description="3b", depends_on=["3a"])
+
+        batches = compute_dependency_batches([t3a, t3b])
+
+        self.assertEqual(
+            [[t.task_id for t in batch] for batch in batches], [["3a"], ["3b"]]
+        )
+
+    def test_parallel_subtask_siblings_coschedule(self) -> None:
+        """13a/13b/13c all dep [10] co-schedule in one batch after [10]."""
+        t10 = FeatureTask(number=10, description="10", depends_on=[])
+        t13a = FeatureTask(number=13, suffix="a", description="13a", depends_on=["10"])
+        t13b = FeatureTask(number=13, suffix="b", description="13b", depends_on=["10"])
+        t13c = FeatureTask(number=13, suffix="c", description="13c", depends_on=["10"])
+
+        batches = compute_dependency_batches([t10, t13a, t13b, t13c])
+
+        self.assertEqual([t.task_id for t in batches[0]], ["10"])
+        self.assertEqual(
+            sorted(t.task_id for t in batches[1]), ["13a", "13b", "13c"]
+        )
+
+    def test_done_sibling_does_not_drop_pending_sibling(self) -> None:
+        """Merge guard: a status:done 3a must NOT drop a pending 3b from
+        scheduling — the done/assigned sets key on task_id, so "3a" in assigned
+        does not imply "3b" in assigned (the silent-merge path #297 must close)."""
+        t3a = FeatureTask(
+            number=3, suffix="a", description="3a", depends_on=[], status="done"
+        )
+        t3b = FeatureTask(number=3, suffix="b", description="3b", depends_on=[])
+
+        batches = compute_dependency_batches([t3a, t3b])
+
+        scheduled = [t.task_id for batch in batches for t in batch]
+        self.assertIn("3b", scheduled)
+        self.assertNotIn("3a", scheduled)  # already done, excluded from pending
+
+    def test_dangling_subtask_reference_raises(self) -> None:
+        """A [3] reference when only 3a/3b exist is unresolvable and raises
+        (preserved cycle/unresolvable classification; Task 2 sharpens message)."""
+        t3a = FeatureTask(number=3, suffix="a", description="3a", depends_on=[])
+        t4 = FeatureTask(number=4, description="4", depends_on=["3"])
+
+        with self.assertRaises(ValueError):
+            compute_dependency_batches([t3a, t4])
+
+
+class TestMarkTaskDoneInPlan(unittest.TestCase):
+    """#297 Req 6: mark_task_done_in_plan matches the full task_id and the
+    body scan cannot bleed its [ ]->[x] flip across the next ### heading."""
+
+    def _plan(self, body: str) -> Path:
+        d = tempfile.mkdtemp()
+        p = Path(d) / "plan.md"
+        p.write_text(body, encoding="utf-8")
+        return p
+
+    def test_marks_target_task_status(self) -> None:
+        p = self._plan(
+            "## Tasks\n\n"
+            "### Task 1: First\n- **Status**: [ ] pending\n\n"
+            "### Task 2: Second\n- **Status**: [ ] pending\n"
+        )
+        mark_task_done_in_plan(p, "1")
+        text = p.read_text(encoding="utf-8")
+        self.assertIn("### Task 1: First\n- **Status**: [x]", text)
+        self.assertIn("### Task 2: Second\n- **Status**: [ ]", text)
+
+    def test_already_done_parent_does_not_flip_next_task(self) -> None:
+        """Marking an already-[x] task does NOT bleed into the next task's [ ]
+        (the pre-existing DOTALL cross-task bleed, fixed by the tempered dot)."""
+        p = self._plan(
+            "## Tasks\n\n"
+            "### Task 1: First\n- **Status**: [x] done\n\n"
+            "### Task 2: Second\n- **Status**: [ ] pending\n"
+        )
+        mark_task_done_in_plan(p, "1")
+        text = p.read_text(encoding="utf-8")
+        # Task 2 must remain unchecked — the scan must not cross into it.
+        self.assertIn("### Task 2: Second\n- **Status**: [ ]", text)
+
+    def test_marks_subtask_by_task_id_not_sibling(self) -> None:
+        """Marking 3a checks 3a's status, not 3b's."""
+        p = self._plan(
+            "## Tasks\n\n"
+            "### Task 3a: Sub A\n- **Status**: [ ] pending\n\n"
+            "### Task 3b: Sub B\n- **Status**: [ ] pending\n"
+        )
+        mark_task_done_in_plan(p, "3a")
+        text = p.read_text(encoding="utf-8")
+        self.assertIn("### Task 3a: Sub A\n- **Status**: [x]", text)
+        self.assertIn("### Task 3b: Sub B\n- **Status**: [ ]", text)

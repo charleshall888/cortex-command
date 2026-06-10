@@ -675,35 +675,44 @@ def compute_dependency_batches(tasks: list) -> list[list]:
     Batch 0: tasks with no dependencies. Batch N: tasks whose deps
     all appear in batches 0..N-1. Tasks already done are skipped.
 
-    Each task must have ``.number``, ``.status``, and ``.depends_on``
+    Each task must have ``.task_id``, ``.status``, and ``.depends_on``
     attributes (matching ``FeatureTask`` from the pipeline parser).
 
+    Identity is keyed on ``.task_id`` (the canonical string ``f"{number}{suffix}"``),
+    NOT ``.number`` — so letter-suffixed sub-tasks (``3a``/``3b``) form distinct
+    nodes whose ``done``/``assigned`` membership cannot collide (ADR-0010). For
+    integer-only plans ``task_id == str(number)``, so batching is unchanged.
+    ``depends_on`` is a ``list[str]`` of task_ids resolved verbatim against the
+    declared headings; ordering is driven solely by those edges (no implicit
+    ``a < b`` edge between same-parent sub-tasks).
+
     Args:
-        tasks: List of task objects with number, status, depends_on.
+        tasks: List of task objects with task_id, status, depends_on.
 
     Returns:
         Ordered list of batches; each batch is a list of tasks
         that can run concurrently.
 
     Raises:
-        ValueError: If a dependency cycle prevents progress.
+        ValueError: If a dependency cycle or an unresolvable dependency
+            prevents progress.
     """
     pending = [t for t in tasks if t.status != "done"]
-    done_numbers: set[int] = {t.number for t in tasks if t.status == "done"}
+    done_ids: set[str] = {t.task_id for t in tasks if t.status == "done"}
     batches: list[list] = []
-    assigned: set[int] = set(done_numbers)
+    assigned: set[str] = set(done_ids)
 
     while pending:
         batch = [t for t in pending if all(d in assigned for d in t.depends_on)]
         if not batch:
-            remaining = [t.number for t in pending]
+            remaining = [t.task_id for t in pending]
             raise ValueError(
                 f"Dependency cycle or unresolvable deps among tasks: {remaining}"
             )
         batches.append(batch)
         for t in batch:
-            assigned.add(t.number)
-        pending = [t for t in pending if t.number not in assigned]
+            assigned.add(t.task_id)
+        pending = [t for t in pending if t.task_id not in assigned]
 
     return batches
 
@@ -712,25 +721,32 @@ def compute_dependency_batches(tasks: list) -> list[list]:
 # mark_task_done_in_plan
 # ---------------------------------------------------------------------------
 
-def mark_task_done_in_plan(plan_path: Path, task_number: int) -> None:
+def mark_task_done_in_plan(plan_path: Path, task_id: str) -> None:
     """Update a task's status in a feature plan from [ ] to [x].
 
-    Reads the plan file, finds the ``### Task N:`` heading and its
+    Reads the plan file, finds the ``### Task {task_id}:`` heading and its
     ``**Status**: [ ]`` field, replaces with ``[x]``, and writes
     back atomically. Does nothing if the file does not exist or the
     pattern is not found.
 
+    The heading match uses the full ``task_id`` (``### Task 3a:``), so a
+    sub-task is checked off independently of its siblings and the parent.
+    The body scan is a tempered dot bounded under ``re.MULTILINE`` so it
+    cannot cross a subsequent ``^###`` heading: when the target task's Status
+    is already ``[x]``, the scan stops at the next heading and finds no ``[ ]``
+    to flip, fixing the pre-existing cross-task ``[ ]`` bleed (#297 Req 6).
+
     Args:
         plan_path: Path to the plan.md file.
-        task_number: The task number to mark as done.
+        task_id: The canonical task identity (``"3"``, ``"3a"``) to mark done.
     """
     if not plan_path.exists():
         return
 
     text = plan_path.read_text(encoding="utf-8")
     pattern = re.compile(
-        rf"(### Task {task_number}:.*?-\s+\*\*Status\*\*:\s*)\[ \]",
-        re.DOTALL,
+        rf"(### Task {re.escape(task_id)}:(?:(?!^###\s)[\s\S])*?-\s+\*\*Status\*\*:\s*)\[ \]",
+        re.MULTILINE,
     )
     updated = pattern.sub(r"\1[x]", text, count=1)
     if updated != text:

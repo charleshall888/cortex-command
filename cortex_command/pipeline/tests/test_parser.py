@@ -17,6 +17,7 @@ from pathlib import Path
 
 from cortex_command.pipeline.parser import (
     FeaturePlan,
+    FeatureTask,
     parse_feature_plan,
     parse_master_plan,
     _normalize_task_separators,
@@ -605,7 +606,7 @@ class TestR1DialectEquivalence(_PlanParseMixin, unittest.TestCase):
     def test_canonical_baseline(self):
         plan = self._parse(_CANONICAL_TASK)
         self.assertEqual(plan.tasks[0].files, ["src/a.py", "src/b.py"])
-        self.assertEqual(plan.tasks[0].depends_on, [1, 2])
+        self.assertEqual(plan.tasks[0].depends_on, ["1", "2"])
 
     def test_no_bullet_form_equivalent(self):
         """``**Files**: x`` / ``**Depends on**: [1, 2]`` (no leading bullet)."""
@@ -616,7 +617,7 @@ class TestR1DialectEquivalence(_PlanParseMixin, unittest.TestCase):
             "**Complexity**: simple\n"
         )
         self.assertEqual(plan.tasks[0].files, ["src/a.py", "src/b.py"])
-        self.assertEqual(plan.tasks[0].depends_on, [1, 2])
+        self.assertEqual(plan.tasks[0].depends_on, ["1", "2"])
 
     def test_bulleted_colon_inside_equivalent(self):
         """``- **Files:** x`` / ``- **Depends on:** [1, 2]`` (colon inside bold)."""
@@ -627,7 +628,7 @@ class TestR1DialectEquivalence(_PlanParseMixin, unittest.TestCase):
             "- **Complexity:** simple\n"
         )
         self.assertEqual(plan.tasks[0].files, ["src/a.py", "src/b.py"])
-        self.assertEqual(plan.tasks[0].depends_on, [1, 2])
+        self.assertEqual(plan.tasks[0].depends_on, ["1", "2"])
 
     def test_no_bullet_colon_inside_equivalent(self):
         """``**Files:** x`` (no bullet, colon inside bold)."""
@@ -638,7 +639,7 @@ class TestR1DialectEquivalence(_PlanParseMixin, unittest.TestCase):
             "**Complexity:** simple\n"
         )
         self.assertEqual(plan.tasks[0].files, ["src/a.py", "src/b.py"])
-        self.assertEqual(plan.tasks[0].depends_on, [1, 2])
+        self.assertEqual(plan.tasks[0].depends_on, ["1", "2"])
 
 
 class TestR1MultiLineFiles(_PlanParseMixin, unittest.TestCase):
@@ -723,7 +724,7 @@ class TestR4DependsOnListConformance(_PlanParseMixin, unittest.TestCase):
             "- **Depends on**: [1] (console-script must exist), [4] (sidecar)\n"
             "- **Complexity**: simple\n"
         )
-        self.assertEqual(plan.tasks[0].depends_on, [1, 4])
+        self.assertEqual(plan.tasks[0].depends_on, ["1", "4"])
 
     def test_none_with_parenthetical_resolves_to_empty(self):
         """``none (parallel-eligible with Task 1)`` -> [] (not phantom [1])."""
@@ -743,18 +744,29 @@ class TestR4DependsOnListConformance(_PlanParseMixin, unittest.TestCase):
             "- **Depends on**: [1], [4]\n"
             "- **Complexity**: simple\n"
         )
-        self.assertEqual(plan.tasks[0].depends_on, [1, 4])
+        self.assertEqual(plan.tasks[0].depends_on, ["1", "4"])
 
-    def test_subtask_letter_suffix_tolerated(self):
-        """``[1, 3a, 3b]`` (corpus sub-task dialect) parses; suffixes collapse
-        to their integer (depends_on is list[int])."""
+    def test_subtask_letter_suffix_preserved(self):
+        """``[1, 3a, 3b]`` (corpus sub-task dialect) parses verbatim as task_id
+        strings — no longer collapsed to ``[1, 3, 3]`` (#297)."""
         plan = self._parse(
             "### Task 1: Build the widget\n"
             "- **Files**: `src/a.py`\n"
             "- **Depends on**: [1, 3a, 3b]\n"
             "- **Complexity**: simple\n"
         )
-        self.assertEqual(plan.tasks[0].depends_on, [1, 3, 3])
+        self.assertEqual(plan.tasks[0].depends_on, ["1", "3a", "3b"])
+
+    def test_depends_on_uppercase_suffix_case_folded(self):
+        """``[3A]`` case-folds to lowercase ``3a`` so it matches a ``3a`` heading
+        (suffix-grammar parity; the conformance check is IGNORECASE)."""
+        plan = self._parse(
+            "### Task 1: Build the widget\n"
+            "- **Files**: `src/a.py`\n"
+            "- **Depends on**: [3A]\n"
+            "- **Complexity**: simple\n"
+        )
+        self.assertEqual(plan.tasks[0].depends_on, ["3a"])
 
     def test_trailing_em_dash_annotation_tolerated(self):
         """``[1, 8] — all refs must be removed`` -> [1, 8] (em-dash note stripped)."""
@@ -764,7 +776,7 @@ class TestR4DependsOnListConformance(_PlanParseMixin, unittest.TestCase):
             "- **Depends on**: [1, 8] — all live references must be removed\n"
             "- **Complexity**: simple\n"
         )
-        self.assertEqual(plan.tasks[0].depends_on, [1, 8])
+        self.assertEqual(plan.tasks[0].depends_on, ["1", "8"])
 
 
 class TestR3NonTriggers(_PlanParseMixin, unittest.TestCase):
@@ -879,12 +891,38 @@ class TestR9FieldNameRenameDriftGuard(_PlanParseMixin, unittest.TestCase):
         # A field-label rename in the canonical template would drop these to
         # [] (R2 cannot catch a rename); pin them to non-empty values.
         self.assertEqual(plan.tasks[0].files, ["a.py"])
-        self.assertEqual(plan.tasks[0].depends_on, [1])
+        self.assertEqual(plan.tasks[0].depends_on, ["1"])
 
 
-class TestSubTaskHeadingFailLoud(unittest.TestCase):
-    """Letter-suffixed sub-task headings (### Task Na) fail loud rather than
-    silently absorbing the sub-task into the preceding integer task."""
+class TestFeatureTaskIdentity(unittest.TestCase):
+    """FeatureTask.task_id / .sort_key derived-identity contract (#297)."""
+
+    def test_suffixed_task_identity(self):
+        t = FeatureTask(number=3, suffix="a", description="x")
+        self.assertEqual(t.task_id, "3a")
+        self.assertEqual(t.sort_key, (3, "a"))
+
+    def test_integer_only_task_identity_byte_identical(self):
+        """An unsuffixed task: task_id == str(number), suffix=="" , sort_key=(n,'')."""
+        t = FeatureTask(number=3, description="x")
+        self.assertEqual(t.task_id, "3")
+        self.assertEqual(t.suffix, "")
+        self.assertEqual(t.sort_key, (3, ""))
+
+    def test_sort_key_orders_3_before_3a_before_3b_before_4(self):
+        ids = [
+            FeatureTask(number=4, description="x"),
+            FeatureTask(number=3, suffix="b", description="x"),
+            FeatureTask(number=3, description="x"),
+            FeatureTask(number=3, suffix="a", description="x"),
+        ]
+        ordered = sorted(ids, key=lambda t: t.sort_key)
+        self.assertEqual([t.task_id for t in ordered], ["3", "3a", "3b", "4"])
+
+
+class TestSubTaskHeadingParse(unittest.TestCase):
+    """Letter-suffixed sub-task headings (### Task Na) parse into first-class
+    units with a distinct task_id (#297 replaces the #293 fail-loud guard)."""
 
     def setUp(self):
         self._tmpdir = tempfile.TemporaryDirectory()
@@ -897,33 +935,50 @@ class TestSubTaskHeadingFailLoud(unittest.TestCase):
         plan_path.write_text(_make_plan(tasks_body), encoding="utf-8")
         return parse_feature_plan(plan_path)
 
-    def test_subtask_heading_colon_raises(self):
-        """A ### Task 2a: sub-task heading raises (would otherwise be absorbed)."""
+    def test_subtask_heading_colon_parses_to_task_id(self):
+        """A ### Task 3a: sub-task heading parses (no raise) with task_id == "3a"."""
         body = (
             _task_block("### Task 1: Parent", Files="a.py", **{"Depends on": "none"})
-            + _task_block("### Task 2a: Sub-task", Files="b.py", **{"Depends on": "[1]"})
+            + _task_block("### Task 3a: Sub-task", Files="b.py", **{"Depends on": "[1]"})
         )
-        with self.assertRaises(ValueError):
-            self._parse(body)
+        plan = self._parse(body)
+        self.assertEqual([t.task_id for t in plan.tasks], ["1", "3a"])
+        self.assertEqual(plan.tasks[1].suffix, "a")
+        self.assertEqual(plan.tasks[1].number, 3)
 
-    def test_subtask_heading_dash_separator_raises(self):
-        """### Task 2b — Desc also raises; the separator normalizer leaves the
-        letter suffix intact, so the integer pattern still cannot capture it."""
+    def test_subtask_heading_dash_separator_parses(self):
+        """### Task 0a — Q1: normalizes the em-dash and parses; the title keeps
+        the second colon (greedy capture), task_id == "0a", integer 0 accepted."""
         body = (
             _task_block("### Task 1: Parent", Files="a.py", **{"Depends on": "none"})
-            + "### Task 2b — Sub-task\n- **Files**: c.py\n- **Depends on**: [1]\n"
+            + "### Task 0a — Q1: Sub-task\n- **Files**: c.py\n- **Depends on**: [1]\n"
         )
-        with self.assertRaises(ValueError):
-            self._parse(body)
+        plan = self._parse(body)
+        sub = next(t for t in plan.tasks if t.task_id == "0a")
+        self.assertEqual(sub.number, 0)
+        self.assertEqual(sub.suffix, "a")
+        self.assertTrue(sub.description.startswith("Q1:"))
 
-    def test_integer_only_plan_does_not_raise(self):
-        """Control: a plan with only integer task headings parses cleanly."""
+    def test_parent_and_sibling_coexist_distinct_ids(self):
+        """### Task 8: AND ### Task 8b: (no 8a) parse as distinct units; 8b's
+        [8] dep resolves to the real parent 8 (no self-loop, no collision)."""
+        body = (
+            _task_block("### Task 8: Parent", Files="a.py", **{"Depends on": "none"})
+            + _task_block("### Task 8b: Sub", Files="b.py", **{"Depends on": "[8]"})
+        )
+        plan = self._parse(body)
+        self.assertEqual([t.task_id for t in plan.tasks], ["8", "8b"])
+        self.assertEqual(plan.tasks[1].depends_on, ["8"])
+
+    def test_integer_only_plan_parses(self):
+        """Control: a plan with only integer task headings parses unchanged."""
         body = (
             _task_block("### Task 1: First", Files="a.py", **{"Depends on": "none"})
             + _task_block("### Task 2: Second", Files="b.py", **{"Depends on": "[1]"})
         )
         plan = self._parse(body)
         self.assertEqual([t.number for t in plan.tasks], [1, 2])
+        self.assertEqual([t.task_id for t in plan.tasks], ["1", "2"])
 
 
 if __name__ == "__main__":

@@ -168,7 +168,7 @@ _EXIT_REPORT_ACTIONS = {"complete", "question"}
 
 def _read_exit_report(
     feature: str,
-    task_number: int,
+    task_id: str,
     worktree_path: Optional[Path] = None,
     *,
     lifecycle_base: Path = Path("cortex/lifecycle"),
@@ -176,14 +176,20 @@ def _read_exit_report(
     """Read a worker exit report for a single task.
 
     Returns ``(action, reason, question)`` extracted from
-    ``{lifecycle_base}/{feature}/exit-reports/{task_number}.json``.
+    ``{lifecycle_base}/{feature}/exit-reports/{task_id}.json``.
+
+    Keyed on ``task_id`` (the canonical string identity, ``"3a"``) so it
+    round-trips with the worker's write side: the worker is told to write
+    ``exit-reports/{task_number}.json`` where ``{task_number}`` is substituted
+    from ``task.task_id`` in the IMPLEMENT_TEMPLATE render (#297). For
+    integer-only tasks ``task_id == str(number)``, so the filename is unchanged.
 
     Checks two locations in order:
-    1. Primary: ``{lifecycle_base}/{feature}/exit-reports/{task_number}.json``
+    1. Primary: ``{lifecycle_base}/{feature}/exit-reports/{task_id}.json``
        resolved against the project root (the integration worktree in overnight
        sessions when *lifecycle_base* is root-anchored).
     2. Fallback: ``worktree_path / "cortex" / "lifecycle" / feature / "exit-reports" /
-       "{task_number}.json"`` — the absolute path inside the feature worktree,
+       "{task_id}.json"`` — the absolute path inside the feature worktree,
        used when the worker wrote artifacts to its own CWD rather than the
        integration worktree.
 
@@ -191,10 +197,10 @@ def _read_exit_report(
     contains malformed JSON, is missing the ``action`` key, or declares an
     unrecognised action string.
     """
-    report_path = lifecycle_base / feature / "exit-reports" / f"{task_number}.json"
+    report_path = lifecycle_base / feature / "exit-reports" / f"{task_id}.json"
     if not report_path.is_file():
         if worktree_path is not None:
-            fallback_path = worktree_path / "cortex" / "lifecycle" / feature / "exit-reports" / f"{task_number}.json"
+            fallback_path = worktree_path / "cortex" / "lifecycle" / feature / "exit-reports" / f"{task_id}.json"
             if fallback_path.is_file():
                 report_path = fallback_path
             else:
@@ -243,8 +249,10 @@ async def _handle_failed_task(
     if cb_state.consecutive_pauses >= CIRCUIT_BREAKER_THRESHOLD - 1:
         return None  # PAUSE outcome — caller handles as paused
 
-    # Compute has_dependents: any task whose depends_on contains this task
-    has_dependents = any(task.number in t.depends_on for t in all_tasks)
+    # Compute has_dependents: any task whose depends_on contains this task.
+    # Keyed on task_id (str) to match the str depends_on type (#297); using
+    # .number (int) here would be `int in list[str]` -> always False.
+    has_dependents = any(task.task_id in t.depends_on for t in all_tasks)
 
     ctx = BrainContext(
         feature=feature,
@@ -275,7 +283,7 @@ async def _handle_failed_task(
 
     # Map BrainDecision to return values
     if decision.action == BrainAction.SKIP:
-        mark_task_done_in_plan(lifecycle_base / feature / "plan.md", task.number)
+        mark_task_done_in_plan(lifecycle_base / feature / "plan.md", task.task_id)
         return None  # Continue to next task
 
     if decision.action == BrainAction.DEFER:
@@ -319,12 +327,17 @@ def _compute_plan_hash(plan_path: Path) -> str:
     return hashlib.sha256(content.encode()).hexdigest()
 
 
-def _make_idempotency_token(feature: str, task_number: int, plan_hash: str) -> str:
+def _make_idempotency_token(feature: str, task_number: "int | str", plan_hash: str) -> str:
     """Return the first 32 hex chars of SHA-256 of the canonical key.
 
     The key is ``<feature>:<task_number>:<plan_hash>``.  Changing any input
     component produces a different token, so a plan edit automatically
     invalidates all previously-written tokens.
+
+    ``task_number`` accepts the canonical ``task_id`` string (``"3a"``) as well
+    as a legacy int; the key shape and ``str()`` stringification are preserved
+    exactly, so an integer-only task's token (``str(3) == "3"``) is byte-identical
+    to the pre-#297 value — resume re-skips done tasks correctly.
     """
     key = f"{feature}:{task_number}:{plan_hash}"
     return hashlib.sha256(key.encode()).hexdigest()[:32]
@@ -623,7 +636,11 @@ async def execute_feature(
 
             system_prompt = _render_template(IMPLEMENT_TEMPLATE, {
                 "feature": feature,
-                "task_number": str(task.number),
+                # task_id, not .number: this value names the exit-report file
+                # the worker writes (exit-reports/{task_number}.json in
+                # implement.md); it MUST round-trip with _read_exit_report's
+                # task_id-keyed read, else sub-tasks 3a/3b collide on 3.json.
+                "task_number": task.task_id,
                 "task_description": task.description,
                 "plan_task": plan_task,
                 "spec_path": spec_path_resolved,
@@ -634,7 +651,7 @@ async def execute_feature(
 
             activity_log_path = lifecycle_base / feature / "agent-activity.jsonl"
 
-            token = _make_idempotency_token(feature, task.number, plan_hash)
+            token = _make_idempotency_token(feature, task.task_id, plan_hash)
             if _check_task_completed(config.pipeline_events_path, token):
                 try:
                     pipeline_log_event(config.pipeline_events_path, {
@@ -777,12 +794,12 @@ async def execute_feature(
                 )
 
             if result.idempotency_skipped:
-                mark_task_done_in_plan(lifecycle_base / feature / "plan.md", task.number)
+                mark_task_done_in_plan(lifecycle_base / feature / "plan.md", task.task_id)
                 continue
 
             # --- Exit-report validation (R1, R2, R3) ---
             report_action, report_reason, report_question = _read_exit_report(
-                feature, task.number, worktree_path=worktree_path,
+                feature, task.task_id, worktree_path=worktree_path,
                 lifecycle_base=lifecycle_base,
             )
 
@@ -826,7 +843,7 @@ async def execute_feature(
                 report_action == "question" and not report_question
             ):
                 report_path = (
-                    lifecycle_base / feature / "exit-reports" / f"{task.number}.json"
+                    lifecycle_base / feature / "exit-reports" / f"{task.task_id}.json"
                 )
                 if report_path.is_file():
                     overnight_log_event(
@@ -849,7 +866,7 @@ async def execute_feature(
 
             # action == "complete", missing, or malformed — fall through
             total_commits += max(0, task_commit_count)
-            mark_task_done_in_plan(lifecycle_base / feature / "plan.md", task.number)
+            mark_task_done_in_plan(lifecycle_base / feature / "plan.md", task.task_id)
 
     # All tasks passed — check for silent-worker bookkeeping failures
     if silent_worker_error is not None and total_commits == 0:

@@ -58,9 +58,31 @@ class FeatureTask:
     number: int
     description: str
     files: list[str] = field(default_factory=list)
-    depends_on: list[int] = field(default_factory=list)
+    depends_on: list[str] = field(default_factory=list)
     complexity: str = "simple"
     status: str = "pending"
+    suffix: str = ""
+
+    @property
+    def task_id(self) -> str:
+        """Canonical string identity ``f"{number}{suffix}"`` (e.g. ``"3a"``).
+
+        This is the SOLE identity key for dependency batching, plan checkoff,
+        exit-report read/write, idempotency tokens, and ``has_dependents``.
+        ``.number`` remains a non-unique ``int`` "group ordinal" consumed only
+        by telemetry payloads (ADR-0010). An unsuffixed task has
+        ``task_id == str(number)``, so integer-only plans are byte-identical.
+        """
+        return f"{self.number}{self.suffix}"
+
+    @property
+    def sort_key(self) -> tuple[int, str]:
+        """Display-ordering key ``(number, suffix)`` so 3 < 3a < 3b < 4.
+
+        Empty suffix sorts first (``"" < "a"``); hand-rolled composite tuple,
+        no ``packaging``/PEP 440 import (``parser.py`` is stdlib-only).
+        """
+        return (self.number, self.suffix)
 
 
 @dataclass
@@ -289,7 +311,7 @@ def _normalize_task_separators(text: str) -> str:
     colon so the downstream regex can match consistently.
     """
     return re.sub(
-        r"^(###\s+Task\s+\d+)\s*[—–-]\s*",
+        r"^(###\s+Task\s+\d+[a-z]?)\s*[—–-]\s*",
         r"\1: ",
         text,
         flags=re.MULTILINE,
@@ -309,38 +331,27 @@ def _parse_tasks(text: str, path: Path) -> tuple[list[FeatureTask], list[dict]]:
     # Normalize separator variants (em dash, en dash, hyphen) to colon
     text = _normalize_task_separators(text)
 
-    # Find all task headings: ### Task N: description
-    # Relaxed regex also accepts em dash, en dash, and hyphen as belt-and-suspenders
+    # Find all task headings: ### Task N[suffix]: description
+    # Group 1 is the integer part (``0`` accepted); group 2 is an optional
+    # single lowercase letter suffix (``3a``/``13b`` \u2014 the corpus sub-task
+    # dialect, first-class per #297); group 3 is the title after the first
+    # separator. Relaxed separator class also accepts em/en dash and hyphen.
+    # Uppercase / multi-letter / spaced suffixes are deliberately NOT matched
+    # here \u2014 the explicit fail-loud guard for those malformed forms lands in a
+    # later task (#297 Phase 2); the broad #293 guard that rejected ALL
+    # letter-suffixed headings is removed because they now parse.
     task_pattern = re.compile(
-        r"^###\s+Task\s+(\d+)\s*[:\u2014\u2013-]\s*(.+)$", re.MULTILINE
+        r"^###\s+Task\s+(\d+)([a-z]?)\s*[:\u2014\u2013-]\s*(.+)$", re.MULTILINE
     )
     matches = list(task_pattern.finditer(text))
-
-    # Letter-suffixed sub-task headings like ``### Task 3a:`` are not captured
-    # by the integer-only ``task_pattern`` above; their bodies would be
-    # silently absorbed into the preceding integer task, dropping the
-    # sub-task's Files/Depends-on metadata from dispatch ordering. Fail loud
-    # rather than silently mis-parse — the same posture #293 took for the
-    # field parsers. Recognizing 3a/3b as first-class ordered units is a
-    # deferred data-model change (FeatureTask.number is an int and
-    # compute_dependency_batches keys on it); until then a letter-suffixed
-    # task heading is unrecoverable drift.
-    subtask = re.compile(r"^###\s+Task\s+\d+[A-Za-z]", re.MULTILINE).search(text)
-    if subtask is not None:
-        offending = subtask.group(0).strip()
-        raise ValueError(
-            f"Feature plan at {path} uses an unsupported sub-task heading "
-            f"({offending!r}); letter-suffixed task numbers (### Task Na) are "
-            f"not yet parseable and would silently drop the sub-task from "
-            f"dispatch ordering. Use integer task numbers."
-        )
 
     if not matches:
         raise ValueError(f"Feature plan at {path} has no task sections")
 
     for i, match in enumerate(matches):
         task_num = int(match.group(1))
-        description = match.group(2).strip()
+        suffix = match.group(2)
+        description = match.group(3).strip()
         description = re.sub(r'\s*\[[xX]\]\s*$', '', description).strip()
 
         # Extract the body of this task section (up to next ### or ## or EOF)
@@ -369,6 +380,7 @@ def _parse_tasks(text: str, path: Path) -> tuple[list[FeatureTask], list[dict]]:
 
         tasks.append(FeatureTask(
             number=task_num,
+            suffix=suffix,
             description=description,
             files=files,
             depends_on=depends_on,
@@ -489,17 +501,23 @@ _DEPENDS_ON_TRAILING_ANNOTATION = re.compile(r"\s+(?:[—–]|--)\s.*$")
 
 def _parse_field_depends_on(
     body: str, task_num: int, path: Path
-) -> list[int]:
-    """Extract the Depends on field as a list of task numbers.
+) -> list[str]:
+    """Extract the Depends on field as a list of task_id strings.
 
     Tolerates the live corpus's annotation dialects — parenthetical
     (``[1] (console-script must exist), [4] (...)``) and trailing em-dash notes
     (``[1, 8] — all live references must be removed``) — by stripping them
-    before checking list-conformance (R4). Extracts dependency numbers only
+    before checking list-conformance (R4). Extracts task identifiers only
     from the stripped, list-conformant remainder — so
     ``none (parallel-eligible with Task 1)`` resolves to ``[]`` rather than the
     phantom ``[1]`` the prior digit-scrape produced. A present label whose
     value is empty or non-list-conformant prose raises (R2/R4).
+
+    #297: identifiers are returned verbatim as lowercase strings (``["1",
+    "3a", "3b"]``), no longer collapsed to their integer (``[1, 3, 3]``), so a
+    letter-suffixed sub-task reference resolves against its real ``### Task Na``
+    heading. Integer-only references are byte-identical as strings (``["1",
+    "2", "3"]``).
     """
     match = re.search(
         r"^" + _field_match_shape("Depends\\s+on") + r"\s*(.+)",
@@ -537,18 +555,19 @@ def _parse_field_depends_on(
     if stripped.lower() == "none":
         return []
 
-    # Extract the integer portion of each task identifier. A letter-suffixed
-    # sub-task id (``3a``) collapses to its integer (``3``) here because
-    # ``depends_on`` is ``list[int]`` — the same integer the pre-existing
-    # digit-scrape produced; faithful sub-task ordering is out of this parser's
-    # scope (the ``### Task Na`` heading itself is not recognized upstream).
-    numbers = re.findall(r"\d+", stripped)
-    if not numbers:
+    # Extract each task identifier verbatim, preserving the optional letter
+    # suffix (``3a``) — #297 makes ``depends_on`` a ``list[str]`` of task_ids
+    # resolved against real headings, no longer collapsing ``3a`` -> ``3``.
+    # Match with IGNORECASE and case-fold to lowercase so a ``[3A]`` reference
+    # resolves to the lowercase ``3a`` heading (suffix-grammar parity: the
+    # conformance check above is IGNORECASE; headings are lowercase-only).
+    ids = re.findall(_DEPENDS_ON_TASK_ID, stripped, re.IGNORECASE)
+    if not ids:
         raise ValueError(
             f"Task {task_num} in {path}: cannot parse 'Depends on' value: {raw!r}"
         )
 
-    return [int(n) for n in numbers]
+    return [tid.lower() for tid in ids]
 
 
 def _parse_field_string(body: str, field_name: str) -> Optional[str]:

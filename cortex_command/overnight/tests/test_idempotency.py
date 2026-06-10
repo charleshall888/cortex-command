@@ -119,6 +119,21 @@ class TestMakeIdempotencyToken(unittest.TestCase):
         expected = hashlib.sha256(key.encode()).hexdigest()[:32]
         self.assertEqual(_make_idempotency_token(feature, task_number, plan_hash), expected)
 
+    def test_integer_only_task_id_byte_identical_to_int(self):
+        """#297 Req 7 AC d: an integer-only task's token computed from the
+        string task_id ("3") is byte-identical to the pre-change int (3) value,
+        so resume re-skips done tasks correctly across the migration."""
+        from_int = _make_idempotency_token("feat-a", 3, "h")
+        from_task_id = _make_idempotency_token("feat-a", "3", "h")
+        self.assertEqual(from_int, from_task_id)
+
+    def test_subtask_ids_produce_distinct_tokens(self):
+        """#297: 3a and 3b produce distinct tokens (no silent-overwrite under
+        the former non-unique .number)."""
+        t3a = _make_idempotency_token("feat-a", "3a", "h")
+        t3b = _make_idempotency_token("feat-a", "3b", "h")
+        self.assertNotEqual(t3a, t3b)
+
 
 # ---------------------------------------------------------------------------
 # TestCheckTaskCompleted

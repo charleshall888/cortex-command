@@ -17,7 +17,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from cortex_command.overnight.orchestrator import BatchConfig
 from cortex_command.overnight.feature_executor import execute_feature
-from cortex_command.overnight.feature_executor import _read_exit_report
+from cortex_command.overnight.feature_executor import (
+    _read_exit_report,
+    _render_template,
+    IMPLEMENT_TEMPLATE,
+)
 from cortex_command.overnight.events import (
     FEATURE_DEFERRED,
     WORKER_MALFORMED_EXIT_REPORT,
@@ -106,6 +110,66 @@ class TestReadExitReport(unittest.TestCase):
         self._make_report({"action": "question", "reason": "unclear"})
         result = _read_exit_report("test-feat", 1)
         self.assertEqual(result, ("question", "unclear", None))
+
+
+class TestSubTaskExitReportIdentity(unittest.TestCase):
+    """#297 Req 7: exit-report read/write key on task_id, so sub-tasks 3a/3b
+    get distinct files and the worker's write target (the IMPLEMENT_TEMPLATE
+    ``{task_number}`` substitution) round-trips with ``_read_exit_report``."""
+
+    def setUp(self):
+        self._tmpdir = tempfile.TemporaryDirectory()
+        self._orig_cwd = os.getcwd()
+        os.chdir(self._tmpdir.name)
+
+    def tearDown(self):
+        os.chdir(self._orig_cwd)
+        self._tmpdir.cleanup()
+
+    def _write_report(self, feature: str, task_id: str, data) -> Path:
+        p = Path(f"cortex/lifecycle/{feature}/exit-reports/{task_id}.json")
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(json.dumps(data), encoding="utf-8")
+        return p
+
+    def test_subtask_reports_distinct_and_round_trip(self):
+        """3a.json != 3b.json; each reads back its own content via its task_id
+        (no silent merge onto a shared 3.json)."""
+        self._write_report("feat", "3a", {"action": "complete", "reason": "A"})
+        self._write_report(
+            "feat", "3b", {"action": "question", "reason": "B", "question": "q?"}
+        )
+        self.assertTrue(Path("cortex/lifecycle/feat/exit-reports/3a.json").is_file())
+        self.assertTrue(Path("cortex/lifecycle/feat/exit-reports/3b.json").is_file())
+        self.assertEqual(_read_exit_report("feat", "3a"), ("complete", "A", None))
+        self.assertEqual(_read_exit_report("feat", "3b"), ("question", "B", "q?"))
+
+    def test_write_template_and_read_agree_on_filename(self):
+        """Cross-seam: the IMPLEMENT_TEMPLATE ``{task_number}`` substitution (the
+        worker's write target) and ``_read_exit_report`` (the orchestrator's
+        read) both resolve to ``exit-reports/3a.json`` for a suffixed task —
+        proving the write value (task.task_id) and the read key agree."""
+        task = FeatureTask(
+            number=3, suffix="a", description="Sub", depends_on=[], files=[]
+        )
+        self.assertEqual(task.task_id, "3a")
+        # Write side: the value substituted into the worker prompt is task.task_id.
+        rendered = _render_template(IMPLEMENT_TEMPLATE, {
+            "feature": "feat",
+            "task_number": task.task_id,
+            "task_description": task.description,
+            "plan_task": "- **Files**: a.py",
+            "spec_path": "spec.md",
+            "worktree_path": "/wt",
+            "learnings": "(none)",
+            "integration_worktree_path": "/iw",
+        })
+        self.assertIn("exit-reports/3a.json", rendered)
+        # Read side: a report written at that path is read back for task_id 3a.
+        self._write_report("feat", task.task_id, {"action": "complete", "reason": "ok"})
+        self.assertEqual(
+            _read_exit_report("feat", task.task_id), ("complete", "ok", None)
+        )
 
 
 # ---------------------------------------------------------------------------

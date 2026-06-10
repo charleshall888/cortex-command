@@ -270,7 +270,7 @@ class TestMarkTaskDoneInPlanIdempotent:
         )
         plan_upper.write_text(content_upper, encoding="utf-8")
         before_upper = plan_upper.read_bytes()
-        mark_task_done_in_plan(plan_upper, 1)
+        mark_task_done_in_plan(plan_upper, "1")
         after_upper = plan_upper.read_bytes()
         assert after_upper == before_upper
 
@@ -283,7 +283,7 @@ class TestMarkTaskDoneInPlanIdempotent:
         )
         plan_lower.write_text(content_lower, encoding="utf-8")
         before_lower = plan_lower.read_bytes()
-        mark_task_done_in_plan(plan_lower, 1)
+        mark_task_done_in_plan(plan_lower, "1")
         after_lower = plan_lower.read_bytes()
         assert after_lower == before_lower
 
@@ -295,7 +295,7 @@ class TestMarkTaskDoneInPlanIdempotent:
             "- **Status**: [ ] pending\n"
         )
         plan_pending.write_text(content_pending, encoding="utf-8")
-        mark_task_done_in_plan(plan_pending, 1)
+        mark_task_done_in_plan(plan_pending, "1")
         updated = plan_pending.read_text(encoding="utf-8")
         assert "- **Status**: [x] pending" in updated
         assert "- **Status**: [ ] pending" not in updated
