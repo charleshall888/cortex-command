@@ -5,3 +5,6 @@
 {"ts": "2026-06-10T14:15:47Z", "event": "spec_approved", "feature": "plan-parser-support-sub-task-headings"}
 {"ts": "2026-06-10T14:37:51Z", "event": "plan_approved", "feature": "plan-parser-support-sub-task-headings"}
 {"ts": "2026-06-10T14:37:51Z", "event": "phase_transition", "feature": "plan-parser-support-sub-task-headings", "from": "plan", "to": "implement"}
+{"ts": "2026-06-10T14:44:36Z", "event": "batch_dispatch", "feature": "plan-parser-support-sub-task-headings", "batch": 0, "tasks": [1]}
+{"ts": "2026-06-10T15:15:00Z", "event": "batch_dispatch", "feature": "plan-parser-support-sub-task-headings", "batch": 1, "tasks": [2, 3, 4, 5, 6, 7]}
+{"ts": "2026-06-10T15:34:04Z", "event": "phase_transition", "feature": "plan-parser-support-sub-task-headings", "tier": "complex", "from": "implement", "to": "review"}

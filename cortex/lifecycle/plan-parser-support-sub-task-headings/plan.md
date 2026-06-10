@@ -47,7 +47,7 @@ Make `### Task Na` sub-task headings first-class by introducing a canonical `tas
   - **`parser.py` is stdlib-only**: hand-roll the `(number, suffix)` `sort_key` tuple; do NOT import `packaging`/PEP 440.
   - **Tests**: invert `test_subtask_letter_suffix_tolerated` (test_parser.py:748) to assert `[1, 3a, 3b]` → `["1", "3a", "3b"]`; replace `TestSubTaskHeadingFailLoud` (test_parser.py:885) with positive-parse cases asserting `### Task 3a:` yields `task_id == "3a"` and no raise; add a `FeatureTask` unit test for `suffix`/`task_id`/`sort_key` (incl. integer-only `task_id == "3"`, `sort_key == (3, "")`); update int-typed `depends_on` assertions to the new string typing. In `test_common.py`: add batcher cases for `3a→3b` ordered batches, `13a/13b/13c` co-scheduling after `[10]`, and the **merge guard** (a `status:done` `3a` does NOT drop pending `3b`); add the `mark_task_done_in_plan` already-`[x]`-parent-does-not-flip-next-task regression. In `test_exit_report.py`: assert `3a.json` ≠ `3b.json` and a write→`_read_exit_report` round-trip for `3a`. **Cross-seam round-trip (closes the write↔read gap)**: render `IMPLEMENT_TEMPLATE` for a suffixed `FeatureTask(number=3, suffix="a")` and assert the substituted `{task_number}` is `"3a"` (so the worker writes `3a.json`), then assert `_read_exit_report(feature, task.task_id=...)` reads back that same `3a.json` — proving the write-template value (626) and the read path (169/194/197) agree on the filename for a suffixed task (not just that the read helper works in isolation). Also assert the three `mark_task_done_in_plan` call sites (278/780/852) and the exit-report write/read all key on the *same* `task.task_id` for one suffixed task (guards a mis-threaded call site passing `.number` to one seam and `task_id` to another). In `test_idempotency.py`: assert an integer-only task's token is byte-identical to the pre-change value (Req 7 AC d). In `test_brain.py`: assert `has_dependents` is `True` for a task referenced as `3a` in another task's `depends_on` (Req 7 AC c).
 - **Verification**: run `just test` — pass if exit 0 (the full suite, including all updated/new assertions above, is green). Then `python3 -m pytest cortex_command/pipeline/tests/test_parser.py cortex_command/tests/test_common.py cortex_command/overnight/tests/test_idempotency.py cortex_command/overnight/tests/test_exit_report.py cortex_command/overnight/tests/test_brain.py` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 2: Loud, message-clear failure on dangling and self-referential dependencies
 - **Files**: `cortex_command/common.py`, `cortex_command/tests/test_common.py`
@@ -56,7 +56,7 @@ Make `### Task Na` sub-task headings first-class by introducing a canonical `tas
 - **Complexity**: simple
 - **Context**: `compute_dependency_batches` (common.py:696–702) already raises `ValueError("Dependency cycle or unresolvable deps among tasks: …")` when no batch can form. Tighten the message to name the specific unresolvable / self-referential `task_id`(s) by diffing each pending task's `depends_on` against the set of all declared `task_id`s plus a self-membership check. Do NOT set `parse_error` — verify the classification path is unchanged against `outcome_router.py:851–858` (the `if not result.parse_error:` branch governs circuit-breaker counting). No auto-expand of `[3]` to `{3, 3a, 3b}` (Non-Requirement).
 - **Verification**: run `python3 -m pytest cortex_command/tests/test_common.py` — pass if exit 0, including new cases asserting (a) a plan referencing `[3]` when only `3a`/`3b` exist raises `ValueError` whose message names the **unresolvable** id `3` *as the offending reference* (assert the message identifies `3` specifically — e.g. contains a token like `unresolvable: 3` or `references 3` — not merely that the substring `"3"` appears somewhere, since `"3"` is also a substring of the present `3a`/`3b`); and (b) a self-referential `depends_on` (e.g. `3a` deps `[3a]`) raises naming `3a`; neither sets `parse_error` (verify against the `if not result.parse_error:` branch at `outcome_router.py:851`).
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 3: Reject malformed suffixes with explicit fail-loud
 - **Files**: `cortex_command/pipeline/parser.py`, `cortex_command/pipeline/tests/test_parser.py`
@@ -65,7 +65,7 @@ Make `### Task Na` sub-task headings first-class by introducing a canonical `tas
 - **Complexity**: simple
 - **Context**: In `_parse_tasks`, after computing `matches`, detect headings of the form `^###\s+Task\s+\d+` whose trailing identifier is not a bare integer or a single-lowercase-letter-then-separator — i.e. a residual letter/space the valid pattern did not consume — and raise naming the offending heading. This is the narrowed successor to the broad 87239c4b guard removed in Task 1: it rejects only genuinely-malformed suffixes, not the now-supported `### Task 3a:`. Anchor with an explicit terminator so `### Task 30:` (two digits, no suffix) and `### Task 3a:` (valid) are not misflagged.
 - **Verification**: run `python3 -m pytest cortex_command/pipeline/tests/test_parser.py` — pass if exit 0, including new cases asserting `### Task 3ab:`, `### Task 3 a:`, and `### Task 3A:` each raise `ValueError`, while `### Task 3a:` and `### Task 30:` parse without raising.
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 4: Suffix-aware dashboard exit-report sort
 - **Files**: `cortex_command/dashboard/data.py`, `cortex_command/dashboard/tests/test_data.py`
@@ -74,7 +74,7 @@ Make `### Task Na` sub-task headings first-class by introducing a canonical `tas
 - **Complexity**: simple
 - **Context**: The sort key at `dashboard/data.py:1349–1355` is `int(p.stem) if p.stem.isdigit() else 1 << 30, p.name` — non-digit stems currently bucket to the sort floor. Replace with a parse of `p.stem` into `(int(numeric-prefix), suffix-string)` via a `re.fullmatch(r"(\d+)([a-z]*)", p.stem)`, falling back to the existing `1 << 30` sentinel for stems that don't match. This is the same composite-tuple idiom as `FeatureTask.sort_key`; keep it local to `data.py` (dashboard has no dependency on parser internals).
 - **Verification**: run `python3 -m pytest cortex_command/dashboard/tests/test_data.py` — pass if exit 0, including a new unit test asserting stems `["10","3b","1","3","2","3a"]` sort to `["1","2","3","3a","3b","10"]`.
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 5: Amend pipeline.md must-have criterion
 - **Files**: `cortex/requirements/pipeline.md`
@@ -83,7 +83,7 @@ Make `### Task Na` sub-task headings first-class by introducing a canonical `tas
 - **Complexity**: simple
 - **Context**: The criterion is the third bullet under Feature Execution (the `compute_dependency_batches`/`Depends on`/`fails the feature loudly (`parse_error`)` sentence). Narrow the unparseable clause to genuinely-unparseable metadata; reflect that ordering now derives from task_id-keyed batching over per-task `Depends on` ids (integer and `### Task Na` sub-task). Do not rewrite the whole bullet — targeted amendment per research §65–72.
 - **Verification**: two binary checks. (1) **Edit-occurred oracle** (the `"fails the feature loudly"` substring already exists in the unamended bullet, so grepping it proves nothing — instead grep for a marker the amendment *introduces*): `grep -ci "sub-task\|task_id\|### Task Na" cortex/requirements/pipeline.md` ≥ 1 — pass if count ≥ 1 (none of these tokens appear in the current line-42 bullet, so a non-zero count proves the mechanism clause was actually edited to reflect the richer identity). (2) **Fail-loud net preserved**: `grep -c "fails the feature loudly" cortex/requirements/pipeline.md` ≥ 1 — pass if count ≥ 1. (Interactive/session-dependent: the semantic narrowing — that the amended text no longer *reads as forbidding* `### Task Na` headings — is requirements prose with no command oracle; confirm by reading the amended bullet.)
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 6: Document the sub-task syntax in lifecycle references
 - **Files**: `skills/lifecycle/references/plan.md`, `skills/lifecycle/references/implement.md`, `plugins/cortex-core/skills/lifecycle/references/plan.md`, `plugins/cortex-core/skills/lifecycle/references/implement.md`
@@ -92,7 +92,7 @@ Make `### Task Na` sub-task headings first-class by introducing a canonical `tas
 - **Complexity**: simple
 - **Context**: Edit the canonical sources under `skills/lifecycle/references/`; the `plugins/cortex-core/skills/lifecycle/references/` mirrors regenerate via `just build-plugin` (the pre-commit dual-source drift gate rejects an out-of-date mirror). Per project convention, run `just build-plugin` and stage canonical + regenerated mirror together in the same commit. Add the disjoint-`Files` guidance: same-batch sub-tasks (siblings co-scheduled by shared `Depends on`) must declare disjoint `Files` because the overnight path dispatches a batch into one shared worktree (Non-Requirements caveat).
 - **Verification**: (1) syntax documented: `grep -c "Task Na\|sub-task" skills/lifecycle/references/plan.md` ≥ 1 — pass if count ≥ 1. (2) **disjoint-`Files` guidance present** (the load-bearing content, not an incidental mention): `grep -ci "disjoint" skills/lifecycle/references/implement.md skills/lifecycle/references/plan.md` ≥ 1 — pass if count ≥ 1 (proves the same-batch authoring guidance that mitigates the accepted shared-worktree race was actually written, not just the word "sub-task"). (3) mirror currency: `just build-plugin` then `git diff --exit-code plugins/cortex-core/skills/lifecycle/references/` — pass if exit 0 (no drift; confirms the regenerated mirror matches canonical, the dual-source gate's contract).
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 7: Record ADR-0010 — task_id is task identity, not number
 - **Files**: `cortex/adr/0010-task-id-is-task-identity-not-number.md`
@@ -101,7 +101,7 @@ Make `### Task Na` sub-task headings first-class by introducing a canonical `tas
 - **Complexity**: simple
 - **Context**: Follow the format of existing ADRs in `cortex/adr/` (e.g. `0009-skill-path-resolution-for-plugin-distributed-skills.md`): Context / Decision / Consequences (or the repo's house structure). 0010 is the next free number (0001–0009 + README present). Source the Context/Decision/Trade-off prose from spec.md "Proposed ADR" §89–91.
 - **Verification**: `test -f cortex/adr/0010-task-id-is-task-identity-not-number.md` (file exists) AND the ADR carries the load-bearing residual-hazard *argument*, not just keywords — `grep -ci "group ordinal" …0010….md` ≥ 1 (the `.number` demotion) AND `grep -ci "contained\|not eliminated\|merge-guard\|silently merge" …0010….md` ≥ 1 (the contained-not-eliminated distinction the spec says is load-bearing for the "contained not eliminated" claim) — pass if the file exists and both counts are ≥ 1. (Interactive/session-dependent: that the trade-off prose is sound is ADR judgment with no fuller command oracle; confirm by reading.)
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ## Risks
 
