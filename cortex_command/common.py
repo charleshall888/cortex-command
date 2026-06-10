@@ -34,6 +34,7 @@ import sys
 import tempfile
 from functools import lru_cache
 from pathlib import Path
+from typing import NamedTuple
 
 
 # ---------------------------------------------------------------------------
@@ -640,6 +641,118 @@ def read_tier(
 
 # Expose the cached inner helper on the public API for spec R1 introspection.
 read_tier.__wrapped__ = _read_tier_inner  # type: ignore[attr-defined]
+
+
+# ---------------------------------------------------------------------------
+# reduce_lifecycle_state — single canonical tolerant reducer
+# ---------------------------------------------------------------------------
+
+# Closed vocabularies for the two state axes. A parsed value outside its
+# vocabulary is rejected (does not enter the accumulator) and flags its line.
+TIER_VOCABULARY = frozenset({"simple", "complex"})
+CRITICALITY_VOCABULARY = frozenset({"low", "medium", "high", "critical"})
+
+
+class LifecycleStateReduction(NamedTuple):
+    """Result of reducing an events.log to its canonical lifecycle state.
+
+    This is the single source of truth that ``state_cli``,
+    ``read_tier``/``read_criticality``, and ``refine._reduce_current_state``
+    all project from, so the readers agree by construction.
+
+    Attributes:
+        state: Accumulated lifecycle state with at most the keys
+            ``"criticality"`` and ``"tier"``. Seeded by ``lifecycle_start``
+            in criticality-then-tier insertion order to match the existing
+            ``state_cli`` output order.
+        skipped_lines: 1-based line numbers of every line skipped for a JSON
+            parse failure OR an out-of-vocabulary value rejection. Feeds the
+            CLI's per-line stderr warnings.
+    """
+
+    state: dict[str, str]
+    skipped_lines: tuple[int, ...]
+
+
+def reduce_lifecycle_state(events_path: Path) -> LifecycleStateReduction:
+    """Reduce a feature's events.log to its canonical lifecycle state.
+
+    Tolerant by contract (spec R1): a missing file yields an empty result and
+    never raises; a torn (un-parseable) line is recorded and skipped rather
+    than collapsing the whole reduction to ``None``; non-UTF-8 bytes are
+    decoded with ``errors="replace"`` so a corrupt byte cannot crash a reader.
+
+    Event handling mirrors ``_read_tier_inner``/``_read_criticality_inner``:
+    ``lifecycle_start`` seeds ``criticality``/``tier``; ``criticality_override``
+    and ``complexity_override`` supersede from their ``to`` field ONLY (no
+    ``.tier``/``.criticality`` fallback). A parsed value outside its closed
+    vocabulary is rejected per-value (it does not enter ``state``) and its line
+    is recorded in ``skipped_lines`` — so a line mixing one valid and one
+    out-of-vocab value still accumulates the valid one but is flagged.
+
+    Args:
+        events_path: Path to the feature's ``events.log``.
+
+    Returns:
+        A :class:`LifecycleStateReduction`. Never ``None``.
+    """
+    try:
+        content = Path(events_path).read_text(encoding="utf-8", errors="replace")
+    except (FileNotFoundError, IsADirectoryError, NotADirectoryError, PermissionError, OSError):
+        return LifecycleStateReduction(state={}, skipped_lines=())
+
+    state: dict[str, str] = {}
+    skipped: list[int] = []
+
+    for lineno, raw in enumerate(content.splitlines(), start=1):
+        line = raw.strip()
+        if not line:
+            continue
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            skipped.append(lineno)
+            continue
+        if not isinstance(record, dict):
+            # Non-dict JSON value: skip silently, matching the three current
+            # readers' no-op handling. This is NOT a corruption signal.
+            continue
+
+        kind = record.get("event")
+        line_rejected = False
+
+        if kind == "lifecycle_start":
+            if "criticality" in record:
+                value = record.get("criticality")
+                if isinstance(value, str) and value in CRITICALITY_VOCABULARY:
+                    state["criticality"] = value
+                else:
+                    line_rejected = True
+            if "tier" in record:
+                value = record.get("tier")
+                if isinstance(value, str) and value in TIER_VOCABULARY:
+                    state["tier"] = value
+                else:
+                    line_rejected = True
+        elif kind == "criticality_override":
+            if "to" in record:
+                value = record.get("to")
+                if isinstance(value, str) and value in CRITICALITY_VOCABULARY:
+                    state["criticality"] = value
+                else:
+                    line_rejected = True
+        elif kind == "complexity_override":
+            if "to" in record:
+                value = record.get("to")
+                if isinstance(value, str) and value in TIER_VOCABULARY:
+                    state["tier"] = value
+                else:
+                    line_rejected = True
+
+        if line_rejected:
+            skipped.append(lineno)
+
+    return LifecycleStateReduction(state=state, skipped_lines=tuple(skipped))
 
 
 # ---------------------------------------------------------------------------
