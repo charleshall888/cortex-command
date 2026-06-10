@@ -197,3 +197,16 @@ def test_corrupt_missing_events_log_predicate_false(tmp_path):
     to review)."""
     base = tmp_path / "cortex" / "lifecycle"
     assert lifecycle_state_corrupted("feat-missing", lifecycle_base=base) is False
+
+
+def test_reduce_lifecycle_state_library_readers_silent_on_stderr(tmp_path, capsys):
+    """CLI-only boundary (spec R9): read_tier on a torn file writes nothing to
+    stderr — only state_cli surfaces skipped lines as warnings."""
+    feature_dir = tmp_path / "feat-silent"
+    feature_dir.mkdir()
+    (feature_dir / "events.log").write_bytes(
+        b'{"event":"lifecycle_start","tier":"complex","criticality":"high"}\n'
+        b'{"event":"phase_transition","from":"resea\n'
+    )
+    read_tier("feat-silent", lifecycle_base=tmp_path)
+    assert capsys.readouterr().err == ""

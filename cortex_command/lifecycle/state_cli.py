@@ -150,6 +150,18 @@ def main(argv: Optional[List[str]] = None) -> None:
         sys.exit(0)
 
     reduction = reduce_lifecycle_state(events_path)
+
+    # CLI-only diagnostic: one stderr warning per skipped line (parse failure
+    # or out-of-vocabulary rejection), exit code unchanged. The library readers
+    # (read_tier/read_criticality/refine) stay silent — only this CLI surfaces
+    # the lines. "unusable" rather than "malformed" because skipped_lines also
+    # covers vocab-rejected lines that parsed fine but carried no accepted value.
+    for lineno in reduction.skipped_lines:
+        sys.stderr.write(
+            f"cortex-lifecycle-state: warning: skipped unusable line at "
+            f"{events_path}:{lineno}\n"
+        )
+
     result = reduction.state
 
     if field:

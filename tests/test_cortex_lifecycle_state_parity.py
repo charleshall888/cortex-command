@@ -23,11 +23,12 @@ Named-tolerance categories per fixture (from tests/fixtures/cortex-lifecycle-sta
   field-tier:            none         (single-key object; key-reorder is vacuous)
   missing-events-log:    none         (output is {} — trivially byte-identical)
   no-start-event:        none         (output is {} — trivially byte-identical)
-  torn-line:             error-formatter-shape (stderr), key-reorder (stdout)
+  torn-line:             key-reorder  (stdout); stderr byte-identical
 
-The torn-line case applies the error-formatter-shape tolerance to stderr only;
-stdout must still match the fixture (the recovered accumulator dict — the
-tolerant reducer no longer collapses a torn line to null).
+The torn-line case now byte-compares stderr: the tolerant reducer recovers the
+accumulator dict on stdout and the CLI emits one "skipped unusable line"
+warning per skipped line (exit 0). The path in the warning is cwd-relative, so
+it is deterministic under the harness's staged tmp cwd.
 
 Determinism harness: LC_ALL=C, TZ=UTC as set during fixture capture.
 LIFECYCLE_SESSION_ID is unset and CORTEX_REPO_ROOT is set to the scratch
@@ -73,7 +74,7 @@ _CASE_TOLERANCES: dict[str, dict[str, list[str]]] = {
     "field-tier":          {"stdout": [],              "stderr": []},
     "missing-events-log":  {"stdout": [],              "stderr": []},
     "no-start-event":      {"stdout": [],              "stderr": []},
-    "torn-line":           {"stdout": ["key-reorder"], "stderr": ["error-formatter-shape"]},
+    "torn-line":           {"stdout": ["key-reorder"], "stderr": []},
 }
 
 
@@ -235,9 +236,9 @@ def test_stdout_parity(case: str, tmp_path: Path) -> None:
 def test_stderr_parity(case: str, tmp_path: Path) -> None:
     """stderr matches the fixture capture under declared tolerances.
 
-    For the torn-line case, the error-formatter-shape tolerance is applied:
-    both actual and expected are empty with exit 0 — the Python port must
-    also produce empty stderr with exit 0.
+    For the torn-line case, stderr is byte-compared: the CLI emits one
+    "skipped unusable line" warning per skipped line (cwd-relative path,
+    exit 0), and the fixture pins it exactly.
     """
     expected_bytes = _read_expected_stderr(case)
     result = _invoke_case(case, tmp_path)
