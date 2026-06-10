@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from cortex_command.backlog.update_item import _get_frontmatter_value
+from cortex_command.common import reduce_lifecycle_state
 
 
 # Allowed value sets, kept in lockstep with the canonical readers at
@@ -113,51 +114,17 @@ def _lifecycle_start_present(events_log: Path) -> bool:
 def _reduce_current_state(events_log: Path) -> tuple[str, str]:
     """Return the current reduced ``(tier, criticality)`` from ``events_log``.
 
-    Replays ``lifecycle_start.tier``/``.criticality`` then the ``to`` field of
-    any later ``complexity_override``/``criticality_override`` row — mirroring
-    the canonical readers ``cortex_command/common.py:_read_tier_inner`` and
-    ``_read_criticality_inner`` (both read ``.to`` only on override rows).
+    Delegates to :func:`cortex_command.common.reduce_lifecycle_state`, the single
+    tolerant reducer shared by all three reader sites (``state_cli``,
+    ``read_tier``/``read_criticality``, and this function), so they agree by
+    construction. A single torn or out-of-vocabulary line is skipped rather than
+    collapsing the reduce.
 
-    Deliberately *tolerant* (R5): malformed lines are skipped via the same
-    ``json.loads`` + ``JSONDecodeError`` pattern as :func:`_lifecycle_start_present`,
-    so a single torn line never collapses the reduce. This diverges from
-    ``state_cli._reduce_events``, which nulls on any malformed line — using
-    that here would let a torn log read as unset and emit a futile override.
-
-    Defaults to ``("simple", "medium")`` when ``events_log`` is absent or
-    leaves a field unset, matching the canonical reader defaults.
+    Defaults to ``("simple", "medium")`` when ``events_log`` is absent or leaves
+    a field unset, matching the canonical reader defaults.
     """
-    tier = "simple"
-    criticality = "medium"
-    if not events_log.exists():
-        return (tier, criticality)
-    for line in events_log.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            record = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if not isinstance(record, dict):
-            continue
-        event = record.get("event")
-        if event == "lifecycle_start":
-            t = record.get("tier")
-            if isinstance(t, str) and t:
-                tier = t
-            c = record.get("criticality")
-            if isinstance(c, str) and c:
-                criticality = c
-        elif event == "complexity_override":
-            t = record.get("to")
-            if isinstance(t, str) and t:
-                tier = t
-        elif event == "criticality_override":
-            c = record.get("to")
-            if isinstance(c, str) and c:
-                criticality = c
-    return (tier, criticality)
+    state = reduce_lifecycle_state(events_log).state
+    return (state.get("tier", "simple"), state.get("criticality", "medium"))
 
 
 def _cmd_reconcile_clarify(args: argparse.Namespace) -> int:

@@ -573,10 +573,11 @@ def test_reconcile_clarify_tolerates_malformed_line(
 ) -> None:
     """R5: a malformed line alongside a valid seed → exit 0, overrides appended.
 
-    The local tolerant reduce skips the torn line and still reads the valid
-    seed's simple/medium, so the complex/high reconciliation proceeds. (This
-    diverges from ``state_cli._reduce_events``, which would null on the torn
-    line — see plan Risks / #287.)
+    The shared tolerant reducer skips the torn line and still reads the valid
+    seed's simple/medium, so the complex/high reconciliation proceeds. (All
+    three readers — ``state_cli``, ``read_tier``/``read_criticality``, and
+    ``refine._reduce_current_state`` — share ``reduce_lifecycle_state`` and so
+    agree on the torn log; see plan Risks / #287.)
     """
     monkeypatch.chdir(tmp_path)
     events_log = _seed_events(
