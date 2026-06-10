@@ -16,3 +16,6 @@
 {"ts": "2026-06-10T20:01:25Z", "event": "batch_dispatch", "feature": "harness-token-efficiency-trim", "batch": 7, "tasks": [7]}
 {"ts": "2026-06-10T20:16:03Z", "event": "batch_dispatch", "feature": "harness-token-efficiency-trim", "batch": 8, "tasks": [8]}
 {"ts": "2026-06-10T20:25:30Z", "event": "batch_dispatch", "feature": "harness-token-efficiency-trim", "batch": 9, "tasks": [9]}
+{"ts": "2026-06-10T20:35:45Z", "event": "batch_dispatch", "feature": "harness-token-efficiency-trim", "batch": 10, "tasks": [10]}
+{"ts": "2026-06-10T20:55:54Z", "event": "batch_dispatch", "feature": "harness-token-efficiency-trim", "batch": 11, "tasks": [11]}
+{"ts": "2026-06-10T21:08:11Z", "event": "batch_dispatch", "feature": "harness-token-efficiency-trim", "batch": 12, "tasks": [12]}

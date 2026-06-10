@@ -92,7 +92,7 @@ Apply the adversarially-verified token trim to the lifecycle/refine skill family
 - **Complexity**: simple
 - **Context**: plan.md §1a/§1b/§5 designators are cited normatively by `cortex_command/overnight/prompts/orchestrator-round.md:242,302,413` and `cortex_command/lifecycle_config.py:8-9,95-96` — section headings and numbering must survive; trim within sections only (Task 12 adds the mechanized pin). Plan-agent prompt template and synthesizer dispatch instructions are dispatched-verbatim. Approval-surface anchors shift; same-commit inventory update.
 - **Verification**: `uv run pytest tests/test_lifecycle_kept_pauses_parity.py` — pass if exit 0; `grep -c '^### 1a\.' skills/lifecycle/references/plan.md` = 1, `grep -c '^### 1b\.' …` = 1, `grep -c '^### 5\.' …` = 1; ledger disposition complete.
-- **Status**: [ ] pending
+- **Status**: [x] complete (plan.md −3,810B; specify.md −2,247B; 38 dispositions)
 
 ### Task 9: Trim complete.md + review.md
 - **Files**: `skills/lifecycle/references/complete.md`, `skills/lifecycle/references/review.md`, `skills/lifecycle/SKILL.md` (kept-pauses inventory anchor)
@@ -101,7 +101,7 @@ Apply the adversarially-verified token trim to the lifecycle/refine skill family
 - **Complexity**: simple
 - **Context**: complete.md's `**Hard guard**:` paragraph is byte-pinned to `tests/fixtures/complete_md_hard_guard.txt` — untouchable; the snapshot test (not a hand-rolled sed, which was measured to mis-extract even on the untouched file) is the gate. The `<!-- finalization-commit-step -->` marker region and ~40 verbatim substrings are pinned. review.md §4a designator cited by `report.py:965`; reviewer dispatch prompt is dispatched-verbatim. `complete.md:73` anchor shifts; same-commit inventory update.
 - **Verification**: `uv run pytest tests/test_complete_md_hard_guard_snapshot.py tests/test_complete_md_finalization_commit.py tests/test_lifecycle_complete_state_routing.py tests/test_lifecycle_kept_pauses_parity.py` — pass if exit 0; ledger disposition complete.
-- **Status**: [ ] pending
+- **Status**: [x] complete (complete.md −3,811B; review.md −1,949B; deviation: merge_anchor note moved to docs/internals/pipeline.md)
 
 ### Task 10: Trim refine SKILL.md + clarify-critic.md
 - **Files**: `skills/refine/SKILL.md`, `skills/refine/references/clarify-critic.md`, `skills/lifecycle/SKILL.md` (kept-pauses inventory anchor)
@@ -110,7 +110,7 @@ Apply the adversarially-verified token trim to the lifecycle/refine skill family
 - **Complexity**: simple
 - **Context**: clarify-critic.md's critic dispatch prompt (between the `---` markers) is dispatched-verbatim — trim targets the orchestrator-side branch tables and warning-allowlist narration around it. refine §4 complexity-value gate text is a kept-pause anchor (`refine/SKILL.md:166`) with test-pinned CLI wiring literals (`cortex-load-parent-epic`, ordering). Same-commit inventory update.
 - **Verification**: `uv run pytest tests/test_lifecycle_kept_pauses_parity.py` — pass if exit 0; `grep -c 'superseded by the most recent' skills/refine/SKILL.md` = 0 (protocol collapsed; closes the residue Task 2 deferred here); `grep -c 'cortex-lifecycle-state' skills/refine/SKILL.md` ≥ 1 (command inline); `grep -c 'cortex-load-parent-epic' skills/refine/references/clarify-critic.md` unchanged from pre-edit count; ledger disposition complete.
-- **Status**: [ ] pending
+- **Status**: [x] complete (refine SKILL.md −5,049B; clarify-critic.md −5,365B; RULE_CARRIERS updated; schema doc created per verifier conditions)
 
 ### Task 11: Trim post-refine-commit.md + backlog-writeback.md + orchestrator-review.md
 - **Files**: `skills/lifecycle/references/post-refine-commit.md`, `skills/lifecycle/references/backlog-writeback.md`, `skills/lifecycle/references/orchestrator-review.md`, `skills/lifecycle/SKILL.md` (kept-pauses inventory anchor)
@@ -119,7 +119,7 @@ Apply the adversarially-verified token trim to the lifecycle/refine skill family
 - **Complexity**: simple
 - **Context**: backlog-writeback has zero refuted proposals (measured: 0 refuted, 4 downgraded) — the only verdict-missing proposals in the whole evidence set are implement.md's §1a.iv sandbox recap and review.md's §4 line-159 item, which Tasks 6/9 skip as `no-verdict` in their ledgers. orchestrator-review.md trim must preserve the section shape Task 5's discovery pointer cites. `backlog-writeback.md:11` anchor shifts; same-commit inventory update.
 - **Verification**: `uv run pytest tests/test_lifecycle_kept_pauses_parity.py` — pass if exit 0; `grep -c 'superseded by the most recent' skills/lifecycle/references/orchestrator-review.md` = 0; `grep -c 'Step 3 §4' skills/lifecycle/references/post-refine-commit.md` = 0 OR the references match the renumbered SKILL.md headings (verify by reading the cited heading); ledger disposition complete.
-- **Status**: [ ] pending
+- **Status**: [x] complete (−5,562B across three files; one downgrade declined: dispatched-verbatim Fix-Agent template)
 
 ### Task 12: Guard tests — L1 ratchet + cited-designator pins (spec R5, R6f)
 - **Files**: `tests/test_l1_surface_ratchet.py` (new), `tests/test_skill_section_citations.py` (new)
