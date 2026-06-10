@@ -13,6 +13,8 @@ from pathlib import Path
 
 from cortex_command.common import (
     LifecycleStateReduction,
+    read_criticality,
+    read_tier,
     reduce_lifecycle_state,
 )
 
@@ -92,3 +94,19 @@ def test_reduce_lifecycle_state_missing_file_is_empty(tmp_path):
     """A missing file reduces to an empty result and never raises."""
     result = reduce_lifecycle_state(tmp_path / "nope.log")
     assert result == LifecycleStateReduction(state={}, skipped_lines=())
+
+
+def test_read_tier_non_utf8_does_not_raise(tmp_path):
+    """read_tier/read_criticality flow through the tolerant reducer: a
+    non-UTF-8 events.log returns a string rather than raising
+    UnicodeDecodeError (spec R5)."""
+    feature_dir = tmp_path / "feat-non-utf8"
+    feature_dir.mkdir()
+    (feature_dir / "events.log").write_bytes(
+        b'{"event":"lifecycle_start","tier":"complex","criticality":"high"}\n'
+        b"\xff\xfe torn \xfa\n"
+    )
+    tier = read_tier("feat-non-utf8", lifecycle_base=tmp_path)
+    crit = read_criticality("feat-non-utf8", lifecycle_base=tmp_path)
+    assert isinstance(tier, str) and tier == "complex"
+    assert isinstance(crit, str) and crit == "high"

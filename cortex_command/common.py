@@ -518,28 +518,12 @@ def _read_criticality_inner(
     if not exists:
         return "medium"
 
-    criticality = "medium"
-    found = False
-    for line in Path(events_path_str).read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            record = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        kind = record.get("event")
-        if kind == "lifecycle_start":
-            value = record.get("criticality")
-            if isinstance(value, str) and value:
-                criticality = value
-                found = True
-        elif kind == "criticality_override":
-            value = record.get("to")
-            if isinstance(value, str) and value:
-                criticality = value
-                found = True
-    return criticality if found else "medium"
+    # Delegate to the shared tolerant reducer so all three reader sites agree
+    # by construction. Reads now flow through errors="replace", closing the
+    # latent overnight-runner UnicodeDecodeError crash (spec R5).
+    return reduce_lifecycle_state(Path(events_path_str)).state.get(
+        "criticality", "medium"
+    )
 
 
 def read_criticality(
@@ -591,28 +575,11 @@ def _read_tier_inner(
     if not exists:
         return "simple"
 
-    tier = "simple"
-    found = False
-    for line in Path(events_path_str).read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            record = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        kind = record.get("event")
-        if kind == "lifecycle_start":
-            value = record.get("tier")
-            if isinstance(value, str) and value:
-                tier = value
-                found = True
-        elif kind == "complexity_override":
-            value = record.get("to")
-            if isinstance(value, str) and value:
-                tier = value
-                found = True
-    return tier if found else "simple"
+    # Delegate to the shared tolerant reducer so all three reader sites agree
+    # by construction (spec R5: reads flow through errors="replace").
+    return reduce_lifecycle_state(Path(events_path_str)).state.get(
+        "tier", "simple"
+    )
 
 
 def read_tier(
