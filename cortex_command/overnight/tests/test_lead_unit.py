@@ -1822,6 +1822,10 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
                 cycle=1,
             ),
         )
+        # Patch write_deferral so the deferral does not land in the repo-root
+        # default DEFAULT_DEFERRED_DIR (this test only asserts the
+        # features_deferred count); mirrors test_review_raises.
+        self._start_patch("cortex_command.overnight.outcome_router.write_deferral")
 
         from cortex_command.overnight.orchestrator import run_batch
 
