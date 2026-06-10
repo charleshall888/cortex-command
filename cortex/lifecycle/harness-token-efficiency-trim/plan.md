@@ -65,7 +65,7 @@ Apply the adversarially-verified token trim to the lifecycle/refine skill family
 - **Complexity**: simple
 - **Context**: research.md F7; the pair diverges by 79 lines with shared bulk. Discovery's deltas (discovery-phase checklist rows, decompose-specific checks) stay in the discovery file; identify them by diffing the two files at edit time. `cortex-check-skill-path` gates the propagation line shape.
 - **Verification**: `wc -c skills/discovery/references/orchestrator-review.md` < 3500; `grep -c 'lifecycle/references/orchestrator-review.md' skills/discovery/SKILL.md` ≥ 1 (manifest) AND `grep -c 'orchestrator-review' skills/discovery/references/orchestrator-review.md` ≥ 1 (the reduced file itself names the canonical); `grep -c -i 'decompose' skills/discovery/references/orchestrator-review.md` ≥ 1 (discovery-specific deltas survived); pre-commit green.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Trim implement.md (highest pin density)
 - **Files**: `skills/lifecycle/references/implement.md`, `skills/lifecycle/SKILL.md` (kept-pauses inventory anchor)
@@ -74,7 +74,7 @@ Apply the adversarially-verified token trim to the lifecycle/refine skill family
 - **Complexity**: complex
 - **Context**: Heaviest test pins (`evidence.json → constraints.anchors`): step-v ordered-token block, branch-mode dispatch wiring incl. the `cortex-lifecycle-branch-mode` structural marker, daytime-free negative pin, EnterWorktree ±60-line co-location, `EnterWorktree skipped` anchor family — note line 197 packs the fallback taxonomy (three-way OR routing, selected-vs-suppressed, diagnostic strings) into one line, so a line-count grep proves nothing; the pin tests below are the real gate. Consult per-proposal `verifier_reason` notes. The `implement.md:49` inventory anchor shifts; same-commit inventory update. Builder prompt template and worktree-merge instructions are dispatched-verbatim: untouchable.
 - **Verification**: `uv run pytest tests/test_lifecycle_kept_pauses_parity.py tests/test_lifecycle_phase_parity.py tests/test_lifecycle_step_v_ordering.py tests/test_lifecycle_implement_branch_mode.py tests/test_lifecycle_implement_md_daytime_free.py tests/test_lifecycle_enterworktree_callsites.py` — pass if exit 0; proposal ledger in commit body covers every implement.md proposal.
-- **Status**: [ ] pending
+- **Status**: [x] complete (−7,142 bytes; 71/71 pin tests; anchor :49→:44)
 
 ### Task 7: Trim lifecycle SKILL.md + clarify.md
 - **Files**: `skills/lifecycle/SKILL.md`, `skills/lifecycle/references/clarify.md`
@@ -83,7 +83,7 @@ Apply the adversarially-verified token trim to the lifecycle/refine skill family
 - **Complexity**: simple
 - **Context**: The Reference-path propagation section's downgrade verdict predates Task 1–3's manifest growth — its "keep all three target→path mappings" means keep ALL mappings present at edit time (now ~9: the original three plus refine-delegation's four plus criticality-matrix, critical-review-gate, orchestrator-review). The kept-pauses inventory section itself is load-bearing — trim only its meta-prose per verdicts. `clarify.md:57` anchor shifts; same-commit inventory update. 500-line SKILL.md budget applies post-edit.
 - **Verification**: `uv run pytest tests/test_lifecycle_kept_pauses_parity.py` — pass if exit 0; `wc -l skills/lifecycle/SKILL.md` ≤ 500; ledger disposition for every proposal in both files' maps.
-- **Status**: [ ] pending
+- **Status**: [x] complete (SKILL.md −3,989B; clarify.md −2,102B; 31 dispositions)
 
 ### Task 8: Trim plan.md + specify.md
 - **Files**: `skills/lifecycle/references/plan.md`, `skills/lifecycle/references/specify.md`, `skills/lifecycle/SKILL.md` (kept-pauses inventory anchors)
