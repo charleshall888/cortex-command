@@ -277,10 +277,11 @@ For each completed feature (same list as Section 2, same order):
 
       ```json
       {"ts": "<now>", "event": "phase_transition", "feature": "<name>", "from": "review", "to": "complete"}
-      {"ts": "<now>", "event": "feature_complete", "feature": "<name>", "tasks_total": N, "rework_cycles": C}
+      {"ts": "<now>", "event": "feature_complete", "feature": "<name>", "tasks_total": N, "rework_cycles": R}
       ```
 
-      Where `C` is the cycle number from the last `review_verdict` event.
+      Where `R` is the number of `review_verdict` events with `verdict: CHANGES_REQUESTED`
+      in the feature's `events.log` (0 when the only verdict was a clean `APPROVED`).
       Report: `advanced → complete (crash recovery)`.
 
    c. **Neither `review_verdict` (with `cycle >= 1`) nor `feature_complete` present**:
