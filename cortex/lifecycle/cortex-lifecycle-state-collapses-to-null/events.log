@@ -1,0 +1,6 @@
+{"schema_version": 1, "ts": "2026-06-10T13:10:38Z", "event": "lifecycle_start", "feature": "cortex-lifecycle-state-collapses-to-null", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-10T13:14:48Z", "event": "clarify_critic", "feature": "cortex-lifecycle-state-collapses-to-null", "parent_epic_loaded": false, "findings_count": 6, "dispositions": {"apply": 6, "dismiss": 0, "ask": 0}, "applied_fixes_count": 4, "dismissals_count": 0, "status": "ok"}
+{"ts": "2026-06-10T13:33:20Z", "event": "complexity_override", "feature": "cortex-lifecycle-state-collapses-to-null", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-06-10T13:33:20Z", "event": "criticality_override", "feature": "cortex-lifecycle-state-collapses-to-null", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-06-10T14:38:06Z", "event": "spec_approved", "feature": "cortex-lifecycle-state-collapses-to-null"}
+{"ts": "2026-06-10T14:46:09Z", "event": "phase_transition", "feature": "cortex-lifecycle-state-collapses-to-null", "from": "specify", "to": "plan"}

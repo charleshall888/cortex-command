@@ -2,11 +2,16 @@
 schema_version: "1"
 uuid: f9bc97d9-f171-46aa-9d56-50898edc891d
 title: "cortex-lifecycle-state collapses to null on any malformed events.log line, silently skipping the spec-phase gates (diverges from common.py tolerant skip)"
-status: backlog
+status: in_progress
 priority: medium
 type: bug
 created: 2026-06-02
-updated: 2026-06-02
+updated: 2026-06-10
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/cortex-lifecycle-state-collapses-to-null/spec.md
+areas: ['lifecycle']
+lifecycle_phase: plan
 ---
 **Why:** `cortex_command/lifecycle/state_cli.py`'s `_reduce_events` returns `None` (jq-1.8.1 reduce-to-null semantics) if ANY single line in `events.log` fails JSON parse; `main()` then writes the filtered result and `sys.exit(0)` (state_cli.py:195-201), so `cortex-lifecycle-state --field tier` emits a non-`complex` result and exits cleanly. Downstream the value reads as absent and defaults to `simple`. By contrast `cortex_command/common.py`'s `_read_tier_inner`/`_read_criticality_inner` tolerantly SKIP malformed lines (`continue`) and return the last valid value. This divergence is a split-brain: a single torn line (crash mid-write, external edit, partial append) silently disables the spec-phase adversarial gates that read via `cortex-lifecycle-state` — §3a Orchestrator Review applicability and the §3b Critical Review run-rule both default to `simple` and skip — while overnight model/effort sizing (which reads via `common.py`) still sees the correct value. The skip is silent (exit 0, no diagnostic). Surfaced during the §3b critical-review of #285 (standalone-refine-seeds-lifecycle-tier-criticality) and deliberately scoped out of that fix because it is a read-path defect affecting all `cortex-lifecycle-state` consumers, not just refine.
 
