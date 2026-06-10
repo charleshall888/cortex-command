@@ -1,0 +1,7 @@
+{"schema_version": 1, "ts": "2026-06-10T13:13:50Z", "event": "lifecycle_start", "feature": "plan-parser-support-sub-task-headings", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-10T13:19:10Z", "event": "clarify_critic", "feature": "plan-parser-support-sub-task-headings", "parent_epic_loaded": false, "findings_count": 5, "dispositions": {"apply": 5, "dismiss": 0, "ask": 0}, "applied_fixes_count": 5, "dismissals_count": 0, "status": "ok"}
+{"ts": "2026-06-10T13:38:59Z", "event": "complexity_override", "feature": "plan-parser-support-sub-task-headings", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-06-10T13:38:59Z", "event": "criticality_override", "feature": "plan-parser-support-sub-task-headings", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-06-10T14:15:47Z", "event": "spec_approved", "feature": "plan-parser-support-sub-task-headings"}
+{"ts": "2026-06-10T14:37:51Z", "event": "plan_approved", "feature": "plan-parser-support-sub-task-headings"}
+{"ts": "2026-06-10T14:37:51Z", "event": "phase_transition", "feature": "plan-parser-support-sub-task-headings", "from": "plan", "to": "implement"}
