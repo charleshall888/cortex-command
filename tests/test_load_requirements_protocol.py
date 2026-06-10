@@ -65,13 +65,13 @@ _CONSUMER_RULE_RE = re.compile(r"absence as a signal|surface the term")
 # they receive the rule by following the protocol. specify.md keeps its own
 # copy deliberately: refine's standalone resume-at-spec path skips
 # requirements loading, so specify.md must state the rule itself. The
-# discovery and refine copies remain pending their own trim tasks.
+# discovery copies remain pending their own trim tasks. The refine copy was
+# removed by harness-token-efficiency-trim Task 10.
 RULE_CARRIERS: tuple[Path, ...] = (
     REPO_ROOT / "skills" / "lifecycle" / "references" / "load-requirements.md",
     REPO_ROOT / "skills" / "lifecycle" / "references" / "specify.md",
     REPO_ROOT / "skills" / "discovery" / "references" / "clarify.md",
     REPO_ROOT / "skills" / "discovery" / "references" / "research.md",
-    REPO_ROOT / "skills" / "refine" / "SKILL.md",
 )
 
 
