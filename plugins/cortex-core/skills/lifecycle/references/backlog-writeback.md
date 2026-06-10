@@ -2,41 +2,42 @@
 
 Two Step 2 sub-procedures: check whether the backlog item is already complete, and write the lifecycle start back to the originating backlog item. (`index.md` creation for new lifecycles is handled in `discovery-bootstrap.md`.) This file is also the canonical home for two rules consumed by later phase references: `cortex-update-item` exit-2 handling and artifact registration in `index.md`.
 
+Both sub-procedures consume Step 1's resolved `{backlog-file}` and parsed frontmatter; never re-scan the backlog directory.
+
 ## Backlog Status Check
 
-Before creating any artifacts or performing write-back, check whether the originating backlog item has already been marked complete outside the lifecycle. **Do not re-scan the backlog directory in this sub-procedure** — Step 1's `cortex-resolve-backlog-item` call already located the file and parsed its frontmatter; consume that result here.
+Before creating any artifacts or performing write-back, check whether the originating backlog item has already been marked complete outside the lifecycle. **Do not re-scan the backlog directory in this sub-procedure** — consume Step 1's resolved result.
 
-1. **Use** the `{backlog-file}` resolved by Step 1 (or the resolver's no-match signal, exit code 3).
-2. **If no match was found** (resolver exit 3), or the parsed `status` field is not `complete`: skip this section silently and fall through to subsequent sections as normal.
-3. **If a match was found and the parsed `status` is `complete`**: present a prompt using `AskUserQuestion` with two options:
+1. **If no match was found** (resolver exit 3), or the parsed `status` field is not `complete`: skip this section silently and fall through to subsequent sections as normal.
+2. **If a match was found and the parsed `status` is `complete`**: present a prompt using `AskUserQuestion` with two options:
    - **"Close lifecycle"**
    - **"Continue from current phase"**
 
    If `AskUserQuestion` is unavailable (e.g., overnight batch context where no interactive prompt is possible), default to **Continue** — never auto-close.
 
-4. **On "Continue"** (or if the check was skipped): fall through to "Backlog Write-Back" and subsequent sections as normal. No further action from this section.
+3. **On "Continue"**: fall through as normal.
 
-5. **On "Close lifecycle"**: the behavior depends on the current phase:
+4. **On "Close lifecycle"**: the behavior depends on the current phase:
 
    - **If `phase != none`** (a `cortex/lifecycle/{feature}/` directory exists):
      1. Append the following NDJSON event to `cortex/lifecycle/{feature}/events.log` (one JSON object per line):
         ```json
         {"ts": "<ISO 8601>", "event": "feature_complete", "feature": "<name>"}
         ```
-        Intentionally omit `tasks_total` and `rework_cycles` — `plan.md` may not exist on this path (the lifecycle may have been completed out-of-band before a plan was written). Do NOT add those fields with value 0.
+        Intentionally omit `tasks_total` and `rework_cycles` — `plan.md` may not exist on this path. Do NOT add those fields with value 0.
      2. Run:
         ```bash
         cortex-update-item <slug> --status complete --lifecycle-phase complete --session-id null
         ```
-        Where `<slug>` is the backlog filename stem (e.g., `1043-add-backlog-status-detection-to-lifecycle-resume`).
-     3. **Exit immediately.** Do not proceed to "Backlog Write-Back", "Discovery Bootstrap", or any subsequent Step 2 sections or later steps. The lifecycle is closed.
+        Where `<slug>` is the backlog filename stem.
+     3. **Exit immediately.** Do not proceed to Discovery Bootstrap or any subsequent Step 2 sections or later steps.
 
    - **If `phase = none`** (no `cortex/lifecycle/{feature}/` directory exists):
-     1. **Exit immediately** without creating any lifecycle artifacts (no directory, no events.log, no index.md) and without calling `cortex-update-item`. The backlog item is already complete and no lifecycle artifacts need to exist.
+     1. **Exit immediately** without creating any lifecycle artifacts (no directory, no events.log, no index.md) and without calling `cortex-update-item`.
 
 ## Backlog Write-Back (Lifecycle Start)
 
-After registering the session, attempt to write the lifecycle start back to the originating backlog item. **Do not re-scan the backlog directory in this sub-procedure** — use Step 1's resolved `{backlog-file}` (when present).
+After registering the session, attempt to write the lifecycle start back to the originating backlog item. **Do not re-scan the backlog directory in this sub-procedure** — consume Step 1's resolved result.
 
 If Step 1 resolved a `{backlog-file}` (exit 0), run:
 
@@ -46,13 +47,13 @@ cortex-update-item <path> --status in_progress --session-id $LIFECYCLE_SESSION_I
 
 Where `<path>` is the slug-or-uuid of the matched backlog item (e.g., `045-my-feature`).
 
-Additionally, when `phase = none` (new lifecycle only), also run the following write-back to record the lifecycle slug — this is separate from and in addition to the status write-back above:
+Additionally, when `phase = none` (new lifecycle only), run the following write-back to record the lifecycle slug:
 
 ```bash
 cortex-update-item <path> --lifecycle-slug {lifecycle-slug}
 ```
 
-This `lifecycle_slug` write-back runs only when `phase = none`. The status write-back runs on all phases when a match is found.
+The status write-back runs on all phases when a match is found.
 
 If Step 1's resolver returned exit 3 (no backlog match), skip this step silently — lifecycles can exist independently of the backlog.
 

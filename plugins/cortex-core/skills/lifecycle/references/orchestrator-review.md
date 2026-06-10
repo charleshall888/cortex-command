@@ -4,28 +4,19 @@ Quality gate between phase artifact write and user presentation. The orchestrato
 
 ## Applicability
 
-Before running this protocol, determine whether orchestrator review applies. Read both fields by running `cortex-lifecycle-state --feature {feature}` (emits JSON; canonical rules — criticality is the most recent value from `lifecycle_start` or `criticality_override`; tier is `lifecycle_start.tier` superseded by the most recent `complexity_override.to`). Defaults: criticality `medium`, tier `simple` when the key is absent.
+Before running this protocol, determine whether orchestrator review applies. Read both fields by running `cortex-lifecycle-state --feature {feature}` (emits JSON). Defaults: criticality `medium`, tier `simple` when the key is absent.
 
 If that output contains `"corrupted": true`, the events.log is corrupted and the tier/criticality are unknowable — treat the feature as requiring review (run the protocol below) rather than applying the skip rule and defaulting.
 
 **Skip rule**: Skip orchestrator review when criticality is `low` AND tier is `simple`. Proceed directly to user presentation or the next phase.
 
-**Run rule**: Run orchestrator review for all other combinations:
+Run review for all other combinations.
 
-| Criticality | simple | complex |
-|-------------|--------|---------|
-| low         | skip   | review  |
-| medium      | review | review  |
-| high        | review | review  |
-| critical    | review | review  |
-
-If the review is skipped, do not log any orchestrator events. Proceed as if the protocol were not present.
+If the review is skipped, do not log any orchestrator events.
 
 ## Protocol
 
 ### 1. Identify Phase and Checklist
-
-Determine which phase just completed and select the corresponding checklist below.
 
 ### 2. Execute Review
 
@@ -34,15 +25,11 @@ Evaluate the artifact against every item in the checklist. For each item, assign
 - **pass**: The item is satisfied. No action needed.
 - **flag**: The item is not satisfied or is materially weak. Requires a fix before user presentation.
 
-This review executes in the main conversation context. Do not dispatch a subagent for the review itself — the artifact is already in context.
+Run this review in the main conversation — do not dispatch a subagent; the artifact is already in context.
 
 ### 3. Handle Verdict
 
-**On pass**: Show the user a one-line assessment summarizing what was checked and the result. Example formats:
-
-- "Research solid: all 4 questions answered with concrete findings, feasibility grounded in codebase analysis."
-- "Spec clean: 6 requirements with measurable criteria, edge cases covered, scope boundaries explicit."
-- "Plan well-structured: 8 tasks averaging 10 min each, dependency graph complete, all verification steps actionable."
+**On pass**: Show the user a one-line assessment summarizing what was checked and the result. Example: "Spec clean: 6 requirements with measurable criteria, edge cases covered, scope boundaries explicit."
 
 Then proceed to user presentation or the next phase as normal.
 
@@ -58,11 +45,9 @@ For each flagged issue, determine the appropriate fix mode:
 
 **Same conversation**: Use for interactive rework that requires user input. This includes spec clarifications where user preference determines the answer, ambiguous requirements, and priority trade-offs. Explain the issue to the user, gather their input, and then revise the artifact in the current context.
 
-Fix agents rewrite the full artifact, not section patches. A full rewrite maintains internal coherence across sections that cross-reference each other.
+Fix agents rewrite the full artifact, not section patches.
 
-After all fixes complete, return to step 2 (Execute Review) and increment the cycle counter. The re-review evaluates the revised artifact against the same checklist.
-
-After the fix-agent returns its envelope, the orchestrator reads the envelope and does not relay it to the user. The orchestrator proceeds to step 2 (Execute Review) (preserving the cycle-cap logic in the Cycle Cap section). Only the pass/fail verdict from the re-review surfaces to the user; the fix-agent envelope itself is never relayed.
+After all fixes complete, increment the cycle counter, return to step 2 (Execute Review) with the same checklist. Read the fix-agent envelope but do not relay it to the user — only the re-review verdict surfaces.
 
 #### Fix Agent Prompt Template
 
@@ -137,16 +122,11 @@ Evaluate against `cortex/lifecycle/{feature}/plan.md`:
 
 ## Cycle Cap
 
-The orchestrator runs a maximum of 2 review cycles per phase. A cycle is one complete pass through the checklist. The counter resets for each new phase.
-
-- **Cycle 1**: Initial review after artifact is written.
-- **Cycle 2**: Re-review after fix dispatch. If issues remain after cycle 2, escalate.
-
-Do not start cycle 3. Escalate with full context per step 5.
+The orchestrator runs a maximum of 2 review cycles per phase. A cycle is one complete pass through the checklist. The counter resets for each new phase. Do not start cycle 3 — escalate with full context per step 5.
 
 ## Constraints
 
 | Thought | Reality |
 |---------|---------|
-| "The fix made things worse, I should try a third cycle" | The 2-cycle cap is firm. Escalate to the user. More iteration rounds decrease quality, not increase it. |
+| "The fix made things worse, I should try a third cycle" | The 2-cycle cap is firm — escalate; more rounds decrease quality. |
 | "Criticality is low so I should skip even for complex features" | The skip rule requires BOTH low criticality AND simple complexity. Low-criticality complex features still get reviewed. |
