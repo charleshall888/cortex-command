@@ -12,20 +12,18 @@ Output:
 
   With --field: JSON containing only the requested key (omitted when empty).
 
-Canonical rules (mirror cortex_command.common.read_tier / read_criticality):
-  criticality: most-recent `criticality` field on `lifecycle_start` or
-               `criticality_override` events.
+Canonical rules (delegated to cortex_command.common.reduce_lifecycle_state,
+the single tolerant reducer shared with read_tier / read_criticality and
+refine, so all three readers agree by construction):
+  criticality: `lifecycle_start.criticality` superseded by
+               `criticality_override.to`, whichever appears most recently.
   tier:        `lifecycle_start.tier` superseded by `complexity_override.to`,
                whichever appears most recently.
 
-JSONL streaming via `jq fromjson?` — tolerates the spaced (`"event": "X"`)
-and compact (`"event":"X"`) serialization styles uniformly, and silently
-skips torn or malformed lines.
-
-Torn-line behavior: replicates jq-1.8.1 reduce semantics — if ANY line in
-events.log fails JSON parsing, the reduce result is null (not a partial
-accumulator). Stdout will contain "null" and exit 0, matching the bash+jq
-pre-deletion capture.
+Torn-line behavior: a torn or out-of-vocabulary line is skipped (and
+recorded for the CLI warning) rather than collapsing the whole reduction.
+The last valid value for each axis wins, so stdout is the recovered
+accumulator dict (never "null") with exit 0.
 """
 
 from __future__ import annotations
@@ -34,6 +32,8 @@ import json
 import sys
 from pathlib import Path
 from typing import List, Optional
+
+from cortex_command.common import reduce_lifecycle_state
 
 # ---------------------------------------------------------------------------
 # Help text — extracted from the bash script's docblock (lines 2-25, stripped
@@ -56,92 +56,49 @@ Output:
 
   With --field: JSON containing only the requested key (omitted when empty).
 
-Canonical rules (mirror cortex_command.common.read_tier / read_criticality):
-  criticality: most-recent `criticality` field on `lifecycle_start` or
-               `criticality_override` events.
+Canonical rules (delegated to cortex_command.common.reduce_lifecycle_state,
+shared with read_tier / read_criticality and refine):
+  criticality: `lifecycle_start.criticality` superseded by
+               `criticality_override.to`, whichever appears most recently.
   tier:        `lifecycle_start.tier` superseded by `complexity_override.to`,
                whichever appears most recently.
 
-JSONL streaming via `jq fromjson?` — tolerates the spaced (`"event": "X"`)
-and compact (`"event":"X"`) serialization styles uniformly, and silently
-skips torn or malformed lines.
+A torn or out-of-vocabulary line is skipped (last valid value wins) rather
+than collapsing the reduction; stdout is the accumulator dict, never "null".
 """
 
 # Accepted --field values (from bash script lines 61-67).
 _ACCEPTED_FIELDS = frozenset({"criticality", "tier"})
 
 
-def _reduce_events(events_path: Path) -> object:
-    """Read events.log and reduce to {criticality, tier} accumulator dict.
+def _reduce_events(events_path: Path) -> dict:
+    """Reduce events.log to the {criticality, tier} accumulator dict.
 
-    Replicates jq-1.8.1 reduce semantics:
-    - If ANY line fails JSON parsing, return None (jq's null).
-    - Otherwise accumulate: lifecycle_start sets criticality + tier;
-      criticality_override sets criticality (from .to or .criticality);
-      complexity_override sets tier (from .to or .tier).
-    - Keys absent when never set.
+    Thin compatibility wrapper over ``common.reduce_lifecycle_state`` — kept
+    (rather than inlined) because tests import it as the canonical reduction
+    oracle. A torn or out-of-vocabulary line is skipped (never collapses the
+    reduction to ``null``); the last valid value for each axis wins, and keys
+    are absent when never set.
 
     Returns:
-        A dict with at most two keys ("criticality", "tier"), or None if
-        any line was malformed (replicating jq-1.8.1 reduce-to-null).
+        A dict with at most two keys ("criticality", "tier").
     """
-    acc: dict[str, str] = {}
-
-    for raw_line in events_path.read_text(encoding="utf-8", errors="replace").splitlines():
-        line = raw_line.strip()
-        if not line:
-            continue
-        try:
-            record = json.loads(line)
-        except json.JSONDecodeError:
-            # Replicates jq-1.8.1: any malformed line collapses the
-            # entire reduce to null.
-            return None
-        if not isinstance(record, dict):
-            # Non-object lines collapse reduce to null (same semantics:
-            # fromjson? on a non-object JSON value still yields a value,
-            # but .event access on it yields null which falls to the
-            # else branch — not a parse failure — so non-dict does NOT
-            # trigger null. Treat it as a no-op (else branch below).
-            continue
-        event = record.get("event")
-        if event == "lifecycle_start":
-            crit = record.get("criticality")
-            if isinstance(crit, str) and crit:
-                acc["criticality"] = crit
-            tier = record.get("tier")
-            if isinstance(tier, str) and tier:
-                acc["tier"] = tier
-        elif event == "criticality_override":
-            value = record.get("to") or record.get("criticality")
-            if isinstance(value, str) and value:
-                acc["criticality"] = value
-        elif event == "complexity_override":
-            value = record.get("to") or record.get("tier")
-            if isinstance(value, str) and value:
-                acc["tier"] = value
-
-    return acc
+    return reduce_lifecycle_state(events_path).state
 
 
-def _filter_field(obj: object, field: str) -> object:
-    """Apply --field filter to the accumulated result.
+def _filter_field(obj: dict, field: str) -> dict:
+    """Apply the --field filter to the accumulated result.
 
-    Mirrors the jq logic:
-      if $field == "criticality" then (if has("criticality") then {criticality} else {} end)
-      elif $field == "tier" then (if has("tier") then {tier} else {} end)
-      else .
-      end
-
-    When obj is None (torn-line reduce-to-null), returns None regardless
-    of field (null | has("criticality") is false in jq, yielding {}).
+    The reduction is always a dict (the shared reducer never returns ``null``),
+    so this projects to a single-key dict when the requested key is present,
+    else ``{}``. With no ``--field``, returns the dict unchanged.
     """
     if field == "criticality":
-        if isinstance(obj, dict) and "criticality" in obj:
+        if "criticality" in obj:
             return {"criticality": obj["criticality"]}
         return {}
     elif field == "tier":
-        if isinstance(obj, dict) and "tier" in obj:
+        if "tier" in obj:
             return {"tier": obj["tier"]}
         return {}
     # No field filter: return as-is.

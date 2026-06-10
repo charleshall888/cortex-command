@@ -1,8 +1,11 @@
 # cortex-lifecycle-state golden-replay fixtures
 
-This directory holds the pre-deletion capture of `bin/cortex-lifecycle-state`
-(bash+jq) for the parity test that guards its Python port
-(`cortex_command.lifecycle_state`).
+This directory holds golden fixtures for the parity test that guards
+`cortex_command.lifecycle.state_cli`. They originated as a pre-deletion capture
+of the old `bin/cortex-lifecycle-state` (bash+jq), but that oracle no longer
+exists — `bin/cortex-lifecycle-state` is now a pure Python wrapper, and the
+fixtures pin the CLI's agreement with the shared reducer
+`cortex_command.common.reduce_lifecycle_state`.
 
 Each test case is stored as five flat sibling files plus an optional input file:
 
@@ -41,29 +44,30 @@ Source: `bin/cortex-lifecycle-state` lines 61–67 (canonical bash, captured 202
 | `field-tier` | same events as criticality-override, filtered to tier field | valid JSONL, 4 lines | `tier` | `{"tier":"complex"}` | 0 |
 | `missing-events-log` | no events.log file exists for the feature | absent | none | `{}` | 0 |
 | `no-start-event` | events.log present but no lifecycle_start or override events | valid JSONL, 2 lines | none | `{}` | 0 |
-| `torn-line` | events.log has a truncated/malformed JSON line in the middle | torn line 2 of 3 | none | `null` | 0 |
+| `torn-line` | events.log has a truncated/malformed JSON line in the middle | torn line 2 of 3 | none | `{"criticality":"high","tier":"complex"}` | 0 |
 
 Cases cross-cut: missing file, empty-accumulator, valid-field-filter, override
 precedence (complexity_override supersedes lifecycle_start.tier; criticality_override
 supersedes lifecycle_start.criticality), and malformed-input.
 
-## Torn-line behavior — actual bash+jq output
+## Torn-line behavior — tolerant skip-and-continue
 
-The bash script's comment says it "silently skips torn or malformed lines", but
-**the actual jq behavior is different**. When `fromjson?` produces no output for a
-line, the `as $r` binding produces `null` instead of skipping the iteration, and
-jq's `reduce` body becomes empty for that iteration. With jq-1.8.1, a `reduce`
-whose body produces empty for any iteration outputs `null` for the entire reduce.
+`state_cli` delegates reduction to `cortex_command.common.reduce_lifecycle_state`,
+the single tolerant reducer shared with `read_tier` / `read_criticality` and
+refine. A torn (un-parseable) or out-of-vocabulary line is skipped and recorded
+rather than collapsing the whole reduction — the last valid value for each axis
+wins. The `torn-line` fixture has a valid `lifecycle_start`
+(tier=complex, criticality=high) on line 1, a truncated JSON line 2, and a valid
+`phase_transition` line 3, so:
+- Without `--field`: the recovered accumulator
+  `{"criticality":"high","tier":"complex"}` is printed, exit 0.
+- With `--field criticality` / `--field tier`: the single recovered key is
+  printed (`{"criticality":"high"}` / `{"tier":"complex"}`), exit 0.
 
-Concrete result: if ANY line in events.log fails `fromjson?`, the reduce exits with
-accumulator `null` rather than the partially-accumulated object. Then:
-- Without `--field`: `null | .` = `null`, printed as `null\n`.
-- With `--field criticality` or `--field tier`: `null | has("criticality")` = `false`,
-  so the output is `{}`.
-
-The `torn-line` fixture captures this jq-1.8.1 behavior. The Python port (Task 21)
-must replicate this behavior OR apply the `error-formatter-shape` tolerance carve-out
-(see below).
+This is the whole point of the shared reducer: a single malformed line no longer
+collapses the entire state to `null` (the old jq-1.8.1 reduce-to-null behavior the
+fixtures originally captured), which is the split-brain fix. Both the stdout
+(recovered accumulator) and exit code (0) are pinned by the fixtures.
 
 ## Applicable parity tolerances per fixture
 
@@ -94,17 +98,11 @@ and declares an explicit, opt-in tolerance set per fixture.
 - **`number-format`** — integer-valued floats (`1` vs `1.0`). Not applicable — all
   values are strings.
 
-- **`error-formatter-shape`** — Carve-out for jq's diagnostic messages on malformed
-  input. The Python port (`json.JSONDecodeError`) cannot byte-replicate jq's
-  diagnostic stderr text. The parity test accepts equivalent behavior: the Python port
-  must produce the same stdout AND same exit code as the bash fixture, but stderr
-  content may differ when `error-formatter-shape` is opted in. For `torn-line`, bash
-  produces empty stderr and exit 0 with `null` on stdout; the Python port must also
-  produce `null` on stdout and exit 0 (reproducing the reduce-to-null behavior), but
-  may emit a different (or empty) stderr message. If the Python port instead silently
-  skips malformed lines (producing `{"criticality":"high","tier":"complex"}` instead
-  of `null`), that is a parity failure — the Python must match the bash reduce-to-null
-  behavior, not the script comment's stated intent.
+- **`error-formatter-shape`** — Carve-out for diagnostic stderr on malformed
+  input: the port must match the fixture's stdout AND exit code, while stderr
+  content may differ. For `torn-line`, the tolerant reducer recovers
+  `{"criticality":"high","tier":"complex"}` on stdout with exit 0 and currently
+  emits empty stderr.
 
 ## Determinism harness
 

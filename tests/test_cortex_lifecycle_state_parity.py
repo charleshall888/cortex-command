@@ -26,7 +26,8 @@ Named-tolerance categories per fixture (from tests/fixtures/cortex-lifecycle-sta
   torn-line:             error-formatter-shape (stderr), key-reorder (stdout)
 
 The torn-line case applies the error-formatter-shape tolerance to stderr only;
-stdout must still match the fixture (null).
+stdout must still match the fixture (the recovered accumulator dict — the
+tolerant reducer no longer collapses a torn line to null).
 
 Determinism harness: LC_ALL=C, TZ=UTC as set during fixture capture.
 LIFECYCLE_SESSION_ID is unset and CORTEX_REPO_ROOT is set to the scratch
