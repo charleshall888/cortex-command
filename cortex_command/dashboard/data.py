@@ -1332,6 +1332,18 @@ def parse_escalations(
     return events[-last_n:]
 
 
+def _exit_report_sort_key(stem: str) -> tuple[int, str]:
+    """Order exit-report filename stems by ``(numeric-prefix, suffix)`` so a
+    sub-task stem (``3a``) sorts after its parent (``3``) and before the next
+    integer (``4``) — #297. Non-conforming stems bucket to the sort floor
+    (``1 << 30``) with the stem as tiebreak, preserving the prior non-digit
+    fallback. Composite-tuple idiom, mirroring ``FeatureTask.sort_key``."""
+    m = re.fullmatch(r"(\d+)([a-z]*)", stem)
+    if m is None:
+        return (1 << 30, stem)
+    return (int(m.group(1)), m.group(2))
+
+
 def parse_exit_reports(feature_slug: str, lifecycle_dir: Path) -> list[dict]:
     """Return all exit-report dicts for a feature, sorted by filename number.
 
@@ -1348,10 +1360,7 @@ def parse_exit_reports(feature_slug: str, lifecycle_dir: Path) -> list[dict]:
     try:
         for path in sorted(
             reports_dir.glob("*.json"),
-            key=lambda p: (
-                int(p.stem) if p.stem.isdigit() else 1 << 30,
-                p.name,
-            ),
+            key=lambda p: _exit_report_sort_key(p.stem),
         ):
             try:
                 data = json.loads(path.read_text(encoding="utf-8"))

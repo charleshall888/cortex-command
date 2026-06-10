@@ -22,6 +22,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from cortex_command.dashboard.data import (
+    _exit_report_sort_key,
     _read_all_jsonl,
     build_swim_lane_data,
     compute_slow_flags,
@@ -38,6 +39,26 @@ from cortex_command.dashboard.data import (
     parse_round_timestamps,
     tail_jsonl,
 )
+
+
+# ---------------------------------------------------------------------------
+# Tests: _exit_report_sort_key (suffix-aware exit-report ordering, #297)
+# ---------------------------------------------------------------------------
+
+class TestExitReportSortKey(unittest.TestCase):
+    """#297 Req 9: exit-report stems sort by (numeric-prefix, suffix) so a
+    sub-task stem sorts after its parent and before the next integer."""
+
+    def test_suffixed_stems_sort_after_parent_before_next_integer(self):
+        stems = ["10", "3b", "1", "3", "2", "3a"]
+        ordered = sorted(stems, key=_exit_report_sort_key)
+        self.assertEqual(ordered, ["1", "2", "3", "3a", "3b", "10"])
+
+    def test_non_conforming_stem_buckets_to_floor(self):
+        # A non-digit stem (e.g. "repair") sorts after all numeric stems.
+        stems = ["repair", "2", "1"]
+        ordered = sorted(stems, key=_exit_report_sort_key)
+        self.assertEqual(ordered, ["1", "2", "repair"])
 
 
 # ---------------------------------------------------------------------------
