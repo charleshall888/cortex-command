@@ -2,7 +2,7 @@
 feature: cortex-lifecycle-state-collapses-to-null
 parent_backlog_uuid: f9bc97d9-f171-46aa-9d56-50898edc891d
 parent_backlog_id: 287
-artifacts: ["research", "spec", "plan"]
+artifacts: ["research", "spec", "plan", "review"]
 tags: []
 created: 2026-06-10
 updated: 2026-06-10

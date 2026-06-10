@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: f9bc97d9-f171-46aa-9d56-50898edc891d
 title: "cortex-lifecycle-state collapses to null on any malformed events.log line, silently skipping the spec-phase gates (diverges from common.py tolerant skip)"
-status: in_progress
+status: complete
 priority: medium
 type: bug
 created: 2026-06-02

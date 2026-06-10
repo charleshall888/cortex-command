@@ -7,3 +7,7 @@
 {"ts":"2026-06-10T15:08:22Z","event":"sentinel_absence","feature":"cortex-lifecycle-state-collapses-to-null","reviewer_angle":"corruption-signal-semantics","reason":"absent","model_tier":"opus","expected_sha":"989fff0a079c6238be204a35f510e8436d9b289ce17d96a403b9319be5d8205e","observed_sha_or_null":null}
 {"ts": "2026-06-10T15:23:00Z", "event": "plan_approved", "feature": "cortex-lifecycle-state-collapses-to-null"}
 {"ts": "2026-06-10T15:23:00Z", "event": "phase_transition", "feature": "cortex-lifecycle-state-collapses-to-null", "from": "plan", "to": "implement"}
+{"ts": "2026-06-10T16:54:00Z", "event": "phase_transition", "feature": "cortex-lifecycle-state-collapses-to-null", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-06-10T17:09:11Z", "event": "review_verdict", "feature": "cortex-lifecycle-state-collapses-to-null", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-06-10T17:09:11Z", "event": "phase_transition", "feature": "cortex-lifecycle-state-collapses-to-null", "from": "review", "to": "complete"}
+{"ts": "2026-06-10T17:10:28Z", "event": "feature_complete", "feature": "cortex-lifecycle-state-collapses-to-null", "tasks_total": 10, "rework_cycles": 0, "merge_anchor": "merge"}
