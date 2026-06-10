@@ -9,7 +9,7 @@ Two-stage review: spec compliance first, then code quality. Complex tier only. T
 - Read `cortex/lifecycle/{feature}/spec.md` for requirements
 - Identify files changed during implementation by reading the git log for commits since the lifecycle started, or by comparing plan.md's file lists
 - Read `cortex/lifecycle/{feature}/plan.md` for the verification strategy
-- Load requirements docs using the shared tag-based loading protocol — read the protocol at the absolute path the lifecycle body resolved and propagated (the `${CLAUDE_SKILL_DIR}/references/load-requirements.md` target established in lifecycle SKILL.md's "Reference-path propagation" subsection) and follow it. Record the full list of loaded requirements files (project.md + matched area docs) for injection into the reviewer prompt; when the fallback applies (no tags match or no area docs are found), note: "no area docs matched for tags: {tags}; drift check covers project.md only".
+- Load requirements docs following the load-requirements.md protocol at the propagated absolute path. Record the full list of loaded requirements files (project.md + matched area docs) for injection into the reviewer prompt; when the fallback applies (no tags match or no area docs are found), note: "no area docs matched for tags: {tags}; drift check covers project.md only".
 
 ### 2. Launch Review Sub-Task
 
@@ -19,7 +19,7 @@ Dispatch a focused review sub-task with read-only instructions using the reviewe
 
 ### Reviewer Prompt Template
 
-Before dispatching, substitute `{spec_path}` with the absolute path to the spec file, resolved as `git rev-parse --show-toplevel` joined with `cortex/lifecycle/{feature}/spec.md`.
+Before dispatching, substitute `{spec_path}` with the absolute path to the spec file.
 
 ```
 You are reviewing the {feature} implementation against its specification.
@@ -64,8 +64,7 @@ The Verdict section is a JSON object with exactly these fields:
 - "cycle": the review cycle number (integer)
 - "issues": array of issue strings (empty array if none)
 
-Alternative field names like "overall", "result", or "status" are not used.
-Alternative values like "PASS", "FAIL", or "APPROVED_WITH_NOTES" are not used.
+Use exactly these field names and values — not "overall"/"result"/"status", and not "PASS"/"FAIL"/"APPROVED_WITH_NOTES" (those are Stage 1 rating values, not verdicts).
 
 Your review.md includes a ## Requirements Drift section using exactly this format:
 ## Requirements Drift
@@ -105,21 +104,7 @@ Do NOT modify any source files. This is a read-only review.
 
 ...
 
-## Requirements Drift
-
-**State**: none | detected
-**Findings**:
-- (one bullet per drifted item, or "None" if state is none)
-**Update needed**: (path to requirements file that needs updating, or "None")
-
-## Suggested Requirements Update
-<!-- Only present when State is detected -->
-**File**: (path)
-**Section**: (heading)
-**Content**:
-```
-(exact content to append)
-```
+<!-- Requirements Drift and Suggested Requirements Update sections use the exact formats defined in §2 inside the dispatched reviewer prompt. -->
 
 ## Stage 2: Code Quality
 <!-- Only present if Stage 1 has no FAIL verdicts -->
@@ -153,7 +138,7 @@ Register `"review"` in the `artifacts` array of `cortex/lifecycle/{feature}/inde
 
 The cycle counter prevents infinite rework loops. After cycle 2, always escalate to the user regardless of verdict.
 
-After reading the verdict from the review artifact, append a `review_verdict` event to `cortex/lifecycle/{feature}/events.log`:
+After reading the verdict from the review artifact (state detection parses the exact `"verdict"` field name and its exact values), append a `review_verdict` event to `cortex/lifecycle/{feature}/events.log`:
 
 ```
 {"ts": "<ISO 8601>", "event": "review_verdict", "feature": "<name>", "verdict": "APPROVED|CHANGES_REQUESTED|REJECTED", "cycle": <N>, "requirements_drift": "none|detected"}
@@ -171,7 +156,7 @@ After logging the `review_verdict` event, check whether `requirements_drift` is 
 
    > "review.md flags `requirements_drift: detected` but is missing the `## Suggested Requirements Update` section. Read the existing review.md, then append the section in the format documented in §2 (File / Section / Content). Do not modify any other section."
 
-   The re-dispatch follows a max-retry cap of `2` — i.e. the reviewer is invoked up to 2 additional times for a total of 3 passes (initial dispatch + 2 retries). On each retry, re-read `cortex/lifecycle/{feature}/review.md` from disk and check whether the section is now present and parseable. As soon as a pass produces a parseable section, exit the retry loop and continue with step 3.
+   The re-dispatch follows a max-retry cap of `2` (initial dispatch + 2 retries = 3 passes); exit the loop as soon as a pass yields a parseable section and continue with step 3.
 
    If all 3 passes complete without producing a parseable `## Suggested Requirements Update` section, the retry loop is exhausted. Do **not** block the verdict processing. Instead, log a `drift_protocol_breach` event to `cortex/lifecycle/{feature}/events.log` with `state=detected` and `suggestion=missing`, then fall through to step 5 (skip auto-apply). The breach event surfaces in the morning report so the gap is visible rather than silent.
 
@@ -181,9 +166,7 @@ After logging the `review_verdict` event, check whether `requirements_drift` is 
    {"ts": "<ISO 8601>", "event": "drift_protocol_breach", "feature": "<name>", "state": "detected", "suggestion": "missing", "retries": 2}
    ```
 
-   The `retries` field records the number of re-dispatches attempted before exhaustion (max-retry=2, so this is `2` on every emitted breach). Future tooling that surfaces breaches reads the `event` name; the `state` and `suggestion` fields disambiguate the breach mode for the morning report.
-
-3. **Apply the update**: Read the target requirements file. Find the section heading. Append the content after the last bullet or paragraph in that section. Write the file.
+3. **Apply the update**: Append the Content at the end of the named Section in the target file.
 
 4. **Report to the user**: Display what was changed:
    ```
@@ -191,19 +174,17 @@ After logging the `review_verdict` event, check whether `requirements_drift` is 
      Added: {first line of content}
    ```
 
-   In interactive sessions, the user sees this immediately.
-
-5. **Skip auto-apply after exhausted retries**: If step 2's retry loop exhausted without a parseable section, log a brief notice to the user — "Requirements drift detected but no suggested update was provided after re-dispatch; breach logged for morning report" — and continue to §5 Transition without blocking the verdict.
+5. **Skip auto-apply after exhausted retries**: log a brief notice — "Requirements drift detected but no suggested update was provided after re-dispatch; breach logged for morning report" — and continue to §5 Transition without blocking.
 
 ### 5. Transition
 
 Proceed automatically — do not ask the user for confirmation when the verdict is APPROVED or CHANGES_REQUESTED cycle 1. Announce the transition briefly and continue.
 
-- APPROVED → log the transition and proceed to Complete automatically — do not ask the user for confirmation:
+- APPROVED → log the transition and proceed to Complete automatically:
   ```
   {"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "from": "review", "to": "complete"}
   ```
-- CHANGES_REQUESTED cycle 1 → log the transition and return to Implement automatically — do not ask the user for confirmation:
+- CHANGES_REQUESTED cycle 1 → log the transition and return to Implement automatically:
   ```
   {"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "from": "review", "to": "implement-rework"}
   ```
@@ -214,9 +195,5 @@ Proceed automatically — do not ask the user for confirmation when the verdict 
 
 ## Constraints
 
-| Thought | Reality |
-|---------|---------|
-| "Code quality issues are minor, I'll let them pass" | Minor issues compound. Flag them as PARTIAL with notes — the implementer can address them quickly. |
-| "I'll use `overall: PASS` for the verdict" | The verdict JSON must use exactly `"verdict": "APPROVED"` (or `CHANGES_REQUESTED` / `REJECTED`). State detection parses this exact field name and these exact values. |
-| "Requirements drift is hard to assess without clear traceability" | Assess against the requirements docs loaded in §1. If uncertain, log `detected` with a note — false positives auto-apply a small update; false negatives silently hide drift. |
-| "Requirements drift should influence whether I approve the feature" | Drift is an observation only. The verdict reflects spec compliance and code quality. A feature with detected drift may still be APPROVED. The drift is auto-applied to requirements after the verdict. |
+- Flag minor code quality issues as PARTIAL with notes — minor issues compound.
+- If uncertain about requirements drift, log `detected` with a note — false positives auto-apply a small update; false negatives silently hide drift.
