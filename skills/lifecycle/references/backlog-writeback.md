@@ -1,6 +1,6 @@
 # Backlog Status Check and Backlog Write-Back
 
-Two Step 2 sub-procedures: check whether the backlog item is already complete, and write the lifecycle start back to the originating backlog item. (`index.md` creation for new lifecycles is handled in `discovery-bootstrap.md`.)
+Two Step 2 sub-procedures: check whether the backlog item is already complete, and write the lifecycle start back to the originating backlog item. (`index.md` creation for new lifecycles is handled in `discovery-bootstrap.md`.) This file is also the canonical home for two rules consumed by later phase references: `cortex-update-item` exit-2 handling and artifact registration in `index.md`.
 
 ## Backlog Status Check
 
@@ -56,4 +56,17 @@ This `lifecycle_slug` write-back runs only when `phase = none`. The status write
 
 If Step 1's resolver returned exit 3 (no backlog match), skip this step silently — lifecycles can exist independently of the backlog.
 
-If any `cortex-update-item` invocation in this file (the close-lifecycle call, the in-progress status write-back, or the lifecycle-slug write-back) exits 2, that signals an ambiguous slug match. Present the candidate list emitted on stderr to the user and ask them to re-invoke with a disambiguated slug.
+## `cortex-update-item` Exit-2 Handling (canonical)
+
+If any `cortex-update-item` invocation exits 2, that signals an ambiguous slug match. Present the candidate list emitted on stderr to the user and ask them to re-invoke with a disambiguated slug. This rule covers every `cortex-update-item` call site — the invocations in this file (the close-lifecycle call, the in-progress status write-back, the lifecycle-slug write-back) and those in later phase references, which point here rather than restating it.
+
+## Registering an Artifact in index.md (canonical)
+
+When a phase produces an artifact (e.g. `"plan"`, `"review"`), register it in `cortex/lifecycle/{feature}/index.md`:
+
+- If the artifact key is already in the `artifacts` array, skip entirely (no-op)
+- Otherwise: append the artifact key to the artifacts inline array
+- Update the `updated` field to today's date
+- Rewrite the full `index.md` atomically
+
+Phase references point here rather than restating these bullets.

@@ -47,7 +47,7 @@ Apply the adversarially-verified token trim to the lifecycle/refine skill family
 - **Complexity**: simple
 - **Context**: `evidence.json → duplication.options[0]` (the 1,244B/1,241B pair). What moves is the shared explanation + event shape + skip protocol (~0.9KB/site); what stays inline is the command pair + condition line (~0.3KB/site) per Task 2's inline-command invariant — the two tasks now apply the same rule to the same command class. The event JSON shape must survive verbatim in the gate file (events-registry lint). Approval-surface anchors (`specify.md:155`, `plan.md:277`) shift; update the SKILL.md inventory bullets in the same commit.
 - **Verification**: `uv run pytest tests/test_lifecycle_kept_pauses_parity.py` — pass if exit 0; `grep -c 'lifecycle_critical_review_skipped' skills/lifecycle/references/critical-review-gate.md` = 1; `grep -c 'superseded by the most recent' skills/lifecycle/references/critical-review-gate.md` = 0 (no ninth protocol copy); `grep -c 'cortex-lifecycle-state' skills/lifecycle/references/specify.md` ≥ 1 and same for plan.md (commands survived inline); `grep -c 'critical-review-gate.md' skills/lifecycle/SKILL.md` ≥ 1 (manifest entry).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Critical-review SKILL.md pointer-trims + micro-canonicalizations (spec R2 moves 2 + 4)
 - **Files**: `skills/critical-review/SKILL.md`, `skills/lifecycle/references/load-requirements.md`, `skills/lifecycle/references/backlog-writeback.md`, `skills/lifecycle/references/clarify.md`, `skills/lifecycle/references/review.md`

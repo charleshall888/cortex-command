@@ -32,8 +32,6 @@ Branch on the exit code:
 
 Load requirements using the shared tag-based loading protocol — read the protocol at the absolute path the lifecycle body resolved and propagated (the `${CLAUDE_SKILL_DIR}/references/load-requirements.md` target established in lifecycle SKILL.md's "Reference-path propagation" subsection) and follow it. If no `cortex/requirements/` directory or files exist, note this and proceed.
 
-If a concept you need is not yet defined in the glossary, treat the absence as a signal to surface the term in the next requirements interview.
-
 ### 3. Confidence Assessment
 
 Assess confidence across three dimensions:
@@ -114,7 +112,7 @@ cortex-update-item {backlog-filename-slug} --complexity {value} --criticality {v
 
 Where `{backlog-filename-slug}` is the backlog file's name without the `.md` extension (e.g., `119-create-refine-skill`).
 
-If `cortex-update-item` fails, surface the error and ask the user to resolve it before proceeding. Do not silently skip write-backs. If `cortex-update-item` exits with code 2, the slug was ambiguous: present the candidate list on stderr to the user and ask them to re-invoke with a disambiguated slug.
+If `cortex-update-item` fails, surface the error and ask the user to resolve it before proceeding. Do not silently skip write-backs. On exit 2, apply the canonical ambiguous-slug handling in backlog-writeback.md (loaded at lifecycle Step 2).
 
 For Context B (ad-hoc), skip this step — there is no backlog item to update.
 

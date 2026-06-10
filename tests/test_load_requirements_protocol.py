@@ -58,6 +58,22 @@ _CITATION_RE = re.compile(r"load-requirements\.md|tag-based.*loading")
 # absent terms (no spec-side parking artifact, no automated promotion).
 _CONSUMER_RULE_RE = re.compile(r"absence as a signal|surface the term")
 
+# Files that must carry the consumer-rule prose directly. The
+# harness-token-efficiency-trim feature canonicalized the rule into
+# load-requirements.md itself (the protocol-of-record every consumer reads),
+# so lifecycle clarify.md and review.md no longer carry per-file copies —
+# they receive the rule by following the protocol. specify.md keeps its own
+# copy deliberately: refine's standalone resume-at-spec path skips
+# requirements loading, so specify.md must state the rule itself. The
+# discovery and refine copies remain pending their own trim tasks.
+RULE_CARRIERS: tuple[Path, ...] = (
+    REPO_ROOT / "skills" / "lifecycle" / "references" / "load-requirements.md",
+    REPO_ROOT / "skills" / "lifecycle" / "references" / "specify.md",
+    REPO_ROOT / "skills" / "discovery" / "references" / "clarify.md",
+    REPO_ROOT / "skills" / "discovery" / "references" / "research.md",
+    REPO_ROOT / "skills" / "refine" / "SKILL.md",
+)
+
 
 def test_six_consumer_references_cite_shared_protocol() -> None:
     """Each of the 6 non-exempt consumers contains the canonical citation.
@@ -78,24 +94,27 @@ def test_six_consumer_references_cite_shared_protocol() -> None:
     )
 
 
-def test_six_consumer_references_carry_consumer_rule_prose() -> None:
-    """Each of the 6 non-exempt consumers contains the consumer-rule prose.
+def test_rule_carriers_carry_consumer_rule_prose() -> None:
+    """Each designated rule carrier contains the consumer-rule prose.
 
     Mirrors the spec's R14 union grep — ``grep -c "absence as a signal\\|
-    surface the term" <file>`` >= 1 for each consumer. The prose surfaces
+    surface the term" <file>`` >= 1 for each carrier. The prose surfaces
     an undefined glossary term to the user as a signal to raise in the
     next requirements interview; absent the prose, a consumer would
-    silently swallow the gap. This test prevents a future edit from
-    accidentally stripping the rule while rewriting nearby text.
+    silently swallow the gap. The canonical statement lives in
+    load-requirements.md (the protocol every non-exempt consumer follows);
+    per-file copies remain only where a consumer's read path can skip the
+    protocol (see RULE_CARRIERS comment). This test prevents a future edit
+    from accidentally stripping the rule while rewriting nearby text.
     """
     missing: list[str] = []
-    for ref in CONSUMER_REFS:
-        assert ref.is_file(), f"consumer reference missing: {ref}"
+    for ref in RULE_CARRIERS:
+        assert ref.is_file(), f"rule carrier missing: {ref}"
         text = ref.read_text(encoding="utf-8")
         if not _CONSUMER_RULE_RE.search(text):
             missing.append(str(ref.relative_to(REPO_ROOT)))
     assert not missing, (
-        "consumer references lacking the consumer-rule prose "
+        "rule carriers lacking the consumer-rule prose "
         "('absence as a signal' or 'surface the term'): "
         f"{missing}"
     )

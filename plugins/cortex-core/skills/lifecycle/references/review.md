@@ -10,7 +10,6 @@ Two-stage review: spec compliance first, then code quality. Complex tier only. T
 - Identify files changed during implementation by reading the git log for commits since the lifecycle started, or by comparing plan.md's file lists
 - Read `cortex/lifecycle/{feature}/plan.md` for the verification strategy
 - Load requirements docs using the shared tag-based loading protocol — read the protocol at the absolute path the lifecycle body resolved and propagated (the `${CLAUDE_SKILL_DIR}/references/load-requirements.md` target established in lifecycle SKILL.md's "Reference-path propagation" subsection) and follow it. Record the full list of loaded requirements files (project.md + matched area docs) for injection into the reviewer prompt; when the fallback applies (no tags match or no area docs are found), note: "no area docs matched for tags: {tags}; drift check covers project.md only".
-- If a concept you need is not yet defined in the glossary, treat the absence as a signal to surface the term in the next requirements interview.
 
 ### 2. Launch Review Sub-Task
 
@@ -143,11 +142,7 @@ After the reviewer sub-task completes and `cortex/lifecycle/{feature}/review.md`
 
 Before proceeding, validate that review.md contains a `## Requirements Drift` section. If the section is absent (e.g., the reviewer ran out of context), re-dispatch the reviewer with this targeted instruction: "review.md is missing the ## Requirements Drift section. Read the existing review.md, then append the ## Requirements Drift section in the correct format. Do not modify any other section." If the section remains absent after one re-dispatch, escalate to the user.
 
-Update `cortex/lifecycle/{feature}/index.md`:
-- If `"review"` is already in the `artifacts` array, skip entirely (no-op)
-- Otherwise: append `"review"` to the artifacts inline array
-- Update the `updated` field to today's date
-- Rewrite the full `index.md` atomically
+Register `"review"` in the `artifacts` array of `cortex/lifecycle/{feature}/index.md` per the canonical artifact-registration procedure in backlog-writeback.md (loaded at lifecycle Step 2).
 
 | Verdict | Cycle | Action |
 |---------|-------|--------|
