@@ -2,10 +2,10 @@
 feature: harden-lifecycle-complete-phase-finalization-and
 parent_backlog_uuid: 4ca3e2f7-42a5-4ed5-9ec2-5e9c777d3815
 parent_backlog_id: 296
-artifacts: ["research", "spec", "plan"]
+artifacts: ["research", "spec", "plan", "review"]
 tags: []
 created: 2026-06-09
-updated: 2026-06-09
+updated: 2026-06-10
 ---
 
 # [[296-harden-lifecycle-complete-phase-finalization-and-rework-cycles-counter|Harden lifecycle complete-phase finalization and rework_cycles counter]]

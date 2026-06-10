@@ -2,11 +2,15 @@
 schema_version: "1"
 uuid: 4ca3e2f7-42a5-4ed5-9ec2-5e9c777d3815
 title: "Harden lifecycle complete-phase finalization and rework_cycles counter"
-status: backlog
+status: complete
 priority: low
 type: bug
 created: 2026-06-09
-updated: 2026-06-09
+updated: 2026-06-10
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/harden-lifecycle-complete-phase-finalization-and/spec.md
+areas: ['lifecycle']
 ---
 ## Why
 
