@@ -217,14 +217,29 @@ class TestSubTaskBatching(unittest.TestCase):
         self.assertIn("3b", scheduled)
         self.assertNotIn("3a", scheduled)  # already done, excluded from pending
 
-    def test_dangling_subtask_reference_raises(self) -> None:
-        """A [3] reference when only 3a/3b exist is unresolvable and raises
-        (preserved cycle/unresolvable classification; Task 2 sharpens message)."""
+    def test_dangling_subtask_reference_raises_naming_offender(self) -> None:
+        """A [3] reference when only 3a/3b exist is unresolvable and raises with
+        a message naming the offending id `3` specifically (#297 Req 5) — not a
+        bare cycle dump. `3` must be identified distinctly from the present 3a."""
         t3a = FeatureTask(number=3, suffix="a", description="3a", depends_on=[])
         t4 = FeatureTask(number=4, description="4", depends_on=["3"])
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as cm:
             compute_dependency_batches([t3a, t4])
+        msg = str(cm.exception)
+        self.assertIn("Unresolvable dependency reference", msg)
+        self.assertIn("'3'", msg)
+
+    def test_self_referential_dependency_raises_naming_offender(self) -> None:
+        """A task that lists its own id in depends_on raises naming it (#297 Req 5)."""
+        t3a = FeatureTask(
+            number=3, suffix="a", description="3a", depends_on=["3a"]
+        )
+        with self.assertRaises(ValueError) as cm:
+            compute_dependency_batches([t3a])
+        msg = str(cm.exception)
+        self.assertIn("Self-referential", msg)
+        self.assertIn("3a", msg)
 
 
 class TestMarkTaskDoneInPlan(unittest.TestCase):

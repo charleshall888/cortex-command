@@ -697,6 +697,7 @@ def compute_dependency_batches(tasks: list) -> list[list]:
         ValueError: If a dependency cycle or an unresolvable dependency
             prevents progress.
     """
+    all_ids: set[str] = {t.task_id for t in tasks}
     pending = [t for t in tasks if t.status != "done"]
     done_ids: set[str] = {t.task_id for t in tasks if t.status == "done"}
     batches: list[list] = []
@@ -706,6 +707,29 @@ def compute_dependency_batches(tasks: list) -> list[list]:
         batch = [t for t in pending if all(d in assigned for d in t.depends_on)]
         if not batch:
             remaining = [t.task_id for t in pending]
+            # Distinguish an unresolvable reference (a depends_on id that names
+            # no declared task — e.g. a leftover [3] after the heading became
+            # 3a/3b) and a self-reference from a true cycle, so the message
+            # names the offending id (#297 Req 5). Classification is unchanged:
+            # all three remain a hard ValueError routed to a counted
+            # status:failed (NOT parse_error).
+            dangling = sorted(
+                {d for t in pending for d in t.depends_on if d not in all_ids}
+            )
+            if dangling:
+                raise ValueError(
+                    f"Unresolvable dependency reference(s) {dangling}: no task "
+                    f"with that id exists among {sorted(all_ids)} "
+                    f"(pending: {remaining})"
+                )
+            self_refs = sorted(
+                {t.task_id for t in pending if t.task_id in t.depends_on}
+            )
+            if self_refs:
+                raise ValueError(
+                    f"Self-referential dependency: task(s) {self_refs} list "
+                    f"their own id in 'Depends on' (pending: {remaining})"
+                )
             raise ValueError(
                 f"Dependency cycle or unresolvable deps among tasks: {remaining}"
             )
