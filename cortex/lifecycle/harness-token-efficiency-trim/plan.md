@@ -56,7 +56,7 @@ Apply the adversarially-verified token trim to the lifecycle/refine skill family
 - **Complexity**: simple
 - **Context**: `evidence.json → duplication.options[1]` and `options[3]`. Do NOT touch: dispatched-verbatim READ_OK copies, reviewer/fallback/synthesizer prompt files, approval-surface skeletons, auto-advance reinforcements, model-routing inline values. The canonical glossary sentence reads "If a concept you need is not yet defined in the glossary…" — match that wording exactly; do not reword to satisfy a grep.
 - **Verification**: pre-commit chain green; `grep -c 'check-artifact-stable' skills/critical-review/SKILL.md` ≥ 1 (abort conditions survive); `grep -rc 'If a concept you need is not yet defined' skills/lifecycle/references/ | grep -v ':0'` lists exactly load-requirements.md and specify.md with count 1 each, and clarify.md/review.md at 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (deviation: tests/test_load_requirements_protocol.py carrier list retargeted; Task 10 must drop refine SKILL.md from RULE_CARRIERS)
 
 ### Task 5: Sync orchestrator-review drift pair (spec R3)
 - **Files**: `skills/discovery/references/orchestrator-review.md`, `skills/discovery/SKILL.md`
