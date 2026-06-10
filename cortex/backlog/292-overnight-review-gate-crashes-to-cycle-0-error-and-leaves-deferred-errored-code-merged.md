@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: b77ea33f-4397-4945-be86-4ad4fb861253
 title: "Overnight review gate crashes to cycle-0 ERROR and leaves deferred/errored code merged"
-status: in_progress
+status: complete
 priority: high
 type: bug
 created: 2026-06-09

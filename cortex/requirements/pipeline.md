@@ -70,6 +70,7 @@ The pipeline area covers the overnight execution framework: how sessions are orc
   - Non-APPROVED after cycle 2, REJECTED at any cycle, or review agent failure → feature status `deferred`; deferral file written for morning triage
   - APPROVED at any cycle → `review_verdict`, `phase_transition`, and `feature_complete` events written to per-feature events.log; feature proceeds to merged flow
   - Morning review synthetic events (`review_verdict: APPROVED, cycle: 0`) gated on the same matrix — only written for features that legitimately skip review
+  - On any non-APPROVED outcome (REJECTED, CHANGES_REQUESTED after rework, or a could-not-run/crashed review with verdict ERROR), the feature's live merge commit is reverted SHA-anchored under `ctx.lock` before deferring, so no unreviewed code remains on the integration branch; the one exception is a dependent-conflict revert that aborts and surfaces as a blocking deferral naming the dependent feature. Review gating applies uniformly at every merge-to-`merged` site (primary, post-recovery re-merge, and the repair_completed ff-merge), and `SYSTEMIC_FAILURE_THRESHOLD` review-dispatch crashes in a batch trip the systemic circuit breaker with a `review_dispatch_crash` cause class.
 - **Priority**: must-have
 
 ### Post-Merge Test Failure Recovery

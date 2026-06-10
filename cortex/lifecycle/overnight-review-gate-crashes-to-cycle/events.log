@@ -15,3 +15,6 @@
 {"ts":"2026-06-09T23:24:53Z","event":"batch_dispatch","feature":"overnight-review-gate-crashes-to-cycle","batch":7,"tasks":[9]}
 {"ts":"2026-06-09T23:41:01Z","event":"batch_dispatch","feature":"overnight-review-gate-crashes-to-cycle","batch":8,"tasks":[10]}
 {"ts":"2026-06-10T00:05:03Z","event":"phase_transition","feature":"overnight-review-gate-crashes-to-cycle","tier":"complex","from":"implement","to":"review"}
+{"ts":"2026-06-10T00:27:10Z","event":"review_verdict","feature":"overnight-review-gate-crashes-to-cycle","verdict":"APPROVED","cycle":1,"requirements_drift":"detected"}
+{"ts":"2026-06-10T00:27:43Z","event":"phase_transition","feature":"overnight-review-gate-crashes-to-cycle","from":"review","to":"complete"}
+{"ts":"2026-06-10T00:29:15Z","event":"feature_complete","feature":"overnight-review-gate-crashes-to-cycle","tasks_total":10,"rework_cycles":1,"merge_anchor":"merge"}
