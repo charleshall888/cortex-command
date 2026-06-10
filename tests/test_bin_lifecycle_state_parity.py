@@ -20,6 +20,7 @@ Treats bin-side omitted keys as equivalent to Python-side defaults:
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -64,7 +65,9 @@ def _clear_lifecycle_caches() -> None:
 def _stage_fixture(slug: str, tmp_path: Path) -> Path:
     """Copy tests/fixtures/bin_parity/<slug>/ into tmp_path/cortex/lifecycle/<slug>/.
 
-    Returns the tmp_path (to use as cwd for subprocess invocations).
+    Returns the tmp_path (to use as cwd for subprocess invocations). Staging is
+    byte-oriented (shutil.copy2), so fixtures carrying non-UTF-8 bytes survive
+    intact — a prerequisite for Task 10's non-UTF-8 axes.
     """
     src = FIXTURES_DIR / slug
     dst = tmp_path / "cortex" / "lifecycle" / slug
@@ -72,6 +75,25 @@ def _stage_fixture(slug: str, tmp_path: Path) -> Path:
     for item in src.iterdir():
         shutil.copy2(item, dst / item.name)
     return tmp_path
+
+
+def _pinned_env() -> dict[str, str]:
+    """Pin the bin subprocess to working-tree code.
+
+    The bin wrapper's dual-channel logic otherwise prefers an ambient-importable
+    wheel over the working tree, so during implementation the subprocess could
+    exec stale wheel code. CORTEX_COMMAND_FORCE_SOURCE=1 forces the wrapper's
+    branch (a) (exec the working-tree module), and prepending REPO_ROOT to
+    PYTHONPATH makes that module the local source under test. Mirrors the sibling
+    golden harness (test_cortex_lifecycle_state_parity.py).
+    """
+    env = dict(os.environ)
+    env["CORTEX_COMMAND_FORCE_SOURCE"] = "1"
+    existing = env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = (
+        f"{REPO_ROOT}{os.pathsep}{existing}" if existing else str(REPO_ROOT)
+    )
+    return env
 
 
 @pytest.mark.parametrize("slug", ["feat1", "feat2"])
@@ -84,8 +106,16 @@ def test_bin_lifecycle_state_matches_python(slug: str, tmp_path: Path) -> None:
         capture_output=True,
         text=True,
         check=True,
+        env=_pinned_env(),
     )
     bin_out = json.loads(result.stdout)
+
+    assert isinstance(bin_out, dict), (
+        f"bin emitted non-object stdout for {slug}: {result.stdout!r} "
+        f"(parsed {bin_out!r}). The harness compares dict fields, so a null or "
+        f"scalar reduction must fail with this diagnostic rather than "
+        f"AttributeError on None.get(...)."
+    )
 
     lifecycle_base = cwd / "cortex" / "lifecycle"
     expected_tier = read_tier(slug, lifecycle_base=lifecycle_base)
@@ -113,6 +143,7 @@ def test_bin_lifecycle_counters_matches_python(slug: str, tmp_path: Path) -> Non
         capture_output=True,
         text=True,
         check=True,
+        env=_pinned_env(),
     )
     bin_out = json.loads(result.stdout)
 
