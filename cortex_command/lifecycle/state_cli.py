@@ -149,10 +149,19 @@ def main(argv: Optional[List[str]] = None) -> None:
         sys.stdout.write("{}\n")
         sys.exit(0)
 
-    result = _reduce_events(events_path)
+    reduction = reduce_lifecycle_state(events_path)
+    result = reduction.state
 
     if field:
         result = _filter_field(result, field)
+
+    # Additive corruption signal: when corruption left the tier or criticality
+    # unknowable, surface "corrupted": true so the gate-deciding consumers
+    # (which read --field tier) fail safe toward review. Appended after the
+    # filter so it rides through on both the unfiltered and --field paths;
+    # absent entirely for every clean log (output shape unchanged).
+    if reduction.corrupted:
+        result = {**result, "corrupted": True}
 
     sys.stdout.write(json.dumps(result, ensure_ascii=False, separators=(",", ":")) + "\n")
     sys.exit(0)

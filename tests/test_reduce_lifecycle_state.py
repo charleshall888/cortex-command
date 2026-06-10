@@ -11,12 +11,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from cortex_command.common import (
     LifecycleStateReduction,
+    lifecycle_state_corrupted,
     read_criticality,
     read_tier,
     reduce_lifecycle_state,
 )
+from cortex_command.lifecycle import state_cli
 
 
 def _write(path: Path, *lines: str) -> Path:
@@ -110,3 +114,86 @@ def test_read_tier_non_utf8_does_not_raise(tmp_path):
     crit = read_criticality("feat-non-utf8", lifecycle_base=tmp_path)
     assert isinstance(tier, str) and tier == "complex"
     assert isinstance(crit, str) and crit == "high"
+
+
+# ---------------------------------------------------------------------------
+# Corruption signal (Task 5)
+# ---------------------------------------------------------------------------
+
+
+def _stage_log(root: Path, feature: str, *byte_lines: bytes) -> Path:
+    """Write events.log bytes under root/cortex/lifecycle/<feature>/."""
+    fdir = root / "cortex" / "lifecycle" / feature
+    fdir.mkdir(parents=True, exist_ok=True)
+    path = fdir / "events.log"
+    path.write_bytes(b"".join(byte_lines))
+    return path
+
+
+def test_corrupt_torn_start_only_predicate_and_cli(tmp_path, monkeypatch, capsys):
+    """Torn lifecycle_start-only: both axes unknowable. The predicate is true,
+    and the corruption signal rides through BOTH the unfiltered and the
+    --field tier CLI paths (the filtered path is what the gates read)."""
+    _stage_log(tmp_path, "feat", b'{"event":"lifecycle_start","tier":"comp\n')
+    base = tmp_path / "cortex" / "lifecycle"
+    assert lifecycle_state_corrupted("feat", lifecycle_base=base) is True
+
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(SystemExit) as exc:
+        state_cli.main(["--feature", "feat"])
+    assert exc.value.code == 0
+    assert '"corrupted":true' in capsys.readouterr().out
+
+    with pytest.raises(SystemExit):
+        state_cli.main(["--feature", "feat", "--field", "tier"])
+    assert capsys.readouterr().out.strip() == '{"corrupted":true}'
+
+
+def test_corrupt_symmetric_criticality_axis_predicate_true(tmp_path):
+    """Valid tier + mojibake criticality → criticality axis unknowable → corrupted
+    (the symmetric R7 amendment: tier intact does not exempt the gate)."""
+    base = tmp_path / "cortex" / "lifecycle"
+    _stage_log(
+        tmp_path,
+        "feat-sym",
+        '{"event":"lifecycle_start","tier":"complex","criticality":"�"}\n'.encode(
+            "utf-8"
+        ),
+    )
+    assert lifecycle_state_corrupted("feat-sym", lifecycle_base=base) is True
+
+
+def test_corrupt_clean_no_state_predicate_false_no_cli_key(tmp_path, monkeypatch, capsys):
+    """A clean log with no state events → not corrupted, no CLI key (additive)."""
+    base = tmp_path / "cortex" / "lifecycle"
+    _stage_log(
+        tmp_path,
+        "feat-clean",
+        b'{"event":"phase_transition","from":"research","to":"specify"}\n',
+    )
+    assert lifecycle_state_corrupted("feat-clean", lifecycle_base=base) is False
+
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(SystemExit):
+        state_cli.main(["--feature", "feat-clean"])
+    assert "corrupted" not in capsys.readouterr().out
+
+
+def test_corrupt_torn_mid_file_recovered_predicate_false(tmp_path):
+    """A torn line after a valid lifecycle_start → state recovered → not corrupted."""
+    base = tmp_path / "cortex" / "lifecycle"
+    _stage_log(
+        tmp_path,
+        "feat-mid",
+        b'{"event":"lifecycle_start","tier":"complex","criticality":"high"}\n',
+        b'{"event":"phase_transition","from":"resea\n',
+    )
+    assert lifecycle_state_corrupted("feat-mid", lifecycle_base=base) is False
+
+
+def test_corrupt_missing_events_log_predicate_false(tmp_path):
+    """Missing events.log → not corrupted (routine for stateless features at the
+    overnight gate sites; a regression here would route every stateless feature
+    to review)."""
+    base = tmp_path / "cortex" / "lifecycle"
+    assert lifecycle_state_corrupted("feat-missing", lifecycle_base=base) is False

@@ -640,6 +640,22 @@ class LifecycleStateReduction(NamedTuple):
     state: dict[str, str]
     skipped_lines: tuple[int, ...]
 
+    @property
+    def corrupted(self) -> bool:
+        """True iff corruption made the tier OR criticality unknowable.
+
+        Distinguishes "gate input unknowable due to corruption" (>=1 skipped
+        line AND a missing axis) from "no state yet" (no skips) and from
+        "state recovered despite a torn line" (both axes present). The
+        symmetric tier-OR-criticality form widens spec R7's tier-only wording
+        so a torn or vocab-rejected criticality with tier intact is equally
+        gate-corrupting — the tier-only form would silently skip the gate on
+        the criticality axis (see plan Risks).
+        """
+        return bool(self.skipped_lines) and (
+            "tier" not in self.state or "criticality" not in self.state
+        )
+
 
 def reduce_lifecycle_state(events_path: Path) -> LifecycleStateReduction:
     """Reduce a feature's events.log to its canonical lifecycle state.
@@ -720,6 +736,29 @@ def reduce_lifecycle_state(events_path: Path) -> LifecycleStateReduction:
             skipped.append(lineno)
 
     return LifecycleStateReduction(state=state, skipped_lines=tuple(skipped))
+
+
+def lifecycle_state_corrupted(
+    feature: str,
+    lifecycle_base: Path = Path("cortex/lifecycle"),
+) -> bool:
+    """True iff a feature's events.log corruption makes the gate input unknowable.
+
+    Signature parallels :func:`read_tier`/:func:`read_criticality`. Returns the
+    reduction's ``corrupted`` signal: a torn or out-of-vocabulary line combined
+    with a missing tier or criticality axis. A missing or clean log is not
+    corrupted, so stateless features return ``False`` (routine at the gate
+    sites). No ``lru_cache`` — this is a gate path, not a hot path.
+
+    Args:
+        feature: Feature slug string (e.g. "my-feature").
+        lifecycle_base: Base directory for lifecycle data.
+
+    Returns:
+        True if corruption left the tier or criticality unknowable.
+    """
+    events_path = lifecycle_base / feature / "events.log"
+    return reduce_lifecycle_state(events_path).corrupted
 
 
 # ---------------------------------------------------------------------------
