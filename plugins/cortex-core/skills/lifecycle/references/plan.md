@@ -277,15 +277,7 @@ After orchestrator review passes, read the active tier and criticality (rules: c
 - `cortex-lifecycle-state --feature {feature} --field tier`
 - `cortex-lifecycle-state --feature {feature} --field criticality`
 
-If either read's output contains `"corrupted": true`, treat the feature as requiring review (run the critical review).
-
-**Run** when `tier = complex` AND `criticality ∈ {medium, high, critical}`: invoke the `critical-review` skill with the plan artifact. Present the synthesis to the user before plan approval.
-
-**Skip** otherwise. When the skip is because `tier = complex` AND `criticality = low`, first append a `lifecycle_critical_review_skipped` event to `cortex/lifecycle/{feature}/events.log` so the skip rate is observable, then proceed to user approval:
-
-```
-{"ts": "<ISO 8601>", "event": "lifecycle_critical_review_skipped", "feature": "<name>", "phase": "plan", "tier": "complex", "criticality": "low"}
-```
+**Run** when `tier = complex` AND `criticality ∈ {medium, high, critical}`: invoke the `critical-review` skill with the plan artifact. Present the synthesis to the user before plan approval. Otherwise, read and follow the critical-review gate protocol (use the body-resolved absolute path from lifecycle SKILL.md's Reference-path propagation manifest: the **critical-review-gate** target) for the `plan` phase.
 
 ### 4. User Approval
 

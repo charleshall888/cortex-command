@@ -163,6 +163,7 @@ A reference file cannot itself resolve `${CLAUDE_SKILL_DIR}` (the substitution h
 - **post-refine-commit** (read in refine-delegation.md Step 6) → `${CLAUDE_SKILL_DIR}/references/post-refine-commit.md`. Substitute as `<POST_REFINE_COMMIT_MD>` in refine-delegation.md.
 - **criticality-matrix** (§Reading lifecycle state rules cited by Detect criticality/tier in Step 2, and §Criticality Behavior Matrix cited at end of Phase Transition) → `${CLAUDE_SKILL_DIR}/references/criticality-matrix.md`.
 - **orchestrator-review** (read at Specify §3a and Plan §3a) → `${CLAUDE_SKILL_DIR}/references/orchestrator-review.md`. Substitute this body-resolved absolute path wherever a phase reference says `read and follow references/orchestrator-review.md` — a bare relative path resolves against CWD and breaks off-repo.
+- **critical-review-gate** (read at Specify §3b and Plan §3b on the skip branch) → `${CLAUDE_SKILL_DIR}/references/critical-review-gate.md`. Substitute this body-resolved absolute path wherever a phase reference says `read and follow the critical-review gate protocol` — a bare relative path resolves against CWD and breaks off-repo.
 
 ## Phase Transition
 
