@@ -23,3 +23,5 @@
 {"ts": "2026-06-10T21:28:05Z", "event": "phase_transition", "feature": "harness-token-efficiency-trim", "tier": "complex", "from": "implement", "to": "review"}
 {"ts": "2026-06-10T21:41:49Z", "event": "review_verdict", "feature": "harness-token-efficiency-trim", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
 {"ts": "2026-06-10T21:41:49Z", "event": "phase_transition", "feature": "harness-token-efficiency-trim", "from": "review", "to": "complete"}
+{"schema_version": 1, "ts": "2026-06-10T21:51:07Z", "event": "pr_opened", "feature": "harness-token-efficiency-trim", "number": 19, "url": "https://github.com/charleshall888/cortex-command/pull/19", "head_branch": "feature/harness-token-efficiency-trim", "repo": "charleshall888/cortex-command"}
+{"ts": "2026-06-11T00:44:53Z", "event": "feature_complete", "feature": "harness-token-efficiency-trim", "tasks_total": 13, "rework_cycles": 0, "merge_anchor": "merge"}
