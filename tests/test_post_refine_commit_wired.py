@@ -2,11 +2,18 @@
 
 Verifies two things per R5 acceptance:
 
-1. ``skills/lifecycle/SKILL.md`` references ``post-refine-commit`` within 50
-   lines after both the ``phase_transition specify→plan`` block and the
-   ``lifecycle_cancelled`` mention in Step 3 §4. The line-distance bound is
-   what protects against future edits that move the wiring sentence to an
-   unrelated section — a plain ordered-substring DOTALL regex would not.
+1. ``skills/lifecycle/references/refine-delegation.md`` references
+   ``post-refine-commit`` within 50 lines after both the
+   ``phase_transition specify→plan`` block and the ``lifecycle_cancelled``
+   mention. The refine-delegation.md file is the extracted home of the
+   delegation steps (Task 1 progressive-disclosure move); the line-distance
+   bound protects against future edits that move the wiring sentence to an
+   unrelated section.  A plain ordered-substring DOTALL regex would not.
+
+   Additionally, ``skills/lifecycle/SKILL.md`` must reference
+   ``post-refine-commit`` (at minimum via the Reference-path propagation
+   manifest entry and the Reference Files section) to ensure the
+   extract-and-manifest pattern is wired end-to-end.
 
 2. ``skills/lifecycle/references/post-refine-commit.md`` contains the five
    required content tokens that mirror Task 4's verification greps:
@@ -57,10 +64,22 @@ def test_post_refine_commit_reference_exists() -> None:
     assert plugin_ref.exists(), f"plugin-tree mirror missing at {plugin_ref}"
 
 
-def test_skill_md_wires_post_refine_commit_within_distance() -> None:
+def test_refine_delegation_wires_post_refine_commit_within_distance() -> None:
+    """refine-delegation.md references post-refine-commit near phase_transition/cancelled.
+
+    After the Task 1 progressive-disclosure extraction, the delegation steps
+    (including the post-refine-commit trigger) live in refine-delegation.md,
+    not in SKILL.md directly. The distance check moves to that file.
+    """
     repo_root = _repo_root()
-    skill = repo_root / "skills" / "lifecycle" / "SKILL.md"
-    lines = skill.read_text(encoding="utf-8").splitlines()
+    delegation = (
+        repo_root / "skills" / "lifecycle" / "references" / "refine-delegation.md"
+    )
+    assert delegation.exists(), (
+        f"refine-delegation.md missing at {delegation} — "
+        "Task 1 progressive-disclosure extraction may not have run"
+    )
+    lines = delegation.read_text(encoding="utf-8").splitlines()
 
     phase_transition_lines = _line_indices(
         lines, ["phase_transition", "specify", "plan"]
@@ -69,14 +88,14 @@ def test_skill_md_wires_post_refine_commit_within_distance() -> None:
     post_refine_lines = _line_indices(lines, ["post-refine-commit"])
 
     assert phase_transition_lines, (
-        "SKILL.md Step 3 §4 must contain a phase_transition specify→plan line"
+        "refine-delegation.md must contain a phase_transition specify→plan line"
     )
     assert cancelled_lines, (
-        "SKILL.md Step 3 §4 must reference lifecycle_cancelled "
+        "refine-delegation.md must reference lifecycle_cancelled "
         "(post-refine-commit handles both approval and cancel paths)"
     )
     assert post_refine_lines, (
-        "SKILL.md must reference post-refine-commit (Step 6 of refine delegation)"
+        "refine-delegation.md must reference post-refine-commit (Step 6 of refine delegation)"
     )
 
     def within_50_lines_after(anchor: int) -> bool:
@@ -91,6 +110,25 @@ def test_skill_md_wires_post_refine_commit_within_distance() -> None:
         "post-refine-commit reference must appear within 50 lines after the "
         f"lifecycle_cancelled mention (anchor lines {cancelled_lines}, "
         f"post-refine-commit lines {post_refine_lines})"
+    )
+
+
+def test_skill_md_references_post_refine_commit() -> None:
+    """SKILL.md must reference post-refine-commit (manifest entry + Reference Files).
+
+    After the Task 1 extraction, SKILL.md references post-refine-commit via:
+    - The Reference-path propagation manifest (body-resolved path for
+      refine-delegation.md consumers).
+    - The Reference Files section (load-on-demand index).
+    The test requires at least 2 occurrences to ensure both sites survive.
+    """
+    repo_root = _repo_root()
+    skill = repo_root / "skills" / "lifecycle" / "SKILL.md"
+    text = skill.read_text(encoding="utf-8")
+    count = text.count("post-refine-commit")
+    assert count >= 2, (
+        f"SKILL.md must reference post-refine-commit at least twice (manifest + "
+        f"Reference Files), found {count}"
     )
 
 

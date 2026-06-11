@@ -25,7 +25,7 @@ The `cortex_command/pipeline/` module contains the execution machinery used by t
 | `worktree.py` | Git worktree create/cleanup for feature isolation |
 | `parser.py` | Parse `master-plan.md` and per-feature `plan.md` into task objects |
 | `report.py` | Generate execution summary report |
-| `metrics.py` | Cost and timing metrics collection |
+| `metrics.py` | Cost and timing metrics collection. Reads `feature_complete` events; tolerates absent `merge_anchor` field (defaults to `"review"`) for pre-restructure legacy events — post-restructure events always emit `merge_anchor: "merge"` (see `metrics.py:226`). |
 | `conflict.py` | Merge conflict classification and repair agent dispatch; inspects unmerged files, aborts in-progress merges, provides `dispatch_repair_agent()` |
 | `merge_recovery.py` | Post-merge test-failure recovery loop; orchestrates flaky guard followed by up to two code-repair attempts with model escalation (sonnet → opus) |
 | `review_dispatch.py` | Post-merge review dispatcher; loads `prompts/review.md` via `_load_review_prompt()`, runs a review agent against the merged state, parses `APPROVED` / `CHANGES_REQUESTED` / `REJECTED` verdicts, and writes the rework deferral on cycle-2 non-`APPROVED` |
