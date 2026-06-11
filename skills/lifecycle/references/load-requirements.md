@@ -16,6 +16,8 @@ Follow these five steps in order:
 
 5. **Fallback when `tags:` is empty or absent.** If the lifecycle `index.md` has no `tags:` field, or `tags:` is present but empty (`tags: []`), or no tag word matches any Conditional Loading phrase: load `project.md` only and proceed silently. No tags is not an error condition — it is the documented fallback for lifecycles whose parent backlog item has no tags, or for new lifecycles created without a parent backlog. Optionally record a brief note (e.g. "no area docs matched for tags: {tags}; loaded project.md only") for downstream visibility, but do not block, retry, or warn.
 
+If a concept you need is not yet defined in the glossary, treat the absence as a signal to surface the term in the next requirements interview.
+
 ## Matching Semantics
 
 - **Case-insensitive substring match against the Conditional Loading phrase text.** A tag word `harness` matches a phrase "Harness adaptation work". A tag word `agent` matches "agent dispatch".

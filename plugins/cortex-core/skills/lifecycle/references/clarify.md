@@ -17,22 +17,17 @@ Branch on the exit code:
 - **Exit 0** — unambiguous match (**Context A**). Parse stdout JSON; the object contains exactly four fields: `filename`, `backlog_filename_slug`, `title`, `lifecycle_slug`. Use these directly in subsequent phases. Do not re-derive slugs from scratch. Read the backlog item's frontmatter (`title`, `description`, `status`) and body.
 - **Exit 2** — ambiguous match. Read the `<filename>\t<title>` candidate lines from stderr. Present them to the user and ask them to select one. Re-invoke `cortex-resolve-backlog-item` with the chosen filename slug, or treat the user's selection directly as the resolved item (Context A).
 - **Exit 3** — no match. Switch to **Context B** (ad-hoc topic) and treat the input as the topic name. Offer to invoke `/cortex-core:backlog new` to create a backlog item with the disciplined body template before continuing — if this seems impractical, note it and proceed without.
-- **Exit 64** — usage error (e.g., empty or malformed input). Halt and surface the stderr usage diagnostic to the user. Do not fall through to disambiguation.
-- **Exit 70** — internal software error (malformed frontmatter, missing backlog directory, or other IO failure). Halt and surface the stderr diagnostic to the user. Do not fall through to disambiguation.
+- **Exit 64** (usage error) / **Exit 70** (internal error) — halt and surface the stderr diagnostic; do not fall through to disambiguation.
 
-> **Note:** If the body contains implementation suggestions (e.g., a proposed fix or a specific approach), treat them as unvalidated hypotheses for the research phase — not as constraints on scope. Scope is determined by the problem to solve, not the suggested solution.
-
-**Context A — Backlog item**: Input resolved to a `cortex/backlog/NNN-*.md` file. Downstream phases use the four named fields (`filename`, `backlog_filename_slug`, `title`, `lifecycle_slug`) from the exit-0 JSON directly.
+**Context A — Backlog item**: Input resolved to a `cortex/backlog/NNN-*.md` file; use the exit-0 JSON fields downstream.
 
 **Context B — Ad-hoc prompt**: Input is raw text (a topic name or description) with no matching backlog item. Assess the prompt directly. The output intent statement and complexity/criticality assessments still apply; backlog write-backs are skipped.
 
-**Title-phrase predicate**: The script matches title-phrase input by computing `slugify(input)` and checking whether it is a substring of `slugify(title)` for each backlog item. Both sides are slugified symmetrically so that punctuation, underscores, slashes, and case differences normalize away. The candidate set is deduplicated by filename; n=1 resolves unambiguously (exit 0), n>1 bails with the candidate list (exit 2), and n=0 falls through to no-match (exit 3). To check whether your input will match, apply `slugify(input)` and look for it in `slugify(title)` — this is what the script does.
+**Title-phrase predicate**: title-phrase input matches when `slugify(input)` is a substring of `slugify(title)`.
 
 ### 2. Load Requirements Context
 
-Load requirements using the shared tag-based loading protocol — read the protocol at the absolute path the lifecycle body resolved and propagated (the `${CLAUDE_SKILL_DIR}/references/load-requirements.md` target established in lifecycle SKILL.md's "Reference-path propagation" subsection) and follow it. If no `cortex/requirements/` directory or files exist, note this and proceed.
-
-If a concept you need is not yet defined in the glossary, treat the absence as a signal to surface the term in the next requirements interview.
+Load requirements using the shared tag-based loading protocol — read the protocol at the propagated absolute path (target: `${CLAUDE_SKILL_DIR}/references/load-requirements.md`) and follow it. If no `cortex/requirements/` directory or files exist, note this and proceed.
 
 ### 3. Confidence Assessment
 
@@ -44,13 +39,13 @@ Assess confidence across three dimensions:
 | **Scope boundedness** | Boundaries are explicit — what is in and out is clear | Scope is open-ended, unbounded, or conflated with adjacent work |
 | **Requirements alignment** | Request aligns with cortex/requirements/ context; no conflicts detected | Request conflicts with, ignores, or has no connection to requirements context |
 
-> **Note:** A prescriptive ticket body — one that suggests a specific fix or approach — does not make scope "more bounded." Scope boundedness is assessed against the problem statement and what is in/out; a detailed implementation suggestion in the body should not raise the scope-boundedness rating.
+> **Note:** A prescriptive ticket body — one that suggests a specific fix or approach — does not make scope "more bounded." Treat implementation suggestions as unvalidated hypotheses for the research phase, not constraints on scope; a detailed suggestion in the body should not raise the scope-boundedness rating.
 
 For Context B (ad-hoc), assess requirements alignment as "no requirements files found" if §2 was skipped.
 
 ### 3a. Critic Review
 
-Read the **clarify-critic** sibling reference at the absolute path the lifecycle body resolved and propagated (the `${CLAUDE_SKILL_DIR}/../refine/references/clarify-critic.md` target established in lifecycle SKILL.md's "Reference-path propagation" subsection) and follow its protocol. After the critic completes, the orchestrator writes the `clarify_critic` event to `cortex/lifecycle/{feature}/events.log` with the post-critic status.
+Read the **clarify-critic** sibling reference at the propagated absolute path (target: `${CLAUDE_SKILL_DIR}/../refine/references/clarify-critic.md`) and follow its protocol. After the critic completes, the orchestrator writes the `clarify_critic` event to `cortex/lifecycle/{feature}/events.log` with the post-critic status.
 
 ### 4. Question Threshold
 
@@ -58,9 +53,7 @@ Read the **clarify-critic** sibling reference at the absolute path the lifecycle
 
 **If any dimension is still low confidence after §3a, or if the critic raised Ask items**: Merge all questions into a single list. Present via AskUserQuestion with a cap of ≤5 questions. If the merged list exceeds 5, prioritize critic Ask items first (they came from independent challenge), then the highest-impact low-confidence dimension questions — drop lower-priority questions to stay within the cap.
 
-Focus on specific gaps — do not re-ask what is already clear from the backlog item or prior context. Wait for user answers before continuing.
-
-Do not ask questions for the sake of completeness. A clear, well-scoped backlog item with no requirements conflicts and no critic Ask items should flow directly through without any questions.
+Ask only about specific gaps — never for completeness, and do not re-ask what is already clear from the backlog item or prior context. Wait for user answers before continuing.
 
 ### 5. Produce Clarify Output
 
@@ -72,14 +65,14 @@ Write or present the following five outputs — this is the handoff package for 
    - Simple: 1–3 files, mechanical change (rename, reword, add a field), follows existing pattern exactly, 1 obvious approach, no behavioral effects on callers
    - Complex: 4+ files, OR modifies shared infrastructure / core workflow orchestration, OR has cross-cutting behavioral effects on other skills or downstream processes, OR requires judgment calls about design trade-offs, OR introduces new patterns
    When in doubt, prefer `complex`.
-   State the assessment with brief reasoning and proceed — do not ask the user to confirm.
 
 3. **Criticality assessment**: `low | medium | high | critical`, using the lifecycle criticality levels:
    - low: minimal impact, easily reversed, no meaningful downstream dependencies (e.g., a comment fix, a typo correction)
    - medium: affects users or developers but recoverable; isolated tooling change with no downstream consumers
    - high: significant impact or hard to reverse, OR any change to shared skills / workflow infrastructure / overnight runner / hooks that other capabilities depend on — **this is the appropriate default for most skill and agentic layer changes**
    - critical: severe consequences — security, data loss, financial, OR loss of a core capability everything else depends on
-   Default to `high` for skill/lifecycle/hook/workflow changes. Default to `medium` only for clearly isolated, easily-reverted tooling changes (e.g., a standalone UI tweak with no shared dependencies). State the assessment and proceed — do not ask the user to confirm.
+   Default to `medium` only for clearly isolated, easily-reverted tooling changes (e.g., a standalone UI tweak with no shared dependencies).
+   State both assessments with brief reasoning and proceed — do not ask the user to confirm.
 
 4. **Requirements alignment note**: One of:
    - "Aligned with cortex/requirements/{file}: [brief summary of relevant constraints or goals]"
@@ -91,7 +84,7 @@ Write or present the following five outputs — this is the handoff package for 
 
 ### 6. Research Sufficiency Criteria
 
-When Research phase entry evaluates an existing `cortex/lifecycle/{slug}/research.md`, apply these criteria to determine whether it is sufficient or must be rerun. These criteria are defined here (in Clarify) because the clarified intent statement and scope boundaries produced in §5 are the benchmark against which Research is graded.
+These criteria are defined here but applied at Research phase entry, not during Clarify: when Research phase entry evaluates an existing `cortex/lifecycle/{slug}/research.md`, apply them to determine whether it is sufficient or must be rerun.
 
 **Research is sufficient if none of the following signals are present:**
 
@@ -106,22 +99,21 @@ When Research phase entry evaluates an existing `cortex/lifecycle/{slug}/researc
 
 ### 7. Write-Backs (Context A only)
 
-After the user confirms complexity and criticality, write them to the backlog item:
+After producing the complexity and criticality assessments, write them to the backlog item:
 
 ```bash
 cortex-update-item {backlog-filename-slug} --complexity {value} --criticality {value}
 ```
 
-Where `{backlog-filename-slug}` is the backlog file's name without the `.md` extension (e.g., `119-create-refine-skill`).
+Use `backlog_filename_slug` from §1 as `{backlog-filename-slug}`.
 
-If `cortex-update-item` fails, surface the error and ask the user to resolve it before proceeding. Do not silently skip write-backs. If `cortex-update-item` exits with code 2, the slug was ambiguous: present the candidate list on stderr to the user and ask them to re-invoke with a disambiguated slug.
+If `cortex-update-item` fails, surface the error and ask the user to resolve it before proceeding. Do not silently skip write-backs. On exit 2, apply the canonical ambiguous-slug handling in backlog-writeback.md (loaded at lifecycle Step 2).
 
 For Context B (ad-hoc), skip this step — there is no backlog item to update.
 
 ## Constraints
 
-| Thought | Reality |
-|---------|---------|
-| "Clarify should check if the research artifact is sufficient" | Research sufficiency is evaluated at Research phase *entry*, not during Clarify. Clarify defines the criteria (§6); Research phase entry applies them. |
-| "I should interview the user like the specify phase does" | Clarify asks ≤5 targeted questions to resolve low-confidence gaps. The deep requirements interview happens in Specify, after Research. These are different gates. |
-| "I should assess technical feasibility" | That is Research's job. Clarify only checks intent, scope, and requirements alignment. |
+Out of scope for Clarify:
+
+- The deep requirements interview — that happens in Specify, after Research. These are different gates.
+- Technical feasibility — that is Research's job. Clarify only checks intent, scope, and requirements alignment.

@@ -73,6 +73,7 @@ Read **only** the reference for the current phase.
 
 - **load-requirements** → `${CLAUDE_SKILL_DIR}/../lifecycle/references/load-requirements.md`
 - **fanout** (research-sizing matrix) → `${CLAUDE_SKILL_DIR}/../lifecycle/references/fanout.md`
+- **orchestrator-review** (canonical protocol) → `${CLAUDE_SKILL_DIR}/../lifecycle/references/orchestrator-review.md`
 
 ### Research → Decompose approval gate (spec R4)
 

@@ -18,7 +18,7 @@ If tests fail, report the failures and do not proceed until they are resolved. F
 
 Run `cortex-read-commit-artifacts` to read the `commit-artifacts` flag from project config. If stdout is `true` (the default), stage `cortex/lifecycle/{slug}/` artifacts alongside any uncommitted source changes, then use `/cortex-core:commit` to create the commit. If stdout is `false`, exclude lifecycle artifacts from staging (commit only the uncommitted source changes via `/cortex-core:commit`).
 
-**On-main short-circuit**: if the current branch is `main` or `master`, skip Steps 2–5 (no PR needed for direct-to-main work) and proceed to Step 7 with pr.json absent and no orphan-PR probe needed — treat as first-run path jumping directly to Steps 9–12. The finalization-tail artifact commit (Step 11a) runs on this path; its stage-first guard ensures nothing is double-committed.
+**On-main short-circuit**: if the current branch is `main` or `master`, skip Steps 2–5 (no PR needed for direct-to-main work) and proceed to Step 7 with pr.json absent and no orphan-PR probe needed — treat as first-run path jumping directly to Steps 9–12. The finalization-tail artifact commit (Step 11a) runs on this path.
 
 ### Step 3 — Push Branch and Create PR
 
@@ -29,18 +29,11 @@ Push the branch to the remote, then create a pull request with a summary of the 
 1. **Signal 1 — lock file**: call `cortex_command/interactive_lock.py:read_lock(feature_slug)`. A non-None return indicates an `interactive.pid` lock file is present for this slug.
 2. **Signal 2 — directory corroboration**: run `git rev-parse --show-toplevel` and compare the result against `pwd`. If both resolve to the same path and that path is the `interactive/{slug}` worktree root, the session's CWD is confirmed inside the worktree.
 
-If **both signals are positive** (lock file present and `git rev-parse --show-toplevel` matches the `interactive/{slug}` worktree path), apply the `cd-in-then-out` pattern around `/cortex-core:pr`:
+If **both signals are positive** (lock file present and `git rev-parse --show-toplevel` matches the `interactive/{slug}` worktree path), apply the `cd-in-then-out` pattern around `/cortex-core:pr`: save `_origin_pwd=$(pwd)`, cd into the worktree, invoke `/cortex-core:pr`, then restore with `cd "$_origin_pwd"`.
 
-```
-(a) save _origin_pwd=$(pwd)
-(b) cd into the interactive/{slug} worktree if not already there
-(c) invoke /cortex-core:pr
-(d) cd "$_origin_pwd" to restore the original working directory
-```
+If **either signal is absent or contradictory**, treat the session as NOT in Variant A and invoke `/cortex-core:pr` from the current cwd without any cd.
 
-If **either signal is absent or contradictory** (lock file missing or invalid, or `git rev-parse --show-toplevel` does not match the worktree path, or the two signals disagree), treat the session as NOT in Variant A and invoke `/cortex-core:pr` from the current cwd without any cd.
-
-The detection is purely advisory — it does not block PR creation. When the `cd-in-then-out` path is taken, the restore in step (d) ensures the Step 8 cd-out hard guard composes correctly (Step 8 will find the session back in the original directory, not the worktree).
+The detection is purely advisory — it does not block PR creation.
 
 ### Step 4 — Write `pr.json` Atomically
 
@@ -50,7 +43,7 @@ Resolve the repo identity:
 gh repo view --json nameWithOwner -q .nameWithOwner
 ```
 
-Write `cortex/lifecycle/{slug}/pr.json` using a tempfile + `os.replace` pattern (per `cortex/requirements/pipeline.md:124-130` atomicity invariant) with the following closed schema:
+Write `cortex/lifecycle/{slug}/pr.json` using a tempfile + `os.replace` pattern (per `cortex/requirements/pipeline.md:124-130` atomicity invariant; create the tempfile in pr.json's parent directory — os.replace is atomic only within a single filesystem) with the following closed schema:
 
 ```json
 {
@@ -63,22 +56,6 @@ Write `cortex/lifecycle/{slug}/pr.json` using a tempfile + `os.replace` pattern 
 ```
 
 The `repo` field is resolved at PR-creation time and locked so Step 7's `gh pr view --repo <repo>` queries the correct repository even if `origin` changes between invocations.
-
-**Atomic write pattern**:
-
-```python
-import json, os, tempfile, pathlib
-
-pr_json_path = pathlib.Path(f"cortex/lifecycle/{slug}/pr.json")
-payload = {"number": number, "url": url, "head_branch": head_branch,
-           "opened_at": opened_at, "repo": repo}
-with tempfile.NamedTemporaryFile(
-    mode="w", dir=pr_json_path.parent, delete=False, suffix=".tmp"
-) as tmp:
-    json.dump(payload, tmp, indent=2)
-    tmp_path = tmp.name
-os.replace(tmp_path, pr_json_path)
-```
 
 ### Step 5 — Emit `pr_opened` Event
 
@@ -94,7 +71,7 @@ Exit with the following handoff message and do not proceed further:
 
 > PR open at `<url>`; merge on GitHub, then re-run `/cortex-core:lifecycle complete <slug>` to finalize.
 
-This is the kept phase-exit pause. The user merges the PR on GitHub (or delegates merge to a reviewer), then re-invokes the complete phase to trigger Steps 7–12.
+Do not poll — manual re-invocation is the gate.
 
 ---
 
@@ -215,8 +192,6 @@ After the `cortex-update-item` call (regardless of whether it succeeded, failed,
    - Else run `command -v cortex-generate-backlog-index` — if found on PATH, run `cortex-generate-backlog-index` and emit: `"Index regenerated via cortex-generate-backlog-index"`
    - Else emit: `"WARNING: Could not regenerate backlog index — no generate_index.py script found. Index may be stale."`
 
-Each fallback is a separate Bash tool call using `test -f` or `command -v` to check availability before running.
-
 ### Step 11 — Log `feature_complete`
 
 Append a `feature_complete` event to `cortex/lifecycle/{slug}/events.log`:
@@ -227,14 +202,12 @@ Append a `feature_complete` event to `cortex/lifecycle/{slug}/events.log`:
 
 Read `tasks_total` and `rework_cycles` by running `cortex-lifecycle-counters --feature {slug}` and parsing the JSON output. If no review phase occurred (simple tier), `rework_cycles` will be `0`.
 
-The `merge_anchor: "merge"` field identifies this event as post-restructure regime (distinct from pre-restructure events which emit `merge_anchor: "review"` or omit the field). Readers tolerate the field's absence on legacy events (default to `"review"`).
-
 This event closes the event log for the feature.
 
 <!-- finalization-commit-step -->
 ### Step 11a — Commit Finalization Artifacts
 
-Run `cortex-read-commit-artifacts` to read the `commit-artifacts` flag from project config. The binstub prints `true` or `false` on stdout; when the file or field is absent, treat the result as `true`.
+Run `cortex-read-commit-artifacts` to read the `commit-artifacts` flag from project config (default true when absent).
 
 **Flag is `false`**: skip the commit entirely. Note inline that lifecycle artifacts and any uncommitted source are left in the working tree for the operator to commit deliberately.
 
@@ -251,22 +224,20 @@ git add -- cortex/lifecycle/{slug}/research.md \
             cortex/lifecycle/{slug}/events.log
 ```
 
-Stage by enumerated paths only — a directory-scoped add on the lifecycle dir would sweep in residue that is un-ignored *or* already-tracked: `learnings/*` siblings such as `outline.md` (the narrow `recovery-log.md` ignore rule never covers them, so a dir-add catches them in every repo), plus `critical-review-residue.json` (now gitignored in fresh consumer repos by the shipped `cortex/.gitignore`, but still tracked-and-swept in this repo's already-committed history).
+Stage by enumerated paths only — a directory-scoped add on the lifecycle dir would sweep in residue files that are un-ignored or already-tracked.
 
-Stage the review-phase requirements-drift file, if one was auto-applied, by its exact recorded path — never with a directory-scoped add on `cortex/requirements/`:
+Stage the review-phase requirements-drift file, if one was auto-applied, by its exact recorded path — no directory-scoped add on `cortex/requirements/` (neither the `-u` tracked-modified form nor a bare directory add; it sweeps unrelated in-flight requirements edits):
 
 - Read the `## Suggested Requirements Update` section from `cortex/lifecycle/{slug}/review.md` and extract its `**File**:` value (the path the review phase recorded per review.md §4a — fields `File` / `Section` / `Content`).
 - `git add -- <that File path>`.
 - If no `## Suggested Requirements Update` section exists (no drift was applied), skip this staging silently.
 
-Do **not** stage with a directory-scoped add on the `cortex/requirements/` tree (neither the tracked-modified `-u` form nor a bare directory add): on the guard-less trunk path that would sweep an unrelated in-flight `project.md` (or other tracked-modified requirements file) into the finalization commit. Stage only the exact `File` path review.md recorded.
+Stage the backlog write-back:
 
-Stage the backlog write-back so it captures the `cortex-update-item` terminal-status cascade rewrites of pre-tracked sibling/parent files (and the resolved item itself, even when it was created-but-not-yet-committed) without sweeping in unrelated untracked tickets:
+- `git add -u cortex/backlog/` — staged tracked-modified only.
+- Stage the resolved backlog item by its **resolved filename**: capture it via `cortex-resolve-backlog-item {slug}` (exit-0 stdout, the `filename` field), then `git add -- cortex/backlog/<resolved-filename>`.
 
-- `git add -u cortex/backlog/` — tracked-modified only; this captures the cascade rewrites (all of which modify pre-tracked files) while skipping any untracked unrelated tickets.
-- Stage the resolved backlog item by its **resolved filename**: capture it via `cortex-resolve-backlog-item {slug}` (exit-0 stdout, the `filename` field — the same resolver Step 9 relies on, which does title-subset matching), then `git add -- cortex/backlog/<resolved-filename>`. This covers the Edge Case where the resolved item itself is untracked, which `git add -u` alone cannot.
-
-Do **not** stage with a bare directory-scoped add on the `cortex/backlog/` tree (it would sweep unrelated untracked tickets), and do **not** rely on a tail-anchored slug-glob (`{slug}.md` suffixed under `cortex/backlog/`): the lifecycle `{slug}` is a truncated prefix of the backlog filename slug, so that glob matches zero files. Use the resolver's `filename` instead. The gitignored `cortex/backlog/*.events.jsonl` sidecar is excluded automatically.
+Do **not** use a bare directory-scoped add on `cortex/backlog/` (it sweeps unrelated untracked tickets) and do **not** rely on a slug-glob (`{slug}.md`): the lifecycle `{slug}` is a truncated prefix of the backlog filename, so that glob matches zero files — use the resolver's `filename` field instead.
 
 **Stage-first idempotent guard**: after staging, run:
 
@@ -274,7 +245,7 @@ Do **not** stage with a bare directory-scoped add on the `cortex/backlog/` tree 
 git diff --cached --quiet
 ```
 
-- Exit 0 (nothing staged): nothing new to commit — skip `/cortex-core:commit` silently and continue to Step 12. This covers the worktree-interactive post-merge path, where the lifecycle artifacts are already on `main` via the merge and the targeted `git add` stages nothing.
+- Exit 0 (nothing staged): nothing new to commit — skip `/cortex-core:commit` silently and continue to Step 12 (common on the worktree path post-merge).
 - Exit 1 (something staged): proceed to commit.
 
 Invoke `/cortex-core:commit` with an imperative ≤72-char subject, for example:
@@ -283,13 +254,13 @@ Invoke `/cortex-core:commit` with an imperative ≤72-char subject, for example:
 Complete {slug}: lifecycle artifacts and backlog write-back
 ```
 
-If `/cortex-core:commit` exits non-zero, surface the error and stop before the Step 12 summary — a summary implying the artifacts were committed should not be emitted until the commit succeeds. The operator resolves the underlying failure and re-invokes; Branch 2 of Step 7 (`feature_complete` present) will short-circuit to Step 12 on retry, leaving the stage-first guard to no-op.
+If `/cortex-core:commit` exits non-zero, surface the error and stop before the Step 12 summary — a summary implying the artifacts were committed should not be emitted until the commit succeeds.
 
 After a successful commit, if the current branch is not `main` or `master`, surface a one-line advisory:
 
 > Artifacts committed on `<branch>` rather than the default branch — move them to `main` if appropriate.
 
-This covers the feature-branch (no-worktree) flow, where the finalization tail runs on `feature/{slug}` after merge. No automatic branch switch — branch normalization is deferred.
+No automatic branch switch.
 <!-- /finalization-commit-step -->
 
 ### Step 12 — Summarize and Preserve Lifecycle Directory
@@ -300,15 +271,7 @@ Provide a brief summary of what was built:
 - Key files created or modified
 - Any open items or follow-up work identified during implementation or review
 
-The `cortex/lifecycle/{slug}/` directory is preserved as project history. It contains the research, specification (if applicable), plan, implementation events, and the `pr.json` handoff artifact. Do not delete or archive the directory.
+The `cortex/lifecycle/{slug}/` directory is preserved as project history. Do not delete or archive the directory.
 
 Proceed automatically — do not ask the user for confirmation. The lifecycle is now complete; emit the summary and exit without further prompts.
 
-## Constraints
-
-| Thought | Reality |
-|---------|---------|
-| "Let me clean up the lifecycle directory" | The lifecycle directory is project documentation. Preserve it for future reference. |
-| "I'll force-remove the worktree to be safe" | `cleanup_worktree()` never receives `force=True` from the interactive path. Retain on dirty or non-ancestor. |
-| "I'll create the PR again on re-invocation" | On re-invocation, read `pr.json` first. Never create a duplicate PR. |
-| "I'll poll GitHub at every SessionStart" | Manual re-invocation is the gate. No automated polling. |

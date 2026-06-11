@@ -43,7 +43,7 @@ Before dispatching any reviewer agent, load project context for injection into r
 
 ### Step 2a.5: Pre-Dispatch (atomic path + SHA pin)
 
-Before deriving angles or dispatching any agent, fuse path validation and SHA-256 computation into a single subprocess call: `cortex-critical-review prepare-dispatch <artifact-path> [--feature <name>]`. Capture the single-line JSON object printed to stdout (schema: `{"resolved_path": "<absolute-path>", "sha256": "<64-hex>"}`) and bind `{artifact_path}` ← `resolved_path` and `{artifact_sha256}` ← `sha256`. Substitute both into every dispatch site that follows. If `prepare-dispatch` exits non-zero, surface its stderr verbatim and stop — do not dispatch any agent. The orchestrator MUST NOT shell out to `git rev-parse`, `realpath`, or `sha256sum` directly, and MUST NOT instruct dispatched reviewers to do so.
+Fuse artifact-path validation and SHA-256 computation before any dispatch: `cortex-critical-review prepare-dispatch <artifact-path> [--feature <name>]`. Bind `{artifact_path}` and `{artifact_sha256}` from the stdout JSON; substitute both into every dispatch site that follows. If `prepare-dispatch` exits non-zero, surface its stderr verbatim and stop — do not dispatch any agent.
 
 Full invocation contract and exit-code routing: `${CLAUDE_SKILL_DIR}/references/verification-gates.md`.
 
@@ -67,9 +67,7 @@ Each agent receives the canonical reviewer prompt from `${CLAUDE_SKILL_DIR}/refe
 
 ### Step 2c.5: Sentinel-First Verification Gate
 
-After parallel reviewers return, run a two-phase verification gate before Step 2d synthesis. **Phase 1** verifies each reviewer's `READ_OK: <path> <sha>` sentinel via `cortex-critical-review check-artifact-stable` (mirroring the synth-side `check-synth-stable` gate): exit 0 passes on SHA match anywhere within the first 50 lines, exit 3 excludes on SHA drift / sentinel absent / `READ_FAILED`, and exit 4 is a benign skip (telemetry skipped because the `cortex/lifecycle/{feature}/` dir is absent — the write-guard now enforces the `<path>`-arg/no-`--feature` skip-telemetry contract structurally; treat as a normal pass). For each exit-3 excluded reviewer, invoke `cortex-critical-review record-exclusion ...` exactly once (the only sanctioned way to log sentinel_absence) — do NOT append to `events.log` inline. **Phase 2** extracts the `<!--findings-json-->` envelope only for reviewers that pass Phase 1, using LAST-occurrence delimiter anchoring; malformed envelopes drop class tags but pass prose to the synthesizer as an untagged block.
-
-If every reviewer is excluded, surface verbatim and do NOT synthesize: `All reviewers excluded — drift or Read failure detected; critical-review pass invalidated. Re-run after resolving concurrent write source.`
+After parallel reviewers return, run a two-phase verification gate before Step 2d synthesis. Phase 1 verifies each reviewer's sentinel via `cortex-critical-review check-artifact-stable`; Phase 2 extracts the `<!--findings-json-->` envelope only for reviewers that pass Phase 1. If every reviewer is excluded (all exit-3), surface verbatim and do NOT synthesize: `All reviewers excluded — drift or Read failure detected; critical-review pass invalidated. Re-run after resolving concurrent write source.`
 
 Full route table, `record-exclusion` invocation contract, and Phase 2 schema assertions: `${CLAUDE_SKILL_DIR}/references/verification-gates.md`.
 
@@ -83,7 +81,7 @@ Decision gates: A-class count from well-formed envelopes only (untagged prose ex
 
 ### Step 2d.5: Post-Synthesis (atomic SHA verification)
 
-After the synthesizer returns, pipe its **full output** through `cortex-critical-review check-synth-stable --feature <name> --expected-sha <hex>` before surfacing anything to the user. **Exit 0** = sentinel + SHA OK → surface the synthesizer's prose and proceed to Step 2e. **Exit 3** = sentinel absent or SHA mismatch (with a real `cortex/lifecycle/{feature}/` dir present) → do NOT surface the synthesizer's prose; relay the subcommand's own stdout verbatim (which carries the `Critical-review pass invalidated` phrasing). On Exit 3, do NOT proceed to Step 2e — the pass is invalidated. **Exit 4** = telemetry skipped because the `cortex/lifecycle/{feature}/` dir is absent (the write-guard enforces the `<path>`-arg/no-`--feature` skip-telemetry contract structurally) → a benign skip distinct from exit 3; surface the synthesizer's prose and proceed to Step 2e as on Exit 0.
+After the synthesizer returns, pipe its full output through `cortex-critical-review check-synth-stable --feature <name> --expected-sha <hex>` before surfacing anything to the user. On exit 3 (sentinel absent or SHA mismatch), do NOT surface the synthesizer's prose — relay the subcommand's stdout verbatim and do NOT proceed to Step 2e.
 
 Full invocation contract and resolution instructions: `${CLAUDE_SKILL_DIR}/references/verification-gates.md`.
 

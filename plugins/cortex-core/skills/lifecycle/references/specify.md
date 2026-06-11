@@ -6,7 +6,7 @@ Structured interview to surface hidden requirements, edge cases, and priorities 
 
 ### 1. Load Context
 
-Read `cortex/lifecycle/{feature}/research.md` for codebase analysis and open questions. If `cortex/lifecycle.config.md` exists at the project root, read it for project-specific constraints. Load requirements using the shared tag-based loading protocol — read the protocol at the absolute path the lifecycle body resolved and propagated (the `${CLAUDE_SKILL_DIR}/references/load-requirements.md` target established in lifecycle SKILL.md's "Reference-path propagation" subsection) and follow it. If no `cortex/requirements/` directory or files exist, note this and proceed. Use requirements to avoid re-asking settled questions — focus the interview on feature-specific details that requirements don't already cover.
+Read `cortex/lifecycle/{feature}/research.md` for codebase analysis and open questions. If `cortex/lifecycle.config.md` exists at the project root, read it for project-specific constraints. Load requirements using the shared tag-based loading protocol — read `load-requirements.md` at the absolute path the lifecycle body resolved and propagated (see lifecycle SKILL.md "Reference-path propagation") and follow it. If no `cortex/requirements/` directory or files exist, note this and proceed. Use requirements to avoid re-asking settled questions — focus the interview on feature-specific details that requirements don't already cover.
 
 If a concept you need is not yet defined in the glossary, treat the absence as a signal to surface the term in the next requirements interview.
 
@@ -17,8 +17,6 @@ Before asking questions, review the research artifact and feature description. F
 - **Already clear**: State what you found and move on — don't ask the user to confirm the obvious
 - **Partially covered**: Ask only about the gaps, referencing what's already known
 - **Unclear**: Run the full interview for that area
-
-For simple-tier features, many areas will often be self-evident — the interview may reduce to just a few targeted questions.
 
 Ask about these areas in sequence, adapting based on answers:
 
@@ -37,15 +35,15 @@ Ask about these areas in sequence, adapting based on answers:
 
 **Technical constraints**: Surface constraints from the research findings. Ask about performance requirements, compatibility needs, and integration boundaries.
 
-Ask probing questions — challenge assumptions, probe unstated expectations, identify missing requirements. Do not just confirm what is already written. Use the AskUserQuestion tool to present questions interactively — not as plain markdown text. Continue until all ambiguities are resolved.
+Probe — do not just confirm what is already written. Use the AskUserQuestion tool to present questions interactively — not as plain markdown text. Continue until all ambiguities are resolved.
 
-**Cadence**: Ask interview questions one at a time, waiting for the user's response before posing the next. The previous answer is the gate to the next question, so each question can be shaped by what just landed. Avoid batching multiple questions into a single turn — batched questions invite partial answers, hide decision-tree branches that should resolve sequentially, and create respondent fatigue. This cadence is the canonical rule at `skills/interview/references/loop.md`.
+**Cadence**: Ask one question at a time, waiting for the user's response before posing the next. Do not batch questions into a single turn. This cadence is the canonical rule at `skills/interview/references/loop.md`.
 
-**File-path citation**: When recommending an acceptance criterion derived from code, name the file path that grounds it so the user can flag a wrong-place-to-implement before any code is written. For intent-only criteria with no codebase grounding, omit the citation per existing semantics — do not fabricate.
+**File-path citation**: When recommending an acceptance criterion derived from code, name the file path that grounds it so the user can flag a wrong-place-to-implement before any code is written. For intent-only criteria with no codebase grounding, omit the citation — do not fabricate.
 
-**Verification posture**: When citing a file path or a function-behavior claim during the interview, verify it against the actual code before accepting the user's confirmation. This does not replace the §2b end-of-interview Verification check — that gate still fires on the complete candidate claim-set; it surfaces wrong-place-to-implement and stale claims earlier as a passive precondition.
+**Verification posture**: When citing a file path or a function-behavior claim during the interview, verify it against the actual code before accepting the user's confirmation. (§2b's end-of-interview check still runs.)
 
-**Edge-case invention**: When a requirement's acceptance criteria look under-specified, invent one concrete edge-case scenario that would stress the criterion and surface it to the user before locking. Apply judgmentally — skip when the criteria are already tight. This is additive to the section-level **Edge cases** interview area above; it fires per requirement only when the criteria leave a stress-test surface open.
+**Edge-case invention**: When a requirement's acceptance criteria look under-specified, invent one concrete edge-case scenario that would stress the criterion and surface it to the user before locking. Apply judgmentally — skip when the criteria are already tight.
 
 ### 2a. Research Confidence Check
 
@@ -62,7 +60,7 @@ After the interview concludes, evaluate whether the research from `research.md` 
 
 **C3 (Uncovered dependencies)**: Technical constraints or dependencies raised during the interview rely on codebase patterns not covered in `research.md`, and writing accurate acceptance criteria is impossible without them. **Calibration**: Only trigger when the missing patterns are required for accurate requirements — not merely helpful.
 
-> **Note**: This checklist does NOT re-evaluate the four clarify.md §6 staleness signals (scope mismatch, files missing, empty/generic analysis, requirements drift). Those were evaluated at Research phase entry and are not re-checked here.
+> **Note**: Do not re-evaluate clarify.md §6 staleness signals — those were checked at Research entry.
 
 **If all three signals pass**: proceed to §3. No event is logged. Do not emit any acknowledgment to the user.
 
@@ -70,13 +68,12 @@ After the interview concludes, evaluate whether the research from `research.md` 
 
 **If any signal is flagged AND current_cycle = 1**:
 
-1. Present the signals flagged in §2a's Research Confidence Check as a bulleted list — one bullet per flagged signal, ≤15 words per bullet, no prose expansion outside the bullets. Then state that Research must be re-run. Example: a bullet of acceptable terseness might read:
-   - `C2: spec needs read of hooks/commit-msg.sh — not in research.md`
-2. Transition back to Research — **bypassing /refine's Sufficiency Check**. Because Specify runs inside a /cortex-core:refine invocation (Step 5), the normal loop-back to Research would re-enter /cortex-core:refine Step 4, which applies a Sufficiency Check that may declare the existing `research.md` sufficient and skip back to Spec. This must not happen. Explicitly override: treat the existing `research.md` as invalidated and re-run Research from scratch regardless of Sufficiency Check criteria. This follows the same override pattern used in lifecycle SKILL.md's Discovery Bootstrap edge case.
+1. Present the signals flagged in §2a's Research Confidence Check as a bulleted list — one bullet per flagged signal, ≤15 words per bullet, no prose expansion outside the bullets. Then state that Research must be re-run.
+2. Transition back to Research — **bypassing /refine's Sufficiency Check**: treat the existing `research.md` as invalidated and re-run Research from scratch (otherwise /refine Step 4 may declare it sufficient and skip back to Spec).
 
 **If any signal is flagged AND current_cycle ≥ 2**:
 
-Present the signals flagged in §2a's Research Confidence Check as a bulleted list — one bullet per flagged signal, ≤15 words per bullet, no prose expansion outside the bullets. Then ask (via AskUserQuestion) whether to loop back to Research or proceed to §3 anyway.
+Present the flagged signals as in cycle 1, then ask (via AskUserQuestion) whether to loop back to Research or proceed to §3 anyway.
 
 - If the user chooses to loop back: repeat the cycle 1 loop-back procedure above (announce, re-run Research bypassing Sufficiency Check).
 - If the user chooses to proceed: continue to §3.
@@ -85,13 +82,13 @@ Present the signals flagged in §2a's Research Confidence Check as a bulleted li
 
 Before drafting §3, run the checks below. All checks are silent on pass: if every check passes, proceed to §3 with no output. On failure, surface only the specific failing claim or unresolved item as a single terse bullet (≤15 words) — no preamble, no restatement of the check, no pass-side narration.
 
-**Verification check**: For any claim the spec will make about code behavior, verify it against actual code before writing it. Perform all four sub-checks; on failure, surface only the specific failing claim. Common failure modes:
-- **Git command syntax**: If the spec references a `git diff` command, confirm whether two-dot (`A..B`) or three-dot (`A...B`) semantics are correct for the intended comparison. These are not interchangeable — two-dot produces an empty diff when one ref is an ancestor of the other.
+**Verification check**: For any claim the spec will make about code behavior, verify it against actual code before writing it. Perform all four sub-checks. Common failure modes:
+- **Git command syntax**: If the spec references a `git diff` command, confirm whether two-dot (`A..B`) or three-dot (`A...B`) semantics are correct for the intended comparison.
 - **Function behavior**: Before asserting what a function does, accepts, or returns — read it. Do not infer from its name or call sites alone.
 - **File paths**: Before referencing a file path in a requirement, verify the file exists at that path.
-- **State ownership**: Before asserting that a function writes or persists a value, confirm which function owns that write and when it runs. A function that increments a counter in memory may have its write silently overwritten if another function owns the writeback at end-of-batch.
+- **State ownership**: Before asserting that a function writes or persists a value, confirm which function owns that write and when it runs — an in-memory increment can be silently overwritten by an end-of-batch writeback owner.
 
-**Research cross-check**: Re-read `cortex/lifecycle/{feature}/research.md` in full. For each explicit behavioral requirement, constraint, guard, or edge case documented in research — verify it appears in the spec's Requirements, Edge Cases, or Technical Constraints. A requirement present in research but absent from the spec is a silent omission, not a scope decision. On failure, surface only the specific omitted item. If an omission is intentional, note it explicitly in Non-Requirements or Open Decisions.
+**Research cross-check**: Re-read `cortex/lifecycle/{feature}/research.md` in full. For each explicit behavioral requirement, constraint, guard, or edge case documented in research — verify it appears in the spec's Requirements, Edge Cases, or Technical Constraints. A requirement present in research but absent from the spec is a silent omission, not a scope decision. If an omission is intentional, note it explicitly in Non-Requirements or Open Decisions.
 
 **Open Decision Resolution**: Before adding any item to `## Open Decisions`, attempt to resolve it using this order:
 
@@ -99,7 +96,7 @@ Before drafting §3, run the checks below. All checks are silent on pass: if eve
 2. Ask the user directly — the user is present during spec; implementation may run overnight without them.
 3. Defer to `## Open Decisions` only if the decision requires implementation-level context that cannot be obtained without writing or reading the actual code (e.g., choosing between two patterns that are only distinguishable once in the codebase).
 
-Any item that IS deferred must include a one-sentence reason why it cannot be resolved at spec time. No output on pass; on failure, surface only the specific unresolved item as a terse bullet.
+Any item that IS deferred must include a one-sentence reason why it cannot be resolved at spec time.
 
 ### 3. Write Specification Artifact
 
@@ -121,7 +118,7 @@ Omit this callout entirely when §2a passed cleanly or no loop-back occurred.
 [One paragraph: what this solves, who benefits, why it matters]
 
 ## Phases
-<!-- Group requirements into phases. ≥1 phase for complexity=simple; ≥2 phases for complexity=complex (matches plan.md Outline tolerance). Each phase name below must match the **Phase** tag on its requirements in `## Requirements`. -->
+<!-- Group requirements into phases. ≥1 phase for complexity=simple; ≥2 phases for complexity=complex. Each phase name below must match the **Phase** tag on its requirements in `## Requirements`. -->
 - **Phase 1: <name>** — <one-line goal>
 - **Phase 2: <name>** — <one-line goal>
 
@@ -160,24 +157,16 @@ None considered.
 
 ### 3a. Orchestrator Review
 
-Before presenting the artifact to the user, read and follow `references/orchestrator-review.md` for the `specify` phase. The orchestrator review must pass before proceeding to user approval.
+Before presenting the artifact to the user, read and follow the orchestrator-review protocol (use the body-resolved absolute path from lifecycle SKILL.md's Reference-path propagation manifest: the **orchestrator-review** target) for the `specify` phase. The orchestrator review must pass before proceeding to user approval.
 
 ### 3b. Critical Review
 
-After orchestrator review passes, read the active tier and criticality:
+After orchestrator review passes, read the active tier and criticality (rules: criticality-matrix.md §Reading lifecycle state — use the body-resolved absolute path from lifecycle SKILL.md's Reference-path propagation manifest):
 
-- `cortex-lifecycle-state --feature {feature} --field tier` — canonical rule: `lifecycle_start.tier` is superseded by the most recent `complexity_override.to`; defaults to `simple` when absent.
-- `cortex-lifecycle-state --feature {feature} --field criticality` — defaults to `medium` when absent.
+- `cortex-lifecycle-state --feature {feature} --field tier`
+- `cortex-lifecycle-state --feature {feature} --field criticality`
 
-If either read's output contains `"corrupted": true`, the events.log is corrupted and the gate input is unknowable — treat the feature as requiring review (run the critical review) rather than defaulting to `simple`/`medium` and skipping.
-
-**Run** when `tier = complex` AND `criticality ∈ {medium, high, critical}`: invoke the `critical-review` skill with the spec artifact. Present the synthesis to the user before spec approval.
-
-**Skip** otherwise. When the skip is because `tier = complex` AND `criticality = low`, first append a `lifecycle_critical_review_skipped` event to `cortex/lifecycle/{feature}/events.log` so the skip rate is observable, then proceed to user approval:
-
-```
-{"ts": "<ISO 8601>", "event": "lifecycle_critical_review_skipped", "feature": "<name>", "phase": "specify", "tier": "complex", "criticality": "low"}
-```
+**Run** when `tier = complex` AND `criticality ∈ {medium, high, critical}`: invoke the `critical-review` skill with the spec artifact. Present the synthesis to the user before spec approval. Otherwise, read and follow the critical-review gate protocol (use the body-resolved absolute path from lifecycle SKILL.md's Reference-path propagation manifest: the **critical-review-gate** target) for the `specify` phase.
 
 ### 4. User Approval
 
@@ -199,13 +188,11 @@ Enumerate the options on that call explicitly as: `Approve` | `Request changes` 
 
 ### 5. Transition
 
-On `Approve`, append a `phase_transition` event to `cortex/lifecycle/{feature}/events.log` (the `spec_approved` event from §4 must precede this one in the log):
+On `Approve`, append a `phase_transition` event to `cortex/lifecycle/{feature}/events.log`:
 
 ```
 {"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "from": "specify", "to": "plan"}
 ```
-
-After approval, proceed to Plan automatically — do not ask the user for confirmation.
 
 ## Hard Gate
 
