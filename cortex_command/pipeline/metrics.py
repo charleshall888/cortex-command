@@ -225,9 +225,24 @@ def extract_feature_metrics(events: list[dict[str, Any]]) -> dict[str, Any] | No
     # read so historical events lacking the field keep their prior semantics.
     merge_anchor: str = final_complete.get("merge_anchor", "review")
 
-    # ---- Tier (from lifecycle_start, if present) ----
-    start_events = [e for e in events if e["event"] == "lifecycle_start"]
-    tier: str | None = start_events[0]["tier"] if start_events else None
+    # ---- Tier ----
+    # Final effective tier, mirroring the canonical rule in
+    # ``common.reduce_lifecycle_state``: ``lifecycle_start`` seeds the tier
+    # (a later ``lifecycle_start`` re-seeds), and each ``complexity_override``
+    # supersedes via its ``to`` field, so the most recent writer wins.
+    # Escalated features therefore bucket under the tier they finished at,
+    # matching every other tier reader (``read_tier``, dispatch complexity).
+    # ``initial_tier`` preserves the first seed so escalation rate stays
+    # queryable and historical records remain comparable.
+    initial_tier: str | None = None
+    tier: str | None = None
+    for e in events:
+        if e["event"] == "lifecycle_start" and e.get("tier") is not None:
+            if initial_tier is None:
+                initial_tier = e["tier"]
+            tier = e["tier"]
+        elif e["event"] == "complexity_override" and e.get("to") is not None:
+            tier = e["to"]
 
     # ---- Task count ----
     task_count: int | None = final_complete.get("tasks_total")
@@ -273,6 +288,7 @@ def extract_feature_metrics(events: list[dict[str, Any]]) -> dict[str, Any] | No
     return {
         "feature": feature_name,
         "tier": tier,
+        "initial_tier": initial_tier,
         "merge_anchor": merge_anchor,
         "task_count": task_count,
         "batch_count": batch_count,
@@ -921,6 +937,7 @@ def format_feature_record(metrics: dict[str, Any]) -> dict[str, Any]:
     """
     return {
         "tier": metrics["tier"],
+        "initial_tier": metrics["initial_tier"],
         "status": "complete",
         "total_duration_s": metrics["total_duration_seconds"],
         "phase_durations": _phase_durations_as_dict(metrics["phase_durations"]),

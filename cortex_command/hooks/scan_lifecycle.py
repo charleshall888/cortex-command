@@ -461,10 +461,12 @@ def _metrics_summary_line(metrics_file: Path) -> str | None:
     ``"Metrics: N completed features | Simple: avg X tasks, Y rework | Complex: avg X tasks, Y rework"``
 
     where ``N`` is ``len(features)`` and the avg fields default to ``0``
-    when missing (bash ``// 0`` fallback). Numbers are formatted in
-    their natural JSON form (no rounding) — bash echoes whatever ``jq``
-    produces, which for integer ``0`` is ``"0"`` and for floats is the
-    canonical ``json``-decoder repr.
+    when missing (bash ``// 0`` fallback). Integers keep their natural
+    JSON form (``"0"`` — golden fixtures pin this); floats are rounded
+    to 2 decimals so the line doesn't carry full-repr noise like
+    ``9.885714285714286``. (The old no-rounding rule mirrored the bash
+    hook for parity, but that script is now a thin wrapper delegating
+    here, so the constraint is dead.)
     """
 
     if not metrics_file.is_file():
@@ -490,15 +492,19 @@ def _metrics_summary_line(metrics_file: Path) -> str | None:
         complex_ = {}
 
     def _fmt(val: object) -> str:
-        # Mirror the bash output: jq emits the raw JSON form. ``json.dumps``
-        # of an int gives "3"; of a float gives "3.5" / "0.0". The bash
-        # hook's `// 0` fallback emits "0" for missing.
+        # ``json.dumps`` of an int gives "3" (the bash hook's `// 0`
+        # fallback emits "0" for missing — golden fixtures pin that form).
         if val is None:
             return "0"
         if isinstance(val, bool):
             # Defensive: bools are ints in Python; bash never emits bool here.
             return "0"
-        if isinstance(val, (int, float)):
+        if isinstance(val, float):
+            # Floats are means from compute_aggregates; round to 2 decimals
+            # so the context line stays readable. Ints must pass through
+            # unrounded to keep the golden fixtures byte-identical.
+            return json.dumps(round(val, 2))
+        if isinstance(val, int):
             return json.dumps(val)
         return str(val)
 

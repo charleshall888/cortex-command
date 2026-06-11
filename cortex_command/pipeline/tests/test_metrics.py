@@ -1700,5 +1700,132 @@ def test_compute_aggregates_phase_durations_segmented_by_merge_anchor(tmp_path):
     # ((200 + 900)/2).  The assertions above rule out that scenario.
 
 
+def test_extract_feature_metrics_complexity_override_supersedes_tier(tmp_path):
+    """An escalated feature reports its FINAL effective tier.
+
+    Canonical rule (mirrors ``common.reduce_lifecycle_state``):
+    ``lifecycle_start`` seeds the tier and the most recent
+    ``complexity_override``'s ``to`` field supersedes it. ``initial_tier``
+    preserves the starting tier so escalation rate stays queryable.
+
+    Also asserts parity with ``common.read_tier`` on the same on-disk log —
+    the inline fold in ``extract_feature_metrics`` must agree with the
+    canonical reader.
+    """
+    import json as _json
+
+    from cortex_command.common import read_tier
+    from cortex_command.pipeline.metrics import (
+        extract_feature_metrics,
+        format_feature_record,
+        parse_events,
+    )
+
+    feature = "feat-escalated"
+    lines = [
+        {"ts": "2026-05-10T12:00:00Z", "event": "lifecycle_start",
+         "feature": feature, "tier": "simple"},
+        {"ts": "2026-05-10T12:05:00Z", "event": "complexity_override",
+         "feature": feature, "from": "simple", "to": "complex"},
+        {"ts": "2026-05-10T13:00:00Z", "event": "feature_complete",
+         "feature": feature, "tasks_total": 5, "rework_cycles": 0},
+    ]
+    log_path = tmp_path / feature / "events.log"
+    log_path.parent.mkdir(parents=True)
+    log_path.write_text(
+        "\n".join(_json.dumps(e) for e in lines) + "\n", encoding="utf-8"
+    )
+
+    m = extract_feature_metrics(parse_events(log_path))
+    assert m is not None
+    assert m["tier"] == "complex", (
+        f"Expected final effective tier 'complex'; got {m['tier']!r}"
+    )
+    assert m["initial_tier"] == "simple", (
+        f"Expected initial_tier 'simple'; got {m['initial_tier']!r}"
+    )
+
+    # Parity with the canonical reader every other tier consumer uses.
+    assert m["tier"] == read_tier(feature, lifecycle_base=tmp_path)
+
+    # Both fields flow through to the metrics.json feature record.
+    record = format_feature_record(m)
+    assert record["tier"] == "complex"
+    assert record["initial_tier"] == "simple"
+
+
+def test_extract_feature_metrics_last_complexity_override_wins():
+    """Multiple overrides: the most recent ``to`` wins; the seed is kept.
+
+    A feature escalated simple→complex and later de-escalated back to
+    simple finishes as "simple"; ``initial_tier`` stays the first
+    ``lifecycle_start`` seed throughout.
+    """
+    from cortex_command.pipeline.metrics import extract_feature_metrics
+
+    feature = "feat-flip-flop"
+    events = [
+        {"ts": "2026-05-10T12:00:00Z", "event": "lifecycle_start",
+         "feature": feature, "tier": "simple"},
+        {"ts": "2026-05-10T12:05:00Z", "event": "complexity_override",
+         "feature": feature, "from": "simple", "to": "complex"},
+        {"ts": "2026-05-10T12:30:00Z", "event": "complexity_override",
+         "feature": feature, "from": "complex", "to": "simple"},
+        {"ts": "2026-05-10T13:00:00Z", "event": "feature_complete",
+         "feature": feature, "tasks_total": 3, "rework_cycles": 0},
+    ]
+
+    m = extract_feature_metrics(events)
+    assert m is not None
+    assert m["tier"] == "simple", (
+        f"Expected last override 'simple' to win; got {m['tier']!r}"
+    )
+    assert m["initial_tier"] == "simple"
+
+
+def test_compute_aggregates_buckets_escalated_feature_by_final_tier():
+    """Aggregation groups escalated features under their final tier.
+
+    One plain simple feature and one feature escalated simple→complex must
+    land in separate buckets: ``simple`` n=1, ``complex`` n=1. Under the
+    old starting-tier semantics both would have collapsed into ``simple``.
+    """
+    from cortex_command.pipeline.metrics import (
+        compute_aggregates,
+        extract_feature_metrics,
+    )
+
+    plain_events = [
+        {"ts": "2026-05-10T12:00:00Z", "event": "lifecycle_start",
+         "feature": "feat-plain", "tier": "simple"},
+        {"ts": "2026-05-10T13:00:00Z", "event": "feature_complete",
+         "feature": "feat-plain", "tasks_total": 2, "rework_cycles": 0},
+    ]
+    escalated_events = [
+        {"ts": "2026-05-10T12:00:00Z", "event": "lifecycle_start",
+         "feature": "feat-escalated", "tier": "simple"},
+        {"ts": "2026-05-10T12:05:00Z", "event": "complexity_override",
+         "feature": "feat-escalated", "from": "simple", "to": "complex"},
+        {"ts": "2026-05-10T13:00:00Z", "event": "feature_complete",
+         "feature": "feat-escalated", "tasks_total": 8, "rework_cycles": 1},
+    ]
+
+    plain = extract_feature_metrics(plain_events)
+    escalated = extract_feature_metrics(escalated_events)
+    assert plain is not None and escalated is not None
+
+    # The unescalated feature's tier and initial_tier agree.
+    assert plain["tier"] == plain["initial_tier"] == "simple"
+
+    aggregates = compute_aggregates([plain, escalated])
+
+    assert sorted(aggregates) == ["complex", "simple"], (
+        f"Expected one feature per tier bucket; got {list(aggregates)}"
+    )
+    assert aggregates["simple"]["n"] == 1
+    assert aggregates["complex"]["n"] == 1
+    assert aggregates["complex"]["avg_task_count"] == 8.0
+
+
 if __name__ == "__main__":
     unittest.main()
