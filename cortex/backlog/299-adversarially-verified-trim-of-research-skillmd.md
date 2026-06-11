@@ -25,8 +25,19 @@ Known constraint anchors (from the prior feature's research — verify before ed
 - The adversarial pass on the synthesizer/adversarial-wave instructions: the always-last adversarial dispatch ordering is load-bearing (error-amplification control) — narration around it can trim, the ordering rule cannot.
 - Section designators may be cited from docs/ — run a citation grep before renumbering.
 
+## Secondary scope — lifecycle/refine micro-canonicalizations (rider)
+
+The harness-token-efficiency-trim review approved with an R2 PARTIAL: option-4 micro-canonicalizations were left incomplete (see the verdict block in cortex/lifecycle/harness-token-efficiency-trim/review.md). Apply them here while the verified-trim toolchain is warm — no new trim map needed, the reviewer enumerated the exact locations:
+
+- skills/refine/SKILL.md:82 and skills/lifecycle/references/complete.md:183 retain inline copies of the update-item exit-2 disambiguation rule — replace with pointers to backlog-writeback.md (canonical).
+- skills/lifecycle/references/plan.md and skills/refine/SKILL.md retain inline index.md artifact-registration rules — canonicalize to one home.
+- skills/lifecycle/references/implement.md retains the full disjoint-Files race rule — cite plan.md §Sub-task headings instead.
+
+All inline copies are functionally correct today; the gap is consistency and ~2KB of token mass. Line numbers are as of the review (2026-06-10) — re-locate before editing. Same mirror-regen and skill-path-lint discipline as the primary scope.
+
 ## Touch-points
 
 - skills/research/SKILL.md (canonical) + plugins/cortex-core mirror
 - skills/lifecycle/references/fanout.md (canonical matrix — pointer target, not duplicate)
 - tests/test_research_fanout_matrix.py, tests/test_discovery_research_sizing.py
+- Secondary scope: skills/refine/SKILL.md, skills/lifecycle/references/{complete,plan,implement}.md, skills/lifecycle/references/backlog-writeback.md (+ mirrors)
