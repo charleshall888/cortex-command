@@ -1738,3 +1738,48 @@ def test_session_diagnostic_excluded_stale(
     # latest_event_ts surfaces the old ts so post-mortem can see WHY it's stale.
     assert record["latest_event_ts"] == old_ts, record
     assert record["threshold_days"] == 30, record
+
+
+# ---------------------------------------------------------------------------
+# Metrics-summary float rounding
+# ---------------------------------------------------------------------------
+
+
+def test_metrics_summary_line_rounds_floats_to_two_decimals(
+    tmp_path: Path,
+) -> None:
+    """Float aggregates render rounded to 2 decimals; ints pass through.
+
+    ``avg_task_count=9.885714285714286`` previously leaked its full float
+    repr into the SessionStart context line; it must now render as
+    ``9.89``. The int path stays byte-identical (golden fixtures b/d pin
+    the bare ``avg 0 tasks`` form), so ``2`` renders as ``"2"`` while the
+    float ``4.0`` renders as ``"4.0"``.
+    """
+    metrics_file = tmp_path / "metrics.json"
+    metrics_file.write_text(
+        json.dumps(
+            {
+                "features": {"feat-a": {}, "feat-b": {}},
+                "aggregates": {
+                    "simple": {
+                        "avg_task_count": 9.885714285714286,
+                        "avg_rework_cycles": 0.2857142857142857,
+                    },
+                    "complex": {
+                        "avg_task_count": 4.0,
+                        "avg_rework_cycles": 2,
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    line = scan_lifecycle_mod._metrics_summary_line(metrics_file)
+
+    assert line == (
+        "Metrics: 2 completed features | "
+        "Simple: avg 9.89 tasks, 0.29 rework | "
+        "Complex: avg 4.0 tasks, 2 rework"
+    ), f"unexpected summary line: {line!r}"
