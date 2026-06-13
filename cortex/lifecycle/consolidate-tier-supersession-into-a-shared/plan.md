@@ -30,7 +30,7 @@ Extract the event-fold body of `reduce_lifecycle_state` into a pure `reduce_life
   - **Interface preserved → callers untouched.** `reduce_lifecycle_state(Path) -> LifecycleStateReduction` keeps its exact signature/return type, so its callers require **no** changes — do NOT edit them: `_read_criticality_inner` (`:524`), `_read_tier_inner` (`:580`), `lifecycle_state_corrupted` (`:761`), `refine._reduce_current_state` (`refine.py:126`), `state_cli` (`state_cli.py:86,152`), `outcome_router._review_required` (`outcome_router.py:1001`). All use named-attribute access (research §Call graph). Preserve the `__wrapped__`/`lru_cache` hooks on the cached readers — they key on file stat, not on this function's internals.
   - **Do NOT grow `LifecycleStateReduction`** — it keeps exactly `(state, skipped_lines)`; no `initial_tier` field (R3 constraint; A-Option-2 rejected in research §Adversarial).
 - **Verification**: `grep -c "def reduce_lifecycle_events" cortex_command/common.py` = 1 (pass if exactly 1); then `python3 -m pytest tests/test_reduce_lifecycle_state.py -q` — pass if exit 0 (every pre-existing test — torn-line lineno `:57`, mixed-line per-value `:84`, corruption suite `:133-199`, missing-file `:97`, reader delegation `:103` — still passes unchanged against the delegating reader).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Pure-core, interleaving, and NamedTuple-field tests
 - **Files**: `tests/test_reduce_lifecycle_state.py`
@@ -44,7 +44,7 @@ Extract the event-fold body of `reduce_lifecycle_state` into a pure `reduce_life
   - **Interleaving case** (R2/R4): through the Path reader, a vocab-rejected value on line 1 and a torn-JSON line 2 → assert `result.skipped_lines == (1, 2)` (ascending, not category-grouped). Follow the byte-fixture style already used at `test_reduce_lifecycle_state.py:31,44,57,84`.
   - **NamedTuple growth guard** (R3): assert `LifecycleStateReduction._fields == ("state", "skipped_lines")`. Rationale: the existing `:100` equality assertion does NOT catch a *defaulted* added field (`Three(state={}, skipped_lines=()) == Three(...)` is `True` when a third field defaults), so the field-set assertion is the actual growth guard.
 - **Verification**: `python3 -m pytest tests/test_reduce_lifecycle_state.py -q` — pass if exit 0 and the new test names are collected (no skips/errors).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Metrics production edits — delegate final tier, local vocab-gated `initial_tier`, harden intake
 - **Files**: `cortex_command/pipeline/metrics.py`
@@ -58,7 +58,7 @@ Extract the event-fold body of `reduce_lifecycle_state` into a pure `reduce_life
   - **Intake hardening** (R8): in `parse_events` (`:75-101`), change the read at `:88` from `path.read_text(encoding="utf-8")` to `encoding="utf-8", errors="replace"` — matching `common.py:683`. This stops an uncaught `UnicodeDecodeError` from crashing `extract_all_feature_metrics` on a byte-corrupt log.
   - **Commit hygiene**: this task lands three independent concerns — R5 (behavior-preserving delegation), R6 (permissive→strict vocab gate, a **behavior change**), and R8 (orthogonal intake-robustness fix). They share `metrics.py` so they ship in one commit (splitting would force same-file serialization for a one-line R8 change), but **enumerate all three in the commit body** so the behavior-changing R6 stays independently traceable/revertible.
 - **Verification**: `grep -nE "from cortex_command.common import.*reduce_lifecycle_events" cortex_command/pipeline/metrics.py` returns 1 line (pass if ≥1); `grep -n "complexity_override" cortex_command/pipeline/metrics.py` shows no occurrence inside `extract_feature_metrics`'s body (`:198-300`) (pass if absent in that range); `grep -nE '\{\s*"(simple|complex)"' cortex_command/pipeline/metrics.py` returns no locally re-spelled tier set used as the gate (pass if absent); `grep -c 'errors="replace"' cortex_command/pipeline/metrics.py` ≥ 1 (pass if ≥1).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 4: Metrics tests — delegation behavior, vocab lock, intake regression, `:1749` disposition
 - **Files**: `cortex_command/pipeline/tests/test_metrics.py`
@@ -72,7 +72,7 @@ Extract the event-fold body of `reduce_lifecycle_state` into a pure `reduce_life
   - **R8 intake regression:** write a non-UTF-8 `events.log` (`write_bytes`) and run it through `extract_all_feature_metrics`; assert it completes without raising.
   - **R9a `:1749` disposition:** the in-place parity assertion at `test_metrics.py:1749` (inside `test_extract_feature_metrics_complexity_override_supersedes_tier`, `:1703`) degrades after delegation to confirming only that the two parse front-ends agree on clean input. **Decision: annotate it as superseded** — add a comment at `:1749` referencing the R9 independent-oracle matrix (Task 5) as its replacement guard, rather than strengthening it in place (the R9 matrix subsumes it with an independent oracle + out-of-vocab + re-seed cases).
 - **Verification**: `python3 -m pytest cortex_command/pipeline/tests/test_metrics.py -q` — pass if exit 0 with the new test names collected; `grep -n "R9" cortex_command/pipeline/tests/test_metrics.py` shows the superseded-by-matrix comment near `:1749` (pass if present).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5: Parity-harness coverage — metrics fold against an independent oracle + intake-divergence case
 - **Files**: `tests/test_bin_lifecycle_state_parity.py`
@@ -85,7 +85,7 @@ Extract the event-fold body of `reduce_lifecycle_state` into a pure `reduce_life
   - **Non-UTF-8 intake fixture (precise construction — this is O4 from review):** put the corrupt bytes on a **standalone non-load-bearing line** (e.g. a junk line between the seed and `feature_complete`); the seed and `feature_complete` lines must be clean valid UTF-8 so `extract_feature_metrics` still returns non-`None`. **Primary assertion**: `extract_all_feature_metrics` completes **without raising** — this is the real R8 regression guard (pre-R8 it raised `UnicodeDecodeError` and crashed every feature). **Secondary**: `extract_feature_metrics`'s tier agrees with `read_tier`, which holds *because the tier-bearing lines are clean* and the corrupt line is used by neither reader for tier. Do **NOT** assert the two agree on the corrupt record itself — `parse_events` drops it (no `ts`/`event`) while the Path reader folds/torn-counts it, so the intakes are deliberately asymmetric there (Overview rule-not-intake scoping). A fixture whose corruption hits the `feature_complete` line would make metrics return `None` and pass vacuously — avoid that.
   - **Primary assertion = independent oracle** (hand-computed expected tier per fixture), NOT solely `read_tier`-agreement — post-R5 both project from the same fold core, so bare agreement is tautological for the fold. `read_tier`-agreement is the *secondary* cross-check whose real value is the non-UTF-8 no-crash case above.
 - **Verification**: `python3 -m pytest tests/test_bin_lifecycle_state_parity.py -q` — pass if exit 0 with the new parametrized test collected; `grep -n "extract_feature_metrics" tests/test_bin_lifecycle_state_parity.py` returns ≥1 (pass if present).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 6: Full-suite gate
 - **Files**: none (verification-only; the per-task commits from Tasks 1–5 are the durable changes)
@@ -94,7 +94,7 @@ Extract the event-fold body of `reduce_lifecycle_state` into a pure `reduce_life
 - **Complexity**: simple
 - **Context**: This is R10's whole-feature gate. No file edits — if a failure surfaces, route the fix back to the owning task (1–5) rather than patching here.
 - **Verification**: `just test` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ## Risks
 - **Pure-core signature is locked by this plan, not the spec.** Spec §Technical Constraints left the exact signature to Plan/Implement. This plan commits to research's Approach B: `reduce_lifecycle_events(records: Iterable[dict]) -> (state, rejected_positions)` with 0-based positions, core returns bare `state` (not a `LifecycleStateReduction`). This is the lowest-touch shape on protected `common.py` and dissolves the synthetic-lineno footgun (research §Adversarial). Revisit only if a second pre-parsed consumer of the *full* reduction is named — none exists.

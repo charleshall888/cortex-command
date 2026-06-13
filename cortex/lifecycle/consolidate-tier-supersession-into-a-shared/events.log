@@ -5,3 +5,8 @@
 {"ts": "2026-06-13T15:35:08Z", "event": "spec_approved", "feature": "consolidate-tier-supersession-into-a-shared"}
 {"ts": "2026-06-13T16:02:40Z", "event": "plan_approved", "feature": "consolidate-tier-supersession-into-a-shared"}
 {"ts": "2026-06-13T16:02:40Z", "event": "phase_transition", "feature": "consolidate-tier-supersession-into-a-shared", "from": "plan", "to": "implement"}
+{"ts": "2026-06-13T17:12:08Z", "event": "batch_dispatch", "feature": "consolidate-tier-supersession-into-a-shared", "batch": 0, "tasks": [1]}
+{"ts": "2026-06-13T17:15:26Z", "event": "batch_dispatch", "feature": "consolidate-tier-supersession-into-a-shared", "batch": 1, "tasks": [2, 3]}
+{"ts": "2026-06-13T17:20:55Z", "event": "batch_dispatch", "feature": "consolidate-tier-supersession-into-a-shared", "batch": 2, "tasks": [4, 5]}
+{"ts": "2026-06-13T17:20:55Z", "event": "batch_dispatch", "feature": "consolidate-tier-supersession-into-a-shared", "batch": 3, "tasks": [6]}
+{"ts": "2026-06-13T17:32:25Z", "event": "phase_transition", "feature": "consolidate-tier-supersession-into-a-shared", "tier": "complex", "from": "implement", "to": "review"}
