@@ -1,0 +1,7 @@
+{"schema_version": 1, "ts": "2026-06-13T14:47:17Z", "event": "lifecycle_start", "feature": "adversarially-verified-trim-of-critical-review", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-13T14:52:23Z", "event": "clarify_critic", "feature": "adversarially-verified-trim-of-critical-review", "parent_epic_loaded": false, "findings_count": 7, "dispositions": {"apply": 7, "dismiss": 0, "ask": 0}, "applied_fixes_count": 5, "dismissals_count": 0, "status": "ok"}
+{"ts": "2026-06-13T15:07:06Z", "event": "complexity_override", "feature": "adversarially-verified-trim-of-critical-review", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-06-13T15:07:06Z", "event": "criticality_override", "feature": "adversarially-verified-trim-of-critical-review", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-06-13T15:34:51Z", "event": "spec_approved", "feature": "adversarially-verified-trim-of-critical-review"}
+{"ts": "2026-06-13T17:07:09Z", "event": "plan_approved", "feature": "adversarially-verified-trim-of-critical-review"}
+{"ts": "2026-06-13T17:07:09Z", "event": "phase_transition", "feature": "adversarially-verified-trim-of-critical-review", "from": "plan", "to": "implement"}

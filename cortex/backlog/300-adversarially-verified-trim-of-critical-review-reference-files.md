@@ -2,11 +2,15 @@
 schema_version: "1"
 uuid: b940697b-2bfc-483f-97b4-0d9daf92e221
 title: Adversarially-verified trim of critical-review reference files
-status: backlog
+status: refined
 priority: medium
 type: chore
 created: 2026-06-10
-updated: 2026-06-10
+updated: 2026-06-13
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/adversarially-verified-trim-of-critical-review/spec.md
+areas: ['skills']
 ---
 ## Why
 
