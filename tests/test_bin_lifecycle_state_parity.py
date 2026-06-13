@@ -294,3 +294,112 @@ def test_all_readers_agree_on_effective_state(
         f"corruption signal mismatch on {axis}: bin_out={bin_out!r} "
         f"expected_corrupted={exp_corrupted}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Metrics fold parity (feature 301, R9) — extract_feature_metrics' effective
+# tier is pinned against a hand-computed INDEPENDENT ORACLE, not solely
+# read_tier-agreement (which is tautological post-delegation, since both
+# project from the same shared core). A separate non-UTF-8 intake case pins
+# the R8 no-crash property plus reader agreement on clean tier-bearing lines.
+# These fixtures each carry a clean feature_complete so extract_feature_metrics
+# returns a record rather than None.
+# ---------------------------------------------------------------------------
+
+
+def _metrics_log_bytes(*event_dicts: dict) -> bytes:
+    """Clean-UTF-8 JSONL bytes for one feature's events.log."""
+    return ("\n".join(json.dumps(e) for e in event_dicts) + "\n").encode("utf-8")
+
+
+# axis id, expected metrics tier (hand-computed oracle), whether read_tier's
+# value should equal the metrics tier (True only when the effective tier is
+# in-vocab; for the dropped out-of-vocab seed the two diverge by projection —
+# metrics None vs read_tier's "simple" default — so agreement is not asserted).
+_METRICS_ORACLE_AXES = [
+    ("in-vocab-escalated", "complex", True),
+    ("out-of-vocab-seed", None, False),
+    ("reseed", "complex", True),
+]
+
+
+@pytest.mark.parametrize(
+    "axis,expected_tier,read_tier_agrees",
+    _METRICS_ORACLE_AXES,
+    ids=[a[0] for a in _METRICS_ORACLE_AXES],
+)
+def test_extract_feature_metrics_tier_matches_oracle(
+    axis: str, expected_tier, read_tier_agrees: bool, tmp_path: Path
+) -> None:
+    from cortex_command.pipeline.metrics import extract_feature_metrics, parse_events
+
+    slug = f"feat-metrics-{axis}"
+    seed = lambda tier, ts="2026-05-10T12:00:00Z": {  # noqa: E731
+        "ts": ts, "event": "lifecycle_start", "feature": slug, "tier": tier,
+    }
+    complete = {
+        "ts": "2026-05-10T13:00:00Z", "event": "feature_complete",
+        "feature": slug, "tasks_total": 3, "rework_cycles": 0,
+    }
+    if axis == "in-vocab-escalated":
+        events = [
+            seed("simple"),
+            {"ts": "2026-05-10T12:05:00Z", "event": "complexity_override",
+             "feature": slug, "from": "simple", "to": "complex"},
+            complete,
+        ]
+    elif axis == "out-of-vocab-seed":
+        events = [seed("trivial"), complete]
+    elif axis == "reseed":
+        events = [seed("simple"), seed("complex", "2026-05-10T12:01:00Z"), complete]
+    else:  # pragma: no cover - defensive
+        raise AssertionError(f"unknown axis {axis}")
+
+    cwd = _stage_events_bytes(slug, tmp_path, _metrics_log_bytes(*events))
+    lifecycle_base = cwd / "cortex" / "lifecycle"
+    log = lifecycle_base / slug / "events.log"
+
+    m = extract_feature_metrics(parse_events(log))
+    assert m is not None, f"{axis}: expected a completed feature"
+    # Primary: hand-computed independent oracle (NOT read_tier-agreement).
+    assert m["tier"] == expected_tier, (
+        f"{axis}: metrics tier {m['tier']!r} != oracle {expected_tier!r}"
+    )
+    # Secondary cross-check: where the effective tier is in-vocab, the two
+    # readers' values coincide.
+    if read_tier_agrees:
+        assert m["tier"] == read_tier(slug, lifecycle_base=lifecycle_base)
+
+
+def test_extract_feature_metrics_non_utf8_intake_no_crash(tmp_path: Path) -> None:
+    """R9 intake-divergence case: post-R8 a byte-corrupt log no longer crashes
+    extract_all_feature_metrics (pre-R8 it raised UnicodeDecodeError). The
+    corrupt bytes sit on a standalone line; the seed and feature_complete lines
+    are clean valid UTF-8, so extract_feature_metrics and read_tier agree on the
+    clean tier-bearing lines. The corrupt record itself is treated
+    asymmetrically by the two intakes (parse_events drops it; the Path reader
+    torn-counts it) — that asymmetry is by design and is NOT asserted."""
+    from cortex_command.pipeline.metrics import extract_all_feature_metrics
+
+    slug = "feat-metrics-non-utf8"
+    data = (
+        b'{"ts":"2026-05-10T12:00:00Z","event":"lifecycle_start","feature":"'
+        + slug.encode()
+        + b'","tier":"complex"}\n'
+        b"\xff\xfe corrupt non-utf8 line \xfa\n"
+        b'{"ts":"2026-05-10T13:00:00Z","event":"feature_complete","feature":"'
+        + slug.encode()
+        + b'","tasks_total":3,"rework_cycles":0}\n'
+    )
+    cwd = _stage_events_bytes(slug, tmp_path, data)
+    lifecycle_base = cwd / "cortex" / "lifecycle"
+
+    # Primary: the pipeline completes without raising (the real R8 guard).
+    results = extract_all_feature_metrics(lifecycle_base)
+    by_feature = {m["feature"]: m for m in results}
+    assert slug in by_feature, "byte-corrupt log must still yield the feature"
+
+    # Secondary: the two readers agree on the clean tier-bearing lines.
+    metrics_tier = by_feature[slug]["tier"]
+    assert metrics_tier == "complex"
+    assert metrics_tier == read_tier(slug, lifecycle_base=lifecycle_base)
