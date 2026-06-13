@@ -2,11 +2,15 @@
 schema_version: "1"
 uuid: 6a8e28ef-dbe3-4b51-911b-3d84d1ce3b40
 title: Adversarially-verified trim of research/SKILL.md
-status: backlog
+status: refined
 priority: medium
 type: chore
 created: 2026-06-10
-updated: 2026-06-10
+updated: 2026-06-13
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/adversarially-verified-trim-of-research-skillmd/spec.md
+areas: ['skills', 'lifecycle']
 ---
 ## Why
 
