@@ -1708,9 +1708,13 @@ def test_extract_feature_metrics_complexity_override_supersedes_tier(tmp_path):
     ``complexity_override``'s ``to`` field supersedes it. ``initial_tier``
     preserves the starting tier so escalation rate stays queryable.
 
-    Also asserts parity with ``common.read_tier`` on the same on-disk log —
-    the inline fold in ``extract_feature_metrics`` must agree with the
-    canonical reader.
+    Also asserts parity with ``common.read_tier`` on the same on-disk log.
+    Post-delegation (feature 301) ``extract_feature_metrics`` has no inline
+    fold — it projects from the same shared core as ``read_tier`` — so this
+    parity assertion degrades to confirming the two parse front-ends agree on
+    clean input. It is SUPERSEDED as the drift guard by the R9
+    independent-oracle matrix in ``tests/test_bin_lifecycle_state_parity.py``
+    (see the inline note below).
     """
     import json as _json
 
@@ -1746,6 +1750,11 @@ def test_extract_feature_metrics_complexity_override_supersedes_tier(tmp_path):
     )
 
     # Parity with the canonical reader every other tier consumer uses.
+    # NOTE (R9a, feature 301): post-delegation both sides project from the
+    # same shared core, so this only confirms the parse front-ends agree on
+    # clean input. The real drift guard is the R9 independent-oracle matrix in
+    # tests/test_bin_lifecycle_state_parity.py — see
+    # test_extract_feature_metrics_tier_matches_oracle.
     assert m["tier"] == read_tier(feature, lifecycle_base=tmp_path)
 
     # Both fields flow through to the metrics.json feature record.
@@ -1825,6 +1834,145 @@ def test_compute_aggregates_buckets_escalated_feature_by_final_tier():
     assert aggregates["simple"]["n"] == 1
     assert aggregates["complex"]["n"] == 1
     assert aggregates["complex"]["avg_task_count"] == 8.0
+
+
+# ---------------------------------------------------------------------------
+# Shared-core delegation, vocab gate, and intake hardening (feature 301)
+# ---------------------------------------------------------------------------
+
+
+def test_extract_feature_metrics_tier_delegates_to_shared_core_value():
+    """R5: the final tier comes solely from the shared core, so a seed
+    superseded by a complexity_override reports the override's value.
+
+    Asserted against a hand-computed constant ("complex"), NOT against a live
+    reduce_lifecycle_events(events) call on the same list — the latter would be
+    an X == X tautology (both fold the identical input through the same
+    function). Paired with the grep-for-absence of the inline fold, this pins
+    that delegation produces the correct superseded tier.
+    """
+    from cortex_command.pipeline.metrics import extract_feature_metrics
+
+    feature = "feat-delegated"
+    events = [
+        {"ts": "2026-05-10T12:00:00Z", "event": "lifecycle_start",
+         "feature": feature, "tier": "simple"},
+        {"ts": "2026-05-10T12:05:00Z", "event": "complexity_override",
+         "feature": feature, "from": "simple", "to": "complex"},
+        {"ts": "2026-05-10T13:00:00Z", "event": "feature_complete",
+         "feature": feature, "tasks_total": 4, "rework_cycles": 0},
+    ]
+    m = extract_feature_metrics(events)
+    assert m is not None
+    assert m["tier"] == "complex"
+
+
+def test_extract_feature_metrics_initial_tier_out_of_vocab_sole_seed_is_none():
+    """R6 (i): a sole out-of-vocab lifecycle_start seed is dropped — both the
+    final tier and initial_tier are None, consistent with each other."""
+    from cortex_command.pipeline.metrics import extract_feature_metrics
+
+    feature = "feat-oov-seed"
+    events = [
+        {"ts": "2026-05-10T12:00:00Z", "event": "lifecycle_start",
+         "feature": feature, "tier": "trivial"},
+        {"ts": "2026-05-10T13:00:00Z", "event": "feature_complete",
+         "feature": feature, "tasks_total": 1, "rework_cycles": 0},
+    ]
+    m = extract_feature_metrics(events)
+    assert m is not None
+    assert m["tier"] is None
+    assert m["initial_tier"] is None
+
+
+def test_extract_feature_metrics_initial_tier_skips_leading_out_of_vocab_seed():
+    """R6 (ii) — DISCRIMINATING fixture: an out-of-vocab seed followed by an
+    in-vocab seed yields the in-vocab value for BOTH initial_tier and the final
+    tier. This distinguishes 'skip out-of-vocab and keep scanning' from a naive
+    latch-with-gate (which would leave initial_tier None)."""
+    from cortex_command.pipeline.metrics import extract_feature_metrics
+
+    feature = "feat-oov-then-invocab"
+    events = [
+        {"ts": "2026-05-10T12:00:00Z", "event": "lifecycle_start",
+         "feature": feature, "tier": "trivial"},
+        {"ts": "2026-05-10T12:01:00Z", "event": "lifecycle_start",
+         "feature": feature, "tier": "complex"},
+        {"ts": "2026-05-10T13:00:00Z", "event": "feature_complete",
+         "feature": feature, "tasks_total": 6, "rework_cycles": 0},
+    ]
+    m = extract_feature_metrics(events)
+    assert m is not None
+    assert m["initial_tier"] == "complex"
+    assert m["tier"] == "complex"
+
+
+def test_extract_feature_metrics_out_of_vocab_tier_dropped_and_excluded(tmp_path):
+    """R7: an out-of-vocab lifecycle_start tier yields tier=None and the
+    feature is excluded from compute_aggregates. read_tier projects its own
+    'simple' default on the same log — both agree 'trivial' is not a tier."""
+    import json as _json
+
+    from cortex_command.common import read_tier
+    from cortex_command.pipeline.metrics import (
+        compute_aggregates,
+        extract_feature_metrics,
+        parse_events,
+    )
+
+    feature = "feat-trivial-tier"
+    lines = [
+        {"ts": "2026-05-10T12:00:00Z", "event": "lifecycle_start",
+         "feature": feature, "tier": "trivial"},
+        {"ts": "2026-05-10T13:00:00Z", "event": "feature_complete",
+         "feature": feature, "tasks_total": 2, "rework_cycles": 0},
+    ]
+    log_path = tmp_path / feature / "events.log"
+    log_path.parent.mkdir(parents=True)
+    log_path.write_text(
+        "\n".join(_json.dumps(e) for e in lines) + "\n", encoding="utf-8"
+    )
+
+    m = extract_feature_metrics(parse_events(log_path))
+    assert m is not None
+    assert m["tier"] is None
+    assert read_tier(feature, lifecycle_base=tmp_path) == "simple"
+
+    aggregates = compute_aggregates([m])
+    assert aggregates == {}, (
+        f"None-tier feature must be excluded from aggregates; got {list(aggregates)}"
+    )
+
+
+def test_extract_all_feature_metrics_tolerates_non_utf8_log(tmp_path):
+    """R8: a byte-corrupt events.log no longer crashes the metrics pipeline.
+
+    parse_events now decodes with errors='replace', so
+    extract_all_feature_metrics completes instead of raising
+    UnicodeDecodeError (the pre-R8 behavior). The corrupt bytes sit on a
+    standalone line; the seed and feature_complete lines are clean, so the
+    feature is still extracted with its tier intact."""
+    from cortex_command.pipeline.metrics import extract_all_feature_metrics
+
+    feature = "feat-corrupt-intake"
+    fdir = tmp_path / feature
+    fdir.mkdir(parents=True)
+    (fdir / "events.log").write_bytes(
+        b'{"ts":"2026-05-10T12:00:00Z","event":"lifecycle_start","feature":"'
+        + feature.encode()
+        + b'","tier":"complex"}\n'
+        b"\xff\xfe corrupt non-utf8 line \xfa\n"
+        b'{"ts":"2026-05-10T13:00:00Z","event":"feature_complete","feature":"'
+        + feature.encode()
+        + b'","tasks_total":3,"rework_cycles":0}\n'
+    )
+
+    # Must not raise UnicodeDecodeError.
+    results = extract_all_feature_metrics(tmp_path)
+    assert isinstance(results, list)
+    by_feature = {m["feature"]: m for m in results}
+    assert feature in by_feature
+    assert by_feature[feature]["tier"] == "complex"
 
 
 if __name__ == "__main__":
