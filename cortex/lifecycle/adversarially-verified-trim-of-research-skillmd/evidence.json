@@ -1,0 +1,540 @@
+{
+  "schema_note": "Single-file adversarially-verified trim map for skills/research/SKILL.md (precedent trims_verified shape, extended per spec R1/R2/R3/R5). See cortex/lifecycle/harness-token-efficiency-trim/evidence.json for the precedent.",
+  "provenance": {
+    "pretrim_blob_sha": "b0a4c5f401772903042e8fe7c6e1d1f03c4c83d6",
+    "pretrim_bytes": 15018,
+    "posttrim_blob_sha": "2ab3e6310797b17d49d434f57725f4555b36ac53",
+    "posttrim_bytes": 14344,
+    "auditor_agent_id": "a868ca19389866ae4",
+    "verifier_agent_id": "a77833ae48080fadf",
+    "oracle_agent_id": "a6f91d1c7f9e085ae"
+  },
+  "behavioral_equivalence": [
+    {
+      "id": "i",
+      "q": "For tier=complex criticality=high, how many agents dispatch (and by what rule)?",
+      "baseline": "Determined by the (tier=complex, criticality=high) cell of the fan-out count matrix in fanout.md (cited via ${CLAUDE_SKILL_DIR}/../lifecycle/references/fanout.md) — NOT inlined in this file. The file states only: floor cell (simple+low)=3, corner cell (complex+critical)=10, both axes raise the count monotonically; the count is an upper bound on investigation breadth, NOT a quota (dispatch fewer if the task offers fewer genuinely distinct angles; do not pad with redundant agents). The literal value for complex+high lives in fanout.md, not here.",
+      "post_trim": "Does NOT state a literal number for complex+high. agent_count is the cell where tier (row) meets criticality (column) in the count matrix at ${CLAUDE_SKILL_DIR}/../lifecycle/references/fanout.md — 'the canonical, shared source for the grid.' Only literal cells in this file: floor (simple+low=3), corner (complex+critical=10); both axes raise the count monotonically. The complex+high number comes from fanout.md, not this file.",
+      "match": true
+    },
+    {
+      "id": "ii",
+      "q": "Which three angles are the mandatory core?",
+      "baseline": "Codebase, Web, Requirements & Constraints — always dispatched, at every cell.",
+      "post_trim": "Codebase, Web, and Requirements & Constraints (always dispatched, at every cell).",
+      "match": true
+    },
+    {
+      "id": "iii",
+      "q": "Is the fan-out count matrix inlined here or referenced by pointer?",
+      "baseline": "Pointer-referenced, not inlined: 'the canonical, shared source for the grid (do not re-inline it here)', cited via ${CLAUDE_SKILL_DIR}/../lifecycle/references/fanout.md (three such pointers in the file: Step 2 count, Step 3 angle-selection, Step 3 dispatch-protocol).",
+      "post_trim": "NOT inlined — referenced by a pointer to ${CLAUDE_SKILL_DIR}/../lifecycle/references/fanout.md ('the canonical, shared source for the grid'). The file states only two cells (simple+low=3, complex+critical=10) and that both axes raise the count monotonically.",
+      "match": true
+    },
+    {
+      "id": "iv",
+      "q": "Which angle is dispatched LAST for high/critical, and is it given a summary of the other angles' findings?",
+      "baseline": "The Adversarial angle is always last for high/critical, dispatched after the core + orchestrator-chosen angles complete. Yes — it is given a summary: 'inject the summarized findings of the completed angles before dispatch'; the dispatch protocol says 'summarize each angle's findings into a brief paragraph and dispatch the adversarial agent with that summary injected'. The prompt body contains a {summarized_findings_from_other_agents} placeholder.",
+      "post_trim": "The Adversarial angle is dispatched LAST for high/critical. Yes, given a summary: 'dispatched after the core + chosen angles complete, over a brief summary of their findings'; dispatch protocol says 'summarize each angle's findings and dispatch the adversarial agent with that summary injected' ({summarized_findings_from_other_agents} placeholder).",
+      "match": true
+    },
+    {
+      "id": "v",
+      "q": "Which angles receive the considerations-injection and which are excluded?",
+      "baseline": "Injected into the mandatory CORE angles only — Codebase, Web, Requirements & Constraints. Excluded: Tradeoffs (so its orthogonal-dimension evaluation is not narrowed by external considerations), Adversarial (it operates on summarized findings of the other angles, not directly on the considerations), and any other orchestrator-chosen angle.",
+      "post_trim": "Injected into the mandatory core angles ONLY — Codebase, Web, Requirements & Constraints. EXCLUDED: Tradeoffs (orthogonal-dimension eval not narrowed), Adversarial (operates on summarized findings, not the considerations directly), and any other orchestrator-chosen angle.",
+      "match": true
+    },
+    {
+      "id": "vi",
+      "q": "What is the one fixed-contract output heading?",
+      "baseline": "## Open Questions — the only fixed contract heading, machine-parsed by cortex-complexity-escalator (cortex_command/lifecycle/complexity_escalator.py). Every other ## section is angle-driven and not parsed by name; its heading and semantics must be preserved exactly.",
+      "post_trim": "## Open Questions — machine-parsed by cortex-complexity-escalator (cortex_command/lifecycle/complexity_escalator.py); heading and semantics preserved exactly. Otherwise the schema is angle-driven with no fixed heading roster.",
+      "match": true
+    },
+    {
+      "id": "vii",
+      "q": "What distinguishes lifecycle-mode from standalone-mode output routing?",
+      "baseline": "Mode is determined by lifecycle-slug presence in $ARGUMENTS (do NOT use directory existence checks). Lifecycle mode (slug present): create cortex/lifecycle/{slug}/ if absent, write synthesis to research.md, emit ## Considerations Addressed if research-considerations non-empty, announce the written path. Standalone mode (slug absent/empty): present synthesis in conversation only, write no file, create no directory, and do NOT emit ## Considerations Addressed.",
+      "post_trim": "Mode determined by lifecycle-slug presence in $ARGUMENTS (explicit rule: use argument presence, NOT directory existence checks). Lifecycle mode (slug present): create cortex/lifecycle/{slug}/ if missing, write synthesis to research.md, announce completion. Standalone mode (slug absent/empty): present synthesis in conversation, write no file, create no directory.",
+      "match": true
+    },
+    {
+      "id": "viii",
+      "q": "Into which agent prompts is INJECTION_RESISTANCE_INSTRUCTION substituted, and what is the stated substitution scope?",
+      "baseline": "The named fragment is 'referenced by every agent-prompt code-block below'; when constructing an Agent dispatch, substitute the {INJECTION_RESISTANCE_INSTRUCTION} placeholder with the verbatim canonical text. The placeholder appears in every per-angle prompt block (Codebase, Web, Requirements & Constraints, Tradeoffs, Adversarial), and the 'when composing a different chosen angle' recipe instructs appending {INJECTION_RESISTANCE_INSTRUCTION}. Stated scope: every agent-prompt code-block.",
+      "post_trim": "Substituted into EVERY agent-prompt code-block: 'The following named fragment is referenced by every agent-prompt code-block below. When constructing an Agent tool dispatch, substitute the placeholder {INJECTION_RESISTANCE_INSTRUCTION} with the verbatim canonical text.' Appears in Codebase, Web, Requirements & Constraints, Tradeoffs, Adversarial templates; chosen-angle composition shape instructs appending {INJECTION_RESISTANCE_INSTRUCTION}.",
+      "match": true
+    },
+    {
+      "id": "ix",
+      "q": "Is the core wave dispatched as one batch in a single response with read-only (no-worktree) agents, and is the second wave present only when an adversarial angle is chosen?",
+      "baseline": "Yes. Core wave: 'Dispatch the mandatory core plus the orchestrator-chosen angles ... in parallel, as one batch of Agent tool calls in a single response. No isolation: \"worktree\"; agents are read-only.' Second wave (Adversarial) is dispatched last for high/critical; 'At low/medium criticality where no adversarial angle was chosen, the core wave is the whole dispatch and there is no second wave.' So the second wave exists only when an adversarial angle is chosen.",
+      "post_trim": "Yes — core wave (every angle except the always-last adversarial one) dispatched 'in one batch of Agent calls in a single response.' Agents read-only and non-worktree: 'No isolation: \"worktree\"; agents are read-only.' Second (adversarial) wave for high/critical after core returns; it does NOT happen at low/medium where no adversarial angle was chosen ('the core wave is the whole dispatch — no second wave.').",
+      "match": true
+    }
+  ],
+  "trims_verified": [
+    {
+      "file": "skills/research/SKILL.md",
+      "keep_rationale": "Pre-trim 15018 B / 253 lines. The five #### <Angle> fenced prompt bodies (~26%) are verbatim-shipped to dispatched sub-agents and untouchable. Duplication axis ~zero cross-file (precedent finding 6j); yield is condensation of orchestrator-read narration that restates rules whose authority lives in fanout.md, redundant intra-file examples, maintainer asides, and the orchestrator-read output-structure template brackets. Preserved verbatim: all five fenced prompt bodies, every ## Step heading, the ## Open Questions contract heading, the three fanout.md pointers (with ${CLAUDE_SKILL_DIR}/ prefix), the always-last adversarial ordering (textual + positional), INJECTION_RESISTANCE_INSTRUCTION text + placeholders + substitution-scope phrase, the considerations h3/placement rule, the Step-1 directory-check negative + parsing rule, and the Step-4 warning-string literals.",
+      "content_class_legend": [
+        "load-bearing-gate",
+        "maintainer-rationale",
+        "how-narration",
+        "duplication"
+      ],
+      "consumption_mode_legend": [
+        "orchestrator-read",
+        "verbatim-shipped"
+      ],
+      "region_classification": [
+        {
+          "region": "YAML frontmatter (L1-20)",
+          "content_class": "load-bearing-gate",
+          "consumption_mode": "verbatim-shipped",
+          "verdict": "keep",
+          "note": "Out of scope (ticket #298 owns frontmatter)."
+        },
+        {
+          "region": "Title + summary + $ARGUMENTS (L22-26)",
+          "content_class": "load-bearing-gate",
+          "consumption_mode": "orchestrator-read",
+          "verdict": "keep",
+          "note": "Entry point + argument binding."
+        },
+        {
+          "region": "Step 1 parse + example invocations (L28-34)",
+          "content_class": "how-narration",
+          "consumption_mode": "orchestrator-read",
+          "verdict": "keep",
+          "note": "Concrete arg examples; low yield."
+        },
+        {
+          "region": "Step 1 mode-detection negative (L36)",
+          "content_class": "load-bearing-gate",
+          "consumption_mode": "orchestrator-read",
+          "verdict": "keep",
+          "note": "do-NOT-use-directory-checks negative (preserve-list)."
+        },
+        {
+          "region": "Step 1 mode branches + defaults (L38-44)",
+          "content_class": "load-bearing-gate",
+          "consumption_mode": "orchestrator-read",
+          "verdict": "keep",
+          "note": "Mode routing + defaults."
+        },
+        {
+          "region": "Step 1 research-considerations format (L46)",
+          "content_class": "load-bearing-gate",
+          "consumption_mode": "orchestrator-read",
+          "verdict": "keep",
+          "note": "Parsing rule (preserve-list)."
+        },
+        {
+          "region": "Step 2 fanout pointer + grid floor/corner (L50)",
+          "content_class": "how-narration",
+          "consumption_mode": "orchestrator-read",
+          "verdict": "trim",
+          "note": "P2: drop maintainer parenthetical."
+        },
+        {
+          "region": "Step 2 upper-bound-not-quota weighting (L52)",
+          "content_class": "maintainer-rationale",
+          "consumption_mode": "orchestrator-read",
+          "verdict": "keep",
+          "note": "Scope/weighting prose; already terse, kept."
+        },
+        {
+          "region": "Step 2 examples line (L54)",
+          "content_class": "duplication",
+          "consumption_mode": "orchestrator-read",
+          "verdict": "trim",
+          "note": "P1: restates L50 cells."
+        },
+        {
+          "region": "Injection-resistance intro + canonical text (L58-62)",
+          "content_class": "load-bearing-gate",
+          "consumption_mode": "verbatim-shipped",
+          "verdict": "keep",
+          "note": "Canonical text + substitution-scope phrase (preserve-list)."
+        },
+        {
+          "region": "Considerations-injection rule + why (L64-66)",
+          "content_class": "maintainer-rationale",
+          "consumption_mode": "orchestrator-read",
+          "verdict": "trim",
+          "note": "P4: rule kept, why condensed."
+        },
+        {
+          "region": "Considerations h3 + fixed-placement (L68)",
+          "content_class": "load-bearing-gate",
+          "consumption_mode": "orchestrator-read",
+          "verdict": "keep",
+          "note": "h3 + placement rule (preserve-list)."
+        },
+        {
+          "region": "Angle selection hybrid + fanout pointer (L70-72)",
+          "content_class": "how-narration",
+          "consumption_mode": "orchestrator-read",
+          "verdict": "trim",
+          "note": "P3: drop 'do not re-derive' aside."
+        },
+        {
+          "region": "Core/chosen/adversarial-last summary (L74-78)",
+          "content_class": "load-bearing-gate",
+          "consumption_mode": "orchestrator-read",
+          "verdict": "keep",
+          "note": "Always-last adversarial ordering (preserve)."
+        },
+        {
+          "region": "Codebase prompt body (fence L83-101)",
+          "content_class": "load-bearing-gate",
+          "consumption_mode": "verbatim-shipped",
+          "verdict": "keep",
+          "note": "Shipped verbatim to sub-agent."
+        },
+        {
+          "region": "Web prompt body (fence L107-124)",
+          "content_class": "load-bearing-gate",
+          "consumption_mode": "verbatim-shipped",
+          "verdict": "keep",
+          "note": "Shipped verbatim to sub-agent."
+        },
+        {
+          "region": "Requirements & Constraints prompt body (fence L129-144)",
+          "content_class": "load-bearing-gate",
+          "consumption_mode": "verbatim-shipped",
+          "verdict": "keep",
+          "note": "Shipped verbatim to sub-agent."
+        },
+        {
+          "region": "Tradeoffs prompt body (fence L149-161)",
+          "content_class": "load-bearing-gate",
+          "consumption_mode": "verbatim-shipped",
+          "verdict": "keep",
+          "note": "Shipped verbatim to sub-agent."
+        },
+        {
+          "region": "Chosen-angle composition recipe (L163)",
+          "content_class": "load-bearing-gate",
+          "consumption_mode": "orchestrator-read",
+          "verdict": "keep",
+          "note": "append {INJECTION_RESISTANCE_INSTRUCTION} recipe (preserve-list)."
+        },
+        {
+          "region": "Adversarial prompt body (fence L168-185)",
+          "content_class": "load-bearing-gate",
+          "consumption_mode": "verbatim-shipped",
+          "verdict": "keep",
+          "note": "Shipped verbatim to sub-agent."
+        },
+        {
+          "region": "Dispatch protocol fanout pointer + two-wave (L187-194)",
+          "content_class": "how-narration",
+          "consumption_mode": "orchestrator-read",
+          "verdict": "trim",
+          "note": "P5 (downgraded): condense narration, preserve ordering + read-only gate."
+        },
+        {
+          "region": "Step 4 angle-driven schema + Open Questions contract (L196-200)",
+          "content_class": "load-bearing-gate",
+          "consumption_mode": "orchestrator-read",
+          "verdict": "keep",
+          "note": "## Open Questions machine contract."
+        },
+        {
+          "region": "Step 4 empty/failed warning literals (L202-209)",
+          "content_class": "load-bearing-gate",
+          "consumption_mode": "verbatim-shipped",
+          "verdict": "keep",
+          "note": "Exact warning-string literals (preserve-list)."
+        },
+        {
+          "region": "Step 4 contradiction handling (L211-213)",
+          "content_class": "load-bearing-gate",
+          "consumption_mode": "orchestrator-read",
+          "verdict": "keep",
+          "note": "Routes contradictions to ## Open Questions."
+        },
+        {
+          "region": "Step 4 output-structure template (fence L219-239)",
+          "content_class": "how-narration",
+          "consumption_mode": "orchestrator-read",
+          "verdict": "trim",
+          "note": "P6 (downgraded)/P7/P8: orchestrator-read template (NOT sub-agent-shipped); condense bracket prose, preserve heading names + literals + omission rules."
+        },
+        {
+          "region": "Step 5 route output (L241-254)",
+          "content_class": "load-bearing-gate",
+          "consumption_mode": "orchestrator-read",
+          "verdict": "trim",
+          "note": "P9: condense substep-3 duplication; keep routing/announce/gating."
+        }
+      ],
+      "safe_proposals": [
+        {
+          "id": "P1",
+          "section": "Step 2: Determine Agent Count (L54 Examples line)",
+          "content_class": "duplication",
+          "consumption_mode": "orchestrator-read",
+          "verdict": "trim",
+          "kind": "redundant-example",
+          "action": "remove",
+          "est_savings_bytes": 93,
+          "excerpt": "Examples: `tier=complex, criticality=critical` → 10. `tier=simple, criticality=low` → 3.",
+          "proposed_replacement": "",
+          "risk": "low",
+          "notes": "Pure restatement of L50's already-stated cells. Remove line + trailing blank line.",
+          "verifier_reason": {
+            "verdict": "safe",
+            "behavior": "Gave the orchestrator two concrete tier×criticality→count anchor points (complex+critical→10, simple+low→3).",
+            "anchor": "skills/research/SKILL.md:50",
+            "anchor_quote": "The floor cell (simple+low) is 3; the corner cell (complex+critical) is 10. Both axes raise the count monotonically.",
+            "scope_preserved_quote": "The floor cell (simple+low) is 3; the corner cell (complex+critical) is 10.",
+            "notes": "Redundant-example exception: identical values survive at L50; removal loses no information."
+          }
+        },
+        {
+          "id": "P2",
+          "section": "Step 2: Determine Agent Count (L50 parenthetical)",
+          "content_class": "maintainer-rationale",
+          "consumption_mode": "orchestrator-read",
+          "verdict": "trim",
+          "kind": "maintainer-rationale",
+          "action": "condense",
+          "est_savings_bytes": 27,
+          "excerpt": "the canonical, shared source for the grid (do not re-inline it here)",
+          "proposed_replacement": "the canonical, shared source for the grid",
+          "risk": "low",
+          "notes": "Drops a future-editor instruction; grid remains absent from the file.",
+          "verifier_reason": {
+            "verdict": "safe",
+            "behavior": "'(do not re-inline it here)' instructed a future editor not to copy the grid into this file.",
+            "anchor": "skills/research/SKILL.md:50 (surviving 'the canonical, shared source for the grid') + structural fact that the grid is not inlined anywhere.",
+            "anchor_quote": "the canonical, shared source for the grid",
+            "scope_preserved_quote": "the canonical, shared source for the grid",
+            "notes": "Surviving phrase still designates fanout.md authoritative; dropped clause was a pure future-editor instruction."
+          }
+        },
+        {
+          "id": "P3",
+          "section": "Step 3 -> Angle selection (L72)",
+          "content_class": "how-narration",
+          "consumption_mode": "orchestrator-read",
+          "verdict": "trim",
+          "kind": "how-narration",
+          "action": "condense",
+          "est_savings_bytes": 32,
+          "excerpt": "Apply it; do not re-derive the rule here.",
+          "proposed_replacement": "Apply it.",
+          "risk": "low",
+          "notes": "Delegation to fanout.md survives; only the redundant aside dropped.",
+          "verifier_reason": {
+            "verdict": "safe",
+            "behavior": "'do not re-derive the rule here' told the orchestrator to defer how-to-choose-angles logic to fanout.md.",
+            "anchor": "skills/research/SKILL.md:72 (surviving delegation sentence + retained 'Apply it.')",
+            "anchor_quote": "The authority on *how to choose* the non-core angles ... is the hybrid-angle-selection section of [...fanout.md]. Apply it.",
+            "scope_preserved_quote": "...is the hybrid-angle-selection section of [...fanout.md]. Apply it.",
+            "notes": "Delegation and imperative survive; ${CLAUDE_SKILL_DIR} pointer untouched."
+          }
+        },
+        {
+          "id": "P4",
+          "section": "Step 3 -> Considerations injection (L66 why-prose)",
+          "content_class": "maintainer-rationale",
+          "consumption_mode": "orchestrator-read",
+          "verdict": "trim",
+          "kind": "maintainer-rationale",
+          "action": "condense",
+          "est_savings_bytes": 127,
+          "excerpt": "Tradeoffs is excluded so its orthogonal-dimension evaluation (complexity, maintainability, performance, alignment with existing patterns) is preserved without being narrowed by external considerations. Adversarial is excluded because it operates on summarized findings of the other angles rather than directly on the considerations.",
+          "proposed_replacement": "Tradeoffs is excluded so its orthogonal-dimension evaluation is not narrowed by external considerations; Adversarial is excluded because it operates on summarized findings, not the considerations directly.",
+          "risk": "low",
+          "notes": "Rule in preceding sentence untouched; surviving text names both excluded angles + reasons.",
+          "verifier_reason": {
+            "verdict": "safe",
+            "behavior": "Explained WHY Tradeoffs and Adversarial are excluded from considerations-injection.",
+            "anchor": "skills/research/SKILL.md:66 (preceding scope-bearing rule, untouched) + condensed why in replacement.",
+            "anchor_quote": "inject its content ... into the dispatch prompts of the **mandatory core angles only** (Codebase, Web, Requirements & Constraints) — the Tradeoffs and Adversarial angles, and any other orchestrator-chosen angle, do not receive this section.",
+            "scope_preserved_quote": "Tradeoffs is excluded so its orthogonal-dimension evaluation is not narrowed by external considerations; Adversarial is excluded because it operates on summarized findings, not the considerations directly.",
+            "notes": "CHECK PASSED: surviving text names BOTH excluded angles and each reason; only the parenthetical four-dimension re-listing (still at L152) dropped."
+          }
+        },
+        {
+          "id": "P7",
+          "section": "Step 4 -> Output-structure template, ## Open Questions bracket (L232-235)",
+          "content_class": "how-narration",
+          "consumption_mode": "orchestrator-read",
+          "verdict": "trim",
+          "kind": "how-narration",
+          "action": "condense",
+          "est_savings_bytes": 13,
+          "excerpt": "reached because the cell's count exceeded the distinct angles available (per fanout.md).",
+          "proposed_replacement": "Light tighten: 'contradictions between agents'->'agent contradictions'; 'exceeded the distinct angles available'->'exceeded available distinct angles'. Preserve 'Fixed contract heading — parsed by the complexity escalator', '(per fanout.md)', and 'Omit this section if no open questions exist.'",
+          "risk": "low",
+          "notes": "Secondary restatement; primary contract anchored at L198.",
+          "verifier_reason": {
+            "verdict": "safe",
+            "behavior": "Told synthesizer the section is the fixed contract heading parsed by the escalator, includes contradictions + subdivision note, omitted if no open questions.",
+            "anchor": "skills/research/SKILL.md:198 (Step-4 contract sentence) + L231 (## Open Questions heading, untouched).",
+            "anchor_quote": "The **only** fixed contract heading is `## Open Questions`, which is machine-parsed by `cortex-complexity-escalator` ... Preserve `## Open Questions`'s heading and semantics exactly.",
+            "scope_preserved_quote": "Preserve 'Fixed contract heading — parsed by the complexity escalator', '(per fanout.md)', and 'Omit this section if no open questions exist.'",
+            "notes": "Fixed-contract semantics primarily anchored at L198; bracket is secondary restatement."
+          }
+        },
+        {
+          "id": "P8",
+          "section": "Step 4 -> Output-structure template, ## Considerations Addressed bracket (L238)",
+          "content_class": "how-narration",
+          "consumption_mode": "orchestrator-read",
+          "verdict": "trim",
+          "kind": "how-narration",
+          "action": "condense",
+          "est_savings_bytes": 12,
+          "excerpt": "Each input consideration becomes one bullet with a one-sentence note on how research addressed it",
+          "proposed_replacement": "Tighten: 'Each input consideration becomes one bullet'->'One bullet per input consideration'; 'and before'->'before'. Preserve the conditional gate, the 'deferred — no relevant evidence found' literal, and the after-Open-Questions/before-references placement.",
+          "risk": "low",
+          "notes": "Gate + literal + placement preserved.",
+          "verifier_reason": {
+            "verdict": "safe",
+            "behavior": "Told synthesizer this conditional section is emitted only when research-considerations non-empty AND lifecycle mode, with the deferred literal and placement.",
+            "anchor": "skills/research/SKILL.md:238 (surviving gate/literal/placement) + Step-5 L246/L253 (independent lifecycle-only gate + literal).",
+            "anchor_quote": "[Conditional section: emitted only when research-considerations was non-empty AND lifecycle mode. ... (or \"deferred — no relevant evidence found\"). Appears after `## Open Questions` and before any final references.]",
+            "scope_preserved_quote": "the conditional gate ('emitted only when research-considerations was non-empty AND lifecycle mode'), the 'deferred — no relevant evidence found' literal, and the placement rule.",
+            "notes": "Only filler phrasing tightens; lifecycle-only gate additionally anchored at L253."
+          }
+        },
+        {
+          "id": "P9",
+          "section": "Step 5 -> Lifecycle mode substep 3 (L246)",
+          "content_class": "duplication",
+          "consumption_mode": "orchestrator-read",
+          "verdict": "trim",
+          "kind": "how-narration",
+          "action": "condense",
+          "est_savings_bytes": 172,
+          "excerpt": "one bullet per input consideration with a one-sentence note on how research addressed it (or \"deferred — no relevant evidence found\"). This section is emitted only in lifecycle mode.",
+          "proposed_replacement": "3. If `research-considerations` was non-empty, the synthesis output includes the `## Considerations Addressed` section (per Step 4 output structure). Emitted only in lifecycle mode.",
+          "risk": "low",
+          "notes": "Dropped clause re-derives the L238 bracket, reached via the retained cross-ref.",
+          "verifier_reason": {
+            "verdict": "safe",
+            "behavior": "Spelled out, word-for-word, the same Considerations-Addressed mechanics Step 4's bracket already defines.",
+            "anchor": "skills/research/SKILL.md:238 (the Step-4 bracket this substep cross-references) + retained '(per Step 4 output structure)' cross-ref.",
+            "anchor_quote": "If `research-considerations` was non-empty, the synthesis output includes the `## Considerations Addressed` section (per Step 4 output structure). Emitted only in lifecycle mode.",
+            "scope_preserved_quote": "the synthesis output includes the `## Considerations Addressed` section (per Step 4 output structure). Emitted only in lifecycle mode.",
+            "notes": "Detail survives in Step 4 (L238); gate + section name + cross-ref + lifecycle-only gating preserved."
+          }
+        }
+      ],
+      "downgraded_proposals": [
+        {
+          "id": "P5",
+          "section": "Step 3 -> Dispatch protocol (L191-194 two-wave narration)",
+          "content_class": "how-narration",
+          "consumption_mode": "orchestrator-read",
+          "verdict": "trim",
+          "kind": "how-narration",
+          "action": "condense",
+          "downgrade_to": "condense with a hard apply-time needle-gate: the surviving text MUST literally retain (a) always-last adversarial ordering, (b) single-batch/single-response parallel dispatch, (c) 'No isolation: \"worktree\"; agents are read-only', (d) the summary-injection step, (e) the low/medium no-second-wave sentence.",
+          "est_savings_bytes": 64,
+          "excerpt": "in parallel, as one batch of Agent tool calls in a single response",
+          "risk": "medium",
+          "notes": "Verifier downgraded from safe: the recorded proposed_replacement was an apply-note, not a literal string, so the five needles must be re-confirmed in the concrete condensed text at apply time (Task 5 anchor re-check + Task 6 oracle item ix).",
+          "verifier_reason": {
+            "verdict": "downgrade",
+            "behavior": "Told the orchestrator: dispatch core+chosen as one parallel batch in a single response, no-worktree/read-only; then for high/critical summarize each angle and dispatch adversarial last with that summary; fold critique into synthesis; low/medium no second wave.",
+            "anchor": "skills/research/SKILL.md:191-194 — these five facts live ONLY in this prose; the only other always-last anchor (L78) does not carry the batching/read-only/no-second-wave facts. Apply-time gate required.",
+            "anchor_quote": "1. **Core wave (parallel).** Dispatch ... in parallel, as one batch of Agent tool calls in a single response. No `isolation: \"worktree\"`; agents are read-only.",
+            "scope_preserved_quote": "preserving wave ordering (core parallel then adversarial last), single-batch/single-response parallel dispatch, 'No isolation: \"worktree\"; agents are read-only', the summary-injection step, fold-into-synthesis, and the low/medium no-second-wave branch",
+            "notes": "Downgrade to condense-with-needle-gate; cannot certify safe until concrete condensed text contains all five needles verbatim."
+          }
+        },
+        {
+          "id": "P6",
+          "section": "Step 4 -> Output-structure template, ## <Angle name> bracket (L223-229)",
+          "content_class": "duplication",
+          "consumption_mode": "orchestrator-read",
+          "verdict": "trim",
+          "kind": "how-narration",
+          "action": "condense",
+          "downgrade_to": "condense with an apply-time needle-gate: produced text MUST literally contain all five ## heading names (## Codebase Analysis, ## Web Research, ## Requirements & Constraints, ## Tradeoffs & Alternatives, ## Adversarial Review), the 'present only when the adversarial agent ran (high/critical)' conditional, and the exact warning literal '⚠️ The [angle] agent returned no findings — this section may be incomplete.'",
+          "est_savings_bytes": 133,
+          "excerpt": "[One section per dispatched angle, titled by that angle. The mandatory core is always present",
+          "risk": "low",
+          "notes": "Verifier downgraded from safe: needle set must be re-confirmed in the concrete condensed bracket at apply time. Heading names also survive at L223-227 and the warning literal at L206 independently.",
+          "verifier_reason": {
+            "verdict": "downgrade",
+            "behavior": "Told the synthesizer to emit one ## section per dispatched angle, mandatory core always present (three named headings), each chosen angle its own heading, ## Adversarial Review only when adversarial ran, and emit the no-findings warning literal.",
+            "anchor": "skills/research/SKILL.md preserve-list (all five heading names + conditional + warning literal); reinforced by Step-3 structure (L74 core, L78 adversarial-last) and L206 warning literal source.",
+            "anchor_quote": "all five heading names (## Codebase Analysis, ## Web Research, ## Requirements & Constraints, ## Tradeoffs & Alternatives, ## Adversarial Review), the adversarial-only-for-high/critical conditional, and the warning literal '⚠️ The [angle] agent returned no findings — this section may be incomplete.'",
+            "scope_preserved_quote": "all five heading names + the 'present only when the adversarial agent ran (high/critical)' conditional + the exact warning literal.",
+            "notes": "Downgraded only because the proposed_replacement is an apply-note; the needle set must be re-confirmed at apply time (Task 5)."
+          }
+        }
+      ],
+      "refuted_proposals": [],
+      "safe_savings_bytes": 674,
+      "est_total_savings_bytes": 673,
+      "verifier_anchor_recheck": [
+        {
+          "id": "P1",
+          "anchor": "skills/research/SKILL.md L50 floor/corner values",
+          "confirmed_post_trim": true,
+          "needle": "The floor cell (simple+low) is 3; the corner cell (complex+critical) is 10."
+        },
+        {
+          "id": "P2",
+          "anchor": "L50 'the canonical, shared source for the grid.'",
+          "confirmed_post_trim": true,
+          "needle": "the canonical, shared source for the grid."
+        },
+        {
+          "id": "P3",
+          "anchor": "L72 delegation to fanout.md + 'Apply it.'",
+          "confirmed_post_trim": true,
+          "needle": "fanout.md). Apply it."
+        },
+        {
+          "id": "P4",
+          "anchor": "L66 exclusion rule (untouched) + condensed why naming both angles",
+          "confirmed_post_trim": true,
+          "needle": "mandatory core angles only** (Codebase, Web, Requirements & Constraints); Tradeoffs/Adversarial exclusion reasons both present."
+        },
+        {
+          "id": "P5",
+          "anchor": "L191-194 two-wave; all five needle-gate facts re-read post-trim",
+          "confirmed_post_trim": true,
+          "needle": "always-last ordering + 'in one batch of Agent calls in a single response' + 'No isolation: \"worktree\"; agents are read-only.' + summary-injection + 'the core wave is the whole dispatch — no second wave.'"
+        },
+        {
+          "id": "P6",
+          "anchor": "Output-template bracket; all five ## heading names + adversarial conditional + warning literal re-read post-trim",
+          "confirmed_post_trim": true,
+          "needle": "## Codebase Analysis / ## Web Research / ## Requirements & Constraints / ## Tradeoffs & Alternatives / ## Adversarial Review + 'present only when the adversarial agent ran (high/critical)' + '⚠️ The [angle] agent returned no findings — this section may be incomplete.'"
+        },
+        {
+          "id": "P7",
+          "anchor": "Output-template ## Open Questions bracket",
+          "confirmed_post_trim": true,
+          "needle": "Fixed contract heading — parsed by the complexity escalator ... (per fanout.md). Omit this section if no open questions exist."
+        },
+        {
+          "id": "P8",
+          "anchor": "Output-template ## Considerations Addressed bracket",
+          "confirmed_post_trim": true,
+          "needle": "emitted only when research-considerations was non-empty AND lifecycle mode ... deferred — no relevant evidence found"
+        },
+        {
+          "id": "P9",
+          "anchor": "Step 5 lifecycle substep 3",
+          "confirmed_post_trim": true,
+          "needle": "`## Considerations Addressed` section (per Step 4 output structure). Emitted only in lifecycle mode."
+        }
+      ],
+      "fenced_bodies_unchanged": true,
+      "fenced_bodies_check": "Five per-angle prompt bodies (Codebase, Web, Requirements & Constraints, Tradeoffs, Adversarial) extracted from post-trim and from pinned pre-trim blob b0a4c5f4 and diffed: byte-identical. Sixth fenced region (output-structure template) differs (P6/P7/P8 edits, expected). Fence parity 12 markers preserved."
+    }
+  ]
+}
