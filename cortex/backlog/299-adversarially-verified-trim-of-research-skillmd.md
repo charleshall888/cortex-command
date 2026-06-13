@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 6a8e28ef-dbe3-4b51-911b-3d84d1ce3b40
 title: Adversarially-verified trim of research/SKILL.md
-status: refined
+status: complete
 priority: medium
 type: chore
 created: 2026-06-10
