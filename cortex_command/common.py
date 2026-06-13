@@ -32,6 +32,7 @@ import os
 import re
 import sys
 import tempfile
+from collections.abc import Iterable
 from functools import lru_cache
 from pathlib import Path
 from typing import NamedTuple
@@ -657,6 +658,87 @@ class LifecycleStateReduction(NamedTuple):
         )
 
 
+def reduce_lifecycle_events(records: Iterable[dict]) -> tuple[dict[str, str], list[int]]:
+    """Pure supersession fold over already-parsed event records.
+
+    The functional core shared by the file-based reader
+    (:func:`reduce_lifecycle_state`) and the in-memory metrics path
+    (``extract_feature_metrics``), so the supersession rule and its
+    vocabulary gate agree by construction. Performs no file I/O, no
+    ``json.loads``, and no line-number tracking — the caller owns the
+    intake and (for the Path reader) the line numbers.
+
+    ``lifecycle_start`` seeds ``criticality``/``tier``; ``criticality_override``
+    and ``complexity_override`` supersede from their ``to`` field ONLY (no
+    ``.tier``/``.criticality`` fallback). A parsed value outside its closed
+    vocabulary is rejected per-value (it does not enter ``state``). A record
+    carrying any out-of-vocabulary value reports its position **once** — a
+    single ``lifecycle_start`` with both an out-of-vocab ``tier`` and an
+    out-of-vocab ``criticality`` reports its position a single time, mirroring
+    the per-line skip the file-based reader has always produced.
+
+    Args:
+        records: Already-parsed records, in order. Non-dict records and
+            unrecognized events are silent no-ops (not rejections), matching
+            the readers' historical handling.
+
+    Returns:
+        ``(state, rejected_positions)``. ``state`` holds at most the keys
+        ``"criticality"`` and ``"tier"`` in criticality-then-tier insertion
+        order. ``rejected_positions`` are 0-based indices into ``records`` of
+        records carrying an out-of-vocabulary value, each position at most
+        once. Never a ``LifecycleStateReduction`` — that wrapper is a
+        Path-shell concern.
+    """
+    state: dict[str, str] = {}
+    rejected_positions: list[int] = []
+
+    for index, record in enumerate(records):
+        if not isinstance(record, dict):
+            # Non-dict JSON value: silent no-op, matching the readers'
+            # historical handling. NOT a rejection, NOT a corruption signal.
+            continue
+
+        kind = record.get("event")
+        rejected = False
+
+        if kind == "lifecycle_start":
+            if "criticality" in record:
+                value = record.get("criticality")
+                if isinstance(value, str) and value in CRITICALITY_VOCABULARY:
+                    state["criticality"] = value
+                else:
+                    rejected = True
+            if "tier" in record:
+                value = record.get("tier")
+                if isinstance(value, str) and value in TIER_VOCABULARY:
+                    state["tier"] = value
+                else:
+                    rejected = True
+        elif kind == "criticality_override":
+            if "to" in record:
+                value = record.get("to")
+                if isinstance(value, str) and value in CRITICALITY_VOCABULARY:
+                    state["criticality"] = value
+                else:
+                    rejected = True
+        elif kind == "complexity_override":
+            if "to" in record:
+                value = record.get("to")
+                if isinstance(value, str) and value in TIER_VOCABULARY:
+                    state["tier"] = value
+                else:
+                    rejected = True
+
+        # One append per rejected record (not per rejected value), so
+        # rejected_positions is duplicate-free by construction and faithful
+        # to the file reader's per-line skip semantics.
+        if rejected:
+            rejected_positions.append(index)
+
+    return state, rejected_positions
+
+
 def reduce_lifecycle_state(events_path: Path) -> LifecycleStateReduction:
     """Reduce a feature's events.log to its canonical lifecycle state.
 
@@ -684,8 +766,9 @@ def reduce_lifecycle_state(events_path: Path) -> LifecycleStateReduction:
     except (FileNotFoundError, IsADirectoryError, NotADirectoryError, PermissionError, OSError):
         return LifecycleStateReduction(state={}, skipped_lines=())
 
-    state: dict[str, str] = {}
-    skipped: list[int] = []
+    parse_failures: list[int] = []
+    linenos: list[int] = []
+    records: list = []
 
     for lineno, raw in enumerate(content.splitlines(), start=1):
         line = raw.strip()
@@ -694,46 +777,21 @@ def reduce_lifecycle_state(events_path: Path) -> LifecycleStateReduction:
         try:
             record = json.loads(line)
         except json.JSONDecodeError:
-            skipped.append(lineno)
+            parse_failures.append(lineno)
             continue
-        if not isinstance(record, dict):
-            # Non-dict JSON value: skip silently, matching the three current
-            # readers' no-op handling. This is NOT a corruption signal.
-            continue
+        # Keep every parsed JSON value (dicts and non-dicts alike) in line
+        # order so the core's 0-based positions index this list 1:1; the
+        # core no-ops on non-dicts.
+        linenos.append(lineno)
+        records.append(record)
 
-        kind = record.get("event")
-        line_rejected = False
-
-        if kind == "lifecycle_start":
-            if "criticality" in record:
-                value = record.get("criticality")
-                if isinstance(value, str) and value in CRITICALITY_VOCABULARY:
-                    state["criticality"] = value
-                else:
-                    line_rejected = True
-            if "tier" in record:
-                value = record.get("tier")
-                if isinstance(value, str) and value in TIER_VOCABULARY:
-                    state["tier"] = value
-                else:
-                    line_rejected = True
-        elif kind == "criticality_override":
-            if "to" in record:
-                value = record.get("to")
-                if isinstance(value, str) and value in CRITICALITY_VOCABULARY:
-                    state["criticality"] = value
-                else:
-                    line_rejected = True
-        elif kind == "complexity_override":
-            if "to" in record:
-                value = record.get("to")
-                if isinstance(value, str) and value in TIER_VOCABULARY:
-                    state["tier"] = value
-                else:
-                    line_rejected = True
-
-        if line_rejected:
-            skipped.append(lineno)
+    state, rejected_positions = reduce_lifecycle_events(records)
+    vocab_rejections = [linenos[pos] for pos in rejected_positions]
+    # The parse-failure and vocab-rejection line sets are disjoint (a parse
+    # failure never reaches the core), and the core reports each rejected
+    # record exactly once, so the sorted union reproduces the historical
+    # single-forward-pass ascending skipped_lines byte-for-byte.
+    skipped = sorted(set(parse_failures) | set(vocab_rejections))
 
     return LifecycleStateReduction(state=state, skipped_lines=tuple(skipped))
 
