@@ -18,6 +18,7 @@ from cortex_command.common import (
     lifecycle_state_corrupted,
     read_criticality,
     read_tier,
+    reduce_lifecycle_events,
     reduce_lifecycle_state,
 )
 from cortex_command.lifecycle import state_cli
@@ -210,3 +211,110 @@ def test_reduce_lifecycle_state_library_readers_silent_on_stderr(tmp_path, capsy
     )
     read_tier("feat-silent", lifecycle_base=tmp_path)
     assert capsys.readouterr().err == ""
+
+
+# ---------------------------------------------------------------------------
+# Pure-core entry point: reduce_lifecycle_events (feature 301)
+# ---------------------------------------------------------------------------
+
+
+def test_reduce_lifecycle_events_empty_input():
+    """Empty input → empty state, no rejected positions."""
+    state, rejected = reduce_lifecycle_events([])
+    assert state == {}
+    assert rejected == []
+
+
+def test_reduce_lifecycle_events_seed_and_overrides_insertion_order():
+    """Seed + complexity_override + criticality_override → both axes present in
+    criticality-then-tier insertion order, no rejections."""
+    state, rejected = reduce_lifecycle_events(
+        [
+            {"event": "lifecycle_start", "tier": "simple", "criticality": "medium"},
+            {"event": "complexity_override", "to": "complex"},
+            {"event": "criticality_override", "to": "high"},
+        ]
+    )
+    assert state == {"criticality": "high", "tier": "complex"}
+    assert list(state.keys()) == ["criticality", "tier"]
+    assert rejected == []
+
+
+def test_reduce_lifecycle_events_out_of_vocab_value_dropped_and_reported():
+    """An out-of-vocab override value is dropped from state and its 0-based
+    position is reported."""
+    state, rejected = reduce_lifecycle_events(
+        [
+            {"event": "lifecycle_start", "tier": "simple"},
+            {"event": "complexity_override", "to": "trivial"},
+        ]
+    )
+    assert state == {"tier": "simple"}
+    assert rejected == [1]
+
+
+def test_reduce_lifecycle_events_non_dict_record_is_silent_noop():
+    """A non-dict record is a silent no-op — no state change, NOT reported."""
+    state, rejected = reduce_lifecycle_events(
+        [42, {"event": "lifecycle_start", "tier": "complex"}]
+    )
+    assert state == {"tier": "complex"}
+    assert rejected == []
+
+
+def test_reduce_lifecycle_events_second_lifecycle_start_reseeds_tier():
+    """A second lifecycle_start re-seeds state['tier'] (last writer wins)."""
+    state, rejected = reduce_lifecycle_events(
+        [
+            {"event": "lifecycle_start", "tier": "simple"},
+            {"event": "lifecycle_start", "tier": "complex"},
+        ]
+    )
+    assert state["tier"] == "complex"
+    assert rejected == []
+
+
+def test_reduce_lifecycle_events_double_axis_rejection_reports_position_once():
+    """A single lifecycle_start carrying BOTH an out-of-vocab tier AND an
+    out-of-vocab criticality reports its position exactly once (not twice) —
+    the per-record-once contract distinguishing per-record from per-value
+    emission. The only input that catches a per-value double-append."""
+    state, rejected = reduce_lifecycle_events(
+        [{"event": "lifecycle_start", "tier": "trivial", "criticality": "bogus"}]
+    )
+    assert state == {}
+    assert rejected == [0]
+
+
+def test_reduce_lifecycle_state_double_axis_rejection_flags_line_once(tmp_path):
+    """Through the Path reader, the double-out-of-vocab lifecycle_start's line
+    appears once in skipped_lines."""
+    log = tmp_path / "events.log"
+    _write(
+        log,
+        '{"event":"lifecycle_start","tier":"trivial","criticality":"bogus"}',
+    )
+    result = reduce_lifecycle_state(log)
+    assert result.state == {}
+    assert result.skipped_lines == (1,)
+
+
+def test_reduce_lifecycle_state_interleaved_vocab_and_torn_ascending(tmp_path):
+    """A vocab-rejected value on line 1 and a torn-JSON line 2 → skipped_lines
+    is ascending (1, 2), not category-grouped."""
+    log = tmp_path / "events.log"
+    _write(
+        log,
+        '{"event":"lifecycle_start","tier":"trivial","criticality":"high"}',
+        '{"event":"complexity_override","to":"comp',
+    )
+    result = reduce_lifecycle_state(log)
+    assert result.skipped_lines == (1, 2)
+    assert result.state == {"criticality": "high"}
+
+
+def test_lifecycle_state_reduction_not_grown():
+    """R3 growth guard: the NamedTuple keeps exactly its two declared fields.
+    The missing-file equality assertion does NOT catch a defaulted added
+    field, so this field-set assertion is the actual growth guard."""
+    assert LifecycleStateReduction._fields == ("state", "skipped_lines")
