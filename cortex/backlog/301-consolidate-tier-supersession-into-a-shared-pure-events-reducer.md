@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: caa4a81c-97ae-490a-8716-302d4bbd81bc
 title: Consolidate tier supersession into a shared pure-events reducer
-status: refined
+status: complete
 priority: low
 type: chore
 created: 2026-06-10
