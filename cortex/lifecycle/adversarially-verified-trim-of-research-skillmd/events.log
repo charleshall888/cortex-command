@@ -5,3 +5,11 @@
 {"ts": "2026-06-13T15:35:08Z", "event": "spec_approved", "feature": "adversarially-verified-trim-of-research-skillmd"}
 {"ts": "2026-06-13T16:02:42Z", "event": "plan_approved", "feature": "adversarially-verified-trim-of-research-skillmd"}
 {"ts": "2026-06-13T16:02:42Z", "event": "phase_transition", "feature": "adversarially-verified-trim-of-research-skillmd", "from": "plan", "to": "implement"}
+{"ts": "2026-06-13T16:08:18Z", "event": "batch_dispatch", "feature": "adversarially-verified-trim-of-research-skillmd", "batch": 0, "tasks": [1]}
+{"ts": "2026-06-13T16:13:17Z", "event": "batch_dispatch", "feature": "adversarially-verified-trim-of-research-skillmd", "batch": 1, "tasks": [2]}
+{"ts": "2026-06-13T16:20:44Z", "event": "batch_dispatch", "feature": "adversarially-verified-trim-of-research-skillmd", "batch": 2, "tasks": [3]}
+{"ts": "2026-06-13T16:26:43Z", "event": "batch_dispatch", "feature": "adversarially-verified-trim-of-research-skillmd", "batch": 3, "tasks": [4]}
+{"ts": "2026-06-13T16:30:57Z", "event": "batch_dispatch", "feature": "adversarially-verified-trim-of-research-skillmd", "batch": 4, "tasks": [5]}
+{"ts": "2026-06-13T16:30:57Z", "event": "batch_dispatch", "feature": "adversarially-verified-trim-of-research-skillmd", "batch": 5, "tasks": [6]}
+{"ts": "2026-06-13T16:32:57Z", "event": "batch_dispatch", "feature": "adversarially-verified-trim-of-research-skillmd", "batch": 6, "tasks": [7]}
+{"ts": "2026-06-13T16:32:57Z", "event": "batch_dispatch", "feature": "adversarially-verified-trim-of-research-skillmd", "batch": 7, "tasks": [8]}

@@ -47,11 +47,9 @@ Defaults:
 
 ## Step 2: Determine Agent Count
 
-`agent_count` is the cell where the task's `tier` (row) meets its `criticality` (column) in the count matrix at [`${CLAUDE_SKILL_DIR}/../lifecycle/references/fanout.md`](${CLAUDE_SKILL_DIR}/../lifecycle/references/fanout.md) — the canonical, shared source for the grid (do not re-inline it here). The floor cell (simple+low) is 3; the corner cell (complex+critical) is 10. Both axes raise the count monotonically.
+`agent_count` is the cell where the task's `tier` (row) meets its `criticality` (column) in the count matrix at [`${CLAUDE_SKILL_DIR}/../lifecycle/references/fanout.md`](${CLAUDE_SKILL_DIR}/../lifecycle/references/fanout.md) — the canonical, shared source for the grid. The floor cell (simple+low) is 3; the corner cell (complex+critical) is 10. Both axes raise the count monotonically.
 
 The count is an **upper bound on investigation breadth, not a quota** — dispatch fewer if the task offers fewer genuinely distinct angles than its cell allows; do not pad with redundant agents.
-
-Examples: `tier=complex, criticality=critical` → 10. `tier=simple, criticality=low` → 3.
 
 ## Step 3: Dispatch Agents
 
@@ -63,13 +61,13 @@ The following named fragment is referenced by every agent-prompt code-block belo
 
 ### Considerations injection (per-angle applicability)
 
-When `research-considerations` is non-empty (see Step 1), inject its content as a `### Considerations to investigate alongside the primary scope` h3-level section into the dispatch prompts of the **mandatory core angles only** (Codebase, Web, Requirements & Constraints) — the Tradeoffs and Adversarial angles, and any other orchestrator-chosen angle, do not receive this section. Tradeoffs is excluded so its orthogonal-dimension evaluation (complexity, maintainability, performance, alignment with existing patterns) is preserved without being narrowed by external considerations. Adversarial is excluded because it operates on summarized findings of the other angles rather than directly on the considerations.
+When `research-considerations` is non-empty (see Step 1), inject its content as a `### Considerations to investigate alongside the primary scope` h3-level section into the dispatch prompts of the **mandatory core angles only** (Codebase, Web, Requirements & Constraints) — the Tradeoffs and Adversarial angles, and any other orchestrator-chosen angle, do not receive this section. Tradeoffs is excluded so its orthogonal-dimension evaluation is not narrowed by external considerations; Adversarial is excluded because it operates on summarized findings, not the considerations directly.
 
 Heading level is h3 (`###`), not h2 (`##`), to avoid markdown-level collision with each agent's `## Output format` section. Placement is fixed: the section is inserted immediately after the per-agent job-description block (which ends at the injection-resistance instruction) and before the agent's existing `## Output format` block. When `research-considerations` is empty or absent, no section is injected and the prompts dispatch as today.
 
 ### Angle selection
 
-The angle set is **hybrid**: a fixed mandatory core plus orchestrator-chosen distinct angles, with an always-last adversarial pass for high/critical work. The authority on *how to choose* the non-core angles — keep them distinct and non-redundant, subdivide an existing angle by scope only once genuinely distinct angles are exhausted, and **no** topic→angle keyword router — is the hybrid-angle-selection section of [`${CLAUDE_SKILL_DIR}/../lifecycle/references/fanout.md`](${CLAUDE_SKILL_DIR}/../lifecycle/references/fanout.md). Apply it; do not re-derive the rule here.
+The angle set is **hybrid**: a fixed mandatory core plus orchestrator-chosen distinct angles, with an always-last adversarial pass for high/critical work. The authority on *how to choose* the non-core angles — keep them distinct and non-redundant, subdivide an existing angle by scope only once genuinely distinct angles are exhausted, and **no** topic→angle keyword router — is the hybrid-angle-selection section of [`${CLAUDE_SKILL_DIR}/../lifecycle/references/fanout.md`](${CLAUDE_SKILL_DIR}/../lifecycle/references/fanout.md). Apply it.
 
 **Mandatory core (always dispatched, at every cell):** Codebase, Web, Requirements & Constraints. Prompt templates below.
 
@@ -188,10 +186,10 @@ Output format:
 
 Per [`${CLAUDE_SKILL_DIR}/../lifecycle/references/fanout.md`](${CLAUDE_SKILL_DIR}/../lifecycle/references/fanout.md):
 
-1. **Core wave (parallel).** Dispatch the mandatory core plus the orchestrator-chosen angles for this cell — every angle except the always-last adversarial one — in parallel, as one batch of Agent tool calls in a single response. No `isolation: "worktree"`; agents are read-only.
-2. **Adversarial wave (last).** For high/critical work, once the core wave returns, summarize each angle's findings into a brief paragraph and dispatch the adversarial agent with that summary injected. Fold its critique into synthesis.
+1. **Core wave (parallel).** Dispatch the mandatory core plus the orchestrator-chosen angles — every angle except the always-last adversarial one — in one batch of Agent calls in a single response. No `isolation: "worktree"`; agents are read-only.
+2. **Adversarial wave (last).** For high/critical work, once the core wave returns, summarize each angle's findings and dispatch the adversarial agent with that summary injected; fold its critique into synthesis.
 
-At low/medium criticality where no adversarial angle was chosen, the core wave is the whole dispatch and there is no second wave.
+At low/medium criticality where no adversarial angle was chosen, the core wave is the whole dispatch — no second wave.
 
 ## Step 4: Synthesize Findings
 
@@ -220,22 +218,19 @@ Emit **one `##` section per angle actually dispatched in Step 3**, in dispatch o
 # Research: {topic}
 
 ## <Angle name>
-[One section per dispatched angle, titled by that angle. The mandatory core is always present
-— `## Codebase Analysis`, `## Web Research`, `## Requirements & Constraints` — using the
-output headings from each angle's prompt template. Each orchestrator-chosen angle gets a
-section titled by the angle the orchestrator selected (e.g. `## Tradeoffs & Alternatives`).
-The `## Adversarial Review` section is present only when the adversarial agent ran (high/critical).
-If an angle's agent returned no findings: ⚠️ The [angle] agent returned no findings — this
-section may be incomplete.]
+[One section per dispatched angle, titled by its prompt-template output heading. Core always present:
+`## Codebase Analysis`, `## Web Research`, `## Requirements & Constraints`. Each chosen angle gets its
+own heading (e.g. `## Tradeoffs & Alternatives`); `## Adversarial Review` is present only when the
+adversarial agent ran (high/critical). If an angle returned no findings: ⚠️ The [angle] agent returned
+no findings — this section may be incomplete.]
 
 ## Open Questions
-[Fixed contract heading — parsed by the complexity escalator. Unresolved questions surfaced
-during research, including contradictions between agents and any note that angle subdivision was
-reached because the cell's count exceeded the distinct angles available (per fanout.md).
-Omit this section if no open questions exist.]
+[Fixed contract heading — parsed by the complexity escalator. Unresolved questions surfaced during
+research, including agent contradictions and any note that angle subdivision was reached because the
+cell's count exceeded available distinct angles (per fanout.md). Omit this section if no open questions exist.]
 
 ## Considerations Addressed
-[Conditional section: emitted only when research-considerations was non-empty AND lifecycle mode. Each input consideration becomes one bullet with a one-sentence note on how research addressed it (or "deferred — no relevant evidence found"). Appears after `## Open Questions` and before any final references.]
+[Conditional section: emitted only when research-considerations was non-empty AND lifecycle mode. One bullet per input consideration with a one-sentence note on how research addressed it (or "deferred — no relevant evidence found"). Appears after `## Open Questions`, before any final references.]
 ```
 
 ## Step 5: Route Output
@@ -243,7 +238,7 @@ Omit this section if no open questions exist.]
 **Lifecycle mode** (`lifecycle-slug` was present in `$ARGUMENTS`):
 1. If `cortex/lifecycle/{lifecycle-slug}/` does not exist, create the directory.
 2. Write synthesis output to `cortex/lifecycle/{lifecycle-slug}/research.md`.
-3. If `research-considerations` was non-empty in `$ARGUMENTS`, the synthesis output includes the `## Considerations Addressed` section (per Step 4 output structure) — one bullet per input consideration with a one-sentence note on how research addressed it (or "deferred — no relevant evidence found"). This section is emitted only in lifecycle mode.
+3. If `research-considerations` was non-empty, the synthesis output includes the `## Considerations Addressed` section (per Step 4 output structure). Emitted only in lifecycle mode.
 4. Announce: "Research complete. Written to `cortex/lifecycle/{lifecycle-slug}/research.md`."
 
 **Standalone mode** (`lifecycle-slug` absent or empty):
