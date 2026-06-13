@@ -22,7 +22,7 @@ Capture the single-line JSON object printed to stdout. Schema: `{"resolved_path"
 - `{artifact_path}` ← `resolved_path`
 - `{artifact_sha256}` ← `sha256`
 
-Substitute both into every dispatch site that follows: the per-angle reviewer template, the total-failure fallback reviewer template, and the synthesizer template.
+Substitute both into every dispatch site that follows — including the conditionally-used total-failure fallback reviewer template.
 
 If `prepare-dispatch` exits non-zero, surface its stderr verbatim to the user and stop — do not dispatch any agent. Exit-2 messages name the offending path and the violated rule (symlink, prefix mismatch, non-file).
 
@@ -30,7 +30,7 @@ If `prepare-dispatch` exits non-zero, surface its stderr verbatim to the user an
 
 After parallel reviewers (or the surviving subset) return, run a two-phase verification gate before Step 2d synthesis. Phase 1 verifies each reviewer's read-sentinel; Phase 2 extracts the JSON envelope only for reviewers that pass Phase 1.
 
-The orchestrator captures the pre-dispatch SHA-256 of the artifact into orchestrator context before fan-out (see the `check-synth-stable` subcommand for the canonical computation path). That captured SHA is the expected value compared against each reviewer's sentinel here.
+The pre-dispatch SHA captured in Step 2a.5 (canonical computation path: the `check-synth-stable` subcommand) is the expected value compared against each reviewer's sentinel here.
 
 **Phase 1 — Sentinel verification (per reviewer):**
 
