@@ -29,6 +29,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from cortex_command.common import TIER_VOCABULARY, reduce_lifecycle_events
+
 assert sys.version_info >= (3, 11), (
     "cortex_command/pipeline/metrics.py requires Python 3.11+ for datetime.fromisoformat offset handling"
 )
@@ -85,7 +87,9 @@ def parse_events(path: Path) -> list[dict[str, Any]]:
         ``feature`` keys.
     """
     events: list[dict[str, Any]] = []
-    for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+    for lineno, line in enumerate(
+        path.read_text(encoding="utf-8", errors="replace").splitlines(), 1
+    ):
         line = line.strip()
         if not line:
             continue
@@ -226,23 +230,31 @@ def extract_feature_metrics(events: list[dict[str, Any]]) -> dict[str, Any] | No
     merge_anchor: str = final_complete.get("merge_anchor", "review")
 
     # ---- Tier ----
-    # Final effective tier, mirroring the canonical rule in
-    # ``common.reduce_lifecycle_state``: ``lifecycle_start`` seeds the tier
-    # (a later ``lifecycle_start`` re-seeds), and each ``complexity_override``
-    # supersedes via its ``to`` field, so the most recent writer wins.
-    # Escalated features therefore bucket under the tier they finished at,
-    # matching every other tier reader (``read_tier``, dispatch complexity).
-    # ``initial_tier`` preserves the first seed so escalation rate stays
-    # queryable and historical records remain comparable.
+    # Final effective tier comes solely from the shared supersession core in
+    # ``common.reduce_lifecycle_events``, so this in-memory reader agrees with
+    # ``read_tier`` (and every other tier reader) by construction: the core
+    # seeds from ``lifecycle_start`` and lets the most recent in-vocab tier
+    # override win, so escalated features bucket under the tier they finished
+    # at. Metrics ignores the rejected-position channel and never builds a
+    # ``LifecycleStateReduction``.
+    state, _ = reduce_lifecycle_events(events)
+    tier: str | None = state.get("tier")
+
+    # ``initial_tier`` preserves the FIRST in-vocab seed so escalation rate
+    # stays queryable and historical records stay comparable. It is a
+    # metrics-only forensic projection (a first-seed latch the gate readers do
+    # not want), kept local rather than moved into the shared core — but it
+    # reuses the canonical ``TIER_VOCABULARY`` so the vocab gate stays
+    # single-sourced. A leading out-of-vocab seed is skipped (not latched), so
+    # ``initial_tier`` is the first in-vocab seed, or ``None`` when no seed is
+    # in vocab.
     initial_tier: str | None = None
-    tier: str | None = None
     for e in events:
-        if e["event"] == "lifecycle_start" and e.get("tier") is not None:
-            if initial_tier is None:
-                initial_tier = e["tier"]
-            tier = e["tier"]
-        elif e["event"] == "complexity_override" and e.get("to") is not None:
-            tier = e["to"]
+        if e["event"] == "lifecycle_start":
+            seed = e.get("tier")
+            if isinstance(seed, str) and seed in TIER_VOCABULARY:
+                initial_tier = seed
+                break
 
     # ---- Task count ----
     task_count: int | None = final_complete.get("tasks_total")
