@@ -247,11 +247,7 @@ Plans are prose with structural context. The line between design and implementat
 - Verification fields that consist only of prose descriptions requiring human judgment (e.g., "confirm the feature works correctly")
 - Verification steps that reference artifacts (files, log entries, status fields) the executing task creates solely for the purpose of satisfying verification — this is self-sealing and passes tautologically
 
-After writing `plan.md`, update `cortex/lifecycle/{feature}/index.md`:
-- If `"plan"` is already in the `artifacts` array, skip entirely (no-op)
-- Otherwise: append `"plan"` to the artifacts inline array
-- Update the `updated` field to today's date
-- Rewrite the full `index.md` atomically
+After writing `plan.md`, register the `"plan"` artifact in `cortex/lifecycle/{feature}/index.md` per the canonical artifact-registration recipe in backlog-writeback.md (loaded at lifecycle Step 2).
 
 ### 3a. Orchestrator Review
 

@@ -202,7 +202,7 @@ Compute batches from the dependency graph using topological level grouping:
 - **Batch 1**: Tasks whose dependencies are all in batch 0.
 - **Batch N**: Tasks whose dependencies are all in batches 0 through N-1.
 
-Batching keys on each task's full identity, including letter-suffixed sub-task headings (`### Task 3a:`, `### Task 3b:`) which are first-class units (see plan.md's "Sub-task headings" section). **Sub-task siblings that co-schedule in the same batch must have disjoint `Files`**: a batch dispatches into one shared worktree, so same-batch tasks writing the same file race (last-writer-wins). If two same-parent sub-tasks must touch the same file, serialize them with an explicit `Depends on` edge so they land in different batches.
+Batching keys on each task's full identity, including letter-suffixed sub-task headings (`### Task 3a:`, `### Task 3b:`) which are first-class units (see plan.md's "Sub-task headings" section). **Sub-task siblings that co-schedule in the same batch must have disjoint `Files`** — the rationale and the serialize-via-`Depends on` workaround live in that canonical "Sub-task headings" section.
 
 For each batch, in order:
 

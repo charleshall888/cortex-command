@@ -87,7 +87,7 @@ Trim `skills/research/SKILL.md` by running a role-separated verification pipelin
 - **Complexity**: simple
 - **Context**: Concurrent lifecycle sessions share the git index (see git status: multiple live lifecycle dirs) — scope the commit explicitly to this feature's files; do not let another session's staged files leak in. Canonical + mirror MUST land in one commit (pre-commit drift hook fails a split). The branch decision is owned by the Implement phase's §1 picker (dirty tree + concurrent worktree carve-outs will fire); this task assumes the branch is already chosen.
 - **Verification**: `diff skills/research/SKILL.md plugins/cortex-core/skills/research/SKILL.md` — pass if empty (byte-identical mirror); AND `just test` exit 0; AND `git log -1 --stat` shows both files in the latest commit.
-- **Status**: [ ] pending
+- **Status**: [x] complete — committed in 781acd3c (trim+mirror+artifacts) + 9cd9fad8 (evidence.json). Mirror byte-identical; 46 feature tests + 386 parity/mirror tests pass + skill-path lint 0 violations. `just test` had 2 environmental failures unrelated to the trim (test_log_invocation_perf p50 timing flake under load; test_mcp_subprocess_contract sandbox-blocked pypi fetch) — neither references research/SKILL.md.
 
 ### Task 9: Rider R8 — canonicalize cortex-update-item exit-2 disambiguation
 - **Files**: `skills/refine/SKILL.md`, `skills/lifecycle/references/complete.md`
@@ -96,7 +96,7 @@ Trim `skills/research/SKILL.md` by running a role-separated verification pipelin
 - **Complexity**: simple
 - **Context**: Canonical home: `backlog-writeback.md` `## cortex-update-item Exit-2 Handling (canonical)` (~line 60). Use the file+descriptive-phrase pointer form proven at `clarify.md:110` (bare inline-code filename, e.g. "apply the canonical `cortex-update-item` exit-2 handling in `backlog-writeback.md`") — do NOT cite an exact heading anchor (the live heading carries backticks and a `(canonical)` suffix and may drift). Re-locate exact lines before editing (numbers as of 2026-06-13). Edit canonical only; mirror regenerates in Task 12.
 - **Verification**: `grep -rn 'ambiguous slug' skills/refine/SKILL.md skills/lifecycle/references/complete.md` shows no inline exit-2 *rule* restatement remaining (the disambiguation rule text appears canonically only in `backlog-writeback.md`); AND both consumers contain a `backlog-writeback.md` pointer (`grep -c 'backlog-writeback.md' skills/refine/SKILL.md` ≥ 1 and same for `complete.md`); AND `grep -n 'Handle failures as in Step 3' skills/refine/SKILL.md` still resolves to surviving generic prose (manual one-line confirm).
-- **Status**: [ ] pending
+- **Status**: [x] complete — both inline restatements (count 0) replaced with the clarify.md:110 pointer form; the generic "surface the error and wait" sentence survives at Step 3, so the "Handle failures as in Step 3" back-ref resolves to real prose.
 
 ### Task 10: Rider R9 — canonicalize index.md artifact-registration (conditional)
 - **Files**: `skills/refine/SKILL.md`, `skills/lifecycle/references/plan.md`, `cortex/lifecycle/adversarially-verified-trim-of-research-skillmd/evidence.json`
@@ -105,7 +105,7 @@ Trim `skills/research/SKILL.md` by running a role-separated verification pipelin
 - **Complexity**: simple
 - **Context**: Shares `skills/refine/SKILL.md` with Task 9 — must run after Task 9 (serialized, not parallel). This is the lowest-confidence canonicalization (research.md Adversarial #7; spec OQ note) — the decline branch is legitimate but must be a *reasoned* decline, not a default no-op. The canonical recipe is generic ("append the artifact key"); the per-site key is NOT delegable. Re-locate all three sites before editing (the back-reference at ~164 dangles if 130-134 becomes a pointer and is not retargeted — this is the spec's known three-site count). Lint-safe bare inline-code filename pointer form per `clarify.md:110`.
 - **Verification**: EITHER (a) `grep -c 'append .*artifacts inline array' skills/refine/SKILL.md skills/lifecycle/references/plan.md` shows the 4-bullet recipe removed from both, each site retains its key literal (`grep -c '"research"' skills/refine/SKILL.md` ≥ 1; `grep -c '"plan"' skills/lifecycle/references/plan.md` ≥ 1), and the retargeted "as in Step 4" reference points directly at `backlog-writeback.md` (not at a line that is itself only a pointer); OR (b) `jq -e '.index_md_canonicalization == "declined" and (.index_md_canonicalization_rationale | type == "string" and length > 0)' .../evidence.json` exit 0 and inline copies unchanged. Pass if either branch holds.
-- **Status**: [ ] pending
+- **Status**: [x] complete — branch (a): CONVERTED. 4-bullet recipe removed from refine/SKILL.md + plan.md (count 0); "research"/"spec"/"plan" key literals retained; "as in Step 4" back-ref retargeted directly to backlog-writeback.md (count 0 dangling). Convert decision + rationale recorded in evidence.json `riders.R9_index_md_canonicalization`.
 
 ### Task 11: Rider R10 — canonicalize disjoint-Files race rule (rationale only)
 - **Files**: `skills/lifecycle/references/implement.md`
@@ -114,7 +114,7 @@ Trim `skills/research/SKILL.md` by running a role-separated verification pipelin
 - **Complexity**: simple
 - **Context**: The critical review found `implement.md:205` is the **only** `disjoint` statement in the file, and `implement.md` §2 is the *dispatch-time consumer* that applies the disjoint-Files constraint at point-of-use — `plan.md:219` is a *plan-authoring* section for a different audience. So the operative rule must survive where it is enforced; only the duplicated rationale (the shared-worktree/last-writer-wins/serialize explanation) relocates to the canonical home. This is a narrower cut than the spec's R10 literal wording, which conflated the rule with its rationale. Disjoint from Tasks 9/10 (touches `implement.md` only) — may run in parallel with the Task 9→10 chain. Edit canonical only.
 - **Verification**: `grep -c "Sub-task headings" skills/lifecycle/references/implement.md` ≥ 1 (citation retained) AND `grep -c 'disjoint' skills/lifecycle/references/implement.md` ≥ 1 (operative rule survives at point-of-use) AND `grep -c 'last-writer-wins' skills/lifecycle/references/implement.md` = 0 (duplicated rationale removed).
-- **Status**: [ ] pending
+- **Status**: [x] complete — operative disjoint-Files rule + Sub-task-headings citation retained; only the duplicated rationale dropped (last-writer-wins count 0, disjoint count 1, Sub-task headings count 1).
 
 ### Task 12: Regenerate mirrors, full test + lint, commit Phase 2
 - **Files**: `plugins/cortex-core/skills/refine/SKILL.md`, `plugins/cortex-core/skills/lifecycle/references/complete.md`, `plugins/cortex-core/skills/lifecycle/references/plan.md`, `plugins/cortex-core/skills/lifecycle/references/implement.md`, `cortex/lifecycle/adversarially-verified-trim-of-research-skillmd/`

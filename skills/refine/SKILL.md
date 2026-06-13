@@ -79,7 +79,7 @@ After complexity and criticality are determined, run the write-back immediately 
 cortex-update-item {backlog-filename-slug} --complexity {value} --criticality {value}
 ```
 
-If `cortex-update-item` fails, surface the error and wait for the user to resolve before continuing. Exit 2 indicates an ambiguous slug — present the candidate list on stderr to the user and ask them to re-invoke with a disambiguated slug.
+If `cortex-update-item` fails, surface the error and wait for the user to resolve before continuing. On exit 2, apply the canonical ambiguous-slug handling in backlog-writeback.md (loaded at lifecycle Step 2).
 
 ## Step 4: Research Phase
 
@@ -127,11 +127,7 @@ Each consideration must be a one-sentence paraphrase of the underlying alignment
 
 Pass the assembled list as `research-considerations="..."` to the `/cortex-core:research` invocation. This argument fires only when at least one Apply'd alignment finding exists. If clarify-critic returned no alignment findings, or every alignment finding was Dismissed, omit the `research-considerations` argument entirely from the research dispatch.
 
-After writing `research.md`, update `cortex/lifecycle/{lifecycle-slug}/index.md`:
-- If `"research"` is already in the `artifacts` array, skip entirely (no-op)
-- Otherwise: append `"research"` to the artifacts inline array
-- Update the `updated` field to today's date
-- Rewrite the full `index.md` atomically
+After writing `research.md`, register the `"research"` artifact in `cortex/lifecycle/{lifecycle-slug}/index.md` per the canonical artifact-registration recipe in backlog-writeback.md (loaded at lifecycle Step 2).
 
 ### Research Exit Gate
 
@@ -161,7 +157,7 @@ Read `${CLAUDE_SKILL_DIR}/../lifecycle/references/specify.md` and follow it (its
 
 Do NOT set `status: refined` before user approval.
 
-After user approval (specify.md §4), update `cortex/lifecycle/{lifecycle-slug}/index.md` as in Step 4, appending `"spec"` instead of `"research"`.
+After user approval (specify.md §4), register the `"spec"` artifact in `cortex/lifecycle/{lifecycle-slug}/index.md` per the canonical artifact-registration recipe in backlog-writeback.md (the same canonical recipe as the `"research"` registration above).
 
 ### Write-Back on Approval (Context A only)
 

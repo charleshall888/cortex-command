@@ -9,6 +9,11 @@
     "verifier_agent_id": "a77833ae48080fadf",
     "oracle_agent_id": "a6f91d1c7f9e085ae"
   },
+  "riders": {
+    "R8_exit2_disambiguation": "converted — refine/SKILL.md and complete.md inline exit-2 restatements replaced with the lint-safe pointer form 'On exit 2, apply the canonical ambiguous-slug handling in backlog-writeback.md (loaded at lifecycle Step 2)' (matching clarify.md:110). refine's 'Handle failures as in Step 3' back-reference resolves to the surviving generic failure sentence (no double-hop).",
+    "R9_index_md_canonicalization": "converted (not declined). The conditional altitude criterion was weighed: the registration recipe is read at a phase-end hot path, but (a) the canonical home backlog-writeback.md explicitly states 'Phase references point here rather than restating these bullets', (b) the clarify.md:110 precedent already points phase references there with the '(loaded at lifecycle Step 2)' note, and (c) the recipe is short and re-derivable, so the pointer carries no correctness risk. refine/SKILL.md (research copy + the 'as in Step 4' spec back-reference) and plan.md (plan copy) converted to pointers; each site retains its non-delegable artifact-key literal ('research', 'spec', 'plan'). The back-reference retargets directly to backlog-writeback.md (no pointer-to-pointer).",
+    "R10_disjoint_files_race_rule": "narrowed (per critical-review finding): kept the plan.md 'Sub-task headings' citation AND the operative rule 'Sub-task siblings that co-schedule in the same batch must have disjoint Files' at implement.md's dispatch-time point-of-use; dropped only the duplicated rationale (shared-worktree race / last-writer-wins / serialize-via-Depends-on), whose full form lives canonically at plan.md."
+  },
   "behavioral_equivalence": [
     {
       "id": "i",
