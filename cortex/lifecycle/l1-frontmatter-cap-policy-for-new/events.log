@@ -1,0 +1,7 @@
+{"schema_version": 1, "ts": "2026-06-13T14:47:00Z", "event": "lifecycle_start", "feature": "l1-frontmatter-cap-policy-for-new", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-13T14:52:29Z", "event": "clarify_critic", "feature": "l1-frontmatter-cap-policy-for-new", "parent_epic_loaded": false, "findings_count": 6, "dispositions": {"apply": 3, "dismiss": 3, "ask": 0}, "applied_fixes_count": 2, "dismissals_count": 3, "status": "ok"}
+{"ts": "2026-06-13T15:19:51Z", "event": "complexity_override", "feature": "l1-frontmatter-cap-policy-for-new", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-06-13T15:19:51Z", "event": "criticality_override", "feature": "l1-frontmatter-cap-policy-for-new", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-06-13T15:43:42Z", "event": "spec_approved", "feature": "l1-frontmatter-cap-policy-for-new"}
+{"ts": "2026-06-13T17:26:53Z", "event": "plan_approved", "feature": "l1-frontmatter-cap-policy-for-new"}
+{"ts": "2026-06-13T17:26:53Z", "event": "phase_transition", "feature": "l1-frontmatter-cap-policy-for-new", "from": "plan", "to": "implement"}
