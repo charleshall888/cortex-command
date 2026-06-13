@@ -1,0 +1,7 @@
+{"schema_version": 1, "ts": "2026-06-13T14:47:22Z", "event": "lifecycle_start", "feature": "consolidate-tier-supersession-into-a-shared", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-13T14:51:46Z", "event": "clarify_critic", "feature": "consolidate-tier-supersession-into-a-shared", "parent_epic_loaded": false, "findings_count": 6, "dispositions": {"apply": 1, "dismiss": 4, "ask": 1}, "applied_fixes_count": 1, "dismissals_count": 4, "status": "ok"}
+{"ts": "2026-06-13T15:17:50Z", "event": "complexity_override", "feature": "consolidate-tier-supersession-into-a-shared", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-06-13T15:17:50Z", "event": "criticality_override", "feature": "consolidate-tier-supersession-into-a-shared", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-06-13T15:35:08Z", "event": "spec_approved", "feature": "consolidate-tier-supersession-into-a-shared"}
+{"ts": "2026-06-13T16:02:40Z", "event": "plan_approved", "feature": "consolidate-tier-supersession-into-a-shared"}
+{"ts": "2026-06-13T16:02:40Z", "event": "phase_transition", "feature": "consolidate-tier-supersession-into-a-shared", "from": "plan", "to": "implement"}

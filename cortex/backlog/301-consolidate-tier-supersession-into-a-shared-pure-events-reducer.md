@@ -2,11 +2,15 @@
 schema_version: "1"
 uuid: caa4a81c-97ae-490a-8716-302d4bbd81bc
 title: Consolidate tier supersession into a shared pure-events reducer
-status: backlog
+status: refined
 priority: low
 type: chore
 created: 2026-06-10
-updated: 2026-06-10
+updated: 2026-06-13
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/consolidate-tier-supersession-into-a-shared/spec.md
+areas: ['lifecycle']
 ---
 ## Why
 
