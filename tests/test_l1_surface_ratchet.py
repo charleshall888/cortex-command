@@ -19,11 +19,12 @@ Two structural gates accompany the per-skill comparison:
   (``ROUTING_PRESSURE_CLUSTER``, the single source of truth imported from
   ``test_skill_routing_disambiguation``) is the only exemption surface.
 
-Provenance correction (298): ``research`` is itself post-#191 regrowth — its
-L1 surface grew +124B (378 -> 502) after the harness-token-efficiency-trim
+Provenance correction (298): ``research`` was itself post-#191 regrowth — its
+L1 surface had grown +124B (378 -> 502) after the harness-token-efficiency-trim
 snapshot, correcting the 298 ticket body's claim that the original 13 skills
-did not regrow. ``research`` stays at its deliberate cluster budget of 502
-until the follow-on revert (ticket 302) lands.
+did not regrow. Ticket 302 has since reverted that regrowth: ``research`` is now
+at its post-revert cluster budget of 379 (the #191 close-state, plus 1B for the
+corrected 3-10 agent count).
 
 Spec: cortex/lifecycle/l1-frontmatter-cap-policy-for-new/spec.md R1, R5.
 """
@@ -66,8 +67,8 @@ _BASELINES: dict[str, int] = {
     "requirements": 231,
     "requirements-gather": 347,
     "requirements-write": 353,
-    "research": 502,
-    "total": 7320,
+    "research": 379,
+    "total": 7197,
 }
 
 
