@@ -92,3 +92,30 @@ skills:
       - "/cortex-core:research"
       - "research this topic"
       - "investigate this feature"
+  # The four post-#191 uncapped skills (cap-policy lifecycle 298). Each entry's
+  # phrases are a deletion regression-guard for the Phase-2 trim. For the two
+  # collision pairs (interview <-> backlog-author, requirements-gather <->
+  # requirements-write) the first phrase is a disambiguator verified absent from
+  # the sibling's description (an authoring-time read-check, not a running test).
+  interview:
+    must_contain:
+      - "thinking-partner interview"
+      - "General-purpose priming interview"
+      - "grilling"
+      - "help you think through a topic"
+  backlog-author:
+    must_contain:
+      - "Why/Role/Integration/Edges/Touch-points template"
+      - "Compose structured backlog ticket bodies"
+      - "write a ticket body"
+      - "author a backlog item"
+  requirements-gather:
+    must_contain:
+      - "Interview-only sub-skill"
+      - "produces a structured Q&A markdown block"
+      - "Adopts mattpocock interview patterns"
+  requirements-write:
+    must_contain:
+      - "Synthesize-only sub-skill"
+      - "v2-compliant"
+      - "never conducts an interview itself"
