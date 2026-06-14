@@ -3,9 +3,8 @@ name: research
 description: >
   Parallel research orchestrator. Use when the user says "/cortex-core:research", "research this topic",
   "investigate this feature", "gather research for", or when /cortex-core:refine delegates its research
-  phase. Dispatches 3–10 parallel agents — sized by a tier×criticality matrix — across independent
-  angles (core: codebase, web, constraints; plus task-chosen angles such as tradeoffs and an
-  always-last adversarial pass for high/critical), synthesizes into research.md or conversation output.
+  phase. Dispatches 3–10 parallel agents across independent angles (codebase, web, constraints,
+  tradeoffs, adversarial), synthesizes into research.md or conversation output.
 inputs:
   - "topic: string (required) — feature or topic to research"
   - "lifecycle-slug: string (optional) — determines lifecycle mode; if present, writes cortex/lifecycle/{slug}/research.md"
