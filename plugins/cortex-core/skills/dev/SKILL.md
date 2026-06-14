@@ -140,13 +140,15 @@ If it fails:
 - Warn the user: "Index generation failed. Falling back to the existing index."
 - Attempt to read `cortex/backlog/index.md` directly. If that file also does not exist, report: "No backlog index found. Use `/cortex-core:backlog add` to create items, then re-run `/cortex-core:dev`."
 
-### 3b. Read the Ready Section
+### 3b. Read the Ready Set
 
-Read `cortex/backlog/index.md` and extract the **Ready** section — items with no unresolved blockers.
+The index has no single section literally named "Ready". The actionable buckets are `## Refined` (`status: refined` — spec-approved, overnight-eligible) and `## Backlog` (`status: backlog` — not yet refined). The **ready set** is the union of these two sections. The generator has already done the filtering: when it populates them it excludes anything held out by an unresolved blocker, a `deferred` park flag, or a non-actionable status, so an item's presence in `## Refined`/`## Backlog` is the readiness signal.
 
-If no items are in the Ready section:
+Read both sections from `cortex/backlog/index.md`. The master table at the top is the **full non-terminal ledger**, not a candidate list — it intentionally also contains blocked, `proposed`, and `deferred` items. Items that appear in the master table but in **neither** `## Refined` nor `## Backlog` are non-actionable. Do NOT present master-table-only items as work candidates; at most surface them as a brief "parked / blocked" footnote so the user can act on stale ones.
+
+If both `## Refined` and `## Backlog` are empty:
 - Report: "No ready items in the backlog."
-- Suggest: check blocked items for stale dependencies, or create new items with `/cortex-core:backlog new`.
+- Suggest: check the master table for blocked items with stale dependencies, or create new items with `/cortex-core:backlog new`.
 
 **Epic detection and child map construction** (must complete before any output is rendered):
 
@@ -156,7 +158,7 @@ Invoke `cortex-build-epic-map` to produce the deterministic epic→children map.
 
 **Output schema**: The script emits an envelope `{"schema_version": "1", "epics": {...}}` where each `epics[epic_id]` contains a `children` array. Each child entry has four fields: `id` (numeric), `title` (string), `status` (string), and `spec` (string or null). A non-null `spec` indicates a refined child; Step 3c reads this field directly to render the `[refined]` indicator.
 
-**Ready intersection**: The script emits ALL detected epics from `index.json`. Step 3b filters by intersecting the script's emitted `epics` keys with the IDs already extracted from the Ready section above. Only Ready set epics are passed to Step 3c for rendering.
+**Ready intersection**: The script emits ALL detected epics from `index.json`. Step 3b filters by intersecting the script's emitted `epics` keys with the IDs already extracted from the ready set (`## Refined` ∪ `## Backlog`) above. Only ready-set epics are passed to Step 3c for rendering.
 
 **Fallback for missing index**: If `index.json` is missing after Step 3a ran, warn and fall back to reading `index.md` using the existing table columns. The script signals this case via exit 1.
 

@@ -223,7 +223,7 @@ def generate_md(
     archive_ids: set[int],
     all_items: list[dict],
 ) -> str:
-    """Produce index.md summary table with Ready, In-Progress, and Warnings sections."""
+    """Produce index.md summary table with Refined, Backlog, In-Progress, and Warnings sections."""
     lines: list[str] = ["# Backlog Index", ""]
     lines.append("| ID | Title | Status | Priority | Type | Blocked By | Parent | Spec |")
     lines.append("|-----|-------|--------|----------|------|------------|--------|------|")

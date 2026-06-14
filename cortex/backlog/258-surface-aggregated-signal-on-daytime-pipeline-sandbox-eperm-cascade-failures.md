@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: be599732-2f99-43b0-b528-5c2ad1656328
 title: "Surface aggregated signal on daytime-pipeline sandbox/EPERM cascade failures"
-status: archived
+status: abandoned
 priority: high
 type: feature
 created: 2026-05-20
-updated: 2026-05-29
+updated: 2026-06-14
 tags: [overnight-runner, pipeline, observability, sandbox]
 discovery_source: cortex/research/harness-friction-triage/research.md
 ---
