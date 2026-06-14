@@ -1,0 +1,2 @@
+{"ts":"2026-06-14T20:24:38Z","event":"discovery_research_sizing","topic":"cortex-core-tooling-gaps","complexity":"complex","criticality":"high"}
+{"ts":"2026-06-14T20:40:28Z","event":"gate_brief_generated","status":"ok","brief_word_count":254,"patterns_detected_count":0}
