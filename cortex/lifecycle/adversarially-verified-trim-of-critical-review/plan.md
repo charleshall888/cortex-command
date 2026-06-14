@@ -68,7 +68,7 @@ Ship a string-regression gate over the load-bearing contract text in `skills/cri
 - **Complexity**: simple
 - **Context**: Per MEMORY `feedback_drift_hook_shared_checkout_coupling`: on `main`, run `just build-plugin` with (not after) the canonical-edit commit and stage canonical+mirror together — mirror regen can't be deferred to a later commit, and the pre-commit drift hook fails with "dual-source drift detected" if the staged canonical's mirror isn't regenerated and staged alongside. Per MEMORY `feedback_trunk_shared_index_concurrent_session`: a concurrent live lifecycle session exists, so commit with an explicit `git commit -- <files>` pathspec enumerating exactly the five paths (canonical, mirror, trim-map.md, implementation-notes.md, plan.md) rather than `git add -A` — never sweep the session's 298–302 backlog edits in. Commit via the `/cortex-core:commit` skill. Do not run `just test` until after `just build-plugin` has regenerated the mirror (the parity test reads working-tree bytes — see Task 6). If Task 3 was a zero-byte trim, the mirror is byte-unchanged and only the lifecycle artifacts commit — still a valid Phase-2 close.
 - **Verification**: after `just build-plugin`, `git status --porcelain plugins/cortex-core/skills/critical-review/references/verification-gates.md` reflects the regenerated mirror state; `python -m pytest tests/test_dual_source_reference_parity.py -q` exits 0; the contract recipe (`cortex-check-contract --staged` or the `just` contract recipe) exits 0 (E101 — both fenced invocations keep required flags); `git diff --stat HEAD~1 -- skills/critical-review/references/a-to-b-downgrade-rubric.md skills/critical-review/references/residue-write.md skills/critical-review/references/angle-menu.md` shows 0 changed lines for all three (and their mirrors). Pass if parity test and contract lint exit 0, the out-of-scope files are untouched, and the pre-commit drift hook passed (commit succeeded).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Final gates — L1 ratchet, no-new-MUST, full suite
 - **Files**: none (verification-only)
@@ -76,8 +76,8 @@ Ship a string-regression gate over the load-bearing contract text in `skills/cri
 - **Depends on**: [5]
 - **Complexity**: simple
 - **Context**: The trim touches reference bodies only — frontmatter is out of scope, so the L1 ratchet (critical-review at 795B, zero headroom) must stay green by construction. Review the diff for any new imperative escalation token; if one is genuinely unavoidable it requires the #91-policy evidence artifact in the commit body (not expected here — this is a trim, not new authoring).
-- **Verification**: `python -m pytest tests/test_l1_surface_ratchet.py -q` exits 0 (frontmatter still 795B); `git diff origin/main -- skills/critical-review/references/verification-gates.md | grep -E '^\+' | grep -E 'MUST|CRITICAL|REQUIRED'` returns no new-line matches (or the matches are pre-existing context, confirmed by review); `just test` exits 0 on the final tree. Pass if the ratchet test and `just test` both exit 0 and no new escalation token was added.
-- **Status**: [ ] pending
+- **Verification**: `python -m pytest tests/test_l1_surface_ratchet.py -q` exits 0 (frontmatter still 795B); `git diff origin/main -- skills/critical-review/references/verification-gates.md | grep -E '^\+' | grep -E 'MUST|CRITICAL|REQUIRED'` returns no new-line matches (or the matches are pre-existing context, confirmed by review); `just test` exits 0 on the final tree. Pass if the ratchet test and `just test` both exit 0 and no new escalation token was added.  **Result: L1 ratchet green; no new MUST; full suite 1886 passed (sole failure = pre-existing pypi sandbox-network flake, confirmed passing with network).**
+- **Status**: [x] complete
 
 ## Risks
 

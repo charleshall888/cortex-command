@@ -5,3 +5,13 @@
 {"ts": "2026-06-13T15:34:51Z", "event": "spec_approved", "feature": "adversarially-verified-trim-of-critical-review"}
 {"ts": "2026-06-13T17:07:09Z", "event": "plan_approved", "feature": "adversarially-verified-trim-of-critical-review"}
 {"ts": "2026-06-13T17:07:09Z", "event": "phase_transition", "feature": "adversarially-verified-trim-of-critical-review", "from": "plan", "to": "implement"}
+{"ts": "2026-06-13T22:24:32Z", "event": "batch_dispatch", "feature": "adversarially-verified-trim-of-critical-review", "batch": 0, "tasks": [1]}
+{"ts": "2026-06-13T23:43:47Z", "event": "batch_dispatch", "feature": "adversarially-verified-trim-of-critical-review", "batch": 1, "tasks": [2]}
+{"ts": "2026-06-13T23:51:05Z", "event": "batch_dispatch", "feature": "adversarially-verified-trim-of-critical-review", "batch": 2, "tasks": [3]}
+{"ts": "2026-06-13T23:52:20Z", "event": "batch_dispatch", "feature": "adversarially-verified-trim-of-critical-review", "batch": 3, "tasks": [4]}
+{"ts": "2026-06-13T23:53:37Z", "event": "batch_dispatch", "feature": "adversarially-verified-trim-of-critical-review", "batch": 4, "tasks": [5]}
+{"ts": "2026-06-13T23:54:52Z", "event": "batch_dispatch", "feature": "adversarially-verified-trim-of-critical-review", "batch": 5, "tasks": [6]}
+{"ts": "2026-06-13T23:58:41Z", "event": "phase_transition", "feature": "adversarially-verified-trim-of-critical-review", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-06-14T00:09:15Z", "event": "review_verdict", "feature": "adversarially-verified-trim-of-critical-review", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-06-14T00:09:15Z", "event": "phase_transition", "feature": "adversarially-verified-trim-of-critical-review", "from": "review", "to": "complete"}
+{"ts": "2026-06-14T00:10:18Z", "event": "feature_complete", "feature": "adversarially-verified-trim-of-critical-review", "tasks_total": 6, "rework_cycles": 0, "merge_anchor": "trunk"}
