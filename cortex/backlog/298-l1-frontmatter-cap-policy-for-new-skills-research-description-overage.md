@@ -2,11 +2,15 @@
 schema_version: "1"
 uuid: e80d67ca-d383-4942-baab-6a452b4271f9
 title: L1 frontmatter cap policy for new skills + research-description overage
-status: backlog
+status: complete
 priority: medium
 type: chore
 created: 2026-06-10
-updated: 2026-06-10
+updated: 2026-06-13
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/l1-frontmatter-cap-policy-for-new/spec.md
+areas: ['skills']
 ---
 ## Why
 
