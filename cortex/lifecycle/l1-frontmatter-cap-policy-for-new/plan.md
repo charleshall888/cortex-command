@@ -31,7 +31,7 @@ Reframe the existing `tests/test_l1_surface_ratchet.py` snapshot into a delibera
 - **Complexity**: simple
 - **Context**: Constraint at `cortex/requirements/project.md:48` (currently a single bullet referencing the 295 cap-policy ticket and "enforces the snapshot until that policy lands"). The cluster list must match `ROUTING_PRESSURE_CLUSTER` in `tests/test_skill_routing_disambiguation.py:44` — quote the same six names. This is the partner doc to the ratchet's existing "Do NOT raise these values without a documented justification and lifecycle artifact" governance comment. MUST-escalation policy applies: prefer soft positive-routing phrasing; do not introduce new MUST/CRITICAL/REQUIRED language.
 - **Verification**: (b) `grep -c "400" cortex/requirements/project.md` ≥ 1 within the constraint; `grep -c "298" cortex/requirements/project.md` ≥ 1; `grep -ci "lifecycle-id\|lifecycle artifact" cortex/requirements/project.md` ≥ 1. Read-check: all of (a)/(b)/(c)/(d) appear, including the lifecycle-id requirement for raises and the cluster-promotion exemption naming the six cluster skills.
-- **Status**: [ ] pending
+- **Status**: [x] done — constraint line: 400=1, 298=1, lifecycle-id=1; (a)/(b)/(c)/(d) all present; six cluster skills named.
 
 ### Task 3: Point new-skill authors at the L1 budget in CLAUDE.md
 - **Files**: `CLAUDE.md`
