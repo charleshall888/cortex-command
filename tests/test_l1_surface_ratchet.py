@@ -10,10 +10,14 @@ Ratchet direction: equal-or-lower passes; any skill that EXCEEDS its budget
 fails. When this test fails, reduce the offending skill's frontmatter until
 it is at or below its budget rather than raising the budget here.
 
-A completeness gate accompanies the per-skill comparison:
-``test_budget_rows_complete`` asserts every canonical skill under ``skills/``
-has a budget row (a new skill with no row fails), drawn from the same
-enumeration the budgets are validated against.
+Two structural gates accompany the per-skill comparison:
+- ``test_budget_rows_complete`` asserts every canonical skill under ``skills/``
+  has a budget row (a new skill with no row fails), drawn from the same
+  enumeration the budgets are validated against.
+- ``test_non_cluster_budgets_within_default`` asserts every non-cluster skill's
+  budget is <= 400 bytes (the cap-policy default). The routing-pressure cluster
+  (``ROUTING_PRESSURE_CLUSTER``, the single source of truth imported from
+  ``test_skill_routing_disambiguation``) is the only exemption surface.
 
 Provenance correction (298): ``research`` is itself post-#191 regrowth — its
 L1 surface grew +124B (378 -> 502) after the harness-token-efficiency-trim
@@ -32,6 +36,7 @@ from pathlib import Path
 import pytest
 
 from conftest import enumerate_canonical_skills
+from test_skill_routing_disambiguation import ROUTING_PRESSURE_CLUSTER
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -119,6 +124,37 @@ def test_budget_rows_complete(utility_rows: dict[str, int]) -> None:
         f"glob-only (utility skipped): {sorted(canonical - measured)}; "
         f"utility-only (glob skipped): {sorted(measured - canonical)}. "
         "Check for a dangling SKILL.md symlink or a non-skill directory under skills/."
+    )
+
+
+def test_non_cluster_budgets_within_default() -> None:
+    """Every non-cluster skill's deliberate budget is <= 400 bytes.
+
+    This is the cap-policy default (298): a new non-cluster skill shipping
+    >400B fails here at add time. The routing-pressure cluster — sourced from
+    ``ROUTING_PRESSURE_CLUSTER`` (the single source of truth in
+    ``test_skill_routing_disambiguation``) — is the only exemption surface; its
+    skills carry irreducible disambiguation/path-routing tokens and are bounded
+    by their own higher budget rows. Promoting a skill into the cluster is a
+    reviewed allowlist edit, not a self-granted per-skill pass (see
+    cortex/requirements/project.md, "SKILL.md L1 surface ratchet").
+    """
+    # Subtractive-set guard: the non-cluster set is defined by subtracting the
+    # cluster from the budget keys, so every cluster name must itself be a
+    # budget row — otherwise a stray/renamed cluster name would silently shrink
+    # the enforced non-cluster set instead of failing loudly.
+    cluster = set(ROUTING_PRESSURE_CLUSTER)
+    missing = cluster - set(_BASELINES)
+    assert not missing, (
+        f"routing-pressure cluster names with no budget row: {sorted(missing)}. "
+        "Add a budget row for each, or fix ROUTING_PRESSURE_CLUSTER."
+    )
+    non_cluster = set(_BASELINES) - cluster - {"total"}
+    over = {name: _BASELINES[name] for name in sorted(non_cluster) if _BASELINES[name] > 400}
+    assert not over, (
+        f"non-cluster skills over the 400B default budget: {over}. "
+        "Trim the frontmatter to <=400B, or promote the skill into the "
+        "routing-pressure cluster via a reviewed allowlist edit (cap policy 298)."
     )
 
 

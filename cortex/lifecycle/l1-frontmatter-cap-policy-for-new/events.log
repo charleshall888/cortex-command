@@ -7,3 +7,4 @@
 {"ts": "2026-06-13T17:26:53Z", "event": "phase_transition", "feature": "l1-frontmatter-cap-policy-for-new", "from": "plan", "to": "implement"}
 {"ts": "2026-06-14T00:28:24Z", "event": "batch_dispatch", "feature": "l1-frontmatter-cap-policy-for-new", "batch": 0, "tasks": [1, 2, 3, 4]}
 {"ts": "2026-06-14T00:41:51Z", "event": "batch_dispatch", "feature": "l1-frontmatter-cap-policy-for-new", "batch": 1, "tasks": [5]}
+{"ts": "2026-06-14T00:44:41Z", "event": "batch_dispatch", "feature": "l1-frontmatter-cap-policy-for-new", "batch": 2, "tasks": [6]}
