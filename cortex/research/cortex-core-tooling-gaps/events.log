@@ -1,2 +1,5 @@
 {"ts":"2026-06-14T20:24:38Z","event":"discovery_research_sizing","topic":"cortex-core-tooling-gaps","complexity":"complex","criticality":"high"}
 {"ts":"2026-06-14T20:40:28Z","event":"gate_brief_generated","status":"ok","brief_word_count":254,"patterns_detected_count":0}
+{"ts":"2026-06-14T21:04:59Z","event":"approval_checkpoint_responded","topic":"cortex-core-tooling-gaps","checkpoint":"research-decompose","response":"revise","revision_round":1}
+{"ts":"2026-06-14T21:09:00Z","event":"approval_checkpoint_responded","topic":"cortex-core-tooling-gaps","checkpoint":"research-decompose","response":"approve","revision_round":1}
+{"ts":"2026-06-14T21:19:52Z","event":"approval_checkpoint_responded","topic":"cortex-core-tooling-gaps","checkpoint":"decompose-commit","response":"approve-all","revision_round":1}
