@@ -1,0 +1,7 @@
+{"schema_version": 1, "ts": "2026-06-14T01:04:21Z", "event": "lifecycle_start", "feature": "careful-revert-research-skillmd-frontmatter-to", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-14T01:10:35Z", "event": "clarify_critic", "feature": "careful-revert-research-skillmd-frontmatter-to", "parent_epic_loaded": false, "findings_count": 7, "dispositions": {"apply": 2, "dismiss": 5, "ask": 0}, "applied_fixes_count": 2, "dismissals_count": 5, "status": "ok"}
+{"ts": "2026-06-14T01:24:06Z", "event": "complexity_override", "feature": "careful-revert-research-skillmd-frontmatter-to", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-06-14T01:24:06Z", "event": "criticality_override", "feature": "careful-revert-research-skillmd-frontmatter-to", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-06-14T02:14:33Z", "event": "spec_approved", "feature": "careful-revert-research-skillmd-frontmatter-to"}
+{"ts": "2026-06-14T03:05:37Z", "event": "plan_approved", "feature": "careful-revert-research-skillmd-frontmatter-to"}
+{"ts": "2026-06-14T03:05:37Z", "event": "phase_transition", "feature": "careful-revert-research-skillmd-frontmatter-to", "from": "plan", "to": "implement"}
