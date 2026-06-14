@@ -2,10 +2,8 @@
 name: backlog-author
 description: >
   Compose structured backlog ticket bodies using the Why/Role/Integration/Edges/Touch-points template.
-  Use when user says "backlog body", "ticket authoring", "interview", "compose", "write a ticket body",
-  "author a backlog item", or when a skill needs to produce a structured backlog body for
-  cortex-create-backlog-item. Exposes two subcommands: interview (human-facing, guided prompts)
-  and compose (autonomous, context-driven).
+  Use when user says "ticket authoring", "compose", "write a ticket body", or "author a backlog item".
+  Two subcommands: interview (guided prompts) and compose (autonomous, context-driven).
 inputs:
   - "subcommand: string (required) — interview|compose"
   - "topic: string (required with interview) — title or topic of the ticket being authored"

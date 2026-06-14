@@ -1,7 +1,7 @@
 ---
 name: requirements-gather
-description: Interview-only sub-skill that produces a structured Q&A markdown block for /requirements-write to synthesize. Invoked by the /cortex-core:requirements orchestrator. Adopts mattpocock interview patterns (recommend-before-asking, codebase trumps interview, lazy artifact creation).
-when_to_use: "Use only as a sub-skill of /cortex-core:requirements. Different from /cortex-core:requirements — gather only conducts the interview; the orchestrator hands the resulting Q&A block to /requirements-write for synthesis."
+description: Interview-only sub-skill that produces a structured Q&A markdown block for /requirements-write to synthesize. Adopts mattpocock interview patterns. Invoked by the /cortex-core:requirements orchestrator.
+when_to_use: "Use only as a sub-skill of /cortex-core:requirements. Gather conducts the interview; the orchestrator hands its Q&A block to /requirements-write."
 argument-hint: "<scope>"
 inputs:
   - "scope: string (required) — 'project' for project-level, or area kebab-case slug for area-level"

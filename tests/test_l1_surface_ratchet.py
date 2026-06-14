@@ -46,23 +46,23 @@ UTILITY = REPO_ROOT / "bin" / "cortex-measure-l1-surface"
 # skills-research-description-overage.md
 _BASELINES: dict[str, int] = {
     "backlog": 319,
-    "backlog-author": 427,
+    "backlog-author": 288,
     "commit": 208,
     "critical-review": 795,
     "dev": 285,
     "diagnose": 294,
     "discovery": 932,
-    "interview": 758,
+    "interview": 361,
     "lifecycle": 890,
     "morning-review": 320,
     "overnight": 314,
     "pr": 237,
     "refine": 644,
     "requirements": 231,
-    "requirements-gather": 498,
-    "requirements-write": 685,
+    "requirements-gather": 347,
+    "requirements-write": 353,
     "research": 502,
-    "total": 8339,
+    "total": 7320,
 }
 
 

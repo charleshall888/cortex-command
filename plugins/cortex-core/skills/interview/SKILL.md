@@ -1,7 +1,7 @@
 ---
 name: interview
-description: General-purpose priming interview — conducts a structured "grilling" loop (recommend-before-asking, one-decision-per-turn, codebase-trumps-interview, accumulate-don't-interrogate) to help you think through a topic, then offers a concise brief. This is a thinking-partner interview, NOT backlog-ticket authoring — for composing a backlog ticket body, use /cortex-core:backlog-author's interview subcommand instead.
-when_to_use: Use when you say "interview me about X", "grill me on X", "help me think through X", or want a structured priming conversation before drafting or deciding. Different from /cortex-core:backlog-author — backlog-author's interview subcommand produces a ticket body; this skill is general-purpose priming and produces an in-conversation brief.
+description: General-purpose priming interview — a structured "grilling" loop to help you think through a topic, then a concise brief. A thinking-partner interview, NOT backlog-ticket authoring; for a ticket body use /cortex-core:backlog-author.
+when_to_use: Use for "interview me about X", "grill me on X", or "help me think through X" — a priming conversation, not ticket authoring.
 argument-hint: "[optional topic to interview about]"
 ---
 
