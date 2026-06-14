@@ -7,6 +7,7 @@ artifacts:
   - research.md
   - spec.md
   - plan.md
+  - review.md
 updated: 2026-06-13
 ---
 # careful-revert-research-skillmd-frontmatter-to

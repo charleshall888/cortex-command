@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 0e8dcceb-26a5-432d-aec1-1137090e141a
 title: 'Careful-revert research/SKILL.md frontmatter to ~378B #191 close-state (split from #298, blocked by #299)'
-status: refined
+status: complete
 priority: medium
 type: chore
 created: 2026-06-13

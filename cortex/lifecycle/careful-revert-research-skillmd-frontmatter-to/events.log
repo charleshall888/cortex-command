@@ -5,3 +5,9 @@
 {"ts": "2026-06-14T02:14:33Z", "event": "spec_approved", "feature": "careful-revert-research-skillmd-frontmatter-to"}
 {"ts": "2026-06-14T03:05:37Z", "event": "plan_approved", "feature": "careful-revert-research-skillmd-frontmatter-to"}
 {"ts": "2026-06-14T03:05:37Z", "event": "phase_transition", "feature": "careful-revert-research-skillmd-frontmatter-to", "from": "plan", "to": "implement"}
+{"ts": "2026-06-14T03:09:27Z", "event": "batch_dispatch", "feature": "careful-revert-research-skillmd-frontmatter-to", "batch": 0, "tasks": [1]}
+{"ts": "2026-06-14T03:11:31Z", "event": "batch_dispatch", "feature": "careful-revert-research-skillmd-frontmatter-to", "batch": 1, "tasks": [2]}
+{"ts": "2026-06-14T03:20:16Z", "event": "phase_transition", "feature": "careful-revert-research-skillmd-frontmatter-to", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-06-14T03:30:23Z", "event": "review_verdict", "feature": "careful-revert-research-skillmd-frontmatter-to", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-06-14T03:30:23Z", "event": "phase_transition", "feature": "careful-revert-research-skillmd-frontmatter-to", "from": "review", "to": "complete"}
+{"ts": "2026-06-14T03:31:21Z", "event": "feature_complete", "feature": "careful-revert-research-skillmd-frontmatter-to", "tasks_total": 2, "rework_cycles": 0, "merge_anchor": "merge"}
