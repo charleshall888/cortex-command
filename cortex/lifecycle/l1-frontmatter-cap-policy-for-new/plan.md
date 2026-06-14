@@ -40,7 +40,7 @@ Reframe the existing `tests/test_l1_surface_ratchet.py` snapshot into a delibera
 - **Complexity**: simple
 - **Context**: Natural anchor is the Conventions bullet at `CLAUDE.md:43` ("New skills go in `skills/` with `name` and `description` frontmatter; `when_to_use:` is optional and concatenated to `description:` for routing.") — append or follow it with the budget pointer. Discoverability nicety; the policy is structurally enforced without it.
 - **Verification**: (b) `grep -ci "L1 budget\|400B\|l1 surface" CLAUDE.md` ≥ 1. Read-check: the line sits within the skill-authoring guidance (near line 43) and points at both `project.md` and the ratchet test.
-- **Status**: [ ] pending
+- **Status**: [x] done — CLAUDE.md:44 added (grep=1); points at project.md + ratchet test.
 
 ### Task 4: Land trigger-phrase fixtures for the four uncapped skills (regression guard)
 - **Files**: `tests/fixtures/skill_trigger_phrases.yaml`

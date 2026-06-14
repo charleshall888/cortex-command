@@ -41,6 +41,7 @@ Run `just` to see all available recipes. Key commands:
 - Commit messages: imperative mood, capitalized, no trailing period, max 72 chars subject
 - A shared hook validates commit messages automatically
 - New skills go in `skills/` with `name` and `description` frontmatter; `when_to_use:` is optional and concatenated to `description:` for routing.
+- A new skill's `description` + `when_to_use` SUM is bounded by the L1 surface budget — default ≤400B for non-cluster skills, enforced by `tests/test_l1_surface_ratchet.py`; see the "SKILL.md L1 surface ratchet" constraint in `cortex/requirements/project.md` for the cluster exemption and re-cap rule.
 - Agent-specific config goes in `claude/`
 - Settings JSON must remain valid JSON
 - Hook/notification scripts must be executable (`chmod +x`)
