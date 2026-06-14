@@ -9,3 +9,5 @@
 {"ts": "2026-06-14T00:41:51Z", "event": "batch_dispatch", "feature": "l1-frontmatter-cap-policy-for-new", "batch": 1, "tasks": [5]}
 {"ts": "2026-06-14T00:44:41Z", "event": "batch_dispatch", "feature": "l1-frontmatter-cap-policy-for-new", "batch": 2, "tasks": [6]}
 {"ts": "2026-06-14T00:51:48Z", "event": "phase_transition", "feature": "l1-frontmatter-cap-policy-for-new", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-06-14T00:55:53Z", "event": "review_verdict", "feature": "l1-frontmatter-cap-policy-for-new", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-06-14T00:55:53Z", "event": "phase_transition", "feature": "l1-frontmatter-cap-policy-for-new", "from": "review", "to": "complete"}
