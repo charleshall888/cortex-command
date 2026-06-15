@@ -42,7 +42,7 @@ Fields:
 - `status` — one of `proposed`, `accepted`, `deprecated`, or `superseded`. New ADRs land as `proposed` and promote to `accepted` at PR merge (see promotion gate below). `deprecated` marks an ADR whose decision no longer applies but is preserved for history. `superseded` marks an ADR replaced by a newer one and **must** be paired with `superseded_by: NNNN` pointing at the replacement's four-digit number.
 - `superseded_by` — optional; the zero-padded four-digit number of the superseding ADR. Omit unless `status: superseded`.
 
-No `area:` field is defined at v1. Area tagging is intentionally deferred to a backfill ticket; do not invent one ad hoc.
+No `area:` field is defined. Area tagging was considered and deliberately not adopted (no consumer); do not invent one ad hoc.
 
 **Promotion gate.** An ADR with `status: proposed` is promoted to `status: accepted` at the moment its PR is merged into `main`. The promotion is a single-field edit and is expected to occur in the same PR that introduces the ADR (so the merged file lands as `accepted`), unless the ADR is deliberately landed as `proposed` to invite further discussion before acceptance.
 
