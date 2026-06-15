@@ -412,6 +412,10 @@ check-path-hardcoding *args:
 check-path-hardcoding-audit:
     bin/cortex-check-path-hardcoding --audit
 
+# Audit ADR citation coverage across lifecycle artifacts (report-only, always exits 0)
+adr-citation-audit:
+    bin/cortex-adr-citation-audit
+
 # Audit logged-vs-applied requirements drift suggestions (R9, informational JSON to stdout)
 requirements-parity-audit:
     bin/cortex-requirements-parity-audit
