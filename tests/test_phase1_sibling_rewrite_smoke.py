@@ -34,6 +34,9 @@ Covered scripts (Tasks 4a and 4b)
 Task 4a (bash):
   - cortex-jcc
 
+Bash dual-channel wrappers:
+  - cortex-adr-citation-audit
+
 Console-script entry point (wheel-generated binstub; bash wrapper retired):
   - cortex-morning-review-complete-session
 
@@ -192,6 +195,23 @@ def test_cortex_morning_review_complete_session_no_log_invocation_warning(tmp_pa
     # --help is handled by argparse and exits 0.
     assert result.returncode == 0, (
         f"cortex-morning-review-complete-session: --help returned exit {result.returncode}.\n"
+        f"stderr = {result.stderr!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Bash dual-channel wrappers
+# ---------------------------------------------------------------------------
+
+
+def test_cortex_adr_citation_audit_no_log_invocation_warning(tmp_path: Path) -> None:
+    """cortex-adr-citation-audit: --help exits 0 with no log-invocation warning."""
+    script = BIN_DIR / "cortex-adr-citation-audit"
+    env = _base_env(str(tmp_path))
+    result = _run([script, "--help"], env=env)
+    _assert_no_log_invocation_warning(result, "cortex-adr-citation-audit")
+    assert result.returncode == 0, (
+        f"cortex-adr-citation-audit: --help returned exit {result.returncode}.\n"
         f"stderr = {result.stderr!r}"
     )
 
