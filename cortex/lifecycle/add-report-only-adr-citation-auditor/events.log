@@ -1,0 +1,6 @@
+{"schema_version": 1, "ts": "2026-06-14T21:29:34Z", "event": "lifecycle_start", "feature": "add-report-only-adr-citation-auditor", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-14T21:37:10Z", "event": "clarify_critic", "feature": "add-report-only-adr-citation-auditor", "parent_epic_loaded": true, "findings_count": 7, "dispositions": {"apply": 2, "dismiss": 5, "ask": 0}, "applied_fixes_count": 2, "dismissals_count": 5, "status": "ok"}
+{"ts": "2026-06-14T21:50:49Z", "event": "complexity_override", "feature": "add-report-only-adr-citation-auditor", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-06-15T11:38:32Z", "event": "spec_approved", "feature": "add-report-only-adr-citation-auditor"}
+{"ts": "2026-06-15T12:07:09Z", "event": "plan_approved", "feature": "add-report-only-adr-citation-auditor"}
+{"ts": "2026-06-15T12:07:09Z", "event": "phase_transition", "feature": "add-report-only-adr-citation-auditor", "from": "plan", "to": "implement"}
