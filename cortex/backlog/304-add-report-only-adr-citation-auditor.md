@@ -2,14 +2,18 @@
 schema_version: "1"
 uuid: f570d455-26ca-45c7-bffa-9c42a0b7d0d7
 title: Add report-only ADR citation auditor
-status: backlog
+status: complete
 priority: high
 type: feature
 created: 2026-06-14
-updated: 2026-06-14
+updated: 2026-06-15
 parent: "303"
 tags: ['cortex-core-tooling-gaps']
 discovery_source: cortex/research/cortex-core-tooling-gaps/research.md
+complexity: complex
+criticality: medium
+spec: cortex/lifecycle/add-report-only-adr-citation-auditor/spec.md
+areas: []
 ---
 ## Why
 

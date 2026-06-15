@@ -4,3 +4,10 @@
 {"ts": "2026-06-15T11:38:32Z", "event": "spec_approved", "feature": "add-report-only-adr-citation-auditor"}
 {"ts": "2026-06-15T12:07:09Z", "event": "plan_approved", "feature": "add-report-only-adr-citation-auditor"}
 {"ts": "2026-06-15T12:07:09Z", "event": "phase_transition", "feature": "add-report-only-adr-citation-auditor", "from": "plan", "to": "implement"}
+{"ts": "2026-06-15T12:33:19Z", "event": "batch_dispatch", "feature": "add-report-only-adr-citation-auditor", "batch": 0, "tasks": [1, 5]}
+{"ts": "2026-06-15T12:37:57Z", "event": "batch_dispatch", "feature": "add-report-only-adr-citation-auditor", "batch": 1, "tasks": [2, 3]}
+{"ts": "2026-06-15T12:43:58Z", "event": "batch_dispatch", "feature": "add-report-only-adr-citation-auditor", "batch": 2, "tasks": [4]}
+{"ts": "2026-06-15T12:49:32Z", "event": "phase_transition", "feature": "add-report-only-adr-citation-auditor", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-06-15T12:53:48Z", "event": "review_verdict", "feature": "add-report-only-adr-citation-auditor", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-06-15T12:53:48Z", "event": "phase_transition", "feature": "add-report-only-adr-citation-auditor", "from": "review", "to": "complete"}
+{"ts": "2026-06-15T12:57:28Z", "event": "feature_complete", "feature": "add-report-only-adr-citation-auditor", "tasks_total": 5, "rework_cycles": 0, "merge_anchor": "merge"}
