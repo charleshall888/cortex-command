@@ -1,0 +1,5 @@
+{"schema_version": 1, "ts": "2026-06-14T21:29:35Z", "event": "lifecycle_start", "feature": "hyperlink-the-spec-column-in-the", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-14T21:34:21Z", "event": "clarify_critic", "feature": "hyperlink-the-spec-column-in-the", "parent_epic_loaded": true, "findings_count": 5, "dispositions": {"apply": 0, "dismiss": 5, "ask": 0}, "applied_fixes_count": 0, "dismissals_count": 5, "status": "ok"}
+{"ts": "2026-06-14T21:58:18Z", "event": "spec_approved", "feature": "hyperlink-the-spec-column-in-the"}
+{"ts": "2026-06-15T11:10:48Z", "event": "plan_approved", "feature": "hyperlink-the-spec-column-in-the"}
+{"ts": "2026-06-15T11:10:48Z", "event": "phase_transition", "feature": "hyperlink-the-spec-column-in-the", "from": "plan", "to": "implement"}
