@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 42f6d9e8-d4cb-45c9-b59e-96ca8095e7fa
 title: Hyperlink the spec column in the generated backlog index
-status: in_progress
+status: wontfix
 priority: low
 type: chore
 created: 2026-06-14
-updated: 2026-06-14
+updated: 2026-06-15
 parent: "303"
 tags: ['cortex-core-tooling-gaps']
 discovery_source: cortex/research/cortex-core-tooling-gaps/research.md
@@ -14,7 +14,7 @@ complexity: simple
 criticality: medium
 spec: cortex/lifecycle/hyperlink-the-spec-column-in-the/spec.md
 areas: ['backlog']
-lifecycle_phase: plan
+lifecycle_phase: wontfix
 ---
 ## Why
 

@@ -3,3 +3,4 @@
 {"ts": "2026-06-14T21:58:18Z", "event": "spec_approved", "feature": "hyperlink-the-spec-column-in-the"}
 {"ts": "2026-06-15T11:10:48Z", "event": "plan_approved", "feature": "hyperlink-the-spec-column-in-the"}
 {"ts": "2026-06-15T11:10:48Z", "event": "phase_transition", "feature": "hyperlink-the-spec-column-in-the", "from": "plan", "to": "implement"}
+{"ts": "2026-06-15T11:44:07Z", "event": "feature_wontfix", "feature": "hyperlink-the-spec-column-in-the", "reason": "cost-value gate: friction too small to justify even a one-line build"}
