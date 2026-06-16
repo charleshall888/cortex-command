@@ -5,3 +5,5 @@
 {"ts": "2026-06-16T14:50:48Z", "event": "complexity_override", "feature": "rewrite-cortex-pr-review-from-fan", "from": "simple", "to": "complex", "gate": "research_open_questions"}
 {"ts": "2026-06-16T16:16:19Z", "event": "spec_approved", "feature": "rewrite-cortex-pr-review-from-fan"}
 {"ts": "2026-06-16T16:16:34Z", "event": "phase_transition", "feature": "rewrite-cortex-pr-review-from-fan", "from": "specify", "to": "plan"}
+{"ts": "2026-06-16T17:57:06Z", "event": "plan_approved", "feature": "rewrite-cortex-pr-review-from-fan"}
+{"ts": "2026-06-16T17:57:06Z", "event": "phase_transition", "feature": "rewrite-cortex-pr-review-from-fan", "from": "plan", "to": "implement"}
