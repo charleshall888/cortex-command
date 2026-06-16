@@ -37,7 +37,7 @@
     {
       "name": "cortex-pr-review",
       "source": "./plugins/cortex-pr-review",
-      "description": "Multi-agent GitHub pull request review pipeline for Claude Code",
+      "description": "Single high-effort GitHub pull request reviewer for Claude Code — no-autopost by default, with a dropped-findings observability footer",
       "category": "development"
     },
     {
