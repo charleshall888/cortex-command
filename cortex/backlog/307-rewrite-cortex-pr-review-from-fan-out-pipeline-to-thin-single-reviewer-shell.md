@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 0ec6245d-2664-4aa6-8014-5afd6579a2e3
 title: Rewrite cortex-pr-review from fan-out pipeline to thin single-reviewer shell
-status: in_progress
+status: complete
 priority: high
 type: feature
 created: 2026-06-16

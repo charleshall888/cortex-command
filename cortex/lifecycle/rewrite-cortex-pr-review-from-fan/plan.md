@@ -31,7 +31,7 @@ To prevent the helper, its caller, and its test from drifting, the contract is p
 - **Complexity**: complex
 - **Context**: Current file is 78 lines. Use the spec `## Grounding & Verdict Vocabulary` verbatim. One blocking label form only (`issue (blocking):`); decoration rendered from `severity`. Conventional Comments decorations `(blocking)`/`(non-blocking)`/`(if-minor)`. Do not put a model id in the footer example (de-pin — Req 4).
 - **Verification**: ALL must hold — (a) the canonical table is present: `grep -cE '^\|.*[Ss]everity.*\|' …/output-format.md` ≥ 1 AND the table names both `blocking` and `non-blocking`; (b) schema fields present: `grep -c 'grounding' …/output-format.md` ≥ 1 AND `grep -c 'file:line' …/output-format.md` ≥ 1 AND `grep -c 'evidence-weak' …/output-format.md` ≥ 1; (c) footer fields present: `grep -c 'findings_surfaced' …/output-format.md` ≥ 1 AND `grep -c 'findings_dropped' …/output-format.md` ≥ 1; (d) `grep -c 'suggestion (blocking)' …/output-format.md` = 0; (e) `grep -c 'claude-opus-4-7' …/output-format.md` = 0; (f) `<details>` appears only after the posting-mode heading.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Rewrite `rubric.md` — single severity + grounding gate
 - **Files**: `plugins/cortex-pr-review/skills/pr-review/references/rubric.md`
@@ -40,7 +40,7 @@ To prevent the helper, its caller, and its test from drifting, the contract is p
 - **Complexity**: simple
 - **Context**: Current file 117 lines (axes :9-37, caps :52-56, tie-break :58, unrun α-protocol). Remove the stability-protocol section.
 - **Verification**: positive AND subtractive — (a) `grep -ci 'blocking' …/rubric.md` ≥ 1 AND `grep -ci 'grounding' …/rubric.md` ≥ 1 AND `grep -c 'output-format' …/rubric.md` ≥ 1 (references the canonical table); (b) `grep -c 'suggestion (blocking)' …/rubric.md` = 0 AND `grep -ci 'alphabetical' …/rubric.md` = 0 AND `grep -cEi '(nitpick|praise|cross-cutting)[^:]*(≤|<=|max|cap )' …/rubric.md` = 0 — pass if all hold.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Create the verdict-derivation unit (deterministic fail-loud state machine)
 - **Files**: `plugins/cortex-pr-review/skills/pr-review/scripts/derive_verdict.py`
@@ -49,7 +49,7 @@ To prevent the helper, its caller, and its test from drifting, the contract is p
 - **Complexity**: simple
 - **Context**: Plugin-local (not `bin/cortex-*`, so no parity wiring). Signature, key names, signal ownership, verdict logic, and CLI shape are all pinned in the Verdict-Helper Contract section — do not re-derive them. Signals 5/6 are derived internally (the caller never passes them); only the four `RUNTIME_SIGNALS` are accepted from the caller.
 - **Verification**: (a) `echo '{"findings":[{"severity":"blocking","grounding":"grounded","label":"issue (blocking)","file:line":"x.py:1","body":"b"}],"runtime_signals":[]}' | python3 …/derive_verdict.py` prints `REQUEST_CHANGES`; (b) `echo '{"findings":[{"severity":"non-blocking","grounding":"evidence-weak","label":"issue","file:line":"x.py:1","body":"b"}],"runtime_signals":[]}' | python3 …/derive_verdict.py` prints `REVIEW_INCONCLUSIVE` (signal 5 derived internally, no signal passed) — pass if both stdout match exactly. (Full matrix is Task 7.)
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Rewrite `protocol.md` to single-pass; document the verdict; invoke the helper; delete `evidence-ground.sh`; de-pin
 - **Files**: `plugins/cortex-pr-review/skills/pr-review/references/protocol.md`, `plugins/cortex-pr-review/skills/pr-review/scripts/evidence-ground.sh`
@@ -58,7 +58,7 @@ To prevent the helper, its caller, and its test from drifting, the contract is p
 - **Complexity**: complex
 - **Context**: Current `protocol.md` 821 lines; pins at :562/:572/:582/:727; fail-open at :548-557/:768-792. Prescribe What/Why, not method (CLAUDE.md). Resolve `${CLAUDE_SKILL_DIR}` only in SKILL.md (Task 5) and propagate the absolute `derive_verdict.py` path into the flow — no bare `${CLAUDE_SKILL_DIR}` / bare-relative path here (ADR-0009/SP002). Keep removal/migration narration OUT of the operative section so the structural greps read clean.
 - **Verification**: ALL must hold — (a) single-pass + no pin: `grep -ciE '(^|[^a-z])(stage|step|pass|phase) [0-9]' …/protocol.md` = 0 AND `grep -c 'claude-opus-4-7' …/protocol.md` = 0; (b) verdict documented: `grep -c 'REVIEW_INCONCLUSIVE' …/protocol.md` ≥ 1; (c) helper invoked (not orphaned): `grep -c 'derive_verdict' …/protocol.md` ≥ 1; (d) single-reviewer + grounding present: `grep -ciE 'single|one (full-context )?review' …/protocol.md` ≥ 1 AND `grep -c 'evidence-weak' …/protocol.md` ≥ 1; (e) script gone: `test ! -e …/scripts/evidence-ground.sh`; (f) bounded: `[ $(wc -l < …/protocol.md) -le 200 ]`.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Update `SKILL.md` — shell, frontmatter, no-autopost, notes, path propagation
 - **Files**: `plugins/cortex-pr-review/skills/pr-review/SKILL.md`
@@ -67,7 +67,7 @@ To prevent the helper, its caller, and its test from drifting, the contract is p
 - **Complexity**: complex
 - **Context**: Current SKILL.md 76 lines; no-autopost at :73-74; `disable-model-invocation: true` (preserve); `${CLAUDE_SKILL_DIR}` propagation at :46-69. The body currently uses fan-out vocabulary 7× (Haiku/triage/pipeline/subagent). Size cap 500 lines (covered by `tests/test_skill_size_budget.py`).
 - **Verification**: ALL must hold — (a) no fan-out vocabulary: `grep -ciE 'multi-agent|haiku|triage|fan-out|pipeline|synthesiz|each subagent|four (parallel )?critic' …/SKILL.md` = 0; (b) distinctness note: `grep -c 'review_dispatch' …/SKILL.md` ≥ 1; (c) no grounder reference: `grep -c 'evidence-ground' …/SKILL.md` = 0; (d) `[ $(wc -l < …/SKILL.md) -le 500 ]`.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Update plugin + marketplace manifests
 - **Files**: `plugins/cortex-pr-review/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`
@@ -76,7 +76,7 @@ To prevent the helper, its caller, and its test from drifting, the contract is p
 - **Complexity**: simple
 - **Context**: `plugin.json:3` and `marketplace.json:40` carry the identical stale description. Both valid JSON — preserve validity. Plugin stays `HAND_MAINTAINED` (justfile:576); do NOT run `build-plugin`.
 - **Verification**: ALL must hold — (a) `grep -ciE 'multi-agent|pipeline' plugins/cortex-pr-review/.claude-plugin/plugin.json` = 0 AND `grep -ciE 'multi-agent|pipeline' .claude-plugin/marketplace.json` = 0 (BOTH files grepped); (b) JSON valid: `python3 -c "import json; json.load(open('plugins/cortex-pr-review/.claude-plugin/plugin.json'))"` exits 0 AND `python3 -c "import json; json.load(open('.claude-plugin/marketplace.json'))"` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 7: Create the contract test — verdict state machine + grounding + stdin path
 - **Files**: `tests/test_pr_review_verdict.py`
@@ -85,7 +85,7 @@ To prevent the helper, its caller, and its test from drifting, the contract is p
 - **Complexity**: simple
 - **Context**: Load the module via `importlib.util.spec_from_file_location` against `plugins/cortex-pr-review/skills/pr-review/scripts/derive_verdict.py`; for the stdin path use `subprocess.run([sys.executable, <path>], input=<json>, …)`. Follow existing `tests/` pytest conventions. Importing `RUNTIME_SIGNALS` (rather than hard-coding strings) is what prevents helper/test signal-name drift.
 - **Verification**: `uv run pytest tests/test_pr_review_verdict.py` exits 0 with all seven assertions (five verdict cases + signal-5/6-derivation + stdin path) passing — pass if exit code = 0. (Verifies Task-3 behavior, not mere file existence.)
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 8: Remove stale run artifacts; gitignore `.cache/`
 - **Files**: `plugins/cortex-pr-review/skills/pr-review/.cache/` (delete), `.gitignore`
@@ -94,7 +94,7 @@ To prevent the helper, its caller, and its test from drifting, the contract is p
 - **Complexity**: simple
 - **Context**: `.cache/` is currently untracked (`git status` `??`) and NOT gitignored (`git check-ignore` confirms). Only `__pycache__/` is ignored today. Removing the dir is safe (run artifacts, regenerated on demand).
 - **Verification**: `test ! -e plugins/cortex-pr-review/skills/pr-review/.cache/` AND `git check-ignore plugins/cortex-pr-review/skills/pr-review/.cache/x` exits 0 (the path is now ignored) — pass if both hold.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Risks
 - **The verdict helper is new runtime machinery in a "thin shell" rewrite.** Justified by spec Req 7/10 (structural-over-prose enforcement of the safety-critical gate) and far smaller than the deleted 553-line `evidence-ground.sh`. The signal-ownership/name/stdin contract is pinned in the Verdict-Helper Contract section to prevent Task 3/4/7 drift.

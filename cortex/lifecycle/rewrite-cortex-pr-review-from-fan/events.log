@@ -7,3 +7,11 @@
 {"ts": "2026-06-16T16:16:34Z", "event": "phase_transition", "feature": "rewrite-cortex-pr-review-from-fan", "from": "specify", "to": "plan"}
 {"ts": "2026-06-16T17:57:06Z", "event": "plan_approved", "feature": "rewrite-cortex-pr-review-from-fan"}
 {"ts": "2026-06-16T17:57:06Z", "event": "phase_transition", "feature": "rewrite-cortex-pr-review-from-fan", "from": "plan", "to": "implement"}
+{"ts": "2026-06-16T18:36:06Z", "event": "batch_dispatch", "feature": "rewrite-cortex-pr-review-from-fan", "batch": 0, "tasks": [1, 6, 8]}
+{"ts": "2026-06-16T19:05:16Z", "event": "batch_dispatch", "feature": "rewrite-cortex-pr-review-from-fan", "batch": 1, "tasks": [2, 3]}
+{"ts": "2026-06-16T19:12:12Z", "event": "batch_dispatch", "feature": "rewrite-cortex-pr-review-from-fan", "batch": 2, "tasks": [4, 7]}
+{"ts": "2026-06-16T19:19:18Z", "event": "batch_dispatch", "feature": "rewrite-cortex-pr-review-from-fan", "batch": 3, "tasks": [5]}
+{"ts": "2026-06-16T19:32:20Z", "event": "phase_transition", "feature": "rewrite-cortex-pr-review-from-fan", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-06-16T19:43:49Z", "event": "review_verdict", "feature": "rewrite-cortex-pr-review-from-fan", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-06-16T19:43:49Z", "event": "phase_transition", "feature": "rewrite-cortex-pr-review-from-fan", "from": "review", "to": "complete"}
+{"ts": "2026-06-16T19:46:36Z", "event": "feature_complete", "feature": "rewrite-cortex-pr-review-from-fan", "tasks_total": 8, "rework_cycles": 0, "merge_anchor": "merge"}
