@@ -1,0 +1,7 @@
+{"schema_version": 1, "ts": "2026-06-16T14:22:36Z", "event": "lifecycle_start", "feature": "rewrite-cortex-pr-review-from-fan", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-16T14:28:21Z", "event": "clarify_critic", "feature": "rewrite-cortex-pr-review-from-fan", "parent_epic_loaded": false, "findings_count": 7, "dispositions": {"apply": 3, "dismiss": 4, "ask": 0}, "applied_fixes_count": 3, "dismissals_count": 4, "status": "ok"}
+{"schema_version": 1, "ts": "2026-06-16T14:29:16Z", "event": "lifecycle_start", "feature": "rewrite-cortex-pr-review-from-fan", "tier": "complex", "criticality": "high", "entry_point": "lifecycle"}
+{"schema_version": 1, "ts": "2026-06-16T14:29:16Z", "event": "phase_transition", "feature": "rewrite-cortex-pr-review-from-fan", "from": "clarify", "to": "research"}
+{"ts": "2026-06-16T14:50:48Z", "event": "complexity_override", "feature": "rewrite-cortex-pr-review-from-fan", "from": "simple", "to": "complex", "gate": "research_open_questions"}
+{"ts": "2026-06-16T16:16:19Z", "event": "spec_approved", "feature": "rewrite-cortex-pr-review-from-fan"}
+{"ts": "2026-06-16T16:16:34Z", "event": "phase_transition", "feature": "rewrite-cortex-pr-review-from-fan", "from": "specify", "to": "plan"}
