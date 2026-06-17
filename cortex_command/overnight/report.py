@@ -1281,6 +1281,34 @@ def render_failed_features(data: ReportData) -> str:
             snippet = ""
         if snippet:
             lines.append(f"- **Last worker output**: {snippet}")
+
+        # Failure diagnostics (R8): exit_code, cwd, and a tail-anchored stderr
+        # tail read off the same task_output event. On a worker crash the
+        # `**Last worker output**` line above is empty, so these lines are the
+        # only localized evidence. The `(empty)`/`unknown` markers are
+        # byte-identical to the brain-prompt markers so the two surfaces agree.
+        if data.pipeline_events_path is not None:
+            diagnostics = _read_last_task_diagnostics(name, data.pipeline_events_path)
+        else:
+            diagnostics = None
+        if diagnostics is not None:
+            raw_exit = diagnostics.get("exit_code")
+            exit_code = (
+                _DIAGNOSTICS_UNKNOWN_EXIT if raw_exit is None else str(raw_exit)
+            )
+            lines.append(f"- **exit_code**: {exit_code}")
+            cwd = diagnostics.get("cwd")
+            if cwd:
+                lines.append(f"- **cwd**: `{cwd}`")
+            stderr = diagnostics.get("child_stderr") or ""
+            # Tail-anchored: keep the END of the stderr (the failing
+            # assertion / traceback bottom), clipping the head past the cap.
+            stderr_tail = stderr[-_STDERR_TAIL_CAP:] if stderr else _DIAGNOSTICS_EMPTY_STDERR
+            lines.append(f"- **stderr tail**:")
+            lines.append("")
+            lines.append("```")
+            lines.append(stderr_tail)
+            lines.append("```")
         lines.append("")
 
     # Cascade casualties: dependents auto-failed by the end-of-round sweep
@@ -1959,6 +1987,75 @@ def _read_last_task_output(
 
     output = last_match.get("output", "")
     return output[:500]
+
+
+# Tail-anchored truncation budget for the rendered stderr in the failed-feature
+# block. Deliberately LARGER than the 500-char `output` cap in
+# `_read_last_task_output`: the diagnostically-valuable part of a crash stderr is
+# its END (the failing assertion / traceback bottom), so we keep the tail and
+# clip the head. A regression to the 500 cap is pinned by a test in
+# test_report.py.
+_STDERR_TAIL_CAP = 2000
+
+# Marker literals for absent diagnostics in the failed-feature render. These MUST
+# stay byte-identical to the brain-prompt markers in brain.py so an operator
+# comparing the morning report and the brain prompt sees the same labels. The
+# parity is pinned by a test in test_report.py asserting equality with the brain
+# constants.
+_DIAGNOSTICS_UNKNOWN_EXIT = "unknown"
+_DIAGNOSTICS_EMPTY_STDERR = "(empty)"
+
+
+def _read_last_task_diagnostics(
+    feature: str,
+    pipeline_events_path: Path = Path("cortex/lifecycle/pipeline-events.log"),
+) -> Optional[dict]:
+    """Read the failure diagnostics off the most recent task_output event.
+
+    Sibling of ``_read_last_task_output`` (which returns the ``output`` string
+    capped at 500 chars). This reader returns the distinct diagnostics fields
+    (``child_stderr``/``exit_code``/``cwd``) the failure path adds to the
+    ``task_output`` event, leaving the string-returning sibling untouched so its
+    existing caller is unaffected.
+
+    Args:
+        feature: The feature name to search for.
+        pipeline_events_path: Path to the pipeline events log file.
+
+    Returns:
+        A dict with ``child_stderr``/``exit_code``/``cwd`` keys (any of which may
+        be absent or ``None``) from the last matching event, or ``None`` if the
+        file is missing/unreadable, no matching event exists, or the matching
+        event carries none of the diagnostics fields (the success path omits
+        them).
+    """
+    try:
+        lines = pipeline_events_path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return None
+
+    last_match: dict | None = None
+    for line in lines:
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if event.get("event") == "task_output" and event.get("feature") == feature:
+            last_match = event
+
+    if last_match is None:
+        return None
+
+    # The success path omits the diagnostics fields entirely; only surface a
+    # bundle when at least one field is present so the renderer can skip cleanly.
+    if not any(key in last_match for key in ("child_stderr", "exit_code", "cwd")):
+        return None
+
+    return {
+        "child_stderr": last_match.get("child_stderr"),
+        "exit_code": last_match.get("exit_code"),
+        "cwd": last_match.get("cwd"),
+    }
 
 
 def _aggregate_feature_cost(

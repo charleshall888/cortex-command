@@ -1053,3 +1053,185 @@ def test_whole_backlog_resolve_survives_colon_title(tmp_path) -> None:
         )
 
 
+# ---------------------------------------------------------------------------
+# Tests for failed-feature diagnostics rendering (R8)
+# ---------------------------------------------------------------------------
+
+import json as _json
+
+
+def _write_task_output_event(
+    path: Path,
+    feature: str,
+    *,
+    output: str = "",
+    child_stderr=None,
+    exit_code=None,
+    cwd=None,
+    include_diagnostics: bool = True,
+) -> None:
+    """Write a single task_output event line to a pipeline-events.log fixture.
+
+    When ``include_diagnostics`` is False, the diagnostics fields are omitted
+    entirely (mirrors the success-path emit in feature_executor.py).
+    """
+    event = {
+        "event": "task_output",
+        "feature": feature,
+        "task_number": 1,
+        "task_description": "do a thing",
+        "output": output,
+    }
+    if include_diagnostics:
+        event["child_stderr"] = child_stderr
+        event["exit_code"] = exit_code
+        event["cwd"] = cwd
+    with path.open("a", encoding="utf-8") as fh:
+        fh.write(_json.dumps(event) + "\n")
+
+
+def test_failed_feature_renders_exit_code_and_stderr(tmp_path: Path) -> None:
+    """Failed-feature block renders exit_code, cwd, and the stderr tail lines."""
+    events_path = tmp_path / "pipeline-events.log"
+    _write_task_output_event(
+        events_path,
+        "feat-crash",
+        child_stderr="Traceback: ValueError boom at frobnicate()",
+        exit_code=1,
+        cwd="/work/feat-crash",
+    )
+    features = {
+        "feat-crash": OvernightFeatureStatus(status="failed", error="ProcessError: exit code 1"),
+    }
+    data = _pytest_make_data(features)
+    data.pipeline_events_path = events_path
+
+    output = render_failed_features(data)
+
+    assert "- **exit_code**: 1" in output, f"got:\n{output}"
+    assert "/work/feat-crash" in output, f"got:\n{output}"
+    assert "**stderr tail**" in output, f"got:\n{output}"
+    assert "Traceback: ValueError boom at frobnicate()" in output, f"got:\n{output}"
+
+
+def test_failed_feature_empty_stderr_renders_empty_marker(tmp_path: Path) -> None:
+    """An empty/absent stderr renders the literal `(empty)` marker (silent crash)."""
+    events_path = tmp_path / "pipeline-events.log"
+    _write_task_output_event(
+        events_path,
+        "feat-silent",
+        child_stderr="",
+        exit_code=1,
+        cwd="/work/feat-silent",
+    )
+    features = {
+        "feat-silent": OvernightFeatureStatus(status="failed", error="ProcessError: exit code 1"),
+    }
+    data = _pytest_make_data(features)
+    data.pipeline_events_path = events_path
+
+    output = render_failed_features(data)
+
+    assert "(empty)" in output, f"expected literal '(empty)' marker, got:\n{output}"
+
+
+def test_failed_feature_none_exit_code_renders_unknown_marker(tmp_path: Path) -> None:
+    """A None exit_code (timeout/connection failure) renders the literal `unknown`."""
+    events_path = tmp_path / "pipeline-events.log"
+    _write_task_output_event(
+        events_path,
+        "feat-timeout",
+        child_stderr="connection reset",
+        exit_code=None,
+        cwd="/work/feat-timeout",
+    )
+    features = {
+        "feat-timeout": OvernightFeatureStatus(status="failed", error="CLIConnectionError"),
+    }
+    data = _pytest_make_data(features)
+    data.pipeline_events_path = events_path
+
+    output = render_failed_features(data)
+
+    assert "- **exit_code**: unknown" in output, (
+        f"expected literal 'unknown' for None exit_code, got:\n{output}"
+    )
+
+
+def test_failed_feature_stderr_tail_exceeds_500_keeps_tail(tmp_path: Path) -> None:
+    """A stderr longer than 500 chars but within the cap renders with its TAIL intact.
+
+    Re-budget guard: pins the larger-than-500 cap intent. A regression to the
+    500-char `output` cap would clip the diagnostically-valuable END and fail
+    this test.
+    """
+    from cortex_command.overnight.report import _STDERR_TAIL_CAP
+
+    tail_sentinel = "FINAL_FAILING_ASSERTION_AT_THE_END"
+    # Build a stderr longer than 500 but within the tail cap, ending in the
+    # sentinel so we can assert the tail survives.
+    head = "X" * 700
+    long_stderr = head + tail_sentinel
+    assert len(long_stderr) > 500
+    assert len(long_stderr) <= _STDERR_TAIL_CAP
+
+    events_path = tmp_path / "pipeline-events.log"
+    _write_task_output_event(
+        events_path,
+        "feat-long",
+        child_stderr=long_stderr,
+        exit_code=1,
+        cwd="/work/feat-long",
+    )
+    features = {
+        "feat-long": OvernightFeatureStatus(status="failed", error="ProcessError: exit code 1"),
+    }
+    data = _pytest_make_data(features)
+    data.pipeline_events_path = events_path
+
+    output = render_failed_features(data)
+
+    assert tail_sentinel in output, (
+        f"stderr tail was clipped (regression to 500 cap?); sentinel missing from:\n{output[-600:]}"
+    )
+
+
+def test_failed_feature_success_path_omits_diagnostics(tmp_path: Path) -> None:
+    """A task_output event without diagnostics fields renders no diagnostics lines."""
+    events_path = tmp_path / "pipeline-events.log"
+    _write_task_output_event(
+        events_path,
+        "feat-nodiag",
+        output="some assistant text",
+        include_diagnostics=False,
+    )
+    features = {
+        "feat-nodiag": OvernightFeatureStatus(status="failed", error="something else"),
+    }
+    data = _pytest_make_data(features)
+    data.pipeline_events_path = events_path
+
+    output = render_failed_features(data)
+
+    assert "**exit_code**" not in output, f"got:\n{output}"
+    assert "**stderr tail**" not in output, f"got:\n{output}"
+
+
+def test_report_diagnostics_markers_match_brain_constants() -> None:
+    """Report marker literals are byte-identical to the brain-prompt markers.
+
+    Guards drift: an operator comparing the morning report and the brain prompt
+    must see the same `(empty)`/`unknown` labels.
+    """
+    from cortex_command.overnight import report as _report_module
+    from cortex_command.overnight import brain as _brain_module
+
+    assert (
+        _report_module._DIAGNOSTICS_EMPTY_STDERR
+        == _brain_module._DIAGNOSTICS_EMPTY_STDERR
+    )
+    assert (
+        _report_module._DIAGNOSTICS_UNKNOWN_EXIT
+        == _brain_module._DIAGNOSTICS_UNKNOWN_EXIT
+    )
+
