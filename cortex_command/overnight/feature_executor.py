@@ -702,13 +702,29 @@ async def execute_feature(
             if result.success and not result.paused:
                 _write_completion_token(config.pipeline_events_path, feature, task.number, token)
 
-            pipeline_log_event(config.pipeline_events_path, {
+            task_output_event = {
                 "event": "task_output",
                 "feature": feature,
                 "task_number": task.number,
                 "task_description": task.description,
                 "output": (result.final_output or "")[:2000],
-            })
+            }
+            # Field-additive diagnostics (R7): carried as DISTINCT fields, never
+            # folded into `output` (which is empty on a worker crash). Sourced
+            # from the same RetryResult bundle the brain reads, so report and
+            # brain cannot diverge in source. Omit on the success path (bundle
+            # is None) per the emitter-omits-None rule; the report tolerates
+            # absence.
+            _task_diagnostics = getattr(result, "last_dispatch_diagnostics", None)
+            if _task_diagnostics is not None:
+                task_output_event["child_stderr"] = getattr(
+                    _task_diagnostics, "child_stderr", None
+                )
+                task_output_event["exit_code"] = getattr(
+                    _task_diagnostics, "exit_code", None
+                )
+                task_output_event["cwd"] = getattr(_task_diagnostics, "cwd", None)
+            pipeline_log_event(config.pipeline_events_path, task_output_event)
 
             try:
                 status_proc = subprocess.run(
