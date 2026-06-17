@@ -25,7 +25,7 @@ from cortex_command.overnight.brain import (
 )
 from cortex_command.overnight.feature_executor import _handle_failed_task
 from cortex_command.overnight.types import CircuitBreakerState
-from cortex_command.pipeline.dispatch import DispatchResult
+from cortex_command.pipeline.dispatch import DispatchDiagnostics, DispatchResult
 from cortex_command.pipeline.parser import FeatureTask
 
 
@@ -462,6 +462,109 @@ class TestHandleFailedTaskBrainActions(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(result)
         mock_mark_done.assert_not_called()
         mock_write_deferral.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Task 6 (#309): Final Attempt Diagnostics rendered into the brain prompt
+# ---------------------------------------------------------------------------
+
+
+class TestBrainDiagnosticsRendering(unittest.TestCase):
+    """Rendering the real batch-brain.md template with diagnostics (R6).
+
+    Asserts the rendered prompt contains the captured exit_code/cwd/stderr
+    values AND the limits-framing text — not merely that the heading exists —
+    and that the full template still renders with no missing-key error.
+    """
+
+    def _ctx(self, diagnostics):
+        return BrainContext(
+            feature="feat",
+            task_description="do something",
+            retry_count=2,
+            learnings="some learnings",
+            spec_excerpt="spec text",
+            last_attempt_output="",  # the empty-output crash case this feature targets
+            has_dependents=False,
+            last_attempt_diagnostics=diagnostics,
+        )
+
+    def _render(self, ctx):
+        return brain_module._render_template(
+            brain_module._BRAIN_TEMPLATE,
+            {
+                "feature": ctx.feature,
+                "task_description": ctx.task_description,
+                "retry_count": str(ctx.retry_count),
+                "learnings": ctx.learnings,
+                "spec_excerpt": ctx.spec_excerpt,
+                "has_dependents": str(ctx.has_dependents),
+                "last_attempt_output": ctx.last_attempt_output,
+                "final_attempt_diagnostics": brain_module._format_diagnostics(
+                    ctx.last_attempt_diagnostics
+                ),
+            },
+        )
+
+    def test_known_values_and_framing_rendered(self):
+        """A known exit_code/cwd/stderr surfaces in the prompt with framing."""
+        diagnostics = DispatchDiagnostics(
+            child_stderr="ModuleNotFoundError: no module named widget_xyz",
+            exit_code=1,
+            cwd="/tmp/worktrees/feat-abc",
+        )
+        rendered = self._render(self._ctx(diagnostics))
+
+        # Values rendered (not just the heading).
+        self.assertIn("## Final Attempt Diagnostics", rendered)
+        self.assertIn("ModuleNotFoundError: no module named widget_xyz", rendered)
+        self.assertIn("/tmp/worktrees/feat-abc", rendered)
+        self.assertIn("exit_code", rendered)
+        self.assertIn("1", rendered)
+
+        # Limits-framing text present.
+        self.assertIn("generic", rendered)
+        self.assertIn("learnings file", rendered)
+        self.assertIn("not a", rendered)  # "not a diagnosis"
+
+        # No unresolved placeholder leaked through.
+        self.assertNotIn("{final_attempt_diagnostics}", rendered)
+
+    def test_none_exit_code_renders_unknown_marker(self):
+        """A None exit_code renders the literal `unknown` marker."""
+        diagnostics = DispatchDiagnostics(
+            child_stderr="connection reset",
+            exit_code=None,
+            cwd="/tmp/wt",
+        )
+        rendered = self._render(self._ctx(diagnostics))
+        self.assertIn("unknown", rendered)
+        self.assertIn("connection reset", rendered)
+
+    def test_empty_stderr_renders_empty_marker(self):
+        """An empty stderr renders the literal `(empty)` silent-failure marker."""
+        diagnostics = DispatchDiagnostics(
+            child_stderr="",
+            exit_code=1,
+            cwd="/tmp/wt",
+        )
+        rendered = self._render(self._ctx(diagnostics))
+        self.assertIn("(empty)", rendered)
+
+    def test_none_bundle_renders_without_missing_key(self):
+        """A None diagnostics bundle still renders the full template cleanly."""
+        rendered = self._render(self._ctx(None))
+        self.assertIn("## Final Attempt Diagnostics", rendered)
+        self.assertIn("(empty)", rendered)
+        self.assertIn("unknown", rendered)
+        # Smoke: no placeholder left unresolved anywhere in the template.
+        self.assertNotIn("{final_attempt_diagnostics}", rendered)
+        self.assertNotIn("{last_attempt_output}", rendered)
+
+    def test_marker_literals_match_module_constants(self):
+        """The marker literals are the byte-identical shared constants."""
+        self.assertEqual(brain_module._DIAGNOSTICS_UNKNOWN_EXIT, "unknown")
+        self.assertEqual(brain_module._DIAGNOSTICS_EMPTY_STDERR, "(empty)")
 
 
 if __name__ == "__main__":

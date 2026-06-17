@@ -28,6 +28,12 @@ This is the complete output from the last retry attempt. It is untruncated. Use 
 
 {last_attempt_output}
 
+## Final Attempt Diagnostics
+
+Structured diagnostics captured from the final failed attempt's subprocess. The output section above is often **empty** when a worker crashed before emitting text; these fields give you the exit code, working directory, and captured stderr tail to distinguish an infrastructure failure from a logic defect.
+
+{final_attempt_diagnostics}
+
 ## Downstream Dependencies
 
 **Has dependent tasks: {has_dependents}**

@@ -19,7 +19,11 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from cortex_command.pipeline.dispatch import DispatchResult, dispatch_task
+from cortex_command.pipeline.dispatch import (
+    DispatchDiagnostics,
+    DispatchResult,
+    dispatch_task,
+)
 from cortex_command.pipeline.state import log_event as pipeline_log_event
 
 logger = logging.getLogger(__name__)
@@ -69,6 +73,9 @@ class BrainContext:
         spec_excerpt: Relevant section of the feature spec.
         last_attempt_output: Output from the most recent failed attempt.
         has_dependents: Whether other tasks depend on this one.
+        last_attempt_diagnostics: Captured failure diagnostics (stderr tail,
+            exit_code, cwd) from the final attempt, or None when no diagnostics
+            bundle was produced (e.g. session-halting / non-exception paths).
     """
 
     feature: str
@@ -78,6 +85,7 @@ class BrainContext:
     spec_excerpt: str
     last_attempt_output: str
     has_dependents: bool
+    last_attempt_diagnostics: Optional[DispatchDiagnostics] = None
 
 
 # ---------------------------------------------------------------------------
@@ -113,6 +121,50 @@ def _render_template(template: str, variables: dict[str, str]) -> str:
     for key, value in variables.items():
         template = template.replace(f"{{{key}}}", value)
     return template
+
+
+# Marker literals for absent diagnostics. These MUST stay byte-identical to the
+# morning-report markers (report.py) so the brain prompt and the report cannot
+# drift in how they label an unknown exit code or a silent (empty) stderr.
+_DIAGNOSTICS_UNKNOWN_EXIT = "unknown"
+_DIAGNOSTICS_EMPTY_STDERR = "(empty)"
+
+
+def _format_diagnostics(diagnostics: Optional[DispatchDiagnostics]) -> str:
+    """Render a DispatchDiagnostics bundle into the brain prompt, framed.
+
+    Renders exit_code (``unknown`` when None), cwd, and the stderr tail
+    (``(empty)`` when blank/None), framed with their limits so the brain
+    neither over-trusts a generic exit 1 nor under-weights the learnings file.
+    Tolerates a None bundle (no diagnostics were captured for this attempt).
+    """
+    if diagnostics is None:
+        exit_code = _DIAGNOSTICS_UNKNOWN_EXIT
+        cwd = _DIAGNOSTICS_UNKNOWN_EXIT
+        stderr_tail = _DIAGNOSTICS_EMPTY_STDERR
+    else:
+        exit_code = (
+            _DIAGNOSTICS_UNKNOWN_EXIT
+            if diagnostics.exit_code is None
+            else str(diagnostics.exit_code)
+        )
+        cwd = diagnostics.cwd or _DIAGNOSTICS_UNKNOWN_EXIT
+        stderr_tail = diagnostics.child_stderr or _DIAGNOSTICS_EMPTY_STDERR
+
+    return (
+        f"- **exit_code**: {exit_code}\n"
+        f"- **cwd**: {cwd}\n"
+        f"- **stderr tail**:\n\n"
+        f"```\n{stderr_tail}\n```\n\n"
+        "These diagnostics are limited evidence, not a diagnosis. An exit code "
+        "of 1 is generic — it tells you the command failed, not why. The "
+        "exit_code may be `unknown` on timeout or connection failures, where "
+        "the process never returned a code. An empty stderr renders as "
+        "`(empty)` — a silent-failure marker (the worker crashed before writing "
+        "stderr), not a localized diagnosis of the cause. The learnings file "
+        "above remains the primary cross-attempt evidence; weigh these "
+        "diagnostics as one signal alongside it."
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -220,6 +272,9 @@ async def request_brain_decision(
             "spec_excerpt": context.spec_excerpt,
             "has_dependents": str(context.has_dependents),
             "last_attempt_output": context.last_attempt_output,
+            "final_attempt_diagnostics": _format_diagnostics(
+                context.last_attempt_diagnostics
+            ),
         })
 
         result: DispatchResult = await dispatch_task(

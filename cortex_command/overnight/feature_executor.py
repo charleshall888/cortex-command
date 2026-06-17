@@ -262,6 +262,7 @@ async def _handle_failed_task(
         spec_excerpt=spec_excerpt,
         last_attempt_output=getattr(retry_result, 'final_output', '') or '',
         has_dependents=has_dependents,
+        last_attempt_diagnostics=getattr(retry_result, 'last_dispatch_diagnostics', None),
     )
 
     decision = await request_brain_decision(ctx, manager, log_path)
