@@ -1,0 +1,799 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 929cb790..b45bf301 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -86,6 +86,7 @@ A plain `uv tool install` (without `--reinstall`) will not overwrite the existin
+ - **Daytime autonomous pipeline** — the four daytime pipeline modules in `cortex_command/overnight/` (`daytime_pipeline.py`, `daytime_dispatch_writer.py`, `daytime_result_reader.py`, `readiness.py`), the three `[project.scripts]` console-scripts (`cortex-daytime-pipeline`, `cortex-daytime-dispatch-writer`, `cortex-daytime-result-reader`), seven test files (`cortex_command/overnight/tests/test_daytime_pipeline.py`, `cortex_command/overnight/tests/test_daytime_auth.py`, `cortex_command/overnight/tests/test_daytime_result_reader.py`, `cortex_command/overnight/tests/test_dispatch_readiness.py`, `tests/test_daytime_preflight.py`, `tests/test_daytime_dispatch_writer.py`, `tests/test_dispatch_parity.py`), dashboard daytime parsing helpers (`parse_daytime_state`, `parse_daytime_result`, `write_daytime_artifacts`), dataclass fields, and template fragments in `cortex_command/dashboard/`, the justfile `test-dispatch-parity-launchd-real` recipe, `.gitignore` daytime tempfile patterns (lines 32–34), `bin/.parity-exceptions.md` rows for the three daytime console-scripts, and `bin/.audit-bare-python-m-allowlist.md` daytime entries (3 entries: justfile launchd recipe + 2 `test_daytime_preflight.py` blocks) are all removed. The `_DAYTIME_DISPATCH_FIELDS` filter in `cortex_command/pipeline/metrics.py` is **retained** as a read-side compatibility shim for archived `pipeline-events.log` rows on operator machines (historical compatibility — skips pre-#246 daytime-schema rows in archived event logs).
+   - **Replacement**: the worktree-interactive implement-phase option, delivered by #238 + #240 under epic #237, replaces the daytime pipeline's interactive-session use case. Operators who previously ran `cortex-daytime-pipeline` to get a supervised mid-day session should use the `implement` lifecycle phase instead.
+   - **Operator action — remove orphan binstubs**: `uv tool uninstall cortex-command && uv tool install git+https://github.com/charleshall888/cortex-command.git@<latest-tag>` to remove orphan `cortex-daytime-*` binstubs from `~/.local/bin/`. `uv tool install --reinstall` is not sufficient — it does not remove binstubs whose entry-points are no longer in `[project.scripts]`.
++- **Two orphaned discovery audit-affordance events** — the `architecture_section_written` event (along with its dead `has_why_n_justification` field and `--has-why-n-justification` flag) and the `prescriptive_check_run` event are hard-deleted (no deprecation tombstone) from `cortex_command/discovery.py`, their `bin/.events-registry.md` rows, the `tests/test_discovery_module.py` test paths, and a stale `### Why N pieces` fixture heading. Neither was emitted by any live skill prose: `architecture_section_written` carried the Why-N falsification surface removed by #269, and `prescriptive_check_run`'s real check now lives in the `cortex-check-prescriptive-prose` pre-commit hook. The live `approval_checkpoint_responded` event is untouched (only its dangling consumer reference is repointed to the real test file). **Tolerant-Reader compatibility**: already-archived `events.log` rows that still contain these event types remain on disk and parseable — no Python reader parses these discovery event names, and all event-log readers tolerate unknown event types (one archived row even carries a `status` value no longer in the current validator set). Historical logs are not migrated or rewritten.
+ 
+ ## [v0.1.0] - 2026-04-29
+ 
+diff --git a/bin/.events-registry.md b/bin/.events-registry.md
+index 1c482417..b50b6429 100644
+--- a/bin/.events-registry.md
++++ b/bin/.events-registry.md
+@@ -112,9 +112,7 @@ Adding an entry is an architectural commitment: each row promises a documented c
+ | `decompose_drop` | `per-feature-events-log` | `gate-enforced` | `(deleted in commit 239b080 from skills/discovery/references/decompose.md:49-51)` | `(no consumer; in-flight sessions may still emit until prompt re-read)` | `deprecated-pending-removal` | `2026-05-11` | `2026-06-10` | `Verified-dead per epic 172 audit (zero non-test consumers); deletion shipped under spec R1. Row covers in-flight sessions during the 30-day grandfather window.` | `charliemhall@gmail.com` |
+ | `sentinel_absence` | `per-feature-events-log` | `manual` | `cortex_command/critical_review.py:375-416` (`_build_sentinel_absence_event`) | `(future per-tier compliance audit)` | `live` | `2026-05-11` |  | `Reviewer-side sentinel/SHA-drift/Read-failure telemetry from /cortex-core:critical-review fan-out (spec Req 12). Field-additive extensions (spec Req 7/8, 2026-05-20) declared below the table. *Note (2026-05-16): event volume rebaseline expected from this date forward — the Step 2c.5 first-line-strict over-fire was relaxed via verify-reviewer-output (backlog #229), reducing reason: absent events. Future audits comparing pre- and post-fix rates should bracket their analysis window around this commit.*` |  |
+ | `synthesizer_drift` | `per-feature-events-log` | `manual` | `cortex_command/critical_review.py:318-322` | `(future per-tier compliance audit)` | `live` | `2026-05-11` |  | `Synthesizer-side SHA-drift telemetry from /cortex-core:critical-review (spec Req 12)` |  |
+-| `architecture_section_written` | `per-feature-events-log` \| `research-topic-events-log` | `gate-enforced` | `skills/discovery/SKILL.md`; `skills/discovery/references/research.md` | `tests/test_discovery_events.py (tests-only)` | `audit-affordance` | `2026-05-11` |  | `Discovery architecture-section emission per reframe-discovery-to-principal-architect-posture spec R8b; consumer is tests-only at ship time per EVT-3 (audit-affordance) — surfaces architecture-write events for post-ship per-tier compliance audit and re-walk attempt counter (R12 reuses this event with re_walk_attempt field).` | `charliemhall@gmail.com` |
+-| `approval_checkpoint_responded` | `per-feature-events-log` \| `research-topic-events-log` | `gate-enforced` | `skills/discovery/SKILL.md`; `skills/discovery/references/decompose.md` | `tests/test_discovery_events.py (tests-only)` | `audit-affordance` | `2026-05-11` |  | `Discovery phase-boundary approval gate emission per reframe-discovery-to-principal-architect-posture spec R8b covering both R4 research-decompose checkpoint and R15 decompose-commit batch-review gate via the checkpoint field; consumer is tests-only at ship time per EVT-3 (audit-affordance) — surfaces approval responses for post-ship review of routinely-skipped checkpoints.` | `charliemhall@gmail.com` |
+-| `prescriptive_check_run` | `per-feature-events-log` \| `research-topic-events-log` | `gate-enforced` | `skills/discovery/references/decompose.md` | `tests/test_discovery_events.py (tests-only)` | `audit-affordance` | `2026-05-11` |  | `Discovery prescriptive-prose scanner emission per reframe-discovery-to-principal-architect-posture spec R8b; consumer is tests-only at ship time per EVT-3 (audit-affordance) — surfaces ticket-body scan results (flag_locations nested array) for post-ship audit of decompose-phase guardrails.` | `charliemhall@gmail.com` |
++| `approval_checkpoint_responded` | `per-feature-events-log` \| `research-topic-events-log` | `gate-enforced` | `skills/discovery/SKILL.md`; `skills/discovery/references/decompose.md` | `tests/test_discovery_module.py (tests-only)` | `audit-affordance` | `2026-05-11` |  | `Discovery phase-boundary approval gate emission per reframe-discovery-to-principal-architect-posture spec R8b covering both R4 research-decompose checkpoint and R15 decompose-commit batch-review gate via the checkpoint field; consumer is tests-only at ship time per EVT-3 (audit-affordance) — surfaces approval responses for post-ship review of routinely-skipped checkpoints.` | `charliemhall@gmail.com` |
+ | `drift_protocol_breach` | `per-feature-events-log` | `gate-enforced` | `skills/lifecycle/references/review.md:185` | `cortex_command/overnight/report.py:573,654` | `live` | `2026-05-12` |  | `requirements-skill-v2 spec R7 Phase 2 — emitted by review.md §4a post-dispatch validation gate when the reviewer exhausts the max-retry=2 cap without producing a parseable Suggested Requirements Update section. Schema: {ts, event, feature, state=detected, suggestion=missing, retries=2}. Consumer in report.py surfaces breaches in the morning report so an exhausted retry is visible rather than silent.` | `charliemhall@gmail.com` |
+ | `auth_probe` | `overnight-events-log` \| `per-feature-events-log` | `manual` | `cortex_command/overnight/auth.py (ensure_sdk_auth)` | `cortex_command/overnight/runner.py` | `live` | `2026-05-12` |  | `harden-autonomous-dispatch-path-for-interactive spec R4 — emitted by ensure_sdk_auth after keychain presence probe. Schema: {ts, event: "auth_probe", feature, vector: "<resolved>"\|"none", keychain: "resolved"\|"absent"\|"unavailable", result: "ok"\|"absent", source: "ensure_sdk_auth"}. Written to pipeline-events.log (runner path). Consumer in runner.py surfaces probe outcome for startup-failure diagnosis.` | `charliemhall@gmail.com` |
+ | `seatbelt_probe` | `overnight-events-log` \| `seatbelt-probe-log` | `manual` | `(emitter cortex_command/overnight/seatbelt_probe.py + runner.py session-start block deleted; see docs/overnight-operations.md "Retired: automated session-start probe")` | `(no consumer; report.py render_seatbelt_probe_header deleted in same change)` | `deprecated-pending-removal` | `2026-05-16` | `2026-06-28` | `Retired — the session-start probe could never pass: under an enforcing sandbox in non-interactive ``claude -p`` mode the compound uv-run-pytest-then-tee-then-printf Bash command is denied (``--dangerously-skip-permissions`` does not override sandbox denials), so every logged run failed without executing the test. Emitter, top-level log, and report consumer all deleted; on-demand ``pytest tests/test_worktree_seatbelt.py`` is the supported check. Row covers historical/in-flight per-session overnight-events.log entries during the grandfather window.` | `charliemhall@gmail.com` |
+diff --git a/cortex/lifecycle/retire-or-re-establish-the-orphaned/events.log b/cortex/lifecycle/retire-or-re-establish-the-orphaned/events.log
+index fabc7d63..d13fabee 100644
+--- a/cortex/lifecycle/retire-or-re-establish-the-orphaned/events.log
++++ b/cortex/lifecycle/retire-or-re-establish-the-orphaned/events.log
+@@ -5,3 +5,12 @@
+ {"ts": "2026-05-29T12:06:56Z", "event": "spec_approved", "feature": "retire-or-re-establish-the-orphaned"}
+ {"ts": "2026-05-29T12:56:13Z", "event": "plan_approved", "feature": "retire-or-re-establish-the-orphaned"}
+ {"ts": "2026-05-29T12:56:13Z", "event": "phase_transition", "feature": "retire-or-re-establish-the-orphaned", "from": "plan", "to": "implement"}
++{"schema_version":1,"ts":"2026-05-29T13:14:19.880682+00:00","event":"interactive_worktree_entered","feature":"retire-or-re-establish-the-orphaned","worktree_path":"/Users/charlie.hall/Workspaces/cortex-command/.claude/worktrees/interactive-retire-or-re-establish-the-orphaned"}
++{"ts": "2026-05-29T13:42:24Z", "event": "batch_dispatch", "feature": "retire-or-re-establish-the-orphaned", "batch": 0, "tasks": [1, 3]}
++{"ts": "2026-05-29T13:42:24Z", "event": "batch_dispatch", "feature": "retire-or-re-establish-the-orphaned", "batch": 1, "tasks": [2]}
++{"ts": "2026-05-29T13:42:24Z", "event": "batch_dispatch", "feature": "retire-or-re-establish-the-orphaned", "batch": 2, "tasks": [4]}
++{"ts": "2026-05-29T13:42:24Z", "event": "batch_dispatch", "feature": "retire-or-re-establish-the-orphaned", "batch": 3, "tasks": [5]}
++{"ts": "2026-05-29T13:42:24Z", "event": "phase_transition", "feature": "retire-or-re-establish-the-orphaned", "tier": "complex", "from": "implement", "to": "review"}
++{"ts": "2026-05-29T13:46:49Z", "event": "review_verdict", "feature": "retire-or-re-establish-the-orphaned", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
++{"ts": "2026-05-29T13:46:49Z", "event": "phase_transition", "feature": "retire-or-re-establish-the-orphaned", "from": "review", "to": "complete"}
++{"schema_version": 1, "ts": "2026-05-29T13:59:14Z", "event": "pr_opened", "feature": "retire-or-re-establish-the-orphaned", "number": 17, "url": "https://github.com/charleshall888/cortex-command/pull/17", "head_branch": "interactive/retire-or-re-establish-the-orphaned", "repo": "charleshall888/cortex-command"}
+diff --git a/cortex/lifecycle/retire-or-re-establish-the-orphaned/index.md b/cortex/lifecycle/retire-or-re-establish-the-orphaned/index.md
+index 0e501f64..fcd04feb 100644
+--- a/cortex/lifecycle/retire-or-re-establish-the-orphaned/index.md
++++ b/cortex/lifecycle/retire-or-re-establish-the-orphaned/index.md
+@@ -2,7 +2,7 @@
+ feature: retire-or-re-establish-the-orphaned
+ parent_backlog_uuid: b900be81-682f-49bb-aace-aeb16c94d47b
+ parent_backlog_id: 270
+-artifacts: ["research", "spec", "plan"]
++artifacts: ["research", "spec", "plan", "review"]
+ tags: []
+ created: 2026-05-28
+ updated: 2026-05-29
+diff --git a/cortex/lifecycle/retire-or-re-establish-the-orphaned/plan.md b/cortex/lifecycle/retire-or-re-establish-the-orphaned/plan.md
+index fc238f56..19c787e0 100644
+--- a/cortex/lifecycle/retire-or-re-establish-the-orphaned/plan.md
++++ b/cortex/lifecycle/retire-or-re-establish-the-orphaned/plan.md
+@@ -27,7 +27,7 @@ Hard-delete the two fully-orphaned discovery events (`architecture_section_writt
+   - The module docstring (`:3-22`): change "emits three new event types" to reflect that only `approval_checkpoint_responded` survives; remove the `architecture_section_written` (`:5`), `prescriptive_check_run` (`:8`), and `flag_locations[]` (`:11`) bullets and the `emit-architecture-written` (`:20`) / `emit-prescriptive-check` (`:22`) CLI-usage lines.
+   - **Do NOT touch** the surviving live path: `emit_checkpoint_response` (`:539`), `_validate_checkpoint_payload` (`:447`), `_cmd_emit_checkpoint_response` (`:1188`), `emit-checkpoint-response` subparser, or the genuinely shared helpers `resolve_events_log_path` (`:153`) and `append_event` (`:216`). (`_STATUS_VALUES` is NOT shared with the surviving path — `_validate_checkpoint_payload` does not read it — so it is removed above, not preserved.) Caller enumeration (repo-wide grep) confirms no skill prose, hook, bin script, or other Python module invokes the removed subcommands/functions — the only non-test reference is a historical lifecycle research artifact, which is left untouched.
+ - **Verification**: `grep -c 'architecture_section_written\|has_why_n_justification\|emit-architecture-written' cortex_command/discovery.py` = 0 AND `grep -c 'prescriptive_check_run\|emit-prescriptive-check' cortex_command/discovery.py` = 0 AND `grep -c '_coerce_bool_namespace\|_validate_architecture_payload\|_validate_prescriptive_payload\|_STATUS_VALUES' cortex_command/discovery.py` = 0 (this dead-residue grep extends the spec's `_coerce_bool_namespace` criterion to the two validators and the orphaned `_STATUS_VALUES` constant) AND `python3 -m cortex_command.discovery --help` exits 0 (module still imports and parses after deletion; the help text lists neither retired subcommand). **Do NOT run `just test` for this task** — it will fail at collection until Task 3 lands (documented import coupling); test-suite green is Task 3's gate.
+-- **Status**: [ ] pending
++- **Status**: [x] done
+ 
+ ### Task 2: Hard-delete both orphan registry rows and repoint the surviving consumer reference in `bin/.events-registry.md`
+ - **Files**: `bin/.events-registry.md`
+@@ -36,7 +36,7 @@ Hard-delete the two fully-orphaned discovery events (`architecture_section_writt
+ - **Complexity**: simple
+ - **Context**: Only row 116 survives among the three sibling rows, so the family-wide dangling-ref fix reduces to repointing that one remaining row. The events-registry gate validates row schema and that staged skill-prompt emissions reference registered events — it does not stat producer/consumer files and does not scan Python, so deleting rows whose events no skill emits is safe. Leave row 116's `category` (`audit-affordance`), `rationale`, and all other cells unchanged — edit only its `consumers` cell. Pre-commit runs `just check-events-registry` when this file is staged.
+ - **Verification**: `grep -c 'architecture_section_written\|prescriptive_check_run' bin/.events-registry.md` = 0 AND `grep -c 'approval_checkpoint_responded' bin/.events-registry.md` = 1 AND `grep -c 'test_discovery_events.py' bin/.events-registry.md` = 0 AND `just check-events-registry` exits 0 AND `just check-events-registry-audit` exits 0 — pass if all five hold.
+-- **Status**: [ ] pending
++- **Status**: [x] done
+ 
+ ### Task 3: Reconcile `tests/test_discovery_module.py` to the surviving single emitter
+ - **Files**: `tests/test_discovery_module.py`
+@@ -50,7 +50,7 @@ Hard-delete the two fully-orphaned discovery events (`architecture_section_writt
+   - Resolve the shared path-routing test `test_emit_subcommands_honor_resolve_events_log_path` (`:359-413`): it co-asserts all three sibling emitters (`len == 3`, name-set of all three at `:410-412`). With only `approval_checkpoint_responded` surviving, the *cross-emitter parity* property (three emitters resolve the same path) is no longer expressible — **intentionally retire** that property (a single emitter cannot diverge from itself). But the retired test ALSO uniquely holds a *single-emitter* property that survives and still matters: under an active-lifecycle override (it sets `LIFECYCLE_SESSION_ID` + writes a `.session` file at `:369-370`), it asserts `emit_checkpoint_response` returns `feature_dir / "events.log"` (`:398`) and NOT `cortex/research/<topic>/events.log` (`:402-403`) — i.e. the surviving emitter delegates to `resolve_events_log_path` rather than hardcoding the research path. The existing `test_emit_checkpoint_response_*` tests (`:176`/`:216`/`:259`) do NOT cover this: each runs `monkeypatch.delenv("LIFECYCLE_SESSION_ID")` (override unset) and asserts only `.exists()`, never the returned path value. Therefore: when retiring the multi-emitter test, **add a dedicated single-emitter test** (this is mandatory, not "or fold into existing coverage" — folding into the existing checkpoint tests would silently drop the property to zero coverage) that sets `LIFECYCLE_SESSION_ID` + writes `.session`, calls `emit_checkpoint_response`, and asserts the returned target equals the lifecycle `events.log` path AND that the research-path file does not exist. This is sanctioned retirement of the now-impossible parity property with preservation of the still-provable override-delegation property (spec Req 6).
+   - **Do NOT** modify `tests/test_discovery_gate_presentation.py`'s `DRIFTED_VOCAB_TOKENS` drift-guard (Non-Requirement — it asserts the retired token stays absent from `skills/discovery/SKILL.md`, which is already true; it stays green).
+ - **Verification**: `just test` exits 0 (suite green now that Task 1 has landed — pass if exit 0, all tests pass) AND `grep -c 'architecture_section_written\|prescriptive_check_run' tests/test_discovery_module.py` = 0 AND the override-delegation property is still covered for the surviving emitter — observable state: a test function exists that contains both `setenv("LIFECYCLE_SESSION_ID"` and a call to `emit_checkpoint_response` and an `assert`-equality on the returned path against a `cortex/lifecycle/<slug>/events.log` target (verify via `grep -n 'setenv("LIFECYCLE_SESSION_ID"' tests/test_discovery_module.py` returning a line inside a function that also calls `emit_checkpoint_response`) — pass if all three hold.
+-- **Status**: [ ] pending
++- **Status**: [x] done
+ 
+ ### Task 4: Conform the one stale fixture heading
+ - **Files**: `tests/fixtures/discovery-brief/complex-topic/research.md`
+@@ -59,7 +59,7 @@ Hard-delete the two fully-orphaned discovery events (`architecture_section_writt
+ - **Complexity**: simple
+ - **Context**: The fixture is consumed by `test_discovery_gate_brief.py` via `generate-brief`, which asserts on `### Pieces` and never on `### Why N pieces`, so removing the section is safe. Remove the whole section (heading + body) rather than leaving an orphaned-body fragment under the preceding `### Seam-level edges` section.
+ - **Verification**: `grep -c '### Why N pieces' tests/fixtures/discovery-brief/complex-topic/research.md` = 0 AND `grep -rc '### Why N pieces' tests/fixtures/discovery-brief/` sums to 0 across all three fixture files — pass if both hold.
+-- **Status**: [ ] pending
++- **Status**: [x] done
+ 
+ ### Task 5: Record the retirement in `CHANGELOG.md` under `## [Unreleased]`
+ - **Files**: `CHANGELOG.md`
+@@ -68,7 +68,7 @@ Hard-delete the two fully-orphaned discovery events (`architecture_section_writt
+ - **Complexity**: simple
+ - **Context**: The `## [Unreleased]` heading is at `:48`; the next `## [` heading is `## [v0.1.0]` at `:90`. The entry must land strictly between them — not at the file top (which is a shipped `## [v2.0.0]` block) and not inside a versioned block. Do NOT author a `grep -c "architecture_section_written"` style Done-When anywhere in the `cortex/backlog/270-*.md` body — after retirement the token resolves in neither the registry nor `cortex_command/`, and `test_backlog_grep_targets_resolve.py` would fail (this task touches only `CHANGELOG.md`, so the constraint is a guardrail, not an action).
+ - **Verification**: `grep -c 'architecture_section_written' CHANGELOG.md` ≥ 1 AND the new entry's line number (from `grep -n 'architecture_section_written' CHANGELOG.md`) is greater than the `## [Unreleased]` line (`grep -n '## \[Unreleased\]' CHANGELOG.md`) and less than the first `## [` heading appearing after `## [Unreleased]` (i.e. `## [v0.1.0]`) — pass if both the count and the placement hold.
+-- **Status**: [ ] pending
++- **Status**: [x] done
+ 
+ ## Risks
+ 
+diff --git a/cortex/lifecycle/retire-or-re-establish-the-orphaned/pr.json b/cortex/lifecycle/retire-or-re-establish-the-orphaned/pr.json
+new file mode 100644
+index 00000000..e6535c85
+--- /dev/null
++++ b/cortex/lifecycle/retire-or-re-establish-the-orphaned/pr.json
+@@ -0,0 +1,7 @@
++{
++  "number": 17,
++  "url": "https://github.com/charleshall888/cortex-command/pull/17",
++  "head_branch": "interactive/retire-or-re-establish-the-orphaned",
++  "opened_at": "2026-05-29T13:58:36Z",
++  "repo": "charleshall888/cortex-command"
++}
+\ No newline at end of file
+diff --git a/cortex/lifecycle/retire-or-re-establish-the-orphaned/review.md b/cortex/lifecycle/retire-or-re-establish-the-orphaned/review.md
+new file mode 100644
+index 00000000..5a792948
+--- /dev/null
++++ b/cortex/lifecycle/retire-or-re-establish-the-orphaned/review.md
+@@ -0,0 +1,63 @@
++# Review: retire-or-re-establish-the-orphaned
++
++## Stage 1: Spec Compliance
++
++### Requirement 1: `architecture_section_written` event, `emit_architecture_written`, `emit-architecture-written` subcommand, `has_why_n_justification` field/flag, and the now-dead `_coerce_bool_namespace` helper fully removed from `cortex_command/discovery.py`
++- **Expected**: `grep -c 'architecture_section_written\|has_why_n_justification\|emit-architecture-written' cortex_command/discovery.py` = 0 AND `grep -c '_coerce_bool_namespace' cortex_command/discovery.py` = 0.
++- **Actual**: Both greps return 0. The module no longer defines `emit_architecture_written`, its dispatcher, its subparser, the `--has-why-n-justification` flag, or `_coerce_bool_namespace`. The module imports and `--help` exits 0.
++- **Verdict**: PASS
++- **Notes**: The plan's dead-residue extension is also satisfied: `grep -c '_validate_architecture_payload\|_validate_prescriptive_payload\|_STATUS_VALUES' cortex_command/discovery.py` = 0, so the two orphaned validators and the `_STATUS_VALUES` frozenset (none of whose names contain a retired event token) were removed alongside the spec-named helper. discovery.py shed 264 lines.
++
++### Requirement 2: `prescriptive_check_run` event, `emit_prescriptive_check`, and `emit-prescriptive-check` subcommand fully removed
++- **Expected**: `grep -c 'prescriptive_check_run\|emit-prescriptive-check' cortex_command/discovery.py` = 0.
++- **Actual**: Returns 0. Function, dispatcher, and subparser are gone.
++- **Verdict**: PASS
++- **Notes**: The operator-ratified scope expansion to the second orphan landed as specced.
++
++### Requirement 3: Both orphaned event rows hard-deleted from `bin/.events-registry.md` (no tombstone)
++- **Expected**: `grep -c 'architecture_section_written\|prescriptive_check_run' bin/.events-registry.md` = 0.
++- **Actual**: Returns 0. No `deprecated-pending-removal` tombstone row was added for either event (consistent with the hard-delete decision).
++- **Verdict**: PASS
++
++### Requirement 4: Surviving `approval_checkpoint_responded` row preserved; dangling consumer reference repointed off the nonexistent `tests/test_discovery_events.py`
++- **Expected**: `grep -c 'approval_checkpoint_responded' bin/.events-registry.md` = 1 AND `grep -c 'test_discovery_events.py' bin/.events-registry.md` = 0.
++- **Actual**: Both hold (1 and 0). Row 115 now points `consumers` at `tests/test_discovery_module.py (tests-only)`; the file `tests/test_discovery_events.py` confirmed nonexistent. Row's `category` (`audit-affordance`), rationale, owner, and other cells unchanged.
++- **Verdict**: PASS
++
++### Requirement 5: Stale `### Why N pieces` heading removed from the one fixture that carried it
++- **Expected**: `grep -c '### Why N pieces' tests/fixtures/discovery-brief/complex-topic/research.md` = 0 AND `grep -rc '### Why N pieces' tests/fixtures/discovery-brief/` totals 0.
++- **Actual**: 0 in the complex-topic fixture; repo-wide total across all three fixtures = 0. The fixture retains `### Pieces` and `### Seam-level edges`, so `test_discovery_gate_brief.py`'s assertions are unaffected.
++- **Verdict**: PASS
++
++### Requirement 6: Dead-path test functions removed; `has_why_n_justification` assertions stripped; CLI-help test no longer asserts removed subcommands; degenerate multi-emitter parity test retired with a dedicated single-emitter override-delegation replacement
++- **Expected**: `just test` exits 0 AND `grep -c 'architecture_section_written\|prescriptive_check_run' tests/test_discovery_module.py` = 0; the override-delegation property remains covered.
++- **Actual**: Grep returns 0. The module-scope imports now bring in only `emit_checkpoint_response` and `resolve_events_log_path`. The retired multi-emitter test `test_emit_subcommands_honor_resolve_events_log_path` is gone; its surviving single-emitter property is covered by the dedicated `test_emit_checkpoint_response_honors_resolve_events_log_path` (lines 277-311), which sets `LIFECYCLE_SESSION_ID`, writes a `.session` file, calls `emit_checkpoint_response`, asserts the returned target equals `feature_dir / "events.log"` (the lifecycle path), and asserts the research-path file is never created. The CLI-help test asserts only `resolve-events-log-path` and `emit-checkpoint-response`. Change-relevant suite (`test_discovery_module.py`, `test_discovery_gate_brief.py`, `test_discovery_gate_presentation.py`) = 86 passed, 2 skipped (SDK-gated).
++- **Verdict**: PASS
++- **Notes**: The critical-review fix is genuinely covered, not dropped. The replacement is a true single-emitter override-delegation test asserting the returned path value (not just `.exists()`), distinct from the three pre-existing `test_emit_checkpoint_response_*` tests that run with the env override unset.
++
++### Requirement 7: Events-registry gates pass after removals and repoint
++- **Expected**: `just check-events-registry` exits 0 AND `just check-events-registry-audit` exits 0.
++- **Actual**: Both exit 0.
++- **Verdict**: PASS
++
++### Requirement 8: Retirement recorded under the existing `## [Unreleased]` section of `CHANGELOG.md`, noting Tolerant-Reader compatibility
++- **Expected**: `grep -c 'architecture_section_written' CHANGELOG.md` ≥ 1 AND the entry sits between `## [Unreleased]` and the next `## [` heading.
++- **Actual**: Count = 1, at line 89. `## [Unreleased]` is line 48; the next `## [` heading after it is `## [v0.1.0]` at line 91. The entry (89) is strictly between (48 < 89 < 91), not inside a shipped block. The entry explicitly notes Tolerant-Reader compatibility of already-archived event-log rows (no Python reader parses these names; readers tolerate unknown types; one archived row carries a now-invalid status value) and that historical logs are not migrated.
++- **Verdict**: PASS
++
++## Requirements Drift
++**State**: none
++**Findings**:
++- None
++**Update needed**: None
++
++## Stage 2: Code Quality
++- **Naming conventions**: Consistent. The surviving `emit_checkpoint_response` / `_validate_checkpoint_payload` / `_cmd_emit_checkpoint_response` / `emit-checkpoint-response` family follows the module's established naming pattern. New test `test_emit_checkpoint_response_honors_resolve_events_log_path` matches the existing `test_*` granular-per-scenario convention documented in the module docstring.
++- **Error handling**: Unchanged on the surviving path — `_cmd_emit_checkpoint_response` still distinguishes `ValueError` (exit 2, validation) from `OSError` (exit 2, append failure) and `emit_checkpoint_response` still validates before resolving the path. No error-handling surface was weakened by the deletions.
++- **Test coverage**: The plan's verification steps were executed and pass. Critically, the retired multi-emitter path-routing test was replaced by a dedicated single-emitter override-delegation test (lines 277-311) that sets `LIFECYCLE_SESSION_ID`, calls `emit_checkpoint_response`, and asserts the returned target equals the lifecycle `events.log` (and that the research path is NOT created) — the exact critical-review property, covered for real rather than folded into the env-unset checkpoint tests. Module imports + `--help` succeed; `test_check_events_registry.py` (9 passed), `test_backlog_grep_targets_resolve.py` (3 passed), and the three discovery test files all pass. Repo-wide grep finds no dangling reference to any removed function/token outside historical lifecycle/research artifacts and the CHANGELOG. The backlog-grep-target constraint (Technical Constraints) is honored — no `grep -c` Done-When targeting a retired token exists in `cortex/backlog/270-*.md`.
++- **Pattern consistency**: Hard-delete (no tombstone) is consistent with the spec's stated approach and with project.md's historical-compatibility-shim pattern (L37), which governs deleted *pipeline modules* with archived-log Python readers — explicitly inapplicable here, as no Python reader parses these discovery event names. The surviving `approval_checkpoint_responded` path is fully intact (emitter, validator, dispatcher, subparser, and registry row all preserved; only the dangling consumer cell corrected). The diff is contained to exactly the declared changed files plus lifecycle bookkeeping artifacts. Note: the pre-existing `_has_rerun_suffix` helper is callerless, but it was already callerless on `main` (not introduced or worsened by this change) and was correctly left out of scope.
++
++## Verdict
++```json
++{"verdict": "APPROVED", "cycle": 1, "issues": [], "requirements_drift": "none"}
++```
+diff --git a/cortex_command/discovery.py b/cortex_command/discovery.py
+index b58c458e..73bddfe6 100644
+--- a/cortex_command/discovery.py
++++ b/cortex_command/discovery.py
+@@ -1,30 +1,24 @@
+ """Atomic CLI helpers for the /cortex-core:discovery skill.
+ 
+-The discovery skill emits three new event types per spec R8b:
++The discovery skill emits the ``approval_checkpoint_responded`` event per
++spec R8b (R4 research->decompose gate AND R15 decompose->commit batch-review
++gate).
+ 
+-  - ``architecture_section_written``    (research-phase Architecture write)
+-  - ``approval_checkpoint_responded``   (R4 research->decompose gate AND
+-                                         R15 decompose->commit batch-review gate)
+-  - ``prescriptive_check_run``          (decompose-phase ticket-body scan)
++The event carries a small but non-trivial payload that meets the project.md
++L33 "skill-helper module" paraphrase-vulnerability threshold: authoring the
++JSON inline in skill prose invites the orchestrator-LLM to silently drop
++fields.
+ 
+-Each event carries a small but non-trivial payload (e.g. the
+-``prescriptive_check_run.flag_locations[]`` nested array) that meets the
+-project.md L33 "skill-helper module" paraphrase-vulnerability threshold:
+-authoring the JSON inline in skill prose invites the orchestrator-LLM to
+-silently drop fields or fold the array shape.
+-
+-This module collapses each emission into one atomic CLI subcommand that
++This module collapses the emission into one atomic CLI subcommand that
+ fuses input validation + JSONL append + path resolution. The orchestrator
+ invokes:
+ 
+-  python3 -m cortex_command.discovery emit-architecture-written ...
+   python3 -m cortex_command.discovery emit-checkpoint-response  ...
+-  python3 -m cortex_command.discovery emit-prescriptive-check   ...
+   python3 -m cortex_command.discovery resolve-events-log-path   ...
+ 
+-The first three emit-* subcommands internally call ``resolve-events-log-path``
+-to pick the correct events.log target -- never hardcoded. Path resolution
+-rules (spec R9 + R13 + EVT-1):
++The emit-checkpoint-response subcommand internally calls
++``resolve-events-log-path`` to pick the correct events.log target -- never
++hardcoded. Path resolution rules (spec R9 + R13 + EVT-1):
+ 
+   1. If ``LIFECYCLE_SESSION_ID`` is set in the env AND a lifecycle directory
+      under ``{repo_root}/cortex/lifecycle/`` contains a ``.session`` (or
+@@ -411,37 +405,6 @@ _RESPONSE_VALUES = frozenset({
+     "consolidate-pieces",
+     "split-piece",
+ })
+-_STATUS_VALUES = frozenset({"draft", "approved", "revised", "walk-back"})
+-
+-
+-def _validate_architecture_payload(
+-    topic: str,
+-    piece_count: int,
+-    has_why_n_justification: bool,
+-    status: str,
+-    re_walk_attempt: int | None,
+-) -> None:
+-    _validate_topic_slug(topic)
+-    if not isinstance(piece_count, int) or piece_count < 0:
+-        raise ValueError(
+-            f"piece_count must be a non-negative int: got {piece_count!r}"
+-        )
+-    if not isinstance(has_why_n_justification, bool):
+-        raise ValueError(
+-            "has_why_n_justification must be bool: got "
+-            f"{type(has_why_n_justification).__name__}"
+-        )
+-    if status not in _STATUS_VALUES:
+-        raise ValueError(
+-            f"status must be one of {sorted(_STATUS_VALUES)}: got {status!r}"
+-        )
+-    if re_walk_attempt is not None and (
+-        not isinstance(re_walk_attempt, int) or re_walk_attempt < 0
+-    ):
+-        raise ValueError(
+-            f"re_walk_attempt must be a non-negative int or None: "
+-            f"got {re_walk_attempt!r}"
+-        )
+ 
+ 
+ def _validate_checkpoint_payload(
+@@ -467,75 +430,10 @@ def _validate_checkpoint_payload(
+         )
+ 
+ 
+-def _validate_prescriptive_payload(
+-    topic: str,
+-    tickets_checked: int,
+-    flagged_count: int,
+-    flag_locations: list,
+-) -> None:
+-    _validate_topic_slug(topic)
+-    if not isinstance(tickets_checked, int) or tickets_checked < 0:
+-        raise ValueError(
+-            f"tickets_checked must be a non-negative int: got "
+-            f"{tickets_checked!r}"
+-        )
+-    if not isinstance(flagged_count, int) or flagged_count < 0:
+-        raise ValueError(
+-            f"flagged_count must be a non-negative int: got {flagged_count!r}"
+-        )
+-    if not isinstance(flag_locations, list):
+-        raise ValueError(
+-            f"flag_locations must be a list: got "
+-            f"{type(flag_locations).__name__}"
+-        )
+-    for i, loc in enumerate(flag_locations):
+-        if not isinstance(loc, dict):
+-            raise ValueError(
+-                f"flag_locations[{i}] must be a dict: got "
+-                f"{type(loc).__name__}"
+-            )
+-        for required_key in ("ticket", "section", "signal"):
+-            if required_key not in loc:
+-                raise ValueError(
+-                    f"flag_locations[{i}] missing required key "
+-                    f"{required_key!r}: {loc!r}"
+-                )
+-
+-
+ # ---------------------------------------------------------------------------
+ # Emit helpers (importable)
+ # ---------------------------------------------------------------------------
+ 
+-def emit_architecture_written(
+-    topic: str,
+-    piece_count: int,
+-    has_why_n_justification: bool,
+-    status: str,
+-    repo_root: Path,
+-    re_walk_attempt: int | None = None,
+-) -> Path:
+-    """Validate + emit one ``architecture_section_written`` event.
+-
+-    Returns the events.log path written to.
+-    """
+-    _validate_architecture_payload(
+-        topic, piece_count, has_why_n_justification, status, re_walk_attempt
+-    )
+-    events_log = resolve_events_log_path(topic, repo_root)
+-    event: dict = {
+-        "ts": _now_iso(),
+-        "event": "architecture_section_written",
+-        "topic": topic,
+-        "piece_count": piece_count,
+-        "has_why_n_justification": has_why_n_justification,
+-        "status": status,
+-    }
+-    if re_walk_attempt is not None:
+-        event["re_walk_attempt"] = re_walk_attempt
+-    append_event(events_log, event)
+-    return events_log
+-
+-
+ def emit_checkpoint_response(
+     topic: str,
+     checkpoint: str,
+@@ -561,33 +459,6 @@ def emit_checkpoint_response(
+     return events_log
+ 
+ 
+-def emit_prescriptive_check(
+-    topic: str,
+-    tickets_checked: int,
+-    flagged_count: int,
+-    flag_locations: list,
+-    repo_root: Path,
+-) -> Path:
+-    """Validate + emit one ``prescriptive_check_run`` event.
+-
+-    Returns the events.log path written to.
+-    """
+-    _validate_prescriptive_payload(
+-        topic, tickets_checked, flagged_count, flag_locations
+-    )
+-    events_log = resolve_events_log_path(topic, repo_root)
+-    event = {
+-        "ts": _now_iso(),
+-        "event": "prescriptive_check_run",
+-        "topic": topic,
+-        "tickets_checked": tickets_checked,
+-        "flagged_count": flagged_count,
+-        "flag_locations": flag_locations,
+-    }
+-    append_event(events_log, event)
+-    return events_log
+-
+-
+ # ---------------------------------------------------------------------------
+ # Brief validation helper (used by generator pre-persist and test suite)
+ # ---------------------------------------------------------------------------
+@@ -1161,30 +1032,6 @@ def _cmd_resolve_events_log_path(args: argparse.Namespace) -> int:
+     return 0
+ 
+ 
+-def _cmd_emit_architecture_written(args: argparse.Namespace) -> int:
+-    repo_root = _resolve_repo_root_arg(args)
+-    if repo_root is None:
+-        return 2
+-    try:
+-        target = emit_architecture_written(
+-            topic=args.topic,
+-            piece_count=args.piece_count,
+-            has_why_n_justification=args.has_why_n_justification,
+-            status=args.status,
+-            repo_root=repo_root,
+-            re_walk_attempt=args.re_walk_attempt,
+-        )
+-    except ValueError as e:
+-        print(str(e), file=sys.stderr)
+-        return 2
+-    except OSError as e:
+-        print(f"Failed to append architecture_section_written event: {e}",
+-              file=sys.stderr)
+-        return 2
+-    sys.stdout.write(str(target) + "\n")
+-    return 0
+-
+-
+ def _cmd_emit_checkpoint_response(args: argparse.Namespace) -> int:
+     repo_root = _resolve_repo_root_arg(args)
+     if repo_root is None:
+@@ -1208,39 +1055,6 @@ def _cmd_emit_checkpoint_response(args: argparse.Namespace) -> int:
+     return 0
+ 
+ 
+-def _cmd_emit_prescriptive_check(args: argparse.Namespace) -> int:
+-    repo_root = _resolve_repo_root_arg(args)
+-    if repo_root is None:
+-        return 2
+-    # flag_locations comes in as a JSON string on the CLI (stdin or arg).
+-    if args.flag_locations_json == "-":
+-        raw = sys.stdin.read()
+-    else:
+-        raw = args.flag_locations_json
+-    try:
+-        flag_locations = json.loads(raw) if raw.strip() else []
+-    except json.JSONDecodeError as e:
+-        print(f"--flag-locations-json must be valid JSON: {e}", file=sys.stderr)
+-        return 2
+-    try:
+-        target = emit_prescriptive_check(
+-            topic=args.topic,
+-            tickets_checked=args.tickets_checked,
+-            flagged_count=args.flagged_count,
+-            flag_locations=flag_locations,
+-            repo_root=repo_root,
+-        )
+-    except ValueError as e:
+-        print(str(e), file=sys.stderr)
+-        return 2
+-    except OSError as e:
+-        print(f"Failed to append prescriptive_check_run event: {e}",
+-              file=sys.stderr)
+-        return 2
+-    sys.stdout.write(str(target) + "\n")
+-    return 0
+-
+-
+ # ---------------------------------------------------------------------------
+ # argparse wiring
+ # ---------------------------------------------------------------------------
+@@ -1277,36 +1091,6 @@ def _build_parser() -> argparse.ArgumentParser:
+     rp.add_argument("--topic", required=True, help="Discovery topic slug.")
+     rp.set_defaults(func=_cmd_resolve_events_log_path)
+ 
+-    # emit-architecture-written
+-    ea = sub.add_parser(
+-        "emit-architecture-written",
+-        help="Validate and emit one architecture_section_written event.",
+-    )
+-    _add_repo_root_arg(ea)
+-    ea.add_argument("--topic", required=True)
+-    ea.add_argument("--piece-count", required=True, type=int)
+-    ea.add_argument(
+-        "--has-why-n-justification",
+-        required=True,
+-        choices=("true", "false"),
+-    )
+-    ea.add_argument(
+-        "--status",
+-        required=True,
+-        choices=sorted(_STATUS_VALUES),
+-    )
+-    ea.add_argument(
+-        "--re-walk-attempt",
+-        type=int,
+-        default=None,
+-        help="Optional R12 re-walk attempt counter.",
+-    )
+-    ea.set_defaults(
+-        func=lambda a: _cmd_emit_architecture_written(
+-            _coerce_bool_namespace(a, "has_why_n_justification")
+-        )
+-    )
+-
+     # emit-checkpoint-response
+     ec = sub.add_parser(
+         "emit-checkpoint-response",
+@@ -1332,25 +1116,6 @@ def _build_parser() -> argparse.ArgumentParser:
+     )
+     ec.set_defaults(func=_cmd_emit_checkpoint_response)
+ 
+-    # emit-prescriptive-check
+-    ep = sub.add_parser(
+-        "emit-prescriptive-check",
+-        help="Validate and emit one prescriptive_check_run event.",
+-    )
+-    _add_repo_root_arg(ep)
+-    ep.add_argument("--topic", required=True)
+-    ep.add_argument("--tickets-checked", required=True, type=int)
+-    ep.add_argument("--flagged-count", required=True, type=int)
+-    ep.add_argument(
+-        "--flag-locations-json",
+-        required=True,
+-        help=(
+-            "JSON list of {ticket, section, signal} dicts. Pass '-' to read "
+-            "JSON from stdin."
+-        ),
+-    )
+-    ep.set_defaults(func=_cmd_emit_prescriptive_check)
+-
+     # generate-brief
+     gb = sub.add_parser(
+         "generate-brief",
+@@ -1426,13 +1191,6 @@ def _build_parser() -> argparse.ArgumentParser:
+     return p
+ 
+ 
+-def _coerce_bool_namespace(args: argparse.Namespace, name: str) -> argparse.Namespace:
+-    """Coerce a "true"/"false" argparse string into a real Python bool."""
+-    raw = getattr(args, name)
+-    setattr(args, name, raw == "true")
+-    return args
+-
+-
+ def main(argv: list[str] | None = None) -> int:
+     parser = _build_parser()
+     args = parser.parse_args(argv)
+diff --git a/tests/fixtures/discovery-brief/complex-topic/research.md b/tests/fixtures/discovery-brief/complex-topic/research.md
+index 2e3e205f..bc7c4bab 100644
+--- a/tests/fixtures/discovery-brief/complex-topic/research.md
++++ b/tests/fixtures/discovery-brief/complex-topic/research.md
+@@ -133,12 +133,6 @@ Named contract surfaces:
+ - Piece 3: edges land on 8+ skill source files, `tests/test_clarify_critic_alignment_integration.py`, `tests/fixtures/clarify_critic_v1.json`, `tests/fixtures/jsonl_emission_cutoff.txt`.
+ - Piece 4: edges land on `cortex_command/overnight/orchestrator_context.py`, `cortex_command/overnight/prompts/orchestrator-round.md`, `cortex_command/overnight/tests/` (update `aggregate_round_context` tests).
+ 
+-### Why N pieces
+-
+-Piece count is 4. Template R3 gate fires only when piece_count > 5; gate does not fire.
+-
+-Decomposition history: original was 6 pieces (separate pieces for registry, gate, dead-scan tool, per-event audit, coordinated deletion, and `escalations.jsonl` fix). Walked back per template rule R1 across two iterations: dead-scan tool merged into gate (Piece 2) because both share the `skills/**/*.md` scan surface and can be described in one Role/Integration/Edges paragraph without losing distinguishing detail → merged; per-event audit merged into dead-deletion (Piece 3) because the audit is the input to deletion and shares no separate named contract surface → merged. Final count: 4.
+-
+ ## Decision Records
+ 
+ ### DR-1: Partition skill-side and session-side registries; do not merge logs
+diff --git a/tests/test_discovery_module.py b/tests/test_discovery_module.py
+index addfd5cc..3fc68b9b 100644
+--- a/tests/test_discovery_module.py
++++ b/tests/test_discovery_module.py
+@@ -22,9 +22,7 @@ from pathlib import Path
+ import pytest
+ 
+ from cortex_command.discovery import (
+-    emit_architecture_written,
+     emit_checkpoint_response,
+-    emit_prescriptive_check,
+     resolve_events_log_path,
+ )
+ 
+@@ -134,45 +132,6 @@ def test_resolve_path_env_unset_falls_back_to_research(
+ # ---------------------------------------------------------------------------
+ 
+ 
+-def test_emit_architecture_written_writes_jsonl(
+-    repo_root: Path, monkeypatch: pytest.MonkeyPatch
+-) -> None:
+-    monkeypatch.delenv("LIFECYCLE_SESSION_ID", raising=False)
+-    target = emit_architecture_written(
+-        topic="my-topic",
+-        piece_count=9,
+-        has_why_n_justification=True,
+-        status="approved",
+-        repo_root=repo_root,
+-        re_walk_attempt=1,
+-    )
+-    assert target == repo_root / "cortex" / "research" / "my-topic" / "events.log"
+-    events = _read_jsonl(target)
+-    assert len(events) == 1
+-    ev = events[0]
+-    assert ev["event"] == "architecture_section_written"
+-    assert ev["topic"] == "my-topic"
+-    assert ev["piece_count"] == 9
+-    assert ev["has_why_n_justification"] is True
+-    assert ev["status"] == "approved"
+-    assert ev["re_walk_attempt"] == 1
+-    assert "ts" in ev
+-
+-
+-def test_emit_architecture_written_validation_rejects_negative_piece_count(
+-    repo_root: Path, monkeypatch: pytest.MonkeyPatch
+-) -> None:
+-    monkeypatch.delenv("LIFECYCLE_SESSION_ID", raising=False)
+-    with pytest.raises(ValueError, match="piece_count"):
+-        emit_architecture_written(
+-            topic="my-topic",
+-            piece_count=-1,
+-            has_why_n_justification=False,
+-            status="draft",
+-            repo_root=repo_root,
+-        )
+-
+-
+ def test_emit_checkpoint_response_writes_jsonl_and_validates_response(
+     repo_root: Path, monkeypatch: pytest.MonkeyPatch
+ ) -> None:
+@@ -300,82 +259,35 @@ def test_emit_checkpoint_response_accepts_split_piece_at_decompose_commit(
+     assert ev["revision_round"] == 0
+ 
+ 
+-def test_emit_prescriptive_check_writes_nested_flag_locations(
+-    repo_root: Path, monkeypatch: pytest.MonkeyPatch
+-) -> None:
+-    monkeypatch.delenv("LIFECYCLE_SESSION_ID", raising=False)
+-    flag_locations = [
+-        {"ticket": "210", "section": "Edges", "signal": "path:line"},
+-        {"ticket": "210", "section": "Integration", "signal": "section-index"},
+-    ]
+-    target = emit_prescriptive_check(
+-        topic="my-topic",
+-        tickets_checked=3,
+-        flagged_count=2,
+-        flag_locations=flag_locations,
+-        repo_root=repo_root,
+-    )
+-    events = _read_jsonl(target)
+-    assert len(events) == 1
+-    ev = events[0]
+-    assert ev["event"] == "prescriptive_check_run"
+-    assert ev["tickets_checked"] == 3
+-    assert ev["flagged_count"] == 2
+-    assert ev["flag_locations"] == flag_locations
+-
+-
+-def test_emit_prescriptive_check_rejects_malformed_flag_locations(
+-    repo_root: Path, monkeypatch: pytest.MonkeyPatch
+-) -> None:
+-    monkeypatch.delenv("LIFECYCLE_SESSION_ID", raising=False)
+-    # Missing the 'signal' key.
+-    with pytest.raises(ValueError, match="signal"):
+-        emit_prescriptive_check(
+-            topic="my-topic",
+-            tickets_checked=1,
+-            flagged_count=1,
+-            flag_locations=[{"ticket": "210", "section": "Edges"}],
+-            repo_root=repo_root,
+-        )
+-    # Non-list payload.
+-    with pytest.raises(ValueError, match="flag_locations"):
+-        emit_prescriptive_check(
+-            topic="my-topic",
+-            tickets_checked=1,
+-            flagged_count=1,
+-            flag_locations="not-a-list",  # type: ignore[arg-type]
+-            repo_root=repo_root,
+-        )
+-
+-
+ # ---------------------------------------------------------------------------
+-# (iv) emit-* subcommands route through resolve-events-log-path, NOT a
+-#      hardcoded cortex/research/{topic}/events.log path. We assert this by
+-#      activating the lifecycle env override and verifying every emit-*
+-#      writes to the cortex/lifecycle/<slug>/events.log target.
++# (iv) the surviving emit-checkpoint-response routes through
++#      resolve-events-log-path, NOT a hardcoded cortex/research/{topic}/events.log
++#      path. We assert this by activating the lifecycle env override and
++#      verifying the emit writes to the cortex/lifecycle/<slug>/events.log target.
++#
++#      This is the single-emitter override-delegation property that survives
++#      the retirement of the multi-emitter parity test (cross-emitter parity
++#      is unprovable with one surviving emitter). It is NOT covered by the
++#      test_emit_checkpoint_response_* tests above: those run with
++#      LIFECYCLE_SESSION_ID deleted and assert only ``.exists()``, never the
++#      returned lifecycle path nor the absence of the research-path file.
+ # ---------------------------------------------------------------------------
+ 
+ 
+-def test_emit_subcommands_honor_resolve_events_log_path(
++def test_emit_checkpoint_response_honors_resolve_events_log_path(
+     repo_root: Path, monkeypatch: pytest.MonkeyPatch
+ ) -> None:
+-    """If the emit-* helpers hardcoded ``cortex/research/{topic}/events.log``, an
+-    active-lifecycle env override would NOT redirect their output. This
+-    test fails any such hardcode by activating the env override and
+-    asserting all three emit-* targets resolve under ``cortex/lifecycle/<slug>/``.
++    """If ``emit_checkpoint_response`` hardcoded ``cortex/research/{topic}/events.log``,
++    an active-lifecycle env override would NOT redirect its output. This test
++    fails any such hardcode by activating the env override and asserting the
++    emit target resolves under ``cortex/lifecycle/<slug>/`` and that the
++    research-path file is never created.
+     """
+     feature_dir = repo_root / "cortex" / "lifecycle" / "active-feature"
+     feature_dir.mkdir(parents=True)
+     (feature_dir / ".session").write_text("active-id", encoding="utf-8")
+     monkeypatch.setenv("LIFECYCLE_SESSION_ID", "active-id")
+ 
+-    arch_target = emit_architecture_written(
+-        topic="some-topic",
+-        piece_count=1,
+-        has_why_n_justification=False,
+-        status="draft",
+-        repo_root=repo_root,
+-    )
+     chk_target = emit_checkpoint_response(
+         topic="some-topic",
+         checkpoint="research-decompose",
+@@ -383,38 +295,24 @@ def test_emit_subcommands_honor_resolve_events_log_path(
+         revision_round=0,
+         repo_root=repo_root,
+     )
+-    pre_target = emit_prescriptive_check(
+-        topic="some-topic",
+-        tickets_checked=0,
+-        flagged_count=0,
+-        flag_locations=[],
+-        repo_root=repo_root,
+-    )
+ 
+-    # All three write to the SAME lifecycle events.log -- proves the path
+-    # is shared via resolve_events_log_path and not derived per-emitter.
++    # The emit writes to the lifecycle events.log -- proves the path is
++    # resolved via resolve_events_log_path and not hardcoded to research/.
+     expected = feature_dir / "events.log"
+-    assert arch_target == expected
+     assert chk_target == expected
+-    assert pre_target == expected
+ 
+     # And NOT to cortex/research/some-topic/events.log.
+     standalone = repo_root / "cortex" / "research" / "some-topic" / "events.log"
+     assert not standalone.exists()
+ 
+-    # All three events landed in the lifecycle log.
++    # The event landed in the lifecycle log.
+     events = _read_jsonl(expected)
+-    assert len(events) == 3
+-    names = {e["event"] for e in events}
+-    assert names == {
+-        "architecture_section_written",
+-        "approval_checkpoint_responded",
+-        "prescriptive_check_run",
+-    }
++    assert len(events) == 1
++    assert events[0]["event"] == "approval_checkpoint_responded"
+ 
+ 
+ # ---------------------------------------------------------------------------
+-# CLI smoke tests (the four subcommands are addressable end-to-end)
++# CLI smoke tests (the surviving subcommands are addressable end-to-end)
+ # ---------------------------------------------------------------------------
+ 
+ 
+@@ -427,9 +325,7 @@ def test_cli_help_exits_zero() -> None:
+     assert proc.returncode == 0
+     for sub in (
+         "resolve-events-log-path",
+-        "emit-architecture-written",
+         "emit-checkpoint-response",
+-        "emit-prescriptive-check",
+     ):
+         assert sub in proc.stdout
+ 
+@@ -456,35 +352,3 @@ def test_cli_resolve_events_log_path_standalone_topic(
+     assert proc.stdout.strip() == str(
+         repo_root / "cortex" / "research" / "my-topic" / "events.log"
+     )
+-
+-
+-def test_cli_emit_architecture_written_appends_event(
+-    repo_root: Path, monkeypatch: pytest.MonkeyPatch
+-) -> None:
+-    monkeypatch.delenv("LIFECYCLE_SESSION_ID", raising=False)
+-    proc = subprocess.run(
+-        [
+-            sys.executable,
+-            "-m",
+-            "cortex_command.discovery",
+-            "emit-architecture-written",
+-            "--repo-root",
+-            str(repo_root),
+-            "--topic",
+-            "cli-topic",
+-            "--piece-count",
+-            "3",
+-            "--has-why-n-justification",
+-            "false",
+-            "--status",
+-            "approved",
+-        ],
+-        capture_output=True,
+-        text=True,
+-    )
+-    assert proc.returncode == 0, proc.stderr
+-    events_log = repo_root / "cortex" / "research" / "cli-topic" / "events.log"
+-    events = _read_jsonl(events_log)
+-    assert len(events) == 1
+-    assert events[0]["event"] == "architecture_section_written"
+-    assert events[0]["has_why_n_justification"] is False

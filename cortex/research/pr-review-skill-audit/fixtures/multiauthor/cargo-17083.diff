@@ -1,0 +1,1129 @@
+From cc50bcd491ca00231e6ed9f18dc0dc6f137660e0 Mon Sep 17 00:00:00 2001
+From: Weihang Lo <me@weihanglo.tw>
+Date: Sat, 6 Jun 2026 23:51:48 -0400
+Subject: [PATCH 1/7] test(install): show yanked-only install error messages
+
+Error message is not helpful here because `source::query` has filtered
+out yanked versions. Later install didn't know how to recover from that.
+Only exact requirement has informative error message.
+
+This will be improved when moving yanked version handling to resolver
+---
+ tests/testsuite/install.rs | 26 ++++++++++++++++++++++++++
+ 1 file changed, 26 insertions(+)
+
+diff --git a/tests/testsuite/install.rs b/tests/testsuite/install.rs
+index 1f77ece9345..a39d95a0b4c 100644
+--- a/tests/testsuite/install.rs
++++ b/tests/testsuite/install.rs
+@@ -2376,6 +2376,32 @@ fn install_yanked_cargo_package() {
+         .run();
+ }
+ 
++#[cargo_test]
++fn install_yanked_only_with_caret_req() {
++    Package::new("baz", "2.0.0").yanked(true).publish();
++    cargo_process("install baz --version ^2")
++        .with_status(101)
++        .with_stderr_data(str![[r#"
++[UPDATING] `dummy-registry` index
++[ERROR] could not find `baz` in registry `crates-io` with version `^2`
++
++"#]])
++        .run();
++}
++
++#[cargo_test]
++fn install_yanked_only_without_version() {
++    Package::new("baz", "0.0.1").yanked(true).publish();
++    cargo_process("install baz")
++        .with_status(101)
++        .with_stderr_data(str![[r#"
++[UPDATING] `dummy-registry` index
++[ERROR] could not find `baz` in registry `crates-io` with version `*`
++
++"#]])
++        .run();
++}
++
+ #[cargo_test]
+ fn install_cargo_package_in_a_patched_workspace() {
+     pkg("foo", "0.1.0");
+
+From 7bb68a2a2361d046d8b2c82afa18ae64de6770f9 Mon Sep 17 00:00:00 2001
+From: Weihang Lo <me@weihanglo.tw>
+Date: Sun, 7 Jun 2026 01:03:51 -0400
+Subject: [PATCH 2/7] test(publish): duplicate-version check skips yanked
+ versions
+
+---
+ tests/testsuite/publish.rs | 57 ++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 57 insertions(+)
+
+diff --git a/tests/testsuite/publish.rs b/tests/testsuite/publish.rs
+index 6145b3997fe..f1e5617fafc 100644
+--- a/tests/testsuite/publish.rs
++++ b/tests/testsuite/publish.rs
+@@ -131,6 +131,63 @@ fn simple() {
+     validate_upload_foo();
+ }
+ 
++#[cargo_test]
++fn duplicate_version_yanked() {
++    let registry_dupl = RegistryBuilder::new().http_api().http_index().build();
++    Package::new("foo", "0.0.0").yanked(true).publish();
++
++    let p = project()
++        .file(
++            "Cargo.toml",
++            r#"
++                [package]
++                name = "foo"
++                version = "0.0.0"
++                edition = "2021"
++                license = "MIT"
++                description = "foo"
++                documentation = "foo"
++            "#,
++        )
++        .file("src/main.rs", "fn main() {}")
++        .build();
++
++    p.cargo("publish --dry-run")
++        .replace_crates_io(registry_dupl.index_url())
++        .with_stderr_data(str![[r#"
++[UPDATING] crates.io index
++[PACKAGING] foo v0.0.0 ([ROOT]/foo)
++[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
++[VERIFYING] foo v0.0.0 ([ROOT]/foo)
++[COMPILING] foo v0.0.0 ([ROOT]/foo/target/package/foo-0.0.0)
++[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
++[UPLOADING] foo v0.0.0 ([ROOT]/foo)
++[WARNING] aborting upload due to dry run
++
++"#]])
++        .run();
++
++    // This is a gap in our cargo-test-support code.
++    // Real registry would reject re-publish regardless.
++    p.cargo("publish")
++        .replace_crates_io(registry_dupl.index_url())
++        .with_stderr_data(str![[r#"
++[UPDATING] crates.io index
++[PACKAGING] foo v0.0.0 ([ROOT]/foo)
++[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
++[VERIFYING] foo v0.0.0 ([ROOT]/foo)
++[COMPILING] foo v0.0.0 ([ROOT]/foo/target/package/foo-0.0.0)
++[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
++[UPLOADING] foo v0.0.0 ([ROOT]/foo)
++[UPLOADED] foo v0.0.0 to registry `crates-io`
++[NOTE] waiting for foo v0.0.0 to be available at registry `crates-io`
++[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
++[PUBLISHED] foo v0.0.0 at registry `crates-io`
++
++"#]])
++        .run();
++}
++
+ #[cargo_test]
+ fn duplicate_version() {
+     let registry_dupl = RegistryBuilder::new().http_api().http_index().build();
+
+From 89a5dfc16b8623dde2b89dbd2fdab1e7ee9bcd33 Mon Sep 17 00:00:00 2001
+From: Weihang Lo <me@weihanglo.tw>
+Date: Sun, 7 Jun 2026 08:53:00 -0400
+Subject: [PATCH 3/7] test(replace): `[replace]` override path against yanked
+
+---
+ tests/testsuite/replace.rs | 45 ++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 45 insertions(+)
+
+diff --git a/tests/testsuite/replace.rs b/tests/testsuite/replace.rs
+index e75c86ac122..56073b6dc03 100644
+--- a/tests/testsuite/replace.rs
++++ b/tests/testsuite/replace.rs
+@@ -1509,3 +1509,48 @@ fn override_spec_metadata_is_optional() {
+ "#]])
+         .run();
+ }
++
++#[cargo_test]
++fn yanked_candidates_are_skipped() {
++    Package::new("bar", "1.0.0").yanked(true).publish();
++    Package::new("bar", "1.1.0").publish();
++
++    let _bar_path = project()
++        .at("bar")
++        .file("Cargo.toml", &basic_manifest("bar", "1.1.0"))
++        .file("src/lib.rs", "")
++        .build();
++
++    let p = project()
++        .file(
++            "Cargo.toml",
++            r#"
++                [package]
++                name = "foo"
++                version = "0.0.0"
++                edition = "2021"
++
++                [dependencies]
++                bar = "1.0"
++
++                [replace]
++                "bar:1.0.0" = { path = "../bar" }
++            "#,
++        )
++        .file("src/lib.rs", "")
++        .build();
++
++    p.cargo("check")
++        .with_stderr_data(str![[r#"
++[UPDATING] `dummy-registry` index
++[LOCKING] 1 package to latest compatible version
++[WARNING] package replacement is not used: https://github.com/rust-lang/crates.io-index#bar@1.0.0
++[DOWNLOADING] crates ...
++[DOWNLOADED] bar v1.1.0 (registry `dummy-registry`)
++[CHECKING] bar v1.1.0
++[CHECKING] foo v0.0.0 ([ROOT]/foo)
++[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
++
++"#]])
++        .run();
++}
+
+From 9bc7940b9bce53421750c2aa123c8a6f9f2164df Mon Sep 17 00:00:00 2001
+From: Weihang Lo <me@weihanglo.tw>
+Date: Sat, 6 Jun 2026 12:50:00 -0400
+Subject: [PATCH 4/7] refactor(resolver): extract `should_prefer` function
+
+---
+ src/cargo/core/resolver/version_prefs.rs | 22 ++++++++++++----------
+ 1 file changed, 12 insertions(+), 10 deletions(-)
+
+diff --git a/src/cargo/core/resolver/version_prefs.rs b/src/cargo/core/resolver/version_prefs.rs
+index a8512a5f5e2..a831569a7dd 100644
+--- a/src/cargo/core/resolver/version_prefs.rs
++++ b/src/cargo/core/resolver/version_prefs.rs
+@@ -58,6 +58,16 @@ impl VersionPreferences {
+         self.publish_time = Some(publish_time);
+     }
+ 
++    /// Whether the given package is preferred.
++    pub fn should_prefer(&self, pkg_id: &PackageId) -> bool {
++        self.try_to_use.contains(pkg_id)
++            || self
++                .prefer_patch_deps
++                .get(&pkg_id.name())
++                .map(|deps| deps.iter().any(|d| d.matches_id(*pkg_id)))
++                .unwrap_or(false)
++    }
++
+     /// Sort (and filter) the given vector of summaries in-place
+     ///
+     /// Note: all summaries presumed to be for the same package.
+@@ -75,14 +85,6 @@ impl VersionPreferences {
+         summaries: &mut Vec<Summary>,
+         first_version: Option<VersionOrdering>,
+     ) {
+-        let should_prefer = |pkg_id: &PackageId| {
+-            self.try_to_use.contains(pkg_id)
+-                || self
+-                    .prefer_patch_deps
+-                    .get(&pkg_id.name())
+-                    .map(|deps| deps.iter().any(|d| d.matches_id(*pkg_id)))
+-                    .unwrap_or(false)
+-        };
+         if let Some(max_publish_time) = self.publish_time {
+             summaries.retain(|s| {
+                 if let Some(summary_publish_time) = s.pubtime() {
+@@ -93,8 +95,8 @@ impl VersionPreferences {
+             });
+         }
+         summaries.sort_unstable_by(|a, b| {
+-            let prefer_a = should_prefer(&a.package_id());
+-            let prefer_b = should_prefer(&b.package_id());
++            let prefer_a = self.should_prefer(&a.package_id());
++            let prefer_b = self.should_prefer(&b.package_id());
+             let previous_cmp = prefer_a.cmp(&prefer_b).reverse();
+             if previous_cmp != Ordering::Equal {
+                 return previous_cmp;
+
+From 111b5c2b40948407c56f624a8e516577c7830a4c Mon Sep 17 00:00:00 2001
+From: Weihang Lo <me@weihanglo.tw>
+Date: Sat, 6 Jun 2026 12:50:00 -0400
+Subject: [PATCH 5/7] refactor(resolver): move yank policy to resolver layer
+
+Since this is a refactor,
+we preserve the old `Source::query` behavior that filter out yanked by
+default. Some queries actually can live without filter to get better
+diagnostics, though those will be in follow-up fixes.
+
+Here is the list of all call site I audit:
+
+| Call site | Yanked versions handling |
+| --------- | ------------------------ |
+| [`core/resolver/dep_cache.rs` `query`](https://github.com/rust-lang/cargo/blob/71b70c095bb15e278ab9f0f808397c8033079888/src/cargo/core/resolver/dep_cache.rs#L64) | Filter |
+| [`core/resolver/dep_cache.rs` `[replace]` override](https://github.com/rust-lang/cargo/blob/71b70c095bb15e278ab9f0f808397c8033079888/src/cargo/core/resolver/dep_cache.rs#L91) | Filter |
+| [`core/registry.rs` `patch` collection](https://github.com/rust-lang/cargo/blob/71b70c095bb15e278ab9f0f808397c8033079888/src/cargo/core/registry.rs#L383) | Filter |
+| [`core/registry.rs` `query_overrides`](https://github.com/rust-lang/cargo/blob/71b70c095bb15e278ab9f0f808397c8033079888/src/cargo/core/registry.rs#L553) | Filter |
+| [`core/registry.rs` `summary_for_patch` unlocked-retry](https://github.com/rust-lang/cargo/blob/71b70c095bb15e278ab9f0f808397c8033079888/src/cargo/core/registry.rs#L965) | Filter |
+| [`core/registry.rs` `summary_for_patch` name-only diagnostic](https://github.com/rust-lang/cargo/blob/71b70c095bb15e278ab9f0f808397c8033079888/src/cargo/core/registry.rs#L998) | Filter |
+| [`core/resolver/errors.rs` `alt_versions`](https://github.com/rust-lang/cargo/blob/71b70c095bb15e278ab9f0f808397c8033079888/src/cargo/core/resolver/errors.rs#L432) | Filter |
+| [`core/resolver/errors.rs` `rejected_versions`](https://github.com/rust-lang/cargo/blob/71b70c095bb15e278ab9f0f808397c8033079888/src/cargo/core/resolver/errors.rs#L450) | Keep |
+| [`core/resolver/errors.rs` `alt_names`](https://github.com/rust-lang/cargo/blob/71b70c095bb15e278ab9f0f808397c8033079888/src/cargo/core/resolver/errors.rs#L469) | Keep |
+| [`ops/common_for_install_and_uninstall.rs` `select_dep_pkg` (x2)](https://github.com/rust-lang/cargo/blob/71b70c095bb15e278ab9f0f808397c8033079888/src/cargo/ops/common_for_install_and_uninstall.rs#L611) | Filter |
+| [`ops/cargo_update.rs` `upgrade_dependency`](https://github.com/rust-lang/cargo/blob/71b70c095bb15e278ab9f0f808397c8033079888/src/cargo/ops/cargo_update.rs#L373) | Filter |
+| [`ops/cargo_update.rs` `report_latest` (x4)](https://github.com/rust-lang/cargo/blob/71b70c095bb15e278ab9f0f808397c8033079888/src/cargo/ops/cargo_update.rs#L791) | Filter |
+| [`ops/cargo_add/mod.rs` `get_latest_dependency`](https://github.com/rust-lang/cargo/blob/71b70c095bb15e278ab9f0f808397c8033079888/src/cargo/ops/cargo_add/mod.rs#L823) | Filter |
+| [`ops/cargo_add/mod.rs` `select_package`](https://github.com/rust-lang/cargo/blob/71b70c095bb15e278ab9f0f808397c8033079888/src/cargo/ops/cargo_add/mod.rs#L952) | Filter |
+| [`ops/cargo_add/mod.rs` `populate_available_features`](https://github.com/rust-lang/cargo/blob/71b70c095bb15e278ab9f0f808397c8033079888/src/cargo/ops/cargo_add/mod.rs#L1180) | Filter |
+| [`ops/registry/info/mod.rs` `query_summaries`](https://github.com/rust-lang/cargo/blob/71b70c095bb15e278ab9f0f808397c8033079888/src/cargo/ops/registry/info/mod.rs#L215) | Filter |
+| [`ops/registry/publish.rs` `poll_one_package`](https://github.com/rust-lang/cargo/blob/71b70c095bb15e278ab9f0f808397c8033079888/src/cargo/ops/registry/publish.rs#L439) | Filter |
+| [`ops/registry/publish.rs` `verify_unpublished`](https://github.com/rust-lang/cargo/blob/71b70c095bb15e278ab9f0f808397c8033079888/src/cargo/ops/registry/publish.rs#L451) | Filter |
+| [`core/compiler/future_incompat.rs` `get_updates`](https://github.com/rust-lang/cargo/blob/71b70c095bb15e278ab9f0f808397c8033079888/src/cargo/core/compiler/future_incompat.rs#L334) | Filter |
+| [`crates/xtask-bump-check/src/xtask.rs` `check`](https://github.com/rust-lang/cargo/blob/71b70c095bb15e278ab9f0f808397c8033079888/crates/xtask-bump-check/src/xtask.rs#L448) | Filter |
+
+This doesn't go into `VersionPreferences` or `sort_summaries` yet because
+
+* We want to minimize the refactor change. Changing the order of
+  query and filter may change lots of diagnostics
+* `[replace]` resolution should not see yanked candidates either
+* A future `VersionPreferences` predicate may still need to be invoked
+  at this same point.
+---
+ crates/xtask-bump-check/src/xtask.rs          |  6 ++-
+ src/cargo/core/compiler/future_incompat.rs    |  6 ++-
+ src/cargo/core/registry.rs                    | 41 ++++++++---------
+ src/cargo/core/resolver/dep_cache.rs          | 45 +++++++++++++------
+ src/cargo/core/resolver/errors.rs             |  8 +++-
+ src/cargo/core/source_id.rs                   |  3 --
+ src/cargo/ops/cargo_add/mod.rs                | 16 +++++--
+ src/cargo/ops/cargo_update.rs                 | 25 ++++++++---
+ .../ops/common_for_install_and_uninstall.rs   | 11 ++++-
+ src/cargo/ops/registry/info/mod.rs            |  5 ++-
+ src/cargo/ops/registry/publish.rs             | 11 ++++-
+ src/cargo/ops/resolve.rs                      |  1 -
+ src/cargo/sources/directory.rs                |  2 -
+ src/cargo/sources/git/source.rs               |  2 -
+ src/cargo/sources/overlay.rs                  |  5 ---
+ src/cargo/sources/path.rs                     |  4 --
+ src/cargo/sources/registry/index/mod.rs       |  2 +-
+ src/cargo/sources/registry/mod.rs             | 35 ++++-----------
+ src/cargo/sources/replaced.rs                 |  8 ----
+ src/cargo/sources/source.rs                   | 11 +----
+ 20 files changed, 132 insertions(+), 115 deletions(-)
+
+diff --git a/crates/xtask-bump-check/src/xtask.rs b/crates/xtask-bump-check/src/xtask.rs
+index bc107d0d3f4..d21387a1694 100644
+--- a/crates/xtask-bump-check/src/xtask.rs
++++ b/crates/xtask-bump-check/src/xtask.rs
+@@ -22,6 +22,7 @@ use cargo::core::Registry;
+ use cargo::core::SourceId;
+ use cargo::core::Workspace;
+ use cargo::core::dependency::Dependency;
++use cargo::sources::IndexSummary;
+ use cargo::sources::source::QueryKind;
+ use cargo::util::cache_lock::CacheLockMode;
+ use cargo::util::command_prelude::*;
+@@ -445,7 +446,10 @@ fn check_crates_io<'a>(
+         let query = Dependency::parse(*name, Some(&version_req), source_id)?;
+         // Exact to avoid returning all for path/git
+         let possibilities =
+-            futures::executor::block_on(registry.query_vec(&query, QueryKind::Exact))?;
++            futures::executor::block_on(registry.query_vec(&query, QueryKind::Exact))?
++                .into_iter()
++                .filter(|s| matches!(s, IndexSummary::Candidate(_)))
++                .collect::<Vec<_>>();
+         if possibilities.is_empty() {
+             tracing::trace!("dep `{name}` has no version greater than or equal to `{current}`");
+         } else {
+diff --git a/src/cargo/core/compiler/future_incompat.rs b/src/cargo/core/compiler/future_incompat.rs
+index d8c70ae61d2..f44baa3f7f8 100644
+--- a/src/cargo/core/compiler/future_incompat.rs
++++ b/src/cargo/core/compiler/future_incompat.rs
+@@ -35,6 +35,7 @@
+ 
+ use crate::core::compiler::BuildContext;
+ use crate::core::{Dependency, PackageId, Workspace};
++use crate::sources::IndexSummary;
+ use crate::sources::SourceConfigMap;
+ use crate::sources::source::QueryKind;
+ use crate::util::CargoResult;
+@@ -342,7 +343,10 @@ fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<
+     for (pkg_id, summaries) in summaries {
+         let mut updated_versions: Vec<_> = summaries
+             .iter()
+-            .map(|summary| summary.as_summary().version())
++            .filter_map(|s| match s {
++                IndexSummary::Candidate(s) => Some(s.version()),
++                _ => None,
++            })
+             .filter(|version| *version > pkg_id.version())
+             .collect();
+         updated_versions.sort();
+diff --git a/src/cargo/core/registry.rs b/src/cargo/core/registry.rs
+index 60fa0badfd2..34b8701a121 100644
+--- a/src/cargo/core/registry.rs
++++ b/src/cargo/core/registry.rs
+@@ -107,8 +107,6 @@ pub struct PackageRegistry<'gctx> {
+     /// This is constructed via [`PackageRegistry::register_lock`].
+     /// See also [`LockedMap`].
+     locked: LockedMap,
+-    /// Packages allowed to be used, even if they are yanked.
+-    yanked_whitelist: RefCell<HashSet<PackageId>>,
+     source_config: SourceConfigMap<'gctx>,
+ 
+     /// Patches registered during calls to [`PackageRegistry::patch`].
+@@ -203,7 +201,6 @@ impl<'gctx> PackageRegistry<'gctx> {
+             overrides: RefCell::new(Vec::new()),
+             source_config,
+             locked: HashMap::new(),
+-            yanked_whitelist: RefCell::new(HashSet::new()),
+             patches: HashMap::new(),
+             patches_locked: false,
+             patches_available: HashMap::new(),
+@@ -284,15 +281,6 @@ impl<'gctx> PackageRegistry<'gctx> {
+         self.add_source(source, Kind::Override);
+     }
+ 
+-    /// Allows a group of package to be available to query even if they are yanked.
+-    pub fn add_to_yanked_whitelist(&self, iter: impl Iterator<Item = PackageId>) {
+-        let pkgs = iter.collect::<Vec<_>>();
+-        for (_, source) in self.sources.borrow().iter() {
+-            source.add_to_yanked_whitelist(&pkgs);
+-        }
+-        self.yanked_whitelist.borrow_mut().extend(pkgs);
+-    }
+-
+     /// remove all residual state from previous lock files.
+     pub fn clear_lock(&mut self) {
+         trace!("clear_lock");
+@@ -414,7 +402,9 @@ impl<'gctx> PackageRegistry<'gctx> {
+                 let mut summaries = Vec::new();
+                 source
+                     .query(&dep, QueryKind::Exact, &mut |s| {
+-                        summaries.push(s.into_summary())
++                        if let IndexSummary::Candidate(summary) = s {
++                            summaries.push(summary)
++                        }
+                     })
+                     .await
+                     .with_context(|| format!("unable to update {}", source.source_id()))
+@@ -537,12 +527,6 @@ impl<'gctx> PackageRegistry<'gctx> {
+             .with_context(|| format!("unable to update {}", source_id))?;
+         assert_eq!(source.source_id(), source_id);
+ 
+-        let yanked_whitelist = self.yanked_whitelist.borrow();
+-        if !yanked_whitelist.is_empty() {
+-            let pkgs: Vec<_> = yanked_whitelist.iter().copied().collect();
+-            source.add_to_yanked_whitelist(&pkgs);
+-        }
+-
+         if kind == Kind::Override {
+             self.overrides.borrow_mut().push(source_id);
+         }
+@@ -577,7 +561,11 @@ impl<'gctx> PackageRegistry<'gctx> {
+                 .borrow()
+                 .get(s)
+                 .unwrap()
+-                .query(&dep, QueryKind::Exact, &mut |s| results = Some(s))
++                .query(&dep, QueryKind::Exact, &mut |s| {
++                    if let IndexSummary::Candidate(_) = &s {
++                        results = Some(s);
++                    }
++                })
+                 .await?;
+             if results.is_some() {
+                 return Ok(results);
+@@ -991,7 +979,13 @@ async fn summary_for_patch(
+                 Vec::new()
+             });
+ 
+-        let orig_matches = orig_matches.into_iter().map(|s| s.into_summary()).collect();
++        let orig_matches = orig_matches
++            .into_iter()
++            .filter_map(|s| match s {
++                IndexSummary::Candidate(s) => Some(s),
++                _ => None,
++            })
++            .collect();
+ 
+         let summary = Box::pin(summary_for_patch(
+             original_patch,
+@@ -1022,7 +1016,10 @@ async fn summary_for_patch(
+         });
+     let mut vers = name_summaries
+         .iter()
+-        .map(|summary| summary.as_summary().version())
++        .filter_map(|s| match s {
++            IndexSummary::Candidate(s) => Some(s.version()),
++            _ => None,
++        })
+         .collect::<Vec<_>>();
+     let found = match vers.len() {
+         0 => "".to_string(),
+diff --git a/src/cargo/core/resolver/dep_cache.rs b/src/cargo/core/resolver/dep_cache.rs
+index 9acd59fd413..0a0796fa42c 100644
+--- a/src/cargo/core/resolver/dep_cache.rs
++++ b/src/cargo/core/resolver/dep_cache.rs
+@@ -19,6 +19,7 @@ use crate::core::resolver::{
+ use crate::core::{
+     Dependency, FeatureValue, PackageId, PackageIdSpec, PackageIdSpecQuery, Registry, Summary,
+ };
++use crate::sources::IndexSummary;
+ use crate::sources::source::QueryKind;
+ use crate::util::LocalPollAdapter;
+ use crate::util::closest_msg;
+@@ -68,8 +69,23 @@ impl<'a, T: Registry> RegistryQueryerAsync<'a, T> {
+         let (dep, first_version) = key;
+         let mut summaries = Vec::new();
+         self.registry
+-            .query(dep, QueryKind::Exact, &mut |s| {
+-                summaries.push(s.into_summary());
++            .query(dep, QueryKind::Exact, &mut |s| match s {
++                IndexSummary::Candidate(summary) => summaries.push(summary),
++                // Prefer yanked only when
++                //
++                // * it is recorded in lock file or a `[patch]` entry
++                // * it is specified in `cargo update --precise`
++                IndexSummary::Yanked(summary) => {
++                    let pkg_id = summary.package_id();
++                    let allow_precise = pkg_id
++                        .source_id()
++                        .precise_registry_version(pkg_id.name().as_str())
++                        .is_some_and(|(_, to)| to == pkg_id.version());
++                    if allow_precise || self.version_prefs.should_prefer(&pkg_id) {
++                        summaries.push(summary);
++                    }
++                }
++                _ => {}
+             })
+             .await?;
+ 
+@@ -92,20 +108,21 @@ impl<'a, T: Registry> RegistryQueryerAsync<'a, T> {
+                 .registry
+                 .query_vec(dep, QueryKind::Exact)
+                 .await?
+-                .into_iter();
+-            let s = summaries
+-                .next()
+-                .ok_or_else(|| {
+-                    anyhow::format_err!(
+-                        "no matching package for override `{}` found\n\
++                .into_iter()
++                .filter_map(|s| match s {
++                    IndexSummary::Candidate(s) => Some(s),
++                    _ => None,
++                });
++            let s = summaries.next().ok_or_else(|| {
++                anyhow::format_err!(
++                    "no matching package for override `{}` found\n\
+                      location searched: {}\n\
+                      version required: {}",
+-                        spec,
+-                        dep.source_id(),
+-                        dep.version_req()
+-                    )
+-                })?
+-                .into_summary();
++                    spec,
++                    dep.source_id(),
++                    dep.version_req()
++                )
++            })?;
+             let summaries = summaries.collect::<Vec<_>>();
+             if !summaries.is_empty() {
+                 let bullets = summaries
+diff --git a/src/cargo/core/resolver/errors.rs b/src/cargo/core/resolver/errors.rs
+index cab65502f38..be18b409080 100644
+--- a/src/cargo/core/resolver/errors.rs
++++ b/src/cargo/core/resolver/errors.rs
+@@ -437,7 +437,13 @@ fn alt_versions(registry: &impl Registry, dep: &Dependency) -> Option<CargoResul
+         Ok(candidates) => candidates,
+         Err(e) => return Some(Err(e)),
+     };
+-    let mut candidates: Vec<_> = candidates.into_iter().map(|s| s.into_summary()).collect();
++    let mut candidates: Vec<_> = candidates
++        .into_iter()
++        .filter_map(|s| match s {
++            IndexSummary::Candidate(s) => Some(s),
++            _ => None,
++        })
++        .collect();
+     candidates.sort_unstable_by(|a, b| b.version().cmp(a.version()));
+     if candidates.is_empty() {
+         None
+diff --git a/src/cargo/core/source_id.rs b/src/cargo/core/source_id.rs
+index 0d27e3b5441..efb6d854d96 100644
+--- a/src/cargo/core/source_id.rs
++++ b/src/cargo/core/source_id.rs
+@@ -387,9 +387,6 @@ impl SourceId {
+     }
+ 
+     /// Creates an implementation of `Source` corresponding to this ID.
+-    ///
+-    /// To allow yanked packages through queries,
+-    /// call [`Source::add_to_yanked_whitelist`] on the returned source.
+     pub fn load<'a>(self, gctx: &'a GlobalContext) -> CargoResult<Box<dyn Source + 'a>> {
+         trace!("loading SourceId; {}", self);
+         match self.inner.kind {
+diff --git a/src/cargo/ops/cargo_add/mod.rs b/src/cargo/ops/cargo_add/mod.rs
+index 8c2ce7d238d..c848956a234 100644
+--- a/src/cargo/ops/cargo_add/mod.rs
++++ b/src/cargo/ops/cargo_add/mod.rs
+@@ -31,6 +31,7 @@ use crate::core::Workspace;
+ use crate::core::dependency::DepKind;
+ use crate::core::registry::PackageRegistry;
+ use crate::ops::resolve_ws;
++use crate::sources::IndexSummary;
+ use crate::sources::source::QueryKind;
+ use crate::util::OptVersionReq;
+ use crate::util::cache_lock::CacheLockMode;
+@@ -838,7 +839,10 @@ fn get_latest_dependency(
+ 
+             let mut possibilities: Vec<_> = possibilities
+                 .into_iter()
+-                .map(|s| s.into_summary())
++                .filter_map(|s| match s {
++                    IndexSummary::Candidate(s) => Some(s),
++                    _ => None,
++                })
+                 .collect();
+ 
+             possibilities.sort_by_key(|s| {
+@@ -964,7 +968,10 @@ fn select_package(
+ 
+             let possibilities: Vec<_> = possibilities
+                 .into_iter()
+-                .map(|s| s.into_summary())
++                .filter_map(|s| match s {
++                    IndexSummary::Candidate(s) => Some(s),
++                    _ => None,
++                })
+                 .collect();
+ 
+             match possibilities.len() {
+@@ -1191,7 +1198,10 @@ fn populate_available_features(
+     // in the lock file for a given version requirement.
+     let lowest_common_denominator = possibilities
+         .iter()
+-        .map(|s| s.as_summary())
++        .filter_map(|s| match s {
++            IndexSummary::Candidate(s) => Some(s),
++            _ => None,
++        })
+         .min_by_key(|s| {
+             // Fallback to a pre-release if no official release is available by sorting them as
+             // more.
+diff --git a/src/cargo/ops/cargo_update.rs b/src/cargo/ops/cargo_update.rs
+index 0c47dcb3fdf..f6bba4c0934 100644
+--- a/src/cargo/ops/cargo_update.rs
++++ b/src/cargo/ops/cargo_update.rs
+@@ -375,7 +375,10 @@ fn upgrade_dependency(
+     let latest = if !possibilities.is_empty() {
+         possibilities
+             .iter()
+-            .map(|s| s.as_summary())
++            .filter_map(|s| match s {
++                IndexSummary::Candidate(s) => Some(s),
++                _ => None,
++            })
+             .map(|s| s.version())
+             .filter(|v| !v.is_prerelease())
+             .max()
+@@ -799,7 +802,10 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
+ 
+     let compat_ver_compat_msrv_summary = possibilities
+         .iter()
+-        .map(|s| s.as_summary())
++        .filter_map(|s| match s {
++            IndexSummary::Candidate(s) => Some(s),
++            _ => None,
++        })
+         .filter(|s| {
+             if let (Some(summary_rust_version), Some(required_rust_version)) =
+                 (s.rust_version(), required_rust_version)
+@@ -821,7 +827,10 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
+     if !change.is_transitive.unwrap_or(true) {
+         let incompat_ver_compat_msrv_summary = possibilities
+             .iter()
+-            .map(|s| s.as_summary())
++            .filter_map(|s| match s {
++                IndexSummary::Candidate(s) => Some(s),
++                _ => None,
++            })
+             .filter(|s| {
+                 if let (Some(summary_rust_version), Some(required_rust_version)) =
+                     (s.rust_version(), required_rust_version)
+@@ -843,7 +852,10 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
+ 
+     let compat_ver_summary = possibilities
+         .iter()
+-        .map(|s| s.as_summary())
++        .filter_map(|s| match s {
++            IndexSummary::Candidate(s) => Some(s),
++            _ => None,
++        })
+         .filter(|s| package_id.version() != s.version() && version_req.matches(s.version()))
+         .max_by_key(|s| s.version());
+     if let Some(summary) = compat_ver_summary {
+@@ -860,7 +872,10 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
+     if !change.is_transitive.unwrap_or(true) {
+         let incompat_ver_summary = possibilities
+             .iter()
+-            .map(|s| s.as_summary())
++            .filter_map(|s| match s {
++                IndexSummary::Candidate(s) => Some(s),
++                _ => None,
++            })
+             .filter(|s| is_latest(s.version(), package_id.version()))
+             .max_by_key(|s| s.version());
+         if let Some(summary) = incompat_ver_summary {
+diff --git a/src/cargo/ops/common_for_install_and_uninstall.rs b/src/cargo/ops/common_for_install_and_uninstall.rs
+index 1a16b5c1f83..7d72f5ba8e7 100644
+--- a/src/cargo/ops/common_for_install_and_uninstall.rs
++++ b/src/cargo/ops/common_for_install_and_uninstall.rs
+@@ -16,6 +16,7 @@ use crate::core::compiler::{DirtyReason, Freshness};
+ use crate::core::{Dependency, FeatureValue, Package, PackageId, SourceId};
+ use crate::core::{PackageSet, Target};
+ use crate::ops::{self, CompileFilter, CompileOptions};
++use crate::sources::IndexSummary;
+ use crate::sources::PathSource;
+ use crate::sources::source::{QueryKind, Source, SourceMap};
+ use crate::util::GlobalContext;
+@@ -611,7 +612,10 @@ pub fn select_dep_pkg(
+     let deps = crate::util::block_on(source.query_vec(&dep, QueryKind::Exact))?;
+     match deps
+         .iter()
+-        .map(|s| s.as_summary())
++        .filter_map(|s| match s {
++            IndexSummary::Candidate(s) => Some(s),
++            _ => None,
++        })
+         .max_by_key(|p| p.package_id())
+     {
+         Some(summary) => {
+@@ -627,7 +631,10 @@ pub fn select_dep_pkg(
+                             crate::util::block_on(source.query_vec(&msrv_dep, QueryKind::Exact))?;
+                         if let Some(alt) = msrv_deps
+                             .iter()
+-                            .map(|s| s.as_summary())
++                            .filter_map(|s| match s {
++                                IndexSummary::Candidate(s) => Some(s),
++                                _ => None,
++                            })
+                             .filter(|summary| {
+                                 summary
+                                     .rust_version()
+diff --git a/src/cargo/ops/registry/info/mod.rs b/src/cargo/ops/registry/info/mod.rs
+index 3963a918f44..e052ce14250 100644
+--- a/src/cargo/ops/registry/info/mod.rs
++++ b/src/cargo/ops/registry/info/mod.rs
+@@ -220,7 +220,10 @@ fn query_summaries(
+     // Query without version requirement to get all index summaries.
+     let dep = Dependency::parse(spec.name(), None, source_ids.original)?;
+     // Use normalized crate name lookup for user-provided package names.
+-    let results = crate::util::block_on(registry.query_vec(&dep, QueryKind::Normalized))?;
++    let results: Vec<_> = crate::util::block_on(registry.query_vec(&dep, QueryKind::Normalized))?
++        .into_iter()
++        .filter(|s| matches!(s, IndexSummary::Candidate(_)))
++        .collect();
+ 
+     let normalized_name = results.first().map(|s| s.package_id().name().to_string());
+ 
+diff --git a/src/cargo/ops/registry/publish.rs b/src/cargo/ops/registry/publish.rs
+index 599b3be5453..14fbf1bf490 100644
+--- a/src/cargo/ops/registry/publish.rs
++++ b/src/cargo/ops/registry/publish.rs
+@@ -39,6 +39,7 @@ use crate::ops::RegistryOrIndex;
+ use crate::ops::registry::RegistryClient;
+ use crate::ops::registry::RegistrySourceIds;
+ use crate::sources::CRATES_IO_REGISTRY;
++use crate::sources::IndexSummary;
+ use crate::sources::RegistrySource;
+ use crate::sources::SourceConfigMap;
+ use crate::sources::source::QueryKind;
+@@ -445,7 +446,10 @@ fn poll_one_package(
+     let query = Dependency::parse(pkg_id.name(), Some(&version_req), registry_src)?;
+     // Exact to avoid returning all for path/git
+     let summaries = crate::util::block_on(source.query_vec(&query, QueryKind::Exact))?;
+-    Ok(!summaries.is_empty())
++    let available = summaries
++        .iter()
++        .any(|s| matches!(s, IndexSummary::Candidate(_)));
++    Ok(available)
+ }
+ 
+ fn verify_unpublished(
+@@ -461,7 +465,10 @@ fn verify_unpublished(
+         source_ids.replacement,
+     )?;
+     let duplicate_query = crate::util::block_on(source.query_vec(&query, QueryKind::Exact))?;
+-    if !duplicate_query.is_empty() {
++    let already_published = duplicate_query
++        .iter()
++        .any(|s| matches!(s, IndexSummary::Candidate(_)));
++    if already_published {
+         // Move the registry error earlier in the publish process.
+         // Since dry-run wouldn't talk to the registry to get the error, we downgrade it to a
+         // warning.
+diff --git a/src/cargo/ops/resolve.rs b/src/cargo/ops/resolve.rs
+index 722cefe5713..186f9d03396 100644
+--- a/src/cargo/ops/resolve.rs
++++ b/src/cargo/ops/resolve.rs
+@@ -629,7 +629,6 @@ fn register_previous_locks(
+     // newer version of `serde` requires a new version of `log` it'll get pulled
+     // in (as we didn't accidentally lock it to an old version).
+     let mut avoid_locking = HashSet::new();
+-    registry.add_to_yanked_whitelist(resolve.iter().filter(keep));
+     for node in resolve.iter() {
+         if !keep(&node) {
+             add_deps(resolve, node, &mut avoid_locking);
+diff --git a/src/cargo/sources/directory.rs b/src/cargo/sources/directory.rs
+index 4d49d581889..09df53ea6ab 100644
+--- a/src/cargo/sources/directory.rs
++++ b/src/cargo/sources/directory.rs
+@@ -267,8 +267,6 @@ impl<'gctx> Source for DirectorySource<'gctx> {
+         format!("directory source `{}`", self.root.display())
+     }
+ 
+-    fn add_to_yanked_whitelist(&self, _pkgs: &[PackageId]) {}
+-
+     async fn is_yanked(&self, _pkg: PackageId) -> CargoResult<bool> {
+         Ok(false)
+     }
+diff --git a/src/cargo/sources/git/source.rs b/src/cargo/sources/git/source.rs
+index 5d26b46a98e..bcb3f5a871d 100644
+--- a/src/cargo/sources/git/source.rs
++++ b/src/cargo/sources/git/source.rs
+@@ -442,8 +442,6 @@ impl<'gctx> Source for GitSource<'gctx> {
+         format!("Git repository {}", self.source_id.borrow())
+     }
+ 
+-    fn add_to_yanked_whitelist(&self, _pkgs: &[PackageId]) {}
+-
+     async fn is_yanked(&self, _pkg: PackageId) -> CargoResult<bool> {
+         Ok(false)
+     }
+diff --git a/src/cargo/sources/overlay.rs b/src/cargo/sources/overlay.rs
+index 8df6ad7dd5d..9a1ed786469 100644
+--- a/src/cargo/sources/overlay.rs
++++ b/src/cargo/sources/overlay.rs
+@@ -127,11 +127,6 @@ impl<'gctx> Source for DependencyConfusionThreatOverlaySource<'gctx> {
+         self.remote.describe()
+     }
+ 
+-    fn add_to_yanked_whitelist(&self, pkgs: &[crate::core::PackageId]) {
+-        self.local.add_to_yanked_whitelist(pkgs);
+-        self.remote.add_to_yanked_whitelist(pkgs);
+-    }
+-
+     async fn is_yanked(&self, pkg: crate::core::PackageId) -> crate::CargoResult<bool> {
+         self.remote.is_yanked(pkg).await
+     }
+diff --git a/src/cargo/sources/path.rs b/src/cargo/sources/path.rs
+index 78dbe2027ee..fb14a0a881e 100644
+--- a/src/cargo/sources/path.rs
++++ b/src/cargo/sources/path.rs
+@@ -201,8 +201,6 @@ impl<'gctx> Source for PathSource<'gctx> {
+         }
+     }
+ 
+-    fn add_to_yanked_whitelist(&self, _pkgs: &[PackageId]) {}
+-
+     async fn is_yanked(&self, _pkg: PackageId) -> CargoResult<bool> {
+         Ok(false)
+     }
+@@ -402,8 +400,6 @@ impl<'gctx> Source for RecursivePathSource<'gctx> {
+         }
+     }
+ 
+-    fn add_to_yanked_whitelist(&self, _pkgs: &[PackageId]) {}
+-
+     async fn is_yanked(&self, _pkg: PackageId) -> CargoResult<bool> {
+         Ok(false)
+     }
+diff --git a/src/cargo/sources/registry/index/mod.rs b/src/cargo/sources/registry/index/mod.rs
+index 2c5a09f2008..0676090ce7a 100644
+--- a/src/cargo/sources/registry/index/mod.rs
++++ b/src/cargo/sources/registry/index/mod.rs
+@@ -511,7 +511,7 @@ impl<'gctx> RegistryIndex<'gctx> {
+         let found = self
+             .summaries(pkg.name(), &req, load)
+             .await?
+-            .any(|s| s.is_yanked());
++            .any(|s| matches!(s, IndexSummary::Yanked(_)));
+         Ok(found)
+     }
+ }
+diff --git a/src/cargo/sources/registry/mod.rs b/src/cargo/sources/registry/mod.rs
+index 4281453a732..2c669901796 100644
+--- a/src/cargo/sources/registry/mod.rs
++++ b/src/cargo/sources/registry/mod.rs
+@@ -256,14 +256,6 @@ pub struct RegistrySource<'gctx> {
+     ops: Box<dyn RegistryData + 'gctx>,
+     /// Interface for managing the on-disk index.
+     index: index::RegistryIndex<'gctx>,
+-    /// A set of packages that should be allowed to be used, even if they are
+-    /// yanked.
+-    ///
+-    /// This is populated from the entries in `Cargo.lock` to ensure that
+-    /// `cargo update somepkg` won't unlock yanked entries in `Cargo.lock`.
+-    /// Otherwise, the resolver would think that those entries no longer
+-    /// exist, and it would trigger updates to unrelated packages.
+-    yanked_whitelist: RefCell<HashSet<PackageId>>,
+     /// Yanked versions that have already been selected during queries.
+     ///
+     /// As of this writing, this is for not emitting the `--precise <yanked>`
+@@ -499,7 +491,6 @@ impl<'gctx> RegistrySource<'gctx> {
+             gctx,
+             source_id,
+             index: index::RegistryIndex::new(source_id, ops.index_path(), gctx),
+-            yanked_whitelist: RefCell::new(HashSet::new()),
+             ops,
+             selected_precise_yanked: RefCell::new(HashSet::new()),
+         }
+@@ -759,19 +750,19 @@ impl<'gctx> Source for RegistrySource<'gctx> {
+                 if !matched {
+                     return;
+                 }
+-                // Next filter out all yanked packages. Some yanked packages may
+-                // leak through if they're in a whitelist (aka if they were
+-                // previously in `Cargo.lock`
+                 match s {
+                     s @ _ if kind == QueryKind::RejectedVersions => callback(s),
+                     s @ IndexSummary::Candidate(_) => callback(s),
+                     s @ IndexSummary::Yanked(_) => {
+-                        if self.yanked_whitelist.borrow().contains(&s.package_id()) {
+-                            callback(s);
+-                        } else if req.is_precise() {
++                        // HACK: While source knows nothing about yank policy,
++                        // We still detect `cargo update --precise <yanked>`
++                        // so we can warn about the user-visible selection.
++                        //
++                        // We should consider also move this out from source query.
++                        if req.is_precise() {
+                             precise_yanked_in_use = true;
+-                            callback(s);
+                         }
++                        callback(s);
+                     }
+                     IndexSummary::Unsupported(summary, v) => {
+                         tracing::debug!(
+@@ -832,13 +823,7 @@ impl<'gctx> Source for RegistrySource<'gctx> {
+                     continue;
+                 }
+                 self.index
+-                    .query_inner(name_permutation, &req, &*self.ops, &mut |s| {
+-                        if !s.is_yanked() {
+-                            f(s);
+-                        } else if kind == QueryKind::AlternativeNames {
+-                            f(s);
+-                        }
+-                    })
++                    .query_inner(name_permutation, &req, &*self.ops, &mut |s| f(s))
+                     .await?;
+             }
+         }
+@@ -896,10 +881,6 @@ impl<'gctx> Source for RegistrySource<'gctx> {
+         self.source_id.display_index()
+     }
+ 
+-    fn add_to_yanked_whitelist(&self, pkgs: &[PackageId]) {
+-        self.yanked_whitelist.borrow_mut().extend(pkgs);
+-    }
+-
+     async fn is_yanked(&self, pkg: PackageId) -> CargoResult<bool> {
+         self.index.is_yanked(pkg, &*self.ops).await
+     }
+diff --git a/src/cargo/sources/replaced.rs b/src/cargo/sources/replaced.rs
+index d0e3d5ba33c..8313e38aa1f 100644
+--- a/src/cargo/sources/replaced.rs
++++ b/src/cargo/sources/replaced.rs
+@@ -156,14 +156,6 @@ impl<'gctx> Source for ReplacedSource<'gctx> {
+         !self.is_builtin_replacement()
+     }
+ 
+-    fn add_to_yanked_whitelist(&self, pkgs: &[PackageId]) {
+-        let pkgs = pkgs
+-            .iter()
+-            .map(|id| id.with_source_id(self.replace_with))
+-            .collect::<Vec<_>>();
+-        self.inner.add_to_yanked_whitelist(&pkgs);
+-    }
+-
+     async fn is_yanked(&self, pkg: PackageId) -> CargoResult<bool> {
+         self.inner.is_yanked(pkg).await
+     }
+diff --git a/src/cargo/sources/source.rs b/src/cargo/sources/source.rs
+index 02740231a7a..0e9d862fde3 100644
+--- a/src/cargo/sources/source.rs
++++ b/src/cargo/sources/source.rs
+@@ -125,13 +125,8 @@ pub trait Source {
+         false
+     }
+ 
+-    /// Add a number of crates that should be whitelisted for showing up during
+-    /// queries, even if they are yanked. Currently only applies to registry
+-    /// sources.
+-    fn add_to_yanked_whitelist(&self, pkgs: &[PackageId]);
+-
+     /// Query if a package is yanked. Only registry sources can mark packages
+-    /// as yanked. This ignores the yanked whitelist.
++    /// as yanked.
+     async fn is_yanked(&self, pkg: PackageId) -> CargoResult<bool>;
+ }
+ 
+@@ -238,10 +233,6 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
+         (**self).is_replaced()
+     }
+ 
+-    fn add_to_yanked_whitelist(&self, pkgs: &[PackageId]) {
+-        (**self).add_to_yanked_whitelist(pkgs);
+-    }
+-
+     async fn is_yanked(&self, pkg: PackageId) -> CargoResult<bool> {
+         (**self).is_yanked(pkg).await
+     }
+
+From 2adb4a816abed2420929e19da99ae929c89c225f Mon Sep 17 00:00:00 2001
+From: Weihang Lo <me@weihanglo.tw>
+Date: Sat, 6 Jun 2026 12:50:00 -0400
+Subject: [PATCH 6/7] fix(install): better error when pkg is yanked
+
+---
+ .../ops/common_for_install_and_uninstall.rs     | 17 +++--------------
+ tests/testsuite/install.rs                      |  4 ++--
+ 2 files changed, 5 insertions(+), 16 deletions(-)
+
+diff --git a/src/cargo/ops/common_for_install_and_uninstall.rs b/src/cargo/ops/common_for_install_and_uninstall.rs
+index 7d72f5ba8e7..ea7aaf5ef5f 100644
+--- a/src/cargo/ops/common_for_install_and_uninstall.rs
++++ b/src/cargo/ops/common_for_install_and_uninstall.rs
+@@ -673,20 +673,9 @@ cannot install package `{name} {ver}`, it requires rustc {msrv} or newer, while
+             Ok(pkg_set.get_one(summary.package_id())?.clone())
+         }
+         None => {
+-            let is_yanked: bool = if dep.version_req().is_exact() {
+-                let version: String = dep.version_req().to_string();
+-                if let Ok(pkg_id) =
+-                    PackageId::try_new(dep.package_name(), &version[1..], source.source_id())
+-                {
+-                    source.invalidate_cache();
+-                    crate::util::block_on(source.is_yanked(pkg_id)).unwrap_or_default()
+-                } else {
+-                    false
+-                }
+-            } else {
+-                false
+-            };
+-            if is_yanked {
++            // Let's see if there is any yanked version so can give a more concrete error.
++            let any_yanked = deps.iter().any(|s| matches!(s, IndexSummary::Yanked(_)));
++            if any_yanked {
+                 bail!(
+                     "cannot install package `{}`, it has been yanked from {}",
+                     dep.package_name(),
+diff --git a/tests/testsuite/install.rs b/tests/testsuite/install.rs
+index a39d95a0b4c..f7a1da3640d 100644
+--- a/tests/testsuite/install.rs
++++ b/tests/testsuite/install.rs
+@@ -2383,7 +2383,7 @@ fn install_yanked_only_with_caret_req() {
+         .with_status(101)
+         .with_stderr_data(str![[r#"
+ [UPDATING] `dummy-registry` index
+-[ERROR] could not find `baz` in registry `crates-io` with version `^2`
++[ERROR] cannot install package `baz`, it has been yanked from registry `crates-io`
+ 
+ "#]])
+         .run();
+@@ -2396,7 +2396,7 @@ fn install_yanked_only_without_version() {
+         .with_status(101)
+         .with_stderr_data(str![[r#"
+ [UPDATING] `dummy-registry` index
+-[ERROR] could not find `baz` in registry `crates-io` with version `*`
++[ERROR] cannot install package `baz`, it has been yanked from registry `crates-io`
+ 
+ "#]])
+         .run();
+
+From 9041c48a66834aacb476309a7c0486a9d1ffa701 Mon Sep 17 00:00:00 2001
+From: Weihang Lo <me@weihanglo.tw>
+Date: Tue, 9 Jun 2026 19:53:27 -0400
+Subject: [PATCH 7/7] fix(publish): bail when target version exists but yanked
+
+---
+ src/cargo/ops/registry/publish.rs | 11 ++---------
+ tests/testsuite/publish.rs        | 13 +++----------
+ 2 files changed, 5 insertions(+), 19 deletions(-)
+
+diff --git a/src/cargo/ops/registry/publish.rs b/src/cargo/ops/registry/publish.rs
+index 14fbf1bf490..599b3be5453 100644
+--- a/src/cargo/ops/registry/publish.rs
++++ b/src/cargo/ops/registry/publish.rs
+@@ -39,7 +39,6 @@ use crate::ops::RegistryOrIndex;
+ use crate::ops::registry::RegistryClient;
+ use crate::ops::registry::RegistrySourceIds;
+ use crate::sources::CRATES_IO_REGISTRY;
+-use crate::sources::IndexSummary;
+ use crate::sources::RegistrySource;
+ use crate::sources::SourceConfigMap;
+ use crate::sources::source::QueryKind;
+@@ -446,10 +445,7 @@ fn poll_one_package(
+     let query = Dependency::parse(pkg_id.name(), Some(&version_req), registry_src)?;
+     // Exact to avoid returning all for path/git
+     let summaries = crate::util::block_on(source.query_vec(&query, QueryKind::Exact))?;
+-    let available = summaries
+-        .iter()
+-        .any(|s| matches!(s, IndexSummary::Candidate(_)));
+-    Ok(available)
++    Ok(!summaries.is_empty())
+ }
+ 
+ fn verify_unpublished(
+@@ -465,10 +461,7 @@ fn verify_unpublished(
+         source_ids.replacement,
+     )?;
+     let duplicate_query = crate::util::block_on(source.query_vec(&query, QueryKind::Exact))?;
+-    let already_published = duplicate_query
+-        .iter()
+-        .any(|s| matches!(s, IndexSummary::Candidate(_)));
+-    if already_published {
++    if !duplicate_query.is_empty() {
+         // Move the registry error earlier in the publish process.
+         // Since dry-run wouldn't talk to the registry to get the error, we downgrade it to a
+         // warning.
+diff --git a/tests/testsuite/publish.rs b/tests/testsuite/publish.rs
+index f1e5617fafc..1acc947cd33 100644
+--- a/tests/testsuite/publish.rs
++++ b/tests/testsuite/publish.rs
+@@ -156,6 +156,7 @@ fn duplicate_version_yanked() {
+         .replace_crates_io(registry_dupl.index_url())
+         .with_stderr_data(str![[r#"
+ [UPDATING] crates.io index
++[WARNING] crate foo@0.0.0 already exists on crates.io index
+ [PACKAGING] foo v0.0.0 ([ROOT]/foo)
+ [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+ [VERIFYING] foo v0.0.0 ([ROOT]/foo)
+@@ -171,18 +172,10 @@ fn duplicate_version_yanked() {
+     // Real registry would reject re-publish regardless.
+     p.cargo("publish")
+         .replace_crates_io(registry_dupl.index_url())
++        .with_status(101)
+         .with_stderr_data(str![[r#"
+ [UPDATING] crates.io index
+-[PACKAGING] foo v0.0.0 ([ROOT]/foo)
+-[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+-[VERIFYING] foo v0.0.0 ([ROOT]/foo)
+-[COMPILING] foo v0.0.0 ([ROOT]/foo/target/package/foo-0.0.0)
+-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+-[UPLOADING] foo v0.0.0 ([ROOT]/foo)
+-[UPLOADED] foo v0.0.0 to registry `crates-io`
+-[NOTE] waiting for foo v0.0.0 to be available at registry `crates-io`
+-[HELP] you may press ctrl-c to skip waiting; the crate should be available shortly
+-[PUBLISHED] foo v0.0.0 at registry `crates-io`
++[ERROR] crate foo@0.0.0 already exists on crates.io index
+ 
+ "#]])
+         .run();

@@ -1,0 +1,939 @@
+From 00fc8c923ab3f321a412e1c89e425c107122f0bb Mon Sep 17 00:00:00 2001
+From: tommaso-moro <tommaso-moro@github.com>
+Date: Tue, 19 May 2026 14:56:56 +0100
+Subject: [PATCH 1/4] fix discovery support in nested dirs
+
+---
+ internal/skills/discovery/discovery.go      | 39 +++++++++----------
+ internal/skills/discovery/discovery_test.go | 43 +++++++++++++++++++--
+ pkg/cmd/skills/install/install.go           | 13 ++++++-
+ pkg/cmd/skills/install/install_test.go      | 31 +++++++++++++++
+ 4 files changed, 100 insertions(+), 26 deletions(-)
+
+diff --git a/internal/skills/discovery/discovery.go b/internal/skills/discovery/discovery.go
+index df17c5b9f21..b2d966c988c 100644
+--- a/internal/skills/discovery/discovery.go
++++ b/internal/skills/discovery/discovery.go
+@@ -451,18 +451,21 @@ func matchSkillConventions(entry treeEntry) *skillMatch {
+ }
+ 
+ // matchHiddenDirConventions checks if a blob path matches a skill convention
+-// under a hidden (dot-prefixed) root directory. These patterns mirror the
+-// standard skills/ conventions but rooted under .{host}/skills/:
++// under a hidden (dot-prefixed) directory. These patterns mirror the standard
++// skills/ conventions, but only when the path contains a hidden segment:
+ //
+-//   - .{host}/skills/*/SKILL.md         -> "hidden-dir"
+-//   - .{host}/skills/{scope}/*/SKILL.md -> "hidden-dir-namespaced"
++//   - {prefix}/.{host}/skills/*/SKILL.md         -> "hidden-dir"
++//   - {prefix}/.{host}/skills/{scope}/*/SKILL.md -> "hidden-dir-namespaced"
+ func matchHiddenDirConventions(entry treeEntry) *skillMatch {
+ 	if path.Base(entry.Path) != "SKILL.md" {
+ 		return nil
+ 	}
++	if !hasHiddenSegment(entry.Path) {
++		return nil
++	}
+ 
+-	// .{host}/skills/*
+-	// .{host}/skills/{scope}/*
++	// {prefix}/.{host}/skills/*
++	// {prefix}/.{host}/skills/{scope}/*
+ 	dir := path.Dir(entry.Path)
+ 	skillName := path.Base(dir)
+ 
+@@ -470,29 +473,23 @@ func matchHiddenDirConventions(entry treeEntry) *skillMatch {
+ 		return nil
+ 	}
+ 
+-	// .{host}/skills
+-	// .{host}/skills/{scope}
++	// {prefix}/.{host}/skills
++	// {prefix}/.{host}/skills/{scope}
+ 	parentDir := path.Dir(dir)
+ 
+-	// .{host}/skills/*/SKILL.md
++	// {prefix}/.{host}/skills/*/SKILL.md
+ 	if path.Base(parentDir) == "skills" {
+-		hiddenRoot := path.Dir(parentDir)
+-		if path.Dir(hiddenRoot) == "." && strings.HasPrefix(hiddenRoot, ".") {
+-			return &skillMatch{entry: entry, name: skillName, skillDir: dir, convention: "hidden-dir"}
+-		}
++		return &skillMatch{entry: entry, name: skillName, skillDir: dir, convention: "hidden-dir"}
+ 	}
+ 
+-	// .{host}/skills/{scope}/*/SKILL.md
++	// {prefix}/.{host}/skills/{scope}/*/SKILL.md
+ 	grandparentDir := path.Dir(parentDir)
+ 	if path.Base(grandparentDir) == "skills" {
+-		hiddenRoot := path.Dir(grandparentDir)
+-		if path.Dir(hiddenRoot) == "." && strings.HasPrefix(hiddenRoot, ".") {
+-			namespace := path.Base(parentDir)
+-			if !validateName(namespace) {
+-				return nil
+-			}
+-			return &skillMatch{entry: entry, name: skillName, namespace: namespace, skillDir: dir, convention: "hidden-dir-namespaced"}
++		namespace := path.Base(parentDir)
++		if !validateName(namespace) {
++			return nil
+ 		}
++		return &skillMatch{entry: entry, name: skillName, namespace: namespace, skillDir: dir, convention: "hidden-dir-namespaced"}
+ 	}
+ 
+ 	return nil
+diff --git a/internal/skills/discovery/discovery_test.go b/internal/skills/discovery/discovery_test.go
+index bc3ce979b54..24ef0081ab7 100644
+--- a/internal/skills/discovery/discovery_test.go
++++ b/internal/skills/discovery/discovery_test.go
+@@ -202,6 +202,19 @@ func TestMatchHiddenDirConventions(t *testing.T) {
+ 			wantNamespace:  "monalisa",
+ 			wantConvention: "hidden-dir-namespaced",
+ 		},
++		{
++			name:           "nested hidden dir skills directory",
++			path:           "foo/bar/.claude/skills/code-review/SKILL.md",
++			wantName:       "code-review",
++			wantConvention: "hidden-dir",
++		},
++		{
++			name:           "nested hidden dir namespaced skill",
++			path:           "foo/bar/.claude/skills/monalisa/code-review/SKILL.md",
++			wantName:       "code-review",
++			wantNamespace:  "monalisa",
++			wantConvention: "hidden-dir-namespaced",
++		},
+ 		{
+ 			name:    "not a SKILL.md file",
+ 			path:    ".claude/skills/code-review/README.md",
+@@ -228,9 +241,10 @@ func TestMatchHiddenDirConventions(t *testing.T) {
+ 			wantNil: true,
+ 		},
+ 		{
+-			name:    "too deeply nested hidden dir",
+-			path:    ".claude/nested/skills/code-review/SKILL.md",
+-			wantNil: true,
++			name:           "hidden dir with nested skills directory",
++			path:           ".claude/nested/skills/code-review/SKILL.md",
++			wantName:       "code-review",
++			wantConvention: "hidden-dir",
+ 		},
+ 		{
+ 			name:    "invalid skill name",
+@@ -992,6 +1006,14 @@ func TestDiscoverSkillsWithOptions(t *testing.T) {
+ 		},
+ 	}
+ 
++	nestedHiddenTree := map[string]interface{}{
++		"sha": "abc123", "truncated": false,
++		"tree": []map[string]interface{}{
++			{"path": "foo/bar/.claude/skills/hidden-skill", "type": "tree", "sha": "tree-sha-1"},
++			{"path": "foo/bar/.claude/skills/hidden-skill/SKILL.md", "type": "blob", "sha": "blob-1"},
++		},
++	}
++
+ 	emptyTree := map[string]interface{}{
+ 		"sha": "abc123", "truncated": false,
+ 		"tree": []map[string]interface{}{
+@@ -1015,6 +1037,11 @@ func TestDiscoverSkillsWithOptions(t *testing.T) {
+ 			tree:       mixedTree,
+ 			wantSkills: []string{"hidden-skill", "standard-skill"},
+ 		},
++		{
++			name:       "nested hidden-dir tree returns hidden skill",
++			tree:       nestedHiddenTree,
++			wantSkills: []string{"hidden-skill"},
++		},
+ 		{
+ 			name:    "no skills at all",
+ 			tree:    emptyTree,
+@@ -1415,6 +1442,16 @@ func TestDiscoverLocalSkillsWithOptions(t *testing.T) {
+ 			},
+ 			wantSkills: []string{"standard", "hidden"},
+ 		},
++		{
++			name: "nested hidden dir returns skill",
++			setup: func(t *testing.T, dir string) {
++				t.Helper()
++				skillDir := filepath.Join(dir, "foo", "bar", ".claude", "skills", "hidden")
++				require.NoError(t, os.MkdirAll(skillDir, 0o755))
++				require.NoError(t, os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("# hidden"), 0o644))
++			},
++			wantSkills: []string{"hidden"},
++		},
+ 		{
+ 			name:    "no skills at all",
+ 			setup:   func(t *testing.T, _ string) { t.Helper() },
+diff --git a/pkg/cmd/skills/install/install.go b/pkg/cmd/skills/install/install.go
+index caaa7221490..61f9458a346 100644
+--- a/pkg/cmd/skills/install/install.go
++++ b/pkg/cmd/skills/install/install.go
+@@ -115,8 +115,10 @@ func NewCmdInstall(f *cmdutil.Factory, telemetry ghtelemetry.CommandRecorder, ru
+ 			see: https://agentskills.io/specification
+ 
+ 			The skill argument can be a name, a namespaced name (%[1]sauthor/skill%[1]s),
+-			or an exact path within the repository (%[1]sskills/author/skill%[1]s or
+-			%[1]sskills/author/skill/SKILL.md%[1]s).
++			or an exact path within the repository (%[1]sskills/author/skill%[1]s,
++			%[1]spackages/agent-skills/code-review%[1]s, or any %[1]s.../SKILL.md%[1]s path).
++			Namespaced names with one slash are matched by name. Use a %[1]sSKILL.md%[1]s
++			suffix to force a one-directory path outside the standard conventions.
+ 
+ 			Performance tip: when installing from a large repository with many
+ 			skills, providing an exact path instead of a skill name avoids a
+@@ -155,6 +157,9 @@ func NewCmdInstall(f *cmdutil.Factory, telemetry ghtelemetry.CommandRecorder, ru
+ 			# Install from a large namespaced repo by path (efficient, skips full discovery)
+ 			$ gh skill install github/awesome-copilot skills/monalisa/code-review
+ 
++			# Install from a non-standard nested path (efficient, skips full discovery)
++			$ gh skill install oracle/netsuite-suitecloud-sdk packages/agent-skills/netsuite-ai-connector-instructions
++
+ 			# Install from a local directory
+ 			$ gh skill install ./my-skills-repo --from-local
+ 
+@@ -546,6 +551,7 @@ func runLocalInstall(opts *InstallOptions) error {
+ // isSkillPath returns true if the argument looks like a repo-relative path
+ // rather than a simple skill name.
+ func isSkillPath(name string) bool {
++	name = strings.TrimSuffix(name, "/")
+ 	if name == "" {
+ 		return false
+ 	}
+@@ -558,6 +564,9 @@ func isSkillPath(name string) bool {
+ 	if strings.Contains(name, "/skills/") || strings.Contains(name, "/plugins/") {
+ 		return true
+ 	}
++	if strings.Count(name, "/") >= 2 {
++		return true
++	}
+ 	return false
+ }
+ 
+diff --git a/pkg/cmd/skills/install/install_test.go b/pkg/cmd/skills/install/install_test.go
+index b126f1ac788..c9c384675fb 100644
+--- a/pkg/cmd/skills/install/install_test.go
++++ b/pkg/cmd/skills/install/install_test.go
+@@ -798,6 +798,34 @@ func TestInstallRun(t *testing.T) {
+ 			},
+ 			wantStdout: "Installed terraform-style-guide",
+ 		},
++		{
++			name:  "remote install by arbitrary nested skill path skips full discovery",
++			isTTY: true,
++			stubs: func(reg *httpmock.Registry) {
++				stubResolveVersion(reg, "monalisa", "skills-repo", "v1.0.0", "abc123")
++				stubSkillByPath(reg, "monalisa", "skills-repo", "abc123",
++					"packages/agent-skills/netsuite-ai-connector-instructions", "netsuite-ai-connector-instructions", "treeSHA")
++				// DiscoverSkillByPath: tree + blob (for fetchDescription)
++				stubInstallFiles(reg, "monalisa", "skills-repo", "treeSHA", "blobSHA", gitCommitContent)
++				// installer.Install: tree + blob (again, for writing files)
++				stubInstallFiles(reg, "monalisa", "skills-repo", "treeSHA", "blobSHA", gitCommitContent)
++			},
++			opts: func(ios *iostreams.IOStreams, reg *httpmock.Registry) *InstallOptions {
++				t.Helper()
++				return &InstallOptions{
++					IO:           ios,
++					HttpClient:   func() (*http.Client, error) { return &http.Client{Transport: reg}, nil },
++					GitClient:    &git.Client{RepoDir: t.TempDir()},
++					SkillSource:  "monalisa/skills-repo",
++					SkillName:    "packages/agent-skills/netsuite-ai-connector-instructions",
++					Agent:        "github-copilot",
++					Scope:        "project",
++					ScopeChanged: true,
++					Dir:          t.TempDir(),
++				}
++			},
++			wantStdout: "Installed netsuite-ai-connector-instructions",
++		},
+ 		{
+ 			name:  "remote install with URL repo argument",
+ 			isTTY: true,
+@@ -2118,7 +2146,10 @@ func Test_isSkillPath(t *testing.T) {
+ 		{name: "nested skills/ path", path: "terraform/code-generation/skills/terraform-style-guide", want: true},
+ 		{name: "deeply nested skills/ path", path: "a/b/c/skills/my-skill", want: true},
+ 		{name: "nested plugins/ path", path: "vendor/plugins/hubot/skills/pr-summary", want: true},
++		{name: "arbitrary nested skill path", path: "packages/agent-skills/netsuite-ai-connector-instructions", want: true},
++		{name: "arbitrary nested skill path with trailing slash", path: "skills-catalog/matlab-core/matlab-debugging/", want: true},
+ 		{name: "name containing skills substring", path: "myskills", want: false},
++		{name: "namespaced skill name", path: "monalisa/code-review", want: false},
+ 		{name: "namespaced path", path: "skills/monalisa/issue-triage", want: true},
+ 	}
+ 	for _, tt := range tests {
+
+From fb748cb2bf3a434ff12f5268c9983a65310c6520 Mon Sep 17 00:00:00 2001
+From: tommaso-moro <tommaso-moro@github.com>
+Date: Tue, 19 May 2026 15:31:43 +0100
+Subject: [PATCH 2/4] add logic to preview too
+
+---
+ internal/skills/discovery/discovery.go      | 22 +++++++++
+ internal/skills/discovery/discovery_test.go | 28 +++++++++++
+ pkg/cmd/skills/install/install.go           | 18 +------
+ pkg/cmd/skills/preview/preview.go           | 52 ++++++++++++++-------
+ pkg/cmd/skills/preview/preview_test.go      | 49 +++++++++++++++++++
+ 5 files changed, 136 insertions(+), 33 deletions(-)
+
+diff --git a/internal/skills/discovery/discovery.go b/internal/skills/discovery/discovery.go
+index b2d966c988c..f7b4ae8b2f7 100644
+--- a/internal/skills/discovery/discovery.go
++++ b/internal/skills/discovery/discovery.go
+@@ -390,6 +390,28 @@ func MatchSkillPath(filePath string) (name, namespace string) {
+ 	return m.name, m.namespace
+ }
+ 
++// IsSkillPath reports whether a skill selector looks like a repo-relative path
++// rather than a simple skill name.
++func IsSkillPath(name string) bool {
++	name = strings.TrimSuffix(name, "/")
++	if name == "" {
++		return false
++	}
++	if name == "SKILL.md" || strings.HasSuffix(name, "/SKILL.md") {
++		return true
++	}
++	if strings.HasPrefix(name, "skills/") || strings.HasPrefix(name, "plugins/") {
++		return true
++	}
++	if strings.Contains(name, "/skills/") || strings.Contains(name, "/plugins/") {
++		return true
++	}
++	if strings.Count(name, "/") >= 2 {
++		return true
++	}
++	return false
++}
++
+ // matchSkillConventions checks if a blob path matches any known skill convention.
+ func matchSkillConventions(entry treeEntry) *skillMatch {
+ 	if path.Base(entry.Path) != "SKILL.md" {
+diff --git a/internal/skills/discovery/discovery_test.go b/internal/skills/discovery/discovery_test.go
+index 24ef0081ab7..297b65910cd 100644
+--- a/internal/skills/discovery/discovery_test.go
++++ b/internal/skills/discovery/discovery_test.go
+@@ -1526,6 +1526,34 @@ func TestMatchSkillPath(t *testing.T) {
+ 	}
+ }
+ 
++func TestIsSkillPath(t *testing.T) {
++	tests := []struct {
++		name string
++		path string
++		want bool
++	}{
++		{name: "empty string", path: "", want: false},
++		{name: "plain skill name", path: "git-commit", want: false},
++		{name: "SKILL.md at root", path: "SKILL.md", want: true},
++		{name: "SKILL.md suffix", path: "skills/code-review/SKILL.md", want: true},
++		{name: "starts with skills/", path: "skills/code-review", want: true},
++		{name: "starts with plugins/", path: "plugins/hubot/skills/pr-summary", want: true},
++		{name: "nested skills/ path", path: "terraform/code-generation/skills/terraform-style-guide", want: true},
++		{name: "deeply nested skills/ path", path: "a/b/c/skills/my-skill", want: true},
++		{name: "nested plugins/ path", path: "vendor/plugins/hubot/skills/pr-summary", want: true},
++		{name: "arbitrary nested skill path", path: "packages/agent-skills/netsuite-ai-connector-instructions", want: true},
++		{name: "arbitrary nested skill path with trailing slash", path: "skills-catalog/matlab-core/matlab-debugging/", want: true},
++		{name: "name containing skills substring", path: "myskills", want: false},
++		{name: "namespaced skill name", path: "monalisa/code-review", want: false},
++		{name: "namespaced path", path: "skills/monalisa/issue-triage", want: true},
++	}
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			assert.Equal(t, tt.want, IsSkillPath(tt.path))
++		})
++	}
++}
++
+ func TestDiscoverSkillFiles(t *testing.T) {
+ 	tests := []struct {
+ 		name      string
+diff --git a/pkg/cmd/skills/install/install.go b/pkg/cmd/skills/install/install.go
+index 61f9458a346..b426257f1ba 100644
+--- a/pkg/cmd/skills/install/install.go
++++ b/pkg/cmd/skills/install/install.go
+@@ -551,23 +551,7 @@ func runLocalInstall(opts *InstallOptions) error {
+ // isSkillPath returns true if the argument looks like a repo-relative path
+ // rather than a simple skill name.
+ func isSkillPath(name string) bool {
+-	name = strings.TrimSuffix(name, "/")
+-	if name == "" {
+-		return false
+-	}
+-	if name == "SKILL.md" || strings.HasSuffix(name, "/SKILL.md") {
+-		return true
+-	}
+-	if strings.HasPrefix(name, "skills/") || strings.HasPrefix(name, "plugins/") {
+-		return true
+-	}
+-	if strings.Contains(name, "/skills/") || strings.Contains(name, "/plugins/") {
+-		return true
+-	}
+-	if strings.Count(name, "/") >= 2 {
+-		return true
+-	}
+-	return false
++	return discovery.IsSkillPath(name)
+ }
+ 
+ func resolveRepoArg(skillSource string, canPrompt bool, p prompter.Prompter) (ghrepo.Interface, string, error) {
+diff --git a/pkg/cmd/skills/preview/preview.go b/pkg/cmd/skills/preview/preview.go
+index e6c202b0992..6e8e398422d 100644
+--- a/pkg/cmd/skills/preview/preview.go
++++ b/pkg/cmd/skills/preview/preview.go
+@@ -69,6 +69,12 @@ func NewCmdPreview(f *cmdutil.Factory, telemetry ghtelemetry.CommandRecorder, ru
+ 			When run with only a repository argument, lists available skills and
+ 			prompts for selection.
+ 
++			The skill argument can be a name, a namespaced name (%[1]sauthor/skill%[1]s),
++			or an exact path within the repository (%[1]sskills/author/skill%[1]s,
++			%[1]spackages/agent-skills/code-review%[1]s, or any %[1]s.../SKILL.md%[1]s path).
++			Namespaced names with one slash are matched by name. Use a %[1]sSKILL.md%[1]s
++			suffix to force a one-directory path outside the standard conventions.
++
+ 			To preview a specific version of the skill, append %[1]s@VERSION%[1]s to the
+ 			skill name. The version is resolved as a git tag, branch, or commit SHA.
+ 		`, "`"),
+@@ -82,6 +88,9 @@ func NewCmdPreview(f *cmdutil.Factory, telemetry ghtelemetry.CommandRecorder, ru
+ 			# Preview a skill at a specific commit SHA
+ 			$ gh skill preview github/awesome-copilot documentation-writer@abc123def456
+ 
++			# Preview from a non-standard nested path (efficient, skips full discovery)
++			$ gh skill preview oracle/netsuite-suitecloud-sdk packages/agent-skills/netsuite-ai-connector-instructions
++
+ 			# Browse and preview interactively
+ 			$ gh skill preview github/awesome-copilot
+ 		`),
+@@ -153,25 +162,36 @@ func previewRun(opts *PreviewOptions) error {
+ 		return fmt.Errorf("could not resolve version: %w", err)
+ 	}
+ 
+-	opts.IO.StartProgressIndicatorWithLabel("Discovering skills")
+-	allSkills, err := discovery.DiscoverSkillsWithOptions(apiClient, hostname, owner, repoName, resolved.SHA, discovery.DiscoverOptions{})
+-	opts.IO.StopProgressIndicator()
+-	if err != nil {
+-		return err
+-	}
++	var skill discovery.Skill
++	if discovery.IsSkillPath(opts.SkillName) {
++		opts.IO.StartProgressIndicatorWithLabel("Looking up skill")
++		found, err := discovery.DiscoverSkillByPath(apiClient, hostname, owner, repoName, resolved.SHA, opts.SkillName)
++		opts.IO.StopProgressIndicator()
++		if err != nil {
++			return err
++		}
++		skill = *found
++	} else {
++		opts.IO.StartProgressIndicatorWithLabel("Discovering skills")
++		allSkills, err := discovery.DiscoverSkillsWithOptions(apiClient, hostname, owner, repoName, resolved.SHA, discovery.DiscoverOptions{})
++		opts.IO.StopProgressIndicator()
++		if err != nil {
++			return err
++		}
+ 
+-	skills, err := filterHiddenDirSkills(opts, allSkills)
+-	if err != nil {
+-		return err
+-	}
++		skills, err := filterHiddenDirSkills(opts, allSkills)
++		if err != nil {
++			return err
++		}
+ 
+-	sort.Slice(skills, func(i, j int) bool {
+-		return skills[i].DisplayName() < skills[j].DisplayName()
+-	})
++		sort.Slice(skills, func(i, j int) bool {
++			return skills[i].DisplayName() < skills[j].DisplayName()
++		})
+ 
+-	skill, err := selectSkill(opts, skills)
+-	if err != nil {
+-		return err
++		skill, err = selectSkill(opts, skills)
++		if err != nil {
++			return err
++		}
+ 	}
+ 
+ 	opts.IO.StartProgressIndicatorWithLabel("Fetching skill content")
+diff --git a/pkg/cmd/skills/preview/preview_test.go b/pkg/cmd/skills/preview/preview_test.go
+index 3bc98fece56..fca5dff5081 100644
+--- a/pkg/cmd/skills/preview/preview_test.go
++++ b/pkg/cmd/skills/preview/preview_test.go
+@@ -261,6 +261,55 @@ func TestPreviewRun(t *testing.T) {
+ 			},
+ 			wantStdout: "My Skill",
+ 		},
++		{
++			name: "preview by arbitrary nested skill path skips full discovery",
++			tty:  true,
++			opts: &PreviewOptions{
++				repo:      ghrepo.New("owner", "repo"),
++				SkillName: "packages/agent-skills/netsuite-ai-connector-instructions",
++			},
++			httpStubs: func(reg *httpmock.Registry) {
++				reg.Register(
++					httpmock.REST("GET", "repos/owner/repo/releases/latest"),
++					httpmock.StringResponse(`{"tag_name": "v1.0.0"}`),
++				)
++				reg.Register(
++					httpmock.REST("GET", "repos/owner/repo/git/ref/tags/v1.0.0"),
++					httpmock.StringResponse(`{"object": {"sha": "abc123", "type": "commit"}}`),
++				)
++				reg.Register(
++					httpmock.REST("GET", "repos/owner/repo/contents/packages%2Fagent-skills"),
++					httpmock.StringResponse(`[
++						{"name": "netsuite-ai-connector-instructions", "path": "packages/agent-skills/netsuite-ai-connector-instructions", "sha": "treeSHA4", "type": "dir"}
++					]`),
++				)
++				reg.Register(
++					httpmock.REST("GET", "repos/owner/repo/git/trees/treeSHA4"),
++					httpmock.StringResponse(`{
++						"tree": [
++							{"path": "SKILL.md", "type": "blob", "sha": "blob999", "size": 50}
++						]
++					}`),
++				)
++				reg.Register(
++					httpmock.REST("GET", "repos/owner/repo/git/blobs/blob999"),
++					httpmock.StringResponse(`{"sha": "blob999", "content": "`+encodedContent+`", "encoding": "base64"}`),
++				)
++				reg.Register(
++					httpmock.REST("GET", "repos/owner/repo/git/trees/treeSHA4"),
++					httpmock.StringResponse(`{
++						"tree": [
++							{"path": "SKILL.md", "type": "blob", "sha": "blob999", "size": 50}
++						]
++					}`),
++				)
++				reg.Register(
++					httpmock.REST("GET", "repos/owner/repo/git/blobs/blob999"),
++					httpmock.StringResponse(`{"sha": "blob999", "content": "`+encodedContent+`", "encoding": "base64"}`),
++				)
++			},
++			wantStdout: "My Skill",
++		},
+ 		{
+ 			name: "skill not found",
+ 			tty:  true,
+
+From 994024f8ac6eafecdd8bd8d37896e6c319ba1bf5 Mon Sep 17 00:00:00 2001
+From: tommaso-moro <tommaso-moro@github.com>
+Date: Fri, 22 May 2026 15:12:03 +0100
+Subject: [PATCH 3/4] address copilot comments
+
+---
+ internal/skills/discovery/discovery.go      | 26 ++++++++++++++-----
+ internal/skills/discovery/discovery_test.go | 28 ++++++++++++++++++++-
+ pkg/cmd/skills/install/install_test.go      |  2 +-
+ pkg/cmd/skills/preview/preview.go           |  2 +-
+ pkg/cmd/skills/preview/preview_test.go      |  4 ---
+ 5 files changed, 49 insertions(+), 13 deletions(-)
+
+diff --git a/internal/skills/discovery/discovery.go b/internal/skills/discovery/discovery.go
+index f7b4ae8b2f7..55d27447846 100644
+--- a/internal/skills/discovery/discovery.go
++++ b/internal/skills/discovery/discovery.go
+@@ -397,7 +397,7 @@ func IsSkillPath(name string) bool {
+ 	if name == "" {
+ 		return false
+ 	}
+-	if name == "SKILL.md" || strings.HasSuffix(name, "/SKILL.md") {
++	if strings.HasSuffix(name, "/SKILL.md") {
+ 		return true
+ 	}
+ 	if strings.HasPrefix(name, "skills/") || strings.HasPrefix(name, "plugins/") {
+@@ -473,11 +473,12 @@ func matchSkillConventions(entry treeEntry) *skillMatch {
+ }
+ 
+ // matchHiddenDirConventions checks if a blob path matches a skill convention
+-// under a hidden (dot-prefixed) directory. These patterns mirror the standard
+-// skills/ conventions, but only when the path contains a hidden segment:
++// under a path that contains a hidden (dot-prefixed) directory. These patterns
++// mirror the standard skills/ conventions, but only when a hidden segment
++// appears anywhere in the ancestor path:
+ //
+-//   - {prefix}/.{host}/skills/*/SKILL.md         -> "hidden-dir"
+-//   - {prefix}/.{host}/skills/{scope}/*/SKILL.md -> "hidden-dir-namespaced"
++//   - {prefix}/.{hidden}/{suffix}/skills/*/SKILL.md         -> "hidden-dir"
++//   - {prefix}/.{hidden}/{suffix}/skills/{scope}/*/SKILL.md -> "hidden-dir-namespaced"
+ func matchHiddenDirConventions(entry treeEntry) *skillMatch {
+ 	if path.Base(entry.Path) != "SKILL.md" {
+ 		return nil
+@@ -674,8 +675,19 @@ func FetchDescriptionsConcurrent(client *api.Client, host, owner, repo string, s
+ 	wg.Wait()
+ }
+ 
++// DiscoverSkillByPathOptions controls optional behavior for DiscoverSkillByPathWithOptions.
++type DiscoverSkillByPathOptions struct {
++	SkipDescription bool
++}
++
+ // DiscoverSkillByPath looks up a single skill by its exact path in the repository.
+ func DiscoverSkillByPath(client *api.Client, host, owner, repo, commitSHA, skillPath string) (*Skill, error) {
++	return DiscoverSkillByPathWithOptions(client, host, owner, repo, commitSHA, skillPath, DiscoverSkillByPathOptions{})
++}
++
++// DiscoverSkillByPathWithOptions looks up a single skill by its exact path in
++// the repository, applying the given options.
++func DiscoverSkillByPathWithOptions(client *api.Client, host, owner, repo, commitSHA, skillPath string, opts DiscoverSkillByPathOptions) (*Skill, error) {
+ 	skillPath = strings.TrimSuffix(skillPath, "/SKILL.md")
+ 	skillPath = strings.TrimSuffix(skillPath, "/")
+ 
+@@ -756,7 +768,9 @@ func DiscoverSkillByPath(client *api.Client, host, owner, repo, commitSHA, skill
+ 		TreeSHA:    treeSHA,
+ 	}
+ 
+-	skill.Description = fetchDescription(client, host, owner, repo, skill)
++	if !opts.SkipDescription {
++		skill.Description = fetchDescription(client, host, owner, repo, skill)
++	}
+ 
+ 	return skill, nil
+ }
+diff --git a/internal/skills/discovery/discovery_test.go b/internal/skills/discovery/discovery_test.go
+index 297b65910cd..d00f8d7acfb 100644
+--- a/internal/skills/discovery/discovery_test.go
++++ b/internal/skills/discovery/discovery_test.go
+@@ -1325,6 +1325,32 @@ func TestDiscoverSkillByPath(t *testing.T) {
+ 	}
+ }
+ 
++func TestDiscoverSkillByPathWithOptionsSkipsDescription(t *testing.T) {
++	reg := &httpmock.Registry{}
++	defer reg.Verify(t)
++
++	reg.Register(
++		httpmock.REST("GET", "repos/monalisa/octocat-skills/contents/skills"),
++		httpmock.JSONResponse([]map[string]interface{}{
++			{"name": "code-review", "path": "skills/code-review", "sha": "tree-sha", "type": "dir"},
++		}))
++	reg.Register(
++		httpmock.REST("GET", "repos/monalisa/octocat-skills/git/trees/tree-sha"),
++		httpmock.JSONResponse(map[string]interface{}{
++			"sha": "tree-sha", "truncated": false,
++			"tree": []map[string]interface{}{
++				{"path": "SKILL.md", "type": "blob", "sha": "blob-sha"},
++			},
++		}))
++
++	client := api.NewClientFromHTTP(&http.Client{Transport: reg})
++	skill, err := DiscoverSkillByPathWithOptions(client, "github.com", "monalisa", "octocat-skills", "abc123", "skills/code-review", DiscoverSkillByPathOptions{SkipDescription: true})
++
++	require.NoError(t, err)
++	assert.Equal(t, "code-review", skill.Name)
++	assert.Empty(t, skill.Description)
++}
++
+ func TestDiscoverLocalSkills(t *testing.T) {
+ 	tests := []struct {
+ 		name       string
+@@ -1534,7 +1560,7 @@ func TestIsSkillPath(t *testing.T) {
+ 	}{
+ 		{name: "empty string", path: "", want: false},
+ 		{name: "plain skill name", path: "git-commit", want: false},
+-		{name: "SKILL.md at root", path: "SKILL.md", want: true},
++		{name: "bare SKILL.md", path: "SKILL.md", want: false},
+ 		{name: "SKILL.md suffix", path: "skills/code-review/SKILL.md", want: true},
+ 		{name: "starts with skills/", path: "skills/code-review", want: true},
+ 		{name: "starts with plugins/", path: "plugins/hubot/skills/pr-summary", want: true},
+diff --git a/pkg/cmd/skills/install/install_test.go b/pkg/cmd/skills/install/install_test.go
+index c9c384675fb..54ea1d4554c 100644
+--- a/pkg/cmd/skills/install/install_test.go
++++ b/pkg/cmd/skills/install/install_test.go
+@@ -2139,7 +2139,7 @@ func Test_isSkillPath(t *testing.T) {
+ 	}{
+ 		{name: "empty string", path: "", want: false},
+ 		{name: "plain skill name", path: "git-commit", want: false},
+-		{name: "SKILL.md at root", path: "SKILL.md", want: true},
++		{name: "bare SKILL.md", path: "SKILL.md", want: false},
+ 		{name: "SKILL.md suffix", path: "skills/code-review/SKILL.md", want: true},
+ 		{name: "starts with skills/", path: "skills/code-review", want: true},
+ 		{name: "starts with plugins/", path: "plugins/hubot/skills/pr-summary", want: true},
+diff --git a/pkg/cmd/skills/preview/preview.go b/pkg/cmd/skills/preview/preview.go
+index 6e8e398422d..7f870b635c7 100644
+--- a/pkg/cmd/skills/preview/preview.go
++++ b/pkg/cmd/skills/preview/preview.go
+@@ -165,7 +165,7 @@ func previewRun(opts *PreviewOptions) error {
+ 	var skill discovery.Skill
+ 	if discovery.IsSkillPath(opts.SkillName) {
+ 		opts.IO.StartProgressIndicatorWithLabel("Looking up skill")
+-		found, err := discovery.DiscoverSkillByPath(apiClient, hostname, owner, repoName, resolved.SHA, opts.SkillName)
++		found, err := discovery.DiscoverSkillByPathWithOptions(apiClient, hostname, owner, repoName, resolved.SHA, opts.SkillName, discovery.DiscoverSkillByPathOptions{SkipDescription: true})
+ 		opts.IO.StopProgressIndicator()
+ 		if err != nil {
+ 			return err
+diff --git a/pkg/cmd/skills/preview/preview_test.go b/pkg/cmd/skills/preview/preview_test.go
+index fca5dff5081..48d301f7c06 100644
+--- a/pkg/cmd/skills/preview/preview_test.go
++++ b/pkg/cmd/skills/preview/preview_test.go
+@@ -291,10 +291,6 @@ func TestPreviewRun(t *testing.T) {
+ 						]
+ 					}`),
+ 				)
+-				reg.Register(
+-					httpmock.REST("GET", "repos/owner/repo/git/blobs/blob999"),
+-					httpmock.StringResponse(`{"sha": "blob999", "content": "`+encodedContent+`", "encoding": "base64"}`),
+-				)
+ 				reg.Register(
+ 					httpmock.REST("GET", "repos/owner/repo/git/trees/treeSHA4"),
+ 					httpmock.StringResponse(`{
+
+From 678660b4a4a2677d7b2b0cb05ca05479f7ee83f8 Mon Sep 17 00:00:00 2001
+From: tommaso-moro <tommaso-moro@github.com>
+Date: Mon, 1 Jun 2026 16:46:43 +0100
+Subject: [PATCH 4/4] address review comments
+
+---
+ internal/skills/discovery/discovery.go      | 16 +++++-----
+ internal/skills/discovery/discovery_test.go | 17 +++++++++--
+ pkg/cmd/skills/install/install.go           | 10 ++----
+ pkg/cmd/skills/install/install_test.go      | 34 ++-------------------
+ pkg/cmd/skills/preview/preview.go           |  2 +-
+ pkg/cmd/skills/preview/preview_test.go      | 12 ++------
+ 6 files changed, 31 insertions(+), 60 deletions(-)
+
+diff --git a/internal/skills/discovery/discovery.go b/internal/skills/discovery/discovery.go
+index 55d27447846..ff6f1286e6b 100644
+--- a/internal/skills/discovery/discovery.go
++++ b/internal/skills/discovery/discovery.go
+@@ -477,8 +477,8 @@ func matchSkillConventions(entry treeEntry) *skillMatch {
+ // mirror the standard skills/ conventions, but only when a hidden segment
+ // appears anywhere in the ancestor path:
+ //
+-//   - {prefix}/.{hidden}/{suffix}/skills/*/SKILL.md         -> "hidden-dir"
+-//   - {prefix}/.{hidden}/{suffix}/skills/{scope}/*/SKILL.md -> "hidden-dir-namespaced"
++//   - {prefix}/.{host}/{suffix}/skills/*/SKILL.md         -> "hidden-dir"
++//   - {prefix}/.{host}/{suffix}/skills/{scope}/*/SKILL.md -> "hidden-dir-namespaced"
+ func matchHiddenDirConventions(entry treeEntry) *skillMatch {
+ 	if path.Base(entry.Path) != "SKILL.md" {
+ 		return nil
+@@ -487,8 +487,8 @@ func matchHiddenDirConventions(entry treeEntry) *skillMatch {
+ 		return nil
+ 	}
+ 
+-	// {prefix}/.{host}/skills/*
+-	// {prefix}/.{host}/skills/{scope}/*
++	// {prefix}/.{host}/{suffix}/skills/*
++	// {prefix}/.{host}/{suffix}/skills/{scope}/*
+ 	dir := path.Dir(entry.Path)
+ 	skillName := path.Base(dir)
+ 
+@@ -496,16 +496,16 @@ func matchHiddenDirConventions(entry treeEntry) *skillMatch {
+ 		return nil
+ 	}
+ 
+-	// {prefix}/.{host}/skills
+-	// {prefix}/.{host}/skills/{scope}
++	// {prefix}/.{host}/{suffix}/skills
++	// {prefix}/.{host}/{suffix}/skills/{scope}
+ 	parentDir := path.Dir(dir)
+ 
+-	// {prefix}/.{host}/skills/*/SKILL.md
++	// {prefix}/.{host}/{suffix}/skills/*/SKILL.md
+ 	if path.Base(parentDir) == "skills" {
+ 		return &skillMatch{entry: entry, name: skillName, skillDir: dir, convention: "hidden-dir"}
+ 	}
+ 
+-	// {prefix}/.{host}/skills/{scope}/*/SKILL.md
++	// {prefix}/.{host}/{suffix}/skills/{scope}/*/SKILL.md
+ 	grandparentDir := path.Dir(parentDir)
+ 	if path.Base(grandparentDir) == "skills" {
+ 		namespace := path.Base(parentDir)
+diff --git a/internal/skills/discovery/discovery_test.go b/internal/skills/discovery/discovery_test.go
+index d00f8d7acfb..8d1cff8c93e 100644
+--- a/internal/skills/discovery/discovery_test.go
++++ b/internal/skills/discovery/discovery_test.go
+@@ -246,6 +246,13 @@ func TestMatchHiddenDirConventions(t *testing.T) {
+ 			wantName:       "code-review",
+ 			wantConvention: "hidden-dir",
+ 		},
++		{
++			name:           "hidden dir with nested namespaced skills directory",
++			path:           ".claude/nested/skills/monalisa/code-review/SKILL.md",
++			wantName:       "code-review",
++			wantNamespace:  "monalisa",
++			wantConvention: "hidden-dir-namespaced",
++		},
+ 		{
+ 			name:    "invalid skill name",
+ 			path:    ".claude/skills/../SKILL.md",
+@@ -1011,6 +1018,8 @@ func TestDiscoverSkillsWithOptions(t *testing.T) {
+ 		"tree": []map[string]interface{}{
+ 			{"path": "foo/bar/.claude/skills/hidden-skill", "type": "tree", "sha": "tree-sha-1"},
+ 			{"path": "foo/bar/.claude/skills/hidden-skill/SKILL.md", "type": "blob", "sha": "blob-1"},
++			{"path": "foo/bar/.claude/nested/skills/deep-hidden-skill", "type": "tree", "sha": "tree-sha-2"},
++			{"path": "foo/bar/.claude/nested/skills/deep-hidden-skill/SKILL.md", "type": "blob", "sha": "blob-2"},
+ 		},
+ 	}
+ 
+@@ -1040,7 +1049,7 @@ func TestDiscoverSkillsWithOptions(t *testing.T) {
+ 		{
+ 			name:       "nested hidden-dir tree returns hidden skill",
+ 			tree:       nestedHiddenTree,
+-			wantSkills: []string{"hidden-skill"},
++			wantSkills: []string{"deep-hidden-skill", "hidden-skill"},
+ 		},
+ 		{
+ 			name:    "no skills at all",
+@@ -1475,8 +1484,12 @@ func TestDiscoverLocalSkillsWithOptions(t *testing.T) {
+ 				skillDir := filepath.Join(dir, "foo", "bar", ".claude", "skills", "hidden")
+ 				require.NoError(t, os.MkdirAll(skillDir, 0o755))
+ 				require.NoError(t, os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("# hidden"), 0o644))
++
++				deepDir := filepath.Join(dir, "foo", "bar", ".claude", "nested", "skills", "deep-hidden")
++				require.NoError(t, os.MkdirAll(deepDir, 0o755))
++				require.NoError(t, os.WriteFile(filepath.Join(deepDir, "SKILL.md"), []byte("# deep-hidden"), 0o644))
+ 			},
+-			wantSkills: []string{"hidden"},
++			wantSkills: []string{"deep-hidden", "hidden"},
+ 		},
+ 		{
+ 			name:    "no skills at all",
+diff --git a/pkg/cmd/skills/install/install.go b/pkg/cmd/skills/install/install.go
+index b426257f1ba..22628299ac3 100644
+--- a/pkg/cmd/skills/install/install.go
++++ b/pkg/cmd/skills/install/install.go
+@@ -158,7 +158,7 @@ func NewCmdInstall(f *cmdutil.Factory, telemetry ghtelemetry.CommandRecorder, ru
+ 			$ gh skill install github/awesome-copilot skills/monalisa/code-review
+ 
+ 			# Install from a non-standard nested path (efficient, skips full discovery)
+-			$ gh skill install oracle/netsuite-suitecloud-sdk packages/agent-skills/netsuite-ai-connector-instructions
++			$ gh skill install monalisa/skills-repo packages/agent-skills/code-review
+ 
+ 			# Install from a local directory
+ 			$ gh skill install ./my-skills-repo --from-local
+@@ -281,7 +281,7 @@ func installRun(opts *InstallOptions) error {
+ 
+ 	var selectedSkills []discovery.Skill
+ 
+-	if isSkillPath(opts.SkillName) {
++	if discovery.IsSkillPath(opts.SkillName) {
+ 		opts.IO.StartProgressIndicatorWithLabel("Looking up skill")
+ 		skill, err := discovery.DiscoverSkillByPath(apiClient, hostname, opts.repo.RepoOwner(), opts.repo.RepoName(), resolved.SHA, opts.SkillName)
+ 		opts.IO.StopProgressIndicator()
+@@ -548,12 +548,6 @@ func runLocalInstall(opts *InstallOptions) error {
+ 	return nil
+ }
+ 
+-// isSkillPath returns true if the argument looks like a repo-relative path
+-// rather than a simple skill name.
+-func isSkillPath(name string) bool {
+-	return discovery.IsSkillPath(name)
+-}
+-
+ func resolveRepoArg(skillSource string, canPrompt bool, p prompter.Prompter) (ghrepo.Interface, string, error) {
+ 	if skillSource == "" {
+ 		if !canPrompt {
+diff --git a/pkg/cmd/skills/install/install_test.go b/pkg/cmd/skills/install/install_test.go
+index 54ea1d4554c..f914860cdfc 100644
+--- a/pkg/cmd/skills/install/install_test.go
++++ b/pkg/cmd/skills/install/install_test.go
+@@ -804,7 +804,7 @@ func TestInstallRun(t *testing.T) {
+ 			stubs: func(reg *httpmock.Registry) {
+ 				stubResolveVersion(reg, "monalisa", "skills-repo", "v1.0.0", "abc123")
+ 				stubSkillByPath(reg, "monalisa", "skills-repo", "abc123",
+-					"packages/agent-skills/netsuite-ai-connector-instructions", "netsuite-ai-connector-instructions", "treeSHA")
++					"packages/agent-skills/code-review", "code-review", "treeSHA")
+ 				// DiscoverSkillByPath: tree + blob (for fetchDescription)
+ 				stubInstallFiles(reg, "monalisa", "skills-repo", "treeSHA", "blobSHA", gitCommitContent)
+ 				// installer.Install: tree + blob (again, for writing files)
+@@ -817,14 +817,14 @@ func TestInstallRun(t *testing.T) {
+ 					HttpClient:   func() (*http.Client, error) { return &http.Client{Transport: reg}, nil },
+ 					GitClient:    &git.Client{RepoDir: t.TempDir()},
+ 					SkillSource:  "monalisa/skills-repo",
+-					SkillName:    "packages/agent-skills/netsuite-ai-connector-instructions",
++					SkillName:    "packages/agent-skills/code-review",
+ 					Agent:        "github-copilot",
+ 					Scope:        "project",
+ 					ScopeChanged: true,
+ 					Dir:          t.TempDir(),
+ 				}
+ 			},
+-			wantStdout: "Installed netsuite-ai-connector-instructions",
++			wantStdout: "Installed code-review",
+ 		},
+ 		{
+ 			name:  "remote install with URL repo argument",
+@@ -2131,34 +2131,6 @@ func TestRunLocalInstall(t *testing.T) {
+ 	}
+ }
+ 
+-func Test_isSkillPath(t *testing.T) {
+-	tests := []struct {
+-		name string
+-		path string
+-		want bool
+-	}{
+-		{name: "empty string", path: "", want: false},
+-		{name: "plain skill name", path: "git-commit", want: false},
+-		{name: "bare SKILL.md", path: "SKILL.md", want: false},
+-		{name: "SKILL.md suffix", path: "skills/code-review/SKILL.md", want: true},
+-		{name: "starts with skills/", path: "skills/code-review", want: true},
+-		{name: "starts with plugins/", path: "plugins/hubot/skills/pr-summary", want: true},
+-		{name: "nested skills/ path", path: "terraform/code-generation/skills/terraform-style-guide", want: true},
+-		{name: "deeply nested skills/ path", path: "a/b/c/skills/my-skill", want: true},
+-		{name: "nested plugins/ path", path: "vendor/plugins/hubot/skills/pr-summary", want: true},
+-		{name: "arbitrary nested skill path", path: "packages/agent-skills/netsuite-ai-connector-instructions", want: true},
+-		{name: "arbitrary nested skill path with trailing slash", path: "skills-catalog/matlab-core/matlab-debugging/", want: true},
+-		{name: "name containing skills substring", path: "myskills", want: false},
+-		{name: "namespaced skill name", path: "monalisa/code-review", want: false},
+-		{name: "namespaced path", path: "skills/monalisa/issue-triage", want: true},
+-	}
+-	for _, tt := range tests {
+-		t.Run(tt.name, func(t *testing.T) {
+-			assert.Equal(t, tt.want, isSkillPath(tt.path))
+-		})
+-	}
+-}
+-
+ func Test_printReviewHint(t *testing.T) {
+ 	tests := []struct {
+ 		name            string
+diff --git a/pkg/cmd/skills/preview/preview.go b/pkg/cmd/skills/preview/preview.go
+index 7f870b635c7..06d50154c91 100644
+--- a/pkg/cmd/skills/preview/preview.go
++++ b/pkg/cmd/skills/preview/preview.go
+@@ -89,7 +89,7 @@ func NewCmdPreview(f *cmdutil.Factory, telemetry ghtelemetry.CommandRecorder, ru
+ 			$ gh skill preview github/awesome-copilot documentation-writer@abc123def456
+ 
+ 			# Preview from a non-standard nested path (efficient, skips full discovery)
+-			$ gh skill preview oracle/netsuite-suitecloud-sdk packages/agent-skills/netsuite-ai-connector-instructions
++			$ gh skill preview monalisa/skills-repo packages/agent-skills/code-review
+ 
+ 			# Browse and preview interactively
+ 			$ gh skill preview github/awesome-copilot
+diff --git a/pkg/cmd/skills/preview/preview_test.go b/pkg/cmd/skills/preview/preview_test.go
+index 48d301f7c06..04fae62587e 100644
+--- a/pkg/cmd/skills/preview/preview_test.go
++++ b/pkg/cmd/skills/preview/preview_test.go
+@@ -266,7 +266,7 @@ func TestPreviewRun(t *testing.T) {
+ 			tty:  true,
+ 			opts: &PreviewOptions{
+ 				repo:      ghrepo.New("owner", "repo"),
+-				SkillName: "packages/agent-skills/netsuite-ai-connector-instructions",
++				SkillName: "packages/agent-skills/code-review",
+ 			},
+ 			httpStubs: func(reg *httpmock.Registry) {
+ 				reg.Register(
+@@ -280,7 +280,7 @@ func TestPreviewRun(t *testing.T) {
+ 				reg.Register(
+ 					httpmock.REST("GET", "repos/owner/repo/contents/packages%2Fagent-skills"),
+ 					httpmock.StringResponse(`[
+-						{"name": "netsuite-ai-connector-instructions", "path": "packages/agent-skills/netsuite-ai-connector-instructions", "sha": "treeSHA4", "type": "dir"}
++						{"name": "code-review", "path": "packages/agent-skills/code-review", "sha": "treeSHA4", "type": "dir"}
+ 					]`),
+ 				)
+ 				reg.Register(
+@@ -291,14 +291,6 @@ func TestPreviewRun(t *testing.T) {
+ 						]
+ 					}`),
+ 				)
+-				reg.Register(
+-					httpmock.REST("GET", "repos/owner/repo/git/trees/treeSHA4"),
+-					httpmock.StringResponse(`{
+-						"tree": [
+-							{"path": "SKILL.md", "type": "blob", "sha": "blob999", "size": 50}
+-						]
+-					}`),
+-				)
+ 				reg.Register(
+ 					httpmock.REST("GET", "repos/owner/repo/git/blobs/blob999"),
+ 					httpmock.StringResponse(`{"sha": "blob999", "content": "`+encodedContent+`", "encoding": "base64"}`),

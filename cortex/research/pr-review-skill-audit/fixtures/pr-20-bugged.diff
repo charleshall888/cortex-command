@@ -1,0 +1,283 @@
+diff --git a/cortex_command/hooks/scan_lifecycle.py b/cortex_command/hooks/scan_lifecycle.py
+index 2e74e06b..e30412eb 100644
+--- a/cortex_command/hooks/scan_lifecycle.py
++++ b/cortex_command/hooks/scan_lifecycle.py
+@@ -461,10 +461,12 @@ def _metrics_summary_line(metrics_file: Path) -> str | None:
+     ``"Metrics: N completed features | Simple: avg X tasks, Y rework | Complex: avg X tasks, Y rework"``
+ 
+     where ``N`` is ``len(features)`` and the avg fields default to ``0``
+-    when missing (bash ``// 0`` fallback). Numbers are formatted in
+-    their natural JSON form (no rounding) — bash echoes whatever ``jq``
+-    produces, which for integer ``0`` is ``"0"`` and for floats is the
+-    canonical ``json``-decoder repr.
++    when missing (bash ``// 0`` fallback). Integers keep their natural
++    JSON form (``"0"`` — golden fixtures pin this); floats are rounded
++    to 2 decimals so the line doesn't carry full-repr noise like
++    ``9.885714285714286``. (The old no-rounding rule mirrored the bash
++    hook for parity, but that script is now a thin wrapper delegating
++    here, so the constraint is dead.)
+     """
+ 
+     if not metrics_file.is_file():
+@@ -490,15 +492,19 @@ def _metrics_summary_line(metrics_file: Path) -> str | None:
+         complex_ = {}
+ 
+     def _fmt(val: object) -> str:
+-        # Mirror the bash output: jq emits the raw JSON form. ``json.dumps``
+-        # of an int gives "3"; of a float gives "3.5" / "0.0". The bash
+-        # hook's `// 0` fallback emits "0" for missing.
++        # ``json.dumps`` of an int gives "3" (the bash hook's `// 0`
++        # fallback emits "0" for missing — golden fixtures pin that form).
+         if val is None:
+             return "0"
+         if isinstance(val, bool):
+             # Defensive: bools are ints in Python; bash never emits bool here.
+             return "0"
+-        if isinstance(val, (int, float)):
++        if isinstance(val, float):
++            # Floats are means from compute_aggregates; round to 2 decimals
++            # so the context line stays readable. Ints must pass through
++            # unrounded to keep the golden fixtures byte-identical.
++            return json.dumps(round(val, 2))
++        if isinstance(val, int):
+             return json.dumps(val)
+         return str(val)
+ 
+diff --git a/cortex_command/pipeline/metrics.py b/cortex_command/pipeline/metrics.py
+index a70a1fda..0c188f02 100644
+--- a/cortex_command/pipeline/metrics.py
++++ b/cortex_command/pipeline/metrics.py
+@@ -225,9 +225,24 @@ def extract_feature_metrics(events: list[dict[str, Any]]) -> dict[str, Any] | No
+     # read so historical events lacking the field keep their prior semantics.
+     merge_anchor: str = final_complete.get("merge_anchor", "review")
+ 
+-    # ---- Tier (from lifecycle_start, if present) ----
+-    start_events = [e for e in events if e["event"] == "lifecycle_start"]
+-    tier: str | None = start_events[0]["tier"] if start_events else None
++    # ---- Tier ----
++    # Final effective tier, mirroring the canonical rule in
++    # ``common.reduce_lifecycle_state``: ``lifecycle_start`` seeds the tier
++    # (a later ``lifecycle_start`` re-seeds), and each ``complexity_override``
++    # supersedes via its ``to`` field, so the most recent writer wins.
++    # Escalated features therefore bucket under the tier they finished at,
++    # matching every other tier reader (``read_tier``, dispatch complexity).
++    # ``initial_tier`` preserves the first seed so escalation rate stays
++    # queryable and historical records remain comparable.
++    initial_tier: str | None = None
++    tier: str | None = None
++    for e in events:
++        if e["event"] == "lifecycle_start" and e.get("tier") is not None:
++            if initial_tier is not None:
++                initial_tier = e["tier"]
++            tier = e["tier"]
++        elif e["event"] == "complexity_override" and e.get("to") is not None:
++            tier = e["to"]
+ 
+     # ---- Task count ----
+     task_count: int | None = final_complete.get("tasks_total")
+@@ -273,6 +288,7 @@ def extract_feature_metrics(events: list[dict[str, Any]]) -> dict[str, Any] | No
+     return {
+         "feature": feature_name,
+         "tier": tier,
++        "initial_tier": initial_tier,
+         "merge_anchor": merge_anchor,
+         "task_count": task_count,
+         "batch_count": batch_count,
+@@ -921,6 +937,7 @@ def format_feature_record(metrics: dict[str, Any]) -> dict[str, Any]:
+     """
+     return {
+         "tier": metrics["tier"],
++        "initial_tier": metrics["initial_tier"],
+         "status": "complete",
+         "total_duration_s": metrics["total_duration_seconds"],
+         "phase_durations": _phase_durations_as_dict(metrics["phase_durations"]),
+diff --git a/cortex_command/pipeline/tests/test_metrics.py b/cortex_command/pipeline/tests/test_metrics.py
+index d6af7131..8cce3a12 100644
+--- a/cortex_command/pipeline/tests/test_metrics.py
++++ b/cortex_command/pipeline/tests/test_metrics.py
+@@ -1700,5 +1700,132 @@ def test_compute_aggregates_phase_durations_segmented_by_merge_anchor(tmp_path):
+     # ((200 + 900)/2).  The assertions above rule out that scenario.
+ 
+ 
++def test_extract_feature_metrics_complexity_override_supersedes_tier(tmp_path):
++    """An escalated feature reports its FINAL effective tier.
++
++    Canonical rule (mirrors ``common.reduce_lifecycle_state``):
++    ``lifecycle_start`` seeds the tier and the most recent
++    ``complexity_override``'s ``to`` field supersedes it. ``initial_tier``
++    preserves the starting tier so escalation rate stays queryable.
++
++    Also asserts parity with ``common.read_tier`` on the same on-disk log —
++    the inline fold in ``extract_feature_metrics`` must agree with the
++    canonical reader.
++    """
++    import json as _json
++
++    from cortex_command.common import read_tier
++    from cortex_command.pipeline.metrics import (
++        extract_feature_metrics,
++        format_feature_record,
++        parse_events,
++    )
++
++    feature = "feat-escalated"
++    lines = [
++        {"ts": "2026-05-10T12:00:00Z", "event": "lifecycle_start",
++         "feature": feature, "tier": "simple"},
++        {"ts": "2026-05-10T12:05:00Z", "event": "complexity_override",
++         "feature": feature, "from": "simple", "to": "complex"},
++        {"ts": "2026-05-10T13:00:00Z", "event": "feature_complete",
++         "feature": feature, "tasks_total": 5, "rework_cycles": 0},
++    ]
++    log_path = tmp_path / feature / "events.log"
++    log_path.parent.mkdir(parents=True)
++    log_path.write_text(
++        "\n".join(_json.dumps(e) for e in lines) + "\n", encoding="utf-8"
++    )
++
++    m = extract_feature_metrics(parse_events(log_path))
++    assert m is not None
++    assert m["tier"] == "complex", (
++        f"Expected final effective tier 'complex'; got {m['tier']!r}"
++    )
++    assert m["initial_tier"] == "simple", (
++        f"Expected initial_tier 'simple'; got {m['initial_tier']!r}"
++    )
++
++    # Parity with the canonical reader every other tier consumer uses.
++    assert m["tier"] == read_tier(feature, lifecycle_base=tmp_path)
++
++    # Both fields flow through to the metrics.json feature record.
++    record = format_feature_record(m)
++    assert record["tier"] == "complex"
++    assert record["initial_tier"] == "simple"
++
++
++def test_extract_feature_metrics_last_complexity_override_wins():
++    """Multiple overrides: the most recent ``to`` wins; the seed is kept.
++
++    A feature escalated simple→complex and later de-escalated back to
++    simple finishes as "simple"; ``initial_tier`` stays the first
++    ``lifecycle_start`` seed throughout.
++    """
++    from cortex_command.pipeline.metrics import extract_feature_metrics
++
++    feature = "feat-flip-flop"
++    events = [
++        {"ts": "2026-05-10T12:00:00Z", "event": "lifecycle_start",
++         "feature": feature, "tier": "simple"},
++        {"ts": "2026-05-10T12:05:00Z", "event": "complexity_override",
++         "feature": feature, "from": "simple", "to": "complex"},
++        {"ts": "2026-05-10T12:30:00Z", "event": "complexity_override",
++         "feature": feature, "from": "complex", "to": "simple"},
++        {"ts": "2026-05-10T13:00:00Z", "event": "feature_complete",
++         "feature": feature, "tasks_total": 3, "rework_cycles": 0},
++    ]
++
++    m = extract_feature_metrics(events)
++    assert m is not None
++    assert m["tier"] == "simple", (
++        f"Expected last override 'simple' to win; got {m['tier']!r}"
++    )
++    assert m["initial_tier"] == "simple"
++
++
++def test_compute_aggregates_buckets_escalated_feature_by_final_tier():
++    """Aggregation groups escalated features under their final tier.
++
++    One plain simple feature and one feature escalated simple→complex must
++    land in separate buckets: ``simple`` n=1, ``complex`` n=1. Under the
++    old starting-tier semantics both would have collapsed into ``simple``.
++    """
++    from cortex_command.pipeline.metrics import (
++        compute_aggregates,
++        extract_feature_metrics,
++    )
++
++    plain_events = [
++        {"ts": "2026-05-10T12:00:00Z", "event": "lifecycle_start",
++         "feature": "feat-plain", "tier": "simple"},
++        {"ts": "2026-05-10T13:00:00Z", "event": "feature_complete",
++         "feature": "feat-plain", "tasks_total": 2, "rework_cycles": 0},
++    ]
++    escalated_events = [
++        {"ts": "2026-05-10T12:00:00Z", "event": "lifecycle_start",
++         "feature": "feat-escalated", "tier": "simple"},
++        {"ts": "2026-05-10T12:05:00Z", "event": "complexity_override",
++         "feature": "feat-escalated", "from": "simple", "to": "complex"},
++        {"ts": "2026-05-10T13:00:00Z", "event": "feature_complete",
++         "feature": "feat-escalated", "tasks_total": 8, "rework_cycles": 1},
++    ]
++
++    plain = extract_feature_metrics(plain_events)
++    escalated = extract_feature_metrics(escalated_events)
++    assert plain is not None and escalated is not None
++
++    # The unescalated feature's tier and initial_tier agree.
++    assert plain["tier"] == plain["initial_tier"] == "simple"
++
++    aggregates = compute_aggregates([plain, escalated])
++
++    assert sorted(aggregates) == ["complex", "simple"], (
++        f"Expected one feature per tier bucket; got {list(aggregates)}"
++    )
++    assert aggregates["simple"]["n"] == 1
++    assert aggregates["complex"]["n"] == 1
++    assert aggregates["complex"]["avg_task_count"] == 8.0
++
++
+ if __name__ == "__main__":
+     unittest.main()
+diff --git a/tests/test_hooks_scan_lifecycle.py b/tests/test_hooks_scan_lifecycle.py
+index c226e7d3..f2666031 100644
+--- a/tests/test_hooks_scan_lifecycle.py
++++ b/tests/test_hooks_scan_lifecycle.py
+@@ -1738,3 +1738,48 @@ def test_session_diagnostic_excluded_stale(
+     # latest_event_ts surfaces the old ts so post-mortem can see WHY it's stale.
+     assert record["latest_event_ts"] == old_ts, record
+     assert record["threshold_days"] == 30, record
++
++
++# ---------------------------------------------------------------------------
++# Metrics-summary float rounding
++# ---------------------------------------------------------------------------
++
++
++def test_metrics_summary_line_rounds_floats_to_two_decimals(
++    tmp_path: Path,
++) -> None:
++    """Float aggregates render rounded to 2 decimals; ints pass through.
++
++    ``avg_task_count=9.885714285714286`` previously leaked its full float
++    repr into the SessionStart context line; it must now render as
++    ``9.89``. The int path stays byte-identical (golden fixtures b/d pin
++    the bare ``avg 0 tasks`` form), so ``2`` renders as ``"2"`` while the
++    float ``4.0`` renders as ``"4.0"``.
++    """
++    metrics_file = tmp_path / "metrics.json"
++    metrics_file.write_text(
++        json.dumps(
++            {
++                "features": {"feat-a": {}, "feat-b": {}},
++                "aggregates": {
++                    "simple": {
++                        "avg_task_count": 9.885714285714286,
++                        "avg_rework_cycles": 0.2857142857142857,
++                    },
++                    "complex": {
++                        "avg_task_count": 4.0,
++                        "avg_rework_cycles": 2,
++                    },
++                },
++            }
++        ),
++        encoding="utf-8",
++    )
++
++    line = scan_lifecycle_mod._metrics_summary_line(metrics_file)
++
++    assert line == (
++        "Metrics: 2 completed features | "
++        "Simple: avg 9.89 tasks, 0.29 rework | "
++        "Complex: avg 4.0 tasks, 2 rework"
++    ), f"unexpected summary line: {line!r}"

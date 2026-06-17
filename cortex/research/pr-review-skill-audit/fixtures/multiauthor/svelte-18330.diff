@@ -1,0 +1,694 @@
+From 4bf2a373e7bd4baaf8c317a01cba41da2a437d81 Mon Sep 17 00:00:00 2001
+From: baseballyama <xydybaseball@gmail.com>
+Date: Sat, 30 May 2026 14:30:45 +0900
+Subject: [PATCH 1/5] fix: don't mistake `type` identifier expressions for TS
+ `type` declarations in tags
+
+Detect TypeScript `type` declarations by actually parsing instead of by
+character-class blacklists, so that expressions like `{type === 'all' ? a : b}`
+or `{type instanceof Foo}` aren't misclassified as malformed declarations.
+
+Closes #18328
+---
+ .changeset/fix-type-identifier-in-tag.md      |  5 +
+ .../src/compiler/phases/1-parse/state/tag.js  | 26 +++++-
+ .../input.svelte                              |  1 +
+ .../output.json                               | 92 +++++++++++++++++++
+ .../_config.js                                |  5 +
+ .../main.svelte                               | 16 ++++
+ .../errors.json                               |  4 +-
+ .../input.svelte                              | 11 +++
+ .../errors.json                               | 14 +++
+ .../input.svelte                              |  2 +
+ .../errors.json                               | 14 +++
+ .../input.svelte                              |  2 +
+ 12 files changed, 187 insertions(+), 5 deletions(-)
+ create mode 100644 .changeset/fix-type-identifier-in-tag.md
+ create mode 100644 packages/svelte/tests/parser-modern/samples/tag-type-identifier-probe-comment/input.svelte
+ create mode 100644 packages/svelte/tests/parser-modern/samples/tag-type-identifier-probe-comment/output.json
+ create mode 100644 packages/svelte/tests/runtime-runes/samples/declaration-tag-type-identifier/_config.js
+ create mode 100644 packages/svelte/tests/runtime-runes/samples/declaration-tag-type-identifier/main.svelte
+ create mode 100644 packages/svelte/tests/validator/samples/declaration-tag-invalid-type-generic/errors.json
+ create mode 100644 packages/svelte/tests/validator/samples/declaration-tag-invalid-type-generic/input.svelte
+ create mode 100644 packages/svelte/tests/validator/samples/declaration-tag-invalid-type-unicode/errors.json
+ create mode 100644 packages/svelte/tests/validator/samples/declaration-tag-invalid-type-unicode/input.svelte
+
+diff --git a/.changeset/fix-type-identifier-in-tag.md b/.changeset/fix-type-identifier-in-tag.md
+new file mode 100644
+index 000000000000..8e8884353652
+--- /dev/null
++++ b/.changeset/fix-type-identifier-in-tag.md
+@@ -0,0 +1,5 @@
++---
++'svelte': patch
++---
++
++fix: don't mistake expressions starting with `type` (e.g. `{type === 'all' ? a : b}`) for TypeScript `type` declarations in tags
+diff --git a/packages/svelte/src/compiler/phases/1-parse/state/tag.js b/packages/svelte/src/compiler/phases/1-parse/state/tag.js
+index 3c8eba4b2686..de171839206e 100644
+--- a/packages/svelte/src/compiler/phases/1-parse/state/tag.js
++++ b/packages/svelte/src/compiler/phases/1-parse/state/tag.js
+@@ -12,9 +12,9 @@ import { find_matching_bracket, match_bracket } from '../utils/bracket.js';
+ 
+ const regex_whitespace_with_closing_curly_brace = /\s*}/y;
+ const regex_supported_declaration = /(?:let|const)\b/y;
+-// All except `type` are reserved keywords and cannot be used as variable names.
+-// For type we check if it's not something like `type .x` / `type ()` / `type % 2` / ...
+-const regex_unsupported_declaration = /(?:(?:var|interface|enum)\b)|(?:type\s+[^?.(`<[&|%^}])/y;
++const regex_unsupported_declaration = /(?:var|interface|enum)\b/y;
++// `type` is a contextual keyword; this is just a shape hint, confirmed by parsing.
++const regex_maybe_type_declaration = /type\s+[\p{ID_Start}_$]/uy;
+ 
+ const pointy_bois = { '<': '>' };
+ 
+@@ -77,6 +77,26 @@ function read_declaration(parser) {
+ 		e.declaration_tag_invalid_type({ start, end: start + unsupported.length });
+ 	}
+ 
++	const type_alias_match = parser.match_regex(regex_maybe_type_declaration);
++	if (type_alias_match) {
++		const initial_comment_count = parser.root.comments.length;
++		/** @type {{ type: string; start: number; end: number } | undefined} */
++		let statement;
++		try {
++			statement = /** @type {{ type: string; start: number; end: number }} */ (
++				/** @type {unknown} */ (parse_statement_at(parser, parser.template, start))
++			);
++		} catch {
++			e.declaration_tag_invalid_type({ start, end: start + type_alias_match.length });
++		}
++		if (statement.type !== 'ExpressionStatement') {
++			e.declaration_tag_invalid_type(statement);
++		}
++		// discard probe comments so `read_expression` doesn't re-add them
++		parser.root.comments.length = initial_comment_count;
++		return null;
++	}
++
+ 	if (!parser.match_regex(regex_supported_declaration)) {
+ 		return null;
+ 	}
+diff --git a/packages/svelte/tests/parser-modern/samples/tag-type-identifier-probe-comment/input.svelte b/packages/svelte/tests/parser-modern/samples/tag-type-identifier-probe-comment/input.svelte
+new file mode 100644
+index 000000000000..fa4195996ec6
+--- /dev/null
++++ b/packages/svelte/tests/parser-modern/samples/tag-type-identifier-probe-comment/input.svelte
+@@ -0,0 +1 @@
++{type instanceof /* probe */ Object}
+diff --git a/packages/svelte/tests/parser-modern/samples/tag-type-identifier-probe-comment/output.json b/packages/svelte/tests/parser-modern/samples/tag-type-identifier-probe-comment/output.json
+new file mode 100644
+index 000000000000..4fe64687422b
+--- /dev/null
++++ b/packages/svelte/tests/parser-modern/samples/tag-type-identifier-probe-comment/output.json
+@@ -0,0 +1,92 @@
++{
++	"css": null,
++	"js": [],
++	"start": 0,
++	"end": 36,
++	"type": "Root",
++	"fragment": {
++		"type": "Fragment",
++		"nodes": [
++			{
++				"type": "ExpressionTag",
++				"start": 0,
++				"end": 36,
++				"expression": {
++					"type": "BinaryExpression",
++					"start": 1,
++					"end": 35,
++					"loc": {
++						"start": {
++							"line": 1,
++							"column": 1
++						},
++						"end": {
++							"line": 1,
++							"column": 35
++						}
++					},
++					"left": {
++						"type": "Identifier",
++						"start": 1,
++						"end": 5,
++						"loc": {
++							"start": {
++								"line": 1,
++								"column": 1
++							},
++							"end": {
++								"line": 1,
++								"column": 5
++							}
++						},
++						"name": "type"
++					},
++					"operator": "instanceof",
++					"right": {
++						"type": "Identifier",
++						"start": 29,
++						"end": 35,
++						"loc": {
++							"start": {
++								"line": 1,
++								"column": 29
++							},
++							"end": {
++								"line": 1,
++								"column": 35
++							}
++						},
++						"name": "Object",
++						"leadingComments": [
++							{
++								"type": "Block",
++								"value": " probe ",
++								"start": 17,
++								"end": 28
++							}
++						]
++					}
++				}
++			}
++		]
++	},
++	"options": null,
++	"comments": [
++		{
++			"type": "Block",
++			"value": " probe ",
++			"start": 17,
++			"end": 28,
++			"loc": {
++				"start": {
++					"line": 1,
++					"column": 17
++				},
++				"end": {
++					"line": 1,
++					"column": 28
++				}
++			}
++		}
++	]
++}
+diff --git a/packages/svelte/tests/runtime-runes/samples/declaration-tag-type-identifier/_config.js b/packages/svelte/tests/runtime-runes/samples/declaration-tag-type-identifier/_config.js
+new file mode 100644
+index 000000000000..52841fd48ddd
+--- /dev/null
++++ b/packages/svelte/tests/runtime-runes/samples/declaration-tag-type-identifier/_config.js
+@@ -0,0 +1,5 @@
++import { test } from '../../test';
++
++export default test({
++	html: `<ul><li>a</li><li>b</li><li>All types</li></ul><p data-cast="">cast</p><p data-generic-call="">generic-call</p><p data-generic-call-space="">generic-call-space</p>`
++});
+diff --git a/packages/svelte/tests/runtime-runes/samples/declaration-tag-type-identifier/main.svelte b/packages/svelte/tests/runtime-runes/samples/declaration-tag-type-identifier/main.svelte
+new file mode 100644
+index 000000000000..693a360f5520
+--- /dev/null
++++ b/packages/svelte/tests/runtime-runes/samples/declaration-tag-type-identifier/main.svelte
+@@ -0,0 +1,16 @@
++<script lang="ts">
++	const assetTypes = ['a', 'b', 'all'] as const;
++	function type<T>(x: T): T {
++		return x;
++	}
++</script>
++
++<ul>
++	{#each assetTypes as type (type)}
++		<li>{type === 'all' ? 'All types' : type}</li>
++	{/each}
++</ul>
++
++<p data-cast>{'cast' as string}</p>
++<p data-generic-call>{type<string>('generic-call')}</p>
++<p data-generic-call-space>{type <string>('generic-call-space')}</p>
+diff --git a/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-2/errors.json b/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-2/errors.json
+index 052636cddb47..c1603f413998 100644
+--- a/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-2/errors.json
++++ b/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-2/errors.json
+@@ -3,11 +3,11 @@
+ 		"code": "declaration_tag_invalid_type",
+ 		"message": "Declaration tags must be `let` or `const` declarations",
+ 		"start": {
+-			"line": 14,
++			"line": 25,
+ 			"column": 2
+ 		},
+ 		"end": {
+-			"line": 14,
++			"line": 25,
+ 			"column": 8
+ 		}
+ 	}
+diff --git a/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-2/input.svelte b/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-2/input.svelte
+index 129a8ac7ba9e..772c0931c090 100644
+--- a/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-2/input.svelte
++++ b/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-2/input.svelte
+@@ -10,6 +10,17 @@
+ 	{type ()}
+ 	{type [1]}
+ 	{type `tag`}
++	{type === 'all' ? 'All types' : type}
++	{type !== 'all'}
++	{type == 'all'}
++	{type != 'all'}
++	{type + 1}
++	{type - 1}
++	{type * 2}
++	{type / 2}
++	{type > 1}
++	{type instanceof Foo}
++	{type in foo}
+ 	<!-- ... this one should trigger though -->
+ 	{type foo = boolean}
+ {/if}
+diff --git a/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-generic/errors.json b/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-generic/errors.json
+new file mode 100644
+index 000000000000..a60f0055ae3b
+--- /dev/null
++++ b/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-generic/errors.json
+@@ -0,0 +1,14 @@
++[
++	{
++		"code": "declaration_tag_invalid_type",
++		"message": "Declaration tags must be `let` or `const` declarations",
++		"start": {
++			"line": 2,
++			"column": 1
++		},
++		"end": {
++			"line": 2,
++			"column": 33
++		}
++	}
++]
+diff --git a/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-generic/input.svelte b/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-generic/input.svelte
+new file mode 100644
+index 000000000000..2e5465b7869f
+--- /dev/null
++++ b/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-generic/input.svelte
+@@ -0,0 +1,2 @@
++<script lang="ts"></script>
++{type Foo<T extends string> = T[]}
+diff --git a/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-unicode/errors.json b/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-unicode/errors.json
+new file mode 100644
+index 000000000000..fb4ef28f3a24
+--- /dev/null
++++ b/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-unicode/errors.json
+@@ -0,0 +1,14 @@
++[
++	{
++		"code": "declaration_tag_invalid_type",
++		"message": "Declaration tags must be `let` or `const` declarations",
++		"start": {
++			"line": 2,
++			"column": 1
++		},
++		"end": {
++			"line": 2,
++			"column": 16
++		}
++	}
++]
+diff --git a/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-unicode/input.svelte b/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-unicode/input.svelte
+new file mode 100644
+index 000000000000..baae7078987f
+--- /dev/null
++++ b/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-unicode/input.svelte
+@@ -0,0 +1,2 @@
++<script lang="ts"></script>
++{type Ω = string}
+
+From b48ad46381a82e0c0c679c698c0a221f08fd39c7 Mon Sep 17 00:00:00 2001
+From: baseballyama <xydybaseball@gmail.com>
+Date: Sat, 30 May 2026 19:01:07 +0900
+Subject: [PATCH 2/5] test: remove redundant runtime test for `type` identifier
+ expressions
+
+Coverage is already provided by the validator samples (declaration-tag-invalid-type-2
+exercises the fall-through path; declaration-tag-invalid-type-unicode/-generic exercise
+the parse-confirmed type-alias error path).
+---
+ .../declaration-tag-type-identifier/_config.js   |  5 -----
+ .../declaration-tag-type-identifier/main.svelte  | 16 ----------------
+ .../errors.json                                  | 14 --------------
+ .../input.svelte                                 |  2 --
+ 4 files changed, 37 deletions(-)
+ delete mode 100644 packages/svelte/tests/runtime-runes/samples/declaration-tag-type-identifier/_config.js
+ delete mode 100644 packages/svelte/tests/runtime-runes/samples/declaration-tag-type-identifier/main.svelte
+ delete mode 100644 packages/svelte/tests/validator/samples/declaration-tag-invalid-type-generic/errors.json
+ delete mode 100644 packages/svelte/tests/validator/samples/declaration-tag-invalid-type-generic/input.svelte
+
+diff --git a/packages/svelte/tests/runtime-runes/samples/declaration-tag-type-identifier/_config.js b/packages/svelte/tests/runtime-runes/samples/declaration-tag-type-identifier/_config.js
+deleted file mode 100644
+index 52841fd48ddd..000000000000
+--- a/packages/svelte/tests/runtime-runes/samples/declaration-tag-type-identifier/_config.js
++++ /dev/null
+@@ -1,5 +0,0 @@
+-import { test } from '../../test';
+-
+-export default test({
+-	html: `<ul><li>a</li><li>b</li><li>All types</li></ul><p data-cast="">cast</p><p data-generic-call="">generic-call</p><p data-generic-call-space="">generic-call-space</p>`
+-});
+diff --git a/packages/svelte/tests/runtime-runes/samples/declaration-tag-type-identifier/main.svelte b/packages/svelte/tests/runtime-runes/samples/declaration-tag-type-identifier/main.svelte
+deleted file mode 100644
+index 693a360f5520..000000000000
+--- a/packages/svelte/tests/runtime-runes/samples/declaration-tag-type-identifier/main.svelte
++++ /dev/null
+@@ -1,16 +0,0 @@
+-<script lang="ts">
+-	const assetTypes = ['a', 'b', 'all'] as const;
+-	function type<T>(x: T): T {
+-		return x;
+-	}
+-</script>
+-
+-<ul>
+-	{#each assetTypes as type (type)}
+-		<li>{type === 'all' ? 'All types' : type}</li>
+-	{/each}
+-</ul>
+-
+-<p data-cast>{'cast' as string}</p>
+-<p data-generic-call>{type<string>('generic-call')}</p>
+-<p data-generic-call-space>{type <string>('generic-call-space')}</p>
+diff --git a/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-generic/errors.json b/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-generic/errors.json
+deleted file mode 100644
+index a60f0055ae3b..000000000000
+--- a/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-generic/errors.json
++++ /dev/null
+@@ -1,14 +0,0 @@
+-[
+-	{
+-		"code": "declaration_tag_invalid_type",
+-		"message": "Declaration tags must be `let` or `const` declarations",
+-		"start": {
+-			"line": 2,
+-			"column": 1
+-		},
+-		"end": {
+-			"line": 2,
+-			"column": 33
+-		}
+-	}
+-]
+diff --git a/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-generic/input.svelte b/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-generic/input.svelte
+deleted file mode 100644
+index 2e5465b7869f..000000000000
+--- a/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-generic/input.svelte
++++ /dev/null
+@@ -1,2 +0,0 @@
+-<script lang="ts"></script>
+-{type Foo<T extends string> = T[]}
+
+From 2cea42701fd76c4671ee1bdfd901455fc99b0eb7 Mon Sep 17 00:00:00 2001
+From: Simon Holthausen <simon.holthausen@vercel.com>
+Date: Sun, 31 May 2026 22:20:30 +0200
+Subject: [PATCH 3/5] simplify / fix "find matching bracket" bug around regex,
+ consolidate tests
+
+---
+ .../src/compiler/phases/1-parse/state/tag.js  | 43 ++++++++-----------
+ .../compiler/phases/1-parse/utils/bracket.js  | 11 ++++-
+ .../errors.json                               |  6 +--
+ .../input.svelte                              |  3 ++
+ .../errors.json                               | 14 ------
+ .../input.svelte                              |  2 -
+ 6 files changed, 33 insertions(+), 46 deletions(-)
+ delete mode 100644 packages/svelte/tests/validator/samples/declaration-tag-invalid-type-unicode/errors.json
+ delete mode 100644 packages/svelte/tests/validator/samples/declaration-tag-invalid-type-unicode/input.svelte
+
+diff --git a/packages/svelte/src/compiler/phases/1-parse/state/tag.js b/packages/svelte/src/compiler/phases/1-parse/state/tag.js
+index de171839206e..15c79e03538c 100644
+--- a/packages/svelte/src/compiler/phases/1-parse/state/tag.js
++++ b/packages/svelte/src/compiler/phases/1-parse/state/tag.js
+@@ -14,7 +14,7 @@ const regex_whitespace_with_closing_curly_brace = /\s*}/y;
+ const regex_supported_declaration = /(?:let|const)\b/y;
+ const regex_unsupported_declaration = /(?:var|interface|enum)\b/y;
+ // `type` is a contextual keyword; this is just a shape hint, confirmed by parsing.
+-const regex_maybe_type_declaration = /type\s+[\p{ID_Start}_$]/uy;
++const regex_maybe_type_declaration = /type\b/y;
+ 
+ const pointy_bois = { '<': '>' };
+ 
+@@ -77,29 +77,16 @@ function read_declaration(parser) {
+ 		e.declaration_tag_invalid_type({ start, end: start + unsupported.length });
+ 	}
+ 
+-	const type_alias_match = parser.match_regex(regex_maybe_type_declaration);
+-	if (type_alias_match) {
+-		const initial_comment_count = parser.root.comments.length;
+-		/** @type {{ type: string; start: number; end: number } | undefined} */
+-		let statement;
+-		try {
+-			statement = /** @type {{ type: string; start: number; end: number }} */ (
+-				/** @type {unknown} */ (parse_statement_at(parser, parser.template, start))
+-			);
+-		} catch {
+-			e.declaration_tag_invalid_type({ start, end: start + type_alias_match.length });
+-		}
+-		if (statement.type !== 'ExpressionStatement') {
+-			e.declaration_tag_invalid_type(statement);
+-		}
+-		// discard probe comments so `read_expression` doesn't re-add them
+-		parser.root.comments.length = initial_comment_count;
++	if (
++		!parser.match_regex(regex_supported_declaration) &&
++		// `type` is special, since it is not a reserved keyword and can be used
++		// as part of a valid expression. We gotta parse first and then see what it is.
++		!parser.match_regex(regex_maybe_type_declaration)
++	) {
+ 		return null;
+ 	}
+ 
+-	if (!parser.match_regex(regex_supported_declaration)) {
+-		return null;
+-	}
++	const initial_comment_count = parser.root.comments.length;
+ 
+ 	/** @type {import('estree').Statement | import('estree').VariableDeclaration} */
+ 	let declaration;
+@@ -137,10 +124,16 @@ function read_declaration(parser) {
+ 	}
+ 
+ 	if (declaration.type !== 'VariableDeclaration') {
+-		e.declaration_tag_invalid_type({
+-			start: declaration.start ?? start,
+-			end: declaration.end ?? parser.index
+-		});
++		if (declaration.type === 'ExpressionStatement') {
++			parser.root.comments.length = initial_comment_count; // Else they show up duplicated
++			return null;
++		} else {
++			// This is a TSTypeAliasDeclaration
++			e.declaration_tag_invalid_type({
++				start: declaration.start ?? start,
++				end: declaration.end ?? parser.index
++			});
++		}
+ 	}
+ 
+ 	// TODO support using
+diff --git a/packages/svelte/src/compiler/phases/1-parse/utils/bracket.js b/packages/svelte/src/compiler/phases/1-parse/utils/bracket.js
+index 63fbc68fb322..567d999a59ce 100644
+--- a/packages/svelte/src/compiler/phases/1-parse/utils/bracket.js
++++ b/packages/svelte/src/compiler/phases/1-parse/utils/bracket.js
+@@ -39,7 +39,9 @@ function find_string_end(string, search_start_index, string_start_char) {
+  * @returns {number} The index of the end of this regex expression, or `Infinity` if not found.
+  */
+ function find_regex_end(string, search_start_index) {
+-	return find_unescaped_char(string, search_start_index, '/');
++	const slash = find_unescaped_char(string, search_start_index, '/');
++	const eol = find_unescaped_char(string, search_start_index, '\n');
++	return slash < eol ? slash : Infinity;
+ }
+ 
+ /**
+@@ -114,7 +116,12 @@ export function find_matching_bracket(template, index, open) {
+ 					i = infinity_if_negative(template.indexOf('*/', i + 1)) + '*/'.length;
+ 					continue;
+ 				}
+-				i = find_regex_end(template, i + 1) + '/'.length;
++				const end = find_regex_end(template, i + 1) + '/'.length;
++				if (end === Infinity) {
++					i++;
++				} else {
++					i = end;
++				}
+ 				continue;
+ 			}
+ 			default: {
+diff --git a/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-2/errors.json b/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-2/errors.json
+index c1603f413998..a375ac577665 100644
+--- a/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-2/errors.json
++++ b/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-2/errors.json
+@@ -3,12 +3,12 @@
+ 		"code": "declaration_tag_invalid_type",
+ 		"message": "Declaration tags must be `let` or `const` declarations",
+ 		"start": {
+-			"line": 25,
++			"line": 28,
+ 			"column": 2
+ 		},
+ 		"end": {
+-			"line": 25,
+-			"column": 8
++			"line": 28,
++			"column": 20
+ 		}
+ 	}
+ ]
+diff --git a/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-2/input.svelte b/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-2/input.svelte
+index 772c0931c090..88295cad582e 100644
+--- a/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-2/input.svelte
++++ b/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-2/input.svelte
+@@ -1,3 +1,5 @@
++<script lang="ts"></script>
++
+ {#if true}
+ 	<!-- check that these doesn't trigger already -->
+ 	{type}
+@@ -20,6 +22,7 @@
+ 	{type / 2}
+ 	{type > 1}
+ 	{type instanceof Foo}
++	{type instanceof /* comment */ Object}
+ 	{type in foo}
+ 	<!-- ... this one should trigger though -->
+ 	{type foo = boolean}
+diff --git a/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-unicode/errors.json b/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-unicode/errors.json
+deleted file mode 100644
+index fb4ef28f3a24..000000000000
+--- a/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-unicode/errors.json
++++ /dev/null
+@@ -1,14 +0,0 @@
+-[
+-	{
+-		"code": "declaration_tag_invalid_type",
+-		"message": "Declaration tags must be `let` or `const` declarations",
+-		"start": {
+-			"line": 2,
+-			"column": 1
+-		},
+-		"end": {
+-			"line": 2,
+-			"column": 16
+-		}
+-	}
+-]
+diff --git a/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-unicode/input.svelte b/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-unicode/input.svelte
+deleted file mode 100644
+index baae7078987f..000000000000
+--- a/packages/svelte/tests/validator/samples/declaration-tag-invalid-type-unicode/input.svelte
++++ /dev/null
+@@ -1,2 +0,0 @@
+-<script lang="ts"></script>
+-{type Ω = string}
+
+From 00479b91174407470bd73e5cc505c413d7b68376 Mon Sep 17 00:00:00 2001
+From: baseballyama <xydybaseball@gmail.com>
+Date: Mon, 1 Jun 2026 09:09:01 +0900
+Subject: [PATCH 4/5] add test
+
+---
+ .../loose-declaration-tag/input.svelte        |  1 +
+ .../samples/loose-declaration-tag/output.json | 38 +++++++++++++++++--
+ 2 files changed, 36 insertions(+), 3 deletions(-)
+
+diff --git a/packages/svelte/tests/parser-modern/samples/loose-declaration-tag/input.svelte b/packages/svelte/tests/parser-modern/samples/loose-declaration-tag/input.svelte
+index f2225316381c..036d5283f5a2 100644
+--- a/packages/svelte/tests/parser-modern/samples/loose-declaration-tag/input.svelte
++++ b/packages/svelte/tests/parser-modern/samples/loose-declaration-tag/input.svelte
+@@ -1,4 +1,5 @@
+ {#if true}
+ 	{let }
+ 	{const x = }
++	{let x = a / }
+ {/if}
+diff --git a/packages/svelte/tests/parser-modern/samples/loose-declaration-tag/output.json b/packages/svelte/tests/parser-modern/samples/loose-declaration-tag/output.json
+index 882e5f34f15b..270d16af94c8 100644
+--- a/packages/svelte/tests/parser-modern/samples/loose-declaration-tag/output.json
++++ b/packages/svelte/tests/parser-modern/samples/loose-declaration-tag/output.json
+@@ -2,7 +2,7 @@
+ 	"css": null,
+ 	"js": [],
+ 	"start": 0,
+-	"end": 38,
++	"end": 54,
+ 	"type": "Root",
+ 	"fragment": {
+ 		"type": "Fragment",
+@@ -11,7 +11,7 @@
+ 				"type": "IfBlock",
+ 				"elseif": false,
+ 				"start": 0,
+-				"end": 38,
++				"end": 54,
+ 				"test": {
+ 					"type": "Literal",
+ 					"start": 5,
+@@ -99,7 +99,39 @@
+ 						{
+ 							"type": "Text",
+ 							"start": 32,
+-							"end": 33,
++							"end": 34,
++							"raw": "\n\t",
++							"data": "\n\t"
++						},
++						{
++							"type": "DeclarationTag",
++							"start": 34,
++							"end": 48,
++							"declaration": {
++								"type": "VariableDeclaration",
++								"kind": "let",
++								"declarations": [
++									{
++										"type": "VariableDeclarator",
++										"id": {
++											"type": "Identifier",
++											"name": "",
++											"start": 47,
++											"end": 47
++										},
++										"init": null,
++										"start": 47,
++										"end": 47
++									}
++								],
++								"start": 35,
++								"end": 47
++							}
++						},
++						{
++							"type": "Text",
++							"start": 48,
++							"end": 49,
+ 							"raw": "\n",
+ 							"data": "\n"
+ 						}
+
+From cca40b14d35d600fdf3f76b25532cd6407c5ba67 Mon Sep 17 00:00:00 2001
+From: Simon H <5968653+dummdidumm@users.noreply.github.com>
+Date: Mon, 1 Jun 2026 10:03:27 +0200
+Subject: [PATCH 5/5] Update .changeset/fix-type-identifier-in-tag.md
+
+---
+ .changeset/fix-type-identifier-in-tag.md | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/.changeset/fix-type-identifier-in-tag.md b/.changeset/fix-type-identifier-in-tag.md
+index 8e8884353652..90e03da80ff7 100644
+--- a/.changeset/fix-type-identifier-in-tag.md
++++ b/.changeset/fix-type-identifier-in-tag.md
+@@ -2,4 +2,4 @@
+ 'svelte': patch
+ ---
+ 
+-fix: don't mistake expressions starting with `type` (e.g. `{type === 'all' ? a : b}`) for TypeScript `type` declarations in tags
++fix: more robust parsing of declaration tags with regards to `type`
