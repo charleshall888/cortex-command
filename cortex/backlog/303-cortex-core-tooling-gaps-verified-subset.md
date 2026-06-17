@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: cda99005-e1bb-4c34-8d34-9c6c7f84f1b3
 title: cortex-core tooling gaps (verified subset)
-status: backlog
+status: complete
 priority: medium
 type: epic
 created: 2026-06-14
-updated: 2026-06-14
+updated: 2026-06-15
 tags: ['cortex-core-tooling-gaps']
 discovery_source: cortex/research/cortex-core-tooling-gaps/research.md
 ---

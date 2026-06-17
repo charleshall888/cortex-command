@@ -2,14 +2,16 @@
 schema_version: "1"
 uuid: 6eebd147-4dfe-4c69-b410-55dedd5535e8
 title: Generate a cross-lifecycle phase index wired to morning-review
-status: backlog
+status: abandoned
 priority: medium
 type: feature
 created: 2026-06-14
-updated: 2026-06-14
+updated: 2026-06-15
 parent: "303"
 tags: ['cortex-core-tooling-gaps']
 discovery_source: cortex/research/cortex-core-tooling-gaps/research.md
+complexity: complex
+criticality: high
 ---
 ## Why
 
@@ -38,3 +40,14 @@ It reuses the existing phase-inference reducer that already maps artifact presen
 - `cortex_command/backlog/generate_index.py:327-331` — the atomic-write / byte-stable index pattern to mirror
 - `cortex_command/overnight/report.py` — the morning report, the named consumer to wire the index into
 - `cortex_command/hooks/scan_lifecycle.py:907` — the archive/sessions skip convention to respect
+
+## Closed — won't-do (2026-06-15)
+
+Closed during refine (Clarify→Research) after a value pressure-test. Decided not to build. Rationale:
+
+- **No broken root to fix.** The "125 lifecycle dirs" pain is *intentional* history retention, not neglect: `complete.md:274` explicitly says completed lifecycle dirs are "preserved as project history. Do not delete or archive." Measured: 115 of 125 active dirs already carry a `feature_complete` event; only ~10 are in-flight. The index would mostly catalog deliberately-retained history.
+- **Thin ROI / zero consumers.** `report.py` reads no cross-lifecycle view; the dashboard scans per-feature on demand; nobody queries completed dirs by phase. Live work (~10 dirs) is already surfaced by the SessionStart scanner (by phase, stale-filtered) and dashboard swim-lanes. The ticket had to *manufacture* a consumer ("requires a named consumer … the morning report"), which has no existing seam and conflicts with epic 303's standalone-navigation framing.
+- **Premise contradicts a prior decision.** The Edges ask for a *committed* index + regenerate-and-diff gate, but `untrack-backlog-index-cache` (commit `9875226c`, `.gitignore:38-39`) deliberately **gitignored** the analogous backlog index because committed aggregates rewritten by every writer cause divergent-copy conflicts across parallel sessions. A cross-lifecycle index has higher write fan-out.
+- **The only true root fix (archiving completed lifecycles, candidate B4) was deliberately deferred** and carries a real blast radius: 106 backlog items reference ~125 live lifecycle paths that a move would break (hence `cortex-archive-rewrite-paths`).
+
+If revived: build the minimal form only — a gitignored, regenerate-on-demand, standalone index (slug + base phase, `-paused` stripped per `generate_index.py:179`; exclude stale/phantom = "every live lifecycle"), no morning-report wiring — and reconsider it jointly with B4 (archive verb), since "keep history + index it" vs "archive it" is one design decision, not two.
