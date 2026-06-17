@@ -354,6 +354,13 @@ _CONFUSED_PATTERNS = (
 )
 _RATE_LIMIT_PATTERNS = ("rate_limit_error", "rate limit", "too many requests")
 _MAX_STDERR_LINES = 100
+# Secondary byte cap on a single captured stderr line. The line cap alone lets a
+# single pathological multi-megabyte line through into every downstream sink
+# (event log, brain prompt, committed report). Bound the post-redaction line by
+# total bytes too, truncating tail-anchored so the most-recent (and usually
+# most-diagnostic) bytes survive. 64 KiB comfortably holds a real traceback while
+# capping a runaway line.
+_MAX_STDERR_BYTES = 65536
 
 # ---------------------------------------------------------------------------
 # Stderr secret redaction (cue-anchored, value-level — see #309 spec R1)
@@ -725,6 +732,14 @@ async def dispatch_task(
 
     def _on_stderr(line: str) -> None:
         line = _redact(line)
+        # Secondary byte cap (the line cap is the secondary line-count bound).
+        # Measure the post-redaction line so the cap reflects what is actually
+        # stored. Truncate tail-anchored — keep the most-recent bytes, which are
+        # usually the most diagnostic — at a UTF-8 character boundary so the
+        # stored slice is never a partial multibyte sequence.
+        encoded = line.encode("utf-8", "surrogatepass")
+        if len(encoded) > _MAX_STDERR_BYTES:
+            line = encoded[-_MAX_STDERR_BYTES:].decode("utf-8", "ignore")
         if len(_stderr_lines) < _MAX_STDERR_LINES:
             _stderr_lines.append(line)
 

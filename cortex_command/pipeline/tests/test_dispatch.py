@@ -834,6 +834,23 @@ class TestRedactOverRedactionGuard(unittest.TestCase):
                 self.assertEqual(out, line, "benign cued-keyword text was redacted")
 
 
+class TestStderrByteCap(unittest.TestCase):
+    """A single >cap-byte stderr line is bounded by total bytes (#309 R2)."""
+
+    def test_single_oversize_line_capped_to_byte_bound(self):
+        # One stderr line far larger than the byte cap. The line-count cap (100
+        # lines) alone would let this pathological multi-megabyte line through.
+        oversize = "x" * (_dispatch_module._MAX_STDERR_BYTES * 4)
+        out = _capture_stderr_via_dispatch(oversize)
+        self.assertLessEqual(
+            len(out.encode("utf-8")),
+            _dispatch_module._MAX_STDERR_BYTES,
+            "stored stderr tail exceeded the byte cap",
+        )
+        # Tail-anchored: the kept slice is the end of the emitted line.
+        self.assertTrue(oversize.endswith(out), "byte cap was not tail-anchored")
+
+
 # ---------------------------------------------------------------------------
 # Tests: dispatch_task runtime validation guards (R3, R14)
 # ---------------------------------------------------------------------------
