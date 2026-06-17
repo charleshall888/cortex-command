@@ -5,3 +5,13 @@
 {"ts": "2026-06-17T22:02:48Z", "event": "spec_approved", "feature": "overnight-task-failures-produce-empty-captured"}
 {"ts": "2026-06-17T22:38:58Z", "event": "plan_approved", "feature": "overnight-task-failures-produce-empty-captured"}
 {"ts": "2026-06-17T22:38:58Z", "event": "phase_transition", "feature": "overnight-task-failures-produce-empty-captured", "from": "plan", "to": "implement"}
+{"ts": "2026-06-17T22:51:11Z", "event": "batch_dispatch", "feature": "overnight-task-failures-produce-empty-captured", "batch": 0, "tasks": [1]}
+{"ts": "2026-06-17T22:55:52Z", "event": "batch_dispatch", "feature": "overnight-task-failures-produce-empty-captured", "batch": 1, "tasks": [3, 2]}
+{"ts": "2026-06-17T22:58:43Z", "event": "batch_dispatch", "feature": "overnight-task-failures-produce-empty-captured", "batch": 2, "tasks": [4]}
+{"ts": "2026-06-17T23:02:10Z", "event": "batch_dispatch", "feature": "overnight-task-failures-produce-empty-captured", "batch": 3, "tasks": [5]}
+{"ts": "2026-06-17T23:05:40Z", "event": "batch_dispatch", "feature": "overnight-task-failures-produce-empty-captured", "batch": 4, "tasks": [6]}
+{"ts": "2026-06-17T23:09:08Z", "event": "batch_dispatch", "feature": "overnight-task-failures-produce-empty-captured", "batch": 5, "tasks": [7]}
+{"ts": "2026-06-17T23:13:55Z", "event": "batch_dispatch", "feature": "overnight-task-failures-produce-empty-captured", "batch": 6, "tasks": [8]}
+{"ts": "2026-06-17T23:18:54Z", "event": "batch_dispatch", "feature": "overnight-task-failures-produce-empty-captured", "batch": 7, "tasks": [9, 10]}
+{"ts": "2026-06-17T23:21:30Z", "event": "batch_dispatch", "feature": "overnight-task-failures-produce-empty-captured", "batch": 8, "tasks": [11]}
+{"ts": "2026-06-17T23:43:03Z", "event": "phase_transition", "feature": "overnight-task-failures-produce-empty-captured", "tier": "complex", "from": "implement", "to": "review"}
