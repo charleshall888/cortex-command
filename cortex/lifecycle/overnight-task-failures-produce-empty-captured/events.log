@@ -1,0 +1,7 @@
+{"schema_version": 1, "ts": "2026-06-17T20:17:28Z", "event": "lifecycle_start", "feature": "overnight-task-failures-produce-empty-captured", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-17T20:22:37Z", "event": "clarify_critic", "feature": "overnight-task-failures-produce-empty-captured", "parent_epic_loaded": false, "findings_count": 6, "dispositions": {"apply": 3, "dismiss": 3, "ask": 0}, "applied_fixes_count": 3, "dismissals_count": 3, "status": "ok"}
+{"ts": "2026-06-17T20:36:23Z", "event": "complexity_override", "feature": "overnight-task-failures-produce-empty-captured", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-06-17T20:36:23Z", "event": "criticality_override", "feature": "overnight-task-failures-produce-empty-captured", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-06-17T22:02:48Z", "event": "spec_approved", "feature": "overnight-task-failures-produce-empty-captured"}
+{"ts": "2026-06-17T22:38:58Z", "event": "plan_approved", "feature": "overnight-task-failures-produce-empty-captured"}
+{"ts": "2026-06-17T22:38:58Z", "event": "phase_transition", "feature": "overnight-task-failures-produce-empty-captured", "from": "plan", "to": "implement"}
