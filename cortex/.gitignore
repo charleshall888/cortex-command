@@ -26,6 +26,7 @@ lifecycle/**/.lock
 lifecycle/**/agent-activity.jsonl
 lifecycle/**/learnings/recovery-log.md
 lifecycle/overnight-events*.log
+lifecycle/**/pipeline-events.log
 lifecycle/metrics.json
 lifecycle/sessions/
 
