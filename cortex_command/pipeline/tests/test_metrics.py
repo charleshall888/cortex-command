@@ -289,6 +289,81 @@ class TestPairDispatchEvents(unittest.TestCase):
         self.assertEqual(rec["model"], "sonnet")
         self.assertFalse(rec["untiered"])
 
+    # ------------------------------------------------------------------
+    # (h) dispatch_error carrying the new diagnostics fields still pairs
+    #     (#309 field-additive extension: cwd/child_stderr/exit_code)
+    # ------------------------------------------------------------------
+
+    def test_dispatch_error_with_cwd_still_pairs(self):
+        """A dispatch_error carrying the #309 diagnostics fields
+        (``cwd``, ``child_stderr``, ``exit_code``) still pairs to its
+        preceding start.
+
+        Pairing keys on event TYPE via ``_DISPATCH_PAIRABLE``, not field
+        presence, so the additive fields must not perturb the match. The
+        new fields must also NOT trip the daytime field-presence
+        discriminator ``_DAYTIME_DISPATCH_FIELDS = {mode, outcome, pr_url}``
+        — that gate only fires for ``dispatch_complete``, but this guard
+        asserts the row is paired (outcome="error"), never dropped.
+        """
+        error_with_cwd = self._error("feat-diag", error_type="ProcessError")
+        error_with_cwd["child_stderr"] = "Traceback (most recent call last):\n  ValueError: boom"
+        error_with_cwd["exit_code"] = 1
+        error_with_cwd["cwd"] = "/Users/agent/worktrees/feat-diag"
+        events = [
+            self._start("feat-diag", complexity="complex", model="opus"),
+            error_with_cwd,
+        ]
+        result = self._fn(events)
+
+        # The error still pairs to its start — exactly one record, not dropped.
+        self.assertEqual(len(result), 1)
+        rec = result[0]
+        self.assertEqual(rec["feature"], "feat-diag")
+        self.assertEqual(rec["outcome"], "error")
+        self.assertEqual(rec["error_type"], "ProcessError")
+        self.assertEqual(rec["tier"], "complex")
+        self.assertEqual(rec["model"], "opus")
+        # Matched start (not orphaned), so untiered must be False.
+        self.assertFalse(rec["untiered"])
+
+    def test_dispatch_error_cwd_does_not_trip_daytime_discriminator(self):
+        """The ``cwd`` field added to ``dispatch_error`` is not one of the
+        daytime field-presence sentinels, so the row is never skipped.
+
+        Guards against a future accidental overlap between the diagnostics
+        field names and ``_DAYTIME_DISPATCH_FIELDS``: an orphan
+        dispatch_error carrying ``cwd`` must still emit an (untiered) record
+        — proving the daytime-skip path (which only short-circuits
+        dispatch_complete) does not swallow it.
+        """
+        from cortex_command.pipeline.metrics import _DAYTIME_DISPATCH_FIELDS
+
+        orphan_error = self._error("feat-orphan-diag", error_type="ProcessError")
+        orphan_error["child_stderr"] = "boom"
+        orphan_error["exit_code"] = 1
+        orphan_error["cwd"] = "/tmp/wt"
+
+        # None of the new diagnostics field names collide with the daytime
+        # sentinels — the additive extension is safe by construction.
+        self.assertFalse(_DAYTIME_DISPATCH_FIELDS & orphan_error.keys())
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            result = self._fn([orphan_error])
+
+        # Orphan error still produces a record (untiered) — not silently dropped.
+        self.assertEqual(len(result), 1)
+        rec = result[0]
+        self.assertTrue(rec["untiered"])
+        self.assertEqual(rec["outcome"], "error")
+        self.assertEqual(rec["error_type"], "ProcessError")
+        user_warnings = [w for w in caught if issubclass(w.category, UserWarning)]
+        self.assertTrue(
+            len(user_warnings) >= 1,
+            "Expected a UserWarning for the orphan dispatch_error",
+        )
+
 
 class TestSinceFlag(unittest.TestCase):
     """Tests for filter_events_since and _parse_since."""
