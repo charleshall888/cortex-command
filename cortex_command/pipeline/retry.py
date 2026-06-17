@@ -26,6 +26,7 @@ from typing import Optional
 
 from cortex_command.pipeline.dispatch import (
     dispatch_task,
+    DispatchDiagnostics,
     ERROR_RECOVERY,
     MODEL_ESCALATION_LADDER,
     Skill,
@@ -55,6 +56,12 @@ class RetryResult:
         idempotency_skipped: True if the task was skipped because an
             idempotency token confirmed it already completed in a prior
             session. All normal code paths leave this False.
+        last_dispatch_diagnostics: Captured failure diagnostics from the
+            final dispatch attempt, threaded write-once from the same
+            ``result`` binding that supplies ``final_output``. None on the
+            success exit and on the idempotency-skip path; on failure exits
+            it carries ``result.diagnostics`` (itself None except on the
+            two exception error paths in dispatch_task).
     """
 
     success: bool
@@ -65,6 +72,7 @@ class RetryResult:
     total_cost_usd: float = 0.0
     idempotency_skipped: bool = False
     error_type: Optional[str] = None
+    last_dispatch_diagnostics: Optional[DispatchDiagnostics] = None
 
 
 # ---------------------------------------------------------------------------
@@ -346,6 +354,7 @@ async def retry_task(
                 learnings_path=learnings_path,
                 paused=True,
                 total_cost_usd=total_cost,
+                last_dispatch_diagnostics=result.diagnostics,
             )
 
         # Clean up stale locks before deciding on retry strategy.
@@ -375,6 +384,7 @@ async def retry_task(
                 paused=True,
                 total_cost_usd=total_cost,
                 error_type=error_type,
+                last_dispatch_diagnostics=result.diagnostics,
             )
 
         elif recovery_path == "pause_session":
@@ -397,6 +407,7 @@ async def retry_task(
                 paused=True,
                 total_cost_usd=total_cost,
                 error_type=error_type,
+                last_dispatch_diagnostics=result.diagnostics,
             )
 
         elif recovery_path == "escalate":
@@ -424,6 +435,7 @@ async def retry_task(
                     learnings_path=learnings_path,
                     paused=True,
                     total_cost_usd=total_cost,
+                    last_dispatch_diagnostics=result.diagnostics,
                 )
 
             if log_path:
@@ -457,4 +469,5 @@ async def retry_task(
         learnings_path=learnings_path,
         paused=True,
         total_cost_usd=total_cost,
+        last_dispatch_diagnostics=result.diagnostics,
     )
