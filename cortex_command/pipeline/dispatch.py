@@ -355,6 +355,87 @@ _CONFUSED_PATTERNS = (
 _RATE_LIMIT_PATTERNS = ("rate_limit_error", "rate limit", "too many requests")
 _MAX_STDERR_LINES = 100
 
+# ---------------------------------------------------------------------------
+# Stderr secret redaction (cue-anchored, value-level — see #309 spec R1)
+#
+# Each pattern is anchored on a distinguishing prefix or keyword so it cannot
+# match arbitrary high-entropy diagnostic text (git SHAs, UUIDs, content
+# hashes, base64 fixtures) — the content this feature exists to preserve.
+# There is deliberately NO prefixless fixed-length blob matcher: such a rule
+# is regex-indistinguishable from those benign blobs and would defeat the
+# feature's purpose.
+#
+# This enumerated allowlist is defense-in-depth, NOT complete: other stably
+# cued families (Google `AIza`, GitLab `glpat-`) and all prefixless secrets
+# are out of scope and may still reach a downstream sink.
+# ---------------------------------------------------------------------------
+
+# Secret-shape floor for keyword-delimiter values: a length floor (≥16 chars)
+# over a secret-ish charset, so short benign tokens (parser `RPAREN`, `EOF`,
+# `changeme`) and spaced English (`Bearer of bad news`) fall through.
+_SECRET_VALUE = r"[A-Za-z0-9_\-./+=]{16,}"
+
+# (i) Prefix-cued shapes — unambiguous distinguishing prefix, near-zero
+#     over-redaction risk.
+# (ii) Keyword-delimiter shapes — keyword ALSO appears in benign stderr, so
+#      the match is constrained to secret-shaped values (a quoted value OR an
+#      unquoted run clearing the secret-shape floor).
+_REDACTION_RULES: tuple[tuple[re.Pattern[str], str], ...] = (
+    # --- Prefix-cued shapes (i) ---
+    # Anthropic API keys (kept from the original sk-ant- rule).
+    (re.compile(r"sk-ant-[a-zA-Z0-9_-]+"), "sk-ant-<redacted>"),
+    # GitHub personal-access / OAuth / server / refresh tokens.
+    (re.compile(r"gh[porsu]_[A-Za-z0-9]+"), "<redacted-github-token>"),
+    # Slack bot / user tokens.
+    (re.compile(r"xox[bp]-[A-Za-z0-9-]+"), "<redacted-slack-token>"),
+    # AWS access key IDs: AKIA/ASIA + 16-char tail.
+    (re.compile(r"(?:AKIA|ASIA)[A-Z0-9]{16}"), "<redacted-aws-key>"),
+    # URL userinfo: scheme://user:pass@host -> keep user, redact password.
+    (
+        re.compile(r"(?P<scheme>[a-zA-Z][a-zA-Z0-9+.\-]*://[^\s:/@]+:)[^\s@/]+@"),
+        r"\g<scheme><redacted>@",
+    ),
+    # --- Keyword-delimiter shapes (ii), constrained to secret-shaped values ---
+    # Bearer <token> — only a secret-shaped value (not spaced English).
+    (
+        re.compile(r"(?P<cue>Bearer\s+)" + _SECRET_VALUE),
+        r"\g<cue><redacted>",
+    ),
+    # password=/token= delimiters. The value must clear the secret-shape floor
+    # (≥16 secret-charset chars), quoted or unquoted, so short benign tokens
+    # (`token='EOF'`, `password=changeme`) fall through unredacted.
+    (
+        re.compile(
+            r"(?P<key>\b(?:password|token)\s*=\s*)"
+            r"(?P<q>[\"'])(?P<val>" + _SECRET_VALUE + r")(?P=q)"
+        ),
+        r"\g<key>\g<q><redacted>\g<q>",
+    ),
+    (
+        re.compile(r"(?P<key>\b(?:password|token)\s*=\s*)" + _SECRET_VALUE),
+        r"\g<key><redacted>",
+    ),
+)
+
+# Multi-line-secret cue: a per-line value regex cannot span a PEM block, so on
+# a cued line mask conservatively at line level. (Residual gap — a token split
+# across stream-buffer flushes — is an accepted defense-in-depth limit.)
+_PEM_CUE = re.compile(r"-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----")
+
+
+def _redact(line: str) -> str:
+    """Scrub cue-anchored credential shapes from a single stderr line.
+
+    Defense-in-depth: an enumerated allowlist of distinguishing prefixes and
+    secret-shaped keyword-delimiter values, never a prefixless blob matcher.
+    Benign high-entropy diagnostics (git SHAs, UUIDs, base64 fixtures) survive.
+    """
+    if _PEM_CUE.search(line):
+        return "<redacted-private-key-block>"
+    for pattern, replacement in _REDACTION_RULES:
+        line = pattern.sub(replacement, line)
+    return line
+
 
 def classify_error(error: Exception, output: str = "") -> str:
     """Classify an exception into a dispatch error type.
@@ -643,7 +724,7 @@ async def dispatch_task(
     _stderr_lines: list[str] = []
 
     def _on_stderr(line: str) -> None:
-        line = re.sub(r'sk-ant-[a-zA-Z0-9_-]+', 'sk-ant-<redacted>', line)
+        line = _redact(line)
         if len(_stderr_lines) < _MAX_STDERR_LINES:
             _stderr_lines.append(line)
 

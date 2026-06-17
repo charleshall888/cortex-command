@@ -680,6 +680,161 @@ class TestDispatchTaskStderrRedaction(unittest.IsolatedAsyncioTestCase):
 
 
 # ---------------------------------------------------------------------------
+# Tests: cue-anchored value-level redaction + over-redaction guard (#309 R1)
+# ---------------------------------------------------------------------------
+
+
+def _capture_stderr_via_dispatch(emitted_line: str) -> str:
+    """Drive `emitted_line` through dispatch_task's real `_on_stderr` capture
+    path and return the single stored (post-redaction) stderr line."""
+
+    import asyncio
+
+    captured: dict = {}
+
+    async def mock_query(**kwargs):
+        options = kwargs.get("options")
+        captured["options"] = options
+        if options is not None and options.stderr is not None:
+            options.stderr(emitted_line)
+        result_msg = ResultMessage(
+            subtype="success",
+            duration_ms=100,
+            duration_api_ms=80,
+            is_error=False,
+            num_turns=1,
+            session_id="sess-redact",
+            total_cost_usd=0.0,
+        )
+        async for m in _async_gen(result_msg):
+            yield m
+
+    async def _run() -> str:
+        with tempfile.TemporaryDirectory() as tmp:
+            worktree = Path(tmp) / "feature-worktree"
+            worktree.mkdir()
+            with patch.object(_dispatch_module, "query", mock_query):
+                await _dispatch_module.dispatch_task(
+                    feature="redact-test",
+                    task="do something",
+                    worktree_path=worktree,
+                    complexity="simple",
+                    system_prompt="",
+                    skill="implement",
+                )
+        on_stderr = captured["options"].stderr
+        for name, cell in zip(
+            on_stderr.__code__.co_freevars, on_stderr.__closure__ or ()
+        ):
+            if name == "_stderr_lines":
+                lines = cell.cell_contents
+                return lines[-1] if lines else ""
+        raise AssertionError("_stderr_lines closure cell not found")
+
+    return asyncio.run(_run())
+
+
+class TestRedactCueAnchored(unittest.TestCase):
+    """Cue-anchored credential shapes are scrubbed value-level (#309 R1a)."""
+
+    def test_prefix_cued_shapes_redacted(self):
+        cases = [
+            # (emitted line, marker present after redact, secret absent after redact)
+            (
+                "fatal: auth failed token ghp_AbCdEf0123456789xyz tail",
+                "<redacted-github-token>",
+                "ghp_AbCdEf0123456789xyz",
+            ),
+            (
+                "oauth gho_0123456789abcdefABCDEF done",
+                "<redacted-github-token>",
+                "gho_0123456789abcdefABCDEF",
+            ),
+            (
+                "slack xoxb-FAKE-FIXTURE-NOT-A-REAL-TOKEN posted",
+                "<redacted-slack-token>",
+                "xoxb-FAKE-FIXTURE-NOT-A-REAL-TOKEN",
+            ),
+            (
+                "creds AKIAIOSFODNN7EXAMPLE region us-east-1",
+                "<redacted-aws-key>",
+                "AKIAIOSFODNN7EXAMPLE",
+            ),
+            (
+                "clone https://alice:s3cr3tP4ssw0rdXYZ@github.com/o/r.git failed",
+                "<redacted>",
+                "s3cr3tP4ssw0rdXYZ",
+            ),
+        ]
+        for line, marker, secret in cases:
+            with self.subTest(line=line):
+                out = _capture_stderr_via_dispatch(line)
+                self.assertIn(marker, out)
+                self.assertNotIn(secret, out)
+
+    def test_keyword_delimiter_secret_shaped_values_redacted(self):
+        # token="<≥16-char secret>"
+        out = _capture_stderr_via_dispatch(
+            'auth header token="abcDEF0123456789ghIJ" rejected'
+        )
+        self.assertNotIn("abcDEF0123456789ghIJ", out)
+        self.assertIn("token=", out)
+        self.assertIn("rejected", out)
+
+        # password=<long unquoted secret>
+        out = _capture_stderr_via_dispatch(
+            "connect failed password=Sup3rSecretValue123456 host=db"
+        )
+        self.assertNotIn("Sup3rSecretValue123456", out)
+        self.assertIn("password=", out)
+        self.assertIn("host=db", out)
+
+        # Bearer <secret>
+        out = _capture_stderr_via_dispatch(
+            "401 Bearer eyJ0eXAabcdef0123456789ABCDEF denied"
+        )
+        self.assertNotIn("eyJ0eXAabcdef0123456789ABCDEF", out)
+        self.assertIn("denied", out)
+
+    def test_pem_private_key_cue_masks_line_level(self):
+        out = _capture_stderr_via_dispatch(
+            "key: -----BEGIN RSA PRIVATE KEY-----MIIEpAIBAAKCAQ"
+        )
+        self.assertIn("<redacted-private-key-block>", out)
+        self.assertNotIn("MIIEpAIBAAKCAQ", out)
+
+
+class TestRedactOverRedactionGuard(unittest.TestCase):
+    """Benign high-entropy / cued-keyword diagnostics survive redaction (#309 R1b)."""
+
+    def test_prefixless_blobs_survive(self):
+        cases = [
+            # 40-char hex git SHA
+            "merge base da39a3ee5e6b4b0d3255bfef95601890afd80709 resolved",
+            # UUID
+            "trace id 550e8400-e29b-41d4-a716-446655440000 emitted",
+            # base64 fixture (prefixless blob)
+            "fixture YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXowMTIzNDU= loaded",
+        ]
+        for line in cases:
+            with self.subTest(line=line):
+                out = _capture_stderr_via_dispatch(line)
+                self.assertEqual(out, line, "benign high-entropy text was redacted")
+
+    def test_cued_keyword_benign_context_survives(self):
+        cases = [
+            "unexpected token=RPAREN at position 12",
+            "expected token='EOF' but found ';'",
+            "Bearer of bad news: the build is broken",
+            "config error password=changeme is too weak",
+        ]
+        for line in cases:
+            with self.subTest(line=line):
+                out = _capture_stderr_via_dispatch(line)
+                self.assertEqual(out, line, "benign cued-keyword text was redacted")
+
+
+# ---------------------------------------------------------------------------
 # Tests: dispatch_task runtime validation guards (R3, R14)
 # ---------------------------------------------------------------------------
 
