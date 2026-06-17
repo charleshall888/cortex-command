@@ -621,6 +621,81 @@ class TestDispatchTaskBudgetExhausted(unittest.IsolatedAsyncioTestCase):
 
 
 # ---------------------------------------------------------------------------
+# Tests: dispatch_task DispatchDiagnostics bundle (#309 R4)
+# ---------------------------------------------------------------------------
+
+
+class TestDispatchTaskDiagnostics(unittest.IsolatedAsyncioTestCase):
+    """DispatchResult.diagnostics carries captured stderr/exit_code/cwd on the
+    exception error paths, and is None on the success path."""
+
+    async def test_diagnostics_populated_on_process_error(self):
+        """A ProcessError dispatch carries the captured stderr, exit_code, and
+        cwd in DispatchResult.diagnostics."""
+        with tempfile.TemporaryDirectory() as tmp:
+            worktree = Path(tmp) / "feature-worktree"
+            worktree.mkdir()
+
+            async def mock_query(**kwargs):
+                options = kwargs.get("options")
+                # Drive a known stderr line through the real _on_stderr capture.
+                if options is not None and options.stderr is not None:
+                    options.stderr("child process failed: boom")
+                exc = ProcessError("child exited non-zero")
+                exc.exit_code = 42
+                raise exc
+                yield  # pragma: no cover — makes this an async generator
+
+            with patch.object(_dispatch_module, "query", mock_query):
+                result = await _dispatch_module.dispatch_task(
+                    feature="diagnostics-test",
+                    task="do something",
+                    worktree_path=worktree,
+                    complexity="simple",
+                    system_prompt="",
+                    skill="implement",
+                )
+
+            self.assertFalse(result.success)
+            self.assertIsNotNone(result.diagnostics)
+            self.assertEqual(result.diagnostics.child_stderr, "child process failed: boom")
+            self.assertEqual(result.diagnostics.exit_code, 42)
+            self.assertEqual(result.diagnostics.cwd, str(worktree))
+
+    async def test_diagnostics_none_on_success(self):
+        """A successful dispatch leaves DispatchResult.diagnostics as None."""
+        with tempfile.TemporaryDirectory() as tmp:
+            worktree = Path(tmp) / "feature-worktree"
+            worktree.mkdir()
+
+            async def mock_query(**kwargs):
+                result_msg = ResultMessage(
+                    subtype="success",
+                    duration_ms=100,
+                    duration_api_ms=80,
+                    is_error=False,
+                    num_turns=1,
+                    session_id="sess-diagnostics-ok",
+                    total_cost_usd=0.1,
+                )
+                async for m in _async_gen(result_msg):
+                    yield m
+
+            with patch.object(_dispatch_module, "query", mock_query):
+                result = await _dispatch_module.dispatch_task(
+                    feature="diagnostics-ok-test",
+                    task="do something",
+                    worktree_path=worktree,
+                    complexity="simple",
+                    system_prompt="",
+                    skill="implement",
+                )
+
+            self.assertTrue(result.success)
+            self.assertIsNone(result.diagnostics)
+
+
+# ---------------------------------------------------------------------------
 # Tests: dispatch_task _on_stderr redaction of sk-ant-* tokens
 # ---------------------------------------------------------------------------
 

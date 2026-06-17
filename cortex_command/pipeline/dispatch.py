@@ -297,6 +297,25 @@ _ALLOWED_TOOLS = ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
 # ---------------------------------------------------------------------------
 
 @dataclass
+class DispatchDiagnostics:
+    """Captured failure diagnostics from a dispatched agent task.
+
+    Threaded through the result carriers to the brain and onto the
+    task_output event the morning report reads. Populated only on the
+    exception error paths; None elsewhere.
+
+    Attributes:
+        child_stderr: Redacted/capped child stderr, else None.
+        exit_code: Process exit code if available, else None.
+        cwd: Working directory the agent ran in, else None.
+    """
+
+    child_stderr: Optional[str] = None
+    exit_code: Optional[int] = None
+    cwd: Optional[str] = None
+
+
+@dataclass
 class DispatchResult:
     """Structured result from a dispatched agent task.
 
@@ -309,6 +328,8 @@ class DispatchResult:
             budget_exhausted, api_rate_limit, unknown.
         error_detail: Human-readable error detail string, else None.
         cost_usd: Total cost reported by the SDK, else None.
+        diagnostics: Captured failure diagnostics, populated only on the
+            exception error paths, else None.
     """
 
     success: bool
@@ -316,6 +337,7 @@ class DispatchResult:
     error_type: Optional[str] = None
     error_detail: Optional[str] = None
     cost_usd: Optional[float] = None
+    diagnostics: Optional["DispatchDiagnostics"] = None
 
 
 # ---------------------------------------------------------------------------
@@ -906,6 +928,7 @@ async def dispatch_task(
                 "error_detail": error_detail,
                 "child_stderr": child_stderr,
                 "exit_code": exit_code,
+                "cwd": str(worktree_path),
             })
 
         return DispatchResult(
@@ -914,6 +937,11 @@ async def dispatch_task(
             error_type=error_type,
             error_detail=error_detail,
             cost_usd=cost_usd,
+            diagnostics=DispatchDiagnostics(
+                child_stderr=child_stderr,
+                exit_code=exit_code,
+                cwd=str(worktree_path),
+            ),
         )
 
     except Exception as exc:
@@ -929,6 +957,7 @@ async def dispatch_task(
                 "error_detail": error_detail,
                 "child_stderr": child_stderr,
                 "exit_code": exit_code,
+                "cwd": str(worktree_path),
             })
 
         return DispatchResult(
@@ -937,4 +966,9 @@ async def dispatch_task(
             error_type="unknown",
             error_detail=error_detail,
             cost_usd=cost_usd,
+            diagnostics=DispatchDiagnostics(
+                child_stderr=child_stderr,
+                exit_code=exit_code,
+                cwd=str(worktree_path),
+            ),
         )
