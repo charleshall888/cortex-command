@@ -36,6 +36,7 @@ from cortex_command.overnight.deferral import (
 )
 from cortex_command.overnight.events import _default_log_path, read_events
 from cortex_command.overnight import fail_markers as fail_markers_module
+from cortex_command.overnight import status
 from cortex_command.overnight.fail_markers import FailedFire, FireAdvisory
 from cortex_command.overnight.state import OvernightState, _default_state_path, load_state, session_dir
 
@@ -97,6 +98,23 @@ class ReportData:
     scheduled_fire_failures: list[FailedFire] = field(default_factory=list)
     scheduled_fire_advisories: list[FireAdvisory] = field(default_factory=list)
     sandbox_denials: dict[str, int] = field(default_factory=dict)
+    # --- orchestrator-crash recovery enrichment (spec §R4, Task 6) ---
+    # These are populated only for a crash-recovery report (paused_reason ==
+    # "orchestrator_crash"); they stay empty/None for every other report so the
+    # existing budget_exhausted/api_rate_limit output is byte-for-byte unchanged.
+    #
+    # crash_death_ts: last event ts in overnight-events.log — the orchestrator's
+    #   apparent moment of death.
+    # crash_last_pipeline_event_ts: last event ts in pipeline-events.log, when
+    #   available, so the report can convey the gap (workers may have kept
+    #   running/logging after the orchestrator stopped consuming).
+    # crash_reap: the orphan-reap outcome counts read from the
+    #   recovery-complete.json sidecar (absent during recovery's own first
+    #   render — the sidecar is written after the report — so the reap line is
+    #   omitted defensively when this is None).
+    crash_death_ts: Optional[datetime] = None
+    crash_last_pipeline_event_ts: Optional[datetime] = None
+    crash_reap: Optional[dict[str, Any]] = None
 
 
 def collect_report_data(
@@ -228,7 +246,100 @@ def collect_report_data(
     data.scheduled_fire_failures = combined_failures
     data.scheduled_fire_advisories = advisories
 
+    # Orchestrator-crash recovery enrichment (spec §R4, Task 6). Only collected
+    # for a crash-recovery report so every other report's data is unchanged.
+    if data.state is not None and getattr(
+        data.state, "paused_reason", None
+    ) == "orchestrator_crash":
+        _collect_crash_recovery_fields(
+            data,
+            events_path=events_path,
+            pipeline_events_path=pipeline_events_path,
+            session_id=data.session_id,
+            lifecycle_root=lifecycle_root,
+            results_dir=results_dir,
+        )
+
     return data
+
+
+def _collect_crash_recovery_fields(
+    data: ReportData,
+    *,
+    events_path: Path,
+    pipeline_events_path: Optional[Path],
+    session_id: str,
+    lifecycle_root: Path,
+    results_dir: Optional[Path],
+) -> None:
+    """Populate the crash-recovery enrichment fields on ``data`` (spec §R4).
+
+    Derives, from disk artifacts only:
+
+      * ``crash_death_ts`` — the last event ts in ``overnight-events.log`` (the
+        orchestrator's apparent death moment), via
+        :func:`status._read_last_event_ts`.
+      * ``crash_last_pipeline_event_ts`` — the last event ts in
+        ``pipeline-events.log`` when present (so the banner can convey the gap
+        vs the death ts — workers may keep logging after the orchestrator
+        stops).
+      * ``crash_reap`` — the orphan-reap counts recorded in the
+        ``recovery-complete.json`` sidecar, when present. Absent during
+        recovery's own first render (the sidecar is written after the report),
+        so the reap line is omitted defensively when this stays ``None``.
+
+    All reads are best-effort: any failure leaves the field ``None``/unset so a
+    partial report still renders.
+    """
+    # Death ts: last event in overnight-events.log.
+    try:
+        data.crash_death_ts = status._read_last_event_ts(events_path)
+    except Exception:
+        data.crash_death_ts = None
+
+    # Pipeline-events last ts (gap reference), when the log is available.
+    if pipeline_events_path is not None:
+        try:
+            data.crash_last_pipeline_event_ts = status._read_last_event_ts(
+                pipeline_events_path
+            )
+        except Exception:
+            data.crash_last_pipeline_event_ts = None
+
+    # Reap outcome from the recovery-complete sidecar (optional/defensive).
+    sidecar = _resolve_recovery_sidecar(
+        session_id=session_id,
+        lifecycle_root=lifecycle_root,
+        results_dir=results_dir,
+    )
+    if sidecar is not None and sidecar.exists():
+        try:
+            payload = json.loads(sidecar.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            payload = None
+        if isinstance(payload, dict) and isinstance(payload.get("reap"), dict):
+            data.crash_reap = payload["reap"]
+
+
+def _resolve_recovery_sidecar(
+    *,
+    session_id: str,
+    lifecycle_root: Path,
+    results_dir: Optional[Path],
+) -> Optional[Path]:
+    """Return the ``recovery-complete.json`` path for this session, if locatable.
+
+    Prefers ``results_dir`` (the session dir collect_report_data already
+    resolved for batch results); falls back to deriving the session dir from
+    ``session_id`` under ``lifecycle_root``. Returns ``None`` when neither
+    yields a directory.
+    """
+    if results_dir is not None:
+        return results_dir / "recovery-complete.json"
+    if session_id:
+        sdir = session_dir(session_id, lifecycle_root=lifecycle_root)
+        return sdir / "recovery-complete.json"
+    return None
 
 
 def _today() -> str:
@@ -475,9 +586,86 @@ def render_executive_summary(data: ReportData) -> str:
             "remain queued for resume; consult `pipeline-events.log` for retry context."
         )
         lines.append("")
+    elif getattr(data.state, "paused_reason", None) == "orchestrator_crash":
+        lines.extend(_render_orchestrator_crash_banner(data))
     lines.append("")
 
     return "\n".join(lines)
+
+
+def _render_orchestrator_crash_banner(data: ReportData) -> list[str]:
+    """Render the interrupted-session banner for an orchestrator crash (spec §R4).
+
+    Emitted only when ``state.paused_reason == "orchestrator_crash"`` — the
+    out-of-process recovery core (``recovery.recover_session``) sets that reason
+    before generating this report, so this branch fires and conveys, from disk
+    artifacts:
+
+      * the **death timestamp** (the last ``overnight-events.log`` event ts —
+        the orchestrator's apparent moment of death), plus the **gap** vs the
+        last ``pipeline-events.log`` event ts when available (workers can keep
+        logging after the orchestrator stops consuming);
+      * the count of features left **non-terminal** (``running``/``pending``)
+        when the orchestrator died;
+      * the **orphan-reap outcome** (when the recovery sidecar is present —
+        omitted defensively otherwise, since recovery writes the sidecar after
+        this report on its own first render).
+
+    Additive: returns the banner lines for the crash case only; every other
+    ``paused_reason`` is unchanged.
+    """
+    state = data.state
+    features = state.features if state is not None else {}
+    non_terminal = sum(
+        1 for f in features.values() if f.status in ("running", "pending")
+    )
+
+    death = data.crash_death_ts
+    death_str = death.isoformat() if death is not None else "unknown"
+
+    out: list[str] = []
+    out.append(
+        "> **Interrupted Session: orchestrator crash.** The overnight runner "
+        "died mid-session and was recovered out-of-process; this is a partial "
+        "report."
+    )
+    out.append(
+        f"> - Orchestrator last alive (death timestamp): {death_str} "
+        "(last `overnight-events.log` event)."
+    )
+
+    # Event-gap line: only when both timestamps are available.
+    pipeline_ts = data.crash_last_pipeline_event_ts
+    if death is not None and pipeline_ts is not None:
+        gap_seconds = int(abs((pipeline_ts - death).total_seconds()))
+        out.append(
+            f"> - Last `pipeline-events.log` event: {pipeline_ts.isoformat()} "
+            f"(gap vs death: {gap_seconds}s)."
+        )
+
+    out.append(
+        f"> - Features left non-terminal (`running`/`pending`): {non_terminal} "
+        "— routed through interrupted-feature recovery on resume."
+    )
+
+    # Orphan-reap outcome — defensive: only when the sidecar recorded it.
+    reap = data.crash_reap
+    if isinstance(reap, dict):
+        matched = reap.get("matched", 0)
+        killed = reap.get("killed", 0)
+        unreaped = reap.get("unreaped", 0)
+        line = (
+            f"> - Orphan workers reaped: {matched} matched"
+        )
+        if killed:
+            line += f", {killed} force-killed"
+        if unreaped:
+            line += f", {unreaped} un-reaped (surfaced, not broad-matched)"
+        line += "."
+        out.append(line)
+
+    out.append("")
+    return out
 
 
 def _compute_duration(events: list[dict]) -> str:

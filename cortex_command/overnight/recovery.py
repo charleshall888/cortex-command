@@ -538,11 +538,15 @@ def recover_session(session_dir: Path, *, trigger: str) -> RecoveryResult:
 
         # Step 7: write the recovery-complete sidecar atomically as the final,
         # race-authoritative completion marker (a separate file a concurrent
-        # resume save_state cannot overwrite).
+        # resume save_state cannot overwrite). The reap counts are threaded in
+        # so a later report re-render can surface the orphan-reap outcome line
+        # (Task 6); recovery's own report at step 4 ran before this write, so
+        # that render omits the reap line defensively.
         _write_recovery_complete_sidecar(
             session_dir,
             session_id=session_id,
             trigger=trigger,
+            reap=reap,
         )
 
         # Completion event (best-effort: swallow an unregistered-name ValueError
@@ -585,6 +589,7 @@ def _write_recovery_complete_sidecar(
     *,
     session_id: str,
     trigger: str,
+    reap: Optional[ReapOutcome] = None,
 ) -> None:
     """Atomically write the ``recovery-complete.json`` completion sidecar.
 
@@ -594,11 +599,24 @@ def _write_recovery_complete_sidecar(
     ``save_state`` (which rewrites only ``overnight-state.json``) cannot clobber
     it. Task 5 adds the idempotency short-circuit that keys on this file's
     existence.
+
+    The optional ``reap`` outcome is recorded under a ``"reap"`` key (counts
+    only) so a later morning-report re-render can surface the orphan-reap
+    outcome line (Task 6). The morning report's dependency on this field is
+    optional/defensive — an absent sidecar or absent ``reap`` key just omits
+    that one banner line.
     """
-    payload = {
+    payload: dict = {
         "session_id": session_id,
         "trigger": trigger,
         "paused_reason": ORCHESTRATOR_CRASH_PAUSED_REASON,
         "recovered_at": datetime.now(timezone.utc).isoformat(),
     }
+    if reap is not None:
+        payload["reap"] = {
+            "matched": reap.matched_count,
+            "terminated": reap.terminated_count,
+            "killed": reap.killed_count,
+            "unreaped": reap.unreaped_count,
+        }
     ipc._atomic_write_json(session_dir / RECOVERY_COMPLETE_SIDECAR, payload)
