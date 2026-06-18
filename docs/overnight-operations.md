@@ -321,6 +321,15 @@ A **crash-loop resume guard** on `cortex overnight start` refuses to auto-resume
 
 **Who watches the watchman.** The guardian deliberately does **not** use a bare `KeepAlive`. Its `StartInterval` periodic re-fire is itself the restart-on-crash supervision: if a guardian invocation crashes, launchd re-launches it at the next interval regardless, so the cadence doubles as the liveness backstop. `ThrottleInterval` is the crash-loop floor that bounds how fast a persistently-failing guardian can re-fire. The guardian is bounded by design — a single host-level agent, a false-positive-free primary signal, and the manual verb as a backstop — so the supervision layer does not itself become an unbounded new failure surface.
 
+### The caffeinate-sleep limitation (macOS)
+
+The runner holds a `caffeinate -i -w <runner_pid>` idle-sleep assertion (`runner.py:139`) that is bound to the runner's own pid: `caffeinate` exits the moment the runner dies. So a **hard-dead** runner (SIGKILL/OOM) takes its sleep assertion with it, the Mac is then free to idle-sleep, and a `StartInterval` launchd job does not fire while the machine is asleep. The two detection cases therefore have different latency floors:
+
+- **Alive-but-wedged** (caffeinate still up, host kept awake): the guardian catches it **promptly**, on its next `StartInterval` tick.
+- **Hard-dead** (caffeinate gone, host free to sleep): the guardian's automatic detection is **bounded to the next machine wake** — if the Mac sleeps before the next tick, recovery waits until something wakes it. This is still strictly better than the status-quo "stuck forever," but it is not prompt.
+
+For the hard-dead case the **immediate** path is the manual `cortex overnight recover` verb: an operator who notices a stuck session runs it on demand without waiting for a wake. A future **should-have** (not committed to here) is a guardian-maintained `caffeinate` held while any session is `executing`, which would shrink the hard-dead detection latency — weighed against the cost of keeping the host awake for the duration of every run.
+
 ---
 
 ## Tuning
