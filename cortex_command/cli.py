@@ -81,6 +81,74 @@ def _dispatch_overnight_schedule(args: argparse.Namespace) -> int:
     return cli_handler.handle_schedule(args)
 
 
+def _dispatch_overnight_recover(args: argparse.Namespace) -> int:
+    """Implement ``cortex overnight recover [--session <id>]`` (spec §R7).
+
+    The operator-facing manual trigger for the out-of-process recovery core
+    — the on-demand path when the host-level guardian is not installed. It is
+    writer-authorized and is deliberately NOT folded into the read-only
+    ``cortex overnight status`` verb (``observability.md:93/99``): recovery
+    writes originate only from this verb and the guardian.
+
+    Target resolution:
+      * ``--session <id>`` selects a specific session, resolved (with R17
+        validation + realpath containment) against
+        ``cortex/lifecycle/sessions/``.
+      * Otherwise the active-session pointer is read — the same source
+        ``status`` reads — and its ``session_dir`` is used.
+
+    Self-heals / no-ops cleanly: when there is no resolvable session, or the
+    recovery core re-confirms nothing needs recovery (``action == "noop"``),
+    a "nothing to recover" message is printed and the verb exits 0 — it does
+    not error.
+    """
+    from pathlib import Path
+
+    from cortex_command.overnight import ipc, recovery, session_validation
+    from cortex_command.overnight.cli_handler import _resolve_repo_path
+
+    session_id = getattr(args, "session", None)
+
+    if session_id is not None:
+        repo_path = _resolve_repo_path()
+        lifecycle_sessions_root = repo_path / "cortex/lifecycle" / "sessions"
+        try:
+            session_dir = session_validation.resolve_session_dir(
+                session_id, lifecycle_sessions_root
+            )
+        except ValueError:
+            print("invalid session id", file=sys.stderr, flush=True)
+            return 1
+        if not (session_dir / "overnight-state.json").exists():
+            print(f"nothing to recover: no session {session_id}")
+            return 0
+    else:
+        active = ipc.read_active_session()
+        session_dir_str = (
+            active.get("session_dir") if isinstance(active, dict) else None
+        )
+        if not isinstance(session_dir_str, str):
+            print("nothing to recover: no active session")
+            return 0
+        session_dir = Path(session_dir_str)
+        if not (session_dir / "overnight-state.json").exists():
+            print("nothing to recover: no active session")
+            return 0
+
+    result = recovery.recover_session(session_dir, trigger="manual")
+
+    if result.action == "recovered":
+        reaped = result.reap.matched_count if result.reap is not None else 0
+        print(
+            f"recovered session {result.session_id}: "
+            f"transitioned to paused, reaped {reaped} orphan(s)"
+        )
+        return 0
+
+    print("nothing to recover")
+    return 0
+
+
 def _dispatch_overnight_launch(args: argparse.Namespace) -> int:
     from cortex_command.overnight import cli_handler
 
@@ -652,6 +720,32 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Output format (default: human)",
     )
     list_sessions.set_defaults(func=_dispatch_overnight_list_sessions)
+
+    # cortex overnight recover (R7) — operator-facing manual trigger for the
+    # out-of-process recovery core. Writer-authorized (NOT folded into the
+    # read-only ``status`` verb): drives a pid-dead ``executing`` session to a
+    # clean ``paused`` end-state via ``recovery.recover_session(...,
+    # trigger="manual")``. The on-demand path when the host-level guardian is
+    # not installed; self-heals / reports cleanly when nothing needs recovery.
+    recover = overnight_sub.add_parser(
+        "recover",
+        help="Recover a crashed (pid-dead) overnight session",
+        description=(
+            "Drive a pid-dead 'executing' overnight session to a clean "
+            "'paused' end-state: transition, partial morning report, reap "
+            "session-matched orphans, and clear the stale runner.pid. The "
+            "on-demand recovery path for when the guardian is not installed. "
+            "Self-heals / reports cleanly when there is nothing to recover."
+        ),
+    )
+    recover.add_argument(
+        "--session",
+        dest="session",
+        type=str,
+        default=None,
+        help="Session-id to recover (default: active-session pointer)",
+    )
+    recover.set_defaults(func=_dispatch_overnight_recover)
 
     # cortex overnight schedule (R1) — schedule an overnight session via
     # the macOS LaunchAgent backend. Mirrors the structural shape of the
