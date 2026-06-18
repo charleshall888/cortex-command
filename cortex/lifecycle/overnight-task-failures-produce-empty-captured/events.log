@@ -15,3 +15,6 @@
 {"ts": "2026-06-17T23:18:54Z", "event": "batch_dispatch", "feature": "overnight-task-failures-produce-empty-captured", "batch": 7, "tasks": [9, 10]}
 {"ts": "2026-06-17T23:21:30Z", "event": "batch_dispatch", "feature": "overnight-task-failures-produce-empty-captured", "batch": 8, "tasks": [11]}
 {"ts": "2026-06-17T23:43:03Z", "event": "phase_transition", "feature": "overnight-task-failures-produce-empty-captured", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-06-17T23:57:24Z", "event": "review_verdict", "feature": "overnight-task-failures-produce-empty-captured", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
+{"ts": "2026-06-17T23:57:54Z", "event": "phase_transition", "feature": "overnight-task-failures-produce-empty-captured", "from": "review", "to": "complete"}
+{"ts": "2026-06-18T00:06:28Z", "event": "feature_complete", "feature": "overnight-task-failures-produce-empty-captured", "tasks_total": 11, "rework_cycles": 0, "merge_anchor": "merge"}

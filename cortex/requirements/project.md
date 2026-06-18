@@ -53,6 +53,7 @@ Agentic workflow toolkit for AI-assisted software development on Claude Code: sk
 - **Maintainability through simplicity**: Complexity is managed by iteratively trimming skills/workflows.
 - **Iterative improvement**: Architecture tolerates exploratory development; design emerges through use.
 - **Defense-in-depth for permissions**: `settings.json` ships minimal allow, comprehensive deny, sandbox on. For sandbox-excluded commands (git, gh, WebFetch) the allow/deny list is sole enforcement — keep global allows read-only. Overnight runs `--dangerously-skip-permissions`; sandbox is the critical surface.
+- **Defense-in-depth for captured subprocess output**: Child stderr captured for diagnostics (`pipeline/dispatch.py:_redact`) is scrubbed at source with a cue-anchored credential allowlist (prefix-cued: `sk-ant-`/`gh?_`/`xox[bp]-`/AWS `AKIA`/`ASIA`; keyword-delimiter secret-shaped: `Bearer`/`password=`/`token=`/URL-userinfo; PEM line-level) before it reaches the brain prompt or the morning report committed to local `main`. The allowlist is defense-in-depth, NOT complete (prefixless secrets and uncued families may pass); it deliberately uses no prefixless fixed-length blob matcher so benign high-entropy diagnostics (SHAs, UUIDs, base64) survive. → #309.
 - **Destructive operations preserve uncommitted state**: Cleanup scripts removing user-visible artifacts (worktrees, branches, sessions) SKIP on uncommitted state. Inline destructive sequences extract into named scripts.
 
 ## Project Boundaries
