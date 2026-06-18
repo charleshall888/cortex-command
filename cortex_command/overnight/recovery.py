@@ -32,6 +32,8 @@ This module performs no writes.
 
 from __future__ import annotations
 
+import fcntl
+import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -385,19 +387,36 @@ def _lifecycle_root(session_dir: Path) -> Path:
 def recover_session(session_dir: Path, *, trigger: str) -> RecoveryResult:
     """Drive a pid-dead ``executing`` session to a clean ``paused`` end-state.
 
-    This is the writer-authorized recovery core (spec §R2). It re-implements
+    This is the writer-authorized recovery core (spec §R2/§R3). It re-implements
     pause/report/reap/clear from the pure ``state``/``ipc``/``report``
     primitives — it MUST NOT call the runner's ``_transition_paused`` /
     ``_generate_morning_report``, which require an in-process
     ``RunnerCoordination`` threading lock unavailable out-of-process.
 
-    Performs, in order:
+    **Concurrency + idempotency (spec §R3).** The whole detect→recover sequence
+    runs under :func:`ipc._acquire_takeover_lock` (a 5s-budget flock, released
+    in a ``finally``). A second invocation on an already-recovered session is a
+    no-op via a layered guard checked *under the lock*, in order:
+
+      * **(a) sidecar guard** — if the :data:`RECOVERY_COMPLETE_SIDECAR` file
+        already exists, return a no-op immediately. This is the sole
+        race-authoritative completion marker: a separate file a concurrent
+        resume's ``save_state`` rewrite of ``overnight-state.json`` cannot
+        clobber (the ``paused_reason`` stays ``"orchestrator_crash"``, never a
+        ``"_recovered"`` flip).
+      * **(b) phase guard** — re-load state *after* the lock is held and
+        short-circuit to a no-op if ``phase in ("paused", "complete")``. This
+        catch-first guard is checked before any ``state.transition`` call so we
+        never rely on ``transition`` raising ``ValueError`` to detect an
+        illegal re-pause.
+
+    With the lock held, performs, in order:
 
       1. **Re-load state from disk and re-confirm the predicate.** The mutated
-         ``state`` object is this fresh load (Task 5 wraps a takeover lock + an
-         early no-op guard AROUND this call; the post-lock load lives here). If
-         :func:`needs_recovery_pid_death` is ``False`` at re-confirm, return a
-         no-op :class:`RecoveryResult` without mutating anything.
+         ``state`` object is this post-lock load (a stale pre-lock read could
+         slip past both guards). If :func:`needs_recovery_pid_death` is ``False``
+         at re-confirm, return a no-op :class:`RecoveryResult` without mutating
+         anything.
       2. ``state.transition(state, "paused")`` + set
          ``paused_reason = "orchestrator_crash"`` + increment
          ``crash_recovery_attempts`` + atomic ``save_state``.
@@ -425,97 +444,140 @@ def recover_session(session_dir: Path, *, trigger: str) -> RecoveryResult:
 
     Returns:
         A :class:`RecoveryResult` describing what was done.
+
+    Raises:
+        ConcurrentRunnerLockTimeoutError: If the takeover lock cannot be
+            acquired within its 5s budget (a concurrent recovery/resume holds
+            it).
     """
     state_path = session_dir / "overnight-state.json"
 
-    # Step 1: re-load state from disk and re-confirm the predicate. The mutated
-    # state object MUST be this post-lock load (Task 5 wraps the lock around
-    # this call), not a pre-lock read.
-    overnight_state = state_mod.load_state(state_path)
-    session_id = overnight_state.session_id
+    # Acquire the per-session takeover lock so the whole detect→recover sequence
+    # runs serialized against a concurrent recovery; released in the finally via
+    # flock(LOCK_UN) + os.close (the helper returns a held fd, NOT a context
+    # manager). Raises ConcurrentRunnerLockTimeoutError on its 5s budget.
+    lock_fd = ipc._acquire_takeover_lock(session_dir)
+    try:
+        # Idempotency guard (a): the race-authoritative completion sidecar
+        # already exists → recovery already ran; second invocation is a no-op.
+        # Checked FIRST, under the lock, before any state load or mutation.
+        if (session_dir / RECOVERY_COMPLETE_SIDECAR).exists():
+            return RecoveryResult(
+                session_id="",
+                action="noop",
+                trigger=trigger,
+            )
 
-    if not needs_recovery_pid_death(session_dir):
-        return RecoveryResult(
+        # Step 1: re-load state from disk UNDER THE LOCK. The mutated state
+        # object MUST be this post-lock load (a stale pre-lock read could slip
+        # past the phase guard below and the transition call).
+        overnight_state = state_mod.load_state(state_path)
+        session_id = overnight_state.session_id
+
+        # Idempotency guard (b): short-circuit if the session is already in a
+        # terminal/paused phase. Catch-first — we do NOT rely on
+        # state.transition raising ValueError for an illegal re-pause.
+        if overnight_state.phase in ("paused", "complete"):
+            return RecoveryResult(
+                session_id=session_id,
+                action="noop",
+                trigger=trigger,
+            )
+
+        # Re-confirm the predicate under the lock; a session whose runner pid is
+        # now alive (or phase no longer executing) needs no recovery.
+        if not needs_recovery_pid_death(session_dir):
+            return RecoveryResult(
+                session_id=session_id,
+                action="noop",
+                trigger=trigger,
+            )
+
+        # Step 2: transition executing -> paused, record the reason, bump the
+        # crash-recovery counter, and persist atomically.
+        state_mod.transition(overnight_state, "paused")
+        overnight_state.paused_reason = ORCHESTRATOR_CRASH_PAUSED_REASON
+        overnight_state.crash_recovery_attempts += 1
+        state_mod.save_state(overnight_state, state_path)
+
+        # Step 3: retain the active-session pointer at the new phase (no clear).
+        # A no-op if the pointer is absent or names a different session.
+        ipc.update_active_session_phase(session_id, "paused")
+
+        # Step 4: write the partial morning report. Both the session-specific
+        # and the latest-copy paths are written; pass the lifecycle root
+        # explicitly so the write stays anchored to this session dir's tree.
+        # (Task 6 enriches the banner via the new orchestrator_crash render
+        # branch.)
+        lifecycle_root = _lifecycle_root(session_dir)
+        project_root = lifecycle_root.parent.parent
+        report_path: Optional[Path] = None
+        latest_report_path: Optional[Path] = None
+        try:
+            written = report.generate_and_write_report(
+                state_path=state_path,
+                events_path=lifecycle_root / "overnight-events.log",
+                report_dir=session_dir,
+                project_root=project_root,
+            )
+            report_path = session_dir / "morning-report.md"
+            latest_report_path = lifecycle_root / "morning-report.md"
+            if written is not None:
+                report_path = Path(written)
+        except Exception:
+            # The report is partial-safe but best-effort: a render failure must
+            # not block the transition/reap/clear that already succeeded.
+            pass
+
+        # Step 5: reap the dead session's orphaned workers by env-marker match.
+        reap = reap_session_orphans(session_id)
+
+        # Step 6: clear the stale runner.pid (CAS — only unlinks on session
+        # match).
+        ipc.clear_runner_pid(session_dir, expected_session_id=session_id)
+
+        # Step 7: write the recovery-complete sidecar atomically as the final,
+        # race-authoritative completion marker (a separate file a concurrent
+        # resume save_state cannot overwrite).
+        _write_recovery_complete_sidecar(
+            session_dir,
             session_id=session_id,
-            action="noop",
             trigger=trigger,
         )
 
-    # Step 2: transition executing -> paused, record the reason, bump the
-    # crash-recovery counter, and persist atomically.
-    state_mod.transition(overnight_state, "paused")
-    overnight_state.paused_reason = ORCHESTRATOR_CRASH_PAUSED_REASON
-    overnight_state.crash_recovery_attempts += 1
-    state_mod.save_state(overnight_state, state_path)
+        # Completion event (best-effort: swallow an unregistered-name ValueError
+        # so a not-yet-registered EVENT_TYPES entry never aborts a completed
+        # recovery).
+        try:
+            events.log_event(
+                ORCHESTRATOR_CRASH_RECOVERED_EVENT,
+                overnight_state.current_round,
+                details={
+                    "trigger": trigger,
+                    "reaped": reap.matched_count,
+                    "killed": reap.killed_count,
+                    "unreaped": reap.unreaped_count,
+                },
+                log_path=lifecycle_root / "overnight-events.log",
+            )
+        except Exception:
+            pass
 
-    # Step 3: retain the active-session pointer at the new phase (no clear). A
-    # no-op if the pointer is absent or names a different session.
-    ipc.update_active_session_phase(session_id, "paused")
-
-    # Step 4: write the partial morning report. Both the session-specific and
-    # the latest-copy paths are written; pass the lifecycle root explicitly so
-    # the write stays anchored to this session dir's tree. (Task 6 enriches the
-    # banner via the new orchestrator_crash render branch.)
-    lifecycle_root = _lifecycle_root(session_dir)
-    project_root = lifecycle_root.parent.parent
-    report_path: Optional[Path] = None
-    latest_report_path: Optional[Path] = None
-    try:
-        written = report.generate_and_write_report(
-            state_path=state_path,
-            events_path=lifecycle_root / "overnight-events.log",
-            report_dir=session_dir,
-            project_root=project_root,
+        return RecoveryResult(
+            session_id=session_id,
+            action="recovered",
+            trigger=trigger,
+            reap=reap,
+            report_path=report_path,
+            latest_report_path=latest_report_path,
         )
-        report_path = session_dir / "morning-report.md"
-        latest_report_path = lifecycle_root / "morning-report.md"
-        if written is not None:
-            report_path = Path(written)
-    except Exception:
-        # The report is partial-safe but best-effort: a render failure must not
-        # block the transition/reap/clear that already succeeded.
-        pass
-
-    # Step 5: reap the dead session's orphaned workers by env-marker match.
-    reap = reap_session_orphans(session_id)
-
-    # Step 6: clear the stale runner.pid (CAS — only unlinks on session match).
-    ipc.clear_runner_pid(session_dir, expected_session_id=session_id)
-
-    # Step 7: write the recovery-complete sidecar atomically as the final,
-    # race-authoritative completion marker (a separate file a concurrent resume
-    # save_state cannot overwrite).
-    _write_recovery_complete_sidecar(
-        session_dir,
-        session_id=session_id,
-        trigger=trigger,
-    )
-
-    # Completion event (best-effort: swallow an unregistered-name ValueError so
-    # a not-yet-registered EVENT_TYPES entry never aborts a completed recovery).
-    try:
-        events.log_event(
-            ORCHESTRATOR_CRASH_RECOVERED_EVENT,
-            overnight_state.current_round,
-            details={
-                "trigger": trigger,
-                "reaped": reap.matched_count,
-                "killed": reap.killed_count,
-                "unreaped": reap.unreaped_count,
-            },
-            log_path=lifecycle_root / "overnight-events.log",
-        )
-    except Exception:
-        pass
-
-    return RecoveryResult(
-        session_id=session_id,
-        action="recovered",
-        trigger=trigger,
-        reap=reap,
-        report_path=report_path,
-        latest_report_path=latest_report_path,
-    )
+    finally:
+        # Release the takeover lock: unlock then close the held fd (the helper
+        # returns a bare fd, not a context manager).
+        try:
+            fcntl.flock(lock_fd, fcntl.LOCK_UN)
+        finally:
+            os.close(lock_fd)
 
 
 def _write_recovery_complete_sidecar(
