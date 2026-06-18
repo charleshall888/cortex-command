@@ -5,3 +5,11 @@
 {"ts": "2026-06-17T22:39:06Z", "event": "spec_approved", "feature": "overnight-run-now-runner-left-session"}
 {"ts": "2026-06-18T00:38:33Z", "event": "plan_approved", "feature": "overnight-run-now-runner-left-session"}
 {"ts": "2026-06-18T00:38:33Z", "event": "phase_transition", "feature": "overnight-run-now-runner-left-session", "from": "plan", "to": "implement"}
+{"ts": "2026-06-18T01:22:35Z", "event": "batch_dispatch", "feature": "overnight-run-now-runner-left-session", "batch": 0, "tasks": [1, 2, 7]}
+{"ts": "2026-06-18T02:12:26Z", "event": "batch_dispatch", "feature": "overnight-run-now-runner-left-session", "batch": 1, "tasks": [3]}
+{"ts": "2026-06-18T02:24:22Z", "event": "batch_dispatch", "feature": "overnight-run-now-runner-left-session", "batch": 2, "tasks": [4]}
+{"ts": "2026-06-18T02:53:59Z", "event": "batch_dispatch", "feature": "overnight-run-now-runner-left-session", "batch": 3, "tasks": [5, 8, 11, 12]}
+{"ts": "2026-06-18T04:00:12Z", "event": "batch_dispatch", "feature": "overnight-run-now-runner-left-session", "batch": 4, "tasks": [6, 9, 14]}
+{"ts": "2026-06-18T04:43:55Z", "event": "batch_dispatch", "feature": "overnight-run-now-runner-left-session", "batch": 5, "tasks": [10, 15]}
+{"ts": "2026-06-18T05:07:57Z", "event": "batch_dispatch", "feature": "overnight-run-now-runner-left-session", "batch": 6, "tasks": [13]}
+{"ts": "2026-06-18T05:13:20Z", "event": "batch_dispatch", "feature": "overnight-run-now-runner-left-session", "batch": 7, "tasks": [16]}

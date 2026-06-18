@@ -19,7 +19,7 @@ Introduce an out-of-process supervision model for the run-now cortex-CLI overnig
 **Goal**: Wire the recovery core to its triggers — the manual `cortex overnight recover` verb, the persistent guardian scan + its launchd install/remove, and the crash-loop resume guard on `cortex overnight start`.
 **Checkpoint**: `cortex overnight recover` and `cortex overnight guardian scan` both recover a fixture stuck session and leave a healthy session untouched; guardian install/remove exit 0; resume declines an over-bound crash-paused session without `--force`; `just test` exits 0.
 
-### Phase 3: Event registration + supervision docs (tasks: 12, 13)
+### Phase 3: Event registration + supervision docs (tasks: 12, 13, 17)
 **Goal**: Register new recovery event(s) and document the out-of-process supervision model in the owning doc.
 **Checkpoint**: events-registry gate passes; `grep -c "recover" docs/overnight-operations.md` ≥ 1; pre-commit exits 0.
 
@@ -36,7 +36,7 @@ Introduce an out-of-process supervision model for the run-now cortex-CLI overnig
 - **Complexity**: simple
 - **Context**: `OvernightState` is a dataclass (`state.py:164–247`); insert the new field after `integration_degraded` (`:246`) and before `schema_version` (`:247`), matching the backwards-compat default pattern (every field has a default for legacy loads). `save_state` (`:394–437`) serializes via `asdict()` so the field is auto-included; `load_state` (`:322–391`) rehydrates nested dataclasses — confirm its construction path applies the default when the key is absent from a legacy file (add a `.get(...)`/filter step only if `OvernightState(**data)` would otherwise raise on a missing key — it should not, since the field has a default, but a legacy file simply omits it). `paused_reason` is already an `Optional[str]` field set manually (`transition` takes no reason arg). `__post_init__` validates `recovery_attempts`/`recovery_depth` as non-negative (`:122–131`) — add the same non-negative guard for `crash_recovery_attempts` if a `__post_init__` exists on `OvernightState` (per-feature validation lives on `OvernightFeatureStatus`; mirror only if the parent has one, else skip).
 - **Verification**: `just test` — pass if exit 0. New test: (a) construct + `save_state` + `load_state` round-trip preserves `crash_recovery_attempts=2`; (b) load a hand-written legacy state JSON lacking the key and assert `crash_recovery_attempts == 0`.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: pid-death recovery predicate
 - **Files**: `cortex_command/overnight/recovery.py`, `tests/test_recovery_predicate.py`
@@ -45,7 +45,7 @@ Introduce an out-of-process supervision model for the run-now cortex-CLI overnig
 - **Complexity**: simple
 - **Context**: Mirror the predicate shape of `fail_markers._advisory_is_stale` (`fail_markers.py:266–302`), which combines age + `verify_runner_pid` + phase for the *pre-round-loop* window — this is the symmetric *mid-round-loop* `executing` predicate, minus the age term. Read phase the way `_advisory_is_stale` reads it (`_session_phase(session_dir)` → `overnight-state.json` `phase`). Liveness primitive: `ipc.read_runner_pid(session_dir)` then `ipc.verify_runner_pid(pid_data)` (`ipc.py:392–437`; checks magic, schema bound, `create_time` ±2s). Reuse `status._is_runner_pid_live(session_dir)` (`status.py:141–151`) if it already composes those two — confirm it returns False on absent/malformed/dead. Read-only: no writes.
 - **Verification**: New test asserts (a) executing + dead-pid → True, (b) executing + live-pid (`os.getpid()` payload) → False, (c) `paused`/`complete` → False. Use the `_alive_pid_payload`/`_write_runner_pid` fixture helpers from `tests/test_ipc_verify_runner_pid.py:28–63` and the `_write_state` helper from `tests/test_runner_resume.py:40–50`. `just test` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: env-match orphan reaper
 - **Files**: `cortex_command/overnight/recovery.py`, `tests/test_recovery_reaper.py`
@@ -54,7 +54,7 @@ Introduce an out-of-process supervision model for the run-now cortex-CLI overnig
 - **Complexity**: complex
 - **Context**: `CORTEX_RUNNER_CHILD == "1"` is the **load-bearing identity discriminator** — it is set only at the two runner spawn sites (orchestrator `runner.py:1247`, batch_runner `:1458`) and inherited by their descendants, so only runner-spawned children carry it. `LIFECYCLE_SESSION_ID` alone is NOT sufficient: it is also exported into ordinary interactive Claude Code sessions in a cortex repo (via the SessionStart hook / `CLAUDE_ENV_FILE`), so an operator's interactive `claude` session on the same feature legitimately carries it. The selection MUST keep the AND of both markers; do not collapse it to a session-id-only match. Confirmed propagation: the orchestrator process cortex spawns (`claude -p`) and the SDK leaf `claude` workers (which merge `{**os.environ}`) carry both markers. **Runtime-unconfirmed**: whether the Task-tool subagents that the brain-path `claude -p` spawns *internally* (via the Claude Code CLI binary, which no cortex code controls) carry the markers — this is the spec's Open Decision; verify at implementation. The fallback is safe either way: a worker class without the markers is counted as `unreaped` and surfaced in the report, never broad-matched. Enumerate with `psutil.process_iter(['environ','create_time'])` (sets the attr to `None`/raises `AccessDenied` for processes you can't introspect — treat as non-match, swallow). The codebase explicitly rejects recorded child-PGIDs (`runner.py._terminate_descendant_tree` docstring, `:155–177`), so do NOT use a recorded-pgid `killpg`. The create_time re-read guards only the enumerate→kill TOCTOU window (it does not assert prior membership beyond the env match). Grace window mirrors `DESCENDANT_GRACEFUL_SHUTDOWN_SECONDS`. Best-effort: swallow per-process exceptions so one failure doesn't block the rest.
 - **Verification**: New test asserts (a) only env-matched pids are selected (both `CORTEX_RUNNER_CHILD=1` AND matching `LIFECYCLE_SESSION_ID`); (b) a `claude` process carrying a matching `LIFECYCLE_SESSION_ID` but lacking `CORTEX_RUNNER_CHILD` is never selected (the interactive-session safety case); (c) a matched child that appears only on the second enumeration pass is reaped by the fixpoint loop. Drive selection via a monkeypatched `psutil.process_iter` returning fake process objects with controlled `environ()`/`create_time()` (no real kill) — reaping a live tree is interactive/session-dependent. `just test` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 4: recovery core sequence
 - **Files**: `cortex_command/overnight/recovery.py`, `tests/test_recovery_core.py`
@@ -63,7 +63,7 @@ Introduce an out-of-process supervision model for the run-now cortex-CLI overnig
 - **Complexity**: complex
 - **Context**: Pure primitives: `state.transition(state, new_phase)` (`state.py:494–553`, validates against `_FORWARD_TRANSITIONS`, raises `ValueError` on illegal moves — `executing→paused` is legal), `state.save_state` (`:394–437`, atomic tempfile+`os.replace`), `ipc.update_active_session_phase(session_id, new_phase)` (`ipc.py:465–479`, no-op if pointer absent/mismatched), `ipc.clear_runner_pid(session_dir, expected_session_id=...)` (`ipc.py:349–378`, CAS — only unlinks on session_id match). The runner's `_transition_paused` requires an in-process `RunnerCoordination` threading lock (`runner.py:410–434`) — out of bounds. For the pid-death case no live runner exists, so no SIGKILL-before-transition is needed (that guard is the Phase 2 wedged path, Task 15). Emit the event via `events.overnight_log_event(...)`. `RecoveryResult` carries: session_id, action taken (`recovered`/`noop`), reap outcome, report paths.
 - **Verification**: New integration test drives a synthesized stuck-`executing`+dead-pid session dir through `recover_session` and asserts final `phase == "paused"`, `paused_reason == "orchestrator_crash"`, a morning-report file exists, and `runner.pid` is cleared (`verify_runner_pid` on the prior data → False). `just test` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5: idempotency + concurrency safety
 - **Files**: `cortex_command/overnight/recovery.py`, `tests/test_recovery_idempotency.py`
@@ -72,7 +72,7 @@ Introduce an out-of-process supervision model for the run-now cortex-CLI overnig
 - **Complexity**: simple
 - **Context**: `_acquire_takeover_lock(session_dir)` (`ipc.py:100–153`) returns a held fd (NOT a context manager) — release via `fcntl.flock(fd, LOCK_UN)` + `os.close(fd)` in `finally`; it raises `ConcurrentRunnerLockTimeoutError` on a 5s budget. **Re-load state from disk after the lock is held** (the in-memory `state` object the recovery core mutates in Task 4 must be the post-lock load, so the `phase`-guard short-circuit and the `transition` call operate on fresh phase — a stale pre-lock load would slip past both guards). Every write stays atomic (tempfile+`os.replace`). recovery.py edits here build on Task 4 (serialize: same file).
 - **Verification**: New test invokes `recover_session` twice on the same session and asserts (a) the second call makes no further state change (state mtime/contents stable) and raises no exception; (b) `recovery-complete.json` exists after the first call and is the gate the second call short-circuits on. `just test` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 6: partial morning report enrichment
 - **Files**: `cortex_command/overnight/recovery.py`, `cortex_command/overnight/report.py`, `tests/test_recovery_report.py`
@@ -81,7 +81,7 @@ Introduce an out-of-process supervision model for the run-now cortex-CLI overnig
 - **Complexity**: complex
 - **Context**: **Correction to the rendering premise:** `render_executive_summary` (`report.py:394`, branches at `:466` `budget_exhausted` / `:472` `api_rate_limit`) has no `orchestrator_crash` branch and no `--interrupted` bool — the literal "Interrupted Session" header text lives only in the report CLI `_run()` behind the argparse `--interrupted` flag (`report.py:2454/2490`), a path the recovery flow never reaches. So Task 6 MUST add the render branch; it is the load-bearing change, not the `paused_reason` set. **Correction to the caller enumeration:** `generate_and_write_report` (`report.py:2343`) has **zero** live Python callers (only its def, the `__init__.py:50` re-export, and a docstring example); the runner's `_generate_morning_report` calls `report.generate_report(data)` + `report.write_report(...)` directly (`runner.py:475–476`), and the report CLI calls `collect_report_data`+`generate_report`+`write_report` directly. The recovery path reaches the renderer via `generate_and_write_report` → `generate_report` → `render_executive_summary`, so the enrichment surface is **`generate_report`/`render_executive_summary`**, and the new branch must be added there (which both the recovery path and the existing CLI/runner report paths flow through). Keep the change additive — a new `paused_reason` branch plus optional summary fields — so existing report output for non-crash reasons is unchanged. Dual write: session-specific `cortex/lifecycle/sessions/{id}/morning-report.md` + latest `cortex/lifecycle/morning-report.md` (pass `project_root` for the latter). Event-gap fields from `status._read_last_event_ts` (`status.py:202–217`) over both `overnight-events.log` and `pipeline-events.log`; non-terminal counts from `state.features`. recovery.py edits serialize after Task 5.
 - **Verification**: New test runs recovery on a session with ≥1 non-terminal feature and asserts both report files exist and contain the interrupted-session banner (the new `orchestrator_crash` branch's header) and a non-terminal-feature count; a second assertion renders a report for a `budget_exhausted` paused_reason and confirms its existing banner is unchanged (no regression). `just test` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 7: runner.pid clear-on-crash (best-effort)
 - **Files**: `cortex_command/overnight/runner.py`, `tests/test_runner_finally_clears_pid.py`
@@ -90,7 +90,7 @@ Introduce an out-of-process supervision model for the run-now cortex-CLI overnig
 - **Complexity**: simple
 - **Context**: The `finally` block (`runner.py:2789–2798`) tears down `spawned_procs` and restores signal handlers but never calls `ipc.clear_runner_pid`. Add a best-effort `ipc.clear_runner_pid(session_dir, expected_session_id=session_id)` (CAS, `ipc.py:349–378`) there, swallowing exceptions. `_cleanup` already clears it on the signal path (`runner.py:894–897`) — do not duplicate on that path. This is defense-in-depth; the authoritative clear is recovery step 6 (Task 4). runner.pid records the live leader pid correctly (`runner.py:1002`, `os.getpid()`) — no recorded-pid change.
 - **Verification**: New test simulates a non-signaled loop exit (or directly exercises the finally helper) and asserts `runner.pid` is absent / `verify_runner_pid` on the prior payload returns False afterward. `just test` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 8: manual `cortex overnight recover` verb
 - **Files**: `cortex_command/cli.py`, `tests/test_cli_overnight_recover.py`
@@ -99,7 +99,7 @@ Introduce an out-of-process supervision model for the run-now cortex-CLI overnig
 - **Complexity**: simple
 - **Context**: Verbs are argparse subparsers in `cortex_command/cli.py` (subparser group `overnight_sub`, `:411–415`); add after `list-sessions` (`:619–654`) following the `add_parser(...)` + `add_argument(...)` + `set_defaults(func=_dispatch_overnight_recover)` pattern used by `start`/`status`/`cancel` (`:418–565`). `status` must stay read-only (`observability.md:93/99`); recovery writes originate only from this verb and the guardian. Resolve the active session via the active-session pointer (same source `status` reads). Self-heal/no-op cleanly (predicate False → print "nothing to recover", exit 0).
 - **Verification**: `cortex overnight recover --help` — pass if exit 0 and output lists `--session`. New test runs it against a synthesized stuck-`executing`+dead-pid fixture and asserts the session transitions to `paused` (state read). `just test` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 9: guardian scan entrypoint
 - **Files**: `cortex_command/overnight/guardian.py`, `cortex_command/cli.py`, `tests/test_guardian_scan.py`
@@ -108,7 +108,7 @@ Introduce an out-of-process supervision model for the run-now cortex-CLI overnig
 - **Complexity**: complex
 - **Context**: Enumerate session dirs under the state root (same layout `report`/`status` scan — `cortex/lifecycle/sessions/*/`). Call into the recovery module's predicate + core (so guardian holds no recovery logic of its own). Add the verb after Task 8's `recover` verb in `cli.py` (serialize: shared file — depends on [8]); a nested `guardian` subparser with a `scan` sub-action (and the install/remove sub-actions land in Task 10). One persistent agent scans ALL sessions, so the scan must be cheap, idempotent (each session already guarded by the takeover lock + `recovery-complete.json` sidecar from Task 5), and continue-on-error per session.
 - **Verification**: New test invokes `scan_and_recover` against a fixtures dir with (a) one stuck-`executing`+dead-pid session, (b) one healthy (live-pid) session, and (c) one "poison" session with a malformed `overnight-state.json`; asserts the stuck one is recovered, the healthy and poison ones are not, and the poison session's exception does NOT prevent the stuck session's recovery (order-independent). `just test` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 10: persistent guardian launchd install/remove
 - **Files**: `cortex_command/overnight/guardian.py`, `cortex_command/overnight/scheduler/macos.py`, `cortex_command/cli.py`, `tests/test_guardian_install.py`
@@ -117,7 +117,7 @@ Introduce an out-of-process supervision model for the run-now cortex-CLI overnig
 - **Complexity**: complex
 - **Context**: Reuse is narrower than "reuse the launchd machinery" implies: `scheduler/macos.py` is built end-to-end for per-session one-shots (per-session label minting with epoch-collision retry, a self-bootout launcher template, a sidecar index, and `_gc_pass` for spent shots, plus a hardcoded `StartCalendarInterval`+`RunAtLoad:False` in `_build_plist_dict` `:586–602`) — NONE of which the guardian wants. The guardian genuinely reuses only `_bootstrap_and_verify` (`:494`, `launchctl bootstrap`) and the `cancel` path's `launchctl bootout gui/{uid}/{label}` + `_safe_unlink` (`:382–424`). Everything else is net-new: a guardian-specific plist builder (`StartInterval` integer + fixed host-level `Label`, one agent), a guardian variant of the plist round-trip validator (`_render_and_validate_plist` `:543–573` validates against the dict its builder produces), no label minting, no launcher template, no sidecar, no GC. Treat Task 10's "complex" sizing as covering this net-new surface, not a thin wrapper. `StartInterval` jobs do not run while the Mac sleeps (documented in Task 16). cli.py edits serialize after Task 9 (shared file, via the [9] dep).
 - **Verification**: New test asserts the rendered guardian plist (a) contains a `StartInterval` integer key, (b) has a single fixed host-level label (no per-session minting), and (c) does NOT contain a bare-true `KeepAlive` key (regression guard for the launchd-incoherence finding). `cortex overnight guardian install` / `guardian remove` — pass if exit 0 (run against a temp plist dir / mocked launchctl). `just test` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 11: crash-loop resume guard
 - **Files**: `cortex_command/overnight/runner.py`, `cortex_command/cli.py`, `tests/test_crash_loop_guard.py`
@@ -126,16 +126,16 @@ Introduce an out-of-process supervision model for the run-now cortex-CLI overnig
 - **Complexity**: complex
 - **Context**: Resume currently re-dispatches with no `phase=='paused'` guard (`_count_pending` counts pending+running+paused; `handle_interrupted_features` resets running→pending preserving counters). The reorder: acquire the takeover lock at the top of the resume path, check the sidecar/counter guard under it, and hold the fd through to the existing `_check_concurrent_start`/`write_runner_pid` handoff (which already stashes and reuses a held lock fd — follow that pattern at `runner.py:944/1032/1037` rather than acquiring twice) so `handle_interrupted_features` runs under the same lock. Add `--force` to the `start` subparser in `cli.py` and thread it to the resume decision. The #308 trigger class (a pre-commit gate blocking every commit) is deterministic and would otherwise crash-loop, so the bound must stop auto-resume. Depends on [7] to serialize this runner.py edit against Task 7's `finally` clear (and Task 14's heartbeat serializes after this via its [7, 11] dep) — distinct code regions, ordered by edge not prose.
 - **Verification**: New test sets `crash_recovery_attempts` above the bound on a crash-paused fixture and asserts resume declines without `--force` and proceeds with `--force` (and that a `budget_exhausted` pause resumes normally regardless). A second test asserts the guard reads the `recovery-complete.json` sidecar before `handle_interrupted_features` mutates state (e.g. a session with the sidecar present + over-bound counter declines without the feature-status reset having run). `just test` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 12: register recovery event(s) in the events registry
-- **Files**: `bin/.events-registry.md`
-- **What**: Add a registry row for `orchestrator_crash_recovered` (the recovery completion event from Task 4) with columns in the canonical order, naming `cortex_command/overnight/recovery.py` as producer and the report/metrics consumer(s). If the guardian emits any additional event literal, register it too.
+- **Files**: `bin/.events-registry.md`, `cortex_command/overnight/events.py`
+- **What**: Register `orchestrator_crash_recovered` (the recovery completion event from Task 4) in BOTH gates: (1) add it to the Python `EVENT_TYPES` allowlist in `events.py` so `events.log_event` actually writes the event instead of raising `ValueError` (the runtime gate — Task 4 surfaced that the event is currently unregistered there and is only emitted under a defensive try/except, so it never lands); (2) add a registry row in `bin/.events-registry.md` with columns in the canonical order, naming `cortex_command/overnight/recovery.py` as producer and the report/metrics consumer(s). If the guardian emits any additional event literal, register it in both places too.
 - **Depends on**: [4]
 - **Complexity**: simple
-- **Context**: `bin/.events-registry.md` is a markdown table with fixed columns: `event_name | target | scan_coverage | producers | consumers | category | added_date | deprecation_date | rationale | owner` (see existing `phase_transition` row). New live event: `category=live`, `added_date=2026-06-17`, `owner=charliemhall@gmail.com`. The gate `bin/cortex-check-events-registry --staged` (`just check-events-registry`) scans staged `skills/**/*.md` + `cortex_command/overnight/prompts/*.md` for unregistered `"event": "<name>"` literals; the recovery event is emitted from Python so it may not be auto-flagged, but req 10 requires registration regardless. This is the consumer-wiring co-location for the emitted event.
-- **Verification**: `just check-events-registry` — pass if exit 0. `grep -c "orchestrator_crash_recovered" bin/.events-registry.md` — pass if ≥ 1.
-- **Status**: [ ] pending
+- **Context**: `EVENT_TYPES` is a tuple in `cortex_command/overnight/events.py:92`; `log_event` (`:220`) raises `ValueError` for any name not in it — add the new event name (mirror how existing event names are listed). `bin/.events-registry.md` is a markdown table with fixed columns: `event_name | target | scan_coverage | producers | consumers | category | added_date | deprecation_date | rationale | owner` (see existing `phase_transition` row). New live event: `category=live`, `added_date=2026-06-17`, `owner=charliemhall@gmail.com`. The `bin/cortex-check-events-registry --staged` gate scans staged `skills/**/*.md` + `cortex_command/overnight/prompts/*.md`; the recovery event is emitted from Python so it may not be auto-flagged there, but req 10 requires registration in both surfaces. Once added to `EVENT_TYPES`, Task 4's defensive try/except around the emit becomes a no-op (the emit succeeds) — leave it as belt-and-suspenders.
+- **Verification**: `just check-events-registry` — pass if exit 0. `grep -c "orchestrator_crash_recovered" bin/.events-registry.md` — pass if ≥ 1. `python3 -c "from cortex_command.overnight.events import EVENT_TYPES; assert 'orchestrator_crash_recovered' in EVENT_TYPES"` — pass if exit 0 (the runtime allowlist now admits the event). `just test` — pass if exit 0.
+- **Status**: [x] done
 
 ### Task 13: document the out-of-process supervision model
 - **Files**: `docs/overnight-operations.md`, `docs/internals/pipeline.md`
@@ -144,7 +144,7 @@ Introduce an out-of-process supervision model for the run-now cortex-CLI overnig
 - **Complexity**: simple
 - **Context**: `docs/overnight-operations.md` headings: `## Architecture`, `## Code Layout`, `## Tuning`, `## Observability`, `## Security and Trust Boundaries`, `## Internal APIs` — add the supervision content under `## Architecture` (or a new section right after `## Code Layout`). `docs/internals/pipeline.md` already has a `## Recovery Procedures` section — add the cross-link there. Follow the doc-ownership rule (overnight-operations.md owns the round loop; pipeline.md links, not duplicates). The caffeinate-sleep limitation is added in Task 16 (same file — serialize).
 - **Verification**: `grep -c "recover" docs/overnight-operations.md` — pass if ≥ 1. Pre-commit (`just` doc/contract gates) — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 14: runner-level heartbeat across all executing sub-phases
 - **Files**: `cortex_command/overnight/runner.py`, `tests/test_runner_heartbeat.py`
@@ -153,16 +153,16 @@ Introduce an out-of-process supervision model for the run-now cortex-CLI overnig
 - **Complexity**: complex
 - **Context**: Today `HEARTBEAT` is emitted only by `_heartbeat_loop` (`orchestrator.py:462–486`, 300s cadence) inside `run_batch`; during planning the runner only `_poll_subprocess` (`time.sleep(0.1)`, no events). Add a runner-owned heartbeat (a daemon thread or a poll-loop emit) covering the planning→batch span, emitting via `events.overnight_log_event(...)`. Cadence fixed (reuse/relate to the 300s heartbeat interval). This makes event-log staleness a valid liveness signal in every phase — the prerequisite for Task 15's staleness predicate. Depends on [7, 11] to fully serialize the three runner.py edits as a chain (T7 `finally` clear → T11 resume guard → T14 heartbeat); the regions are distinct (emit site separate from Task 7's `finally` and Task 11's resume guard) but share the file, so the edge — not a prose note — orders them.
 - **Verification**: New test simulating a planning-phase window with no batch heartbeat asserts the runner-level heartbeat advances the last-event timestamp within the cadence (use `status._read_last_event_ts` on a temp events log). `just test` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 15: wedged-runner staleness predicate + SIGKILL-before-transition
-- **Files**: `cortex_command/overnight/recovery.py`, `tests/test_recovery_wedged.py`
-- **What**: Add `needs_recovery_wedged(session_dir: Path) -> bool` returning True iff `phase == "executing"` AND `verify_runner_pid` reads ALIVE AND the last heartbeat (Task 14) is older than a pinned threshold `WEDGED_STALENESS_SECONDS = 2700` (45 min) — strictly greater than `STALL_TIMEOUT_SECONDS` (`1800s`) with a 900s margin so the in-process watchdog gets first crack. Extend `recover_session` so the wedged path `os.kill(pid, SIGKILL)`s the create_time-verified runner BEFORE the `transition` call (the wedged runner is alive and could overwrite `paused`→`executing`). The guardian/recover surfaces apply this predicate via the unified recovery entrypoint, so no guardian.py change is needed.
+- **Files**: `cortex_command/overnight/recovery.py`, `cortex_command/overnight/guardian.py`, `tests/test_recovery_wedged.py`
+- **What**: Add `needs_recovery_wedged(session_dir: Path) -> bool` returning True iff `phase == "executing"` AND `verify_runner_pid` reads ALIVE AND the last heartbeat (Task 14) is older than a pinned threshold `WEDGED_STALENESS_SECONDS = 2700` (45 min) — strictly greater than `STALL_TIMEOUT_SECONDS` (`1800s`) with a 900s margin so the in-process watchdog gets first crack. Add a unified `needs_recovery(session_dir) -> bool` = `needs_recovery_pid_death(d) or needs_recovery_wedged(d)`. Extend `recover_session` so step-1 re-confirm uses the unified predicate and, when the wedged case fired (runner alive), it `os.kill(pid, SIGKILL)`s the create_time-verified runner BEFORE the `transition` call (the wedged runner is alive and could overwrite `paused`→`executing`). Update the guardian scan's candidate gate (Task 9 currently gates on `needs_recovery_pid_death` only) to call the unified `needs_recovery` so the guardian catches wedged sessions too; the manual `recover` verb already calls `recover_session` directly, so its step-1 re-confirm covers wedged automatically.
 - **Depends on**: [6, 14]
 - **Complexity**: complex
-- **Context**: `STALL_TIMEOUT_SECONDS = 1800.0` (`runner.py:87`) is the in-process watchdog's wall-clock timer; define `WEDGED_STALENESS_SECONDS = 2700` as a named module constant in `recovery.py` (not a bare literal) so the acceptance test references it directly and the strict-greater-than-1800s relationship is assertable. Last-heartbeat source: `status._read_last_event_ts` on `overnight-events.log` (now advanced in planning by Task 14). SIGKILL-before-transition: verify the recorded pid's `create_time` (via `verify_runner_pid` semantics) immediately before `os.kill`, then proceed with the Task 4 sequence. The takeover lock does NOT serialize `save_state` cross-process, hence the kill-first ordering. recovery.py edits serialize after Task 6.
-- **Verification**: New test asserts (a) `WEDGED_STALENESS_SECONDS > STALL_TIMEOUT_SECONDS`; (b) executing + alive-pid + heartbeat age `WEDGED_STALENESS_SECONDS + 60` → True, and age `WEDGED_STALENESS_SECONDS - 60` → False; (c) the wedged-recovery path issues `SIGKILL` to the recorded pid before the `transition` call (monkeypatch `os.kill` + `state.transition` and assert call order). `just test` — pass if exit 0.
-- **Status**: [ ] pending
+- **Context**: `STALL_TIMEOUT_SECONDS = 1800.0` (`runner.py:87`) is the in-process watchdog's wall-clock timer; define `WEDGED_STALENESS_SECONDS = 2700` as a named module constant in `recovery.py` (not a bare literal) so the acceptance test references it directly and the strict-greater-than-1800s relationship is assertable. Last-heartbeat source: `status._read_last_event_ts` on `overnight-events.log` (now advanced in planning by Task 14). SIGKILL-before-transition: verify the recorded pid's `create_time` (via `verify_runner_pid` semantics) immediately before `os.kill`, then proceed with the Task 4 sequence. The takeover lock does NOT serialize `save_state` cross-process, hence the kill-first ordering. The guardian gate update is one line (swap `needs_recovery_pid_death` → `needs_recovery` in the scan's candidate filter); keep the per-session try/except isolation intact. recovery.py edits serialize after Task 6; the guardian.py edit serializes after Task 9 (both committed).
+- **Verification**: New test asserts (a) `WEDGED_STALENESS_SECONDS > STALL_TIMEOUT_SECONDS`; (b) executing + alive-pid + heartbeat age `WEDGED_STALENESS_SECONDS + 60` → True, and age `WEDGED_STALENESS_SECONDS - 60` → False; (c) the wedged-recovery path issues `SIGKILL` to the recorded pid before the `transition` call (monkeypatch `os.kill` + `state.transition` and assert call order); (d) the guardian scan recovers a synthesized wedged (alive-pid + stale-heartbeat) session via the unified gate. `just test` — pass if exit 0.
+- **Status**: [x] done
 
 ### Task 16: document the caffeinate-sleep limitation
 - **Files**: `docs/overnight-operations.md`
@@ -171,7 +171,16 @@ Introduce an out-of-process supervision model for the run-now cortex-CLI overnig
 - **Complexity**: simple
 - **Context**: `caffeinate -i -w <runner_pid>` is spawned at `runner.py:139`. Add this bound to the supervision section created in Task 13 (same file — serialize via the [13] dep). Optionally note the should-have idea of a guardian-maintained `caffeinate` while any session is `executing` (weighed against keeping the host awake) without committing to it.
 - **Verification**: `grep -c "caffeinate" docs/overnight-operations.md` — pass if ≥ 1, and the limitation section names the guardian, the wake bound, and the manual verb. Pre-commit — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
+
+### Task 17: create ADR-0011 (out-of-process supervision)
+- **Files**: `cortex/adr/0011-out-of-process-overnight-runner-supervision.md`
+- **What**: Create the ADR the spec proposed (spec `## Proposed ADR`) and that Task 13's docs link to (`→ ADR-0011`) — a dangling link otherwise. Record the out-of-process supervision decision, its three-criteria clearance, and the rejected alternatives, reflecting the SHIPPED design (pid-death-primary detection, wedged staleness `>2700s` with SIGKILL-before-transition, re-implemented recovery core, env-match reaping, standalone `recovery-complete.json` marker, no-bare-`KeepAlive` `StartInterval` guardian, crash-loop resume guard, macOS caffeinate-sleep ceiling). Discovered during Implement: the plan omitted an ADR task though the spec proposed one and the docs reference it.
+- **Depends on**: [13]
+- **Complexity**: simple
+- **Context**: ADR conventions in `cortex/adr/README.md` — frontmatter `status:` (land as `accepted` since it ships on `main` as implemented), three-criteria gate, no-content-duplication (link from docs, don't restate). Match the body structure of an existing ADR (e.g. `0010`: `## Context` / `## Decision` / `## Three-criteria gate clearance` / `## Rejected alternatives` / `## Consequences and residual hazard`). The spec's `## Proposed ADR` section is the source content; update implementation specifics to what actually shipped.
+- **Verification**: `ls cortex/adr/0011-*.md` — pass if the file exists. `grep -c "out-of-process" cortex/adr/0011-out-of-process-overnight-runner-supervision.md` — pass if ≥ 1. ADR frontmatter `status:` present and valid.
+- **Status**: [x] done
 
 ## Risks
 - **New long-lived process surface.** The persistent guardian is a net-new daemon (who-watches-the-watchman). Mitigated by: a single host-level agent (not per-session), the manual `recover` verb as a backstop, and a false-positive-free primary signal (pid-death). The operator may prefer to ship Phase 1's manual verb first and defer the guardian — the phasing supports that (Phase 2 Task 10 is the only guardian-install dependency).
