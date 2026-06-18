@@ -30,6 +30,7 @@ session is already guarded by the takeover lock + the
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 from cortex_command.overnight import recovery
@@ -114,3 +115,78 @@ def scan_and_recover(state_root: Path) -> list[RecoveryResult]:
             error_result.error = f"{type(exc).__name__}: {exc}"
             results.append(error_result)
     return results
+
+
+# ---------------------------------------------------------------------------
+# Persistent guardian install / remove (spec §R6, Task 10)
+#
+# These wire the scan entrypoint above to its AUTOMATIC trigger: a SINGLE
+# host-level launchd LaunchAgent on a ``StartInterval`` cadence that invokes
+# ``cortex overnight guardian scan`` every tick. One agent for the whole host
+# (NOT per-session) avoids the install/GC-per-session problem. The launchd
+# plumbing lives in :mod:`cortex_command.overnight.scheduler.macos`; these
+# helpers gate on macOS support and delegate.
+# ---------------------------------------------------------------------------
+
+
+class GuardianUnsupportedError(Exception):
+    """Raised when guardian install/remove is attempted off macOS.
+
+    The persistent guardian is a launchd LaunchAgent — macOS-only. The
+    manual ``cortex overnight recover`` verb and ``cortex overnight guardian
+    scan`` remain available cross-platform; only the persistent installer is
+    macOS-bound.
+    """
+
+
+def install_guardian(repo_root: Path) -> Path:
+    """Install the single persistent host-level guardian LaunchAgent.
+
+    Renders a ``StartInterval``-cadence plist (fixed host-level label, no
+    per-session minting, no launcher shim) whose ``ProgramArguments`` invoke
+    ``cortex overnight guardian scan`` against ``repo_root``, then bootstraps
+    it via ``launchctl``. Re-install replaces a prior registration (idempotent).
+
+    Args:
+        repo_root: The user repo whose ``cortex/lifecycle/sessions/`` the
+            installed guardian scans (threaded via ``CORTEX_REPO_ROOT``).
+
+    Returns:
+        The path of the written guardian plist.
+
+    Raises:
+        GuardianUnsupportedError: when run off macOS.
+    """
+    if sys.platform != "darwin":
+        raise GuardianUnsupportedError(
+            "the persistent guardian is a macOS launchd LaunchAgent; "
+            "use 'cortex overnight recover' or a scheduled "
+            "'cortex overnight guardian scan' on other platforms"
+        )
+    from cortex_command.overnight.scheduler import macos
+
+    return macos.install_guardian(repo_root=repo_root)
+
+
+def remove_guardian() -> bool:
+    """Bootout and unlink the persistent guardian LaunchAgent.
+
+    A clean no-op when the guardian is not installed (bootout on an
+    unregistered label is non-fatal; the plist unlink tolerates an absent
+    file).
+
+    Returns:
+        ``True`` if the guardian plist was removed, ``False`` if it was
+        already absent.
+
+    Raises:
+        GuardianUnsupportedError: when run off macOS.
+    """
+    if sys.platform != "darwin":
+        raise GuardianUnsupportedError(
+            "the persistent guardian is a macOS launchd LaunchAgent; "
+            "there is nothing to remove on other platforms"
+        )
+    from cortex_command.overnight.scheduler import macos
+
+    return macos.remove_guardian()

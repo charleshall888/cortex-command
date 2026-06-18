@@ -196,6 +196,56 @@ def _dispatch_overnight_guardian_scan(args: argparse.Namespace) -> int:
     return 0
 
 
+def _dispatch_overnight_guardian_install(args: argparse.Namespace) -> int:
+    """Implement ``cortex overnight guardian install`` (spec §R6, Task 10).
+
+    Renders and bootstraps the SINGLE host-level launchd guardian — one
+    LaunchAgent for the whole host (NOT one per session) on a ``StartInterval``
+    poll cadence whose ``ProgramArguments`` invoke ``cortex overnight guardian
+    scan`` each tick. The single-agent design is the load-bearing choice: a
+    persistent agent scans ALL ``executing`` sessions, sidestepping the
+    install/GC-per-session problem a per-session agent would create. Re-install
+    replaces a prior registration (idempotent).
+
+    macOS-only (launchd). Off macOS it prints a clear message and exits 1.
+    """
+    from cortex_command.overnight import guardian
+    from cortex_command.overnight.cli_handler import _resolve_repo_path
+
+    repo_path = _resolve_repo_path()
+    try:
+        plist_path = guardian.install_guardian(repo_path)
+    except guardian.GuardianUnsupportedError as exc:
+        print(f"cannot install guardian: {exc}", file=sys.stderr)
+        return 1
+
+    print(f"installed overnight guardian LaunchAgent ({plist_path})")
+    return 0
+
+
+def _dispatch_overnight_guardian_remove(args: argparse.Namespace) -> int:
+    """Implement ``cortex overnight guardian remove`` (spec §R6, Task 10).
+
+    Boots out the host-level guardian LaunchAgent and unlinks its plist. A
+    clean no-op when the guardian is not installed (exit 0).
+
+    macOS-only (launchd). Off macOS it prints a clear message and exits 1.
+    """
+    from cortex_command.overnight import guardian
+
+    try:
+        removed = guardian.remove_guardian()
+    except guardian.GuardianUnsupportedError as exc:
+        print(f"cannot remove guardian: {exc}", file=sys.stderr)
+        return 1
+
+    if removed:
+        print("removed overnight guardian LaunchAgent")
+    else:
+        print("overnight guardian was not installed (nothing to remove)")
+    return 0
+
+
 def _dispatch_overnight_launch(args: argparse.Namespace) -> int:
     from cortex_command.overnight import cli_handler
 
@@ -804,9 +854,8 @@ def _build_parser() -> argparse.ArgumentParser:
     # launchd invokes (and an operator can run manually): it enumerates every
     # ``executing`` session, applies the pid-death predicate, and runs the
     # recovery core for each dead-runner session, with per-session failure
-    # isolation. The ``install`` / ``remove`` sub-actions (which register and
-    # tear down the LaunchAgent) land in a later task; the nested subparser is
-    # structured so they slot in alongside ``scan`` without rework.
+    # isolation. ``guardian install`` / ``guardian remove`` register and tear
+    # down the SINGLE host-level LaunchAgent on a StartInterval poll cadence.
     guardian = overnight_sub.add_parser(
         "guardian",
         help="Manage the persistent out-of-process recovery guardian",
@@ -815,7 +864,9 @@ def _build_parser() -> argparse.ArgumentParser:
             "every 'executing' overnight session, detects dead-runner "
             "sessions via the pid-death predicate, and recovers each — the "
             "scan the host-level launchd guardian invokes each tick and that "
-            "an operator can run on demand."
+            "an operator can run on demand. 'guardian install' / 'guardian "
+            "remove' register and tear down the persistent LaunchAgent that "
+            "drives that scan automatically."
         ),
     )
     guardian_sub = guardian.add_subparsers(
@@ -839,6 +890,35 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     guardian_scan.set_defaults(func=_dispatch_overnight_guardian_scan)
+
+    guardian_install = guardian_sub.add_parser(
+        "install",
+        help="Install the single persistent host-level guardian LaunchAgent",
+        description=(
+            "Install ONE persistent host-level launchd LaunchAgent on a "
+            "StartInterval poll cadence (every ~5 min) whose ProgramArguments "
+            "invoke 'cortex overnight guardian scan' each tick. There is "
+            "exactly ONE guardian agent for the whole host — NOT one per "
+            "session: a single persistent agent scans ALL 'executing' "
+            "sessions, sidestepping the install/GC-per-session problem a "
+            "per-session agent would create. The StartInterval re-fire IS the "
+            "restart-on-crash supervision (no unconditional KeepAlive, which "
+            "would busy-loop a run-to-completion job). Re-install replaces a "
+            "prior registration (idempotent). macOS-only (launchd)."
+        ),
+    )
+    guardian_install.set_defaults(func=_dispatch_overnight_guardian_install)
+
+    guardian_remove = guardian_sub.add_parser(
+        "remove",
+        help="Bootout and unlink the persistent guardian LaunchAgent",
+        description=(
+            "Bootout the single host-level guardian LaunchAgent and unlink "
+            "its plist. A clean no-op when the guardian is not installed. "
+            "macOS-only (launchd)."
+        ),
+    )
+    guardian_remove.set_defaults(func=_dispatch_overnight_guardian_remove)
 
     # cortex overnight schedule (R1) — schedule an overnight session via
     # the macOS LaunchAgent backend. Mirrors the structural shape of the

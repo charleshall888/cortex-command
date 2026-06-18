@@ -91,6 +91,36 @@ _VERIFY_POLL_INTERVAL_SEC = 0.05
 
 
 # ---------------------------------------------------------------------------
+# Persistent guardian constants (spec §R6, Task 10)
+# ---------------------------------------------------------------------------
+
+# The SINGLE fixed host-level launchd label for the out-of-process recovery
+# guardian. There is exactly ONE guardian agent per host — NOT one per
+# session — so the label is a constant, not a per-session minted string.
+# This is the install/GC-per-session-avoidance property: a single persistent
+# agent scans all `executing` sessions each tick.
+GUARDIAN_LABEL = "com.charleshall.cortex-command.overnight-guardian"
+
+# Poll cadence for the guardian, in seconds. The guardian fires every
+# `StartInterval` seconds, runs `cortex overnight guardian scan` to
+# completion, and exits — then `StartInterval` re-fires it on the next tick.
+# 300s matches the heartbeat cadence (orchestrator `_heartbeat_loop`) so the
+# guardian's detection granularity tracks the runner's own liveness signal.
+GUARDIAN_START_INTERVAL_SECONDS = 300
+
+# Crash-loop floor for the guardian, in seconds. If a scan tick exits almost
+# immediately (e.g. a hard crash on startup), `ThrottleInterval` is the
+# minimum wall-clock launchd waits before re-firing — the only coherent
+# crash-handling addition to a `StartInterval` job. We do NOT set an
+# unconditional `KeepAlive`: a `StartInterval` job runs-to-completion and
+# exits each tick, and a bare-true `KeepAlive` would relaunch it the instant
+# it exits (throttled only to this ~10s floor), collapsing the poll interval
+# into a near-continuous busy-loop. `StartInterval`'s own periodic re-fire IS
+# the restart-on-crash supervision (the "who-watches-the-watchman" story).
+GUARDIAN_THROTTLE_INTERVAL_SECONDS = 60
+
+
+# ---------------------------------------------------------------------------
 # Exceptions
 # ---------------------------------------------------------------------------
 
@@ -1071,3 +1101,209 @@ def _resolve_cortex_bin() -> str:
     """
     resolved = shutil.which("cortex")
     return resolved if resolved is not None else "cortex"
+
+
+# ---------------------------------------------------------------------------
+# Persistent guardian plist (spec §R6, Task 10)
+#
+# The guardian reuses ONLY the generic launchctl primitives here
+# (``_bootstrap_and_verify`` for install, ``launchctl bootout`` +
+# ``_safe_unlink`` for remove). Everything else is net-new and deliberately
+# does NOT reuse the per-session one-shot machinery (label minting, the
+# self-bootout launcher template, the sidecar index, ``_gc_pass``): the
+# guardian is ONE persistent agent on a ``StartInterval`` cadence with a
+# fixed host-level label, not a per-session ``StartCalendarInterval``
+# one-shot.
+# ---------------------------------------------------------------------------
+
+
+def build_guardian_plist_dict(
+    *,
+    cortex_bin: str | None = None,
+    repo_root: Path,
+    start_interval: int = GUARDIAN_START_INTERVAL_SECONDS,
+    throttle_interval: int = GUARDIAN_THROTTLE_INTERVAL_SECONDS,
+) -> dict:
+    """Construct the persistent-guardian plist dict (spec §R6, Task 10).
+
+    The shape is intentionally distinct from the per-session one-shot
+    :meth:`MacOSLaunchAgentBackend._build_plist_dict`:
+
+      * ``Label`` is the fixed host-level :data:`GUARDIAN_LABEL` constant —
+        one agent for the whole host, NOT a per-session minted label.
+      * ``StartInterval`` is an integer second cadence — the job fires every
+        ``start_interval`` seconds, runs ``cortex overnight guardian scan``
+        to completion, and exits. This is NOT ``StartCalendarInterval`` (a
+        one-shot wall-clock fire); the guardian is a recurring poll.
+      * ``ProgramArguments`` invoke the installed ``cortex`` entrypoint with
+        ``overnight guardian scan`` directly — no launcher-script shim.
+      * ``ThrottleInterval`` is the crash-loop floor.
+      * There is **no** ``KeepAlive`` key. A bare-true ``KeepAlive`` on a
+        ``StartInterval`` run-to-completion job would relaunch it the instant
+        it exits each tick (throttled only to ``ThrottleInterval``), collapsing
+        the poll interval into a near-continuous busy-loop. ``StartInterval``'s
+        own periodic re-fire is the restart-on-crash supervision. (If
+        restart-on-failure were ever wanted it would be the conditional dict
+        form ``KeepAlive = {"SuccessfulExit": False}``, never the bare-true
+        form — but the default omits it entirely.)
+
+    Args:
+        cortex_bin: Absolute path to the ``cortex`` binary launchd execs.
+            Defaults to :func:`_resolve_cortex_bin` (``shutil.which`` with a
+            literal ``"cortex"`` fallback).
+        repo_root: The user repo whose ``cortex/lifecycle/sessions/`` the
+            scan enumerates. Passed via ``CORTEX_REPO_ROOT`` so the scan's
+            ``_resolve_repo_path`` resolves to it under launchd (where ``cwd``
+            is not the user's repo).
+        start_interval: Poll cadence in seconds.
+        throttle_interval: Crash-loop floor in seconds.
+    """
+    resolved_bin = cortex_bin if cortex_bin is not None else _resolve_cortex_bin()
+    return {
+        "Label": GUARDIAN_LABEL,
+        "ProgramArguments": [
+            resolved_bin,
+            "overnight",
+            "guardian",
+            "scan",
+        ],
+        "RunAtLoad": False,
+        "StartInterval": int(start_interval),
+        "ThrottleInterval": int(throttle_interval),
+        "EnvironmentVariables": {
+            "PATH": os.environ.get("PATH", "/usr/bin:/bin:/usr/sbin:/sbin"),
+            "CORTEX_REPO_ROOT": str(repo_root),
+        },
+    }
+
+
+def _render_and_validate_guardian_plist(plist_dict: dict) -> bytes:
+    """Dump the guardian plist dict to bytes and round-trip-validate it.
+
+    A guardian variant of
+    :meth:`MacOSLaunchAgentBackend._render_and_validate_plist` — the
+    per-session validator validates against the dict ITS builder produces, so
+    the guardian needs its own round-trip check against the guardian dict.
+    Raises :class:`PlistValidationError` (label = :data:`GUARDIAN_LABEL`) if
+    the ``dumps``/``loads`` round-trip diverges.
+    """
+    rendered = plistlib.dumps(plist_dict)
+    roundtrip = plistlib.loads(rendered)
+    if roundtrip != plist_dict:
+        divergent_key: str | None = None
+        for key in plist_dict:
+            if key not in roundtrip or roundtrip[key] != plist_dict[key]:
+                divergent_key = key
+                break
+        raise PlistValidationError(GUARDIAN_LABEL, divergent_key)
+    return rendered
+
+
+def _guardian_plist_path(plist_dir: Path | None = None) -> Path:
+    """Resolve the guardian plist path.
+
+    Defaults to ``$TMPDIR/cortex-overnight-launch/<GUARDIAN_LABEL>.plist`` —
+    the same ``_plist_dir()`` the per-session backend writes into — but
+    accepts an explicit ``plist_dir`` override so the install/remove verbs and
+    their tests can point at a temp dir without touching the real one.
+    """
+    base = plist_dir if plist_dir is not None else MacOSLaunchAgentBackend._plist_dir()
+    return base / f"{GUARDIAN_LABEL}.plist"
+
+
+def install_guardian(
+    *,
+    repo_root: Path,
+    plist_dir: Path | None = None,
+    start_interval: int = GUARDIAN_START_INTERVAL_SECONDS,
+) -> Path:
+    """Render, write, and bootstrap the SINGLE host-level guardian agent.
+
+    Re-install-friendly (idempotent): if a guardian is already registered,
+    it is booted out first so ``launchctl bootstrap`` does not collide on the
+    fixed label, then the freshly-rendered plist is bootstrapped. Reuses the
+    generic :meth:`MacOSLaunchAgentBackend._bootstrap_and_verify` (the same
+    ``launchctl bootstrap`` + armed-state verify the per-session path uses);
+    the post-bootstrap liveness probe is advisory (an inconclusive
+    ``launchctl print`` is logged, not fatal).
+
+    Args:
+        repo_root: The user repo the scan enumerates (threaded via
+            ``CORTEX_REPO_ROOT``).
+        plist_dir: Optional override for the plist directory (tests).
+        start_interval: Poll cadence in seconds.
+
+    Returns:
+        The path of the written guardian plist.
+    """
+    target_dir = plist_dir if plist_dir is not None else MacOSLaunchAgentBackend._plist_dir()
+    target_dir.mkdir(parents=True, exist_ok=True)
+    plist_path = _guardian_plist_path(target_dir)
+
+    plist_dict = build_guardian_plist_dict(
+        repo_root=repo_root,
+        start_interval=start_interval,
+    )
+    plist_bytes = _render_and_validate_guardian_plist(plist_dict)
+    plist_path.write_bytes(plist_bytes)
+
+    # Re-install replaces: bootout any prior registration on the fixed label
+    # first (idempotent — a clean no-op if not registered) so bootstrap does
+    # not collide. Failures here are non-fatal; bootstrap below is the gate.
+    _bootout_guardian()
+
+    backend = MacOSLaunchAgentBackend()
+    try:
+        backend._bootstrap_and_verify(plist_path, GUARDIAN_LABEL)
+    except LaunchctlVerifyError as exc:
+        # Advisory: bootstrap succeeded (the agent IS armed) but the
+        # ``launchctl print`` probe did not confirm the armed-state line
+        # within the budget. Record-and-continue, mirroring the per-session
+        # advisory posture — the install is successful.
+        logger.warning(
+            "launchctl print did not confirm the guardian agent %s within "
+            "the verify budget; recording the install anyway (probe is "
+            "advisory): %s",
+            GUARDIAN_LABEL,
+            exc,
+        )
+
+    return plist_path
+
+
+def remove_guardian(plist_dir: Path | None = None) -> bool:
+    """Bootout the guardian agent and unlink its plist (spec §R6, Task 10).
+
+    A clean no-op if the guardian is not installed: ``launchctl bootout`` on
+    an unregistered label is non-fatal (the agent may already be gone) and
+    :func:`_safe_unlink` tolerates an absent plist. Reuses the same
+    ``launchctl bootout gui/{uid}/{label}`` + :func:`_safe_unlink` the
+    per-session ``cancel`` path uses.
+
+    Returns:
+        ``True`` if the plist file was removed, ``False`` if it was already
+        absent.
+    """
+    _bootout_guardian()
+    plist_path = _guardian_plist_path(plist_dir)
+    return _safe_unlink(plist_path)
+
+
+def _bootout_guardian() -> int:
+    """``launchctl bootout gui/{uid}/<GUARDIAN_LABEL>``; non-fatal.
+
+    Mirrors the per-session ``cancel`` bootout: a non-zero exit is NOT
+    treated as fatal because the agent may already be gone (never installed,
+    or already booted out). Returns the bootout exit code (``-1`` on
+    ``OSError``).
+    """
+    uid = os.getuid()
+    try:
+        result = subprocess.run(
+            ["launchctl", "bootout", f"gui/{uid}/{GUARDIAN_LABEL}"],
+            capture_output=True,
+        )
+        return result.returncode
+    except OSError as exc:
+        logger.warning("launchctl bootout failed for %s: %s", GUARDIAN_LABEL, exc)
+        return -1
