@@ -8,10 +8,10 @@ that died hard or wedged cannot supervise its own host's death).
 
 This module is the scan entrypoint that guardian invokes. It holds **no
 recovery logic of its own**: it enumerates session dirs under the state
-root, applies the existing :func:`recovery.needs_recovery_pid_death`
-predicate, and calls the existing
-:func:`recovery.recover_session` (``trigger="guardian"``) for each session
-that needs it. Healthy sessions are left untouched.
+root, applies the unified :func:`recovery.needs_recovery` predicate (the
+disjunction of the pid-death and alive-but-wedged signals), and calls the
+existing :func:`recovery.recover_session` (``trigger="guardian"``) for each
+session that needs it. Healthy sessions are left untouched.
 
 Per-session failure isolation (spec §R6, the load-bearing invariant here)
 --------------------------------------------------------------------------
@@ -66,11 +66,11 @@ def scan_and_recover(state_root: Path) -> list[RecoveryResult]:
     This is the guardian's scan entrypoint (spec §R6) and is also reachable
     by an operator via ``cortex overnight guardian scan``. It holds no
     recovery logic of its own: for each enumerated session dir it applies the
-    :func:`recovery.needs_recovery_pid_death` predicate and, when the
-    predicate fires, invokes
+    unified :func:`recovery.needs_recovery` predicate (pid-death OR
+    alive-but-wedged) and, when the predicate fires, invokes
     :func:`recovery.recover_session` with ``trigger="guardian"``. Healthy
-    sessions (live pid, or any phase other than ``executing``) are left
-    untouched and produce no result entry.
+    sessions (live pid with a fresh heartbeat, or any phase other than
+    ``executing``) are left untouched and produce no result entry.
 
     **Per-session failure isolation.** Each session's predicate+recover runs
     in its own ``try``/``except`` so a single poison session cannot abort the
@@ -93,7 +93,7 @@ def scan_and_recover(state_root: Path) -> list[RecoveryResult]:
     results: list[RecoveryResult] = []
     for session_dir in _session_dirs(state_root):
         try:
-            if not recovery.needs_recovery_pid_death(session_dir):
+            if not recovery.needs_recovery(session_dir):
                 continue
             results.append(recovery.recover_session(session_dir, trigger="guardian"))
         except Exception as exc:  # noqa: BLE001 — per-session isolation is the contract

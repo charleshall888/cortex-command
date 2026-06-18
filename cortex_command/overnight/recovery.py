@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import fcntl
 import os
+import signal
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -44,7 +45,10 @@ import psutil
 from cortex_command.overnight import events, ipc, report, status
 from cortex_command.overnight import state as state_mod
 from cortex_command.overnight.fail_markers import _session_phase
-from cortex_command.overnight.runner import DESCENDANT_GRACEFUL_SHUTDOWN_SECONDS
+from cortex_command.overnight.runner import (
+    DESCENDANT_GRACEFUL_SHUTDOWN_SECONDS,
+    STALL_TIMEOUT_SECONDS,
+)
 
 
 def needs_recovery_pid_death(session_dir: Path) -> bool:
@@ -73,6 +77,91 @@ def needs_recovery_pid_death(session_dir: Path) -> bool:
     if _session_phase(session_dir) != "executing":
         return False
     return not status._is_runner_pid_live(session_dir)
+
+
+# ---------------------------------------------------------------------------
+# Wedged-runner staleness predicate (spec §R12, Phase 2)
+# ---------------------------------------------------------------------------
+
+#: Event-log staleness threshold (seconds) that flags an *alive-but-wedged*
+#: runner for recovery (spec §R12, Task 15). A named module constant — not a
+#: bare literal — so the acceptance test can reference it directly and the
+#: strict-greater-than relationship to the in-process watchdog's
+#: :data:`runner.STALL_TIMEOUT_SECONDS` (``1800s``) is assertable.
+#:
+#: Pinned at ``2700`` (45 min) — strictly greater than ``STALL_TIMEOUT_SECONDS``
+#: by a ``900s`` margin so the runner's own in-process ``WatchdogThread`` gets
+#: first crack at a graceful self-heal before the out-of-process guardian
+#: SIGKILLs the wedged runner. This margin is what makes the staleness signal
+#: safe: a healthy-but-slow round that the in-process watchdog would already
+#: have terminated cannot reach this threshold.
+WEDGED_STALENESS_SECONDS: float = 2700.0
+
+# Fail loud if the strict-greater-than invariant ever regresses (e.g. someone
+# lowers WEDGED_STALENESS_SECONDS or raises STALL_TIMEOUT_SECONDS): the whole
+# point of the threshold is to let the in-process watchdog self-heal first.
+assert WEDGED_STALENESS_SECONDS > STALL_TIMEOUT_SECONDS, (
+    "WEDGED_STALENESS_SECONDS must be strictly greater than "
+    "STALL_TIMEOUT_SECONDS so the in-process watchdog self-heals first"
+)
+
+
+def needs_recovery_wedged(session_dir: Path) -> bool:
+    """Return ``True`` iff a session needs *wedged-runner* recovery (spec §R12).
+
+    The alive-but-hung counterpart to :func:`needs_recovery_pid_death`. Flags
+    the session iff ALL THREE hold:
+
+      1. its on-disk ``phase`` is ``"executing"``, AND
+      2. its recorded session-leader ``runner.pid`` reads **ALIVE**
+         (:func:`status._is_runner_pid_live` is ``True``) — the runner process
+         exists, so the pid-death signal does NOT fire, AND
+      3. the last event in ``overnight-events.log`` (the runner-level heartbeat
+         advances this in every ``executing`` sub-phase, per Task 14) is older
+         than :data:`WEDGED_STALENESS_SECONDS` — the event loop has gone silent
+         past the safe threshold.
+
+    The freshness source is :func:`status._read_last_event_ts` over the session
+    tree's ``overnight-events.log``; a missing or unparseable last-event
+    timestamp is treated as *not stale* (``False``) — staleness is only asserted
+    against a real, parseable timestamp, never inferred from an absent one (an
+    absent log on an alive runner is more likely a fresh start than a wedge).
+
+    The :data:`WEDGED_STALENESS_SECONDS` threshold is strictly greater than the
+    in-process watchdog's ``STALL_TIMEOUT_SECONDS`` so the runner's own
+    ``WatchdogThread`` gets first crack at a graceful self-heal — this margin is
+    what keeps a healthy-but-slow round from false-positiving.
+
+    Purely read-only: this function never writes state.
+    """
+    if _session_phase(session_dir) != "executing":
+        return False
+    if not status._is_runner_pid_live(session_dir):
+        # Pid is dead → this is the pid-death case, not the wedged case.
+        return False
+    last_ts = status._read_last_event_ts(
+        _lifecycle_root(session_dir) / "overnight-events.log"
+    )
+    if last_ts is None:
+        # No parseable last-event timestamp: do not infer a wedge from an absent
+        # signal — only a real, parseable, stale timestamp flags the wedge.
+        return False
+    age_seconds = (datetime.now(timezone.utc) - last_ts).total_seconds()
+    return age_seconds > WEDGED_STALENESS_SECONDS
+
+
+def needs_recovery(session_dir: Path) -> bool:
+    """Return ``True`` iff a session needs recovery (unified gate, spec §R12).
+
+    The disjunction of the two detection signals:
+    :func:`needs_recovery_pid_death` (the hard-dead runner) OR
+    :func:`needs_recovery_wedged` (the alive-but-hung runner). This is the
+    single predicate the guardian scan and the recovery core's step-1
+    re-confirm gate on, so wedged sessions are caught alongside pid-dead ones.
+    """
+    return needs_recovery_pid_death(session_dir) or needs_recovery_wedged(
+        session_dir
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -484,14 +573,27 @@ def recover_session(session_dir: Path, *, trigger: str) -> RecoveryResult:
                 trigger=trigger,
             )
 
-        # Re-confirm the predicate under the lock; a session whose runner pid is
-        # now alive (or phase no longer executing) needs no recovery.
-        if not needs_recovery_pid_death(session_dir):
+        # Re-confirm the UNIFIED predicate under the lock; a session whose
+        # runner pid is now alive AND whose heartbeat is fresh (or whose phase
+        # is no longer executing) needs no recovery. The unified gate catches
+        # both the pid-death case and the alive-but-wedged case.
+        if not needs_recovery(session_dir):
             return RecoveryResult(
                 session_id=session_id,
                 action="noop",
                 trigger=trigger,
             )
+
+        # SIGKILL-before-transition (wedged case only, spec §R12). When the
+        # runner pid reads ALIVE the firing signal is the wedged-staleness
+        # predicate, NOT pid-death — and a still-alive wedged runner could
+        # overwrite our ``paused`` back to ``executing`` (the takeover lock does
+        # NOT serialize ``save_state`` cross-process). So we MUST SIGKILL the
+        # recorded runner BEFORE the transition. The pid's ``create_time`` is
+        # re-verified immediately before the kill (``verify_runner_pid``
+        # semantics) so a reused pid is never killed.
+        if needs_recovery_wedged(session_dir):
+            _sigkill_wedged_runner(session_dir)
 
         # Step 2: transition executing -> paused, record the reason, bump the
         # crash-recovery counter, and persist atomically.
@@ -582,6 +684,45 @@ def recover_session(session_dir: Path, *, trigger: str) -> RecoveryResult:
             fcntl.flock(lock_fd, fcntl.LOCK_UN)
         finally:
             os.close(lock_fd)
+
+
+def _sigkill_wedged_runner(session_dir: Path) -> None:
+    """SIGKILL the create_time-verified wedged runner recorded in ``runner.pid``.
+
+    Called from :func:`recover_session` for the wedged case ONLY, *before* the
+    ``state.transition`` to ``paused`` (spec §R12). The wedged runner's event
+    loop is hung but its process is still alive, so it could ``save_state`` over
+    our ``paused`` back to ``executing`` — and the takeover lock does NOT
+    serialize ``save_state`` cross-process. Killing it first removes that race.
+
+    **TOCTOU guard (pid reuse).** The recorded ``runner.pid`` payload is
+    re-verified via :func:`ipc.verify_runner_pid` (magic + schema bound +
+    ``create_time`` ±2s) immediately before the ``os.kill`` — so a pid the OS
+    has recycled for an unrelated process is never killed. If the payload is
+    absent/malformed or no longer verifies (the runner died on its own between
+    the predicate and here, or the pid was reused), the kill is skipped.
+
+    Best-effort: any signalling failure (the process exited in the TOCTOU
+    window, an ``OSError`` from ``os.kill``) is swallowed — the subsequent
+    transition/report/reap/clear sequence proceeds either way, and the reaper
+    is a second line of defense for the worker tree.
+    """
+    pid_data = ipc.read_runner_pid(session_dir)
+    if pid_data is None:
+        return
+    # Re-verify create_time ±2s immediately before the kill so a reused pid is
+    # never signalled (verify_runner_pid semantics).
+    if not ipc.verify_runner_pid(pid_data):
+        return
+    pid = pid_data.get("pid")
+    if not isinstance(pid, int):
+        return
+    try:
+        os.kill(pid, signal.SIGKILL)
+    except (ProcessLookupError, PermissionError, OSError):
+        # Vanished in the TOCTOU window, or we lack permission — proceed with
+        # the transition regardless; the kill is a best-effort race guard.
+        pass
 
 
 def _write_recovery_complete_sidecar(
