@@ -149,6 +149,53 @@ def _dispatch_overnight_recover(args: argparse.Namespace) -> int:
     return 0
 
 
+def _dispatch_overnight_guardian_scan(args: argparse.Namespace) -> int:
+    """Implement ``cortex overnight guardian scan`` (spec §R6).
+
+    The scan entrypoint the persistent host-level launchd guardian invokes
+    each tick — and that an operator can run manually. It enumerates every
+    ``executing`` overnight session under ``cortex/lifecycle/sessions/``,
+    applies the false-positive-free pid-death predicate, and runs the
+    writer-authorized recovery core (``trigger="guardian"``) for each session
+    whose runner has died. Healthy sessions are left untouched.
+
+    The scan holds no recovery logic of its own (it delegates to
+    :mod:`cortex_command.overnight.guardian`) and isolates per-session
+    failure: a single poison session cannot starve its co-resident stuck
+    sessions. A one-line summary per recovered/errored session is printed;
+    the verb exits 0 even when nothing needed recovery.
+    """
+    from cortex_command.overnight import guardian
+    from cortex_command.overnight.cli_handler import _resolve_repo_path
+
+    repo_path = _resolve_repo_path()
+    state_root = repo_path / "cortex" / "lifecycle"
+
+    results = guardian.scan_and_recover(state_root)
+
+    recovered = [r for r in results if r.action == "recovered"]
+    errored = [r for r in results if r.action == "error"]
+
+    for result in results:
+        if result.action == "recovered":
+            reaped = result.reap.matched_count if result.reap is not None else 0
+            print(
+                f"recovered session {result.session_id}: "
+                f"transitioned to paused, reaped {reaped} orphan(s)"
+            )
+        elif result.action == "error":
+            detail = getattr(result, "error", "")
+            print(
+                f"error scanning session {result.session_id}: {detail}",
+                file=sys.stderr,
+            )
+
+    if not recovered and not errored:
+        print("nothing to recover")
+
+    return 0
+
+
 def _dispatch_overnight_launch(args: argparse.Namespace) -> int:
     from cortex_command.overnight import cli_handler
 
@@ -751,6 +798,47 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Session-id to recover (default: active-session pointer)",
     )
     recover.set_defaults(func=_dispatch_overnight_recover)
+
+    # cortex overnight guardian (R6) — the persistent host-level launchd
+    # supervisor surface. ``guardian scan`` is the per-tick scan entrypoint
+    # launchd invokes (and an operator can run manually): it enumerates every
+    # ``executing`` session, applies the pid-death predicate, and runs the
+    # recovery core for each dead-runner session, with per-session failure
+    # isolation. The ``install`` / ``remove`` sub-actions (which register and
+    # tear down the LaunchAgent) land in a later task; the nested subparser is
+    # structured so they slot in alongside ``scan`` without rework.
+    guardian = overnight_sub.add_parser(
+        "guardian",
+        help="Manage the persistent out-of-process recovery guardian",
+        description=(
+            "Out-of-process supervision surface. 'guardian scan' enumerates "
+            "every 'executing' overnight session, detects dead-runner "
+            "sessions via the pid-death predicate, and recovers each — the "
+            "scan the host-level launchd guardian invokes each tick and that "
+            "an operator can run on demand."
+        ),
+    )
+    guardian_sub = guardian.add_subparsers(
+        dest="guardian_command",
+        required=True,
+        metavar="<subcommand>",
+    )
+
+    guardian_scan = guardian_sub.add_parser(
+        "scan",
+        help="Scan all executing sessions and recover dead-runner sessions",
+        description=(
+            "Enumerate every 'executing' overnight session under "
+            "cortex/lifecycle/sessions/, apply the false-positive-free "
+            "pid-death predicate, and drive each dead-runner session to a "
+            "clean 'paused' end-state (transition, partial morning report, "
+            "reap session-matched orphans, clear the stale runner.pid). "
+            "Per-session failure isolation: one poison session cannot starve "
+            "co-resident stuck sessions. Exits 0 even when nothing needs "
+            "recovery."
+        ),
+    )
+    guardian_scan.set_defaults(func=_dispatch_overnight_guardian_scan)
 
     # cortex overnight schedule (R1) — schedule an overnight session via
     # the macOS LaunchAgent backend. Mirrors the structural shape of the
