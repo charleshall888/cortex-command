@@ -184,8 +184,16 @@ class OvernightState:
             Only set when phase is 'paused'; None otherwise.
         paused_reason: Free-form string describing why the session was paused
             (e.g. "signal", "stall_timeout", "budget_exhausted", "user_abort").
-            None for sessions paused before this field was introduced or when
-            no reason was recorded. Not reset when the session resumes.
+            The out-of-process recovery core sets the single value
+            "orchestrator_crash" when it crash-recovers a session whose runner
+            pid died mid-``executing``; the resume guard keys on that value.
+            The "recovery completed" signal is NOT a second paused_reason value
+            (keeping this field single-valued avoids a state-file flip a
+            concurrent resume save_state could clobber) — completion is the
+            standalone recovery-complete.json sidecar plus the
+            orchestrator_crash_recovered event. None for sessions paused before
+            this field was introduced or when no reason was recorded. Not reset
+            when the session resumes.
         integration_branch: Git branch created for this session. All feature
             branches merge here; a PR to main is opened at session end.
         integration_branches: Mapping of absolute repo path (string) to
@@ -218,6 +226,16 @@ class OvernightState:
             the PR block's body-warning branch fires deterministically in
             --dry-run sessions. Live sessions leave it False and rely on the
             shell variable set during recovery.
+        crash_recovery_attempts: Count of times the out-of-process recovery
+            core has crash-recovered this session (transition->paused on
+            runner-pid death). Incremented by the recovery core and read by
+            the ``cortex overnight start`` resume guard, which refuses to
+            auto-resume a session paused with ``paused_reason ==
+            "orchestrator_crash"`` once this counter exceeds a small bound
+            (default 1) unless ``--force`` is passed — the #308 trigger class
+            (e.g. a pre-commit gate blocking every commit) is deterministic
+            and would otherwise crash-loop. Defaults to ``0`` for
+            backward-compatible sessions created before the field existed.
         schema_version: Integer state-file schema version (ticket 115, R10).
             Defaults to ``1`` for newly constructed sessions. ``load_state``
             treats absence as ``schema_version = 0`` (legacy pre-115 state
@@ -244,6 +262,7 @@ class OvernightState:
     scheduled_start: Optional[str] = None
     integration_pr_flipped_once: bool = False
     integration_degraded: bool = False
+    crash_recovery_attempts: int = 0
     schema_version: int = 1
 
     def __post_init__(self) -> None:
@@ -255,6 +274,14 @@ class OvernightState:
             raise ValueError(
                 f"current_round must be a positive integer, "
                 f"got {self.current_round!r}"
+            )
+        if (
+            not isinstance(self.crash_recovery_attempts, int)
+            or self.crash_recovery_attempts < 0
+        ):
+            raise ValueError(
+                f"crash_recovery_attempts must be a non-negative integer, "
+                f"got {self.crash_recovery_attempts!r}"
             )
 
 
@@ -387,6 +414,7 @@ def load_state(state_path: Optional[Path] = None) -> OvernightState:
         scheduled_start=raw.get("scheduled_start"),
         integration_pr_flipped_once=raw.get("integration_pr_flipped_once", False),
         integration_degraded=raw.get("integration_degraded", False),
+        crash_recovery_attempts=raw.get("crash_recovery_attempts", 0),
         schema_version=raw.get("schema_version", 0),
     )
 
