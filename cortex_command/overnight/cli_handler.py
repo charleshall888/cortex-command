@@ -239,6 +239,7 @@ def _run_runner_inline(
         max_rounds=args.max_rounds,
         tier=args.tier,
         dry_run=args.dry_run,
+        force=getattr(args, "force", False),
     )
 
 
@@ -269,6 +270,10 @@ def _build_async_spawn_argv(args: argparse.Namespace, state_path: Path) -> list[
     max_rounds = getattr(args, "max_rounds", None)
     if isinstance(max_rounds, int):
         argv.extend(["--max-rounds", str(max_rounds)])
+    # Forward --force so the child runner (which runs _start_session and
+    # therefore the crash-loop resume guard) can bypass it (spec §R9).
+    if getattr(args, "force", False):
+        argv.append("--force")
     return argv
 
 

@@ -531,9 +531,14 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         default=False,
         help=(
-            "Bypass the pending-schedule cross-cancel guard (R14): start "
-            "now even when a scheduled fire is registered for this "
-            "session. Does NOT cancel the schedule — both will run."
+            "Bypass start-time guards: (1) the pending-schedule "
+            "cross-cancel guard (R14) — start now even when a scheduled "
+            "fire is registered for this session (does NOT cancel the "
+            "schedule — both will run); and (2) the crash-loop resume "
+            "guard (R9) — auto-resume a session paused by "
+            "orchestrator-crash recovery even when crash_recovery_attempts "
+            "exceeds the bound (the crash trigger is likely deterministic; "
+            "diagnose it before forcing)."
         ),
     )
     start.add_argument(

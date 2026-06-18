@@ -227,6 +227,7 @@ def test_circuit_breaker_marks_features_paused(
         repo_path: Path,
         events_path: Path,
         coord,
+        force: bool = False,
     ):
         loaded = state_module.load_state(state_path)
         return loaded, {"pid": 0}, "2026-05-04T00:00:00+00:00"

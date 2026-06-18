@@ -89,6 +89,16 @@ STALL_TIMEOUT_SECONDS: float = 1800.0
 #: Orchestrator ``claude -p`` turn cap. Matches ``runner.sh:643``.
 ORCHESTRATOR_MAX_TURNS: int = 50
 
+#: Crash-loop resume bound (spec §R9, Task 11). ``cortex overnight start``
+#: refuses to auto-resume a session paused with
+#: ``paused_reason == "orchestrator_crash"`` once
+#: ``crash_recovery_attempts`` exceeds this bound, unless ``--force`` is
+#: passed. The #308 trigger class (e.g. a pre-commit gate blocking every
+#: commit) is deterministic, so a blind auto-resume would crash-loop; the
+#: bound stops it after one recovered attempt. A clean pause
+#: (``budget_exhausted``/``signal``) is unaffected.
+CRASH_RECOVERY_RESUME_BOUND: int = 1
+
 #: Graceful shutdown budget for the SIGTERM tree-walker (R12 / Task 3).
 #: When SIGTERM arrives, the tree-walker enumerates all descendants via
 #: ``psutil.Process(os.getpid()).children(recursive=True)``, sends SIGTERM
@@ -920,6 +930,7 @@ def _cleanup(
 
 def _check_concurrent_start(
     session_dir: Path,
+    lock_fd: Optional[int] = None,
 ) -> tuple[Optional[str], Optional[int]]:
     """Check for a live session via ``runner.pid`` + ``verify_runner_pid``.
 
@@ -931,25 +942,38 @@ def _check_concurrent_start(
     into the subsequent :func:`ipc.write_runner_pid` call so the entire
     read-verify-claim critical section runs under one lock.
 
+    When ``lock_fd`` is provided, the caller already holds the takeover
+    lock (the resume path acquires it at the top to serialize the
+    crash-loop guard + ``handle_interrupted_features`` against a
+    concurrent recovery writer). This function then reuses that held FD
+    rather than acquiring the lock a second time, and on the
+    live-collision path it does NOT close the caller-owned FD — the
+    caller is responsible for releasing the FD it acquired.
+
     Returns a ``(error_message, lock_fd)`` tuple:
 
-    * On a live-session collision: ``(error_message, None)``. The
-      function releases the lock before returning so the caller does not
-      need to.
+    * On a live-session collision: ``(error_message, None)`` when this
+      function acquired the lock (it releases the lock before returning so
+      the caller does not need to); ``(error_message, lock_fd)`` when the
+      caller passed in a held FD (the caller owns release).
     * On the no-PID-file path or successful stale self-heal:
       ``(None, lock_fd)``. The caller MUST release via the nested
       ``try: LOCK_UN ... finally: os.close(fd)`` pattern after
       :func:`ipc.write_runner_pid` returns.
     """
-    lock_fd = ipc._acquire_takeover_lock(session_dir)
+    caller_owns_lock = lock_fd is not None
+    if lock_fd is None:
+        lock_fd = ipc._acquire_takeover_lock(session_dir)
     try:
         pid_data = ipc.read_runner_pid(session_dir)
         if pid_data is None:
             return None, lock_fd
         if ipc.verify_runner_pid(pid_data):
-            # Live runner — release the lock before returning the error
-            # so the caller never needs to handle the fd on the error
-            # path.
+            # Live runner. Only release the lock here when this function
+            # acquired it; when the caller passed in a held FD it owns
+            # release and we return the FD so the caller can clean up.
+            if caller_owns_lock:
+                return "session already running", lock_fd
             try:
                 fcntl.flock(lock_fd, fcntl.LOCK_UN)
             finally:
@@ -963,14 +987,75 @@ def _check_concurrent_start(
         ipc.clear_active_session()
         return None, lock_fd
     except BaseException:
-        try:
+        # Only tear down the FD when this function acquired it; a
+        # caller-owned FD is released by the caller's own finally.
+        if not caller_owns_lock:
             try:
-                fcntl.flock(lock_fd, fcntl.LOCK_UN)
-            finally:
-                os.close(lock_fd)
-        except OSError:
-            pass
+                try:
+                    fcntl.flock(lock_fd, fcntl.LOCK_UN)
+                finally:
+                    os.close(lock_fd)
+            except OSError:
+                pass
         raise
+
+
+def _crash_loop_resume_declined(
+    session_dir: Path,
+    state: state_module.OvernightState,
+    *,
+    force: bool,
+) -> Optional[str]:
+    """Return a decline message if the crash-loop resume guard trips (spec §R9).
+
+    Refuses to auto-resume a session paused by out-of-process crash
+    recovery once it has exhausted the crash-loop bound, because the #308
+    trigger class (e.g. a pre-commit gate blocking every commit) is
+    deterministic — a blind auto-resume would crash, get recovered, and
+    crash again. The decline condition (ALL of):
+
+      * the recovery-complete sidecar (``recovery-complete.json``) is
+        present — the race-authoritative marker that recovery actually
+        ran on this session (a separate file a concurrent resume's
+        ``save_state`` cannot clobber), AND
+      * ``paused_reason == "orchestrator_crash"`` — a crash-recovery
+        pause specifically (a clean ``budget_exhausted``/``signal`` pause
+        is never declined), AND
+      * ``crash_recovery_attempts`` exceeds
+        :data:`CRASH_RECOVERY_RESUME_BOUND` (default 1), AND
+      * ``--force`` was not passed.
+
+    Returns the operator-facing decline message when the guard trips, or
+    ``None`` to proceed with the resume. Pure: reads disk + state only,
+    mutates nothing. The caller MUST run this UNDER the takeover lock and
+    BEFORE :func:`interrupt.handle_interrupted_features`, so the read of
+    the sidecar + counter is serialized against a concurrent recovery
+    writer and no feature-status reset runs ahead of a declined resume.
+    """
+    if force:
+        return None
+    # Lazy import: ``recovery`` imports from this module at module load
+    # (``DESCENDANT_GRACEFUL_SHUTDOWN_SECONDS``), so a top-level import
+    # here would be circular. The constants are read inside the function.
+    from cortex_command.overnight import recovery
+
+    paused_reason = getattr(state, "paused_reason", None)
+    if paused_reason != recovery.ORCHESTRATOR_CRASH_PAUSED_REASON:
+        return None
+    attempts = getattr(state, "crash_recovery_attempts", 0)
+    if attempts <= CRASH_RECOVERY_RESUME_BOUND:
+        return None
+    sidecar = session_dir / recovery.RECOVERY_COMPLETE_SIDECAR
+    if not sidecar.exists():
+        return None
+    return (
+        f"refusing to auto-resume session paused by orchestrator-crash "
+        f"recovery: crash_recovery_attempts={attempts} exceeds the "
+        f"crash-loop bound ({CRASH_RECOVERY_RESUME_BOUND}). The crash "
+        f"trigger is likely deterministic (it crashed and re-crashed). "
+        f"Diagnose the underlying failure, or pass --force to resume "
+        f"anyway."
+    )
 
 
 def _start_session(
@@ -979,6 +1064,7 @@ def _start_session(
     repo_path: Path,
     events_path: Path,
     coord: RunnerCoordination,
+    force: bool = False,
 ) -> tuple[Optional[state_module.OvernightState], Optional[dict], Optional[str]]:
     """Run R8/R9/R14 session startup: interrupt recovery, PID + pointer writes.
 
@@ -986,54 +1072,96 @@ def _start_session(
     ``runner.pid`` (reused for pointer updates), and the ``start_time``
     string used for PID-reuse detection. Returns ``(None, None, None)``
     when the locked concurrent-start guard detects a live runner already
-    owns the session — the caller MUST treat this as the
-    "session already running" exit path (already printed to stderr by
-    this function) and return a nonzero exit code.
+    owns the session, OR when the crash-loop resume guard (spec §R9)
+    declines an auto-resume of a crash-recovered session past the bound —
+    the caller MUST treat either as a refused-start exit path (the
+    message is already printed to stderr by this function) and return a
+    nonzero exit code.
+
+    **Lock ordering (spec §R9 / Overview "Recovery↔resume ordering").**
+    The takeover lock is acquired at the TOP of the resume path — before
+    the crash-loop guard reads the ``recovery-complete.json`` sidecar +
+    ``crash_recovery_attempts`` and before
+    :func:`interrupt.handle_interrupted_features` mutates feature status —
+    so both the guard read and the interrupt-recovery write are
+    serialized against a concurrent out-of-process recovery writer (the
+    takeover lock does NOT serialize ``save_state`` cross-process, so the
+    guard would otherwise act on unserialized state). The SAME held FD is
+    threaded into :func:`_check_concurrent_start` and
+    :func:`ipc.write_runner_pid` (the lock is acquired ONCE, not twice).
+
+    ``force`` (from ``cortex overnight start --force``) bypasses the
+    crash-loop resume guard; it does not affect the concurrent-start
+    protection or the ``runner.pid`` claim.
     """
-    # R14 interrupt recovery for features stuck in "running".
-    interrupt.handle_interrupted_features(state_path)
-
-    state = state_module.load_state(state_path)
-    session_id = state.session_id
-    if not session_id:
-        raise RuntimeError(f"state file {state_path} has empty session_id")
-
-    start_time = datetime.now(timezone.utc).isoformat()
     pid = os.getpid()
     try:
         pgid = os.getpgid(pid)
     except ProcessLookupError:
         pgid = pid
 
-    pid_data = {
-        "schema_version": 1,
-        "magic": "cortex-runner-v1",
-        "pid": pid,
-        "pgid": pgid,
-        "start_time": start_time,
-        "session_id": session_id,
-        "session_dir": str(session_dir),
-        "repo_path": str(repo_path),
-    }
-
     # The takeover-lock acquire and release live inside the
     # ``deferred_signals`` block so SIGTERM that arrives during the
     # ``_acquire_takeover_lock`` polling loop is stashed by the context
     # manager and replayed on exit. PEP 475 means ``time.sleep(0.05)``
     # retries to completion across signals — the 50 ms cadence (not
-    # EINTR) is what bounds signal-response latency. The lock spans
+    # EINTR) is what bounds signal-response latency. The lock is acquired
+    # at the TOP of the resume path (spec §R9 reorder) so the crash-loop
+    # guard read AND ``handle_interrupted_features``'s feature-status
+    # write run under it, serialized against a concurrent recovery
+    # writer; the SAME held FD is then threaded into
     # ``_check_concurrent_start`` (read-verify-clear) AND the subsequent
-    # ``write_runner_pid`` claim so the entire read-verify-claim
-    # critical section runs under one held lock; the re-verify under
-    # the held lock inside ``write_runner_pid``'s retry path is the
-    # load-bearing CAS that closes the documented unlink-then-recreate
-    # TOCTOU.
+    # ``write_runner_pid`` claim so the entire read-verify-claim critical
+    # section runs under one held lock (the re-verify under the held lock
+    # inside ``write_runner_pid``'s retry path is the load-bearing CAS
+    # that closes the documented unlink-then-recreate TOCTOU). The lock
+    # is acquired ONCE; the held FD is reused, never re-acquired.
     with deferred_signals(coord):
-        concurrent_err, lock_fd = _check_concurrent_start(session_dir)
-        if concurrent_err is not None:
-            print(concurrent_err, file=sys.stderr, flush=True)
-            return None, None, None
+        lock_fd = ipc._acquire_takeover_lock(session_dir)
         try:
+            # Crash-loop resume guard (spec §R9): read the
+            # recovery-complete sidecar + crash_recovery_attempts UNDER
+            # the lock and BEFORE handle_interrupted_features mutates
+            # feature status, so the decision is serialized against a
+            # concurrent recovery writer and no feature-status reset runs
+            # ahead of a declined resume.
+            guard_state = state_module.load_state(state_path)
+            decline = _crash_loop_resume_declined(
+                session_dir, guard_state, force=force
+            )
+            if decline is not None:
+                print(decline, file=sys.stderr, flush=True)
+                return None, None, None
+
+            # R14 interrupt recovery for features stuck in "running",
+            # under the held lock (spec §R9 reorder).
+            interrupt.handle_interrupted_features(state_path)
+
+            state = state_module.load_state(state_path)
+            session_id = state.session_id
+            if not session_id:
+                raise RuntimeError(
+                    f"state file {state_path} has empty session_id"
+                )
+
+            start_time = datetime.now(timezone.utc).isoformat()
+            pid_data = {
+                "schema_version": 1,
+                "magic": "cortex-runner-v1",
+                "pid": pid,
+                "pgid": pgid,
+                "start_time": start_time,
+                "session_id": session_id,
+                "session_dir": str(session_dir),
+                "repo_path": str(repo_path),
+            }
+
+            concurrent_err, _lock_fd = _check_concurrent_start(
+                session_dir, lock_fd=lock_fd
+            )
+            if concurrent_err is not None:
+                print(concurrent_err, file=sys.stderr, flush=True)
+                return None, None, None
             ipc.write_runner_pid(
                 session_dir=session_dir,
                 pid=pid,
@@ -2133,6 +2261,7 @@ def run(
     max_rounds: Optional[int],
     tier: str,
     dry_run: bool = False,
+    force: bool = False,
 ) -> int:
     """Run the overnight round-dispatch loop.
 
@@ -2153,11 +2282,15 @@ def run(
             ``cortex-batch-runner``.
         dry_run: When True, reject if any feature is ``pending``; skip
             spawns and emit ``DRY-RUN`` echoes instead.
+        force: When True, bypass the crash-loop resume guard (spec §R9)
+            so a session paused by orchestrator-crash recovery past the
+            bound is resumed anyway. Does not affect the concurrent-start
+            protection or the ``runner.pid`` claim.
 
     Returns:
         Process exit code. ``0`` on clean loop exit. Nonzero on
-        concurrent-start collision, dry-run rejection, or propagated
-        signal exit.
+        concurrent-start collision, crash-loop resume refusal, dry-run
+        rejection, or propagated signal exit.
     """
     # Earliest action (R4): bind a no-idle-sleep assertion to this runner's
     # lifetime as a child, BEFORE state load and takeover-lock acquisition.
@@ -2256,6 +2389,7 @@ def run(
                 repo_path=repo_path,
                 events_path=events_path,
                 coord=coord,
+                force=force,
             )
             if state is None:
                 # ``_start_session`` already printed
