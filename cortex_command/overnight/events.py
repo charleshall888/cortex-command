@@ -88,6 +88,7 @@ SYNTHESIZER_CIRCUIT_BREAKER_FIRED = "synthesizer_circuit_breaker_fired"
 SYNTHESIZER_ERROR = "synthesizer_error"
 PIPELINE_SYSTEMIC_FAILURE = "pipeline_systemic_failure"
 COMPLEXITY_NORMALIZED = "complexity_normalized"
+ORCHESTRATOR_CRASH_RECOVERED = "orchestrator_crash_recovered"
 
 EVENT_TYPES = (
     SESSION_START,
@@ -149,6 +150,7 @@ EVENT_TYPES = (
     SYNTHESIZER_ERROR,
     PIPELINE_SYSTEMIC_FAILURE,
     COMPLEXITY_NORMALIZED,
+    ORCHESTRATOR_CRASH_RECOVERED,
 )
 
 
