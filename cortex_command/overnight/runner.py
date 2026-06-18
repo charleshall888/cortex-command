@@ -86,6 +86,18 @@ KILL_ESCALATION_SECONDS: float = DEFAULT_KILL_ESCALATION_SECONDS
 #: subprocess is considered stalled). Matches ``runner.sh:646``.
 STALL_TIMEOUT_SECONDS: float = 1800.0
 
+#: Runner-level heartbeat cadence (spec Req 11, Task 14). A runner-owned
+#: daemon thread emits a ``HEARTBEAT`` event every this-many seconds across
+#: ALL ``executing`` sub-phases — the planning span (between ``ROUND_START``
+#: and the ``batch_runner`` spawn) AND the batch span — so the event log
+#: never goes silent during healthy plan generation. Matches the
+#: ``_heartbeat_loop`` cadence in ``orchestrator.py:465`` (300s); the runner
+#: heartbeat covers the planning blind window where the batch heartbeat does
+#: not run, and a slightly redundant emit during the batch span is harmless.
+#: This advancing event-log timestamp is the prerequisite that makes
+#: event-log staleness a valid liveness signal in every phase (Task 15).
+RUNNER_HEARTBEAT_INTERVAL_SECONDS: float = 300.0
+
 #: Orchestrator ``claude -p`` turn cap. Matches ``runner.sh:643``.
 ORCHESTRATOR_MAX_TURNS: int = 50
 
@@ -353,6 +365,119 @@ def _kill_subprocess_group(
                 os.killpg(pgid, signal.SIGKILL)
             except ProcessLookupError:
                 return
+
+
+# ---------------------------------------------------------------------------
+# Runner-level heartbeat (spec Req 11, Task 14)
+# ---------------------------------------------------------------------------
+
+def _emit_runner_heartbeat(
+    events_path: Path,
+    session_id: str,
+    round_num: int,
+) -> None:
+    """Append a single ``HEARTBEAT`` event for the runner's executing span.
+
+    Reuses :data:`events.HEARTBEAT` (already in the event registry — no new
+    event literal is introduced) and the same ``events.log_event`` path the
+    runner uses for its other events. The ``source`` detail marks it as the
+    runner-owned heartbeat to distinguish it from the batch_runner's
+    ``_heartbeat_loop`` emit, which carries the per-feature pending/running
+    counters this runner-level emit deliberately omits (those counts are not
+    known to the runner during the planning sub-phase).
+
+    Best-effort: any failure is swallowed so a transient log-write error can
+    never crash the runner. The point of the heartbeat is liveness, not
+    durability — a missed beat self-corrects on the next cadence tick.
+    """
+    try:
+        events.log_event(
+            events.HEARTBEAT,
+            round=round_num,
+            details={"session_id": session_id, "source": "runner"},
+            log_path=events_path,
+        )
+    except Exception:
+        pass
+
+
+class RunnerHeartbeatThread(threading.Thread):
+    """Runner-owned daemon that emits ``HEARTBEAT`` across executing sub-phases.
+
+    Closes the planning-phase blind window (spec Req 11): today ``HEARTBEAT``
+    is emitted only by ``_heartbeat_loop`` inside ``run_batch`` (the
+    batch_runner subprocess), so during the planning sub-phase — between
+    ``ROUND_START`` and the batch_runner spawn — the runner emits nothing and
+    ``overnight-events.log`` can be silent >30 min during healthy plan
+    generation. This thread emits a runner-level heartbeat on a fixed cadence
+    (:data:`RUNNER_HEARTBEAT_INTERVAL_SECONDS`) for the entire planning→batch
+    span, advancing the last-event timestamp in every ``executing`` sub-phase
+    so event-log staleness becomes a valid liveness signal (Task 15's
+    prerequisite).
+
+    Sleeps in ``coord.shutdown_event.wait(timeout=interval)`` — never a
+    blocking stdlib sleep — so a SIGTERM/SIGHUP handler (which sets
+    ``shutdown_event``) wakes the thread immediately for a prompt stop. Daemon
+    thread: never prevents interpreter shutdown. Additive — it does NOT touch
+    the existing batch ``_heartbeat_loop``; a slightly redundant beat during
+    the batch span is harmless.
+    """
+
+    def __init__(
+        self,
+        coord: RunnerCoordination,
+        events_path: Path,
+        session_id: str,
+        round_num: int,
+        *,
+        interval_seconds: float = RUNNER_HEARTBEAT_INTERVAL_SECONDS,
+    ) -> None:
+        super().__init__(name="runner-heartbeat", daemon=True)
+        self._coord = coord
+        self._events_path = events_path
+        self._session_id = session_id
+        self._round_num = round_num
+        self._interval_seconds = interval_seconds
+        self._stop_event = threading.Event()
+
+    def set_round(self, round_num: int) -> None:
+        """Update the round number stamped on subsequent heartbeats.
+
+        Called by the main loop as it advances rounds so the runner-level
+        heartbeat carries the round it is currently executing. A plain field
+        write is safe: int assignment is atomic under the GIL and a stale read
+        on a cadence tick is immaterial to liveness.
+        """
+        self._round_num = round_num
+
+    def stop(self) -> None:
+        """Signal the thread to exit before its next cadence tick.
+
+        Sets the thread's own stop event so a clean (non-signal) loop exit
+        wakes the ``wait`` immediately rather than blocking ``join`` for up to
+        a full cadence interval. The signal path reaches the same exit via
+        ``coord.shutdown_event`` (checked each tick), but the explicit stop is
+        what wakes the thread promptly on the clean path.
+        """
+        self._stop_event.set()
+
+    def run(self) -> None:
+        while True:
+            # Block for the cadence interval, waking immediately on an
+            # explicit ``stop()``. ``wait`` returns True when ``_stop_event``
+            # is set (clean-exit stop) and False on timeout (time to beat).
+            if self._stop_event.wait(timeout=self._interval_seconds):
+                return
+            # A SIGTERM/SIGHUP handler sets ``shutdown_event`` but not
+            # ``_stop_event``; honor it as an exit trigger on the next tick so
+            # the heartbeat stops once shutdown is in progress.
+            if self._coord.shutdown_event.is_set():
+                return
+            _emit_runner_heartbeat(
+                self._events_path,
+                self._session_id,
+                self._round_num,
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -2378,6 +2503,7 @@ def run(
     os.environ["CORTEX_REPO_ROOT"] = str(repo_path)
 
     spawned_procs: list[tuple[subprocess.Popen, str]] = []
+    heartbeat_thread: Optional[RunnerHeartbeatThread] = None
 
     try:
         # Session startup: interrupt recovery, PID + pointer writes.
@@ -2426,6 +2552,23 @@ def run(
 
         stall_count = 0
 
+        # Runner-level heartbeat (spec Req 11, Task 14): start a daemon that
+        # emits ``HEARTBEAT`` on a fixed cadence across ALL ``executing``
+        # sub-phases — including the planning span where only ``_poll_subprocess``
+        # runs and the batch_runner's ``_heartbeat_loop`` is not yet alive —
+        # so the event log never goes silent during healthy plan generation.
+        # Skipped under --dry-run (no real spawns, exits immediately). Stopped
+        # in the ``finally`` so it never outlives the runner. Additive: it does
+        # NOT alter the existing batch ``_heartbeat_loop``.
+        if not dry_run:
+            heartbeat_thread = RunnerHeartbeatThread(
+                coord=coord,
+                events_path=events_path,
+                session_id=session_id,
+                round_num=round_num,
+            )
+            heartbeat_thread.start()
+
         while not coord.shutdown_event.is_set():
             # Time budget check.
             if time_limit_seconds is not None:
@@ -2445,6 +2588,12 @@ def run(
             # Round budget check.
             if round_num > effective_max:
                 break
+
+            # Stamp the runner-level heartbeat with the round now executing so
+            # its planning-span beats carry the correct round (informational;
+            # liveness is the load-bearing property).
+            if heartbeat_thread is not None:
+                heartbeat_thread.set_round(round_num)
 
             # Reload state to pick up mid-round mutations by peer modules.
             state = state_module.load_state(state_path)
@@ -2921,6 +3070,19 @@ def run(
         return 0
 
     finally:
+        # Stop the runner-level heartbeat first so it never emits after the
+        # session has exited the round loop. ``stop()`` wakes the thread's
+        # ``wait`` immediately on the clean path; a short ``join`` reaps it
+        # without blocking on the full cadence interval. Daemon status makes
+        # this defense-in-depth — the thread cannot outlive the interpreter
+        # even on the signal path where ``_cleanup`` re-raises before this
+        # ``finally`` completes.
+        if heartbeat_thread is not None:
+            try:
+                heartbeat_thread.stop()
+                heartbeat_thread.join(timeout=1.0)
+            except Exception:
+                pass
         # Tear down any still-live spawned subprocesses before restoring
         # handlers — guarantees no orphan PGIDs survive a crash path.
         for proc, _label in spawned_procs:
@@ -2959,6 +3121,8 @@ __all__ = [
     "KILL_ESCALATION_SECONDS",
     "ORCHESTRATOR_MAX_TURNS",
     "POLL_INTERVAL_SECONDS",
+    "RUNNER_HEARTBEAT_INTERVAL_SECONDS",
+    "RunnerHeartbeatThread",
     "STALL_TIMEOUT_SECONDS",
     "dry_run_echo",
     "run",
