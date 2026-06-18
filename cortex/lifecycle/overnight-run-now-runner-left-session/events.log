@@ -13,3 +13,7 @@
 {"ts": "2026-06-18T04:43:55Z", "event": "batch_dispatch", "feature": "overnight-run-now-runner-left-session", "batch": 5, "tasks": [10, 15]}
 {"ts": "2026-06-18T05:07:57Z", "event": "batch_dispatch", "feature": "overnight-run-now-runner-left-session", "batch": 6, "tasks": [13]}
 {"ts": "2026-06-18T05:13:20Z", "event": "batch_dispatch", "feature": "overnight-run-now-runner-left-session", "batch": 7, "tasks": [16]}
+{"ts": "2026-06-18T05:22:20Z", "event": "phase_transition", "feature": "overnight-run-now-runner-left-session", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-06-18T05:34:04Z", "event": "review_verdict", "feature": "overnight-run-now-runner-left-session", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
+{"ts": "2026-06-18T05:34:56Z", "event": "phase_transition", "feature": "overnight-run-now-runner-left-session", "from": "review", "to": "complete"}
+{"ts": "2026-06-18T05:39:26Z", "event": "feature_complete", "feature": "overnight-run-now-runner-left-session", "tasks_total": 17, "rework_cycles": 0, "merge_anchor": "merge"}

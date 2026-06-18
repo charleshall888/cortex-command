@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 1f5eb8a9-2152-4bfb-9331-b85af9c0c72d
 title: 'Overnight run-now runner left session ''executing'' after orchestrator silently stopped; worker_no_exit_report did not trip the #262 circuit breaker'
-status: in_progress
+status: complete
 priority: high
 type: bug
 created: 2026-06-17
-updated: 2026-06-17
+updated: 2026-06-18
 complexity: complex
 criticality: high
 spec: cortex/lifecycle/overnight-run-now-runner-left-session/spec.md
