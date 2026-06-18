@@ -33,11 +33,14 @@ This module performs no writes.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Optional
 
 import psutil
 
-from cortex_command.overnight import status
+from cortex_command.overnight import events, ipc, report, status
+from cortex_command.overnight import state as state_mod
 from cortex_command.overnight.fail_markers import _session_phase
 from cortex_command.overnight.runner import DESCENDANT_GRACEFUL_SHUTDOWN_SECONDS
 
@@ -310,3 +313,230 @@ def _toctou_alive(proc: psutil.Process) -> bool:
         # rule out reuse. Treat the successful live read as alive.
         return True
     return enumerated == live
+
+
+# ---------------------------------------------------------------------------
+# Recovery core sequence (spec §R2, Phase 1)
+# ---------------------------------------------------------------------------
+
+#: The descriptive ``paused_reason`` a crash-recovery pause sets (spec §R2
+#: step 2, Task 1). Single-valued on purpose: the "recovery completed" signal
+#: is NOT a second ``paused_reason`` — it is the standalone
+#: :data:`RECOVERY_COMPLETE_SIDECAR` file plus the
+#: :data:`ORCHESTRATOR_CRASH_RECOVERED_EVENT` event — so a concurrent resume's
+#: ``save_state`` rewrite of ``overnight-state.json`` cannot clobber the
+#: completion marker.
+ORCHESTRATOR_CRASH_PAUSED_REASON = "orchestrator_crash"
+
+#: Filename of the standalone, race-authoritative completion marker written as
+#: the final step of a successful recovery (spec §R3, Overview "Recovery↔resume
+#: ordering"). A separate file — not a flag inside ``overnight-state.json`` —
+#: so a concurrent resume ``save_state`` cannot overwrite it. Task 5 adds the
+#: idempotency short-circuit that keys on this file's existence; this task only
+#: writes it (step 7).
+RECOVERY_COMPLETE_SIDECAR = "recovery-complete.json"
+
+#: The event name emitted to ``overnight-events.log`` when recovery completes
+#: (spec §R10). Registered in ``bin/.events-registry.md`` by Task 12; until the
+#: matching ``EVENT_TYPES`` constant is added in ``events.py`` the emit is
+#: swallowed best-effort (see :func:`recover_session`).
+ORCHESTRATOR_CRASH_RECOVERED_EVENT = "orchestrator_crash_recovered"
+
+
+@dataclass
+class RecoveryResult:
+    """Outcome of a :func:`recover_session` invocation (spec §R2).
+
+    Fields:
+
+    * ``session_id`` — the recovered session's id (from on-disk state). May be
+      ``""`` when state could not be loaded.
+    * ``action`` — ``"recovered"`` when the full transition→report→reap→clear
+      sequence ran, ``"noop"`` when the predicate did not re-confirm under the
+      (Task-5) lock so nothing was mutated.
+    * ``trigger`` — the surface that invoked recovery (``"guardian"`` |
+      ``"manual"``), threaded into the completion event.
+    * ``reap`` — the :class:`ReapOutcome` from the orphan reap, or ``None`` on a
+      no-op.
+    * ``report_path`` — the session-specific morning report path written, or
+      ``None`` if no report was written.
+    * ``latest_report_path`` — the latest-copy morning report path, or ``None``.
+    """
+
+    session_id: str
+    action: str
+    trigger: str
+    reap: Optional[ReapOutcome] = None
+    report_path: Optional[Path] = None
+    latest_report_path: Optional[Path] = None
+
+
+def _lifecycle_root(session_dir: Path) -> Path:
+    """Return the lifecycle root implied by a session dir.
+
+    A session dir is ``{lifecycle_root}/sessions/{session_id}`` (see
+    :func:`state.session_dir`), so the lifecycle root is two levels up. Used to
+    resolve the per-session report + events-log destinations without depending
+    on ``CORTEX_REPO_ROOT`` resolution (the session dir is passed in directly).
+    """
+    return session_dir.parent.parent
+
+
+def recover_session(session_dir: Path, *, trigger: str) -> RecoveryResult:
+    """Drive a pid-dead ``executing`` session to a clean ``paused`` end-state.
+
+    This is the writer-authorized recovery core (spec §R2). It re-implements
+    pause/report/reap/clear from the pure ``state``/``ipc``/``report``
+    primitives — it MUST NOT call the runner's ``_transition_paused`` /
+    ``_generate_morning_report``, which require an in-process
+    ``RunnerCoordination`` threading lock unavailable out-of-process.
+
+    Performs, in order:
+
+      1. **Re-load state from disk and re-confirm the predicate.** The mutated
+         ``state`` object is this fresh load (Task 5 wraps a takeover lock + an
+         early no-op guard AROUND this call; the post-lock load lives here). If
+         :func:`needs_recovery_pid_death` is ``False`` at re-confirm, return a
+         no-op :class:`RecoveryResult` without mutating anything.
+      2. ``state.transition(state, "paused")`` + set
+         ``paused_reason = "orchestrator_crash"`` + increment
+         ``crash_recovery_attempts`` + atomic ``save_state``.
+      3. ``ipc.update_active_session_phase(session_id, "paused")`` (retain the
+         active-session pointer — no clear).
+      4. Write the partial morning report (Task 6 enriches its banner).
+      5. Reap session-matched orphans (:func:`reap_session_orphans`).
+      6. ``ipc.clear_runner_pid(session_dir, expected_session_id=session_id)``
+         (CAS — unlinks only on session_id match).
+      7. Write the :data:`RECOVERY_COMPLETE_SIDECAR` sidecar atomically as the
+         final, race-authoritative completion marker.
+
+    Emits an :data:`ORCHESTRATOR_CRASH_RECOVERED_EVENT` event to
+    ``overnight-events.log`` with a ``trigger`` field after the sequence. The
+    emit is best-effort: ``events.log_event`` validates the name against
+    ``EVENT_TYPES`` and raises ``ValueError`` for an unregistered name, so the
+    call is wrapped so a not-yet-registered event never aborts a completed
+    recovery (the registration lands in Task 12 / ``EVENT_TYPES``).
+
+    Args:
+        session_dir: The session's directory
+            (``{lifecycle_root}/sessions/{session_id}``) holding
+            ``overnight-state.json`` and ``runner.pid``.
+        trigger: The invoking surface — ``"guardian"`` or ``"manual"``.
+
+    Returns:
+        A :class:`RecoveryResult` describing what was done.
+    """
+    state_path = session_dir / "overnight-state.json"
+
+    # Step 1: re-load state from disk and re-confirm the predicate. The mutated
+    # state object MUST be this post-lock load (Task 5 wraps the lock around
+    # this call), not a pre-lock read.
+    overnight_state = state_mod.load_state(state_path)
+    session_id = overnight_state.session_id
+
+    if not needs_recovery_pid_death(session_dir):
+        return RecoveryResult(
+            session_id=session_id,
+            action="noop",
+            trigger=trigger,
+        )
+
+    # Step 2: transition executing -> paused, record the reason, bump the
+    # crash-recovery counter, and persist atomically.
+    state_mod.transition(overnight_state, "paused")
+    overnight_state.paused_reason = ORCHESTRATOR_CRASH_PAUSED_REASON
+    overnight_state.crash_recovery_attempts += 1
+    state_mod.save_state(overnight_state, state_path)
+
+    # Step 3: retain the active-session pointer at the new phase (no clear). A
+    # no-op if the pointer is absent or names a different session.
+    ipc.update_active_session_phase(session_id, "paused")
+
+    # Step 4: write the partial morning report. Both the session-specific and
+    # the latest-copy paths are written; pass the lifecycle root explicitly so
+    # the write stays anchored to this session dir's tree. (Task 6 enriches the
+    # banner via the new orchestrator_crash render branch.)
+    lifecycle_root = _lifecycle_root(session_dir)
+    project_root = lifecycle_root.parent.parent
+    report_path: Optional[Path] = None
+    latest_report_path: Optional[Path] = None
+    try:
+        written = report.generate_and_write_report(
+            state_path=state_path,
+            events_path=lifecycle_root / "overnight-events.log",
+            report_dir=session_dir,
+            project_root=project_root,
+        )
+        report_path = session_dir / "morning-report.md"
+        latest_report_path = lifecycle_root / "morning-report.md"
+        if written is not None:
+            report_path = Path(written)
+    except Exception:
+        # The report is partial-safe but best-effort: a render failure must not
+        # block the transition/reap/clear that already succeeded.
+        pass
+
+    # Step 5: reap the dead session's orphaned workers by env-marker match.
+    reap = reap_session_orphans(session_id)
+
+    # Step 6: clear the stale runner.pid (CAS — only unlinks on session match).
+    ipc.clear_runner_pid(session_dir, expected_session_id=session_id)
+
+    # Step 7: write the recovery-complete sidecar atomically as the final,
+    # race-authoritative completion marker (a separate file a concurrent resume
+    # save_state cannot overwrite).
+    _write_recovery_complete_sidecar(
+        session_dir,
+        session_id=session_id,
+        trigger=trigger,
+    )
+
+    # Completion event (best-effort: swallow an unregistered-name ValueError so
+    # a not-yet-registered EVENT_TYPES entry never aborts a completed recovery).
+    try:
+        events.log_event(
+            ORCHESTRATOR_CRASH_RECOVERED_EVENT,
+            overnight_state.current_round,
+            details={
+                "trigger": trigger,
+                "reaped": reap.matched_count,
+                "killed": reap.killed_count,
+                "unreaped": reap.unreaped_count,
+            },
+            log_path=lifecycle_root / "overnight-events.log",
+        )
+    except Exception:
+        pass
+
+    return RecoveryResult(
+        session_id=session_id,
+        action="recovered",
+        trigger=trigger,
+        reap=reap,
+        report_path=report_path,
+        latest_report_path=latest_report_path,
+    )
+
+
+def _write_recovery_complete_sidecar(
+    session_dir: Path,
+    *,
+    session_id: str,
+    trigger: str,
+) -> None:
+    """Atomically write the ``recovery-complete.json`` completion sidecar.
+
+    The standalone, race-authoritative completion marker (spec §R3). Written as
+    recovery's final step via the shared atomic tempfile+``os.replace`` helper
+    so a reader never sees a partial file and a concurrent resume's
+    ``save_state`` (which rewrites only ``overnight-state.json``) cannot clobber
+    it. Task 5 adds the idempotency short-circuit that keys on this file's
+    existence.
+    """
+    payload = {
+        "session_id": session_id,
+        "trigger": trigger,
+        "paused_reason": ORCHESTRATOR_CRASH_PAUSED_REASON,
+        "recovered_at": datetime.now(timezone.utc).isoformat(),
+    }
+    ipc._atomic_write_json(session_dir / RECOVERY_COMPLETE_SIDECAR, payload)
