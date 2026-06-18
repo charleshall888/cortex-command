@@ -289,6 +289,40 @@ The two directories are kept separate because their audiences differ: `pipeline/
 
 ---
 
+## Out-of-Process Supervision
+
+Every in-process liveness and recovery primitive the runner owns — the `WatchdogThread`, the signal-driven `_cleanup` pause path, the SIGTERM descendant-tree reaper — fires only from the runner's own control flow or a signal delivered to a living runner. None of them can run if the runner itself dies hard (SIGKILL, OOM) or its event loop wedges: a supervisor that lives inside the process it supervises cannot detect that process's own death. The structural consequence is the #308 failure class — a runner that vanishes mid-session leaves the session stuck in `phase: executing`, with orphaned worker agents reparented to launchd (PID 1) and no morning report, until a human notices. Because the failure window is overnight, "until a human notices" can be hours.
+
+The fix is an out-of-process supervision layer that detects orchestrator death from *outside* the runner and runs a writer-authorized recovery core. Its rationale is recorded in `cortex/adr/0011-out-of-process-overnight-runner-supervision.md`.
+
+### Detection signals
+
+- **Runner-pid-death (primary).** `phase == "executing"` AND `ipc.verify_runner_pid(...)` reads dead (the recorded session-leader pid is gone). This signal is false-positive-free: a live runner's pid is always alive, and `verify_runner_pid` matches `psutil.create_time` ±2s so PID reuse cannot spoof liveness. It covers the hard-dead runner case, which no in-process mechanism can.
+- **Event/heartbeat staleness (secondary, Phase 2).** For the alive-but-wedged runner (pid reads alive but the event loop is hung), recovery keys on a runner-level heartbeat older than a threshold (`> 2700s`) strictly above the in-process watchdog's `STALL_TIMEOUT_SECONDS` (`1800s`). The strict-greater margin lets the runner's own watchdog attempt a graceful self-heal first. Because a wedged runner is still alive and could overwrite `paused` → `executing`, this path SIGKILLs the create_time-verified runner before transitioning. This is the lower-priority, false-positive-prone signal; the pid-death signal already covers the dominant dead-runner mode.
+
+### Recovery sequence (`recovery.recover_session`)
+
+The recovery core lives in `cortex_command/overnight/recovery.py` and re-implements pause + report from the pure primitives (`state.transition`, `save_state`, `ipc.*`, `report.generate_and_write_report`) — it does **not** call the runner's `_transition_paused` / `_generate_morning_report`, which require an in-process `RunnerCoordination` (threading locks) that no longer exists once the runner is dead. The whole sequence runs under the existing `ipc._acquire_takeover_lock(session_dir)` flock and is idempotent (a second invocation on an already-recovered session is a no-op, guarded by the `paused`/`complete` phase and a `recovery-complete.json` sidecar). In order:
+
+1. **Transition → `paused`** — sets `paused_reason = "orchestrator_crash"`, increments `crash_recovery_attempts`, atomic `save_state`, and updates the active-session pointer (it retains the pointer, does not clear it).
+2. **Partial morning report** — `report.generate_and_write_report(...)` in `--interrupted` mode writes both report paths (`cortex/lifecycle/sessions/{id}/morning-report.md` and `cortex/lifecycle/morning-report.md`) with an `orchestrator_crash` interrupted banner, the count of features left non-terminal, and the orphan-reap outcome.
+3. **Reap session-marked orphans** — because the runner is dead, its descendants reparented to launchd, so neither the in-process descendant walk nor a recorded-pgid `killpg` reaches them. The reaper enumerates candidate processes via `psutil` and selects only those matching this session by env (`CORTEX_RUNNER_CHILD=1` AND `LIFECYCLE_SESSION_ID == session_id`), then SIGTERM → grace → SIGKILL each, re-reading `create_time` immediately before signalling to guard the enumerate→kill window. It never broad-matches all `claude` processes (which would kill the operator's interactive sessions); any worker that does not carry the markers is surfaced in the report as un-reaped rather than reaped by guesswork.
+4. **Clear the stale `runner.pid`** — via the existing CAS `clear_runner_pid`.
+
+A **crash-loop resume guard** on `cortex overnight start` refuses to auto-resume a session paused with `orchestrator_crash` once `crash_recovery_attempts` exceeds a small bound (default 1) without `--force`, because the #308 trigger class (e.g. a pre-commit gate blocking every commit) is deterministic and would otherwise crash-loop. A clean pause (`budget_exhausted` / `signal`) is unaffected.
+
+### Manual verb
+
+`cortex overnight recover [--session <id>]` invokes the recovery core from a writer-authorized surface (it is **not** folded into `cortex overnight status`, which stays a read-only snapshot per [Observability](#observability)). It is the on-demand path when the guardian is not installed or for immediate operator-driven recovery, and it self-heals or reports cleanly when there is nothing to recover.
+
+### The persistent guardian (automatic trigger)
+
+`cortex overnight guardian scan` / `guardian install` / `guardian remove` manage a **single host-level** launchd LaunchAgent — one agent for the whole host, not one per session — that scans every `executing` session on a `StartInterval` cadence (default 300s), applies the detection predicate, and invokes the recovery core for each session that needs it. One persistent agent avoids the install/garbage-collect-per-session problem a per-session design would carry. It reuses the `scheduler/macos.py` launchd machinery.
+
+**Who watches the watchman.** The guardian deliberately does **not** use a bare `KeepAlive`. Its `StartInterval` periodic re-fire is itself the restart-on-crash supervision: if a guardian invocation crashes, launchd re-launches it at the next interval regardless, so the cadence doubles as the liveness backstop. `ThrottleInterval` is the crash-loop floor that bounds how fast a persistently-failing guardian can re-fire. The guardian is bounded by design — a single host-level agent, a false-positive-free primary signal, and the manual verb as a backstop — so the supervision layer does not itself become an unbounded new failure surface.
+
+---
+
 ## Tuning
 
 ### --tier concurrency (Concurrency Tuning)
@@ -690,7 +724,7 @@ The module resolves Anthropic authentication in a strict 4-step fallback order b
 
 #### Overnight entry point: three-exit-code contract
 
-`cortex_command/overnight/runner.py` invokes the helper via `cortex-auth --shell` and branches on the exit code:
+`cortex_command/overnight/runner.py` invokes the helper (the `cortex-auth` console script) in `--shell` mode and branches on the exit code:
 
 - **exit code 0** — vector resolved. Helper prints `export VAR=VALUE` to stdout; the runner parses and applies it to the subprocess environment. Warnings (if any) went to stderr.
 - **exit code 1** — no vector resolved. Helper printed a warning to stderr. The runner continues; the first SDK spawn may prompt for keychain access.

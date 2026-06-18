@@ -153,6 +153,11 @@ merge conflicts, post-merge recovery) is documented in
 [docs/overnight-operations.md](../overnight-operations.md). This document retains only the
 pipeline-module internals summarized in the module reference table above.
 
+Out-of-process supervision — how a runner that dies hard or wedges is detected and recovered
+from outside the process (the persistent launchd guardian, the manual `cortex overnight recover`
+verb, and the writer-authorized recovery sequence) — is documented in
+[docs/overnight-operations.md → Out-of-Process Supervision](../overnight-operations.md#out-of-process-supervision).
+
 Round-startup state assembly is documented in `docs/overnight-operations.md` (see `aggregate_round_context`).
 
 ---
