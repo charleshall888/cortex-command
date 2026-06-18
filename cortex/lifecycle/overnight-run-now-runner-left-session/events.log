@@ -1,0 +1,7 @@
+{"schema_version": 1, "ts": "2026-06-17T20:17:26Z", "event": "lifecycle_start", "feature": "overnight-run-now-runner-left-session", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-17T20:24:21Z", "event": "clarify_critic", "feature": "overnight-run-now-runner-left-session", "parent_epic_loaded": false, "findings_count": 7, "dispositions": {"apply": 3, "dismiss": 4, "ask": 0}, "applied_fixes_count": 3, "dismissals_count": 4, "status": "ok"}
+{"ts": "2026-06-17T21:00:27Z", "event": "complexity_override", "feature": "overnight-run-now-runner-left-session", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-06-17T21:00:27Z", "event": "criticality_override", "feature": "overnight-run-now-runner-left-session", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-06-17T22:39:06Z", "event": "spec_approved", "feature": "overnight-run-now-runner-left-session"}
+{"ts": "2026-06-18T00:38:33Z", "event": "plan_approved", "feature": "overnight-run-now-runner-left-session"}
+{"ts": "2026-06-18T00:38:33Z", "event": "phase_transition", "feature": "overnight-run-now-runner-left-session", "from": "plan", "to": "implement"}
