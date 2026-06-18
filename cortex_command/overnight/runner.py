@@ -2795,6 +2795,20 @@ def run(
                     _kill_subprocess_group(proc, coord)
                 except Exception:
                     pass
+        # Best-effort clear of the per-session ``runner.pid`` so a
+        # non-signaled crash/exception loop-exit does not leave a stale
+        # pid behind while state stays ``executing`` (which would mask the
+        # stuck state from observers). The signal path already clears it in
+        # ``_cleanup`` and the clean path in ``_post_loop``; the CAS on
+        # ``session_id`` makes those prior clears safe no-ops here and stops
+        # a displaced owner from clobbering a successor's claim. This is
+        # defense-in-depth — the authoritative clear is the out-of-process
+        # recovery core; swallow any error so cleanup never masks the
+        # original exception.
+        try:
+            ipc.clear_runner_pid(session_dir, expected_session_id=session_id)
+        except Exception:
+            pass
         restore_signal_handlers(prior)
 
 
