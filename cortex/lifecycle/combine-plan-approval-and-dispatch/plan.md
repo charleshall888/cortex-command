@@ -110,7 +110,7 @@ exist.
   Console-script name parallels `cortex-lifecycle-state =
   "cortex_command.lifecycle.state_cli:main"`.
 - **Verification**: `python3 -c "from cortex_command.lifecycle_implement import read_dispatch_choice"` exits 0 AND, after reinstall, `cortex-lifecycle-dispatch-choice --feature combine-plan-approval-and-dispatch` exits 0 (prints empty or a value) — pass if both exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 4: Unit-test the resolver (line-position-last + three-way fallback)
 - **Files**: `tests/test_dispatch_choice_resolver.py`
@@ -127,7 +127,7 @@ exist.
   from `cortex_command.lifecycle_implement`. Mirror existing lifecycle reducer
   test fixture style.
 - **Verification**: `python3 -m pytest tests/test_dispatch_choice_resolver.py -q` exits 0 — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5: Rewrite plan.md §4 as the merged approval surface
 - **Files**: `skills/lifecycle/references/plan.md`
@@ -153,7 +153,7 @@ exist.
   body-resolved absolute path (manifest entry, Task 7). Skill prose only — no code
   bodies.
 - **Verification**: `for t in dispatch_choice feature_paused trunk worktree-interactive feature-branch; do grep -q "$t" skills/lifecycle/references/plan.md || { echo "missing $t"; exit 1; }; done` exits 0; plus Interactive/session-dependent review of the surface logic (gated by Task 7 parity + Task 12 `just test`) — pass if the grep loop exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 6: Add consumer logic to implement.md §1 (substitute for picker result)
 - **Files**: `skills/lifecycle/references/implement.md`
@@ -186,7 +186,7 @@ exist.
   §2 — route there, not to a phantom "§1b". Gating on main/master keeps the
   resolver read in the main-repo CWD (the worktree carries its own events.log).
 - **Verification**: `grep -q 'cortex-lifecycle-dispatch-choice' skills/lifecycle/references/implement.md && grep -q 'main/master\|on `main`' skills/lifecycle/references/implement.md` exits 0 — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 7: Update SKILL.md inventory, manifest, and §4 description
 - **Files**: `skills/lifecycle/SKILL.md`
@@ -210,7 +210,7 @@ exist.
   existing format at SKILL.md:144–152 (`- **branch-picker** (consulted in Plan §4
   and Implement §1) → ${CLAUDE_SKILL_DIR}/references/branch-picker.md`).
 - **Verification**: `python3 -m pytest tests/test_lifecycle_kept_pauses_parity.py -q` exits 0 — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 8: Update the events-registry plan_approved row
 - **Files**: `bin/.events-registry.md`

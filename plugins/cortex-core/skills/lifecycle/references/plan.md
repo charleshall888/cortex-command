@@ -262,31 +262,44 @@ After orchestrator review passes, read the active tier and criticality (rules: c
 
 **Run** when `tier = complex` AND `criticality ∈ {medium, high, critical}`: invoke the `critical-review` skill with the plan artifact. Present the synthesis to the user before plan approval. Otherwise, read and follow the critical-review gate protocol (use the body-resolved absolute path from lifecycle SKILL.md's Reference-path propagation manifest: the **critical-review-gate** target) for the `plan` phase.
 
-### 4. User Approval
+### 4. User Approval (merged branch/dispatch surface)
 
-Present the plan summary (overview + task list) and use the AskUserQuestion tool to collect the operator's disposition. In addition to the overview and task list, include these approval surface fields:
+This surface folds the Implement-phase branch/dispatch selection into plan approval — **each branch option implies plan approval**, so the operator answers one question, not two. Present the plan summary (overview + task list) plus the approval-surface fields:
 
 - **Produced** (one-line summary of the artifact)
 - **Trade-offs** (alternatives considered and rationale for chosen approach)
 
-Enumerate the options on that call explicitly as: `Approve` | `Request changes` | `Cancel`. Route on the response:
+**Assemble the merged option set.** When the current branch is `main`/`master`, read the branch-mode and picker decision (two Bash calls, exactly as Implement §1 does), then follow the shared decision logic in **branch-picker.md** (body-resolved absolute path — SKILL.md Reference-path propagation manifest) to assemble the adaptive branch options:
 
-- **Approve**: append a `plan_approved` event to `cortex/lifecycle/{feature}/events.log`, then append the `phase_transition` event from §5 below, then auto-advance to Implement. Proceed automatically — do not ask the user for confirmation again.
+```bash
+cortex-lifecycle-branch-mode .
+cortex-lifecycle-picker-decision . {feature} {branch_mode}
+```
+
+branch-picker.md defines the suppressed-routing (a configured mode fixes a single choice), the uncommitted-changes-guard demotion, and the runtime-probe degrade. When **not** on `main`/`master`, the branch sub-choices collapse: implementation will proceed on the current branch (`trunk`), so the surface offers only `[Approve & implement (current branch), Approve plan but wait to implement]`.
+
+**Compose the `AskUserQuestion` `options`** (≤4): the assembled branch modes, plus a final **"Approve plan but wait to implement"** option. The auto-provided **"Other"** free-text escape is appended by the platform *outside* the 4-option `options` cap and carries Request-changes and Cancel. Route on the selection:
+
+- **A branch mode** (`Implement on current branch` → `trunk`; `Implement on feature branch with worktree` → `worktree-interactive`; `Create feature branch` → `feature-branch`) — implies plan approval. Append `plan_approved` carrying the chosen `dispatch_choice`, then the `phase_transition` from §5, then auto-advance to Implement (which consumes `dispatch_choice` and skips its own picker). Proceed automatically.
   ```
-  {"ts": "<ISO 8601>", "event": "plan_approved", "feature": "<name>"}
+  {"ts": "<ISO 8601>", "event": "plan_approved", "feature": "<name>", "dispatch_choice": "<trunk|worktree-interactive|feature-branch>"}
   ```
-- **Request changes**: collect the requested changes, revise the plan, and re-present the approval surface. Do not emit `plan_approved` on intermediate revision loops; only the final `Approve` selection emits the event.
-- **Cancel**: append a `lifecycle_cancelled` event and halt. The user can resume by re-invoking `/cortex-core:lifecycle`.
+- **Approve plan but wait to implement** — append `plan_approved` with `dispatch_choice: "wait"`, then append `feature_paused`, then **halt** (do not auto-advance, do not dispatch). Re-invocation routes to `implement` (the plan IS approved); Implement §1 fires its fallback picker since `wait` is not a branch mode. The feature surfaces as `implement-paused`. **When the feature is backlog-linked (Context A), warn now** that the overnight runner may still execute the item unless it is paused (overnight eligibility does not yet honor `feature_paused` — see the overnight-honors-pause backlog item).
+  ```
+  {"ts": "<ISO 8601>", "event": "plan_approved", "feature": "<name>", "dispatch_choice": "wait"}
+  {"ts": "<ISO 8601>", "event": "feature_paused", "feature": "<name>"}
+  ```
+- **"Other" free-text** — interpret the text. A cancel-intent → append `lifecycle_cancelled` and halt. Any other text → treat as **Request changes**: collect the change, revise the plan, and **re-assemble and re-present** this merged surface (re-running the branch-picker assembly). Do not emit `plan_approved` on revision rounds — only a terminal branch-mode or "wait" selection emits it.
 
 ### 5. Transition
 
-On `Approve`, append a `phase_transition` event to `cortex/lifecycle/{feature}/events.log` (the `plan_approved` event from §4 must precede this one in the log):
+On a branch-mode selection (not "wait"), append a `phase_transition` event to `cortex/lifecycle/{feature}/events.log` (the `plan_approved` event from §4 must precede this one in the log):
 
 ```
 {"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "from": "plan", "to": "implement"}
 ```
 
-Run `cortex-read-commit-artifacts` to read the `commit-artifacts` flag from project config. If stdout is `true` (the default), stage `cortex/lifecycle/{feature}/` and commit using `/cortex-core:commit`. If stdout is `false`, skip the commit silently.
+On any approval (a branch-mode selection OR "wait" — both emit `plan_approved`), run `cortex-read-commit-artifacts` to read the `commit-artifacts` flag. If stdout is `true` (the default), stage `cortex/lifecycle/{feature}/` and commit using `/cortex-core:commit`. If stdout is `false`, skip the commit silently. On the "wait" path the commit makes the approval durable, then the lifecycle halts.
 
 ## Hard Gate
 

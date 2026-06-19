@@ -51,6 +51,7 @@ cortex-integration-recovery = "cortex_command.overnight.integration_recovery:mai
 cortex-interrupt = "cortex_command.overnight.interrupt:main"
 cortex-lifecycle-branch-mode = "cortex_command.lifecycle.branch_mode_cli:main"
 cortex-lifecycle-counters = "cortex_command.lifecycle.counters:main"
+cortex-lifecycle-dispatch-choice = "cortex_command.lifecycle.dispatch_choice_cli:main"
 cortex-lifecycle-init-ensure = "cortex_command.lifecycle.init_ensure:main"
 cortex-lifecycle-picker-decision = "cortex_command.lifecycle.picker_decision_cli:main"
 cortex-lifecycle-state = "cortex_command.lifecycle.state_cli:main"

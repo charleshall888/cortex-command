@@ -1,11 +1,14 @@
 """Runtime gate for the implement-phase picker.
 
-This module exposes exactly two public symbols:
+This module exposes exactly three public symbols:
 
 - :data:`REASONS` — the closed set of reason strings returned by
   :func:`should_fire_picker`.
 - :func:`should_fire_picker` — predicate that decides whether the
   implement-phase picker should fire for a given repo + slug + branch_mode.
+- :func:`read_dispatch_choice` — resolve the line-position-last
+  ``plan_approved`` event's ``dispatch_choice`` from a feature's events.log
+  (the carry-forward channel the merged Plan §4 surface writes).
 
 All other names are underscore-prefixed to keep the public API surface
 closed (see spec R3/R4 of ``lifecycle-implement-auto-enter-worktree-drop``).
@@ -17,6 +20,7 @@ belong to separate lifecycles.
 
 from __future__ import annotations as _annotations
 
+import json as _json
 import os as _os
 import pathlib as _pathlib
 import subprocess as _subprocess
@@ -135,3 +139,47 @@ def should_fire_picker(
         return True, "live_interactive_worktree_session"
 
     return False, "suppressed"
+
+
+def read_dispatch_choice(events_path: _pathlib.Path) -> str | None:
+    """Return the line-position-last ``plan_approved`` event's ``dispatch_choice``.
+
+    Scans ``events_path`` in **line order** (never timestamp-sorted — matching
+    the reducer convention in ``cortex_command.common``, which warns that
+    torn/missing ``ts`` fields would otherwise mis-sort). The last
+    ``plan_approved`` row wins; its ``dispatch_choice`` value (or ``None`` when
+    that row carries no such field) is returned. Returns ``None`` when the file
+    is absent/unreadable or contains no ``plan_approved`` event.
+
+    The three "no recorded branch mode" shapes the Implement consumer must treat
+    as picker-fallback all map to a non-branch-mode result here:
+
+    - no ``plan_approved`` event (migration-sentinel / legacy log) → ``None``;
+    - latest ``plan_approved`` with no ``dispatch_choice`` field → ``None``;
+    - latest ``plan_approved`` with ``dispatch_choice: "wait"`` → ``"wait"``.
+
+    Torn or non-object JSON lines are skipped, never collapsing the scan.
+    """
+    try:
+        text = events_path.read_text(encoding="utf-8", errors="replace")
+    except (FileNotFoundError, OSError):
+        return None
+
+    result: str | None = None
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            event = _json.loads(line)
+        except (ValueError, _json.JSONDecodeError):
+            continue
+        if not isinstance(event, dict):
+            continue
+        if event.get("event") == "plan_approved":
+            # Line-position-last wins. Reassign on every match — including the
+            # field-absent case (resets to None) — so a later field-less
+            # plan_approved correctly supersedes an earlier recorded choice.
+            choice = event.get("dispatch_choice")
+            result = choice if isinstance(choice, str) else None
+    return result

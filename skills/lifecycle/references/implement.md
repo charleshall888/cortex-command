@@ -8,7 +8,18 @@ Execute the plan by dispatching a fresh implementation sub-task per task. Each s
 
 Read `cortex/lifecycle/{feature}/plan.md` and identify pending tasks (those with `[ ]`).
 
-**Branch selection**: If the current branch is `main` or `master`, prompt the user via AskUserQuestion with three options:
+**Consume a plan-time recorded branch choice (primary path)**: The merged Plan §4 approval surface records the operator's branch/dispatch choice on the `plan_approved` event, so the operator is not asked twice. When the current branch is `main`/`master`, before assembling the fallback picker, read any recorded choice:
+
+```bash
+cortex-lifecycle-dispatch-choice --feature {slug}
+```
+
+Routing on the output (the read is gated on `main`/`master` so it runs in the main-repo CWD — an interactive worktree carries its own events.log):
+
+- A valid branch mode (`trunk` / `worktree-interactive` / `feature-branch`) — **do not render the picker**. Treat the value exactly as if the operator had selected that option in the picker and run the identical post-selection routing (so every guard still runs): `trunk` → remain on the current branch → §2; `worktree-interactive` → **record entry mode `selected`**, run Step A (overnight-active rejection) and Step B (interactive-lock acquisition) below, then §1a; `feature-branch` → create and check out `feature/{lifecycle-slug}`, then §2.
+- Empty output, `wait`, or command-not-found (the console-script not yet installed) — no recorded branch mode; **fall through to the fallback picker below**.
+
+**Branch selection (fallback picker)**: When the current branch is `main` or `master` AND no branch mode was consumed above, prompt the user via AskUserQuestion with three options:
 
 - **Implement on current branch** (recommended) — trunk-based workflow, changes land directly on the current branch. **When to pick**: tiny, trunk-safe changes where a branch would be overhead.
 - **Implement on feature branch with worktree** — creates an `interactive/{slug}` worktree at `<repo>/.claude/worktrees/interactive-{slug}/` and auto-enters it via the platform `EnterWorktree` tool so the orchestrator session continues implementation from inside the worktree. **When to pick**: medium/many-task features where you want an isolated branch with worktree but still need live steering. Proceeds to §1a below.
