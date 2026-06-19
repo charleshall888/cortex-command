@@ -8,3 +8,7 @@
 {"ts": "2026-06-19T17:46:37Z", "event": "phase_transition", "feature": "combine-plan-approval-and-dispatch", "from": "specify", "to": "plan"}
 {"ts": "2026-06-19T17:59:24Z", "event": "plan_approved", "feature": "combine-plan-approval-and-dispatch"}
 {"ts": "2026-06-19T17:59:24Z", "event": "phase_transition", "feature": "combine-plan-approval-and-dispatch", "from": "plan", "to": "implement"}
+{"ts": "2026-06-19T18:38:34Z", "event": "phase_transition", "feature": "combine-plan-approval-and-dispatch", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-06-19T18:52:03Z", "event": "review_verdict", "feature": "combine-plan-approval-and-dispatch", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-06-19T18:52:03Z", "event": "phase_transition", "feature": "combine-plan-approval-and-dispatch", "from": "review", "to": "complete"}
+{"ts": "2026-06-19T18:52:45Z", "event": "feature_complete", "feature": "combine-plan-approval-and-dispatch", "tasks_total": 12, "rework_cycles": 0, "merge_anchor": "merge"}
