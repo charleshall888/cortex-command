@@ -66,7 +66,7 @@ exist.
   the Kept-pauses inventory; it gets no inventory entry (no `AskUserQuestion`).
   Mirror auto-regenerates into `plugins/cortex-core/skills/lifecycle/references/`.
 - **Verification**: `test -f skills/lifecycle/references/branch-picker.md && [ "$(grep -c 'AskUserQuestion' skills/lifecycle/references/branch-picker.md)" = 0 ]` — pass if file exists and count = 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Refactor implement.md §1 to consult the shared reference (no behavior change)
 - **Files**: `skills/lifecycle/references/implement.md`
@@ -83,7 +83,7 @@ exist.
   lines 42, 197–214). Keep the `cortex-lifecycle-branch-mode .` call adjacent to
   the picker. Do not yet add consumer logic (Task 6).
 - **Verification**: `python3 -m pytest tests/test_lifecycle_kept_pauses_parity.py -q` exits 0 — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Add the dispatch_choice resolver (helper + console-script) and reinstall
 - **Files**: `cortex_command/lifecycle_implement.py`, `cortex_command/lifecycle/dispatch_choice_cli.py`, `pyproject.toml`

@@ -14,9 +14,7 @@ Read `cortex/lifecycle/{feature}/plan.md` and identify pending tasks (those with
 - **Implement on feature branch with worktree** — creates an `interactive/{slug}` worktree at `<repo>/.claude/worktrees/interactive-{slug}/` and auto-enters it via the platform `EnterWorktree` tool so the orchestrator session continues implementation from inside the worktree. **When to pick**: medium/many-task features where you want an isolated branch with worktree but still need live steering. Proceeds to §1a below.
 - **Create feature branch** — create `feature/{lifecycle-slug}` for PR-based workflow. **When to pick**: you want a PR-based flow but cannot use a worktree (e.g., tooling that assumes a single checkout). NOTE: this runs `git checkout` on the main session and can corrupt parallel sessions in this repo.
 
-**Branch-mode dispatch preflight**: Before the uncommitted-changes guard and the runtime probe below, consult the per-repo `branch-mode` config via `cortex-lifecycle-branch-mode`.
-
-Run two Bash calls (no compound commands):
+**Branch-mode dispatch preflight**: Before rendering the picker, read the per-repo `branch-mode` config and the picker decision. Run two Bash calls (no compound commands):
 
 1. Read the configured `branch-mode` value:
 
@@ -26,7 +24,7 @@ Run two Bash calls (no compound commands):
 
    The CLI wraps `read_branch_mode`: prints the configured value, or empty when unset/malformed; invalid values fall through to the picker as `branch_mode_unset_or_invalid`.
 
-2. Decide whether the picker fires, given the value above and the current preflight state. The CLI emits a JSON object `{"fire": <bool>, "reason": "<closed-set-token>"}`:
+2. Decide whether the picker fires. The CLI emits `{"fire": <bool>, "reason": "<closed-set-token>"}`:
 
    ```bash
    DECISION=$(cortex-lifecycle-picker-decision . {slug} {branch_mode})
@@ -36,30 +34,7 @@ Run two Bash calls (no compound commands):
 
    The third positional argument (`{branch_mode}`) is the value emitted by step 1; omit it when the branch-mode value is empty.
 
-**Routing on the result.** When `should_fire_picker` returns `(False, "suppressed")`, skip the picker (the uncommitted-changes guard, runtime probe, and `AskUserQuestion` call below) and route by value:
-
-- `worktree-interactive` — **record entry mode `suppressed`** and proceed directly to §1a (Interactive Worktree Creation). The `suppressed` marker is the carried control-flow value §1a step v branches on: it routes structurally to the cd-shim, skipping `EnterWorktree`.
-- `trunk` — proceed on the current branch directly to §2 Task Dispatch.
-- `feature-branch` — proceed to §1b (Feature Branch Creation): create and check out `feature/{lifecycle-slug}` before dispatching any tasks, then proceed to §2.
-- `prompt` — `should_fire_picker` returns `(True, "branch_mode_prompt")`, so the picker fires: fall through to the uncommitted-changes guard and `AskUserQuestion` call below.
-
-When `should_fire_picker` returns `(True, reason)` for any reason (`branch_mode_unset_or_invalid`, `branch_mode_prompt`, `dirty_tree`, or `live_interactive_worktree_session`), do **not** short-circuit — fall through to the uncommitted-changes guard, the runtime probe, and the existing `AskUserQuestion` call site below.
-
-**Uncommitted-changes guard**: Immediately before the `AskUserQuestion` call, run `git status --porcelain` (no path filter, no additional flags). If non-empty output is returned, the option that keeps the user on the current branch is demoted in place: (a) prepend the fixed warning `Warning: uncommitted changes in working tree — this will mix them into the commit on main.` as a one-line prefix to that option's description, and (b) strip the `(recommended)` suffix from that option's label if present. The option remains selectable and stays at its existing position — no removal, no gating pre-question. If `git status --porcelain` exits non-zero (e.g., missing `.git`, corrupt index, bisect/rebase state), the guard does not fire — neither the demotion nor the warning prefix are applied — a single-line diagnostic `uncommitted-changes guard skipped: git status failed` is surfaced alongside the prompt, and the pre-flight continues normally as a fallback.
-
-**Runtime probe**: After the uncommitted-changes guard and before assembling the prompt's options array, run a single Bash call that probes whether the `cortex-worktree-create` console-script is reachable on PATH:
-
-```bash
-command -v cortex-worktree-create >/dev/null 2>&1
-```
-
-Route by exit code into one of three menu dispositions:
-
-- **exit 0** → the binary is reachable on PATH → all three options remain unchanged: `Implement on current branch`, `Implement on feature branch with worktree`, and `Create feature branch`.
-- **exit 1** → the binary is not on PATH → remove `Implement on feature branch with worktree` from the options array; this is a silent hide, with no diagnostic surfaced. The post-degrade option set is `Implement on current branch` and `Create feature branch`.
-- **Bash tool execution failure (sandbox rejection, missing /bin/sh, shell unavailable) OR `command -v` exit code other than 0 or 1** → fail open: all three options remain, and the literal diagnostic string `runtime probe skipped: console-script probe failed` is surfaced alongside the prompt.
-
-Pass the resolved options array to `AskUserQuestion`.
+**Assembly and routing**: With `branch_mode` and `{fire, reason}` in hand, follow the shared decision logic in **branch-picker.md** (body-resolved absolute path — SKILL.md Reference-path propagation manifest). It defines: (a) the **suppressed routing** when `fire == false` (route by `branch_mode` value — `worktree-interactive` records entry mode `suppressed` → §1a; `trunk` → §2; `feature-branch` → create+checkout then §2 — without rendering a menu); and (b) when `fire == true`, the **uncommitted-changes-guard demotion** and the **runtime-probe 3-way degrade** that assemble the option set (current branch / feature branch with worktree / create feature branch). Render the assembled option set via `AskUserQuestion`.
 
 Dispatch by selection:
 - If the user selects **Implement on feature branch with worktree**, **record entry mode `selected`** and run the two interactive preflight guards below (Steps A and B) before proceeding to §1a. If either guard rejects, exit §1 without creating a worktree.
