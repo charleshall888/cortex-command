@@ -151,7 +151,6 @@ Resolve `${CLAUDE_SKILL_DIR}` here in the body and carry the absolute paths into
 - **criticality-matrix** (§Reading lifecycle state rules cited by Detect criticality/tier in Step 2, and §Criticality Behavior Matrix cited at end of Phase Transition) → `${CLAUDE_SKILL_DIR}/references/criticality-matrix.md`.
 - **orchestrator-review** (read at Specify §3a and Plan §3a) → `${CLAUDE_SKILL_DIR}/references/orchestrator-review.md`.
 - **critical-review-gate** (read at Specify §3b and Plan §3b on the skip branch) → `${CLAUDE_SKILL_DIR}/references/critical-review-gate.md`.
-- **branch-picker** (consulted in Plan §4 to assemble the merged approval surface, and in Implement §1's fallback picker) → `${CLAUDE_SKILL_DIR}/references/branch-picker.md`.
 
 ## Phase Transition
 
@@ -188,7 +187,7 @@ The following user-facing pauses are deliberate and remain in scope.
 - `skills/lifecycle/references/specify.md:67` — §2a cycle-2 confidence-check: user decides whether to loop back to research or proceed with gaps.
 - `skills/lifecycle/references/specify.md:155` — spec approval surface (Approve / Request changes / Cancel). Substantive user decision.
 - `skills/lifecycle/references/plan.md:281` — plan approval surface, merged with branch/dispatch selection (branch modes + "Approve plan but wait to implement" imply approval; Request changes / Cancel via the "Other" free-text escape). Substantive user decision.
-- `skills/lifecycle/references/implement.md:22` — conditional pause: fallback branch-selection picker on main, used only when no plan-time `dispatch_choice` was recorded (trunk vs feature-branch-with-worktree vs feature branch). Suppressed when `lifecycle.config.md::branch-mode` is set AND the working tree is clean AND no concurrent live interactive worktree exists for the feature slug.
+- `skills/lifecycle/references/implement.md:50` — conditional pause: fallback branch-selection picker on main, used only when no plan-time `dispatch_choice` was recorded (trunk vs feature-branch-with-worktree vs feature branch). Suppressed when `lifecycle.config.md::branch-mode` is set AND the working tree is clean AND no concurrent live interactive worktree exists for the feature slug.
 - `skills/lifecycle/references/backlog-writeback.md:11` — backlog write-back complete-lifecycle prompt on a backlog item already marked complete.
 - `skills/lifecycle/references/complete.md:73` — phase-exit pause: merge-wait pause inside the multi-step Complete phase; user re-invokes /cortex-core:lifecycle complete <slug> after merging on GitHub.
 - `skills/refine/SKILL.md:166` — refine §4 complexity-value gate pick-menu — renders only when the orchestrator's recommendation diverges from full scope or confidence is low; otherwise the announcement folds into the regular approval surface.

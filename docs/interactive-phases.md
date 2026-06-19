@@ -51,7 +51,7 @@ You do not need to run all three skills — `/cortex-core:lifecycle` on a fresh 
 | Clarify | Agent asks intent, complexity, and criticality | none (output captured internally) | Yes — up to 5 questions |
 | Research | Agent reads codebase, dependencies, and requirements | `cortex/lifecycle/{feature}/research.md` | Minimal — complexity escalation prompt only |
 | Specify | Structured requirements interview covering problem statement, requirements, non-requirements, edge cases, technical constraints | `cortex/lifecycle/{feature}/spec.md` | Yes — spec approval required |
-| Plan | Agent produces a task breakdown; orchestrator reviews before approval | `cortex/lifecycle/{feature}/plan.md` | Yes — plan approval required |
+| Plan | Agent produces a task breakdown; orchestrator reviews before approval | `cortex/lifecycle/{feature}/plan.md` | Yes — plan approval (merged with the branch/dispatch choice) |
 | Implement | Agent executes tasks as commits | Source code + commits | Optional — user can monitor or leave it running |
 | Review | Multi-agent verdict (complex tier or forced by criticality) | `cortex/lifecycle/{feature}/review.md` | No — automated; results presented for acceptance |
 | Complete | events.log closure, backlog item closed | events.log update | No |
@@ -71,7 +71,7 @@ You do not need to run all three skills — `/cortex-core:lifecycle` on a fresh 
 
 The agent presents a draft spec and asks for approval. Review it carefully — once approved, the spec drives planning. Request changes if anything is wrong or missing; the agent will revise and re-present.
 
-**Plan** — Automated task breakdown followed by an orchestrator review. The plan is presented for your approval before implementation begins. This is your last chance to adjust scope before code is written.
+**Plan** — Automated task breakdown followed by an orchestrator review. The plan is presented for your approval before implementation begins — this is your last chance to adjust scope before code is written. The approval surface is **merged with the implementation branch/dispatch choice**: on `main`, the options are the branch modes (current branch / worktree / feature branch) plus "Approve plan but wait to implement". Selecting any branch mode approves the plan and proceeds; "wait" approves but pauses (resume later via re-invocation). Request changes or cancel via the "Other" free-text option.
 
 **Implement** — The agent works through the plan tasks. Each task produces one or more commits. You can monitor progress or leave the session running. If the feature is complex or high-criticality, a review phase follows.
 

@@ -269,14 +269,14 @@ This surface folds the Implement-phase branch/dispatch selection into plan appro
 - **Produced** (one-line summary of the artifact)
 - **Trade-offs** (alternatives considered and rationale for chosen approach)
 
-**Assemble the merged option set.** When the current branch is `main`/`master`, read the branch-mode and picker decision (two Bash calls, exactly as Implement §1 does), then follow the shared decision logic in **branch-picker.md** (body-resolved absolute path — SKILL.md Reference-path propagation manifest) to assemble the adaptive branch options:
+**Assemble the merged option set.** When the current branch is `main`/`master`, assemble the adaptive branch options using the **same branch-mode preflight Implement §1 runs** (see Implement §1 "Branch-mode dispatch preflight" for the authoritative routing rules):
 
 ```bash
 cortex-lifecycle-branch-mode .
 cortex-lifecycle-picker-decision . {feature} {branch_mode}
 ```
 
-branch-picker.md defines the suppressed-routing (a configured mode fixes a single choice), the uncommitted-changes-guard demotion, and the runtime-probe degrade. When **not** on `main`/`master`, the branch sub-choices collapse: implementation will proceed on the current branch (`trunk`), so the surface offers only `[Approve & implement (current branch), Approve plan but wait to implement]`.
+Apply the same rules Implement §1 documents: the suppressed-routing (a configured `branch-mode` fixes a single choice and skips the menu), the uncommitted-changes-guard demotion, and the `command -v cortex-worktree-create` runtime-probe degrade (which hides the worktree option when the console-script is absent). When **not** on `main`/`master`, the branch sub-choices collapse: implementation will proceed on the current branch (`trunk`), so the surface offers only `[Approve & implement (current branch), Approve plan but wait to implement]`.
 
 **Compose the `AskUserQuestion` `options`** (≤4): the assembled branch modes, plus a final **"Approve plan but wait to implement"** option. The auto-provided **"Other"** free-text escape is appended by the platform *outside* the 4-option `options` cap and carries Request-changes and Cancel. Route on the selection:
 
