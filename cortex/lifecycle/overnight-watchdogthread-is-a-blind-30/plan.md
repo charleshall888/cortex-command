@@ -1,0 +1,89 @@
+# Plan: overnight-watchdogthread-is-a-blind-30
+
+## Overview
+Convert `WatchdogThread` from a blind tick-counter into a monotonic activity-aware inactivity timer with a never-reset absolute ceiling and a kill-reason marker (Phase 1), wire the batch_runner watchdog to the worker-written `pipeline-events.log`, then give the orchestrator a child-driven signal via a de-risk-gated stream-json switch (Phase 2). The activity-probe is an injected seam defaulting to `None` (= today's blind timer), so Phase 1 leaves the orchestrator unchanged until Phase 2 wires its signal. Revised after a 4-angle plan critical review: the Phase-2 verdict gate is now machine-enforced via verdict-aware task guards + verifications, and the verification ACs are discriminating (no presence-greps that pre-pass).
+**Architectural Pattern**: shared-state
+
+## Outline
+
+### Phase 1: Activity-aware watchdog core + batch_runner site (tasks: 1, 2, 3)
+**Goal**: `WatchdogThread` resets on child-file activity + an absolute ceiling; batch_runner watchdog wired to `pipeline-events.log`; orchestrator left on the default (blind-timer-equivalent) probe.
+**Checkpoint**: `just test` green including new behavioral reset/ceiling/probe-None tests AND a test that captures the batch watchdog's probe path; `recovery.py` `WEDGED>STALL` assert still passes.
+
+### Phase 2: Orchestrator child-progress signal + docs (tasks: 4, 5, 6, 7)
+**Goal**: De-risk stream-json incremental flush (#25670) FIRST; on PASS, swap the orchestrator to stream-json with NDJSON-aware telemetry parsing and wire its watchdog to the stdout file; on FAIL, leave the orchestrator ceiling-only; update source-of-truth docs to the actual shipped state.
+**Checkpoint**: de-risk verdict recorded; the orchestrator's parser/flag/watchdog state matches the verdict (verdict-aware verifications); `just test` green; docs reflect the final per-site behavior.
+> Task 4 has `Depends on: none` and runs in the first batch (de-risk FIRST); Tasks 5–6 are hard-gated on its `VERDICT: PASS`.
+
+## Tasks
+
+### Task 1: Rewrite WatchdogThread into a monotonic activity-aware timer + ceiling
+- **Files**: `cortex_command/overnight/runner_primitives.py`
+- **What**: Replace the blind `elapsed += poll_interval` loop with a monotonic inactivity timer that resets on a child-file activity probe, plus a never-reset absolute ceiling and a kill-reason marker. The cohesive core of the feature in one file.
+- **Depends on**: none
+- **Complexity**: complex
+- **Context**: Implements spec Reqs 1–7. (a) `import time`. (b) `ABSOLUTE_CEILING_SECONDS: float = 14400.0` in the Tunables block (~25–39) with a `#:` comment: deliberate conservative guess to revisit once session-duration data accumulates; ceiling-kills are logged via the reason marker. (c) `WatchdogContext` (63–73): add `stall_reason: str = ""` (set `"inactivity"` or `"ceiling"` on kill) — the only new shared field. (d) `__init__` (95–113): add `activity_probe: Callable[[], tuple[int, int] | None] | None = None` (returns `(size, mtime_ns)` or `None`) and `clock: Callable[[], float] = time.monotonic`. Default `activity_probe=None` ⇒ inactivity never resets ⇒ blind-timer-equivalent (preserves today's orchestrator behavior). (e) Rewrite `run()` (115–133): keep the `shutdown_event.wait()` return and `proc.poll()` early-return FIRST (ordering invariant); `started_at = clock()`, `last_activity_at = clock()`; each tick, if `activity_probe` is set, CALL it inside `try/except OSError` at the `run()` level (the `except OSError` wraps the probe call — the production probe may reuse `_stat_key`'s narrower `FileNotFoundError` catch, but a broader `OSError` e.g. EACCES is caught here so a transient blip degrades to no-reset, never a dead daemon thread); `None`/missing ⇒ no reset; first non-`None` appearance ⇒ reset; reset when `size > last_size` OR `mtime_ns > last_mtime_ns`; a size decrease re-baselines without resetting; `inactivity = clock() - last_activity_at`; `_kill_for_stall()` with `stall_reason="inactivity"` when `inactivity > timeout_seconds`, or `stall_reason="ceiling"` when `clock() - started_at > ABSOLUTE_CEILING_SECONDS`. Reuse the `(exists, st_mtime_ns, st_size)` shape from `cortex_command/common.py:209` `_stat_key`; the research safe-stat skeleton is the guide. All bookkeeping (`last_activity_at`, `started_at`, last-seen tuple) is `run()`-local — no shared field beyond `stall_reason`, no locks in the reset path. Update the class docstring (80–93) to the honest behavior.
+- **Verification**: Structural smoke only (the behavioral gate is Task 2): `grep -cE "monotonic|ABSOLUTE_CEILING_SECONDS|stall_reason" cortex_command/overnight/runner_primitives.py` ≥ 3 AND `python3 -c "import ast; ast.parse(open('cortex_command/overnight/runner_primitives.py').read())"` exits 0 — pass if both. (Loop correctness is asserted by Task 2, not here.)
+- **Status**: [ ] pending
+
+### Task 2: Behavioral unit tests for reset, silence-kill, ceiling, and blind-default
+- **Files**: `tests/test_runner_threading.py`
+- **What**: Add deterministic tests (injected `clock` + `activity_probe`) that ASSERT OUTCOMES, not token presence: each test must fail against a blind/inverted implementation.
+- **Depends on**: [1]
+- **Complexity**: simple
+- **Context**: Implements the behavioral ACs for Reqs 1–5, 7. Tests required: (1) `reset` — with the injected probe returning a strictly-growing `(size, mtime_ns)` each tick, advance the injected clock PAST `timeout_seconds` and assert `wctx.stall_flag` is NOT set / `_kill_for_stall` not reached (productive work survives); (2) `silence` — with a static probe, advance the clock past `timeout_seconds` and assert the proc IS killed with `stall_reason == "inactivity"`; (3) `probe_none` — `activity_probe=None`, assert blind-timer kill after `timeout_seconds`; (4) `ceiling` — with a forever-growing probe and a tiny injected ceiling, assert kill with `stall_reason == "ceiling"`; (5) `stat_raises` — a probe that raises `OSError` ⇒ no reset, no crash, thread survives. Follow the `tests/test_runner_threading.py` style (`sleep_proc` fixture line 66) but inject fakes so timing is deterministic (no real sleeps for the reset path). Preserve `test_shutdown_event_wakes_watchdog_sleep` (186) and `test_concurrent_cancel_and_stall_dont_double_kill` (120).
+- **Verification**: `just test` exits 0 AND the tests assert kill/no-kill outcomes and `stall_reason` values (not mere existence) — confirm by `grep -cE "stall_flag|stall_reason" tests/test_runner_threading.py` ≥ 4 within the new tests — pass if both. A reviewer spot-check: each new test must contain an `assert` on `stall_flag`/`stall_reason`, so a stub named-but-empty test fails this AC.
+- **Status**: [ ] pending
+
+### Task 3: Wire batch_runner watchdog to pipeline_events_path; thread kill-reason; capture-test the probe
+- **Files**: `cortex_command/overnight/runner.py`, `tests/test_runner_sandbox.py`
+- **What**: Build the batch_runner watchdog with an `activity_probe` over the EXISTING `pipeline_events_path` variable; pass `activity_probe=None` at the orchestrator spawn (Phase-1 unchanged); thread `wctx.stall_reason` into the stall-handling log; and add a test that CAPTURES the probe and asserts its path (the no-op `_FakeWatchdog` cannot, so the test must capture the real construction).
+- **Depends on**: [1]
+- **Complexity**: complex
+- **Context**: Implements spec Reqs 7 (read/log), 9, and the orchestrator default-probe. PATH IS RESOLVED — do NOT re-derive: the batch child writes `session_dir / "pipeline-events.log"` because `_spawn_batch_runner` is passed `--plan session_dir/batch-plan-round-N.md` (runner.py:1689, 2828) ⇒ `result_dir = Path(args.plan).parent = session_dir` (batch_runner.py:29) ⇒ `pipeline_events_path = result_dir/"pipeline-events.log"` (batch_runner.py:41). That is exactly the `pipeline_events_path = session_dir / "pipeline-events.log"` already computed at runner.py:2681 and in scope at the batch spawn (~2841). Wire the batch watchdog's `activity_probe` to stat THAT variable. NOTE: `_FakeWatchdog.__init__(self, **kwargs)` (tests/test_runner_sandbox.py:~78) ALREADY swallows arbitrary kwargs — no signature update is needed; but because it is a no-op it cannot prove correct wiring. Add a focused test (in test_runner_sandbox.py or a new test) that captures the `activity_probe` argument the batch spawn constructs and asserts it resolves to `pipeline_events_path` (e.g. patch `WatchdogThread` to record kwargs, invoke the batch-spawn path, assert the recorded probe stats the session pipeline-events.log). Thread `wctx.stall_reason` into the stall-handler log lines (orchestrator ~2755; batch ~2856). Do not refactor `runner.run()` in a way that breaks `tests/test_runner_heartbeat.py::test_run_is_wired_to_start_the_runner_heartbeat` (AST-walk).
+- **Verification**: `just test` exits 0 AND a test asserts the batch watchdog's probe targets the session `pipeline-events.log` path — confirm by `grep -cE "activity_probe|pipeline_events_path" tests/test_runner_sandbox.py` ≥ 1 within the new capture-test — pass if both. (The vacuous whole-file `grep "pipeline-events.log"` is intentionally NOT the gate.)
+- **Status**: [ ] pending
+
+### Task 4: Phase-2 de-risk (runs FIRST) — verify stream-json incremental flush to a redirected file
+- **Files**: `cortex/lifecycle/overnight-watchdogthread-is-a-blind-30/phase2-derisk.md`
+- **What**: Empirically spawn a real `claude -p --output-format=stream-json --verbose` with stdout redirected to a file (matching the runner's `open(stdout_path,"wb")`) and observe whether the file's size/mtime advances mid-stream. Record a machine-readable verdict that Tasks 5–6 hard-gate on.
+- **Depends on**: none
+- **Complexity**: simple
+- **Context**: Implements spec Req 12. `Depends on: none` so it runs in the first batch — the verdict is the most decision-relevant signal in the plan and must surface earliest. Known-threatened by Claude Code Issue #25670 (stream-json block-buffers ~4–8 KB to a non-TTY stdout). Write a leading line EXACTLY `VERDICT: PASS` (incremental flush confirmed) or `VERDICT: FAIL — fallback: <ceiling-only|pty|self-heartbeat>`. This file is a real consumed input (Tasks 5–6 read it), not a self-check. On FAIL, the orchestrator stays ceiling-only (Task 3's `probe=None`) and a follow-up ticket is filed for a robust orchestrator signal.
+- **Verification**: `grep -cE "^VERDICT: (PASS|FAIL)" cortex/lifecycle/overnight-watchdogthread-is-a-blind-30/phase2-derisk.md` = 1 — pass if exactly one verdict line. (Interactive/session-dependent: the empirical buffering observation requires spawning a real `claude` subprocess the test suite cannot exercise.)
+- **Status**: [ ] pending
+
+### Task 5: Orchestrator NDJSON result parsing — VERDICT-GATED
+- **Files**: `cortex_command/overnight/runner.py`, `cortex_command/overnight/tests/test_orchestrator_telemetry.py`
+- **What**: GUARD: read `phase2-derisk.md`; proceed ONLY if it contains `VERDICT: PASS`. On PASS, make `_emit_orchestrator_round_telemetry` select the terminal `type:"result"` NDJSON object instead of `json.loads` of the whole file. On FAIL, make NO change (parser stays whole-file `json.loads`) and set Status to `skipped (de-risk FAIL)`.
+- **Depends on**: [4]
+- **Complexity**: simple
+- **Context**: Implements spec Req 13 (telemetry-only; the parser reads `usage`/`total_cost_usd`/`duration_ms`/`num_turns`/`model`/`is_error`/`subtype`/`stop_reason`/`effort` — never a `result` field). Edit `_emit_orchestrator_round_telemetry` (runner.py:1546, the `json.loads(envelope_text)` at ~1546) and the call-site read `orchestrator_stdout_path.read_text()` (runner.py:2736) to select the LAST NDJSON line whose `type == "result"`. Must still classify `is_error`/`subtype.startswith("error_")` (1572–1594). `_emit_orchestrator_round_telemetry` has NO existing test — create `cortex_command/overnight/tests/test_orchestrator_telemetry.py` (NOT `test_cli_overnight_format_json.py`, which tests the CLI surface). The Req-13-before-Req-11 ordering is owned by the `Depends on` graph (Task 6 depends on [5]), so no prose ordering gate is needed here.
+- **Verification**: Verdict-aware — pass only on the branch matching `phase2-derisk.md`. If `VERDICT: PASS`: a new test in `test_orchestrator_telemetry.py` feeds a MULTI-line stream-json NDJSON fixture and asserts the LAST `type:"result"` object is selected (a fixture with an earlier non-result `type:"result"`-shaped line must not be picked) AND that `is_error`/`error_*` subtypes classify; `just test` exits 0. If `VERDICT: FAIL`: the orchestrator envelope parse is unchanged (whole-file `json.loads` retained) — `grep -c "stream-json" cortex_command/overnight/runner.py` = 0. Pass only if the verdict-matching branch holds.
+- **Status**: [ ] pending
+
+### Task 6: Flip orchestrator to stream-json + wire its watchdog to stdout — VERDICT-GATED
+- **Files**: `cortex_command/overnight/runner.py`
+- **What**: GUARD: proceed ONLY if `phase2-derisk.md` contains `VERDICT: PASS`. On PASS, change the orchestrator invocation to `--output-format=stream-json --verbose` (runner.py:1492) and build its watchdog with an `activity_probe` over `stdout_path`. On FAIL, make NO change (orchestrator stays `--output-format=json`, `activity_probe=None` from Task 3) and set Status `skipped (de-risk FAIL)`.
+- **Depends on**: [5, 1]
+- **Complexity**: simple
+- **Context**: Implements spec Reqs 11, 14. The why-not comment at the watchdog wiring: the parent `RunnerHeartbeatThread` advances `overnight-events.log` regardless of child progress (would make the watchdog never fire; the guardian owns that signal and cannot catch a hung orchestrator child — the ceiling is the backstop). Argv edit at the `subprocess.Popen([... "--output-format=json"])` list (~1492); watchdog at `_spawn_orchestrator` (1503–1510).
+- **Verification**: Verdict-aware — pass only on the branch matching `phase2-derisk.md`. If `VERDICT: PASS`: `grep -c "stream-json" cortex_command/overnight/runner.py` ≥ 1 AND the orchestrator watchdog is constructed with an `activity_probe` over `stdout_path` (assert via the Task-3 capture pattern, extended to the orchestrator spawn) AND `just test` exits 0. If `VERDICT: FAIL`: `grep -c "stream-json" cortex_command/overnight/runner.py` = 0 AND the orchestrator argv still contains `--output-format=json` AND its probe stays `None`. Pass only if the verdict-matching branch holds.
+- **Status**: [ ] pending
+
+### Task 7: Update source-of-truth docs to the actual shipped state
+- **Files**: `docs/overnight-operations.md`
+- **What**: Replace the stale stall-watchdog row and the margin prose with the honest post-change behavior, branching on the de-risk verdict (stream-json reset vs ceiling-only orchestrator).
+- **Depends on**: [3, 4, 6]
+- **Complexity**: simple
+- **Context**: Implements spec Req 15. The watchdog row (~`docs/overnight-operations.md:43`) currently reads "No event written to events log for 30 minutes" — replace it with per-site activity-reset + absolute-ceiling, and the per-site asymmetry (batch has a worker signal; the orchestrator's is de-risk-gated and may be ceiling-only per `phase2-derisk.md`'s VERDICT — Task 4 is the content-determining input). Update the margin prose (~line 301) to the honest `WEDGED>STALL` relationship (the two layers no longer race on the same stall; the guardian can't catch an active-but-doomed child, which the ceiling owns). `docs/overnight-operations.md` owns the watchdog description (CLAUDE.md source-of-truth split); no `docs/internals/pipeline.md` edit.
+- **Verification**: `grep -c "No event written to events log for 30 minutes" docs/overnight-operations.md` = 0 (the stale watchdog-row text is gone) AND the watchdog row now contains one of `activity`/`ceiling`/`reset` — pass if both (stale text removed AND new text present). The whole-file token grep is intentionally NOT the gate.
+- **Status**: [ ] pending
+
+## Risks
+- **Phase 2 is hard-gated, not prose-gated.** Tasks 5–6 begin by reading `phase2-derisk.md` and no-op on a non-PASS verdict; their VERDICT-aware Verifications fail if the code state does not match the verdict, so an executor that flips the flag on FAIL fails its own AC (cannot ship the dead-signal regression green). On FAIL the orchestrator stays ceiling-only (Task 3's `probe=None`) and a follow-up ticket is filed.
+- **Ceiling value `14400.0` is an admitted guess** — Req 7's kill-reason telemetry is the only feedback loop; a data-driven revisit is deferred.
+- **Dispatch mode**: this edits the `cortex_command` package; per project convention use sequential/trunk dispatch (the editable install means a worktree would verify stale code). Surfaced at the approval surface below.
+
+## Acceptance
+The whole feature works when: on an overnight session, a batch_runner subprocess that keeps emitting `dispatch_progress` past 30 minutes is NOT killed (productive work survives), while a genuinely-silent subprocess is still killed after `STALL_TIMEOUT_SECONDS` of silence with `stall_reason="inactivity"` recorded (and a forever-active-but-doomed child by `stall_reason="ceiling"`); the orchestrator watchdog either resets on its stream-json stdout growth (de-risk PASS) or remains a documented ceiling-only backstop (FAIL) — and the shipped code state matches the recorded verdict; and `just test` is green including the behavioral reset/ceiling/probe-None tests, the batch-probe-path capture test, and the unchanged `recovery.py` `WEDGED(2700)>STALL(1800)` assert.

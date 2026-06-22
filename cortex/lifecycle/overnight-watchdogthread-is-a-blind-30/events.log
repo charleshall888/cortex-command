@@ -6,3 +6,5 @@
 {"schema_version": 1, "ts": "2026-06-22T14:47:19Z", "event": "phase_transition", "feature": "overnight-watchdogthread-is-a-blind-30", "from": "research", "to": "specify"}
 {"schema_version": 1, "ts": "2026-06-22T15:59:08Z", "event": "spec_approved", "feature": "overnight-watchdogthread-is-a-blind-30"}
 {"schema_version": 1, "ts": "2026-06-22T15:59:32Z", "event": "phase_transition", "feature": "overnight-watchdogthread-is-a-blind-30", "from": "specify", "to": "plan"}
+{"schema_version": 1, "ts": "2026-06-22T17:08:47Z", "event": "plan_approved", "feature": "overnight-watchdogthread-is-a-blind-30", "dispatch_choice": "wait"}
+{"schema_version": 1, "ts": "2026-06-22T17:08:47Z", "event": "feature_paused", "feature": "overnight-watchdogthread-is-a-blind-30"}
