@@ -55,7 +55,7 @@ re-capped to the new measured surface; full suite green and manual R6 walkthroug
 - **What**: Measure refine's post-reframe L1 surface and, if it decreased from 644, lower `_BASELINES["refine"]` to the measured value and recompute `_BASELINES["total"]`.
 - **Context**: `_BASELINES` dict in `tests/test_l1_surface_ratchet.py` (`"refine": 644`, `"total": 7197`). Measure via `bin/cortex-measure-l1-surface` (prints `<skill> <bytes>` rows; `total` row is the sum). Set `_BASELINES["refine"]` to the measured refine bytes and `_BASELINES["total"]` to the measured total (the test asserts both per-skill and total). Do not raise either value; lowering is the re-cap. R6 (Step 6 body) does not change the L1 surface — only R2's frontmatter does, verified against `bin/cortex-measure-l1-surface` (it sums the frontmatter `description` + `when_to_use` byte lengths only, never the body). Depend on `[2, 3]` regardless, so the measurement lands after **both** refine edits — closing the window where an incidental frontmatter touch in Task 3 would otherwise leave the lowered baseline stale-too-low and surface only at Task 5's `just test` (the ratchet is not in the pre-commit hook).
 - **Verification**: `python3 -m pytest tests/test_l1_surface_ratchet.py -q` exits `0`; the `refine` and `total` rows from `bin/cortex-measure-l1-surface` equal the new `_BASELINES` values.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5: Full verification — routing, parity, ratchet, manual R6 (R3, R5, R6 behavioral)
 - **Files**: none (verification only; reads `spec.md`, exercises `tests/`)

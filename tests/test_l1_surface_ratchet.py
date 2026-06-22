@@ -63,12 +63,12 @@ _BASELINES: dict[str, int] = {
     "morning-review": 320,
     "overnight": 314,
     "pr": 237,
-    "refine": 644,
+    "refine": 624,
     "requirements": 231,
     "requirements-gather": 347,
     "requirements-write": 353,
     "research": 379,
-    "total": 7197,
+    "total": 7177,
 }
 
 
