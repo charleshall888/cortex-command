@@ -547,7 +547,7 @@ def _anchor_match(brief: str, tokens: tuple[str, ...]) -> bool:
 
 
 def validate_brief(brief: str) -> tuple[bool, str]:
-    """Check a generated brief for decision-content anchors and word-cap tolerance.
+    """Check a generated brief for decision-content anchors.
 
     Decision-content anchors. The brief must contain at least one token from
     each of three canonical floors. Matching is case-insensitive and uses
@@ -573,8 +573,10 @@ def validate_brief(brief: str) -> tuple[bool, str]:
       ``trade-off``, ``cost``, ``drawback``, ``downside``, ``sacrifice``,
       ``consequence``, ``compromise``, ``risk``.
 
-    Word-cap tolerance: the brief must be at most ``GATE_BRIEF_WORD_CAP + 25``
-    words (Req 5a).
+    Word cap is advisory, not enforced: a brief that exceeds
+    ``GATE_BRIEF_WORD_CAP + 25`` words still passes validation. The overage is
+    surfaced as a non-blocking signal via ``brief_word_overage`` rather than a
+    validation gate.
 
     Args:
         brief: The generated brief text to validate.
@@ -609,16 +611,28 @@ def validate_brief(brief: str) -> tuple[bool, str]:
             "tradeoff, cost, drawback, downside, compromise, risk, ...)"
         )
 
-    # Word-cap tolerance
-    word_count = len(brief.split())
-    cap = GATE_BRIEF_WORD_CAP + 25
-    if word_count > cap:
-        return False, (
-            f"brief word count {word_count} exceeds cap {cap} "
-            f"(GATE_BRIEF_WORD_CAP={GATE_BRIEF_WORD_CAP} + 25 tolerance)"
-        )
-
+    # Word cap is advisory, not a validation gate: an anchor-valid over-cap
+    # brief still passes. Overage is surfaced via ``brief_word_overage``.
     return True, ""
+
+
+def brief_word_overage(brief: str) -> int:
+    """Return how many words ``brief`` exceeds the advisory word ceiling by.
+
+    The ceiling is ``GATE_BRIEF_WORD_CAP + 25`` words. This is a non-blocking
+    signal: ``validate_brief`` no longer fails an over-cap brief, so callers use
+    this helper to surface the overage (e.g. as a soft note or telemetry) without
+    rejecting the brief.
+
+    Args:
+        brief: The generated brief text to measure.
+
+    Returns:
+        The number of words by which ``brief`` exceeds ``GATE_BRIEF_WORD_CAP +
+        25``, or ``0`` when the brief is within the ceiling.
+    """
+    overage = len(brief.split()) - (GATE_BRIEF_WORD_CAP + 25)
+    return overage if overage > 0 else 0
 
 
 # ---------------------------------------------------------------------------

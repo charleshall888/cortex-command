@@ -96,6 +96,7 @@ _REQUIRES_AUTH = pytest.mark.skipif(
 
 from cortex_command.discovery import (  # noqa: E402
     GATE_BRIEF_WORD_CAP,
+    brief_word_overage,
     validate_brief,
 )
 
@@ -920,3 +921,48 @@ def test_validate_brief_canonical_floor(anchor: str, token: str) -> None:
         f"{token!r} and return (True, ''), but got {result!r}.\n"
         f"Brief: {brief!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Advisory word cap: over-cap anchored briefs pass; overage is a signal
+# ---------------------------------------------------------------------------
+
+
+def test_validate_brief_over_cap_anchored_passes() -> None:
+    """An anchor-valid over-cap brief is accepted: the cap is advisory."""
+    anchored = "We decided to ship. Alternatives were weighed. The tradeoff is cost. "
+    brief = anchored + "filler " * 400
+    assert len(brief.split()) > GATE_BRIEF_WORD_CAP + 25, (
+        "Test setup: brief must exceed the advisory ceiling to exercise the "
+        "over-cap path."
+    )
+    result = validate_brief(brief)
+    assert result == (True, ""), (
+        "Expected validate_brief to accept an anchor-valid over-cap brief and "
+        f"return (True, '') (cap is advisory), but got {result!r}."
+    )
+
+
+@pytest.mark.parametrize(
+    "filler_words,expect_positive",
+    [
+        (0, False),
+        (10, False),
+        (400, True),
+    ],
+)
+def test_brief_word_overage(filler_words: int, expect_positive: bool) -> None:
+    """brief_word_overage() returns 0 within the ceiling, positive over it."""
+    anchored = "We decided to ship. Alternatives were weighed. The tradeoff is cost. "
+    brief = anchored + "filler " * filler_words
+    overage = brief_word_overage(brief)
+    if expect_positive:
+        cap = GATE_BRIEF_WORD_CAP + 25
+        assert overage == len(brief.split()) - cap, (
+            f"Expected overage to equal words-over-{cap}, got {overage}."
+        )
+        assert overage > 0
+    else:
+        assert overage == 0, (
+            f"Expected 0 overage for a within-ceiling brief, got {overage}."
+        )
