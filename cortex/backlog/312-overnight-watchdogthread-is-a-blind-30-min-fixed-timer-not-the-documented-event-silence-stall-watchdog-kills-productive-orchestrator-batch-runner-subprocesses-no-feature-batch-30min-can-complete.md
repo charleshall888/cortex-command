@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 0cbb3a1d-3efb-4710-bd62-52e030763bdd
 title: Overnight WatchdogThread is a blind 30-min fixed timer (not the documented event-silence/stall watchdog) — kills productive orchestrator/batch_runner subprocesses; no feature batch >30min can complete
-status: refined
+status: complete
 priority: high
 type: bug
 created: 2026-06-22

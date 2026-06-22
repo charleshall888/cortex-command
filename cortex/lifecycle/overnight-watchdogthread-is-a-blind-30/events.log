@@ -16,3 +16,4 @@
 {"schema_version": 1, "ts": "2026-06-22T19:38:47Z", "event": "phase_transition", "feature": "overnight-watchdogthread-is-a-blind-30", "tier": "complex", "from": "implement", "to": "review"}
 {"ts": "2026-06-22T19:49:58Z", "event": "review_verdict", "feature": "overnight-watchdogthread-is-a-blind-30", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
 {"ts": "2026-06-22T19:51:25Z", "event": "phase_transition", "feature": "overnight-watchdogthread-is-a-blind-30", "from": "review", "to": "complete"}
+{"ts": "2026-06-22T19:54:19Z", "event": "feature_complete", "feature": "overnight-watchdogthread-is-a-blind-30", "tasks_total": 7, "rework_cycles": 0, "merge_anchor": "merge"}
