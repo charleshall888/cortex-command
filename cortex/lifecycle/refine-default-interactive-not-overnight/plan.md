@@ -37,7 +37,7 @@ re-capped to the new measured surface; full suite green and manual R6 walkthroug
 - **Complexity**: simple
 - **Context**: Frontmatter L3 `description`, L4 `when_to_use`, L9 `outputs`; body L19 purpose statement and L188 "Ready for overnight execution.". Set the purpose to read `Prepares a single backlog item for execution.` (terse). The four substrings that MUST survive (routing): `refine backlog item`, `prepare for overnight`, `prepare feature for execution`, `Clarify → Research → Spec` — keep `prepare for overnight` as a discoverability keyword even though the purpose is now execution-agnostic. Keep the combined L1 surface (description + when_to_use) ≤ 644 bytes — it should shrink, since "overnight execution" → "execution" removes bytes. After editing, run `just build-plugin`; stage canonical + regenerated mirror.
 - **Verification**: `grep -c "Prepares a single backlog item for execution" skills/refine/SKILL.md` ≥ `1`; `grep -c "Ready for overnight execution." skills/refine/SKILL.md` = `0`; each of the four trigger substrings still present (`grep -c` ≥ 1 each); the L1 surface did not grow — `bin/cortex-measure-l1-surface | grep '^refine '` shows refine bytes ≤ `644` (catches an accidental rephrase that grows the surface here, not late at Task 4/5); `diff -q skills/refine/SKILL.md plugins/cortex-core/skills/refine/SKILL.md` identical (exit 0).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Add standalone-guarded overnight-candidate warning to refine Step 6 (R6)
 - **Files**: `skills/refine/SKILL.md`, `plugins/cortex-core/skills/refine/SKILL.md`

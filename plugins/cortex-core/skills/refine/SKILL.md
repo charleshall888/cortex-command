@@ -1,12 +1,12 @@
 ---
 name: refine
-description: Prepare a backlog item for overnight execution by running it through Clarify → Research → Spec. Use when user says "/cortex-core:refine", "refine backlog item", "prepare for overnight", "prepare feature for execution", or "run on a backlog item before overnight". Produces cortex/lifecycle/{slug}/research.md and cortex/lifecycle/{slug}/spec.md, then sets status:refined on the backlog item.
-when_to_use: "Use when preparing a backlog item for overnight execution (\"spec this out\", \"tighten the requirements\", \"lock in the spec\"). Different from /cortex-core:lifecycle — refine produces spec only; lifecycle wraps refine and continues to plan/implement."
+description: Prepare a backlog item for execution by running it through Clarify → Research → Spec. Use when user says "/cortex-core:refine", "refine backlog item", "prepare for overnight", "prepare feature for execution", or "run on a backlog item before overnight". Produces cortex/lifecycle/{slug}/research.md and cortex/lifecycle/{slug}/spec.md, then sets status:refined on the backlog item.
+when_to_use: "Use when preparing a backlog item for execution (\"spec this out\", \"tighten the requirements\", \"lock in the spec\"). Different from /cortex-core:lifecycle — refine produces spec only; lifecycle wraps refine and continues to plan/implement."
 inputs:
   - "topic: string (required) — backlog item ID (numeric), slug (kebab-case), or title (quoted phrase); or ad-hoc topic name if no backlog item exists"
 outputs:
   - "cortex/lifecycle/{slug}/research.md — implementation-level research artifact"
-  - "cortex/lifecycle/{slug}/spec.md — approved specification ready for overnight planning"
+  - "cortex/lifecycle/{slug}/spec.md — approved specification ready for planning"
   - "cortex/backlog/{item}.md — updated with complexity:, criticality:, status: refined, spec: path, areas:"
 preconditions:
   - "Run from project root"
@@ -16,7 +16,7 @@ argument-hint: "<topic>"
 
 # /cortex-core:refine
 
-Prepares a single backlog item for overnight execution. Runs three phases in sequence: **Clarify** (intent gate and requirements alignment), **Research** (implementation-level exploration), and **Spec** (structured requirements interview). When complete, the backlog item has `status: refined` and a linked spec, and the overnight runner can plan and execute it without further human input.
+Prepares a single backlog item for execution. Runs three phases in sequence: **Clarify** (intent gate and requirements alignment), **Research** (implementation-level exploration), and **Spec** (structured requirements interview). When complete, the backlog item has `status: refined` and a linked spec, ready to be planned and executed.
 
 Topic: $ARGUMENTS (backlog item slug, title, or description). If empty, prompt user before proceeding.
 
@@ -184,8 +184,6 @@ Announce that `/cortex-core:refine` is complete. Summarize:
 - Lifecycle directory: `cortex/lifecycle/{lifecycle-slug}/`
 - Artifacts produced: research.md, spec.md
 - Backlog fields written: `complexity`, `criticality`, `status: refined`, `spec`, `areas`
-
-Ready for overnight execution.
 
 ## Constraints
 
