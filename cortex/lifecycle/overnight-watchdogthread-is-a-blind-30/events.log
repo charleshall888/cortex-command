@@ -1,0 +1,8 @@
+{"schema_version": 1, "ts": "2026-06-22T12:33:27Z", "event": "lifecycle_start", "feature": "overnight-watchdogthread-is-a-blind-30", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-22T12:38:28Z", "event": "clarify_critic", "feature": "overnight-watchdogthread-is-a-blind-30", "parent_epic_loaded": false, "findings_count": 5, "dispositions": {"apply": 4, "dismiss": 1, "ask": 0}, "applied_fixes_count": 4, "dismissals_count": 1, "status": "ok"}
+{"ts": "2026-06-22T12:40:27Z", "event": "complexity_override", "feature": "overnight-watchdogthread-is-a-blind-30", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-06-22T12:40:27Z", "event": "criticality_override", "feature": "overnight-watchdogthread-is-a-blind-30", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"schema_version": 1, "ts": "2026-06-22T12:41:13Z", "event": "phase_transition", "feature": "overnight-watchdogthread-is-a-blind-30", "from": "clarify", "to": "research"}
+{"schema_version": 1, "ts": "2026-06-22T14:47:19Z", "event": "phase_transition", "feature": "overnight-watchdogthread-is-a-blind-30", "from": "research", "to": "specify"}
+{"schema_version": 1, "ts": "2026-06-22T15:59:08Z", "event": "spec_approved", "feature": "overnight-watchdogthread-is-a-blind-30"}
+{"schema_version": 1, "ts": "2026-06-22T15:59:32Z", "event": "phase_transition", "feature": "overnight-watchdogthread-is-a-blind-30", "from": "specify", "to": "plan"}

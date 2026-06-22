@@ -2,11 +2,17 @@
 schema_version: "1"
 uuid: 0cbb3a1d-3efb-4710-bd62-52e030763bdd
 title: Overnight WatchdogThread is a blind 30-min fixed timer (not the documented event-silence/stall watchdog) — kills productive orchestrator/batch_runner subprocesses; no feature batch >30min can complete
-status: backlog
+status: refined
 priority: high
 type: bug
 created: 2026-06-22
 updated: 2026-06-22
+lifecycle_phase: research
+lifecycle_slug: overnight-watchdogthread-is-a-blind-30
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/overnight-watchdogthread-is-a-blind-30/spec.md
+areas: ['overnight-runner']
 ---
 **Why:** The overnight runner's `WatchdogThread` (`cortex_command/overnight/runner_primitives.py`) is documented as a "Stall-detection watchdog" and its kill path logs `"event log silence (stall timeout)"`, but the implementation **monitors nothing** — it is a flat fixed-duration timer. `run()` only ever does `elapsed += poll_interval` and calls `_kill_for_stall()` once `elapsed > timeout_seconds` (`STALL_TIMEOUT_SECONDS = 1800.0`, `runner.py:87`). It never reads an event log, file mtime, or any progress/activity signal, and never resets `elapsed`. Result: **every orchestrator and batch_runner subprocess is hard-killed at exactly 30 minutes regardless of how productively it is working** — so any feature (or batch) that legitimately needs >30 min can never complete.
 
