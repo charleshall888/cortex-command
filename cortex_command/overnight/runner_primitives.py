@@ -18,8 +18,9 @@ import os
 import signal
 import subprocess
 import threading
+import time
 from dataclasses import dataclass, field
-from typing import Any, Iterator
+from typing import Any, Callable, Iterator
 
 
 # ---------------------------------------------------------------------------
@@ -34,6 +35,15 @@ DEFAULT_WATCHDOG_POLL_INTERVAL_SECONDS: float = 1.0
 #: :meth:`WatchdogThread._kill_pgid`. Keep short enough that a truly
 #: stalled subprocess cannot linger indefinitely.
 DEFAULT_KILL_ESCALATION_SECONDS: float = 5.0
+
+#: Never-reset absolute ceiling: a child is killed once it has run this
+#: long regardless of activity, backstopping the inactivity tier against
+#: a loud-but-stuck loop (output != progress). 14400 s = 4 h is a
+#: deliberate conservative guess to revisit once session-duration data
+#: accumulates; ceiling-kills are logged via the kill-reason marker
+#: (``WatchdogContext.stall_reason == "ceiling"``), which is the data
+#: that future revisit consumes.
+ABSOLUTE_CEILING_SECONDS: float = 14400.0
 
 #: Signals whose handlers trigger clean shutdown (R14).
 _SHUTDOWN_SIGNALS: tuple[int, ...] = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
@@ -68,9 +78,16 @@ class WatchdogContext:
     batch_runner). ``stall_flag`` is set by the watchdog when it decides
     to kill its subprocess; the main thread checks this after
     ``Popen.wait()`` returns to distinguish stall-kill from normal exit.
+
+    ``stall_reason`` records which tier fired — ``"inactivity"`` or
+    ``"ceiling"`` — so stall-handling can distinguish "the child went
+    silent" from "hit the absolute ceiling — tune it". It is the only
+    shared field added for the activity-aware rewrite; all timing
+    bookkeeping stays thread-confined to :meth:`WatchdogThread.run`.
     """
 
     stall_flag: threading.Event = field(default_factory=threading.Event)
+    stall_reason: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -78,16 +95,37 @@ class WatchdogContext:
 # ---------------------------------------------------------------------------
 
 class WatchdogThread(threading.Thread):
-    """Stall-detection watchdog for a spawned subprocess.
+    """Activity-aware stall watchdog for a spawned subprocess.
 
     Sleeps in ``coord.shutdown_event.wait(timeout=poll_interval)`` — never
     via stdlib blocking sleep — so SIGHUP/SIGTERM handlers (which set
     ``shutdown_event``) wake the watchdog immediately.
 
-    On elapsed > ``timeout_seconds``, sets ``wctx.stall_flag``, acquires
-    ``coord.kill_lock``, terminates the subprocess's process group with
-    ``SIGTERM`` (escalating to ``SIGKILL`` after
-    ``kill_escalation_seconds``), releases the lock, and exits.
+    Timing uses a **monotonic clock** (injectable via ``clock``), not a
+    count of poll ticks, so host scheduling delays never distort it. Two
+    tiers decide a kill:
+
+    * **Inactivity tier** — an injected ``activity_probe`` returns the
+      watched child file's ``(size, mtime_ns)`` (or ``None`` when the
+      file is absent/unsupplied). Each tick the timer resets when the
+      probe advances (``size`` grows **or** ``mtime_ns`` advances, or the
+      file first appears from a ``None`` baseline). A ``size`` decrease
+      (rotation/truncation) re-baselines without counting as a reset.
+      A kill fires when inactivity exceeds ``timeout_seconds``
+      (``stall_reason="inactivity"``). With ``activity_probe=None`` the
+      inactivity timer never resets, so the watchdog behaves exactly as a
+      blind ``timeout_seconds`` timer — today's orchestrator behavior.
+    * **Absolute-ceiling tier** — a never-reset deadline at
+      ``started_at + ceiling_seconds`` kills the child regardless of
+      activity (``stall_reason="ceiling"``), backstopping a loud-but-stuck
+      loop the inactivity tier is structurally blind to.
+
+    On a kill it sets ``wctx.stall_flag`` and ``wctx.stall_reason``,
+    acquires ``coord.kill_lock``, terminates the subprocess's process
+    group with ``SIGTERM`` (escalating to ``SIGKILL`` after
+    ``kill_escalation_seconds``), releases the lock, and exits. All timing
+    state (``started_at``, ``last_activity_at``, last-seen probe tuple) is
+    confined to :meth:`run`; the reset path takes no locks.
 
     Daemon thread: does not prevent interpreter shutdown.
     """
@@ -102,6 +140,9 @@ class WatchdogThread(threading.Thread):
         *,
         poll_interval_seconds: float = DEFAULT_WATCHDOG_POLL_INTERVAL_SECONDS,
         kill_escalation_seconds: float = DEFAULT_KILL_ESCALATION_SECONDS,
+        ceiling_seconds: float = ABSOLUTE_CEILING_SECONDS,
+        activity_probe: Callable[[], tuple[int, int] | None] | None = None,
+        clock: Callable[[], float] = time.monotonic,
     ) -> None:
         super().__init__(name=f"watchdog-{label}", daemon=True)
         self._proc = proc
@@ -111,9 +152,27 @@ class WatchdogThread(threading.Thread):
         self._label = label
         self._poll_interval_seconds = poll_interval_seconds
         self._kill_escalation_seconds = kill_escalation_seconds
+        self._ceiling_seconds = ceiling_seconds
+        # ``activity_probe`` returns the watched child file's (size,
+        # mtime_ns) or None when absent/unsupplied. Default None ⇒ the
+        # inactivity tier never resets ⇒ blind-timer-equivalent, which
+        # preserves today's orchestrator behavior until Phase 2 wires a
+        # probe. ``clock`` is the injectable monotonic time source.
+        self._activity_probe = activity_probe
+        self._clock = clock
 
     def run(self) -> None:
-        elapsed = 0.0
+        # Monotonic instants — never poll-tick counts — so host
+        # scheduling delays don't distort either tier. All bookkeeping is
+        # run()-local: no shared field beyond ``stall_reason``, no locks
+        # in the reset path.
+        started_at = self._clock()
+        last_activity_at = self._clock()
+        # Last (size, mtime_ns) the probe returned; None until the file
+        # first appears. ``saw_activity`` distinguishes a never-seen file
+        # from one seen at (0, 0) so first appearance counts as activity.
+        last_seen: tuple[int, int] | None = None
+        saw_activity = False
         while True:
             # Sleep via the shared shutdown_event — SIGHUP sets this and
             # wakes us immediately. Never call a blocking stdlib sleep.
@@ -124,16 +183,56 @@ class WatchdogThread(threading.Thread):
                 return
 
             # Subprocess already exited on its own — nothing to watch.
+            # This early-return runs BEFORE any stat/reset so reset never
+            # extends a child past a shutdown request or a dead child.
             if self._proc.poll() is not None:
                 return
 
-            elapsed += self._poll_interval_seconds
-            if elapsed > self._timeout_seconds:
-                self._kill_for_stall()
+            # Inactivity tier: probe the child-written activity file. A
+            # missing/unsupplied source (probe None or returning None) is
+            # "no activity yet" — no reset. Broaden the production probe's
+            # narrower FileNotFoundError catch to OSError here so a
+            # transient blip (e.g. EACCES) degrades to no-reset rather
+            # than killing the daemon thread.
+            if self._activity_probe is not None:
+                try:
+                    sample = self._activity_probe()
+                except OSError:
+                    sample = None
+                if sample is not None:
+                    size, mtime_ns = sample
+                    if not saw_activity:
+                        # First appearance from a missing/None baseline.
+                        saw_activity = True
+                        last_seen = sample
+                        last_activity_at = self._clock()
+                    else:
+                        prev_size, prev_mtime_ns = last_seen  # type: ignore[misc]
+                        if size > prev_size or mtime_ns > prev_mtime_ns:
+                            last_activity_at = self._clock()
+                            last_seen = sample
+                        elif size < prev_size:
+                            # Rotation/truncation: re-baseline without
+                            # treating the shrink as a stall reset.
+                            last_seen = sample
+
+            now = self._clock()
+            if now - last_activity_at > self._timeout_seconds:
+                self._kill_for_stall("inactivity")
+                return
+            if now - started_at > self._ceiling_seconds:
+                self._kill_for_stall("ceiling")
                 return
 
-    def _kill_for_stall(self) -> None:
-        """Signal the process group for stall + escalate to SIGKILL."""
+    def _kill_for_stall(self, reason: str) -> None:
+        """Signal the process group for stall + escalate to SIGKILL.
+
+        ``reason`` is ``"inactivity"`` or ``"ceiling"`` and is recorded on
+        ``wctx.stall_reason`` (set before ``stall_flag`` so a reader that
+        observes the flag also observes the reason) for the stall-handling
+        log to distinguish a silent child from a ceiling-kill.
+        """
+        self._wctx.stall_reason = reason
         self._wctx.stall_flag.set()
         with self._coord.kill_lock:
             # Re-check under the lock: the main thread's cleanup path
