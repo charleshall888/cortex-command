@@ -224,7 +224,7 @@ def test_schedule_then_cancel_full_lifecycle(
     state_path = _write_state(session_dir, session_id)
 
     # Wire repo root so session-path resolution and state-load work.
-    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda: tmp_path)
+    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda *a, **k: tmp_path)
 
     # Redirect state.session_dir() so the backend writes launcher/plist
     # logs to our tmp session dir rather than the real one. The backend
@@ -342,7 +342,7 @@ def test_schedule_verifies_on_darwin25_not_running(
     session_dir = sessions_root / session_id
     state_path = _write_state(session_dir, session_id)
 
-    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda: tmp_path)
+    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda *a, **k: tmp_path)
 
     def _fake_session_dir(sid: str) -> Path:
         d = sessions_root / sid
@@ -410,7 +410,7 @@ def test_fail_marker_surfaces_in_status(
 
     # Wire repo root and suppress the active-session pointer so
     # handle_status falls back to the latest state file we just wrote.
-    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda: tmp_path)
+    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda *a, **k: tmp_path)
     monkeypatch.setattr(
         "cortex_command.overnight.cli_handler.ipc.read_active_session",
         lambda: None,

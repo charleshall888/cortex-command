@@ -98,7 +98,7 @@ def test_prepare_renders_plan_json_without_mutating_state(
 ) -> None:
     """``prepare`` emits the rendered plan JSON and never bootstraps/mutates."""
     selection = _make_selection()
-    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda: tmp_path)
+    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda *a, **k: tmp_path)
     monkeypatch.setattr(
         backlog_module, "select_overnight_batch", lambda **kw: selection
     )
@@ -138,7 +138,7 @@ def test_prepare_selection_failure_exits_nonzero(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
 ) -> None:
     """A selection exception surfaces as a non-zero exit with an error envelope."""
-    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda: tmp_path)
+    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda *a, **k: tmp_path)
 
     def _raise(**kw):
         raise ValueError("malformed frontmatter")
@@ -167,7 +167,7 @@ def test_launch_returns_structured_envelope(
     logs exactly one fire-time ``session_start`` (R11).
     """
     selection = _make_selection()
-    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda: tmp_path)
+    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda *a, **k: tmp_path)
     monkeypatch.setattr(
         backlog_module, "select_overnight_batch", lambda **kw: selection
     )
@@ -247,7 +247,7 @@ def test_launch_aborts_before_mutation_on_invalid_repos(
 ) -> None:
     """A non-empty repo-validation list aborts before bootstrap_session runs."""
     selection = _make_selection()
-    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda: tmp_path)
+    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda *a, **k: tmp_path)
     monkeypatch.setattr(
         backlog_module, "select_overnight_batch", lambda **kw: selection
     )
@@ -279,7 +279,7 @@ def test_launch_nothing_ready_exits_nonzero(
 ) -> None:
     """An empty selection (zero batches) is a non-zero 'nothing ready' result."""
     empty = SelectionResult(batches=[], ineligible=[], summary="nothing")
-    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda: tmp_path)
+    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda *a, **k: tmp_path)
     monkeypatch.setattr(
         backlog_module, "select_overnight_batch", lambda **kw: empty
     )

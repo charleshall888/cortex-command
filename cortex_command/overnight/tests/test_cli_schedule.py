@@ -96,7 +96,7 @@ def test_schedule_dry_run_human_exits_zero(
     session_dir = sessions_root / session_id
     state_path = _write_state_file(session_dir, session_id)
 
-    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda: tmp_path)
+    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda *a, **k: tmp_path)
 
     args = _make_args(
         target_time=_future_hhmm(),
@@ -124,7 +124,7 @@ def test_schedule_dry_run_json_envelope(
     session_dir = sessions_root / session_id
     state_path = _write_state_file(session_dir, session_id)
 
-    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda: tmp_path)
+    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda *a, **k: tmp_path)
 
     args = _make_args(
         target_time=_future_hhmm(),
@@ -161,7 +161,7 @@ def test_schedule_non_darwin_exits_with_macos_only_message(
     session_dir = sessions_root / session_id
     state_path = _write_state_file(session_dir, session_id)
 
-    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda: tmp_path)
+    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda *a, **k: tmp_path)
 
     # Force the dispatch.get_backend() call inside handle_schedule to
     # return the unsupported stub regardless of host platform.
@@ -201,7 +201,7 @@ def test_schedule_feb_29_in_non_leap_year_rejected(
     session_dir = sessions_root / session_id
     state_path = _write_state_file(session_dir, session_id)
 
-    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda: tmp_path)
+    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda *a, **k: tmp_path)
 
     args = _make_args(
         target_time="2026-02-29T23:00",
@@ -226,7 +226,7 @@ def test_schedule_malformed_target_rejected(
     session_dir = sessions_root / session_id
     state_path = _write_state_file(session_dir, session_id)
 
-    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda: tmp_path)
+    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda *a, **k: tmp_path)
 
     args = _make_args(
         target_time="not-a-time",
@@ -335,7 +335,7 @@ def test_schedule_inconclusive_probe_completes_bookkeeping(
     session_dir = sessions_root / session_id
     state_path = _write_state_file(session_dir, session_id)
 
-    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda: tmp_path)
+    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda *a, **k: tmp_path)
     backend = _install_inconclusive_probe_backend(monkeypatch, tmp_path / "home")
 
     args = _make_args(

@@ -52,7 +52,7 @@ def test_escalations_per_session(capsys, monkeypatch) -> None:
 
         # Route the handler's repo-path resolver at our tempdir.
         monkeypatch.setattr(
-            cli_handler, "_resolve_repo_path", lambda: repo_path
+            cli_handler, "_resolve_repo_path", lambda *a, **k: repo_path
         )
 
         args = argparse.Namespace(

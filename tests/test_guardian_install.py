@@ -214,7 +214,7 @@ def test_cli_guardian_install_exits_zero(
     plist_dir = tmp_path / "launch"
     monkeypatch.setattr(
         "cortex_command.overnight.cli_handler._resolve_repo_path",
-        lambda: tmp_path,
+        lambda *a, **k: tmp_path,
     )
     # Pin the backend's plist dir into the temp tree so the real
     # $TMPDIR/cortex-overnight-launch/ is never touched.
@@ -260,7 +260,7 @@ def test_cli_guardian_install_off_macos_exits_one(
     monkeypatch.setattr(guardian.sys, "platform", "linux")
     monkeypatch.setattr(
         "cortex_command.overnight.cli_handler._resolve_repo_path",
-        lambda: Path("/repo"),
+        lambda *a, **k: Path("/repo"),
     )
 
     rc = cli._dispatch_overnight_guardian_install(argparse.Namespace())

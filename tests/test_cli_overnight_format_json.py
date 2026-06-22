@@ -93,7 +93,7 @@ def test_overnight_logs_format_json_emits_versioned_json(
         )
 
         monkeypatch.setattr(
-            cli_handler, "_resolve_repo_path", lambda: repo_path
+            cli_handler, "_resolve_repo_path", lambda *a, **k: repo_path
         )
 
         args = argparse.Namespace(
@@ -156,7 +156,7 @@ def test_overnight_cancel_format_json_emits_versioned_json(
         _make_session(repo_path, session_id)
 
         monkeypatch.setattr(
-            cli_handler, "_resolve_repo_path", lambda: repo_path
+            cli_handler, "_resolve_repo_path", lambda *a, **k: repo_path
         )
 
         args = argparse.Namespace(
@@ -230,7 +230,7 @@ def test_overnight_start_format_json_concurrent_runner(
         )
 
         monkeypatch.setattr(
-            cli_handler, "_resolve_repo_path", lambda: repo_path
+            cli_handler, "_resolve_repo_path", lambda *a, **k: repo_path
         )
 
         args = argparse.Namespace(

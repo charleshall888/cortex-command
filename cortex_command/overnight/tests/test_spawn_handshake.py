@@ -157,7 +157,7 @@ def fake_runner_env(
     state_path = _write_minimal_state(session_dir, session_id)
 
     monkeypatch.setattr(
-        cli_handler, "_resolve_repo_path", lambda: tmp_path
+        cli_handler, "_resolve_repo_path", lambda *a, **k: tmp_path
     )
 
     yield {

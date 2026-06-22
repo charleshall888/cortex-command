@@ -142,7 +142,7 @@ def test_cancel_scheduled_launch_removes_sidecar_and_clears_state(
     )
 
     # Wire the test's repo root so _resolve_repo_path locates the session.
-    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda: tmp_path)
+    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda *a, **k: tmp_path)
 
     args = argparse.Namespace(
         session_id=session_id,
@@ -212,7 +212,7 @@ def test_cancel_scheduled_launch_json_envelope(
         "cortex_command.overnight.scheduler.macos.subprocess.run",
         _fake_run,
     )
-    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda: tmp_path)
+    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda *a, **k: tmp_path)
 
     args = argparse.Namespace(
         session_id=session_id,
@@ -250,7 +250,7 @@ def test_cancel_no_runner_no_schedule_returns_no_active_session(
     session_dir = sessions_root / session_id
     _write_state(session_dir, session_id, scheduled_start=None)
 
-    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda: tmp_path)
+    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda *a, **k: tmp_path)
 
     args = argparse.Namespace(
         session_id=session_id,

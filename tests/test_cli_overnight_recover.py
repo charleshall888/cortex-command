@@ -104,7 +104,7 @@ def _patch_environment(tmp_path: Path, monkeypatch) -> None:
     # --session lookup stays inside the fixture.
     monkeypatch.setattr(
         "cortex_command.overnight.cli_handler._resolve_repo_path",
-        lambda: tmp_path,
+        lambda *a, **k: tmp_path,
     )
     # Reaper must not touch real processes.
     monkeypatch.setattr(

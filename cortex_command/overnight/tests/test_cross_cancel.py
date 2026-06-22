@@ -118,7 +118,7 @@ def test_schedule_blocked_when_runner_active(
     session_dir = sessions_root / session_id
     state_path = _write_state(session_dir, session_id)
 
-    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda: tmp_path)
+    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda *a, **k: tmp_path)
     # Force a live runner.pid + verify_runner_pid → True.
     monkeypatch.setattr(
         ipc,
@@ -152,7 +152,7 @@ def test_schedule_blocked_when_spawn_pending_fresh(
     session_dir = sessions_root / session_id
     state_path = _write_state(session_dir, session_id)
 
-    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda: tmp_path)
+    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda *a, **k: tmp_path)
     # No runner.pid.
     monkeypatch.setattr(ipc, "read_runner_pid", lambda d: None)
     monkeypatch.setattr(ipc, "verify_runner_pid", lambda d: False)
@@ -186,7 +186,7 @@ def test_schedule_proceeds_when_spawn_pending_stale(
     session_dir = sessions_root / session_id
     state_path = _write_state(session_dir, session_id)
 
-    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda: tmp_path)
+    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda *a, **k: tmp_path)
     monkeypatch.setattr(ipc, "read_runner_pid", lambda d: None)
     monkeypatch.setattr(ipc, "verify_runner_pid", lambda d: False)
 
@@ -230,7 +230,7 @@ def test_start_blocked_when_pending_schedule(
     session_dir = sessions_root / session_id
     state_path = _write_state(session_dir, session_id)
 
-    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda: tmp_path)
+    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda *a, **k: tmp_path)
 
     handle = ScheduledHandle(
         label=f"com.charleshall.cortex-command.overnight-schedule.{session_id}.111",
@@ -269,7 +269,7 @@ def test_start_with_force_bypasses_pending_schedule_guard(
     session_dir = sessions_root / session_id
     state_path = _write_state(session_dir, session_id)
 
-    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda: tmp_path)
+    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda *a, **k: tmp_path)
 
     handle = ScheduledHandle(
         label=f"com.charleshall.cortex-command.overnight-schedule.{session_id}.222",

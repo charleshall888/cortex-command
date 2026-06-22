@@ -83,7 +83,7 @@ def test_status_json_includes_scheduled_start_null_when_absent(
     session_dir = sessions_root / session_id
     _write_state(session_dir, session_id, scheduled_start=None)
 
-    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda: tmp_path)
+    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda *a, **k: tmp_path)
     # Force the active-session pointer to be empty so the fallback uses
     # the latest-state path under our tmp_path cortex/lifecycle/sessions dir.
     monkeypatch.setattr(
@@ -111,7 +111,7 @@ def test_status_json_includes_scheduled_start_iso_when_present(
     iso = "2026-05-05T22:00:00"
     _write_state(session_dir, session_id, scheduled_start=iso)
 
-    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda: tmp_path)
+    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda *a, **k: tmp_path)
     monkeypatch.setattr(
         "cortex_command.overnight.cli_handler.ipc.read_active_session",
         lambda: None,
@@ -141,7 +141,7 @@ def test_status_human_includes_scheduled_fire_line_when_present(
     iso = "2026-05-05T22:00:00"
     _write_state(session_dir, session_id, scheduled_start=iso)
 
-    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda: tmp_path)
+    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda *a, **k: tmp_path)
     monkeypatch.setattr(
         "cortex_command.overnight.cli_handler.ipc.read_active_session",
         lambda: None,
@@ -171,7 +171,7 @@ def test_status_human_omits_scheduled_fire_line_when_absent(
     session_dir = sessions_root / session_id
     _write_state(session_dir, session_id, scheduled_start=None)
 
-    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda: tmp_path)
+    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda *a, **k: tmp_path)
     monkeypatch.setattr(
         "cortex_command.overnight.cli_handler.ipc.read_active_session",
         lambda: None,
