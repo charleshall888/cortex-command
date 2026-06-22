@@ -100,6 +100,13 @@ from cortex_command.discovery import (  # noqa: E402
     validate_brief,
 )
 
+# Over-cap soft-note marker. Mirrors the literal phrasing the Task 4 prose in
+# skills/discovery/SKILL.md emits — "(summary ran N words over the 275-word
+# advisory cap)". The render helper below appends this note when a posted brief
+# is over-cap; keeping the helper's emitted note and the prose in lockstep is
+# the authoring-discipline parity this mirror exists to enforce.
+_OVER_CAP_NOTE_CAP_TOKENS = GATE_BRIEF_WORD_CAP + 25  # 275 in the prose
+
 
 # ---------------------------------------------------------------------------
 # Test 1: brief passes all fixtures (requires API auth)
@@ -273,13 +280,19 @@ def _render_gate(topic_dir: Path, research_md: Path) -> str:
 
     Mirrors the SKILL.md gate-render contract:
       1. If ``brief.md`` exists in ``topic_dir`` and passes ``validate_brief``,
-         return its content.
+         return its content. When the posted brief is over-cap (anchor-valid but
+         exceeds the advisory ceiling), the brief text is still returned, with a
+         one-line soft note appended — the cap is advisory, not a posting gate.
       2. Otherwise, extract the ``## Architecture`` body from ``research_md``
          and return it with a ``brief_generation_failed`` warning prefixed.
 
     This is not a published Python API — it is a test-local implementation of
     the file-reading contract described in SKILL.md.  Task 9's ``score-corpus``
     subcommand exercises the same contract over the live corpus.
+
+    The over-cap soft note mirrors the Task 4 prose in
+    ``skills/discovery/SKILL.md`` verbatim — "(summary ran N words over the
+    275-word advisory cap)". This mirror and that prose must stay in lockstep.
     """
     brief_path = topic_dir / "brief.md"
     if brief_path.is_file():
@@ -287,6 +300,13 @@ def _render_gate(topic_dir: Path, research_md: Path) -> str:
         if brief_text:
             ok, _ = validate_brief(brief_text)
             if ok:
+                overage = brief_word_overage(brief_text)
+                if overage > 0:
+                    note = (
+                        f"(summary ran {overage} words over the "
+                        f"{_OVER_CAP_NOTE_CAP_TOKENS}-word advisory cap)"
+                    )
+                    return f"{brief_text}\n\n{note}"
                 return brief_text
 
     # Fallback: extract ## Architecture section from research.md.
@@ -387,6 +407,71 @@ def test_gate_renders_brief_not_architecture(tmp_path: Path) -> None:
         "Fallback rendered gate output contains brief text from Scenario A — "
         "brief isolation between tmp_path scenarios failed.\n"
         f"Rendered:\n{rendered_b}"
+    )
+
+    # --- Scenario C: brief.md is over-cap but anchored — display brief + note ---
+    #
+    # Mirrors the FULL over-cap render contract that the Task 4 SKILL.md prose
+    # encodes: an anchor-valid brief over the advisory ceiling is posted as the
+    # gate summary (NOT discarded for the Architecture fallback), followed by a
+    # one-line soft note. The cap is advisory, not a posting gate.
+
+    topic_dir_c = tmp_path / "scenario-c" / "simple-topic"
+    topic_dir_c.mkdir(parents=True)
+
+    # An anchor-valid brief padded over GATE_BRIEF_WORD_CAP + 25 (275) words.
+    over_cap_brief = (
+        "The team decided to use the native GitHub badge over third-party options. "
+        "Two alternatives were considered: Shields.io and Codecov. "
+        "The tradeoff is that the native badge only shows pass/fail with no coverage "
+        "metrics, but this cost is acceptable given the zero-dependency benefit. "
+    ) + "filler " * 280
+    assert len(over_cap_brief.split()) > GATE_BRIEF_WORD_CAP + 25, (
+        "Test setup: over-cap brief must exceed GATE_BRIEF_WORD_CAP + 25 to "
+        "exercise the over-cap render path."
+    )
+    ok_c, reason_c = validate_brief(over_cap_brief)
+    assert ok_c, (
+        "Test setup: over-cap brief must pass validate_brief (cap is advisory) "
+        f"so it posts rather than falling back: {reason_c}"
+    )
+    assert brief_word_overage(over_cap_brief) > 0, (
+        "Test setup: over-cap brief must report a positive overage."
+    )
+
+    (topic_dir_c / "brief.md").write_text(over_cap_brief + "\n", encoding="utf-8")
+
+    rendered_c = _render_gate(topic_dir_c, fixture_research_md)
+
+    # The rendered output must contain the brief content.
+    assert "native GitHub badge" in rendered_c, (
+        "Over-cap rendered gate output does not contain brief content — an "
+        "anchor-valid over-cap brief must still post.\n"
+        f"Rendered:\n{rendered_c}"
+    )
+
+    # The rendered output must carry the soft-note marker (mirrors the Task 4
+    # prose token "advisory cap" / "over").
+    assert "advisory cap" in rendered_c, (
+        "Over-cap rendered gate output is missing the 'advisory cap' soft-note "
+        "marker that the Task 4 SKILL.md prose mandates.\n"
+        f"Rendered:\n{rendered_c}"
+    )
+    assert "over" in rendered_c, (
+        "Over-cap rendered gate output is missing the overage 'over' phrasing.\n"
+        f"Rendered:\n{rendered_c}"
+    )
+
+    # The rendered output must NOT fall back to the ## Architecture body.
+    assert "## Architecture" not in rendered_c, (
+        "Over-cap rendered gate output contains '## Architecture' — an over-cap "
+        "anchored brief must NOT trigger the Architecture fallback.\n"
+        f"Rendered:\n{rendered_c}"
+    )
+    assert "### Pieces" not in rendered_c, (
+        "Over-cap rendered gate output contains '### Pieces' (Architecture "
+        "section body) — the over-cap brief must post, not fall back.\n"
+        f"Rendered:\n{rendered_c}"
     )
 
     # --- SKILL.md gate options check ---
