@@ -1533,8 +1533,11 @@ def _spawn_orchestrator(
         # out-of-process guardian already owns the parent-event-staleness
         # signal — but the guardian watches the PARENT and cannot catch a hung
         # orchestrator *child*; this child-stdout probe is the only signal that
-        # can. The absolute ceiling (timeout_seconds) remains the backstop for
-        # the pathological case where even partial-message chunks stop.
+        # can. Two tiers then decide a kill: when stdout stops growing (a
+        # silent/wedged child) the inactivity tier fires after ``timeout_seconds``
+        # (STALL_TIMEOUT_SECONDS); the never-reset ``ABSOLUTE_CEILING_SECONDS``
+        # tier is the SEPARATE backstop for a loud-but-stuck child whose stdout
+        # keeps advancing without real progress.
         activity_probe=lambda: _stat_activity(stdout_path),
     )
     watchdog.start()
