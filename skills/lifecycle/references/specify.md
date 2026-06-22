@@ -37,6 +37,8 @@ Ask about these areas in sequence, adapting based on answers:
 
 Probe — do not just confirm what is already written. Use the AskUserQuestion tool to present questions interactively — not as plain markdown text. Continue until all ambiguities are resolved.
 
+**Interview posture (interactive default)**: Assume the work is verified interactively — the user is present in-session to confirm acceptance criteria. Do not interrogate how criteria would be verified autonomously or overnight; user-present, in-session verification is a first-class, legitimate outcome. This governs interview *posture* only — the §3 acceptance-criteria format still prefers testable criteria and does not relax binary-checkability.
+
 **Cadence**: Ask one question at a time, waiting for the user's response before posing the next. Do not batch questions into a single turn. This cadence is the canonical rule at `skills/interview/references/loop.md`.
 
 **File-path citation**: When recommending an acceptance criterion derived from code, name the file path that grounds it so the user can flag a wrong-place-to-implement before any code is written. For intent-only criteria with no codebase grounding, omit the citation — do not fabricate.
@@ -93,7 +95,7 @@ Before drafting §3, run the checks below. All checks are silent on pass: if eve
 **Open Decision Resolution**: Before adding any item to `## Open Decisions`, attempt to resolve it using this order:
 
 1. Check `research.md` — if the answer is evident from research findings, incorporate it into Requirements, Technical Constraints, or the spec body instead. Do not list it as open.
-2. Ask the user directly — the user is present during spec; implementation may run overnight without them.
+2. Ask the user directly — the user is present during spec; resolve open decisions now, because the implementer works from the spec and is not in a position to resolve them mid-implementation.
 3. Defer to `## Open Decisions` only if the decision requires implementation-level context that cannot be obtained without writing or reading the actual code (e.g., choosing between two patterns that are only distinguishable once in the codebase).
 
 Any item that IS deferred must include a one-sentence reason why it cannot be resolved at spec time.
