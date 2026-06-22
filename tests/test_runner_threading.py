@@ -277,3 +277,272 @@ def test_deferred_signals_stashes_and_replays(coord, preserve_signal_handlers):
         assert coord.shutdown_event.is_set()
     finally:
         restore_signal_handlers(outer_prior)
+
+
+# ---------------------------------------------------------------------------
+# Activity-aware inactivity timer + absolute ceiling (deterministic seams)
+#
+# These tests inject a fake ``clock`` and ``activity_probe`` so timing is
+# exact and no real sleeps occur on the reset path. They ASSERT OUTCOMES
+# (kill vs no-kill and ``stall_reason``), so each fails against a blind or
+# inverted implementation: a watchdog that ignores the probe kills the
+# productive-work case; one that never kills fails the silence/ceiling
+# cases; one that mis-tags the tier fails the ``stall_reason`` asserts.
+# ---------------------------------------------------------------------------
+
+
+class _StepClock:
+    """Monotonic-like fake clock that advances a fixed step per call.
+
+    The watchdog reads the clock several times per loop iteration; a fixed
+    per-call step makes elapsed time grow deterministically without real
+    sleeps. ``now()`` peeks the current value without advancing it.
+    """
+
+    def __init__(self, *, step: float) -> None:
+        self._t = 0.0
+        self._step = step
+
+    def __call__(self) -> float:
+        cur = self._t
+        self._t += self._step
+        return cur
+
+    def now(self) -> float:
+        return self._t
+
+
+class _StallProc:
+    """Popen-ish stand-in that reports "still running" until killed.
+
+    ``poll()`` returns ``None`` (alive) for the first ``alive_polls`` calls,
+    then ``0`` (exited) — letting a test model "the child finished on its
+    own" via the watchdog's ``proc.poll() is not None`` early-return. With
+    the default of effectively-infinite alive polls the child only stops
+    running when the watchdog kills it.
+    """
+
+    pid = 99999
+
+    def __init__(self, *, alive_polls: int = 10**9) -> None:
+        self._alive_polls = alive_polls
+        self._calls = 0
+
+    def poll(self):
+        self._calls += 1
+        return None if self._calls <= self._alive_polls else 0
+
+
+def _no_sleep_wait(timeout=None):
+    """A ``shutdown_event.wait`` replacement that never blocks or fires.
+
+    Returns ``False`` immediately so the watchdog loop spins at full speed
+    against the injected clock instead of sleeping for ``poll_interval``.
+    Accepts the ``timeout`` kwarg the watchdog passes (both in the poll
+    loop and the kill-escalation window).
+    """
+    return False
+
+
+def test_watchdog_reset_keeps_growing_child_alive(coord):
+    """Reset (Reqs 1, 3): a probe returning a strictly-growing
+    ``(size, mtime_ns)`` each tick keeps ``last_activity_at`` current, so
+    advancing the clock far past ``timeout_seconds`` does NOT trip the
+    inactivity kill — productive work survives. The child then finishes on
+    its own (``poll`` flips to exited), so the watchdog exits without a
+    stall. A blind timer (ignoring the probe) would kill this case.
+    """
+    clock = _StepClock(step=10.0)
+    # Strictly-growing sample every tick → continuous reset.
+    counter = {"n": 0}
+
+    def growing_probe():
+        counter["n"] += 1
+        return (counter["n"] * 100, counter["n"] * 1_000_000)
+
+    # Child stays alive for many polls (well past timeout_seconds worth of
+    # ticks at step=10), then exits on its own.
+    proc = _StallProc(alive_polls=20)
+    wctx = WatchdogContext(stall_flag=threading.Event())
+    wd = WatchdogThread(
+        proc,
+        timeout_seconds=30,  # 3 ticks of clock-step would exceed this
+        coord=coord,
+        wctx=wctx,
+        label="reset",
+        poll_interval_seconds=0.01,
+        activity_probe=growing_probe,
+        clock=clock,
+    )
+    with mock.patch.object(coord.shutdown_event, "wait", _no_sleep_wait), \
+            mock.patch("os.killpg") as killpg:
+        wd.start()
+        wd.join(timeout=5)
+
+    assert not wd.is_alive(), "watchdog should exit once the child exits"
+    assert not wctx.stall_flag.is_set(), (
+        "productive (growing) child must NOT be stall-killed"
+    )
+    assert wctx.stall_reason == "", "no kill ⇒ no stall_reason set"
+    killpg.assert_not_called()
+
+
+def test_watchdog_kills_silent_child_with_inactivity_reason(coord):
+    """Silence (Reqs 1, 3): a static probe never advances, so the
+    inactivity timer never resets; advancing the clock past
+    ``timeout_seconds`` kills the child tagged ``stall_reason ==
+    "inactivity"``. An implementation that reset on a non-advancing probe
+    would never fire.
+    """
+    clock = _StepClock(step=100.0)
+    # Static sample: same (size, mtime_ns) forever → no reset.
+    static_probe = lambda: (4096, 5_000_000)
+
+    proc = _StallProc()  # alive until killed
+    wctx = WatchdogContext(stall_flag=threading.Event())
+    wd = WatchdogThread(
+        proc,
+        timeout_seconds=30,
+        coord=coord,
+        wctx=wctx,
+        label="silent",
+        poll_interval_seconds=0.01,
+        kill_escalation_seconds=0.01,
+        activity_probe=static_probe,
+        clock=clock,
+    )
+    with mock.patch.object(coord.shutdown_event, "wait", _no_sleep_wait), \
+            mock.patch("os.getpgid", return_value=12345), \
+            mock.patch("os.killpg") as killpg:
+        wd.start()
+        wd.join(timeout=5)
+
+    assert not wd.is_alive()
+    assert wctx.stall_flag.is_set(), "silent child must be stall-killed"
+    assert wctx.stall_reason == "inactivity", (
+        f"silent child kill must be tagged inactivity; got {wctx.stall_reason!r}"
+    )
+    killpg.assert_called()
+
+
+def test_watchdog_blind_timer_kills_when_probe_none(coord):
+    """Blind default (Req 2): with ``activity_probe=None`` the inactivity
+    tier never resets, so the watchdog behaves exactly as today's blind
+    ``timeout_seconds`` timer and kills after the timeout elapses. The kill
+    is an inactivity kill (the blind timer is the degenerate inactivity
+    tier).
+    """
+    clock = _StepClock(step=100.0)
+    proc = _StallProc()
+    wctx = WatchdogContext(stall_flag=threading.Event())
+    wd = WatchdogThread(
+        proc,
+        timeout_seconds=30,
+        coord=coord,
+        wctx=wctx,
+        label="blind",
+        poll_interval_seconds=0.01,
+        kill_escalation_seconds=0.01,
+        activity_probe=None,  # blind-timer-equivalent
+        clock=clock,
+    )
+    with mock.patch.object(coord.shutdown_event, "wait", _no_sleep_wait), \
+            mock.patch("os.getpgid", return_value=12345), \
+            mock.patch("os.killpg") as killpg:
+        wd.start()
+        wd.join(timeout=5)
+
+    assert not wd.is_alive()
+    assert wctx.stall_flag.is_set(), (
+        "probe=None must still kill after timeout_seconds (blind-timer)"
+    )
+    assert wctx.stall_reason == "inactivity", (
+        f"blind-timer kill is the inactivity tier; got {wctx.stall_reason!r}"
+    )
+    killpg.assert_called()
+
+
+def test_watchdog_ceiling_kills_forever_growing_child(coord):
+    """Ceiling (Req 4): with a forever-growing probe the inactivity tier
+    never fires, but a tiny injected ``ceiling_seconds`` (never reset)
+    kills the child once ``now - started_at`` exceeds it, tagged
+    ``stall_reason == "ceiling"``. This is the backstop for a loud-but-
+    stuck child that the inactivity tier is structurally blind to.
+    """
+    clock = _StepClock(step=10.0)
+    counter = {"n": 0}
+
+    def growing_probe():
+        counter["n"] += 1
+        return (counter["n"] * 100, counter["n"] * 1_000_000)
+
+    proc = _StallProc()
+    wctx = WatchdogContext(stall_flag=threading.Event())
+    wd = WatchdogThread(
+        proc,
+        # Inactivity timeout far larger than the ceiling so ONLY the
+        # ceiling can fire — proving the kill is the ceiling tier.
+        timeout_seconds=10_000,
+        coord=coord,
+        wctx=wctx,
+        label="ceiling",
+        poll_interval_seconds=0.01,
+        kill_escalation_seconds=0.01,
+        ceiling_seconds=25,  # crossed within a few clock steps
+        activity_probe=growing_probe,
+        clock=clock,
+    )
+    with mock.patch.object(coord.shutdown_event, "wait", _no_sleep_wait), \
+            mock.patch("os.getpgid", return_value=12345), \
+            mock.patch("os.killpg") as killpg:
+        wd.start()
+        wd.join(timeout=5)
+
+    assert not wd.is_alive()
+    assert wctx.stall_flag.is_set(), "ceiling must kill a forever-growing child"
+    assert wctx.stall_reason == "ceiling", (
+        f"forever-growing child kill must be tagged ceiling; got {wctx.stall_reason!r}"
+    )
+    killpg.assert_called()
+
+
+def test_watchdog_probe_oserror_does_not_reset_or_crash(coord):
+    """Robust stat (Req 5): a probe that raises ``OSError`` is caught as
+    "no activity" — it neither resets the timer nor crashes the daemon
+    thread. So the inactivity timer still elapses and the child is killed
+    after ``timeout_seconds`` rather than the thread dying silently. The
+    surviving-then-killing outcome proves both halves: no reset (it still
+    kills) and no crash (the kill path still runs).
+    """
+    clock = _StepClock(step=100.0)
+
+    def raising_probe():
+        raise OSError("transient stat blip (e.g. EACCES)")
+
+    proc = _StallProc()
+    wctx = WatchdogContext(stall_flag=threading.Event())
+    wd = WatchdogThread(
+        proc,
+        timeout_seconds=30,
+        coord=coord,
+        wctx=wctx,
+        label="stat-raises",
+        poll_interval_seconds=0.01,
+        kill_escalation_seconds=0.01,
+        activity_probe=raising_probe,
+        clock=clock,
+    )
+    with mock.patch.object(coord.shutdown_event, "wait", _no_sleep_wait), \
+            mock.patch("os.getpgid", return_value=12345), \
+            mock.patch("os.killpg") as killpg:
+        wd.start()
+        wd.join(timeout=5)
+
+    assert not wd.is_alive(), "OSError in probe must not leave the thread hung"
+    assert wctx.stall_flag.is_set(), (
+        "OSError probe must be treated as no-activity → inactivity kill still fires"
+    )
+    assert wctx.stall_reason == "inactivity", (
+        f"stat-error path keeps the inactivity tier active; got {wctx.stall_reason!r}"
+    )
+    killpg.assert_called()
