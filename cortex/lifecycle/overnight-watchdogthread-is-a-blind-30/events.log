@@ -8,3 +8,4 @@
 {"schema_version": 1, "ts": "2026-06-22T15:59:32Z", "event": "phase_transition", "feature": "overnight-watchdogthread-is-a-blind-30", "from": "specify", "to": "plan"}
 {"schema_version": 1, "ts": "2026-06-22T17:08:47Z", "event": "plan_approved", "feature": "overnight-watchdogthread-is-a-blind-30", "dispatch_choice": "wait"}
 {"schema_version": 1, "ts": "2026-06-22T17:08:47Z", "event": "feature_paused", "feature": "overnight-watchdogthread-is-a-blind-30"}
+{"ts": "2026-06-22T18:38:29Z", "event": "batch_dispatch", "feature": "overnight-watchdogthread-is-a-blind-30", "batch": 0, "tasks": [1, 4]}
