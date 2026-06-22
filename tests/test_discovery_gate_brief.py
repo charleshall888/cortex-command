@@ -117,7 +117,10 @@ _OVER_CAP_NOTE_CAP_TOKENS = GATE_BRIEF_WORD_CAP + 25  # 275 in the prose
 def test_brief_passes_all_fixtures(tmp_path: Path) -> None:
     """For each fixture research.md, generate-brief produces a brief that:
 
-    (a) is <= GATE_BRIEF_WORD_CAP + 25 words
+    (a) is <= GATE_BRIEF_WORD_CAP + 25 words -- a CORPUS-QUALITY check on the
+        canonical fixtures (they model tight briefs), NOT a production-contract
+        assertion. Production now accepts over-cap briefs (the cap is advisory,
+        not a posting gate); see ``test_validate_brief_over_cap_anchored_passes``.
     (b) contains decision-content anchors per validate_brief
     (c) scores 0 of 6 reader-study patterns
     """
@@ -152,12 +155,20 @@ def test_brief_passes_all_fixtures(tmp_path: Path) -> None:
             f"generate-brief returned empty stdout for fixture '{fixture_dir.name}'"
         )
 
-        # (a) Word-cap tolerance
+        # (a) Word-cap tolerance.
+        # CORPUS-QUALITY check on the canonical fixtures, NOT a production
+        # contract: production now accepts over-cap briefs (the cap is advisory,
+        # not a posting gate -- see ``validate_brief`` and
+        # ``test_validate_brief_over_cap_anchored_passes``). This assertion only
+        # asserts that the canonical fixtures model tight briefs; it does not
+        # assert that production rejects over-cap output.
         word_count = len(brief.split())
         cap = GATE_BRIEF_WORD_CAP + 25
         assert word_count <= cap, (
             f"Fixture '{fixture_dir.name}': brief is {word_count} words, "
-            f"exceeds GATE_BRIEF_WORD_CAP+25={cap}"
+            f"exceeds GATE_BRIEF_WORD_CAP+25={cap} (corpus-quality check on "
+            "canonical fixtures -- not a production contract; production accepts "
+            "over-cap briefs)"
         )
 
         # (b) Decision-content anchors
@@ -1139,6 +1150,46 @@ def test_validate_brief_over_cap_anchored_passes() -> None:
     assert result == (True, ""), (
         "Expected validate_brief to accept an anchor-valid over-cap brief and "
         f"return (True, '') (cap is advisory), but got {result!r}."
+    )
+
+
+def test_validate_brief_over_cap_anchor_missing_still_fails() -> None:
+    """Soft-cap scope guard: an over-cap brief that is ALSO anchor-missing still
+    fails with the anchor reason -- NOT ``(True, "")``.
+
+    This pins the advisory-cap change to anchor-valid briefs only. The over-cap
+    branch was removed AFTER the three anchor checks in ``validate_brief``, so an
+    anchor-missing brief must fail with its anchor reason regardless of length.
+
+    Non-tautological: this test fails if Task 1 is mis-implemented to short-
+    circuit ANY over-cap brief to ``(True, "")`` before (or instead of) the
+    anchor checks. A future reorder that returns ``(True, "")`` for an over-cap
+    anchor-missing brief regresses R5's fallback guarantee and trips this test.
+    """
+    # Decision + alternatives anchors present; tradeoff anchor deliberately
+    # absent. Pad past GATE_BRIEF_WORD_CAP + 25 so the brief is genuinely
+    # over-cap and would short-circuit to (True, "") under a mis-ordered impl.
+    anchor_missing = "We decided to ship. Alternatives were weighed. "
+    brief = anchor_missing + "filler " * 400
+    assert len(brief.split()) > GATE_BRIEF_WORD_CAP + 25, (
+        "Test setup: brief must exceed the advisory ceiling so the over-cap "
+        "branch is exercised; otherwise the test would not distinguish a "
+        "short-circuit from correct ordering."
+    )
+    assert brief_word_overage(brief) > 0, (
+        "Test setup: brief must report a positive overage to exercise the "
+        "over-cap path."
+    )
+
+    ok, reason = validate_brief(brief)
+    assert not ok, (
+        "Expected validate_brief to REJECT an over-cap brief that is missing "
+        "an anchor -- the advisory cap must not short-circuit the anchor "
+        f"checks. Got (ok={ok!r}, reason={reason!r})."
+    )
+    assert "tradeoff" in reason, (
+        "Expected the failure reason to name the missing 'tradeoff' anchor "
+        f"(not an over-cap reason); got: {reason!r}"
     )
 
 
