@@ -121,6 +121,101 @@ def test_orchestrator_spawn_includes_settings_flag(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Req 9: batch_runner watchdog wired to the session pipeline-events.log.
+#
+# The no-op ``_FakeWatchdog`` above cannot prove correct wiring (it swallows
+# kwargs), so this test CAPTURES the real ``activity_probe`` the batch spawn
+# constructs and asserts the captured probe stats the session
+# ``pipeline-events.log`` — i.e. resolves to ``pipeline_events_path``.
+# ---------------------------------------------------------------------------
+
+
+def test_batch_runner_watchdog_probe_targets_pipeline_events_log(
+    tmp_path: Path,
+) -> None:
+    """Capture the batch spawn's ``activity_probe`` and assert it stats the
+    session ``pipeline-events.log`` path (Req 9).
+
+    Patches ``WatchdogThread`` to RECORD constructor kwargs (rather than the
+    no-op ``_FakeWatchdog``), invokes ``_spawn_batch_runner`` with a session
+    ``pipeline_events_path``, then drives the captured probe across
+    missing → present → grown and asserts it returns ``(size, mtime_ns)``
+    from THAT file — proving the wiring, not just argument presence.
+    """
+    from cortex_command.overnight import runner as runner_module
+
+    captured: dict = {}
+
+    class _FakePopen:
+        def __init__(self, argv, **kwargs) -> None:
+            captured["argv"] = list(argv)
+            self.pid = 4242
+            self.stdout = None
+            self.stderr = None
+            self.returncode = None
+
+        def poll(self) -> int | None:
+            return None
+
+    class _RecordingWatchdog:
+        def __init__(self, **kwargs) -> None:
+            captured["watchdog_kwargs"] = kwargs
+
+        def start(self) -> None:
+            pass
+
+    session_dir = tmp_path / "session"
+    session_dir.mkdir()
+    batch_plan_path = session_dir / "batch-plan-round-0.md"
+    batch_plan_path.write_text("# plan\n")
+    # The session pipeline-events.log the batch child writes; the call site
+    # (~runner.py:2841) threads exactly this path from ``pipeline_events_path``.
+    pipeline_events_path = session_dir / "pipeline-events.log"
+
+    coord = MagicMock()
+
+    with patch.object(runner_module.subprocess, "Popen", _FakePopen), \
+         patch.object(runner_module, "WatchdogThread", _RecordingWatchdog):
+        runner_module._spawn_batch_runner(
+            batch_plan_path=batch_plan_path,
+            batch_id=0,
+            tier="medium",
+            integration_branch="main",
+            state_path=session_dir / "state.json",
+            events_path=session_dir / "overnight-events.log",
+            test_command=None,
+            coord=coord,
+            spawned_procs=[],
+            pipeline_events_path=pipeline_events_path,
+        )
+
+    probe = captured["watchdog_kwargs"]["activity_probe"]
+    assert probe is not None, "batch watchdog must receive a real activity_probe"
+
+    # Missing file → "no activity yet" (None), no crash.
+    assert not pipeline_events_path.exists()
+    assert probe() is None
+
+    # First appearance → probe returns (size, mtime_ns) from THAT file.
+    pipeline_events_path.write_text('{"event": "dispatch_start"}\n')
+    first = probe()
+    assert first is not None
+    size, mtime_ns = first
+    stat = pipeline_events_path.stat()
+    assert size == stat.st_size
+    assert mtime_ns == stat.st_mtime_ns
+
+    # Growth of the worker-written log advances the probe (size grows) —
+    # this is the signal that resets the watchdog's inactivity timer.
+    pipeline_events_path.write_text(
+        '{"event": "dispatch_start"}\n{"event": "dispatch_complete"}\n'
+    )
+    grown = probe()
+    assert grown is not None
+    assert grown[0] > size, "probe must observe pipeline-events.log growth"
+
+
+# ---------------------------------------------------------------------------
 # Req 2: Per-spawn JSON shape (exact dict shape)
 # ---------------------------------------------------------------------------
 

@@ -1507,6 +1507,12 @@ def _spawn_orchestrator(
         coord=coord,
         wctx=wctx,
         label="orchestrator",
+        # Phase 1: the orchestrator/planning site is left with NO activity
+        # probe (Req 2 default None ⇒ the inactivity tier never resets ⇒
+        # blind 1800s timer, unchanged-from-today). A child-driven signal
+        # is wired in Phase 2 after the Req 12 de-risk gate. The absolute
+        # ceiling still applies as the orchestrator's only backstop here.
+        activity_probe=None,
     )
     watchdog.start()
     return proc, wctx, watchdog
@@ -1665,6 +1671,23 @@ def _emit_orchestrator_round_telemetry(
         )
 
 
+def _stat_activity(path: Path) -> tuple[int, int] | None:
+    """Stat-only activity probe over a child-written file.
+
+    Returns ``(size, mtime_ns)`` for the watchdog's inactivity tier, or
+    ``None`` when the file is absent ("no activity yet"). Mirrors the
+    ``(exists, st_mtime_ns, st_size)`` safe-stat shape from
+    ``cortex_command.common._stat_key``; only ``FileNotFoundError`` is
+    caught here (a transient ``OSError`` is broadened to no-reset inside
+    ``WatchdogThread.run``'s probe call).
+    """
+    try:
+        s = path.stat()
+    except FileNotFoundError:
+        return None
+    return (s.st_size, s.st_mtime_ns)
+
+
 def _spawn_batch_runner(
     batch_plan_path: Path,
     batch_id: int,
@@ -1675,6 +1698,7 @@ def _spawn_batch_runner(
     test_command: Optional[str],
     coord: RunnerCoordination,
     spawned_procs: list[tuple[subprocess.Popen, str]],
+    pipeline_events_path: Path,
 ) -> tuple[subprocess.Popen, WatchdogContext, WatchdogThread]:
     """Spawn ``cortex-batch-runner`` console-script shim with a watchdog.
 
@@ -1682,6 +1706,15 @@ def _spawn_batch_runner(
     invocation for batch_runner — the module-dispatch form is banned,
     as is ``[sys.executable, "-m", "..."]`` (same intent via runtime
     argv).
+
+    The watchdog's inactivity tier is wired to ``pipeline_events_path`` —
+    the session ``pipeline-events.log`` the batch child writes (the child
+    receives ``--plan <session_dir>/batch-plan-round-N.md`` ⇒ its
+    ``result_dir`` is that ``session_dir`` ⇒ its
+    ``pipeline_events_path = result_dir / "pipeline-events.log"``, the
+    same file passed here). Growth of that worker-written log resets the
+    inactivity timer so a productively-working batch survives past the
+    blind 30-minute timer; genuine silence still trips (Req 9).
     """
     cmd = [
         "cortex-batch-runner",
@@ -1718,6 +1751,7 @@ def _spawn_batch_runner(
         coord=coord,
         wctx=wctx,
         label="batch_runner",
+        activity_probe=lambda: _stat_activity(pipeline_events_path),
     )
     watchdog.start()
     return proc, wctx, watchdog
@@ -2753,15 +2787,25 @@ def run(
                     break
 
                 if o_wctx.stall_flag.is_set():
+                    # Req 7: thread the kill-reason marker (``inactivity``
+                    # vs ``ceiling``) so the morning report can tell a
+                    # silent child from a ceiling-kill. In Phase 1 the
+                    # orchestrator runs with activity_probe=None, so its
+                    # inactivity tier is the blind 1800s timer; the reason
+                    # still distinguishes a ceiling-kill from that timer.
+                    _o_reason = o_wctx.stall_reason or "inactivity"
                     print(
                         "Warning: watchdog killed orchestrator due to event "
-                        "log silence (stall timeout)",
+                        f"log silence (stall timeout, reason={_o_reason})",
                         flush=True,
                     )
                     events.log_event(
                         events.ORCHESTRATOR_FAILED,
                         round=round_num,
-                        details={"reason": "stall_timeout"},
+                        details={
+                            "reason": "stall_timeout",
+                            "stall_reason": _o_reason,
+                        },
                         log_path=events_path,
                     )
                     _transition_paused(
@@ -2848,21 +2892,35 @@ def run(
                     test_command=None,
                     coord=coord,
                     spawned_procs=spawned_procs,
+                    # The batch child writes this same session
+                    # pipeline-events.log (see _spawn_batch_runner) — wire
+                    # the watchdog's inactivity probe to it (Req 9).
+                    pipeline_events_path=pipeline_events_path,
                 )
                 batch_exit = _poll_subprocess(b_proc, coord)
                 if batch_exit is None:
                     break
 
                 if b_wctx.stall_flag.is_set():
+                    # Req 7: thread the kill-reason marker (``inactivity``
+                    # vs ``ceiling``). The batch watchdog has a real
+                    # worker-driven probe (pipeline-events.log), so an
+                    # ``inactivity`` kill means genuine worker silence and a
+                    # ``ceiling`` kill means a loud-but-stuck loop the
+                    # inactivity tier is blind to — tune the ceiling.
+                    _b_reason = b_wctx.stall_reason or "inactivity"
                     print(
                         "Warning: watchdog killed batch_runner due to "
-                        "event log silence (stall timeout)",
+                        f"event log silence (stall timeout, reason={_b_reason})",
                         flush=True,
                     )
                     events.log_event(
                         events.BATCH_RUNNER_STALLED,
                         round=round_num,
-                        details={"round": round_num},
+                        details={
+                            "round": round_num,
+                            "stall_reason": _b_reason,
+                        },
                         log_path=events_path,
                     )
                     _transition_paused(
