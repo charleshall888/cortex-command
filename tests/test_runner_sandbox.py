@@ -121,6 +121,180 @@ def test_orchestrator_spawn_includes_settings_flag(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Reqs 11, 14 / Task 6: orchestrator argv flips to stream-json + its watchdog
+# probe wires to the orchestrator stdout file growth.
+#
+# The plan's bare ``grep "stream-json"`` is VACUOUS post-Task-5 (that token now
+# appears in source comments / the NDJSON selector), so these tests inspect the
+# CONSTRUCTED spawn argv and the CAPTURED watchdog ``activity_probe``, not the
+# whole-file token.
+# ---------------------------------------------------------------------------
+
+
+def test_orchestrator_spawn_argv_uses_stream_json(tmp_path: Path) -> None:
+    """Capture the orchestrator spawn argv and assert it carries the three
+    stream-json flags and NO LONGER carries ``--output-format=json``.
+
+    The de-risk gate (phase2-derisk.md, VERDICT: PASS) requires all three of
+    ``--output-format=stream-json``, ``--verbose``, and
+    ``--include-partial-messages`` — plain stream-json without
+    ``--include-partial-messages`` re-introduces the ~100s single-message file
+    silence the watchdog must not false-kill on.
+    """
+    from cortex_command.overnight import runner as runner_module
+    from cortex_command.overnight import state as state_module
+
+    captured: dict = {}
+
+    class _FakePopen:
+        def __init__(self, argv, **kwargs) -> None:
+            captured["argv"] = list(argv)
+            self.pid = 12345
+            self.stdout = None
+            self.returncode = None
+
+        def poll(self) -> int | None:
+            return None
+
+    class _FakeWatchdog:
+        def __init__(self, **kwargs) -> None:
+            pass
+
+        def start(self) -> None:
+            pass
+
+    home_repo = tmp_path / "repo"
+    home_repo.mkdir()
+    session_dir = tmp_path / "session"
+    session_dir.mkdir()
+    stdout_path = tmp_path / "stdout.log"
+
+    state = state_module.OvernightState(
+        session_id="test-session",
+        plan_ref=str(tmp_path / "plan.md"),
+        project_root=str(home_repo),
+    )
+    coord = MagicMock()
+
+    with patch.object(runner_module.subprocess, "Popen", _FakePopen), \
+         patch.object(runner_module, "WatchdogThread", _FakeWatchdog):
+        runner_module._spawn_orchestrator(
+            filled_prompt="test prompt",
+            coord=coord,
+            spawned_procs=[],
+            stdout_path=stdout_path,
+            state=state,
+            session_dir=session_dir,
+            round_num=0,
+        )
+
+    argv = captured["argv"]
+    # All three flags present.
+    assert "--output-format=stream-json" in argv, (
+        f"--output-format=stream-json missing from spawn argv: {argv}"
+    )
+    assert "--verbose" in argv, (
+        f"--verbose missing from spawn argv (stream-json -p mode requires "
+        f"it): {argv}"
+    )
+    assert "--include-partial-messages" in argv, (
+        f"--include-partial-messages missing from spawn argv (de-risk rider): "
+        f"{argv}"
+    )
+    # The old block-buffered envelope flag must be GONE.
+    assert "--output-format=json" not in argv, (
+        f"--output-format=json must no longer appear in spawn argv: {argv}"
+    )
+
+
+def test_orchestrator_watchdog_probe_targets_stdout_path(
+    tmp_path: Path,
+) -> None:
+    """Capture the orchestrator watchdog's ``activity_probe`` and assert it
+    stats the orchestrator ``stdout_path`` (Reqs 11, 14).
+
+    Mirrors the batch-spawn probe-capture test: patch ``WatchdogThread`` to
+    RECORD constructor kwargs, invoke ``_spawn_orchestrator``, then drive the
+    captured probe across missing → present → grown and assert it returns
+    ``(size, mtime_ns)`` from the orchestrator stdout file — proving the
+    wiring, not just argument presence.
+    """
+    from cortex_command.overnight import runner as runner_module
+    from cortex_command.overnight import state as state_module
+
+    captured: dict = {}
+
+    class _FakePopen:
+        def __init__(self, argv, **kwargs) -> None:
+            captured["argv"] = list(argv)
+            self.pid = 4242
+            self.stdout = None
+            self.returncode = None
+
+        def poll(self) -> int | None:
+            return None
+
+    class _RecordingWatchdog:
+        def __init__(self, **kwargs) -> None:
+            captured["watchdog_kwargs"] = kwargs
+
+        def start(self) -> None:
+            pass
+
+    home_repo = tmp_path / "repo"
+    home_repo.mkdir()
+    session_dir = tmp_path / "session"
+    session_dir.mkdir()
+    # The orchestrator stdout file the child writes its NDJSON stream to; the
+    # call site threads exactly this path as ``stdout_path``.
+    stdout_path = tmp_path / "orchestrator-round-0-stdout.log"
+
+    state = state_module.OvernightState(
+        session_id="test-session",
+        plan_ref=str(tmp_path / "plan.md"),
+        project_root=str(home_repo),
+    )
+    coord = MagicMock()
+
+    with patch.object(runner_module.subprocess, "Popen", _FakePopen), \
+         patch.object(runner_module, "WatchdogThread", _RecordingWatchdog):
+        runner_module._spawn_orchestrator(
+            filled_prompt="test prompt",
+            coord=coord,
+            spawned_procs=[],
+            stdout_path=stdout_path,
+            state=state,
+            session_dir=session_dir,
+            round_num=0,
+        )
+
+    probe = captured["watchdog_kwargs"]["activity_probe"]
+    assert probe is not None, (
+        "orchestrator watchdog must receive a real activity_probe (Phase 2)"
+    )
+
+    # ``_spawn_orchestrator`` opens ``stdout_path`` for writing before the
+    # Popen, so the file already exists at this point. Truncate-back to a
+    # known state, then assert the probe tracks growth of THIS file.
+    stdout_path.write_text("")
+    first = probe()
+    assert first is not None, "probe must read the (now-existing) stdout file"
+    size, mtime_ns = first
+    stat = stdout_path.stat()
+    assert size == stat.st_size
+    assert mtime_ns == stat.st_mtime_ns
+
+    # Growth of the NDJSON stream advances the probe (size grows) — this is
+    # the signal that resets the watchdog's inactivity timer.
+    stdout_path.write_text(
+        '{"type":"system"}\n{"type":"stream_event"}\n{"type":"result"}\n'
+    )
+    grown = probe()
+    assert grown is not None
+    assert grown[0] > size, "probe must observe orchestrator stdout growth"
+
+
+# ---------------------------------------------------------------------------
 # Req 9: batch_runner watchdog wired to the session pipeline-events.log.
 #
 # The no-op ``_FakeWatchdog`` above cannot prove correct wiring (it swallows

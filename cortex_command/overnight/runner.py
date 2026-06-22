@@ -1418,11 +1418,13 @@ def _spawn_orchestrator(
 ) -> tuple[subprocess.Popen, WatchdogContext, WatchdogThread]:
     """Spawn the per-round ``claude -p`` orchestrator with a watchdog.
 
-    ``stdout_path`` receives the subprocess stdout (``--output-format=json``
-    envelope). The file handle is held by ``Popen.stdout`` so the caller
-    can close it after ``_poll_subprocess`` returns; redirecting to a
-    file (not an OS pipe) sidesteps the buffer-fill deadlock on long
-    sessions whose envelope exceeds ~64 KB.
+    ``stdout_path`` receives the subprocess stdout (the
+    ``--output-format=stream-json`` NDJSON stream; Task 5's
+    ``_select_orchestrator_result_envelope`` selects its terminal
+    ``type:"result"`` line). The file handle is held by ``Popen.stdout``
+    so the caller can close it after ``_poll_subprocess`` returns;
+    redirecting to a file (not an OS pipe) sidesteps the buffer-fill
+    deadlock on long sessions whose envelope exceeds ~64 KB.
 
     Per-spawn sandbox enforcement (spec Req 1, Req 2): construct the
     documented ``sandbox.filesystem.{denyWrite,allowWrite}`` JSON shape via
@@ -1489,7 +1491,17 @@ def _spawn_orchestrator(
             "--dangerously-skip-permissions",
             "--max-turns",
             str(ORCHESTRATOR_MAX_TURNS),
-            "--output-format=json",
+            # Phase 2 / Task 6: stream the orchestrator NDJSON to ``stdout_path``
+            # so its watchdog can observe child-driven file growth (probe
+            # below). ``stream-json`` in ``-p`` mode requires ``--verbose``;
+            # ``--include-partial-messages`` makes the file grow continuously
+            # during a single long assistant message (the Req 12 de-risk found
+            # plain stream-json plateaus event-granularly — ~100s of file
+            # silence during one long message — which would risk a false kill).
+            # Task 5's terminal-``result`` NDJSON selector parses this stream.
+            "--output-format=stream-json",
+            "--verbose",
+            "--include-partial-messages",
         ],
         stdin=subprocess.DEVNULL,
         stdout=stdout_handle,
@@ -1507,12 +1519,23 @@ def _spawn_orchestrator(
         coord=coord,
         wctx=wctx,
         label="orchestrator",
-        # Phase 1: the orchestrator/planning site is left with NO activity
-        # probe (Req 2 default None ⇒ the inactivity tier never resets ⇒
-        # blind 1800s timer, unchanged-from-today). A child-driven signal
-        # is wired in Phase 2 after the Req 12 de-risk gate. The absolute
-        # ceiling still applies as the orchestrator's only backstop here.
-        activity_probe=None,
+        # Phase 2 / Task 6 (Reqs 11, 14): wire the orchestrator's inactivity
+        # tier to growth of ITS OWN stdout (the NDJSON stream redirected to
+        # ``stdout_path``). The orchestrator now runs with
+        # ``--output-format=stream-json --verbose --include-partial-messages``
+        # (argv above), so this file advances as the child produces output —
+        # productive work resets the timer; genuine silence still trips.
+        #
+        # Why ``stdout_path`` and NOT the session ``overnight-events.log``:
+        # the parent ``RunnerHeartbeatThread`` advances ``overnight-events.log``
+        # on its own cadence regardless of child progress, so a watchdog probe
+        # over that file would never fire (it would always look "active"). The
+        # out-of-process guardian already owns the parent-event-staleness
+        # signal — but the guardian watches the PARENT and cannot catch a hung
+        # orchestrator *child*; this child-stdout probe is the only signal that
+        # can. The absolute ceiling (timeout_seconds) remains the backstop for
+        # the pathological case where even partial-message chunks stop.
+        activity_probe=lambda: _stat_activity(stdout_path),
     )
     watchdog.start()
     return proc, wctx, watchdog
@@ -2846,10 +2869,11 @@ def run(
                 if o_wctx.stall_flag.is_set():
                     # Req 7: thread the kill-reason marker (``inactivity``
                     # vs ``ceiling``) so the morning report can tell a
-                    # silent child from a ceiling-kill. In Phase 1 the
-                    # orchestrator runs with activity_probe=None, so its
-                    # inactivity tier is the blind 1800s timer; the reason
-                    # still distinguishes a ceiling-kill from that timer.
+                    # silent child from a ceiling-kill. In Phase 2 the
+                    # orchestrator's inactivity tier is fed by the stdout
+                    # activity probe (stream-json file growth), so an
+                    # ``inactivity`` reason now means the child's own output
+                    # stalled — distinct from a ceiling-kill.
                     _o_reason = o_wctx.stall_reason or "inactivity"
                     print(
                         "Warning: watchdog killed orchestrator due to event "
