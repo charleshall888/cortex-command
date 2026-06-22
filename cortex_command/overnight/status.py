@@ -96,8 +96,15 @@ def _now() -> datetime:
 
 
 def _parse_iso(ts: str) -> datetime:
-    """Parse an ISO 8601 timestamp string (with timezone) into a datetime."""
-    return datetime.fromisoformat(ts)
+    """Parse an ISO 8601 timestamp into a UTC-aware datetime.
+
+    Naive values (e.g. a scheduler-written local ``scheduled_start``) are
+    interpreted as system-local — ``.astimezone()`` attaches the offset for that
+    value's own wall-clock date (DST-correct) — then converted to UTC. Aware
+    values are converted to UTC. This guarantees every compare site compares
+    aware-vs-aware (R6/R8). In-memory only; no write-back.
+    """
+    return datetime.fromisoformat(ts).astimezone(timezone.utc)
 
 
 def _format_elapsed(seconds: float) -> str:
