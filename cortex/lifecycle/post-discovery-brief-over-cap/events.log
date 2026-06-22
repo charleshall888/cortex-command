@@ -16,3 +16,6 @@
 {"ts": "2026-06-22T17:58:11Z", "event": "batch_dispatch", "feature": "post-discovery-brief-over-cap", "batch": 5, "tasks": [6]}
 {"ts": "2026-06-22T18:13:05Z", "event": "batch_dispatch", "feature": "post-discovery-brief-over-cap", "batch": 6, "tasks": [7]}
 {"ts": "2026-06-22T18:23:33Z", "event": "phase_transition", "feature": "post-discovery-brief-over-cap", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-06-22T18:28:37Z", "event": "review_verdict", "feature": "post-discovery-brief-over-cap", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-06-22T18:28:38Z", "event": "phase_transition", "feature": "post-discovery-brief-over-cap", "from": "review", "to": "complete"}
+{"ts": "2026-06-22T18:34:05Z", "event": "feature_complete", "feature": "post-discovery-brief-over-cap", "tasks_total": 7, "rework_cycles": 0, "merge_anchor": "merge"}
