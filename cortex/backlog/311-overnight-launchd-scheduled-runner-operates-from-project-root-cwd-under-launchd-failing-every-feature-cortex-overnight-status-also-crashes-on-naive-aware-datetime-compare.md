@@ -2,11 +2,17 @@
 schema_version: "1"
 uuid: 263a4e97-248b-4f59-b68e-0e33b9f5efe9
 title: Overnight launchd-scheduled runner operates from project_root='/' (CWD=/ under launchd), failing every feature; cortex overnight status also crashes on naive/aware datetime compare
-status: backlog
+status: refined
 priority: high
 type: bug
 created: 2026-06-22
 updated: 2026-06-22
+lifecycle_phase: research
+lifecycle_slug: overnight-launchd-scheduled-runner-operates-from
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/overnight-launchd-scheduled-runner-operates-from/spec.md
+areas: ['overnight-runner']
 ---
 **Why:** A scheduled wild-light overnight session (`overnight-2026-06-22-0246`, registered via `cortex overnight schedule` → launchd, fired `2026-06-22T04:20Z`) failed **0/4 features in 23 min**. Root cause: at fire time the runner operated with **`project_root="/"`** (filesystem root) even though `overnight-state.json` stored the **correct** `project_root: /Users/charlie.hall/Workspaces/wild-light`. Every git / worktree / `batch_runner.py` operation therefore ran in `/` and failed.
 
