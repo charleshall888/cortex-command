@@ -10,3 +10,5 @@
 {"schema_version": 1, "ts": "2026-06-22T17:08:47Z", "event": "feature_paused", "feature": "overnight-watchdogthread-is-a-blind-30"}
 {"ts": "2026-06-22T18:38:29Z", "event": "batch_dispatch", "feature": "overnight-watchdogthread-is-a-blind-30", "batch": 0, "tasks": [1, 4]}
 {"ts": "2026-06-22T18:56:29Z", "event": "batch_dispatch", "feature": "overnight-watchdogthread-is-a-blind-30", "batch": 1, "tasks": [2, 3]}
+{"ts": "2026-06-22T19:02:50Z", "event": "batch_dispatch", "feature": "overnight-watchdogthread-is-a-blind-30", "batch": 2, "tasks": [5]}
+{"ts": "2026-06-22T19:25:09Z", "event": "batch_dispatch", "feature": "overnight-watchdogthread-is-a-blind-30", "batch": 3, "tasks": [6]}
