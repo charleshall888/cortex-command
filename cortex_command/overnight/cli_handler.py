@@ -1820,7 +1820,11 @@ def handle_schedule(args: argparse.Namespace) -> int:
             else:
                 print(message, file=sys.stderr, flush=True)
             return 1
-        scheduled_for_iso = resolved_target.isoformat()
+        # Emit tz-aware with the local offset (R7), matching the real
+        # schedule path in ``backend.schedule`` so the dry-run preview and
+        # the persisted ``scheduled_start`` agree. ``resolved_target`` is the
+        # naive-local fire time from ``parse_target_time``.
+        scheduled_for_iso = resolved_target.astimezone().isoformat()
         if fmt == "json":
             _emit_json(
                 {

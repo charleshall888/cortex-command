@@ -396,7 +396,14 @@ class MacOSLaunchAgentBackend:
             )
 
             created_at_iso = datetime.now().isoformat()
-            scheduled_for_iso = target.isoformat()
+            # Emit tz-aware with the local offset (R7). ``target`` is the
+            # naive-local fire time from ``parse_target_time``; attaching
+            # the offset via ``.astimezone()`` makes new ``scheduled_start``
+            # values unambiguous so ``status`` reads them without relying on
+            # the reader's naive→local normalization backstop (R6). The GC
+            # ``_is_spent`` loop already normalizes a now-aware
+            # ``scheduled_for`` against its naive ``now`` (see ``_is_spent``).
+            scheduled_for_iso = target.astimezone().isoformat()
             handle = ScheduledHandle(
                 label=label,
                 session_id=session_id,
@@ -1007,6 +1014,13 @@ def _is_spent(scheduled_for_iso: str | None, now: datetime) -> bool:
     Conservative on unparseable / missing input: returns ``False`` so a
     record we cannot interpret is never reaped on a spurious "past"
     reading (it falls through to the registration-state checks instead).
+
+    Since R7 the writer emits ``scheduled_for_iso`` tz-aware (local
+    offset), while the GC loop still passes a naive ``now =
+    datetime.now()``. The ``scheduled_for.tzinfo is not None and
+    now.tzinfo is None`` branch below normalizes ``now`` to the stored
+    offset so a spent aware fire is still reaped. Legacy naive values
+    (pre-R7) keep comparing naive-vs-naive.
     """
     if not scheduled_for_iso:
         return False
