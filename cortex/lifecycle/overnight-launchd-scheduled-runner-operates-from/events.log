@@ -14,3 +14,6 @@
 {"ts": "2026-06-22T16:08:12Z", "event": "batch_dispatch", "feature": "overnight-launchd-scheduled-runner-operates-from", "batch": 3, "tasks": [4, 10]}
 {"ts": "2026-06-22T16:25:35Z", "event": "batch_dispatch", "feature": "overnight-launchd-scheduled-runner-operates-from", "batch": 4, "tasks": [7]}
 {"ts": "2026-06-22T16:35:58Z", "event": "phase_transition", "feature": "overnight-launchd-scheduled-runner-operates-from", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-06-22T16:41:07Z", "event": "review_verdict", "feature": "overnight-launchd-scheduled-runner-operates-from", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-06-22T16:41:07Z", "event": "phase_transition", "feature": "overnight-launchd-scheduled-runner-operates-from", "from": "review", "to": "complete"}
+{"ts": "2026-06-22T16:42:20Z", "event": "feature_complete", "feature": "overnight-launchd-scheduled-runner-operates-from", "tasks_total": 10, "rework_cycles": 0, "merge_anchor": "merge"}

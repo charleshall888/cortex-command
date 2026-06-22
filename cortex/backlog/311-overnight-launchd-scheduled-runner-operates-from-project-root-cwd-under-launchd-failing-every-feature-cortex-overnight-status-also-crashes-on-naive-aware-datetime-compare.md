@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 263a4e97-248b-4f59-b68e-0e33b9f5efe9
 title: Overnight launchd-scheduled runner operates from project_root='/' (CWD=/ under launchd), failing every feature; cortex overnight status also crashes on naive/aware datetime compare
-status: refined
+status: complete
 priority: high
 type: bug
 created: 2026-06-22
