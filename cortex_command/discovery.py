@@ -369,14 +369,20 @@ citation-as-credibility-signal suffixes.
 
 The word target references ``GATE_BRIEF_WORD_CAP`` by name in the rubric
 prose so changes to the cap constant propagate without rewriting the rubric.
+
+The "write no more than ``GATE_BRIEF_WORD_CAP`` words" instruction is
+deliberately retained as a best-effort generation-time brevity nudge even
+though posting is now advisory — ask-for-brevity at generation while
+accepting whatever length is produced at posting is the intended design,
+not a stale posting gate (spec Req 11).
 """
 
 
 _GATE_BRIEF_RETRY_TEMPLATE: str = (
     "Your previous attempt failed validation: {reason}\n"
     "\n"
-    f"Rewrite at no more than {GATE_BRIEF_WORD_CAP} words "
-    f"(hard ceiling {GATE_BRIEF_WORD_CAP + 25}). The brief must contain all "
+    f"Rewrite at no more than {GATE_BRIEF_WORD_CAP} words. "
+    "The brief must contain all "
     "three decision-content anchors. Use one of these tokens for the "
     "decision anchor: "
     f"{', '.join(_GATE_BRIEF_EXAMPLE_TOKENS['decision'])}. Use one of these "
