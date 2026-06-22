@@ -138,13 +138,61 @@ def _emit_json(payload: dict) -> None:
 # Path resolution helpers (R20)
 # ---------------------------------------------------------------------------
 
-def _resolve_repo_path() -> Path:
-    """Return the home repository root, preferring ``git rev-parse``.
+def _is_valid_repo_root(candidate: Path | None) -> bool:
+    """Return ``True`` when ``candidate`` is, *in place*, a real repo root.
 
-    Falls back to ``Path.cwd()`` when the current directory is not a git
-    working tree (or ``git`` is unavailable). The CLI is the single site
-    that resolves user-repo paths (R20).
+    A candidate is valid only if, after ``.resolve()`` canonicalization, the
+    path is non-null, exists, is a directory, is not the filesystem root
+    (``Path("/")``), AND bears a repo marker — a ``.git`` entry (file or dir,
+    handling git worktrees) or a ``cortex/`` directory. The marker *predicate*
+    is borrowed from the house idioms (``log_invocation.py:_resolve_repo_root``
+    requires ``.git``; ``common._resolve_user_project_root`` tests ``cortex/``),
+    but **deliberately NOT their upward walk**: this validator checks the single
+    supplied candidate in place and returns ``False`` on a miss so the caller
+    falls through to the next precedence tier. A walking validator applied to a
+    stale or wrong ``state_project_root`` / ``CORTEX_REPO_ROOT`` could resolve
+    *up* to a marker-bearing ancestor (a monorepo root, ``$HOME/.git``) and
+    silently select the wrong repo — so the non-walking design is load-bearing.
     """
+    if candidate is None:
+        return False
+    try:
+        resolved = Path(candidate).resolve()
+    except (OSError, RuntimeError):
+        return False
+    if not resolved.is_dir():
+        return False
+    if resolved == Path("/"):
+        return False
+    git_marker = resolved / ".git"
+    return git_marker.exists() or (resolved / "cortex").is_dir()
+
+
+def _resolve_repo_path(state_project_root: Path | None = None) -> Path:
+    """Return the home repository root by marker-validated precedence.
+
+    Resolves by precedence: a valid ``state_project_root`` → a valid
+    ``CORTEX_REPO_ROOT`` env value → ``git rev-parse --show-toplevel`` →
+    ``Path.cwd()``. The state and env candidates are guarded uniformly by
+    :func:`_is_valid_repo_root` (a marker-bearing, ``.resolve()``-canonicalized,
+    non-``/`` directory); a candidate that fails the guard is skipped so
+    resolution falls through to the next tier. ``git rev-parse`` and ``cwd``
+    remain the unguarded existing tail.
+
+    This precedence makes scheduled (launchd-fired) runs and the guardian scan
+    robust to launchd's CWD=``/`` and bare environment, which otherwise drive
+    plain ``git rev-parse``/``cwd`` to resolve the filesystem root. The CLI is
+    the single site that resolves user-repo paths (R20).
+    """
+    if _is_valid_repo_root(state_project_root):
+        return Path(state_project_root).resolve()
+
+    env_root = os.environ.get("CORTEX_REPO_ROOT")
+    if env_root:
+        env_candidate = Path(env_root)
+        if _is_valid_repo_root(env_candidate):
+            return env_candidate.resolve()
+
     try:
         out = subprocess.check_output(
             ["git", "rev-parse", "--show-toplevel"],
