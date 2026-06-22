@@ -5,3 +5,7 @@
 {"ts": "2026-06-22T19:49:33Z", "event": "phase_transition", "feature": "refine-default-interactive-not-overnight", "from": "specify", "to": "plan"}
 {"ts": "2026-06-22T21:17:34Z", "event": "plan_approved", "feature": "refine-default-interactive-not-overnight", "dispatch_choice": "trunk"}
 {"ts": "2026-06-22T21:17:34Z", "event": "phase_transition", "feature": "refine-default-interactive-not-overnight", "from": "plan", "to": "implement"}
+{"ts": "2026-06-22T21:40:40Z", "event": "phase_transition", "feature": "refine-default-interactive-not-overnight", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-06-22T21:44:34Z", "event": "review_verdict", "feature": "refine-default-interactive-not-overnight", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-06-22T21:44:34Z", "event": "phase_transition", "feature": "refine-default-interactive-not-overnight", "from": "review", "to": "complete"}
+{"ts": "2026-06-22T21:45:45Z", "event": "feature_complete", "feature": "refine-default-interactive-not-overnight", "tasks_total": 5, "rework_cycles": 0, "merge_anchor": "merge"}
