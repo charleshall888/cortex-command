@@ -281,11 +281,16 @@ baseline from the prior reader study, rounded to the nearest 25 words →
 Loosened to 250 after observing that the Sonnet sub-agent producing the
 brief consistently emits ~300-word output regardless of the explicit
 word target in the rubric — a well-known SDK pattern where word-count
-instructions in system prompts are weakly enforced. The 250 cap (+25
-tolerance = 275 effective ceiling) accommodates the model's natural
-compression while still distinguishing a tight gate brief from a full
-section dump. Pair with the retry-on-overflow logic in
-``_cmd_generate_brief`` for additional resilience.
+instructions in system prompts are weakly enforced.
+
+The cap is **not** a posting gate. It serves two non-blocking roles: a
+generation-time brevity *target* (the rubric asks the sub-agent to write
+no more than this many words) and a soft advisory *signal* at posting time
+(``+25`` tolerance = 275 words; an anchor-valid brief over that ceiling
+still posts, surfaced via ``brief_word_overage`` and the ``ok_over_cap``
+status). Ask-for-brevity at generation while accepting whatever length is
+produced at posting is the intended design — the target and the acceptance
+threshold are deliberately decoupled.
 """
 
 _GATE_BRIEF_EXAMPLE_TOKENS: dict[str, tuple[str, ...]] = {
@@ -880,8 +885,11 @@ def _cmd_generate_brief(args: argparse.Namespace) -> int:
         _emit_event("validation_failed", brief_word_count, brief_text=brief)
         return 1
 
-    # Brief is valid — emit success event and write to stdout.
-    _emit_event("ok", brief_word_count)
+    # Brief is valid — emit success event and write to stdout. The word cap is
+    # advisory: an anchor-valid over-cap brief still posts, but carries the
+    # ``ok_over_cap`` status so the overage surfaces as inert telemetry.
+    status = "ok_over_cap" if brief_word_overage(brief) > 0 else "ok"
+    _emit_event(status, brief_word_count)
 
     sys.stdout.write(brief)
     if not brief.endswith("\n"):

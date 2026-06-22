@@ -513,6 +513,120 @@ def test_validation_failed_event_includes_brief_excerpt(
 
 
 # ---------------------------------------------------------------------------
+# Test 4b: over-cap anchored brief posts with ok_over_cap (no auth) — Reqs 3, 4
+# ---------------------------------------------------------------------------
+
+
+def test_over_cap_brief_persists_and_posts_ok_over_cap(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An anchor-valid but over-cap brief posts instead of falling back.
+
+    Stubs ``_run_brief_query`` (ignoring ``retry_feedback`` so the first
+    validation deterministically passes and no retry fires) to return an
+    over-cap brief containing all three decision-content anchors. Asserts the
+    subcommand exits 0, writes ``brief.md`` with the stubbed content, and emits
+    a ``gate_brief_generated`` event with ``status == "ok_over_cap"`` and the
+    real ``brief_word_count``.
+    """
+    import argparse
+
+    from cortex_command import discovery
+
+    # Build an over-cap brief that passes validate_brief: it opens with a
+    # sentence carrying all three anchors (decided / alternatives / tradeoff),
+    # then pads with filler so the word count exceeds GATE_BRIEF_WORD_CAP + 25.
+    anchor_sentence = (
+        "We decided on the native approach after we weighed the alternatives, "
+        "accepting the maintenance cost as a tradeoff."
+    )
+    filler = (
+        "The research surveyed the landscape and enumerated supporting context "
+        "in plain prose across many sentences. "
+    )
+    over_cap_brief = anchor_sentence + " " + (filler * 30).strip()
+
+    expected_word_count = len(over_cap_brief.split())
+    assert brief_word_overage(over_cap_brief) > 0, (
+        "Test setup: over_cap_brief must exceed GATE_BRIEF_WORD_CAP + 25 so the "
+        f"ok_over_cap path fires; word count is {expected_word_count}."
+    )
+    ok, reason = validate_brief(over_cap_brief)
+    assert ok, (
+        "Test setup: over_cap_brief must pass validate_brief (cap is advisory) "
+        f"so it posts rather than falling back; got reason: {reason!r}"
+    )
+
+    async def _stub_run_brief_query(
+        research_md_content: str,
+        retry_feedback: str | None = None,
+    ) -> str:
+        # Ignore retry_feedback: the first validation passes, so no retry fires.
+        return over_cap_brief
+
+    monkeypatch.setattr(discovery, "_run_brief_query", _stub_run_brief_query)
+
+    topic = "over-cap-ok-test"
+    research_dir = tmp_path / "cortex" / "research" / topic
+    research_dir.mkdir(parents=True)
+    research_md = research_dir / "research.md"
+    research_md.write_text(
+        "# Research: over-cap-ok-test\n\nstub content.\n",
+        encoding="utf-8",
+    )
+    persist_to = research_dir / "brief.md"
+
+    args = argparse.Namespace(
+        research_md=str(research_md),
+        topic=topic,
+        repo_root=str(tmp_path),
+        persist_to=str(persist_to),
+    )
+
+    rc = discovery._cmd_generate_brief(args)
+    assert rc == 0, (
+        "generate-brief was expected to exit 0 for an anchor-valid over-cap "
+        f"brief (cap is advisory), but exit code was {rc}."
+    )
+
+    assert persist_to.is_file(), (
+        f"Expected brief.md persisted at {persist_to} for an over-cap brief, "
+        "but file was not written."
+    )
+    persisted = persist_to.read_text(encoding="utf-8")
+    assert persisted.rstrip("\n") == over_cap_brief.rstrip("\n"), (
+        "Persisted brief.md content does not match the stubbed over-cap brief.\n"
+        f"Expected:\n{over_cap_brief}\nGot:\n{persisted}"
+    )
+
+    events_log = research_dir / "events.log"
+    assert events_log.is_file(), (
+        f"Expected events.log at {events_log} after generate-brief, but file "
+        "was not created."
+    )
+    events = [
+        json.loads(line)
+        for line in events_log.read_text().splitlines()
+        if line.strip()
+    ]
+    brief_events = [e for e in events if e.get("event") == "gate_brief_generated"]
+    assert brief_events, (
+        f"No gate_brief_generated event found in events.log.\nEvents: {events}"
+    )
+    over_cap_events = [e for e in brief_events if e.get("status") == "ok_over_cap"]
+    assert over_cap_events, (
+        "Expected a gate_brief_generated event with status=ok_over_cap; got "
+        f"statuses: {[e.get('status') for e in brief_events]}"
+    )
+    last = over_cap_events[-1]
+    assert last.get("brief_word_count") == expected_word_count, (
+        "ok_over_cap event brief_word_count does not match the brief's word "
+        f"count.\nExpected: {expected_word_count}\nGot: {last.get('brief_word_count')}"
+    )
+
+
+# ---------------------------------------------------------------------------
 # Test 5: anchor paraphrase coverage (no auth) — spec Reqs 3, 4, 5
 #
 # Each parametrized test constructs a minimal brief containing the
