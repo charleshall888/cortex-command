@@ -690,6 +690,37 @@ def handle_start(args: argparse.Namespace) -> int:
     plan_path = session_dir / "overnight-plan.md"
     events_path = session_dir / "overnight-events.log"
 
+    # Re-resolve the home repo from the state file's persisted
+    # ``project_root`` (R2), rebinding ``repo_path`` for every dispatch
+    # branch that threads it into ``runner.run`` (the dry-run /
+    # ``--launchd`` inline paths and the async-spawn path). The line-664
+    # ``_resolve_repo_path()`` is correct for the ``else``/auto-discover
+    # branch (no state file → ``None`` → cwd=repo, unchanged run-now
+    # behavior), but a scheduled (launchd-fired) ``--state`` run starts
+    # with CWD=``/`` and a bare environment, so plain
+    # ``git rev-parse``/``cwd`` resolve the filesystem root. Loading the
+    # state and re-running resolution with ``state_project_root`` lets
+    # the persisted root take precedence, still at the single CLI
+    # resolution site (R20).
+    #
+    # This is a closure invoked per-dispatch-branch rather than run
+    # eagerly here so the JSON concurrent-runner refusal below — which
+    # returns before any ``runner.run`` and needs only ``session_dir``
+    # (already derived above) — still short-circuits on a minimal /
+    # non-loadable state file without being forced through
+    # ``load_state``.
+    def _repo_path_from_state() -> Path:
+        if args.state is None:
+            return repo_path
+        from cortex_command.overnight import state as state_module
+
+        st = state_module.load_state(state_path)
+        return _resolve_repo_path(
+            state_project_root=(
+                Path(st.project_root) if st.project_root else None
+            )
+        )
+
     # Cross-cancel guard (R14): refuse to start when a scheduled
     # launch is pending for this session, unless ``--force`` is set.
     # The dry-run path is exempt (mirrors the historical contract that
@@ -736,7 +767,7 @@ def handle_start(args: argparse.Namespace) -> int:
         return _run_runner_inline(
             state_path=state_path,
             session_dir=session_dir,
-            repo_path=repo_path,
+            repo_path=_repo_path_from_state(),
             plan_path=plan_path,
             events_path=events_path,
             args=args,
@@ -778,7 +809,7 @@ def handle_start(args: argparse.Namespace) -> int:
         return _run_runner_inline(
             state_path=state_path,
             session_dir=session_dir,
-            repo_path=repo_path,
+            repo_path=_repo_path_from_state(),
             plan_path=plan_path,
             events_path=events_path,
             args=args,
@@ -788,7 +819,7 @@ def handle_start(args: argparse.Namespace) -> int:
     result = _spawn_runner_async(
         state_path=state_path,
         session_dir=session_dir,
-        repo_path=repo_path,
+        repo_path=_repo_path_from_state(),
         args=args,
     )
 
