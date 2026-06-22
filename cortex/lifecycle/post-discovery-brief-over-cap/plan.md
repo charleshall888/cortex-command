@@ -108,7 +108,7 @@ defense-in-depth (discovery.py: 1→2→6; test file: 1→2→5→7).
   (test:907) asserting an over-cap anchored brief → `(True, "")` and `brief_word_overage`
   returns 0 within-cap / positive over-cap.
 - **Verification**: `python3 -c "from cortex_command.discovery import validate_brief, brief_word_overage as o; b='We decided to ship. Alternatives were weighed. The tradeoff is cost. '+'filler '*400; print(validate_brief(b)[0], o(b)>0, o('decided alternatives tradeoff')==0)"` prints `True True True` (prints `False ...` against current code — genuinely falsifiable); AND `grep -c 'must be at most' cortex_command/discovery.py` = 0 (the docstring no longer asserts an enforced maximum — pass if count 0); AND `just test` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Persist + post the over-cap brief from `_cmd_generate_brief` with `ok_over_cap`
 - **Files**: cortex_command/discovery.py, tests/test_discovery_gate_brief.py
@@ -141,7 +141,7 @@ defense-in-depth (discovery.py: 1→2→6; test file: 1→2→5→7).
   (anchor-missing) still passes; AND `grep -c 'retry-on-overflow' cortex_command/discovery.py`
   = 0 (the constant docstring no longer pairs the cap with over-cap retry-on-overflow — pass
   if count 0).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Register `ok_over_cap` in the events registry
 - **Files**: bin/.events-registry.md
@@ -155,7 +155,7 @@ defense-in-depth (discovery.py: 1→2→6; test file: 1→2→5→7).
   scan-coverage or status columns.
 - **Verification**: `grep -c 'ok_over_cap' bin/.events-registry.md` ≥ 1 AND the
   events-registry gate `cortex-check-events-registry --audit` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Extend the prose-driven gate with the over-cap soft note, regenerate the plugin mirror
 - **Files**: skills/discovery/SKILL.md, plugins/cortex-core/skills/discovery/SKILL.md
@@ -193,7 +193,7 @@ defense-in-depth (discovery.py: 1→2→6; test file: 1→2→5→7).
   byte-identical (exit 0). (Correctness of the soft-note *instruction wording* and the live
   agent's posting decision are human-reviewed at approval — inherent to a prose gate; the
   file-reading contract it must encode is pinned by Task 5's mirror test.)
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Extend the `_render_gate` contract mirror to cover the over-cap + soft-note path
 - **Files**: tests/test_discovery_gate_brief.py
@@ -219,7 +219,7 @@ defense-in-depth (discovery.py: 1→2→6; test file: 1→2→5→7).
   of the Task 4 prose noted in Verification reality).
 - **Verification**: `just test` exits 0 — the extended `_render_gate` over-cap scenario
   passes (brief text present, soft-note marker present, Architecture body absent).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Reconcile the retry-feedback template's posting-gate wording; document the retained target
 - **Files**: cortex_command/discovery.py
@@ -244,7 +244,7 @@ defense-in-depth (discovery.py: 1→2→6; test file: 1→2→5→7).
 - **Verification**: `grep -c 'hard ceiling' cortex_command/discovery.py` = 0 AND
   `grep -c 'no more than' cortex_command/discovery.py` ≥ 1 AND `just test` exits 0
   (`test_retry_feedback_covers_example_tokens` passes).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 7: Pin the soft-cap scope (anchor-missing over-cap still fails) + clarify the fixture-test intent
 - **Files**: tests/test_discovery_gate_brief.py
@@ -264,7 +264,7 @@ defense-in-depth (discovery.py: 1→2→6; test file: 1→2→5→7).
   accepts over-cap briefs).
 - **Verification**: `just test` exits 0 — the new scope-regression test passes (over-cap
   anchor-missing brief → `(False, <anchor reason>)`), and the fixture test continues to pass.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Risks
 
