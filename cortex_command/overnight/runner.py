@@ -1518,6 +1518,58 @@ def _spawn_orchestrator(
     return proc, wctx, watchdog
 
 
+def _select_orchestrator_result_envelope(envelope_text: str) -> Any:
+    """Select the terminal ``type:"result"`` object from orchestrator stdout.
+
+    The orchestrator now runs with ``--output-format=stream-json --verbose
+    --include-partial-messages`` (Phase 2 / Task 6), so its stdout is an NDJSON
+    stream: ``system``/``assistant``/``user`` events, interleaved
+    ``stream_event`` partial-message chunks, then a terminal ``type:"result"``
+    object that is shape-identical to today's ``--output-format=json`` envelope.
+    Selection rule: return the **last** parsed dict whose top-level ``type ==
+    "result"``, skipping every non-result, blank, and non-JSON line.
+
+    Backward-compatible with a single ``--output-format=json`` envelope,
+    whether compact or pretty-printed across many lines: whole-file
+    ``json.loads`` is tried FIRST and its result returned unchanged (the
+    ``orchestrator_envelope_*`` fixtures are pretty-printed, and a JSON list
+    still surfaces as a non-dict for the shape-drift branch). Only when the
+    whole-file parse fails — i.e. genuine NDJSON with multiple top-level
+    objects — does the line-by-line selection run. Raises ``ValueError`` when
+    neither path yields any JSON, so the caller's ``except`` maps it to
+    ``parse_failure``.
+    """
+    # Fast path: a single JSON document (compact or pretty-printed). Preserves
+    # the legacy --output-format=json envelope exactly, including the non-dict
+    # shape-drift case.
+    try:
+        return json.loads(envelope_text)
+    except Exception:
+        pass
+
+    # NDJSON path: select the LAST line whose top-level type == "result",
+    # skipping system/assistant/user/stream_event/partial-message and any
+    # blank or non-JSON lines.
+    selected: Any = None
+    last_parsed: Any = None
+    saw_json = False
+    for line in envelope_text.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        try:
+            obj = json.loads(stripped)
+        except Exception:
+            continue
+        saw_json = True
+        last_parsed = obj
+        if isinstance(obj, dict) and obj.get("type") == "result":
+            selected = obj
+    if not saw_json:
+        raise ValueError("no JSON line in orchestrator stdout")
+    return selected if selected is not None else last_parsed
+
+
 def _emit_orchestrator_round_telemetry(
     envelope_text: str | None,
     exit_code: int | None,
@@ -1549,7 +1601,12 @@ def _emit_orchestrator_round_telemetry(
             parse_reason = "parse_failure"
         else:
             try:
-                envelope = json.loads(envelope_text)
+                # Select the terminal type:"result" NDJSON object: the
+                # orchestrator now emits a stream-json stream (Task 6), so the
+                # whole-file json.loads would raise on the leading non-result
+                # lines. A single-line --output-format=json envelope still
+                # resolves to its sole type:"result" object unchanged.
+                envelope = _select_orchestrator_result_envelope(envelope_text)
             except Exception:
                 parse_reason = "parse_failure"
                 envelope = None
