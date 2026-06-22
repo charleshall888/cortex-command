@@ -44,6 +44,19 @@ The pipeline area covers the overnight execution framework: how sessions are orc
   - When a feature reaches terminal `failed`, an end-of-round sweep transitions every not-yet-terminal feature whose `intra_session_blocked_by` lists it to `failed` with reason `blocker_failed`, re-applying to a fixpoint so transitive chains resolve. A `paused` blocker (recoverable) does not cascade; only terminal `failed` triggers it.
 - **Priority**: must-have
 
+### Overnight Runner Supervision
+
+- **Description**: Each spawned child subprocess (orchestrator, batch_runner) is guarded by an in-process stall watchdog that resets on child progress — distinct from, and strictly inside, the out-of-process guardian's parent-staleness window.
+- **Acceptance criteria**:
+  - In-process stall watchdog: per spawned child (orchestrator, batch_runner), a monotonic
+    inactivity timer (`STALL_TIMEOUT_SECONDS`, 1800s) that RESETS on each child-progress write
+    to the watched child signal (batch → `pipeline-events.log`; orchestrator → its stream-json
+    stdout, which requires `--output-format=stream-json --verbose --include-partial-messages`),
+    plus a never-reset `ABSOLUTE_CEILING_SECONDS` (14400s) backstop for a loud-but-stuck child.
+    This is distinct from and strictly inside the guardian's `WEDGED_STALENESS_SECONDS` (2700s)
+    parent-staleness window; the watchdog owns child silence, the guardian owns parent/host wedge.
+- **Priority**: must-have
+
 ### Conflict Resolution
 
 - **Description**: When a feature branch produces a merge conflict, the pipeline classifies the conflict and applies the appropriate resolution strategy before the human reviews the session.

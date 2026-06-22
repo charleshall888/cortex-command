@@ -50,6 +50,15 @@ The observability area covers five subsystems that give the developer visibility
   - Dashboard-triggered notifications respect the same deduplication (stall fires once; clears when resolved)
 - **Priority**: must-have
 
+### Overnight Kill/Stall Telemetry
+
+- **Description**: In-process stall-kill events carry a reason marker distinguishing a silent/wedged child from an absolute-ceiling kill — the feedback signal for tuning the (currently guessed) ceiling value.
+- **Acceptance criteria**:
+  - Stall-kill events (`ORCHESTRATOR_FAILED`, `BATCH_RUNNER_STALLED`) carry a `stall_reason`
+    field (`inactivity` | `ceiling`) distinguishing a silent/wedged child from an
+    absolute-ceiling kill — the feedback signal for tuning the (currently guessed) ceiling value.
+- **Priority**: must-have
+
 ### Runtime Adoption Telemetry
 
 - **Description**: Per-script invocation shim (`bin/cortex-log-invocation`) writes one JSONL record per `bin/cortex-*` invocation to `cortex/lifecycle/sessions/<id>/bin-invocations.jsonl`. Aggregator CLI (`bin/cortex-invocation-report`) reads the per-session logs and reports adoption (default human-readable, `--json`, `--check-shims`, `--self-test` modes). Composed with DR-5 static parity lint (ticket 102) for full coverage of script-adoption failure modes — DR-5 catches missing wiring; runtime telemetry catches wired-but-never-invoked scripts.
