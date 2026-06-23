@@ -1456,7 +1456,12 @@ class TestReviewNonApprovedRevertsLiveSha(unittest.IsolatedAsyncioTestCase):
             merge_sha=live_sha,
         )
         # Deferred review with no rework re-merge SHA (primary-merge SHA wins).
-        review_result = MagicMock(deferred=True, verdict="REJECTED", cycle=1, merge_sha=None)
+        # A REJECTED review RAN and said no — could_not_run is False, so the
+        # merge is reverted (not the preserve path).
+        review_result = MagicMock(
+            deferred=True, verdict="REJECTED", cycle=1, merge_sha=None,
+            could_not_run=False,
+        )
         revert_outcome = MagicMock(success=True, aborted=False, merge_sha=live_sha)
 
         with (
@@ -1512,7 +1517,10 @@ class TestReviewNonApprovedRevertsLiveSha(unittest.IsolatedAsyncioTestCase):
             success=True, error=None, conflict=False, test_result=None,
             merge_sha=primary_sha,
         )
-        review_result = MagicMock(deferred=True, verdict="CHANGES_REQUESTED", cycle=2, merge_sha=remerge_sha)
+        review_result = MagicMock(
+            deferred=True, verdict="CHANGES_REQUESTED", cycle=2, merge_sha=remerge_sha,
+            could_not_run=False,
+        )
         revert_outcome = MagicMock(success=True, aborted=False, merge_sha=remerge_sha)
 
         with (
@@ -1635,6 +1643,9 @@ class TestReviewDeferredSurfacingCorrections(unittest.IsolatedAsyncioTestCase):
         review_result = MagicMock(
             deferred=True, verdict=verdict, cycle=(0 if verdict == "ERROR" else 1),
             merge_sha=None,
+            # could_not_run mirrors the real ReviewResult: True only for the
+            # ERROR (could-not-run) verdict, False for REJECTED/CHANGES_REQUESTED.
+            could_not_run=(verdict == "ERROR"),
         )
         revert_outcome = MagicMock(success=True, aborted=False, merge_sha=live_sha)
 
@@ -1917,7 +1928,10 @@ class TestRecoveryPathReviewGate(unittest.IsolatedAsyncioTestCase):
         recovery_result = MagicMock(
             success=True, flaky=False, attempts=1, merge_sha=recovery_sha,
         )
-        review_result = MagicMock(deferred=True, verdict="REJECTED", cycle=1, merge_sha=None)
+        review_result = MagicMock(
+            deferred=True, verdict="REJECTED", cycle=1, merge_sha=None,
+            could_not_run=False,
+        )
         revert_outcome = MagicMock(success=True, aborted=False, merge_sha=recovery_sha)
 
         with (
@@ -2142,7 +2156,10 @@ class TestRepairCompletedReviewGate(unittest.IsolatedAsyncioTestCase):
         the captured pre-ff base, and the feature is deferred."""
         ctx = _make_ctx(pauses=1)
         checkout, revparse, ff, _delete, reset = self._ff_subprocess_side_effect()
-        review_result = MagicMock(deferred=True, verdict="REJECTED", cycle=1, merge_sha=None)
+        review_result = MagicMock(
+            deferred=True, verdict="REJECTED", cycle=1, merge_sha=None,
+            could_not_run=False,
+        )
 
         with (
             patch(
@@ -2458,6 +2475,455 @@ class TestMergeToMergedSiteExhaustiveness(unittest.TestCase):
 
         # Total count pinned: six write sites — two guarded, four review-gated.
         self.assertEqual(sum(append_sites.values()), 6)
+
+
+class TestCouldNotRunPreservesMerge(unittest.IsolatedAsyncioTestCase):
+    """Task 3 — a could-not-run review (agent completed, no usable verdict →
+    verdict ERROR with ``could_not_run=True``) PRESERVES the already-merged
+    feature at all three gate sites, while a genuine crash still reverts. The
+    in-band preserve block is exception-safe: an exception thrown inside it
+    must NOT fall into the crash-``except`` and revert the preserved merge.
+    """
+
+    @staticmethod
+    def _could_not_run_review() -> MagicMock:
+        """A review that ran (success=True) but produced no usable verdict."""
+        return MagicMock(
+            deferred=True, verdict="ERROR", cycle=0, merge_sha=None,
+            could_not_run=True,
+        )
+
+    @staticmethod
+    def _crash_review() -> MagicMock:
+        """A review that resolved to ERROR but was a genuine dispatch crash
+        (``could_not_run=False``) — kept here for parity though the primary
+        crash modeling uses a raised dispatch."""
+        return MagicMock(
+            deferred=True, verdict="ERROR", cycle=0, merge_sha=None,
+            could_not_run=False,
+        )
+
+    @staticmethod
+    def _deferred_event_details(m_log_event) -> dict:
+        from cortex_command.overnight.outcome_router import FEATURE_DEFERRED
+        for call in m_log_event.call_args_list:
+            if call.args and call.args[0] == FEATURE_DEFERRED:
+                return call.kwargs.get("details", {}) or {}
+        raise AssertionError("no FEATURE_DEFERRED event was emitted")
+
+    # ----------------------------------------------------------------- primary
+
+    async def test_primary_could_not_run_preserves_merge(self):
+        """apply_feature_result primary path: a could-not-run review does NOT
+        revert the merge and emits could_not_run=True + merge_reverted=False."""
+        ctx = _make_ctx(pauses=0)
+        ctx.worktree_branches["feat-a"] = "pipeline/feat-a"
+        live_sha = "deadbeefcafe1234deadbeefcafe1234deadbeef"
+        merge_result = MagicMock(
+            success=True, error=None, conflict=False, test_result=None,
+            merge_sha=live_sha,
+        )
+        review_result = self._could_not_run_review()
+
+        with (
+            patch(
+                "cortex_command.overnight.outcome_router._get_changed_files",
+                return_value=["src/a.py"],
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.merge_feature",
+                return_value=merge_result,
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.requires_review",
+                return_value=True,
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.dispatch_review",
+                new=AsyncMock(return_value=review_result),
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.revert_merge",
+            ) as m_revert,
+            patch("cortex_command.overnight.outcome_router.read_tier", return_value="complex"),
+            patch("cortex_command.overnight.outcome_router.read_criticality", return_value="high"),
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch("cortex_command.overnight.outcome_router.overnight_log_event") as m_log,
+            patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+        ):
+            await apply_feature_result(
+                "feat-a",
+                FeatureResult(name="feat-a", status="completed"),
+                ctx,
+            )
+
+        # Preserved: the merge was NOT reverted.
+        m_revert.assert_not_called()
+        self.assertNotIn("feat-a", ctx.batch_result.features_merged)
+        self.assertIn("feat-a", [d["name"] for d in ctx.batch_result.features_deferred])
+        details = self._deferred_event_details(m_log)
+        self.assertTrue(details.get("could_not_run"))
+        self.assertFalse(details.get("merge_reverted"))
+
+    async def test_primary_crash_still_reverts_merge(self):
+        """apply_feature_result primary path: a genuine dispatch crash (raised
+        exception) STILL reverts the merge."""
+        ctx = _make_ctx(pauses=0)
+        ctx.worktree_branches["feat-a"] = "pipeline/feat-a"
+        live_sha = "abc123abc123abc123abc123abc123abc123abc1"
+        merge_result = MagicMock(
+            success=True, error=None, conflict=False, test_result=None,
+            merge_sha=live_sha,
+        )
+        revert_outcome = MagicMock(success=True, aborted=False, merge_sha=live_sha)
+
+        with (
+            patch(
+                "cortex_command.overnight.outcome_router._get_changed_files",
+                return_value=["src/a.py"],
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.merge_feature",
+                return_value=merge_result,
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.requires_review",
+                return_value=True,
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.dispatch_review",
+                new=AsyncMock(side_effect=RuntimeError("review subprocess exited 1")),
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.revert_merge",
+                return_value=revert_outcome,
+            ) as m_revert,
+            patch("cortex_command.overnight.outcome_router.write_deferral"),
+            patch("cortex_command.overnight.outcome_router.read_tier", return_value="complex"),
+            patch("cortex_command.overnight.outcome_router.read_criticality", return_value="high"),
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch("cortex_command.overnight.outcome_router.overnight_log_event") as m_log,
+            patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+        ):
+            await apply_feature_result(
+                "feat-a",
+                FeatureResult(name="feat-a", status="completed"),
+                ctx,
+            )
+
+        m_revert.assert_called_once()
+        self.assertEqual(m_revert.call_args.args[0], live_sha)
+        details = self._deferred_event_details(m_log)
+        self.assertTrue(details.get("review_dispatch_crashed"))
+        self.assertNotIn("could_not_run", details)
+
+    async def test_primary_could_not_run_preserve_exception_does_not_revert(self):
+        """EXCEPTION-SAFETY (spec R3, load-bearing): when the could-not-run
+        in-band preserve block raises (the flag-helper throws), control falls
+        into the crash-``except`` — which must NOT revert the preserved
+        merge."""
+        ctx = _make_ctx(pauses=0)
+        ctx.worktree_branches["feat-a"] = "pipeline/feat-a"
+        live_sha = "feedface0000feedface0000feedface0000feed"
+        merge_result = MagicMock(
+            success=True, error=None, conflict=False, test_result=None,
+            merge_sha=live_sha,
+        )
+        review_result = self._could_not_run_review()
+
+        with (
+            patch(
+                "cortex_command.overnight.outcome_router._get_changed_files",
+                return_value=["src/a.py"],
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.merge_feature",
+                return_value=merge_result,
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.requires_review",
+                return_value=True,
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.dispatch_review",
+                new=AsyncMock(return_value=review_result),
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.revert_merge",
+            ) as m_revert,
+            patch(
+                "cortex_command.overnight.outcome_router._set_review_error_detail_flags",
+                side_effect=RuntimeError("flag-helper blew up mid-preserve"),
+            ),
+            patch("cortex_command.overnight.outcome_router.write_deferral"),
+            patch("cortex_command.overnight.outcome_router.read_tier", return_value="complex"),
+            patch("cortex_command.overnight.outcome_router.read_criticality", return_value="high"),
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch("cortex_command.overnight.outcome_router.overnight_log_event"),
+            patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+        ):
+            await apply_feature_result(
+                "feat-a",
+                FeatureResult(name="feat-a", status="completed"),
+                ctx,
+            )
+
+        # The crash-except ran (the preserve block raised) but it must NOT have
+        # reverted the merge it was preserving.
+        m_revert.assert_not_called()
+        self.assertNotIn("feat-a", ctx.batch_result.features_merged)
+
+    # ---------------------------------------------------------------- recovery
+
+    def _failing_merge_then_recovery_ctx(self):
+        ctx = _make_ctx(pauses=0)
+        ctx.worktree_branches["feat-a"] = "pipeline/feat-a"
+        ctx.worktree_paths["feat-a"] = Path("/tmp/unused-feat-a-worktree")
+        return ctx
+
+    @staticmethod
+    def _test_failure_merge_result() -> MagicMock:
+        return MagicMock(
+            success=False, error="test_failure", conflict=False,
+            test_result=MagicMock(output="FAILED: test_foo"),
+        )
+
+    async def _run_recovery(self, review_result, *, flag_helper_raises=False):
+        ctx = self._failing_merge_then_recovery_ctx()
+        recovery_sha = "recoverysha777777777777777777777777777777"
+        recovery_result = MagicMock(
+            success=True, flaky=False, attempts=1, merge_sha=recovery_sha,
+        )
+        revert_outcome = MagicMock(success=True, aborted=False, merge_sha=recovery_sha)
+
+        flag_patch = patch(
+            "cortex_command.overnight.outcome_router._set_review_error_detail_flags",
+            side_effect=RuntimeError("flag-helper blew up mid-preserve"),
+        ) if flag_helper_raises else patch(
+            "cortex_command.overnight.outcome_router._set_review_error_detail_flags",
+            wraps=__import__(
+                "cortex_command.overnight.outcome_router",
+                fromlist=["_set_review_error_detail_flags"],
+            )._set_review_error_detail_flags,
+        )
+
+        with (
+            patch(
+                "cortex_command.overnight.outcome_router._get_changed_files",
+                return_value=["src/a.py"],
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.merge_feature",
+                return_value=self._test_failure_merge_result(),
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.recover_test_failure",
+                new=AsyncMock(return_value=recovery_result),
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.requires_review",
+                return_value=True,
+            ),
+            (
+                patch(
+                    "cortex_command.overnight.outcome_router.dispatch_review",
+                    new=AsyncMock(side_effect=review_result),
+                )
+                if isinstance(review_result, Exception)
+                else patch(
+                    "cortex_command.overnight.outcome_router.dispatch_review",
+                    new=AsyncMock(return_value=review_result),
+                )
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.revert_merge",
+                return_value=revert_outcome,
+            ) as m_revert,
+            flag_patch,
+            patch("cortex_command.overnight.outcome_router.write_deferral"),
+            patch("cortex_command.overnight.outcome_router._next_escalation_n", return_value=1),
+            patch("cortex_command.overnight.outcome_router.read_tier", return_value="complex"),
+            patch("cortex_command.overnight.outcome_router.read_criticality", return_value="high"),
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch("cortex_command.overnight.outcome_router.overnight_log_event") as m_log,
+            patch("cortex_command.overnight.outcome_router.load_state"),
+            patch("cortex_command.overnight.outcome_router.save_state"),
+            patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+        ):
+            await apply_feature_result(
+                "feat-a",
+                FeatureResult(name="feat-a", status="completed"),
+                ctx,
+            )
+        return ctx, m_revert, m_log, recovery_sha
+
+    async def test_recovery_could_not_run_preserves_merge(self):
+        ctx, m_revert, m_log, _ = await self._run_recovery(self._could_not_run_review())
+        m_revert.assert_not_called()
+        self.assertNotIn("feat-a", ctx.batch_result.features_merged)
+        self.assertIn("feat-a", [d["name"] for d in ctx.batch_result.features_deferred])
+        details = self._deferred_event_details(m_log)
+        self.assertTrue(details.get("could_not_run"))
+        self.assertFalse(details.get("merge_reverted"))
+
+    async def test_recovery_crash_still_reverts_merge(self):
+        ctx, m_revert, m_log, recovery_sha = await self._run_recovery(
+            RuntimeError("review subprocess exited 1")
+        )
+        m_revert.assert_called_once()
+        self.assertEqual(m_revert.call_args.args[0], recovery_sha)
+
+    async def test_recovery_could_not_run_preserve_exception_does_not_revert(self):
+        ctx, m_revert, _, _ = await self._run_recovery(
+            self._could_not_run_review(), flag_helper_raises=True
+        )
+        m_revert.assert_not_called()
+        self.assertNotIn("feat-a", ctx.batch_result.features_merged)
+
+    # ------------------------------------------------------------------ repair
+
+    @staticmethod
+    def _ff_subprocess_side_effect():
+        checkout = MagicMock(returncode=0, stderr="")
+        revparse = MagicMock(returncode=0, stdout="preffbase00\n", stderr="")
+        ff = MagicMock(returncode=0, stderr="")
+        reset = MagicMock(returncode=0, stderr="")
+        return checkout, revparse, ff, reset
+
+    async def test_repair_could_not_run_preserves_ff_merge(self):
+        """repair_completed path: a could-not-run review does NOT git reset the
+        ff-merge — no `git reset --hard` is issued and the event carries
+        could_not_run=True + merge_reverted=False."""
+        ctx = _make_ctx(pauses=1)
+        checkout, revparse, ff, _reset = self._ff_subprocess_side_effect()
+        review_result = self._could_not_run_review()
+
+        with (
+            patch(
+                "cortex_command.overnight.outcome_router.subprocess.run",
+                side_effect=[checkout, revparse, ff],
+            ) as m_sp,
+            patch(
+                "cortex_command.overnight.outcome_router.requires_review",
+                return_value=True,
+            ),
+            patch("cortex_command.overnight.outcome_router.read_tier", return_value="complex"),
+            patch("cortex_command.overnight.outcome_router.read_criticality", return_value="high"),
+            patch(
+                "cortex_command.overnight.outcome_router.dispatch_review",
+                new=AsyncMock(return_value=review_result),
+            ),
+            patch("cortex_command.overnight.outcome_router.write_deferral"),
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch("cortex_command.overnight.outcome_router.overnight_log_event") as m_log,
+            patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+        ):
+            await apply_feature_result(
+                "feat-a",
+                FeatureResult(
+                    name="feat-a", status="repair_completed", repair_branch="repair/feat-a",
+                ),
+                ctx,
+            )
+
+        reset_calls = [
+            c for c in m_sp.call_args_list
+            if c.args and c.args[0][:3] == ["git", "reset", "--hard"]
+        ]
+        self.assertEqual(len(reset_calls), 0)
+        self.assertNotIn("feat-a", ctx.batch_result.features_merged)
+        self.assertIn("feat-a", [d["name"] for d in ctx.batch_result.features_deferred])
+        details = self._deferred_event_details(m_log)
+        self.assertTrue(details.get("could_not_run"))
+        self.assertFalse(details.get("merge_reverted"))
+
+    async def test_repair_crash_still_resets_ff_merge(self):
+        """repair_completed path: a genuine dispatch crash (raised exception)
+        STILL git-resets the ff-merge."""
+        ctx = _make_ctx(pauses=1)
+        checkout, revparse, ff, reset = self._ff_subprocess_side_effect()
+
+        with (
+            patch(
+                "cortex_command.overnight.outcome_router.subprocess.run",
+                side_effect=[checkout, revparse, ff, reset],
+            ) as m_sp,
+            patch(
+                "cortex_command.overnight.outcome_router.requires_review",
+                return_value=True,
+            ),
+            patch("cortex_command.overnight.outcome_router.read_tier", return_value="complex"),
+            patch("cortex_command.overnight.outcome_router.read_criticality", return_value="critical"),
+            patch(
+                "cortex_command.overnight.outcome_router.dispatch_review",
+                new=AsyncMock(side_effect=RuntimeError("review subprocess exited 1")),
+            ),
+            patch("cortex_command.overnight.outcome_router.write_deferral"),
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch("cortex_command.overnight.outcome_router.overnight_log_event"),
+            patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+        ):
+            await apply_feature_result(
+                "feat-a",
+                FeatureResult(
+                    name="feat-a", status="repair_completed", repair_branch="repair/feat-a",
+                ),
+                ctx,
+            )
+
+        reset_calls = [
+            c for c in m_sp.call_args_list
+            if c.args and c.args[0][:3] == ["git", "reset", "--hard"]
+        ]
+        self.assertEqual(len(reset_calls), 1)
+        self.assertEqual(reset_calls[0].args[0][3], "preffbase00")
+
+    async def test_repair_could_not_run_preserve_exception_does_not_reset(self):
+        """EXCEPTION-SAFETY (spec R3, load-bearing): when the could-not-run
+        in-band preserve block raises (the flag-helper throws) on the repair
+        path, the crash-``except`` must NOT git reset the preserved ff-merge."""
+        ctx = _make_ctx(pauses=1)
+        checkout, revparse, ff, _reset = self._ff_subprocess_side_effect()
+        review_result = self._could_not_run_review()
+
+        with (
+            patch(
+                "cortex_command.overnight.outcome_router.subprocess.run",
+                side_effect=[checkout, revparse, ff],
+            ) as m_sp,
+            patch(
+                "cortex_command.overnight.outcome_router.requires_review",
+                return_value=True,
+            ),
+            patch("cortex_command.overnight.outcome_router.read_tier", return_value="complex"),
+            patch("cortex_command.overnight.outcome_router.read_criticality", return_value="high"),
+            patch(
+                "cortex_command.overnight.outcome_router.dispatch_review",
+                new=AsyncMock(return_value=review_result),
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router._set_review_error_detail_flags",
+                side_effect=RuntimeError("flag-helper blew up mid-preserve"),
+            ),
+            patch("cortex_command.overnight.outcome_router.write_deferral"),
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch("cortex_command.overnight.outcome_router.overnight_log_event"),
+            patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+        ):
+            await apply_feature_result(
+                "feat-a",
+                FeatureResult(
+                    name="feat-a", status="repair_completed", repair_branch="repair/feat-a",
+                ),
+                ctx,
+            )
+
+        reset_calls = [
+            c for c in m_sp.call_args_list
+            if c.args and c.args[0][:3] == ["git", "reset", "--hard"]
+        ]
+        self.assertEqual(len(reset_calls), 0)
+        self.assertNotIn("feat-a", ctx.batch_result.features_merged)
 
 
 if __name__ == "__main__":

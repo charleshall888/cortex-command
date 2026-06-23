@@ -107,6 +107,9 @@ class TestRevertReworkRemergeRealGit(unittest.IsolatedAsyncioTestCase):
             review_result = MagicMock(
                 deferred=True, verdict="CHANGES_REQUESTED", cycle=2,
                 merge_sha=remerge_sha,
+                # A review that RAN and said no — could_not_run is False, so the
+                # live re-merge is reverted (not the could-not-run preserve path).
+                could_not_run=False,
             )
 
             with (
@@ -209,6 +212,9 @@ class TestRevertReworkRemergeRealGit(unittest.IsolatedAsyncioTestCase):
             review_result = MagicMock(
                 deferred=True, verdict="CHANGES_REQUESTED", cycle=2,
                 merge_sha=remerge_sha,
+                # A review that RAN and said no — could_not_run is False, so the
+                # live re-merge is reverted (not the could-not-run preserve path).
+                could_not_run=False,
             )
 
             with (

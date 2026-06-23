@@ -1004,6 +1004,32 @@ def _review_required(name: str) -> bool:
     return requires_review(tier, criticality) or reduction.corrupted
 
 
+def _set_review_error_detail_flags(details: dict, *, merge_reverted: bool) -> None:
+    """Set the verdict-ERROR deferral-detail flags coherently across all three
+    review gate sites.
+
+    A could-not-run review (resolved verdict ``ERROR`` with the agent having
+    completed) carries the positive ``could_not_run`` discriminator that the
+    morning report and integration PR key on; it is never inferred from
+    ``merge_reverted == False`` (a genuine crash with a failed revert, or a
+    repair-path ``_reset_ff_merge`` returning False, also yields
+    ``merge_reverted == False``). The ``review_dispatch_crashed`` co-flag is
+    retained here unchanged from the pre-split behavior — Phase-2 (spec R6)
+    owns splitting it off the could-not-run path; this Phase-1 task only adds
+    the merge-preservation guard and threads ``merge_reverted`` coherently.
+
+    Sets ``merge_reverted`` to the authoritative value passed by the caller so
+    a preserved (not-reverted) could-not-run merge records ``merge_reverted ==
+    False``. The revert-skip itself is a per-site guard on each site's own
+    ``revert_merge`` / ``_reset_ff_merge`` call — this helper only unifies the
+    detail-flag setting, which is identical across the three path-divergent
+    reverts.
+    """
+    details["merge_reverted"] = merge_reverted
+    details["review_dispatch_crashed"] = True
+    details["could_not_run"] = True
+
+
 # ---------------------------------------------------------------------------
 # Recovery-path review gate (R10)
 # ---------------------------------------------------------------------------
@@ -1059,6 +1085,13 @@ async def _recovery_review_gate(
         )
         return False
 
+    # Bind ``rr`` before the try so the crash-``except`` can tell a resolved
+    # could-not-run review (preserve the merge) from a raised dispatch crash
+    # (revert): when the in-band preserve path raises after a could-not-run
+    # verdict resolved, control falls into the ``except`` and must NOT revert
+    # the merge it was preserving. ``rr is None`` means the dispatch itself
+    # crashed before resolving — the revert correctly still fires there.
+    rr = None
     try:
         rr = await dispatch_review(
             feature=name,
@@ -1077,22 +1110,30 @@ async def _recovery_review_gate(
             # Review approved — the recovery merge may proceed to `merged`.
             return False
 
-        # Fail-safe rollback: revert the recovery re-merge's LIVE merge commit
-        # (SHA-anchored, under the held ctx.lock). Prefer a cycle-1 re-merge SHA
-        # threaded onto the ReviewResult when present, else the recovery merge
-        # SHA captured by recover_test_failure (R2).
-        live_merge_sha = getattr(rr, "merge_sha", None) or recovery_merge_sha
-        revert_aborted = False
-        merge_reverted = False
-        if live_merge_sha is not None:
-            revert_outcome = revert_merge(
-                live_merge_sha,
-                repo_path=merge_target,
-                log_path=ctx.config.pipeline_events_path,
-                feature=name,
-            )
-            revert_aborted = revert_outcome.aborted
-            merge_reverted = revert_outcome.success
+        # Could-not-run preserve (spec R3): the review agent completed but
+        # produced no usable verdict — PRESERVE the recovery merge rather than
+        # reverting verified, hook-passing work. The merge stays on the
+        # integration branch and is flagged for human re-review.
+        if rr.could_not_run:
+            revert_aborted = False
+            merge_reverted = False
+        else:
+            # Fail-safe rollback: revert the recovery re-merge's LIVE merge commit
+            # (SHA-anchored, under the held ctx.lock). Prefer a cycle-1 re-merge SHA
+            # threaded onto the ReviewResult when present, else the recovery merge
+            # SHA captured by recover_test_failure (R2).
+            live_merge_sha = getattr(rr, "merge_sha", None) or recovery_merge_sha
+            revert_aborted = False
+            merge_reverted = False
+            if live_merge_sha is not None:
+                revert_outcome = revert_merge(
+                    live_merge_sha,
+                    repo_path=merge_target,
+                    log_path=ctx.config.pipeline_events_path,
+                    feature=name,
+                )
+                revert_aborted = revert_outcome.aborted
+                merge_reverted = revert_outcome.success
         if revert_aborted:
             # Dependent-conflict R-edge: the revert conflicted and was aborted,
             # so the recovery merge genuinely REMAINS on the integration branch.
@@ -1142,8 +1183,9 @@ async def _recovery_review_gate(
             "path": "test_recovery",
         }
         if rr.verdict == "ERROR":
-            deferred_details["review_dispatch_crashed"] = True
-            deferred_details["could_not_run"] = True
+            _set_review_error_detail_flags(
+                deferred_details, merge_reverted=merge_reverted
+            )
         overnight_log_event(
             FEATURE_DEFERRED,
             ctx.config.batch_id,
@@ -1163,25 +1205,39 @@ async def _recovery_review_gate(
         return True
 
     except Exception as exc:
-        # Fail-safe rollback on a review-dispatch crash: revert the recovery
-        # re-merge's LIVE merge commit (SHA-anchored, under the held ctx.lock)
-        # before surfacing the deferral.
-        if recovery_merge_sha is not None:
+        # Exception-safety guard (spec R3, load-bearing): if the resolved
+        # review was could-not-run, the in-band preserve path was supposed to
+        # keep the merge — an exception thrown anywhere in that path (the
+        # flag-helper, the deferral write, overnight_log_event, the backlog
+        # write-back) must NOT fall through here and revert-as-crash the very
+        # merge it preserved. Skip the revert + tag could_not_run in that case.
+        # When ``rr is None`` the dispatch itself crashed before resolving, so
+        # the revert correctly still fires (a genuine crash).
+        preserved = rr is not None and rr.could_not_run
+        if not preserved and recovery_merge_sha is not None:
+            # Fail-safe rollback on a genuine review-dispatch crash: revert the
+            # recovery re-merge's LIVE merge commit (SHA-anchored, under the
+            # held ctx.lock) before surfacing the deferral.
             revert_merge(
                 recovery_merge_sha,
                 repo_path=merge_target,
                 log_path=ctx.config.pipeline_events_path,
                 feature=name,
             )
+        crash_details: dict = {
+            "error": f"dispatch_review raised {type(exc).__name__}: {exc}",
+            "path": "test_recovery",
+        }
+        if preserved:
+            crash_details["could_not_run"] = True
+            crash_details["merge_reverted"] = False
+        else:
+            crash_details["review_dispatch_crashed"] = True
         overnight_log_event(
             FEATURE_DEFERRED,
             ctx.config.batch_id,
             feature=name,
-            details={
-                "error": f"dispatch_review raised {type(exc).__name__}: {exc}",
-                "review_dispatch_crashed": True,
-                "path": "test_recovery",
-            },
+            details=crash_details,
             log_path=ctx.config.overnight_events_path,
         )
         deferral = DeferralQuestion(
@@ -1434,6 +1490,12 @@ async def _repair_review_or_revert(
     """
     tier = read_tier(name)
     criticality = read_criticality(name)
+    # Bind ``rr`` before the try so the crash-``except`` can tell a resolved
+    # could-not-run review (preserve the ff-merge) from a raised dispatch crash
+    # (reset): an exception thrown in the in-band preserve path after a
+    # could-not-run verdict resolved must NOT fall into the ``except`` and
+    # ``git reset --hard`` away the very ff-merge it was preserving.
+    rr = None
     try:
         rr = await dispatch_review(
             feature=name,
@@ -1451,10 +1513,17 @@ async def _repair_review_or_revert(
         if not rr.deferred:
             return False
 
-        # Fail-safe rollback of the ff-merge: reset the base branch back to its
-        # pre-ff tip so the unreviewed repair work is no longer on the
-        # integration branch.
-        merge_reverted = _reset_ff_merge(repo, pre_ff_base_sha)
+        if rr.could_not_run:
+            # Could-not-run preserve (spec R3): the review agent completed but
+            # produced no usable verdict — PRESERVE the ff-merged repair work
+            # rather than `git reset --hard`-ing it off the integration branch.
+            # The ff-merge stays put and is flagged for human re-review.
+            merge_reverted = False
+        else:
+            # Fail-safe rollback of the ff-merge: reset the base branch back to
+            # its pre-ff tip so the unreviewed repair work is no longer on the
+            # integration branch.
+            merge_reverted = _reset_ff_merge(repo, pre_ff_base_sha)
         ctx.batch_result.features_deferred.append({
             "name": name,
             "question_count": 1,
@@ -1466,8 +1535,9 @@ async def _repair_review_or_revert(
             "path": "repair_completed",
         }
         if rr.verdict == "ERROR":
-            deferred_details["review_dispatch_crashed"] = True
-            deferred_details["could_not_run"] = True
+            _set_review_error_detail_flags(
+                deferred_details, merge_reverted=merge_reverted
+            )
         overnight_log_event(
             FEATURE_DEFERRED,
             ctx.config.batch_id,
@@ -1479,6 +1549,18 @@ async def _repair_review_or_revert(
         # path is a review-dispatch crash — feed it into the systemic breaker.
         if rr.verdict == "ERROR":
             _record_review_crash_systemic(name, ctx)
+        if rr.could_not_run:
+            context_clause = (
+                "review could not run (agent completed, no usable verdict) — "
+                "the ff-merge is PRESERVED on the integration branch for human "
+                "re-review (intentional, not an error); do NOT re-run."
+            )
+        elif merge_reverted:
+            context_clause = "ff-merge was rolled back — safe to re-review/re-run."
+        else:
+            context_clause = (
+                "ff-merge could NOT be rolled back — manual rollback needed; do NOT re-run."
+            )
         deferral = DeferralQuestion(
             feature=name,
             question_id=0,
@@ -1486,11 +1568,7 @@ async def _repair_review_or_revert(
             context=(
                 f"Feature '{name}' resolved a merge conflict and was ff-merged, "
                 f"but post-merge review deferred (verdict {rr.verdict!r}). The "
-                + (
-                    "ff-merge was rolled back — safe to re-review/re-run."
-                    if merge_reverted
-                    else "ff-merge could NOT be rolled back — manual rollback needed; do NOT re-run."
-                )
+                + context_clause
             ),
             question=(
                 f"Feature '{name}' was deferred at post-repair review. How "
@@ -1508,20 +1586,47 @@ async def _repair_review_or_revert(
         return True
 
     except Exception as exc:
-        # Fail-safe rollback on a review-dispatch crash.
-        merge_reverted = _reset_ff_merge(repo, pre_ff_base_sha)
+        # Exception-safety guard (spec R3, load-bearing): if the resolved
+        # review was could-not-run, the in-band preserve path was supposed to
+        # keep the ff-merge — an exception thrown anywhere in that path must
+        # NOT fall through here and `git reset --hard` away the very ff-merge it
+        # preserved. Skip the reset + tag could_not_run in that case. When
+        # ``rr is None`` the dispatch itself crashed before resolving, so the
+        # reset correctly still fires (a genuine crash).
+        preserved = rr is not None and rr.could_not_run
+        if preserved:
+            merge_reverted = False
+        else:
+            # Fail-safe rollback on a genuine review-dispatch crash.
+            merge_reverted = _reset_ff_merge(repo, pre_ff_base_sha)
+        crash_details: dict = {
+            "error": f"dispatch_review raised {type(exc).__name__}: {exc}",
+            "merge_reverted": merge_reverted,
+            "path": "repair_completed",
+        }
+        if preserved:
+            crash_details["could_not_run"] = True
+        else:
+            crash_details["review_dispatch_crashed"] = True
         overnight_log_event(
             FEATURE_DEFERRED,
             ctx.config.batch_id,
             feature=name,
-            details={
-                "error": f"dispatch_review raised {type(exc).__name__}: {exc}",
-                "review_dispatch_crashed": True,
-                "merge_reverted": merge_reverted,
-                "path": "repair_completed",
-            },
+            details=crash_details,
             log_path=ctx.config.overnight_events_path,
         )
+        if preserved:
+            crash_context_clause = (
+                "review could not run (agent completed, no usable verdict) — "
+                "the ff-merge is PRESERVED on the integration branch for human "
+                "re-review; do NOT re-run."
+            )
+        elif merge_reverted:
+            crash_context_clause = "The ff-merge was rolled back — safe to re-review/re-run."
+        else:
+            crash_context_clause = (
+                "The ff-merge could NOT be rolled back — manual rollback needed."
+            )
         deferral = DeferralQuestion(
             feature=name,
             question_id=0,
@@ -1529,11 +1634,7 @@ async def _repair_review_or_revert(
             context=(
                 f"Feature '{name}' was ff-merged after conflict repair but the "
                 f"post-merge review dispatch crashed: {type(exc).__name__}: {exc}. "
-                + (
-                    "The ff-merge was rolled back — safe to re-review/re-run."
-                    if merge_reverted
-                    else "The ff-merge could NOT be rolled back — manual rollback needed."
-                )
+                + crash_context_clause
             ),
             question=(
                 f"Feature '{name}' was ff-merged after repair but the review "
@@ -1693,6 +1794,15 @@ async def apply_feature_result(
             tier = read_tier(name)
             criticality = read_criticality(name)
             if _review_required(name):
+                # Bind ``rr`` before the try so the crash-``except`` below can
+                # tell a resolved could-not-run review (preserve the merge) from
+                # a raised dispatch crash (revert): an exception thrown anywhere
+                # in the in-band preserve path after a could-not-run verdict
+                # resolved must NOT fall into the ``except`` and revert-as-crash
+                # the very merge it was preserving (spec R3 exception-safety).
+                # When ``rr is None`` the dispatch itself crashed before
+                # resolving, so the except's revert correctly still fires.
+                rr = None
                 try:
                     rr = await dispatch_review(
                         feature=name,
@@ -1708,15 +1818,6 @@ async def apply_feature_result(
                         log_path=ctx.config.pipeline_events_path,
                     )
                     if rr.deferred:
-                        # Fail-safe rollback: revert the feature's LIVE merge
-                        # commit (SHA-anchored, under the held ctx.lock) before
-                        # worktree cleanup so unreviewed code does not ship on
-                        # the integration branch. Prefer the cycle-1 re-merge
-                        # SHA when present (it is the most recent merge of this
-                        # feature), else the primary merge SHA.
-                        live_merge_sha = (
-                            getattr(rr, "merge_sha", None) or merge_result.merge_sha
-                        )
                         revert_aborted = False
                         # Track whether the live merge was actually reverted off
                         # the integration branch so the morning report can
@@ -1725,15 +1826,34 @@ async def apply_feature_result(
                         # re-review"), whereas an aborted revert (the R-edge)
                         # leaves it merged ("do NOT re-run").
                         merge_reverted = False
-                        if live_merge_sha is not None:
-                            revert_outcome = revert_merge(
-                                live_merge_sha,
-                                repo_path=merge_target,
-                                log_path=ctx.config.pipeline_events_path,
-                                feature=name,
+                        if rr.could_not_run:
+                            # Could-not-run preserve (spec R3): the review agent
+                            # completed but produced no usable verdict — PRESERVE
+                            # the already-merged, hook-passing feature rather
+                            # than reverting it. The merge stays on the
+                            # integration branch and is flagged for human
+                            # re-review (rendered on the morning report + the
+                            # integration PR by later tasks).
+                            live_merge_sha = None
+                        else:
+                            # Fail-safe rollback: revert the feature's LIVE merge
+                            # commit (SHA-anchored, under the held ctx.lock)
+                            # before worktree cleanup so unreviewed code does not
+                            # ship on the integration branch. Prefer the cycle-1
+                            # re-merge SHA when present (it is the most recent
+                            # merge of this feature), else the primary merge SHA.
+                            live_merge_sha = (
+                                getattr(rr, "merge_sha", None) or merge_result.merge_sha
                             )
-                            revert_aborted = revert_outcome.aborted
-                            merge_reverted = revert_outcome.success
+                            if live_merge_sha is not None:
+                                revert_outcome = revert_merge(
+                                    live_merge_sha,
+                                    repo_path=merge_target,
+                                    log_path=ctx.config.pipeline_events_path,
+                                    feature=name,
+                                )
+                                revert_aborted = revert_outcome.aborted
+                                merge_reverted = revert_outcome.success
                         if revert_aborted:
                             # Dependent-conflict R-edge: the revert conflicted
                             # (a later feature merged code depending on this
@@ -1799,8 +1919,9 @@ async def apply_feature_result(
                             "merge_reverted": merge_reverted,
                         }
                         if rr.verdict == "ERROR":
-                            deferred_details["review_dispatch_crashed"] = True
-                            deferred_details["could_not_run"] = True
+                            _set_review_error_detail_flags(
+                                deferred_details, merge_reverted=merge_reverted
+                            )
                         overnight_log_event(
                             FEATURE_DEFERRED,
                             ctx.config.batch_id,
@@ -1830,27 +1951,45 @@ async def apply_feature_result(
                             pass
                         return
                 except Exception as exc:
-                    # Fail-safe rollback on a review-dispatch crash: revert the
-                    # feature's LIVE merge commit (SHA-anchored, under the held
-                    # ctx.lock) before surfacing the deferral, so a crashed
-                    # review never leaves unreviewed code on the integration
-                    # branch.
-                    live_merge_sha = merge_result.merge_sha
-                    if live_merge_sha is not None:
-                        revert_merge(
-                            live_merge_sha,
-                            repo_path=merge_target,
-                            log_path=ctx.config.pipeline_events_path,
-                            feature=name,
-                        )
+                    # Exception-safety guard (spec R3, load-bearing): if the
+                    # resolved review was could-not-run, the in-band preserve
+                    # path was supposed to keep the already-merged feature — an
+                    # exception thrown anywhere in that path (the flag-helper,
+                    # _record_review_crash_systemic, the backlog write-back,
+                    # overnight_log_event, cleanup_worktree) must NOT fall
+                    # through here and revert-as-crash the very merge it
+                    # preserved. Skip the revert + tag could_not_run in that
+                    # case. When ``rr is None`` the dispatch itself crashed
+                    # before resolving, so the revert correctly still fires
+                    # (a genuine crash).
+                    preserved = rr is not None and rr.could_not_run
+                    if not preserved:
+                        # Fail-safe rollback on a genuine review-dispatch crash:
+                        # revert the feature's LIVE merge commit (SHA-anchored,
+                        # under the held ctx.lock) before surfacing the deferral,
+                        # so a crashed review never leaves unreviewed code on the
+                        # integration branch.
+                        live_merge_sha = merge_result.merge_sha
+                        if live_merge_sha is not None:
+                            revert_merge(
+                                live_merge_sha,
+                                repo_path=merge_target,
+                                log_path=ctx.config.pipeline_events_path,
+                                feature=name,
+                            )
+                    crash_details: dict = {
+                        "error": f"dispatch_review raised {type(exc).__name__}: {exc}",
+                    }
+                    if preserved:
+                        crash_details["could_not_run"] = True
+                        crash_details["merge_reverted"] = False
+                    else:
+                        crash_details["review_dispatch_crashed"] = True
                     overnight_log_event(
                         FEATURE_DEFERRED,
                         ctx.config.batch_id,
                         feature=name,
-                        details={
-                            "error": f"dispatch_review raised {type(exc).__name__}: {exc}",
-                            "review_dispatch_crashed": True,
-                        },
+                        details=crash_details,
                         log_path=ctx.config.overnight_events_path,
                     )
                     # Single reconciled question-id source: question_id=0 lets
