@@ -1,0 +1,8 @@
+{"schema_version": 1, "ts": "2026-06-23T16:01:34Z", "event": "lifecycle_start", "feature": "overnight-review-gate-reverts-a-clean", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-23T16:07:10Z", "event": "clarify_critic", "feature": "overnight-review-gate-reverts-a-clean", "parent_epic_loaded": false, "findings_count": 6, "dispositions": {"apply": 2, "dismiss": 2, "ask": 2}, "applied_fixes_count": 2, "dismissals_count": 2, "status": "ok"}
+{"ts": "2026-06-23T17:23:10Z", "event": "complexity_override", "feature": "overnight-review-gate-reverts-a-clean", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-06-23T17:23:10Z", "event": "criticality_override", "feature": "overnight-review-gate-reverts-a-clean", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-06-23T17:23:49Z", "event": "phase_transition", "feature": "overnight-review-gate-reverts-a-clean", "from": "clarify", "to": "research"}
+{"ts": "2026-06-23T17:36:53Z", "event": "phase_transition", "feature": "overnight-review-gate-reverts-a-clean", "from": "research", "to": "specify"}
+{"ts": "2026-06-23T17:56:32Z", "event": "spec_approved", "feature": "overnight-review-gate-reverts-a-clean"}
+{"ts": "2026-06-23T17:56:32Z", "event": "phase_transition", "feature": "overnight-review-gate-reverts-a-clean", "from": "specify", "to": "plan"}
