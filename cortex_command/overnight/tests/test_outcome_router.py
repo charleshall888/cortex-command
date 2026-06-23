@@ -670,25 +670,34 @@ class TestSystemicThreshold(unittest.IsolatedAsyncioTestCase):
 
 
 class TestSystemicReviewCrashCircuitBreaker(unittest.IsolatedAsyncioTestCase):
-    """R11: systemic review-dispatch crashes trip the circuit breaker coherently.
+    """R7/R11: systemic review failures trip the circuit breaker coherently.
 
-    A review-dispatch crash (verdict ERROR / a raised dispatch exception) routes
-    a feature to ``features_deferred``, not ``features_paused`` — so it is
-    invisible to the paused-path systemic blocks. These tests pin that such
-    crashes feed the systemic counter AND that the emitted
-    ``PIPELINE_SYSTEMIC_FAILURE`` event carries a ``cause_class`` genuinely
-    attributable to the review-dispatch crashes, not one accidentally derived
+    A systemic review failure routes a feature to ``features_deferred``, not
+    ``features_paused`` — so it is invisible to the paused-path systemic blocks.
+    These tests pin that such failures feed the systemic counter AND that the
+    emitted ``PIPELINE_SYSTEMIC_FAILURE`` event carries a ``cause_class``
+    genuinely attributable to the review failures, not one accidentally derived
     from an unrelated paused feature.
+
+    Two systemic review-failure kinds feed the SAME aggregate counter under
+    DISTINCT cause-class labels (R7): a could-not-run review (the agent
+    completed, verdict ERROR, no usable verdict — ``dispatch_review`` RETURNS
+    the deferred ERROR result, the in-band path) is tagged ``REVIEW_NO_ARTIFACT``
+    and PRESERVES the merge; a genuine dispatch crash (``dispatch_review``
+    RAISES, the except path) is tagged ``REVIEW_DISPATCH_CRASH`` and reverts.
+    The threshold counts the aggregate, so a mixed batch trips at
+    ``SYSTEMIC_FAILURE_THRESHOLD`` carrying both labels.
     """
 
-    async def _drive_review_error_crash(self, ctx: OutcomeContext, name: str,
+    async def _drive_review_no_artifact(self, ctx: OutcomeContext, name: str,
                                         capture_event) -> None:
-        """Drive one ``apply_feature_result`` whose review returns verdict ERROR.
+        """Drive one ``apply_feature_result`` whose review is could-not-run.
 
-        merge succeeds, review is required, and ``dispatch_review`` returns a
-        deferred ERROR verdict — the could-not-run crash path. ``merge_sha`` is
-        None so the revert is skipped (keeps the test focused on the systemic
-        counter, not the revert machinery covered by Task 3)."""
+        merge succeeds, review is required, and ``dispatch_review`` RETURNS a
+        deferred ERROR verdict with ``could_not_run=True`` — the no-artifact
+        in-band path that PRESERVES the merge. ``merge_sha`` is None so no revert
+        is attempted (and the could-not-run guard skips it anyway), keeping the
+        test focused on the systemic counter and the cause-class label."""
         ctx.worktree_branches[name] = f"pipeline/{name}"
         ctx.feature_names = list(ctx.feature_names) + [name]
         merge_result = MagicMock(
@@ -697,6 +706,7 @@ class TestSystemicReviewCrashCircuitBreaker(unittest.IsolatedAsyncioTestCase):
         )
         review_result = MagicMock(
             deferred=True, verdict="ERROR", cycle=0, merge_sha=None,
+            could_not_run=True,
         )
         with (
             patch(
@@ -714,6 +724,63 @@ class TestSystemicReviewCrashCircuitBreaker(unittest.IsolatedAsyncioTestCase):
             patch(
                 "cortex_command.overnight.outcome_router.dispatch_review",
                 new=AsyncMock(return_value=review_result),
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.revert_merge",
+            ) as m_revert,
+            patch("cortex_command.overnight.outcome_router.read_tier", return_value="complex"),
+            patch(
+                "cortex_command.overnight.outcome_router.read_criticality",
+                return_value="high",
+            ),
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch(
+                "cortex_command.overnight.outcome_router.overnight_log_event",
+                side_effect=capture_event,
+            ),
+            patch("cortex_command.overnight.outcome_router.write_deferral"),
+            patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+        ):
+            await apply_feature_result(
+                name,
+                FeatureResult(name=name, status="completed"),
+                ctx,
+            )
+        # The could-not-run merge is PRESERVED: the feature is NOT in
+        # features_merged (it deferred for re-review) and was NOT reverted.
+        m_revert.assert_not_called()
+        self.assertNotIn(name, ctx.batch_result.features_merged)
+
+    async def _drive_review_dispatch_crash(self, ctx: OutcomeContext, name: str,
+                                           capture_event) -> None:
+        """Drive one ``apply_feature_result`` whose review dispatch RAISES.
+
+        merge succeeds, review is required, and ``dispatch_review`` raises an
+        exception — the genuine-crash except path tagged REVIEW_DISPATCH_CRASH.
+        ``merge_sha`` is None so the revert is skipped (keeps the test focused on
+        the systemic counter, not the revert machinery covered by Task 3)."""
+        ctx.worktree_branches[name] = f"pipeline/{name}"
+        ctx.feature_names = list(ctx.feature_names) + [name]
+        merge_result = MagicMock(
+            success=True, error=None, conflict=False, test_result=None,
+            merge_sha=None,
+        )
+        with (
+            patch(
+                "cortex_command.overnight.outcome_router._get_changed_files",
+                return_value=["src/a.py"],
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.merge_feature",
+                return_value=merge_result,
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.requires_review",
+                return_value=True,
+            ),
+            patch(
+                "cortex_command.overnight.outcome_router.dispatch_review",
+                new=AsyncMock(side_effect=RuntimeError("dispatch boom")),
             ),
             patch("cortex_command.overnight.outcome_router.read_tier", return_value="complex"),
             patch(
@@ -734,11 +801,12 @@ class TestSystemicReviewCrashCircuitBreaker(unittest.IsolatedAsyncioTestCase):
                 ctx,
             )
 
-    async def test_threshold_review_crashes_trip_breaker_with_review_cause(self):
-        """SYSTEMIC_FAILURE_THRESHOLD review-dispatch ERROR crashes set
+    async def test_threshold_no_artifact_trips_breaker_preserving_merges(self):
+        """SYSTEMIC_FAILURE_THRESHOLD could-not-run reviews in one batch set
         global_abort_signal=True AND emit PIPELINE_SYSTEMIC_FAILURE whose
-        cause_class is the review-crash cause (REVIEW_DISPATCH_CRASH)."""
-        from cortex_command.overnight.constants import REVIEW_DISPATCH_CRASH
+        cause_class is REVIEW_NO_ARTIFACT — while each merge stays preserved
+        (Task 7 verification (i))."""
+        from cortex_command.overnight.constants import REVIEW_NO_ARTIFACT
 
         ctx = _make_ctx(pauses=0)
         ctx.batch_result.global_abort_signal = False
@@ -752,16 +820,16 @@ class TestSystemicReviewCrashCircuitBreaker(unittest.IsolatedAsyncioTestCase):
             logged_details.append(kwargs.get("details", {}))
 
         for i in range(SYSTEMIC_FAILURE_THRESHOLD - 1):
-            await self._drive_review_error_crash(ctx, f"feat-crash-{i}", _capture)
+            await self._drive_review_no_artifact(ctx, f"feat-na-{i}", _capture)
             self.assertFalse(
                 ctx.batch_result.global_abort_signal,
                 "breaker tripped before threshold",
             )
             self.assertNotIn("pipeline_systemic_failure", logged_events)
 
-        # The threshold-th crash trips it.
-        await self._drive_review_error_crash(
-            ctx, f"feat-crash-{SYSTEMIC_FAILURE_THRESHOLD - 1}", _capture,
+        # The threshold-th no-artifact review trips it.
+        await self._drive_review_no_artifact(
+            ctx, f"feat-na-{SYSTEMIC_FAILURE_THRESHOLD - 1}", _capture,
         )
 
         self.assertEqual(
@@ -774,16 +842,66 @@ class TestSystemicReviewCrashCircuitBreaker(unittest.IsolatedAsyncioTestCase):
         details = logged_details[idx]
         cause_class = details["cause_class"]
         self.assertEqual(details["threshold"], SYSTEMIC_FAILURE_THRESHOLD)
-        # cause_class must be NON-EMPTY and equal to the review-crash cause —
-        # not an unrelated paused feature's error and not an empty flag-only flip.
         self.assertTrue(cause_class, "cause_class must be non-empty")
         self.assertEqual(
             cause_class,
-            [REVIEW_DISPATCH_CRASH] * SYSTEMIC_FAILURE_THRESHOLD,
+            [REVIEW_NO_ARTIFACT] * SYSTEMIC_FAILURE_THRESHOLD,
+        )
+        self.assertIn(REVIEW_NO_ARTIFACT, cause_class)
+        # Merges stay preserved even as the breaker trips: no feature was merged
+        # (each deferred for re-review), and none was reverted (asserted in the
+        # helper).
+        self.assertEqual(ctx.batch_result.features_merged, [])
+
+    async def test_mixed_crash_and_no_artifact_trips_with_both_labels(self):
+        """A mixed 2-crash + 1-no-artifact batch trips at threshold with BOTH
+        cause-class labels present, proving the aggregate counter spans the two
+        kinds while the labels distinguish them (Task 7 verification (ii))."""
+        from cortex_command.overnight.constants import (
+            REVIEW_DISPATCH_CRASH,
+            REVIEW_NO_ARTIFACT,
         )
 
-    async def test_below_threshold_review_crashes_do_not_trip(self):
-        """Fewer than SYSTEMIC_FAILURE_THRESHOLD review crashes do NOT set
+        ctx = _make_ctx(pauses=0)
+        ctx.batch_result.global_abort_signal = False
+        ctx.feature_names = []
+
+        logged_events: list[str] = []
+        logged_details: list[dict] = []
+
+        def _capture(event_type, *args, **kwargs):
+            logged_events.append(event_type)
+            logged_details.append(kwargs.get("details", {}))
+
+        # Two genuine crashes, then one no-artifact — aggregate hits 3.
+        await self._drive_review_dispatch_crash(ctx, "feat-crash-0", _capture)
+        self.assertFalse(ctx.batch_result.global_abort_signal)
+        await self._drive_review_dispatch_crash(ctx, "feat-crash-1", _capture)
+        self.assertFalse(ctx.batch_result.global_abort_signal)
+        self.assertNotIn("pipeline_systemic_failure", logged_events)
+
+        await self._drive_review_no_artifact(ctx, "feat-na-0", _capture)
+
+        self.assertEqual(
+            ctx.cb_state.systemic_pauses_in_batch, SYSTEMIC_FAILURE_THRESHOLD,
+        )
+        self.assertTrue(ctx.batch_result.global_abort_signal)
+        self.assertIn("pipeline_systemic_failure", logged_events)
+
+        idx = logged_events.index("pipeline_systemic_failure")
+        cause_class = logged_details[idx]["cause_class"]
+        self.assertEqual(len(cause_class), SYSTEMIC_FAILURE_THRESHOLD)
+        # Both labels present — the aggregate counter spans the two kinds.
+        self.assertIn(REVIEW_DISPATCH_CRASH, cause_class)
+        self.assertIn(REVIEW_NO_ARTIFACT, cause_class)
+        # Arrival order: two crashes appended first, no-artifact last.
+        self.assertEqual(
+            cause_class,
+            [REVIEW_DISPATCH_CRASH, REVIEW_DISPATCH_CRASH, REVIEW_NO_ARTIFACT],
+        )
+
+    async def test_below_threshold_review_failures_do_not_trip(self):
+        """Fewer than SYSTEMIC_FAILURE_THRESHOLD review failures do NOT set
         global_abort_signal and do NOT emit PIPELINE_SYSTEMIC_FAILURE."""
         ctx = _make_ctx(pauses=0)
         ctx.batch_result.global_abort_signal = False
@@ -795,7 +913,7 @@ class TestSystemicReviewCrashCircuitBreaker(unittest.IsolatedAsyncioTestCase):
             logged_events.append(event_type)
 
         for i in range(SYSTEMIC_FAILURE_THRESHOLD - 1):
-            await self._drive_review_error_crash(ctx, f"feat-crash-{i}", _capture)
+            await self._drive_review_no_artifact(ctx, f"feat-na-{i}", _capture)
 
         self.assertEqual(
             ctx.cb_state.systemic_pauses_in_batch, SYSTEMIC_FAILURE_THRESHOLD - 1,
@@ -829,7 +947,7 @@ class TestSystemicReviewCrashCircuitBreaker(unittest.IsolatedAsyncioTestCase):
             logged_details.append(kwargs.get("details", {}))
 
         for i in range(SYSTEMIC_FAILURE_THRESHOLD):
-            await self._drive_review_error_crash(ctx, f"feat-crash-{i}", _capture)
+            await self._drive_review_dispatch_crash(ctx, f"feat-crash-{i}", _capture)
 
         self.assertTrue(ctx.batch_result.global_abort_signal)
         idx = logged_events.index("pipeline_systemic_failure")

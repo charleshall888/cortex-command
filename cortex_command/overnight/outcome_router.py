@@ -28,6 +28,7 @@ from cortex_command.common import (
 from cortex_command.overnight.constants import (
     CIRCUIT_BREAKER_THRESHOLD,
     REVIEW_DISPATCH_CRASH,
+    REVIEW_NO_ARTIFACT,
     SYSTEMIC_FAILURE_THRESHOLD,
     _SYSTEMIC_ERROR_TYPES,
 )
@@ -934,42 +935,57 @@ def _apply_feature_result(
 # ---------------------------------------------------------------------------
 
 
-def _record_review_crash_systemic(name: str, ctx: OutcomeContext) -> None:
-    """Feed a review-dispatch crash deferral into the systemic circuit breaker.
+def _record_review_crash_systemic(
+    name: str,
+    ctx: OutcomeContext,
+    cause_class: str = REVIEW_DISPATCH_CRASH,
+) -> None:
+    """Feed a systemic review-failure deferral into the circuit breaker.
 
-    A single systemic review-dispatch failure mode can crash multiple features
-    byte-identically (the observed bug). Such a crash routes the feature to
+    A single systemic review failure mode can affect multiple features
+    byte-identically (the observed bug). Such a deferral routes the feature to
     ``features_deferred`` — invisible to the paused-path systemic blocks, which
-    read ``features_paused`` — so this records the crash where the threshold
-    derivation can see it:
+    read ``features_paused`` — so this records it where the threshold derivation
+    can see it:
 
       1. Increment ``cb_state.systemic_pauses_in_batch`` (the threshold counter).
-      2. Append ``REVIEW_DISPATCH_CRASH`` to ``cb_state.review_crash_classes``
-         (the structure the threshold block reads to compute a ``cause_class``
-         attributable to the review-dispatch crashes, not an unrelated paused
-         feature).
+      2. Append *cause_class* to ``cb_state.review_crash_classes`` (the structure
+         the threshold block reads to compute a ``cause_class`` attributable to
+         the review failures, not an unrelated paused feature).
+
+    *cause_class* distinguishes the two systemic review-failure kinds in the
+    emitted event WITHOUT splitting the counter: ``REVIEW_DISPATCH_CRASH`` for a
+    genuine dispatch crash (``success == False`` / a raised exception, from the
+    crash-``except`` blocks) and ``REVIEW_NO_ARTIFACT`` for a could-not-run
+    review (the agent completed but produced no usable verdict, from the in-band
+    ``verdict == "ERROR"`` sites). Both must be members of
+    ``_SYSTEMIC_ERROR_TYPES`` so the threshold derivation recognizes them. The
+    threshold is on the AGGREGATE count, so a mixed crash + no-artifact batch
+    trips at ``SYSTEMIC_FAILURE_THRESHOLD`` carrying both labels (R7).
 
     When the threshold is reached it emits ``PIPELINE_SYSTEMIC_FAILURE`` with a
     non-empty ``cause_class`` and sets ``global_abort_signal`` — coherently,
-    because the derived cause is the review-crash class, never a flag flipped
-    with an empty cause. Call this on every review-dispatch crash deferral path
-    (verdict ``ERROR`` or a raised dispatch exception); a review that ran and
-    said no (REJECTED / CHANGES_REQUESTED) is substantive feedback, not a
-    crash, and does NOT feed this breaker.
+    because the derived cause is the review-failure class, never a flag flipped
+    with an empty cause. Call this on every systemic review-failure deferral path
+    (verdict ``ERROR`` could-not-run, or a raised dispatch exception crash); a
+    review that ran and said no (REJECTED / CHANGES_REQUESTED) is substantive
+    feedback, not a failure, and does NOT feed this breaker.
     """
     ctx.cb_state.systemic_pauses_in_batch += 1
-    ctx.cb_state.review_crash_classes.append(REVIEW_DISPATCH_CRASH)
+    ctx.cb_state.review_crash_classes.append(cause_class)
     if (
         ctx.cb_state.systemic_pauses_in_batch >= SYSTEMIC_FAILURE_THRESHOLD
         and not ctx.batch_result.global_abort_signal
     ):
         # Derive the trailing cause_class from the combined arrival of systemic
-        # paused errors and review-crash classes, taking the trailing window.
-        # The review-crash classes are appended last so an all-crash batch
-        # yields a cause_class of REVIEW_DISPATCH_CRASH entries — the class
-        # genuinely attributable to the review-dispatch crashes (R11 coherence
+        # paused errors and review-failure classes, taking the trailing window.
+        # The review-failure classes are appended last so an all-review-failure
+        # batch yields a cause_class of the genuine review classes
+        # (REVIEW_DISPATCH_CRASH and/or REVIEW_NO_ARTIFACT) — the classes
+        # genuinely attributable to the review failures (R11 coherence
         # requirement), never one accidentally derived from an unrelated paused
-        # feature.
+        # feature. A mixed crash + no-artifact batch surfaces BOTH labels for
+        # diagnosis (R7); the threshold itself is on the aggregate count.
         paused_systemic = [
             entry["error"]
             for entry in ctx.batch_result.features_paused
@@ -1195,10 +1211,12 @@ async def _recovery_review_gate(
             details=deferred_details,
             log_path=ctx.config.overnight_events_path,
         )
-        # R11: a could-not-run review (verdict ERROR) on the recovery path is a
-        # review-dispatch crash — feed it into the systemic circuit breaker.
+        # R7/R11: a could-not-run review (verdict ERROR, agent completed) on the
+        # recovery path is a no-artifact systemic review failure — feed it into
+        # the systemic circuit breaker tagged REVIEW_NO_ARTIFACT (distinct from
+        # a genuine dispatch crash, tagged in the except block below).
         if rr.verdict == "ERROR":
-            _record_review_crash_systemic(name, ctx)
+            _record_review_crash_systemic(name, ctx, REVIEW_NO_ARTIFACT)
         _write_back_to_backlog(
             name, "deferred", ctx.config.batch_id,
             ctx.config.overnight_events_path,
@@ -1264,9 +1282,10 @@ async def _recovery_review_gate(
             "name": name,
             "question_count": 1,
         })
-        # R11: a raised dispatch exception on the recovery path is a
-        # review-dispatch crash — feed it into the systemic circuit breaker.
-        _record_review_crash_systemic(name, ctx)
+        # R7/R11: a raised dispatch exception on the recovery path is a genuine
+        # review-dispatch crash — feed it into the systemic circuit breaker
+        # tagged REVIEW_DISPATCH_CRASH (the helper's default).
+        _record_review_crash_systemic(name, ctx, REVIEW_DISPATCH_CRASH)
         _write_back_to_backlog(
             name, "deferred", ctx.config.batch_id,
             ctx.config.overnight_events_path,
@@ -1547,10 +1566,12 @@ async def _repair_review_or_revert(
             details=deferred_details,
             log_path=ctx.config.overnight_events_path,
         )
-        # R11: a could-not-run review (verdict ERROR) on the repair_completed
-        # path is a review-dispatch crash — feed it into the systemic breaker.
+        # R7/R11: a could-not-run review (verdict ERROR, agent completed) on the
+        # repair_completed path is a no-artifact systemic review failure — feed
+        # it into the systemic breaker tagged REVIEW_NO_ARTIFACT (distinct from
+        # a genuine dispatch crash, tagged in the except block below).
         if rr.verdict == "ERROR":
-            _record_review_crash_systemic(name, ctx)
+            _record_review_crash_systemic(name, ctx, REVIEW_NO_ARTIFACT)
         if rr.could_not_run:
             context_clause = (
                 "review could not run (agent completed, no usable verdict) — "
@@ -1651,9 +1672,10 @@ async def _repair_review_or_revert(
             "name": name,
             "question_count": 1,
         })
-        # R11: a raised dispatch exception on the repair_completed path is a
-        # review-dispatch crash — feed it into the systemic circuit breaker.
-        _record_review_crash_systemic(name, ctx)
+        # R7/R11: a raised dispatch exception on the repair_completed path is a
+        # genuine review-dispatch crash — feed it into the systemic circuit
+        # breaker tagged REVIEW_DISPATCH_CRASH (the helper's default).
+        _record_review_crash_systemic(name, ctx, REVIEW_DISPATCH_CRASH)
         _write_back_to_backlog(
             name, "deferred", ctx.config.batch_id,
             ctx.config.overnight_events_path,
@@ -1931,14 +1953,17 @@ async def apply_feature_result(
                             details=deferred_details,
                             log_path=ctx.config.overnight_events_path,
                         )
-                        # R11: a could-not-run review (verdict ERROR) is a
-                        # review-dispatch crash — feed it into the systemic
-                        # circuit breaker so SYSTEMIC_FAILURE_THRESHOLD identical
-                        # crashes in a batch trip it coherently. A review that
-                        # ran and said no (REJECTED / CHANGES_REQUESTED) is
-                        # substantive feedback, not a crash, and is excluded.
+                        # R7/R11: a could-not-run review (verdict ERROR, agent
+                        # completed) is a no-artifact systemic review failure —
+                        # feed it into the systemic circuit breaker tagged
+                        # REVIEW_NO_ARTIFACT so SYSTEMIC_FAILURE_THRESHOLD
+                        # no-artifact reviews in a batch trip it coherently
+                        # (distinct from a genuine dispatch crash, tagged in the
+                        # except block below). A review that ran and said no
+                        # (REJECTED / CHANGES_REQUESTED) is substantive feedback,
+                        # not a failure, and is excluded.
                         if rr.verdict == "ERROR":
-                            _record_review_crash_systemic(name, ctx)
+                            _record_review_crash_systemic(name, ctx, REVIEW_NO_ARTIFACT)
                         # Use the valid OvernightState status `deferred` (R8) —
                         # `in_progress` is not a valid status and reads as
                         # ordinary active work.
@@ -2023,9 +2048,10 @@ async def apply_feature_result(
                         "name": name,
                         "question_count": 1,
                     })
-                    # R11: a raised dispatch exception is a review-dispatch
-                    # crash — feed it into the systemic circuit breaker.
-                    _record_review_crash_systemic(name, ctx)
+                    # R7/R11: a raised dispatch exception is a genuine
+                    # review-dispatch crash — feed it into the systemic circuit
+                    # breaker tagged REVIEW_DISPATCH_CRASH (the helper's default).
+                    _record_review_crash_systemic(name, ctx, REVIEW_DISPATCH_CRASH)
                     # Mirror the review-deferred path (R8): a crashed review
                     # defers the feature (FEATURE_DEFERRED emitted, blocking
                     # deferral written, feature in features_deferred), so the
