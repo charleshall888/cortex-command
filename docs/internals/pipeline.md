@@ -176,7 +176,10 @@ This relocates a prior code-enforced safety boundary (the "nothing unreviewed su
 the could-not-run case unreviewed code may remain on the integration branch (not `main`), and safety
 now rests on the morning-report annotation, the integration-PR marker, and the systemic breaker. See
 the contract in [requirements/pipeline.md](../../cortex/requirements/pipeline.md) (Post-Merge
-Review) and the rationale in the review-could-not-run-vs-dispatch-crash-split ADR under `cortex/adr/`.
+Review) and the rationale in
+[ADR 0015](../../cortex/adr/0015-review-could-not-run-vs-dispatch-crash-split.md) (Review gate:
+could-not-run vs dispatch-crash split), which supersedes the relevant clause of the prior
+revert-all-unreviewed posture from the `overnight-review-gate-crashes-to-cycle` work.
 
 ---
 
