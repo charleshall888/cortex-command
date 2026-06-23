@@ -10,3 +10,6 @@
 {"ts": "2026-06-23T17:55:59Z", "event": "feature_paused", "feature": "overnight-dispatch-sends-opus-only-xhigh", "phase": "plan", "rationale": "operator approved spec; paused before Plan per request"}
 {"ts": "2026-06-23T18:34:59Z", "event": "plan_approved", "feature": "overnight-dispatch-sends-opus-only-xhigh", "dispatch_choice": "trunk"}
 {"schema_version": 1, "ts": "2026-06-23T18:34:59Z", "event": "phase_transition", "feature": "overnight-dispatch-sends-opus-only-xhigh", "from": "plan", "to": "implement"}
+{"schema_version": 1, "ts": "2026-06-23T19:12:22Z", "event": "phase_transition", "feature": "overnight-dispatch-sends-opus-only-xhigh", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-06-23T19:17:48Z", "event": "review_verdict", "feature": "overnight-dispatch-sends-opus-only-xhigh", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-06-23T19:17:48Z", "event": "phase_transition", "feature": "overnight-dispatch-sends-opus-only-xhigh", "from": "review", "to": "complete"}

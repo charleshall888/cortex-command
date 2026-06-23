@@ -2,7 +2,7 @@
 feature: overnight-dispatch-sends-opus-only-xhigh
 parent_backlog_uuid: 9317e015-9ae6-4d15-845a-4f4bfcf69696
 parent_backlog_id: 313
-artifacts: [research, spec, plan]
+artifacts: [research, spec, plan, review]
 tags: []
 created: 2026-06-23
 updated: 2026-06-23
