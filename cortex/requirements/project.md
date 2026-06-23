@@ -61,7 +61,7 @@ Agentic workflow toolkit for AI-assisted software development on Claude Code: sk
 
 ### In Scope
 
-- AI workflow orchestration (skills, lifecycle, pipeline). Discovery and backlog are documented inline (no area docs): `skills/discovery/SKILL.md`, `cortex/backlog/index.md`. Ticket body authoring is enforced via `skills/backlog-author/` (the shared sub-skill) and validated at pre-commit by `bin/cortex-check-prescriptive-prose` (LEX-1 scanner, covering `## Why`, `## Role`, `## Integration`, `## Edges`).
+- AI workflow orchestration (skills, lifecycle, pipeline). Discovery is documented inline (no area doc): `skills/discovery/SKILL.md`. Backlog has its own area doc (`cortex/requirements/backlog.md`); `cortex/backlog/index.md` is the local-backend (`cortex-backlog`) store. Ticket body authoring is enforced via `skills/backlog-author/` (the shared sub-skill) and validated at pre-commit by `bin/cortex-check-prescriptive-prose` (LEX-1 scanner, covering `## Why`, `## Role`, `## Integration`, `## Edges`).
 - Overnight execution: framework, sessions, scheduled launch, morning report
 - Dashboard (~1800 LOC FastAPI), conflict resolution pipeline (~2500 LOC), remote access (Tailscale/mosh/tmux/Cloudflare Tunnel)
 - Observability (statusline, notifications, metrics, cost); global agent config
@@ -84,6 +84,7 @@ Agentic workflow toolkit for AI-assisted software development on Claude Code: sk
 - pipeline/overnight runner/conflict resolution/deferral → cortex/requirements/pipeline.md
 - remote access/tmux/mosh/Tailscale → cortex/requirements/remote-access.md
 - agent spawning/parallel dispatch/worktrees/model selection → cortex/requirements/multi-agent.md
+- backlog/ticketing/issue tracker/backlog backend → cortex/requirements/backlog.md
 
 ## Global Context
 
