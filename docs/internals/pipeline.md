@@ -28,7 +28,7 @@ The `cortex_command/pipeline/` module contains the execution machinery used by t
 | `metrics.py` | Cost and timing metrics collection. Reads `feature_complete` events; tolerates absent `merge_anchor` field (defaults to `"review"`) for pre-restructure legacy events — post-restructure events always emit `merge_anchor: "merge"` (see `metrics.py:226`). |
 | `conflict.py` | Merge conflict classification and repair agent dispatch; inspects unmerged files, aborts in-progress merges, provides `dispatch_repair_agent()` |
 | `merge_recovery.py` | Post-merge test-failure recovery loop; orchestrates flaky guard followed by up to two code-repair attempts with model escalation (sonnet → opus) |
-| `review_dispatch.py` | Post-merge review dispatcher; loads `prompts/review.md` via `_load_review_prompt()`, runs a review agent against the merged state, parses `APPROVED` / `CHANGES_REQUESTED` / `REJECTED` verdicts, and writes the rework deferral on cycle-2 non-`APPROVED` |
+| `review_dispatch.py` | Post-merge review dispatcher; loads `prompts/review.md` via `_load_review_prompt()`, runs a review agent against the merged state, parses `APPROVED` / `CHANGES_REQUESTED` / `REJECTED` verdicts, and writes the rework deferral on cycle-2 non-`APPROVED`. Threads the review `DispatchResult.success` into the verdict decision and sets the orthogonal `ReviewResult.could_not_run` flag so the no-artifact case is distinguishable from a dispatch crash (see [Review gate: could-not-run vs dispatch crash](#review-gate-could-not-run-vs-dispatch-crash)) |
 | `worktree_resolve_cli.py` | The `cortex-worktree-resolve` console script — single chokepoint that resolves a feature name to its worktree path (`<repo>/.claude/worktrees/<name>/`) for the worktree-create hook and recovery commands |
 
 ---
@@ -143,6 +143,40 @@ the source worktree at `<repo>/.claude/worktrees/{feature}/` is cleaned up autom
 Anthropic-aligned repo-relative default, lives under the project's trust scope).
 
 For overnight sessions, merges target an integration branch `overnight/{session_id}`.
+
+### Review gate: could-not-run vs dispatch crash
+
+The post-merge review gate (`review_dispatch.py` → `outcome_router.py`) splits the single
+verdict-`ERROR` outcome into two kinds, distinguished by whether the review *agent itself* ran:
+
+- **Genuine dispatch crash** — the review `DispatchResult.success == False` (or the dispatch
+  raised). The merge is **reverted** SHA-anchored under `ctx.lock` so no unreviewed code remains,
+  the deferral details carry `review_dispatch_crashed=True`, and the systemic circuit breaker is
+  fed under the `review_dispatch_crash` cause class. A failed dispatch never trusts a stale prior-cycle
+  `review.md` on disk — `.success` is threaded into the verdict decision so a stale `APPROVED` cannot
+  wrongly approve a feature whose fresh review crashed.
+- **Could-not-run review** — the agent completed (`success == True`) but produced no parseable
+  verdict (file missing, no JSON block, unparseable, or a non-canonical `verdict` value), resolving
+  to the synthetic `ERROR` sentinel. The merge is **preserved** on the integration branch
+  (`merge_reverted=False`), tagged with the positive `could_not_run=True` discriminator (never
+  inferred from `merge_reverted=False`, which a crash with a failed revert also produces), surfaced
+  on the morning report and on the integration PR as an unreviewed-merge-preserved deferral for human
+  re-review, and fed to the systemic breaker under the distinct `review_no_artifact` cause class.
+
+The revert-skip is a per-site guard at each of the three review gate sites (primary, recovery-path
+re-merge, repair_completed ff-merge), which use path-divergent revert mechanics (`revert_merge`
+vs `_reset_ff_merge`); a shared helper (`_set_review_error_detail_flags`) only unifies the
+detail-flag setting. The systemic breaker counts crash + no-artifact failures in **aggregate**
+against `SYSTEMIC_FAILURE_THRESHOLD` (a mixed batch still trips), with both cause-class labels
+surfaced in the emitted `pipeline_systemic_failure` event for diagnosis only. The deferral-detail
+keys (`could_not_run`, `merge_reverted`, `review_dispatch_crashed`) and the `review_no_artifact`
+cause-class value are declared in `bin/.events-registry.md`.
+
+This relocates a prior code-enforced safety boundary (the "nothing unreviewed survives" revert): in
+the could-not-run case unreviewed code may remain on the integration branch (not `main`), and safety
+now rests on the morning-report annotation, the integration-PR marker, and the systemic breaker. See
+the contract in [requirements/pipeline.md](../../cortex/requirements/pipeline.md) (Post-Merge
+Review) and the rationale in the review-could-not-run-vs-dispatch-crash-split ADR under `cortex/adr/`.
 
 ---
 
