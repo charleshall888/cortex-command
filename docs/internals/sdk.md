@@ -104,10 +104,12 @@ The `model` argument to `resolve_effort` is the *effective* model — `model_ove
 | Model | Supported effort levels |
 |---|---|
 | haiku | low, medium, high (xhigh/max unverified — assume not supported) |
-| sonnet | low, medium, high, max (xhigh NOT supported — silently downgrades) |
+| sonnet | low, medium, high, max (xhigh NOT supported) |
 | opus 4.7 | low, medium, high, xhigh, max |
 
-The matrix and overrides are designed so no cell + override combination requests `xhigh` on a non-Opus model. A runtime guard in `resolve_effort` asserts this invariant and raises `AssertionError` at dispatch time if violated, surfacing as a feature-level pause via the existing dispatch error path.
+The matrix and overrides are designed so no cell + override combination requests `xhigh` on a non-Opus model. A runtime guard in `resolve_effort` enforces this model-capability invariant and raises `ValueError` at dispatch time if violated, surfacing as a feature-level pause via the existing dispatch error path.
+
+**What actually rejects an unsupported `--effort` is the dispatched CLI binary, not the model (#313).** The SDK renders `effort` as a raw `--effort` flag, and the *binary* validates it: old `claude` (≤2.1.69, e.g. the version `claude-agent-sdk` bundled) **hard-rejects** an unsupported value (`error: option '--effort <level>' argument '…' is invalid`, exit ≠ 0); modern `claude` (≥2.1.186) **warn-ignores** it (`Warning: Unknown --effort value '…' — ignoring it`, exit 0, runs at the default effort). Neither "silently downgrades." Because the SDK's `_find_cli` prefers its bundled binary, cortex resolves the **best-available** CLI (`cortex_command/cli_resolver.py`, → ADR-0014) and pins it via `ClaudeAgentOptions(cli_path=…)`; an `--effort` hard-reject then clamps once to `max` (universally accepted) and a warn-ignore is surfaced as a `dispatch_effort_ignored` note — degradation is always loud, never silent.
 
 For the post-flip rollback monitoring procedure (querying `metrics.json` per-effort cost buckets, the >2× threshold for human investigation, and the matrix-flip revert path), see [overnight-operations.md](../overnight-operations.md).
 

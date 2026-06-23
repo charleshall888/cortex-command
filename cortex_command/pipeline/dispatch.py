@@ -603,11 +603,17 @@ async def dispatch_task(
             resolving from the complexity/criticality cell via ``_EFFORT_MATRIX``
             and skill-based overrides.  Accepts any value accepted by
             ClaudeAgentOptions ("low", "medium", "high", "xhigh", "max"); note
-            that ``xhigh`` is Opus 4.7-only and is silently downgraded by
-            non-Opus models.  Effort is a behavioral signal capping the
-            maximum reasoning depth — the model adapts thinking down for
-            simpler tasks, so higher effort levels do not impose a fixed
-            token cost.
+            that ``xhigh`` is supported only by Opus 4.7+/Fable. An unsupported
+            ``--effort`` is rejected by the *dispatched CLI binary*, not the
+            model (#313): old ``claude`` (<=2.1.69) hard-rejects it (exit != 0),
+            while modern ``claude`` (>=2.1.186) warn-ignores it (exit 0, runs at
+            the default effort) — neither silently downgrades in the sense of
+            quietly choosing a lower level. cortex resolves the best-available
+            CLI (cli_resolver) and clamps/surfaces an unsupported effort rather
+            than depending on the model to absorb it. Effort is a behavioral
+            signal capping the maximum reasoning depth — the model adapts
+            thinking down for simpler tasks, so higher effort levels do not
+            impose a fixed token cost.
         skill: Closed-vocabulary identifier for the dispatch-call site (one of
             the values in the ``Skill`` Literal). Required keyword-only
             argument; emitted on ``dispatch_start`` so downstream aggregators
