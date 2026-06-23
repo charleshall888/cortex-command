@@ -30,7 +30,7 @@ Introduce one leaf module that resolves the best-available `claude` CLI (newer o
   - Test seam: `_reset_cli_cache() -> None` clears the memo; tests call it in setup/teardown.
   - Cite ADR-0014 (Task 8) in the module docstring so `cortex-adr-citation-audit` sees a reference.
 - **Verification**: `.venv/bin/pytest cortex_command/pipeline/tests/test_cli_resolver.py -q` — pass if exit 0 (pytest errors non-zero if the file is absent, so this also enforces the test file was created; `just test` runs the whole suite and ignores a path argument, so it is NOT a per-file gate). Tests must cover, via monkeypatching `_find_system_cli_path`/`_find_bundled_cli_path`/`_parse_cli_version` (no real `claude` required): (a) fake system newer than bundled → system path; (b) system absent → bundled path; (c) `CORTEX_CLAUDE_CLI_PATH` set → that path verbatim; (d) neither found → `None`; (e) memoization (second call returns the cached value without recomputing); (f) **system present but version unparseable → system path returned (not bundled), result not memoized** (the #313-regression guard from the Selection rule).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Pin `cli_path` at the SDK sites + extend the test stub (R2)
 - **Files**: `cortex_command/pipeline/dispatch.py`, `cortex_command/discovery.py`, `cortex_command/tests/_stubs.py`
