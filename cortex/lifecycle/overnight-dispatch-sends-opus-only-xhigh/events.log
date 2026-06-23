@@ -7,3 +7,6 @@
 {"ts":"2026-06-23T17:47:13Z","event":"synthesizer_drift","feature":"overnight-dispatch-sends-opus-only-xhigh","expected_sha":"34aad1efe4a3ca41618b36605bf65a3a171b5f66c8a17e60befaf0ba2e50202c","observed_sha_or_null":null}
 {"ts": "2026-06-23T17:55:10Z", "event": "spec_approved", "feature": "overnight-dispatch-sends-opus-only-xhigh"}
 {"schema_version": 1, "ts": "2026-06-23T17:55:10Z", "event": "phase_transition", "feature": "overnight-dispatch-sends-opus-only-xhigh", "from": "specify", "to": "plan"}
+{"ts": "2026-06-23T17:55:59Z", "event": "feature_paused", "feature": "overnight-dispatch-sends-opus-only-xhigh", "phase": "plan", "rationale": "operator approved spec; paused before Plan per request"}
+{"ts": "2026-06-23T18:34:59Z", "event": "plan_approved", "feature": "overnight-dispatch-sends-opus-only-xhigh", "dispatch_choice": "trunk"}
+{"schema_version": 1, "ts": "2026-06-23T18:34:59Z", "event": "phase_transition", "feature": "overnight-dispatch-sends-opus-only-xhigh", "from": "plan", "to": "implement"}
