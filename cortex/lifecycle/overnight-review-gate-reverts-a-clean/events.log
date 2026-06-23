@@ -6,3 +6,6 @@
 {"ts": "2026-06-23T17:36:53Z", "event": "phase_transition", "feature": "overnight-review-gate-reverts-a-clean", "from": "research", "to": "specify"}
 {"ts": "2026-06-23T17:56:32Z", "event": "spec_approved", "feature": "overnight-review-gate-reverts-a-clean"}
 {"ts": "2026-06-23T17:56:32Z", "event": "phase_transition", "feature": "overnight-review-gate-reverts-a-clean", "from": "specify", "to": "plan"}
+{"ts": "2026-06-23T17:59:26Z", "event": "feature_paused", "feature": "overnight-review-gate-reverts-a-clean"}
+{"ts": "2026-06-23T18:47:34Z", "event": "plan_approved", "feature": "overnight-review-gate-reverts-a-clean", "dispatch_choice": "wait"}
+{"ts": "2026-06-23T18:47:34Z", "event": "feature_paused", "feature": "overnight-review-gate-reverts-a-clean"}

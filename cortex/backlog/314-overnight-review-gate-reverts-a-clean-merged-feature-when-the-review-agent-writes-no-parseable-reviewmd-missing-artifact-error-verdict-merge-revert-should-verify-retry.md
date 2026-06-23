@@ -7,7 +7,7 @@ priority: high
 type: bug
 created: 2026-06-23
 updated: 2026-06-23
-lifecycle_phase: research
+lifecycle_phase: plan
 lifecycle_slug: overnight-review-gate-reverts-a-clean
 complexity: complex
 criticality: high
