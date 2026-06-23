@@ -1013,10 +1013,13 @@ def _set_review_error_detail_flags(details: dict, *, merge_reverted: bool) -> No
     morning report and integration PR key on; it is never inferred from
     ``merge_reverted == False`` (a genuine crash with a failed revert, or a
     repair-path ``_reset_ff_merge`` returning False, also yields
-    ``merge_reverted == False``). The ``review_dispatch_crashed`` co-flag is
-    retained here unchanged from the pre-split behavior — Phase-2 (spec R6)
-    owns splitting it off the could-not-run path; this Phase-1 task only adds
-    the merge-preservation guard and threads ``merge_reverted`` coherently.
+    ``merge_reverted == False``). This helper is invoked ONLY from the three
+    in-band ``if rr.verdict == "ERROR":`` sites — i.e. the could-not-run path
+    where the review agent completed (``success == True``) but produced no
+    usable verdict. It therefore sets ``could_not_run`` and does NOT set
+    ``review_dispatch_crashed`` (spec R6): ``review_dispatch_crashed`` denotes
+    only a genuine dispatch crash (``success == False`` / a raised exception),
+    which the crash-``except`` blocks tag inline, never via this helper.
 
     Sets ``merge_reverted`` to the authoritative value passed by the caller so
     a preserved (not-reverted) could-not-run merge records ``merge_reverted ==
@@ -1026,7 +1029,6 @@ def _set_review_error_detail_flags(details: dict, *, merge_reverted: bool) -> No
     reverts.
     """
     details["merge_reverted"] = merge_reverted
-    details["review_dispatch_crashed"] = True
     details["could_not_run"] = True
 
 

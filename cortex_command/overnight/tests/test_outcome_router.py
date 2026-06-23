@@ -1702,12 +1702,15 @@ class TestReviewDeferredSurfacingCorrections(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("in_progress", statuses)
 
     async def test_error_verdict_event_carries_could_not_run_marker(self):
-        """R9: a could-not-run review (verdict STRING 'ERROR') tags the
-        FEATURE_DEFERRED event with the distinguishing marker."""
+        """R6/R9: a could-not-run review (verdict STRING 'ERROR', agent
+        completed) tags the FEATURE_DEFERRED event with ``could_not_run`` but
+        NOT ``review_dispatch_crashed`` — the latter denotes only a genuine
+        dispatch crash (success=False / raised exception), so it must not be
+        co-set on the could-not-run path."""
         _, m_log_event = await self._run_deferred_path("ERROR")
         deferred_details = self._deferred_event_details(m_log_event)
-        self.assertTrue(deferred_details.get("review_dispatch_crashed"))
         self.assertTrue(deferred_details.get("could_not_run"))
+        self.assertNotIn("review_dispatch_crashed", deferred_details)
 
     async def test_rejected_verdict_event_has_no_could_not_run_marker(self):
         """R9: a review that RAN and said no (REJECTED) does NOT carry the
