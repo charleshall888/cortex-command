@@ -478,3 +478,251 @@ class TestCouldNotRunWritesDeferral(unittest.IsolatedAsyncioTestCase):
                 f"expected exactly one deferral file after a resumed defer; "
                 f"found {written}",
             )
+
+
+class TestCouldNotRunFlag(unittest.IsolatedAsyncioTestCase):
+    """Task 2: the orthogonal ReviewResult.could_not_run flag is True only
+    when the review agent completed (DispatchResult.success == True) but
+    produced no usable verdict — at BOTH cycle 1 and cycle 2, including the
+    cycle-2 file-present non-canonical-verdict edge (the L578 verbatim-
+    passthrough bug closed by Task 2a). A genuine dispatch crash
+    (success == False) resolves to ERROR but leaves the flag False; a
+    substantive non-APPROVED verdict (REJECTED / CHANGES_REQUESTED) is also
+    False."""
+
+    @staticmethod
+    def _write_verdict(review_md_path: Path, verdict: str, cycle: int) -> None:
+        review_md_path.write_text(
+            "# Review\n\n```json\n"
+            + json.dumps({"verdict": verdict, "cycle": cycle, "issues": []})
+            + "\n```\n",
+            encoding="utf-8",
+        )
+
+    async def _run_cycle1(
+        self,
+        feature: str,
+        *,
+        dispatch_success: bool,
+        cycle1_verdict: str | None,
+    ):
+        """Drive a single (cycle-1) review whose verdict is controlled by the
+        on-disk review.md content (or absence) and whose dispatch success is
+        controlled by ``dispatch_success``. Returns the ReviewResult."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            lifecycle_base = tmp_path / "cortex" / "lifecycle"
+            feature_dir = lifecycle_base / feature
+            feature_dir.mkdir(parents=True)
+
+            spec_path = feature_dir / "spec.md"
+            spec_path.write_text("# Spec\n\nSpec content.\n", encoding="utf-8")
+
+            review_md_path = feature_dir / "review.md"
+            if cycle1_verdict is not None:
+                self._write_verdict(review_md_path, cycle1_verdict, 1)
+            # else: leave review.md absent → ERROR sentinel (no-artifact).
+
+            deferred_dir = tmp_path / "deferred"
+
+            async def fake_dispatch(**kwargs) -> DispatchResult:
+                if dispatch_success:
+                    return DispatchResult(success=True, output="ok", cost_usd=0.01)
+                return DispatchResult(
+                    success=False,
+                    output="",
+                    error_type="infrastructure_failure",
+                    error_detail="dispatch crashed",
+                )
+
+            with patch.object(
+                _review_dispatch_module, "dispatch_task",
+                new=AsyncMock(side_effect=fake_dispatch),
+            ):
+                return await dispatch_review(
+                    feature=feature,
+                    worktree_path=tmp_path / "worktree",
+                    branch=f"pipeline/{feature}",
+                    spec_path=spec_path,
+                    complexity="complex",
+                    criticality="high",
+                    lifecycle_base=lifecycle_base,
+                    deferred_dir=deferred_dir,
+                    base_branch="main",
+                )
+
+    async def _run_cycle2(self, feature: str, *, cycle2_verdict: str | None):
+        """Drive the CHANGES_REQUESTED (cycle 1) -> fix -> re-review path so a
+        cycle-2 verdict is produced. The cycle-2 verdict is controlled by
+        rewriting (or deleting) review.md when the cycle-2 dispatch fires.
+        Returns the ReviewResult."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            lifecycle_base = tmp_path / "cortex" / "lifecycle"
+            feature_dir = lifecycle_base / feature
+            feature_dir.mkdir(parents=True)
+
+            spec_path = feature_dir / "spec.md"
+            spec_path.write_text("# Spec\n\nSpec content.\n", encoding="utf-8")
+
+            review_md_path = feature_dir / "review.md"
+            # Cycle 1 returns CHANGES_REQUESTED to enter the rework path.
+            self._write_verdict(review_md_path, "CHANGES_REQUESTED", 1)
+
+            deferred_dir = tmp_path / "deferred"
+
+            async def fake_dispatch(**kwargs) -> DispatchResult:
+                if kwargs.get("skill") == "review-fix" and kwargs.get("cycle") == 2:
+                    if cycle2_verdict is None:
+                        # No-artifact at cycle 2: remove review.md so the
+                        # second parse_verdict() returns the ERROR sentinel.
+                        review_md_path.unlink(missing_ok=True)
+                    else:
+                        self._write_verdict(review_md_path, cycle2_verdict, 2)
+                return DispatchResult(success=True, output="ok", cost_usd=0.01)
+
+            sha_counter = {"n": 0}
+
+            def fake_run(*args, **kwargs):
+                sha_counter["n"] += 1
+
+                class _Result:
+                    stdout = f"sha{sha_counter['n']}\n"
+                    stderr = ""
+                    returncode = 0
+
+                return _Result()
+
+            def fake_merge(*args, **kwargs) -> MergeResult:
+                return MergeResult(success=True, feature=feature, conflict=False)
+
+            with (
+                patch.object(
+                    _review_dispatch_module, "dispatch_task",
+                    new=AsyncMock(side_effect=fake_dispatch),
+                ),
+                patch.object(
+                    _review_dispatch_module.subprocess, "run", side_effect=fake_run,
+                ),
+                patch.object(
+                    _review_dispatch_module, "merge_feature", side_effect=fake_merge,
+                ),
+            ):
+                return await dispatch_review(
+                    feature=feature,
+                    worktree_path=tmp_path / "worktree",
+                    branch=f"pipeline/{feature}",
+                    spec_path=spec_path,
+                    complexity="complex",
+                    criticality="high",
+                    lifecycle_base=lifecycle_base,
+                    deferred_dir=deferred_dir,
+                    base_branch="main",
+                )
+
+    async def test_cycle1_no_artifact_sets_could_not_run_true(self):
+        """Cycle 1, success=True, review.md absent → ERROR sentinel →
+        could_not_run=True."""
+        result = await self._run_cycle1(
+            "feat-c1-noartifact", dispatch_success=True, cycle1_verdict=None,
+        )
+        self.assertEqual(result.verdict, "ERROR")
+        self.assertTrue(result.could_not_run)
+
+    async def test_cycle2_no_artifact_sets_could_not_run_true(self):
+        """Cycle 2, success=True, review.md absent after re-review → ERROR
+        sentinel → could_not_run=True."""
+        result = await self._run_cycle2("feat-c2-noartifact", cycle2_verdict=None)
+        self.assertEqual(result.verdict, "ERROR")
+        self.assertTrue(result.could_not_run)
+
+    async def test_cycle2_file_present_noncanonical_verdict_normalizes_to_error(self):
+        """Cycle 2, success=True, review.md present with a NON-canonical verdict
+        ('BLOCKED') → Task 2a normalizes it to the ERROR sentinel (no longer
+        returned verbatim) → could_not_run=True. This is the cell that exposed
+        the pre-Task-2a L578 verbatim-passthrough bug."""
+        result = await self._run_cycle2("feat-c2-blocked", cycle2_verdict="BLOCKED")
+        self.assertEqual(
+            result.verdict, "ERROR",
+            "a non-canonical cycle-2 verdict must normalize to ERROR, not be "
+            "returned verbatim",
+        )
+        self.assertTrue(result.could_not_run)
+
+    async def test_approved_sets_could_not_run_false(self):
+        """A clean APPROVED verdict leaves could_not_run=False."""
+        result = await self._run_cycle1(
+            "feat-approved", dispatch_success=True, cycle1_verdict="APPROVED",
+        )
+        self.assertEqual(result.verdict, "APPROVED")
+        self.assertFalse(result.could_not_run)
+
+    async def test_rejected_sets_could_not_run_false(self):
+        """A substantive REJECTED verdict (review ran and said no) leaves
+        could_not_run=False — it is NOT a could-not-run case."""
+        result = await self._run_cycle1(
+            "feat-rejected-flag", dispatch_success=True, cycle1_verdict="REJECTED",
+        )
+        self.assertEqual(result.verdict, "REJECTED")
+        self.assertFalse(result.could_not_run)
+
+    async def test_changes_requested_cycle2_sets_could_not_run_false(self):
+        """A substantive CHANGES_REQUESTED at cycle 2 (review ran and said no)
+        leaves could_not_run=False — it is NOT a could-not-run case."""
+        result = await self._run_cycle2(
+            "feat-c2-changes", cycle2_verdict="CHANGES_REQUESTED",
+        )
+        self.assertEqual(result.verdict, "CHANGES_REQUESTED")
+        self.assertFalse(result.could_not_run)
+
+    async def test_failed_dispatch_crash_sets_could_not_run_false(self):
+        """A genuine dispatch crash (success=False) resolves to ERROR but
+        leaves could_not_run=False — it is a crash, not a could-not-run."""
+        result = await self._run_cycle1(
+            "feat-crash", dispatch_success=False, cycle1_verdict="APPROVED",
+        )
+        # Stale on-disk APPROVED is ignored because the dispatch crashed.
+        self.assertEqual(result.verdict, "ERROR")
+        self.assertFalse(result.could_not_run)
+
+    async def test_could_not_run_recorded_in_deferral_file(self):
+        """Task 2c: the could-not-run signal is threaded into the on-disk
+        deferral's Context so it cannot disagree with the FEATURE_DEFERRED
+        event."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            feature = "feat-deferral-marker"
+            lifecycle_base = tmp_path / "cortex" / "lifecycle"
+            feature_dir = lifecycle_base / feature
+            feature_dir.mkdir(parents=True)
+
+            spec_path = feature_dir / "spec.md"
+            spec_path.write_text("# Spec\n\nSpec content.\n", encoding="utf-8")
+
+            # review.md absent → could-not-run (success=True, no artifact).
+            deferred_dir = tmp_path / "deferred"
+
+            async def fake_dispatch(**kwargs) -> DispatchResult:
+                return DispatchResult(success=True, output="ok", cost_usd=0.01)
+
+            with patch.object(
+                _review_dispatch_module, "dispatch_task",
+                new=AsyncMock(side_effect=fake_dispatch),
+            ):
+                result = await dispatch_review(
+                    feature=feature,
+                    worktree_path=tmp_path / "worktree",
+                    branch=f"pipeline/{feature}",
+                    spec_path=spec_path,
+                    complexity="complex",
+                    criticality="high",
+                    lifecycle_base=lifecycle_base,
+                    deferred_dir=deferred_dir,
+                    base_branch="main",
+                )
+
+            self.assertTrue(result.could_not_run)
+            written = sorted(deferred_dir.glob(f"{feature}-q*.md"))
+            self.assertEqual(len(written), 1)
+            body = written[0].read_text(encoding="utf-8")
+            self.assertIn("could-not-run", body)

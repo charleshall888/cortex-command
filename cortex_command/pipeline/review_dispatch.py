@@ -44,6 +44,16 @@ class ReviewResult:
             ``None`` on every path that did not perform a successful
             rework re-merge (no rework, fix-agent failure, or the re-merge
             itself failed).
+        could_not_run: Orthogonal positive discriminator for the
+            *could-not-run review* case — the review agent completed
+            (``DispatchResult.success == True``) but produced no usable
+            verdict, so the resolved verdict is the synthetic ``ERROR``
+            sentinel. Distinguished from a genuine dispatch crash
+            (``success == False``), which also resolves to ``ERROR`` but
+            leaves this flag ``False``. Downstream outcome routing keys on
+            this flag to preserve the merge and flag for human re-review
+            rather than reverting a clean integration. It is orthogonal to
+            ``verdict``: the verdict vocabulary is unchanged.
     """
 
     approved: bool
@@ -52,6 +62,7 @@ class ReviewResult:
     cycle: int
     issues: list[str] = field(default_factory=list)
     merge_sha: Optional[str] = None
+    could_not_run: bool = False
 
 
 _ERROR_RESULT: dict = {"verdict": "ERROR", "cycle": 0, "issues": []}
@@ -319,6 +330,13 @@ async def dispatch_review(
     # the verdict (R6) so a crashed/errored review surfaces in the morning
     # report rather than silently passing as a bare FEATURE_DEFERRED event.
     if verdict_str == "ERROR":
+        # could_not_run is the POSITIVE discriminator: True only when the
+        # review agent completed (result.success) but produced no usable
+        # verdict, False when the dispatch itself crashed (success == False).
+        # Both land here because a crashed dispatch resolves to the ERROR
+        # sentinel above, so the flag — not the verdict — is what downstream
+        # routing keys on to preserve vs. revert the merge.
+        could_not_run = result.success
         log_event(feature_events_log, {
             "event": "review_verdict",
             "feature": feature,
@@ -326,13 +344,17 @@ async def dispatch_review(
             "cycle": cycle,
             "issues": issues,
         })
-        _write_review_deferral(feature, verdict_str, cycle, issues, deferred_dir)
+        _write_review_deferral(
+            feature, verdict_str, cycle, issues, deferred_dir,
+            could_not_run=could_not_run,
+        )
         return ReviewResult(
             approved=False,
             deferred=True,
             verdict="ERROR",
             cycle=cycle,
             issues=issues,
+            could_not_run=could_not_run,
         )
 
     # (8) Handle REJECTED at any cycle — write deferral file
@@ -545,6 +567,24 @@ async def dispatch_review(
         cycle2_cycle = cycle2_verdict_dict.get("cycle", 0)
         cycle2_issues = cycle2_verdict_dict.get("issues", [])
 
+        # Normalize any non-canonical cycle-2 verdict to the ERROR sentinel,
+        # mirroring the cycle-1 "Unexpected verdict value — treat as ERROR"
+        # fall-through. Without this, cycle-2 would special-case only APPROVED
+        # and return every other string — including a non-canonical "BLOCKED"
+        # or a file-present-unparseable verdict — verbatim, leaving cycle-1 and
+        # cycle-2 asymmetric. Canonical non-APPROVED verdicts pass through
+        # untouched; a crashed dispatch (success == False) already resolved to
+        # ERROR above and stays ERROR here.
+        if cycle2_verdict_str not in {"APPROVED", "CHANGES_REQUESTED", "REJECTED", "ERROR"}:
+            logger.warning(
+                "Unexpected cycle-2 review verdict %r for %s — treating as ERROR",
+                cycle2_verdict_str, feature,
+            )
+            cycle2_issues = cycle2_issues + [
+                f"unexpected verdict value: {cycle2_verdict_str}"
+            ]
+            cycle2_verdict_str = "ERROR"
+
         # (9h) If APPROVED, return success
         if cycle2_verdict_str == "APPROVED":
             log_event(feature_events_log, {
@@ -574,7 +614,15 @@ async def dispatch_review(
                 merge_sha=remerge_result.merge_sha,
             )
 
-        # (9i) Non-APPROVED cycle 2 — write deferral and return deferred
+        # (9i) Non-APPROVED cycle 2 — write deferral and return deferred.
+        # could_not_run mirrors cycle 1: True only when the cycle-2 review
+        # agent completed (cycle2_result.success) but produced no usable
+        # verdict (resolved to the ERROR sentinel, post-normalization above).
+        # A canonical CHANGES_REQUESTED/REJECTED (review ran and said no) and a
+        # crashed dispatch (success == False) both leave the flag False.
+        cycle2_could_not_run = (
+            cycle2_result.success and cycle2_verdict_str == "ERROR"
+        )
         log_event(feature_events_log, {
             "event": "review_verdict",
             "feature": feature,
@@ -584,6 +632,7 @@ async def dispatch_review(
         })
         _write_review_deferral(
             feature, cycle2_verdict_str, cycle2_cycle, cycle2_issues, deferred_dir,
+            could_not_run=cycle2_could_not_run,
         )
         return ReviewResult(
             approved=False,
@@ -592,9 +641,17 @@ async def dispatch_review(
             cycle=cycle2_cycle,
             issues=cycle2_issues,
             merge_sha=remerge_result.merge_sha,
+            could_not_run=cycle2_could_not_run,
         )
 
-    # Unexpected verdict value — treat as ERROR
+    # Unexpected verdict value — treat as ERROR. This catch-all is only
+    # reachable when parse_verdict() returned a non-canonical verdict string
+    # (e.g. "BLOCKED"), which means the dispatch completed and a file was
+    # parsed — a crashed dispatch (success == False) resolves to the ERROR
+    # sentinel above and is handled by the explicit ERROR branch, never here.
+    # So this is always a could-not-run case (review ran, no usable verdict);
+    # expressing the flag as result.success keeps it correct by construction.
+    could_not_run = result.success
     logger.warning(
         "Unexpected review verdict %r for %s — treating as ERROR",
         verdict_str, feature,
@@ -612,6 +669,7 @@ async def dispatch_review(
         verdict="ERROR",
         cycle=cycle,
         issues=issues + [f"unexpected verdict value: {verdict_str}"],
+        could_not_run=could_not_run,
     )
 
 
@@ -621,6 +679,7 @@ def _write_review_deferral(
     cycle: int,
     issues: list[str],
     deferred_dir: Path,
+    could_not_run: bool = False,
 ) -> Path:
     """Write a deferral file for a non-APPROVED review verdict.
 
@@ -637,17 +696,28 @@ def _write_review_deferral(
         verdict: The review verdict (ERROR, REJECTED, or CHANGES_REQUESTED).
         cycle: Review cycle number.
         issues: List of issue descriptions from the review.
+        could_not_run: Whether this deferral is the *could-not-run review*
+            case (review agent completed but produced no usable verdict). The
+            flag is recorded in the deferral's Context so the on-disk deferral
+            and the caller's FEATURE_DEFERRED event cannot disagree on whether
+            the merge should be preserved (could-not-run) vs. reverted.
         deferred_dir: Directory for deferral files.
 
     Returns:
         Path to the written deferral file.
     """
     issues_text = "\n".join(f"- {issue}" for issue in issues) if issues else "- (no issues listed)"
+    could_not_run_note = (
+        " (could-not-run: review agent completed but produced no usable "
+        "verdict — preserve the merge for human re-review)"
+        if could_not_run
+        else ""
+    )
     question = DeferralQuestion(
         feature=feature,
         question_id=0,
         severity="blocking",
-        context=f"Review cycle {cycle} returned verdict: {verdict}",
+        context=f"Review cycle {cycle} returned verdict: {verdict}{could_not_run_note}",
         question=f"Feature {feature} received {verdict} during overnight review. Issues need human triage.",
         options_considered=[
             "Address review feedback and re-submit",
