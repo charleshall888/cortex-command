@@ -137,7 +137,7 @@ Introduce one leaf module that resolves the best-available `claude` CLI (newer o
   - Author `cortex/adr/0014-…md` following the existing ADR format (`cortex/adr/0013-overnight-cli-repo-root-resolution-precedence.md` as the structural pattern: Context / Decision / Trade-off / Status). Content is given in spec §Proposed ADR. The resolver module docstring (Task 1) already cites ADR-0014, satisfying the citation-audit reference.
   - This task is the whole-feature gate: run the complete suite, not a single file.
 - **Verification**: `just test` — pass if exit 0 (full suite incl. `test_dispatch.py`, `test_retry.py`, `test_cli_resolver.py`, the orchestrator-spawn test, and `cortex_command/dashboard/tests/test_routes_smoke.py`); AND `cortex/adr/0014-resolve-best-claude-cli-and-resilient-effort-handling.md` exists with Context/Decision/Trade-off sections (`grep -c "## Decision" cortex/adr/0014-*.md` ≥ 1).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ## Risks
 
