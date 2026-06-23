@@ -523,6 +523,21 @@ def render_executive_summary(data: ReportData) -> str:
     )
     failed = sum(1 for f in features.values() if f.status in ("failed", "paused"))
 
+    # Count features whose review COULD NOT RUN and whose merge was therefore
+    # PRESERVED (unreviewed) on the integration branch for human re-review. The
+    # positive discriminator is the feature_deferred could_not_run flag (read
+    # with .get(..., False) for archived-log tolerance). Deduped by feature so a
+    # feature is counted once even if it emits more than one deferral event.
+    preserved_could_not_run_names: set[str] = set()
+    for evt in data.events:
+        if evt.get("event") == "feature_deferred":
+            details = evt.get("details", {}) or {}
+            if details.get("could_not_run", False) is True:
+                feat = evt.get("feature", "")
+                if feat:
+                    preserved_could_not_run_names.add(feat)
+    could_not_run = len(preserved_could_not_run_names)
+
     # Circuit breaker check
     cb_fired = any(
         br.get("circuit_breaker_fired", False)
@@ -565,6 +580,11 @@ def render_executive_summary(data: ReportData) -> str:
     lines.append(f"**Verdict**: {verdict}")
     lines.append(f"- Features completed: {merged}/{total}")
     lines.append(f"- Features deferred: {deferred} (questions need answers)")
+    if could_not_run:
+        lines.append(
+            f"- Unreviewed merges preserved: {could_not_run} "
+            "(review could not run — needs human re-review)"
+        )
     lines.append(f"- Features failed: {failed} (paused, need investigation)")
     lines.append(f"- Rounds completed: {rounds}")
     lines.append(f"- Duration: {duration_str}")
@@ -1250,6 +1270,24 @@ def render_deferred_questions(data: ReportData) -> str:
                 if feat:
                     reverted_from_integration.add(feat)
 
+    # Collect features whose review COULD NOT RUN (agent completed, no usable
+    # verdict) and whose merge was therefore PRESERVED on the integration branch
+    # for human re-review rather than reverted. The positive discriminator is
+    # the feature_deferred event's could_not_run flag (merge_reverted is False
+    # here); read with .get(..., False) for archived-log tolerance. Such a
+    # feature DOES emit feature_merged (the merge lands before the review
+    # dispatches), so it is also in merged_to_integration — branch on this set
+    # BEFORE the merged_to_integration "do NOT re-run" branch so the preserved
+    # case is not shadowed by the legacy success annotation.
+    preserved_could_not_run: set[str] = set()
+    for evt in data.events:
+        if evt.get("event") == "feature_deferred":
+            details = evt.get("details", {}) or {}
+            if details.get("could_not_run", False) is True:
+                feat = evt.get("feature", "")
+                if feat:
+                    preserved_could_not_run.add(feat)
+
     for dq in sorted_deferrals:
         lines.append(f"### {dq.feature}: {dq.question} [{dq.severity}]")
         lines.append(f"> {dq.question}")
@@ -1263,6 +1301,14 @@ def render_deferred_questions(data: ReportData) -> str:
                     "was rolled back off the integration branch after the review could "
                     "not run (or did not approve), so no unreviewed code remains. "
                     "Triage the deferral and re-run when ready."
+                )
+            elif dq.feature in preserved_could_not_run:
+                action = (
+                    "Unreviewed merge preserved — review could not run; kept on the "
+                    "integration branch for human re-review (intentional, not an "
+                    "error). The feature built and merged cleanly but the review "
+                    "agent produced no usable verdict, so the merge was preserved "
+                    "rather than reverted. Re-review the merged work manually."
                 )
             elif dq.feature in merged_to_integration:
                 action = (
@@ -1416,6 +1462,22 @@ def render_failed_features(data: ReportData) -> str:
             if feat:
                 merged_to_integration.add(feat)
 
+    # Collect features whose review COULD NOT RUN and whose merge was therefore
+    # PRESERVED on the integration branch (not reverted). Such a feature DOES
+    # emit feature_merged, so it is also in merged_to_integration — branch on
+    # this set BEFORE the merged_to_integration "Do NOT re-run" annotation so the
+    # preserved-unreviewed case is not mis-rendered as a generic post-merge
+    # failure. Read could_not_run with .get(..., False) for archived-log
+    # tolerance.
+    preserved_could_not_run: set[str] = set()
+    for evt in data.events:
+        if evt.get("event") == "feature_deferred":
+            details = evt.get("details", {}) or {}
+            if details.get("could_not_run", False) is True:
+                feat = evt.get("feature", "")
+                if feat:
+                    preserved_could_not_run.add(feat)
+
     for name, fs in sorted(primary_failures.items()):
         error = fs.error or "unknown error"
         lines.append(f"### {name}: {error}")
@@ -1443,15 +1505,30 @@ def render_failed_features(data: ReportData) -> str:
             if cost is not None:
                 lines.append(f"**Cost**: ${cost:.2f}")
 
-        # Warn if the feature successfully merged to integration
-        if name in merged_to_integration:
+        # Warn if the feature successfully merged to integration. A preserved
+        # could-not-run feature is also in merged_to_integration (the merge
+        # landed before the review), so it must be checked FIRST and rendered as
+        # an unreviewed-merge-preserved annotation, not as a post-merge failure.
+        if name in preserved_could_not_run:
+            lines.append(
+                "- \u26a0\ufe0f Unreviewed merge preserved \u2014 review could not run; "
+                "kept on the integration branch for human re-review (intentional, not "
+                "an error)."
+            )
+        elif name in merged_to_integration:
             lines.append(
                 "- \u26a0\ufe0f Feature is on the integration branch \u2014 "
                 "merge succeeded but a post-merge step failed after the commit landed."
             )
 
         # Suggested next step
-        if name in merged_to_integration:
+        if name in preserved_could_not_run:
+            suggestion = (
+                "Re-review the merged work manually \u2014 the review agent produced no "
+                "usable verdict, so the merge was preserved on the integration branch "
+                "rather than reverted. This is intentional, not an error."
+            )
+        elif name in merged_to_integration:
             suggestion = (
                 "Investigate which post-merge step crashed (check overnight-events.log "
                 "for the feature_deferred event details and error field). Do NOT re-run "

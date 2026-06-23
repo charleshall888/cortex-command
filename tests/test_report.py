@@ -23,6 +23,7 @@ from cortex_command.overnight.report import (
     generate_report,
     render_critical_review_residue,
     render_deferred_questions,
+    render_executive_summary,
     render_failed_features,
 )
 from cortex_command.overnight.state import OvernightFeatureStatus, OvernightState
@@ -203,6 +204,151 @@ class TestRevertReconciledSurfacing:
 
         assert "on the integration branch" in output
         assert "do NOT re-run" in output
+
+
+class TestPreservedCouldNotRunSurfacing:
+    """Task 4: a preserved could-not-run merge (review agent completed, no usable
+    verdict, so the merge was kept on the integration branch rather than
+    reverted) renders distinctly in BOTH report blocks and is sub-counted in the
+    executive summary. The positive discriminator is the feature_deferred event
+    carrying could_not_run=True with merge_reverted=False.
+
+    Critically, such a feature DOES emit feature_merged (the merge lands before
+    the review dispatches), so it is in merged_to_integration and would, without
+    a precedence guard, be shadowed by the legacy 'Feature is on the integration
+    branch — do NOT re-run' annotation. These tests assert the new annotation
+    wins and the legacy/generic text does NOT appear."""
+
+    _PRESERVED_ANNOTATION = "Unreviewed merge preserved"
+    _LEGACY_MERGED = "Feature is on the integration branch"
+    _GENERIC_RERUN = "Answer this question and re-run the feature"
+
+    def _deferral_event(self) -> dict:
+        return {
+            "event": "feature_deferred",
+            "feature": "feat-cnr",
+            "details": {
+                "review_verdict": "ERROR",
+                "review_cycle": 0,
+                "could_not_run": True,
+                "merge_reverted": False,
+            },
+        }
+
+    def _deferred_questions_data(self) -> ReportData:
+        """A feature that merged then deferred at review with could_not_run=True."""
+        state = OvernightState(
+            session_id="test-session",
+            integration_branch="overnight/test",
+        )
+        state.features["feat-cnr"] = OvernightFeatureStatus(status="deferred")
+
+        data = ReportData()
+        data.state = state
+        data.events = [
+            {"event": "feature_merged", "feature": "feat-cnr"},
+            self._deferral_event(),
+        ]
+        data.deferrals = [
+            DeferralQuestion(
+                feature="feat-cnr",
+                question_id=1,
+                severity=SEVERITY_BLOCKING,
+                context="Review cycle 0 returned verdict: ERROR",
+                question="Feature feat-cnr received ERROR during overnight review.",
+                pipeline_attempted="Overnight review agent returned ERROR at cycle 0.",
+            )
+        ]
+        return data
+
+    def test_deferred_questions_renders_preserved_annotation(self):
+        """render_deferred_questions: the preserved feature gets the new
+        annotation, NOT the merged 'do NOT re-run' text, NOT the generic re-run
+        text — even though it emitted feature_merged (so it is in
+        merged_to_integration and the precedence guard is load-bearing)."""
+        data = self._deferred_questions_data()
+        output = render_deferred_questions(data)
+
+        assert self._PRESERVED_ANNOTATION in output
+        assert "review could not run" in output
+        assert "human re-review" in output
+        # NOT the legacy merged_to_integration "do NOT re-run" annotation...
+        assert self._LEGACY_MERGED not in output
+        assert "Investigate the post-merge failure" not in output
+        # ...and NOT the generic re-run fall-through.
+        assert self._GENERIC_RERUN not in output
+
+    def _failed_features_data(self) -> ReportData:
+        """A failed feature that emitted feature_merged + a could_not_run deferral."""
+        state = OvernightState(
+            session_id="test-session",
+            integration_branch="overnight/test",
+        )
+        state.features["feat-cnr"] = OvernightFeatureStatus(
+            status="failed",
+            error="review could not produce a usable verdict",
+        )
+
+        data = ReportData()
+        data.state = state
+        data.events = [
+            {"event": "feature_merged", "feature": "feat-cnr"},
+            self._deferral_event(),
+        ]
+        return data
+
+    def test_failed_features_renders_preserved_annotation(self):
+        """render_failed_features: a preserved could-not-run feature (also in
+        merged_to_integration) is rendered as unreviewed-merge-preserved, NOT as
+        the legacy post-merge-failure 'Do NOT re-run / already on the integration
+        branch' text."""
+        data = self._failed_features_data()
+        output = render_failed_features(data)
+
+        assert self._PRESERVED_ANNOTATION in output
+        assert "review could not run" in output or "review agent produced no" in output
+        # NOT the legacy merged_to_integration post-merge-failure text.
+        assert self._LEGACY_MERGED not in output
+        assert "Do NOT re-run the feature" not in output
+        assert "merge succeeded but a post-merge step failed" not in output
+
+    def test_executive_summary_subcounts_preserved_merge(self):
+        """render_executive_summary: a preserved could-not-run merge contributes
+        a distinct 'Unreviewed merges preserved' sub-count."""
+        state = OvernightState(
+            session_id="test-session",
+            integration_branch="overnight/test",
+        )
+        state.features["feat-cnr"] = OvernightFeatureStatus(status="deferred")
+
+        data = ReportData()
+        data.state = state
+        data.events = [
+            {"event": "feature_merged", "feature": "feat-cnr"},
+            self._deferral_event(),
+        ]
+
+        output = render_executive_summary(data)
+
+        assert "Unreviewed merges preserved: 1" in output
+        assert "needs human re-review" in output
+
+    def test_executive_summary_no_subcount_when_none(self):
+        """The sub-count line is omitted entirely on a clean run (no preserved
+        could-not-run merges) so it does not add noise."""
+        state = OvernightState(
+            session_id="test-session",
+            integration_branch="overnight/test",
+        )
+        state.features["feat-clean"] = OvernightFeatureStatus(status="merged")
+
+        data = ReportData()
+        data.state = state
+        data.events = [{"event": "feature_merged", "feature": "feat-clean"}]
+
+        output = render_executive_summary(data)
+
+        assert "Unreviewed merges preserved" not in output
 
 
 # ---------------------------------------------------------------------------
