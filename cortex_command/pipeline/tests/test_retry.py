@@ -545,5 +545,42 @@ class TestEffortClamp(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(result.paused)
 
 
+class TestProgressStderr(unittest.IsolatedAsyncioTestCase):
+    """#313 R6: the captured child_stderr is surfaced in progress.txt instead of
+    only an opaque ProcessError detail."""
+
+    async def test_child_stderr_written_to_progress(self):
+        sentinel = "option '--effort <level>' argument 'xhigh' is invalid"
+
+        async def mock_dispatch(**kwargs) -> DispatchResult:
+            return _failed_with_diag("infrastructure_failure", stderr=sentinel)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            learnings_dir = Path(tmp) / "learnings"
+            with (
+                patch("cortex_command.pipeline.retry.dispatch_task", new=mock_dispatch),
+                patch("cortex_command.pipeline.retry.cleanup_stale_lock"),
+                patch(
+                    "cortex_command.pipeline.retry._get_worktree_diff",
+                    return_value="d",
+                ),
+            ):
+                result = await retry_task(
+                    feature="feat",
+                    task="t",
+                    worktree_path=Path(tmp),
+                    complexity="simple",
+                    criticality="medium",
+                    system_prompt="",
+                    learnings_dir=learnings_dir,
+                    max_retries=3,
+                    skill="implement",
+                )
+            progress = (learnings_dir / "progress.txt").read_text()
+        self.assertIn(sentinel, progress)
+        self.assertIn("CLI stderr:", progress)
+        self.assertFalse(result.success)
+
+
 if __name__ == "__main__":
     unittest.main()

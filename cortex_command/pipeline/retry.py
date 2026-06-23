@@ -85,6 +85,7 @@ def _append_learnings(
     task: str,
     error: str,
     output: str,
+    child_stderr: Optional[str] = None,
 ) -> Path:
     """Append a structured learnings entry to progress.txt.
 
@@ -119,8 +120,13 @@ def _append_learnings(
         f"{'=' * 60}\n"
         f"Task: {task}\n"
         f"Error: {error}\n"
-        f"Output:\n{truncated_output}\n"
     )
+    # #313 R6: surface the real captured CLI stderr (e.g. an `--effort`
+    # rejection) instead of leaving only an opaque "ProcessError: exit code 1",
+    # so the next retry — and a human reading progress.txt — sees the cause.
+    if child_stderr:
+        entry += f"CLI stderr:\n{child_stderr}\n"
+    entry += f"Output:\n{truncated_output}\n"
 
     with open(progress_path, "a", encoding="utf-8") as f:
         f.write(entry)
@@ -322,6 +328,9 @@ async def retry_task(
             task=task,
             error=error_info,
             output=result.output,
+            child_stderr=(
+                result.diagnostics.child_stderr if result.diagnostics else None
+            ),
         )
 
         if log_path:
