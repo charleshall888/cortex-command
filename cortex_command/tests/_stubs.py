@@ -85,6 +85,11 @@ class ClaudeAgentOptions:
     settings: str | None = None
     effort: str | None = None
     stderr: Callable[[str], None] | None = None
+    # #313: dispatch/discovery pin cli_path=resolve_claude_cli(); the real SDK
+    # ClaudeAgentOptions already has this field (types.py), the stub must too or
+    # the pinned kwarg raises TypeError. Appended last so positional
+    # constructions stay valid.
+    cli_path: str | None = None
 
 
 class CLIConnectionError(Exception):

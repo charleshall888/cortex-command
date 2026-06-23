@@ -661,6 +661,8 @@ try:
 except ImportError:
     _BRIEF_SDK_AVAILABLE = False
 
+from cortex_command.cli_resolver import resolve_claude_cli
+
 
 def _derive_topic_from_path(research_md: Path) -> str | None:
     """Attempt to derive a topic slug from the parent directory of research.md.
@@ -727,6 +729,8 @@ async def _run_brief_query(
         system_prompt=GATE_BRIEF_RUBRIC,
         env=_env,
         permission_mode="bypassPermissions",
+        # Pin the best-available CLI (#313); None ≡ today's bundled-first.
+        cli_path=resolve_claude_cli(),
     )
 
     if retry_feedback:

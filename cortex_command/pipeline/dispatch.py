@@ -36,6 +36,7 @@ try:
 except ImportError:
     _SDK_AVAILABLE = False
 
+from cortex_command.cli_resolver import resolve_claude_cli
 from cortex_command.pipeline.state import log_event
 
 # Lazy imports of cortex_command.overnight.sandbox_settings + state (Req 5)
@@ -777,6 +778,10 @@ async def dispatch_task(
         settings=str(_settings_tempfile_path),
         effort=effort,
         stderr=_on_stderr,
+        # Pin the best-available CLI (newer of system-vs-bundled) so the SDK
+        # does not run its bundled-first selection (#313). None ≡ field-absent
+        # ≡ today's bundled-first behavior, so degraded envs are unaffected.
+        cli_path=resolve_claude_cli(),
     )
 
     if log_path:

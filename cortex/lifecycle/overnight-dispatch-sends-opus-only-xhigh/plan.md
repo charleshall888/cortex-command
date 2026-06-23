@@ -43,7 +43,7 @@ Introduce one leaf module that resolves the best-available `claude` CLI (newer o
   - In `cortex_command/tests/_stubs.py`, add `cli_path: str | None = None` to the `ClaudeAgentOptions` dataclass (`:76-87`), placed so existing positional constructions stay valid (append after `stderr`). The stub field is required because the dispatch/discovery production sites construct the **stub** `ClaudeAgentOptions` (which today lacks `cli_path`) under conftest, so the new kwarg would raise `TypeError` without it. (Note: the real-SDK `test_effort_value_passthrough` is NOT at risk — verified the real `claude_agent_sdk.ClaudeAgentOptions` already declares `cli_path` at `types.py:995` and that test already passes `cli_path="/usr/bin/true"`.)
   - `cli_path` overriding `_find_cli()` is confirmed for the pinned SDK (`subprocess_cli.py:46-47` → `self._find_cli()` only when `cli_path is None`, so `cli_path=None` ≡ field-absent ≡ today's bundled-first selection); no SDK bump is in scope.
 - **Verification**: `grep -c "cli_path" cortex_command/pipeline/dispatch.py` ≥ 1 AND `grep -c "cli_path" cortex_command/discovery.py` ≥ 1 AND `grep -c "cli_path" cortex_command/tests/_stubs.py` ≥ 1 — pass if all three ≥ 1; AND `.venv/bin/pytest cortex_command/pipeline/tests/test_dispatch.py -q` exits 0 (existing `dispatch_task` tests still pass).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Orchestrator spawn uses the resolved CLI (R3)
 - **Files**: `cortex_command/overnight/runner.py`, `cortex_command/overnight/tests/test_spawn_resolved_cli.py` (new)
