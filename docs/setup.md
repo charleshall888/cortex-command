@@ -29,7 +29,7 @@ cortex-command ships as a set of Claude Code plugins (with a bundled `cortex` CL
 
 **That's it** — the skills are live in your session. `cortex-core` is the interactive lifecycle; `cortex-overnight` adds autonomous overnight runs and auto-bundles the `cortex` CLI + an MCP server. (You never need an explicit CLI install — the overnight MCP server installs it on first use.)
 
-**3. Optional, per repo** — for lifecycle and overnight workflows, scaffold the repo and register its sandbox path:
+**3. Set up each repo (recommended)** — in each repo you work in, run `cortex init` to scaffold the `cortex/` workspace and register its sandbox path, so the core skills (lifecycle, refine, backlog) and overnight all run cleanly:
 
 ```
 cortex init
