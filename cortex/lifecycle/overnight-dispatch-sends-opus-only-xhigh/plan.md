@@ -80,7 +80,7 @@ Introduce one leaf module that resolves the best-available `claude` CLI (newer o
   - This bounds the invalid-flag dispatch to exactly one clamped retry: the first `effort_unsupported` clamps to `max`; subsequent attempts run at `max` and never re-send the rejected value.
   - New `test_retry.py` tests (pin `_get_worktree_diff` as the existing tests do, e.g. via the `diff_value=` harness): **(1)** `effort_unsupported` on attempt 1 then success ⇒ exactly two `dispatch_task` calls, the second with `effort_override="max"`, a `retry_effort_clamped` event recorded, NOT N blind retries; **(2) the circuit-breaker regression** — a prior no-diff failure on attempt 1, then `effort_unsupported` (also empty diff) on attempt 2, must STILL clamp and retry at `max` rather than tripping the breaker into `paused=True`.
 - **Verification**: `.venv/bin/pytest cortex_command/pipeline/tests/test_retry.py -q` — pass if exit 0, with the new tests asserting (a) the post-clamp `dispatch_task` call received `effort_override="max"`, (b) the clamped retry fires (not the blind ladder), (c) a `retry_effort_clamped` event was logged, AND (d) the empty-diff-on-attempt-2 case clamps rather than circuit-breaker-pausing.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5: Detect and surface a warn-ignored effort on the success path (R5)
 - **Files**: `cortex_command/pipeline/dispatch.py`, `cortex_command/pipeline/tests/test_dispatch.py`
@@ -92,7 +92,7 @@ Introduce one leaf module that resolves the best-available `claude` CLI (newer o
   - On a hit, `log_event(log_path, {...})` a `dispatch_effort_ignored` event carrying `model`, requested `effort`, and the matched stderr line; the dispatch RAN, so do not fail it. Optionally set a `degraded_note` on `DispatchResult` for downstream surfacing — but the event is the recorded, test-asserted note.
   - New `test_dispatch.py` test: a successful dispatch whose `_on_stderr` received the warn-ignore line ⇒ a `dispatch_effort_ignored` event is logged AND the `DispatchResult.success` is `True`.
 - **Verification**: `.venv/bin/pytest cortex_command/pipeline/tests/test_dispatch.py -q` — pass if exit 0, with a new test asserting the `dispatch_effort_ignored` event is recorded and `result.success is True` on the warn-ignore stderr corpus.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 6: Surface captured CLI stderr into learnings/progress.txt (R6)
 - **Files**: `cortex_command/pipeline/retry.py`, `cortex_command/pipeline/tests/test_retry.py`

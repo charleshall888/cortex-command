@@ -1298,5 +1298,61 @@ def test_non_effort_process_error_still_task_failure():
     )
 
 
+# ---------------------------------------------------------------------------
+# Tests: #313 R5 — warn-ignored effort detection on the success path
+# ---------------------------------------------------------------------------
+
+class TestEffortWarnIgnore(unittest.IsolatedAsyncioTestCase):
+    """A modern CLI warn-ignores an unsupported --effort (exit 0); the dispatch
+    still succeeds but records a visible degraded-effort note (#313 R5)."""
+
+    async def test_warn_ignore_recorded_and_success_preserved(self):
+        import json as _json
+
+        ResultMessage = _sdk.ResultMessage
+        warn = (
+            "Warning: Unknown --effort value 'xhigh' — ignoring it and using "
+            "the default effort. Valid values: low, medium, high, xhigh, max."
+        )
+        result_msg = ResultMessage(
+            subtype="success",
+            duration_ms=1,
+            duration_api_ms=1,
+            is_error=False,
+            num_turns=1,
+            session_id="s",
+            total_cost_usd=0.01,
+        )
+
+        async def mock_query(**kwargs):
+            # Drive the stderr callback so _stderr_lines is populated, then
+            # yield a successful result.
+            kwargs["options"].stderr(warn)
+            yield result_msg
+
+        with tempfile.TemporaryDirectory() as tmp:
+            log_path = Path(tmp) / "events.log"
+            with patch.object(_dispatch_module, "query", mock_query):
+                result = await _dispatch_module.dispatch_task(
+                    feature="feat",
+                    task="t",
+                    worktree_path=Path(tmp),
+                    complexity="complex",
+                    criticality="high",
+                    system_prompt="",
+                    log_path=log_path,
+                    skill="implement",
+                )
+            self.assertTrue(result.success, "warn-ignore must not fail the dispatch")
+            events = [
+                _json.loads(line)
+                for line in log_path.read_text().splitlines()
+                if line.strip()
+            ]
+            ignored = [e for e in events if e.get("event") == "dispatch_effort_ignored"]
+            self.assertEqual(len(ignored), 1, "expected one dispatch_effort_ignored note")
+            self.assertEqual(ignored[0]["effort"], "xhigh")
+
+
 if __name__ == "__main__":
     unittest.main()

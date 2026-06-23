@@ -922,6 +922,25 @@ async def dispatch_task(
                 cost_usd=cost_usd,
             )
 
+        # #313 R5: a modern claude (>=2.1.186) warn-IGNORES an unsupported
+        # --effort (exit 0, runs at default) instead of hard-rejecting. The
+        # dispatch SUCCEEDED, so it must NOT be failed — but the feature ran
+        # degraded, which the no-silent-degradation contract requires
+        # surfacing. Detect the warn-ignore signal in captured stderr and record
+        # a loud note (the morning report renders dispatch_effort_ignored).
+        if log_path:
+            for _stderr_line in _stderr_lines:
+                _lowered = _stderr_line.lower()
+                if "unknown --effort value" in _lowered and "ignoring" in _lowered:
+                    log_event(log_path, {
+                        "event": "dispatch_effort_ignored",
+                        "feature": feature,
+                        "model": model,
+                        "effort": effort,
+                        "stderr_line": _stderr_line,
+                    })
+                    break
+
         return DispatchResult(
             success=True,
             output="\n".join(output_parts),
