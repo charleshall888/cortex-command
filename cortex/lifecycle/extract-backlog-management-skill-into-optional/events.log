@@ -1,0 +1,8 @@
+{"schema_version": 1, "ts": "2026-06-23T21:19:34Z", "event": "lifecycle_start", "feature": "extract-backlog-management-skill-into-optional", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-23T21:27:07Z", "event": "clarify_critic", "feature": "extract-backlog-management-skill-into-optional", "parent_epic_loaded": true, "findings_count": 6, "dispositions": {"apply": 3, "dismiss": 2, "ask": 1}, "applied_fixes_count": 2, "dismissals_count": 2, "status": "ok"}
+{"schema_version": 1, "ts": "2026-06-23T21:30:47Z", "event": "lifecycle_start", "feature": "extract-backlog-management-skill-into-optional", "tier": "complex", "criticality": "high", "entry_point": "lifecycle"}
+{"ts": "2026-06-23T21:30:47Z", "event": "phase_transition", "feature": "extract-backlog-management-skill-into-optional", "from": "clarify", "to": "research"}
+{"ts": "2026-06-23T21:49:48Z", "event": "complexity_override", "feature": "extract-backlog-management-skill-into-optional", "from": "simple", "to": "complex", "gate": "research_open_questions"}
+{"ts": "2026-06-23T21:49:59Z", "event": "phase_transition", "feature": "extract-backlog-management-skill-into-optional", "from": "research", "to": "specify"}
+{"ts": "2026-06-23T22:25:44Z", "event": "spec_approved", "feature": "extract-backlog-management-skill-into-optional"}
+{"ts": "2026-06-23T22:25:53Z", "event": "phase_transition", "feature": "extract-backlog-management-skill-into-optional", "from": "specify", "to": "plan"}
