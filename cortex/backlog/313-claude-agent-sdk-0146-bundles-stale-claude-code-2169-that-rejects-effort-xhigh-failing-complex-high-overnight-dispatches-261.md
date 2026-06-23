@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 9317e015-9ae6-4d15-845a-4f4bfcf69696
 title: "claude_agent_sdk 0.1.46 bundles stale claude-code 2.1.69 that hard-rejects --effort xhigh; SDK prefers the bundled CLI over system claude, failing every complex/high|critical overnight dispatch (#261)"
-status: in_progress
+status: refined
 priority: high
 type: bug
 created: 2026-06-23
@@ -11,6 +11,8 @@ complexity: complex
 criticality: high
 lifecycle_slug: overnight-dispatch-sends-opus-only-xhigh
 lifecycle_phase: research
+spec: cortex/lifecycle/overnight-dispatch-sends-opus-only-xhigh/spec.md
+areas: ['overnight-runner']
 ---
 ## Summary
 
