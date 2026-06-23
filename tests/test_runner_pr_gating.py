@@ -56,6 +56,21 @@ DRY_RUN_REFERENCE = FIXTURE_DIR / "dry_run_reference.txt"
 DRY_RUN_STATE = FIXTURE_DIR / "dry_run_state.json"
 
 
+def _cortex_bin() -> str:
+    """Resolve the ``cortex`` console script to invoke as a subprocess.
+
+    Prefers the repo's editable-install console script
+    (``<repo>/.venv/bin/cortex``) so the suite exercises the code under edit
+    rather than a possibly-stale uv-tool-installed copy that happens to be
+    first on ``PATH`` (the editable install is the canonical dev entrypoint;
+    ``just python-setup`` builds it). Falls back to ``"cortex"`` (PATH
+    resolution) when the editable script is absent — e.g. CI topologies that
+    install the package without an in-repo ``.venv``.
+    """
+    editable = REAL_REPO_ROOT / ".venv" / "bin" / "cortex"
+    return str(editable) if editable.exists() else "cortex"
+
+
 def _copy_state_fixture(source_name: str, tmp_path: Path) -> Path:
     """Copy a source fixture into tmp_path; return the destination path."""
     src = FIXTURE_DIR / source_name
@@ -181,7 +196,7 @@ def _run_runner(state_path: Path, env: dict[str, str]) -> subprocess.CompletedPr
     resolves its own home repo via ``git rev-parse``.
     """
     return subprocess.run(
-        ["cortex", "overnight", "start", "--dry-run", "--state", str(state_path)],
+        [_cortex_bin(), "overnight", "start", "--dry-run", "--state", str(state_path)],
         env=env,
         capture_output=True,
         text=True,
@@ -847,4 +862,139 @@ def test_dry_run_rejects_with_pending_features(tmp_path: Path) -> None:
         in result.stderr
     ), (
         f"expected R15 acceptance message in stderr, got:\n{result.stderr}"
+    )
+
+
+# --- Task 5: preserved could-not-run merge flags the integration PR -----
+#
+# These two tests drive the runtime PRODUCER end-to-end: the runner reads the
+# session events log, detects a preserved could-not-run merge, and sets the
+# unreviewed marker on the auto-created non-draft PR. They deliberately do NOT
+# clone the `state-nonzero-merge-degraded.json` + manual `warning_file.write_text`
+# idiom (which greens the consumer with no producer). The input is a
+# `feature_deferred` event with `could_not_run=True` / `merge_reverted=False`;
+# the runner itself must set `integration_degraded` and write the warning file.
+
+
+def _seed_could_not_run_event(
+    session_dir: Path, session_id: str, feature: str
+) -> Path:
+    """Append a preserved could-not-run `feature_deferred` event to the
+    session events log the runner reads at PR-creation time.
+
+    The runner derives the events-log path as
+    ``session_dir / "overnight-events.log"`` (see cli_handler.handle_start),
+    where ``session_dir`` is ``state_path.parent`` — i.e. ``tmp_path``. The
+    event carries the positive ``could_not_run`` discriminator with
+    ``merge_reverted=False`` (the preserved case Task 3 emits, commit
+    927e9533).
+    """
+    events_log = session_dir / "overnight-events.log"
+    entry = {
+        "v": 1,
+        "ts": "2026-06-23T00:00:00Z",
+        "event": "feature_deferred",
+        "session_id": session_id,
+        "round": 1,
+        "feature": feature,
+        "details": {
+            "could_not_run": True,
+            "merge_reverted": False,
+        },
+    }
+    with open(events_log, "a", encoding="utf-8") as f:
+        f.write(json.dumps(entry) + "\n")
+    return events_log
+
+
+def test_could_not_run_sets_pr_marker(env_setup) -> None:
+    """A preserved could-not-run feature in the batch drives the runner to set
+    the degraded marker and write the warning file naming the feature.
+
+    Producer-driven: no `integration_degraded` is pre-set in state and no
+    warning file is pre-written. The runner must derive both from the
+    `feature_deferred` event.
+    """
+    tp = env_setup["tmp_path"]
+    state = _copy_state_fixture("state-nonzero-merge.json", tp)
+    session_id = "test-nonzero-merge"
+    branch = "overnight/test-nonzero-merge"
+    _seed_could_not_run_event(tp, session_id, "feat-a")
+    _create_integration_branch(branch, ensure=True)
+    try:
+        env = _build_env(tp, env_setup["bin_dir"], env_setup["git_config"])
+        result = _run_runner(state, env)
+    finally:
+        _create_integration_branch(branch, ensure=False)
+
+    _assert_clean_run(result)
+
+    # The runner itself wrote the warning file naming the unreviewed feature.
+    warning_file = tp / "overnight-integration-warning.txt"
+    assert warning_file.exists(), (
+        "runner did not write the integration warning file from a preserved "
+        f"could-not-run event\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+    )
+    warning_text = warning_file.read_text()
+    assert "feat-a" in warning_text, (
+        f"warning file did not name the unreviewed feature, got:\n{warning_text!r}"
+    )
+    assert "UNREVIEWED MERGE PRESERVED" in warning_text, (
+        f"warning file missing the unreviewed marker, got:\n{warning_text!r}"
+    )
+
+    # The non-draft "N features merged" PR body carries the marker.
+    pr_lines = [
+        ln for ln in result.stdout.splitlines()
+        if ln.startswith("DRY-RUN gh pr create")
+    ]
+    assert pr_lines, f"expected 'DRY-RUN gh pr create' line, got stdout:\n{result.stdout}"
+    pr_line = pr_lines[0]
+    assert "--draft" not in pr_line, (
+        f"success path keeps the marker advisory on a NON-draft PR, got:\n{pr_line}"
+    )
+    body = _read_pr_body(tp)
+    assert "UNREVIEWED MERGE PRESERVED" in body, (
+        f"PR body missing the unreviewed marker, got:\n{body!r}"
+    )
+    assert "feat-a" in body, (
+        f"PR body did not name the unreviewed feature, got:\n{body!r}"
+    )
+
+
+def test_could_not_run_marker_write_failure_forces_draft(env_setup) -> None:
+    """When the warning-file write is forced to raise OSError on the
+    could-not-run path, the PR is created --draft (degrade safe), NOT
+    published non-draft-and-unmarked.
+
+    Injects the failure by placing a DIRECTORY at the warning-file path so the
+    runner's `warning_file.write_text` raises `IsADirectoryError` (an
+    `OSError` subclass) — a real failure, no monkeypatching of the subprocess.
+    """
+    tp = env_setup["tmp_path"]
+    state = _copy_state_fixture("state-nonzero-merge.json", tp)
+    session_id = "test-nonzero-merge"
+    branch = "overnight/test-nonzero-merge"
+    _seed_could_not_run_event(tp, session_id, "feat-a")
+    # Make the warning-file path un-writable: a directory there raises
+    # IsADirectoryError (OSError) on write_text.
+    blocked = tp / "overnight-integration-warning.txt"
+    blocked.mkdir()
+    _create_integration_branch(branch, ensure=True)
+    try:
+        env = _build_env(tp, env_setup["bin_dir"], env_setup["git_config"])
+        result = _run_runner(state, env)
+    finally:
+        _create_integration_branch(branch, ensure=False)
+
+    _assert_clean_run(result)
+    pr_lines = [
+        ln for ln in result.stdout.splitlines()
+        if ln.startswith("DRY-RUN gh pr create")
+    ]
+    assert pr_lines, f"expected 'DRY-RUN gh pr create' line, got stdout:\n{result.stdout}"
+    pr_line = pr_lines[0]
+    assert "--draft" in pr_line, (
+        "marker-write failure on the could-not-run path must force --draft "
+        f"(degrade safe), got:\n{pr_line}"
     )

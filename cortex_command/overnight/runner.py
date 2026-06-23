@@ -1874,6 +1874,45 @@ def _count_merged_home_repo(state: state_module.OvernightState) -> int:
     )
 
 
+def _preserved_could_not_run_features(
+    events_path: Path, session_id: str
+) -> list[str]:
+    """Return the names of features whose review COULD NOT RUN and whose merge
+    was therefore PRESERVED (unreviewed) on the integration branch.
+
+    Reads the JSONL events log and selects ``feature_deferred`` events whose
+    ``details.could_not_run`` is ``True`` (the positive discriminator the
+    morning report keys on — never inferred from ``merge_reverted == False``,
+    which a genuine crash with a failed revert also produces). The set is
+    deduped by feature name and returned sorted for deterministic warning text.
+
+    This is the runtime producer for the integration-PR unreviewed marker: a
+    preserved could-not-run feature is ``deferred`` (not ``merged``) in
+    ``state``, so it is invisible to ``_count_merged_home_repo``; the deferral
+    event is the authoritative source. Mirrors the ``feature_deferred`` /
+    ``could_not_run`` read in ``report.py`` so the report annotation and the PR
+    marker cannot disagree.
+
+    The ``session_id`` filter is defensive — the per-session events log is
+    per-session by construction, but the filter shields against archived
+    entries from a re-used path (same rationale as
+    ``_count_synthesizer_deferred``). Returns an empty list when the log does
+    not exist or carries no matching entries.
+    """
+    names: set[str] = set()
+    for evt in events.read_events(events_path):
+        if evt.get("event") != events.FEATURE_DEFERRED:
+            continue
+        if evt.get("session_id") != session_id:
+            continue
+        details = evt.get("details", {}) or {}
+        if details.get("could_not_run", False) is True:
+            feat = evt.get("feature", "")
+            if feat:
+                names.add(feat)
+    return sorted(names)
+
+
 def _count_built_merge_blocked_home_repo(state: state_module.OvernightState) -> int:
     """Count home-repo features that are built-but-merge-blocked (recoverable).
 
@@ -2077,7 +2116,20 @@ def _post_loop(
 
         mc_merged_count = _count_merged_home_repo(state)
         mc_recoverable_count = _count_built_merge_blocked_home_repo(state)
-        integration_degraded = state.integration_degraded
+        # Producer (spec Req 5): a preserved could-not-run merge is on the
+        # integration branch but never set ``integration_degraded`` (the
+        # could-not-run path preserves the merge upstream of the ERROR tag).
+        # Derive it from the ``feature_deferred`` events so the non-draft
+        # "N features merged" PR carries an unreviewed marker at the
+        # merge-decision surface — the sole barrier for a 1-2-feature batch,
+        # since the systemic breaker only trips at threshold 3 and the report
+        # is bypassable.
+        preserved_could_not_run = _preserved_could_not_run_features(
+            events_path, session_id
+        )
+        integration_degraded = state.integration_degraded or bool(
+            preserved_could_not_run
+        )
         commit_count = _integration_commit_count(
             integration_branch, repo_path
         )
@@ -2127,8 +2179,38 @@ def _post_loop(
                     f"morning-report.md for details."
                 )
 
+            # Producer (spec Req 5): when the batch preserved a could-not-run
+            # merge, write the warning file naming the unreviewed feature(s).
+            # Nothing else writes this file on the could-not-run path; the
+            # marker IS the barrier, so a write failure must NOT silently fall
+            # through to an unmarked non-draft PR. On failure, force --draft
+            # (the same self-enforcing block the zero-progress path uses) and
+            # notify — degrade safe rather than publish unmarked.
+            if preserved_could_not_run:
+                feat_list = ", ".join(preserved_could_not_run)
+                marker_text = (
+                    "**UNREVIEWED MERGE PRESERVED** — review could not run "
+                    f"for: {feat_list}. This merge is unreviewed, pending "
+                    "human re-review; it was kept on the integration branch "
+                    "intentionally (not an error). Re-review before merging "
+                    "to main.\n\n"
+                )
+                try:
+                    warning_file.write_text(marker_text, encoding="utf-8")
+                except OSError:
+                    # Marker write failed on the could-not-run path: degrade
+                    # safe to a draft PR rather than publish unmarked.
+                    draft_flag = "--draft"
+                    _notify(
+                        "Overnight could-not-run marker write FAILED — "
+                        f"integration PR forced to --draft. Session: "
+                        f"{session_id}. Unreviewed feature(s): {feat_list}"
+                    )
+
             # Compose PR body: warning (if degraded + file exists) then
-            # the summary (runner.sh:1180-1194).
+            # the summary (runner.sh:1180-1194). On the could-not-run path the
+            # marker is the sole barrier, so a body-compose failure must also
+            # force --draft rather than fall through to an unmarked PR.
             try:
                 if integration_degraded and warning_file.exists():
                     warning_text = warning_file.read_text(encoding="utf-8")
@@ -2141,7 +2223,13 @@ def _post_loop(
                         body_summary + "\n", encoding="utf-8"
                     )
             except OSError:
-                pass
+                if preserved_could_not_run:
+                    draft_flag = "--draft"
+                    _notify(
+                        "Overnight integration-PR body compose FAILED with a "
+                        "preserved unreviewed merge — PR forced to --draft. "
+                        f"Session: {session_id}"
+                    )
 
             # Emit `gh pr create` via dry_run_echo (label verbatim from
             # runner.sh:1197, 1205).
