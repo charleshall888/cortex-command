@@ -355,6 +355,10 @@ ERROR_RECOVERY: dict[str, str] = {
     "infrastructure_failure": "pause_human",
     "budget_exhausted":       "pause_session",
     "api_rate_limit":         "pause_session",
+    # #313 R4: a CLI `--effort` hard-rejection is a permanently-invalid flag.
+    # Its recovery clamps effort once to `max` (universally accepted) instead of
+    # blind-retrying the rejected value; see retry.py's clamp_effort arm.
+    "effort_unsupported":     "clamp_effort",
     "unknown":                "retry",
 }
 
@@ -518,6 +522,15 @@ def classify_error(error: Exception, output: str = "") -> str:
             return "agent_confused"
         if any(p in corpus for p in _RATE_LIMIT_PATTERNS):
             return "api_rate_limit"
+
+        # An `--effort` hard-rejection (old claude, e.g. bundled 2.1.69) is a
+        # permanently-invalid flag — NOT a transient failure to blind-retry.
+        # Classify distinctly so the retry loop clamps once to `max` (#313 R4)
+        # rather than re-sending the rejected value until the budget burns. The
+        # rejection text reaches `corpus` via the stderr appended to `output` at
+        # the call site (ProcessError.stderr is an SDK placeholder, not read).
+        if "option '--effort" in corpus and "is invalid" in corpus:
+            return "effort_unsupported"
 
         return "task_failure"
 

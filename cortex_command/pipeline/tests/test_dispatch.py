@@ -1265,5 +1265,38 @@ def test_normalized_plan_never_triggers_resolve_model_guard(tmp_path):
     assert model in {"haiku", "sonnet", "opus"}
 
 
+# ---------------------------------------------------------------------------
+# Tests: #313 R4 — effort hard-rejection classification + recovery
+# ---------------------------------------------------------------------------
+
+_EFFORT_REJECT_STDERR = (
+    "error: option '--effort <level>' argument 'xhigh' is invalid. "
+    "It must be one of: low, medium, high, max"
+)
+
+
+def test_classify_effort_rejection_returns_effort_unsupported():
+    """A captured `--effort ... is invalid` stderr classifies distinctly so the
+    retry loop clamps rather than blind-retrying the permanently-invalid flag."""
+    err = _process_error("Command failed with exit code 1")
+    assert (
+        _dispatch_module.classify_error(err, output=_EFFORT_REJECT_STDERR)
+        == "effort_unsupported"
+    )
+
+
+def test_effort_unsupported_recovery_is_clamp_effort():
+    assert _dispatch_module.ERROR_RECOVERY["effort_unsupported"] == "clamp_effort"
+
+
+def test_non_effort_process_error_still_task_failure():
+    """A ProcessError without the effort-rejection text is unchanged."""
+    err = _process_error("Command failed with exit code 1")
+    assert (
+        _dispatch_module.classify_error(err, output="some other failure")
+        == "task_failure"
+    )
+
+
 if __name__ == "__main__":
     unittest.main()

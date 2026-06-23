@@ -66,7 +66,7 @@ Introduce one leaf module that resolves the best-available `claude` CLI (newer o
   - Add `"effort_unsupported": "clamp_effort"` to `ERROR_RECOVERY` (`:348-358`). Define the new recovery as one-shot clamp (consumed by Task 4b), distinct from `retry`/`escalate`/`pause_*`.
   - New tests in `test_dispatch.py` (near the effort suite at `:1042-1265`): a `ProcessError` whose stderr corpus carries the `--effort … is invalid` text classifies as `effort_unsupported`; a `max`-accepted dispatch does not; the existing `classify_error` cases are unchanged.
 - **Verification**: `.venv/bin/pytest cortex_command/pipeline/tests/test_dispatch.py -q` — pass if exit 0, including a new assertion that `classify_error(ProcessError(<--effort invalid text>), output=<stderr>)` returns `"effort_unsupported"` and `ERROR_RECOVERY["effort_unsupported"] == "clamp_effort"`.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 4b: One clamped `max` retry in the retry loop, no blind re-send (R4, part 2)
 - **Files**: `cortex_command/pipeline/retry.py`, `cortex_command/pipeline/tests/test_retry.py`
