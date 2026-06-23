@@ -21,6 +21,7 @@ by two retry-class failures at Opus).
 
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -470,6 +471,78 @@ class TestDiagnosticsThreading(unittest.IsolatedAsyncioTestCase):
         self.assertIn(
             result.last_dispatch_diagnostics.child_stderr, result.final_output
         )
+
+
+class TestEffortClamp(unittest.IsolatedAsyncioTestCase):
+    """#313 R4: an effort_unsupported rejection clamps once to ``max`` and
+    retries — without blind-retrying the invalid flag and without the circuit
+    breaker preempting the clamp."""
+
+    async def _run(self, side_effects, *, diff_value, max_retries=3):
+        captured: list[dict] = []
+
+        async def mock_dispatch(**kwargs) -> DispatchResult:
+            captured.append(kwargs)
+            return side_effects[len(captured) - 1]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            log_path = Path(tmp) / "events.log"
+            with (
+                patch("cortex_command.pipeline.retry.dispatch_task", new=mock_dispatch),
+                patch("cortex_command.pipeline.retry.cleanup_stale_lock"),
+                patch(
+                    "cortex_command.pipeline.retry._get_worktree_diff",
+                    return_value=diff_value,
+                ),
+            ):
+                result = await retry_task(
+                    feature="feat",
+                    task="do something",
+                    worktree_path=Path(tmp),
+                    complexity="complex",
+                    criticality="high",
+                    system_prompt="",
+                    learnings_dir=Path(tmp) / "learnings",
+                    log_path=log_path,
+                    max_retries=max_retries,
+                    skill="implement",
+                )
+            events = [
+                json.loads(line)
+                for line in log_path.read_text().splitlines()
+                if line.strip()
+            ]
+        return result, captured, events
+
+    async def test_clamps_once_on_first_attempt(self):
+        result, captured, events = await self._run(
+            [_failed("effort_unsupported"), _succeeded()],
+            diff_value="d",
+        )
+        # Exactly one clamped retry: 2 dispatches, not the blind 4-attempt ladder.
+        self.assertEqual(len(captured), 2)
+        self.assertIsNone(captured[0]["effort_override"])
+        self.assertEqual(captured[1]["effort_override"], "max")
+        self.assertTrue(result.success)
+        clamp_events = [e for e in events if e.get("event") == "retry_effort_clamped"]
+        self.assertEqual(len(clamp_events), 1)
+        self.assertEqual(clamp_events[0]["to_effort"], "max")
+
+    async def test_clamps_on_attempt_2_despite_empty_diff_circuit_breaker(self):
+        # Empty diffs would trip the circuit breaker on attempt 2; the clamp must
+        # be evaluated BEFORE the breaker so the clamped retry still fires.
+        result, captured, events = await self._run(
+            [
+                _failed("task_failure"),
+                _failed("effort_unsupported"),
+                _succeeded(),
+            ],
+            diff_value="",
+        )
+        self.assertEqual(len(captured), 3, "clamp must run despite empty diffs")
+        self.assertEqual(captured[2]["effort_override"], "max")
+        self.assertTrue(result.success)
+        self.assertFalse(result.paused)
 
 
 if __name__ == "__main__":

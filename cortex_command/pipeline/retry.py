@@ -224,6 +224,13 @@ async def retry_task(
     initial_model = current_model
     previous_attempt_model: Optional[str] = None
 
+    # #313 R4: one-shot effort clamp. On an `--effort` hard-rejection
+    # (error_type == "effort_unsupported") the loop clamps to `max` (universally
+    # accepted) exactly once via effort_override, instead of blind-retrying the
+    # permanently-invalid flag until the budget burns.
+    current_effort_override: Optional[str] = None
+    clamped_once = False
+
     for attempt in range(1, total_attempts + 1):
         # Build the prompt for this attempt, including learnings
         effective_prompt = system_prompt
@@ -271,6 +278,7 @@ async def retry_task(
             criticality=criticality,
             activity_log_path=activity_log_path,
             model_override=current_model,
+            effort_override=current_effort_override,
             integration_base_path=integration_base_path,
             repo_root=repo_path,
             skill=skill,
@@ -324,6 +332,32 @@ async def retry_task(
                 "error_type": result.error_type,
                 "error_detail": result.error_detail,
             })
+
+        # #313 R4: handle an `--effort` hard-rejection BEFORE the last-attempt
+        # break and the circuit breaker. A CLI rejection produces an empty
+        # worktree diff (the agent never ran), which `_check_circuit_breaker`
+        # reads as "no progress" — so without this short-circuit a no-diff
+        # effort_unsupported on attempt >=2 (after any prior no-diff failure)
+        # would pause before the clamp ever fires. Clamp effort once to `max`
+        # and retry; one-shot by construction (`max` is universally accepted,
+        # so it cannot re-classify as effort_unsupported).
+        if result.error_type == "effort_unsupported" and not clamped_once:
+            if attempt < total_attempts:
+                clamped_once = True
+                from_effort = current_effort_override
+                current_effort_override = "max"
+                if log_path:
+                    log_event(log_path, {
+                        "event": "retry_effort_clamped",
+                        "feature": feature,
+                        "attempt": attempt,
+                        "from_effort": from_effort,
+                        "to_effort": "max",
+                        "model": current_model,
+                    })
+                continue
+            # Rejection on the final attempt: no remaining budget to clamp into;
+            # fall through to the exhausted return below.
 
         # If this was the last attempt, don't bother with circuit breaker
         # or backoff — just break and return exhausted result
