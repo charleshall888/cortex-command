@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 5d53b7ec-f758-4ebf-bee2-03e1fa24143a
 title: overnight review gate reverts a clean merged feature when the review agent writes no parseable review.md (missing artifact -> ERROR verdict -> merge revert; should verify + retry)
-status: in_progress
+status: complete
 priority: high
 type: bug
 created: 2026-06-23

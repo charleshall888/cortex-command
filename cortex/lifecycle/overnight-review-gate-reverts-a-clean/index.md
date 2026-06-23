@@ -2,7 +2,7 @@
 feature: overnight-review-gate-reverts-a-clean
 parent_backlog_uuid: 5d53b7ec-f758-4ebf-bee2-03e1fa24143a
 parent_backlog_id: 314
-artifacts: [research, spec, plan]
+artifacts: [research, spec, plan, review]
 tags: []
 created: 2026-06-23
 updated: 2026-06-23

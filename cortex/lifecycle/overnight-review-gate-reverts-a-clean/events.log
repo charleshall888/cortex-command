@@ -9,3 +9,17 @@
 {"ts": "2026-06-23T17:59:26Z", "event": "feature_paused", "feature": "overnight-review-gate-reverts-a-clean"}
 {"ts": "2026-06-23T18:47:34Z", "event": "plan_approved", "feature": "overnight-review-gate-reverts-a-clean", "dispatch_choice": "wait"}
 {"ts": "2026-06-23T18:47:34Z", "event": "feature_paused", "feature": "overnight-review-gate-reverts-a-clean"}
+{"ts": "2026-06-23T19:54:54Z", "event": "phase_transition", "feature": "overnight-review-gate-reverts-a-clean", "tier": "complex", "from": "plan", "to": "implement"}
+{"ts": "2026-06-23T19:55:50Z", "event": "batch_dispatch", "feature": "overnight-review-gate-reverts-a-clean", "batch": 0, "tasks": [1]}
+{"ts": "2026-06-23T20:05:50Z", "event": "batch_dispatch", "feature": "overnight-review-gate-reverts-a-clean", "batch": 1, "tasks": [2]}
+{"ts": "2026-06-23T20:20:47Z", "event": "batch_dispatch", "feature": "overnight-review-gate-reverts-a-clean", "batch": 2, "tasks": [3]}
+{"ts": "2026-06-23T20:57:57Z", "event": "batch_dispatch", "feature": "overnight-review-gate-reverts-a-clean", "batch": 3, "tasks": [4]}
+{"ts": "2026-06-23T21:11:56Z", "event": "batch_dispatch", "feature": "overnight-review-gate-reverts-a-clean", "batch": 3, "tasks": [5]}
+{"ts": "2026-06-23T21:34:39Z", "event": "batch_dispatch", "feature": "overnight-review-gate-reverts-a-clean", "batch": 3, "tasks": [6]}
+{"ts": "2026-06-23T21:45:20Z", "event": "batch_dispatch", "feature": "overnight-review-gate-reverts-a-clean", "batch": 4, "tasks": [7]}
+{"ts": "2026-06-23T22:06:44Z", "event": "batch_dispatch", "feature": "overnight-review-gate-reverts-a-clean", "batch": 5, "tasks": [8]}
+{"ts": "2026-06-23T22:20:18Z", "event": "batch_dispatch", "feature": "overnight-review-gate-reverts-a-clean", "batch": 6, "tasks": [9]}
+{"ts": "2026-06-23T22:38:45Z", "event": "phase_transition", "feature": "overnight-review-gate-reverts-a-clean", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-06-23T22:55:33Z", "event": "review_verdict", "feature": "overnight-review-gate-reverts-a-clean", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-06-23T22:55:33Z", "event": "phase_transition", "feature": "overnight-review-gate-reverts-a-clean", "from": "review", "to": "complete"}
+{"ts": "2026-06-23T22:58:15Z", "event": "feature_complete", "feature": "overnight-review-gate-reverts-a-clean", "tasks_total": 9, "rework_cycles": 0, "merge_anchor": "merge"}
