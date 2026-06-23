@@ -54,7 +54,7 @@ Introduce one leaf module that resolves the best-available `claude` CLI (newer o
   - The spawn is in `_spawn_orchestrator` (`runner.py:1410`); the bare literal is at `runner.py:1482`, consumed by `subprocess.Popen([claude_path, "-p", …])` at `:1484-1505`. Import `resolve_claude_cli` from `cortex_command.cli_resolver` (module-level or local) and assign `claude_path = resolve_claude_cli() or "claude"`. The `or "claude"` preserves today's behavior when resolution returns `None`.
   - Test pattern: follow `cortex_command/overnight/tests/test_spawn_handshake.py` / `test_spawn_session_leader.py`. Monkeypatch `resolve_claude_cli` to return a sentinel absolute path and patch `subprocess.Popen` to capture args; invoke the `_spawn_orchestrator` path and assert `Popen.call_args.args[0][0] == <sentinel>`. Also assert the `None` fallback yields `"claude"`.
 - **Verification**: `grep -c "resolve_claude_cli" cortex_command/overnight/runner.py` ≥ 1 (positive: the resolver is wired on the spawn path — a bare re-quoted literal would not satisfy this) AND `grep -cE 'claude_path *= *["'"'"']claude["'"'"']' cortex_command/overnight/runner.py` = 0 (no bare-literal assignment, single- or double-quoted) — pass if both hold; AND `.venv/bin/pytest cortex_command/overnight/tests/test_spawn_resolved_cli.py -q` exits 0 with the `argv[0]`-equals-resolver assertion (and the `None`→`"claude"` fallback assertion) passing.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 4a: Classify `--effort` hard-reject as its own non-blind-retryable type (R4, part 1)
 - **Files**: `cortex_command/pipeline/dispatch.py`, `cortex_command/pipeline/tests/test_dispatch.py`
