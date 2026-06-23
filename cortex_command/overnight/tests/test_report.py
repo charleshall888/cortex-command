@@ -4,7 +4,7 @@
 import pytest
 from pathlib import Path
 
-from cortex_command.overnight.report import ReportData, render_complexity_normalized, render_completed_features, render_executive_summary, render_failed_features
+from cortex_command.overnight.report import ReportData, render_complexity_normalized, render_completed_features, render_effort_degradation, render_executive_summary, render_failed_features
 from cortex_command.overnight.state import OvernightFeatureStatus, OvernightState
 from cortex_command.common import read_tier
 
@@ -817,6 +817,58 @@ def test_render_complexity_normalized_empty_when_no_events() -> None:
     data = ReportData()
     data.events = [{"event": "round_start", "round": 1}]
     assert render_complexity_normalized(data) == ""
+
+
+# ---------------------------------------------------------------------------
+# #313 R4/R5: effort-degradation rendering
+# ---------------------------------------------------------------------------
+
+def test_render_effort_degradation_lists_clamp_and_ignore() -> None:
+    """Both the clamp and the warn-ignore degradations render with the feature."""
+    data = ReportData()
+    data.events = [
+        {"event": "retry_effort_clamped", "feature": "feat-a",
+         "model": "opus", "to_effort": "max"},
+        {"event": "dispatch_effort_ignored", "feature": "feat-b",
+         "model": "opus", "effort": "xhigh"},
+    ]
+    output = render_effort_degradation(data)
+    assert "## Effort Degradations (2)" in output, f"got: {output!r}"
+    assert "feat-a" in output and "clamped to `max`" in output, f"got: {output!r}"
+    assert "feat-b" in output and "warn-ignored" in output, f"got: {output!r}"
+
+
+def test_render_effort_degradation_dedups_by_feature_model() -> None:
+    """Repeated clamp events for the same (feature, model) render once."""
+    data = ReportData()
+    data.events = [
+        {"event": "retry_effort_clamped", "feature": "feat-a",
+         "model": "opus", "to_effort": "max"},
+        {"event": "retry_effort_clamped", "feature": "feat-a",
+         "model": "opus", "to_effort": "max"},
+    ]
+    output = render_effort_degradation(data)
+    assert "## Effort Degradations (1)" in output, f"got: {output!r}"
+    assert output.count("feat-a") == 1, f"got: {output!r}"
+
+
+def test_render_effort_degradation_empty_when_no_events() -> None:
+    """The section is omitted entirely when no degradation occurred."""
+    data = ReportData()
+    data.events = [{"event": "round_start", "round": 1}]
+    assert render_effort_degradation(data) == ""
+
+
+def test_generate_report_includes_effort_degradation_heading() -> None:
+    """generate_report wires the effort-degradation section into the report."""
+    from cortex_command.overnight.report import generate_report
+
+    data = ReportData()
+    data.events = [
+        {"event": "retry_effort_clamped", "feature": "feat-a",
+         "model": "opus", "to_effort": "max"},
+    ]
+    assert "Effort Degradations" in generate_report(data)
 
 
 # ---------------------------------------------------------------------------

@@ -103,7 +103,7 @@ Introduce one leaf module that resolves the best-available `claude` CLI (newer o
   - On the failure path (`retry.py:309-317`), `result.diagnostics` (a `DispatchDiagnostics`, `dispatch.py:299-315`) carries `child_stderr`. Add a `child_stderr: Optional[str] = None` parameter to `_append_learnings` (`retry.py:82-128`) and include it in the written entry (a `CLI stderr:` section). Pass `child_stderr=result.diagnostics.child_stderr if result.diagnostics else None` from the failure-path call.
   - Keep the existing `error`/`output` fields; this is additive so retries still see the prior text.
 - **Verification**: `.venv/bin/pytest cortex_command/pipeline/tests/test_retry.py -q` — pass if exit 0, with a new/extended test asserting that after a failure whose `result.diagnostics.child_stderr` is set, the written `progress.txt` content contains that `child_stderr` text.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 7: Correct the stale "silently downgraded"/`AssertionError` premises (R7)
 - **Files**: `cortex_command/pipeline/dispatch.py`, `docs/internals/sdk.md`
@@ -114,7 +114,7 @@ Introduce one leaf module that resolves the best-available `claude` CLI (newer o
   - In `dispatch.py`, rewrite the `effort_override` docstring claim at `:590-593` ("`xhigh` is Opus 4.7-only and is silently downgraded by non-Opus models") to describe the CLI-level hard-reject-vs-warn-ignore split. The phrase "silently downgraded" must not remain.
   - In `docs/internals/sdk.md`: fix line ~107 (`sonnet | … (xhigh NOT supported — silently downgrades)`) and line ~110 (`asserts this invariant and raises AssertionError`) — the guard at `dispatch.py:282-287` raises `ValueError`. State that the dispatched CLI binary (not the model) is what rejects/ignores an unsupported effort, and document the bundled-CLI-vs-system-CLI distinction the resolver addresses.
 - **Verification**: `grep -c "silently downgraded" cortex_command/pipeline/dispatch.py` = 0 (pass if 0); AND `grep -c "AssertionError" docs/internals/sdk.md` = 0 for the `resolve_effort` claim and `grep -c "hard-reject\|warn-ignore\|warn-and" docs/internals/sdk.md` ≥ 1 (pass if the split is documented).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 8: Surface the effort-degradation notes in the morning report (R4/R5 visibility)
 - **Files**: `cortex_command/overnight/report.py`, `cortex_command/overnight/tests/test_report.py`
@@ -126,7 +126,7 @@ Introduce one leaf module that resolves the best-available `claude` CLI (newer o
   - Wire it into `generate_report` (`report.py:2525-2574`) with the same conditional-append idiom the other optional sections use (`section = render_effort_degradation(data); if section: sections.append(section)`).
   - This closes the gap the critical review surfaced: the morning report renders only named sections, so a producer with no renderer is invisible. The `retry_effort_clamped` (Task 4b) and `dispatch_effort_ignored` (Task 5) events are the producers; this task is their consumer. Register both new event names in `bin/.events-registry.md` if the registry gate requires producer/consumer documentation.
 - **Verification**: `.venv/bin/pytest cortex_command/overnight/tests/test_report.py -q` — pass if exit 0, with a new test asserting that a `ReportData` whose `events` include a `retry_effort_clamped` and a `dispatch_effort_ignored` entry produces a non-empty `render_effort_degradation` section naming the affected feature(s), AND that `generate_report` output contains the `Effort Degradations` heading; and that zero such events yields an empty section (omitted).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 9: ADR-0014 + whole-feature verification (ADR + gates)
 - **Files**: `cortex/adr/0014-resolve-best-claude-cli-and-resilient-effort-handling.md` (new)

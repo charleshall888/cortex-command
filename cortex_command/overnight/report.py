@@ -2518,6 +2518,66 @@ def render_complexity_normalized(data: ReportData) -> str:
     return "\n".join(lines)
 
 
+def render_effort_degradation(data: ReportData) -> str:
+    """Render the effort-degradation section (#313 R4/R5).
+
+    Scans ``data.events`` for ``retry_effort_clamped`` (an ``--effort``
+    hard-reject that was clamped once to ``max`` and retried) and
+    ``dispatch_effort_ignored`` (a modern CLI warn-ignored the requested effort
+    and ran at default). Each is a *loud* record of a feature that ran at
+    reduced reasoning effort — the no-silent-degradation contract requires
+    surfacing it. De-duplicates by ``(event, feature, model)``.
+
+    Returns the empty string when neither event was recorded so the section is
+    omitted entirely from the report.
+    """
+    seen: set[tuple] = set()
+    clamped: list[tuple] = []
+    ignored: list[tuple] = []
+    for evt in data.events:
+        kind = evt.get("event")
+        if kind == "retry_effort_clamped":
+            key = (kind, evt.get("feature"), evt.get("model"))
+            if key in seen:
+                continue
+            seen.add(key)
+            clamped.append(
+                (evt.get("feature"), evt.get("model"), evt.get("to_effort", "max"))
+            )
+        elif kind == "dispatch_effort_ignored":
+            key = (kind, evt.get("feature"), evt.get("model"))
+            if key in seen:
+                continue
+            seen.add(key)
+            ignored.append(
+                (evt.get("feature"), evt.get("model"), evt.get("effort"))
+            )
+
+    if not clamped and not ignored:
+        return ""
+
+    total = len(clamped) + len(ignored)
+    lines: list[str] = [f"## Effort Degradations ({total})", ""]
+    lines.append(
+        "These features ran at reduced reasoning effort. The work still ran "
+        "(no silent skip), but the intended `--effort` was not applied — check "
+        "the dispatched `claude` CLI version if this recurs (see ADR-0014)."
+    )
+    lines.append("")
+    for feature, model, to_effort in clamped:
+        lines.append(
+            f"- **{feature}** ({model}): `--effort` rejected by the CLI → "
+            f"clamped to `{to_effort}` and retried."
+        )
+    for feature, model, effort in ignored:
+        lines.append(
+            f"- **{feature}** ({model}): requested effort `{effort}` was "
+            f"warn-ignored by the CLI → ran at the default effort."
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
 # ---------------------------------------------------------------------------
 # Top-level report generation
 # ---------------------------------------------------------------------------
@@ -2553,6 +2613,11 @@ def generate_report(data: ReportData) -> str:
     complexity_normalized_section = render_complexity_normalized(data)
     if complexity_normalized_section:
         sections.append(complexity_normalized_section)
+    # Effort-degradation section (#313 R4/R5) — omitted entirely when no
+    # clamp/warn-ignore degradation was recorded this session.
+    effort_degradation_section = render_effort_degradation(data)
+    if effort_degradation_section:
+        sections.append(effort_degradation_section)
     # Scheduled-fire failures section is omitted entirely when empty.
     fire_failures_section = render_scheduled_fire_failures(data)
     if fire_failures_section:
