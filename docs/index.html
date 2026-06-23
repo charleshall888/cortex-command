@@ -246,11 +246,11 @@
     z-index: 2;
     max-width: 1280px;
     margin: 0 auto;
-    padding: 36px 320px 96px 80px; /* sidebar gutter on right */
+    padding: 36px 320px 40px 80px; /* sidebar gutter on right */
   }
 
   @media (max-width: 1100px) {
-    .page { padding: 28px 32px 72px 32px; }
+    .page { padding: 28px 32px 40px 32px; }
   }
 
   /* ───────────── Sidebar ───────────── */
@@ -3384,8 +3384,8 @@
   footer {
     position: relative; /* so .redline children can be absolutely positioned */
     max-width: 1280px;
-    margin: 72px auto 0;
-    padding: 32px 320px 48px 80px; /* mirror .page so content aligns with article column and clears the fixed sidebar */
+    margin: 0 auto;
+    padding: 32px 320px 28px 80px; /* mirror .page so content aligns with article column and clears the fixed sidebar */
     border-top: 1px solid var(--rule-soft);
     display: flex;
     justify-content: space-between;
@@ -3397,7 +3397,7 @@
     color: var(--ink-mute);
   }
   @media (max-width: 1100px) {
-    footer { padding: 32px 32px 48px 32px; }
+    footer { padding: 32px 32px 28px 32px; }
   }
   @media (max-width: 600px) {
     footer { padding: 24px 16px 40px 16px; gap: 20px; }
@@ -4889,20 +4889,51 @@
      they punctuate the scroll without stuttering it. Each divider is
      also the scroll anchor the sidebar tracker observes (#part-1..4).
      ═══════════════════════════════════════════════════════════════ */
-  .part-divider { margin: 92px 0 38px; scroll-margin-top: 32px; }
+  .part-divider { margin: 110px 0 46px; scroll-margin-top: 32px; }
   .part-divider:first-of-type { margin-top: 60px; }
-  .part-divider .pd-rule {
-    position: relative; height: 1px; background: var(--rule-soft);
-    margin-bottom: 18px;
+
+  /* Drafting-sheet frame: an ochre crop bracket (top-left) + a faint
+     bracket (bottom-right) + a ghosted register numeral + a coordinate
+     stamp. No horizontal rule — so a Part break never reads like a §X.Y
+     section heading, and the divider owns its own framing regardless of
+     what the next section draws. */
+  .part-divider .pd-frame {
+    position: relative;
+    padding: 30px 0 8px 34px; /* left pad clears the crop bracket + watermark */
   }
-  .part-divider .pd-rule::before {
-    content: ""; position: absolute; left: 0; top: -1.5px;
-    width: 66px; height: 3px; background: var(--ochre);
+  .part-divider .pd-frame::before {
+    content: ""; position: absolute; left: 0; top: 0;
+    width: 22px; height: 22px;
+    border-top: 2px solid var(--ochre);
+    border-left: 2px solid var(--ochre);
   }
-  .part-divider .pd-row { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; }
+  .part-divider .pd-frame::after {
+    content: ""; position: absolute; right: 0; bottom: 0;
+    width: 22px; height: 22px;
+    border-bottom: 1px solid var(--rule-soft);
+    border-right: 1px solid var(--rule-soft);
+  }
+  .part-divider .pd-watermark {
+    position: absolute; left: 14px; top: 0; z-index: 0;
+    font-family: var(--serif); font-weight: 400;
+    font-size: clamp(110px, 15vw, 200px); line-height: 0.8;
+    color: var(--ink); opacity: 0.05; pointer-events: none;
+    font-variation-settings: "opsz" 144;
+  }
+  .part-divider .pd-coord {
+    position: absolute; right: 2px; top: 6px;
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--ink-faint);
+    font-variant-numeric: tabular-nums;
+  }
+  .part-divider .pd-row {
+    position: relative; z-index: 1;
+    display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap;
+  }
   .part-divider .pd-num {
-    font-family: var(--mono); font-size: 11px; letter-spacing: 0.24em;
-    text-transform: uppercase; color: var(--ochre); white-space: nowrap;
+    font-family: var(--mono); font-size: 12px; font-weight: 600;
+    letter-spacing: 0.26em; text-transform: uppercase; color: var(--ochre);
+    white-space: nowrap;
   }
   .part-divider .pd-title {
     font-family: var(--serif); font-weight: 400;
@@ -4911,12 +4942,17 @@
     font-variation-settings: "opsz" 120, "SOFT" 30;
   }
   .part-divider .pd-dek {
+    position: relative; z-index: 1;
     font-family: var(--serif); font-size: 15px; line-height: 1.5;
     color: var(--ink-mute); margin: 12px 0 0; max-width: 60ch; font-weight: 350;
   }
+  html[data-stain="carbon"] .part-divider .pd-watermark { opacity: 0.08; }
   @media (max-width: 600px) {
-    .part-divider { margin: 60px 0 30px; }
+    .part-divider { margin: 64px 0 32px; }
     .part-divider:first-of-type { margin-top: 40px; }
+    .part-divider .pd-frame { padding-left: 26px; }
+    .part-divider .pd-watermark { font-size: 92px; left: 8px; }
+    .part-divider .pd-coord { position: static; display: block; margin-bottom: 10px; }
   }
 
   /* ════════════════════════════════════════════════════════════════
@@ -5385,13 +5421,16 @@
   </section>
 
   <!-- ═══════════════════ PART 1 · THE METHOD ═══════════════════ -->
-  <div class="part-divider" id="part-1">
-    <div class="pd-rule"></div>
-    <div class="pd-row">
-      <span class="pd-num">Part 1</span>
-      <span class="pd-title">The Method</span>
+  <div class="part-divider" id="part-1" data-part="1">
+    <div class="pd-frame">
+      <span class="pd-coord">sheet 01 / 04</span>
+      <span class="pd-watermark" aria-hidden="true">1</span>
+      <div class="pd-row">
+        <span class="pd-num">Part 1</span>
+        <span class="pd-title">The Method</span>
+      </div>
+      <p class="pd-dek">The commands you invoke, in order — turning a vague brief into a spec worth trusting, then a fork: hand it to the night, or ship it beside you.</p>
     </div>
-    <p class="pd-dek">The commands you invoke, in order — turning a vague brief into a spec worth trusting, then a fork: hand it to the night, or ship it beside you.</p>
   </div>
 
   <!-- ───── §1.1 The Run · §1.2 The Interrogation Bench ───── -->
@@ -5846,13 +5885,16 @@
     </div>
 
   <!-- ═══════════════════ PART 2 · THE RIGOR ═══════════════════ -->
-  <div class="part-divider" id="part-2">
-    <div class="pd-rule"></div>
-    <div class="pd-row">
-      <span class="pd-num">Part 2</span>
-      <span class="pd-title">The Rigor</span>
+  <div class="part-divider" id="part-2" data-part="2">
+    <div class="pd-frame">
+      <span class="pd-coord">sheet 02 / 04</span>
+      <span class="pd-watermark" aria-hidden="true">2</span>
+      <div class="pd-row">
+        <span class="pd-num">Part 2</span>
+        <span class="pd-title">The Rigor</span>
+      </div>
+      <p class="pd-dek">Cortex scales its rigor to the work — and runs the phases that turn a feature into a real spec.</p>
     </div>
-    <p class="pd-dek">Cortex scales its rigor to the work — and runs the phases that turn a feature into a real spec.</p>
   </div>
 
   <!-- ───────── §2.1 · the patch atlas (complexity × criticality patches the lifecycle) ───────── -->
@@ -5989,13 +6031,16 @@
   </section>
 
   <!-- ═══════════════════ PART 3 · THE PROOF ═══════════════════ -->
-  <div class="part-divider" id="part-3">
-    <div class="pd-rule"></div>
-    <div class="pd-row">
-      <span class="pd-num">Part 3</span>
-      <span class="pd-title">The Proof</span>
+  <div class="part-divider" id="part-3" data-part="3">
+    <div class="pd-frame">
+      <span class="pd-coord">sheet 03 / 04</span>
+      <span class="pd-watermark" aria-hidden="true">3</span>
+      <div class="pd-row">
+        <span class="pd-num">Part 3</span>
+        <span class="pd-title">The Proof</span>
+      </div>
+      <p class="pd-dek">What happens after you walk away — the overnight handoff in motion, and the safety contract that makes “work while you sleep” a claim you can check.</p>
     </div>
-    <p class="pd-dek">What happens after you walk away — the overnight handoff in motion, and the safety contract that makes “work while you sleep” a claim you can check.</p>
   </div>
 
   <!-- ───────── Pipeline activation (sticky scrub) ───────── -->
@@ -7096,13 +7141,16 @@
   </script>
 
   <!-- ═══════════════ PART 4 · THE BENCH & THE ASK ═══════════════ -->
-  <div class="part-divider" id="part-4">
-    <div class="pd-rule"></div>
-    <div class="pd-row">
-      <span class="pd-num">Part 4</span>
-      <span class="pd-title">The Toolkit</span>
+  <div class="part-divider" id="part-4" data-part="4">
+    <div class="pd-frame">
+      <span class="pd-coord">sheet 04 / 04</span>
+      <span class="pd-watermark" aria-hidden="true">4</span>
+      <div class="pd-row">
+        <span class="pd-num">Part 4</span>
+        <span class="pd-title">The Toolkit</span>
+      </div>
+      <p class="pd-dek">The deterministic CLI underneath the prose — why it exists, and the one command that installs all of it.</p>
     </div>
-    <p class="pd-dek">The deterministic CLI underneath the prose — why it exists, and the one command that installs all of it.</p>
   </div>
 
   <!-- ───────── §4.1 · /cli · the bench (atomic subcommands behind the prose) ───────── -->
@@ -7472,7 +7520,7 @@
           <span class="ship-opt req">required · start here</span>
         </div>
         <h3 class="ship-name">cortex-core</h3>
-        <p class="ship-desc">The interactive lifecycle — <code>/discovery</code>, <code>/refine</code>, <code>/critical-review</code>, <code>/lifecycle</code> — installed as a Claude Code plugin. <strong>Start here.</strong> Run <code>/lifecycle</code> on a real ticket to feel the gates with you in the loop.</p>
+        <p class="ship-desc">The interactive lifecycle — <code>/requirements</code>, <code>/discovery</code>, <code>/refine</code>, <code>/critical-review</code>, <code>/lifecycle</code> — installed as a Claude Code plugin. <strong>Start with <code>/requirements</code></strong> to set the charter, then <code>/discovery</code> to fan it into tickets, then <code>/lifecycle</code> to carry one from spec to shipped with the gates in the loop.</p>
       </article>
 
       <article class="ship-card optional" data-surface="overnight">
