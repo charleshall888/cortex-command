@@ -273,8 +273,15 @@ async def dispatch_review(
         skill="review",
     )
 
-    # (5) Parse verdict from review.md
-    verdict_dict = parse_verdict(review_md_path)
+    # (5) Resolve verdict. A failed dispatch (result.success == False) forces
+    # the ERROR sentinel WITHOUT parsing review.md, so a stale prior-cycle
+    # verdict (e.g. an on-disk APPROVED from an earlier run) can never approve
+    # a feature whose fresh review dispatch crashed. Only consult the on-disk
+    # review.md when the dispatch itself succeeded.
+    if result.success:
+        verdict_dict = parse_verdict(review_md_path)
+    else:
+        verdict_dict = dict(_ERROR_RESULT)
     verdict_str = verdict_dict.get("verdict", "ERROR")
     cycle = verdict_dict.get("cycle", 0)
     issues = verdict_dict.get("issues", [])
@@ -526,8 +533,14 @@ async def dispatch_review(
             cycle=2,
         )
 
-        # (9g) Parse cycle 2 verdict
-        cycle2_verdict_dict = parse_verdict(review_md_path)
+        # (9g) Resolve cycle 2 verdict. As with cycle 1, a failed cycle-2
+        # dispatch (cycle2_result.success == False) forces the ERROR sentinel
+        # WITHOUT parsing review.md, so a stale verdict on disk cannot approve
+        # a feature whose cycle-2 review dispatch crashed.
+        if cycle2_result.success:
+            cycle2_verdict_dict = parse_verdict(review_md_path)
+        else:
+            cycle2_verdict_dict = dict(_ERROR_RESULT)
         cycle2_verdict_str = cycle2_verdict_dict.get("verdict", "ERROR")
         cycle2_cycle = cycle2_verdict_dict.get("cycle", 0)
         cycle2_issues = cycle2_verdict_dict.get("issues", [])

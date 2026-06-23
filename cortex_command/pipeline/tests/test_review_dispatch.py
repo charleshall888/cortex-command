@@ -376,6 +376,62 @@ class TestCouldNotRunWritesDeferral(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(result.verdict, "REJECTED")
             self.assertEqual(len(list(deferred_dir.glob(f"{feature}-q*.md"))), 1)
 
+    async def test_failed_dispatch_ignores_stale_approved_review(self):
+        """Task 1: a failed review dispatch (DispatchResult.success == False)
+        must NOT trust a stale on-disk APPROVED review.md. The verdict is
+        forced to the ERROR sentinel without parsing the file, so the feature
+        is not approved by a stale prior-cycle verdict whose fresh dispatch
+        crashed."""
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            feature = "feat-stale-approved"
+            lifecycle_base = tmp_path / "cortex" / "lifecycle"
+            feature_dir = lifecycle_base / feature
+            feature_dir.mkdir(parents=True)
+
+            spec_path = feature_dir / "spec.md"
+            spec_path.write_text("# Spec\n\nSpec content.\n", encoding="utf-8")
+
+            # Stale APPROVED review.md on disk (e.g. from a prior cycle/run).
+            review_md_path = feature_dir / "review.md"
+            review_md_path.write_text(
+                "# Review\n\n```json\n"
+                + json.dumps({"verdict": "APPROVED", "cycle": 1, "issues": []})
+                + "\n```\n",
+                encoding="utf-8",
+            )
+            deferred_dir = tmp_path / "deferred"
+
+            # The fresh review dispatch crashes (success=False).
+            async def fake_dispatch(**kwargs) -> DispatchResult:
+                return DispatchResult(
+                    success=False,
+                    output="",
+                    error_type="infrastructure_failure",
+                    error_detail="dispatch crashed",
+                )
+
+            with patch.object(
+                _review_dispatch_module, "dispatch_task",
+                new=AsyncMock(side_effect=fake_dispatch),
+            ):
+                result = await dispatch_review(
+                    feature=feature,
+                    worktree_path=tmp_path / "worktree",
+                    branch="pipeline/feat-stale-approved",
+                    spec_path=spec_path,
+                    complexity="complex",
+                    criticality="high",
+                    lifecycle_base=lifecycle_base,
+                    deferred_dir=deferred_dir,
+                    base_branch="main",
+                )
+
+            # The stale APPROVED must NOT approve a crashed dispatch.
+            self.assertFalse(result.approved)
+            self.assertTrue(result.deferred)
+            self.assertEqual(result.verdict, "ERROR")
+
     async def test_defer_path_twice_for_same_feature_is_idempotent(self):
         """R7: re-running the defer path for the same feature (e.g. on session
         resume) does not mint a duplicate -q00N.md file — exactly one deferral
