@@ -141,7 +141,12 @@ def worktree_runner_env(tmp_path: Path):
     mock_bin = tmp_path / "mock-bin"
     mock_bin.mkdir()
     mock_claude = mock_bin / "claude"
-    mock_claude.write_text("#!/bin/bash\nsleep 60\n")
+    # Answer --version instantly (as a real claude does, so cli_resolver's
+    # best-CLI probe does not block), but sleep for the orchestrator `-p` run
+    # so the runner has a long-lived child to clean up.
+    mock_claude.write_text(
+        '#!/bin/bash\nif [ "$1" = "--version" ]; then echo "2.1.999 (Claude Code)"; exit 0; fi\nsleep 60\n'
+    )
     mock_claude.chmod(mock_claude.stat().st_mode | stat.S_IEXEC)
 
     events_path = session_dir / "overnight-events.log"
