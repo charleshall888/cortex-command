@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 2d207318-fd0c-4102-aafa-6a5ddb1b2bf3
 title: 'Review-gate flag-coherence: a feature_deferred event asserted merge_reverted + could_not_run + review_dispatch_crashed together'
-status: in_progress
+status: complete
 priority: low
 type: bug
 created: 2026-06-23

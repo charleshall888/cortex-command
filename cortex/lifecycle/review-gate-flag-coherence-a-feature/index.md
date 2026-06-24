@@ -2,7 +2,7 @@
 feature: review-gate-flag-coherence-a-feature
 parent_backlog_uuid: 2d207318-fd0c-4102-aafa-6a5ddb1b2bf3
 parent_backlog_id: 320
-artifacts: [research, spec, plan]
+artifacts: [research, spec, plan, review]
 tags: []
 created: 2026-06-23
 updated: 2026-06-24
