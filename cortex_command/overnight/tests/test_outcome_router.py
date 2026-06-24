@@ -20,6 +20,7 @@ from cortex_command.overnight.outcome_router import (
     OutcomeContext,
     _apply_feature_result,
     _find_backlog_item_path,
+    _guard_review_flag_coherence,
     _write_back_to_backlog,
     apply_feature_result,
     set_backlog_dir,
@@ -2596,6 +2597,40 @@ class TestMergeToMergedSiteExhaustiveness(unittest.TestCase):
 
         # Total count pinned: six write sites — two guarded, four review-gated.
         self.assertEqual(sum(append_sites.values()), 6)
+
+
+class TestGuardReviewFlagCoherence(unittest.TestCase):
+    """R2 — direct done-criterion unit test of the write-boundary coherence
+    guard. Calls ``_guard_review_flag_coherence`` directly, so a green run
+    *executes* the ``assertRaises`` — not satisfiable by a suite that never
+    touches the guard. Deleting the guard's ``raise`` makes the both-flags
+    case error (genuine mutation tripwire)."""
+
+    def test_raises_when_both_flags_set(self):
+        with self.assertRaises(RuntimeError):
+            _guard_review_flag_coherence(
+                {
+                    "could_not_run": True,
+                    "review_dispatch_crashed": True,
+                    "merge_reverted": True,
+                },
+                site="unit-test",
+            )
+
+    def test_no_raise_could_not_run_alone(self):
+        self.assertIsNone(
+            _guard_review_flag_coherence({"could_not_run": True}, site="unit-test")
+        )
+
+    def test_no_raise_review_dispatch_crashed_alone(self):
+        self.assertIsNone(
+            _guard_review_flag_coherence(
+                {"review_dispatch_crashed": True}, site="unit-test"
+            )
+        )
+
+    def test_no_raise_neither_flag(self):
+        self.assertIsNone(_guard_review_flag_coherence({}, site="unit-test"))
 
 
 class TestCouldNotRunPreservesMerge(unittest.IsolatedAsyncioTestCase):
