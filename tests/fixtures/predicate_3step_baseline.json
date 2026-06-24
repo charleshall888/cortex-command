@@ -44,8 +44,8 @@
     ],
     [
       "overnight watchdog",
-      0,
-      "001-fix-overnight-watchdog-to-kill-entire-process-group-on-stall.md"
+      2,
+      null
     ],
     [
       "additive by default",
@@ -54,8 +54,8 @@
     ],
     [
       "WATCHDOG",
-      0,
-      "001-fix-overnight-watchdog-to-kill-entire-process-group-on-stall.md"
+      2,
+      null
     ],
     [
       "OVERNIGHT",
