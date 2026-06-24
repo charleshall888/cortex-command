@@ -210,14 +210,27 @@ def _main() -> int:
     """CLI entry point — prints ``true`` or ``false`` for the commit-artifacts flag.
 
     Invoked via ``python3 -m cortex_command.lifecycle_config`` or the
-    ``cortex-read-commit-artifacts`` binstub. Resolves the repo root from
-    ``$CORTEX_COMMAND_ROOT`` when set, otherwise the current working directory.
-    Output is lowercase with a trailing newline so shell consumers can match
-    against ``true`` / ``false`` with a plain ``=`` comparison.
+    ``cortex-read-commit-artifacts`` binstub. Resolves the user's cortex
+    project root the same way every other project-aware consumer does, via
+    ``cortex_command.common._resolve_user_project_root()`` (honor
+    ``CORTEX_REPO_ROOT`` when set, else walk up from cwd to the nearest
+    ``cortex/`` ancestor), falling open to the current working directory
+    when no project is found. It does NOT read ``CORTEX_COMMAND_ROOT`` —
+    that variable locates the cortex-command package, not the user's
+    project. Output is lowercase with a trailing newline so shell consumers
+    can match against ``true`` / ``false`` with a plain ``=`` comparison.
     """
     import os as _os
 
-    root = _pathlib.Path(_os.environ.get("CORTEX_COMMAND_ROOT") or _os.getcwd())
+    from cortex_command.common import (
+        CortexProjectRootError,
+        _resolve_user_project_root,
+    )
+
+    try:
+        root = _resolve_user_project_root()
+    except CortexProjectRootError:
+        root = _pathlib.Path(_os.getcwd())
     _sys.stdout.write("true\n" if read_commit_artifacts(root) else "false\n")
     return 0
 
