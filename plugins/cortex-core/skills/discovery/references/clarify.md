@@ -18,7 +18,12 @@ If a concept you need is not yet defined in the glossary, treat the absence as a
 
 ### 3. Check Existing Backlog Coverage
 
-Scan `cortex/backlog/[0-9]*-*.md` titles, tags, and descriptions for overlap with the topic. If a backlog item already covers this topic substantially, surface it to the user and ask whether to proceed with discovery or work from the existing ticket.
+Resolve the active backlog backend once with `cortex-read-backlog-backend` (argless; it prints the resolved backend and exits 0), then route on the value:
+
+- **`cortex-backlog`** (the default arm) → scan `cortex/backlog/[0-9]*-*.md` titles, tags, and descriptions for overlap with the topic. If a backlog item already covers this topic substantially, surface it to the user and ask whether to proceed with discovery or work from the existing ticket.
+- **any other value (`none` OR external)** → skip the local coverage scan with a one-line advisory that backlog coverage checking is disabled for this repo; novelty defaults to "no overlap detected" (the safe, non-blocking direction).
+
+This is a read path, so it folds to **two arms**, not the three arms of decompose §5's create flow: the non-`cortex-backlog` arm stands down rather than querying an external tracker (a read must not mutate or interrogate an external backend). See ADR-0016 for the backend-routing rationale.
 
 ### 4. Confidence Assessment
 
