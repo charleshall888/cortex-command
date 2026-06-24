@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from cortex_command.overnight.orchestrator import BatchResult, BatchConfig
 
 from cortex_command.common import (
+    _resolve_lifecycle_base,
     _resolve_user_project_root,
     read_criticality,
     read_tier,
@@ -1121,6 +1122,7 @@ async def _recovery_review_gate(
             base_branch=_effective_base_branch(
                 repo_path, ctx.integration_branches, ctx.config.base_branch,
             ),
+            lifecycle_base=_resolve_lifecycle_base(),
             repo_path=merge_target,
             log_path=ctx.config.pipeline_events_path,
         )
@@ -1528,6 +1530,7 @@ async def _repair_review_or_revert(
             base_branch=_effective_base_branch(
                 repo_path, ctx.integration_branches, ctx.config.base_branch,
             ),
+            lifecycle_base=_resolve_lifecycle_base(),
             repo_path=repo,
             log_path=ctx.config.pipeline_events_path,
         )
@@ -1838,6 +1841,7 @@ async def apply_feature_result(
                         base_branch=_effective_base_branch(
                             repo_path, ctx.integration_branches, ctx.config.base_branch,
                         ),
+                        lifecycle_base=_resolve_lifecycle_base(),
                         repo_path=merge_target,
                         log_path=ctx.config.pipeline_events_path,
                     )
