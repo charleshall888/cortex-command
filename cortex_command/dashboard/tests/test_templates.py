@@ -297,5 +297,86 @@ class TestStructuralElements(unittest.TestCase):
         self.assertIn('id="feature-cards"', html)
 
 
+class TestBacklogPanelBackendGate(unittest.TestCase):
+    """backlog_panel.html renders a backend-aware 3-way (R5, R6c)."""
+
+    def test_none_backend_renders_placeholder(self):
+        state = DashboardState()
+        state.backlog_backend = "none"
+        # Populated counts must be IGNORED on the non-local arm.
+        state.backlog_counts = {"backlog": 2, "complete": 1}
+        html = _render_partial("backlog_panel.html", state=state)
+        self.assertIn("backlog tracking disabled", html)
+        self.assertNotIn("items tracked", html)
+        self.assertNotIn("stack-bar", html)
+
+    def test_external_backend_names_the_backend(self):
+        state = DashboardState()
+        state.backlog_backend = "github-issues"
+        state.backlog_counts = {"backlog": 2}
+        html = _render_partial("backlog_panel.html", state=state)
+        self.assertIn("tracked externally via", html)
+        self.assertIn("github-issues", html)
+        self.assertNotIn("stack-bar", html)
+
+    def test_cortex_backlog_populated_arm_unchanged(self):
+        # R6c: the default arm's rendered output is byte-for-byte today's.
+        state = DashboardState()
+        state.backlog_backend = "cortex-backlog"
+        state.backlog_counts = {"backlog": 2, "complete": 1}
+        html = _render_partial("backlog_panel.html", state=state)
+        self.assertIn("3 items tracked", html)
+        self.assertIn("stack-bar", html)
+
+    def test_cortex_backlog_empty_arm_unchanged(self):
+        state = DashboardState()
+        state.backlog_backend = "cortex-backlog"
+        state.backlog_counts = {}
+        html = _render_partial("backlog_panel.html", state=state)
+        self.assertIn("no backlog items found", html)
+
+
+class TestSiblingTemplateTitleFallback(unittest.TestCase):
+    """feature_cards.html / escalations_panel.html slug-fallback under the
+    title-clear — the deliberate spec.md:69 behavior change. Pins the two
+    sibling consumers of state.backlog_titles cleared by the non-local poller
+    arm so the fallback render is guarded, not just verbally acknowledged."""
+
+    def test_feature_cards_falls_back_to_slug_when_titles_cleared(self):
+        state = DashboardState()
+        state.overnight = _make_overnight_fixture()
+        state.feature_states = _make_feature_states_fixture()
+        state.backlog_titles = {}  # the non-local arm clears this
+        html = _render_partial("feature_cards.html", state=state)
+        self.assertIn("feat-alpha", html)  # raw slug shown, no error
+
+    def test_feature_cards_shows_title_when_present(self):
+        # Contrast: a populated title IS shown — proves the fallback is
+        # title-when-present / slug-when-cleared, not slug-always.
+        state = DashboardState()
+        state.overnight = _make_overnight_fixture()
+        state.feature_states = _make_feature_states_fixture()
+        state.backlog_titles = {"feat-alpha": "Alpha Human Title"}
+        html = _render_partial("feature_cards.html", state=state)
+        self.assertIn("Alpha Human Title", html)
+
+    def test_escalations_panel_falls_back_to_slug_when_titles_cleared(self):
+        state = DashboardState()
+        state.open_questions_total = 1
+        state.overnight = {"features": {"feat-alpha": {"status": "running"}}}
+        state.feature_escalations = {
+            "feat-alpha": [
+                {
+                    "question": "Blocked on X?",
+                    "escalation_id": "esc-1",
+                    "ts": "2026-06-24T10:00:00+00:00",
+                }
+            ]
+        }
+        state.backlog_titles = {}  # the non-local arm clears this
+        html = _render_partial("escalations_panel.html", state=state)
+        self.assertIn("feat-alpha", html)  # raw slug shown, no error
+
+
 if __name__ == "__main__":
     unittest.main()
