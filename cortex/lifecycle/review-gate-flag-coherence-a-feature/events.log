@@ -1,0 +1,8 @@
+{"schema_version": 1, "ts": "2026-06-24T03:09:21Z", "event": "lifecycle_start", "feature": "review-gate-flag-coherence-a-feature", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-24T03:14:14Z", "event": "clarify_critic", "feature": "review-gate-flag-coherence-a-feature", "parent_epic_loaded": false, "findings_count": 5, "dispositions": {"apply": 2, "dismiss": 3, "ask": 0}, "applied_fixes_count": 2, "dismissals_count": 3, "status": "ok"}
+{"ts": "2026-06-24T03:14:14Z", "event": "phase_transition", "feature": "review-gate-flag-coherence-a-feature", "from": "clarify", "to": "research"}
+{"ts": "2026-06-24T03:27:01Z", "event": "complexity_override", "feature": "review-gate-flag-coherence-a-feature", "from": "simple", "to": "complex", "gate": "research_open_questions"}
+{"ts": "2026-06-24T03:27:11Z", "event": "criticality_override", "feature": "review-gate-flag-coherence-a-feature", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-06-24T03:14:14Z", "event": "phase_transition", "feature": "review-gate-flag-coherence-a-feature", "from": "research", "to": "specify"}
+{"ts": "2026-06-24T03:40:00Z", "event": "spec_approved", "feature": "review-gate-flag-coherence-a-feature"}
+{"ts": "2026-06-24T03:40:00Z", "event": "phase_transition", "feature": "review-gate-flag-coherence-a-feature", "from": "specify", "to": "plan"}
