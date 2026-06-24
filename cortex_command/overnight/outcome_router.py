@@ -1341,6 +1341,33 @@ def _guard_no_review_qualifying_sync_merge(name: str, site: str) -> None:
         )
 
 
+_REVIEW_FLAG_COHERENCE_MSG = (
+    "review-gate `feature_deferred` emit at {site} co-set the mutually "
+    "exclusive flags `could_not_run` and `review_dispatch_crashed` "
+    "(ADR-0015/R6: a could-not-run review preserves the merge and is never a "
+    "dispatch crash). This combination is unreachable under correct code; its "
+    "emission signals a regression at the review-gate write boundary."
+)
+
+
+def _guard_review_flag_coherence(details: dict, *, site: str) -> None:
+    """Raise if a deferral ``details`` dict co-sets the two exclusive flags.
+
+    Write-boundary coherence guard (spec R1) for the six review-gate
+    ``FEATURE_DEFERRED`` emits. ADR-0015/R6 makes ``could_not_run`` and
+    ``review_dispatch_crashed`` mutually exclusive — a could-not-run review
+    preserves the merge and is never a dispatch crash — so the combination is
+    unreachable under correct code and this is a no-op on every reachable
+    path. It fails loudly only if a future edit or new emit site wrongly
+    co-sets both flags, preventing an incoherent event from being written.
+    ``raise``, never ``assert``: overnight spawns plain ``python`` with no
+    ``-O``/``PYTHONOPTIMIZE``, so an ``assert`` would run and abort with a bare
+    ``AssertionError``.
+    """
+    if details.get("could_not_run") and details.get("review_dispatch_crashed"):
+        raise RuntimeError(_REVIEW_FLAG_COHERENCE_MSG.format(site=site))
+
+
 async def _repair_completed_review_gate(
     name: str,
     result: FeatureResult,
