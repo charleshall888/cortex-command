@@ -168,7 +168,13 @@ After orchestrator review passes, read the active tier and criticality (rules: c
 - `cortex-lifecycle-state --feature {feature} --field tier`
 - `cortex-lifecycle-state --feature {feature} --field criticality`
 
-**Run** when `tier = complex` AND `criticality ∈ {medium, high, critical}`: invoke the `critical-review` skill with the spec artifact. Present the synthesis to the user before spec approval. Otherwise, read and follow the critical-review gate protocol (use the body-resolved absolute path from lifecycle SKILL.md's Reference-path propagation manifest: the **critical-review-gate** target) for the `specify` phase.
+Also resolve the active backlog backend once via `` `cortex-read-backlog-backend` `` (argless; it prints the resolved backend and exits 0) before deciding to skip — the non-local seed-tier fail-safe below keys on it, and the gate-protocol reference is consulted only on the skip branch, so the backend read happens here at the inline decision rather than inside the gate ref.
+
+**Run** when `tier = complex` AND `criticality ∈ {medium, high, critical}`: invoke the `critical-review` skill with the spec artifact. Present the synthesis to the user before spec approval.
+
+**Non-local seed-tier fail-safe**: when the resolved backend ≠ `cortex-backlog` AND the run condition above did not fire because `tier = simple` (the skip-silent seed) AND `cortex/lifecycle/{feature}/research.md` exists (the resume-to-spec signature that Clarify may have been bypassed and the seed left un-reconciled), the `simple` seed is not trustworthy — invoke the `critical-review` skill with the spec artifact and present the synthesis before spec approval, rather than skipping. The local `cortex-backlog` path skips this branch (its seed is re-sourced from backlog frontmatter on resume, so it is trustworthy).
+
+Otherwise, read and follow the critical-review gate protocol (use the body-resolved absolute path from lifecycle SKILL.md's Reference-path propagation manifest: the **critical-review-gate** target) for the `specify` phase.
 
 ### 4. User Approval
 
