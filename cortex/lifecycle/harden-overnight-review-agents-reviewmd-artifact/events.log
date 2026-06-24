@@ -8,3 +8,4 @@
 {"ts": "2026-06-24T02:35:14Z", "event": "phase_transition", "feature": "harden-overnight-review-agents-reviewmd-artifact", "tier": "complex", "from": "implement", "to": "review"}
 {"ts": "2026-06-24T02:39:54Z", "event": "review_verdict", "feature": "harden-overnight-review-agents-reviewmd-artifact", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
 {"ts": "2026-06-24T02:39:54Z", "event": "phase_transition", "feature": "harden-overnight-review-agents-reviewmd-artifact", "from": "review", "to": "complete"}
+{"ts": "2026-06-24T02:41:16Z", "event": "feature_complete", "feature": "harden-overnight-review-agents-reviewmd-artifact", "tasks_total": 6, "rework_cycles": 0, "merge_anchor": "merge"}

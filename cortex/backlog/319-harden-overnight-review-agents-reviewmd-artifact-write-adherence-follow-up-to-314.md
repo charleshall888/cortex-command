@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 4d5d2d7c-e8a6-49ad-b81e-16962af95815
 title: 'Harden overnight review agent''s review.md artifact-write adherence (follow-up to #314)'
-status: refined
+status: complete
 priority: medium
 type: bug
 created: 2026-06-23
