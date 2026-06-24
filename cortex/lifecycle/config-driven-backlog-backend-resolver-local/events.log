@@ -1,0 +1,8 @@
+{"schema_version": 1, "ts": "2026-06-23T21:19:19Z", "event": "lifecycle_start", "feature": "config-driven-backlog-backend-resolver-local", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-23T21:25:32Z", "event": "clarify_critic", "feature": "config-driven-backlog-backend-resolver-local", "parent_epic_loaded": true, "findings_count": 7, "dispositions": {"apply": 6, "dismiss": 0, "ask": 1}, "applied_fixes_count": 5, "dismissals_count": 0, "status": "ok"}
+{"schema_version": 1, "ts": "2026-06-23T21:27:42Z", "event": "phase_transition", "feature": "config-driven-backlog-backend-resolver-local", "from": "clarify", "to": "research"}
+{"ts": "2026-06-23T21:41:11Z", "event": "complexity_override", "feature": "config-driven-backlog-backend-resolver-local", "from": "simple", "to": "complex", "gate": "research_open_questions"}
+{"schema_version": 1, "ts": "2026-06-23T21:41:28Z", "event": "phase_transition", "feature": "config-driven-backlog-backend-resolver-local", "from": "research", "to": "specify"}
+{"ts": "2026-06-23T21:41:28Z", "event": "criticality_override", "feature": "config-driven-backlog-backend-resolver-local", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-06-24T00:51:36Z", "event": "spec_approved", "feature": "config-driven-backlog-backend-resolver-local"}
+{"ts": "2026-06-24T00:51:36Z", "event": "phase_transition", "feature": "config-driven-backlog-backend-resolver-local", "from": "specify", "to": "plan"}
