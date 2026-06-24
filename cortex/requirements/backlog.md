@@ -103,7 +103,7 @@ The boundary is deliberate: this area delivers extraction + a declarative backen
 - The config field is the source of truth for the active backend, not plugin-install detection — the wheel cannot reliably introspect installed Claude Code plugins, and lifecycle/overnight import the backlog module from the wheel.
 - Follow the established optional-plugin pattern: register `cortex-backlog` in justfile `BUILD_OUTPUT_PLUGINS`, enforce the dual-source mirror at pre-commit, and document the plugin as optional in `docs/setup.md`.
 - Terminology: the local backend is named `cortex-backlog` consistently in config values and prose (not `local`).
-- This is a load-bearing decision and likely warrants an ADR (configurable backlog backend + LLM-as-adapter rationale), consistent with `cortex/adr/` practice; consumer skills should back-point to it rather than restating rationale.
+- This is a load-bearing decision recorded in [ADR-0016](../adr/0016-configurable-backlog-backend-and-llm-as-adapter.md) (configurable backlog backend + LLM-as-adapter rationale); consumer skills should back-point to it rather than restating rationale.
 
 ## Dependencies
 
