@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 90afa6d5-7fb4-4923-8192-9a77e8588eed
 title: Gate remaining backend-blind backlog consumers (dashboard panel, discovery clarify/decompose)
-status: refined
+status: complete
 priority: low
 type: bug
 created: 2026-06-24
