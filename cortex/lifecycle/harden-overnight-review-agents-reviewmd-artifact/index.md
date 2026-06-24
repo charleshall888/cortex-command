@@ -2,7 +2,7 @@
 feature: harden-overnight-review-agents-reviewmd-artifact
 parent_backlog_uuid: 4d5d2d7c-e8a6-49ad-b81e-16962af95815
 parent_backlog_id: 319
-artifacts: [research, spec, plan]
+artifacts: [research, spec, plan, review]
 tags: []
 created: 2026-06-23
 updated: 2026-06-23
