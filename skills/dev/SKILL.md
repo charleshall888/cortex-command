@@ -132,6 +132,15 @@ Before performing this assessment, check whether `cortex/lifecycle/<feature>/` a
 
 When routing to backlog triage:
 
+### Backend gate (resolve before any index read)
+
+Triage reads the local `cortex/backlog/index.{md,json}` and calls `cortex-build-epic-map` / `cortex-generate-backlog-index`, all of which only describe a `cortex-backlog` (local) repo. So resolve the active backend first — before reaching any of the steps below — with `` `cortex-read-backlog-backend` `` (argless; it prints the resolved backend and exits 0):
+
+- **`cortex-backlog`** (the default arm) — proceed with triage exactly as today (Steps 3a–3c below).
+- **any other value** (`none` or an external tracker) — the local index does not represent the active backlog, so skip triage with a one-line advisory: this repo's backlog lives in a non-`cortex-backlog` backend, so consult it directly and route work through `/cortex-core:lifecycle` (a single concrete feature) or `/cortex-core:discovery` (a topic to decompose). Do not run `cortex-generate-backlog-index`, read `cortex/backlog/index.{md,json}`, or call `cortex-build-epic-map`.
+
+The steps below run only on the `cortex-backlog` arm.
+
 ### 3a. Regenerate the Index
 
 Run the global shell command `cortex-generate-backlog-index` directly (do NOT use a project-local script). If it fails, warn that `index.json` may not be produced.
