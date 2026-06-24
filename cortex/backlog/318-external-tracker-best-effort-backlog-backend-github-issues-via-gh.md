@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: b3edf48d-b1bd-41e5-9813-ff81b0474829
 title: External-tracker best-effort backlog backend (GitHub Issues via gh)
-status: backlog
+status: wontfix
 priority: medium
 type: feature
 created: 2026-06-23

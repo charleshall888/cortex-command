@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 532c410b-96d9-467c-8569-65ed7f3e4033
 title: Optional backlog plugin + configurable backend
-status: backlog
+status: complete
 priority: high
 type: epic
 created: 2026-06-23
-updated: 2026-06-23
+updated: 2026-06-24
 tags: ['backlog-optional-plugin']
 discovery_source: cortex/research/backlog-optional-plugin/research.md
 ---
