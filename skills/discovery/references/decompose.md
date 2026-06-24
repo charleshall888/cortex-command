@@ -186,7 +186,12 @@ For the single-piece branch, omit the Epic subsection and list one ticket. For t
 
 ### 7. Update Index
 
-Run `cortex-generate-backlog-index` to update the backlog index.
+Resolve the active backlog backend **here at §7** with `cortex-read-backlog-backend` (argless, fail-open). Do **not** reuse §5's resolved value — §5's resolution is scoped to its create flow ("after `approve-all` fires"), which the zero-piece branch never enters, so reusing it would leave the zero-piece path ungated. Re-resolving here (one fail-open file read) keeps the zero-piece, single-piece, and epic+children branches all correctly gated. Route on the value:
+
+- **`cortex-backlog`** (the default arm) → run `cortex-generate-backlog-index` to update the backlog index.
+- **any other value (`none` OR external)** → skip the index regeneration with a one-line advisory: `cortex-generate-backlog-index` targets the `cortex-backlog` engine, so there is no index to regenerate under this backend.
+
+See ADR-0016 for the backend-routing rationale.
 
 ### 8. Commit
 
