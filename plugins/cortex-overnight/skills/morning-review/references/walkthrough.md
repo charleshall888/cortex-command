@@ -410,12 +410,21 @@ For each failed feature (in the order listed in the report):
    Create a backlog investigation item for this failure? [yes / skip]
    ```
 
-6. If the user says yes (or any affirmative), invoke `/backlog-author compose` with a
-   context block derived from the failure summary (pre-resolved `why:` = what failed in
-   observable terms, `role:` = investigate the root cause, `integration:` = affected
-   lifecycle feature, `edges:` = non-goal: re-running the overnight session), capture
-   the returned body, then call `cortex-create-backlog-item --title "investigate
-   <feature-slug>" --status should-have --type bug --body "<returned-body>"` to write the ticket.
+6. If the user says yes (or any affirmative), resolve the active backlog backend once with
+   `cortex-read-backlog-backend` (argless; it prints the resolved backend and exits 0)
+   before composing or writing anything, mirroring the §6b auto-close gate. Route on the value:
+
+   - **`cortex-backlog`** (the default arm) → invoke `/backlog-author compose` with a
+     context block derived from the failure summary (pre-resolved `why:` = what failed in
+     observable terms, `role:` = investigate the root cause, `integration:` = affected
+     lifecycle feature, `edges:` = non-goal: re-running the overnight session), capture
+     the returned body, then call `cortex-create-backlog-item --title "investigate
+     <feature-slug>" --status should-have --type bug --body "<returned-body>"` to write the ticket.
+   - **`none`** → skip the create with a one-line advisory that backlog investigation-item
+     creation is disabled for this repo — no file lands in `cortex/backlog/`.
+   - **any other value** (an external tracker) → create the equivalent item best-effort on
+     the configured tracker using the config `backlog.instructions` and your judgment
+     (e.g. `gh issue create`), surfacing the composed body inline if it cannot be filed.
 
 7. If the user says skip, move on without creating a backlog item.
 
