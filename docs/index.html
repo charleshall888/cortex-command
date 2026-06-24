@@ -7584,11 +7584,19 @@
     <article class="qs-box" id="quickstart" aria-label="Quick start install steps">
       <div class="qs-head">
         <span class="qs-head-tag">quick start</span>
-        <span class="qs-head-meta">3 steps · runs inside Claude Code</span>
+        <span class="qs-head-meta">4 steps · CLI first, then inside Claude Code</span>
       </div>
       <ol class="qs-steps">
         <li class="qs-step">
           <span class="qs-num" aria-hidden="true">1</span>
+          <div class="qs-body">
+            <p class="qs-title">Install the cortex CLI</p>
+            <p class="qs-sub">One command in your terminal — the bootstrap installs <code>uv</code> first if it's missing.</p>
+            <div class="qs-cmd qs-cmd--shell"><span class="qs-prompt" aria-hidden="true">$</span><code>curl -fsSL https://raw.githubusercontent.com/charleshall888/cortex-command/main/install.sh | sh</code></div>
+          </div>
+        </li>
+        <li class="qs-step">
+          <span class="qs-num" aria-hidden="true">2</span>
           <div class="qs-body">
             <p class="qs-title">Add the marketplace</p>
             <p class="qs-sub">One command, run inside Claude Code.</p>
@@ -7596,7 +7604,7 @@
           </div>
         </li>
         <li class="qs-step">
-          <span class="qs-num" aria-hidden="true">2</span>
+          <span class="qs-num" aria-hidden="true">3</span>
           <div class="qs-body">
             <p class="qs-title">Install the plugins you want</p>
             <p class="qs-sub">Run <code>/plugin</code> (or <code>/plugins</code>) and pick — or just paste:</p>
@@ -7607,9 +7615,9 @@
         </li>
       </ol>
       <p class="qs-done"><em>That's it.</em> The skills are live in your session.</p>
-      <ol class="qs-steps qs-steps--optional" start="3">
+      <ol class="qs-steps qs-steps--optional" start="4">
         <li class="qs-step">
-          <span class="qs-num" aria-hidden="true">3</span>
+          <span class="qs-num" aria-hidden="true">4</span>
           <div class="qs-body">
             <p class="qs-title">Set up each repo<span class="qs-opt-tag">recommended</span></p>
             <p class="qs-sub">In each repo you work in, run <code>cortex init</code> — it scaffolds the <code>cortex/</code> workspace and registers the sandbox path so the core skills (lifecycle, refine, backlog) and overnight all run cleanly, then tune per-repo preferences in <code>cortex/lifecycle.config.md</code>.</p>
