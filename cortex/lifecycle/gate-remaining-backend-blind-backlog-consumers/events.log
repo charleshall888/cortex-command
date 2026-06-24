@@ -6,3 +6,7 @@
 {"ts": "2026-06-24T16:38:52Z", "event": "spec_approved", "feature": "gate-remaining-backend-blind-backlog-consumers"}
 {"schema_version": 1, "ts": "2026-06-24T16:38:52Z", "event": "phase_transition", "feature": "gate-remaining-backend-blind-backlog-consumers", "from": "specify", "to": "plan"}
 {"ts": "2026-06-24T16:43:21Z", "event": "feature_paused", "feature": "gate-remaining-backend-blind-backlog-consumers"}
+{"ts":"2026-06-24T17:25:25Z","event":"sentinel_absence","feature":"gate-remaining-backend-blind-backlog-consumers","reviewer_angle":"mirror-commit-cadence","reason":"absent","model_tier":"sonnet","expected_sha":"18e07aea0b08ba7448a374b6886dc611284b731d24c1dfc19e4ea55498e9cba3","observed_sha_or_null":null}
+{"ts":"2026-06-24T17:25:25Z","event":"sentinel_absence","feature":"gate-remaining-backend-blind-backlog-consumers","reviewer_angle":"spec-coverage-callers","reason":"absent","model_tier":"sonnet","expected_sha":"18e07aea0b08ba7448a374b6886dc611284b731d24c1dfc19e4ea55498e9cba3","observed_sha_or_null":null}
+{"ts": "2026-06-24T17:40:22Z", "event": "plan_approved", "feature": "gate-remaining-backend-blind-backlog-consumers", "dispatch_choice": "trunk"}
+{"schema_version": 1, "ts": "2026-06-24T17:40:22Z", "event": "phase_transition", "feature": "gate-remaining-backend-blind-backlog-consumers", "from": "plan", "to": "implement"}
