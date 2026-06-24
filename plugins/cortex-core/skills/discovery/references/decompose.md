@@ -135,7 +135,13 @@ Consolidation approvals are recorded under a `## Consolidation Notes` heading in
 
 On each user response, emit one `approval_checkpoint_responded` event with `checkpoint: decompose-commit` and the chosen response. Use the helper module per the `cortex_command/discovery.py` interface (event emission lives in the helper; the prose here only names the event by its literal name `"event": "approval_checkpoint_responded"`).
 
-Follow the `/cortex-backlog:backlog add` conventions for each ticket:
+**Backend routing (resolve once before creating tickets).** The epic-and-children create flow below targets the local backlog engine. After `approve-all` fires and before creating any ticket, resolve the active backend once with `` `cortex-read-backlog-backend` `` (argless; it prints the resolved backend and exits 0). Route on the value:
+
+- **`cortex-backlog`** (the default arm) → proceed exactly as today; create the epic and children via the conventions below.
+- **`none`** → do not call the create CLI. Instead, surface the composed epic and child ticket bodies inline so no authored work is lost: write each full title + body into `cortex/research/{topic}/decomposed.md` (alongside the §6 Decomposition Record) so the operator has the ready-to-file content in the research artifact, and note a one-line advisory that ticket creation is disabled for this repo. No writes land in `cortex/backlog/`.
+- **any other value** (an external tracker) → create the equivalent items best-effort on the configured tracker using the config `backlog.instructions` and your own judgment (e.g. `gh issue create` for the epic and each child), surfacing the composed bodies inline if they cannot be filed so no work is lost.
+
+Under the `cortex-backlog` default arm, follow the `/cortex-backlog:backlog add` conventions for each ticket:
 
 1. Scan filenames matching `[0-9]*-*.md` in both `cortex/backlog/` and `cortex/backlog/archive/` to find the highest existing numeric ID
 2. Create the epic first if applicable (children need its ID for `parent`)
