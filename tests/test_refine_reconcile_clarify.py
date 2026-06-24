@@ -23,6 +23,7 @@ in-process so they exercise the source without a wheel reinstall.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -30,6 +31,11 @@ import pytest
 from cortex_command.lifecycle import state_cli
 from cortex_command.lifecycle.state_cli import _reduce_events
 from cortex_command.refine import main
+
+# Canonical sources whose non-local refine branch carries the explicit-flag
+# reconcile invocation. Read from the repo root (two parents up from tests/).
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+_REFINE_SKILL = _REPO_ROOT / "skills" / "refine" / "SKILL.md"
 
 
 # ---------------------------------------------------------------------------
@@ -189,3 +195,81 @@ def test_reconcile_clarify_delegated_path_noops(
     # state already reads complex/high — not via supersession).
     assert _count_overrides(events_log) == overrides_before == 0
     assert _reduce_events(events_log) == {"tier": "complex", "criticality": "high"}
+
+
+# ---------------------------------------------------------------------------
+# R8 functional regression (#317): under a non-local backend, the refine arm
+# omits --backlog-slug and feeds Clarify's computed tier/criticality forward as
+# explicit flags. reconcile-clarify must ratchet the seed defaults up so the
+# §3b read surface (cortex-lifecycle-state) reports the Clarify values, keeping
+# the critical-review gate alive. No --backlog-slug → no local file read.
+# ---------------------------------------------------------------------------
+
+
+def test_reconcile_clarify_non_local_explicit_flags_ratchets_tier(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    feature = "non-local-refine"
+
+    # Non-local seed: emit-lifecycle-start omitted --backlog-slug, so the seed
+    # carries the simple/medium defaults (no local backlog file is created).
+    _seed_events(
+        tmp_path, feature, [_lifecycle_start_line(feature, "simple", "medium")]
+    )
+
+    # Non-local Context-B reconcile: no --backlog-slug, Clarify's computed
+    # tier/criticality passed as explicit flags.
+    rc = main(
+        [
+            "reconcile-clarify",
+            "--lifecycle-slug",
+            feature,
+            "--complexity",
+            "complex",
+            "--criticality",
+            "high",
+        ]
+    )
+    assert rc == 0
+
+    # The §3b read surface now reports the ratcheted Clarify values, so the
+    # critical-review gate fires instead of skipping silently at simple.
+    assert _state_field(capsys, feature, "tier") == {"tier": "complex"}
+    assert _state_field(capsys, feature, "criticality") == {"criticality": "high"}
+
+
+# ---------------------------------------------------------------------------
+# R8 structural (value-aware): the refine non-local reconcile branch passes the
+# computed {value} placeholder tokens (NOT the seed literals simple/medium) and
+# omits --backlog-slug, while the local branch is unchanged (--backlog-slug
+# re-sources from backlog frontmatter).
+# ---------------------------------------------------------------------------
+
+
+def test_refine_non_local_reconcile_branch_is_value_aware() -> None:
+    body = _REFINE_SKILL.read_text(encoding="utf-8")
+
+    # Local (Context A) branch unchanged: re-sources via --backlog-slug.
+    assert (
+        "reconcile-clarify --lifecycle-slug {lifecycle-slug} "
+        "--backlog-slug {backlog-filename-slug}" in body
+    )
+
+    # Non-local (Context B) reconcile branch: omits --backlog-slug and passes
+    # the computed {value} placeholder tokens as explicit flags.
+    non_local = (
+        "reconcile-clarify --lifecycle-slug {lifecycle-slug} "
+        "--complexity {value} --criticality {value}"
+    )
+    assert non_local in body
+    assert "--backlog-slug" not in non_local
+
+    # Value-aware: the non-local reconcile invocation must NOT hardcode the seed
+    # defaults — no `--complexity simple` / `--criticality medium` literal form.
+    assert not re.search(r"reconcile-clarify[^\n]*--complexity\s+simple", body)
+    assert not re.search(r"reconcile-clarify[^\n]*--criticality\s+medium", body)
+
+    # The backend resolver is referenced so routing is keyed on the resolved
+    # backend, not a static branch.
+    assert "cortex-read-backlog-backend" in body

@@ -60,7 +60,14 @@ else:
 
 Re-running overwrites the existing spec and resets `status` to `in_progress` until the new spec is approved. No CLI flag required.
 
-After determining the resume point, invoke `cortex-refine emit-lifecycle-start --backlog-slug {backlog-filename-slug} --lifecycle-slug {lifecycle-slug}` (omit `--backlog-slug` for Context B) so `events.log` carries the seed `lifecycle_start` row before any other event is logged. The subcommand is idempotent — safe on resume.
+**Resolve the backlog backend once** with `` `cortex-read-backlog-backend` `` (argless; it prints the resolved backend and exits 0). Carry the resolved value through the rest of refine — it keys the seed, write-back, and reconcile routing below. The default `cortex-backlog` arm is byte-identical to today; the non-local arm omits `--backlog-slug` and feeds Clarify's computed tier/criticality forward as explicit flags.
+
+After determining the resume point, seed the `lifecycle_start` row so `events.log` carries it before any other event is logged. The subcommand is idempotent — safe on resume. Route on the resolved backend:
+
+- **`cortex-backlog`** (the default arm) → invoke `cortex-refine emit-lifecycle-start --backlog-slug {backlog-filename-slug} --lifecycle-slug {lifecycle-slug}` (omit `--backlog-slug` for Context B). Unchanged from today.
+- **any non-`cortex-backlog` backend** → invoke `cortex-refine emit-lifecycle-start --lifecycle-slug {lifecycle-slug}` (omit `--backlog-slug`), so `_read_backlog_frontmatter(None)` returns the seed defaults without reading or validating any local backlog file.
+
+**Seed→reconcile→gate ordering invariant (fresh run)**: the non-local seed row (omitting `--backlog-slug`) writes the `simple/medium` defaults. The critical-review gate skips silently at `tier = simple`, so on a non-local backend the gate stays alive only because Step 5's `reconcile-clarify` (running at Spec entry, before specify.md §3b) ratchets the lifecycle state up using **Clarify's computed** tier/criticality — never literals, never the seed defaults. Keep the seed → reconcile → §3b read ordering intact so the §3b read observes the ratcheted values. (The local `cortex-backlog` arm is immune regardless, because its `reconcile-clarify --backlog-slug` re-sources tier/criticality from backlog frontmatter.)
 
 ## Step 3: Clarify Phase
 
@@ -73,11 +80,13 @@ Key outputs from Clarify (record these for use in subsequent phases):
 - Requirements alignment note
 - Open questions for research (may be empty)
 
-After complexity and criticality are determined, run the write-back immediately (Context A only):
+After complexity and criticality are determined, run the write-back immediately (Context A only) — gated on the backend resolved in Step 2. On `cortex-backlog`, run:
 
 ```bash
 cortex-update-item {backlog-filename-slug} --complexity {value} --criticality {value}
 ```
+
+On `none`, skip with a one-line advisory that backlog write-back is disabled for this repo. On any other (external) backend, make the equivalent complexity/criticality update best-effort on the configured tracker per `backlog.instructions`, surfacing the composed values if it cannot be completed. The lifecycle state still carries Clarify's computed tier/criticality forward via Step 5's `reconcile-clarify`, so the critical-review gate stays correctly fed under every backend.
 
 If `cortex-update-item` fails, surface the error and wait for the user to resolve before continuing. On exit 2, apply the canonical ambiguous-slug handling in backlog-writeback.md (loaded at lifecycle Step 2).
 
@@ -139,10 +148,10 @@ If the `## Open Questions` section is absent from `research.md`, the gate passes
 
 ## Step 5: Spec Phase
 
-**Reconcile lifecycle state to the Clarify assessment first** — the `lifecycle_start` seed carries pre-Clarify tier/criticality; reconcile so the §3a/§3b reads observe the Clarify-assessed values:
+**Reconcile lifecycle state to the Clarify assessment first** — the `lifecycle_start` seed carries pre-Clarify tier/criticality; reconcile so the §3a/§3b reads observe the Clarify-assessed values. Key the form on the backend resolved in Step 2:
 
-- **Context A** (the item has a backlog file): `cortex-refine reconcile-clarify --lifecycle-slug {lifecycle-slug} --backlog-slug {backlog-filename-slug}`
-- **Context B** (no backlog file): `cortex-refine reconcile-clarify --lifecycle-slug {lifecycle-slug} --complexity {value} --criticality {value}`
+- **Context A** (a `cortex-backlog` item with a backlog file): `cortex-refine reconcile-clarify --lifecycle-slug {lifecycle-slug} --backlog-slug {backlog-filename-slug}` — re-sources tier/criticality from backlog frontmatter (unchanged from today).
+- **Context B** (no backlog file, OR any non-`cortex-backlog` backend): `cortex-refine reconcile-clarify --lifecycle-slug {lifecycle-slug} --complexity {value} --criticality {value}` — omits `--backlog-slug` (so no local file is read or validated) and passes **Clarify's computed** `{value}` tier/criticality as explicit flags. Under a non-local backend this is the live path: it ratchets the lifecycle state up from the seed defaults so the critical-review gate stays correctly fed (the seed→reconcile→§3b ordering invariant from Step 2). Pass Clarify's computed values here — not the seed defaults and not literals.
 
 Idempotent — safe on resume; no-op under `/cortex-core:lifecycle`.
 
@@ -165,6 +174,8 @@ After user approves the spec:
 
 **Infer areas**: Identify which subsystem the feature primarily modifies. Canonical area names: `overnight-runner`, `backlog`, `skills`, `lifecycle`, `hooks`, `report`, `tests`, `docs`. Use the primary subsystem only — the one where most files change. If the feature spans 4+ subsystems with no clear primary, use `areas=[]`.
 
+Gate these status/spec/areas write-backs on the backend resolved in Step 2. On `cortex-backlog`, run:
+
 ```bash
 cortex-update-item {backlog-filename-slug} --status refined --spec cortex/lifecycle/{lifecycle-slug}/spec.md
 ```
@@ -174,6 +185,8 @@ cortex-update-item {backlog-filename-slug} --areas area1 area2
 ```
 
 For empty areas: `cortex-update-item {backlog-filename-slug} --areas` (passing `--areas` with no values clears the list).
+
+On `none`, skip these write-backs with a one-line advisory that backlog write-back is disabled for this repo. On any other (external) backend, make the equivalent status/areas update best-effort on the configured tracker per `backlog.instructions`, surfacing the composed values if it cannot be completed.
 
 Handle failures as in Step 3.
 

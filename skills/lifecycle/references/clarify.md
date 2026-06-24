@@ -99,13 +99,15 @@ These criteria are defined here but applied at Research phase entry, not during 
 
 ### 7. Write-Backs (Context A only)
 
-After producing the complexity and criticality assessments, write them to the backlog item:
+After producing the complexity and criticality assessments, write them to the backlog item — gated on the active backend, resolved once via `` `cortex-read-backlog-backend` `` (argless; it prints the resolved backend and exits 0). On `cortex-backlog` (the default arm), run:
 
 ```bash
 cortex-update-item {backlog-filename-slug} --complexity {value} --criticality {value}
 ```
 
 Use `backlog_filename_slug` from §1 as `{backlog-filename-slug}`.
+
+On `none`, skip this write-back with a one-line advisory that backlog write-back is disabled for this repo. On any other (external) backend, make the equivalent complexity/criticality update best-effort on the configured tracker per `backlog.instructions`, surfacing the composed values if it cannot be completed. The lifecycle `events.log` remains the authoritative tier/criticality feed regardless of backend, so the critical-review gate stays correctly fed.
 
 If `cortex-update-item` fails, surface the error and ask the user to resolve it before proceeding. Do not silently skip write-backs. On exit 2, apply the canonical ambiguous-slug handling in backlog-writeback.md (loaded at lifecycle Step 2).
 
