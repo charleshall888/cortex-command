@@ -3143,16 +3143,6 @@
     max-width: 720px;
     margin: 0 0 32px 0;
   }
-  .install .ship-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 18px;
-    max-width: 1100px;
-  }
-  .install .ship-grid.two-col {
-    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
-    max-width: 980px;
-  }
   .install .ship-card.required { border-color: var(--ochre); border-width: 1px; box-shadow: 0 1px 0 var(--shadow-tint), 0 12px 28px -22px var(--shadow-tint-deep), inset 3px 0 0 var(--ochre); padding-left: 22px; }
   .install .ship-card.optional { border-color: var(--blue); border-width: 1px; box-shadow: 0 1px 0 var(--shadow-tint), 0 12px 28px -22px var(--shadow-tint-deep), inset 3px 0 0 var(--blue); padding-left: 22px; }
   .install .ship-card.optional .ship-num { color: var(--blue); }
@@ -3178,7 +3168,6 @@
     padding-bottom: 10px; margin-bottom: 4px;
   }
   .install .ship-num { color: var(--ochre); font-weight: 600; }
-  .install .ship-tag { color: var(--blue); }
   .install .ship-opt {
     margin-left: auto;
     color: var(--ink-faint);
@@ -3215,79 +3204,6 @@
     color: var(--blue);
     background: var(--grid-tint);
     padding: 1px 4px; border-radius: 2px;
-  }
-  .install .ship-when {
-    font-family: var(--mono); font-size: 11px;
-    color: var(--ink-mute);
-    margin: auto 0 0 0;
-    padding-top: 10px;
-    border-top: 1px dashed var(--rule-soft);
-    line-height: 1.5;
-  }
-  .install .ship-when .k { color: var(--ink-faint); margin-right: 4px; }
-  .install .install-cta {
-    font-family: var(--mono); font-size: 13px;
-    color: var(--parchment);
-    background: var(--ink);
-    padding: 8px 14px; border-radius: 3px;
-    text-decoration: none; border-bottom: none !important;
-    transition: background 0.2s ease;
-  }
-  .install .install-cta:hover { background: var(--blue); color: var(--parchment); }
-  @media (max-width: 900px) {
-    .install .ship-grid { grid-template-columns: 1fr; }
-  }
-  .install .ship-bridge {
-    display: block;
-    width: 100%;
-    max-width: 980px;
-    height: 56px;
-    margin: 4px 0 0 0;
-    overflow: visible;
-  }
-  .install .ship-bridge-line {
-    stroke: var(--rule);
-    stroke-width: 1;
-    stroke-dasharray: 3 3;
-    fill: none;
-    vector-effect: non-scaling-stroke;
-  }
-  .install .ship-card.bundled {
-    max-width: 540px;
-    margin: 0 auto;
-    border: 1px dashed var(--rule-soft);
-    border-radius: 4px;
-    background: transparent;
-    box-shadow: none;
-    padding: 20px 24px 22px;
-    gap: 8px;
-    text-align: left;
-  }
-  .install .ship-card.bundled .ship-head {
-    border-bottom: 1px solid var(--rule-soft);
-    padding-bottom: 12px;
-    margin-bottom: 6px;
-  }
-  .install .ship-card.bundled .ship-head .ship-opt {
-    margin-left: 0;
-    color: var(--ink-faint);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    font-size: 10.5px;
-    font-style: normal;
-  }
-  .install .ship-card.bundled .ship-name { color: var(--ink); margin-top: 4px; }
-  .install .ship-card.bundled .ship-name code { font-size: 0.78em; }
-  .install .ship-card.bundled .ship-desc { color: var(--ink-mute); }
-  @media (max-width: 900px) {
-    .install .ship-bridge { display: none; }
-    .install .ship-card.bundled {
-      max-width: none;
-      margin: 22px 0 0 0;
-    }
-  }
-  @media (max-width: 600px) {
-    .install .ship-card.bundled { padding: 18px 18px 20px; }
   }
 
   /* ───── Quick start: the primary install affordance ─────
@@ -3662,22 +3578,10 @@
     border-color: #2c2c34;
   }
   html[data-stain="carbon"] .install .ship-head { border-bottom-color: #2c2c34; }
-  html[data-stain="carbon"] .install .ship-when { border-top-color: #2c2c34; }
   html[data-stain="carbon"] .install .ship-name code,
   html[data-stain="carbon"] .install .ship-desc code {
     background: rgba(236, 230, 211, 0.08);
     color: var(--blue-soft);
-  }
-  html[data-stain="carbon"] .install .install-cta {
-    background: transparent;
-    color: var(--ink);
-    border: 1px solid var(--ink);
-    box-shadow: 2px 2px 0 var(--ochre);
-  }
-  html[data-stain="carbon"] .install .install-cta:hover {
-    background: var(--ink);
-    color: #15151a;
-    box-shadow: 2px 2px 0 var(--ochre);
   }
   /* hero spec card grid stronger on carbon — readable engineering paper */
   html[data-stain="carbon"] .spec-card::before {
