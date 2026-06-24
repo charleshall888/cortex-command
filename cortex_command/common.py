@@ -106,6 +106,20 @@ def _resolve_user_project_root() -> Path:
     )
 
 
+def _resolve_lifecycle_base() -> Path:
+    """Return the project-root-anchored ``cortex/lifecycle`` base directory.
+
+    Resolves against ``_resolve_user_project_root()`` (which honors
+    ``CORTEX_REPO_ROOT`` verbatim in the overnight path) so per-feature
+    lifecycle reads/writes do not resolve relative to a non-home CWD or
+    integration worktree. Canonical home for the resolver so that both
+    ``feature_executor`` (writer side) and ``outcome_router`` (review-gate
+    call sites) can source it from ``common`` without an
+    ``feature_executor``↔``outcome_router`` import cycle.
+    """
+    return _resolve_user_project_root() / "cortex" / "lifecycle"
+
+
 def _resolve_user_project_root_from_cwd() -> Path:
     """Resolve the directory containing the user's cortex project from cwd.
 

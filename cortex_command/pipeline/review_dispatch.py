@@ -112,6 +112,7 @@ def _load_review_prompt(
     spec_excerpt: str,
     worktree_path: Path,
     branch_name: str,
+    review_md_path: str,
 ) -> str:
     """Load the review prompt template and substitute placeholders.
 
@@ -120,6 +121,11 @@ def _load_review_prompt(
         spec_excerpt: Specification text excerpt.
         worktree_path: Path to the git worktree.
         branch_name: Git branch name.
+        review_md_path: Absolute main-repo path the agent must write
+            review.md to. Required (no default) so a missed render seam
+            fails at the call rather than rendering an unsubstituted
+            ``{review_md_path}`` literal that would re-resolve against the
+            agent's worktree cwd.
 
     Returns:
         Formatted prompt string.
@@ -130,6 +136,7 @@ def _load_review_prompt(
         "spec_excerpt": spec_excerpt,
         "worktree_path": str(worktree_path),
         "branch_name": branch_name,
+        "review_md_path": review_md_path,
     }.items():
         template = template.replace(f"{{{key}}}", value)
     return template
@@ -245,6 +252,7 @@ async def dispatch_review(
             spec_excerpt=spec_excerpt,
             worktree_path=worktree_path,
             branch_name=branch,
+            review_md_path=str(review_md_path),
         )
     except (FileNotFoundError, OSError) as exc:
         logger.error(
@@ -521,6 +529,7 @@ async def dispatch_review(
                 spec_excerpt=spec_excerpt,
                 worktree_path=worktree_path,
                 branch_name=branch,
+                review_md_path=str(review_md_path),
             )
             cycle2_prompt += (
                 "\n\nNote: This is review cycle 2. A previous review returned "

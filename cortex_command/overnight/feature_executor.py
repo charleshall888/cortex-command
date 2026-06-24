@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from cortex_command.overnight.orchestrator import BatchConfig
 
 from cortex_command.common import (
+    _resolve_lifecycle_base,
     _resolve_user_project_root,
     compute_dependency_batches,
     mark_task_done_in_plan,
@@ -86,17 +87,6 @@ def _render_template(template_path: Path, variables: dict[str, str]) -> str:
     for key, value in variables.items():
         template = template.replace(f"{{{key}}}", value)
     return template
-
-
-def _resolve_lifecycle_base() -> Path:
-    """Return the project-root-anchored ``cortex/lifecycle`` base directory.
-
-    Resolves against ``_resolve_user_project_root()`` (which honors
-    ``CORTEX_REPO_ROOT`` verbatim in the overnight path) so per-feature
-    lifecycle reads/writes do not resolve relative to a non-home CWD or
-    integration worktree.
-    """
-    return _resolve_user_project_root() / "cortex" / "lifecycle"
 
 
 def _get_spec_path(
