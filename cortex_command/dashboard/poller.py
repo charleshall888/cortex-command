@@ -88,6 +88,7 @@ class DashboardState:
     circuit_breaker_notified: bool = False
     backlog_counts: dict = field(default_factory=dict)
     backlog_titles: dict = field(default_factory=dict)
+    backlog_backend: str = "cortex-backlog"
     feature_cost_totals: dict = field(default_factory=dict)
     feature_cost_offsets: dict = field(default_factory=dict)
     session_cost_total: float | None = None

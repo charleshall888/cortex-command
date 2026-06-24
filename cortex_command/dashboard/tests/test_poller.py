@@ -28,6 +28,7 @@ class TestDashboardStateDefaults(unittest.TestCase):
         self.assertEqual(state.overnight_events_offset, 0)
         self.assertIsInstance(state.feature_states, dict)
         self.assertIsInstance(state.backlog_counts, dict)
+        self.assertEqual(state.backlog_backend, "cortex-backlog")
         self.assertEqual(state.last_updated, "")
 
     def test_independent_mutable_defaults(self):
