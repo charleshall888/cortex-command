@@ -1,0 +1,7 @@
+{"schema_version": 1, "ts": "2026-06-24T00:50:28Z", "event": "lifecycle_start", "feature": "harden-overnight-review-agents-reviewmd-artifact", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-24T00:56:24Z", "event": "clarify_critic", "feature": "harden-overnight-review-agents-reviewmd-artifact", "parent_epic_loaded": false, "findings_count": 5, "dispositions": {"apply": 4, "dismiss": 1, "ask": 0}, "applied_fixes_count": 4, "dismissals_count": 1, "status": "ok"}
+{"ts": "2026-06-24T01:22:07Z", "event": "complexity_override", "feature": "harden-overnight-review-agents-reviewmd-artifact", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-06-24T01:22:07Z", "event": "criticality_override", "feature": "harden-overnight-review-agents-reviewmd-artifact", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-06-24T01:45:23Z", "event": "spec_approved", "feature": "harden-overnight-review-agents-reviewmd-artifact"}
+{"ts": "2026-06-24T02:09:07Z", "event": "plan_approved", "feature": "harden-overnight-review-agents-reviewmd-artifact", "dispatch_choice": "trunk"}
+{"ts": "2026-06-24T02:09:07Z", "event": "phase_transition", "feature": "harden-overnight-review-agents-reviewmd-artifact", "from": "plan", "to": "implement"}

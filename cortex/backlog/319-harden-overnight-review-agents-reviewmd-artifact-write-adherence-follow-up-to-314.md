@@ -2,11 +2,15 @@
 schema_version: "1"
 uuid: 4d5d2d7c-e8a6-49ad-b81e-16962af95815
 title: 'Harden overnight review agent''s review.md artifact-write adherence (follow-up to #314)'
-status: backlog
+status: refined
 priority: medium
 type: bug
 created: 2026-06-23
 updated: 2026-06-23
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/harden-overnight-review-agents-reviewmd-artifact/spec.md
+areas: ['overnight-runner']
 ---
 ## Why
 
