@@ -1,0 +1,8 @@
+{
+  "name": "cortex-backlog",
+  "description": "Optional interactive backlog management skill — local cortex/backlog/ ticket files with YAML frontmatter, extracted from cortex-core so repos that track work in an external system can omit it",
+  "author": {
+    "name": "Charlie Hall",
+    "email": "charliemhall@gmail.com"
+  }
+}

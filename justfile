@@ -572,7 +572,7 @@ dangerous:
 
 # --- Plugin ---
 
-BUILD_OUTPUT_PLUGINS := "cortex-core cortex-overnight"
+BUILD_OUTPUT_PLUGINS := "cortex-core cortex-overnight cortex-backlog"
 HAND_MAINTAINED_PLUGINS := "cortex-pr-review cortex-ui-extras android-dev-extras cortex-dev-extras"
 
 _list-build-output-plugins:
@@ -594,7 +594,7 @@ build-plugin:
         BIN=()
         case "$p" in
             cortex-core)
-                SKILLS=(commit pr lifecycle backlog backlog-author requirements requirements-gather requirements-write research discovery refine dev diagnose critical-review interview)
+                SKILLS=(commit pr lifecycle backlog-author requirements requirements-gather requirements-write research discovery refine dev diagnose critical-review interview)
                 HOOKS=(hooks/cortex-validate-commit.sh claude/hooks/cortex-session-start-path-bootstrap.sh claude/hooks/cortex-worktree-create.sh claude/hooks/cortex-worktree-remove.sh)
                 BIN=(cortex-)
                 ;;
@@ -602,6 +602,11 @@ build-plugin:
                 BIN=()
                 SKILLS=(overnight morning-review)
                 HOOKS=(hooks/cortex-cleanup-session.sh hooks/cortex-scan-lifecycle.sh hooks/cortex-cli-version-sync.sh hooks/cortex-cli-background-install.sh claude/hooks/cortex-tool-failure-tracker.sh claude/hooks/cortex-permission-audit-log.sh)
+                ;;
+            cortex-backlog)
+                BIN=()
+                SKILLS=(backlog)
+                HOOKS=()
                 ;;
             *)
                 echo "build-plugin: no manifest for $p" >&2
@@ -612,9 +617,11 @@ build-plugin:
             rsync -a --delete "skills/$s/" "plugins/$p/skills/$s/"
         done
         rm -f plugins/$p/hooks/cortex-*.sh
-        for h in "${HOOKS[@]}"; do
-            rsync -a "$h" "plugins/$p/hooks/$(basename "$h")"
-        done
+        if [[ ${#HOOKS[@]} -gt 0 ]]; then
+            for h in "${HOOKS[@]}"; do
+                rsync -a "$h" "plugins/$p/hooks/$(basename "$h")"
+            done
+        fi
         if [[ ${#BIN[@]} -gt 0 ]]; then
             rsync -a --delete --include='cortex-*' --exclude='*' bin/ "plugins/$p/bin/"
         fi

@@ -47,7 +47,6 @@ PLUGINS: dict[str, tuple[str, ...]] = {
         "commit",
         "pr",
         "lifecycle",
-        "backlog",
         "requirements",
         "research",
         "discovery",
@@ -60,6 +59,7 @@ PLUGINS: dict[str, tuple[str, ...]] = {
         "overnight",
         "morning-review",
     ),
+    "cortex-backlog": ("backlog",),
 }
 
 

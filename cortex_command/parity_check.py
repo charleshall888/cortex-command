@@ -39,6 +39,7 @@ PLUGIN_NAMES: frozenset[str] = frozenset(
         "cortex-ui-extras",
         "cortex-dev-extras",
         "android-dev-extras",
+        "cortex-backlog",
     }
 )
 
@@ -59,11 +60,6 @@ RESERVED_NON_BIN_NAMES: frozenset[str] = frozenset(
         # documented in docs/internals/pipeline.md and docs/overnight-operations.md; the trailing
         # dash captures the token-regex tail. Not a deployable script.
         "cortex-sandbox-",
-        # Planned optional plugin + config backend value named in cortex/requirements/backlog.md
-        # before the plugin exists. Reserved here so the area doc can reference it in code spans;
-        # migrate to PLUGIN_NAMES (with justfile BUILD_OUTPUT_PLUGINS + build recipe) when the
-        # plugin is actually built. Not a deployable bin script.
-        "cortex-backlog",
     }
 )
 

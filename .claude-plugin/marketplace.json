@@ -29,6 +29,12 @@
       "category": "development"
     },
     {
+      "name": "cortex-backlog",
+      "source": "./plugins/cortex-backlog",
+      "description": "Optional interactive backlog management skill — local cortex/backlog/ ticket files, extracted from cortex-core so repos that track work in an external system can omit it",
+      "category": "development"
+    },
+    {
       "name": "cortex-overnight",
       "source": "./plugins/cortex-overnight",
       "description": "Integrates the cortex MCP server and overnight skill runner hooks to drive autonomous lifecycle execution",

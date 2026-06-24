@@ -17,10 +17,10 @@ The boundary is deliberate: this area delivers extraction + a declarative backen
 ### Optional `cortex-backlog` plugin packaging
 
 - **Description**: The interactive backlog surface ships as a separately installable plugin so a repo can omit it. Only the skill surface moves; the engine stays shared.
-- **Inputs**: The existing canonical skills `skills/backlog/` and `skills/backlog-author/`.
-- **Outputs**: A new `cortex-backlog` plugin containing those two skills, built and mirrored via the established dual-source pattern (registered in justfile `BUILD_OUTPUT_PLUGINS`, drift-checked at pre-commit, listed as OPTIONAL in the `docs/setup.md` plugin table).
+- **Inputs**: The existing canonical skill `skills/backlog/` (only the interactive backlog surface moves; `skills/backlog-author/` stays in cortex-core).
+- **Outputs**: A new `cortex-backlog` plugin containing the `backlog` skill, built and mirrored via the established dual-source pattern (registered in justfile `BUILD_OUTPUT_PLUGINS`, drift-checked at pre-commit, documented as optional in docs/setup.md).
 - **Acceptance criteria**:
-  - `skills/backlog` and `skills/backlog-author` are packaged in the `cortex-backlog` plugin, not in `cortex-core`.
+  - Only `skills/backlog` moves: it is packaged in the `cortex-backlog` plugin, not in `cortex-core`; `skills/backlog-author` remains in cortex-core.
   - The backlog Python engine (`cortex_command/backlog/*`) remains in the wheel and is unaffected by plugin install/uninstall.
   - The dual-source drift gate passes for the new plugin with canonical sources still top-level.
 - **Priority**: must
@@ -99,6 +99,7 @@ The boundary is deliberate: this area delivers extraction + a declarative backen
 
 - Backend routing lives at the skill/consumer layer; the `cortex-*` CLI tools remain cortex-backlog-only (they *are* the local engine).
 - The backlog engine (`cortex_command/backlog/*`) stays in the wheel as a shared library; only the skill surface moves to the plugin. Physically removing the package from the wheel (gating every import site in lifecycle/overnight) is explicitly out of scope.
+- The `backlog-author` skill remains in cortex-core (it is **not** moved to cortex-backlog): discovery and morning-review compose ticket bodies through it on the external-tracker create path even when the local backlog plugin is absent, so it must ship with the always-installed core plugin.
 - The config field is the source of truth for the active backend, not plugin-install detection — the wheel cannot reliably introspect installed Claude Code plugins, and lifecycle/overnight import the backlog module from the wheel.
 - Follow the established optional-plugin pattern: register `cortex-backlog` in justfile `BUILD_OUTPUT_PLUGINS`, enforce the dual-source mirror at pre-commit, and add the plugin to the `docs/setup.md` plugin table as OPTIONAL.
 - Terminology: the local backend is named `cortex-backlog` consistently in config values and prose (not `local`).
