@@ -1,0 +1,66 @@
+# Plan: extract-backlog-management-skill-into-optional
+
+## Overview
+Extract `skills/backlog` into a new optional `cortex-backlog` plugin (keeping `backlog-author` in cortex-core), then comprehensively rename `/cortex-core:backlog` → `/cortex-backlog:backlog` across all live references. **Each phase is exactly one task = one atomic commit.** This is forced, not stylistic: the implement harness commits per dispatched task and fails any no-commit task, while the pre-commit gates cross-couple every Phase-1 edit into a single commit (the Phase-1 classification gate needs plugin.json + justfile together; the `plugin-list-matches-justfile` self-test enforces `PLUGIN_NAMES == BUILD_OUTPUT ∪ HAND_MAINTAINED`; the dual-source drift gate needs the regenerated mirror). Splitting either phase across tasks would either commit a gate-failing partial or produce a no-commit task the checkpoint marks failed.
+**Architectural Pattern**: plug-in
+
+## Outline
+
+### Phase 1: Atomic extraction (tasks: 1)
+**Goal**: Create the cortex-backlog plugin, move the backlog skill into it, and co-land every build/parity/marketplace/test/doc edit in one commit.
+**Checkpoint**: `just test` green; `plugins/cortex-backlog/skills/backlog/` build-derived; `plugins/cortex-core/skills/backlog/` gone; `backlog-author` still in cortex-core and absent from cortex-backlog; one commit on the branch.
+
+### Phase 2: Comprehensive namespace rename (tasks: 2)
+**Goal**: Rename every live `/cortex-core:backlog` → `/cortex-backlog:backlog` (21 refs / 10 files), trim the backlog L1 surface, sync the trigger fixture, add the docs/setup.md row, in one commit.
+**Checkpoint**: completeness grep returns zero; `test_skill_descriptions`, `test_l1_surface_ratchet`, `test_backlog_author` green; the two backlog-author refs preserved; second commit on the branch.
+
+> **Execution note (Implement)**: edits `cortex_command/parity_check.py` and `cortex_command/init/templates/`, and runs against a shared checkout with two concurrent lifecycle sessions. Execute **directly in the main orchestrator context, sequentially (no sub-agent dispatch, no worktree)** — a worktree would verify stale `cortex_command` against the editable install, and the per-phase commit must use an **explicit pathspec** (not the commit skill's broad staging) so the concurrent sessions' uncommitted files never leak in. Each task is large by necessity (it is one atomic commit); the size reflects the gate-forced co-land, not splittable work.
+
+## Tasks
+
+### Task 1: Atomic extraction — create cortex-backlog, move the backlog skill, co-land all gates
+- **Files**: `plugins/cortex-backlog/.claude-plugin/plugin.json` (new), `justfile`, `cortex_command/parity_check.py`, `tests/test_dual_source_reference_parity.py`, `.claude-plugin/marketplace.json`, `tests/test_cortex_backlog_prefix_collision.py` (new), `cortex/requirements/backlog.md`, `plugins/cortex-backlog/skills/backlog/**` (generated), `plugins/cortex-core/skills/backlog/**` (deleted)
+- **What**: Perform all of the following edits, then build, prune, verify, and commit once:
+  1. Create `plugins/cortex-backlog/.claude-plugin/plugin.json` (minimal: `name`/`description`/`author`, matching cortex-overnight's shape; no MCP/hooks/bin) — **before** running build-plugin.
+  2. `justfile`: add `cortex-backlog` to `BUILD_OUTPUT_PLUGINS` (line 575); add a `cortex-backlog)` case arm with `SKILLS=(backlog) BIN=() HOOKS=()`; remove the standalone `backlog` token from cortex-core's `SKILLS` array (keep `backlog-author`).
+  3. `cortex_command/parity_check.py`: add `"cortex-backlog"` to `PLUGIN_NAMES`, remove it (and its reservation comment) from `RESERVED_NON_BIN_NAMES`.
+  4. `tests/test_dual_source_reference_parity.py`: drop `"backlog"` from the cortex-core `PLUGINS` tuple, add `"cortex-backlog": ("backlog",)`.
+  5. `.claude-plugin/marketplace.json`: add the cortex-backlog entry (name/source/description/category), ordering consistent with docs/setup.md.
+  6. `tests/test_cortex_backlog_prefix_collision.py`: new test calling the real `collect_reference_candidates`/`collect_wiring_signals` (and `TOKEN_RE`) from `cortex_command.parity_check`, asserting `cortex-backlog-ready`, `cortex-create-backlog-item`, `cortex-resolve-backlog-item`, `cortex-update-item`, `cortex-generate-backlog-index` stay candidate/wired and the bare `cortex-backlog` token is excluded.
+  7. `cortex/requirements/backlog.md`: amend Inputs (20), Outputs (21), acceptance criterion (24) to "only `skills/backlog` moves"; add an architectural-constraints bullet that `backlog-author` remains in cortex-core; soften "listed as OPTIONAL in the table" → "documented as optional in docs/setup.md".
+  8. Run `just build-plugin` (generates `plugins/cortex-backlog/skills/backlog/`, regenerates cortex-core mirrors).
+  9. `git rm -r plugins/cortex-core/skills/backlog/` (the recipe's per-skill `rsync --delete` does not prune a removed skill's dir).
+  10. Stage the explicit set (the Files above) and commit with an explicit pathspec.
+- **Depends on**: none
+- **Complexity**: complex
+- **Context**: `cortex-overnight` is the skills+MCP optional-plugin template; cortex-backlog is skills-only. The recipe (justfile ~588–625) skips plugins lacking `.claude-plugin/` (so step 1 precedes step 8). PLUGIN_NAMES membership excludes a token from both candidate and wiring scans (broader than RESERVED); `TOKEN_RE` word-boundaries keep `cortex-backlog-*` scripts unshadowed. The `plugin-list-matches-justfile` self-test (parity_check.py ~1612–1643) enforces `set(PLUGIN_NAMES) == BUILD_OUTPUT ∪ HAND_MAINTAINED`, coupling steps 2 and 3 — both must be in this commit. Concurrency: before committing, confirm `git status --porcelain -- skills/` shows no *other* skill dirty (else the hook's own build-plugin would regenerate that mirror and the whole-tree drift diff would fail this commit). Commit via explicit pathspec, message e.g. "Add optional cortex-backlog plugin, move backlog skill from cortex-core".
+- **Verification**: all of — (req 3, 4 clauses) `test -d plugins/cortex-backlog/skills/backlog && ! test -e plugins/cortex-core/skills/backlog && test -d plugins/cortex-core/skills/backlog-author && ! test -e plugins/cortex-backlog/skills/backlog-author` (exit 0); (build-derivation) `rm -rf plugins/cortex-backlog/skills/backlog && just build-plugin && test -f plugins/cortex-backlog/skills/backlog/SKILL.md` (exit 0); (parity membership) `python3 -c "from cortex_command.parity_check import PLUGIN_NAMES, RESERVED_NON_BIN_NAMES as R; import sys; sys.exit(0 if 'cortex-backlog' in PLUGIN_NAMES and 'cortex-backlog' not in R else 1)"` (exit 0); (PLUGINS dict) `python3 -c "import importlib.util,sys; s=importlib.util.spec_from_file_location('t','tests/test_dual_source_reference_parity.py'); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); sys.exit(0 if m.PLUGINS.get('cortex-backlog')==('backlog',) and 'backlog' not in m.PLUGINS.get('cortex-core',()) else 1)"` (exit 0); (marketplace) `python3 -c "import json,sys; d=json.load(open('.claude-plugin/marketplace.json')); sys.exit(0 if any(p.get('name')=='cortex-backlog' for p in d['plugins']) else 1)"` (exit 0); (backlog.md) `! grep -qE 'skills/backlog. and .skills/backlog-author. are packaged in the .cortex-backlog' cortex/requirements/backlog.md` AND `grep -qiE 'backlog-author.*(remains|stays).*cortex-core' cortex/requirements/backlog.md`; (suite + drift) `just test` exits 0 AND after commit `git diff --quiet plugins/` exits 0.
+- **Status**: [ ] pending
+
+### Task 2: Comprehensive rename — /cortex-core:backlog → /cortex-backlog:backlog across all live refs
+- **Files**: `skills/backlog/SKILL.md`, `tests/fixtures/skill_trigger_phrases.yaml`, `skills/dev/SKILL.md`, `skills/discovery/references/decompose.md`, `skills/lifecycle/references/clarify.md`, `docs/agentic-layer.md`, `docs/backlog.md`, `docs/overnight.md`, `docs/setup.md`, `cortex_command/init/templates/cortex/backlog/README.md`, `tests/fixtures/backlog_author/valid_five_section.md`, plus regenerated `plugins/cortex-core/skills/**` and `plugins/cortex-backlog/skills/backlog/**` mirrors
+- **What**: Perform all renames, then build, verify, and commit once:
+  1. `skills/backlog/SKILL.md`: rename `/cortex-core:backlog` → `/cortex-backlog:backlog` at lines 3, 26, 40, 92, 109; trim ~3B from the line-3 `description` trigger-phrase list to keep L1 ≤319B (the rename adds +3B); leave the bare `/backlog-author` calls (59/61/62) unchanged.
+  2. `tests/fixtures/skill_trigger_phrases.yaml`: change the `backlog:` `must_contain` entry (line 52) from `/cortex-core:backlog` to `/cortex-backlog:backlog` so it matches the renamed description.
+  3. `skills/dev/SKILL.md` (141, 151, 233), `skills/discovery/references/decompose.md` (138), `skills/lifecycle/references/clarify.md` (19): rename.
+  4. `docs/agentic-layer.md` (143, 250), `docs/backlog.md` (6, 69 heading, 71, 74), `docs/overnight.md` (107, 261): rename.
+  5. `docs/setup.md`: add a cortex-backlog plugin-table row, change "six" → "seven", mark it optional (prose prerequisite, matching cortex-overnight).
+  6. `cortex_command/init/templates/cortex/backlog/README.md` (16), `tests/fixtures/backlog_author/valid_five_section.md` (15): rename. (No init-hash bump exists — the hash is computed live.)
+  7. Run `just build-plugin` to regenerate the renamed skills' mirrors.
+  8. Stage the explicit set and commit with an explicit pathspec.
+- **Depends on**: [1]
+- **Complexity**: complex
+- **Context**: The line-3 description is the L1-counted surface (319B at budget). `test_skill_descriptions.py` asserts each `skill_trigger_phrases.yaml` `must_contain` phrase is a substring of the canonical description — so steps 1 and 2 must agree. `test_backlog_author.py:150` reads `valid_five_section.md` and checks verbatim append, so the rename stays self-consistent. CHANGELOG.md:78's `/cortex-core:backlog add` is **deliberately excluded** (historical release note — rewriting it would misrepresent a shipped version); not in the rename set. The init backlog README is in `scaffold.py:_HASH_INPUT_TEMPLATES`, but `_compute_init_artifacts_hash` returns `f"v1:{h.hexdigest()}"` computed live — no literal to bump. Concurrency + commit: same explicit-pathspec discipline and `git status -- skills/` precondition as Task 1.
+- **Verification**: all of — (completeness, "catch everything") `grep -rIn 'cortex-core:backlog' skills docs tests bin claude hooks cortex_command justfile cortex/requirements CLAUDE.md README.md | grep -v 'cortex-core:backlog-author' | grep -v plugins/` returns zero lines; (fixture corrected, not just added) `! grep -q 'cortex-core:backlog' tests/fixtures/skill_trigger_phrases.yaml` (exit 0) AND `grep -q '/cortex-backlog:backlog' tests/fixtures/skill_trigger_phrases.yaml` (exit 0); (L1 ≤319) `./bin/cortex-measure-l1-surface skills/backlog/SKILL.md | grep -qE '^backlog 3(0[0-9]|1[0-9])$'` (exit 0); (backlog-author refs preserved) `grep -c 'cortex-core:backlog-author' skills/interview/SKILL.md` = 2; (docs/setup.md) `grep -q 'cortex-backlog' docs/setup.md && grep -qiE 'seven (available )?plugins' docs/setup.md && grep -qiE 'cortex-backlog.*optional|optional.*cortex-backlog' docs/setup.md`; (suite + drift) `just test` exits 0 (covers `test_skill_descriptions`, `test_l1_surface_ratchet`, `test_backlog_author`, `test_init_artifacts_hash_inputs`) AND after commit `git diff --quiet plugins/` exits 0.
+- **Status**: [ ] pending
+
+## Risks
+- **Per-phase single-task structure is forced** (per-task-commit harness × gate-forced atomic co-land); each task is large but irreducible. Orchestrator-review task-sizing flags do not apply — splitting would break a gate.
+- **Whole-tree drift contamination**: the pre-commit hook runs `just build-plugin` on the full tree and diffs all of `plugins/<p>/`; a concurrent session editing any `skills/<other>/` source would regenerate that mirror and fail this commit. Currently dormant (verified: no concurrent `skills/` edits). Re-check `git status -- skills/` immediately before each commit; if dirty, coordinate before committing.
+- **Concurrent sessions share the checkout** — commit with explicit pathspec (never `git add -A` / the commit skill's broad staging). Recommend **trunk / sequential / direct-orchestrator** execution.
+- **L1 trim** must not drop a distinct trigger utterance; if a clean ~3B trim is impossible, the documented fallback is a budget re-cap citing this lifecycle-id (not the default).
+- **Cross-plugin `/backlog-author`** kept bare (demonstrated working by morning-review); req-20 post-install verification is interactive, not a shell check.
+- **CHANGELOG.md:78** retains a now-historical `/cortex-core:backlog` mention by design (historical record). Flagged for traceability, not renamed.
+
+## Acceptance
+After both commits: installing cortex-core + cortex-backlog exposes `/cortex-backlog:backlog` (and the backlog skill resolves backlog-author from cortex-core); cortex-core alone has no backlog skill but retains backlog-author; `just test` is green (dual-source parity, the new prefix-collision test, L1 ratchet, skill-descriptions, init-hash, backlog-author); the completeness grep for `/cortex-core:backlog` returns zero live references; and `cortex/requirements/backlog.md` no longer contradicts the design.
