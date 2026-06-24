@@ -184,7 +184,9 @@ If no backlog item was found, skip silently. If `cortex-update-item` exits with 
 
 ### Step 10 — Backlog Index Sync
 
-After the `cortex-update-item` call (regardless of whether it succeeded, failed, or was skipped), regenerate the backlog index using this fallback chain:
+After the `cortex-update-item` call (regardless of whether it succeeded, failed, or was skipped), resolve the active backlog backend with `cortex-read-backlog-backend` (argless; it prints the resolved backend and exits 0) before regenerating anything. On any value other than `cortex-backlog` (`none` OR an external tracker), skip the index regeneration with a one-line advisory that index sync is disabled for this repo — there is no index to regenerate under this backend. (Step 9's write-back is already backend-gated via backlog-writeback.md; this closes the same gap for Step 10, which previously ran unconditionally.)
+
+On the `cortex-backlog` arm (the default), regenerate the backlog index using this fallback chain:
 
 1. If `cortex-update-item` was not found (`command -v cortex-update-item` failed), emit: `"WARNING: cortex-update-item not found — backlog item status may not be updated."`
 2. Attempt index regeneration in order:
