@@ -1206,6 +1206,7 @@ async def _recovery_review_gate(
             _set_review_error_detail_flags(
                 deferred_details, merge_reverted=merge_reverted
             )
+        _guard_review_flag_coherence(deferred_details, site="recovery in-band")
         overnight_log_event(
             FEATURE_DEFERRED,
             ctx.config.batch_id,
@@ -1255,6 +1256,7 @@ async def _recovery_review_gate(
             crash_details["merge_reverted"] = False
         else:
             crash_details["review_dispatch_crashed"] = True
+        _guard_review_flag_coherence(crash_details, site="recovery crash")
         overnight_log_event(
             FEATURE_DEFERRED,
             ctx.config.batch_id,
@@ -1589,6 +1591,7 @@ async def _repair_review_or_revert(
             _set_review_error_detail_flags(
                 deferred_details, merge_reverted=merge_reverted
             )
+        _guard_review_flag_coherence(deferred_details, site="repair in-band")
         overnight_log_event(
             FEATURE_DEFERRED,
             ctx.config.batch_id,
@@ -1661,6 +1664,7 @@ async def _repair_review_or_revert(
             crash_details["could_not_run"] = True
         else:
             crash_details["review_dispatch_crashed"] = True
+        _guard_review_flag_coherence(crash_details, site="repair crash")
         overnight_log_event(
             FEATURE_DEFERRED,
             ctx.config.batch_id,
@@ -1977,6 +1981,7 @@ async def apply_feature_result(
                             _set_review_error_detail_flags(
                                 deferred_details, merge_reverted=merge_reverted
                             )
+                        _guard_review_flag_coherence(deferred_details, site="apply in-band")
                         overnight_log_event(
                             FEATURE_DEFERRED,
                             ctx.config.batch_id,
@@ -2043,6 +2048,7 @@ async def apply_feature_result(
                         crash_details["merge_reverted"] = False
                     else:
                         crash_details["review_dispatch_crashed"] = True
+                    _guard_review_flag_coherence(crash_details, site="apply crash")
                     overnight_log_event(
                         FEATURE_DEFERRED,
                         ctx.config.batch_id,
