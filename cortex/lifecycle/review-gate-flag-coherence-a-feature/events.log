@@ -6,3 +6,7 @@
 {"ts": "2026-06-24T03:14:14Z", "event": "phase_transition", "feature": "review-gate-flag-coherence-a-feature", "from": "research", "to": "specify"}
 {"ts": "2026-06-24T03:40:00Z", "event": "spec_approved", "feature": "review-gate-flag-coherence-a-feature"}
 {"ts": "2026-06-24T03:40:00Z", "event": "phase_transition", "feature": "review-gate-flag-coherence-a-feature", "from": "specify", "to": "plan"}
+{"ts": "2026-06-24T03:42:00Z", "event": "feature_paused", "feature": "review-gate-flag-coherence-a-feature", "phase": "plan", "reason": "operator chose approve-spec-but-wait-to-plan"}
+{"ts":"2026-06-24T12:55:48Z","event":"sentinel_absence","feature":"review-gate-flag-coherence-a-feature","reviewer_angle":"spec-faithfulness-task-mechanics","reason":"absent","model_tier":"sonnet","expected_sha":"0582c7fc761b0dee86016142c70262f9141860b2535be701dd54d5e4a26a001e","observed_sha_or_null":null}
+{"ts": "2026-06-24T13:10:37Z", "event": "plan_approved", "feature": "review-gate-flag-coherence-a-feature", "dispatch_choice": "trunk"}
+{"ts": "2026-06-24T13:10:37Z", "event": "phase_transition", "feature": "review-gate-flag-coherence-a-feature", "from": "plan", "to": "implement"}
