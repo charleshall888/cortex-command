@@ -4059,7 +4059,7 @@
     border: 1px solid var(--rule-soft); border-radius: 2px;
   }
   /* ═════════════════════════════════════════════════════════════════
-     COMPARISON STRIP — two cards (simple vs load-bearing) showing the
+     COMPARISON STRIP — two cards (simple vs critical) showing the
      spectrum in real numbers (gates · tokens · wall clock).
      ═════════════════════════════════════════════════════════════════ */
   .ax-compare {
@@ -4179,7 +4179,7 @@
 
   .ax-esc-rail {
     position: relative;
-    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
     height: 64px; align-items: stretch;
   }
   .ax-esc-cable {
@@ -4227,6 +4227,7 @@
   }
   .ax-esc-orb.lvl-1 { width: 20px; height: 20px; margin: -2px 0; }
   .ax-esc-orb.lvl-2 { width: 24px; height: 24px; margin: -4px 0; }
+  .ax-esc-orb.lvl-3 { width: 28px; height: 28px; margin: -6px 0; }
   .ax-esc-orb-inner {
     width: 60%; height: 60%; border-radius: 50%;
     background: transparent;
@@ -5908,10 +5909,10 @@
           <div class="ax-compare-stat"><span class="ax-compare-stat-v">~200k</span><span class="ax-compare-stat-k">tokens</span></div>
           <div class="ax-compare-stat"><span class="ax-compare-stat-v">~10 min</span><span class="ax-compare-stat-k">wall clock</span></div>
         </div>
-        <div class="ax-compare-extras">ships in one pass. no research gate, no critical-review fork, no parallel plans.</div>
+        <div class="ax-compare-extras">ships in one pass — no critical-review fork, no plan race, no escalated reviewer.</div>
       </div>
       <div class="ax-compare-card critical">
-        <div class="ax-compare-h">a load-bearing change</div>
+        <div class="ax-compare-h">a critical change</div>
         <div class="ax-compare-name">the nightline game loop</div>
         <div class="ax-compare-stats">
           <div class="ax-compare-stat"><span class="ax-compare-stat-v">10</span><span class="ax-compare-stat-k">gates</span></div>
@@ -8154,28 +8155,41 @@
       complete:  { label: 'complete' },
     };
 
-    // Indexed [criticality][complexity]. Full 3×3 possibility space.
+    // Indexed [criticality][complexity]: 4 criticality levels × 2 complexity
+    // tiers, mirroring the canonical enum (common.py TIER_VOCABULARY /
+    // CRITICALITY_VOCABULARY) and the escalation rules in
+    // skills/lifecycle/references/criticality-matrix.md:
+    //   • /critical-review fires for complex + (medium|high|critical)
+    //   • the review phase escalates to Opus (reviewO) at high|critical,
+    //     forced regardless of tier
+    //   • competing plans (planB) are critical-only
+    //   • research runs at every level
     const MATRIX = [
+      // low
       [
-        ['clarify','spec','plan','implement','complete'],
+        ['clarify','research','spec','plan','implement','complete'],
+        ['clarify','research','spec','plan','implement','review','complete'],
+      ],
+      // medium
+      [
         ['clarify','research','spec','plan','implement','review','complete'],
         ['clarify','research','spec','review1','plan','implement','review','complete'],
       ],
+      // high
       [
-        ['clarify','research','spec','plan','implement','review','complete'],
-        ['clarify','research','spec','review1','plan','implement','review','complete'],
-        ['clarify','research','spec','review1','plan','planB','implement','review','complete'],
+        ['clarify','research','spec','plan','implement','reviewO','complete'],
+        ['clarify','research','spec','review1','plan','implement','reviewO','complete'],
       ],
+      // critical
       [
-        ['clarify','research','spec','review1','plan','implement','review','complete'],
-        ['clarify','research','spec','review1','plan','planB','implement','review','complete'],
+        ['clarify','research','spec','plan','planB','implement','reviewO','complete'],
         ['clarify','research','spec','review1','plan','planB','implement','reviewO','complete'],
       ],
     ];
 
     const AXIS = {
-      complexity:  ['simple',  'complex',  'critical'],
-      criticality: ['trivial', 'standard', 'load-bearing'],
+      complexity:  ['simple', 'complex'],
+      criticality: ['low', 'medium', 'high', 'critical'],
     };
 
     function summarize(seq) {
@@ -8363,7 +8377,7 @@
 
     // Escalators
     const controls = skeleton.querySelector('[data-controls]');
-    const escState = { complexity: { idx: 1 }, criticality: { idx: 1 } };
+    const escState = { complexity: { idx: 0 }, criticality: { idx: 1 } };
     const escConfigs = [
       { axis: 'complexity',  glyph: '◇', hint: 'how hard is the work?' },
       { axis: 'criticality', glyph: '!', hint: 'how much will it hurt if it breaks?' },
@@ -8382,12 +8396,12 @@
             <div class="ax-esc-cable-bg"></div>
             <div class="ax-esc-cable-fill" data-fill></div>
           </div>
-          ${[0,1,2].map(i => `
+          ${AXIS[cfg.axis].map((name, i) => `
             <button class="ax-esc-rung" type="button" role="radio" data-idx="${i}"
-                    aria-label="set ${cfg.axis} to ${AXIS[cfg.axis][i]}">
+                    aria-label="set ${cfg.axis} to ${name}">
               <span class="ax-esc-orb lvl-${i}"><span class="ax-esc-orb-inner"></span></span>
-              <span class="ax-esc-name">${AXIS[cfg.axis][i]}</span>
-              <span class="ax-esc-tick">${['I','II','III'][i]}</span>
+              <span class="ax-esc-name">${name}</span>
+              <span class="ax-esc-tick">${['I','II','III','IV'][i]}</span>
             </button>
           `).join('')}
         </div>
@@ -8399,7 +8413,7 @@
         btn.addEventListener('click', () => {
           const i = parseInt(btn.dataset.idx, 10);
           const cur = escState[cfg.axis].idx;
-          escState[cfg.axis].idx = (i === cur) ? (cur + 1) % 3 : i;
+          escState[cfg.axis].idx = (i === cur) ? (cur + 1) % AXIS[cfg.axis].length : i;
           render();
         });
       });
@@ -8443,7 +8457,8 @@
         const cur = escState[axis].idx;
         const root = escState[axis].el;
         root.querySelector('[data-val]').textContent = AXIS[axis][cur];
-        root.querySelector('[data-fill]').style.width = `${(cur / 2) * 100}%`;
+        const span = AXIS[axis].length - 1;
+        root.querySelector('[data-fill]').style.width = `${span > 0 ? (cur / span) * 100 : 0}%`;
         root.querySelectorAll('.ax-esc-rung').forEach((btn, i) => {
           const on = i <= cur;
           const isCur = i === cur;
