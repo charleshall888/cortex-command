@@ -101,7 +101,7 @@ The boundary is deliberate: this area delivers extraction + a declarative backen
 - The backlog engine (`cortex_command/backlog/*`) stays in the wheel as a shared library; only the skill surface moves to the plugin. Physically removing the package from the wheel (gating every import site in lifecycle/overnight) is explicitly out of scope.
 - The `backlog-author` skill remains in cortex-core (it is **not** moved to cortex-backlog): discovery and morning-review compose ticket bodies through it on the external-tracker create path even when the local backlog plugin is absent, so it must ship with the always-installed core plugin.
 - The config field is the source of truth for the active backend, not plugin-install detection — the wheel cannot reliably introspect installed Claude Code plugins, and lifecycle/overnight import the backlog module from the wheel.
-- Follow the established optional-plugin pattern: register `cortex-backlog` in justfile `BUILD_OUTPUT_PLUGINS`, enforce the dual-source mirror at pre-commit, and add the plugin to the `docs/setup.md` plugin table as OPTIONAL.
+- Follow the established optional-plugin pattern: register `cortex-backlog` in justfile `BUILD_OUTPUT_PLUGINS`, enforce the dual-source mirror at pre-commit, and document the plugin as optional in `docs/setup.md`.
 - Terminology: the local backend is named `cortex-backlog` consistently in config values and prose (not `local`).
 - This is a load-bearing decision and likely warrants an ADR (configurable backlog backend + LLM-as-adapter rationale), consistent with `cortex/adr/` practice; consumer skills should back-point to it rather than restating rationale.
 

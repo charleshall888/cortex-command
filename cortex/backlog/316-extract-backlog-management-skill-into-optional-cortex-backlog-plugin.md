@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: d6eeff6d-f9d2-4beb-9d4c-2f54bc39c610
 title: Extract backlog management skill into optional cortex-backlog plugin
-status: in_progress
+status: complete
 priority: high
 type: feature
 created: 2026-06-23

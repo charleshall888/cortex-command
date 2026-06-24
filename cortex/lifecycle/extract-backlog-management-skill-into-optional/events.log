@@ -8,3 +8,7 @@
 {"ts": "2026-06-23T22:25:53Z", "event": "phase_transition", "feature": "extract-backlog-management-skill-into-optional", "from": "specify", "to": "plan"}
 {"ts": "2026-06-24T00:48:07Z", "event": "plan_approved", "feature": "extract-backlog-management-skill-into-optional", "dispatch_choice": "trunk"}
 {"ts": "2026-06-24T00:48:07Z", "event": "phase_transition", "feature": "extract-backlog-management-skill-into-optional", "from": "plan", "to": "implement"}
+{"ts": "2026-06-24T01:18:47Z", "event": "phase_transition", "feature": "extract-backlog-management-skill-into-optional", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-06-24T01:34:49Z", "event": "review_verdict", "feature": "extract-backlog-management-skill-into-optional", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
+{"ts": "2026-06-24T01:34:49Z", "event": "phase_transition", "feature": "extract-backlog-management-skill-into-optional", "from": "review", "to": "complete"}
+{"ts": "2026-06-24T01:36:15Z", "event": "feature_complete", "feature": "extract-backlog-management-skill-into-optional", "tasks_total": 2, "rework_cycles": 0, "merge_anchor": "main"}
