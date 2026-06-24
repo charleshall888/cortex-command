@@ -1,4 +1,9 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(cortex-resolve-backlog-item *)"
+    ]
+  },
   "hooks": {
     "PostToolUse": [
       {
@@ -12,9 +17,7 @@
       }
     ]
   },
-  "permissions": {
-    "allow": [
-      "Bash(cortex-resolve-backlog-item *)"
-    ]
+  "enabledPlugins": {
+    "cortex-backlog@cortex-command": true
   }
 }
