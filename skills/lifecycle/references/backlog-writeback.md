@@ -4,6 +4,16 @@ Two Step 2 sub-procedures: check whether the backlog item is already complete, a
 
 Both sub-procedures consume Step 1's resolved `{backlog-file}` and parsed frontmatter; never re-scan the backlog directory.
 
+## Backend routing (resolve once)
+
+The three `cortex-update-item` write-backs below (close-lifecycle, in-progress status, lifecycle-slug) target the local backlog engine. Before reaching them, resolve the active backend once with `` `cortex-read-backlog-backend` `` (argless; it prints the resolved backend and exits 0). Route on the value:
+
+- **`cortex-backlog`** (the default arm) → proceed exactly as today; run the `cortex-update-item` calls unchanged.
+- **`none`** → skip the three `cortex-update-item` calls, noting a one-line advisory that backlog write-back is disabled for this repo, and continue.
+- **any other value** (an external tracker) → make the equivalent change best-effort on the configured tracker using the config `backlog.instructions` and your own judgment (e.g. `gh issue` create/edit/close), surfacing the composed content if it cannot be completed so no work is lost.
+
+Each `cortex-update-item` write-back below carries the same `` `cortex-read-backlog-backend` `` routing inline; the default `cortex-backlog` arm is the unchanged behavior.
+
 ## Backlog Status Check
 
 Before creating any artifacts or performing write-back, check whether the originating backlog item has already been marked complete outside the lifecycle. **Do not re-scan the backlog directory in this sub-procedure** — consume Step 1's resolved result.
@@ -25,11 +35,11 @@ Before creating any artifacts or performing write-back, check whether the origin
         {"ts": "<ISO 8601>", "event": "feature_complete", "feature": "<name>"}
         ```
         Intentionally omit `tasks_total` and `rework_cycles` — `plan.md` may not exist on this path. Do NOT add those fields with value 0.
-     2. Run:
+     2. Gate this write-back on the backend resolved via `` `cortex-read-backlog-backend` `` (see Backend routing). On `cortex-backlog`, run:
         ```bash
         cortex-update-item <slug> --status complete --lifecycle-phase complete --session-id null
         ```
-        Where `<slug>` is the backlog filename stem.
+        Where `<slug>` is the backlog filename stem. On `none`, skip with a one-line advisory; on any other value, make the equivalent close best-effort on the external tracker per `backlog.instructions`.
      3. **Exit immediately.** Do not proceed to Discovery Bootstrap or any subsequent Step 2 sections or later steps.
 
    - **If `phase = none`** (no `cortex/lifecycle/{feature}/` directory exists):
@@ -39,19 +49,21 @@ Before creating any artifacts or performing write-back, check whether the origin
 
 After registering the session, attempt to write the lifecycle start back to the originating backlog item. **Do not re-scan the backlog directory in this sub-procedure** — consume Step 1's resolved result.
 
-If Step 1 resolved a `{backlog-file}` (exit 0), run:
+If Step 1 resolved a `{backlog-file}` (exit 0), gate this write-back on the backend resolved via `` `cortex-read-backlog-backend` `` (see Backend routing). On `cortex-backlog`, run:
 
 ```bash
 cortex-update-item <path> --status in_progress --session-id $LIFECYCLE_SESSION_ID --lifecycle-phase research
 ```
 
-Where `<path>` is the slug-or-uuid of the matched backlog item (e.g., `045-my-feature`).
+Where `<path>` is the slug-or-uuid of the matched backlog item (e.g., `045-my-feature`). On `none`, skip with a one-line advisory; on any other value, make the equivalent in-progress update best-effort on the external tracker per `backlog.instructions`.
 
-Additionally, when `phase = none` (new lifecycle only), run the following write-back to record the lifecycle slug:
+Additionally, when `phase = none` (new lifecycle only), record the lifecycle slug — gated on the backend resolved via `` `cortex-read-backlog-backend` `` (see Backend routing). On `cortex-backlog`, run:
 
 ```bash
 cortex-update-item <path> --lifecycle-slug {lifecycle-slug}
 ```
+
+On `none`, skip with a one-line advisory; on any other value, record the lifecycle-slug association best-effort on the external tracker per `backlog.instructions`.
 
 The status write-back runs on all phases when a match is found.
 
