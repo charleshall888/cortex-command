@@ -48,7 +48,7 @@ co-setting edit into a coherent emit; `just test` exits 0 with `bin/.events-regi
 - **Verification**: (b) `grep -c "_guard_review_flag_coherence" cortex_command/overnight/outcome_router.py`
   ≥ 1 AND `grep -cE "^[[:space:]]*assert\b" cortex_command/overnight/outcome_router.py` = 0 — pass if the
   helper is present and no `assert` was added.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Direct done-criterion unit test of the guard logic
 - **Files**: `cortex_command/overnight/tests/test_outcome_router.py`
@@ -66,7 +66,7 @@ co-setting edit into a coherent emit; `just test` exits 0 with `bin/.events-regi
   TestGuardReviewFlagCoherence` exits 0 AND `grep -c "class TestGuardReviewFlagCoherence"
   cortex_command/overnight/tests/test_outcome_router.py` = 1. Mutation tripwire: deleting the guard body's
   `raise` (Task 1) makes the `assertRaises` case error.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Wire the guard before all six review-gate emits
 - **Files**: `cortex_command/overnight/outcome_router.py`
@@ -93,7 +93,7 @@ co-setting edit into a coherent emit; `just test` exits 0 with `bin/.events-regi
   ≥ 7 (1 definition + 6 calls) — pass if ≥7; AND each call resides inside one of
   `_recovery_review_gate` / `_repair_completed_review_gate` / `apply_feature_result` (none inside the four
   non-review emit functions). Behavioral correctness is proven by Task 4, not by this count.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Per-path behavioral wiring-proof
 - **Files**: `cortex_command/overnight/tests/test_outcome_router.py`
@@ -138,7 +138,7 @@ co-setting edit into a coherent emit; `just test` exits 0 with `bin/.events-regi
   cortex_command/overnight/tests/test_outcome_router.py -q -k TestReviewDeferralFlagCoherence` exits 0;
   layer (a) fails if a crash-site guard is deleted/mis-placed/mis-bound, and layer (a′) fails if an in-band
   guard is deleted.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Full suite green, parity verified
 - **Files**: none (verification-only gate; no file edits — if `just test` fails, route the failure back to
@@ -154,7 +154,12 @@ co-setting edit into a coherent emit; `just test` exits 0 with `bin/.events-regi
   sandbox-network DNS for an MCP-touching test — both seen in prior lifecycles), confirm it is unrelated to
   this change and not a guard regression before treating it as external.
 - **Verification**: (a) `just test` exit code = 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete — change-owned suites green (outcome_router 65 tests; R5 events-registry +
+  parity 25 tests; `bin/.events-registry.md` untouched). Full `just test` had 2 failures, both external &
+  unrelated to #320: `test_no_order_drift_against_baseline` (pre-existing backlog-resolver/baseline drift,
+  reproduces with this change stashed) and `test_log_invocation_fast_path_budget` (latency-budget flake —
+  passes in isolation, fails only under full-suite concurrent load). Neither references `outcome_router`
+  or the guard.
 
 ## Risks
 - **Emit-site breadth: 6 (chosen) vs 3 (Open Decision).** The guard is wired at all six review-gate emits,
