@@ -9,7 +9,7 @@ inputs:
   - "topic: string (required) — feature or topic to research"
   - "lifecycle-slug: string (optional) — determines lifecycle mode; if present, writes cortex/lifecycle/{slug}/research.md"
   - "tier: simple|complex (optional, default: simple) — feature complexity tier"
-  - "criticality: low|medium|high|critical (optional, default: low) — feature criticality"
+  - "criticality: low|medium|high|critical (optional, default: medium) — feature criticality"
 outputs:
   - "lifecycle mode: cortex/lifecycle/{lifecycle-slug}/research.md"
   - "standalone mode: research findings presented in conversation, no file written"
@@ -39,7 +39,7 @@ Example invocations:
 
 Defaults:
 - `tier`: `simple`
-- `criticality`: `low`
+- `criticality`: `medium`
 - `research-considerations`: empty/absent → no considerations injection
 
 `research-considerations` format: a newline-delimited bullet list, each line starting with `- `. Embedded `=` and `"` characters are not supported in the value. When empty or absent, no considerations are injected into agent prompts.
@@ -60,9 +60,7 @@ The following named fragment is referenced by every agent-prompt code-block belo
 
 ### Considerations injection (per-angle applicability)
 
-When `research-considerations` is non-empty (see Step 1), inject its content as a `### Considerations to investigate alongside the primary scope` h3-level section into the dispatch prompts of the **mandatory core angles only** (Codebase, Web, Requirements & Constraints) — the Tradeoffs and Adversarial angles, and any other orchestrator-chosen angle, do not receive this section. Tradeoffs is excluded so its orthogonal-dimension evaluation is not narrowed by external considerations; Adversarial is excluded because it operates on summarized findings, not the considerations directly.
-
-Heading level is h3 (`###`), not h2 (`##`), to avoid markdown-level collision with each agent's `## Output format` section. Placement is fixed: the section is inserted immediately after the per-agent job-description block (which ends at the injection-resistance instruction) and before the agent's existing `## Output format` block. When `research-considerations` is empty or absent, no section is injected and the prompts dispatch as today.
+When `research-considerations` is non-empty (see Step 1), inject its content as a `### Considerations to investigate alongside the primary scope` section into the **mandatory core angles only** (Codebase, Web, Requirements & Constraints) — not Tradeoffs (keep its orthogonal evaluation unnarrowed), not Adversarial (it works on summarized findings), and not any other orchestrator-chosen angle. Use an `###` (h3) heading so it nests below the agents' `##` output sections, and place it after the job-description block and before the output spec. When empty or absent, inject nothing.
 
 ### Angle selection
 
@@ -237,11 +235,10 @@ cell's count exceeded available distinct angles (per fanout.md). Omit this secti
 **Lifecycle mode** (`lifecycle-slug` was present in `$ARGUMENTS`):
 1. If `cortex/lifecycle/{lifecycle-slug}/` does not exist, create the directory.
 2. Write synthesis output to `cortex/lifecycle/{lifecycle-slug}/research.md`.
-3. If `research-considerations` was non-empty, the synthesis output includes the `## Considerations Addressed` section (per Step 4 output structure). Emitted only in lifecycle mode.
+3. The `## Considerations Addressed` section (defined in Step 4) is included when `research-considerations` was non-empty.
 4. Announce: "Research complete. Written to `cortex/lifecycle/{lifecycle-slug}/research.md`."
 
 **Standalone mode** (`lifecycle-slug` absent or empty):
 1. Present synthesis output directly in the conversation.
 2. Do not write any file.
-3. No lifecycle directory is created.
-4. The `## Considerations Addressed` section is NOT emitted in standalone mode (no research.md is written, so the flow-through artifact does not apply).
+3. No lifecycle directory is created. (The `## Considerations Addressed` section never appears here — it is lifecycle-mode only, per Step 4.)
