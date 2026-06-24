@@ -6,9 +6,9 @@ status: backlog
 priority: medium
 type: feature
 created: 2026-06-23
-updated: 2026-06-23
+updated: 2026-06-24
 parent: "315"
-blocked-by: [317]
+blocked-by: []
 tags: ['backlog-optional-plugin']
 discovery_source: cortex/research/backlog-optional-plugin/research.md
 ---

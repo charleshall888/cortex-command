@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: d54e86bc-93ec-4cbb-a68e-d98ff705cb00
 title: 'Config-driven backlog backend: resolver, local/none routing, overnight safety'
-status: refined
+status: complete
 priority: high
 type: feature
 created: 2026-06-23
-updated: 2026-06-23
+updated: 2026-06-24
 parent: "315"
 tags: ['backlog-optional-plugin']
 discovery_source: cortex/research/backlog-optional-plugin/research.md
