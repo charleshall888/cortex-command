@@ -10,11 +10,37 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from cortex_command.dashboard.poller import DashboardState, run_polling
+
+
+# Fixture: a repo with leftover backlog items whose known statuses make the
+# cortex-backlog arm produce {"backlog": 2, "complete": 1} (normalize_status
+# keeps both verbatim). The leftover items are load-bearing — a clean-empty
+# fixture would pass even a broken gate (both dicts already default to {}).
+_BACKLOG_ITEMS = [("001-a.md", "backlog"), ("002-b.md", "backlog"), ("003-c.md", "complete")]
+_EXPECTED_COUNTS = {"backlog": 2, "complete": 1}
+
+
+def _write_repo(root: Path, backend: str | None) -> None:
+    """Build a tmp repo: optional backend config + leftover backlog items."""
+    (root / ".claude").mkdir(parents=True, exist_ok=True)
+    (root / "cortex" / "lifecycle").mkdir(parents=True, exist_ok=True)
+    backlog = root / "cortex" / "backlog"
+    backlog.mkdir(parents=True, exist_ok=True)
+    if backend is not None:
+        (root / "cortex" / "lifecycle.config.md").write_text(
+            f"---\nbacklog:\n  backend: {backend}\n---\n", encoding="utf-8"
+        )
+    for fname, status in _BACKLOG_ITEMS:
+        (backlog / fname).write_text(
+            f"---\nstatus: {status}\ntitle: Item {fname}\n---\n\nbody\n", encoding="utf-8"
+        )
 
 
 class TestDashboardStateDefaults(unittest.TestCase):
@@ -169,6 +195,100 @@ class TestRunPolling(unittest.IsolatedAsyncioTestCase):
             self.assertIsNone(state.overnight)
             self.assertIsNone(state.pipeline)
             self.assertEqual(state.overnight_events, [])
+
+
+class TestPollSlowBackendGate(unittest.IsolatedAsyncioTestCase):
+    """The _poll_slow gate skips local reads under a non-cortex-backlog backend.
+
+    Drives a real poll iteration — asserting on a freshly-constructed
+    DashboardState() would be insufficient (its dicts already default to {}).
+    """
+
+    async def _run_one_cycle(self, root: Path) -> DashboardState:
+        from cortex_command.dashboard.poller import _poll_slow
+
+        state = DashboardState()
+        task = asyncio.create_task(_poll_slow(state, root))
+        # Let the synchronous poll body run once, up to its `await sleep(30)`.
+        for _ in range(5):
+            await asyncio.sleep(0)
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+        return state
+
+    async def test_nonlocal_arm_skips_local_reads(self):
+        """none AND an external backend: gate stands down, parse never called."""
+        for backend in ("none", "github-issues"):
+            with self.subTest(backend=backend), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                _write_repo(root, backend)
+                with mock.patch(
+                    "cortex_command.dashboard.poller.parse_backlog_counts"
+                ) as spy_counts, mock.patch(
+                    "cortex_command.dashboard.poller.parse_backlog_titles"
+                ) as spy_titles:
+                    state = await self._run_one_cycle(root)
+                # (a) Only passes if the poller actually ran AND wrote the
+                # resolved value — fails for a never-run poller (default
+                # "cortex-backlog") and for a poller that forgets the assign.
+                self.assertEqual(state.backlog_backend, backend)
+                # (b) Local reads skipped even with leftover items present.
+                self.assertEqual(state.backlog_counts, {})
+                self.assertEqual(state.backlog_titles, {})
+                spy_counts.assert_not_called()
+                spy_titles.assert_not_called()
+
+    async def test_cortex_backlog_arm_reads_known_counts(self):
+        """Positive control: known-value dict (NOT == parse_backlog_counts(dir))."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_repo(root, "cortex-backlog")
+            state = await self._run_one_cycle(root)
+        self.assertEqual(state.backlog_backend, "cortex-backlog")
+        self.assertEqual(state.backlog_counts, _EXPECTED_COUNTS)
+
+    async def test_absent_config_resolves_local(self):
+        """Absent lifecycle.config.md → cortex-backlog → today's behavior."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_repo(root, None)
+            state = await self._run_one_cycle(root)
+        self.assertEqual(state.backlog_backend, "cortex-backlog")
+        self.assertEqual(state.backlog_counts, _EXPECTED_COUNTS)
+
+
+class TestLifespanStartupResolution(unittest.IsolatedAsyncioTestCase):
+    """The backend is resolved synchronously at lifespan startup (R1).
+
+    Closes the first-render window: a request landing before the first 30s
+    poll must already see the resolved backend, not the cortex-backlog default.
+    """
+
+    async def test_backend_resolved_before_any_poll(self):
+        from cortex_command.dashboard import app as app_mod
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_repo(root, "none")
+            fresh = DashboardState()
+
+            async def _noop_run_polling(state, r):  # no pollers spawned
+                return None
+
+            with mock.patch.object(app_mod, "_root", return_value=root), \
+                 mock.patch.object(app_mod, "run_polling", _noop_run_polling), \
+                 mock.patch.object(app_mod, "_pid_file", root / "dash.pid"), \
+                 mock.patch.object(app_mod, "state", fresh):
+                # Sanity: the singleton defaults to the local arm before startup.
+                self.assertEqual(fresh.backlog_backend, "cortex-backlog")
+                async with app_mod.lifespan(app_mod.app):
+                    # Resolution ran synchronously before `yield` — assert here,
+                    # before any poll cycle has had a chance to run.
+                    self.assertEqual(fresh.backlog_backend, "none")
+                    await asyncio.sleep(0)  # drain the no-op polling task
 
 
 if __name__ == "__main__":
