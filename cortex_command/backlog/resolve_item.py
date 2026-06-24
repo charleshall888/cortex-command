@@ -13,11 +13,12 @@ no defensive locking needed.
 Exit codes:
   0   Unambiguous match — JSON on stdout.
   2   Ambiguous match — candidate list on stderr.
-  3   No match — stderr message.
+  3   No match (includes an empty but present backlog directory) — stderr
+      message.
   64  Usage error — empty/whitespace input or input that normalises to empty
       after slugify (e.g. '!!!').
-  70  Software/IO error — malformed frontmatter, missing or empty backlog
-      directory, file-permission failure.
+  70  Software/IO error — malformed frontmatter, missing backlog directory,
+      file-permission failure.
 """
 
 from __future__ import annotations
@@ -346,11 +347,12 @@ def _build_parser() -> argparse.ArgumentParser:
             "Exit codes:\n"
             "  0   Unambiguous match — JSON on stdout.\n"
             "  2   Ambiguous match — candidate list on stderr.\n"
-            "  3   No match — stderr message.\n"
+            "  3   No match (includes an empty but present backlog\n"
+            "      directory) — stderr message.\n"
             "  64  Usage error — empty/whitespace input or input that\n"
             "      normalises to empty after slugify (e.g. '!!!').\n"
-            "  70  Software/IO error — malformed frontmatter, missing or\n"
-            "      empty backlog directory, file-permission failure.\n\n"
+            "  70  Software/IO error — malformed frontmatter, missing\n"
+            "      backlog directory, file-permission failure.\n\n"
             "Resolution order: uuid-prefix → numeric → kebab-slug (with-or-without "
             "NNN- prefix) → lifecycle_slug-frontmatter → title-phrase.\n\n"
             "Numeric: matches filenames whose NNN- prefix equals the input.\n"
@@ -394,8 +396,9 @@ def resolve(input_str: str, backlog_dir: Path) -> ResolutionResult:
       5) Title-phrase (slugify(input) ⊆ slugify(title))
 
     Raises:
-        ResolutionError: backlog directory missing/empty, malformed frontmatter,
-            or any IO failure during the resolution sweep.
+        ResolutionError: backlog directory missing, malformed frontmatter,
+            or any IO failure during the resolution sweep. An empty-but-present
+            directory is NOT an error — it returns ``not_found``.
 
     Returns:
         ``ResolutionResult`` whose ``status`` is one of ``"ok"``,
@@ -411,9 +414,14 @@ def resolve(input_str: str, backlog_dir: Path) -> ResolutionResult:
 
         items = sorted(backlog_dir.glob("[0-9]*-*.md"))
         if not items:
-            raise ResolutionError(
-                "backlog directory contains no NNN-*.md items"
-            )
+            # An empty-but-present backlog directory is a legitimate state — a
+            # fresh repo, or one using an external / `none` backlog backend —
+            # not an IO error. Return not_found (exit 3) so single-item
+            # consumers (refine Step 1, lifecycle clarify §1) route to their
+            # ad-hoc / Context-B path instead of halting on exit 70. A *missing*
+            # directory (handled above) stays an error — it usually means the
+            # command ran from the wrong cwd.
+            return ResolutionResult(status="not_found")
 
         # Load frontmatter for all items once — steps 1 and 4 need ``uuid`` and
         # ``lifecycle_slug`` respectively; step 5 needs ``title``. Steps 2 and 3

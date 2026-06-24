@@ -539,6 +539,22 @@ def test_exit_codes_three_no_match(tmp_path):
     assert "no match" in result.stderr
 
 
+def test_exit_codes_three_empty_backlog_dir(tmp_path):
+    """Empty-but-present backlog dir → exit 3 (not_found), NOT exit 70.
+
+    A clean external-backend or brand-new repo has an empty cortex/backlog/.
+    The resolver must report not_found so refine Step 1 and lifecycle clarify
+    §1 route to their ad-hoc / Context-B path instead of halting on exit 70.
+    A *missing* directory stays exit 70 (see test_discovery_no_backlog_exits_70).
+    """
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
+    # Directory exists but contains no NNN-*.md items.
+    result = _run(["any-topic-name"], backlog)
+    assert result.returncode == 3, result.stderr
+    assert "no match" in result.stderr
+
+
 def test_exit_codes_64_empty_input(tmp_path):
     """Input that slugifies to empty → exit 64."""
     backlog = tmp_path / "cortex" / "backlog"
