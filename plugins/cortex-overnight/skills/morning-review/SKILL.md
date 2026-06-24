@@ -96,6 +96,8 @@ Skip any section that has no entries — do not display a placeholder or empty h
 
 After all sections are walked, close each completed feature's backlog ticket. No per-feature confirmation is needed.
 
+**Backend routing**: the auto-close targets the local backlog engine. Resolve the active backend once with `` `cortex-read-backlog-backend` `` (argless; prints the resolved backend and exits 0). On `cortex-backlog` (the default arm), close exactly as below. On `none`, skip the auto-close and note a per-feature advisory that ticket closure is disabled for this repo. On any other value, make the equivalent close best-effort on the configured tracker per the config `backlog.instructions`. See `${CLAUDE_SKILL_DIR}/references/walkthrough.md` Section 6b for the full routing.
+
 **Slug resolution**: The overnight state stores lifecycle slugs (e.g., `enemy-chase-ai-upgrade-simpleenemy-to-characterbody2d-with-direct-steering`) which are longer than backlog file slugs (e.g., `036-enemy-chase-ai`). The `cortex-update-item` script accepts backlog file slugs or numeric IDs — not lifecycle slugs.
 
 To resolve: read each feature's `backlog_id` field from `overnight-state.json` (the state file located in Step 0). Pass the zero-padded numeric ID to `cortex-update-item`:

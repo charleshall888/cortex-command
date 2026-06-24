@@ -530,9 +530,24 @@ entirely if the merge was declined, skipped, or the PR was already merged/closed
 this review — backlog tickets should only be closed when the merge is confirmed in the
 current review session.
 
+The per-feature auto-close below targets the local backlog engine. Before the loop,
+resolve the active backend once with `` `cortex-read-backlog-backend` `` (argless; it
+prints the resolved backend and exits 0). Route the per-feature close on the value:
+
+- **`cortex-backlog`** (the default arm) → close each completed feature exactly as today,
+  running the close call unchanged.
+- **`none`** → skip the auto-close; for each completed feature, note a one-line advisory
+  that backlog ticket closure is disabled for this repo, and continue.
+- **any other value** (an external tracker) → for each completed feature, make the
+  equivalent close best-effort on the configured tracker using the config
+  `backlog.instructions` and your own judgment (e.g. `gh issue close`), surfacing the
+  composed close if it cannot be completed so no work is lost.
+
+The `cortex-backlog` arm runs the loop below unchanged.
+
 For each completed feature (the same list as Section 2, in the same order):
 
-1. Run:
+1. On the `cortex-backlog` arm, run:
 
    ```
    cortex-update-item {backlog_id} --status complete
@@ -542,6 +557,10 @@ For each completed feature (the same list as Section 2, in the same order):
    `backlog_id` field (e.g., `078` not `78`). If `backlog_id` is null, fall back to
    the lifecycle slug for fuzzy matching. Run from the repository root. The script
    exits 0 on success (item updated) and exits 1 silently if no item is found.
+
+   On the `none` arm, skip this call and record a per-feature advisory that closure is
+   disabled. On any other value, make the equivalent close best-effort on the external
+   tracker per `backlog.instructions`.
 
 2. Report one of the following per feature:
    - `closed #ID` — if the script printed "Parent epic also closed: ..." or the item
