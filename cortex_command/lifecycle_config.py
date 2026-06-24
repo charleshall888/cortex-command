@@ -1,12 +1,15 @@
 """Minimal parser primitive for ``cortex/lifecycle.config.md`` frontmatter.
 
-This module exposes two public symbols:
+This module exposes three public symbols:
 
 - :func:`read_branch_mode` — raw closed-set string (caller validates).
 - :func:`read_commit_artifacts` — boolean for the ``commit-artifacts`` flag,
   defaulting to ``True`` to preserve the prose-resident default at
   ``skills/lifecycle/references/plan.md`` §5 and
   ``skills/lifecycle/references/complete.md`` Step 2.
+- :func:`resolve_backlog_backend` — raw backend string from the nested
+  ``backlog:`` block, defaulting to ``"cortex-backlog"`` for every degenerate
+  input so a normal local repo stays byte-identical.
 
 All other names are underscore-prefixed.
 """
@@ -24,6 +27,9 @@ _FRONTMATTER_DELIM = "---"
 _FIELD_NAME = "branch-mode"
 _COMMIT_ARTIFACTS_FIELD = "commit-artifacts"
 _COMMIT_ARTIFACTS_DEFAULT = True
+_BACKLOG_BLOCK_FIELD = "backlog"
+_BACKLOG_BACKEND_FIELD = "backend"
+_BACKLOG_BACKEND_DEFAULT = "cortex-backlog"
 
 
 def _extract_frontmatter_text(text: str) -> str | None:
@@ -86,6 +92,66 @@ def read_branch_mode(repo_root: _pathlib.Path) -> str | None:
         return None
 
     return str(value).strip()
+
+
+def resolve_backlog_backend(repo_root: _pathlib.Path) -> str:
+    """Resolve the active backlog backend from lifecycle.config.md frontmatter.
+
+    Descends the nested ``backlog:`` mapping to read ``backend``. Designed to
+    fail toward today's local behavior (spec R1): every degenerate input
+    resolves to ``"cortex-backlog"``, and an explicit value is returned raw
+    (whitespace-stripped). This function never returns ``None`` and never
+    introspects installed plugins.
+
+    Behavior contract:
+
+    - Missing file → ``"cortex-backlog"``.
+    - Malformed YAML frontmatter → ``"cortex-backlog"`` plus a stderr warning
+      naming the file and the parse error.
+    - Top-level not a mapping → ``"cortex-backlog"``.
+    - ``backlog:`` block absent → ``"cortex-backlog"``.
+    - Scalar ``backlog:`` value (not a mapping) → ``"cortex-backlog"`` (the
+      explicit ``isinstance`` guard prevents an ``AttributeError``).
+    - ``backend`` null/empty → ``"cortex-backlog"``.
+    - ``backend`` present → the raw string value, whitespace-stripped.
+
+    No closed-set validation is performed here; callers route on the value.
+    """
+    config_path = _pathlib.Path(repo_root) / _CONFIG_RELPATH
+    try:
+        text = config_path.read_text(encoding="utf-8")
+    except (FileNotFoundError, OSError):
+        return _BACKLOG_BACKEND_DEFAULT
+
+    frontmatter_text = _extract_frontmatter_text(text)
+    if frontmatter_text is None:
+        return _BACKLOG_BACKEND_DEFAULT
+
+    try:
+        parsed = _yaml.safe_load(frontmatter_text)
+    except _yaml.YAMLError as exc:
+        print(
+            f"warning: failed to parse YAML frontmatter in {config_path}: {exc}",
+            file=_sys.stderr,
+        )
+        return _BACKLOG_BACKEND_DEFAULT
+
+    if not isinstance(parsed, dict):
+        return _BACKLOG_BACKEND_DEFAULT
+
+    backlog_block = parsed.get(_BACKLOG_BLOCK_FIELD)
+    if not isinstance(backlog_block, dict):
+        return _BACKLOG_BACKEND_DEFAULT
+
+    value = backlog_block.get(_BACKLOG_BACKEND_FIELD)
+    if value is None:
+        return _BACKLOG_BACKEND_DEFAULT
+
+    resolved = str(value).strip()
+    if not resolved:
+        return _BACKLOG_BACKEND_DEFAULT
+
+    return resolved
 
 
 def read_commit_artifacts(repo_root: _pathlib.Path) -> bool:
