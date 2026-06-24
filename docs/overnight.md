@@ -104,7 +104,7 @@ prepared before selection. The readiness gate checks four things:
 
 | Requirement | Where it comes from |
 |-------------|-------------------|
-| `status: refined` in backlog frontmatter | Set by `/cortex-core:refine` on spec approval, or manually with `/cortex-core:backlog` |
+| `status: refined` in backlog frontmatter | Set by `/cortex-core:refine` on spec approval, or manually with `/cortex-backlog:backlog` |
 | `research:` field in backlog YAML pointing to an existing file | Produced by `/cortex-core:refine` or `/cortex-core:discovery` |
 | `spec:` field in backlog YAML pointing to an existing file | Produced by `/cortex-core:refine` or `/cortex-core:discovery` |
 | `cortex/lifecycle/{slug}/spec.md` exists on disk | Produced by `/cortex-core:refine <item>` |
@@ -258,7 +258,7 @@ The runner scales well — you can queue as many features as you like. There is 
 
 ### What to prepare the night before
 
-- Run `/cortex-core:backlog pick` → `/cortex-core:refine <item>` for each target feature
+- Run `/cortex-backlog:backlog pick` → `/cortex-core:refine <item>` for each target feature
 - `/cortex-core:refine` runs Clarify → Research → Spec and sets `status: refined` — takes ~15 min per feature
 - Verify `cortex/lifecycle/{slug}/spec.md` exists: `ls cortex/lifecycle/*/spec.md`
 - Run `just overnight-smoke-test` once to verify the toolchain is healthy

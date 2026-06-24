@@ -46,13 +46,14 @@ The rest of this guide is reference material — the section titles below stay v
 <details>
 <summary>The full plugin roster, per-plugin prerequisites, and installing the <code>cortex</code> CLI directly.</summary>
 
-The six available plugins are:
+The seven available plugins are:
 
 | Plugin | Description |
 |--------|-------------|
 | android-dev-extras | Android development skills vendored from Google's Android Skills (Apache 2.0): R8 analyzer, edge-to-edge migration, and Android CLI orchestration |
 | cortex-dev-extras | Devil's advocate inline challenge for solo deliberation |
 | cortex-core | Interactive Claude Code skills, hooks, and CLI utilities from cortex-command for day-to-day development workflows |
+| cortex-backlog | Interactive backlog management skill — local `cortex/backlog/` ticket files with YAML frontmatter, extracted from cortex-core so repos that track work in an external tracker can omit it |
 | cortex-overnight | Integrates the cortex MCP server and overnight skill runner hooks to drive autonomous lifecycle execution |
 | cortex-pr-review | Multi-agent GitHub pull request review pipeline for Claude Code |
 | cortex-ui-extras | Experimental UI design skills for Claude Code interactive workflows |
@@ -63,6 +64,7 @@ Install any of them with `/plugin install <name>@cortex-command`.
 
 - **`cortex-overnight`** requires `uv` and the `cortex` CLI on your `PATH`. The MCP server auto-installs `cortex` on first tool call when it is missing (set `CORTEX_AUTO_INSTALL=0` to opt out and receive a notice instead). It also probes for `uv` at startup and refuses to run if `uv` is not on `PATH`. macOS GUI-launched Claude Code processes do not inherit the same `PATH` as a Terminal session — if `uv` is on `PATH` in your shell but the MCP server still reports it missing, see the auto-install error message and add `uv`'s install directory to `~/.zshenv` (or `~/.bash_profile`) so GUI-launched processes pick it up.
 - **`cortex-core`** shell-side bin shims (`cortex-jcc` and the other `cortex-*` tools) need to be invoked from inside a cortex project directory (one containing a `cortex/` umbrella directory), or with `CORTEX_REPO_ROOT=/path/to/your/project` exported. The in-Claude skills work without setup. The shims error explicitly with the missing-project message when neither condition holds.
+- **`cortex-backlog`** is optional — install it to get the local `cortex/backlog/` interactive surface (the `/cortex-backlog:backlog` skill). It depends on `cortex-core` (the moved backlog skill resolves `backlog-author` from core); without it the backlog engine and `backlog-author` still ship in `cortex-core`.
 - **`cortex-ui-extras`** and **`cortex-pr-review`** have no extra prerequisites.
 
 **Do not add via a direct `marketplace.json` URL.** Use the `owner/repo` git form (`/plugin marketplace add charleshall888/cortex-command`). Do **not** add the marketplace by passing a raw `marketplace.json` URL — relative-path `source` fields only resolve against a git checkout, so the URL form silently breaks plugin installs.

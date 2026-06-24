@@ -140,7 +140,7 @@ In the evening, the user runs `/cortex-overnight:overnight` to plan a batch of f
 
 ### 4. Discovery to Backlog
 
-The user has a vague topic or area of uncertainty rather than a concrete feature. `/cortex-core:discovery topic` runs a deep research phase — exploring the codebase, reading requirements, and potentially searching external sources — then produces a structured spec and decomposes the work into discrete backlog tickets. Each ticket gets YAML frontmatter that may include `research:` and `spec:` fields pointing to the discovery artifacts. When the user later runs `/cortex-core:backlog pick` on one of those tickets and routes it through `/cortex-core:lifecycle`, the lifecycle skill detects the pre-existing artifacts and skips the research and specify phases, bootstrapping directly into planning.
+The user has a vague topic or area of uncertainty rather than a concrete feature. `/cortex-core:discovery topic` runs a deep research phase — exploring the codebase, reading requirements, and potentially searching external sources — then produces a structured spec and decomposes the work into discrete backlog tickets. Each ticket gets YAML frontmatter that may include `research:` and `spec:` fields pointing to the discovery artifacts. When the user later runs `/cortex-backlog:backlog pick` on one of those tickets and routes it through `/cortex-core:lifecycle`, the lifecycle skill detects the pre-existing artifacts and skips the research and specify phases, bootstrapping directly into planning.
 
 ---
 
@@ -247,7 +247,7 @@ For overnight runner operations and architecture (state schemas, recovery, allow
 
 3. **cortex-validate-commit hook** — Pre-execution gate on all `git commit` commands. Enforces imperative mood, ≤72-character subject line, no trailing period, and a blank line before the body.
 
-4. **Backlog index** (`cortex/backlog/index.md`) — Generated locally and **not version-controlled**; regenerated on demand by `/cortex-core:backlog reindex`, on every `cortex-update-item`, and by consumers that read it when it is absent. `/cortex-core:dev` reads it during triage to identify ready work. Items are auto-closed by `/cortex-core:lifecycle complete` and `/cortex-overnight:morning-review`, keeping the index current without manual intervention.
+4. **Backlog index** (`cortex/backlog/index.md`) — Generated locally and **not version-controlled**; regenerated on demand by `/cortex-backlog:backlog reindex`, on every `cortex-update-item`, and by consumers that read it when it is absent. `/cortex-core:dev` reads it during triage to identify ready work. Items are auto-closed by `/cortex-core:lifecycle complete` and `/cortex-overnight:morning-review`, keeping the index current without manual intervention.
 
 5. **pipeline-state.json** — Persistent execution state written by the overnight runner's `cortex_command/pipeline/state.py`. Records which features are complete, in-progress, or blocked. Enables the overnight runner to resume interrupted execution — features already merged are skipped when the runner restarts.
 

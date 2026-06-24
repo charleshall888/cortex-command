@@ -138,7 +138,7 @@ Run the global shell command `cortex-generate-backlog-index` directly (do NOT us
 
 If it fails:
 - Warn the user: "Index generation failed. Falling back to the existing index."
-- Attempt to read `cortex/backlog/index.md` directly. If that file also does not exist, report: "No backlog index found. Use `/cortex-core:backlog add` to create items, then re-run `/cortex-core:dev`."
+- Attempt to read `cortex/backlog/index.md` directly. If that file also does not exist, report: "No backlog index found. Use `/cortex-backlog:backlog add` to create items, then re-run `/cortex-core:dev`."
 
 ### 3b. Read the Ready Set
 
@@ -148,7 +148,7 @@ Read both sections from `cortex/backlog/index.md`. The master table at the top i
 
 If both `## Refined` and `## Backlog` are empty:
 - Report: "No ready items in the backlog."
-- Suggest: check the master table for blocked items with stale dependencies, or create new items with `/cortex-core:backlog new`.
+- Suggest: check the master table for blocked items with stale dependencies, or create new items with `/cortex-backlog:backlog new`.
 
 **Epic detection and child map construction** (must complete before any output is rendered):
 
@@ -230,7 +230,7 @@ After presenting both blocks, ask the user which item to pick up. Once chosen, r
 
 If `cortex/backlog/` contains no item files (or does not exist):
 - Report: "No backlog found."
-- Suggest: "Use `/cortex-core:backlog new` to create items, or describe what you want to build and I'll route you directly."
+- Suggest: "Use `/cortex-backlog:backlog new` to create items, or describe what you want to build and I'll route you directly."
 
 ## Step 4: Direct Implementation Confirmation
 

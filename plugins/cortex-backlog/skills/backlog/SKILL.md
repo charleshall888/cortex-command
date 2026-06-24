@@ -1,6 +1,6 @@
 ---
 name: backlog
-description: Manage project backlog items as individual markdown files with YAML frontmatter. Use when user says "/cortex-core:backlog", "backlog add", "backlog list", "backlog pick", "add to backlog", "show backlog", "archive backlog item", "what's ready", "pick a backlog item", or asks to create/view/manage/select backlog items.
+description: Manage project backlog items as individual markdown files with YAML frontmatter. Use when user says "/cortex-backlog:backlog", "backlog add", "backlog list", "backlog pick", "add to backlog", "show backlog", "archive backlog item", "what's ready", "pick a backlog item", or asks to create/view/manage/select items.
 inputs:
   - "subcommand: string (required) — add|list|pick|ready|archive|reindex"
   - "title: string (optional, with add) — title of the new backlog item to create"
@@ -23,7 +23,7 @@ Subcommand: $ARGUMENTS (first word = subcommand, remainder = subcommand args; em
 
 ## Invocation
 
-`/cortex-core:backlog {{subcommand}}` — run the specified subcommand. When `{{subcommand}}` is `add`, provide `{{title}}` to name the new item. When `{{subcommand}}` is `archive`, provide `{{item}}` to identify the target.
+`/cortex-backlog:backlog {{subcommand}}` — run the specified subcommand. When `{{subcommand}}` is `add`, provide `{{title}}` to name the new item. When `{{subcommand}}` is `archive`, provide `{{item}}` to identify the target.
 
 ## Frontmatter Schema
 
@@ -37,7 +37,7 @@ Examples: `001-complete-phase-commits.md`, `014-add-search-feature.md`
 
 ## Subcommands
 
-When invoked without a `{{subcommand}}` (just `/cortex-core:backlog`), present the available actions via `AskUserQuestion`:
+When invoked without a `{{subcommand}}` (just `/cortex-backlog:backlog`), present the available actions via `AskUserQuestion`:
 
 - **pick** — Select an open item to work on
 - **new** — Interview-driven backlog item creation
@@ -89,7 +89,7 @@ regardless of current status.
 
 Interactive item selector. Presents open backlog items as a selectable list.
 
-1. Run `cortex-backlog-ready`. If exit code is non-zero, parse the error JSON and report the message — suggest running `/cortex-core:backlog reindex` if the error indicates a malformed backlog index.
+1. Run `cortex-backlog-ready`. If exit code is non-zero, parse the error JSON and report the message — suggest running `/cortex-backlog:backlog reindex` if the error indicates a malformed backlog index.
 2. Iterate `groups` in order (`critical → contingent`); within each group, iterate `items`. The first non-empty group's items form the selection set. (Group ordering preserves `critical → low` priority; within a group, refined items come first.)
 3. If no actionable items exist, report that the backlog is clear
 4. If only 1 item exists, present it directly and ask if the user wants to start it
@@ -106,7 +106,7 @@ Interactive item selector. Presents open backlog items as a selectable list.
 
 Report which items are ready to work on.
 
-1. Run `cortex-backlog-ready`. If exit code is non-zero, parse the error JSON and report the message — suggest running `/cortex-core:backlog reindex` if the error indicates a malformed backlog index.
+1. Run `cortex-backlog-ready`. If exit code is non-zero, parse the error JSON and report the message — suggest running `/cortex-backlog:backlog reindex` if the error indicates a malformed backlog index.
 2. For each non-empty group in `groups`, render a markdown subsection: `### {Priority Title}` heading (e.g. `### Critical`, `### High`, `### Medium`, `### Low`, `### Contingent`) followed by `- **{id}** {title}` bullets, in iteration order. If all groups are empty, report `Backlog is clear`.
 
 ### reindex

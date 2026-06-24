@@ -3,7 +3,7 @@
 **For:** Users creating and managing features in the backlog — including preparing items for overnight execution.
 **Assumes:** Git and Claude Code are set up.
 
-The backlog is a flat directory of numbered markdown files (`cortex/backlog/NNN-slug.md`). Each file contains YAML frontmatter describing the item, followed by an optional markdown body. The overnight orchestration system reads these files to select work; the `/cortex-core:backlog` skill manages them interactively.
+The backlog is a flat directory of numbered markdown files (`cortex/backlog/NNN-slug.md`). Each file contains YAML frontmatter describing the item, followed by an optional markdown body. The overnight orchestration system reads these files to select work; the `/cortex-backlog:backlog` skill manages them interactively.
 
 Automated write-backs to frontmatter use the `cortex-update-item` console script (installed by `pyproject.toml`). Earlier versions of this doc referenced `python3 cortex/backlog/update_item.py …`; that direct invocation is no longer canonical — always invoke via the `cortex-update-item` command.
 
@@ -66,12 +66,12 @@ Optional markdown body describing the problem and acceptance criteria.
 
 ---
 
-## `/cortex-core:backlog` Skill Workflow
+## `/cortex-backlog:backlog` Skill Workflow
 
-The `/cortex-core:backlog` skill manages backlog items interactively. Invoke with a subcommand:
+The `/cortex-backlog:backlog` skill manages backlog items interactively. Invoke with a subcommand:
 
 ```
-/cortex-core:backlog <subcommand>
+/cortex-backlog:backlog <subcommand>
 ```
 
 When invoked without a subcommand, the skill presents the available actions.

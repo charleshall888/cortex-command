@@ -16,7 +16,7 @@ Branch on the exit code:
 
 - **Exit 0** — unambiguous match (**Context A**). Parse stdout JSON; the object contains exactly four fields: `filename`, `backlog_filename_slug`, `title`, `lifecycle_slug`. Use these directly in subsequent phases. Do not re-derive slugs from scratch. Read the backlog item's frontmatter (`title`, `description`, `status`) and body.
 - **Exit 2** — ambiguous match. Read the `<filename>\t<title>` candidate lines from stderr. Present them to the user and ask them to select one. Re-invoke `cortex-resolve-backlog-item` with the chosen filename slug, or treat the user's selection directly as the resolved item (Context A).
-- **Exit 3** — no match. Switch to **Context B** (ad-hoc topic) and treat the input as the topic name. Offer to invoke `/cortex-core:backlog new` to create a backlog item with the disciplined body template before continuing — if this seems impractical, note it and proceed without.
+- **Exit 3** — no match. Switch to **Context B** (ad-hoc topic) and treat the input as the topic name. Offer to invoke `/cortex-backlog:backlog new` to create a backlog item with the disciplined body template before continuing — if this seems impractical, note it and proceed without.
 - **Exit 64** (usage error) / **Exit 70** (internal error) — halt and surface the stderr diagnostic; do not fall through to disambiguation.
 
 **Context A — Backlog item**: Input resolved to a `cortex/backlog/NNN-*.md` file; use the exit-0 JSON fields downstream.

@@ -12,7 +12,7 @@ observable problem state rather than prescribed remedies.
 
 ## Integration
 
-The sub-skill exposes an Interface consumed by `/cortex-core:backlog new` (human
+The sub-skill exposes an Interface consumed by `/cortex-backlog:backlog new` (human
 path) and `/backlog-author compose` (autonomous path). It delegates file creation
 to `cortex-create-backlog-item --body`.
 

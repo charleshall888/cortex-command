@@ -49,7 +49,7 @@ skills:
       - "break this down into tickets"
   backlog:
     must_contain:
-      - "/cortex-core:backlog"
+      - "/cortex-backlog:backlog"
       - "add to backlog"
       - "pick a backlog item"
   commit:

@@ -135,7 +135,7 @@ Consolidation approvals are recorded under a `## Consolidation Notes` heading in
 
 On each user response, emit one `approval_checkpoint_responded` event with `checkpoint: decompose-commit` and the chosen response. Use the helper module per the `cortex_command/discovery.py` interface (event emission lives in the helper; the prose here only names the event by its literal name `"event": "approval_checkpoint_responded"`).
 
-Follow the `/cortex-core:backlog add` conventions for each ticket:
+Follow the `/cortex-backlog:backlog add` conventions for each ticket:
 
 1. Scan filenames matching `[0-9]*-*.md` in both `cortex/backlog/` and `cortex/backlog/archive/` to find the highest existing numeric ID
 2. Create the epic first if applicable (children need its ID for `parent`)
