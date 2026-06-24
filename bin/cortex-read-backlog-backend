@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# cortex-read-backlog-backend — dual-channel wrapper for cortex_command.lifecycle.backlog_backend_cli.
+# Prints the active backlog backend (e.g. "cortex-backlog") for the repo from cortex/lifecycle.config.md.
+#
+# Branch order:
+#   (a) CORTEX_COMMAND_FORCE_SOURCE=1 → exec working-tree module directly via python3 -m
+#   (b) wheel-import probe succeeds   → exec via wheel (python3 -m cortex_command.lifecycle.backlog_backend_cli)
+#   (c) working-tree pyproject.toml names cortex-command → exec via working-tree PYTHONPATH
+#   (d) nothing found                 → print "cortex-backlog" and exit 0 (fail-open; the fail-safe lives in the reader)
+set -euo pipefail
+
+"$(dirname "$0")/cortex-log-invocation" "$0" "$@" || true
+
+# Branch (a): force working-tree mode when CORTEX_COMMAND_FORCE_SOURCE=1 is set.
+if [ "${CORTEX_COMMAND_FORCE_SOURCE:-}" = "1" ]; then
+    _root="${CORTEX_COMMAND_ROOT:-$(dirname "$0")/..}"
+    exec env PYTHONPATH="${_root}:${PYTHONPATH:-}" python3 -m cortex_command.lifecycle.backlog_backend_cli "$@"
+fi
+
+# Branch (b): wheel-import probe — prefer the installed wheel.
+if python3 -c "import cortex_command.lifecycle.backlog_backend_cli" 2>/dev/null; then
+    exec python3 -m cortex_command.lifecycle.backlog_backend_cli "$@"
+fi
+
+# Branch (c): working-tree fallback when pyproject.toml names cortex-command.
+_root="${CORTEX_COMMAND_ROOT:-$(dirname "$0")/..}"
+if grep -q '^name = "cortex-command"' "${_root}/pyproject.toml" 2>/dev/null; then
+    exec env PYTHONPATH="${_root}:${PYTHONPATH:-}" python3 -m cortex_command.lifecycle.backlog_backend_cli "$@"
+fi
+
+# Branch (d): nothing found — fail open. Print the default backend and exit 0.
+echo "cortex-backlog"
+exit 0
