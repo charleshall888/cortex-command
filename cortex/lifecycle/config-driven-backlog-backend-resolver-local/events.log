@@ -8,3 +8,5 @@
 {"ts": "2026-06-24T00:51:36Z", "event": "phase_transition", "feature": "config-driven-backlog-backend-resolver-local", "from": "specify", "to": "plan"}
 {"ts": "2026-06-24T03:03:08Z", "event": "plan_approved", "feature": "config-driven-backlog-backend-resolver-local", "dispatch_choice": "trunk"}
 {"ts": "2026-06-24T03:03:08Z", "event": "phase_transition", "schema_version": 1, "feature": "config-driven-backlog-backend-resolver-local", "from": "plan", "to": "implement"}
+{"ts": "2026-06-24T03:06:58Z", "event": "batch_dispatch", "feature": "config-driven-backlog-backend-resolver-local", "batch": 0, "tasks": [1, 5]}
+{"ts": "2026-06-24T05:11:44Z", "event": "phase_transition", "schema_version": 1, "feature": "config-driven-backlog-backend-resolver-local", "tier": "complex", "from": "implement", "to": "review"}
