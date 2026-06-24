@@ -12,6 +12,7 @@ import asyncio
 import subprocess
 import tempfile
 import unittest
+from contextlib import ExitStack
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -2631,6 +2632,272 @@ class TestGuardReviewFlagCoherence(unittest.TestCase):
 
     def test_no_raise_neither_flag(self):
         self.assertIsNone(_guard_review_flag_coherence({}, site="unit-test"))
+
+
+_OR = "cortex_command.overnight.outcome_router."
+
+
+class TestReviewDeferralFlagCoherence(unittest.IsolatedAsyncioTestCase):
+    """R4 — per-path behavioral wiring-proof for ``_guard_review_flag_coherence``.
+
+    Three layers, each using the proof its site structure admits (the forbidden
+    both-flags combo is unreachable by the real assembly, so the proof does NOT
+    manufacture it upstream):
+
+      (a)  crash-site wiring-identity (the 3 crash-``except`` emits): the guard
+           is invoked BEFORE the matching ``overnight_log_event`` and on the
+           SAME dict object the emit serializes. Catches a guard that is
+           removed (spy never called), placed after the emit (call-order), or
+           bound to the wrong dict (identity mismatch) — the miswirings the
+           Task-3 grep cannot see. R2 proves the raise-logic; the composition
+           proves the guard rejects an incoherent dict at each crash site.
+
+      (a') in-band heal end-to-end (the 3 in-band emits, where a real seam
+           exists): with ``_set_review_error_detail_flags`` patched to also set
+           ``review_dispatch_crashed`` (simulating the future edit the in-band
+           wiring insures against), each in-band ERROR path must NOT emit a
+           both-flags event — the real guard raises, the crash-``except`` heals
+           to a coherent ``could_not_run`` emit. Deleting the in-band guard
+           would let the in-band emit write the incoherent both-flags event
+           directly (a normal emit does not raise, so no heal fires), failing
+           this layer. The present/absent discriminator.
+
+      (b)  coherent single-flag sweep: every emitted FEATURE_DEFERRED on a
+           coherent path carries at most one of {could_not_run,
+           review_dispatch_crashed} — generalizing
+           ``test_error_verdict_event_carries_could_not_run_marker``.
+    """
+
+    @staticmethod
+    def _could_not_run_review() -> MagicMock:
+        return MagicMock(
+            deferred=True, verdict="ERROR", cycle=0, merge_sha=None,
+            could_not_run=True,
+        )
+
+    @staticmethod
+    def _coset_both_flags(details, *, merge_reverted):
+        """Simulated future edit: the in-band flag-helper wrongly co-sets both."""
+        details["could_not_run"] = True
+        details["merge_reverted"] = merge_reverted
+        details["review_dispatch_crashed"] = True
+
+    def _wiring_spies(self):
+        """Return (emit_records, guard_se, emit_se).
+
+        ``guard_se`` records (by identity) each dict the guard was called with;
+        ``emit_se`` records, per FEATURE_DEFERRED emit, ``(details,
+        guarded_before)`` where ``guarded_before`` is True iff the guard had
+        already seen that exact dict object at emit time.
+        """
+        guard_seen = []
+        emit_records = []
+
+        def guard_se(details, *, site):
+            guard_seen.append(details)
+
+        def emit_se(event, *args, **kwargs):
+            from cortex_command.overnight.outcome_router import FEATURE_DEFERRED
+            if event == FEATURE_DEFERRED:
+                d = kwargs.get("details")
+                emit_records.append((d, any(d is seen for seen in guard_seen)))
+
+        return emit_records, guard_se, emit_se
+
+    @staticmethod
+    def _capture_emits():
+        """Return (captured, emit_cap): emit_cap records each emitted details."""
+        captured = []
+
+        def emit_cap(event, *args, **kwargs):
+            from cortex_command.overnight.outcome_router import FEATURE_DEFERRED
+            if event == FEATURE_DEFERRED:
+                captured.append(kwargs.get("details") or {})
+
+        return captured, emit_cap
+
+    def _assert_wired(self, emit_records):
+        self.assertTrue(
+            emit_records, "no FEATURE_DEFERRED emit observed (fail-closed)"
+        )
+        for details, guarded_before in emit_records:
+            self.assertTrue(
+                guarded_before,
+                "guard not invoked on the emitted dict before the emit "
+                "(removed / after-emit / wrong-dict)",
+            )
+            self.assertFalse(
+                details.get("could_not_run") and details.get("review_dispatch_crashed"),
+                f"crash emit co-set both flags: {details}",
+            )
+
+    # ----------------------------------------------------------- path drivers
+
+    async def _drive_primary(self, *, crash, emit_se, guard_se=None, flag_se=None):
+        ctx = _make_ctx(pauses=0)
+        ctx.worktree_branches["feat-a"] = "pipeline/feat-a"
+        live_sha = "abc123abc123abc123abc123abc123abc123abc1"
+        merge_result = MagicMock(
+            success=True, error=None, conflict=False, test_result=None,
+            merge_sha=live_sha,
+        )
+        revert_outcome = MagicMock(success=True, aborted=False, merge_sha=live_sha)
+        dispatch = (
+            AsyncMock(side_effect=RuntimeError("review subprocess exited 1"))
+            if crash else AsyncMock(return_value=self._could_not_run_review())
+        )
+        with ExitStack() as s:
+            s.enter_context(patch(_OR + "_get_changed_files", return_value=["src/a.py"]))
+            s.enter_context(patch(_OR + "merge_feature", return_value=merge_result))
+            s.enter_context(patch(_OR + "requires_review", return_value=True))
+            s.enter_context(patch(_OR + "dispatch_review", new=dispatch))
+            s.enter_context(patch(_OR + "revert_merge", return_value=revert_outcome))
+            s.enter_context(patch(_OR + "write_deferral"))
+            s.enter_context(patch(_OR + "read_tier", return_value="complex"))
+            s.enter_context(patch(_OR + "read_criticality", return_value="high"))
+            s.enter_context(patch(_OR + "_write_back_to_backlog"))
+            s.enter_context(patch(_OR + "cleanup_worktree"))
+            if flag_se is not None:
+                s.enter_context(patch(_OR + "_set_review_error_detail_flags", side_effect=flag_se))
+            if guard_se is not None:
+                s.enter_context(patch(_OR + "_guard_review_flag_coherence", side_effect=guard_se))
+            s.enter_context(patch(_OR + "overnight_log_event", side_effect=emit_se))
+            await apply_feature_result(
+                "feat-a", FeatureResult(name="feat-a", status="completed"), ctx,
+            )
+
+    async def _drive_recovery(self, *, crash, emit_se, guard_se=None, flag_se=None):
+        ctx = _make_ctx(pauses=0)
+        ctx.worktree_branches["feat-a"] = "pipeline/feat-a"
+        ctx.worktree_paths["feat-a"] = Path("/tmp/unused-feat-a-worktree")
+        recovery_sha = "recoverysha777777777777777777777777777777"
+        recovery_result = MagicMock(
+            success=True, flaky=False, attempts=1, merge_sha=recovery_sha,
+        )
+        revert_outcome = MagicMock(success=True, aborted=False, merge_sha=recovery_sha)
+        test_failure = MagicMock(
+            success=False, error="test_failure", conflict=False,
+            test_result=MagicMock(output="FAILED: test_foo"),
+        )
+        dispatch = (
+            AsyncMock(side_effect=RuntimeError("review subprocess exited 1"))
+            if crash else AsyncMock(return_value=self._could_not_run_review())
+        )
+        with ExitStack() as s:
+            s.enter_context(patch(_OR + "_get_changed_files", return_value=["src/a.py"]))
+            s.enter_context(patch(_OR + "merge_feature", return_value=test_failure))
+            s.enter_context(patch(_OR + "recover_test_failure", new=AsyncMock(return_value=recovery_result)))
+            s.enter_context(patch(_OR + "requires_review", return_value=True))
+            s.enter_context(patch(_OR + "dispatch_review", new=dispatch))
+            s.enter_context(patch(_OR + "revert_merge", return_value=revert_outcome))
+            s.enter_context(patch(_OR + "write_deferral"))
+            s.enter_context(patch(_OR + "_next_escalation_n", return_value=1))
+            s.enter_context(patch(_OR + "read_tier", return_value="complex"))
+            s.enter_context(patch(_OR + "read_criticality", return_value="high"))
+            s.enter_context(patch(_OR + "_write_back_to_backlog"))
+            s.enter_context(patch(_OR + "load_state"))
+            s.enter_context(patch(_OR + "save_state"))
+            s.enter_context(patch(_OR + "cleanup_worktree"))
+            if flag_se is not None:
+                s.enter_context(patch(_OR + "_set_review_error_detail_flags", side_effect=flag_se))
+            if guard_se is not None:
+                s.enter_context(patch(_OR + "_guard_review_flag_coherence", side_effect=guard_se))
+            s.enter_context(patch(_OR + "overnight_log_event", side_effect=emit_se))
+            await apply_feature_result(
+                "feat-a", FeatureResult(name="feat-a", status="completed"), ctx,
+            )
+
+    async def _drive_repair(self, *, crash, emit_se, guard_se=None, flag_se=None):
+        ctx = _make_ctx(pauses=1)
+        checkout = MagicMock(returncode=0, stderr="")
+        revparse = MagicMock(returncode=0, stdout="preffbase00\n", stderr="")
+        ff = MagicMock(returncode=0, stderr="")
+        dispatch = (
+            AsyncMock(side_effect=RuntimeError("review subprocess exited 1"))
+            if crash else AsyncMock(return_value=self._could_not_run_review())
+        )
+        with ExitStack() as s:
+            s.enter_context(patch(_OR + "subprocess.run", side_effect=[checkout, revparse, ff]))
+            s.enter_context(patch(_OR + "requires_review", return_value=True))
+            s.enter_context(patch(_OR + "read_tier", return_value="complex"))
+            s.enter_context(patch(_OR + "read_criticality", return_value="high"))
+            s.enter_context(patch(_OR + "dispatch_review", new=dispatch))
+            s.enter_context(patch(_OR + "write_deferral"))
+            s.enter_context(patch(_OR + "_write_back_to_backlog"))
+            s.enter_context(patch(_OR + "cleanup_worktree"))
+            s.enter_context(patch(_OR + "_reset_ff_merge", return_value=True))
+            if flag_se is not None:
+                s.enter_context(patch(_OR + "_set_review_error_detail_flags", side_effect=flag_se))
+            if guard_se is not None:
+                s.enter_context(patch(_OR + "_guard_review_flag_coherence", side_effect=guard_se))
+            s.enter_context(patch(_OR + "overnight_log_event", side_effect=emit_se))
+            await apply_feature_result(
+                "feat-a",
+                FeatureResult(
+                    name="feat-a", status="repair_completed", repair_branch="repair/feat-a",
+                ),
+                ctx,
+            )
+
+    @property
+    def _drivers(self):
+        return (("primary", self._drive_primary),
+                ("recovery", self._drive_recovery),
+                ("repair", self._drive_repair))
+
+    # --------------------------------------------------------------- the layers
+
+    async def test_a_crash_emits_are_guard_wired(self):
+        """(a) At each crash-`except` emit the guard ran, before the emit, on
+        the emitted dict object."""
+        for name, driver in self._drivers:
+            with self.subTest(path=name):
+                emit_records, guard_se, emit_se = self._wiring_spies()
+                await driver(crash=True, emit_se=emit_se, guard_se=guard_se)
+                self._assert_wired(emit_records)
+
+    async def test_aprime_inband_coset_edit_heals_to_coherent_emit(self):
+        """(a') With the in-band flag-helper co-setting both flags (simulated
+        future edit), no in-band path emits a both-flags event — the guard
+        raises and the crash-`except` heals to a coherent could_not_run emit."""
+        for name, driver in self._drivers:
+            with self.subTest(path=name):
+                captured, emit_cap = self._capture_emits()
+                await driver(crash=False, emit_se=emit_cap, flag_se=self._coset_both_flags)
+                self.assertTrue(
+                    captured, "no FEATURE_DEFERRED emit observed (fail-closed)"
+                )
+                for details in captured:
+                    self.assertFalse(
+                        details.get("could_not_run") and details.get("review_dispatch_crashed"),
+                        "in-band co-set edit produced an incoherent emit — the "
+                        f"in-band guard did not prevent it: {details}",
+                    )
+                self.assertTrue(
+                    any(d.get("could_not_run") for d in captured),
+                    "expected the heal to emit a coherent could_not_run event",
+                )
+
+    async def test_b_coherent_paths_emit_at_most_one_flag(self):
+        """(b) Single-flag sweep: coherent could-not-run and genuine-crash runs
+        across all three paths each emit at most one of the two flags."""
+        for name, driver in self._drivers:
+            for crash in (False, True):
+                with self.subTest(path=name, crash=crash):
+                    captured, emit_cap = self._capture_emits()
+                    await driver(crash=crash, emit_se=emit_cap)
+                    self.assertTrue(
+                        captured, "no FEATURE_DEFERRED emit observed (fail-closed)"
+                    )
+                    for details in captured:
+                        set_flags = [
+                            k for k in ("could_not_run", "review_dispatch_crashed")
+                            if details.get(k)
+                        ]
+                        self.assertLessEqual(
+                            len(set_flags), 1,
+                            f"emit carried more than one flag: {details}",
+                        )
 
 
 class TestCouldNotRunPreservesMerge(unittest.IsolatedAsyncioTestCase):
