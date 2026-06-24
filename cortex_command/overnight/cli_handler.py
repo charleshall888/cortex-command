@@ -1946,6 +1946,49 @@ def _resolve_backlog_dir(args: argparse.Namespace, repo_path: Path) -> Path:
     return repo_path / "cortex" / "backlog"
 
 
+def _refuse_unsupported_backlog_backend(
+    repo_path: Path, fmt: str
+) -> Optional[int]:
+    """Fail-closed overnight backlog-backend guard (spec R5/R6/R11).
+
+    Resolves the configured backlog backend **in-process** via
+    :func:`cortex_command.lifecycle_config.resolve_backlog_backend` and refuses
+    anything other than ``cortex-backlog`` with a ``backend_not_supported``
+    JSON error envelope (matching the ``selection_failed`` shape emitted by the
+    handlers) and a non-zero return. Returns ``None`` when the backend is the
+    supported local ``cortex-backlog``, so the caller proceeds normally.
+
+    Deliberate fail-direction asymmetry (R11): this overnight guard fails
+    **closed** — an unresolvable or non-local backend refuses *before* any
+    selection or bootstrap — because overnight runs unattended with
+    ``--dangerously-skip-permissions``. That is the OPPOSITE of the interactive
+    reader (the ``cortex-read-backlog-backend`` binstub / graceful resolver
+    default), which fails **open** (prints ``cortex-backlog`` on any
+    unresolvable input). The two readers are intentionally distinct code points
+    and must NOT be DRY-merged: routing this guard through the graceful binstub
+    would inherit the fail-*open* default and silently turn this safety check
+    into a no-op. The structural regression catch is this guard's test, which
+    configures a genuine non-local ``backlog:`` block and asserts the refusal;
+    a future fail-open merge flips that test red. This guard therefore reads the
+    config directly and never shells the binstub.
+    """
+    from cortex_command.lifecycle_config import resolve_backlog_backend
+
+    backlog_backend = resolve_backlog_backend(repo_path)
+    if backlog_backend == "cortex-backlog":
+        return None
+
+    message = (
+        f"overnight refuses backlog backend {backlog_backend!r}: only "
+        "'cortex-backlog' is supported for unattended execution"
+    )
+    if fmt == "json":
+        _emit_json({"error": "backend_not_supported", "message": message})
+    else:
+        print(message, file=sys.stderr, flush=True)
+    return 1
+
+
 def _selection_summary_payload(selection) -> dict:
     """Build a JSON-serializable summary of a ``SelectionResult``.
 
@@ -2002,6 +2045,12 @@ def handle_prepare(args: argparse.Namespace) -> int:
     """
     fmt = getattr(args, "format", "json")
     repo_path = _resolve_repo_path()
+    # Fail-closed overnight backlog-backend guard (R5/R6/R11): refuse any
+    # non-``cortex-backlog`` backend BEFORE any selection. In-process resolve;
+    # never via the fail-open binstub. See _refuse_unsupported_backlog_backend.
+    refusal = _refuse_unsupported_backlog_backend(repo_path, fmt)
+    if refusal is not None:
+        return refusal
     backlog_dir = _resolve_backlog_dir(args, repo_path)
     time_limit_hours = int(getattr(args, "time_limit_hours", 6) or 6)
     batch_size_cap = int(getattr(args, "batch_size_cap", 5) or 5)
@@ -2075,6 +2124,13 @@ def handle_launch(args: argparse.Namespace) -> int:
     """
     fmt = getattr(args, "format", "json")
     repo_path = _resolve_repo_path()
+    # Fail-closed overnight backlog-backend guard (R5/R6/R11): refuse any
+    # non-``cortex-backlog`` backend BEFORE any selection or bootstrap.
+    # In-process resolve; never via the fail-open binstub. See
+    # _refuse_unsupported_backlog_backend for the asymmetry rationale.
+    refusal = _refuse_unsupported_backlog_backend(repo_path, fmt)
+    if refusal is not None:
+        return refusal
     backlog_dir = _resolve_backlog_dir(args, repo_path)
     time_limit_hours = int(getattr(args, "time_limit_hours", 6) or 6)
     batch_size_cap = int(getattr(args, "batch_size_cap", 5) or 5)
