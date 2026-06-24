@@ -17,8 +17,10 @@
   "archived":    "var(--color-ink-30)",
 } %}
 <span class="sec-num"><strong>§ 10</strong>backlog</span>
-<h2>Backlog <em>ledger</em> <span class="phase-tag">{% if state.backlog_counts %}{{ state.backlog_counts.values() | sum }} items tracked{% else %}empty{% endif %}</span></h2>
-{% if state.backlog_counts %}
+<h2>Backlog <em>ledger</em> <span class="phase-tag">{% if state.backlog_backend != "cortex-backlog" %}{% if state.backlog_backend == "none" %}disabled{% else %}external{% endif %}{% elif state.backlog_counts %}{{ state.backlog_counts.values() | sum }} items tracked{% else %}empty{% endif %}</span></h2>
+{% if state.backlog_backend != "cortex-backlog" %}
+<p class="empty-state">{% if state.backlog_backend == "none" %}backlog tracking disabled{% else %}backlog tracked externally via `{{ state.backlog_backend }}`{% endif %}</p>
+{% elif state.backlog_counts %}
 {% set total = state.backlog_counts.values() | sum %}
 {% set complete = state.backlog_counts.get('complete', 0) + state.backlog_counts.get('merged', 0) + state.backlog_counts.get('done', 0) %}
 <div class="stream-line">
