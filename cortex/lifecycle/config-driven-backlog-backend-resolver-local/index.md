@@ -2,7 +2,7 @@
 feature: config-driven-backlog-backend-resolver-local
 parent_backlog_uuid: d54e86bc-93ec-4cbb-a68e-d98ff705cb00
 parent_backlog_id: 317
-artifacts: [research, spec]
+artifacts: [research, spec, plan]
 tags: ['backlog-optional-plugin']
 created: 2026-06-23
 updated: 2026-06-23

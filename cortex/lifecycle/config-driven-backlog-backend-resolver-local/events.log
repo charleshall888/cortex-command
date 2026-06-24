@@ -6,3 +6,5 @@
 {"ts": "2026-06-23T21:41:28Z", "event": "criticality_override", "feature": "config-driven-backlog-backend-resolver-local", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
 {"ts": "2026-06-24T00:51:36Z", "event": "spec_approved", "feature": "config-driven-backlog-backend-resolver-local"}
 {"ts": "2026-06-24T00:51:36Z", "event": "phase_transition", "feature": "config-driven-backlog-backend-resolver-local", "from": "specify", "to": "plan"}
+{"ts": "2026-06-24T03:03:08Z", "event": "plan_approved", "feature": "config-driven-backlog-backend-resolver-local", "dispatch_choice": "trunk"}
+{"ts": "2026-06-24T03:03:08Z", "event": "phase_transition", "schema_version": 1, "feature": "config-driven-backlog-backend-resolver-local", "from": "plan", "to": "implement"}
