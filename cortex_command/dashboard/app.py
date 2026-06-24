@@ -26,6 +26,7 @@ from fastapi.responses import JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from cortex_command.common import _resolve_user_project_root
+from cortex_command.lifecycle_config import resolve_backlog_backend
 from cortex_command.dashboard.data import (
     build_swim_lane_data,
     parse_last_session,
@@ -243,6 +244,12 @@ async def lifespan(app: FastAPI):
 
     _pid_file.write_text(str(os.getpid()), encoding="utf-8")
     atexit.register(lambda: _pid_file.unlink(missing_ok=True))
+
+    # Resolve the backlog backend synchronously at startup so the first served
+    # render reflects the real backend. The slow poller is fire-and-forget
+    # (the task below runs after `yield`), so without this a non-local repo
+    # would render the default cortex-backlog arm until the first 30s poll.
+    state.backlog_backend = resolve_backlog_backend(root)
 
     asyncio.create_task(run_polling(state, root))
     yield

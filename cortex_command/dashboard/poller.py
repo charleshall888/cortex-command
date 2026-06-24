@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
+from cortex_command.lifecycle_config import resolve_backlog_backend
 from cortex_command.dashboard.alerts import evaluate_alerts, fire_notifications
 from cortex_command.dashboard.data import (
     _read_all_jsonl,
@@ -356,9 +357,20 @@ async def _poll_slow(state: DashboardState, root: Path) -> None:
 
     while True:
         try:
-            counts = parse_backlog_counts(backlog_dir)
-            state.backlog_counts = counts
-            state.backlog_titles = parse_backlog_titles(backlog_dir)
+            # Gate the local backlog reads on the resolved backend. Resolved
+            # every cycle (not cached) so a mid-session config edit is picked
+            # up within one 30s cycle. resolve_backlog_backend never raises and
+            # fails toward "cortex-backlog" on degenerate input.
+            backend = resolve_backlog_backend(root)
+            state.backlog_backend = backend
+            if backend == "cortex-backlog":
+                state.backlog_counts = parse_backlog_counts(backlog_dir)
+                state.backlog_titles = parse_backlog_titles(backlog_dir)
+            else:
+                # Non-local backend: stand down — never surface stale local
+                # counts/titles as authoritative.
+                state.backlog_counts = {}
+                state.backlog_titles = {}
 
             state.pipeline_dispatch = parse_pipeline_dispatch(lifecycle_dir)
             state.dispatch_details = parse_dispatch_details(lifecycle_dir)
