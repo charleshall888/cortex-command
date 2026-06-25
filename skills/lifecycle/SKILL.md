@@ -174,16 +174,10 @@ For criticality override syntax and the criticality behavior matrix (which phase
 
 Committing vs gitignoring `cortex/lifecycle/` is a per-project choice; there is no global enforcement.
 
-## Reference Files
+## Situational references
 
-Beyond the per-phase references in the table above, these references cover cross-cutting concerns. Load on demand:
+The per-phase references (Step 3 table) and the cross-cutting references cited at their decision points above already load at point of use. These three have no point-of-use trigger in the linear flow — consult only when the named condition applies, and do not preload:
 
-- [concurrent-sessions.md](${CLAUDE_SKILL_DIR}/references/concurrent-sessions.md) — `.session` file convention, multi-feature concurrency, listing incomplete features
+- [concurrent-sessions.md](${CLAUDE_SKILL_DIR}/references/concurrent-sessions.md) — `.session` convention, multi-feature concurrency, listing incomplete features
 - [parallel-execution.md](${CLAUDE_SKILL_DIR}/references/parallel-execution.md) — running multiple features in parallel via `Agent(isolation: "worktree")`, worktree-inspection invariant
-- [criticality-matrix.md](${CLAUDE_SKILL_DIR}/references/criticality-matrix.md) — criticality override event, behavior matrix across review/orchestrator/dispatch/model dimensions
-- [complexity-escalation.md](${CLAUDE_SKILL_DIR}/references/complexity-escalation.md) — `cortex-complexity-escalator` gates at phase transitions
-- [refine-delegation.md](${CLAUDE_SKILL_DIR}/references/refine-delegation.md) — delegation steps for the Clarify/Research/Specify phases (read when spec.md does not exist; uses body-resolved paths from the manifest above)
-- [discovery-bootstrap.md](${CLAUDE_SKILL_DIR}/references/discovery-bootstrap.md) — index.md creation (new lifecycle only), epic-research detection from backlog frontmatter, epic-context injection during refine
-- [backlog-writeback.md](${CLAUDE_SKILL_DIR}/references/backlog-writeback.md) — backlog status check and write-back to the originating backlog item
-- [post-refine-commit.md](${CLAUDE_SKILL_DIR}/references/post-refine-commit.md) — canonical commit site for the refine→plan boundary
 - [wontfix.md](${CLAUDE_SKILL_DIR}/references/wontfix.md) — terminal-state workflow for operator-decided lifecycle termination

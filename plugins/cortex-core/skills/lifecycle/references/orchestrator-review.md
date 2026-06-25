@@ -18,6 +18,8 @@ If the review is skipped, do not log any orchestrator events.
 
 ### 1. Identify Phase and Checklist
 
+Select the checklist matching the artifact under review: Post-Specify (after `spec.md`) or Post-Plan (after `plan.md`), from the Checklists section below.
+
 ### 2. Execute Review
 
 Evaluate the artifact against every item in the checklist. For each item, assign a verdict:
@@ -44,8 +46,6 @@ For each flagged issue, determine the appropriate fix mode:
 **Model for fresh subagent fixes**: `sonnet` for low/medium/high criticality, `opus` for critical.
 
 **Same conversation**: Use for interactive rework that requires user input. This includes spec clarifications where user preference determines the answer, ambiguous requirements, and priority trade-offs. Explain the issue to the user, gather their input, and then revise the artifact in the current context.
-
-Fix agents rewrite the full artifact, not section patches.
 
 After all fixes complete, increment the cycle counter, return to step 2 (Execute Review) with the same checklist. Read the fix-agent envelope but do not relay it to the user — only the re-review verdict surfaces.
 
@@ -89,13 +89,15 @@ After escalation, the user decides how to proceed. Do not continue reviewing.
 
 ## Checklists
 
+**Binary-checkable** (used by S1 and P4) means satisfied in at least one of three forms: (a) a runnable command with observable output and an explicit pass/fail criterion (e.g., exit code = 0, grep count ≥ N); (b) an observable state naming the specific file path, the specific string/pattern to find, and the expected true/false result; (c) annotated `Interactive/session-dependent: [one-sentence rationale]` when neither (a) nor (b) applies.
+
 ### Post-Specify Checklist
 
 Evaluate against `cortex/lifecycle/{feature}/spec.md`:
 
 | # | Item | Criteria |
 |---|------|----------|
-| S1 | Binary-checkable acceptance criteria | Every requirement has acceptance criteria that are binary-checkable in at least one of three forms: (a) a runnable command with observable output and an explicit pass/fail criterion (e.g., exit code = 0, grep count ≥ N); (b) an observable state naming the specific file path, the specific string/pattern to find, and the expected true/false result; (c) annotated "Interactive/session-dependent: [one-sentence rationale explaining why a command is not possible]" when neither (a) nor (b) applies. Prose criteria like "confirm the feature works correctly" do not pass even if they avoid subjective language. |
+| S1 | Binary-checkable acceptance criteria | Every requirement has acceptance criteria that are binary-checkable (see the definition above). Prose criteria like "confirm the feature works correctly" do not pass even if they avoid subjective language. |
 | S2 | Edge cases identified and handled | Edge Cases section covers failure modes, unexpected inputs, boundary conditions, and concurrent scenarios relevant to the feature |
 | S3 | MoSCoW classification justified | Must-have vs should-have vs won't-do distinctions are explicit, and the classification reflects actual priority rather than "everything is must-have" |
 | S4 | Non-requirements are explicit boundaries | Non-Requirements section defines concrete scope boundaries, not vague statements like "not in scope for now" |
@@ -112,7 +114,7 @@ Evaluate against `cortex/lifecycle/{feature}/plan.md`:
 | P1 | Task sizing within bounds | Each task targets 5-15 minutes and 1-5 files; tasks outside this range are flagged |
 | P2 | Dependency graph complete | Every task has a `**Depends on**` field; no missing edges where one task's output is another's input |
 | P3 | Structural context sufficient | Each task's Context field provides enough information (file paths, function signatures, pattern references) for a fresh subagent to execute without reading unrelated files |
-| P4 | Binary-checkable verification steps | Each task's Verification field is binary-checkable in at least one of three forms: (a) a runnable command with observable output and an explicit pass/fail criterion (e.g., exit code = 0, grep count ≥ N); (b) an observable state naming the specific file path, the specific string/pattern to find, and the expected true/false result; (c) annotated "Interactive/session-dependent: [one-sentence rationale explaining why a command is not possible]" when neither (a) nor (b) applies. Prose-only Verification fields like "verify it works" or "confirm the section was added" do not pass. |
+| P4 | Binary-checkable verification steps | Each task's Verification field is binary-checkable (see the definition above). Prose-only Verification fields like "verify it works" or "confirm the section was added" do not pass. |
 | P5 | Code budget respected | Plan contains prose and structural context only — no function bodies, import statements, or copy-paste-ready code |
 | P6 | Files/Verification consistency | Every file implied by Verification is listed in Files; no verification step requires modifying unlisted files |
 | P7 | No self-sealing verification | For each task, cross-reference the Verification field against the Files list: does Verification reference an artifact that the same task creates? If yes, apply the operational test: if the task's stated purpose is to create that artifact (it is the primary deliverable), the self-check is benign. If the task's purpose is to verify an external condition and the artifact is a side-channel for recording that verification, the self-check is harmful — flag it as self-sealing. |
@@ -128,5 +130,4 @@ The orchestrator runs a maximum of 2 review cycles per phase. A cycle is one com
 
 | Thought | Reality |
 |---------|---------|
-| "The fix made things worse, I should try a third cycle" | The 2-cycle cap is firm — escalate; more rounds decrease quality. |
 | "Criticality is low so I should skip even for complex features" | The skip rule requires BOTH low criticality AND simple complexity. Low-criticality complex features still get reviewed. |
