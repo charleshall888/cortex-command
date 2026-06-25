@@ -32,12 +32,7 @@ cortex-resolve-backlog-item <input>
 
 Where `<input>` is the `$ARGUMENTS` value (backlog item ID, slug, or title phrase). If `$ARGUMENTS` is empty, prompt the user for input before invoking the script.
 
-Branch on the exit code:
-
-- **Exit 0** — unambiguous match. Parse stdout JSON for `filename`, `backlog_filename_slug`, `title`, and `lifecycle_slug`; use these directly in Step 2 and subsequent phases. Do not re-derive slugs from scratch.
-- **Exit 2** — ambiguous match. Read the `<filename>\t<title>` candidate lines from stderr. Present them to the user and ask them to select one. Re-invoke `cortex-resolve-backlog-item` with the chosen filename slug, or treat the user's selection directly as the resolved item.
-- **Exit 3** — no match. Switch to Context B (ad-hoc topic) per `${CLAUDE_SKILL_DIR}/../lifecycle/references/clarify.md` §1 and treat the input as the topic name. When the input is prose rather than a valid kebab-case slug (`^[a-z0-9]+(-[a-z0-9]+)*$`), derive a 3–6 word kebab-case slug for `{lifecycle-slug}`, announce it, and proceed. Do not ask the user to confirm the derived slug.
-- **Any other non-zero exit** (e.g., `64` usage error from empty/malformed input; `70` internal error from malformed frontmatter, missing backlog directory, or other IO failure) — halt, surface the stderr diagnostic to the user verbatim, and do NOT fall through to disambiguation.
+Act on the result: a unique match prints JSON (`filename`, `backlog_filename_slug`, `title`, `lifecycle_slug`) — use it directly, don't re-derive the slugs. An ambiguous match prints candidates on stderr — present them and let the user pick. No match means there's no backlog item: treat the input as an ad-hoc topic (Context B, per `${CLAUDE_SKILL_DIR}/../lifecycle/references/clarify.md` §1); if it's prose rather than a kebab slug, derive a short kebab `{lifecycle-slug}`, announce it, and proceed without asking to confirm. On any hard error, surface the resolver's message and halt.
 
 ## Step 2: Check State
 

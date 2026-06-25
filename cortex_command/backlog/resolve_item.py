@@ -515,6 +515,12 @@ def main(argv: List[str] | None = None) -> int:  # noqa: UP007 (Python 3.9 compa
 
     input_str: str = args.input
 
+    # Normalize a leading "#" sigil so GitHub-style id references ("#001")
+    # resolve identically to the bare id ("001"). The "#" otherwise fails both
+    # the numeric and slug predicates and falls through to a spurious no-match.
+    if input_str:
+        input_str = input_str.strip().lstrip("#").strip()
+
     # Exit 64: empty or whitespace-only input
     if not input_str or not input_str.strip():
         parser.print_usage(sys.stderr)

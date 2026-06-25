@@ -31,7 +31,7 @@ If `cortex/lifecycle.config.md` exists at the project root, read it first. It co
 
 ## Step 1: Identify the Feature
 
-Feature/phase from invocation: $ARGUMENTS. Parse: first word = feature name, second word (if present) = explicit phase override. If $ARGUMENTS is empty, fall through to the existing behavior (scan for incomplete lifecycle directories).
+Feature/phase from invocation: $ARGUMENTS. Parse: first word = feature name (strip a leading `#` first, so `#001` is treated as `001` and `#some-slug` as `some-slug` — the `#` is a no-op id sigil), second word (if present) = explicit phase override. If $ARGUMENTS is empty, fall through to the existing behavior (scan for incomplete lifecycle directories).
 
 When `$ARGUMENTS` is non-empty but its first word is prose rather than a valid kebab-case slug (the valid-slug pattern is `^[a-z0-9]+(-[a-z0-9]+)*$`), derive a 3–6 word kebab-case slug that summarizes the prose's intent, announce the chosen slug as you create `cortex/lifecycle/{slug}/`, and use it as `{feature}` for the rest of Step 1 and Step 2. Do not ask the user to confirm the derived slug — proceed and let the user correct via re-invocation if needed. A derived slug that collides with an existing `cortex/lifecycle/{slug}/` directory is treated as a resume per Step 2's phase-detection routing, not silently disambiguated.
 
@@ -45,13 +45,7 @@ When `$ARGUMENTS` is non-empty, invoke `cortex-resolve-backlog-item` once to fin
 cortex-resolve-backlog-item {feature}
 ```
 
-Route on the resolver's exit code:
-
-- **exit code 0** — Unambiguous match. The resolver prints the resolved backlog filename on stdout (e.g. `cortex/backlog/193-lifecycle-and-hook-hygiene-one-offs.md`). Record this as the `{backlog-file}` Step 2 sub-procedures will consume. Also perform a single read of the file's YAML frontmatter at Step 1 entry and hold the parsed fields (`uuid`, `status`, `tags`, `discovery_source`, `research`, `spec`) in conversation memory for the four sub-procedures.
-- **exit code 2** — Ambiguous match. The resolver prints candidate filenames on stderr. Present the candidates via `AskUserQuestion` and halt for user selection. Once selected, treat the chosen filename as the `{backlog-file}`.
-- **exit code 3** — No match. The named feature has no backlog file. Step 2 sub-procedures each handle the no-backlog-file path independently (Backlog Status Check skips silently; Create index.md proceeds with null fields; Backlog Write-Back silent-skips; Discovery Bootstrap records no epic context).
-- **exit code 64** — Usage error. Halt with the resolver's diagnostic; this indicates an invocation bug, not a feature-naming issue.
-- **exit code 70** — Software/IO error. Halt with the resolver's diagnostic.
+Act on the result: a unique match resolves the printed file as `{backlog-file}` for the Step 2 sub-procedures; an ambiguous match prints candidates on stderr — present them via `AskUserQuestion` for the user to pick; no match means the feature has no backlog file, so proceed without one (the sub-procedures each handle that path). On any hard error, surface the resolver's message and halt.
 
 When `$ARGUMENTS` is empty, skip the resolver entirely — the existing incomplete-lifecycle-dirs scan path applies (see Step 2's empty-arguments fallback).
 
