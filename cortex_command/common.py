@@ -315,14 +315,20 @@ def _detect_lifecycle_phase_inner(
     paused = last_significant_event == "feature_paused"
 
     def _result(phase: str) -> dict[str, str | int]:
-        """Wrap a phase string into the dict result, applying -paused suffix
-        for non-terminal phases when the last significant event is feature_paused.
-        Terminal phases (complete, escalated) are never suffixed.
+        """Wrap a phase string into the dict result.
+
+        ``route`` is the base phase for routing-table lookup. ``phase`` also
+        carries the ``-paused`` suffix for non-terminal phases when the last
+        significant event is feature_paused (terminal phases — complete,
+        escalated — are never suffixed). ``paused`` is the boolean that suffix
+        encodes. Consumers route on ``route`` and annotate with ``paused``
+        rather than re-deriving either from ``phase`` by string surgery.
         """
-        if paused and phase not in ("complete", "escalated"):
-            phase = f"{phase}-paused"
+        is_paused = paused and phase not in ("complete", "escalated")
         return {
-            "phase": phase,
+            "phase": f"{phase}-paused" if is_paused else phase,
+            "route": phase,
+            "paused": is_paused,
             "checked": checked,
             "total": total,
             "cycle": cycle,
@@ -1082,6 +1088,57 @@ def normalize_status(raw: str) -> str:
     return _STATUS_MAP.get(raw, raw)
 
 
+def lifecycle_staleness(feature_dir: Path) -> dict[str, int | None]:
+    """Resume-only staleness signals for a lifecycle feature directory.
+
+    Returns the relative ages (in whole days) of ``spec.md`` and ``plan.md``,
+    plus the count of commits on ``HEAD`` since ``spec.md``'s mtime. Intended
+    for the lifecycle resume offer only — deliberately NOT folded into
+    ``detect_lifecycle_phase``, which runs on every invocation and must stay
+    git-free and fast.
+
+    Degrades gracefully: a missing artifact maps to ``None``; a git-less or
+    non-repository working tree maps ``commits_since_spec`` to ``None`` rather
+    than raising. ``commits_since_spec`` is pinned to "commits on HEAD newer
+    than the spec mtime" — a robust, unambiguous drift proxy.
+    """
+    import subprocess
+    import time
+
+    def _age_days(p: Path) -> int | None:
+        try:
+            return int((time.time() - p.stat().st_mtime) // 86400)
+        except OSError:
+            return None
+
+    spec = feature_dir / "spec.md"
+    plan = feature_dir / "plan.md"
+    spec_age = _age_days(spec) if spec.is_file() else None
+    plan_age = _age_days(plan) if plan.is_file() else None
+
+    commits_since_spec: int | None = None
+    if spec.is_file():
+        try:
+            mtime = int(spec.stat().st_mtime)
+            proc = subprocess.run(
+                ["git", "rev-list", "--count", f"--since=@{mtime}", "HEAD"],
+                cwd=str(feature_dir) if feature_dir.is_dir() else None,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if proc.returncode == 0:
+                commits_since_spec = int(proc.stdout.strip() or "0")
+        except (OSError, ValueError, subprocess.SubprocessError):
+            commits_since_spec = None
+
+    return {
+        "spec_age_days": spec_age,
+        "plan_age_days": plan_age,
+        "commits_since_spec": commits_since_spec,
+    }
+
+
 # ---------------------------------------------------------------------------
 # CLI entry point
 # ---------------------------------------------------------------------------
@@ -1092,6 +1149,15 @@ def _cli_detect_phase(args: list[str]) -> None:
         print("Usage: python3 -m cortex_command.common detect-phase <dir>", file=sys.stderr)
         sys.exit(1)
     result = detect_lifecycle_phase(Path(args[0]))
+    sys.stdout.write(json.dumps(result, separators=(",", ":")) + "\n")
+
+
+def _cli_staleness(args: list[str]) -> None:
+    """Handle ``staleness <dir>`` subcommand."""
+    if len(args) != 1:
+        print("Usage: python3 -m cortex_command.common staleness <dir>", file=sys.stderr)
+        sys.exit(1)
+    result = lifecycle_staleness(Path(args[0]))
     sys.stdout.write(json.dumps(result, separators=(",", ":")) + "\n")
 
 
@@ -1112,6 +1178,7 @@ def _run() -> None:
             "\n"
             "Subcommands:\n"
             "  detect-phase <dir>      Detect lifecycle phase for a feature directory\n"
+            "  staleness <dir>         Resume-only artifact-age / commits-since-spec signals\n"
             "  normalize-status <str>  Normalize a legacy status value",
             file=sys.stderr,
         )
@@ -1122,6 +1189,8 @@ def _run() -> None:
 
     if subcommand == "detect-phase":
         _cli_detect_phase(sub_args)
+    elif subcommand == "staleness":
+        _cli_staleness(sub_args)
     elif subcommand == "normalize-status":
         _cli_normalize_status(sub_args)
     else:

@@ -32,7 +32,7 @@ cortex-resolve-backlog-item <input>
 
 Where `<input>` is the `$ARGUMENTS` value (backlog item ID, slug, or title phrase). If `$ARGUMENTS` is empty, prompt the user for input before invoking the script.
 
-Act on the result: a unique match prints JSON (`filename`, `backlog_filename_slug`, `title`, `lifecycle_slug`) — use it directly, don't re-derive the slugs. An ambiguous match prints candidates on stderr — present them and let the user pick. No match means there's no backlog item: treat the input as an ad-hoc topic (Context B, per `${CLAUDE_SKILL_DIR}/../lifecycle/references/clarify.md` §1); if it's prose rather than a kebab slug, derive a short kebab `{lifecycle-slug}`, announce it, and proceed without asking to confirm. On any hard error, surface the resolver's message and halt.
+Act on the result: a unique match prints JSON (`filename`, `backlog_filename_slug`, `title`, `lifecycle_slug`) — use it directly, don't re-derive the slugs. An ambiguous match prints candidates on stderr — present them and let the user pick. No match means there's no backlog item: treat the input as an ad-hoc topic (Context B, per `${CLAUDE_SKILL_DIR}/references/clarify.md` §1); if it's prose rather than a kebab slug, derive a short kebab `{lifecycle-slug}`, announce it, and proceed without asking to confirm. On any hard error, surface the resolver's message and halt.
 
 ## Step 2: Check State
 
@@ -65,7 +65,7 @@ After determining the resume point, seed the `lifecycle_start` row so `events.lo
 
 ## Step 3: Clarify Phase
 
-Read `${CLAUDE_SKILL_DIR}/../lifecycle/references/clarify.md` and follow its full protocol (§2–§7). Requirements loading within Clarify uses the shared tag-based loading protocol at `${CLAUDE_SKILL_DIR}/../lifecycle/references/load-requirements.md`.
+Read `${CLAUDE_SKILL_DIR}/references/clarify.md` and follow its full protocol (§2–§7). Requirements loading within Clarify uses the shared tag-based loading protocol at `${CLAUDE_SKILL_DIR}/../lifecycle/references/load-requirements.md`.
 
 Key outputs from Clarify (record these for use in subsequent phases):
 - Clarified intent statement
@@ -88,7 +88,7 @@ If `cortex-update-item` fails, surface the error and wait for the user to resolv
 
 ### Sufficiency Check
 
-If `cortex/lifecycle/{lifecycle-slug}/research.md` already exists, apply the Research Sufficiency Criteria defined in `${CLAUDE_SKILL_DIR}/../lifecycle/references/clarify.md` §6. Use the clarified intent statement and scope from Clarify as the benchmark.
+If `cortex/lifecycle/{lifecycle-slug}/research.md` already exists, apply the Research Sufficiency Criteria defined in `${CLAUDE_SKILL_DIR}/references/clarify.md` §6. Use the clarified intent statement and scope from Clarify as the benchmark.
 
 **Path guard** (explicit rules for what satisfies the Sufficiency Check):
 
@@ -149,7 +149,7 @@ If the `## Open Questions` section is absent from `research.md`, the gate passes
 
 Idempotent — safe on resume; no-op under `/cortex-core:lifecycle`.
 
-Read `${CLAUDE_SKILL_DIR}/../lifecycle/references/specify.md` and follow it (its full protocol) with these adaptations:
+Read `${CLAUDE_SKILL_DIR}/references/specify.md` and follow it (its full protocol) with these adaptations:
 
 - **§1 (Load Context)**: Requirements context was loaded during Clarify (Step 3) and research.md was produced in Step 4. Re-read `cortex/lifecycle/{lifecycle-slug}/research.md` but skip redundant requirements loading.
 - **§2a loop-back**: If the Research Confidence Check triggers a loop-back, re-enter Step 4 (Research Phase) with the Sufficiency Check bypass described there.

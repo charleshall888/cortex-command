@@ -24,6 +24,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).parent.parent
 SKILL_MD = REPO_ROOT / "skills" / "lifecycle" / "SKILL.md"
+KEPT_PAUSES_MD = REPO_ROOT / "skills" / "lifecycle" / "references" / "kept-pauses.md"
 LINE_TOLERANCE = 35
 
 # Inventory bullet line: `- <file>:<line> — <rationale>` or with hyphen-minus
@@ -45,23 +46,16 @@ _CONDITIONAL_PAUSE_MARKER = re.compile(r"\bread_branch_mode\b|\blifecycle_config
 def _parse_inventory() -> list[tuple[Path, int, str, str]]:
     """Return a list of (resolved_path, line_number, raw_matched, rationale) entries.
 
-    Reads the "Kept user pauses" subsection from SKILL.md and parses each
-    bullet line. Paths in the inventory are repo-root-relative. ``rationale``
-    is the text on the bullet line after the file:line anchor (may be empty).
+    Reads the kept-pauses inventory file and parses each bullet line. Paths
+    in the inventory are repo-root-relative. ``rationale`` is the text on the
+    bullet line after the file:line anchor (may be empty).
     """
-    content = SKILL_MD.read_text(encoding="utf-8")
-    # Anchor on the subsection heading; slice until the next H2 or H3.
-    section_match = re.search(
-        r"###\s+Kept user pauses\s*\n(.*?)(?=^#{1,3}\s|\Z)",
-        content,
-        re.MULTILINE | re.DOTALL,
-    )
-    if not section_match:
+    if not KEPT_PAUSES_MD.is_file():
         pytest.fail(
-            "Could not locate '### Kept user pauses' section in "
-            f"{SKILL_MD.relative_to(REPO_ROOT)}"
+            "Kept-pauses inventory not found at "
+            f"{KEPT_PAUSES_MD.relative_to(REPO_ROOT)}"
         )
-    section_body = section_match.group(1)
+    section_body = KEPT_PAUSES_MD.read_text(encoding="utf-8")
     section_lines = section_body.splitlines()
     entries: list[tuple[Path, int, str, str]] = []
     for match in _INVENTORY_BULLET.finditer(section_body):
@@ -102,9 +96,10 @@ def _askuserquestion_sites() -> dict[Path, list[int]]:
     for skill_dir in ("skills/lifecycle", "skills/refine"):
         skill_path = REPO_ROOT / skill_dir
         for md_path in skill_path.rglob("*.md"):
-            # Skip the SKILL.md inventory itself — the inventory text mentions
-            # AskUserQuestion in prose but isn't a call site.
-            if md_path == SKILL_MD:
+            # Skip the SKILL.md Phase Transition rule and the relocated
+            # kept-pauses inventory — both mention AskUserQuestion in prose
+            # but are not call sites.
+            if md_path in (SKILL_MD, KEPT_PAUSES_MD):
                 continue
             try:
                 lines = md_path.read_text(encoding="utf-8").splitlines()

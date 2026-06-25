@@ -162,3 +162,62 @@ def test_cycle_counter_ignores_review_md(tmp_path: Path) -> None:
     (fdir / "events.log").write_text("")
     result = detect_lifecycle_phase(fdir)
     assert result["cycle"] == 1
+
+
+# ---------------------------------------------------------------------------
+# route / paused fields (consumed by lifecycle SKILL.md Step 2 routing)
+# ---------------------------------------------------------------------------
+
+
+def test_route_and_paused_on_non_paused_phase(tmp_path: Path) -> None:
+    """Unpaused phase → route == phase, paused False."""
+    fdir = tmp_path / "feature"
+    fdir.mkdir()
+    (fdir / "spec.md").write_text("spec body")
+    (fdir / "events.log").write_text("")
+    result = detect_lifecycle_phase(fdir)
+    assert result["phase"] == "specify"
+    assert result["route"] == "specify"
+    assert result["paused"] is False
+
+
+def test_route_strips_paused_suffix(tmp_path: Path) -> None:
+    """feature_paused as last significant event → phase carries -paused suffix,
+    route is the base phase, paused True."""
+    fdir = tmp_path / "feature"
+    fdir.mkdir()
+    (fdir / "research.md").write_text("research")
+    (fdir / "spec.md").write_text("spec")
+    (fdir / "plan.md").write_text("- **Status**: [ ]\n")
+    _write_events(
+        fdir / "events.log",
+        [
+            {"event": "spec_approved", "feature": "f"},
+            {"event": "phase_transition", "from": "specify", "to": "plan"},
+            {"event": "plan_approved", "feature": "f"},
+            {"event": "phase_transition", "from": "plan", "to": "implement"},
+            {"event": "feature_paused", "feature": "f"},
+        ],
+    )
+    result = detect_lifecycle_phase(fdir)
+    assert result["phase"] == "implement-paused"
+    assert result["route"] == "implement"
+    assert result["paused"] is True
+
+
+def test_terminal_phase_never_paused(tmp_path: Path) -> None:
+    """Terminal phases (complete) are never suffixed even after feature_paused."""
+    fdir = tmp_path / "feature"
+    fdir.mkdir()
+    (fdir / "review.md").write_text('{"verdict": "APPROVED"}')
+    _write_events(
+        fdir / "events.log",
+        [
+            {"event": "feature_complete", "feature": "f"},
+            {"event": "feature_paused", "feature": "f"},
+        ],
+    )
+    result = detect_lifecycle_phase(fdir)
+    assert result["phase"] == "complete"
+    assert result["route"] == "complete"
+    assert result["paused"] is False

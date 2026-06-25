@@ -27,7 +27,7 @@ Branch on the exit code:
 
 ### 2. Load Requirements Context
 
-Load requirements using the shared tag-based loading protocol — read the protocol at the propagated absolute path (target: `${CLAUDE_SKILL_DIR}/references/load-requirements.md`) and follow it. If no `cortex/requirements/` directory or files exist, note this and proceed.
+Load requirements using the shared tag-based loading protocol — read the protocol at the propagated absolute path (target: `${CLAUDE_SKILL_DIR}/../lifecycle/references/load-requirements.md`) and follow it. If no `cortex/requirements/` directory or files exist, note this and proceed.
 
 ### 3. Confidence Assessment
 
@@ -45,7 +45,7 @@ For Context B (ad-hoc), assess requirements alignment as "no requirements files 
 
 ### 3a. Critic Review
 
-Read the **clarify-critic** sibling reference at the propagated absolute path (target: `${CLAUDE_SKILL_DIR}/../refine/references/clarify-critic.md`) and follow its protocol. After the critic completes, the orchestrator writes the `clarify_critic` event to `cortex/lifecycle/{feature}/events.log` with the post-critic status.
+Read the **clarify-critic** sibling reference at the propagated absolute path (target: `${CLAUDE_SKILL_DIR}/references/clarify-critic.md`) and follow its protocol. After the critic completes, the orchestrator writes the `clarify_critic` event to `cortex/lifecycle/{feature}/events.log` with the post-critic status.
 
 ### 4. Question Threshold
 

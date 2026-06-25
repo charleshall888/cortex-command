@@ -54,7 +54,7 @@ Run `just` to see all available recipes. Key commands:
 
 Before classifying a phase boundary or gate as ceremonial, identify the user-facing affordance that boundary protects. A pause that looks redundant from the agent's perspective may be the only point where a human can redirect, reject, or reshape the work before the lifecycle advances. If the affordance genuinely provides no blocking value — because internals already enforce the constraint — document that reasoning explicitly rather than silently removing the boundary.
 
-The concrete inventory of kept user pauses lives in `skills/lifecycle/SKILL.md` under the "Kept user pauses" section. The parity test at `tests/test_lifecycle_kept_pauses_parity.py` verifies that the implementation matches that inventory. When modifying phase sequencing, update both the SKILL.md inventory and the parity test together.
+The concrete inventory of kept user pauses lives in `skills/lifecycle/references/kept-pauses.md`. The parity test at `tests/test_lifecycle_kept_pauses_parity.py` verifies that the implementation matches that inventory. When modifying phase sequencing, update both the kept-pauses.md inventory and the parity test together.
 
 Prefer structural separation over prose-only enforcement for sequential gates. A gate encoded in skill control flow is harder to accidentally bypass than one that relies on the model reading and following a prose instruction. Prose-only enforcement is appropriate only for guidelines where the cost of occasional deviation is low.
 

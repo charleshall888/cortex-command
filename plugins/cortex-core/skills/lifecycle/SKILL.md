@@ -35,7 +35,7 @@ Feature/phase from invocation: $ARGUMENTS. Parse: first word = feature name (str
 
 When `$ARGUMENTS` is non-empty but its first word is prose rather than a valid kebab-case slug (the valid-slug pattern is `^[a-z0-9]+(-[a-z0-9]+)*$`), derive a 3–6 word kebab-case slug that summarizes the prose's intent, announce the chosen slug as you create `cortex/lifecycle/{slug}/`, and use it as `{feature}` for the rest of Step 1 and Step 2. Do not ask the user to confirm the derived slug — proceed and let the user correct via re-invocation if needed. A derived slug that collides with an existing `cortex/lifecycle/{slug}/` directory is treated as a resume per Step 2's phase-detection routing, not silently disambiguated.
 
-Determine the feature name from the invocation. Use lowercase-kebab-case for directory naming. When linked to a backlog item, use the canonical `slugify()` from `cortex_command.common`.
+Use lowercase-kebab-case for directory naming. When linked to a backlog item, use the canonical `slugify()` from `cortex_command.common`.
 
 ### Resolve the originating backlog file once
 
@@ -49,21 +49,19 @@ Act on the result: a unique match resolves the printed file as `{backlog-file}` 
 
 When `$ARGUMENTS` is empty, skip the resolver entirely — the existing incomplete-lifecycle-dirs scan path applies (see Step 2's empty-arguments fallback).
 
-If a long session causes the parsed frontmatter to drop from working memory, a single targeted re-Read of `{backlog-file}` is permitted at a phase boundary.
-
 ## Step 2: Check for Existing State
 
 Scan for `cortex/lifecycle/{feature}/` at the project root.
 
 ### Artifact-Based Phase Detection
 
-If no `cortex/lifecycle/{feature}/` directory exists, `phase = none` — start from the beginning. Otherwise, invoke the canonical detector and route on the returned `phase` field:
+If no `cortex/lifecycle/{feature}/` directory exists, `phase = none` — start from the beginning. Otherwise, invoke the canonical detector and route on the returned `route` field:
 
 ```bash
 cortex-common detect-phase cortex/lifecycle/{feature}
 ```
 
-The command emits a single JSON object on stdout, e.g. `{"phase":"implement","checked":2,"total":5,"cycle":1}`. Parse the `phase` field and route accordingly. The `checked`/`total` fields report plan-task progress; `cycle` reports the review-cycle number.
+The command emits a single JSON object on stdout, e.g. `{"phase":"implement","route":"implement","paused":false,"checked":2,"total":5,"cycle":1}`. Route on the `route` field — the base phase, with any pause marker already stripped by the detector. The `checked`/`total` fields report plan-task progress; `cycle` reports the review-cycle number.
 
 Reference table (one line per `phase` value):
 
@@ -78,7 +76,7 @@ Reference table (one line per `phase` value):
 | `complete`         | `events.log` has a `feature_complete` event, or `review.md` verdict is `APPROVED` — feature done. |
 | `escalated`        | `review.md` verdict is `REJECTED`; present reviewer analysis and ask the user for direction.      |
 
-**Paused suffix**: when the detected phase ends in `-paused` (e.g. `implement-paused:3/5`, `review-paused`), strip the `-paused` portion for routing-table lookup above; display the full label including ` — paused` to the user. The `-paused` marker is set when `events.log`'s most recent significant event among `{phase_transition, feature_complete, feature_wontfix, feature_paused}` is `feature_paused`. A later `phase_transition` event resumes the feature and clears the marker.
+**Paused state**: the detector reports `paused` directly — when `true`, the feature was paused at the `route` phase; route normally and note the paused state when reporting to the user. How the marker is set and cleared is the detector's concern, not yours.
 
 **Detect criticality and tier**: After determining the phase, run `cortex-lifecycle-state --feature {feature} --field criticality` (default: `medium`) and `cortex-lifecycle-state --feature {feature} --field tier` (default: `simple`). Report both alongside the detected phase when resuming. (Rules: [criticality-matrix.md §Reading lifecycle state](${CLAUDE_SKILL_DIR}/references/criticality-matrix.md).)
 
@@ -88,12 +86,7 @@ Reference table (one line per `phase` value):
 echo $LIFECYCLE_SESSION_ID > cortex/lifecycle/{feature}/.session
 ```
 
-If resuming from a previous session, report the detected phase and offer to continue or restart from an earlier phase. Before presenting the offer, surface two staleness signals so the user can decide whether the existing artifacts are still trustworthy:
-
-1. **Artifact age**: relative age of `spec.md` (and `plan.md` if present) — e.g., "spec.md last modified 12 days ago".
-2. **Commits since spec**: count of commits touching spec-named files since spec mtime; non-zero suggests research assumptions may have drifted.
-
-Surface both as terse lines above the continue/restart prompt. Do not block — the offer defaults to "continue".
+If resuming from a previous session, report the detected phase and offer to continue or restart from an earlier phase. Before the offer, run `cortex-common staleness cortex/lifecycle/{feature}` and surface its `spec_age_days` / `plan_age_days` / `commits_since_spec` fields as terse lines above the prompt (high values or non-zero commits suggest the artifacts may have drifted). Do not block — the offer defaults to "continue".
 
 ### Backlog Status, index.md, Write-Back, and Discovery Bootstrap
 
@@ -155,9 +148,7 @@ Proceed automatically — do not ask the user for confirmation at phase boundari
 - **Blockers**: Active blockers, escalations, or deferred questions (or "None")
 - **Next**: Next phase name and what it will do
 
-**A phase boundary is a mechanical transition, not a synchronization point.** The boundary fires when the gate condition above is satisfied (e.g., `plan.md` exists with all tasks `[x]`), not when the user gives input — so there is nothing to "wait for" once the gate has fired. If an earlier user instruction in the session asked you to "report" or "summarize" (at the end, between phases, between tasks), that modulates text-emission cadence — emit the transition summary as plain text and continue. It is not authorization to call `AskUserQuestion`, which is a syntactically different operation (yielding control to the user) rather than a text emission.
-
-`AskUserQuestion` at a phase boundary is authorized only by the Kept user pauses inventory below; no test can catch runtime deviations — this paragraph is the runtime backstop.
+**A phase boundary fires on its gate condition (e.g. `plan.md` with all tasks `[x]`), not on user input — there is nothing to wait for.** A prior session instruction to "report" or "summarize" between phases sets text-emission cadence only: emit the transition summary as plain text and continue. It does not authorize `AskUserQuestion` (yielding control to the user), which at a phase boundary is permitted only by the Kept user pauses inventory (`references/kept-pauses.md`).
 
 ### Per-phase completion rule
 
@@ -173,18 +164,7 @@ Specify and Plan each retain a single user-facing approval surface at §4 of the
 
 ### Kept user pauses
 
-The following user-facing pauses are deliberate and remain in scope.
-
-- `skills/lifecycle/SKILL.md:60` — ambiguous backlog match needs operator disambiguation.
-- `skills/lifecycle/references/clarify.md:57` — low-confidence clarify question batch surfaces unknowns the model cannot resolve alone.
-- `skills/lifecycle/references/specify.md:36` — structured-interview gap-fill: model needs user input for unstated requirements.
-- `skills/lifecycle/references/specify.md:67` — §2a cycle-2 confidence-check: user decides whether to loop back to research or proceed with gaps.
-- `skills/lifecycle/references/specify.md:155` — spec approval surface (Approve / Request changes / Cancel). Substantive user decision.
-- `skills/lifecycle/references/plan.md:281` — plan approval surface, merged with branch/dispatch selection (branch modes + "Approve plan but wait to implement" imply approval; Request changes / Cancel via the "Other" free-text escape). Substantive user decision.
-- `skills/lifecycle/references/implement.md:50` — conditional pause: fallback branch-selection picker on main, used only when no plan-time `dispatch_choice` was recorded (trunk vs feature-branch-with-worktree vs feature branch). Suppressed when `lifecycle.config.md::branch-mode` is set AND the working tree is clean AND no concurrent live interactive worktree exists for the feature slug.
-- `skills/lifecycle/references/backlog-writeback.md:11` — backlog write-back complete-lifecycle prompt on a backlog item already marked complete.
-- `skills/lifecycle/references/complete.md:73` — phase-exit pause: merge-wait pause inside the multi-step Complete phase; user re-invokes /cortex-core:lifecycle complete <slug> after merging on GitHub.
-- `skills/refine/SKILL.md:166` — refine §4 complexity-value gate pick-menu — renders only when the orchestrator's recommendation diverges from full scope or confidence is low; otherwise the announcement folds into the regular approval surface.
+Auto-proceed except where a phase reference defines a kept pause. The canonical, parity-tested inventory of those deliberate `AskUserQuestion` sites lives in [kept-pauses.md](${CLAUDE_SKILL_DIR}/references/kept-pauses.md) (enforced by `tests/test_lifecycle_kept_pauses_parity.py`).
 
 If the user invokes `/cortex-core:lifecycle <phase>` to jump to a specific phase, honor the request but warn if prerequisite artifacts are missing (e.g., entering Plan without research.md).
 
