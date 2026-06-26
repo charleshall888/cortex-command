@@ -6,7 +6,8 @@ status: backlog
 priority: low
 type: chore
 created: 2026-06-25
-updated: 2026-06-25
+updated: 2026-06-26
+parent: 336
 ---
 ## Why
 
@@ -22,7 +23,7 @@ Residue that stays prose (genuine judgment / kept affordance): the `/cortex-core
 
 ## Integration
 
-New `cortex_command` verbs + edits to `references/complete.md` + `references/post-refine-commit.md` (+ mirrors) → lifecycle-gated. **Depends on #330** — the verbs emit their events via the extended `cortex-lifecycle-event`. **PIN byte-identical `events.log` rows + identical staged-path sets.** complete.md's and post-refine-commit.md's prose trims ride in this ticket — do not dedup them separately, since this rewrites those sections.
+New `cortex_command` verbs + edits to `references/complete.md` + `references/post-refine-commit.md` (+ mirrors) → lifecycle-gated. **Depends on #330's `--field` extension** — but the complete / post-refine event emission is built INTO these verbs here, not pre-migrated by #330 (those sites move as part of this ticket, to avoid touching the same lines twice). **PIN byte-identical `events.log` rows + identical staged-path sets.** complete.md's and post-refine-commit.md's prose trims also ride in this ticket — do not dedup them separately, since this rewrites those sections.
 
 ## Edges
 

@@ -6,7 +6,8 @@ status: backlog
 priority: low
 type: chore
 created: 2026-06-25
-updated: 2026-06-25
+updated: 2026-06-26
+parent: 336
 ---
 ## Why
 
@@ -14,11 +15,11 @@ updated: 2026-06-25
 
 ## Role
 
-Extend `cortex-lifecycle-event log` to accept arbitrary `--field k=v` pairs (typed where needed), then replace the raw JSON blocks in all ~12 sites with verb invocations. The references keep only the event name and the inputs to pass — the verb owns shape, ordering, and timestamping.
+Extend `cortex-lifecycle-event log` to accept arbitrary `--field k=v` pairs (typed where needed), then replace the raw JSON blocks at the **inline-emitted** sites with verb invocations. The references keep only the event name and the inputs to pass — the verb owns shape, ordering, and timestamping. (Scope split below: the complete / post-refine / wontfix events are absorbed by their own verbs in #331 and #329, not migrated here.)
 
 ## Integration
 
-Edits `cortex_command/lifecycle_event.py` + ~12 reference files across `skills/lifecycle/` (and 2 in `skills/refine/`) (+ mirrors) → lifecycle-gated. **PIN the byte-identical-output invariant**: emitted rows must be byte-for-byte identical to today's hand-written rows (key names, field order, timestamp format), since `detect-phase` / `state_cli` / the morning report parse them. Add a round-trip test asserting identical rows for each migrated event type. Foundation for #331 and #332, which emit their events through this verb.
+Edits `cortex_command/lifecycle_event.py` + the inline-emitted reference files across `skills/lifecycle/` (and 2 in `skills/refine/`) (+ mirrors) → lifecycle-gated. **Scope split to avoid double-touching**: this ticket migrates only the sites that stay inline-emitted — plan, review, criticality-matrix, critical-review-gate, refine-delegation, backlog-writeback, implement's extras, and refine's clarify-critic / specify. The complete and post-refine-commit events move into #331's new verbs, and the wontfix event into #329's verb — not migrated here. **PIN the byte-identical-output invariant**: emitted rows must be byte-for-byte identical to today's hand-written rows (key names, field order, timestamp format), since `detect-phase` / `state_cli` / the morning report parse them. Add a round-trip test asserting identical rows for each migrated event type. Foundation for #331 and #332, which emit their events through this verb.
 
 ## Edges
 
@@ -29,5 +30,6 @@ Edits `cortex_command/lifecycle_event.py` + ~12 reference files across `skills/l
 ## Touch-points
 
 - `cortex_command/lifecycle_event.py` + tests
-- the ~12 reference files: complete, plan, review, post-refine-commit, wontfix, refine-delegation, criticality-matrix, critical-review-gate, backlog-writeback, implement (extras), + refine's clarify-critic / specify (+ mirrors)
-- coordinate file-overlap with #331 (complete/post-refine) and #332 (implement)
+- the inline-emitted reference files: plan, review, criticality-matrix, critical-review-gate, refine-delegation, backlog-writeback, implement (extras), + refine's clarify-critic / specify (+ mirrors)
+- complete / post-refine-commit / wontfix events are excluded here — handled by #331 and #329
+- coordinate file-overlap with #332 (implement extras)
