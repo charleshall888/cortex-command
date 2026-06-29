@@ -167,6 +167,32 @@ def resolve_worktree_root(
     return (repo / ".claude" / "worktrees" / feature).resolve()
 
 
+def _is_worktree_inside_repo(worktree_path: Path, repo: Path) -> bool:
+    """Return True if ``worktree_path`` is contained within ``repo``.
+
+    Resolves BOTH operands before comparing — this canonicalization is the
+    whole reason the helper exists. The two values arrive asymmetrically:
+    ``_repo_root()`` returns an unresolved ``Path(result.stdout.strip())``
+    while ``resolve_worktree_root``'s default branch (c) returns a
+    ``.resolve()``d path and its env-override branch (a) returns an unresolved
+    path. Resolving both sides here closes that asymmetry so a legitimate
+    same-repo worktree behind a symlinked root (macOS ``/var/folders``,
+    ``/tmp``→``/private/tmp``) is NOT falsely flagged as an escape.
+
+    Containment is decided via ``Path.relative_to`` over the resolved
+    operands — never ``startswith``/``commonprefix``, which admit
+    sibling-prefix false positives (a known CVE class, e.g. ``/repo`` vs
+    ``/repo-evil``).
+    """
+    resolved_worktree = worktree_path.resolve()
+    resolved_repo = repo.resolve()
+    try:
+        resolved_worktree.relative_to(resolved_repo)
+        return True
+    except ValueError:
+        return False
+
+
 def create_worktree(
     feature: str,
     base_branch: str = "main",
@@ -199,6 +225,19 @@ def create_worktree(
     repo = repo_path if cross_repo else _repo_root()
 
     worktree_path = resolve_worktree_root(feature, session_id if cross_repo else None)
+
+    # Containment guard (same-repo only). A same-repo worktree must resolve to
+    # a path inside the repo; an out-of-repo CORTEX_WORKTREE_ROOT override is
+    # the escape this catches. Placed BEFORE the idempotent
+    # worktree_path.exists() branch (and the fresh `git worktree add` branch)
+    # so it gates EVERY return path — a stale out-of-repo worktree from a prior
+    # bad override would otherwise slip through the idempotent early-return. The
+    # cross_repo / $TMPDIR branch is legitimately outside the repo and is exempt.
+    if not cross_repo and not _is_worktree_inside_repo(worktree_path, repo):
+        raise ValueError(
+            f"worktree_escapes_repo: resolved worktree path {worktree_path} "
+            f"is not contained within repo {repo}"
+        )
 
     # If the worktree path already exists and is a valid worktree, return it
     if worktree_path.exists():
