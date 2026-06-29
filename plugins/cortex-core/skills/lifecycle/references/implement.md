@@ -27,25 +27,12 @@ Routing on the output (the read is gated on `main`/`master` so it runs in the ma
 
 **Branch-mode dispatch preflight**: Before the uncommitted-changes guard and the runtime probe below, consult the per-repo `branch-mode` config via `cortex-lifecycle-branch-mode`.
 
-Run two Bash calls (no compound commands):
+Run two Bash calls (no compound commands): first read the configured `branch-mode` value — the helper `read_branch_mode` prints it, or empty when unset/malformed, which routes to the picker as `branch_mode_unset_or_invalid` — then run the picker-decision verb, which emits `{"fire": <bool>, "reason": "<closed-set-token>"}` (read `.fire`/`.reason`; the third positional `{branch_mode}` is step 1's value, omitted when empty):
 
-1. Read the configured `branch-mode` value:
-
-   ```bash
-   cortex-lifecycle-branch-mode .
-   ```
-
-   The CLI wraps `read_branch_mode`: prints the configured value, or empty when unset/malformed; invalid values fall through to the picker as `branch_mode_unset_or_invalid`.
-
-2. Decide whether the picker fires, given the value above and the current preflight state. The CLI emits a JSON object `{"fire": <bool>, "reason": "<closed-set-token>"}`:
-
-   ```bash
-   DECISION=$(cortex-lifecycle-picker-decision . {slug} {branch_mode})
-   FIRE=$(printf '%s' "$DECISION" | jq -r '.fire')
-   REASON=$(printf '%s' "$DECISION" | jq -r '.reason')
-   ```
-
-   The third positional argument (`{branch_mode}`) is the value emitted by step 1; omit it when the branch-mode value is empty.
+```bash
+cortex-lifecycle-branch-mode .
+cortex-lifecycle-picker-decision . {slug} {branch_mode}
+```
 
 **Routing on the result.** When `should_fire_picker` returns `(False, "suppressed")`, skip the picker (the uncommitted-changes guard, runtime probe, and `AskUserQuestion` call below) and route by value:
 
