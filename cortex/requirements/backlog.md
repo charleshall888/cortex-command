@@ -104,6 +104,7 @@ The boundary is deliberate: this area delivers extraction + a declarative backen
 - Follow the established optional-plugin pattern: register `cortex-backlog` in justfile `BUILD_OUTPUT_PLUGINS`, enforce the dual-source mirror at pre-commit, and document the plugin as optional in `docs/setup.md`.
 - Terminology: the local backend is named `cortex-backlog` consistently in config values and prose (not `local`).
 - This is a load-bearing decision recorded in [ADR-0016](../adr/0016-configurable-backlog-backend-and-llm-as-adapter.md) (configurable backlog backend + LLM-as-adapter rationale); consumer skills should back-point to it rather than restating rationale.
+- The backend-blind rule above applies to the backlog-*engine* `cortex-*` CLIs (the local engine: `cortex-create-backlog-item`, `cortex-update-item`, etc.). A skill-helper verb (`cortex-refine`) may carry a caller-passed `--backend` flag purely as a structural guard — coercing a stale local slug away on a non-local backend — without resolving the backend itself, per [ADR-0019](../adr/0019-skill-helper-verb-backend-structural-guard.md).
 
 ## Dependencies
 
