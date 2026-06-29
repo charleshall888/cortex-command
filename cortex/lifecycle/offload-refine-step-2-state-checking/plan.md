@@ -32,7 +32,7 @@ Two independent offloads of deterministic logic out of `skills/refine/SKILL.md` 
 - **Complexity**: simple
 - **Context**: Call `cortex_command.refine.main(["resume-point", "--lifecycle-slug", slug])` in-process under `monkeypatch.chdir(tmp_path)` and capture stdout with `capsys` — mirror the in-process pattern in `tests/test_refine_reconcile_clarify.py` (so the test exercises source without a wheel reinstall). Cases required by acceptance: (a) all four states — `spec+research`→`complete`, `spec` only→`research`, `research` only→`spec`, neither→`clarify`; (b) missing lifecycle dir→`clarify`, exit 0; (c) empty `spec.md` present→`spec_exists=true`; (d) a **directory** named `research.md`→`research_exists=false`; (e) omitting `--lifecycle-slug`→exit 2 (assert `SystemExit.code == 2`). Assert the full JSON object (resume + both booleans) per case, not just `resume`. [spec R1, R2, R3 acceptance]
 - **Verification**: `just test` exits 0 with the new module collected — pass if exit 0 and the new tests run.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Replace Step 2 resume-tree prose with the resume-point call + judgment guards
 - **Files**: `skills/refine/SKILL.md`, `plugins/cortex-core/skills/refine/SKILL.md`
