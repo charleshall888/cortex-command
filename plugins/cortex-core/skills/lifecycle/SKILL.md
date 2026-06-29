@@ -22,8 +22,10 @@ A file-based state machine that survives context loss. Enforces research-before-
 ## Invocation
 
 - `/cortex-core:lifecycle {{feature}}` — start new or resume existing feature
-- `/cortex-core:lifecycle {{phase}}` — explicitly enter a phase for the active feature
+- `/cortex-core:lifecycle {{feature}} {{phase}}` — enter a specific phase for that feature
 - `/cortex-core:lifecycle resume {{feature}}` — resume a specific feature if multiple exist
+- `/cortex-core:lifecycle complete {{slug}}` — finalize a feature (re-invoke the Complete phase)
+- `/cortex-core:lifecycle wontfix {{slug}}` — abandon a feature via the terminal wontfix verb
 
 ## Project Configuration
 
@@ -31,9 +33,26 @@ If `cortex/lifecycle.config.md` exists at the project root, read it first. It co
 
 ## Step 1: Identify the Feature
 
-Feature/phase from invocation: $ARGUMENTS. Parse: first word = feature name (strip a leading `#` first, so `#001` is treated as `001` and `#some-slug` as `some-slug` — the `#` is a no-op id sigil), second word (if present) = explicit phase override. If $ARGUMENTS is empty, fall through to the existing behavior (scan for incomplete lifecycle directories).
+Classify the invocation structurally — do not parse `$ARGUMENTS` in prose. Run the grammar helper and act on its `mode`:
 
-When `$ARGUMENTS` is non-empty but its first word is prose rather than a valid kebab-case slug (the valid-slug pattern is `^[a-z0-9]+(-[a-z0-9]+)*$`), derive a 3–6 word kebab-case slug that summarizes the prose's intent, announce the chosen slug as you create `cortex/lifecycle/{slug}/`, and use it as `{feature}` for the rest of Step 1 and Step 2. Do not ask the user to confirm the derived slug — proceed and let the user correct via re-invocation if needed. A derived slug that collides with an existing `cortex/lifecycle/{slug}/` directory is treated as a resume per Step 2's phase-detection routing, not silently disambiguated.
+```bash
+cortex-lifecycle-parse-args "$ARGUMENTS"
+```
+
+It emits one JSON object `{"mode": "...", "feature": "...", "phase": "..."}`. Route on `mode` (the closed set the helper can emit):
+
+| `mode` | Action |
+|--------|--------|
+| `wontfix` | Abandon the feature: invoke the wontfix verb with `feature` as the slug, report its outcome, and **halt** — this route is terminal/short-circuiting; do not fall through to Step 2. |
+| `resume` | Resume `feature`: route into Step 2 phase-detection, but if `cortex/lifecycle/<feature>/` does not exist, report "no such lifecycle to resume" and stop — do not create it (that is bare `<feature>`'s behavior). |
+| `complete` | Enter the Complete phase for `feature` via the explicit-phase-override route below (`phase` is `complete`). |
+| `phase` | A bare phase token with no feature. Surface "specify a feature, e.g. `/cortex-core:lifecycle <feature> <phase>`" and stop — do not create a lifecycle. |
+| `feature` | The normal path. Use `feature` as `{feature}`; if `phase` is non-empty, honor it via the explicit-phase-override route below. Proceed to the resolver and Step 2. |
+| `needs-derivation` | `$ARGUMENTS`'s first word is prose, not a slug. Derive a 3–6 word kebab-case slug (valid-slug pattern `^[a-z0-9]+(-[a-z0-9]+)*$`) summarizing its intent, announce the chosen slug as you create `cortex/lifecycle/{slug}/`, and proceed as `feature`. Do not ask the user to confirm — let them correct via re-invocation. A derived slug colliding with an existing directory is treated as a resume per Step 2's routing. |
+| `empty` | No arguments (or `resume` with no slug). Fall through to the incomplete-lifecycle-dirs scan (see Step 2's empty-arguments fallback). |
+| `error` | A reserved word (`wontfix`/`resume`/`complete`) given with no slug. Report that the verb needs a target and stop. |
+
+**Explicit-phase-override route**: when the helper returns a non-empty `phase` for a resolved `feature` (the `complete` mode, or a `feature` invocation whose word #2 is a phase token), enter that phase directly rather than deferring to Step 2's artifact detector (`cortex-common detect-phase` routes on artifacts and ignores an explicit phase). Warn if prerequisite artifacts are missing (e.g., entering Plan without research.md).
 
 Use lowercase-kebab-case for directory naming. When linked to a backlog item, use the canonical `slugify()` from `cortex_command.common`.
 
@@ -166,7 +185,7 @@ Specify and Plan each retain a single user-facing approval surface at §4 of the
 
 Auto-proceed except where a phase reference defines a kept pause. The canonical, parity-tested inventory of those deliberate `AskUserQuestion` sites lives in [kept-pauses.md](${CLAUDE_SKILL_DIR}/references/kept-pauses.md) (enforced by `tests/test_lifecycle_kept_pauses_parity.py`).
 
-If the user invokes `/cortex-core:lifecycle <phase>` to jump to a specific phase, honor the request but warn if prerequisite artifacts are missing (e.g., entering Plan without research.md).
+To jump to a specific phase, name the feature — `/cortex-core:lifecycle <feature> <phase>` — and Step 1's explicit-phase-override route enters the requested phase, warning if prerequisite artifacts are missing (e.g., entering Plan without research.md). A bare phase token with no feature (`/cortex-core:lifecycle plan`) does not resolve to an active feature; Step 1 surfaces the feature-required message instead.
 
 For criticality override syntax and the criticality behavior matrix (which phases run, model selection, parallel-vs-single dispatch), see [criticality-matrix.md](${CLAUDE_SKILL_DIR}/references/criticality-matrix.md).
 
