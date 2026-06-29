@@ -50,8 +50,6 @@ import sys
 from pathlib import Path
 from typing import List, Optional, Set, Tuple
 
-import yaml
-
 from cortex_command.common import (
     CortexProjectRootError,
     _resolve_user_project_root,
@@ -65,24 +63,57 @@ FALLBACK_NOTE_TEMPLATE = (
 )
 
 
-def _parse_frontmatter(path: Path) -> dict:
-    """Return the YAML frontmatter dict, or ``{}`` on absence/parse failure."""
-    try:
-        with open(path, "r", encoding="utf-8") as fh:
-            if fh.readline().rstrip("\r\n") != "---":
-                return {}
-            lines: List[str] = []
-            for line in fh:
-                if line.rstrip("\r\n") == "---":
-                    break
-                lines.append(line)
-    except OSError:
-        return {}
-    try:
-        data = yaml.safe_load("".join(lines))
-    except yaml.YAMLError:
-        return {}
-    return data or {}
+def _frontmatter_lines(text: str) -> Optional[List[str]]:
+    """Return the lines inside the leading ``---`` fence, or ``None``."""
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return None
+    block: List[str] = []
+    for line in lines[1:]:
+        if line.strip() == "---":
+            return block
+        block.append(line)
+    return None  # unterminated frontmatter
+
+
+def _unquote(value: str) -> str:
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+        return value[1:-1]
+    return value
+
+
+def _extract_tags(block: List[str]) -> List[str]:
+    """Extract the ``tags:`` list from frontmatter lines (stdlib-only).
+
+    Handles the inline flow form (``tags: [a, b, c]`` / ``tags: []``) and the
+    block-sequence form (``tags:`` then indented ``- a`` lines). Avoids a YAML
+    dependency so the read-only verb stays stdlib-only and runs under the
+    dual-channel wrapper's system-``python3`` branch.
+    """
+    for i, line in enumerate(block):
+        stripped = line.strip()
+        if not (stripped == "tags:" or stripped.startswith("tags:")):
+            continue
+        value = stripped[len("tags:"):].strip()
+        if value.startswith("[") and value.endswith("]"):
+            inner = value[1:-1].strip()
+            if not inner:
+                return []
+            return [_unquote(p.strip()) for p in inner.split(",")]
+        if value:
+            return [_unquote(value)]  # inline scalar (unusual) — single tag
+        # Block-sequence form: collect subsequent ``- item`` lines.
+        items: List[str] = []
+        for sub in block[i + 1:]:
+            s = sub.strip()
+            if s.startswith("- "):
+                items.append(_unquote(s[2:].strip()))
+            elif s == "":
+                continue
+            else:
+                break
+        return items
+    return []
 
 
 def _read_tags(project_root: Path, feature_slug: Optional[str]) -> List[str]:
@@ -96,13 +127,15 @@ def _read_tags(project_root: Path, feature_slug: Optional[str]) -> List[str]:
     index_path = (
         project_root / "cortex" / "lifecycle" / feature_slug / "index.md"
     )
-    if not index_path.is_file():
+    try:
+        text = index_path.read_text(encoding="utf-8")
+    except OSError:
         return []
-    raw = _parse_frontmatter(index_path).get("tags")
-    if not isinstance(raw, list):
+    block = _frontmatter_lines(text)
+    if block is None:
         return []
     # Correction (i): strip empty/whitespace tags before matching.
-    return [t.strip() for t in raw if isinstance(t, str) and t.strip()]
+    return [t.strip() for t in _extract_tags(block) if t.strip()]
 
 
 def _section_lines(text: str, heading: str) -> List[str]:
