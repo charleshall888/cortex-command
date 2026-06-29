@@ -21,6 +21,7 @@ from unittest.mock import patch
 import pytest
 
 from cortex_command.pipeline.worktree import (
+    WorktreeInfo,
     _resolve_branch_name,
     create_worktree,
     resolve_worktree_root,
@@ -634,3 +635,225 @@ def test_mcp_json_propagation_and_deny_invariant(tmp_path):
         "trust handoff for the spawned claude session."
     )
     assert worktree_mcp.read_text() == mcp_content
+
+
+# ---------------------------------------------------------------------------
+# Inside-repo containment contract for create_worktree() (Requirements 1-3, 9).
+#
+# Task 1 (commit 804012d1) folded an inside-repo containment check out of the
+# implement.md heredoc into create_worktree(): a same-repo (not cross_repo)
+# worktree whose resolved path escapes the repo raises
+# ValueError("worktree_escapes_repo: ..."), placed BEFORE the idempotent
+# worktree_path.exists() early-return so it gates EVERY return path. The
+# cross_repo / $TMPDIR branch is exempt.
+#
+# These are the first automated coverage of that contract. Each case is a
+# module-level function with an EXACT name so the verification can select it by
+# nodeid; a missing/renamed case fails loud (pytest exit 5 "no tests ran").
+# The assertions match the containment-specific "worktree_escapes_repo" message
+# (NOT a bare ValueError) because a generic `git worktree add` failure also
+# raises ValueError.
+# ---------------------------------------------------------------------------
+
+
+def test_containment_fresh_same_repo_ok(monkeypatch, tmp_path):
+    """(a) Fresh same-repo create returns WorktreeInfo with no raise."""
+    monkeypatch.delenv("CORTEX_WORKTREE_ROOT", raising=False)
+    isolated_tmpdir = tmp_path / "tmp"
+    isolated_tmpdir.mkdir()
+    monkeypatch.setenv("TMPDIR", str(isolated_tmpdir))
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    branch = _init_git_repo(repo)
+
+    with patch("cortex_command.pipeline.worktree._repo_root", return_value=repo):
+        info = create_worktree("containment-fresh-ok", base_branch=branch)
+
+    assert isinstance(info, WorktreeInfo)
+    # The default branch (c) placement resolves inside the repo.
+    assert info.path.resolve().is_relative_to(repo.resolve())
+
+
+def test_containment_fresh_override_escape(monkeypatch, tmp_path):
+    """(b) CORTEX_WORKTREE_ROOT outside the repo on a FRESH feature raises.
+
+    The message must contain ``worktree_escapes_repo`` — a bare ValueError
+    assertion would also pass on a generic `git worktree add` failure, so the
+    containment-specific message is what discriminates.
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    branch = _init_git_repo(repo)
+
+    outside = tmp_path / "outside-root"
+    outside.mkdir()
+    monkeypatch.setenv("CORTEX_WORKTREE_ROOT", str(outside))
+
+    with patch("cortex_command.pipeline.worktree._repo_root", return_value=repo):
+        with pytest.raises(ValueError) as exc_info:
+            create_worktree("containment-fresh-escape", base_branch=branch)
+
+    assert "worktree_escapes_repo" in str(exc_info.value)
+
+
+def test_containment_idempotent_registered_escape(monkeypatch, tmp_path):
+    """(c) A PRE-EXISTING, REGISTERED out-of-repo worktree still raises.
+
+    LOAD-BEARING: the only test that proves Task 1's placement. The worktree is
+    registered via `git worktree add` so worktree_path.exists() is True and the
+    porcelain list would otherwise drive the idempotent early-return. The guard
+    must fire BEFORE that early-return and raise ``worktree_escapes_repo``.
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    branch = _init_git_repo(repo)
+
+    outside = tmp_path / "outside-root"
+    outside.mkdir()
+    monkeypatch.setenv("CORTEX_WORKTREE_ROOT", str(outside))
+
+    feature = "containment-registered-escape"
+    registered_path = outside / feature
+    # Register the out-of-repo worktree so it is a valid, listed worktree —
+    # this is what would trip the idempotent return without the guard.
+    subprocess.run(
+        [
+            "git", "worktree", "add", str(registered_path),
+            "-b", f"pipeline/{feature}", branch,
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+        cwd=str(repo),
+    )
+    assert registered_path.exists()  # exists()==True path is now exercised
+
+    with patch("cortex_command.pipeline.worktree._repo_root", return_value=repo):
+        with pytest.raises(ValueError) as exc_info:
+            create_worktree(feature, base_branch=branch)
+
+    assert "worktree_escapes_repo" in str(exc_info.value)
+
+
+def test_containment_repo_unresolvable(monkeypatch, tmp_path):
+    """(d) An unresolvable repo root surfaces a failure (raises).
+
+    Patches _repo_root to raise the same CalledProcessError that
+    `git rev-parse --show-toplevel` raises outside any git repo.
+    """
+    monkeypatch.delenv("CORTEX_WORKTREE_ROOT", raising=False)
+
+    def _boom():
+        raise subprocess.CalledProcessError(128, ["git", "rev-parse", "--show-toplevel"])
+
+    with patch("cortex_command.pipeline.worktree._repo_root", side_effect=_boom):
+        with pytest.raises(subprocess.CalledProcessError):
+            create_worktree("containment-unresolvable", base_branch="main")
+
+
+def test_containment_cross_repo_exempt(monkeypatch, tmp_path):
+    """(e) Negative control: cross-repo ($TMPDIR) branch is exempt.
+
+    repo_path + session_id select the cross_repo branch, whose $TMPDIR path is
+    legitimately outside the repo. The containment guard must NOT fire.
+    """
+    monkeypatch.delenv("CORTEX_WORKTREE_ROOT", raising=False)
+    isolated_tmpdir = tmp_path / "tmp"
+    isolated_tmpdir.mkdir()
+    monkeypatch.setenv("TMPDIR", str(isolated_tmpdir))
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    branch = _init_git_repo(repo)
+
+    info = create_worktree(
+        "containment-cross-repo",
+        base_branch=branch,
+        repo_path=repo,
+        session_id="s",
+    )
+
+    assert isinstance(info, WorktreeInfo)
+    # The cross-repo worktree lives under $TMPDIR, outside the repo — and that
+    # is allowed because the guard is exempt on the explicit-repo_path branch.
+    assert info.path.resolve().is_relative_to(isolated_tmpdir.resolve())
+    assert not info.path.resolve().is_relative_to(repo.resolve())
+
+
+def test_containment_symlinked_repo_root_not_flagged(monkeypatch, tmp_path):
+    """(f) A symlinked repo root is NOT falsely flagged as an escape.
+
+    This is the only case proving _is_worktree_inside_repo resolves BOTH
+    operands: _repo_root returns the UNRESOLVED symlink path while branch (c)'s
+    .resolve() collapses the worktree path to the real target. If only one
+    operand were resolved, relative_to would fail and the legitimate same-repo
+    case would raise. Uses a real on-disk symlink (supported on this platform).
+    """
+    monkeypatch.delenv("CORTEX_WORKTREE_ROOT", raising=False)
+    isolated_tmpdir = tmp_path / "tmp"
+    isolated_tmpdir.mkdir()
+    monkeypatch.setenv("TMPDIR", str(isolated_tmpdir))
+
+    real_repo = tmp_path / "real-repo"
+    real_repo.mkdir()
+    branch = _init_git_repo(real_repo)
+
+    symlink_repo = tmp_path / "repo-symlink"
+    symlink_repo.symlink_to(real_repo)
+
+    with patch(
+        "cortex_command.pipeline.worktree._repo_root",
+        return_value=symlink_repo,
+    ):
+        info = create_worktree("containment-symlinked", base_branch=branch)
+
+    assert isinstance(info, WorktreeInfo)
+    # The legitimate same-repo worktree resolves under the real repo target.
+    assert info.path.resolve().is_relative_to(real_repo.resolve())
+
+
+def test_containment_overnight_same_repo_override_escape(monkeypatch, tmp_path):
+    """(g) Overnight same-repo path (repo_path=None, session_id set) escapes.
+
+    With repo_path=None, cross_repo is False even though session_id is given,
+    so an out-of-repo CORTEX_WORKTREE_ROOT must trip the guard. Locks that the
+    guard governs the overnight same-repo path, not just the interactive one.
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    branch = _init_git_repo(repo)
+
+    outside = tmp_path / "outside-root"
+    outside.mkdir()
+    monkeypatch.setenv("CORTEX_WORKTREE_ROOT", str(outside))
+
+    with patch("cortex_command.pipeline.worktree._repo_root", return_value=repo):
+        with pytest.raises(ValueError) as exc_info:
+            create_worktree(
+                "containment-overnight-escape",
+                base_branch=branch,
+                repo_path=None,
+                session_id="overnight-id",
+            )
+
+    assert "worktree_escapes_repo" in str(exc_info.value)
+
+
+def test_interactive_dash_vs_slash_resolve(monkeypatch, tmp_path):
+    """Dash ``interactive-{slug}`` resolves FLAT; slash yields the phantom nest.
+
+    Proves the dash form is the correct resolve shape
+    (.claude/worktrees/interactive-{slug}) while the slash form produces the
+    nested .claude/worktrees/interactive/{slug} phantom path.
+    """
+    monkeypatch.delenv("CORTEX_WORKTREE_ROOT", raising=False)
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    with patch("cortex_command.pipeline.worktree._repo_root", return_value=repo):
+        dash = resolve_worktree_root("interactive-myslug", session_id=None)
+        slash = resolve_worktree_root("interactive/myslug", session_id=None)
+
+    assert str(dash).endswith(".claude/worktrees/interactive-myslug")
+    assert str(slash).endswith(".claude/worktrees/interactive/myslug")
