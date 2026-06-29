@@ -22,7 +22,7 @@ Present questions to the user for review. Add any questions they raise.
 
 ### 1a. Load Requirements Context
 
-Load requirements using the shared tag-based loading protocol — read the **load-requirements** sibling reference at the absolute path the discovery body resolved and propagated (the `${CLAUDE_SKILL_DIR}/../lifecycle/references/load-requirements.md` target established in discovery SKILL.md Step 3) and follow it. Use requirements to inform research — identify where this topic intersects with established requirements and constraints. If no `cortex/requirements/` directory or files exist, note this and skip this step.
+Load requirements using the shared tag-based loading protocol (`load-requirements.md`): run `cortex-load-requirements` (discovery has no lifecycle index, so omit `--feature` — the verb falls back to project.md + Global Context), read every listed non-skipped path into context, and inject the printed path list downstream (relay any fallback note). Use requirements to inform research — identify where this topic intersects with established requirements and constraints. If no `cortex/requirements/` directory or files exist, note this and skip this step.
 
 If a concept you need is not yet defined in the glossary, treat the absence as a signal to surface the term in the next requirements interview.
 

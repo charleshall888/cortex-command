@@ -9,7 +9,7 @@ Two-stage review: spec compliance first, then code quality. Complex tier only. T
 - Read `cortex/lifecycle/{feature}/spec.md` for requirements
 - Identify files changed during implementation by reading the git log for commits since the lifecycle started, or by comparing plan.md's file lists
 - Read `cortex/lifecycle/{feature}/plan.md` for the verification strategy
-- Load requirements docs following the load-requirements.md protocol at the propagated absolute path. Record the full list of loaded requirements files (project.md + matched area docs) for injection into the reviewer prompt; when the fallback applies (no tags match or no area docs are found), note: "no area docs matched for tags: {tags}; drift check covers project.md only".
+- Load requirements docs following the shared tag-based loading protocol (`load-requirements.md`): run `cortex-load-requirements --feature {feature}`, read every listed non-skipped path, and record the printed path list for injection into the reviewer prompt. When the verb emits its no-match fallback note (no area docs matched), the drift check covers project.md only.
 
 ### 2. Launch Review Sub-Task
 
@@ -28,7 +28,7 @@ You are reviewing the {feature} implementation against its specification.
 Read `{spec_path}` before beginning the review.
 
 ## Project Requirements
-{list of requirements docs loaded in §1, each on its own line with path and summary; if only project.md loaded, note 'only project.md loaded — no area docs matched tags'}
+{the path list cortex-load-requirements printed in §1, each path on its own line; if the verb emitted its no-match fallback note, relay that note instead}
 
 ## Changed Files
 {list of files modified during implementation}

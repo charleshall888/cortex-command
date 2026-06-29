@@ -12,7 +12,7 @@ The input is a raw topic name or description. There is no backlog item to resolv
 
 ### 2. Load Requirements Context
 
-Load requirements using the shared tag-based loading protocol — read the **load-requirements** sibling reference at the absolute path the discovery body resolved and propagated (the `${CLAUDE_SKILL_DIR}/../lifecycle/references/load-requirements.md` target established in discovery SKILL.md Step 3) and follow it. If no `cortex/requirements/` directory or files exist, note this and skip to §3.
+Load requirements using the shared tag-based loading protocol (`load-requirements.md`): run `cortex-load-requirements` (discovery has no lifecycle index, so omit `--feature` — the verb falls back to project.md + Global Context), read every listed non-skipped path into context, and inject the printed path list into any downstream prompt that must know what was in scope (relay any fallback note). If no `cortex/requirements/` directory or files exist, note this and skip to §3.
 
 If a concept you need is not yet defined in the glossary, treat the absence as a signal to surface the term in the next requirements interview.
 

@@ -27,7 +27,7 @@ Branch on the exit code:
 
 ### 2. Load Requirements Context
 
-Load requirements using the shared tag-based loading protocol — read the protocol at the propagated absolute path (target: `${CLAUDE_SKILL_DIR}/../lifecycle/references/load-requirements.md`) and follow it. If no `cortex/requirements/` directory or files exist, note this and proceed.
+Load requirements using the shared tag-based loading protocol (`load-requirements.md`): run `cortex-load-requirements --feature {slug}`, read every listed non-skipped path into context, and inject the printed path list into any downstream prompt that must know what was in scope (relay any fallback note). If no `cortex/requirements/` directory or files exist, note this and proceed.
 
 ### 3. Confidence Assessment
 
