@@ -70,6 +70,21 @@ REGISTRY_DOCS_PATH = "docs/internals/events-registry.md"
 # narrative mentions of a registered name are not failures).
 EVENT_NAME_RE = re.compile(r'"event"\s*:\s*"([a-z_][a-z0-9_]*)"')
 
+# Epic #336 routes deterministic emissions through the
+# ``cortex-lifecycle-event log --event <name>`` verb instead of a raw
+# ``"event": "X"`` literal, so the scanner must also recognize the flag form —
+# both ``--event <name>`` and ``--event=<name>`` — to keep gate coverage once a
+# literal is removed. The token is anchored on ``--event`` followed by exactly
+# one space or one ``=`` and a lowercase-snake event name, so doc placeholders
+# like ``--event <event_name>`` (leading ``<``) do NOT match. Wrapped /
+# line-split invocations (a newline between ``--event`` and its value) are NOT
+# matched — the migration authors single-line invocations. Like the whole-body
+# EVENT_NAME_RE scan, a prose / inline-code mention such as ``the --event NAME
+# flag`` also captures ``NAME``: a registered name reads as documented-as-wired
+# (not a failure), while an unregistered token fails the gate (the registry's
+# job is to document names).
+EVENT_FLAG_RE = re.compile(r"--event[ =]([a-z_][a-z0-9_]*)")
+
 # Schema constants — see spec R5.
 ALLOWED_CATEGORIES: frozenset[str] = frozenset(
     {"live", "audit-affordance", "deprecated-pending-removal"}
@@ -360,10 +375,18 @@ def load_registry(
 
 
 def extract_emissions(text: str) -> list[tuple[int, str]]:
-    """Return [(line, event_name), ...] for every ``"event": "<name>"`` in text."""
+    """Return [(line, event_name), ...] for every emission marker in text.
+
+    Recognizes both the raw ``"event": "<name>"`` literal (EVENT_NAME_RE) and
+    the ``cortex-lifecycle-event`` flag form ``--event <name>`` /
+    ``--event=<name>`` (EVENT_FLAG_RE — see its definition for the anchoring
+    and the documented prose-collision property).
+    """
     out: list[tuple[int, str]] = []
     for idx, line in enumerate(text.splitlines(), start=1):
         for m in EVENT_NAME_RE.finditer(line):
+            out.append((idx, m.group(1)))
+        for m in EVENT_FLAG_RE.finditer(line):
             out.append((idx, m.group(1)))
     return out
 

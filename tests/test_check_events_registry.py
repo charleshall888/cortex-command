@@ -87,6 +87,16 @@ _ALPHA_LIVE_ROW = (
 )
 
 
+# A live row for ``phase_transition`` — the registered event used by the
+# ``--event`` flag-form recognition cases below.
+_PHASE_TRANSITION_LIVE_ROW = (
+    "| `phase_transition` | `per-feature-events-log` | `gate-enforced` | "
+    "`skills/lifecycle/references/plan.md` | "
+    "`cortex_command/pipeline/metrics.py:1` | "
+    "`live` | `2026-05-11` |  |  |  |"
+)
+
+
 # ---------------------------------------------------------------------------
 # Case 1: unregistered skill-prompt name fails pre-commit
 # ---------------------------------------------------------------------------
@@ -339,3 +349,101 @@ def test_staged_deep_nested_file_flags_via_real_git(tmp_path: Path) -> None:
     assert "MISSING_REGISTRY" not in out, f"registry not reached:\n{out}"
     assert deep in out, f"deep path missing from violation output\n{out}"
     assert shallow in out, f"depth-1 path missing from violation output\n{out}"
+
+
+# ---------------------------------------------------------------------------
+# #330 R7: scanner recognizes the ``--event <name>`` / ``--event=<name>``
+# flag form (verb-routed emissions), in addition to the ``"event": "X"`` literal.
+# ---------------------------------------------------------------------------
+
+
+def test_event_flag_space_form_registered_passes(tmp_path: Path) -> None:
+    """``--event phase_transition`` (space form) for a registered event passes."""
+    _write_registry(tmp_path, _registry_with_rows(_PHASE_TRANSITION_LIVE_ROW))
+    _write_skill_prompt(
+        tmp_path,
+        "skills/lifecycle/references/plan.md",
+        "```bash\ncortex-lifecycle-event log --event phase_transition "
+        "--feature f --set from=plan --set to=implement\n```\n",
+    )
+
+    result = _run(["--staged"], tmp_path)
+
+    assert result.returncode == 0, result.stderr.decode()
+    assert result.stderr == b""
+
+
+def test_event_flag_equals_form_registered_passes(tmp_path: Path) -> None:
+    """``--event=phase_transition`` (equals form) for a registered event passes."""
+    _write_registry(tmp_path, _registry_with_rows(_PHASE_TRANSITION_LIVE_ROW))
+    _write_skill_prompt(
+        tmp_path,
+        "skills/lifecycle/references/plan.md",
+        "```bash\ncortex-lifecycle-event log --event=phase_transition "
+        "--feature f\n```\n",
+    )
+
+    result = _run(["--staged"], tmp_path)
+
+    assert result.returncode == 0, result.stderr.decode()
+    assert result.stderr == b""
+
+
+def test_event_flag_unregistered_fails(tmp_path: Path) -> None:
+    """``--event bogus_unregistered_xyz`` (no registry row) fails the gate."""
+    _write_registry(tmp_path, _registry_with_rows(_PHASE_TRANSITION_LIVE_ROW))
+    _write_skill_prompt(
+        tmp_path,
+        "skills/example/SKILL.md",
+        "```bash\ncortex-lifecycle-event log --event bogus_unregistered_xyz "
+        "--feature f\n```\n",
+    )
+
+    result = _run(["--staged"], tmp_path)
+
+    assert result.returncode == 1, result.stderr.decode()
+    stderr = result.stderr.decode()
+    assert "UNREGISTERED_EVENT" in stderr
+    assert "bogus_unregistered_xyz" in stderr
+
+
+def test_event_flag_placeholder_does_not_match(tmp_path: Path) -> None:
+    """``--event <event_name>`` (leading ``<``) is a placeholder, not an emission.
+
+    The unregistered token ``event_name`` is NOT scanned, so the file passes —
+    proving the anchor rejects the angle-bracket doc placeholder.
+    """
+    _write_registry(tmp_path, _registry_with_rows(_PHASE_TRANSITION_LIVE_ROW))
+    _write_skill_prompt(
+        tmp_path,
+        "skills/example/SKILL.md",
+        "```\ncortex-lifecycle-event log --event <event_name> "
+        "--feature {slug}\n```\n",
+    )
+
+    result = _run(["--staged"], tmp_path)
+
+    assert result.returncode == 0, result.stderr.decode()
+    assert result.stderr == b""
+
+
+def test_event_flag_prose_collision_unregistered_fails(tmp_path: Path) -> None:
+    """A prose / inline-code ``--event <token>`` mention is scanned (documented).
+
+    An inline-code phrase like ``the --event totally_unregistered flag`` also
+    captures the token; an unregistered token fails the gate — the documented
+    prose-collision property (the registry's job is to document names).
+    """
+    _write_registry(tmp_path, _registry_with_rows(_PHASE_TRANSITION_LIVE_ROW))
+    _write_skill_prompt(
+        tmp_path,
+        "skills/example/SKILL.md",
+        "Pass the `--event totally_unregistered` flag to set the event name.\n",
+    )
+
+    result = _run(["--staged"], tmp_path)
+
+    assert result.returncode == 1, result.stderr.decode()
+    stderr = result.stderr.decode()
+    assert "UNREGISTERED_EVENT" in stderr
+    assert "totally_unregistered" in stderr
