@@ -7,3 +7,4 @@
 {"ts": "2026-06-29T17:17:31Z", "event": "phase_transition", "feature": "offload-load-requirementsmd-selection-to-a", "from": "plan", "to": "implement"}
 {"ts": "2026-06-29T17:48:51Z", "event": "phase_transition", "feature": "offload-load-requirementsmd-selection-to-a", "tier": "complex", "from": "implement", "to": "review"}
 {"ts": "2026-06-29T17:56:38Z", "event": "review_verdict", "feature": "offload-load-requirementsmd-selection-to-a", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-06-29T18:02:28Z", "event": "feature_complete", "feature": "offload-load-requirementsmd-selection-to-a", "tasks_total": 9, "rework_cycles": 0, "merge_anchor": "merge"}

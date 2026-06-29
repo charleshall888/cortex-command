@@ -2,12 +2,16 @@
 schema_version: "1"
 uuid: 9c60730c-dc4d-4fab-bb81-1aced8f84d17
 title: Offload load-requirements.md selection to a cortex-load-requirements verb
-status: backlog
+status: complete
 priority: low
 type: chore
 created: 2026-06-25
-updated: 2026-06-26
+updated: 2026-06-29
 parent: 336
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/offload-load-requirementsmd-selection-to-a/spec.md
+areas: ['lifecycle']
 ---
 ## Why
 
