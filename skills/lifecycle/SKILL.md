@@ -43,7 +43,7 @@ It emits one JSON object `{"mode": "...", "feature": "...", "phase": "..."}`. Ro
 
 | `mode` | Action |
 |--------|--------|
-| `wontfix` | Abandon the feature: invoke the wontfix verb with `feature` as the slug, report its outcome, and **halt** — this route is terminal/short-circuiting; do not fall through to Step 2. |
+| `wontfix` | Abandon the feature: run `cortex-lifecycle-wontfix <feature> --reason "<short rationale>"` (the slug is the parser's `feature`), report its outcome, and **halt** — this route is terminal/short-circuiting; do not fall through to Step 2. On exit 2 (ambiguous backlog slug), surface the candidate list and ask the operator to re-invoke with `--backlog-slug`. |
 | `resume` | Resume `feature`: route into Step 2 phase-detection, but if `cortex/lifecycle/<feature>/` does not exist, report "no such lifecycle to resume" and stop — do not create it (that is bare `<feature>`'s behavior). |
 | `complete` | Enter the Complete phase for `feature` via the explicit-phase-override route below (`phase` is `complete`). |
 | `phase` | A bare phase token with no feature. Surface "specify a feature, e.g. `/cortex-core:lifecycle <feature> <phase>`" and stop — do not create a lifecycle. |
