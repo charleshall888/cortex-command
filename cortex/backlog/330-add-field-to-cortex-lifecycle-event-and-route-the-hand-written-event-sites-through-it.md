@@ -2,12 +2,17 @@
 schema_version: "1"
 uuid: f5fac405-3dc4-4d4f-b147-3c8084614ea4
 title: Add --field to cortex-lifecycle-event and route the hand-written event sites through it
-status: backlog
+status: complete
 priority: low
 type: chore
 created: 2026-06-25
-updated: 2026-06-26
+updated: 2026-06-29
 parent: 336
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/add-field-to-cortex-lifecycle-event/spec.md
+areas: ['lifecycle']
+lifecycle_phase: plan
 ---
 ## Why
 

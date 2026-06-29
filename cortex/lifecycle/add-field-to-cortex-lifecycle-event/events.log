@@ -10,3 +10,4 @@
 {"ts": "2026-06-29T22:44:37Z", "event": "phase_transition", "feature": "add-field-to-cortex-lifecycle-event", "tier": "complex", "from": "implement", "to": "review"}
 {"ts": "2026-06-29T22:57:53Z", "event": "review_verdict", "feature": "add-field-to-cortex-lifecycle-event", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
 {"ts": "2026-06-29T22:57:53Z", "event": "phase_transition", "feature": "add-field-to-cortex-lifecycle-event", "from": "review", "to": "complete"}
+{"ts": "2026-06-29T23:03:23Z", "event": "feature_complete", "feature": "add-field-to-cortex-lifecycle-event", "tasks_total": 12, "rework_cycles": 0, "merge_anchor": "merge"}
