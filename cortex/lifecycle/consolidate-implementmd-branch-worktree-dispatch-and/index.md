@@ -2,7 +2,7 @@
 feature: consolidate-implementmd-branch-worktree-dispatch-and
 parent_backlog_uuid: 512a7b4d-e097-4b13-b941-e170ef75189b
 parent_backlog_id: 332
-artifacts: [research, spec, plan]
+artifacts: [research, spec, plan, review]
 tags: []
 created: 2026-06-29
 updated: 2026-06-29
