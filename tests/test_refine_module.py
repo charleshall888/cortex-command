@@ -23,6 +23,7 @@ isolate the working directory.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -659,3 +660,183 @@ def test_reconcile_clarify_provenance_marker(
         1 for row in _read_jsonl(events_log) if row.get("gate") == "clarify_reconcile"
     )
     assert gate_count == 2  # both tier and criticality reconciled
+
+
+# ---------------------------------------------------------------------------
+# #322 Phase 2: --backend structural guard
+#
+# On a non-local backend a passed --backlog-slug is ignored (no local file is
+# read) and a stderr diagnostic is emitted; a trailing-whitespace
+# 'cortex-backlog' value is stripped and treated as local. The default arm
+# stays byte-identical, verified against a hand-written contract literal (NOT
+# captured from the production serializer) with ts masked via a raw-string
+# regex substitution so a key-order/separator regression cannot be normalized
+# away.
+# ---------------------------------------------------------------------------
+
+
+def _mask_ts(line: str) -> str:
+    """Mask the non-deterministic ts via raw-string substitution on the bytes.
+
+    Deliberately NOT a json.loads -> json.dumps round-trip: a round-trip would
+    re-serialize the production line with this test's separators and normalize
+    away the exact key-order/separator regression the literal exists to catch.
+    """
+    return re.sub(r'"ts": "[^"]*"', '"ts": "<TS>"', line.strip())
+
+
+def test_backend_guard_emit_ignores_stale_local_file(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    # A stale local backlog file with non-default values sits on disk.
+    _write_backlog(tmp_path, "X", ["complexity: complex", "criticality: high"])
+
+    rc = main(
+        [
+            "emit-lifecycle-start",
+            "--backend",
+            "github",
+            "--backlog-slug",
+            "X",
+            "--lifecycle-slug",
+            "feat",
+        ]
+    )
+    assert rc == 0
+
+    seed = _read_jsonl(_events_log_path(tmp_path, "feat"))[0]
+    # The stale X.md (complex/high) was NOT read — seed carries the defaults.
+    assert seed["tier"] == "simple"
+    assert seed["criticality"] == "medium"
+
+    err = capsys.readouterr().err
+    assert "ignoring --backlog-slug" in err
+    assert "github" in err
+
+
+def test_backend_guard_reconcile_ignores_stale_local_file(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    _write_backlog(tmp_path, "X", ["complexity: complex", "criticality: high"])
+    _seed_events(tmp_path, "feat", [_lifecycle_start_line("simple", "medium")])
+
+    # Non-local backend + stale slug, no explicit flags. If the file were read,
+    # reconcile would ratchet to complex/high; the guard drops the slug, so the
+    # reduced state stays at the seed defaults and no override is appended.
+    rc = main(
+        [
+            "reconcile-clarify",
+            "--backend",
+            "github",
+            "--backlog-slug",
+            "X",
+            "--lifecycle-slug",
+            "feat",
+        ]
+    )
+    assert rc == 0
+
+    events_log = _events_log_path(tmp_path, "feat")
+    assert _reduce_events(events_log) == {"tier": "simple", "criticality": "medium"}
+    assert _count_event(events_log, "complexity_override") == 0
+    assert _count_event(events_log, "criticality_override") == 0
+
+    err = capsys.readouterr().err
+    assert "ignoring --backlog-slug" in err
+    assert "github" in err
+
+
+def test_backend_guard_trailing_whitespace_treated_as_local(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    _write_backlog(tmp_path, "X", ["complexity: complex", "criticality: high"])
+
+    # A trailing newline (as a piped `cortex-read-backlog-backend` would yield)
+    # is stripped, so the value is treated as the local cortex-backlog arm.
+    rc = main(
+        [
+            "emit-lifecycle-start",
+            "--backend",
+            "cortex-backlog\n",
+            "--backlog-slug",
+            "X",
+            "--lifecycle-slug",
+            "feat",
+        ]
+    )
+    assert rc == 0
+
+    seed = _read_jsonl(_events_log_path(tmp_path, "feat"))[0]
+    # Treated as local → X.md WAS read.
+    assert seed["tier"] == "complex"
+    assert seed["criticality"] == "high"
+    assert capsys.readouterr().err == ""
+
+
+def test_emit_row_byte_identical_to_hardcoded_contract(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Hand-written contract literal pinning key ORDER + SEPARATORS. NOT captured
+    # from the production serializer — a regression in either fails this assert.
+    expected = (
+        '{"schema_version": 1, "ts": "<TS>", "event": "lifecycle_start", '
+        '"feature": "feat", "tier": "simple", "criticality": "medium", '
+        '"entry_point": "refine"}'
+    )
+    for i, backend_args in enumerate([[], ["--backend", "cortex-backlog"]]):
+        workdir = tmp_path / f"run{i}"
+        workdir.mkdir()
+        monkeypatch.chdir(workdir)
+
+        rc = main(
+            ["emit-lifecycle-start", "--lifecycle-slug", "feat", *backend_args]
+        )
+        assert rc == 0
+
+        line = _events_log_path(workdir, "feat").read_text().strip()
+        assert _mask_ts(line) == expected
+
+
+def test_reconcile_override_row_byte_identical_to_hardcoded_contract(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Hand-written contract literal for the override row (the OTHER verb gaining
+    # --backend), pinning its key order + separators per spec R7 ("each verb").
+    expected = (
+        '{"ts": "<TS>", "event": "complexity_override", "feature": "feat", '
+        '"from": "simple", "to": "complex", "gate": "clarify_reconcile"}'
+    )
+    for i, backend_args in enumerate([[], ["--backend", "cortex-backlog"]]):
+        workdir = tmp_path / f"run{i}"
+        workdir.mkdir()
+        monkeypatch.chdir(workdir)
+        _seed_events(workdir, "feat", [_lifecycle_start_line("simple", "medium")])
+
+        rc = main(
+            [
+                "reconcile-clarify",
+                "--lifecycle-slug",
+                "feat",
+                "--complexity",
+                "complex",
+                *backend_args,
+            ]
+        )
+        assert rc == 0
+
+        overrides = [
+            ln
+            for ln in _events_log_path(workdir, "feat").read_text().splitlines()
+            if '"complexity_override"' in ln
+        ]
+        assert len(overrides) == 1
+        assert _mask_ts(overrides[0]) == expected
