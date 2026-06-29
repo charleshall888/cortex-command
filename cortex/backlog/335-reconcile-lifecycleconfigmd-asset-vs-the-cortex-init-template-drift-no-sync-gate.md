@@ -2,11 +2,15 @@
 schema_version: "1"
 uuid: 35493faf-613f-425a-b469-016e78397922
 title: Reconcile lifecycle.config.md asset vs the cortex-init template (drift, no sync gate)
-status: backlog
+status: complete
 priority: medium
 type: bug
 created: 2026-06-25
-updated: 2026-06-25
+updated: 2026-06-29
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/reconcile-lifecycleconfigmd-asset-vs-the-cortex/spec.md
+areas: ['lifecycle']
 ---
 ## Why
 
