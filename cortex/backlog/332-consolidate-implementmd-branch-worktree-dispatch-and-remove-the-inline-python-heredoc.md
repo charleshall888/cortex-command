@@ -2,12 +2,16 @@
 schema_version: "1"
 uuid: 512a7b4d-e097-4b13-b941-e170ef75189b
 title: Consolidate implement.md branch/worktree dispatch and remove the inline Python heredoc
-status: backlog
+status: complete
 priority: low
 type: chore
 created: 2026-06-25
-updated: 2026-06-26
+updated: 2026-06-29
 parent: 336
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/consolidate-implementmd-branch-worktree-dispatch-and/spec.md
+areas: ['lifecycle']
 ---
 ## Why
 

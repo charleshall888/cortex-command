@@ -14,3 +14,4 @@
 {"ts": "2026-06-29T18:43:28Z", "event": "phase_transition", "feature": "consolidate-implementmd-branch-worktree-dispatch-and", "tier": "complex", "from": "implement", "to": "review"}
 {"ts": "2026-06-29T18:49:24Z", "event": "review_verdict", "feature": "consolidate-implementmd-branch-worktree-dispatch-and", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
 {"ts": "2026-06-29T18:50:01Z", "event": "phase_transition", "feature": "consolidate-implementmd-branch-worktree-dispatch-and", "from": "review", "to": "complete"}
+{"ts": "2026-06-29T18:51:07Z", "event": "feature_complete", "feature": "consolidate-implementmd-branch-worktree-dispatch-and", "tasks_total": 6, "rework_cycles": 0, "merge_anchor": "merge"}
