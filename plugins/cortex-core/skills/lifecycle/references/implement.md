@@ -172,8 +172,8 @@ For each batch, in order:
 **Model**: `sonnet` for low/medium criticality, `opus` for high/critical (read criticality from events.log).
 
 After launching, append a `batch_dispatch` event to `cortex/lifecycle/{feature}/events.log`:
-```
-{"ts": "<ISO 8601>", "event": "batch_dispatch", "feature": "<name>", "batch": <N>, "tasks": [<task IDs in this batch>]}
+```bash
+cortex-lifecycle-event log --event batch_dispatch --feature <name> --set-json batch=<N> --set-json tasks=[<task IDs in this batch>]
 ```
 
 **c. Wait for batch completion**: All tasks in the batch must finish before proceeding.
@@ -237,8 +237,8 @@ Do not add features beyond what is specified.
 If re-entering from a Review phase with CHANGES_REQUESTED:
 
 Append a `phase_transition` event to `cortex/lifecycle/{feature}/events.log` to capture the rework cycle start:
-```
-{"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "from": "review", "to": "implement-rework"}
+```bash
+cortex-lifecycle-event log --event phase_transition --feature <name> --set from=review --set to=implement-rework
 ```
 
 1. Read `cortex/lifecycle/{feature}/review.md` for the reviewer's feedback
@@ -264,8 +264,8 @@ When all tasks are `[x]`, determine the next phase using both complexity tier an
 | critical    | **Review** | Review |
 
 Append a `phase_transition` event to `cortex/lifecycle/{feature}/events.log`:
-```
-{"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "tier": "simple|complex", "from": "implement", "to": "review|complete"}
+```bash
+cortex-lifecycle-event log --event phase_transition --feature <name> --set tier=<simple|complex> --set from=implement --set to=<review|complete>
 ```
 The `"to"` field is determined by the gating matrix above.
 
