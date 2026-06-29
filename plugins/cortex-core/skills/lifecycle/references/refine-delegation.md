@@ -11,12 +11,12 @@ Follow these steps when `cortex/lifecycle/{feature}/spec.md` does not exist and 
 4. **Event logging during delegation**: lifecycle owns `cortex/lifecycle/{feature}/events.log`. Log these events as `/cortex-core:refine` completes each phase:
 
    - After the full Clarify phase completes (including §3a critic review and any Q&A) — **before Research begins** — log `lifecycle_start` (tier and criticality come from the post-critic, post-Q&A values in context):
-     ```json
-     {"ts": "<ISO 8601>", "event": "lifecycle_start", "feature": "<name>", "tier": "simple|complex", "criticality": "<level>"}
+     ```bash
+     cortex-lifecycle-event log --event lifecycle_start --feature <name> --set tier=<simple|complex> --set criticality=<level>
      ```
    - After each phase completes, log a `phase_transition` event (one JSON object per boundary):
-     ```json
-     {"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "from": "<from>", "to": "<to>"}
+     ```bash
+     cortex-lifecycle-event log --event phase_transition --feature <name> --set from=<from> --set to=<to>
      ```
      Log a `phase_transition` row per boundary: clarify→research, research→specify, specify→plan.
 

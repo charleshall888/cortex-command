@@ -31,8 +31,8 @@ Before creating any artifacts or performing write-back, check whether the origin
 
    - **If `phase != none`** (a `cortex/lifecycle/{feature}/` directory exists):
      1. Append the following NDJSON event to `cortex/lifecycle/{feature}/events.log` (one JSON object per line):
-        ```json
-        {"ts": "<ISO 8601>", "event": "feature_complete", "feature": "<name>"}
+        ```bash
+        cortex-lifecycle-event log --event feature_complete --feature <name>
         ```
         Intentionally omit `tasks_total` and `rework_cycles` — `plan.md` may not exist on this path. Do NOT add those fields with value 0.
      2. Gate this write-back on the backend resolved via `` `cortex-read-backlog-backend` `` (see Backend routing). On `cortex-backlog`, run:
