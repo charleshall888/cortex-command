@@ -25,8 +25,8 @@ So when the resolved backend ≠ `cortex-backlog` AND the §3b decision would sk
 
 **Log+skip** when `tier = complex` AND `criticality = low`: append the event below to `cortex/lifecycle/{feature}/events.log` so the skip rate is observable, then proceed to user approval:
 
-```
-{"ts": "<ISO 8601>", "event": "lifecycle_critical_review_skipped", "feature": "<name>", "phase": "<phase>", "tier": "complex", "criticality": "low"}
+```bash
+cortex-lifecycle-event log --event lifecycle_critical_review_skipped --feature <name> --set phase=<phase> --set tier=complex --set criticality=low
 ```
 
 Substitute `<phase>` with the active phase name (`specify` or `plan`).

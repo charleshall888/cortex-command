@@ -4,8 +4,8 @@
 
 The user can change criticality at any time by requesting it explicitly. When overriding, append a `criticality_override` event:
 
-```json
-{"ts": "<ISO 8601>", "event": "criticality_override", "feature": "<name>", "from": "<old>", "to": "<new>"}
+```bash
+cortex-lifecycle-event log --event criticality_override --feature <name> --set from=<old> --set to=<new>
 ```
 
 An automated **Clarify reconciliation** (emitted by `cortex-refine reconcile-clarify --lifecycle-slug {slug}` at Spec-phase entry) additionally carries an optional `gate: "clarify_reconcile"` field, so consumers that inspect `gate` can distinguish its provenance from a user-driven override (which omits `gate`) or an escalator-emitted override (which carries its own gate vocabulary). Consumers that read only `from`/`to` (e.g. `common.py`, `state_cli`) are unaffected.

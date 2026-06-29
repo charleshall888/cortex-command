@@ -188,8 +188,8 @@ Present the specification summary and use the AskUserQuestion tool to collect th
 Enumerate the options on that call explicitly as: `Approve` | `Request changes` | `Cancel`. Route on the response:
 
 - **Approve**: append a `spec_approved` event to `cortex/lifecycle/{feature}/events.log`, then append the `phase_transition` event from §5 below, then auto-advance to Plan. Proceed automatically — do not ask the user for confirmation again.
-  ```
-  {"ts": "<ISO 8601>", "event": "spec_approved", "feature": "<name>"}
+  ```bash
+  cortex-lifecycle-event log --event spec_approved --feature <name>
   ```
 - **Request changes**: collect the requested changes, revise the spec, and re-present the approval surface. Do not emit `spec_approved` on intermediate revision loops; only the final `Approve` selection emits the event.
 - **Cancel**: append a `lifecycle_cancelled` event and halt. The user can resume by re-invoking `/cortex-core:lifecycle`.
@@ -198,8 +198,8 @@ Enumerate the options on that call explicitly as: `Approve` | `Request changes` 
 
 On `Approve`, append a `phase_transition` event to `cortex/lifecycle/{feature}/events.log`:
 
-```
-{"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "from": "specify", "to": "plan"}
+```bash
+cortex-lifecycle-event log --event phase_transition --feature <name> --set from=specify --set to=plan
 ```
 
 ## Hard Gate
