@@ -5,3 +5,5 @@
 {"ts": "2026-06-29T13:06:53Z", "event": "spec_approved", "feature": "offload-load-requirementsmd-selection-to-a"}
 {"ts": "2026-06-29T17:17:31Z", "event": "plan_approved", "feature": "offload-load-requirementsmd-selection-to-a", "dispatch_choice": "trunk"}
 {"ts": "2026-06-29T17:17:31Z", "event": "phase_transition", "feature": "offload-load-requirementsmd-selection-to-a", "from": "plan", "to": "implement"}
+{"ts": "2026-06-29T17:48:51Z", "event": "phase_transition", "feature": "offload-load-requirementsmd-selection-to-a", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-06-29T17:56:38Z", "event": "review_verdict", "feature": "offload-load-requirementsmd-selection-to-a", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
