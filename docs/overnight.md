@@ -45,23 +45,7 @@ The overnight runner can be launched from any repo — not just cortex-command.
 
 ### Setup: cortex/lifecycle.config.md
 
-Before running overnight in a new repo, create a `cortex/lifecycle.config.md` at the repo root. A template lives at `skills/lifecycle/assets/lifecycle.config.md` in cortex-command:
-
-```yaml
----
-type: web-app              # web-app | cli-tool | library | game | other
-test-command: npm test      # shell command to validate merges
-# demo-command:             # e.g., godot res://main.tscn, uv run fastapi run src/main.py
-# demo-commands:
-#   - label: "Godot gameplay"
-#     command: "godot res://main.tscn"
-#   - label: "FastAPI dashboard"
-#     command: "uv run fastapi run src/main.py"
-skip-specify: false
-skip-review: false
-commit-artifacts: true
----
-```
+Before running overnight in a new repo, create a `cortex/lifecycle.config.md` at the repo root — run `cortex init` to scaffold it, or copy the template from the cortex-core plugin asset `skills/lifecycle/assets/lifecycle.config.md`. That asset's frontmatter is the canonical, annotated scaffolded field list (including the `backlog:` backend block), kept byte-identical to what `cortex init` scaffolds by a CI parity gate — see ADR-0017 — so it is the one place to copy from rather than an inline example that can drift.
 
 The most important field is **`test-command`**. This is the shell command that runs after each feature branch merges to the integration branch during overnight execution. If tests fail, the runner attempts automated repair via a repair agent. If repair fails, the feature is paused and surfaced in the morning report.
 
