@@ -2,11 +2,16 @@
 schema_version: "1"
 uuid: 20938276-d6e5-4bf3-b7bd-1770084f37fa
 title: Wire /cortex-core:lifecycle wontfix invocation and offload the workflow to an order-enforcing verb
-status: backlog
+status: in_progress
 priority: medium
 type: bug
 created: 2026-06-25
-updated: 2026-06-25
+updated: 2026-06-29
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/wire-cortex-corelifecycle-wontfix-invocation-and/spec.md
+areas: ['lifecycle']
+lifecycle_phase: plan
 ---
 ## Why
 

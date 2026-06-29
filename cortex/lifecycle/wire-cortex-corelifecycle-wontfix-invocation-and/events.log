@@ -1,0 +1,7 @@
+{"schema_version": 1, "ts": "2026-06-29T11:54:15Z", "event": "lifecycle_start", "feature": "wire-cortex-corelifecycle-wontfix-invocation-and", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-29T12:28:57Z", "event": "clarify_critic", "feature": "wire-cortex-corelifecycle-wontfix-invocation-and", "parent_epic_loaded": false, "findings_count": 5, "dispositions": {"apply": 4, "dismiss": 0, "ask": 1}, "applied_fixes_count": 4, "dismissals_count": 0, "status": "ok"}
+{"ts": "2026-06-29T13:10:07Z", "event": "complexity_override", "feature": "wire-cortex-corelifecycle-wontfix-invocation-and", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-06-29T13:10:07Z", "event": "criticality_override", "feature": "wire-cortex-corelifecycle-wontfix-invocation-and", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-06-29T13:43:52Z", "event": "spec_approved", "feature": "wire-cortex-corelifecycle-wontfix-invocation-and"}
+{"ts": "2026-06-29T18:55:41Z", "event": "plan_approved", "feature": "wire-cortex-corelifecycle-wontfix-invocation-and", "dispatch_choice": "trunk"}
+{"ts": "2026-06-29T18:55:41Z", "event": "phase_transition", "feature": "wire-cortex-corelifecycle-wontfix-invocation-and", "from": "plan", "to": "implement"}
