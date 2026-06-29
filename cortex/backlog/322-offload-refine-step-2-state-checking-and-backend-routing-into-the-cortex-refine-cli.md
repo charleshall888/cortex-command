@@ -2,11 +2,15 @@
 schema_version: "1"
 uuid: f58eb929-c4ec-4f64-b3ae-db01f9f9bc9f
 title: Offload refine Step 2 state-checking and backend routing into the cortex-refine CLI
-status: backlog
+status: complete
 priority: low
 type: chore
 created: 2026-06-24
-updated: 2026-06-24
+updated: 2026-06-29
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/offload-refine-step-2-state-checking/spec.md
+areas: ['skills']
 ---
 ## Why
 

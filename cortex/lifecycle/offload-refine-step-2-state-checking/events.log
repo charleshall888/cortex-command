@@ -13,3 +13,4 @@
 {"ts": "2026-06-29T20:08:57Z", "event": "phase_transition", "feature": "offload-refine-step-2-state-checking", "tier": "complex", "from": "implement", "to": "review"}
 {"ts": "2026-06-29T20:17:01Z", "event": "review_verdict", "feature": "offload-refine-step-2-state-checking", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
 {"ts": "2026-06-29T20:17:44Z", "event": "phase_transition", "feature": "offload-refine-step-2-state-checking", "from": "review", "to": "complete"}
+{"ts": "2026-06-29T20:23:09Z", "event": "feature_complete", "feature": "offload-refine-step-2-state-checking", "tasks_total": 7, "rework_cycles": 0, "merge_anchor": "merge"}
