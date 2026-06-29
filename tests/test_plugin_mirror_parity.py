@@ -25,9 +25,10 @@ MIRROR_DIR = (
     REPO_ROOT / "plugins" / "cortex-core" / "skills" / "lifecycle" / "references"
 )
 
+# specify.md relocated to skills/refine/references/ (commit 8c2ec8ce); its
+# mirror parity is now covered by the glob in test_dual_source_reference_parity.py.
 MIRRORED_FILENAMES = (
     "plan.md",
-    "specify.md",
     "orchestrator-review.md",
 )
 

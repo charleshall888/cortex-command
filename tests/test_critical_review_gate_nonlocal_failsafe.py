@@ -50,7 +50,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 GATE_REF = (
     REPO_ROOT / "skills" / "lifecycle" / "references" / "critical-review-gate.md"
 )
-SPECIFY_REF = REPO_ROOT / "skills" / "lifecycle" / "references" / "specify.md"
+SPECIFY_REF = REPO_ROOT / "skills" / "refine" / "references" / "specify.md"
 
 # The console-script every consumer resolves the backend through. The fail-safe
 # keys on its output (≠ `cortex-backlog`); pinning the token catches a rename or

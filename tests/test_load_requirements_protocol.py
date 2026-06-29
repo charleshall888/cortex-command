@@ -36,8 +36,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # exempt — see ``skills/critical-review/SKILL.md`` "Requirements loading:
 # deliberately exempt" block.
 CONSUMER_REFS: tuple[Path, ...] = (
-    REPO_ROOT / "skills" / "lifecycle" / "references" / "clarify.md",
-    REPO_ROOT / "skills" / "lifecycle" / "references" / "specify.md",
+    REPO_ROOT / "skills" / "refine" / "references" / "clarify.md",
+    REPO_ROOT / "skills" / "refine" / "references" / "specify.md",
     REPO_ROOT / "skills" / "lifecycle" / "references" / "review.md",
     REPO_ROOT / "skills" / "discovery" / "references" / "clarify.md",
     REPO_ROOT / "skills" / "discovery" / "references" / "research.md",
@@ -69,7 +69,7 @@ _CONSUMER_RULE_RE = re.compile(r"absence as a signal|surface the term")
 # removed by harness-token-efficiency-trim Task 10.
 RULE_CARRIERS: tuple[Path, ...] = (
     REPO_ROOT / "skills" / "lifecycle" / "references" / "load-requirements.md",
-    REPO_ROOT / "skills" / "lifecycle" / "references" / "specify.md",
+    REPO_ROOT / "skills" / "refine" / "references" / "specify.md",
     REPO_ROOT / "skills" / "discovery" / "references" / "clarify.md",
     REPO_ROOT / "skills" / "discovery" / "references" / "research.md",
 )
