@@ -19,7 +19,6 @@ import argparse
 import collections
 import json
 import os
-import re
 import statistics
 import sys
 import tempfile
@@ -39,22 +38,30 @@ assert sys.version_info >= (3, 11), (
 # Backfill detection
 # ---------------------------------------------------------------------------
 
-# Synthetic timestamps sit at exact-minute intervals from midnight:
-# T00:00:00Z, T00:01:00Z, ... T00:09:00Z.  Hour 0, minute 0-9, second 0.
-_BACKFILL_RE = re.compile(r"T00:0\d:00Z$")
+# Backfill is an EXPLICIT property of an event row, carried by a
+# ``"backfilled": true`` marker. The previous shape heuristic
+# (``T00:0X:00Z`` timestamps) targeted a phantom class: real overnight events
+# routinely land at exact-minute, first-ten-minutes-after-midnight UTC
+# timestamps, so the heuristic silently nulled real phase/total durations.
+# Detection is therefore marker-driven — an unmarked row is real; only an
+# explicitly-marked row is treated as backfilled.
 
 
-def is_backfilled(ts_str: str) -> bool:
-    """Return True if *ts_str* looks like a backfilled synthetic timestamp.
+def is_backfilled(event: dict[str, Any]) -> bool:
+    """Return True iff *event* carries an explicit backfill marker.
 
-    Detection heuristic: the time component matches ``T00:0X:00Z`` where
-    X is a single digit — i.e., exact-minute intervals in the first ten
-    minutes after midnight UTC.
+    Backfill is an explicit property: a synthetic/backfilled row is written
+    with ``"backfilled": true``. Any row lacking the marker is a real event,
+    so its duration is computed normally.
+
+    The old ``T00:0X:00Z`` shape heuristic was removed because it targeted a
+    phantom class — real overnight events legitimately occur in the first ten
+    minutes after midnight UTC, and the heuristic nulled their durations.
 
     Args:
-        ts_str: An ISO 8601 timestamp string ending in ``Z``.
+        event: A parsed event dict.
     """
-    return bool(_BACKFILL_RE.search(ts_str))
+    return event.get("backfilled") is True
 
 
 # ---------------------------------------------------------------------------
@@ -167,8 +174,8 @@ def _phase_durations(
 ) -> list[dict[str, Any]]:
     """Derive phase durations from consecutive phase_transition events.
 
-    A duration is ``null`` when either the start or end timestamp is
-    backfilled (synthetic).
+    A duration is ``null`` when either endpoint event carries an explicit
+    backfill marker (see ``is_backfilled``).
 
     Args:
         transitions: Sorted list of ``phase_transition`` event dicts.
@@ -182,7 +189,7 @@ def _phase_durations(
         curr = transitions[i]
         nxt = transitions[i + 1]
 
-        if is_backfilled(curr["ts"]) or is_backfilled(nxt["ts"]):
+        if is_backfilled(curr) or is_backfilled(nxt):
             secs: float | None = None
         else:
             try:
@@ -286,11 +293,11 @@ def extract_feature_metrics(events: list[dict[str, Any]]) -> dict[str, Any] | No
     )
 
     # ---- Total duration ----
-    # From first event to feature_complete — only if neither endpoint is
-    # backfilled.
+    # From first event to feature_complete — only if neither endpoint event
+    # carries an explicit backfill marker.
     first_ts_str = events[0]["ts"]
     last_ts_str = final_complete["ts"]
-    if is_backfilled(first_ts_str) or is_backfilled(last_ts_str):
+    if is_backfilled(events[0]) or is_backfilled(final_complete):
         total_duration_seconds: float | None = None
     else:
         total_duration_seconds = (

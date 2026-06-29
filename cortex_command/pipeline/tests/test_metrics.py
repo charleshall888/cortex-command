@@ -1678,8 +1678,10 @@ def test_compute_aggregates_phase_durations_segmented_by_merge_anchor(tmp_path):
     def _make_events_log(tmp_dir, feature_name, anchor, duration_seconds, path_name):
         """Write a minimal events.log for one feature with two phase_transition
         events separated by *duration_seconds* and an optional merge_anchor."""
-        # Use a non-backfilled start time: T12:00:00Z does not match _BACKFILL_RE
-        # (which is T00:0\d:00Z) so _phase_durations will compute real durations.
+        # Backfill is now marker-driven (an explicit ``"backfilled": true``
+        # field), so these unmarked rows always compute real durations
+        # regardless of timestamp shape. (T12:00:00Z historically dodged the
+        # since-removed T00:0\d:00Z shape heuristic.)
         from datetime import datetime, timedelta, timezone
         dt0 = datetime(2026, 5, 10, 12, 0, 0, tzinfo=timezone.utc)
         dt1 = dt0 + timedelta(seconds=duration_seconds)
@@ -2048,6 +2050,74 @@ def test_extract_all_feature_metrics_tolerates_non_utf8_log(tmp_path):
     by_feature = {m["feature"]: m for m in results}
     assert feature in by_feature
     assert by_feature[feature]["tier"] == "complex"
+
+
+def test_backfill_detection_is_marker_driven_not_shape():
+    """#330 R5: backfill is an explicit marker, not a timestamp shape.
+
+    (a) A real, UNMARKED event at a backfill-SHAPED timestamp
+        (``2026-06-29T00:05:00Z`` / ``...00:09:00Z`` — both matched the
+        removed ``T00:0\\d:00Z`` heuristic) classifies real and its
+        ``_phase_durations`` / total-duration compute NON-null, exercised
+        through the real ``extract_feature_metrics`` call path (the bug fix:
+        these durations were silently nulled before).
+    (b) An event dict carrying the explicit ``"backfilled": true`` marker
+        classifies backfilled and nulls its duration (the marker contract).
+    """
+    from cortex_command.pipeline.metrics import (
+        _phase_durations,
+        extract_feature_metrics,
+        is_backfilled,
+    )
+
+    # ---- Predicate-level: marker, not shape ----
+    backfill_shaped = {"ts": "2026-06-29T00:05:00Z", "event": "phase_transition"}
+    assert is_backfilled(backfill_shaped) is False  # shape no longer triggers
+    assert is_backfilled({"backfilled": True}) is True
+    assert is_backfilled({"backfilled": False}) is False
+    assert is_backfilled({"backfilled": "true"}) is False  # strict ``is True``
+
+    # ---- (a) Real (unmarked) backfill-shaped rows compute durations ----
+    real_transitions = [
+        {"ts": "2026-06-29T00:05:00Z", "event": "phase_transition",
+         "feature": "f", "from": "specify", "to": "specify"},
+        {"ts": "2026-06-29T00:09:00Z", "event": "phase_transition",
+         "feature": "f", "from": "plan", "to": "plan"},
+    ]
+    real_durations = _phase_durations(real_transitions)
+    assert real_durations[0]["duration_seconds"] == 240.0, real_durations
+
+    real_events = [
+        {"ts": "2026-06-29T00:05:00Z", "event": "lifecycle_start",
+         "feature": "f", "tier": "simple"},
+        *real_transitions,
+        {"ts": "2026-06-29T00:09:00Z", "event": "feature_complete",
+         "feature": "f"},
+    ]
+    real_metrics = extract_feature_metrics(real_events)
+    assert real_metrics is not None
+    assert real_metrics["total_duration_seconds"] == 240.0
+    assert real_metrics["phase_durations"][0]["duration_seconds"] == 240.0
+
+    # ---- (b) Explicitly-marked rows still null their durations ----
+    marked_transitions = [
+        {**real_transitions[0], "backfilled": True},
+        {**real_transitions[1], "backfilled": True},
+    ]
+    marked_durations = _phase_durations(marked_transitions)
+    assert marked_durations[0]["duration_seconds"] is None, marked_durations
+
+    marked_events = [
+        {"ts": "2026-06-29T00:05:00Z", "event": "lifecycle_start",
+         "feature": "f", "tier": "simple", "backfilled": True},
+        *marked_transitions,
+        {"ts": "2026-06-29T00:09:00Z", "event": "feature_complete",
+         "feature": "f", "backfilled": True},
+    ]
+    marked_metrics = extract_feature_metrics(marked_events)
+    assert marked_metrics is not None
+    assert marked_metrics["total_duration_seconds"] is None
+    assert marked_metrics["phase_durations"][0]["duration_seconds"] is None
 
 
 if __name__ == "__main__":
