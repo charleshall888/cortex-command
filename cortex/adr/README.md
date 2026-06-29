@@ -68,3 +68,28 @@ Skills, hooks, and overnight-runner code that touch ADR content fall into three 
 - **SHOULD surface.** A skill **SHOULD surface** the relevant ADR(s) to the user at decision points the ADR speaks to — by linking the ADR number in spec output, plan output, or review output — so the human can confirm the ADR still applies before the work proceeds. Surfacing is the observability hook that makes the other two rules auditable from the approval surface.
 
 Together: automatic compliance for accepted decisions, automatic abstention from non-accepted ones, visible surfacing so the discipline is reviewable.
+
+## Index
+
+The canonical set of ADRs is the `NNNN-*.md` directory listing itself; this index is a convenience pointer. Read each ADR's frontmatter for its current `status`.
+
+- [0001-file-based-state-no-database](0001-file-based-state-no-database.md)
+- [0002-cli-wheel-plus-plugin-distribution](0002-cli-wheel-plus-plugin-distribution.md)
+- [0003-per-repo-sandbox-registration](0003-per-repo-sandbox-registration.md)
+- [0004-multi-step-complete-and-interactive-worktree-lifecycle](0004-multi-step-complete-and-interactive-worktree-lifecycle.md)
+- [0005-repo-relative-worktree-placement](0005-repo-relative-worktree-placement.md)
+- [0006-cortex-init-consumer-claude-md-authorization-surface](0006-cortex-init-consumer-claude-md-authorization-surface.md)
+- [0007-decompose-groups-pieces-into-tickets](0007-decompose-groups-pieces-into-tickets.md)
+- [0008-picker-selection-authorizes-enterworktree](0008-picker-selection-authorizes-enterworktree.md)
+- [0009-skill-path-resolution-for-plugin-distributed-skills](0009-skill-path-resolution-for-plugin-distributed-skills.md)
+- [0010-task-id-is-task-identity-not-number](0010-task-id-is-task-identity-not-number.md)
+- [0011-out-of-process-overnight-runner-supervision](0011-out-of-process-overnight-runner-supervision.md)
+- [0012-merged-plan-approval-and-dispatch-selection](0012-merged-plan-approval-and-dispatch-selection.md)
+- [0013-overnight-cli-repo-root-resolution-precedence](0013-overnight-cli-repo-root-resolution-precedence.md)
+- [0014-resolve-best-claude-cli-and-resilient-effort-handling](0014-resolve-best-claude-cli-and-resilient-effort-handling.md)
+- [0015-review-could-not-run-vs-dispatch-crash-split](0015-review-could-not-run-vs-dispatch-crash-split.md)
+- [0016-configurable-backlog-backend-and-llm-as-adapter](0016-configurable-backlog-backend-and-llm-as-adapter.md)
+- [0017-reconcile-and-gate-lifecycle-config-sources](0017-reconcile-and-gate-lifecycle-config-sources.md)
+- [0018-structural-lifecycle-invocation-grammar](0018-structural-lifecycle-invocation-grammar.md)
+- [0019-skill-helper-verb-backend-structural-guard](0019-skill-helper-verb-backend-structural-guard.md)
+- [0020-lifecycle-event-emission-contract](0020-lifecycle-event-emission-contract.md)
