@@ -195,7 +195,7 @@ Announce that `/cortex-core:refine` is complete. Summarize:
 This advisory runs only on the standalone `/refine` path. Detect that path with a concrete signal: standalone `/refine` never logs `phase_transition` events (it writes only `lifecycle_start` and `*_override` rows), whereas a run under `/cortex-core:lifecycle` already carries `phase_transition` rows from its phase boundaries — the early `clarify→research` and `research→specify` transitions are on disk before any spec exists. Check:
 
 ```bash
-grep -c '"event": "phase_transition"' cortex/lifecycle/{lifecycle-slug}/events.log
+grep -cE '"event":[[:space:]]*"phase_transition"' cortex/lifecycle/{lifecycle-slug}/events.log
 ```
 
 - `0` → standalone: assess overnight-suitability and surface the advisory below when warranted.
