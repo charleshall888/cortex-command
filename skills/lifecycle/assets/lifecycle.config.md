@@ -15,6 +15,17 @@ commit-artifacts: true
 # Gate for the overnight critical-tier dual-plan synthesizer dispatch path.
 # Default false (fail-closed) until the operator validates the path and flips to true.
 synthesizer_overnight_enabled: false
+# Which ticketing backend cortex uses. Default cortex-backlog = the local
+# cortex/backlog/ files; behavior is byte-identical to today when this block
+# is absent or set to cortex-backlog.
+backlog:
+  backend: cortex-backlog
+  # backend: github-issues   # external tracker (best-effort, see below)
+  # backend: jira            # external tracker (best-effort, see below)
+  # backend: none            # opt out of all cortex ticket management
+  # Freeform prose hint the LLM reads to drive an EXTERNAL tracker best-effort.
+  # External backends are best-effort now and harden in #318. Example:
+  # instructions: "Use the `gh` CLI; label cortex issues `cortex`; epics are milestones"
 ---
 
 # Lifecycle Configuration
