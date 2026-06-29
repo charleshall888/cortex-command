@@ -49,12 +49,15 @@ Branch on the returned `resume` value (`clarify | research | spec | complete`) a
 - **`spec`** — research.md exists without a spec; resume at the Spec phase, where the Research Sufficiency Check (`${CLAUDE_SKILL_DIR}/references/clarify.md` §6) applies at phase entry.
 - **`clarify`** — neither artifact exists; start from the beginning at the Clarify phase.
 
-**Resolve the backlog backend once** with `` `cortex-read-backlog-backend` `` (argless; it prints the resolved backend and exits 0). Carry the resolved value through the rest of refine — it keys the seed, write-back, and reconcile routing below. The default `cortex-backlog` arm is byte-identical to today; the non-local arm omits `--backlog-slug` and feeds Clarify's computed tier/criticality forward as explicit flags.
+**Resolve the backlog backend once** with `` `cortex-read-backlog-backend` `` (argless; it prints the resolved backend and exits 0). Carry the resolved value through the rest of refine — it keys the seed, write-back, and reconcile routing below, and it gates the §3b critical-review decision.
 
-After determining the resume point, seed the `lifecycle_start` row so `events.log` carries it before any other event is logged. The subcommand is idempotent — safe on resume. Route on the resolved backend:
+After determining the resume point, seed the `lifecycle_start` row so `events.log` carries it before any other event is logged. The subcommand is idempotent — safe on resume. One unconditional call, passing the resolved backend:
 
-- **`cortex-backlog`** (the default arm) → invoke `cortex-refine emit-lifecycle-start --backlog-slug {backlog-filename-slug} --lifecycle-slug {lifecycle-slug}` (omit `--backlog-slug` for Context B). Unchanged from today.
-- **any non-`cortex-backlog` backend** → invoke `cortex-refine emit-lifecycle-start --lifecycle-slug {lifecycle-slug}` (omit `--backlog-slug`), so `_read_backlog_frontmatter(None)` returns the seed defaults without reading or validating any local backlog file.
+```bash
+cortex-refine emit-lifecycle-start --backend {resolved} --lifecycle-slug {lifecycle-slug} --backlog-slug {backlog-filename-slug}
+```
+
+Omit `--backlog-slug` for Context B (no backlog item). You do **not** branch on the backend to decide whether to pass the slug: pass it whenever a local backlog item exists, and the verb's `--backend` guard structurally drops it (and emits a diagnostic) on any non-`cortex-backlog` backend, so no stale local file is read. The `cortex-backlog` arm stays byte-identical to today.
 
 **Seed→reconcile→gate ordering invariant**: keep the seed → reconcile → §3b read ordering intact so the §3b read observes the ratcheted (not seed-default) tier — critical on non-`cortex-backlog` backends, where the gate would otherwise skip silently at `tier = simple`. Full rationale in `${CLAUDE_SKILL_DIR}/../lifecycle/references/criticality-matrix.md` under "Seed → reconcile → gate ordering".
 
@@ -137,10 +140,10 @@ If the `## Open Questions` section is absent from `research.md`, the gate passes
 
 ## Step 5: Spec Phase
 
-**Reconcile lifecycle state to the Clarify assessment first** — the `lifecycle_start` seed carries pre-Clarify tier/criticality; reconcile so the §3a/§3b reads observe the Clarify-assessed values. Key the form on the backend resolved in Step 2:
+**Reconcile lifecycle state to the Clarify assessment first** — the `lifecycle_start` seed carries pre-Clarify tier/criticality; reconcile so the §3a/§3b reads observe the Clarify-assessed values. One unconditional call, passing the backend resolved in Step 2 as `--backend {resolved}`; the remaining flags follow the item-existence context (the verb's `--backend` guard owns the non-local slug-drop, so you no longer branch on the backend here):
 
-- **Context A** (a `cortex-backlog` item with a backlog file): `cortex-refine reconcile-clarify --lifecycle-slug {lifecycle-slug} --backlog-slug {backlog-filename-slug}` — re-sources tier/criticality from backlog frontmatter (unchanged from today).
-- **Context B** (no backlog file, OR any non-`cortex-backlog` backend): `cortex-refine reconcile-clarify --lifecycle-slug {lifecycle-slug} --complexity {value} --criticality {value}` — omits `--backlog-slug` (so no local file is read or validated) and passes **Clarify's computed** `{value}` tier/criticality as explicit flags. Under a non-local backend this is the live path: it ratchets the lifecycle state up from the seed defaults so the critical-review gate stays correctly fed (the seed→reconcile→§3b ordering invariant from Step 2). Pass Clarify's computed values here — not the seed defaults and not literals.
+- **Context A** (a local backlog item exists): `cortex-refine reconcile-clarify --backend {resolved} --lifecycle-slug {lifecycle-slug} --backlog-slug {backlog-filename-slug}` — re-sources tier/criticality from backlog frontmatter on the local arm (unchanged from today); on a non-local backend the guard drops the slug structurally.
+- **Context B** (no backlog item): `cortex-refine reconcile-clarify --backend {resolved} --lifecycle-slug {lifecycle-slug} --complexity {value} --criticality {value}` — passes **Clarify's computed** `{value}` tier/criticality as explicit flags. On a non-local backend this is the live path: it ratchets the lifecycle state up from the seed defaults so the critical-review gate stays correctly fed (the seed→reconcile→§3b ordering invariant from Step 2). Pass Clarify's computed values here — not the seed defaults and not literals.
 
 Idempotent — safe on resume; no-op under `/cortex-core:lifecycle`.
 

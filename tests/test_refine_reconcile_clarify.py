@@ -240,33 +240,38 @@ def test_reconcile_clarify_non_local_explicit_flags_ratchets_tier(
 
 
 # ---------------------------------------------------------------------------
-# R8 structural (value-aware): the refine non-local reconcile branch passes the
-# computed {value} placeholder tokens (NOT the seed literals simple/medium) and
-# omits --backlog-slug, while the local branch is unchanged (--backlog-slug
-# re-sources from backlog frontmatter).
+# R8 structural (#322 one-call shape): the backend-keyed two-arm prose is gone
+# — both verbs lead with --backend {resolved} and the verb's guard owns the
+# non-local slug-drop. The item-existence (Context A/B) distinction is still
+# POSITIVELY pinned (Context A passes the backlog slug; Context B passes the
+# computed {value} tier/criticality), and the value-aware #285/#317 negative
+# control (no seed-default literals) is preserved.
 # ---------------------------------------------------------------------------
 
 
 def test_refine_non_local_reconcile_branch_is_value_aware() -> None:
     body = _REFINE_SKILL.read_text(encoding="utf-8")
 
-    # Local (Context A) branch unchanged: re-sources via --backlog-slug.
+    # One-call shape: both verbs now lead with --backend {resolved}.
+    assert "emit-lifecycle-start --backend {resolved}" in body
+    assert "reconcile-clarify --backend {resolved}" in body
+
+    # Positive contiguous-shape pins for the item-existence invariant. Context A
+    # still passes the backlog slug; Context B still passes the computed {value}
+    # tier/criticality. A collapse that dropped either flag set would fail here,
+    # so the invariant is positively guarded — not only negatively.
     assert (
-        "reconcile-clarify --lifecycle-slug {lifecycle-slug} "
-        "--backlog-slug {backlog-filename-slug}" in body
+        "reconcile-clarify --backend {resolved} --lifecycle-slug "
+        "{lifecycle-slug} --backlog-slug {backlog-filename-slug}" in body
+    )
+    assert (
+        "reconcile-clarify --backend {resolved} --lifecycle-slug "
+        "{lifecycle-slug} --complexity {value} --criticality {value}" in body
     )
 
-    # Non-local (Context B) reconcile branch: omits --backlog-slug and passes
-    # the computed {value} placeholder tokens as explicit flags.
-    non_local = (
-        "reconcile-clarify --lifecycle-slug {lifecycle-slug} "
-        "--complexity {value} --criticality {value}"
-    )
-    assert non_local in body
-    assert "--backlog-slug" not in non_local
-
-    # Value-aware: the non-local reconcile invocation must NOT hardcode the seed
-    # defaults — no `--complexity simple` / `--criticality medium` literal form.
+    # Value-aware negative control (#285/#317): the reconcile invocation must
+    # NOT hardcode the seed defaults — no `--complexity simple` /
+    # `--criticality medium` literal form.
     assert not re.search(r"reconcile-clarify[^\n]*--complexity\s+simple", body)
     assert not re.search(r"reconcile-clarify[^\n]*--criticality\s+medium", body)
 
