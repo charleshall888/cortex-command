@@ -4,7 +4,7 @@
 
 ## Problem Statement
 
-`skills/lifecycle/references/load-requirements.md` narrates a deterministic file-selection algorithm (~55–65% of the file) that the model hand-executes in lifecycle Review, refine Clarify/Specify, and discovery Clarify/Research. Hand-execution is unreliable and non-deterministic — four divergent fallback-note forms already appear in real artifacts. Offloading the *selection* into a `cortex-load-requirements` verb makes the algorithm enforced (not advisory), deterministic, and pinnable, and collapses the shared reference to "run it, read what it lists, inject the list." The model keeps the one irreducible part — reading file contents into context and the glossary-surfacing judgment. Benefits every lifecycle/discovery/refine phase; worth doing now as a tractable, high-leverage offload under epic #336.
+`skills/lifecycle/references/load-requirements.md` narrates a deterministic file-selection algorithm (~55–65% of the file) that the model hand-executes in lifecycle Review, refine Clarify/Specify, and discovery Clarify/Research. Hand-execution is unreliable and non-deterministic — four divergent fallback-note forms already appear in real artifacts. Offloading the *selection* into a `cortex-load-requirements` verb makes the algorithm enforced (not advisory), deterministic, and pinnable, and collapses the shared reference to "run it, read what it lists, inject the list." The model keeps the one irreducible part — reading file contents into context and the glossary-surfacing judgment. Benefits every lifecycle, discovery, and refine phase; worth doing now as a tractable, high-leverage offload under epic #336.
 
 ## Phases
 
@@ -57,7 +57,7 @@
 - **De-duplicating the glossary-surfacing line's 4 copies.** Separate concern; the RULE_CARRIER ratchet already designates `load-requirements.md` canonical.
 - **Building `--tags` or `--backlog-slug` arms.** Shelved as future escape hatches; no current consumer justifies them. (The standalone-refine-Context-A path is project.md-only today under faithful protocol execution — `refine/clarify.md` §1 reads only title/description/status, not tags, and no `index.md` exists at Clarify — so `--feature`-only introduces no regression; the `--backlog-slug` arm is the future path if deterministic backlog-tag loading there is ever wanted.)
 - **Unifying every historical fallback-string rendering.** The invariant is forward-deterministic verb output + correct selection set, not reproducing past LLM renderings.
-- **Touching the 3 SKILL.md path-propagation manifest entries** (`lifecycle/refine/discovery`). They stay valid because `load-requirements.md` remains a thin reference.
+- **Touching the 3 SKILL.md path-propagation manifest entries** (the lifecycle, refine, and discovery SKILL.md files). They stay valid because `load-requirements.md` remains a thin reference.
 - **Giving `specify.md` a live verb call.** Its §1 load is skipped by all callers; it remains a citation-only carrier.
 
 ## Edge Cases
