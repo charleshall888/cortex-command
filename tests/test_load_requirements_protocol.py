@@ -137,65 +137,31 @@ def test_critical_review_documents_deliberate_exemption() -> None:
     )
 
 
-def test_load_requirements_md_enumerates_protocol_steps_with_global_context() -> None:
-    """The protocol-of-record describes the expected steps in order.
+def test_load_requirements_md_drives_the_verb() -> None:
+    """The collapsed protocol-of-record drives cortex-load-requirements.
 
-    Verifies the load-requirements.md file contains the 5 numbered steps
-    described in spec R1, with step 1 expanded to cover the
-    add-project-glossary feature's `## Global Context` always-load list:
-    (1) load project.md AND every path enumerated in its
-    `## Global Context` section, recording absent entries as
-    `<path> (skipped: file absent)`; (2) read tags from index.md;
-    (3) case-insensitively match tags against Conditional Loading;
-    (4) load matched area docs; (5) fallback when tags empty/absent.
-
-    Step 1's invariant is no longer "single unconditional load" — it now
-    covers project.md plus the Global Context list. The test asserts the
-    expanded shape directly so a future edit that silently collapses the
-    Global Context read back into prose without surfacing the
-    skipped-entry contract is caught here.
+    After the #333 offload, load-requirements.md is a thin shim: the
+    deterministic selection (the 5 numbered steps, Global Context always-load,
+    the ``(skipped: file absent)`` contract, and the empty/absent-tags
+    fallback) moved into the ``cortex-load-requirements`` verb, whose actual
+    selection/fallback behavior is pinned by
+    ``tests/test_load_requirements_cli.py`` (the migration target for the two
+    former prose-shape tests this replaces). This test asserts the shim still
+    (a) names the verb, (b) keeps a ``## Protocol`` section, (c) carries the
+    tag-based-loading citation so consumers keep a ``_CITATION_RE`` match, and
+    (d) no longer hosts the ``## Matching Semantics`` prose (now in the verb).
     """
     assert LOAD_REQS_PATH.is_file(), LOAD_REQS_PATH
     text = LOAD_REQS_PATH.read_text(encoding="utf-8")
-    # Numbered steps 1-5 appear in order (markdown ordered-list form).
-    for n in range(1, 6):
-        assert re.search(rf"^{n}\.\s", text, re.MULTILINE), (
-            f"load-requirements.md missing numbered protocol step {n}.\n"
-            f"Expected an ordered-list entry starting with '{n}. '"
-        )
-    # The protocol must reference project.md (step 1's always-load anchor),
-    # the `## Global Context` section name (step 1's always-load list), the
-    # skipped-entry contract (step 1 → step 4 hand-off for absent files),
-    # the tags array (step 2), and the Conditional Loading section name
-    # (step 3) — these are the load-bearing nouns of the protocol.
-    skipped_re = re.compile(r"skipped: file absent|skipped because absent")
-    for required in ("project.md", "Global Context", "tags", "Conditional Loading"):
-        assert required in text, (
-            f"load-requirements.md missing required noun: {required!r}"
-        )
-    assert skipped_re.search(text), (
-        "load-requirements.md missing the absent-file skip contract; "
-        "expected one of: 'skipped: file absent' or 'skipped because absent' "
-        "to document how step 1 records Global Context entries whose file "
-        "is not present on disk."
+    assert "cortex-load-requirements" in text, (
+        "collapsed load-requirements.md must name the verb it drives"
     )
-
-
-def test_load_requirements_md_documents_empty_or_absent_tags_fallback() -> None:
-    """The protocol explicitly handles the empty/absent tags case.
-
-    Spec R1 acceptance language: ``grep -ciE
-    'tags.*empty|tags.*absent|no tags' load-requirements.md`` returns ≥1.
-    This is the documented fallback that prevents the loader from
-    erroring on lifecycles with no parent backlog item (or tag-less
-    backlog items).
-    """
-    text = LOAD_REQS_PATH.read_text(encoding="utf-8")
-    fallback_re = re.compile(r"tags.*empty|tags.*absent|no tags", re.IGNORECASE)
-    assert fallback_re.search(text), (
-        "load-requirements.md does not document the empty/absent tags "
-        "fallback. Expected one of: 'tags empty', 'tags absent', "
-        "or 'no tags' to appear (case-insensitive)."
+    assert "## Protocol" in text, "collapsed shim missing ## Protocol section"
+    assert _CITATION_RE.search(text), (
+        "collapsed load-requirements.md lost its tag-based-loading citation"
+    )
+    assert "## Matching Semantics" not in text, (
+        "## Matching Semantics should move into the verb / its --help"
     )
 
 
@@ -224,8 +190,9 @@ def _simulate_loader(
     Returns the set of file paths (as written in the Conditional Loading
     section, plus the unconditional ``project.md``) that the protocol
     would load given the supplied project.md text and the index.md
-    ``tags:`` array. Implements steps 1-5 of the protocol described in
-    ``skills/lifecycle/references/load-requirements.md``.
+    ``tags:`` array. Mirrors the tag-matching semantics now implemented by
+    the ``cortex-load-requirements`` verb
+    (``cortex_command/lifecycle/load_requirements_cli.py``).
     """
     # Step 1: always load project.md.
     loaded: set[str] = {"project.md"}
@@ -318,7 +285,7 @@ def test_protocol_simulation_fallback_when_tags_absent() -> None:
 def test_protocol_simulation_unmatched_tag_silently_dropped() -> None:
     """A tag word that matches no phrase is silently dropped (per spec).
 
-    Per the load-requirements.md "Matching Semantics" subsection: tags
+    Per the cortex-load-requirements verb's matching semantics: tags
     that match nothing are silently dropped; other tags still match
     independently. If no tag matches, project.md-only is loaded — same as
     the empty-tags fallback.
