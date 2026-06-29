@@ -30,7 +30,7 @@ Extract the deterministic requirements-file *selection* algorithm narrated in `s
   - No events: the module imports/writes nothing to `events.log` and registers no event token (R7).
   - Relocate the prose's `## Why this protocol` rationale into the module docstring as a one-line intent pointer ("the verb selects the minimal tag-relevant requirements set, avoiding under/over-loading"); the `## Matching Semantics` content becomes the verb's behavior and `--help` text.
 - **Verification**: run `python3 -m cortex_command.lifecycle.load_requirements_cli` from repo root — pass if exit 0 AND the first stdout line is exactly `cortex/requirements/project.md`; AND `grep -c '"event"' cortex_command/lifecycle/load_requirements_cli.py` = 0 (pass if 0). Fail otherwise.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Normalize the `project.md` Global Context glossary bullet (data fix)
 - **Files**: `cortex/requirements/project.md`
@@ -39,7 +39,7 @@ Extract the deterministic requirements-file *selection* algorithm narrated in `s
 - **Complexity**: simple
 - **Context**: The authoring contract is `skills/requirements-write/SKILL.md:34` (Global Context bullets must be full repo-relative paths). This is a set-fidelity correction, not a verb heuristic — the verb stays dumb and resolves the bullet literally (Task 1). LLM-rendered artifacts already render the full path, so output is unchanged. Commit with explicit pathspec (`git commit -- cortex/requirements/project.md`).
 - **Verification**: `grep -c '^- cortex/requirements/glossary.md' cortex/requirements/project.md` = 1 AND `grep -c '^- glossary.md$' cortex/requirements/project.md` = 0 — pass if both counts match.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Deploy console-script + dual-channel bin wrapper + parity test (atomic W003-safe wiring)
 - **Files**: `pyproject.toml`, `bin/cortex-load-requirements`, `tests/test_cortex_load_requirements_parity.py`, `plugins/cortex-core/bin/cortex-load-requirements`
@@ -52,7 +52,7 @@ Extract the deterministic requirements-file *selection* algorithm narrated in `s
   - `tests/test_cortex_load_requirements_parity.py`: model the sibling parity tests (e.g. `tests/test_cortex_load_parent_epic_parity.py`) for **test-file structure only** — **do not reuse the parity-replay harness** (there is no original bin script; the "original" is LLM prose, so there is nothing to replay). Two deliberate deviations from that model, both load-bearing: (1) the file MUST contain a path-qualified `bin/cortex-load-requirements` literal matching the scanner's `PATH_QUALIFIED_RE` — the cited model carries **zero** `bin/cortex-*` literals (it invokes via `[sys.executable, "-m", ...]`), which is NOT a W003 wiring signal, so a structurally-faithful copy would let W003 fire; this literal is the Wiring Co-Location carrier for the deployed script. (2) The file MUST define **≥1 real test function** that asserts something true (e.g. the bin wrapper exists + is executable, the `[project.scripts]` entry is registered, the path-qualified literal is present) — a literal-only file with no collected tests returns `pytest` exit code 5 and fails this task's own verification.
   - Regenerate the mirror with `just build-plugin`, then stage only this task's canonical files + `plugins/cortex-core/bin/cortex-load-requirements` (explicit pathspec — `just build-plugin` regenerates ALL mirrors; verify only this work's mirror diff is staged). Commit canonical + mirror together (drift hook).
 - **Verification**: `grep -c 'cortex-load-requirements = ' pyproject.toml` = 1 AND `test -x bin/cortex-load-requirements` (exit 0) AND `head -50 bin/cortex-load-requirements | grep -c cortex-log-invocation` ≥ 1 AND `CORTEX_COMMAND_FORCE_SOURCE=1 bin/cortex-load-requirements` exit 0 AND `python3 -m pytest tests/test_cortex_load_requirements_parity.py` exit 0 (≥1 test collected, all pass — not exit 5) AND `just check-parity --staged` exit 0 AND (after `just build-plugin`) `git diff --quiet -- plugins/cortex-core/bin/cortex-load-requirements` exit 0 — pass if all hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 4: Pin selection + fallback with discriminating unit, golden, and behavioral tests
 - **Files**: `tests/test_load_requirements_cli.py`
@@ -70,7 +70,7 @@ Extract the deterministic requirements-file *selection* algorithm narrated in `s
   - R8 assertion: with the live `project.md` data fix (Task 2) in place, assert the emitted Global Context line for the absent glossary is exactly `cortex/requirements/glossary.md (skipped: file absent)` — proving literal resolution, not a heuristic.
   - R7 behavioral: invoke the verb and assert no `events.log` is created or modified by the call (capture existence/mtime before and after).
 - **Verification**: `python3 -m pytest tests/test_load_requirements_cli.py` — pass if exit 0 (all tests pass).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5: Collapse `load-requirements.md` and reconcile the protocol-shape + #328 stale-path tests (same commit)
 - **Files**: `skills/lifecycle/references/load-requirements.md`, `tests/test_load_requirements_protocol.py`, `tests/test_load_requirements_cli.py`, `plugins/cortex-core/skills/lifecycle/references/load-requirements.md`
