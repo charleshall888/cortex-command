@@ -2,7 +2,7 @@
 feature: reconcile-lifecycleconfigmd-asset-vs-the-cortex
 parent_backlog_uuid: 35493faf-613f-425a-b469-016e78397922
 parent_backlog_id: 335
-artifacts: [research, spec, plan]
+artifacts: [research, spec, plan, review]
 tags: []
 created: 2026-06-29
 updated: 2026-06-29
