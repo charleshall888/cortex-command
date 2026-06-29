@@ -288,6 +288,51 @@ def _cmd_emit_lifecycle_start(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_resume_point(args: argparse.Namespace) -> int:
+    """Classify the refine resume state from lifecycle artifact-stat.
+
+    Read-only: stats ``cortex/lifecycle/{slug}/{spec,research}.md`` and prints a
+    single-line JSON object to stdout — no writes, no backend, no events. The
+    resume value is the load-bearing field; the two booleans are a convenience
+    for a data-driven warn message and a cleaner test surface.
+
+    Existence is ``is_file()`` (NOT ``exists()``): a directory named
+    ``spec.md``/``research.md`` does not count, while an empty-but-present
+    ``spec.md`` does (the non-empty check is a separate post-research gate).
+
+    Determination: ``spec ∧ research`` → ``complete``; ``spec ∧ ¬research`` →
+    ``research``; ``research ∧ ¬spec`` → ``spec``; else (incl. a missing
+    lifecycle dir) → ``clarify``. Always exits 0 — every state is a successful
+    determination, and there is no write path that could fail.
+    """
+    lifecycle_slug: str = args.lifecycle_slug
+
+    base = Path("cortex/lifecycle") / lifecycle_slug
+    spec_exists = (base / "spec.md").is_file()
+    research_exists = (base / "research.md").is_file()
+
+    if spec_exists and research_exists:
+        resume = "complete"
+    elif spec_exists:
+        resume = "research"
+    elif research_exists:
+        resume = "spec"
+    else:
+        resume = "clarify"
+
+    print(
+        json.dumps(
+            {
+                "resume": resume,
+                "spec_exists": spec_exists,
+                "research_exists": research_exists,
+            },
+            separators=(",", ":"),
+        )
+    )
+    return 0
+
+
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="cortex-refine",
@@ -366,6 +411,23 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     rc.set_defaults(func=_cmd_reconcile_clarify)
+
+    # resume-point
+    rp = sub.add_parser(
+        "resume-point",
+        help=(
+            "Classify the refine resume state from lifecycle artifact-stat. "
+            "Read-only: prints a single-line JSON object "
+            '{"resume":...,"spec_exists":...,"research_exists":...} to stdout '
+            "and exits 0 for every state."
+        ),
+    )
+    rp.add_argument(
+        "--lifecycle-slug",
+        required=True,
+        help="Lifecycle feature slug under cortex/lifecycle/.",
+    )
+    rp.set_defaults(func=_cmd_resume_point)
 
     return p
 
