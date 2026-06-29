@@ -131,54 +131,15 @@ worktree_path=$(cortex-worktree-create --feature interactive-{slug} --base-branc
 
 If creation fails: the wrapper writes `repr(exc)` to stderr and exits 1. Surface the stderr output to the user and exit §1a — do not proceed to handoff.
 
-**iv. Pre-flight check.** Verify the resolved worktree path lives inside the repo root. Since #260 reverted same-repo worktrees to `<repo>/.claude/worktrees/<feature>`, the path is covered by the project's trust scope automatically — no per-shell `sandbox.filesystem.allowWrite` / `additionalDirectories` registration is required. Run as a single Bash call:
-
-```bash
-python3 - <<'EOF'
-import subprocess, sys
-from pathlib import Path
-
-resolved = subprocess.run(
-    ["cortex-worktree-resolve", "interactive-{slug}"],
-    capture_output=True, text=True, check=False,
-)
-if resolved.returncode != 0:
-    sys.stderr.write(
-        "cortex-worktree-resolve failed; install cortex-core or set CORTEX_COMMAND_ROOT.\n"
-    )
-    sys.exit(2)
-worktree_path = Path(resolved.stdout.strip()).resolve()
-
-repo = subprocess.run(
-    ["git", "rev-parse", "--show-toplevel"],
-    capture_output=True, text=True, check=False,
-)
-if repo.returncode != 0:
-    sys.stderr.write("not inside a git repository.\n")
-    sys.exit(2)
-repo_root = Path(repo.stdout.strip()).resolve()
-
-try:
-    worktree_path.relative_to(repo_root)
-except ValueError:
-    sys.stderr.write(
-        f"resolved worktree {worktree_path} is not inside repo root {repo_root}; "
-        "expected <repo>/.claude/worktrees/<feature>.\n"
-    )
-    sys.exit(2)
-sys.exit(0)
-EOF
-```
-
-Exit-code contract: exit 0 = path is inside the repo, proceed; exit 2 = resolver failed, not in a git repo, or path escapes the repo root. On exit 2, halt §1a — do not cd or emit the event.
+The inside-repo containment check is no longer a separate pre-flight step here: `cortex-worktree-create` (step iii) now performs it inside `create_worktree` and exits 1 with a `worktree_escapes_repo` message if the resolved worktree path escapes the repo root, so a successful step-iii create already guarantees containment.
 
 **Step v — Auto-enter sequence**
 
-After the pre-flight check passes (exit 0), run operations in this order — the event must be emitted from inside the worktree so `_resolve_user_project_root_from_cwd()` lands the row in the worktree's events.log, not the main repo's.
+After worktree creation succeeds (step iii), run operations in this order — the event must be emitted from inside the worktree so `_resolve_user_project_root_from_cwd()` lands the row in the worktree's events.log, not the main repo's.
 
 1. **Capture origin pwd** — run a single Bash call: `_origin_pwd=$(pwd)`. Hold this value for the lifecycle session (it may be needed for restore at Complete phase or on fallback below).
 
-2. **Suppressed-picker structural branch** — when the carried entry mode is `suppressed`, skip the `cortex-worktree-precondition` probe AND the auto-enter call entirely and route structurally to the cd-shim: run `cd $(cortex-worktree-resolve interactive/{slug})` to root the session in the already-created worktree, surface the stable literal diagnostic `EnterWorktree skipped: suppressed-picker (branch-mode worktree-interactive)`, then jump to operation 5 (emit event) (no EnterWorktree authorization — ADR-0008). When the carried entry mode is `selected`, do not take this branch — continue to operation 3.
+2. **Suppressed-picker structural branch** — when the carried entry mode is `suppressed`, skip the `cortex-worktree-precondition` probe AND the auto-enter call entirely and route structurally to the cd-shim: run `cd $(cortex-worktree-resolve interactive-{slug})` to root the session in the already-created worktree, surface the stable literal diagnostic `EnterWorktree skipped: suppressed-picker (branch-mode worktree-interactive)`, then jump to operation 5 (emit event) (no EnterWorktree authorization — ADR-0008). When the carried entry mode is `selected`, do not take this branch — continue to operation 3.
 
 3. **Already-in-worktree probe** (entry mode `selected`) — run a single Bash call: `cortex-worktree-precondition`. Exit 0 means the current session is NOT already inside a worktree (proceed); exit 1 means the session IS already inside a worktree (skip operation 4 and route to the fallback path with a single-line diagnostic naming the detected worktree).
 
@@ -188,7 +149,7 @@ After the pre-flight check passes (exit 0), run operations in this order — the
    EnterWorktree(path=<resolved-path>)
    ```
 
-   where `<resolved-path>` is the value returned by `cortex-worktree-resolve interactive/{slug}` (never a hardcoded prefix per R3). This sets the orchestrator session's CWD to the interactive worktree for all subsequent Bash tool calls in this lifecycle session and clears CWD-dependent caches (system prompt sections, memory files, plans directory). If the tool errors (path not in `git worktree list`, schema rejection, or a "Must not already be in a worktree" race), route to the fallback path below.
+   where `<resolved-path>` is the value returned by `cortex-worktree-resolve interactive-{slug}` (never a hardcoded prefix per R3). This sets the orchestrator session's CWD to the interactive worktree for all subsequent Bash tool calls in this lifecycle session and clears CWD-dependent caches (system prompt sections, memory files, plans directory). If the tool errors (path not in `git worktree list`, schema rejection, or a "Must not already be in a worktree" race), route to the fallback path below.
 
 5. **Emit event** — run a single Bash call once the session CWD is rooted in the worktree (via `EnterWorktree` on the `selected` path, or the cd-shim on the `suppressed` path):
 
@@ -198,7 +159,7 @@ After the pre-flight check passes (exit 0), run operations in this order — the
 
    The `cortex-lifecycle-event` CLI uses `_resolve_user_project_root_from_cwd()` (ignores `CORTEX_REPO_ROOT`), so the event row lands in the worktree's `cortex/lifecycle/{slug}/events.log` — not the main repo's.
 
-**Fallback — `EnterWorktree skipped`.** On the `selected` path, if the `cortex-worktree-precondition` probe in operation 3 returns non-zero, OR the `EnterWorktree` call in operation 4 errors, OR the skill judges the gate unmet and declines to invoke the tool (silent non-invocation), fall back to the cd-shim handoff: run `cd $(cortex-worktree-resolve interactive/{slug})` and proceed to operation 5 to emit the event. Surface a single-line diagnostic beginning with the stable literal `EnterWorktree skipped` and naming the failure mode (e.g., `EnterWorktree skipped: already inside worktree at <path>`, `EnterWorktree skipped: tool rejected path <path>`).
+**Fallback — `EnterWorktree skipped`.** On the `selected` path, if the `cortex-worktree-precondition` probe in operation 3 returns non-zero, OR the `EnterWorktree` call in operation 4 errors, OR the skill judges the gate unmet and declines to invoke the tool (silent non-invocation), fall back to the cd-shim handoff: run `cd $(cortex-worktree-resolve interactive-{slug})` and proceed to operation 5 to emit the event. Surface a single-line diagnostic beginning with the stable literal `EnterWorktree skipped` and naming the failure mode (e.g., `EnterWorktree skipped: already inside worktree at <path>`, `EnterWorktree skipped: tool rejected path <path>`).
 
 The auto-enter affects only orchestrator-session Bash tool calls; sub-agent `Agent(isolation: "worktree")` dispatch in §2 is unaffected, and §2(e) merge-back applies unchanged.
 
