@@ -703,9 +703,9 @@ The returned dict has five top-level keys:
 
 ### cortex/lifecycle.config.md consumers and absence behavior
 
-`cortex/lifecycle.config.md` is a per-project config file (template at `skills/lifecycle/assets/lifecycle.config.md`). There is no centralized Python loader — each consumer reads it directly — so the contract is "template is source of truth for fields; each consumer decides its own absence behavior." Fields include `type`, `test-command`, `demo-command` / `demo-commands`, `default-tier`, `default-criticality`, `skip-specify`, `skip-review`, and `commit-artifacts`.
+`cortex/lifecycle.config.md` is a per-project config file. The canonical scaffolded field list is the cortex-core plugin asset `skills/lifecycle/assets/lifecycle.config.md`, whose frontmatter a CI parity gate keeps byte-identical to the `cortex init` template (see ADR-0017). There is no centralized Python loader — each consumer reads it directly — so each consumer decides its own absence behavior. Scaffolded fields include `type`, `test-command`, `demo-command` / `demo-commands`, `default-tier`, `default-criticality`, `skip-specify`, `skip-review`, `commit-artifacts`, `synthesizer_overnight_enabled`, and the `backlog:` backend block.
 
-**Files**: `skills/lifecycle/assets/lifecycle.config.md` (template — source of truth for the field list), plus the consumers in `skills/lifecycle/`, `skills/critical-review/`, and `skills/morning-review/`.
+**Files**: `skills/lifecycle/assets/lifecycle.config.md` (the gate-kept source of truth for the scaffolded field list), plus the consumers in `skills/lifecycle/`, `skills/critical-review/`, and `skills/morning-review/`.
 
 Absence behavior per consumer (what happens when the project has no `cortex/lifecycle.config.md`):
 
@@ -714,7 +714,9 @@ Absence behavior per consumer (what happens when the project has no `cortex/life
 - **critical-review**: omits the `## Project Context` section of the generated review.
 - **lifecycle specify/plan**: reads optional defaults (`default-tier`, `default-criticality`, `skip-specify`, `skip-review`) and falls back to skill-level defaults when absent.
 
-Because field drift across consumers is possible, the template is the one place to check before assuming a field exists; do not enumerate fields in more than one doc.
+**Consumed-but-unscaffolded exception**: `branch-mode` is read by `read_branch_mode` (the lifecycle branch-selection preflight) but is in **neither** scaffolded template, so it is deliberately not part of the asset's field list above — set it by hand when a repo needs it. Scaffolding it is a separate follow-up: it would require editing the asset and the init template together, which the ADR-0017 parity gate binds.
+
+Because field drift across consumers is possible, the asset's gate-kept frontmatter (above) is the one place to check before assuming a scaffolded field exists; do not enumerate the scaffolded fields in more than one doc.
 
 ### Auth Resolution (apiKeyHelper and env-var fallback order)
 
