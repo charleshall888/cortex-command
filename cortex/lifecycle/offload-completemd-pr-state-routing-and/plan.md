@@ -10,6 +10,12 @@ Extract `complete.md`'s Step-7 PR-state router into a `cortex-lifecycle-complete
 - **Interface is `--set k=v` (literal) / `--set-json k=v` (json-typed)**, not the spec's guessed `--field`. The verb emits `{ts, event, feature, <ordered fields>}` via default (spaced) `json.dumps` + `%Y-%m-%dT%H:%M:%SZ` timestamps, no auto `schema_version` (`cortex_command/lifecycle_event.py:121-152`).
 - **`pr_opened` stays hand-written; only `feature_complete` migrates.** `ADR-0020-lifecycle-event-emission-contract.md` (shipped by #330 — the authority, superseding the spec's "Proposed ADR 0017", which is moot since 0017 is taken by #335) **explicitly exempts `pr_opened`** from the verb because its canonical shape places `schema_version` *before* `feature`, which the feature-first verb cannot produce. The ADR names "#331's `pr_opened`" as exempt. `feature_complete` (`{ts, event, feature, tasks_total, rework_cycles, merge_anchor}` — no `schema_version`) is fully verb-expressible and migrates. This narrows spec Reqs 16/17 to `feature_complete` only. See Risks R1.
 
+## Implementer notes (fresh-session pickup)
+
+- **Resume**: `/cortex-core:lifecycle 331` routes to Implement (plan approved + paused: `implement-paused`, 14 tasks). Implement on **trunk**, sequentially — this edits the `cortex_command` package, so a worktree tests the stale editable install (R5). Commit per-phase with explicit `git commit -- <files>` pathspecs (concurrent offload-epic sessions on trunk) and run `just build-plugin` with each prose-edit commit.
+- **Phase-3 invocation channel (gotcha)**: the PATH `cortex-lifecycle-event` binstub resolves the uv-tool wheel, which may be a **stale pre-#330 build lacking `--set`/`--set-json`**. Run `just python-setup` first so the editable `.venv` console-scripts are current, and have Task 13's round-trip test drive emission via in-process import / `python3 -m cortex_command.lifecycle_event` (the `test_lifecycle_event.py` idiom), not the bare PATH binstub.
+- **Plan governs over the spec on Phase 3**: where the approved spec (Reqs 16/17, "Proposed ADR 0017") and this plan disagree, follow the plan — see R1 (only `feature_complete` migrates; `pr_opened` stays hand-written per ADR-0020; interface is `--set/--set-json`; the bug-1 ordering fix is out of scope → #339).
+
 ## Outline
 
 ### Phase 1: complete-route classifier (tasks: 1, 2, 3, 4, 5, 6)
