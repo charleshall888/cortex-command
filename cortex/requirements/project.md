@@ -88,7 +88,7 @@ Agentic workflow toolkit for AI-assisted software development on Claude Code: sk
 
 ## Global Context
 
-- glossary.md
+- cortex/requirements/glossary.md
 
 ## Optional
 
