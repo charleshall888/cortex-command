@@ -36,23 +36,18 @@ Act on the result: a unique match prints JSON (`filename`, `backlog_filename_slu
 
 ## Step 2: Check State
 
-Check for existing artifacts to determine the resume point:
+Determine the resume point with the read-only resume-point verb — it classifies the state from the lifecycle artifacts (`is_file()` over `spec.md`/`research.md`) and prints `{"resume":...,"spec_exists":...,"research_exists":...}`:
 
-```
-if cortex/lifecycle/{lifecycle-slug}/spec.md exists AND cortex/lifecycle/{lifecycle-slug}/research.md exists:
-    both artifacts exist — refine is complete. Announce completion and skip directly to Step 6 (Completion).
-    Re-run is triggered only by an explicit user message (e.g., "re-run refine", "redo the spec").
-    Do not prompt the user; do not offer a menu.
-elif cortex/lifecycle/{lifecycle-slug}/spec.md exists AND cortex/lifecycle/{lifecycle-slug}/research.md does NOT exist:
-    warn: "spec.md exists but research.md is missing — overnight requires both. Running research phase."
-    resume = research phase (skip Clarify — intent was already established when spec was written)
-elif cortex/lifecycle/{lifecycle-slug}/research.md exists at that exact path:
-    resume = spec phase (research already done — sufficiency check applies at phase entry)
-else:
-    resume = clarify phase (start from beginning)
+```bash
+cortex-refine resume-point --lifecycle-slug {lifecycle-slug}
 ```
 
-Re-running overwrites the existing spec and resets `status` to `in_progress` until the new spec is approved. No CLI flag required.
+Branch on the returned `resume` value (`clarify | research | spec | complete`) and apply the judgment guard the CLI cannot encode:
+
+- **`complete`** — both artifacts exist; refine is complete. Announce completion and skip directly to Step 6 (Completion). Do not prompt the user; do not offer a menu. Re-run is triggered only by an explicit user message (e.g., "re-run refine", "redo the spec"); a re-run overwrites the existing spec and resets `status` to `in_progress` until the new spec is approved.
+- **`research`** — spec.md exists but research.md is missing. Warn that overnight requires both, then run the Research phase. Skip Clarify — intent was already established when the spec was written.
+- **`spec`** — research.md exists without a spec; resume at the Spec phase, where the Research Sufficiency Check (`${CLAUDE_SKILL_DIR}/references/clarify.md` §6) applies at phase entry.
+- **`clarify`** — neither artifact exists; start from the beginning at the Clarify phase.
 
 **Resolve the backlog backend once** with `` `cortex-read-backlog-backend` `` (argless; it prints the resolved backend and exits 0). Carry the resolved value through the rest of refine — it keys the seed, write-back, and reconcile routing below. The default `cortex-backlog` arm is byte-identical to today; the non-local arm omits `--backlog-slug` and feeds Clarify's computed tier/criticality forward as explicit flags.
 
