@@ -7,3 +7,7 @@
 {"ts":"2026-06-29T19:11:22Z","event":"sentinel_absence","feature":"offload-refine-step-2-state-checking","reviewer_angle":"scope-adr","reason":"absent","model_tier":"sonnet","expected_sha":"ff8b195cb5ddb1eb7de703b0b830fd1cb31a3d1839876fd2461afc40dc3da266","observed_sha_or_null":null}
 {"ts": "2026-06-29T19:46:22Z", "event": "plan_approved", "feature": "offload-refine-step-2-state-checking", "dispatch_choice": "trunk"}
 {"ts": "2026-06-29T19:46:22Z", "event": "phase_transition", "feature": "offload-refine-step-2-state-checking", "from": "plan", "to": "implement"}
+{"ts": "2026-06-29T19:48:54Z", "event": "batch_dispatch", "feature": "offload-refine-step-2-state-checking", "batch": 0, "tasks": [1]}
+{"ts": "2026-06-29T19:51:00Z", "event": "batch_dispatch", "feature": "offload-refine-step-2-state-checking", "batch": 1, "tasks": [2, 3, 4]}
+{"ts": "2026-06-29T19:58:02Z", "event": "batch_dispatch", "feature": "offload-refine-step-2-state-checking", "batch": 2, "tasks": [5, 6, 7]}
+{"ts": "2026-06-29T20:08:57Z", "event": "phase_transition", "feature": "offload-refine-step-2-state-checking", "tier": "complex", "from": "implement", "to": "review"}
