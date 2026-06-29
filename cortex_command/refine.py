@@ -85,6 +85,32 @@ def _read_backlog_frontmatter(backlog_slug: str | None) -> tuple[str, str]:
     return (complexity, criticality)
 
 
+def _apply_backend_guard(backend: str, backlog_slug: str | None) -> str | None:
+    """Structural guard: drop a local backlog slug on a non-local backend.
+
+    Acts only on the caller-passed ``--backend`` value (already ``.strip()``'d
+    by the caller) — it does NOT resolve the backend or read config (the skill
+    resolves the backend via ``cortex-read-backlog-backend`` and passes the
+    value). When the backend is not ``cortex-backlog`` AND a ``--backlog-slug``
+    was passed, coerce the slug to ``None`` so no (possibly stale) local backlog
+    file is read, and emit a path-accurate stderr diagnostic naming the ignored
+    slug and the backend. Returns the (possibly coerced) slug.
+
+    The diagnostic describes only the slug handling — uniform across the seed,
+    idempotent short-circuit, and reconcile paths — so it stays accurate
+    wherever the guard runs. Gating the message on ``backlog_slug is not None``
+    keeps it silent on the common no-slug Context-B call.
+    """
+    if backend != "cortex-backlog" and backlog_slug is not None:
+        print(
+            f"cortex-refine: ignoring --backlog-slug {backlog_slug!r} on "
+            f"non-local backend {backend!r}",
+            file=sys.stderr,
+        )
+        return None
+    return backlog_slug
+
+
 def _now_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -149,6 +175,7 @@ def _cmd_reconcile_clarify(args: argparse.Namespace) -> int:
     """
     lifecycle_slug: str = args.lifecycle_slug
     backlog_slug: str | None = args.backlog_slug
+    backlog_slug = _apply_backend_guard(args.backend.strip(), backlog_slug)
 
     events_log = Path("cortex/lifecycle") / lifecycle_slug / "events.log"
     events_log.parent.mkdir(parents=True, exist_ok=True)
@@ -221,6 +248,7 @@ def _cmd_emit_lifecycle_start(args: argparse.Namespace) -> int:
     """
     lifecycle_slug: str = args.lifecycle_slug
     backlog_slug: str | None = args.backlog_slug
+    backlog_slug = _apply_backend_guard(args.backend.strip(), backlog_slug)
 
     events_log = Path("cortex/lifecycle") / lifecycle_slug / "events.log"
     events_log.parent.mkdir(parents=True, exist_ok=True)
@@ -368,6 +396,17 @@ def _build_parser() -> argparse.ArgumentParser:
         required=True,
         help="Lifecycle feature slug under cortex/lifecycle/.",
     )
+    el.add_argument(
+        "--backend",
+        default="cortex-backlog",
+        help=(
+            "Caller-resolved backlog backend (the skill resolves it via "
+            "cortex-read-backlog-backend). Structural guard only: when not "
+            "'cortex-backlog', --backlog-slug is ignored (no local file is "
+            "read) and a stderr diagnostic is emitted. This verb does NOT "
+            "resolve the backend itself. Default: cortex-backlog."
+        ),
+    )
     el.set_defaults(func=_cmd_emit_lifecycle_start)
 
     # reconcile-clarify
@@ -408,6 +447,18 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "Explicit desired criticality (Context B). Takes precedence over "
             "the backlog-derived value when both are supplied."
+        ),
+    )
+    rc.add_argument(
+        "--backend",
+        default="cortex-backlog",
+        help=(
+            "Caller-resolved backlog backend (the skill resolves it via "
+            "cortex-read-backlog-backend). Structural guard only: when not "
+            "'cortex-backlog', --backlog-slug is ignored (no local file is "
+            "read) and a stderr diagnostic is emitted. The explicit "
+            "--complexity/--criticality flags still drive. This verb does NOT "
+            "resolve the backend itself. Default: cortex-backlog."
         ),
     )
     rc.set_defaults(func=_cmd_reconcile_clarify)
