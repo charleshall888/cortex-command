@@ -14,6 +14,7 @@ This test file also satisfies spec R3's acceptance criterion (the CLI is the
 from __future__ import annotations
 
 import json
+import re
 import threading
 from pathlib import Path
 
@@ -72,7 +73,7 @@ class TestLogEventBasicAppend:
         log_event(
             event="interactive_worktree_entered",
             feature="foo",
-            worktree_path="/tmp/xyz",
+            fields=[("str", "worktree_path", "/tmp/xyz")],
         )
 
         log_path = root / "cortex" / "lifecycle" / "foo" / "events.log"
@@ -81,16 +82,16 @@ class TestLogEventBasicAppend:
         assert len(lines) == 1, f"expected 1 JSONL line, got {len(lines)}"
 
         row = json.loads(lines[0])
-        assert row["schema_version"] == 1
         assert row["event"] == "interactive_worktree_entered"
         assert row["feature"] == "foo"
         assert row["worktree_path"] == "/tmp/xyz"
         assert "ts" in row
+        assert "schema_version" not in row
 
-    def test_row_schema_fields_complete(
+    def test_row_base_keys_present_no_legacy_keys(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """All five required schema fields are present in the emitted row."""
+        """The three base keys are present; legacy auto-keys are gone."""
         root = _setup_cortex_root(tmp_path)
         monkeypatch.chdir(root)
         monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
@@ -99,24 +100,27 @@ class TestLogEventBasicAppend:
 
         log_path = root / "cortex" / "lifecycle" / "bar" / "events.log"
         row = json.loads(log_path.read_text(encoding="utf-8").splitlines()[0])
-        required_keys = {"schema_version", "ts", "event", "feature", "worktree_path"}
+        required_keys = {"ts", "event", "feature"}
         assert required_keys <= row.keys(), (
             f"missing keys: {required_keys - row.keys()}"
         )
+        # No fields supplied → no extra keys auto-injected.
+        assert "schema_version" not in row
+        assert "worktree_path" not in row
 
-    def test_worktree_path_none_serialises_as_null(
+    def test_no_fields_means_no_extra_keys(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """``worktree_path=None`` serialises as JSON ``null``."""
+        """Without ``fields``, the row carries only the three base keys."""
         root = _setup_cortex_root(tmp_path)
         monkeypatch.chdir(root)
         monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
 
-        log_event(event="interactive_worktree_entered", feature="nulltest")
+        log_event(event="interactive_worktree_entered", feature="nofields")
 
-        log_path = root / "cortex" / "lifecycle" / "nulltest" / "events.log"
+        log_path = root / "cortex" / "lifecycle" / "nofields" / "events.log"
         row = json.loads(log_path.read_text(encoding="utf-8").splitlines()[0])
-        assert row["worktree_path"] is None
+        assert list(row.keys()) == ["ts", "event", "feature"]
 
     def test_multiple_calls_append_multiple_rows(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -169,7 +173,7 @@ class TestCliRun:
             "log",
             "--event", "interactive_worktree_entered",
             "--feature", "foo",
-            "--worktree-path", "/tmp/xyz",
+            "--set", "worktree_path=/tmp/xyz",
         ])
 
         assert rc == 0
@@ -179,12 +183,12 @@ class TestCliRun:
         assert row["event"] == "interactive_worktree_entered"
         assert row["feature"] == "foo"
         assert row["worktree_path"] == "/tmp/xyz"
-        assert row["schema_version"] == 1
+        assert "schema_version" not in row
 
-    def test_cli_without_worktree_path(
+    def test_cli_without_set_fields(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """``_run`` without ``--worktree-path`` records ``null``."""
+        """``_run`` without ``--set`` fields records only the base keys."""
         root = _setup_cortex_root(tmp_path)
         monkeypatch.chdir(root)
         monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
@@ -198,7 +202,7 @@ class TestCliRun:
         assert rc == 0
         log_path = root / "cortex" / "lifecycle" / "bar" / "events.log"
         row = json.loads(log_path.read_text(encoding="utf-8").splitlines()[0])
-        assert row["worktree_path"] is None
+        assert "worktree_path" not in row
 
     def test_cli_returns_1_when_no_cortex_root(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -255,7 +259,7 @@ class TestCwdResolution:
         log_event(
             event="interactive_worktree_entered",
             feature="myfeature",
-            worktree_path=str(worktree_root),
+            fields=[("str", "worktree_path", str(worktree_root))],
         )
 
         # events.log must land in the worktree, NOT in main_repo
@@ -343,7 +347,7 @@ class TestConcurrentAppend:
                 log_event(
                     event=f"concurrent_event_{i}",
                     feature="concurrent-test",
-                    worktree_path=f"/tmp/wt-{i}",
+                    fields=[("str", "worktree_path", f"/tmp/wt-{i}")],
                 )
             except Exception as exc:
                 errors.append(exc)
@@ -368,7 +372,6 @@ class TestConcurrentAppend:
         # Every line must be a valid, independently parseable JSON object
         for line in lines:
             row = json.loads(line)
-            assert row["schema_version"] == 1
             assert "event" in row
             assert "feature" in row
             assert row["feature"] == "concurrent-test"
@@ -411,3 +414,327 @@ class TestConcurrentAppend:
         assert recorded_events == expected_events, (
             f"missing events: {expected_events - recorded_events}"
         )
+
+
+# ---------------------------------------------------------------------------
+# (d) Field-driven verb surface — --set / --set-json (R1, R2, R3)
+# ---------------------------------------------------------------------------
+
+
+class TestFieldDrivenRowShape:
+    """R1: uniform ``{ts, event, feature, <ordered fields>}`` row."""
+
+    def _read_row(self, root: Path, feature: str) -> dict:
+        log_path = root / "cortex" / "lifecycle" / feature / "events.log"
+        return json.loads(log_path.read_text(encoding="utf-8").splitlines()[0])
+
+    def test_key_ordering_follows_argv(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Extra fields land after the base keys in argv order."""
+        root = _setup_cortex_root(tmp_path)
+        monkeypatch.chdir(root)
+        monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+
+        rc = _run([
+            "log",
+            "--event", "phase_transition",
+            "--feature", "f",
+            "--set", "from=plan",
+            "--set", "to=implement",
+        ])
+        assert rc == 0
+
+        row = self._read_row(root, "f")
+        assert list(row.keys()) == ["ts", "event", "feature", "from", "to"]
+        assert row["event"] == "phase_transition"
+        assert row["feature"] == "f"
+        assert row["from"] == "plan"
+        assert row["to"] == "implement"
+        assert "schema_version" not in row
+        assert "worktree_path" not in row
+
+    def test_interleaved_set_and_set_json_preserve_order(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """``--set`` and ``--set-json`` share one ordered dest."""
+        root = _setup_cortex_root(tmp_path)
+        monkeypatch.chdir(root)
+        monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+
+        rc = _run([
+            "log",
+            "--event", "batch_dispatch",
+            "--feature", "f",
+            "--set-json", "batch=2",
+            "--set", "note=hi",
+            "--set-json", "tasks=[1, 2]",
+        ])
+        assert rc == 0
+
+        row = self._read_row(root, "f")
+        assert list(row.keys()) == ["ts", "event", "feature", "batch", "note", "tasks"]
+        assert row["batch"] == 2
+        assert row["note"] == "hi"
+        assert row["tasks"] == [1, 2]
+
+    def test_duplicate_key_last_wins(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A duplicate key takes the last-supplied value."""
+        root = _setup_cortex_root(tmp_path)
+        monkeypatch.chdir(root)
+        monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+
+        rc = _run([
+            "log",
+            "--event", "e",
+            "--feature", "f",
+            "--set", "k=first",
+            "--set", "k=second",
+        ])
+        assert rc == 0
+        assert self._read_row(root, "f")["k"] == "second"
+
+
+class TestCanonicalSerialization:
+    """R2: spaced ``json.dumps`` defaults + ``%Y-%m-%dT%H:%M:%SZ`` timestamps."""
+
+    def test_timestamp_is_second_precision_z(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """``ts`` matches ``^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$`` (no clock patch)."""
+        root = _setup_cortex_root(tmp_path)
+        monkeypatch.chdir(root)
+        monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+
+        rc = _run(["log", "--event", "phase_transition", "--feature", "f"])
+        assert rc == 0
+
+        line = (
+            root / "cortex" / "lifecycle" / "f" / "events.log"
+        ).read_text(encoding="utf-8").splitlines()[0]
+        row = json.loads(line)
+        assert re.match(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$", row["ts"]), row["ts"]
+
+    def test_serialized_line_is_spaced(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The on-disk line uses spaced separators (``", "`` / ``": "``)."""
+        root = _setup_cortex_root(tmp_path)
+        monkeypatch.chdir(root)
+        monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+
+        rc = _run([
+            "log", "--event", "phase_transition", "--feature", "f",
+            "--set", "from=plan",
+        ])
+        assert rc == 0
+
+        line = (
+            root / "cortex" / "lifecycle" / "f" / "events.log"
+        ).read_text(encoding="utf-8").splitlines()[0]
+        assert '"event": "phase_transition"' in line
+        assert '"from": "plan"' in line
+        assert '":"' not in line  # no compact separators survive
+
+
+class TestFieldTypingGrammar:
+    """R3: ``--set`` literal-string vs ``--set-json`` typed, with usage errors."""
+
+    def _read_row(self, root: Path, feature: str) -> dict:
+        log_path = root / "cortex" / "lifecycle" / feature / "events.log"
+        return json.loads(log_path.read_text(encoding="utf-8").splitlines()[0])
+
+    def test_set_json_number(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """``--set-json batch=3`` yields JSON number ``3``."""
+        root = _setup_cortex_root(tmp_path)
+        monkeypatch.chdir(root)
+        monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+
+        rc = _run([
+            "log", "--event", "batch_dispatch", "--feature", "f",
+            "--set-json", "batch=3",
+        ])
+        assert rc == 0
+        value = self._read_row(root, "f")["batch"]
+        assert value == 3
+        assert isinstance(value, int)
+
+    def test_set_json_array(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """``--set-json tasks=[1, 2, 3]`` yields a JSON array."""
+        root = _setup_cortex_root(tmp_path)
+        monkeypatch.chdir(root)
+        monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+
+        rc = _run([
+            "log", "--event", "batch_dispatch", "--feature", "f",
+            "--set-json", "tasks=[1, 2, 3]",
+        ])
+        assert rc == 0
+        assert self._read_row(root, "f")["tasks"] == [1, 2, 3]
+
+    def test_set_keeps_json_looking_string_literal(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """``--set reason=null`` stays the string ``"null"``."""
+        root = _setup_cortex_root(tmp_path)
+        monkeypatch.chdir(root)
+        monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+
+        rc = _run([
+            "log", "--event", "e", "--feature", "f",
+            "--set", "reason=null",
+        ])
+        assert rc == 0
+        value = self._read_row(root, "f")["reason"]
+        assert value == "null"
+        assert isinstance(value, str)
+
+    def test_set_splits_on_first_equals_only(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A value containing ``=`` (a URL) is preserved whole."""
+        root = _setup_cortex_root(tmp_path)
+        monkeypatch.chdir(root)
+        monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+
+        rc = _run([
+            "log", "--event", "e", "--feature", "f",
+            "--set", "url=https://x?a=b",
+        ])
+        assert rc == 0
+        assert self._read_row(root, "f")["url"] == "https://x?a=b"
+
+    def test_set_empty_value(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """``--set reason=`` emits an empty string."""
+        root = _setup_cortex_root(tmp_path)
+        monkeypatch.chdir(root)
+        monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+
+        rc = _run([
+            "log", "--event", "e", "--feature", "f",
+            "--set", "reason=",
+        ])
+        assert rc == 0
+        assert self._read_row(root, "f")["reason"] == ""
+
+    def test_set_without_equals_is_usage_error_no_row(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """``--set foo`` exits non-zero and writes no row."""
+        root = _setup_cortex_root(tmp_path)
+        monkeypatch.chdir(root)
+        monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+
+        with pytest.raises(SystemExit) as exc:
+            _run([
+                "log", "--event", "e", "--feature", "f",
+                "--set", "foo",
+            ])
+        assert exc.value.code != 0
+        assert not (root / "cortex" / "lifecycle" / "f" / "events.log").exists()
+
+    def test_set_json_malformed_is_usage_error_no_row(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """``--set-json k={bad`` exits non-zero and writes no row."""
+        root = _setup_cortex_root(tmp_path)
+        monkeypatch.chdir(root)
+        monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+
+        with pytest.raises(SystemExit) as exc:
+            _run([
+                "log", "--event", "e", "--feature", "f",
+                "--set-json", "k={bad",
+            ])
+        assert exc.value.code != 0
+        assert not (root / "cortex" / "lifecycle" / "f" / "events.log").exists()
+
+    def test_malformed_set_json_after_valid_writes_no_partial_row(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A later malformed ``--set-json`` aborts before any append."""
+        root = _setup_cortex_root(tmp_path)
+        monkeypatch.chdir(root)
+        monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+
+        with pytest.raises(SystemExit) as exc:
+            _run([
+                "log", "--event", "e", "--feature", "f",
+                "--set-json", "good=1",
+                "--set-json", "bad={oops",
+            ])
+        assert exc.value.code != 0
+        assert not (root / "cortex" / "lifecycle" / "f" / "events.log").exists()
+
+
+# ---------------------------------------------------------------------------
+# (e) Concurrency vs a bare appender — flock + O_APPEND (R4)
+# ---------------------------------------------------------------------------
+
+
+class TestVerbConcurrentWithBareAppender:
+    """R4: the verb and a non-flock ``open(path, "a")`` appender coexist."""
+
+    def test_verb_and_bare_append_all_rows_complete(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Verb writes and bare appends run concurrently; every row parses."""
+        root = _setup_cortex_root(tmp_path)
+        monkeypatch.chdir(root)
+        monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+
+        log_path = root / "cortex" / "lifecycle" / "concur" / "events.log"
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+
+        n = 20
+        errors: list[object] = []
+
+        def _verb_writer(i: int) -> None:
+            try:
+                rc = _run([
+                    "log", "--event", f"verb_{i}", "--feature", "concur",
+                    "--set-json", f"batch={i}",
+                ])
+                if rc != 0:
+                    errors.append(("verb-rc", i, rc))
+            except Exception as exc:  # noqa: BLE001
+                errors.append(exc)
+
+        def _bare_writer(i: int) -> None:
+            try:
+                line = json.dumps(
+                    {"ts": "t", "event": f"bare_{i}", "feature": "concur"}
+                ) + "\n"
+                with open(log_path, "a", encoding="utf-8") as fh:
+                    fh.write(line)
+            except Exception as exc:  # noqa: BLE001
+                errors.append(exc)
+
+        threads: list[threading.Thread] = []
+        for i in range(n):
+            threads.append(threading.Thread(target=_verb_writer, args=(i,)))
+            threads.append(threading.Thread(target=_bare_writer, args=(i,)))
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert not errors, f"writers raised: {errors}"
+
+        lines = [
+            line
+            for line in log_path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        assert len(lines) == 2 * n, f"expected {2 * n} rows, got {len(lines)}"
+        # Every row is a complete, independently parseable JSON object.
+        for line in lines:
+            json.loads(line)
