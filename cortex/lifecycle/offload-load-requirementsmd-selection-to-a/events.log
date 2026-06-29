@@ -1,0 +1,7 @@
+{"schema_version": 1, "ts": "2026-06-29T11:53:15Z", "event": "lifecycle_start", "feature": "offload-load-requirementsmd-selection-to-a", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-29T12:00:04Z", "event": "clarify_critic", "feature": "offload-load-requirementsmd-selection-to-a", "parent_epic_loaded": true, "findings_count": 9, "dispositions": {"apply": 9, "dismiss": 0, "ask": 0}, "applied_fixes_count": 9, "dismissals_count": 0, "status": "ok"}
+{"ts": "2026-06-29T12:25:04Z", "event": "complexity_override", "feature": "offload-load-requirementsmd-selection-to-a", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-06-29T12:25:04Z", "event": "criticality_override", "feature": "offload-load-requirementsmd-selection-to-a", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-06-29T13:06:53Z", "event": "spec_approved", "feature": "offload-load-requirementsmd-selection-to-a"}
+{"ts": "2026-06-29T17:17:31Z", "event": "plan_approved", "feature": "offload-load-requirementsmd-selection-to-a", "dispatch_choice": "trunk"}
+{"ts": "2026-06-29T17:17:31Z", "event": "phase_transition", "feature": "offload-load-requirementsmd-selection-to-a", "from": "plan", "to": "implement"}
