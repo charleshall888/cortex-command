@@ -1,0 +1,7 @@
+{"schema_version": 1, "ts": "2026-06-29T11:52:32Z", "event": "lifecycle_start", "feature": "add-field-to-cortex-lifecycle-event", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-29T11:59:11+00:00", "event": "clarify_critic", "feature": "add-field-to-cortex-lifecycle-event", "parent_epic_loaded": true, "findings_count": 9, "dispositions": {"apply": 5, "dismiss": 4, "ask": 0}, "applied_fixes_count": 4, "dismissals_count": 4, "status": "ok"}
+{"ts": "2026-06-29T12:26:25Z", "event": "complexity_override", "feature": "add-field-to-cortex-lifecycle-event", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-06-29T12:26:25Z", "event": "criticality_override", "feature": "add-field-to-cortex-lifecycle-event", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-06-29T13:06:41Z", "event": "spec_approved", "feature": "add-field-to-cortex-lifecycle-event"}
+{"ts": "2026-06-29T21:35:19Z", "event": "plan_approved", "feature": "add-field-to-cortex-lifecycle-event", "dispatch_choice": "trunk"}
+{"ts": "2026-06-29T21:35:19Z", "event": "phase_transition", "feature": "add-field-to-cortex-lifecycle-event", "from": "plan", "to": "implement"}
