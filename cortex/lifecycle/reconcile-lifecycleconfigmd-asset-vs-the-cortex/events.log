@@ -6,3 +6,7 @@
 {"ts":"2026-06-29T13:13:18Z","event":"sentinel_absence","feature":"reconcile-lifecycleconfigmd-asset-vs-the-cortex","reviewer_angle":"Docs-phase acceptance adequacy & R6/R9 tension","reason":"absent","model_tier":"opus","expected_sha":"9b13fe183a473744f6e643eaebd78d78def409ebecfd0ee6e1d2f9aa1bf6ce3d","observed_sha_or_null":null}
 {"ts": "2026-06-29T13:31:18Z", "event": "plan_approved", "feature": "reconcile-lifecycleconfigmd-asset-vs-the-cortex", "dispatch_choice": "trunk"}
 {"ts": "2026-06-29T13:31:18Z", "event": "phase_transition", "feature": "reconcile-lifecycleconfigmd-asset-vs-the-cortex", "from": "plan", "to": "implement"}
+{"ts": "2026-06-29T13:34:18Z", "event": "batch_dispatch", "feature": "reconcile-lifecycleconfigmd-asset-vs-the-cortex", "batch": 0, "tasks": [1, 2]}
+{"ts": "2026-06-29T13:51:44Z", "event": "batch_dispatch", "feature": "reconcile-lifecycleconfigmd-asset-vs-the-cortex", "batch": 1, "tasks": [3, 4, 5, 6]}
+{"ts": "2026-06-29T13:51:44Z", "event": "batch_dispatch", "feature": "reconcile-lifecycleconfigmd-asset-vs-the-cortex", "batch": 2, "tasks": [7]}
+{"ts": "2026-06-29T13:51:44Z", "event": "phase_transition", "feature": "reconcile-lifecycleconfigmd-asset-vs-the-cortex", "tier": "complex", "from": "implement", "to": "review"}
