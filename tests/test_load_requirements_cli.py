@@ -336,6 +336,37 @@ def test_live_conditional_loading_parses_compound_triggers():
     assert any("/" in trigger for trigger, _ in pairs)
 
 
+def test_live_project_md_selection_oracle(tmp_path):
+    # Selection oracle over the LIVE project.md format (slash-compound
+    # triggers), drift-robust: the expected pick is COMPUTED from the live
+    # file at test time (not frozen), so a future project.md edit cannot
+    # produce a false RED. Copy live project.md into a tmp repo so a synthetic
+    # index can attach without polluting the real repo.
+    import re as _re
+    from cortex_command.lifecycle.load_requirements_cli import (
+        _parse_conditional_loading,
+    )
+    live = (REPO_ROOT / "cortex/requirements/project.md").read_text(encoding="utf-8")
+    pairs = _parse_conditional_loading(live)
+    assert pairs, "live project.md has no Conditional Loading pairs"
+    trigger, path = pairs[0]
+    token = _re.findall(r"[a-z]+", trigger.lower())[0]  # a real word from the trigger
+
+    req = tmp_path / "cortex" / "requirements"
+    req.mkdir(parents=True)
+    (req / "project.md").write_text(live, encoding="utf-8")
+    _touch(tmp_path, path)  # the selected area doc exists → no skip-suffix
+    idx = tmp_path / "cortex" / "lifecycle" / "live"
+    idx.mkdir(parents=True)
+    (idx / "index.md").write_text(f'---\ntags: ["{token}"]\n---\n', encoding="utf-8")
+
+    lines, note = resolve(tmp_path, "live")
+    assert path in lines, (
+        f"tag {token!r} (from live trigger {trigger!r}) should select {path}"
+    )
+    assert note is None  # a real match → no fallback note
+
+
 def test_absent_glossary_literal_resolution():
     # R8: with project.md normalized (Task 2), the absent glossary emits its
     # FULL repo-relative path + skip-suffix — proving literal resolution, not
