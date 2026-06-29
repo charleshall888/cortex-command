@@ -5,3 +5,8 @@
 {"ts": "2026-06-29T13:43:52Z", "event": "spec_approved", "feature": "wire-cortex-corelifecycle-wontfix-invocation-and"}
 {"ts": "2026-06-29T18:55:41Z", "event": "plan_approved", "feature": "wire-cortex-corelifecycle-wontfix-invocation-and", "dispatch_choice": "trunk"}
 {"ts": "2026-06-29T18:55:41Z", "event": "phase_transition", "feature": "wire-cortex-corelifecycle-wontfix-invocation-and", "from": "plan", "to": "implement"}
+{"ts": "2026-06-29T18:57:57Z", "event": "batch_dispatch", "feature": "wire-cortex-corelifecycle-wontfix-invocation-and", "batch": 0, "tasks": [1]}
+{"ts": "2026-06-29T19:23:50Z", "event": "phase_transition", "feature": "wire-cortex-corelifecycle-wontfix-invocation-and", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-06-29T19:30:53Z", "event": "review_verdict", "feature": "wire-cortex-corelifecycle-wontfix-invocation-and", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-06-29T19:30:53Z", "event": "phase_transition", "feature": "wire-cortex-corelifecycle-wontfix-invocation-and", "from": "review", "to": "complete"}
+{"ts": "2026-06-29T19:36:01Z", "event": "feature_complete", "feature": "wire-cortex-corelifecycle-wontfix-invocation-and", "tasks_total": 6, "rework_cycles": 0, "merge_anchor": "merge"}
