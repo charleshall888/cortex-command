@@ -5,3 +5,6 @@
 {"ts": "2026-06-29T13:06:41Z", "event": "spec_approved", "feature": "add-field-to-cortex-lifecycle-event"}
 {"ts": "2026-06-29T21:35:19Z", "event": "plan_approved", "feature": "add-field-to-cortex-lifecycle-event", "dispatch_choice": "trunk"}
 {"ts": "2026-06-29T21:35:19Z", "event": "phase_transition", "feature": "add-field-to-cortex-lifecycle-event", "from": "plan", "to": "implement"}
+{"ts": "2026-06-29T21:38:32Z", "event": "batch_dispatch", "feature": "add-field-to-cortex-lifecycle-event", "batch": 0, "tasks": [1, 2, 3, 12]}
+{"ts": "2026-06-29T22:06:18Z", "event": "batch_dispatch", "feature": "add-field-to-cortex-lifecycle-event", "batch": 1, "tasks": [5, 6, 7, 8, 9, 12]}
+{"ts": "2026-06-29T22:44:37Z", "event": "phase_transition", "feature": "add-field-to-cortex-lifecycle-event", "tier": "complex", "from": "implement", "to": "review"}
