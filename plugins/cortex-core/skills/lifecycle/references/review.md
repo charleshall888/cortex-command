@@ -140,8 +140,8 @@ The cycle counter prevents infinite rework loops. After cycle 2, always escalate
 
 After reading the verdict from the review artifact (state detection parses the exact `"verdict"` field name and its exact values), append a `review_verdict` event to `cortex/lifecycle/{feature}/events.log`:
 
-```
-{"ts": "<ISO 8601>", "event": "review_verdict", "feature": "<name>", "verdict": "APPROVED|CHANGES_REQUESTED|REJECTED", "cycle": <N>, "requirements_drift": "none|detected"}
+```bash
+cortex-lifecycle-event log --event review_verdict --feature <name> --set verdict=<APPROVED|CHANGES_REQUESTED|REJECTED> --set-json cycle=<N> --set requirements_drift=<none|detected>
 ```
 
 Where `requirements_drift` is read from the `"requirements_drift"` field in the verdict JSON block.
@@ -162,8 +162,8 @@ After logging the `review_verdict` event, check whether `requirements_drift` is 
 
    Event format:
 
-   ```
-   {"ts": "<ISO 8601>", "event": "drift_protocol_breach", "feature": "<name>", "state": "detected", "suggestion": "missing", "retries": 2}
+   ```bash
+   cortex-lifecycle-event log --event drift_protocol_breach --feature <name> --set state=detected --set suggestion=missing --set-json retries=2
    ```
 
 3. **Apply the update**: Append the Content at the end of the named Section in the target file.
@@ -181,16 +181,16 @@ After logging the `review_verdict` event, check whether `requirements_drift` is 
 Proceed automatically — do not ask the user for confirmation when the verdict is APPROVED or CHANGES_REQUESTED cycle 1. Announce the transition briefly and continue.
 
 - APPROVED → log the transition and proceed to Complete automatically:
-  ```
-  {"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "from": "review", "to": "complete"}
+  ```bash
+  cortex-lifecycle-event log --event phase_transition --feature <name> --set from=review --set to=complete
   ```
 - CHANGES_REQUESTED cycle 1 → log the transition and return to Implement automatically:
-  ```
-  {"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "from": "review", "to": "implement-rework"}
+  ```bash
+  cortex-lifecycle-event log --event phase_transition --feature <name> --set from=review --set to=implement-rework
   ```
 - Otherwise → log the escalation, then present findings to user and await direction (user input required — this is a genuine concern):
-  ```
-  {"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "from": "review", "to": "escalated"}
+  ```bash
+  cortex-lifecycle-event log --event phase_transition --feature <name> --set from=review --set to=escalated
   ```
 
 ## Constraints
