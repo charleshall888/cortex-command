@@ -68,6 +68,21 @@ def test_overnight_guard_sidecar_called_at_least_twice() -> None:
     )
 
 
+def test_sidecar_invocation_form_bash_s_count() -> None:
+    """The two sidecar invocations must keep their ``bash -s --`` form.
+
+    The sidecar is sourced and piped into ``bash -s -- "<message>" "<root>"``
+    at §1 Step A and §1a.ii. A dropped ``-s --`` (which would swallow the
+    positional message/root args) is otherwise caught by no lint, so the count
+    is pinned here at exactly 2 to guard the §1/§1a consolidation trim.
+    """
+    count = _IMPLEMENT_TEXT.count("bash -s --")
+    assert count == 2, (
+        f"implement.md must contain exactly two 'bash -s --' sidecar "
+        f"invocations (§1 Step A + §1a.ii); found {count}"
+    )
+
+
 def test_gate_and_gated_path_use_same_binary() -> None:
     """§1 runtime-probe gate and §1a step iii invocation must reference the same binary.
 
