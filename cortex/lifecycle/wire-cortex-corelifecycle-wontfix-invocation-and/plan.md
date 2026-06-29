@@ -37,7 +37,7 @@ Structuralize the `/cortex-core:lifecycle` invocation grammar behind a tested `c
   - **Binstub materialization**: adding a `[project.scripts]` entry does not create the PATH binstub until the editable install is refreshed. After editing `pyproject.toml`, re-run the editable install (or verify via `python3 -m cortex_command.lifecycle.parse_args …` against the working tree). `_telemetry`/tests run in-process regardless.
   - Run `just build-plugin`; stage canonical + mirror together (dual-source hook).
 - **Verification**: `python3 -m pytest cortex_command/lifecycle/tests/test_parse_args.py` exits 0 AND `python3 -m cortex_command.lifecycle.parse_args "wontfix add-foo" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['feature']=='add-foo' and d['mode']=='wontfix'"` exits 0 AND `grep -c 'cortex-lifecycle-parse-args' skills/lifecycle/SKILL.md` ≥ 1 AND `grep -c 'first word = feature name' skills/lifecycle/SKILL.md` = 0 AND `grep -c 'honor the request' skills/lifecycle/SKILL.md` = 0 AND `python3 -m pytest tests/test_dual_source_reference_parity.py -q` exits 0 — pass if all hold.
-- **Status**: [ ] pending
+- **Status**: [x] done — c5643846 (17 parser tests pass; smoke OK; greps 1/0/0/4; dual-source 59 pass; parity+contract clean)
 
 ### Task 2: Add the docs-derived drift-guard + mode-coverage parity test
 - **Files**: `tests/test_lifecycle_invocation_grammar_parity.py` (new)
@@ -52,7 +52,7 @@ Structuralize the `/cortex-core:lifecycle` invocation grammar behind a tested `c
   - **Two negative controls** (Req 8): (i) removing a form's handling from the parser (in-memory mutated parse fn) fails the test; (ii) injecting a doc-surface fixture form whose oracle-expected mode differs from parser output fails it. **Scope honesty (B-finding)**: a *novel reserved verb* added to docs-only is NOT auto-caught (oracle and parser share the closed grammar and would agree on bare-feature) — document this in a test comment; the recurrence guarantee is scoped to the current closed grammar's forms, not new-verb additions.
   - **Mode coverage — discriminating** (Req 10, `-k mode_coverage`): read `KNOWN_MODES` from `cortex_command.lifecycle.parse_args`; slice SKILL.md's Step 1 routing-table region (between heading anchors) and assert each literal appears **as a routing-table entry**, not merely as an incidental English word (e.g. require it in a table row / backticked code span), so a missing handler for common-word modes (`complete`/`resume`/`empty`/`error`) is actually caught.
 - **Verification**: `python3 -m pytest tests/test_lifecycle_invocation_grammar_parity.py` exits 0 (covers `-k grammar`/`-k mode_coverage`/`-k edge` and both negative controls, incl. the reserved-two-token-form captures) — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done — 03edc3d6 (5 tests pass; mode_coverage selector 1 pass; 14 forms scraped; both negative controls fire)
 
 ### Task 3: Deploy the `cortex-lifecycle-wontfix` order-enforcing verb + cite it in SKILL.md (atomic deploy+wire)
 - **Files**: `cortex_command/lifecycle/wontfix_cli.py` (new), `pyproject.toml`, `skills/lifecycle/SKILL.md`, `plugins/cortex-core/skills/lifecycle/SKILL.md` (mirror, via `just build-plugin`)
@@ -71,7 +71,7 @@ Structuralize the `/cortex-core:lifecycle` invocation grammar behind a tested `c
   - **ADR back-pointer**: a code comment on the ordering cites **ADR-0004** (no new ADR for the verb; the parser/grammar ADR is Task 6).
   - **SKILL.md citation**: update the `wontfix` route prose to name `cortex-lifecycle-wontfix <slug> --reason "…"` (no required flags → contract-clean). Add `cortex-lifecycle-wontfix = "cortex_command.lifecycle.wontfix_cli:main"` to `pyproject.toml`. Wheel-only — no plugin mirror for the module; run `just build-plugin` for the SKILL.md mirror and stage canonical+mirror together.
 - **Verification**: `python3 -c "import cortex_command.lifecycle.wontfix_cli"` exits 0 AND `python3 -m cortex_command.lifecycle.wontfix_cli --help` exits 0 AND `grep -c 'cortex-lifecycle-wontfix' skills/lifecycle/SKILL.md` ≥ 1 AND `python3 -m pytest tests/test_dual_source_reference_parity.py -q` exits 0 — pass if all hold (behavioral coverage lands in Task 4).
-- **Status**: [ ] pending
+- **Status**: [x] done — 6b857013 (import ok; --help exit 0; SKILL token=1; dual-source 59; parity+contract exit 0)
 
 ### Task 4: Unit-test the wontfix verb (all four guard branches, worktree refusal, discriminating row, fail-forward)
 - **Files**: `cortex_command/lifecycle/tests/test_wontfix_cli.py` (new)
@@ -86,7 +86,7 @@ Structuralize the `/cortex-core:lifecycle` invocation grammar behind a tested `c
   - **Terminalization (Req 14)**: (i) terminalizes via index.md parent id; (ii) a `..`/`/`-bearing slug rejected pre-move; (iii) ambiguous-slug exit-2 propagates; (iv) absent/null `index.md` no-ops step (c) cleanly; (v) zero-match where a parent was expected → non-zero.
   - **Fail-forward (Req 15)**: simulate a step-(b) failure after a successful move by monkeypatching **`cortex_command.lifecycle.wontfix_cli._append_event_atomic`** (the verb's imported binding — patching the source module would NOT affect the already-imported reference and the test would pass vacuously) to raise once, then re-invoke, and assert the `feature_wontfix` row is present and the backlog item terminal afterward.
 - **Verification**: `python3 -m pytest cortex_command/lifecycle/tests/test_wontfix_cli.py` exits 0 — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done — 1782db60 (13 tests pass; fixed test-only subprocess-patch scope so telemetry's git call isn't intercepted)
 
 ### Task 5: Thin `references/wontfix.md` to one verb call + fix the stale citation + mirror
 - **Files**: `skills/lifecycle/references/wontfix.md`, `plugins/cortex-core/skills/lifecycle/references/wontfix.md` (mirror, via `just build-plugin`)
@@ -99,7 +99,7 @@ Structuralize the `/cortex-core:lifecycle` invocation grammar behind a tested `c
   - **Fix the stale citation** (both `:5`, `:15`): `hooks/cortex-scan-lifecycle.sh:227` → `cortex_command/hooks/scan_lifecycle.py:907`.
   - This adds a SECOND in-scope reference to the already-deployed verb (gate-neutral). Run `just build-plugin`; stage canonical + mirror together.
 - **Verification**: `grep -c 'git mv' skills/lifecycle/references/wontfix.md` = 0 AND `grep -c 'cortex-lifecycle-wontfix' skills/lifecycle/references/wontfix.md` ≥ 1 AND `grep -c 'scan_lifecycle.py:907' skills/lifecycle/references/wontfix.md` ≥ 1 AND `python3 -m pytest tests/test_dual_source_reference_parity.py -q` exits 0 — pass if all hold.
-- **Status**: [ ] pending
+- **Status**: [x] done — 818ab5e9 (git mv 0; verb ref 1; citation 1; gate paragraphs removed; dual-source 59; parity+contract+events-registry exit 0)
 
 ### Task 6: Registry hygiene, ADR at next-free number, final mirror/test sweep
 - **Files**: `bin/.events-registry.md`, `cortex/adr/00NN-structural-lifecycle-invocation-grammar.md` (new; `NN` = next-free, see Context), `cortex/lifecycle/wire-cortex-corelifecycle-wontfix-invocation-and/spec.md` (update the Proposed-ADR number reference to match)
@@ -112,7 +112,7 @@ Structuralize the `/cortex-core:lifecycle` invocation grammar behind a tested `c
   - **Registry** (Req 18): in `bin/.events-registry.md`, update the `feature_wontfix` row (`:26`) producers column from `skills/lifecycle/references/wontfix.md` to `cortex_command/lifecycle/wontfix_cli.py`; optionally flip `scan_coverage` `gate-enforced` → `manual` (Should — the literal now emits from Python, out of skill-scan scope). Preserve the R5 column order.
   - **Final sweep**: `just build-plugin` (no-op if Tasks 1/3/5 already regenerated mirrors), then run the gate suite on the staged diff.
 - **Verification**: `ls cortex/adr/ | grep -cE '^00[0-9]{2}-structural-lifecycle-invocation-grammar\.md$'` = 1 (the ADR file exists at the claimed number) AND `just test` exits 0 (incl. `tests/test_dual_source_reference_parity.py`) AND `just check-parity --staged && just check-contract --staged && just check-events-registry --staged` exits 0 — pass if all hold.
-- **Status**: [ ] pending
+- **Status**: [x] done — ADR claimed 0018 (0017 taken by #335); registry producer→wontfix_cli.py + scan_coverage→manual; spec ADR refs updated; just test 7/7; staged gates clean
 
 ## Risks
 - **Gate-sequencing — E002 is symmetric.** `cortex-check-parity` errors on referenced-but-undeployed (E002, `parity_check.py:775-790`), not only deployed-but-unreferenced (W003); the pre-commit hook runs it on any staged `skills/*`. Every new console-script's `pyproject` deploy and its first skill reference are therefore co-located in one task/commit (Task 1 for `parse-args`, Task 3 for `wontfix`). The lifecycle `plan.md` reference's "wiring-first / mention-before-deploy is fine" hint is wrong about E002 — do not follow it here.
