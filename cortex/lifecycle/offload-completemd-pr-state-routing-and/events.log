@@ -1,0 +1,8 @@
+{"schema_version": 1, "ts": "2026-06-29T11:52:57Z", "event": "lifecycle_start", "feature": "offload-completemd-pr-state-routing-and", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-29T12:00:50Z", "event": "clarify_critic", "feature": "offload-completemd-pr-state-routing-and", "parent_epic_loaded": true, "findings_count": 9, "dispositions": {"apply": 7, "dismiss": 2, "ask": 0}, "applied_fixes_count": 5, "dismissals_count": 2, "status": "ok"}
+{"ts": "2026-06-29T12:24:35Z", "event": "complexity_override", "feature": "offload-completemd-pr-state-routing-and", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-06-29T12:24:35Z", "event": "criticality_override", "feature": "offload-completemd-pr-state-routing-and", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-06-29T16:54:12Z", "event": "spec_approved", "feature": "offload-completemd-pr-state-routing-and"}
+{"ts":"2026-06-29T20:10:56Z","event":"sentinel_absence","feature":"offload-completemd-pr-state-routing-and","reviewer_angle":"Test-migration completeness","reason":"absent","model_tier":"sonnet","expected_sha":"e9f0061c82f820e025ce8b08aa497cfac48159ef91a4f537bfcf28d4d09a6c22","observed_sha_or_null":null}
+{"ts": "2026-06-29T23:38:55Z", "event": "plan_approved", "feature": "offload-completemd-pr-state-routing-and", "dispatch_choice": "wait"}
+{"ts": "2026-06-29T23:38:55Z", "event": "feature_paused", "feature": "offload-completemd-pr-state-routing-and"}
