@@ -1,0 +1,7 @@
+{"schema_version": 1, "ts": "2026-06-30T02:41:03Z", "event": "lifecycle_start", "feature": "fix-feature-complete-emission-ordering-strand", "tier": "complex", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-30T02:49:34Z", "event": "clarify_critic", "feature": "fix-feature-complete-emission-ordering-strand", "parent_epic_loaded": true, "findings_count": 9, "dispositions": {"apply": 8, "dismiss": 1, "ask": 0}, "applied_fixes_count": 8, "dismissals_count": 1, "status": "ok"}
+{"schema_version": 1, "ts": "2026-06-30T02:49:34Z", "event": "phase_transition", "feature": "fix-feature-complete-emission-ordering-strand", "from": "clarify", "to": "research"}
+{"ts": "2026-06-30T03:12:39Z", "event": "complexity_override", "feature": "fix-feature-complete-emission-ordering-strand", "from": "simple", "to": "complex", "gate": "research_open_questions"}
+{"schema_version": 1, "ts": "2026-06-30T03:12:48Z", "event": "phase_transition", "feature": "fix-feature-complete-emission-ordering-strand", "from": "research", "to": "specify"}
+{"schema_version": 1, "ts": "2026-06-30T11:34:33Z", "event": "spec_approved", "feature": "fix-feature-complete-emission-ordering-strand"}
+{"schema_version": 1, "ts": "2026-06-30T11:34:33Z", "event": "phase_transition", "feature": "fix-feature-complete-emission-ordering-strand", "from": "specify", "to": "plan"}

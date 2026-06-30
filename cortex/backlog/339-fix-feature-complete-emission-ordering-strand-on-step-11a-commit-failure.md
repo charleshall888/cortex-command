@@ -2,15 +2,18 @@
 schema_version: "1"
 uuid: 29604a81-71cb-4b3f-9eef-9699ffdcee57
 title: Fix feature_complete emission-ordering strand on Step-11a commit failure
-status: backlog
+status: in_progress
 priority: low
 type: bug
 created: 2026-06-29
-updated: 2026-06-29
+updated: 2026-06-30
 parent: 336
 complexity: complex
 criticality: medium
 areas: ['lifecycle']
+lifecycle_phase: research
+lifecycle_slug: fix-feature-complete-emission-ordering-strand
+spec: cortex/lifecycle/fix-feature-complete-emission-ordering-strand/spec.md
 ---
 ## Why
 
