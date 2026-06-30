@@ -99,9 +99,24 @@ If `cortex/lifecycle/{lifecycle-slug}/research.md` already exists, apply the Res
 
 **Bypass case — loop-back from §2a confidence check**: If Research is being re-entered because `specify.md`'s §2a confidence check flagged gaps during the structured interview, skip the Sufficiency Check entirely and re-run Research from scratch. Treat `research.md` as invalidated and overwrite it.
 
+### Alignment-Considerations Propagation
+
+After clarify-critic returns and dispositions are applied (see Step 3), collect every finding with `origin: "alignment"` whose disposition is **Apply** (or whose Ask was resolved to Apply via the §4 Q&A flow). Findings dispositioned as **Dismiss** are not propagated.
+
+When — and **only when** — at least one Apply'd alignment finding exists, perform one coupled step: **write** the surviving findings to `cortex/lifecycle/{lifecycle-slug}/research-considerations.md`, **overwriting** the file (never appending), **and** carry `research-considerations-file=cortex/lifecycle/{lifecycle-slug}/research-considerations.md` on the `/cortex-core:research` dispatch below. The write and the argument are inseparable: the argument is never emitted without a same-run fresh write, so a stale prior-run file can never be read. When clarify-critic returned no alignment findings, or every alignment finding was Dismissed, perform neither the write nor the argument — omit `research-considerations-file` from the dispatch entirely.
+
+The file content is a newline-delimited bullet list, each line a one-sentence paraphrase of the underlying alignment finding:
+
+```
+- consideration text one
+- consideration text two
+```
+
+Because the considerations now ride a file rather than a parsed argument value, the content may contain arbitrary characters (including `=` and `"`) with no escaping.
+
 ### Research Execution
 
-Delegate to `/cortex-core:research`:
+Delegate to `/cortex-core:research` (appending `research-considerations-file=cortex/lifecycle/{lifecycle-slug}/research-considerations.md` only when the propagation write above fired):
 
 ```
 /cortex-core:research topic="{clarified intent}" lifecycle-slug="{lifecycle-slug}" tier={tier} criticality={criticality}
@@ -114,19 +129,6 @@ Delegate to `/cortex-core:research`:
 `/cortex-core:research` writes its output to `cortex/lifecycle/{lifecycle-slug}/research.md`.
 
 After `/cortex-core:research` returns, verify that `cortex/lifecycle/{lifecycle-slug}/research.md` exists and is non-empty. If the file is absent or empty, surface the error to the user and halt — do not proceed to the Research Exit Gate.
-
-### Alignment-Considerations Propagation
-
-After clarify-critic returns and dispositions are applied (see Step 3), collect every finding with `origin: "alignment"` whose disposition is **Apply** (or whose Ask was resolved to Apply via the §4 Q&A flow). Findings dispositioned as **Dismiss** are not propagated. Format the surviving alignment findings as a newline-delimited bullet list:
-
-```
-- consideration text one
-- consideration text two
-```
-
-Each consideration must be a one-sentence paraphrase of the underlying alignment finding. Strip or paraphrase away any embedded `=` or `"` characters so the value remains a well-formed argument string.
-
-Pass the assembled list as `research-considerations="..."` to the `/cortex-core:research` invocation. This argument fires only when at least one Apply'd alignment finding exists. If clarify-critic returned no alignment findings, or every alignment finding was Dismissed, omit the `research-considerations` argument entirely from the research dispatch.
 
 After writing `research.md`, register the `"research"` artifact in `cortex/lifecycle/{lifecycle-slug}/index.md` per the canonical artifact-registration recipe in backlog-writeback.md (loaded at lifecycle Step 2).
 
