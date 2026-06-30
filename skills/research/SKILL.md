@@ -26,7 +26,7 @@ Topic and options: $ARGUMENTS
 
 ## Step 1: Parse Arguments
 
-Parse `$ARGUMENTS` for key=value pairs. Supported keys: `topic`, `lifecycle-slug`, `tier`, `criticality`, `research-considerations`.
+Parse `$ARGUMENTS` for key=value pairs. Supported keys: `topic`, `lifecycle-slug`, `tier`, `criticality`, `research-considerations-file`.
 
 Example invocations:
 - `topic="add rate limiting" lifecycle-slug=add-rate-limiting tier=complex criticality=high`
@@ -40,9 +40,9 @@ Example invocations:
 Defaults:
 - `tier`: `simple`
 - `criticality`: `medium`
-- `research-considerations`: empty/absent → no considerations injection
+- `research-considerations-file`: empty/absent → no considerations injection
 
-`research-considerations` format: a newline-delimited bullet list, each line starting with `- `. Embedded `=` and `"` characters are not supported in the value. When empty or absent, no considerations are injected into agent prompts.
+`research-considerations-file` is a **path** to a file (written by `/cortex-core:refine`) whose content is a newline-delimited bullet list, each line starting with `- `. When the argument is present, research's orchestrator body **reads that file and substitutes its literal content** into the core-angle prompt considerations placeholders (see Step 3) — it injects the file's content, never the path. Because only a path rides the argument, there is nothing to escape. **Reader contract**: when the argument is absent, or the file is missing, empty, or whitespace-only, no considerations injection occurs — do not halt on a missing file.
 
 ## Step 2: Determine Agent Count
 
@@ -60,7 +60,7 @@ The following named fragment is referenced by every agent-prompt code-block belo
 
 ### Considerations injection (per-angle applicability)
 
-When `research-considerations` is non-empty (see Step 1), inject its content as a `### Considerations to investigate alongside the primary scope` section into the **mandatory core angles only** (Codebase, Web, Requirements & Constraints) — not Tradeoffs (keep its orthogonal evaluation unnarrowed), not Adversarial (it works on summarized findings), and not any other orchestrator-chosen angle. Use an `###` (h3) heading so it nests below the agents' `##` output sections, and place it after the job-description block and before the output spec. When empty or absent, inject nothing.
+When `research-considerations-file` is present (see Step 1), research's body reads the file and injects its **content** (never the path) as a `### Considerations to investigate alongside the primary scope` section into the **mandatory core angles only** (Codebase, Web, Requirements & Constraints) — not Tradeoffs (keep its orthogonal evaluation unnarrowed), not Adversarial (it works on summarized findings), and not any other orchestrator-chosen angle. Use an `###` (h3) heading so it nests below the agents' `##` output sections, and place it after the job-description block and before the output spec. When the file is absent, empty, or whitespace-only, inject nothing.
 
 ### Angle selection
 
@@ -227,7 +227,7 @@ research, including agent contradictions and any note that angle subdivision was
 cell's count exceeded available distinct angles (per fanout.md). Omit this section if no open questions exist.]
 
 ## Considerations Addressed
-[Conditional section: emitted only when research-considerations was non-empty AND lifecycle mode. One bullet per input consideration with a one-sentence note on how research addressed it (or "deferred — no relevant evidence found"). Appears after `## Open Questions`, before any final references.]
+[Conditional section: emitted only when the considerations file was non-empty AND lifecycle mode. One bullet per input consideration with a one-sentence note on how research addressed it (or "deferred — no relevant evidence found"). Appears after `## Open Questions`, before any final references.]
 ```
 
 ## Step 5: Route Output
@@ -235,7 +235,7 @@ cell's count exceeded available distinct angles (per fanout.md). Omit this secti
 **Lifecycle mode** (`lifecycle-slug` was present in `$ARGUMENTS`):
 1. If `cortex/lifecycle/{lifecycle-slug}/` does not exist, create the directory.
 2. Write synthesis output to `cortex/lifecycle/{lifecycle-slug}/research.md`.
-3. The `## Considerations Addressed` section (defined in Step 4) is included when `research-considerations` was non-empty.
+3. The `## Considerations Addressed` section (defined in Step 4) is included when the considerations file was non-empty.
 4. Announce: "Research complete. Written to `cortex/lifecycle/{lifecycle-slug}/research.md`."
 
 **Standalone mode** (`lifecycle-slug` absent or empty):
