@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: fe1043fe-3145-4faf-9fba-0f7e5d696ea1
 title: Route bare phase tokens to the active feature in /cortex-core:lifecycle
-status: backlog
+status: wontfix
 priority: low
 type: feature
 created: 2026-06-29
-updated: 2026-06-29
+updated: 2026-06-30
 ---
 ## Why
 
@@ -32,3 +32,7 @@ Give `/cortex-core:lifecycle <phase>` (no feature) a useful behavior: resolve th
 - `cortex_command/lifecycle/parse_args.py`, `skills/lifecycle/SKILL.md` Step 1, `tests/test_lifecycle_invocation_grammar_parity.py`.
 
 Cross-ref: #329; ADR-0018 (structural invocation grammar) scope-honesty note records this as deferred.
+
+## Resolution
+
+Wontfix (2026-06-30, via `/cortex-core:refine` clarify gate). Multiple incomplete lifecycles are the normal working state, so any repo-wide "active feature" resolution degrades to a list-and-ask picker almost every time — trading "type the feature slug" for "click a picker" (which does not cleanly carry the phase), for near-zero net convenience plus new logic on the shared lifecycle entrypoint. The only sub-case immune to that — session-scoped `.session` continuation — has thin value (phases already auto-advance within a session). Given priority:low and that #329's feature-required fallback is already safe, the chosen behavior is to keep requiring an explicit feature arg. #329's `mode=phase` "specify a feature" fallback stands as the intended terminal behavior.
