@@ -41,6 +41,7 @@ from cortex_command.lifecycle.complete_route import classify, main
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 GH_STUB_SOURCE = REPO_ROOT / "tests" / "fixtures" / "gh-stub.sh"
+VERB_SOURCE = REPO_ROOT / "cortex_command" / "lifecycle" / "complete_route.py"
 
 SLUG = "feat"
 
@@ -689,3 +690,361 @@ def test_no_speculative_callers_grep_guard() -> None:
         except ValueError:
             continue
     assert total == 0, f"speculative caller(s) reference the verb:\n{proc.stdout}"
+
+
+# ---------------------------------------------------------------------------
+# Branch-2 narrowing helpers
+# ---------------------------------------------------------------------------
+
+
+def _write_fc_event(root: Path, *, merge_anchor: Optional[str] = "merge") -> None:
+    """Write a feature_complete row to events.log (with a preceding benign row).
+
+    If *merge_anchor* is None the field is omitted, testing the legacy/missing-
+    anchor behaviour — absent defaults to "review" in classify()'s scan.
+    """
+    row = {
+        "ts": "2026-06-30T12:00:00Z",
+        "event": "feature_complete",
+        "feature": SLUG,
+        "tasks_total": 3,
+        "rework_cycles": 0,
+    }
+    if merge_anchor is not None:
+        row["merge_anchor"] = merge_anchor
+    _write_events(root, _BENIGN_EVENT, json.dumps(row))
+
+
+def _write_lifecycle_config(root: Path, *, commit_artifacts: bool) -> None:
+    """Write cortex/lifecycle.config.md with the given commit-artifacts setting.
+
+    Uses _CONFIG_RELPATH = "cortex/lifecycle.config.md" (lifecycle_config.py:25).
+    The cortex/ directory is guaranteed to exist after _make_root().
+    """
+    val = "true" if commit_artifacts else "false"
+    config_path = root / "cortex" / "lifecycle.config.md"
+    config_path.write_text(f"---\ncommit-artifacts: {val}\n---\n", encoding="utf-8")
+
+
+# ---------------------------------------------------------------------------
+# Branch-2 narrowing: per-case builder functions (all use _init_repo)
+# ---------------------------------------------------------------------------
+
+
+def _b2_committed_in_head(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Case 1: feature_complete row committed to HEAD → already_complete (H=True)."""
+    root = _make_root(tmp_path)
+    _init_repo(root)
+    (root / "README").write_text("x\n")
+    _git("add", "README", cwd=root)
+    _git("commit", "-m", "c0", cwd=root)
+    _write_fc_event(root, merge_anchor="merge")
+    _git("add", "--", f"cortex/lifecycle/{SLUG}/events.log", cwd=root)
+    _git("commit", "-m", "c1 feature_complete committed", cwd=root)
+    return root
+
+
+def _b2_uncommitted_anchor_review(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> Path:
+    """Case 2: uncommitted + merge_anchor:"review" → already_complete (anchor!=merge)."""
+    root = _make_root(tmp_path)
+    _init_repo(root)
+    (root / "README").write_text("x\n")
+    _git("add", "README", cwd=root)
+    _git("commit", "-m", "c0", cwd=root)
+    _write_fc_event(root, merge_anchor="review")
+    return root
+
+
+def _b2_uncommitted_no_anchor(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> Path:
+    """Case 3: uncommitted + no merge_anchor field → already_complete.
+
+    Absent field defaults to "review" per the canonical convention, so the row
+    is NOT a retry trigger.  Regression guard for the success-path.
+    """
+    root = _make_root(tmp_path)
+    _init_repo(root)
+    (root / "README").write_text("x\n")
+    _git("add", "README", cwd=root)
+    _git("commit", "-m", "c0", cwd=root)
+    _write_fc_event(root, merge_anchor=None)  # omit the field
+    return root
+
+
+def _b2_uncommitted_ca_false(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> Path:
+    """Case 4: uncommitted + merge_anchor:"merge" + commit-artifacts:false → already_complete.
+
+    Flag-false carve-out: deliberately-uncommitted design, not a retryable strand.
+    """
+    root = _make_root(tmp_path)
+    _init_repo(root)
+    (root / "README").write_text("x\n")
+    _git("add", "README", cwd=root)
+    _git("commit", "-m", "c0", cwd=root)
+    _write_fc_event(root, merge_anchor="merge")
+    _write_lifecycle_config(root, commit_artifacts=False)
+    return root
+
+
+def _b2_committable_on_main(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> Path:
+    """Case 5: uncommitted + merge_anchor:"merge" + committable + on main → on_main/step9.
+
+    All retryable conditions are True: H=False (never committed), merge-anchor,
+    commit-artifacts=True (default), committable=True (events.log untracked),
+    current_branch="main", pr.json absent.  Falls through to Branch 3 →
+    on_main/step9 (NOT already_complete).
+
+    Pre-fix un-narrowed Branch 2 would return already_complete here — this is
+    the positive discriminating case for the narrowing fix.
+    """
+    root = _make_root(tmp_path)
+    _init_repo(root)
+    (root / "README").write_text("x\n")
+    _git("add", "README", cwd=root)
+    _git("commit", "-m", "c0", cwd=root)
+    _write_fc_event(root, merge_anchor="merge")
+    # No lifecycle.config.md → commit-artifacts defaults to True.
+    # No pr.json → Branch 3 checks current_branch ("main") → on_main.
+    return root
+
+
+def _b2_in_head_absent_from_wt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> Path:
+    """Case 6: committed-then-reverted → already_complete (H=True even though W=False).
+
+    Branch 2 fires on (W ∨ H); H-present is sufficient to short-circuit.
+    """
+    root = _make_root(tmp_path)
+    _init_repo(root)
+    (root / "README").write_text("x\n")
+    _git("add", "README", cwd=root)
+    _git("commit", "-m", "c0", cwd=root)
+    _write_fc_event(root, merge_anchor="merge")
+    _git("add", "--", f"cortex/lifecycle/{SLUG}/events.log", cwd=root)
+    _git("commit", "-m", "c1 feature_complete committed", cwd=root)
+    # Overwrite working-tree events.log, removing the feature_complete row.
+    # W=False after this write; H remains True (HEAD is unchanged).
+    _write_events(root, _BENIGN_EVENT)
+    return root
+
+
+def _b2_feature_branch_no_pr_json(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> Path:
+    """Case 7: feature branch + no pr.json → already_complete (retry-target guard).
+
+    Without the guard (current_branch in {main,master} or pr_json.is_file()),
+    retryable=True would fall through to first_run/step1 via the orphan probe
+    (0 matches on a non-main branch with no PR) = lifecycle restart.  The guard
+    suppresses the fall-through.  A gh stub returning 0 matches makes the
+    discriminating intent explicit: without the guard, the test fails.
+    """
+    root = _make_root(tmp_path)
+    _init_repo(root)
+    (root / "README").write_text("x\n")
+    _git("add", "README", cwd=root)
+    _git("commit", "-m", "c0", cwd=root)
+    _git("checkout", "-b", "feature-foo", cwd=root)
+    _write_fc_event(root, merge_anchor="merge")
+    # gh stub returning 0 orphan matches: without the guard the code would call
+    # _orphan_probe, get [], and return first_run/step1.
+    _install_gh_stub(monkeypatch, tmp_path)
+    monkeypatch.setenv("GH_STUB_PR_LIST_COUNT", "0")
+    return root
+
+
+# id, builder, expected_route, expected_continue_to, forbidden_route
+_BRANCH2_CASES = [
+    ("committed_in_head", _b2_committed_in_head, "already_complete", "step12", None),
+    ("uncommitted_anchor_review", _b2_uncommitted_anchor_review, "already_complete", "step12", None),
+    ("uncommitted_no_anchor", _b2_uncommitted_no_anchor, "already_complete", "step12", None),
+    ("uncommitted_ca_false", _b2_uncommitted_ca_false, "already_complete", "step12", None),
+    ("committable_on_main", _b2_committable_on_main, "on_main", "step9", None),
+    ("in_head_absent_from_wt", _b2_in_head_absent_from_wt, "already_complete", "step12", None),
+    ("feature_branch_no_pr_json", _b2_feature_branch_no_pr_json, "already_complete", "step12", "first_run"),
+]
+
+
+@pytest.mark.parametrize(
+    "builder,expected_route,expected_continue_to,forbidden_route",
+    [row[1:] for row in _BRANCH2_CASES],
+    ids=[row[0] for row in _BRANCH2_CASES],
+)
+def test_branch2_narrowing_carveout_matrix(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    builder: Callable[[Path, pytest.MonkeyPatch], Path],
+    expected_route: str,
+    expected_continue_to: Optional[str],
+    forbidden_route: Optional[str],
+) -> None:
+    """Parametrized: each carve-out condition in the narrowed Branch-2 retryable check.
+
+    Every case uses a real repo via _init_repo so assertions discriminate on
+    committed-vs-uncommitted state, not on the no-repo accident (_make_root
+    alone → committable=False → not retryable regardless of anchor).
+    """
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    root = builder(tmp_path, monkeypatch)
+    monkeypatch.chdir(root)
+
+    before = _events_line_count(root)
+    result = classify(SLUG, root)
+    after = _events_line_count(root)
+
+    assert result["route"] == expected_route, (
+        f"{builder.__name__}: expected {expected_route!r}, got {result['route']!r}"
+    )
+    assert result["continue_to"] == expected_continue_to, (
+        f"{builder.__name__}: expected continue_to={expected_continue_to!r}, "
+        f"got {result['continue_to']!r}"
+    )
+    if forbidden_route is not None:
+        assert result["route"] != forbidden_route, (
+            f"{builder.__name__}: route must not be {forbidden_route!r} "
+            f"(retry-target guard missing?)"
+        )
+
+    # Req 1b: classify() must not write to events.log on any route.
+    assert after == before, (
+        f"{builder.__name__}: classify() mutated events.log ({before} → {after} lines)"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Nested-cortex-root H test: --show-prefix enables git-top-relative path
+# resolution when root is a subdirectory of the git repository.
+# ---------------------------------------------------------------------------
+
+
+def test_branch2_nested_cortex_root_H_uses_show_prefix(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """H=True via --show-prefix when root is a subdirectory of the git repo.
+
+    Discriminating: without the --show-prefix fix, _head_has_feature_complete
+    would use a root-relative path (``cortex/lifecycle/.../events.log``) for
+    ``git show HEAD:``.  With ``root = gitroot/sub``, git resolves that path
+    against the git top (``gitroot/``) → exit 128 → H=False.  With H=False and
+    a committable backlog delta present, retryable=True and classify() falls
+    through to on_main/step9 instead of already_complete.
+
+    The --show-prefix fix prepends ``sub/`` → correct path → H=True →
+    already_complete.
+    """
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+
+    gitroot = tmp_path / "gitroot"
+    root = gitroot / "sub"
+    lifecycle_dir = root / "cortex" / "lifecycle" / SLUG
+    lifecycle_dir.mkdir(parents=True, exist_ok=True)
+
+    # Git repo is at gitroot; root (sub/) is a proper subdirectory.
+    _init_repo(gitroot)
+    (gitroot / "README").write_text("x\n")
+    _git("add", "README", cwd=gitroot)
+    _git("commit", "-m", "c0", cwd=gitroot)
+
+    # Write and commit events.log via gitroot (path relative to the git top).
+    _write_fc_event(root, merge_anchor="merge")
+    _git("add", "--", f"sub/cortex/lifecycle/{SLUG}/events.log", cwd=gitroot)
+    _git("commit", "-m", "c1 feature_complete nested", cwd=gitroot)
+
+    # Leave a committable backlog delta so that, without the --show-prefix fix
+    # (H incorrectly False), retryable=True and classify() misroutes to on_main.
+    backlog_dir = root / "cortex" / "backlog"
+    backlog_dir.mkdir(parents=True, exist_ok=True)
+    (backlog_dir / "index.md").write_text("# index\n", encoding="utf-8")
+
+    monkeypatch.chdir(root)
+    result = classify(SLUG, root)
+
+    # With fix: --show-prefix → H=True → retryable=False → already_complete.
+    # Without fix: root-relative path → exit 128 → H=False → retryable=True → on_main.
+    assert result["route"] == "already_complete", (
+        f"expected already_complete (H=True via --show-prefix), got {result['route']!r}"
+    )
+    assert result["continue_to"] == "step12"
+
+
+# ---------------------------------------------------------------------------
+# R3 same-root / no-traceback test: stale .git-file worktree marker degrades
+# gracefully; no CORTEX_REPO_ROOT leakage into classify().
+# ---------------------------------------------------------------------------
+
+
+def test_branch2_stale_git_file_no_traceback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """classify() degrades gracefully on a stale .git-file worktree marker.
+
+    All git helpers (H, committable, current_branch) fail and return the
+    safe-direction default (False / "").  W=True (working-tree row present)
+    makes Branch 2 trigger; H=False and committable=False make it not retryable
+    → already_complete.  CORTEX_REPO_ROOT pointing at a divergent directory is
+    not consulted — classify() receives root as a direct parameter.
+    """
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+
+    # Stale .git-file worktree: .git is a FILE pointing to a non-existent dir.
+    worktree_root = _setup_worktree(tmp_path)
+    _write_fc_event(worktree_root, merge_anchor="merge")
+
+    # Divergent CORTEX_REPO_ROOT to confirm no leakage into classify().
+    divergent = tmp_path / "divergent"
+    (divergent / "cortex" / "lifecycle" / SLUG).mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("CORTEX_REPO_ROOT", str(divergent))
+
+    monkeypatch.chdir(worktree_root)
+
+    # Should not raise; git helpers degrade gracefully on the stale .git file.
+    result = classify(SLUG, worktree_root)
+
+    # W=True (working-tree row), H=False (git fails gracefully),
+    # committable=False (git fails gracefully) → not retryable → already_complete.
+    assert result["route"] == "already_complete"
+    assert result["continue_to"] == "step12"
+
+
+# ---------------------------------------------------------------------------
+# R3 grep guards: porcelain-not-diff-head and no-collect-paths-import.
+# ---------------------------------------------------------------------------
+
+
+def test_classify_uses_porcelain_not_git_diff_head() -> None:
+    """complete_route.py must not use 'git diff HEAD' (blind to untracked files).
+
+    The committability probe must use 'git status --porcelain' so that
+    first-commit untracked artifacts report committable=True (Req 3).
+    """
+    source = VERB_SOURCE.read_text(encoding="utf-8")
+    assert "git diff HEAD" not in source, (
+        "complete_route.py uses 'git diff HEAD'; the committability probe must "
+        "use 'git status --porcelain' to detect untracked files (Req 3)."
+    )
+
+
+def test_classify_does_not_import_collect_paths() -> None:
+    """complete_route.py must not import stage_artifacts or collect_paths.
+
+    The drift read is inlined in _drift_files_from_review; importing
+    stage_artifacts (backlog-glob + YAML-parse) is a weight regression on
+    the routing path (Req 3 Technical Constraints).
+    """
+    source = VERB_SOURCE.read_text(encoding="utf-8")
+    assert "collect_paths" not in source, (
+        "complete_route.py references 'collect_paths'; the drift read must be "
+        "inlined (Req 3 — no stage_artifacts import on the routing path)."
+    )
+    assert "stage_artifacts" not in source, (
+        "complete_route.py imports 'stage_artifacts'; the drift read must be "
+        "inlined in _drift_files_from_review (Req 3 Technical Constraints)."
+    )
