@@ -14,7 +14,7 @@ Usage:
 
 Roles:
   review, builder, orchestrator-fix, competing-plan  — tier-keyed (need --criticality)
-  synthesizer                                          — criticality-independent (no --criticality)
+  synthesizer, searcher                                — criticality-independent (no --criticality)
 
 Output:
   Bare model name + newline on stdout, exit 0 on success.
@@ -67,9 +67,15 @@ _LIFECYCLE_MATRIX: dict[str, dict[str, str]] = {
 # identical cells: a constant cannot drift, and it removes the empty
 # low/medium/high cells a future editor might be tempted to "fill in" (which
 # would invent a criticality dependence the role does not have). This is also
-# what lets the standalone synthesizer dispatch sites resolve with no
+# what lets the standalone synthesizer/searcher dispatch sites resolve with no
 # lifecycle-state read.
-_CRITICALITY_INDEPENDENT: dict[str, str] = {"synthesizer": "opus"}
+#
+# `searcher` routes the interactive research/discovery core-wave (gather) fan-out
+# to sonnet: criticality scales the angle count and triggers the adversarial
+# wave, not the per-gatherer model, so the gather model is constant. The
+# always-last adversarial wave inherits the parent rather than resolving this
+# role (the judgment-inherit contract — see docs/internals/sdk.md and ADR-0023).
+_CRITICALITY_INDEPENDENT: dict[str, str] = {"synthesizer": "opus", "searcher": "sonnet"}
 
 # Argparse choices: the five role names (four tier-keyed + the independent one).
 _ROLE_CHOICES = sorted(set(_LIFECYCLE_MATRIX) | set(_CRITICALITY_INDEPENDENT))
@@ -93,7 +99,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "Dispatch role. Tier-keyed roles (review, builder, "
             "orchestrator-fix, competing-plan) require --criticality; "
-            "synthesizer is criticality-independent."
+            "synthesizer and searcher are criticality-independent."
         ),
     )
     parser.add_argument(
@@ -103,7 +109,7 @@ def _build_parser() -> argparse.ArgumentParser:
         choices=_CRITICALITY_CHOICES,
         help=(
             "Lifecycle criticality. Required for tier-keyed roles; ignored "
-            "for the criticality-independent synthesizer role."
+            "for the criticality-independent synthesizer and searcher roles."
         ),
     )
     return parser
