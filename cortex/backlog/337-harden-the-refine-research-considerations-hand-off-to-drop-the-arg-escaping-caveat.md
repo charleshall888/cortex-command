@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 78434a7c-8871-4aeb-ad0f-cb620363d0b7
 title: Harden the refine->research considerations hand-off to drop the arg-escaping caveat
-status: refined
+status: complete
 priority: low
 type: chore
 created: 2026-06-29
