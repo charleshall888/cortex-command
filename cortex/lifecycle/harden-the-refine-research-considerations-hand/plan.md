@@ -50,7 +50,7 @@ Migrate the refine→research alignment-considerations hand-off from a model-par
 - **Complexity**: simple
 - **Context**: The fixture is a flat YAML list under `handoff_fields:` (see the existing `discovery_source` entry). The test does a plain case-sensitive substring search for the token in `skills/<skill>/SKILL.md` or `references/*.md` for the producer (`refine`) and each consumer (`research`); both carry `research-considerations-file` after Tasks 2–3, so this is green once those land. `test_skill_handoff.py`'s existing `pytest.raises` regression fixture is the built-in negative control — do not modify it.
 - **Verification**: `.venv/bin/pytest tests/test_skill_handoff.py -q` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done — 2 passed; token enforced in both skills' prose
 
 ### Task 5: Add the gitignore-template test case
 - **Files**: `cortex_command/init/tests/test_cortex_gitignore_template.py`
