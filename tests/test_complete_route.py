@@ -1048,3 +1048,85 @@ def test_classify_does_not_import_collect_paths() -> None:
         "complete_route.py imports 'stage_artifacts'; the drift read must be "
         "inlined in _drift_files_from_review (Req 3 Technical Constraints)."
     )
+
+
+# ---------------------------------------------------------------------------
+# Task 4 / R5: commit-failure routing-recovery test
+# ---------------------------------------------------------------------------
+
+
+def test_classify_recovery_commit_failed_then_retry(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R5: commit-failed → on_main/step9 retry → committed → already_complete.
+
+    Stage 1 (commit failed): feature_complete row in working tree, not in HEAD.
+    A committable backlog delta is also present so retryable=True (all five
+    conditions satisfied).  The Stage-1 on_main assertion is the discriminator:
+    the pre-fix un-narrowed classify() returns already_complete here (short-
+    circuits on W=True), so this assertion fails against the old code.
+
+    Stage 2 (successful retry): commit the finalization set.  H is now True →
+    already_complete.  The cycle ends done.
+
+    Convergence-state check: exactly one feature_complete row in HEAD's
+    events.log confirms classify() (read-only) did not duplicate during the
+    round-trip.
+
+    Scope note: this tests routing (Task 1 fix), not R4's Step-11 prose dedup —
+    classify() never runs Step 11, so the prose emit guard is not exercisable
+    by any unit test; that is acknowledged here rather than claimed.
+    """
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    root = _make_root(tmp_path)
+    _init_repo(root)
+    (root / "README").write_text("x\n")
+    _git("add", "README", cwd=root)
+    _git("commit", "-m", "c0", cwd=root)
+    monkeypatch.chdir(root)
+
+    # Stage 1: simulate a failed Step-11a commit.
+    # feature_complete row is in the working tree (W=True) but NOT in HEAD (H=False).
+    # A committable backlog delta ensures committable=True so the retryable=True
+    # path triggers (not the committable=False carve-out).
+    _write_fc_event(root, merge_anchor="merge")
+    backlog_dir = root / "cortex" / "backlog"
+    backlog_dir.mkdir(parents=True, exist_ok=True)
+    (backlog_dir / "index.md").write_text("# index\n", encoding="utf-8")
+
+    result = classify(SLUG, root)
+    # Discriminator: pre-fix classify() returns already_complete; post-fix
+    # (narrowed Branch 2) detects retryable=True and falls through to on_main.
+    assert result["route"] == "on_main", (
+        f"Stage 1: expected on_main (commit-failed retry), got {result['route']!r}"
+    )
+    assert result["continue_to"] == "step9"
+
+    # Stage 2: successful retry — commit the finalization set.
+    _git(
+        "add", "--",
+        f"cortex/lifecycle/{SLUG}/events.log",
+        "cortex/backlog/index.md",
+        cwd=root,
+    )
+    _git("commit", "-m", "c1 finalization", cwd=root)
+
+    result2 = classify(SLUG, root)
+    # H is now True (feature_complete row committed to HEAD) → already_complete.
+    assert result2["route"] == "already_complete", (
+        f"Stage 2: expected already_complete (committed), got {result2['route']!r}"
+    )
+    assert result2["continue_to"] == "step12"
+
+    # Convergence-state check: exactly one feature_complete row in HEAD's events.log.
+    # classify() is read-only and never appends; the single row is fixture-written.
+    # (Does not exercise R4's prose emit guard — scope note above.)
+    prefix_proc = _git("rev-parse", "--show-prefix", cwd=root)
+    prefix = prefix_proc.stdout.strip()
+    path_in_git = f"{prefix}cortex/lifecycle/{SLUG}/events.log"
+    show_proc = _git("show", f"HEAD:{path_in_git}", cwd=root)
+    committed_content = show_proc.stdout
+    fc_count = committed_content.count('"event": "feature_complete"')
+    assert fc_count == 1, (
+        f"expected exactly 1 feature_complete row in HEAD's events.log, got {fc_count}"
+    )
