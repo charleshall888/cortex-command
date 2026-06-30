@@ -2,11 +2,16 @@
 schema_version: "1"
 uuid: af87592d-32ef-4c41-98e9-49ef90e7b3d9
 title: Move overnight-suitability judgment from refine into /overnight curation
-status: backlog
+status: in_progress
 priority: low
 type: feature
 created: 2026-06-25
-updated: 2026-06-25
+updated: 2026-06-29
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/move-overnight-suitability-judgment-from-refine/spec.md
+areas: ['overnight-runner', 'skills']
+lifecycle_phase: plan
 ---
 ## Why
 

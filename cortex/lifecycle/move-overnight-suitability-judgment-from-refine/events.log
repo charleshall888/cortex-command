@@ -1,0 +1,7 @@
+{"schema_version": 1, "ts": "2026-06-29T12:41:15Z", "event": "lifecycle_start", "feature": "move-overnight-suitability-judgment-from-refine", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-29T12:48:21Z", "event": "clarify_critic", "feature": "move-overnight-suitability-judgment-from-refine", "parent_epic_loaded": false, "findings_count": 8, "dispositions": {"apply": 8, "dismiss": 0, "ask": 0}, "applied_fixes_count": 4, "dismissals_count": 0, "status": "ok"}
+{"ts": "2026-06-29T13:43:32Z", "event": "complexity_override", "feature": "move-overnight-suitability-judgment-from-refine", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-06-29T13:43:32Z", "event": "criticality_override", "feature": "move-overnight-suitability-judgment-from-refine", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-06-29T17:19:46Z", "event": "spec_approved", "feature": "move-overnight-suitability-judgment-from-refine"}
+{"ts": "2026-06-30T02:48:12Z", "event": "plan_approved", "feature": "move-overnight-suitability-judgment-from-refine", "dispatch_choice": "trunk"}
+{"ts": "2026-06-30T02:48:12Z", "event": "phase_transition", "feature": "move-overnight-suitability-judgment-from-refine", "from": "plan", "to": "implement"}
