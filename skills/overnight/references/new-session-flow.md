@@ -72,7 +72,22 @@ Collect specs for all selected features, display the session plan with specs inl
 
 - **If a spec file is missing or unreadable**: Report "Cannot read spec for {feature_title}: {error}." Offer two choices: (a) remove the feature from the selection and continue, or (b) abort planning so the user can fix the spec. If the user chooses remove, update the selection and skip that feature in the display below.
 
-**Display plan + specs**: Present the rendered session plan from Step 5, then immediately display each feature's spec content inline:
+**Suitability triage (judged once, on first Step 6 entry)**: Unattended overnight execution is the riskiest place to run work — no human is watching to catch a wrong turn — so before showing the plan, judge whether each selected feature is a good *unattended* candidate and set the poor ones aside by default. You hold each feature's `spec.md` (collected above); use it. This judgment happens **once, on first entry to Step 6** — later re-renders re-apply the result rather than re-judging (see the `[T]` handler), so a candidate never flickers between pools.
+
+For each selected feature, set it aside (with a one-line, plain-language reason) when its spec shows it is a poor fit for running with no human present. Bias toward exclusion — a set-aside item is one re-add away, but a bad unattended run wastes the night. Signals that warrant setting aside:
+
+- **Mechanical** (read from the spec): an acceptance criterion marked `Interactive/session-dependent`; or a genuinely unresolved item under the spec's `## Open Decisions` (an `## Open Decisions` of `- None.` or a placeholder is *not* a trigger).
+- **Soft** (judgment from the spec's content): the work needs network or credentials the sandbox cannot reach; it leans on human-visual or human-judgment verification; or it is exploratory / under-specified.
+
+**Blocker-aware**: do not set aside a feature that is the in-session blocker of a feature you are keeping without surfacing that the dependent must also be set aside (or the blocker kept) — `launch` refuses a curated set that drops a kept feature's in-session blocker, so flag that coupling at triage time.
+
+This produces **three pools**:
+
+- **Active** — good unattended candidates; these run.
+- **Set aside (suitability)** — poor unattended fits, **excluded by default but always re-addable** (a mechanical flag is a judgment the operator may legitimately override; a soft flag even more so).
+- **Hard-ineligible** — features that *cannot* run (missing research/spec, epic, blocked, branch-merged); **display-only, never re-addable** (forcing one in would fail bootstrap). A re-add attempt on a hard-ineligible item is refused with its reason.
+
+**Display plan + specs**: Present the rendered session plan from Step 5, then each **active** feature's spec content inline (set-aside features are listed separately below, not shown in full):
 
 ```
 {rendered session plan}
@@ -88,20 +103,26 @@ Spec [2/{total}]: {feature_title}  (cortex/lifecycle/{slug}/spec.md)
 {spec content}
 ```
 
-**Approval prompt**: After all specs are shown, present a single approval. There is no recommended upper limit on session size — the runner scales well, so remove features only for substantive reasons (out of scope, not actually ready), not to keep the session small.
+**Set-aside display**: After the active specs, show the **Set Aside** pool as a numbered list — each entry naming the feature and its one-line reason — then the hard-ineligible pool (display-only). If the active pool is empty (everything was set aside), make that obvious so the operator re-adds rather than approving an empty run.
+
+**Re-display before every approval**: Immediately before each approval prompt, re-display the complete current state — the active pool, the Set Aside pool (with reasons), and the hard-ineligible pool. The no-silent-drop guarantee does not rest on remembering prior decisions: what is displayed and approved here is exactly what `launch` executes (Step 7), so a silently-reversed re-add is visible in this final display.
+
+**Approval prompt**: There is no recommended upper limit on session size — the runner scales well, so remove features only for substantive reasons (out of scope, not actually ready), not to keep the session small. Render the `[I]` line only when the Set Aside pool is non-empty:
 
 ```
 Approve this plan and specs?
 
-  [A] Approve — proceed to launch
-  [R] Remove a feature — specify which to exclude, then re-display
+  [A] Approve — launch exactly the active pool
+  [R] Remove a feature — move an active feature out of the run
+  [I] Include a set-aside item — re-add a set-aside feature to the active pool
   [T] Adjust time limit — change from the default 6h
   [Q] Abort — stop planning
 ```
 
-- **Approve (A)**: Proceed to Step 7.
-- **Remove (R)**: Ask which feature to remove. Drop it from the selection, re-render the plan (repeat Step 5), reload specs for remaining features, and re-display everything before prompting again.
-- **Adjust time limit (T)**: Ask for the new time limit. Re-render the plan with the new limit and re-display before prompting again.
+- **Approve (A)**: Proceed to Step 7 and launch exactly the active pool shown above.
+- **Remove (R)**: Ask which active feature to remove. Move it directly out of the active pool and re-display — do **not** re-run `prepare`'s selection (that would re-introduce removed/set-aside items).
+- **Include (I)**: Ask which set-aside feature to re-add. Move it from the Set Aside pool into the active pool and re-display. A re-add targeting a hard-ineligible item is refused with that item's reason — it can never enter the active set. The re-add is a one-shot, session-scoped override: it holds through this session's re-renders and into the frozen list, but is not remembered to suppress the same set-aside in a future curation.
+- **Adjust time limit (T)**: Ask for the new time limit. Re-render the plan with the new limit, then **re-apply the existing curation** (the maintained active/set-aside pools and any operator re-adds) on top of the re-rendered plan — do not re-judge suitability from scratch, so no candidate (and in particular no re-added item) flickers between pools across re-renders.
 - **Abort (Q)**: Stop immediately. Report "Planning aborted." Do not write any artifacts. Stop.
 
 **Error**: If `cortex/lifecycle/{slug}/spec.md` exists but cannot be decoded (e.g., binary content, encoding error), treat it the same as a missing file and offer the remove-or-abort choice.
@@ -138,11 +159,13 @@ On user approval, execute these steps in order:
 
    **Error**: If `git status` fails (unexpected git error), report the error and stop. In practice this cannot occur — the git repository check in Input Validation (`.git/` exists) runs before Step 7.
 
-2. **Bootstrap the session**: Run the mutating `cortex overnight launch --format json` verb via Bash. It fuses the prep work into one call — target-repo validation (sub-step 0), session bootstrap, and batch-spec extraction (sub-step 4) — so the skill does not shell into internal Python APIs.
+2. **Bootstrap the session**: Run the mutating `cortex overnight launch --format json` verb via Bash, passing the **frozen curated set** via `--only`. It fuses the prep work into one call — target-repo validation (sub-step 0), session bootstrap, and batch-spec extraction (sub-step 4) — so the skill does not shell into internal Python APIs.
 
    ```
-   cortex overnight launch --format json
+   cortex overnight launch --format json --only <comma-separated active slugs>
    ```
+
+   The `--only` value is exactly the **active pool** displayed at the `[A]pprove` moment in Step 6 — the active list shown at approval IS the frozen set IS the executed set; there is no re-selection between approval and execution. Compose the comma-separated slug list from that approved active display. (Omitting `--only` falls back to full re-selection — do not do that here, or operator removals/set-asides would not stick. `launch` refuses fail-loud if the active set is not dependency-closed, naming the missing in-session blocker so you can re-add it at the Step 6 gate.)
 
    This performs all initialization atomically and then emits a JSON envelope. Internally it:
    - Creates a timestamp-based session ID (`overnight-{YYYY-MM-DD}-{HHmm}`) with collision-avoidance
