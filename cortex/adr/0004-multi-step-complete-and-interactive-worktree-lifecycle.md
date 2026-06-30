@@ -49,3 +49,37 @@ This section records the three decisions resolved by the `lifecycle-implement-au
 **Decision (2a) — Authorization shape: dual-path authorization covering picker-fires and suppressed-picker entries.** **[Superseded in part by ADR-0008 — see the supersession note at the end of this decision.]** The load-bearing schema clause is the `EnterWorktree` requirement that *"'worktree' is explicitly mentioned by the user or in CLAUDE.md / memory instructions"* before the tool is callable. The resolution is two complementary surfaces: the picker-fires path is covered by the user's selection of an AskUserQuestion option whose label contains the literal word `worktree` (spec requirement R19 pins this via a parity test on `skills/lifecycle/references/implement.md` §1), and the suppressed-picker path (per-repo `branch-mode` default) is covered by a cortex-managed fenced authorization clause that `cortex init` writes into the consumer's `CLAUDE.md` (spec requirements R5, R6 for the writer with the literal-word-twice invariant, plus R20 for the `cortex init --verify-worktree-auth` runtime probe that guards every §1a entry against drift). The clause body, fence shape, lifecycle (write, refresh on canonical-version bump, revoke), and the rejected `.claude/cortex-authorizations.md` sibling-location alternative are recorded in their own load-bearing artifact, ADR-0006. **Supersession note:** ADR-0006 is now superseded by ADR-0008, which removed the consumer-`CLAUDE.md` fence write entirely. The picker-fires half of this dual-path decision survives unchanged; the suppressed-picker half no longer writes or verifies a fence — it routes structurally to the cd-shim. Decision (2a)'s consumer-`CLAUDE.md` fence write is therefore historical, not a live decision.
 
 **Decision (2b) — WorktreeCreate-hook bypass requires no expansion: verification at the `create_worktree` call site, not at the hook registry.** The load-bearing invariant is that `cortex_command/pipeline/worktree.py::create_worktree` invokes `git worktree add` directly via `subprocess` rather than routing through Claude Code's `--worktree` launch path — meaning the `WorktreeCreate` hook never fires for lifecycle-created worktrees and therefore needs no expansion to cover the Approach A auto-enter shape. The resolution is codified by spec requirement R18 (`tests/test_create_worktree_bypass.py` reads `create_worktree`'s source and asserts the subprocess invocation contains `'git', 'worktree', 'add'` and does NOT contain `'claude', '--worktree'`). This is the structural assertion that protects the bypass invariant the existing ADR-0004 text already declares; the prior R18 framing (a `hooks.json` grep) verified the wrong invariant and was reworked per the spec's critical-review trail.
+
+## Committed-iff-complete invariant for re-invocation routing
+
+This section amends ADR-0004 to record a refinement to the re-invocation routing logic introduced by the `fix-feature-complete-emission-ordering-strand` lifecycle (#339). ADR-0004's core "merge is terminal / Done means merged" decision stands and is reinforced, not contradicted, by this refinement.
+
+**Prior position.** ADR-0004 treats merge as the terminal event for a lifecycle feature. The events log is the canonical runtime state store; the backlog frontmatter is a synchronized summary field updated at phase boundaries. ADR-0004 made no claim about whether an uncommitted working-tree `feature_complete` row constitutes a terminal state — that question did not arise in the original framing because the Complete phase was designed to emit and commit in one step.
+
+**The problem.** Under the multi-step Complete phase, `feature_complete` is written to `events.log` and then committed to HEAD. A crash or interruption between the write and the `git commit` leaves the row present in the working tree but absent from HEAD. The `classify()` router in `complete_route.py` was treating any working-tree `feature_complete` row as `already_complete`, routing to a premature exit. This contradicted the merge-is-terminal invariant: the lifecycle was declaring Done on state that was uncommitted and therefore not durable.
+
+**The refinement (committed-iff-complete).** An uncommitted working-tree `feature_complete` row is treated as commit-failed and retried — not as already-complete — when all of the following conditions hold simultaneously:
+
+1. The row's anchor is `merge` (not `review`).
+2. The row is committable (surrounding repo state permits a commit).
+3. `commit-artifacts: true` is set on the row.
+4. The row is absent from HEAD (the emitting commit did not land).
+5. The repo is on a valid retry target: either `main` directly, or a feature branch with `pr.json` present.
+
+When all five conditions hold, the router classifies the state as commit-failed and re-enters the finalization commit step rather than exiting with a false-done signal.
+
+**Carve-outs — shapes that still route `already_complete`.** Every other shape routes unchanged:
+
+- **HEAD-present**: the row is in HEAD; the commit landed. Route already_complete.
+- **Review-anchor**: the row's anchor is `review`; review-phase finalization is governed by a different invariant. Route already_complete.
+- **Missing anchor → `review` phase**: no `feature_complete` row is present at all; the router returns `review` to continue forward, not `already_complete`.
+- **`commit-artifacts: false`**: the feature was configured to emit without a follow-on commit; working-tree presence is the expected terminal shape. Route already_complete.
+- **Not committable**: surrounding state prevents a commit; retrying would immediately fail again. Route already_complete.
+- **Off-main with pr.json absent**: the valid-retry-target guard cannot resolve an unambiguous retry target. Route already_complete.
+
+**Rejected alternatives (from #331's plan critical-review).**
+
+- **Two-commit (emit first, commit separately)**: splits emission and artifact commit into two separate commits. This does not eliminate the residual window — it shifts it to the gap between the two commits. Under `commit-artifacts: false` the second commit never fires, so the router still loops. Rejected.
+- **Emit-then-rollback**: if the post-emit commit fails, roll back the `feature_complete` row from `events.log`. Rejected because `events.log` is an append-only log (per the canonical-runtime-state-store invariant above); mutating it introduces its own crash window between the rollback write and its commit, and removes the auditability property the log provides.
+
+Originating work: lifecycle slug `fix-feature-complete-emission-ordering-strand`.
