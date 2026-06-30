@@ -29,10 +29,12 @@ There is **no** hardcoded topic→angle keyword router. Angle choice beyond the 
 
 ## Dispatch protocol
 
-1. **Core wave (parallel).** Dispatch the mandatory core plus the orchestrator-chosen angles for the cell, all in parallel. This is every angle except the always-last adversarial one.
-2. **Adversarial wave (last).** For high/critical work, once the core wave returns, summarize its findings briefly and dispatch the adversarial agent over that summary. Fold its critique into synthesis.
+1. **Core wave (parallel) — routes to the Sonnet `searcher` tier.** Dispatch the mandatory core plus the orchestrator-chosen angles for the cell, all in parallel. This is every angle except the always-last adversarial one. The core wave is breadth-first gather work the orchestrator synthesizes, so bind it to the `searcher` model rather than inheriting the (interactively, Opus) parent: in the consuming orchestrator **body**, resolve `model=$(cortex-resolve-model --role searcher)` and pass the captured value as the `model:` parameter of every core-wave `Agent` call. If the resolve exits nonzero, fall back to dispatching the core wave with **no** `model:` (inherit the parent, exactly as before) and surface a one-line warning that the gather wave is running on the inherited model because role resolution failed — do not halt. `searcher` is criticality-independent, so this resolves with no `--criticality` and no lifecycle-state read (it works in standalone `/research` with no lifecycle session).
+2. **Adversarial wave (last) — inherits the parent.** For high/critical work, once the core wave returns, summarize its findings briefly and dispatch the adversarial agent over that summary. Fold its critique into synthesis. The adversarial wave **omits** `model:` and inherits the parent — it is the error-correction layer that catches what the cheaper gatherers missed, so it is not routed to `searcher` (the judgment-inherit contract; see `docs/internals/sdk.md` and ADR-0023).
 
 At low/medium criticality where no adversarial agent was chosen, the core wave is the whole dispatch and there is no second wave.
+
+This file authors the routing *rule*; each consuming entry point (`/cortex-core:research` Step 3, `/cortex-core:discovery`'s research dispatch) carries its own runnable resolve + `model:` bind that follows it, because each dispatches from its own orchestrator body rather than by executing this file.
 
 ## Why this protocol
 
