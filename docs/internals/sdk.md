@@ -137,6 +137,26 @@ Model escalation ladder on retry: Haiku → Sonnet → Opus (terminal).
 
 ---
 
+## Model Selection Rationale
+
+Two matrices govern which model a dispatch uses, and they are intentionally separate — the lifecycle `orchestrator-fix` row (sonnet at low/medium/high, opus only at critical) is not representable in the pipeline's complexity × criticality shape, so the two are structurally unmergeable:
+
+- **Lifecycle role matrix** (interactive, Path A) is owned by the `cortex-resolve-model` verb, which resolves the deterministic *(role, criticality) → model* lookup for the value-bearing lifecycle roles at dispatch time. It is the authority for lifecycle model selection — do not restate its table here; the golden-anchor test (`tests/test_resolve_model.py`) is the parity anchor that pins it.
+- **Pipeline matrix** (autonomous, Path B) is owned by `resolve_model()` / `_MODEL_MATRIX` in `cortex_command/pipeline/dispatch.py`, the *(complexity, criticality) → model* lookup for the overnight pipeline.
+
+The durable rationale behind the routing choices, worded version-agnostically:
+
+- **Parallel agents → sonnet.** Parallel research and competing-plan dispatches benefit from breadth across multiple agents rather than maximum depth per agent; the orchestrator synthesizes the outputs, so individual-agent quality need not be maximal.
+- **Exploration → haiku unless high/critical.** Read-only pattern discovery is Haiku's sweet spot; upgrade to sonnet at high/critical, where the findings feed all downstream phases and warrant more nuanced analysis.
+- **Complex + low/medium → sonnet (not opus).** Sonnet's faster latency and lower over-engineering tendency make it the better default at standard criticality; reserve opus for when criticality demands maximum quality.
+- **Reviews follow criticality, not complexity.** Review quality depends on how much the bugs matter, not how many files changed — high/critical features warrant opus review regardless of implementation complexity.
+
+Two load-bearing model-profile facts not owned elsewhere: Opus has a **128K max output token** ceiling, and Claude Code's built-in **Explore agent uses Haiku**.
+
+The dated benchmark evidence that originally motivated these conclusions is preserved in `cortex/research/opus-4-7-harness-adaptation/`.
+
+---
+
 ## Worktree Isolation
 
 Both paths use worktree isolation for parallel execution. The SDK's `isolation: "worktree"` parameter triggers a `WorktreeCreate` hook that provisions the worktree and branch.
