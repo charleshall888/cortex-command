@@ -9,3 +9,8 @@
 {"ts": "2026-06-30T11:17:43Z", "event": "batch_dispatch", "feature": "criticality-dispatch-reference-cleanup-relocate-fanoutmd", "batch": 1, "tasks": [4, 5]}
 {"ts": "2026-06-30T11:30:01Z", "event": "batch_dispatch", "feature": "criticality-dispatch-reference-cleanup-relocate-fanoutmd", "batch": 2, "tasks": [6, 7, 8]}
 {"ts": "2026-06-30T13:06:20Z", "event": "phase_transition", "feature": "criticality-dispatch-reference-cleanup-relocate-fanoutmd", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-06-30T13:16:26Z", "event": "review_verdict", "feature": "criticality-dispatch-reference-cleanup-relocate-fanoutmd", "verdict": "CHANGES_REQUESTED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-06-30T13:16:26Z", "event": "phase_transition", "feature": "criticality-dispatch-reference-cleanup-relocate-fanoutmd", "from": "review", "to": "implement-rework"}
+{"ts": "2026-06-30T13:19:29Z", "event": "review_verdict", "feature": "criticality-dispatch-reference-cleanup-relocate-fanoutmd", "verdict": "APPROVED", "cycle": 2, "requirements_drift": "none"}
+{"ts": "2026-06-30T13:19:29Z", "event": "phase_transition", "feature": "criticality-dispatch-reference-cleanup-relocate-fanoutmd", "from": "review", "to": "complete"}
+{"ts": "2026-06-30T13:25:19Z", "event": "feature_complete", "feature": "criticality-dispatch-reference-cleanup-relocate-fanoutmd", "tasks_total": 10, "rework_cycles": 1, "merge_anchor": "merge"}

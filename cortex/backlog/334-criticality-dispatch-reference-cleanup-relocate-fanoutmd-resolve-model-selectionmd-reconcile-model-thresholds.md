@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 30a44a35-ca12-4889-845a-b3ffee453d78
 title: 'Criticality/dispatch reference cleanup: relocate fanout.md, resolve model-selection.md, reconcile model thresholds'
-status: refined
+status: complete
 priority: low
 type: chore
 created: 2026-06-25
-updated: 2026-06-29
+updated: 2026-06-30
 complexity: complex
 criticality: high
 spec: cortex/lifecycle/criticality-dispatch-reference-cleanup-relocate-fanoutmd/spec.md
