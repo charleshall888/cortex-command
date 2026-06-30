@@ -25,7 +25,13 @@ When criticality is `critical`, dispatch 2-3 independent plan agents to produce 
 **a. Prepare shared context**: Inject `{spec_path}` and `{research_path}` as absolute paths (derived from repo root) into the prompt template. Each plan agent reads the files itself rather than receiving inline contents. Do NOT share one agent's draft with another — each agent must work independently.
 
 **b. Dispatch plan agents**: Launch each agent as a parallel Task tool sub-task. Use the plan agent prompt template below **verbatim** for each — substitute the variables (including `{spec_path}` and `{research_path}` as absolute paths) but do not omit, reorder, or paraphrase any instructions. Each agent reads the same spec and research files but is instructed to design an independent approach.
-**Model**: `sonnet`
+**Model**: resolve each plan agent's model at dispatch by running the verb — this block runs only when criticality is `critical`, so read it back rather than hardcoding a literal:
+
+```bash
+model=$(cortex-resolve-model --role competing-plan --criticality "$(cortex-lifecycle-state --feature {feature} --field criticality)")
+```
+
+Dispatch each competing-plan agent with the captured `$model`. On nonzero exit from `cortex-resolve-model` — the verb rejected the input or the `cortex-lifecycle-state` read returned corrupt/absent criticality — halt and escalate rather than guessing or substituting a model.
 
 **Plan Agent Prompt Template:**
 
@@ -76,7 +82,7 @@ Use the plan format defined in §3 Write Plan Artifact below. Required fields pe
 
 **d. Synthesizer dispatch**: Dispatch one fresh Opus Task sub-agent (no worktree isolation needed; the synthesizer is read-only) to compare the variants and select one with structured rationale. The Task tool invocation:
 
-- **Model**: `opus`
+- **Model**: resolve the synthesizer model by running `cortex-resolve-model --role synthesizer` (no `--criticality` flag and no lifecycle-state read) and dispatch with the captured name. On nonzero exit from the verb (absent or broken), halt and escalate rather than guessing or substituting a model.
 - **System prompt**: load the canonical synthesizer prompt fragment from `cortex_command/overnight/prompts/plan-synthesizer.md` via `importlib.resources`. Do not paraphrase or inline the fragment elsewhere — load the canonical file.
 - **User prompt**: inline the variant file paths (e.g. `cortex/lifecycle/{feature}/plan-variant-A.md`, `plan-variant-B.md`, optionally `plan-variant-C.md`) plus the swap-and-require-agreement instruction directing the synthesizer to compare the variants twice with order swapped and require agreement before assigning `confidence: "high"` or `"medium"`. The user prompt must direct the synthesizer to emit a JSON envelope per the schema in the system prompt fragment.
 

@@ -15,7 +15,13 @@ Two-stage review: spec compliance first, then code quality. Complex tier only. T
 
 Dispatch a focused review sub-task with read-only instructions using the reviewer prompt below.
 
-**Model**: `sonnet` for low/medium criticality, `opus` for high/critical
+**Model**: resolve the reviewer sub-task model at dispatch by running the verb against the feature criticality — never hardcode a model literal:
+
+```bash
+model=$(cortex-resolve-model --role review --criticality "$(cortex-lifecycle-state --feature {feature} --field criticality)")
+```
+
+Pass the captured `$model` as the reviewer sub-task's model. On nonzero exit from `cortex-resolve-model` — whether the verb rejected the input or the inner `cortex-lifecycle-state` read returned corrupt/absent criticality — halt and escalate to the user rather than guessing or substituting a model.
 
 ### Reviewer Prompt Template
 

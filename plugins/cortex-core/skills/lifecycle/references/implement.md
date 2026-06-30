@@ -169,7 +169,13 @@ For each batch, in order:
 
 **b. Dispatch batch**: Launch all tasks in the batch concurrently as parallel sub-tasks. Use the builder prompt template below **verbatim** for each — substitute the variables but do not omit, reorder, or paraphrase any instructions. Provide the full task text plus 2-3 sentences of architectural context from the plan's Overview section.
 
-**Model**: `sonnet` for low/medium criticality, `opus` for high/critical (read criticality from events.log).
+**Model**: resolve the builder sub-task model at dispatch by running the verb against the feature criticality — never hardcode a model literal:
+
+```bash
+model=$(cortex-resolve-model --role builder --criticality "$(cortex-lifecycle-state --feature {feature} --field criticality)")
+```
+
+Pass the captured `$model` as each builder sub-task's model. On nonzero exit from `cortex-resolve-model` — the verb rejected the input or the `cortex-lifecycle-state` read returned corrupt/absent criticality — halt and escalate rather than guessing or substituting a model.
 
 After launching, append a `batch_dispatch` event to `cortex/lifecycle/{feature}/events.log`:
 ```bash

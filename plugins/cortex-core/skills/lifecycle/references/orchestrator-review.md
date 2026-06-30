@@ -43,7 +43,13 @@ For each flagged issue, determine the appropriate fix mode:
 
 **Fresh subagent** (via Task tool): Use for thinking-quality rework that does not require user input. This includes research depth issues, plan restructuring, feasibility re-assessment, missing edge cases, vague acceptance criteria, and similar structural problems. Fresh context prevents anchoring to the flawed artifact.
 
-**Model for fresh subagent fixes**: `sonnet` for low/medium/high criticality, `opus` for critical.
+**Model for fresh subagent fixes**: resolve the fix sub-agent model at dispatch by running the verb against the feature criticality — do not hardcode a model literal:
+
+```bash
+model=$(cortex-resolve-model --role orchestrator-fix --criticality "$(cortex-lifecycle-state --feature {feature} --field criticality)")
+```
+
+Pass the captured `$model` as the fresh fix sub-agent's model. On nonzero exit from `cortex-resolve-model` — the verb rejected the input or the `cortex-lifecycle-state` read returned corrupt/absent criticality — halt and escalate rather than guessing or substituting a model.
 
 **Same conversation**: Use for interactive rework that requires user input. This includes spec clarifications where user preference determines the answer, ambiguous requirements, and priority trade-offs. Explain the issue to the user, gather their input, and then revise the artifact in the current context.
 
