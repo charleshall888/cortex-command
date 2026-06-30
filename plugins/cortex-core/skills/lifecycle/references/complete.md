@@ -175,7 +175,7 @@ The verb owns the explicit-path staging discipline — it stages the lifecycle a
 
 **Stage-first idempotent guard**: the verb's `signal` is the staging outcome (equivalent to `git diff --cached --quiet`):
 
-- `nothing_staged` (the index already matches HEAD — `git diff --cached --quiet` would exit 0): nothing new to commit — skip `/cortex-core:commit` silently and continue to Step 12 (common on the worktree path post-merge).
+- `nothing_staged` (the index already matches HEAD — `git diff --cached --quiet` would exit 0): nothing new to commit — skip `/cortex-core:commit` silently and continue to Step 12 (common on the worktree path post-merge, and on the on_main commit-retry path when the finalization set was already committed in a prior attempt).
 - `staged`: something is staged — proceed to commit.
 
 A non-zero verb exit is a staging failure: halt before Step 12 rather than committing a partial set.
