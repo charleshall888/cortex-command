@@ -156,6 +156,8 @@ Read the `{N}` values — `tasks_total` and `rework_cycles` — by running `cort
 
 This event closes the event log for the feature.
 
+**Idempotent-skip guard**: before invoking the verb, parse each line of the working-tree `cortex/lifecycle/{slug}/events.log` as a JSON object and check the `event` field. When a line with `"event": "feature_complete"` already exists, skip the verb invocation and continue directly to Step 11a — a duplicate row from a commit-retry would leave the log in an inconsistent state. Use a JSON-line parse (not a substring search) so a `feature` field or comment containing the string `feature_complete` does not trigger a false positive.
+
 <!-- finalization-commit-step -->
 ### Step 11a — Commit Finalization Artifacts
 
