@@ -2,12 +2,16 @@
 schema_version: "1"
 uuid: 427d4c22-ea92-462e-a7c1-602342ef78cc
 title: 'Offload lifecycle Step 2 backlog write-back + index.md creation into CLI verbs (lifecycle analog of #322)'
-status: backlog
+status: complete
 priority: low
 type: chore
 created: 2026-06-25
-updated: 2026-06-26
+updated: 2026-06-30
 parent: 336
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/offload-lifecycle-step-2-backlog-write/spec.md
+areas: ['lifecycle']
 ---
 ## Why
 

@@ -39,7 +39,7 @@ Two single-purpose, console-script-only verbs (Approach B from research): `corte
   - Field forms (Req 2): `parent_backlog_uuid`/`parent_backlog_id` emit **bare unquoted** `null` when absent (never `"null"` — `wontfix_cli._frontmatter_value` would treat a quoted value as a real target); `tags` emit unquoted inline `tags: [a, b]` (parseable by `load_requirements_cli._extract_tags`); **plain-kebab tags are the supported contract** — they render bare and round-trip. A tag containing `:`/`[` is quoted; a **comma-bearing tag is NOT supported** (`_extract_tags` splits on comma *before* unquoting, so even a quoted comma-tag fragments — out of scope, not a target). `created`/`updated` are date-only `YYYY-MM-DD`. Reference on-disk shape: the existing `cortex/lifecycle/offload-lifecycle-step-2-backlog-write/index.md`.
   - Test (clone the two-arm template from `tests/test_stage_artifacts.py`): patch `create_index._today`; drive `main([...])` under `monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)` + a tmp repo. Cases: (a) Shape-A golden against an inline byte string using a **special-char title** (the #326 ticket's own `+`/`#`/`(`/`)` title) and a plain-kebab `tags`; assert the literal `parent_backlog_uuid: null` line in a null-field case; assert the emitted `tags` line is the unquoted form AND `_extract_tags` round-trips it; assert `created`/`updated` match `^\d{4}-\d{2}-\d{2}$`. (b) Shape-B golden (no heading/body, bare nulls). (c) skip-if-exists: write a sentinel index.md, run, assert bytes byte-identical + skip signal. (d) Req-5: set `CORTEX_REPO_ROOT` to a different tree than CWD, assert the write lands under the env-root tree. (e) **basename-input regression** (the A-fix): place the backlog file ONLY at `{root}/cortex/backlog/326-foo.md`, pass `--backlog-file 326-foo.md` (the bare resolver basename, no `cortex/backlog/` prefix), assert create-index opens it via the canonical-dir join and writes Shape A — a naive `root / backlog_file` open would miss it, so this case fails if the join regresses. (f) non-empty-but-missing `--backlog-file` asserts `main(...) == 1` (diagnostic exit, NOT a silent Shape-B write). CLI-contract byte assertions on stdout (`endswith("\n")`, single line, `", "`/`": "` absent). Include a negative control per golden (e.g. a quoted-`null` variant the assertion rejects).
 - **Verification**: `python3 -m pytest tests/test_create_index.py -q` — pass if exit 0; AND `grep -cE 'def _today' cortex_command/lifecycle/create_index.py` ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit fad82d13, combined with Task 2)
 
 ### Task 2: Register `create-index` script + thin discovery-bootstrap.md + regenerate mirror
 - **Files**: `pyproject.toml`, `skills/lifecycle/references/discovery-bootstrap.md`, `plugins/cortex-core/skills/lifecycle/references/discovery-bootstrap.md`
@@ -54,7 +54,7 @@ Two single-purpose, console-script-only verbs (Approach B from research): `corte
   - **Concurrency hazard (critical-review):** because the pre-commit hook re-runs `build-plugin` and diffs the whole mirror tree, a sibling session's *unstaged* canonical edit anywhere under a mirrored skill tree gets regenerated into the working tree and flags whole-tree drift → blocks this commit even though the two-file check passes. Before committing, confirm no concurrent session has unstaged canonical skill edits (or coordinate so the regenerated mirror is consistent); explicit-pathspec controls staging, not the hook's whole-tree regenerate-and-diff.
   - Commit via `/cortex-core:commit` with an explicit pathspec (concurrent sessions are active on trunk).
 - **Verification**: `grep -c 'cortex-lifecycle-create-index' skills/lifecycle/references/discovery-bootstrap.md` = 1 AND `grep -c 'cortex-lifecycle-create-index' pyproject.toml` = 1 AND `grep -c 'parent_backlog_uuid' skills/lifecycle/references/discovery-bootstrap.md` = 0 (template prose removed) AND `cortex-check-contract` exits 0 AND, after `just build-plugin`, `git diff --quiet -- plugins/` reports clean over the **whole** mirror tree (the enforcing gate diffs the entire tree, not just the edited file) — pass if all hold.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit fad82d13; merged with Task 1 — the parity E002/W003 gates force script registration, test reference, and prose wiring to co-locate in one commit)
 
 ### Task 3: Create `cortex-lifecycle-start-sync` module + argv-assertion test
 - **Files**: `cortex_command/lifecycle/start_sync.py` (new), `tests/test_start_sync.py` (new)
@@ -69,7 +69,7 @@ Two single-purpose, console-script-only verbs (Approach B from research): `corte
   - Exit-2 passthrough (Req 9, the `wontfix_cli._terminalize_backlog` pattern): if any `cortex-update-item` call exits 2, re-emit its stderr and `return 2`.
   - Test (`tests/test_start_sync.py`): monkeypatch `subprocess.run` to capture argv; assert the EXACT flag list per arm — `cortex-backlog` + `phase=none` yields both calls with pinned argv (`["cortex-update-item", "<stem>", "--status", "in_progress", "--session-id", "<id>", "--lifecycle-phase", "research"]` then `["cortex-update-item", "<stem>", "--lifecycle-slug", "<slug>"]`); `cortex-backlog` + non-none phase yields only the in_progress call; `none` and external arms yield zero calls + advisory; `--backlog-file ""` yields zero calls. Negative control per arm (e.g. assert the `none` arm did NOT call `cortex-update-item`; assert non-none phase did NOT emit the `--lifecycle-slug` call). Exit-2 case stubs an exit-2 `cortex-update-item` and asserts `main(...) == 2` with the candidate stderr surfaced.
 - **Verification**: `python3 -m pytest tests/test_start_sync.py -q` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit 10f62b6d, combined with Task 4)
 
 ### Task 4: Register `start-sync` script + thin backlog-writeback.md Write-Back section + regenerate mirror
 - **Files**: `pyproject.toml`, `skills/lifecycle/references/backlog-writeback.md`, `plugins/cortex-core/skills/lifecycle/references/backlog-writeback.md`
@@ -86,7 +86,7 @@ Two single-purpose, console-script-only verbs (Approach B from research): `corte
   - No new `--event` emission → `cortex-check-events-registry` stays quiet; `test_lifecycle_event_roundtrip.py` stays trivially green; `test_lifecycle_kept_pauses_parity.py` stays green within tolerance (confirm via the parity test, and update `kept-pauses.md` if the anchor shifted).
   - Regenerate via `just build-plugin`; stage canonical + mirror together; commit with an explicit pathspec. NOTE: this task and Task 2 both edit `pyproject.toml` + the plugin mirror tree, so they must not co-run — trunk-sequential dispatch enforces the **intra-plan** ordering. It does NOT isolate against *external* concurrent sessions: an explicit-pathspec `git commit -- pyproject.toml` commits the whole working-tree file, so before committing, verify `pyproject.toml` carries no unrelated unstaged `[project.scripts]` edits from another session (else they leak into the #326 commit). Same whole-tree-mirror concurrency hazard as Task 2 applies.
 - **Verification**: `grep -c 'cortex-lifecycle-start-sync' skills/lifecycle/references/backlog-writeback.md` = 1 AND `grep -c 'Exit-2 Handling (canonical)' skills/lifecycle/references/backlog-writeback.md` = 1 AND `grep -c 'Registering an Artifact in index.md (canonical)' skills/lifecycle/references/backlog-writeback.md` = 1 AND `grep -cF 'three `cortex-update-item` write-backs below' skills/lifecycle/references/backlog-writeback.md` = 0 (stale routing-block enumeration reconciled) AND `grep -c 'cortex-lifecycle-start-sync' pyproject.toml` = 1 AND `cortex-check-contract` exits 0 AND `cortex-check-parity` exits 0 (no W003) AND `python3 -m pytest tests/test_lifecycle_kept_pauses_parity.py tests/test_lifecycle_event_roundtrip.py -q` exits 0 AND, after `just build-plugin`, `git diff --quiet -- plugins/` is clean over the whole mirror tree — pass if all hold.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit 10f62b6d; literal start-sync token confined to the one bash invocation so grep=1, reconciled blocks reference "the start-sync verb" in prose)
 
 ### Task 4b: Amend ADR-0019 with the start-sync scope-extension note
 - **Files**: `cortex/adr/0019-skill-helper-verb-backend-structural-guard.md`
@@ -95,7 +95,7 @@ Two single-purpose, console-script-only verbs (Approach B from research): `corte
 - **Complexity**: simple
 - **Context**: ADRs under `cortex/adr/` are not skill mirrors (no `just build-plugin`). The note records the boundary crossing the reviewer flagged so a future contributor sees the precedent was knowingly stretched, not silently. May land in its own small commit or with Task 4's commit. No code or test impact.
 - **Verification**: `grep -cE 'start-sync|start_sync|#326' cortex/adr/0019-skill-helper-verb-backend-structural-guard.md` ≥ 1 — pass if ≥ 1 (the scope note references the extension).
-- **Status**: [ ] pending
+- **Status**: [x] done (commit 10f62b6d, with Task 4)
 
 ### Task 5: Whole-suite gate verification
 - **Files**: none (verification only; a tiny fixup commit only if a gate surfaces drift)
@@ -104,7 +104,7 @@ Two single-purpose, console-script-only verbs (Approach B from research): `corte
 - **Complexity**: simple
 - **Context**: Run `just test` (exercises the editable install — the real verb code). Re-run `cortex-check-contract` and `cortex-check-parity` against the working tree. Two `just test` failures are known-external on this machine (a concurrent-session fixture race and a sandbox-network MCP/pypi DNS test) — record them as external if they recur, do not treat as #326 regressions.
 - **Verification**: `just test` exits 0 (or only the two documented external failures) AND `cortex-check-contract` exits 0 AND `cortex-check-parity` exits 0 — pass if the cortex-* gates are clean and no #326-attributable test fails.
-- **Status**: [ ] pending
+- **Status**: [x] done — `just test` 7/7 suites EXIT 0 (no external failures recurred this run); `cortex-check-parity` EXIT 0; `cortex-check-contract` EXIT 0 via the editable `.venv` (the bare PATH binstub flags unreleased --backend/--set/--lifecycle-slug in untouched refine/wontfix prose — the stale-released-binstub Risk, not a #326 error)
 
 ## Risks
 

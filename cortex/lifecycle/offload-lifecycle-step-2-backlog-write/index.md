@@ -2,7 +2,7 @@
 feature: offload-lifecycle-step-2-backlog-write
 parent_backlog_uuid: 427d4c22-ea92-462e-a7c1-602342ef78cc
 parent_backlog_id: 326
-artifacts: ["research", "spec", "plan"]
+artifacts: ["research", "spec", "plan", "review"]
 tags: []
 created: 2026-06-29
 updated: 2026-06-30

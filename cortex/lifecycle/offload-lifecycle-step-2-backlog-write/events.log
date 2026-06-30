@@ -5,3 +5,8 @@
 {"ts": "2026-06-30T10:46:35Z", "event": "spec_approved", "feature": "offload-lifecycle-step-2-backlog-write"}
 {"ts": "2026-06-30T13:00:15Z", "event": "plan_approved", "feature": "offload-lifecycle-step-2-backlog-write", "dispatch_choice": "wait"}
 {"ts": "2026-06-30T13:00:15Z", "event": "feature_paused", "feature": "offload-lifecycle-step-2-backlog-write"}
+{"ts": "2026-06-30T13:35:33Z", "event": "batch_dispatch", "feature": "offload-lifecycle-step-2-backlog-write", "batch": 0, "tasks": [1, 3]}
+{"ts": "2026-06-30T13:57:39Z", "event": "phase_transition", "feature": "offload-lifecycle-step-2-backlog-write", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-06-30T14:09:12Z", "event": "review_verdict", "feature": "offload-lifecycle-step-2-backlog-write", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-06-30T14:09:12Z", "event": "phase_transition", "feature": "offload-lifecycle-step-2-backlog-write", "from": "review", "to": "complete"}
+{"ts": "2026-06-30T14:16:47Z", "event": "feature_complete", "feature": "offload-lifecycle-step-2-backlog-write", "tasks_total": 6, "rework_cycles": 0}
