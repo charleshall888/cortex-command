@@ -72,7 +72,7 @@ Read **only** the reference for the current phase.
 **Sibling-path propagation (load-bearing).** Both `clarify.md` and `research.md` need to load two files that live in the **lifecycle sibling** skill, not in discovery's own `references/` directory: the shared requirements-loading protocol and the fan-out sizing matrix. A reference file cannot resolve `${CLAUDE_SKILL_DIR}` itself, and these targets sit outside discovery's own dir — so resolve them here in the body (where `${CLAUDE_SKILL_DIR}/../lifecycle/…` resolves) and carry the absolute paths into the phase. When you read the current-phase reference, substitute these body-resolved absolute paths wherever it directs you to the lifecycle sibling:
 
 - **load-requirements** → `${CLAUDE_SKILL_DIR}/../lifecycle/references/load-requirements.md`
-- **fanout** (research-sizing matrix) → `${CLAUDE_SKILL_DIR}/../lifecycle/references/fanout.md`
+- **fanout** (research-sizing matrix) → `${CLAUDE_SKILL_DIR}/../research/references/fanout.md`
 - **orchestrator-review** (canonical protocol) → `${CLAUDE_SKILL_DIR}/../lifecycle/references/orchestrator-review.md`
 
 ### Research → Decompose approval gate (spec R4)

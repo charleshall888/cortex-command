@@ -46,7 +46,7 @@ Defaults:
 
 ## Step 2: Determine Agent Count
 
-`agent_count` is the cell where the task's `tier` (row) meets its `criticality` (column) in the count matrix at [`${CLAUDE_SKILL_DIR}/../lifecycle/references/fanout.md`](${CLAUDE_SKILL_DIR}/../lifecycle/references/fanout.md) — the canonical, shared source for the grid. The floor cell (simple+low) is 3; the corner cell (complex+critical) is 10. Both axes raise the count monotonically.
+`agent_count` is the cell where the task's `tier` (row) meets its `criticality` (column) in the count matrix at [`${CLAUDE_SKILL_DIR}/references/fanout.md`](${CLAUDE_SKILL_DIR}/references/fanout.md) — the canonical, shared source for the grid. The floor cell (simple+low) is 3; the corner cell (complex+critical) is 10. Both axes raise the count monotonically.
 
 The count is an **upper bound on investigation breadth, not a quota** — dispatch fewer if the task offers fewer genuinely distinct angles than its cell allows; do not pad with redundant agents.
 
@@ -64,7 +64,7 @@ When `research-considerations` is non-empty (see Step 1), inject its content as 
 
 ### Angle selection
 
-The angle set is **hybrid**: a fixed mandatory core plus orchestrator-chosen distinct angles, with an always-last adversarial pass for high/critical work. The authority on *how to choose* the non-core angles — keep them distinct and non-redundant, subdivide an existing angle by scope only once genuinely distinct angles are exhausted, and **no** topic→angle keyword router — is the hybrid-angle-selection section of [`${CLAUDE_SKILL_DIR}/../lifecycle/references/fanout.md`](${CLAUDE_SKILL_DIR}/../lifecycle/references/fanout.md). Apply it.
+The angle set is **hybrid**: a fixed mandatory core plus orchestrator-chosen distinct angles, with an always-last adversarial pass for high/critical work. The authority on *how to choose* the non-core angles — keep them distinct and non-redundant, subdivide an existing angle by scope only once genuinely distinct angles are exhausted, and **no** topic→angle keyword router — is the hybrid-angle-selection section of [`${CLAUDE_SKILL_DIR}/references/fanout.md`](${CLAUDE_SKILL_DIR}/references/fanout.md). Apply it.
 
 **Mandatory core (always dispatched, at every cell):** Codebase, Web, Requirements & Constraints. Prompt templates below.
 
@@ -181,7 +181,7 @@ Output format:
 
 ### Dispatch protocol
 
-Per [`${CLAUDE_SKILL_DIR}/../lifecycle/references/fanout.md`](${CLAUDE_SKILL_DIR}/../lifecycle/references/fanout.md):
+Per [`${CLAUDE_SKILL_DIR}/references/fanout.md`](${CLAUDE_SKILL_DIR}/references/fanout.md):
 
 1. **Core wave (parallel).** Dispatch the mandatory core plus the orchestrator-chosen angles — every angle except the always-last adversarial one — in one batch of Agent calls in a single response. No `isolation: "worktree"`; agents are read-only.
 2. **Adversarial wave (last).** For high/critical work, once the core wave returns, summarize each angle's findings and dispatch the adversarial agent with that summary injected; fold its critique into synthesis.

@@ -1,7 +1,7 @@
 """Regression guard for the research fan-out tier x criticality matrix.
 
 The research fan-out agent count is defined as a 2D matrix in the shared
-reference ``skills/lifecycle/references/fanout.md``. The count is prose-applied
+reference ``skills/research/references/fanout.md``. The count is prose-applied
 by the model, not computed by code, so this test asserts the *invariants* of
 the published grid by parsing the markdown table out of that file. It does not
 treat the numbers as the source of truth in code -- it parses the grid first,
@@ -19,7 +19,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-FANOUT_MD = REPO_ROOT / "skills" / "lifecycle" / "references" / "fanout.md"
+FANOUT_MD = REPO_ROOT / "skills" / "research" / "references" / "fanout.md"
 
 # Column order for the criticality axis, low -> critical.
 CRITICALITY_COLUMNS = ["low", "medium", "high", "critical"]
