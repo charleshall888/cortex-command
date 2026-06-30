@@ -628,9 +628,22 @@ def test_feature_complete_precedes_pr_state(
     pr.json that a stubbed gh reports OPEN, the verb must route
     ``already_complete`` (continue_to step12), not ``pr_open`` — proving the
     strict-order short-circuit fires before Branch 4.
+
+    Discriminating intent: the feature_complete row is COMMITTED into HEAD so
+    ``H=True`` (``_head_has_feature_complete`` returns True), making
+    ``retryable=False`` via ``not _h``.  If Branch 2 were removed the fixture
+    would route ``pr_open`` (Branch 4 sees an OPEN pr.json).  The committed-row
+    construction, not the no-repo accident (``_finalization_committable``
+    returning False with no git), is what proves the short-circuit fires.
     """
     monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
     root = _make_root(tmp_path)
+    _init_repo(root)
+    # Initial commit so HEAD exists before writing lifecycle artifacts.
+    (root / "README").write_text("x\n")
+    _git("add", "README", cwd=root)
+    _git("commit", "-m", "c0 init", cwd=root)
+    # Write events.log with the feature_complete row and commit it so H=True.
     _write_events(
         root,
         _BENIGN_EVENT,
@@ -645,6 +658,9 @@ def test_feature_complete_precedes_pr_state(
             }
         ),
     )
+    _git("add", "-A", cwd=root)
+    _git("commit", "-m", "c1 feature_complete row", cwd=root)
+    # pr.json present on disk (not committed) — gh stub would report OPEN.
     _write_pr_json(root, number=7, url="https://github.com/owner/repo/pull/7")
     _install_gh_stub(monkeypatch, tmp_path)
     monkeypatch.setenv("GH_STUB_SCENARIO", "open-anchored")
