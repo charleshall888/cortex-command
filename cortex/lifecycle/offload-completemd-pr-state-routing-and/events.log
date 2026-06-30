@@ -9,3 +9,7 @@
 {"ts": "2026-06-29T23:56:23Z", "event": "batch_dispatch", "feature": "offload-completemd-pr-state-routing-and", "batch": 0, "tasks": [1, 2, 3, 4, 5]}
 {"ts": "2026-06-30T00:53:02Z", "event": "batch_dispatch", "feature": "offload-completemd-pr-state-routing-and", "batch": 1, "tasks": [7, 8, 9, 10, 11]}
 {"ts": "2026-06-30T01:30:47Z", "event": "batch_dispatch", "feature": "offload-completemd-pr-state-routing-and", "batch": 2, "tasks": [12, 13, 14]}
+{"ts": "2026-06-30T01:44:30Z", "event": "phase_transition", "feature": "offload-completemd-pr-state-routing-and", "from": "implement", "to": "review", "tier": "complex"}
+{"ts": "2026-06-30T01:51:15Z", "event": "review_verdict", "feature": "offload-completemd-pr-state-routing-and", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-06-30T01:51:15Z", "event": "phase_transition", "feature": "offload-completemd-pr-state-routing-and", "from": "review", "to": "complete"}
+{"ts": "2026-06-30T02:02:27Z", "event": "feature_complete", "feature": "offload-completemd-pr-state-routing-and", "tasks_total": 14, "rework_cycles": 0, "merge_anchor": "merge"}

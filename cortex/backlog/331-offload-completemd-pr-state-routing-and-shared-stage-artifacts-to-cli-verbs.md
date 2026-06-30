@@ -2,12 +2,16 @@
 schema_version: "1"
 uuid: cd473467-2134-4e1d-8d33-fddd125f120c
 title: Offload complete.md PR-state routing and shared stage-artifacts to CLI verbs
-status: backlog
+status: complete
 priority: low
 type: chore
 created: 2026-06-25
-updated: 2026-06-26
+updated: 2026-06-29
 parent: 336
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/offload-completemd-pr-state-routing-and/spec.md
+areas: ['lifecycle']
 ---
 ## Why
 

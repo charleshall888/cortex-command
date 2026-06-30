@@ -2,7 +2,7 @@
 feature: offload-completemd-pr-state-routing-and
 parent_backlog_uuid: cd473467-2134-4e1d-8d33-fddd125f120c
 parent_backlog_id: 331
-artifacts: [research, spec, plan]
+artifacts: [research, spec, plan, review]
 tags: []
 created: 2026-06-29
 updated: 2026-06-29
