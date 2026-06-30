@@ -1,0 +1,7 @@
+{"schema_version": 1, "ts": "2026-06-29T12:42:41Z", "event": "lifecycle_start", "feature": "criticality-dispatch-reference-cleanup-relocate-fanoutmd", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-06-29T12:53:04Z", "event": "clarify_critic", "feature": "criticality-dispatch-reference-cleanup-relocate-fanoutmd", "parent_epic_loaded": false, "findings_count": 9, "dispositions": {"apply": 8, "dismiss": 0, "ask": 1}, "applied_fixes_count": 4, "dismissals_count": 0, "status": "ok"}
+{"ts": "2026-06-29T13:46:44Z", "event": "complexity_override", "feature": "criticality-dispatch-reference-cleanup-relocate-fanoutmd", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-06-29T13:46:44Z", "event": "criticality_override", "feature": "criticality-dispatch-reference-cleanup-relocate-fanoutmd", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"schema_version":1,"ts":"2026-06-29T17:16:20.411937+00:00","event":"spec_approved","feature":"criticality-dispatch-reference-cleanup-relocate-fanoutmd","worktree_path":null}
+{"ts": "2026-06-30T10:47:53Z", "event": "plan_approved", "feature": "criticality-dispatch-reference-cleanup-relocate-fanoutmd", "dispatch_choice": "trunk"}
+{"ts": "2026-06-30T10:47:53Z", "event": "phase_transition", "feature": "criticality-dispatch-reference-cleanup-relocate-fanoutmd", "from": "plan", "to": "implement"}
