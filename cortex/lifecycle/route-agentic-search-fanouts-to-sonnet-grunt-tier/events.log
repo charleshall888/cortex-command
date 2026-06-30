@@ -5,3 +5,5 @@
 {"ts": "2026-06-30T19:50:12Z", "event": "complexity_override", "feature": "route-agentic-search-fanouts-to-sonnet-grunt-tier", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
 {"ts": "2026-06-30T20:56:56Z", "event": "spec_approved", "feature": "route-agentic-search-fanouts-to-sonnet-grunt-tier"}
 {"ts": "2026-06-30T20:56:56Z", "event": "phase_transition", "feature": "route-agentic-search-fanouts-to-sonnet-grunt-tier", "from": "specify", "to": "plan"}
+{"ts": "2026-06-30T21:28:55Z", "event": "plan_approved", "feature": "route-agentic-search-fanouts-to-sonnet-grunt-tier", "dispatch_choice": "trunk"}
+{"ts": "2026-06-30T21:28:55Z", "event": "phase_transition", "feature": "route-agentic-search-fanouts-to-sonnet-grunt-tier", "from": "plan", "to": "implement"}
