@@ -38,3 +38,6 @@ pytest-of-*/
 .archive-sample.txt
 cortex/.cortex-init
 cortex/.cortex-init-backup/
+
+# Transient flock lock files written by cortex-lifecycle-event (events.log writer)
+events.log.lock

@@ -133,7 +133,14 @@ fire_notification() {
     # missing or the user has notifications muted, the run still failed
     # and the fail-marker is the durable signal. Suppress all output so
     # a notification failure does not pollute launchd logs.
-    /usr/bin/osascript \
+    #
+    # The osascript binary is invoked through the CORTEX_OSASCRIPT
+    # override, defaulting to the absolute /usr/bin/osascript in
+    # production (launchd's degraded PATH can't be relied on for a bare
+    # lookup). Tests point CORTEX_OSASCRIPT at a no-op stub so the suite
+    # never fires a real notification — a bare `osascript` on PATH could
+    # not intercept the absolute-path call.
+    "${CORTEX_OSASCRIPT:-/usr/bin/osascript}" \
         -e "display notification \"Scheduled overnight run failed at fire time — see ${SESSION_DIR}\" with title \"cortex-overnight\" sound name \"Basso\"" \
         >/dev/null 2>&1 || true
 }

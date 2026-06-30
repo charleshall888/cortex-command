@@ -20,10 +20,11 @@ These are platform-agnostic: they render the real launcher template and
 run it under ``bash`` with a stub ``CORTEX_BIN`` that writes a canned
 ``spawn-outcome`` token and exits 1. ``bash`` is POSIX; the only
 macOS-only surface the launcher touches on the failure path is
-``osascript``, which we stub on ``PATH`` (the launcher calls it as
-``/usr/bin/osascript`` best-effort with output suppressed and ``|| true``,
-so its absence is harmless — but we stub it for cleanliness on non-darwin
-where ``/usr/bin/osascript`` does not exist).
+``osascript``. The launcher invokes it through the ``CORTEX_OSASCRIPT``
+override (defaulting to the absolute ``/usr/bin/osascript`` in
+production), which we point at a no-op stub so the suite never fires a
+real macOS notification — including on a developer's Mac, where a bare
+``osascript`` on ``PATH`` could not intercept the absolute-path call.
 
 They run via ``just test`` anywhere the suite runs. They are NOT wired
 into GitHub Actions today (``validate.yml`` runs only skill + callgraph
@@ -109,16 +110,23 @@ def _write_token_stub(
     path.chmod(0o755)
 
 
-def _stub_osascript_in_path(extra_bin_dir: Path) -> str:
-    """Drop a no-op ``osascript`` stub on PATH so the launcher's
-    notification call does not fail (or fire a real notification) during
-    tests. Returns the modified PATH string.
+def _stub_osascript(env: dict[str, str], extra_bin_dir: Path) -> None:
+    """Point the launcher at a no-op ``osascript`` so the suite never
+    fires a real macOS notification.
+
+    The launcher invokes osascript through the ``CORTEX_OSASCRIPT``
+    override (defaulting to the absolute ``/usr/bin/osascript`` in
+    production); we set that override to a no-op stub. A bare ``osascript``
+    on ``PATH`` cannot intercept the absolute-path call, so the override is
+    the load-bearing redirect; we prepend the stub dir to ``PATH`` too for
+    any bare lookups. Mutates ``env`` in place.
     """
     extra_bin_dir.mkdir(parents=True, exist_ok=True)
     osascript = extra_bin_dir / "osascript"
     osascript.write_text("#!/bin/bash\nexit 0\n", encoding="utf-8")
     osascript.chmod(0o755)
-    return f"{extra_bin_dir}:{os.environ.get('PATH', '')}"
+    env["CORTEX_OSASCRIPT"] = str(osascript)
+    env["PATH"] = f"{extra_bin_dir}:{env.get('PATH', '')}"
 
 
 def _run_launcher(
@@ -175,7 +183,7 @@ class TestLauncherSpawnDiedWritesFailureMarker(unittest.TestCase):
             )
 
             env = dict(os.environ)
-            env["PATH"] = _stub_osascript_in_path(tmp / "bin")
+            _stub_osascript(env, tmp / "bin")
 
             result = _run_launcher(launcher_path, env)
 
@@ -267,7 +275,7 @@ class TestLauncherSpawnUnconfirmedWritesAdvisoryMarker(unittest.TestCase):
             )
 
             env = dict(os.environ)
-            env["PATH"] = _stub_osascript_in_path(tmp / "bin")
+            _stub_osascript(env, tmp / "bin")
 
             result = _run_launcher(launcher_path, env)
 
@@ -361,7 +369,7 @@ class TestLauncherStartedTokenIgnoresExitCode(unittest.TestCase):
             )
 
             env = dict(os.environ)
-            env["PATH"] = _stub_osascript_in_path(tmp / "bin")
+            _stub_osascript(env, tmp / "bin")
 
             result = _run_launcher(launcher_path, env)
 

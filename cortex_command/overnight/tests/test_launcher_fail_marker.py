@@ -45,12 +45,15 @@ from cortex_command.overnight.scheduler.macos import MacOSLaunchAgentBackend
 
 # ---------------------------------------------------------------------------
 # Skip on non-darwin: bash is POSIX, so the launcher itself runs fine on
-# Linux too, but the failure path calls `/usr/bin/osascript` (macOS-only)
-# for the fire-time notification. These tests historically stubbed only
-# part of that surface and remain darwin-gated for stability. The
-# platform-agnostic discriminator-branch guards live in
-# ``test_launcher_envelope.py`` (which stubs osascript on PATH and runs
-# everywhere the suite runs).
+# Linux too. The fire-time notification path shells out to osascript via
+# the ``CORTEX_OSASCRIPT`` override, which ``_stub_osascript`` points at a
+# no-op stub — so these tests no longer fire a real macOS notification on
+# a developer's Mac (the prior PATH-only stub could not intercept the
+# launcher's absolute ``/usr/bin/osascript`` call). The darwin gate is
+# retained for conservatism — these failure-path tests historically ran
+# only on macOS — while the platform-agnostic discriminator-branch guards
+# live in ``test_launcher_envelope.py`` (which runs everywhere the suite
+# runs).
 # ---------------------------------------------------------------------------
 
 _PLATFORM_SUPPORTED = sys.platform == "darwin"
@@ -140,16 +143,23 @@ def _write_cortex_stub(
     path.chmod(0o755)
 
 
-def _stub_osascript_in_path(extra_bin_dir: Path) -> str:
-    """Drop a no-op ``osascript`` stub on PATH so the notification call
-    in the launcher does not actually fire a real macOS notification
-    during tests. Returns the modified PATH string.
+def _stub_osascript(env: dict[str, str], extra_bin_dir: Path) -> None:
+    """Point the launcher at a no-op ``osascript`` so these tests never
+    fire a real macOS notification.
+
+    The launcher invokes osascript through the ``CORTEX_OSASCRIPT``
+    override (defaulting to the absolute ``/usr/bin/osascript`` in
+    production); we set that override to a no-op stub. A bare ``osascript``
+    on ``PATH`` cannot intercept the absolute-path call, so the override is
+    the load-bearing redirect; we prepend the stub dir to ``PATH`` too for
+    any bare lookups. Mutates ``env`` in place.
     """
     extra_bin_dir.mkdir(parents=True, exist_ok=True)
     osascript = extra_bin_dir / "osascript"
     osascript.write_text("#!/bin/bash\nexit 0\n", encoding="utf-8")
     osascript.chmod(0o755)
-    return f"{extra_bin_dir}:{os.environ.get('PATH', '')}"
+    env["CORTEX_OSASCRIPT"] = str(osascript)
+    env["PATH"] = f"{extra_bin_dir}:{env.get('PATH', '')}"
 
 
 def _run_launcher(launcher_path: Path, env: dict[str, str]) -> subprocess.CompletedProcess:
@@ -203,7 +213,7 @@ class TestLauncherCommandNotFound(unittest.TestCase):
             )
 
             env = dict(os.environ)
-            env["PATH"] = _stub_osascript_in_path(tmp / "bin")
+            _stub_osascript(env, tmp / "bin")
 
             result = _run_launcher(launcher_path, env)
 
@@ -306,7 +316,7 @@ class TestLauncherEPerm(unittest.TestCase):
             )
 
             env = dict(os.environ)
-            env["PATH"] = _stub_osascript_in_path(tmp / "bin")
+            _stub_osascript(env, tmp / "bin")
 
             # Source the launcher's function definitions and call
             # handle_failure 1 directly. This is the canonical way to
@@ -416,7 +426,7 @@ class TestLauncherSuccessPath(unittest.TestCase):
             )
 
             env = dict(os.environ)
-            env["PATH"] = _stub_osascript_in_path(tmp / "bin")
+            _stub_osascript(env, tmp / "bin")
 
             result = _run_launcher(launcher_path, env)
 
@@ -512,7 +522,7 @@ class TestLauncherFailMarkerJsonShape(unittest.TestCase):
             )
 
             env = dict(os.environ)
-            env["PATH"] = _stub_osascript_in_path(tmp / "bin")
+            _stub_osascript(env, tmp / "bin")
 
             _run_launcher(launcher_path, env)
 
