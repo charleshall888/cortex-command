@@ -1,0 +1,4 @@
+{"ts":"2026-06-30T22:22:26Z","event":"discovery_research_sizing","topic":"skill-efficiency-remaining-work","complexity":"complex","criticality":"high"}
+{"ts":"2026-06-30T22:30:23Z","event":"gate_brief_generated","status":"ok_over_cap","brief_word_count":322,"patterns_detected_count":0}
+{"ts":"2026-06-30T22:31:32Z","event":"approval_checkpoint_responded","topic":"skill-efficiency-remaining-work","checkpoint":"research-decompose","response":"approve","revision_round":0}
+{"ts":"2026-06-30T22:47:01Z","event":"approval_checkpoint_responded","topic":"skill-efficiency-remaining-work","checkpoint":"decompose-commit","response":"approve-all","revision_round":0}

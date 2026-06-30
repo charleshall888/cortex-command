@@ -1,0 +1,33 @@
+---
+schema_version: "1"
+uuid: ccbb7f99-da2e-4e2d-802d-3016b916f7a6
+title: Core-skill efficiency survivors of the post-#336 adversarial audit
+status: backlog
+priority: low
+type: epic
+created: 2026-06-30
+updated: 2026-06-30
+tags: ['skill-efficiency-remaining-work']
+discovery_source: cortex/research/skill-efficiency-remaining-work/research.md
+---
+## Why
+A 2026-06-30 adversarial audit re-examined where core-skill token trimming and offloading still pay off after epic #336 completed the deterministic-procedure-to-CLI offloads. Six opportunity-finders proposed cuts; a symmetric trio (defense-of-current, mechanism-failure, neutral cost-model) plus an architecture probe then stress-tested them. Most were killed: repeated backend-routing prose is not dedupable (the blocks route different actions with site-specific arms), the morning-review demo-selection prose is an intentional model-judgment affordance shipped as #072, and decompose's repetition is a test-enforced guard. Three targeted changes survived as genuine net wins and one ambitious idea was deliberately declined. This epic groups the survivors so the shared discipline — rank by hot-path resident-tokens and clarity-harm, not bytes-on-disk — is applied consistently.
+
+## Scope
+Children:
+- plan-phase reference slimming — extract the critical-only competing-plans block to a lazily-loaded reference (highest token value)
+- morning-review close-ordering correctness fix — remove a live contradiction over a destructive action (highest priority)
+- dev-router triage relocation — gate the triage block to the one branch that uses it (smallest)
+- phase-isolation decision record — a wontfix that records why the context-architecture rewrite is declined
+
+Shared discipline every child carries: preserve every test-pinned and overnight-cited heading verbatim, leaving a pointer stub rather than deleting it; justify each change by hot-path resident-token reduction or clarity-harm removal, not raw byte count.
+
+## Out of scope
+- Backend-routing prose dedup, demo-selection offload, and decompose regex/grouping dedup — all evaluated and rejected (see research.md).
+- The event-migration of the clarify-critic and plan-comparison sites — contested by a dual-producer parity argument; default-dropped pending that question.
+
+## Touch points
+- cortex/research/skill-efficiency-remaining-work/research.md
+- skills/lifecycle/references/plan.md
+- skills/morning-review/SKILL.md
+- skills/dev/SKILL.md
