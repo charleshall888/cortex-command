@@ -6,13 +6,13 @@ Both sub-procedures consume Step 1's resolved `{backlog-file}` and parsed frontm
 
 ## Backend routing (resolve once)
 
-The three `cortex-update-item` write-backs below (close-lifecycle, in-progress status, lifecycle-slug) target the local backlog engine. Before reaching them, resolve the active backend once with `` `cortex-read-backlog-backend` `` (argless; it prints the resolved backend and exits 0). Route on the value:
+Two write-back paths consume the active backlog backend, resolved once with `` `cortex-read-backlog-backend` `` (argless; it prints the resolved backend and exits 0): the **close-lifecycle** `cortex-update-item` write-back, which stays inline in the Backlog Status Check close path below, and the **lifecycle-start** in-progress + lifecycle-slug write-backs, which are offloaded to the backend-routed start-sync verb (see Backlog Write-Back (Lifecycle Start) below — pass the resolved value as its `--backend`). Route on the value:
 
-- **`cortex-backlog`** (the default arm) → proceed exactly as today; run the `cortex-update-item` calls unchanged.
-- **`none`** → skip the three `cortex-update-item` calls, noting a one-line advisory that backlog write-back is disabled for this repo, and continue.
+- **`cortex-backlog`** (the default arm) → proceed exactly as today; run the `cortex-update-item` call(s) unchanged.
+- **`none`** → skip the `cortex-update-item` call(s), noting a one-line advisory that backlog write-back is disabled for this repo, and continue.
 - **any other value** (an external tracker) → make the equivalent change best-effort on the configured tracker using the config `backlog.instructions` and your own judgment (e.g. `gh issue` create/edit/close), surfacing the composed content if it cannot be completed so no work is lost.
 
-Each `cortex-update-item` write-back below carries the same `` `cortex-read-backlog-backend` `` routing inline; the default `cortex-backlog` arm is the unchanged behavior.
+The close-lifecycle write-back carries this `` `cortex-read-backlog-backend` `` routing inline; the lifecycle-start write-backs carry it via the start-sync verb's `--backend`. The default `cortex-backlog` arm is the unchanged behavior.
 
 ## Backlog Status Check
 
@@ -47,31 +47,19 @@ Before creating any artifacts or performing write-back, check whether the origin
 
 ## Backlog Write-Back (Lifecycle Start)
 
-After registering the session, attempt to write the lifecycle start back to the originating backlog item. **Do not re-scan the backlog directory in this sub-procedure** — consume Step 1's resolved result.
-
-If Step 1 resolved a `{backlog-file}` (exit 0), gate this write-back on the backend resolved via `` `cortex-read-backlog-backend` `` (see Backend routing). On `cortex-backlog`, run:
+After registering the session, write the lifecycle start back to the originating backlog item via the backend-routed start-sync verb. **Do not re-scan the backlog directory in this sub-procedure** — consume Step 1's resolved result. Resolve the backend once (see Backend routing) and pass it through:
 
 ```bash
-cortex-update-item <path> --status in_progress --session-id $LIFECYCLE_SESSION_ID --lifecycle-phase research
+cortex-lifecycle-start-sync --backend {resolved-backend} --backlog-file {backlog-filename-or-empty-string} --phase {none-or-current-phase} --session-id $LIFECYCLE_SESSION_ID --lifecycle-slug {lifecycle-slug}
 ```
 
-Where `<path>` is the slug-or-uuid of the matched backlog item (e.g., `045-my-feature`). On `none`, skip with a one-line advisory; on any other value, make the equivalent in-progress update best-effort on the external tracker per `backlog.instructions`.
+`{backlog-filename}` is Step 1's resolver `filename` basename (e.g. `326-foo.md`); the verb reduces it to the `cortex-update-item` slug itself. The verb runs the in-progress status write-back on every phase, and additionally records the lifecycle-slug association **only when `--phase none`** (a brand-new lifecycle). On a resolver exit-3 no-match, pass `--backlog-file ""` and the verb no-ops.
 
-Additionally, when `phase = none` (new lifecycle only), record the lifecycle slug — gated on the backend resolved via `` `cortex-read-backlog-backend` `` (see Backend routing). On `cortex-backlog`, run:
-
-```bash
-cortex-update-item <path> --lifecycle-slug {lifecycle-slug}
-```
-
-On `none`, skip with a one-line advisory; on any other value, record the lifecycle-slug association best-effort on the external tracker per `backlog.instructions`.
-
-The status write-back runs on all phases when a match is found.
-
-If Step 1's resolver returned exit 3 (no backlog match), skip this step silently — lifecycles can exist independently of the backlog.
+Backend behavior is the verb's (ADR-0019 structural guard — it acts on the passed `--backend`, never self-resolves): `cortex-backlog` runs the `cortex-update-item` write-backs; `none` skips them with a one-line advisory. On **any other value** (an external tracker) the verb makes no local write — make the equivalent **in-progress** update **and (on `--phase none`) the lifecycle-slug association** best-effort on the external tracker per `backlog.instructions`, surfacing the composed content if it cannot be completed so no work is lost.
 
 ## `cortex-update-item` Exit-2 Handling (canonical)
 
-If any `cortex-update-item` invocation exits 2, that signals an ambiguous slug match. Present the candidate list emitted on stderr to the user and ask them to re-invoke with a disambiguated slug. This rule covers every `cortex-update-item` call site — the invocations in this file (the close-lifecycle call, the in-progress status write-back, the lifecycle-slug write-back) and those in later phase references, which point here rather than restating it.
+If any `cortex-update-item` invocation exits 2, that signals an ambiguous slug match. Present the candidate list emitted on stderr to the user and ask them to re-invoke with a disambiguated slug. This rule covers every `cortex-update-item` call site — the close-lifecycle call inline in this file, the lifecycle-start in-progress + lifecycle-slug write-backs now routed through the start-sync verb (which re-emits the exit-2 candidate list per this same rule), and the calls in later phase references, which point here rather than restating it.
 
 ## Registering an Artifact in index.md (canonical)
 
