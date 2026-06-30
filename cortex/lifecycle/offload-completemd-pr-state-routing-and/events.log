@@ -6,3 +6,4 @@
 {"ts":"2026-06-29T20:10:56Z","event":"sentinel_absence","feature":"offload-completemd-pr-state-routing-and","reviewer_angle":"Test-migration completeness","reason":"absent","model_tier":"sonnet","expected_sha":"e9f0061c82f820e025ce8b08aa497cfac48159ef91a4f537bfcf28d4d09a6c22","observed_sha_or_null":null}
 {"ts": "2026-06-29T23:38:55Z", "event": "plan_approved", "feature": "offload-completemd-pr-state-routing-and", "dispatch_choice": "wait"}
 {"ts": "2026-06-29T23:38:55Z", "event": "feature_paused", "feature": "offload-completemd-pr-state-routing-and"}
+{"ts": "2026-06-29T23:56:23Z", "event": "batch_dispatch", "feature": "offload-completemd-pr-state-routing-and", "batch": 0, "tasks": [1, 2, 3, 4, 5]}

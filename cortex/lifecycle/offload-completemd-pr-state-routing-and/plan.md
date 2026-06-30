@@ -50,7 +50,7 @@ Extract `complete.md`'s Step-7 PR-state router into a `cortex-lifecycle-complete
   - Output dict keys: `{route, terminal, continue_to, message, pr_state, pr_url, pr_number, head_branch}` plus `candidates` on the `orphan_ambiguous` route. `message` is `""` on non-terminal routes; `continue_to ∈ {null, "step1", "step8", "step9", "step12"}`; `pr_state ∈ {"", "unknown", "OPEN", "MERGED", "CLOSED"}`. The full route enumeration (`wontfix, already_complete, on_main, first_run, orphan_ambiguous, pr_unknown, pr_not_found, pr_open, merged_dirty, merged_clean_ancestor, merged_not_ancestor, pr_closed`) and its `{terminal, continue_to, pr_state}` triple per route is the golden table Task 3 pins.
   - pyproject: add `cortex-lifecycle-complete-route = "cortex_command.lifecycle.complete_route:main"` to `[project.scripts]` (alpha order, after `cortex-lifecycle-branch-mode` at line 52). Console-script-only — no `bin/` wrapper (the `cortex-lifecycle-event` precedent; registration alone satisfies parity `gather_deployed`, `parity_check.py:279`).
 - **Verification**: `python3 -c "import cortex_command.lifecycle.complete_route"` exits 0 AND `pip show -f cortex-command >/dev/null 2>&1; cortex-lifecycle-complete-route --help` after `just python-setup` exits 0 (console-script resolves). Pass if both exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Extend the shared gh-stub fixture for the complete-route gh surface (backward-compatible)
 - **Files**: `tests/fixtures/gh-stub.sh`
@@ -65,7 +65,7 @@ Extract `complete.md`'s Step-7 PR-state router into a `cortex-lifecycle-complete
   - `set -u` is set in the stub — every new branch must read its env via `${GH_STUB_*:-default}` so an unset var doesn't crash; runner-safe since `test_runner_pr_gating.py` never reaches the new branches.
   - PATH-injection precedent for tests (`tests/test_runner_pr_gating.py:110` `_install_gh_stub` → copy to `tmp/bin/gh`, chmod 0o755, prepend to PATH; pop the `GH_STUB_*` envs before `env.update(extra)`).
 - **Verification**: `.venv/bin/pytest tests/test_runner_pr_gating.py -q` exits 0 (no regression in existing consumers) AND `GH_STUB_PR_LIST_COUNT=2 bash tests/fixtures/gh-stub.sh pr list --head x --state all --json number,state,mergedAt --limit 5` prints a 2-element JSON array AND `GH_STUB_VIEW_FAIL=notfound bash tests/fixtures/gh-stub.sh pr view 7 --json state,mergedAt; echo $?` exits non-zero with `Could not resolve` on stderr. Pass if the pytest exits 0 and both stub probes behave as stated.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Golden-route-table test for the complete-route verb
 - **Files**: `tests/test_complete_route.py` (new)
@@ -79,7 +79,7 @@ Extract `complete.md`'s Step-7 PR-state router into a `cortex-lifecycle-complete
   - Worktree-CWD test (Req 7): model on `test_lifecycle_event.py:234` `_setup_worktree` — `.git` **file** with a `gitdir:` pointer + a `cortex/lifecycle/` dir; `chdir(inside-worktree)`; `setenv("CORTEX_REPO_ROOT", <unrelated-main>)`; assert the verb reads the worktree-rooted `events.log`/`pr.json` and the main-repo path is untouched.
   - Req-7a grep guard: assert `grep -rEc "cortex-lifecycle-complete-route|complete_route" claude/statusline.sh cortex_command/dashboard/ hooks/` == 0 (no render/observability surface references the verb).
 - **Verification**: `.venv/bin/pytest tests/test_complete_route.py -q` exits 0 (all 12 branch cases + gh-absent + zero-events + worktree-CWD + Req-7a grep pass). Pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 4: Migrate `test_lifecycle_complete_state_routing.py` to target the verb
 - **Files**: `tests/test_lifecycle_complete_state_routing.py`
@@ -97,7 +97,7 @@ Extract `complete.md`'s Step-7 PR-state router into a `cortex-lifecycle-complete
   - **Persisted wiring guard** (closes the asymmetry R4-C3/excluded-R3 flagged): keep ONE structural assertion in this file that `complete.md`'s Step-7 region invokes `cortex-lifecycle-complete-route` AND no longer contains the Branch 4a-4g terminal-message strings (so narration-removal is regression-guarded by a persisted test, not only Task 5's one-shot grep). This is the migrated counterpart to the positive `stage-artifacts`-invocation token that `test_complete_md_finalization_commit.py` keeps on the Phase-2 side.
   - Acceptance (Req 3): after migration `grep -c "complete.md" tests/test_lifecycle_complete_state_routing.py` reflects only intentional residual references (the structural heading + wiring guards), not a hard 0.
 - **Verification**: `.venv/bin/pytest tests/test_lifecycle_complete_state_routing.py -q` exits 0 AND the routing/message assertions assert verb output (spot-check: `grep -c "_complete_text()" tests/test_lifecycle_complete_state_routing.py` reflects only the retained structural heading + narration-removal wiring guards, no routing-message reads). Pass if pytest exits 0 and the only surviving `complete.md` reads are the two named structural guards.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5: Collapse `complete.md` Step 7 prose to the verb call
 - **Files**: `skills/lifecycle/references/complete.md`; `plugins/cortex-core/skills/lifecycle/references/complete.md` (regenerated mirror)
@@ -112,7 +112,7 @@ Extract `complete.md`'s Step-7 PR-state router into a `cortex-lifecycle-complete
   - Mirror: `just build-plugin` regenerates `plugins/cortex-core/...`; commit canonical + mirror together (drift hook) at the Task-6 gate.
   - Narration-removal is regression-guarded by Task 4's persisted wiring assertion (Step-7 region contains the verb call and NOT the Branch 4a-4g message strings), so it is a durable test, not only this one-shot grep.
 - **Verification**: `grep -c "complete-route" skills/lifecycle/references/complete.md` >= 1 AND the Step-7 region no longer contains the routing narration: `awk '/^### Step 7/,/^### Step 8/' skills/lifecycle/references/complete.md | grep -Ec "gh pr view --json|merge-base --is-ancestor|Branch 4[a-g]"` == 0 AND `grep -c "AskUserQuestion" skills/lifecycle/references/complete.md` == 0. Pass if first >=1 and the other two == 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 6: Phase-1 gate + commit
 - **Files**: (verification/commit only — no new edits) `cortex_command/lifecycle/complete_route.py`, `pyproject.toml`, `tests/fixtures/gh-stub.sh`, `tests/test_complete_route.py`, `tests/test_lifecycle_complete_state_routing.py`, `skills/lifecycle/references/complete.md`, `plugins/cortex-core/skills/lifecycle/references/complete.md`
@@ -123,7 +123,7 @@ Extract `complete.md`'s Step-7 PR-state router into a `cortex-lifecycle-complete
   - Trunk discipline: implementation runs on `main` sequentially (editing `cortex_command/` → `just test` exercises the editable install, so worktree verification would test stale code — `project_lifecycle_implement_dispatch_mode`). Commit with explicit `git commit -- <files>` pathspec given concurrent offload-epic sessions on trunk (`feedback_trunk_shared_index_concurrent_session`).
   - Commit canonical + regenerated mirror together (`feedback_drift_hook_shared_checkout_coupling`): run `just build-plugin` before/with the commit. Use `/cortex-core:commit`.
 - **Verification**: `just build-plugin && git diff --quiet plugins/cortex-core/ && python3 -m cortex_command.parity_check --json` reports no E002 AND `just check-events-registry && just check-events-registry-audit && just test` exit 0 AND the bare-python-import, skill-path, contract, and prescriptive-prose audits exit 0. Pass if all exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 7: Create the `stage-artifacts` staging verb
 - **Files**: `cortex_command/lifecycle/stage_artifacts.py` (new); `pyproject.toml`

@@ -81,71 +81,21 @@ When `/cortex-core:lifecycle complete <slug>` is invoked again after the phase-e
 
 ### Step 7 — State-Aware Routing
 
-Evaluate in strict order. Each branch is terminal unless noted otherwise (i.e., continues to Steps 8–12).
-
-**Evaluation order:**
-
-#### Branch 1 — `feature_wontfix` present in events.log
-
-Scan `cortex/lifecycle/{slug}/events.log` for a `feature_wontfix` event. If present, exit with:
-
-> lifecycle was wontfix'd at `<ts>`; nothing to complete (worktree cleanup skipped).
-
-Takes precedence over all pr.json and PR-state checks, including the case where a PR was already created.
-
-#### Branch 2 — `feature_complete` already in events.log
-
-Scan events.log for a `feature_complete` event. If present, short-circuit to the summary in Step 12. No duplicate event, no re-cleanup, no second `pr.json` write.
-
-#### Branch 3 — `pr.json` absent (orphan-PR probe)
-
-Check whether `cortex/lifecycle/{slug}/pr.json` exists.
-
-If absent, probe for an orphan PR (the case where Step 3 created a PR but Step 4 crashed before writing pr.json):
+Run the classifier verb to resolve the route from current lifecycle state. It reads `events.log` and `pr.json` (and queries `gh` only when a PR is in play), applies the strict-order, first-match-wins state machine — `feature_wontfix` precedes every PR-state check, and an already-logged `feature_complete` short-circuits ahead of them — and prints one JSON verdict:
 
 ```bash
-gh pr list --head "interactive/{slug}" --state all --json number,state,mergedAt --limit 5
+cortex-lifecycle-complete-route <slug>
 ```
 
-- **Zero matches**: run first-run path (Steps 1–6). Step 1 tests re-run; if no orphan, PR creation is fresh.
-- **Exactly one match**: retroactively reconstruct `pr.json` from the response, write it atomically (same pattern as Step 4), then proceed to Branch 4 (query PR state).
-- **Multiple matches (slug-reuse)**: surface the candidates with PR numbers, states, and `mergedAt` timestamps; ask the user which to use (interactive recovery path). On selection, write pr.json and proceed to Branch 4.
+Act on the verdict; do not re-derive the routing yourself:
 
-#### Branch 4 — Query PR state via `gh pr view`
-
-Read `cortex/lifecycle/{slug}/pr.json` and query:
-
-```bash
-gh pr view <number> --json state,mergedAt --repo <repo>
-```
-
-Route on the result:
-
-**4a — Auth/network error**: `gh auth status` exits non-zero, or `gh pr view` exits non-zero with output matching network/auth error patterns. Exit with:
-
-> PR state unknown; gh unauthenticated or network error; retry later. (Worktree retained.)
-
-**4b — PR not found**: `gh pr view` exits non-zero with output matching "Could not resolve to a PullRequest" or "GraphQL: not found". Exit with:
-
-> PR `<number>` referenced in pr.json was not found on GitHub. The PR may have been deleted. Run `git worktree remove <path>` manually if appropriate, or restore the PR. (Worktree retained.)
-
-**4c — `state=OPEN`**: Exit with:
-
-> PR open at `<url>`; merge first.
-
-**4d — `state=MERGED` (`mergedAt != null`) + dirty worktree**: Check `git status --porcelain` inside the worktree. If non-empty, exit with:
-
-> uncommitted changes at `<path>`; resolve first.
-
-**4e — `state=MERGED` + clean worktree + branch is local ancestor of `origin/main`**: Branch head passes `git merge-base --is-ancestor <branch-head> origin/main`. Continue to Steps 8–12.
-
-**4f — `state=MERGED` + clean worktree + branch NOT local ancestor of `origin/main`**: Exit with:
-
-> branch head is not in origin/main (possible squash with non-ancestor commit or fork-merge); refusing cleanup until verified. Run `git worktree remove <path>` manually to override.
-
-**4g — `state=CLOSED` (`mergedAt == null`, closed without merge)**: Exit with:
-
-> PR `<url>` was closed without merging. Either reopen and merge, run `git worktree remove <path>` manually to abandon, or invoke `/cortex-core:lifecycle wontfix <slug>` if appropriate. (Worktree retained.)
+- **Terminal route** (`message` non-empty, `continue_to: null`): print `message` verbatim and exit. The verb owns the exact recovery/wait text for the wontfix, PR-state, and not-found dead-ends — surface it and stop.
+- **`continue_to` set** — continue at the named step without re-running the verb:
+  - `already_complete` → **Step 12** (idempotent short-circuit: no re-cleanup, no duplicate `feature_complete`, no second `pr.json`).
+  - `on_main` → **Step 9** (direct-to-main work has no PR; Step 2's on-main short-circuit already routed here).
+  - `first_run` → **Steps 1–6** (no PR exists yet; run the first-run path).
+  - `merged_clean_ancestor` → **Step 8** (merged and verified present in `origin/main`; proceed to worktree cleanup).
+- **`orphan_ambiguous`** (non-terminal, `continue_to: null`, `candidates` present): multiple orphan PRs match `interactive/<slug>` (slug reuse). Surface the candidates — their PR numbers, states, and `mergedAt` timestamps — and ask the user which to use. On selection, write `pr.json` for the chosen PR atomically (tempfile + `os.replace`), then re-run `cortex-lifecycle-complete-route <slug>` — `pr.json` is now present, so the re-run classifies the chosen PR's state and routes on it.
 
 ---
 
