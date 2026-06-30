@@ -30,7 +30,7 @@ from cortex_command.lifecycle.resolve_model_cli import main
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 CRITICALITY_COLUMNS = ["low", "medium", "high", "critical"]
-_ALL_ROLES = ("review", "builder", "orchestrator-fix", "competing-plan", "synthesizer")
+_ALL_ROLES = ("review", "builder", "orchestrator-fix", "competing-plan", "synthesizer", "searcher")
 
 
 # ---------------------------------------------------------------------------
@@ -87,6 +87,18 @@ def test_synthesizer_is_constant_opus(capsys):
         code, out, _ = _run(argv, capsys)
         assert code == 0, f"{argv}: expected exit 0, got {code}"
         assert out == "opus\n", f"{argv}: expected 'opus', got {out!r}"
+
+
+def test_searcher_is_constant_sonnet(capsys):
+    """searcher is criticality-independent: sonnet with or without --criticality."""
+    for argv in (
+        ["--role", "searcher"],
+        ["--role", "searcher", "--criticality", "low"],
+        ["--role", "searcher", "--criticality", "critical"],
+    ):
+        code, out, _ = _run(argv, capsys)
+        assert code == 0, f"{argv}: expected exit 0, got {code}"
+        assert out == "sonnet\n", f"{argv}: expected 'sonnet', got {out!r}"
 
 
 # ---------------------------------------------------------------------------
