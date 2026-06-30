@@ -53,6 +53,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -64,6 +65,7 @@ from cortex_command.common import (
     CortexProjectRootError,
     _resolve_user_project_root_from_cwd,
 )
+from cortex_command.lifecycle_config import read_commit_artifacts
 
 _GIT_TIMEOUT = 10
 _GH_TIMEOUT = 30
@@ -247,6 +249,102 @@ def _reconstruct_pr_json(slug: str, lifecycle_dir: Path, match: dict) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Branch-2 read-only signal helpers (H / committable)
+# ---------------------------------------------------------------------------
+
+
+def _head_has_feature_complete(slug: str, root: Path) -> bool:
+    """H: True iff HEAD's events.log contains a feature_complete row.
+
+    Uses git-top-relative path resolution via ``git rev-parse --show-prefix``
+    because ``git show <rev>:<path>`` resolves ``<path>`` against the
+    repository top-level, not the cwd.  A root-relative literal fails with
+    exit 128 when *root* is a subdirectory of the git repo — the layout that
+    ``_resolve_user_project_root_from_cwd`` explicitly supports.
+
+    A ``None`` from either call (exit 128 / no commits / git-absent) yields
+    ``False``; the parse uses the same tolerant line-wise ``json.loads``
+    (skip-on-``JSONDecodeError``) as the working-tree scan in ``classify()``,
+    so a torn final row is treated identically by both.
+    """
+    prefix = _git_out(["rev-parse", "--show-prefix"], cwd=str(root))
+    if prefix is None:
+        return False
+    prefix = prefix.strip()  # "" when root == git-top; "sub/" otherwise
+    path_in_git = f"{prefix}cortex/lifecycle/{slug}/events.log"
+    text = _git_out(["show", f"HEAD:{path_in_git}"], cwd=str(root))
+    if text is None:
+        return False
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            ev = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(ev, dict) and ev.get("event") == "feature_complete":
+            return True
+    return False
+
+
+def _drift_files_from_review(review_md: Path) -> list[str]:
+    """Extract drift-requirements file paths from review.md's §4a section.
+
+    Scans the ``## Suggested Requirements Update`` section for ``**File**:``
+    lines and returns their values as a list.  Returns ``[]`` when the file is
+    absent, unreadable, or the section is missing.  Inlined (no external
+    backlog-parsing import) to keep the routing path lightweight.
+    """
+    if not review_md.is_file():
+        return []
+    try:
+        text = review_md.read_text(errors="replace")
+    except OSError:
+        return []
+    paths: list[str] = []
+    in_section = False
+    for line in text.splitlines():
+        if re.match(r"^#{1,4}\s+Suggested Requirements Update", line):
+            in_section = True
+            continue
+        if in_section and re.match(r"^#{1,4}\s+", line):
+            in_section = False
+        if in_section:
+            m = re.search(r"\*\*File\*\*:\s*(.+)", line)
+            if m:
+                paths.append(m.group(1).strip())
+    return paths
+
+
+def _finalization_committable(slug: str, root: Path) -> bool:
+    """Return True iff the finalization stage-set has pending changes.
+
+    Runs ``git status --porcelain --`` over a pathspec list scoped to the
+    finalization set: the lifecycle dir, ``cortex/backlog/index.md`` (the
+    generated backlog write-back proxy), and any drift-requirements paths
+    recorded in ``review.md``.  Degrades to ``False`` on any git failure.
+
+    The probe is read-only (no ``git add``; Req 1b preserved) and never
+    pathspec-less (no over-detection of unrelated dirty files).  Uses
+    ``cwd=str(root)`` so pathspecs are correctly root-relative for
+    ``git status`` (unlike ``git show``, which resolves against git-top).
+    """
+    lifecycle_pathspec = f"cortex/lifecycle/{slug}/"
+    index_pathspec = "cortex/backlog/index.md"
+    review_md = root / "cortex" / "lifecycle" / slug / "review.md"
+    drift = _drift_files_from_review(review_md)
+    pathspecs = [lifecycle_pathspec, index_pathspec] + drift
+    out = _git_out(
+        ["status", "--porcelain", "--"] + pathspecs,
+        cwd=str(root),
+    )
+    if out is None:
+        return False
+    return bool(out.strip())
+
+
+# ---------------------------------------------------------------------------
 # Route construction
 # ---------------------------------------------------------------------------
 
@@ -416,6 +514,7 @@ def classify(slug: str, root: Path) -> dict:
     # --- events.log scan (Branch 1 + Branch 2) ---
     wontfix_ts: Optional[str] = None
     complete_seen = False
+    has_merge_anchor_row = False  # ∃ feature_complete row with merge_anchor=="merge"
     if events_log.is_file():
         try:
             content = events_log.read_text(errors="replace")
@@ -438,6 +537,11 @@ def classify(slug: str, root: Path) -> dict:
                 # Shape-agnostic: match on the event key only (the 6-key merge
                 # row and the 3-key close row alike), never on field count.
                 complete_seen = True
+                # Canonical convention: absent merge_anchor defaults to "review"
+                # (bin/.events-registry.md + metrics.py).  A missing-anchor row
+                # is therefore NOT a retry trigger.
+                if ev.get("merge_anchor", "review") == "merge":
+                    has_merge_anchor_row = True
 
     # Branch 1 — feature_wontfix (precedes ALL pr.json / PR-state checks).
     if wontfix_ts is not None:
@@ -450,14 +554,49 @@ def classify(slug: str, root: Path) -> dict:
         )
         return result
 
-    # Branch 2 — feature_complete already present (idempotent short-circuit).
-    if complete_seen:
-        result["route"] = "already_complete"
-        result["terminal"] = False
-        result["continue_to"] = "step12"
-        return result
-
+    # Resolve current_branch up front so it is available for both Branch 2's
+    # valid-retry-target guard and the Branch 3 / on-main logic below.
     current_branch = _current_branch()
+
+    # Branch 2 — fire on (W ∨ H); short-circuit to already_complete for
+    # genuinely-done states; fall through for a retryable interactive
+    # finalization.
+    #
+    # W = complete_seen (working-tree row present)
+    # H = feature_complete present in HEAD (via git show)
+    #
+    # A retryable interactive finalization is detected when ALL of:
+    #   ¬H              — HEAD doesn't have the row (committed → done, not retry)
+    #   has_merge_anchor_row — ∃ a working-tree row with merge_anchor=="merge"
+    #                         (review-anchor / missing-anchor → "review" → done)
+    #   read_commit_artifacts — commit-artifacts:true (false → deliberately
+    #                           uncommitted → done)
+    #   _finalization_committable — the finalization set has pending changes
+    #                               (nothing pending → done; git failure → False
+    #                               → done, safe direction)
+    #   valid-retry-target — on main/master OR pr.json present (neither →
+    #                        fall-through would land on first_run/step1,
+    #                        restarting the lifecycle — strictly worse than
+    #                        already_complete)
+    #
+    # Everything else is done: HEAD-present, review-anchor, missing-anchor,
+    # commit-artifacts:false, not-committable, no retry target.
+    _h = _head_has_feature_complete(slug, root)
+    if complete_seen or _h:
+        retryable = (
+            not _h
+            and has_merge_anchor_row
+            and read_commit_artifacts(root)
+            and _finalization_committable(slug, root)
+            and (current_branch in {"main", "master"} or pr_json.is_file())
+        )
+        if not retryable:
+            result["route"] = "already_complete"
+            result["terminal"] = False
+            result["continue_to"] = "step12"
+            return result
+        # Retryable: do NOT return — fall through to the existing Branch 3 /
+        # Branch 4 logic (on_main → step9 on main; merged_dirty via pr.json).
 
     # Branch 3 / on-main short-circuit (pr.json absent).
     if not pr_json.is_file():
