@@ -5,3 +5,4 @@
 {"schema_version":1,"ts":"2026-06-29T17:16:20.411937+00:00","event":"spec_approved","feature":"criticality-dispatch-reference-cleanup-relocate-fanoutmd","worktree_path":null}
 {"ts": "2026-06-30T10:47:53Z", "event": "plan_approved", "feature": "criticality-dispatch-reference-cleanup-relocate-fanoutmd", "dispatch_choice": "trunk"}
 {"ts": "2026-06-30T10:47:53Z", "event": "phase_transition", "feature": "criticality-dispatch-reference-cleanup-relocate-fanoutmd", "from": "plan", "to": "implement"}
+{"ts": "2026-06-30T10:52:02Z", "event": "batch_dispatch", "feature": "criticality-dispatch-reference-cleanup-relocate-fanoutmd", "batch": 0, "tasks": [1, 2, 3]}
