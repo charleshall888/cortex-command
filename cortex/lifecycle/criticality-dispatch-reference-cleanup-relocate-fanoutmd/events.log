@@ -6,3 +6,6 @@
 {"ts": "2026-06-30T10:47:53Z", "event": "plan_approved", "feature": "criticality-dispatch-reference-cleanup-relocate-fanoutmd", "dispatch_choice": "trunk"}
 {"ts": "2026-06-30T10:47:53Z", "event": "phase_transition", "feature": "criticality-dispatch-reference-cleanup-relocate-fanoutmd", "from": "plan", "to": "implement"}
 {"ts": "2026-06-30T10:52:02Z", "event": "batch_dispatch", "feature": "criticality-dispatch-reference-cleanup-relocate-fanoutmd", "batch": 0, "tasks": [1, 2, 3]}
+{"ts": "2026-06-30T11:17:43Z", "event": "batch_dispatch", "feature": "criticality-dispatch-reference-cleanup-relocate-fanoutmd", "batch": 1, "tasks": [4, 5]}
+{"ts": "2026-06-30T11:30:01Z", "event": "batch_dispatch", "feature": "criticality-dispatch-reference-cleanup-relocate-fanoutmd", "batch": 2, "tasks": [6, 7, 8]}
+{"ts": "2026-06-30T13:06:20Z", "event": "phase_transition", "feature": "criticality-dispatch-reference-cleanup-relocate-fanoutmd", "tier": "complex", "from": "implement", "to": "review"}
