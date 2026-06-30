@@ -146,13 +146,13 @@ On the `cortex-backlog` arm (the default), regenerate the backlog index using th
 
 ### Step 11 — Log `feature_complete`
 
-Append a `feature_complete` event to `cortex/lifecycle/{slug}/events.log`:
+Append a `feature_complete` event to `cortex/lifecycle/{slug}/events.log` via the event verb:
 
-```json
-{"ts": "<ISO8601>", "event": "feature_complete", "feature": "<slug>", "tasks_total": <N>, "rework_cycles": <N>, "merge_anchor": "merge"}
+```bash
+cortex-lifecycle-event log --event feature_complete --feature {slug} --set-json tasks_total={N} --set-json rework_cycles={N} --set merge_anchor=merge
 ```
 
-Read `tasks_total` and `rework_cycles` by running `cortex-lifecycle-counters --feature {slug}` and parsing the JSON output. If no review phase occurred (simple tier), `rework_cycles` will be `0`.
+Read the `{N}` values — `tasks_total` and `rework_cycles` — by running `cortex-lifecycle-counters --feature {slug}` and parsing the JSON output. `tasks_total` and `rework_cycles` are ints (pass them as `--set-json`); `merge_anchor` is the literal string `merge` (pass it as `--set`). If no review phase occurred (simple tier), `rework_cycles` will be `0`. The verb emits `{ts, event, feature, tasks_total, rework_cycles, merge_anchor}` (no `schema_version`).
 
 This event closes the event log for the feature.
 

@@ -200,7 +200,7 @@ Extract `complete.md`'s Step-7 PR-state router into a `cortex-lifecycle-complete
   - Branch-2 detection in `complete-route` is shape-agnostic (Task 1) and the close-form 3-key `feature_complete` (`backlog-writeback.md`) is **out of scope** (Non-Requirements) — do not touch it.
   - Mirror: `just build-plugin`; commit canonical + mirror together at the Task-14 gate.
 - **Verification**: `grep -c '"event": "feature_complete"' skills/lifecycle/references/complete.md` == 0 (raw-JSON literal removed) AND `grep -c "cortex-lifecycle-event log --event feature_complete" skills/lifecycle/references/complete.md` >= 1 AND `grep -c '"event": "pr_opened"' skills/lifecycle/references/complete.md` == 1 (pr_opened raw JSON deliberately retained per ADR-0020) AND the `feature_complete` verb call sits before the `<!-- finalization-commit-step -->` marker (`awk '/Step 11 —/,/finalization-commit-step/'` contains the verb call — emission stays pre-11a). Pass if all hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 13: Round-trip field-set + real-consumer test for `feature_complete`
 - **Files**: `tests/test_complete_feature_complete_emission.py` (new)
@@ -212,7 +212,7 @@ Extract `complete.md`'s Step-7 PR-state router into a `cortex-lifecycle-complete
   - No bug-1 commit-failure test here: the emission/commit ordering is unchanged (Task 12 keeps today's order), and the ordering *fix* (with its discriminating structural test) is #339's scope. A behavioral "no feature_complete on commit failure" test would be self-sealing against unchanged prose, so it is deliberately omitted.
   - Top-level `tests/` so `just test` runs it.
 - **Verification**: `.venv/bin/pytest tests/test_complete_feature_complete_emission.py -q` exits 0 (round-trip field-set+values + real-consumer classification pass). Pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 14: Events-registry reconciliation + Phase-3 gate + commit
 - **Files**: `bin/.events-registry.md` (only if the `feature_complete` producer row needs reconciliation); verification/commit of Tasks 12–13
@@ -223,7 +223,7 @@ Extract `complete.md`'s Step-7 PR-state router into a `cortex-lifecycle-complete
   - `bin/.events-registry.md:12` (`feature_complete`) already lists `skills/lifecycle/references/complete.md` as a producer; after migration `complete.md` still produces it (via the verb), so the row likely needs no change — but verify `just check-events-registry && just check-events-registry-audit` stay green and edit the row only if the gate flags drift. `pr_opened` row (`:137`) is untouched.
   - Trunk + explicit-pathspec + commit-canonical+mirror-together discipline (as Task 6/11). `just build-plugin` before/with the commit; `/cortex-core:commit`.
 - **Verification**: `just build-plugin && git diff --quiet plugins/cortex-core/ && python3 -m cortex_command.parity_check --json` reports no E002 AND `just check-events-registry && just check-events-registry-audit && just test` exit 0 AND the bare-python-import, skill-path, contract, and prescriptive-prose audits exit 0. Pass if all exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ## Risks
 
