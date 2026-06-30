@@ -23,7 +23,7 @@ The user's criticality setting is always final. No automated process (including 
 
 Per-role model resolution (which model each dispatch role uses at a given criticality) is owned by the `cortex-resolve-model` verb — run it at each dispatch site rather than reading a model from this table.
 
-Research is **always parallel** at every criticality; the agent count is sized by the tier × criticality fan-out matrix — see fanout.md for the count-source-of-truth and dispatch protocol. Competing **plans** remain critical-only (single plan at low/medium/high).
+Research is **always parallel** at every criticality; the agent count is sized by the tier × criticality fan-out matrix owned by the `/cortex-core:research` skill (the count-source-of-truth and dispatch protocol). Competing **plans** remain critical-only (single plan at low/medium/high).
 
 ## Reading lifecycle state
 
