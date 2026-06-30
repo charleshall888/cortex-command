@@ -5,3 +5,5 @@
 {"schema_version": 1, "ts": "2026-06-30T03:12:48Z", "event": "phase_transition", "feature": "fix-feature-complete-emission-ordering-strand", "from": "research", "to": "specify"}
 {"schema_version": 1, "ts": "2026-06-30T11:34:33Z", "event": "spec_approved", "feature": "fix-feature-complete-emission-ordering-strand"}
 {"schema_version": 1, "ts": "2026-06-30T11:34:33Z", "event": "phase_transition", "feature": "fix-feature-complete-emission-ordering-strand", "from": "specify", "to": "plan"}
+{"ts": "2026-06-30T13:45:22Z", "event": "plan_approved", "feature": "fix-feature-complete-emission-ordering-strand", "dispatch_choice": "wait"}
+{"ts": "2026-06-30T13:45:22Z", "event": "feature_paused", "feature": "fix-feature-complete-emission-ordering-strand"}

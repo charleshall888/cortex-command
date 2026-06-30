@@ -2,7 +2,7 @@
 feature: fix-feature-complete-emission-ordering-strand
 parent_backlog_uuid: 29604a81-71cb-4b3f-9eef-9699ffdcee57
 parent_backlog_id: 339
-artifacts: [research, spec]
+artifacts: [research, spec, plan]
 tags: []
 created: 2026-06-29
 updated: 2026-06-30
