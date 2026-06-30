@@ -1127,3 +1127,124 @@ def select_overnight_batch(
         summary=summary,
         intra_session_deps=intra_session_deps,
     )
+
+
+def filter_selection_to_curated_set(
+    selection: SelectionResult,
+    only_slugs: list[str],
+) -> tuple[Optional[SelectionResult], Optional[dict]]:
+    """Restrict a full ``SelectionResult`` to the operator's curated slug set.
+
+    Implements the curation->launch frozen-list handoff (#323). The caller
+    passes the result of a normal full ``select_overnight_batch`` plus the
+    operator's curated/frozen slug list; this post-filters that already-computed
+    result down to exactly the curated slugs (dropping non-kept items from each
+    batch, dropping emptied batches, and filtering ``intra_session_deps`` to the
+    kept set) while preserving the scoring/batching/round assignment the full
+    selection already computed.
+
+    Post-filtering the already-computed result — rather than re-running
+    ``select_overnight_batch``/``filter_ready`` over a universe restricted to
+    the curated slugs — is deliberate and load-bearing for correctness:
+    dependency-closure here validates only ``intra_session_deps`` (non-terminal
+    in-session blockers), so a curated item that is eligible *because its
+    blocker is terminal/complete* has no ``intra_session_deps`` entry. Re-running
+    ``filter_ready`` over a restricted universe would strip that blocker's id
+    from the status lookup, reclassify the dependent as ``external blocker``, and
+    silently drop it. Post-filtering never re-derives eligibility, so it cannot
+    introduce that drop. Non-contiguous ``batch_id`` after dropping empty
+    batches is tolerated downstream (the orchestrator round gate advances empty
+    rounds).
+
+    Returns ``(restricted_selection, None)`` on success, or
+    ``(None, error_dict)`` on a fail-loud refusal. ``error_dict`` always carries
+    ``error`` and ``message`` keys plus cause-specific fields:
+
+    - ``{"error": "ineligible_slug", "message": ..., "slugs": [...]}`` — one or
+      more curated slugs are not present in the launch-time executable set.
+    - ``{"error": "dependency_not_closed", "message": ..., "blockers": [...],
+      "dependents": [...]}`` — a kept feature's in-session blocker was excluded.
+    """
+    curated = [s for s in only_slugs if s]
+    curated_set = set(curated)
+
+    # The launch-time executable universe is exactly what landed in batches.
+    selected_slugs: set[str] = {
+        item.resolve_slug() for batch in selection.batches for item in batch.items
+    }
+
+    # (1) Eligibility: every curated slug must be in the launch-time selection.
+    missing_slugs = [s for s in curated if s not in selected_slugs]
+    if missing_slugs:
+        names = ", ".join(missing_slugs)
+        return None, {
+            "error": "ineligible_slug",
+            "message": (
+                f"curated slug(s) not eligible at launch time: {names}. "
+                "Possible causes: a typo, drift since prepare (the item became "
+                "blocked or merged), or a curation-removed in-session blocker. "
+                "Re-run prepare to re-derive the eligible set."
+            ),
+            "slugs": missing_slugs,
+        }
+
+    # (2) Dependency-closure: every kept feature's in-session blocker must also
+    # be kept, or a dangling intra_session_blocked_by would reach state.
+    missing_blockers: list[str] = []
+    blocked_dependents: list[str] = []
+    for slug in curated:
+        for blocker in selection.intra_session_deps.get(slug, []):
+            if blocker not in curated_set:
+                missing_blockers.append(blocker)
+                blocked_dependents.append(slug)
+    if missing_blockers:
+        uniq_blockers = sorted(set(missing_blockers))
+        uniq_dependents = sorted(set(blocked_dependents))
+        names = ", ".join(uniq_blockers)
+        deps = ", ".join(uniq_dependents)
+        return None, {
+            "error": "dependency_not_closed",
+            "message": (
+                f"curated set is not dependency-closed: in-session blocker(s) "
+                f"{names} were excluded but are required by {deps}. "
+                "Re-add the blocker(s) or also remove the dependent(s)."
+            ),
+            "blockers": uniq_blockers,
+            "dependents": uniq_dependents,
+        }
+
+    # (3) Build the restricted selection: keep only curated items, drop empty
+    # batches, preserve batch_id/batch_context, filter intra_session_deps.
+    new_batches: list[Batch] = []
+    for batch in selection.batches:
+        kept_items = [
+            item for item in batch.items if item.resolve_slug() in curated_set
+        ]
+        if kept_items:
+            new_batches.append(
+                Batch(
+                    items=kept_items,
+                    batch_context=batch.batch_context,
+                    batch_id=batch.batch_id,
+                )
+            )
+
+    new_deps = {
+        slug: blockers
+        for slug, blockers in selection.intra_session_deps.items()
+        if slug in curated_set
+    }
+
+    total_selected = sum(len(b.items) for b in new_batches)
+    summary = (
+        f"Curated selection: {total_selected} items in {len(new_batches)} "
+        f"batches (frozen from operator curation)"
+    )
+
+    restricted = SelectionResult(
+        batches=new_batches,
+        ineligible=selection.ineligible,
+        summary=summary,
+        intra_session_deps=new_deps,
+    )
+    return restricted, None

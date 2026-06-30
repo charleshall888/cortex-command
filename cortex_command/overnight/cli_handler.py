@@ -2152,6 +2152,38 @@ def handle_launch(args: argparse.Namespace) -> int:
             print(message, file=sys.stderr, flush=True)
         return 1
 
+    # (1b) Curated frozen-list handoff (#323). When ``--only`` is supplied, the
+    # caller (the /overnight curation gate) is handing us the exact operator-
+    # approved set. Absent the flag (``only is None``), behavior is unchanged
+    # (full re-selection). Empty (``only == ""`` → no slugs) returns the
+    # existing nothing_ready refusal rather than bootstrapping an empty session.
+    only_arg = getattr(args, "only", None)
+    if only_arg is not None:
+        curated = [s.strip() for s in only_arg.split(",") if s.strip()]
+        if not curated:
+            message = "nothing ready for overnight execution"
+            if fmt == "json":
+                _emit_json(
+                    {
+                        "error": "nothing_ready",
+                        "message": message,
+                        "selection": _selection_summary_payload(selection),
+                    }
+                )
+            else:
+                print(message, file=sys.stderr, flush=True)
+            return 1
+        restricted, curate_error = backlog_module.filter_selection_to_curated_set(
+            selection, curated
+        )
+        if curate_error is not None:
+            if fmt == "json":
+                _emit_json(curate_error)
+            else:
+                print(curate_error["message"], file=sys.stderr, flush=True)
+            return 1
+        selection = restricted
+
     if not selection.batches:
         message = "nothing ready for overnight execution"
         if fmt == "json":

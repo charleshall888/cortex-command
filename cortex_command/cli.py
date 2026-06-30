@@ -1049,6 +1049,19 @@ def _build_parser() -> argparse.ArgumentParser:
         default="json",
         help="Output format (default: json)",
     )
+    launch.add_argument(
+        "--only",
+        dest="only",
+        type=str,
+        default=None,
+        help=(
+            "Restrict execution to this comma-separated set of feature slugs "
+            "(the operator's curated/frozen set). Absent (default) re-selects "
+            "the full eligible set as before; an empty value refuses with "
+            "nothing_ready. The set must be dependency-closed — launch refuses "
+            "fail-loud when a kept feature's in-session blocker is excluded."
+        ),
+    )
     launch.set_defaults(func=_dispatch_overnight_launch)
 
     # -------------------------------------------------------------------
