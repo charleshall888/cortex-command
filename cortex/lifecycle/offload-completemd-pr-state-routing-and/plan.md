@@ -138,7 +138,7 @@ Extract `complete.md`'s Step-7 PR-state router into a `cortex-lifecycle-complete
   - Explicit-add discipline: never a directory-scoped `git add` on `cortex/lifecycle/`, `cortex/backlog/`, or `cortex/requirements/`; never the `-u` tracked-modified form on those dirs.
   - pyproject: add `cortex-lifecycle-stage-artifacts = "cortex_command.lifecycle.stage_artifacts:main"` (alpha order, after `cortex-lifecycle-picker-decision` at line 57). Console-script-only.
 - **Verification**: `python3 -c "import cortex_command.lifecycle.stage_artifacts"` exits 0 AND after `just python-setup`, `cortex-lifecycle-stage-artifacts --help` exits 0 and shows `--phase` + `--feature`. Pass if both exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 8: Real-git staged-set test for stage-artifacts (incl. negative + no-sweep controls)
 - **Files**: `tests/test_stage_artifacts.py` (new)
@@ -151,7 +151,7 @@ Extract `complete.md`'s Step-7 PR-state router into a `cortex-lifecycle-complete
   - Negative controls (Req 13): fixtures with **unrelated dirty tracked** files under `cortex/lifecycle/` (residue), `cortex/requirements/`, and `cortex/backlog/OTHER.md`; assert `git diff --cached --name-only` does NOT include them — behaviorally exercising the dropped `-u` sweep and the no-directory-glob discipline (not string-checking the source).
   - Signal (Req 12): assert `nothing_staged` on a no-op re-run vs `staged` on a real stage, matching `git diff --cached --quiet`'s exit.
 - **Verification**: `.venv/bin/pytest tests/test_stage_artifacts.py -q` exits 0 (all sub-modes + negative + no-sweep + signal cases pass). Pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 9: Collapse `complete.md` Step 11a + `post-refine-commit.md` staging prose
 - **Files**: `skills/lifecycle/references/complete.md`; `skills/lifecycle/references/post-refine-commit.md`; `plugins/cortex-core/skills/lifecycle/references/complete.md` + `.../post-refine-commit.md` (regenerated mirrors)
@@ -165,7 +165,7 @@ Extract `complete.md`'s Step-7 PR-state router into a `cortex-lifecycle-complete
   - **Scope the edits to Steps 7 (Task 5) + 11a only** — `complete.md` is read by ~10 tests (`test_complete_cleanup_gates.py`, `test_complete_md_hard_guard_snapshot.py`, `test_complete_index_sync_gate.py`, `test_complete_pr_routing.py`, `test_complete_pr_json_schema.py`, `test_skill_section_citations.py`, …). The collapse is safe because their regions (Steps 2/3/4/8/10 + headings) are untouched, and shared tokens (`git status --porcelain`, `git merge-base --is-ancestor`) survive in the **untouched Step-8 cleanup gate** (`complete.md:164-165`) — so those whole-file/region guards don't break. Do NOT edit outside the Step-7 and Step-11a regions.
   - Mirrors: `just build-plugin`; commit canonical + mirror together at the Task-11 gate.
 - **Verification**: `grep -c "stage-artifacts" skills/lifecycle/references/complete.md skills/lifecycle/references/post-refine-commit.md` shows >=1 in each file AND `grep -c "git add -u cortex/backlog/" skills/lifecycle/references/complete.md` == 0 (bug-2 sweep removed from prose). Pass if both hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 10: Update the finalization-region guard + the post-refine wiring test
 - **Files**: `tests/test_complete_md_finalization_commit.py`; `tests/test_post_refine_commit_wired.py`
@@ -178,7 +178,7 @@ Extract `complete.md`'s Step-7 PR-state router into a `cortex-lifecycle-complete
     - **Stay as prose control flow → KEEP asserting present**: `cortex-read-commit-artifacts` (the commit-artifacts flag gate — Task 9 keeps Flag Check as prose), `/cortex-core:commit`, `git diff --cached --quiet` (the stage-first guard stays prose control flow), the halt clause, and the `main`/`master` post-commit branch advisory. Add a positive `stage-artifacts`-invocation token. Keep all negative tokens.
   - `test_post_refine_commit_wired.py` (the actual `post-refine-commit.md` guard — the spec named the wrong file): `test_post_refine_commit_contains_required_tokens` asserts `cortex-read-commit-artifacts`, `/cortex-core:commit`, halt tokens, since-last-commit tokens, and cancel-path tokens (`"cancelled"/"cancel"`). Handle each precisely: `cortex-read-commit-artifacts`/`/cortex-core:commit`/halt **stay** (still prose); the cancel-path token is satisfied by the **kept Commit-Subject prose** `Refine {feature}: cancelled at spec approval` (Task 9 preserves Commit Subject) so it needs **no change**; the since-last-commit narration (`"most recent"` in the removed Preconditions/No-Op scan) is **dropped** (no verb-output equivalent); add a positive `stage-artifacts`-invocation token. The two cross-file wiring tests (`refine-delegation.md` 50-line distance at `refine-delegation.md:25`; `SKILL.md` >=2 refs) and the mirror-existence test survive unchanged because Task 9 edits neither `refine-delegation.md` nor `SKILL.md` — verify they still pass.
 - **Verification**: `.venv/bin/pytest tests/test_complete_md_finalization_commit.py tests/test_post_refine_commit_wired.py -q` exits 0. Pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 11: Phase-2 gate + commit
 - **Files**: (verification/commit only) `cortex_command/lifecycle/stage_artifacts.py`, `pyproject.toml`, `tests/test_stage_artifacts.py`, `tests/test_complete_md_finalization_commit.py`, `tests/test_post_refine_commit_wired.py`, `skills/lifecycle/references/complete.md`, `skills/lifecycle/references/post-refine-commit.md`, and their regenerated mirrors
@@ -187,7 +187,7 @@ Extract `complete.md`'s Step-7 PR-state router into a `cortex-lifecycle-complete
 - **Complexity**: simple
 - **Context**: Same trunk + explicit-pathspec + commit-canonical+mirror-together discipline as Task 6. `just build-plugin` before/with the commit; `/cortex-core:commit`.
 - **Verification**: `just build-plugin && git diff --quiet plugins/cortex-core/ && python3 -m cortex_command.parity_check --json` reports no E002 AND `just check-events-registry && just check-events-registry-audit && just test && .venv/bin/pytest tests/test_lifecycle_kept_pauses_parity.py tests/test_lifecycle_phase_parity.py -q` exit 0 AND the bare-python-import, skill-path, contract, and prescriptive-prose audits exit 0. Pass if all exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 12: Migrate `feature_complete` emission to the verb (in place — no ordering change)
 - **Files**: `skills/lifecycle/references/complete.md`; `plugins/cortex-core/skills/lifecycle/references/complete.md` (regenerated mirror)

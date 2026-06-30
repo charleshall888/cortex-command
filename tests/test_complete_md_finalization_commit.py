@@ -4,19 +4,29 @@ Slices the ``<!-- finalization-commit-step -->`` …
 ``<!-- /finalization-commit-step -->`` region out of the canonical
 ``skills/lifecycle/references/complete.md`` and asserts:
 
+After #331 Phase 2 the Step-11a staging mechanics (the enumerated ``git add``,
+the resolver lookup, the ``-u`` sweep, the "never directory-glob" warnings)
+collapsed into the ``cortex-lifecycle-stage-artifacts --phase complete`` verb.
+The region keeps only the residual control flow; the verb's behavioral staged-set
+test (``tests/test_stage_artifacts.py``, Req 13) owns the staging-discipline
+assertions that used to live here.
+
 Positive tokens (all must be present in the region):
-- ``cortex-read-commit-artifacts`` — binstub invocation
+- ``cortex-lifecycle-stage-artifacts`` — the staging verb the enumerated
+  ``git add`` / resolver lookup / ``-u`` sweep collapsed into (Req 14)
+- ``cortex-read-commit-artifacts`` — binstub invocation (Flag Check stays prose)
 - ``/cortex-core:commit`` — commit skill invocation
-- ``git diff --cached --quiet`` — stage-first idempotent guard
-- Enumerated lifecycle-path staging (R5 requirement)
-- ``Suggested Requirements Update`` — the region reads review.md's
-  requirements-update ``File`` path and stages it by exact path (defect 2)
-- ``cortex-resolve-backlog-item`` + ``git add -u cortex/backlog/`` — the
-  scoped backlog staging contract (defect 3): the resolver supplies the
-  resolved filename and the ``-u`` flag is bound to the ``cortex/backlog/``
-  path in a single staging directive (a single substring binds the two)
-- A halt-on-failure clause for non-zero commit exit
+- ``git diff --cached --quiet`` — the stage-first idempotent guard; the verb's
+  ``signal`` is documented as equivalent to this exit, and it stays prose
+  control flow (not absorbed by the verb)
+- A halt-on-failure clause for a non-zero commit/stage exit
 - A ``main`` / ``master`` non-default-branch advisory (R13)
+
+The staging-mechanics tokens that moved into the verb are no longer asserted
+here: the enumerated lifecycle filenames, ``Suggested Requirements Update``, and
+``cortex-resolve-backlog-item`` (dropped — the verb owns them), and
+``git add -u cortex/backlog/`` (flipped to a *negative* token below — the bug-2
+``-u`` sweep was narrowed away, Req 11).
 
 Negative tokens (must NOT appear in the region):
 - ``git push`` — pushing is not part of the finalization commit step
@@ -30,6 +40,9 @@ Negative tokens (must NOT appear in the region):
   in-flight edits); only the exact review.md-recorded ``File`` path is staged
 - ``git add cortex/backlog/`` (unscoped, bare) — defect 3 forbids the
   directory-sweep that captured unrelated untracked tickets
+- ``git add -u cortex/backlog/`` — the bug-2 ``-u`` sweep: previously asserted
+  *present*, now forbidden in the prose (the narrowed two-explicit-path staging
+  moved into the verb; the over-broad sweep was dropped, Req 11)
 - ``cortex/backlog/*-`` — the tail-anchored slug-glob matches zero files
   (the lifecycle slug is a truncated prefix of the backlog filename slug);
   the resolver's ``filename`` is used instead
@@ -84,6 +97,13 @@ def test_finalization_commit_region_positive_tokens() -> None:
 
     region = _extract_region(complete_md.read_text(encoding="utf-8"))
 
+    # Req 14: the Step-11a staging mechanics collapsed into the verb invocation.
+    assert "cortex-lifecycle-stage-artifacts" in region, (
+        "finalization-commit-step region must invoke the "
+        "'cortex-lifecycle-stage-artifacts' staging verb (Req 14) — the "
+        "enumerated git-add / resolver lookup / -u sweep collapsed into it"
+    )
+
     assert "cortex-read-commit-artifacts" in region, (
         "finalization-commit-step region must invoke the cortex-read-commit-artifacts binstub"
     )
@@ -92,42 +112,15 @@ def test_finalization_commit_region_positive_tokens() -> None:
     )
     assert "git diff --cached --quiet" in region, (
         "finalization-commit-step region must include the stage-first idempotent guard "
-        "'git diff --cached --quiet'"
+        "'git diff --cached --quiet' (the verb's signal is equivalent to this exit; "
+        "the guard stays prose control flow)"
     )
 
-    # Enumerated lifecycle-path staging (R5): individual filenames must be present
-    enumerated_files = [
-        "research.md",
-        "spec.md",
-        "plan.md",
-        "review.md",
-        "index.md",
-        "events.log",
-    ]
-    for fname in enumerated_files:
-        assert fname in region, (
-            f"finalization-commit-step region must stage '{fname}' by enumerated path (R5)"
-        )
-
-    # Defect 2: the region reads review.md's requirements-update File path and
-    # stages it by exact path. The section heading must be referenced.
-    assert "Suggested Requirements Update" in region, (
-        "finalization-commit-step region must read review.md's "
-        "'## Suggested Requirements Update' File path and stage it (defect 2)"
-    )
-
-    # Defect 3: scoped backlog staging. The resolver supplies the resolved
-    # filename, and the '-u' flag is bound to the cortex/backlog/ path as a
-    # single staging directive (single substring => -u bound to the path).
-    assert "cortex-resolve-backlog-item" in region, (
-        "finalization-commit-step region must resolve the backlog item via "
-        "'cortex-resolve-backlog-item' for the explicit backlog add (defect 3)"
-    )
-    assert "git add -u cortex/backlog/" in region, (
-        "finalization-commit-step region must stage tracked-modified backlog "
-        "files with 'git add -u cortex/backlog/' (defect 3); the -u flag must "
-        "be bound to the cortex/backlog/ path in a single directive"
-    )
+    # NOTE: the enumerated lifecycle filenames, 'Suggested Requirements Update',
+    # and 'cortex-resolve-backlog-item' staging-mechanics tokens moved into the
+    # stage-artifacts verb (Req 14) and are now pinned by the verb's behavioral
+    # staged-set test (tests/test_stage_artifacts.py, Req 13). 'git add -u
+    # cortex/backlog/' flipped to a negative token (bug-2, Req 11) — see below.
 
     # Halt-on-failure clause: commit failure must stop progress
     region_lower = region.lower()
@@ -188,13 +181,24 @@ def test_finalization_commit_region_negative_tokens() -> None:
     )
 
     # Defect 3: the unscoped bare backlog directory-sweep is forbidden (it
-    # captured unrelated untracked tickets). Only the '-u' form plus the
-    # resolver-supplied filename are permitted.
+    # captured unrelated untracked tickets). After #331 Phase 2 the narrowed
+    # backlog staging lives in the verb, so no bare 'git add cortex/backlog/'
+    # appears in the prose either.
     assert "git add cortex/backlog/" not in region, (
         "finalization-commit-step region must not contain the unscoped "
         "'git add cortex/backlog/' — defect 3 forbids the directory-sweep that "
-        "captured unrelated untracked tickets; use 'git add -u cortex/backlog/' "
-        "plus the resolver-supplied filename"
+        "captured unrelated untracked tickets; the narrowed staging is in the verb"
+    )
+
+    # Bug-2 flip (Req 11): 'git add -u cortex/backlog/' was previously asserted
+    # PRESENT (the -u tracked-modified sweep). The sweep over-captured unrelated
+    # dirty tickets (cross-session contamination), so it was dropped and the
+    # backlog write-back narrowed to two explicit paths inside the verb. The
+    # over-broad -u sweep must no longer appear in the prose.
+    assert "git add -u cortex/backlog/" not in region, (
+        "finalization-commit-step region must not contain "
+        "'git add -u cortex/backlog/' — the bug-2 -u sweep was narrowed away "
+        "(Req 11); the verb stages the resolved ticket file + index.md explicitly"
     )
 
     # Defect 3: the tail-anchored slug-glob matches zero files and must not be

@@ -7,3 +7,4 @@
 {"ts": "2026-06-29T23:38:55Z", "event": "plan_approved", "feature": "offload-completemd-pr-state-routing-and", "dispatch_choice": "wait"}
 {"ts": "2026-06-29T23:38:55Z", "event": "feature_paused", "feature": "offload-completemd-pr-state-routing-and"}
 {"ts": "2026-06-29T23:56:23Z", "event": "batch_dispatch", "feature": "offload-completemd-pr-state-routing-and", "batch": 0, "tasks": [1, 2, 3, 4, 5]}
+{"ts": "2026-06-30T00:53:02Z", "event": "batch_dispatch", "feature": "offload-completemd-pr-state-routing-and", "batch": 1, "tasks": [7, 8, 9, 10, 11]}

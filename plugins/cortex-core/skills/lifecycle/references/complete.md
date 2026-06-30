@@ -163,42 +163,20 @@ Run `cortex-read-commit-artifacts` to read the `commit-artifacts` flag from proj
 
 **Flag is `false`**: skip the commit entirely. Note inline that lifecycle artifacts and any uncommitted source are left in the working tree for the operator to commit deliberately.
 
-**Flag is `true`**: stage the artifact set below and proceed to the stage-first guard.
-
-Stage the lifecycle dir by enumerated paths (those present on disk):
+**Flag is `true`**: stage the finalization artifact set with the verb, then act on its `signal`:
 
 ```
-git add -- cortex/lifecycle/{slug}/research.md \
-            cortex/lifecycle/{slug}/spec.md \
-            cortex/lifecycle/{slug}/plan.md \
-            cortex/lifecycle/{slug}/review.md \
-            cortex/lifecycle/{slug}/index.md \
-            cortex/lifecycle/{slug}/events.log
+cortex-lifecycle-stage-artifacts --phase complete --feature {slug}
 ```
 
-Stage by enumerated paths only — a directory-scoped add on the lifecycle dir would sweep in residue files that are un-ignored or already-tracked.
+The verb owns the explicit-path staging discipline — it stages the lifecycle artifacts, the review-drift requirements file (by the exact path review.md recorded), and the narrowed backlog write-back (the resolved ticket file plus the backlog index), all by enumerated paths, never a directory glob or `-u` sweep — and prints `{"signal": "staged"|"nothing_staged", "staged_paths": [...]}`.
 
-Stage the review-phase requirements-drift file, if one was auto-applied, by its exact recorded path — no directory-scoped add on `cortex/requirements/` (neither the `-u` tracked-modified form nor a bare directory add; it sweeps unrelated in-flight requirements edits):
+**Stage-first idempotent guard**: the verb's `signal` is the staging outcome (equivalent to `git diff --cached --quiet`):
 
-- Read the `## Suggested Requirements Update` section from `cortex/lifecycle/{slug}/review.md` and extract its `**File**:` value (the path the review phase recorded per review.md §4a — fields `File` / `Section` / `Content`).
-- `git add -- <that File path>`.
-- If no `## Suggested Requirements Update` section exists (no drift was applied), skip this staging silently.
+- `nothing_staged` (the index already matches HEAD — `git diff --cached --quiet` would exit 0): nothing new to commit — skip `/cortex-core:commit` silently and continue to Step 12 (common on the worktree path post-merge).
+- `staged`: something is staged — proceed to commit.
 
-Stage the backlog write-back:
-
-- `git add -u cortex/backlog/` — staged tracked-modified only.
-- Stage the resolved backlog item by its **resolved filename**: capture it via `cortex-resolve-backlog-item {slug}` (exit-0 stdout, the `filename` field), then `git add -- cortex/backlog/<resolved-filename>`.
-
-Do **not** use a bare directory-scoped add on `cortex/backlog/` (it sweeps unrelated untracked tickets) and do **not** rely on a slug-glob (`{slug}.md`): the lifecycle `{slug}` is a truncated prefix of the backlog filename, so that glob matches zero files — use the resolver's `filename` field instead.
-
-**Stage-first idempotent guard**: after staging, run:
-
-```
-git diff --cached --quiet
-```
-
-- Exit 0 (nothing staged): nothing new to commit — skip `/cortex-core:commit` silently and continue to Step 12 (common on the worktree path post-merge).
-- Exit 1 (something staged): proceed to commit.
+A non-zero verb exit is a staging failure: halt before Step 12 rather than committing a partial set.
 
 Invoke `/cortex-core:commit` with an imperative ≤72-char subject, for example:
 

@@ -15,13 +15,16 @@ Verifies two things per R5 acceptance:
    manifest entry and the Reference Files section) to ensure the
    extract-and-manifest pattern is wired end-to-end.
 
-2. ``skills/lifecycle/references/post-refine-commit.md`` contains the five
-   required content tokens that mirror Task 4's verification greps:
+2. ``skills/lifecycle/references/post-refine-commit.md`` contains the required
+   content tokens after the #331 Phase 2 collapse: the
+   ``cortex-lifecycle-stage-artifacts`` staging-verb invocation (the Staging +
+   No-Op Short-Circuit sections collapsed into it, Req 14),
    ``cortex-read-commit-artifacts``, ``/cortex-core:commit``, a halt clause,
-   a since-last-commit qualifier, and a cancel-path keyword. This converts
-   the wiring test from a bare ``.exists()`` check into a durable guard so
-   future regressions in ``post-refine-commit.md``'s substantive content
-   cause CI failure.
+   and a cancel-path keyword (the kept Commit-Subject prose). The
+   since-last-commit qualifier was dropped — the bottom-up scan / no-op
+   narration moved into the verb, which exposes no equivalent prose token. This
+   keeps the wiring test a durable guard so future regressions in
+   ``post-refine-commit.md``'s substantive content cause CI failure.
 
 Per R5: full end-to-end refine→commit testing is interactive/session-
 dependent (the refine spec-approval surface requires user input), so the
@@ -138,6 +141,12 @@ def test_post_refine_commit_contains_required_tokens() -> None:
     text = ref.read_text(encoding="utf-8")
     text_lower = text.lower()
 
+    # Req 14: the Staging + No-Op Short-Circuit sections collapsed into the verb.
+    assert "cortex-lifecycle-stage-artifacts" in text, (
+        "post-refine-commit.md must invoke the 'cortex-lifecycle-stage-artifacts' "
+        "staging verb (Req 14) — the Staging + No-Op Short-Circuit sections "
+        "collapsed into it"
+    )
     assert "cortex-read-commit-artifacts" in text, (
         "post-refine-commit.md must invoke the cortex-read-commit-artifacts binstub"
     )
@@ -148,11 +157,9 @@ def test_post_refine_commit_contains_required_tokens() -> None:
     assert any(t in text_lower for t in halt_tokens), (
         f"post-refine-commit.md must encode a halt clause (one of {halt_tokens})"
     )
-    since_tokens = ("since the last commit", "since last commit", "most recent")
-    assert any(t in text_lower for t in since_tokens), (
-        f"post-refine-commit.md must encode the since-last-commit qualifier "
-        f"(one of {since_tokens})"
-    )
+    # NOTE: the since-last-commit qualifier was dropped (#331 Phase 2) — the
+    # bottom-up scan / no-op narration moved into the verb, which exposes no
+    # equivalent prose token.
     cancel_tokens = ("cancelled", "cancel")
     assert any(t in text_lower for t in cancel_tokens), (
         f"post-refine-commit.md must reference the cancel path "
