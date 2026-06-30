@@ -72,7 +72,7 @@ When all five conditions hold, the router classifies the state as commit-failed 
 
 - **HEAD-present**: the row is in HEAD; the commit landed. Route already_complete.
 - **Review-anchor**: the row's anchor is `review`; review-phase finalization is governed by a different invariant. Route already_complete.
-- **Missing anchor → `review` phase**: no `feature_complete` row is present at all; the router returns `review` to continue forward, not `already_complete`.
+- **Missing anchor (defaults to `review`)**: a `feature_complete` row whose `merge_anchor` field is absent resolves to `review` via `ev.get("merge_anchor", "review")`, so it is not a merge-anchor row and `has_merge_anchor_row` stays false. Route already_complete.
 - **`commit-artifacts: false`**: the feature was configured to emit without a follow-on commit; working-tree presence is the expected terminal shape. Route already_complete.
 - **Not committable**: surrounding state prevents a commit; retrying would immediately fail again. Route already_complete.
 - **Off-main with pr.json absent**: the valid-retry-target guard cannot resolve an unambiguous retry target. Route already_complete.
