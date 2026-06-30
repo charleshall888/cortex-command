@@ -30,6 +30,10 @@ lifecycle/**/pipeline-events.log
 lifecycle/metrics.json
 lifecycle/sessions/
 
+# Transient refine->research considerations hand-off input (written by refine,
+# read by a single research dispatch, never a phase deliverable)
+lifecycle/**/research-considerations.md
+
 # Critical-review residue — written for the morning report, read off-disk by
 # overnight/report.py (never via git), so it is transient working-tree scratch.
 lifecycle/**/critical-review-residue.json
