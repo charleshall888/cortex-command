@@ -59,7 +59,7 @@ Migrate the refine→research alignment-considerations hand-off from a model-par
 - **Complexity**: simple
 - **Context**: Append to the existing `_IGNORED` parametrize list (the test materializes the template into a throwaway repo and asserts `git check-ignore --no-index` exit 0). Mirror the active+archive-depth convention already used for `critical-review-residue.json`. No new test function needed — the existing `test_transient_artifacts_ignored` parametrization covers the added paths.
 - **Verification**: `.venv/bin/pytest cortex_command/init/tests/test_cortex_gitignore_template.py -q` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done — 35 passed; both depths ignored, research.md still not-ignored
 
 ### Task 6: Write ADR-0022 and back-point both SKILL.md edits
 - **Files**: `cortex/adr/0022-explicit-path-arg-for-refine-research-considerations-handoff.md`, `skills/refine/SKILL.md`, `plugins/cortex-core/skills/refine/SKILL.md`, `skills/research/SKILL.md`, `plugins/cortex-core/skills/research/SKILL.md`

@@ -35,6 +35,9 @@ _IGNORED = [
     # critical-review residue — active + archive (Spec Req 1)
     "cortex/lifecycle/feat/critical-review-residue.json",
     "cortex/lifecycle/archive/x/critical-review-residue.json",
+    # transient refine->research considerations input — active + archive (#337)
+    "cortex/lifecycle/feat/research-considerations.md",
+    "cortex/lifecycle/archive/x/research-considerations.md",
     # session / lock files — active + archive
     "cortex/lifecycle/feat/.session",
     "cortex/lifecycle/archive/x/.session",
