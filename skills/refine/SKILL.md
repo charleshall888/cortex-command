@@ -190,26 +190,6 @@ Announce that `/cortex-core:refine` is complete. Summarize:
 - Artifacts produced: research.md, spec.md
 - Backlog fields written: `complexity`, `criticality`, `status: refined`, `spec`, `areas`
 
-### Overnight-candidate advisory (standalone `/refine` only)
-
-This advisory runs only on the standalone `/refine` path. Detect that path with a concrete signal: standalone `/refine` never logs `phase_transition` events (it writes only `lifecycle_start` and `*_override` rows), whereas a run under `/cortex-core:lifecycle` already carries `phase_transition` rows from its phase boundaries — the early `clarify→research` and `research→specify` transitions are on disk before any spec exists. Check:
-
-```bash
-grep -cE '"event":[[:space:]]*"phase_transition"' cortex/lifecycle/{lifecycle-slug}/events.log
-```
-
-- `0` → standalone: assess overnight-suitability and surface the advisory below when warranted.
-- `≥ 1` → invoked under `/cortex-core:lifecycle`: stay silent (the user is building interactively and verifies throughout).
-
-When standalone, assess whether the approved `spec.md` is a poor overnight candidate. Anchor on these mechanical signals, and cite each that is present:
-
-- any acceptance criterion marked `Interactive/session-dependent`, and
-- any unresolved item under the spec's `## Open Decisions`.
-
-You may additionally cite judgment reasons when they apply: the work needs network or credentials the sandbox can't reach, it leans on human-visual or human-judgment verification, or its scope is exploratory/under-specified.
-
-When one or more reasons apply, surface a brief advisory naming them — e.g., "Heads up — this looks like a poor overnight candidate because …" — so the operator can choose to run it interactively instead. When none apply, say nothing about overnight suitability; the advisory is silent on a good candidate.
-
 ## Constraints
 
 | Thought | Reality |
