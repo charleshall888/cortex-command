@@ -101,6 +101,8 @@ If `cortex/lifecycle/{lifecycle-slug}/research.md` already exists, apply the Res
 
 ### Alignment-Considerations Propagation
 
+The file-channel design — a path argument coupled to the write rather than an inline value — is recorded in ADR-0022.
+
 After clarify-critic returns and dispositions are applied (see Step 3), collect every finding with `origin: "alignment"` whose disposition is **Apply** (or whose Ask was resolved to Apply via the §4 Q&A flow). Findings dispositioned as **Dismiss** are not propagated.
 
 When — and **only when** — at least one Apply'd alignment finding exists, perform one coupled step: **write** the surviving findings to `cortex/lifecycle/{lifecycle-slug}/research-considerations.md`, **overwriting** the file (never appending), **and** carry `research-considerations-file=cortex/lifecycle/{lifecycle-slug}/research-considerations.md` on the `/cortex-core:research` dispatch below. The write and the argument are inseparable: the argument is never emitted without a same-run fresh write, so a stale prior-run file can never be read. When clarify-critic returned no alignment findings, or every alignment finding was Dismissed, perform neither the write nor the argument — omit `research-considerations-file` from the dispatch entirely.

@@ -42,7 +42,7 @@ Defaults:
 - `criticality`: `medium`
 - `research-considerations-file`: empty/absent → no considerations injection
 
-`research-considerations-file` is a **path** to a file (written by `/cortex-core:refine`) whose content is a newline-delimited bullet list, each line starting with `- `. When the argument is present, research's orchestrator body **reads that file and substitutes its literal content** into the core-angle prompt considerations placeholders (see Step 3) — it injects the file's content, never the path. Because only a path rides the argument, there is nothing to escape. **Reader contract**: when the argument is absent, or the file is missing, empty, or whitespace-only, no considerations injection occurs — do not halt on a missing file.
+`research-considerations-file` is a **path** to a file (written by `/cortex-core:refine`) whose content is a newline-delimited bullet list, each line starting with `- `. When the argument is present, research's orchestrator body **reads that file and substitutes its literal content** into the core-angle prompt considerations placeholders (see Step 3) — it injects the file's content, never the path. Because only a path rides the argument, there is nothing to escape. **Reader contract**: when the argument is absent, or the file is missing, empty, or whitespace-only, no considerations injection occurs — do not halt on a missing file. (The file-channel design is recorded in ADR-0022.)
 
 ## Step 2: Determine Agent Count
 
