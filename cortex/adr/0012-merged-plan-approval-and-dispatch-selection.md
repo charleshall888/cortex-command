@@ -53,11 +53,18 @@ checks both hold.
 
 Removes one redundant prompt per feature and keeps full branch choice, at the cost
 of demoting Request-changes/Cancel to free-text "Other" (a real
-affordance/discoverability cost for the revise loop) and of a known limitation:
-the overnight runner does not yet honor "wait" (its eligibility gate keys on
-backlog status + research/spec presence and does not read `dispatch_choice` or
-`feature_paused`). That limitation is mitigated by a wait-time warning to the
-operator and deferred to a follow-up backlog item; it is not a claim of safety.
+affordance/discoverability cost for the revise loop). One interaction with the
+overnight runner was originally logged here as a limitation: its eligibility gate
+keys on backlog status + research/spec presence and does not read `dispatch_choice`
+or `feature_paused`, so a "wait"-deferred feature stays overnight-eligible. That
+was deferred to follow-up #310, which was **closed won't-fix (2026-06-30)**:
+"Approve plan but wait" is a soft session-boundary deferral, not a hold, and
+overnight is a legitimate fresh-context pickup path that **reuses the
+operator-approved `plan.md`** (it synthesizes only when `plan.md` is missing —
+`cortex_command/overnight/prompts/orchestrator-round.md:210`), so picking up a
+waited feature is the intended handoff, not an override. Dependency-style waits
+are expressed via `blocked_by`. The interactive `feature_paused` → `implement-paused`
+surface (statusline/dashboard visibility) is unaffected.
 The merge couples two previously-independent pauses; reversing means re-splitting
 the surface and removing the `dispatch_choice` field.
 
@@ -90,10 +97,13 @@ the surface and removing the `dispatch_choice` field.
   (`detect_lifecycle_phase` would report plain `implement`), misrepresenting a
   paused feature as active work. Rejected in favor of `feature_paused` →
   `implement-paused`.
-- **Make overnight honor "wait" in this feature (deferred)**: genuinely blocking
-  overnight requires changes to the overnight eligibility gate this feature held
-  out of scope; deferred to a follow-up backlog item with a wait-time warning as
-  the interim mitigation.
+- **Make overnight honor "wait" by blocking eligibility (deferred → rejected via
+  #310)**: originally deferred to follow-up #310, which was closed won't-fix
+  (2026-06-30). "Approve plan but wait" is a soft session-boundary deferral, and
+  overnight legitimately picks up a waited feature reusing the operator-approved
+  `plan.md` — so blocking overnight eligibility would break that handoff rather
+  than protect it. Dependency-style waits use `blocked_by`. See
+  `cortex/lifecycle/archive/overnight-runner-honors-a-lifecycle-wait/research.md`.
 
 ## Relation to ADR-0008
 
