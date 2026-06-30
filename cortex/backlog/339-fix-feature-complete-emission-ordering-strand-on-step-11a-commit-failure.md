@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 29604a81-71cb-4b3f-9eef-9699ffdcee57
 title: Fix feature_complete emission-ordering strand on Step-11a commit failure
-status: in_progress
+status: complete
 priority: low
 type: bug
 created: 2026-06-29

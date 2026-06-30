@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 8c587080-270b-4877-9f41-0f0aa6b230f6
 title: Offload deterministic lifecycle mechanics to CLI verbs
-status: backlog
+status: complete
 priority: low
 type: epic
 created: 2026-06-26
-updated: 2026-06-26
+updated: 2026-06-30
 ---
 ## Why
 
