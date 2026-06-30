@@ -1,0 +1,7 @@
+{"schema_version": 1, "ts": "2026-06-30T16:21:34Z", "event": "lifecycle_start", "feature": "harden-the-refine-research-considerations-hand", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"ts": "2026-06-30T16:26:21Z", "event": "clarify_critic", "feature": "harden-the-refine-research-considerations-hand", "schema_version": 3, "parent_epic_loaded": false, "findings_count": 7, "dispositions": {"apply": 6, "dismiss": 1, "ask": 0}, "applied_fixes_count": 6, "dismissals_count": 1, "status": "ok"}
+{"ts": "2026-06-30T16:47:59Z", "event": "complexity_override", "feature": "harden-the-refine-research-considerations-hand", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-06-30T16:47:59Z", "event": "criticality_override", "feature": "harden-the-refine-research-considerations-hand", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-06-30T17:31:16Z", "event": "spec_approved", "feature": "harden-the-refine-research-considerations-hand"}
+{"ts": "2026-06-30T18:04:29Z", "event": "plan_approved", "feature": "harden-the-refine-research-considerations-hand", "dispatch_choice": "trunk"}
+{"ts": "2026-06-30T18:04:29Z", "event": "phase_transition", "feature": "harden-the-refine-research-considerations-hand", "from": "plan", "to": "implement"}

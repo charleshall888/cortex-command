@@ -2,11 +2,15 @@
 schema_version: "1"
 uuid: 78434a7c-8871-4aeb-ad0f-cb620363d0b7
 title: Harden the refine->research considerations hand-off to drop the arg-escaping caveat
-status: backlog
+status: refined
 priority: low
 type: chore
 created: 2026-06-29
-updated: 2026-06-29
+updated: 2026-06-30
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/harden-the-refine-research-considerations-hand/spec.md
+areas: ['skills']
 ---
 ## Why
 
