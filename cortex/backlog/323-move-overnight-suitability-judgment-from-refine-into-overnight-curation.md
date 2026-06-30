@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: af87592d-32ef-4c41-98e9-49ef90e7b3d9
 title: Move overnight-suitability judgment from refine into /overnight curation
-status: in_progress
+status: complete
 priority: low
 type: feature
 created: 2026-06-25
