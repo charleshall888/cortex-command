@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 1eade404-b107-4779-b4ad-fbb8e32467ae
 title: Fix morning-review pre-merge auto-close ordering bug
-status: in_progress
+status: complete
 priority: high
 type: chore
 created: 2026-06-30

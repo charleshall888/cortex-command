@@ -13,3 +13,6 @@
 {"ts": "2026-07-01T15:38:15Z", "event": "batch_dispatch", "feature": "fix-morning-review-pre-merge-auto", "batch": 2, "tasks": [3]}
 {"ts": "2026-07-01T15:59:29Z", "event": "batch_dispatch", "feature": "fix-morning-review-pre-merge-auto", "batch": 3, "tasks": [4]}
 {"ts": "2026-07-01T16:08:31Z", "event": "phase_transition", "feature": "fix-morning-review-pre-merge-auto", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-07-01T16:16:54Z", "event": "review_verdict", "feature": "fix-morning-review-pre-merge-auto", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-07-01T16:16:55Z", "event": "phase_transition", "feature": "fix-morning-review-pre-merge-auto", "from": "review", "to": "complete"}
+{"ts": "2026-07-01T16:19:27Z", "event": "feature_complete", "feature": "fix-morning-review-pre-merge-auto", "tasks_total": 4, "rework_cycles": 0, "merge_anchor": "merge"}
