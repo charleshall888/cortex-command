@@ -1,0 +1,11 @@
+# baseline-failures.txt — pre-change externality baseline for #343 (R11)
+# Provenance:
+HEAD: 8f803a31e8093580a00720a78364053edc629078
+captured-before: any skills/dev edit (Task 1, sequential trunk)
+porcelain-at-capture (unrelated concurrent-session + stray artifacts present):
+#    M cortex/backlog/345-add-observed-merge-auto-close-for-morning-review-already-merged-exit.md
+#   ?? ${CLAUDE_SKILL_DIR}/
+#   ?? cortex/lifecycle/add-observed-merge-auto-close-for/
+#   ?? cortex/lifecycle/relocate-dev-router-triage-logic-to/baseline-failures.txt
+# ---- just test result below ----
+exit-code: 0
