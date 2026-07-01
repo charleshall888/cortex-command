@@ -456,8 +456,11 @@ Run after all other sections. No per-feature confirmation is needed before locat
    - If empty (no PR found): inform the user —
      "No PR found for `{integration_branch}`. The runner may have failed to create one.
      Use `/pr` to create it manually." Then stop.
+     Any feature completed this session has its backlog ticket remaining open — the
+     work is on the integration branch, not main.
    - If the PR's `state` is `"MERGED"`: report "PR already merged — main is up to date."
-     Then stop.
+     Then stop. Verify this session's completed-feature tickets are `complete` — the
+     merge normally closes them, but a rare mid-session write failure could leave one open.
    - If the PR's `state` is `"CLOSED"`: report "PR was closed without merging." Then stop.
 
 3. Display the open PR (state is `"OPEN"` only — MERGED and CLOSED exit early in Step 2):
@@ -501,8 +504,10 @@ Run after all other sections. No per-feature confirmation is needed before locat
        - If you spun up a demo earlier in this review, close the demo and remove its worktree using the `git worktree remove` command printed at the time.
        - If `worktree_path` is absent, empty, or the path does not exist: skip removal silently.
    - On failure: show the error message and leave the PR open for manual resolution.
+     The feature's backlog ticket remains open — the work is on the integration branch, not main.
 
 7. If no: leave the PR open and note: "PR left open at {url} — merge manually when ready."
+   The feature's backlog ticket remains open — the work is on the integration branch, not main.
 
 After this section, proceed to Section 6a if a merge was performed.
 
