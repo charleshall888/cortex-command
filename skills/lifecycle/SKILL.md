@@ -157,6 +157,7 @@ Resolve `${CLAUDE_SKILL_DIR}` here in the body and carry the absolute paths into
 - **criticality-matrix** (§Reading lifecycle state rules cited by Detect criticality/tier in Step 2, and §Criticality Behavior Matrix cited at end of Phase Transition) → `${CLAUDE_SKILL_DIR}/references/criticality-matrix.md`.
 - **orchestrator-review** (read at Specify §3a and Plan §3a) → `${CLAUDE_SKILL_DIR}/references/orchestrator-review.md`.
 - **critical-review-gate** (read at Specify §3b and Plan §3b on the skip branch) → `${CLAUDE_SKILL_DIR}/references/critical-review-gate.md`.
+- **competing-plans** (read on Plan's `critical` branch via §1a→§1b) → `${CLAUDE_SKILL_DIR}/references/competing-plans.md`.
 
 ## Phase Transition
 
