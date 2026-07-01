@@ -86,47 +86,16 @@ Honor the user's choice immediately.
 
 Before routing to `/cortex-core:lifecycle`, analyze the feature description for heuristic signals that suggest elevated criticality.
 
-### Heuristic Signals
-
-Scan the feature description for these indicators:
-
-| Signal | Suggests |
-|--------|----------|
-| Authentication, authorization, access control | high or critical |
-| Security, encryption, secrets, tokens | high or critical |
-| Payments, billing, financial data | critical |
-| Shared library, core module, base class | high |
-| CI/CD, deployment, infrastructure | high |
-| Foundational tooling other capabilities are built on | high or critical |
-| Database migration, schema change | high |
-| Data deletion, destructive operations | high or critical |
-| User-facing API change, public interface | medium or high |
-| Configuration, settings, preferences | low or medium |
-| Documentation, comments, formatting | low |
-
-### Forming the Suggestion
-
-Based on signals found (or absence of signals), suggest a criticality level:
-
-- **low**: No elevated signals. Failure is easily reversed and has minimal impact.
-- **medium**: Some signals present but scope is contained. Default when uncertain.
-- **high**: Multiple signals or broad blast radius. Failure is hard to reverse.
-- **critical**: Security, financial, or data-loss signals. Failure has severe consequences.
-
-Present the suggestion conversationally:
-
-> **Criticality suggestion: `<level>`** — `<one-sentence justification>`.
-
-If no heuristic signals are detected, suggest **medium** (the lifecycle default) and note that no elevated signals were found.
-
 ### Resumed Lifecycle
 
-Before performing this assessment, check whether `cortex/lifecycle/<feature>/` already exists. If it does:
+Before performing this criticality assessment (its heuristic-signals table now lives in the reference Read below), check whether `cortex/lifecycle/<feature>/` already exists. If it does:
 
 1. Read criticality by running `cortex-lifecycle-state --feature <feature> --field criticality` (emits JSON; defaults to `medium` when the key is absent).
 2. Inform the user: "A lifecycle for `<feature>` already exists at `<phase>`. Resume it?"
 3. If the user confirms, state: "Invoke `/cortex-core:lifecycle <feature>`" to resume. Skip the criticality suggestion — the existing lifecycle already has one.
 4. If the user wants to start fresh, confirm they want to discard existing artifacts before proceeding.
+
+Read `${CLAUDE_SKILL_DIR}/references/criticality-heuristics.md` and apply its heuristic-signals table before forming a criticality suggestion.
 
 ## Step 3: Backlog Triage
 
