@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 562ec957-4c0e-44f1-b408-a9316932d37e
 title: Extract the critical-only competing-plans block to a lazy reference
-status: backlog
+status: refined
 priority: high
 type: chore
 created: 2026-06-30
@@ -10,6 +10,10 @@ updated: 2026-06-30
 parent: "340"
 tags: ['skill-efficiency-remaining-work']
 discovery_source: cortex/research/skill-efficiency-remaining-work/research.md
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/extract-the-critical-only-competing-plans/spec.md
+areas: ['lifecycle']
 ---
 ## Why
 The plan-phase reference carries a large "Competing Plans" block that runs only when a feature's criticality is critical, yet it loads on every plan because the phase reads the whole reference top-to-bottom. Measured across 257 features, critical is about 2% of plans (the rest high/medium/low), so this block is dead weight on roughly 98% of plan reads — and it is the single largest resident-byte reduction available on the hottest interactive path, at low risk. It is also the no-architectural-risk form of the resident-prose reduction the phase-isolation probe recommended over a context rewrite.
