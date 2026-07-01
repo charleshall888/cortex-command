@@ -42,7 +42,7 @@ RST() { if [ "$use_color" -eq 1 ]; then printf '\033[0m'; fi; }
 # 256-color codes (\033[38;5;NNNm = 12 bytes) cause Claude Code width
 # miscalculation. Basic codes (\033[NNm = 5 bytes) halve the overhead.
 dir_color() { if [ "$use_color" -eq 1 ]; then printf '\033[94m'; fi; }    # bright blue
-model_color() { if [ "$use_color" -eq 1 ]; then printf '\033[95m'; fi; }  # bright magenta
+model_color() { if [ "$use_color" -eq 1 ]; then printf '\033[38;5;141m'; fi; }  # purple (256-color; basic magenta reads as red under Srcery)
 version_color() { if [ "$use_color" -eq 1 ]; then printf '\033[93m'; fi; } # bright yellow
 rst() { if [ "$use_color" -eq 1 ]; then printf '\033[0m'; fi; }
 
@@ -305,7 +305,7 @@ if [ -d "$_lc_base" ]; then
       done < "$_lc_overnight_file"
     fi
 
-    _lc_icon_color='\033[95m'   # bright magenta (basic 16-color)
+    _lc_icon_color='\033[38;5;141m'   # purple (256-color; basic magenta reads as red under Srcery)
     _lc_name_color='\033[97m'   # bright white
     _lc_rst='\033[0m'
 
@@ -490,7 +490,7 @@ if [ -d "$_lc_base" ]; then
   done
 
   # Build the lifecycle status line (basic 16-color to reduce ANSI byte overhead)
-  _lc_icon_color='\033[95m'   # bright magenta
+  _lc_icon_color='\033[38;5;141m'   # purple (256-color; basic magenta reads as red under Srcery)
   _lc_name_color='\033[97m'   # bright white
   _lc_rst='\033[0m'
 
