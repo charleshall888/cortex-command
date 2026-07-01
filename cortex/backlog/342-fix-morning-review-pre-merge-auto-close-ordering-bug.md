@@ -2,14 +2,18 @@
 schema_version: "1"
 uuid: 1eade404-b107-4779-b4ad-fbb8e32467ae
 title: Fix morning-review pre-merge auto-close ordering bug
-status: backlog
+status: in_progress
 priority: high
 type: chore
 created: 2026-06-30
-updated: 2026-06-30
+updated: 2026-07-01
 parent: "340"
 tags: ['skill-efficiency-remaining-work']
 discovery_source: cortex/research/skill-efficiency-remaining-work/research.md
+lifecycle_phase: research
+lifecycle_slug: fix-morning-review-pre-merge-auto
+complexity: complex
+criticality: high
 ---
 ## Why
 The morning-review skill body runs a full backlog auto-close step before the PR is merged, while a later walkthrough section is the post-merge closer the protocol deliberately moved closure to — and the walkthrough explicitly calls the pre-merge close "a bug." The model therefore receives two contradictory orderings of a destructive action (closing tickets) on every morning-review run. Because a contradiction misleads the model on every read regardless of caching, this is higher value than its near-zero byte count suggests: it is a correctness fix, not a token trim.

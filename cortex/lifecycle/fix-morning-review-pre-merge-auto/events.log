@@ -1,0 +1,8 @@
+{"schema_version": 1, "ts": "2026-07-01T13:42:56Z", "event": "lifecycle_start", "feature": "fix-morning-review-pre-merge-auto", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"ts": "2026-07-01T13:51:48Z", "event": "clarify_critic", "feature": "fix-morning-review-pre-merge-auto", "schema_version": 3, "parent_epic_loaded": true, "findings_count": 7, "dispositions": {"apply": 6, "dismiss": 0, "ask": 1}, "applied_fixes_count": 6, "dismissals_count": 0, "status": "ok"}
+{"ts": "2026-07-01T13:59:04Z", "event": "phase_transition", "feature": "fix-morning-review-pre-merge-auto", "from": "clarify", "to": "research"}
+{"ts": "2026-07-01T14:29:49Z", "event": "complexity_override", "feature": "fix-morning-review-pre-merge-auto", "from": "simple", "to": "complex", "gate": "research_open_questions"}
+{"ts": "2026-07-01T14:30:33Z", "event": "phase_transition", "feature": "fix-morning-review-pre-merge-auto", "from": "research", "to": "specify"}
+{"ts": "2026-07-01T14:30:33Z", "event": "criticality_override", "feature": "fix-morning-review-pre-merge-auto", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-07-01T14:54:23Z", "event": "spec_approved", "feature": "fix-morning-review-pre-merge-auto"}
+{"ts": "2026-07-01T14:54:23Z", "event": "phase_transition", "feature": "fix-morning-review-pre-merge-auto", "from": "specify", "to": "plan"}
