@@ -554,7 +554,8 @@ prints the resolved backend and exits 0). Route the per-feature close on the val
 
 The `cortex-backlog` arm runs the loop below unchanged.
 
-For each completed feature (the same list as Section 2, in the same order):
+No per-feature confirmation is needed before closing — the confirmed merge is
+authoritative. For each completed feature (the same list as Section 2, in the same order):
 
 1. On the `cortex-backlog` arm, run:
 
@@ -565,7 +566,11 @@ For each completed feature (the same list as Section 2, in the same order):
    Where `{backlog_id}` is the zero-padded numeric ID from `overnight-state.json`'s
    `backlog_id` field (e.g., `078` not `78`). If `backlog_id` is null, fall back to
    the lifecycle slug for fuzzy matching. Run from the repository root. The script
-   exits 0 on success (item updated) and exits 1 silently if no item is found.
+   exits 0 on success (item updated), exits 1 silently if no item is found, and exits 2
+   when the slug is ambiguous (it writes the matching candidate list to stderr).
+
+   On exit 2, surface that stderr candidate list to the operator and ask them to
+   re-invoke the close with a disambiguated slug for that feature before continuing.
 
    On the `none` arm, skip this call and record a per-feature advisory that closure is
    disabled. On any other value, make the equivalent close best-effort on the external
@@ -575,6 +580,8 @@ For each completed feature (the same list as Section 2, in the same order):
    - `closed #ID` — if the script printed "Parent epic also closed: ..." or the item
      was found and updated (exit 0 with a matching item)
    - `no ticket found` — if the script exited 1
+   - `ambiguous slug` — if the script exited 2; surface the stderr candidate list and
+     ask the operator to re-invoke with a disambiguated slug
 
 3. If `update_item.py` printed "Parent epic also closed: {path}", append
    `(parent epic also closed)` to the line for that feature.
