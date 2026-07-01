@@ -9,3 +9,8 @@ porcelain-at-capture (unrelated concurrent-session + stray artifacts present):
 #   ?? cortex/lifecycle/relocate-dev-router-triage-logic-to/baseline-failures.txt
 # ---- just test result below ----
 exit-code: 0
+
+# ---- Task 5 post-change result (R11 gate) ----
+post-change HEAD: b5d8aac21bc2d4354faff7e298d0b68cd79a75b9
+post-change just test exit: 0 (7/7 suites, 0 failures)
+R11 verdict: PASS — post-change failure set (empty) ⊆ baseline (empty); no new failures
