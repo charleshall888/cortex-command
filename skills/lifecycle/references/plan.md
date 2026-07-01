@@ -20,7 +20,7 @@ Read criticality by running `cortex-lifecycle-state --feature {feature} --field 
 
 ### 1b. Competing Plans (Critical Only)
 
-The competing-plans protocol (dispatch variants → synthesize → route → log the v2 `plan_comparison` event) now lives in the **competing-plans** target; §1a's `critical` branch loads it before dispatching, and only the `critical` arm reaches it.
+The competing-plans protocol (dispatch variants → synthesize → route → log the v2 comparison event) now lives in the **competing-plans** target; §1a's `critical` branch loads it before dispatching, and only the `critical` arm reaches it.
 
 ### 2. Design the Approach
 
