@@ -8,3 +8,8 @@
 {"ts": "2026-07-01T14:54:23Z", "event": "phase_transition", "feature": "fix-morning-review-pre-merge-auto", "from": "specify", "to": "plan"}
 {"ts": "2026-07-01T15:23:20Z", "event": "plan_approved", "feature": "fix-morning-review-pre-merge-auto", "dispatch_choice": "trunk"}
 {"ts": "2026-07-01T15:23:20Z", "event": "phase_transition", "feature": "fix-morning-review-pre-merge-auto", "from": "plan", "to": "implement"}
+{"ts": "2026-07-01T15:25:31Z", "event": "batch_dispatch", "feature": "fix-morning-review-pre-merge-auto", "batch": 0, "tasks": [1]}
+{"ts": "2026-07-01T15:34:17Z", "event": "batch_dispatch", "feature": "fix-morning-review-pre-merge-auto", "batch": 1, "tasks": [2]}
+{"ts": "2026-07-01T15:38:15Z", "event": "batch_dispatch", "feature": "fix-morning-review-pre-merge-auto", "batch": 2, "tasks": [3]}
+{"ts": "2026-07-01T15:59:29Z", "event": "batch_dispatch", "feature": "fix-morning-review-pre-merge-auto", "batch": 3, "tasks": [4]}
+{"ts": "2026-07-01T16:08:31Z", "event": "phase_transition", "feature": "fix-morning-review-pre-merge-auto", "tier": "complex", "from": "implement", "to": "review"}

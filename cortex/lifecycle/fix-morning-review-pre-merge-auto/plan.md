@@ -38,7 +38,7 @@ serialization under every dispatch mode.
 - **Complexity**: simple
 - **Context**: Step 4 heading at line 95, body ends 120; Step 5 (Commit) at 122; Step 6 (PR Merge) at 137-141 references §6/§6a but not §6b; the only current §6b mention is line 99 inside Step 4. Collapse-to-pointer (not delete+renumber). **Do NOT copy walkthrough §5's stub literally** — §5's stub NAMES "Section 6b" (walkthrough.md:435 "closure has moved to **Section 6b**"); reproducing that creates a second reference and fails the exactly-one count. Step 4's body also currently holds six bare `cortex-update-item`/`update_item` mentions (lines ~101,103,111,113,117,118: slug-resolution, exit-2 prose, report-state list) and the line-99 backend-routing prose (`cortex-read-backlog-backend`, the three arms) — the collapse removes ALL of them (the routing/slug prose already lives in §6b; exit-2 is migrated by Task 2). After editing, run `just build-plugin`, stage canonical + regenerated mirror in the same commit, `/cortex-core:commit`.
 - **Verification**: (b) over the Step-4 stub span (from the `### Step 4` heading to the `### Step 5` heading — extract with awk/sed): `grep -icE "update[-_]item|cortex-read-backlog-backend"` = `0` (stub cleared of every close-command name + routing prose, not merely the `--status complete` line); AND `grep -crEi "update[-_]item.*--status complete" skills/morning-review/SKILL.md` = `0`; AND `grep -c "Section 6b" skills/morning-review/SKILL.md` = `1` with that single match after the `### Step 6` heading (confirm line numbers via `grep -n`). Plus (a) `just test` — mirror parity passes.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Migrate exit-2 disambiguation and the no-confirmation guardrail into §6b
 - **Files**: `skills/morning-review/references/walkthrough.md`, `plugins/cortex-overnight/skills/morning-review/references/walkthrough.md` (regenerated)
@@ -47,7 +47,7 @@ serialization under every dispatch mode.
 - **Complexity**: simple
 - **Context**: §6b's close call is ~562; report list ~574-577. `update_item.py` exit 2 = ambiguous, candidate list to stderr. Soft declarative phrasing; no `MUST`/`CRITICAL`/`REQUIRED` tokens. Serialized after Task 1 (shared build-plugin mirror dir — see Dispatch note). Run `just build-plugin`, stage canonical + mirror together, `/cortex-core:commit`.
 - **Verification**: **Extract the §6b span first** (e.g. `awk '/^## Section 6b/{f=1;next} /^## /{f=0} f' walkthrough.md`), then over THAT span only (span-scoping excludes the pre-existing "candidate" at L142 / other-section text): (ii) `grep -ic "ambiguous slug"` ≥ 1 — the report-state ENTRY, distinct from the (i) enumeration prose which the bare word "ambiguous" would also match; (iii) `grep -ic "candidate"` ≥ 1 — the disambiguation action; (iv) `grep -icE "no per-feature confirmation|without.*confirmation|no confirmation"` ≥ 1; (i) the enumeration line no longer reads as a closed `exits 0 … exits 1` pair (manually confirm it admits exit-2). The greps are proxies — manually confirm the candidate-list-surfacing + re-invoke ACTION actually migrated (not just the tokens). Plus (a) `just test` mirror parity passes.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Add closure-state notes to the non-standard §6 PR exits
 - **Files**: `skills/morning-review/references/walkthrough.md`, `plugins/cortex-overnight/skills/morning-review/references/walkthrough.md` (regenerated)
@@ -56,7 +56,7 @@ serialization under every dispatch mode.
 - **Complexity**: simple
 - **Context**: §6 spans ~443-509. Anchors: no-PR-found near "No PR found for"; declined near "PR left open at {url} — merge manually"; merge-failed near "leave the PR open for manual resolution"; already-merged at "PR already merged — main is up to date"; draft sub-branch ~472-485 (skip). Soft declarative phrasing; no MUST tokens; prose only (no copy-pinning test). The novel datum on the unmerged exits is the ticket-open clause. Serialized after Task 2 (same file). Run `just build-plugin`, stage canonical + mirror together, `/cortex-core:commit`.
 - **Verification**: (b) **per-exit** (confirm the clause lands in EACH of the three distinct exit spans, not a single ≥1 over all §6): at each unmerged exit's anchor lines, `grep -iE "ticket.*remain|remain[s]? open|not closed|stays? open"` is present. For the already-merged exit (~459): the advisory uses `verify` (NOT `check` — "check" pre-exists at L481 in the skipped draft exit, so a `verify|check` pattern would false-green) plus a `ticket|complete` reference — confirm `grep -iE "verify.*(ticket|complete)|(ticket|complete).*verify"` matches at that exit. Plus (a) `just test` mirror parity passes; the existing `test_morning_review_status_close_ordering.py` stays green.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Add the spelling-agnostic absence-based SKILL.md ordering guard with durable positive controls
 - **Files**: `tests/test_morning_review_status_close_ordering.py`
@@ -65,7 +65,7 @@ serialization under every dispatch mode.
 - **Complexity**: simple
 - **Context**: The existing test defines `WALKTHROUGH` (walkthrough.md only), `MERGE_LITERAL = "gh pr merge"`, `CLOSE_LITERAL = "cortex-update-item"`, `CLOSE_ARG = "--status complete"`, and `_first_occurrence` / section-finder helpers. Add a `SKILL` path constant. Spelling-agnostic close pattern: `update[-_]item` + `--status complete`. Anchor SKILL.md ordering on the "PR Merge" heading text (not `gh pr merge`, which SKILL.md lacks). Depends on Tasks 1-3 so the full suite is green when this runs.
 - **Verification**: (a) `just test` exits 0 — the new SKILL.md assertions pass on the fixed SKILL.md; the embedded positive-control assertions pass (close-pattern matches both spellings; ordering check flags a synthetic pre-merge §6b), proving the guard is discriminating in CI (not by an out-of-band claim); existing walkthrough ordering + `test_dual_source_reference_parity.py` stay green.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Risks
 
