@@ -6,3 +6,5 @@
 {"ts": "2026-07-01T14:09:09Z", "event": "phase_transition", "feature": "relocate-dev-router-triage-logic-to", "from": "research", "to": "specify"}
 {"ts": "2026-07-01T14:31:56Z", "event": "spec_approved", "feature": "relocate-dev-router-triage-logic-to"}
 {"ts": "2026-07-01T14:31:57Z", "event": "phase_transition", "feature": "relocate-dev-router-triage-logic-to", "from": "specify", "to": "plan"}
+{"ts": "2026-07-01T21:54:11Z", "event": "plan_approved", "feature": "relocate-dev-router-triage-logic-to", "dispatch_choice": "trunk"}
+{"ts": "2026-07-01T21:54:11Z", "event": "phase_transition", "feature": "relocate-dev-router-triage-logic-to", "from": "plan", "to": "implement"}
