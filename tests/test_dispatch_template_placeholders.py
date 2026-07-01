@@ -26,7 +26,8 @@ Requirement 10(b) — path/SHA placeholders PRESENT at expected sites:
     ``skills/critical-review/SKILL.md`` (reviewer prompt, fallback
     single-agent prompt, synthesizer prompt — Requirements 1–3).
   - ``{spec_path}`` and ``{research_path}`` present in
-    ``skills/lifecycle/references/plan.md`` (Requirement 6).
+    ``skills/lifecycle/references/competing-plans.md`` (Requirement 6; the §1b
+    plan-agent prompt template was extracted there from plan.md — see #341).
   - ``{spec_path}`` present in ``skills/lifecycle/references/review.md``
     (Requirement 7).
 
@@ -48,6 +49,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 CRITICAL_REVIEW_SKILL = REPO_ROOT / "skills" / "critical-review" / "SKILL.md"
 LIFECYCLE_PLAN = REPO_ROOT / "skills" / "lifecycle" / "references" / "plan.md"
+LIFECYCLE_COMPETING_PLANS = (
+    REPO_ROOT / "skills" / "lifecycle" / "references" / "competing-plans.md"
+)
 LIFECYCLE_REVIEW = REPO_ROOT / "skills" / "lifecycle" / "references" / "review.md"
 
 
@@ -128,15 +132,18 @@ def test_req10b_critical_review_artifact_sha256_placeholder_present() -> None:
 
 
 def test_req10b_lifecycle_plan_spec_and_research_path_placeholders_present() -> None:
-    """`{spec_path}` and `{research_path}` MUST appear in lifecycle plan.md."""
-    content = _read(LIFECYCLE_PLAN)
+    """`{spec_path}` and `{research_path}` MUST appear in the §1b plan-agent
+    prompt template, extracted from plan.md to competing-plans.md (#341)."""
+    content = _read(LIFECYCLE_COMPETING_PLANS)
     assert "{spec_path}" in content, (
         f"Req 10(b): '{{spec_path}}' must appear in "
-        f"{LIFECYCLE_PLAN.relative_to(REPO_ROOT)} (Req 6)."
+        f"{LIFECYCLE_COMPETING_PLANS.relative_to(REPO_ROOT)} (Req 6; the §1b "
+        f"plan-agent template moved here from plan.md per #341)."
     )
     assert "{research_path}" in content, (
         f"Req 10(b): '{{research_path}}' must appear in "
-        f"{LIFECYCLE_PLAN.relative_to(REPO_ROOT)} (Req 6)."
+        f"{LIFECYCLE_COMPETING_PLANS.relative_to(REPO_ROOT)} (Req 6; the §1b "
+        f"plan-agent template moved here from plan.md per #341)."
     )
 
 

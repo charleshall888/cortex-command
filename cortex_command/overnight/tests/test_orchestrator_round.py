@@ -82,7 +82,7 @@ def _extract_synthesizer_envelope(stdout_text: str) -> dict | None:
 
     Mirrors the LAST-occurrence anchor pattern prescribed by
     ``cortex_command/overnight/prompts/orchestrator-round.md`` Step 3b.4
-    (and the canonical ``skills/lifecycle/references/plan.md`` §1b
+    (and the canonical ``skills/lifecycle/references/competing-plans.md`` §1b
     extraction). Returns ``None`` when no anchor is present or the JSON
     that follows the last anchor cannot be parsed.
 
