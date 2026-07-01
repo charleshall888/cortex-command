@@ -8,6 +8,7 @@ successful merge so it is NOT reached on the unmerged-PR path.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -16,10 +17,22 @@ REPO_ROOT = Path(__file__).parent.parent
 WALKTHROUGH = (
     REPO_ROOT / "skills" / "morning-review" / "references" / "walkthrough.md"
 )
+SKILL = REPO_ROOT / "skills" / "morning-review" / "SKILL.md"
 
 MERGE_LITERAL = "gh pr merge"
 CLOSE_LITERAL = "cortex-update-item"
 CLOSE_ARG = "--status complete"
+
+# Spelling-agnostic close pattern. The ticket-close command has TWO live
+# spellings of the same operation — the console form
+# (cortex-update-item … --status complete) and the module form
+# (python3 -m cortex_command.backlog.update_item … --status complete). An
+# absence guard that matched only the console literal would let a module-form
+# reintroduction slip back into SKILL.md green. `update[-_]item` matches both
+# `update-item` and `update_item`; the trailing `--status complete` anchors on
+# the terminal-close argument. Matched per-line, case-insensitively, mirroring
+# the `grep -crEi "update[-_]item.*--status complete"` acceptance check.
+CLOSE_PATTERN = re.compile(r"update[-_]item.*--status complete", re.IGNORECASE)
 
 
 def _load_lines() -> list[str]:
@@ -183,4 +196,132 @@ def test_section_6b_is_gated_on_successful_merge() -> None:
     assert CLOSE_LITERAL not in section_5_text, (
         f"'{CLOSE_LITERAL}' found in Section 5 content — ticket closure "
         f"must only appear in Section 6b, not in Section 5's stub."
+    )
+
+
+# ---------------------------------------------------------------------------
+# SKILL.md single-source guard (Req 5)
+#
+# These tests protect two structural invariants of skills/morning-review/
+# SKILL.md so the pre-merge close (in EITHER the console `update-item` or the
+# module `update_item` spelling) and a mis-placed/duplicate §6b reference
+# cannot silently return:
+#   (a) no close literal in either spelling appears anywhere in SKILL.md; and
+#   (b) exactly one `Section 6b` reference appears, after the "PR Merge" step
+#       (semantic-heading anchor — SKILL.md carries no `gh pr merge` literal
+#       and step numbers are not durable anchors).
+# The positive-control tests below prove these guards are DISCRIMINATING every
+# CI run, so a mis-written (never-matching) guard fails loud rather than
+# passing vacuously green.
+# ---------------------------------------------------------------------------
+
+
+def _close_literal_present(text: str) -> bool:
+    """Return True if any line carries a close literal in either spelling."""
+    return any(CLOSE_PATTERN.search(line) for line in text.splitlines())
+
+
+def _section_6b_ordering_violation(text: str) -> str | None:
+    """Return a violation message if SKILL.md-shaped `text` breaks the
+    single-source / post-merge-ordering invariant for `Section 6b`, else None.
+
+    Invariant: exactly one `Section 6b` reference, appearing after the
+    `PR Merge` heading (semantic anchor — never a step number).
+    """
+    lines = text.splitlines()
+    sixb_lines = [
+        i for i, line in enumerate(lines, start=1) if "Section 6b" in line
+    ]
+    if len(sixb_lines) != 1:
+        return (
+            f"expected exactly one 'Section 6b' reference, found "
+            f"{len(sixb_lines)} (lines {sixb_lines})"
+        )
+
+    merge_line = None
+    for i, line in enumerate(lines, start=1):
+        if "PR Merge" in line:
+            merge_line = i
+            break
+    if merge_line is None:
+        return "no 'PR Merge' heading found to anchor ordering"
+
+    sixb_line = sixb_lines[0]
+    if sixb_line <= merge_line:
+        return (
+            f"'Section 6b' reference at line {sixb_line} is not after the "
+            f"'PR Merge' heading at line {merge_line} (pre-merge closure "
+            f"reference must not survive)"
+        )
+    return None
+
+
+def test_skill_md_has_no_close_literal_in_either_spelling() -> None:
+    """SKILL.md carries no ticket-close literal in console or module spelling."""
+    text = SKILL.read_text(encoding="utf-8")
+    assert not _close_literal_present(text), (
+        f"A close literal ('update[-_]item … --status complete', either "
+        f"spelling) appears in {SKILL.relative_to(REPO_ROOT)}. Backlog-ticket "
+        f"closure must be single-sourced to walkthrough §6b (post-merge); the "
+        f"pre-merge close must not return to SKILL.md."
+    )
+
+
+def test_skill_md_section_6b_single_and_post_merge() -> None:
+    """SKILL.md references `Section 6b` exactly once, after the PR Merge step."""
+    text = SKILL.read_text(encoding="utf-8")
+    violation = _section_6b_ordering_violation(text)
+    assert violation is None, (
+        f"Section 6b single-source/ordering invariant broken in "
+        f"{SKILL.relative_to(REPO_ROOT)}: {violation}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Durable positive controls (Req 5 — hardening from critical-review)
+#
+# These live permanently in the test file and run in CI every time. They assert
+# the detection helpers' behavior against fixed synthetic literals so a
+# mis-written guard (e.g. a close pattern that silently never matches, or an
+# ordering check that never flags) fails here rather than passing green while
+# providing no real protection. They are NOT self-sealing: the synthetic
+# samples are fixed inline in the test, not artifacts produced to dodge
+# verification.
+# ---------------------------------------------------------------------------
+
+
+def test_positive_control_close_pattern_matches_both_spellings() -> None:
+    """The close-detection pattern matches synthetic close samples in BOTH
+    the console (`update-item`) and module (`update_item`) spellings."""
+    console_sample = "cortex-update-item 078 --status complete"
+    module_sample = (
+        "python3 -m cortex_command.backlog.update_item 078 --status complete"
+    )
+    assert _close_literal_present(console_sample), (
+        f"Close pattern failed to match the console-spelling sample "
+        f"{console_sample!r} — the guard would be blind to a console-form "
+        f"reintroduction."
+    )
+    assert _close_literal_present(module_sample), (
+        f"Close pattern failed to match the module-spelling sample "
+        f"{module_sample!r} — the guard would be blind to a module-form "
+        f"reintroduction."
+    )
+
+
+def test_positive_control_ordering_check_flags_pre_merge_reference() -> None:
+    """The single-source/ordering check flags a synthetic SKILL.md-shaped
+    string that carries a §6b reference BEFORE the PR Merge step."""
+    synthetic_pre_merge = "\n".join(
+        [
+            "### Step 4: Auto-Close Backlog Tickets",
+            "Close each ticket — see Section 6b for the closer.",
+            "### Step 6: PR Merge",
+            "Locate the PR and offer to merge it.",
+        ]
+    )
+    assert _section_6b_ordering_violation(synthetic_pre_merge) is not None, (
+        "Ordering check failed to flag a synthetic pre-merge 'Section 6b' "
+        "reference — the guard would not catch an incompletely-relocated "
+        "(lingering pre-merge) §6b reference."
     )
