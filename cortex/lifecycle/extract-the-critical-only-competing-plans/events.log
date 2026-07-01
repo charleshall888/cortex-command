@@ -5,3 +5,9 @@
 {"ts": "2026-07-01T00:02:07Z", "event": "spec_approved", "feature": "extract-the-critical-only-competing-plans"}
 {"ts": "2026-07-01T02:46:38Z", "event": "plan_approved", "feature": "extract-the-critical-only-competing-plans", "dispatch_choice": "trunk"}
 {"ts": "2026-07-01T02:46:38Z", "event": "phase_transition", "feature": "extract-the-critical-only-competing-plans", "from": "plan", "to": "implement"}
+{"ts": "2026-07-01T03:10:45Z", "event": "phase_transition", "feature": "extract-the-critical-only-competing-plans", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-07-01T03:22:35Z", "event": "review_verdict", "feature": "extract-the-critical-only-competing-plans", "verdict": "CHANGES_REQUESTED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-07-01T03:22:35Z", "event": "phase_transition", "feature": "extract-the-critical-only-competing-plans", "from": "review", "to": "implement-rework"}
+{"ts": "2026-07-01T03:25:11Z", "event": "review_verdict", "feature": "extract-the-critical-only-competing-plans", "verdict": "APPROVED", "cycle": 2, "requirements_drift": "none"}
+{"ts": "2026-07-01T03:25:11Z", "event": "phase_transition", "feature": "extract-the-critical-only-competing-plans", "from": "review", "to": "complete"}
+{"ts": "2026-07-01T03:31:31Z", "event": "feature_complete", "feature": "extract-the-critical-only-competing-plans", "tasks_total": 8, "rework_cycles": 1, "merge_anchor": "merge"}

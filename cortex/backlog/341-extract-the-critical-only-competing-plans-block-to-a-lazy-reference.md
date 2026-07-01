@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 562ec957-4c0e-44f1-b408-a9316932d37e
 title: Extract the critical-only competing-plans block to a lazy reference
-status: refined
+status: complete
 priority: high
 type: chore
 created: 2026-06-30
