@@ -40,6 +40,12 @@ Defaults:
 
 `research-considerations-file` is a **path** to a file (written by `/cortex-core:refine`) whose content is a newline-delimited bullet list, each line starting with `- `. When the argument is present, research's orchestrator body **reads that file and substitutes its literal content** into the core-angle prompt considerations placeholders (see Step 3) — it injects the file's content, never the path. Because only a path rides the argument, there is nothing to escape. **Reader contract**: when the argument is absent, or the file is missing, empty, or whitespace-only, no considerations injection occurs — do not halt on a missing file. (The file-channel design is recorded in ADR-0022.)
 
+Mode routing (applied after synthesis in Step 4):
+
+**Lifecycle mode** (`lifecycle-slug` present): write the synthesis to `cortex/lifecycle/{lifecycle-slug}/research.md`, creating the directory if it does not exist, including the `## Considerations Addressed` section (Step 4) when the considerations file was non-empty, then announce the written path.
+
+**Standalone mode** (`lifecycle-slug` absent or empty): present the synthesis directly in the conversation; write no file and create no lifecycle directory. (The `## Considerations Addressed` section never appears in this mode — it is lifecycle-mode only, per Step 4.)
+
 ## Step 2: Determine Agent Count
 
 `agent_count` is the cell where the task's `tier` (row) meets its `criticality` (column) in the count matrix at [`${CLAUDE_SKILL_DIR}/references/fanout.md`](${CLAUDE_SKILL_DIR}/references/fanout.md) — the canonical, shared source for the grid. Read that grid to size the fan-out.
@@ -219,16 +225,3 @@ Emit **one `##` section per angle actually dispatched in Step 3**, in dispatch o
 ## Considerations Addressed
 [Conditional section: emitted only when the considerations file was non-empty AND lifecycle mode. One bullet per input consideration with a one-sentence note on how research addressed it (or "deferred — no relevant evidence found"). Appears after `## Open Questions`, before any final references.]
 ```
-
-## Step 5: Route Output
-
-**Lifecycle mode** (`lifecycle-slug` was present in `$ARGUMENTS`):
-1. If `cortex/lifecycle/{lifecycle-slug}/` does not exist, create the directory.
-2. Write synthesis output to `cortex/lifecycle/{lifecycle-slug}/research.md`.
-3. The `## Considerations Addressed` section (defined in Step 4) is included when the considerations file was non-empty.
-4. Announce: "Research complete. Written to `cortex/lifecycle/{lifecycle-slug}/research.md`."
-
-**Standalone mode** (`lifecycle-slug` absent or empty):
-1. Present synthesis output directly in the conversation.
-2. Do not write any file.
-3. No lifecycle directory is created. (The `## Considerations Addressed` section never appears here — it is lifecycle-mode only, per Step 4.)
