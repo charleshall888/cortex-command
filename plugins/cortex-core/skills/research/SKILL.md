@@ -26,11 +26,7 @@ Topic and options: $ARGUMENTS
 
 ## Step 1: Parse Arguments
 
-Parse `$ARGUMENTS` for key=value pairs. Supported keys: `topic`, `lifecycle-slug`, `tier`, `criticality`, `research-considerations-file`.
-
-Example invocations:
-- `topic="add rate limiting" lifecycle-slug=add-rate-limiting tier=complex criticality=high`
-- `topic="best practices for OAuth 2.0 flows"` (standalone, no lifecycle-slug)
+Parse `$ARGUMENTS` for key=value pairs. Supported keys: `topic`, `lifecycle-slug`, `tier`, `criticality`, `research-considerations-file`. See `argument-hint` for the invocation shape.
 
 **Mode detection rule**: `lifecycle-slug` presence in `$ARGUMENTS` determines mode — do NOT use directory existence checks.
 
@@ -60,7 +56,7 @@ The following named fragment is referenced by every agent-prompt code-block belo
 
 ### Considerations injection (per-angle applicability)
 
-When `research-considerations-file` is present (see Step 1), research's body reads the file and injects its **content** (never the path) as a `### Considerations to investigate alongside the primary scope` section into the **mandatory core angles only** (Codebase, Web, Requirements & Constraints) — not Tradeoffs (keep its orthogonal evaluation unnarrowed), not Adversarial (it works on summarized findings), and not any other orchestrator-chosen angle. Use an `###` (h3) heading so it nests below the agents' `##` output sections, and place it after the job-description block and before the output spec. When the file is absent, empty, or whitespace-only, inject nothing.
+When `research-considerations-file` is present, its content is injected as a `### Considerations to investigate alongside the primary scope` section into the **mandatory core angles only** (Codebase, Web, Requirements & Constraints) — not Tradeoffs (keep its orthogonal evaluation unnarrowed), not Adversarial (it works on summarized findings), and not any other orchestrator-chosen angle. The reader contract and the content-not-path substitution are defined in Step 1; the three core templates below already carry the `### Considerations to investigate…` heading at the correct nesting.
 
 ### Angle selection
 
