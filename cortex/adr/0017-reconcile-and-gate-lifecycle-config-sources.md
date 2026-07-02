@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # Reconcile and gate the two lifecycle.config.md sources

@@ -716,6 +716,15 @@ Absence behavior per consumer (what happens when the project has no `cortex/life
 
 **Consumed-but-unscaffolded exception**: `branch-mode` is read by `read_branch_mode` (the lifecycle branch-selection preflight) but is in **neither** scaffolded template, so it is deliberately not part of the asset's field list above — set it by hand when a repo needs it. Scaffolding it is a separate follow-up: it would require editing the asset and the init template together, which the ADR-0017 parity gate binds.
 
+The closed set of `branch-mode` values (case-sensitive; any out-of-set value falls through to the picker, silently):
+
+- `worktree-interactive` — proceed on an `interactive/{slug}` worktree (feature branch + a `<repo>/.claude/worktrees/` worktree).
+- `trunk` — proceed on the current branch (commits land on `main`/`master`).
+- `feature-branch` — create and check out `feature/{slug}` in the current working tree.
+- `prompt` — the picker fires every time (equivalent to leaving the field unset).
+
+Regardless of `branch-mode`, the picker still fires when the working tree is dirty or a live interactive worktree session exists for the feature (`cortex/lifecycle/sessions/{slug}.interactive.pid` with a live PID). Full per-value routing and carve-out semantics live in `skills/lifecycle/references/implement.md` §2 and `cortex_command/lifecycle_implement.py` (`should_fire_picker`).
+
 Because field drift across consumers is possible, the asset's gate-kept frontmatter (above) is the one place to check before assuming a scaffolded field exists; do not enumerate the scaffolded fields in more than one doc.
 
 ### Auth Resolution (apiKeyHelper and env-var fallback order)
