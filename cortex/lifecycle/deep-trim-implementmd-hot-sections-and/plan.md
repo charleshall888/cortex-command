@@ -74,8 +74,8 @@ Standing constraints applied to every task (stated once here, not re-narrated pe
 - **Depends on**: [4]
 - **Complexity**: simple
 - **Context**: Keep-list/claim: `master_candidates.json` `.id=="s6"`. Pin: `tests/test_implement_worktree_interactive_contract.py` (the `command -v` pattern + gate/gated-binary parity — the same binary named in §1a-iii, shared with s12). Keep the `command -v cortex-worktree-create` probe form.
-- **Verification**: `grep -c 'command -v' skills/lifecycle/references/implement.md` ≥ 1 AND `.venv/bin/pytest tests/test_implement_worktree_interactive_contract.py tests/test_gate_and_gated_path_use_same_binary.py -q` exits 0 AND `just test` exits 0 (full suite) AND, after `just build-plugin`, `git diff --quiet -- plugins/cortex-core/`.
-- **Status**: [ ] pending
+- **Verification**: `grep -c 'command -v' skills/lifecycle/references/implement.md` ≥ 1 AND `.venv/bin/pytest tests/test_implement_worktree_interactive_contract.py -q` exits 0 (this file contains the gate/gated-binary parity test function — there is no separate `test_gate_and_gated_path_use_same_binary.py`) AND `just test` exits 0 (full suite) AND, after `just build-plugin`, `git diff --quiet -- plugins/cortex-core/`.
+- **Status**: [x] done
 
 ### Task 6: Merge-dedup §1a-ii Overnight concurrent guard against §1 Step A (s11)
 - **Files**: `skills/lifecycle/references/implement.md`, `plugins/cortex-core/skills/lifecycle/references/implement.md` (mirror)

@@ -51,11 +51,11 @@ When `should_fire_picker` returns `(True, reason)` for any reason (`branch_mode_
 command -v cortex-worktree-create >/dev/null 2>&1
 ```
 
-Route by exit code into one of three menu dispositions:
+Route by `command -v` exit code:
 
-- **exit 0** → the binary is reachable on PATH → all three options remain unchanged: `Implement on current branch`, `Implement on feature branch with worktree`, and `Create feature branch`.
-- **exit 1** → the binary is not on PATH → remove `Implement on feature branch with worktree` from the options array; this is a silent hide, with no diagnostic surfaced. The post-degrade option set is `Implement on current branch` and `Create feature branch`.
-- **Bash tool execution failure (sandbox rejection, missing /bin/sh, shell unavailable) OR `command -v` exit code other than 0 or 1** → fail open: all three options remain, and the literal diagnostic string `runtime probe skipped: console-script probe failed` is surfaced alongside the prompt.
+- **exit 0** (reachable) → keep all three options unchanged.
+- **exit 1** (not on PATH) → silently drop `Implement on feature branch with worktree` (no diagnostic), leaving `Implement on current branch` and `Create feature branch`.
+- **Bash execution failure or any exit code other than 0/1** → fail open: keep all three options and surface the literal diagnostic `runtime probe skipped: console-script probe failed`.
 
 Pass the resolved options array to `AskUserQuestion`.
 
