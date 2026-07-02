@@ -57,7 +57,7 @@ Standing constraints applied to every task (stated once here, not re-narrated pe
 - **Complexity**: simple
 - **Context**: Keep-list/claim: `master_candidates.json` `.id=="s3"` (LAZY_REF verdict, but treated in-place here — low ceiling; only descriptions may move). Pins: `tests/test_lifecycle_picker_label_pins_worktree.py`, `tests/test_implement_worktree_interactive_contract.py`. The label `Implement on feature branch with worktree` must survive verbatim.
 - **Verification**: `grep -c 'Implement on feature branch with worktree' skills/lifecycle/references/implement.md` ≥ 1 AND `.venv/bin/pytest tests/test_lifecycle_picker_label_pins_worktree.py tests/test_implement_worktree_interactive_contract.py -q` exits 0 AND `just test` exits 0 (full suite — restores per-commit independent-revertability per spec R5) AND, after `just build-plugin`, `git diff --quiet -- plugins/cortex-core/`.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 4: Compress §1 Uncommitted-changes guard mechanics (s5)
 - **Files**: `skills/lifecycle/references/implement.md`, `plugins/cortex-core/skills/lifecycle/references/implement.md` (mirror)

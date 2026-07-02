@@ -21,9 +21,9 @@ Routing on the output (the read is gated on `main`/`master` so it runs in the ma
 
 **Branch selection**: When the current branch is `main` or `master` AND no branch mode was consumed above (this is the fallback picker — it fires only when no plan-time `dispatch_choice` was recorded), prompt the user via AskUserQuestion with three options:
 
-- **Implement on current branch** (recommended) — trunk-based workflow, changes land directly on the current branch. **When to pick**: tiny, trunk-safe changes where a branch would be overhead.
-- **Implement on feature branch with worktree** — creates an `interactive/{slug}` worktree at `<repo>/.claude/worktrees/interactive-{slug}/` and auto-enters it via the platform `EnterWorktree` tool so the orchestrator session continues implementation from inside the worktree. **When to pick**: medium/many-task features where you want an isolated branch with worktree but still need live steering. Proceeds to §1a below.
-- **Create feature branch** — create `feature/{lifecycle-slug}` for PR-based workflow. **When to pick**: you want a PR-based flow but cannot use a worktree (e.g., tooling that assumes a single checkout). NOTE: this runs `git checkout` on the main session and can corrupt parallel sessions in this repo.
+- **Implement on current branch** (recommended) — trunk workflow; changes land on the current branch. Pick for small, trunk-safe changes.
+- **Implement on feature branch with worktree** — creates an `interactive/{slug}` worktree at `<repo>/.claude/worktrees/interactive-{slug}/` and auto-enters it via the `EnterWorktree` tool (continues from inside the worktree). Proceeds to §1a. Pick for multi-task features wanting isolation with live steering.
+- **Create feature branch** — create `feature/{lifecycle-slug}` for a PR-based flow. NOTE: runs `git checkout` on the main session and can corrupt parallel sessions in this repo.
 
 **Branch-mode dispatch preflight**: Before the uncommitted-changes guard and the runtime probe below, consult the per-repo `branch-mode` config via `cortex-lifecycle-branch-mode`.
 
