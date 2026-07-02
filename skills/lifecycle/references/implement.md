@@ -252,22 +252,15 @@ cortex-lifecycle-event log --event phase_transition --feature <name> --set from=
 
 When all tasks are `[x]`, determine the next phase using both complexity tier and criticality. Read criticality by running `cortex-lifecycle-state --feature {feature} --field criticality` (rules: criticality-matrix.md §Reading lifecycle state).
 
-**Review gating matrix:**
-
-| Criticality | simple | complex |
-|-------------|--------|---------|
-| low         | Complete | Review |
-| medium      | Complete | Review |
-| high        | **Review** | Review |
-| critical    | **Review** | Review |
+The next phase is **Review** when `criticality ∈ {high, critical}` OR `tier = complex`, else **Complete**. This mirrors `cortex_command/common.py:requires_review` — do not re-derive the cells.
 
 Append a `phase_transition` event to `cortex/lifecycle/{feature}/events.log`:
 ```bash
 cortex-lifecycle-event log --event phase_transition --feature <name> --set tier=<simple|complex> --set from=implement --set to=<review|complete>
 ```
-The `"to"` field is determined by the gating matrix above.
+The `"to"` field follows the review rule above.
 
-**Proceed automatically** — do not ask the user for confirmation before entering the next phase. The transition fires on the gate conditions (every task `[x]`, then the criticality matrix above), not on user input. Announce the transition briefly as plain text and continue. The Implement → Review/Complete boundary is not in the Kept user pauses inventory; see SKILL.md §Phase Transition for the umbrella reasoning.
+**Proceed automatically** — do not ask the user for confirmation before entering the next phase. The transition fires on the gate conditions (every task `[x]`, then the review rule above), not on user input. Announce the transition briefly as plain text and continue. The Implement → Review/Complete boundary is not in the Kept user pauses inventory; see SKILL.md §Phase Transition for the umbrella reasoning.
 
 ## Constraints
 

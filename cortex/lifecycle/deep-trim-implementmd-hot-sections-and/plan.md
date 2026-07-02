@@ -120,7 +120,7 @@ Standing constraints applied to every task (stated once here, not re-narrated pe
 - **Complexity**: simple
 - **Context**: Keep-list/claim: `master_candidates.json` `.id=="s23"`. Pins: `tests/test_lifecycle_event_roundtrip.py` (the `phase_transition` line + its `tier`/`from`/`to` key set must stay verbatim), `cortex_command/common.py:requires_review` (semantic-parity referent — a reviewer check, not a test), `tests/test_common_utils.py` (pure-function test, never reads implement.md — cannot be broken by this cut), `skills/lifecycle/references/kept-pauses.md`. Keep exactly the `{batch_dispatch:1, phase_transition:2}` roundtrip counts and the §4 `phase_transition` field-map using `--set` (never `--set-json`).
 - **Verification**: `.venv/bin/pytest tests/test_lifecycle_event_roundtrip.py -q` exits 0 AND `grep -c 'phase_transition' skills/lifecycle/references/implement.md` ≥ 2 AND `grep -c 'requires_review' skills/lifecycle/references/implement.md` ≥ 1 (the code citation replacing the matrix) AND `just test` exits 0 AND, after `just build-plugin`, `git diff --quiet -- plugins/cortex-core/`.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 11: Extract the §2e merge-back procedure to a sibling reference + wire it (s18) — final gate
 - **Files**: `skills/lifecycle/references/implement.md`, `skills/lifecycle/references/merge-back.md` (new), `skills/lifecycle/SKILL.md`, `plugins/cortex-core/skills/lifecycle/**` (mirror)
