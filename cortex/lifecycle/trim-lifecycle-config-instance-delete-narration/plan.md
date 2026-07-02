@@ -18,7 +18,7 @@ Delete the `## Branch Mode` section (candidates s4–s8) from this repo's always
 - **Complexity**: simple
 - **Context**: The section is currently the last content in the file (Branch Mode block runs from the `## Branch Mode` heading through `### Edge cases`; `## Review Criteria` sits above it and must survive). The frontmatter closes at the second `---`; the pointer comment must live *inside* the frontmatter, on its own line above `branch-mode: prompt`, e.g. `# branch-mode values + carve-outs: see docs/overnight-operations.md (branch-mode note)`. Parser `cortex_command/lifecycle_config.py:_extract_frontmatter_text`/`read_branch_mode` only reads the frontmatter region, so a `#` comment there is inert. Leave a single trailing newline after `## Review Criteria`'s last bullet.
 - **Verification**: `grep -c '^## Branch Mode' cortex/lifecycle.config.md` = 0 AND `grep -cE '### (Values \(closed set\)|Carve-outs|Normalization rules|Edge cases)' cortex/lifecycle.config.md` = 0 AND `grep -c '^## Review Criteria' cortex/lifecycle.config.md` = 1 AND the line above `branch-mode: prompt` starts with `#` and contains `docs/overnight-operations.md` AND `.venv/bin/python -c "import cortex_command.lifecycle_config as m,pathlib; print(m.read_branch_mode(pathlib.Path('.')))"` prints `prompt` — pass if all hold.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Complete the docs branch-mode note with the four values
 - **Files**: docs/overnight-operations.md
@@ -27,7 +27,7 @@ Delete the `## Branch Mode` section (candidates s4–s8) from this repo's always
 - **Complexity**: simple
 - **Context**: The note begins `**Consumed-but-unscaffolded exception**: \`branch-mode\` is read by \`read_branch_mode\` …`. Append the value list: `worktree-interactive` (worktree-interactive path), `trunk` (commit on current branch), `feature-branch` (create `feature/{slug}`), `prompt` (picker fires every time = unset). Carve-out line: the picker fires regardless of `branch-mode` on a dirty working tree or when a live interactive worktree session PID exists (`cortex/lifecycle/sessions/{slug}.interactive.pid`). Source of truth for routing remains `skills/lifecycle/references/implement.md` §2 and `cortex_command/lifecycle_implement.py:should_fire_picker`.
 - **Verification**: `grep -c 'worktree-interactive' docs/overnight-operations.md` ≥ 1 AND all four tokens `worktree-interactive`, `trunk`, `feature-branch`, `prompt` appear within the branch-mode section — pass if all four present in that section.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Correct ADR-0017 status to accepted
 - **Files**: cortex/adr/0017-reconcile-and-gate-lifecycle-config-sources.md
@@ -36,7 +36,7 @@ Delete the `## Branch Mode` section (candidates s4–s8) from this repo's always
 - **Complexity**: simple
 - **Context**: The ADR frontmatter currently contains only `status: proposed` between the two `---` delimiters.
 - **Verification**: `grep -c '^status: accepted' cortex/adr/0017-reconcile-and-gate-lifecycle-config-sources.md` = 1 AND `grep -c '^status: proposed' cortex/adr/0017-reconcile-and-gate-lifecycle-config-sources.md` = 0 — pass if both hold.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Verify no test regression
 - **Files**: none (read-only test run)
@@ -45,7 +45,7 @@ Delete the `## Branch Mode` section (candidates s4–s8) from this repo's always
 - **Complexity**: simple
 - **Context**: The relevant modules are `tests/test_lifecycle_config.py` (parser unit tests), `tests/test_lifecycle_config_parity.py` (asset↔template frontmatter parity — unaffected by repo-instance body edits), `tests/test_skill_section_citations.py` (heading citations — pins plan.md/complete.md, not this file), and `tests/test_lifecycle_implement_branch_mode.py` (picker routing — code-owned closed set). Run with the repo venv.
 - **Verification**: `.venv/bin/python -m pytest tests/test_lifecycle_config.py tests/test_lifecycle_config_parity.py tests/test_skill_section_citations.py tests/test_lifecycle_implement_branch_mode.py -q` — pass if exit code = 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Risks
 - Scope spans three files rather than the ticket's literal one-file Touch points — this is the research-decided cold home for the LAZY_REF blocks, surfaced and approved by the operator at spec time, and conflict-checked clean against all epic #347 siblings. The docs edit is additive (adds a value list), so it cannot be clobbered by a future doc trim.
