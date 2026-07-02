@@ -1,0 +1,33 @@
+---
+schema_version: "1"
+uuid: b2475c58-a893-4da1-ab31-338463568b87
+title: Deep-trim implement.md hot sections and replace dead liveness check
+status: backlog
+priority: high
+type: feature
+tags: ['skill-value-scorecard']
+areas: [skills, lifecycle]
+discovery_source: cortex/research/skill-value-scorecard/report.html
+created: 2026-07-02
+updated: 2026-07-02
+parent: "347"
+---
+## Why
+implement.md is the audit corpus outlier: its content rides into dispatched builder prompts, so every resident token multiplies. Three big verified verdicts remain unapplied, and one section (1a-i, the interactive worktree liveness check) probes a PID file that nothing in the codebase ever writes — dead code that still costs ~672 weighted tokens and provides no guard.
+
+## Role
+Apply the remaining verified implement.md verdicts from master_candidates.json: compress the step-v auto-enter narration between its test-pinned anchors (s13, roughly 20 percent of 873 tokens), move the five-case merge-back procedure to a lazily read sibling reference since it is skipped entirely for sequential dispatch (s18), and replace section 1a-i with a one-line probe of the interactive-lock console script so the suppressed branch-mode path — which skips the section-1 Step B guard — gains a real same-slug concurrency check (user decision recorded 2026-07-02).
+
+## Integration
+The step-v ordering test extracts a bounded block and asserts token order, not prose bulk; the verdicts name the boundary lines. The lazy-ref move needs a read trigger at the worktree-mode branch point and must keep references resolving (references-resolve test requires new files to be committed before the test run). The probe replacement touches the same suppressed-path routing the inline s4/s7 trims just compressed.
+
+## Edges
+- Verdicts carry exact keep-lists (EnterWorktree skipped token, worktree-precondition verb name, interactive_worktree_entered event) — research should re-validate each pin before cutting.
+- The probe must not fire on the picker-selected path, which already runs Step B.
+- Provisional implement.md candidates (several with pin hits) can ride along only after their pins are individually cleared.
+
+## Touch points
+- skills/lifecycle/references/implement.md (sections 1a step v, 1a-i, 2e)
+- possibly a new skills/lifecycle/references/ sibling for the merge-back procedure
+- plugins/cortex-core mirror (same commit)
+- cortex/research/skill-value-scorecard/master_candidates.json (verdict source)
