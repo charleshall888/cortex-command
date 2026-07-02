@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 69e763a3-e55d-49cb-8c94-cff16aa124b1
 title: Relocate dev-router triage logic to a branch-gated reference
-status: in_progress
+status: complete
 priority: medium
 type: chore
 created: 2026-06-30
