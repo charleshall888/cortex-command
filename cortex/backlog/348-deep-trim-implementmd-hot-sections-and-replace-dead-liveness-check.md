@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: b2475c58-a893-4da1-ab31-338463568b87
 title: Deep-trim implement.md hot sections and replace dead liveness check
-status: in_progress
+status: complete
 priority: high
 type: feature
 tags: ['skill-value-scorecard']
