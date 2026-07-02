@@ -2,15 +2,19 @@
 schema_version: "1"
 uuid: 49115a79-b56e-4200-85ed-5bcf8f4949fe
 title: 'Restructure commit skill: lazy-load release-type mechanics, drop examples'
-status: backlog
+status: in_progress
 priority: medium
 type: chore
 tags: ['skill-value-scorecard']
-areas: [skills]
+areas: ['skills']
 discovery_source: cortex/research/skill-value-scorecard/report.html
 created: 2026-07-02
 updated: 2026-07-02
 parent: "347"
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/restructure-commit-skill-lazy-load-release/spec.md
+lifecycle_phase: research
 ---
 ## Why
 The commit skill body lands in context on every commit the lifecycle makes — many times per run — and the audit verified five of its sections as trim-safe. The release-type marker mechanics and their worked examples are only relevant when a release-worthy change is being committed, yet they are resident on every invocation.

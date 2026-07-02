@@ -1,0 +1,8 @@
+{"schema_version": 1, "ts": "2026-07-02T18:39:05Z", "event": "lifecycle_start", "feature": "restructure-commit-skill-lazy-load-release", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-07-02T18:47:47Z", "event": "clarify_critic", "feature": "restructure-commit-skill-lazy-load-release", "parent_epic_loaded": true, "findings_count": 9, "dispositions": {"apply": 9, "dismiss": 0, "ask": 0}, "applied_fixes_count": 9, "dismissals_count": 0, "status": "ok"}
+{"ts": "2026-07-02T19:07:21Z", "event": "complexity_override", "feature": "restructure-commit-skill-lazy-load-release", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-07-02T19:07:21Z", "event": "criticality_override", "feature": "restructure-commit-skill-lazy-load-release", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-07-02T19:27:16Z", "event": "spec_approved", "feature": "restructure-commit-skill-lazy-load-release"}
+{"ts":"2026-07-02T19:42:21Z","event":"sentinel_absence","feature":"restructure-commit-skill-lazy-load-release","reviewer_angle":"Verification fidelity & anti-vacuity residue","reason":"absent","model_tier":"sonnet","expected_sha":"d4a7473c42dbf889e7dc4361a8b71b37e32637289c252fa863fa3692ff4dd570","observed_sha_or_null":null}
+{"ts": "2026-07-02T20:02:24Z", "event": "plan_approved", "feature": "restructure-commit-skill-lazy-load-release", "dispatch_choice": "trunk"}
+{"ts": "2026-07-02T20:02:24Z", "event": "phase_transition", "feature": "restructure-commit-skill-lazy-load-release", "from": "plan", "to": "implement"}
