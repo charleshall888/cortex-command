@@ -9,3 +9,4 @@
 {"ts": "2026-07-02T15:19:46Z", "event": "plan_approved", "feature": "trim-lifecycle-config-instance-delete-narration", "dispatch_choice": "trunk"}
 {"ts": "2026-07-02T15:19:46Z", "event": "phase_transition", "feature": "trim-lifecycle-config-instance-delete-narration", "from": "plan", "to": "implement"}
 {"ts": "2026-07-02T15:23:43Z", "event": "phase_transition", "feature": "trim-lifecycle-config-instance-delete-narration", "tier": "simple", "from": "implement", "to": "complete"}
+{"ts": "2026-07-02T15:30:11Z", "event": "feature_complete", "feature": "trim-lifecycle-config-instance-delete-narration", "tasks_total": 4, "rework_cycles": 0, "merge_anchor": "merge"}
