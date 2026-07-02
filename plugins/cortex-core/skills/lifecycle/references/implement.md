@@ -183,17 +183,7 @@ cortex-lifecycle-event log --event batch_dispatch --feature <name> --set-json ba
 
 Then update plan.md to change `[ ]` to `[x]` for every task that completed successfully in the batch.
 
-**e. Worktree Integration**: Skip this step entirely for sequential (non-worktree) dispatch.
-
-After checkpoint, merge each completed task's worktree branch back into the feature branch and clean up. This ensures subsequent batches' worktrees, created via `claude/hooks/cortex-worktree-create.sh`, branch from the updated HEAD and see prior batches' changes.
-
-For each task in the batch (in task order):
-
-1. **No-changes case**: If the task's Agent result shows no changes were made, the worktree was already auto-cleaned by the Agent tool. Skip merge and cleanup for that task.
-2. **Failed-commit case**: If `git log HEAD..worktree/{task-name} --oneline` showed zero lines (the task failed to produce a commit), skip the merge but still run cleanup: `git worktree remove "$(cortex-worktree-resolve {task-name})"` then `git branch -d worktree/{task-name}`.
-3. **Merge**: For tasks that passed the checkpoint (produced commits), run `git merge worktree/{task-name}` from the feature branch.
-4. **Cleanup**: After a successful merge, run `git worktree remove "$(cortex-worktree-resolve {task-name})"` then `git branch -d worktree/{task-name}`.
-5. **Partial integration failure**: If `git merge worktree/{task-name}` produces a conflict, surface it as an integration error including the branch name `worktree/{task-name}`. Continue processing remaining tasks in the batch — do not roll back already-merged branches.
+**e. Worktree Integration**: Skip this step entirely for sequential (non-worktree) dispatch. For worktree dispatch, read and follow the five-case merge-back procedure at the body-resolved absolute path `${CLAUDE_SKILL_DIR}/references/merge-back.md` (SKILL.md, Reference-path propagation — the **merge-back** target).
 
 **f. Report**: Summarize what the batch accomplished and any issues before dispatching the next batch.
 

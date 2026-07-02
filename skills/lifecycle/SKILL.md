@@ -158,6 +158,7 @@ Resolve `${CLAUDE_SKILL_DIR}` here in the body and carry the absolute paths into
 - **orchestrator-review** (read at Specify §3a and Plan §3a) → `${CLAUDE_SKILL_DIR}/references/orchestrator-review.md`.
 - **critical-review-gate** (read at Specify §3b and Plan §3b on the skip branch) → `${CLAUDE_SKILL_DIR}/references/critical-review-gate.md`.
 - **competing-plans** (read on Plan's `critical` branch via §1a→§1b) → `${CLAUDE_SKILL_DIR}/references/competing-plans.md`.
+- **merge-back** (read in Implement §2e on the worktree-dispatch arm) → `${CLAUDE_SKILL_DIR}/references/merge-back.md`.
 
 ## Phase Transition
 
