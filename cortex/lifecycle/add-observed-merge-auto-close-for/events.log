@@ -4,3 +4,9 @@
 {"ts": "2026-07-02T10:49:56Z", "event": "spec_approved", "feature": "add-observed-merge-auto-close-for"}
 {"ts": "2026-07-02T11:14:49Z", "event": "plan_approved", "feature": "add-observed-merge-auto-close-for", "dispatch_choice": "trunk"}
 {"ts": "2026-07-02T11:14:49Z", "event": "phase_transition", "feature": "add-observed-merge-auto-close-for", "from": "plan", "to": "implement"}
+{"ts": "2026-07-02T11:16:25Z", "event": "batch_dispatch", "feature": "add-observed-merge-auto-close-for", "batch": 0, "tasks": [1]}
+{"ts": "2026-07-02T11:20:01Z", "event": "batch_dispatch", "feature": "add-observed-merge-auto-close-for", "batch": 1, "tasks": [2]}
+{"ts": "2026-07-02T11:31:34Z", "event": "phase_transition", "feature": "add-observed-merge-auto-close-for", "tier": "simple", "from": "implement", "to": "review"}
+{"ts": "2026-07-02T11:40:11Z", "event": "review_verdict", "feature": "add-observed-merge-auto-close-for", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-07-02T11:40:12Z", "event": "phase_transition", "feature": "add-observed-merge-auto-close-for", "from": "review", "to": "complete"}
+{"ts": "2026-07-02T11:45:58Z", "event": "feature_complete", "feature": "add-observed-merge-auto-close-for", "tasks_total": 2, "rework_cycles": 0, "merge_anchor": "merge"}

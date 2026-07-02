@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 4fed271e-9fd8-4e86-98b1-3c5efec3800f
 title: Add observed-merge auto-close for morning-review already-merged exit
-status: in_progress
+status: complete
 priority: medium
 type: feature
 created: 2026-07-01
