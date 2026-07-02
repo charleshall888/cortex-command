@@ -28,6 +28,7 @@ which is a known limitation documented in the spec's Risks section.
 
 from __future__ import annotations
 
+import json
 import os
 import pathlib
 import subprocess
@@ -91,13 +92,13 @@ class TestShouldFirePicker:
     def test_a3_trunk_live_interactive_pid_fires(
         self, tmp_path: pathlib.Path
     ) -> None:
-        """(a3) ``branch-mode: trunk`` + live interactive PID → live_interactive_worktree_session.
+        """(a3) ``branch-mode: trunk`` + live interactive lock → live_interactive_worktree_session.
 
         The dirty-tree check fires first in ``should_fire_picker``'s
-        ordering (i → ii → iii → iv), so the sessions directory must be
-        gitignored before the PID file is dropped — otherwise the
-        untracked PID file would short-circuit to ``dirty_tree`` and the
-        live-PID carve-out would never be reached.
+        ordering (i → ii → iii → iv), so the ``cortex/`` umbrella must be
+        gitignored before the lock file is dropped — otherwise the
+        untracked lock file would short-circuit to ``dirty_tree`` and the
+        live-lock carve-out would never be reached.
         """
         _init_clean_repo(tmp_path)
         # Ignore the cortex/ umbrella so the PID file does not dirty the
@@ -110,13 +111,26 @@ class TestShouldFirePicker:
         (info_dir / "exclude").write_text("cortex/\n", encoding="utf-8")
 
         slug = "my-feature"
-        sessions_dir = tmp_path / "cortex" / "lifecycle" / "sessions"
-        sessions_dir.mkdir(parents=True, exist_ok=True)
-        # Use the current process's PID — ``os.kill(os.getpid(), 0)`` always
-        # succeeds, so the liveness check inside ``should_fire_picker`` will
-        # treat the session as live.
-        pid_file = sessions_dir / f"{slug}.interactive.pid"
-        pid_file.write_text(f"{os.getpid()}\n", encoding="utf-8")
+        # Write the REAL interactive lock that ``scan_live_locks`` reads:
+        # ``cortex/lifecycle/{slug}/interactive.pid``, JSON carrying the lock
+        # magic and the current process's PID. A live PID with null
+        # ``session_id``/``start_time`` classifies Row-4 conservative-LIVE
+        # (sufficient to exercise detection; it need not replicate the
+        # Row-1 self-session lock the live ``acquire`` writes).
+        lock_dir = tmp_path / "cortex" / "lifecycle" / slug
+        lock_dir.mkdir(parents=True, exist_ok=True)
+        lock_file = lock_dir / "interactive.pid"
+        lock_file.write_text(
+            json.dumps(
+                {
+                    "magic": "cortex-interactive-lock",
+                    "pid": os.getpid(),
+                    "session_id": None,
+                    "start_time": None,
+                }
+            ),
+            encoding="utf-8",
+        )
 
         # Sanity-check: the tree must be reported as clean so that
         # should_fire_picker does NOT short-circuit to dirty_tree.

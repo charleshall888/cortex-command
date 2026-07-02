@@ -21,10 +21,11 @@ belong to separate lifecycles.
 from __future__ import annotations as _annotations
 
 import json as _json
-import os as _os
 import pathlib as _pathlib
 import subprocess as _subprocess
 import typing as _typing
+
+from cortex_command.interactive_lock import scan_live_locks as _scan_live_locks
 
 
 REASONS: _typing.Final[frozenset[str]] = frozenset(
@@ -41,8 +42,6 @@ REASONS: _typing.Final[frozenset[str]] = frozenset(
 _VALID_BRANCH_MODES: _typing.Final[frozenset[str]] = frozenset(
     {"worktree-interactive", "trunk", "feature-branch", "prompt"}
 )
-
-_SESSIONS_RELDIR = "cortex/lifecycle/sessions"
 
 
 def _is_dirty_tree(repo_root: _pathlib.Path) -> bool:
@@ -68,39 +67,13 @@ def _is_dirty_tree(repo_root: _pathlib.Path) -> bool:
 def _has_live_interactive_session(
     repo_root: _pathlib.Path, slug: str
 ) -> bool:
-    """Return True iff the slug's interactive PID file references a live PID.
+    """Return True iff ``slug`` currently holds a live interactive lock.
 
-    File format: simple text containing the PID, optionally with trailing
-    whitespace (matches the ``cat``-then-``kill -0`` invocation in
-    ``implement.md:78–82``). If the file is missing, empty, or contains an
-    unparseable value, return False. If the PID is parseable, use
-    ``os.kill(pid, 0)`` to probe liveness: any OSError means dead; success
-    means live.
+    Delegates to ``cortex_command.interactive_lock.scan_live_locks`` — the
+    single source of truth for the real per-feature lock — which returns the
+    set of slugs whose lock owner process is live. See ``implement.md`` §1a-i.
     """
-    pid_path = (
-        _pathlib.Path(repo_root)
-        / _SESSIONS_RELDIR
-        / f"{slug}.interactive.pid"
-    )
-    try:
-        text = pid_path.read_text(encoding="utf-8")
-    except (FileNotFoundError, OSError):
-        return False
-
-    stripped = text.strip()
-    if not stripped:
-        return False
-
-    try:
-        pid = int(stripped)
-    except ValueError:
-        return False
-
-    try:
-        _os.kill(pid, 0)
-    except OSError:
-        return False
-    return True
+    return slug in _scan_live_locks(_pathlib.Path(repo_root))
 
 
 def should_fire_picker(
@@ -121,8 +94,9 @@ def should_fire_picker(
     (ii)  ``branch_mode == "prompt"`` → ``"branch_mode_prompt"``.
     (iii) ``git status --porcelain`` returns non-empty stdout
           → ``"dirty_tree"``.
-    (iv)  ``{repo_root}/cortex/lifecycle/sessions/{slug}.interactive.pid``
-          exists AND its PID is live → ``"live_interactive_worktree_session"``.
+    (iv)  ``slug`` holds a live interactive lock per
+          ``cortex_command.interactive_lock.scan_live_locks`` (§1a-i)
+          → ``"live_interactive_worktree_session"``.
 
     Otherwise → ``(False, "suppressed")``.
     """
