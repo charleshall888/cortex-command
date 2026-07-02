@@ -2,11 +2,17 @@
 schema_version: "1"
 uuid: 4cb85bf0-2e94-41e9-aa15-8e1fa416e7e9
 title: 'Fix selected-path interactive worktree orphan-lock: Step B acquires before overnight guard'
-status: backlog
+status: refined
 priority: low
 type: bug
 created: 2026-07-02
 updated: 2026-07-02
+lifecycle_phase: research
+lifecycle_slug: fix-selected-path-interactive-worktree-orphan
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/fix-selected-path-interactive-worktree-orphan/spec.md
+areas: ['lifecycle']
 ---
 ## Why
 On the picker-selected path of the interactive worktree implement flow (skills/lifecycle/references/implement.md), Step B acquires the per-feature lock. A Step A overnight check already precedes the acquire, so an overnight run that is live at entry is rejected before any acquire happens. But a second overnight concurrent guard runs later, during interactive worktree preflight; if overnight goes live in the window between the acquire and that second guard, the guard rejects while the acquired lock is never released — release_lock in cortex_command/interactive_lock.py is not invoked anywhere in the skill flow — so the session holds a lock for a worktree it never created. The same session then self-blocks on retry, and concurrent sessions read the lock as LIVE until the owner process dies (stale recovery). Because Step A already guards the common already-live case, this is a narrow TOCTOU race, not a deterministic orphan — the deterministic variant lived on the suppressed branch-mode path (no Step A) and was fixed by ticket 348. The selected-path case was carved out of 348 because reordering the acquire relative to the second guard changes the picker-selected preflight sequence, beyond that ticket's trim + dead-check charter.
