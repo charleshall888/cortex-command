@@ -5,3 +5,4 @@
 {"ts": "2026-07-02T19:36:47Z", "event": "spec_approved", "feature": "single-source-research-skill-fan-out"}
 {"ts": "2026-07-02T20:58:17Z", "event": "plan_approved", "feature": "single-source-research-skill-fan-out", "dispatch_choice": "trunk"}
 {"ts": "2026-07-02T20:58:17Z", "event": "phase_transition", "feature": "single-source-research-skill-fan-out", "from": "plan", "to": "implement"}
+{"ts": "2026-07-02T21:37:22Z", "event": "phase_transition", "feature": "single-source-research-skill-fan-out", "tier": "complex", "from": "implement", "to": "review"}
