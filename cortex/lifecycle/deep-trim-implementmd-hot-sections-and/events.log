@@ -1,0 +1,8 @@
+{"schema_version": 1, "ts": "2026-07-02T14:48:36Z", "event": "lifecycle_start", "feature": "deep-trim-implementmd-hot-sections-and", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"ts": "2026-07-02T14:57:02Z", "event": "clarify_critic", "feature": "deep-trim-implementmd-hot-sections-and", "schema_version": 3, "parent_epic_loaded": true, "findings_count": 8, "dispositions": {"apply": 6, "dismiss": 2, "ask": 0}, "applied_fixes_count": 6, "dismissals_count": 2, "status": "ok"}
+{"ts": "2026-07-02T14:57:36Z", "event": "lifecycle_start", "feature": "deep-trim-implementmd-hot-sections-and", "tier": "complex", "criticality": "high"}
+{"ts": "2026-07-02T14:57:36Z", "event": "phase_transition", "feature": "deep-trim-implementmd-hot-sections-and", "from": "clarify", "to": "research"}
+{"ts": "2026-07-02T15:26:54Z", "event": "complexity_override", "feature": "deep-trim-implementmd-hot-sections-and", "from": "simple", "to": "complex", "gate": "research_open_questions"}
+{"ts": "2026-07-02T15:27:07Z", "event": "phase_transition", "feature": "deep-trim-implementmd-hot-sections-and", "from": "research", "to": "specify"}
+{"ts": "2026-07-02T15:52:24Z", "event": "spec_approved", "feature": "deep-trim-implementmd-hot-sections-and"}
+{"ts": "2026-07-02T15:52:24Z", "event": "phase_transition", "feature": "deep-trim-implementmd-hot-sections-and", "from": "specify", "to": "plan"}

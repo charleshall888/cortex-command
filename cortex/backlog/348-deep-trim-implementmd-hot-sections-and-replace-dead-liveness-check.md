@@ -2,15 +2,20 @@
 schema_version: "1"
 uuid: b2475c58-a893-4da1-ab31-338463568b87
 title: Deep-trim implement.md hot sections and replace dead liveness check
-status: backlog
+status: refined
 priority: high
 type: feature
 tags: ['skill-value-scorecard']
-areas: [skills, lifecycle]
+areas: ['skills', 'lifecycle']
 discovery_source: cortex/research/skill-value-scorecard/report.html
 created: 2026-07-02
 updated: 2026-07-02
 parent: "347"
+lifecycle_phase: research
+lifecycle_slug: deep-trim-implementmd-hot-sections-and
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/deep-trim-implementmd-hot-sections-and/spec.md
 ---
 ## Why
 implement.md is the audit corpus outlier: its content rides into dispatched builder prompts, so every resident token multiplies. Eleven verified verdicts remain unapplied: three big structural ones, eight section compressions (s3, s5, s6, s11, s12, s14, s21, s23 — together ~10.1k weighted, including the s21 builder-prompt template at 1,680), and one section (1a-i, the interactive worktree liveness check) probes a PID file that nothing in the codebase ever writes — dead code that still costs ~672 weighted tokens and provides no guard.
