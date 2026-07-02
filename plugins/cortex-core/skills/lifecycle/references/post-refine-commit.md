@@ -17,11 +17,9 @@ Stage the refine artifact set with the verb, then act on its `signal`:
 cortex-lifecycle-stage-artifacts --phase refine --feature {feature}
 ```
 
-The verb auto-detects the approval vs cancel sub-mode and stages the exact set by explicit paths only (never a directory glob): `research.md, index.md, events.log` plus the originating backlog ticket (Context A), with `spec.md` staged on the approval path and omitted on cancel (spec.md is absent on disk because the user cancelled before refine wrote it). It prints `{"signal": "staged"|"nothing_staged", "staged_paths": [...]}`.
+It prints `{"signal": "staged"|"nothing_staged", "staged_paths": [...]}`:
 
-The verb's `signal` is the stage-first outcome (equivalent to `git diff --cached --quiet`):
-
-- `nothing_staged` (the index already matches HEAD — `git diff --cached --quiet` would exit 0): exit silently without invoking `/cortex-core:commit`. Return control to lifecycle Step 3 so it auto-advances to Plan (resume case).
+- `nothing_staged`: exit silently without invoking `/cortex-core:commit`. Return control to lifecycle Step 3 so it auto-advances to Plan (resume case).
 - `staged`: proceed to Commit.
 
 A non-zero verb exit is a staging failure: halt before Plan rather than committing a partial set.

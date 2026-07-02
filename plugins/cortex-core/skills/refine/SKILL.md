@@ -36,7 +36,7 @@ Act on the result: a unique match prints JSON (`filename`, `backlog_filename_slu
 
 ## Step 2: Check State
 
-Determine the resume point with the read-only resume-point verb — it classifies the state from the lifecycle artifacts (`is_file()` over `spec.md`/`research.md`) and prints `{"resume":...,"spec_exists":...,"research_exists":...}`:
+Determine the resume point with the read-only resume-point verb:
 
 ```bash
 cortex-refine resume-point --lifecycle-slug {lifecycle-slug}
@@ -57,7 +57,7 @@ After determining the resume point, seed the `lifecycle_start` row so `events.lo
 cortex-refine emit-lifecycle-start --backend {resolved} --lifecycle-slug {lifecycle-slug} --backlog-slug {backlog-filename-slug}
 ```
 
-Omit `--backlog-slug` for Context B (no backlog item). You do **not** branch on the backend to decide whether to pass the slug: pass it whenever a local backlog item exists, and the verb's `--backend` guard structurally drops it (and emits a diagnostic) on any non-`cortex-backlog` backend, so no stale local file is read. The `cortex-backlog` arm stays byte-identical to today.
+Omit `--backlog-slug` for Context B (no backlog item). You do **not** branch on the backend to decide whether to pass the slug: pass it whenever a local backlog item exists — the verb's `--backend` guard owns the non-local slug-drop (ADR-0019).
 
 **Seed→reconcile→gate ordering invariant**: keep the seed → reconcile → §3b read ordering intact so the §3b read observes the ratcheted (not seed-default) tier — critical on non-`cortex-backlog` backends, where the gate would otherwise skip silently at `tier = simple`. Full rationale in `${CLAUDE_SKILL_DIR}/../lifecycle/references/criticality-matrix.md` under "Seed → reconcile → gate ordering".
 

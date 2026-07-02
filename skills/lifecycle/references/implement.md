@@ -27,7 +27,7 @@ Routing on the output (the read is gated on `main`/`master` so it runs in the ma
 
 **Branch-mode dispatch preflight**: Before the uncommitted-changes guard and the runtime probe below, consult the per-repo `branch-mode` config via `cortex-lifecycle-branch-mode`.
 
-Run two Bash calls (no compound commands): first read the configured `branch-mode` value — the helper `read_branch_mode` prints it, or empty when unset/malformed, which routes to the picker as `branch_mode_unset_or_invalid` — then run the picker-decision verb, which emits `{"fire": <bool>, "reason": "<closed-set-token>"}` (read `.fire`/`.reason`; the third positional `{branch_mode}` is step 1's value, omitted when empty):
+Two Bash calls (no compound commands): `read_branch_mode` prints the configured value — empty when unset/malformed, which routes to the picker as `branch_mode_unset_or_invalid` — then the picker-decision verb emits `{"fire": <bool>, "reason": "<closed-set-token>"}` (third positional `{branch_mode}` is step 1's value, omitted when empty):
 
 ```bash
 cortex-lifecycle-branch-mode .
@@ -39,7 +39,7 @@ cortex-lifecycle-picker-decision . {slug} {branch_mode}
 - `worktree-interactive` — **record entry mode `suppressed`** and proceed directly to §1a (Interactive Worktree Creation). The `suppressed` marker is the carried control-flow value §1a step v branches on: it routes structurally to the cd-shim, skipping `EnterWorktree`.
 - `trunk` — proceed on the current branch directly to §2 Task Dispatch.
 - `feature-branch` — create and check out `feature/{lifecycle-slug}` before dispatching any tasks, then proceed to §2.
-- `prompt` — `should_fire_picker` returns `(True, "branch_mode_prompt")`, so the picker fires: fall through to the uncommitted-changes guard and `AskUserQuestion` call below.
+- `prompt` — the picker fires: covered by the fall-through rule below.
 
 When `should_fire_picker` returns `(True, reason)` for any reason (`branch_mode_unset_or_invalid`, `branch_mode_prompt`, `dirty_tree`, or `live_interactive_worktree_session`), do **not** short-circuit — fall through to the uncommitted-changes guard, the runtime probe, and the existing `AskUserQuestion` call site below.
 
@@ -78,12 +78,10 @@ Dispatch by selection:
   cortex-interactive-lock acquire {slug}
   ```
 
-  On exit 0: proceed to §1a. On non-zero exit: the console-script has already written R5's rejection wording to stderr — surface stderr verbatim and exit §1 without creating a worktree:
+  On exit 0: proceed to §1a. On non-zero exit: the console-script has already written R5's rejection wording to stderr — surface stderr verbatim and exit §1 without creating a worktree.
 
-  > Interactive session already active on this feature (session {session_id}, acquired {acquired_at}). Wait for it to exit, or work on a different feature, or run `cortex-interactive-lock inspect {slug}` for details.
-
-- If the user selects **"Implement on current branch"**, remain on the current branch and proceed to §2 Task Dispatch.
-- If the user selects **"Create feature branch"**, create and check out `feature/{lifecycle-slug}` before dispatching any tasks. Then proceed to §2 Task Dispatch.
+- **Implement on current branch** → proceed to §2 Task Dispatch on the current branch.
+- **Create feature branch** → create and check out `feature/{lifecycle-slug}`, then proceed to §2 Task Dispatch.
 
 If the current branch is not `main`/`master` (already on a feature branch or resumed session), skip the prompt and proceed on the current branch.
 

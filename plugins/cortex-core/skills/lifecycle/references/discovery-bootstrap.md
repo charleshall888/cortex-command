@@ -16,30 +16,11 @@ index.md creation is backend-blind (always local) — no `--backend` flag.
 
 When `phase = research` (no lifecycle directory exists yet), check whether discovery already produced epic-level artifacts for this feature. **Do not re-scan the backlog directory in this sub-procedure** — consume Step 1's resolved `{backlog-file}` and parsed frontmatter.
 
-```
-if Step 1 resolved a {backlog-file} (exit 0):
-    use the parsed frontmatter from Step 1
-    if discovery_source field exists:
-        epic_research_path = discovery_source field value
-    elif research field exists:
-        epic_research_path = research field value
-    else:
-        (no epic context — epic_research_path is unset)
-    if epic_research_path is set:
-        if epic_research_path file exists on disk:
-            record epic_research_path
-            if spec field also exists and spec file path exists on disk:
-                record epic_spec_path = spec field value
-        else:
-            log warning: "epic research file {epic_research_path} not found on disk — no epic context available"
-            epic_research_path = unset
-else:
-    (Step 1 resolver returned exit 3 — no backlog match; no epic context)
-```
+From the parsed frontmatter (when Step 1 resolved a match): take `discovery_source` as the epic research path, falling back to the `research` field; record it only if the file exists on disk (warn and treat as unset when it does not), and record the `spec` field as `epic_spec_path` only alongside a recorded research path and only if it too exists on disk. A resolver no-match or no field means no epic context.
 
 **Do not copy epic content into lifecycle files.** Epic research covers all tickets in the epic — copying it wholesale bleeds cross-ticket context into this ticket's research and spec. Record the paths as reference context only; `/cortex-core:refine` will produce ticket-specific research.md and spec.md that reference the epic artifacts without reproducing them.
 
-If `epic_research_path` was found, announce: "Found epic research at `{epic_research_path}` — will use as background reference during research. Running ticket-specific research and spec phases."
+If `epic_research_path` was found, announce the recorded path and that it will serve as background reference for the ticket-specific research and spec phases.
 
 ## Epic Context Injection (during /cortex-core:refine delegation)
 

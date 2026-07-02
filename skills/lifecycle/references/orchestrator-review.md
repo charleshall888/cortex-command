@@ -41,7 +41,7 @@ Then proceed to user presentation or the next phase as normal.
 
 For each flagged issue, determine the appropriate fix mode:
 
-**Fresh subagent** (via Task tool): Use for thinking-quality rework that does not require user input. This includes research depth issues, plan restructuring, feasibility re-assessment, missing edge cases, vague acceptance criteria, and similar structural problems. Fresh context prevents anchoring to the flawed artifact.
+**Fresh subagent** (via Task tool): Use for thinking-quality rework that does not require user input. Fresh context prevents anchoring to the flawed artifact.
 
 **Model for fresh subagent fixes**: resolve the fix sub-agent model at dispatch by running the verb against the feature criticality — do not hardcode a model literal:
 
@@ -51,7 +51,7 @@ model=$(cortex-resolve-model --role orchestrator-fix --criticality "$(cortex-lif
 
 Pass the captured `$model` as the fresh fix sub-agent's model. On nonzero exit from `cortex-resolve-model` — the verb rejected the input or the `cortex-lifecycle-state` read returned corrupt/absent criticality — halt and escalate rather than guessing or substituting a model.
 
-**Same conversation**: Use for interactive rework that requires user input. This includes spec clarifications where user preference determines the answer, ambiguous requirements, and priority trade-offs. Explain the issue to the user, gather their input, and then revise the artifact in the current context.
+**Same conversation**: Use for interactive rework that requires user input — where user preference determines the answer. Explain the issue to the user, gather their input, and then revise the artifact in the current context.
 
 After all fixes complete, increment the cycle counter, return to step 2 (Execute Review) with the same checklist. Read the fix-agent envelope but do not relay it to the user — only the re-review verdict surfaces.
 

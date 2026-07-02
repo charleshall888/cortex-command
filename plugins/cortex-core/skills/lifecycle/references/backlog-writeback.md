@@ -8,11 +8,9 @@ Both sub-procedures consume Step 1's resolved `{backlog-file}` and parsed frontm
 
 Two write-back paths consume the active backlog backend, resolved once with `` `cortex-read-backlog-backend` `` (argless; it prints the resolved backend and exits 0): the **close-lifecycle** `cortex-update-item` write-back, which stays inline in the Backlog Status Check close path below, and the **lifecycle-start** in-progress + lifecycle-slug write-backs, which are offloaded to the backend-routed start-sync verb (see Backlog Write-Back (Lifecycle Start) below — pass the resolved value as its `--backend`). Route on the value:
 
-- **`cortex-backlog`** (the default arm) → proceed exactly as today; run the `cortex-update-item` call(s) unchanged.
+- **`cortex-backlog`** (the default arm) → run the `cortex-update-item` call(s) unchanged.
 - **`none`** → skip the `cortex-update-item` call(s), noting a one-line advisory that backlog write-back is disabled for this repo, and continue.
 - **any other value** (an external tracker) → make the equivalent change best-effort on the configured tracker using the config `backlog.instructions` and your own judgment (e.g. `gh issue` create/edit/close), surfacing the composed content if it cannot be completed so no work is lost.
-
-The close-lifecycle write-back carries this `` `cortex-read-backlog-backend` `` routing inline; the lifecycle-start write-backs carry it via the start-sync verb's `--backend`. The default `cortex-backlog` arm is the unchanged behavior.
 
 ## Backlog Status Check
 
@@ -47,7 +45,7 @@ Before creating any artifacts or performing write-back, check whether the origin
 
 ## Backlog Write-Back (Lifecycle Start)
 
-After registering the session, write the lifecycle start back to the originating backlog item via the backend-routed start-sync verb. **Do not re-scan the backlog directory in this sub-procedure** — consume Step 1's resolved result. Resolve the backend once (see Backend routing) and pass it through:
+After registering the session, write the lifecycle start back to the originating backlog item via the backend-routed start-sync verb, consuming Step 1's resolved result. Resolve the backend once (see Backend routing) and pass it through:
 
 ```bash
 cortex-lifecycle-start-sync --backend {resolved-backend} --backlog-file {backlog-filename-or-empty-string} --phase {none-or-current-phase} --session-id $LIFECYCLE_SESSION_ID --lifecycle-slug {lifecycle-slug}
@@ -55,7 +53,7 @@ cortex-lifecycle-start-sync --backend {resolved-backend} --backlog-file {backlog
 
 `{backlog-filename}` is Step 1's resolver `filename` basename (e.g. `326-foo.md`); the verb reduces it to the `cortex-update-item` slug itself. The verb runs the in-progress status write-back on every phase, and additionally records the lifecycle-slug association **only when `--phase none`** (a brand-new lifecycle). On a resolver exit-3 no-match, pass `--backlog-file ""` and the verb no-ops.
 
-Backend behavior is the verb's (ADR-0019 structural guard — it acts on the passed `--backend`, never self-resolves): `cortex-backlog` runs the `cortex-update-item` write-backs; `none` skips them with a one-line advisory. On **any other value** (an external tracker) the verb makes no local write — make the equivalent **in-progress** update **and (on `--phase none`) the lifecycle-slug association** best-effort on the external tracker per `backlog.instructions`, surfacing the composed content if it cannot be completed so no work is lost.
+On **any other value** of the backend (an external tracker) the verb makes no local write — make the equivalent **in-progress** update **and (on `--phase none`) the lifecycle-slug association** best-effort on the external tracker per `backlog.instructions`, surfacing the composed content if it cannot be completed so no work is lost.
 
 ## `cortex-update-item` Exit-2 Handling (canonical)
 
