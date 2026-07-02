@@ -91,20 +91,18 @@ If the current branch is not `main`/`master` (already on a feature branch or res
 
 This section runs in two entry modes: `selected` (user picked the worktree option in §1) or `suppressed` (`branch-mode: worktree-interactive` bypassed the picker). Step v branches on the carried entry-mode marker; either way the orchestrator session does not exit `/cortex-core:lifecycle` — it continues into §2 task dispatch.
 
-**i. Interactive worktree liveness check.** Two separate Bash calls (no compound commands):
-
-1. Read the interactive PID file: `cat cortex/lifecycle/sessions/{slug}.interactive.pid 2>/dev/null`
-2. If the file was non-empty, liveness check on the PID: `kill -0 $pid 2>/dev/null`
-
-If `kill -0` exits 0 (process alive): reject with "An interactive worktree session is already live for `{slug}` (PID {pid}). Resolve it before creating a new worktree." and exit §1a without creating a worktree. If the exit code is non-zero or the file was absent/empty: proceed.
-
-**ii. Overnight concurrent guard.** Invoke the sidecar at the body-resolved absolute path (SKILL.md, Reference-path propagation):
+**i. Overnight concurrent guard.** Invoke the sidecar at the body-resolved absolute path (SKILL.md, Reference-path propagation):
 
 ```
 cat ${CLAUDE_SKILL_DIR}/references/_interactive_overnight_check.sh | bash -s -- "Overnight runner is active for this repo — wait for it to complete before creating an interactive worktree." "$(pwd)"
 ```
 
-Sidecar exit codes: `0` = no overnight active, proceed normally; `1` = overnight live for this repo, surface the wording and exit §1a; `2` = stale runner detected (runner.pid absent or process dead), surface a warn-and-continue diagnostic and proceed.
+Sidecar exit codes: `0` = no overnight active, proceed to ii; `1` = overnight live for this repo, surface the wording and exit §1a; `2` = stale runner detected (runner.pid absent or process dead), surface a warn-and-continue diagnostic and proceed.
+
+**ii. Interactive lock (per-feature concurrency guard).** Acquire the real lock via the `cortex-interactive-lock` console script — the single source of truth for `cortex/lifecycle/{slug}/interactive.pid` — conditioned on the carried entry mode, and only **after** the overnight guard (i) has passed, so a rejecting overnight guard can never orphan a held lock:
+
+- Entry mode `selected`: §1 Step B already acquired the lock for `{slug}` this session — do **not** acquire again (a second same-session acquire self-rejects on the session-id-match row). Proceed to iii.
+- Entry mode `suppressed`: run a single Bash call `cortex-interactive-lock acquire {slug}`. Exit 0 → proceed to iii. Non-zero → the script has written its rejection to stderr (a live same-slug interactive session already holds the lock); surface that stderr verbatim and exit §1a without creating a worktree.
 
 **iii. Worktree creation.** Single Bash call invoking `cortex-worktree-create`:
 

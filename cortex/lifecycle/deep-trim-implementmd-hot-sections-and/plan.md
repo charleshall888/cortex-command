@@ -48,7 +48,7 @@ Standing constraints applied to every task (stated once here, not re-narrated pe
   - **Affordance protected**: prevents a second concurrent same-slug interactive session from creating a colliding worktree/branch (shared-index corruption). The suppressed path has *zero* real same-slug guard today (§1 Step A/B is gated to `selected`; old §1a-i read a dead path).
   - `implement.md` is a reference file (exempt from SKILL.md size/L1 ratchets). Regenerate + stage the mirror same-commit.
 - **Verification**: `grep -c 'kill -0' skills/lifecycle/references/implement.md` = 0 AND `grep -cE 'sessions/[^ ]*\.interactive\.pid' skills/lifecycle/references/implement.md` = 0 AND `awk '/_interactive_overnight_check\.sh/{o=NR} /cortex-interactive-lock acquire/{a=NR} END{exit !(a>o)}' skills/lifecycle/references/implement.md` exits 0 (acquire below overnight-check) AND `.venv/bin/pytest tests/test_implement_worktree_interactive_contract.py -q` exits 0 AND `just test` exits 0 (full suite) AND, after `just build-plugin`, `git diff --quiet -- plugins/cortex-core/` (mirror in sync).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Compress §1 Branch-selection picker option descriptions, keeping the label list-items inline (s3)
 - **Files**: `skills/lifecycle/references/implement.md`, `plugins/cortex-core/skills/lifecycle/references/implement.md` (mirror)
