@@ -2,15 +2,20 @@
 schema_version: "1"
 uuid: a37d35f0-a59f-4c0b-b1b0-8ea3c337ac91
 title: Compress project.md sections that restate ADRs, CLAUDE.md, and tests
-status: backlog
+status: refined
 priority: medium
 type: chore
 tags: ['skill-value-scorecard']
-areas: [docs]
+areas: ['docs']
 discovery_source: cortex/research/skill-value-scorecard/report.html
 created: 2026-07-02
 updated: 2026-07-02
 parent: "347"
+lifecycle_phase: research
+lifecycle_slug: compress-projectmd-sections-that-restate-adrs
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/compress-projectmd-sections-that-restate-adrs/spec.md
 ---
 ## Why
 cortex/requirements/project.md loads into lifecycle, refine, and discovery context on the load-requirements path, and the audit verified eight of its sections as compressible (s4, s6, s7, s8, s9, s10, s11, s15 — seven at high confidence, s6 at medium): they restate, sometimes clause-for-clause, content that already lives in always-loaded CLAUDE.md, in ADR bodies (which the ADR README explicitly forbids project.md from restating), in test docstrings, or in enforcement-site documentation.

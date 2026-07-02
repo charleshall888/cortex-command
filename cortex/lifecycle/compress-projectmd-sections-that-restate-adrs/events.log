@@ -1,0 +1,8 @@
+{"schema_version": 1, "ts": "2026-07-02T21:22:24Z", "event": "lifecycle_start", "feature": "compress-projectmd-sections-that-restate-adrs", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"ts": "2026-07-02T21:32:22Z", "event": "clarify_critic", "feature": "compress-projectmd-sections-that-restate-adrs", "schema_version": 3, "parent_epic_loaded": true, "findings_count": 9, "dispositions": {"apply": 9, "dismiss": 0, "ask": 0}, "applied_fixes_count": 9, "dismissals_count": 0, "status": "ok"}
+{"ts": "2026-07-02T21:33:37Z", "event": "phase_transition", "feature": "compress-projectmd-sections-that-restate-adrs", "from": "clarify", "to": "research"}
+{"ts": "2026-07-02T21:34:57Z", "event": "phase_transition", "feature": "compress-projectmd-sections-that-restate-adrs", "from": "research", "to": "specify"}
+{"ts": "2026-07-02T21:34:57Z", "event": "complexity_override", "feature": "compress-projectmd-sections-that-restate-adrs", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-07-02T21:34:57Z", "event": "criticality_override", "feature": "compress-projectmd-sections-that-restate-adrs", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-07-02T21:58:30Z", "event": "spec_approved", "feature": "compress-projectmd-sections-that-restate-adrs"}
+{"ts": "2026-07-02T21:58:30Z", "event": "phase_transition", "feature": "compress-projectmd-sections-that-restate-adrs", "from": "specify", "to": "plan"}
