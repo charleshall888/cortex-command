@@ -42,7 +42,7 @@ Defaults:
 
 ## Step 2: Determine Agent Count
 
-`agent_count` is the cell where the task's `tier` (row) meets its `criticality` (column) in the count matrix at [`${CLAUDE_SKILL_DIR}/references/fanout.md`](${CLAUDE_SKILL_DIR}/references/fanout.md) — the canonical, shared source for the grid. The floor cell (simple+low) is 3; the corner cell (complex+critical) is 10. Both axes raise the count monotonically.
+`agent_count` is the cell where the task's `tier` (row) meets its `criticality` (column) in the count matrix at [`${CLAUDE_SKILL_DIR}/references/fanout.md`](${CLAUDE_SKILL_DIR}/references/fanout.md) — the canonical, shared source for the grid. Read that grid to size the fan-out.
 
 The count is an **upper bound on investigation breadth, not a quota** — dispatch fewer if the task offers fewer genuinely distinct angles than its cell allows; do not pad with redundant agents.
 
