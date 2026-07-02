@@ -66,7 +66,7 @@ Standing constraints applied to every task (stated once here, not re-narrated pe
 - **Complexity**: simple
 - **Context**: Keep-list/claim: `master_candidates.json` `.id=="s5"` — **unpinned** (no test/hook/ADR grep hits); the only behavioral contracts are the warning literal (`uncommitted changes in working tree — this will mix them into the commit on main`) and the "git status non-zero → guard does not fire, surface `uncommitted-changes guard skipped: git status failed`" fail-open clause. Both must survive.
 - **Verification**: `grep -c 'uncommitted changes in working tree' skills/lifecycle/references/implement.md` ≥ 1 AND `grep -c 'uncommitted-changes guard skipped' skills/lifecycle/references/implement.md` ≥ 1 AND `just test` exits 0 AND, after `just build-plugin`, `git diff --quiet -- plugins/cortex-core/`.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5: Compress §1 Runtime probe exit-code dispositions (s6)
 - **Files**: `skills/lifecycle/references/implement.md`, `plugins/cortex-core/skills/lifecycle/references/implement.md` (mirror)
