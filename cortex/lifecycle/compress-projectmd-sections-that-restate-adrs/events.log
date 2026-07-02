@@ -6,3 +6,5 @@
 {"ts": "2026-07-02T21:34:57Z", "event": "criticality_override", "feature": "compress-projectmd-sections-that-restate-adrs", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
 {"ts": "2026-07-02T21:58:30Z", "event": "spec_approved", "feature": "compress-projectmd-sections-that-restate-adrs"}
 {"ts": "2026-07-02T21:58:30Z", "event": "phase_transition", "feature": "compress-projectmd-sections-that-restate-adrs", "from": "specify", "to": "plan"}
+{"ts": "2026-07-02T22:22:54Z", "event": "plan_approved", "feature": "compress-projectmd-sections-that-restate-adrs", "dispatch_choice": "wait"}
+{"ts": "2026-07-02T22:22:54Z", "event": "feature_paused", "feature": "compress-projectmd-sections-that-restate-adrs"}
