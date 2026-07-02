@@ -6,3 +6,5 @@
 {"ts": "2026-07-02T15:27:07Z", "event": "phase_transition", "feature": "deep-trim-implementmd-hot-sections-and", "from": "research", "to": "specify"}
 {"ts": "2026-07-02T15:52:24Z", "event": "spec_approved", "feature": "deep-trim-implementmd-hot-sections-and"}
 {"ts": "2026-07-02T15:52:24Z", "event": "phase_transition", "feature": "deep-trim-implementmd-hot-sections-and", "from": "specify", "to": "plan"}
+{"ts": "2026-07-02T17:41:21Z", "event": "plan_approved", "feature": "deep-trim-implementmd-hot-sections-and", "dispatch_choice": "wait"}
+{"ts": "2026-07-02T17:41:21Z", "event": "feature_paused", "feature": "deep-trim-implementmd-hot-sections-and"}
