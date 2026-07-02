@@ -116,7 +116,7 @@ worktree_path=$(cortex-worktree-create --feature interactive-{slug} --base-branc
 
 After worktree creation succeeds (step iii), run operations in this order — the event must be emitted from inside the worktree so `_resolve_user_project_root_from_cwd()` lands the row in the worktree's events.log, not the main repo's.
 
-1. **Capture origin pwd** — run a single Bash call: `_origin_pwd=$(pwd)`. Hold this value for the lifecycle session (it may be needed for restore at Complete phase or on fallback below).
+1. **Capture origin pwd** — `_origin_pwd=$(pwd)` (single Bash call); hold it for the session (needed for restore at Complete or on fallback).
 
 2. **Suppressed-picker structural branch** — when the carried entry mode is `suppressed`, skip the `cortex-worktree-precondition` probe AND the auto-enter call entirely and route structurally to the cd-shim: run `cd $(cortex-worktree-resolve interactive-{slug})` to root the session in the already-created worktree, surface the stable literal diagnostic `EnterWorktree skipped: suppressed-picker (branch-mode worktree-interactive)`, then jump to operation 5 (emit event) (no EnterWorktree authorization — ADR-0008). When the carried entry mode is `selected`, do not take this branch — continue to operation 3.
 
@@ -136,15 +136,15 @@ After worktree creation succeeds (step iii), run operations in this order — th
    cortex-lifecycle-event log --event interactive_worktree_entered --feature {slug} --set worktree_path="$(pwd)"
    ```
 
-   The `cortex-lifecycle-event` CLI uses `_resolve_user_project_root_from_cwd()` (ignores `CORTEX_REPO_ROOT`), so the event row lands in the worktree's `cortex/lifecycle/{slug}/events.log` — not the main repo's.
+   (`cortex-lifecycle-event` uses `_resolve_user_project_root_from_cwd()`, ignoring `CORTEX_REPO_ROOT`, so the row lands in the worktree's events.log.)
 
 **Fallback — `EnterWorktree skipped`.** On the `selected` path, if the `cortex-worktree-precondition` probe in operation 3 returns non-zero, OR the `EnterWorktree` call in operation 4 errors, OR the skill judges the gate unmet and declines to invoke the tool (silent non-invocation), fall back to the cd-shim handoff: run `cd $(cortex-worktree-resolve interactive-{slug})` and proceed to operation 5 to emit the event. Surface a single-line diagnostic beginning with the stable literal `EnterWorktree skipped` and naming the failure mode (e.g., `EnterWorktree skipped: already inside worktree at <path>`, `EnterWorktree skipped: tool rejected path <path>`).
 
 The auto-enter affects only orchestrator-session Bash tool calls; sub-agent `Agent(isolation: "worktree")` dispatch in §2 is unaffected, and §2(e) merge-back applies unchanged.
 
-**vi. Interactive worktree auto-entry.** On entry mode `suppressed` the operation-2 cd-shim roots the session without `EnterWorktree`'s cache-clear (and without its session-exit keep/remove prompt) — `cd $(git rev-parse --show-toplevel)` is the only restoration step needed on that path. Surface the worktree path to the user along with a single-line warning that on session exit the harness will prompt to **keep or remove** the worktree — selecting "remove" discards any uncommitted work, so commit or push before exiting. Mid-session restoration: run `ExitWorktree action="keep"` to clear session state cleanly (dismisses the exit prompt), or `cd $(git rev-parse --show-toplevel)` to navigate back while deferring the prompt. See ADR-0004 for the design rationale.
+**vi. Interactive worktree auto-entry.** On entry mode `suppressed`, `cd $(git rev-parse --show-toplevel)` is the only restoration step needed. Surface the worktree path with a single-line warning: on session exit the harness prompts to **keep or remove** the worktree — "remove" discards any uncommitted work, so commit or push before exiting. Mid-session, `ExitWorktree action="keep"` clears session state cleanly, or `cd $(git rev-parse --show-toplevel)` navigates back while deferring the prompt. See ADR-0004.
 
-**vii. Continue to §2 Task Dispatch.** Do not exit `/cortex-core:lifecycle`. The orchestrator session is now inside the interactive worktree and proceeds to dispatch implementation tasks from §2 onward.
+**vii. Continue to §2 Task Dispatch.** Do not exit `/cortex-core:lifecycle` — the session is now inside the interactive worktree; proceed to dispatch tasks from §2 onward.
 
 ### 2. Task Dispatch
 
