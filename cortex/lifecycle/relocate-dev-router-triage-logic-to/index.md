@@ -2,7 +2,7 @@
 feature: relocate-dev-router-triage-logic-to
 parent_backlog_uuid: 69e763a3-e55d-49cb-8c94-cff16aa124b1
 parent_backlog_id: 343
-artifacts: [research, spec, plan]
+artifacts: [research, spec, plan, review]
 tags: [skill-efficiency-remaining-work]
 created: 2026-07-01
 updated: 2026-07-01
