@@ -6,3 +6,5 @@
 {"ts": "2026-07-02T21:43:37Z", "event": "complexity_override", "feature": "fix-selected-path-interactive-worktree-orphan", "from": "simple", "to": "complex", "gate": "research_open_questions"}
 {"ts": "2026-07-02T22:06:07Z", "event": "spec_approved", "feature": "fix-selected-path-interactive-worktree-orphan"}
 {"ts": "2026-07-02T22:06:08Z", "event": "phase_transition", "feature": "fix-selected-path-interactive-worktree-orphan", "from": "specify", "to": "plan"}
+{"ts": "2026-07-02T22:27:57Z", "event": "plan_approved", "feature": "fix-selected-path-interactive-worktree-orphan", "dispatch_choice": "wait"}
+{"ts": "2026-07-02T22:27:57Z", "event": "feature_paused", "feature": "fix-selected-path-interactive-worktree-orphan"}
