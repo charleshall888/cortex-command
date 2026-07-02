@@ -211,16 +211,10 @@ Emit **one `##` section per angle actually dispatched in Step 3**, in dispatch o
 # Research: {topic}
 
 ## <Angle name>
-[One section per dispatched angle, titled by its prompt-template output heading. Core always present:
-`## Codebase Analysis`, `## Web Research`, `## Requirements & Constraints`. Each chosen angle gets its
-own heading (e.g. `## Tradeoffs & Alternatives`); `## Adversarial Review` is present only when the
-adversarial agent ran (high/critical). If an angle returned no findings: ⚠️ The [angle] agent returned
-no findings — this section may be incomplete.]
+[One `##` section per dispatched angle, in dispatch order, titled by its prompt-template output heading.]
 
 ## Open Questions
-[Fixed contract heading — parsed by the complexity escalator. Unresolved questions surfaced during
-research, including agent contradictions and any note that angle subdivision was reached because the
-cell's count exceeded available distinct angles (per fanout.md). Omit this section if no open questions exist.]
+[Fixed contract heading. Omit this section if no open questions exist.]
 
 ## Considerations Addressed
 [Conditional section: emitted only when the considerations file was non-empty AND lifecycle mode. One bullet per input consideration with a one-sentence note on how research addressed it (or "deferred — no relevant evidence found"). Appears after `## Open Questions`, before any final references.]
