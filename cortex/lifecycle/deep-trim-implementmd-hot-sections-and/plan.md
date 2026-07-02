@@ -111,7 +111,7 @@ Standing constraints applied to every task (stated once here, not re-narrated pe
 - **Complexity**: simple
 - **Context**: Keep-list/claim: `master_candidates.json` `.id=="s21"`. Pin: commit `c2daec5b` (self-sealing guard provenance — prose-only, no test enforces it, so the grep below is the guard). Template is not test-pinned; only behavioral contracts constrain the edit.
 - **Verification** (pin the guard's *operative clause*, not the bare token — a stray `self-sealing` word would pass vacuously): `grep -c 'solely to satisfy' skills/lifecycle/references/implement.md` ≥ 1 AND `grep -c 'flag it as self-sealing in your exit report' skills/lifecycle/references/implement.md` ≥ 1 (builder-instruction 6's self-verification directive survives intact) AND `grep -c 'do not use raw' skills/lifecycle/references/implement.md` ≥ 1 (anti-raw-git rule) AND `just test` exits 0 AND, after `just build-plugin`, `git diff --quiet -- plugins/cortex-core/`.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 10: Replace §4 Transition review-gating matrix with a code citation (s23)
 - **Files**: `skills/lifecycle/references/implement.md`, `plugins/cortex-core/skills/lifecycle/references/implement.md` (mirror)
