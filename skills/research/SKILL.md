@@ -60,13 +60,9 @@ When `research-considerations-file` is present, its content is injected as a `##
 
 ### Angle selection
 
-The angle set is **hybrid**: a fixed mandatory core plus orchestrator-chosen distinct angles, with an always-last adversarial pass for high/critical work. The authority on *how to choose* the non-core angles — keep them distinct and non-redundant, subdivide an existing angle by scope only once genuinely distinct angles are exhausted, and **no** topic→angle keyword router — is the hybrid-angle-selection section of [`${CLAUDE_SKILL_DIR}/references/fanout.md`](${CLAUDE_SKILL_DIR}/references/fanout.md). Apply it.
-
-**Mandatory core (always dispatched, at every cell):** Codebase, Web, Requirements & Constraints. Prompt templates below.
+The angle set is **hybrid**: a fixed mandatory core plus orchestrator-chosen distinct angles, with an always-last adversarial pass for high/critical work. The authority on *how to choose* the non-core angles is the hybrid-angle-selection section of [`${CLAUDE_SKILL_DIR}/references/fanout.md`](${CLAUDE_SKILL_DIR}/references/fanout.md). Apply it.
 
 **Orchestrator-chosen angles:** select `agent_count − core − (adversarial, if high/critical)` additional distinct angles per task, following fanout.md. Tradeoffs is a common choice and its template is given below as the canonical example; compose other angles for the specific task as the topic warrants — each must investigate something the others do not.
-
-**Adversarial (always last for high/critical):** dispatched after the core + chosen angles complete, over a brief summary of their findings. Template below.
 
 #### Codebase (core)
 Tools: Read, Glob, Grep
