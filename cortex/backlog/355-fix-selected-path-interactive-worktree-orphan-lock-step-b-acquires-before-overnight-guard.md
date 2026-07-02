@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 4cb85bf0-2e94-41e9-aa15-8e1fa416e7e9
 title: 'Fix selected-path interactive worktree orphan-lock: Step B acquires before overnight guard'
-status: refined
+status: complete
 priority: low
 type: bug
 created: 2026-07-02

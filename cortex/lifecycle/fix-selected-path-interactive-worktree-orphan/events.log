@@ -9,3 +9,6 @@
 {"ts": "2026-07-02T22:27:57Z", "event": "plan_approved", "feature": "fix-selected-path-interactive-worktree-orphan", "dispatch_choice": "wait"}
 {"ts": "2026-07-02T22:27:57Z", "event": "feature_paused", "feature": "fix-selected-path-interactive-worktree-orphan"}
 {"ts": "2026-07-02T23:00:40Z", "event": "phase_transition", "feature": "fix-selected-path-interactive-worktree-orphan", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-07-02T23:10:50Z", "event": "review_verdict", "feature": "fix-selected-path-interactive-worktree-orphan", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-07-02T23:10:56Z", "event": "phase_transition", "feature": "fix-selected-path-interactive-worktree-orphan", "from": "review", "to": "complete"}
+{"ts": "2026-07-02T23:20:51Z", "event": "feature_complete", "feature": "fix-selected-path-interactive-worktree-orphan", "tasks_total": 2, "rework_cycles": 0, "merge_anchor": "merge"}
