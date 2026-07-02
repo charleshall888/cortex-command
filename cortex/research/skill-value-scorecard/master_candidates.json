@@ -3218,11 +3218,21 @@
   ],
   "file": "skills/commit/SKILL.md",
   "slug": "skills_commit_SKILL",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "lens": "batch",
+    "survives": true,
+    "confidence": "high",
+    "revised_category": "LAZY_REF",
+    "revised_claim": "Move release-type mechanics (regex display, precedence, BREAKING: fallback detail, --dry-run procedure) to skills/commit/references/release-type.md behind a pointer that keeps three things in the hot path: the two marker tokens, the own-line rule, and one clause that a column-0 BREAKING:/BREAKING CHANGE: line forces a major bump. That last clause is the one authoring-time hazard a commit author can trigger silently (auto-bump misfires are not hook-recoverable \u2014 wrong semver ships quietly), so it must not move out of context. Pointer must use ${CLAUDE_SKILL_DIR}/references/release-type.md per ADR-0009.",
+    "evidence": "Section added with the auto-bump feature itself (f79089b2, 2026-05-14) and tightened alongside the helper regex (544bbab9, 2026-05-18 'Drop release-type: skip from auto-bump and tighten BREAKING regex') \u2014 provenance is feature-documentation, not an observed model failure, so no live-failure anchor blocks the move. Regexes at cortex_command/auto_bump_version.py:37-56. Grandfathered MUST ('marker MUST appear as the entire content of its own line', SKILL.md:65) moves with the section; no new escalation introduced. Weighted saving ~3.3k of 3654 tokens across ~9 loads/run for detail only needed at rare release cuts.",
+    "user_question": ""
+   }
+  ],
   "mech_pins": [
    "` and invokes `->docs/overnight-operations.md",
    "` and invokes `->tests/test_check_prescriptive_prose.py",
@@ -3265,11 +3275,21 @@
   "pins": [],
   "file": "skills/commit/SKILL.md",
   "slug": "skills_commit_SKILL",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "lens": "batch",
+    "survives": true,
+    "confidence": "high",
+    "revised_category": "DELETE",
+    "revised_claim": "Delete the two worked examples from the hot path; optionally fold them into the references/release-type.md file created by s7 (they cost nothing there). They illustrate only the own-line rule the s7 pointer already states, and a frontier model needs no worked example to place a bracketed token on its own line in a body.",
+    "evidence": "Examples arrived with the section in f79089b2 (2026-05-14) as illustration, not as a fix for an observed failure (no -S provenance tying them to a misplaced-marker incident). Behavioral walk-through: an agent holding the s7 pointer (tokens + own-line rule) composes '[release-type: minor]' on its own body line without an exemplar \u2014 the only failure mode (mid-line embedding) is exactly what the retained rule states. Contingent ordering: apply with or after s7 so the pointer exists; if s7 were rejected, these examples still add nothing the full section's regex line does not.",
+    "user_question": ""
+   }
+  ],
   "mech_pins": [
    "`cortex-auto-bump-version`->bin/.audit-bare-python-m-allowlist.md",
    "`cortex-auto-bump-version`->bin/cortex-auto-bump-version",
@@ -3314,11 +3334,21 @@
   ],
   "file": "skills/commit/SKILL.md",
   "slug": "skills_commit_SKILL",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "lens": "batch",
+    "survives": true,
+    "confidence": "high",
+    "revised_category": "COMPRESS",
+    "revised_claim": "Drop the derivable template block and the hook-duplicated structural bullets (capital opener, no trailing period, blank line before body), keeping the judgment lines the hook cannot check: summarize the why not the what, 72-char wrap, skip body for self-evident changes \u2014 PLUS keep 'imperative mood' in the retained line, because the hook's check is only a past-tense-opener blacklist (added|fixed|removed|...) and does not catch third-person forms like 'Adds foo', so imperative is partially enforced, not fully.",
+    "evidence": "Section is initial-commit provenance (428e54ea, 2026-04-01) \u2014 pre-hook-maturity boilerplate, no observed-failure anchor. Behavioral walk-through without the section: a frontier model produces conventional imperative git messages by default; any structural miss is denied by the PreToolUse hook with the exact reason, and the retained judgment lines cover everything the hook is silent on (why-not-what, wrap, body-skip). Saving is partial (~60-70 of 120 tokens x9 loads) but the change is safe with the imperative-mood precondition named above.",
+    "user_question": ""
+   }
+  ],
   "mech_pins": [],
   "mech_pin_count": 0
  },
@@ -3337,11 +3367,21 @@
   ],
   "file": "skills/commit/SKILL.md",
   "slug": "skills_commit_SKILL",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "lens": "batch",
+    "survives": true,
+    "confidence": "high",
+    "revised_category": "COMPRESS",
+    "revised_claim": "Delete both example blocks and keep the two prohibition sentences (HEREDOC/command-substitution, dangerouslyDisableSandbox), with one named precondition: retain a clause naming the sanctioned multi-line form (a second -m flag for the body), since the prohibition forbids Claude Code's trained-default HEREDOC commit style and the skill must leave one legal path to a multi-line body visible.",
+    "evidence": "git log -S HEREDOC on skills/commit/SKILL.md shows only the initial commit (428e54ea) \u2014 the prohibition predates any recorded incident and counters the model's trained default, so it stays; the two `git commit -m` blocks (SKILL.md:43-50) narrate the obvious. Walk-through without examples: model told 'no HEREDOC, no $(...)' reaches multiple -m flags or a multi-line quoted string immediately; both pass the hook (fixtures invalid-no-blank-line.json prove the one miss-shape is caught loudly). ~45 of 88 tokens x9 loads saved.",
+    "user_question": ""
+   }
+  ],
   "mech_pins": [
    "`dangerouslyDisableSandbox: true`->skills/overnight/SKILL.md",
    "`dangerouslyDisableSandbox: true`->skills/overnight/references/new-session-flow.md",
@@ -3388,11 +3428,21 @@
   ],
   "file": "skills/commit/SKILL.md",
   "slug": "skills_commit_SKILL",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "lens": "batch",
+    "survives": true,
+    "confidence": "high",
+    "revised_category": "COMPRESS",
+    "revised_claim": "Collapse steps 2-4 (stage/compose/commit narration) into a single constraints line, keeping verbatim: the `cortex-commit-preflight` step-1 invocation, 'git add specific files, not -A', and 'Do not push / Do not create branches / no conversational text'. Safe: the collapsed steps are How-narration a frontier model performs unprompted (and CLAUDE.md's prescribe-What-not-How principle explicitly targets this), while every pin in the area attaches to the CLI verb or the retained directives, not the numbered-list prose.",
+    "evidence": "Workflow numbered list dates to the preflight extraction era (a4666918 2026-04-28, b0430be6 2026-05-06 touched only the invocation form); steps 2-4 are original scaffolding with no failure-driven -S provenance. Walk-through without steps 2-4: preflight JSON gives status+diff+log, retained constraints bound staging and output behavior, hook loudly rejects format misses \u2014 nothing in the deleted narration changes any decision the model makes. Regenerate plugins/cortex-core mirror in the same commit (drift hook). ~55 of 100 tokens x9 loads saved.",
+    "user_question": ""
+   }
+  ],
   "mech_pins": [
    "`cortex-commit-preflight`->bin/.audit-bare-python-m-allowlist.md",
    "`cortex-commit-preflight`->bin/.contract-lint-exceptions.md",
@@ -3470,11 +3520,21 @@
   ],
   "file": "skills/refine/SKILL.md",
   "slug": "skills_refine_SKILL",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "lens": "batch",
+    "survives": true,
+    "confidence": "high",
+    "revised_category": "COMPRESS",
+    "revised_claim": "Cut ~150-180 tokens from Step 2 (lines 37-63): (1) drop the verb-internals parenthetical on line 39 ('it classifies the state from the lifecycle artifacts (is_file() over spec.md/research.md) and prints {json}') \u2014 the JSON is self-describing at runtime and the skill only branches on `resume`; keep the 'read-only' descriptor. (2) On line 60, keep the behavioral instruction ('Omit --backlog-slug for Context B... pass it whenever a local backlog item exists \u2014 do not branch on the backend') but replace the guard-mechanics rationale ('structurally drops it (and emits a diagnostic)... no stale local file is read. The cortex-backlog arm stays byte-identical to today.') with a one-clause ADR-0019 pointer; 'byte-identical to today' is stale June-2026 migration prose. Preconditions: keep both fenced command blocks verbatim (emit-lifecycle-start block must retain the contiguous 'emit-lifecycle-start --backend {resolved}' shape), keep the argless `cortex-read-backlog-backend` mention, keep all 4 resume branches incl. the clarify.md \u00a76 ref, keep the idempotent/safe-on-resume note, keep the seed\u2192reconcile\u2192gate invariant paragraph with its criticality-matrix.md ref, and regenerate the plugins/cortex-core mirror in the same commit (drift hook). Edit requires a lifecycle per CLAUDE.md skills/ rule.",
+    "evidence": "Provenance: line 39 narration and line 60 rationale both landed in the #322 offload (b71f6e3f 'Replace refine Step 2 resume-tree with resume-point call' and a8b432c5 'Collapse refine backend two-arm prose to one --backend call', 2026-06-29). a8b432c5's message states 'the backend-keyed slug-omission prose is gone (the verb's --backend guard owns the non-local slug-drop)' \u2014 i.e., #322's deliberate design moved this invariant into code; the line-60 re-explanation is transitional residue ('byte-identical to today' dates itself), duplicated at cortex/adr/0019:19. Enforcement: grepped tests/ for 'structurally|byte-identical|stale local|slug-drop|is_file|classifies the state' against SKILL.md \u2014 zero prose pins on the cut targets; the only SKILL.md Step-2 pins are the command literals/shapes (test_refine_lifecycle_start_wiring.py:31, test_refine_reconcile_clarify.py:256/280) which the claim keeps. Behavioral walk: post-trim the orchestrator still (1) runs resume-point and branches on `resume` (output shape observed at runtime), (2) resolves backend once, (3) seeds emit-lifecycle-start unconditionally with --backend {resolved} and item-existence-keyed --backlog-slug, (4) preserves seed\u2192reconcile\u2192gate ordering into Step 5 \u2014 no decision input is lost. The only conflation risk (Context B = no item vs backend != cortex-backlog) is covered by keeping the 'do not branch on the backend' clause, which the revised claim names as a precondition. Scorer's ~180-token estimate is slightly high; realistic ~150-180.",
+    "user_question": ""
+   }
+  ],
   "mech_pins": [
    "`${CLAUDE_SKILL_DIR}/references/clarify.md`->skills/discovery/SKILL.md",
    "`${CLAUDE_SKILL_DIR}/references/clarify.md`->tests/fixtures/skill_path/negative.md",
@@ -4369,11 +4429,21 @@
   "pins": [],
   "file": "skills/research/SKILL.md",
   "slug": "skills_research_SKILL",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "lens": "batch",
+    "survives": true,
+    "confidence": "high",
+    "revised_category": "MERGE_DEDUP",
+    "revised_claim": "Collapse '### Angle selection' to the count arithmetic (agent_count \u2212 core \u2212 adversarial-if-high/critical) plus the template index, PROVIDED the fanout.md hybrid-angle-selection pointer sentence ('the authority ... is fanout.md. Apply it.') is retained and the template h4 tags '(core)' / '(always last for high/critical)' stay \u2014 the roster and ordering then remain structurally encoded in the template headings while the selection rules live only in fanout.md, which is force-read in Step 2 for the grid (and unconditionally so if s4 lands, since s4 removes the inline floor/corner values).",
+    "evidence": "Not a reverted-cut re-proposal: #302 revert (6f683afb) touched only the frontmatter description (378->502->379B), and the prior adversarial trim 781acd3c trimmed this exact section ('Apply it; do not re-derive the rule here' -> 'Apply it.') without any subsequent revert. Grep of tests/, cortex_command/, hooks/, claude/ for 'Angle selection|Mandatory core|keyword router' returns zero pins (only tests/test_research_fanout_matrix.py exists and it pins fanout.md exclusively, FANOUT_MD at line 22). Roster survives via '#### Codebase (core)', '#### Web (core)', '#### Requirements & Constraints (core)', '#### Adversarial (always last for high/critical)' headings (SKILL.md:75,98,121,160). Section does not ride into searcher prompts (only fenced templates + injection fragment do), so no multiplied-cost conservatism applies. fanout.md is resident every run via the Step 2 grid Read.",
+    "user_question": ""
+   }
+  ],
   "mech_pins": [],
   "mech_pin_count": 0
  },
@@ -4393,11 +4463,21 @@
   ],
   "file": "skills/research/SKILL.md",
   "slug": "skills_research_SKILL",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "lens": "batch",
+    "survives": true,
+    "confidence": "high",
+    "revised_category": "COMPRESS",
+    "revised_claim": "Strip the bracketed annotations from the Output-structure skeleton (angle-roster re-explanation duplicating Step 4's opening at line 199; verbatim re-quote of the empty-agent warning canonical at line 207; escalator-parse restatement duplicating line 199) \u2014 PROVIDED (1) the '## Open Questions' heading keeps a one-line semantics note including 'omit if no open questions exist' (that omission instruction exists nowhere else; refine's exit gate at skills/refine/SKILL.md:143 tolerates absence but doesn't instruct it) and (2) the '## Considerations Addressed' definition is kept intact \u2014 it is the SOLE definition of that section anywhere in the repo (grep: only skills/research/SKILL.md).",
+    "evidence": "grep -l 'Considerations Addressed' across tests/, skills/, cortex_command/, cortex/adr/ hits only skills/research/SKILL.md \u2014 its definition is irreplaceable and the claim keeps it. '## Open Questions' machine contract is stated in Step 4 opening (SKILL.md:199) independently of the skeleton annotation. Warning literal canonical at SKILL.md:207 (### Empty/failed agent handling). The subdivision-note instruction in the Open Questions annotation also exists canonically at fanout.md:26. No test parses the SKILL.md fenced skeleton (test_skill_contracts.py has no research entries; escalator/discovery tests are artifact-side). Section is orchestrator-side synthesis guidance \u2014 does not ride into searcher prompts.",
+    "user_question": ""
+   }
+  ],
   "mech_pins": [
    "`## Codebase Analysis`->skills/discovery/references/research.md",
    "`## Codebase Analysis`->tests/fixtures/discovery-brief/complex-topic/research.md",
@@ -4439,11 +4519,21 @@
   ],
   "file": "skills/research/SKILL.md",
   "slug": "skills_research_SKILL",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "lens": "batch",
+    "survives": true,
+    "confidence": "medium",
+    "revised_category": "MERGE_DEDUP",
+    "revised_claim": "Fold Step 5 into Step 1's mode-detection block and cut mkdir/announce narration, with a HARD placement precondition the scorer's claim under-specifies: tests/test_research_handoff.py::test_standalone_reads_nothing slices from the case-sensitive anchor '**Standalone mode**' to the NEXT '\\n## ' heading \u2014 after the fold that slice extends to '## Step 2', so the anchor block must be positioned AFTER Step 1's considerations-file paragraph (current line 45), which contains both 'research-considerations-file' and 'reads that file' and would fail the slice's negative assertions if it fell inside. Also ensure exactly one capital-S '**Standalone mode**' occurrence (Step 1's existing bullet is lowercase '**standalone mode**' \u2014 keep it lowercase or dedupe). Retain the no-file/no-Considerations-Addressed semantics in the anchor block; the write destination is already stated at line 37 and refine externally verifies research.md exists post-return (skills/refine/SKILL.md:133), so the numbered write/mkdir/announce narration is safely inferable.",
+    "evidence": "test_research_handoff.py:37-44 _slice implementation confirmed: text.find('**Standalone mode**') (case-sensitive, first occurrence) then re.search(r'\\n## '). Grep for the announce string 'Research complete. Written' across tests/, cortex_command/, hooks/: zero hits. mkdir is trivially inferable for a capable model and refine pre-creates the dir anyway (writes research-considerations.md into it, skills/refine/SKILL.md:108). Not a re-proposal of a reverted cut: 781acd3c compressed Step 5 item 3 without revert; 6f683afb touched frontmatter only. Section is orchestrator-side; never rides into searcher prompts.",
+    "user_question": ""
+   }
+  ],
   "mech_pins": [
    "`$ARGUMENTS`->cortex/adr/0022-explicit-path-arg-for-refine-research-considerations-handoff.md",
    "`$ARGUMENTS`->cortex_command/lifecycle/parse_args.py",
@@ -4488,11 +4578,21 @@
   ],
   "file": "skills/research/SKILL.md",
   "slug": "skills_research_SKILL",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "lens": "batch",
+    "survives": true,
+    "confidence": "high",
+    "revised_category": "MERGE_DEDUP",
+    "revised_claim": "Reduce Step 2 to the pointer sentence plus ONE retained clause: keep a one-line 'upper bound on investigation breadth, not a quota \u2014 dispatch fewer if fewer distinct angles' rider (matching discovery's deliberately-condensed sibling at skills/discovery/references/research.md:43, which kept exactly that clause when it went pointer-only), and delete the floor/corner/monotonic restatement. Deleting the inline floor(3)/corner(10) values is affirmatively good: today a simple+low run could skip the fanout.md Read because 3 is inline; removing them makes the Step-2 Read unconditional, which also strengthens the resident-fanout.md assumption that candidates s7/s13 rely on. Keep the ${CLAUDE_SKILL_DIR}/references/fanout.md link (skill-path lint).",
+    "evidence": "Provenance: 01cf51a8 'Wire /research count to shared fan-out matrix' created this as a deliberate summary-plus-pointer; 781acd3c already trimmed the worked examples and '(do not re-inline it here)' from this exact section with no subsequent revert; 6f683afb (#302 revert) was frontmatter-description only, so this is not a reverted-cut re-proposal. fanout.md:14 states floor/monotonic/quota canonically and the grid values live only there, so the orchestrator must Read it. Step 2 is orchestrator-side and never rides into searcher prompts.",
+    "user_question": ""
+   }
+  ],
   "mech_pins": [
    "` (row) meets its `->skills/research/references/fanout.md",
    "`agent_count`->skills/discovery/references/research.md"
@@ -4536,11 +4636,21 @@
   ],
   "file": "skills/research/SKILL.md",
   "slug": "skills_research_SKILL",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "lens": "batch",
+    "survives": true,
+    "confidence": "high",
+    "revised_category": "COMPRESS",
+    "revised_claim": "Drop the two example invocations (unpinned; the argument-hint frontmatter line 18 carries the grammar) and merge the line-45 reader-contract paragraph with Step 3's '### Considerations injection' into ONE canonical statement \u2014 safe because tests/test_research_handoff.py's pins are file-wide regexes, but with three named preconditions: (1) the merged statement must preserve regex-matchable phrasings verbatim-ish \u2014 'read(s) that/the file and substitute(s) its literal content' (test line 87-91), an '(absent|missing|empty|whitespace) ... no injection' clause (line 129-134), and 'do not halt' (line 135); (2) no bare 'research-considerations' token may be introduced (test_no_stale_bare_value_key, negative lookahead for -file/.md); (3) execute jointly with s6 as one edit so exactly one canonical statement survives, then run pytest tests/test_research_handoff.py.",
+    "evidence": "Provenance is recent and live (7a516eba, #337, 2026-06-30) but the duplication being cut is an artifact of the migration touching two sites, not an observed-failure hardening: ADR-0022 records the channel design and its tests, and neither requires dual statement. Example invocations: repo-wide grep for their literal text in tests/, hooks/, cortex_command/ returns nothing. Not a reverted-cut re-proposal (781acd3c predates this paragraph; 6f683afb frontmatter-only). Step 1 is orchestrator-side; the fences that ride into searcher prompts are untouched and test_inject_content_not_path's fence negatives remain green structurally.",
+    "user_question": ""
+   }
+  ],
   "mech_pins": [
    "`$ARGUMENTS`->cortex/adr/0022-explicit-path-arg-for-refine-research-considerations-handoff.md",
    "`$ARGUMENTS`->cortex_command/lifecycle/parse_args.py",
@@ -4587,11 +4697,21 @@
   ],
   "file": "skills/research/SKILL.md",
   "slug": "skills_research_SKILL",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "lens": "batch",
+    "survives": true,
+    "confidence": "high",
+    "revised_category": "COMPRESS",
+    "revised_claim": "Keep the per-angle applicability arms with their why (core-only; not Tradeoffs \u2014 unnarrowed orthogonal evaluation; not Adversarial \u2014 works on summarized findings) and cut (a) the content-not-path and empty-file clauses duplicated from Step 1 and (b) the h3-nesting/placement How \u2014 safe because the three core fenced templates literally contain the '### Considerations to investigate alongside the primary scope' heading in position (after {INJECTION_RESISTANCE_INSTRUCTION}, before Output format), so level and placement are structurally demonstrated, and the file-wide handoff regexes need exactly one occurrence, provided by the s3-merged canonical statement. Precondition: apply as one coordinated edit with s3 and gate on pytest tests/test_research_handoff.py (test_three_placeholders_retained==3, fence negatives, reader-contract, literal-content).",
+    "evidence": "The h3/placement paragraph is genuinely duplicated How: templates at SKILL.md:87-88, 111-112, 131-132 carry the heading + placeholder in situ; a capable model substituting into those templates cannot misplace the section. The exclusions-with-why survive per the claim (their why was already compressed once in 781acd3c and kept \u2014 this candidate keeps them again, so no prior-trim conflict). Provenance 7a516eba (#337) is live but its enforcement is the regex test suite, not prose duplication. Only the heading INSIDE the fences rides into searcher prompts (multiplied cost is untouched); the prose being cut is orchestrator-side.",
+    "user_question": ""
+   }
+  ],
   "mech_pins": [
    "`research-considerations-file`->cortex/adr/0022-explicit-path-arg-for-refine-research-considerations-handoff.md",
    "`research-considerations-file`->skills/refine/SKILL.md",
@@ -4618,11 +4738,21 @@
   ],
   "file": "skills/research/SKILL.md",
   "slug": "skills_research_SKILL",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "lens": "batch",
+    "survives": true,
+    "confidence": "high",
+    "revised_category": "COMPRESS",
+    "revised_claim": "Cut the restated rationale while keeping every ADR-0023-mandated mechanism (runnable resolve+bind bash line, core-wave model: bind + '(sonnet)', adversarial omits model:, wave ordering, read-only/no-worktree, full degrade-loud fallback) \u2014 but note the realizable saving is smaller than scored: 'breadth-first gather' is NOT in this section (that phrase lives only in fanout.md:32); the actual cuttable rationale is the trailing 'it is the error-correction layer, deliberately not routed to searcher (the judgment-inherit contract)' clause on wave 2 and the no-second-wave closer line (~50-70 tokens, not the implied bulk of 368). Both are canonically stated in fanout.md:33-35, resident via the Step 2 grid Read. Keep the 'Per [fanout.md]:' citation link.",
+    "evidence": "Provenance: 8b65e414 'Route research core-wave fan-out to Sonnet searcher tier' (2026-06-30, ADR-0023) \u2014 very recent and live, but the candidate cuts only rationale that the same feature authored canonically in fanout.md:33 ('the judgment-inherit contract; see docs/internals/sdk.md and ADR-0023') and fanout.md:35 (no-second-wave). resolve_model_cli.py:77 carries the contract in code comments too. Not a reverted-cut re-proposal (781acd3c trimmed this section's earlier form; never reverted; 6f683afb frontmatter-only). Dispatch protocol is orchestrator-side \u2014 nothing here rides into searcher prompts. Searcher-tier review history (#334 memory) demanded token-complete removal when a ref is cut \u2014 here the fanout.md token is deliberately KEPT as the citation.",
+    "user_question": ""
+   }
+  ],
   "mech_pins": [
    "` (sonnet) as each core-wave Agent's `->skills/discovery/references/research.md",
    "`cortex-resolve-model`->bin/cortex-resolve-model",
@@ -6459,11 +6589,21 @@
   ],
   "file": "cortex/requirements/project.md",
   "slug": "cortex_requirements_project",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "lens": "batch",
+    "survives": true,
+    "confidence": "high",
+    "revised_category": "COMPRESS",
+    "revised_claim": "Compress lines 44-46 to gate-name + suppression-token + one-line intent + pointer each. Preconditions: (1) keep the literal tokens `cortex-check-bare-python-import`, `cortex-check-skill-path`, `<!-- bare-python-lint:ignore-next -->`, `<!-- skill-path-lint:ignore-next -->`, `tests/test_backlog_grep_targets_resolve.py`, and the ADR-0009 pointer so parity wiring and discoverability survive; (2) project.md is in cortex-check-contract scan scope (tests/test_check_contract.py:162), so the rewrite must not introduce new bare inline-code `cortex-<verb>` mentions that trip E101/E103; (3) keep the one-clause WHY for the backlog grep-c rule (prevents acceptance criteria passing against hallucinated event names) since no other prose home states it.",
+    "evidence": "Line 46 duplicates the always-loaded CLAUDE.md skill-dir design-principle paragraph (same lint name, same ADR-0009 cite, same propagate-the-resolved-path rule). skill_path.py:1-46 and bare_python_import.py:21 self-document detectors and suppression sentinels; violations fail loudly at pre-commit, so a capable model recovers without the prose. tests/test_backlog_grep_targets_resolve.py structurally enforces line 44. No test greps project.md for any token in lines 44-46 (only Conditional Loading format is content-pinned, tests/test_load_requirements_cli.py:314-337).",
+    "user_question": ""
+   }
+  ],
   "mech_pins": [
    "`## Touch points`->cortex_command/lint/prescriptive_prose.py",
    "`## Touch points`->skills/backlog-author/SKILL.md",
@@ -6511,11 +6651,21 @@
   ],
   "file": "cortex/requirements/project.md",
   "slug": "cortex_requirements_project",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "lens": "batch",
+    "survives": true,
+    "confidence": "high",
+    "revised_category": "COMPRESS",
+    "revised_claim": "Collapse line 41 (EnterWorktree) to scope-statement + '-> ADR-0008' and line 42 (install-state) to contract-name + dependency-direction one-liner ('the wheel never imports from plugins/cortex-overnight/') + parity-test pointer; line 43 (AUTO_ENSURE) is already near-minimal, keep or trim lightly. Precondition: retain the parity-test cite (tests/test_install_state_path_parity.py) and the dependency-direction invariant, since line 42 has no ADR and those two clauses are its only non-code-duplicated content.",
+    "evidence": "cortex/adr/README.md 'No-content-duplication discipline rule' explicitly forbids project.md restating ADR bodies and requires one-line back-pointers. ADR-0008 exists and owns line 41's decision. install_core.py:763-768 docstring duplicates line 42's rationale ('vendor-style ... bare system python3 with only CLAUDE_PLUGIN_ROOT on sys.path ... enforced by tests/test_install_state_path_parity.py'), and install_state.py:7 documents the dependency direction. No test greps project.md prose in lines 39-43.",
+    "user_question": ""
+   }
+  ],
   "mech_pins": [
    "` with only `->cortex_command/dashboard/tests/test_data.py",
    "` with only `->cortex_command/hooks/scan_lifecycle.py",
@@ -6563,11 +6713,21 @@
   ],
   "file": "cortex/requirements/project.md",
   "slug": "cortex_requirements_project",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "lens": "batch",
+    "survives": true,
+    "confidence": "high",
+    "revised_category": "COMPRESS",
+    "revised_claim": "Cut the line-48 L1-ratchet bullet to ~1/3, keeping (a) the heading token 'SKILL.md L1 surface ratchet' verbatim, (b) the cluster-exemption concept + promotion-by-reviewed-allowlist-edit rule, and (c) the re-cap-with-rationale-plus-lifecycle-id rule \u2014 CLAUDE.md points here BY NAME specifically 'for the cluster exemption and re-cap rule', so those two policies are the load-bearing prose; budget rows, the <=400 non-cluster default, the six cluster member names, and the completeness gate are all enforced and re-documented inside tests/test_l1_surface_ratchet.py (docstrings at lines 130-169 restate the policy). Line 47 (dependency bounds): compress the starlette example to a pointer \u2014 pyproject.toml:18-19 carries the FastAPI/starlette rationale inline \u2014 but keep the two prose-only policy clauses (uv-tool-install-ignores-uv.lock => requires-dist is the only universal governance; promote-transitive-to-direct-capped rule), which are not derivable from the test.",
+    "evidence": "CLAUDE.md names this constraint and delegates exactly two policies to it (cluster exemption, re-cap rule). tests/test_l1_surface_ratchet.py:53-56 restates the re-cap rule, :130-160 restates the 400B default + subtractive-set guard + promotion rule, :169 restates the re-cap rule again \u2014 the enforcement site is self-documenting. Cluster membership lives once in ROUTING_PRESSURE_CLUSTER. pyproject.toml:18-19 owns the starlette rationale. No test asserts project.md's body text beyond the heading token.",
+    "user_question": ""
+   }
+  ],
   "mech_pins": [
    "`ROUTING_PRESSURE_CLUSTER`->tests/test_l1_surface_ratchet.py",
    "`ROUTING_PRESSURE_CLUSTER`->tests/test_skill_routing_disambiguation.py",
@@ -6614,11 +6774,21 @@
   ],
   "file": "cortex/requirements/project.md",
   "slug": "cortex_requirements_project",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "lens": "batch",
+    "survives": true,
+    "confidence": "medium",
+    "revised_category": "COMPRESS",
+    "revised_claim": "Line 36 (TERMINAL_STATUSES dual-location contract) stays intact per the claim. Line 37: compress to the policy sentence ('deleted pipeline modules keep their read-side schema filters as historical compat shims; retitle docstrings \u2014 pattern at pipeline/metrics.py:_DAYTIME_DISPATCH_FIELDS') \u2014 the exact docstring wording is discoverable at metrics.py:367/396 and the pattern is prose-only policy, so the one-line form must survive (it is the ONLY enforcement; there is no test pinning shim retention). Line 38: compress to gotcha + remedy, keeping three facts verbatim: binstubs read the installed wheel not the working tree; python3 -m runs the working tree; CORTEX_COMMAND_FORCE_SOURCE=1 forces working-tree execution in the bin/cortex-* wrappers. This bullet is operationally load-bearing during lifecycle implement phases (the wheel-vs-tree staleness gotcha recurs in session history), and project.md is its main prose home \u2014 the mechanism is otherwise documented only in bin wrapper header comments.",
+    "evidence": "metrics.py:367/396 carry the retitled compat docstring verbatim, so line 37's format detail is code-discoverable; but no test enforces shim retention \u2014 the policy sentence is the sole guard and must survive compression. grep shows CORTEX_COMMAND_FORCE_SOURCE appears only in bin/ wrapper comments and code, nowhere in docs/ or CLAUDE.md, so line 38's remedy clause is the primary prose home. Both lines 37-38 landed via #246 review drift (commit a1b25507) for an observed failure class that is still live (module deletions and wheel staleness both recurred since).",
+    "user_question": ""
+   }
+  ],
   "mech_pins": [
    "`_DAYTIME_DISPATCH_FIELDS`->cortex_command/pipeline/metrics.py",
    "`_DAYTIME_DISPATCH_FIELDS`->cortex_command/pipeline/tests/test_metrics.py",
@@ -6665,11 +6835,21 @@
   ],
   "file": "cortex/requirements/project.md",
   "slug": "cortex_requirements_project",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "lens": "batch",
+    "survives": true,
+    "confidence": "high",
+    "revised_category": "COMPRESS",
+    "revised_claim": "Line 49 (supervision): reduce to one line + '-> ADR-0011' \u2014 the bullet restates ADR-0011's Decision section near-verbatim (guardian + recover verb, writer-authorized recovery core, transition->paused/partial report/orphan reap/pid clear, observability-stays-read-only), which the ADR README's no-duplication rule forbids. Line 50 (containment): reduce to invariant + exemption one-liner + pointer to the test_containment_* block; the code-internals narration (relative_to-not-startswith, check-before-early-returns ordering, override handling) is pinned by seven test_containment_* tests in tests/test_worktree.py:659-816 and by code comments at worktree.py:230-231. Precondition for line 50: keep the same-repo-overnight-is-NOT-exempt clause in the compressed form \u2014 it is the one counter-intuitive cell of the exemption matrix and line 50 is its only prose home (no ADR exists for containment).",
+    "evidence": "ADR-0011 Decision section (read in full) contains line 49's content clause-for-clause; cortex/adr/README.md names project.md as a must-not-restate document. Line 50 was added by commit e0fef8a2 ('Record 332 review ... worktree-containment constraint') as review drift; its internals are pinned by tests/test_worktree.py:659,678,700,739,755,784,816 and worktree.py:230-231 comments. No test greps project.md for containment prose.",
+    "user_question": ""
+   }
+  ],
   "mech_pins": [
    "`_is_worktree_inside_repo`->cortex_command/pipeline/worktree.py",
    "`_is_worktree_inside_repo`->tests/test_worktree.py",
@@ -6718,11 +6898,21 @@
   ],
   "file": "cortex/requirements/project.md",
   "slug": "cortex_requirements_project",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "lens": "batch",
+    "survives": true,
+    "confidence": "high",
+    "revised_category": "COMPRESS",
+    "revised_claim": "Keep the philosophy-level contracts (a phase may be multi-step with a user-driven re-invocation point; merge-not-PR-open is the terminal 'Done' event, recorded as merge_anchor:'merge'; the two-kind kept-pause taxonomy with the parity-test cite) and drop the finalization mechanics (Steps 9-11a, flag-gated stage-first step, three-path enumeration, idempotent-routing detail) which ADR-0004 owns \u2014 the ADR's summary line and its #339-era amendments carry the multi-step shape, re-invocation routing matrix, and finalization tail, and cortex/adr/README.md forbids project.md restating them. Side-fix while editing: line 27 points the kept-pauses inventory at 'skills/lifecycle/SKILL.md' but the canonical inventory is skills/lifecycle/references/kept-pauses.md (per CLAUDE.md and skills/lifecycle/SKILL.md:187) \u2014 correct the pointer.",
+    "evidence": "ADR-0004 line 7 states the entire multi-step/merge-terminal design including the platform-convention rationale duplicated in line 25; its amendment sections own the finalization-tail mechanics (Steps 9-11a routing was further amended by #339). cortex/adr/README.md: project.md 'must not restate the decision body'. merge_anchor pinned at metrics.py:237/311/996-1047. Found a defect supporting the edit: project.md:27 cites 'skills/lifecycle/SKILL.md kept-pauses inventory' while the canonical inventory is references/kept-pauses.md (SKILL.md:187, CLAUDE.md).",
+    "user_question": ""
+   }
+  ],
   "mech_pins": [
    "`AskUserQuestion`->cortex/adr/0004-multi-step-complete-and-interactive-worktree-lifecycle.md",
    "`AskUserQuestion`->cortex/adr/0012-merged-plan-approval-and-dispatch-selection.md",
@@ -6769,11 +6959,21 @@
   ],
   "file": "cortex/requirements/project.md",
   "slug": "cortex_requirements_project",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "lens": "batch",
+    "survives": true,
+    "confidence": "high",
+    "revised_category": "COMPRESS",
+    "revised_claim": "Compress the sandbox-preflight and two-mode-gate bullets to name + one-line scope + pointer; keep the '## Optional' H2, the first-line prunability-convention sentence, bold-led bullet form, and the 'Workflow trimming' bullet untouched \u2014 the requirements-write schema (skills/requirements-write/SKILL.md:35) requires exactly that structure (H2 #8, first non-heading line states the convention, bold-led bullets, <=1200-token budget). Precondition: project.md is in cortex-check-contract scan scope (tests/test_check_contract.py:162), so keep the currently-passing token forms for `bin/cortex-check-parity` and `bin/cortex-check-events-registry` rather than introducing new bare `cortex-*` inline-code mentions.",
+    "evidence": "requirements-write SKILL.md:26-35 defines the eight required H2s and the Optional section's shape; only structure is pinned, not bullet content. Preflight is documented in docs/overnight-operations.md and docs/internals/auto-update.md (grep -rln preflight), and cortex-check-parity's own contract block; _in_scan_scope lives in cortex_command/lint/contract.py with tests. Parity wiring for both bin scripts is satisfied by multiple non-project.md in-scope references (tests/test_check_parity.py, tests/test_check_events_registry.py, docs/internals/events-registry.md, bin/.parity-exceptions.md).",
+    "user_question": ""
+   }
+  ],
   "mech_pins": [
    "`CHANGELOG.md`->cortex_command/lint/contract.py",
    "`CHANGELOG.md`->docs/release-process.md",
@@ -6819,11 +7019,21 @@
   ],
   "file": "cortex/requirements/project.md",
   "slug": "cortex_requirements_project",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "lens": "batch",
+    "survives": true,
+    "confidence": "high",
+    "revised_category": "COMPRESS",
+    "revised_claim": "Trim only line 58's parenthetical cue-family enumeration (prefix-cued sk-ant-/gh?_/xox[bp]-/AKIA/ASIA; keyword-delimiter Bearer/password=/token=/URL-userinfo; PEM) down to 'cue-anchored credential allowlist (families enumerated in pipeline/dispatch.py:_redact)'. Keep verbatim the three policy clauses that are NOT derivable from code: scrubbed-at-source before brain prompt/morning report, deliberately-incomplete defense-in-depth, and the no-prefixless-fixed-length-blob-matcher decision with its benign-high-entropy rationale plus the '-> #309' provenance. Those clauses are the guard against a future 'fix' that adds an entropy matcher and breaks diagnostics; the family list is a drift liability that already risks diverging from _redact's actual patterns. Lines 54-57 and 59 stay as-is.",
+    "evidence": "dispatch.py and test_dispatch.py both contain the cue patterns (mech pins password=, xox[bp]- confirmed at cortex_command/pipeline/dispatch.py and pipeline/tests/test_dispatch.py), so the enumeration is code+test-pinned. The design-decision clauses (deliberately incomplete; no prefixless blob matcher so SHAs/UUIDs/base64 survive) appear nowhere else at requirements or ADR level (no ADR 0001-0023 covers redaction), so they are the load-bearing residue the claim correctly preserves. No test greps project.md for line 58 content.",
+    "user_question": ""
+   }
+  ],
   "mech_pins": [
    "`password=`->cortex_command/pipeline/dispatch.py",
    "`password=`->cortex_command/pipeline/tests/test_dispatch.py",
@@ -8494,11 +8704,21 @@
   ],
   "file": "skills/critical-review/references/reviewer-prompt.md",
   "slug": "skills_critical_review_references_reviewer_prompt",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "lens": "batch",
+    "survives": true,
+    "confidence": "high",
+    "revised_category": "COMPRESS",
+    "revised_claim": "Compress only the two optional-field description strings inside the schema exemplar; keep delimiter, field names, structure, and enum byte-exact. Asymmetric precondition the scorer missed: line 72 (fix_invalidation_argument) is safely pointer-able because line 38 (outside this candidate, retained) carries the full instruction verbatim; line 73 (straddle_rationale) is NOT purely pointer-able because the Straddle Protocol section (lines 40-42) never names the field or its population condition -- line 73 is the SOLE instruction telling reviewers to populate straddle_rationale when biasing up to A on an unsplittable case, and the a-to-b-downgrade-rubric Trigger-3 Straddle exemption plus the live with_straddle classifier test depend on that field being populated in exactly that case. Safe form: pointer for line 72; for line 73 either keep the 'when biasing up to A on an unsplittable case' trigger clause or move the field-population instruction into the Straddle Protocol section in the same edit. Realistic savings ~25-30 raw tokens (~100-120 weighted), below the scorer's ~40-token estimate. Regenerate plugins/cortex-core mirror in the same commit (drift hook).",
+    "evidence": "reviewer-prompt.md:62-77 read directly: line 72 description duplicates line 38 near-verbatim (both from efbe4e99 'Add fix_invalidation_argument field', orchestrator-pushback lifecycle R2); line 73 is the only occurrence of straddle_rationale population semantics in the reviewer prompt -- Straddle Protocol section (lines 40-42, from f3c91f33 A/B/C taxonomy commit) instructs split-or-bias-up but never names the field. Downstream: verification-gates.md:66 treats both fields as optional:str (presence-only schema), synthesizer-prompt.md:33 re-reads fix_invalidation_argument for the A->B rubric, a-to-b-downgrade-rubric.md:13 exempts Trigger 3 on straddle_rationale presence, and test_critical_review_classifier.py:770-815 asserts (via live claude -p) that reclassification does NOT fire when the field is populated -- the with_straddle/no_straddle pair varies ONLY that field, proving its presence is behavior-determining. History: lines extracted to references/ in 16fbcd7e; envelope extraction added in 423221f3; all originating failures (A-class over-tagging, straddle disputes) remain live enforced behaviors, so field semantics must survive compression even as prose shrinks.",
+    "user_question": ""
+   }
+  ],
   "mech_pins": [
    "`<!--findings-json-->`->cortex_command/overnight/prompts/orchestrator-round.md",
    "`<!--findings-json-->`->cortex_command/overnight/prompts/plan-synthesizer.md",
