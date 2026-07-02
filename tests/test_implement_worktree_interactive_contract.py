@@ -136,3 +136,79 @@ def test_gate_and_gated_path_use_same_binary() -> None:
         f"gate uses '{gate_binary}' but §1a step iii invokes '{gated_binary}' "
         "— gate and gated path must call the same binary"
     )
+
+
+def test_selected_path_acquire_unified_at_1a_ii() -> None:
+    """The §1a.ii interactive-lock acquire must be unconditional (no per-entry-mode branch).
+
+    Regression guard for #355: on the picker-``selected`` interactive-worktree
+    path the lock acquire must occur only at §1a.ii (after the §1a.i overnight
+    guard), identically to the ``suppressed`` path — never early at §1 Step B,
+    where an overnight-guard rejection would orphan a held lock.
+
+    Three assertions:
+      (i)   [discriminator] §1 contains no ``cortex-interactive-lock acquire``
+            (the early Step-B acquire is gone).
+      (ii)  [forward-guard] within §1a, the earliest acquire index is after the
+            last overnight-sidecar index (the acquire stays behind the guard).
+      (iii) [unconditionality discriminator] the §1a.ii step invokes the acquire
+            AND names neither entry mode — proving one unconditional acquire, not
+            a per-mode branch. A dead-arm half-fix must name a mode and is caught.
+    """
+    # §1 Pre-Flight Check (up to §1a).
+    section_1_match = re.search(
+        r"### 1\. Pre-Flight Check.*?(?=### 1a\.)", _IMPLEMENT_TEXT, flags=re.DOTALL
+    )
+    assert section_1_match is not None, (
+        "Could not locate '### 1. Pre-Flight Check' section in implement.md"
+    )
+    section_1 = section_1_match.group(0)
+
+    # §1a Interactive Worktree Creation, bounded at the next real heading
+    # '### 2. Task Dispatch' (NOT \\Z/EOF — so later sections cannot leak in).
+    section_1a_match = re.search(
+        r"### 1a\..*?(?=### 2\.)", _IMPLEMENT_TEXT, flags=re.DOTALL
+    )
+    assert section_1a_match is not None, (
+        "Could not locate '### 1a.' section (bounded at '### 2.') in implement.md"
+    )
+    section_1a = section_1a_match.group(0)
+
+    # The §1a.ii step: narrow §1a between the '**ii.' and '**iii.' markers.
+    ii_start = section_1a.find("**ii.")
+    assert ii_start != -1, "Could not locate '**ii.' marker in §1a of implement.md"
+    iii_start = section_1a.find("**iii.", ii_start)
+    assert iii_start != -1, "Could not locate '**iii.' marker in §1a of implement.md"
+    step_ii = section_1a[ii_start:iii_start]
+
+    # (i) discriminator: the early §1 Step-B acquire is gone.
+    assert "cortex-interactive-lock acquire" not in section_1, (
+        "§1 must not contain 'cortex-interactive-lock acquire' — the selected-path "
+        "acquire must move out of §1 Step B into §1a.ii (after the overnight guard)"
+    )
+
+    # (ii) forward-guard: the acquire stays behind the overnight guard within §1a.
+    earliest_acquire = section_1a.find("cortex-interactive-lock acquire")
+    last_sidecar = section_1a.rfind("_interactive_overnight_check.sh")
+    assert earliest_acquire != -1, (
+        "§1a must invoke 'cortex-interactive-lock acquire' at §1a.ii"
+    )
+    assert last_sidecar != -1, (
+        "§1a must invoke the overnight sidecar '_interactive_overnight_check.sh' at §1a.i"
+    )
+    assert earliest_acquire > last_sidecar, (
+        "the §1a lock acquire must come AFTER the §1a.i overnight guard "
+        f"(acquire@{earliest_acquire} must be > sidecar@{last_sidecar})"
+    )
+
+    # (iii) unconditionality discriminator: the §1a.ii acquire is unconditional —
+    # it names neither entry mode, so no dead per-mode arm can hide.
+    assert "cortex-interactive-lock acquire" in step_ii, (
+        "the §1a.ii step ('**ii.'→'**iii.') must invoke 'cortex-interactive-lock acquire'"
+    )
+    step_ii_lower = step_ii.lower()
+    assert "selected" not in step_ii_lower and "suppressed" not in step_ii_lower, (
+        "the §1a.ii acquire must be UNCONDITIONAL — the step must name neither "
+        "'selected' nor 'suppressed'; a per-entry-mode branch (dead-arm half-fix) "
+        "would name at least one mode and re-introduce the orphan risk"
+    )

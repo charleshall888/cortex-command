@@ -16,7 +16,7 @@ cortex-lifecycle-dispatch-choice --feature {slug}
 
 Routing on the output (the read is gated on `main`/`master` so it runs in the main-repo CWD — an interactive worktree carries its own events.log):
 
-- A valid branch mode (`trunk` / `worktree-interactive` / `feature-branch`) — **do not render the picker**. Treat the value exactly as if the operator had selected that option in the picker and run the identical post-selection routing (so every guard still runs): `trunk` → remain on the current branch → §2; `worktree-interactive` → **record entry mode `selected`**, run Step A (overnight-active rejection) and Step B (interactive-lock acquisition) below, then §1a; `feature-branch` → create and check out `feature/{lifecycle-slug}`, then §2.
+- A valid branch mode (`trunk` / `worktree-interactive` / `feature-branch`) — **do not render the picker**. Treat the value exactly as if the operator had selected that option in the picker and run the identical post-selection routing (so every guard still runs): `trunk` → remain on the current branch → §2; `worktree-interactive` → **record entry mode `selected`**, run Step A (overnight-active rejection) below, then §1a; `feature-branch` → create and check out `feature/{lifecycle-slug}`, then §2.
 - Empty output, `wait`, or command-not-found (the console-script not yet installed) — no recorded branch mode; **fall through to the fallback picker below**.
 
 **Branch selection**: When the current branch is `main` or `master` AND no branch mode was consumed above (this is the fallback picker — it fires only when no plan-time `dispatch_choice` was recorded), prompt the user via AskUserQuestion with three options:
@@ -60,7 +60,7 @@ Route by `command -v` exit code:
 Pass the resolved options array to `AskUserQuestion`.
 
 Dispatch by selection:
-- If the user selects **Implement on feature branch with worktree**, **record entry mode `selected`** and run the two interactive preflight guards below (Steps A and B) before proceeding to §1a. If either guard rejects, exit §1 without creating a worktree.
+- If the user selects **Implement on feature branch with worktree**, **record entry mode `selected`** and run the interactive preflight guard below (Step A) before proceeding to §1a. If it rejects, exit §1 without creating a worktree.
 
   **Step A — Overnight-active rejection mirror**: Source the overnight-probe sidecar and surface interactive-tailored wording on exit 1:
 
@@ -70,15 +70,7 @@ Dispatch by selection:
 
   Substitute the body-resolved absolute sidecar path (SKILL.md, Reference-path propagation).
 
-  Sidecar exit codes: `0` = no overnight active, proceed to Step B; `1` = overnight live for this repo, surface the wording above and exit §1 without creating a worktree; `2` = stale runner detected, surface a warn-and-continue diagnostic and proceed to Step B.
-
-  **Step B — Interactive lock acquisition**: Run a single Bash call to acquire the per-feature interactive lock:
-
-  ```
-  cortex-interactive-lock acquire {slug}
-  ```
-
-  On exit 0: proceed to §1a. On non-zero exit: the console-script has already written R5's rejection wording to stderr — surface stderr verbatim and exit §1 without creating a worktree.
+  Sidecar exit codes: `0` = no overnight active, proceed to §1a; `1` = overnight live for this repo, surface the wording above and exit §1 without creating a worktree; `2` = stale runner detected, surface a warn-and-continue diagnostic and proceed to §1a.
 
 - **Implement on current branch** → proceed to §2 Task Dispatch on the current branch.
 - **Create feature branch** → create and check out `feature/{lifecycle-slug}`, then proceed to §2 Task Dispatch.
@@ -99,10 +91,13 @@ cat ${CLAUDE_SKILL_DIR}/references/_interactive_overnight_check.sh | bash -s -- 
 
 Sidecar exit codes carry the same `0` = proceed / `1` = reject / `2` = warn-and-continue (stale runner) semantics as §1 Step A; on this path exit `0` proceeds to ii and exit `1` exits §1a.
 
-**ii. Interactive lock (per-feature concurrency guard).** Acquire the real lock via the `cortex-interactive-lock` console script — the single source of truth for `cortex/lifecycle/{slug}/interactive.pid` — conditioned on the carried entry mode, and only **after** the overnight guard (i) has passed, so a rejecting overnight guard can never orphan a held lock:
+**ii. Interactive lock (per-feature concurrency guard).** Acquire the real lock via the `cortex-interactive-lock` console script — the single source of truth for `cortex/lifecycle/{slug}/interactive.pid` — **unconditionally for both entry modes**, and only **after** the overnight guard (i) has passed, so a rejecting overnight guard can never orphan a held lock. Run a single Bash call:
 
-- Entry mode `selected`: §1 Step B already acquired the lock for `{slug}` this session — do **not** acquire again (a second same-session acquire self-rejects on the session-id-match row). Proceed to iii.
-- Entry mode `suppressed`: run a single Bash call `cortex-interactive-lock acquire {slug}`. Exit 0 → proceed to iii. Non-zero → the script has written its rejection to stderr (a live same-slug interactive session already holds the lock); surface that stderr verbatim and exit §1a without creating a worktree.
+```bash
+cortex-interactive-lock acquire {slug}
+```
+
+Exit 0 → proceed to iii. Non-zero → the script has written its rejection to stderr (a live same-slug interactive session already holds the lock); surface that stderr verbatim and exit §1a without creating a worktree.
 
 **iii. Worktree creation.** Single Bash call invoking `cortex-worktree-create`:
 
