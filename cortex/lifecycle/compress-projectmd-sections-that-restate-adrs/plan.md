@@ -27,7 +27,7 @@ Execute the eight epic-#347 audit verdicts against `cortex/requirements/project.
 - **Complexity**: simple
 - **Context**: Current L25 ends "...consult `cortex/adr/0004-multi-step-complete-and-interactive-worktree-lifecycle.md` for the design rationale." The ADR README §No-content-duplication (L51) requires the one-line back-pointer form. `merge_anchor` and the "two kinds" pause sentence are the philosophy-level keeps. Do NOT touch the L21 Solution-horizon bullet (CLAUDE.md cites project.md's Philosophy-of-Work Solution-horizon home by name).
 - **Verification**: spec R1 — (a) cut: `grep -c "Steps 9" project.md` = 0 AND `grep -Fc "on all completion paths" project.md` = 0 AND `grep -c "adr/0004-multi-step" project.md` = 0; (b) keeps: `grep -Fc 'merge_anchor' project.md` ≥ 1 AND `grep -Fc 'ADR-0004' project.md` = 1 AND `grep -Fc 'two kinds' project.md` ≥ 1; (c) L27: `grep -Fc 'skills/lifecycle/references/kept-pauses.md' project.md` ≥ 1 AND `grep -c 'skills/lifecycle/SKILL.md' project.md` = 0. Pass if all hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: s6 — compress historical-shim + wheel-binstub bullets (medium-confidence — keep-conservative)
 - **Files**: `cortex/requirements/project.md`
@@ -36,7 +36,7 @@ Execute the eight epic-#347 audit verdicts against `cortex/requirements/project.
 - **Complexity**: simple
 - **Context**: s6 is the lone medium-confidence verdict; its keeps (shim policy sentence, FORCE_SOURCE remedy) have NO test backstop — when uncertain, keep the sentence. FORCE_SOURCE's only other home is bin-wrapper comments; the shim-retitle pattern lives at `pipeline/metrics.py:367,396`.
 - **Verification**: spec R2 — (a) keeps: `grep -Fc 'CORTEX_COMMAND_FORCE_SOURCE' project.md` ≥ 1 AND `grep -Fc 'TERMINAL_STATUSES' project.md` ≥ 1; (b) cut: `grep -Fc 'replaying or aggregating' project.md` = 0 AND `grep -Fc 'Dogfooders iterating' project.md` = 0. Pass if all hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: s7 — collapse EnterWorktree / install-state / AUTO_ENSURE bullets
 - **Files**: `cortex/requirements/project.md`
@@ -45,7 +45,7 @@ Execute the eight epic-#347 audit verdicts against `cortex/requirements/project.
 - **Complexity**: simple
 - **Context**: The critical-review flagged that a bare `plugins/cortex-overnight/` path token is NOT a proxy for the directional claim — the compressed L42 must retain the word "never imports" (the invariant itself). ADR-0008 owns L41's decision; `install_core.py:763-768` + `install_state.py:7` own L42's rationale.
 - **Verification**: spec R3 — (a) keeps: `grep -Fc 'ADR-0008' project.md` ≥ 1 AND `grep -Fc 'test_install_state_path_parity.py' project.md` ≥ 1 AND `grep -Fc 'never imports' project.md` ≥ 1 AND `grep -Fc 'plugins/cortex-overnight/' project.md` ≥ 1; (b) cut — **one present-today token per edited bullet** (all =1 now, so a per-bullet no-op fails): `grep -Fc 'cd-shim' project.md` = 0 (L41 EnterWorktree collapse) AND `grep -Fc 'vendor-style' project.md` = 0 (L42 install-state narration). Pass if all hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 4: s8 — compress the three lint bullets (grep-c / bare-python / skill-dir)
 - **Files**: `cortex/requirements/project.md`
@@ -54,7 +54,7 @@ Execute the eight epic-#347 audit verdicts against `cortex/requirements/project.
 - **Complexity**: simple
 - **Context**: **Contract-lint constraint**: keep the existing passing inline-code form of `cortex-check-bare-python-import` and `cortex-check-skill-path` — do NOT drop the `cortex-` prefix (that zeroes R4's keep-grep) and do NOT introduce a new bare `cortex-<verb>` mention. Both binaries have zero required flags/subcommands so E101/E103 are unreachable for them; the risk is only new verb mentions. The L44 WHY ("prevents acceptance criteria passing against hallucinated event names") has no other prose home — keep it (diff-review).
 - **Verification**: spec R4 — (a) keeps: `grep -Fc 'cortex-check-bare-python-import' project.md` ≥ 1 AND `grep -Fc 'cortex-check-skill-path' project.md` ≥ 1 AND `grep -Fc 'bare-python-lint:ignore-next' project.md` ≥ 1 AND `grep -Fc 'skill-path-lint:ignore-next' project.md` ≥ 1 AND `grep -Fc 'test_backlog_grep_targets_resolve.py' project.md` ≥ 1 AND `grep -Fc 'ADR-0009' project.md` ≥ 1; (b) cut — **one present-today token per edited bullet** (all =1 now): `grep -Fc 'Companion to the events-registry' project.md` = 0 (L44 grep-c narration) AND `grep -Fc 'importlib.util.find_spec' project.md` = 0 (L45 enumerated import forms) AND `grep -Fc 'resolves only in a SKILL.md body' project.md` = 0 (L46 skill-dir paragraph); (c) `cortex-check-contract --staged` (or repo-wide) exits 0. Pass if all hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5: s9 — compress dependency-bounds + L1-ratchet bullets
 - **Files**: `cortex/requirements/project.md`
@@ -63,7 +63,7 @@ Execute the eight epic-#347 audit verdicts against `cortex/requirements/project.
 - **Complexity**: simple
 - **Context**: CLAUDE.md:44 cites this section BY NAME "for the cluster exemption and re-cap rule" — those two policies are the load-bearing prose and must survive. `pyproject.toml:18-19` owns the starlette rationale; `ROUTING_PRESSURE_CLUSTER` owns cluster membership.
 - **Verification**: spec R5 — (a) keeps: `grep -Fc 'SKILL.md L1 surface ratchet' project.md` ≥ 1 AND `grep -Fc 'exemption' project.md` ≥ 1 AND `grep -Fc 're-cap' project.md` ≥ 1 AND `grep -Fc 'requires-dist' project.md` ≥ 1 AND `grep -Fc 'promote a transitive' project.md` ≥ 1; (b) cut: `grep -Fc 'starlette' project.md` = 0 AND `grep -Fc 'membership encoded once' project.md` = 0. Pass if all hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 6: s10 — compress supervision + containment bullets
 - **Files**: `cortex/requirements/project.md`
@@ -72,7 +72,7 @@ Execute the eight epic-#347 audit verdicts against `cortex/requirements/project.
 - **Complexity**: simple
 - **Context**: ADR-0011 owns L49's Decision section clause-for-clause. L50's internals are pinned by `test_worktree.py:659-816` + `worktree.py:230-231` comments. The "NOT exempt" counter-intuitive matrix cell has no ADR and no test — it is the one containment clause that must survive in prose (diff-review keep).
 - **Verification**: spec R6 — (a) keeps: `grep -Fc 'ADR-0011' project.md` ≥ 1 AND `grep -Fc 'NOT exempt' project.md` ≥ 1 AND `grep -Fc 'test_containment' project.md` ≥ 1; (b) cut — **one present-today token per edited bullet** (all =1 now): `grep -Fc 'orphan reap' project.md` = 0 (L49 supervision narration) AND `grep -Fc '_is_worktree_inside_repo' project.md` = 0 AND `grep -Fc 'startswith' project.md` = 0 (L50 containment internals). Pass if all hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 7: s11 — trim the redaction cue-family enumeration only
 - **Files**: `cortex/requirements/project.md`
@@ -81,7 +81,7 @@ Execute the eight epic-#347 audit verdicts against `cortex/requirements/project.
 - **Complexity**: simple
 - **Context**: No ADR (0001–0023) covers redaction, so the three design clauses are the load-bearing residue with no other home. The cue patterns are code+test-pinned in `dispatch.py`/`test_dispatch.py`.
 - **Verification**: spec R7 — (a) keeps: `grep -Fc 'scrubbed at source' project.md` ≥ 1 AND `grep -Fc 'NOT complete' project.md` ≥ 1 AND `grep -Fc 'prefixless fixed-length blob' project.md` ≥ 1 AND `grep -Fc '#309' project.md` ≥ 1; (b) cut: `grep -Fc 'ASIA' project.md` = 0 AND `grep -Fc 'xox' project.md` = 0. Pass if all hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 8: s15 — compress the Optional sandbox-preflight + two-mode-gate bullets
 - **Files**: `cortex/requirements/project.md`
@@ -90,7 +90,7 @@ Execute the eight epic-#347 audit verdicts against `cortex/requirements/project.
 - **Complexity**: simple
 - **Context**: Preflight is documented in `docs/overnight-operations.md` + `auto-update.md`; `_in_scan_scope` lives in `contract.py` with tests. The requirements-write schema (`skills/requirements-write/SKILL.md:35`) pins the Optional H2 + convention line + bold-led bullets + ≤1,200-token budget — do not violate. Do NOT introduce new bare `cortex-*` mentions (keep `bin/cortex-check-parity` / `bin/cortex-check-events-registry` path-qualified forms).
 - **Verification**: spec R8 — (a) compress-not-delete: `grep -Fc 'Sandbox preflight' project.md` ≥ 1 AND `grep -Fc 'Two-mode gate' project.md` ≥ 1; (b) untouched keeps: `grep -Fc '## Optional' project.md` = 1 AND `grep -Fc 'Workflow trimming' project.md` ≥ 1; (c) cut — **one present-today token per edited bullet** (both =1 now): `grep -Fc 'claude --version' project.md` = 0 (L98 sandbox-preflight narration) AND `grep -Fc 'recursive-glob matcher safe' project.md` = 0 (L99 two-mode-gate `_in_scan_scope` narration); (d) `cortex-check-contract` exits 0. Pass if all hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 9: whole-file gates — contract-lint, tests, structural invariants, net reduction, diff-scoping
 - **Files**: `cortex/requirements/project.md`
@@ -121,7 +121,7 @@ resolution**: Backlog tickets
 ```
 
 then require `diff <(git show 7e46ee11:cortex/requirements/project.md | grep -vFf targets.txt) <(grep -vFf targets.txt cortex/requirements/project.md)` to be **empty** — i.e. every line NOT part of an edited bullet is byte-identical to baseline. This catches neighbor rewording AND neighbor deletion (incl. the L39 `→ ADR-0002` bullet, which a presence-grep misses because L7 Overview also carries the token). Guard: re-confirm each lead-in still matches exactly one line before trusting the diff (a compression that alters a lead-in itself would silently drop that bullet from the filter). Pass if all hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ## Risks
 

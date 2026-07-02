@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: a37d35f0-a59f-4c0b-b1b0-8ea3c337ac91
 title: Compress project.md sections that restate ADRs, CLAUDE.md, and tests
-status: refined
+status: complete
 priority: medium
 type: chore
 tags: ['skill-value-scorecard']

@@ -8,3 +8,7 @@
 {"ts": "2026-07-02T21:58:30Z", "event": "phase_transition", "feature": "compress-projectmd-sections-that-restate-adrs", "from": "specify", "to": "plan"}
 {"ts": "2026-07-02T22:22:54Z", "event": "plan_approved", "feature": "compress-projectmd-sections-that-restate-adrs", "dispatch_choice": "wait"}
 {"ts": "2026-07-02T22:22:54Z", "event": "feature_paused", "feature": "compress-projectmd-sections-that-restate-adrs"}
+{"ts": "2026-07-02T23:07:06Z", "event": "phase_transition", "feature": "compress-projectmd-sections-that-restate-adrs", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-07-02T23:13:17Z", "event": "review_verdict", "feature": "compress-projectmd-sections-that-restate-adrs", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-07-02T23:13:50Z", "event": "phase_transition", "feature": "compress-projectmd-sections-that-restate-adrs", "from": "review", "to": "complete"}
+{"ts": "2026-07-02T23:14:55Z", "event": "feature_complete", "feature": "compress-projectmd-sections-that-restate-adrs", "tasks_total": 9, "rework_cycles": 0, "merge_anchor": "merge"}
