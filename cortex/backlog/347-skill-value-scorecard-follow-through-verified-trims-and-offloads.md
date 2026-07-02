@@ -22,3 +22,6 @@ Every child consumes its verdicts from cortex/research/skill-value-scorecard/mas
 
 ## Out of scope
 Re-proposing ideas killed by the 2026-06-30 audit (backend-routing dedup, decompose regex dedup, demo-selection offload). The 5 verified-refuted candidates. Anything overlapping tickets 343/345.
+
+## Completion check
+When the last child closes, re-run the audit measurement (the mapping and per-file weighting, not the full verification) against the new baseline and record the achieved hot-path reduction next to the predicted 25-35 percent band. Only then decide whether a designed progressive-disclosure architecture pass is warranted for whatever remains — epic 340 declined the per-phase context-isolation rewrite on the record, so a new architecture effort needs the post-trim numbers to justify reopening that question.
