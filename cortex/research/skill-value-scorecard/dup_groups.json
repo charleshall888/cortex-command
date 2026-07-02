@@ -1,0 +1,103 @@
+[
+ {
+  "files": [
+   "skills/lifecycle/references/competing-plans.md",
+   "skills/lifecycle/references/plan.md"
+  ],
+  "est_dup_tokens": 205,
+  "blocks": 2,
+  "samples": [
+   "### Allowed in Context and other fields: - File paths and di",
+   "### Prohibited: - Function bodies - Import statements - Erro"
+  ]
+ },
+ {
+  "files": [
+   "skills/lifecycle/references/plan.md",
+   "skills/refine/references/specify.md"
+  ],
+  "est_dup_tokens": 136,
+  "blocks": 2,
+  "samples": [
+   "Before presenting the artifact to the user, read and follow ",
+   "After orchestrator review passes, read the active tier and c"
+  ]
+ },
+ {
+  "files": [
+   "skills/critical-review/references/fallback-reviewer-prompt.md",
+   "skills/critical-review/references/synthesizer-prompt.md"
+  ],
+  "est_dup_tokens": 86,
+  "blocks": 1,
+  "samples": [
+   "Use bullets, not prose paragraphs. Each finding is a discret"
+  ]
+ },
+ {
+  "files": [
+   "skills/discovery/references/clarify.md",
+   "skills/refine/references/clarify.md"
+  ],
+  "est_dup_tokens": 86,
+  "blocks": 1,
+  "samples": [
+   "3. **Requirements alignment note**: One of:    - \"Aligned wi"
+  ]
+ },
+ {
+  "files": [
+   "skills/lifecycle/references/competing-plans.md",
+   "skills/lifecycle/references/implement.md"
+  ],
+  "est_dup_tokens": 68,
+  "blocks": 1,
+  "samples": [
+   "Dispatch each competing-plan agent with the captured `$model"
+  ]
+ },
+ {
+  "files": [
+   "skills/lifecycle/references/competing-plans.md",
+   "skills/lifecycle/references/orchestrator-review.md"
+  ],
+  "est_dup_tokens": 68,
+  "blocks": 1,
+  "samples": [
+   "Dispatch each competing-plan agent with the captured `$model"
+  ]
+ },
+ {
+  "files": [
+   "skills/lifecycle/references/implement.md",
+   "skills/lifecycle/references/orchestrator-review.md"
+  ],
+  "est_dup_tokens": 68,
+  "blocks": 1,
+  "samples": [
+   "Pass the captured `$model` as each builder sub-task's model."
+  ]
+ },
+ {
+  "files": [
+   "skills/discovery/references/orchestrator-review.md",
+   "skills/lifecycle/references/orchestrator-review.md"
+  ],
+  "est_dup_tokens": 65,
+  "blocks": 1,
+  "samples": [
+   "Quality gate between phase artifact write and user presentat"
+  ]
+ },
+ {
+  "files": [
+   "skills/critical-review/references/fallback-reviewer-prompt.md",
+   "skills/critical-review/references/reviewer-prompt.md"
+  ],
+  "est_dup_tokens": 45,
+  "blocks": 1,
+  "samples": [
+   "When the Read fails or returns empty content, emit `READ_FAI"
+  ]
+ }
+]
