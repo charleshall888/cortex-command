@@ -1,16 +1,21 @@
 ---
 schema_version: "1"
 uuid: 0604375c-04bf-4ea3-914d-e4a01676f732
-title: Trim lifecycle config instance: delete narration, lazy-load Branch Mode blocks
-status: backlog
+title: "Trim lifecycle config instance: delete narration, lazy-load Branch Mode blocks"
+status: refined
 priority: low
 type: chore
 tags: ['skill-value-scorecard']
-areas: [skills, lifecycle]
+areas: ['lifecycle']
 discovery_source: cortex/research/skill-value-scorecard/report.html
 created: 2026-07-02
 updated: 2026-07-02
 parent: "347"
+lifecycle_phase: research
+lifecycle_slug: trim-lifecycle-config-instance-delete-narration
+complexity: simple
+criticality: medium
+spec: cortex/lifecycle/trim-lifecycle-config-instance-delete-narration/spec.md
 ---
 
 ## Why
