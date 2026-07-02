@@ -6,3 +6,5 @@
 {"ts": "2026-07-02T15:01:19Z", "event": "complexity_override", "feature": "trim-lifecycle-config-instance-delete-narration", "from": "complex", "to": "simple", "gate": "research_open_questions", "reason": "false-positive revert: 3 resolved/deferred items were formatted as top-level bullets under ## Open Questions, tripping the naive bullet-count (Gate 1 has no None/resolved exclusion); research.md corrected to move resolutions into the body, re-run gate does not fire; task is genuinely simple per Clarify dimensions (<=3 files, mechanical prose, no code, no caller effects)"}
 {"ts": "2026-07-02T15:14:25Z", "event": "spec_approved", "feature": "trim-lifecycle-config-instance-delete-narration"}
 {"ts": "2026-07-02T15:14:32Z", "event": "phase_transition", "feature": "trim-lifecycle-config-instance-delete-narration", "from": "specify", "to": "plan"}
+{"ts": "2026-07-02T15:19:46Z", "event": "plan_approved", "feature": "trim-lifecycle-config-instance-delete-narration", "dispatch_choice": "trunk"}
+{"ts": "2026-07-02T15:19:46Z", "event": "phase_transition", "feature": "trim-lifecycle-config-instance-delete-narration", "from": "plan", "to": "implement"}
