@@ -459,8 +459,14 @@ Run after all other sections. No per-feature confirmation is needed before locat
      Any feature completed this session has its backlog ticket remaining open — the
      work is on the integration branch, not main.
    - If the PR's `state` is `"MERGED"`: report "PR already merged — main is up to date."
-     Then stop. Verify this session's completed-feature tickets are `complete` — the
-     merge normally closes them, but a rare mid-session write failure could leave one open.
+     Then stop. This exit skips Section 6a's post-merge sync, so local `main` may lag the
+     out-of-band merge — run `git fetch origin main` (or pull) first, before checking any
+     ticket. If this session completed any features, check each one's backlog ticket (the
+     completed-feature list and its zero-padded `backlog_id`s already surfaced in Section 2
+     from `overnight-state.json`); the merge normally closes them, but a rare mid-session
+     write failure could leave one open. For any still open after the fetch, close it via
+     Section 6b's backlog closer, then push. With no completed features this session, there
+     is nothing to check.
    - If the PR's `state` is `"CLOSED"`: report "PR was closed without merging." Then stop.
 
 3. Display the open PR (state is `"OPEN"` only — MERGED and CLOSED exit early in Step 2):
