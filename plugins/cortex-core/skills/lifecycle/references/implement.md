@@ -97,7 +97,7 @@ This section runs in two entry modes: `selected` (user picked the worktree optio
 cat ${CLAUDE_SKILL_DIR}/references/_interactive_overnight_check.sh | bash -s -- "Overnight runner is active for this repo — wait for it to complete before creating an interactive worktree." "$(pwd)"
 ```
 
-Sidecar exit codes: `0` = no overnight active, proceed to ii; `1` = overnight live for this repo, surface the wording and exit §1a; `2` = stale runner detected (runner.pid absent or process dead), surface a warn-and-continue diagnostic and proceed.
+Sidecar exit codes carry the same `0` = proceed / `1` = reject / `2` = warn-and-continue (stale runner) semantics as §1 Step A; on this path exit `0` proceeds to ii and exit `1` exits §1a.
 
 **ii. Interactive lock (per-feature concurrency guard).** Acquire the real lock via the `cortex-interactive-lock` console script — the single source of truth for `cortex/lifecycle/{slug}/interactive.pid` — conditioned on the carried entry mode, and only **after** the overnight guard (i) has passed, so a rejecting overnight guard can never orphan a held lock:
 

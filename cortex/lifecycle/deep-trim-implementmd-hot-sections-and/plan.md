@@ -84,7 +84,7 @@ Standing constraints applied to every task (stated once here, not re-narrated pe
 - **Complexity**: simple
 - **Context**: Keep-list/claim: `master_candidates.json` `.id=="s11"` (MERGE_DEDUP). Pins: `tests/test_implement_worktree_interactive_contract.py` (`bash -s --` count == 2), `tests/test_bidirectional_concurrency_contract.py`. Do not disturb the §1a-i acquire that Task 2 placed after this guard.
 - **Verification**: `grep -c 'bash -s --' skills/lifecycle/references/implement.md` = 2 AND `grep -c '_interactive_overnight_check.sh' skills/lifecycle/references/implement.md` = 2 AND `grep -c '\*\*iii\.' skills/lifecycle/references/implement.md` ≥ 1 AND `.venv/bin/pytest tests/test_implement_worktree_interactive_contract.py tests/test_bidirectional_concurrency_contract.py -q` exits 0 AND `just test` exits 0 (full suite) AND, after `just build-plugin`, `git diff --quiet -- plugins/cortex-core/`.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 7: Compress §1a-iii Worktree creation wrapper narration (s12)
 - **Files**: `skills/lifecycle/references/implement.md`, `plugins/cortex-core/skills/lifecycle/references/implement.md` (mirror)
