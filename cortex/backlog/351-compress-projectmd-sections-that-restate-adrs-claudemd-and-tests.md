@@ -13,10 +13,10 @@ updated: 2026-07-02
 parent: "347"
 ---
 ## Why
-cortex/requirements/project.md loads into lifecycle, refine, and discovery context on the load-requirements path, and the audit verified eight of its sections as compressible with high confidence: they restate, sometimes clause-for-clause, content that already lives in always-loaded CLAUDE.md, in ADR bodies (which the ADR README explicitly forbids project.md from restating), in test docstrings, or in enforcement-site documentation.
+cortex/requirements/project.md loads into lifecycle, refine, and discovery context on the load-requirements path, and the audit verified eight of its sections as compressible (s4, s6, s7, s8, s9, s10, s11, s15 — seven at high confidence, s6 at medium): they restate, sometimes clause-for-clause, content that already lives in always-loaded CLAUDE.md, in ADR bodies (which the ADR README explicitly forbids project.md from restating), in test docstrings, or in enforcement-site documentation.
 
 ## Role
-Compress the eight verified sections per their keep-lists in master_candidates.json. Each verdict names exactly which clauses have no other home and must survive: the cluster-exemption and re-cap rules of the L1 ratchet, the retention policy and FORCE_SOURCE escape hatch that are documented nowhere else, the same-repo-overnight-not-exempt containment clause, the merge-terminal and pause-taxonomy conventions, the deliberately-incomplete redaction design rationale. Also fix the stale pointer at line 27 — the kept-pauses inventory moved to references/kept-pauses.md.
+Compress the eight verified sections per their keep-lists in master_candidates.json. Each verdict names exactly which clauses have no other home and must survive: the cluster-exemption and re-cap rules of the L1 ratchet, the retention policy and FORCE_SOURCE escape hatch whose main prose home is here (otherwise surfacing only in bin wrapper header comments), the same-repo-overnight-not-exempt containment clause, the merge-terminal and pause-taxonomy conventions, the deliberately-incomplete redaction design rationale. Also fix the stale pointer at line 27 — the kept-pauses inventory moved to references/kept-pauses.md.
 
 ## Integration
 This is the user-authored project constitution, so the compression is an editorial pass the user reviews at spec or PR time — the audit established what is duplicated, not what the user wants to keep saying in their own voice.

@@ -292,7 +292,8 @@
     "evidence": "(a) Pins: tests/test_skill_handoff.py + tests/fixtures/skill_handoff_schema.yaml require literal 'discovery_source' anywhere in skills/lifecycle/SKILL.md or references/*.md (plain case-sensitive substring, _field_present_in_skill). grep shows two occurrences in this file: lines 22-23 (inside trim range) AND line 57 (outside trim range) \u2014 the pin survives the trim regardless, so its combined change cost is zero. No test pins the announce string 'Found epic research at' (line 42 is its only occurrence repo-wide) or the disk-existence warning string. tests/test_superseded_frontmatter_tolerance.py",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim verified low-value prose from lifecycle, refine skill files (skill-value-trims)"
  },
  {
   "id": "s2",
@@ -424,7 +425,8 @@
     "evidence": "(a) Pins: tests/test_post_refine_commit_wired.py:138-167 pins only 'cortex-lifecycle-stage-artifacts', 'cortex-read-commit-artifacts', '/cortex-core:commit', a halt token, and a cancel token \u2014 all survive the trim (halt at line 27 and the Halt-Before-Plan Gate; cancel in Commit Subject lines 31-34). The test docstring (lines 24-27) explicitly records that the no-op/scan narration 'moved into the verb, which exposes no equivalent prose token' \u2014 it was deliberately designed NOT to pin this prose. The 'git diff --cached --quiet' prose assertion at tests/test_complete_md_finalization_commit.py:113",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim verified low-value prose from lifecycle, refine skill files (skill-value-trims)"
  },
  {
   "id": "s5",
@@ -646,7 +648,8 @@
     "evidence": "(a) Pins: only two tests touch this file. tests/test_lifecycle_kept_pauses_parity.py resolves kept-pauses.md:20's anchor 'backlog-writeback.md:11' against AskUserQuestion mentions (lines 22/26) with a +/-20-line tolerance, so a one-line deletion at 15 (mentions shift to 21/25; anchor line 11 itself unchanged) passes with wide margin. tests/test_lifecycle_event_roundtrip.py:153 pins exactly one feature_complete invocation (line 35, count-based) \u2014 untouched. Repo-wide grep for 'Backend routing', 'proceed exactly as today', and 'the unchanged behavior' hits no test/hook/ADR/cortex_command consume",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim verified low-value prose from lifecycle, refine skill files (skill-value-trims)"
  },
  {
   "id": "s4",
@@ -678,7 +681,8 @@
     "evidence": "(a) Pins: start_sync.py:5-6 docstring cites the heading \u2014 kept verbatim per claim. tests/test_start_sync.py contains zero references to the .md prose (grep for 'backlog-writeback|Lifecycle Start|.md' hits nothing beyond fixture args); it pins verb arm behavior in code, which is exactly why the prose re-description is redundant. tests/test_lifecycle_event_roundtrip.py:153 pins feature_complete:1 in this file, but that invocation is at file line 35 (Status Check close path), outside lines 48-59. No test or lint greps ADR-0019 in this file (grep over tests/ returns empty), so dropping the ADR par",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim verified low-value prose from lifecycle, refine skill files (skill-value-trims)"
  },
  {
   "id": "s3",
@@ -874,7 +878,8 @@
     "evidence": "(a) Pins: repo-wide grep across skills/, tests/, hooks/, docs/, cortex_command/, plugins/, cortex/adr/, claude/ for the example-list phrases ('research depth issues', 'plan restructuring', 'feasibility re-assessment', 'vague acceptance criteria', 'priority trade-offs') hits only the canonical file and its auto-generated mirror \u2014 no test, lint, or hook pins them. All scorer-noted pins anchor kept material: tests/test_resolve_model.py + docs/internals/sdk.md:142 + resolve_model_cli.py pin the orchestrator-fix role matrix (kept lines 46-52); skills/discovery/references/orchestrator-review.md:9 pi",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim verified low-value prose from lifecycle, refine skill files (skill-value-trims)"
  },
  {
   "id": "s7",
@@ -1898,7 +1903,8 @@
     "evidence": "Provenance refutes nothing \u2014 it supports the trim. (1) git log -L 62,88 shows 4 commits touching the region: cfc784da (2026-05-18, origin \u2014 wired guards per spec, blockquote included to satisfy spec R5's doc-grep acceptance), a79f9a34 (entry-mode marker), 8a719b7b (path propagation), 333cd43b (prior trim, trimmed neighbors). No commit is a failure-response patch; no F-row/ADR/retro cites a model failing to surface stderr. (2) The wording's canonical source is cortex_command/interactive_lock.py:561-566 (console-script writes it to stderr), enforced by the live subprocess test tests/test_bidirec",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim verified low-value prose from lifecycle, refine skill files (skill-value-trims)"
  },
  {
   "id": "s4",
@@ -1949,7 +1955,8 @@
     "evidence": "Simulated all six execution branches with the compressed form: (1) unset mode -> empty step-1 output -> fire=true/branch_mode_unset_or_invalid -> picker; (2) prompt -> fire=true/branch_mode_prompt -> picker (covered by merged general fall-through, dedicated bullet redundant); (3) trunk clean -> suppressed -> \u00a72; (4) worktree-interactive clean -> suppressed -> entry-mode-suppressed -> \u00a71a (bullet 39 untouched); (5) worktree-interactive dirty -> fire=true/dirty_tree -> picker with demotion (correct ONLY if the general line-44 form survives the merge \u2014 this is the named precondition); (6) verb mi",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim verified low-value prose from lifecycle, refine skill files (skill-value-trims)"
  },
  {
   "id": "s18",
@@ -3562,7 +3569,8 @@
    "`cortex-backlog`->docs/agentic-layer.md",
    "`cortex-backlog`->docs/backlog.md"
   ],
-  "mech_pin_count": 622
+  "mech_pin_count": 622,
+  "applied_in_commit": "Trim verified low-value prose from lifecycle, refine skill files (skill-value-trims)"
  },
  {
   "id": "s10c",
