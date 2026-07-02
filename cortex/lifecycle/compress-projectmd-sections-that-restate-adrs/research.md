@@ -46,7 +46,7 @@ The load-bearing residue is precisely the prose **nothing enforces** — the ver
 ## Risks
 
 - **s6 is the lone medium-confidence verdict**, and its keeps (shim policy sentence, `FORCE_SOURCE` remedy) are exactly the clauses with no test backstop. Treat s6 with the most editorial care; over-cutting it fails silently.
-- **Silent-failure region**: an over-cut of any "only prose home" clause (s6 shim/FORCE_SOURCE, s10 same-repo-not-exempt, s11 redaction rationale, s4 pause taxonomy, s8 L44 WHY) passes all automation. This is why criticality is `high` despite the prose being inert — plus project.md is the always-loaded constitution consulted by lifecycle/refine/discovery.
+- **Silent-failure region**: an over-cut of any "only prose home" clause (s6 shim/FORCE_SOURCE, s10 same-repo-not-exempt, s11 redaction rationale, s4 pause taxonomy, s8 L44 WHY) passes all automation. This is why criticality is `high` despite the prose being inert — plus project.md is the always-loaded constitution consulted by the lifecycle, refine, and discovery skills.
 - **Concurrent #350 session** is live-editing `skills/research/SKILL.md` on `main`. #351 touches only `cortex/requirements/project.md` (disjoint file set), but commits must use explicit pathspec to avoid capturing the other session's staged work.
 
 ## Open Questions
