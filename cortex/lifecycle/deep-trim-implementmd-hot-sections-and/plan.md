@@ -93,7 +93,7 @@ Standing constraints applied to every task (stated once here, not re-narrated pe
 - **Complexity**: simple
 - **Context**: Keep-list/claim: `master_candidates.json` `.id=="s12"`. Pins: `tests/test_implement_worktree_interactive_contract.py`, `tests/test_implement_option2_worktree_creation.py`. **Unrecorded pins (do not cut)**: the `create_worktree` token, the `--feature interactive-` invocation shape, and the `**iii.` marker — required by `test_lifecycle_enterworktree_callsites` (only occurrences are inside this section) and `test_gate_and_gated_path_use_same_binary`.
 - **Verification**: `grep -c 'create_worktree' skills/lifecycle/references/implement.md` ≥ 1 AND `grep -c 'cortex-worktree-create --feature interactive-' skills/lifecycle/references/implement.md` ≥ 1 AND `grep -c '\*\*iii\.' skills/lifecycle/references/implement.md` ≥ 1 AND `.venv/bin/pytest tests/test_implement_worktree_interactive_contract.py tests/test_implement_option2_worktree_creation.py tests/test_lifecycle_enterworktree_callsites.py -q` exits 0 AND `just test` exits 0 (full suite) AND, after `just build-plugin`, `git diff --quiet -- plugins/cortex-core/`.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 8: Compress §1a Step-v (10–15%) coordinated with vi/vii restoration (s13 + s14)
 - **Files**: `skills/lifecycle/references/implement.md`, `plugins/cortex-core/skills/lifecycle/references/implement.md` (mirror)

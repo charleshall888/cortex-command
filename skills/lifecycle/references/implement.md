@@ -110,11 +110,7 @@ Sidecar exit codes carry the same `0` = proceed / `1` = reject / `2` = warn-and-
 worktree_path=$(cortex-worktree-create --feature interactive-{slug} --base-branch main)
 ```
 
-`create_worktree` resolves the branch as `interactive/{slug}` and materializes the worktree at `<repo>/.claude/worktrees/interactive-{slug}/`. The wrapper copies `.claude/settings.local.json` and symlinks `.venv`. Stdout = absolute worktree path; stderr = informational.
-
-If creation fails: the wrapper writes `repr(exc)` to stderr and exits 1. Surface the stderr output to the user and exit §1a — do not proceed to handoff.
-
-The inside-repo containment check is no longer a separate pre-flight step here: `cortex-worktree-create` (step iii) now performs it inside `create_worktree` and exits 1 with a `worktree_escapes_repo` message if the resolved worktree path escapes the repo root, so a successful step-iii create already guarantees containment.
+`create_worktree` resolves the branch as `interactive/{slug}`, materializes the worktree at `<repo>/.claude/worktrees/interactive-{slug}/` (containment enforced inside — a path escaping the repo root exits 1 with `worktree_escapes_repo`), and prints the absolute worktree path on stdout. On failure it writes `repr(exc)` to stderr and exits 1 — surface it and exit §1a.
 
 **Step v — Auto-enter sequence**
 
