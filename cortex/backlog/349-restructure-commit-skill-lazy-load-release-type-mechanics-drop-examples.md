@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 49115a79-b56e-4200-85ed-5bcf8f4949fe
 title: 'Restructure commit skill: lazy-load release-type mechanics, drop examples'
-status: in_progress
+status: complete
 priority: medium
 type: chore
 tags: ['skill-value-scorecard']

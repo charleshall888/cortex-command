@@ -35,7 +35,7 @@ This plan MUST run **trunk-sequential in a single shared working tree**, with al
 - **Complexity**: simple
 - **Context**: Content source is the current `skills/commit/SKILL.md` release-type section (lines 58–99): the regex fence `(?im)^\s*\[release-type:\s*(major|minor)\s*\]\s*$`, the `` `major` > `minor` > `patch` `` precedence, the `BREAKING:` backstop paragraph (matching `(?im)^BREAKING(?:\s+CHANGE)?:`), the `--dry-run` pre-merge verification paragraph, and the two fenced examples headed `Major bump:` / `Minor bump:`. The regex source of truth is `cortex_command/auto_bump_version.py` (`RELEASE_TYPE_RE`, `BREAKING_RE`) — this ref is a second human-readable copy, NOT single-sourced (per spec Non-Requirements; do not add a byte-identity test). SP002 constraint: keep bare-relative `read`/`cat …|bash`/`bash …` path constructions OUT of this file (it is in the `skills/**/*.md` lint corpus); prose + fenced ```` ```bash ```` example blocks with no bare-relative path are safe. No `${CLAUDE_SKILL_DIR}` needed inside the ref. Follow the sibling `references/*.md` convention (e.g. `skills/refine/references/`).
 - **Verification**: `test -f skills/commit/references/release-type.md` — pass if exit 0. Then (Req 1, form b — note the byte-correct backslash in `\[`, which the spec's Req 1 grep drops; `grep -F '(?im)^\s*[release-type:'` returns 0 against the verbatim `\[release-type:` content, so the pattern MUST include the backslash): `grep -cF '(?im)^\s*\[release-type:' skills/commit/references/release-type.md` ≥ 1 AND `grep -cF 'cortex-auto-bump-version --dry-run' skills/commit/references/release-type.md` ≥ 1 AND `grep -cF 'Major bump:' skills/commit/references/release-type.md` = 1 AND `grep -cF 'Minor bump:' skills/commit/references/release-type.md` = 1 AND `grep -ciE 'major.*>.*minor.*>.*patch' skills/commit/references/release-type.md` ≥ 1 AND `grep -cF 'BREAKING' skills/commit/references/release-type.md` ≥ 1 — pass if all hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Restructure the resident release-type section (extract mechanics, keep trigger + pointer)
 - **Files**: `skills/commit/SKILL.md`
@@ -50,7 +50,7 @@ This plan MUST run **trunk-sequential in a single shared working tree**, with al
   - **Placement (anti-footnote structural gate — the load-bearing check for the silent-misfire guard)**: the decision conditional must sit ABOVE the ref pointer, not be folded into it. `tok=$(grep -nF '[release-type: minor]' skills/commit/SKILL.md | head -1 | cut -d: -f1); ptr=$(grep -nF '${CLAUDE_SKILL_DIR}/references/release-type.md' skills/commit/SKILL.md | head -1 | cut -d: -f1); [ -n "$tok" ] && [ -n "$ptr" ] && [ "$tok" -lt "$ptr" ]` — pass if exit 0. This fails the "tokens folded into the trailing pointer/when-to-read block" layout (where `tok ≥ ptr`), which passes every presence/removal/size gate yet leaves the author unprompted at composition time.
   - MUST (Req 5): `grep -cE 'MUST|CRITICAL|REQUIRED'` ≤ 1.
   Pass if all hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Compress Workflow (s3) and fold Validation (s6)
 - **Files**: `skills/commit/SKILL.md`
@@ -59,7 +59,7 @@ This plan MUST run **trunk-sequential in a single shared working tree**, with al
 - **Complexity**: simple
 - **Context**: Coupled because s6's fold target IS the Workflow section. Keeps (s3): the `cortex-commit-preflight` invocation, the "specific files, not `-A`" directive, and ALL THREE clauses of the guard line — no push, no branches, no conversational output. Keep (s6): the "do not bypass" directive as its OWN standalone imperative sentence — it is the sole guard against the hook's command-shape-scoped blind spot (`git commit -F`/editor bypass the PreToolUse hook; research Adversarial Review). Do not paraphrase "do not bypass" into a subclause. Same file as Task 2; the `Depends on [2]` edge fixes edit order — shared-file safety comes from the single-worktree Execution Mode (no parallel/worktree dispatch), not from the edge.
 - **Verification** (Reqs 6 & 9, form b greps on `skills/commit/SKILL.md`): `grep -cF 'cortex-commit-preflight'` ≥ 1 AND `grep -cF 'not `+"`-A`"+`'` ≥ 1 AND `grep -cF 'Do not push'` ≥ 1 AND `grep -cF 'Do not create branches'` ≥ 1 AND `grep -ciF 'conversational text'` ≥ 1 AND `grep -cF '## Validation'` = 0 AND `grep -ciE 'do not bypass|not bypass|never bypass'` ≥ 1 — pass if all hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 4: Compress Commit Message Format (s4)
 - **Files**: `skills/commit/SKILL.md`
@@ -68,7 +68,7 @@ This plan MUST run **trunk-sequential in a single shared working tree**, with al
 - **Complexity**: simple
 - **Context**: Hook analysis (research): the imperative-mood check is a past-tense blacklist that misses present-tense-`s` forms ("Adds foo") → imperative-mood guidance is the primary guard, keep the exemplars. "Why, not what" has zero enforcement anywhere (exists only here) → keep. 72-char wrap: hook only checks ≥10 → keep. Capital/no-period/blank-line ARE hook-enforced → safe to drop from prose. Same file as prior tasks; the `Depends on [3]` edge fixes edit order — shared-file safety comes from the single-worktree Execution Mode (no parallel/worktree dispatch). **Do not displace or drop the Task 2 release-type decision conditional** while compressing the adjacent Commit Message Format section — the Task 6 end-state gate re-runs Reqs 1–5.
 - **Verification** (Req 7, form b greps on `skills/commit/SKILL.md`): keeps — `grep -ciF 'imperative'` ≥ 1 AND `grep -cE 'Add.*Fix.*Remove'` ≥ 1 AND `grep -ciE 'why.*not.*what'` ≥ 1 AND `grep -cF '72'` ≥ 1; removals — `grep -cF '<subject line>'` = 0 AND `grep -ciF 'trailing period'` = 0. Pass if all hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5: Compress Commit Command (s5)
 - **Files**: `skills/commit/SKILL.md`
@@ -77,7 +77,7 @@ This plan MUST run **trunk-sequential in a single shared working tree**, with al
 - **Complexity**: simple
 - **Context**: The example fences carry `Subject line here` — removing them proves compression. The HEREDOC prohibition is sandbox-motivated (the hook parses HEREDOC fine per research) — keep it as sandbox guidance. Name the second-`-m` alternative in prose (the example blocks currently demonstrate it; once deleted, the multi-line path must be named explicitly). Same file as prior tasks; the `Depends on [4]` edge fixes edit order — shared-file safety comes from the single-worktree Execution Mode (no parallel/worktree dispatch).
 - **Verification** (Req 8, form b greps on `skills/commit/SKILL.md`): keeps — `grep -cF 'HEREDOC'` ≥ 1 AND `grep -ciF 'dangerouslyDisableSandbox'` ≥ 1 AND `grep -ciE 'second .{0,3}-m|another -m|additional -m'` ≥ 1; removal — `grep -cF 'Subject line here'` = 0. Pass if all hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 6: Regenerate mirror, verify shrink + suite, land the single commit
 - **Files**: `plugins/cortex-core/skills/commit/SKILL.md` (regenerated), `plugins/cortex-core/skills/commit/references/release-type.md` (regenerated), `skills/commit/SKILL.md` (read for the body-size gate; staged), `skills/commit/references/release-type.md` (staged). All four are `git add`ed for the single commit; only the two mirror paths are written (by `build-plugin`), the two canonical paths are read/staged only.
@@ -91,7 +91,7 @@ This plan MUST run **trunk-sequential in a single shared working tree**, with al
   - `just build-plugin && diff -r skills/commit/ plugins/cortex-core/skills/commit/` — pass if no output (mirror byte-identical).
   - `just test` — pass if exit 0 (triage any failures as pre-existing/external, not introduced here — the repo has known concurrent-fixture + sandbox-network flakes).
   - The commit succeeds (drift + `cortex-check-skill-path` pre-commit gates pass, exit 0).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ## Risks
 - **Dispatch mode is a correctness precondition, not a preference** (see Execution Mode): the single-commit + shared-file + fail-closed-drift design is correct only under trunk-sequential single-worktree deferred-commit execution. Parallel/worktree dispatch would clobber the shared `SKILL.md` edits (uncommitted edits are invisible across worktrees); per-task commits would strand mirror regen or land a pointer whose target ref is still untracked. The forced-fallback escape (multi-commit, each with its own `build-plugin` + `git add`) is the documented degraded path, not the intended one.
