@@ -1,0 +1,9 @@
+{"schema_version": 1, "ts": "2026-07-03T02:34:29Z", "event": "lifecycle_start", "feature": "sweep-provisional-tail-critical-review-cluster", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-07-03T02:40:45Z", "event": "clarify_critic", "feature": "sweep-provisional-tail-critical-review-cluster", "parent_epic_loaded": false, "findings_count": 7, "dispositions": {"apply": 6, "dismiss": 1, "ask": 0}, "applied_fixes_count": 6, "dismissals_count": 1, "status": "ok"}
+{"ts": "2026-07-03T03:00:09Z", "event": "complexity_override", "feature": "sweep-provisional-tail-critical-review-cluster", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-07-03T03:00:09Z", "event": "criticality_override", "feature": "sweep-provisional-tail-critical-review-cluster", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-07-03T03:22:32Z", "event": "spec_approved", "feature": "sweep-provisional-tail-critical-review-cluster"}
+{"ts": "2026-07-03T03:42:54Z", "event": "plan_approved", "feature": "sweep-provisional-tail-critical-review-cluster", "dispatch_choice": "wait"}
+{"ts": "2026-07-03T03:42:54Z", "event": "feature_paused", "feature": "sweep-provisional-tail-critical-review-cluster"}
+{"ts": "2026-07-03T12:03:52Z", "event": "phase_transition", "feature": "sweep-provisional-tail-critical-review-cluster", "from": "plan", "to": "implement", "dispatch_choice": "trunk"}
+{"ts": "2026-07-03T12:04:46Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-critical-review-cluster", "batch": 0, "tasks": [1]}
