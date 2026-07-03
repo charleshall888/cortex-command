@@ -12,7 +12,7 @@ Read `cortex/research/{topic}/research.md` for findings, feasibility assessment,
 
 ### 2. Consume the Architecture Section
 
-Each bullet in the approved `### Pieces` sub-section is a piece. A piece is not always a ticket: §4 groups tightly-coupled pieces into ticket units, so M pieces may map to 1 ticket. Pieces that share no coupling each become one ticket of their own. Do **not** re-derive pieces from raw findings — the Architecture section already names them by role. The analytical piece-set is fixed at decompose entry; if the agent finds that the piece-set itself is *wrong* (a piece is missing, mis-named, or wrongly split at the analytical level), return to the research phase rather than mutating the set silently. Grouping pieces into ticket units at §4 is a packaging decision over the *right* set, not a mutation of the set — the two are distinct (see §3 and §4).
+Each bullet in the approved `### Pieces` sub-section is a piece. A piece is not always a ticket: §4 groups tightly-coupled pieces into ticket units, so M pieces may map to 1 ticket. Pieces that share no coupling each become one ticket of their own. Do **not** re-derive pieces from raw findings — the Architecture section already names them by role. The analytical piece-set is fixed at decompose entry; if the agent finds that the piece-set itself is *wrong* (a piece is missing, mis-named, or wrongly split at the analytical level), return to the research phase rather than mutating the set silently.
 
 For each piece, invoke `/backlog-author compose` with the piece's context; the canonical body template lives at `skills/backlog-author/references/body-template.md`.
 
@@ -26,16 +26,12 @@ The template applies uniformly to all pieces. There is no defect-vs-novel branch
 ## Edges
 
 - Breaks if the phase-transition contract changes shape (new phase enum value, renamed transition function).
-- Depends on the events-registry schema for the events this piece emits.
 
 ## Touch points
 
-- skills/lifecycle/SKILL.md §3 (phase-transition prose)
 - cortex-lifecycle-state:42-58 (transition function)
 - bin/.events-registry.md (target enum for emitted events)
 ```
-
-The Edges bullets name contracts by name. The Touch points bullets cite paths and lines. The path:line citation `cortex-lifecycle-state:42-58` belongs in Touch points; the structural summary "depends on the events-registry schema" belongs in Edges.
 
 For each ticket, also capture:
 
@@ -92,7 +88,7 @@ Then:
 
 ### 5. Create Backlog Tickets
 
-**Authoring a grouped ticket's body.** For a child that wraps a single piece, author the body straight from the §2 uniform template. For a child that wraps *multiple* grouped pieces (§4), author **one merged body** that covers the whole group — mirroring the R15 `consolidate-pieces` body-merge convention (§5, the R15 gate sub-section below): the grouped pieces' `## Why`, `## Role`, and `## Integration` are **prose-merged** into one coherent narrative (not concatenated piece-by-piece), and their `## Edges` and `## Touch points` bullets are **unioned and deduplicated**. When the grouped pieces carried a `blocked-by` ordering among themselves (§4), fold that surviving order into the merged body as an explicit intra-ticket sequence note, framed as an internal phase boundary rather than a cross-ticket dependency. The research-phase Architecture `### Pieces` source in `research.md` is **not** touched by this merge — it stays unchanged as the authoritative per-piece record, so the retained source is exactly what a later `split-piece <N>` re-derives the constituent piece bodies from.
+**Authoring a grouped ticket's body.** For a child that wraps a single piece, author the body straight from the §2 uniform template. For a child that wraps *multiple* grouped pieces (§4), author **one merged body** that covers the whole group — mirroring the R15 `consolidate-pieces` body-merge convention (§5, the R15 gate sub-section below): the grouped pieces' `## Why`, `## Role`, and `## Integration` are **prose-merged** into one coherent narrative (not concatenated piece-by-piece), and their `## Edges` and `## Touch points` bullets are **unioned and deduplicated**.
 
 Ticket bodies authored under the Role/Integration/Edges/Touch-points template are validated by `cortex-check-prescriptive-prose` at pre-commit time (LEX-1 scanner). The scanner runs section-partitioned: path:line citations, `§N`/`RN` section-index citations, and multi-line fenced code blocks are permitted only in `## Touch points` and are flagged when they appear inside `## Role`, `## Integration`, or `## Edges`.
 
