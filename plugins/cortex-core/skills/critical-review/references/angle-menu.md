@@ -1,41 +1,19 @@
 # Angle Menu (Step 2b reference)
 
-The orchestrator derives 3-4 challenge angles in Step 2b. The menu below
-lists representative examples — not an exhaustive set. Pick angles most
-likely to reveal real problems for this specific artifact, choosing from
-the menu or inventing new angles that fit the artifact better. If domain
-context was loaded in Step 2a, weight domain-specific examples more heavily
-— but domain detection is optional, not required for angle derivation.
+Representative examples, not an exhaustive set — prefer inventing angles that
+fit the specific artifact, and weight domain-specific examples when Step 2a
+loaded a domain (optional).
 
 ## General Examples
 
-- Architectural risk
-- Unexamined alternatives
-- Fragile assumptions
-- Integration risk
-- Scope creep
-- Real-world failure modes
+A diversity nudge across concerns like architectural risk, fragile
+assumptions, integration risk, and scope creep — not a checklist.
 
-## Domain-Specific Examples (games)
+## Domain-Specific Examples
 
-- Performance budget
-- Game loop coupling
-- Save/load state
-- Platform store compliance
-
-## Domain-Specific Examples (mobile)
-
-- Platform API constraints
-- Offline behavior
-- Haptic/accessibility
-- Background execution limits
-
-## Domain-Specific Examples (workflow/tooling)
-
-- Agent isolation
-- Prompt injection
-- State file corruption
-- Failure propagation
+Weight by the loaded domain: games, mobile, and workflow/tooling (this repo's
+usual subject) each surface their own failure modes — e.g. save/load state,
+offline behavior, prompt injection, and state-file corruption.
 
 ## Angle Count
 
@@ -44,5 +22,4 @@ context was loaded in Step 2a, weight domain-specific examples more heavily
 
 ## Acceptance Criteria
 
-- **Distinctness**: No two derived angles may be re-phrasings of the same concern. Each must probe a different failure surface.
-- **Artifact-specificity**: Each angle must cite a specific section, claim, assumption, or design choice in the artifact — not a generic category label. "Fragile assumptions" alone is not an angle; "The retry logic in section 3 assumes idempotent endpoints, which breaks for the payment webhook described in section 5" is.
+- **Distinctness / artifact-specificity**: No two derived angles may be re-phrasings of the same concern, and each must cite a specific section, claim, assumption, or design choice in the artifact — not a generic category label. "Fragile assumptions" alone is not an angle; "The retry logic in section 3 assumes idempotent endpoints, which breaks for the payment webhook described in section 5" is.
