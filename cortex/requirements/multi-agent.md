@@ -6,7 +6,7 @@
 
 ## Overview
 
-The multi-agent area covers how the system spawns, isolates, and coordinates multiple Claude agents working in parallel. This includes the go/no-go criteria for parallel dispatch, per-feature worktree isolation, model selection based on task characteristics, and error recovery escalation. These capabilities underpin the overnight runner's ability to work on multiple features simultaneously without interference.
+The multi-agent area covers how the system spawns, isolates, and coordinates multiple Claude agents working in parallel — parallel dispatch, per-feature worktree isolation, model selection, and error recovery escalation — so the overnight runner can work multiple features simultaneously without interference.
 
 ## Functional Requirements
 
@@ -20,7 +20,7 @@ The multi-agent area covers how the system spawns, isolates, and coordinates mul
   - Agent stderr is captured and included in learnings for subsequent retry attempts
   - Agent budget exhaustion halts the current session (no new features dispatched) without crashing
   - Permission mode is always `bypassPermissions` for overnight agents
-  - Per-spawn OS-kernel sandbox enforcement is layered under `bypassPermissions`: every `claude -p` orchestrator spawn and every per-feature dispatch passes `--settings <tempfile>` carrying a `sandbox.filesystem.{denyWrite,allowWrite}` JSON dict (orchestrator denies critical git-state paths per repo; dispatch allows the worktree plus six risk-targeted out-of-worktree writers). The `CORTEX_SANDBOX_SOFT_FAIL=1` env var downgrades `failIfUnavailable` to `false` for sandbox-runtime regression recovery; activation is unconditionally surfaced in the morning report. See `docs/overnight-operations.md` "Per-spawn sandbox enforcement".
+  - Per-spawn OS-kernel sandbox enforcement is layered under `bypassPermissions`: every `claude -p` orchestrator spawn and every per-feature dispatch passes a per-spawn `--settings <tempfile>` sandbox dict. `CORTEX_SANDBOX_SOFT_FAIL=1` downgrades `failIfUnavailable` for sandbox-runtime regression recovery; activation is unconditionally surfaced in the morning report. Full deny/allow-set contract: see `docs/overnight-operations.md` "Per-spawn sandbox enforcement".
 - **Priority**: must-have
 
 ### Worktree Isolation
@@ -48,8 +48,8 @@ The multi-agent area covers how the system spawns, isolates, and coordinates mul
   - One feature's failure does not abort other in-flight features (fail-forward model)
   - Features with `intra_session_blocked_by` dependencies are excluded from dispatch until all named blockers reach `merged` status — this filtering happens at round-planning time (orchestrator prompt), not at dispatch time
 - **Priority**: must-have
-- **Orchestrator dispatch-template substitution contract**: Dual-layer prompts (orchestrator-round.md) use two token tiers — session-level single-brace `{token}` pre-filled by `fill_prompt()` in `runner.sh`, and per-feature double-brace `{{feature_X}}` substituted by the orchestrator agent at dispatch time from `state.features[<slug>]`. An XML-tagged `<substitution_contract>` block in the prompt demarcates the contract; the two tiers are also visually distinct (brace-count + name prefix) to defeat lexical priming. Single-layer prompts (`batch-brain.md`, `repair-agent.md`, pipeline prompts) remain single-brace — the double-brace convention applies only to dual-layer dispatch templates. Enforced by `tests/test_fill_prompt.py` at the shell layer; agent-layer substitution is a convention and not independently validated.
-- **Pre-deploy no-active-runner check**: Edits that couple `runner.sh` and the orchestrator prompt must be deployed as a single commit AND merged only when no overnight runner is active (consult `~/.local/share/overnight-sessions/active-session.json`: absent, or `phase` not `running`, or PID not alive). `runner.sh` is sourced once per session and its `fill_prompt()` body is held in memory for the full session lifetime; a mid-session prompt/runner skew is silently mis-substituting. Operator discipline only; no automated gate today.
+- **Orchestrator dispatch-template substitution contract**: Dual-layer prompts (orchestrator-round.md) use two token tiers — session-level single-brace `{token}` pre-filled by `fill_prompt()` in `runner.sh`, and per-feature double-brace `{{feature_X}}` substituted by the orchestrator agent at dispatch time from `state.features[<slug>]`. An XML-tagged `<substitution_contract>` block in the prompt demarcates the contract; the two tiers are also visually distinct (brace-count + name prefix). Single-layer prompts (`batch-brain.md`, `repair-agent.md`, pipeline prompts) remain single-brace — the double-brace convention applies only to dual-layer dispatch templates.
+- **Pre-deploy no-active-runner check**: Edits that couple `runner.sh` and the orchestrator prompt must be deployed as a single commit AND merged only when no overnight runner is active (consult `~/.local/share/overnight-sessions/active-session.json`: absent, or `phase` not `running`, or PID not alive). `runner.sh` is sourced once per session and its `fill_prompt()` body is held in memory for the full session lifetime; a mid-session prompt/runner skew is silently mis-substituting.
 
 ### Model Selection Matrix
 
@@ -74,7 +74,7 @@ The multi-agent area covers how the system spawns, isolates, and coordinates mul
 
 - Parallelism decisions are made by the overnight orchestrator, not by individual agents — agents do not spawn peer agents.
 - The tier-based concurrency limit (1–3 workers) is a hard limit enforced by `ConcurrencyManager`; it is not overridable at runtime by agents.
-- Worktrees for the default repo are created at `<repo>/.claude/worktrees/{feature}/`; cross-repo worktrees go to `$TMPDIR/overnight-worktrees/{session_id}/{feature}/`. Rationale: Anthropic-aligned repo-relative default — the worktree lives under the project's trust scope and needs no per-shell sandbox registration. The `.mcp.json` sandbox deny is filename-scoped (blocks agent writes to `.mcp.json`) and does NOT block `git worktree add` from creating the worktree directory or checking out other files into `.claude/worktrees/`. Resolved through a single chokepoint (`resolve_worktree_root()` in `cortex_command/pipeline/worktree.py`). The `restore-worktree-root-env-prefix/` lifecycle (which moved this to `$TMPDIR`) is superseded by #260 — its empirical premise was refuted on 2026-05-20.
+- Worktrees for the default repo are created at `<repo>/.claude/worktrees/{feature}/`; cross-repo worktrees go to `$TMPDIR/overnight-worktrees/{session_id}/{feature}/`. Resolved through a single chokepoint (`resolve_worktree_root()` in `cortex_command/pipeline/worktree.py`). See `cortex/adr/0005-repo-relative-worktree-placement.md` for the placement rationale, the `.mcp.json` filename-scoping detail, and the superseded env-prefix history (#260).
 - The escalation ladder is fixed: haiku → sonnet → opus. There is no downgrade path within a session.
 
 ## Dependencies
