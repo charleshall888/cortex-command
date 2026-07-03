@@ -28,7 +28,7 @@ Before creating any artifacts or performing write-back, check whether the origin
 4. **On "Close lifecycle"**: the behavior depends on the current phase:
 
    - **If `phase != none`** (a `cortex/lifecycle/{feature}/` directory exists):
-     1. Append the following NDJSON event to `cortex/lifecycle/{feature}/events.log` (one JSON object per line):
+     1. Log the completion event:
         ```bash
         cortex-lifecycle-event log --event feature_complete --feature <name>
         ```
@@ -37,7 +37,7 @@ Before creating any artifacts or performing write-back, check whether the origin
         ```bash
         cortex-update-item <slug> --status complete --lifecycle-phase complete --session-id null
         ```
-        Where `<slug>` is the backlog filename stem. On `none`, skip with a one-line advisory; on any other value, make the equivalent close best-effort on the external tracker per `backlog.instructions`.
+        Where `<slug>` is the backlog filename stem.
      3. **Exit immediately.** Do not proceed to Discovery Bootstrap or any subsequent Step 2 sections or later steps.
 
    - **If `phase = none`** (no `cortex/lifecycle/{feature}/` directory exists):
@@ -57,7 +57,7 @@ On **any other value** of the backend (an external tracker) the verb makes no lo
 
 ## `cortex-update-item` Exit-2 Handling (canonical)
 
-If any `cortex-update-item` invocation exits 2, that signals an ambiguous slug match. Present the candidate list emitted on stderr to the user and ask them to re-invoke with a disambiguated slug. This rule covers every `cortex-update-item` call site — the close-lifecycle call inline in this file, the lifecycle-start in-progress + lifecycle-slug write-backs now routed through the start-sync verb (which re-emits the exit-2 candidate list per this same rule), and the calls in later phase references, which point here rather than restating it.
+If any `cortex-update-item` invocation exits 2, that signals an ambiguous slug match. Present the candidate list emitted on stderr to the user and ask them to re-invoke with a disambiguated slug.
 
 ## Registering an Artifact in index.md (canonical)
 
