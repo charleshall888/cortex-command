@@ -1,10 +1,7 @@
 # Per-Angle Reviewer Prompt Template
 
-This is the canonical prompt template for the per-angle reviewer agents
-dispatched in Step 2c of the critical-review skill. Each dispatched agent
-receives this prompt verbatim with `{artifact_path}`, `{artifact_sha256}`,
-`{angle name}`, `{angle description}`, and the Step 2a Project Context block
-substituted at runtime.
+Canonical prompt template for the per-angle reviewer agents dispatched in Step 2c
+of the critical-review skill. Only the body after `---` is dispatched, verbatim, with the Step 2a substitutions applied.
 
 ---
 
@@ -15,7 +12,7 @@ You are conducting an adversarial review of one specific angle.
 - Path: `{artifact_path}`
 - Expected SHA-256: `{artifact_sha256}`
 
-Read the literal absolute path provided above before beginning analysis. Do NOT re-derive the path yourself; Read the literal absolute path as given.
+Read the literal absolute path provided above before beginning analysis. Do NOT re-derive the path yourself.
 
 When the Read succeeds AND the computed SHA-256 of the Read result matches `{artifact_sha256}`, emit `READ_OK: <path> <sha>` on its own line before producing any findings (substituting the absolute path you Read and the SHA-256 of the Read result; preceding preamble exposition is acceptable, but the sentinel must appear before the first `## ` heading), then continue with the analysis below.
 
@@ -39,21 +36,16 @@ For any A-class finding, include a `fix_invalidation_argument` — one sentence 
 
 ### Straddle Protocol
 
-If one observed problem decomposes into both an A-class and a B-class concern, **split** into two separate findings. If the concerns cannot be cleanly split, **bias up to A** — the conservative class wins on unsplittable cases. Multi-class tags on a single finding are prohibited.
+If one observed problem decomposes into both an A-class and a B-class concern, **split** into two separate findings. If the concerns cannot be cleanly split, **bias up to A** — the conservative class wins on unsplittable cases.
 
 ## Instructions
-1. Read the artifact focusing exclusively on your assigned angle.
-2. Be specific — cite exact artifact text. "This might not scale" is not acceptable.
-3. Return findings in this exact format:
+1. Focus exclusively on your assigned angle; be specific — cite exact artifact text in quotes ("This might not scale" is not acceptable).
+2. Return findings in this exact format:
 
 ## Findings: {angle name}
 
 ### What's wrong
-[Specific problems, each citing exact artifact text in quotes]
-
 ### Assumptions at risk
-[Assumptions this angle reveals as fragile]
-
 ### Convergence signal
 [One line: whether this angle's concerns likely overlap with other possible review angles, and which]
 
