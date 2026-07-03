@@ -9,3 +9,5 @@
 {"ts": "2026-07-03T12:04:46Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-critical-review-cluster", "batch": 0, "tasks": [1]}
 {"ts": "2026-07-03T12:58:30Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-critical-review-cluster", "batch": 1, "tasks": [2]}
 {"ts": "2026-07-03T13:02:15Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-critical-review-cluster", "batch": 2, "tasks": [3]}
+{"ts": "2026-07-03T13:09:53Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-critical-review-cluster", "batch": 3, "tasks": [4]}
+{"ts": "2026-07-03T13:21:20Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-critical-review-cluster", "batch": 4, "tasks": [5]}
