@@ -29,7 +29,7 @@ Apply the 50 verified lifecycle-cluster trim verdicts (+ the one verified critic
 - **Complexity**: simple
 - **Context**: candidate `reviewer-prompt.md s9`. Before trimming, read the critical-review synthesizer to enumerate what it parses (the `<!--findings-json-->` delimiter and every field it extracts). **Asymmetric keep**: the straddle-rationale population instruction is the sole one repo-wide — keep or relocate, never drop (spec R4). Keep the delimiter contract and all parsed fields verbatim; compress only prose/examples the synthesizer never reads.
 - **Verification**: `grep -c 'findings-json' skills/critical-review/references/reviewer-prompt.md` ≥ 1 AND straddle-rationale instruction still present (grep) — pass if both hold; and `diff <(git show HEAD:skills/critical-review/references/reviewer-prompt.md) skills/critical-review/references/reviewer-prompt.md | grep -c '^>'` shows fewer added-than-removed (net shrink). Run the critical-review contract/parity tests if any pin this file.
-- **Status**: [ ] pending
+- **Status**: [x] done — commit 43aa2157; keep-list (delimiter, 7 field names, class enum, biasing-up trigger) intact, 3990→3924 bytes
 
 ### Task 2: Trim lifecycle SKILL.md body (s8, s5, s12, s16)
 - **Files**: skills/lifecycle/SKILL.md
@@ -38,7 +38,7 @@ Apply the 50 verified lifecycle-cluster trim verdicts (+ the one verified critic
 - **Complexity**: simple
 - **Context**: candidates `SKILL.md s8/s5/s12/s16`. **s16 must not change the parity-tested pause inventory** (spec R5) — compress the restatement, not the pause list. Keep the mode-routing table's closed-set mode values and the reference-path manifest anchors (SKILL.md:155 map is pinned by test_lifecycle_references_resolve).
 - **Verification**: `just test-skill-design` and `python -m pytest tests/test_lifecycle_kept_pauses_parity.py tests/test_lifecycle_references_resolve.py` — pass if exit 0; AND net line count of SKILL.md decreased vs HEAD.
-- **Status**: [ ] pending
+- **Status**: [x] done — commit 4eb43ffa; SKILL.md 19232→17853 bytes; parity green; s12 coupled refine-delegation:3 loosening in same commit. (references-resolve red is pre-existing #351 false-positive, not mine.)
 
 ### Task 3: Trim complete.md (s14, s12, s4)
 - **Files**: skills/lifecycle/references/complete.md
@@ -47,7 +47,7 @@ Apply the 50 verified lifecycle-cluster trim verdicts (+ the one verified critic
 - **Complexity**: simple
 - **Context**: candidates `complete.md s14/s12/s4`. Keep every verb+flag invocation (cortex-* commands, git steps) and the emission-ordering guarantees verbatim; compress surrounding rationale only.
 - **Verification**: keep-list cortex-* command tokens still grep-present in the file AND file net-shrinks vs HEAD; `just test-lifecycle-state` exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done — commit db0d5bb9; 13707→12395 bytes; all 7 Step-3 substrings + Step-10 ordering + git-diff-cached kept; 26 complete/parity tests green
 
 ### Task 4: Trim criticality-matrix.md (s2, s3, s4, s5)
 - **Files**: skills/lifecycle/references/criticality-matrix.md
@@ -56,7 +56,7 @@ Apply the 50 verified lifecycle-cluster trim verdicts (+ the one verified critic
 - **Complexity**: simple
 - **Context**: candidates `criticality-matrix.md s2/s3/s4/s5`. This file is cited by lifecycle SKILL "Reading lifecycle state" and Plan/Specify — keep the `--field` invocation forms and matrix cell semantics; s5 LAZY_REF must leave a resolvable pointer to the ordering rule's canonical home.
 - **Verification**: `python -m pytest tests/test_lifecycle_references_resolve.py` exit 0; `--field` invocation tokens still present; file net-shrinks.
-- **Status**: [ ] pending
+- **Status**: [x] done — commit 920079ff; 4713→2499 bytes; s5 extracted seed-reconcile ordering to refine/references (resolves clean, added no new resolve failure); event-roundtrip+state green
 
 ### Task 5: Trim backlog-writeback.md (s3, s5)
 - **Files**: skills/lifecycle/references/backlog-writeback.md
@@ -65,7 +65,7 @@ Apply the 50 verified lifecycle-cluster trim verdicts (+ the one verified critic
 - **Complexity**: simple
 - **Context**: candidates `backlog-writeback.md s3/s5`. Keep the canonical exit-2 rule anchor (other references point here), the `cortex-update-item`/`cortex-lifecycle-start-sync` invocations, and the close-path event ordering verbatim.
 - **Verification**: `cortex-update-item` + `cortex-lifecycle-event` invocation tokens grep-present; file net-shrinks; `just test-lifecycle-state` exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done — commit 8889fa6f; 6167→5585 bytes; feature_complete pin (exactly 1) + AskUserQuestion + never-auto-close kept; 35 tests green
 
 ### Task 6: Trim orchestrator-review.md (s3, s4, s7, s12, s13)
 - **Files**: skills/lifecycle/references/orchestrator-review.md
@@ -74,7 +74,7 @@ Apply the 50 verified lifecycle-cluster trim verdicts (+ the one verified critic
 - **Complexity**: simple
 - **Context**: candidates `orchestrator-review.md s3/s4/s7/s12/s13`. s13 is a verified DELETE of the Constraints section (redundant); s7 LAZY_REF replaces the embedded fix-agent template with a resolvable pointer — confirm the pointer target exists. Keep the cycle-cap number and review-pass gate semantics.
 - **Verification**: Constraints section removed (`grep -c '## Constraints' file` = 0); fix-agent pointer resolves; `python -m pytest tests/test_lifecycle_references_resolve.py` exit 0; file net-shrinks.
-- **Status**: [ ] pending
+- **Status**: [x] done — commit 9e42a82f; OR 10035→8798 bytes; steps renumbered 1-4 (cross-refs synced); s7 fix-agent template extracted + wired into lifecycle+discovery manifests; skill-path lint clean; contracts 16/16; resolve added no new failure (only pre-existing #351)
 
 ### Task 7: Trim plan.md reference (s5, s9, s14, s19, file-compress)
 - **Files**: skills/lifecycle/references/plan.md
@@ -83,7 +83,7 @@ Apply the 50 verified lifecycle-cluster trim verdicts (+ the one verified critic
 - **Complexity**: simple
 - **Context**: candidates `plan.md s5/s9/s14/s19/file-compress`. Keep the complexity-tier table's critical rule (trivial→turn-exhaustion), the (a)/(b)/(c) Verification format, and the Hard-Gate "no code in plans" directive. This is the file I am currently generating from — edit the reference, not this artifact.
 - **Verification**: complexity table + (a)/(b)/(c) format + Hard-Gate directive grep-present; file net-shrinks; `just test-skill-design` exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done — commit afbdea0f; 15035→14331 bytes; competing_plans_wired 5/5; skill-path clean; s14/file-compress prose-only-Verification conflict resolved (drop line-150, keep line-86). NOTE: mirror s14 Allowed-list into competing-plans.md in Task 8.
 
 ### Task 8: Trim competing-plans.md (s3, s4, s6, s8)
 - **Files**: skills/lifecycle/references/competing-plans.md
@@ -92,7 +92,7 @@ Apply the 50 verified lifecycle-cluster trim verdicts (+ the one verified critic
 - **Complexity**: simple
 - **Context**: candidates `competing-plans.md s3/s4/s6/s8`. Only reached on the `critical` Plan branch. Keep the model-resolution invocation and the verdict/confidence routing thresholds verbatim; compress the embedded prompt-template prose.
 - **Verification**: model-resolution + verdict-routing tokens grep-present; file net-shrinks; `python -m pytest tests/test_lifecycle_references_resolve.py` exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done — commit 67a9c1ae; 11319→10374 bytes; contract E101/E103-clean; wired 5/5; s8 did table→row-list (write-rule-consolidation left for safety)
 
 ### Task 9: Trim review.md reference (s2, s3, s8, s9)
 - **Files**: skills/lifecycle/references/review.md
@@ -101,7 +101,7 @@ Apply the 50 verified lifecycle-cluster trim verdicts (+ the one verified critic
 - **Complexity**: simple
 - **Context**: candidates `review.md s2/s3/s8/s9`. Keep the verdict enum (APPROVED/CHANGES_REQUESTED/REJECTED), the review_verdict event emission, and the drift auto-apply gate condition verbatim.
 - **Verification**: verdict enum + review_verdict event tokens grep-present; file net-shrinks; `just test-lifecycle-state` exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done — commit ea503fae; 11052→10516 bytes; s3 parity applied to orchestrator-review too (impl.md #348 + crit-review SKILL provisional left for their tickets); 54 tests green (drift/event/section/load)
 
 ### Task 10: Trim critical-review-gate.md (s3, s4)
 - **Files**: skills/lifecycle/references/critical-review-gate.md
@@ -110,7 +110,7 @@ Apply the 50 verified lifecycle-cluster trim verdicts (+ the one verified critic
 - **Complexity**: simple
 - **Context**: candidates `critical-review-gate.md s3/s4`. Keep the run-condition (`tier=complex AND criticality∈{medium,high,critical}`) verbatim — it is the actual gate other files depend on.
 - **Verification**: run-condition string grep-present; file net-shrinks; `python -m pytest tests/test_lifecycle_references_resolve.py` exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done — commit 981d83a3; 2596→1913 bytes; cortex-read-backlog-backend token kept; gate-ref + event tests green
 
 ### Task 11: Trim small references batch A (discovery-bootstrap, load-requirements, refine-delegation)
 - **Files**: skills/lifecycle/references/discovery-bootstrap.md, skills/lifecycle/references/load-requirements.md, skills/lifecycle/references/refine-delegation.md
@@ -119,7 +119,7 @@ Apply the 50 verified lifecycle-cluster trim verdicts (+ the one verified critic
 - **Complexity**: simple
 - **Context**: candidates in those three files (7 total). Keep the `cortex-lifecycle-create-index` invocation, the tag-selection protocol steps, and the `<REFINE_SKILL_MD>`/`<COMPLEXITY_ESCALATION_MD>` substitution-token names verbatim.
 - **Verification**: create-index + substitution-token names grep-present across the three files; each file net-shrinks; `python -m pytest tests/test_lifecycle_references_resolve.py` exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done — commit 558d46ec; load-req 1531→1216, discovery-bootstrap 3571→3324, refine-delegation 2132→1841; SKILL.md 3 manifest pins renumbered; 46 tests green
 
 ### Task 12: Trim small references batch B (complexity-escalation, post-refine-commit, parallel-execution)
 - **Files**: skills/lifecycle/references/complexity-escalation.md, skills/lifecycle/references/post-refine-commit.md, skills/lifecycle/references/parallel-execution.md
@@ -128,7 +128,7 @@ Apply the 50 verified lifecycle-cluster trim verdicts (+ the one verified critic
 - **Complexity**: simple
 - **Context**: candidates in those three files (6 total). Keep the verb+flag invocation + three-way exit/stdout routing (complexity-escalation), the flag-check invocation (post-refine-commit), and the worktree-inspection invariant statement (parallel-execution) verbatim.
 - **Verification**: exit-routing + flag-check + worktree-invariant tokens grep-present; each file net-shrinks; `python -m pytest tests/test_lifecycle_references_resolve.py tests/test_complexity_escalator.py` exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done — commit e96c1f37; CE 1138→976, PR 2411→2153, PE 2530→1582; ADR-0005 pointer resolves, no AskUserQuestion token; 37 tests green
 
 ### Task 13: Trim tiny references batch C (kept-pauses, wontfix, concurrent-sessions)
 - **Files**: skills/lifecycle/references/kept-pauses.md, skills/lifecycle/references/wontfix.md, skills/lifecycle/references/concurrent-sessions.md
@@ -137,7 +137,7 @@ Apply the 50 verified lifecycle-cluster trim verdicts (+ the one verified critic
 - **Complexity**: simple
 - **Context**: candidates in those three files. **kept-pauses.md must not change the parity-tested pause inventory** (spec R5) — compress preamble only. Keep the `.session` convention and wontfix verb invocation verbatim.
 - **Verification**: `python -m pytest tests/test_lifecycle_kept_pauses_parity.py` exit 0; `.session` + wontfix tokens grep-present; each file net-shrinks.
-- **Status**: [ ] pending
+- **Status**: [x] done — commit 3008bdf8; KP 2504→2322, WF 2372→2124, CS 1027→672; kept-pauses parity green; resolve added no new failure
 
 ### Task 14: Integration gate — full suite + savings tally
 - **Files**: (verification only — no edits)
@@ -146,7 +146,7 @@ Apply the 50 verified lifecycle-cluster trim verdicts (+ the one verified critic
 - **Complexity**: simple
 - **Context**: This is the whole-batch checkpoint. Re-run keep-list survival greps across all 19 files; sum the `weighted_cost` of applied candidates for the savings report.
 - **Verification**: `just test` — pass if exit 0 and all suites green; savings tally ≈ 8.6k weighted tokens reported.
-- **Status**: [ ] pending
+- **Status**: [x] done — full tests/ suite 2287 passed (only pre-existing #351 resolve red); `just test` 6/7 suites (the 1 fail = same #351); net −10,039 canonical bytes across 22 files + 2 LAZY_REF extractions
 
 ## Risks
 - **reviewer-prompt s9 synthesizer coupling** (Task 1) — the single genuine correctness risk; mitigated by reading the synthesizer parse surface before trimming and isolating it as the first commit.
