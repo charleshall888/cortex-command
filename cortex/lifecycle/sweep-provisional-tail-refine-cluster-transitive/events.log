@@ -5,3 +5,18 @@
 {"ts": "2026-07-03T03:26:21Z", "event": "spec_approved", "feature": "sweep-provisional-tail-refine-cluster-transitive"}
 {"ts": "2026-07-03T14:26:13Z", "event": "plan_approved", "feature": "sweep-provisional-tail-refine-cluster-transitive", "dispatch_choice": "trunk"}
 {"ts": "2026-07-03T14:26:13Z", "event": "phase_transition", "feature": "sweep-provisional-tail-refine-cluster-transitive", "from": "plan", "to": "implement"}
+{"ts": "2026-07-03T14:27:38Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-refine-cluster-transitive", "batch": 0, "tasks": [1]}
+{"ts": "2026-07-03T14:37:30Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-refine-cluster-transitive", "batch": 1, "tasks": [2]}
+{"ts": "2026-07-03T14:44:12Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-refine-cluster-transitive", "batch": 2, "tasks": [3]}
+{"ts": "2026-07-03T14:51:55Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-refine-cluster-transitive", "batch": 3, "tasks": [4]}
+{"ts": "2026-07-03T14:59:17Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-refine-cluster-transitive", "batch": 4, "tasks": [5]}
+{"ts": "2026-07-03T15:05:56Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-refine-cluster-transitive", "batch": 5, "tasks": [6]}
+{"ts": "2026-07-03T15:10:18Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-refine-cluster-transitive", "batch": 6, "tasks": [7]}
+{"ts": "2026-07-03T15:15:35Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-refine-cluster-transitive", "batch": 7, "tasks": [8]}
+{"ts": "2026-07-03T15:20:28Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-refine-cluster-transitive", "batch": 8, "tasks": [9]}
+{"ts": "2026-07-03T15:25:43Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-refine-cluster-transitive", "batch": 9, "tasks": [10]}
+{"ts": "2026-07-03T15:27:29Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-refine-cluster-transitive", "batch": 10, "tasks": [11]}
+{"ts": "2026-07-03T15:31:35Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-refine-cluster-transitive", "batch": 11, "tasks": [12]}
+{"ts": "2026-07-03T15:39:16Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-refine-cluster-transitive", "batch": 12, "tasks": [13]}
+{"ts": "2026-07-03T15:41:58Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-refine-cluster-transitive", "batch": 13, "tasks": [14]}
+{"ts": "2026-07-03T15:51:16Z", "event": "phase_transition", "feature": "sweep-provisional-tail-refine-cluster-transitive", "tier": "complex", "from": "implement", "to": "review"}
