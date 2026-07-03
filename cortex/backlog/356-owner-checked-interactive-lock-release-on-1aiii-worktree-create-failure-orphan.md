@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: adc22833-5cd8-41d6-ac04-a504dbd57c84
 title: Owner-checked interactive-lock release on 1a.iii worktree-create-failure orphan
-status: backlog
+status: complete
 priority: low
 type: bug
 created: 2026-07-02
-updated: 2026-07-02
+updated: 2026-07-03
 ---
 ## Why
 The interactive-worktree implement flow acquires the per-feature lock, then creates the git worktree in a later step. If the worktree create aborts (create failure, `worktree_escapes_repo` containment rejection, or any non-zero exit), the flow exits with the lock still held — orphaning it on **both** entry modes (picker-`selected` and branch-mode-`suppressed`, unified post-#355). This is pre-existing and was **not** fixed by #348 or #355: both closed the *overnight-guard-reject* orphan by moving the acquire behind the overnight guard, but the worktree-create-failure orphan sits *after* the acquire, so no acquire reorder can reach it. Residual is a self-block on retry until stale recovery reclaims the lock — the same hazard class #355 closed for the guard-reject path.
@@ -27,3 +27,6 @@ The release must be **owner-checked**. `release_lock(feature_slug)` in `cortex_c
 - `skills/lifecycle/references/implement.md` §1a.iii (+ the byte-identical cortex-core mirror) — the worktree-create failure exit gains a release-on-abort for the lock acquired at §1a.ii.
 - `cortex_command/interactive_lock.py` — add an owner-checked release path (an owner check on `release_lock`, or a new release-if-owner subcommand on `cortex-interactive-lock`).
 - Parent context: #355 (selected-path guard-then-acquire reorder) and #348 (suppressed-path precedent).
+
+## Resolution
+Implemented directly (commit `c0d0abd9`), not through the lifecycle gate — the change was small and the one open design question (owner-check identity) resolved to the conservative `session_id`-only match. `release_lock_if_owner` / the `release-if-owner` subcommand unlink only when this session's `CLAUDE_CODE_SESSION_ID` owns the on-disk lock; §1a.iii's create-failure exit now calls it before exiting. The env-absent case is intentionally not cleaned up here — it degrades to the pre-existing stale-recovery-bounded behavior rather than risk deleting a co-passer's live lock. The pid+start_time fallback the ticket floated was dropped as unnecessary for that reason.
