@@ -17,13 +17,6 @@ preconditions:
 
 Derives challenge angles from the artifact and domain context, dispatches one fresh reviewer agent per angle in parallel, then synthesizes findings with an Opus agent. Each reviewer works independently with no anchoring to the reasoning that produced the artifact.
 
-## Contents
-
-1. [Step 1: Find the Artifact](#step-1-find-the-artifact)
-2. [Step 2: Review Setup and Dispatch](#step-2-review-setup-and-dispatch)
-3. [Step 3: Present](#step-3-present)
-4. [Step 4: Apply Feedback](#step-4-apply-feedback)
-
 ## Step 1: Find the Artifact
 
 If a lifecycle is active, read the most relevant artifact (`cortex/lifecycle/{feature}/plan.md` → `spec.md` → `research.md`, in that order). Otherwise use conversation context. If nothing is clear enough to challenge, ask: "What should I critically review?" before proceeding.
