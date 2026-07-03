@@ -22,10 +22,7 @@ Ask about these areas in sequence, adapting based on answers:
 
 **Problem statement**: What problem does this feature solve? Who benefits? What happens if it is not built?
 
-**Requirements**: For each requirement, ask for acceptance criteria — how will you know it works? Probe for:
-- Must-have vs nice-to-have distinction
-- Measurable success criteria
-- User-facing vs internal requirements
+**Requirements**: For each requirement, ask for acceptance criteria — how will you know it works? Probe for the must-have vs nice-to-have distinction, measurable success criteria, and user-facing vs internal requirements.
 
 **ADR posture (in-the-moment)**: When negotiating a requirement decision, if it meets the three-criteria gate from `cortex/adr/README.md` (Hard to reverse + Surprising without context + Real trade-off), draft an ADR proposal in the spec's `## Proposed ADR` section in the same turn rather than deferring.
 
@@ -49,10 +46,7 @@ Probe — do not just confirm what is already written. Use the AskUserQuestion t
 
 ### 2a. Research Confidence Check
 
-**Missing research.md guard**: Before evaluating any signals, check whether `cortex/lifecycle/{feature}/research.md` exists.
-
-- **If it does NOT exist**: Announce to the user that `research.md` is missing and Research must run before Specify can proceed. Then immediately trigger the cycle 1 loop-back: log a `confidence_check` event with `"signals": ["research.md missing"]` and `"action": "loop_back"`, and transition to Research bypassing /refine's Sufficiency Check (same override described below). Do not evaluate C1/C2/C3.
-- **If it DOES exist**: proceed to the C1/C2/C3 signal evaluation below.
+**Missing research.md guard**: Before evaluating any signals, check whether `cortex/lifecycle/{feature}/research.md` exists. If it does NOT exist, announce to the user that `research.md` is missing and Research must run before Specify can proceed, then trigger the cycle 1 loop-back below: log a `confidence_check` event with `"signals": ["research.md missing"]` and `"action": "loop_back"`, and transition to Research bypassing /refine's Sufficiency Check — do not evaluate C1/C2/C3. If it DOES exist, proceed to the C1/C2/C3 signal evaluation below.
 
 After the interview concludes, evaluate whether the research from `research.md` is still sufficient to write accurate acceptance criteria. Assess these three signals — each is a pass/fail gate:
 
@@ -104,14 +98,7 @@ Any item that IS deferred must include a one-sentence reason why it cannot be re
 
 Compile answers into `cortex/lifecycle/{feature}/spec.md`.
 
-**If §2a ended with the user declining to loop back** (i.e., a `confidence_check` event with `"action": "declined"` is present in `cortex/lifecycle/{feature}/events.log`): prepend the following callout to the spec, before `## Problem Statement`, substituting one bullet per flagged signal from that event:
-
-```markdown
-> **Advisory — research gaps noted**: The confidence check identified gaps during the interview that were not resolved before proceeding. The requirements below may be incomplete or inaccurate in these areas. This warning is intentional; downstream phases should proceed normally.
-> - [signal description for each flagged signal]
-```
-
-Omit this callout entirely when §2a passed cleanly or no loop-back occurred.
+**If §2a ended with the user declining to loop back** (i.e., a `confidence_check` event with `"action": "declined"` is present in `cortex/lifecycle/{feature}/events.log`): before `## Problem Statement`, prepend a short advisory blockquote noting the confidence check found research gaps left unresolved during the interview (the requirements below may be incomplete in those areas; downstream phases should proceed normally), with one bullet naming each flagged signal from that event. Omit it entirely when §2a passed cleanly or no loop-back occurred.
 
 ```markdown
 # Specification: {feature}
@@ -172,7 +159,7 @@ Also resolve the active backlog backend once via `` `cortex-read-backlog-backend
 
 **Run** when `tier = complex` AND `criticality ∈ {medium, high, critical}`: invoke the `critical-review` skill with the spec artifact. Present the synthesis to the user before spec approval.
 
-**Non-local seed-tier fail-safe**: when the resolved backend ≠ `cortex-backlog` AND the run condition above did not fire because `tier = simple` (the skip-silent seed) AND `cortex/lifecycle/{feature}/research.md` exists (the resume-to-spec signature that Clarify may have been bypassed and the seed left un-reconciled), the `simple` seed is not trustworthy — invoke the `critical-review` skill with the spec artifact and present the synthesis before spec approval, rather than skipping. The local `cortex-backlog` path skips this branch (its seed is re-sourced from backlog frontmatter on resume, so it is trustworthy).
+**Non-local seed-tier fail-safe**: when the resolved backend ≠ `cortex-backlog` AND the run condition above did not fire because `tier = simple` AND `cortex/lifecycle/{feature}/research.md` exists, invoke the `critical-review` skill with the spec artifact and present the synthesis before spec approval, rather than skipping. (Rationale — why the `simple` seed is un-reconciled and why the local `cortex-backlog` path is exempt — lives in critical-review-gate.md's Non-Local Seed-Tier Rule.)
 
 Otherwise, read and follow the critical-review gate protocol (use the body-resolved absolute path from lifecycle SKILL.md's Reference-path propagation manifest: the **critical-review-gate** target) for the `specify` phase.
 
