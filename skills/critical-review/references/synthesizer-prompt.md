@@ -1,12 +1,6 @@
 # Opus Synthesizer Prompt Template
 
-This is the canonical synthesizer prompt for Step 2d. Substitute
-`{artifact_path}`, `{artifact_sha256}`, `{a_to_b_rubric}`, and the
-reviewer-findings payload at runtime. The A→B downgrade rubric and its 8 worked
-examples live in `a-to-b-downgrade-rubric.md`; the dispatching SKILL.md body
-Reads that file and inlines its content into `{a_to_b_rubric}` before dispatch
-(the rubric is body-propagated, not referenced by path — a fresh subagent
-cannot resolve a skill-dir path).
+Substitute `{artifact_path}`, `{artifact_sha256}`, `{a_to_b_rubric}`, and the reviewer-findings payload at runtime.
 
 ---
 
@@ -17,7 +11,7 @@ You are synthesizing findings from multiple independent adversarial reviewers in
 - Path: `{artifact_path}`
 - Expected SHA-256: `{artifact_sha256}`
 
-Read the literal absolute path provided above once at the START of synthesis, before the per-finding loop in the Instructions section. Do NOT re-derive the path yourself; Read the literal absolute path as given. Treat the in-context Read result as the source of truth for evidence-quote re-validation throughout the remainder of synthesis.
+Read the literal absolute path provided above once at the START of synthesis, before the per-finding loop. Do NOT re-derive it. Treat the in-context Read result as the source of truth for evidence-quote re-validation throughout synthesis.
 
 When the Read succeeds AND the computed SHA-256 of the Read result matches `{artifact_sha256}`, emit `SYNTH_READ_OK: <path> <sha>` (substituting the absolute path you Read and the SHA-256 of the Read result) as a line in your output before any per-finding analysis, then continue with the synthesis below.
 
@@ -28,9 +22,8 @@ When the Read fails or returns empty content, emit `SYNTH_READ_FAILED: <absolute
 
 ## Instructions
 
-1. Read all reviewer findings carefully.
 2. Find the through-lines — claims or concerns that appear across multiple angles **within the same class**. A-class through-lines, B-class through-lines, and C-class through-lines are distinct; do not merge them.
-3. Before accepting any finding's class tag, re-read its `evidence_quote` field against the in-context Read result of `{artifact_path}` performed at the start of synthesis. For A-class findings, also re-read the `"fix_invalidation_argument"` field, then apply the A→B downgrade rubric inlined below. After applying the rubric, if the evidence supports a different class, re-classify and surface a note: `Synthesizer re-classified finding N from B→A: <rationale>` (upgrade) or `Synthesizer re-classified finding N from A→B: <rationale>` (downgrade). Downgrades commonly fire on straddle-rationale findings where the evidence only supports the adjacent concern.
+3. Before accepting any finding's class tag, re-read its `evidence_quote` field against the in-context Read result of `{artifact_path}`. For A-class findings, also re-read the `"fix_invalidation_argument"` field, then apply the A→B downgrade rubric inlined below. After applying the rubric, if the evidence supports a different class, re-classify and surface a note: `Synthesizer re-classified finding N from B→A: <rationale>` (upgrade) or `Synthesizer re-classified finding N from A→B: <rationale>` (downgrade). Downgrades commonly fire on straddle-rationale findings where the evidence only supports the adjacent concern.
 
 ### A→B downgrade rubric
 
@@ -50,8 +43,6 @@ Use the following named sections:
 ## Tensions
 ## Concerns
 
-Use bullets, not prose paragraphs. Each finding is a discrete bullet. Bullets may be multi-sentence when quoting artifact text as evidence. Skip sections where the agent returned no findings — do not emit empty section headers. Do not include balanced or endorsement sections — no "## What Went Well", no "## Strengths", no "## Recommendation".
+Use bullets, not prose paragraphs. Each finding is a discrete bullet. Bullets may be multi-sentence when quoting artifact text as evidence. Skip sections where the agent returned no findings — do not emit empty section headers. Do not include balanced or endorsement sections — no "## What Went Well", no "## Strengths", no "## Recommendation". Do not be balanced.
 
-Untagged prose from malformed-envelope reviewers (per Step 2c.5) renders under `## Concerns` and is excluded from the A-class tally that gates whether `## Objections` is emitted.
-
-Do not be balanced. Do not reassure. Find the through-lines and make the strongest case.
+Do not reassure. Find the through-lines and make the strongest case.
