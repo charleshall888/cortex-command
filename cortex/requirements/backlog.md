@@ -8,9 +8,9 @@
 
 The backlog becomes an **optional, backend-configurable** capability rather than a built-in. Today the backlog is a local-file system (`cortex/backlog/NNN-slug.md`) wired directly into `lifecycle`, `discovery`, `refine`, `dev`, `overnight`, and `morning-review`. This area makes two changes: (1) extract the interactive backlog surface into a new optional `cortex-backlog` plugin, mirroring how `cortex-overnight` is optional; and (2) let each repo declare, in the cortex init config, *which* ticketing backend cortex should use — the local cortex-backlog, an external tracker (GitHub Issues, Jira, …), or none.
 
-The driving motivation is adoption: future users already run GitHub Issues / Jira and want cortex to work with their tracker **without cortex maintaining a code adapter per tool**. The key insight that makes "support any tracker" affordable is that the adapter is **user-authored prose in config, consumed by the LLM** — not cortex-maintained code. For an external backend, consumers fall back to the LLM's judgement: they read the configured backend plus a freeform `instructions` hint and drive the user's tracker best-effort (e.g. `gh issue create`). This trades per-tool fidelity for zero per-tool maintenance and aligns with the project's "prescribe What and Why, not How" principle.
+The driving motivation is adoption: future users already run GitHub Issues / Jira and want cortex to work with their tracker **without cortex maintaining a code adapter per tool**. The key insight that makes "support any tracker" affordable is that the adapter is **user-authored prose in config, consumed by the LLM** — not cortex-maintained code. For an external backend, consumers fall back to the LLM's judgement: they read the configured backend plus a freeform `instructions` hint and drive the user's tracker best-effort (e.g. `gh issue create`). This aligns with the project's "prescribe What and Why, not How" principle (see Non-Functional Requirements' "Zero per-tool maintenance" bullet for the resulting trade-off).
 
-The boundary is deliberate: this area delivers extraction + a declarative backend config + LLM-best-effort routing on interactive paths. It does **not** build concrete Jira/GitHub code adapters, and it does **not** physically remove the backlog engine from the wheel. This promotes the backlog from "documented inline (no area doc)" in `project.md` to its own area doc.
+The boundary is deliberate: this area delivers extraction + a declarative backend config + LLM-best-effort routing on interactive paths (see Architectural Constraints for what stays explicitly out of scope). This promotes the backlog from "documented inline (no area doc)" in `project.md` to its own area doc.
 
 ## Functional Requirements
 
@@ -20,8 +20,7 @@ The boundary is deliberate: this area delivers extraction + a declarative backen
 - **Inputs**: The existing canonical skill `skills/backlog/` (only the interactive backlog surface moves; `skills/backlog-author/` stays in cortex-core).
 - **Outputs**: A new `cortex-backlog` plugin containing the `backlog` skill, built and mirrored via the established dual-source pattern (registered in justfile `BUILD_OUTPUT_PLUGINS`, drift-checked at pre-commit, documented as optional in docs/setup.md).
 - **Acceptance criteria**:
-  - Only `skills/backlog` moves: it is packaged in the `cortex-backlog` plugin, not in `cortex-core`; `skills/backlog-author` remains in cortex-core.
-  - The backlog Python engine (`cortex_command/backlog/*`) remains in the wheel and is unaffected by plugin install/uninstall.
+  - Only `skills/backlog` moves into the `cortex-backlog` plugin; `skills/backlog-author` and the backlog engine (`cortex_command/backlog/*`) stay in cortex-core/the wheel — see Architectural Constraints for the packaging rule.
   - The dual-source drift gate passes for the new plugin with canonical sources still top-level.
 - **Priority**: must
 
@@ -29,7 +28,6 @@ The boundary is deliberate: this area delivers extraction + a declarative backen
 
 - **Description**: `cortex/lifecycle.config.md` (the doc `cortex init` scaffolds) gains a `backlog:` block declaring the active backend and optional prose instructions.
 - **Inputs**: A `backlog:` mapping with `backend:` (one of `cortex-backlog` [default] | `github-issues` | `jira` | a freeform string | `none`) and an optional freeform `instructions:` string.
-- **Outputs**: A resolved backend identity that every consumer reads before touching tickets.
 - **Acceptance criteria**:
   - The scaffolded `lifecycle.config.md` documents the `backlog:` block with `cortex-backlog` as the default and commented alternatives.
   - An example external config (`backend: github-issues` + an `instructions` hint such as "Use the `gh` CLI; label cortex issues `cortex`; epics are milestones") is documented.
@@ -41,13 +39,12 @@ The boundary is deliberate: this area delivers extraction + a declarative backen
 - **Inputs**: The `backlog.backend` value, or its absence.
 - **Outputs**: The active backend; absent/unset resolves to `cortex-backlog`.
 - **Acceptance criteria**:
-  - With no `backlog:` block present, consumers behave exactly as they do today (local backlog).
-  - Resolution never depends on introspecting installed Claude Code plugins.
+  - With no `backlog:` block present, consumers behave exactly as they do today (local backlog); backend resolution follows the config-authoritative rule in Architectural Constraints (never plugin-install detection).
 - **Priority**: must
 
 ### Consumer backend routing (skill layer)
 
-- **Description**: Backend branching lives in the consumer skills, not in the CLI tools. The `cortex-*` CLI tools remain the cortex-backlog-only local engine.
+- **Description**: Backend branching lives in the consumer skills, not in the CLI tools (see Architectural Constraints for the CLI-backend-blind rule).
 - **Inputs**: The resolved backend, read by each interactive consumer (`discovery`, `lifecycle`, `refine`, `dev`, `morning-review`).
 - **Outputs**: One of three behaviors per consumer — local-engine call, LLM best-effort against an external tracker, or skip.
 - **Acceptance criteria**:
@@ -60,8 +57,6 @@ The boundary is deliberate: this area delivers extraction + a declarative backen
 ### External backend via LLM best-effort (create + round-trip)
 
 - **Description**: For an external backend, consumers drive the user's tracker using the LLM plus the config `instructions`, with no typed client.
-- **Inputs**: The composed ticket body (from `backlog-author`), the `instructions` prose, and the tracker's CLI/auth available in the repo.
-- **Outputs**: Created/updated/closed tracker items; for write-back, the correct item re-located by search.
 - **Acceptance criteria**:
   - Create (discovery): compose the body via `backlog-author`, then create the item in the configured tracker (e.g. `gh issue create`) honoring `instructions`.
   - Round-trip (lifecycle/morning-review): re-resolve the target item by searching the tracker for its title/slug (e.g. `gh issue list`) — the same fuzzy approach `cortex-resolve-backlog-item` uses locally — rather than relying on a persisted ID map.
@@ -81,7 +76,6 @@ The boundary is deliberate: this area delivers extraction + a declarative backen
 ### `none` backend behavior
 
 - **Description**: A repo can opt out of all cortex ticket interaction, including LLM best-effort.
-- **Inputs**: `backend: none`.
 - **Outputs**: Incidental consumers skip; discovery surfaces its output instead of erroring.
 - **Acceptance criteria**:
   - Incidental consumers (lifecycle write-back, refine seeding, morning-review close) skip with a one-line advisory.
@@ -91,7 +85,7 @@ The boundary is deliberate: this area delivers extraction + a declarative backen
 ## Non-Functional Requirements
 
 - **Zero per-tool maintenance**: No code adapter per tracker — the core driver. New trackers are supported via user-authored prose, not cortex code.
-- **Backward compatibility**: Existing local-backlog repos see no behavior change. The default backend is `cortex-backlog`, and an absent `backlog:` block resolves to it.
+- **Backward compatibility**: no behavior change for existing local-backlog repos — see Backend Resolution's acceptance criteria (above).
 - **Safety**: External-tracker writes occur only on interactive (LLM-in-loop) paths where the user is present — never on the unattended overnight path with `--dangerously-skip-permissions`.
 - **Honest support claims**: GitHub Issues is the well-supported case (`gh` is near-universal and the model drives it reliably). Jira and freeform backends are documented as best-effort, dependent on the user's CLI/auth, and unverified — not promised as parity. The `instructions` field is how a user closes that gap themselves.
 
@@ -116,16 +110,13 @@ The boundary is deliberate: this area delivers extraction + a declarative backen
 
 ## Edge Cases
 
-- **External backend configured but overnight is run**: overnight refuses with a clear message naming the configured backend and requiring `cortex-backlog`.
-- **Round-trip ambiguity (multiple tracker items match a title/slug)**: the LLM disambiguates or asks the user rather than guessing.
-- **Existing `lifecycle.config.md` with no `backlog:` block**: resolves to `cortex-backlog`; zero behavior change (migration is implicit).
-- **Empty `instructions` for an external backend**: the LLM falls back to general knowledge of the named tool, best-effort.
-- **Backend names a tool the LLM can't drive (no CLI / no auth)**: best-effort fails gracefully and surfaces the error to the user rather than silently dropping work.
-- **`none` + discovery**: composed tickets are surfaced inline / in the research artifact, not treated as an error.
+- **External backend configured but overnight is run**: refuses; see the Overnight-requires-`cortex-backlog` FR's acceptance criteria (above).
+- **Existing `lifecycle.config.md` with no `backlog:` block**: resolves to `cortex-backlog`; see Backend Resolution's acceptance criteria (above).
+- **`none` + discovery**: surfaced inline / in the research artifact, not treated as an error; see the `none` backend behavior FR's Outputs (above).
 
 ## Open Questions
 
 - The Jira best-effort path is unverified — which CLI/auth assumption to document, and whether to ship a starter `instructions` snippet. Deferred until a real Jira user drives it.
-- Whether to persist the external ticket ref in the lifecycle artifact for more robust round-tripping, versus relying on title/slug re-resolution. Recommendation: re-resolution for v1; revisit if it proves flaky.
-- Whether `cortex init` should interactively prompt for a backend, versus scaffolding the `cortex-backlog` default with commented alternatives. Recommendation: scaffold-with-default + comments, no interactive prompt in v1.
+- Ticket-ref persistence: resolved — round-trip via title/slug re-resolution (see External Backend via LLM Best-Effort, above), not a persisted ID map.
+- Interactive init prompt: resolved — `cortex init` scaffolds the `cortex-backlog` default with commented alternatives; no interactive prompt in v1.
 - Whether building any concrete external adapter (beyond LLM best-effort) is ever warranted. Explicitly deferred to a future area decision driven by real demand.
