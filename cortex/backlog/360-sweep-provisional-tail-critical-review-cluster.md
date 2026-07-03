@@ -2,15 +2,19 @@
 schema_version: "1"
 uuid: fab85f4c-2aa9-4b6f-ae21-3c9f3e7c94c9
 title: 'Sweep provisional tail: critical-review cluster'
-status: backlog
+status: complete
 priority: low
 type: chore
 tags: ['skill-value-scorecard']
-areas: [skills]
+areas: ['skills']
 discovery_source: cortex/research/skill-value-scorecard/report.html
 created: 2026-07-02
-updated: 2026-07-02
+updated: 2026-07-03
 parent: "357"
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/sweep-provisional-tail-critical-review-cluster/spec.md
+lifecycle_phase: research
 ---
 ## Why
 Child of #357's decomposition (the parent umbrella carrying the provisional tail of the skill-value audit). This child owns the critical-review cluster: 26 provisional candidates (~4.9k weighted tokens) across SKILL.md (8), references/angle-menu.md (6), references/synthesizer-prompt.md (4), references/reviewer-prompt.md (3), references/verification-gates.md (2), references/residue-write.md (2), and references/fallback-reviewer-prompt.md (1). The a-to-b-downgrade-rubric candidates are excluded (they overlap #300). None were adversarially verified.
