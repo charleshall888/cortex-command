@@ -87,8 +87,9 @@ def _dispatch_overnight_recover(args: argparse.Namespace) -> int:
     The operator-facing manual trigger for the out-of-process recovery core
     — the on-demand path when the host-level guardian is not installed. It is
     writer-authorized and is deliberately NOT folded into the read-only
-    ``cortex overnight status`` verb (``observability.md:93/99``): recovery
-    writes originate only from this verb and the guardian.
+    ``cortex overnight status`` verb (see ``observability.md``'s
+    "In-Session Status CLI" section): recovery writes originate only from
+    this verb and the guardian.
 
     Target resolution:
       * ``--session <id>`` selects a specific session, resolved (with R17

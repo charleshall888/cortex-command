@@ -52,7 +52,7 @@ The observability area covers five subsystems that give the developer visibility
 
 ### Overnight Kill/Stall Telemetry
 
-- **Description**: In-process stall-kill events carry a reason marker distinguishing a silent/wedged child from an absolute-ceiling kill — the feedback signal for tuning the (currently guessed) ceiling value.
+- **Description**: In-process stall-kill events carry a reason marker distinguishing a silent/wedged child from an absolute-ceiling kill.
 - **Acceptance criteria**:
   - Stall-kill events (`ORCHESTRATOR_FAILED`, `BATCH_RUNNER_STALLED`) carry a `stall_reason`
     field (`inactivity` | `ceiling`) distinguishing a silent/wedged child from an
@@ -61,7 +61,7 @@ The observability area covers five subsystems that give the developer visibility
 
 ### Runtime Adoption Telemetry
 
-- **Description**: Per-script invocation shim (`bin/cortex-log-invocation`) writes one JSONL record per `bin/cortex-*` invocation to `cortex/lifecycle/sessions/<id>/bin-invocations.jsonl`. Aggregator CLI (`bin/cortex-invocation-report`) reads the per-session logs and reports adoption (default human-readable, `--json`, `--check-shims`, `--self-test` modes). Composed with DR-5 static parity lint (ticket 102) for full coverage of script-adoption failure modes — DR-5 catches missing wiring; runtime telemetry catches wired-but-never-invoked scripts.
+- **Description**: Per-script invocation shim (`bin/cortex-log-invocation`) writes one JSONL record per `bin/cortex-*` invocation to `cortex/lifecycle/sessions/<id>/bin-invocations.jsonl`. Aggregator CLI (`bin/cortex-invocation-report`) reads the per-session logs and reports adoption (default human-readable, `--json`, `--check-shims`, `--self-test` modes).
 - **Inputs**: helper invocation calls from each `bin/cortex-*` script's shim line; `LIFECYCLE_SESSION_ID` environment variable; aggregator scans `cortex/lifecycle/sessions/*/bin-invocations.jsonl` glob.
 - **Outputs**: per-session JSONL log file (`cortex/lifecycle/sessions/<id>/bin-invocations.jsonl`); aggregator stdout (default + `--json` modes); error breadcrumb at `~/.cache/cortex/log-invocation-errors.log` recording fail-open categories.
 - **Acceptance criteria**: Spec R1–R18 acceptance criteria from `cortex/lifecycle/archive/add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7/spec.md` (helper fail-open contract, JSONL schema, sessions inventory, aggregator output structure, `--check-shims` pre-commit gate, `--self-test` round-trip, plugin distribution byte-identity).
@@ -69,7 +69,7 @@ The observability area covers five subsystems that give the developer visibility
 
 ### In-Session Status CLI
 
-- **Description**: The `cortex overnight status` Python subcommand (dispatched by `cortex_command/cli.py:_dispatch_overnight_status` → `cortex_command.overnight.cli_handler.handle_status`) produces a one-shot status report of the active overnight session from within a sandboxed Claude Code session. Installed as the `cortex` console script via `uv tool install` (typically `~/.local/bin/cortex`). Also invocable as `/overnight status` via the overnight skill. The legacy `bin/overnight-status` bash shim is retired (see `pipeline.md:28`).
+- **Description**: The `cortex overnight status` Python subcommand produces a one-shot status report of the active overnight session from within a sandboxed Claude Code session. Installed as the `cortex` console script via `uv tool install`. Also invocable as `/overnight status` via the overnight skill.
 - **Inputs**: `~/.local/share/overnight-sessions/active-session.json` (session pointer), `cortex/lifecycle/sessions/{id}/overnight-state.json`, `cortex/lifecycle/sessions/{id}/runner.pid`, `cortex/lifecycle/sessions/{id}/overnight-events.log`
 - **Outputs**: Human-readable status report to stdout (default) or JSON object (`--format json`) including runner liveness, session phase, feature progress, recent events, and failed-feature errors
 - **Acceptance criteria**:
@@ -89,7 +89,7 @@ The observability area covers five subsystems that give the developer visibility
 - **Outputs**: Updated `~/.claude/settings.local.json` with combined `allowUnixSockets` array (preserving existing GPG socket entry)
 - **Acceptance criteria**:
   - `settings.local.json` contains both the tmux socket and GPG agent socket in `allowUnixSockets`
-  - Existing `sandbox.filesystem.allowWrite` entries in `settings.local.json` are preserved (arrays replace, not merge)
+  - Existing `sandbox.filesystem.allowWrite` entries in `settings.local.json` are preserved (see Note below on array-replace semantics)
   - Setup prints a clear warning about granting access to all tmux sessions
   - Idempotent: re-running skips if tmux socket already present
 - **Priority**: should-have
@@ -120,12 +120,9 @@ The observability area covers five subsystems that give the developer visibility
 ## Edge Cases
 
 - **No active session**: Statusline renders git state only; dashboard hides Session and Fleet panels
-- **Session directory rotation**: Dashboard resets event offset to 0 on session ID change and re-reads from scratch; possible duplicate alerts on first poll after reset
 - **jq unavailable**: Statusline falls back to pure-bash regex parsing; may fail on complex JSON
-
 - **Stale PID in `.runner.lock`**: Runner died but lock file not cleaned up; `kill -0` returns non-zero; status CLI reports "dead (stale PID)" rather than "alive"
-- **Corrupt `overnight-state.json`**: Truncated write during active session; status CLI falls back to events-only output
-- **`settings.local.json` array clobber**: Adding `allowUnixSockets` via naive jq write could destroy `filesystem.allowWrite`; setup recipe uses deep merge to preserve sibling keys
+- **`settings.local.json` array clobber**: Adding `allowUnixSockets` via a naive write could destroy `filesystem.allowWrite` if arrays are blindly replaced (see the Sandbox Socket Access Note on array-replace semantics)
 - **tmux socket grants broad access**: Allowlisting the default tmux socket grants access to ALL tmux sessions, not just the overnight runner; acceptable for single-user personal tooling
 
 ## Install-mutation invocations
