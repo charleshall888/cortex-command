@@ -140,7 +140,7 @@ Apply the spec's risk-first-then-fat-first edit program to the core skill conste
 - **Complexity**: simple
 - **Context**: Same dual-source discipline as Tasks 3/7. Confirms the new `test_model_resolution_wiring.py`, kept-pauses parity, and mirror parity all green after the leading-word + single-source edits.
 - **Verification**: `just build-plugin && just test` — pass if exit 0 and all suites green (notably `test_model_resolution_wiring.py`, `test_lifecycle_kept_pauses_parity`, mirror-parity, `test_competing_plans_wired`, `test_refine_reconcile_wiring`).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 11: Trim description synonyms (R9)
 - **Files**: `skills/lifecycle/SKILL.md`, `skills/refine/SKILL.md`, `skills/critical-review/SKILL.md`, `skills/research/SKILL.md`, `skills/discovery/SKILL.md`
@@ -149,7 +149,7 @@ Apply the spec's risk-first-then-fat-first edit program to the core skill conste
 - **Complexity**: complex
 - **Context**: The five skill `description`/`when_to_use` fields carry 6-11 synonyms per branch. **Fixture-constrained**: `tests/fixtures/skill_trigger_phrases.yaml` pins several lifecycle phrases — trim only the free (unpinned) synonyms; do not remove a pinned phrase. Keep the lifecycle description's mirror-regen note (it is governance-load-bearing) unless relocated. **L1 surface ratchet**: `test_l1_surface_ratchet.py` requires equal-or-lower byte budget — trims must not regrow; critical-review sits at its 795B cluster ceiling, so its description must not grow. Confirm the routing fixture still resolves each skill's intended triggers after the trim.
 - **Verification**: `just test` runs `test_l1_surface_ratchet.py` (equal-or-lower passes) and the routing fixture, both green, AND each trimmed skill's pinned `skill_trigger_phrases.yaml` phrases still present — pass if the ratchet holds at equal-or-lower budget and routing/fixture tests stay green.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 12: Phase 4 gate — regenerate mirrors, test, commit
 - **Files**: `plugins/cortex-core/` (regenerated), `cortex/lifecycle/skill-suite-dedup/`
