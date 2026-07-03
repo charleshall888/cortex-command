@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 04e4c3bd-52fb-4b70-aa21-2c1f41ffdb27
 title: Sweep remaining verified and provisional trim candidates by cluster
-status: in_progress
+status: complete
 priority: low
 type: chore
 tags: ['skill-value-scorecard']
