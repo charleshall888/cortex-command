@@ -198,12 +198,7 @@ After all agents complete, synthesize into the output structure.
 
 ### Empty/failed agent handling
 
-For each dispatched angle, check whether its agent returned findings. If an agent returned empty output or failed:
-- Include the section header anyway
-- Add a warning note: `⚠️ The [angle] agent returned no findings — this section may be incomplete.`
-- Proceed with synthesis using available outputs; do not abort.
-
-If ALL agents returned empty output, write the structure with warnings in every section and include a top-level note: `⚠️ All agents returned no findings — research should be retried.`
+If an angle's agent returned empty output or failed, keep its section header with a warning note flagging the section as incomplete, and proceed with synthesis using available outputs — never abort. If ALL agents returned empty, warn in every section and add a top-level note that research should be retried.
 
 ### Contradiction handling
 
