@@ -27,14 +27,7 @@ This is a read path, so it folds to **two arms**, not the three arms of decompos
 
 ### 4. Confidence Assessment
 
-Assess confidence across four ideation-alignment dimensions:
-
-| Dimension | High confidence | Low confidence |
-|-----------|----------------|----------------|
-| **Topic aim** | The topic has a clear focus — one problem space, one domain | The topic is vague, multi-directional, or conflates distinct problems |
-| **Domain** | The domain is identifiable — it belongs clearly to one area of the system | The domain is unclear or spans unrelated areas without a unifying question |
-| **Novelty** | No substantial backlog overlap detected | Significant overlap with existing tickets; unclear whether this is truly new |
-| **Requirements alignment** | Topic aligns with requirements context; no obvious conflicts | Topic conflicts with requirements, or has no connection to any stated need |
+Assess confidence across four ideation-alignment dimensions: **Topic aim**, **Domain**, **Novelty**, and **Requirements alignment**.
 
 ### 5. Question Threshold
 
@@ -46,15 +39,11 @@ Assess confidence across four ideation-alignment dimensions:
 
 Write or present the following outputs — this is the handoff package for Research:
 
-1. **Clarified topic statement**: One sentence describing what this discovery will investigate and why. Example: "Explore options for replacing the pipeline orchestrator with a simpler overnight-backed flow, focused on reducing duplication in the execution layer."
+1. **Clarified topic statement**: One sentence describing what this discovery will investigate and why.
 
 2. **Domain note**: Which area(s) of the project this touches (e.g., "Skills & workflow engine — orchestration layer").
 
-3. **Requirements alignment note**: One of:
-   - "Aligned with cortex/requirements/{file}: [brief summary of relevant constraints or goals]"
-   - "Partial alignment: [what aligns and what doesn't]"
-   - "No requirements files found — alignment check skipped"
-   - "Conflict detected: [describe the conflict]" — if conflict, resolve with user before proceeding
+3. **Requirements alignment note**: state aligned / partial / none / conflict; on conflict, resolve with user before proceeding.
 
 4. **Open questions for research**: Bulleted list of questions to carry into Research (may be empty). These are questions best resolved by investigation — not user answers.
 
@@ -66,11 +55,9 @@ Write or present the following outputs — this is the handoff package for Resea
 
    Discovery's research-sizing assessment is deliberately biased *upward* relative to how the same topic would rate under refine/lifecycle, because discovery is high-leverage: it sets the direction the whole epic inherits, and a wrong direction is costly to reverse once tickets are spawned. So criticality **floors at `medium`** — never rate a discovery topic `low`. Raise it to `high` or `critical` when the topic seeds a whole epic or sets direction across multiple tickets. Apply judgment to where on that range the topic lands rather than a mechanical lookup. State the assessment with brief reasoning and proceed.
 
-7. **Scope envelope** (optional): The agent decides per topic whether to produce this. When the topic's boundaries are tractable at clarify time, emit in-scope/out-of-scope bullets to constrain what Research investigates:
-   - **In scope**: bulleted list of areas/questions Research should pursue
-   - **Out of scope**: bulleted list of adjacent concerns explicitly excluded from this discovery
-   
-   When boundaries cannot be pre-locked (topic is too exploratory, or scope itself is part of what Research must determine), emit "No envelope needed" with a one-line reason. Fire when boundaries are tractable; skip when they are not.
+7. **Scope envelope** (optional): The agent decides per topic whether to produce this. When the topic's boundaries are tractable at clarify time, emit in-scope/out-of-scope bullets to constrain what Research investigates.
+
+   When boundaries cannot be pre-locked (topic is too exploratory, or scope itself is part of what Research must determine), emit "No envelope needed" with a one-line reason.
 
 ### Persist the research-sizing assessment
 
@@ -83,11 +70,3 @@ cortex-discovery emit-research-sizing --topic <topic> --complexity <simple|compl
 ```
 
 This records a durable `discovery_research_sizing` entry on the topic's events.log (the helper resolves the correct path — never hardcode it). Research reads it back at entry to size its fan-out.
-
-## Constraints
-
-| Thought | Reality |
-|---------|---------|
-| "I should assess complexity and criticality" | Discovery Clarify assesses a *research-sizing* complexity/criticality only (§4, outputs 5–6) — its sole job is sizing the research fan-out, biased upward because discovery sets an epic's initial direction. It does not assess *implementation* complexity; that assessment happens in /cortex-core:refine or /cortex-core:lifecycle when a ticket is ready to build. |
-| "I should look for a backlog item to match" | Discovery produces backlog items; it does not start from them. The backlog coverage check (§3) looks for overlap to avoid duplicating existing work, not to resolve an input. |
-| "I should research feasibility here" | That is Research's job. Clarify only checks aim, domain, novelty, and alignment. |
