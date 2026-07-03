@@ -20,16 +20,16 @@ Name what this piece does by its Responsibility in the system, not by its mechan
 
 ## Integration
 
-Describe how this piece connects to neighboring pieces and to the existing system, using the Interface surfaces named in the Architecture section. Reference contract surfaces by name (e.g., "the phase-transition contract", "the events-registry schema") without citing file paths or line numbers. One paragraph covering the inbound and outbound Interface connections is sufficient.
+Describe how this piece connects to neighboring pieces and to the existing system, using the Interface surfaces named in the Architecture section. Reference contract surfaces by name (e.g., "the phase-transition contract", "the events-registry schema"). One paragraph covering the inbound and outbound Interface connections is sufficient.
 
 ---
 
 ## Edges
 
-Enumerate structural constraints and Boundary conditions: what breaks if an upstream contract changes shape, what this piece must not do, and what explicit non-goal decisions keep the scope tight. Each bullet names a contract surface or non-goal by name. Bullets do not cite file paths or section indices — those belong in `## Touch points`.
+Enumerate structural constraints and Boundary conditions: what breaks if an upstream contract changes shape, what this piece must not do, and what explicit non-goal decisions keep the scope tight. Each bullet names a contract surface or non-goal by name.
 
 ---
 
-## Touch points  (optional)
+## Touch points
 
-List implementation locations: specific file paths with line numbers, section indices (§N, RN), or multi-line code excerpts. This is the sole permitted location for path:line citations and section-index references. Use one bullet per distinct location. Omit this section entirely when no implementation locations are known at ticket-authoring time; the section is optional by design so early-stage tickets remain clean.
+List implementation locations: specific file paths with line numbers, section indices (§N, RN), or multi-line code excerpts. Use one bullet per distinct location. Omit this section entirely when no implementation locations are known at ticket-authoring time; the section is optional by design so early-stage tickets remain clean.

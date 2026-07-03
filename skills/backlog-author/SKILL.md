@@ -26,18 +26,6 @@ Read `${CLAUDE_SKILL_DIR}/references/body-template.md` before beginning the inte
 
 The interview guides a human author through constructing a structured ticket body. Use `AskUserQuestion` to present each question interactively — not as plain markdown text. Ask one question at a time, waiting for the user's response before posing the next. The previous answer is the gate to the next question so each question can be shaped by what just landed. Avoid batching multiple questions into a single turn.
 
-**Interview sequence**
-
-1. **Why** — Ask the author to describe the problem the ticket addresses in symptom-voice: what is broken, missing, or degraded in observable terms, as a user or operator would describe the symptom. The answer should not name a solution or mechanism. If the author's answer collapses to a single sentence that would merely restate Role's lead, note the disambiguation rule and flag that Why may be omitted after Role is captured.
-
-2. **Role** — Ask what job this piece fulfills in the system once the ticket lands. The answer should name the arc42 Responsibility — what task exists in the system after this piece is present that could not be done before — without describing how it is built or which files it touches.
-
-3. **Integration** — Ask how this piece connects to neighboring pieces and the existing system. The answer should reference contract surfaces by name (e.g., "the phase-transition contract", "the events-registry schema") without citing file paths or line numbers. Prompt for both inbound and outbound Interface connections.
-
-4. **Edges** — Ask the author to enumerate structural constraints and boundary conditions: what breaks if an upstream contract changes shape, what this piece must not do, and what explicit non-goal decisions keep the scope tight. Each answer item names a contract surface or non-goal by name without citing file paths.
-
-5. **Touch points** (optional) — Ask whether there are known implementation locations: specific file paths with line numbers, section indices, or code excerpts. Inform the author that this section is optional and should be omitted when no implementation locations are known at authoring time.
-
 **Applying answers**
 
 After all questions are answered, apply the Why-vs-Role disambiguation rule: if Why collapses to a single sentence restating Role's lead, omit the Why section from the output. Then compose the body using the five-section template from `skills/backlog-author/references/body-template.md` and emit it to stdout as a markdown block suitable for passing to `cortex-create-backlog-item --body`.
