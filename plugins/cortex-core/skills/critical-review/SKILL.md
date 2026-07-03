@@ -15,7 +15,7 @@ preconditions:
 
 # Critical Review
 
-Derives challenge angles from the artifact and domain context, dispatches one fresh reviewer agent per angle in parallel, then synthesizes findings with an Opus agent. Each reviewer works independently with no anchoring to the reasoning that produced the artifact.
+Derives challenge angles from the artifact and domain context, dispatches one fresh reviewer agent per angle in parallel, then synthesizes findings with an Opus agent. Each reviewer works with **fresh-eyes** — full independence, no anchoring to the reasoning that produced the artifact.
 
 ## Step 1: Find the Artifact
 
@@ -33,7 +33,7 @@ Before dispatching any reviewer agent, assemble a `## Project Context` block for
 
 If none of these inputs is available, **omit the `## Project Context` section entirely** — do not inject an empty placeholder.
 
-> **Requirements loading: deliberately exempt.** Critical-review intentionally narrows its context to the parent `cortex/requirements/project.md` Overview (~250 words) and the glossary `## Language` section, and does NOT participate in the tag-based requirements-loading protocol other skills use. This is deliberate: reviewers stay focused on adversarial challenge, and broader project context (priorities, area tags, decisions) would dilute that focus and anchor them to existing reasoning. Vocabulary is admitted because it is definitional, not reasoning-shaped. Do not "fix" this exemption by wiring tag-based loading into the dispatch path.
+> **Requirements loading: deliberately exempt.** Critical-review intentionally narrows its context to the parent `cortex/requirements/project.md` Overview (~250 words) and the glossary `## Language` section, and does NOT participate in the tag-based requirements-loading protocol other skills use. This is deliberate: reviewers stay focused on adversarial challenge, and broader project context (priorities, area tags, decisions) would dilute that focus and break their **fresh-eyes** stance. Vocabulary is admitted because it is definitional, not reasoning-shaped. Do not "fix" this exemption by wiring tag-based loading into the dispatch path.
 
 ### Step 2a.5: Pre-Dispatch (atomic path + SHA pin)
 

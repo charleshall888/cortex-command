@@ -6,7 +6,7 @@ Quality gate between phase artifact write and user presentation. The orchestrato
 
 Before running this protocol, determine whether orchestrator review applies. Read both fields by running `cortex-lifecycle-state --feature {feature}` (emits JSON). Defaults: criticality `medium`, tier `simple` when the key is absent.
 
-If that output contains `"corrupted": true`, the events.log is corrupted and the tier/criticality are unknowable — treat the feature as requiring review (run the protocol below) rather than applying the skip rule and defaulting.
+If that output contains `"corrupted": true`, follow the canonical corrupted-state rule in `criticality-matrix.md` — treat the feature as requiring review (run the protocol below) rather than skipping.
 
 **Skip rule**: Skip orchestrator review when criticality is `low` AND tier is `simple`. Proceed directly to user presentation or the next phase.
 

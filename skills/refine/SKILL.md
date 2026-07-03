@@ -55,7 +55,7 @@ cortex-refine emit-lifecycle-start --backend {resolved} --lifecycle-slug {lifecy
 
 Omit `--backlog-slug` for Context B (no backlog item). You do **not** branch on the backend to decide whether to pass the slug: pass it whenever a local backlog item exists — the verb's `--backend` guard owns the non-local slug-drop (ADR-0019).
 
-**Seed→reconcile→gate ordering invariant**: keep the seed → reconcile → §3b read ordering intact so the §3b read observes the ratcheted (not seed-default) tier — critical on non-`cortex-backlog` backends, where the gate would otherwise skip silently at `tier = simple`. Full rationale in `${CLAUDE_SKILL_DIR}/references/seed-reconcile-gate-ordering.md`.
+**Tier ratchet ordering invariant**: keep the seed → reconcile → §3b read ordering intact so the §3b read observes the **tier ratchet**'s output, not the seed default. Full rationale — and the tier-ratchet definition — in `${CLAUDE_SKILL_DIR}/references/seed-reconcile-gate-ordering.md`.
 
 ## Step 3: Clarify Phase
 
@@ -68,7 +68,7 @@ Key outputs from Clarify (record these for use in subsequent phases):
 - Requirements alignment note
 - Open questions for research (may be empty)
 
-After complexity and criticality are determined, run the write-back immediately (Context A only) — gated on the backend resolved in Step 2. On `cortex-backlog`, run:
+After complexity and criticality are determined, run the write-back immediately (Context A only) — gated on the backend resolved in Step 2. This is the canonical **backend-gated write-back routing** — the 3-arm `cortex-backlog` / `none` / external shape that Step 5's Write-Back also routes through, each site supplying its own fields. On the `cortex-backlog` arm, run:
 
 ```bash
 cortex-update-item {backlog-filename-slug} --complexity {value} --criticality {value}
@@ -135,7 +135,7 @@ If the `## Open Questions` section is absent from `research.md`, the gate passes
 **Reconcile lifecycle state to the Clarify assessment first** — the `lifecycle_start` seed carries pre-Clarify tier/criticality; reconcile so the §3a/§3b reads observe the Clarify-assessed values. One unconditional call, passing the backend resolved in Step 2 as `--backend {resolved}`; the remaining flags follow the item-existence context (the `--backend` guard owns the non-local slug-drop, per Step 2):
 
 - **Context A** (a local backlog item exists): `cortex-refine reconcile-clarify --backend {resolved} --lifecycle-slug {lifecycle-slug} --backlog-slug {backlog-filename-slug}` — re-sources tier/criticality from backlog frontmatter on the local arm; on a non-local backend the guard drops the slug (Step 2).
-- **Context B** (no backlog item): `cortex-refine reconcile-clarify --backend {resolved} --lifecycle-slug {lifecycle-slug} --complexity {value} --criticality {value}` — passes **Clarify's computed** `{value}` tier/criticality as explicit flags. On a non-local backend this ratchets the lifecycle state up from the seed defaults so the critical-review gate stays fed (Step 2's seed→reconcile→§3b invariant). Pass Clarify's computed values here — not the seed defaults and not literals.
+- **Context B** (no backlog item): `cortex-refine reconcile-clarify --backend {resolved} --lifecycle-slug {lifecycle-slug} --complexity {value} --criticality {value}` — passes **Clarify's computed** `{value}` tier/criticality as explicit flags. On a non-local backend this is the **tier ratchet** (Step 2's ordering invariant) that keeps the critical-review gate fed. Pass Clarify's computed values here — not the seed defaults and not literals.
 
 Idempotent — safe on resume; no-op under `/cortex-core:lifecycle`.
 
@@ -143,7 +143,7 @@ Read `${CLAUDE_SKILL_DIR}/references/specify.md` and follow it (its full protoco
 
 - **§1 (Load Context)**: Requirements context was loaded during Clarify (Step 3) and research.md was produced in Step 4. Re-read `cortex/lifecycle/{lifecycle-slug}/research.md` but skip redundant requirements loading.
 - **§2a loop-back**: If the Research Confidence Check triggers a loop-back, re-enter Step 4 (Research Phase) with the Sufficiency Check bypass described there.
-- **§3b tier detection**: Run `cortex-lifecycle-state --feature {lifecycle-slug} --field tier`. The caller (`/cortex-core:lifecycle`) may escalate the tier between Research and Spec — do not rely solely on the Clarify output. If the output contains `"corrupted": true`, treat the feature as requiring review (run the §3b gate) rather than defaulting to `simple` and skipping. See `${CLAUDE_SKILL_DIR}/../lifecycle/references/criticality-matrix.md` for the full behavior matrix.
+- **§3b tier detection**: Run `cortex-lifecycle-state --feature {lifecycle-slug} --field tier`. The caller (`/cortex-core:lifecycle`) may escalate the tier between Research and Spec — do not rely solely on the Clarify output. If the output contains `"corrupted": true`, treat the feature as requiring review (run the §3b gate) rather than defaulting to `simple` and skipping — the §3b-specific mapping of the canonical `corrupted:true` rule. See `${CLAUDE_SKILL_DIR}/../lifecycle/references/criticality-matrix.md` for that canonical rule and the full behavior matrix.
 - **§3a/§3b gate references**: specify.md's §3a and §3b consult two lifecycle-sibling gate references via "the propagated `<target>` path". Standalone `/cortex-core:refine` carries no lifecycle SKILL.md manifest, so resolve them here: the **orchestrator-review** target is `${CLAUDE_SKILL_DIR}/../lifecycle/references/orchestrator-review.md` and the **critical-review-gate** target is `${CLAUDE_SKILL_DIR}/../lifecycle/references/critical-review-gate.md`. Follow specify.md using these absolute paths — the "propagated `<target>` path" phrasing binds to them.
 - **§4 (User Approval) — Complexity/value gate**: Before the approval surface, gate the spec on complexity/value proportionality. Fire — regardless of whether critical-review ran — when the spec has any of: 3+ distinct new state surfaces, a new persistent data format or config section the user must maintain, or a subsystem requiring ongoing per-feature upkeep. Recommend full scope ("Confirm current scope") by default, unless complexity materially exceeds the value case — then recommend the smallest downsize preserving the primary outcome. State the recommendation with a one-sentence rationale citing the driving spec surface(s), phrased "I recommend X because Y.", before any user-facing question. Call `AskUserQuestion` only when the recommendation is not full scope OR confidence is low; otherwise fold the announcement into the existing approval surface (Approve / Request changes / Cancel) with no intervening pick-menu. When `AskUserQuestion` fires, the lead option's `label` ends with ` (Recommended)` (single leading space, capital R) and its `description` opens with the rationale — `Confirm current scope (Recommended)` for full scope, else the recommended downsize labeled `… (Recommended)`. Offer the downsize alternatives where they apply — "drop entirely", "bugs-only", "minimum viable" — and say so when one doesn't.
 - **§5 (Transition)**: Skip the `phase_transition` event emission — /cortex-core:refine does not log `phase_transition` events; the caller (/cortex-core:lifecycle) owns phase-transition logging and commit-artifacts. The `lifecycle_start` sentinel emitted at Step 2 is exempt from this rule.
@@ -159,7 +159,7 @@ After user approves the spec:
 
 **Infer areas**: Identify which subsystem the feature primarily modifies. Canonical area names: `overnight-runner`, `backlog`, `skills`, `lifecycle`, `hooks`, `report`, `tests`, `docs`. Use the primary subsystem only — the one where most files change. If the feature spans 4+ subsystems with no clear primary, use `areas=[]`.
 
-Gate these status/spec/areas write-backs on the backend resolved in Step 2. On `cortex-backlog`, run:
+Route these status/spec/areas write-backs through Step 3's canonical backend-gated write-back routing (the 3-arm `cortex-backlog` / `none` / external shape), supplying this site's fields. On the `cortex-backlog` arm, run:
 
 ```bash
 cortex-update-item {backlog-filename-slug} --status refined --spec cortex/lifecycle/{lifecycle-slug}/spec.md
@@ -171,9 +171,7 @@ cortex-update-item {backlog-filename-slug} --areas area1 area2
 
 For empty areas: `cortex-update-item {backlog-filename-slug} --areas` (passing `--areas` with no values clears the list).
 
-On `none`, skip these write-backs with a one-line advisory that backlog write-back is disabled for this repo. On any other (external) backend, make the equivalent status/areas update best-effort on the configured tracker per `backlog.instructions`, surfacing the composed values if it cannot be completed.
-
-Handle failures as in Step 3.
+The `none` and external arms — and failure handling — apply exactly as Step 3, with `status`/`areas` as this site's supplied fields.
 
 ## Step 6: Completion
 

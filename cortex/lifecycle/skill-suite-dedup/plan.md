@@ -86,7 +86,7 @@ Apply the spec's risk-first-then-fat-first edit program to the core skill conste
 - **Complexity**: simple
 - **Context**: Same dual-source discipline as Task 3. This gate additionally confirms the R4 placeholder-test extension and R6's `test_refine_skill.py` pins. Order: build-plugin → test → commit.
 - **Verification**: `just build-plugin && just test` — pass if exit 0 and all suites green (notably `test_dispatch_template_placeholders.py`, `test_refine_skill.py`, `test_lifecycle_kept_pauses_parity`, mirror-parity).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 8: Coin leading words — tier ratchet, fresh-eyes, adversarial (R7)
 - **Files**: `skills/critical-review/SKILL.md`, `skills/refine/SKILL.md`, `skills/refine/references/specify.md`, `skills/refine/references/seed-reconcile-gate-ordering.md`, `skills/refine/references/clarify-critic.md`, `skills/critical-review/references/reviewer-prompt.md`, `skills/critical-review/references/synthesizer-prompt.md`, `skills/critical-review/references/fallback-reviewer-prompt.md`
@@ -95,7 +95,7 @@ Apply the spec's risk-first-then-fat-first edit program to the core skill conste
 - **Complexity**: complex
 - **Context**: `tier ratchet` — restated at `skills/refine/SKILL.md:58` and `:135-138`, `skills/refine/references/specify.md:162`, and `skills/refine/references/seed-reconcile-gate-ordering.md`; "ratchet" already appears in the vocabulary. Define once (recommend: at seed-reconcile-gate-ordering.md, the rationale home) and reference by token elsewhere. `fresh-eyes` — critical-review's no-anchoring concept at `skills/critical-review/SKILL.md:18,36,99`. **Collision guard (spec Edge Case):** `critical-review/SKILL.md:99` "Anchor-checks" means the OPPOSITE, good/evidence sense — the `fresh-eyes` leading word must NOT overwrite or rename it; keep `:99` distinct. `adversarial` — the "don't be balanced" directives live at `skills/refine/references/clarify-critic.md:46,82,95` AND inside three verbatim sub-agent prompts: `reviewer-prompt.md:52`, `synthesizer-prompt.md:48`, `fallback-reviewer-prompt.md:39`. **Verbatim-prompt carve-out (load-bearing):** these prompts are passed to a fresh dispatched agent verbatim ("Pass the critic this prompt verbatim"); that agent has NO glossary in context and cannot resolve a bare `adversarial` token. Do NOT replace the operative in-prompt directive text ("Do not be balanced", the one-sided-critique / no-strengths steer) with a bare token in any file that is injected into a sub-agent prompt — the imperative instruction text must survive as instruction. Collapse restatement ONLY where the reader is the orchestrator (main-context prose), not the dispatched agent. Endorsed by `GLOSSARY.md:134` ("reach for an existing word first") — reuse, not invention. Keep edits local (kept-pauses parity sweeps refine/).
 - **Verification**: `tier ratchet` has exactly one definition site — verify with `grep -rn 'tier ratchet' skills/` and inspect that exactly one occurrence is a definition (a sentence defining the term) and the rest are token-references; a bare `wc -l` count is insufficient because it cannot distinguish a definition from a reference. AND `grep -c 'Anchor-checks' skills/critical-review/SKILL.md` ≥ 1 (opposite-sense term preserved at `:99`) AND the three verbatim sub-agent prompts each retain their operative directive: `grep -c 'Do not be balanced' skills/critical-review/references/reviewer-prompt.md` ≥ 1 AND `grep -c 'Do not be balanced' skills/critical-review/references/synthesizer-prompt.md` ≥ 1 AND `grep -c 'Do not be balanced' skills/critical-review/references/fallback-reviewer-prompt.md` ≥ 1 — pass if each coined term has a single definition, Anchor-checks survives distinctly, and no verbatim prompt was reduced to a bare token; `just test` green.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 9a: Single-source the corrupted:true rule (R8)
 - **Files**: `skills/lifecycle/references/criticality-matrix.md`, `skills/lifecycle/references/critical-review-gate.md`, `skills/lifecycle/references/orchestrator-review.md`, `skills/refine/SKILL.md`
@@ -104,7 +104,7 @@ Apply the spec's risk-first-then-fat-first edit program to the core skill conste
 - **Complexity**: simple
 - **Context**: The `corrupted:true` rule appears at four sites: `skills/lifecycle/references/critical-review-gate.md:7`, `skills/lifecycle/references/criticality-matrix.md:30`, `skills/lifecycle/references/orchestrator-review.md:9`, `skills/refine/SKILL.md:146`. Keep the full rule at criticality-matrix.md (canonical); replace the other three with a one-line citation pointing to it. Preserve each site's runnable behavior — refine SKILL.md:146 also carries the `cortex-lifecycle-state … --field tier` bind and the criticality-matrix pointer (from Task 1); keep those. **Preserve refine's site-specific control-flow mapping:** refine `:146` maps the corrupted state onto refine's OWN §3b step — "treat the feature as requiring review (run the §3b gate) rather than defaulting to `simple` and skipping". The canonical at `criticality-matrix.md:30` phrases the consequence generically ("run the critical-review / orchestrator-review gate"), so a bare citation loses the §3b-specific steer at refine's tier-detection decision. Keep the "run the §3b gate rather than defaulting to simple and skipping" clause inline at refine `:146` alongside the citation. Depends on Task 8 because both edit `skills/refine/SKILL.md` — serialize to avoid a same-file race.
 - **Verification**: The `corrupted:true` rule body appears once (canonical) at `criticality-matrix.md` and the other three sites carry a citation rather than a restatement — `grep -rn 'corrupted' skills/lifecycle/references/ skills/refine/SKILL.md` shows one authoritative definition + citations; `just test` green.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 9b: Single-source dispatch-protocol narration to fanout.md (R8)
 - **Files**: `skills/research/SKILL.md`, `skills/discovery/references/research.md`, `skills/research/references/fanout.md`
@@ -113,7 +113,7 @@ Apply the spec's risk-first-then-fat-first edit program to the core skill conste
 - **Complexity**: simple
 - **Context**: `skills/research/SKILL.md:180-192` and `skills/discovery/references/research.md:37-45` re-narrate `fanout.md`'s dispatch protocol. Point both to fanout.md (canonical) and keep the runnable `model=$(cortex-resolve-model …)` capture + `model:` bind each entry point carries per `skills/research/references/fanout.md:37`. **Preserve the searcher degrade-loud contract** (contract iii): the core-wave bind falls back to inherited model on resolve failure and never halts (`skills/research/SKILL.md:118` describes this). **Site-specific fact fanout.md does NOT carry — do not drop it:** `skills/research/SKILL.md:190` states "No `isolation: \"worktree\"`; agents are read-only." `fanout.md` never mentions worktree or read-only, so pointing to it cannot restore this; keep the read-only/no-worktree instruction inline at the research entry point. (Discovery's `research.md:37` carries its own copy — verify whether it too has a read-only/no-worktree note and preserve it if present.) Both entry points collapse two DIFFERENT narrations — verify each independently rather than assuming symmetry. Disjoint from Task 8's and 9a's files → may run parallel with them within Phase 3.
 - **Verification**: `grep -c 'cortex-resolve-model' skills/research/SKILL.md` ≥ 1 (research bind survives) AND `grep -c 'cortex-resolve-model' skills/discovery/references/research.md` ≥ 1 (discovery bind survives — checked symmetrically, not only for the pointer) AND `grep -c 'fanout.md' skills/research/SKILL.md` ≥ 1 AND `grep -c 'fanout.md' skills/discovery/references/research.md` ≥ 1 AND `grep -Ec 'read-only|worktree' skills/research/SKILL.md` ≥ 1 (read-only/no-worktree contract retained at research entry) — pass if all hold; `just test` green.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 9c: Single-source backend write-back routing (R8)
 - **Files**: `skills/refine/SKILL.md`
@@ -122,7 +122,7 @@ Apply the spec's risk-first-then-fat-first edit program to the core skill conste
 - **Complexity**: simple
 - **Context**: The backend-gated write-back 3-arm routing (cortex-backlog / none / external) is restated at `skills/refine/SKILL.md:71-79` and `:161-173`; `clarify.md:87` already names Step 3 "the canonical copy". Extract the routing shape once; each site supplies its fields. **Preserve site-specific quirks**: `:171`'s empty-`--areas` clearing (`cortex-update-item {slug} --areas` with no values clears the list) must survive at its site. Depends on Task 9a — both edit `skills/refine/SKILL.md`; serialize.
 - **Verification**: The 3-arm routing appears once as a shared shape with per-site field supply, and the empty-`--areas` clearing behavior remains at `:171`'s site — `grep -c 'passing `--areas` with no values clears' skills/refine/SKILL.md` ≥ 1 (or equivalent phrasing) AND the routing narration is not duplicated verbatim; `just test` green.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 9d: Pin model-resolution contracts with a wiring test (R8)
 - **Files**: `tests/test_model_resolution_wiring.py` (new)
@@ -131,7 +131,7 @@ Apply the spec's risk-first-then-fat-first edit program to the core skill conste
 - **Complexity**: simple
 - **Context**: Three model-resolution contracts must be preserved (do NOT collapse ii into i — breaks standalone critical-review, which has no lifecycle state to read): (i) criticality-keyed + halt at `implement.md:165`, `review.md:22`, `orchestrator-review.md:45`, `competing-plans.md:16`; (ii) synthesizer no-criticality + halt at `competing-plans.md:61`, `critical-review/SKILL.md:70`; (iii) searcher degrade-loud never-halts at `research/fanout.md:32`. No existing test covers this. Add `tests/test_model_resolution_wiring.py` asserting each call site's `--role`/`--criticality`-presence and halt-vs-degrade shape, plus each single-sourced rule's one-definition-plus-citation structure. Depends on 9a/9b/9c so it pins post-edit state. **Manual invariant (not test-caught, per the `test_*_wired` disclaimer that runtime under-trigger is unassertable):** the per-site runnable bind must survive the narration collapse — reviewer confirms manually.
 - **Verification**: `just test` runs `tests/test_model_resolution_wiring.py` and it passes, asserting all three contracts are present with correct halt-vs-degrade shape — pass if the new test is collected and green and the full suite stays green.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 10: Phase 3 gate — regenerate mirrors, test, commit
 - **Files**: `plugins/cortex-core/` (regenerated), `cortex/lifecycle/skill-suite-dedup/`

@@ -40,7 +40,7 @@ Fill the remaining slots the matrix buys with discovery's other distinct dimensi
 model=$(cortex-resolve-model --role searcher)
 ```
 
-Dispatch the mandatory core plus the chosen angles for the cell — every angle except the always-last adversarial one — as one batch of Agent calls in a single response, passing the captured `$model` as each core-wave Agent's `model:` parameter, per fanout.md's dispatch-protocol routing rule.
+Pass the captured `$model` as each core-wave Agent's `model:` parameter, per fanout.md's dispatch-protocol routing rule (canonical for the two-wave sequencing, the searcher bind, and the degrade-loud fallback).
 
 Each agent returns its findings for synthesis; do not let any agent write project files. Prerequisites entries describing codebase-state checks (e.g., 'Identify pattern X in {file}') belong to the Codebase angle — its findings carry citations, or are reported as `NOT_FOUND(query, scope)`. Entries remaining in §4's Feasibility Prerequisites column are implementation-sequencing only (work to be done after the approach is committed).
 

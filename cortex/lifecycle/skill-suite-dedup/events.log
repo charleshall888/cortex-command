@@ -7,3 +7,7 @@
 {"ts": "2026-07-03T19:53:25Z", "event": "phase_transition", "feature": "skill-suite-dedup", "from": "plan", "to": "implement"}
 {"ts": "2026-07-03T19:55:52Z", "event": "batch_dispatch", "feature": "skill-suite-dedup", "batch": 0, "tasks": [1, 2]}
 {"ts": "2026-07-03T20:04:09Z", "event": "batch_dispatch", "feature": "skill-suite-dedup", "batch": 2, "tasks": [4, 5, 6]}
+{"ts": "2026-07-03T20:11:44Z", "event": "batch_dispatch", "feature": "skill-suite-dedup", "batch": 4, "tasks": [8, "9b"]}
+{"ts": "2026-07-03T20:21:55Z", "event": "batch_dispatch", "feature": "skill-suite-dedup", "batch": 5, "tasks": ["9a"]}
+{"ts": "2026-07-03T20:24:43Z", "event": "batch_dispatch", "feature": "skill-suite-dedup", "batch": 6, "tasks": ["9c"]}
+{"ts": "2026-07-03T20:26:38Z", "event": "batch_dispatch", "feature": "skill-suite-dedup", "batch": 7, "tasks": ["9d"]}
