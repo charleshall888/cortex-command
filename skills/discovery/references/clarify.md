@@ -14,8 +14,6 @@ The input is a raw topic name or description. There is no backlog item to resolv
 
 Load requirements using the shared tag-based loading protocol (`load-requirements.md`): run `cortex-load-requirements` (discovery has no lifecycle index, so omit `--feature` — the verb falls back to project.md + Global Context), read every listed non-skipped path into context, and inject the printed path list into any downstream prompt that must know what was in scope (relay any fallback note). If no `cortex/requirements/` directory or files exist, note this and skip to §3.
 
-If a concept you need is not yet defined in the glossary, treat the absence as a signal to surface the term in the next requirements interview.
-
 ### 3. Check Existing Backlog Coverage
 
 Resolve the active backlog backend once with `cortex-read-backlog-backend` (argless; it prints the resolved backend and exits 0), then route on the value:

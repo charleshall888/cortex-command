@@ -70,8 +70,6 @@ _CONSUMER_RULE_RE = re.compile(r"absence as a signal|surface the term")
 RULE_CARRIERS: tuple[Path, ...] = (
     REPO_ROOT / "skills" / "lifecycle" / "references" / "load-requirements.md",
     REPO_ROOT / "skills" / "refine" / "references" / "specify.md",
-    REPO_ROOT / "skills" / "discovery" / "references" / "clarify.md",
-    REPO_ROOT / "skills" / "discovery" / "references" / "research.md",
 )
 
 

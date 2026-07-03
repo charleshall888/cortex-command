@@ -14,8 +14,6 @@ Present questions to the user for review. Add any questions they raise.
 
 Load requirements using the shared tag-based loading protocol (`load-requirements.md`): run `cortex-load-requirements` (discovery has no lifecycle index, so omit `--feature` — the verb falls back to project.md + Global Context), read every listed non-skipped path into context, and inject the printed path list downstream (relay any fallback note). Use requirements to inform research — identify where this topic intersects with established requirements and constraints. If no `cortex/requirements/` directory or files exist, note this and skip this step.
 
-If a concept you need is not yet defined in the glossary, treat the absence as a signal to surface the term in the next requirements interview.
-
 ### 1b. Read the Research-Sizing Assessment
 
 Research can be entered independently of Clarify (a fresh `/cortex-core:discovery research <topic>` session), so read the complexity/criticality assessment back from the topic's events.log rather than relying on conversation memory:
