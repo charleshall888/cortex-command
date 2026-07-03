@@ -10,7 +10,7 @@ Run the order-enforcing verb:
 cortex-lifecycle-wontfix <slug> --reason "<short rationale>"
 ```
 
-It performs, as a single fail-forward operation, the three steps that used to be a hand-run bash sequence: (a) archive the lifecycle directory to `cortex/lifecycle/archive/<slug>`, (b) append the `feature_wontfix` terminal-state event to the archived `events.log`, and (c) terminalize the originating backlog item (status `wontfix`, lifecycle-phase `wontfix`, session released). The **move → append → terminalize order is now a code invariant** inside the verb — it is no longer prose you must follow by hand. The rationale (and the partial-failure safety reasoning) lives as comments in `cortex_command/lifecycle/wontfix_cli.py` and back-points to ADR-0004.
+It performs, as a single fail-forward operation, three steps: (a) archive the lifecycle directory to `cortex/lifecycle/archive/<slug>`, (b) append the `feature_wontfix` terminal-state event to the archived `events.log`, and (c) terminalize the originating backlog item (status `wontfix`, lifecycle-phase `wontfix`, session released). The **move → append → terminalize order is a code invariant** inside the verb.
 
 By default the verb reads the backlog target from the lifecycle's `index.md` parent fields. Pass `--backlog-slug <slug>` to override (e.g. when `index.md` is absent or the resolver is ambiguous). An ad-hoc lifecycle with no backlog parent terminalizes nothing — that step is a clean no-op, not an error.
 

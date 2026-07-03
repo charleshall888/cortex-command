@@ -1,14 +1,6 @@
 # Kept user pauses
 
-Canonical inventory of the deliberate, in-scope user-facing `AskUserQuestion`
-pauses across the lifecycle and refine skills. The lifecycle SKILL.md Phase
-Transition rule ("`AskUserQuestion` at a phase boundary is permitted only by
-the Kept user pauses inventory") points here. The parity test at
-`tests/test_lifecycle_kept_pauses_parity.py` enforces bidirectional parity:
-every entry below resolves to a real `AskUserQuestion` site, and every such
-site under `skills/lifecycle/` and `skills/refine/` has an entry here.
-
-The following user-facing pauses are deliberate and remain in scope.
+Canonical inventory of the deliberate, in-scope user-facing `AskUserQuestion` pauses across the lifecycle and refine skills (the lifecycle SKILL.md Phase Transition rule points here). `tests/test_lifecycle_kept_pauses_parity.py` enforces bidirectional parity: every entry below resolves to a real `AskUserQuestion` site, and every such site under `skills/lifecycle/` and `skills/refine/` has an entry here.
 
 - `skills/lifecycle/SKILL.md:48` — ambiguous backlog match needs operator disambiguation.
 - `skills/refine/references/clarify.md:57` — low-confidence clarify question batch surfaces unknowns the model cannot resolve alone.
