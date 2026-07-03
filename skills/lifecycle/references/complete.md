@@ -24,16 +24,7 @@ Run `cortex-read-commit-artifacts` to read the `commit-artifacts` flag from proj
 
 Push the branch to the remote, then create a pull request with a summary of the feature. The PR title and body should reflect the feature's purpose and include a link to the lifecycle directory.
 
-**Variant A detection (advisory)**: Before invoking `/cortex-core:pr`, perform a two-signal check to determine whether this lifecycle is running from inside an `interactive/{slug}` worktree:
-
-1. **Signal 1 — lock file**: call `cortex_command/interactive_lock.py:read_lock(feature_slug)`. A non-None return indicates an `interactive.pid` lock file is present for this slug.
-2. **Signal 2 — directory corroboration**: run `git rev-parse --show-toplevel` and compare the result against `pwd`. If both resolve to the same path and that path is the `interactive/{slug}` worktree root, the session's CWD is confirmed inside the worktree.
-
-If **both signals are positive** (lock file present and `git rev-parse --show-toplevel` matches the `interactive/{slug}` worktree path), apply the `cd-in-then-out` pattern around `/cortex-core:pr`: save `_origin_pwd=$(pwd)`, cd into the worktree, invoke `/cortex-core:pr`, then restore with `cd "$_origin_pwd"`.
-
-If **either signal is absent or contradictory**, treat the session as NOT in Variant A and invoke `/cortex-core:pr` from the current cwd without any cd.
-
-The detection is purely advisory — it does not block PR creation.
+**Variant A detection (advisory)**: Before invoking `/cortex-core:pr`, run a two-signal check for whether this lifecycle runs from inside an `interactive/{slug}` worktree — signal 1: `cortex_command/interactive_lock.py:read_lock(feature_slug)` returns non-None (lock file present); signal 2: `git rev-parse --show-toplevel` equals `pwd` and that path is the `interactive/{slug}` worktree root. When **both signals** are positive, apply the `cd-in-then-out` pattern around `/cortex-core:pr` (`_origin_pwd=$(pwd)`, cd into the worktree, invoke `/cortex-core:pr`, then `cd "$_origin_pwd"`); if either is **absent or contradictory**, invoke `/cortex-core:pr` from the current cwd without any cd. The detection is purely advisory — it does not block PR creation.
 
 ### Step 4 — Write `pr.json` Atomically
 
@@ -134,15 +125,9 @@ If no backlog item was found, skip silently. If `cortex-update-item` exits with 
 
 ### Step 10 — Backlog Index Sync
 
-After the `cortex-update-item` call (regardless of whether it succeeded, failed, or was skipped), resolve the active backlog backend with `cortex-read-backlog-backend` (argless; it prints the resolved backend and exits 0) before regenerating anything. On any value other than `cortex-backlog` (`none` OR an external tracker), skip the index regeneration with a one-line advisory that index sync is disabled for this repo — there is no index to regenerate under this backend. (Step 9's write-back is already backend-gated via backlog-writeback.md; this closes the same gap for Step 10, which previously ran unconditionally.)
+After the `cortex-update-item` call (regardless of whether it succeeded, failed, or was skipped), resolve the active backlog backend with `cortex-read-backlog-backend` (argless; it prints the resolved backend and exits 0) before regenerating anything. On any value other than `cortex-backlog` (`none` OR an external tracker), skip the index regeneration with a one-line advisory that index sync is disabled for this repo — there is no index to regenerate under this backend.
 
-On the `cortex-backlog` arm (the default), regenerate the backlog index using this fallback chain:
-
-1. If `cortex-update-item` was not found (`command -v cortex-update-item` failed), emit: `"WARNING: cortex-update-item not found — backlog item status may not be updated."`
-2. Attempt index regeneration in order:
-   - Run `test -f cortex_command/backlog/generate_index.py` — if it exists, run `python3 -m cortex_command.backlog.generate_index` and emit: `"Index regenerated via cortex_command/backlog/generate_index.py"`
-   - Else run `command -v cortex-generate-backlog-index` — if found on PATH, run `cortex-generate-backlog-index` and emit: `"Index regenerated via cortex-generate-backlog-index"`
-   - Else emit: `"WARNING: Could not regenerate backlog index — no generate_index.py script found. Index may be stale."`
+On the `cortex-backlog` arm (the default), regenerate the backlog index: warn if `cortex-update-item` was not found (status may be stale), then regenerate via the two-tier fallback — module path first (`python3 -m cortex_command.backlog.generate_index` when `cortex_command/backlog/generate_index.py` exists), CLI binstub `cortex-generate-backlog-index` second (on PATH), and a stale-index warning last if neither is available.
 
 ### Step 11 — Log `feature_complete`
 
@@ -171,22 +156,16 @@ Run `cortex-read-commit-artifacts` to read the `commit-artifacts` flag from proj
 cortex-lifecycle-stage-artifacts --phase complete --feature {slug}
 ```
 
-The verb owns the explicit-path staging discipline — it stages the lifecycle artifacts, the review-drift requirements file (by the exact path review.md recorded), and the narrowed backlog write-back (the resolved ticket file plus the backlog index), all by enumerated paths, never a directory glob or `-u` sweep — and prints `{"signal": "staged"|"nothing_staged", "staged_paths": [...]}`.
+The verb owns the explicit-path staging discipline (lifecycle artifacts, the review-drift requirements file, the narrowed backlog write-back) and prints its `signal`.
 
 **Stage-first idempotent guard**: the verb's `signal` is the staging outcome (equivalent to `git diff --cached --quiet`):
 
-- `nothing_staged` (the index already matches HEAD — `git diff --cached --quiet` would exit 0): nothing new to commit — skip `/cortex-core:commit` silently and continue to Step 12 (common on the worktree path post-merge, and on the on_main commit-retry path when the finalization set was already committed in a prior attempt).
+- `nothing_staged` (the index already matches HEAD): nothing new to commit — skip `/cortex-core:commit` silently and continue to Step 12 (common on the worktree path post-merge, and on the on_main commit-retry path when the finalization set was already committed in a prior attempt).
 - `staged`: something is staged — proceed to commit.
 
 A non-zero verb exit is a staging failure: halt before Step 12 rather than committing a partial set.
 
-Invoke `/cortex-core:commit` with an imperative ≤72-char subject, for example:
-
-```
-Complete {slug}: lifecycle artifacts and backlog write-back
-```
-
-If `/cortex-core:commit` exits non-zero, surface the error and stop before the Step 12 summary — a summary implying the artifacts were committed should not be emitted until the commit succeeds.
+Invoke `/cortex-core:commit` with an imperative ≤72-char subject. If `/cortex-core:commit` exits non-zero, surface the error and stop before the Step 12 summary — a summary implying the artifacts were committed should not be emitted until the commit succeeds.
 
 After a successful commit, if the current branch is not `main` or `master`, surface a one-line advisory:
 
