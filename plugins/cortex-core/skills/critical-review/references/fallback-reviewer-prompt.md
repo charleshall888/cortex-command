@@ -1,9 +1,6 @@
 # Total-Failure Fallback Reviewer Prompt Template
 
-This prompt is dispatched as a single general-purpose agent when ALL parallel
-reviewers from Step 2c fail. Substitute `{artifact_path}` and
-`{artifact_sha256}` at runtime, then output the agent's result directly
-without a Step 2d synthesis step.
+Dispatched as a single general-purpose agent when ALL Step 2c parallel reviewers fail. Substitute `{artifact_path}` and `{artifact_sha256}` at runtime; output the agent's result directly, with no Step 2d synthesis step.
 
 ---
 
@@ -43,4 +40,4 @@ Do not be balanced. Do not reassure. Find the problems.
 
 ---
 
-Prefix the agent's output with this one-line note when surfacing to the user: `Note: parallel dispatch failed, falling back to single reviewer`.
+Prefix the surfaced output with: `Note: parallel dispatch failed, falling back to single reviewer`.
