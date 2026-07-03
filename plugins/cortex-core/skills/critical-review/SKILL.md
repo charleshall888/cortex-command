@@ -32,14 +32,15 @@ If a lifecycle is active, read the most relevant artifact (`cortex/lifecycle/{fe
 
 ### Step 2a: Load Domain Context
 
-Before dispatching any reviewer agent, load project context for injection into reviewer prompts:
+Before dispatching any reviewer agent, assemble a `## Project Context` block for injection into reviewer prompts from these inputs:
 
-1. If `cortex/requirements/project.md` exists, read it and extract the **Overview** section (or the first top-level summary section if none is labeled "Overview") — up to ~250 words.
-2. If `cortex/lifecycle.config.md` exists, read it and check for a `type:` field. Only use the value if it is present, non-empty, and not commented out (i.e., the line is not prefixed with `#`). If valid, include it as a one-line prefix: `**Project type:** {type}` before the project overview text.
-3. If `cortex/requirements/glossary.md` exists, read it **Language-section-only**: extract the Language section (`## Language`) verbatim and include it inline in the assembled `## Project Context` block. Do NOT read `## Relationships`, `## Example dialogue`, or `## Flagged ambiguities` — those could approach "existing reasoning" territory. Silently skip when the file is absent.
-4. Construct a `## Project Context` block from these inputs. **If neither file exists** (or `cortex/requirements/project.md` is absent and `cortex/lifecycle.config.md` has no valid `type:` value), **omit the `## Project Context` section entirely** — do not inject an empty placeholder into reviewer prompts.
+1. `cortex/requirements/project.md` — the **Overview** section (or the first top-level section if none is labeled Overview), up to ~250 words.
+2. `cortex/lifecycle.config.md` — a valid `type:` field (present, non-empty, uncommented) as a one-line prefix `**Project type:** {type}` before the overview.
+3. `cortex/requirements/glossary.md` — the `## Language` section verbatim, inline. Read that section **only**; do NOT read `## Relationships`, `## Example dialogue`, or `## Flagged ambiguities` (those approach existing-reasoning territory). Skip silently when absent.
 
-> **Requirements loading: deliberately exempt.** Critical-review intentionally narrows its context to the parent `cortex/requirements/project.md` Overview only (~250 words) and does NOT participate in the tag-based requirements-loading protocol used by other skills. This is a deliberate design choice, not an oversight: reviewer agents stay focused on adversarial challenge against the artifact under review, and broader project context (priorities, area-specific tags, decisions, **not vocabulary**) would dilute that focus and anchor reviewers to existing reasoning. Vocabulary (the glossary's `## Language` section) is admitted because it is definitional rather than reasoning-shaped. Do not "fix" this exemption by wiring tag-based loading into the dispatch path.
+If none of these inputs is available, **omit the `## Project Context` section entirely** — do not inject an empty placeholder.
+
+> **Requirements loading: deliberately exempt.** Critical-review intentionally narrows its context to the parent `cortex/requirements/project.md` Overview (~250 words) and the glossary `## Language` section, and does NOT participate in the tag-based requirements-loading protocol other skills use. This is deliberate: reviewers stay focused on adversarial challenge, and broader project context (priorities, area tags, decisions) would dilute that focus and anchor them to existing reasoning. Vocabulary is admitted because it is definitional, not reasoning-shaped. Do not "fix" this exemption by wiring tag-based loading into the dispatch path.
 
 ### Step 2a.5: Pre-Dispatch (atomic path + SHA pin)
 
@@ -51,13 +52,13 @@ Full invocation contract and exit-code routing: `${CLAUDE_SKILL_DIR}/references/
 
 The orchestrator (in main conversation context) derives 3-4 challenge angles from the artifact. Each angle must be **distinct** (no two angles are re-phrasings of each other) and must **reference specific sections or claims in the artifact** (not generic category labels).
 
-Pick angles most likely to reveal real problems for this specific artifact. Representative angle examples (general, games, mobile, workflow/tooling), the angle-count rule, and the distinctness + artifact-specificity acceptance criteria: see `${CLAUDE_SKILL_DIR}/references/angle-menu.md`.
+Pick angles most likely to reveal real problems for this specific artifact. Representative angle examples (general, games, mobile, workflow/tooling) and the angle-count rule: see `${CLAUDE_SKILL_DIR}/references/angle-menu.md`.
 
 ### Step 2c: Dispatch Parallel Reviewers
 
 For each angle derived in Step 2b, dispatch one general-purpose agent as a parallel Task tool sub-task. All agents run simultaneously — do not wait for one to finish before launching the next.
 
-Each agent receives the canonical reviewer prompt from `${CLAUDE_SKILL_DIR}/references/reviewer-prompt.md` verbatim, with `{artifact_path}`, `{artifact_sha256}`, `{angle name}`, `{angle description}`, and the Step 2a Project Context block substituted at runtime. The prompt instructs the reviewer to Read the literal absolute path and emit `READ_OK: <path> <sha>` on its own line before findings (or `READ_FAILED: <path> <reason>` on failure), then to produce class-tagged findings (A — fix-invalidating, B — adjacent-gap, C — framing) with a `<!--findings-json-->` JSON envelope appended after prose findings.
+Each agent receives the canonical reviewer prompt from `${CLAUDE_SKILL_DIR}/references/reviewer-prompt.md` verbatim, with `{artifact_path}`, `{artifact_sha256}`, `{angle name}`, `{angle description}`, and the Step 2a Project Context block substituted at runtime. That prompt (not restated here) directs the reviewer to emit `READ_OK: <path> <sha>` before findings, then class-tagged findings with a `<!--findings-json-->` JSON envelope.
 
 #### Failure Handling
 
@@ -73,7 +74,7 @@ Full route table, `record-exclusion` invocation contract, and Phase 2 schema ass
 
 ### Step 2d: Opus Synthesis
 
-After parallel reviewers (or the successful subset) return and pass Step 2c.5, resolve the synthesizer model by running `cortex-resolve-model --role synthesizer` (no `--criticality` flag and no lifecycle-state read — the standalone critical-review path may have no lifecycle session, so a missing state must never block synthesis), then dispatch one synthesizer agent with the resolved model and the canonical synthesizer prompt from `${CLAUDE_SKILL_DIR}/references/synthesizer-prompt.md` verbatim, with `{artifact_path}`, `{artifact_sha256}`, `{a_to_b_rubric}`, and the reviewer-findings payload substituted at runtime. On nonzero exit from `cortex-resolve-model` (the verb is absent or broken), halt and escalate rather than guessing or substituting a model. Before dispatching, Read `${CLAUDE_SKILL_DIR}/references/a-to-b-downgrade-rubric.md` and substitute its full content into `{a_to_b_rubric}` — exactly as you substitute `{artifact_path}`/`{artifact_sha256}`; the rubric is inlined into the prompt because the fresh Opus synthesizer subagent cannot resolve a skill-dir path itself. The prompt instructs the synthesizer to Read the artifact once at start and emit `SYNTH_READ_OK: <path> <sha>` as a line in output before per-finding analysis.
+After parallel reviewers (or the successful subset) return and pass Step 2c.5, resolve the synthesizer model by running `cortex-resolve-model --role synthesizer` (no `--criticality` flag and no lifecycle-state read — the standalone critical-review path may have no lifecycle session, so a missing state must never block synthesis), then dispatch one synthesizer agent with the resolved model and the canonical synthesizer prompt from `${CLAUDE_SKILL_DIR}/references/synthesizer-prompt.md` verbatim, with `{artifact_path}`, `{artifact_sha256}`, `{a_to_b_rubric}`, and the reviewer-findings payload substituted at runtime. On nonzero exit from `cortex-resolve-model`, halt and escalate rather than guessing or substituting a model. Before dispatching, Read `${CLAUDE_SKILL_DIR}/references/a-to-b-downgrade-rubric.md` and substitute its full content into `{a_to_b_rubric}`. The prompt instructs the synthesizer to Read the artifact once at start and emit `SYNTH_READ_OK: <path> <sha>` as a line in output before per-finding analysis.
 
 The synthesizer applies the **A→B downgrade rubric** when evaluating each A-class finding's `"fix_invalidation_argument"` field — full rubric definitions, trigger semantics, and 8 worked examples (4 ratify / 4 downgrade across the absent/restates/adjacent/vague triggers) are inlined into the prompt via `{a_to_b_rubric}` (sourced from `${CLAUDE_SKILL_DIR}/references/a-to-b-downgrade-rubric.md`).
 
@@ -87,7 +88,7 @@ Full invocation contract and resolution instructions: `${CLAUDE_SKILL_DIR}/refer
 
 ### Step 2e: Residue Write
 
-After synthesis (or Step 2c.5 pass-through), atomically write any B-class findings to a sidecar JSON for the morning report. Skip silently when zero B-class findings remain. Resolve `{feature}` from `$LIFECYCLE_SESSION_ID` against `cortex/lifecycle/*/.session` files; on multiple-match or zero-match, emit the documented note and skip the write. The write is performed via the `cortex-critical-review-write-residue` console-script, which performs a tempfile + `os.replace` atomic rename to `cortex/lifecycle/{feature}/critical-review-residue.json`.
+After synthesis (or Step 2c.5 pass-through), atomically write any B-class findings to a sidecar JSON for the morning report; skip silently when zero B-class findings remain. Resolve `{feature}` from `$LIFECYCLE_SESSION_ID` against `cortex/lifecycle/*/.session`; on zero- or multiple-match, emit the documented note and skip. The `cortex-critical-review-write-residue` console-script performs the tempfile + `os.replace` write to `cortex/lifecycle/{feature}/critical-review-residue.json`.
 
 Resolver script, payload schema (R4), and gating rules: `${CLAUDE_SKILL_DIR}/references/residue-write.md`.
 
@@ -108,7 +109,4 @@ After classifying all objections:
 
 1. Re-read the artifact in full.
 2. Write the updated artifact with all "Apply" fixes incorporated. Preserve everything not touched by an accepted objection.
-3. Present a compact summary:
-   - **Apply bullets describe the direction of the change**, not the objection text. Use one of these verbs as the first word of each bullet: strengthened, narrowed, clarified, added, removed, inverted.
-   - **Dismiss: N objections** — a single count line. Omit when N = 0.
-   - **Ask items consolidate into a single message when any remain.**
+3. Present a compact summary: Apply bullets describe the direction of change (not the objection text), each opening with one of these verbs — strengthened, narrowed, clarified, added, removed, inverted; a single **Dismiss: N objections** count line (omit when N = 0); and any Ask items consolidated into one message.
