@@ -57,8 +57,8 @@ None intended for the wrapped (lifecycle→refine) path. The **only** deliberate
 
 ## Open Decisions
 
-- **Batching (resolved, recommend):** one plan, tasks ordered R1→R9, each its own `just test` gate. Rejected: splitting bugs into a separate lifecycle (heavier ceremony, same files).
-- **How-pruning minimums (resolved, recommend):** preserve *What decision + when it fires + option set*; cut *step-by-step method, exact label/format strings, tool-internal diagnostics*. This is the concrete reading of "prescribe What/Why, not How" for R3/R6.
+- **Batching (resolved, recommend):** one plan, tasks ordered R1→R2 then R4→R9 (R3 dropped), each its own `just test` gate. Rejected: splitting bugs into a separate lifecycle (heavier ceremony, same files).
+- **How-pruning minimums (resolved, recommend):** preserve *What decision + when it fires + option set*; cut *step-by-step method, exact label/format strings, tool-internal diagnostics*. This is the concrete reading of "prescribe What/Why, not How" for R6 (and the delete-not-prune boundary for R5). Note the R6 carve-out: user-visible output strings like `(Recommended)` are contract, not How — do not cut them.
 
 ## Proposed ADR
 
