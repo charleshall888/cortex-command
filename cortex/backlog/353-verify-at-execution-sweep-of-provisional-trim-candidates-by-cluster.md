@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 04e4c3bd-52fb-4b70-aa21-2c1f41ffdb27
 title: Sweep remaining verified and provisional trim candidates by cluster
-status: backlog
+status: in_progress
 priority: low
 type: chore
 tags: ['skill-value-scorecard']
@@ -11,6 +11,8 @@ discovery_source: cortex/research/skill-value-scorecard/report.html
 created: 2026-07-02
 updated: 2026-07-02
 parent: "347"
+lifecycle_phase: research
+lifecycle_slug: sweep-remaining-verified-and-provisional-trim
 ---
 ## Why
 This ticket sweeps everything the audit found that no sibling ticket owns — three distinct remainders. First, 52 already-verified candidates in cluster files without a dedicated ticket, ~8.8k weighted tokens: the lifecycle SKILL.md body sections (four candidates, ~2.2k), backlog-writeback s3/s5, complete.md, competing-plans.md, criticality-matrix, plan.md, review.md, orchestrator-review (including the s7 fix-agent-template lazy-ref and the s13 verified DELETE), refine-delegation, load-requirements, critical-review-gate, complexity-escalation, the remaining discovery-bootstrap and post-refine-commit sections, and the small parallel-execution, kept-pauses, concurrent-sessions, and wontfix stragglers. Second, the provisional tail: 162 candidates, ~26.4k weighted, scored and mechanically pin-scanned but never adversarially verified (the corpus has 164 unverified, but commit SKILL s6 and research SKILL s15 belong to tickets 349 and 350 under the file rule; 21 of the rest carry overlap or reproposal flags and are excluded at execution). The tail includes the provisional candidates in the three cluster SKILL.md bodies (refine, discovery, critical-review) and a transitive-file slice — 64 candidates, ~6.5k weighted — across files no other ticket owns: the cortex/requirements area files (pipeline, observability, backlog, multi-agent, remote-access), the backlog-author skill and its body-template reference, fanout.md itself, the ADR README, the pr skill, skills/backlog/SKILL.md, the interview skill's loop reference, and the overnight plan-synthesizer prompt.

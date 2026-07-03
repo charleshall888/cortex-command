@@ -1,0 +1,4 @@
+{"ts": "2026-07-02T23:55:53Z", "event": "research_synthesized", "feature": "sweep-remaining-verified-and-provisional-trim", "source": "master_candidates.json", "mode": "lightweight-no-fanout"}
+{"ts": "2026-07-02T23:55:53Z", "event": "spec_written", "feature": "sweep-remaining-verified-and-provisional-trim", "batch": "verified-lifecycle-cluster", "candidates": "50", "weighted_tokens": "8566"}
+{"ts": "2026-07-03T00:02:21Z", "event": "plan_approved", "feature": "sweep-remaining-verified-and-provisional-trim", "dispatch_choice": "trunk"}
+{"ts": "2026-07-03T00:02:21Z", "event": "phase_transition", "feature": "sweep-remaining-verified-and-provisional-trim", "from": "plan", "to": "implement"}
