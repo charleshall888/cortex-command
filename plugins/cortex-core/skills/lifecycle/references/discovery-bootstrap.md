@@ -2,9 +2,9 @@
 
 ## Create index.md (New Lifecycle Only)
 
-When `phase = none` (no prior `cortex/lifecycle/{slug}/` directory exists), create the lifecycle `index.md` by invoking the creation verb. **Do not re-scan the backlog directory in this sub-procedure** — consume Step 1's resolved `{backlog-file}` (the resolver's `filename` basename, e.g. `326-foo.md`) directly; the verb normalizes it via the canonical backlog dir and re-parses the frontmatter itself.
+When `phase = none` (no prior `cortex/lifecycle/{slug}/` directory exists), create the lifecycle `index.md` by invoking the creation verb. **Do not re-scan the backlog directory in this sub-procedure** — consume Step 1's resolved `{backlog-file}` (the resolver's `filename` basename, e.g. `326-foo.md`) directly; the verb handles normalization.
 
-The verb is skip-if-exists (it no-ops when `index.md` already exists) and owns the byte-faithful 7-field template, the backlog-linked vs ad-hoc shapes, and the wikilink body. Pass the basename, or the empty string when Step 1 found no backlog match:
+The verb is skip-if-exists (it no-ops when `index.md` already exists). Pass the basename, or the empty string when Step 1 found no backlog match:
 
 ```bash
 cortex-lifecycle-create-index --feature {lifecycle-slug} --backlog-file {backlog-filename-or-empty-string}
@@ -24,7 +24,7 @@ If `epic_research_path` was found, announce the recorded path and that it will s
 
 ## Epic Context Injection (during /cortex-core:refine delegation)
 
-When `epic_research_path` was recorded above, before starting Clarify, read the epic research file at `{epic_research_path}` (and `{epic_spec_path}` if present) as background context. This explains the broader epic scope and which concerns belong to adjacent tickets. Instruct `/cortex-core:refine` to:
+When `epic_research_path` was recorded above, before starting Clarify, read the epic research file at `{epic_research_path}` (and `{epic_spec_path}` if present) as background context. Instruct `/cortex-core:refine` to:
 
 - Scope research and spec to THIS ticket's specific requirements only — do not reproduce content that belongs to other tickets in the epic
 - Include a `## Epic Reference` section near the top of `research.md` with a link to the epic research path and a one-sentence note on how the epic relates to this ticket

@@ -144,9 +144,9 @@ Resolve `${CLAUDE_SKILL_DIR}` here in the body and carry the absolute paths into
 - **overnight-check sidecar** (executed in Implement §1 Step A and §1a.ii) → `${CLAUDE_SKILL_DIR}/references/_interactive_overnight_check.sh`. The Implement reference invokes it as `cat ${CLAUDE_SKILL_DIR}/references/_interactive_overnight_check.sh | bash -s -- "<message>" "<root>"` — preserve the `bash -s --` message and root arguments verbatim.
 - **load-requirements protocol** (consulted in Specify §1, Review §1, and Clarify §2) → `${CLAUDE_SKILL_DIR}/references/load-requirements.md`
 - **refine SKILL.md** (read verbatim in refine-delegation.md Step 1) → `${CLAUDE_SKILL_DIR}/../refine/SKILL.md`. Substitute as `<REFINE_SKILL_MD>` in refine-delegation.md.
-- **discovery-bootstrap** (read in refine-delegation.md Steps 2–3) → `${CLAUDE_SKILL_DIR}/references/discovery-bootstrap.md`. Substitute as `<DISCOVERY_BOOTSTRAP_MD>` in refine-delegation.md.
-- **complexity-escalation** (run in refine-delegation.md Step 5) → `${CLAUDE_SKILL_DIR}/references/complexity-escalation.md`. Substitute as `<COMPLEXITY_ESCALATION_MD>` in refine-delegation.md.
-- **post-refine-commit** (read in refine-delegation.md Step 6) → `${CLAUDE_SKILL_DIR}/references/post-refine-commit.md`. Substitute as `<POST_REFINE_COMMIT_MD>` in refine-delegation.md.
+- **discovery-bootstrap** (read in refine-delegation.md Step 2) → `${CLAUDE_SKILL_DIR}/references/discovery-bootstrap.md`. Substitute as `<DISCOVERY_BOOTSTRAP_MD>` in refine-delegation.md.
+- **complexity-escalation** (run in refine-delegation.md Step 4) → `${CLAUDE_SKILL_DIR}/references/complexity-escalation.md`. Substitute as `<COMPLEXITY_ESCALATION_MD>` in refine-delegation.md.
+- **post-refine-commit** (read in refine-delegation.md Step 5) → `${CLAUDE_SKILL_DIR}/references/post-refine-commit.md`. Substitute as `<POST_REFINE_COMMIT_MD>` in refine-delegation.md.
 - **criticality-matrix** (§Reading lifecycle state rules cited by Detect criticality/tier in Step 2, and §Criticality Behavior Matrix cited at end of Phase Transition) → `${CLAUDE_SKILL_DIR}/references/criticality-matrix.md`.
 - **orchestrator-review** (read at Specify §3a and Plan §3a) → `${CLAUDE_SKILL_DIR}/references/orchestrator-review.md`.
 - **fix-agent-prompt-template** (read at orchestrator-review step 3 Fix Dispatch, on a flag verdict) → `${CLAUDE_SKILL_DIR}/references/fix-agent-prompt-template.md`.
