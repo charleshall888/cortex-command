@@ -1,0 +1,7 @@
+{"schema_version": 1, "ts": "2026-07-03T02:34:38Z", "event": "lifecycle_start", "feature": "sweep-provisional-tail-refine-cluster-transitive", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-07-03T02:41:21Z", "event": "clarify_critic", "feature": "sweep-provisional-tail-refine-cluster-transitive", "parent_epic_loaded": false, "findings_count": 10, "dispositions": {"apply": 3, "dismiss": 6, "ask": 1}, "applied_fixes_count": 3, "dismissals_count": 6, "status": "ok"}
+{"ts": "2026-07-03T03:08:42Z", "event": "complexity_override", "feature": "sweep-provisional-tail-refine-cluster-transitive", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-07-03T03:08:42Z", "event": "criticality_override", "feature": "sweep-provisional-tail-refine-cluster-transitive", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-07-03T03:26:21Z", "event": "spec_approved", "feature": "sweep-provisional-tail-refine-cluster-transitive"}
+{"ts": "2026-07-03T14:26:13Z", "event": "plan_approved", "feature": "sweep-provisional-tail-refine-cluster-transitive", "dispatch_choice": "trunk"}
+{"ts": "2026-07-03T14:26:13Z", "event": "phase_transition", "feature": "sweep-provisional-tail-refine-cluster-transitive", "from": "plan", "to": "implement"}
