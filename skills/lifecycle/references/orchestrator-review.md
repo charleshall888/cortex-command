@@ -16,28 +16,21 @@ If the review is skipped, do not log any orchestrator events.
 
 ## Protocol
 
-### 1. Identify Phase and Checklist
+### 1. Execute Review
 
-Select the checklist matching the artifact under review: Post-Specify (after `spec.md`) or Post-Plan (after `plan.md`), from the Checklists section below.
-
-### 2. Execute Review
-
-Evaluate the artifact against every item in the checklist. For each item, assign a verdict:
-
-- **pass**: The item is satisfied. No action needed.
-- **flag**: The item is not satisfied or is materially weak. Requires a fix before user presentation.
+Select the checklist matching the artifact — Post-Specify (after `spec.md`) or Post-Plan (after `plan.md`), from the Checklists section below — then evaluate the artifact against every item, assigning each **pass** or **flag**. Flag any item that is not satisfied or is materially weak; a flag requires a fix before user presentation.
 
 Run this review in the main conversation — do not dispatch a subagent; the artifact is already in context.
 
-### 3. Handle Verdict
+### 2. Handle Verdict
 
 **On pass**: Show the user a one-line assessment summarizing what was checked and the result. Example: "Spec clean: 6 requirements with measurable criteria, edge cases covered, scope boundaries explicit."
 
 Then proceed to user presentation or the next phase as normal.
 
-**On flag**: Check the cycle counter. If this is cycle 3 or beyond, go to Escalation (step 5). Otherwise, proceed to Fix Dispatch (step 4).
+**On flag**: Check the cycle counter. If this is cycle 3 or beyond, go to Escalation (step 4). Otherwise, proceed to Fix Dispatch (step 3).
 
-### 4. Fix Dispatch
+### 3. Fix Dispatch
 
 For each flagged issue, determine the appropriate fix mode:
 
@@ -53,39 +46,15 @@ Pass the captured `$model` as the fresh fix sub-agent's model. On nonzero exit f
 
 **Same conversation**: Use for interactive rework that requires user input — where user preference determines the answer. Explain the issue to the user, gather their input, and then revise the artifact in the current context.
 
-After all fixes complete, increment the cycle counter, return to step 2 (Execute Review) with the same checklist. Read the fix-agent envelope but do not relay it to the user — only the re-review verdict surfaces.
+After all fixes complete, increment the cycle counter, return to step 1 (Execute Review) with the same checklist. Read the fix-agent envelope but do not relay it to the user — only the re-review verdict surfaces.
 
 #### Fix Agent Prompt Template
 
-```
-You are fixing a flagged issue in the {phase} artifact for the {feature} feature.
+Dispatch the fresh fix sub-agent using the fix-agent prompt template at the body-resolved **fix-agent-prompt-template** path (lifecycle SKILL.md Reference-path propagation).
 
-## Issue
-{description of the flagged checklist item and what is wrong}
+### 4. Escalation
 
-## Current Artifact
-Read cortex/lifecycle/{feature}/{artifact} for the current content.
-
-## Phase-Specific Checklist
-{paste the relevant checklist from the Checklists section below}
-
-## Instructions
-1. Read the current artifact fully
-2. Rewrite the ENTIRE artifact to address the flagged issue while maintaining all existing content that is correct
-3. Do not patch individual sections — rewrite the full file to maintain internal coherence
-4. Write the revised artifact to cortex/lifecycle/{feature}/{artifact}
-5. End your return with a YAML-style envelope using these three fields, and emit no prose before or after it:
-   verdict: revised | failed
-   files_changed: [<path>, ...]
-   rationale: <≤15 words>
-
-The artifact must still conform to the format defined in the {phase} phase reference.
-Do not add content beyond what the phase requires.
-```
-
-### 5. Escalation
-
-When the cycle cap is reached (2 cycles completed, issue persists), stop reviewing and escalate to the user. Present:
+The orchestrator runs a maximum of **2 review cycles per phase** — one cycle is a complete pass through the checklist, and the counter resets for each new phase (do not start cycle 3). When the cycle cap is reached (2 cycles completed, issue persists), stop reviewing and escalate to the user. Present:
 
 - What was checked (the flagged checklist items)
 - What was tried (fixes dispatched in each cycle)
@@ -127,13 +96,3 @@ Evaluate against `cortex/lifecycle/{feature}/plan.md`:
 | P8 | Architectural Pattern field present and in taxonomy | Structural check only (field presence + closed-set membership): the plan contains a `**Architectural Pattern**` field whose value is one of the five categories: event-driven, pipeline, layered, shared-state, plug-in. Gated on `criticality = critical` (when §1b ran); explicitly N/A for non-critical plans. Semantic fit is not checked here — that domain belongs to the synthesizer. |
 | P9 | Plan outline section present | Plan contains `## Outline` section. For `complexity=complex` plans, ≥2 phases required; for `complexity=simple` plans, ≥1 phase acceptable. Each phase names its task IDs in the heading; each phase has `**Goal**` and `**Checkpoint**` fields. |
 | P10 | Acceptance section present on complex plans | For `complexity=complex` plans, plan contains `## Acceptance` section with whole-feature acceptance criterion. Skip on `complexity=simple` plans — last-phase Checkpoint is the contract there. |
-
-## Cycle Cap
-
-The orchestrator runs a maximum of 2 review cycles per phase. A cycle is one complete pass through the checklist. The counter resets for each new phase. Do not start cycle 3 — escalate with full context per step 5.
-
-## Constraints
-
-| Thought | Reality |
-|---------|---------|
-| "Criticality is low so I should skip even for complex features" | The skip rule requires BOTH low criticality AND simple complexity. Low-criticality complex features still get reviewed. |

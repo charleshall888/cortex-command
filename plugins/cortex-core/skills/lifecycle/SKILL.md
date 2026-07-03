@@ -149,6 +149,7 @@ Resolve `${CLAUDE_SKILL_DIR}` here in the body and carry the absolute paths into
 - **post-refine-commit** (read in refine-delegation.md Step 6) → `${CLAUDE_SKILL_DIR}/references/post-refine-commit.md`. Substitute as `<POST_REFINE_COMMIT_MD>` in refine-delegation.md.
 - **criticality-matrix** (§Reading lifecycle state rules cited by Detect criticality/tier in Step 2, and §Criticality Behavior Matrix cited at end of Phase Transition) → `${CLAUDE_SKILL_DIR}/references/criticality-matrix.md`.
 - **orchestrator-review** (read at Specify §3a and Plan §3a) → `${CLAUDE_SKILL_DIR}/references/orchestrator-review.md`.
+- **fix-agent-prompt-template** (read at orchestrator-review step 3 Fix Dispatch, on a flag verdict) → `${CLAUDE_SKILL_DIR}/references/fix-agent-prompt-template.md`.
 - **critical-review-gate** (read at Specify §3b and Plan §3b on the skip branch) → `${CLAUDE_SKILL_DIR}/references/critical-review-gate.md`.
 - **competing-plans** (read on Plan's `critical` branch via §1a→§1b) → `${CLAUDE_SKILL_DIR}/references/competing-plans.md`.
 - **merge-back** (read in Implement §2e on the worktree-dispatch arm) → `${CLAUDE_SKILL_DIR}/references/merge-back.md`.
