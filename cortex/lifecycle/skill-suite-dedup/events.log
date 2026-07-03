@@ -12,3 +12,4 @@
 {"ts": "2026-07-03T20:24:43Z", "event": "batch_dispatch", "feature": "skill-suite-dedup", "batch": 6, "tasks": ["9c"]}
 {"ts": "2026-07-03T20:26:38Z", "event": "batch_dispatch", "feature": "skill-suite-dedup", "batch": 7, "tasks": ["9d"]}
 {"ts": "2026-07-03T20:38:22Z", "event": "batch_dispatch", "feature": "skill-suite-dedup", "batch": 9, "tasks": [11]}
+{"ts": "2026-07-03T20:45:41Z", "event": "phase_transition", "feature": "skill-suite-dedup", "tier": "complex", "from": "implement", "to": "review"}

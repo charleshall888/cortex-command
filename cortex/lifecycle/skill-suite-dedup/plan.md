@@ -158,7 +158,7 @@ Apply the spec's risk-first-then-fat-first edit program to the core skill conste
 - **Complexity**: simple
 - **Context**: Final gate. Confirms `test_l1_surface_ratchet.py`, the routing fixture, and mirror parity green. Completes the edit program.
 - **Verification**: `just build-plugin && just test` — pass if exit 0 and the aggregate summary reports all suites green.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ## Risks
 - **R6 §4-gate pruning near the pinned `(Recommended)` string** — `test_refine_skill.py` pins the format string within 35 lines of the gate anchor and `test_lifecycle_kept_pauses_parity` enforces a ±35-line tolerance. Over-aggressive deletion breaches parity. Mitigation: prune in place, keep all seven enumerated keep-list elements (Task 6 items 1–7, including the announcement phrasing, no-pick-menu fold, and downsize menu), keep edits local. If the parity tolerance is breached, the gate must be re-pruned more conservatively rather than the test relaxed.
