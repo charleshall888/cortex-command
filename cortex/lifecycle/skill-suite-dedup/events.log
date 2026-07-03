@@ -3,3 +3,5 @@
 {"ts": "2026-07-03T18:32:32Z", "event": "phase_transition", "feature": "skill-suite-dedup", "from": "research", "to": "specify"}
 {"ts": "2026-07-03T18:58:59Z", "event": "spec_approved", "feature": "skill-suite-dedup"}
 {"ts": "2026-07-03T18:58:59Z", "event": "phase_transition", "feature": "skill-suite-dedup", "from": "specify", "to": "plan"}
+{"ts": "2026-07-03T19:53:25Z", "event": "plan_approved", "feature": "skill-suite-dedup", "dispatch_choice": "trunk"}
+{"ts": "2026-07-03T19:53:25Z", "event": "phase_transition", "feature": "skill-suite-dedup", "from": "plan", "to": "implement"}
