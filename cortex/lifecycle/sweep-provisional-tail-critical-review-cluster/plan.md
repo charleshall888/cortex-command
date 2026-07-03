@@ -104,7 +104,7 @@ Verify-then-apply-or-refute the 26 provisional trim candidates under `skills/cri
 - **Complexity**: simple
 - **Context**: Amend the Integration + Touch points sections of the #357 backlog file. Backlog files are not mirrored. Serialized after Task 8. Commit via `/cortex-core:commit`.
 - **Verification**: (b) `grep -c "verdicts.md" cortex/backlog/357-sweep-provisional-tail-of-skill-value-audit-by-cluster.md` ≥ 1 AND the fold-in **direction** is structurally captured, not just mentioned: the amended passage matches a child→master ordering — e.g. `grep -Eiq "verdicts\.md[^.]*(→|->|into|fold[- ]?in|feeds?)[^.]*master_candidates\.json" cortex/backlog/357-sweep-provisional-tail-of-skill-value-audit-by-cluster.md` (child `verdicts.md` on the left of the fold-in verb, `master_candidates.json` on the right); (c) Interactive/session-dependent: read the amended Integration + Touch points passage and confirm it names child `verdicts.md` as the *input* and `master_candidates.json` as the *target* (not the reverse) — the regex captures ordering but a human/agent read confirms it is not incidental co-mention.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit `0f98384e`). verdicts.md named 2× in #357; directional grep PASS (child verdicts.md → master_candidates.json); amended both the reconciliation-input contract (Integration prose) and Touch points, naming verdicts.md as authoritative input and master_candidates.json as target, plus the `applied_in_commit` provenance #353 dropped.
 
 ### Task 10: Batch integration gate (Req 15)
 - **Files**: (no edits — verification-only gate)
