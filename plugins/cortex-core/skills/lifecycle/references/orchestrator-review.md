@@ -42,7 +42,7 @@ For each flagged issue, determine the appropriate fix mode:
 model=$(cortex-resolve-model --role orchestrator-fix --criticality "$(cortex-lifecycle-state --feature {feature} --field criticality)")
 ```
 
-Pass the captured `$model` as the fresh fix sub-agent's model. On nonzero exit from `cortex-resolve-model` — the verb rejected the input or the `cortex-lifecycle-state` read returned corrupt/absent criticality — halt and escalate rather than guessing or substituting a model.
+Pass the captured `$model` as the fresh fix sub-agent's model. On nonzero exit from `cortex-resolve-model`, halt and escalate rather than guessing or substituting a model.
 
 **Same conversation**: Use for interactive rework that requires user input — where user preference determines the answer. Explain the issue to the user, gather their input, and then revise the artifact in the current context.
 

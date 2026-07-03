@@ -6,9 +6,7 @@ Two-stage review: spec compliance first, then code quality. Complex tier only. T
 
 ### 1. Gather Review Inputs
 
-- Read `cortex/lifecycle/{feature}/spec.md` for requirements
-- Identify files changed during implementation by reading the git log for commits since the lifecycle started, or by comparing plan.md's file lists
-- Read `cortex/lifecycle/{feature}/plan.md` for the verification strategy
+- Read `cortex/lifecycle/{feature}/spec.md` (requirements) and `cortex/lifecycle/{feature}/plan.md` (verification strategy), and identify the files changed during implementation (git log since the lifecycle started, or plan.md's file lists).
 - Load requirements docs following the shared tag-based loading protocol (`load-requirements.md`): run `cortex-load-requirements --feature {feature}`, read every listed non-skipped path, and record the printed path list for injection into the reviewer prompt. When the verb emits its no-match fallback note (no area docs matched), the drift check covers project.md only.
 
 ### 2. Launch Review Sub-Task
@@ -21,7 +19,7 @@ Dispatch a focused review sub-task with read-only instructions using the reviewe
 model=$(cortex-resolve-model --role review --criticality "$(cortex-lifecycle-state --feature {feature} --field criticality)")
 ```
 
-Pass the captured `$model` as the reviewer sub-task's model. On nonzero exit from `cortex-resolve-model` — whether the verb rejected the input or the inner `cortex-lifecycle-state` read returned corrupt/absent criticality — halt and escalate to the user rather than guessing or substituting a model.
+Pass the captured `$model` as the reviewer sub-task's model. On nonzero exit from `cortex-resolve-model`, halt and escalate to the user rather than guessing or substituting a model.
 
 ### Reviewer Prompt Template
 
@@ -139,10 +137,10 @@ Register `"review"` in the `artifacts` array of `cortex/lifecycle/{feature}/inde
 |---------|-------|--------|
 | APPROVED | any | Proceed to Complete |
 | CHANGES_REQUESTED | 1 | Re-enter Implement for flagged tasks with reviewer feedback |
-| CHANGES_REQUESTED | 2 | Escalate to user — present the reviewer's analysis and ask for direction |
+| CHANGES_REQUESTED | ≥2 | Escalate to user — present the reviewer's analysis and ask for direction |
 | REJECTED | any | Escalate to user immediately — recommend revisiting the plan or spec |
 
-The cycle counter prevents infinite rework loops. After cycle 2, always escalate to the user regardless of verdict.
+The cycle counter prevents infinite rework loops (the `≥2` row escalates on cycle 2 and any later cycle a user-directed rework reaches).
 
 After reading the verdict from the review artifact (state detection parses the exact `"verdict"` field name and its exact values), append a `review_verdict` event to `cortex/lifecycle/{feature}/events.log`:
 
@@ -158,13 +156,9 @@ After logging the `review_verdict` event, check whether `requirements_drift` is 
 
 1. **Read the suggested update**: Parse the `## Suggested Requirements Update` section from `cortex/lifecycle/{feature}/review.md`. Extract `File`, `Section`, and `Content` fields.
 
-2. **If the section is missing or unparseable, enforce the protocol via re-dispatch**: The reviewer is expected to emit a `## Suggested Requirements Update` section whenever `requirements_drift: detected`. When the section is absent or unparseable on the first pass, re-dispatch the reviewer with a targeted instruction:
+2. **If the section is missing or unparseable, enforce via re-dispatch**: the reviewer must emit a `## Suggested Requirements Update` section whenever `requirements_drift: detected`. When it is absent or unparseable, re-dispatch the reviewer to append it in the §2 format (File / Section / Content) without modifying other sections, under a max-retry cap of `2` (initial dispatch + 2 retries = 3 passes); exit as soon as a pass yields a parseable section and continue with step 3.
 
-   > "review.md flags `requirements_drift: detected` but is missing the `## Suggested Requirements Update` section. Read the existing review.md, then append the section in the format documented in §2 (File / Section / Content). Do not modify any other section."
-
-   The re-dispatch follows a max-retry cap of `2` (initial dispatch + 2 retries = 3 passes); exit the loop as soon as a pass yields a parseable section and continue with step 3.
-
-   If all 3 passes complete without producing a parseable `## Suggested Requirements Update` section, the retry loop is exhausted. Do **not** block the verdict processing. Instead, log a `drift_protocol_breach` event to `cortex/lifecycle/{feature}/events.log` with `state=detected` and `suggestion=missing`, then fall through to step 5 (skip auto-apply). The breach event surfaces in the morning report so the gap is visible rather than silent.
+   If all 3 passes fail, the retry loop is exhausted — do **not** block the verdict processing. Log a `drift_protocol_breach` event to `cortex/lifecycle/{feature}/events.log` with `state=detected` and `suggestion=missing`, then fall through to step 5 (skip auto-apply). The breach surfaces in the morning report so the gap is visible rather than silent.
 
    Event format:
 
@@ -174,11 +168,7 @@ After logging the `review_verdict` event, check whether `requirements_drift` is 
 
 3. **Apply the update**: Append the Content at the end of the named Section in the target file.
 
-4. **Report to the user**: Display what was changed:
-   ```
-   Requirements updated: {file} → {section}
-     Added: {first line of content}
-   ```
+4. **Report to the user**: state what was changed — the file, the section, and the first line of the appended content.
 
 5. **Skip auto-apply after exhausted retries**: log a brief notice — "Requirements drift detected but no suggested update was provided after re-dispatch; breach logged for morning report" — and continue to §5 Transition without blocking.
 
