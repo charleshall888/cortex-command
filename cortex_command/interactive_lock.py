@@ -484,6 +484,53 @@ def release_lock(feature_slug: str) -> None:
     })
 
 
+def release_lock_if_owner(feature_slug: str) -> bool:
+    """Release the lock only when the caller owns it, else leave it in place.
+
+    Ownership is a ``session_id`` match: the on-disk lock's ``session_id``
+    must equal the current ``CLAUDE_CODE_SESSION_ID`` (both present). On a
+    match, unlinks and emits ``interactive_lock_released`` with
+    ``was_owner: true``; on any mismatch, a missing lock, or either
+    ``session_id`` absent, leaves the file untouched and emits the event
+    with ``was_owner: false``.
+
+    This is the safe release for the §1a.iii worktree-create-failure abort:
+    ``acquire_lock`` is a non-atomic read-then-replace, so two same-slug
+    ``selected`` sessions can both pass acquire; an unconditional release on
+    abort would then delete the winner's live lock. The session_id owner
+    check prevents that. The env-absent case is not actively cleaned up here
+    — it degrades to today's behavior (orphan bounded by stale recovery).
+
+    Returns True when the lock was owned and unlinked, False otherwise.
+    """
+    lock_path = _lock_path(feature_slug)
+    ts = _now_iso()
+    current_session_id = os.environ.get("CLAUDE_CODE_SESSION_ID")
+
+    existing = read_lock(feature_slug)
+    is_owner = (
+        existing is not None
+        and current_session_id is not None
+        and existing.get("session_id") == current_session_id
+    )
+
+    if is_owner:
+        try:
+            lock_path.unlink()
+        except FileNotFoundError:
+            is_owner = False
+
+    _emit_event(feature_slug, {
+        "ts": ts,
+        "event": "interactive_lock_released",
+        "feature": feature_slug,
+        "session_id": current_session_id,
+        "was_owner": is_owner,
+    })
+
+    return is_owner
+
+
 def scan_live_locks(project_root: Path) -> set[str]:
     """Return the set of feature slugs with live interactive owners.
 
@@ -524,10 +571,11 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     Subcommands:
 
-    - ``acquire <slug>``       — acquire the lock; exit 0 on success, 1 if blocked
-    - ``release <slug>``       — release the lock unconditionally
-    - ``inspect <slug>``       — print the lock JSON and liveness verdict
-    - ``force-release <slug>`` — unconditional unlink without event emission
+    - ``acquire <slug>``           — acquire the lock; exit 0 on success, 1 if blocked
+    - ``release <slug>``           — release the lock unconditionally
+    - ``release-if-owner <slug>``  — release only if the caller's session owns it
+    - ``inspect <slug>``           — print the lock JSON and liveness verdict
+    - ``force-release <slug>``     — unconditional unlink without event emission
     """
     parser = argparse.ArgumentParser(
         prog="cortex-interactive-lock",
@@ -540,6 +588,12 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     release_p = sub.add_parser("release", help="Release the interactive lock")
     release_p.add_argument("slug", help="Feature slug")
+
+    release_owner_p = sub.add_parser(
+        "release-if-owner",
+        help="Release the lock only if the caller's session owns it",
+    )
+    release_owner_p.add_argument("slug", help="Feature slug")
 
     inspect_p = sub.add_parser("inspect", help="Inspect lock state and liveness")
     inspect_p.add_argument("slug", help="Feature slug")
@@ -569,6 +623,10 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     elif args.command == "release":
         release_lock(args.slug)
+        return 0
+
+    elif args.command == "release-if-owner":
+        release_lock_if_owner(args.slug)
         return 0
 
     elif args.command == "inspect":

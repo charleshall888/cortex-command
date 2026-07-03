@@ -105,7 +105,7 @@ Exit 0 → proceed to iii. Non-zero → the script has written its rejection to 
 worktree_path=$(cortex-worktree-create --feature interactive-{slug} --base-branch main)
 ```
 
-`create_worktree` resolves the branch as `interactive/{slug}`, materializes the worktree at `<repo>/.claude/worktrees/interactive-{slug}/` (containment enforced inside — a path escaping the repo root exits 1 with `worktree_escapes_repo`), and prints the absolute worktree path on stdout. On failure it writes `repr(exc)` to stderr and exits 1 — surface it and exit §1a.
+`create_worktree` resolves the branch as `interactive/{slug}`, materializes the worktree at `<repo>/.claude/worktrees/interactive-{slug}/` (containment enforced inside — a path escaping the repo root exits 1 with `worktree_escapes_repo`), and prints the absolute worktree path on stdout. On failure it writes `repr(exc)` to stderr and exits 1 — before exiting §1a, run `cortex-interactive-lock release-if-owner {slug}` to release the lock acquired at step ii so a failed create never orphans it. The `release-if-owner` variant only unlinks when this session's `CLAUDE_CODE_SESSION_ID` owns the on-disk lock, so it can never delete a co-passer's live lock (acquire is non-atomic). Then surface the stderr and exit §1a.
 
 **Step v — Auto-enter sequence**
 

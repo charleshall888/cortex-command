@@ -536,3 +536,46 @@ def test_resolve_main_repo_root_bfail_inside_worktree_degrades_to_local(
 
     # (b-guard) fails on the no-cortex main → step (c) returns the worktree root.
     assert il._resolve_main_repo_root() == wt.resolve()
+
+
+# ---------------------------------------------------------------------------
+# release_lock_if_owner — owner-checked release for the §1a.iii abort
+# ---------------------------------------------------------------------------
+
+
+def test_release_if_owner_unlinks_when_session_matches(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Owner match (lock session_id == CLAUDE_CODE_SESSION_ID) → unlink + True."""
+    project_root = _setup_repo_root(tmp_path)
+    monkeypatch.setenv("CORTEX_REPO_ROOT", str(project_root))
+    monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "owner-session")
+
+    lock_dir = project_root / "cortex" / "lifecycle" / "feat"
+    lock_dir.mkdir(parents=True)
+    lock_path = lock_dir / "interactive.pid"
+    lock_path.write_text(json.dumps(_make_lock(session_id="owner-session")))
+
+    result = il.release_lock_if_owner("feat")
+
+    assert result is True
+    assert not lock_path.exists()
+
+
+def test_release_if_owner_leaves_lock_when_session_differs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Session mismatch (a co-passer's live lock) → leave the file, return False."""
+    project_root = _setup_repo_root(tmp_path)
+    monkeypatch.setenv("CORTEX_REPO_ROOT", str(project_root))
+    monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "loser-session")
+
+    lock_dir = project_root / "cortex" / "lifecycle" / "feat"
+    lock_dir.mkdir(parents=True)
+    lock_path = lock_dir / "interactive.pid"
+    lock_path.write_text(json.dumps(_make_lock(session_id="winner-session")))
+
+    result = il.release_lock_if_owner("feat")
+
+    assert result is False
+    assert lock_path.exists(), "must not delete a co-passer's live lock"
