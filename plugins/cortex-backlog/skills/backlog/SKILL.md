@@ -21,10 +21,6 @@ Manage a file-based project backlog. Each item is a standalone markdown file wit
 
 Subcommand: $ARGUMENTS (first word = subcommand, remainder = subcommand args; empty = list backlog).
 
-## Invocation
-
-`/cortex-backlog:backlog {{subcommand}}` — run the specified subcommand. When `{{subcommand}}` is `add`, provide `{{title}}` to name the new item. When `{{subcommand}}` is `archive`, provide `{{item}}` to identify the target.
-
 ## Frontmatter Schema
 
 Read `${CLAUDE_SKILL_DIR}/references/schema.md` when creating or validating items — it contains the field table, enum values, and item template.
@@ -37,15 +33,7 @@ Examples: `001-complete-phase-commits.md`, `014-add-search-feature.md`
 
 ## Subcommands
 
-When invoked without a `{{subcommand}}` (just `/cortex-backlog:backlog`), present the available actions via `AskUserQuestion`:
-
-- **pick** — Select an open item to work on
-- **new** — Interview-driven backlog item creation
-- **list** — Show the backlog summary table
-- **add** — Create a new backlog item
-- **ready** — Show unblocked items ready to work on
-- **archive** — Move a resolved item to the archive
-- **reindex** — Regenerate the backlog index
+When invoked without a `{{subcommand}}` (just `/cortex-backlog:backlog`), present the available actions — the `###` subcommands below — via `AskUserQuestion`.
 
 ### add
 
@@ -91,13 +79,8 @@ Interactive item selector. Presents open backlog items as a selectable list.
 
 1. Run `cortex-backlog-ready`. If exit code is non-zero, parse the error JSON and report the message — suggest running `/cortex-backlog:backlog reindex` if the error indicates a malformed backlog index.
 2. Iterate `groups` in order (`critical → contingent`); within each group, iterate `items`. The first non-empty group's items form the selection set. (Group ordering preserves `critical → low` priority; within a group, refined items come first.)
-3. If no actionable items exist, report that the backlog is clear
-4. If only 1 item exists, present it directly and ask if the user wants to start it
-5. If 2-4 items exist, present all via `AskUserQuestion` with one question:
-   - Each option's `label` is `"NNN — Title"` (ID and title)
-   - Each option's `description` includes priority and type from the index
-6. If 5+ items exist, present the top 4 by priority via `AskUserQuestion` and note how many additional items were omitted
-7. After the user selects an item, ask what they'd like to do with it using a second `AskUserQuestion`:
+3. Present that group's items for selection: if none, report the backlog is clear; if one, offer it directly; otherwise present via `AskUserQuestion` — up to the top 4 by priority, noting any omitted — each option labeled `"NNN — Title"` with its priority and type from the index.
+4. After the user selects an item, ask what they'd like to do with it using a second `AskUserQuestion`:
    - **Start lifecycle** — invoke `/cortex-core:lifecycle {{item}}` to begin structured development
    - **View details** — read and present the full item file
    - **Mark in-progress** — update the item's status to `in_progress` and `updated` date
