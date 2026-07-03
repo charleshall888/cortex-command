@@ -6,28 +6,17 @@ Pre-research intent gate. Confirms what is being built and why, aligns with proj
 
 ### 1. Resolve Input
 
-Run:
-
-```bash
-cortex-resolve-backlog-item <input>
-```
-
-Branch on the exit code:
-
-- **Exit 0** — unambiguous match (**Context A**). Parse stdout JSON; the object contains exactly four fields: `filename`, `backlog_filename_slug`, `title`, `lifecycle_slug`. Use these directly in subsequent phases. Do not re-derive slugs from scratch. Read the backlog item's frontmatter (`title`, `description`, `status`) and body.
-- **Exit 2** — ambiguous match. Read the `<filename>\t<title>` candidate lines from stderr. Present them to the user and ask them to select one. Re-invoke `cortex-resolve-backlog-item` with the chosen filename slug, or treat the user's selection directly as the resolved item (Context A).
-- **Exit 3** — no match. Switch to **Context B** (ad-hoc topic) and treat the input as the topic name. Offer to invoke `/cortex-backlog:backlog new` to create a backlog item with the disciplined body template before continuing — if this seems impractical, note it and proceed without.
-- **Exit 64** (usage error) / **Exit 70** (internal error) — halt and surface the stderr diagnostic; do not fall through to disambiguation.
+Input is resolved at refine SKILL.md Step 1 — the `cortex-resolve-backlog-item` invocation and its unambiguous / ambiguous / no-match / error branching — and this phase consumes that result. On an unambiguous match, use the exit-0 JSON fields (`filename`, `backlog_filename_slug`, `title`, `lifecycle_slug`) directly (do not re-derive slugs) and read the backlog item's frontmatter and body.
 
 **Context A — Backlog item**: Input resolved to a `cortex/backlog/NNN-*.md` file; use the exit-0 JSON fields downstream.
 
-**Context B — Ad-hoc prompt**: Input is raw text (a topic name or description) with no matching backlog item. Assess the prompt directly. The output intent statement and complexity/criticality assessments still apply; backlog write-backs are skipped.
+**Context B — Ad-hoc prompt**: Input is raw text (a topic name or description) with no matching backlog item. Assess the prompt directly. The output intent statement and complexity/criticality assessments still apply; backlog write-backs are skipped. Optionally offer to create a backlog item via `/cortex-backlog:backlog new` with the disciplined body template before continuing; if impractical, note it and proceed.
 
 **Title-phrase predicate**: title-phrase input matches when `slugify(input)` is a substring of `slugify(title)`.
 
 ### 2. Load Requirements Context
 
-Load requirements using the shared tag-based loading protocol (`load-requirements.md`): run `cortex-load-requirements --feature {slug}`, read every listed non-skipped path into context, and inject the printed path list into any downstream prompt that must know what was in scope (relay any fallback note). If no `cortex/requirements/` directory or files exist, note this and proceed.
+Run `cortex-load-requirements --feature {slug}` — the shared tag-based loading protocol (`load-requirements.md`). Read every listed non-skipped path into context and inject the printed path list into any downstream prompt that must know what was in scope, relaying any fallback note. If no `cortex/requirements/` files exist, note this and proceed.
 
 ### 3. Confidence Assessment
 
@@ -74,11 +63,7 @@ Write or present the following five outputs — this is the handoff package for 
    Default to `medium` only for clearly isolated, easily-reverted tooling changes (e.g., a standalone UI tweak with no shared dependencies).
    State both assessments with brief reasoning and proceed — do not ask the user to confirm.
 
-4. **Requirements alignment note**: One of:
-   - "Aligned with cortex/requirements/{file}: [brief summary of relevant constraints or goals]"
-   - "Partial alignment: [what aligns and what doesn't]"
-   - "No requirements files found — requirements alignment check skipped"
-   - "Conflict detected: [describe the conflict]" — if conflict, resolve with user before proceeding
+4. **Requirements alignment note**: State one of — aligned (name the `cortex/requirements/{file}` and the relevant constraints/goals), partial (what aligns and what doesn't), no requirements files found (check skipped), or conflict (describe it). On a detected conflict, resolve with the user before proceeding.
 
 5. **Open questions for research**: Bulleted list of questions to carry into the research phase (may be empty). These are questions that need investigation (not user answers) — ambiguities best resolved by reading code, not asking.
 
@@ -99,19 +84,7 @@ These criteria are defined here but applied at Research phase entry, not during 
 
 ### 7. Write-Backs (Context A only)
 
-After producing the complexity and criticality assessments, write them to the backlog item — gated on the active backend, resolved once via `` `cortex-read-backlog-backend` `` (argless; it prints the resolved backend and exits 0). On `cortex-backlog` (the default arm), run:
-
-```bash
-cortex-update-item {backlog-filename-slug} --complexity {value} --criticality {value}
-```
-
-Use `backlog_filename_slug` from §1 as `{backlog-filename-slug}`.
-
-On `none`, skip this write-back with a one-line advisory that backlog write-back is disabled for this repo. On any other (external) backend, make the equivalent complexity/criticality update best-effort on the configured tracker per `backlog.instructions`, surfacing the composed values if it cannot be completed. The lifecycle `events.log` remains the authoritative tier/criticality feed regardless of backend, so the critical-review gate stays correctly fed.
-
-If `cortex-update-item` fails, surface the error and ask the user to resolve it before proceeding. Do not silently skip write-backs. On exit 2, apply the canonical ambiguous-slug handling in backlog-writeback.md (loaded at lifecycle Step 2).
-
-For Context B (ad-hoc), skip this step — there is no backlog item to update.
+After producing the complexity and criticality assessments, write them to the backlog item per the write-back block in refine SKILL.md Step 3 — the canonical copy, covering backend resolution (`cortex-read-backlog-backend`), the `cortex-update-item --complexity --criticality` call on `cortex-backlog`, the `none` and external-backend arms, failure handling, and the Context B skip.
 
 ## Constraints
 
