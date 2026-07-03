@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 2ba2a001-15f1-4ce7-aa08-3de3c05062ec
 title: 'Repair test_critical_review_classifier extraction source (pre-existing break)'
-status: backlog
+status: complete
 priority: medium
 type: chore
 tags: ['skill-value-scorecard', 'test-debt']
