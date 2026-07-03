@@ -63,6 +63,13 @@ KNOWN_PROSE_COLLISIONS: tuple[tuple[str, str], ...] = (
         "discovery",
         "cortex/lifecycle/audit-cortex-coreresearch-skill-output-shape-for-token-waste-in-researchmd-sections/review.md",
     ),
+    # review.md quotes the pre-reword string "consulted by lifecycle/refine/
+    # discovery" as prose while describing a research.md fix; ``refine`` here is
+    # a slash-joined prose token, not a lifecycle feature citation.
+    (
+        "refine",
+        "cortex/lifecycle/compress-projectmd-sections-that-restate-adrs/review.md",
+    ),
     # Worktree-context implementation note abbreviates the real test path
     # ``cortex_command/lifecycle/tests/test_init_ensure.py`` to
     # ``lifecycle/tests/...``; ``tests`` is not a feature slug.
