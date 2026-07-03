@@ -5575,11 +5575,18 @@
   ],
   "file": "cortex/requirements/multi-agent.md",
   "slug": "cortex_requirements_multi_agent",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "553d4de7",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [
    "` pre-filled by `->cortex_command/overnight/prompts/orchestrator-round.md",
    "`<substitution_contract>`->cortex_command/overnight/prompts/orchestrator-round.md",
@@ -5607,7 +5614,8 @@
    "`batch-brain.md`->cortex_command/overnight/tests/test_brain.py",
    "`batch-brain.md`->docs/overnight-operations.md"
   ],
-  "mech_pin_count": 53
+  "mech_pin_count": 53,
+  "applied_in_commit": "553d4de7"
  },
  {
   "id": "s9",
@@ -5626,11 +5634,18 @@
   ],
   "file": "cortex/requirements/multi-agent.md",
   "slug": "cortex_requirements_multi_agent",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "553d4de7",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [
    "`.claude/worktrees/`->bin/cortex-archive-rewrite-paths",
    "`.claude/worktrees/`->claude/hooks/cortex-worktree-create.sh",
@@ -5658,7 +5673,8 @@
    "`.mcp.json`->docs/internals/sdk.md",
    "`.mcp.json`->docs/mcp-server.md"
   ],
-  "mech_pin_count": 85
+  "mech_pin_count": 85,
+  "applied_in_commit": "553d4de7"
  },
  {
   "id": "s4",
@@ -5677,11 +5693,18 @@
   ],
   "file": "cortex/requirements/multi-agent.md",
   "slug": "cortex_requirements_multi_agent",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "553d4de7",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [
    "`CORTEX_SANDBOX_SOFT_FAIL=1`->bin/.events-registry.md",
    "`CORTEX_SANDBOX_SOFT_FAIL=1`->cortex_command/overnight/report.py",
@@ -5709,7 +5732,8 @@
    "`claude -p`->tests/test_critical_review_classifier.py",
    "`claude_agent_sdk.query()`->cortex_command/discovery.py"
   ],
-  "mech_pin_count": 51
+  "mech_pin_count": 51,
+  "applied_in_commit": "553d4de7"
  },
  {
   "id": "s2",
@@ -5727,11 +5751,18 @@
   ],
   "file": "cortex/requirements/multi-agent.md",
   "slug": "cortex_requirements_multi_agent",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "553d4de7",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [
    "heading->cortex_command/init/templates/cortex/requirements/project.md",
    "heading->cortex_command/overnight/recovery.py",
@@ -5754,7 +5785,8 @@
    "heading->tests/test_load_requirements_protocol.py",
    "heading->tests/test_requirements_skill_e2e.py"
   ],
-  "mech_pin_count": 20
+  "mech_pin_count": 20,
+  "applied_in_commit": "553d4de7"
  },
  {
   "id": "s14",
@@ -5772,11 +5804,18 @@
   ],
   "file": "cortex/requirements/pipeline.md",
   "slug": "cortex_requirements_pipeline",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "e82344d5",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [
    "`atexit.register`->cortex_command/dashboard/app.py",
    "`atexit.register`->cortex_command/overnight/sandbox_settings.py",
@@ -5804,7 +5843,8 @@
    "`cortex-command`->bin/cortex-git-sync-rebase",
    "`cortex-command`->bin/cortex-jcc"
   ],
-  "mech_pin_count": 215
+  "mech_pin_count": 215,
+  "applied_in_commit": "e82344d5"
  },
  {
   "id": "s3",
@@ -5822,11 +5862,18 @@
   ],
   "file": "cortex/requirements/pipeline.md",
   "slug": "cortex_requirements_pipeline",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "e82344d5",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [
    "`^[a-zA-Z0-9._-]{1,128}$`->cortex_command/overnight/session_validation.py",
    "`cortex overnight cancel`->cortex_command/cli.py",
@@ -5854,7 +5901,8 @@
    "`cortex/lifecycle/overnight-state.json`->skills/morning-review/SKILL.md",
    "`cortex/lifecycle/overnight-state.json`->skills/overnight/references/new-session-flow.md"
   ],
-  "mech_pin_count": 166
+  "mech_pin_count": 166,
+  "applied_in_commit": "e82344d5"
  },
  {
   "id": "s7",
@@ -5872,11 +5920,18 @@
   ],
   "file": "cortex/requirements/pipeline.md",
   "slug": "cortex_requirements_pipeline",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "e82344d5",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [
    "`cortex/adr/`->cortex/adr/README.md",
    "`cortex/adr/`->cortex_command/adr_citation_audit.py",
@@ -5904,7 +5959,8 @@
    "`cortex/lifecycle/{feature}/events.log`->skills/lifecycle/references/backlog-writeback.md",
    "`cortex/lifecycle/{feature}/events.log`->skills/lifecycle/references/competing-plans.md"
   ],
-  "mech_pin_count": 224
+  "mech_pin_count": 224,
+  "applied_in_commit": "e82344d5"
  },
  {
   "id": "s4",
@@ -5921,11 +5977,18 @@
   ],
   "file": "cortex/requirements/pipeline.md",
   "slug": "cortex_requirements_pipeline",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "e82344d5",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [
    "` with reason `->cortex_command/backlog/ready.py",
    "` with reason `->cortex_command/overnight/integration_recovery.py",
@@ -5953,7 +6016,8 @@
    "`deferred`->cortex_command/dashboard/templates/alerts_banner.html",
    "`deferred`->cortex_command/dashboard/templates/backlog_panel.html"
   ],
-  "mech_pin_count": 171
+  "mech_pin_count": 171,
+  "applied_in_commit": "e82344d5"
  },
  {
   "id": "s5",
@@ -5970,11 +6034,18 @@
   ],
   "file": "cortex/requirements/pipeline.md",
   "slug": "cortex_requirements_pipeline",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "e82344d5",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [
    "`ABSOLUTE_CEILING_SECONDS`->cortex_command/overnight/runner.py",
    "`ABSOLUTE_CEILING_SECONDS`->cortex_command/overnight/runner_primitives.py",
@@ -6002,7 +6073,8 @@
    "`pipeline-events.log`->cortex_command/overnight/tests/test_orchestrator.py",
    "`pipeline-events.log`->cortex_command/overnight/tests/test_orchestrator_round_telemetry.py"
   ],
-  "mech_pin_count": 38
+  "mech_pin_count": 38,
+  "applied_in_commit": "e82344d5"
  },
  {
   "id": "s13",
@@ -6020,11 +6092,18 @@
   ],
   "file": "cortex/requirements/pipeline.md",
   "slug": "cortex_requirements_pipeline",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "e82344d5",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [
    "`os.replace()`->docs/internals/pipeline.md",
    "`os.replace()`->docs/overnight-operations.md",
@@ -6045,7 +6124,8 @@
    "heading->skills/requirements-write/SKILL.md",
    "heading->tests/test_requirements_skill_e2e.py"
   ],
-  "mech_pin_count": 18
+  "mech_pin_count": 18,
+  "applied_in_commit": "e82344d5"
  },
  {
   "id": "s2",
@@ -6063,11 +6143,18 @@
   ],
   "file": "cortex/requirements/backlog.md",
   "slug": "cortex_requirements_backlog",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "9618653d",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [
    "`cortex-backlog`->bin/.audit-bare-python-m-allowlist.md",
    "`cortex-backlog`->bin/cortex-read-backlog-backend",
@@ -6095,7 +6182,8 @@
    "`cortex-backlog`->docs/index.html",
    "`cortex-backlog`->docs/overnight.md"
   ],
-  "mech_pin_count": 1242
+  "mech_pin_count": 1242,
+  "applied_in_commit": "9618653d"
  },
  {
   "id": "s3",
@@ -6114,11 +6202,18 @@
   ],
   "file": "cortex/requirements/backlog.md",
   "slug": "cortex_requirements_backlog",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "9618653d",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [
    "`BUILD_OUTPUT_PLUGINS`->cortex_command/parity_check.py",
    "`BUILD_OUTPUT_PLUGINS`->docs/plugin-development.md",
@@ -6146,7 +6241,8 @@
    "`cortex-backlog`->cortex_command/refine.py",
    "`cortex-backlog`->docs/agentic-layer.md"
   ],
-  "mech_pin_count": 193
+  "mech_pin_count": 193,
+  "applied_in_commit": "9618653d"
  },
  {
   "id": "s14",
@@ -6163,11 +6259,18 @@
   ],
   "file": "cortex/requirements/backlog.md",
   "slug": "cortex_requirements_backlog",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "9618653d",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [
    "`cortex init`->bin/cortex-invocation-report",
    "`cortex init`->cortex/adr/0001-file-based-state-no-database.md",
@@ -6195,7 +6298,8 @@
    "`cortex init`->docs/overnight.md",
    "`cortex init`->docs/setup.md"
   ],
-  "mech_pin_count": 142
+  "mech_pin_count": 142,
+  "applied_in_commit": "9618653d"
  },
  {
   "id": "s13",
@@ -6212,11 +6316,18 @@
   ],
   "file": "cortex/requirements/backlog.md",
   "slug": "cortex_requirements_backlog",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "9618653d",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [
    "`backlog:`->bin/cortex-invocation-report",
    "`backlog:`->cortex/adr/0017-reconcile-and-gate-lifecycle-config-sources.md",
@@ -6244,7 +6355,8 @@
    "`backlog:`->tests/test_init_backlog_scaffold.py",
    "`backlog:`->tests/test_l1_surface_ratchet.py"
   ],
-  "mech_pin_count": 183
+  "mech_pin_count": 183,
+  "applied_in_commit": "9618653d"
  },
  {
   "id": "s10",
@@ -6262,11 +6374,18 @@
   ],
   "file": "cortex/requirements/backlog.md",
   "slug": "cortex_requirements_backlog",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "9618653d",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [
    "`backlog:`->bin/cortex-invocation-report",
    "`backlog:`->cortex/adr/0017-reconcile-and-gate-lifecycle-config-sources.md",
@@ -6294,7 +6413,8 @@
    "`backlog:`->tests/test_init_backlog_scaffold.py",
    "`backlog:`->tests/test_l1_surface_ratchet.py"
   ],
-  "mech_pin_count": 123
+  "mech_pin_count": 123,
+  "applied_in_commit": "9618653d"
  },
  {
   "id": "s6",
@@ -6313,11 +6433,18 @@
   ],
   "file": "cortex/requirements/backlog.md",
   "slug": "cortex_requirements_backlog",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "9618653d",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [
    "`cortex-*`->bin/.contract-lint-exceptions.md",
    "`cortex-*`->bin/.parity-exceptions.md",
@@ -6345,7 +6472,8 @@
    "`cortex-*`->tests/test_drift_enforcement.sh",
    "`cortex-*`->tests/test_events_registry_glob_parity.py"
   ],
-  "mech_pin_count": 749
+  "mech_pin_count": 749,
+  "applied_in_commit": "9618653d"
  },
  {
   "id": "s7",
@@ -6363,11 +6491,18 @@
   ],
   "file": "cortex/requirements/backlog.md",
   "slug": "cortex_requirements_backlog",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "9618653d",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [
    "`backlog-author`->bin/.contract-lint-exceptions.md",
    "`backlog-author`->docs/setup.md",
@@ -6395,7 +6530,8 @@
    "`cortex-resolve-backlog-item`->skills/lifecycle/SKILL.md",
    "`cortex-resolve-backlog-item`->skills/refine/SKILL.md"
   ],
-  "mech_pin_count": 72
+  "mech_pin_count": 72,
+  "applied_in_commit": "9618653d"
  },
  {
   "id": "s8",
@@ -6414,11 +6550,18 @@
   ],
   "file": "cortex/requirements/backlog.md",
   "slug": "cortex_requirements_backlog",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "9618653d",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [
    "`backend: cortex-backlog`->cortex/adr/0017-reconcile-and-gate-lifecycle-config-sources.md",
    "`backend: cortex-backlog`->cortex_command/init/templates/cortex/lifecycle.config.md",
@@ -6446,7 +6589,8 @@
    "`cortex-backlog`->cortex_command/parity_check.py",
    "`cortex-backlog`->cortex_command/refine.py"
   ],
-  "mech_pin_count": 63
+  "mech_pin_count": 63,
+  "applied_in_commit": "9618653d"
  },
  {
   "id": "s4",
@@ -6465,11 +6609,18 @@
   ],
   "file": "cortex/requirements/backlog.md",
   "slug": "cortex_requirements_backlog",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "9618653d",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [
    "` CLI; label cortex issues `->cortex_command/init/templates/cortex/lifecycle.config.md",
    "` CLI; label cortex issues `->skills/lifecycle/assets/lifecycle.config.md",
@@ -6497,7 +6648,8 @@
    "`backlog:`->cortex_command/init/templates/cortex/backlog/README.md",
    "`backlog:`->cortex_command/init/templates/cortex/lifecycle.config.md"
   ],
-  "mech_pin_count": 242
+  "mech_pin_count": 242,
+  "applied_in_commit": "9618653d"
  },
  {
   "id": "s5",
@@ -6516,11 +6668,18 @@
   ],
   "file": "cortex/requirements/backlog.md",
   "slug": "cortex_requirements_backlog",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "9618653d",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [
    "`backlog.backend`->cortex/adr/0016-configurable-backlog-backend-and-llm-as-adapter.md",
    "`backlog.backend`->docs/setup.md",
@@ -6548,7 +6707,8 @@
    "`backlog:`->tests/fixtures/cortex-load-parent-epic/README.md",
    "`backlog:`->tests/fixtures/skill_trigger_phrases.yaml"
   ],
-  "mech_pin_count": 90
+  "mech_pin_count": 90,
+  "applied_in_commit": "9618653d"
  },
  {
   "id": "s9",
@@ -6566,17 +6726,25 @@
   ],
   "file": "cortex/requirements/backlog.md",
   "slug": "cortex_requirements_backlog",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "9618653d",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [
    "`backend: none`->cortex_command/init/templates/cortex/lifecycle.config.md",
    "`backend: none`->skills/lifecycle/assets/lifecycle.config.md",
    "`backend: none`->tests/test_lifecycle_config_parity.py"
   ],
-  "mech_pin_count": 3
+  "mech_pin_count": 3,
+  "applied_in_commit": "9618653d"
  },
  {
   "id": "s8",
@@ -7084,16 +7252,24 @@
   ],
   "file": "cortex/requirements/remote-access.md",
   "slug": "cortex_requirements_remote_access",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "7295b21d",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [
    "`terminal-notifier`->docs/agentic-layer.md",
    "`terminal-notifier`->docs/setup.md"
   ],
-  "mech_pin_count": 2
+  "mech_pin_count": 2,
+  "applied_in_commit": "7295b21d"
  },
  {
   "id": "s4",
@@ -7108,13 +7284,21 @@
   "pins": [],
   "file": "cortex/requirements/remote-access.md",
   "slug": "cortex_requirements_remote_access",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "7295b21d",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [],
-  "mech_pin_count": 0
+  "mech_pin_count": 0,
+  "applied_in_commit": "7295b21d"
  },
  {
   "id": "s5",
@@ -7129,13 +7313,21 @@
   "pins": [],
   "file": "cortex/requirements/remote-access.md",
   "slug": "cortex_requirements_remote_access",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "7295b21d",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [],
-  "mech_pin_count": 0
+  "mech_pin_count": 0,
+  "applied_in_commit": "7295b21d"
  },
  {
   "id": "s2",
@@ -7150,11 +7342,18 @@
   "pins": [],
   "file": "cortex/requirements/remote-access.md",
   "slug": "cortex_requirements_remote_access",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "7295b21d",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [
    "heading->cortex_command/init/templates/cortex/requirements/project.md",
    "heading->cortex_command/overnight/recovery.py",
@@ -7177,7 +7376,8 @@
    "heading->tests/test_load_requirements_protocol.py",
    "heading->tests/test_requirements_skill_e2e.py"
   ],
-  "mech_pin_count": 20
+  "mech_pin_count": 20,
+  "applied_in_commit": "7295b21d"
  },
  {
   "id": "s6",
@@ -7192,17 +7392,25 @@
   "pins": [],
   "file": "cortex/requirements/remote-access.md",
   "slug": "cortex_requirements_remote_access",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "7295b21d",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [
    "heading->skills/requirements-gather/SKILL.md",
    "heading->skills/requirements-write/SKILL.md",
    "heading->tests/test_requirements_skill_e2e.py"
   ],
-  "mech_pin_count": 3
+  "mech_pin_count": 3,
+  "applied_in_commit": "7295b21d"
  },
  {
   "id": "s14",
@@ -7272,11 +7480,18 @@
   ],
   "file": "cortex/requirements/observability.md",
   "slug": "cortex_requirements_observability",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "8d7a95db",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [
    "` (typically `->cortex_command/critical_review/resolve_feature_cli.py",
    "` (typically `->cortex_command/lifecycle/branch_mode_cli.py",
@@ -7304,7 +7519,8 @@
    "`cortex overnight status`->skills/lifecycle/references/implement.md",
    "`cortex overnight status`->skills/overnight/references/new-session-flow.md"
   ],
-  "mech_pin_count": 287
+  "mech_pin_count": 287,
+  "applied_in_commit": "8d7a95db"
  },
  {
   "id": "s9",
@@ -7319,11 +7535,18 @@
   "pins": [],
   "file": "cortex/requirements/observability.md",
   "slug": "cortex_requirements_observability",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "8d7a95db",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [
    "`$(id -u)`->cortex_command/overnight/scheduler/launcher.sh",
    "`$(id -u)`->cortex_command/overnight/scheduler/macos.py",
@@ -7351,7 +7574,8 @@
    "`settings.json`->docs/agentic-layer.md",
    "`settings.json`->docs/internals/sdk.md"
   ],
-  "mech_pin_count": 76
+  "mech_pin_count": 76,
+  "applied_in_commit": "8d7a95db"
  },
  {
   "id": "s7",
@@ -7370,11 +7594,18 @@
   ],
   "file": "cortex/requirements/observability.md",
   "slug": "cortex_requirements_observability",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "8d7a95db",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [
    "`LIFECYCLE_SESSION_ID`->bin/cortex-invocation-report",
    "`LIFECYCLE_SESSION_ID`->claude/hooks/cortex-permission-audit-log.sh",
@@ -7402,7 +7633,8 @@
    "`LIFECYCLE_SESSION_ID`->cortex_command/overnight/tests/test_runner_session_start.py",
    "`LIFECYCLE_SESSION_ID`->cortex_command/overnight/tests/test_synthesizer_circuit_breaker.py"
   ],
-  "mech_pin_count": 140
+  "mech_pin_count": 140,
+  "applied_in_commit": "8d7a95db"
  },
  {
   "id": "s13",
@@ -7419,11 +7651,18 @@
   ],
   "file": "cortex/requirements/observability.md",
   "slug": "cortex_requirements_observability",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "8d7a95db",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [
    "`.runner.lock`->docs/overnight-operations.md",
    "`allowUnixSockets`->cortex_command/init/tests/test_settings_merge.py",
@@ -7451,7 +7690,8 @@
    "`overnight-state.json`->cortex_command/dashboard/tests/test_sessions.py",
    "`overnight-state.json`->cortex_command/hooks/_pipeline_state.py"
   ],
-  "mech_pin_count": 160
+  "mech_pin_count": 160,
+  "applied_in_commit": "8d7a95db"
  },
  {
   "id": "s6",
@@ -7469,11 +7709,18 @@
   ],
   "file": "cortex/requirements/observability.md",
   "slug": "cortex_requirements_observability",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "verdict": "survives",
+    "batch": "#358",
+    "commit": "8d7a95db",
+    "source": "cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/verify-outcomes.md"
+   }
+  ],
   "mech_pins": [
    "`BATCH_RUNNER_STALLED`->cortex_command/overnight/events.py",
    "`BATCH_RUNNER_STALLED`->cortex_command/overnight/runner.py",
@@ -7491,7 +7738,8 @@
    "`stall_reason`->docs/overnight-operations.md",
    "`stall_reason`->tests/test_runner_threading.py"
   ],
-  "mech_pin_count": 15
+  "mech_pin_count": 15,
+  "applied_in_commit": "8d7a95db"
  },
  {
   "id": "s2",
