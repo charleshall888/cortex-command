@@ -41,19 +41,15 @@ This is the MT-Bench-derived swap-and-require-agreement protocol. The swap probe
 
 Score each variant per-criterion before composing prose rationale. The JSON envelope's positional order — `per_criterion` first, `verdict` second, `confidence` third, `rationale` last — exists to anchor your reasoning in numeric scores before narrative. Do not reverse the order; do not let a polished rationale paragraph drag the per-criterion scores after the fact.
 
-### 4. Ignore variant order and length
-
-You must ignore variant order and length when forming your verdict (re-state: ignore the presentation order, ignore the byte-length). Re-read this rule if you notice yourself favoring `Variant 1` because it appeared first, or favoring a longer variant because it has more sections.
-
-### 5. When uncertain, assign low confidence
+### 4. When uncertain, assign low confidence
 
 When uncertain, assign low confidence. The dispatching context routes `confidence: "low"` envelopes to a defer-to-morning fallback (overnight) or a manual user-pick fallback (interactive). A low-confidence verdict is a safe outcome, not a failure. Do not inflate confidence to seem decisive.
 
-### 6. Tie verdict (`C`)
+### 5. Tie verdict (`C`)
 
 If the variants are genuinely indistinguishable on substance, emit `verdict: "C"` (tie). Pair `verdict: "C"` with `confidence: "low"` so the dispatching context falls back to deferral or user-pick rather than auto-selecting an arbitrary variant.
 
-### 7. If a variant did not produce any variant content
+### 6. If a variant did not produce any variant content
 
 If a variant file is empty or did not produce any variant (the upstream plan-gen sub-agent failed to write it), score it as 1 across all criteria and exclude it from the verdict — pick between the surviving variants.
 
@@ -101,21 +97,12 @@ The envelope schema, in **positional order**:
 }
 ```
 
-Field-by-field:
+Field notes (the worked envelope above shows all five fields; only the non-derivable rule is restated here):
 
-1. **`schema_version`** (int, always `2`): Anchors the v2 schema sweep.
-2. **`per_criterion`** (object: variant label → criterion → integer score 1-5): Per-variant per-criterion scores. Variant labels are exactly `Variant 1`, `Variant 2`, and (if present) `Variant 3`.
-3. **`verdict`** (string, one of `"A"` | `"B"` | `"C"`): `"A"` selects `Variant 1`, `"B"` selects `Variant 2`, `"C"` indicates a tie. Do not emit `"Variant 1"` or generator IDs in the verdict field — the verdict is always one of the three letter tokens.
-4. **`confidence`** (string, one of `"high"` | `"medium"` | `"low"`): Required. Pair `verdict: "C"` with `confidence: "low"`. Use `low` whenever the swap-probe passes disagreed or you are uncertain — the dispatching context handles low-confidence envelopes safely.
-5. **`rationale`** (string): Brief prose summary of why you chose this verdict, including a one-sentence note on whether the swap probe agreed.
-
-The positional order of these five fields — `schema_version`, `per_criterion`, `verdict`, `confidence`, `rationale` — is load-bearing. Per-criterion scores anchor your reasoning before the verdict; verdict precedes confidence; rationale closes the envelope.
+- **`verdict`** must be the letter token `A`/`B`/`C` — `"A"` selects `Variant 1`, `"B"` selects `Variant 2`, `"C"` a tie. Do not emit `"Variant 1"` or generator IDs in the verdict field.
 
 ## Constraints
 
 - Emit exactly one `<!--findings-json-->` envelope. The dispatching context uses the LAST occurrence as the anchor; if you must reference the delimiter inside prose, the parser tolerates it, but emit only one canonical envelope at the end of your output.
 - Do not modify any file. You are read-only.
 - Do not use the Task tool. Do not spawn sub-agents.
-- Do not skip the swap-and-require-agreement step. The swap probe is the calibration mechanism for confidence assignment.
-- Do not let a polished rationale paragraph drag the per-criterion scores; score first, write rationale last.
-- When uncertain, assign `confidence: "low"`. Deferral is a safe outcome.
