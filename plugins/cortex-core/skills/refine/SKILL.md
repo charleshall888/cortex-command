@@ -22,15 +22,11 @@ Topic: $ARGUMENTS (backlog item slug, title, or description). If empty, prompt u
 
 ## Step 1: Resolve Input
 
-Determine the feature topic from the invocation argument.
-
 Run:
 
 ```bash
 cortex-resolve-backlog-item <input>
 ```
-
-Where `<input>` is the `$ARGUMENTS` value (backlog item ID, slug, or title phrase). If `$ARGUMENTS` is empty, prompt the user for input before invoking the script.
 
 Act on the result: a unique match prints JSON (`filename`, `backlog_filename_slug`, `title`, `lifecycle_slug`) — use it directly, don't re-derive the slugs. An ambiguous match prints candidates on stderr — present them and let the user pick. No match means there's no backlog item: treat the input as an ad-hoc topic (Context B, per `${CLAUDE_SKILL_DIR}/references/clarify.md` §1); if it's prose rather than a kebab slug, derive a short kebab `{lifecycle-slug}`, announce it, and proceed without asking to confirm. On any hard error, surface the resolver's message and halt.
 
@@ -88,11 +84,7 @@ If `cortex-update-item` fails, surface the error and wait for the user to resolv
 
 If `cortex/lifecycle/{lifecycle-slug}/research.md` already exists, apply the Research Sufficiency Criteria defined in `${CLAUDE_SKILL_DIR}/references/clarify.md` §6. Use the clarified intent statement and scope from Clarify as the benchmark.
 
-**Path guard** (explicit rules for what satisfies the Sufficiency Check):
-
-1. The check passes only for a file at the exact path `cortex/lifecycle/{lifecycle-slug}/research.md`.
-2. Files referenced by a backlog item's `discovery_source` or `research` frontmatter field are background context for the Clarify phase — they are not a substitute for the lifecycle research artifact, regardless of their path.
-3. When `cortex/lifecycle/{lifecycle-slug}/research.md` does not exist at that exact path, run Research Execution below.
+**Path guard**: The check passes only for a file at the exact path `cortex/lifecycle/{lifecycle-slug}/research.md`. Files referenced by a backlog item's `discovery_source` or `research` frontmatter field are background context for the Clarify phase — never a substitute for the lifecycle research artifact, regardless of their path. When that exact-path file does not exist, run Research Execution below.
 
 - **Sufficient**: Announce that existing research is sufficient, state which sufficiency signals were checked, and skip to Spec (Step 5).
 - **Insufficient**: State which signal(s) triggered insufficiency, then proceed to run new research.
@@ -100,8 +92,6 @@ If `cortex/lifecycle/{lifecycle-slug}/research.md` already exists, apply the Res
 **Bypass case — loop-back from §2a confidence check**: If Research is being re-entered because `specify.md`'s §2a confidence check flagged gaps during the structured interview, skip the Sufficiency Check entirely and re-run Research from scratch. Treat `research.md` as invalidated and overwrite it.
 
 ### Alignment-Considerations Propagation
-
-The file-channel design — a path argument coupled to the write rather than an inline value — is recorded in ADR-0022.
 
 After clarify-critic returns and dispositions are applied (see Step 3), collect every finding with `origin: "alignment"` whose disposition is **Apply** (or whose Ask was resolved to Apply via the §4 Q&A flow). Findings dispositioned as **Dismiss** are not propagated.
 
@@ -128,8 +118,6 @@ Delegate to `/cortex-core:research` (appending `research-considerations-file=cor
 
 **Alternative exploration**: When a backlog item contains implementation suggestions AND the feature is complex-tier or high/critical criticality, research must explicitly explore at least one alternative approach alongside the ticket's suggestion, within the `/cortex-core:research` call. For simple-tier or low/medium-criticality features, alternative exploration is encouraged but not required. Validating the ticket's suggested approach is a correct outcome — the requirement is to explore alternatives, not to reject the suggestion.
 
-`/cortex-core:research` writes its output to `cortex/lifecycle/{lifecycle-slug}/research.md`.
-
 After `/cortex-core:research` returns, verify that `cortex/lifecycle/{lifecycle-slug}/research.md` exists and is non-empty. If the file is absent or empty, surface the error to the user and halt — do not proceed to the Research Exit Gate.
 
 After writing `research.md`, register the `"research"` artifact in `cortex/lifecycle/{lifecycle-slug}/index.md` per the canonical artifact-registration recipe in backlog-writeback.md (loaded at lifecycle Step 2).
@@ -144,10 +132,10 @@ If the `## Open Questions` section is absent from `research.md`, the gate passes
 
 ## Step 5: Spec Phase
 
-**Reconcile lifecycle state to the Clarify assessment first** — the `lifecycle_start` seed carries pre-Clarify tier/criticality; reconcile so the §3a/§3b reads observe the Clarify-assessed values. One unconditional call, passing the backend resolved in Step 2 as `--backend {resolved}`; the remaining flags follow the item-existence context (the verb's `--backend` guard owns the non-local slug-drop, so you no longer branch on the backend here):
+**Reconcile lifecycle state to the Clarify assessment first** — the `lifecycle_start` seed carries pre-Clarify tier/criticality; reconcile so the §3a/§3b reads observe the Clarify-assessed values. One unconditional call, passing the backend resolved in Step 2 as `--backend {resolved}`; the remaining flags follow the item-existence context (the `--backend` guard owns the non-local slug-drop, per Step 2):
 
-- **Context A** (a local backlog item exists): `cortex-refine reconcile-clarify --backend {resolved} --lifecycle-slug {lifecycle-slug} --backlog-slug {backlog-filename-slug}` — re-sources tier/criticality from backlog frontmatter on the local arm (unchanged from today); on a non-local backend the guard drops the slug structurally.
-- **Context B** (no backlog item): `cortex-refine reconcile-clarify --backend {resolved} --lifecycle-slug {lifecycle-slug} --complexity {value} --criticality {value}` — passes **Clarify's computed** `{value}` tier/criticality as explicit flags. On a non-local backend this is the live path: it ratchets the lifecycle state up from the seed defaults so the critical-review gate stays correctly fed (the seed→reconcile→§3b ordering invariant from Step 2). Pass Clarify's computed values here — not the seed defaults and not literals.
+- **Context A** (a local backlog item exists): `cortex-refine reconcile-clarify --backend {resolved} --lifecycle-slug {lifecycle-slug} --backlog-slug {backlog-filename-slug}` — re-sources tier/criticality from backlog frontmatter on the local arm; on a non-local backend the guard drops the slug (Step 2).
+- **Context B** (no backlog item): `cortex-refine reconcile-clarify --backend {resolved} --lifecycle-slug {lifecycle-slug} --complexity {value} --criticality {value}` — passes **Clarify's computed** `{value}` tier/criticality as explicit flags. On a non-local backend this ratchets the lifecycle state up from the seed defaults so the critical-review gate stays fed (Step 2's seed→reconcile→§3b invariant). Pass Clarify's computed values here — not the seed defaults and not literals.
 
 Idempotent — safe on resume; no-op under `/cortex-core:lifecycle`.
 
@@ -156,7 +144,7 @@ Read `${CLAUDE_SKILL_DIR}/references/specify.md` and follow it (its full protoco
 - **§1 (Load Context)**: Requirements context was loaded during Clarify (Step 3) and research.md was produced in Step 4. Re-read `cortex/lifecycle/{lifecycle-slug}/research.md` but skip redundant requirements loading.
 - **§2a loop-back**: If the Research Confidence Check triggers a loop-back, re-enter Step 4 (Research Phase) with the Sufficiency Check bypass described there.
 - **§3b tier detection**: Run `cortex-lifecycle-state --feature {lifecycle-slug} --field tier`. The caller (`/cortex-core:lifecycle`) may escalate the tier between Research and Spec — do not rely solely on the Clarify output. If the output contains `"corrupted": true`, treat the feature as requiring review (run the §3b gate) rather than defaulting to `simple` and skipping. See `${CLAUDE_SKILL_DIR}/../lifecycle/references/criticality-matrix.md` for the full behavior matrix.
-- **§4 (User Approval) — Complexity/value gate**: After the spec is written, before showing the approval surface, check whether complexity is proportional to the value case. Fire this check if the spec has any of: 3+ distinct new state surfaces, a new persistent data format or config section the user must maintain, or a subsystem requiring ongoing per-feature upkeep. This check fires regardless of whether critical-review ran. When the check fires, decide which alternative is the recommended option for this specific spec. Default to "Confirm current scope" (full scope) unless the spec's complexity materially exceeds the value case, in which case recommend the smallest downsize that preserves the primary outcome. Announce the recommendation with a one-sentence rationale citing the specific spec surface(s) driving the choice — phrased as "I recommend X because Y." — before any user-facing question. Call `AskUserQuestion` only when the recommendation is not full scope OR when confidence is low; otherwise fold the announcement into the existing approval surface (Approve / Request changes / Cancel) and proceed without an intervening pick-menu. When `AskUserQuestion` fires, the lead option's `label` ends with the literal suffix ` (Recommended)` (single leading space, capital R) and its `description` opens with the rationale. The lead label is `Confirm current scope (Recommended)` when recommending full scope, or the recommended downsize labeled `… (Recommended)` otherwise. Carry through the existing downsize alternatives where they naturally apply — "drop entirely" (value is weak or achievable another way), "bugs-only" (keep only latent fixes the spec uncovered), "minimum viable" (one concrete scope cut) — and say so when one doesn't apply.
+- **§4 (User Approval) — Complexity/value gate**: After the spec is written, before showing the approval surface, check whether complexity is proportional to the value case. Fire this check — regardless of whether critical-review ran — if the spec has any of: 3+ distinct new state surfaces, a new persistent data format or config section the user must maintain, or a subsystem requiring ongoing per-feature upkeep. When it fires, decide the recommended option for this specific spec: default to "Confirm current scope" (full scope) unless complexity materially exceeds the value case, in which case recommend the smallest downsize that preserves the primary outcome. Announce it with a one-sentence rationale citing the driving spec surface(s) — phrased "I recommend X because Y." — before any user-facing question. Call `AskUserQuestion` only when the recommendation is not full scope OR confidence is low; otherwise fold the announcement into the existing approval surface (Approve / Request changes / Cancel) with no intervening pick-menu. When `AskUserQuestion` fires, the lead option's `label` ends with the literal suffix ` (Recommended)` (single leading space, capital R) and its `description` opens with the rationale: `Confirm current scope (Recommended)` for full scope, else the recommended downsize labeled `… (Recommended)`. Carry through the downsize alternatives where they apply — "drop entirely", "bugs-only", "minimum viable" — and say so when one doesn't.
 - **§5 (Transition)**: Skip the `phase_transition` event emission — /cortex-core:refine does not log `phase_transition` events; the caller (/cortex-core:lifecycle) owns phase-transition logging and commit-artifacts. The `lifecycle_start` sentinel emitted at Step 2 is exempt from this rule.
 - **`## Hard Gate`**: Applies; when the Open-Decisions row and the §4 gate both fire, §4's surface flow wins.
 
@@ -188,17 +176,10 @@ Handle failures as in Step 3.
 
 ## Step 6: Completion
 
-Announce that `/cortex-core:refine` is complete. Summarize:
-- Backlog item: `{backlog-filename-slug}`
-- Lifecycle directory: `cortex/lifecycle/{lifecycle-slug}/`
-- Artifacts produced: research.md, spec.md
-- Backlog fields written: `complexity`, `criticality`, `status: refined`, `spec`, `areas`
+Announce that `/cortex-core:refine` is complete, summarizing the backlog item (`{backlog-filename-slug}`), the lifecycle directory (`cortex/lifecycle/{lifecycle-slug}/`), the artifacts produced (research.md, spec.md), and the backlog fields written (`complexity`, `criticality`, `status: refined`, `spec`, `areas`).
 
 ## Constraints
 
 | Thought | Reality |
 |---------|---------|
-| "I should generate a plan" | Refine stops at spec; overnight auto-generates plans. |
-| "I should set status:refined as soon as research is done" | Set only after user approves the spec (Step 5). |
 | "I should use the lifecycle-slug as the cortex-update-item argument" | cortex-update-item takes the backlog-filename-slug (e.g., 119-create-refine-skill), not the lifecycle-slug. |
-| "If cortex-update-item fails I can skip it and continue" | Surface and resolve; silent skips corrupt backlog state. |
