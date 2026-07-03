@@ -1,6 +1,6 @@
 # Refine Delegation Steps
 
-Follow these steps when `cortex/lifecycle/{feature}/spec.md` does not exist and lifecycle delegates to `/cortex-core:refine`.
+Follow these steps when `cortex/lifecycle/{feature}/research.md` and/or `spec.md` is missing and lifecycle delegates to `/cortex-core:refine`.
 
 1. **Read refine SKILL.md verbatim** (body-resolved path: `<REFINE_SKILL_MD>`). Do not paraphrase or reconstruct `/cortex-core:refine`'s protocol from training context. The file read is mandatory — this ensures lifecycle stays in sync as `/cortex-core:refine` evolves.
 

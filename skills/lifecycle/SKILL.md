@@ -43,12 +43,12 @@ It emits one JSON object `{"mode": "...", "feature": "...", "phase": "..."}`. Ro
 
 | `mode` | Action |
 |--------|--------|
-| `wontfix` | Abandon the feature: run `cortex-lifecycle-wontfix <feature> --reason "<short rationale>"` (the slug is the parser's `feature`), report its outcome, and **halt** — this route is terminal/short-circuiting; do not fall through to Step 2. On exit 2 (ambiguous backlog slug), surface the candidate list and ask the operator to re-invoke with `--backlog-slug`. |
+| `wontfix` | Abandon the feature: run `cortex-lifecycle-wontfix <feature> --reason "<short rationale>"`, report its outcome, and **halt** — terminal/short-circuiting, do not fall through to Step 2. Ambiguous-slug (exit 2) handling: see references/wontfix.md. |
 | `resume` | Resume `feature`: route into Step 2 phase-detection, but if `cortex/lifecycle/<feature>/` does not exist, report "no such lifecycle to resume" and stop — do not create it (that is bare `<feature>`'s behavior). |
 | `complete` | Enter the Complete phase for `feature` via the explicit-phase-override route below (`phase` is `complete`). |
 | `phase` | A bare phase token with no feature. Surface "specify a feature, e.g. `/cortex-core:lifecycle <feature> <phase>`" and stop — do not create a lifecycle. |
 | `feature` | The normal path. Use `feature` as `{feature}`; if `phase` is non-empty, honor it via the explicit-phase-override route below. Proceed to the resolver and Step 2. |
-| `needs-derivation` | `$ARGUMENTS`'s first word is prose, not a slug. Derive a 3–6 word kebab-case slug (valid-slug pattern `^[a-z0-9]+(-[a-z0-9]+)*$`) summarizing its intent, announce the chosen slug as you create `cortex/lifecycle/{slug}/`, and proceed as `feature`. Do not ask the user to confirm — let them correct via re-invocation. A derived slug colliding with an existing directory is treated as a resume per Step 2's routing. |
+| `needs-derivation` | `$ARGUMENTS`'s first word is prose, not a slug. Derive a 3–6 word kebab-case slug (pattern `^[a-z0-9]+(-[a-z0-9]+)*$`) summarizing its intent, announce it as you create `cortex/lifecycle/{slug}/`, and proceed as `feature`. Don't ask the user to confirm — they correct via re-invocation; a slug colliding with an existing dir is treated as a resume (Step 2). |
 | `empty` | No arguments (or `resume` with no slug). Fall through to the incomplete-lifecycle-dirs scan (see Step 2's empty-arguments fallback). |
 | `error` | A reserved word (`wontfix`/`resume`/`complete`) given with no slug. Report that the verb needs a target and stop. |
 
@@ -80,18 +80,13 @@ If no `cortex/lifecycle/{feature}/` directory exists, `phase = none` — start f
 cortex-common detect-phase cortex/lifecycle/{feature}
 ```
 
-The command emits a single JSON object on stdout, e.g. `{"phase":"implement","route":"implement","paused":false,"checked":2,"total":5,"cycle":1}`. Route on the `route` field — the base phase, with any pause marker already stripped by the detector. The `checked`/`total` fields report plan-task progress; `cycle` reports the review-cycle number.
+The command emits a single JSON object on stdout. Route on the `route` field — the base phase, with any pause marker already stripped by the detector. The `checked`/`total` fields report plan-task progress; `cycle` reports the review-cycle number.
 
-Reference table (one line per `phase` value):
+The linear phases (`research`, `specify`, `plan`, `implement`, `review`) each route to their same-named phase — enter it. The non-obvious `route` values:
 
 | `phase`            | Semantic meaning                                                                                  |
 |--------------------|---------------------------------------------------------------------------------------------------|
-| `research`         | No artifacts yet — start the Research phase.                                                      |
-| `specify`          | `research.md` exists; advance to the Specify phase.                                               |
-| `plan`             | `spec.md` exists; advance to the Plan phase.                                                      |
-| `implement`        | `plan.md` exists with at least one task unchecked; run/resume the Implement phase.                |
 | `implement-rework` | `review.md` verdict is `CHANGES_REQUESTED`; re-enter Implement to address review feedback.        |
-| `review`           | `plan.md` exists with all tasks checked; run the Review phase.                                    |
 | `complete`         | `events.log` has a `feature_complete` event, or `review.md` verdict is `APPROVED` — feature done. |
 | `escalated`        | `review.md` verdict is `REJECTED`; present reviewer analysis and ask the user for direction.      |
 
@@ -128,9 +123,7 @@ The Clarify, Research, and Spec phases are delegated to `/cortex-core:refine`.
 
 **If `cortex/lifecycle/{feature}/spec.md` already exists AND `cortex/lifecycle/{feature}/research.md` also exists** (from a prior `/cortex-core:refine` run, or a resumed lifecycle): announce that early-phase delegation is skipped and proceed directly to the phase execution table below (Plan phase).
 
-**If `cortex/lifecycle/{feature}/spec.md` exists but `cortex/lifecycle/{feature}/research.md` does not**: warn that the lifecycle is in an inconsistent state — spec exists without research, and overnight requires both. Delegate to `/cortex-core:refine` normally; `/cortex-core:refine`'s Step 2 will detect the missing research.md and route to the research phase.
-
-**If `cortex/lifecycle/{feature}/spec.md` does not exist**: read [refine-delegation.md](${CLAUDE_SKILL_DIR}/references/refine-delegation.md) and follow it, substituting the body-resolved paths from the Reference-path propagation manifest below.
+**Otherwise** — spec.md is missing, or exists without research.md (warn that this mixed state is inconsistent; overnight requires both): read [refine-delegation.md](${CLAUDE_SKILL_DIR}/references/refine-delegation.md) and follow it, substituting the body-resolved paths from the Reference-path propagation manifest below. `/cortex-core:refine`'s Step 2 detects a missing research.md and routes to the research phase.
 
 The Research and Spec phases are handled by the /cortex-core:refine delegation block above. The following phases run directly in the lifecycle context:
 
@@ -186,8 +179,6 @@ Specify and Plan each retain a single user-facing approval surface at §4 of the
 ### Kept user pauses
 
 Auto-proceed except where a phase reference defines a kept pause. The canonical, parity-tested inventory of those deliberate `AskUserQuestion` sites lives in [kept-pauses.md](${CLAUDE_SKILL_DIR}/references/kept-pauses.md) (enforced by `tests/test_lifecycle_kept_pauses_parity.py`).
-
-To jump to a specific phase, name the feature — `/cortex-core:lifecycle <feature> <phase>` — and Step 1's explicit-phase-override route enters the requested phase, warning if prerequisite artifacts are missing (e.g., entering Plan without research.md). A bare phase token with no feature (`/cortex-core:lifecycle plan`) does not resolve to an active feature; Step 1 surfaces the feature-required message instead.
 
 For criticality override syntax and the criticality behavior matrix (which phases run, model selection, parallel-vs-single dispatch), see [criticality-matrix.md](${CLAUDE_SKILL_DIR}/references/criticality-matrix.md).
 
