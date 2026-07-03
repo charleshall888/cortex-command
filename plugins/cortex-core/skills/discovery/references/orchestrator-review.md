@@ -1,7 +1,5 @@
 # Orchestrator Phase Review (Discovery)
 
-Quality gate between phase artifact write and user presentation. The orchestrator reviews the artifact against phase-specific checklists, dispatches fixes for flagged issues, and only surfaces the artifact to the user once it passes or the cycle cap is reached.
-
 Discovery has no applicability skip rule — orchestrator review always runs for every discovery topic regardless of complexity or criticality.
 
 ## Protocol
