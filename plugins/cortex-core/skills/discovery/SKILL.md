@@ -44,8 +44,6 @@ elif decomposed.md exists:
     phase = complete (offer to re-run or update)
 ```
 
-Backward compat: existing discoveries that have `spec.md` but no `decomposed.md` will also have `research.md` present and correctly resume at `phase = decompose`.
-
 If resuming, report the detected phase and offer to continue or restart from an earlier phase.
 
 ### Re-run slug-collision semantics (spec R13)
@@ -69,7 +67,7 @@ Events for re-runs route to `cortex/research/{{topic}}-N/events.log` via the hel
 
 Read **only** the reference for the current phase.
 
-**Sibling-path propagation (load-bearing).** Both `clarify.md` and `research.md` need to load two files that live in the **lifecycle sibling** skill, not in discovery's own `references/` directory: the shared requirements-loading protocol and the fan-out sizing matrix. A reference file cannot resolve `${CLAUDE_SKILL_DIR}` itself, and these targets sit outside discovery's own dir — so resolve them here in the body (where `${CLAUDE_SKILL_DIR}/../lifecycle/…` resolves) and carry the absolute paths into the phase. When you read the current-phase reference, substitute these body-resolved absolute paths wherever it directs you to the lifecycle sibling:
+**Sibling-path propagation (load-bearing).** Both `clarify.md` and `research.md` need to load two files that live in the **lifecycle sibling** skill, not in discovery's own `references/` directory: the shared requirements-loading protocol and the fan-out sizing matrix. Resolve them here in the body (where `${CLAUDE_SKILL_DIR}/../lifecycle/…` resolves) and carry the absolute paths into the phase. When you read the current-phase reference, substitute these body-resolved absolute paths wherever it directs you to the lifecycle sibling:
 
 - **load-requirements** → `${CLAUDE_SKILL_DIR}/../lifecycle/references/load-requirements.md`
 - **fanout** (research-sizing matrix) → `${CLAUDE_SKILL_DIR}/../research/references/fanout.md`
