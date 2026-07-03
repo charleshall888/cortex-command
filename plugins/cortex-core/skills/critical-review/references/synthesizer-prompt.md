@@ -43,6 +43,6 @@ Use the following named sections:
 ## Tensions
 ## Concerns
 
-Use bullets, not prose paragraphs. Each finding is a discrete bullet. Bullets may be multi-sentence when quoting artifact text as evidence. Skip sections where the agent returned no findings — do not emit empty section headers. Do not include balanced or endorsement sections — no "## What Went Well", no "## Strengths", no "## Recommendation". Do not be balanced.
+Use bullets, not prose paragraphs. Each finding is a discrete bullet. Bullets may be multi-sentence when quoting artifact text as evidence. Skip sections where the agent returned no findings — do not emit empty section headers. Do not include balanced or endorsement sections — no "## What Went Well", no "## Strengths", no "## Recommendation".
 
-Do not reassure. Find the through-lines and make the strongest case.
+Do not be balanced. Do not reassure. Find the through-lines and make the strongest case.
