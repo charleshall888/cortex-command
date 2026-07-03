@@ -13,12 +13,6 @@ Author structured backlog ticket bodies using the Why/Role/Integration/Edges/Tou
 
 Subcommand: $ARGUMENTS (first word = subcommand; remainder = subcommand args)
 
-## Invocation
-
-`/backlog-author interview <topic>` — guided human-facing authoring session that produces a structured body via AskUserQuestion prompts.
-
-`/backlog-author compose <context-block>` — autonomous authoring from a structured context block; produces a body without asking the user any questions.
-
 ## Subcommand Dispatch
 
 When invoked without a `{{subcommand}}`, present the available modes via `AskUserQuestion`:
