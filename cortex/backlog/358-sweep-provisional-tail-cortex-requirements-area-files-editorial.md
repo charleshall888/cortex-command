@@ -2,15 +2,18 @@
 schema_version: "1"
 uuid: 3b24f21f-de4f-46e4-b1f3-bd40d613cb24
 title: 'Sweep provisional tail: cortex/requirements area files (editorial)'
-status: backlog
+status: refined
 priority: low
 type: chore
 tags: ['skill-value-scorecard']
-areas: [skills]
+areas: ['docs']
 discovery_source: cortex/research/skill-value-scorecard/report.html
 created: 2026-07-02
 updated: 2026-07-02
 parent: "357"
+complexity: complex
+criticality: medium
+spec: cortex/lifecycle/sweep-provisional-tail-cortex-requirements-area/spec.md
 ---
 ## Why
 Child of #357's decomposition (the parent umbrella carrying the provisional tail of the skill-value audit). This child owns the cortex/requirements/ area-file slice: 32 provisional candidates (~3.3k weighted tokens) across backlog.md (11), pipeline.md (6), observability.md (6), remote-access.md (5), and multi-agent.md (4). These files load via the load-requirements selection path, so trims here are editorial (like #351), not mechanical pin-verification. None were adversarially verified.

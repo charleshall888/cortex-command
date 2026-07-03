@@ -1,0 +1,7 @@
+{"schema_version": 1, "ts": "2026-07-03T02:34:12Z", "event": "lifecycle_start", "feature": "sweep-provisional-tail-cortex-requirements-area", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-07-03T02:39:22Z", "event": "clarify_critic", "feature": "sweep-provisional-tail-cortex-requirements-area", "parent_epic_loaded": false, "findings_count": 7, "dispositions": {"apply": 2, "dismiss": 5, "ask": 0}, "applied_fixes_count": 2, "dismissals_count": 5, "status": "ok"}
+{"ts": "2026-07-03T02:55:11Z", "event": "complexity_override", "feature": "sweep-provisional-tail-cortex-requirements-area", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts":"2026-07-03T03:08:06Z","event":"sentinel_absence","feature":"sweep-provisional-tail-cortex-requirements-area","reviewer_angle":"Citation-refresh-scope","reason":"absent","model_tier":"sonnet","expected_sha":"92bffbf8a8ffb507d2b987c7404c5ab6947725549e024929ffa5f46931c696ee","observed_sha_or_null":null}
+{"ts": "2026-07-03T03:18:42Z", "event": "spec_approved", "feature": "sweep-provisional-tail-cortex-requirements-area"}
+{"ts": "2026-07-03T03:42:33Z", "event": "plan_approved", "feature": "sweep-provisional-tail-cortex-requirements-area", "dispatch_choice": "trunk", "oq3_decision": "direct-write"}
+{"ts": "2026-07-03T03:42:33Z", "event": "phase_transition", "feature": "sweep-provisional-tail-cortex-requirements-area", "from": "plan", "to": "implement"}
