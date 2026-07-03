@@ -14,7 +14,6 @@ Before deriving angles or dispatching any agent, fuse path validation and SHA-25
 cortex-critical-review prepare-dispatch <artifact-path> [--feature <name>]
 ```
 
-- `<artifact-path>` is the candidate artifact path resolved in Step 1 (e.g. `cortex/lifecycle/{feature}/plan.md` or the explicit `<path>` argument from `/cortex-core:critical-review <path>`).
 - Pass `--feature <name>` only on auto-trigger flows (the lifecycle resolved `{feature}` from `$LIFECYCLE_SESSION_ID` against `cortex/lifecycle/*/.session` — see the Step 2e residue-write reference for the canonical resolver). The `<path>`-arg invocation form (`/cortex-core:critical-review <path>`) omits `--feature`.
 
 Capture the single-line JSON object printed to stdout. Schema: `{"resolved_path": "<absolute-path>", "sha256": "<64-hex>"}`. Bind:
@@ -30,7 +29,7 @@ If `prepare-dispatch` exits non-zero, surface its stderr verbatim to the user an
 
 After parallel reviewers (or the surviving subset) return, run a two-phase verification gate before Step 2d synthesis. Phase 1 verifies each reviewer's read-sentinel; Phase 2 extracts the JSON envelope only for reviewers that pass Phase 1.
 
-The pre-dispatch SHA captured in Step 2a.5 (canonical computation path: the `check-synth-stable` subcommand) is the expected value compared against each reviewer's sentinel here.
+The pre-dispatch SHA captured in Step 2a.5 (canonical computation path: the `prepare-dispatch` subcommand) is the expected value compared against each reviewer's sentinel here.
 
 **Phase 1 — Sentinel verification (per reviewer):**
 
