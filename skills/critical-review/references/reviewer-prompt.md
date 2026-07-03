@@ -69,8 +69,8 @@ After the prose findings above, emit a JSON envelope so the orchestrator can ext
       "class": "A" | "B" | "C",
       "finding": "<text>",
       "evidence_quote": "<verbatim quote from the artifact>",
-      "fix_invalidation_argument": "<optional: for A-class findings, one sentence explaining why the proposed change as written would fail to produce its stated outcome>",
-      "straddle_rationale": "<optional: rationale when splitting per Straddle Protocol, or when biasing up to A on an unsplittable case>"
+      "fix_invalidation_argument": "<optional: A-class findings only — see the fix_invalidation_argument instruction above>",
+      "straddle_rationale": "<optional: rationale when splitting, or when biasing up to A on an unsplittable case>"
     }
   ]
 }
