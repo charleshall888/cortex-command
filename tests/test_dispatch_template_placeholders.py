@@ -53,6 +53,10 @@ LIFECYCLE_COMPETING_PLANS = (
     REPO_ROOT / "skills" / "lifecycle" / "references" / "competing-plans.md"
 )
 LIFECYCLE_REVIEW = REPO_ROOT / "skills" / "lifecycle" / "references" / "review.md"
+RESEARCH_SKILL = REPO_ROOT / "skills" / "research" / "SKILL.md"
+RESEARCH_ANGLE_TEMPLATES = (
+    REPO_ROOT / "skills" / "research" / "references" / "angle-templates.md"
+)
 
 
 def _read(path: Path) -> str:
@@ -185,4 +189,77 @@ def test_req10d_synthesizer_prompt_contains_synth_read_ok_directive() -> None:
         "Req 10(d): verbatim 'SYNTH_READ_OK: <path> <sha>' must appear in "
         f"{CRITICAL_REVIEW_SKILL.relative_to(REPO_ROOT)} synthesizer "
         "prompt (Req 3)."
+    )
+
+
+# ---------------------------------------------------------------------------
+# Research angle roster (skill-suite-dedup Task 4 / R4): the three always-fired
+# core templates stay inline in SKILL.md; the two conditional templates
+# (Tradeoffs, Adversarial) relocate to references/angle-templates.md. Each
+# template carries its OWN placeholder set — {research_considerations_bullets}
+# is core-only and must be ABSENT from the relocated conditional templates.
+# ---------------------------------------------------------------------------
+
+
+def test_research_core_templates_carry_their_markers_inline() -> None:
+    """The three always-fired core templates stay inline in research/SKILL.md
+    and each carries {topic}, {INJECTION_RESISTANCE_INSTRUCTION}, and the
+    core-only {research_considerations_bullets} marker."""
+    content = _read(RESEARCH_SKILL)
+    # Three core angle prompts remain inline.
+    assert "You are the Codebase research agent" in content
+    assert "You are the Web research agent" in content
+    assert "You are the Requirements & Constraints research agent" in content
+    # Core-only considerations marker present exactly once per core template (×3).
+    assert content.count("{research_considerations_bullets}") == 3, (
+        "{research_considerations_bullets} must appear 3× (one per inline core "
+        f"template) in {RESEARCH_SKILL.relative_to(REPO_ROOT)}; found "
+        f"{content.count('{research_considerations_bullets}')}."
+    )
+    # Shared markers present across the core templates.
+    assert "{topic}" in content
+    assert "{INJECTION_RESISTANCE_INSTRUCTION}" in content
+    # The conditional templates are relocated — their bodies are NOT inline.
+    assert "You are the Adversarial research agent" not in content, (
+        "Adversarial template must be relocated to angle-templates.md, not "
+        f"inline in {RESEARCH_SKILL.relative_to(REPO_ROOT)}."
+    )
+    assert "You are the Tradeoffs & Alternatives research agent" not in content, (
+        "Tradeoffs template must be relocated to angle-templates.md, not "
+        f"inline in {RESEARCH_SKILL.relative_to(REPO_ROOT)}."
+    )
+    # Dispatch protocol wires the read of the relocated templates.
+    assert "angle-templates.md" in content, (
+        "Dispatch protocol must reference angle-templates.md so the "
+        "relocated bodies are read at dispatch time."
+    )
+
+
+def test_research_tradeoffs_template_marker_set() -> None:
+    """Relocated Tradeoffs template carries {topic} and
+    {INJECTION_RESISTANCE_INSTRUCTION} only — NOT
+    {summarized_findings_from_other_agents} and NOT
+    {research_considerations_bullets}."""
+    content = _read(RESEARCH_ANGLE_TEMPLATES)
+    assert "You are the Tradeoffs & Alternatives research agent for the topic: {topic}." in content
+    assert "{INJECTION_RESISTANCE_INSTRUCTION}" in content
+    assert "{research_considerations_bullets}" not in content, (
+        "{research_considerations_bullets} is core-only and must be ABSENT "
+        f"from {RESEARCH_ANGLE_TEMPLATES.relative_to(REPO_ROOT)}."
+    )
+
+
+def test_research_adversarial_template_marker_set() -> None:
+    """Relocated Adversarial template carries {topic},
+    {summarized_findings_from_other_agents}, and
+    {INJECTION_RESISTANCE_INSTRUCTION} — NOT
+    {research_considerations_bullets}."""
+    content = _read(RESEARCH_ANGLE_TEMPLATES)
+    assert "You are the Adversarial research agent for the topic: {topic}." in content
+    assert "{summarized_findings_from_other_agents}" in content
+    assert "{INJECTION_RESISTANCE_INSTRUCTION}" in content
+    # Guarded again here so the Adversarial-focused case fails loudly on its own.
+    assert "{research_considerations_bullets}" not in content, (
+        "{research_considerations_bullets} is core-only and must be ABSENT "
+        f"from {RESEARCH_ANGLE_TEMPLATES.relative_to(REPO_ROOT)}."
     )

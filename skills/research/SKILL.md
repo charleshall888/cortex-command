@@ -136,46 +136,16 @@ Output format:
 - Scope boundaries relevant to this topic
 ```
 
-#### Tradeoffs & Alternatives (canonical example of an orchestrator-chosen angle)
-Tools: Read, Glob, Grep, WebSearch
-Prompt:
-```
-You are the Tradeoffs & Alternatives research agent for the topic: {topic}.
+#### Conditional angles (Tradeoffs & Alternatives, Adversarial)
 
-Your job: identify alternative approaches to implementing this topic and weigh the tradeoffs between them on four dimensions: implementation complexity, maintainability, performance, and alignment with existing patterns.
+The two conditionally-fired angle templates live in [`${CLAUDE_SKILL_DIR}/references/angle-templates.md`](${CLAUDE_SKILL_DIR}/references/angle-templates.md), keeping them out of the always-loaded body:
 
-{INJECTION_RESISTANCE_INSTRUCTION}
+- **Tradeoffs & Alternatives** — orchestrator-chosen (the canonical example of a chosen angle); fires when you select it per fanout.md. Placeholders: `{topic}`, `{INJECTION_RESISTANCE_INSTRUCTION}`.
+- **Adversarial** — high/critical only, always last; fires the adversarial wave. Placeholders: `{topic}`, `{summarized_findings_from_other_agents}`, `{INJECTION_RESISTANCE_INSTRUCTION}`.
 
-Output format:
-## Tradeoffs & Alternatives
-- Alternative approach A: [description, pros, cons]
-- Alternative approach B: [description, pros, cons]
-- Recommended approach: [rationale]
-```
+Neither carries the considerations-bullets placeholder — considerations inject into the core angles only (see above). Read that file at dispatch time (see Dispatch protocol) to obtain the body before substituting.
 
 When composing a different chosen angle, follow this shape: name the angle, state the job (what it must cover that no other angle does), append `{INJECTION_RESISTANCE_INSTRUCTION}`, and give it a `## <Angle name>` output heading.
-
-#### Adversarial (always last for high/critical)
-Tools: Read, Glob, Grep, WebSearch
-Prompt (inject the summarized findings of the completed angles before dispatch):
-```
-You are the Adversarial research agent for the topic: {topic}.
-
-The following is a summary of findings from the other research agents:
-
-{summarized_findings_from_other_agents}
-
-Your job: challenge these findings. Identify failure modes, anti-patterns, security concerns, and edge cases that would invalidate the proposed approach. Do not simply validate what the other agents found — actively look for what they missed or got wrong.
-
-{INJECTION_RESISTANCE_INSTRUCTION}
-
-Output format:
-## Adversarial Review
-- Failure modes and edge cases
-- Security concerns or anti-patterns
-- Assumptions that may not hold
-- Recommended mitigations
-```
 
 ### Dispatch protocol
 
@@ -187,8 +157,8 @@ Before dispatching the core wave, resolve the gather model in this orchestrator 
 model=$(cortex-resolve-model --role searcher)
 ```
 
-1. **Core wave (parallel) — bind the resolved `searcher` model.** Dispatch the mandatory core plus the orchestrator-chosen angles — every angle except the always-last adversarial one — in one batch of Agent calls in a single response, passing the captured `$model` as each core-wave Agent's `model:` parameter. No `isolation: "worktree"`; agents are read-only. If the resolve above exited nonzero, fall back to dispatching the core wave with **no** `model:` (inherit the parent, as before) and surface a one-line warning that the gather wave is running on the inherited model because role resolution failed — do not halt.
-2. **Adversarial wave (last) — inherits the parent.** For high/critical work, once the core wave returns, summarize each angle's findings and dispatch the adversarial agent with that summary injected; fold its critique into synthesis. The adversarial agent **omits** `model:` and inherits the parent.
+1. **Core wave (parallel) — bind the resolved `searcher` model.** Dispatch the mandatory core plus the orchestrator-chosen angles — every angle except the always-last adversarial one — in one batch of Agent calls in a single response, passing the captured `$model` as each core-wave Agent's `model:` parameter. No `isolation: "worktree"`; agents are read-only. If the resolve above exited nonzero, fall back to dispatching the core wave with **no** `model:` (inherit the parent, as before) and surface a one-line warning that the gather wave is running on the inherited model because role resolution failed — do not halt. For any orchestrator-chosen angle whose template lives in `${CLAUDE_SKILL_DIR}/references/angle-templates.md` (e.g. Tradeoffs & Alternatives), Read that file first to obtain the prompt body, then substitute its placeholders (`{topic}`, `{INJECTION_RESISTANCE_INSTRUCTION}`) before dispatch.
+2. **Adversarial wave (last) — inherits the parent.** For high/critical work, once the core wave returns, Read `${CLAUDE_SKILL_DIR}/references/angle-templates.md` to obtain the Adversarial prompt body, summarize each angle's findings, and substitute `{topic}`, `{summarized_findings_from_other_agents}`, and `{INJECTION_RESISTANCE_INSTRUCTION}` into that body before dispatching the adversarial agent; fold its critique into synthesis. The adversarial agent **omits** `model:` and inherits the parent.
 
 ## Step 4: Synthesize Findings
 

@@ -92,15 +92,7 @@ Then:
 
 Ticket bodies authored under the Role/Integration/Edges/Touch-points template are validated by `cortex-check-prescriptive-prose` at pre-commit time (LEX-1 scanner). The scanner runs section-partitioned: path:line citations, `§N`/`RN` section-index citations, and multi-line fenced code blocks are permitted only in `## Touch points` and are flagged when they appear inside `## Role`, `## Integration`, or `## Edges`.
 
-**LEX-1 regex specification** (the scanner's exact behavior, baked into this prose):
-
-- **Pattern 1 (path:line)**: `\b[\w./\-]+\.(md|py|sh|json|toml|yml|yaml):\d+(?:-\d+)?\b` — matches `decompose.md:147`, `bin/foo.py:42-58`. Bare paths without `:line` do NOT match (narrative references are fine).
-- **Pattern 2 (section-index)**: `(?:§|R)\d+(?:[a-z]\)?|\([a-z]\))?\b` — matches `§5`, `§3a`, `§3(a)`, `R2`, `R2(b)`. Single-letter references without a digit do NOT match.
-- **Pattern 3 (quoted-prose-patch)**: a fenced code block (` ``` ` or `~~~`) of ≥ 2 non-empty lines appearing inside a forbidden section. Single-line fenced blocks and inline backticks do NOT match.
-
-**Forbidden sections (per ticket body)**: `## Why`, `## Role`, `## Integration`, `## Edges`. **Permitted section**: `## Touch points`.
-
-**Section-boundary detection**: a section begins at a line matching `^## (Why|Role|Integration|Edges|Touch points)$` and ends at the next line matching `^## ` (any sibling-level heading) or end-of-file. Third-level subsections (`### foo`) inside a section are part of that section. Fenced code blocks are tolerated as ranges (do not split sections).
+**Forbidden sections (per ticket body)**: `## Why`, `## Role`, `## Integration`, `## Edges`. **Permitted section**: `## Touch points`. (The scanner owns the exact match patterns and section-boundary detection; author against the worked examples below.)
 
 **Worked examples**:
 
