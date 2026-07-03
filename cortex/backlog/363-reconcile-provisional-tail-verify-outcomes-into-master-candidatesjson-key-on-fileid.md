@@ -2,12 +2,16 @@
 schema_version: "1"
 uuid: 8b39eaa5-881b-4430-8dca-022a82480f5a
 title: Reconcile provisional-tail verify outcomes into master_candidates.json (key on file,id)
-status: backlog
+status: complete
 priority: low
 type: chore
 created: 2026-07-03
 updated: 2026-07-03
 parent: "357"
+complexity: complex
+criticality: medium
+spec: cortex/lifecycle/reconcile-provisional-tail-verify-outcomes-into/spec.md
+areas: ['skills']
 ---
 ## Why
 
@@ -25,4 +29,4 @@ When the sibling children complete, ensure their verify/refute verdicts land as 
 
 ## Done when
 
-All provisional-tail children's verify outcomes are reflected as `(file,id)`-keyed `status` entries in `master_candidates.json`, and no applied candidate remains without an `applied_in_commit`.
+All provisional-tail children's verify outcomes are reflected as `(file,id)`-keyed `status` entries in `master_candidates.json`. (Re-scoped to this clause-1 condition only; #359 + #360 folded here, #358 + #361/#366 already discharged. The original clause-2 global `applied_in_commit` completeness condition, plus the drifted-anchor hygiene debt, is transferred to successor #368.)

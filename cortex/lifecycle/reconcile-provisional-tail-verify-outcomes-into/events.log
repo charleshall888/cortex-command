@@ -4,3 +4,10 @@
 {"ts": "2026-07-03T17:18:33Z", "event": "spec_approved", "feature": "reconcile-provisional-tail-verify-outcomes-into"}
 {"ts": "2026-07-03T17:41:50Z", "event": "plan_approved", "feature": "reconcile-provisional-tail-verify-outcomes-into", "dispatch_choice": "trunk"}
 {"ts": "2026-07-03T17:41:50Z", "event": "phase_transition", "feature": "reconcile-provisional-tail-verify-outcomes-into", "from": "plan", "to": "implement"}
+{"ts": "2026-07-03T17:44:50Z", "event": "batch_dispatch", "feature": "reconcile-provisional-tail-verify-outcomes-into", "batch": 0, "tasks": [1]}
+{"ts": "2026-07-03T17:46:58Z", "event": "batch_dispatch", "feature": "reconcile-provisional-tail-verify-outcomes-into", "batch": 1, "tasks": [2]}
+{"ts": "2026-07-03T17:49:03Z", "event": "batch_dispatch", "feature": "reconcile-provisional-tail-verify-outcomes-into", "batch": 2, "tasks": [3]}
+{"ts": "2026-07-03T17:52:08Z", "event": "batch_dispatch", "feature": "reconcile-provisional-tail-verify-outcomes-into", "batch": 3, "tasks": [4]}
+{"ts": "2026-07-03T18:01:33Z", "event": "batch_dispatch", "feature": "reconcile-provisional-tail-verify-outcomes-into", "batch": 4, "tasks": [5]}
+{"ts": "2026-07-03T18:09:49Z", "event": "batch_dispatch", "feature": "reconcile-provisional-tail-verify-outcomes-into", "batch": 5, "tasks": [6]}
+{"ts": "2026-07-03T18:10:58Z", "event": "batch_dispatch", "feature": "reconcile-provisional-tail-verify-outcomes-into", "batch": 6, "tasks": [7]}
