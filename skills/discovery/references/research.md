@@ -40,7 +40,7 @@ Fill the remaining slots the matrix buys with discovery's other distinct dimensi
 model=$(cortex-resolve-model --role searcher)
 ```
 
-Dispatch the mandatory core plus the chosen angles for the cell — every angle except the always-last adversarial one — as one batch of Agent calls in a single response, passing the captured `$model` (sonnet) as each core-wave Agent's `model:` parameter, per fanout.md's dispatch-protocol routing rule.
+Dispatch the mandatory core plus the chosen angles for the cell — every angle except the always-last adversarial one — as one batch of Agent calls in a single response, passing the captured `$model` as each core-wave Agent's `model:` parameter, per fanout.md's dispatch-protocol routing rule.
 
 Each agent returns its findings for synthesis; do not let any agent write project files. Prerequisites entries describing codebase-state checks (e.g., 'Identify pattern X in {file}') belong to the Codebase angle — its findings carry citations, or are reported as `NOT_FOUND(query, scope)`. Entries remaining in §4's Feasibility Prerequisites column are implementation-sequencing only (work to be done after the approach is committed).
 
@@ -109,7 +109,7 @@ Run `/cortex-core:critical-review` on `cortex/research/{topic}/research.md`. Add
 
 ### 5. Transition
 
-Stage and commit `cortex/research/{topic}/` using `/cortex-core:commit`. Summarize key findings for the user and proceed to Specify.
+Stage and commit `cortex/research/{topic}/` using `/cortex-core:commit`. Summarize key findings for the user and proceed to the Research → Decompose approval gate (defined in SKILL.md) — do not begin Decompose until the user answers it.
 
 ## Constraints
 

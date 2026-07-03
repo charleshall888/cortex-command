@@ -43,7 +43,7 @@ Full invocation contract and exit-code routing: `${CLAUDE_SKILL_DIR}/references/
 
 ### Step 2b: Derive Angles
 
-The orchestrator (in main conversation context) derives 3-4 challenge angles from the artifact. Each angle must be **distinct** (no two angles are re-phrasings of each other) and must **reference specific sections or claims in the artifact** (not generic category labels).
+The orchestrator (in main conversation context) derives the challenge angles from the artifact (typically 3-4; exact count per the angle-count rule below). Each angle must be **distinct** (no two angles are re-phrasings of each other) and must **reference specific sections or claims in the artifact** (not generic category labels).
 
 Pick angles most likely to reveal real problems for this specific artifact. Representative angle examples (general, games, mobile, workflow/tooling) and the angle-count rule: see `${CLAUDE_SKILL_DIR}/references/angle-menu.md`.
 

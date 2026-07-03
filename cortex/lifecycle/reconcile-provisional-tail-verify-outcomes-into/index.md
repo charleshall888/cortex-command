@@ -2,7 +2,7 @@
 feature: reconcile-provisional-tail-verify-outcomes-into
 parent_backlog_uuid: 8b39eaa5-881b-4430-8dca-022a82480f5a
 parent_backlog_id: 363
-artifacts: ["research", "spec", "plan"]
+artifacts: ["research", "spec", "plan", "review"]
 tags: [skill-value-scorecard]
 created: 2026-07-03
 updated: 2026-07-03
@@ -15,3 +15,4 @@ Feature lifecycle for [[363-reconcile-provisional-tail-verify-outcomes-into-mast
 - Research: [[reconcile-provisional-tail-verify-outcomes-into/research|research.md]]
 - Spec: [[reconcile-provisional-tail-verify-outcomes-into/spec|spec.md]]
 - Plan: [[reconcile-provisional-tail-verify-outcomes-into/plan|plan.md]]
+- Review: [[reconcile-provisional-tail-verify-outcomes-into/review|review.md]]

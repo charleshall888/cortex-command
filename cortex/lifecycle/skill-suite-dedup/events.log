@@ -1,0 +1,5 @@
+{"ts": "2026-07-03T18:32:32Z", "event": "lifecycle_start", "feature": "skill-suite-dedup", "tier": "complex", "criticality": "high"}
+{"ts": "2026-07-03T18:32:32Z", "event": "phase_transition", "feature": "skill-suite-dedup", "from": "clarify", "to": "research"}
+{"ts": "2026-07-03T18:32:32Z", "event": "phase_transition", "feature": "skill-suite-dedup", "from": "research", "to": "specify"}
+{"ts": "2026-07-03T18:58:59Z", "event": "spec_approved", "feature": "skill-suite-dedup"}
+{"ts": "2026-07-03T18:58:59Z", "event": "phase_transition", "feature": "skill-suite-dedup", "from": "specify", "to": "plan"}

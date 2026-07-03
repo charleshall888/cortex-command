@@ -187,7 +187,7 @@ Before dispatching the core wave, resolve the gather model in this orchestrator 
 model=$(cortex-resolve-model --role searcher)
 ```
 
-1. **Core wave (parallel) — bind the resolved `searcher` model.** Dispatch the mandatory core plus the orchestrator-chosen angles — every angle except the always-last adversarial one — in one batch of Agent calls in a single response, passing the captured `$model` (sonnet) as each core-wave Agent's `model:` parameter. No `isolation: "worktree"`; agents are read-only. If the resolve above exited nonzero, fall back to dispatching the core wave with **no** `model:` (inherit the parent, as before) and surface a one-line warning that the gather wave is running on the inherited model because role resolution failed — do not halt.
+1. **Core wave (parallel) — bind the resolved `searcher` model.** Dispatch the mandatory core plus the orchestrator-chosen angles — every angle except the always-last adversarial one — in one batch of Agent calls in a single response, passing the captured `$model` as each core-wave Agent's `model:` parameter. No `isolation: "worktree"`; agents are read-only. If the resolve above exited nonzero, fall back to dispatching the core wave with **no** `model:` (inherit the parent, as before) and surface a one-line warning that the gather wave is running on the inherited model because role resolution failed — do not halt.
 2. **Adversarial wave (last) — inherits the parent.** For high/critical work, once the core wave returns, summarize each angle's findings and dispatch the adversarial agent with that summary injected; fold its critique into synthesis. The adversarial agent **omits** `model:` and inherits the parent.
 
 ## Step 4: Synthesize Findings
