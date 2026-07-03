@@ -2913,7 +2913,7 @@
   ],
   "file": "skills/research/references/fanout.md",
   "slug": "skills_research_references_fanout",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -2937,7 +2937,8 @@
    "`## Open Questions`->tests/test_requirements_skill_e2e.py",
    "`## Open Questions`->tests/test_variant_a_writer_sites_baseline.py"
   ],
-  "mech_pin_count": 17
+  "mech_pin_count": 17,
+  "applied_in_commit": "Trim research fanout.md provisional-tail candidates (#361)"
  },
  {
   "id": "s5",
@@ -2955,13 +2956,14 @@
   ],
   "file": "skills/research/references/fanout.md",
   "slug": "skills_research_references_fanout",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
   "verdict_summaries": [],
   "mech_pins": [],
-  "mech_pin_count": 0
+  "mech_pin_count": 0,
+  "applied_in_commit": "Trim research fanout.md provisional-tail candidates (#361)"
  },
  {
   "id": "s4",
@@ -2980,7 +2982,7 @@
   ],
   "file": "skills/research/references/fanout.md",
   "slug": "skills_research_references_fanout",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -3012,7 +3014,8 @@
    "`/cortex-core:research`->tests/fixtures/skill_trigger_phrases.yaml",
    "`/cortex-core:research`->tests/test_refine_handoff.py"
   ],
-  "mech_pin_count": 118
+  "mech_pin_count": 118,
+  "applied_in_commit": "Trim research fanout.md provisional-tail candidates (#361)"
  },
  {
   "id": "s1",
@@ -3031,7 +3034,7 @@
   ],
   "file": "skills/research/references/fanout.md",
   "slug": "skills_research_references_fanout",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -3063,7 +3066,8 @@
    "`/cortex-core:research`->tests/fixtures/skill_trigger_phrases.yaml",
    "`/cortex-core:research`->tests/test_refine_handoff.py"
   ],
-  "mech_pin_count": 363
+  "mech_pin_count": 363,
+  "applied_in_commit": "Trim research fanout.md provisional-tail candidates (#361)"
  },
  {
   "id": "s2",
@@ -3082,13 +3086,14 @@
   ],
   "file": "skills/research/references/fanout.md",
   "slug": "skills_research_references_fanout",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
   "verdict_summaries": [],
   "mech_pins": [],
-  "mech_pin_count": 0
+  "mech_pin_count": 0,
+  "applied_in_commit": "Trim research fanout.md provisional-tail candidates (#361)"
  },
  {
   "id": "s3a",
@@ -3103,7 +3108,7 @@
   "pins": [],
   "file": "skills/pr/SKILL.md",
   "slug": "skills_pr_SKILL",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -3135,7 +3140,8 @@
    "`git status`->cortex_command/lifecycle/complete_route.py",
    "`git status`->cortex_command/lifecycle_implement.py"
   ],
-  "mech_pin_count": 42
+  "mech_pin_count": 42,
+  "applied_in_commit": "Trim pr/SKILL.md; extract template-filling to lazy reference"
  },
  {
   "id": "s3b",
@@ -3150,7 +3156,7 @@
   "pins": [],
   "file": "skills/pr/SKILL.md",
   "slug": "skills_pr_SKILL",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -3164,7 +3170,8 @@
    "`gh pr create`->tests/test_complete_md_finalization_commit.py",
    "`gh pr create`->tests/test_runner_pr_gating.py"
   ],
-  "mech_pin_count": 7
+  "mech_pin_count": 7,
+  "applied_in_commit": "Trim pr/SKILL.md; extract template-filling to lazy reference"
  },
  {
   "id": "file-compress",
@@ -3179,13 +3186,14 @@
   "pins": [],
   "file": "skills/pr/SKILL.md",
   "slug": "skills_pr_SKILL",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
   "verdict_summaries": [],
   "mech_pins": [],
-  "mech_pin_count": 0
+  "mech_pin_count": 0,
+  "applied_in_commit": "Trim pr/SKILL.md; extract template-filling to lazy reference"
  },
  {
   "id": "s3c",
@@ -3200,13 +3208,14 @@
   "pins": [],
   "file": "skills/pr/SKILL.md",
   "slug": "skills_pr_SKILL",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
   "verdict_summaries": [],
   "mech_pins": [],
-  "mech_pin_count": 0
+  "mech_pin_count": 0,
+  "applied_in_commit": "Trim pr/SKILL.md; extract template-filling to lazy reference"
  },
  {
   "id": "s7",
@@ -3485,7 +3494,7 @@
   ],
   "file": "skills/commit/SKILL.md",
   "slug": "skills_commit_SKILL",
-  "status": "unverified",
+  "status": "verified_refuted",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -3588,7 +3597,7 @@
   ],
   "file": "skills/refine/SKILL.md",
   "slug": "skills_refine_SKILL",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -3614,7 +3623,8 @@
    "`AskUserQuestion`->tests/test_lifecycle_implement_branch_mode.py",
    "`AskUserQuestion`->tests/test_lifecycle_kept_pauses_parity.py"
   ],
-  "mech_pin_count": 19
+  "mech_pin_count": 19,
+  "applied_in_commit": "Trim refine/SKILL.md provisional-tail candidates + bump parity anchor"
  },
  {
   "id": "s8",
@@ -3633,7 +3643,7 @@
   ],
   "file": "skills/refine/SKILL.md",
   "slug": "skills_refine_SKILL",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -3665,7 +3675,8 @@
    "`\"research\"`->tests/fixtures/build_epic_map/multi_epic.json",
    "`\"research\"`->tests/fixtures/build_epic_map/no_epics.json"
   ],
-  "mech_pin_count": 147
+  "mech_pin_count": 147,
+  "applied_in_commit": "Trim refine/SKILL.md provisional-tail candidates + bump parity anchor"
  },
  {
   "id": "s10a",
@@ -3685,7 +3696,7 @@
   ],
   "file": "skills/refine/SKILL.md",
   "slug": "skills_refine_SKILL",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -3717,7 +3728,8 @@
    "`/cortex-core:lifecycle`->skills/lifecycle/references/implement.md",
    "`/cortex-core:lifecycle`->skills/lifecycle/references/kept-pauses.md"
   ],
-  "mech_pin_count": 96
+  "mech_pin_count": 96,
+  "applied_in_commit": "Trim refine/SKILL.md provisional-tail candidates + bump parity anchor"
  },
  {
   "id": "s6",
@@ -3736,7 +3748,7 @@
   ],
   "file": "skills/refine/SKILL.md",
   "slug": "skills_refine_SKILL",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -3768,7 +3780,8 @@
    "`research.md`->bin/.events-registry.md",
    "`research.md`->claude/statusline.sh"
   ],
-  "mech_pin_count": 297
+  "mech_pin_count": 297,
+  "applied_in_commit": "Trim refine/SKILL.md provisional-tail candidates + bump parity anchor"
  },
  {
   "id": "s13",
@@ -3785,7 +3798,7 @@
   ],
   "file": "skills/refine/SKILL.md",
   "slug": "skills_refine_SKILL",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -3817,7 +3830,8 @@
    "`cortex-update-item`->tests/fixtures/contract/valid-non-argparse-exempt/skills/demo/SKILL.md",
    "`cortex-update-item`->tests/test_check_prescriptive_prose.py"
   ],
-  "mech_pin_count": 31
+  "mech_pin_count": 31,
+  "applied_in_commit": "Trim refine/SKILL.md provisional-tail candidates + bump parity anchor"
  },
  {
   "id": "s7",
@@ -3836,7 +3850,7 @@
   ],
   "file": "skills/refine/SKILL.md",
   "slug": "skills_refine_SKILL",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -3850,7 +3864,8 @@
    "`research-considerations-file`->tests/test_research_handoff.py",
    "heading->tests/test_refine_handoff.py"
   ],
-  "mech_pin_count": 7
+  "mech_pin_count": 7,
+  "applied_in_commit": "Trim refine/SKILL.md provisional-tail candidates + bump parity anchor"
  },
  {
   "id": "s3",
@@ -3867,7 +3882,7 @@
   ],
   "file": "skills/refine/SKILL.md",
   "slug": "skills_refine_SKILL",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -3899,7 +3914,8 @@
    "`cortex-resolve-backlog-item`->tests/test_superseded_frontmatter_tolerance.py",
    "`cortex-resolve-backlog-item`->tests/test_update_item_resolution.py"
   ],
-  "mech_pin_count": 165
+  "mech_pin_count": 165,
+  "applied_in_commit": "Trim refine/SKILL.md provisional-tail candidates + bump parity anchor"
  },
  {
   "id": "s12",
@@ -3914,7 +3930,7 @@
   "pins": [],
   "file": "skills/refine/SKILL.md",
   "slug": "skills_refine_SKILL",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -3946,7 +3962,8 @@
    "`complexity`->bin/cortex-complexity-escalator",
    "`complexity`->cortex/adr/0019-skill-helper-verb-backend-structural-guard.md"
   ],
-  "mech_pin_count": 272
+  "mech_pin_count": 272,
+  "applied_in_commit": "Trim refine/SKILL.md provisional-tail candidates + bump parity anchor"
  },
  {
   "id": "s6a",
@@ -4203,7 +4220,7 @@
   ],
   "file": "skills/refine/references/clarify-critic.md",
   "slug": "skills_refine_references_clarify_critic",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -4217,7 +4234,8 @@
    "`/cortex-core:critical-review`->tests/baseline_critical_review.py",
    "`/cortex-core:critical-review`->tests/test_critical_review_classifier.py"
   ],
-  "mech_pin_count": 7
+  "mech_pin_count": 7,
+  "applied_in_commit": "Trim #361 Task 4: compress clarify-critic disposition framework"
  },
  {
   "id": "s3",
@@ -4288,7 +4306,7 @@
   ],
   "file": "skills/refine/references/clarify-critic.md",
   "slug": "skills_refine_references_clarify_critic",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -4320,7 +4338,8 @@
    "`type: epic`->tests/test_build_epic_map.py",
    "`type: epic`->tests/test_clarify_critic_alignment_integration.py"
   ],
-  "mech_pin_count": 27
+  "mech_pin_count": 27,
+  "applied_in_commit": "Trim #361 Task 4: compress clarify-critic disposition framework"
  },
  {
   "id": "file-compress",
@@ -4339,7 +4358,7 @@
   ],
   "file": "cortex_command/overnight/prompts/plan-synthesizer.md",
   "slug": "cortex_command_overnight_prompts_plan_synthesizer",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -4371,7 +4390,8 @@
    "`/cortex-core:lifecycle`->skills/lifecycle/references/kept-pauses.md",
    "`/cortex-core:lifecycle`->skills/lifecycle/references/parallel-execution.md"
   ],
-  "mech_pin_count": 289
+  "mech_pin_count": 289,
+  "applied_in_commit": "Trim plan-synthesizer.md nested file-compress + s15 restatements"
  },
  {
   "id": "s15",
@@ -4390,7 +4410,7 @@
   ],
   "file": "cortex_command/overnight/prompts/plan-synthesizer.md",
   "slug": "cortex_command_overnight_prompts_plan_synthesizer",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -4422,7 +4442,8 @@
    "`\"medium\"`->cortex_command/pipeline/tests/test_parser.py",
    "`\"medium\"`->cortex_command/pipeline/tests/test_retry.py"
   ],
-  "mech_pin_count": 301
+  "mech_pin_count": 301,
+  "applied_in_commit": "Trim plan-synthesizer.md nested file-compress + s15 restatements"
  },
  {
   "id": "s7",
@@ -4620,13 +4641,14 @@
   "pins": [],
   "file": "skills/research/SKILL.md",
   "slug": "skills_research_SKILL",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
   "verdict_summaries": [],
   "mech_pins": [],
-  "mech_pin_count": 0
+  "mech_pin_count": 0,
+  "applied_in_commit": "Trim research SKILL.md Empty/failed agent handling narration (s15)"
  },
  {
   "id": "s3",
@@ -4801,7 +4823,7 @@
   ],
   "file": "skills/refine/references/specify.md",
   "slug": "skills_refine_references_specify",
-  "status": "unverified",
+  "status": "verified_refuted",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -4851,13 +4873,14 @@
   ],
   "file": "skills/refine/references/specify.md",
   "slug": "skills_refine_references_specify",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
   "verdict_summaries": [],
   "mech_pins": [],
-  "mech_pin_count": 0
+  "mech_pin_count": 0,
+  "applied_in_commit": "Trim refine specify.md provisional-tail candidates (Task 2)"
  },
  {
   "id": "s7a",
@@ -4872,7 +4895,7 @@
   "pins": [],
   "file": "skills/refine/references/specify.md",
   "slug": "skills_refine_references_specify",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -4904,7 +4927,8 @@
    "`cortex/lifecycle/{feature}/events.log`->skills/morning-review/SKILL.md",
    "`cortex/lifecycle/{feature}/events.log`->skills/morning-review/references/walkthrough.md"
   ],
-  "mech_pin_count": 39
+  "mech_pin_count": 39,
+  "applied_in_commit": "Trim refine specify.md provisional-tail candidates (Task 2)"
  },
  {
   "id": "s9",
@@ -4924,7 +4948,7 @@
   ],
   "file": "skills/refine/references/specify.md",
   "slug": "skills_refine_references_specify",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -4956,7 +4980,8 @@
    "`cortex-backlog`->docs/index.html",
    "`cortex-backlog`->docs/overnight.md"
   ],
-  "mech_pin_count": 200
+  "mech_pin_count": 200,
+  "applied_in_commit": "Trim refine specify.md provisional-tail candidates (Task 2)"
  },
  {
   "id": "s5a",
@@ -4973,7 +4998,7 @@
   ],
   "file": "skills/refine/references/specify.md",
   "slug": "skills_refine_references_specify",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -5005,7 +5030,8 @@
    "`research.md`->cortex_command/overnight/prompts/orchestrator-round.md",
    "`research.md`->cortex_command/overnight/sync-allowlist.conf"
   ],
-  "mech_pin_count": 89
+  "mech_pin_count": 89,
+  "applied_in_commit": "Trim refine specify.md provisional-tail candidates (Task 2)"
  },
  {
   "id": "s3",
@@ -5023,7 +5049,7 @@
   ],
   "file": "skills/refine/references/clarify.md",
   "slug": "skills_refine_references_clarify",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -5055,7 +5081,8 @@
    "`cortex-backlog`->cortex_command/lifecycle/start_sync.py",
    "`cortex-backlog`->cortex_command/lifecycle_config.py"
   ],
-  "mech_pin_count": 414
+  "mech_pin_count": 414,
+  "applied_in_commit": "Trim refine clarify.md: dedup \u00a71/\u00a77, compress \u00a72/\u00a75 (#361 Task 3)"
  },
  {
   "id": "s10",
@@ -5074,7 +5101,7 @@
   ],
   "file": "skills/refine/references/clarify.md",
   "slug": "skills_refine_references_clarify",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -5106,7 +5133,8 @@
    "`cortex-backlog`->cortex_command/init/templates/cortex/lifecycle.config.md",
    "`cortex-backlog`->cortex_command/lifecycle/backlog_backend_cli.py"
   ],
-  "mech_pin_count": 309
+  "mech_pin_count": 309,
+  "applied_in_commit": "Trim refine clarify.md: dedup \u00a71/\u00a77, compress \u00a72/\u00a75 (#361 Task 3)"
  },
  {
   "id": "s8",
@@ -5125,7 +5153,7 @@
   ],
   "file": "skills/refine/references/clarify.md",
   "slug": "skills_refine_references_clarify",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -5138,7 +5166,8 @@
    "`low | medium | high | critical`->skills/refine/SKILL.md",
    "`low | medium | high | critical`->skills/research/references/fanout.md"
   ],
-  "mech_pin_count": 6
+  "mech_pin_count": 6,
+  "applied_in_commit": "Trim refine clarify.md: dedup \u00a71/\u00a77, compress \u00a72/\u00a75 (#361 Task 3)"
  },
  {
   "id": "s5",
@@ -5156,7 +5185,7 @@
   ],
   "file": "skills/refine/references/clarify.md",
   "slug": "skills_refine_references_clarify",
-  "status": "unverified",
+  "status": "verified_refuted",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -5216,7 +5245,7 @@
   ],
   "file": "skills/refine/references/clarify.md",
   "slug": "skills_refine_references_clarify",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -5248,7 +5277,8 @@
    "`cortex/requirements/`->cortex_command/overnight/fill_prompt.py",
    "`cortex/requirements/`->cortex_command/overnight/orchestrator_context.py"
   ],
-  "mech_pin_count": 67
+  "mech_pin_count": 67,
+  "applied_in_commit": "Trim refine clarify.md: dedup \u00a71/\u00a77, compress \u00a72/\u00a75 (#361 Task 3)"
  },
  {
   "id": "s5",
@@ -8179,7 +8209,7 @@
   ],
   "file": "skills/interview/references/loop.md",
   "slug": "skills_interview_references_loop",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -8205,7 +8235,8 @@
    "`AskUserQuestion`->tests/test_lifecycle_implement_branch_mode.py",
    "`AskUserQuestion`->tests/test_lifecycle_kept_pauses_parity.py"
   ],
-  "mech_pin_count": 19
+  "mech_pin_count": 19,
+  "applied_in_commit": "Compress interview loop Why prose (#361 file-compress)"
  },
  {
   "id": "file-compress",
@@ -8277,7 +8308,7 @@
   ],
   "file": "cortex/adr/README.md",
   "slug": "cortex_adr_README",
-  "status": "unverified",
+  "status": "verified_refuted",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -8311,7 +8342,7 @@
   ],
   "file": "cortex/adr/README.md",
   "slug": "cortex_adr_README",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -8327,7 +8358,8 @@
    "`cortex/adr/`->tests/test_adr_citation_audit.py",
    "`cortex/adr/`->tests/test_lifecycle_config_parity.py"
   ],
-  "mech_pin_count": 9
+  "mech_pin_count": 9,
+  "applied_in_commit": "Trim adr/README.md provisional-tail candidates (#361 Task 5)"
  },
  {
   "id": "s6",
@@ -8346,7 +8378,7 @@
   ],
   "file": "cortex/adr/README.md",
   "slug": "cortex_adr_README",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -8376,7 +8408,8 @@
    "`cortex/requirements/project.md`->tests/test_requirements_skill_e2e.py",
    "`cortex/requirements/project.md`->tests/test_stage_artifacts.py"
   ],
-  "mech_pin_count": 23
+  "mech_pin_count": 23,
+  "applied_in_commit": "Trim adr/README.md provisional-tail candidates (#361 Task 5)"
  },
  {
   "id": "s5",
@@ -8396,7 +8429,7 @@
   ],
   "file": "cortex/adr/README.md",
   "slug": "cortex_adr_README",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -8428,7 +8461,8 @@
    "`accepted`->cortex_command/discovery.py",
    "`accepted`->cortex_command/doctor/path_self_test.py"
   ],
-  "mech_pin_count": 144
+  "mech_pin_count": 144,
+  "applied_in_commit": "Trim adr/README.md provisional-tail candidates (#361 Task 5)"
  },
  {
   "id": "s7",
@@ -8446,7 +8480,7 @@
   ],
   "file": "cortex/adr/README.md",
   "slug": "cortex_adr_README",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -8478,7 +8512,8 @@
    "`accepted`->cortex_command/hooks/scan_lifecycle.py",
    "`accepted`->cortex_command/init/handler.py"
   ],
-  "mech_pin_count": 98
+  "mech_pin_count": 98,
+  "applied_in_commit": "Trim adr/README.md provisional-tail candidates (#361 Task 5)"
  },
  {
   "id": "s1",
@@ -8495,13 +8530,14 @@
   ],
   "file": "cortex/adr/README.md",
   "slug": "cortex_adr_README",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
   "verdict_summaries": [],
   "mech_pins": [],
-  "mech_pin_count": 0
+  "mech_pin_count": 0,
+  "applied_in_commit": "Trim adr/README.md provisional-tail candidates (#361 Task 5)"
  },
  {
   "id": "s4",
@@ -10152,7 +10188,7 @@
   ],
   "file": "skills/backlog/SKILL.md",
   "slug": "skills_backlog_SKILL",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -10184,7 +10220,8 @@
    "`cortex-backlog-ready`->cortex_command/backlog/ready.py",
    "`cortex-backlog-ready`->docs/index.html"
   ],
-  "mech_pin_count": 305
+  "mech_pin_count": 305,
+  "applied_in_commit": "Trim backlog/SKILL.md: compress Invocation aggregate and pick"
  },
  {
   "id": "file-compress",
@@ -10202,7 +10239,7 @@
   ],
   "file": "skills/backlog/SKILL.md",
   "slug": "skills_backlog_SKILL",
-  "status": "unverified",
+  "status": "verified_survives",
   "votes": 0,
   "survive_votes": 0,
   "needs_user_input": false,
@@ -10234,7 +10271,8 @@
    "`blocked-by`->tests/fixtures/readiness/eligible.yaml",
    "`blocked-by`->tests/fixtures/readiness/rejected-blocked.yaml"
   ],
-  "mech_pin_count": 258
+  "mech_pin_count": 258,
+  "applied_in_commit": "Trim backlog/SKILL.md: compress Invocation aggregate and pick"
  },
  {
   "id": "s7",

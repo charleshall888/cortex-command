@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 831e9f7c-28a9-4842-b09f-305d4a978f1e
 title: Reconcile #357 refine-cluster + transitive verify-outcomes into master_candidates.json (key on file,id)
-status: backlog
+status: complete
 priority: low
 type: chore
 tags: ['skill-value-scorecard']
