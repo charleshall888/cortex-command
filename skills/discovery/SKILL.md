@@ -16,11 +16,6 @@ preconditions:
 
 # Discovery
 
-## Invocation
-
-- `/cortex-core:discovery {{topic}}` — start new or resume existing discovery
-- `/cortex-core:discovery {{phase}}` — jump to a specific phase (clarify, research, decompose)
-
 ## Step 1: Identify the Topic
 
 Topic: $ARGUMENTS (required — non-empty topic).
@@ -28,8 +23,6 @@ Topic: $ARGUMENTS (required — non-empty topic).
 Determine the `{{topic}}` from invocation. Use lowercase-kebab-case for directory naming (e.g., `cortex/research/plugin-system/`).
 
 **If `$ARGUMENTS` is empty**: halt with the message "discovery requires a topic argument; for 'what should I work on' or 'next task' routing, use `/cortex-core:dev` instead." Do not proceed to Step 2.
-
-**If a topic was provided**: proceed to Step 2 directly.
 
 ## Step 2: Check for Existing State
 
