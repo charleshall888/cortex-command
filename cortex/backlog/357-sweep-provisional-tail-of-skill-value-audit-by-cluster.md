@@ -12,6 +12,16 @@ created: 2026-07-02
 updated: 2026-07-02
 parent: "347"
 ---
+## Decomposition
+This ticket is the parent umbrella for the provisional tail; the 143 eligible candidates are split into four file-disjoint child batches, refinable and executable in parallel sessions (the lifecycle state machine is per-ticket, so parallelism needs separate tickets). The children partition the candidate set with no overlap:
+
+- **#358** — cortex/requirements/ area files: 32 candidates, editorial mode.
+- **#359** — discovery + backlog-author clusters: 43 candidates, pin-verify (holds the sole L1-ratchet frontmatter candidate).
+- **#360** — critical-review cluster: 26 candidates, pin-verify (carries the SKILL.md cross-site parity residual).
+- **#361** — refine cluster + transitive tail: 42 candidates, pin-verify.
+
+Verification bar across all four: pin-hit verification, single-pass (read each candidate's pins/mech_pins, confirm the trimmed span is not load-bearing, apply honoring the keep-list, record refuted). master_candidates.json status write-back is deferred out of the children to avoid concurrent writes; closing this umbrella includes the single reconciliation pass that folds every child's verify outcomes back into master_candidates.json.
+
 ## Why
 Follow-up to #353, which completed Batch 1 — the verified lifecycle-cluster remainder (50 adversarially-verified candidates applied across 22 files, ~10k net bytes / ~8.6k weighted tokens). This ticket carries the **provisional tail** that #353 scoped but deliberately did not execute: 143 candidates (~23k weighted tokens) that are scored and mechanically pin-scanned but **never adversarially verified**. Unlike the verified batch, each provisional candidate must be verified against its listed pin hits before trimming — recording refuted ones so they are not re-proposed. The largest concentrations: the `cortex/requirements/` area files (backlog.md ~11, pipeline.md, observability.md, multi-agent, remote-access), the backlog-author SKILL (~9) + its body-template reference, and the refine (~8) / discovery (~7) / critical-review (~8) cluster SKILL.md bodies + references (e.g. discovery/references/research.md ~7).
 
