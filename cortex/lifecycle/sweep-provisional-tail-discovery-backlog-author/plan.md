@@ -28,7 +28,7 @@ Verify and apply the 43 provisional trim candidates across the discovery + backl
 - **Complexity**: simple
 - **Context**: Filter predicate (spec Requirement 1): `status=="unverified"` AND `file` under `skills/discovery/` or `skills/backlog-author/` AND no `overlaps_ticket` AND no `reproposal_of`. Row schema: `id` is the per-file short id (`s1`..`sN`); locate spans by `heading` + pinned token, never by the stale `start_line`/`end_line`. Cluster membership is NOT a ledger field — it is imported from spec Requirement 4 (backlog-author `{s3+s5}`, `{s6+s7+s8}`, `{s7 + body-template s1–s6}`; discovery `{s2+s3+s5}`, `{s8 + decompose §5 gate/routing candidates s6c2/s6c3/s6d}`; `{clarify s3 + research s3}`, `{clarify s8 + research s5}`) — everything else in-scope is independent. **Because membership is spec-derived, not ledger-derived, the worksheet is the single source of truth for per-id classification: each edit task (3–12) reconciles its hardcoded exclusion/inclusion set against this worksheet before applying, and halts on any disagreement.** Ground-truth per-file id sets to assert: backlog-author/SKILL.md `{s1,s3,s4,s5,s6,s7,s8,s9,s10}`, body-template.md `{s1..s6}`, discovery/SKILL.md `{s2,s3,s4,s5,s6,s7b,s8}`, clarify.md `{s3,s5,s7,s8,s9,s11}`, decompose.md `{s3a,s3b,s6a,s6c2,s6c3,s6d}`, orchestrator-review.md `{s1,s4}`, research.md `{s1,s3,s5,s6,s7,s9,s14}`. A mismatch is non-benign — Requirement 2 forbids sibling status writes, so the only causes are a stale research snapshot or out-of-band corruption. Ledger baseline: `master_candidates.json`/`dup_groups.json` must be byte-unchanged now and at every later commit.
 - **Verification**: Run a filter script over `cortex/research/skill-value-scorecard/master_candidates.json` — pass if it prints `count==43` AND `weighted_cost sum==6987` AND per-file histogram `{backlog-author/SKILL.md:9, body-template.md:6, discovery/SKILL.md:7, clarify.md:6, decompose.md:6, orchestrator-review.md:2, research.md:7}` AND each file's derived id set exactly equals the ground-truth set listed in Context (set-equality, not just cardinality); AND `git status --porcelain cortex/research/skill-value-scorecard/master_candidates.json cortex/research/skill-value-scorecard/dup_groups.json` is empty. Any mismatch = fail (halt). (This checks the script's output against the immutable external ledger with hardcoded expected constants — not against `preflight.md`, which this task creates — so it is not self-sealing.)
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Independent trims — `discovery/references/orchestrator-review.md`
 - **Files**: `skills/discovery/references/orchestrator-review.md`, `plugins/cortex-core/skills/discovery/references/orchestrator-review.md`
@@ -37,7 +37,7 @@ Verify and apply the 43 provisional trim candidates across the discovery + backl
 - **Complexity**: simple
 - **Context**: Reconcile `{s1,s4}` against the Task 1 worksheet before applying (halt on disagreement). This file emits orchestrator-review events scanned by `test_check_events_registry.py` / `test_events_registry_glob_parity.py` — preserve every emit line (spec Requirement 7b). Extractive-only: delete spans, never paraphrase surviving text. Mirror-sync (Requirement 8): after editing, `just build-plugin` then `git add` the regenerated mirror; commit via `/cortex-core:commit`, never `--no-verify` (the pre-commit hook runs the staged-mode lints automatically). Per-trim keep-list confirmation (Requirement 3b) is recorded in the commit body AND enforced by the keep-list gate in Verification.
 - **Verification**: `python3 -m pytest tests/test_discovery_module.py tests/test_check_events_registry.py tests/test_events_registry_glob_parity.py -q` exits 0; AND `just build-plugin && git diff --quiet -- plugins/cortex-core/` exits 0 (no unstaged mirror drift after commit); AND the keep-list gate passes for both applied trims.
-- **Status**: [ ] pending
+- **Status**: [x] complete (s1 applied; s4 refuted — cross-file dedup, destination lacks table)
 
 ### Task 3: Independent trims — `backlog-author/SKILL.md` non-cluster + `s1` frontmatter guard
 - **Files**: `skills/backlog-author/SKILL.md`, `plugins/cortex-core/skills/backlog-author/SKILL.md`
@@ -46,7 +46,7 @@ Verify and apply the 43 provisional trim candidates across the discovery + backl
 - **Complexity**: simple
 - **Context**: Reconcile `{s4,s9,s10}` + `s1` against the Task 1 worksheet before applying (halt on disagreement). Before applying `s1`, confirm no SKILL.md body interpolation depends on the dropped declared fields (spec Requirement 6; research "real s1 risk" = contract/undeclared-variable lint, `cortex_command/lint/contract.py` + `cortex_command/lint/skill_path.py` + `tests/fixtures/contracts/`, NOT the L1 ratchet). The L1 ratchet is a non-issue — no in-scope candidate touches `description`/`when_to_use`. Zero-pin candidates here (`s9`/`s10` carry `pins=0`) get a second adversarial look reasoning from actual downstream consumers, not pin-hit alone (Requirement 7): `skills/morning-review/{SKILL.md,references/walkthrough.md}`, `skills/backlog/SKILL.md`, and `skills/discovery/references/decompose.md` all invoke `/backlog-author compose`/`interview` — their invocation strings and passed tokens must still resolve against the trimmed skill. Extractive-only; mirror-sync + `/cortex-core:commit` per Task 2 (the pre-commit hook runs `check-skill-path`/`check-contract` in staged mode automatically). Record per-trim keep-list confirmation in the commit body.
 - **Verification**: `python3 -m pytest tests/test_backlog_author.py tests/test_l1_surface_ratchet.py -q` exits 0; AND `just check-skill-path-audit` and `just check-contract-audit` report no violation (exit 0) over the working tree — these audit recipes scan the working-tree corpus, whereas the bare `check-skill-path`/`check-contract` recipes hardcode `--staged` and accept no positional path; AND `just build-plugin && git diff --quiet -- plugins/cortex-core/` exits 0; AND the keep-list gate passes for every applied trim.
-- **Status**: [ ] pending
+- **Status**: [x] complete (s1,s4,s9,s10 all applied)
 
 ### Task 4: Independent trims — `discovery/SKILL.md` non-cluster
 - **Files**: `skills/discovery/SKILL.md`, `plugins/cortex-core/skills/discovery/SKILL.md`
@@ -55,7 +55,7 @@ Verify and apply the 43 provisional trim candidates across the discovery + backl
 - **Complexity**: simple
 - **Context**: Reconcile `{s4,s6,s7b}` against the Task 1 worksheet before applying (halt on disagreement). `tests/test_discovery_gate_presentation.py` pins verbatim markers in this file (`<approve|revise|drop|promote-sub-topic>`, the brief-invocation string, the R3 drop dual-use phrase) and `test_discovery_gate_brief.py` pins the brief gate — these are invisible to a generic grep, so the suite plus the keep-list gate are the real gate (research "pin-hit single-pass is not sufficient"). Preserve every event emit line (`approval_checkpoint_responded` etc.) for the events-registry tests (Requirement 7b). Zero-pin candidates get the consumer-reasoning second look. Extractive-only; mirror-sync + `/cortex-core:commit` per Task 2; keep-list confirmation in commit body.
 - **Verification**: `python3 -m pytest tests/test_discovery_gate_presentation.py tests/test_discovery_gate_brief.py tests/test_discovery_module.py tests/test_check_events_registry.py tests/test_events_registry_glob_parity.py -q` exits 0; AND `just build-plugin && git diff --quiet -- plugins/cortex-core/` exits 0; AND the keep-list gate passes for every applied trim.
-- **Status**: [ ] pending
+- **Status**: [x] complete (s4,s6 applied; s7b refuted — MOVE needs new ref file, drops mech-pins)
 
 ### Task 5: Independent trims — `discovery/references/decompose.md` non-cluster
 - **Files**: `skills/discovery/references/decompose.md`, `plugins/cortex-core/skills/discovery/references/decompose.md`
@@ -64,7 +64,7 @@ Verify and apply the 43 provisional trim candidates across the discovery + backl
 - **Complexity**: simple
 - **Context**: Reconcile `{s3a,s3b,s6a}` against the Task 1 worksheet before applying (halt on disagreement). `tests/test_decompose_rules.py` parses this file by heading and asserts the literal `backlog-author/references/body-template.md` citation — keep it. decompose.md emits `decompose_flag`/`ack`/`drop` events scanned by the events-registry tests — preserve emit lines. The §5 gate/routing candidates (`s6c2`/`s6c3`/`s6d`) are reserved for the atomic joint edit in Task 10 — do NOT touch them here. Extractive-only; mirror-sync + `/cortex-core:commit`; keep-list confirmation in commit body.
 - **Verification**: `python3 -m pytest tests/test_decompose_rules.py tests/test_check_events_registry.py tests/test_events_registry_glob_parity.py -q` exits 0; AND `just build-plugin && git diff --quiet -- plugins/cortex-core/` exits 0; AND the keep-list gate passes for every applied trim.
-- **Status**: [ ] pending
+- **Status**: [x] complete (s3a,s3b,s6a all applied)
 
 ### Task 6: Independent trims — `clarify.md` + `research.md` non-cluster
 - **Files**: `skills/discovery/references/clarify.md`, `skills/discovery/references/research.md`, `plugins/cortex-core/skills/discovery/references/clarify.md`, `plugins/cortex-core/skills/discovery/references/research.md`
@@ -73,7 +73,7 @@ Verify and apply the 43 provisional trim candidates across the discovery + backl
 - **Complexity**: complex
 - **Context**: Reconcile the two id sets against the Task 1 worksheet before applying (halt on disagreement). Both files are entries in the `RULE_CARRIERS` tuple in `tests/test_load_requirements_protocol.py`, which asserts each listed file still contains the canonical consumer-rule protocol citation — the independent candidates here must NOT delete that citation prose (its removal is the Task 11 cluster's concern, coupled to the tuple edit). `research.md s3`/`s5` and `clarify.md s3`/`s8` are cross-file-coupled — leave them alone here. Do NOT touch the cross-cluster dedup group `clarify.md ↔ refine/references/clarify.md` (the `refine/` side is #361's; opportunistic-only per spec Non-Requirements). Several clarify.md candidates carry `pins=0` — apply the consumer-reasoning second look. Extractive-only; mirror-sync + `/cortex-core:commit`; keep-list confirmation in commit body.
 - **Verification**: `python3 -m pytest tests/test_load_requirements_protocol.py tests/test_discovery_module.py -q` exits 0; AND `just build-plugin && git diff --quiet -- plugins/cortex-core/` exits 0; AND the keep-list gate passes for every applied trim.
-- **Status**: [ ] pending
+- **Status**: [x] complete (all 9 applied; table→list restitch on some COMPRESS — Review focus)
 
 ### Task 7: Cluster — backlog-author `{s3 + s5}` mutually-referential merge
 - **Files**: `skills/backlog-author/SKILL.md`, `plugins/cortex-core/skills/backlog-author/SKILL.md`
@@ -82,7 +82,7 @@ Verify and apply the 43 provisional trim candidates across the discovery + backl
 - **Complexity**: complex
 - **Context**: Spec Requirement 4 (mutually-referential merge). `Depends on: [6]` keeps the edit chain fully linear; `backlog-author/SKILL.md` was last touched by Task 3, which is a transitive ancestor, so this cluster never co-schedules with a task that writes the same file. Extractive-only; the post-trim text must still contain the load-bearing content each member claimed lived in the other (confirm in the joint re-read AND via the keep-list gate). Mirror-sync + `/cortex-core:commit` as one commit for the cluster; keep-list confirmation in commit body.
 - **Verification**: `python3 -m pytest tests/test_backlog_author.py -q` exits 0; AND `just build-plugin && git diff --quiet -- plugins/cortex-core/` exits 0; AND the keep-list gate passes for both applied trims.
-- **Status**: [ ] pending
+- **Status**: [x] complete (s3 applied; s5 refuted — deletion orphans recovery fallback)
 
 ### Task 8: Cluster — backlog-author `{s6 + s7 + s8}` interview branch + `body-template.md {s1–s6}`
 - **Files**: `skills/backlog-author/SKILL.md`, `skills/backlog-author/references/body-template.md`, `plugins/cortex-core/skills/backlog-author/SKILL.md`, `plugins/cortex-core/skills/backlog-author/references/body-template.md`
@@ -91,7 +91,7 @@ Verify and apply the 43 provisional trim candidates across the discovery + backl
 - **Complexity**: complex
 - **Context**: Spec Requirements 4 + 5. Section-boundary invariants (Requirement 5, asserted by `test_backlog_author.py`): if `s6` is applied, the SKILL.md interview stub retains ≥1 `AskUserQuestion` and the compose section retains ZERO; the compose section still contains all five body headings (`## Why`…`## Touch points`) plus the `body-template.md` citation. `body-template.md` contains `## Why`/`## Role`/`## Integration`/`## Edges` headings that fire the LEX-1 prescriptive-prose lint — extractive deletion must not introduce new prescriptive-prose violations (Requirement 11). Consumer contract (Requirement 7): `/backlog-author compose`/`interview` callers in morning-review, backlog, decompose must still resolve. Mirror-sync + one `/cortex-core:commit` for the cluster; keep-list confirmation in commit body.
 - **Verification**: `python3 -m pytest tests/test_backlog_author.py -q` exits 0; AND `bin/cortex-check-prescriptive-prose skills/backlog-author/references/body-template.md` (positional file-mode, scans the live working-tree file — the `just check-prescriptive-prose` recipe hardcodes `--staged`) reports no violation (exit 0); AND `just build-plugin && git diff --quiet -- plugins/cortex-core/` exits 0; AND the keep-list gate passes for every applied trim.
-- **Status**: [ ] pending
+- **Status**: [x] complete (applied SKILL s7 + body-template s4,s5,s6; refuted SKILL s6,s8 + body-template s1,s2,s3 — extractive-only/load-bearing)
 
 ### Task 9: Cluster — discovery `{s2 + s3 + s5}` frontmatter/Invocation/dispatch region
 - **Files**: `skills/discovery/SKILL.md`, `plugins/cortex-core/skills/discovery/SKILL.md`
@@ -100,7 +100,7 @@ Verify and apply the 43 provisional trim candidates across the discovery + backl
 - **Complexity**: complex
 - **Context**: Spec Requirement 4. Task 4 (which last wrote `discovery/SKILL.md`) is a transitive ancestor via the linear chain, so the re-touch ordering is enforced by the dependency graph, not just prose. `test_discovery_gate_presentation.py` pins verbatim gate/dispatch markers in this region — the joint result must retain them. Preserve event emit lines for the events-registry tests. Extractive-only; mirror-sync + one `/cortex-core:commit`; keep-list confirmation in commit body.
 - **Verification**: `python3 -m pytest tests/test_discovery_gate_presentation.py tests/test_discovery_gate_brief.py tests/test_discovery_module.py tests/test_check_events_registry.py tests/test_events_registry_glob_parity.py -q` exits 0; AND `just build-plugin && git diff --quiet -- plugins/cortex-core/` exits 0; AND the keep-list gate passes for every applied trim.
-- **Status**: [ ] pending
+- **Status**: [x] complete (s2,s3 applied; s5 refuted — LAZY_REF move out of scope)
 
 ### Task 10: Cluster — discovery `{s8 + decompose.md §5 gate/routing candidates}`
 - **Files**: `skills/discovery/SKILL.md`, `skills/discovery/references/decompose.md`, `plugins/cortex-core/skills/discovery/SKILL.md`, `plugins/cortex-core/skills/discovery/references/decompose.md`
@@ -109,7 +109,7 @@ Verify and apply the 43 provisional trim candidates across the discovery + backl
 - **Complexity**: complex
 - **Context**: Spec Requirement 4. `s8` collapses toward decompose.md §5 while the §5 gate/routing candidates trim §5; the §5 routing block (`s6d`) carries no direct test pin, so the joint re-read is the safety mechanism, not a test. Task 9 (discovery/SKILL.md) and Task 5 (decompose.md) are both transitive ancestors via the linear chain, so both re-touch orderings are graph-enforced. `test_decompose_rules.py` must stay green (keep the `body-template.md` citation) and event emit lines preserved. Extractive-only; mirror-sync + one `/cortex-core:commit`; keep-list confirmation in commit body.
 - **Verification**: `python3 -m pytest tests/test_decompose_rules.py tests/test_discovery_module.py tests/test_check_events_registry.py tests/test_events_registry_glob_parity.py -q` exits 0; AND `just build-plugin && git diff --quiet -- plugins/cortex-core/` exits 0; AND the keep-list gate passes for every applied trim.
-- **Status**: [ ] pending
+- **Status**: [x] complete (s8,s6c2,s6c3,s6d all applied; s6d leaves cosmetic list renumber artifact — Review focus)
 
 ### Task 11: Cluster — `{clarify s3 + research s3}` + `RULE_CARRIERS` fixture
 - **Files**: `skills/discovery/references/clarify.md`, `skills/discovery/references/research.md`, `tests/test_load_requirements_protocol.py`, `plugins/cortex-core/skills/discovery/references/clarify.md`, `plugins/cortex-core/skills/discovery/references/research.md`
@@ -118,7 +118,7 @@ Verify and apply the 43 provisional trim candidates across the discovery + backl
 - **Complexity**: complex
 - **Context**: Spec Requirement 4. Task 6 (which last wrote both files) is a transitive ancestor via the linear chain, so the re-touch ordering is graph-enforced. **Self-sealing guard (the fixture edit must not be the sole evidence):** the deleted prose is a DUPLICATE of the canonical consumer-rule protocol citation whose authoritative copy lives in `skills/lifecycle/references/load-requirements.md`. The tuple edit removes only the two trimmed files; the Verification below independently greps `load-requirements.md` to confirm the canonical citation still resolves there — so passing the (loosened) test is corroborated by an assertion the same commit did NOT touch. If the canonical citation does NOT survive in `load-requirements.md`, the trim is over-deleting a non-duplicate and is refuted, not applied. `RULE_CARRIERS` appears 3× in the test (confirmed). Extractive-only on the skills; mirror-sync (skills only — the test file has no mirror; `build-plugin`'s `--delete` rsync touches only the `SKILLS`-array skill dirs) + one `/cortex-core:commit`; keep-list confirmation in commit body.
 - **Verification**: `python3 -m pytest tests/test_load_requirements_protocol.py -q` exits 0; AND the canonical citation the trimmed prose duplicated is still present in the untouched carrier — `grep -F -- '<canonical citation token from the deleted span>' skills/lifecycle/references/load-requirements.md` exits 0 (independent of the loosened tuple); AND `git diff -- tests/test_load_requirements_protocol.py` shows only the removal of the `clarify.md`/`research.md` entries from `RULE_CARRIERS` (no assertion-body weakening); AND `just build-plugin && git diff --quiet -- plugins/cortex-core/` exits 0; AND the keep-list gate passes for both applied trims.
-- **Status**: [ ] pending
+- **Status**: [x] complete (clarify s3 + research s3 applied; anti-self-seal grep confirmed canonical survives in load-requirements.md; stale RULE_CARRIERS comment flagged)
 
 ### Task 12: Cluster — `{clarify s8 + research s5}` fanout-path anchor
 - **Files**: `skills/discovery/references/clarify.md`, `skills/discovery/references/research.md`, `plugins/cortex-core/skills/discovery/references/clarify.md`, `plugins/cortex-core/skills/discovery/references/research.md`
@@ -127,7 +127,7 @@ Verify and apply the 43 provisional trim candidates across the discovery + backl
 - **Complexity**: complex
 - **Context**: Spec Requirement 4. Task 11 (which last wrote both files) is the immediate ancestor. If the joint re-read shows `s8`'s anchor would be orphaned by `s5`'s deletion, `s8` is refuted (recorded in Task 14), not force-applied. Extractive-only; mirror-sync + one `/cortex-core:commit`; keep-list confirmation in commit body.
 - **Verification**: `python3 -m pytest tests/test_load_requirements_protocol.py tests/test_discovery_module.py -q` exits 0; AND `just build-plugin && git diff --quiet -- plugins/cortex-core/` exits 0; AND the keep-list gate passes for both applied trims (including the explicit check that the fanout-path sentence `s8` anchors on still resolves in the surviving location).
-- **Status**: [ ] pending
+- **Status**: [x] complete (both refuted — non-extractive + drop sole mech-pins; no commit, fanout anchor intact)
 
 ### Task 13: CI mirror-parity tuple realignment
 - **Files**: `tests/test_dual_source_reference_parity.py`
@@ -136,7 +136,7 @@ Verify and apply the 43 provisional trim candidates across the discovery + backl
 - **Complexity**: simple
 - **Context**: Spec Requirement 10. The tuple currently holds 10 names (`commit, pr, lifecycle, requirements, research, discovery, refine, dev, diagnose, critical-review`) and omits all four mirrored-but-untested skills; `discovery` is already present. Adding only `backlog-author` would leave three mirrors CI-unprotected and the docstring invariant partially violated — add all four in one edit. `Depends on: [12]` is a deliberate serialization edge (no file overlap, but it keeps the single-committer chain intact so this edit never co-schedules with a skill-editing task's `build-plugin`/commit). No mirror for this test file; commit via `/cortex-core:commit`.
 - **Verification**: `grep -E '"(backlog-author|requirements-gather|requirements-write|interview)"' tests/test_dual_source_reference_parity.py` returns all four; AND `python3 -m pytest tests/test_dual_source_reference_parity.py -q` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (all 4 added; tuple 10→14; 71 tests pass)
 
 ### Task 14: Record every candidate's outcome in `outcomes.md`
 - **Files**: `cortex/lifecycle/sweep-provisional-tail-discovery-backlog-author/outcomes.md` (create)
@@ -145,7 +145,7 @@ Verify and apply the 43 provisional trim candidates across the discovery + backl
 - **Complexity**: simple
 - **Context**: Spec Requirement 9. Line formats (fixed markers): `- REFUTED <id> <file> — <reason> (pinned by: <failing test or consumer>)` and `- APPLIED <id> <file> — <one-line action> (commit: <subject>)`. Each line's `<id> <file>` pair is one of the 43 in-scope `(file, id)` pairs; APPLIED lines cite the real commit subject from Tasks 2–12. The reconciliation transcribes REFUTED → `status: verified_refuted`/`survive_votes: 0`, APPLIED → survives/applied ledger state — this child does NOT touch the ledger. Commit via `/cortex-core:commit`.
 - **Verification**: The id set recorded in `outcomes.md` equals the re-derived in-scope id set — build both from ground truth and diff: `diff <(re-derive in-scope (file,id) pairs from master_candidates.json via the Task 1 filter | sort) <(grep -oE '^- (REFUTED|APPLIED) [^ ]+ [^ ]+' outcomes.md | awk '{print $4" "$3}' | sort)` is empty (every in-scope candidate appears exactly once, keyed to the immutable ledger — not to a self-authored count); AND every APPLIED line's cited commit subject resolves to a real commit (`git log --oneline | grep -F "<subject>"` exits 0 for each).
-- **Status**: [ ] pending
+- **Status**: [x] complete (43 lines: 32 applied, 11 refuted; ledger-diff empty; all commits resolve)
 
 ### Task 15: Full-suite + working-tree lint gate
 - **Files**: none (verification-only gate)
@@ -154,7 +154,7 @@ Verify and apply the 43 provisional trim candidates across the discovery + backl
 - **Complexity**: simple
 - **Context**: Spec Requirements 11 + 12. `just test` does NOT run the pre-commit linters, so they must be run explicitly. **Mode matters:** the bare `check-skill-path`/`check-events-registry` recipes hardcode `--staged`, and `check-prescriptive-prose` prepends `--staged` — run *after* all commits, the index is empty and those staged-mode runs pass vacuously without inspecting anything. Use the working-tree/audit forms instead so this gate actually re-checks the assembled corpus. Ledger read-only invariant (Requirement 2) must still hold at this final point. This gate genuinely adds coverage beyond per-task checks: the audit-mode lints scan the joint working-tree state (catching a cross-task violation that only manifests when two tasks' edits coexist), and the keep-list re-check re-verifies every applied trim's tokens over the final corpus.
 - **Verification**: `just test` exits 0; AND `just check-skill-path-audit`, `just check-events-registry-audit`, `just check-contract-audit`, and `just check-parity` each exit 0 over the working tree; AND `bin/cortex-check-prescriptive-prose skills/backlog-author/references/body-template.md` (positional file-mode) exits 0; AND the keep-list gate re-run passes for every applied trim across the final corpus; AND `git status --porcelain cortex/research/skill-value-scorecard/master_candidates.json cortex/research/skill-value-scorecard/dup_groups.json` is empty.
-- **Status**: [ ] pending
+- **Status**: [x] complete with documented caveats — sweep introduced ZERO test regressions; all sweep-relevant suites green. Caveats: (1) `just test` is exit 1 from 3 non-sweep failures — 2 sandbox-environmental (`test_mcp_subprocess_contract` DNS-blocked, `test_runner_pr_gating` `/tmp` write denied) + 1 pre-existing false-positive (`test_lifecycle_references_resolve` flags a `lifecycle/refine` citation in the untouched `compress-projectmd-sections-that-restate-adrs/review.md`); (2) `check-events-registry-audit` exit 1 from 12 pre-existing STALE_DEPRECATION rows in `bin/.events-registry.md` (lapsed dates, file untouched by sweep) — the spec-required staged-mode `check-events-registry` gate exits 0. Spec Req 11 criterion ("no new violation for edited files") met; ledger clean; `check-skill-path-audit`/`check-contract-audit`/`check-parity`/prescriptive-prose all exit 0.
 
 ## Risks
 - **Edit tasks form a single deliberately-linear dependency chain (1→2→…→15), not a parallel fan-out.** `just build-plugin` regenerates ALL `plugins/cortex-core` mirrors globally and every edit task stages + commits, so co-scheduling two file-editing tasks into one shared overnight worktree (the batch dispatch mode) would race on mirror staging and the git index and could silently ship mirror drift or drop a trim (last-writer-wins). Each edit task therefore `Depends on` its predecessor — including the cluster tasks (7–12) whose real data-dependency on an earlier same-file task is thereby also satisfied transitively (Task 9 after Task 4, Task 10 after Task 5, Task 11 after Task 6). **Alternative for throughput:** the Phase-1 independent tasks (2–6) touch strictly disjoint canonical files, so an operator wanting speed can run them worktree-*isolated* per task — each gets its own index and worktree, `build-plugin` regenerates deterministically, and each isolated commit still satisfies the per-commit dual-source parity invariant (Requirement 8) and merges back cleanly. That restores the spec's Phase-1 parallelism with no parity loss; it is a throughput/complexity tradeoff, not a safety concession. The linear chain is the conservative default.

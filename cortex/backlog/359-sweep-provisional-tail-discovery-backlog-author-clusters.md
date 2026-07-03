@@ -2,15 +2,18 @@
 schema_version: "1"
 uuid: f084a030-b273-41f8-b9f6-d269097b762c
 title: 'Sweep provisional tail: discovery + backlog-author clusters'
-status: backlog
+status: complete
 priority: low
 type: chore
 tags: ['skill-value-scorecard']
-areas: [skills]
+areas: ['skills']
 discovery_source: cortex/research/skill-value-scorecard/report.html
 created: 2026-07-02
-updated: 2026-07-02
+updated: 2026-07-03
 parent: "357"
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/sweep-provisional-tail-discovery-backlog-author/spec.md
 ---
 ## Why
 Child of #357's decomposition (the parent umbrella carrying the provisional tail of the skill-value audit). This child owns the discovery and backlog-author skill clusters: 43 provisional candidates (~7.0k weighted tokens) across backlog-author/SKILL.md (9), discovery/SKILL.md (7), discovery/references/research.md (7), discovery/references/clarify.md (6), backlog-author/references/body-template.md (6), discovery/references/decompose.md (6), and discovery/references/orchestrator-review.md (2). None were adversarially verified — the six decompose.md dedup reproposals are already excluded.

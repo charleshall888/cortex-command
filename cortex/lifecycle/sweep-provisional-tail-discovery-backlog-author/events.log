@@ -6,3 +6,25 @@
 {"ts": "2026-07-03T03:43:45Z", "event": "orchestrator_review", "feature": "sweep-provisional-tail-discovery-backlog-author", "phase": "plan", "verdict": "pass", "cycle": "1"}
 {"ts": "2026-07-03T04:58:46Z", "event": "plan_approved", "feature": "sweep-provisional-tail-discovery-backlog-author", "dispatch_choice": "trunk"}
 {"ts": "2026-07-03T04:58:46Z", "event": "phase_transition", "feature": "sweep-provisional-tail-discovery-backlog-author", "from": "plan", "to": "implement"}
+{"ts": "2026-07-03T04:59:51Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-discovery-backlog-author", "batch": 0, "tasks": [1]}
+{"ts": "2026-07-03T05:03:48Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-discovery-backlog-author", "batch": 1, "tasks": [2]}
+{"ts": "2026-07-03T05:07:29Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-discovery-backlog-author", "batch": 2, "tasks": [3]}
+{"ts": "2026-07-03T05:12:50Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-discovery-backlog-author", "batch": 3, "tasks": [4]}
+{"ts": "2026-07-03T05:17:31Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-discovery-backlog-author", "batch": 4, "tasks": [5]}
+{"ts": "2026-07-03T05:22:45Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-discovery-backlog-author", "batch": 5, "tasks": [6]}
+{"ts": "2026-07-03T05:36:59Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-discovery-backlog-author", "batch": 6, "tasks": [7]}
+{"ts": "2026-07-03T05:43:41Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-discovery-backlog-author", "batch": 7, "tasks": [8]}
+{"ts": "2026-07-03T05:52:17Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-discovery-backlog-author", "batch": 8, "tasks": [9]}
+{"ts": "2026-07-03T05:56:27Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-discovery-backlog-author", "batch": 9, "tasks": [10]}
+{"ts": "2026-07-03T06:04:22Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-discovery-backlog-author", "batch": 10, "tasks": [11]}
+{"ts": "2026-07-03T06:07:51Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-discovery-backlog-author", "batch": 11, "tasks": [12]}
+{"ts": "2026-07-03T06:12:20Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-discovery-backlog-author", "batch": 12, "tasks": [13]}
+{"ts": "2026-07-03T06:14:03Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-discovery-backlog-author", "batch": 13, "tasks": [14]}
+{"ts": "2026-07-03T06:17:27Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-discovery-backlog-author", "batch": 14, "tasks": [15]}
+{"ts": "2026-07-03T06:29:23Z", "event": "phase_transition", "feature": "sweep-provisional-tail-discovery-backlog-author", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-07-03T06:37:44Z", "event": "review_verdict", "feature": "sweep-provisional-tail-discovery-backlog-author", "verdict": "CHANGES_REQUESTED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-07-03T06:37:44Z", "event": "phase_transition", "feature": "sweep-provisional-tail-discovery-backlog-author", "from": "review", "to": "implement-rework"}
+{"ts": "2026-07-03T06:43:39Z", "event": "phase_transition", "feature": "sweep-provisional-tail-discovery-backlog-author", "from": "implement-rework", "to": "review"}
+{"ts": "2026-07-03T06:47:24Z", "event": "review_verdict", "feature": "sweep-provisional-tail-discovery-backlog-author", "verdict": "APPROVED", "cycle": 2, "requirements_drift": "none"}
+{"ts": "2026-07-03T06:47:24Z", "event": "phase_transition", "feature": "sweep-provisional-tail-discovery-backlog-author", "from": "review", "to": "complete"}
+{"ts": "2026-07-03T06:53:40Z", "event": "feature_complete", "feature": "sweep-provisional-tail-discovery-backlog-author", "tasks_total": 15, "rework_cycles": 1, "merge_anchor": "merge"}
