@@ -17,7 +17,9 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 BASELINE_PATH = REPO_ROOT / "tests" / "fixtures" / "critical-review" / "baseline-stability.json"
-SKILL_MD_PATH = REPO_ROOT / "skills" / "critical-review" / "SKILL.md"
+CRITICAL_REVIEW_REFS = REPO_ROOT / "skills" / "critical-review" / "references"
+SYNTHESIZER_PROMPT_PATH = CRITICAL_REVIEW_REFS / "synthesizer-prompt.md"
+A_TO_B_RUBRIC_PATH = CRITICAL_REVIEW_REFS / "a-to-b-downgrade-rubric.md"
 
 # Stub artifact used to ground the synthesizer prompt's `{artifact_path}`/`{artifact_sha256}`
 # references and the reviewer Read directive.
@@ -45,12 +47,17 @@ decide whether to retry idempotently.
 # reference a concrete path + sha256 for the new `{artifact_path}` /
 # `{artifact_sha256}` placeholders (replaces the prior inline-content
 # placeholder per #188).
-_stub_artifact_tmpfile = tempfile.NamedTemporaryFile(
-    mode="w", suffix=".md", delete=False, encoding="utf-8"
-)
-_stub_artifact_tmpfile.write(STUB_ARTIFACT)
-_stub_artifact_tmpfile.close()
-STUB_ARTIFACT_PATH = _stub_artifact_tmpfile.name
+#
+# The stub lives OUTSIDE the spawned `claude -p` subprocess's default workspace,
+# so the synthesizer's Read of it would be permission-denied (SYNTH_READ_FAILED)
+# and synthesis would abort before the rubric ever fires. We therefore grant the
+# subprocess read access to the stub's directory via `--add-dir` on every
+# synthesizer-only invocation. To keep that grant tight, the stub gets its OWN
+# throwaway directory (mkdtemp) holding nothing else — `--add-dir` then exposes a
+# single isolated dir rather than the shared system temp root.
+STUB_ARTIFACT_DIR = tempfile.mkdtemp(prefix="cr-classifier-stub-")
+STUB_ARTIFACT_PATH = str(Path(STUB_ARTIFACT_DIR) / "artifact.md")
+Path(STUB_ARTIFACT_PATH).write_text(STUB_ARTIFACT, encoding="utf-8")
 STUB_ARTIFACT_SHA256 = hashlib.sha256(STUB_ARTIFACT.encode("utf-8")).hexdigest()
 
 
@@ -208,22 +215,36 @@ def test_weak_argument_downgrade():
 
 
 def _extract_synthesizer_template():
-    """Extract the Step 2d Opus Synthesis prompt template from SKILL.md.
+    """Assemble the Step 2d Opus Synthesis prompt template the way the dispatch
+    path does.
 
-    Uses header-anchored search (NOT line numbers — line numbers shift after edits).
-    Finds the `### Step 2d: Opus Synthesis` heading, then the first `---` line
-    after it (start of template), then the next `---` line (end of template).
+    Pre-#360 this template lived inline in SKILL.md between `---` delimiters and
+    was extracted from there; it has since been factored into its own reference
+    file, so this helper now mirrors the SKILL.md Step 2d dispatch (which Reads
+    `references/synthesizer-prompt.md` verbatim and substitutes `{a_to_b_rubric}`
+    with the full content of `references/a-to-b-downgrade-rubric.md` before
+    dispatch). We (1) read the canonical synthesizer prompt, (2) take the template
+    body — everything after the first `---` line that separates the doc's usage
+    note from the prompt itself — and (3) inline the A→B downgrade rubric into the
+    `{a_to_b_rubric}` placeholder. The remaining placeholders (`{artifact_path}`,
+    `{artifact_sha256}`, `{all reviewer findings ...}`) are substituted by each
+    caller with its own stub artifact and reviewer envelope.
     """
-    skill_md = SKILL_MD_PATH.read_text()
-    header_match = re.search(r'^### Step 2d: Opus Synthesis\s*$', skill_md, re.MULTILINE)
-    assert header_match, "Step 2d: Opus Synthesis header not found in SKILL.md"
-    after_header = skill_md[header_match.end():]
-    delims = list(re.finditer(r'^---\s*$', after_header, re.MULTILINE))
-    assert len(delims) >= 2, (
-        "expected at least 2 '---' delimiters after Step 2d header; "
-        f"found {len(delims)}"
+    prompt_doc = SYNTHESIZER_PROMPT_PATH.read_text()
+    delim = re.search(r'^---\s*$', prompt_doc, re.MULTILINE)
+    assert delim, (
+        "expected a '---' delimiter separating the usage note from the template "
+        f"body in {SYNTHESIZER_PROMPT_PATH}"
     )
-    template = after_header[delims[0].end():delims[1].start()].strip("\n")
+    template = prompt_doc[delim.end():].strip("\n")
+
+    rubric = A_TO_B_RUBRIC_PATH.read_text().strip("\n")
+    assert rubric, f"A→B downgrade rubric is empty at {A_TO_B_RUBRIC_PATH}"
+    template = template.replace("{a_to_b_rubric}", rubric)
+    assert "{a_to_b_rubric}" not in template, (
+        "rubric inlining failed: {a_to_b_rubric} placeholder still present after "
+        "substitution — the dispatch path inlines it, so the test must too"
+    )
     return template
 
 
@@ -290,11 +311,15 @@ def test_synthesizer_rubric_deterministic():
     # would silently no-op because the actual placeholders include descriptive
     # clauses (em-dash for the long form). str.format() cannot be used because
     # the Output Format section contains literal JSON braces.
+    # Substitute ALL occurrences (not count=1): the canonical synthesizer prompt
+    # references {artifact_path}/{artifact_sha256} in both the Artifact block (for
+    # the initial Read) and the per-finding evidence re-validation instruction, so
+    # a single-substitution would leave a stray placeholder and desync the prompt.
     assembled = re.sub(
-        r'\{artifact_path\}', lambda _m: STUB_ARTIFACT_PATH, template, count=1
+        r'\{artifact_path\}', lambda _m: STUB_ARTIFACT_PATH, template
     )
     assembled = re.sub(
-        r'\{artifact_sha256\}', lambda _m: STUB_ARTIFACT_SHA256, assembled, count=1
+        r'\{artifact_sha256\}', lambda _m: STUB_ARTIFACT_SHA256, assembled
     )
     assembled = re.sub(
         r'\{all reviewer findings[^}]*\}', lambda _m: reviewer_json, assembled, count=1
@@ -314,7 +339,7 @@ def test_synthesizer_rubric_deterministic():
     # Invoke claude -p directly with the assembled prompt — bypasses reviewer
     # dispatch entirely. Modeled after _run_critical_review above.
     proc = subprocess.run(
-        ["claude", "-p", assembled, "--model", "opus"],
+        ["claude", "-p", assembled, "--model", "opus", "--add-dir", STUB_ARTIFACT_DIR],
         capture_output=True, text=True, timeout=600,
     )
     stdout = proc.stdout
@@ -428,11 +453,15 @@ def test_synthesizer_trigger_2_restates() -> None:
     }
     reviewer_json = json.dumps(reviewer_envelope, indent=2)
 
+    # Substitute ALL occurrences (not count=1): the canonical synthesizer prompt
+    # references {artifact_path}/{artifact_sha256} in both the Artifact block (for
+    # the initial Read) and the per-finding evidence re-validation instruction, so
+    # a single-substitution would leave a stray placeholder and desync the prompt.
     assembled = re.sub(
-        r'\{artifact_path\}', lambda _m: STUB_ARTIFACT_PATH, template, count=1
+        r'\{artifact_path\}', lambda _m: STUB_ARTIFACT_PATH, template
     )
     assembled = re.sub(
-        r'\{artifact_sha256\}', lambda _m: STUB_ARTIFACT_SHA256, assembled, count=1
+        r'\{artifact_sha256\}', lambda _m: STUB_ARTIFACT_SHA256, assembled
     )
     assembled = re.sub(
         r'\{all reviewer findings[^}]*\}', lambda _m: reviewer_json, assembled, count=1
@@ -455,7 +484,7 @@ def test_synthesizer_trigger_2_restates() -> None:
     results: list[tuple[bool, str]] = []
     for attempt_idx in range(3):
         proc = subprocess.run(
-            ["claude", "-p", assembled, "--model", "opus"],
+            ["claude", "-p", assembled, "--model", "opus", "--add-dir", STUB_ARTIFACT_DIR],
             capture_output=True, text=True, timeout=600,
         )
         if proc.returncode != 0:
@@ -631,11 +660,15 @@ def test_synthesizer_trigger_3_adjacent_no_straddle() -> None:
     )
     reviewer_json = json.dumps(reviewer_envelope, indent=2)
 
+    # Substitute ALL occurrences (not count=1): the canonical synthesizer prompt
+    # references {artifact_path}/{artifact_sha256} in both the Artifact block (for
+    # the initial Read) and the per-finding evidence re-validation instruction, so
+    # a single-substitution would leave a stray placeholder and desync the prompt.
     assembled = re.sub(
-        r'\{artifact_path\}', lambda _m: STUB_ARTIFACT_PATH, template, count=1
+        r'\{artifact_path\}', lambda _m: STUB_ARTIFACT_PATH, template
     )
     assembled = re.sub(
-        r'\{artifact_sha256\}', lambda _m: STUB_ARTIFACT_SHA256, assembled, count=1
+        r'\{artifact_sha256\}', lambda _m: STUB_ARTIFACT_SHA256, assembled
     )
     assembled = re.sub(
         r'\{all reviewer findings[^}]*\}', lambda _m: reviewer_json, assembled, count=1
@@ -657,7 +690,7 @@ def test_synthesizer_trigger_3_adjacent_no_straddle() -> None:
     results: list[tuple[bool, str]] = []
     for attempt_idx in range(3):
         proc = subprocess.run(
-            ["claude", "-p", assembled, "--model", "opus"],
+            ["claude", "-p", assembled, "--model", "opus", "--add-dir", STUB_ARTIFACT_DIR],
             capture_output=True, text=True, timeout=600,
         )
         if proc.returncode != 0:
@@ -775,11 +808,15 @@ def test_synthesizer_trigger_3_adjacent_with_straddle() -> None:
     ), "shared fix_invalidation_argument must be byte-identical across the pair"
     reviewer_json = json.dumps(reviewer_envelope, indent=2)
 
+    # Substitute ALL occurrences (not count=1): the canonical synthesizer prompt
+    # references {artifact_path}/{artifact_sha256} in both the Artifact block (for
+    # the initial Read) and the per-finding evidence re-validation instruction, so
+    # a single-substitution would leave a stray placeholder and desync the prompt.
     assembled = re.sub(
-        r'\{artifact_path\}', lambda _m: STUB_ARTIFACT_PATH, template, count=1
+        r'\{artifact_path\}', lambda _m: STUB_ARTIFACT_PATH, template
     )
     assembled = re.sub(
-        r'\{artifact_sha256\}', lambda _m: STUB_ARTIFACT_SHA256, assembled, count=1
+        r'\{artifact_sha256\}', lambda _m: STUB_ARTIFACT_SHA256, assembled
     )
     assembled = re.sub(
         r'\{all reviewer findings[^}]*\}', lambda _m: reviewer_json, assembled, count=1
@@ -798,7 +835,7 @@ def test_synthesizer_trigger_3_adjacent_with_straddle() -> None:
     results: list[tuple[bool, str]] = []
     for attempt_idx in range(3):
         proc = subprocess.run(
-            ["claude", "-p", assembled, "--model", "opus"],
+            ["claude", "-p", assembled, "--model", "opus", "--add-dir", STUB_ARTIFACT_DIR],
             capture_output=True, text=True, timeout=600,
         )
         if proc.returncode != 0:
@@ -955,11 +992,15 @@ def test_synthesizer_trigger_4_vague() -> None:
     }
     reviewer_json = json.dumps(reviewer_envelope, indent=2)
 
+    # Substitute ALL occurrences (not count=1): the canonical synthesizer prompt
+    # references {artifact_path}/{artifact_sha256} in both the Artifact block (for
+    # the initial Read) and the per-finding evidence re-validation instruction, so
+    # a single-substitution would leave a stray placeholder and desync the prompt.
     assembled = re.sub(
-        r'\{artifact_path\}', lambda _m: STUB_ARTIFACT_PATH, template, count=1
+        r'\{artifact_path\}', lambda _m: STUB_ARTIFACT_PATH, template
     )
     assembled = re.sub(
-        r'\{artifact_sha256\}', lambda _m: STUB_ARTIFACT_SHA256, assembled, count=1
+        r'\{artifact_sha256\}', lambda _m: STUB_ARTIFACT_SHA256, assembled
     )
     assembled = re.sub(
         r'\{all reviewer findings[^}]*\}', lambda _m: reviewer_json, assembled, count=1
@@ -981,7 +1022,7 @@ def test_synthesizer_trigger_4_vague() -> None:
     results: list[tuple[bool, str]] = []
     for attempt_idx in range(3):
         proc = subprocess.run(
-            ["claude", "-p", assembled, "--model", "opus"],
+            ["claude", "-p", assembled, "--model", "opus", "--add-dir", STUB_ARTIFACT_DIR],
             capture_output=True, text=True, timeout=600,
         )
         if proc.returncode != 0:
