@@ -12,7 +12,7 @@ Resolve `{feature}` from `$LIFECYCLE_SESSION_ID` against `cortex/lifecycle/*/.se
 FEATURE=$(cortex-critical-review-resolve-feature "$LIFECYCLE_SESSION_ID")
 ```
 
-The `cortex-critical-review-resolve-feature` console-script prints the resolved feature slug on stdout (exit 0) when exactly one `.session` file matches. On zero matches or multiple matches it exits non-zero and writes a diagnostic to stderr; the skill must propagate the failure:
+Route on the console-script's exit code; propagate any failure:
 
 - **One match** (exit 0): `$FEATURE` = resolved slug; proceed to atomic write.
 - **Zero matches** (non-zero exit, or no repo root): ad-hoc mode — if B-class findings exist, emit `Note: B-class residue not written — no active lifecycle context.`; skip write.
@@ -20,7 +20,7 @@ The `cortex-critical-review-resolve-feature` console-script prints the resolved 
 
 ## Atomic Write
 
-Only when `{feature}` resolved AND ≥1 B-class finding — invoke the `cortex-critical-review-write-residue` console-script, which performs a tempfile + `os.replace` atomic rename to `cortex/lifecycle/{feature}/critical-review-residue.json`. The payload JSON is piped in via stdin:
+Only when `{feature}` resolved AND ≥1 B-class finding — invoke the `cortex-critical-review-write-residue` console-script, writing `cortex/lifecycle/{feature}/critical-review-residue.json`. The payload JSON is piped in via stdin:
 
 ```bash
 cortex-critical-review-write-residue --feature "$FEATURE" <<< "$PAYLOAD_JSON"
