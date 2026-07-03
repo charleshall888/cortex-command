@@ -32,7 +32,7 @@ Apply the spec's risk-first-then-fat-first edit program to the core skill conste
 - **Complexity**: simple
 - **Context**: refine SKILL.md's Step 5 block (`skills/refine/SKILL.md:142-149`) currently resolves only `criticality-matrix` at `:146` (`${CLAUDE_SKILL_DIR}/../lifecycle/references/criticality-matrix.md`); `orchestrator-review` and `critical-review-gate` are unresolved. Add an adaptation bullet mirroring the `:146` pattern that resolves both as `${CLAUDE_SKILL_DIR}/../lifecycle/references/{orchestrator-review,critical-review-gate}.md` and states specify.md's "propagated `<target>` path" phrasing binds to these. In `skills/refine/references/specify.md`, lines `:149` (orchestrator-review), `:153` (criticality-matrix), `:164` (critical-review-gate) each say "use the body-resolved absolute path from lifecycle SKILL.md's Reference-path propagation manifest" — reword to "the propagated `<target>` path" (target-neutral, caller-agnostic). Honor ADR-0009: no bare-relative or `../` paths introduced in the reference file itself — resolution stays in the body. `test_critical_review_gate_nonlocal_failsafe` pins the specify.md §3b heading + backend-read ordering (±35-line tolerance via kept-pauses parity) — keep edits local and do not move the §3b heading.
 - **Verification**: `grep -c '\${CLAUDE_SKILL_DIR}/../lifecycle/references/orchestrator-review.md' skills/refine/SKILL.md` ≥ 1 AND `grep -c '\${CLAUDE_SKILL_DIR}/../lifecycle/references/critical-review-gate.md' skills/refine/SKILL.md` ≥ 1 AND `grep -c 'propagation manifest' skills/refine/references/specify.md` = 0 — pass if all three hold.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Fix Bug 2 — discovery research.md:104 path (R2)
 - **Files**: `skills/discovery/references/research.md`
@@ -41,7 +41,7 @@ Apply the spec's risk-first-then-fat-first edit program to the core skill conste
 - **Complexity**: simple
 - **Context**: `skills/discovery/references/research.md:104` reads "read and follow `references/orchestrator-review.md` for the `research` phase" — a CWD-relative path. Discovery has its OWN `skills/discovery/references/orchestrator-review.md` (a delta file), but discovery SKILL.md's sibling-path-propagation section (`skills/discovery/SKILL.md:63-68`) resolves the **orchestrator-review** token to the lifecycle canonical (`${CLAUDE_SKILL_DIR}/../lifecycle/references/orchestrator-review.md`) at `:67`. Decide which the `:104` consumer intends: if the lifecycle canonical, reword `:104` to "the propagated **orchestrator-review** path" matching the SKILL.md manifest (same shape as Task 1's specify.md reword); if genuinely discovery's own delta file, keep `references/orchestrator-review.md` but add a one-line rationale comment that it intentionally targets discovery's local delta, not the propagated canonical. Same failure class as Bug 1, smaller blast radius. ADR-0009 applies.
 - **Verification**: `grep -n 'references/orchestrator-review.md' skills/discovery/references/research.md` shows either zero bare-relative occurrences at `:104`, OR the line is accompanied by a rationale comment — pass if a bare unqualified `references/…` path no longer stands unexplained at `:104`.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Phase 1 gate — regenerate mirrors, test, commit
 - **Files**: `plugins/cortex-core/` (regenerated), `cortex/lifecycle/skill-suite-dedup/`

@@ -146,11 +146,11 @@ None considered.
 
 ### 3a. Orchestrator Review
 
-Before presenting the artifact to the user, read and follow the orchestrator-review protocol (use the body-resolved absolute path from lifecycle SKILL.md's Reference-path propagation manifest: the **orchestrator-review** target) for the `specify` phase. The orchestrator review must pass before proceeding to user approval.
+Before presenting the artifact to the user, read and follow the orchestrator-review protocol (use the propagated `<target>` path — the **orchestrator-review** target) for the `specify` phase. The orchestrator review must pass before proceeding to user approval.
 
 ### 3b. Critical Review
 
-After orchestrator review passes, read the active tier and criticality (rules: criticality-matrix.md §Reading lifecycle state — use the body-resolved absolute path from lifecycle SKILL.md's Reference-path propagation manifest):
+After orchestrator review passes, read the active tier and criticality (rules: criticality-matrix.md §Reading lifecycle state — use the propagated `<target>` path):
 
 - `cortex-lifecycle-state --feature {feature} --field tier`
 - `cortex-lifecycle-state --feature {feature} --field criticality`
@@ -161,7 +161,7 @@ Also resolve the active backlog backend once via `` `cortex-read-backlog-backend
 
 **Non-local seed-tier fail-safe**: when the resolved backend ≠ `cortex-backlog` AND the run condition above did not fire because `tier = simple` AND `cortex/lifecycle/{feature}/research.md` exists, invoke the `critical-review` skill with the spec artifact and present the synthesis before spec approval, rather than skipping. (Rationale — why the `simple` seed is un-reconciled and why the local `cortex-backlog` path is exempt — lives in critical-review-gate.md's Non-Local Seed-Tier Rule.)
 
-Otherwise, read and follow the critical-review gate protocol (use the body-resolved absolute path from lifecycle SKILL.md's Reference-path propagation manifest: the **critical-review-gate** target) for the `specify` phase.
+Otherwise, read and follow the critical-review gate protocol (use the propagated `<target>` path — the **critical-review-gate** target) for the `specify` phase.
 
 ### 4. User Approval
 

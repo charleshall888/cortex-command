@@ -101,6 +101,7 @@ Combine findings into `cortex/research/{topic}/research.md`:
 
 ### 4a. Orchestrator Review
 
+<!-- `references/orchestrator-review.md` here intentionally targets discovery's OWN local delta file (skills/discovery/references/orchestrator-review.md), NOT the propagated lifecycle canonical. The delta supplies the discovery-specific Post-Research Checklist and fix-agent path/persona substitutions, and itself reads the lifecycle canonical via SKILL.md's orchestrator-review propagation. It is discovery's own sibling reference, so it is not carried in SKILL.md's lifecycle-sibling manifest (ADR-0009). -->
 Before committing, read and follow `references/orchestrator-review.md` for the `research` phase. The orchestrator review must pass before proceeding to §4b (Critical Review).
 
 ### 4b. Critical Review
