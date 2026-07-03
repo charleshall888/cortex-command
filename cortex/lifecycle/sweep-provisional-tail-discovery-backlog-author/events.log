@@ -1,0 +1,8 @@
+{"schema_version": 1, "ts": "2026-07-03T02:34:22Z", "event": "lifecycle_start", "feature": "sweep-provisional-tail-discovery-backlog-author", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-07-03T02:37:13Z", "event": "clarify_critic", "feature": "sweep-provisional-tail-discovery-backlog-author", "parent_epic_loaded": false, "findings_count": 4, "dispositions": {"apply": 0, "dismiss": 4, "ask": 0}, "applied_fixes_count": 0, "dismissals_count": 4, "status": "ok"}
+{"ts": "2026-07-03T02:52:24Z", "event": "complexity_override", "feature": "sweep-provisional-tail-discovery-backlog-author", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-07-03T02:52:24Z", "event": "criticality_override", "feature": "sweep-provisional-tail-discovery-backlog-author", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-07-03T03:35:14Z", "event": "spec_approved", "feature": "sweep-provisional-tail-discovery-backlog-author"}
+{"ts": "2026-07-03T03:43:45Z", "event": "orchestrator_review", "feature": "sweep-provisional-tail-discovery-backlog-author", "phase": "plan", "verdict": "pass", "cycle": "1"}
+{"ts": "2026-07-03T04:58:46Z", "event": "plan_approved", "feature": "sweep-provisional-tail-discovery-backlog-author", "dispatch_choice": "trunk"}
+{"ts": "2026-07-03T04:58:46Z", "event": "phase_transition", "feature": "sweep-provisional-tail-discovery-backlog-author", "from": "plan", "to": "implement"}
