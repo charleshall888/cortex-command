@@ -1,10 +1,10 @@
 # Architecture Decision Records (ADRs)
 
-This directory holds the project's Architecture Decision Records. ADRs are short, immutable notes that capture a load-bearing design decision, the context that forced it, and the alternatives that were rejected. The format and posture below are inlined here so that skill authors, reviewers, and overnight runs do not need to fetch anything external to apply them.
+This directory holds the project's Architecture Decision Records.
 
 ## Purpose
 
-The purpose of `cortex/adr/` is to give the project a stable record of decisions that are **hard to reverse**, **surprising without context**, and **the result of a real trade-off** — so that future contributors (human or agentic) can act on the decision without re-deriving it, and can challenge it on the original grounds rather than rediscovering them from scratch.
+The purpose of `cortex/adr/` is to give the project a stable record of hard-to-reverse decisions — so that future contributors (human or agentic) can act on the decision without re-deriving it, and can challenge it on the original grounds rather than rediscovering them from scratch.
 
 The format is adapted from Matt Pocock's `ADR-FORMAT.md` discovery work; the load-bearing parts (three-criteria gate, frontmatter shape, consumer-rule discipline) are inlined in this README so the policy is self-contained.
 
@@ -39,7 +39,7 @@ superseded_by: NNNN  # optional; required only when status is "superseded"
 
 Fields:
 
-- `status` — one of `proposed`, `accepted`, `deprecated`, or `superseded`. New ADRs land as `proposed` and promote to `accepted` at PR merge (see promotion gate below). `deprecated` marks an ADR whose decision no longer applies but is preserved for history. `superseded` marks an ADR replaced by a newer one and **must** be paired with `superseded_by: NNNN` pointing at the replacement's four-digit number.
+- `status` — one of `proposed`, `accepted`, `deprecated`, or `superseded`. New ADRs land as `proposed` (see promotion gate below). `deprecated` marks an ADR whose decision no longer applies but is preserved for history. `superseded` marks an ADR replaced by a newer one and **must** be paired with `superseded_by: NNNN` pointing at the replacement's four-digit number.
 - `superseded_by` — optional; the zero-padded four-digit number of the superseding ADR. Omit unless `status: superseded`.
 
 No `area:` field is defined. Area tagging was considered and deliberately not adopted (no consumer); do not invent one ad hoc.
@@ -52,19 +52,12 @@ No `area:` field is defined. Area tagging was considered and deliberately not ad
 
 ADRs are the canonical home for the decisions they record. Other documents — `cortex/requirements/project.md`, skill READMEs, spec phases, research notes — **must not** restate the decision body. They link to the ADR by number (e.g., `→ ADR-0001`) and let the ADR carry the substance.
 
-The discipline runs in both directions:
-
-- **Source documents back-pointer to the ADR**, rather than inlining the decision narrative. When a passage of prose elsewhere in the repo would otherwise re-derive an ADR's rationale, replace that passage with a one-line back-pointer.
-- **ADRs do not restate context owned by other documents.** An ADR may quote a short fragment of project requirements or a skill contract for grounding, but the bulk of the surrounding context lives in its owning document and is referenced, not copied.
-
-The reason is maintenance cost: duplicated decision text drifts. A single canonical home for each decision keeps drift out of the system and makes "what is the current call?" a one-lookup question.
+The discipline runs in both directions: source documents replace re-derived rationale with a one-line back-pointer, and ADRs reference — rather than copy — context owned by other documents. A single canonical home per decision keeps drift out of the system and makes "what is the current call?" a one-lookup question.
 
 ## Consumer-rule prose
 
 Skills, hooks, and overnight-runner code that touch ADR content fall into three behavioral categories. The three behaviors below are the consumer contract for ADRs:
 
 - **MUST automatic.** A skill or hook **MUST automatic**-ally honor any constraint that an `accepted` ADR encodes when the skill operates inside the scope the ADR governs. If ADR-0002 says the project ships as a CLI plus plugins (no symlink deploy), a release skill must not propose a symlink-deploy path; honoring the ADR is non-optional and requires no human prompt.
-- **MUST NOT automatic.** A skill **MUST NOT automatic**-ally treat a `proposed` or `deprecated` ADR as binding. `proposed` ADRs are still under review and may be rejected; `deprecated` ADRs no longer reflect the current decision. Acting on either without human confirmation would propagate stale or unratified guidance into downstream artifacts.
-- **SHOULD surface.** A skill **SHOULD surface** the relevant ADR(s) to the user at decision points the ADR speaks to — by linking the ADR number in spec output, plan output, or review output — so the human can confirm the ADR still applies before the work proceeds. Surfacing is the observability hook that makes the other two rules auditable from the approval surface.
-
-Together: automatic compliance for accepted decisions, automatic abstention from non-accepted ones, visible surfacing so the discipline is reviewable.
+- **MUST NOT automatic.** A skill **MUST NOT automatic**-ally treat a `proposed` or `deprecated` ADR as binding. `proposed` ADRs are still under review and may be rejected; `deprecated` ADRs no longer reflect the current decision.
+- **SHOULD surface.** A skill **SHOULD surface** the relevant ADR(s) to the user at decision points the ADR speaks to — by linking the ADR number in spec output, plan output, or review output — so the human can confirm the ADR still applies before the work proceeds.
