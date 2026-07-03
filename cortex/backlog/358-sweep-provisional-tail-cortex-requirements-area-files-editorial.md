@@ -2,14 +2,14 @@
 schema_version: "1"
 uuid: 3b24f21f-de4f-46e4-b1f3-bd40d613cb24
 title: 'Sweep provisional tail: cortex/requirements area files (editorial)'
-status: refined
+status: complete
 priority: low
 type: chore
 tags: ['skill-value-scorecard']
 areas: ['docs']
 discovery_source: cortex/research/skill-value-scorecard/report.html
 created: 2026-07-02
-updated: 2026-07-02
+updated: 2026-07-03
 parent: "357"
 complexity: complex
 criticality: medium

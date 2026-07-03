@@ -2,7 +2,7 @@
 feature: sweep-provisional-tail-cortex-requirements-area
 parent_backlog_uuid: 3b24f21f-de4f-46e4-b1f3-bd40d613cb24
 parent_backlog_id: 358
-artifacts: ["research", "spec", "plan"]
+artifacts: ["research", "spec", "plan", "review"]
 tags: [skill-value-scorecard]
 created: 2026-07-02
 updated: 2026-07-02

@@ -5,3 +5,8 @@
 {"ts": "2026-07-03T03:18:42Z", "event": "spec_approved", "feature": "sweep-provisional-tail-cortex-requirements-area"}
 {"ts": "2026-07-03T03:42:33Z", "event": "plan_approved", "feature": "sweep-provisional-tail-cortex-requirements-area", "dispatch_choice": "trunk", "oq3_decision": "direct-write"}
 {"ts": "2026-07-03T03:42:33Z", "event": "phase_transition", "feature": "sweep-provisional-tail-cortex-requirements-area", "from": "plan", "to": "implement"}
+{"ts": "2026-07-03T03:47:37Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-cortex-requirements-area", "batch": 1, "tasks": ["2a", "2b", "2c", "2d", "2e"]}
+{"ts": "2026-07-03T04:42:43Z", "event": "phase_transition", "feature": "sweep-provisional-tail-cortex-requirements-area", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-07-03T04:49:03Z", "event": "review_verdict", "feature": "sweep-provisional-tail-cortex-requirements-area", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-07-03T04:49:14Z", "event": "phase_transition", "feature": "sweep-provisional-tail-cortex-requirements-area", "from": "review", "to": "complete"}
+{"ts": "2026-07-03T04:58:24Z", "event": "feature_complete", "feature": "sweep-provisional-tail-cortex-requirements-area", "tasks_total": 15, "rework_cycles": 0, "merge_anchor": "merge"}
