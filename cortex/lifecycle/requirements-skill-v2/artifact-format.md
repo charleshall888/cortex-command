@@ -42,7 +42,7 @@ Required H2 sections, in order:
 7. `## Open Questions` — Unresolved questions specific to this area; `- None` when nothing is open.
 
 Structural rules:
-- Required H2s are the seven above, in order. Ad-hoc additional H2s are discouraged — they break the area-doc shape contract that consumers rely on. (Note: live `observability.md` carries one extra H2 `## Install-mutation invocations` as a documented exception; Task 24 audit may resolve it.)
+- Required H2s are the seven above, in order. Ad-hoc additional H2s are discouraged — they break the area-doc shape contract that consumers rely on. (The former `observability.md` extra H2 `## Install-mutation invocations` was relocated to `docs/internals/auto-update.md` under ticket 362, resolving the exception; all live area docs now conform to the seven-H2 contract.)
 - The Parent backlink is the only required navigation element. Area docs do NOT contain "When to Load" guidance — that belongs in the parent's `## Conditional Loading` trigger table.
 - Area docs are loaded conditionally; no token budget is enforced. Keep capability count proportional to real surface area.
 - Anchor preservation rule applies: section names are referenced by skill prose; preserve verbatim across rewrites.

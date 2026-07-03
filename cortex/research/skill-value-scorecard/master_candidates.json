@@ -7459,11 +7459,20 @@
   ],
   "file": "cortex/requirements/observability.md",
   "slug": "cortex_requirements_observability",
-  "status": "unverified",
-  "votes": 0,
-  "survive_votes": 0,
+  "status": "verified_survives",
+  "votes": 1,
+  "survive_votes": 1,
   "needs_user_input": false,
-  "verdict_summaries": [],
+  "verdict_summaries": [
+   {
+    "lens": "relocation-evaluation",
+    "survives": true,
+    "confidence": "high",
+    "revised_category": "RELOCATED (applied)",
+    "revised_claim": "The '## Install-mutation invocations' H2 was relocated verbatim from cortex/requirements/observability.md to docs/internals/auto-update.md (new H2 before '## Residual risks') under ticket 362. observability.md now conforms to the seven-H2 area-doc contract; the maintainer contract is preserved under the doc CLAUDE.md designates as owner of the auto-update flow.",
+    "evidence": "No test/hook greps the heading (grep across tests/, cortex_command/, hooks/ returned zero). install_guard.py's docstring independently states the opt-in convention, so the section is the audit/classification companion to a code-owned convention. artifact-format.md:45 exception note updated to record the resolution. Only citers are archived non-runtime research artifacts. Deferral in sweep-provisional-tail-cortex-requirements-area was out-of-editorial-scope (5-file trim), not a content judgment against relocation."
+   }
+  ],
   "mech_pins": [
    "`_dispatch_upgrade`->cortex_command/__init__.py",
    "`_dispatch_upgrade`->cortex_command/cli.py",

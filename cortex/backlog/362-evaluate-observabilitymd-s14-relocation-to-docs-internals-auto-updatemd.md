@@ -2,11 +2,12 @@
 schema_version: "1"
 uuid: c75d97ba-dc70-4fcd-89b0-15150a6a801a
 title: Evaluate observability.md s14 relocation to docs/internals/auto-update.md
-status: backlog
+status: complete
 priority: low
 type: chore
 created: 2026-07-03
 updated: 2026-07-03
+resolution: Relocated the `## Install-mutation invocations` section from cortex/requirements/observability.md to docs/internals/auto-update.md; updated the artifact-format.md:45 exception note and marked master_candidates.json s14 verified_survives. No runtime citers; no test greps the heading.
 parent: "357"
 ---
 ## Why
