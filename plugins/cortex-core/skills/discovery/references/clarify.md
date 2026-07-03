@@ -25,7 +25,14 @@ This is a read path, so it folds to **two arms**, not the three arms of decompos
 
 ### 4. Confidence Assessment
 
-Assess confidence across four ideation-alignment dimensions: **Topic aim**, **Domain**, **Novelty**, and **Requirements alignment**.
+Assess confidence across four ideation-alignment dimensions:
+
+| Dimension | High confidence | Low confidence |
+|-----------|----------------|----------------|
+| **Topic aim** | The topic has a clear focus — one problem space, one domain | The topic is vague, multi-directional, or conflates distinct problems |
+| **Domain** | The domain is identifiable — it belongs clearly to one area of the system | The domain is unclear or spans unrelated areas without a unifying question |
+| **Novelty** | No substantial backlog overlap detected | Significant overlap with existing tickets; unclear whether this is truly new |
+| **Requirements alignment** | Topic aligns with requirements context; no obvious conflicts | Topic conflicts with requirements, or has no connection to any stated need |
 
 ### 5. Question Threshold
 
@@ -41,7 +48,11 @@ Write or present the following outputs — this is the handoff package for Resea
 
 2. **Domain note**: Which area(s) of the project this touches (e.g., "Skills & workflow engine — orchestration layer").
 
-3. **Requirements alignment note**: state aligned / partial / none / conflict; on conflict, resolve with user before proceeding.
+3. **Requirements alignment note**: One of:
+   - "Aligned with cortex/requirements/{file}: [brief summary of relevant constraints or goals]"
+   - "Partial alignment: [what aligns and what doesn't]"
+   - "No requirements files found — alignment check skipped"
+   - "Conflict detected: [describe the conflict]" — if conflict, resolve with user before proceeding
 
 4. **Open questions for research**: Bulleted list of questions to carry into Research (may be empty). These are questions best resolved by investigation — not user answers.
 

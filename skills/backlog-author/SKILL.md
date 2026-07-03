@@ -48,6 +48,5 @@ caller has N pieces to author, it invokes compose N times — one piece per invo
 Steps:
 1. Read `${CLAUDE_SKILL_DIR}/references/body-template.md` to load section-boundary criteria,
    the Why-vs-Role disambiguation rule, and grounding keywords.
-2. Compose the five-section body from the provided `{{context-block}}` (applying the Why-vs-Role
-   disambiguation rule). Emit it to stdout as a markdown block for the caller to pass
+4. Compose the five-section body. Emit it to stdout as a markdown block for the caller to pass
    to `cortex-create-backlog-item --body`.

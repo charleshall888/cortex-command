@@ -8,7 +8,7 @@ no `overlaps_ticket`, no `reproposal_of`). Both outcomes are recorded — not th
 subset alone. This child does NOT touch the ledger; the reconciliation transcribes
 `REFUTED → status: verified_refuted` / `survive_votes: 0` and `APPLIED → survives/applied`.
 
-Totals: 32 APPLIED, 11 REFUTED, 43 in-scope.
+Totals: 31 APPLIED, 12 REFUTED, 43 in-scope.
 
 ## skills/discovery/references/orchestrator-review.md
 
@@ -20,7 +20,7 @@ Totals: 32 APPLIED, 11 REFUTED, 43 in-scope.
 - APPLIED s1 skills/backlog-author/SKILL.md — dropped inputs/outputs/preconditions frontmatter (commit: Trim backlog-author/SKILL.md {s1,s4,s9,s10} provisional-tail candidates)
 - APPLIED s4 skills/backlog-author/SKILL.md — deleted ## Body Template dup section (commit: Trim backlog-author/SKILL.md {s1,s4,s9,s10} provisional-tail candidates)
 - APPLIED s9 skills/backlog-author/SKILL.md — cut redundant compose contract restatements (commit: Trim backlog-author/SKILL.md {s1,s4,s9,s10} provisional-tail candidates)
-- APPLIED s10 skills/backlog-author/SKILL.md — deleted parse/rule-restatement steps (commit: Trim backlog-author/SKILL.md {s1,s4,s9,s10} provisional-tail candidates)
+- APPLIED s10 skills/backlog-author/SKILL.md — deleted parse/rule-restatement compose steps as pure span deletion (kept step 1 read + step 4 output-contract verbatim) (commit: Rework backlog-author s10 + clarify s5/s7 to extractive-only)
 - APPLIED s3 skills/backlog-author/SKILL.md — deleted redundant ## Invocation, merged into ## Subcommand Dispatch (commit: Merge backlog-author {s3+s5} dispatch cluster; drop redundant Invocation)
 - APPLIED s7 skills/backlog-author/SKILL.md — deleted redundant 5-question interview enumeration (commit: Trim backlog-author interview enumeration and body-template restatements)
 - REFUTED s5 skills/backlog-author/SKILL.md — deleting mode bullets orphans the missing-subcommand AskUserQuestion fallback; extractive-only bars fixing the orphan (pinned by: missing-subcommand AskUserQuestion fallback branch)
@@ -58,8 +58,8 @@ Totals: 32 APPLIED, 11 REFUTED, 43 in-scope.
 ## skills/discovery/references/clarify.md
 
 - APPLIED s3 skills/discovery/references/clarify.md — deleted duplicate consumer-rule glossary sentence (commit: Dedup consumer-rule glossary prose from discovery clarify/research)
-- APPLIED s5 skills/discovery/references/clarify.md — collapsed §4 High/Low table to a dimension-name list (commit: Trim clarify.md + research.md non-cluster provisional-tail candidates)
-- APPLIED s7 skills/discovery/references/clarify.md — dropped output-1 example and collapsed output-3 template (commit: Trim clarify.md + research.md non-cluster provisional-tail candidates)
+- REFUTED s5 skills/discovery/references/clarify.md — §4 table→inline-list collapse is a non-extractive restructure; no meaning-preserving pure deletion keeps the dimension names, so the 4-row table is restored (pinned by: extractive-only review)
+- APPLIED s7 skills/discovery/references/clarify.md — dropped output-1 worked example as pure deletion; output-3 template paraphrase reverted (four alignment-note bullets restored) per extractive-only review (commit: Rework backlog-author s10 + clarify s5/s7 to extractive-only)
 - APPLIED s9 skills/discovery/references/clarify.md — dropped closing Fire-when restatement and bullet-structure spec (commit: Trim clarify.md + research.md non-cluster provisional-tail candidates)
 - APPLIED s11 skills/discovery/references/clarify.md — deleted 3-row Constraints Thought/Reality table (commit: Trim clarify.md + research.md non-cluster provisional-tail candidates)
 - REFUTED s8 skills/discovery/references/clarify.md — replace/merge is non-extractive and drops the sole mech-pin token ${CLAUDE_SKILL_DIR}/../research/references/fanout.md (pinned by: sole mech-pin token ${CLAUDE_SKILL_DIR}/../research/references/fanout.md)
