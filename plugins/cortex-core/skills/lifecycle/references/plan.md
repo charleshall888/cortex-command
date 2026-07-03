@@ -2,6 +2,8 @@
 
 Produce a detailed implementation plan with numbered tasks, file paths, and verification steps. Plans are prose with implementation context, not code.
 
+> Reference targets named in **bold** below (e.g. **competing-plans**, **orchestrator-review**, **critical-review-gate**, **criticality-matrix**) resolve via lifecycle SKILL.md's Reference-path propagation manifest — substitute the body-resolved absolute path at each.
+
 ## Protocol
 
 ### 1. Load Context
@@ -15,7 +17,7 @@ Read prior artifacts:
 
 Read criticality by running `cortex-lifecycle-state --feature {feature} --field criticality` (rules: criticality-matrix.md §Reading lifecycle state).
 
-- **If criticality is `critical`**: read and follow the competing-plans protocol (use the body-resolved absolute path from lifecycle SKILL.md's Reference-path propagation manifest: the **competing-plans** target) before dispatching, then proceed per its guidance.
+- **If criticality is `critical`**: read and follow the competing-plans protocol (the **competing-plans** target) before dispatching, then proceed per its guidance.
 - **Otherwise** (low, medium, high): proceed to §2 (Design the Approach) — the standard single-plan flow.
 
 ### 1b. Competing Plans (Critical Only)
@@ -24,11 +26,7 @@ The competing-plans protocol (dispatch variants → synthesize → route → log
 
 ### 2. Design the Approach
 
-Based on research and spec, determine:
-- Overall architecture and implementation strategy
-- File creation/modification order
-- Integration points with existing code
-- Testing and verification approach
+Based on research and spec, determine the overall architecture and implementation strategy, the file creation/modification order, integration points with existing code, and the testing and verification approach.
 
 ### 3. Write Plan Artifact
 
@@ -101,13 +99,13 @@ If wiring is too large to combine with deployment in one task, reorder so wiring
 
 Every task requires a `**Complexity**` field. Choose from `trivial`, `simple`, or `complex`:
 
-| Tier | When to use | Examples |
-|------|-------------|---------|
-| `trivial` | Single-file edit, no side effects, no commit needed | Update a comment, bump a version string, fix a typo |
-| `simple` | 1–3 file changes, commit required, may run shell commands or validate output | Create a hook script, edit settings.json, create a symlink, run chmod, wire a new entry into a config array |
-| `complex` | 4+ files, architectural change, new pattern, or multi-component integration | Add a new subsystem, refactor a module's public API, integrate two previously independent components |
+| Tier | When to use |
+|------|-------------|
+| `trivial` | Single-file edit, no side effects, no commit needed |
+| `simple` | 1–3 file changes, commit required, may run shell commands or validate output |
+| `complex` | 4+ files, architectural change, new pattern, or multi-component integration |
 
-**Critical rule**: Tasks that create files, modify JSON settings, create symlinks, set file permissions, or must commit are `simple` minimum — **never `trivial`**. The `trivial` tier has a lower turn budget; assigning it to multi-step tasks causes turn exhaustion before the commit step.
+**Critical rule**: Tasks that create files, modify JSON settings, create symlinks, set file permissions, or must commit are `simple` minimum — **never `trivial`**, whose lower turn budget causes turn exhaustion before the commit step on multi-step tasks.
 
 The `**Complexity**` field drives model and turn-limit selection in the overnight pipeline.
 
@@ -133,13 +131,7 @@ When a task modifies or removes a function, command, or interface — enumerate 
 
 Plans are prose with structural context. The line between design and implementation:
 
-**Allowed in Context and other fields:**
-- File paths and directory structures
-- Function signatures (name, parameters, return type)
-- Type definitions (field names and types only)
-- Pattern references ("follow the pattern in `src/hooks/useAuth.ts`")
-- Config keys and values
-- Interface contracts between tasks
+**Allowed in Context and other fields:** file paths and directory structures; function signatures (name, parameters, return type); type definitions (field names and types only); pattern references ("follow the pattern in `src/hooks/useAuth.ts`"); config keys and values; interface contracts between tasks.
 
 **Prohibited:**
 - Function bodies
@@ -147,23 +139,22 @@ Plans are prose with structural context. The line between design and implementat
 - Error handling implementations
 - Complete test code
 - Any code that an implementer would copy-paste rather than write
-- Verification fields that consist only of prose descriptions requiring human judgment (e.g., "confirm the feature works correctly")
 - Verification steps that reference artifacts (files, log entries, status fields) the executing task creates solely for the purpose of satisfying verification — this is self-sealing and passes tautologically
 
 After writing `plan.md`, register the `"plan"` artifact in `cortex/lifecycle/{feature}/index.md` per the canonical artifact-registration recipe in backlog-writeback.md (loaded at lifecycle Step 2).
 
 ### 3a. Orchestrator Review
 
-Before presenting the artifact to the user, read and follow the orchestrator-review protocol (use the body-resolved absolute path from lifecycle SKILL.md's Reference-path propagation manifest: the **orchestrator-review** target) for the `plan` phase. The orchestrator review must pass before proceeding to user approval.
+Before presenting the artifact to the user, read and follow the orchestrator-review protocol (the **orchestrator-review** target) for the `plan` phase. The orchestrator review must pass before proceeding to user approval.
 
 ### 3b. Critical Review
 
-After orchestrator review passes, read the active tier and criticality (rules: criticality-matrix.md §Reading lifecycle state — use the body-resolved absolute path from lifecycle SKILL.md's Reference-path propagation manifest):
+After orchestrator review passes, read the active tier and criticality (rules: the **criticality-matrix** target, §Reading lifecycle state):
 
 - `cortex-lifecycle-state --feature {feature} --field tier`
 - `cortex-lifecycle-state --feature {feature} --field criticality`
 
-**Run** when `tier = complex` AND `criticality ∈ {medium, high, critical}`: invoke the `critical-review` skill with the plan artifact. Present the synthesis to the user before plan approval. Otherwise, read and follow the critical-review gate protocol (use the body-resolved absolute path from lifecycle SKILL.md's Reference-path propagation manifest: the **critical-review-gate** target) for the `plan` phase.
+**Run** when `tier = complex` AND `criticality ∈ {medium, high, critical}`: invoke the `critical-review` skill with the plan artifact. Present the synthesis to the user before plan approval. Otherwise, read and follow the critical-review gate protocol (the **critical-review-gate** target) for the `plan` phase.
 
 ### 4. User Approval (merged branch/dispatch surface)
 
@@ -205,7 +196,5 @@ cortex-lifecycle-event log --event phase_transition --feature <name> --set from=
 On any approval (a branch-mode selection OR "wait" — both emit `plan_approved`), run `cortex-read-commit-artifacts` to read the `commit-artifacts` flag. If stdout is `true` (the default), stage `cortex/lifecycle/{feature}/` and commit using `/cortex-core:commit`. If stdout is `false`, skip the commit silently. On the "wait" path the commit makes the approval durable, then the lifecycle halts.
 
 ## Hard Gate
-
-Do NOT write implementation code in the plan. Plans describe WHAT each task does and provide structural context, not HOW to write the code.
 
 Backlog items suggest approaches — they don't prescribe them. Unless the backlog item has linked cortex/research/spec artifacts that already validated the approach, evaluate it critically and weigh alternatives.
