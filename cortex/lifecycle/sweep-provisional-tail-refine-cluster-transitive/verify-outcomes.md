@@ -191,3 +191,7 @@ single id, so per-file hits are resolved by inspection (above) rather than a ful
 per-id verdict; the two single/few-candidate cases (research s15, plan-synthesizer s15) were
 checked against the post-trim file directly and confirmed preserved-not-dropped.
 
+---
+
+savings: ~6920 weighted tokens across 38 applied candidates (of 42; 4 refuted) — summed from `master_candidates.json` `weighted_cost` over the `(file,id)` pairs marked `verified_survives` above.
+
