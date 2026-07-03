@@ -59,7 +59,7 @@ cortex-refine emit-lifecycle-start --backend {resolved} --lifecycle-slug {lifecy
 
 Omit `--backlog-slug` for Context B (no backlog item). You do **not** branch on the backend to decide whether to pass the slug: pass it whenever a local backlog item exists — the verb's `--backend` guard owns the non-local slug-drop (ADR-0019).
 
-**Seed→reconcile→gate ordering invariant**: keep the seed → reconcile → §3b read ordering intact so the §3b read observes the ratcheted (not seed-default) tier — critical on non-`cortex-backlog` backends, where the gate would otherwise skip silently at `tier = simple`. Full rationale in `${CLAUDE_SKILL_DIR}/../lifecycle/references/criticality-matrix.md` under "Seed → reconcile → gate ordering".
+**Seed→reconcile→gate ordering invariant**: keep the seed → reconcile → §3b read ordering intact so the §3b read observes the ratcheted (not seed-default) tier — critical on non-`cortex-backlog` backends, where the gate would otherwise skip silently at `tier = simple`. Full rationale in `${CLAUDE_SKILL_DIR}/references/seed-reconcile-gate-ordering.md`.
 
 ## Step 3: Clarify Phase
 
