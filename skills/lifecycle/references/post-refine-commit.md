@@ -4,9 +4,9 @@ When refine returns control at the Specify → Plan boundary, follow this commit
 
 ## Flag Check
 
-Run `cortex-read-commit-artifacts` to read the `commit-artifacts` flag from `cortex/lifecycle.config.md`. The binstub prints `true` or `false` on stdout.
+Run `cortex-read-commit-artifacts` to read the `commit-artifacts` flag from `cortex/lifecycle.config.md`.
 
-- stdout `true` (the default, also fires when the file or field is absent): proceed to Staging.
+- stdout `true`: proceed to Staging.
 - stdout `false`: skip the commit silently. Do not stage, do not invoke `/cortex-core:commit`. Return control to lifecycle Step 3.
 
 ## Staging
@@ -39,6 +39,4 @@ If `/cortex-core:commit` exits non-zero (index lock, pre-commit hook rejection, 
 
 ## Constraints
 
-- This reference does **not** introduce new event types (see `bin/.events-registry.md`).
-- No user pause occurs in this procedure.
-- Hand-edits to refine artifacts made before re-invocation are staged and committed under the Refine subject as-is — do not split, re-title, or pause.
+- Hand-edits made before re-invocation are staged and committed under the Refine subject as-is — do not split, re-title, or pause.
