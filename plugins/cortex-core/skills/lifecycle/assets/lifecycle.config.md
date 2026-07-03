@@ -15,6 +15,10 @@ commit-artifacts: true
 # Gate for the overnight critical-tier dual-plan synthesizer dispatch path.
 # Default false (fail-closed) until the operator validates the path and flips to true.
 synthesizer_overnight_enabled: false
+# Branch-selection default for the lifecycle implement phase. Default prompt =
+# the picker fires every time, byte-identical to leaving this field absent.
+# Values + carve-outs: see docs/overnight-operations.md (branch-mode note).
+branch-mode: prompt
 # Which ticketing backend cortex uses. Default cortex-backlog = the local
 # cortex/backlog/ files; behavior is byte-identical to today when this block
 # is absent or set to cortex-backlog.

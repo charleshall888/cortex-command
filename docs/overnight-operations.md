@@ -703,7 +703,7 @@ The returned dict has five top-level keys:
 
 ### cortex/lifecycle.config.md consumers and absence behavior
 
-`cortex/lifecycle.config.md` is a per-project config file. The canonical scaffolded field list is the cortex-core plugin asset `skills/lifecycle/assets/lifecycle.config.md`, whose frontmatter a CI parity gate keeps byte-identical to the `cortex init` template (see ADR-0017). There is no centralized Python loader — each consumer reads it directly — so each consumer decides its own absence behavior. Scaffolded fields include `type`, `test-command`, `demo-command` / `demo-commands`, `default-tier`, `default-criticality`, `skip-specify`, `skip-review`, `commit-artifacts`, `synthesizer_overnight_enabled`, and the `backlog:` backend block.
+`cortex/lifecycle.config.md` is a per-project config file. The canonical scaffolded field list is the cortex-core plugin asset `skills/lifecycle/assets/lifecycle.config.md`, whose frontmatter a CI parity gate keeps byte-identical to the `cortex init` template (see ADR-0017). There is no centralized Python loader — each consumer reads it directly — so each consumer decides its own absence behavior. Scaffolded fields include `type`, `test-command`, `demo-command` / `demo-commands`, `default-tier`, `default-criticality`, `skip-specify`, `skip-review`, `commit-artifacts`, `synthesizer_overnight_enabled`, `branch-mode`, and the `backlog:` backend block.
 
 **Files**: `skills/lifecycle/assets/lifecycle.config.md` (the gate-kept source of truth for the scaffolded field list), plus the consumers in `skills/lifecycle/`, `skills/critical-review/`, and `skills/morning-review/`.
 
@@ -714,7 +714,7 @@ Absence behavior per consumer (what happens when the project has no `cortex/life
 - **critical-review**: omits the `## Project Context` section of the generated review.
 - **lifecycle specify/plan**: reads optional defaults (`default-tier`, `default-criticality`, `skip-specify`, `skip-review`) and falls back to skill-level defaults when absent.
 
-**Consumed-but-unscaffolded exception**: `branch-mode` is read by `read_branch_mode` (the lifecycle branch-selection preflight) but is in **neither** scaffolded template, so it is deliberately not part of the asset's field list above — set it by hand when a repo needs it. Scaffolding it is a separate follow-up: it would require editing the asset and the init template together, which the ADR-0017 parity gate binds.
+`branch-mode` is read by `read_branch_mode` (the lifecycle branch-selection preflight) and is now scaffolded into both the asset and the init template with a behavior-preserving default of `prompt` (the picker fires every time, byte-identical to the field being absent). The ADR-0017 parity gate binds the asset and init-template frontmatter byte-for-byte, so the two must be edited together.
 
 The closed set of `branch-mode` values (case-sensitive; any out-of-set value falls through to the picker, silently):
 

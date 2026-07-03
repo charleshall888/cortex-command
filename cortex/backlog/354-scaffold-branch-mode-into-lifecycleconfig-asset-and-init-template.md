@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: e58571ec-3c61-4f10-853a-e6773a6d980c
 title: Scaffold branch-mode into lifecycle.config asset and init template
-status: backlog
+status: complete
 priority: low
 type: chore
 created: 2026-07-02
-updated: 2026-07-02
+updated: 2026-07-03
 ---
 ## Why
 The `branch-mode` field is read by `read_branch_mode` (the lifecycle branch-selection preflight) but is scaffolded into neither the cortex-core plugin asset (skills/lifecycle/assets/lifecycle.config.md) nor the init template (cortex_command/init/templates/cortex/lifecycle.config.md). Operators adopting cortex-command must set it by hand; until they do the field is absent and the picker fires every time. This is the pre-existing "consumed-but-unscaffolded exception" documented in the docs/overnight-operations.md branch-mode note. Surfaced during #352, which consolidated the branch-mode value docs into that note.
