@@ -2,15 +2,18 @@
 schema_version: "1"
 uuid: 393849ba-1fb9-4a40-bf86-e6a5525cce65
 title: 'Sweep provisional tail: refine cluster + transitive tail'
-status: backlog
+status: complete
 priority: low
 type: chore
 tags: ['skill-value-scorecard']
-areas: [skills]
+areas: ['skills']
 discovery_source: cortex/research/skill-value-scorecard/report.html
 created: 2026-07-02
-updated: 2026-07-02
+updated: 2026-07-03
 parent: "357"
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/sweep-provisional-tail-refine-cluster-transitive/spec.md
 ---
 ## Why
 Child of #357's decomposition (the parent umbrella carrying the provisional tail of the skill-value audit). This child owns the refine cluster plus the transitive tail no sibling child owns: 42 provisional candidates (~7.9k weighted tokens) across refine/SKILL.md (8), cortex/adr/README.md (6), research/references/fanout.md (5), refine/references/specify.md (5), refine/references/clarify.md (5), pr/SKILL.md (4), refine/references/clarify-critic.md (2), overnight/prompts/plan-synthesizer.md (2), skills/backlog/SKILL.md (2), commit/SKILL.md (1), research/SKILL.md (1), and interview/references/loop.md (1). None were adversarially verified.

@@ -20,3 +20,6 @@
 {"ts": "2026-07-03T15:39:16Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-refine-cluster-transitive", "batch": 12, "tasks": [13]}
 {"ts": "2026-07-03T15:41:58Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-refine-cluster-transitive", "batch": 13, "tasks": [14]}
 {"ts": "2026-07-03T15:51:16Z", "event": "phase_transition", "feature": "sweep-provisional-tail-refine-cluster-transitive", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-07-03T15:57:12Z", "event": "review_verdict", "feature": "sweep-provisional-tail-refine-cluster-transitive", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-07-03T15:57:12Z", "event": "phase_transition", "feature": "sweep-provisional-tail-refine-cluster-transitive", "from": "review", "to": "complete"}
+{"ts": "2026-07-03T15:58:14Z", "event": "feature_complete", "feature": "sweep-provisional-tail-refine-cluster-transitive", "tasks_total": 14, "rework_cycles": 0, "merge_anchor": "merge"}
