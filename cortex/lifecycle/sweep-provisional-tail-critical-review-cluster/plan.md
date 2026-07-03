@@ -38,8 +38,8 @@ Verify-then-apply-or-refute the 26 provisional trim candidates under `skills/cri
 - **Depends on**: [1]
 - **Complexity**: simple
 - **Context**: angle-menu.md is orchestrator-only (never dispatched), mirror-parity-pinned. Serialized after Task 1 so the working tree carries no other edited-but-unstaged canonical critical-review file when the pre-commit whole-tree drift check runs. **Precondition (start-of-task guard):** `git diff --quiet -- skills/critical-review/ plugins/cortex-core/skills/critical-review/` must be clean; if it is dirty the predecessor task did not commit cleanly — abort and surface "predecessor left uncommitted critical-review changes" rather than editing against a poisoned tree (an opaque pre-commit drift rejection would otherwise be the only signal). Edit canonical → `just build-plugin` → stage both → `/cortex-core:commit`.
-- **Verification**: (a) `python -m pytest tests/test_plugin_mirror_parity.py tests/test_dual_source_reference_parity.py` exits 0 (after `just build-plugin`); (b) `grep -c "Acceptance Criteria" skills/critical-review/references/angle-menu.md` ≥ 1 AND `diff -rq skills/critical-review/ plugins/cortex-core/skills/critical-review/` empty AND `git diff --stat` shows the file shrank.
-- **Status**: [ ] pending
+- **Verification**: (a) `uv run pytest tests/test_plugin_mirror_parity.py tests/test_dual_source_reference_parity.py` exits 0 (after `just build-plugin`); (b) `grep -c "Acceptance Criteria" skills/critical-review/references/angle-menu.md` ≥ 1 AND `diff -rq skills/critical-review/ plugins/cortex-core/skills/critical-review/` empty AND `git diff --stat` shows the file shrank.
+- **Status**: [x] complete (commit `a092737d`; Acceptance-Criteria pointer preserved, mirror clean, file −43/2)
 
 ### Task 3: Apply residue-write.md trims (Req 5)
 - **Files**: `skills/critical-review/references/residue-write.md`, `plugins/cortex-core/skills/critical-review/references/residue-write.md`
@@ -47,8 +47,8 @@ Verify-then-apply-or-refute the 26 provisional trim candidates under `skills/cri
 - **Depends on**: [2]
 - **Complexity**: simple
 - **Context**: Orchestrator-only, `pins`-backed. Keep-list = R4 payload schema field names + `resolve_feature_cli.py` + writer invocation names. Serialized after Task 2. **Precondition (start-of-task guard):** `git diff --quiet -- skills/critical-review/ plugins/cortex-core/skills/critical-review/` must be clean, else abort — predecessor did not commit cleanly (do not edit a poisoned tree). Edit canonical → `just build-plugin` → stage both → `/cortex-core:commit`.
-- **Verification**: (a) `python -m pytest tests/test_critical_review_reference_pins.py` exits 0; (b) `grep -q "resolve_feature_cli.py" skills/critical-review/references/residue-write.md` (keep-token present) AND `diff -rq skills/critical-review/ plugins/cortex-core/skills/critical-review/` empty AND `git diff --stat` shows the file shrank.
-- **Status**: [ ] pending
+- **Verification**: (a) `uv run pytest tests/test_critical_review_reference_pins.py` exits 0; (b) **keep-token correction (found during implementation):** the plan's `resolve_feature_cli.py` token was mis-specified — that filename never existed in residue-write.md (the code lives in `cortex_command/critical_review/__main__.py`); the real operative keep-tokens are the console-script names. Verified present after trim: `cortex-critical-review-resolve-feature` (1), `cortex-critical-review-write-residue` (2), R4/`critical-review-residue.json` schema (2), and the exit-code routing (one/zero/multiple match). `diff -rq skills/critical-review/ plugins/cortex-core/skills/critical-review/` empty AND file shrank.
+- **Status**: [x] complete (commit `310db782`; resolver+writer script names + R4 schema + exit routing preserved, mirror clean)
 
 ### Task 4: Apply reviewer-prompt.md trims — structural + behavioral (Req 7)
 - **Files**: `skills/critical-review/references/reviewer-prompt.md`, `plugins/cortex-core/skills/critical-review/references/reviewer-prompt.md`

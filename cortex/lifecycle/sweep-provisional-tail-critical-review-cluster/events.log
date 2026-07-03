@@ -7,3 +7,5 @@
 {"ts": "2026-07-03T03:42:54Z", "event": "feature_paused", "feature": "sweep-provisional-tail-critical-review-cluster"}
 {"ts": "2026-07-03T12:03:52Z", "event": "phase_transition", "feature": "sweep-provisional-tail-critical-review-cluster", "from": "plan", "to": "implement", "dispatch_choice": "trunk"}
 {"ts": "2026-07-03T12:04:46Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-critical-review-cluster", "batch": 0, "tasks": [1]}
+{"ts": "2026-07-03T12:58:30Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-critical-review-cluster", "batch": 1, "tasks": [2]}
+{"ts": "2026-07-03T13:02:15Z", "event": "batch_dispatch", "feature": "sweep-provisional-tail-critical-review-cluster", "batch": 2, "tasks": [3]}
