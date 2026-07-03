@@ -98,17 +98,13 @@ Write a one-sided critique — focus on what the assessment got wrong. Exclude b
 
 ## Disposition Framework
 
-After the critic agent returns its list of objections, the orchestrator (not the critic) classifies each objection with one of three dispositions. (Apply/Dismiss/Ask classification and the self-resolution step below are reproduced from `/cortex-core:critical-review` Step 4 — keep the two in sync.)
+After the critic agent returns its list of objections, the orchestrator (not the critic) classifies each objection **Apply**, **Dismiss**, or **Ask** using the classification, self-resolution, and anchor-check logic of `/cortex-core:critical-review` Step 4 — keep the two in sync. Clarify-critic specializations of that shared logic:
 
-**Apply** — the objection identifies a concrete problem and the correct fix is clear and unambiguous. Examples: a High confidence rating is demonstrably unsupported by the source, the scope claim contradicts explicit text in the backlog item, the requirements alignment is asserted when no requirements file was loaded. Fix these without asking — revise the affected confidence dimension(s) accordingly.
-
-**Dismiss** — the objection is already addressed by the source material, misreads the stated constraints, or rests on an assumption the source material explicitly rules out.
-
-**Ask** — the fix is not for the orchestrator to decide unilaterally. This covers: (a) genuine preference or scope decisions — e.g., whether a vague phrase in the backlog item should be read narrowly or broadly; (b) genuine orchestrator uncertainty about which reading of the source is correct; (c) consequential ambiguity where either interpretation changes what gets built. Hold these for the consolidated Q&A in §4.
-
-**Before classifying as Ask, attempt self-resolution.** For each objection you are considering classifying as Ask, do a brief check — not an exhaustive search. Re-read the source material and confidence assessment, and consult any requirements context loaded in clarify §2. If the answer is supported by verifiable evidence — explicit text in the source material, a requirements constraint, or a documented project convention — resolve it and reclassify: as Apply (revising the affected confidence dimension accordingly) or as Dismiss. Do not resolve based on inferences from general principles or reasoning you already held before investigating. **Anchor check**: if your resolution relies on conclusions from your prior work on this assessment rather than new evidence found during the check, treat it as Ask — that is anchoring, not resolution. Uncertainty still defaults to Ask. Surviving Ask items flow into the Ask-to-Q&A Merge Rule as before.
-
-**Apply bar**: Apply when and only when the fix is unambiguous and confidence is high. Uncertainty is a legitimate reason to Ask — do not guess and apply. For inconsequential tie-breaks, pick one and apply. For consequential tie-breaks, Ask.
+- **Apply** — fix without asking; revise the affected confidence dimension(s) accordingly.
+- **Dismiss** — also when the objection rests on an assumption the source material explicitly rules out.
+- **Ask** — covers genuine preference/scope decisions, genuine uncertainty about the correct reading of the source, and consequential ambiguity where either interpretation changes what gets built; hold these for the consolidated Q&A in §4.
+- **Self-resolution** — a brief check (not an exhaustive search) that additionally consults any requirements context loaded in clarify §2; resolve when supported by verifiable evidence in the source or requirements, reclassifying as Apply (revising the affected confidence dimension) or Dismiss. Uncertainty still defaults to Ask; surviving Ask items flow into the Ask-to-Q&A Merge Rule.
+- **Apply bar** — apply only when the fix is unambiguous and confidence is high; uncertainty defaults to Ask. For inconsequential tie-breaks, pick one and apply; for consequential tie-breaks, Ask.
 
 ### Dispositioning Output Contract
 
@@ -169,8 +165,3 @@ If the critic agent fails, errors, or times out:
 ## Constraints
 
 **Soft rubric-dimension cap**: the clarify-critic carries a soft cap of ≤5 rubric dimensions to preserve per-angle attention quality. Adding a 6th rubric dimension requires either replacing an existing dimension or extracting the new one to a separate critic; do not exceed the cap by simple addition.
-
-| Thought | Reality |
-|---------|---------|
-| "The critic should read files or gather additional context" | The critic receives the confidence assessment, the source material, and (Context A only, when the child has a `type: epic` parent loaded by `cortex-load-parent-epic`) a `## Parent Epic Alignment` section containing the sanitized parent epic body inside `<parent_epic_body>` markers. It reads nothing else. |
-| "Surface Dismiss rationales to the user so they can see the critic's work" | Dismiss rationales are not preserved in the v3 event row — only `dismissals_count`. The user-facing response surface is reserved for §4 Ask merge and silent Apply confidence revisions. |
