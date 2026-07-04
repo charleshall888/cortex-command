@@ -8,7 +8,7 @@ Break the approved Architecture section into backlog tickets. This is the core v
 
 Read `cortex/research/{topic}/research.md` for findings, feasibility assessment, decision records, and — most importantly — the approved `## Architecture` section. The Architecture section's `### Pieces` sub-section (one role bullet per piece) and `### How they connect` sub-section (the connection/boundary prose) are the source-of-truth input to decompose: `### Pieces` names the analytical piece-set, and `### How they connect` carries the relationships from which dependencies are derived. The research→decompose approval gate (per `skills/discovery/SKILL.md`) must have fired before this phase runs.
 
-> See ADR `cortex/adr/0007-decompose-groups-pieces-into-tickets.md` for why §4 groups coupled pieces into tickets (M pieces → 1 ticket) and the residual anchoring risk that `split-piece` at the R15 gate reduces.
+> §4 groups coupled pieces into tickets (M pieces → 1 ticket); the `split-piece` gate at R15 reduces the residual anchoring risk.
 
 ### 2. Consume the Architecture Section
 
@@ -54,7 +54,7 @@ Proceed to §4. Grouping in §4 is the explicit packaging step; it is never a si
 
 ### 4. Determine Grouping
 
-Grouping decides how the analytical pieces are *packaged* into tickets. It reads only the approved Architecture content — `### Pieces` (the role bullets) and `### How they connect` (the connection/boundary prose) — and the dependency relationships derived from them. It never rewrites the `### Pieces` set; it only coarsens ticket units over the *right* set (per §3). See ADR `cortex/adr/0007-decompose-groups-pieces-into-tickets.md`.
+Grouping decides how the analytical pieces are *packaged* into tickets. It reads only the approved Architecture content — `### Pieces` (the role bullets) and `### How they connect` (the connection/boundary prose) — and the dependency relationships derived from them. It never rewrites the `### Pieces` set; it only coarsens ticket units over the *right* set (per §3).
 
 **Single-piece branch** (piece_count = 1): Create one backlog ticket directly. **No epic.** The single ticket is the entire output. Skip to §5.
 
@@ -90,7 +90,7 @@ Then:
 
 **Authoring a grouped ticket's body.** For a child that wraps a single piece, author the body straight from the §2 uniform template. For a child that wraps *multiple* grouped pieces (§4), author **one merged body** that covers the whole group — mirroring the R15 `consolidate-pieces` body-merge convention (§5, the R15 gate sub-section below): the grouped pieces' `## Why`, `## Role`, and `## Integration` are **prose-merged** into one coherent narrative (not concatenated piece-by-piece), and their `## Edges` and `## Touch points` bullets are **unioned and deduplicated**.
 
-Ticket bodies authored under the Role/Integration/Edges/Touch-points template are validated by `cortex-check-prescriptive-prose` at pre-commit time (LEX-1 scanner). The scanner runs section-partitioned: path:line citations, `§N`/`RN` section-index citations, and multi-line fenced code blocks are permitted only in `## Touch points` and are flagged when they appear inside `## Role`, `## Integration`, or `## Edges`.
+In ticket bodies authored under the Role/Integration/Edges/Touch-points template, path:line citations, `§N`/`RN` section-index citations, and multi-line fenced code blocks belong only in `## Touch points` — keep them out of `## Role`, `## Integration`, and `## Edges`.
 
 **Forbidden sections (per ticket body)**: `## Why`, `## Role`, `## Integration`, `## Edges`. **Permitted section**: `## Touch points`. (The scanner owns the exact match patterns and section-boundary detection; author against the worked examples below.)
 
@@ -121,7 +121,7 @@ The gate is user-blocking: no tickets commit to `cortex/backlog/` until `approve
 
 Consolidation approvals are recorded under a `## Consolidation Notes` heading in `cortex/research/{topic}/decomposed.md` — the agent creates the heading on the first consolidation and appends to it on subsequent ones. This heading is distinct from `## Dropped Items` (the Title-keyed Markdown table for fully-rejected tickets used by `drop-piece`). Each entry is prose, in the agent's natural voice, naming (i) which pieces merged into which surviving piece by their current (post-renumber) index, (ii) the surviving piece's revised role summary, and (iii) a one-sentence rationale for why the merge holds. This matches the corpus precedent at `cortex/research/swap-daytime-autonomous-for-worktree-interactive/decomposed.md` and `cortex/research/archive/gpg-signing-claude-code-sandbox/decomposed.md`.
 
-On each user response, emit one `approval_checkpoint_responded` event with `checkpoint: decompose-commit` and the chosen response. Use the helper module per the `cortex_command/discovery.py` interface (event emission lives in the helper; the prose here only names the event by its literal name `"event": "approval_checkpoint_responded"`).
+On each user response, emit one `approval_checkpoint_responded` event with `checkpoint: decompose-commit` and the chosen response. Use the discovery helper module to emit it (event emission lives in the helper; the prose here only names the event by its literal name `"event": "approval_checkpoint_responded"`).
 
 **Backend routing (resolve once before creating tickets).** The epic-and-children create flow below targets the local backlog engine. After `approve-all` fires and before creating any ticket, resolve the active backend once with `` `cortex-read-backlog-backend` `` (argless; it prints the resolved backend and exits 0). Route on the value:
 
@@ -177,8 +177,6 @@ Resolve the active backlog backend **here at §7** with `cortex-read-backlog-bac
 - **`cortex-backlog`** (the default arm) → run `cortex-generate-backlog-index` to update the backlog index.
 - **any other value (`none` OR external)** → skip the index regeneration with a one-line advisory: `cortex-generate-backlog-index` targets the `cortex-backlog` engine, so there is no index to regenerate under this backend.
 
-See ADR-0016 for the backend-routing rationale.
-
 ### 8. Commit
 
 Stage and commit the new backlog files and `cortex/research/{topic}/decomposed.md` using `/cortex-core:commit`.
@@ -193,7 +191,7 @@ Show the user:
 
 ## Constraints
 
-- **Architecture-section-driven**: The analytical piece-set is the approved `### Pieces` sub-section from research, and dependencies derive from the `### How they connect` sub-section — the headings the research template actually emits. Do not re-derive pieces from raw findings; do not silently mutate the analytical set at decompose time. Grouping pieces into ticket units (§4) is permitted and distinct: it is an explicit, R15-surfaced packaging decision that coarsens ticket *count* without touching the `### Pieces` set, which stays unchanged as the per-piece record `split-piece` re-derives from. See ADR `cortex/adr/0007-decompose-groups-pieces-into-tickets.md`.
+- **Architecture-section-driven**: The analytical piece-set is the approved `### Pieces` sub-section from research, and dependencies derive from the `### How they connect` sub-section — the headings the research template actually emits. Do not re-derive pieces from raw findings; do not silently mutate the analytical set at decompose time. Grouping pieces into ticket units (§4) is permitted and distinct: it is an explicit, R15-surfaced packaging decision that coarsens ticket *count* without touching the `### Pieces` set, which stays unchanged as the per-piece record `split-piece` re-derives from.
 - **Uniform body template**: All tickets use `## Role`, `## Integration`, `## Edges`, and optional `## Touch points`. No per-shape branching.
 - **Touch-points exclusivity**: Path:line citations and section-index citations live only in `## Touch points`. The pre-commit scanner enforces this.
 - **No implementation planning**: Don't specify HOW to build each piece — that's `/cortex-core:lifecycle`'s plan phase. Ticket bodies describe role, integration, and structural edges; the plan phase fills in mechanism.

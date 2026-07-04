@@ -30,7 +30,7 @@ There is **no** hardcoded topic→angle keyword router. Angle choice beyond the 
 ## Dispatch protocol
 
 1. **Core wave (parallel) — binds the `searcher` model.** Dispatch the mandatory core plus the orchestrator-chosen angles for the cell — every angle except the always-last adversarial one — in parallel. Because this is breadth-first gather work, each consuming orchestrator body resolves `model=$(cortex-resolve-model --role searcher)` and binds it as every core-wave `Agent`'s `model:`; on nonzero resolve it degrades loud — dispatch with **no** `model:` (inherit the parent) plus a one-line warning, never halting.
-2. **Adversarial wave (last) — inherits the parent.** For high/critical work, once the core wave returns, summarize its findings and dispatch the adversarial agent over that summary; fold its critique into synthesis. It **omits** `model:` and inherits the parent — the error-correction layer is not routed to the cheaper `searcher` (see `docs/internals/sdk.md` and ADR-0023).
+2. **Adversarial wave (last) — inherits the parent.** For high/critical work, once the core wave returns, summarize its findings and dispatch the adversarial agent over that summary; fold its critique into synthesis. It **omits** `model:` and inherits the parent — the error-correction layer is not routed to the cheaper `searcher`.
 
 At low/medium criticality where no adversarial agent was chosen, the core wave is the whole dispatch and there is no second wave.
 

@@ -74,4 +74,3 @@ def test_section7_resolves_independently_not_via_section5() -> None:
     text = DECOMPOSE.read_text(encoding="utf-8")
     section = _slice_section(text, SECTION_HEADING)
     assert "zero-piece" in section, "§7 must justify independent re-resolution"
-    assert "ADR-0016" in section

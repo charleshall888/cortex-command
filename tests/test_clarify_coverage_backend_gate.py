@@ -71,8 +71,7 @@ def test_negative_control_pre_edit_section_is_ungated() -> None:
     assert not _gate_present(PRE_EDIT_SECTION)
 
 
-def test_divergence_note_backpoints_to_adr() -> None:
+def test_divergence_note_present() -> None:
     text = CLARIFY.read_text(encoding="utf-8")
     section = _slice_section(text, SECTION_HEADING)
     assert "two arms" in section.lower(), "missing the two-arm divergence note"
-    assert "ADR-0016" in section, "§3 must back-point to ADR-0016"

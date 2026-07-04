@@ -18,7 +18,7 @@ For each area below, first assess from research + feature description whether th
 Areas, in sequence (adapt on answers):
 - **Problem statement** — what it solves, who benefits, what happens if unbuilt.
 - **Requirements** — per requirement, acceptance criteria (how you'll know it works); probe must-have vs nice-to-have, measurable success, user-facing vs internal.
-- **ADR posture (in-the-moment)** — if a requirement decision meets `cortex/adr/README.md`'s three-criteria gate (hard to reverse + surprising without context + real trade-off), draft it in the spec's `## Proposed ADR` in the same turn rather than deferring.
+- **ADR posture (in-the-moment)** — if a requirement decision is hard to reverse, surprising without context, and a real trade-off, draft it in the spec's `## Proposed ADR` in the same turn rather than deferring.
 - **Non-requirements** — what it intentionally does NOT do; push back on vague boundaries.
 - **Edge cases** — unexpected inputs, unavailable systems, unexpected user behavior; challenge optimistic assumptions.
 - **Technical constraints** — from the research findings: performance, compatibility, integration boundaries.
@@ -110,7 +110,7 @@ Compile answers into `cortex/lifecycle/{feature}/spec.md`.
 None considered.
 <!-- Per ADR-shaped decision negotiated in the interview, replace the default with one sub-entry:
 ### Proposed ADR: <NNNN-slug>
-[One-paragraph context, decision, and trade-off, suitable for promotion into cortex/adr/<NNNN-slug>.md.]
+[One-paragraph context, decision, and trade-off, suitable for promotion into an ADR.]
 -->
 ```
 

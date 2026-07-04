@@ -93,7 +93,7 @@ cortex-discovery emit-checkpoint-response \
     --revision-round <int>
 ```
 
-The helper resolves the correct events.log target (lifecycle-attached, R13 re-run `-N` slug, or standalone `cortex/research/<topic>/events.log`) via its `resolve-events-log-path` subcommand. See `cortex_command/discovery.py` for the full subcommand surface.
+The helper resolves the correct events.log target (lifecycle-attached, R13 re-run `-N` slug, or standalone `cortex/research/<topic>/events.log`) via its `resolve-events-log-path` subcommand.
 
 ### Decompose-commit batch-review gate
 

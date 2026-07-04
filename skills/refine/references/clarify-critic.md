@@ -130,7 +130,7 @@ status: "ok"
 
 v3 carries only counts — the per-finding prose, dismissal rationales, and applied-fix descriptions are intentionally not preserved. `parent_epic_loaded` mirrors the dispatch decision (`true` when the `## Parent Epic Alignment` section was included). Disposition counts reflect post-self-resolution values.
 
-**Legacy-tolerance — all prior shapes read-tolerated indefinitely.** Readers MUST tolerate every prior shape forever: minimal v1, v1+dismissals, v2, YAML-block, and v3 (the only shape new producers emit). Per-shape read-mapping and the legacy cross-field invariant live in `docs/internals/clarify-critic-event-schema.md`.
+**Legacy-tolerance — all prior shapes read-tolerated indefinitely.** Readers MUST tolerate every prior shape forever: minimal v1, v1+dismissals, v2, YAML-block, and v3 (the only shape new producers emit).
 
 Example (single-line JSONL, written verbatim by the orchestrator):
 

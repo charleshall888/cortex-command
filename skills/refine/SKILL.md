@@ -51,7 +51,7 @@ Then seed the `lifecycle_start` row so `events.log` carries it before any other 
 cortex-refine emit-lifecycle-start --backend {resolved} --lifecycle-slug {lifecycle-slug} --backlog-slug {backlog-filename-slug}
 ```
 
-Omit `--backlog-slug` for Context B. Don't branch on the backend to decide whether to pass the slug — pass it whenever a local backlog item exists; the verb's `--backend` guard owns the non-local slug-drop (ADR-0019).
+Omit `--backlog-slug` for Context B. Don't branch on the backend to decide whether to pass the slug — pass it whenever a local backlog item exists; the verb's `--backend` guard owns the non-local slug-drop.
 
 **Tier ratchet ordering invariant**: keep the seed → reconcile → §3b-read ordering so the §3b read observes the **tier ratchet**'s output, not the seed default. Rationale and the tier-ratchet definition: `${CLAUDE_SKILL_DIR}/references/seed-reconcile-gate-ordering.md`.
 
