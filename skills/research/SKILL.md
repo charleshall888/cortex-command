@@ -30,25 +30,27 @@ Parse `$ARGUMENTS` for key=value pairs. Supported keys: `topic`, `lifecycle-slug
 
 **Mode detection rule**: `lifecycle-slug` presence in `$ARGUMENTS` determines mode — do NOT use directory existence checks.
 
-- `lifecycle-slug` present → **lifecycle mode**: write output to `cortex/lifecycle/{lifecycle-slug}/research.md`
-- `lifecycle-slug` absent or empty → **standalone mode**: output findings to conversation only, no file written
+- `lifecycle-slug` present → **lifecycle mode**
+- `lifecycle-slug` absent or empty → **standalone mode**
+
+(Destinations: see Mode routing below.)
 
 Defaults:
 - `tier`: `simple`
 - `criticality`: `medium`
 - `research-considerations-file`: empty/absent → no considerations injection
 
-`research-considerations-file` is a **path** to a file (written by `/cortex-core:refine`) whose content is a newline-delimited bullet list, each line starting with `- `. When the argument is present, research's orchestrator body **reads that file and substitutes its literal content** into the core-angle prompt considerations placeholders (see Step 3) — it injects the file's content, never the path. Because only a path rides the argument, there is nothing to escape. **Reader contract**: when the argument is absent, or the file is missing, empty, or whitespace-only, no considerations injection occurs — do not halt on a missing file.
+`research-considerations-file` is a **path** to a file (written by `/cortex-core:refine`) whose content is a newline-delimited bullet list, each line starting with `- `. When the argument is present, research's orchestrator body **reads that file and substitutes its literal content** into the core-angle prompt considerations placeholders (see Step 3) — it injects the file's content, never the path. **Reader contract**: when the argument is absent, or the file is missing, empty, or whitespace-only, no considerations injection occurs — do not halt on a missing file.
 
 Mode routing (applied after synthesis in Step 4):
 
 **Lifecycle mode** (`lifecycle-slug` present): write the synthesis to `cortex/lifecycle/{lifecycle-slug}/research.md`, creating the directory if it does not exist, including the `## Considerations Addressed` section (Step 4) when the considerations file was non-empty, then announce the written path.
 
-**Standalone mode** (`lifecycle-slug` absent or empty): present the synthesis directly in the conversation; write no file and create no lifecycle directory. (The `## Considerations Addressed` section never appears in this mode — it is lifecycle-mode only, per Step 4.)
+**Standalone mode** (`lifecycle-slug` absent or empty): present the synthesis directly in the conversation; write no file and create no lifecycle directory.
 
 ## Step 2: Determine Agent Count
 
-`agent_count` is the cell where the task's `tier` (row) meets its `criticality` (column) in the count matrix at [`${CLAUDE_SKILL_DIR}/references/fanout.md`](${CLAUDE_SKILL_DIR}/references/fanout.md) — the canonical, shared source for the grid. Read that grid to size the fan-out.
+`agent_count` is the cell where the task's `tier` (row) meets its `criticality` (column) in the count matrix at [`${CLAUDE_SKILL_DIR}/references/fanout.md`](${CLAUDE_SKILL_DIR}/references/fanout.md) (canonical). Read it to size the fan-out.
 
 The count is an **upper bound on investigation breadth, not a quota** — dispatch fewer if the task offers fewer genuinely distinct angles than its cell allows; do not pad with redundant agents.
 
@@ -149,7 +151,7 @@ When composing a different chosen angle, follow this shape: name the angle, stat
 
 ### Dispatch protocol
 
-Follow the two-wave dispatch protocol in [`${CLAUDE_SKILL_DIR}/references/fanout.md`](${CLAUDE_SKILL_DIR}/references/fanout.md) (canonical) — the core wave binds the `searcher` model and degrades loud on resolve failure; the adversarial wave runs last and inherits the parent. This entry point carries the runnable bind and the site-specific dispatch facts fanout.md does not:
+Follow the two-wave dispatch protocol in [`${CLAUDE_SKILL_DIR}/references/fanout.md`](${CLAUDE_SKILL_DIR}/references/fanout.md) (canonical). This entry point carries the runnable bind and the site-specific dispatch facts fanout.md does not:
 
 Before dispatching the core wave, resolve the gather model in this orchestrator body (not inside any angle-prompt block):
 

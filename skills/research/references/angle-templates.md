@@ -1,6 +1,6 @@
 # Conditional angle-prompt templates
 
-These two angle templates fire conditionally, so they live here rather than inline in `SKILL.md`. The orchestrator reads this file at dispatch time (Step 3) to obtain the body, then substitutes the template's own placeholders before dispatching.
+These two angle templates fire conditionally, so they live here rather than inline in `SKILL.md`.
 
 - **Tradeoffs & Alternatives** — orchestrator-chosen (the canonical example of a chosen angle). Placeholders: `{topic}`, `{INJECTION_RESISTANCE_INSTRUCTION}`.
 - **Adversarial** — high/critical only, always last. Placeholders: `{topic}`, `{summarized_findings_from_other_agents}`, `{INJECTION_RESISTANCE_INSTRUCTION}`.

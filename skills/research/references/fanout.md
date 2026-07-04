@@ -11,7 +11,7 @@ Agent count is the cell where the task's tier (row) meets its criticality (colum
 | **simple**         | 3   | 4      | 5    | 6        |
 | **complex**        | 5   | 6      | 8    | 10       |
 
-The count is an **upper bound on investigation breadth, not a quota** — the most distinct angles the task warrants, not a target to pad with redundant agents. If a task offers fewer genuinely distinct angles than its cell allows, dispatch fewer; do not invent overlapping work to hit the number.
+The count is an **upper bound on breadth, not a quota** — the most distinct angles the task warrants. If a task offers fewer genuinely distinct angles than its cell allows, dispatch fewer.
 
 ## Hybrid angle selection
 
@@ -25,7 +25,7 @@ An **Adversarial / critique** angle is **always present for high and critical** 
 
 The **remaining slots** the matrix buys (beyond the mandatory core and, where applicable, the adversarial agent) are **chosen by the orchestrator per task**. Pick angles that are distinct and non-redundant — each should investigate something the others do not. *Tradeoffs* (alternatives, costs, second-order effects) is a common orchestrator choice. Subdivide an existing angle by scope only once genuinely distinct angles are exhausted — for example, splitting Codebase into per-subsystem agents when one codebase pass cannot cover the surface area. When subdivision is reached because the cell's count exceeded the distinct angles available, the orchestrator may note that in `## Open Questions`.
 
-There is **no** hardcoded topic→angle keyword router. Angle choice beyond the mandatory core is orchestrator judgment in context — describing *what* each angle must cover and *why*, not following a fixed lookup of topic words to specialists.
+There is **no** hardcoded topic→angle keyword router; angle choice beyond the mandatory core is orchestrator judgment in context — describing *what* each angle must cover and *why*.
 
 ## Dispatch protocol
 
@@ -34,8 +34,8 @@ There is **no** hardcoded topic→angle keyword router. Angle choice beyond the 
 
 At low/medium criticality where no adversarial agent was chosen, the core wave is the whole dispatch and there is no second wave.
 
-This file authors the routing *rule*; each consuming entry point (`/cortex-core:research` Step 3, `/cortex-core:discovery`'s research dispatch) carries its own runnable resolve + `model:` bind that follows it, because each dispatches from its own orchestrator body rather than by executing this file.
+This file authors the *rule*; each consumer (`/cortex-core:research` Step 3, `/cortex-core:discovery`'s research dispatch) carries its own runnable resolve + `model:` bind, since each dispatches from its own body.
 
 ## Why this protocol
 
-The grid is **corner-anchored**: the two factors compound rather than being max'd together, so complex+critical gets the deepest investigation (10) and the cap holds there because parallel research hits a concurrency-and-diminishing-returns ceiling. Discovery sets the initial direction of an epic, where a wrong direction propagates across every ticket it spawns, so discovery's sizing assessment is biased upward toward the high end of this same grid.
+The two factors **compound** rather than being max'd together, so complex+critical peaks the count (10), and the cap holds there because parallel research hits a concurrency-and-diminishing-returns ceiling. Discovery biases its sizing upward toward the high end of this same grid (see discovery's clarify.md for why).
