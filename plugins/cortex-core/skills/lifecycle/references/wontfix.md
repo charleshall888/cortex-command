@@ -14,4 +14,4 @@ By default the backlog target comes from the lifecycle's `index.md` parent field
 
 ## Why it lands as it does
 
-Archive-move is first because it is the desired safe end-state: the name-based archive-skip at `cortex_command/hooks/scan_lifecycle.py:907` (`if feature in ("archive", "sessions"): continue`) drops the lifecycle from SessionStart enumeration immediately, so even a later-step failure leaves a coherent terminal state. The detector in `cortex_command/common.py` is defense-in-depth: it returns `phase=complete` on the `{"event": "feature_wontfix"}` marker, covering archive-internal phase queries against an archived `events.log`.
+Archive-move goes first because it's the safe end-state — the name-based archive-skip in `scan_lifecycle.py` drops the lifecycle from SessionStart enumeration immediately, so even a later-step failure leaves a coherent terminal state. The `common.py` detector is defense-in-depth: it returns `phase=complete` on the `feature_wontfix` marker, covering phase queries against an archived `events.log`.

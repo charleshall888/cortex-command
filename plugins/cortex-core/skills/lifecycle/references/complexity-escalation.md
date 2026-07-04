@@ -1,6 +1,6 @@
 # Complexity Escalation Gates
 
-Two complexity-escalation gates run during `/cortex-core:refine` delegation; each section below gives the `cortex-complexity-escalator` command and its exit-code/stdout routing.
+Two complexity-escalation gates run during `/cortex-core:refine` delegation.
 
 ## Research → Specify gate
 

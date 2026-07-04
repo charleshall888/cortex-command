@@ -16,7 +16,7 @@ The close-lifecycle write-back stays inline below; the lifecycle-start write-bac
 
 ## Backlog Status Check
 
-Before creating artifacts or writing back, check whether the item was already completed outside the lifecycle (consume Step 1's result, don't re-scan):
+Before creating artifacts or writing back, check whether the item was already completed outside the lifecycle:
 
 1. **No match** (resolver exit 3) or `status` ≠ `complete` → skip silently, fall through.
 2. **Match with `status = complete`** → `AskUserQuestion` with **Close lifecycle** / **Continue from current phase**. If AskUserQuestion is unavailable (overnight batch, no interactive prompt), default to **Continue** — never auto-close.

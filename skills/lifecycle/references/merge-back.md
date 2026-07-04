@@ -1,6 +1,6 @@
 # Worktree Merge-Back (Implement §2e)
 
-Consumed by Implement §2e **only on the worktree-dispatch arm** — sequential dispatch skips merge-back entirely (the mode is decided in §1 before any batch runs, so this is never read on the sequential path).
+Consumed by Implement §2e only on the worktree-dispatch arm; the sequential path never reads it (mode is fixed in §1 before any batch runs).
 
 After checkpoint, merge each completed task's worktree branch back into the feature branch and clean up, so later batches' worktrees (created via `claude/hooks/cortex-worktree-create.sh`) branch from the updated HEAD and see prior batches' changes.
 

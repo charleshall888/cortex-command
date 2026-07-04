@@ -16,15 +16,11 @@ When `phase = research` (no lifecycle directory yet), check whether discovery al
 
 ## Epic Context Injection (during /cortex-core:refine delegation)
 
-When `epic_research_path` was recorded, before starting Clarify read `{epic_research_path}` (and `{epic_spec_path}` if present) as background, and instruct `/cortex-core:refine` to:
-
-- Scope research and spec to THIS ticket's requirements only — don't reproduce content belonging to other tickets in the epic.
-- Add a `## Epic Reference` section near the top of `research.md` linking the epic research path with a one-sentence note on how the epic relates to this ticket.
-- Add a brief preamble note in `spec.md` referencing the epic research path for broader context.
+When `epic_research_path` was recorded, read it (and `{epic_spec_path}` if present) as background before Clarify, and instruct `/cortex-core:refine` to add a `## Epic Reference` section to `research.md` and a preamble note to `spec.md` linking the epic research path — scoped to THIS ticket, without reproducing epic content (per the rule above).
 
 ## Refine Starting-Point Rules
 
 `/cortex-core:refine`'s Step 2 (Check State) checks for `cortex/lifecycle/{lifecycle-slug}/research.md` and `spec.md` at those exact paths:
 
 - Both exist → Step 2 proceeds normally.
-- A backlog item's `discovery_source`/`research` field pointing to epic research at a different path is background context for Clarify, not a substitute — `/cortex-core:refine` still runs its full Research phase to produce `cortex/lifecycle/{slug}/research.md`.
+- A `discovery_source`/`research` field pointing to epic research at a different path is background only (per above) — `/cortex-core:refine` still runs its full Research phase to produce `cortex/lifecycle/{slug}/research.md`.

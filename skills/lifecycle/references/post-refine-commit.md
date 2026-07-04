@@ -32,7 +32,7 @@ Invoke `/cortex-core:commit` with that subject and a one-line body (e.g. `- Rese
 
 ## Halt-before-Plan gate
 
-If `/cortex-core:commit` exits non-zero (index lock, pre-commit hook rejection, working-tree conflict), surface the error and **MUST** HALT — do not auto-advance to Plan. The stranded `phase_transition` (or `lifecycle_cancelled`) row stays uncommitted in the working tree until the operator resolves the failure and re-invokes `/cortex-core:lifecycle`; resume routing then continues from the current phase.
+If `/cortex-core:commit` exits non-zero (index lock, pre-commit hook rejection, working-tree conflict), surface the error and HALT — do not auto-advance to Plan. The uncommitted `phase_transition` (or `lifecycle_cancelled`) row waits in the working tree until the operator resolves the failure and re-invokes `/cortex-core:lifecycle`; resume continues from the current phase.
 
 ## Constraints
 

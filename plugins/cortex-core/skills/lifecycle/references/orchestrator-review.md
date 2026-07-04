@@ -1,6 +1,6 @@
 # Orchestrator Phase Review
 
-Quality gate between phase-artifact write and user presentation: review the artifact against a phase checklist, dispatch fixes for flagged items, and surface it to the user only once it passes or the cycle cap is reached.
+Quality gate between phase-artifact write and user presentation: nothing reaches the user until the artifact passes the phase checklist or hits the cycle cap.
 
 ## Applicability
 

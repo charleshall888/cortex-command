@@ -60,11 +60,7 @@ End with a Verdict — a JSON object using exactly these fields (not "overall"/"
 
 ### 3. Review Artifact Format
 
-The reviewer emits the Stage 1 / Stage 2 / Requirements Drift / Suggested Requirements Update sections per the §2 prompt. The only shape downstream parsing depends on is the Verdict JSON block — exact field names and values:
-
-```json
-{"verdict": "APPROVED", "cycle": 1, "issues": [], "requirements_drift": "none"}
-```
+The reviewer emits the sections defined in the §2 prompt; downstream parsing depends only on the Verdict JSON block (exact field names and values from §2).
 
 ### 4. Process Verdict
 
@@ -79,7 +75,7 @@ Register `"review"` in `index.md`'s `artifacts` array per backlog-writeback.md (
 | CHANGES_REQUESTED | ≥2 | Escalate — present the analysis, ask for direction |
 | REJECTED | any | Escalate immediately — recommend revisiting plan or spec |
 
-The cycle counter prevents infinite rework (the `≥2` row escalates on cycle 2 and any later cycle a user-directed rework reaches).
+The `≥2` row caps rework: cycle 2 and any later cycle escalates.
 
 Append the `review_verdict` event — `--drift` comes from the verdict JSON's `requirements_drift` field:
 

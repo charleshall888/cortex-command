@@ -23,11 +23,11 @@ Run `cortex-read-commit-artifacts`. If `true` (the default), stage `cortex/lifec
 
 Push the branch, then create a PR whose title and body reflect the feature's purpose and link the lifecycle directory.
 
-**Variant A (advisory, non-blocking)**: if this lifecycle runs from inside an `interactive/{slug}` worktree — both `read_lock(slug)` returns non-None AND `git rev-parse --show-toplevel` is that worktree root — wrap `/cortex-core:pr` in a cd-in-then-out around the worktree (capture cwd first, restore it after). Otherwise invoke `/cortex-core:pr` from the current cwd.
+**Variant A (advisory, non-blocking)**: if this lifecycle runs from inside an `interactive/{slug}` worktree — both `read_lock(slug)` returns non-None AND `git rev-parse --show-toplevel` is that worktree root — wrap `/cortex-core:pr` in a cd-in-then-out around the worktree. Otherwise invoke `/cortex-core:pr` from the current cwd.
 
 ### Step 4 — Write `pr.json` Atomically
 
-Resolve repo identity with `gh repo view --json nameWithOwner -q .nameWithOwner`, then write `cortex/lifecycle/{slug}/pr.json` via tempfile + `os.replace` (per `cortex/requirements/pipeline.md:124-130`; create the tempfile in pr.json's parent directory — `os.replace` is atomic only within one filesystem):
+Resolve repo identity with `gh repo view --json nameWithOwner -q .nameWithOwner`, then write `cortex/lifecycle/{slug}/pr.json` via tempfile + `os.replace` in pr.json's parent directory (per `cortex/requirements/pipeline.md:124-130`):
 
 ```json
 {"number": <int>, "url": "<string>", "head_branch": "<string>", "opened_at": "<ISO8601>", "repo": "<owner/name>"}
@@ -57,7 +57,7 @@ Don't poll — manual re-invocation is the gate.
 
 ### Step 7 — State-Aware Routing
 
-The classifier verb reads `events.log` and `pr.json` (querying `gh` only when a PR is in play), applies a strict-order first-match state machine (`feature_wontfix` precedes every PR-state check; an already-logged `feature_complete` short-circuits ahead of them), and prints one JSON verdict:
+The classifier verb reads `events.log` and `pr.json` (querying `gh` only when a PR is in play) and prints one JSON verdict:
 
 ```bash
 cortex-lifecycle-complete-route <slug>
@@ -65,7 +65,7 @@ cortex-lifecycle-complete-route <slug>
 
 Act on the verdict; do not re-derive it:
 
-- **Terminal** (`message` non-empty, `continue_to: null`): print `message` verbatim and exit — the verb owns the exact recovery/wait text for the wontfix, PR-state, and not-found dead-ends.
+- **Terminal** (`message` non-empty, `continue_to: null`): print `message` verbatim and exit — the verb owns the exact recovery/wait text.
 - **`continue_to` set** — continue at the named step:
   - `already_complete` → **Step 12** (idempotent short-circuit: no re-cleanup, no duplicate `feature_complete`, no second `pr.json`).
   - `on_main` → **Step 9**.
@@ -107,7 +107,7 @@ After the Step 9 call (success, failure, or skip), resolve the backend with `cor
 cortex-lifecycle-event feature-complete --feature {slug} --tasks-total {N} --rework-cycles {N} --merge-anchor merge
 ```
 
-Read `{N}` from `cortex-lifecycle-counters --feature {slug}` (JSON): `tasks_total`/`rework_cycles` are ints (`--set-json`), `merge_anchor` is the literal `merge` (`--set`). Simple tier (no review) → `rework_cycles` is `0`. This event closes the feature's log.
+Read `{N}` from `cortex-lifecycle-counters --feature {slug}` (JSON `tasks_total`/`rework_cycles`). Simple tier (no review) → `rework_cycles` is `0`. This event closes the feature's log.
 
 **Idempotent-skip guard**: if a `feature_complete` row already exists in the working-tree events.log, skip the verb and continue to Step 11a — a duplicate from a commit-retry corrupts the log. Match on a parsed JSON `event` field, not a substring.
 
@@ -124,9 +124,9 @@ Run `cortex-read-commit-artifacts` (default true when absent).
 cortex-lifecycle-stage-artifacts --phase complete --feature {slug}
 ```
 
-The verb owns the explicit-path staging (lifecycle artifacts, the review-drift requirements file, the narrowed backlog write-back) and prints `signal` — the staging outcome, equivalent to `git diff --cached --quiet`:
+The verb owns the explicit-path staging and prints `signal` — the staging outcome, equivalent to `git diff --cached --quiet`:
 
-- `nothing_staged` → skip `/cortex-core:commit` silently and continue to Step 12 (common on the worktree post-merge path and the on_main commit-retry path).
+- `nothing_staged` → skip `/cortex-core:commit` silently and continue to Step 12.
 - `staged` → proceed to commit.
 
 A non-zero verb exit is a staging failure: halt before Step 12 rather than commit a partial set.
@@ -136,4 +136,4 @@ Invoke `/cortex-core:commit` with an imperative ≤72-char subject. On non-zero 
 
 ### Step 12 — Summarize and Preserve Lifecycle Directory
 
-Brief summary: feature name + description, tasks completed, key files created/modified, any open or follow-up items. Preserve `cortex/lifecycle/{slug}/` as project history — do not delete or archive it. Proceed automatically, no confirmation; emit the summary and exit.
+Brief summary: feature name + description, tasks completed, key files created/modified, any open or follow-up items. Preserve `cortex/lifecycle/{slug}/` as project history. Proceed automatically — emit the summary and exit.

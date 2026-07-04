@@ -1,8 +1,8 @@
 ### 1b. Competing Plans (Critical Only)
 
-> Extracted sibling of `plan.md` §1b, read only on the `critical` planning arm (via plan.md §1a). Steps: **a** shared context · **b** dispatch plan agents · **c** collect · **d** synthesize · **e** extract envelope · **f** route on verdict + confidence · **g** log the v2 `plan_comparison` event.
+> Extracted sibling of `plan.md` §1b, read only on the `critical` planning arm (via plan.md §1a).
 
-When criticality is `critical`, dispatch 2-3 independent plan agents for competing variants. Choose the count (2-3) by how many meaningfully distinct approaches the spec and research support.
+When criticality is `critical`, dispatch 2-3 independent plan agents — count chosen by how many meaningfully distinct approaches the spec and research support.
 
 **a. Prepare shared context** — inject `{spec_path}` and `{research_path}` as absolute paths (from repo root) into the prompt template. Each agent reads the files itself; never share one agent's draft with another.
 

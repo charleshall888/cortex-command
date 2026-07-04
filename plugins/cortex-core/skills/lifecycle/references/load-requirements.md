@@ -7,5 +7,3 @@ Shared protocol for pulling the minimal set of project and area-level requiremen
 1. Run `cortex-load-requirements --feature {slug}` (lifecycle/refine consumers, which have `cortex/lifecycle/{slug}/index.md`) or `cortex-load-requirements` (discovery, no lifecycle index). It prints the resolved repo-relative paths to stdout — a file absent on disk gets a ` (skipped: file absent)` suffix; any no-match fallback note goes to stderr.
 2. Read every listed non-skipped path into context — the verb prints paths only, never file contents.
 3. Inject the printed path list verbatim into any downstream prompt (reviewer dispatch, drift-check) that must know what was in scope, and relay any fallback note.
-
-If a concept you need is not yet in the glossary, treat the absence as a signal to surface the term in the next requirements interview.

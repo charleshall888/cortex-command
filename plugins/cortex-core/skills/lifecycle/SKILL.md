@@ -38,7 +38,7 @@ It emits one JSON object with a `state` discriminant, a `next` directive, and th
 | `wontfix` | Run `next`'s `cortex-lifecycle-wontfix` command, report the outcome, **halt**. |
 | `error` · `needs-feature` · `no-such-lifecycle` | Report `next` and stop — do not create a lifecycle. |
 | `derive-slug` | Derive a 3–6 word kebab-case slug from the prose, announce it as you create `cortex/lifecycle/<slug>/`, then re-run the resolver on it. No confirmation — the user corrects via re-invocation. |
-| `empty` | No feature given — fall through to Step 2's incomplete-lifecycle-dirs scan. |
+| `empty` | No feature given — act on `next`: scan `cortex/lifecycle/*` for incomplete lifecycles and offer them via `AskUserQuestion`, then re-run the resolver on the choice. |
 | `ambiguous-backlog` | Present `candidates` via `AskUserQuestion`, then re-run the resolver on the choice. |
 | `new` · `resume` | Proceed to Step 2. `resume` carries `route`, `paused`, `checked`/`total`, `cycle`, `criticality`, `tier`, `staleness`, `backlog`; `new` carries `backlog`. |
 
@@ -91,9 +91,9 @@ Read **only** the current phase's reference. Do not preload others.
 
 ## Phase Transition
 
-Proceed automatically — no confirmation at phase boundaries. Announce and continue. Each transition summary includes: **Decisions** (or None), **Scope delta** (or None), **Blockers** (or None), **Next** (phase + what it does).
+Proceed automatically — no confirmation at phase boundaries. Announce and continue. Each transition summary includes **Decisions**, **Scope delta**, **Blockers** (each "None" when empty), and **Next** (phase + what it does).
 
-A boundary fires on its gate condition (e.g. `plan.md` all tasks `[x]`), not on user input — nothing to wait for. A prior instruction to "report"/"summarize" sets text cadence only: emit the summary as plain text and continue. It does not authorize `AskUserQuestion` — that is permitted at a boundary only by the Kept user pauses inventory.
+A boundary fires on its gate condition (e.g. `plan.md` all tasks `[x]`), not on user input — nothing to wait for. A prior "report"/"summarize" instruction sets text cadence only — emit the summary as plain text and continue; it does not authorize `AskUserQuestion` (permitted at a boundary only by the Kept user pauses inventory).
 
 ### Per-phase completion rule
 
@@ -105,7 +105,7 @@ A phase completes (auto-advance fires) only on its gate:
 - **Review**: `review.md` exists AND a `review_verdict` event with `verdict: APPROVED` (→ Complete), OR the cycle-2 escalation (→ `escalated`, user-blocking).
 - **Complete**: `feature_complete` event present.
 
-Specify and Plan each keep one approval surface at §4 of their reference. Specify's is `Approve / Request changes / Cancel`. Plan's §4 is **merged with the Implement branch/dispatch selection**: branch modes plus "Approve plan but wait to implement" (a branch mode implies approval; Request changes / Cancel ride the "Other" free-text escape). `plan_approved` fires on any branch-mode or "wait" selection — branch-mode records `dispatch_choice` and auto-advances to Implement; "wait" also emits `feature_paused` and halts (re-invocation resumes at Implement).
+Specify and Plan each keep one approval surface at §4 of their reference. Specify's is `Approve / Request changes / Cancel`. Plan's §4 merges plan approval with the Implement branch/dispatch selection — see plan.md §4 for the branch-mode → `plan_approved` / `dispatch_choice` / `feature_paused` routing.
 
 ### Kept user pauses
 
