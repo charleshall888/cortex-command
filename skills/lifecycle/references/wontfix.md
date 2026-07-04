@@ -1,21 +1,17 @@
 # Wontfix workflow
 
-Use when an operator decides a lifecycle should be terminated without shipping — typically because the premise has been rejected, the work is superseded by another lifecycle, or the cost/value gate has flipped against the feature. The goal is twofold: drop the lifecycle from SessionStart's "incomplete lifecycles" enumeration immediately, and leave a terminal-state marker that both `cortex_command.common.detect_lifecycle_phase` and `claude/statusline.sh` recognize as `phase=complete`.
+Use when an operator terminates a lifecycle without shipping — premise rejected, superseded by another lifecycle, or the cost/value gate flipped. Goal: drop it from SessionStart's "incomplete lifecycles" enumeration immediately, and leave a terminal marker that `cortex_command.common.detect_lifecycle_phase` and `claude/statusline.sh` read as `phase=complete`.
 
 ## How
-
-Run the order-enforcing verb:
 
 ```bash
 cortex-lifecycle-wontfix <slug> --reason "<short rationale>"
 ```
 
-It performs, as a single fail-forward operation, three steps: (a) archive the lifecycle directory to `cortex/lifecycle/archive/<slug>`, (b) append the `feature_wontfix` terminal-state event to the archived `events.log`, and (c) terminalize the originating backlog item (status `wontfix`, lifecycle-phase `wontfix`, session released). The **move → append → terminalize order is a code invariant** inside the verb.
+As one fail-forward operation the verb: (a) archives the lifecycle directory to `cortex/lifecycle/archive/<slug>`, (b) appends the `feature_wontfix` terminal-state event to the archived `events.log`, (c) terminalizes the originating backlog item (status `wontfix`, lifecycle-phase `wontfix`, session released). The **move → append → terminalize order is a code invariant** inside the verb.
 
-By default the verb reads the backlog target from the lifecycle's `index.md` parent fields. Pass `--backlog-slug <slug>` to override (e.g. when `index.md` is absent or the resolver is ambiguous). An ad-hoc lifecycle with no backlog parent terminalizes nothing — that step is a clean no-op, not an error.
-
-**Ambiguous backlog slug**: if backlog resolution is ambiguous the verb exits `2` with the candidate list on stderr; re-invoke with `--backlog-slug` naming the intended item.
+By default the backlog target comes from the lifecycle's `index.md` parent fields; pass `--backlog-slug <slug>` to override (absent `index.md`, or ambiguous resolver). An ad-hoc lifecycle with no backlog parent terminalizes nothing — a clean no-op, not an error. Ambiguous backlog slug → the verb exits `2` with candidates on stderr; re-invoke with `--backlog-slug`.
 
 ## Why it lands as it does
 
-The archive move is first because it is the desired safe end-state: the name-based archive-skip at `cortex_command/hooks/scan_lifecycle.py:907` (`if feature in ("archive", "sessions"): continue`) drops the lifecycle from SessionStart enumeration immediately, so even a later-step failure leaves a coherent terminal state. The detector belt in `cortex_command/common.py` is defense-in-depth: it returns `phase=complete` whenever it sees the `{"event": "feature_wontfix"}` marker — covering archive-internal phase queries that inspect an archived `events.log` directly.
+Archive-move is first because it is the desired safe end-state: the name-based archive-skip at `cortex_command/hooks/scan_lifecycle.py:907` (`if feature in ("archive", "sessions"): continue`) drops the lifecycle from SessionStart enumeration immediately, so even a later-step failure leaves a coherent terminal state. The detector in `cortex_command/common.py` is defense-in-depth: it returns `phase=complete` on the `{"event": "feature_wontfix"}` marker, covering archive-internal phase queries against an archived `events.log`.

@@ -1,19 +1,16 @@
 # Parallel Execution
 
-When the user requests running multiple lifecycle features in parallel (e.g., "/cortex-core:lifecycle 120 and 121 in parallel"), use the `Agent` tool with `isolation: "worktree"` for each feature:
+To run multiple lifecycle features in parallel (e.g. "/cortex-core:lifecycle 120 and 121 in parallel"), use the `Agent` tool with `isolation: "worktree"` per feature:
 
 ```
-Agent(
-  isolation: "worktree",
-  prompt: "/cortex-core:lifecycle {feature}"
-)
+Agent(isolation: "worktree", prompt: "/cortex-core:lifecycle {feature}")
 ```
 
-**Prefer the `Agent` tool's `isolation: "worktree"` over manual `git worktree add`.** Same-repo worktrees resolve to `<repo>/.claude/worktrees/{feature}/` under the project's trust scope (rationale: `cortex/adr/0005-repo-relative-worktree-placement.md`); the `Agent` tool creates and auto-cleans them. If manual worktree creation is ever needed, compute the target via `cortex-worktree-resolve {name}` rather than hardcoding a path — and note that `git worktree add` creates the branch *before* checking out files, so a failed checkout leaves an orphaned branch (`git branch -d <name>` before retrying).
+**Prefer `Agent`'s `isolation: "worktree"` over manual `git worktree add`.** Same-repo worktrees resolve to `<repo>/.claude/worktrees/{feature}/` under the project trust scope (rationale: `cortex/adr/0005-repo-relative-worktree-placement.md`); the Agent tool creates and auto-cleans them. If manual creation is unavoidable, compute the target via `cortex-worktree-resolve {name}` — never hardcode a path — and note that `git worktree add` creates the branch *before* checking out files, so a failed checkout leaves an orphaned branch (`git branch -d <name>` before retrying).
 
 ## Worktree Inspection Invariant
 
-**Prohibited**: `cd <worktree-path> && git <cmd>` — this triggers a hardcoded Claude Code security check ("Compound commands with cd and git require approval to prevent bare repository attacks") that is not bypassable by allow rules or sandbox config. It also fails general compound-command allow-rule matching.
+**Prohibited**: `cd <worktree-path> && git <cmd>` — it trips a hardcoded Claude Code security check ("Compound commands with cd and git require approval to prevent bare repository attacks") that no allow rule or sandbox config bypasses.
 
 **Correct pattern**: inspect worktree branches from the main repo CWD using remote-ref syntax:
 
