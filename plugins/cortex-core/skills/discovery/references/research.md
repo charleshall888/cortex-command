@@ -16,7 +16,7 @@ Load requirements using the shared tag-based loading protocol (`load-requirement
 
 ### 1b. Read the Research-Sizing Assessment
 
-Research can be entered independently of Clarify (a fresh `/cortex-core:discovery research <topic>` session), so read the complexity/criticality assessment back from the topic's events.log rather than relying on conversation memory:
+Read the complexity/criticality assessment back from the topic's events.log (Clarify persists it; conversation memory does not survive a phase-resume):
 
 ```
 cortex-discovery read-research-sizing --topic <topic>
@@ -26,7 +26,7 @@ This returns the assessment Clarify persisted (`complexity` + `criticality`). Wh
 
 ### 2. Size and Dispatch the Research Fan-Out
 
-Discovery's research gathers its findings the same way `/cortex-core:research` does — a sized wave of parallel, angle-specialized agents — but synthesizes them into discovery's own artifact schema (§4), not /research's. The sizing and dispatch engine is shared so the two entry points cannot drift: the authority for the count matrix, the mandatory-core set, the always-last adversarial rule, and the hybrid angle-selection rules is the **fanout** sibling reference at the absolute path the discovery body resolved and propagated (the `${CLAUDE_SKILL_DIR}/../research/references/fanout.md` target established in discovery SKILL.md Step 3). Apply that file; do not re-derive the matrix or the selection rule here.
+Gather findings via a sized wave of parallel, angle-specialized agents, then synthesize into discovery's own schema (§4), not /research's. The count matrix, mandatory-core set, always-last adversarial rule, and angle-selection rules are authoritative in the **fanout** sibling reference (the `${CLAUDE_SKILL_DIR}/../research/references/fanout.md` target propagated from discovery SKILL.md Step 3). Apply it; do not re-derive here.
 
 **Size it.** Look up `agent_count` in the fanout.md count matrix using the `complexity` (tier row) and `criticality` (column) returned by the §1b read-back. The count is an upper bound on investigation breadth, not a quota — dispatch fewer if the topic offers fewer genuinely distinct angles than its cell allows.
 
@@ -46,7 +46,7 @@ Each agent returns its findings for synthesis; do not let any agent write projec
 
 ### 3. Synthesize the Findings
 
-The fan-out changes how findings are gathered (parallel, angle-specialized), not the shape of the artifact. Compose the returned findings into discovery's own schema in §4 — do **not** adopt `/cortex-core:research`'s Codebase/Web/Tradeoffs/Adversarial artifact schema. Discovery's `## Architecture` → `### Pieces` / `### How they connect` headings are machine-parsed downstream (the Research→Decompose gate and `decompose.md`'s "decomposition source of record"), so the synthesis must land in §4's structure exactly. Where agents contradict each other, surface the contradiction under `## Open Questions` rather than silently picking a side.
+Compose the returned findings into discovery's own schema in §4 — do **not** adopt `/cortex-core:research`'s Codebase/Web/Tradeoffs/Adversarial artifact schema. Discovery's `## Architecture` → `### Pieces` / `### How they connect` headings are machine-parsed downstream (the Research→Decompose gate and `decompose.md`'s "decomposition source of record"), so the synthesis must land in §4's structure exactly. Where agents contradict each other, surface the contradiction under `## Open Questions` rather than silently picking a side.
 
 ### 4. Write Research Artifact
 
