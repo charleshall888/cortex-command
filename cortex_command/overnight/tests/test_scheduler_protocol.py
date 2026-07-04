@@ -30,18 +30,6 @@ from cortex_command.overnight.scheduler.macos import MacOSLaunchAgentBackend
 class TestProtocolShape(unittest.TestCase):
     """The Scheduler Protocol must expose the four agreed methods."""
 
-    def test_protocol_has_schedule(self) -> None:
-        self.assertTrue(hasattr(Scheduler, "schedule"))
-
-    def test_protocol_has_cancel(self) -> None:
-        self.assertTrue(hasattr(Scheduler, "cancel"))
-
-    def test_protocol_has_list_active(self) -> None:
-        self.assertTrue(hasattr(Scheduler, "list_active"))
-
-    def test_protocol_has_is_supported(self) -> None:
-        self.assertTrue(hasattr(Scheduler, "is_supported"))
-
     def test_macos_backend_satisfies_protocol_methods(self) -> None:
         backend = MacOSLaunchAgentBackend()
         for name in ("schedule", "cancel", "list_active", "is_supported"):

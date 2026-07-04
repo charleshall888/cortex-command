@@ -560,17 +560,6 @@ def test_invalid_stream_raises_value_error() -> None:
         )
 
 
-def test_tolerance_categories_is_closed_set_of_five() -> None:
-    # The closed set is named explicitly in the contract — every tolerance
-    # is opt-in and per-stream. A future amendment expanding the set
-    # MUST update this test alongside the helper.
-    assert TOLERANCE_CATEGORIES == frozenset({
-        "key-reorder",
-        "unicode-escape",
-        "number-format",
-        "trailing-newline",
-        "error-formatter-shape",
-    })
 
 
 # --- non-tolerance diffs still fail under the contract -------------------

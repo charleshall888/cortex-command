@@ -17,94 +17,48 @@ precondition_checks:
 
 # Feature Lifecycle
 
-A file-based state machine that survives context loss. Enforces research-before-code, prose-before-implementation, and spec-before-build discipline.
-
-## Invocation
-
-- `/cortex-core:lifecycle {{feature}}` — start new or resume existing feature
-- `/cortex-core:lifecycle {{feature}} {{phase}}` — enter a specific phase for that feature
-- `/cortex-core:lifecycle resume {{feature}}` — resume a specific feature if multiple exist
-- `/cortex-core:lifecycle complete {{slug}}` — finalize a feature (re-invoke the Complete phase)
-- `/cortex-core:lifecycle wontfix {{slug}}` — abandon a feature via the terminal wontfix verb
+A file-based state machine that survives context loss. Enforces research-before-code, and user-guided spec-before-build discipline, and enforced project coherence throughout the process.
 
 ## Project Configuration
 
 If `cortex/lifecycle.config.md` exists at the project root, read it first. It contains project-specific overrides for complexity defaults, test commands, phase skipping, and review criteria.
 
-## Step 1: Identify the Feature
+## Step 1: Resolve the Invocation
 
-Classify the invocation structurally — do not parse `$ARGUMENTS` in prose. Run the grammar helper and act on its `mode`:
-
-```bash
-cortex-lifecycle-parse-args "$ARGUMENTS"
-```
-
-It emits one JSON object `{"mode": "...", "feature": "...", "phase": "..."}`. Route on `mode` (the closed set the helper can emit):
-
-| `mode` | Action |
-|--------|--------|
-| `wontfix` | Abandon the feature: run `cortex-lifecycle-wontfix <feature> --reason "<short rationale>"`, report its outcome, and **halt** — terminal/short-circuiting, do not fall through to Step 2. Ambiguous-slug (exit 2) handling: see references/wontfix.md. |
-| `resume` | Resume `feature`: route into Step 2 phase-detection, but if `cortex/lifecycle/<feature>/` does not exist, report "no such lifecycle to resume" and stop — do not create it (that is bare `<feature>`'s behavior). |
-| `complete` | Enter the Complete phase for `feature` via the explicit-phase-override route below (`phase` is `complete`). |
-| `phase` | A bare phase token with no feature. Surface "specify a feature, e.g. `/cortex-core:lifecycle <feature> <phase>`" and stop — do not create a lifecycle. |
-| `feature` | The normal path. Use `feature` as `{feature}`; if `phase` is non-empty, honor it via the explicit-phase-override route below. Proceed to the resolver and Step 2. |
-| `needs-derivation` | `$ARGUMENTS`'s first word is prose, not a slug. Derive a 3–6 word kebab-case slug (pattern `^[a-z0-9]+(-[a-z0-9]+)*$`) summarizing its intent, announce it as you create `cortex/lifecycle/{slug}/`, and proceed as `feature`. Don't ask the user to confirm — they correct via re-invocation; a slug colliding with an existing dir is treated as a resume (Step 2). |
-| `empty` | No arguments (or `resume` with no slug). Fall through to the incomplete-lifecycle-dirs scan (see Step 2's empty-arguments fallback). |
-| `error` | A reserved word (`wontfix`/`resume`/`complete`) given with no slug. Report that the verb needs a target and stop. |
-
-**Explicit-phase-override route**: when the helper returns a non-empty `phase` for a resolved `feature` (the `complete` mode, or a `feature` invocation whose word #2 is a phase token), enter that phase directly rather than deferring to Step 2's artifact detector (`cortex-common detect-phase` routes on artifacts and ignores an explicit phase). Warn if prerequisite artifacts are missing (e.g., entering Plan without research.md).
-
-Use lowercase-kebab-case for directory naming. When linked to a backlog item, use the canonical `slugify()` from `cortex_command.common`.
-
-### Resolve the originating backlog file once
-
-When `$ARGUMENTS` is non-empty, invoke `cortex-resolve-backlog-item` once to find the matching backlog file. The four sub-procedures (Backlog Status Check, Create index.md, Backlog Write-Back, Discovery Bootstrap) consume Step 1's resolver output — they do not re-scan the backlog directory.
+One read-only call classifies `$ARGUMENTS`, resolves the originating backlog file, detects phase, and reads staleness + criticality/tier:
 
 ```bash
-cortex-resolve-backlog-item {feature}
+cortex-lifecycle-resolve "$ARGUMENTS"
 ```
 
-Act on the result: a unique match resolves the printed file as `{backlog-file}` for the Step 2 sub-procedures; an ambiguous match prints candidates on stderr — present them via `AskUserQuestion` for the user to pick; no match means the feature has no backlog file, so proceed without one (the sub-procedures each handle that path). On any hard error, surface the resolver's message and halt.
+It emits one JSON object with a `state` discriminant, a `next` directive, and the data that state carries. Act on `state`:
 
-When `$ARGUMENTS` is empty, skip the resolver entirely — the existing incomplete-lifecycle-dirs scan path applies (see Step 2's empty-arguments fallback).
+| `state` | Action |
+|---------|--------|
+| `wontfix` | Run the `cortex-lifecycle-wontfix` command in `next`, report its outcome, and **halt** — do not fall through. |
+| `error` · `needs-feature` · `no-such-lifecycle` | Report `next` and stop — do not create a lifecycle. |
+| `derive-slug` | Derive a 3–6 word kebab-case slug summarizing the prose, announce it as you create `cortex/lifecycle/<slug>/`, then re-run the resolver on the slug. Don't ask the user to confirm — they correct via re-invocation. |
+| `empty` | No feature given — fall through to the incomplete-lifecycle-dirs scan (Step 2's empty-arguments fallback). |
+| `ambiguous-backlog` | Present `candidates` via `AskUserQuestion`, then re-run the resolver on the chosen slug. |
+| `new` · `resume` | Proceed to Step 2 with the struct. `resume` carries `route`, `paused`, `checked`/`total`, `cycle`, `criticality`, `tier`, `staleness`, and `backlog`; `new` carries `backlog` and starts fresh. |
 
-## Step 2: Check for Existing State
+The resolver is read-only: it honors an explicit phase override (word #2, returned as `route`) but never creates or writes — the mutating sub-procedures in Step 2 run afterward.
 
-Scan for `cortex/lifecycle/{feature}/` at the project root.
+## Step 2: Enter the Resolved State
 
-### Artifact-Based Phase Detection
+For `new`, start from the beginning (`phase = none`). For `resume`, enter the resolver's `route` — the base phase (pause marker already stripped); `checked`/`total` report plan-task progress, `cycle` the review-cycle number. The linear routes (`research`, `specify`, `plan`, `implement`, `review`) enter their same-named phase. Non-obvious routes: `implement-rework` (`review.md` is `CHANGES_REQUESTED` — re-enter Implement), `complete` (`feature_complete` logged or review `APPROVED` — feature done), `escalated` (`review.md` is `REJECTED` — present the reviewer analysis and ask the user for direction). When `paused` is true, route normally and note the paused state when reporting.
 
-If no `cortex/lifecycle/{feature}/` directory exists, `phase = none` — start from the beginning. Otherwise, invoke the canonical detector and route on the returned `route` field:
-
-```bash
-cortex-common detect-phase cortex/lifecycle/{feature}
-```
-
-The command emits a single JSON object on stdout. Route on the `route` field — the base phase, with any pause marker already stripped by the detector. The `checked`/`total` fields report plan-task progress; `cycle` reports the review-cycle number.
-
-The linear phases (`research`, `specify`, `plan`, `implement`, `review`) each route to their same-named phase — enter it. The non-obvious `route` values:
-
-| `phase`            | Semantic meaning                                                                                  |
-|--------------------|---------------------------------------------------------------------------------------------------|
-| `implement-rework` | `review.md` verdict is `CHANGES_REQUESTED`; re-enter Implement to address review feedback.        |
-| `complete`         | `events.log` has a `feature_complete` event, or `review.md` verdict is `APPROVED` — feature done. |
-| `escalated`        | `review.md` verdict is `REJECTED`; present reviewer analysis and ask the user for direction.      |
-
-**Paused state**: the detector reports `paused` directly — when `true`, the feature was paused at the `route` phase; route normally and note the paused state when reporting to the user. How the marker is set and cleared is the detector's concern, not yours.
-
-**Detect criticality and tier**: After determining the phase, run `cortex-lifecycle-state --feature {feature} --field criticality` (default: `medium`) and `cortex-lifecycle-state --feature {feature} --field tier` (default: `simple`). Report both alongside the detected phase when resuming. (Rules: [criticality-matrix.md §Reading lifecycle state](${CLAUDE_SKILL_DIR}/references/criticality-matrix.md).)
-
-**Register session**: After identifying the feature (whether new or existing), register this session by writing the session file:
+**Register session**: After identifying the feature (new or existing), write the session file:
 
 ```
 echo $LIFECYCLE_SESSION_ID > cortex/lifecycle/{feature}/.session
 ```
 
-If resuming from a previous session, report the detected phase and offer to continue or restart from an earlier phase. Before the offer, run `cortex-common staleness cortex/lifecycle/{feature}` and surface its `spec_age_days` / `plan_age_days` / `commits_since_spec` fields as terse lines above the prompt (high values or non-zero commits suggest the artifacts may have drifted). Do not block — the offer defaults to "continue".
+If resuming, report `route`, `criticality`, and `tier`, and offer to continue or restart from an earlier phase. Surface the resolver's `staleness` (`spec_age_days` / `plan_age_days` / `commits_since_spec`) as terse lines above the prompt — high ages or non-zero commits suggest the artifacts may have drifted. Do not block — the offer defaults to "continue".
 
 ### Backlog Status, index.md, Write-Back, and Discovery Bootstrap
 
-These four sub-procedures all read or update the originating backlog item and (for new lifecycles) seed `index.md` and epic context. Read the reference for the protocol:
+These four sub-procedures consume the resolver's `backlog` field (they do not re-scan the backlog directory) and, for new lifecycles, seed `index.md` and epic context. Read the reference for the protocol:
 
 - [backlog-writeback.md](${CLAUDE_SKILL_DIR}/references/backlog-writeback.md) — Backlog Status Check and Backlog Write-Back (Lifecycle Start)
 - [discovery-bootstrap.md](${CLAUDE_SKILL_DIR}/references/discovery-bootstrap.md) — Create index.md (new lifecycle only), detect epic cortex/research/spec from backlog frontmatter, and record paths for refine context injection (do not copy epic content). Read only when `phase = none` (new lifecycle) or `phase = research`.
@@ -138,21 +92,9 @@ Read **only** the reference for the current phase. Do not preload other phases.
 
 ### Reference-path propagation (load-bearing)
 
-Resolve `${CLAUDE_SKILL_DIR}` here in the body and carry the absolute paths into the phase — a bare `skills/…` or `../` path in a reference file resolves against CWD and breaks off-repo. When you read the current-phase reference, substitute these body-resolved absolute paths wherever it directs you to one of these targets:
+`${CLAUDE_SKILL_DIR}` resolves only in this body, not inside a reference you read. So wherever a reference contains a `${CLAUDE_SKILL_DIR}/…` path, substitute the body-resolved absolute path (a bare `skills/…` or `../` path would resolve against CWD and break off-repo). Two targets sit outside this skill's `references/`: `clarify-critic` → `${CLAUDE_SKILL_DIR}/../refine/references/clarify-critic.md`, and refine's SKILL.md → `${CLAUDE_SKILL_DIR}/../refine/SKILL.md`.
 
-- **clarify-critic** (consulted in Clarify §3a) → `${CLAUDE_SKILL_DIR}/../refine/references/clarify-critic.md`
-- **overnight-check sidecar** (executed in Implement §1 Step A and §1a.ii) → `${CLAUDE_SKILL_DIR}/references/_interactive_overnight_check.sh`. The Implement reference invokes it as `cat ${CLAUDE_SKILL_DIR}/references/_interactive_overnight_check.sh | bash -s -- "<message>" "<root>"` — preserve the `bash -s --` message and root arguments verbatim.
-- **load-requirements protocol** (consulted in Specify §1, Review §1, and Clarify §2) → `${CLAUDE_SKILL_DIR}/references/load-requirements.md`
-- **refine SKILL.md** (read verbatim in refine-delegation.md Step 1) → `${CLAUDE_SKILL_DIR}/../refine/SKILL.md`. Substitute as `<REFINE_SKILL_MD>` in refine-delegation.md.
-- **discovery-bootstrap** (read in refine-delegation.md Step 2) → `${CLAUDE_SKILL_DIR}/references/discovery-bootstrap.md`. Substitute as `<DISCOVERY_BOOTSTRAP_MD>` in refine-delegation.md.
-- **complexity-escalation** (run in refine-delegation.md Step 4) → `${CLAUDE_SKILL_DIR}/references/complexity-escalation.md`. Substitute as `<COMPLEXITY_ESCALATION_MD>` in refine-delegation.md.
-- **post-refine-commit** (read in refine-delegation.md Step 5) → `${CLAUDE_SKILL_DIR}/references/post-refine-commit.md`. Substitute as `<POST_REFINE_COMMIT_MD>` in refine-delegation.md.
-- **criticality-matrix** (§Reading lifecycle state rules cited by Detect criticality/tier in Step 2, and §Criticality Behavior Matrix cited at end of Phase Transition) → `${CLAUDE_SKILL_DIR}/references/criticality-matrix.md`.
-- **orchestrator-review** (read at Specify §3a and Plan §3a) → `${CLAUDE_SKILL_DIR}/references/orchestrator-review.md`.
-- **fix-agent-prompt-template** (read at orchestrator-review step 3 Fix Dispatch, on a flag verdict) → `${CLAUDE_SKILL_DIR}/references/fix-agent-prompt-template.md`.
-- **critical-review-gate** (read at Specify §3b and Plan §3b on the skip branch) → `${CLAUDE_SKILL_DIR}/references/critical-review-gate.md`.
-- **competing-plans** (read on Plan's `critical` branch via §1a→§1b) → `${CLAUDE_SKILL_DIR}/references/competing-plans.md`.
-- **merge-back** (read in Implement §2e on the worktree-dispatch arm) → `${CLAUDE_SKILL_DIR}/references/merge-back.md`.
+`refine-delegation.md` uses named placeholders — fill each with its `${CLAUDE_SKILL_DIR}`-resolved path: `<REFINE_SKILL_MD>`→`../refine/SKILL.md`, `<DISCOVERY_BOOTSTRAP_MD>`→`references/discovery-bootstrap.md`, `<COMPLEXITY_ESCALATION_MD>`→`references/complexity-escalation.md`, `<POST_REFINE_COMMIT_MD>`→`references/post-refine-commit.md`.
 
 ## Phase Transition
 

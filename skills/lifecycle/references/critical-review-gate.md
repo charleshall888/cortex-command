@@ -4,7 +4,7 @@ Shared skip-path protocol for the §3b Critical Review gate in Specify and Plan 
 
 ## Corrupted State Rule
 
-If either `cortex-lifecycle-state` read's output contains `"corrupted": true`, follow the canonical corrupted-state rule in `criticality-matrix.md` — treat the feature as requiring review (run the critical-review skill) rather than skipping.
+If either `cortex-lifecycle-state` read's output contains `"corrupted": true`, follow the canonical corrupted-state rule in `${CLAUDE_SKILL_DIR}/references/criticality-matrix.md` — treat the feature as requiring review (run the critical-review skill) rather than skipping.
 
 ## Non-Local Seed-Tier Rule
 

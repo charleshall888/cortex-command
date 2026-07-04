@@ -44,16 +44,6 @@ def test_competing_plans_reference_and_mirror_exist() -> None:
     assert mirror.exists(), f"plugin-tree mirror missing at {mirror}"
 
 
-def test_skill_md_references_competing_plans_target() -> None:
-    """SKILL.md must reference the competing-plans target (propagation manifest)."""
-    skill = _repo_root() / "skills" / "lifecycle" / "SKILL.md"
-    text = skill.read_text(encoding="utf-8")
-    assert "competing-plans" in text, (
-        "SKILL.md must reference the competing-plans target via the "
-        "Reference-path propagation manifest bullet"
-    )
-
-
 def test_plan_md_carries_the_1a_read_directive() -> None:
     """plan.md's §1a critical branch must carry the load-bearing Read directive.
 

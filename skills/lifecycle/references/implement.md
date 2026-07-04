@@ -8,74 +8,31 @@ Execute the plan by dispatching a fresh implementation sub-task per task. Each s
 
 Read `cortex/lifecycle/{feature}/plan.md` and identify pending tasks (those with `[ ]`).
 
-**Consume a plan-time recorded branch choice (primary path)**: The merged Plan §4 approval surface records the operator's branch/dispatch choice on the `plan_approved` event, so the operator is not asked twice. When the current branch is `main`/`master`, before assembling the fallback picker, read any recorded choice:
+**Branch decision**: resolve how to dispatch with one read-only call — it composes the current-branch check, the plan-time `dispatch_choice`, the per-repo `branch-mode` config, and the picker-fire gate:
 
 ```bash
-cortex-lifecycle-dispatch-choice --feature {slug}
+cortex-lifecycle-branch-decision --feature {slug}
 ```
 
-Routing on the output (the read is gated on `main`/`master` so it runs in the main-repo CWD — an interactive worktree carries its own events.log):
+Act on `state`:
 
-- A valid branch mode (`trunk` / `worktree-interactive` / `feature-branch`) — **do not render the picker**. Treat the value exactly as if the operator had selected that option in the picker and run the identical post-selection routing (so every guard still runs): `trunk` → remain on the current branch → §2; `worktree-interactive` → **record entry mode `selected`**, run Step A (overnight-active rejection) below, then §1a; `feature-branch` → create and check out `feature/{lifecycle-slug}`, then §2.
-- Empty output, `wait`, or command-not-found (the console-script not yet installed) — no recorded branch mode; **fall through to the fallback picker below**.
+- **`skip`** — not on `main`/`master`; proceed on the current branch to §2.
+- **`resolved`** — a branch mode was determined without prompting; run the identical post-selection routing so every downstream guard still runs. `trunk` → §2 on the current branch. `feature-branch` → create and check out `feature/{lifecycle-slug}`, then §2. `worktree-interactive` → record the returned `entry_mode`; on `selected` run Step A below then §1a, on `suppressed` go straight to §1a (its own overnight guard runs there, and step v routes structurally to the cd-shim).
+- **`prompt`** — render the picker below via `AskUserQuestion`, applying the returned guards: when `uncommitted_changes`, demote the current-branch option in place (prepend `Warning: uncommitted changes in working tree — this will mix them into the commit on main.`, drop any `(recommended)` suffix); when `worktree_option_available` is false, drop the worktree option. On selection — **current branch** → §2; **feature branch** → create/checkout `feature/{lifecycle-slug}` → §2; **worktree** → record entry mode `selected`, run Step A, then §1a (a Step A rejection exits §1 without creating a worktree).
 
-**Branch selection**: When the current branch is `main` or `master` AND no branch mode was consumed above (this is the fallback picker — it fires only when no plan-time `dispatch_choice` was recorded), prompt the user via AskUserQuestion with three options:
+**Picker options**:
 
 - **Implement on current branch** (recommended) — trunk workflow; changes land on the current branch. Pick for small, trunk-safe changes.
-- **Implement on feature branch with worktree** — creates an `interactive/{slug}` worktree at `<repo>/.claude/worktrees/interactive-{slug}/` and auto-enters it via the `EnterWorktree` tool (continues from inside the worktree). Proceeds to §1a. Pick for multi-task features wanting isolation with live steering.
+- **Implement on feature branch with worktree** — creates an `interactive/{slug}` worktree at `<repo>/.claude/worktrees/interactive-{slug}/` and auto-enters it via the `EnterWorktree` tool. Proceeds to §1a. Pick for multi-task features wanting isolation with live steering.
 - **Create feature branch** — create `feature/{lifecycle-slug}` for a PR-based flow. NOTE: runs `git checkout` on the main session and can corrupt parallel sessions in this repo.
 
-**Branch-mode dispatch preflight**: Before the uncommitted-changes guard and the runtime probe below, consult the per-repo `branch-mode` config via `cortex-lifecycle-branch-mode`.
+**Step A — Overnight-active rejection**: Source the overnight-probe sidecar and surface interactive-tailored wording on exit 1:
 
-Two Bash calls (no compound commands): `read_branch_mode` prints the configured value — empty when unset/malformed, which routes to the picker as `branch_mode_unset_or_invalid` — then the picker-decision verb emits `{"fire": <bool>, "reason": "<closed-set-token>"}` (third positional `{branch_mode}` is step 1's value, omitted when empty):
-
-```bash
-cortex-lifecycle-branch-mode .
-cortex-lifecycle-picker-decision . {slug} {branch_mode}
+```
+cat ${CLAUDE_SKILL_DIR}/references/_interactive_overnight_check.sh | bash -s -- "Overnight runner is active (session {session_id}, PID {pid}, phase: executing) — wait for the run to complete (`cortex overnight status`), or open a different feature." "$(_resolve_user_project_root)"
 ```
 
-**Routing on the result.** When `should_fire_picker` returns `(False, "suppressed")`, skip the picker (the uncommitted-changes guard, runtime probe, and `AskUserQuestion` call below) and route by value:
-
-- `worktree-interactive` — **record entry mode `suppressed`** and proceed directly to §1a (Interactive Worktree Creation). The `suppressed` marker is the carried control-flow value §1a step v branches on: it routes structurally to the cd-shim, skipping `EnterWorktree`.
-- `trunk` — proceed on the current branch directly to §2 Task Dispatch.
-- `feature-branch` — create and check out `feature/{lifecycle-slug}` before dispatching any tasks, then proceed to §2.
-- `prompt` — the picker fires: covered by the fall-through rule below.
-
-When `should_fire_picker` returns `(True, reason)` for any reason (`branch_mode_unset_or_invalid`, `branch_mode_prompt`, `dirty_tree`, or `live_interactive_worktree_session`), do **not** short-circuit — fall through to the uncommitted-changes guard, the runtime probe, and the existing `AskUserQuestion` call site below.
-
-**Uncommitted-changes guard**: Immediately before the `AskUserQuestion` call, run `git status --porcelain`. On non-empty output, demote the current-branch option in place (keep it selectable at its existing position): prepend the fixed warning `Warning: uncommitted changes in working tree — this will mix them into the commit on main.` to its description and drop any `(recommended)` suffix from its label. If `git status --porcelain` exits non-zero (missing `.git`, corrupt index, bisect/rebase state), fail open — the guard does not fire; surface the single-line diagnostic `uncommitted-changes guard skipped: git status failed` alongside the prompt and continue.
-
-**Runtime probe**: After the uncommitted-changes guard and before assembling the prompt's options array, run a single Bash call that probes whether the `cortex-worktree-create` console-script is reachable on PATH:
-
-```bash
-command -v cortex-worktree-create >/dev/null 2>&1
-```
-
-Route by `command -v` exit code:
-
-- **exit 0** (reachable) → keep all three options unchanged.
-- **exit 1** (not on PATH) → silently drop `Implement on feature branch with worktree` (no diagnostic), leaving `Implement on current branch` and `Create feature branch`.
-- **Bash execution failure or any exit code other than 0/1** → fail open: keep all three options and surface the literal diagnostic `runtime probe skipped: console-script probe failed`.
-
-Pass the resolved options array to `AskUserQuestion`.
-
-Dispatch by selection:
-- If the user selects **Implement on feature branch with worktree**, **record entry mode `selected`** and run the interactive preflight guard below (Step A) before proceeding to §1a. If it rejects, exit §1 without creating a worktree.
-
-  **Step A — Overnight-active rejection mirror**: Source the overnight-probe sidecar and surface interactive-tailored wording on exit 1:
-
-  ```
-  cat ${CLAUDE_SKILL_DIR}/references/_interactive_overnight_check.sh | bash -s -- "Overnight runner is active (session {session_id}, PID {pid}, phase: executing) — wait for the run to complete (`cortex overnight status`), or open a different feature." "$(_resolve_user_project_root)"
-  ```
-
-  Substitute the body-resolved absolute sidecar path (SKILL.md, Reference-path propagation).
-
-  Sidecar exit codes: `0` = no overnight active, proceed to §1a; `1` = overnight live for this repo, surface the wording above and exit §1 without creating a worktree; `2` = stale runner detected, surface a warn-and-continue diagnostic and proceed to §1a.
-
-- **Implement on current branch** → proceed to §2 Task Dispatch on the current branch.
-- **Create feature branch** → create and check out `feature/{lifecycle-slug}`, then proceed to §2 Task Dispatch.
-
-If the current branch is not `main`/`master` (already on a feature branch or resumed session), skip the prompt and proceed on the current branch.
+Sidecar exit codes: `0` = no overnight active, proceed to §1a; `1` = overnight live for this repo, surface the wording above and exit §1 without creating a worktree; `2` = stale runner detected, surface a warn-and-continue diagnostic and proceed to §1a.
 
 **Dependency graph analysis**: Parse the `**Depends on**` field from every pending task. Build an adjacency list: for each task, record which tasks it depends on. If a cycle is detected, stop and surface the error to the user — do not dispatch any tasks.
 
@@ -83,7 +40,7 @@ If the current branch is not `main`/`master` (already on a feature branch or res
 
 This section runs in two entry modes: `selected` (user picked the worktree option in §1) or `suppressed` (`branch-mode: worktree-interactive` bypassed the picker). Step v branches on the carried entry-mode marker; either way the orchestrator session does not exit `/cortex-core:lifecycle` — it continues into §2 task dispatch.
 
-**i. Overnight concurrent guard.** Invoke the sidecar at the body-resolved absolute path (SKILL.md, Reference-path propagation):
+**i. Overnight concurrent guard.** Invoke the sidecar:
 
 ```
 cat ${CLAUDE_SKILL_DIR}/references/_interactive_overnight_check.sh | bash -s -- "Overnight runner is active for this repo — wait for it to complete before creating an interactive worktree." "$(pwd)"
@@ -178,7 +135,7 @@ cortex-lifecycle-event log --event batch_dispatch --feature <name> --set-json ba
 
 Then update plan.md to change `[ ]` to `[x]` for every task that completed successfully in the batch.
 
-**e. Worktree Integration**: Skip this step entirely for sequential (non-worktree) dispatch. For worktree dispatch, read and follow the five-case merge-back procedure at the body-resolved absolute path `${CLAUDE_SKILL_DIR}/references/merge-back.md` (SKILL.md, Reference-path propagation — the **merge-back** target).
+**e. Worktree Integration**: Skip this step entirely for sequential (non-worktree) dispatch. For worktree dispatch, read and follow the five-case merge-back procedure at `${CLAUDE_SKILL_DIR}/references/merge-back.md`.
 
 **f. Report**: Summarize what the batch accomplished and any issues before dispatching the next batch.
 
@@ -235,7 +192,7 @@ cortex-lifecycle-event log --event phase_transition --feature <name> --set from=
 
 ### 4. Transition
 
-When all tasks are `[x]`, determine the next phase using both complexity tier and criticality. Read criticality by running `cortex-lifecycle-state --feature {feature} --field criticality` (rules: criticality-matrix.md §Reading lifecycle state).
+When all tasks are `[x]`, determine the next phase using both complexity tier and criticality. Read criticality by running `cortex-lifecycle-state --feature {feature} --field criticality` (rules: `${CLAUDE_SKILL_DIR}/references/criticality-matrix.md` §Reading lifecycle state).
 
 The next phase is **Review** when `criticality ∈ {high, critical}` OR `tier = complex`, else **Complete**. This mirrors `cortex_command/common.py:requires_review` — do not re-derive the cells.
 

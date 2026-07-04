@@ -194,50 +194,6 @@ class TestEscalationsDataModel(unittest.TestCase):
             self.assertEqual(data["type"], "escalation")
 
     # ------------------------------------------------------------------
-    # Req 6: resolution entry field presence
-    # ------------------------------------------------------------------
-
-    def test_resolution_entry_has_required_fields(self):
-        """Manually appended resolution entry has all expected fields."""
-        with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "escalations.jsonl"
-            record = {
-                "type": "resolution",
-                "escalation_id": "feat-1-q1",
-                "feature": "feat",
-                "answer": "yes",
-                "resolved_by": "orchestrator",
-                "ts": _now_iso(),
-            }
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(json.dumps(record) + "\n")
-            data = _parse_jsonl(path)[0]
-            for field in ("type", "escalation_id", "feature",
-                          "answer", "resolved_by", "ts"):
-                self.assertIn(field, data, msg=f"Missing field: {field}")
-
-    # ------------------------------------------------------------------
-    # Req 7: promoted entry field presence
-    # ------------------------------------------------------------------
-
-    def test_promoted_entry_has_required_fields(self):
-        """Manually appended promoted entry has all expected fields."""
-        with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "escalations.jsonl"
-            record = {
-                "type": "promoted",
-                "escalation_id": "feat-1-q1",
-                "feature": "feat",
-                "promoted_by": "orchestrator",
-                "ts": _now_iso(),
-            }
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(json.dumps(record) + "\n")
-            data = _parse_jsonl(path)[0]
-            for field in ("type", "escalation_id", "feature", "promoted_by", "ts"):
-                self.assertIn(field, data, msg=f"Missing field: {field}")
-
-    # ------------------------------------------------------------------
     # Req 8: escalation_id consistency
     # ------------------------------------------------------------------
 

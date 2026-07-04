@@ -127,19 +127,6 @@ class TestDispatchComplete:
         assert rec["cost_usd"] is not None
         assert rec["num_turns"] is not None
         assert rec["model"] is not None
-        # Cache fields tolerated as None; if present, must be non-None.
-        # (R3 explicitly tolerates absent cache fields.)
-        if "cache_creation_input_tokens" in rec:
-            # Absent → None permitted; present → must be non-None.
-            assert (
-                rec["cache_creation_input_tokens"] is None
-                or rec["cache_creation_input_tokens"] is not None
-            )
-        if "cache_read_input_tokens" in rec:
-            assert (
-                rec["cache_read_input_tokens"] is None
-                or rec["cache_read_input_tokens"] is not None
-            )
 
     def test_dispatch_complete_round_num_in_feature(self, tmp_path: Path) -> None:
         """Per-round-unique feature key uses the round_num argument."""

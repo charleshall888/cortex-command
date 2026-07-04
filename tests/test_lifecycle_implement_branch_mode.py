@@ -169,167 +169,33 @@ class TestShouldFirePicker:
 
 
 class TestImplementMdWiring:
-    """Structural-doc check that implement.md wires the dispatch helpers correctly.
-
-    Reads ``skills/lifecycle/references/implement.md`` directly, splits into
-    lines, and applies regex/proximity checks. Documentation-shape testing;
-    does not exercise the inverted-boolean regression class.
+    """The §1 branch/dispatch decision is composed by the
+    cortex-lifecycle-branch-decision verb. implement.md invokes that verb; the
+    verb composes the reads (read_branch_mode, should_fire_picker,
+    read_dispatch_choice) the old prose used to narrate inline. This class
+    guards both ends of that wiring. The predicate's own behavior is covered by
+    TestPrimitiveCases above and
+    cortex_command/lifecycle/tests/test_branch_decision.py.
     """
 
-    @pytest.fixture(scope="class")
-    def implement_lines(self) -> list[str]:
-        """Cache the implement.md content as a list of lines for the class."""
-        return IMPLEMENT_MD.read_text(encoding="utf-8").splitlines()
-
-    def test_helpers_named(self, implement_lines: list[str]) -> None:
-        """(i) Both ``read_branch_mode`` and ``should_fire_picker`` are named."""
-        text = "\n".join(implement_lines)
-        assert "read_branch_mode" in text, (
-            "implement.md must name the read_branch_mode helper"
-        )
-        assert "should_fire_picker" in text, (
-            "implement.md must name the should_fire_picker helper"
+    def test_implement_invokes_branch_decision(self) -> None:
+        """(i) implement.md §1 dispatches via the branch-decision verb."""
+        text = IMPLEMENT_MD.read_text(encoding="utf-8")
+        assert "cortex-lifecycle-branch-decision" in text, (
+            "implement.md §1 must invoke cortex-lifecycle-branch-decision — the "
+            "verb that composes the branch/dispatch decision."
         )
 
-    def test_should_fire_picker_invocation_present(
-        self, implement_lines: list[str]
-    ) -> None:
-        """(ii) An invocation form of ``should_fire_picker`` appears at least once.
+    def test_verb_composes_the_dispatch_predicates(self) -> None:
+        """(ii) The branch-decision verb still composes the reads it absorbed.
 
-        Historically the implement.md dispatch used the Python open-paren
-        form ``should_fire_picker(...)``. After the convert-bin migration
-        (see the spec under "Changes to Existing Behavior" line 109; the
-        lifecycle slug is mentioned without code formatting here to keep
-        the parity-check from flagging a substring as drift), the Python
-        ``python3 -c`` snippet was replaced with the
-        ``cortex-lifecycle-picker-decision`` console-script. Either form
-        satisfies the "dispatch must actually call the predicate" intent
-        — the console-script's ``main()`` calls ``should_fire_picker``
-        directly.
+        A refactor that drops one of the composed reads must fail here rather
+        than silently change dispatch behavior.
         """
-        invocations = [
-            idx
-            for idx, line in enumerate(implement_lines)
-            if "should_fire_picker(" in line
-            or "cortex-lifecycle-picker-decision" in line
-        ]
-        assert invocations, (
-            "implement.md must invoke should_fire_picker(...) — either via "
-            "the open-paren Python form or via the "
-            "cortex-lifecycle-picker-decision CLI (which calls the predicate "
-            "in its main()). Citation of the helper name alone is insufficient."
-        )
-
-    def test_invocation_before_picker_askuserquestion(
-        self, implement_lines: list[str]
-    ) -> None:
-        """(iii) The picker invocation precedes the §1 picker AskUserQuestion anchor.
-
-        The picker call site is the AskUserQuestion mention that the
-        dispatch routes to — i.e. the first AskUserQuestion occurrence
-        located at or after the §1 ``Branch-mode dispatch preflight``
-        block (anchored on the dispatch-helper invocation line). The
-        descriptive prose at the top of §1 ("prompt the user via
-        AskUserQuestion with three options:") is the section heading
-        rather than the call site the dispatch gates.
-
-        Accepts either the legacy ``should_fire_picker(`` Python form or
-        the new ``cortex-lifecycle-picker-decision`` CLI form (post the
-        convert-bin migration, spec line 109). For the dispatch anchor,
-        accepts either ``read_branch_mode`` (Python form) or
-        ``cortex-lifecycle-branch-mode`` (CLI form).
-        """
-        # Locate the dispatch preflight anchor — prefer the open-paren
-        # Python form, then fall back to the CLI form, then to any
-        # mention of the dispatch helper.
-        dispatch_anchor: int | None = None
-        for idx, line in enumerate(implement_lines):
-            if "read_branch_mode" in line and "(" in line:
-                dispatch_anchor = idx
-                break
-        if dispatch_anchor is None:
-            for idx, line in enumerate(implement_lines):
-                if "cortex-lifecycle-branch-mode" in line:
-                    dispatch_anchor = idx
-                    break
-        if dispatch_anchor is None:
-            for idx, line in enumerate(implement_lines):
-                if "read_branch_mode" in line:
-                    dispatch_anchor = idx
-                    break
-        assert dispatch_anchor is not None, (
-            "could not locate read_branch_mode / "
-            "cortex-lifecycle-branch-mode anchor in implement.md"
-        )
-
-        # Find the first picker invocation line — either Python or CLI form.
-        invocation_idx: int | None = None
-        for idx, line in enumerate(implement_lines):
-            if (
-                "should_fire_picker(" in line
-                or "cortex-lifecycle-picker-decision" in line
-            ):
-                invocation_idx = idx
-                break
-        assert invocation_idx is not None, (
-            "picker invocation not found in implement.md — neither "
-            "should_fire_picker( nor cortex-lifecycle-picker-decision present"
-        )
-
-        # Find the picker AskUserQuestion call-site anchor: first
-        # AskUserQuestion mention at or after the dispatch preflight block.
-        # This is the call site the dispatch gates — the prose-only mention
-        # at the top of §1 (the section heading) precedes the dispatch.
-        picker_anchor: int | None = None
-        for idx, line in enumerate(
-            implement_lines[dispatch_anchor:], start=dispatch_anchor
-        ):
-            if "AskUserQuestion" in line:
-                picker_anchor = idx
-                break
-        assert picker_anchor is not None, (
-            "could not locate §1 picker AskUserQuestion anchor in implement.md "
-            f"(searched from line {dispatch_anchor + 1} onward)"
-        )
-
-        assert invocation_idx < picker_anchor, (
-            f"should_fire_picker( invocation at line {invocation_idx + 1} "
-            f"must appear before §1 picker AskUserQuestion anchor at line "
-            f"{picker_anchor + 1}"
-        )
-
-    def test_four_branch_modes_within_proximity(
-        self, implement_lines: list[str]
-    ) -> None:
-        """(iv) Each closed-set value appears within ±10 lines of a should_fire_picker mention.
-
-        The routing block must name each of the four branch-mode values
-        (``worktree-interactive``, ``trunk``, ``feature-branch``,
-        ``prompt``) near a ``should_fire_picker`` mention so that each
-        closed-set value has a documented routing destination adjacent to
-        the dispatch invocation.
-        """
-        mention_indices = [
-            idx
-            for idx, line in enumerate(implement_lines)
-            if "should_fire_picker" in line
-        ]
-        assert mention_indices, (
-            "no should_fire_picker mentions found — proximity check cannot run"
-        )
-
-        values = ("worktree-interactive", "trunk", "feature-branch", "prompt")
-        for value in values:
-            found_near_mention = False
-            for mention_idx in mention_indices:
-                lo = max(0, mention_idx - 10)
-                hi = min(len(implement_lines), mention_idx + 11)
-                window = implement_lines[lo:hi]
-                if any(value in line for line in window):
-                    found_near_mention = True
-                    break
-            assert found_near_mention, (
-                f"closed-set value {value!r} not found within ±10 lines of "
-                f"any should_fire_picker mention in implement.md "
-                f"(mentions at lines: {[i + 1 for i in mention_indices]})"
+        verb_src = (
+            REPO_ROOT / "cortex_command" / "lifecycle" / "branch_decision.py"
+        ).read_text(encoding="utf-8")
+        for helper in ("should_fire_picker", "read_branch_mode", "read_dispatch_choice"):
+            assert helper in verb_src, (
+                f"cortex-lifecycle-branch-decision must compose {helper}"
             )

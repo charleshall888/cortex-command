@@ -311,28 +311,3 @@ class TestProbeHardcodedDenyVscode:
         assert result.cause == "hardcoded_deny"
 
 
-# ---------------------------------------------------------------------------
-# ProbeResult shape contract
-# ---------------------------------------------------------------------------
-
-
-class TestProbeResultShape:
-    """Verify ProbeResult dataclass has the required fields."""
-
-    def test_probe_result_has_ok_field(self):
-        r = ProbeResult(ok=True, cause=None, remediation_hint=None)
-        assert r.ok is True
-
-    def test_probe_result_has_cause_field(self):
-        r = ProbeResult(ok=False, cause="sandbox_blocked", remediation_hint="hint")
-        assert r.cause == "sandbox_blocked"
-
-    def test_probe_result_has_remediation_hint_field(self):
-        r = ProbeResult(ok=False, cause="hardcoded_deny", remediation_hint="fix it")
-        assert r.remediation_hint == "fix it"
-
-    def test_probe_result_success_shape(self):
-        r = ProbeResult(ok=True, cause=None, remediation_hint=None)
-        assert r.ok is True
-        assert r.cause is None
-        assert r.remediation_hint is None

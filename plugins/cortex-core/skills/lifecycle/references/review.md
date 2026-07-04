@@ -7,7 +7,7 @@ Two-stage review: spec compliance first, then code quality. Complex tier only. T
 ### 1. Gather Review Inputs
 
 - Read `cortex/lifecycle/{feature}/spec.md` (requirements) and `cortex/lifecycle/{feature}/plan.md` (verification strategy), and identify the files changed during implementation (git log since the lifecycle started, or plan.md's file lists).
-- Load requirements docs following the shared tag-based loading protocol (`load-requirements.md`): run `cortex-load-requirements --feature {feature}`, read every listed non-skipped path, and record the printed path list for injection into the reviewer prompt. When the verb emits its no-match fallback note (no area docs matched), the drift check covers project.md only.
+- Load requirements docs following the shared tag-based loading protocol (`${CLAUDE_SKILL_DIR}/references/load-requirements.md`): run `cortex-load-requirements --feature {feature}`, read every listed non-skipped path, and record the printed path list for injection into the reviewer prompt. When the verb emits its no-match fallback note (no area docs matched), the drift check covers project.md only.
 
 ### 2. Launch Review Sub-Task
 

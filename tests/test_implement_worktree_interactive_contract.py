@@ -84,21 +84,26 @@ def test_sidecar_invocation_form_bash_s_count() -> None:
 
 
 def test_gate_and_gated_path_use_same_binary() -> None:
-    """§1 runtime-probe gate and §1a step iii invocation must reference the same binary.
+    """The worktree-availability gate and §1a step iii invocation must reference
+    the same binary.
 
-    This is the class-level structural guard against literal-substring drift
-    breaking gate↔gated agreement: if the binary named in the §1 `command -v`
-    check diverges from the binary invoked in §1a step iii, the gate silently
-    lets through a binary it never tested.
+    Structural guard against gate↔gated drift: if the binary the availability
+    gate probes diverges from the binary §1a step iii invokes, the gate silently
+    lets through a binary it never tested. The gate moved from a §1 `command -v`
+    check into the cortex-lifecycle-branch-decision verb (which sets
+    `worktree_option_available` via `shutil.which(...)`); the gated path stays in
+    §1a step iii of implement.md.
     """
-    # Extract §1 body (Pre-Flight Check up to §1a).
-    section_1_match = re.search(
-        r"### 1\. Pre-Flight Check.*?(?=### 1a\.)", _IMPLEMENT_TEXT, flags=re.DOTALL
+    # Gate side: the shutil.which(...) probe inside the branch-decision verb.
+    verb_src = (
+        REPO_ROOT / "cortex_command" / "lifecycle" / "branch_decision.py"
+    ).read_text(encoding="utf-8")
+    gate_match = re.search(r'shutil\.which\(["\'](\S+?)["\']\)', verb_src)
+    assert gate_match is not None, (
+        "Could not find 'shutil.which(\"<binary>\")' availability gate in "
+        "branch_decision.py"
     )
-    assert section_1_match is not None, (
-        "Could not locate '### 1. Pre-Flight Check' section in implement.md"
-    )
-    section_1 = section_1_match.group(0)
+    gate_binary = gate_match.group(1)
 
     # Extract §1a body (from §1a heading up to §1b or end of string).
     section_1a_match = re.search(
@@ -114,13 +119,6 @@ def test_gate_and_gated_path_use_same_binary() -> None:
     assert iii_start != -1, "Could not locate '**iii.' marker in §1a of implement.md"
     iv_start = section_1a.find("**iv.", iii_start)
     section_1a_iii = section_1a[iii_start:iv_start] if iv_start != -1 else section_1a[iii_start:]
-
-    # Extract binary from §1 gate: `command -v <name>`.
-    gate_match = re.search(r"command -v (\S+)", section_1)
-    assert gate_match is not None, (
-        "Could not find 'command -v <binary>' pattern in §1 of implement.md"
-    )
-    gate_binary = gate_match.group(1)
 
     # Extract binary from §1a step iii: first token on a line followed by --feature interactive-.
     # The line may be a bare invocation or a shell assignment (var=$(<binary> ...)).

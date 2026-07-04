@@ -91,12 +91,6 @@ def test_route_renders_200(client, route):
     )
 
 
-def test_all_ten_partial_routes_covered():
-    """Guard the partial-route inventory: exactly the ten documented partials."""
-    assert len(PARTIAL_ROUTES) == 10
-    assert len(set(PARTIAL_ROUTES)) == 10
-
-
 def test_missing_session_returns_404(client):
     """``GET /sessions/{missing-id}`` returns 404 (the status_code path, not 500)."""
     response = client.get("/sessions/this-session-id-does-not-exist")

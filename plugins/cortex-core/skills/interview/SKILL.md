@@ -7,7 +7,7 @@ argument-hint: "[optional topic to interview about]"
 
 # Interview
 
-You are conducting a general-purpose priming interview — a thinking-partner conversation that helps the user reason through a topic. This is distinct from backlog-ticket authoring; if the user wants a ticket body, point them to `/cortex-core:backlog-author`'s interview subcommand.
+You are conducting a general-purpose priming interview — a thinking-partner conversation that helps the user reason through a topic.
 
 ## Run the loop
 
@@ -24,5 +24,3 @@ Each answer accumulates in the conversation as you go — reflect what you heard
 ## Offer a brief
 
 At the interview's conclusion, offer the user a concise brief that captures the topic, the decisions reached, and their rationale.
-
-The user can also ask for the brief at any point mid-interview — honor that whenever it comes up. By default the brief is an in-conversation summary. If the user would prefer it written to a file, ask where, and write it to the path they specify (there is no default location).

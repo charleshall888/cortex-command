@@ -2,8 +2,6 @@
 
 Produce a detailed implementation plan with numbered tasks, file paths, and verification steps. Plans are prose with implementation context, not code.
 
-> Reference targets named in **bold** below (e.g. **competing-plans**, **orchestrator-review**, **critical-review-gate**, **criticality-matrix**) resolve via lifecycle SKILL.md's Reference-path propagation manifest — substitute the body-resolved absolute path at each.
-
 ## Protocol
 
 ### 1. Load Context
@@ -15,14 +13,14 @@ Read prior artifacts:
 
 ### 1a. Check Criticality
 
-Read criticality by running `cortex-lifecycle-state --feature {feature} --field criticality` (rules: criticality-matrix.md §Reading lifecycle state).
+Read criticality by running `cortex-lifecycle-state --feature {feature} --field criticality` (rules: `${CLAUDE_SKILL_DIR}/references/criticality-matrix.md` §Reading lifecycle state).
 
-- **If criticality is `critical`**: read and follow the competing-plans protocol (the **competing-plans** target) before dispatching, then proceed per its guidance.
+- **If criticality is `critical`**: read and follow `${CLAUDE_SKILL_DIR}/references/competing-plans.md` before dispatching, then proceed per its guidance.
 - **Otherwise** (low, medium, high): proceed to §2 (Design the Approach) — the standard single-plan flow.
 
 ### 1b. Competing Plans (Critical Only)
 
-The competing-plans protocol (dispatch variants → synthesize → route → log the v2 comparison event) now lives in the **competing-plans** target; §1a's `critical` branch loads it before dispatching, and only the `critical` arm reaches it.
+The competing-plans protocol (dispatch variants → synthesize → route → log the v2 comparison event) now lives in `${CLAUDE_SKILL_DIR}/references/competing-plans.md`; §1a's `critical` branch loads it before dispatching, and only the `critical` arm reaches it.
 
 ### 2. Design the Approach
 
@@ -145,16 +143,16 @@ After writing `plan.md`, register the `"plan"` artifact in `cortex/lifecycle/{fe
 
 ### 3a. Orchestrator Review
 
-Before presenting the artifact to the user, read and follow the orchestrator-review protocol (the **orchestrator-review** target) for the `plan` phase. The orchestrator review must pass before proceeding to user approval.
+Before presenting the artifact to the user, read and follow `${CLAUDE_SKILL_DIR}/references/orchestrator-review.md` for the `plan` phase. The orchestrator review must pass before proceeding to user approval.
 
 ### 3b. Critical Review
 
-After orchestrator review passes, read the active tier and criticality (rules: the **criticality-matrix** target, §Reading lifecycle state):
+After orchestrator review passes, read the active tier and criticality (rules: `${CLAUDE_SKILL_DIR}/references/criticality-matrix.md` §Reading lifecycle state):
 
 - `cortex-lifecycle-state --feature {feature} --field tier`
 - `cortex-lifecycle-state --feature {feature} --field criticality`
 
-**Run** when `tier = complex` AND `criticality ∈ {medium, high, critical}`: invoke the `critical-review` skill with the plan artifact. Present the synthesis to the user before plan approval. Otherwise, read and follow the critical-review gate protocol (the **critical-review-gate** target) for the `plan` phase.
+**Run** when `tier = complex` AND `criticality ∈ {medium, high, critical}`: invoke the `critical-review` skill with the plan artifact. Present the synthesis to the user before plan approval. Otherwise, read and follow `${CLAUDE_SKILL_DIR}/references/critical-review-gate.md` for the `plan` phase.
 
 ### 4. User Approval (merged branch/dispatch surface)
 

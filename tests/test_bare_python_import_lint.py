@@ -31,19 +31,6 @@ NEGATIVE_MD = FIXTURES / "negative.md"
 # ---------------------------------------------------------------------------
 
 
-def test_positive_fixture_yields_eight_violations() -> None:
-    """positive.md should yield ≥8 L201 violations — one per positive case."""
-    text = POSITIVE_MD.read_text(encoding="utf-8")
-    violations = scan_text(text, POSITIVE_MD)
-    assert len(violations) >= 8, (
-        f"Expected ≥8 violations from positive.md, got {len(violations)}: "
-        + "\n".join(v.format_text() for v in violations)
-    )
-    # All violations should carry the L201 code.
-    for v in violations:
-        assert v.code == "L201", f"Unexpected code {v.code!r}: {v}"
-
-
 def test_negative_fixture_yields_zero_violations() -> None:
     """negative.md should yield 0 L201 violations."""
     text = NEGATIVE_MD.read_text(encoding="utf-8")

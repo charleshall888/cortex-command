@@ -6,7 +6,7 @@ Quality gate between phase artifact write and user presentation. The orchestrato
 
 Before running this protocol, determine whether orchestrator review applies. Read both fields by running `cortex-lifecycle-state --feature {feature}` (emits JSON). Defaults: criticality `medium`, tier `simple` when the key is absent.
 
-If that output contains `"corrupted": true`, follow the canonical corrupted-state rule in `criticality-matrix.md` — treat the feature as requiring review (run the protocol below) rather than skipping.
+If that output contains `"corrupted": true`, follow the canonical corrupted-state rule in `${CLAUDE_SKILL_DIR}/references/criticality-matrix.md` — treat the feature as requiring review (run the protocol below) rather than skipping.
 
 **Skip rule**: Skip orchestrator review when criticality is `low` AND tier is `simple`. Proceed directly to user presentation or the next phase.
 
@@ -50,7 +50,7 @@ After all fixes complete, increment the cycle counter, return to step 1 (Execute
 
 #### Fix Agent Prompt Template
 
-Dispatch the fresh fix sub-agent using the fix-agent prompt template at the body-resolved **fix-agent-prompt-template** path (lifecycle SKILL.md Reference-path propagation).
+Dispatch the fresh fix sub-agent using the fix-agent prompt template at `${CLAUDE_SKILL_DIR}/references/fix-agent-prompt-template.md`.
 
 ### 4. Escalation
 

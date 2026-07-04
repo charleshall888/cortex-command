@@ -27,11 +27,12 @@ import pytest
 REPO_ROOT = Path(__file__).parent.parent
 IMPLEMENT_MD = REPO_ROOT / "skills" / "lifecycle" / "references" / "implement.md"
 
-# §1 picker block bounded by the ``**Branch selection**`` heading and the
-# next line-start ``**``-prefixed boundary (e.g. ``**Branch-mode dispatch
-# preflight**``, ``**Uncommitted-changes guard**``, etc.).
+# §1 picker block bounded by the ``**Picker options**`` heading and the next
+# line-start ``**``-prefixed boundary (``**Step A**``). The branch decision is
+# resolved by the cortex-lifecycle-branch-decision verb; the picker options it
+# renders on the ``prompt`` state live under this heading.
 _BLOCK_PATTERN = re.compile(
-    r"^\*\*Branch selection\*\*.*?(?=^\*\*)",
+    r"^\*\*Picker options\*\*.*?(?=^\*\*)",
     re.MULTILINE | re.DOTALL,
 )
 

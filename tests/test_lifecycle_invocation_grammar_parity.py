@@ -102,8 +102,10 @@ def _assert_form_classifies(tokens, parse_fn, expected_mode: str) -> None:
 
 def test_grammar_advertised_forms_classify() -> None:
     forms = _all_forms()
-    # Vacuous-pass guard: an empty scrape (regex broke) must fail loudly.
-    assert len(forms) >= 8, f"scraped too few forms ({len(forms)}) — scraper likely broke"
+    # Vacuous-pass guard: an empty scrape (regex broke) would let the loop below
+    # pass with zero assertions. Guard against that specific hole only — NOT a
+    # content-count floor, which fires on legitimate doc trims.
+    assert forms, "scraped no forms — scraper regex broke"
     for tokens in forms:
         _assert_form_classifies(tokens, parse, _expected_mode(tokens))
 
@@ -119,13 +121,16 @@ def test_grammar_reserved_two_token_forms_captured_intact() -> None:
     assert reserved_two_token, "no reserved two-token forms scraped — capture degraded to lone words"
 
 
-def test_mode_coverage_every_known_mode_has_a_routing_row() -> None:
+def test_state_coverage_every_known_state_has_a_routing_row() -> None:
+    # Step 1 now routes on cortex-lifecycle-resolve's `state` (parse-args `mode`
+    # is internal to that verb). The live contract: every state the verb can
+    # emit must be documented in Step 1, or the skill has a routing gap.
+    from cortex_command.lifecycle.resolve import KNOWN_STATES
+
     text = SKILL_MD.read_text()
     step1 = text.split("## Step 1", 1)[1].split("## Step 2", 1)[0]
-    # Discriminating: require each mode as a routing-TABLE cell (`| `mode` `),
-    # not merely an incidental English word (complete/resume/empty/error etc.).
-    missing = [m for m in KNOWN_MODES if f"| `{m}`" not in step1]
-    assert not missing, f"Step 1 routing table missing rows for modes: {missing}"
+    missing = [s for s in KNOWN_STATES if f"`{s}`" not in step1]
+    assert not missing, f"Step 1 missing routing coverage for states: {missing}"
 
 
 # --- negative controls -----------------------------------------------------
