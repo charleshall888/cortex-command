@@ -6,91 +6,56 @@ Two-stage review: spec compliance first, then code quality. Complex tier only. T
 
 ### 1. Gather Review Inputs
 
-- Read `cortex/lifecycle/{feature}/spec.md` (requirements) and `cortex/lifecycle/{feature}/plan.md` (verification strategy), and identify the files changed during implementation (git log since the lifecycle started, or plan.md's file lists).
-- Load requirements docs following the shared tag-based loading protocol (`${CLAUDE_SKILL_DIR}/references/load-requirements.md`): run `cortex-load-requirements --feature {feature}`, read every listed non-skipped path, and record the printed path list for injection into the reviewer prompt. When the verb emits its no-match fallback note (no area docs matched), the drift check covers project.md only.
+Read `cortex/lifecycle/{feature}/spec.md` (requirements) and `plan.md` (verification strategy), and identify the files changed during implementation (git log since the lifecycle started, or plan.md's file lists). Then load requirements per the shared protocol (`${CLAUDE_SKILL_DIR}/references/load-requirements.md`): run `cortex-load-requirements --feature {feature}`, read every listed non-skipped path, and record the printed path list for the reviewer prompt. On the verb's no-match fallback note (no area docs matched), the drift check covers project.md only.
 
 ### 2. Launch Review Sub-Task
 
-Dispatch a focused review sub-task with read-only instructions using the reviewer prompt below.
-
-**Model**: resolve the reviewer sub-task model at dispatch by running the verb against the feature criticality — never hardcode a model literal:
+**Model** — resolve at dispatch, never hardcode:
 
 ```bash
 model=$(cortex-resolve-model --role review --criticality "$(cortex-lifecycle-state --feature {feature} --field criticality)")
 ```
 
-Pass the captured `$model` as the reviewer sub-task's model. On nonzero exit from `cortex-resolve-model`, halt and escalate to the user rather than guessing or substituting a model.
+Pass `$model` to the reviewer sub-task. On nonzero exit, halt and escalate rather than guessing. Dispatch the sub-task read-only with the prompt below, substituting `{spec_path}` with the absolute spec path.
 
 ### Reviewer Prompt Template
 
-Before dispatching, substitute `{spec_path}` with the absolute path to the spec file.
-
 ```
-You are reviewing the {feature} implementation against its specification.
+You are reviewing the {feature} implementation against its specification. Read-only — do NOT modify any source file.
 
 ## Specification
-Read `{spec_path}` before beginning the review.
+Read `{spec_path}`.
 
 ## Project Requirements
-{the path list cortex-load-requirements printed in §1, each path on its own line; if the verb emitted its no-match fallback note, relay that note instead}
+{the path list cortex-load-requirements printed in §1, one per line; if the verb emitted its no-match fallback note, relay that instead}
 
 ## Changed Files
-{list of files modified during implementation}
+{files modified during implementation}
 
-## Instructions
+## Stage 1 — Spec Compliance
+Per requirement: read the relevant source, check acceptance criteria, rate PASS / FAIL / PARTIAL. If any is FAIL, skip Stage 2 and write the verdict.
 
-### Stage 1: Spec Compliance
-For each requirement in the specification, verify the implementation matches:
-- Read the relevant source files
-- Check that acceptance criteria are met
-- Rate each requirement: PASS / FAIL / PARTIAL
+## Stage 2 — Code Quality (only when no FAIL)
+Assess naming consistency, error handling, test coverage (were the plan's verification steps executed?), and pattern consistency with the project.
 
-If any requirement is FAIL, skip Stage 2 and write the verdict.
+## Requirements Drift (observation only — does not affect the verdict)
+Compare the implementation to the project requirements above. State `none` if it matches all of them and adds no unreflected behavior; `detected` if it introduces or changes behavior the requirements don't capture.
 
-### Stage 2: Code Quality
-Only run this stage if all requirements PASS or PARTIAL (no FAIL):
-- Naming conventions: consistent with project patterns?
-- Error handling: appropriate for the context?
-- Test coverage: verification steps from the plan executed?
-- Pattern consistency: follows existing project conventions?
+## Write review.md
+Write to `cortex/lifecycle/{feature}/review.md`, including a `## Requirements Drift` section:
 
-### Requirements Drift
-Using the project requirements provided above, compare the implementation against stated requirements.
-Note: requirements drift does NOT influence the verdict. This is an observation only.
-- If the implementation matches all stated requirements and introduces no new behavior not reflected in them: state = none
-- If the implementation introduces behavior not captured in the requirements docs, or changes behavior in a way requirements don't reflect: state = detected; list each drifted item as a bullet; name the requirements file that needs updating
-
-### Write Review
-Write your review to cortex/lifecycle/{feature}/review.md using the format below.
-
-The Verdict section is a JSON object with exactly these fields:
-- "verdict": one of "APPROVED", "CHANGES_REQUESTED", or "REJECTED"
-- "cycle": the review cycle number (integer)
-- "issues": array of issue strings (empty array if none)
-
-Use exactly these field names and values — not "overall"/"result"/"status", and not "PASS"/"FAIL"/"APPROVED_WITH_NOTES" (those are Stage 1 rating values, not verdicts).
-
-Your review.md includes a ## Requirements Drift section using exactly this format:
-## Requirements Drift
 **State**: none | detected
-**Findings**:
-- (one bullet per drifted item, or "None" if state is none)
-**Update needed**: (path to requirements file that needs updating, or "None")
-The requirements_drift value in the verdict JSON matches: "none" when State is none, "detected" when State is detected.
+**Findings**: one bullet per drifted item, or "None"
+**Update needed**: requirements file path, or "None"
 
-When drift IS detected, also include a ## Suggested Requirements Update section immediately after Requirements Drift. This section provides the exact content the orchestrator will append to the named requirements file:
-## Suggested Requirements Update
-**File**: (path to the requirements file to update, e.g. cortex/requirements/project.md)
-**Section**: (existing section heading where the content belongs, e.g. "## Quality Attributes")
-**Content**:
-```
-(exact markdown content to append — a single bullet point, constraint, or paragraph that captures the drifted concern)
-```
-Write the content as it should appear in the requirements file — not as a description of what to add. Keep it concise (1-3 lines). If drift spans multiple requirements files, include one Suggested Requirements Update section per file.
+When State is `detected`, add a `## Suggested Requirements Update` section (omit when `none`; one per drifted file):
 
-When drift is NOT detected, omit the Suggested Requirements Update section entirely.
+**File**: e.g. cortex/requirements/project.md
+**Section**: existing heading, e.g. "## Quality Attributes"
+**Content**: exact 1-3 line markdown to append, as it should appear (not a description)
 
-Do NOT modify any source files. This is a read-only review.
+End with a Verdict — a JSON object using exactly these fields (not "overall"/"result"/"status"; not the Stage-1 "PASS"/"FAIL" values):
+{"verdict": "APPROVED"|"CHANGES_REQUESTED"|"REJECTED", "cycle": <int>, "issues": [<strings>], "requirements_drift": "none"|"detected"}
 ```
 
 ### 3. Review Artifact Format
@@ -103,28 +68,26 @@ The reviewer emits the Stage 1 / Stage 2 / Requirements Drift / Suggested Requir
 
 ### 4. Process Verdict
 
-After the reviewer sub-task completes and `cortex/lifecycle/{feature}/review.md` is confirmed on disk:
+After the sub-task completes and review.md is on disk: if it lacks a `## Requirements Drift` section (the reviewer ran out of context), re-dispatch once — "review.md is missing the ## Requirements Drift section; read the existing file and append it in the correct format, modifying nothing else." Still absent after one retry → escalate.
 
-Before proceeding, validate that review.md contains a `## Requirements Drift` section. If the section is absent (e.g., the reviewer ran out of context), re-dispatch the reviewer with this targeted instruction: "review.md is missing the ## Requirements Drift section. Read the existing review.md, then append the ## Requirements Drift section in the correct format. Do not modify any other section." If the section remains absent after one re-dispatch, escalate to the user.
-
-Register `"review"` in the `artifacts` array of `cortex/lifecycle/{feature}/index.md` per the canonical artifact-registration procedure in backlog-writeback.md (loaded at lifecycle Step 2).
+Register `"review"` in `index.md`'s `artifacts` array per backlog-writeback.md (loaded at lifecycle Step 2).
 
 | Verdict | Cycle | Action |
 |---------|-------|--------|
 | APPROVED | any | Proceed to Complete |
 | CHANGES_REQUESTED | 1 | Re-enter Implement for flagged tasks with reviewer feedback |
-| CHANGES_REQUESTED | ≥2 | Escalate to user — present the reviewer's analysis and ask for direction |
-| REJECTED | any | Escalate to user immediately — recommend revisiting the plan or spec |
+| CHANGES_REQUESTED | ≥2 | Escalate — present the analysis, ask for direction |
+| REJECTED | any | Escalate immediately — recommend revisiting plan or spec |
 
-The cycle counter prevents infinite rework loops (the `≥2` row escalates on cycle 2 and any later cycle a user-directed rework reaches).
+The cycle counter prevents infinite rework (the `≥2` row escalates on cycle 2 and any later cycle a user-directed rework reaches).
 
-After reading the verdict from the review artifact (state detection parses the exact `"verdict"` field name and its exact values), append a `review_verdict` event to `cortex/lifecycle/{feature}/events.log`:
+Append a `review_verdict` event (state detection parses the exact `"verdict"` field name and values):
 
 ```bash
 cortex-lifecycle-event log --event review_verdict --feature <name> --set verdict=<APPROVED|CHANGES_REQUESTED|REJECTED> --set-json cycle=<N> --set requirements_drift=<none|detected>
 ```
 
-Where `requirements_drift` is read from the `"requirements_drift"` field in the verdict JSON block.
+`requirements_drift` comes from the verdict JSON's `"requirements_drift"` field.
 
 ### 4a. Auto-Apply Requirements Drift
 
@@ -143,22 +106,22 @@ The breach surfaces in the morning report so the gap is visible rather than sile
 
 ### 5. Transition
 
-Proceed automatically — do not ask the user for confirmation when the verdict is APPROVED or CHANGES_REQUESTED cycle 1. Announce the transition briefly and continue.
+Proceed automatically for APPROVED and CHANGES_REQUESTED cycle 1 — announce briefly and continue.
 
-- APPROVED → log the transition and proceed to Complete automatically:
+- **APPROVED** → Complete:
   ```bash
   cortex-lifecycle-event log --event phase_transition --feature <name> --set from=review --set to=complete
   ```
-- CHANGES_REQUESTED cycle 1 → log the transition and return to Implement automatically:
+- **CHANGES_REQUESTED cycle 1** → Implement:
   ```bash
   cortex-lifecycle-event log --event phase_transition --feature <name> --set from=review --set to=implement-rework
   ```
-- Otherwise → log the escalation, then present findings to user and await direction (user input required — this is a genuine concern):
+- **Otherwise** (cycle ≥2 or REJECTED) → log the escalation, present findings, await direction (a genuine user concern):
   ```bash
   cortex-lifecycle-event log --event phase_transition --feature <name> --set from=review --set to=escalated
   ```
 
 ## Constraints
 
-- Flag minor code quality issues as PARTIAL with notes — minor issues compound.
-- If uncertain about requirements drift, log `detected` with a note — false positives auto-apply a small update; false negatives silently hide drift.
+- Flag minor code-quality issues as PARTIAL with notes — minor issues compound.
+- If uncertain about requirements drift, log `detected` with a note — a false positive auto-applies a small update; a false negative silently hides drift.
