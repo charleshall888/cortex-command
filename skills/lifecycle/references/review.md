@@ -95,34 +95,10 @@ Do NOT modify any source files. This is a read-only review.
 
 ### 3. Review Artifact Format
 
-```markdown
-# Review: {feature}
-
-## Stage 1: Spec Compliance
-
-### Requirement 1: {requirement text}
-- **Expected**: {what the spec says}
-- **Actual**: {what the implementation does}
-- **Verdict**: PASS / FAIL / PARTIAL
-- **Notes**: {details if FAIL or PARTIAL}
-
-...
-
-<!-- Requirements Drift and Suggested Requirements Update sections use the exact formats defined in §2 inside the dispatched reviewer prompt. -->
-
-## Stage 2: Code Quality
-<!-- Only present if Stage 1 has no FAIL verdicts -->
-
-- **Naming conventions**: {assessment}
-- **Error handling**: {assessment}
-- **Test coverage**: {assessment}
-- **Pattern consistency**: {assessment}
-
-## Verdict
+The reviewer emits the Stage 1 / Stage 2 / Requirements Drift / Suggested Requirements Update sections per the §2 prompt. The only shape downstream parsing depends on is the Verdict JSON block — exact field names and values:
 
 ```json
 {"verdict": "APPROVED", "cycle": 1, "issues": [], "requirements_drift": "none"}
-```
 ```
 
 ### 4. Process Verdict
@@ -152,25 +128,18 @@ Where `requirements_drift` is read from the `"requirements_drift"` field in the 
 
 ### 4a. Auto-Apply Requirements Drift
 
-After logging the `review_verdict` event, check whether `requirements_drift` is `"detected"`. If so:
+After logging the `review_verdict` event, if `requirements_drift` is `"detected"`:
 
-1. **Read the suggested update**: Parse the `## Suggested Requirements Update` section from `cortex/lifecycle/{feature}/review.md`. Extract `File`, `Section`, and `Content` fields.
+1. **Parse** the `## Suggested Requirements Update` section (`File` / `Section` / `Content`) from review.md.
+2. **Apply**: append `Content` at the end of the named `Section` in the target file, then report to the user what changed (file, section, first line of the appended content).
 
-2. **If the section is missing or unparseable, enforce via re-dispatch**: the reviewer must emit a `## Suggested Requirements Update` section whenever `requirements_drift: detected`. When it is absent or unparseable, re-dispatch the reviewer to append it in the §2 format (File / Section / Content) without modifying other sections, under a max-retry cap of `2` (initial dispatch + 2 retries = 3 passes); exit as soon as a pass yields a parseable section and continue with step 3.
+If the section is missing or unparseable, re-dispatch the reviewer to append it in the §2 format without touching other sections (cap 2 retries). If it still fails, do **not** block verdict processing — log the breach and fall through to §5 without applying:
 
-   If all 3 passes fail, the retry loop is exhausted — do **not** block the verdict processing. Log a `drift_protocol_breach` event to `cortex/lifecycle/{feature}/events.log` with `state=detected` and `suggestion=missing`, then fall through to step 5 (skip auto-apply). The breach surfaces in the morning report so the gap is visible rather than silent.
+```bash
+cortex-lifecycle-event log --event drift_protocol_breach --feature <name> --set state=detected --set suggestion=missing --set-json retries=2
+```
 
-   Event format:
-
-   ```bash
-   cortex-lifecycle-event log --event drift_protocol_breach --feature <name> --set state=detected --set suggestion=missing --set-json retries=2
-   ```
-
-3. **Apply the update**: Append the Content at the end of the named Section in the target file.
-
-4. **Report to the user**: state what was changed — the file, the section, and the first line of the appended content.
-
-5. **Skip auto-apply after exhausted retries**: log a brief notice — "Requirements drift detected but no suggested update was provided after re-dispatch; breach logged for morning report" — and continue to §5 Transition without blocking.
+The breach surfaces in the morning report so the gap is visible rather than silent.
 
 ### 5. Transition
 

@@ -24,7 +24,7 @@ Run `cortex-read-commit-artifacts` to read the `commit-artifacts` flag from proj
 
 Push the branch to the remote, then create a pull request with a summary of the feature. The PR title and body should reflect the feature's purpose and include a link to the lifecycle directory.
 
-**Variant A detection (advisory)**: Before invoking `/cortex-core:pr`, run a two-signal check for whether this lifecycle runs from inside an `interactive/{slug}` worktree — signal 1: `cortex_command/interactive_lock.py:read_lock(feature_slug)` returns non-None (lock file present); signal 2: `git rev-parse --show-toplevel` equals `pwd` and that path is the `interactive/{slug}` worktree root. When **both signals** are positive, apply the `cd-in-then-out` pattern around `/cortex-core:pr` (`_origin_pwd=$(pwd)`, cd into the worktree, invoke `/cortex-core:pr`, then `cd "$_origin_pwd"`); if either is **absent or contradictory**, invoke `/cortex-core:pr` from the current cwd without any cd. The detection is purely advisory — it does not block PR creation.
+**Variant A (advisory, non-blocking)**: if this lifecycle runs from inside an `interactive/{slug}` worktree — both `read_lock(slug)` returns non-None AND `git rev-parse --show-toplevel` is that worktree root — wrap `/cortex-core:pr` in a cd-in-then-out around the worktree (capture cwd first, restore it after). Otherwise invoke `/cortex-core:pr` from the current cwd.
 
 ### Step 4 — Write `pr.json` Atomically
 
@@ -141,7 +141,7 @@ Read the `{N}` values — `tasks_total` and `rework_cycles` — by running `cort
 
 This event closes the event log for the feature.
 
-**Idempotent-skip guard**: before invoking the verb, parse each line of the working-tree `cortex/lifecycle/{slug}/events.log` as a JSON object and check the `event` field. When a line with `"event": "feature_complete"` already exists, skip the verb invocation and continue directly to Step 11a — a duplicate row from a commit-retry would leave the log in an inconsistent state. Use a JSON-line parse (not a substring search) so a `feature` field or comment containing the string `feature_complete` does not trigger a false positive.
+**Idempotent-skip guard**: if a `feature_complete` row already exists in the working-tree `cortex/lifecycle/{slug}/events.log`, skip the verb and continue to Step 11a — a duplicate from a commit-retry corrupts the log. Match on a parsed JSON `event` field, not a substring, so an incidental `feature_complete` string elsewhere does not false-positive.
 
 <!-- finalization-commit-step -->
 ### Step 11a — Commit Finalization Artifacts
