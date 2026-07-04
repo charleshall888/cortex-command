@@ -6,6 +6,19 @@ SHA verification. The orchestrator MUST route through the canonical
 `git rev-parse`, `realpath`, or `sha256sum` directly, and MUST NOT append
 to `events.log` inline.
 
+**Telemetry write-guard and exit 4 (shared by Steps 2c.5 and 2d.5).** Pass
+`--feature <name>` only on auto-trigger flows; on the `<path>`-arg invocation
+form skip the verification step entirely (no lifecycle feature directory to
+write telemetry into). Both `check-*` subcommands enforce this structurally: a
+`--feature` whose `cortex/lifecycle/{feature}/` directory is absent suppresses
+the event append and returns **exit 4** rather than creating a phantom
+directory. Exit 4 is a benign skip — no event persisted, the verdict otherwise
+treated as a clean pass — and is distinct from exit 3 (drift/absence *with* the
+directory present, where the subcommand has already appended its event
+atomically and the orchestrator must NOT duplicate that append or invoke
+`record-exclusion` separately). Each gate's `**Exit 4**` row below carries only
+its section-specific reaction.
+
 ## Step 2a.5: Pre-Dispatch (atomic path + SHA pin)
 
 Before deriving angles or dispatching any agent, fuse path validation and SHA-256 computation into a single subprocess call:
@@ -45,13 +58,13 @@ cortex-critical-review check-artifact-stable \
 ```
 
 - `<hex>` is the same `{artifact_sha256}` captured in Step 2a.5 from `prepare-dispatch`.
-- `<name>` is the same `--feature` argument used in Step 2a.5. The `<path>`-arg invocation form (no `--feature` in scope) skips telemetry, and the subcommand's write-guard now enforces this structurally: if you pass a `--feature` whose `cortex/lifecycle/{feature}/` directory does not exist, the subcommand suppresses the write and returns exit 4 (see below) rather than creating a phantom directory. On the `<path>`-arg form you may skip this verification step entirely — sentinel_absence telemetry has no lifecycle feature directory to write into.
+- `<name>` is the same `--feature` argument used in Step 2a.5 (the `sentinel_absence` telemetry target). See the shared telemetry write-guard note above for the `<path>`-arg skip and the exit-4 structural guard.
 
 Routes based on exit code:
 
 - **Exit 0** — sentinel present on its own line (anywhere in the first 50 lines) AND SHA matches. Pass — proceed to Phase 2 for this reviewer.
-- **Exit 3** — sentinel absent, SHA mismatch (drift), or `READ_FAILED` route, with a real `cortex/lifecycle/{feature}/` directory present. The subcommand has already appended the `sentinel_absence` event to `cortex/lifecycle/{feature}/events.log` atomically; the orchestrator MUST NOT append to `events.log` inline and MUST NOT invoke `record-exclusion` separately (would cause double-emission). Emit the standardized warning `⚠ Reviewer {angle} excluded: {reason}` to the orchestrator log; reason maps from the subcommand's stdout (`EXCLUDED absent | EXCLUDED sha_mismatch | EXCLUDED read_failed`).
-- **Exit 4** — telemetry skipped: the target `cortex/lifecycle/{feature}/` directory does not exist, so the structural write-guard suppressed the `sentinel_absence` append rather than creating a phantom directory. This is a benign skip, distinct from exit 3: no event was persisted, the reviewer is neither excluded-for-drift nor failed, and the stdout verdict line still reflects the genuine check result. Treat the reviewer as a normal pass — proceed to Phase 2 for this reviewer; do not emit an exclusion warning and do not count it toward the all-reviewers-excluded total-failure path.
+- **Exit 3** — sentinel absent, SHA mismatch (drift), or `READ_FAILED` route, with the `cortex/lifecycle/{feature}/` directory present (the subcommand has already appended the `sentinel_absence` event — do not duplicate; see the shared note above). Emit the standardized warning `⚠ Reviewer {angle} excluded: {reason}` to the orchestrator log; reason maps from the subcommand's stdout (`EXCLUDED absent | EXCLUDED sha_mismatch | EXCLUDED read_failed`).
+- **Exit 4** — telemetry skipped (benign; see the shared note above). Treat the reviewer as a normal pass — proceed to Phase 2 for this reviewer; do not emit an exclusion warning and do not count it toward the all-reviewers-excluded total-failure path.
 
 Excluded reviewers drop from ALL downstream tallies (A-class, B-class, C-class) AND from the untagged-prose pathway. Their output is not parsed for envelope JSON and not surfaced to the synthesizer as prose. Include the warning line in the synthesizer prompt preamble (Step 2d) so the synthesizer sees the partial reviewer set explicitly rather than silently working from a reduced count.
 
@@ -76,13 +89,13 @@ printf '%s' "$SYNTH_OUTPUT" | cortex-critical-review check-synth-stable \
 ```
 
 - `<hex>` is the same `{artifact_sha256}` captured in Step 2a.5 from `prepare-dispatch`.
-- `<name>` is the same `--feature` argument used in Step 2a.5. The `<path>`-arg invocation form (no `--feature` in scope) skips telemetry, and the subcommand's write-guard now enforces this structurally: if you pass a `--feature` whose `cortex/lifecycle/{feature}/` directory does not exist, the subcommand suppresses the write and returns exit 4 (see below) rather than creating a phantom directory. On the `<path>`-arg form you may skip this verification step entirely — drift telemetry has no lifecycle feature directory to write into.
+- `<name>` is the same `--feature` argument used in Step 2a.5 (the `synthesizer_drift` telemetry target). See the shared telemetry write-guard note above for the `<path>`-arg skip and the exit-4 structural guard.
 
 Routes based on exit code:
 
 - **Exit 0** — synthesizer's `SYNTH_READ_OK:` sentinel present and SHA matches. Surface the synthesizer's prose output to the user normally, then proceed to Step 2e.
-- **Exit 3** — sentinel absent OR SHA mismatch (drift), with a real `cortex/lifecycle/{feature}/` directory present. **Do NOT surface the synthesizer's prose output.** Instead, relay `check-synth-stable`'s own stdout verbatim to the user — its top-level diagnostic carries the `Critical-review pass invalidated` phrasing and the resolution instruction. The subcommand has already appended the `synthesizer_drift` event to `cortex/lifecycle/{feature}/events.log` atomically; the orchestrator must not duplicate that append.
-- **Exit 4** — telemetry skipped: the target `cortex/lifecycle/{feature}/` directory does not exist, so the structural write-guard suppressed the `synthesizer_drift` append rather than creating a phantom directory. This is a benign skip, distinct from exit 3: no event was persisted and the synthesizer's verdict is otherwise treated as a clean pass. Surface the synthesizer's prose output normally and proceed to Step 2e.
+- **Exit 3** — sentinel absent OR SHA mismatch (drift), with the `cortex/lifecycle/{feature}/` directory present (the subcommand has already appended the `synthesizer_drift` event — do not duplicate; see the shared note above). **Do NOT surface the synthesizer's prose output.** Instead, relay `check-synth-stable`'s own stdout verbatim to the user — its top-level diagnostic carries the `Critical-review pass invalidated` phrasing and the resolution instruction.
+- **Exit 4** — telemetry skipped (benign; see the shared note above). Surface the synthesizer's prose output normally and proceed to Step 2e.
 
 On Exit 3, do NOT proceed to Step 2e (residue write) — the critical-review pass is invalidated and a stale residue write would compound the drift. Exit 4 does not invalidate the pass, so Step 2e proceeds as on Exit 0.
 
