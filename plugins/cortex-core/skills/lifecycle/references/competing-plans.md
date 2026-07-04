@@ -28,7 +28,7 @@ Read the spec at {spec_path} and the research at {research_path}. Before any pla
 3. Code budget: prose with structural context (paths, signatures, type field names, pattern references, config keys) — no function bodies, imports, error-handling implementations, complete test code, or copy-paste-ready code. No prose-only Verification, and no self-sealing Verification (referencing an artifact the task creates solely to satisfy the check).
 ```
 
-**c. Collect results** — wait for all agents. On a failure (crash, timeout, garbage), continue with the successes. Only 1 succeeds → use it as the sole variant (skip d-f, go to plan.md §3a). All fail → fall back to the single-plan flow in plan.md §2-§3.
+**c. Collect results** — wait for all agents. On a failure (crash, timeout, garbage), continue with the successes. Only 1 succeeds → use it as the sole variant (skip d-f, go to plan.md §3a). All fail → fall back to the single-plan flow in plan.md §3.
 
 **d. Synthesizer dispatch** — one fresh read-only Opus Task sub-agent compares the variants and picks one with structured rationale:
 - **Model**: `cortex-resolve-model --role synthesizer` (no `--criticality` flag and no lifecycle-state read); dispatch with the captured name, halt and escalate on nonzero exit (per §1b.b).
@@ -56,4 +56,4 @@ Read the spec at {spec_path} and the research at {research_path}. Before any pla
 - `disposition` — `rubber_stamp` (Enter on the pick), `override` (typed a different label), `deferred` (rejected all on fallback), `auto_select` (overnight surface only, not emitted here).
 - `operator_choice` — the chosen label, or `null` when no operator (overnight) or all rejected.
 
-After logging, go to plan.md §3a if a variant was selected, or plan.md §2 if the operator rejected all on the fallback path.
+After logging, go to plan.md §3a if a variant was selected, or plan.md §3 if the operator rejected all on the fallback path.

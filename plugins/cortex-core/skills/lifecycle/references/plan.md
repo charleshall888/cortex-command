@@ -17,15 +17,11 @@ cortex-lifecycle-state --feature {feature} --field criticality
 ```
 
 - **`critical`** → read and follow `${CLAUDE_SKILL_DIR}/references/competing-plans.md`, then proceed per its guidance.
-- **Otherwise** (low/medium/high) → §2, the standard single-plan flow.
+- **Otherwise** (low/medium/high) → §3, the standard single-plan flow.
 
 ### 1b. Competing Plans (Critical Only)
 
 The competing-plans protocol (dispatch variants → synthesize → route → log the v2 comparison event) lives in `${CLAUDE_SKILL_DIR}/references/competing-plans.md`; §1a's `critical` branch loads it, and only that arm reaches it.
-
-### 2. Design the Approach
-
-From research and spec, determine the architecture, the file creation/modification order, integration points with existing code, and the verification approach.
 
 ### 3. Write Plan Artifact
 
@@ -69,7 +65,7 @@ Produce `cortex/lifecycle/{feature}/plan.md`:
 
 ### Authoring rules
 
-**Task sizing** — 5-15 min and 1-5 files each; ~5-15 tasks per feature; split any task touching >5 files. Each task self-contained: an implementer with no prior context completes it from the task text and its referenced files alone.
+**Task sizing** — size each task to a coherent, self-contained unit of work: one an implementer with no prior context can complete from the task text and its referenced files alone. Split when a task spans unrelated concerns or grows too large to hold in one focused pass.
 
 **Complexity** — every task carries `**Complexity**`:
 
@@ -91,7 +87,7 @@ Tasks that create files, modify JSON settings, create symlinks, set permissions,
 
 **Caller enumeration** — when a task changes or removes a function/command/interface, search the codebase first and list ALL callers/dependents in **Files**.
 
-**Code budget** — plans are prose with structural context. Allowed: paths and directory structures, function signatures, type field names/types, pattern references, config keys/values, inter-task contracts. Prohibited: function bodies, imports, error-handling implementations, complete test code, any copy-paste-ready code, and self-sealing verification (steps referencing artifacts the same task creates solely to satisfy the check).
+**Code budget** — plans are prose with structural context. Allowed: paths and directory structures, function signatures, type field names/types, pattern references, config keys/values, inter-task contracts. Prohibited: anything beyond that — no copy-paste-ready code, and no self-sealing verification (steps referencing artifacts the same task creates solely to satisfy the check).
 
 After writing `plan.md`, register the `"plan"` artifact in `index.md` per the artifact-registration recipe in backlog-writeback.md (loaded at lifecycle Step 2).
 
