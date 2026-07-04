@@ -81,9 +81,9 @@ Act on the verdict; do not re-derive it:
 
 **Prefix check**: cleanup runs only for `interactive/`-prefixed worktrees — check `git worktree list --porcelain` for `.claude/worktrees/interactive-{slug}`. No match (Option 1/3 features) → skip silently.
 
-**Gate** — both required, or skip with a warning:
-1. `git status --porcelain --ignored=traditional` inside the worktree is empty.
-2. `git merge-base --is-ancestor <branch-head> origin/main` succeeds.
+**Gate** — both required, else skip with a warning:
+1. `git status --porcelain --ignored=traditional` inside the worktree is empty (dirty → skip with warning).
+2. `git merge-base --is-ancestor <branch-head> origin/main` succeeds (non-ancestor → skip with warning).
 
 **Call**: `cleanup_worktree(slug, branch=f"interactive/{slug}", force=False)`. No `force=True` — on failure, report and retain the worktree.
 

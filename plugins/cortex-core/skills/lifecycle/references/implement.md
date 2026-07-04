@@ -62,7 +62,7 @@ Exit 0 → iii. Non-zero → the script wrote its rejection to stderr (a live sa
 worktree_path=$(cortex-worktree-create --feature interactive-{slug} --base-branch main)
 ```
 
-Resolves the branch as `interactive/{slug}`, materializes the worktree at `<repo>/.claude/worktrees/interactive-{slug}/` (containment enforced — an escaping path exits 1 with `worktree_escapes_repo`), prints the absolute path. On failure it writes `repr(exc)` to stderr and exits 1 — before exiting §1a run `cortex-interactive-lock release-if-owner {slug}` to release the step-ii lock (`release-if-owner` unlinks only when this session's `CLAUDE_CODE_SESSION_ID` owns the on-disk lock, so it never deletes a co-passer's live lock), then surface the stderr and exit §1a.
+`create_worktree` resolves the branch as `interactive/{slug}`, materializes the worktree at `<repo>/.claude/worktrees/interactive-{slug}/` (containment enforced — an escaping path exits 1 with `worktree_escapes_repo`), and prints the absolute path. On failure it writes `repr(exc)` to stderr and exits 1 — before exiting §1a run `cortex-interactive-lock release-if-owner {slug}` to release the step-ii lock (`release-if-owner` unlinks only when this session's `CLAUDE_CODE_SESSION_ID` owns the on-disk lock, so it never deletes a co-passer's live lock), then surface the stderr and exit §1a.
 
 **Step v — Auto-enter sequence**
 
