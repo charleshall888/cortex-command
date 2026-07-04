@@ -24,7 +24,7 @@ Before creating artifacts or writing back, check whether the item was already co
 4. **Close lifecycle**:
    - **`phase != none`** (a `cortex/lifecycle/{feature}/` directory exists): log completion (omit `tasks_total`/`rework_cycles` — plan.md may not exist on this path; do NOT set them to 0), then on the `cortex-backlog` backend run the close write-back, then **exit immediately** (no Discovery Bootstrap, no later steps):
      ```bash
-     cortex-lifecycle-event log --event feature_complete --feature <name>
+     cortex-lifecycle-event feature-complete --feature <name>
      cortex-update-item <slug> --status complete --lifecycle-phase complete --session-id null
      ```
      (`<slug>` = the backlog filename stem.)

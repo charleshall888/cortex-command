@@ -75,7 +75,7 @@ After iii succeeds, run in this order — the event must be emitted from inside 
 5. **Emit event** — once CWD is rooted in the worktree (via `EnterWorktree` on `selected`, or the cd-shim on `suppressed`):
 
    ```bash
-   cortex-lifecycle-event log --event interactive_worktree_entered --feature {slug} --set worktree_path="$(pwd)"
+   cortex-lifecycle-event interactive-worktree-entered --feature {slug} --worktree-path "$(pwd)"
    ```
 
    (`cortex-lifecycle-event` uses `_resolve_user_project_root_from_cwd()`, ignoring `CORTEX_REPO_ROOT`, so the row lands in the worktree's events.log.)
@@ -109,7 +109,7 @@ model=$(cortex-resolve-model --role builder --criticality "$(cortex-lifecycle-st
 Pass `$model` to each builder. On nonzero exit, halt and escalate rather than guessing. Then log the dispatch:
 
 ```bash
-cortex-lifecycle-event log --event batch_dispatch --feature <name> --set-json batch=<N> --set-json tasks=[<task IDs>]
+cortex-lifecycle-event batch-dispatch --feature <name> --batch <N> --tasks '[<task IDs>]'
 ```
 
 **c. Wait** — all batch tasks finish before proceeding.
@@ -159,11 +159,7 @@ Do not add features beyond what is specified.
 
 ### 3. Rework (Review Re-Entry)
 
-Re-entering from Review with CHANGES_REQUESTED — log the rework start:
-
-```bash
-cortex-lifecycle-event log --event phase_transition --feature <name> --set from=review --set to=implement-rework
-```
+Re-entering from Review with CHANGES_REQUESTED — log the rework start: `cortex-lifecycle-event phase-transition --feature <name> --from review --to implement-rework`
 
 1. Read `cortex/lifecycle/{feature}/review.md` for the reviewer's feedback.
 2. For each flagged task, dispatch a fresh sub-task with the original task text + the reviewer's specific feedback + a fix instruction.
@@ -181,7 +177,7 @@ cortex-lifecycle-state --feature {feature} --field criticality
 Next phase is **Review** when `criticality ∈ {high, critical}` OR `tier = complex`, else **Complete** — mirrors `cortex_command/common.py:requires_review`; do not re-derive.
 
 ```bash
-cortex-lifecycle-event log --event phase_transition --feature <name> --set tier=<simple|complex> --set from=implement --set to=<review|complete>
+cortex-lifecycle-event phase-transition --feature <name> --from implement --to <review|complete> --tier <simple|complex>
 ```
 
 **Proceed automatically** — no confirmation. The transition fires on the gate (every task `[x]`, then the review rule), not user input. Announce briefly and continue. This boundary is not a kept pause; see SKILL.md §Phase Transition.

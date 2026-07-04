@@ -81,13 +81,9 @@ Register `"review"` in `index.md`'s `artifacts` array per backlog-writeback.md (
 
 The cycle counter prevents infinite rework (the `≥2` row escalates on cycle 2 and any later cycle a user-directed rework reaches).
 
-Append a `review_verdict` event (state detection parses the exact `"verdict"` field name and values):
+Append the `review_verdict` event — `--drift` comes from the verdict JSON's `requirements_drift` field:
 
-```bash
-cortex-lifecycle-event log --event review_verdict --feature <name> --set verdict=<APPROVED|CHANGES_REQUESTED|REJECTED> --set-json cycle=<N> --set requirements_drift=<none|detected>
-```
-
-`requirements_drift` comes from the verdict JSON's `"requirements_drift"` field.
+`cortex-lifecycle-event review-verdict --feature <name> --verdict <APPROVED|CHANGES_REQUESTED|REJECTED> --cycle <N> --drift <none|detected>`
 
 ### 4a. Auto-Apply Requirements Drift
 
@@ -96,11 +92,7 @@ After logging the `review_verdict` event, if `requirements_drift` is `"detected"
 1. **Parse** the `## Suggested Requirements Update` section (`File` / `Section` / `Content`) from review.md.
 2. **Apply**: append `Content` at the end of the named `Section` in the target file, then report to the user what changed (file, section, first line of the appended content).
 
-If the section is missing or unparseable, re-dispatch the reviewer to append it in the §2 format without touching other sections (cap 2 retries). If it still fails, do **not** block verdict processing — log the breach and fall through to §5 without applying:
-
-```bash
-cortex-lifecycle-event log --event drift_protocol_breach --feature <name> --set state=detected --set suggestion=missing --set-json retries=2
-```
+If the section is missing or unparseable, re-dispatch the reviewer to append it in the §2 format without touching other sections (cap 2 retries). If it still fails, do **not** block verdict processing — log the breach and fall through to §5 without applying: `cortex-lifecycle-event drift-protocol-breach --feature <name> --state detected --suggestion missing --retries 2`
 
 The breach surfaces in the morning report so the gap is visible rather than silent.
 
@@ -108,18 +100,9 @@ The breach surfaces in the morning report so the gap is visible rather than sile
 
 Proceed automatically for APPROVED and CHANGES_REQUESTED cycle 1 — announce briefly and continue.
 
-- **APPROVED** → Complete:
-  ```bash
-  cortex-lifecycle-event log --event phase_transition --feature <name> --set from=review --set to=complete
-  ```
-- **CHANGES_REQUESTED cycle 1** → Implement:
-  ```bash
-  cortex-lifecycle-event log --event phase_transition --feature <name> --set from=review --set to=implement-rework
-  ```
-- **Otherwise** (cycle ≥2 or REJECTED) → log the escalation, present findings, await direction (a genuine user concern):
-  ```bash
-  cortex-lifecycle-event log --event phase_transition --feature <name> --set from=review --set to=escalated
-  ```
+- **APPROVED** → Complete: `cortex-lifecycle-event phase-transition --feature <name> --from review --to complete`
+- **CHANGES_REQUESTED cycle 1** → Implement: `cortex-lifecycle-event phase-transition --feature <name> --from review --to implement-rework`
+- **Otherwise** (cycle ≥2 or REJECTED) → log the escalation, present findings, await direction (a genuine user concern): `cortex-lifecycle-event phase-transition --feature <name> --from review --to escalated`
 
 ## Constraints
 

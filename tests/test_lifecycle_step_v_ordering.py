@@ -66,7 +66,7 @@ _REQUIRED_ORDER = (
     "_origin_pwd",
     "cortex-worktree-precondition",
     "EnterWorktree(",
-    "interactive_worktree_entered",
+    "interactive-worktree-entered",
 )
 
 # The suppressed-picker structural-skip marker. Per ADR-0008, when §1's

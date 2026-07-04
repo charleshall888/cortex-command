@@ -14,25 +14,27 @@ Two independent arms per migrated event:
     the exact ``"event": "feature_complete"`` substring — the ``needle_tight``
     literal ``cortex_command/hooks/scan_lifecycle.py`` string-matches.
 
-(ii) ON-DISK CROSS-VALIDATION — parse EVERY ``cortex-lifecycle-event log
-    --event X ...`` invocation out of each migrated ``.md`` (tolerating
-    fenced ```` ```bash ```` blocks and placeholder values like ``from=<...>``
-    or ``tasks=[<task IDs>]`` — the flag-kind and field-KEY are concrete even
-    when the value is a placeholder), and for EACH invocation assert its
-    (field-key set, per-field flag-kind) matches the canonical for that event.
-    A fail-loud found-match check asserts the parser located exactly the
-    expected number of invocations per (file, event), so a parse that finds
-    zero/too-few/too-many fails rather than passing an empty loop.
+(ii) ON-DISK CROSS-VALIDATION — parse EVERY high-level subcommand invocation
+    (``cortex-lifecycle-event <event-subcommand> ...``, the Phase 2 form that
+    replaced ``log --event X --set…``) out of each migrated ``.md`` (tolerating
+    fenced ```` ```bash ```` blocks and placeholder values like ``--from <...>``
+    or ``--tasks '[<task IDs>]'`` — the flag NAMES are concrete even when the
+    value is a placeholder), and assert each invocation's flag set is a subset
+    of the subcommand's declared flags with all required flags present. The
+    contract is validated against the verb's own ``_EVENT_SUBCOMMANDS`` table
+    (single source of truth), not a hand-maintained field map. A fail-loud
+    found-match check asserts the parser located exactly the expected number of
+    invocations per (file, event), so a parse that finds zero/too-few/too-many
+    fails rather than passing an empty loop.
 
-**Residual limitation (documented, not closed):** the canonical argv is
-author-supplied, so arm (ii) detects on-disk DRIFT FROM the canonical, not a
-canonical that is itself wrong in lockstep with the ``.md``. Arm (i)'s golden
-is the independent type/spacing anchor. The label is "flag-and-field-set
-cross-validation," not full value-pinning (the ``.md`` values are placeholders).
+**Residual limitation (documented, not closed):** arm (ii) detects on-disk
+DRIFT FROM the table's declared flags, not a table that is itself wrong in
+lockstep with the ``.md``. Arm (i)'s golden is the independent type/spacing
+anchor (it still drives the intact ``log`` path the subcommands funnel into).
 
 ``phase_transition`` is NON-UNIFORM across sites: most rows carry ``{from,to}``,
-but ``implement.md`` §4 legitimately carries ``{tier,from,to}``. The canonical
-allows both key sets for that event (and only that event).
+but ``implement.md`` §4 legitimately carries ``{tier,from,to}``. ``--tier`` is
+an optional (declared, non-required) flag, so both forms validate.
 """
 
 from __future__ import annotations
@@ -62,69 +64,60 @@ def _setup_cortex_root(base: Path) -> Path:
     return base
 
 
-_EVENT_RE = re.compile(
-    r"cortex-lifecycle-event\s+log\b.*?--event[ =]([a-z_][a-z0-9_]*)"
-)
-_FIELD_RE = re.compile(r"--set(-json)?\s+([a-z_][a-z0-9_]*)=")
+# On-disk form (Phase 2): ``cortex-lifecycle-event <subcommand> --feature X
+# --flag val ...`` where ``<subcommand>`` != ``log`` and each event's flag set
+# is owned by the verb's ``_EVENT_SUBCOMMANDS`` table — the single source of
+# truth this arm validates against (no hand-maintained field map to drift).
+from cortex_command.lifecycle_event import _EVENT_SUBCOMMANDS
+
+# event_name -> subcommand (1:1 with the table).
+_EVENT_TO_SUB: dict[str, str] = {
+    event: sub for sub, (event, _specs) in _EVENT_SUBCOMMANDS.items()
+}
+
+_SUBCMD_RE = re.compile(r"cortex-lifecycle-event\s+(?!log\b)([a-z][a-z0-9-]*)\b")
+_FLAG_RE = re.compile(r"(--[a-z][a-z0-9-]+)")
 
 
 class CrossValidationError(Exception):
     """Raised when an on-disk invocation drifts from the canonical contract."""
 
 
-def parse_invocations(path: Path) -> list[tuple[int, str, dict[str, str]]]:
-    """Return ``[(lineno, event_name, {field_key: flag_kind}), ...]``.
+def parse_invocations(path: Path) -> list[tuple[int, str, set[str]]]:
+    """Return ``[(lineno, subcommand, {--flag, ...}), ...]``.
 
-    ``flag_kind`` is ``"set"`` (``--set``, literal string) or ``"json"``
-    (``--set-json``). Only the flag-kind and field-key are extracted — the
-    value (often a placeholder) is intentionally ignored.
+    Only the subcommand name and the set of option flags (values, often
+    placeholders, ignored) are extracted. ``log``-form lines are skipped — the
+    generic escape hatch is not a high-level subcommand and is validated by the
+    golden arm, not here.
     """
-    out: list[tuple[int, str, dict[str, str]]] = []
+    out: list[tuple[int, str, set[str]]] = []
     for lineno, line in enumerate(
         path.read_text(encoding="utf-8").splitlines(), start=1
     ):
-        if "cortex-lifecycle-event" not in line or "--event" not in line:
+        if "cortex-lifecycle-event" not in line:
             continue
-        m = _EVENT_RE.search(line)
-        if not m:
+        m = _SUBCMD_RE.search(line)
+        if not m or m.group(1) not in _EVENT_SUBCOMMANDS:
             continue
-        field_map: dict[str, str] = {}
-        for suffix, key in _FIELD_RE.findall(line):
-            field_map[key] = "json" if suffix == "-json" else "set"
-        out.append((lineno, m.group(1), field_map))
+        flags = set(_FLAG_RE.findall(line))
+        out.append((lineno, m.group(1), flags))
     return out
 
 
-# Canonical field-map(s) per event: event -> list of allowed {key: flag_kind}.
-# A list with one entry means the event is uniform; ``phase_transition`` has
-# two allowed key sets (the implement.md §4 row carries a preserved ``tier``).
-CANONICAL: dict[str, list[dict[str, str]]] = {
-    "plan_approved": [{"dispatch_choice": "set"}],
-    "feature_paused": [{}],
-    "phase_transition": [
-        {"from": "set", "to": "set"},
-        {"tier": "set", "from": "set", "to": "set"},
-    ],
-    "review_verdict": [
-        {"verdict": "set", "cycle": "json", "requirements_drift": "set"}
-    ],
-    "drift_protocol_breach": [
-        {"state": "set", "suggestion": "set", "retries": "json"}
-    ],
-    "batch_dispatch": [{"batch": "json", "tasks": "json"}],
-    "criticality_override": [{"from": "set", "to": "set"}],
-    "lifecycle_critical_review_skipped": [
-        {"phase": "set", "tier": "set", "criticality": "set"}
-    ],
-    "lifecycle_start": [{"tier": "set", "criticality": "set"}],
-    "spec_approved": [{}],
-    "feature_complete": [{}],
-}
+def _declared_and_required(subcommand: str) -> tuple[set[str], set[str]]:
+    """Return (declared, required) flag sets for *subcommand* from the table."""
+    _event, specs = _EVENT_SUBCOMMANDS[subcommand]
+    declared = {"--feature"} | {flag for (flag, *_rest) in specs}
+    required = {"--feature"} | {
+        flag for (flag, _ek, _kind, req, _choices) in specs if req
+    }
+    return declared, required
 
-# Per-file expected invocation counts for each migrated event (the Task 5-9
-# on-disk reality). ``implement.md`` also carries an ``interactive_worktree_
-# entered`` line (Task 1) — out of #330's migration scope — which is not in any
-# entry here, so it is never cross-validated by these counts.
+
+# Per-file expected invocation counts per event (the on-disk reality). Keyed by
+# event name; the subcommand is resolved via ``_EVENT_TO_SUB``. implement.md's
+# ``interactive_worktree_entered`` is now migrated too, so it is cross-validated.
 FILE_EVENTS: dict[str, dict[str, int]] = {
     "skills/lifecycle/references/plan.md": {
         "plan_approved": 2,
@@ -139,6 +132,7 @@ FILE_EVENTS: dict[str, dict[str, int]] = {
     "skills/lifecycle/references/implement.md": {
         "batch_dispatch": 1,
         "phase_transition": 2,
+        "interactive_worktree_entered": 1,
     },
     "skills/refine/references/specify.md": {
         "spec_approved": 1,
@@ -161,23 +155,33 @@ FILE_EVENTS: dict[str, dict[str, int]] = {
 
 
 def cross_validate(path: Path, event: str, expected_count: int) -> None:
-    """Fail loud if *event*'s on-disk invocations drift from the canonical.
+    """Fail loud if *event*'s on-disk subcommand invocations drift from the table.
 
     Raises ``CrossValidationError`` when the found count != *expected_count*
-    (anti-vacuous), or when any matching invocation's field-key set / per-field
-    flag-kind is not an allowed canonical for *event*.
+    (anti-vacuous), when any invocation uses a flag the subcommand does not
+    declare, or when a required flag is missing.
     """
-    matching = [fm for (_ln, ev, fm) in parse_invocations(path) if ev == event]
+    subcommand = _EVENT_TO_SUB[event]
+    matching = [
+        flags for (_ln, sub, flags) in parse_invocations(path)
+        if sub == subcommand
+    ]
     if len(matching) != expected_count:
         raise CrossValidationError(
-            f"{path}: expected {expected_count} '{event}' invocation(s), "
+            f"{path}: expected {expected_count} '{subcommand}' invocation(s), "
             f"found {len(matching)}"
         )
-    allowed = CANONICAL[event]
-    for fm in matching:
-        if fm not in allowed:
+    declared, required = _declared_and_required(subcommand)
+    for flags in matching:
+        undeclared = flags - declared
+        if undeclared:
             raise CrossValidationError(
-                f"{path}: '{event}' field-map {fm} not in allowed {allowed}"
+                f"{path}: '{subcommand}' uses undeclared flags {undeclared}"
+            )
+        missing = required - flags
+        if missing:
+            raise CrossValidationError(
+                f"{path}: '{subcommand}' missing required flags {missing}"
             )
 
 
@@ -272,6 +276,13 @@ GOLDEN_CASES: list[tuple[str, str, list[str], str]] = [
         [],
         '{"ts": "%s", "event": "feature_complete", "feature": "f"}' % FIXED_TS,
     ),
+    (
+        "interactive_worktree_entered",
+        "interactive_worktree_entered",
+        ["--set", "worktree_path=/tmp/wt"],
+        '{"ts": "%s", "event": "interactive_worktree_entered", "feature": "f", '
+        '"worktree_path": "/tmp/wt"}' % FIXED_TS,
+    ),
 ]
 
 
@@ -352,11 +363,12 @@ def test_ondisk_invocation_matches_canonical(
     cross_validate(path, event, expected_count)
 
 
-def test_every_canonical_event_has_a_golden_case() -> None:
-    """Sanity: every event in CANONICAL has at least one golden case."""
+def test_every_subcommand_event_has_a_golden_case() -> None:
+    """Sanity: every event owned by a subcommand has at least one golden case."""
     golden_events = {c[1] for c in GOLDEN_CASES}
-    assert set(CANONICAL) <= golden_events, (
-        f"events missing a golden case: {set(CANONICAL) - golden_events}"
+    table_events = {event for (event, _specs) in _EVENT_SUBCOMMANDS.values()}
+    assert table_events <= golden_events, (
+        f"events missing a golden case: {table_events - golden_events}"
     )
 
 
@@ -382,40 +394,39 @@ def _write_md(path: Path, invocation: str) -> Path:
     return path
 
 
-def test_negative_control_mistyped_flag_kind_rejected(tmp_path: Path) -> None:
-    """batch=--set (should be --set-json) is rejected through the file path."""
+def test_negative_control_undeclared_flag_rejected(tmp_path: Path) -> None:
+    """An undeclared flag on a subcommand is rejected through the file path."""
     bad = _write_md(
         tmp_path / "bad_batch.md",
-        "cortex-lifecycle-event log --event batch_dispatch --feature f "
-        "--set batch=3 --set-json tasks=[1, 2]",
+        "cortex-lifecycle-event batch-dispatch --feature f "
+        "--batch 3 --tasks [1,2] --bogus x",
     )
     with pytest.raises(CrossValidationError):
         cross_validate(bad, "batch_dispatch", 1)
 
-    # Witness: the corrected form (both --set-json) ACCEPTS — proving it is the
-    # flag-kind defect, not the fixture file itself, that triggers rejection.
+    # Witness: the declared-only form ACCEPTS — proving it is the undeclared
+    # flag, not the fixture file itself, that triggers rejection.
     good = _write_md(
         tmp_path / "good_batch.md",
-        "cortex-lifecycle-event log --event batch_dispatch --feature f "
-        "--set-json batch=3 --set-json tasks=[1, 2]",
+        "cortex-lifecycle-event batch-dispatch --feature f "
+        "--batch 3 --tasks [1,2]",
     )
     cross_validate(good, "batch_dispatch", 1)  # must not raise
 
 
-def test_negative_control_dropped_field_key_rejected(tmp_path: Path) -> None:
-    """lifecycle_start missing --set criticality= is rejected via the file path."""
+def test_negative_control_dropped_required_flag_rejected(tmp_path: Path) -> None:
+    """lifecycle-start missing required --criticality is rejected via the file path."""
     bad = _write_md(
         tmp_path / "bad_lifecycle_start.md",
-        "cortex-lifecycle-event log --event lifecycle_start --feature f "
-        "--set tier=simple",
+        "cortex-lifecycle-event lifecycle-start --feature f --tier simple",
     )
     with pytest.raises(CrossValidationError):
         cross_validate(bad, "lifecycle_start", 1)
 
-    # Witness: restoring --set criticality= ACCEPTS.
+    # Witness: restoring --criticality ACCEPTS.
     good = _write_md(
         tmp_path / "good_lifecycle_start.md",
-        "cortex-lifecycle-event log --event lifecycle_start --feature f "
-        "--set tier=simple --set criticality=medium",
+        "cortex-lifecycle-event lifecycle-start --feature f "
+        "--tier simple --criticality medium",
     )
     cross_validate(good, "lifecycle_start", 1)  # must not raise

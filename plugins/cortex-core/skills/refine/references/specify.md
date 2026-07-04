@@ -145,10 +145,7 @@ Present the specification summary via the AskUserQuestion tool with these approv
 
 Enumerate the options explicitly as `Approve` | `Request changes` | `Cancel`. Route on the response:
 
-- **Approve** → append `spec_approved`, then §5's `phase_transition`, then auto-advance to Plan (no re-confirmation):
-  ```bash
-  cortex-lifecycle-event log --event spec_approved --feature <name>
-  ```
+- **Approve** → append `spec_approved`, then §5's `phase_transition`, then auto-advance to Plan (no re-confirmation): `cortex-lifecycle-event spec-approved --feature <name>`
 - **Request changes** → collect the changes, revise the spec, re-present the surface. No `spec_approved` on revision loops — only the final Approve emits it.
 - **Cancel** → append `lifecycle_cancelled` and halt (resume by re-invoking `/cortex-core:lifecycle`).
 
@@ -156,9 +153,7 @@ Enumerate the options explicitly as `Approve` | `Request changes` | `Cancel`. Ro
 
 On `Approve`, append a `phase_transition` event:
 
-```bash
-cortex-lifecycle-event log --event phase_transition --feature <name> --set from=specify --set to=plan
-```
+`cortex-lifecycle-event phase-transition --feature <name> --from specify --to plan`
 
 ## Hard Gate
 

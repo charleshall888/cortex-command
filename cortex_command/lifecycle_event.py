@@ -1,6 +1,12 @@
 """CLI helper for appending events to a feature's events.log.
 
-Exposes a single ``log`` subcommand:
+Exposes a generic ``log`` subcommand plus one high-level subcommand per
+non-exempt lifecycle event (``phase-transition``, ``review-verdict``, …). The
+high-level subcommands own their event's field contract (names, order, type,
+enum) so callers emit without restating the raw scaffold; each funnels into the
+same ``log_event`` writer, so the row is identical to the equivalent ``log``
+form. See ``_EVENT_SUBCOMMANDS`` for the table and the ADR-0020 exempt-event
+carve-out. The generic form:
 
     cortex-lifecycle-event log --event <name> --feature <slug> \
         [--set k=v ...] [--set-json k=v ...]
@@ -196,12 +202,139 @@ class _SetFieldAction(argparse.Action):
         items.append((kind, key, value))
 
 
+# ---------------------------------------------------------------------------
+# High-level event subcommands (ADR-0020 field-set ownership)
+# ---------------------------------------------------------------------------
+# Each subcommand owns one event's field contract — the field names, their
+# order, type, and enum — so a caller emits it without restating the raw
+# ``--event <name> --set k=v`` scaffold. Every subcommand funnels into
+# ``log_event`` so the emitted row is key/value/type-identical to the
+# equivalent ``log`` form (extra-field serialization order is normalized per
+# subcommand; consumers key by name, and ADR-0020 fixes only the ts/event/
+# feature base-key prefix). The generic ``log`` subcommand is retained as the
+# escape hatch and the ONLY path for the ADR-0020 hand-written exempt events
+# (``plan_comparison``, ``clarify_critic``, ``pr_opened``) whose canonical
+# shape places ``schema_version`` before ``feature``.
+#
+# The subcommand name is the event name with ``_`` rendered as ``-``. Each
+# FieldSpec is ``(flag, emit_key, kind, required, choices)``: ``flag`` is the
+# argparse option, ``emit_key`` the row key it writes (they differ only where
+# the flag is an ergonomic alias — e.g. ``--drift`` → ``requirements_drift``),
+# ``kind`` is ``"str"`` (literal) or ``"json"`` (``json.loads``-parsed, the old
+# ``--set-json``), ``choices`` validates the enum or is ``None``.
+
+_STR = "str"
+_JSON = "json"
+
+_CRITICALITY = ("low", "medium", "high", "critical")
+
+_EVENT_SUBCOMMANDS: dict[str, tuple[str, list]] = {
+    "phase-transition": ("phase_transition", [
+        ("--from", "from", _STR, True, None),
+        ("--to", "to", _STR, True, None),
+        ("--tier", "tier", _STR, False, ("simple", "complex")),
+    ]),
+    "plan-approved": ("plan_approved", [
+        ("--dispatch-choice", "dispatch_choice", _STR, True,
+         ("trunk", "worktree-interactive", "feature-branch", "wait")),
+    ]),
+    "feature-complete": ("feature_complete", [
+        ("--tasks-total", "tasks_total", _JSON, False, None),
+        ("--rework-cycles", "rework_cycles", _JSON, False, None),
+        ("--merge-anchor", "merge_anchor", _STR, False, ("merge", "review")),
+    ]),
+    "spec-approved": ("spec_approved", []),
+    "review-verdict": ("review_verdict", [
+        ("--verdict", "verdict", _STR, True,
+         ("APPROVED", "CHANGES_REQUESTED", "REJECTED")),
+        ("--cycle", "cycle", _JSON, True, None),
+        ("--drift", "requirements_drift", _STR, True, ("none", "detected")),
+    ]),
+    "lifecycle-start": ("lifecycle_start", [
+        ("--tier", "tier", _STR, True, ("simple", "complex")),
+        ("--criticality", "criticality", _STR, True, _CRITICALITY),
+    ]),
+    "critical-review-skipped": ("lifecycle_critical_review_skipped", [
+        ("--phase", "phase", _STR, True, None),
+        ("--tier", "tier", _STR, True, ("simple", "complex")),
+        ("--criticality", "criticality", _STR, True, _CRITICALITY),
+    ]),
+    "interactive-worktree-entered": ("interactive_worktree_entered", [
+        ("--worktree-path", "worktree_path", _STR, True, None),
+    ]),
+    "feature-paused": ("feature_paused", []),
+    "drift-protocol-breach": ("drift_protocol_breach", [
+        ("--state", "state", _STR, True, None),
+        ("--suggestion", "suggestion", _STR, True, None),
+        ("--retries", "retries", _JSON, True, None),
+    ]),
+    "criticality-override": ("criticality_override", [
+        ("--from", "from", _STR, True, None),
+        ("--to", "to", _STR, True, None),
+    ]),
+    "batch-dispatch": ("batch_dispatch", [
+        ("--batch", "batch", _JSON, True, None),
+        ("--tasks", "tasks", _JSON, True, None),
+    ]),
+}
+
+
+def _json_arg(value: str) -> object:
+    """argparse ``type=`` for JSON-typed fields (old ``--set-json`` semantics)."""
+    try:
+        return json.loads(value)
+    except json.JSONDecodeError as exc:
+        raise argparse.ArgumentTypeError(
+            f"invalid JSON value {value!r}: {exc}"
+        )
+
+
+def _flag_dest(flag: str) -> str:
+    """Derive argparse's dest from an option flag (``--tasks-total`` → ``tasks_total``)."""
+    return flag[2:].replace("-", "_")
+
+
+def _emit_subcommand(command: str, args: argparse.Namespace) -> int:
+    """Map a high-level event subcommand's parsed args to a ``log_event`` call."""
+    event_name, specs = _EVENT_SUBCOMMANDS[command]
+    fields: list[tuple[str, str, object]] = []
+    for flag, emit_key, kind, required, _choices in specs:
+        value = getattr(args, _flag_dest(flag))
+        if value is None and not required:
+            continue  # optional flag omitted — drop the field entirely
+        fields.append((kind, emit_key, value))
+    try:
+        log_event(event=event_name, feature=args.feature, fields=fields)
+    except CortexProjectRootError as exc:
+        sys.stderr.write(f"cortex-lifecycle-event: {exc}\n")
+        return 1
+    return 0
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="cortex-lifecycle-event",
         description="Append events to a feature's events.log.",
     )
     sub = parser.add_subparsers(dest="command", required=True)
+
+    for command, (event_name, specs) in _EVENT_SUBCOMMANDS.items():
+        event_p = sub.add_parser(
+            command, help=f"Emit a {event_name} event"
+        )
+        event_p.add_argument(
+            "--feature", required=True, metavar="SLUG",
+            help="Feature slug (e.g. my-feature)",
+        )
+        for flag, emit_key, kind, required, choices in specs:
+            kwargs: dict = {"required": required}
+            if choices is not None:
+                kwargs["choices"] = list(choices)
+            else:
+                kwargs["metavar"] = emit_key.upper()
+            if kind == _JSON:
+                kwargs["type"] = _json_arg
+            event_p.add_argument(flag, **kwargs)
 
     log_p = sub.add_parser("log", help="Append one event row to events.log")
     log_p.add_argument(
@@ -238,6 +371,9 @@ def _build_parser() -> argparse.ArgumentParser:
 def _run(argv: Optional[list[str]] = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
+
+    if args.command in _EVENT_SUBCOMMANDS:
+        return _emit_subcommand(args.command, args)
 
     if args.command == "log":
         try:

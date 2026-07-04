@@ -4,9 +4,7 @@
 
 The user can change criticality at any time by asking. On override, append:
 
-```bash
-cortex-lifecycle-event log --event criticality_override --feature <name> --set from=<old> --set to=<new>
-```
+`cortex-lifecycle-event criticality-override --feature <name> --from <old> --to <new>`
 
 An automated **Clarify reconciliation** (from `cortex-refine reconcile-clarify --lifecycle-slug {slug}` at Spec-phase entry) carries `gate: "clarify_reconcile"` and is monotonic-up-only (never lowers a value). A later, ungated user `criticality_override` always supersedes it by recency — the user's setting is final.
 

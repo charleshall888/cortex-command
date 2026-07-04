@@ -104,7 +104,7 @@ After the Step 9 call (success, failure, or skip), resolve the backend with `cor
 ### Step 11 — Log `feature_complete`
 
 ```bash
-cortex-lifecycle-event log --event feature_complete --feature {slug} --set-json tasks_total={N} --set-json rework_cycles={N} --set merge_anchor=merge
+cortex-lifecycle-event feature-complete --feature {slug} --tasks-total {N} --rework-cycles {N} --merge-anchor merge
 ```
 
 Read `{N}` from `cortex-lifecycle-counters --feature {slug}` (JSON): `tasks_total`/`rework_cycles` are ints (`--set-json`), `merge_anchor` is the literal `merge` (`--set`). Simple tier (no review) → `rework_cycles` is `0`. This event closes the feature's log.

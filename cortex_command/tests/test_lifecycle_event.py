@@ -738,3 +738,181 @@ class TestVerbConcurrentWithBareAppender:
         # Every row is a complete, independently parseable JSON object.
         for line in lines:
             json.loads(line)
+
+
+# ---------------------------------------------------------------------------
+# (f) High-level event subcommands — field-set ownership (ADR-0020)
+# ---------------------------------------------------------------------------
+
+
+class TestEventSubcommands:
+    """Each high-level subcommand emits a row identical to its ``log`` form.
+
+    The invariant guarded here is the migration's safety net: a subcommand's
+    row must be key/value/type-identical (ts aside) to the raw
+    ``log --event <name> --set…`` scaffold the skill prose used before. Byte
+    order of extra fields is normalized per subcommand, so the comparison is on
+    the parsed dict, not the serialized line.
+    """
+
+    def _read_row(self, root: Path, feature: str) -> dict:
+        log_path = root / "cortex" / "lifecycle" / feature / "events.log"
+        return json.loads(
+            log_path.read_text(encoding="utf-8").splitlines()[0]
+        )
+
+    def _strip_ts(self, row: dict) -> dict:
+        return {k: v for k, v in row.items() if k != "ts"}
+
+    # (subcommand argv-tail, equivalent log argv-tail) — feature added per case.
+    PARITY_CASES = [
+        (
+            ["phase-transition", "--from", "review", "--to", "complete"],
+            ["log", "--event", "phase_transition",
+             "--set", "from=review", "--set", "to=complete"],
+        ),
+        (
+            ["phase-transition", "--from", "implement", "--to", "review",
+             "--tier", "complex"],
+            ["log", "--event", "phase_transition",
+             "--set", "from=implement", "--set", "to=review",
+             "--set", "tier=complex"],
+        ),
+        (
+            ["plan-approved", "--dispatch-choice", "trunk"],
+            ["log", "--event", "plan_approved",
+             "--set", "dispatch_choice=trunk"],
+        ),
+        (
+            ["feature-complete"],
+            ["log", "--event", "feature_complete"],
+        ),
+        (
+            ["feature-complete", "--tasks-total", "5",
+             "--rework-cycles", "1", "--merge-anchor", "merge"],
+            ["log", "--event", "feature_complete",
+             "--set-json", "tasks_total=5", "--set-json", "rework_cycles=1",
+             "--set", "merge_anchor=merge"],
+        ),
+        (
+            ["spec-approved"],
+            ["log", "--event", "spec_approved"],
+        ),
+        (
+            ["review-verdict", "--verdict", "APPROVED", "--cycle", "2",
+             "--drift", "detected"],
+            ["log", "--event", "review_verdict",
+             "--set", "verdict=APPROVED", "--set-json", "cycle=2",
+             "--set", "requirements_drift=detected"],
+        ),
+        (
+            ["lifecycle-start", "--tier", "complex", "--criticality", "high"],
+            ["log", "--event", "lifecycle_start",
+             "--set", "tier=complex", "--set", "criticality=high"],
+        ),
+        (
+            ["critical-review-skipped", "--phase", "plan",
+             "--tier", "complex", "--criticality", "low"],
+            ["log", "--event", "lifecycle_critical_review_skipped",
+             "--set", "phase=plan", "--set", "tier=complex",
+             "--set", "criticality=low"],
+        ),
+        (
+            ["interactive-worktree-entered", "--worktree-path", "/tmp/wt"],
+            ["log", "--event", "interactive_worktree_entered",
+             "--set", "worktree_path=/tmp/wt"],
+        ),
+        (
+            ["feature-paused"],
+            ["log", "--event", "feature_paused"],
+        ),
+        (
+            ["drift-protocol-breach", "--state", "detected",
+             "--suggestion", "missing", "--retries", "2"],
+            ["log", "--event", "drift_protocol_breach",
+             "--set", "state=detected", "--set", "suggestion=missing",
+             "--set-json", "retries=2"],
+        ),
+        (
+            ["criticality-override", "--from", "medium", "--to", "high"],
+            ["log", "--event", "criticality_override",
+             "--set", "from=medium", "--set", "to=high"],
+        ),
+        (
+            ["batch-dispatch", "--batch", "0", "--tasks", '["3a", "3b"]'],
+            ["log", "--event", "batch_dispatch",
+             "--set-json", "batch=0", "--set-json", 'tasks=["3a", "3b"]'],
+        ),
+    ]
+
+    @pytest.mark.parametrize("new_tail,old_tail", PARITY_CASES)
+    def test_subcommand_row_matches_log_form(
+        self, new_tail, old_tail,
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        root = _setup_cortex_root(tmp_path)
+        monkeypatch.chdir(root)
+        monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+
+        assert _run(new_tail + ["--feature", "f"]) == 0
+        assert _run(old_tail + ["--feature", "f"]) == 0
+
+        lines = (
+            root / "cortex" / "lifecycle" / "f" / "events.log"
+        ).read_text(encoding="utf-8").splitlines()
+        new_row = self._strip_ts(json.loads(lines[0]))
+        old_row = self._strip_ts(json.loads(lines[1]))
+        assert new_row == old_row, (new_row, old_row)
+
+    def test_json_fields_stay_typed(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """``--cycle`` / ``--batch`` / ``--retries`` emit ints, ``--tasks`` a list."""
+        root = _setup_cortex_root(tmp_path)
+        monkeypatch.chdir(root)
+        monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+
+        assert _run([
+            "batch-dispatch", "--feature", "f", "--batch", "3",
+            "--tasks", '["a"]',
+        ]) == 0
+        row = self._read_row(root, "f")
+        assert row["batch"] == 3 and isinstance(row["batch"], int)
+        assert row["tasks"] == ["a"]
+
+    def test_enum_typo_is_usage_error_no_row(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """An out-of-enum ``--verdict`` exits non-zero and writes no row."""
+        root = _setup_cortex_root(tmp_path)
+        monkeypatch.chdir(root)
+        monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+
+        with pytest.raises(SystemExit) as exc:
+            _run([
+                "review-verdict", "--feature", "f", "--verdict", "aproved",
+                "--cycle", "1", "--drift", "none",
+            ])
+        assert exc.value.code != 0
+        assert not (root / "cortex" / "lifecycle" / "f" / "events.log").exists()
+
+    def test_optional_field_omitted_drops_key(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """``feature-complete`` with no flags emits the bare 3-key close row."""
+        root = _setup_cortex_root(tmp_path)
+        monkeypatch.chdir(root)
+        monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+
+        assert _run(["feature-complete", "--feature", "f"]) == 0
+        row = self._read_row(root, "f")
+        assert set(row) == {"ts", "event", "feature"}
+        assert row["event"] == "feature_complete"
+
+    def test_subcommand_table_covers_only_non_exempt_events(self) -> None:
+        """The subcommand table never shadows an ADR-0020 hand-written event."""
+        from cortex_command.lifecycle_event import _EVENT_SUBCOMMANDS
+
+        exempt = {"plan_comparison", "clarify_critic", "pr_opened"}
+        emitted = {ev for ev, _specs in _EVENT_SUBCOMMANDS.values()}
+        assert emitted.isdisjoint(exempt), emitted & exempt

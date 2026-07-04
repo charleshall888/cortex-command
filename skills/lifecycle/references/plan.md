@@ -125,24 +125,17 @@ Off `main`/`master`, the sub-choices collapse to `trunk` (the current branch), s
 
 **Compose `AskUserQuestion` `options`** (≤4): the branch modes plus **"Approve plan but wait to implement"**. The platform's **"Other"** free-text escape (appended outside the 4-cap) carries Request-changes and Cancel. Route on the selection:
 
-- **A branch mode** (`Implement on current branch`→`trunk`; `Implement on feature branch with worktree`→`worktree-interactive`; `Create feature branch`→`feature-branch`) — implies approval. Append `plan_approved` with the `dispatch_choice`, then §5's `phase_transition`, then auto-advance to Implement (it consumes `dispatch_choice` and skips its own picker).
-  ```bash
-  cortex-lifecycle-event log --event plan_approved --feature <name> --set dispatch_choice=<trunk|worktree-interactive|feature-branch>
-  ```
+- **A branch mode** (`Implement on current branch`→`trunk`; `Implement on feature branch with worktree`→`worktree-interactive`; `Create feature branch`→`feature-branch`) — implies approval. Append `plan_approved` with the `dispatch_choice`, then §5's `phase_transition`, then auto-advance to Implement (it consumes `dispatch_choice` and skips its own picker). `cortex-lifecycle-event plan-approved --feature <name> --dispatch-choice <trunk|worktree-interactive|feature-branch>`
 - **Approve plan but wait to implement** — append `plan_approved` with `dispatch_choice: "wait"`, then `feature_paused`, then **halt** (no auto-advance, no dispatch). Re-invocation routes to `implement` (the plan IS approved); Implement §1 fires its fallback picker since `wait` is not a branch mode. **If the feature is backlog-linked, warn now** that the overnight runner may still execute the item unless it is paused (overnight eligibility does not yet honor `feature_paused`).
   ```bash
-  cortex-lifecycle-event log --event plan_approved --feature <name> --set dispatch_choice=wait
-  cortex-lifecycle-event log --event feature_paused --feature <name>
+  cortex-lifecycle-event plan-approved --feature <name> --dispatch-choice wait
+  cortex-lifecycle-event feature-paused --feature <name>
   ```
 - **"Other" free-text** — a cancel-intent → append `lifecycle_cancelled` and halt. Any other text → **Request changes**: revise the plan and re-assemble/re-present this surface. Do not emit `plan_approved` on revision rounds — only a terminal branch-mode or "wait" selection emits it.
 
 ### 5. Transition
 
-On a branch-mode selection (not "wait"), append `phase_transition` (the §4 `plan_approved` must precede it in the log):
-
-```bash
-cortex-lifecycle-event log --event phase_transition --feature <name> --set from=plan --set to=implement
-```
+On a branch-mode selection (not "wait"), append `phase_transition` (the §4 `plan_approved` must precede it in the log): `cortex-lifecycle-event phase-transition --feature <name> --from plan --to implement`
 
 On any approval (branch-mode or "wait" — both emit `plan_approved`), run `cortex-read-commit-artifacts`. If `true` (the default), stage `cortex/lifecycle/{feature}/` and commit via `/cortex-core:commit`; if `false`, skip silently. On the "wait" path the commit makes approval durable, then the lifecycle halts.
 
