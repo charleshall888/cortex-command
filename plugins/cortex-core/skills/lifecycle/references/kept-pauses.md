@@ -4,9 +4,9 @@ Canonical inventory of the deliberate, in-scope user-facing `AskUserQuestion` pa
 
 - `skills/lifecycle/SKILL.md:42` — ambiguous backlog match needs operator disambiguation.
 - `skills/refine/references/clarify.md:57` — low-confidence clarify question batch surfaces unknowns the model cannot resolve alone.
-- `skills/refine/references/specify.md:36` — structured-interview gap-fill: model needs user input for unstated requirements.
-- `skills/refine/references/specify.md:67` — §2a cycle-2 confidence-check: user decides whether to loop back to research or proceed with gaps.
-- `skills/refine/references/specify.md:155` — spec approval surface (Approve / Request changes / Cancel). Substantive user decision.
+- `skills/refine/references/specify.md:26` — structured-interview gap-fill: model needs user input for unstated requirements.
+- `skills/refine/references/specify.md:55` — §2a cycle-2 confidence-check: user decides whether to loop back to research or proceed with gaps.
+- `skills/refine/references/specify.md:140` — spec approval surface (Approve / Request changes / Cancel). Substantive user decision.
 - `skills/lifecycle/references/plan.md:126` — plan approval surface, merged with branch/dispatch selection (branch modes + "Approve plan but wait to implement" imply approval; Request changes / Cancel via the "Other" free-text escape). Substantive user decision.
 - `skills/lifecycle/references/implement.md:21` — conditional pause: fallback branch-selection picker on main (the `cortex-lifecycle-branch-decision` verb's `prompt` state), used only when no plan-time `dispatch_choice` was recorded (trunk vs feature-branch-with-worktree vs feature branch). Suppressed when `lifecycle.config.md::branch-mode` is set AND the working tree is clean AND no concurrent live interactive worktree exists for the feature slug.
 - `skills/lifecycle/references/backlog-writeback.md:22` — backlog write-back complete-lifecycle prompt on a backlog item already marked complete.
