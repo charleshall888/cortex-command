@@ -24,7 +24,7 @@ A conversational routing hub — the single entry point for all development work
 
 Read the user's input and classify it into one of five routing branches. Evaluate in this order — first match wins.
 
-**Skill name mentions**: If the user names a specific skill (e.g., "use skill-creator", "run discovery on X"), treat it as a strong signal during classification — not an automatic pass-through. Dev always analyzes the request and provides its own assessment. If the analysis agrees with the user's stated preference, route there with context. If it disagrees, present the discrepancy and let the user decide. The user chose `/cortex-core:dev` over invoking the skill directly because they want the routing hub's analysis.
+**Skill name mentions**: If the user names a specific skill (e.g., "use skill-creator", "run discovery on X"), treat it as a strong signal during classification — not an automatic pass-through. Dev always analyzes the request and provides its own assessment. If the analysis agrees with the user's stated preference, route there with context. If it disagrees, present the discrepancy and let the user decide.
 
 ### Branch 1: Backlog Triage
 
@@ -44,7 +44,7 @@ The user describes multiple features or uses batch language.
 
 - **All non-trivial**: Tell the user to run `/cortex-overnight:overnight` with the feature list.
 - **All trivial**: Execute direct implementation (Step 4) for each sequentially in the current conversation.
-- **Mixed**: Present a **hybrid plan** — `/cortex-overnight:overnight` for non-trivial tasks, direct implementation for trivial ones. Execute trivial tasks first (or in parallel with the overnight pipeline) to get quick wins shipped while structured work proceeds.
+- **Mixed**: Present a **hybrid plan** — `/cortex-overnight:overnight` for non-trivial tasks, direct implementation for trivial ones. Execute trivial tasks first, or in parallel with the overnight pipeline.
 
 When presenting the hybrid plan, show a table classifying each task with its routing and brief justification, then ask the user to confirm or adjust before proceeding.
 
@@ -88,7 +88,7 @@ Before routing to `/cortex-core:lifecycle`, analyze the feature description for 
 
 ### Resumed Lifecycle
 
-Before performing this criticality assessment (its heuristic-signals table now lives in the reference Read below), check whether `cortex/lifecycle/<feature>/` already exists. If it does:
+Before performing this criticality assessment, check whether `cortex/lifecycle/<feature>/` already exists. If it does:
 
 1. Read criticality by running `cortex-lifecycle-state --feature <feature> --field criticality` (emits JSON; defaults to `medium` when the key is absent).
 2. Inform the user: "A lifecycle for `<feature>` already exists at `<phase>`. Resume it?"
@@ -103,7 +103,7 @@ When routing to backlog triage:
 
 ### Backend gate (resolve before any index read)
 
-Triage reads the local `cortex/backlog/index.{md,json}` and calls `cortex-build-epic-map` / `cortex-generate-backlog-index`, all of which only describe a `cortex-backlog` (local) repo. So resolve the active backend first — before reaching any of the steps below — with `` `cortex-read-backlog-backend` `` (argless; it prints the resolved backend and exits 0):
+Triage reads the local `cortex/backlog/index.{md,json}` and calls `cortex-build-epic-map` / `cortex-generate-backlog-index`, all of which only describe a `cortex-backlog` (local) repo. So resolve the active backend first — before reaching any of the steps below — with `` `cortex-read-backlog-backend` ``:
 
 - **`cortex-backlog`** (the default arm) — proceed with triage exactly as today (Steps 3a–3c below).
 - **any other value** (`none` or an external tracker) — the local index does not represent the active backlog, so skip triage with a one-line advisory: this repo's backlog lives in a non-`cortex-backlog` backend, so consult it directly and route work through `/cortex-core:lifecycle` (a single concrete feature) or `/cortex-core:discovery` (a topic to decompose). Do not run `cortex-generate-backlog-index`, read `cortex/backlog/index.{md,json}`, or call `cortex-build-epic-map`.
@@ -120,7 +120,7 @@ If it fails:
 
 ### 3b. Read the Ready Set
 
-The index has no single section literally named "Ready". The actionable buckets are `## Refined` (`status: refined` — spec-approved, overnight-eligible) and `## Backlog` (`status: backlog` — not yet refined). The **ready set** is the union of these two sections. The generator has already done the filtering: when it populates them it excludes anything held out by an unresolved blocker, a `deferred` park flag, or a non-actionable status, so an item's presence in `## Refined`/`## Backlog` is the readiness signal.
+The index has no single section literally named "Ready". The actionable buckets are `## Refined` (`status: refined` — spec-approved, overnight-eligible) and `## Backlog` (`status: backlog` — not yet refined). The **ready set** is the union of these two sections. The generator already excludes blocked, `deferred`, and non-actionable items, so an item's presence in `## Refined`/`## Backlog` is the readiness signal.
 
 Read both sections from `cortex/backlog/index.md`. The master table at the top is the **full non-terminal ledger**, not a candidate list — it intentionally also contains blocked, `proposed`, and `deferred` items. Items that appear in the master table but in **neither** `## Refined` nor `## Backlog` are non-actionable. Do NOT present master-table-only items as work candidates; at most surface them as a brief "parked / blocked" footnote so the user can act on stale ones.
 
@@ -130,19 +130,15 @@ If both `## Refined` and `## Backlog` are empty:
 
 **Epic detection and child map construction** (must complete before any output is rendered):
 
-Invoke `cortex-build-epic-map` to produce the deterministic epic→children map. The script reads `cortex/backlog/index.json`, auto-detects `type: epic` items, and groups non-epic items under their normalized parent epic (handling quote-stripping, UUID-format parent references, and integer comparison internally). Capture stdout as JSON.
+Invoke `cortex-build-epic-map` to produce the deterministic epic→children map. The script reads `cortex/backlog/index.json`, auto-detects `type: epic` items, and groups non-epic items under their normalized parent epic. Capture stdout as JSON.
 
-**Schema note**: The Refined section contains `status: refined` items (spec-approved, overnight-eligible). The Backlog section contains `status: backlog` items (not yet refined).
+**Output schema**: an envelope `{"schema_version": "1", "epics": {...}}` where each `epics[epic_id]` has a `children` array; each child has `id` (numeric), `title` (string), `status` (string), and `spec` (string or null). A non-null `spec` marks a refined child.
 
-**Output schema**: The script emits an envelope `{"schema_version": "1", "epics": {...}}` where each `epics[epic_id]` contains a `children` array. Each child entry has four fields: `id` (numeric), `title` (string), `status` (string), and `spec` (string or null). A non-null `spec` indicates a refined child; Step 3c reads this field directly to render the `[refined]` indicator.
-
-**Ready intersection**: The script emits ALL detected epics from `index.json`. Step 3b filters by intersecting the script's emitted `epics` keys with the IDs already extracted from the ready set (`## Refined` ∪ `## Backlog`) above. Only ready-set epics are passed to Step 3c for rendering.
-
-**Fallback for missing index**: If `index.json` is missing after Step 3a ran, warn and fall back to reading `index.md` using the existing table columns. The script signals this case via exit 1.
+**Ready intersection**: the script emits ALL detected epics; pass only those whose keys intersect the ready set (`## Refined` ∪ `## Backlog`) to Step 3c.
 
 **Exit-code handling**:
-- Exit 1 — missing or malformed `index.json`: warn the user, then fall back to reading `index.md` table columns as in the missing-index case above.
-- Exit 2 — `schema_version` mismatch: report the mismatch and halt triage. Do not silently fall back, because that would mask the schema-bump signal and let stale parsing logic run against a newer envelope.
+- Exit 1 — missing or malformed `index.json`: warn, then fall back to reading `index.md`'s table columns.
+- Exit 2 — `schema_version` mismatch: report it and halt triage. Do not silently fall back — that would mask the schema-bump signal and run stale parsing against a newer envelope.
 
 ### 3c. Present Ready Items with Workflow Recommendations
 
@@ -156,7 +152,7 @@ If `cortex/backlog/` contains no item files (or does not exist):
 
 ## Step 4: Direct Implementation Confirmation
 
-When a request appears trivial (Branch 5), confirm before skipping lifecycle:
+When a request appears trivial (Branch 4), confirm before skipping lifecycle:
 
 > This looks like a trivial change — implement directly without lifecycle?
 >
@@ -175,7 +171,7 @@ If the user declines:
 
 ## Constraint: No Built-In Plan Mode
 
-Never use Claude Code's built-in `EnterPlanMode` as a substitute for `/cortex-core:lifecycle`. When a feature requires planning, route through `/cortex-core:lifecycle` — its structured phases (research → specify → plan → implement → review → complete) replace the built-in plan mode entirely. The `/cortex-core:dev` skill exists to route to the right workflow skill, not to perform planning itself.
+Never use Claude Code's built-in `EnterPlanMode` as a substitute for `/cortex-core:lifecycle`. When a feature requires planning, route through `/cortex-core:lifecycle` — its structured phases (research → specify → plan → implement → review → complete) replace the built-in plan mode entirely.
 
 ## Step 5: User Override
 

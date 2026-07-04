@@ -4,8 +4,6 @@ Consumed by `/cortex-core:dev` Step 2 (Branch 5 route-to-lifecycle) and the Step
 
 ### Heuristic Signals
 
-Scan the feature description for these indicators:
-
 | Signal | Suggests |
 |--------|----------|
 | Authentication, authorization, access control | high or critical |
@@ -22,7 +20,7 @@ Scan the feature description for these indicators:
 
 ### Forming the Suggestion
 
-Based on signals found (or absence of signals), suggest a criticality level:
+Suggest a level:
 
 - **low**: No elevated signals. Failure is easily reversed and has minimal impact.
 - **medium**: Some signals present but scope is contained. Default when uncertain.
@@ -33,4 +31,4 @@ Present the suggestion conversationally:
 
 > **Criticality suggestion: `<level>`** — `<one-sentence justification>`.
 
-If no heuristic signals are detected, suggest **medium** (the lifecycle default) and note that no elevated signals were found.
+With no signals detected, suggest **medium** and note that no elevated signals were found.

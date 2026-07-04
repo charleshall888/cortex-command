@@ -2,7 +2,7 @@
 
 Consumed by `/cortex-core:dev` Step 3c (Branch 1 backlog triage). Read this before producing any triage output; it renders the child map from Step 3b into two blocks.
 
-Output is rendered in two blocks. Build both before displaying either — the child map from Step 3b is required for correct deduplication.
+Build both blocks before displaying either — the Step-3b child map is required for correct deduplication.
 
 #### Block 1: Epic Sections (one per epic in the Ready set)
 
@@ -21,13 +21,11 @@ Render each epic in priority order (critical → high → medium → low). For e
 
 **Status-based display variations**:
 - Children with `status: in_progress` or `status: review`: show in the list with their status label. Note them as already being worked on; exclude from workflow recommendations.
-- Children with `status: blocked`: show in the list with a `[blocked]` indicator. Before the group-level recommendation, note how many children are blocked.
+- Children with `status: blocked`: show in the list with a `[blocked]` indicator.
 
 **No-children case** — if the epic has no children in the child map (childless or all children are complete/abandoned): display the heading and a note: "No active child tickets found — consider running `/cortex-core:discovery` to decompose this epic."
 
 **Per-epic workflow recommendation** — after rendering the child list (or no-children note), append a recommendation based on the children's state:
-
-- **No active children** (childless epic or all children complete/abandoned): "No active child tickets found. Consider running `/cortex-core:discovery` to decompose this epic into child tickets."
 
 - **Blocked children note** — if any children have `status: blocked`, prepend the following to the recommendation: "Note: [N] children are blocked — skip them until unblocked. Recommendations apply to the remaining [M] children." (where N is the count of blocked children and M is the count of non-blocked active children).
 
