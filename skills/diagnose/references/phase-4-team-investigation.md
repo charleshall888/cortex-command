@@ -1,6 +1,6 @@
 # Phase 4 §5: Team Investigation Before Escalation
 
-This reference expands on Phase 4 §5 of the 4-phase debugging protocol. Read when 3+ fixes have failed.
+Expands Phase 4 §5. Read when 3+ fixes have failed.
 
 ## Step 1 — Agent Teams availability check
 
@@ -39,7 +39,7 @@ Format example:
 Root cause: [assertion] / Evidence: [supporting detail] / Rebuttal: [strongest objection to this hypothesis]
 ```
 
-Enforce via `TeammateIdle` hook (exit code 2 sends feedback, keeps the teammate working) or by the lead sending direct messages challenging shallow or incomplete outputs.
+Enforce via the `TeammateIdle` hook (exit code 2 sends feedback, keeps the teammate working) or by the lead sending direct messages on weak outputs.
 
 ## Step 5 — Convergence check
 
@@ -69,14 +69,7 @@ Proceed directly to Architecture Discussion below, including a summary of the co
 
 **Patterns indicating an architectural problem:**
 
-- Each fix reveals new coupling or a new symptom in a different place
-- A proper fix would require "massive refactoring" to implement correctly
-- Each fix moves the error rather than eliminating it
+- Each fix reveals new coupling or moves the error to a different place
+- A proper fix would require massive refactoring
 
-**STOP and question fundamentals:**
-
-- Is the component designed correctly for this use case?
-- Are we debugging a symptom of a deeper structural mismatch?
-- Should this be redesigned rather than incrementally patched?
-
-**Discuss with the user before attempting more fixes.**
+Then STOP and question fundamentals: is the component designed correctly for this use case, or are you patching a symptom of a deeper structural mismatch that should be redesigned? **Discuss with the user before attempting more fixes.**

@@ -47,7 +47,7 @@ Read **only** the reference for what you are currently doing. Do not preload all
 **Find the pattern before fixing:**
 
 1. **Find working examples.** Locate a similar working component (working skill, passing hook, healthy lifecycle).
-2. **Compare against the reference.** Read the reference implementation completely — don't skim. Frontmatter and structure end-to-end.
+2. **Compare against the reference.** Read it end-to-end, don't skim — frontmatter and structure.
 3. **Identify differences.** List every difference between working and broken, however small. Don't assume "that can't matter."
 4. **Understand dependencies.** What does this component need? Paths, env vars, permissions, session state, assumptions about when it runs.
 
@@ -58,8 +58,8 @@ Read **only** the reference for what you are currently doing. Do not preload all
 **Scientific method:**
 
 1. **Form a single hypothesis.** State clearly: "I think X is the root cause because Y." Be specific about file paths, env vars, exact mismatches.
-2. **Test minimally.** SMALLEST possible change to test the hypothesis. One variable at a time.
-3. **Verify before continuing.** Worked → Phase 4. Didn't work → new hypothesis. Don't pile fixes on top of fixes.
+2. **Test minimally.** Smallest possible change, one variable at a time.
+3. **Verify before continuing.** Worked → Phase 4. Didn't work → new hypothesis.
 4. **When you don't know, say so.** Don't pretend. Gather more evidence (back to Phase 1).
 
 > After this phase, update the debug session artifact.
@@ -69,13 +69,13 @@ Read **only** the reference for what you are currently doing. Do not preload all
 **Fix the root cause, not the symptom:**
 
 1. **Confirm the root cause.** State what it is and where it is before writing any fix.
-2. **Implement a single fix.** Address the root cause — one change at a time. No "while I'm here" improvements. No bundled refactoring.
+2. **Implement a single fix.** Address the root cause — one change at a time. No "while I'm here" improvements or bundled refactoring.
 3. **Verify the fix.** Test the specific behavior that was failing. Check adjacent behaviors still work.
 4. **If the fix doesn't work, STOP.** Count fix attempts so far.
    - If < 3: return to Phase 1 and re-analyze.
    - **If ≥ 3: stop and attempt team investigation before escalating.** See `${CLAUDE_SKILL_DIR}/references/phase-4-team-investigation.md`. Do NOT attempt Fix #4 without completing the team investigation protocol or an architectural discussion.
 
-> After this phase completes, update the debug session artifact (Resolved or Escalated). See `${CLAUDE_SKILL_DIR}/references/debug-session-artifact.md`.
+> After this phase completes, update the debug session artifact (Resolved or Escalated).
 
 ---
 
@@ -104,7 +104,6 @@ If you catch yourself thinking any of these, **stop and return to Phase 1**:
 - "It's probably X, let me fix that" (without evidence)
 - "I don't fully understand but this might work"
 - Proposing a solution before completing the backward trace
-- "One more fix attempt" (when you've already tried 2+)
 - Each fix reveals a new problem in a different place
 
 **If 3+ fixes failed:** team investigation first, then architecture discussion if the team doesn't converge. See `${CLAUDE_SKILL_DIR}/references/phase-4-team-investigation.md`.

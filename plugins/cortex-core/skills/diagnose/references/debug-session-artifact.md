@@ -1,7 +1,5 @@
 # Debug Session Artifact — Location, Format, and Write Timing
 
-This reference defines the debug-session artifact written during the 4-phase debugging protocol.
-
 ## Location
 
 Determine where to write the artifact using this priority:

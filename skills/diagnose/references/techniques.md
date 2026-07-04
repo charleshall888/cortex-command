@@ -4,9 +4,7 @@ Three techniques referenced from the 4-phase debugging protocol. Read on demand 
 
 ## Backward Root-Cause Tracing
 
-Bugs often manifest far from their source. Your instinct is to fix where the error appears — that treats a symptom.
-
-**Core principle**: Trace backward through the execution path until you find the original trigger, then fix at the source.
+**Core principle**: Bugs manifest far from their source. Trace backward through the execution path to the original trigger, then fix there — not at the symptom.
 
 **The tracing process:**
 
@@ -29,15 +27,11 @@ echo "DEBUG: GNUPGHOME=$GNUPGHOME, socket exists=$(test -S $GNUPGHOME/S.gpg-agen
 # (temporarily add the invocation phrase you're testing to verify it triggers)
 ```
 
-**Never fix just where the error appears.** Trace back to find the original trigger.
-
 ---
 
 ## Defense-in-Depth Validation
 
-When you fix a bug caused by bad state, adding validation at one place feels sufficient — but that check can be bypassed by different code paths or edge cases.
-
-**Core principle**: Validate at every layer data passes through. Make the bug structurally impossible.
+**Core principle**: One validation point can be bypassed by other code paths. Validate at every layer data passes through — make the bug structurally impossible.
 
 **The four layers:**
 
@@ -75,15 +69,11 @@ When you fix a bug caused by bad state, adding validation at one place feels suf
    echo "DEBUG: entering hook, session=$LIFECYCLE_SESSION_ID, feature=$1" >&2
    ```
 
-Don't stop at one validation point. Add checks at every layer.
-
 ---
 
 ## Condition-Based Waiting
 
-Arbitrary sleeps guess at timing. This creates races where scripts pass on fast machines but fail under load or when the system is busy.
-
-**Core principle**: wait for the actual condition you care about, not a guess about how long it takes.
+**Core principle**: Arbitrary sleeps guess at timing and race under load. Wait for the actual condition you care about, not a guess about how long it takes.
 
 **Shell-native pattern:**
 
@@ -114,8 +104,3 @@ wait_for "overnight runner to finish" 'grep -q feature_complete cortex/lifecycle
 
 - Testing actual timing behavior (a debounce or rate-limit mechanism)
 - If using an arbitrary sleep, document WHY with a comment
-
-**Common mistakes:**
-
-- No timeout: loop forever if condition never met — always include a timeout with a clear error
-- Stale state: evaluate the condition fresh inside the loop, not a cached value
