@@ -1,28 +1,22 @@
 """Test #4 (R9 routing-precision non-regression, ticket
 reduce-boot-context-surface-claudemd-skillmd Task 4): trigger-phrase substring
 presence across the concatenated ``description:`` + ``when_to_use:`` routing
-surface for the routing-pressure-cluster skills, plus path-token routing
-assertions for the lifecycle skill.
+surface for the routing-pressure-cluster skills.
 
 Where ``tests/test_skill_descriptions.py`` enforces phrase presence against
 ``description`` alone, this module enforces presence against the concatenated
 ``description:`` + ``when_to_use:`` text because Claude Code's L1 listing
 concatenates the two fields — both surfaces are load-bearing for routing.
 
-Two test functions:
+``test_routing_cluster_phrases_in_description_or_when_to_use`` is parametrized
+over ``(skill, phrase)`` for the routing-pressure cluster (``dev``,
+``lifecycle``, ``refine``, ``research``, ``discovery``, ``critical-review``)
+and asserts each ``must_contain`` phrase appears as a case-sensitive substring
+of the skill's concatenated frontmatter.
 
-1. ``test_routing_cluster_phrases_in_description_or_when_to_use``
-   — parametrized over ``(skill, phrase)`` for the routing-pressure cluster
-   (``dev``, ``lifecycle``, ``refine``, ``research``, ``discovery``,
-   ``critical-review``). Asserts each ``must_contain`` phrase appears as a
-   case-sensitive substring of the skill's concatenated frontmatter.
-
-2. ``test_lifecycle_skill_frontmatter_contains_path_tokens``
-   — asserts each token in the lifecycle entry's ``must_contain_paths`` key
-   appears as a case-sensitive substring of the concatenated frontmatter of
-   ``skills/lifecycle/SKILL.md``. The ``must_contain_paths`` block is fixture
-   data only; the assertion is separate from ``must_contain`` because path
-   tokens are non-phrase routing data.
+(The former path-token assertion for the lifecycle skill was retired when the
+cortex-command-specific protected-path routing moved out of the shipped skill
+description into this repo's CLAUDE.md — the shipped skill is repo-agnostic.)
 """
 
 from __future__ import annotations
@@ -104,29 +98,3 @@ def test_routing_cluster_phrases_in_description_or_when_to_use(
         f"phrase {phrase!r} missing from {skill} SKILL.md concatenated "
         f"description+when_to_use routing surface"
     )
-
-
-def test_lifecycle_skill_frontmatter_contains_path_tokens() -> None:
-    """The lifecycle skill's concatenated ``description`` + ``when_to_use``
-    frontmatter must contain every path token listed under the fixture's
-    lifecycle ``must_contain_paths`` key. Path tokens are non-phrase routing
-    data (canonical-source paths that mandate lifecycle entry) and are
-    enforced separately from the phrase-token regression gate."""
-    fixture = _load_fixture()
-    lifecycle_entry = fixture["skills"]["lifecycle"]
-    assert "must_contain_paths" in lifecycle_entry, (
-        "lifecycle fixture entry missing must_contain_paths key — "
-        "path-routing assertions cannot run"
-    )
-    path_tokens = lifecycle_entry["must_contain_paths"]
-
-    text = _concatenated_routing_text()["lifecycle"]
-
-    missing = [token for token in path_tokens if token not in text]
-    if missing:
-        lines = [f"  lifecycle: missing path token {token!r}" for token in missing]
-        raise AssertionError(
-            f"{len(missing)} path token(s) missing from lifecycle SKILL.md "
-            f"concatenated description+when_to_use routing surface:\n"
-            + "\n".join(lines)
-        )

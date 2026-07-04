@@ -35,7 +35,7 @@ Read the spec at {spec_path} and the research at {research_path}. Before any pla
 - **System prompt**: load the canonical fragment from `cortex_command/overnight/prompts/plan-synthesizer.md` via `importlib.resources` — don't paraphrase or inline it.
 - **User prompt**: inline the variant paths (`plan-variant-A.md`, `-B.md`, optionally `-C.md`) plus the swap-and-require-agreement instruction, directing a JSON envelope per the system-prompt schema.
 
-**e. Envelope extraction** — parse the synthesizer output with the LAST-occurrence anchor pattern from `plugins/cortex-core/skills/critical-review/references/verification-gates.md` (Phase 2):
+**e. Envelope extraction** — parse the synthesizer output with the LAST-occurrence delimiter anchor (the same pattern the critical-review gate uses):
 1. Split on the last `<!--findings-json-->` delimiter (`re.findall(r'^<!--findings-json-->\s*$', output, re.MULTILINE)`).
 2. `json.loads` the tail; validate `schema_version: 2` (int), `per_criterion` (object), `verdict ∈ {A,B,C}` (string), `confidence ∈ {high,medium,low}` (string), `rationale` (string).
 3. On any extraction/validation failure, treat as `confidence: "low"` for routing.

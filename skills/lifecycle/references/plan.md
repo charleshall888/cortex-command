@@ -81,8 +81,6 @@ Tasks that create files, modify JSON settings, create symlinks, set permissions,
 
 **Sub-task headings** — a task may split into `### Task 3a:`, `### Task 3b:` (single lowercase suffix) — first-class dispatchable units ordered `3` < `3a` < `3b` < `4`. The integer part accepts `0`; a group need not start at `a` (an orphan `8b` is valid). Reference by full id (`[3a]`, `[13a, 13b]`) — a bare `[3]` means literal task `3`, not the group. Multi-letter (`3ab`), uppercase (`3A`), space-separated (`3 a`) fail loud. **Same-batch siblings must declare disjoint `Files`**: siblings sharing a `Depends on` co-schedule into one shared worktree, so same-file writes race (last-writer-wins) — give them disjoint `Files`, or serialize with an explicit edge (`3b` depends on `[3a]`).
 
-**Wiring co-location** — a task deploying a new `bin/cortex-*` script must include its consumer wiring in the same task (a SKILL.md/hook/doc reference naming the script as inline code or a path token), or `cortex-check-parity` emits W003 (orphan: deployed but not referenced). If the wiring is too large to combine, land it first — the check flags deployed-but-unreferenced, not the reverse.
-
 **Files/Verification consistency** — every file Verification implies must be in Files (a "write a test" verification needs the test file listed). Builders can't modify files outside their Files list, so a mismatch is an impossible constraint.
 
 **Caller enumeration** — when a task changes or removes a function/command/interface, search the codebase first and list ALL callers/dependents in **Files**.

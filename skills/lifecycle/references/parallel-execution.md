@@ -6,7 +6,7 @@ To run multiple lifecycle features in parallel (e.g. "/cortex-core:lifecycle 120
 Agent(isolation: "worktree", prompt: "/cortex-core:lifecycle {feature}")
 ```
 
-**Prefer `Agent`'s `isolation: "worktree"` over manual `git worktree add`.** Same-repo worktrees resolve to `<repo>/.claude/worktrees/{feature}/` under the project trust scope (rationale: `cortex/adr/0005-repo-relative-worktree-placement.md`); the Agent tool creates and auto-cleans them. If manual creation is unavoidable, compute the target via `cortex-worktree-resolve {name}` (never hardcode); a failed checkout can orphan the branch, so `git branch -d <name>` it before retrying.
+**Prefer `Agent`'s `isolation: "worktree"` over manual `git worktree add`.** Same-repo worktrees resolve to `<repo>/.claude/worktrees/{feature}/` under the project trust scope; the Agent tool creates and auto-cleans them. If manual creation is unavoidable, compute the target via `cortex-worktree-resolve {name}` (never hardcode); a failed checkout can orphan the branch, so `git branch -d <name>` it before retrying.
 
 ## Worktree Inspection Invariant
 
