@@ -6,7 +6,7 @@ Five-section template for backlog ticket bodies. Sections appear in this order. 
 
 ## Why
 
-Capture the problem the ticket addresses in symptom-voice: what is broken, missing, or degraded in observable terms, as a user or operator would describe the symptom. Do not name the solution or mechanism here. One paragraph is sufficient. This section anchors motivation at intake so reviewers can evaluate whether the Role fills the right gap.
+Capture the problem the ticket addresses in symptom-voice: what is broken, missing, or degraded in observable terms, as a user or operator would describe the symptom. Do not name the solution or mechanism here. One paragraph is sufficient.
 
 **Why-vs-Role disambiguation rule**: Why captures the problem in symptom-voice (what's broken / what's missing in observable terms). Role captures what slot this piece fills in the system after the ticket lands (arc42 Responsibility — what task it fulfills). When the Why collapses to one sentence that restates Role's lead, omit Why entirely — the section is optional in this collapse case, required otherwise.
 
