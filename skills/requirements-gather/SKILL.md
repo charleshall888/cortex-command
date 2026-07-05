@@ -16,27 +16,27 @@ Conduct a structured requirements interview and return a Q&A markdown block. Thi
 
 ## What this skill is for
 
-Surfacing the intent, priorities, constraints, and boundaries that a downstream artifact will codify. The output is the raw interview record. Section selection and prose formatting belong to `/requirements-write`.
+Surfacing the intent, priorities, constraints, and boundaries a downstream artifact will codify. The output is the raw interview record; `/requirements-write` selects sections and formats prose.
 
 ## Decision criteria
 
 ### Codebase trumps interview
 
-Before drafting a question, decide whether the answer is recoverable from code, configs, README, CLAUDE.md, or the existing target doc. If yes, explore code instead of asking — read the relevant files, draft the answer with citations, and ask the user to confirm or correct. Reserve interview questions for intent, priorities, scope boundaries, and non-functional bars that source code cannot reveal. The bias is: code-derived answer with confirmation prompt beats an open question every time.
+Per the codebase-trumps-interview rule in `skills/interview/references/loop.md`: before drafting a question, check whether the answer is recoverable from code, configs, README, CLAUDE.md, or the existing target doc. If so, draft the answer with citations and ask the user to confirm rather than asking cold. Reserve live questions for intent, priorities, scope boundaries, and non-functional bars source code cannot reveal.
 
 ### Recommend before asking
 
-Every question carries a **Recommended answer:** line stating the position the model would adopt if the user said "go with your best guess." The user adjusts the recommendation rather than answering from scratch. Recommendations are grounded — derived from explored code, the existing target doc, the parent requirements (for area scope), or stated project conventions. When no grounded recommendation is possible, mark the recommendation as `none — open question` and explain why so the user understands the gap.
+Every question carries a **Recommended answer:** line — the position the model would adopt on "go with your best guess." Ground it in explored code, the existing target doc, the parent requirements (area scope), or stated conventions. When no grounded recommendation is possible, mark it `none — open question` and explain the gap.
 
 ### Ask one at a time
 
-Conduct the interview one question at a time, following the canonical one-at-a-time cadence rule in `skills/interview/references/loop.md` — pose a single question, wait for the answer, and let it shape the next. The previous answer gates the next, so questions are not batched into a single turn.
+Conduct the interview one question at a time, per the canonical cadence rule in `skills/interview/references/loop.md`.
 
 ### Lazy artifact creation
 
-Hold the Q&A block in conversation context until the orchestrator's handoff. Synthesis of project.md and area docs belongs to `/requirements-write`. The writable set for this sub-skill is narrow and explicit: `cortex/requirements/glossary.md` per-term append, with lazy file creation on the first resolved term. `cortex/requirements/project.md` and area docs under `cortex/requirements/` are explicitly excluded — those writes remain `/requirements-write`'s. Lazy artifact creation still applies to project.md and area docs: the Q&A block is held in conversation context until `/requirements-write` synthesizes, so abandoning the interview leaves no partial project.md or area doc behind.
+Hold the Q&A block in conversation context until the orchestrator's handoff — synthesis of project.md and area docs belongs to `/requirements-write`, so abandoning the interview leaves no partial doc behind. The only write this sub-skill owns is a per-term append to `cortex/requirements/glossary.md` (created lazily on the first resolved term).
 
-For glossary writes, the mid-interview abandonment semantic is different by design: each per-term append is durably persisted at the moment it fires; entries appended before abandonment remain in the file. Partial-monotonic-growth is the documented behavior — every appended entry was a complete unit at write time, so an abandoned interview still leaves the glossary in a coherent state.
+Glossary appends persist immediately, so entries written before an abandoned interview remain in the file — an abandoned interview still leaves the glossary coherent.
 
 ### Inline glossary write with term-already-exists probe
 
@@ -52,7 +52,7 @@ A user-confirmation gate sits in front of every inline write: only user-named or
 
 ### Language-content constraint
 
-Entries written into the glossary's `## Language` section must be definitional, not classification-shaped. The Language section feeds `critical-review`'s Project Context block, so classification framing leaking in would carry "existing reasoning" into a surface that is deliberately reasoning-free. Anchor pair: `phase_transition: the named event emitted when ...` is admitted because it defines what the term means; `phase_transition — genuinely-domain term; contract-shaped in lifecycle.md` is rejected because it classifies the term rather than defining it. Write the first shape; never the second.
+Entries written into the glossary's `## Language` section must be definitional, not classification-shaped — the section feeds `critical-review`'s Project Context, which must stay reasoning-free. Anchor pair: `phase_transition: the named event emitted when ...` is admitted (defines the term); `phase_transition — genuinely-domain term; contract-shaped in lifecycle.md` is rejected (classifies rather than defines). Write the first shape; never the second.
 
 ## Scope shaping
 
@@ -80,7 +80,7 @@ Return one markdown block of the form:
 
 One H3 per template section. Sections with no live questions (because code already answered everything and the user confirmed) collapse to a single bullet noting the confirmed code-derived position. The orchestrator passes this block verbatim to `/requirements-write`.
 
-When the **Recommended answer** is derived from code, the **Code evidence** field names the file path that grounds it (so the user can flag a wrong-place-to-implement before any code is written). For intent-only questions with no codebase grounding, omit the field per the existing semantics — do not fabricate a citation or write `N/A`.
+Omit **Code evidence** for intent-only questions with no codebase grounding — do not fabricate a citation or write `N/A`.
 
 ## Handoff contract
 

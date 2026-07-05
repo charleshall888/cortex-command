@@ -31,20 +31,12 @@ Header `# Requirements: {project-name}` + `> Last gathered: {YYYY-MM-DD}` blockq
 4. `## Quality Attributes` — Non-functional bar, bold-led bullets.
 5. `## Project Boundaries` — H3s `### In Scope`, `### Out of Scope`, `### Deferred`. Discovery/backlog scope clarified inline per R14.
 6. `## Conditional Loading` — `{trigger phrase} → cortex/requirements/{area}.md` lines; trigger phrases must intersect real lifecycle `index.md` `tags:` words.
-7. `## Global Context` — Bulleted list of paths under `cortex/requirements/` that are always loaded by every consumer regardless of tag matches. Each bullet is a bare path (e.g. `- cortex/requirements/glossary.md`); no trigger phrases, no conditional prose. Use sparingly — entries here load on every consumer invocation, so they belong only where the content is genuinely cross-cutting and small.
+7. `## Global Context` — Bulleted list of bare paths under `cortex/requirements/` (e.g. `- cortex/requirements/glossary.md`) that every consumer loads on every invocation, regardless of tag matches; no trigger phrases, no conditional prose. Use sparingly — reserve for genuinely cross-cutting, small content. Absent paths are silently skipped (per the load-requirements protocol), so listing a path before its file exists is valid.
 8. `## Optional` — Prunable. First non-heading line states the prunability convention; bold-led bullets for deferred notes. Token budget ≤1,200 (`cl100k_base`), verified at acceptance — overflow goes into `## Optional` or an area doc, never new top-level H2s.
-
-### Global Context schema entry
-
-The H2 heading written into `project.md` is, verbatim:
-
-## Global Context
-
-Content rule: a bulleted list of paths under `cortex/requirements/` that every consumer loads on every invocation, regardless of tag matches. No trigger-phrase syntax, no conditional prose. The loader treats absent paths as silently skipped (recorded per the load-requirements protocol), so adding an entry before the target file exists is valid and intentional.
 
 ## Area template — `cortex/requirements/{area}.md`
 
-Header `# Requirements: {area-name}` + `> Last gathered: {YYYY-MM-DD}` + a parent backlink written verbatim as `**Parent doc**: [requirements/project.md](project.md)` (the link is relative to the area doc's location at `cortex/requirements/{area}.md`, where `project.md` is a sibling), then seven H2s in order:
+Header `# Requirements: {area-name}` + `> Last gathered: {YYYY-MM-DD}` + a parent backlink written verbatim as `**Parent doc**: [requirements/project.md](project.md)` (relative link; `project.md` is a sibling of the area doc), then seven H2s in order:
 
 1. `## Overview` — What this area covers and its place in the project.
 2. `## Functional Requirements` — One H3 per capability; canonical bullets `**Description**`, `**Inputs**`, `**Outputs**`, `**Acceptance criteria**` (nested), `**Priority**` (must/should/nice-to-have).
