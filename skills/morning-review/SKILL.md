@@ -30,7 +30,7 @@ Locate the session to update:
 2. If the pointer file does not exist, is not readable, or its `phase` is not `"executing"`, fall back to resolving `cortex/lifecycle/sessions/latest-overnight/overnight-state.json` (via the `latest-overnight` symlink).
 3. If neither path resolves to a readable file, skip Step 0 entirely — do not error.
 
-If `<resolved_state_path>` resolves to a readable file, mark the session complete by invoking the C11 helper. The helper owns the `phase == "executing"` precondition (silent-skip on any other phase per spec R5), the canonical state-machine transition, the atomic write, and the optional pointer-file cleanup.
+If `<resolved_state_path>` resolves to a readable file, mark the session complete by invoking the helper. It silent-skips unless phase is `executing`, so it is safe to invoke unconditionally.
 
 - If you used the active-session pointer (the path-resolution branch above selected line 1's pointer because its `phase == "executing"`), invoke the helper WITH `--pointer` so the pointer file is unlinked on success:
 
@@ -44,7 +44,7 @@ If `<resolved_state_path>` resolves to a readable file, mark the session complet
   cortex-morning-review-complete-session <resolved_state_path>
   ```
 
-Read the current session ID from the resolved state file (its `session_id` field is invariant under the C11 helper — only `phase` mutates — so the read is safe to perform after the helper runs):
+Read the session ID from the resolved state file:
 
 ```
 session_id="$(jq -r '.session_id' <resolved_state_path>)"
@@ -52,15 +52,13 @@ session_id="$(jq -r '.session_id' <resolved_state_path>)"
 
 #### Garbage sweep: stale demo worktrees
 
-After marking the session complete, sweep stale demo worktrees left behind by prior overnight sessions. The sweep is intentionally narrow — it only touches worktrees under `$TMPDIR` whose path matches the canonical demo-worktree pattern created by Section 2a of the walkthrough, so it cannot collide with unrelated user worktrees. The C12 helper handles the `$TMPDIR` resolution, prefix matching, active-session exclusion, uncommitted-state precondition, per-worktree `git worktree remove`, and the trailing single `git worktree prune` ordering invariant internally.
+After marking the session complete, sweep stale demo worktrees from prior overnight sessions. The sweep is narrow — it only touches `$TMPDIR` worktrees matching Section 2a's demo-worktree pattern, so it cannot collide with unrelated worktrees. The helper owns the resolution, active-session exclusion, uncommitted-state precondition, and the `git worktree remove`/`prune` ordering.
 
-The C12 sweep runs AFTER the C11 helper invocation. Pass the resolved active session ID as the script's positional argument:
+The sweep runs after `cortex-morning-review-complete-session`. Pass the resolved active session ID as the script's positional argument:
 
 ```
 cortex-morning-review-gc-demo-worktrees "$session_id"
 ```
-
-Skip Step 0 entirely if neither path-resolution branch resolved to a readable state file (line 31). Otherwise invoke the C11 helper unconditionally — the helper itself silent-skips when phase is anything other than `"executing"` (per spec R5), and is safe to call repeatedly.
 
 ### Step 1: Locate Report
 
@@ -85,16 +83,16 @@ Read the morning report located in Step 1. Extract and display the Executive Sum
 Work through the report sections in sequence. Delegate the per-section interaction protocol to `${CLAUDE_SKILL_DIR}/references/walkthrough.md`:
 
 1. **Completed Features** — display all features at once (grouped by round, enriched with overnight metadata), ask a single batch verification question
-2. **Demo Setup** — if `demo-commands:` (list) or `demo-command:` (single string) is configured and the session is local, offer to spin up a demo worktree from the overnight branch; for `demo-commands:`, the agent reasons from Section 2 context to select the most relevant entry (or skips if none is relevant).
+2. **Demo Setup** — if a `demo-command(s):` config is present and the session is local, offer a demo worktree from the overnight branch (walkthrough §2a owns path selection, guards, and entry reasoning).
 3. **Lifecycle Advancement** — immediately after verification: append completion events to each feature's `cortex/lifecycle/{feature}/events.log`
 4. **Deferred Questions** — display each question and collect a user answer; write the answer back to the corresponding `deferred/` file
-5. **Failed Features** — display error summary and suggested next step; offer to create a backlog investigation item (should-have). When the user accepts, invoke `/backlog-author compose` with a context block derived from the failure summary (pre-resolved `why:` = what failed in observable terms, `role:` = investigate the root cause, `integration:` = affected lifecycle feature, `edges:` = non-goal: re-running the overnight session), capture the returned body, then call `cortex-create-backlog-item --title "investigate <feature-slug>" --status should-have --type bug --body "<returned-body>"`.
+5. **Failed Features** — display error summary and suggested next step; offer a should-have backlog investigation item. Walkthrough §4 owns the compose/backend-route protocol.
 
 Skip any section that has no entries — do not display a placeholder or empty heading.
 
 ### Step 4: Auto-Close Backlog Tickets
 
-Backlog ticket closure now happens after the PR is merged — not here. Closing tickets before the merge is confirmed marked completed features on home main even when the merge was later declined (a bug), so closure now runs only on the post-merge success path.
+Backlog ticket closure runs post-merge in walkthrough §6b, not here.
 
 ### Step 5: Commit Morning Review Artifacts
 
@@ -115,11 +113,11 @@ No additional user input is needed before committing — the review is authorita
 
 After the commit, locate the PR that the runner created for this session's integration branch, display it to the user, and offer to merge it to main. See `${CLAUDE_SKILL_DIR}/references/walkthrough.md` Section 6 for the full protocol.
 
-After a successful merge, Section 6a of the walkthrough handles post-merge sync: rebasing local main onto the remote and pushing to origin so that the local and remote branches are fully aligned. Section 6b then closes each completed feature's backlog ticket once the merge and post-merge sync are confirmed.
+After a successful merge, walkthrough Section 6a syncs local main to the remote and Section 6b closes each completed feature's ticket.
 
 ## Constraints
 
 - Does not re-run or resume overnight sessions (use `/overnight resume`)
 - Does not re-generate the morning report (use `cortex-report`)
-- Reads `overnight-state.json` for metadata from the session directory (resolved via `cortex/lifecycle/sessions/latest-overnight/` symlink for new-style worktree sessions, or directly from `cortex/lifecycle/overnight-state.json` for old-style sessions); Step 0 may write `phase: "complete"` to it — all other steps are read-only
+- `overnight-state.json` is read-only except Step 0, which may write `phase: "complete"`
 - Does not support resuming a partially-completed review; restart if interrupted

@@ -15,8 +15,7 @@ Summary section and extract:
 - **Feature counts**: number completed, failed, and deferred
 - **Session duration**: start time, end time, and elapsed time
 
-Display all three fields to the user before any interaction. This is the first output the
-user sees. Do not ask questions or prompt for input during this step.
+Display all three fields before any interaction; ask nothing here.
 
 **Missing report handling**: If `cortex/lifecycle/morning-report.md` does not exist and
 `cortex/lifecycle/sessions/` contains no subdirectories, print:
@@ -73,9 +72,7 @@ Parse the response:
   verified, rest skipped. Fuzzy matching is acceptable (prefix or substring,
   case-insensitive).
 
-Record verified/skipped status per feature, then proceed immediately to Section 2a (which may be skipped — see its guard clauses; if skipped, advance directly to Section 2b).
-Verified/skipped statuses are for reporting context only — they do not gate lifecycle
-advancement.
+Record verified/skipped status per feature, then proceed immediately to Section 2a. Verified/skipped statuses are for reporting context only — they do not gate lifecycle advancement.
 
 ---
 
@@ -92,10 +89,10 @@ This guard determines which of two configuration schemas is active in `cortex/li
 Parsing rules for the `demo-commands:` list (apply these in order):
 
 1. Read the file. Scan for the first non-commented line that, after stripping leading whitespace, exactly matches `demo-commands:` (the bare key with no inline value).
-2. If found, collect the subsequent indented entries of the form `- label: "..."` / `command: "..."` as list entries, stopping at the first non-indented, non-blank line. (This "stopping at the first non-indented, non-blank line" rule is load-bearing — it is what terminates the list.)
-3. For each entry, extract the `label:` and `command:` values using first-colon extraction: take everything after the first `:` character on the line, then trim leading and trailing whitespace. (The "after the first" colon rule matters because shell commands may legitimately contain additional `:` characters — e.g. `godot res://main.tscn`.)
+2. If found, collect the subsequent indented entries of the form `- label: "..."` / `command: "..."` as list entries, stopping at the first non-indented, non-blank line (this terminates the list).
+3. For each entry, extract the `label:` and `command:` values using first-colon extraction: take everything after the first `:` character on the line, then trim leading and trailing whitespace (shell commands may contain additional `:` — e.g. `godot res://main.tscn`).
 4. Reject any entry whose `command:` value contains a control character (byte < 0x20 except `\t`); silently discard that entry.
-5. Reject any entry whose `command:` value is empty or whitespace-only after trimming; silently discard that entry. (An empty `command:` is never a valid list entry.)
+5. Reject any entry whose `command:` value is empty or whitespace-only after trimming; silently discard that entry.
 6. Do NOT strip inline `#` comments from `command:` values. Shell commands may legitimately contain `#`; there is no shell parser available at this layer to distinguish comment from literal. Users are responsible for keeping list `command:` values free of trailing inline `#` comments.
 7. If at least one valid entry remains, the active path is `demo-commands:` list. Proceed to Guard 2, then Guard 3, then the demo-commands: list flow below.
 
@@ -116,11 +113,9 @@ Parsing rules for the `demo-command:` field (apply these in order):
 3. If the stripped line begins with `demo-command:`, extract everything after the first `:` character, then strip leading and trailing whitespace from the extracted value.
 4. Reject the value if it contains any control character (byte < 0x20 except `\t`); treat as if the field were unset.
 5. If no matching line was found, or the extracted value is empty, treat the field as unset.
-6. Do NOT strip inline `#` comments from the value. Shell commands may legitimately contain `#`; there is no shell parser available at this layer to distinguish comment from literal. Users are responsible for keeping `demo-command` values free of trailing inline `#` comments.
+6. Do NOT strip inline `#` comments from the value — same inline-`#` rule as the list path (rule 6 above).
 
-If a non-empty, control-character-free value is found, the active path is `demo-command:` single-string. Proceed to Guard 2, then Guard 3, then the existing single-string flow. If neither the list path nor the single-string path is active (i.e. no valid entries on the list path and no valid value on the single-string path), skip Section 2a silently.
-
-> Implementer note (not user-facing): extract the value with `sed -n 's/^[[:space:]]*demo-command:[[:space:]]*//p'` or equivalent. Do NOT use `awk -F: '{print $2}'` — it discards everything after the second `:` and breaks on values like `godot res://main.tscn` (returning `//` instead of the verbatim command).
+If a non-empty, control-character-free value is found, the active path is `demo-command:` single-string. Proceed to Guard 2, then Guard 3, then the existing single-string flow. If neither the list path nor the single-string path is active, skip Section 2a silently.
 
 ### Guard 2 — remote session
 
@@ -130,7 +125,7 @@ Skip Section 2a if `$SSH_CONNECTION` is set and non-empty. This catches both SSH
 
 Skip Section 2a if `git rev-parse --verify {integration_branch}` exits non-zero, where `{integration_branch}` is read from `cortex/lifecycle/sessions/latest-overnight/overnight-state.json` using the same jq pattern as Section 6 step 1 (`jq -r '.integration_branch' cortex/lifecycle/sessions/latest-overnight/overnight-state.json`). If `overnight-state.json` is missing or `integration_branch` is absent from it, also skip.
 
-**If on the `demo-commands:` list path only (this third check does NOT apply to the `demo-command:` single-string path):** additionally read the `features` map from `cortex/lifecycle/sessions/latest-overnight/overnight-state.json` and count entries whose `"status"` equals `"merged"`. If there are zero merged features (i.e. `"status".*merged` matches no entry — no merged features, no completed features), skip Section 2a silently. If `overnight-state.json` is missing the `features` key entirely, treat this as zero merged features and skip. This guard suppresses the demo offer when no overnight work actually landed on the integration branch — there is nothing meaningful to demo.
+**If on the `demo-commands:` list path only (this third check does NOT apply to the `demo-command:` single-string path):** additionally read the `features` map from `cortex/lifecycle/sessions/latest-overnight/overnight-state.json` and count entries whose `"status"` equals `"merged"`. If there are zero merged features, skip Section 2a silently. If `overnight-state.json` is missing the `features` key entirely, treat this as zero merged features and skip.
 
 ### Agent Reasoning
 
@@ -138,14 +133,14 @@ Skip Section 2a if `git rev-parse --verify {integration_branch}` exits non-zero,
 
 Constraints and inputs for the reasoning step:
 
-1. **No additional git commands are run for this step.** The input is the completed-features list already in context from Section 2, including each feature's **Key files changed** data (which was already processed in Section 2 when computing the "Files changed" count). Do NOT re-read `git log`, `git diff`, or any file tree — everything needed is already in context.
+1. **No additional git commands are run for this step.** The input is the completed-features list already in context from Section 2, including each feature's **Key files changed** data. Do NOT re-read `git log`, `git diff`, or any file tree.
 2. Consider each configured entry's `label:` and `command:` alongside the merged features' names and **Key files changed** paths. A `demo-commands:` entry whose label or command clearly maps to the area the night's work touched is a candidate.
 3. If a single entry is clearly the most relevant winner, select it and proceed to the Demo offer (`demo-commands:` list path variant) using that entry's `label` as `{selected-label}` and its `command` as `{selected-command}`.
 4. If no entry is clearly relevant — the night's work does not map cleanly onto any configured demo — **skip Section 2a silently**. This suppression is absolute: do NOT fall back to the `demo-command:` single-string path even if that field is also configured in the same `cortex/lifecycle.config.md`. The list path, once active, owns the decision; the single-string fallback does not fire when the `demo-commands:` list path is active.
 
 ### Demo offer
 
-If all guards above pass, ask the user a single yes/no question and take no further input from this section. The exact wording of the offer depends on which path is active — use the variant matching the active path and ignore the other.
+If all guards above pass, ask the user a single yes/no question and take no further input from this section. Use the variant matching the active path:
 
 #### `demo-commands:` list path variant
 
@@ -171,11 +166,11 @@ On `y`:
 
 1. Resolve the temp directory: `realpath "$TMPDIR"` and capture the output as `{resolved-tmpdir}`.
 2. Build the target path: `{resolved-tmpdir}/demo-{session_id}-{timestamp}`, where `{timestamp}` is produced by `$(date -u +%Y%m%dT%H%M%SZ)`.
-3. Run exactly this command (the double-quotes around the placeholders are literal in the skill text — they protect paths with spaces at runtime):
+3. Run exactly this command:
 
        git -c core.hooksPath=/dev/null worktree add "{target-path}" "{integration_branch}"
 
-   The `git -c core.hooksPath=/dev/null` prefix is mandatory — it neutralizes any tracked `post-checkout` hook (e.g., husky or lefthook) on the overnight branch. This is a plain `git worktree add` invocation with the hook-neutralizing prefix; do NOT use --force. Do NOT use `git -C` (uppercase); `git -c` (lowercase) is a distinct, allowed flag.
+   The `git -c core.hooksPath=/dev/null` prefix is mandatory — it neutralizes any tracked `post-checkout` hook (e.g., husky or lefthook) on the overnight branch. Do NOT use `--force`. Do NOT use `git -C` (uppercase); `git -c` (lowercase) is a distinct, allowed flag.
 4. On non-zero exit, print the captured stderr and advance to Section 2b. Do not retry. Do not invoke any cleanup.
 
 ### Print template
@@ -237,11 +232,9 @@ For each completed feature (same list as Section 2, same order):
    rules — tier: `lifecycle_start.tier` superseded by the most recent
    `complexity_override.to`; criticality: most recent value from `lifecycle_start`
    or `criticality_override`). When a key is absent, default tier to `"simple"`
-   and criticality to `"medium"`. This mirrors `read_tier()` / `read_criticality()`
-   from `claude.common`.
+   and criticality to `"medium"`.
 
-4. Apply the review gating check using the logic from `requires_review(tier, criticality)`
-   in `claude.common`:
+4. Apply the review gating check:
    - complex tier at any criticality → review required
    - any tier at high or critical criticality → review required
    - otherwise (simple/low, simple/medium) → review NOT required
@@ -336,43 +329,6 @@ feature, walk files in filename sort order):
 
 6. If the user skips, leave the file unchanged.
 
-**Deferred answer example:**
-
-Suppose `deferred/auth-api-q1.md` contains:
-
-```
----
-feature: auth-api
-question: "Should the token refresh endpoint accept POST or PUT?"
-tried: "Implemented as POST; reviewer flagged ambiguity."
-needed: "Product owner decision on HTTP verb semantics."
----
-
-The auth-api implementation used POST for the token refresh endpoint but the API
-design doc is silent on this choice. A decision is needed before the endpoint
-ships.
-```
-
-After the user answers "Use POST — aligns with the existing /login endpoint", the file
-becomes:
-
-```
----
-feature: auth-api
-question: "Should the token refresh endpoint accept POST or PUT?"
-tried: "Implemented as POST; reviewer flagged ambiguity."
-needed: "Product owner decision on HTTP verb semantics."
----
-
-The auth-api implementation used POST for the token refresh endpoint but the API
-design doc is silent on this choice. A decision is needed before the endpoint
-ships.
-
-## User Answer (2026-02-25)
-
-Use POST — aligns with the existing /login endpoint
-```
-
 ---
 
 ## Section 4 — Failed Features
@@ -432,17 +388,13 @@ For each failed feature (in the order listed in the report):
 
 ## Section 5 — Auto-Close Backlog Tickets
 
-Backlog ticket closure has moved to **Section 6b**, which runs immediately after a
-successful merge in Section 6. Closing tickets before confirming the PR has merged was
-a bug — the closure now happens on the post-merge success path only.
-
-Proceed to Section 6.
+Backlog closure runs in Section 6b (post-merge, on confirmed-merge success only). Proceed to Section 6.
 
 ---
 
 ## Section 6 — PR Review and Merge
 
-Run after all other sections. No per-feature confirmation is needed before locating the PR.
+Run after all other sections. No per-feature confirmation is needed before locating the PR. Until a merge is confirmed, completed features' backlog tickets stay open — the work sits on the integration branch, not main.
 
 1. Read `cortex/lifecycle/sessions/latest-overnight/overnight-state.json` and extract `integration_branch`.
    - If the file is missing or `integration_branch` is absent/empty, skip this section
@@ -456,8 +408,6 @@ Run after all other sections. No per-feature confirmation is needed before locat
    - If empty (no PR found): inform the user —
      "No PR found for `{integration_branch}`. The runner may have failed to create one.
      Use `/pr` to create it manually." Then stop.
-     Any feature completed this session has its backlog ticket remaining open — the
-     work is on the integration branch, not main.
    - If the PR's `state` is `"MERGED"`: report "PR already merged — main is up to date."
      Then stop. This exit skips Section 6a's post-merge sync, so local `main` may lag the
      out-of-band merge — run `git fetch origin main` (or pull) first, before checking any
@@ -510,10 +460,8 @@ Run after all other sections. No per-feature confirmation is needed before locat
        - If you spun up a demo earlier in this review, close the demo and remove its worktree using the `git worktree remove` command printed at the time.
        - If `worktree_path` is absent, empty, or the path does not exist: skip removal silently.
    - On failure: show the error message and leave the PR open for manual resolution.
-     The feature's backlog ticket remains open — the work is on the integration branch, not main.
 
 7. If no: leave the PR open and note: "PR left open at {url} — merge manually when ready."
-   The feature's backlog ticket remains open — the work is on the integration branch, not main.
 
 After this section, proceed to Section 6a if a merge was performed.
 
@@ -612,62 +560,18 @@ After this section, the review is complete.
 
 ## Edge Cases
 
+Most edge handling is specified inline per section. The cases below are stated only here:
+
 | Situation | Action |
 |-----------|--------|
-| No morning report at `cortex/lifecycle/morning-report.md` | Print missing-report message (Section 1) and stop |
 | `cortex/lifecycle/sessions/` exists but report is missing | Print "Incomplete session detected — report not generated. Run: `cortex-report`" and stop |
-| No completed features | Skip Sections 2, 2b, and 6b entirely |
-| No deferred question files | Skip Section 3 entirely |
-| No failed features | Skip Section 4 entirely |
 | Single completed feature | Still use the batch prompt — consistent UX regardless of count |
-| All features in same round | Omit `### Round N` sub-headings to reduce noise |
-| `overnight-state.json` missing | Display features flat (no round grouping or duration) |
-| `started_at` or `completed_at` null | Omit Duration field for that feature |
-| `feature_complete` already in events.log | Report `already complete`; do not append events |
-| `cortex/lifecycle/{feature}/` dir missing | Report `no lifecycle dir`; skip advancement |
-| `plan.md` missing | Use `tasks_total: 0` in `feature_complete` event |
-| No tier in events.log | Default to `"simple"` (mirrors `read_tier()`) |
-| No criticality in events.log | Default to `"medium"` (mirrors `read_criticality()`) |
-| Review-required feature with real review_verdict + feature_complete | Report `already complete (reviewed)`; skip synthetic events |
-| Review-required feature with review_verdict but no feature_complete | Crash recovery: write remaining events to complete the lifecycle |
-| Review-required feature with no review events | Error state: report `missing review`; do NOT write synthetic APPROVED |
-| Multiple deferred files for one feature | Walk all of them in filename sort order within Section 3 |
-| Deferred file already has `## User Answer` section | Append new answer block after the last existing one |
-| `update_item.py` exits 1 (no item found) | Report "no ticket found" — not an error |
 | `update_item.py` exits non-zero for another reason | Report "close failed (exit {N})" for that feature and continue |
-| `overnight-state.json` has no `integration_branch` | Skip Section 6 with a note |
-| `gh pr list` returns empty array | Inform user, suggest `/pr` to create manually |
-| PR state is MERGED | Report already merged, skip merge prompt |
-| PR state is CLOSED | Report closed without merging, skip merge prompt |
-| PR state is DRAFT | Prompt user with mark-ready/close/skip options per the new sub-step |
-| `gh pr merge` fails | Show error, leave PR open for manual resolution |
-| `open` command fails | Run `open {url} 2>/dev/null || true` — review continues |
-| `worktree_path` in state doesn't exist on disk | Skip worktree removal silently, continue |
-| `cortex-git-sync-rebase` exits 0 | Report synced and pushed — fully up to date |
-| `cortex-git-sync-rebase` exits 1 (unresolvable conflicts) | Report diverged — resolve manually with `git pull --rebase origin main` |
-| `cortex-git-sync-rebase` exits 2 (push failed) | Report rebase succeeded — run `git push origin main` when network available |
-| Merge was declined or skipped | Skip Sections 6a and 6b entirely |
 | `cortex-git-sync-rebase` not found | Report missing script, skip sync, note "install the `cortex-core` plugin" |
 | Dirty `.git/rebase-merge/` detected | Script auto-aborts stale rebase, warns user, proceeds with sync |
-| Push fails after rebase | Report error, note local main is clean but not pushed |
 | All conflicts auto-resolved | Report "N files auto-resolved via allowlist" |
-| cortex/lifecycle.config.md missing at project root | Skip Section 2a entirely |
-| `cortex/lifecycle.config.md` present but `demo-command` absent or commented out | Skip Section 2a entirely |
-| `cortex/lifecycle.config.md` present but `demo-command` value is empty | Skip Section 2a entirely |
-| `demo-command` value contains control characters / ANSI escapes | Skip Section 2a entirely; treat as malformed |
-| `$SSH_CONNECTION` set (running over SSH or mosh) | Skip Section 2a entirely |
-| `git rev-parse --verify {integration_branch}` exits non-zero | Skip Section 2a entirely |
-| Overnight branch already checked out by another worktree | `git worktree add` fails with "already checked out"; print stderr; advance |
-| User declines the demo offer | Print no further output; advance |
-| `git worktree add` fails on accept (any other reason) | Print git's stderr; advance without retry |
 | Agent crashes between worktree creation and command print | Worktree exists with no record for user; next sweep retries |
 | Stale demo worktree from prior session in `$TMPDIR` | Removed by Step 0 garbage sweep on next morning-review (if clean) |
 | Stale demo worktree from prior session contains user edits | Sweep's `git worktree remove` (no `--force`) fails; stderr printed; user can rescue manually |
 | Demo worktree created but user closes session before Section 6 reminder | No cleanup until next morning-review's Step 0 sweep |
 | User abandons the repo entirely (no future morning-review for it) | Stale worktrees and admin entries persist until manual cleanup or OS reboot |
-| `demo-commands:` present but all entries rejected (control chars / empty command) | Fall through to `demo-command:` single-string check |
-| `demo-commands:` and `demo-command:` both configured | `demo-commands:` takes precedence; `demo-command:` is ignored on this path |
-| Single entry in `demo-commands:` | Agent may still reason "none relevant" and skip silently; one entry does not guarantee an offer |
-| Zero features with `"status": "merged"` in `overnight-state.json` | Guard 3 zero-merged check fires; skip Section 2a silently |
-| `overnight-state.json` missing `features` key (older state format) | Treat as zero merged features; skip Section 2a silently |
-| Section 2 context showed features but agent has poor context on what they changed | Agent selects "none relevant" and skips silently; correct graceful degradation |
