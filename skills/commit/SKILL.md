@@ -17,14 +17,14 @@ Do not push. Do not create branches. Do not output conversational text — only 
 
 ## Commit Message Format
 
-Keep the subject imperative-mood and ~72 chars, and summarize the *why*, not the *what*. The hook does not reliably enforce these: its past-tense blacklist misses present-tense forms ("Adds"/"Fixes"), and it does not check the wrap. Write "Add"/"Fix"/"Remove" — never "Adds"/"Added". Add a blank-line-separated body only when the change needs motivation; use `- ` bullets for multiple items.
+Keep the subject imperative-mood and ~72 chars, and summarize the *why*, not the *what*. The hook does not reliably enforce these, so write them yourself: use "Add"/"Fix"/"Remove" — never "Adds"/"Added"/"Fixes". Add a blank-line-separated body only when the change needs motivation; use `- ` bullets for multiple items.
 
 **Release-type marker** — drives the auto-release semver bump; the default is a **patch**. Add a marker only when the change is more than a patch:
 
 - backward-compatible feature → add `[release-type: minor]`
 - breaking change → add `[release-type: major]`
 
-The marker must be the entire content of its own line in the body — a mid-line marker is silently ignored. A column-0 `BREAKING:` in the body also forces a major bump. For the match regex, precedence, the `--dry-run` pre-merge check, and worked examples, read `${CLAUDE_SKILL_DIR}/references/release-type.md`.
+The marker must be the entire content of its own line; a column-0 `BREAKING:` also forces major. For the regex, precedence, `--dry-run` check, and examples, read `${CLAUDE_SKILL_DIR}/references/release-type.md`.
 
 ## Commit Command
 

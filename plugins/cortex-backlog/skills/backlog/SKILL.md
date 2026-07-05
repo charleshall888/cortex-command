@@ -27,7 +27,7 @@ Read `${CLAUDE_SKILL_DIR}/references/schema.md` when creating or validating item
 
 ## Filename Convention
 
-Files are named `NNN-slug.md` where `NNN` is a zero-padded three-digit sequential ID and `slug` is a lowercase-kebab-case summary. The numeric prefix is the stable ID used in cross-references (`blocks: [7]`). Slug drift after title changes is cosmetic and does not break references.
+Files are named `NNN-slug.md` where `NNN` is a zero-padded three-digit sequential ID and `slug` is a lowercase-kebab-case summary. The numeric prefix is the stable cross-reference ID (`blocks: [7]`); slug drift after retitling is cosmetic.
 
 Examples: `001-complete-phase-commits.md`, `014-add-search-feature.md`
 
@@ -49,7 +49,7 @@ Interview-driven backlog item creation. Delegates body authoring to `/backlog-au
 1. Invoke `/backlog-author interview "{{title}}"` to conduct a structured interview and obtain a fully authored body
 2. Run `cortex-create-backlog-item --title "{{title}}" --status backlog --type {{type}} --body "..."` with the body returned by `backlog-author interview`
 
-The body is already authored after step 1; the file is not opened for user editing (unlike `add`).
+Unlike `add`, the file is not opened for editing — the body is already authored.
 
 ### list
 

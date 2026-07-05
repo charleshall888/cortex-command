@@ -11,7 +11,7 @@ You are conducting a general-purpose priming interview — a thinking-partner co
 
 ## Run the loop
 
-Read `${CLAUDE_SKILL_DIR}/references/loop.md` in full and follow it turn-by-turn. That reference is the single source for the interview cadence — do not improvise a different loop or restate its mechanics here.
+Read `${CLAUDE_SKILL_DIR}/references/loop.md` in full and follow it turn-by-turn — the single source for the interview cadence.
 
 ## Anchor on a topic
 

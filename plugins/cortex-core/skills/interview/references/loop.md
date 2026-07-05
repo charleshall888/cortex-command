@@ -2,21 +2,19 @@
 
 Shared interview-loop mechanics for one-at-a-time conversational grilling. Read this and follow it when conducting an interview. The rules here are generic and caller-agnostic — they describe how to run the loop, not what to do with the answers; answer disposition (priming a session, synthesizing a doc, authoring a ticket) belongs to whoever invoked the interview.
 
-This file is the canonical source for the one-at-a-time cadence rule. Other surfaces that conduct interviews point here for that rule rather than restating it.
-
 ## Decision rules
 
 ### Ask one at a time
 
-Pose a single question, wait for the reply, then let that answer shape the next question. The previous answer gates the next one — you are not working from a fixed list of questions decided up front, you are following where each answer leads.
+Pose a single question, wait for the reply, then let that answer shape the next — you follow where each answer leads, not a list fixed up front.
 
-Why: a real interview adapts — the best next question depends on the last answer, sharpening it, following a thread, or dropping a branch. Front-loading a batch forfeits that adaptation and forces answers to questions later replies would have made irrelevant.
+Why: a real interview adapts — the best next question depends on the last answer. Front-loading a batch forfeits that adaptation and forces answers to questions later replies would have made irrelevant.
 
 ### Keep the grilling conversational — not batched AskUserQuestion
 
 Conduct the loop as plain-text conversational Q&A: one question in prose, await the reply, next question shaped by that reply. Do not route the grilling through batched `AskUserQuestion` calls.
 
-Why: batching composes the whole batch before any answer arrives, so later questions cannot react to earlier ones — it breaks the previous-answer-gates-the-next-question cadence. (A caller may still use `AskUserQuestion` for its own discrete decision points outside the grilling — this exclusion is about the question-by-question interview cadence itself.)
+Why: batching commits later questions before earlier answers arrive — the same adaptation loss as above, here via the tool path. (A caller may still use `AskUserQuestion` for its own discrete decision points outside the grilling — this exclusion is about the question-by-question interview cadence itself.)
 
 ### Recommend before asking
 
@@ -28,7 +26,7 @@ Suppress the recommendation on taste or preference questions — anything where 
 
 When a question is answerable by looking — the code, the existing artifacts, the surrounding context already on disk — explore first and then confirm what you found, rather than asking the person to recite something recoverable. Reserve live questions for what only the person holds: intent, priorities, scope boundaries, and the bars that judgment sets.
 
-Why: the person's time is the scarce resource. Spending a question on what the codebase already answers wastes it and risks an answer less accurate than the source; confirming a finding ("the code does X — is that the intent?") is faster and a better check than asking cold.
+Why: confirming a finding ("the code does X — is that the intent?") is faster and a stronger check than asking cold, and it avoids an answer less accurate than the source.
 
 ### Funnel from broad to narrow
 
@@ -42,4 +40,4 @@ Stop when new answers stop changing the picture — when further questions are r
 
 The person can stop early at any point — honor that immediately and wrap up gracefully. As a guard against over-interrogation, keep a soft cap: once a fair amount of ground is covered, surface a light "we've covered a lot — keep going or wrap up?" check rather than continuing to question indefinitely.
 
-Why: template-coverage stopping both over-asks (grinding through sections that add nothing) and under-asks (stopping at a filled template while the picture still shifts). Saturation tracks what matters — whether you are still learning — and the early-exit and soft cap keep the loop respectful of the person's time.
+Why: template-coverage stopping both over-asks (grinding through sections that add nothing) and under-asks (stopping at a filled template while the picture still shifts). Saturation tracks what matters — whether you are still learning.

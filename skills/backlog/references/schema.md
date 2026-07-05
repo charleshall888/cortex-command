@@ -1,7 +1,5 @@
 # Backlog Item Schema
 
-Read this file when creating or validating backlog items.
-
 ## Frontmatter Schema
 
 Every backlog item file uses this YAML frontmatter contract. Frontmatter must be under 20 lines.
@@ -14,8 +12,8 @@ Every backlog item file uses this YAML frontmatter contract. Frontmatter must be
 | `status` | enum | yes | `backlog`, `ready`, `refined`, `in_progress`, `implementing`, `review`, `complete`, `abandoned` |
 | `priority` | enum | yes | `critical`, `high`, `medium`, `low` |
 | `type` | enum | yes | `feature`, `bug`, `chore`, `spike`, `idea`, `epic` (epics are non-implementable, produced by /cortex-core:discovery) |
-| `tags` | array | no | Inline YAML only: `[tag1, tag2]`. The `deferred` tag is recognized by the index generator as a parked-state signal: in the master table the item's Status cell renders `<status> (deferred)`, and the item is excluded from the `## Refined` and `## Backlog` actionable groupings. This is an index-view flag only — it does NOT affect overnight selection (`is_item_ready`). To fully park an item from overnight, set a non-eligible `status` (e.g. `abandoned`). |
-| `areas` | list[str] | no | Inline YAML only: `[overnight-runner, backlog]`. Area-separation constraint for overnight scheduling — features with overlapping areas are assigned to different rounds. Written by `/cortex-core:refine` at spec approval time. If absent or empty, separation constraint is silently skipped (identical to current algorithm). When all items in a session share an area, every item runs in its own single-item batch (fully serialized execution) — this is intended. Zero effect until populated; protection scales with how many items have the field. Canonical names: `overnight-runner`, `backlog`, `skills`, `lifecycle`, `hooks`, `report`, `tests`, `docs` |
+| `tags` | array | no | Inline YAML only: `[tag1, tag2]`. The `deferred` tag is an index-view signal: the generator renders Status as `<status> (deferred)` and excludes the item from the `## Refined`/`## Backlog` groupings. It does NOT affect overnight selection — to park from overnight, set a non-eligible `status` (e.g. `abandoned`). |
+| `areas` | list[str] | no | Inline YAML only: `[overnight-runner, backlog]`. Overnight scheduling separates features with overlapping areas into different rounds. Written by `/cortex-core:refine` at spec approval; absent/empty = separation skipped. Canonical names: `overnight-runner`, `backlog`, `skills`, `lifecycle`, `hooks`, `report`, `tests`, `docs` |
 | `created` | date | yes | `YYYY-MM-DD` |
 | `updated` | date | yes | `YYYY-MM-DD` |
 | `lifecycle_slug` | string | no | Slug of associated lifecycle feature, or `null` |
@@ -28,15 +26,7 @@ Every backlog item file uses this YAML frontmatter contract. Frontmatter must be
 | `spec` | string | no | Path to lifecycle spec doc, set by /cortex-core:refine (cortex/lifecycle/{slug}/spec.md) |
 | `discovery_source` | string | no | Path to discovery research artifact; set by /cortex-core:discovery on epics and child tickets |
 
-**Inline array syntax is mandatory.** All array fields (`tags`, `areas`, `blocks`, `blocked-by`) must use `[value1, value2]` form. Never use the multiline `- item` form. This keeps shell parsing tractable with a single regex pattern.
-
-## Enum Reference
-
-**status:** `backlog` | `ready` | `refined` | `in_progress` | `implementing` | `review` | `complete` | `abandoned`
-
-**priority:** `critical` | `high` | `medium` | `low`
-
-**type:** `feature` | `bug` | `chore` | `spike` | `idea` | `epic`
+**Array fields (`tags`, `areas`, `blocks`, `blocked-by`) must use inline `[a, b]` form**, never multiline `- item` — the shell parser expects a single regex.
 
 ## Item Template
 
@@ -61,11 +51,5 @@ blocked-by: []
 
 Optional markdown body for description and acceptance criteria.
 
-**Implementation approaches must use exploratory framing by default.** Frame approaches as suggestions, not instructions. Use language like "one approach might be...", "consider...", or "research could explore..." — the lifecycle's research and planning phases exist to evaluate approaches critically. Backlog items that prescribe exact solutions bypass the thinking that makes lifecycle valuable.
-
-**Prescriptive framing is acceptable only in two narrow cases:**
-1. **No viable alternatives exist** — the solution is dictated by an external constraint (API shape, platform requirement, sole available library).
-2. **The approach exactly follows an already-established codebase pattern** — the ticket is asking to replicate something the repo already does elsewhere, and the pattern is the point.
-
-"I investigated this and believe it is correct" does not meet either exception. That level of confidence is precisely what the lifecycle research and plan phases exist to establish — it is the *starting point* for investigation, not the conclusion that justifies skipping it.
+**Frame implementation approaches as suggestions, not instructions** ("one approach might be...", "consider...") — the lifecycle's research and plan phases evaluate them. Prescribe an exact solution only when (1) an external constraint dictates it (API shape, platform requirement, sole library) or (2) it replicates an established repo pattern. Prior investigation ("I checked and it's correct") does not qualify — that confidence is the starting point for the research phase, not a reason to skip it.
 ```
