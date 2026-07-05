@@ -21,7 +21,7 @@ preconditions:
 
 Interactive entry point for overnight autonomous orchestration. Guides the user through selecting features from the backlog, reviewing a session plan, and launching overnight execution. The skill itself handles planning and approval; execution is delegated to the runner.
 
-For the canonical round-loop and orchestrator behavior that the runner implements after launch, see `docs/overnight-operations.md` (source of truth per CLAUDE.md). This skill stops at handoff — it does not duplicate runner semantics.
+For the canonical round-loop and orchestrator behavior the runner implements after launch, see `docs/overnight-operations.md`.
 
 ## References
 
@@ -125,7 +125,7 @@ The key difference: pipeline creates research and specs interactively during the
 
 - **Do not contain implementation code.** This skill is a protocol that the agent follows. It references functions by their module paths (`cortex_command.overnight.backlog`, `cortex_command.overnight.plan`, `cortex_command.overnight.state`, `cortex_command.overnight.events`, `cortex_command.overnight.deferral`).
 - **One overnight session at a time.** If a session is active (non-complete state file), the user must resume or abandon it before starting a new one.
-- **Features must have `cortex/lifecycle/{slug}/research.md` and `cortex/lifecycle/{slug}/spec.md` on disk, and must not be `type: epic` (checked after blocked-by, before artifact checks).** The readiness gate in `select_overnight_batch()` enforces this. Features without all required artifacts are reported as ineligible with a reason. `plan.md` is generated during the session if missing — a plan generation sub-agent runs before dispatch and defers the feature (with a captured reason) if it cannot produce a valid plan.
+- **Features must have `cortex/lifecycle/{slug}/research.md` and `cortex/lifecycle/{slug}/spec.md` on disk, and must not be `type: epic`** (eligibility detail in new-session-flow.md Step 3). The readiness gate in `select_overnight_batch()` enforces this; features missing artifacts are reported ineligible with a reason. `plan.md` is generated during the session if missing — a plan sub-agent runs before dispatch and defers the feature (with a reason) if it cannot produce a valid plan.
 - **The skill does not execute features.** It creates the plan and state, then hands off to the runner. The runner and batch runner handle actual execution.
 - **Overnight features do not merge directly to main.** They merge to the session's integration branch (`overnight/{session_id}`). The runner opens a single PR from the integration branch to main at session end, containing all overnight changes for review.
 - **Session plan is immutable after approval.** Once written to the session directory (`cortex/lifecycle/sessions/{session_id}/overnight-plan.md`), the plan does not change. Runtime state lives in `cortex/lifecycle/sessions/{session_id}/overnight-state.json`.

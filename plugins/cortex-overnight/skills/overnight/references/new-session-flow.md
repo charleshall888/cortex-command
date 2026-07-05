@@ -2,7 +2,7 @@
 
 > **Python module note**: After `uv tool install git+<url>@<tag>`, the `cortex` console script is available globally and the `cortex_command.*` package is importable inside the tool venv — no `PYTHONPATH` manipulation required. Invoke planning helpers either through the CLI entry point (`cortex <subcommand>`) or, where subcommands are not yet wired, via `python3 -m cortex_command.<module>`.
 >
-> **Dev-clone install path (R16)**: When working from a local clone, use `uv pip install -e . --no-deps` against the active `.venv` to pick up edits (including F3 console-script promotions) without reinstalling the full tool. Do not use `uv tool install --reinstall` during active sessions: the in-flight install guard blocks reinstall while any partial session is running to prevent mid-session environment changes. The existing carve-outs — pytest, `CORTEX_RUNNER_CHILD=1`, dashboard, and cancel-force — are unchanged; no new carve-out is added by this workflow.
+> **Dev-clone install path**: When working from a local clone, use `uv pip install -e . --no-deps` against the active `.venv` to pick up edits without reinstalling the full tool. Do not use `uv tool install --reinstall` during active sessions — the in-flight install guard blocks reinstall while a session is running.
 
 ## Step 1: Check for Existing Session
 
@@ -22,9 +22,7 @@ The regenerated files are gitignored, so they do not appear in the uncommitted-f
 
 ## Step 3: Select Eligible Features
 
-Run `select_overnight_batch()` from `cortex_command.overnight.backlog` on the project's backlog directory.
-
-This function composes the full selection pipeline: parse backlog items, filter for readiness (status, blockers, research + spec + plan artifacts), score by weighted algorithm (dependency structure, priority, tag cohesion, type routing), and group into batches.
+Run `select_overnight_batch()` from `cortex_command.overnight.backlog` on the project's backlog directory. It returns a `SelectionResult` (eligible items, batches, ineligible reasons).
 
 A feature is eligible only if the following exist on disk:
 - `cortex/lifecycle/{slug}/research.md` exists on disk (slug = `item.lifecycle_slug` if set, else `slugify(item.title)`)
@@ -72,7 +70,7 @@ Collect specs for all selected features, display the session plan with specs inl
 
 - **If a spec file is missing or unreadable**: Report "Cannot read spec for {feature_title}: {error}." Offer two choices: (a) remove the feature from the selection and continue, or (b) abort planning so the user can fix the spec. If the user chooses remove, update the selection and skip that feature in the display below.
 
-**Suitability triage (judged once, on first Step 6 entry)**: Unattended overnight execution is the riskiest place to run work — no human is watching to catch a wrong turn — so before showing the plan, judge whether each selected feature is a good *unattended* candidate and set the poor ones aside by default. You hold each feature's `spec.md` (collected above); use it. This judgment happens **once, on first entry to Step 6** — later re-renders re-apply the result rather than re-judging (see the `[T]` handler), so a candidate never flickers between pools.
+**Suitability triage (judged once, on first Step 6 entry)**: Unattended overnight execution is the riskiest place to run work — no human is watching to catch a wrong turn — so before showing the plan, judge whether each selected feature is a good *unattended* candidate and set the poor ones aside by default. You hold each feature's `spec.md` (collected above); use it. Judged once on first entry — later re-renders re-apply the result rather than re-judging (see the `[T]` handler).
 
 For each selected feature, set it aside (with a one-line, plain-language reason) when its spec shows it is a poor fit for running with no human present. Bias toward exclusion — a set-aside item is one re-add away, but a bad unattended run wastes the night. Signals that warrant setting aside:
 
@@ -167,14 +165,7 @@ On user approval, execute these steps in order:
 
    The `--only` value is exactly the **active pool** displayed at the `[A]pprove` moment in Step 6 — the active list shown at approval IS the frozen set IS the executed set; there is no re-selection between approval and execution. Compose the comma-separated slug list from that approved active display. (Omitting `--only` falls back to full re-selection — do not do that here, or operator removals/set-asides would not stick. `launch` refuses fail-loud if the active set is not dependency-closed, naming the missing in-session blocker so you can re-add it at the Step 6 gate.)
 
-   This performs all initialization atomically and then emits a JSON envelope. Internally it:
-   - Creates a timestamp-based session ID (`overnight-{YYYY-MM-DD}-{HHmm}`) with collision-avoidance
-   - Sets all selected features to `pending` status with round assignments matching batch numbers
-   - Sets phase to `executing`
-   - Creates a git worktree at `$TMPDIR/overnight-worktrees/{session_id}/` with a new `overnight/{session_id}` integration branch; the user's active branch is not changed
-   - Writes `overnight-plan.md`, `session.json`, and `overnight-state.json` into the MC lifecycle session directory
-
-   Parse the envelope and capture these fields for the later sub-steps — do **not** reconstruct any path from a hard-coded prefix or environment variable:
+   This performs all initialization atomically (session ID, worktree on a new `overnight/{session_id}` branch, `overnight-plan.md`/`session.json`/`overnight-state.json`) and emits a JSON envelope. Parse it and capture these fields for the later sub-steps — do **not** reconstruct any path from a hard-coded prefix or environment variable:
    - `session_id` — the bootstrapped session id
    - `state_dir` — the session directory under `cortex/lifecycle/sessions/{session_id}/`
    - `state_path` — the absolute path to `overnight-state.json` (pass this as `--state` in sub-step 7)
@@ -189,7 +180,7 @@ On user approval, execute these steps in order:
 
    **Error**: If `git add` or `git commit` fails, report: "Batch spec commit failed: {error}. Proceeding without committing batch spec sections — they may be extracted during runner startup." Continue — the runner can still function without the pre-commit.
 
-5. **Session start logging (deferred to the launch branch)**: Do **not** log `session_start` here. The prep-time `session_start` log is gated to the **run-now** branch of step 7 only (see sub-step 7's "Run now" path) — when the runner launches immediately, `LIFECYCLE_SESSION_ID` is unset in this prep context, so logging here would tag the event `session_id:"manual"` and the runner re-logs the real `session_start` at fire. On the **schedule** branch, do not pre-log at all: the fire happens ~hours later and the runner is the sole author of the single `session_start` (logged with the real session id at fire time). This avoids the early/duplicate `session_start` that a scheduled run would otherwise produce.
+5. **Session start logging (deferred to the launch branch)**: Do **not** log `session_start` here — it is gated to the **run-now** branch of sub-step 7. The runner is the sole fire-time author of the single `session_start`; the schedule branch does not pre-log at all (its fire happens hours later, so pre-logging would produce an early/duplicate event).
 
 6. **Launch the dashboard** (if not already running): Check whether the dashboard is live by reading `${XDG_CACHE_HOME:-$HOME/.cache}/cortex/dashboard.pid`. If the file exists and the stored PID is alive (`kill -0 $(cat "${XDG_CACHE_HOME:-$HOME/.cache}/cortex/dashboard.pid")` exits 0), the dashboard is already running — note the URL and skip launch. Otherwise, instruct the user to run `cortex dashboard` (installer-tier) or `just dashboard` (clone-only) in a separate terminal before starting the runner, or explain that they can launch it at any time during the session. Poll `GET http://localhost:8080/health` for a 200 response (up to 5 seconds, 1-second intervals); if successful, note "Dashboard available at http://localhost:8080" in the session start message.
 
@@ -204,9 +195,7 @@ On user approval, execute these steps in order:
       [2] Schedule for specific time — delay launch until a target time
     ```
 
-    > **Usage context (dormant)**: No programmatic access to Claude Code's subscription usage data (remaining tokens, reset time) currently exists from within an agent context. When such access becomes available (e.g., a `/usage` API, a `usage-cache.json` file, or an environment variable), auto-display it alongside the scheduling prompt to help the user choose a launch time. Until then, no usage information is shown.
-
-    **Run now (option 1)**: First, log the prep-time `session_start` (run-now branch only): call `log_event()` from `cortex_command.overnight.events` with `event='session_start'`, `round=1`, and `details` including the session ID, feature count, and time limit. Pass `log_path=state_dir / "overnight-events.log"` so the event log lands in the MC lifecycle session directory alongside the other session artifacts. Note: the parameter is `event` (not `event_type`) and event names are lowercase strings (e.g., `'session_start'`, not `'SESSION_START'`). **Error**: If `log_event()` fails, report: "Failed to log session start event: {error}." Continue — logging failure is non-fatal. (The schedule branch does NOT perform this log — the runner is the sole fire-time author of the single `session_start`.)
+    **Run now (option 1)**: First, log the prep-time `session_start` (run-now branch only): call `log_event()` from `cortex_command.overnight.events` with `event='session_start'`, `round=1`, and `details` including the session ID, feature count, and time limit. Pass `log_path=state_dir / "overnight-events.log"` so the event log lands in the MC lifecycle session directory alongside the other session artifacts. Note: the parameter is `event` (not `event_type`) and event names are lowercase strings (e.g., `'session_start'`, not `'SESSION_START'`). **Error**: If `log_event()` fails, report: "Failed to log session start event: {error}." Continue — logging failure is non-fatal.
 
     Then execute via Bash tool with `dangerouslyDisableSandbox: true`, passing the `state_path` captured from the `cortex overnight launch` envelope in sub-step 2 (substitute the actual value; do **not** reconstruct it from a hard-coded prefix or environment variable):
 
