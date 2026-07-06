@@ -1,13 +1,12 @@
 # Criticality Heuristics
 
-Consumed by `/cortex-core:dev` Step 2 (Branch 5 route-to-lifecycle) and the Step-4 decline path. Read this before forming a criticality suggestion.
+Consumed by `/cortex-core:dev` Step 2 (Branch 5) and the Step-4 decline path.
 
 ### Heuristic Signals
 
 | Signal | Suggests |
 |--------|----------|
-| Authentication, authorization, access control | high or critical |
-| Security, encryption, secrets, tokens | high or critical |
+| Authentication/authorization, security, encryption, secrets, tokens | high or critical |
 | Payments, billing, financial data | critical |
 | Shared library, core module, base class | high |
 | CI/CD, deployment, infrastructure | high |
@@ -20,15 +19,9 @@ Consumed by `/cortex-core:dev` Step 2 (Branch 5 route-to-lifecycle) and the Step
 
 ### Forming the Suggestion
 
-Suggest a level:
+- **low**: no elevated signals, easily reversed, minimal impact.
+- **medium**: some signals but contained scope — default when uncertain or when none are detected.
+- **high**: multiple signals or broad blast radius, hard to reverse.
+- **critical**: security, financial, or data-loss signals — severe consequences.
 
-- **low**: No elevated signals. Failure is easily reversed and has minimal impact.
-- **medium**: Some signals present but scope is contained. Default when uncertain.
-- **high**: Multiple signals or broad blast radius. Failure is hard to reverse.
-- **critical**: Security, financial, or data-loss signals. Failure has severe consequences.
-
-Present the suggestion conversationally:
-
-> **Criticality suggestion: `<level>`** — `<one-sentence justification>`.
-
-With no signals detected, suggest **medium** and note that no elevated signals were found.
+Present conversationally: **Criticality suggestion: `<level>`** — `<one-sentence justification>`.

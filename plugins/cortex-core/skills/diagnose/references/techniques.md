@@ -1,31 +1,14 @@
 # Supporting Techniques
 
-Three techniques referenced from the 4-phase debugging protocol. Read on demand when the body points here.
+Three techniques referenced from the 4-phase protocol; read on demand when the body points here.
 
 ## Backward Root-Cause Tracing
 
 **Core principle**: Bugs manifest far from their source. Trace backward through the execution path to the original trigger, then fix there — not at the symptom.
 
-**The tracing process:**
+Example: `git commit` fails with a GPG error because `GNUPGHOME` is unset → trace up: the SessionStart hook that sets it didn't complete → its socket-path logic broke when `TMPDIR` changed. Fix the socket-path logic, not the symptom (don't suppress the GPG error in the commit skill).
 
-1. Observe the symptom (e.g., "commit fails with GPG error")
-2. Find the immediate cause (e.g., `git commit` exits non-zero; GNUPGHOME not set)
-3. Ask: what called this? What provided the environment? (e.g., the commit skill ran, but the SessionStart hook that sets up GNUPGHOME didn't complete)
-4. Keep tracing up: what caused the hook to not complete? (e.g., the extra socket path wasn't found because TMPDIR changed)
-5. Fix at the source (the socket path logic in the hook) — not at the symptom (suppressing the GPG error in the commit skill)
-
-**Adding diagnostic instrumentation** when you can't trace manually:
-
-```bash
-# In a hook script: trace execution
-set -x  # prints every command as it runs
-
-# At a key decision point: log the state
-echo "DEBUG: GNUPGHOME=$GNUPGHOME, socket exists=$(test -S $GNUPGHOME/S.gpg-agent && echo yes || echo no)" >&2
-
-# For skill invocation: add an explicit trace to the description trigger
-# (temporarily add the invocation phrase you're testing to verify it triggers)
-```
+When you can't trace manually, instrument: log state at each boundary (`set -x`, or a targeted `echo ... >&2`) rather than guessing.
 
 ---
 
@@ -35,72 +18,15 @@ echo "DEBUG: GNUPGHOME=$GNUPGHOME, socket exists=$(test -S $GNUPGHOME/S.gpg-agen
 
 **The four layers:**
 
-1. **Entry point**: reject invalid input at the boundary
-
-   ```bash
-   # In a hook script: verify required env vars are set before using them
-   if [ -z "$GNUPGHOME" ]; then
-     echo "ERROR: GNUPGHOME not set" >&2; exit 1
-   fi
-   ```
-
-2. **Business logic**: ensure data makes sense for this operation
-
-   ```bash
-   # In a lifecycle script: verify events.log is valid before appending
-   if ! python3 -c "import json; [json.loads(l) for l in open('events.log')]" 2>/dev/null; then
-     echo "ERROR: events.log is malformed" >&2; exit 1
-   fi
-   ```
-
-3. **Environment guards**: prevent dangerous operations in specific contexts
-
-   ```bash
-   # Before destructive operations: verify you're not in the wrong directory
-   if [ "$(pwd)" != "$EXPECTED_ROOT" ]; then
-     echo "ERROR: wrong working directory" >&2; exit 1
-   fi
-   ```
-
-4. **Debug instrumentation**: capture context for forensics
-
-   ```bash
-   # Log state at each boundary for post-mortem if something still goes wrong
-   echo "DEBUG: entering hook, session=$LIFECYCLE_SESSION_ID, feature=$1" >&2
-   ```
+1. **Entry point**: reject invalid input at the boundary (e.g., a hook checks required env vars before using them)
+2. **Business logic**: ensure data makes sense for this operation (e.g., a lifecycle script validates events.log is well-formed JSON before appending)
+3. **Environment guards**: prevent dangerous operations in the wrong context (e.g., verify the working directory before a destructive operation)
+4. **Debug instrumentation**: log state at each boundary so anything that slips through leaves a forensic trail
 
 ---
 
 ## Condition-Based Waiting
 
-**Core principle**: Arbitrary sleeps guess at timing and race under load. Wait for the actual condition you care about, not a guess about how long it takes.
+**Core principle**: Arbitrary sleeps guess at timing and race under load. Wait for the actual condition you care about, not a guess about how long it takes — poll it in a loop with a timeout, not a fixed `sleep N`.
 
-**Shell-native pattern:**
-
-```bash
-wait_for() {
-  local description="$1"
-  local condition="$2"      # a bash test expression
-  local timeout="${3:-30}"  # seconds
-  local elapsed=0
-  while ! eval "$condition" 2>/dev/null; do
-    if [ "$elapsed" -ge "$timeout" ]; then
-      echo "Timeout after ${timeout}s waiting for: $description" >&2
-      return 1
-    fi
-    sleep 1
-    elapsed=$((elapsed + 1))
-  done
-}
-
-# Usage examples:
-wait_for "events.log to appear"       '[ -s cortex/lifecycle/my-feature/events.log ]'
-wait_for "task-done flag"             '[ -f /tmp/task-done.flag ]'       30
-wait_for "GPG agent socket"           '[ -S "$GNUPGHOME/S.gpg-agent" ]'  10
-wait_for "overnight runner to finish" 'grep -q feature_complete cortex/lifecycle/my-feature/events.log' 120
-```
-
-**Don't use when:**
-
-- Testing actual timing behavior (a debounce or rate-limit mechanism)
-- If using an arbitrary sleep, document WHY with a comment
+Reserve a real sleep only for testing timing behavior itself (a debounce or rate-limit), documented with a comment.

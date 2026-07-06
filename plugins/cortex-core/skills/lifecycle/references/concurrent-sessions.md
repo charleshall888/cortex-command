@@ -1,5 +1,5 @@
 # Concurrent Sessions
 
-Multiple sessions can work on different features simultaneously. Each session associates with one feature via the gitignored, SessionEnd-cleaned `cortex/lifecycle/{feature}/.session` file, written by SKILL.md Step 2's Register-session step from `$LIFECYCLE_SESSION_ID` (set by the SessionStart hook). Do not commit `.session` files.
+Multiple sessions can work on different features simultaneously. Each session associates with one feature via the gitignored, SessionEnd-cleaned `cortex/lifecycle/{feature}/.session` file, written at SKILL.md Step 2's Register-session step from `$LIFECYCLE_SESSION_ID` (set by the SessionStart hook). Do not commit `.session` files.
 
-**Listing incomplete features**: If multiple incomplete `cortex/lifecycle/*/` directories exist and the user has not specified which to work on, list them and ask which to resume. Completed features (those with a `feature_complete` event in `events.log`, or `review.md` containing an APPROVED verdict) are ignored.
+**Listing incomplete features**: if multiple incomplete `cortex/lifecycle/*/` directories exist and the user hasn't specified which to work on, list them and ask which to resume. Completed features (`feature_complete` in `events.log`, or an APPROVED verdict in `review.md`) are ignored.

@@ -12,54 +12,30 @@ outputs:
 
 # /requirements-gather
 
-Conduct a structured requirements interview and return a Q&A markdown block. This sub-skill never writes to disk — synthesis is `/requirements-write`'s job.
-
-## What this skill is for
-
-Surfacing the intent, priorities, constraints, and boundaries a downstream artifact will codify. The output is the raw interview record; `/requirements-write` selects sections and formats prose.
+Conduct a structured requirements interview surfacing intent, priorities, constraints, and boundaries, and return a Q&A markdown block — the raw interview record. This sub-skill never writes to disk or formats prose; synthesis and section selection are `/requirements-write`'s job.
 
 ## Decision criteria
 
-### Codebase trumps interview
+### Interview stance
 
-Per the codebase-trumps-interview rule in `skills/interview/references/loop.md`: before drafting a question, check whether the answer is recoverable from code, configs, README, CLAUDE.md, or the existing target doc. If so, draft the answer with citations and ask the user to confirm rather than asking cold. Reserve live questions for intent, priorities, scope boundaries, and non-functional bars source code cannot reveal.
+- **Codebase trumps interview**: per `skills/interview/references/loop.md`, check whether code, configs, README, CLAUDE.md, or the existing target doc already answers a question before asking it; if so, draft the answer with citations for the user to confirm. Reserve live questions for intent, priorities, scope boundaries, and non-functional bars source code cannot reveal.
+- **Recommend before asking**: every question carries a **Recommended answer:** line grounded in explored code, the existing target doc, the parent requirements (area scope), or stated conventions; when no grounded recommendation is possible, mark it `none — open question` and explain the gap.
+- **Ask one at a time**, per `skills/interview/references/loop.md`'s cadence rule.
 
-### Recommend before asking
+### Glossary writes
 
-Every question carries a **Recommended answer:** line — the position the model would adopt on "go with your best guess." Ground it in explored code, the existing target doc, the parent requirements (area scope), or stated conventions. When no grounded recommendation is possible, mark it `none — open question` and explain the gap.
+Hold the Q&A block in conversation context until the orchestrator's handoff — synthesis belongs to `/requirements-write`, so an abandoned interview leaves no partial project/area doc behind. The one write this sub-skill owns is a per-term append to `cortex/requirements/glossary.md` (created lazily on first resolved term, persisted immediately, so entries survive an abandoned interview). Before writing, probe for an existing entry: if found, use it verbatim or surface the conflict via `AskUserQuestion` ("the glossary defines X as Y; this interview suggests Z — keep / replace / surface as Flagged Ambiguity?"); if absent, classify and gate below.
 
-### Ask one at a time
+### Classify, gate, and format
 
-Conduct the interview one question at a time, per the canonical cadence rule in `skills/interview/references/loop.md`.
-
-### Lazy artifact creation
-
-Hold the Q&A block in conversation context until the orchestrator's handoff — synthesis of project.md and area docs belongs to `/requirements-write`, so abandoning the interview leaves no partial doc behind. The only write this sub-skill owns is a per-term append to `cortex/requirements/glossary.md` (created lazily on the first resolved term).
-
-Glossary appends persist immediately, so entries written before an abandoned interview remain in the file — an abandoned interview still leaves the glossary coherent.
-
-### Inline glossary write with term-already-exists probe
-
-When a term resolves during the interview, probe before writing: read `cortex/requirements/glossary.md` if it exists, and check whether the term is already present. If it is, use the existing entry verbatim, or surface the conflict via `AskUserQuestion` ("the glossary defines X as Y; this interview suggests Z — keep / replace / surface as Flagged Ambiguity?") before any reclassification. If the term is absent, apply the classifier described below; on a project-specific verdict, append the entry to `glossary.md` (creating the file lazily if it does not yet exist).
-
-### Project-specific vs general programming
-
-The binary classifier decides whether a resolved term earns a glossary entry. Pocock's rule: project-specific terms get written, general programming terms do not. "Phase transition," "kept user pauses," "sentinel-as-used-here" are project-specific — their meaning is shaped by this repo's conventions and would not be obvious to a reader who knew Python and Claude Code generally. "Timeout," "callback," "race condition" are general programming — defining them in the glossary adds noise rather than disambiguation. When the classifier rejects a term, explain the rejection in the interview turn and proceed; nothing is written.
-
-### User-confirmation gate
-
-A user-confirmation gate sits in front of every inline write: only user-named or user-confirmed terms persist. A term that surfaced only in a `Recommended answer:` line and was never user-named or user-confirmed does NOT trigger an inline write — the recommendation alone is not consent to persist. If the user later names or confirms the term explicitly, the write fires then. This keeps the glossary anchored to the user's vocabulary rather than the model's paraphrases.
-
-### Language-content constraint
-
-Entries written into the glossary's `## Language` section must be definitional, not classification-shaped — the section feeds `critical-review`'s Project Context, which must stay reasoning-free. Anchor pair: `phase_transition: the named event emitted when ...` is admitted (defines the term); `phase_transition — genuinely-domain term; contract-shaped in lifecycle.md` is rejected (classifies rather than defines). Write the first shape; never the second.
+The binary classifier: project-specific terms — meaning shaped by this repo's conventions, e.g. "phase transition," "kept user pauses" — earn a glossary entry; general programming terms — "timeout," "race condition" — do not. When rejected, explain why in the interview turn and write nothing. Even on a project-specific verdict, only a user-named or user-confirmed term persists — a `Recommended answer:` mention alone is not consent. `## Language` entries must be definitional, not classification-shaped (`phase_transition: the named event emitted when ...`, not `phase_transition — genuinely-domain term; contract-shaped in lifecycle.md`), since the section feeds `critical-review`'s reasoning-free Project Context.
 
 ## Scope shaping
 
-- **Project scope**: cover the parent template's seven required sections — Overview, Philosophy of Work, Architectural Constraints, Quality Attributes, Project Boundaries (In/Out/Deferred), Conditional Loading (trigger phrase → area doc map), and the prunable Optional section. Anchor each block of questions to one of these sections so the synthesis step has a clean mapping.
-- **Area scope**: cover the area template's seven required sections — Overview, Functional Requirements, Non-Functional Requirements, Architectural Constraints, Dependencies, Edge Cases, Open Questions. Reuse parent project context loaded from `cortex/requirements/project.md`; do not re-ask settled project-level positions.
+- **Project scope**: seven sections — Overview, Philosophy of Work, Architectural Constraints, Quality Attributes, Project Boundaries (In/Out/Deferred), Conditional Loading (trigger phrase → area doc), and the prunable Optional. Anchor each question block to one.
+- **Area scope**: seven sections — Overview, Functional Requirements, Non-Functional Requirements, Architectural Constraints, Dependencies, Edge Cases, Open Questions. Reuse parent project context loaded from `cortex/requirements/project.md`; don't re-ask settled project-level positions.
 
-The full section list and ordering live in the artifact-format documentation that `/requirements-write` consumes. This skill needs only to label each Q&A under the section it feeds.
+Full section ordering and formatting live in `/requirements-write`'s templates; this skill only needs to label each Q&A under the section it feeds.
 
 ## Output shape
 
@@ -78,19 +54,10 @@ Return one markdown block of the form:
 - **Q:** ...
 ```
 
-One H3 per template section. Sections with no live questions (because code already answered everything and the user confirmed) collapse to a single bullet noting the confirmed code-derived position. The orchestrator passes this block verbatim to `/requirements-write`.
+One H3 per template section; a section with no live questions collapses to a single bullet noting the confirmed code-derived position. The orchestrator passes this block verbatim to `/requirements-write`.
 
 Omit **Code evidence** for intent-only questions with no codebase grounding — do not fabricate a citation or write `N/A`.
 
 ## Handoff contract
 
-When the interview is complete, announce completion and return the Q&A block to the caller. Do NOT invoke `/requirements-write` directly — the `/cortex-core:requirements` orchestrator owns sequencing. If the user requests changes after handoff, the orchestrator re-enters this sub-skill with the prior Q&A block as starting context.
-
-## Constraints
-
-| Thought | Reality |
-|---------|---------|
-| "I should write the requirements file once the interview is done" | Writing is `/requirements-write`'s job. This sub-skill stops at the Q&A block. |
-| "I'll just ask the user — it's faster than reading code" | Codebase-trumps-interview applies: explore code instead when the answer is recoverable from source, then confirm. |
-| "I'll skip the Recommended answer when I'm unsure" | Mark it `none — open question` with a one-line rationale. Never omit the field. |
-| "Empty sections should be dropped from the output" | Keep the H3 header and note the confirmed code-derived position so synthesis has full template coverage. |
+When the interview is complete, announce completion and return the Q&A block to the caller — do NOT invoke `/requirements-write` directly; the orchestrator owns sequencing. If the user requests changes after handoff, it re-enters this sub-skill with the prior Q&A block as context.

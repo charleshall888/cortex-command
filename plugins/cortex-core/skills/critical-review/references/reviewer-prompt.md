@@ -14,7 +14,7 @@ You are conducting an adversarial review of one specific angle.
 
 Read the literal absolute path provided above before beginning analysis. Do NOT re-derive the path yourself.
 
-When the Read succeeds AND the computed SHA-256 of the Read result matches `{artifact_sha256}`, emit `READ_OK: <path> <sha>` on its own line before producing any findings (substituting the absolute path you Read and the SHA-256 of the Read result; preceding preamble exposition is acceptable, but the sentinel must appear before the first `## ` heading), then continue with the analysis below.
+When the Read succeeds AND the computed SHA-256 of the Read result matches `{artifact_sha256}`, emit `READ_OK: <path> <sha>` on its own line (the absolute path you Read and its SHA-256) before the first `## ` heading — preamble prose before it is fine — then continue with the analysis below.
 
 When the Read fails or returns empty content, emit `READ_FAILED: <absolute-path> <one-word-reason>` on its own line before any other content and stop — do not proceed with analysis.
 
@@ -26,7 +26,7 @@ When the Read fails or returns empty content, emit `READ_FAILED: <absolute-path>
 
 ## Finding Classes
 
-Each finding must be tagged with exactly one class. Multi-class tags are prohibited.
+Tag each finding with exactly one class — no multi-class tags.
 
 - **A — fix-invalidating**: the artifact's proposed change does not work as described, or makes the situation worse. Worked example: "the refactor removes a null check the caller depends on."
 - **B — adjacent-gap**: the proposed change is internally correct but an adjacent code path, callsite, or contract is left misaligned. Worked example: "the fix is correct but the analytics event a layer up still fires on the old path."
@@ -61,8 +61,8 @@ After the prose findings above, emit a JSON envelope so the orchestrator can ext
       "class": "A" | "B" | "C",
       "finding": "<text>",
       "evidence_quote": "<verbatim quote from the artifact>",
-      "fix_invalidation_argument": "<optional: A-class findings only — see the fix_invalidation_argument instruction above>",
-      "straddle_rationale": "<optional: rationale when splitting, or when biasing up to A on an unsplittable case>"
+      "fix_invalidation_argument": "<optional, A-class only>",
+      "straddle_rationale": "<optional: split or bias-up-to-A rationale>"
     }
   ]
 }

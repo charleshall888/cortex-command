@@ -910,23 +910,34 @@ def _load_project_scripts(pyproject_path: Path) -> dict[str, str]:
 # ---------------------------------------------------------------------------
 
 
-def _resolve_module_path(module_attr: str) -> Path | None:
+def _resolve_module_path(module_attr: str, root: Path | None = None) -> Path | None:
     """Resolve ``module.path:attr`` to an absolute source path.
 
-    Uses ``importlib.util.find_spec()`` which does NOT import the module;
-    reads ``spec.origin`` for the file path.  Returns ``None`` if the spec
-    cannot be found or has no origin.
+    Tries ``importlib.util.find_spec()`` first and reads ``spec.origin`` for
+    the file path.  Note ``find_spec`` executes *parent package* imports, so
+    it fails when a parent's dependency is missing from the running
+    interpreter (e.g. the hook environment lacks PyYAML) even though the
+    target source file is right there in the repo.  When ``root`` is given,
+    falls back to constructing the path directly under it, so extraction
+    stays dependency-free.  Returns ``None`` only when both fail.
     """
     if ":" not in module_attr:
         return None
     module_name, _attr = module_attr.split(":", 1)
     try:
         spec = importlib.util.find_spec(module_name)
-    except (ModuleNotFoundError, ValueError):
-        return None
-    if spec is None or spec.origin is None:
-        return None
-    return Path(spec.origin)
+    except (ImportError, ValueError):
+        spec = None
+    if spec is not None and spec.origin is not None:
+        return Path(spec.origin)
+    if root is not None:
+        candidate = root / (module_name.replace(".", "/") + ".py")
+        if candidate.is_file():
+            return candidate
+        pkg_candidate = root / module_name.replace(".", "/") / "__init__.py"
+        if pkg_candidate.is_file():
+            return pkg_candidate
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -1234,7 +1245,7 @@ def extract_surface(
             continue
 
         # Resolve to source path
-        module_path = _resolve_module_path(module_attr)
+        module_path = _resolve_module_path(module_attr, root=root)
         if module_path is None:
             # Can't resolve — treat as not_argparse without emitting E201
             # (the module may not be importlib-visible, e.g. wrong venv).

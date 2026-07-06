@@ -31,22 +31,13 @@ One read-only call classifies `$ARGUMENTS`, resolves the backlog file, detects p
 cortex-lifecycle-resolve "$ARGUMENTS"
 ```
 
-It emits one JSON object with a `state` discriminant, a `next` directive, and that state's data. Act on `state`:
-
-| `state` | Action |
-|---------|--------|
-| `wontfix` | Run `next`'s `cortex-lifecycle-wontfix` command, report the outcome, **halt**. |
-| `error` · `needs-feature` · `no-such-lifecycle` | Report `next` and stop — do not create a lifecycle. |
-| `derive-slug` | Derive a 3–6 word kebab-case slug from the prose, announce it as you create `cortex/lifecycle/<slug>/`, then re-run the resolver on it. No confirmation — the user corrects via re-invocation. |
-| `empty` | No feature given — act on `next`: scan `cortex/lifecycle/*` for incomplete lifecycles and offer them via `AskUserQuestion`, then re-run the resolver on the choice. |
-| `ambiguous-backlog` | Present `candidates` via `AskUserQuestion`, then re-run the resolver on the choice. |
-| `new` · `resume` | Proceed to Step 2. `resume` carries `route`, `paused`, `checked`/`total`, `cycle`, `criticality`, `tier`, `staleness`, `backlog`; `new` carries `backlog`. |
+It emits one JSON object with a `state` discriminant and a `next` directive that already states the required action — act on `next`, don't re-derive it. `new` and `resume` proceed to Step 2 (`resume` carries `route`, `paused`, `checked`/`total`, `cycle`, `criticality`, `tier`, `staleness`, `backlog`; `new` carries `backlog`). Every other state is terminal for this call and `next` says what to do: `derive-slug` (derive a 3–6 word kebab-case slug and re-run the resolver on it — no confirmation, the user corrects via re-invocation), `empty` (scan `cortex/lifecycle/*` for incomplete lifecycles and offer them via `AskUserQuestion`, then re-run), `ambiguous-backlog` (present `candidates` via `AskUserQuestion`, then re-run), `wontfix` (run the named `cortex-lifecycle-wontfix` command and halt), or `error` / `needs-feature` / `no-such-lifecycle` (report and stop — do not create a lifecycle).
 
 The resolver never writes — Step 2's sub-procedures do.
 
 ## Step 2: Enter the Resolved State
 
-`new` starts fresh (`phase = none`). `resume` enters the resolver's `route` (base phase, pause marker stripped). Linear routes (`research`, `specify`, `plan`, `implement`, `review`) enter their same-named phase. Non-obvious: `implement-rework` (review `CHANGES_REQUESTED` → re-enter Implement), `complete` (`feature_complete` logged or review `APPROVED`), `escalated` (review `REJECTED` → present the analysis, ask for direction). When `paused`, route normally and note it.
+`new` starts fresh (`phase = none`). `resume` enters the resolver's `route` (base phase, pause marker stripped): linear routes (`research`, `specify`, `plan`, `implement`, `review`) enter their same-named phase; non-obvious routes are `implement-rework` (review `CHANGES_REQUESTED` → re-enter Implement), `complete` (`feature_complete` logged or review `APPROVED`), and `escalated` (review `REJECTED` → present the analysis, ask for direction). When `paused`, route normally and note it.
 
 **Register session:**
 
@@ -54,7 +45,7 @@ The resolver never writes — Step 2's sub-procedures do.
 echo $LIFECYCLE_SESSION_ID > cortex/lifecycle/{feature}/.session
 ```
 
-If resuming, report `route`, `criticality`, `tier`, and offer to continue or restart from an earlier phase. Surface `staleness` (`spec_age_days` / `plan_age_days` / `commits_since_spec`) as terse lines — high values suggest the artifacts drifted. Don't block; default to continue.
+If resuming, report `route`, `criticality`, `tier`, offer to continue or restart from an earlier phase, and surface `staleness` (`spec_age_days` / `plan_age_days` / `commits_since_spec`) tersely — high values suggest drift, but don't block; default to continue.
 
 ### Backlog + Discovery Bootstrap
 
@@ -93,7 +84,7 @@ Read **only** the current phase's reference. Do not preload others.
 
 Proceed automatically — no confirmation at phase boundaries. Announce and continue. Each transition summary includes **Decisions**, **Scope delta**, **Blockers** (each "None" when empty), and **Next** (phase + what it does).
 
-A boundary fires on its gate condition (e.g. `plan.md` all tasks `[x]`), not on user input — nothing to wait for. A prior "report"/"summarize" instruction sets text cadence only — emit the summary as plain text and continue; it does not authorize `AskUserQuestion` (permitted at a boundary only by the Kept user pauses inventory).
+A boundary fires on its gate condition (e.g. `plan.md` all tasks `[x]`), not user input. A prior "report"/"summarize" instruction sets text cadence only; it does not authorize `AskUserQuestion` (permitted at a boundary only by the Kept user pauses inventory).
 
 ### Per-phase completion rule
 
@@ -115,7 +106,7 @@ For criticality override syntax and the behavior matrix (which phases run, model
 
 ## Situational references
 
-The per-phase and cross-cutting references above load at point of use. These three have no linear-flow trigger — consult only when their condition applies, don't preload:
+No linear-flow trigger — consult only when their condition applies, don't preload:
 
 - [concurrent-sessions.md](${CLAUDE_SKILL_DIR}/references/concurrent-sessions.md) — `.session` convention, multi-feature concurrency
 - [parallel-execution.md](${CLAUDE_SKILL_DIR}/references/parallel-execution.md) — parallel features via `Agent(isolation: "worktree")`

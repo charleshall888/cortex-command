@@ -6,7 +6,7 @@ Two-stage review: spec compliance first, then code quality. Complex tier only. T
 
 ### 1. Gather Review Inputs
 
-Read `cortex/lifecycle/{feature}/spec.md` (requirements) and `plan.md` (verification strategy), and identify the files changed during implementation (git log since the lifecycle started, or plan.md's file lists). Then load requirements per the shared protocol (`${CLAUDE_SKILL_DIR}/references/load-requirements.md`): run `cortex-load-requirements --feature {feature}`, read every listed non-skipped path, and record the printed path list for the reviewer prompt. On the verb's no-match fallback note (no area docs matched), the drift check covers project.md only.
+Read `cortex/lifecycle/{feature}/spec.md` (requirements) and `plan.md` (verification strategy), and identify the files changed during implementation (git log since the lifecycle started, or plan.md's file lists). Load requirements per the shared protocol (`${CLAUDE_SKILL_DIR}/references/load-requirements.md`): run `cortex-load-requirements --feature {feature}`, read every listed non-skipped path, and record the printed path list for the reviewer prompt. On the verb's no-match fallback note, the drift check covers project.md only.
 
 ### 2. Launch Review Sub-Task
 
@@ -33,7 +33,7 @@ Read `{spec_path}`.
 {files modified during implementation}
 
 ## Stage 1 — Spec Compliance
-Per requirement: read the relevant source, check acceptance criteria, rate PASS / FAIL / PARTIAL. If any is FAIL, skip Stage 2 and write the verdict.
+Per requirement: read the relevant source, check acceptance criteria, rate PASS / FAIL / PARTIAL. Any FAIL → skip Stage 2 and write the verdict.
 
 ## Stage 2 — Code Quality (only when no FAIL)
 Assess naming consistency, error handling, test coverage (were the plan's verification steps executed?), and pattern consistency with the project.
@@ -60,7 +60,7 @@ End with a Verdict — a JSON object using exactly these fields (not "overall"/"
 
 ### 3. Review Artifact Format
 
-The reviewer emits the sections defined in the §2 prompt; downstream parsing depends only on the Verdict JSON block (exact field names and values from §2).
+Downstream parsing depends only on the Verdict JSON block (exact field names and values from §2).
 
 ### 4. Process Verdict
 
@@ -88,7 +88,7 @@ After logging the `review_verdict` event, if `requirements_drift` is `"detected"
 1. **Parse** the `## Suggested Requirements Update` section (`File` / `Section` / `Content`) from review.md.
 2. **Apply**: append `Content` at the end of the named `Section` in the target file, then report to the user what changed (file, section, first line of the appended content).
 
-If the section is missing or unparseable, re-dispatch the reviewer to append it in the §2 format without touching other sections (cap 2 retries). If it still fails, do **not** block verdict processing — log the breach and fall through to §5 without applying: `cortex-lifecycle-event drift-protocol-breach --feature <name> --state detected --suggestion missing --retries 2`
+Section missing or unparseable → re-dispatch the reviewer to append it in the §2 format without touching other sections (cap 2 retries). Still failing → do **not** block verdict processing — log the breach and fall through to §5 without applying: `cortex-lifecycle-event drift-protocol-breach --feature <name> --state detected --suggestion missing --retries 2`
 
 The breach surfaces in the morning report so the gap is visible rather than silent.
 
@@ -98,7 +98,7 @@ Proceed automatically for APPROVED and CHANGES_REQUESTED cycle 1 — announce br
 
 - **APPROVED** → Complete: `cortex-lifecycle-event phase-transition --feature <name> --from review --to complete`
 - **CHANGES_REQUESTED cycle 1** → Implement: `cortex-lifecycle-event phase-transition --feature <name> --from review --to implement-rework`
-- **Otherwise** (cycle ≥2 or REJECTED) → log the escalation, present findings, await direction (a genuine user concern): `cortex-lifecycle-event phase-transition --feature <name> --from review --to escalated`
+- **Otherwise** (cycle ≥2 or REJECTED) → log the escalation, present findings, await direction: `cortex-lifecycle-event phase-transition --feature <name> --from review --to escalated`
 
 ## Constraints
 

@@ -293,3 +293,26 @@ def test_staged_deep_file_violation_detected(tmp_path: Path) -> None:
         f"Expected E101 from depth-3 staged file, got codes={codes}\n"
         f"violations={violations}\nstderr={result.stderr!r}"
     )
+
+
+def test_resolve_module_path_falls_back_to_root_when_find_spec_fails(tmp_path: Path) -> None:
+    """A module invisible to importlib (e.g. a parent package whose dependency
+    is missing from the hook interpreter) must still resolve via the root
+    fallback so extraction stays dependency-free."""
+    from cortex_command.lint.contract import _resolve_module_path
+
+    pkg = tmp_path / "fallback_pkg_xyz" / "deep"
+    pkg.mkdir(parents=True)
+    module = pkg / "tool.py"
+    module.write_text("import argparse\n", encoding="utf-8")
+
+    resolved = _resolve_module_path("fallback_pkg_xyz.deep.tool:main", root=tmp_path)
+    assert resolved == module
+
+    # Package form resolves to __init__.py.
+    (pkg / "__init__.py").write_text("", encoding="utf-8")
+    resolved_pkg = _resolve_module_path("fallback_pkg_xyz.deep:main", root=tmp_path)
+    assert resolved_pkg == pkg / "__init__.py"
+
+    # Nothing on disk and nothing importable → None, as before.
+    assert _resolve_module_path("fallback_pkg_xyz.missing:main", root=tmp_path) is None

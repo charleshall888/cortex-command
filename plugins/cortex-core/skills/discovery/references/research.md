@@ -6,33 +6,29 @@ Multi-dimensional investigation to build deep understanding of a topic.
 
 ### 1. Define Research Questions
 
-Before investigating, articulate 3-7 specific questions this research needs to answer. These become the acceptance criteria — research isn't done until each question has a confident answer or is explicitly marked as unanswerable.
-
-Present questions to the user for review. Add any questions they raise.
+Before investigating, articulate 3-7 specific questions this research needs to answer — the acceptance criteria; research isn't done until each has a confident answer or is explicitly marked unanswerable. Present them to the user for review and add any they raise.
 
 ### 1a. Load Requirements Context
 
-Load requirements using the shared tag-based loading protocol (`load-requirements.md`): run `cortex-load-requirements` (discovery has no lifecycle index, so omit `--feature` — the verb falls back to project.md + Global Context), read every listed non-skipped path into context, and inject the printed path list downstream (relay any fallback note). Use requirements to inform research — identify where this topic intersects with established requirements and constraints. If no `cortex/requirements/` directory or files exist, note this and skip this step.
+Run `cortex-load-requirements` (omit `--feature`; discovery has no lifecycle index, so it falls back to project.md + Global Context) per the shared tag-based protocol (`load-requirements.md`). Read every listed non-skipped path into context and inject the printed path list downstream (relay any fallback note). Use requirements to identify where this topic intersects with established constraints. No `cortex/requirements/` directory or files → note this and skip.
 
 ### 1b. Read the Research-Sizing Assessment
 
-Read the complexity/criticality assessment back from the topic's events.log (Clarify persists it; conversation memory does not survive a phase-resume):
+Read the complexity/criticality assessment Clarify persisted (conversation memory does not survive a phase-resume):
 
 ```
 cortex-discovery read-research-sizing --topic <topic>
 ```
 
-This returns the assessment Clarify persisted (`complexity` + `criticality`). When none was persisted — a legacy discovery directory, or Research entered before Clarify ran — it returns discovery's floor default `{"complexity":"simple","criticality":"medium"}` (criticality floors at `medium`, never `low`, per discovery's upward bias) and never errors. These two values size the research fan-out for the steps below.
+When none was persisted — a legacy discovery directory, or Research entered before Clarify ran — this returns discovery's floor default `{"complexity":"simple","criticality":"medium"}` (criticality floors at `medium`, never `low`) and never errors. These two values size the fan-out below.
 
 ### 2. Size and Dispatch the Research Fan-Out
 
-Gather findings via a sized wave of parallel, angle-specialized agents, then synthesize into discovery's own schema (§4), not /research's. The count matrix, mandatory-core set, always-last adversarial rule, and angle-selection rules are authoritative in the **fanout** sibling reference (the `${CLAUDE_SKILL_DIR}/../research/references/fanout.md` target propagated from discovery SKILL.md Step 3). Apply it; do not re-derive here.
+Gather findings via a sized wave of parallel, angle-specialized agents, then synthesize into discovery's own schema (§4), not /research's. The count matrix, mandatory-core set, always-last adversarial rule, and angle-selection rules are authoritative in the **fanout** sibling reference (`${CLAUDE_SKILL_DIR}/../research/references/fanout.md`, propagated from SKILL.md Step 3). Apply it; do not re-derive here.
 
-**Size it.** Look up `agent_count` in the fanout.md count matrix using the `complexity` (tier row) and `criticality` (column) returned by the §1b read-back. The count is an upper bound on investigation breadth, not a quota — dispatch fewer if the topic offers fewer genuinely distinct angles than its cell allows.
+**Size it.** Look up `agent_count` in the fanout.md count matrix using the `complexity` (tier row) and `criticality` (column) from §1b. The count is an upper bound on investigation breadth, not a quota — dispatch fewer if the topic offers fewer genuinely distinct angles than its cell allows.
 
-**Choose the angles.** Discovery's natural investigation dimensions form the angle pool.
-
-Fill the remaining slots the matrix buys with discovery's other distinct dimensions — **Domain & Prior Art** (competing/analogous implementations, industry patterns, trade-offs others hit, lessons that apply) and **Feasibility** (technical risks, unknowns that could derail, prerequisites, rough S/M/L/XL effort) — plus any finer-grained angle the topic warrants.
+**Choose the angles.** Discovery's natural investigation dimensions form the angle pool: **Domain & Prior Art** (comparable implementations, industry patterns, trade-offs, lessons learned) and **Feasibility** (technical risks, unknowns, prerequisites, rough S/M/L/XL effort) fill the remaining slots, plus any finer-grained angle the topic warrants.
 
 **Dispatch it.** Follow fanout.md's two-wave protocol with the Agent tool — read-only research agents, no `isolation: "worktree"`, mirroring how `/cortex-core:research` Step 3 dispatches. Before the core wave, resolve the gather model in this orchestrator body (not inside any angle-prompt block):
 
@@ -40,13 +36,13 @@ Fill the remaining slots the matrix buys with discovery's other distinct dimensi
 model=$(cortex-resolve-model --role searcher)
 ```
 
-Pass the captured `$model` as each core-wave Agent's `model:` parameter, per fanout.md's dispatch-protocol routing rule (canonical for the two-wave sequencing, the searcher bind, and the degrade-loud fallback).
+Pass the captured `$model` as each core-wave Agent's `model:` parameter, per fanout.md's dispatch-protocol routing rule.
 
-Each agent returns its findings for synthesis; do not let any agent write project files. Prerequisites entries describing codebase-state checks (e.g., 'Identify pattern X in {file}') belong to the Codebase angle — its findings carry citations, or are reported as `NOT_FOUND(query, scope)`. Entries remaining in §4's Feasibility Prerequisites column are implementation-sequencing only (work to be done after the approach is committed).
+Each agent returns its findings for synthesis; no agent writes project files. Prerequisites entries describing codebase-state checks (e.g., 'Identify pattern X in {file}') belong to the Codebase angle — its findings carry citations, or are reported as `NOT_FOUND(query, scope)`. Entries remaining in §4's Feasibility Prerequisites column are implementation-sequencing only.
 
 ### 3. Synthesize the Findings
 
-Compose the returned findings into discovery's own schema in §4 — do **not** adopt `/cortex-core:research`'s Codebase/Web/Tradeoffs/Adversarial artifact schema. Discovery's `## Architecture` → `### Pieces` / `### How they connect` headings are machine-parsed downstream (the Research→Decompose gate and `decompose.md`'s "decomposition source of record"), so the synthesis must land in §4's structure exactly. Where agents contradict each other, surface the contradiction under `## Open Questions` rather than silently picking a side.
+Compose the returned findings into discovery's own schema in §4 — do **not** adopt `/cortex-core:research`'s Codebase/Web/Tradeoffs/Adversarial schema. Discovery's `## Architecture` → `### Pieces` / `### How they connect` headings are machine-parsed downstream (the Research→Decompose gate and decompose.md's decomposition source of record), so synthesis must land in §4's structure exactly. Where agents contradict each other, surface the contradiction under `## Open Questions` rather than silently picking a side.
 
 ### 4. Write Research Artifact
 
@@ -64,8 +60,6 @@ Combine findings into `cortex/research/{topic}/research.md`:
 - [Files/modules affected]
 - [Integration points]
 - [Constraints]
-- Examples (per-claim marker usage):
-  - Pattern X used in three callers — `[src/foo.py:42]`, `[src/bar.py:18]`, `[src/baz.py:88]` — all share the same signature.
 
 ## Web & Documentation Research
 <!-- Omit section if skipped -->
@@ -101,21 +95,21 @@ Combine findings into `cortex/research/{topic}/research.md`:
 
 ### 4a. Orchestrator Review
 
-<!-- `references/orchestrator-review.md` here intentionally targets discovery's OWN local delta file (skills/discovery/references/orchestrator-review.md), NOT the propagated lifecycle canonical. The delta supplies the discovery-specific Post-Research Checklist and fix-agent path/persona substitutions, and itself reads the lifecycle canonical via SKILL.md's orchestrator-review propagation. It is discovery's own sibling reference, so it is not carried in SKILL.md's lifecycle-sibling manifest. -->
-Before committing, read and follow `references/orchestrator-review.md` for the `research` phase. The orchestrator review must pass before proceeding to §4b (Critical Review).
+<!-- `references/orchestrator-review.md` here intentionally targets discovery's OWN local delta file, NOT the propagated lifecycle canonical — the delta supplies discovery's Post-Research Checklist and fix-agent path/persona substitutions, and itself reads the lifecycle canonical via SKILL.md's propagation. -->
+Before committing, read and follow `references/orchestrator-review.md` for the `research` phase. It must pass before §4b.
 
 ### 4b. Critical Review
 
-Run `/cortex-core:critical-review` on `cortex/research/{topic}/research.md`. Address any significant challenges raised before proceeding.
+Run `/cortex-core:critical-review` on `cortex/research/{topic}/research.md`. Address any significant challenges before proceeding.
 
 ### 5. Transition
 
-Stage and commit `cortex/research/{topic}/` using `/cortex-core:commit`. Summarize key findings for the user and proceed to the Research → Decompose approval gate (defined in SKILL.md) — do not begin Decompose until the user answers it.
+Stage and commit `cortex/research/{topic}/` using `/cortex-core:commit`. Summarize key findings and proceed to the Research → Decompose approval gate (SKILL.md) — do not begin Decompose until the user answers it.
 
 ## Constraints
 
 - **Read-only**: Do not modify project files except the research artifact
 - **All findings in the artifact**: They won't survive in context alone
 - **Scope**: Research the topic as described, not adjacent topics
-- **Citations**: codebase-pointing claims must carry an inline `[file:line]` citation traceable to codebase-agent findings, OR an explicit inline `[premise-unverified: not-searched]` marker when the author did not investigate the claim.
-- **Empty-corpus reporting**: searches that returned no results must be reported inline as `NOT_FOUND(query=<search-string>, scope=<path-or-glob>)` — distinct from the `premise-unverified: not-searched` marker used when no investigation was attempted.
+- **Citations**: codebase-pointing claims carry an inline `[file:line]` citation traceable to codebase-agent findings, or an explicit `[premise-unverified: not-searched]` marker when not investigated.
+- **Empty-corpus reporting**: a search returning no results is reported inline as `NOT_FOUND(query=<search-string>, scope=<path-or-glob>)` — distinct from `premise-unverified: not-searched` (no investigation attempted).

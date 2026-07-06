@@ -22,8 +22,8 @@ Act on `state`:
 
 **Picker options**:
 
-- **Implement on current branch** (recommended) — trunk workflow; changes land on the current branch. For small, trunk-safe changes.
-- **Implement on feature branch with worktree** — creates an `interactive/{slug}` worktree at `<repo>/.claude/worktrees/interactive-{slug}/` and auto-enters via `EnterWorktree`. Proceeds to §1a. For multi-task features wanting isolation with live steering.
+- **Implement on current branch** (recommended) — trunk workflow; changes land on the current branch.
+- **Implement on feature branch with worktree** — creates an `interactive/{slug}` worktree at `<repo>/.claude/worktrees/interactive-{slug}/` and auto-enters via `EnterWorktree`. Proceeds to §1a.
 - **Create feature branch** — create `feature/{lifecycle-slug}` for a PR flow. NOTE: runs `git checkout` on the main session and can corrupt parallel sessions in this repo.
 
 **Step A — Overnight-active rejection**: source the overnight-probe sidecar; on exit 1 surface interactive-tailored wording:
@@ -34,44 +34,33 @@ cat ${CLAUDE_SKILL_DIR}/references/_interactive_overnight_check.sh | bash -s -- 
 
 Exit codes: `0` = none active, proceed to §1a; `1` = overnight live, surface the wording and exit §1 without creating a worktree; `2` = stale runner, warn-and-continue to §1a.
 
-**Dependency graph**: parse `**Depends on**` from every pending task into an adjacency list. On a cycle, stop and surface the error — dispatch nothing.
+**Dependency graph**: parse `**Depends on**` from every pending task into an adjacency list; a cycle stops the phase — dispatch nothing.
 
 ### 1a. Interactive Worktree Creation (Alternate Path)
 
 Two entry modes: `selected` (user picked the worktree option) or `suppressed` (`branch-mode: worktree-interactive` bypassed the picker). Step v branches on the carried marker; either way the orchestrator session continues into §2.
 
-**i. Overnight concurrent guard** — invoke the sidecar:
-
-```
-cat ${CLAUDE_SKILL_DIR}/references/_interactive_overnight_check.sh | bash -s -- "Overnight runner is active for this repo — wait for it to complete before creating an interactive worktree." "$(pwd)"
-```
-
-Same `0` proceed / `1` reject / `2` warn-and-continue semantics as Step A; exit `0` → ii, exit `1` → exit §1a.
-
-**ii. Interactive lock** — acquire the per-feature lock (single source of truth for `cortex/lifecycle/{slug}/interactive.pid`) **unconditionally for both entry modes**, and only **after** guard i passes, so a rejecting guard can never orphan a held lock:
+**i. Prepare** — one call composes the overnight guard, `cortex-interactive-lock acquire`, and `create_worktree`, running unconditionally for both entry modes:
 
 ```bash
-cortex-interactive-lock acquire {slug}
+cortex-lifecycle-prepare-worktree --feature {slug}
 ```
 
-Exit 0 → iii. Non-zero → the script wrote its rejection to stderr (a live same-slug session holds the lock); surface it verbatim and exit §1a without creating a worktree.
+Act on `state`:
 
-**iii. Worktree creation**:
-
-```bash
-worktree_path=$(cortex-worktree-create --feature interactive-{slug} --base-branch main)
-```
-
-`create_worktree` prints the worktree's absolute path (containment enforced — an escaping path exits 1 with `worktree_escapes_repo`). On failure it writes `repr(exc)` to stderr and exits 1 — before exiting §1a run `cortex-interactive-lock release-if-owner {slug}` (unlinks only when this session's `CLAUDE_CODE_SESSION_ID` owns the on-disk lock, never a co-passer's live lock), then surface the stderr and exit §1a.
+- **`overnight-active`** — surface `message` verbatim and exit §1a without creating a worktree.
+- **`lock-held`** — a live same-slug session holds the lock; surface `message` verbatim and exit §1a without creating a worktree.
+- **`create-failed`** — surface `message` (`repr(exc)`) and exit §1a; the verb already released the lock if this session owned it.
+- **`ok`** — `worktree_path` is set; relay any `warning` (a stale runner.pid) as a one-line diagnostic, then continue to Step v.
 
 **Step v — Auto-enter sequence**
 
-After iii succeeds, run in this order — the event must be emitted from inside the worktree so `_resolve_user_project_root_from_cwd()` lands the row in the worktree's events.log:
+After `state: ok`, run in this order — the event must be emitted from inside the worktree so `_resolve_user_project_root_from_cwd()` lands the row in the worktree's events.log:
 
 1. **Capture origin pwd** — `_origin_pwd=$(pwd)`; hold it for the session (restore at Complete or on fallback).
-2. **Suppressed-picker structural branch** — when the entry mode is `suppressed`, skip the `cortex-worktree-precondition` probe AND the auto-enter, and route structurally to the cd-shim: `cd $(cortex-worktree-resolve interactive-{slug})`, surface the stable literal `EnterWorktree skipped: suppressed-picker (branch-mode worktree-interactive)`, then jump to op 5 (no EnterWorktree authorization). When `selected`, skip this branch and continue to op 3.
-3. **Already-in-worktree probe** (`selected`) — `cortex-worktree-precondition`. Exit 0 = not inside a worktree (proceed); exit 1 = already inside (skip op 4, route to fallback with a one-line diagnostic naming the detected worktree).
-4. **Auto-enter** (`selected`, probe returned 0) — call `EnterWorktree(path=<resolved-path>)` where `<resolved-path>` is `cortex-worktree-resolve interactive-{slug}`'s output (never a hardcoded prefix — R3). This sets session CWD to the worktree for all subsequent Bash calls and clears CWD-dependent caches. On error (path not in `git worktree list`, schema rejection, "Must not already be in a worktree" race) → fallback.
+2. **Suppressed-picker structural branch** — `suppressed` skips the `cortex-worktree-precondition` probe AND the auto-enter, routing structurally to the cd-shim: `cd $(cortex-worktree-resolve interactive-{slug})`, surfacing the stable literal `EnterWorktree skipped: suppressed-picker (branch-mode worktree-interactive)`, then jumping to op 5. `selected` skips this branch and continues to op 3.
+3. **Already-in-worktree probe** (`selected`) — `cortex-worktree-precondition`. Exit 0 = not inside a worktree (proceed); exit 1 = already inside (skip op 4, route to fallback naming the detected worktree).
+4. **Auto-enter** (`selected`, probe returned 0) — `EnterWorktree(path=<resolved-path>)` where `<resolved-path>` is `cortex-worktree-resolve interactive-{slug}`'s output (never a hardcoded prefix — R3). Sets session CWD to the worktree for all subsequent Bash calls and clears CWD-dependent caches. Error (path not in `git worktree list`, schema rejection, "Must not already be in a worktree" race) → fallback.
 5. **Emit event** — once CWD is rooted in the worktree (via `EnterWorktree` on `selected`, or the cd-shim on `suppressed`):
 
    ```bash
@@ -96,7 +85,7 @@ Per batch, in order:
 
 **a. Extract task texts** — copy each task's full block from plan.md (`### Task N:` to the next task heading).
 
-**b. Dispatch** — launch all batch tasks concurrently as parallel sub-tasks. Use the builder template below **verbatim** per task (substitute variables only). Add 2-3 sentences of architectural context from the plan's Overview.
+**b. Dispatch** — launch all batch tasks concurrently as parallel sub-tasks. Use the builder template below **verbatim** per task (substitute variables only), adding 2-3 sentences of architectural context from the plan's Overview.
 
 **Model** — resolve at dispatch, never hardcode:
 
@@ -128,7 +117,7 @@ When a batch task fails:
 1. Let other in-flight batch tasks finish — do not abort them.
 2. Checkpoint successful tasks as `[x]`.
 3. Identify downstream tasks transitively depending on the failed one — these are blocked.
-4. Surface: which task failed, the error, which downstream tasks are now blocked.
+4. Surface which task failed, the error, and which downstream tasks are now blocked.
 5. Ask the user: **retry**, **skip** (mark failed, continue non-dependents), or **abort**.
 
 ### Builder Prompt Template
@@ -143,16 +132,14 @@ You are implementing a single task for the {feature} feature.
 {2-3 sentences from plan Overview section}
 
 ## Instructions
-1. Implement exactly what the task specifies
-2. File paths and artifact locations must match the spec exactly; if a spec path looks wrong, flag it rather than silently deviating
-3. Verify your implementation works as described in the Verification field
-4. Commit your work using the Skill tool: `skill: "commit"`. You have full tool access including the Skill tool — do not use raw `git commit` or `git -C` commands.
-5. Report, per task: name, status (completed/partial/failed), files modified, verification outcome, and any issues or deviations from the spec.
-6. Do not create files or artifacts solely to satisfy your own verification. If a verification step would check something you created this task (not the task's primary deliverable), flag it as self-sealing in your exit report rather than self-certifying.
+1. Implement exactly what the task specifies.
+2. File paths must match the spec exactly — flag a wrong-looking path rather than silently deviating.
+3. Verify your implementation per the Verification field.
+4. Commit via the Skill tool (`skill: "commit"`) — never raw `git commit` or `git -C`.
+5. Report per task: name, status (completed/partial/failed), files modified, verification outcome, deviations.
+6. Do not create files solely to satisfy your own verification — flag self-sealing checks (an artifact this task created being used to verify itself) in your exit report rather than self-certifying.
 
-If this task references the specification, read cortex/lifecycle/{feature}/spec.md.
-Do not implement other tasks. Do not modify files not listed in this task.
-Do not add features beyond what is specified.
+If this task references the specification, read cortex/lifecycle/{feature}/spec.md. Do not implement other tasks, modify unlisted files, or add unspecified features.
 ```
 
 ### 3. Rework (Review Re-Entry)
@@ -183,4 +170,4 @@ cortex-lifecycle-event phase-transition --feature <name> --from implement --to <
 ## Constraints
 
 - Batch N+1 waits for batch N.
-- Always commit via `/cortex-core:commit` — orchestrator checkpoints and worktree sub-agents included; never raw git (uncertainty is not a reason to bypass the Skill tool).
+- Always commit via `/cortex-core:commit` — orchestrator checkpoints and worktree sub-agents included; never raw git.

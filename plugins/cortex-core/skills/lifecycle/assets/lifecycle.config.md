@@ -34,11 +34,10 @@ backlog:
 
 # Lifecycle Configuration
 
-Project-specific overrides for the lifecycle skill. Copy this file to your project root as `cortex/lifecycle.config.md` and customize.
+Project-specific overrides for the lifecycle skill. Copy to `cortex/lifecycle.config.md` at your project root and customize.
 
 ## Review Criteria
 
-Add project-specific review criteria beyond default spec compliance + code quality:
-<!-- Example: -->
+Project-specific review criteria beyond default spec compliance + code quality, e.g.:
 <!-- - Verify all new routes have authentication middleware -->
 <!-- - Check that database migrations are reversible -->

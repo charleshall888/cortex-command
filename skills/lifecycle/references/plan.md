@@ -65,7 +65,7 @@ Produce `cortex/lifecycle/{feature}/plan.md`:
 
 ### Authoring rules
 
-**Task sizing** — size each task to a coherent, self-contained unit of work: one an implementer with no prior context can complete from the task text and its referenced files alone. Split when a task spans unrelated concerns or grows too large to hold in one focused pass.
+**Task sizing** — a coherent, self-contained unit an implementer with no prior context can complete from the task text and its referenced files alone. Split when a task spans unrelated concerns or grows too large for one focused pass.
 
 **Complexity** — every task carries `**Complexity**`:
 
@@ -75,17 +75,17 @@ Produce `cortex/lifecycle/{feature}/plan.md`:
 | `simple` | 1–3 files, commit required, may run/validate commands |
 | `complex` | 4+ files, architectural change, new pattern, or multi-component integration |
 
-Tasks that create files, modify JSON settings, create symlinks, set permissions, or must commit are `simple` minimum — **never `trivial`** (its lower turn budget exhausts before the commit step on multi-step tasks). The field drives model and turn-limit selection in the overnight pipeline.
+Tasks that create files, modify JSON settings, create symlinks, set permissions, or must commit are `simple` minimum — never `trivial` (its lower turn budget exhausts before the commit step). The field drives model and turn-limit selection in the overnight pipeline.
 
 **Dependencies** — every task carries `**Depends on**` between **What** and **Context**: `[N, M]` or `none`. Implement dispatches independent tasks in parallel; a missing or malformed field blocks parallelism.
 
-**Sub-task headings** — a task may split into `### Task 3a:`, `### Task 3b:` (single lowercase suffix) — first-class dispatchable units ordered `3` < `3a` < `3b` < `4`. The integer part accepts `0`; a group need not start at `a` (an orphan `8b` is valid). Reference by full id (`[3a]`, `[13a, 13b]`) — a bare `[3]` means literal task `3`, not the group. Multi-letter (`3ab`), uppercase (`3A`), space-separated (`3 a`) fail loud. **Same-batch siblings must declare disjoint `Files`**: siblings sharing a `Depends on` co-schedule into one shared worktree, so same-file writes race (last-writer-wins) — give them disjoint `Files`, or serialize with an explicit edge (`3b` depends on `[3a]`).
+**Sub-task headings** — a task may split into `### Task 3a:`, `### Task 3b:` (single lowercase suffix), first-class dispatchable units ordered `3` < `3a` < `3b` < `4`. The integer part accepts `0`; a group need not start at `a`. Reference by full id (`[3a]`, `[13a, 13b]`) — a bare `[3]` means literal task `3`. Multi-letter (`3ab`), uppercase (`3A`), space-separated (`3 a`) fail loud. Same-batch siblings sharing a `Depends on` co-schedule into one worktree, so same-file writes race — give them disjoint `Files`, or serialize with an explicit edge (`3b` depends on `[3a]`).
 
-**Files/Verification consistency** — every file Verification implies must be in Files (a "write a test" verification needs the test file listed). Builders can't modify files outside their Files list, so a mismatch is an impossible constraint.
+**Files/Verification consistency** — every file Verification implies must be in Files; builders can't modify files outside their Files list.
 
 **Caller enumeration** — when a task changes or removes a function/command/interface, search the codebase first and list ALL callers/dependents in **Files**.
 
-**Code budget** — plans are prose with structural context. Allowed: paths and directory structures, function signatures, type field names/types, pattern references, config keys/values, inter-task contracts. Prohibited: anything beyond that — no copy-paste-ready code, and no self-sealing verification (steps referencing artifacts the same task creates solely to satisfy the check).
+**Code budget** — prose with structural context only: paths, directory structures, function signatures, type field names/types, pattern references, config keys/values, inter-task contracts. No copy-paste-ready code, and no self-sealing verification (steps referencing artifacts the same task creates solely to satisfy the check).
 
 After writing `plan.md`, register the `"plan"` artifact in `index.md` per the artifact-registration recipe in backlog-writeback.md (loaded at lifecycle Step 2).
 
@@ -106,7 +106,7 @@ cortex-lifecycle-state --feature {feature} --field criticality
 
 ### 4. User Approval (merged branch/dispatch surface)
 
-This surface folds the Implement branch/dispatch selection into plan approval — **each branch option implies plan approval**. Present the plan summary (overview + task list) plus **Produced** (one-line artifact summary) and **Trade-offs** (alternatives considered + rationale).
+This surface folds the Implement branch/dispatch selection into plan approval — each branch option implies plan approval. Present the plan summary (overview + task list) plus **Produced** (one-line artifact summary) and **Trade-offs** (alternatives considered + rationale).
 
 **Assemble the option set.** On `main`/`master`, assemble the adaptive branch options with the same branch-mode preflight Implement §1 runs — see Implement §1 for the authoritative rules (suppressed-routing, the uncommitted-changes-guard demotion, and the `cortex-worktree-create` runtime-probe degrade that hides the worktree option when absent):
 
@@ -120,18 +120,18 @@ Off `main`/`master`, the sub-choices collapse to `trunk` (the current branch), s
 **Compose `AskUserQuestion` `options`** (≤4): the branch modes plus **"Approve plan but wait to implement"**. The platform's **"Other"** free-text escape (appended outside the 4-cap) carries Request-changes and Cancel. Route on the selection:
 
 - **A branch mode** (`Implement on current branch`→`trunk`; `Implement on feature branch with worktree`→`worktree-interactive`; `Create feature branch`→`feature-branch`) — implies approval. Append `plan_approved` with the `dispatch_choice`, then §5's `phase_transition`, then auto-advance to Implement (it consumes `dispatch_choice` and skips its own picker). `cortex-lifecycle-event plan-approved --feature <name> --dispatch-choice <trunk|worktree-interactive|feature-branch>`
-- **Approve plan but wait to implement** — append `plan_approved` with `dispatch_choice: "wait"`, then `feature_paused`, then **halt** (no auto-advance, no dispatch). Re-invocation routes to `implement` (the plan IS approved); Implement §1 fires its fallback picker since `wait` is not a branch mode. **If the feature is backlog-linked, warn now** that the overnight runner may still execute the item unless it is paused (overnight eligibility does not yet honor `feature_paused`).
+- **Approve plan but wait to implement** — append `plan_approved` with `dispatch_choice: "wait"`, then `feature_paused`, then **halt** (no auto-advance, no dispatch). Re-invocation routes to `implement` (the plan IS approved); Implement §1 fires its fallback picker since `wait` is not a branch mode. If the feature is backlog-linked, warn now that the overnight runner may still execute the item unless paused (overnight eligibility does not yet honor `feature_paused`).
   ```bash
   cortex-lifecycle-event plan-approved --feature <name> --dispatch-choice wait
   cortex-lifecycle-event feature-paused --feature <name>
   ```
-- **"Other" free-text** — a cancel-intent → append `lifecycle_cancelled` and halt. Any other text → **Request changes**: revise the plan and re-assemble/re-present this surface. Do not emit `plan_approved` on revision rounds — only a terminal branch-mode or "wait" selection emits it.
+- **"Other" free-text** — cancel-intent → append `lifecycle_cancelled` and halt. Any other text → **Request changes**: revise the plan and re-present this surface. Do not emit `plan_approved` on revision rounds — only a terminal branch-mode or "wait" selection emits it.
 
 ### 5. Transition
 
-On a branch-mode selection (not "wait"), append `phase_transition` (the §4 `plan_approved` must precede it in the log): `cortex-lifecycle-event phase-transition --feature <name> --from plan --to implement`
+On a branch-mode selection (not "wait"), append `phase_transition` (the §4 `plan_approved` must precede it): `cortex-lifecycle-event phase-transition --feature <name> --from plan --to implement`
 
-On any approval (branch-mode or "wait" — both emit `plan_approved`), run `cortex-read-commit-artifacts`. If `true` (the default), stage `cortex/lifecycle/{feature}/` and commit via `/cortex-core:commit`; if `false`, skip silently. On the "wait" path the commit makes approval durable, then the lifecycle halts.
+On any approval (branch-mode or "wait"), run `cortex-read-commit-artifacts`. `true` (default) → stage `cortex/lifecycle/{feature}/` and commit via `/cortex-core:commit`; `false` → skip silently. On the "wait" path the commit makes approval durable, then the lifecycle halts.
 
 ## Hard Gate
 

@@ -4,72 +4,45 @@ Expands Phase 4 §5. Read when 3+ fixes have failed.
 
 ## Step 1 — Agent Teams availability check
 
-```
-Run: printenv CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS
-```
-
-- If it prints `1`: Agent Teams is available — proceed to Step 2
-- If it prints nothing or fails: Agent Teams unavailable — skip to the Architecture Discussion below
+Run `printenv CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`. Prints `1` → available, proceed to Step 2. Prints nothing or fails → unavailable, skip to Architecture Discussion below.
 
 ## Step 2 — Spawn 3–5 teammates
 
-Choose team size based on the number of distinct plausible theories at this point (minimum 3). If fewer than 3 distinct theories can be identified, assign the third teammate to "investigate novel angles not covered by the other theories."
+Team size follows the number of distinct plausible theories (minimum 3); if fewer exist, assign the extra teammate(s) to investigate novel angles the others don't cover.
 
 ## Step 3 — Provide teammate context
 
-Each teammate receives:
-
-- The bug description and reproduction steps
-- The complete error output
-- The full history of failed fix attempts — what was tried, what failed, and what was learned from each
-- Their assigned root cause theory
-- Explicit challenge instruction: "Your job is to test your assigned theory AND actively challenge the other teammates' theories with evidence. Try to disprove their hypotheses, not just verify yours."
+Give each teammate the full picture (bug description, reproduction steps, error output, fix-attempt history — tried, failed, learned) plus their assigned theory, with an explicit instruction to challenge the other teammates' theories with evidence, not just verify their own.
 
 ## Step 4 — Enforce structured output
 
-Each teammate must produce:
-
-- **Root cause assertion**: one clear statement
-- **Supporting evidence**: specific findings (file paths, error patterns, code behavior)
-- **Rebuttal of strongest competing theory**: with evidence
-
-Format example:
+Each teammate must produce a root cause assertion (one statement), supporting evidence (file paths, error patterns, code behavior), and a rebuttal of the strongest competing theory:
 
 ```
 Root cause: [assertion] / Evidence: [supporting detail] / Rebuttal: [strongest objection to this hypothesis]
 ```
 
-Enforce via the `TeammateIdle` hook (exit code 2 sends feedback, keeps the teammate working) or by the lead sending direct messages on weak outputs.
+Enforce via the `TeammateIdle` hook (exit code 2 keeps the teammate working) or by messaging weak outputs directly.
 
 ## Step 5 — Convergence check
 
-After the team completes, review each teammate's structured conclusion:
+- **Converged**: all but at most one teammate independently reach the same root cause, with non-overlapping evidence. Shared evidence cited by multiple teammates does not count as independent confirmation.
+- **Not converged**: no theory meets that threshold, or the agreement rests on shared rather than independent evidence.
 
-- **Converged**: all but at most one teammate independently identify the same root cause, and their evidence is non-overlapping. Corroboration (the same finding cited by multiple teammates) does NOT count as independent confirmation — that is non-convergence.
-- **Not converged**: no theory achieves the convergence threshold, or the apparent agreement is based on shared evidence rather than independent findings.
+## Step 6 — Outcome
 
-## Step 6 — On convergence
+- **Converged**: attempt one more targeted fix with the surviving theory (a fresh attempt, uncounted toward the 3-attempt limit). Success → done; failure → Architecture Discussion below.
+- **Not converged**: proceed directly to Architecture Discussion below, with a summary of the competing theories and evidence gathered.
 
-Attempt one more targeted fix using the surviving theory. This is a fresh attempt, not counted toward the original 3-attempt limit.
-
-- If this fix succeeds → done
-- If this fix fails → proceed to Architecture Discussion below
-
-## Step 7 — On non-convergence
-
-Proceed directly to Architecture Discussion below, including a summary of the competing theories and evidence gathered by the team.
-
-> **Note on overnight/autonomous contexts**: If running autonomously (no human available): skip team investigation and fail the current task directly. The overnight runner's failure gate will surface it to morning review.
+> **Note on overnight/autonomous contexts**: skip team investigation and fail the task directly — the overnight runner's failure gate surfaces it to morning review.
 
 ---
 
 ## Architecture Discussion
-
-(Escalation destination for non-convergence or post-team fix failure.)
 
 **Patterns indicating an architectural problem:**
 
 - Each fix reveals new coupling or moves the error to a different place
 - A proper fix would require massive refactoring
 
-Then STOP and question fundamentals: is the component designed correctly for this use case, or are you patching a symptom of a deeper structural mismatch that should be redesigned? **Discuss with the user before attempting more fixes.**
+Then stop: is the component correctly designed for this use case, or are you patching a deeper structural mismatch? **Discuss with the user before attempting more fixes.**

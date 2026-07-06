@@ -9,23 +9,16 @@ Create a single git commit from the current working tree changes.
 
 ## Workflow
 
-1. Run `cortex-commit-preflight` for status, working-tree diff, and last 10 commits (one JSON document).
-2. Stage relevant files with `git add` (specific files, not `-A`).
-3. Compose the message per the format below and commit with `git commit -m`.
+Run `cortex-commit-preflight` for status, diff, and recent history (one JSON document); stage relevant files with `git add` (specific files, not `-A`); compose the message per the format below and commit with `git commit -m`. Do not push, branch, or emit conversational text — only tool calls.
 
-Do not push. Do not create branches. Do not output conversational text — only tool calls. A PreToolUse hook validates the message before execution; if it rejects the commit, read the reason and fix the message — do not bypass (e.g. via `git commit -F` or the editor, which the hook cannot see).
+A PreToolUse hook validates the message before execution; if it rejects the commit, fix the message — don't bypass it via `git commit -F` or an editor, which the hook can't see.
 
 ## Commit Message Format
 
-Keep the subject imperative-mood and ~72 chars, and summarize the *why*, not the *what*. The hook does not reliably enforce these, so write them yourself: use "Add"/"Fix"/"Remove" — never "Adds"/"Added"/"Fixes". Add a blank-line-separated body only when the change needs motivation; use `- ` bullets for multiple items.
+Subject: imperative mood, ~72 chars, the *why* over the *what* ("Add"/"Fix"/"Remove", never "Adds"/"Added"/"Fixes" — unenforced by the hook). Add a blank-line body only when the change needs motivation, with `- ` bullets for multiple items.
 
-**Release-type marker** — drives the auto-release semver bump; the default is a **patch**. Add a marker only when the change is more than a patch:
-
-- backward-compatible feature → add `[release-type: minor]`
-- breaking change → add `[release-type: major]`
-
-The marker must be the entire content of its own line; a column-0 `BREAKING:` also forces major. For the regex, precedence, `--dry-run` check, and examples, read `${CLAUDE_SKILL_DIR}/references/release-type.md`.
+**Release-type marker** drives the auto-release semver bump (default **patch**), alone on its own line: `[release-type: minor]` for a backward-compatible feature, `[release-type: major]` for a breaking change. Read `${CLAUDE_SKILL_DIR}/references/release-type.md` for the regex, the `BREAKING:` fallback, precedence, and the `--dry-run` check.
 
 ## Commit Command
 
-Use `git commit -m "subject"`, adding a second `-m` for a multi-line body. Never use HEREDOC (`<<EOF`) or command substitution (`$(cat ...)`) — these create temp files that fail in sandboxed environments. Never use `dangerouslyDisableSandbox: true` for `git commit`.
+`git commit -m` (a second `-m` for a multi-line body); never HEREDOC or command substitution — both create temp files that fail sandboxed; never disable the sandbox.

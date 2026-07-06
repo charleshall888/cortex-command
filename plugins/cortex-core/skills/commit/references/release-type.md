@@ -1,42 +1,18 @@
 # Release-type markers
 
-The auto-release workflow runs on every push to `main` and invokes `cortex-auto-bump-version` to determine the next semver tag. The default is a **patch** bump. To override, place a marker token on its own line in the commit message body:
+The auto-release workflow runs on every push to `main` and invokes `cortex-auto-bump-version` to pick the next semver tag. Default: **patch**. Override by placing a marker token on its own line in the commit body:
 
-- `[release-type: major]` — bump major version (breaking change).
-- `[release-type: minor]` — bump minor version (new feature, backward-compatible).
+- `[release-type: major]` — breaking change.
+- `[release-type: minor]` — new, backward-compatible feature.
 
-**Positional anchor**: the marker must appear as the entire content of its own line, modulo surrounding whitespace. The auto-bump helper matches:
+The marker must be alone on its own line (modulo whitespace), or it's ignored. Matched via:
 
 ```
 (?im)^\s*\[release-type:\s*(major|minor)\s*\]\s*$
 ```
 
-A marker embedded mid-line or inside prose is ignored.
+**Precedence** across commits since the last tag: `major` > `minor` > `patch`.
 
-**Precedence** when multiple commits since the last tag carry markers: `major` > `minor` > `patch`.
+**`BREAKING:` fallback**: a column-0 `BREAKING:` or `BREAKING CHANGE:` token (matching `(?im)^BREAKING(?:\s+CHANGE)?:`) forces major even over an explicit `minor` marker; indented mentions don't fire. The explicit marker is preferred — this is a backstop.
 
-**`BREAKING:` fallback**: if any commit body contains a column-0 `BREAKING:` or `BREAKING CHANGE:` token (case-insensitive, matching `(?im)^BREAKING(?:\s+CHANGE)?:`), the helper treats the range as a major-bump even if the explicit marker says `minor`. Indented mentions (e.g., bullet continuations describing the fallback) do not fire. Prefer the explicit marker; `BREAKING:` is a backstop.
-
-**Pre-merge verification**: before merging a PR, run `cortex-auto-bump-version --dry-run` locally against the PR branch to confirm the tag the auto-release workflow will produce. The flag performs the same parsing with no filesystem mutations and exits 0 even on `no-bump`.
-
-## Examples
-
-Major bump:
-
-```
-Migrate envelope schema to v2.0
-
-The state file format is now incompatible with v1.x consumers.
-
-[release-type: major]
-```
-
-Minor bump:
-
-```
-Add --dry-run flag to cortex-auto-bump-version
-
-Read-only mode for pre-merge verification of the next tag.
-
-[release-type: minor]
-```
+**Pre-merge check**: `cortex-auto-bump-version --dry-run` against the PR branch previews the tag the workflow will produce — read-only, exits 0 even on `no-bump`.

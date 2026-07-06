@@ -33,19 +33,19 @@ Assemble a `## Project Context` block for the reviewer prompts from:
 
 None of these available → **omit the `## Project Context` section entirely** — no empty placeholder.
 
-> **Requirements loading: deliberately exempt.** Critical-review narrows its context to `cortex/requirements/project.md`'s Overview (~250 words) and the glossary `## Language` section, and does NOT participate in the tag-based requirements-loading protocol other skills use. This keeps reviewers on adversarial challenge — broader project context (priorities, area tags, decisions) would dilute that focus and break the **fresh-eyes** stance. Vocabulary is admitted because it is definitional, not reasoning-shaped. Do not "fix" this exemption by wiring tag-based loading into the dispatch path.
+> **Requirements loading: deliberately exempt.** Critical-review narrows its context to `cortex/requirements/project.md`'s Overview and the glossary `## Language` section, skipping the tag-based requirements-loading protocol other skills use — broader project context (priorities, area tags, decisions) would dilute the **fresh-eyes** stance. Vocabulary is admitted because it's definitional, not reasoning-shaped. Do not "fix" this by wiring tag-based loading into the dispatch path.
 
 ### Step 2a.5: Pre-Dispatch (atomic path + SHA pin)
 
-Fuse path validation and SHA-256 computation before any dispatch: `cortex-critical-review prepare-dispatch <artifact-path> [--feature <name>]`. Bind `{artifact_path}` and `{artifact_sha256}` from the stdout JSON and substitute both into every downstream dispatch site. Non-zero exit → surface its stderr verbatim and stop, dispatching no agent. Full invocation contract and exit-code routing: `${CLAUDE_SKILL_DIR}/references/verification-gates.md`.
+Fuse path validation and SHA-256 computation before any dispatch via `cortex-critical-review prepare-dispatch <artifact-path> [--feature <name>]`, binding `{artifact_path}`/`{artifact_sha256}` for every downstream dispatch site. Full invocation contract and exit-code routing: `${CLAUDE_SKILL_DIR}/references/verification-gates.md`.
 
 ### Step 2b: Derive Angles
 
-The orchestrator (in main conversation context) derives the challenge angles from the artifact (typically 3-4; count per the angle-menu rule). Each must be **distinct** (no two are re-phrasings of each other) and **reference specific sections or claims in the artifact** (not generic category labels). Pick angles most likely to reveal real problems for this specific artifact. Representative examples + the angle-count rule: `${CLAUDE_SKILL_DIR}/references/angle-menu.md`.
+The orchestrator (main conversation context) derives the challenge angles from the artifact — distinct, artifact-specific, and picked to reveal real problems for this artifact, not generic category labels. Count and acceptance criteria: `${CLAUDE_SKILL_DIR}/references/angle-menu.md`.
 
 ### Step 2c: Dispatch Parallel Reviewers
 
-Dispatch one general-purpose agent per angle as a parallel Task sub-task — all simultaneously, don't wait for one before launching the next. Each receives the canonical reviewer prompt from `${CLAUDE_SKILL_DIR}/references/reviewer-prompt.md` verbatim, with `{artifact_path}`, `{artifact_sha256}`, `{angle name}`, `{angle description}`, and the Step 2a Project Context block substituted at runtime. That prompt directs the reviewer to emit `READ_OK: <path> <sha>` before findings, then class-tagged findings with a `<!--findings-json-->` JSON envelope.
+Dispatch one general-purpose agent per angle as a parallel Task sub-task, all simultaneously, using the canonical reviewer prompt from `${CLAUDE_SKILL_DIR}/references/reviewer-prompt.md` verbatim, substituting `{artifact_path}`, `{artifact_sha256}`, `{angle name}`, `{angle description}`, and the Step 2a Project Context block at runtime.
 
 #### Failure Handling
 
@@ -54,21 +54,21 @@ Dispatch one general-purpose agent per angle as a parallel Task sub-task — all
 
 ### Step 2c.5: Sentinel-First Verification Gate
 
-After parallel reviewers return, run a two-phase gate before Step 2d synthesis: Phase 1 verifies each reviewer's sentinel via `cortex-critical-review check-artifact-stable`; Phase 2 extracts the `<!--findings-json-->` envelope only for Phase-1 passers. If every reviewer is excluded (all exit-3), surface verbatim and do NOT synthesize: `All reviewers excluded — drift or Read failure detected; critical-review pass invalidated. Re-run after resolving concurrent write source.` Full route table, `record-exclusion` contract, and Phase 2 schema assertions: `${CLAUDE_SKILL_DIR}/references/verification-gates.md`.
+After parallel reviewers return, run the two-phase verification gate (sentinel check, then envelope extraction) before Step 2d synthesis. If every reviewer is excluded (all exit-3), surface verbatim and do NOT synthesize: `All reviewers excluded — drift or Read failure detected; critical-review pass invalidated. Re-run after resolving concurrent write source.` Full route table, `record-exclusion` contract, and Phase 2 schema assertions: `${CLAUDE_SKILL_DIR}/references/verification-gates.md`.
 
 ### Step 2d: Opus Synthesis
 
-After parallel reviewers (or the successful subset) clear Step 2c.5, resolve the synthesizer model by running `cortex-resolve-model --role synthesizer` (no `--criticality` flag and no lifecycle-state read — the standalone critical-review path may have no lifecycle session, so a missing state must never block synthesis); on nonzero exit, halt and escalate rather than guessing or substituting a model. Read `${CLAUDE_SKILL_DIR}/references/a-to-b-downgrade-rubric.md` and substitute its full content into `{a_to_b_rubric}`, then dispatch one synthesizer agent with the resolved model and the canonical prompt from `${CLAUDE_SKILL_DIR}/references/synthesizer-prompt.md` verbatim, with `{artifact_path}`, `{artifact_sha256}`, `{a_to_b_rubric}`, and the reviewer-findings payload substituted at runtime. The prompt directs the synthesizer to Read the artifact once at start and emit `SYNTH_READ_OK: <path> <sha>` in output before per-finding analysis.
+After parallel reviewers (or the successful subset) clear Step 2c.5, resolve the synthesizer model by running `cortex-resolve-model --role synthesizer` (no `--criticality` flag and no lifecycle-state read — the standalone path may have no lifecycle session, so a missing state must never block synthesis); on nonzero exit, halt and escalate rather than substitute a model. Read `${CLAUDE_SKILL_DIR}/references/a-to-b-downgrade-rubric.md` and substitute its full content into `{a_to_b_rubric}`, then dispatch one synthesizer agent with the resolved model and the canonical prompt from `${CLAUDE_SKILL_DIR}/references/synthesizer-prompt.md` verbatim, with `{artifact_path}`, `{artifact_sha256}`, `{a_to_b_rubric}`, and the reviewer-findings payload substituted at runtime. The prompt directs the synthesizer to Read the artifact once at start and emit `SYNTH_READ_OK: <path> <sha>` in output before per-finding analysis.
 
-The synthesizer applies the **A→B downgrade rubric** to each A-class finding's `"fix_invalidation_argument"` field — definitions, trigger semantics, and 8 worked examples (4 ratify / 4 downgrade across the absent/restates/adjacent/vague triggers) are inlined via `{a_to_b_rubric}`. Decision gates: count A-class from well-formed envelopes only (untagged prose excluded from the A tally); zero A-class → no `## Objections` section. Output sections: `## Objections`, `## Through-lines`, `## Tensions`, `## Concerns` — bullets only, skip empty sections, no balanced/endorsement sections.
+The synthesizer applies the **A→B downgrade rubric** (inlined via `{a_to_b_rubric}`) to each A-class finding's `"fix_invalidation_argument"` field. Output sections: `## Objections`, `## Through-lines`, `## Tensions`, `## Concerns` — bullets only, skip empty sections, no balanced/endorsement sections.
 
 ### Step 2d.5: Post-Synthesis (atomic SHA verification)
 
-Pipe the synthesizer's full output through `cortex-critical-review check-synth-stable --feature <name> --expected-sha <hex>` before surfacing anything. On exit 3 (sentinel absent or SHA mismatch), do NOT surface the prose — relay the subcommand's stdout verbatim and do NOT proceed to Step 2e. Full contract and resolution instructions: `${CLAUDE_SKILL_DIR}/references/verification-gates.md`.
+Pipe the synthesizer's full output through `cortex-critical-review check-synth-stable --feature <name> --expected-sha <hex>` before surfacing anything or proceeding to Step 2e. Full contract and exit-code routing: `${CLAUDE_SKILL_DIR}/references/verification-gates.md`.
 
 ### Step 2e: Residue Write
 
-After synthesis (or a Step 2c.5 pass-through), atomically write any B-class findings to a sidecar JSON for the morning report; skip silently when zero B-class remain. Resolve `{feature}` from `$LIFECYCLE_SESSION_ID` against `cortex/lifecycle/*/.session`; on zero- or multiple-match, emit the documented note and skip. The `cortex-critical-review-write-residue` console-script does the tempfile + `os.replace` write to `cortex/lifecycle/{feature}/critical-review-residue.json`. Resolver, payload schema (R4), and gating: `${CLAUDE_SKILL_DIR}/references/residue-write.md`.
+After synthesis (or a Step 2c.5 pass-through), atomically write any B-class findings to `cortex/lifecycle/{feature}/critical-review-residue.json` via the `cortex-critical-review-write-residue` console-script; skip silently when zero B-class remain. Resolver, payload schema (R4), and zero/multiple-match gating: `${CLAUDE_SKILL_DIR}/references/residue-write.md`.
 
 ## Step 3: Present
 

@@ -15,82 +15,53 @@ ALWAYS find root cause before attempting fixes. No fixes without completing Phas
 
 ## References
 
-Detailed procedures, examples, and templates are extracted to references. Read on demand when the phase you are in points to one:
+Read only the reference for what you're doing right now — don't preload all of them.
 
-| Topic | Reference |
-|-------|-----------|
-| Phase 1 detail (boundary instrumentation, competing-hypotheses team) | [phase-1-investigation.md](${CLAUDE_SKILL_DIR}/references/phase-1-investigation.md) |
-| Phase 4 §5 (team investigation + architecture discussion) | [phase-4-team-investigation.md](${CLAUDE_SKILL_DIR}/references/phase-4-team-investigation.md) |
-| Debug-session artifact (location, format, write timing) | [debug-session-artifact.md](${CLAUDE_SKILL_DIR}/references/debug-session-artifact.md) |
-| Supporting techniques (backward tracing, defense-in-depth, condition waits) | [techniques.md](${CLAUDE_SKILL_DIR}/references/techniques.md) |
-| Common rationalizations | [rationalizations.md](${CLAUDE_SKILL_DIR}/references/rationalizations.md) |
-
-Read **only** the reference for what you are currently doing. Do not preload all references.
+- **Phase 1 detail**: `${CLAUDE_SKILL_DIR}/references/phase-1-investigation.md`
+- **Phase 4 §5** (team investigation): `${CLAUDE_SKILL_DIR}/references/phase-4-team-investigation.md`
+- **Debug-session artifact**: `${CLAUDE_SKILL_DIR}/references/debug-session-artifact.md`
+- **Supporting techniques**: `${CLAUDE_SKILL_DIR}/references/techniques.md`
+- **Common rationalizations**: `${CLAUDE_SKILL_DIR}/references/rationalizations.md`
 
 ## The Four Phases
 
+After each phase, write or update the debug session artifact — `In progress` through Phases 1–3, `Resolved` or `Escalated` at Phase 4. See `${CLAUDE_SKILL_DIR}/references/debug-session-artifact.md` for location, format, and timing.
+
 ### Phase 1: Root Cause Investigation
 
-**BEFORE attempting ANY fix:**
-
-1. **Read error messages carefully.** Don't skip warnings; note file paths, line numbers, exit codes. For hook failures, distinguish errors from the hook script vs. errors from the tool it wraps.
-2. **Reproduce consistently.** Identify exact trigger steps. Context-specific failures (sandbox vs. non-sandbox, overnight vs. interactive) are clues, not noise.
-3. **Check recent changes.** Git diff, recent commits. New skills, frontmatter edits, justfile changes, hook redeploys.
-4. **Gather evidence at component boundaries.** Add diagnostic instrumentation before proposing fixes; identify the failing component from evidence, not guesswork. See `${CLAUDE_SKILL_DIR}/references/phase-1-investigation.md` for boundary checklist and instrumentation patterns.
-5. **Trace backward to root cause.** Where does the bad value or wrong behavior originate? Fix at the source, not the symptom. See `${CLAUDE_SKILL_DIR}/references/techniques.md` (Backward Root-Cause Tracing).
-6. **Optional: competing-hypotheses team.** If 2+ distinct plausible theories already exist and a human is available, consider spawning a parallel team rather than testing sequentially. Skip entirely in autonomous contexts. Procedure: `${CLAUDE_SKILL_DIR}/references/phase-1-investigation.md` §6.
-
-> After this phase, write or update the debug session artifact. See `${CLAUDE_SKILL_DIR}/references/debug-session-artifact.md`.
+1. Read errors fully: file paths, line numbers, exit codes. For hooks, separate the hook script's errors from the wrapped tool's.
+2. Reproduce consistently; treat context (sandbox vs. non-sandbox, overnight vs. interactive) as a clue, not noise.
+3. Check recent changes — git diff, recent commits, skill or hook redeploys.
+4. Gather evidence at component boundaries before proposing fixes. See `${CLAUDE_SKILL_DIR}/references/phase-1-investigation.md` §4 for the boundary checklist.
+5. Trace backward to root cause; fix at the source, not the symptom. See `${CLAUDE_SKILL_DIR}/references/techniques.md` (Backward Root-Cause Tracing).
+6. Optional: if 2+ plausible theories exist and a human is available, consider a competing-hypotheses team instead of testing sequentially — skip in autonomous contexts. See `${CLAUDE_SKILL_DIR}/references/phase-1-investigation.md` §6.
 
 ### Phase 2: Pattern Analysis
 
-**Find the pattern before fixing:**
-
-1. **Find working examples.** Locate a similar working component (working skill, passing hook, healthy lifecycle).
-2. **Compare against the reference.** Read it end-to-end, don't skim — frontmatter and structure.
-3. **Identify differences.** List every difference between working and broken, however small. Don't assume "that can't matter."
-4. **Understand dependencies.** What does this component need? Paths, env vars, permissions, session state, assumptions about when it runs.
-
-> After this phase, update the debug session artifact.
+1. Find a working example (similar skill, passing hook, healthy lifecycle) and diff it against the broken one, down to frontmatter and structure — no difference is too small to matter.
+2. Check dependencies — paths, env vars, permissions, session state, timing assumptions.
 
 ### Phase 3: Hypothesis and Testing
 
-**Scientific method:**
-
-1. **Form a single hypothesis.** State clearly: "I think X is the root cause because Y." Be specific about file paths, env vars, exact mismatches.
-2. **Test minimally.** Smallest possible change, one variable at a time.
-3. **Verify before continuing.** Worked → Phase 4. Didn't work → new hypothesis.
-4. **When you don't know, say so.** Don't pretend. Gather more evidence (back to Phase 1).
-
-> After this phase, update the debug session artifact.
+1. Form one hypothesis: "I think X is the root cause because Y" — specific file paths, env vars, exact mismatches.
+2. Test minimally — smallest possible change, one variable at a time.
+3. Verify: worked → Phase 4; didn't → new hypothesis.
+4. When you don't know, say so — gather more evidence (back to Phase 1) rather than guessing.
 
 ### Phase 4: Implementation
 
-**Fix the root cause, not the symptom:**
-
-1. **Confirm the root cause.** State what it is and where it is before writing any fix.
-2. **Implement a single fix.** Address the root cause — one change at a time. No "while I'm here" improvements or bundled refactoring.
-3. **Verify the fix.** Test the specific behavior that was failing. Check adjacent behaviors still work.
-4. **If the fix doesn't work, STOP.** Count fix attempts so far.
-   - If < 3: return to Phase 1 and re-analyze.
-   - **If ≥ 3: stop and attempt team investigation before escalating.** See `${CLAUDE_SKILL_DIR}/references/phase-4-team-investigation.md`. Do NOT attempt Fix #4 without completing the team investigation protocol or an architectural discussion.
-
-> After this phase completes, update the debug session artifact (Resolved or Escalated).
+1. State the confirmed root cause and where it is before writing any fix.
+2. Implement one change addressing it — no bundled refactoring or "while I'm here" fixes.
+3. Verify: test the specific behavior that was failing, then check adjacent behavior.
+4. If it doesn't work, stop and count fix attempts. < 3: return to Phase 1. ≥ 3: team investigation before a 4th attempt — see `${CLAUDE_SKILL_DIR}/references/phase-4-team-investigation.md`.
 
 ---
 
 ## Lifecycle Escalation Boundary
 
-Debug skill escalation and lifecycle escalation are **different mechanisms** covering different concerns:
+Debug and lifecycle escalation are **different mechanisms**. Debug escalation: fires during implementation after 3 failed fixes on an architecturally-resistant bug, and runs a team investigation then an architecture discussion. Lifecycle escalation: fires at phase transitions (Research→Spec, Spec→Plan) when scope or complexity exceeds the estimate, and prompts the user to escalate to the Complex tier.
 
-| | Debug escalation | Lifecycle escalation |
-|---|---|---|
-| **When** | During implementation, after 3 failed fix attempts | At phase transitions (Research→Spec, Spec→Plan) |
-| **Signal** | A bug resists fixes and shows architectural patterns | Feature scope/complexity exceeds original estimate |
-| **Action** | Team investigation first; architecture discussion if team doesn't converge | User is prompted to escalate to Complex tier |
-| **Phase** | Implement (post-build debugging) | Research/Specify (pre-build design) |
-
-Invoking `/cortex-core:diagnose` when a lifecycle task fails is a structured pre-retry step — it does not replace or short-circuit the lifecycle's own phase gates.
+`/cortex-core:diagnose` on a failed lifecycle task is a pre-retry step, not a replacement for the lifecycle's own phase gates.
 
 ---
 
@@ -98,14 +69,10 @@ Invoking `/cortex-core:diagnose` when a lifecycle task fails is a structured pre
 
 If you catch yourself thinking any of these, **stop and return to Phase 1**:
 
-- "Quick fix for now, investigate later"
-- "Just try changing X and see if it works"
-- "Add multiple changes, run and see"
-- "It's probably X, let me fix that" (without evidence)
-- "I don't fully understand but this might work"
-- Proposing a solution before completing the backward trace
+- "Quick fix for now, investigate later" / "just try X and see" / "add multiple changes at once and see what happens"
+- "It's probably X" or "this might work" — proposed without evidence, or before completing the backward trace
 - Each fix reveals a new problem in a different place
 
-**If 3+ fixes failed:** team investigation first, then architecture discussion if the team doesn't converge. See `${CLAUDE_SKILL_DIR}/references/phase-4-team-investigation.md`.
+**If 3+ fixes failed:** see `${CLAUDE_SKILL_DIR}/references/phase-4-team-investigation.md` before a 4th attempt.
 
 For the catalog of excuses to recognize and rebut, see `${CLAUDE_SKILL_DIR}/references/rationalizations.md`.

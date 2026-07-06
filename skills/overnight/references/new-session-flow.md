@@ -1,91 +1,74 @@
 # New Session Flow (`/overnight`) — Detailed Steps
 
-> **Python module note**: After `uv tool install git+<url>@<tag>`, the `cortex` console script is available globally and the `cortex_command.*` package is importable inside the tool venv — no `PYTHONPATH` manipulation required. Invoke planning helpers either through the CLI entry point (`cortex <subcommand>`) or, where subcommands are not yet wired, via `python3 -m cortex_command.<module>`.
->
-> **Dev-clone install path**: When working from a local clone, use `uv pip install -e . --no-deps` against the active `.venv` to pick up edits without reinstalling the full tool. Do not use `uv tool install --reinstall` during active sessions — the in-flight install guard blocks reinstall while a session is running.
-
 ## Step 1: Check for Existing Session
 
-Call `load_state()` from `cortex_command.overnight.state` (no arguments — it resolves its own default path under the project root, the top-level `cortex/lifecycle/overnight-state.json` symlink, which `bootstrap_session` maintains). To resolve the project root explicitly for any sibling path, read the `root` field from `cortex --print-root` rather than an environment variable.
+Call `load_state()` from `cortex_command.overnight.state` (no arguments — resolves the default path under `cortex/lifecycle/overnight-state.json`, which `bootstrap_session` maintains).
 
-- **If found with phase other than `complete`**: Warn the user that an active overnight session exists. Report the phase and feature count. Ask whether to resume the existing session (switch to the Resume Flow) or abandon it and start fresh.
-- **If found with `complete` phase**: Treat as no active session. Proceed as new.
-- **If not found (FileNotFoundError)**: Proceed as new.
+- **Found, phase other than `complete`**: an active session exists — report phase and feature count, then offer resume (switch to Resume Flow) or abandon-and-start-fresh.
+- **Found, phase `complete`**: treat as no active session; proceed as new.
+- **Not found**: proceed as new.
 
 ## Step 2: Pre-selection Index Regeneration
 
-Regenerate the backlog index so that feature selection in Step 3 operates on up-to-date metadata. The index (`cortex/backlog/index.json` / `index.md`) is a regenerated local cache and is **not committed** — regenerate it, but do not stage or commit it.
+Run `cortex-generate-backlog-index` from the project root so Step 3 selects against fresh metadata. The index (`cortex/backlog/index.json`/`index.md`) is a gitignored local cache — regenerate it, but do not stage or commit it (it won't appear in the uncommitted-files pre-flight in Step 7).
 
-1. Run `cortex-generate-backlog-index` from the project root. If the command exits with a non-zero status, report: "Backlog index regeneration failed (exit {code}). Fix the issue and retry `/overnight`." → halt.
-
-The regenerated files are gitignored, so they do not appear in the uncommitted-files pre-flight below and need no commit step.
+**Error**: non-zero exit → "Backlog index regeneration failed (exit {code}). Fix the issue and retry `/overnight`." → halt.
 
 ## Step 3: Select Eligible Features
 
-Run `select_overnight_batch()` from `cortex_command.overnight.backlog` on the project's backlog directory. It returns a `SelectionResult` (eligible items, batches, ineligible reasons).
+Run `select_overnight_batch()` from `cortex_command.overnight.backlog`; it returns a `SelectionResult` (eligible items, batches, ineligible reasons).
 
-A feature is eligible only if the following exist on disk:
-- `cortex/lifecycle/{slug}/research.md` exists on disk (slug = `item.lifecycle_slug` if set, else `slugify(item.title)`)
-- `cortex/lifecycle/{slug}/spec.md` exists on disk (produced by `/refine` or `/lifecycle`)
-- `type:` is not `epic` — epic items are non-implementable and excluded at step 4 (after blocked-by, before artifact checks); a blocked epic reports its blocking dependency, not the epic exclusion
+A feature is eligible only if, on disk:
+- `cortex/lifecycle/{slug}/research.md` exists (slug = `item.lifecycle_slug` if set, else `slugify(item.title)`)
+- `cortex/lifecycle/{slug}/spec.md` exists (produced by `/refine` or `/lifecycle`)
+- `type:` is not `epic` — excluded at step 4, after blocked-by and before artifact checks; a blocked epic reports its blocking dependency, not the epic exclusion
 
-If `cortex/lifecycle/{slug}/plan.md` is missing, it is generated automatically during the
-overnight session before the feature executes — no pre-run `/lifecycle plan` needed.
+Missing `plan.md` is generated automatically during the session — no pre-run `/lifecycle plan` needed.
 
-**If no eligible items** (selection result has zero batches): Report "Nothing ready for overnight execution." List the ineligible items with their reasons from the selection result. Suggest running `/lifecycle` through the plan phase on the highest-priority ineligible items to produce the required lifecycle artifacts. Stop.
+**If no eligible items**: report "Nothing ready for overnight execution," list ineligible items with reasons, and suggest running `/lifecycle` through the plan phase on the highest-priority ones. Stop.
 
-**Error**: If `select_overnight_batch()` raises an exception (e.g., malformed backlog frontmatter), report: "Failed to parse backlog: {error}. Check backlog file frontmatter for syntax errors." → stop.
+**Error**: `select_overnight_batch()` exception (e.g., malformed frontmatter) → "Failed to parse backlog: {error}. Check backlog file frontmatter for syntax errors." → stop.
 
 ## Step 4: Present Selection Summary
 
-Present the selection result summary to the user. This includes:
-
-- Number of eligible items and how many batches they form
-- Per-batch breakdown: batch number, batch context (knowledge domain), and feature titles
-- Ineligible items with reasons (missing research, missing spec, blocked, etc.)
-
-The summary string is available as `selection.summary` on the `SelectionResult` object.
+Present the selection summary to the user: eligible item/batch counts, per-batch breakdown (batch number, knowledge-domain context, feature titles), and ineligible items with reasons. Available pre-formatted as `selection.summary` on the `SelectionResult` object.
 
 ## Step 5: Render Session Plan
 
-Run the read-only `cortex overnight prepare --format json` verb (default `--time-limit-hours 6`) via Bash. This selects eligible backlog items and renders the session plan without mutating any state — no bootstrap, no worktree, no telemetry — so it is safe to re-run during the Approve gate.
+Run the read-only `cortex overnight prepare --format json` verb (default `--time-limit-hours 6`) via Bash — it selects eligible items and renders the plan without mutating state (no bootstrap, no worktree, no telemetry), so it's safe to re-run at the Approve gate.
 
 ```
 cortex overnight prepare --format json
 ```
 
-Parse the JSON envelope and read:
-- `plan_markdown` — the formatted markdown session plan (selected-features table, execution strategy, not-ready items, risk assessment, stop conditions). Display this in Step 6.
-- `selection` — the structured selection summary (eligible items, batches, ineligible items with reasons) used for Step 4.
+Parse the envelope: `plan_markdown` (the formatted plan — feature table, execution strategy, not-ready items, risk assessment, stop conditions — for Step 6) and `selection` (the structured summary for Step 4).
 
-To re-render with a different time limit or batch cap (e.g. on a Time-limit adjustment in Step 6), re-run with `--time-limit-hours <N>` or `--batch-size-cap <N>`.
+Re-run with `--time-limit-hours <N>` or `--batch-size-cap <N>` to re-render under different limits (e.g. Step 6's `[T]`).
 
-**Error**: If `cortex overnight prepare` exits non-zero, it emits a JSON `error`/`message` envelope (e.g. `selection_failed`, `render_failed`). Report: "Failed to render session plan: {message}." → stop.
+**Error**: non-zero exit emits a JSON `error`/`message` envelope (`selection_failed`, `render_failed`) → "Failed to render session plan: {message}." → stop.
 
 ## Step 6: Unified Plan + Spec Review
 
-Collect specs for all selected features, display the session plan with specs inline, and get a single approval covering both.
+Collect specs for all selected features, display the plan with specs inline, and get one approval covering both.
 
-**Collect specs**: For each selected feature (in round-then-priority order), attempt to read `cortex/lifecycle/{slug}/spec.md`.
+**Collect specs**: for each selected feature (round-then-priority order), read `cortex/lifecycle/{slug}/spec.md`.
 
-- **If a spec file is missing or unreadable**: Report "Cannot read spec for {feature_title}: {error}." Offer two choices: (a) remove the feature from the selection and continue, or (b) abort planning so the user can fix the spec. If the user chooses remove, update the selection and skip that feature in the display below.
+- **Missing, unreadable, or undecodable** (binary content, encoding error — treated the same as missing): report "Cannot read spec for {feature_title}: {error}." Offer to remove the feature and continue, or abort so the user can fix the spec. On remove, update the selection and skip it below.
 
-**Suitability triage (judged once, on first Step 6 entry)**: Unattended overnight execution is the riskiest place to run work — no human is watching to catch a wrong turn — so before showing the plan, judge whether each selected feature is a good *unattended* candidate and set the poor ones aside by default. You hold each feature's `spec.md` (collected above); use it. Judged once on first entry — later re-renders re-apply the result rather than re-judging (see the `[T]` handler).
+**Suitability triage (judged once, on first entry)**: unattended execution is the riskiest place to run work — no human is watching to catch a wrong turn — so judge each feature's fit for running unattended from its spec and set poor fits aside by default. Bias toward exclusion: a set-aside item is one re-add away, but a bad unattended run wastes the night. Re-renders reuse this judgment rather than re-judging (see `[T]`).
 
-For each selected feature, set it aside (with a one-line, plain-language reason) when its spec shows it is a poor fit for running with no human present. Bias toward exclusion — a set-aside item is one re-add away, but a bad unattended run wastes the night. Signals that warrant setting aside:
+Set a feature aside, with a one-line plain-language reason, on:
+- **Mechanical** (from the spec): an acceptance criterion marked `Interactive/session-dependent`; a genuinely unresolved item under `## Open Decisions` (`- None.` or a placeholder is not a trigger).
+- **Soft** (judgment): needs network/credentials the sandbox can't reach; leans on human-visual or human-judgment verification; or is exploratory/under-specified.
 
-- **Mechanical** (read from the spec): an acceptance criterion marked `Interactive/session-dependent`; or a genuinely unresolved item under the spec's `## Open Decisions` (an `## Open Decisions` of `- None.` or a placeholder is *not* a trigger).
-- **Soft** (judgment from the spec's content): the work needs network or credentials the sandbox cannot reach; it leans on human-visual or human-judgment verification; or it is exploratory / under-specified.
+**Blocker-aware**: don't set aside a feature that's the in-session blocker of one you're keeping without flagging the coupling — `launch` refuses a curated set that drops a kept feature's blocker.
 
-**Blocker-aware**: do not set aside a feature that is the in-session blocker of a feature you are keeping without surfacing that the dependent must also be set aside (or the blocker kept) — `launch` refuses a curated set that drops a kept feature's in-session blocker, so flag that coupling at triage time.
-
-This produces **three pools**:
-
+Three pools result:
 - **Active** — good unattended candidates; these run.
-- **Set aside (suitability)** — poor unattended fits, **excluded by default but always re-addable** (a mechanical flag is a judgment the operator may legitimately override; a soft flag even more so).
-- **Hard-ineligible** — features that *cannot* run (missing research/spec, epic, blocked, branch-merged); **display-only, never re-addable** (forcing one in would fail bootstrap). A re-add attempt on a hard-ineligible item is refused with its reason.
+- **Set aside (suitability)** — excluded by default, always re-addable (the operator may legitimately override either signal type).
+- **Hard-ineligible** — cannot run (missing research/spec, epic, blocked, branch-merged); display-only, never re-addable — a re-add attempt is refused with its reason.
 
-**Display plan + specs**: Present the rendered session plan from Step 5, then each **active** feature's spec content inline (set-aside features are listed separately below, not shown in full):
+**Display plan + specs**: present the Step 5 plan, then each **active** feature's spec inline (set-aside features are listed separately, not shown in full):
 
 ```
 {rendered session plan}
@@ -94,18 +77,14 @@ This produces **three pools**:
 Spec [1/{total}]: {feature_title}  (cortex/lifecycle/{slug}/spec.md)
 ─────────────────────────────────────────
 {spec content}
-
-─────────────────────────────────────────
-Spec [2/{total}]: {feature_title}  (cortex/lifecycle/{slug}/spec.md)
-─────────────────────────────────────────
-{spec content}
 ```
+(repeat per active feature)
 
-**Set-aside display**: After the active specs, show the **Set Aside** pool as a numbered list — each entry naming the feature and its one-line reason — then the hard-ineligible pool (display-only). If the active pool is empty (everything was set aside), make that obvious so the operator re-adds rather than approving an empty run.
+**Set-aside display**: after the active specs, list the Set Aside pool (feature + one-line reason), then the hard-ineligible pool (display-only). If the active pool is empty, make that obvious so the operator re-adds rather than approving an empty run.
 
-**Re-display before every approval**: Immediately before each approval prompt, re-display the complete current state — the active pool, the Set Aside pool (with reasons), and the hard-ineligible pool. The no-silent-drop guarantee does not rest on remembering prior decisions: what is displayed and approved here is exactly what `launch` executes (Step 7), so a silently-reversed re-add is visible in this final display.
+**Re-display before every approval**: immediately before each approval prompt, re-display the active, Set Aside, and hard-ineligible pools in full — what's displayed and approved here is exactly what `launch` executes in Step 7.
 
-**Approval prompt**: There is no recommended upper limit on session size — the runner scales well, so remove features only for substantive reasons (out of scope, not actually ready), not to keep the session small. Render the `[I]` line only when the Set Aside pool is non-empty:
+**Approval prompt**: no recommended size ceiling — remove features only for substantive reasons (out of scope, not ready), not to keep the session small. Show `[I]` only when the Set Aside pool is non-empty:
 
 ```
 Approve this plan and specs?
@@ -117,19 +96,17 @@ Approve this plan and specs?
   [Q] Abort — stop planning
 ```
 
-- **Approve (A)**: Proceed to Step 7 and launch exactly the active pool shown above.
-- **Remove (R)**: Ask which active feature to remove. Move it directly out of the active pool and re-display — do **not** re-run `prepare`'s selection (that would re-introduce removed/set-aside items).
-- **Include (I)**: Ask which set-aside feature to re-add. Move it from the Set Aside pool into the active pool and re-display. A re-add targeting a hard-ineligible item is refused with that item's reason — it can never enter the active set. The re-add is a one-shot, session-scoped override: it holds through this session's re-renders and into the frozen list, but is not remembered to suppress the same set-aside in a future curation.
-- **Adjust time limit (T)**: Ask for the new time limit. Re-render the plan with the new limit, then **re-apply the existing curation** (the maintained active/set-aside pools and any operator re-adds) on top of the re-rendered plan — do not re-judge suitability from scratch, so no candidate (and in particular no re-added item) flickers between pools across re-renders.
-- **Abort (Q)**: Stop immediately. Report "Planning aborted." Do not write any artifacts. Stop.
-
-**Error**: If `cortex/lifecycle/{slug}/spec.md` exists but cannot be decoded (e.g., binary content, encoding error), treat it the same as a missing file and offer the remove-or-abort choice.
+- **Approve (A)**: proceed to Step 7 and launch exactly the active pool.
+- **Remove (R)**: ask which active feature to remove; move it out and re-display — do not re-run `prepare`'s selection (that would re-introduce removed/set-aside items).
+- **Include (I)**: ask which set-aside feature to re-add; move it into the active pool and re-display. A hard-ineligible target is refused with its reason. The re-add holds through this session only — it isn't remembered for future curations.
+- **Adjust time limit (T)**: ask for the new limit, re-render the plan, then re-apply the existing curation on top — don't re-judge suitability from scratch, so no candidate flickers between pools across re-renders.
+- **Abort (Q)**: stop immediately, report "Planning aborted," write no artifacts.
 
 ## Step 7: Launch
 
 On user approval, execute these steps in order:
 
-0. **Target-repo validation (performed by `cortex overnight launch` in sub-step 2)**: The `launch` verb validates every backlog `repo:` path before any mutation. If a path is not a valid git working tree, `launch` exits non-zero with a JSON envelope `{"error": "invalid_target_repos", "repos": [...]}` and writes no artifacts, creates no worktree, and marks no session `executing`. When you see that error, report:
+0. **Target-repo validation** (performed by `launch` in sub-step 2): `launch` validates every backlog `repo:` path before any mutation. On an invalid path it exits non-zero with `{"error": "invalid_target_repos", "repos": [...]}`, writing no artifacts and marking no session `executing`. Report:
    ```
    Cannot start overnight session: the following repo: paths are not valid git repositories:
      - {path1}
@@ -138,9 +115,9 @@ On user approval, execute these steps in order:
    ```
    → stop.
 
-1. **Pre-flight: uncommitted cortex/lifecycle/backlog files**: Run `git status --porcelain -- cortex/lifecycle/ cortex/backlog/` and capture the output.
+1. **Pre-flight: uncommitted cortex/lifecycle/backlog files**: run `git status --porcelain -- cortex/lifecycle/ cortex/backlog/`.
 
-   - **If output is non-empty** (any untracked files, staged, or modified-but-unstaged files in `cortex/lifecycle/` or `cortex/backlog/`): block launch with:
+   - **Non-empty**: block launch with:
      ```
      Uncommitted lifecycle files detected. The overnight worktree is created from HEAD, so
      these files will not be visible to the runner. Commit or stash them before launching.
@@ -148,45 +125,35 @@ On user approval, execute these steps in order:
      Uncommitted paths:
        {lines from git status output}
      ```
-     Then offer: "Would you like me to run `/commit` now?"
+     Offer to run `/commit`. If accepted, invoke it, then re-check status — proceed to sub-step 2 if now empty; otherwise show the block message with the remaining paths and stop (don't offer `/commit` a second time). If declined, stop: "Commit or stash the files above, then run `/overnight` again."
+   - **Empty**: proceed to sub-step 2.
 
-     - **If user accepts**: invoke `/commit`. After it returns, re-run `git status --porcelain -- cortex/lifecycle/ cortex/backlog/`. If the output is now empty, proceed to Launch sub-step 2. If the output is still non-empty, display the block message again with the remaining paths and stop — do not offer `/commit` a second time.
-     - **If user declines**: stop with "Commit or stash the files above, then run `/overnight` again." Do not proceed to Launch sub-step 2.
+   **Error**: unexpected `git status` failure → report and stop (can't occur in practice — Input Validation's git-repo check runs first).
 
-   - **If output is empty**: proceed to Launch sub-step 2 without any message.
-
-   **Error**: If `git status` fails (unexpected git error), report the error and stop. In practice this cannot occur — the git repository check in Input Validation (`.git/` exists) runs before Step 7.
-
-2. **Bootstrap the session**: Run the mutating `cortex overnight launch --format json` verb via Bash, passing the **frozen curated set** via `--only`. It fuses the prep work into one call — target-repo validation (sub-step 0), session bootstrap, and batch-spec extraction (sub-step 4) — so the skill does not shell into internal Python APIs.
+2. **Bootstrap the session**: run the mutating `cortex overnight launch --format json` verb via Bash, passing the **frozen curated set** via `--only`. It fuses target-repo validation (sub-step 0), session bootstrap, and batch-spec extraction (sub-step 4) into one call.
 
    ```
    cortex overnight launch --format json --only <comma-separated active slugs>
    ```
 
-   The `--only` value is exactly the **active pool** displayed at the `[A]pprove` moment in Step 6 — the active list shown at approval IS the frozen set IS the executed set; there is no re-selection between approval and execution. Compose the comma-separated slug list from that approved active display. (Omitting `--only` falls back to full re-selection — do not do that here, or operator removals/set-asides would not stick. `launch` refuses fail-loud if the active set is not dependency-closed, naming the missing in-session blocker so you can re-add it at the Step 6 gate.)
+   `--only` is exactly the **active pool** shown at `[A]pprove` in Step 6 — no re-selection happens between approval and execution. Omitting it falls back to full re-selection, losing operator removals/set-asides. `launch` refuses fail-loud if the active set isn't dependency-closed, naming the missing in-session blocker to re-add at the Step 6 gate.
 
-   This performs all initialization atomically (session ID, worktree on a new `overnight/{session_id}` branch, `overnight-plan.md`/`session.json`/`overnight-state.json`) and emits a JSON envelope. Parse it and capture these fields for the later sub-steps — do **not** reconstruct any path from a hard-coded prefix or environment variable:
-   - `session_id` — the bootstrapped session id
-   - `state_dir` — the session directory under `cortex/lifecycle/sessions/{session_id}/`
-   - `state_path` — the absolute path to `overnight-state.json` (pass this as `--state` in sub-step 7)
-   - `worktree_path` — the integration-branch worktree (used in sub-step 4)
-   - `extracted_specs` — list of batch-spec paths written into the worktree (used in sub-step 4)
+   This atomically initializes the session (the artifacts listed in the skill's frontmatter `outputs:`) and returns a JSON envelope. Capture, for later sub-steps, without reconstructing from a hard-coded prefix or environment variable:
+   - `session_id`, `state_dir` (session directory), `state_path` (pass as `--state` in sub-step 7), `worktree_path` (sub-step 4), `extracted_specs` (batch-spec paths, sub-step 4)
 
-   **Error**: If `cortex overnight launch` exits non-zero, it emits a JSON `error`/`message` envelope (`invalid_target_repos` → handle per sub-step 0; `bootstrap_failed` → report the message and stop). On `bootstrap_failed`, clean up any orphaned worktree: run `git worktree prune`, then `ls $TMPDIR/overnight-worktrees/` and remove any leftover directory (`rm -rf $TMPDIR/overnight-worktrees/<session_id>`); the session ID is inside the directory name — check modification time to find the orphan.
+   **Error**: non-zero exit emits `error`/`message` (`invalid_target_repos` → handle per sub-step 0; `bootstrap_failed` → report the message and stop). On `bootstrap_failed`, clean up any orphaned worktree: `git worktree prune`, then remove the stale directory under `$TMPDIR/overnight-worktrees/` (find by modification time; the session ID is in the directory name).
 
-3. **latest-overnight symlink**: Handled by the runner on startup. The skill does not create this symlink — it writes to the repo root which is outside the sandbox's write allowlist in sandboxed projects.
+3. **latest-overnight symlink**: handled by the runner on startup — the skill doesn't create it; it writes to the repo root, outside the sandbox's write allowlist in sandboxed projects.
 
-4. **Commit extracted batch spec sections**: `cortex overnight launch` (sub-step 2) already wrote any batch-spec sections into the worktree's `cortex/lifecycle/` directory and returned them as `extracted_specs`. If `extracted_specs` is non-empty, `cd` to `worktree_path` (from the envelope), stage each returned path with `git add` (paths are relative to the worktree, not the repo root), and commit using `/commit` with message `"Extract batch spec sections for overnight session {session_id}"` (substituting the actual session ID). This commits the specs on the integration branch, not on main. If `extracted_specs` is empty, skip the commit — no batch-spec items were selected.
+4. **Commit extracted batch spec sections**: sub-step 2 already wrote any batch-spec sections into the worktree and returned their paths as `extracted_specs`. If non-empty, `cd` to `worktree_path`, `git add` each path (relative to the worktree), and commit via `/commit` with message `"Extract batch spec sections for overnight session {session_id}"`. This commits on the integration branch, not main. If empty, skip.
 
-   **Error**: If `git add` or `git commit` fails, report: "Batch spec commit failed: {error}. Proceeding without committing batch spec sections — they may be extracted during runner startup." Continue — the runner can still function without the pre-commit.
+   **Error**: `git add`/`git commit` failure → "Batch spec commit failed: {error}. Proceeding without committing batch spec sections — they may be extracted during runner startup." Continue.
 
-5. **Session start logging (deferred to the launch branch)**: Do **not** log `session_start` here — it is gated to the **run-now** branch of sub-step 7. The runner is the sole fire-time author of the single `session_start`; the schedule branch does not pre-log at all (its fire happens hours later, so pre-logging would produce an early/duplicate event).
+5. **Session start logging (deferred to the run-now branch)**: don't log `session_start` here — it's gated to the run-now branch of sub-step 7. The runner is the sole fire-time author; the schedule branch never pre-logs (its fire happens hours later, so pre-logging would produce an early/duplicate event).
 
-6. **Launch the dashboard** (if not already running): Check whether the dashboard is live by reading `${XDG_CACHE_HOME:-$HOME/.cache}/cortex/dashboard.pid`. If the file exists and the stored PID is alive (`kill -0 $(cat "${XDG_CACHE_HOME:-$HOME/.cache}/cortex/dashboard.pid")` exits 0), the dashboard is already running — note the URL and skip launch. Otherwise, instruct the user to run `cortex dashboard` (installer-tier) or `just dashboard` (clone-only) in a separate terminal before starting the runner, or explain that they can launch it at any time during the session. Poll `GET http://localhost:8080/health` for a 200 response (up to 5 seconds, 1-second intervals); if successful, note "Dashboard available at http://localhost:8080" in the session start message.
+6. **Launch the dashboard** (if not already running): check `${XDG_CACHE_HOME:-$HOME/.cache}/cortex/dashboard.pid` for a live PID (`kill -0 $(cat <path>)` exits 0) — if alive, skip and note the URL. Otherwise poll `GET http://localhost:8080/health` (up to 5s, 1s intervals): on success, note "Dashboard available at http://localhost:8080" in the session start message; on timeout or an unreadable PID file, report "Dashboard not detected at http://localhost:8080. Run `cortex dashboard` (installer-tier) or `just dashboard` (clone-only) in a separate terminal to enable live progress monitoring" and continue — the dashboard is optional and can be started anytime during the session.
 
-    **Error**: If the dashboard health check times out or the PID file is unreadable, continue without failing — the dashboard is optional. Report: "Dashboard not detected at http://localhost:8080. Run `cortex dashboard` in a separate terminal to enable live progress monitoring."
-
-7. **Execute the runner command**: Ask the user whether to run now or schedule for later using AskUserQuestion:
+7. **Execute the runner command**: ask run-now vs. schedule via AskUserQuestion:
 
     ```
     Run now or schedule for later?
@@ -195,26 +162,26 @@ On user approval, execute these steps in order:
       [2] Schedule for specific time — delay launch until a target time
     ```
 
-    **Run now (option 1)**: First, log the prep-time `session_start` (run-now branch only): call `log_event()` from `cortex_command.overnight.events` with `event='session_start'`, `round=1`, and `details` including the session ID, feature count, and time limit. Pass `log_path=state_dir / "overnight-events.log"` so the event log lands in the MC lifecycle session directory alongside the other session artifacts. Note: the parameter is `event` (not `event_type`) and event names are lowercase strings (e.g., `'session_start'`, not `'SESSION_START'`). **Error**: If `log_event()` fails, report: "Failed to log session start event: {error}." Continue — logging failure is non-fatal.
+    **Run now (option 1)**: first log the prep-time `session_start` (run-now branch only) — call `log_event()` from `cortex_command.overnight.events` with `event='session_start'` (not `event_type`; event names are lowercase), `round=1`, and `details` covering session ID, feature count, and time limit; pass `log_path=state_dir / "overnight-events.log"`. **Error**: `log_event()` failure → report "Failed to log session start event: {error}." and continue (non-fatal).
 
-    Then execute via Bash tool with `dangerouslyDisableSandbox: true`, passing the `state_path` captured from the `cortex overnight launch` envelope in sub-step 2 (substitute the actual value; do **not** reconstruct it from a hard-coded prefix or environment variable):
+    Then run via Bash with `dangerouslyDisableSandbox: true`, using the `state_path` captured in sub-step 2 (don't reconstruct it):
 
     ```
     cortex overnight start --state {state_path} --time-limit 21600
     ```
 
-    Args are flagged — pass `--state <absolute path>` (the envelope's `state_path`) and `--time-limit <seconds>` (e.g., `21600` for 6 hours). `cortex overnight start` launches the runner detached and returns immediately.
+    `--state` takes the envelope's `state_path`; `--time-limit` is in seconds (`21600` = 6h). The runner launches detached and returns immediately.
 
-    **Schedule for specific time (option 2)**: Prompt the user for a target time. Accept either `HH:MM` (24-hour local time) or `YYYY-MM-DDTHH:MM` (ISO 8601 date + time with `T` separator). Execute via Bash tool with `dangerouslyDisableSandbox: true`, passing the `state_path` captured from the `cortex overnight launch` envelope in sub-step 2 (substitute the actual value and target time; do **not** reconstruct the path from a hard-coded prefix or environment variable):
+    **Schedule for specific time (option 2)**: prompt for a target time — `HH:MM` (24-hour local) or `YYYY-MM-DDTHH:MM` (ISO 8601). Run via Bash with `dangerouslyDisableSandbox: true` (required for `launchctl`), using the same `state_path`:
 
     ```
     cortex overnight schedule <target-time> --state {state_path}
     ```
 
-    `cortex overnight schedule` registers a one-shot LaunchAgent (no tmux) that fires the runner at the target time and returns immediately. The Bash tool call MUST set `dangerouslyDisableSandbox: true` so the harness can reach `launchctl`.
+    Registers a one-shot LaunchAgent (no tmux) that fires the runner at the target time and returns immediately.
 
-8. **Inform the user**: After the Bash tool returns successfully, report the outcome:
+8. **Inform the user**: after the Bash tool returns, report the outcome:
     - **Run now**: "Overnight session launched. Inspect progress with `cortex overnight status` and `cortex overnight logs <session-id>`."
-    - **Scheduled**: Report the scheduled time and session ID from the command output. Use `cortex overnight status` to inspect the registered schedule before fire time.
+    - **Scheduled**: report the scheduled time and session ID from the command output; `cortex overnight status` shows the registered schedule before fire time.
 
-    The runner operates autonomously and tracks progress in the state file and event log. Resume at any time with `/overnight resume`.
+    The runner tracks progress in the state file and event log. Resume at any time with `/overnight resume`.

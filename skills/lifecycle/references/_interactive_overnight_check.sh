@@ -2,18 +2,11 @@
 # Overnight-active probe sidecar — shared implementation used by the
 # interactive overnight-check path (implement.md §1, R7).
 #
-# Usage:
-#   cat skills/lifecycle/references/_interactive_overnight_check.sh | bash -s -- "<rejection-wording>" "<expected-repo-path>"
+# Usage: cat _interactive_overnight_check.sh | bash -s -- "<rejection-wording>" "<expected-repo-path>"
+#   $1 = wording surfaced on exit 1; $2 = expected repo_path.
 #
-# Arguments:
-#   $1  Rejection-wording template string surfaced to the caller on exit 1.
-#   $2  Expected repo_path to match against the active session's repo_path.
-#
-# Exit codes:
-#   0   No overnight session active — caller may proceed.
-#   1   Overnight runner is live for the expected repo — caller surfaces $1.
-#   2   Stale runner detected (runner.pid absent or process dead) — caller
-#       surfaces a warn-and-continue diagnostic.
+# Exit codes: 0 = no session active, proceed; 1 = runner live for this repo,
+# surface $1; 2 = stale runner (pid absent/dead), warn-and-continue.
 
 _rejection_wording="$1"
 _expected_repo_path="$2"
