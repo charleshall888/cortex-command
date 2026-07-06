@@ -15,19 +15,24 @@ Tests three acceptance contracts (spec Req 5, 6, 7):
 
   test_gate_renders_brief_not_architecture
       Tests the gate render contract directly against the file-reading logic
-      described in SKILL.md: brief.md present → display brief content; brief.md
-      absent → fall back to ``## Architecture`` body + ``brief_generation_failed``
-      warning. Does NOT need live API auth and always runs.
+      described in skills/discovery/references/decompose-gate.md: brief.md
+      present → display brief content; brief.md absent → fall back to
+      ``## Architecture`` body + ``brief_generation_failed`` warning. Does NOT
+      need live API auth and always runs.
 
 Gate-render helper note
 -----------------------
-The gate render surface is prose-only in ``skills/discovery/SKILL.md`` (no
-Python callable). The test implements the file-reading contract directly,
-mirroring exactly what an agent following SKILL.md would do: read brief.md if
-present and valid, otherwise extract the ## Architecture section from
-research.md and emit a ``brief_generation_failed`` warning. This is the same
-contract Task 9's ``score-corpus`` subcommand will exercise over the live
-``cortex/research/*/brief.md`` set.
+The gate render surface is prose-only, living in
+``skills/discovery/references/decompose-gate.md`` (no Python callable) — the
+R4 gate prose was originally inline in ``skills/discovery/SKILL.md`` and was
+extracted there by the progressive-disclosure-discovery-overnight
+restructuring, read lazily at the Research/Decompose phase boundary instead
+of loaded on every invocation. The test implements the file-reading contract
+directly, mirroring exactly what an agent following that reference would do:
+read brief.md if present and valid, otherwise extract the ## Architecture
+section from research.md and emit a ``brief_generation_failed`` warning. This
+is the same contract Task 9's ``score-corpus`` subcommand will exercise over
+the live ``cortex/research/*/brief.md`` set.
 
 Pattern-scoring helper
 ----------------------
@@ -101,10 +106,11 @@ from cortex_command.discovery import (  # noqa: E402
 )
 
 # Over-cap soft-note marker. Mirrors the literal phrasing the Task 4 prose in
-# skills/discovery/SKILL.md emits — "(summary ran N words over the 275-word
-# advisory cap)". The render helper below appends this note when a posted brief
-# is over-cap; keeping the helper's emitted note and the prose in lockstep is
-# the authoring-discipline parity this mirror exists to enforce.
+# skills/discovery/references/decompose-gate.md emits — "(summary ran N words
+# over the 275-word advisory cap)". The render helper below appends this note
+# when a posted brief is over-cap; keeping the helper's emitted note and the
+# prose in lockstep is the authoring-discipline parity this mirror exists to
+# enforce.
 _OVER_CAP_NOTE_CAP_TOKENS = GATE_BRIEF_WORD_CAP + 25  # 275 in the prose
 
 
@@ -268,28 +274,31 @@ def test_brief_failure_falls_back_to_architecture(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 # Gate-render helper note:
-# The gate render surface in this repo is prose-only (SKILL.md instructs the
-# agent to read cortex/research/<topic>/brief.md and display it; there is no
-# Python gate-render callable). This test implements the same contract as a
-# pure file-reading exercise: read brief.md if it passes validate_brief;
-# otherwise extract the ## Architecture section from research.md and append a
-# brief_generation_failed warning. This mirrors exactly what an agent
-# following SKILL.md would produce, and is the correct test surface for a
-# prose-only skill instruction.
+# The gate render surface in this repo is prose-only (references/decompose-gate.md
+# instructs the agent to read cortex/research/<topic>/brief.md and display it;
+# there is no Python gate-render callable). This content lived inline in
+# SKILL.md originally and was extracted to references/decompose-gate.md by
+# the progressive-disclosure-discovery-overnight restructuring, read lazily at
+# the Research/Decompose phase boundary. This test implements the same
+# contract as a pure file-reading exercise: read brief.md if it passes
+# validate_brief; otherwise extract the ## Architecture section from
+# research.md and append a brief_generation_failed warning. This mirrors
+# exactly what an agent following decompose-gate.md would produce, and is the
+# correct test surface for a prose-only skill instruction.
 #
-# The GATE_OPTIONS string must match the verbatim text in SKILL.md (Req 7).
-# The four gate options that Req 7 requires to be preserved verbatim.
-# SKILL.md lists them as separate bolded bullets; we verify each is present
-# rather than checking for the pipe-separated shorthand the spec uses in its
-# grep acceptance command (which represents the conceptual set, not the literal
-# string that must appear in the file).
+# The GATE_OPTIONS string must match the verbatim text in decompose-gate.md
+# (Req 7). The four gate options that Req 7 requires to be preserved verbatim.
+# decompose-gate.md lists them as separate bolded bullets; we verify each is
+# present rather than checking for the pipe-separated shorthand the spec uses
+# in its grep acceptance command (which represents the conceptual set, not the
+# literal string that must appear in the file).
 _GATE_OPTION_ITEMS = ("`approve`", "`revise`", "`drop`", "`promote-sub-topic`")
 
 
 def _render_gate(topic_dir: Path, research_md: Path) -> str:
     """Render the Research → Decompose gate content for a topic directory.
 
-    Mirrors the SKILL.md gate-render contract:
+    Mirrors the decompose-gate.md gate-render contract:
       1. If ``brief.md`` exists in ``topic_dir`` and passes ``validate_brief``,
          return its content. When the posted brief is over-cap (anchor-valid but
          exceeds the advisory ceiling), the brief text is still returned, with a
@@ -298,12 +307,14 @@ def _render_gate(topic_dir: Path, research_md: Path) -> str:
          and return it with a ``brief_generation_failed`` warning prefixed.
 
     This is not a published Python API — it is a test-local implementation of
-    the file-reading contract described in SKILL.md.  Task 9's ``score-corpus``
-    subcommand exercises the same contract over the live corpus.
+    the file-reading contract described in references/decompose-gate.md.
+    Task 9's ``score-corpus`` subcommand exercises the same contract over the
+    live corpus.
 
     The over-cap soft note mirrors the Task 4 prose in
-    ``skills/discovery/SKILL.md`` verbatim — "(summary ran N words over the
-    275-word advisory cap)". This mirror and that prose must stay in lockstep.
+    ``skills/discovery/references/decompose-gate.md`` verbatim — "(summary ran
+    N words over the 275-word advisory cap)". This mirror and that prose must
+    stay in lockstep.
     """
     brief_path = topic_dir / "brief.md"
     if brief_path.is_file():
@@ -422,10 +433,11 @@ def test_gate_renders_brief_not_architecture(tmp_path: Path) -> None:
 
     # --- Scenario C: brief.md is over-cap but anchored — display brief + note ---
     #
-    # Mirrors the FULL over-cap render contract that the Task 4 SKILL.md prose
-    # encodes: an anchor-valid brief over the advisory ceiling is posted as the
-    # gate summary (NOT discarded for the Architecture fallback), followed by a
-    # one-line soft note. The cap is advisory, not a posting gate.
+    # Mirrors the FULL over-cap render contract that the Task 4
+    # decompose-gate.md prose encodes: an anchor-valid brief over the advisory
+    # ceiling is posted as the gate summary (NOT discarded for the Architecture
+    # fallback), followed by a one-line soft note. The cap is advisory, not a
+    # posting gate.
 
     topic_dir_c = tmp_path / "scenario-c" / "simple-topic"
     topic_dir_c.mkdir(parents=True)
@@ -465,7 +477,7 @@ def test_gate_renders_brief_not_architecture(tmp_path: Path) -> None:
     # prose token "advisory cap" / "over").
     assert "advisory cap" in rendered_c, (
         "Over-cap rendered gate output is missing the 'advisory cap' soft-note "
-        "marker that the Task 4 SKILL.md prose mandates.\n"
+        "marker that the Task 4 decompose-gate.md prose mandates.\n"
         f"Rendered:\n{rendered_c}"
     )
     assert "over" in rendered_c, (
@@ -485,16 +497,23 @@ def test_gate_renders_brief_not_architecture(tmp_path: Path) -> None:
         f"Rendered:\n{rendered_c}"
     )
 
-    # --- SKILL.md gate options check ---
-    # Verify the canonical SKILL.md source still carries all four gate options (Req 7).
-    # The options appear as individual bolded bullets; we check each is present.
-    discovery_skill = REPO_ROOT / "skills" / "discovery" / "SKILL.md"
-    skill_text = discovery_skill.read_text(encoding="utf-8")
+    # --- decompose-gate.md gate options check ---
+    # Verify the canonical gate-reference source still carries all four gate
+    # options (Req 7). The R4 gate prose lived inline in SKILL.md originally;
+    # the progressive-disclosure-discovery-overnight restructuring extracted it
+    # to references/decompose-gate.md, read lazily at the Research/Decompose
+    # phase boundary. The options appear as individual bolded bullets; we check
+    # each is present.
+    decompose_gate_ref = (
+        REPO_ROOT / "skills" / "discovery" / "references" / "decompose-gate.md"
+    )
+    gate_text = decompose_gate_ref.read_text(encoding="utf-8")
     for option in _GATE_OPTION_ITEMS:
-        assert option in skill_text, (
-            f"skills/discovery/SKILL.md no longer contains gate option {option!r}. "
-            "Req 7 requires all four options (approve, revise, drop, promote-sub-topic) "
-            "to be preserved in the Research → Decompose gate prose."
+        assert option in gate_text, (
+            f"skills/discovery/references/decompose-gate.md no longer contains "
+            f"gate option {option!r}. Req 7 requires all four options (approve, "
+            "revise, drop, promote-sub-topic) to be preserved in the "
+            "Research → Decompose gate prose."
         )
 
 
