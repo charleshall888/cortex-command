@@ -53,7 +53,7 @@ Act on `state`:
 - **`create-failed`** — surface `message` (`repr(exc)`) and exit §1a; the verb already released the lock if this session owned it.
 - **`ok`** — `worktree_path` is set; relay any `warning` (a stale runner.pid) as a one-line diagnostic, then continue to Step v.
 
-**Step v — Auto-enter sequence**
+**Step v — Auto-enter sequence** (steps ii–iv were absorbed into `cortex-lifecycle-prepare-worktree`; the i→v gap is intentional — do not renumber, tests and cross-refs anchor on these labels)
 
 After `state: ok`, run in this order — the event must be emitted from inside the worktree so `_resolve_user_project_root_from_cwd()` lands the row in the worktree's events.log:
 

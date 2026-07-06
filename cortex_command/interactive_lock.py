@@ -494,7 +494,8 @@ def release_lock_if_owner(feature_slug: str) -> bool:
     ``session_id`` absent, leaves the file untouched and emits the event
     with ``was_owner: false``.
 
-    This is the safe release for the §1a.iii worktree-create-failure abort:
+    This is the safe release for the worktree-create-failure abort (now the
+    ``create-failed`` branch inside ``lifecycle/prepare_worktree.py``):
     ``acquire_lock`` is a non-atomic read-then-replace, so two same-slug
     ``selected`` sessions can both pass acquire; an unconditional release on
     abort would then delete the winner's live lock. The session_id owner
@@ -529,6 +530,25 @@ def release_lock_if_owner(feature_slug: str) -> bool:
     })
 
     return is_owner
+
+
+def rejection_message(feature_slug: str, lock: Optional[dict]) -> str:
+    """Return the acquire-rejection wording for *feature_slug*.
+
+    Shared by ``main()``'s ``acquire`` subcommand (stderr) and
+    ``cortex_command.lifecycle.prepare_worktree``'s lock-held state (JSON
+    ``message`` field) so both call sites stay byte-identical by
+    construction. Takes the already-read *lock* (or ``None``) rather than
+    reading it itself, so callers control the read (and tests can stub it).
+    """
+    session_id = lock.get("session_id") if lock else "unknown"
+    acquired_at = lock.get("acquired_at") if lock else "unknown"
+    return (
+        f"Interactive session already active on this feature "
+        f"(session {session_id}, acquired {acquired_at}). "
+        f"Wait for it to exit, or work on a different feature, "
+        f"or run `cortex-interactive-lock inspect {feature_slug}` for details."
+    )
 
 
 def scan_live_locks(project_root: Path) -> set[str]:
@@ -610,14 +630,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         ok = acquire_lock(args.slug)
         if not ok:
             lock = read_lock(args.slug)
-            session_id = lock.get("session_id") if lock else "unknown"
-            acquired_at = lock.get("acquired_at") if lock else "unknown"
-            sys.stderr.write(
-                f"Interactive session already active on this feature "
-                f"(session {session_id}, acquired {acquired_at}). "
-                f"Wait for it to exit, or work on a different feature, "
-                f"or run `cortex-interactive-lock inspect {args.slug}` for details.\n"
-            )
+            sys.stderr.write(rejection_message(args.slug, lock) + "\n")
             return 1
         return 0
 

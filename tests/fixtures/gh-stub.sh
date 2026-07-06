@@ -46,6 +46,16 @@
 #       0 -> []   1 -> one object   N -> N objects
 #     Emits [{"number":<i>,"state":"OPEN","mergedAt":null}, ...] (i = 1..N).
 #
+#   $GH_STUB_PR_LIST_MATCH_HEAD (default: "" -> matches any --head value)
+#     Restricts $GH_STUB_PR_LIST_COUNT's matches to invocations whose --head
+#     value equals this exact string; any other --head value gets 0 matches
+#     regardless of $GH_STUB_PR_LIST_COUNT. Lets tests exercise the
+#     complete-route orphan probe's interactive/{slug} -> feature/{slug}
+#     fallback (#331 recovery-gap fix) by forcing the first (interactive)
+#     query to come back empty so the second (feature) query is the one that
+#     matches. Unset (the default) preserves the prior behavior where COUNT
+#     applies regardless of --head.
+#
 #   $GH_STUB_REPO (default: owner/repo)
 #     Value emitted by `gh repo view --json nameWithOwner [-q .nameWithOwner]`.
 #     Mimics real gh: bare value when -q/--jq is present (the verb passes
@@ -140,6 +150,20 @@ case "$cmd" in
                 # `gh pr list --head ... --json number,state,mergedAt` for the
                 # complete-route orphan probe (#331). Count controls match arity.
                 count="${GH_STUB_PR_LIST_COUNT:-0}"
+                match_head="${GH_STUB_PR_LIST_MATCH_HEAD:-}"
+                if [ -n "$match_head" ]; then
+                    head_val=""
+                    prev=""
+                    for a in "$@"; do
+                        if [ "$prev" = "--head" ]; then
+                            head_val="$a"
+                        fi
+                        prev="$a"
+                    done
+                    if [ "$head_val" != "$match_head" ]; then
+                        count=0
+                    fi
+                fi
                 out="["
                 i=1
                 while [ "$i" -le "$count" ]; do

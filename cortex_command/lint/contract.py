@@ -913,23 +913,24 @@ def _load_project_scripts(pyproject_path: Path) -> dict[str, str]:
 def _resolve_module_path(module_attr: str, root: Path | None = None) -> Path | None:
     """Resolve ``module.path:attr`` to an absolute source path.
 
-    Tries ``importlib.util.find_spec()`` first and reads ``spec.origin`` for
-    the file path.  Note ``find_spec`` executes *parent package* imports, so
-    it fails when a parent's dependency is missing from the running
-    interpreter (e.g. the hook environment lacks PyYAML) even though the
-    target source file is right there in the repo.  When ``root`` is given,
-    falls back to constructing the path directly under it, so extraction
-    stays dependency-free.  Returns ``None`` only when both fail.
+    When ``root`` is given, tries the root-relative candidate paths first
+    (module ``.py``, then package ``__init__.py``): the lint's job is to
+    check the working tree at ``root``, not whatever copy of the package
+    ``sys.path`` happens to resolve to (e.g. a stale installed wheel), and
+    checking two paths on disk is cheap compared to importing parent
+    packages. Falls back to ``importlib.util.find_spec()`` and its
+    ``spec.origin`` only when neither root-relative candidate exists, which
+    covers modules genuinely out of the tree. ``find_spec`` executes *parent
+    package* imports, so it can raise for reasons unrelated to the module
+    itself (e.g. a parent's dependency, such as PyYAML, missing from the
+    running interpreter); any exception from that call is treated as
+    unresolved-by-spec rather than propagating and crashing the lint.
+    Returns ``None`` when no candidate resolves.
     """
     if ":" not in module_attr:
         return None
     module_name, _attr = module_attr.split(":", 1)
-    try:
-        spec = importlib.util.find_spec(module_name)
-    except (ImportError, ValueError):
-        spec = None
-    if spec is not None and spec.origin is not None:
-        return Path(spec.origin)
+
     if root is not None:
         candidate = root / (module_name.replace(".", "/") + ".py")
         if candidate.is_file():
@@ -937,6 +938,14 @@ def _resolve_module_path(module_attr: str, root: Path | None = None) -> Path | N
         pkg_candidate = root / module_name.replace(".", "/") / "__init__.py"
         if pkg_candidate.is_file():
             return pkg_candidate
+
+    try:
+        spec = importlib.util.find_spec(module_name)
+    except Exception:
+        spec = None
+    if spec is not None and spec.origin is not None:
+        return Path(spec.origin)
+
     return None
 
 

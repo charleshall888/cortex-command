@@ -108,7 +108,7 @@ cortex-lifecycle-state --feature {feature} --field criticality
 
 This surface folds the Implement branch/dispatch selection into plan approval — each branch option implies plan approval. Present the plan summary (overview + task list) plus **Produced** (one-line artifact summary) and **Trade-offs** (alternatives considered + rationale).
 
-**Assemble the option set.** On `main`/`master`, assemble the adaptive branch options with the same branch-mode preflight Implement §1 runs — see Implement §1 for the authoritative rules (suppressed-routing, the uncommitted-changes-guard demotion, and the `cortex-worktree-create` runtime-probe degrade that hides the worktree option when absent):
+**Assemble the option set.** On `main`/`master`, assemble the adaptive branch options with the same branch-mode preflight Implement §1 runs — see Implement §1 for the authoritative rules (suppressed-routing, the uncommitted-changes-guard demotion, and the `cortex-lifecycle-prepare-worktree` runtime-probe degrade that hides the worktree option when absent):
 
 ```bash
 cortex-lifecycle-branch-mode .

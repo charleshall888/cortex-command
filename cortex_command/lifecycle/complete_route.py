@@ -201,46 +201,66 @@ def _gh_repo() -> str:
 
 
 def _orphan_probe(slug: str) -> dict:
-    """Run the Branch-3 orphan-PR probe.
+    """Run the Branch-3 orphan-PR probe across both picker branch patterns.
 
-    Returns ``{"error": bool, "matches": list}``. ``error`` is True when gh is
-    absent or the probe call fails (routes to Branch 4a unknown).
+    Queries ``interactive/{slug}`` first; only when that query succeeds with
+    zero matches does it fall back to ``feature/{slug}``. The lifecycle's
+    branch picker produces both shapes, so probing only ``interactive/{slug}``
+    left a recovery gap: a gh-error halt (pr.json never written) followed by
+    re-invocation on a ``feature/{slug}`` branch would find zero matches and
+    loop back into ``gh pr create`` on a branch that already has an open PR.
+
+    Returns ``{"error": bool, "matches": list, "head_branch": str}``.
+    ``head_branch`` is the pattern whose query produced ``matches`` (the first
+    pattern when there are no matches or the probe errors). ``error`` is True
+    when gh is absent or a probe call fails (routes to Branch 4a unknown) —
+    behavior is unchanged from before when the interactive pattern already
+    matches or errors, since the feature-pattern fallback is only attempted
+    after an error-free, zero-match interactive query.
     """
     gh = shutil.which("gh")
+    interactive_head = f"interactive/{slug}"
     if gh is None:
-        return {"error": True, "matches": []}
-    proc = _run([
-        gh, "pr", "list",
-        "--head", f"interactive/{slug}",
-        "--state", "all",
-        "--json", "number,state,mergedAt",
-        "--limit", "5",
-    ])
-    if proc is None or proc.returncode != 0:
-        return {"error": True, "matches": []}
-    try:
-        data = json.loads(proc.stdout or "[]")
-    except json.JSONDecodeError:
-        return {"error": False, "matches": []}
-    if not isinstance(data, list):
-        return {"error": False, "matches": []}
-    return {"error": False, "matches": data}
+        return {"error": True, "matches": [], "head_branch": interactive_head}
+    for head_branch in (interactive_head, f"feature/{slug}"):
+        proc = _run([
+            gh, "pr", "list",
+            "--head", head_branch,
+            "--state", "all",
+            "--json", "number,state,mergedAt",
+            "--limit", "5",
+        ])
+        if proc is None or proc.returncode != 0:
+            return {"error": True, "matches": [], "head_branch": head_branch}
+        try:
+            data = json.loads(proc.stdout or "[]")
+        except json.JSONDecodeError:
+            data = []
+        if not isinstance(data, list):
+            data = []
+        if data:
+            return {"error": False, "matches": data, "head_branch": head_branch}
+    return {"error": False, "matches": [], "head_branch": interactive_head}
 
 
-def _reconstruct_pr_json(slug: str, lifecycle_dir: Path, match: dict) -> dict:
+def _reconstruct_pr_json(
+    slug: str, lifecycle_dir: Path, match: dict, head_branch: str
+) -> dict:
     """Reconstruct ``pr.json`` from a single orphan-probe match (Branch 3·one).
 
-    The probe response carries only ``number``/``state``/``mergedAt``; the head
-    branch is ``interactive/{slug}`` by construction (the ``--head`` we queried)
-    and the repo is resolved via ``gh repo view`` (Step-4 pattern). ``url`` and
-    ``opened_at`` are not present in the probe response and are left empty.
+    The probe response carries only ``number``/``state``/``mergedAt``;
+    *head_branch* is the ``--head`` pattern whose query produced *match*
+    (``interactive/{slug}`` or ``feature/{slug}`` — see ``_orphan_probe``),
+    and the repo is resolved via ``gh repo view`` (Step-4 pattern). ``url``
+    and ``opened_at`` are not present in the probe response and are left
+    empty.
     """
     number = match.get("number") if isinstance(match, dict) else None
     repo = _gh_repo()
     pr_obj = {
         "number": number,
         "url": "",
-        "head_branch": f"interactive/{slug}",
+        "head_branch": head_branch,
         "opened_at": "",
         "repo": repo,
     }
@@ -625,7 +645,9 @@ def classify(slug: str, root: Path) -> dict:
             result["candidates"] = matches
             return result
         # Exactly one — reconstruct pr.json then fall through to Branch 4.
-        pr_obj = _reconstruct_pr_json(slug, lifecycle_dir, matches[0])
+        pr_obj = _reconstruct_pr_json(
+            slug, lifecycle_dir, matches[0], probe["head_branch"]
+        )
         return _branch4(result, slug, root, pr_obj, lifecycle_dir)
 
     # pr.json present → Branch 4.

@@ -316,3 +316,53 @@ def test_resolve_module_path_falls_back_to_root_when_find_spec_fails(tmp_path: P
 
     # Nothing on disk and nothing importable → None, as before.
     assert _resolve_module_path("fallback_pkg_xyz.missing:main", root=tmp_path) is None
+
+
+def test_resolve_module_path_prefers_root_over_installed_when_both_resolve(
+    tmp_path: Path,
+) -> None:
+    """When a root-relative candidate exists AND the module name is also
+    importable from sys.path (e.g. a stale installed wheel), the root copy
+    must win: the lint's job is to check the working tree at ``root``, not
+    whatever copy ``sys.path`` happens to serve."""
+    pytest.importorskip("yaml")
+    from cortex_command.lint.contract import _resolve_module_path
+
+    shadow_module = tmp_path / "yaml.py"
+    shadow_module.write_text("# shadow copy under the lint root\n", encoding="utf-8")
+
+    resolved = _resolve_module_path("yaml:main", root=tmp_path)
+    assert resolved == shadow_module
+
+
+def test_resolve_module_path_swallows_non_import_error_from_find_spec(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A parent package whose import raises a non-ImportError (e.g. a broken
+    dependency raising RuntimeError, as real packages do when a transitive
+    import fails) must not crash resolution. The ``find_spec`` call is
+    wrapped in a broad ``except Exception`` that treats any such failure as
+    unresolved-by-spec."""
+    import sys
+
+    from cortex_command.lint.contract import _resolve_module_path
+
+    sys_path_pkg = tmp_path / "on_sys_path"
+    broken_pkg = sys_path_pkg / "brokenpkg_xyz"
+    broken_pkg.mkdir(parents=True)
+    (broken_pkg / "__init__.py").write_text(
+        "raise RuntimeError('missing dependency')\n", encoding="utf-8"
+    )
+    (broken_pkg / "tool.py").write_text("import argparse\n", encoding="utf-8")
+
+    monkeypatch.syspath_prepend(str(sys_path_pkg))
+    for mod_name in list(sys.modules):
+        if mod_name == "brokenpkg_xyz" or mod_name.startswith("brokenpkg_xyz."):
+            del sys.modules[mod_name]
+
+    # No matching file under root, so resolution must fall through to
+    # find_spec (which raises) and land on None rather than crashing.
+    root = tmp_path / "empty_root"
+    root.mkdir()
+
+    assert _resolve_module_path("brokenpkg_xyz.tool:main", root=root) is None

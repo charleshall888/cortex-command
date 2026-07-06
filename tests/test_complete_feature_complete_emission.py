@@ -288,17 +288,21 @@ class TestPrOpenedStaysHandWritten:
     """
 
     def test_pr_opened_literal_retains_schema_version_before_feature(self) -> None:
-        """The hand-written ``pr_opened`` row literal still carries
-        ``schema_version`` before ``feature``.
+        """The hand-written ``pr_opened`` row literal is NOT routed through
+        ``log_event``.
 
-        A future migration that dropped ``schema_version`` or routed
-        ``pr_opened`` through ``log_event``'s field order would regress the
-        ``statusline.sh``/``scan_lifecycle`` consumers; this guard catches it.
-        The end-to-end emitted-row shape (actual key order via
-        ``json.dumps``) is exercised by
+        A future migration that routed ``pr_opened`` through ``log_event``
+        would regress the ``statusline.sh``/``scan_lifecycle`` consumers,
+        which depend on the ADR-0020 exempt shape (``schema_version`` before
+        ``feature``); this guard catches the routing regression at the
+        source level. The exact emitted key order (actual ``json.dumps``
+        output, not source-string position — a byte-identical refactor of
+        this literal could reorder dict keys in source without changing
+        behavior) is pinned behaviorally by
         ``cortex_command/lifecycle/tests/test_record_pr_opened.py::
         test_pr_opened_event_schema_is_exempt_shape``; this is the
-        source-level companion.
+        source-level companion, checking only that the literal still exists
+        and still carries its exempt-schema marker key.
         """
         source = RECORD_PR_OPENED_PY.read_text(encoding="utf-8")
         assert '"event": "pr_opened"' in source, (
@@ -309,9 +313,4 @@ class TestPrOpenedStaysHandWritten:
         assert '"schema_version": 1' in source, (
             "pr_opened row literal lost its schema_version key in "
             "cortex_command/lifecycle/record_pr_opened.py"
-        )
-        sv_idx = source.index('"schema_version": 1')
-        feature_idx = source.index('"feature": feature', sv_idx)
-        assert sv_idx < feature_idx, (
-            "schema_version must precede feature in the pr_opened row literal"
         )

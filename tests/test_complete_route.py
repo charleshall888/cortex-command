@@ -561,6 +561,137 @@ def test_branch3_multi_match_no_write_with_candidates(
 
 
 # ---------------------------------------------------------------------------
+# Branch 3 — feature/{slug} fallback probe (recovery-gap fix): the picker
+# also produces feature/{slug} branches, so a zero-match interactive/{slug}
+# query must fall back to feature/{slug} before concluding first_run.
+# ---------------------------------------------------------------------------
+
+
+def test_orphan_probe_falls_back_to_feature_pattern_directly(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Unit-level pin: interactive/{slug} empty -> feature/{slug} queried next."""
+    from cortex_command.lifecycle import complete_route
+
+    seen_heads: list = []
+
+    def _fake_run(cmd, cwd=None, timeout=30):
+        head = cmd[cmd.index("--head") + 1]
+        seen_heads.append(head)
+
+        class _P:
+            returncode = 0
+            if head == f"feature/{SLUG}":
+                stdout = json.dumps([{"number": 9, "state": "OPEN", "mergedAt": None}])
+            else:
+                stdout = "[]"
+
+        return _P()
+
+    monkeypatch.setattr(complete_route.shutil, "which", lambda name: "/usr/bin/gh")
+    monkeypatch.setattr(complete_route, "_run", _fake_run)
+
+    probe = complete_route._orphan_probe(SLUG)
+
+    assert seen_heads == [f"interactive/{SLUG}", f"feature/{SLUG}"]
+    assert probe["error"] is False
+    assert probe["head_branch"] == f"feature/{SLUG}"
+    assert probe["matches"] == [{"number": 9, "state": "OPEN", "mergedAt": None}]
+
+
+def test_orphan_probe_stops_at_interactive_match_without_querying_feature(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Existing behavior preserved: an interactive/{slug} match short-circuits."""
+    from cortex_command.lifecycle import complete_route
+
+    seen_heads: list = []
+
+    def _fake_run(cmd, cwd=None, timeout=30):
+        seen_heads.append(cmd[cmd.index("--head") + 1])
+
+        class _P:
+            returncode = 0
+            stdout = json.dumps([{"number": 3, "state": "OPEN", "mergedAt": None}])
+
+        return _P()
+
+    monkeypatch.setattr(complete_route.shutil, "which", lambda name: "/usr/bin/gh")
+    monkeypatch.setattr(complete_route, "_run", _fake_run)
+
+    probe = complete_route._orphan_probe(SLUG)
+
+    assert seen_heads == [f"interactive/{SLUG}"], "feature/{slug} must not be queried"
+    assert probe["head_branch"] == f"interactive/{SLUG}"
+    assert probe["matches"] == [{"number": 3, "state": "OPEN", "mergedAt": None}]
+
+
+def test_branch3_feature_head_fallback_single_match_reconstructs_pr_json(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """End-to-end: interactive/{slug} empty, feature/{slug} has one match."""
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    root = _make_root(tmp_path)
+    _write_events(root, _BENIGN_EVENT)
+    _install_gh_stub(monkeypatch, tmp_path)
+    monkeypatch.setenv("GH_STUB_PR_LIST_COUNT", "1")
+    monkeypatch.setenv("GH_STUB_PR_LIST_MATCH_HEAD", f"feature/{SLUG}")
+    monkeypatch.setenv("GH_STUB_SCENARIO", "open-anchored")  # Branch 4c after recon
+    monkeypatch.setenv("GH_STUB_REPO", "owner/repo")
+    monkeypatch.chdir(root)
+
+    pr_path = root / "cortex" / "lifecycle" / SLUG / "pr.json"
+    assert not pr_path.exists()
+
+    result = classify(SLUG, root)
+
+    assert pr_path.exists(), "feature/{slug} single-match did not reconstruct pr.json"
+    pr_obj = json.loads(pr_path.read_text(encoding="utf-8"))
+    assert pr_obj["number"] == 1
+    assert pr_obj["head_branch"] == f"feature/{SLUG}"
+    assert pr_obj["repo"] == "owner/repo"
+
+    assert result["route"] == "pr_open"
+    assert result["head_branch"] == f"feature/{SLUG}"
+
+
+def test_branch3_feature_head_fallback_multi_match_orphan_ambiguous(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """End-to-end: interactive/{slug} empty, feature/{slug} has multiple matches."""
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    root = _make_root(tmp_path)
+    _write_events(root, _BENIGN_EVENT)
+    _install_gh_stub(monkeypatch, tmp_path)
+    monkeypatch.setenv("GH_STUB_PR_LIST_COUNT", "2")
+    monkeypatch.setenv("GH_STUB_PR_LIST_MATCH_HEAD", f"feature/{SLUG}")
+    monkeypatch.chdir(root)
+
+    pr_path = root / "cortex" / "lifecycle" / SLUG / "pr.json"
+    result = classify(SLUG, root)
+
+    assert result["route"] == "orphan_ambiguous"
+    assert not pr_path.exists(), "multi-match wrongly wrote pr.json"
+    candidates = result.get("candidates")
+    assert candidates and len(candidates) == 2
+
+
+def test_branch3_both_patterns_empty_still_routes_first_run(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Zero matches on both interactive/{slug} and feature/{slug} -> first_run."""
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    root = _make_root(tmp_path)
+    _write_events(root, _BENIGN_EVENT)
+    _install_gh_stub(monkeypatch, tmp_path)
+    monkeypatch.setenv("GH_STUB_PR_LIST_COUNT", "0")
+    monkeypatch.chdir(root)
+
+    result = classify(SLUG, root)
+    assert result["route"] == "first_run"
+
+
+# ---------------------------------------------------------------------------
 # gh-absent -> Branch 4a unknown / exit 0 through the CLI main() (Req 1a, 4).
 # ---------------------------------------------------------------------------
 

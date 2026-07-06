@@ -144,13 +144,26 @@ def test_gate_and_gated_path_use_same_binary() -> None:
     )
     section_1a = section_1a_match.group(0)
 
+    # Narrow to the '**i. Prepare**' block (ends at '**Step v') so a future
+    # --feature-bearing command elsewhere in §1a can't become the compared
+    # binary and silently repoint the gate↔gated parity check.
+    prepare_match = re.search(
+        r"\*\*i\..*?(?=\*\*Step v)", section_1a, flags=re.DOTALL
+    )
+    assert prepare_match is not None, (
+        "Could not locate the '**i. Prepare**' block (bounded at '**Step v') "
+        "in §1a of implement.md"
+    )
+    prepare_block = prepare_match.group(0)
+
     # Extract binary: first token on a line followed by --feature. The line
     # may be a bare invocation or a shell assignment (var=$(<binary> ...)).
     gated_match = re.search(
-        r"^(?:\w+=\$\()?(\S+?)\s+--feature\s+", section_1a, flags=re.MULTILINE
+        r"^(?:\w+=\$\()?(\S+?)\s+--feature\s+", prepare_block, flags=re.MULTILINE
     )
     assert gated_match is not None, (
-        "Could not find '<binary> --feature ...' invocation in §1a of implement.md"
+        "Could not find '<binary> --feature ...' invocation in the §1a Prepare "
+        "block of implement.md"
     )
     gated_binary = gated_match.group(1)
 

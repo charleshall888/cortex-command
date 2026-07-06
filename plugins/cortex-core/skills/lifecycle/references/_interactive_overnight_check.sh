@@ -43,6 +43,11 @@ if [ -z "$_runner_pid" ]; then
     exit 2
 fi
 
+# `kill -0` accepts any numeric-looking string, so a pid stored as a JSON
+# string here is already treated as live. KEEP IN SYNC with
+# cortex_command/lifecycle/prepare_worktree.py's `_check_overnight_guard`,
+# which coerces int-like pid values the same way before its liveness check —
+# the two independent checks must agree on what counts as "active".
 if kill -0 "$_runner_pid" 2>/dev/null; then
     echo "$_rejection_wording" >&2
     exit 1
