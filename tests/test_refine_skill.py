@@ -5,7 +5,7 @@ within proximity of the heading anchor, (b) contain a "recommend" trigger
 inside the §4 bullet block, (c) place a rationale clue ("rationale" or
 "because") before the first `(Recommended)` occurrence (rationale-first
 ordering), and (d) not contain `MUST decide` (negative regression guard
-against MUST-escalation drift, per CLAUDE.md §72-84).
+against MUST-escalation drift, per docs/policies.md's MUST-escalation policy).
 """
 
 from __future__ import annotations
@@ -94,11 +94,12 @@ def test_rationale_or_because_precedes_recommended() -> None:
 
 def test_no_must_decide_regression() -> None:
     """The §4 bullet does not contain 'MUST decide' — guards against
-    MUST-escalation regression per CLAUDE.md §72-84.
+    MUST-escalation regression per docs/policies.md's MUST-escalation policy.
     """
     text = SKILL_MD.read_text(encoding="utf-8")
     block = _slice_section_4(text)
     assert "MUST decide" not in block, (
         "§4 bullet contains 'MUST decide' — MUST-escalation requires an "
-        "evidence artifact per CLAUDE.md §72-84; use the soft-form 'Decide' instead"
+        "evidence artifact per docs/policies.md's MUST-escalation policy; "
+        "use the soft-form 'Decide' instead"
     )
