@@ -35,35 +35,35 @@ After all fixes, increment the cycle counter and return to step 1 with the same 
 
 ### 4. Escalation
 
-Max **2 review cycles per phase** (the counter resets each phase; don't start cycle 3). At the cap with an issue persisting, stop and escalate: present what was checked (the flagged items), what was tried (fixes per cycle), and what remains unresolved. The user then decides — do not continue reviewing.
+Max **2 review cycles per phase** (the counter resets each phase; don't start cycle 3). At the cap with an issue persisting, stop and escalate: present what was checked, what was tried per cycle, and what remains unresolved. The user then decides — do not continue reviewing.
 
 ## Checklists
 
-**Binary-checkable** (used by S1 and P4): satisfied in one of three forms — (a) a runnable command with observable output and an explicit pass/fail (exit 0, grep count ≥ N); (b) an observable state naming the file path, the string/pattern to find, and the expected true/false; (c) `Interactive/session-dependent: [one-sentence rationale]` when neither (a) nor (b) applies.
+**Binary-checkable** (S1, P4): one of (a) a runnable command with observable output and pass/fail (exit 0, grep count ≥ N); (b) an observable state naming the file path, the string/pattern, and the expected true/false; (c) `Interactive/session-dependent: [one-sentence rationale]` when neither applies.
 
 ### Post-Specify Checklist (`spec.md`)
 
 | # | Item | Criteria |
 |---|------|----------|
-| S1 | Binary-checkable acceptance criteria | Every requirement's acceptance criteria are binary-checkable (above). Prose like "confirm it works" fails even without subjective language. |
-| S2 | Edge cases handled | Edge Cases section covers failure modes, unexpected inputs, boundary conditions, and concurrent scenarios relevant to the feature. |
-| S3 | MoSCoW justified | Must/should/won't distinctions are explicit and reflect real priority, not "everything is must-have". |
-| S4 | Non-requirements are concrete boundaries | Non-Requirements section names concrete scope boundaries, not vague "not in scope for now". |
-| S5 | Constraints grounded | Technical Constraints reference specific codebase patterns, ADRs, or architectural decisions — not generic best practices. |
-| S6 | Behavioral changes documented | If the feature modifies/removes/extends existing behavior (including additions to an existing domain), a `## Changes to Existing Behavior` section lists specific MODIFIED/REMOVED/ADDED entries. Omission is acceptable only for pure-greenfield work in a new domain. |
-| S7 | Spec phases present | `## Phases` section with ≥1 phase; each requirement carries a `**Phase**` tag matching a declared phase. Skip on `criticality=low AND tier=simple`. |
+| S1 | Binary-checkable acceptance criteria | All binary-checkable (above); prose like "confirm it works" fails. |
+| S2 | Edge cases handled | Edge Cases covers failure modes, unexpected inputs, boundaries, and concurrency relevant to the feature. |
+| S3 | MoSCoW justified | Must/should/won't reflect real priority, not "everything is must-have". |
+| S4 | Non-requirements are concrete boundaries | Names concrete scope boundaries, not vague "not in scope for now". |
+| S5 | Constraints grounded | Cite specific codebase patterns, ADRs, or architectural decisions — not generic best practices. |
+| S6 | Behavioral changes documented | Modifying/removing/extending existing behavior gets a `## Changes to Existing Behavior` section (MODIFIED/REMOVED/ADDED); omit only for pure-greenfield work. |
+| S7 | Spec phases present | `## Phases` with ≥1 phase; each requirement's `**Phase**` tag matches one. Skip on `criticality=low AND tier=simple`. |
 
 ### Post-Plan Checklist (`plan.md`)
 
 | # | Item | Criteria |
 |---|------|----------|
-| P1 | Task sizing | Each task targets 5-15 min and 1-5 files; flag outliers. |
+| P1 | Task sizing | Each task targets 5-15 min, 1-5 files; flag outliers. |
 | P2 | Dependency graph complete | Every task has `**Depends on**`; no missing edge where one task's output feeds another. |
 | P3 | Structural context sufficient | Each Context field lets a fresh subagent execute without reading unrelated files. |
-| P4 | Binary-checkable verification | Each Verification field is binary-checkable (above). "Verify it works" / "confirm the section was added" fail. |
+| P4 | Binary-checkable verification | Binary-checkable (above); "verify it works" fails. |
 | P5 | Code budget respected | Prose and structural context only — no function bodies, imports, or copy-paste-ready code. |
-| P6 | Files/Verification consistency | Every file Verification implies is in Files; no verification requires modifying an unlisted file. |
-| P7 | No self-sealing verification | When Verification references an artifact the same task creates: benign if that artifact is the task's primary deliverable; harmful (flag) if it's a side-channel recording an external condition. |
-| P8 | Architectural Pattern present + in taxonomy | Structural check: an `**Architectural Pattern**` field valued in {event-driven, pipeline, layered, shared-state, plug-in}. Gated on `criticality = critical` (when §1b ran); N/A otherwise. Semantic fit belongs to the synthesizer. |
-| P9 | Outline present | `## Outline` section; ≥2 phases for `complexity=complex`, ≥1 for `simple`. Each phase names its task IDs and has `**Goal**` and `**Checkpoint**`. |
-| P10 | Acceptance on complex plans | `complexity=complex` plans have a `## Acceptance` section with a whole-feature criterion. Skip on simple — the last-phase Checkpoint is the contract there. |
+| P6 | Files/Verification consistency | Every file Verification implies is listed in Files. |
+| P7 | No self-sealing verification | An artifact the task itself creates is benign only if it's the primary deliverable — harmful (flag) if it's a side-channel recording an external condition. |
+| P8 | Architectural Pattern present + in taxonomy | `**Architectural Pattern**` valued in {event-driven, pipeline, layered, shared-state, plug-in}; gated on `criticality = critical` (when §1b ran), N/A otherwise. Semantic fit belongs to the synthesizer. |
+| P9 | Outline present | `## Outline`; ≥2 phases for `complexity=complex`, ≥1 for `simple`. Each phase names its task IDs plus `**Goal**` and `**Checkpoint**`. |
+| P10 | Acceptance on complex plans | `complexity=complex` plans have a `## Acceptance` whole-feature criterion. Skip on simple — the last-phase Checkpoint is the contract there. |

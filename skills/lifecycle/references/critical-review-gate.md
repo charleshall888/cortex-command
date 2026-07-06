@@ -4,11 +4,11 @@ Shared skip-path protocol for the §3b Critical Review gate in Specify and Plan 
 
 ## Corrupted State Rule
 
-If either `cortex-lifecycle-state` read contains `"corrupted": true`, follow the canonical corrupted-state rule in `${CLAUDE_SKILL_DIR}/references/criticality-matrix.md` — treat the feature as requiring review (run the critical-review skill) rather than skipping.
+If either `cortex-lifecycle-state` read contains `"corrupted": true`, follow the canonical corrupted-state rule in `${CLAUDE_SKILL_DIR}/references/criticality-matrix.md` — treat the feature as requiring review rather than skipping.
 
 ## Non-Local Seed-Tier Rule
 
-Same "untrustworthy tier → review, don't skip" posture for a second seed-tier hole: when the backend (`cortex-read-backlog-backend`) ≠ `cortex-backlog` AND the §3b decision would skip-silent at `tier = simple` AND `cortex/lifecycle/{feature}/research.md` exists (the resume-to-spec signature that Clarify may have been bypassed, leaving state stuck at the `simple/medium` seed), require review instead. The local (`cortex-backlog`) path is exempt — its `reconcile-clarify --backlog-slug` re-sources tier/criticality from backlog frontmatter on resume, so its seed is trustworthy. Over-firing on a genuinely-simple fresh non-local feature is the safe direction (extra review never harms correctness).
+Same "untrustworthy tier → review, don't skip" posture for a second seed-tier hole: when the backend (`cortex-read-backlog-backend`) ≠ `cortex-backlog` AND the §3b decision would skip-silent at `tier = simple` AND `cortex/lifecycle/{feature}/research.md` exists (Clarify may have been bypassed, leaving state stuck at the `simple/medium` seed), require review instead. The local (`cortex-backlog`) path is exempt — its `reconcile-clarify --backlog-slug` re-sources tier/criticality from backlog frontmatter on resume, so its seed is trustworthy.
 
 ## Run/Skip Matrix
 

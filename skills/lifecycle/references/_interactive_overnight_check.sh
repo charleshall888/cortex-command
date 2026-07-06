@@ -2,18 +2,11 @@
 # Overnight-active probe sidecar — shared implementation used by the
 # interactive overnight-check path (implement.md §1, R7).
 #
-# Usage:
-#   cat skills/lifecycle/references/_interactive_overnight_check.sh | bash -s -- "<rejection-wording>" "<expected-repo-path>"
+# Usage: cat _interactive_overnight_check.sh | bash -s -- "<rejection-wording>" "<expected-repo-path>"
+#   $1 = wording surfaced on exit 1; $2 = expected repo_path.
 #
-# Arguments:
-#   $1  Rejection-wording template string surfaced to the caller on exit 1.
-#   $2  Expected repo_path to match against the active session's repo_path.
-#
-# Exit codes:
-#   0   No overnight session active — caller may proceed.
-#   1   Overnight runner is live for the expected repo — caller surfaces $1.
-#   2   Stale runner detected (runner.pid absent or process dead) — caller
-#       surfaces a warn-and-continue diagnostic.
+# Exit codes: 0 = no session active, proceed; 1 = runner live for this repo,
+# surface $1; 2 = stale runner (pid absent/dead), warn-and-continue.
 
 _rejection_wording="$1"
 _expected_repo_path="$2"
@@ -50,6 +43,11 @@ if [ -z "$_runner_pid" ]; then
     exit 2
 fi
 
+# `kill -0` accepts any numeric-looking string, so a pid stored as a JSON
+# string here is already treated as live. KEEP IN SYNC with
+# cortex_command/lifecycle/prepare_worktree.py's `_check_overnight_guard`,
+# which coerces int-like pid values the same way before its liveness check —
+# the two independent checks must agree on what counts as "active".
 if kill -0 "$_runner_pid" 2>/dev/null; then
     echo "$_rejection_wording" >&2
     exit 1

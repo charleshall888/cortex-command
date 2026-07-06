@@ -27,8 +27,11 @@ second-precision ts, NO auto ``schema_version``). This test pins:
       partition).
 
 (3) **``pr_opened`` ADR-0020 exemption regression guard**: ``pr_opened`` is NOT
-    migrated (it stays a hand-written raw-JSON literal in ``complete.md`` Step 5),
-    so this asserts its literal still carries ``schema_version``.
+    migrated to the uniform ``cortex-lifecycle-event`` machinery — it stays a
+    hand-constructed dict literal, now inside
+    ``cortex_command.lifecycle.record_pr_opened`` (the verb that composes
+    complete.md's former Steps 4+5), so this asserts the literal still
+    carries ``schema_version`` before ``feature``.
 
 Emission is driven in-process via ``cortex_command.lifecycle_event._run`` (the
 ``test_lifecycle_event.py`` idiom) — NOT the bare PATH binstub, which may resolve
@@ -54,7 +57,6 @@ from cortex_command.pipeline.metrics import (
 
 # Repo root: tests/ -> repo root.
 REPO_ROOT = Path(__file__).resolve().parents[1]
-COMPLETE_MD = REPO_ROOT / "skills" / "lifecycle" / "references" / "complete.md"
 
 SLUG = "offload-completemd-pr-state-routing-and"
 FROZEN_TS = "2026-01-01T00:00:00Z"
@@ -268,26 +270,47 @@ class TestRealConsumerClassification:
 # ---------------------------------------------------------------------------
 
 
+RECORD_PR_OPENED_PY = (
+    REPO_ROOT / "cortex_command" / "lifecycle" / "record_pr_opened.py"
+)
+
+
 class TestPrOpenedStaysHandWritten:
-    """``pr_opened`` is NOT migrated; its literal still carries ``schema_version``."""
+    """``pr_opened`` is NOT migrated to ``cortex-lifecycle-event``; it stays a
+    hand-constructed dict literal and must keep its ``schema_version`` key.
 
-    def test_pr_opened_literal_retains_schema_version(self) -> None:
-        """The hand-written ``pr_opened`` raw-JSON literal still carries ``schema_version``.
+    ``pr_opened``'s write moved out of complete.md Step 5's raw-JSON literal
+    and into ``cortex_command.lifecycle.record_pr_opened`` (the verb that
+    composes complete.md's former Steps 4+5 — see that module's docstring).
+    It is still a hand-authored dict, not routed through ``log_event``'s
+    uniform ``{ts, event, feature, ...}`` shape, so the exempt schema
+    (``schema_version`` before ``feature``) must survive the move.
+    """
 
-        ``pr_opened`` is the ADR-0020 exemption — it stays a raw-JSON literal in
-        ``complete.md`` Step 5 (not migrated to the verb), so it must keep its
-        ``schema_version`` key. A future migration that drops this would regress
-        the ``statusline.sh``/``scan_lifecycle`` consumers; this guard catches it.
+    def test_pr_opened_literal_retains_schema_version_before_feature(self) -> None:
+        """The hand-written ``pr_opened`` row literal is NOT routed through
+        ``log_event``.
+
+        A future migration that routed ``pr_opened`` through ``log_event``
+        would regress the ``statusline.sh``/``scan_lifecycle`` consumers,
+        which depend on the ADR-0020 exempt shape (``schema_version`` before
+        ``feature``); this guard catches the routing regression at the
+        source level. The exact emitted key order (actual ``json.dumps``
+        output, not source-string position — a byte-identical refactor of
+        this literal could reorder dict keys in source without changing
+        behavior) is pinned behaviorally by
+        ``cortex_command/lifecycle/tests/test_record_pr_opened.py::
+        test_pr_opened_event_schema_is_exempt_shape``; this is the
+        source-level companion, checking only that the literal still exists
+        and still carries its exempt-schema marker key.
         """
-        text = COMPLETE_MD.read_text(encoding="utf-8")
-        pr_opened_lines = [
-            line for line in text.splitlines() if '"event": "pr_opened"' in line
-        ]
-        assert pr_opened_lines, (
-            "pr_opened raw-JSON literal not found in complete.md Step 5 — "
-            "either it was migrated (ADR-0020 exemption broken) or moved"
+        source = RECORD_PR_OPENED_PY.read_text(encoding="utf-8")
+        assert '"event": "pr_opened"' in source, (
+            "pr_opened row literal not found in "
+            "cortex_command/lifecycle/record_pr_opened.py — either it was "
+            "migrated (ADR-0020 exemption broken) or moved"
         )
-        for line in pr_opened_lines:
-            assert '"schema_version"' in line, (
-                f"pr_opened literal lost its schema_version key: {line!r}"
-            )
+        assert '"schema_version": 1' in source, (
+            "pr_opened row literal lost its schema_version key in "
+            "cortex_command/lifecycle/record_pr_opened.py"
+        )

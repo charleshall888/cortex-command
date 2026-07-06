@@ -1,6 +1,6 @@
 # Common Rationalizations
 
-Patterns Claude (or any debugger) uses to skip systematic process. Read this when you catch yourself looking for shortcuts.
+Patterns used to skip systematic process — read when you catch yourself looking for a shortcut.
 
 | Excuse | Reality |
 |--------|---------|
@@ -9,4 +9,4 @@ Patterns Claude (or any debugger) uses to skip systematic process. Read this whe
 | "Just try this first, then investigate" | First fix sets the pattern. Do it right from the start. |
 | "Multiple fixes at once saves time" | Can't isolate what worked. Causes new bugs. |
 | "I see the problem, let me fix it" | Seeing symptoms ≠ understanding root cause. |
-| "One more fix attempt" (after 2+ failures) | 3+ failures = run team investigation (Phase 4 §5) if Agent Teams available, then architecture discussion. Do not add a 4th fix without completing §5. |
+| "One more fix attempt" (after 2+ failures) | 3+ failures → team investigation (§5) if available, then architecture discussion; no 4th fix without it. |

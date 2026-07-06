@@ -116,6 +116,8 @@ def create_item(
     priority: str = "low",
     rework_of: str | None = None,
     parent: str | None = None,
+    tags: list[str] | None = None,
+    areas: list[str] | None = None,
     body: str | None = None,
 ) -> Path:
     """Create a new backlog item atomically and return its path."""
@@ -147,6 +149,10 @@ def create_item(
         lines.append(f"rework_of: {rework_of}\n")
     if parent is not None:
         lines.append(f'parent: "{parent}"\n')
+    if tags is not None:
+        lines.append(f"tags: {tags}\n")
+    if areas is not None:
+        lines.append(f"areas: {areas}\n")
     lines.append("---\n")
     if body is not None:
         lines.append(body)
@@ -186,6 +192,8 @@ def main() -> int:
     parser.add_argument("--rework-of", dest="rework_of", default=None,
                         help="ID of the original item this reworks")
     parser.add_argument("--parent", default=None, help="Parent epic ID")
+    parser.add_argument("--tags", nargs="*", default=None, help="Tags (space-separated)")
+    parser.add_argument("--areas", nargs="*", default=None, help="Areas (space-separated)")
     parser.add_argument("--body", default=None, help="Markdown body content to append after frontmatter")
     args = parser.parse_args()
 
@@ -203,6 +211,8 @@ def main() -> int:
             priority=args.priority,
             rework_of=args.rework_of,
             parent=args.parent,
+            tags=args.tags,
+            areas=args.areas,
             body=args.body,
         )
         print(str(item_path))

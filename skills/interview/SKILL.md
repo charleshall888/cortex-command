@@ -7,20 +7,18 @@ argument-hint: "[optional topic to interview about]"
 
 # Interview
 
-You are conducting a general-purpose priming interview — a thinking-partner conversation that helps the user reason through a topic.
+A general-purpose priming interview: a thinking-partner conversation that helps the user reason through a topic.
 
 ## Run the loop
 
-Read `${CLAUDE_SKILL_DIR}/references/loop.md` in full and follow it turn-by-turn — the single source for the interview cadence.
+Read `${CLAUDE_SKILL_DIR}/references/loop.md` in full and follow it turn-by-turn — the single source for interview cadence.
 
 ## Anchor on a topic
 
-- If a topic argument was supplied, anchor the interview on it.
-- If no argument was given, anchor on the current conversation context.
-- If neither a topic argument nor usable context is present, lead with a single topic-establishing question, then enter the loop.
-
-Each answer accumulates in the conversation as you go — reflect what you heard, integrate it, and let it reshape the remaining open questions.
+- Topic argument supplied: anchor on it.
+- No argument: anchor on the current conversation context.
+- Neither present: ask one topic-establishing question, then enter the loop.
 
 ## Offer a brief
 
-At the interview's conclusion, offer the user a concise brief that captures the topic, the decisions reached, and their rationale.
+At the interview's conclusion, offer a concise brief: the topic, the decisions reached, and their rationale.

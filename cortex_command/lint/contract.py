@@ -910,23 +910,43 @@ def _load_project_scripts(pyproject_path: Path) -> dict[str, str]:
 # ---------------------------------------------------------------------------
 
 
-def _resolve_module_path(module_attr: str) -> Path | None:
+def _resolve_module_path(module_attr: str, root: Path | None = None) -> Path | None:
     """Resolve ``module.path:attr`` to an absolute source path.
 
-    Uses ``importlib.util.find_spec()`` which does NOT import the module;
-    reads ``spec.origin`` for the file path.  Returns ``None`` if the spec
-    cannot be found or has no origin.
+    When ``root`` is given, tries the root-relative candidate paths first
+    (module ``.py``, then package ``__init__.py``): the lint's job is to
+    check the working tree at ``root``, not whatever copy of the package
+    ``sys.path`` happens to resolve to (e.g. a stale installed wheel), and
+    checking two paths on disk is cheap compared to importing parent
+    packages. Falls back to ``importlib.util.find_spec()`` and its
+    ``spec.origin`` only when neither root-relative candidate exists, which
+    covers modules genuinely out of the tree. ``find_spec`` executes *parent
+    package* imports, so it can raise for reasons unrelated to the module
+    itself (e.g. a parent's dependency, such as PyYAML, missing from the
+    running interpreter); any exception from that call is treated as
+    unresolved-by-spec rather than propagating and crashing the lint.
+    Returns ``None`` when no candidate resolves.
     """
     if ":" not in module_attr:
         return None
     module_name, _attr = module_attr.split(":", 1)
+
+    if root is not None:
+        candidate = root / (module_name.replace(".", "/") + ".py")
+        if candidate.is_file():
+            return candidate
+        pkg_candidate = root / module_name.replace(".", "/") / "__init__.py"
+        if pkg_candidate.is_file():
+            return pkg_candidate
+
     try:
         spec = importlib.util.find_spec(module_name)
-    except (ModuleNotFoundError, ValueError):
-        return None
-    if spec is None or spec.origin is None:
-        return None
-    return Path(spec.origin)
+    except Exception:
+        spec = None
+    if spec is not None and spec.origin is not None:
+        return Path(spec.origin)
+
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -1234,7 +1254,7 @@ def extract_surface(
             continue
 
         # Resolve to source path
-        module_path = _resolve_module_path(module_attr)
+        module_path = _resolve_module_path(module_attr, root=root)
         if module_path is None:
             # Can't resolve — treat as not_argparse without emitting E201
             # (the module may not be importlib-visible, e.g. wrong venv).

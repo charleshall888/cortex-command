@@ -123,7 +123,7 @@ def resolve_branch_decision(feature: str, project_root: Optional[Path] = None) -
         "state": "prompt",
         "reason": reason,
         "uncommitted_changes": _is_dirty_tree(root),
-        "worktree_option_available": shutil.which("cortex-worktree-create") is not None,
+        "worktree_option_available": shutil.which("cortex-lifecycle-prepare-worktree") is not None,
         "next": (
             "Render the branch picker. uncommitted_changes=true demotes the "
             "current-branch option with the warning; worktree_option_available=false "

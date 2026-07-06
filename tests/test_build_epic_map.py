@@ -329,3 +329,29 @@ def test_help_mentions_index_json() -> None:
     assert "index.json" in result.stdout, (
         f"expected --help output to mention 'index.json'; got {result.stdout!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# --describe-schema — prints the output envelope's schema shape, exits 0.
+# ---------------------------------------------------------------------------
+
+
+def test_describe_schema_exits_0_and_describes_envelope() -> None:
+    """``--describe-schema`` prints the schema shape and exits 0, without
+    requiring (or reading) an ``index_path``."""
+    result = _run_wrapper("--describe-schema")
+    assert result.returncode == 0, (
+        f"expected exit 0, got {result.returncode}\nstderr={result.stderr!r}"
+    )
+    assert '"schema_version": "1"' in result.stdout
+    assert '"epics"' in result.stdout
+    assert "children" in result.stdout
+
+
+def test_describe_schema_ignores_missing_index_path() -> None:
+    """``--describe-schema`` short-circuits before any index-file read, so it
+    exits 0 even when no ``index_path`` is reachable."""
+    result = _run_wrapper("--describe-schema", "/nonexistent/path/index.json")
+    assert result.returncode == 0, (
+        f"expected exit 0, got {result.returncode}\nstderr={result.stderr!r}"
+    )

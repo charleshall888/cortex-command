@@ -11,19 +11,25 @@ outputs:
 
 # Requirements (orchestrator)
 
-Thin routing surface for the v2 requirements workflow. Sequence: parse `$ARGUMENTS` → optionally short-circuit on `list` → dispatch `/requirements-gather` → hand the returned Q&A block to `/requirements-write`.
+Routing surface for the v2 requirements workflow: parse `$ARGUMENTS`, then sequence `/requirements-gather` → `/requirements-write`.
 
 ## Argument shapes (every shape is load-bearing)
 
 - `/cortex-core:requirements` — bare invocation; project scope.
-- `/cortex-core:requirements project` — explicit project-scope alias of the bare form.
+- `/cortex-core:requirements project` — explicit alias of the bare form.
 - `/cortex-core:requirements {area}` — area scope; `{area}` is a kebab-case slug (e.g. `multiplayer`, `observability`).
-- `/cortex-core:requirements list` — read-only enumeration of `cortex/requirements/*.md`; does NOT enter the gather/write pipeline. It excludes `glossary.md` — a producer-managed vocabulary artifact (per-term append lifecycle), not a scope-level requirements doc.
+- `/cortex-core:requirements list` — read-only enumeration of `cortex/requirements/*.md`; skips the gather/write pipeline. Excludes `glossary.md` — a producer-managed vocabulary artifact (per-term append lifecycle), not a scope-level requirements doc.
 
 ## Routing
 
-1. If `$ARGUMENTS == "list"`: scan `cortex/requirements/` and present a table (file, scope, last-gathered date, requirement count), excluding `glossary.md` (see above). Exit. If the directory is absent, report "No requirements documented yet. Run `/cortex-core:requirements` to start with project-level requirements." and exit.
+1. If `$ARGUMENTS == "list"`: run the inventory verb (excludes `glossary.md` itself — see above) and act on `state`, then exit either way:
+
+   ```bash
+   cortex-list-requirements
+   ```
+
+   `absent` → report "No requirements documented yet. Run `/cortex-core:requirements` to start with project-level requirements." `ok` → render `rows` as a table (file, scope, last_gathered, requirement_count).
 2. Otherwise resolve `scope`: empty or `project` → `project`; any other single token → that token as the area slug.
 3. Invoke `/requirements-gather` with the resolved `scope` and, when `cortex/requirements/{scope}.md` already exists, pass its path as `existing-doc` so the interview refines rather than rewrites.
-4. When gather returns the Q&A block, invoke `/requirements-write` with the same `scope`, the Q&A block, and the same `existing-doc` (if any). Surface the written artifact path to the user for approval.
-5. After user approval, stage `cortex/requirements/` and commit via `/cortex-core:commit`. Requirements are passive artifacts — do not auto-dispatch any consumer here; downstream skills load them on their own schedule. The glossary is the producer-managed exception: `/requirements-gather` appends terms inline during interviews, but consumers still read it passively (via the tag-based protocol, no consumer-driven writes).
+4. Invoke `/requirements-write` with the same `scope`, the returned Q&A block, and the same `existing-doc` (if any); surface the written artifact path to the user for approval.
+5. After user approval, stage `cortex/requirements/` and commit via `/cortex-core:commit`. Requirements are passive artifacts: do not auto-dispatch any consumer here — downstream skills load them on their own schedule. The glossary is the producer-managed exception (`/requirements-gather` appends terms inline; consumers still read it passively, no consumer-driven writes).

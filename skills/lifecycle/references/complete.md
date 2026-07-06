@@ -11,37 +11,29 @@ Determine the test path from `cortex/lifecycle.config.md`:
 - **config without `test-command`** → ask the user if there are tests to run.
 - **no config** → skip, noting "No `cortex/lifecycle.config.md` found — skipping test step."
 
-If tests fail, report and halt until they are resolved. First-run path only — Step 7's routing skips Step 1 on re-invocation.
+Tests fail → report and halt until resolved. First-run path only — Step 7's routing skips Step 1 on re-invocation.
 
 ### Step 2 — Commit Lifecycle Artifacts
 
-Run `cortex-read-commit-artifacts`. If `true` (the default), stage `cortex/lifecycle/{slug}/` plus any uncommitted source and commit via `/cortex-core:commit`. If `false`, commit only the source (exclude lifecycle artifacts).
+Run `cortex-read-commit-artifacts`. `true` (default) → stage `cortex/lifecycle/{slug}/` plus any uncommitted source and commit via `/cortex-core:commit`. `false` → commit only the source.
 
-**On-main short-circuit**: on `main`/`master`, skip Steps 2–5 (no PR for direct-to-main work) and jump to Steps 9–12 with pr.json absent — the first-run path, no orphan-PR probe. Step 11a's artifact commit still runs.
+**On-main short-circuit**: on `main`/`master`, skip Steps 2–4 (no PR for direct-to-main work) and jump to Steps 9–12 with pr.json absent — no orphan-PR probe. Step 11a's artifact commit still runs.
 
 ### Step 3 — Push Branch and Create PR
 
-Push the branch, then create a PR whose title and body reflect the feature's purpose and link the lifecycle directory.
+Push the branch, then create a PR whose title and body reflect the feature's purpose and link the lifecycle directory. Capture the returned PR number and URL, and the current branch (already known before the push), for Step 4.
 
 **Variant A (advisory, non-blocking)**: if this lifecycle runs from inside an `interactive/{slug}` worktree — both `read_lock(slug)` returns non-None AND `git rev-parse --show-toplevel` is that worktree root — wrap `/cortex-core:pr` in a cd-in-then-out around the worktree. Otherwise invoke `/cortex-core:pr` from the current cwd.
 
-### Step 4 — Write `pr.json` Atomically
+### Step 4 — Record the Opened PR
 
-Resolve repo identity with `gh repo view --json nameWithOwner -q .nameWithOwner`, then write `cortex/lifecycle/{slug}/pr.json` via tempfile + `os.replace` in pr.json's parent directory (per `cortex/requirements/pipeline.md:124-130`):
+One call resolves repo identity, atomically writes `cortex/lifecycle/{slug}/pr.json`, and logs the `pr_opened` event (schema_version-first, per the ADR-0020 hand-written exemption — see the verb for the exact shape). Pass `--url`/`--head-branch` from Step 3 so the verb skips its `gh pr view` fallback:
 
-```json
-{"number": <int>, "url": "<string>", "head_branch": "<string>", "opened_at": "<ISO8601>", "repo": "<owner/name>"}
+```bash
+cortex-lifecycle-record-pr-opened --feature {slug} --number {pr-number} --url {pr-url} --head-branch {head-branch}
 ```
 
-`repo` is resolved at PR-creation and locked so Step 7's `gh pr view --repo <repo>` hits the right repository even if `origin` later changes.
-
-### Step 5 — Emit `pr_opened` Event
-
-Append to `cortex/lifecycle/{slug}/events.log`:
-
-```json
-{"schema_version": 1, "ts": "<ISO8601>", "event": "pr_opened", "feature": "<slug>", "number": <int>, "url": "<string>", "head_branch": "<string>", "repo": "<owner/name>"}
-```
+Act on `state`: `ok` → continue to Step 6. `gh-error` → surface `message` and halt — do not proceed to the handoff without a recorded PR. `repo` is resolved at PR-creation and locked so Step 7's `gh pr view --repo <repo>` hits the right repository even if `origin` later changes.
 
 ### Step 6 — Phase-Exit Pause (Handoff Message)
 
@@ -66,11 +58,7 @@ cortex-lifecycle-complete-route <slug>
 Act on the verdict; do not re-derive it:
 
 - **Terminal** (`message` non-empty, `continue_to: null`): print `message` verbatim and exit — the verb owns the exact recovery/wait text.
-- **`continue_to` set** — continue at the named step:
-  - `already_complete` → **Step 12** (idempotent short-circuit: no re-cleanup, no duplicate `feature_complete`, no second `pr.json`).
-  - `on_main` → **Step 9**.
-  - `first_run` → **Steps 1–6**.
-  - `merged_clean_ancestor` → **Step 8**.
+- **`continue_to` set** — continue at the named step: `already_complete` → **Step 12** (idempotent short-circuit: no re-cleanup, no duplicate `feature_complete`, no second `pr.json`); `on_main` → **Step 9**; `first_run` → **Steps 1–6**; `merged_clean_ancestor` → **Step 8**.
 - **`orphan_ambiguous`** (`continue_to: null`, `candidates` present): multiple orphan PRs match `interactive/<slug>` (slug reuse). Surface the candidates (PR number, state, `mergedAt`), ask which to use, write `pr.json` for it atomically, then re-run `cortex-lifecycle-complete-route <slug>` to classify the chosen PR's state.
 
 ---
@@ -79,11 +67,9 @@ Act on the verdict; do not re-derive it:
 
 **Hard guard**: if `realpath "$PWD"` is inside the target worktree, exit with `cd out of the worktree before running cleanup; current PWD is the worktree being removed.` — do not auto-cd. The user exits (`ExitWorktree action="keep"` when EnterWorktree state is live, else `cd $(git rev-parse --show-toplevel)`) and re-invokes.
 
-**Prefix check**: cleanup runs only for `interactive/`-prefixed worktrees — check `git worktree list --porcelain` for `.claude/worktrees/interactive-{slug}`. No match (Option 1/3 features) → skip silently.
+**Prefix check**: cleanup runs only for `interactive/`-prefixed worktrees — check `git worktree list --porcelain` for `.claude/worktrees/interactive-{slug}`. No match → skip silently.
 
-**Gate** — both required, else skip with a warning:
-1. `git status --porcelain --ignored=traditional` inside the worktree is empty (dirty → skip with warning).
-2. `git merge-base --is-ancestor <branch-head> origin/main` succeeds (non-ancestor → skip with warning).
+**Gate** — both required, else skip with a warning naming the cause (dirty worktree, or non-ancestor branch not in origin/main): (1) `git status --porcelain --ignored=traditional` inside the worktree is empty; (2) `git merge-base --is-ancestor <branch-head> origin/main` succeeds.
 
 **Call**: `cleanup_worktree(slug, branch=f"interactive/{slug}", force=False)`. No `force=True` — on failure, report and retain the worktree.
 
@@ -99,7 +85,7 @@ No item → skip silently. Exit code 2 → apply the ambiguous-slug handling in 
 
 ### Step 10 — Backlog Index Sync
 
-After the Step 9 call (success, failure, or skip), resolve the backend with `cortex-read-backlog-backend` (argless). Any value other than `cortex-backlog` (`none` or an external tracker) → skip with a one-line advisory that index sync is disabled for this repo. On `cortex-backlog` (the default), regenerate via the two-tier fallback: module path `python3 -m cortex_command.backlog.generate_index` first, CLI `cortex-generate-backlog-index` second, else a stale-index warning.
+After the Step 9 call (success, failure, or skip), resolve the backend with `cortex-read-backlog-backend` (argless). Any value other than `cortex-backlog` → skip with a one-line advisory that index sync is disabled for this repo. On `cortex-backlog` (default), regenerate via the two-tier fallback: module path `python3 -m cortex_command.backlog.generate_index` first, CLI `cortex-generate-backlog-index` second, else a stale-index warning.
 
 ### Step 11 — Log `feature_complete`
 

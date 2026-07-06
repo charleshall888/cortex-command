@@ -15,19 +15,13 @@
 | Round | Feature | Backlog | Type | Priority | Pre-work |
 |-------|---------|---------|------|----------|----------|
 | 1 | Add user authentication | #042 | feature | high | plan needed |
-| 1 | Fix pagination bug | #051 | bug | high | plan ready |
-| 1 | Tighten login rate-limit | #053 | bug | high | plan ready |
 | 2 | Add export to CSV | #038 | feature | medium | plan ready |
-| 2 | Wire up audit log writer | #044 | feature | medium | plan ready |
-| 2 | Backfill missing user timestamps | #046 | chore | medium | plan ready |
-| 3 | Add admin-only dashboard route | #049 | feature | medium | plan ready |
-| 3 | Document the auth flow | #055 | chore | low | plan ready |
 
 ## Execution Strategy
 
-- **Rounds**: 3
+- **Rounds**: 2
 - **Throttle**: tier-based adaptive (round size determined by conflict tiers)
-- **Features**: 8 (3 in Round 1, 3 in Round 2, 2 in Round 3)
+- **Features**: 2 (1 per round)
 
 ## Not Ready
 
@@ -37,9 +31,7 @@
 
 ## Risk Assessment
 
-- No file overlap detected within any round's features
-- Round 2 depends on Round 1 completing successfully (audit log writer reads auth state)
-- Round 3 is independent but scheduled after Round 2 to keep dashboard work off a churning auth surface
+- Round 2 depends on Round 1 completing successfully (export reads auth state)
 
 ## Stop Conditions
 
@@ -56,7 +48,6 @@
   "started": "2025-11-14T22:30:15Z",
   "features": [
     "add-user-authentication",
-    "fix-pagination-bug",
     "add-export-to-csv"
   ]
 }

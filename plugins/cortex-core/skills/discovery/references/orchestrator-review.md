@@ -4,10 +4,10 @@ Discovery has no applicability skip rule — orchestrator review always runs for
 
 ## Protocol
 
-Read the canonical orchestrator-review protocol from the lifecycle sibling. The body-resolved path is propagated via discovery SKILL.md as **orchestrator-review** → `skills/lifecycle/references/orchestrator-review.md`. The protocol sections (Execute Review, Handle Verdict, Fix Dispatch, Escalation) apply as written there, with two discovery-specific substitutions:
+Read the canonical orchestrator-review protocol from the lifecycle sibling — the body-resolved path propagated via discovery SKILL.md as **orchestrator-review** → `skills/lifecycle/references/orchestrator-review.md`. Its sections (Execute Review, Handle Verdict, Fix Dispatch, Escalation) apply as written, with two discovery-specific substitutions:
 
-1. **Fix Agent path and persona**: in the fix-agent prompt template (body-resolved **fix-agent-prompt-template** path, discovery SKILL.md propagation), replace `{feature}` with `{topic} discovery topic` and `cortex/lifecycle/{feature}/{artifact}` with `cortex/research/{topic}/{artifact}`. The return envelope is plain prose (`changed [path] — [rationale]`), not the YAML envelope used by lifecycle.
-2. **Checklist**: Use the Post-Research Checklist below instead of the lifecycle Post-Specify / Post-Plan checklists.
+1. **Fix Agent path and persona**: in the fix-agent prompt template (body-resolved **fix-agent-prompt-template** path, discovery SKILL.md propagation), replace `{feature}` with `{topic} discovery topic` and `cortex/lifecycle/{feature}/{artifact}` with `cortex/research/{topic}/{artifact}`. The return envelope is plain prose (`changed [path] — [rationale]`), not lifecycle's YAML envelope.
+2. **Checklist**: use the Post-Research Checklist below instead of the lifecycle Post-Specify / Post-Plan checklists.
 
 ## Checklists
 

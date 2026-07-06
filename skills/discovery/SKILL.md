@@ -22,7 +22,7 @@ Topic: $ARGUMENTS (required — non-empty topic).
 
 Determine the `{{topic}}` from invocation. Use lowercase-kebab-case for directory naming (e.g., `cortex/research/plugin-system/`).
 
-**If `$ARGUMENTS` is empty**: halt with the message "discovery requires a topic argument; for 'what should I work on' or 'next task' routing, use `/cortex-core:dev` instead." Do not proceed to Step 2.
+**If `$ARGUMENTS` is empty**: halt with the message "discovery requires a topic argument; for 'what should I work on' or 'next task' routing, use `/cortex-core:dev` instead."
 
 ## Step 2: Check for Existing State
 
@@ -43,12 +43,12 @@ If resuming, report the detected phase and offer to continue or restart from an 
 
 On a re-run-from-scratch (not resume or update in place) of an existing `cortex/research/{{topic}}/`, do NOT overwrite the prior artifact:
 
-(a) **Fresh slug**: compute a new slug `{{topic}}-N`, N the smallest integer ≥ 2 making the slug unique against every entry directly under `cortex/research/` (e.g. `plugin-system` → `plugin-system-2`).
-(b) **`superseded:` frontmatter on the new artifact**: the newly created `cortex/research/{{topic}}-N/research.md` begins with a YAML frontmatter block that includes a `superseded:` key whose value is the relative path of the prior artifact it supersedes (e.g. `superseded: cortex/research/plugin-system/research.md`). When the re-run itself supersedes an existing `-N` artifact, the `superseded:` value points at that immediately-prior `-N` artifact, not the original.
-(c) **Prior artifact untouched**: the existing `cortex/research/{{topic}}/` (or prior `-N`) directory is read-only for this re-run. No files in it are renamed, moved, or deleted; the decomposed.md (if any) remains in place as a durable audit trail.
-(d) **Reconciliation is manual**: the agent does NOT automatically reconcile the new architecture with the prior one. Surfacing differences, choosing which slug downstream `discovery_source:` fields should point at, and any archival of the prior artifact are explicit user decisions made outside the discovery skill.
+(a) **Fresh slug**: `{{topic}}-N`, N the smallest integer ≥ 2 unique against every entry directly under `cortex/research/` (e.g. `plugin-system` → `plugin-system-2`).
+(b) **`superseded:` frontmatter**: the new `cortex/research/{{topic}}-N/research.md` opens with YAML frontmatter whose `superseded:` key holds the relative path of the artifact it supersedes — the immediately-prior `-N` artifact when re-running over one, not the original.
+(c) **Prior artifact untouched**: the existing directory is read-only for this re-run — nothing renamed, moved, or deleted; `decomposed.md` (if any) stays as a durable audit trail.
+(d) **Reconciliation is manual**: the agent does not auto-reconcile the new architecture with the prior one. Surfacing differences, choosing which slug `discovery_source:` should point at, and archiving the prior artifact are explicit user decisions outside the skill.
 
-Re-run events resolve through the helper's `resolve-events-log-path` (never hardcode the log path), so they land in the `-N` log rather than the superseded artifact's.
+Re-run events resolve through the helper's `resolve-events-log-path` (never hardcode the log path), landing in the `-N` log.
 
 ## Step 3: Execute Current Phase
 
@@ -69,7 +69,7 @@ Read **only** the reference for the current phase.
 
 ### Research → Decompose approval gate (spec R4)
 
-Between the Research and Decompose phases a single-question user-blocking gate fires. The gate's first content section is the contents of `cortex/research/<topic>/brief.md`, generated via:
+Between Research and Decompose a single-question user-blocking gate fires. Its first content section is `cortex/research/<topic>/brief.md`, generated via:
 
 ```
 cortex-discovery generate-brief \
@@ -77,17 +77,14 @@ cortex-discovery generate-brief \
     --persist-to cortex/research/<topic>/brief.md
 ```
 
-If brief generation exits non-zero, OR `brief.md` is missing, OR `brief.md` fails decision-content validation, the gate falls back to displaying the dense `## Architecture` section (sub-sections `### Pieces` and `### How they connect`) and surfaces a warning naming the failure condition (`brief_generation_failed: <reason>`). When `brief.md` is present, the generator exited 0, and the decision-content anchors pass — but the brief's word count exceeds the advisory cap — the gate still displays the brief, followed by a one-line overage note such as "(summary ran N words over the 275-word advisory cap)". No decompose work begins until the user answers. Four options:
+If brief generation exits non-zero, `brief.md` is missing, or it fails decision-content validation, the gate falls back to the dense `## Architecture` section (`### Pieces` and `### How they connect`) with a warning naming the failure (`brief_generation_failed: <reason>`). When `brief.md` is present, valid, and anchor-passing but over the advisory word cap, the gate still displays it, followed by a one-line note such as "(summary ran N words over the 275-word advisory cap)". No decompose work begins until the user answers. Four options:
 
 - **`approve`** — continue to the Decompose phase. The agent emits one `approval_checkpoint_responded` event with `checkpoint: research-decompose`, `response: approve`, and the current `revision_round` integer, then proceeds.
-- **`revise`** — open a free-text revision prompt scoped to the Architecture section. The agent re-walks the Architecture section against the live template in `references/research.md` §6, re-emitting `### Pieces` (named by role, per the role-naming convention) then `### How they connect`, and applying the template's soft "consider merging" guidance when the piece count grows large. It re-presents the gate and increments `revision_round`. Emits one `approval_checkpoint_responded` event with `response: revise` per loop iteration. Loop continues until `approve` or `drop`.
-- **`drop`** — neutral terminus: close discovery when research is sufficient and no tickets are warranted, OR abandon outright. Both uses are legitimate; the user selects `drop` whenever they want to exit without filing tickets, regardless of motive. The agent emits one `approval_checkpoint_responded` event with `response: drop` and exits without writing to `cortex/backlog/`. The research artifact stays in place as a durable audit trail.
-- **`promote-sub-topic`** — the user supplies a sub-topic description; invoke `/backlog-author compose` with it as the context block, including a `## Promoted from` section reading exactly `## Promoted from\n\nDiscovery: cortex/research/<current-topic>/`. Resolve the active backend once with `` `cortex-read-backlog-backend` `` (argless) and route the create of a single `needs-discovery` ticket:
-  - **`cortex-backlog`** (the default arm) → call `cortex-create-backlog-item --title "investigate ..." --status needs-discovery --type discovery --body "<composed-body>"`.
-  - **`none`** → do not call the create CLI; surface the composed title and body inline in `cortex/research/<current-topic>/` with a one-line advisory that ticket creation is disabled for this repo.
-  - **any other value** (an external tracker) → create the equivalent `needs-discovery` item best-effort using the config `backlog.instructions` and your judgment (e.g. `gh issue create`), surfacing the body inline if it cannot be filed.
+- **`revise`** — free-text revision scoped to the Architecture section: the agent re-walks it against the live template in `references/research.md` §6, re-emitting `### Pieces` (named by role) then `### How they connect`, re-presents the gate, and increments `revision_round`. Emits one `approval_checkpoint_responded` event with `response: revise` per iteration. Loops until `approve` or `drop`.
+- **`drop`** — neutral terminus: close discovery when research is sufficient and no tickets are warranted, OR abandon outright — both legitimate, motive-agnostic. The agent emits one `approval_checkpoint_responded` event with `response: drop` and exits without writing to `cortex/backlog/`; the research artifact stays in place as a durable audit trail.
+- **`promote-sub-topic`** — the user supplies a sub-topic description; invoke `/backlog-author compose` with it as context, including a `## Promoted from` section reading exactly `## Promoted from\n\nDiscovery: cortex/research/<current-topic>/`. Resolve the backend once with `cortex-read-backlog-backend` and route creation of a single `needs-discovery` ticket: **`cortex-backlog`** (default) → `cortex-create-backlog-item --title "investigate ..." --status needs-discovery --type discovery --body "<composed-body>"`; **`none`** → surface the title and body inline in `cortex/research/<current-topic>/` with a one-line advisory that ticket creation is disabled for this repo; **any other value** (external tracker) → create the equivalent item best-effort per `backlog.instructions`, surfacing the body inline if it can't be filed.
 
-  The body-section reference is the sole linkage (no frontmatter pointer); no nested `/cortex-core:discovery`. Then emit one `approval_checkpoint_responded` event with `response: promote-sub-topic` and return to this gate (the user can still `approve`, `revise`, or `drop`).
+  The body-section reference is the sole linkage (no frontmatter pointer, no nested `/cortex-core:discovery`). Emit one `approval_checkpoint_responded` event with `response: promote-sub-topic` and return to this gate (the user can still `approve`, `revise`, or `drop`).
 
 All emissions go through the helper module — never hardcode the events.log path. Invoke via:
 
@@ -102,7 +99,7 @@ The helper resolves the correct events.log target (lifecycle-attached, R13 re-ru
 
 ### Decompose-commit batch-review gate
 
-Within the Decompose phase, a user-blocking post-decompose batch-review gate (`checkpoint: decompose-commit`) fires after all ticket bodies are authored and the prescriptive-prose scanner has passed, BEFORE any tickets commit to `cortex/backlog/`. The gate offers `approve-all`, `revise-piece <N>`, `drop-piece <N>`, `consolidate-pieces <N,M,...>`, and `split-piece <N>` options and emits an `approval_checkpoint_responded` event per response. See decompose.md §5 for the gate semantics.
+In the Decompose phase, a user-blocking post-decompose batch-review gate (`checkpoint: decompose-commit`) fires after all ticket bodies are authored and the prescriptive-prose scanner has passed, before any commit to `cortex/backlog/` — offering `approve-all`, `revise-piece <N>`, `drop-piece <N>`, `consolidate-pieces <N,M,...>`, and `split-piece <N>`, each emitting an `approval_checkpoint_responded` event. See decompose.md §5 for gate semantics.
 
 ## Phase Transition
 
@@ -114,4 +111,4 @@ One active discovery at a time. If multiple incomplete `cortex/research/*/` dire
 
 ## Relationship to /cortex-core:lifecycle
 
-When `/cortex-core:discovery` creates backlog tickets, each ticket receives a `discovery_source:` field pointing to the research artifact. When `/cortex-core:lifecycle` starts on that ticket, it automatically loads the prior research, presents a summary, and asks whether to skip re-investigation (default: skip). In pipeline or overnight contexts the skip is applied automatically. To re-investigate from scratch, choose N at the prompt.
+When `/cortex-core:discovery` creates backlog tickets, each receives a `discovery_source:` field pointing to the research artifact. When `/cortex-core:lifecycle` starts on that ticket, it auto-loads the prior research, presents a summary, and asks whether to skip re-investigation (default: skip; pipeline/overnight contexts apply the skip automatically). Choose N at the prompt to re-investigate from scratch.

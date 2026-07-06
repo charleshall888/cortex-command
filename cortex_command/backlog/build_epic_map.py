@@ -177,6 +177,25 @@ def build_epic_map(items: list[dict], strict_schema: bool = True) -> dict:
 # CLI entry point
 # ---------------------------------------------------------------------------
 
+_SCHEMA_DESCRIPTION = """\
+{
+  "schema_version": "1",
+  "epics": {
+    "<epic_id>": {
+      "children": [
+        {"id": <num>, "spec": <str|null>, "status": <str>, "title": <str>},
+        ...
+      ]
+    },
+    ...
+  }
+}
+
+Epics are ordered by integer id ascending; children are ordered by id
+ascending. Each child's keys are inserted in lexicographic order (id, spec,
+status, title). A non-null "spec" marks the child as refined."""
+
+
 def _build_argparser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="cortex-build-epic-map",
@@ -192,6 +211,11 @@ def _build_argparser() -> argparse.ArgumentParser:
         default="cortex/backlog/index.json",
         help="Path to backlog index.json (default: cortex/backlog/index.json, resolved relative to CWD).",
     )
+    parser.add_argument(
+        "--describe-schema",
+        action="store_true",
+        help="Print the output JSON envelope's schema description and exit 0.",
+    )
     return parser
 
 
@@ -200,6 +224,10 @@ def main(argv: list[str] | None = None) -> int:
     _telemetry.log_invocation("cortex-build-epic-map")
     parser = _build_argparser()
     args = parser.parse_args(argv)
+
+    if args.describe_schema:
+        print(_SCHEMA_DESCRIPTION)
+        return 0
 
     index_path = Path(args.index_path)
     try:

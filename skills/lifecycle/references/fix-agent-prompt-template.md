@@ -15,13 +15,12 @@ Read cortex/lifecycle/{feature}/{artifact} for the current content.
 {paste the relevant checklist from the canonical protocol's Checklists section}
 
 ## Instructions
-1. Rewrite the ENTIRE artifact to address the flagged issue, preserving all correct existing content — rewrite the full file, don't patch sections, to keep internal coherence.
+1. Rewrite the ENTIRE artifact to address the flagged issue, preserving all correct existing content — don't patch sections.
 2. Write the revised artifact to cortex/lifecycle/{feature}/{artifact}.
-3. End your return with a YAML-style envelope using these three fields, and emit no prose before or after it:
+3. End your return with this envelope, no prose before or after it:
    verdict: revised | failed
    files_changed: [<path>, ...]
    rationale: <≤15 words>
 
-The artifact must still conform to the format defined in the {phase} phase reference.
-Do not add content beyond what the phase requires.
+The artifact must conform to the {phase} phase reference's format. Do not add content beyond what the phase requires.
 ```

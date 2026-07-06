@@ -2201,8 +2201,15 @@ def handle_launch(args: argparse.Namespace) -> int:
     # (2) Validate target repos BEFORE any mutation.
     repo_failures = plan_module.validate_target_repos(selection)
     if repo_failures:
+        # Relay-ready sentence (moved from new-session-flow.md sub-step 0):
+        # the skill's block previously authored this remediation text itself
+        # from the bare ``repos`` list; it now relays ``message`` verbatim.
         message = (
-            "target repo validation failed for: " + ", ".join(repo_failures)
+            "Cannot start overnight session: the following repo: paths are "
+            "not valid git repositories:\n"
+            + "\n".join(f"  - {path}" for path in repo_failures)
+            + "\nRun `git clone <url> <path>` or correct the repo: field "
+            "in the affected backlog items."
         )
         if fmt == "json":
             _emit_json(
@@ -2241,8 +2248,9 @@ def handle_launch(args: argparse.Namespace) -> int:
         # On bootstrap failure the session id is unknown, so a leaked
         # worktree cannot be targeted here; the skill-flow / operator runs
         # ``git worktree prune`` (documented in new-session-flow.md). Surface
-        # the error and abort.
-        message = f"failed to bootstrap overnight session: {exc}"
+        # the error and abort. Relay-ready sentence (capitalized, punctuated)
+        # so the skill can relay ``message`` verbatim.
+        message = f"Failed to bootstrap overnight session: {exc}."
         if fmt == "json":
             _emit_json({"error": "bootstrap_failed", "message": message})
         else:

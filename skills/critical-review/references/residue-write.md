@@ -20,7 +20,7 @@ Route on the console-script's exit code; propagate any failure:
 
 ## Atomic Write
 
-Only when `{feature}` resolved AND ≥1 B-class finding — invoke the `cortex-critical-review-write-residue` console-script, writing `cortex/lifecycle/{feature}/critical-review-residue.json`. The payload JSON is piped in via stdin:
+Only when `{feature}` resolved AND ≥1 B-class finding — invoke `cortex-critical-review-write-residue`, writing `cortex/lifecycle/{feature}/critical-review-residue.json` via stdin:
 
 ```bash
 cortex-critical-review-write-residue --feature "$FEATURE" <<< "$PAYLOAD_JSON"
@@ -50,4 +50,4 @@ cortex-critical-review-write-residue --feature "$FEATURE" <<< "$PAYLOAD_JSON"
 
 - Zero B-class findings → no file, no note.
 - Synthesis failure → write `synthesis_status: "failed"` with B-class findings from Step 2c reviewers' envelopes.
-- Path-argument (`/cortex-core:critical-review <path>`) and auto-trigger invocations (specify.md §3b / plan.md) both obey session-bound resolution — the argument path does not re-bind `{feature}`.
+- Path-argument and auto-trigger invocations (specify.md §3b / plan.md) both obey session-bound resolution — the argument path does not re-bind `{feature}`.
