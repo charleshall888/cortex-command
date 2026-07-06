@@ -9,8 +9,10 @@ Covers the ``emit-lifecycle-start`` subcommand:
   - R3: ``test_emit_lifecycle_start_idempotent`` — pre-seeded events.log
     with a ``lifecycle_start`` row → second invocation no-ops.
   - R5: ``test_emit_lifecycle_start_rejects_invalid_value`` —
-    parametrized over ``criticality: extreme`` and ``complexity: medium``
-    (wrong dimension).
+    parametrized over ``criticality: extreme`` and ``complexity: enormous``
+    (unknown value). Legacy vocabulary (``trivial``/``medium``/``moderate``)
+    is coerced, not rejected — see
+    ``test_emit_lifecycle_start_coerces_legacy_complexity`` (#369).
   - R11: ``test_emit_lifecycle_start_matches_227_repro_scenario`` —
     backlog with ``criticality: high`` + ``complexity: simple`` →
     ``read_criticality`` returns ``"high"`` and ``read_tier`` returns
@@ -263,9 +265,9 @@ def test_emit_lifecycle_start_idempotent(
             "extreme",
         ),
         (
-            "complexity_medium_wrong_dimension",
-            ["title: Foo", "criticality: high", "complexity: medium"],
-            "medium",
+            "complexity_unknown_value",
+            ["title: Foo", "criticality: high", "complexity: enormous"],
+            "enormous",
         ),
     ],
 )
@@ -300,6 +302,90 @@ def test_emit_lifecycle_start_rejects_invalid_value(
     assert exc_info.value.code != 0, f"scenario={scenario}"
     captured = capsys.readouterr()
     assert bad_value in captured.err, f"scenario={scenario}: stderr={captured.err!r}"
+    assert "cortex-update-item" in captured.err, (
+        f"scenario={scenario}: diagnostic must name the remediation command; "
+        f"stderr={captured.err!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Legacy complexity vocabulary coerced instead of hard-failing (#369)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "legacy_value,expected_tier",
+    [
+        ("trivial", "simple"),
+        ("medium", "complex"),
+        ("moderate", "complex"),
+    ],
+)
+def test_emit_lifecycle_start_coerces_legacy_complexity(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    legacy_value: str,
+    expected_tier: str,
+) -> None:
+    """Pre-two-tier complexity values coerce with a stderr warning (#369).
+
+    ``moderate``/``medium`` map to ``complex`` (clarify.md §5: when in
+    doubt, prefer complex); ``trivial`` maps to ``simple``. The seed row
+    carries the coerced tier and the command exits 0.
+    """
+    monkeypatch.chdir(tmp_path)
+    _write_backlog(
+        tmp_path,
+        "111-legacy",
+        ["title: Foo", "criticality: high", f"complexity: {legacy_value}"],
+    )
+
+    rc = main(
+        [
+            "emit-lifecycle-start",
+            "--backlog-slug",
+            "111-legacy",
+            "--lifecycle-slug",
+            "feat",
+        ]
+    )
+    assert rc == 0
+
+    captured = capsys.readouterr()
+    assert legacy_value in captured.err
+    assert expected_tier in captured.err
+
+    rows = _read_jsonl(_events_log_path(tmp_path, "feat"))
+    assert rows[0]["tier"] == expected_tier
+    assert rows[0]["criticality"] == "high"
+
+
+def test_emit_lifecycle_start_treats_yaml_null_as_absent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``complexity: null`` / ``criticality: null`` fall back to defaults."""
+    monkeypatch.chdir(tmp_path)
+    _write_backlog(
+        tmp_path,
+        "112-null",
+        ["title: Foo", "criticality: null", "complexity: null"],
+    )
+
+    rc = main(
+        [
+            "emit-lifecycle-start",
+            "--backlog-slug",
+            "112-null",
+            "--lifecycle-slug",
+            "feat",
+        ]
+    )
+    assert rc == 0
+
+    rows = _read_jsonl(_events_log_path(tmp_path, "feat"))
+    assert rows[0]["tier"] == "simple"
+    assert rows[0]["criticality"] == "medium"
 
 
 # ---------------------------------------------------------------------------

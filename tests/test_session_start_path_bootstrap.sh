@@ -88,6 +88,16 @@ if [[ -f "$ENV_FILE" ]]; then
   fi
 fi
 
+# Verify the env file exports LIFECYCLE_SESSION_ID from the hook input's
+# session_id (lifecycle skill Step 2 writes it to .session; see #369).
+if [[ -f "$ENV_FILE" ]]; then
+  if [[ "${LIFECYCLE_SESSION_ID:-}" == "test-bootstrap-001" ]]; then
+    pass "path-bootstrap/lifecycle-session-id-exported"
+  else
+    fail "path-bootstrap/lifecycle-session-id-exported" "LIFECYCLE_SESSION_ID='${LIFECYCLE_SESSION_ID:-}' after sourcing env file, expected 'test-bootstrap-001'; contents: $(cat "$ENV_FILE")"
+  fi
+fi
+
 # ---------------------------------------------------------------------------
 # Test (b): non-cortex-shaped directory — hook exits 0, PATH not mutated
 # ---------------------------------------------------------------------------

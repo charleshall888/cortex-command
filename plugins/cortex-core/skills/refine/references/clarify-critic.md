@@ -11,7 +11,7 @@ The orchestrator provides two inputs in the dispatch prompt (the critic reads no
 
 ## Parent Epic Loading (orchestrator)
 
-Before building the dispatch prompt, the orchestrator (Context A only) calls `cortex-load-parent-epic <child-slug>` (see its docstring for the JSON-shape/exit-code contract) to decide whether the alignment sub-rubric is included. Every `status` except `loaded` sets `parent_epic_loaded = false`, omitting the `## Parent Epic Alignment` section; only `missing`/`unreadable` also emit a warning — verbatim, never raw filesystem error text or helper stderr:
+Before building the dispatch prompt, the orchestrator (Context A only) calls `cortex-load-parent-epic <child-slug>` (see its docstring for the JSON-shape/exit-code contract) to decide whether the alignment sub-rubric is included. `<child-slug>` is the **backlog-filename slug** (e.g. `119-create-refine-skill`, the `cortex/backlog/{slug}.md` stem) — passing the lifecycle slug returns `not found`. Every `status` except `loaded` sets `parent_epic_loaded = false`, omitting the `## Parent Epic Alignment` section; only `missing`/`unreadable` also emit a warning — verbatim, never raw filesystem error text or helper stderr:
 
 - `missing`: `"Parent epic <id> referenced but file missing — alignment evaluation skipped."`
 - `unreadable`: `"Parent epic <id> referenced but file is unreadable — alignment evaluation skipped."`

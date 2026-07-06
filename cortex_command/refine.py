@@ -23,6 +23,21 @@ from cortex_command.common import reduce_lifecycle_state
 _ALLOWED_CRITICALITY: frozenset[str] = frozenset({"low", "medium", "high", "critical"})
 _ALLOWED_COMPLEXITY: frozenset[str] = frozenset({"simple", "complex"})
 
+# Legacy pre-two-tier complexity vocabulary, coerced with a stderr warning
+# instead of hard-failing (readers tolerate every prior shape — see
+# clarify-critic.md's event-schema rule). Mid-scale values map to "complex"
+# per clarify.md §5's "when in doubt, prefer complex"; Clarify re-assesses
+# and writes the reconciled value back regardless.
+_LEGACY_COMPLEXITY_MAP: dict[str, str] = {
+    "trivial": "simple",
+    "medium": "complex",
+    "moderate": "complex",
+}
+
+# The regex frontmatter reader returns YAML nulls as literal strings; treat
+# them as an absent key (defaults apply) rather than an invalid value.
+_YAML_NULL_LITERALS: frozenset[str] = frozenset({"null", "~", "None"})
+
 # Monotonic ordering for the no-downgrade guard (R4). An override is appended
 # only when the desired value ranks strictly above the current reduced value.
 # Unknown values rank below every canonical value (-1) so a non-canonical
@@ -45,9 +60,13 @@ def _read_backlog_frontmatter(backlog_slug: str | None) -> tuple[str, str]:
     :func:`_get_frontmatter_value`. Absent keys fall back to defaults.
 
     Validates ``criticality`` against ``{low, medium, high, critical}`` and
-    ``complexity`` against ``{simple, complex}``. On an invalid value,
-    prints a stderr diagnostic naming the invalid value, file path, and
-    allowed set, then exits with status 64 (``EX_USAGE``).
+    ``complexity`` against ``{simple, complex}``. Legacy pre-two-tier
+    complexity values (``trivial``, ``medium``, ``moderate``) are coerced
+    via :data:`_LEGACY_COMPLEXITY_MAP` with a stderr warning; YAML null
+    literals are treated as absent. On any other invalid value, prints a
+    stderr diagnostic naming the invalid value, file path, allowed set,
+    and the ``cortex-update-item`` remediation, then exits with status 64
+    (``EX_USAGE``).
     """
     if backlog_slug is None:
         return ("simple", "medium")
@@ -60,24 +79,35 @@ def _read_backlog_frontmatter(backlog_slug: str | None) -> tuple[str, str]:
     criticality = _get_frontmatter_value(text, "criticality")
     complexity = _get_frontmatter_value(text, "complexity")
 
-    if criticality is None:
+    if criticality is None or criticality in _YAML_NULL_LITERALS:
         criticality = "medium"
     elif criticality not in _ALLOWED_CRITICALITY:
         allowed = ", ".join(sorted(_ALLOWED_CRITICALITY))
         print(
             f"cortex-refine: invalid criticality value {criticality!r} in "
-            f"{backlog_path} (allowed: {allowed})",
+            f"{backlog_path} (allowed: {allowed}). Fix with: "
+            f"cortex-update-item {backlog_slug} --criticality <value>",
             file=sys.stderr,
         )
         sys.exit(64)
 
-    if complexity is None:
+    if complexity is None or complexity in _YAML_NULL_LITERALS:
         complexity = "simple"
+    elif complexity in _LEGACY_COMPLEXITY_MAP:
+        coerced = _LEGACY_COMPLEXITY_MAP[complexity]
+        print(
+            f"cortex-refine: legacy complexity value {complexity!r} in "
+            f"{backlog_path} coerced to {coerced!r} (Clarify re-assesses "
+            f"and writes back the two-tier value)",
+            file=sys.stderr,
+        )
+        complexity = coerced
     elif complexity not in _ALLOWED_COMPLEXITY:
         allowed = ", ".join(sorted(_ALLOWED_COMPLEXITY))
         print(
             f"cortex-refine: invalid complexity value {complexity!r} in "
-            f"{backlog_path} (allowed: {allowed})",
+            f"{backlog_path} (allowed: {allowed}). Fix with: "
+            f"cortex-update-item {backlog_slug} --complexity <value>",
             file=sys.stderr,
         )
         sys.exit(64)

@@ -106,3 +106,4 @@ Announce refine is complete: the item (`{backlog-filename-slug}`), the lifecycle
 | Thought | Reality |
 |---------|---------|
 | "Use the lifecycle-slug as the cortex-update-item argument" | cortex-update-item takes the backlog-filename-slug (e.g. 119-create-refine-skill), not the lifecycle-slug. |
+| "Use the lifecycle-slug as the cortex-load-parent-epic argument" | cortex-load-parent-epic takes the backlog-filename-slug too — the lifecycle-slug returns `not found`. |
