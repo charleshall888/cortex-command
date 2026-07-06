@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 4557df28-4a0f-41f3-8f4a-ccaec5f746b0
 title: Backfill orphaned applied_in_commit and relocate drifted ledger anchors in master_candidates.json
-status: backlog
+status: complete
 priority: low
 type: chore
 created: 2026-07-03
-updated: 2026-07-03
+updated: 2026-07-06
 parent: "357"
 areas: ['skills']
 ---

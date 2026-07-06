@@ -2,14 +2,14 @@
 schema_version: "1"
 uuid: 1a162236-8dc9-4451-90f1-afb75a17ef6e
 title: 'Skill value scorecard follow-through: verified trims and offloads'
-status: backlog
+status: complete
 priority: medium
 type: epic
 tags: ['skill-value-scorecard']
 areas: [skills]
 discovery_source: cortex/research/skill-value-scorecard/report.html
 created: 2026-07-02
-updated: 2026-07-02
+updated: 2026-07-06
 ---
 ## Why
 The 2026-07 skill value scorecard audit (cortex/research/skill-value-scorecard/) scored all 528 sections of the four core skill clusters plus transitive loads: 137k weighted hot-path tokens, 265 trim candidates, 96 verified safe by adversarial refutation with named preconditions. Eight verified COMPRESS verdicts with the narrowest blast radius were applied directly on branch skill-value-trims (marked applied_in_commit in master_candidates.json); the remaining verified work is larger, structural, or editorially sensitive and belongs in lifecycle-managed tickets.

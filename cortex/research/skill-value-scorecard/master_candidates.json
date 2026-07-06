@@ -29,7 +29,8 @@
     "evidence": "(a) Pins: no test, lint, or hook greps this prose. tests/test_complexity_escalator.py, tests/test_cortex_complexity_escalator_parity.py, and tests/test_variant_a_writer_sites_baseline.py pin gate names and CLI surface only; the sole repo-wide textual overlap in tests ('malformed input' at tests/test_cortex_rewrite_cli_pin.py:284) is an unrelated tag-parsing docstring. The md's only structural couplings are existence-level: skills/lifecycle/SKILL.md:155 substitutes it as <COMPLEXITY_ESCALATION_MD> into refine-delegation.md, so content edits are free. (b) Provenance: git log --follow shows a sin",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim complexity-escalation, post-refine-commit, parallel-exec (#353)"
  },
  {
   "id": "s1",
@@ -62,7 +63,8 @@
     "evidence": "(a) Pins: repo-wide grep for the intro's distinctive phrases ('Complexity Escalation Gates', 'complexity-escalation gates run', 'route based on exit code') across tests/, hooks/, cortex_command/, bin/, skills/, plugins/ returns zero hits outside the file itself \u2014 no wording pin. skills/lifecycle/SKILL.md:155 (+ mirror :155) pins only the path and the <COMPLEXITY_ESCALATION_MD> substitution token. tests/test_lifecycle_references_resolve.py pins existence plus one line-anchored citation: cortex/research/harness-friction-triage/research.md:35 cites 'complexity-escalation.md:3,7,15', but the file_",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim complexity-escalation, post-refine-commit, parallel-exec (#353)"
  },
  {
   "id": "s2",
@@ -95,7 +97,8 @@
     "evidence": "(a) Pins: tests/test_lifecycle_event_roundtrip.py:147 FILE_EVENTS pins only the invocation (criticality_override:1, from/to field-map via parse_invocations) \u2014 the claim keeps it untouched. No live test/lint pins the narration paragraphs: grep of tests/hooks/bin/cortex_command for 'criticality-matrix' hits only the roundtrip test and bin/.events-registry.md (a producer listing satisfied by the kept invocation; test_check_events_registry.py runs on tmp fixtures and only checks event registration). All cross-references from other skills (lifecycle SKILL.md:100,157,191; plan.md; implement.md; refi",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim criticality-matrix; extract seed-reconcile ordering (#353)"
  },
  {
   "id": "s5",
@@ -126,7 +129,8 @@
     "evidence": "Angle (a) pins: no test, lint, hook, or ADR anchors the heading or its prose. tests/test_lifecycle_event_roundtrip.py:147 pins criticality-matrix.md to exactly one criticality_override invocation, but parse_invocations (line 86) only matches lines containing 'cortex-lifecycle-event' + '--event' \u2014 that invocation is the code fence at line 8 of the reference, and lines 36-43 contain none, so the FILE_EVENTS count is untouched. docs/index.html:8161 cites only the behavior-matrix escalation rules; ADR-0023 cites the file for the model-matrix-owner constraint (line 24); lifecycle SKILL.md:100/157/1",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim criticality-matrix; extract seed-reconcile ordering (#353)"
  },
  {
   "id": "s4",
@@ -161,7 +165,8 @@
     "evidence": "(a) Pins: no test or lint pins lines 28-35's text. tests/test_lifecycle_event_roundtrip.py:147 pins criticality-matrix.md to exactly one criticality_override invocation-shaped line \u2014 that anchors line 8 in \u00a7Criticality Override, not this section (prose mentions in bullets don't match the invocation parser). ADR-0023 cites this file only for the model-matrix single-owner constraint (line 24). skills/morning-review/references/walkthrough.md:238 independently restates the reduction rules and is untouched (separate MERGE_DEDUP candidate). All 6 citers reference by heading + 'rules:' pointer, kept ",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim criticality-matrix; extract seed-reconcile ordering (#353)"
  },
  {
   "id": "s3",
@@ -194,7 +199,8 @@
     "evidence": "(a) Pins: tests/test_lifecycle_event_roundtrip.py:147 pins only the criticality_override invocation at line 8, not lines 15-27; tests/test_research_fanout_matrix.py parses skills/research fanout.md, not this file; docs/index.html:8161 mirrors matrix semantics in a JS comment (all mirrored facts remain in the kept table); ADR-0023 names this file only for the cortex-resolve-model single-matrix-owner pointer (line 24, kept). No test/lint pins line 26 or the repeated cell text. (b) Provenance: line 26 added in f019345a fixing a real contradiction (table said 'Single research' at low/medium/high v",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim criticality-matrix; extract seed-reconcile ordering (#353)"
  },
  {
   "id": "s3",
@@ -227,7 +233,8 @@
     "evidence": "Read critical-review-gate.md:9-14. (a) Pins: tests/test_critical_review_gate_nonlocal_failsafe.py::test_gate_ref_documents_nonlocal_seed_tier_rule asserts presence of cortex-read-backlog-backend / 'non-local' (case-insensitive, satisfied by heading) / 'simple' / 'research.md'; cortex-read-backlog-backend lives only in line 11, refuting the scorer's 'all tokens survive in the condition sentence' but fixable by moving the token into the compressed condition. The sibling wiring test (test_specify_3b_reads_backend_before_skip_decision) covers only specify.md, not plan.md or this file. tests/test_l",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim critical-review-gate seed-tier rule and matrix (#353)"
  },
  {
   "id": "s4",
@@ -259,7 +266,8 @@
     "evidence": "(a) Pins: tests/test_lifecycle_event_roundtrip.py:116-118,150-152 requires exactly 1 lifecycle_critical_review_skipped invocation in this file with set-keys phase/tier/criticality \u2014 line 29 is kept verbatim, pin cost 0. tests/test_critical_review_gate_nonlocal_failsafe.py asserts only tokens cortex-read-backlog-backend / 'non-local' / 'simple' / 'research.md', all in kept sections (lines 9-13, 24); its line-28 'Run/Skip Matrix skip-silents' mention is a docstring comment, not an assertion. Repo-wide grep found no other test/lint/hook/ADR anchored to the table or Run paragraph. (b) Provenance: ",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim critical-review-gate seed-tier rule and matrix (#353)"
  },
  {
   "id": "s3",
@@ -327,7 +335,8 @@
     "evidence": "(a) Pins: no test, lint, hook, or ADR pins the enumeration prose. grep for 'byte-faithful|7-field|wikilink' across tests/, skills/, cortex_command/ hits the clause only in discovery-bootstrap.md:7 itself; tests/test_create_index.py asserts the VERB's rendered output (Shape A/B, skip-if-exists, no-silent-fallback), never reads skill prose. cortex_command/lifecycle/create_index.py:1-33 docstring already documents byte-faithful/7-field/two-shapes/wikilink in full; its line-5 cite of discovery-bootstrap.md is historical ('previously narrated as hand-executed prose') and stays accurate after the tr",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim load-requirements, discovery-bootstrap, refine-delegation (#353)"
  },
  {
   "id": "s5",
@@ -360,7 +369,8 @@
     "evidence": "(a) Pins: repo-wide grep for 'Refine Starting-Point Rules' hits only refine-delegation.md:9 (canonical + auto-regenerated mirror), the file itself, and cortex/lifecycle/offload-lifecycle-step-2-backlog-write/plan.md \u2014 a completed #326 plan artifact, not a live consumer. No test/lint/hook greps the section body (tests/ grep for 'Starting-Point' is empty; test_superseded_frontmatter_tolerance.py pins the resolver binary, not this prose). The heading pointer is the only live pin and the claim preserves it verbatim, so pin+prose combined change cost is just the body rewrite. (b) Provenance: git lo",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim load-requirements, discovery-bootstrap, refine-delegation (#353)"
  },
  {
   "id": "s4",
@@ -392,7 +402,8 @@
     "evidence": "(a) Pins: 'Epic Context Injection' appears only in refine-delegation.md:7 (heading-anchored prose pointer, kept verbatim under the claim), the auto-generated plugins/cortex-core mirror, and one historical lifecycle plan.md artifact. No test/lint/hook consumes the section body: grep of tests/ for 'Epic Context|epic_research_path|discovery-bootstrap' hits only test_superseded_frontmatter_tolerance.py, which exercises the bin/cortex-resolve-backlog-item loader, not this prose. '## Epic Reference' is produced-only: research/SKILL.md:199 states the only machine-parsed research.md heading is '## Ope",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim load-requirements, discovery-bootstrap, refine-delegation (#353)"
  },
  {
   "id": "s3",
@@ -490,7 +501,8 @@
     "evidence": "(a) Pins: tests/test_post_refine_commit_wired.py:138-167 pins only tokens outside Constraints (cortex-lifecycle-stage-artifacts, cortex-read-commit-artifacts, /cortex-core:commit, halt tokens satisfied at line 40, cancel tokens at lines 31-34) \u2014 none anchor to lines 42-46. grep for 'No user pause' across skills/tests/docs/adr returns only this file; kept-pauses.md inventory and the parity test never mention post-refine-commit. The parity-scanner pin is an absence pin (no AskUserQuestion token), which the claim already respects. Event-type discipline is structurally enforced by the bin/cortex-c",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim complexity-escalation, post-refine-commit, parallel-exec (#353)"
  },
  {
   "id": "s2",
@@ -522,7 +534,8 @@
     "evidence": "(a) Pins: tests/test_post_refine_commit_wired.py:150 asserts only token presence ('cortex-read-commit-artifacts' in text) plus /cortex-core:commit, a halt token, a cancel token, and the stage-artifacts token \u2014 no assertion on 'default', 'absent', 'stdout', or the parenthetical; tests/test_lifecycle_kept_pauses_parity.py has zero references to post-refine-commit.md; the default semantics are behaviorally pinned in code by tests/test_lifecycle_config_commit_artifacts.py (missing-file->True, field-absent->True, malformed-YAML->True+stderr warn, fail-open _main prints 'true\\n'), which is exactly t",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim complexity-escalation, post-refine-commit, parallel-exec (#353)"
  },
  {
   "id": "s5",
@@ -554,7 +567,8 @@
     "evidence": "(a) Pins: tests/test_lifecycle_event_roundtrip.py:156-159 pins {lifecycle_start: 1, phase_transition: 1} for this file, but parse_invocations (:75-95) only inspects lines containing both 'cortex-lifecycle-event' and '--event' \u2014 lines 17/21 never enter the parser, so trimming their prose cannot alter counts or field maps as long as the fences are untouched. tests/test_post_refine_commit_wired.py:87-116 requires one line containing all of ['phase_transition','specify','plan'] with 'post-refine-commit' within 50 lines after: line 21's kept enumeration satisfies the anchor, and line 26 ('after the",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim load-requirements, discovery-bootstrap, refine-delegation (#353)"
  },
  {
   "id": "s2",
@@ -585,7 +599,8 @@
     "evidence": "(a) Pins: no test or lint greps the guard sentences. tests/test_post_refine_commit_wired.py pins Step 4/6 tokens (phase_transition specify->plan, lifecycle_cancelled, post-refine-commit); tests/test_lifecycle_event_roundtrip.py:156 pins the two event invocations in Step 4; tests/test_skill_handoff.py's verbatim-checked phrases are its own docstring policy phrases, unrelated. The only anchor is the unenforced prose manifest parenthetical at skills/lifecycle/SKILL.md:153, whose siblings (154-156) already use plain 'read in', so the combined pin+prose change cost is one word. (b) Provenance: git ",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim load-requirements, discovery-bootstrap, refine-delegation (#353)"
  },
  {
   "id": "s3",
@@ -616,7 +631,8 @@
     "evidence": "(a) Pins: exhaustive grep for 'refine-delegation.md Step' found exactly four step-number pins, all prose lines in skills/lifecycle/SKILL.md:153-156 (Step 1 unaffected; Steps 2-3, Step 5, Step 6 need renumber) \u2014 same file, adjacent lines, trivially co-committed. No test asserts step numbers: tests/test_post_refine_commit_wired.py checks token presence/distance (phase_transition specify\u2192plan, lifecycle_cancelled, post-refine-commit within 50 lines \u2014 all in Steps 4/6 content, untouched); tests/test_lifecycle_event_roundtrip.py:156 counts event invocations (lifecycle_start=1, phase_transition=1 in",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim load-requirements, discovery-bootstrap, refine-delegation (#353)"
  },
  {
   "id": "s2",
@@ -714,7 +730,8 @@
     "evidence": "(a) Pins: tests/test_lifecycle_event_roundtrip.py:154 (SITE_EXPECTATIONS feature_complete:1) + :121 (CANONICAL feature_complete=[{}]) parse only the invocation line, not surrounding prose; tests/test_lifecycle_kept_pauses_parity.py:28 LINE_TOLERANCE=35 with anchor backlog-writeback.md:11 vs actual AskUserQuestion at line 22 -- both trims (lines 33, 38-42) are below the pause so it cannot drift out of tolerance; repo-wide grep found no test/lint pinning the none/external routing prose in this file, and all external references to backlog-writeback.md (complete.md:133/137, plan.md:153, review.md:",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim backlog-writeback status-check and exit-2 rule (#353)"
  },
  {
   "id": "s5",
@@ -746,7 +763,8 @@
     "evidence": "(a) Pins: tests/test_lifecycle_event_roundtrip.py:153 pins only this file's feature_complete cortex-lifecycle-event invocation (line 35, untouched). tests/test_lifecycle_kept_pauses_parity.py anchors the AskUserQuestion pause at backlog-writeback.md:11 with a \u00b120-line tolerance (test docstring line 9); the deletion at line 62 shifts no earlier lines. No lint/hook/ADR anchors the enumeration text; the citers (complete.md:133, refine clarify.md:112, refine SKILL.md:83, morning-review walkthrough.md:577, lifecycle SKILL.md:46) all reference the rule by name/behavior and need zero edits. (b) Prove",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim backlog-writeback status-check and exit-2 rule (#353)"
  },
  {
   "id": "s1",
@@ -779,7 +797,8 @@
     "evidence": "(a) Pins: _parse_inventory (tests/test_lifecycle_kept_pauses_parity.py:32-35,46-75) matches only bullet lines `- <path>.md:<line>` via _INVENTORY_BULLET; heading and preamble prose are never parsed, and the file is excluded from AskUserQuestion site-scanning by path, not content (test:102), so keeping or dropping the token in the compressed preamble is structurally irrelevant. Repo-wide grep for preamble phrases ('Canonical inventory', 'bidirectional parity', 'deliberate and remain in scope') hits nothing outside the file itself and backlog ticket #327's description \u2014 no lint/hook/ADR pins the",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim kept-pauses, wontfix, concurrent-sessions preambles (#353)"
  },
  {
   "id": "s1",
@@ -811,7 +830,8 @@
     "evidence": "Pins: tests/test_load_requirements_protocol.py::test_load_requirements_md_drives_the_verb asserts (a) 'cortex-load-requirements' in file \u2014 also present at line 7, so not intro-unique; (b) _CITATION_RE r'load-requirements\\.md|tag-based.*loading' \u2014 verified line 3's 'tag-based loading' is the ONLY match in the file; (c) '## Protocol' present and (d) '## Matching Semantics' absent \u2014 both outside this section, and (d) structurally enforces semantics-live-in-the-verb regardless of the intro prose. Repo-wide grep for 'single source of selection truth', 'under-loading', 'over-loading', 'Consumed by l",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim load-requirements, discovery-bootstrap, refine-delegation (#353)"
  },
  {
   "id": "s2",
@@ -844,7 +864,8 @@
     "evidence": "(a) Pins: tests/test_load_requirements_protocol.py::test_load_requirements_md_drives_the_verb (lines 155-165) pins only the verb name, the literal '## Protocol' heading, the _CITATION_RE match (still satisfied by intro line 3), and absence of '## Matching Semantics' \u2014 nothing pins the ordering prose. The ordering behavior itself is pinned in tests/test_load_requirements_cli.py (test_first_line_is_project_md, test_dedup_global_context_position_wins, test_golden_match) against the verb, and documented in cortex_command/lifecycle/load_requirements_cli.py module docstring lines 14-27 plus --help (",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim load-requirements, discovery-bootstrap, refine-delegation (#353)"
  },
  {
   "id": "s6",
@@ -912,7 +933,8 @@
     "evidence": "All three refutation angles fail to refute. (a) Pins: envelope tokens 'verdict: revised'/'files_changed:' exist ONLY in this file + its auto-generated mirror \u2014 no test, hook, lint, or cortex_command Python parses them (repo-wide grep; overnight files_changed matches are unrelated dataclass fields). test_plugin_mirror_parity.py:32 byte-compares orchestrator-review.md to its mirror, which the pre-commit rsync regenerates \u2014 logistics, not a blocker; new sibling covered by the dual-source glob test. Stale-line-citation risk in test_lifecycle_references_resolve.py is refuted: every live-artifact li",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim orchestrator-review; extract fix-agent template (#353)"
  },
  {
   "id": "s13",
@@ -959,7 +981,8 @@
     "evidence": "Provenance walk complete (git log --follow, git log -S on both cells, retro/events sweep). (1) ORIGIN: row born in the initial commit 428e54ea as 1 of 5 defensively-authored rows \u2014 speculative authoring, no fix-commit, no evidence artifact. (2) ZERO OBSERVED FAILURES of the guarded misread across ~3 months / ~46 lifecycle features: retro sweep finds only cycle-3 cap violation (2026-04-10-2259-refine-064 \u2014 whose guarding row was ALREADY deleted in d1ae91d5 despite real failure history), over-narration (lifecycle-083), dispatch flip-flopping (lifecycle-130), semantic gaps passing S-checks; none ",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim orchestrator-review; extract fix-agent template (#353)"
  },
  {
   "id": "s4",
@@ -990,7 +1013,8 @@
     "evidence": "Pins: (a) discovery sibling skills/discovery/references/orchestrator-review.md:9 pins the section NAMES ('The protocol sections (Execute Review, Handle Verdict, Fix Dispatch, Escalation, Cycle Cap) apply as written there'), not the bullet text \u2014 claim already keeps the heading; (b) tests/test_plugin_mirror_parity.py:32 pins byte-parity with the mirror (mechanical regen cost only, per known drift-hook coupling); (c) grep across tests/, hooks/, bin/, cortex_command/, docs/, cortex/adr/ finds zero anchors on the bullet wording \u2014 'materially weak', 'assign a verdict', and the pass/flag definitions",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim orchestrator-review; extract fix-agent template (#353)"
  },
  {
   "id": "s3",
@@ -1021,7 +1045,8 @@
     "evidence": "(a) Pins: the only external structural pin is the discovery shim (skills/discovery/references/orchestrator-review.md:9), which pins protocol sections by NAME (Execute Review, Handle Verdict, Fix Dispatch, Escalation, Cycle Cap) and deliberately excludes step 1 \u2014 its substitution 2 replaces checklist selection wholesale, so folding step 1 is invisible to it as long as remaining section names are unchanged. grep across tests/, hooks/, docs/, cortex_command/ shows no test or lint pins the '### 1. Identify Phase and Checklist' heading or external step numbers; the only test touching this file is t",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim orchestrator-review; extract fix-agent template (#353)"
  },
  {
   "id": "s12",
@@ -1052,7 +1077,8 @@
     "evidence": "(a) Pins: repo-wide grep for 'Cycle Cap'/'cycle cap'/'cycle-cap' across skills/, tests/, hooks/, docs/, cortex/adr/ finds exactly one live pin \u2014 the discovery shim's prose section list at skills/discovery/references/orchestrator-review.md:9 ('Execute Review, Handle Verdict, Fix Dispatch, Escalation, Cycle Cap ... apply as written'), a one-token co-edit that protects nothing beyond name resolution; tests/test_plugin_mirror_parity.py:32 pins the FILE for byte parity with the plugin mirror (satisfied mechanically by build-plugin regen), not the section; test_critical_review_reference_pins.py and ",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim orchestrator-review; extract fix-agent template (#353)"
  },
  {
   "id": "file-compress",
@@ -1086,7 +1112,8 @@
     "evidence": "Refutation attempt results per angle. (a) Pins: tests/test_competing_plans_wired.py:66-77 requires a single plan.md line containing all of 'critical'+'read'+'competing-plans' \u2014 line 18 survives shorthand replacement iff the bold target token stays on that line; tests/test_lifecycle_kept_pauses_parity.py has LINE_TOLERANCE=35 (line 28), so the plan.md:184 anchor in kept-pauses.md:18 tolerates the small upward shift; the plan.md:184 entry rationale is 'Substantive user decision' (not 'conditional pause'), so the read_branch_mode/cortex-lifecycle-branch-mode marker regex is not required near the ",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim plan.md reference: complexity, code-budget, hard-gate (#353)"
  },
  {
   "id": "s14",
@@ -1118,7 +1145,8 @@
     "evidence": "(a) Pins: no test or lint anchors the Allowed/Prohibited text \u2014 grep for 'Code Budget'/'copy-paste'/'self-sealing' across tests/, hooks/, cortex_command/ finds only test_plugin_mirror_parity.py (auto-regenerating canonical-to-mirror check, content-indifferent) and unrelated docstrings. The scorer's pins hold and support the trim: orchestrator-review.md P5 (line 124: 'no function bodies, import statements, or copy-paste-ready code'), P4 (line 123: prose-only Verification does not pass), and P7 (line 126: self-sealing cross-reference with operational test) enforce the same constraints at review ",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim plan.md reference: complexity, code-budget, hard-gate (#353)"
  },
  {
   "id": "s9",
@@ -1150,7 +1178,8 @@
     "evidence": "(a) Pins: cortex_command/pipeline/dispatch.py:128-132 TIER_CONFIG pins the tier vocabulary and confirms the never-trivial rationale is live (trivial max_turns=15 < simple 20 < complex 30); test_parser.py pins absent-Complexity->simple default and OOV coercion \u2014 none of these pin the Examples column or the exact Critical-rule wording. tests/test_skill_section_citations.py pins plan.md headings by designator but only 1a/1b/5, not this section; grep for 'Task Complexity Classification' and 'never trivial' across tests/, hooks/, skills/, docs/, cortex/adr/, cortex_command/ finds zero citers outsid",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim plan.md reference: complexity, code-budget, hard-gate (#353)"
  },
  {
   "id": "s19",
@@ -1179,7 +1208,8 @@
     "evidence": "(a) Pins: the only 'Hard Gate' occurrence in the entire lifecycle skill tree is plan.md:207 itself. test_refine_skill.py:28 and skills/refine/SKILL.md:161 both anchor refine's OWN Hard Gate in skills/refine/references/specify.md:205, not lifecycle plan.md \u2014 scorer's pin analysis confirmed. No hit in bin/, hooks/, cortex_command/, claude/, or lifecycle SKILL.md. test_check_events_registry.py references plan.md only for cortex-lifecycle-event registry rows (\u00a74/\u00a75), untouched by this edit. (b) Provenance: git log -S shows both paragraphs date to the initial commit (428e54ea) \u2014 generic scaffolding",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim plan.md reference: complexity, code-budget, hard-gate (#353)"
  },
  {
   "id": "s5",
@@ -1210,7 +1240,8 @@
     "evidence": "(a) Pins: tests/test_skill_section_citations.py pins plan.md headings \u00a71a, \u00a71b, and \u00a75 only \u2014 no test, lint, or hook pins '### 2. Design the Approach' or the bullet text (repo-wide grep for the bullet phrases hits only plan.md and its auto-generated plugins/cortex-core mirror; grep for 'Design the Approach' / 'plan.md \u00a72' across tests/, hooks/, cortex_command/, docs/, cortex/adr/ hits nothing outside the two prose cross-refs). The only anchors are plan.md:19 and competing-plans.md:63,90,108, all satisfied by keeping the heading verbatim as the claim already proposes. (b) Provenance: git log -L",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim plan.md reference: complexity, code-budget, hard-gate (#353)"
  },
  {
   "id": "s1",
@@ -1244,7 +1275,8 @@
     "evidence": "(a) Pins: no test or lint anchors the prose \u2014 grep across tests/ for the cut facts (mcp.json, trust scope, resolve_worktree_root, orphaned branch) hits only resolver-behavior tests (tests/test_worktree.py, tests/test_worktree_seatbelt.py, tests/test_hooks_resolver_parity.sh:66) that pin resolve_worktree_root() runtime behavior, not this markdown; the only cross-reference to parallel-execution.md is the SKILL.md:202 lazy-ref pointer, which names the file and its two topics (both survive COMPRESS), so test_lifecycle_references_resolve.py stays green. (b) Provenance: the narration originates from",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim complexity-escalation, post-refine-commit, parallel-exec (#353)"
  },
  {
   "id": "file-compress",
@@ -1277,7 +1309,8 @@
     "evidence": "(a) Pins: no test, lint, hook, or ADR anchors the section text \u2014 grep for 'Worktree Inspection Invariant', 'worktree-inspection', and 'updatedPermissions' across tests/, hooks/, cortex_command/, docs/ hits only SKILL.md:202 (a lazy-ref pointer that names the invariant, unaffected by trimming line 28), implement.md:189 (repeats the git-log pattern being KEPT), and the hook comment itself (cortex-worktree-create.sh:73-82, which is the duplicate justifying the deletion, not a pin against it). tests/ has zero references to parallel-execution.md; test_lifecycle_references_resolve.py only requires t",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim complexity-escalation, post-refine-commit, parallel-exec (#353)"
  },
  {
   "id": "file-compress",
@@ -1311,7 +1344,8 @@
     "evidence": "Angle (a) pins: no test, lint, or hook greps any token of lines 1-14 \u2014 grep over tests/ for 'concurrent-sessions', 'Session-feature', 'ephemeral', 'Listing incomplete' returns zero content pins; the only pin is file existence via SKILL.md:201 + tests/test_lifecycle_references_resolve.py:417, satisfied by keeping the file. tests/test_hooks.sh:51-83 and tests/test_hooks_scan_lifecycle.py pin the hooks (cortex-cleanup-session.sh, scan_lifecycle takeover writer), not this prose. Angle (b) provenance: git log -S shows the prose dates to the initial commit 428e54ea and was extracted verbatim in d7ed",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim kept-pauses, wontfix, concurrent-sessions preambles (#353)"
  },
  {
   "id": "s8",
@@ -1363,7 +1397,8 @@
     "evidence": "Behavioral simulation of every route value the detector can emit (common.py:317-392: research, specify, plan, implement, implement-rework, review, complete, escalated) with only 3 rows kept: research/specify route through Step 3's refine-delegation branches (SKILL.md:127-133), which key on spec.md/research.md file existence, not the table; plan/implement/review/complete map directly through the Step 3 phase-reference table (SKILL.md:137-142); implement-rework and escalated have no Step 3 row and carry non-derivable behavior (re-enter Implement; present analysis + ask user) \u2014 correctly kept. Th",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim lifecycle SKILL.md body; couple refine-delegation scope (#353)"
  },
  {
   "id": "s5",
@@ -1414,7 +1449,8 @@
     "evidence": "Pins are real but narrow, exactly as scorer claimed: tests/test_lifecycle_invocation_grammar_parity.py:122-128 requires only a `| `{mode}`` cell per KNOWN_MODES literal within the '## Step 1'..'## Step 2' slice; the form scraper (_FORM_RE, line 40) touches Step 1 at exactly one place \u2014 the phase-row '<feature> <phase>' example (measured: 13 forms doc-set-wide vs the >=8 vacuous-pass guard at line 106; reserved two-token forms live in the Invocation section, lines 26-28). No test asserts on Action-column narration (grep for 'do not fall through', 'Do not ask the user to confirm', needs-derivati",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim lifecycle SKILL.md body; couple refine-delegation scope (#353)"
  },
  {
   "id": "s16",
@@ -1447,7 +1483,8 @@
     "evidence": "(a) Pins: tests/test_lifecycle_kept_pauses_parity.py never reads line 189 \u2014 test 1 anchors kept-pauses.md entries to AskUserQuestion tokens (line 189 has none; the SKILL.md:48 inventory anchor at line 67 sits above the deletion so no line shift), and test 2 excludes the whole '## Phase Transition' section (lines 230-247 build the exclusion range from the h2 heading to the next h1/h2). tests/test_lifecycle_invocation_grammar_parity.py scrapes line 189's two forms but only enforces a >=8 total-form floor (11 remain after deletion) and its mode-coverage check greps Step 1's routing-table rows ('|",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim lifecycle SKILL.md body; couple refine-delegation scope (#353)"
  },
  {
   "id": "s12",
@@ -1479,7 +1516,8 @@
     "evidence": "(a) Pins: no test anchors on the arm-2 sentence. Grep for 'inconsistent state'/'spec exists without research'/'research.md does not' across tests/, hooks/, cortex_command/ hits only unrelated files. test_post_refine_commit_wired.py anchors on refine-delegation.md tokens + SKILL.md containing 'post-refine-commit' >=2 times (untouched); test_lifecycle_references_resolve.py checks link resolution (refine-delegation.md link stays). validate-callgraph's INVOCATION_RE matches arm 2's 'Delegate to `/cortex-core:refine`' but only fails on disable-model-invocation callees; refine has none and is invoke",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim lifecycle SKILL.md body; couple refine-delegation scope (#353)"
  },
  {
   "id": "s14",
@@ -1542,7 +1580,8 @@
     "evidence": "(a) Pins: no test/lint/hook pins the '## How' body text. grep for wontfix.md across tests/, cortex_command/, hooks/, skills/, cortex/adr/, docs/, claude/ yields only three cites, none body-text-anchored: cortex_command/lifecycle/wontfix_cli.py:14 (docstring names wontfix.md as the workflow doc \u2014 file-existence/role pin, unaffected), cortex_command/common.py:338 (comment cite, unaffected), skills/lifecycle/SKILL.md:203 (lazy-ref link, unaffected). The #329 docs-derived drift-guard tests/test_lifecycle_invocation_grammar_parity.py DOES scrape skills/lifecycle/references/*.md live bytes, but its ",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim kept-pauses, wontfix, concurrent-sessions preambles (#353)"
  },
  {
   "id": "s9",
@@ -1576,7 +1615,8 @@
     "evidence": "Duplication is real: step 2's final paragraph (line 167: 'Do not block... fall through to step 5 (skip auto-apply)... surfaces in the morning report') and step 5 (line 183: 'Skip auto-apply after exhausted retries... breach logged for morning report... continue to \u00a75 Transition without blocking') restate non-blocking, skip-auto-apply, and morning-report-visibility twice. Pin audit: test_drift_enforcement_protocol.py asserts only (heading regex '^### 4a\\.' + three substring anchors in the extracted section + a pure-Python loop simulation independent of prose wording); step-number references in ",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim review.md gather/dispatch/verdict/drift sections (#353)"
  },
  {
   "id": "s7",
@@ -1639,7 +1679,8 @@
     "evidence": "Pins checked: tests/test_lifecycle_event_roundtrip.py FILE_EVENTS (line 134-138) pins only invocation counts {review_verdict:1, drift_protocol_breach:1, phase_transition:3} \u2014 claim keeps the event block verbatim. tests/test_drift_enforcement_protocol.py anchors are region-scoped to section 4a (regex '^### 4a\\.'), not section 4. tests/test_skill_section_citations.py pins the '### 4a.' heading only. tests/test_dispatch_template_placeholders.py pins {spec_path} in the section-2 prompt template. grep for the line-134 quoted instruction text across tests/hooks/cortex_command/docs = no hits. Provena",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim review.md gather/dispatch/verdict/drift sections (#353)"
  },
  {
   "id": "s2",
@@ -1670,7 +1711,8 @@
     "evidence": "Pins: (a) tests/test_load_requirements_protocol.py:52 _CITATION_RE pins line 12 only, which the claim keeps; review.md is NOT in RULE_CARRIERS (lines 70-75), so no consumer-rule prose is required here. (b) tests/test_skill_section_citations.py pins only the '### 4a.' heading of review.md, not \u00a71. (c) tests/test_lifecycle_event_roundtrip.py FILE_EVENTS pins event-verb counts (review_verdict/drift_protocol_breach/phase_transition) \u2014 none appear in \u00a71. (d) tests/test_dispatch_template_placeholders.py pins '{spec_path}' in the prompt template (line 34), untouched by trimming \u00a71 bullets. Provenance",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim review.md gather/dispatch/verdict/drift sections (#353)"
  },
  {
   "id": "s3",
@@ -1701,7 +1743,8 @@
     "evidence": "(a) Pins: no standing test, lint, or hook greps the trimmed phrases \u2014 tests/test_resolve_model.py pins verb behavior only (golden matrix + exit codes); tests/test_dispatch_template_placeholders.py pins {spec_path}/{requirements} placeholders in review.md, not the model section; grep of hooks/, bin/, cortex_command/ for 'never hardcode'/'halt and escalate' returns nothing. #334 spec (cortex/lifecycle/criticality-dispatch-reference-cleanup-relocate-fanoutmd/spec.md Req 8) required 'an explicit nonzero-exit/halt-and-escalate instruction (grep >=1 per site)' \u2014 the trim keeps that instruction, so e",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim review.md gather/dispatch/verdict/drift sections (#353)"
  },
  {
   "id": "s4",
@@ -1736,7 +1779,8 @@
     "evidence": "Refutation attempted on all three angles; none landed. (a) Pins: tests/test_complete_pr_routing.py:450-519 TestCompleteStepThreeStructural pins exactly 7 substring/regex anchors, all trivially preservable in a 2-3 sentence form; the behavioral tests (lines 75-443) run against _detect_variant_a_worktree, an explicit non-extracted Python mirror ('NOT extracted production code', line 45-46), so prose wording changes cannot break them. tests/test_interactive_lock.py:406 only cites 'complete.md Step 3' in a comment (no line number). tests/test_variant_a_writer_sites_baseline.py names complete.md bu",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim complete.md Steps 3, 10, 11a (#353)"
  },
  {
   "id": "s14",
@@ -1769,7 +1813,8 @@
     "evidence": "(a) Pins: tests/test_complete_md_finalization_commit.py slices the anchored region and asserts positive tokens cortex-lifecycle-stage-artifacts, cortex-read-commit-artifacts, /cortex-core:commit, 'git diff --cached --quiet', a halt token, 'main'+'master'; all retained under the trim EXCEPT that 'git diff --cached --quiet' appears exactly twice in the region (complete.md:176,178) so only one restatement is trimmable \u2014 the scorer's 'git-diff-cached restatement' item is refuted if read as removing both, since the test docstring shows the pin is deliberate (post-#331 the guard semantics stayed pro",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim complete.md Steps 3, 10, 11a (#353)"
  },
  {
   "id": "s12",
@@ -1801,7 +1846,8 @@
     "evidence": "(a) Pins: tests/test_complete_index_sync_gate.py pins exactly what the scorer said \u2014 SECTION_HEADING verbatim (line 24, used by _slice_section), BACKEND_READER 'cortex-read-backlog-backend' before REGEN_ANCHOR 'cortex-generate-backlog-index' (lines 44-54), and SKIP_ADVISORY 'disabled for this repo' (line 23). No assertion touches the emit strings or the parenthetical; the negative-control PRE_EDIT_SECTION (lines 28-35) is a standalone string constant independent of the live file. Repo-wide grep for 'Index regenerated via', 'Could not regenerate backlog index', 'cortex-update-item not found', '",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim complete.md Steps 3, 10, 11a (#353)"
  },
  {
   "id": "s13",
@@ -1852,7 +1898,8 @@
     "evidence": "Verified extraction live: block = 2628 chars ending at '**Fallback' line-start boundary, token indices [323, 558, 1556, 2332] ordered, suppressed marker present. Anchors enumerated: tests/test_lifecycle_step_v_ordering.py (heading anchor, 4-token presence+order, suppressed-skip literal, verify-worktree-auth absence \u2014 all token-level, none pins narration bulk); tests/test_lifecycle_enterworktree_callsites.py (create_worktree + one of show-toplevel/git-common-dir/'EnterWorktree skipped' within \u00b160 lines of 'EnterWorktree(' \u2014 currently 19 lines apart, shrinking only reduces distances); tests/test",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim #348 s13+s14: compress step-v + vi/vii restoration"
  },
  {
   "id": "s7",
@@ -2005,7 +2052,8 @@
     "evidence": "Exhaustive anchor hunt found NO enforcement pin on the section body. (1) Tests: grep of tests/ for 'Worktree Integration', 'merge worktree', 'worktree/{task-name}', 'git branch -d', 'cortex-worktree-resolve' hits only PATH-bootstrap/hook tests (tests/test_hooks.sh, tests/test_session_start_path_bootstrap.sh) that shim the resolver binary \u2014 none read implement.md. All implement.md-pinning tests (tests/test_implement_worktree_interactive_contract.py, tests/test_lifecycle_implement_branch_mode.py, tests/test_lifecycle_step_v_ordering.py, tests/test_lifecycle_enterworktree_callsites.py) pin \u00a71/\u00a71a",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim #348 s18: extract \u00a72e merge-back to a sibling reference"
  },
  {
   "id": "s5",
@@ -2052,7 +2100,8 @@
     "evidence": "Simulated execution without the choreography: (1) dirty-tree-on-main path still demotes+warns because 'demote in place' + the warning literal carry the semantics; (2) fail-open path kept per claim; (3) ordering preserved by the runtime probe's own 'After the uncommitted-changes guard' anchor at implement.md:48; (4) tests/test_lifecycle_picker_label_pins_worktree.py's block regex terminates at '**Branch-mode dispatch preflight**' (implement.md:28), before the guard, so no live test breaks. Refutation attempts that failed: cortex/lifecycle/consolidate-implementmd-branch-worktree-dispatch-and/spe",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim #348 s5: compress \u00a71 uncommitted-changes guard mechanics"
  },
  {
   "id": "s6",
@@ -2101,7 +2150,8 @@
     "evidence": "Every enforcement anchor either targets content the compression preserves or lies outside lines 48-61. (1) The pin test tests/test_implement_worktree_interactive_contract.py::test_gate_and_gated_path_use_same_binary (lines 86-138) only extracts `command -v (\\S+)` from \u00a71 and the `--feature interactive-` binary from \u00a71a-iii \u2014 it never matches the three disposition bullets; the fenced block at implement.md:51 satisfies it. test_menu_label_present_in_section_1 requires the label anywhere in \u00a71; it lives at lines 25 and 63, outside the compressed range. (2) tests/test_lifecycle_picker_label_pins_w",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim #348 s6: collapse \u00a71 runtime-probe exit-code dispositions"
  },
  {
   "id": "s23",
@@ -2153,7 +2203,8 @@
     "evidence": "Behavioral walk with the compressed section: the matrix is a pure 2-input boolean and cortex_command/common.py:846-862 requires_review encodes it exactly (tier == 'complex' or criticality in ('high','critical')); every cell of the table maps to that one line, so a frontier model applying the inline boolean reaches the identical to=review|complete decision on all 8 branches \u2014 the bolded surprising cells (simple+high/critical -> Review) are carried more explicitly by the boolean than by the table. The gating is unified-by-design, not coincidentally duplicated: skills/morning-review/references/wa",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim #348 s23: replace \u00a74 review-gating matrix with code citation"
  },
  {
   "id": "s12",
@@ -2204,7 +2255,8 @@
     "evidence": "Anchor hunt results: (a) tests/test_implement_worktree_interactive_contract.py:112-138 \u2014 the only prose pin on \u00a71a step iii; needs the '**iii.' marker and the '--feature interactive-' invocation line, both retained under COMPRESS; lines 117/119/121 are not matched by any assertion. (b) tests/test_implement_option2_worktree_creation.py:101-152 \u2014 pins settings.local.json copy and .venv symlink against create_worktree's runtime behavior in a tmp repo; it never reads implement.md, so cutting the prose leaves the behavior fully tested. (c) Containment: worktree.py:238 raises 'worktree_escapes_repo'",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim #348 s12: compress \u00a71a-iii worktree-creation narration"
  },
  {
   "id": "s3",
@@ -2255,7 +2307,8 @@
     "evidence": "Behavioral walk without the section inline: (a) primary path \u2014 implement.md:19 fully specifies post-selection routing for a recorded choice ('Treat the value exactly as if the operator had selected that option') without needing option descriptions; (b) branch-mode suppressed path (lines 37-43) never assembles the picker; (c) picker-fires path has a crisp structural read-trigger (explicit fall-through at lines 20/42/44), and all three labels plus per-selection routing are duplicated in the surviving prose (lines 56-58, 62-88), so only the When-to-pick descriptions, '(recommended)' marker, and t",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim #348 s3: compress \u00a71 branch-picker option descriptions"
  },
  {
   "id": "s14",
@@ -2304,7 +2357,8 @@
     "evidence": "test_lifecycle_step_v_ordering.py block regex '^\\*\\*Step v \u2014 Auto-enter sequence\\*\\*.*?(?=^\\*\\*)' terminates at '**Fallback' (line 149) \u2014 empirically verified the extracted block ends with the operation-5 events.log sentence, so lines 153-156 are outside every pinned assertion. test_lifecycle_enterworktree_callsites.py needs create_worktree + one of {show-toplevel, git-common-dir, 'EnterWorktree skipped'} within \u00b160 lines of 'EnterWorktree(' (line 136); the Fallback's 'EnterWorktree skipped' literal at line 149 satisfies it independently of vi (vi's show-toplevel is redundant coverage; window ",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim #348 s13+s14: compress step-v + vi/vii restoration"
  },
  {
   "id": "s21",
@@ -2353,7 +2407,8 @@
     "evidence": "git log -L 217,240:skills/lifecycle/references/implement.md shows only 4 commits: 428e54ea (initial, 2026-04-01 \u2014 instructions 1-4, both sentences of instruction 2, scope fences), c2daec5b (2026-04-04 \u2014 instruction 6 self-sealing guard; motivated by observed failure recorded in cortex/retros/archive/2026-04-02-1629.md where a plan task wrote its own req1_verified evidence; failure mode recurred in retros 2026-04-18-2014, 2026-04-21-0853, 2026-04-22-1204 \u2014 still live), 6fb6657f (2026-04-10 \u2014 diff shows instruction 5's structured spec appended after the retained generic sentence; governing requi",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim #348 s21: compress builder-template instructions 2 and 5"
  },
  {
   "id": "s10",
@@ -2400,7 +2455,8 @@
     "evidence": "(1) Introduced bc32dc0d 2026-05-18 'Wire implement.md option 2 to create interactive worktree' \u2014 diff shows it is a rename-in-place of the \u00a71a.ii daytime.pid 'Double-dispatch guard' (added e603fc39 2026-04-14 for the detached autonomous daytime pipeline, since removed); commit message gives no observed interactive failure, just pattern carry-over. (2) cortex_command/interactive_lock.py:207 \u2014 the real lock path is root/'cortex'/'lifecycle'/{slug}/'interactive.pid' (JSON, env-var-primary + psutil start_time, 8-row liveness table); \u00a71a-i probes cortex/lifecycle/sessions/{slug}.interactive.pid ins",
     "user_question": "\u00a71a-i probes a PID file nothing ever writes, so it is dead either way \u2014 do you want it (a) deleted outright, or (b) replaced with a one-line cortex-interactive-lock probe so the suppressed branch-mode path (which skips \u00a71 Step B) finally gets a real same-slug guard?"
    }
-  ]
+  ],
+  "applied_in_commit": "Replace #348 dead \u00a71a-i check with real ordered lock probe"
  },
  {
   "id": "s11",
@@ -2450,7 +2506,8 @@
     "evidence": "Execution-path walk: (a) selected mode \u2014 \u00a71 Step A (line 73) executes the identical sidecar with full semantics 35 lines earlier in the same file, so a back-reference at \u00a71a ii resolves trivially; (b) suppressed mode (branch-mode: worktree-interactive) \u2014 \u00a71a ii is the ONLY overnight guard on the path, but the whole reference file is in context, so line 73's table is still readable even though Step A never executed. Semantics cannot be fully DELETED at \u00a71a ii (sidecar exit 2 is silent \u2014 skills/lifecycle/references/_interactive_overnight_check.sh exits 2 with no output, so warn-and-continue vs r",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim #348 s11: dedup \u00a71a overnight-guard exit-code semantics"
  },
  {
   "id": "s4",
@@ -2484,7 +2541,8 @@
     "evidence": "tests/test_dispatch_template_placeholders.py:134-147 pins only whole-file {spec_path}/{research_path} presence in competing-plans.md (preserved by the ## Inputs section at lines 26/29 regardless of sentinel-paragraph compression); the verbatim READ_OK pins at :164-189 assert against skills/critical-review/SKILL.md only. tests/test_competing_plans_wired.py:97-104 pins only the plan_comparison token, present in \u00a7g (lines 94-107) independent of the template. grep of tests/ + cortex_command/ shows no plan-agent READ_OK consumer (test_variant_a_writer_sites_baseline.py:231 is SYNTH_READ_OK, critica",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim competing-plans.md dispatch, synth, routing (#353)"
  },
  {
   "id": "s8",
@@ -2516,7 +2574,8 @@
     "evidence": "(a) Pins: cortex_command/pipeline/tests/test_metrics.py:1500-1546 tests generic JSONL parse_events with a fixture event using disposition=rubber_stamp \u2014 it pins \u00a7g's event schema (preserved verbatim by the claim), not \u00a7f prose. tests/test_competing_plans_wired.py pins only the 'plan_comparison' token (in \u00a7g, line 97) plus plan.md/SKILL.md wiring \u2014 no \u00a7f phrase assertions. tests/test_lifecycle_kept_pauses_parity.py scans for the literal 'AskUserQuestion' token; grep confirms competing-plans.md contains none (exit 1), so \u00a7f is outside its scan, and kept-pauses.md:18 anchors plan.md:184, not this",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim competing-plans.md dispatch, synth, routing (#353)"
  },
  {
   "id": "s9",
@@ -2552,7 +2611,8 @@
     "evidence": "(a) Pins: tests/test_competing_plans_wired.py:97-104 only asserts the literal 'plan_comparison' token exists in competing-plans.md - satisfied by the kept JSONL example (lines 94/97). cortex_command/pipeline/tests/test_metrics.py:1496-1544 round-trips a v2 event through parse_events using field NAMES in Python, no dependence on skill prose. bin/cortex-check-events-registry scans for emitted event_name literals only (--staged mode), not field-semantics prose; the emission and token stay. tests/test_dispatch_template_placeholders.py anchors on the SS1b.b prompt template ({spec_path}), not SSg. R",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim competing-plans.md dispatch, synth, routing (#353)"
  },
  {
   "id": "s1",
@@ -2618,7 +2678,8 @@
     "evidence": "(a) Pins: tests/test_competing_plans_wired.py pins only file+mirror existence, SKILL.md mention, the plan.md \u00a71a read directive, and the 'plan_comparison' token \u2014 no assertion touches \u00a71b.d prose. cortex_command/pipeline/tests/test_plan_synthesizer.py:172-177 pins the swap-probe phrases inside cortex_command/overnight/prompts/plan-synthesizer.md (the fragment, not the skill ref) \u2014 untouched by this trim and it PROTECTS the trim: the authoritative protocol text ('Run the comparison twice with variant order swapped', 'do not skip the swap-and-require-agreement step' at fragment lines 34-38, 119)",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim competing-plans.md dispatch, synth, routing (#353)"
  },
  {
   "id": "s3",
@@ -2650,7 +2711,8 @@
     "evidence": "(a) Pins: tests/test_resolve_model.py (undefined-cell + unknown-criticality + missing-criticality all exit 2, empty stdout) and resolve_model_cli.py matrix comment confirm the causes-enumeration is derivable from verb behavior \u2014 the pin supports the trim rather than refuting it. No standing test greps the line-10/16 prose: tests/test_competing_plans_wired.py pins only file+mirror existence, SKILL.md mention, plan.md \u00a71a routing wire, and the 'plan_comparison' token; tests/test_dispatch_template_placeholders.py pins only {spec_path}/{research_path} presence; grep of tests/ for 'halt and escalat",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim competing-plans.md dispatch, synth, routing (#353)"
  },
  {
   "id": "s7",
@@ -2699,7 +2761,8 @@
     "evidence": "Anchor hunt found zero pins on the section body: (1) tests/test_lifecycle_config.py:18-19 builds tmp_path/cortex/lifecycle.config.md fixtures \u2014 all 8 normalization cases (dup last-wins :119-124, whitespace strip :137, commented->null :143-148, case/out-of-set fall-through :165-172) test the parser code, never this file; scorer pins confirmed accurate. (2) tests/test_lifecycle_config_parity.py:35-36 gates ASSET<->TEMPLATE frontmatter byte-slices only \u2014 the repo instance cortex/lifecycle.config.md is not a parity source, and grep shows 'Normalization' absent from both asset and template, so the ",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim lifecycle.config.md Branch Mode; consolidate values to docs"
  },
  {
   "id": "s6",
@@ -2749,7 +2812,8 @@
     "evidence": "Exhaustive anchor hunt found ZERO enforcement anchors on the section itself. (1) tests/test_lifecycle_implement_branch_mode.py pins should_fire_picker code behavior (a2=dirty_tree, a3=live_interactive_worktree_session) and implement.md structural wiring (TestImplementMdWiring reads skills/lifecycle/references/implement.md, line 41: IMPLEMENT_MD constant) \u2014 it never reads cortex/lifecycle.config.md. (2) tests/test_lifecycle_kept_pauses_parity.py anchors implement.md AskUserQuestion sites plus a _CONDITIONAL_PAUSE_MARKER regex (read_branch_mode|lifecycle_config|cortex-lifecycle-branch-mode) near",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim lifecycle.config.md Branch Mode; consolidate values to docs"
  },
  {
   "id": "s4",
@@ -2799,7 +2863,8 @@
     "evidence": "Provenance is clean shipped-with-feature schema documentation, not a failure guard: git log -L 27,32:cortex/lifecycle.config.md and git log -S 'configures the default branch-selection behavior' both return exactly one commit, d012511e (2026-05-19), whose message says 'Phase 1 of #249's schema + parser foundation; the runtime short-circuit and parser primitive land in subsequent phases'. No events.log F-row, retro, or ADR anchors this text to this location (grep of cortex/lifecycle/*/events.log and cortex/retros for branch-mode: zero failure hits; ADR-0008 pins implement.md, ADR-0017 pins asset",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim lifecycle.config.md Branch Mode; consolidate values to docs"
  },
  {
   "id": "s5",
@@ -2831,7 +2896,8 @@
     "evidence": "(a) Pins: no test/lint/hook pins this file's body. tests/test_lifecycle_config_parity.py gates only the asset/init-template pair's FRONTMATTER byte-slice, and grep shows neither skills/lifecycle/assets/lifecycle.config.md nor cortex_command/init/templates/cortex/lifecycle.config.md contains a Branch Mode section at all. tests/test_lifecycle_config.py exercises read_branch_mode against tmp_path fixtures, not this file. tests/test_lifecycle_kept_pauses_parity.py greps implement.md markers (read_branch_mode/cortex-lifecycle-branch-mode), not the config body. The scorer's pin (tests/test_lifecycle",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim lifecycle.config.md Branch Mode; consolidate values to docs"
  },
  {
   "id": "s3",
@@ -2894,7 +2960,8 @@
     "evidence": "git log -L 55,57:cortex/lifecycle.config.md shows the section added whole in d012511e (2026-05-19, 'Phase 1 of #249's schema + parser foundation') \u2014 spec-derived docs, no F-row/retro/observed-failure motivation. The referenced sys.exit(2) path was the settings.local.json allowWrite preflight heredoc added in 0e474324 (2026-05-18, implement.md \u00a71a step iv, exit 2 = base not registered). Commit 1e9c01f6 (2026-06-29, 'Remove implement.md worktree pre-flight heredoc') deleted that 33-line heredoc; current skills/lifecycle/references/implement.md:119-121 shows the only creation-failure surface is c",
     "user_question": ""
    }
-  ]
+  ],
+  "applied_in_commit": "Trim lifecycle.config.md Branch Mode; consolidate values to docs"
  },
  {
   "id": "s3",
@@ -3276,7 +3343,8 @@
    "`cortex-auto-bump-version`->tests/fixtures/cortex-auto-bump-version/README.md",
    "`cortex-auto-bump-version`->tests/fixtures/cortex-auto-bump-version/major_bump_breaking.argv"
   ],
-  "mech_pin_count": 32
+  "mech_pin_count": 32,
+  "applied_in_commit": "Restructure commit skill: lazy-load release-type mechanics"
  },
  {
   "id": "s8",
@@ -3333,7 +3401,8 @@
    "heading->skills/critical-review/references/angle-menu.md",
    "heading->skills/critical-review/references/fallback-reviewer-prompt.md"
   ],
-  "mech_pin_count": 30
+  "mech_pin_count": 30,
+  "applied_in_commit": "Restructure commit skill: lazy-load release-type mechanics"
  },
  {
   "id": "s4",
@@ -3366,7 +3435,8 @@
    }
   ],
   "mech_pins": [],
-  "mech_pin_count": 0
+  "mech_pin_count": 0,
+  "applied_in_commit": "Restructure commit skill: lazy-load release-type mechanics"
  },
  {
   "id": "s5",
@@ -3425,7 +3495,8 @@
    "`git commit`->tests/fixtures/hooks/commit/invalid-past-tense.json",
    "`git commit`->tests/fixtures/hooks/commit/invalid-too-short.json"
   ],
-  "mech_pin_count": 41
+  "mech_pin_count": 41,
+  "applied_in_commit": "Restructure commit skill: lazy-load release-type mechanics"
  },
  {
   "id": "s3",
@@ -3477,7 +3548,8 @@
    "heading->skills/pr/SKILL.md",
    "heading->tests/test_dev_triage_refs_wired.py"
   ],
-  "mech_pin_count": 16
+  "mech_pin_count": 16,
+  "applied_in_commit": "Restructure commit skill: lazy-load release-type mechanics"
  },
  {
   "id": "s6",
@@ -4476,7 +4548,8 @@
    }
   ],
   "mech_pins": [],
-  "mech_pin_count": 0
+  "mech_pin_count": 0,
+  "applied_in_commit": "Collapse research angle-selection restatement to fanout.md (#350 s7)"
  },
  {
   "id": "s17",
@@ -4533,7 +4606,8 @@
    "`## Open Questions`->tests/test_requirements_skill_e2e.py",
    "`## Open Questions`->tests/test_variant_a_writer_sites_baseline.py"
   ],
-  "mech_pin_count": 22
+  "mech_pin_count": 22,
+  "applied_in_commit": "Strip research Output-structure annotations to skeleton (#350 s17)"
  },
  {
   "id": "s18",
@@ -4592,7 +4666,8 @@
    "`lifecycle-slug`->skills/lifecycle/references/implement.md",
    "`lifecycle-slug`->skills/refine/SKILL.md"
   ],
-  "mech_pin_count": 34
+  "mech_pin_count": 34,
+  "applied_in_commit": "Fold research Step 5 routing into Step 1 mode block (#350 s18)"
  },
  {
   "id": "s4",
@@ -4628,7 +4703,8 @@
    "` (row) meets its `->skills/research/references/fanout.md",
    "`agent_count`->skills/discovery/references/research.md"
   ],
-  "mech_pin_count": 2
+  "mech_pin_count": 2,
+  "applied_in_commit": "Collapse research Step 2 agent-count grid to fanout.md pointer (#350 s4)"
  },
  {
   "id": "s15",
@@ -4710,7 +4786,8 @@
    "`/cortex-core:refine`->skills/lifecycle/references/criticality-matrix.md",
    "`/cortex-core:refine`->skills/lifecycle/references/discovery-bootstrap.md"
   ],
-  "mech_pin_count": 177
+  "mech_pin_count": 177,
+  "applied_in_commit": "Single-source research considerations hand-off (#350 s3+s6)"
  },
  {
   "id": "s6",
@@ -4751,7 +4828,8 @@
    "`research-considerations-file`->tests/test_refine_handoff.py",
    "`research-considerations-file`->tests/test_research_handoff.py"
   ],
-  "mech_pin_count": 5
+  "mech_pin_count": 5,
+  "applied_in_commit": "Single-source research considerations hand-off (#350 s3+s6)"
  },
  {
   "id": "s13",
@@ -4808,7 +4886,8 @@
    "`searcher`->tests/test_resolve_model.py",
    "heading->skills/research/references/fanout.md"
   ],
-  "mech_pin_count": 21
+  "mech_pin_count": 21,
+  "applied_in_commit": "Trim research dispatch-protocol rationale, keep mechanism (#350 s13)"
  },
  {
   "id": "s6",
@@ -6846,7 +6925,8 @@
    "`__import__`->tests/test_backlog_author.py",
    "`__import__`->tests/test_bare_python_import_lint.py"
   ],
-  "mech_pin_count": 666
+  "mech_pin_count": 666,
+  "applied_in_commit": "Compress project.md Architectural-Constraints s6-s10 (#351)"
  },
  {
   "id": "s7",
@@ -6908,7 +6988,8 @@
    "`EnterWorktree`->cortex/adr/0012-merged-plan-approval-and-dispatch-selection.md",
    "`EnterWorktree`->cortex_command/interactive_lock.py"
   ],
-  "mech_pin_count": 153
+  "mech_pin_count": 153,
+  "applied_in_commit": "Compress project.md Architectural-Constraints s6-s10 (#351)"
  },
  {
   "id": "s9",
@@ -6970,7 +7051,8 @@
    "`critical-review`->docs/internals/sdk.md",
    "`critical-review`->docs/overnight-operations.md"
   ],
-  "mech_pin_count": 608
+  "mech_pin_count": 608,
+  "applied_in_commit": "Compress project.md Architectural-Constraints s6-s10 (#351)"
  },
  {
   "id": "s6",
@@ -7031,7 +7113,8 @@
    "`common.py`->docs/backlog.md",
    "`common.py`->docs/index.html"
   ],
-  "mech_pin_count": 104
+  "mech_pin_count": 104,
+  "applied_in_commit": "Compress project.md Architectural-Constraints s6-s10 (#351)"
  },
  {
   "id": "s10",
@@ -7092,7 +7175,8 @@
    "`git worktree add`->skills/lifecycle/references/parallel-execution.md",
    "`git worktree add`->skills/morning-review/references/walkthrough.md"
   ],
-  "mech_pin_count": 381
+  "mech_pin_count": 381,
+  "applied_in_commit": "Compress project.md Architectural-Constraints s6-s10 (#351)"
  },
  {
   "id": "s4",
@@ -7155,7 +7239,8 @@
    "`feature_complete`->cortex/adr/0004-multi-step-complete-and-interactive-worktree-lifecycle.md",
    "`feature_complete`->cortex_command/common.py"
   ],
-  "mech_pin_count": 85
+  "mech_pin_count": 85,
+  "applied_in_commit": "Compress project.md Philosophy-of-Work s4 + fix kept-pauses pointer (#351)"
  },
  {
   "id": "s15",
@@ -7216,7 +7301,8 @@
    "`cortex-check-events-registry`->tests/test_check_events_registry.py",
    "`cortex-check-events-registry`->tests/test_events_registry_glob_parity.py"
   ],
-  "mech_pin_count": 136
+  "mech_pin_count": 136,
+  "applied_in_commit": "Compress project.md Quality-Attributes s11 + Optional s15 (#351)"
  },
  {
   "id": "s11",
@@ -7273,7 +7359,8 @@
    "`settings.json`->tests/test_worktree_probe.py",
    "`xox[bp]-`->cortex_command/pipeline/dispatch.py"
   ],
-  "mech_pin_count": 22
+  "mech_pin_count": 22,
+  "applied_in_commit": "Compress project.md Quality-Attributes s11 + Optional s15 (#351)"
  },
  {
   "id": "file-compress",
@@ -7509,7 +7596,8 @@
    "`cortex-command`->bin/cortex-check-prescriptive-prose",
    "`cortex-command`->bin/cortex-check-skill-path"
   ],
-  "mech_pin_count": 202
+  "mech_pin_count": 202,
+  "applied_in_commit": "Relocate Install-mutation invocations section to auto-update.md (#362)"
  },
  {
   "id": "s8",
@@ -9060,7 +9148,8 @@
    "`<!--findings-json-->`->tests/fixtures/critical-review/reviewer-outputs/case-ok-deeper-preamble.txt",
    "`<!--findings-json-->`->tests/fixtures/critical-review/reviewer-outputs/case-ok-line-1.txt"
   ],
-  "mech_pin_count": 13
+  "mech_pin_count": 13,
+  "applied_in_commit": "Trim critical-review reviewer-prompt JSON descriptions (#353)"
  },
  {
   "id": "s4",

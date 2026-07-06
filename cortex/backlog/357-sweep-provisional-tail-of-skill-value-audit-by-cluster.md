@@ -2,14 +2,14 @@
 schema_version: "1"
 uuid: 1d39f37f-9d9a-4245-898c-ac881f413363
 title: Sweep the provisional tail of the skill-value audit by cluster
-status: backlog
+status: complete
 priority: low
 type: chore
 tags: ['skill-value-scorecard']
 areas: [skills]
 discovery_source: cortex/research/skill-value-scorecard/report.html
 created: 2026-07-02
-updated: 2026-07-02
+updated: 2026-07-06
 parent: "347"
 ---
 ## Decomposition
