@@ -65,7 +65,8 @@ import cortex_command.backlog.resolve_item as _resolve_item_module
 
 
 # Sample frontmatter blob the new R13 artifact would carry. Mirrors the
-# shape documented in skills/discovery/SKILL.md Step 2:
+# shape documented in skills/discovery/references/rerun-semantics.md
+# (triggered from SKILL.md Step 2):
 #   superseded: cortex/research/<prior-topic>/research.md
 SAMPLE_SUPERSEDED_VALUE = "cortex/research/plugin-system/research.md"
 

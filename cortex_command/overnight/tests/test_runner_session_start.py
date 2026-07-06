@@ -16,11 +16,14 @@ real session id) on the schedule path.
 Two checkable halves, mirroring the spec's R11 acceptance:
 
   TestSkillFlowGating
-      (a) The skill-flow prose gates the step-5 / step-7.5 prep-time
-      ``session_start`` log to the run-now branch only — the schedule branch
-      reaches the launch without it. Asserted against the canonical
-      ``skills/overnight/`` files (the plugin mirror is byte-identical via
-      ``just build-plugin``).
+      (a) The skill-flow prose gates the step-5 prep-time ``session_start``
+      log to the run-now branch only — the schedule branch reaches the
+      launch without it. Asserted against ``new-session-flow.md``, the sole
+      file carrying the launch sub-steps (SKILL.md's New Session Flow
+      section is a pointer into it, not a duplicate step list, so it's
+      asserted only to confirm it doesn't reintroduce an unconditional
+      ``session_start`` call). Canonical ``skills/overnight/`` files; the
+      plugin mirror is byte-identical via ``just build-plugin``.
 
   TestRunnerSessionStartSingle
       (b) After a (simulated) fire, the session's ``events.log`` contains
@@ -150,26 +153,33 @@ class TestSkillFlowGating(unittest.TestCase):
             "the sole fire-time author",
         )
 
-    def test_skill_step_75_gates_to_runnow(self) -> None:
-        """SKILL.md step 7.5 must not issue an unconditional prep log.
+    def test_skill_new_session_flow_does_not_duplicate_prep_session_start_log(
+        self,
+    ) -> None:
+        """SKILL.md's New Session Flow section must not reintroduce the bug.
 
-        The 7.5 line must defer the ``session_start`` log to the run-now
-        branch (7.7) rather than calling it before the branch.
+        The launch sub-steps (formerly duplicated in SKILL.md as 7.1-7.8)
+        now live solely in new-session-flow.md, which the section above
+        asserts is gated correctly. This guards against a regression where
+        SKILL.md's pointer text grows back into a step list carrying its own
+        unconditional ``session_start`` log call.
         """
-        # Isolate the 7.5 sub-step line.
-        m = re.search(r"\n\s*- 7\.5 .*", self._skill)
-        self.assertIsNotNone(m, "could not locate 7.5 sub-step in SKILL.md")
-        line_75 = m.group(0)
+        m = re.search(r"## New Session Flow.*?(?=\n## )", self._skill, flags=re.DOTALL)
+        self.assertIsNotNone(
+            m, "could not locate New Session Flow section in SKILL.md"
+        )
+        section = m.group(0)
         self.assertNotRegex(
-            line_75,
-            r"^\s*- 7\.5 `?log_event\(event='session_start'",
-            "SKILL.md 7.5 still issues an unconditional prep-time "
-            "session_start log; gate it to the run-now branch",
+            section,
+            r"log_event\([^\n]*session_start",
+            "SKILL.md must not duplicate the session_start log directive; "
+            "gating lives solely in new-session-flow.md",
         )
         self.assertRegex(
-            line_75.lower(),
+            section.lower(),
             r"run-now|run now",
-            "SKILL.md 7.5 must reference the run-now branch as the gated location",
+            "SKILL.md's New Session Flow pointer should still note the "
+            "run-now gating for a reader who doesn't open the reference",
         )
 
 

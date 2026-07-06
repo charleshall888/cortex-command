@@ -55,35 +55,11 @@ Validate before entering any flow:
 
 ## New Session Flow (`/overnight`)
 
-Full per-step detail (error handling, sub-steps, function signatures) lives in `${CLAUDE_SKILL_DIR}/references/new-session-flow.md`. Execute in order:
-
-1. **Check for existing session** — offer resume or abandon if a non-`complete` session is active.
-2. **Regenerate the backlog index** — `cortex-generate-backlog-index` (gitignored cache; not staged or committed).
-3. **Select eligible features** — `cortex overnight prepare` groups items with `research.md` and `spec.md` on disk and `type != epic`; missing `plan.md` is generated during the session.
-4. **Present the selection summary** — eligible items, batches, ineligible items with reasons.
-5. **Render the session plan** — `cortex overnight prepare --format json` (read-only).
-6. **Unified plan + spec review** — display the plan and each active spec inline; triage suitability once, on first entry, into three pools: active (runs), suitability set-aside (excluded by default, re-addable), hard-ineligible (display-only). Re-display all pools before every approval prompt: `[A]pprove / [R]emove / [I]nclude-set-aside / [T]ime-limit / [Q]uit`. Full triage rubric and re-add semantics in the reference.
-7. **Launch** — on approval, in order:
-   - 7.1 Pre-flight: block on uncommitted `cortex/lifecycle/` or `cortex/backlog/` files; offer `/commit`.
-   - 7.2 `cortex overnight launch --format json --only <active slugs>` (must be exactly the approved active pool) — bootstraps the session; capture `state_path`, `worktree_path`, `extracted_specs` from the envelope.
-   - 7.3 `latest-overnight` symlink — deferred to runner startup.
-   - 7.4 Stage + commit `extracted_specs` (if any) on the integration branch.
-   - 7.5 No `session_start` log here — deferred to the run-now branch (7.7); the runner is the sole fire-time author.
-   - 7.6 Launch the dashboard if not already running (optional).
-   - 7.7 Ask run-now vs. schedule-for-later, via Bash with `dangerouslyDisableSandbox: true`:
-     - Run now: log `session_start` first, then `cortex overnight start --state {state_path} --time-limit 21600`.
-     - Schedule (no prep-time log): `cortex overnight schedule <target-time> --state {state_path}`.
-   - 7.8 Inform the user; the runner takes over.
+Read `${CLAUDE_SKILL_DIR}/references/new-session-flow.md` and follow it (full protocol, error handling, sub-steps, function signatures) — check for an existing session, regenerate the backlog index, select eligible features, present the selection, render the plan, run the unified plan + spec review to approval, then launch (pre-flight, bootstrap, batch-spec commit, dashboard, run-now/schedule split — `session_start` is logged only on the run-now branch; the runner is the sole fire-time author otherwise).
 
 ## Resume Flow (`/overnight resume`)
 
-Full per-step detail in `${CLAUDE_SKILL_DIR}/references/resume-flow.md`.
-
-1. **Load existing state** — most-recent non-`complete` `overnight-state.json` under `cortex/lifecycle/sessions/`.
-2. **Report session state** — phase, per-feature statuses, rounds completed, current round; surface `paused_reason` when `phase: paused`.
-3. **Check for deferred questions** — via `cortex_command.overnight.deferral`.
-4. **Determine next action** — depends on phase (`executing` / `paused` / `complete` / `planning`); full table in the reference.
-5. **Act on user choice** — resume runs the same `cortex overnight start` command as 7.7 above.
+Read `${CLAUDE_SKILL_DIR}/references/resume-flow.md` and follow it (full protocol) — load existing state, report session status, surface deferred questions, then act on the phase-appropriate next step.
 
 ## Status Flow (`/overnight status`)
 
