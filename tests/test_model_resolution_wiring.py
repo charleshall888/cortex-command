@@ -242,15 +242,17 @@ def test_corrupted_citation_sites_point_to_canonical() -> None:
 
 
 def test_refine_preserves_site_specific_corrupted_mapping() -> None:
-    """refine's corrupted:true citation keeps its §3b-specific control-flow steer.
+    """refine's corrupted:true mapping stays inline at the §3b gate site.
 
-    A bare citation to the generic canonical would lose refine's mapping of the
-    corrupted state onto its OWN §3b gate — Task 9a required keeping that clause
-    inline alongside the citation.
+    Task 9a required the corrupted-state → run-the-gate steer to live inline
+    where the state is read, not only in the generic canonical. That site is
+    now specify.md §3b itself (the mapping moved there when refine's SKILL.md
+    adaptation list was inlined into specify.md).
     """
-    text = _read("skills/refine/SKILL.md")
-    assert "run the §3b gate" in text, (
-        "refine SKILL.md must keep the §3b-specific corrupted-state mapping "
+    text = _read("skills/refine/references/specify.md")
+    section_3b = text.split("### 3b.")[1].split("### 4.")[0]
+    assert '"corrupted": true' in section_3b and "run the gate" in section_3b, (
+        "specify.md §3b must keep the corrupted-state → run-the-gate mapping "
         "inline alongside the criticality-matrix.md citation"
     )
 
