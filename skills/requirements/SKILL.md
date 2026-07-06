@@ -22,7 +22,13 @@ Routing surface for the v2 requirements workflow: parse `$ARGUMENTS`, then seque
 
 ## Routing
 
-1. If `$ARGUMENTS == "list"`: scan `cortex/requirements/` and present a table (file, scope, last-gathered date, requirement count), excluding `glossary.md` (see above). Exit. If the directory is absent, report "No requirements documented yet. Run `/cortex-core:requirements` to start with project-level requirements." and exit.
+1. If `$ARGUMENTS == "list"`: run the inventory verb (excludes `glossary.md` itself — see above) and act on `state`, then exit either way:
+
+   ```bash
+   cortex-list-requirements
+   ```
+
+   `absent` → report "No requirements documented yet. Run `/cortex-core:requirements` to start with project-level requirements." `ok` → render `rows` as a table (file, scope, last_gathered, requirement_count).
 2. Otherwise resolve `scope`: empty or `project` → `project`; any other single token → that token as the area slug.
 3. Invoke `/requirements-gather` with the resolved `scope` and, when `cortex/requirements/{scope}.md` already exists, pass its path as `existing-doc` so the interview refines rather than rewrites.
 4. Invoke `/requirements-write` with the same `scope`, the returned Q&A block, and the same `existing-doc` (if any); surface the written artifact path to the user for approval.

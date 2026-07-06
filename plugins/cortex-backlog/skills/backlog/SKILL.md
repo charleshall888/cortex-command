@@ -23,7 +23,7 @@ Subcommand: $ARGUMENTS (first word = subcommand, remainder = args; empty = list 
 
 ## Schema & Filenames
 
-Read `${CLAUDE_SKILL_DIR}/references/schema.md` when creating or validating items — field table, enum values, and item template. Files are named `NNN-slug.md`: `NNN` is a zero-padded three-digit sequential ID (the stable cross-reference used in `blocks: [7]`); `slug` is lowercase-kebab-case and may drift cosmetically after retitling.
+Read `${CLAUDE_SKILL_DIR}/references/schema.md` when creating or validating items — field table and enum values. Files are named `NNN-slug.md`: `NNN` is a zero-padded three-digit sequential ID (the stable cross-reference used in `blocks: [7]`); `slug` is lowercase-kebab-case and may drift cosmetically after retitling.
 
 ## Subcommands
 
@@ -31,7 +31,7 @@ No `{{subcommand}}` (bare `/cortex-backlog:backlog`): present the subcommands be
 
 ### add
 
-`cortex-create-backlog-item --title "{{title}}" --status backlog --type {{type}} --priority {{priority}}` (type defaults `feature`, priority `medium` unless specified; `--parent NNN` for a parent epic), then open the created file for review.
+`cortex-create-backlog-item --title "{{title}}" --status backlog --type {{type}} --priority {{priority}}` (type defaults `feature`, priority `medium` unless specified; `--parent NNN` for a parent epic; `--tags`/`--areas` space-separated when specified), then open the created file for review.
 
 ### new
 

@@ -365,6 +365,48 @@ def test_launch_aborts_before_mutation_on_invalid_repos(
     payload = json.loads(captured.out.strip())
     assert payload["error"] == "invalid_target_repos"
     assert payload["repos"] == ["~/broken-repo"]
+    # ``message`` is a complete, relay-ready sentence (moved from
+    # new-session-flow.md sub-step 0) — the skill relays it verbatim rather
+    # than authoring its own remediation text from ``repos``.
+    assert "Cannot start overnight session" in payload["message"]
+    assert "~/broken-repo" in payload["message"]
+    assert "git clone" in payload["message"]
+
+
+def test_launch_bootstrap_failure_returns_relay_ready_message(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
+    """A ``bootstrap_session`` exception surfaces as ``bootstrap_failed`` with
+    a complete, relay-ready ``message`` (moved from new-session-flow.md
+    sub-step 2) — the skill relays it verbatim rather than authoring its own
+    "report the message" wrapper.
+    """
+    selection = _make_selection()
+    monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda *a, **k: tmp_path)
+    monkeypatch.setattr(
+        backlog_module, "select_overnight_batch", lambda **kw: selection
+    )
+    monkeypatch.setattr(
+        plan_module,
+        "render_session_plan",
+        lambda selection, time_limit_hours: "# plan\n",
+    )
+    monkeypatch.setattr(plan_module, "validate_target_repos", lambda sel: [])
+
+    def _boom(*a, **kw):
+        raise OSError("worktree add failed: disk full")
+
+    monkeypatch.setattr(plan_module, "bootstrap_session", _boom)
+
+    rc = cli_handler.handle_launch(_launch_args(fmt="json"))
+    captured = capsys.readouterr()
+
+    assert rc == 1
+    payload = json.loads(captured.out.strip())
+    assert payload["error"] == "bootstrap_failed"
+    assert payload["message"] == (
+        "Failed to bootstrap overnight session: worktree add failed: disk full."
+    )
 
 
 def test_launch_nothing_ready_exits_nonzero(

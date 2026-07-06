@@ -74,24 +74,24 @@ Skip this section if any of the following hold:
 
 ### Guard 1 — resolve the active config path
 
-Read `cortex/lifecycle.config.md` at the project root; if missing, skip Section 2a
-silently. Try `demo-commands:` (a list) first, falling back to `demo-command:` (a single
-string) if the list is absent or has no valid entries; if neither is configured, skip
-silently.
+Run:
 
-**`demo-commands:` list** — find the bare `demo-commands:` key and read its indented
-`- label: "..."` / `command: "..."` entries until the first non-indented, non-blank line.
-Extract `label:`/`command:` via first-colon split (commands may contain their own `:`,
-e.g. `godot res://main.tscn`). Discard entries whose `command:` is empty/whitespace-only
-or contains a control character (byte < 0x20 except `\t`); don't strip inline `#` — no
-shell parser here can tell comment from literal, so `command:` values must stay free of
-trailing `#` comments. At least one surviving entry activates this path.
+```
+cortex-morning-review-resolve-demo-config
+```
 
-**`demo-command:` single string** (fallback) — find a non-commented `demo-command:` line,
-extract everything after the first `:`, trim whitespace; same rejection rules as above. A
-valid value activates this path.
+`state` is `"list"`, `"single"`, or `"none"`; `"none"` skips Section 2a silently — no
+demo config is present at `cortex/lifecycle.config.md`, or neither `demo-commands:` nor
+`demo-command:` resolved to a valid entry. Otherwise `entries` holds the already-validated
+entry (or entries, for the list form) to use below — each is
+`{"path": "list"|"single", "label"?, "command"}`, with `command` already checked for
+empty/whitespace-only or control-character content.
 
-If neither path is active, skip silently. Otherwise proceed to Guard 2.
+The **list path** below refers to `state == "list"` (one or more `entries`, each carrying
+a `label`); the **single-string path** refers to `state == "single"` (`entries` has exactly
+one item, with no `label`).
+
+Otherwise proceed to Guard 2.
 
 ### Guard 2 — remote session
 
@@ -112,20 +112,22 @@ silently.
 
 ### Agent Reasoning (list path only)
 
-If all guards pass on the list path, pick the configured entry whose `label:`/`command:`
+If all guards pass on the list path, pick the entry in `entries` whose `label`/`command`
 best matches the night's merged features and their **Key files changed** (already in
 context from Section 2 — do not re-run `git log`, `git diff`, or any file-tree read). If
-one entry is a clear winner, select it and proceed to the Demo offer. If none maps
-cleanly, skip Section 2a silently — do not fall back to the single-string path even if
-it's also configured; once the list path is active, it owns the decision.
+one entry is a clear winner, select it as `{selected-entry}` and proceed to the Demo
+offer. If none maps cleanly, skip Section 2a silently — do not fall back to the
+single-string path even if it's also configured; once the list path is active, it owns
+the decision.
 
 ### Demo offer
 
 Ask a single yes/no question, using the variant for the active path. No follow-up
 questions.
 
-- **List path:** `Run {selected-label} demo ({selected-command}) from {integration_branch}
-  in a fresh worktree? [y / n]` — substitute the selected entry's label/command.
+- **List path:** `Run {selected-entry.label} demo ({selected-entry.command}) from
+  {integration_branch} in a fresh worktree? [y / n]` — substitute the selected entry's
+  label/command.
 - **Single-string path:** `Spin up a demo worktree of {integration_branch} at
   $TMPDIR/demo-{session_id}-{timestamp} and print the launch command? [y / n]`
 
@@ -145,10 +147,10 @@ On `n` or unparseable input, advance to Section 2b. On `y`, continue below.
 ### Print template
 
 After a successful worktree-add, print this block, substituting `{resolved-target-path}`
-with the absolute path from the previous step and `{command}` with `{demo-command}`
-(single-string path) or `{selected-command}` (list path) — both already validated
-control-character-free above. On the list path only, append ` ({selected-label})` after
-"the demo" on the second line.
+with the absolute path from the previous step and `{command}` with `entries[0].command`
+(single-string path) or `{selected-entry.command}` (list path) — both already validated
+control-character-free by the resolver verb. On the list path only, append
+` ({selected-entry.label})` after "the demo" on the second line.
 
 ```
 Demo worktree created at: {resolved-target-path}
@@ -172,55 +174,26 @@ to run manually in a separate terminal.
 Run immediately after Section 2a (or after the batch verification response if 2a was
 skipped). No additional user input needed.
 
-For each completed feature (same list and order as Section 2):
+For each completed feature (same list and order as Section 2), run:
 
-1. If `cortex/lifecycle/{feature}/events.log` doesn't exist, skip — report
-   `no lifecycle dir`.
-2. If it already contains a `"event": "feature_complete"` line, skip — report
-   `already complete`.
-3. Get tier/criticality via `cortex-lifecycle-state --feature {feature}` (tier:
-   `lifecycle_start.tier` superseded by the most recent `complexity_override.to`;
-   criticality: most recent of `lifecycle_start` or `criticality_override`; default tier
-   `"simple"`, criticality `"medium"` when absent).
-4. Gate: complex tier at any criticality, or any tier at high/critical criticality →
-   review required. Otherwise (simple/low, simple/medium) → not required.
+```
+cortex-morning-review-advance-lifecycle --feature {feature}
+```
 
-5. **Review not required**: count `- [x]`/`- [ ]` checkboxes in `plan.md`
-   (case-insensitive) as `tasks_total` (`0` if `plan.md` is missing). Append four events
-   to `events.log` (one JSON object per line, newline-terminated, current UTC ISO 8601
-   `ts`):
+This owns the checkbox count against `plan.md`, the tier/criticality review gate (complex
+tier at any criticality, or any tier at high/critical criticality, requires review;
+default tier `"simple"`, criticality `"medium"` when absent), and the matching
+`events.log` append (four synthetic events when review isn't required; two when a real
+`cycle >= 1` review already ran but `feature_complete` is missing — crash recovery; none
+otherwise). Map the returned `state` to a report line:
 
-   ```json
-   {"ts": "<now>", "event": "phase_transition", "feature": "<name>", "from": "implement", "to": "review"}
-   {"ts": "<now>", "event": "review_verdict", "feature": "<name>", "verdict": "APPROVED", "cycle": 0}
-   {"ts": "<now>", "event": "phase_transition", "feature": "<name>", "from": "review", "to": "complete"}
-   {"ts": "<now>", "event": "feature_complete", "feature": "<name>", "tasks_total": N, "rework_cycles": 0}
-   ```
-
-   Report: `advanced → complete`.
-
-6. **Review required**: check `events.log` for real review events from the batch runner
-   (`cycle >= 1`):
-
-   a. **`review_verdict` (cycle ≥ 1) and `feature_complete` both present** — the batch
-      runner already completed the review lifecycle. Skip synthetic events. Report:
-      `already complete (reviewed)`.
-
-   b. **`review_verdict` (cycle ≥ 1) present, `feature_complete` missing** — crash
-      recovery: count checkboxes as in step 5 and append only:
-
-      ```json
-      {"ts": "<now>", "event": "phase_transition", "feature": "<name>", "from": "review", "to": "complete"}
-      {"ts": "<now>", "event": "feature_complete", "feature": "<name>", "tasks_total": N, "rework_cycles": R}
-      ```
-
-      `R` = count of `review_verdict` events with `verdict: CHANGES_REQUESTED` (`0` if the
-      only verdict was a clean `APPROVED`). Report: `advanced → complete (crash
-      recovery)`.
-
-   c. **Neither present** — the feature was expected to be reviewed overnight but wasn't.
-      Do NOT write synthetic APPROVED events. Report: `missing review — expected review
-      but none found`.
+| `state` | Report |
+|---|---|
+| `no-lifecycle-dir` | `no lifecycle dir` |
+| `already-complete` | `already complete` |
+| `advanced-complete` | `advanced → complete` |
+| `advanced-crash-recovery` | `advanced → complete (crash recovery)` |
+| `missing-review` | `missing review — expected review but none found` (the feature was expected to be reviewed overnight but wasn't; no synthetic events are written) |
 
 Display an inline summary before moving to Section 3:
 
@@ -391,32 +364,28 @@ Run immediately after a successful post-merge sync in Section 6a. Skip this sect
 entirely if the merge was declined, skipped, or the PR was already merged/closed before
 this review — tickets close only when the merge is confirmed in the current session.
 
-The per-feature close targets the local backlog engine. Before the loop, resolve the
-active backend once with `cortex-read-backlog-backend` (argless; prints the resolved
-backend, exits 0):
-
-- **`cortex-backlog`** (default) → run the loop below unchanged.
-- **`none`** → skip the auto-close; note a one-line advisory per feature that backlog
-  ticket closure is disabled for this repo.
-- **any other value** (external tracker) → make the equivalent close best-effort per
-  `backlog.instructions` and your judgment (e.g. `gh issue close`), surfacing the
-  composed close if it can't complete so no work is lost.
-
-No per-feature confirmation is needed before closing — the confirmed merge is
-authoritative. For each completed feature (same list and order as Section 2), on the
-`cortex-backlog` arm run:
+Resolve the active backend once with `cortex-read-backlog-backend` (argless; prints the
+resolved backend, exits 0). No per-feature confirmation is needed before closing — the
+confirmed merge is authoritative. Then run the close loop for every completed feature
+(same list and order as Section 2) in one call:
 
 ```
-cortex-update-item {backlog_id} --status complete
+cortex-morning-review-close-tickets --item {feature}={identifier} [--item ...] --backend {resolved-backend}
 ```
 
-`{backlog_id}` is the zero-padded numeric ID from `overnight-state.json`'s `backlog_id`
-field (e.g. `078`, not `78`); fall back to the lifecycle slug for fuzzy matching if it's
-null. Run from the repository root.
+`{identifier}` is the zero-padded numeric ID from `overnight-state.json`'s `backlog_id`
+field for that feature (e.g. `078`, not `78`); fall back to the lifecycle slug for fuzzy
+matching if it's null. The verb performs the `cortex-backlog`/`none` arms of the routing
+itself; map each returned per-item `state` to a report line:
 
-Report per feature: `closed #ID` (exit 0; append `(parent epic also closed)` if the
-script printed that), `no ticket found` (exit 1), or `ambiguous slug` (exit 2 — surface
-the stderr candidate list and ask the operator to re-invoke with a disambiguated slug).
+| `state` | Report |
+|---|---|
+| `closed` | `closed #{id}` (append `(parent epic also closed)` if `parent_closed` is set) |
+| `no-ticket` | `no ticket found` |
+| `ambiguous` | surface `message`'s candidate list and ask the operator to re-invoke with a disambiguated slug |
+| `skipped-disabled` | one-line advisory that backlog ticket closure is disabled for this repo (the `none` backend) |
+| `external` | an external tracker is configured — make the equivalent close best-effort per `backlog.instructions` and your judgment (e.g. `gh issue close`), surfacing the composed close if it can't complete so no work is lost |
+| `error` | `close failed: {message}` |
 
 Present the full results as a summary at the end of the review:
 
@@ -438,7 +407,7 @@ Most edge handling is specified inline per section. The cases below are stated o
 |-----------|--------|
 | `cortex/lifecycle/sessions/` exists but report is missing | Print "Incomplete session detected — report not generated. Run: `cortex-report`" and stop |
 | Single completed feature | Use the batch prompt anyway — consistent UX regardless of count |
-| `update_item.py` exits non-zero for another reason | Report "close failed (exit {N})" and continue |
+| `cortex-morning-review-close-tickets` returns `error` for an item | Report "close failed: {message}" and continue with the remaining items |
 | `cortex-git-sync-rebase` not found | Report the missing script, skip sync, note "install the `cortex-core` plugin" |
 | Dirty `.git/rebase-merge/` detected | Script auto-aborts the stale rebase, warns, proceeds with sync |
 | All conflicts auto-resolved | Report "N files auto-resolved via allowlist" |

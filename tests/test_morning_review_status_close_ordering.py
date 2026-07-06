@@ -1,9 +1,16 @@
 """Structural ordering tests for morning-review walkthrough.md.
 
-Asserts that backlog ticket closure (python3 -m cortex_command.backlog.update_item
-<id> --status complete) is positioned AFTER the PR merge step (gh pr merge) in
-walkthrough.md source order, and that the closure section is conditioned on a
-successful merge so it is NOT reached on the unmerged-PR path.
+Asserts that backlog ticket closure — now the
+``cortex-morning-review-close-tickets`` verb call, which owns the
+``cortex-update-item``-based close internally — is positioned AFTER the PR
+merge step (``gh pr merge``) in walkthrough.md source order, and that the
+closure section is conditioned on a successful merge so it is NOT reached on
+the unmerged-PR path. The close operation moved FROM a raw per-feature
+``cortex-update-item {id} --status complete`` invocation INTO the verb (see
+``cortex_command.overnight.close_tickets``); the ordering property being
+guarded — ticket closure never precedes a confirmed merge — is unchanged, so
+this file was updated to anchor on the verb's invocation literal rather than
+the raw close command it now wraps.
 """
 
 from __future__ import annotations
@@ -20,8 +27,8 @@ WALKTHROUGH = (
 SKILL = REPO_ROOT / "skills" / "morning-review" / "SKILL.md"
 
 MERGE_LITERAL = "gh pr merge"
-CLOSE_LITERAL = "cortex-update-item"
-CLOSE_ARG = "--status complete"
+CLOSE_LITERAL = "cortex-morning-review-close-tickets"
+CLOSE_ARG = "--backend"
 
 # Spelling-agnostic close pattern. The ticket-close command has TWO live
 # spellings of the same operation — the console form
@@ -64,13 +71,13 @@ def _section_6_pr_review_start(lines: list[str]) -> int | None:
 
 
 # ---------------------------------------------------------------------------
-# Ordering test — gh pr merge appears before
-# python3 -m cortex_command.backlog.update_item <id> --status complete
+# Ordering test — gh pr merge appears before the
+# cortex-morning-review-close-tickets verb call
 # ---------------------------------------------------------------------------
 
 
 def test_status_complete_appears_after_merge_in_source_order() -> None:
-    """python3 -m cortex_command.backlog.update_item <id> --status complete appears strictly after gh pr merge in walkthrough."""
+    """cortex-morning-review-close-tickets appears strictly after gh pr merge in walkthrough."""
     lines = _load_lines()
 
     merge_line = _first_occurrence(lines, MERGE_LITERAL)
@@ -83,7 +90,8 @@ def test_status_complete_appears_after_merge_in_source_order() -> None:
         f"'{CLOSE_LITERAL}' not found in {WALKTHROUGH.relative_to(REPO_ROOT)}"
     )
 
-    # Confirm the close line also carries --status complete (not just cortex-update-item)
+    # Confirm the close line is the actual invocation (carries --backend), not
+    # just a passing mention of the verb's name in prose.
     close_line_text = lines[close_line - 1]
     assert CLOSE_ARG in close_line_text, (
         f"Line {close_line} contains '{CLOSE_LITERAL}' but not '{CLOSE_ARG}': "

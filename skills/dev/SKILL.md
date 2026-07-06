@@ -103,9 +103,7 @@ If both `## Refined` and `## Backlog` are empty:
 - Report: "No ready items in the backlog."
 - Suggest: check the master table for blocked items with stale dependencies, or create new items with `/cortex-backlog:backlog new`.
 
-**Epic detection and child map** (complete before rendering output): invoke `cortex-build-epic-map`, which reads `index.json`, auto-detects `type: epic` items, groups non-epic items under their normalized parent, and prints the map as JSON to stdout.
-
-**Output schema**: `{"schema_version": "1", "epics": {epic_id: {"children": [{"id": <num>, "title": <str>, "status": <str>, "spec": <str|null>}]}}}` — non-null `spec` marks refined. Emits ALL detected epics; pass only those intersecting the ready set to Step 3c.
+**Epic detection and child map** (complete before rendering output): invoke `cortex-build-epic-map`, which reads `index.json`, auto-detects `type: epic` items, groups non-epic items under their normalized parent, and prints the map as JSON to stdout. Run `cortex-build-epic-map --describe-schema` for the output shape. Emits ALL detected epics; pass only those intersecting the ready set to Step 3c.
 
 **Exit codes**:
 - 1 (missing or malformed `index.json`): warn, then fall back to reading `index.md`'s table columns.

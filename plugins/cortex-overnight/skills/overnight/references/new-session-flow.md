@@ -106,14 +106,7 @@ Approve this plan and specs?
 
 On user approval, execute these steps in order:
 
-0. **Target-repo validation** (performed by `launch` in sub-step 2): `launch` validates every backlog `repo:` path before any mutation. On an invalid path it exits non-zero with `{"error": "invalid_target_repos", "repos": [...]}`, writing no artifacts and marking no session `executing`. Report:
-   ```
-   Cannot start overnight session: the following repo: paths are not valid git repositories:
-     - {path1}
-     - {path2}
-   Run `git clone <url> <path>` or correct the repo: field in the affected backlog items.
-   ```
-   → stop.
+0. **Target-repo validation** (performed by `launch` in sub-step 2): `launch` validates every backlog `repo:` path before any mutation. On an invalid path it exits non-zero with `{"error": "invalid_target_repos", "message": "...", "repos": [...]}`, writing no artifacts and marking no session `executing`. Relay the envelope's `message` verbatim, then stop.
 
 1. **Pre-flight: uncommitted cortex/lifecycle/backlog files**: run `git status --porcelain -- cortex/lifecycle/ cortex/backlog/`.
 
@@ -141,7 +134,7 @@ On user approval, execute these steps in order:
    This atomically initializes the session (the artifacts listed in the skill's frontmatter `outputs:`) and returns a JSON envelope. Capture, for later sub-steps, without reconstructing from a hard-coded prefix or environment variable:
    - `session_id`, `state_dir` (session directory), `state_path` (pass as `--state` in sub-step 7), `worktree_path` (sub-step 4), `extracted_specs` (batch-spec paths, sub-step 4)
 
-   **Error**: non-zero exit emits `error`/`message` (`invalid_target_repos` → handle per sub-step 0; `bootstrap_failed` → report the message and stop). On `bootstrap_failed`, clean up any orphaned worktree: `git worktree prune`, then remove the stale directory under `$TMPDIR/overnight-worktrees/` (find by modification time; the session ID is in the directory name).
+   **Error**: non-zero exit emits `error`/`message` (`invalid_target_repos` → handle per sub-step 0; `bootstrap_failed` → relay the envelope's `message` verbatim and stop). On `bootstrap_failed`, also clean up any orphaned worktree: `git worktree prune`, then remove the stale directory under `$TMPDIR/overnight-worktrees/` (find by modification time; the session ID is in the directory name).
 
 3. **latest-overnight symlink**: handled by the runner on startup — the skill doesn't create it; it writes to the repo root, outside the sandbox's write allowlist in sandboxed projects.
 

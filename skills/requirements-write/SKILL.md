@@ -47,3 +47,13 @@ Header `# Requirements: {area-name}` + `> Last gathered: {YYYY-MM-DD}` + a paren
 7. `## Open Questions` — `- None` when nothing is open.
 
 No token budget. Parent backlink is the only navigation element; area docs do NOT carry "When to Load" prose.
+
+## Acceptance
+
+After writing (or refining) the doc, run the mechanical acceptance gate instead of self-reporting conformance to the templates above:
+
+```bash
+cortex-validate-requirements-doc --path {written-path} --scope {project|area}
+```
+
+`pass` → return the written path. `fail` → `checks` names which check failed (a missing canonical H2, or an over-budget `## Optional`); fix the doc in place and re-run the gate before returning. `file-not-found`/`error` → the doc was not written where expected; resolve before returning.

@@ -24,7 +24,17 @@ Conduct a structured requirements interview surfacing intent, priorities, constr
 
 ### Glossary writes
 
-Hold the Q&A block in conversation context until the orchestrator's handoff — synthesis belongs to `/requirements-write`, so an abandoned interview leaves no partial project/area doc behind. The one write this sub-skill owns is a per-term append to `cortex/requirements/glossary.md` (created lazily on first resolved term, persisted immediately, so entries survive an abandoned interview). Before writing, probe for an existing entry: if found, use it verbatim or surface the conflict via `AskUserQuestion` ("the glossary defines X as Y; this interview suggests Z — keep / replace / surface as Flagged Ambiguity?"); if absent, classify and gate below.
+Hold the Q&A block in conversation context until the orchestrator's handoff — synthesis belongs to `/requirements-write`, so an abandoned interview leaves no partial project/area doc behind. The one write this sub-skill owns is a per-term entry in `cortex/requirements/glossary.md`'s `## Language` section, via the file-I/O verb below (lazily creates the file/section on first resolved term, persisted immediately, so entries survive an abandoned interview). Before classify/gate ever runs, probe for an existing entry:
+
+```bash
+cortex-append-glossary-term --term "{term}"
+```
+
+`found` → use the returned `definition` verbatim, or surface the conflict via `AskUserQuestion` ("the glossary defines X as Y; this interview suggests Z — keep / replace / surface as Flagged Ambiguity?") — "replace" re-invokes the verb with `--definition` and `--replace`. `not-found` → classify and gate below; only on a pass, write:
+
+```bash
+cortex-append-glossary-term --term "{term}" --definition "{definition}"
+```
 
 ### Classify, gate, and format
 

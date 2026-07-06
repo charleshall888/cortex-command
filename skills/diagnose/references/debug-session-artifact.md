@@ -2,13 +2,19 @@
 
 ## Location
 
-Priority order for where to write the artifact:
+Resolve where the artifact lives, then act on the response:
 
-1. **Explicit feature argument** (e.g., `/cortex-core:diagnose my-feature`): write to `cortex/lifecycle/{feature}/debug-session.md` if it exists, else warn and fall back to step 3.
-2. **Active session scan**: if a `.session` file under `cortex/lifecycle/*/` matches `$LIFECYCLE_SESSION_ID`, write to that feature's `debug-session.md`.
-3. **Fallback**: write to `debug/{date}-{slug}.md` (ISO date; kebab-case slug, or `diagnose` if none available). Create `debug/` if absent.
+```
+cortex-debug-session-path [--feature {feature-slug}] [--slug {kebab-slug}]
+```
 
-> **Note**: `$LIFECYCLE_SESSION_ID` propagation into overnight sub-agent sessions is unverified — in autonomous/overnight context, pass the feature name explicitly for reliable placement.
+Pass `--feature` when invoked with an explicit feature argument (e.g., `/cortex-core:diagnose my-feature`); omit it in autonomous/overnight context to resolve the active lifecycle session instead. Pass `--slug` for the fallback's kebab-case naming when neither applies.
+
+The verb always exits 0 and prints one `{state, path, basis}` JSON object:
+
+- `state: "lifecycle"` — write to `path`.
+- `state: "fallback"` — write to `path` under `cortex/debug/`; if `basis` is `"explicit-feature-missing"`, surface the accompanying `warning` before writing.
+- `state: "error"` — `message` explains what failed; do not write an artifact.
 
 ## Format
 
