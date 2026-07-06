@@ -176,8 +176,13 @@ def test_cli_item_flag_rejects_missing_equals() -> None:
         parser.parse_args(["--item", "auth-api-no-identifier", "--backend", "cortex-backlog"])
 
 
-def test_cli_emits_json(tmp_path: Path, backlog_dir: Path, capsys) -> None:
+def test_cli_emits_json(
+    tmp_path: Path, backlog_dir: Path, capsys, monkeypatch: pytest.MonkeyPatch
+) -> None:
     make_item(backlog_dir, "001-auth-api.md", "Auth API", extra="status: in_progress\n")
+    # Route main()'s root resolution to the tmp fixture — without this the
+    # CLI resolves the developer's real repo and mutates a real backlog item.
+    monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
     rc = ct.main(
         [
             "--item", "auth-api=1",
@@ -186,10 +191,8 @@ def test_cli_emits_json(tmp_path: Path, backlog_dir: Path, capsys) -> None:
     )
     assert rc == 0
     obj = json.loads(capsys.readouterr().out)
-    # No --project-root flag: main() resolves via CORTEX_REPO_ROOT/cwd, which
-    # in this test process is the real repo, not tmp_path — so we only assert
-    # the CLI's shape/contract here, not resolution against the tmp fixture.
-    assert obj["state"] in ("ok", "error")
+    assert obj["state"] == "ok"
+    assert obj["results"][0]["state"] == "closed"
 
 
 def test_cli_no_items_returns_empty_results(monkeypatch: pytest.MonkeyPatch, capsys) -> None:
