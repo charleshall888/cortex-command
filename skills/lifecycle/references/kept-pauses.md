@@ -6,8 +6,8 @@ Canonical inventory of the deliberate, in-scope user-facing `AskUserQuestion` pa
 - `skills/refine/references/clarify.md:40` — low-confidence clarify question batch surfaces unknowns the model cannot resolve alone.
 - `skills/refine/references/specify.md:23` — structured-interview gap-fill: model needs user input for unstated requirements.
 - `skills/refine/references/specify.md:48` — §2a cycle-2 confidence-check: user decides whether to loop back to research or proceed with gaps.
-- `skills/refine/references/specify.md:133` — spec approval surface (Approve / Request changes / Cancel). Substantive user decision.
-- `skills/refine/SKILL.md:118` — refine §4 complexity-value gate pick-menu — renders only when the orchestrator's recommendation diverges from full scope or confidence is low; otherwise the announcement folds into the regular approval surface.
+- `skills/refine/references/specify.md:135` — §4 complexity-value gate pick-menu — renders only when the recommendation diverges from full scope or confidence is low; otherwise the announcement folds into the regular approval surface.
+- `skills/refine/references/specify.md:137` — spec approval surface (Approve / Request changes / Cancel). Substantive user decision.
 - `skills/lifecycle/references/plan.md:120` — plan approval surface, merged with branch/dispatch selection (branch modes + "Approve plan but wait to implement" imply approval; Request changes / Cancel via the "Other" free-text escape). Substantive user decision.
 - `skills/lifecycle/references/implement.md:21` — conditional pause: fallback branch-selection picker on main (the `cortex-lifecycle-branch-decision` verb's `prompt` state), used only when no plan-time `dispatch_choice` was recorded (trunk vs feature-branch-with-worktree vs feature branch). Suppressed when `lifecycle.config.md::branch-mode` is set AND the working tree is clean AND no concurrent live interactive worktree exists for the feature slug.
 - `skills/lifecycle/references/backlog-writeback.md:16` — backlog write-back complete-lifecycle prompt on a backlog item already marked complete.

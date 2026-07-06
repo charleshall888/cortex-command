@@ -6,7 +6,7 @@ Structured interview to surface hidden requirements, edge cases, and priorities 
 
 ### 1. Load Context
 
-Read `cortex/lifecycle/{feature}/research.md` (codebase analysis + open questions) and `cortex/lifecycle.config.md` if it exists. Load requirements via the shared protocol (`load-requirements.md` at the lifecycle-resolved, propagated path — see lifecycle SKILL.md "Reference-path propagation"); none found → note it and proceed. Use requirements to avoid re-asking settled questions, focusing the interview on the gaps; surface any concept missing from the glossary in the next requirements interview.
+Read `cortex/lifecycle/{feature}/research.md` (codebase analysis + open questions) and `cortex/lifecycle.config.md` if it exists. Load requirements via the shared protocol (`load-requirements.md` at the lifecycle-resolved, propagated path — see lifecycle SKILL.md "Reference-path propagation"); none found → note it and proceed. Under `/cortex-core:refine`, requirements were already loaded in Clarify — re-read `research.md` but skip the redundant requirements loading. Use requirements to avoid re-asking settled questions, focusing the interview on the gaps; surface any concept missing from the glossary in the next requirements interview.
 
 ### 2. Structured Interview
 
@@ -120,6 +120,8 @@ cortex-lifecycle-state --feature {feature} --field tier
 cortex-lifecycle-state --feature {feature} --field criticality
 ```
 
+The caller may have escalated tier between Research and Spec — trust this read, not Clarify's value. `"corrupted": true` → treat as requiring review (run the gate), not `simple`-and-skip; canonical rule + full matrix in criticality-matrix.md.
+
 Resolve the active backlog backend once via `cortex-read-backlog-backend` (argless) before deciding to skip — the non-local seed-tier fail-safe below keys on it.
 
 **Run** when `tier = complex` AND `criticality ∈ {medium, high, critical}`: invoke the `critical-review` skill with the spec artifact; present the synthesis before spec approval.
@@ -129,6 +131,8 @@ Resolve the active backlog backend once via `cortex-read-backlog-backend` (argle
 Otherwise, read and follow the critical-review gate protocol (the propagated `<target>` path — the **critical-review-gate** target) for the `specify` phase.
 
 ### 4. User Approval
+
+**Complexity/value gate** — before the approval surface, gate the spec on complexity/value proportionality (regardless of critical-review). Fire on 3+ new state surfaces, a new persistent data format/config section to maintain, or a subsystem needing ongoing per-feature upkeep. Default full scope; else recommend the smallest downsize preserving the primary outcome, rationale-first: "I recommend X because Y" (citing the driving surface) before the user-facing question. `AskUserQuestion` only when the recommendation isn't full scope or confidence is low; otherwise fold into the approval surface (Approve / Request changes / Cancel), no pick-menu. Lead option `label` ends ` (Recommended)`, `description` opens with the rationale (`Confirm current scope (Recommended)` for full scope, else the downsize labeled `… (Recommended)`). Offer applicable downsizes ("drop entirely", "bugs-only", "minimum viable"), noting when one doesn't apply. When the `## Hard Gate` Open-Decisions row and this gate both fire, this gate's surface flow wins.
 
 Present the specification summary via the AskUserQuestion tool with these approval-surface fields:
 - **Produced** — one-line artifact summary.
@@ -147,6 +151,8 @@ Enumerate the options explicitly as `Approve` | `Request changes` | `Cancel`. Ro
 On `Approve`, append a `phase_transition` event:
 
 `cortex-lifecycle-event phase-transition --feature <name> --from specify --to plan`
+
+Under `/cortex-core:refine`, skip this emission — the `/cortex-core:lifecycle` caller owns phase-transition logging and commit-artifacts; the refine Step-2 `lifecycle_start` sentinel is exempt.
 
 ## Hard Gate
 

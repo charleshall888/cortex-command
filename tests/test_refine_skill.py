@@ -1,11 +1,13 @@
-"""Prose-shape assertions for skills/refine/SKILL.md §4 complexity-value gate.
+"""Prose-shape assertions for the refine §4 complexity-value gate.
 
-The rewritten §4 bullet must (a) place the `(Recommended)` suffix instruction
-within proximity of the heading anchor, (b) contain a "recommend" trigger
-inside the §4 bullet block, (c) place a rationale clue ("rationale" or
-"because") before the first `(Recommended)` occurrence (rationale-first
-ordering), and (d) not contain `MUST decide` (negative regression guard
-against MUST-escalation drift, per docs/policies.md's MUST-escalation policy).
+The gate lives in skills/refine/references/specify.md §4 (inlined there from
+the refine SKILL.md adaptation list — specify.md's sole consumer is refine).
+The gate block must (a) place the `(Recommended)` suffix instruction within
+proximity of the anchor, (b) contain a "recommend" trigger inside the block,
+(c) place a rationale clue ("rationale" or "because") before the first
+`(Recommended)` occurrence (rationale-first ordering), and (d) not contain
+`MUST decide` (negative regression guard against MUST-escalation drift, per
+docs/policies.md's MUST-escalation policy).
 """
 
 from __future__ import annotations
@@ -16,27 +18,23 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).parent.parent
-SKILL_MD = REPO_ROOT / "skills" / "refine" / "SKILL.md"
+SKILL_MD = REPO_ROOT / "skills" / "refine" / "references" / "specify.md"
 
 ANCHOR = "Complexity/value gate"
 
 
 def _slice_section_4(text: str) -> str:
-    """Return the §4 bullet block — from the anchor to the next sibling bullet.
+    """Return the gate block — from the anchor paragraph to the next blank line.
 
-    The §4 bullet starts with `- **§4 (User Approval) — Complexity/value gate**:`
-    and ends at the next top-level bullet `- **§5` / `- **`## Hard Gate``` or
-    at a blank-line-then-bullet boundary.
+    The gate is the paragraph beginning `**Complexity/value gate**` inside
+    specify.md §4 (User Approval), ending at the paragraph boundary.
     """
-    # Find the §4 bullet's starting line (the one beginning with `- **§4`).
-    start_match = re.search(rf"^- \*\*§4[^\n]*{re.escape(ANCHOR)}", text, re.MULTILINE)
+    start_match = re.search(rf"^\*\*{re.escape(ANCHOR)}\*\*", text, re.MULTILINE)
     if not start_match:
-        pytest.fail(f"Could not locate §4 anchor '{ANCHOR}' bullet in {SKILL_MD}")
+        pytest.fail(f"Could not locate gate anchor '{ANCHOR}' paragraph in {SKILL_MD}")
     start = start_match.start()
-    # End at the next top-level bullet starting with `- **` — search after the
-    # bullet's continuation lines (which begin with whitespace).
     after = text[start_match.end():]
-    end_match = re.search(r"\n- \*\*", after)
+    end_match = re.search(r"\n\s*\n", after)
     end = start_match.end() + (end_match.start() if end_match else len(after))
     return text[start:end]
 

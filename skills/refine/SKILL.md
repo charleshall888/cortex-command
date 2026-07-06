@@ -69,36 +69,7 @@ Every backend still feeds the critical-review gate — Step 5's `reconcile-clari
 
 ## Step 4: Research Phase
 
-### Sufficiency Check
-
-If `cortex/lifecycle/{lifecycle-slug}/research.md` exists, apply the Research Sufficiency Criteria (`clarify.md` §6) against Clarify's intent and scope. **Path guard**: only a file at that exact path counts — a backlog item's `discovery_source`/`research` field is Clarify background, never a substitute. Missing → run Research Execution.
-
-- **Sufficient** → announce, state which signals were checked, skip to Spec.
-- **Insufficient** → state the triggering signal(s), run new research.
-
-**Bypass**: if Research is re-entered from specify.md's §2a confidence-check loop-back, skip the Sufficiency Check and re-run from scratch, overwriting `research.md`.
-
-### Alignment-Considerations Propagation
-
-After clarify-critic returns and dispositions are applied (Step 3), collect every `origin: "alignment"` finding dispositioned **Apply** (or Ask resolved to Apply via the §4 Q&A) — Dismiss'd findings aren't propagated. **Only when** ≥1 such finding exists: write the survivors to `cortex/lifecycle/{lifecycle-slug}/research-considerations.md` (overwrite, never append) **and** carry `research-considerations-file=cortex/lifecycle/{lifecycle-slug}/research-considerations.md` on the research dispatch, always paired. No Applied alignment findings → neither write nor argument.
-
-Format: newline-delimited bullets, one one-sentence paraphrase per finding — a file, so arbitrary characters need no escaping.
-
-### Research Execution
-
-Delegate to `/cortex-core:research` (append `research-considerations-file=cortex/lifecycle/{lifecycle-slug}/research-considerations.md` only when the propagation write above fired):
-
-```
-/cortex-core:research topic="{clarified intent}" lifecycle-slug="{lifecycle-slug}" tier={tier} criticality={criticality}
-```
-
-The clarified intent, not the ticket body, is the research scope anchor. **Alternative exploration**: for complex-tier or high/critical features with a suggested implementation, research must explore ≥1 alternative alongside it (encouraged, not required, otherwise) — exploring isn't rejecting; validating the suggestion is a fine outcome.
-
-After research returns, verify `research.md` exists and is non-empty (else surface the error and halt), then register the `"research"` artifact in `index.md` per backlog-writeback.md's canonical recipe.
-
-### Research Exit Gate
-
-Scan `research.md`'s `## Open Questions`: an item is **resolved** if it has an inline answer, **deferred** if explicitly marked deferred with written rationale; a bare unannotated bullet is neither. Any unresolved, non-deferred items → present them and resolve or explicitly defer each before Spec. An absent `## Open Questions` section → the gate passes.
+Read `${CLAUDE_SKILL_DIR}/references/research-phase.md` and follow it — sufficiency check, alignment-considerations propagation, research dispatch, and exit gate.
 
 ## Step 5: Spec Phase
 
@@ -109,15 +80,7 @@ Scan `research.md`'s `## Open Questions`: an item is **resolved** if it has an i
 
 Idempotent — safe on resume; no-op under `/cortex-core:lifecycle`.
 
-Read `${CLAUDE_SKILL_DIR}/references/specify.md` and follow it (its full protocol) with these adaptations:
-
-- **§1 (Load Context)**: requirements were loaded in Clarify and research.md was produced in Step 4 — re-read `research.md` but skip redundant requirements loading.
-- **§2a loop-back**: a Research Confidence Check loop-back re-enters Step 4 with the Sufficiency Check bypass.
-- **§3b tier detection**: the caller (`/cortex-core:lifecycle`) may escalate tier between Research and Spec — don't rely solely on Clarify. `"corrupted": true` → treat as requiring review (run the §3b gate), not `simple`-and-skip. Canonical rule + full matrix: `${CLAUDE_SKILL_DIR}/../lifecycle/references/criticality-matrix.md`.
-- **§3a/§3b gate references**: specify.md consults two lifecycle-sibling gates via "the propagated `<target>` path"; standalone refine has no lifecycle manifest, so resolve them here: orchestrator-review → `${CLAUDE_SKILL_DIR}/../lifecycle/references/orchestrator-review.md`, critical-review-gate → `${CLAUDE_SKILL_DIR}/../lifecycle/references/critical-review-gate.md`.
-- **§4 (User Approval) — Complexity/value gate**: gate the spec on complexity/value proportionality before the approval surface (regardless of critical-review). Fire on 3+ new state surfaces, a new persistent data format/config section to maintain, or a subsystem needing ongoing per-feature upkeep. Default full scope; else recommend the smallest downsize preserving the primary outcome, rationale-first: "I recommend X because Y" (citing the driving surface) before the user-facing question. `AskUserQuestion` only when the recommendation isn't full scope or confidence is low; otherwise fold into the approval surface (Approve / Request changes / Cancel), no pick-menu. Lead option `label` ends ` (Recommended)`, `description` opens with the rationale (`Confirm current scope (Recommended)` for full scope, else the downsize labeled `… (Recommended)`). Offer applicable downsizes ("drop entirely", "bugs-only", "minimum viable"), noting when one doesn't apply.
-- **§5 (Transition)**: skip the `phase_transition` emission — the caller (`/cortex-core:lifecycle`) owns phase-transition logging and commit-artifacts; the Step-2 `lifecycle_start` sentinel is exempt.
-- **`## Hard Gate`**: applies; when the Open-Decisions row and the §4 gate both fire, §4's surface flow wins.
+Read `${CLAUDE_SKILL_DIR}/references/specify.md` and follow its full protocol — the refine-context notes are inlined there at §1 (skip redundant requirements loading), §3b (trust the state read; `corrupted: true` runs the gate), §4 (complexity/value gate), and §5 (skip the `phase_transition` emission). Its §3a/§3b gates and criticality matrix reference "the propagated `<target>` path"; standalone refine has no lifecycle manifest, so resolve them here: orchestrator-review → `${CLAUDE_SKILL_DIR}/../lifecycle/references/orchestrator-review.md`, critical-review-gate → `${CLAUDE_SKILL_DIR}/../lifecycle/references/critical-review-gate.md`, criticality-matrix → `${CLAUDE_SKILL_DIR}/../lifecycle/references/criticality-matrix.md`.
 
 Do NOT set `status: refined` before approval. After approval (specify.md §4), register the `"spec"` artifact in `index.md` per backlog-writeback.md's canonical recipe.
 
