@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 9bc329d8-1a89-4b00-90c1-0cf1dad6cf18
 title: 'Repair critical-review full-pipeline classifier tests: Req 9b path gate + evaluator prose-format drift'
-status: backlog
+status: wontfix
 priority: low
 type: chore
 created: 2026-07-03
-updated: 2026-07-03
+updated: 2026-07-06
 areas: ['skills', 'tests']
 tags: ['critical-review', 'test-debt']
 ---
@@ -56,3 +56,6 @@ Verification requires full-pipeline `claude -p "/cortex-core:critical-review <ar
 All three full-pipeline tests pass under `uv run pytest --run-slow` (at their re-confirmed N-of-3 criteria) **run in a real terminal**, `baseline-stability.json` is regenerated through the fixed path, and no staged fixture copy remains in `cortex/research/` after a run.
 
 Filed from the #364 investigation: repairing the extraction source (the 5 synthesizer-only tests) exposed this next layer once those tests could reach their model calls. See #364.
+## Wontfix rationale (2026-07-06)
+
+Closed without repair; the three full-pipeline tests, their evaluators, `tests/baseline_critical_review.py`, `baseline-stability.json`, and the pipeline fixtures (`pure_b_aggregation`, `straddle_case`, `weak_argument_downgrade`) were deleted rather than left permanently red. Cost/value: the repair and every future prompt change require stochastic N-of-3 calibration via real-terminal `claude -p` runs (~10 min each, live-billed), while the classification rubric is already covered by the deterministic synthesizer-only tests repaired in #364, which remain in `tests/test_critical_review_classifier.py`. The end-to-end reviewer→synthesizer path is exercised on every real critical-review run with a human reading the output, and its failure mode (missing synthesis) is loud. Do not re-file without new evidence that silent e2e classifier drift is occurring in practice.
