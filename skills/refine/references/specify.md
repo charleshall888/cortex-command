@@ -109,7 +109,7 @@ None considered.
 
 ### 3a. Orchestrator Review
 
-Before user presentation, read and follow the orchestrator-review protocol (the propagated `<target>` path — the **orchestrator-review** target) for the `specify` phase. It must pass before approval.
+Before user presentation, read and follow the orchestrator-review protocol (the propagated `<target>` path — the **orchestrator-review** target) plus its Post-Specify checklist (`orchestrator-checklist-specify.md`, sibling of that target) for the `specify` phase. It must pass before approval.
 
 ### 3b. Critical Review
 

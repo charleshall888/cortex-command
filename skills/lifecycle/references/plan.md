@@ -91,7 +91,7 @@ After writing `plan.md`, register the `"plan"` artifact in `index.md` per the ar
 
 ### 3a. Orchestrator Review
 
-Before user presentation, read and follow `${CLAUDE_SKILL_DIR}/references/orchestrator-review.md` for the `plan` phase. It must pass before approval.
+Before user presentation, read and follow `${CLAUDE_SKILL_DIR}/references/orchestrator-review.md` (shared protocol) plus its Post-Plan checklist `${CLAUDE_SKILL_DIR}/references/orchestrator-checklist-plan.md` for the `plan` phase. It must pass before approval.
 
 ### 3b. Critical Review
 
