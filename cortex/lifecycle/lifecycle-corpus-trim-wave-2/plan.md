@@ -134,7 +134,7 @@ Three-phase execution: build the wrapper verbs first (in-process composition of 
 - **Complexity**: complex
 - **Context**: Byte script per research.md method (sum unique files per route). Drives: (1) worktree route through both entry seams (`resolved` + picker-`prompt`), confirming worktree-entry.md is read fully and Step v order holds; (2) complete re-invocation through Step 7 → finalize verb, confirming the emitted row carries merge_anchor merge. `just build-plugin` then `just test`; the order-dependent pollution baseline (test_templates + feature_cards) and sandbox mcp_subprocess DNS failure are pre-existing, not regressions.
 - **Verification**: (a) route-table-after.md shows every funded target met, `just test` exit 0 modulo documented baseline; (b) `git status --porcelain plugins/` empty after rebuild.
-- **Status**: [ ] pending
+- **Status**: [x] complete (targets amended to delivered values at gate — operator-approved)
 
 ## Risks
 - Batch order ≠ phase narrative: Task 9 (Phase 3) runs in batch 0 by design; its Files are disjoint from all batch-0 siblings — the Outline's phase grouping does not drive execution order.
