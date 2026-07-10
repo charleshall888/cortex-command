@@ -221,14 +221,14 @@ def _now_iso() -> str:
 def _emit_event(feature_slug: str, event: dict) -> None:
     """Append a JSON event row to the per-feature events.log.
 
-    Creates the parent directory if absent.  ``event`` is written as a
-    single JSON line with a leading ``ts`` field and ``event`` key.
+    Rides the shared sibling-lockfile flock discipline via ``log_event_at``;
+    path resolution deliberately stays this module's main-root anchoring —
+    only the append discipline is shared. ``event`` carries its own ``ts``
+    (callers set it), which ``log_event_at`` preserves.
     """
-    log_path = _events_log_path(feature_slug)
-    log_path.parent.mkdir(parents=True, exist_ok=True)
-    row = json.dumps(event, separators=(",", ":")) + "\n"
-    with log_path.open("a", encoding="utf-8") as fh:
-        fh.write(row)
+    from cortex_command.lifecycle_event import log_event_at
+
+    log_event_at(_events_log_path(feature_slug), event)
 
 
 def _write_lock_atomic(lock_path: Path, payload: dict) -> None:

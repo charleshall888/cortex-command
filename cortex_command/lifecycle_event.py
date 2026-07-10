@@ -124,6 +124,21 @@ def _append_event_atomic(log_path: Path, row: str) -> None:
 # ---------------------------------------------------------------------------
 
 
+def log_event_at(log_path: Path, event_dict: dict) -> None:
+    """Append one event row to an *explicit* events.log path under the shared
+    sibling-lockfile flock discipline.
+
+    For writers that resolve the feature log themselves (e.g. the pipeline
+    review dispatch with a config-supplied lifecycle base, or the interactive
+    lock's main-root-anchored telemetry) and therefore cannot use
+    ``log_event``'s CWD resolution. A ``ts`` field is prepended when absent;
+    the caller supplies ``event``/``feature`` keys and any ordered fields.
+    """
+    row_dict = {"ts": _now_iso()}
+    row_dict.update(event_dict)
+    _append_event_atomic(log_path, json.dumps(row_dict) + "\n")
+
+
 def log_event(
     event: str,
     feature: str,

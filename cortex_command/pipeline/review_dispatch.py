@@ -17,10 +17,12 @@ from importlib.resources import files
 from pathlib import Path
 from typing import Optional
 
+# Feature events.log writes ride the shared flock discipline (never the
+# unlocked pipeline-telemetry appender); the log path stays config-resolved.
+from cortex_command.lifecycle_event import log_event_at as log_event
 from cortex_command.overnight.deferral import DeferralQuestion, write_deferral
 from cortex_command.pipeline.dispatch import dispatch_task
 from cortex_command.pipeline.merge import merge_feature
-from cortex_command.pipeline.state import log_event
 
 logger = logging.getLogger(__name__)
 

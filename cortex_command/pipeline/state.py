@@ -16,7 +16,16 @@ from pathlib import Path
 from typing import Optional
 
 
-# Valid pipeline phases
+# Valid pipeline phases.
+#
+# FENCED (2026-07-10, backlog #372): this PHASES/_FORWARD_TRANSITIONS state
+# machine models a *pipeline run* (batch aggregate), not a feature lifecycle —
+# a different aggregate from cortex/lifecycle/{feature}/events.log, explicitly
+# out of scope for the lifecycle state-machine work (epic #371). It is dormant
+# in the live overnight path: no production caller of save_state/transition/
+# update_feature_status exists; pipeline-state.json is written only by
+# dashboard demo seeding and read by the dashboard. Prune wholesale when the
+# dashboard demo path is next touched, or keep fenced.
 PHASES = ("planning", "executing", "merging", "integration-review", "complete", "paused")
 
 # Valid forward transitions (source -> set of allowed targets)

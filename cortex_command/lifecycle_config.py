@@ -31,6 +31,49 @@ _BACKLOG_BLOCK_FIELD = "backlog"
 _BACKLOG_BACKEND_FIELD = "backend"
 _BACKLOG_BACKEND_DEFAULT = "cortex-backlog"
 
+# Config-key inventory (backlog #372 dormant-config audit).
+#
+# Live-in-code: parsed by a Python consumer today. Live-in-prose: consumed by
+# skill prose (the model reads the value), no Python parser by design.
+# DORMANT: documented in the scaffolded asset and set in live configs, but
+# honored by nothing — a consumer that silently starts parsing one of these
+# would change workflow behavior in every repo that copied the asset, so any
+# activation must be loud and deliberate (epic #371's activation guard).
+_LIVE_CODE_KEYS = frozenset(
+    {"branch-mode", "commit-artifacts", "backlog", "synthesizer_overnight_enabled"}
+)
+_LIVE_PROSE_KEYS = frozenset({"type", "test-command", "demo-command", "demo-commands"})
+_DORMANT_KEYS = frozenset(
+    {"skip-specify", "skip-review", "default-tier", "default-criticality"}
+)
+_KNOWN_KEYS = _LIVE_CODE_KEYS | _LIVE_PROSE_KEYS | _DORMANT_KEYS
+
+# Once-per-process dedup so multi-read consumers (statusline, hooks) don't spam.
+_WARNED_KEYS: set = set()
+
+
+def _warn_config_keys(parsed: dict, config_path: _pathlib.Path) -> None:
+    """Warn (stderr, once per process per key) on dormant or unknown
+    frontmatter keys. Never raises and never changes any parsed value —
+    fail-open by contract; this is the audit surface, not a validator."""
+    for key in parsed:
+        if not isinstance(key, str) or key in _WARNED_KEYS:
+            continue
+        if key in _DORMANT_KEYS:
+            _WARNED_KEYS.add(key)
+            print(
+                f"warning: '{key}' in {config_path} is documented but not "
+                "honored by any consumer — setting it currently has no effect",
+                file=_sys.stderr,
+            )
+        elif key not in _KNOWN_KEYS:
+            _WARNED_KEYS.add(key)
+            print(
+                f"warning: unknown lifecycle.config.md key '{key}' in "
+                f"{config_path} — ignored",
+                file=_sys.stderr,
+            )
+
 
 def _extract_frontmatter_text(text: str) -> str | None:
     """Return the YAML text between the two ``---`` delimiters, or ``None``.
@@ -87,6 +130,7 @@ def read_branch_mode(repo_root: _pathlib.Path) -> str | None:
     if not isinstance(parsed, dict):
         return None
 
+    _warn_config_keys(parsed, config_path)
     value = parsed.get(_FIELD_NAME)
     if value is None:
         return None
@@ -139,6 +183,7 @@ def resolve_backlog_backend(repo_root: _pathlib.Path) -> str:
     if not isinstance(parsed, dict):
         return _BACKLOG_BACKEND_DEFAULT
 
+    _warn_config_keys(parsed, config_path)
     backlog_block = parsed.get(_BACKLOG_BLOCK_FIELD)
     if not isinstance(backlog_block, dict):
         return _BACKLOG_BACKEND_DEFAULT
@@ -191,6 +236,7 @@ def read_commit_artifacts(repo_root: _pathlib.Path) -> bool:
     if not isinstance(parsed, dict):
         return _COMMIT_ARTIFACTS_DEFAULT
 
+    _warn_config_keys(parsed, config_path)
     if _COMMIT_ARTIFACTS_FIELD not in parsed:
         return _COMMIT_ARTIFACTS_DEFAULT
 

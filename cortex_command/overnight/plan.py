@@ -18,7 +18,12 @@ import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from cortex_command.common import _resolve_user_project_root, atomic_write, slugify
+from cortex_command.common import (
+    TERMINAL_STATUSES,
+    _resolve_user_project_root,
+    atomic_write,
+    slugify,
+)
 from cortex_command.overnight.backlog import BacklogItem, Batch, SelectionResult
 from cortex_command.overnight.state import (
     OvernightFeatureStatus,
@@ -144,11 +149,9 @@ def validate_target_repos(selection: SelectionResult) -> list[str]:
 
 # Terminal statuses for the Not Ready filter — items in these states are
 # finished work and should be excluded from the "Not Ready" section of the
-# session plan.  Independent of common.TERMINAL_STATUSES by design; changes
-# here must stay in sync with that set.
-_TERMINAL: frozenset[str] = frozenset(
-    ("complete", "done", "resolved", "wontfix", "abandoned", "superseded")
-)
+# session plan. The shared set is authoritative (it also carries the
+# wont-do/won't-do spellings this module's old local copy missed).
+_TERMINAL: frozenset[str] = TERMINAL_STATUSES
 
 
 def render_session_plan(

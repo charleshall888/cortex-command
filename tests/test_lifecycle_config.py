@@ -172,3 +172,52 @@ def test_out_of_set_typo_returns_raw_string(tmp_path: pathlib.Path) -> None:
     body = "---\nbranch-mode: wurktree-interactive\n---\nbody\n"
     _write_config(tmp_path, body)
     assert read_branch_mode(tmp_path) == "wurktree-interactive"
+
+
+# ---------------------------------------------------------------------------
+# Dormant/unknown-key warnings (backlog #372 dormant-config audit)
+# ---------------------------------------------------------------------------
+
+
+def test_dormant_key_warns_once(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture
+) -> None:
+    import cortex_command.lifecycle_config as lc
+
+    lc._WARNED_KEYS.clear()
+    body = "---\nskip-specify: true\nbranch-mode: trunk\n---\nbody\n"
+    _write_config(tmp_path, body)
+    assert read_branch_mode(tmp_path) == "trunk"
+    err = capsys.readouterr().err
+    assert "skip-specify" in err and "no effect" in err
+    # Second read: once-per-process dedup — no repeat warning.
+    read_branch_mode(tmp_path)
+    assert "skip-specify" not in capsys.readouterr().err
+
+
+def test_unknown_workflow_key_warns(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture
+) -> None:
+    import cortex_command.lifecycle_config as lc
+
+    lc._WARNED_KEYS.clear()
+    body = "---\nphase-order: [a, b]\nbranch-mode: trunk\n---\nbody\n"
+    _write_config(tmp_path, body)
+    assert read_branch_mode(tmp_path) == "trunk"
+    err = capsys.readouterr().err
+    assert "phase-order" in err and "unknown" in err
+
+
+def test_live_keys_do_not_warn(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture
+) -> None:
+    import cortex_command.lifecycle_config as lc
+
+    lc._WARNED_KEYS.clear()
+    body = (
+        "---\nbranch-mode: trunk\ncommit-artifacts: true\n"
+        "test-command: just test\nbacklog:\n  backend: cortex-backlog\n---\n"
+    )
+    _write_config(tmp_path, body)
+    assert read_branch_mode(tmp_path) == "trunk"
+    assert capsys.readouterr().err == ""
