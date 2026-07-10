@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 09539950-c01f-48d7-adbd-1a17934c4f3d
 title: 'Build the verb-completion composition: wrapper verbs, generated pauses, shared overnight reducer'
-status: refined
+status: in_progress
 priority: high
 type: feature
 created: 2026-07-10
