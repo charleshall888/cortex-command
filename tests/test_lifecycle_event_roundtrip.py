@@ -271,6 +271,12 @@ GOLDEN_CASES: list[tuple[str, str, list[str], str]] = [
         '{"ts": "%s", "event": "spec_approved", "feature": "f"}' % FIXED_TS,
     ),
     (
+        "lifecycle_cancelled",
+        "lifecycle_cancelled",
+        [],
+        '{"ts": "%s", "event": "lifecycle_cancelled", "feature": "f"}' % FIXED_TS,
+    ),
+    (
         "feature_complete",
         "feature_complete",
         [],
@@ -331,6 +337,79 @@ def test_feature_complete_golden_contains_scan_lifecycle_needle() -> None:
     golden = next(c[3] for c in GOLDEN_CASES if c[0] == "feature_complete")
     # The exact substring cortex_command/hooks/scan_lifecycle.py searches for.
     assert '"event": "feature_complete"' in golden
+
+
+# ---------------------------------------------------------------------------
+# Typed-subcommand emission path (epic 371 Phase B): the new typed
+# `lifecycle-cancelled` subcommand and the optional `spec-approved --decision`
+# consent field are exercised through the subcommand dispatch (not the `log`
+# escape hatch), pinning the row the future wrapper verbs will emit.
+# ---------------------------------------------------------------------------
+
+
+def _emit_and_read_line(
+    argv: list[str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> str:
+    """Run *argv* through the verb in an isolated root; return the first row."""
+    root = _setup_cortex_root(tmp_path)
+    monkeypatch.chdir(root)
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    monkeypatch.setattr(lifecycle_event, "_now_iso", lambda: FIXED_TS)
+    rc = _run(argv)
+    assert rc == 0
+    return (
+        root / "cortex" / "lifecycle" / "f" / "events.log"
+    ).read_text(encoding="utf-8").splitlines()[0]
+
+
+def test_typed_lifecycle_cancelled_subcommand_emits_base_row(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`lifecycle-cancelled --feature f` writes the bare typed event row."""
+    line = _emit_and_read_line(
+        ["lifecycle-cancelled", "--feature", "f"], tmp_path, monkeypatch
+    )
+    assert line == (
+        '{"ts": "%s", "event": "lifecycle_cancelled", "feature": "f"}' % FIXED_TS
+    )
+    assert json.loads(line)["event"] == "lifecycle_cancelled"
+
+
+def test_typed_spec_approved_carries_decision_consent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`spec-approved --decision approved` emits a row carrying decision=approved."""
+    line = _emit_and_read_line(
+        ["spec-approved", "--feature", "f", "--decision", "approved"],
+        tmp_path,
+        monkeypatch,
+    )
+    row = json.loads(line)
+    assert row["event"] == "spec_approved"
+    assert row["decision"] == "approved"
+
+
+def test_typed_spec_approved_omits_decision_when_absent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The optional decision field is dropped entirely when the flag is omitted."""
+    line = _emit_and_read_line(
+        ["spec-approved", "--feature", "f"], tmp_path, monkeypatch
+    )
+    assert line == (
+        '{"ts": "%s", "event": "spec_approved", "feature": "f"}' % FIXED_TS
+    )
+    assert "decision" not in json.loads(line)
+
+
+def test_spec_approved_decision_enum_is_validated(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A non-enum decision value is rejected by argparse (SystemExit)."""
+    root = _setup_cortex_root(tmp_path)
+    monkeypatch.chdir(root)
+    with pytest.raises(SystemExit):
+        _run(["spec-approved", "--feature", "f", "--decision", "rejected"])
 
 
 # ---------------------------------------------------------------------------

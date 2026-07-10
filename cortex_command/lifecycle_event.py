@@ -258,7 +258,9 @@ _EVENT_SUBCOMMANDS: dict[str, tuple[str, list]] = {
         ("--rework-cycles", "rework_cycles", _JSON, False, None),
         ("--merge-anchor", "merge_anchor", _STR, False, ("merge", "review")),
     ]),
-    "spec-approved": ("spec_approved", []),
+    "spec-approved": ("spec_approved", [
+        ("--decision", "decision", _STR, False, ("approved",)),
+    ]),
     "review-verdict": ("review_verdict", [
         ("--verdict", "verdict", _STR, True,
          ("APPROVED", "CHANGES_REQUESTED", "REJECTED")),
@@ -278,6 +280,7 @@ _EVENT_SUBCOMMANDS: dict[str, tuple[str, list]] = {
         ("--worktree-path", "worktree_path", _STR, True, None),
     ]),
     "feature-paused": ("feature_paused", []),
+    "lifecycle-cancelled": ("lifecycle_cancelled", []),
     "drift-protocol-breach": ("drift_protocol_breach", [
         ("--state", "state", _STR, True, None),
         ("--suggestion", "suggestion", _STR, True, None),
