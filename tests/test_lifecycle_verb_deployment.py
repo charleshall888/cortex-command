@@ -34,6 +34,11 @@ VERBS: list[tuple[str, str, str]] = [
         "cortex_command.lifecycle.register_artifact:main",
         "bin/cortex-lifecycle-register-artifact",
     ),
+    (
+        "cortex-lifecycle-enter",
+        "cortex_command.lifecycle.enter:main",
+        "bin/cortex-lifecycle-enter",
+    ),
 ]
 
 

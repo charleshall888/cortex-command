@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# cortex-lifecycle-enter — dual-channel wrapper for the
+# cortex_command.lifecycle.enter module.
+#
+# Branch order:
+#   (a) CORTEX_COMMAND_FORCE_SOURCE=1 → exec working-tree module directly via python3 -m
+#   (b) wheel-import probe succeeds   → exec via wheel (python3 -m cortex_command.lifecycle.enter)
+#   (c) working-tree pyproject.toml names cortex-command → exec via working-tree PYTHONPATH
+#   (d) nothing found                 → exit 2 with remediation message
+set -euo pipefail
+
+# Log invocation telemetry when cortex-log-invocation is available on PATH.
+if command -v cortex-log-invocation >/dev/null 2>&1; then
+    cortex-log-invocation "$0" "$@" || echo "cortex-log-invocation failed: $?" >&2
+fi
+
+# Branch (a): force working-tree mode when CORTEX_COMMAND_FORCE_SOURCE=1 is set.
+if [ "${CORTEX_COMMAND_FORCE_SOURCE:-}" = "1" ]; then
+    _root="${CORTEX_COMMAND_ROOT:-$(dirname "$0")/..}"
+    exec env PYTHONPATH="${_root}:${PYTHONPATH:-}" python3 -m cortex_command.lifecycle.enter "$@"
+fi
+
+# Branch (b): wheel-import probe — prefer the installed wheel.
+if python3 -c "import cortex_command.lifecycle.enter" 2>/dev/null; then
+    exec python3 -m cortex_command.lifecycle.enter "$@"
+fi
+
+# Branch (c): working-tree fallback when pyproject.toml names cortex-command.
+_root="${CORTEX_COMMAND_ROOT:-$(dirname "$0")/..}"
+if grep -q '^name = "cortex-command"' "${_root}/pyproject.toml" 2>/dev/null; then
+    exec env PYTHONPATH="${_root}:${PYTHONPATH:-}" python3 -m cortex_command.lifecycle.enter "$@"
+fi
+
+# Branch (d): nothing found — emit remediation message and exit 2.
+echo "cortex-lifecycle-enter: cortex-command wheel not found on PATH. To fix: run 'uv tool install --reinstall --refresh git+https://github.com/charleshall880/cortex-command.git@<latest-tag>'. If this happens after a recent upgrade, your wheel may be stale." >&2
+exit 2
