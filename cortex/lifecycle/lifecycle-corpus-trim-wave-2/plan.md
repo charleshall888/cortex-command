@@ -35,7 +35,7 @@ Three-phase execution: build the wrapper verbs first (in-process composition of 
 - **Complexity**: complex
 - **Context**: `create_index(feature, backlog_file, root)` from `cortex_command/lifecycle/create_index.py` (skip-if-exists; OSError → exit 1). `sync(...)` from `start_sync.py` (raises `_Exit2` → exit 2; only writes lifecycle-slug association when `--phase none`). `init_ensure.main([])` is exit-code-shaped — wrap its int return into the envelope. `.session`: `Path("cortex/lifecycle/{feature}/.session").write_text(session_id)`. Flags: `--feature --session-id --backend --phase --backlog-file` (ADR-0019: never self-resolve backend or re-derive new-vs-resume — Adversarial #3 in research.md). `backlog_status`: empty `--backlog-file` → `no_match`; else read `cortex/backlog/{backlog-file}` and regex the frontmatter scalar `^status:\s*(\S+)` (re.MULTILINE, first match wins) — `complete` → `already_complete`, anything else → `open`; never auto-close. Root: env-var flavor (`_resolve_user_project_root`), tests `monkeypatch.setenv("CORTEX_REPO_ROOT", tmp_path)`. Monkeypatch composed primitives on the verb's own module namespace (test_prepare_worktree.py pattern).
 - **Verification**: (a) `pytest cortex_command/lifecycle/tests/test_enter.py -q` exits 0; every KNOWN_STATES member reachable; exception-to-JSON test present; named tests for `backlog_status` = `no_match` (empty backlog-file) and `already_complete`; (b) `grep -c 'cortex-lifecycle-enter' pyproject.toml` = 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Build cortex-lifecycle-finalize
 - **Files**: cortex_command/lifecycle/finalize.py, cortex_command/lifecycle/tests/test_finalize.py, pyproject.toml, bin/cortex-lifecycle-finalize
