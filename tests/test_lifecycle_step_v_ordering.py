@@ -1,7 +1,8 @@
-"""Parity test pinning the operation order of implement.md §1a step v.
+"""Parity test pinning the operation order of worktree-entry.md §1a step v.
 
-The implement-phase reference at ``skills/lifecycle/references/implement.md``
-§1a step v (the "Auto-enter sequence") performs four operations on the
+The interactive-worktree-entry reference at
+``skills/lifecycle/references/worktree-entry.md`` §1a step v (the
+"Auto-enter sequence") performs four operations on the
 ``selected`` (picker-fired) entry-mode path in a load-bearing order:
 
   1. capture ``_origin_pwd`` (so we can restore CWD on fallback),
@@ -15,7 +16,10 @@ The implement-phase reference at ``skills/lifecycle/references/implement.md``
 
 Under ADR-0008 the consumer-CLAUDE.md authorization fence was removed, so
 the former ``cortex init --verify-worktree-auth`` probe is gone — this
-module asserts the token is ABSENT. The ``suppressed`` (picker-suppressed,
+module asserts the token is ABSENT. (§1a step v moved out of implement.md
+into worktree-entry.md in the lifecycle-corpus-trim-wave-2 route-conditional
+extraction; the behavioral pins are unchanged — only the host file did.) The
+``suppressed`` (picker-suppressed,
 branch-mode: worktree-interactive) entry mode skips the precondition probe
 AND the EnterWorktree call entirely and routes structurally to the
 cd-shim; ``test_step_v_pins_suppressed_picker_skip`` pins that structural
@@ -26,7 +30,7 @@ Re-ordering any of the four operations silently breaks observable behavior
 — e.g., emitting the event before EnterWorktree completes would land the
 row in the wrong events.log; probing after EnterWorktree would be
 impossible to use as a fast-fail (cortex-worktree-precondition). This test
-extracts the step v block from ``implement.md`` between the
+extracts the step v block from ``worktree-entry.md`` between the
 ``**Step v — Auto-enter sequence**`` anchor and the next ``**`` line-start
 boundary, then asserts the four tokens appear in the expected order.
 
@@ -43,7 +47,9 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).parent.parent
-IMPLEMENT_MD = REPO_ROOT / "skills" / "lifecycle" / "references" / "implement.md"
+WORKTREE_ENTRY_MD = (
+    REPO_ROOT / "skills" / "lifecycle" / "references" / "worktree-entry.md"
+)
 
 # §1a step v block bounded by the ``**Step v — Auto-enter sequence**``
 # heading and the next line-start ``**``-prefixed boundary (e.g. the
@@ -85,13 +91,13 @@ _REMOVED_VERIFY_TOKEN = "verify-worktree-auth"
 
 def _extract_step_v_block() -> str:
     """Return the §1a step v block text bounded by the stable anchors."""
-    content = IMPLEMENT_MD.read_text(encoding="utf-8")
+    content = WORKTREE_ENTRY_MD.read_text(encoding="utf-8")
     match = _BLOCK_PATTERN.search(content)
     if not match:
         pytest.fail(
             "Could not locate the §1a step v block anchored on "
             "'**Step v — Auto-enter sequence**' in "
-            f"{IMPLEMENT_MD.relative_to(REPO_ROOT)}. The anchor heading "
+            f"{WORKTREE_ENTRY_MD.relative_to(REPO_ROOT)}. The anchor heading "
             "or the next '**' line-start boundary is missing — restore "
             "the anchor heading or the next block-level '**' delimiter."
         )

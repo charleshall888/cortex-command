@@ -116,8 +116,10 @@ def _declared_and_required(subcommand: str) -> tuple[set[str], set[str]]:
 
 
 # Per-file expected invocation counts per event (the on-disk reality). Keyed by
-# event name; the subcommand is resolved via ``_EVENT_TO_SUB``. implement.md's
-# ``interactive_worktree_entered`` is now migrated too, so it is cross-validated.
+# event name; the subcommand is resolved via ``_EVENT_TO_SUB``. The
+# ``interactive_worktree_entered`` emission moved out of implement.md into
+# worktree-entry.md in the lifecycle-corpus-trim-wave-2 route-conditional
+# extraction, so it is cross-validated against that file now.
 FILE_EVENTS: dict[str, dict[str, int]] = {
     "skills/lifecycle/references/plan.md": {
         "plan_approved": 2,
@@ -132,6 +134,8 @@ FILE_EVENTS: dict[str, dict[str, int]] = {
     "skills/lifecycle/references/implement.md": {
         "batch_dispatch": 1,
         "phase_transition": 2,
+    },
+    "skills/lifecycle/references/worktree-entry.md": {
         "interactive_worktree_entered": 1,
     },
     "skills/refine/references/specify.md": {
