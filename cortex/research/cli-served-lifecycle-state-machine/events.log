@@ -1,1 +1,6 @@
 {"ts":"2026-07-10T14:40:31Z","event":"discovery_research_sizing","topic":"cli-served-lifecycle-state-machine","complexity":"complex","criticality":"critical"}
+{"ts":"2026-07-10T15:15:26Z","event":"gate_brief_generated","status":"ok","brief_word_count":267,"patterns_detected_count":0}
+{"ts":"2026-07-10T16:47:35Z","event":"gate_brief_generated","status":"ok_over_cap","brief_word_count":292,"patterns_detected_count":0}
+{"ts":"2026-07-10T17:41:06Z","event":"approval_checkpoint_responded","topic":"cli-served-lifecycle-state-machine","checkpoint":"research-decompose","response":"approve","revision_round":0}
+{"ts":"2026-07-10T17:47:19Z","event":"approval_checkpoint_responded","topic":"cli-served-lifecycle-state-machine","checkpoint":"decompose-commit","response":"consolidate-pieces","revision_round":0}
+{"ts":"2026-07-10T17:50:36Z","event":"approval_checkpoint_responded","topic":"cli-served-lifecycle-state-machine","checkpoint":"decompose-commit","response":"approve-all","revision_round":1}
