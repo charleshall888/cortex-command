@@ -158,16 +158,11 @@ def resolve_invocation(arguments: str, project_root: Optional[Path] = None) -> d
     feature_dir = lifecycle_base / feature
     dir_exists = feature_dir.is_dir()
 
-    if mode == "resume" and not dir_exists:
-        return {
-            "state": "no-such-lifecycle",
-            "feature": feature,
-            "next": (
-                f"No cortex/lifecycle/{feature}/ to resume. Report and stop; do not "
-                "create it (that is bare-<feature> behavior)."
-            ),
-        }
-
+    # Backlog resolution runs before the resume/new guards: lifecycle dirs are
+    # slug-keyed, never numeric-ID-keyed, so a numeric/alias token must remap
+    # to the backlog item's lifecycle_slug before any dir-existence verdict
+    # (#370 — the slug is the canonical identity; other tokens are input
+    # normalization).
     backlog = _resolve_backlog(feature)
     if isinstance(backlog, dict) and "ambiguous" in backlog:
         return {
@@ -177,6 +172,25 @@ def resolve_invocation(arguments: str, project_root: Optional[Path] = None) -> d
             "next": (
                 "Present the candidates via AskUserQuestion; re-run resolve on the "
                 "chosen slug."
+            ),
+        }
+
+    resolved_from = None
+    if not dir_exists and isinstance(backlog, dict):
+        slug = backlog.get("lifecycle_slug")
+        if slug and slug != feature and (lifecycle_base / slug).is_dir():
+            resolved_from = feature
+            feature = slug
+            feature_dir = lifecycle_base / slug
+            dir_exists = True
+
+    if mode == "resume" and not dir_exists:
+        return {
+            "state": "no-such-lifecycle",
+            "feature": feature,
+            "next": (
+                f"No cortex/lifecycle/{feature}/ to resume. Report and stop; do not "
+                "create it (that is bare-<feature> behavior)."
             ),
         }
 
@@ -191,7 +205,7 @@ def resolve_invocation(arguments: str, project_root: Optional[Path] = None) -> d
 
     det = detect_lifecycle_phase(feature_dir)
     route = phase_override or det["route"]
-    return {
+    out = {
         "state": "resume",
         "feature": feature,
         "backlog": backlog,
@@ -207,6 +221,10 @@ def resolve_invocation(arguments: str, project_root: Optional[Path] = None) -> d
         "phase_override": bool(phase_override),
         "next": _next_for_route(route, bool(phase_override)),
     }
+    if resolved_from is not None:
+        # Evidence trail: the invocation token that remapped onto the slug.
+        out["resolved_from"] = resolved_from
+    return out
 
 
 def _build_parser() -> argparse.ArgumentParser:

@@ -150,6 +150,68 @@ def test_unique_backlog_match_attaches_metadata(
     assert r["backlog"]["filename"] == "042-solo-item.md"
 
 
+# --- numeric-ID -> lifecycle_slug remap (#370) ------------------------------
+
+def _slugged_backlog(root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Backlog with one item whose lifecycle_slug names a real lifecycle dir."""
+    backlog = root / "the-backlog"
+    backlog.mkdir()
+    (backlog / "308-render-thing.md").write_text(
+        "---\ntitle: render thing\nstatus: complete\n"
+        "lifecycle_slug: render-thing-lifecycle\n---\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("CORTEX_BACKLOG_DIR", str(backlog))
+
+
+def test_numeric_id_with_existing_slug_dir_resumes(
+    root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#370: a numeric ID whose backlog item names an existing slug-keyed
+    lifecycle dir must resolve resume under the slug, never state:new."""
+    _slugged_backlog(root, monkeypatch)
+    d = _feature_dir(root, "render-thing-lifecycle")
+    (d / "research.md").write_text("# research", encoding="utf-8")
+    r = resolve_invocation("308", project_root=root)
+    assert r["state"] == "resume"
+    assert r["feature"] == "render-thing-lifecycle"
+    assert r["resolved_from"] == "308"
+
+
+def test_explicit_resume_numeric_id_remaps_to_slug(
+    root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#370 Edges: the explicit-resume arm shares the remap — no more
+    no-such-lifecycle for a numeric ID whose slug dir exists."""
+    _slugged_backlog(root, monkeypatch)
+    _feature_dir(root, "render-thing-lifecycle")
+    r = resolve_invocation("resume 308", project_root=root)
+    assert r["state"] == "resume"
+    assert r["feature"] == "render-thing-lifecycle"
+
+
+def test_numeric_id_without_slug_dir_stays_new(
+    root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """True-new preserved: backlog match with lifecycle_slug but no dir on
+    disk under either key still resolves state:new."""
+    _slugged_backlog(root, monkeypatch)
+    r = resolve_invocation("308", project_root=root)
+    assert r["state"] == "new"
+    assert "resolved_from" not in r
+
+
+def test_remap_threads_phase_override(
+    root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _slugged_backlog(root, monkeypatch)
+    _feature_dir(root, "render-thing-lifecycle")
+    r = resolve_invocation("308 review", project_root=root)
+    assert r["state"] == "resume"
+    assert r["route"] == "review"
+    assert r["phase_override"] is True
+
+
 # --- contract guards -------------------------------------------------------
 
 def test_every_returned_state_is_in_known_states(root: Path) -> None:
