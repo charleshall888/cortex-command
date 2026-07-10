@@ -17,3 +17,4 @@
 {"ts": "2026-07-10T05:21:20Z", "event": "batch_dispatch", "feature": "lifecycle-corpus-trim-wave-2", "batch": 5, "tasks": [6, 11]}
 {"ts": "2026-07-10T05:31:39Z", "event": "batch_dispatch", "feature": "lifecycle-corpus-trim-wave-2", "batch": 6, "tasks": [8]}
 {"ts": "2026-07-10T05:38:30Z", "event": "batch_dispatch", "feature": "lifecycle-corpus-trim-wave-2", "batch": 7, "tasks": [10]}
+{"ts": "2026-07-10T05:56:18Z", "event": "batch_dispatch", "feature": "lifecycle-corpus-trim-wave-2", "batch": 8, "tasks": [12]}
