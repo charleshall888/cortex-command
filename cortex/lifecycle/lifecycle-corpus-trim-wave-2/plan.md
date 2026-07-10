@@ -21,16 +21,16 @@ Three-phase execution: build the wrapper verbs first (in-process composition of 
 
 ### Task 1: Build cortex-lifecycle-register-artifact
 - **Files**: cortex_command/lifecycle/register_artifact.py, cortex_command/lifecycle/tests/test_register_artifact.py, pyproject.toml, bin/cortex-lifecycle-register-artifact
-- **What**: New verb `--feature X --artifact {research|spec|plan|review}`: skip-if-present append to index.md `artifacts:` inline array + `updated:` date bump, regex capture-rewrite + atomic_write (spec R3). This task also adds ALL THREE `[project.scripts]` rows (register-artifact, enter, finalize) to pyproject.toml in one edit — Tasks 2/3 do not touch pyproject.toml (single-writer rule; their modules land before any install/build consumes the entries).
+- **What**: New verb `--feature X --artifact {research|spec|plan|review}`: skip-if-present append to index.md `artifacts:` inline array + `updated:` date bump, regex capture-rewrite + atomic_write (spec R3). This task adds ONLY its own `[project.scripts]` row and wires it via the tests surface (a real assertion naming the literal `cortex-lifecycle-register-artifact`) so the W003 parity gate passes without exception rows — Tasks 2/3 each do the same for their own verb, serialized by dependencies so pyproject.toml never has two same-batch writers.
 - **Depends on**: none
 - **Complexity**: simple
 - **Context**: Model the array rewrite on `cortex_command/backlog/update_item.py::_remove_uuid_from_blocked_by` (re.MULTILINE capture groups) and `atomic_write` from `cortex_command/common.py`. Index format: unquoted inline flow list, hand-rendered like `create_index.py::_render_tags` — PyYAML cannot round-trip it. Root resolution: `_resolve_user_project_root_from_cwd` flavor (Complete-phase sibling); tests use `monkeypatch.chdir(tmp_path)` + delenv CORTEX_REPO_ROOT. Envelope: `{state, ...}` compact json.dumps, KNOWN_STATES tuple, never-crash main per `prepare_worktree.py`. bin wrapper copied from `bin/cortex-lifecycle-counters` (dual-channel + cortex-log-invocation shim).
 - **Verification**: (a) `pytest cortex_command/lifecycle/tests/test_register_artifact.py -q` exits 0; includes a byte-format round-trip test and a double-register no-op test.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Build cortex-lifecycle-enter
-- **Files**: cortex_command/lifecycle/enter.py, cortex_command/lifecycle/tests/test_enter.py, bin/cortex-lifecycle-enter
-- **What**: Compose create_index + start_sync + init_ensure + `.session` write in-process; return `{state, backlog_status}` envelope; all discriminants caller-passed (spec R1).
+- **Files**: cortex_command/lifecycle/enter.py, cortex_command/lifecycle/tests/test_enter.py, pyproject.toml, bin/cortex-lifecycle-enter
+- **What**: Compose create_index + start_sync + init_ensure + `.session` write in-process; return `{state, backlog_status}` envelope; all discriminants caller-passed (spec R1). Adds its own pyproject row; wires via a tests-surface assertion naming `cortex-lifecycle-enter` (W003).
 - **Depends on**: [1]
 - **Complexity**: complex
 - **Context**: `create_index(feature, backlog_file, root)` from `cortex_command/lifecycle/create_index.py` (skip-if-exists; OSError → exit 1). `sync(...)` from `start_sync.py` (raises `_Exit2` → exit 2; only writes lifecycle-slug association when `--phase none`). `init_ensure.main([])` is exit-code-shaped — wrap its int return into the envelope. `.session`: `Path("cortex/lifecycle/{feature}/.session").write_text(session_id)`. Flags: `--feature --session-id --backend --phase --backlog-file` (ADR-0019: never self-resolve backend or re-derive new-vs-resume — Adversarial #3 in research.md). `backlog_status`: empty `--backlog-file` → `no_match`; else read `cortex/backlog/{backlog-file}` and regex the frontmatter scalar `^status:\s*(\S+)` (re.MULTILINE, first match wins) — `complete` → `already_complete`, anything else → `open`; never auto-close. Root: env-var flavor (`_resolve_user_project_root`), tests `monkeypatch.setenv("CORTEX_REPO_ROOT", tmp_path)`. Monkeypatch composed primitives on the verb's own module namespace (test_prepare_worktree.py pattern).
@@ -38,9 +38,9 @@ Three-phase execution: build the wrapper verbs first (in-process composition of 
 - **Status**: [ ] pending
 
 ### Task 3: Build cortex-lifecycle-finalize
-- **Files**: cortex_command/lifecycle/finalize.py, cortex_command/lifecycle/tests/test_finalize.py, bin/cortex-lifecycle-finalize
-- **What**: Compose backend-gated update_item(status=complete) + counters read + idempotent feature_complete emission with `merge_anchor: "merge"` (spec R2).
-- **Depends on**: [1]
+- **Files**: cortex_command/lifecycle/finalize.py, cortex_command/lifecycle/tests/test_finalize.py, pyproject.toml, bin/cortex-lifecycle-finalize
+- **What**: Compose backend-gated update_item(status=complete) + counters read + idempotent feature_complete emission with `merge_anchor: "merge"` (spec R2). Adds its own pyproject row; wires via a tests-surface assertion naming `cortex-lifecycle-finalize` (W003).
+- **Depends on**: [1, 2]
 - **Complexity**: complex
 - **Context**: `update_item(item_path, fields, backlog_dir, session_id)` from `cortex_command/backlog/update_item.py` (its tail already regens the index via subprocess — do NOT add a second regen; Step 10's fallback is retired). Counters: `count_tasks(plan_path)`, `count_rework_cycles(events_log)` from `cortex_command/lifecycle/counters.py`, called with resolved Paths. Emission: `log_event` from `cortex_command/lifecycle_event.py` behind a new events.log scan matching parsed `{"event": "feature_complete"}` rows (no substring match). CRITICAL: emit `merge_anchor: "merge"` — `cortex_command/pipeline/metrics.py:237,998` segments interactive vs legacy-overnight on it; `overnight/advance_lifecycle.py` deliberately omits it and is NOT a template (research.md Adversarial #5). Backend gate: `--backend` caller-passed; `none` → skip update_item, still emit the event; external → return `state: external-backend` for the skill's best-effort arm. Root: chdir flavor. No new event names; no schema_version-first shape (ADR-0020). EXIT-2 CARVE-OUT: ambiguous-slug from update_item propagates as exit 2 with candidates on stderr (mirror start_sync's `_Exit2`) — this error class is exempt from the never-crash JSON envelope; only unexpected exceptions JSON-encode.
 - **Verification**: (a) `pytest cortex_command/lifecycle/tests/test_finalize.py -q` exits 0; asserts emitted row contains `"merge_anchor": "merge"`; second-invocation no-duplicate test present; ambiguous-slug exit-2 propagation test present; (b) `grep -c 'cortex-lifecycle-finalize' pyproject.toml` = 1.
@@ -62,7 +62,7 @@ Three-phase execution: build the wrapper verbs first (in-process composition of 
 - **Complexity**: complex
 - **Context**: Load trigger keys on the SELECTION, not the verb state (`prompt` precedes the choice — critical-review objection 2). The extracted file carries the full selected/suppressed branch; implement.md §1 hands off the entry-mode marker at both routing points with imperative "Read … and follow" links. Preserve verbatim: `EnterWorktree skipped: suppressed-picker (branch-mode worktree-interactive)`, step labels i–vii ("do not renumber"), `bash -s --` exactly once per file, `cortex-lifecycle-prepare-worktree` absent from §1 / present unconditionally in the i→v block (no `selected`/`suppressed` tokens inside that block), picker labels in §1. `${CLAUDE_SKILL_DIR}` propagation per ADR-0009; SP002-compliant paths. kept-pauses.md `implement.md:21` anchor moves with the picker (stays in implement.md §1) — update line number only.
 - **Verification**: (a) `pytest tests/test_lifecycle_step_v_ordering.py tests/test_implement_worktree_interactive_contract.py tests/test_lifecycle_enterworktree_callsites.py tests/test_lifecycle_picker_label_pins_worktree.py tests/test_lifecycle_kept_pauses_parity.py -q` exits 0; (b) `wc -c skills/lifecycle/references/implement.md` ≤ 7400 (≥4KB drop from 11,471 baseline).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Split complete.md and rewire finalize
 - **Files**: skills/lifecycle/references/complete.md, skills/lifecycle/references/complete-first-run.md, cortex_command/lifecycle_config.py, tests/test_skill_section_citations.py, tests/test_lifecycle_event_roundtrip.py, skills/lifecycle/references/kept-pauses.md
@@ -98,7 +98,7 @@ Three-phase execution: build the wrapper verbs first (in-process composition of 
 - **Complexity**: complex
 - **Context**: Preserve in orchestrator-review.md: `--role orchestrator-fix --criticality "$(cortex-lifecycle-state` + "halt and escalate" within its 900-char window, criticality-matrix.md citation (single-source rule — never restate "tier/criticality are unknowable"). Callers (specify.md §3a via refine, plan.md §3a) point at their phase checklist. Named untouchables: S7/P8/P10 skip rules, P7 benign-vs-harmful, S1/P4 binary-checkable definitions; every other item keeps its condition set — Task 12 verifies clause parity.
 - **Verification**: (a) `pytest tests/test_model_resolution_wiring.py tests/test_plugin_mirror_parity.py -q` exits 0 (mirror rebuilt in Task 13); (b) `wc -c` of shared file + one checklist ≤ 4300.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 10: Situational trims and SKILL.md dedup
 - **Files**: skills/lifecycle/SKILL.md, skills/lifecycle/references/kept-pauses.md, skills/lifecycle/references/competing-plans.md, skills/lifecycle/references/review.md, skills/lifecycle/references/criticality-matrix.md, skills/lifecycle/references/plan.md

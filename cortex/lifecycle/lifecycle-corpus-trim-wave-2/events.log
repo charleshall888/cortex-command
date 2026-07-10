@@ -9,3 +9,4 @@
 {"ts": "2026-07-10T03:42:07Z", "event": "phase_transition", "feature": "lifecycle-corpus-trim-wave-2", "from": "specify", "to": "plan"}
 {"ts": "2026-07-10T04:04:03Z", "event": "plan_approved", "feature": "lifecycle-corpus-trim-wave-2", "dispatch_choice": "trunk"}
 {"ts": "2026-07-10T04:04:03Z", "event": "phase_transition", "feature": "lifecycle-corpus-trim-wave-2", "from": "plan", "to": "implement"}
+{"ts": "2026-07-10T04:04:58Z", "event": "batch_dispatch", "feature": "lifecycle-corpus-trim-wave-2", "batch": 0, "tasks": [1, 5, 9]}
