@@ -31,6 +31,8 @@ One read-only call classifies `$ARGUMENTS`, resolves the backlog file, detects p
 cortex-lifecycle-resolve "$ARGUMENTS"
 ```
 
+<!-- pause: empty-lifecycle-offer question -->
+<!-- pause: ambiguous-backlog-pick question -->
 It emits one JSON object with a `state` discriminant and a `next` directive — act on `next`, don't re-derive it. `new` and `resume` proceed to Step 2 (`resume` carries `route`, `paused`, `checked`/`total`, `cycle`, `criticality`, `tier`, `staleness`, `backlog`; `new` carries `backlog`). Every other state is terminal; `next` says what to do: `derive-slug` (derive a 3–6 word kebab-case slug and re-run — no confirmation; user corrects via re-invocation), `empty` (offer incomplete `cortex/lifecycle/*` lifecycles via `AskUserQuestion`, then re-run), `ambiguous-backlog` (present `candidates` via `AskUserQuestion`, then re-run), `wontfix` (run the named `cortex-lifecycle-wontfix` command and halt), or `error` / `needs-feature` / `no-such-lifecycle` (report and stop — do not create a lifecycle).
 
 The resolver never writes — Step 2's sub-procedures do.

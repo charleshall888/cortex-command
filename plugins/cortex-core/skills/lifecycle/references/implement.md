@@ -18,6 +18,7 @@ Act on `state`:
 
 - **`skip`** — not on `main`/`master`; proceed on the current branch to §2.
 - **`resolved`** — a branch mode was fixed without prompting; run the same post-selection routing so every downstream guard runs. `trunk` → §2 on the current branch. `feature-branch` → create/checkout `feature/{lifecycle-slug}`, then §2. `worktree-interactive` → record the returned `entry_mode` (`selected` or `suppressed`), then read `${CLAUDE_SKILL_DIR}/references/worktree-entry.md` and follow it to completion before returning to §2.
+<!-- pause: implement-branch-pick config-conditional -->
 - **`prompt`** — render the picker below via `AskUserQuestion`, applying the returned guards: on `uncommitted_changes`, demote the current-branch option in place (prepend `Warning: uncommitted changes in working tree — this will mix them into the commit on main.`, drop any `(recommended)`); when `worktree_option_available` is false, drop the worktree option. On selection — **current branch** → §2; **feature branch** → create/checkout `feature/{lifecycle-slug}` → §2; **worktree** → record entry mode `selected`, then read `${CLAUDE_SKILL_DIR}/references/worktree-entry.md` and follow it to completion before returning to §2.
 
 **Picker options**:
@@ -73,6 +74,7 @@ When a batch task fails:
 2. Checkpoint successful tasks as `[x]`.
 3. Identify downstream tasks transitively depending on the failed one — these are blocked.
 4. Surface which task failed, the error, and which downstream tasks are now blocked.
+<!-- pause: implement-batch-failure question -->
 5. Ask the user: **retry**, **skip** (mark failed, continue non-dependents), or **abort**.
 
 ### Builder Prompt Template

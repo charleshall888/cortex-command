@@ -117,6 +117,7 @@ cortex-lifecycle-picker-decision . {feature} {branch_mode}
 
 Off `main`/`master`, the sub-choices collapse to `trunk` (the current branch), so the surface offers only `[Approve & implement (current branch), Approve plan but wait to implement]`.
 
+<!-- pause: plan-approval relayed-consent -->
 **Compose `AskUserQuestion` `options`** (≤4): the branch modes plus **"Approve plan but wait to implement"**. The platform's **"Other"** free-text escape (appended outside the 4-cap) carries Request-changes and Cancel. Route on the selection:
 
 - **A branch mode** (`Implement on current branch`→`trunk`; `Implement on feature branch with worktree`→`worktree-interactive`; `Create feature branch`→`feature-branch`) — implies approval. Append `plan_approved` with the `dispatch_choice`, then §5's `phase_transition`, then auto-advance to Implement (it consumes `dispatch_choice` and skips its own picker). `cortex-lifecycle-event plan-approved --feature <name> --dispatch-choice <trunk|worktree-interactive|feature-branch>`

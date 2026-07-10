@@ -20,6 +20,7 @@ Areas, in sequence (adapt on answers):
 - **Edge cases** — unexpected inputs, unavailable systems, unexpected user behavior; challenge optimistic assumptions.
 - **Technical constraints** — from the research findings: performance, compatibility, integration boundaries.
 
+<!-- pause: spec-interview-gapfill question -->
 Probe via the AskUserQuestion tool (not plain markdown), one question at a time, never batch (`skills/interview/references/loop.md`), until ambiguities resolve.
 
 **Interview posture**: interactive, in-session verification is a legitimate default — don't interrogate how criteria would be verified autonomously or overnight. Posture only; §3's acceptance-criteria format still prefers testable, binary-checkable criteria.
@@ -45,6 +46,7 @@ After the interview, assess whether `research.md` is still sufficient for accura
 
 **Any signal flagged AND cycle = 1**: present the flagged signals as a bulleted list (≤15 words each, no other prose), state Research must re-run, then transition to Research **bypassing /refine's Sufficiency Check** (`research.md` is invalidated, re-run from scratch — else Step 4 may declare it sufficient and skip back to Spec).
 
+<!-- pause: spec-confidence-loopback question -->
 **Any signal flagged AND cycle ≥ 2**: present the flagged signals as in cycle 1, then ask (via AskUserQuestion) whether to loop back to Research or proceed to §3. Loop back → repeat the cycle-1 procedure; proceed → §3.
 
 ### 2b. Pre-Write Checks
@@ -57,6 +59,7 @@ Runs before drafting §3; silent on pass. On failure, surface only the failing c
 
 **Research cross-check** — re-read `research.md` in full; verify every explicit behavioral requirement, constraint, guard, and edge case appears in the spec's Requirements, Edge Cases, or Technical Constraints. An absent research item is a silent omission, not a scope decision — if intentional, note it in Non-Requirements or Open Decisions.
 
+<!-- pause: spec-open-decision-ask question -->
 **Open Decision resolution** — before adding to `## Open Decisions`, try in order: (1) resolve from `research.md`, fold into Requirements/Constraints/body; (2) ask the user now (implementer can't resolve mid-implementation); (3) defer only when the decision needs implementation-level context unobtainable without writing/reading code — with a one-sentence reason why.
 
 ### 3. Write Specification Artifact
@@ -130,8 +133,10 @@ Otherwise, read and follow the critical-review gate protocol (the propagated `<t
 
 ### 4. User Approval
 
+<!-- pause: spec-complexity-value-gate question -->
 **Complexity/value gate** — before the approval surface, gate the spec on complexity/value proportionality (regardless of critical-review). Fire on 3+ new state surfaces, a new persistent data format/config section to maintain, or a subsystem needing ongoing per-feature upkeep. Default full scope; else recommend the smallest downsize preserving the primary outcome, rationale-first: "I recommend X because Y" (citing the driving surface) before the user-facing question. `AskUserQuestion` only when the recommendation isn't full scope or confidence is low; otherwise fold into the approval surface (Approve / Request changes / Cancel), no pick-menu. Lead option `label` ends ` (Recommended)`, `description` opens with the rationale (`Confirm current scope (Recommended)` for full scope, else the downsize labeled `… (Recommended)`). Offer applicable downsizes ("drop entirely", "bugs-only", "minimum viable"), noting when one doesn't apply. When the `## Hard Gate` Open-Decisions row and this gate both fire, this gate's surface flow wins.
 
+<!-- pause: spec-approval relayed-consent -->
 Present the specification summary via the AskUserQuestion tool with these approval-surface fields:
 - **Produced** — one-line artifact summary.
 - **Value** — the problem solved and why it's worth building now; flag weak value cases explicitly.

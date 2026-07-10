@@ -37,6 +37,7 @@ Read the **clarify-critic** sibling at the propagated absolute path (target: `${
 
 **All three dimensions high after §3a AND no critic Ask items** → skip questions entirely, proceed to §5.
 
+<!-- pause: clarify-question-batch question -->
 **Any dimension still low after §3a, or critic raised Ask items** → merge into one list, present via AskUserQuestion, cap ≤5. Over 5 → prioritize critic Ask items first, then highest-impact low-confidence questions; drop the rest. Ask only about specific gaps — never for completeness, never re-asking what's already clear. Wait for answers before continuing.
 
 ### 5. Produce Clarify Output

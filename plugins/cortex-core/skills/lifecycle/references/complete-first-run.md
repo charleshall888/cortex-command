@@ -8,6 +8,7 @@ Read this only on `first_run` routing from complete.md's Step 7, or on a fresh `
 
 Determine the test path from `cortex/lifecycle.config.md`:
 - **`test-command` set** → run it.
+<!-- pause: complete-test-command-ask question -->
 - **config without `test-command`** → ask the user if there are tests to run.
 - **no config** → skip, noting "No `cortex/lifecycle.config.md` found — skipping test step."
 
@@ -33,6 +34,7 @@ cortex-lifecycle-record-pr-opened --feature {slug} --number {pr-number} --url {p
 
 Act on `state`: `ok` → continue to Step 6. `gh-error` → surface `message` and halt — do not proceed to the handoff without a recorded PR. `repo` is resolved at PR-creation and locked so complete.md's Step 7 `gh pr view --repo <repo>` hits the right repository even if `origin` later changes.
 
+<!-- pause: complete-merge-wait phase-exit-wait -->
 ### Step 6 — Phase-Exit Pause (Handoff Message)
 
 Exit with this handoff and go no further:

@@ -18,6 +18,7 @@ argument-hint: "<topic>"
 
 Prepares a single backlog item for execution through three phases: **Clarify** (intent gate + requirements alignment), **Research** (implementation-level exploration), **Spec** (structured requirements interview). On completion: `status: refined`, linked spec, ready to plan.
 
+<!-- pause: refine-empty-topic-prompt question -->
 Topic: $ARGUMENTS (backlog item slug, title, or description). If empty, prompt the user first.
 
 ## Step 1: Resolve Input

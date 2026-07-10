@@ -20,6 +20,7 @@ Act on the verdict; do not re-derive it:
 
 - **Terminal** (`message` non-empty, `continue_to: null`): print `message` verbatim and exit — the verb owns the exact recovery/wait text.
 - **`continue_to` set** — continue at the named step: `already_complete` → **Step 12** (idempotent short-circuit: no re-cleanup, no duplicate `feature_complete`, no second `pr.json`); `on_main` → **Step 9**; `first_run` → **complete-first-run.md** (Steps 1–6); `merged_clean_ancestor` → **Step 8**.
+<!-- pause: complete-orphan-pr-pick question -->
 - **`orphan_ambiguous`** (`continue_to: null`, `candidates` present): multiple orphan PRs match `interactive/<slug>` (slug reuse). Surface the candidates (PR number, state, `mergedAt`), ask which to use, write `pr.json` for it atomically, then re-run `cortex-lifecycle-complete-route <slug>` to classify the chosen PR's state.
 
 ---
