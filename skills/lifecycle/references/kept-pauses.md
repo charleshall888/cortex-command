@@ -1,6 +1,6 @@
 # Kept user pauses
 
-Canonical inventory of the deliberate, in-scope user-facing `AskUserQuestion` pauses across the lifecycle and refine skills (the lifecycle SKILL.md Phase Transition rule points here). `tests/test_lifecycle_kept_pauses_parity.py` enforces bidirectional parity: every entry below resolves to a real `AskUserQuestion` site, and every such site under `skills/lifecycle/` and `skills/refine/` has an entry here.
+Canonical inventory of the deliberate, in-scope user-facing `AskUserQuestion` pauses across the lifecycle and refine skills. This is a **tests-only** inventory — the parity test reads it, not the interactive or overnight runtime (the lifecycle SKILL.md Phase Transition rule points here only so the source of truth is discoverable). `tests/test_lifecycle_kept_pauses_parity.py` enforces bidirectional parity: every entry below resolves to a real `AskUserQuestion` site, and every such site under `skills/lifecycle/` and `skills/refine/` has an entry here.
 
 - `skills/lifecycle/SKILL.md:34` — ambiguous backlog match needs operator disambiguation.
 - `skills/refine/references/clarify.md:40` — low-confidence clarify question batch surfaces unknowns the model cannot resolve alone.

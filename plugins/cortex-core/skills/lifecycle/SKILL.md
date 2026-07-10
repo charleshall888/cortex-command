@@ -17,7 +17,7 @@ precondition_checks:
 
 # Feature Lifecycle
 
-A file-based state machine that survives context loss: research before code, user-approved spec before build, project coherence throughout.
+A file-based state machine that survives context loss: research before code, approved spec before build, coherence throughout.
 
 ## Project Configuration
 
@@ -31,21 +31,21 @@ One read-only call classifies `$ARGUMENTS`, resolves the backlog file, detects p
 cortex-lifecycle-resolve "$ARGUMENTS"
 ```
 
-It emits one JSON object with a `state` discriminant and a `next` directive that already states the required action — act on `next`, don't re-derive it. `new` and `resume` proceed to Step 2 (`resume` carries `route`, `paused`, `checked`/`total`, `cycle`, `criticality`, `tier`, `staleness`, `backlog`; `new` carries `backlog`). Every other state is terminal for this call and `next` says what to do: `derive-slug` (derive a 3–6 word kebab-case slug and re-run the resolver on it — no confirmation, the user corrects via re-invocation), `empty` (scan `cortex/lifecycle/*` for incomplete lifecycles and offer them via `AskUserQuestion`, then re-run), `ambiguous-backlog` (present `candidates` via `AskUserQuestion`, then re-run), `wontfix` (run the named `cortex-lifecycle-wontfix` command and halt), or `error` / `needs-feature` / `no-such-lifecycle` (report and stop — do not create a lifecycle).
+It emits one JSON object with a `state` discriminant and a `next` directive — act on `next`, don't re-derive it. `new` and `resume` proceed to Step 2 (`resume` carries `route`, `paused`, `checked`/`total`, `cycle`, `criticality`, `tier`, `staleness`, `backlog`; `new` carries `backlog`). Every other state is terminal; `next` says what to do: `derive-slug` (derive a 3–6 word kebab-case slug and re-run — no confirmation; user corrects via re-invocation), `empty` (offer incomplete `cortex/lifecycle/*` lifecycles via `AskUserQuestion`, then re-run), `ambiguous-backlog` (present `candidates` via `AskUserQuestion`, then re-run), `wontfix` (run the named `cortex-lifecycle-wontfix` command and halt), or `error` / `needs-feature` / `no-such-lifecycle` (report and stop — do not create a lifecycle).
 
 The resolver never writes — Step 2's sub-procedures do.
 
 ## Step 2: Enter the Resolved State
 
-`new` starts fresh (`phase = none`); `resume` follows the resolver's `next` directive, which names the phase/action for its `route` (Step 1 owns the mapping; don't re-derive it). When `paused`, route normally and note it.
+`new` starts fresh (`phase = none`); `resume` follows the resolver's `next` directive for its `route` (Step 1 owns the mapping — don't re-derive it). When `paused`, route normally and note it.
 
-One call composes the entry — create-index, the lifecycle-start write-back, `cortex init --ensure`, and `.session` — with the resolver's discriminants (resolve the backend once via `cortex-read-backlog-backend`; never re-derive it or new-vs-resume):
+One call composes the entry — create-index, the lifecycle-start write-back, `cortex init --ensure`, and `.session` — from the resolver's discriminants (resolve the backend once via `cortex-read-backlog-backend`; never re-derive it or new-vs-resume):
 
 ```bash
 cortex-lifecycle-enter --feature {feature} --session-id $LIFECYCLE_SESSION_ID --backend {resolved-backend} --phase {none-or-current-phase} --backlog-file {backlog-filename-or-empty-string}
 ```
 
-`{backlog-file}` is the resolver's `filename` basename (`""` on an exit-3 no-match). Exit 2 (ambiguous slug) → [backlog-writeback.md](${CLAUDE_SKILL_DIR}/references/backlog-writeback.md)'s exit-2 rule. Else act on `{state, backlog_status}`: `ready` → proceed; `blocked` (`cortex init --ensure` refused a user-correctable gate, `.session` unwritten) → halt, fix, re-run (idempotent); `ensure-failed`/`error` → halt. `already_complete` → apply backlog-writeback.md's **Backlog Status Check** (Close / Continue); `open`/`no_match` → proceed. If resuming, also report `route`/`criticality`/`tier`, offer continue-or-restart, and surface `staleness` tersely (drift hint, non-blocking; default continue).
+`{backlog-file}` is the resolver's `filename` basename (`""` on an exit-3 no-match). Exit 2 (ambiguous slug) → [backlog-writeback.md](${CLAUDE_SKILL_DIR}/references/backlog-writeback.md)'s exit-2 rule. Else act on `{state, backlog_status}`: `ready` → proceed; `blocked` (`cortex init --ensure` refused a user-correctable gate, `.session` unwritten) → halt, fix, re-run (idempotent); `ensure-failed`/`error` → halt. `already_complete` → apply backlog-writeback.md's **Backlog Status Check** (Close / Continue); `open`/`no_match` → proceed. When resuming, report `route`/`criticality`/`tier`, offer continue-or-restart, and surface `staleness` tersely (non-blocking drift hint; default continue).
 
 ## Step 3: Execute Current Phase
 
@@ -54,7 +54,7 @@ cortex-lifecycle-enter --feature {feature} --session-id $LIFECYCLE_SESSION_ID --
 Clarify, Research, and Spec are delegated to `/cortex-core:refine`.
 
 - **`spec.md` AND `research.md` both exist** (prior refine run or resume): skip delegation, go to the phase table (Plan).
-- **Otherwise** (spec.md missing, or present without research.md — warn this mixed state is inconsistent; overnight needs both): read [refine-delegation.md](${CLAUDE_SKILL_DIR}/references/refine-delegation.md), substituting the body-resolved paths below. Refine routes a missing research.md to the research phase.
+- **Otherwise** (spec.md missing, or present without research.md — warn this mixed state is inconsistent; overnight needs both): read [refine-delegation.md](${CLAUDE_SKILL_DIR}/references/refine-delegation.md), substituting the body-resolved paths below. Refine routes a missing research.md to research.
 
 | Phase | Reference | Artifact |
 |-------|-----------|----------|
@@ -63,7 +63,7 @@ Clarify, Research, and Spec are delegated to `/cortex-core:refine`.
 | Review | [review.md](${CLAUDE_SKILL_DIR}/references/review.md) | `review.md` |
 | Complete | [complete.md](${CLAUDE_SKILL_DIR}/references/complete.md) | Git workflow + summary |
 
-Read **only** the current phase's reference. Do not preload others.
+Read **only** the current phase's reference. Don't preload others.
 
 ### Reference-path propagation (load-bearing)
 
@@ -71,31 +71,23 @@ Read **only** the current phase's reference. Do not preload others.
 
 ## Phase Transition
 
-Proceed automatically — no confirmation at phase boundaries. Announce and continue. Each transition summary includes **Decisions**, **Scope delta**, **Blockers** (each "None" when empty), and **Next** (phase + what it does).
+Proceed automatically — no confirmation at phase boundaries; announce and continue. Each transition summary includes **Decisions**, **Scope delta**, **Blockers** (each "None" when empty), and **Next** (phase + what it does).
 
 A boundary fires on its gate condition (e.g. `plan.md` all tasks `[x]`), not user input. A prior "report"/"summarize" instruction sets text cadence only; it does not authorize `AskUserQuestion` (permitted at a boundary only by the Kept user pauses inventory).
 
 ### Per-phase completion rule
 
-A phase completes (auto-advance fires) only on its gate:
-
-- **Specify**: `spec.md` exists AND (`spec_approved` event OR a `phase_transition` with `"from":"specify"` as migration sentinel).
-- **Plan**: `plan.md` exists AND (`plan_approved` event OR `phase_transition` `"from":"plan"`).
-- **Implement**: `plan.md` exists AND every task `**Status**` is `[x]` — the checkbox tally is the gate, no approval.
-- **Review**: `review.md` exists AND a `review_verdict` event with `verdict: APPROVED` (→ Complete), OR the cycle-2 escalation (→ `escalated`, user-blocking).
-- **Complete**: `feature_complete` event present.
-
-Specify and Plan each keep one approval surface at §4 of their reference. Specify's is `Approve / Request changes / Cancel`. Plan's §4 merges plan approval with the Implement branch/dispatch selection — see plan.md §4 for the branch-mode → `plan_approved` / `dispatch_choice` / `feature_paused` routing.
+Auto-advance fires only on a phase's gate; each phase reference owns that gate and its transition statement — read the current phase's reference for the exact condition, don't re-derive it. Specify and Plan additionally gate on a §4 user-approval surface (see their references).
 
 ### Kept user pauses
 
-Auto-proceed except where a phase reference defines a kept pause. The parity-tested inventory lives in [kept-pauses.md](${CLAUDE_SKILL_DIR}/references/kept-pauses.md).
+Auto-proceed except where a phase reference defines a kept pause; the parity-tested inventory (tests-only, not runtime reading) lives in [kept-pauses.md](${CLAUDE_SKILL_DIR}/references/kept-pauses.md).
 
 For criticality override syntax and the behavior matrix (which phases run, model selection, parallel-vs-single dispatch), see [criticality-matrix.md](${CLAUDE_SKILL_DIR}/references/criticality-matrix.md).
 
 ## Situational references
 
-No linear-flow trigger — consult only when their condition applies, don't preload:
+No linear-flow trigger — consult only when the condition applies, don't preload:
 
 - [concurrent-sessions.md](${CLAUDE_SKILL_DIR}/references/concurrent-sessions.md) — `.session` convention, multi-feature concurrency
 - [parallel-execution.md](${CLAUDE_SKILL_DIR}/references/parallel-execution.md) — parallel features via `Agent(isolation: "worktree")`

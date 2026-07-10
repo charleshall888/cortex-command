@@ -39,7 +39,7 @@ Per requirement: read the relevant source, check acceptance criteria, rate PASS 
 Assess naming consistency, error handling, test coverage (were the plan's verification steps executed?), and pattern consistency with the project.
 
 ## Requirements Drift (observation only — does not affect the verdict)
-Compare the implementation to the project requirements above. State `none` if it matches all of them and adds no unreflected behavior; `detected` if it introduces or changes behavior the requirements don't capture.
+Compare the implementation to the project requirements above: `none` if it matches all and adds no unreflected behavior; `detected` if it introduces or changes behavior the requirements don't capture.
 
 ## Write review.md
 Write to `cortex/lifecycle/{feature}/review.md`, including a `## Requirements Drift` section:

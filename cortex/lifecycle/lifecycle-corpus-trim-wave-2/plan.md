@@ -89,7 +89,7 @@ Three-phase execution: build the wrapper verbs first (in-process composition of 
 - **Complexity**: complex
 - **Context**: The stale bullet is a verified duplicate: `cortex-refine emit-lifecycle-start` (idempotent seed, refine SKILL Step 2) + `reconcile-clarify` own the lifecycle_start row; `cortex-lifecycle-event lifecycle-start` appends unconditionally → duplicate row per delegated run. FILE_EVENTS: refine-delegation.md loses `lifecycle_start` (×1→0), keeps `phase_transition`; move rows for events whose text migrates files. Merged file ≤ sum of absorbed sections (spec R7 honesty clause). `<DISCOVERY_BOOTSTRAP_MD>`/`<COMPLEXITY_ESCALATION_MD>`/`<POST_REFINE_COMMIT_MD>` placeholders collapse; `<REFINE_SKILL_MD>` stays. events-registry `lifecycle_start` producers row updated.
 - **Verification**: (a) `pytest tests/test_lifecycle_event_roundtrip.py -q` exits 0; (b) `ls skills/lifecycle/references/ | grep -c 'complexity-escalation\|post-refine-commit\|discovery-bootstrap'` = 0; `grep -c 'lifecycle-start' skills/lifecycle/references/refine-delegation.md` = 0; `wc -c` of merged refine-delegation.md ≤ sum of absorbed source sections (record both numbers in the task report).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 9: Split and compress orchestrator-review checklists
 - **Files**: skills/lifecycle/references/orchestrator-review.md, skills/lifecycle/references/orchestrator-checklist-specify.md, skills/lifecycle/references/orchestrator-checklist-plan.md, skills/refine/references/specify.md, skills/lifecycle/references/plan.md
@@ -107,7 +107,7 @@ Three-phase execution: build the wrapper verbs first (in-process composition of 
 - **Complexity**: complex
 - **Context**: competing-plans keeps: both model-resolution contracts (competing-plan criticality-keyed AND synthesizer no-criticality + rationale phrase within 600 chars), `plan_comparison` literal + v2 event schema, structured fallback table + graft recording. review.md keeps: reviewer-prompt Verdict JSON contract, §4a parse/apply/2-retry/breach protocol, `### 4a. Auto-Apply Requirements Drift` heading, FILE_EVENTS counts (review_verdict×1, drift_protocol_breach×1, phase_transition×3). plan.md keeps `### 1a./### 1b./### 5.` headings, `**Files**:`/`**Depends on**:` labels (parser-load-bearing, no automated guard), critical-arm wire line (single line containing critical+read+competing-plans). Also retarget plan.md §4's "see Implement §1" cross-references for suppressed-routing/probe-degrade to the content's post-Task-5 home (worktree-entry.md) — no test pins this destination, so verify by grep. Load-bearing rules to section edges (lost-in-the-middle).
 - **Verification**: (a) `pytest tests/test_model_resolution_wiring.py tests/test_competing_plans_wired.py tests/test_skill_section_citations.py tests/test_lifecycle_event_roundtrip.py tests/test_lifecycle_kept_pauses_parity.py -q` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 11: Sub-skill safe cuts
 - **Files**: skills/refine/SKILL.md, skills/refine/references/clarify-critic.md, skills/refine/references/research-phase.md, skills/refine/references/specify.md, skills/critical-review/SKILL.md, skills/critical-review/references/a-to-b-downgrade-rubric.md, skills/research/SKILL.md, skills/research/references/angle-templates.md
