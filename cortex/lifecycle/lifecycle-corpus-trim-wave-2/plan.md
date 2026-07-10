@@ -125,7 +125,7 @@ Three-phase execution: build the wrapper verbs first (in-process composition of 
 - **Complexity**: simple
 - **Context**: Old text from `git show HEAD:<path>`; the reviewer's brief lists the named untouchables from Tasks 9–11 Context fields and asks it to hunt dropped conditions (the research finding: procedural-constraint compliance degrades before task success — check conditions specifically, not gist). Write the verdict artifact to the lifecycle dir.
 - **Verification**: (b) `grep -c 'VERDICT: parity-confirmed' cortex/lifecycle/lifecycle-corpus-trim-wave-2/compression-diff-review.md` = 1 (issued only after all findings are resolved).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 13: Route-table recompute, drives, mirrors, full suite
 - **Files**: cortex/lifecycle/lifecycle-corpus-trim-wave-2/route-table-after.md, plugins/cortex-core/ (regenerated)
