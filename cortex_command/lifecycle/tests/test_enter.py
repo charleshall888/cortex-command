@@ -110,6 +110,20 @@ def test_every_state_is_known(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
         assert state == expected
         seen.add(state)
 
+    # needs-decision: an already_complete item without --acknowledge-complete
+    # short-circuits before the composition (the ensure-code patch is irrelevant).
+    _write_backlog(tmp_path, "370-complete.md", "complete")
+    seen.add(
+        en.enter(
+            feature="feat",
+            session_id="s",
+            backend="cortex-backlog",
+            phase="none",
+            backlog_file="370-complete.md",
+            root=tmp_path,
+        )["state"]
+    )
+
     # The error state is only reachable through main()'s never-crash guard.
     monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
 
@@ -187,12 +201,21 @@ def _write_backlog(root: Path, name: str, status: str) -> None:
     )
 
 
-def test_backlog_status_already_complete(
+def test_already_complete_returns_needs_decision_with_no_side_effects(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A backlog item whose frontmatter status is ``complete`` is reported as
-    already_complete — the verb never auto-closes it."""
-    _patch_primitives(monkeypatch, ensure_code=0)
+    """An ``already_complete`` item without ``--acknowledge-complete`` returns
+    ``needs-decision`` and runs NO composed step — the structural form of the
+    pre-verb "completed item creates no artifacts" carve-out. Primitives are
+    patched to fail loudly, proving the early return fires before any of them,
+    and the tmp tree is asserted unchanged (no lifecycle dir at all)."""
+
+    def _forbidden(*args, **kwargs):
+        raise AssertionError("composition ran despite the needs-decision short-circuit")
+
+    monkeypatch.setattr(en, "create_index", _forbidden)
+    monkeypatch.setattr(en, "sync", _forbidden)
+    monkeypatch.setattr(en.init_ensure, "main", _forbidden)
     _write_backlog(tmp_path, "370-foo.md", "complete")
     r = en.enter(
         feature="feat",
@@ -202,7 +225,35 @@ def test_backlog_status_already_complete(
         backlog_file="370-foo.md",
         root=tmp_path,
     )
+    assert r["state"] == "needs-decision"
     assert r["backlog_status"] == "already_complete"
+    # No side effects: the verb created no lifecycle directory (hence no index,
+    # no .session) and ran no backend write-back.
+    assert not (tmp_path / "cortex" / "lifecycle").exists()
+
+
+def test_already_complete_with_acknowledge_proceeds(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With ``--acknowledge-complete`` (the caller-passed Continue decision), an
+    already_complete item drives the full composition normally and still reports
+    ``already_complete`` — the verb never auto-closes it."""
+    _patch_primitives(monkeypatch, ensure_code=0)
+    _write_backlog(tmp_path, "370-foo.md", "complete")
+    r = en.enter(
+        feature="feat",
+        session_id="s",
+        backend="cortex-backlog",
+        phase="none",
+        backlog_file="370-foo.md",
+        root=tmp_path,
+        acknowledge_complete=True,
+    )
+    assert r["state"] == "ready"
+    assert r["backlog_status"] == "already_complete"
+    assert (tmp_path / "cortex" / "lifecycle" / "feat" / ".session").read_text(
+        encoding="utf-8"
+    ) == "s"
 
 
 def test_backlog_status_open_for_non_complete_status(
@@ -288,6 +339,42 @@ def test_cli_exits_0_with_error_state_on_unexpected_exception(
     obj = json.loads(capsys.readouterr().out)
     assert obj["state"] == "error"
     assert "root not found" in obj["message"]
+
+
+def test_cli_needs_decision_on_already_complete_emits_json(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
+) -> None:
+    """The CLI surfaces the needs-decision short-circuit as a JSON envelope
+    (exit 0) with no composed step run."""
+    monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
+    _write_backlog(tmp_path, "370-foo.md", "complete")
+
+    def _forbidden(*args, **kwargs):
+        raise AssertionError("composition ran despite the needs-decision short-circuit")
+
+    monkeypatch.setattr(en, "create_index", _forbidden)
+    monkeypatch.setattr(en, "sync", _forbidden)
+    monkeypatch.setattr(en.init_ensure, "main", _forbidden)
+    rc = en.main(_cli_args(backlog_file="370-foo.md"))
+    assert rc == 0
+    obj = json.loads(capsys.readouterr().out)
+    assert obj["state"] == "needs-decision"
+    assert obj["backlog_status"] == "already_complete"
+
+
+def test_cli_acknowledge_complete_flag_proceeds(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
+) -> None:
+    """The --acknowledge-complete flag drives the full composition for an
+    already_complete item (exit 0, state ready)."""
+    monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
+    _patch_primitives(monkeypatch, ensure_code=0)
+    _write_backlog(tmp_path, "370-foo.md", "complete")
+    rc = en.main(_cli_args(backlog_file="370-foo.md") + ["--acknowledge-complete"])
+    assert rc == 0
+    obj = json.loads(capsys.readouterr().out)
+    assert obj["state"] == "ready"
+    assert obj["backlog_status"] == "already_complete"
 
 
 def test_cli_exits_1_on_create_index_oserror(

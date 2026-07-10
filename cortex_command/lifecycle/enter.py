@@ -27,10 +27,25 @@ status:
                        reported as complete, preserving the never-auto-close
                        safety invariant).
 
+An ``already_complete`` item short-circuits the whole composition into the
+``needs-decision`` state UNLESS ``--acknowledge-complete`` is passed. This
+preserves — structurally, not in prose — the pre-verb carve-out where a
+completed backlog item created no lifecycle artifacts: the return happens BEFORE
+``create_index``/``sync``/``init_ensure``/``.session``, so a decision-required
+entry leaves the tree untouched. The skill asks Close/Continue; **Continue**
+re-runs the verb with ``--acknowledge-complete`` (a caller-passed acknowledgement
+that keeps the verb a dumb arg-actor — it never decides on its own), which drives
+the full composition normally.
+
 States (the ``state`` discriminant reflects the ``cortex init --ensure`` gate,
-the one composed step that can refuse a lifecycle entry):
+the one composed step that can refuse a lifecycle entry — plus the
+``needs-decision`` short-circuit above):
 
   ready         — all four steps succeeded; ``.session`` was written.
+  needs-decision — the backlog item is ``already_complete`` and
+                  ``--acknowledge-complete`` was not passed. NO side effect ran
+                  (no index, no sync, no init-ensure, no ``.session``); the skill
+                  must resolve Close/Continue before the verb re-runs.
   blocked       — ``cortex init --ensure`` returned 2 (a user-correctable gate,
                   e.g. invoked inside an attached git worktree). ``.session`` is
                   NOT written — the environment must be fixed and the verb re-run
@@ -80,7 +95,7 @@ from cortex_command.lifecycle import init_ensure
 from cortex_command.lifecycle.create_index import create_index
 from cortex_command.lifecycle.start_sync import _Exit2, sync
 
-KNOWN_STATES = ("ready", "blocked", "ensure-failed", "error")
+KNOWN_STATES = ("ready", "needs-decision", "blocked", "ensure-failed", "error")
 
 # First-match-wins frontmatter status scalar; ``.`` never crosses the newline so
 # the capture is confined to the one ``status:`` line.
@@ -125,6 +140,7 @@ def enter(
     phase: str,
     backlog_file: str,
     root: Path,
+    acknowledge_complete: bool = False,
 ) -> dict:
     """Compose create-index, start-sync, init-ensure, and the ``.session`` write.
 
@@ -132,8 +148,22 @@ def enter(
     (create-index: unresolved non-empty backlog-file → the caller maps to exit 1)
     or ``_Exit2`` (start-sync: ambiguous slug → exit 2). ``backlog_status`` is
     read first, before ``sync`` mutates the item's status to ``in_progress``.
+
+    An ``already_complete`` item returns ``needs-decision`` and runs NO composed
+    step unless *acknowledge_complete* is set — the structural form of the
+    pre-verb "completed item creates no artifacts" carve-out. The verb never
+    decides on its own; the acknowledgement is caller-passed.
     """
     backlog_status = _backlog_status(backlog_file, root)
+
+    if backlog_status == "already_complete" and not acknowledge_complete:
+        # Short-circuit BEFORE any side effect so the tree is untouched. The skill
+        # resolves Close/Continue; Continue re-runs with --acknowledge-complete.
+        return {
+            "state": "needs-decision",
+            "backlog_status": backlog_status,
+            "feature": feature,
+        }
 
     index_result = create_index(feature, backlog_file, root)  # OSError → exit 1
     sync_result = sync(
@@ -196,6 +226,16 @@ def _build_parser() -> argparse.ArgumentParser:
         metavar="BASENAME",
         help='Resolver filename basename (e.g. 326-foo.md); "" on no match.',
     )
+    parser.add_argument(
+        "--acknowledge-complete",
+        action="store_true",
+        help=(
+            "Caller-passed acknowledgement of the Continue decision for an "
+            "already_complete item: proceed through the full composition. "
+            "Without it, an already_complete item returns needs-decision and "
+            "runs no composed step (no side effects)."
+        ),
+    )
     return parser
 
 
@@ -215,6 +255,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             phase=args.phase,
             backlog_file=args.backlog_file,
             root=root,
+            acknowledge_complete=args.acknowledge_complete,
         )
     except OSError as exc:
         sys.stderr.write(
