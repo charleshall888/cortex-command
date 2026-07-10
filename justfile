@@ -522,6 +522,7 @@ test:
     run_test "test-init" just test-init
     run_test "test-install" bash tests/test_install.sh
     run_test "tests" .venv/bin/pytest tests/ -q
+    run_test "tests-lifecycle-backlog-cortex" .venv/bin/pytest cortex_command/lifecycle/tests/ cortex_command/tests/ cortex_command/backlog/tests/ -q
     echo "── dashboard suite (collected) ──"
     .venv/bin/pytest cortex_command/dashboard/tests/ --collect-only -q 2>&1 | grep '::' || true
     run_test "tests-dashboard" .venv/bin/pytest cortex_command/dashboard/tests/ -q
