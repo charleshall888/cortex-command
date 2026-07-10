@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 09539950-c01f-48d7-adbd-1a17934c4f3d
 title: 'Build the verb-completion composition: wrapper verbs, generated pauses, shared overnight reducer'
-status: backlog
+status: refined
 priority: high
 type: feature
 created: 2026-07-10
@@ -11,6 +11,12 @@ parent: "371"
 tags: ['cli-served-lifecycle-state-machine']
 discovery_source: cortex/research/cli-served-lifecycle-state-machine/research.md
 blocked-by: 370
+lifecycle_phase: research
+lifecycle_slug: build-the-verb-completion-composition-wrapper
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/build-the-verb-completion-composition-wrapper/spec.md
+areas: ['lifecycle']
 ---
 ## Why
 
