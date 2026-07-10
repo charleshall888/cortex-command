@@ -26,12 +26,18 @@ States:
   no-index        — ``{root}/cortex/lifecycle/{feature}/index.md`` does not
                     exist; nothing was written.
   error           — an unexpected exception (unresolvable project root, I/O
-                    failure) escaped the call; ``message`` carries the
-                    diagnostic. Never raises — see ``register_artifact``.
+                    failure, a non-UTF-8 index.md decode failure) surfaced as a
+                    state; ``message`` carries the diagnostic. ``register_artifact``
+                    self-handles the common cases and ``main`` wraps the call in a
+                    final never-crash net (matching the sibling verbs), so the CLI
+                    always emits JSON and exits 0.
 
 The write root resolves via ``_resolve_user_project_root_from_cwd`` (the
 cwd-only resolver, matching this verb's Complete-phase-sibling call site) so
-the file lands in the same tree the phase's other writes target.
+the file lands in the same tree the phase's other writes target. Root-resolution
+invariant: ``enter`` resolves the project root via ``CORTEX_REPO_ROOT``
+(env-honoring) while ``finalize`` and ``register-artifact`` resolve it from cwd;
+callers must ensure the two agree (overnight runs with cwd == repo root).
 """
 
 from __future__ import annotations
@@ -81,8 +87,10 @@ def register_artifact(
     """Append *artifact* to *feature*'s ``index.md`` ``artifacts:`` array.
 
     Skip-if-present: an artifact already in the array is a byte-level no-op.
-    Never raises — every failure mode is returned as an ``"error"`` state (see
-    the module docstring).
+    Common failure modes (unresolvable root, I/O error) return an ``"error"``
+    state; an unexpected error (e.g. a non-UTF-8 ``index.md`` that raises
+    ``UnicodeDecodeError``) propagates to ``main``'s never-crash net (see the
+    module docstring).
     """
     try:
         if index_path is not None:
@@ -170,9 +178,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     _telemetry.log_invocation("cortex-lifecycle-register-artifact")
     args = _build_parser().parse_args(argv)
     project_root = Path(args.project_root) if args.project_root else None
-    result = register_artifact(
-        args.feature, args.artifact, project_root=project_root
-    )
+    try:
+        result = register_artifact(
+            args.feature, args.artifact, project_root=project_root
+        )
+    except Exception as exc:  # noqa: BLE001 — always emit a JSON struct, never a traceback
+        result = {"state": "error", "message": repr(exc)}
     sys.stdout.write(json.dumps(result, separators=(",", ":")) + "\n")
     return 0
 

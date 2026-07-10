@@ -227,6 +227,23 @@ def test_cli_rejects_unknown_artifact(tmp_path) -> None:
         ra.main(["--feature", "feat", "--artifact", "bogus"])
 
 
+def test_cli_decode_failure_returns_error_state_and_exits_zero(tmp_path, capsys) -> None:
+    """A non-UTF-8 index.md (0xff byte) raises UnicodeDecodeError inside
+    register_artifact — which is neither FileNotFoundError nor OSError, so the
+    function's own handlers miss it. main's never-crash net must still surface an
+    error state at exit 0 rather than a traceback."""
+    path = _index_path(tmp_path)
+    path.parent.mkdir(parents=True)
+    # 0xff is not valid UTF-8 → read_text(encoding="utf-8") raises UnicodeDecodeError.
+    path.write_bytes(b"---\nartifacts: [\xff]\n---\n")
+    rc = ra.main(
+        ["--feature", "feat", "--artifact", "research", "--project-root", str(tmp_path)]
+    )
+    assert rc == 0
+    obj = json.loads(capsys.readouterr().out)
+    assert obj["state"] == "error"
+
+
 def test_cli_never_raises_and_always_exits_zero(monkeypatch, capsys) -> None:
     def _raise():
         raise CortexProjectRootError("no cortex/ found")

@@ -14,8 +14,12 @@ The three composed pieces:
      ``complete`` with ``session_id=null`` (Step 9). ``update_item``'s own tail
      regenerates the backlog index via subprocess, so Step 10's separate
      two-tier index-regen fallback is retired — the composition does NOT add a
-     second regen. ``--backend none`` skips the write-back; any other value is
-     an external tracker the skill updates best-effort (``external-backend``).
+     second regen. That regen is **best-effort by ``update_item``'s contract**:
+     a non-zero regen subprocess prints a WARNING but does NOT fail the update,
+     so finalize does not verify it and reports ``index_regen: best-effort``
+     (``not-run`` when no write-back ran) rather than masking the outcome under a
+     bare ``finalized``. ``--backend none`` skips the write-back; any other value
+     is an external tracker the skill updates best-effort (``external-backend``).
   2. **Counters read** — ``count_tasks``/``count_rework_cycles`` over the
      feature's ``plan.md``/``events.log`` supply the ``feature_complete``
      event's ``tasks_total``/``rework_cycles`` fields.
@@ -54,6 +58,11 @@ so the counters read, the idempotent ``events.log`` scan, and ``log_event``'s
 own write target all resolve against the same physical tree — ``log_event``
 resolves its path from cwd internally and cannot be handed a root, so finalize
 matches it rather than diverging under ``CORTEX_REPO_ROOT``.
+
+Root-resolution invariant across the verb family: ``enter`` resolves the project
+root via ``CORTEX_REPO_ROOT`` (env-honoring) while ``finalize`` and
+``register-artifact`` resolve it from cwd; callers must ensure the two agree
+(overnight runs with cwd == repo root).
 """
 
 from __future__ import annotations
@@ -193,6 +202,7 @@ def finalize(
         "feature": feature,
         "backend": backend,
         "backlog": backlog_signal,
+        "index_regen": "best-effort" if backlog_signal == "updated" else "not-run",
         "emitted": emitted,
         "tasks_total": tasks_total,
         "rework_cycles": rework_cycles,

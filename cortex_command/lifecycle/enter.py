@@ -55,6 +55,11 @@ The write root resolves via ``_resolve_user_project_root`` (honoring
 ``create-index`` and ``start-sync`` write-backs under overnight (#319
 precedent) — never a cwd-relative path that could diverge when the runner's
 cwd differs from the recorded repo root.
+
+Root-resolution invariant across the verb family: ``enter`` resolves via
+``CORTEX_REPO_ROOT`` (env-honoring, as above) while ``finalize`` and
+``register-artifact`` resolve from cwd; callers must ensure the two agree
+(overnight runs with cwd == repo root).
 """
 
 from __future__ import annotations
