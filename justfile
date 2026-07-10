@@ -126,6 +126,10 @@ dashboard-seed-clean:
 backlog-index:
     cortex-generate-backlog-index
 
+# Regenerate skills/lifecycle/references/kept-pauses.md from kept-pauses-data.toml
+kept-pauses:
+    cortex-generate-kept-pauses --write
+
 # Mark a backlog item as complete by name, ID, or UUID (updates frontmatter in place, cleans blocked-by, regenerates index)
 backlog-close feature="":
     cortex-update-item {{ feature }} --status complete

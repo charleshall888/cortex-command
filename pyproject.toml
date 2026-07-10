@@ -26,6 +26,7 @@ cortex-batch-runner = "cortex_command.overnight.batch_runner:main"
 cortex-update-item = "cortex_command.backlog.update_item:main"
 cortex-create-backlog-item = "cortex_command.backlog.create_item:main"
 cortex-generate-backlog-index = "cortex_command.backlog.generate_index:main"
+cortex-generate-kept-pauses = "cortex_command.lifecycle.generate_kept_pauses:main"
 cortex-build-epic-map = "cortex_command.backlog.build_epic_map:main"
 # Phase 3 console-script sweep (R13): promoted from python3 -m callsites
 cortex-auth = "cortex_command.overnight.auth:_main"

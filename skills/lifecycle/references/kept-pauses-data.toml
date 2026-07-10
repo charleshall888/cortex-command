@@ -1,0 +1,150 @@
+# Kept-pause taxonomy — durable source of truth.
+#
+# One [[pause]] row per `<!-- pause: <slug> <kind> -->` marker across
+# skills/lifecycle and skills/refine (18 markers as of Phase B, epic 371).
+# The `cortex-generate-kept-pauses` console script renders
+# skills/lifecycle/references/kept-pauses.md from this file. Task 5 flips the
+# parity test to exact marker-set equality against these `id` values, so every
+# id here MUST match a marker slug byte-for-byte — never invent, rename, or drop.
+#
+# Fields per pause:
+#   id            marker slug (== `<!-- pause: <slug> ... -->`)
+#   kind          question | phase-exit-wait | config-conditional | relayed-consent
+#   suppressed_by optional; a lifecycle.config.md key, or "judgment" for
+#                 model-conditional rendering. Orthogonal to kind.
+#   file          repo-relative path of the marker'd prose site
+#   anchor        stable in-file locator (heading / step) for the marker
+#   rationale     why this pause is deliberately kept
+
+[[pause]]
+id = "empty-lifecycle-offer"
+kind = "question"
+file = "skills/lifecycle/SKILL.md"
+anchor = "Step 1: Resolve the Invocation (resolver `empty` state)"
+rationale = "No topic given and incomplete lifecycles exist: offer them for the operator to pick, then re-run."
+
+[[pause]]
+id = "ambiguous-backlog-pick"
+kind = "question"
+file = "skills/lifecycle/SKILL.md"
+anchor = "Step 1: Resolve the Invocation (resolver `ambiguous-backlog` state)"
+rationale = "Backlog match is ambiguous: present candidates for the operator to disambiguate, then re-run."
+
+[[pause]]
+id = "complete-orphan-pr-pick"
+kind = "question"
+file = "skills/lifecycle/references/complete.md"
+anchor = "Route the verdict (`orphan_ambiguous`)"
+rationale = "Multiple orphan PRs match interactive/<slug>: ask which PR to finalize before writing pr.json."
+
+[[pause]]
+id = "implement-branch-pick"
+kind = "config-conditional"
+suppressed_by = "branch-mode"
+file = "skills/lifecycle/references/implement.md"
+anchor = "§1 branch selection (`prompt` state picker)"
+rationale = "Fallback branch picker on main; suppressed when branch-mode is set, the tree is clean, and no live worktree exists for the slug."
+
+[[pause]]
+id = "implement-batch-failure"
+kind = "question"
+file = "skills/lifecycle/references/implement.md"
+anchor = "Failure Handling"
+rationale = "A batch task failed: ask retry / skip / abort before continuing non-dependent tasks."
+
+[[pause]]
+id = "resume-feature-pick"
+kind = "question"
+file = "skills/lifecycle/references/concurrent-sessions.md"
+anchor = "Listing incomplete features"
+rationale = "Multiple incomplete features and none specified: list them and ask which to resume."
+
+[[pause]]
+id = "complete-test-command-ask"
+kind = "question"
+suppressed_by = "test-command"
+file = "skills/lifecycle/references/complete-first-run.md"
+anchor = "Step 1 — Run Tests"
+rationale = "Config present but without test-command: ask whether tests exist; suppressed when test-command is set (just run it)."
+
+[[pause]]
+id = "complete-merge-wait"
+kind = "phase-exit-wait"
+file = "skills/lifecycle/references/complete-first-run.md"
+anchor = "Step 6 — Phase-Exit Pause (Handoff Message)"
+rationale = "Hand off after opening the PR: operator merges on GitHub then re-invokes complete; manual re-invocation is the gate."
+
+[[pause]]
+id = "plan-approval"
+kind = "relayed-consent"
+file = "skills/lifecycle/references/plan.md"
+anchor = "Plan approval surface"
+rationale = "Substantive plan approval merged with branch/dispatch selection; overnight relays the operator's pre-authorized consent."
+
+[[pause]]
+id = "backlog-already-complete-pick"
+kind = "config-conditional"
+suppressed_by = "backlog.backend"
+file = "skills/lifecycle/references/backlog-writeback.md"
+anchor = "Backlog Status Check"
+rationale = "Item already marked complete: ask Close vs Continue; the backend arm gates the write-back (none skips it) and overnight defaults to Continue without asking."
+
+[[pause]]
+id = "backlog-ambiguous-slug-reinvoke"
+kind = "question"
+file = "skills/lifecycle/references/backlog-writeback.md"
+anchor = "Exit-2 (ambiguous slug, canonical)"
+rationale = "Ambiguous slug on write-back: present the stderr candidates and ask the operator to re-invoke disambiguated."
+
+[[pause]]
+id = "clarify-question-batch"
+kind = "question"
+suppressed_by = "judgment"
+file = "skills/refine/references/clarify.md"
+anchor = "4. Question Threshold"
+rationale = "Clarify question batch; suppressed by model judgment when all confidence dimensions are high and the critic raised no Ask items."
+
+[[pause]]
+id = "refine-empty-topic-prompt"
+kind = "question"
+file = "skills/refine/SKILL.md"
+anchor = "Topic resolution (empty $ARGUMENTS)"
+rationale = "Empty $ARGUMENTS: prompt the operator for a topic before resolving the backlog item."
+
+[[pause]]
+id = "spec-interview-gapfill"
+kind = "question"
+file = "skills/refine/references/specify.md"
+anchor = "§2 Structured interview"
+rationale = "Structured spec interview: probe one question at a time via AskUserQuestion until ambiguities resolve."
+
+[[pause]]
+id = "spec-confidence-loopback"
+kind = "question"
+suppressed_by = "judgment"
+file = "skills/refine/references/specify.md"
+anchor = "2a. Research Confidence Check (cycle >= 2)"
+rationale = "On flagged confidence signals at cycle >= 2, ask whether to loop back to Research or proceed; rendered on the model's signal assessment."
+
+[[pause]]
+id = "spec-open-decision-ask"
+kind = "question"
+suppressed_by = "judgment"
+file = "skills/refine/references/specify.md"
+anchor = "2b. Pre-Write Checks (Open Decision resolution)"
+rationale = "Ask the operator to resolve an open decision when it cannot be resolved from research or safely deferred; model judgment gates rendering."
+
+[[pause]]
+id = "spec-complexity-value-gate"
+kind = "question"
+suppressed_by = "judgment"
+file = "skills/refine/references/specify.md"
+anchor = "4. User Approval (complexity/value gate)"
+rationale = "Complexity/value proportionality pick-menu; renders only when the recommendation is not full scope or confidence is low, else folds into the approval surface."
+
+[[pause]]
+id = "spec-approval"
+kind = "relayed-consent"
+file = "skills/refine/references/specify.md"
+anchor = "4. User Approval (approval surface)"
+rationale = "Substantive spec approval surface (Approve / Request changes / Cancel); overnight relays the operator's pre-authorized consent."
