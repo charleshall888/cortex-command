@@ -66,7 +66,7 @@ Downstream parsing depends only on the Verdict JSON block (exact field names and
 
 After the sub-task completes and review.md is on disk: if it lacks a `## Requirements Drift` section (the reviewer ran out of context), re-dispatch once — "review.md is missing the ## Requirements Drift section; read the existing file and append it in the correct format, modifying nothing else." Still absent after one retry → escalate.
 
-Register `"review"` in `index.md`'s `artifacts` array per backlog-writeback.md (loaded at lifecycle Step 2).
+Register the artifact: `cortex-lifecycle-register-artifact --feature {feature} --artifact review`.
 
 | Verdict | Cycle | Action |
 |---------|-------|--------|

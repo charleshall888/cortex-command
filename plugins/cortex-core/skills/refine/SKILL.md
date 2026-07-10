@@ -82,7 +82,7 @@ Idempotent — safe on resume; no-op under `/cortex-core:lifecycle`.
 
 Read `${CLAUDE_SKILL_DIR}/references/specify.md` and follow its full protocol — the refine-context notes are inlined there at §1 (skip redundant requirements loading), §3b (trust the state read; `corrupted: true` runs the gate), §4 (complexity/value gate), and §5 (skip the `phase_transition` emission). Its §3a/§3b gates and criticality matrix reference "the propagated `<target>` path"; standalone refine has no lifecycle manifest, so resolve them here: orchestrator-review → `${CLAUDE_SKILL_DIR}/../lifecycle/references/orchestrator-review.md`, critical-review-gate → `${CLAUDE_SKILL_DIR}/../lifecycle/references/critical-review-gate.md`, criticality-matrix → `${CLAUDE_SKILL_DIR}/../lifecycle/references/criticality-matrix.md`.
 
-Do NOT set `status: refined` before approval. After approval (specify.md §4), register the `"spec"` artifact in `index.md` per backlog-writeback.md's canonical recipe.
+Do NOT set `status: refined` before approval. After approval (specify.md §4), register the spec artifact: `cortex-lifecycle-register-artifact --feature {lifecycle-slug} --artifact spec`.
 
 ### Write-Back on Approval (Context A only)
 

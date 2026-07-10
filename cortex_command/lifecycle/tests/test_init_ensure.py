@@ -5,10 +5,14 @@ Covers three acceptance bundles from the spec:
 R9 — console-script and ``python3 -m cortex_command.lifecycle.init_ensure``
      invoke the same code path with identical Namespace shapes.
 
-R10 — ``cortex-lifecycle-init-ensure`` is referenced in both the canonical
+R10 — ``cortex-lifecycle-enter`` (the Step-2 wrapper that composes init-ensure
+      in-process) is referenced in both the canonical
       ``skills/lifecycle/SKILL.md`` and the regenerated mirror under
       ``plugins/cortex-core/skills/lifecycle/SKILL.md``; the existing
-      dual-source-drift test suite exits 0.
+      dual-source-drift test suite exits 0. (The corpus-trim wave-2 rewiring
+      replaced the standalone ``cortex-lifecycle-init-ensure`` prose call with
+      the ``cortex-lifecycle-enter`` composition; the init-ensure binary and its
+      R9/R11 module tests are unchanged.)
 
 R11 — the helper refuses when invoked inside a ``git worktree add`` attached
       worktree (exit 2 + diagnostic on stderr); a regular-checkout baseline
@@ -231,37 +235,37 @@ def test_r9c_namespace_shape_equivalence(
 
 
 # ---------------------------------------------------------------------------
-# R10(a) — canonical SKILL.md contains directive.
+# R10(a) — canonical SKILL.md contains the enter-verb directive.
 # ---------------------------------------------------------------------------
 
 
-def test_r10a_canonical_skill_md_references_init_ensure() -> None:
-    """R10(a): canonical skills/lifecycle/SKILL.md mentions cortex-lifecycle-init-ensure."""
+def test_r10a_canonical_skill_md_references_enter() -> None:
+    """R10(a): canonical skills/lifecycle/SKILL.md mentions cortex-lifecycle-enter."""
     assert _CANONICAL_SKILL_MD.is_file(), (
         f"Canonical SKILL.md missing: {_CANONICAL_SKILL_MD}"
     )
     content = _CANONICAL_SKILL_MD.read_text(encoding="utf-8")
-    count = content.count("cortex-lifecycle-init-ensure")
+    count = content.count("cortex-lifecycle-enter")
     assert count >= 1, (
-        f"Expected at least 1 occurrence of 'cortex-lifecycle-init-ensure' in "
+        f"Expected at least 1 occurrence of 'cortex-lifecycle-enter' in "
         f"{_CANONICAL_SKILL_MD}; found {count}"
     )
 
 
 # ---------------------------------------------------------------------------
-# R10(b) — mirror SKILL.md contains directive.
+# R10(b) — mirror SKILL.md contains the enter-verb directive.
 # ---------------------------------------------------------------------------
 
 
-def test_r10b_mirror_skill_md_references_init_ensure() -> None:
-    """R10(b): plugins/cortex-core/skills/lifecycle/SKILL.md mentions cortex-lifecycle-init-ensure."""
+def test_r10b_mirror_skill_md_references_enter() -> None:
+    """R10(b): plugins/cortex-core/skills/lifecycle/SKILL.md mentions cortex-lifecycle-enter."""
     assert _MIRROR_SKILL_MD.is_file(), (
         f"Mirror SKILL.md missing: {_MIRROR_SKILL_MD}"
     )
     content = _MIRROR_SKILL_MD.read_text(encoding="utf-8")
-    count = content.count("cortex-lifecycle-init-ensure")
+    count = content.count("cortex-lifecycle-enter")
     assert count >= 1, (
-        f"Expected at least 1 occurrence of 'cortex-lifecycle-init-ensure' in "
+        f"Expected at least 1 occurrence of 'cortex-lifecycle-enter' in "
         f"{_MIRROR_SKILL_MD}; found {count}"
     )
 

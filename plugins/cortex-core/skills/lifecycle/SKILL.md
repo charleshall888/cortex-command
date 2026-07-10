@@ -37,26 +37,17 @@ The resolver never writes — Step 2's sub-procedures do.
 
 ## Step 2: Enter the Resolved State
 
-`new` starts fresh (`phase = none`). `resume` enters the resolver's `route` (base phase, pause marker stripped): linear routes (`research`, `specify`, `plan`, `implement`, `review`) enter their same-named phase; non-obvious routes are `implement-rework` (review `CHANGES_REQUESTED` → re-enter Implement), `complete` (`feature_complete` logged or review `APPROVED`), and `escalated` (review `REJECTED` → present the analysis, ask for direction). When `paused`, route normally and note it.
+`new` starts fresh (`phase = none`); `resume` follows the resolver's `next` directive, which names the phase/action for its `route` (Step 1 owns the mapping; don't re-derive it). When `paused`, route normally and note it.
 
-**Register session:**
+One call composes the entry — create-index, the lifecycle-start write-back, `cortex init --ensure`, and `.session` — with the resolver's discriminants (resolve the backend once via `cortex-read-backlog-backend`; never re-derive it or new-vs-resume):
 
+```bash
+cortex-lifecycle-enter --feature {feature} --session-id $LIFECYCLE_SESSION_ID --backend {resolved-backend} --phase {none-or-current-phase} --backlog-file {backlog-filename-or-empty-string}
 ```
-echo $LIFECYCLE_SESSION_ID > cortex/lifecycle/{feature}/.session
-```
 
-If resuming, report `route`, `criticality`, `tier`, offer to continue or restart from an earlier phase, and surface `staleness` (`spec_age_days` / `plan_age_days` / `commits_since_spec`) tersely — high values suggest drift, but don't block; default to continue.
+`{backlog-file}` is the resolver's `filename` basename (`""` on an exit-3 no-match). Exit 2 (ambiguous slug) → [backlog-writeback.md](${CLAUDE_SKILL_DIR}/references/backlog-writeback.md)'s exit-2 rule. Else act on `{state, backlog_status}`: `ready` → proceed; `blocked` (`cortex init --ensure` refused a user-correctable gate, `.session` unwritten) → halt, fix, re-run (idempotent); `ensure-failed`/`error` → halt. `already_complete` → apply backlog-writeback.md's **Backlog Status Check** (Close / Continue); `open`/`no_match` → proceed. If resuming, also report `route`/`criticality`/`tier`, offer continue-or-restart, and surface `staleness` tersely (drift hint, non-blocking; default continue).
 
-### Backlog + Discovery Bootstrap
-
-These consume the resolver's `backlog` field (no re-scan) and, for new lifecycles, seed `index.md` and epic context. Run in order — Backlog Status → Create index.md → Backlog Write-Back → Discovery Bootstrap:
-
-- [backlog-writeback.md](${CLAUDE_SKILL_DIR}/references/backlog-writeback.md) — Backlog Status Check and Write-Back
 - [discovery-bootstrap.md](${CLAUDE_SKILL_DIR}/references/discovery-bootstrap.md) — index.md creation + epic detection from backlog frontmatter. Read only when `phase = none` or `research`.
-
-### Init drift refresh
-
-Run `cortex-lifecycle-init-ensure` before Step 3. Non-zero exit → halt and surface its diagnostic.
 
 ## Step 3: Execute Current Phase
 

@@ -87,7 +87,7 @@ Tasks that create files, modify JSON settings, create symlinks, set permissions,
 
 **Code budget** — prose with structural context only: paths, directory structures, function signatures, type field names/types, pattern references, config keys/values, inter-task contracts. No copy-paste-ready code, and no self-sealing verification (steps referencing artifacts the same task creates solely to satisfy the check).
 
-After writing `plan.md`, register the `"plan"` artifact in `index.md` per the artifact-registration recipe in backlog-writeback.md (loaded at lifecycle Step 2).
+After writing `plan.md`, register the artifact: `cortex-lifecycle-register-artifact --feature {feature} --artifact plan`.
 
 ### 3a. Orchestrator Review
 
