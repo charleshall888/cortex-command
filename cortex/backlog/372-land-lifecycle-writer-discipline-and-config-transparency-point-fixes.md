@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: e50765ba-013e-4ba1-8c44-3d05bd592478
 title: Land lifecycle writer-discipline and config-transparency point fixes
-status: backlog
+status: complete
 priority: high
 type: chore
 created: 2026-07-10
@@ -10,6 +10,7 @@ updated: 2026-07-10
 parent: "371"
 tags: ['cli-served-lifecycle-state-machine']
 discovery_source: cortex/research/cli-served-lifecycle-state-machine/research.md
+lifecycle_phase: complete
 ---
 ## Why
 
@@ -36,7 +37,7 @@ Touches the review-dispatch verdict writes (the only pipeline module writing fea
 - `cortex_command/pipeline/state.py:288-304` — the unlocked bare append those writes ride on
 - `cortex_command/interactive_lock.py:221-231` — `_emit_event` bare `open("a")` append, no flock
 - `cortex_command/overnight/plan.py:145-151` — `_TERMINAL` frozenset missing the wont-do variants; replace with shared import
-- `cortex_command/common.py:175-176` — stale comment describing a divergence already fixed in overnight/backlog.py
+- `cortex_command/common.py:175-176` — stale comment describing a divergence already fixed in overnight/backlog.py (deferred: common.py edits are lifecycle-gated; fold into the next gated common.py change)
 - `cortex_command/overnight/events.py:85-86` — vestigial `SYNTHESIZER_VALIDATED_{INTERACTIVE,OVERNIGHT}` constants with no emitters
 - `cortex_command/pipeline/state.py:20-28` + `cortex/lifecycle/pipeline-state.json` — dormant pipeline FSM; prune under workflow trimming or fence by name
 - `cortex_command/lifecycle_config.py` — field parsers accreted one per ticket

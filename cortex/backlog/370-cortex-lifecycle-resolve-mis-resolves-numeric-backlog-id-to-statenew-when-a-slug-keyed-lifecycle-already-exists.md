@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: d0b527f7-1e3d-432b-97ab-8126f357882e
 title: cortex-lifecycle-resolve mis-resolves numeric backlog ID to state:new when a slug-keyed lifecycle already exists
-status: backlog
+status: complete
 priority: high
 type: bug
 created: 2026-07-07
@@ -10,6 +10,7 @@ updated: 2026-07-10
 tags: ['resolver', 'lifecycle-resolve', 'dogfood']
 areas: ['lifecycle']
 parent: 371
+lifecycle_phase: complete
 ---
 ## Why
 
