@@ -11,7 +11,7 @@ locate the callers.
 
 Cited from:
   - cortex_command/overnight/prompts/orchestrator-round.md:242,302,413
-  - cortex_command/lifecycle_config.py:8-9,95-96
+  - cortex_command/lifecycle_config.py:8-9,162-163
   - cortex_command/overnight/report.py:965
 
 Spec: cortex/lifecycle/harness-token-efficiency-trim/spec.md R5, R6f.
@@ -73,35 +73,38 @@ def test_plan_md_has_5_transition_heading() -> None:
     """plan.md must contain '### 5. Transition'.
 
     Cited by:
-      - lifecycle_config.py:8-9   (``skills/lifecycle/references/plan.md`` §5)
-      - lifecycle_config.py:95-96 (same)
+      - lifecycle_config.py:8-9    (``skills/lifecycle/references/plan.md`` §5)
+      - lifecycle_config.py:162-163 (same)
       - orchestrator-round.md:413 (canonical plan.md format defined in skills/lifecycle/references/plan.md)
     """
     headings = _read_headings("plan.md")
     assert "### 5. Transition" in headings, (
         "plan.md is missing '### 5. Transition' — "
         "this designator is cited normatively at "
-        "cortex_command/lifecycle_config.py:8-9,95-96. "
+        "cortex_command/lifecycle_config.py:8-9,162-163. "
         "Update the citing lines before removing or renaming it here."
     )
 
 
 # ---------------------------------------------------------------------------
-# skills/lifecycle/references/complete.md
+# skills/lifecycle/references/complete-first-run.md
 # ---------------------------------------------------------------------------
 
-def test_complete_md_has_step2_heading() -> None:
-    """complete.md must contain '### Step 2 — Commit Lifecycle Artifacts'.
+def test_complete_first_run_md_has_step2_heading() -> None:
+    """complete-first-run.md must contain '### Step 2 — Commit Lifecycle Artifacts'.
+
+    Step 2 moved out of complete.md into the extracted first-run PR flow in the
+    lifecycle-corpus-trim-wave-2 split, so the citation now targets that file.
 
     Cited by:
-      - lifecycle_config.py:8-9   (``skills/lifecycle/references/complete.md`` Step 2)
-      - lifecycle_config.py:95-96 (same)
+      - lifecycle_config.py:8-9     (``skills/lifecycle/references/complete-first-run.md`` Step 2)
+      - lifecycle_config.py:162-163 (same)
     """
-    headings = _read_headings("complete.md")
+    headings = _read_headings("complete-first-run.md")
     assert "### Step 2 — Commit Lifecycle Artifacts" in headings, (
-        "complete.md is missing '### Step 2 — Commit Lifecycle Artifacts' — "
+        "complete-first-run.md is missing '### Step 2 — Commit Lifecycle Artifacts' — "
         "this designator is cited normatively at "
-        "cortex_command/lifecycle_config.py:8-9,95-96. "
+        "cortex_command/lifecycle_config.py:8-9,162-163. "
         "Update the citing lines before removing or renaming it here."
     )
 

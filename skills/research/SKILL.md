@@ -3,8 +3,8 @@ name: research
 description: >
   Parallel research orchestrator. Use when the user says "/cortex-core:research", "research this topic",
   "investigate this feature", or when /cortex-core:refine delegates its research
-  phase. Dispatches 3–10 parallel agents across independent angles (codebase, web, constraints,
-  tradeoffs, adversarial), synthesizes into research.md or conversation output.
+  phase. Dispatches 3–10 parallel agents across independent angles,
+  synthesizes into research.md or conversation output.
 inputs:
   - "topic: string (required) — feature or topic to research"
   - "lifecycle-slug: string (optional) — determines lifecycle mode; if present, writes cortex/lifecycle/{slug}/research.md"
@@ -32,13 +32,11 @@ Parse `$ARGUMENTS` for key=value pairs (see `argument-hint`). Defaults: `tier` =
 
 `research-considerations-file` is a **path** to a file written by `/cortex-core:refine` — a newline-delimited bullet list. When present, the orchestrator reads that file and substitutes its literal content — never the path — into the core-angle placeholders (Step 3). **Reader contract**: if the argument is absent, or the file is missing, empty, or whitespace-only, no injection occurs — do not halt on a missing file.
 
-Mode routing, applied after Step 4 synthesis: lifecycle mode creates the directory if needed, includes `## Considerations Addressed` when the considerations file was non-empty, then announces the written path; standalone mode writes nothing.
+Mode routing, applied after Step 4 synthesis: lifecycle mode creates the directory if needed, then announces the written path; standalone mode writes nothing.
 
 ## Step 2: Determine Agent Count
 
 `agent_count` is sized from the count matrix in [`fanout.md`](${CLAUDE_SKILL_DIR}/references/fanout.md) (canonical) — tier (row) × criticality (column).
-
-Treat it as an **upper bound on breadth, not a quota** — dispatch fewer if the task offers fewer genuinely distinct angles.
 
 ## Step 3: Dispatch Agents
 
@@ -50,7 +48,7 @@ Every prompt below references `{INJECTION_RESISTANCE_INSTRUCTION}`; substitute t
 
 When `research-considerations-file` is present (Step 1), inject its content as a `### Considerations to investigate alongside the primary scope` section into the **mandatory core angles only** (Codebase, Web, Requirements & Constraints) — never Tradeoffs or Adversarial.
 
-The angle set is **hybrid**: fixed mandatory core, plus `agent_count − core − (adversarial, if high/critical)` orchestrator-chosen distinct angles (selection rule: fanout.md's hybrid-angle-selection section — apply it), plus an always-last adversarial pass for high/critical work. Tradeoffs is the common choice; compose others as the topic warrants.
+The angle set is **hybrid**: fixed mandatory core, plus `agent_count − core − (adversarial, if high/critical)` orchestrator-chosen distinct angles (selection rule: fanout.md's hybrid-angle-selection section — apply it), plus an always-last adversarial pass for high/critical work.
 
 #### Codebase (core)
 Tools: Read, Glob, Grep
@@ -116,7 +114,7 @@ Output format:
 
 #### Conditional angles (Tradeoffs & Alternatives, Adversarial)
 
-Both live in [`angle-templates.md`](${CLAUDE_SKILL_DIR}/references/angle-templates.md) — **Tradeoffs & Alternatives** (orchestrator-chosen canonical example, fires when selected per fanout.md) and **Adversarial** (high/critical only, always last, dispatched over the other angles' summarized findings). Neither carries the considerations-bullets placeholder.
+Both live in [`angle-templates.md`](${CLAUDE_SKILL_DIR}/references/angle-templates.md).
 
 Composing a different chosen angle: name it, state what it covers that no other angle does, append `{INJECTION_RESISTANCE_INSTRUCTION}`, and give it a `## <Angle name>` output heading.
 

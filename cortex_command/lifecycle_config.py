@@ -6,7 +6,7 @@ This module exposes three public symbols:
 - :func:`read_commit_artifacts` — boolean for the ``commit-artifacts`` flag,
   defaulting to ``True`` to preserve the prose-resident default at
   ``skills/lifecycle/references/plan.md`` §5 and
-  ``skills/lifecycle/references/complete.md`` Step 2.
+  ``skills/lifecycle/references/complete-first-run.md`` Step 2.
 - :func:`resolve_backlog_backend` — raw backend string from the nested
   ``backlog:`` block, defaulting to ``"cortex-backlog"`` for every degenerate
   input so a normal local repo stays byte-identical.
@@ -159,7 +159,7 @@ def read_commit_artifacts(repo_root: _pathlib.Path) -> bool:
 
     Defaults to ``True`` (preserves the prose-resident default at
     ``skills/lifecycle/references/plan.md`` §5 and
-    ``skills/lifecycle/references/complete.md`` Step 2):
+    ``skills/lifecycle/references/complete-first-run.md`` Step 2):
 
     - Missing file → ``True``.
     - Malformed YAML frontmatter → ``True`` plus a stderr warning naming

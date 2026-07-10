@@ -2,8 +2,8 @@
 
 Fire conditionally (see `SKILL.md` Step 3), so live here rather than inline.
 
-- **Tradeoffs & Alternatives** — orchestrator-chosen canonical example. Placeholders: `{topic}`, `{INJECTION_RESISTANCE_INSTRUCTION}`.
-- **Adversarial** — high/critical only, always last. Placeholders: `{topic}`, `{summarized_findings_from_other_agents}`, `{INJECTION_RESISTANCE_INSTRUCTION}`.
+- **Tradeoffs & Alternatives** — Placeholders: `{topic}`, `{INJECTION_RESISTANCE_INSTRUCTION}`.
+- **Adversarial** — Placeholders: `{topic}`, `{summarized_findings_from_other_agents}`, `{INJECTION_RESISTANCE_INSTRUCTION}`.
 
 Neither carries the considerations-bullets placeholder (core-only, per SKILL.md) — do not add it.
 

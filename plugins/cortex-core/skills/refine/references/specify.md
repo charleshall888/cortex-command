@@ -53,8 +53,6 @@ Runs before drafting §3; silent on pass. On failure, surface only the failing c
 
 **Verification check** — verify any code-behavior claim against actual code before writing it:
 - **Git command syntax** — for a `git diff`, confirm two-dot (`A..B`) vs three-dot (`A...B`) semantics.
-- **Function behavior** — read the function before asserting what it does/accepts/returns; don't infer from name or call sites alone.
-- **File paths** — verify the file exists at the path before referencing it in a requirement.
 - **State ownership** — confirm which function owns a write and when it runs (an in-memory increment can be silently overwritten by an end-of-batch writeback owner).
 
 **Research cross-check** — re-read `research.md` in full; verify every explicit behavioral requirement, constraint, guard, and edge case appears in the spec's Requirements, Edge Cases, or Technical Constraints. An absent research item is a silent omission, not a scope decision — if intentional, note it in Non-Requirements or Open Decisions.
@@ -126,7 +124,7 @@ Resolve the active backlog backend once via `cortex-read-backlog-backend` (argle
 
 **Run** when `tier = complex` AND `criticality ∈ {medium, high, critical}`: invoke the `critical-review` skill with the spec artifact; present the synthesis before spec approval.
 
-**Non-local seed-tier fail-safe**: also run (rather than skip) when the resolved backend ≠ `cortex-backlog` AND the run condition above didn't fire only because `tier = simple` AND `cortex/lifecycle/{feature}/research.md` exists — the `simple` seed may be un-reconciled here. (Rationale + the local-`cortex-backlog` exemption: critical-review-gate.md's Non-Local Seed-Tier Rule.)
+**Non-local seed-tier fail-safe**: also run (rather than skip) when the resolved backend ≠ `cortex-backlog` AND the run condition above didn't fire only because `tier = simple` AND `cortex/lifecycle/{feature}/research.md` exists. (Rationale + the local-`cortex-backlog` exemption: critical-review-gate.md's Non-Local Seed-Tier Rule.)
 
 Otherwise, read and follow the critical-review gate protocol (the propagated `<target>` path — the **critical-review-gate** target) for the `specify` phase.
 

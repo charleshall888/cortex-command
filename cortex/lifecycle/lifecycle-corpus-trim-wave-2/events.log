@@ -13,3 +13,5 @@
 {"ts": "2026-07-10T04:27:46Z", "event": "batch_dispatch", "feature": "lifecycle-corpus-trim-wave-2", "batch": 1, "tasks": [2]}
 {"ts": "2026-07-10T04:34:56Z", "event": "batch_dispatch", "feature": "lifecycle-corpus-trim-wave-2", "batch": 2, "tasks": [3]}
 {"ts": "2026-07-10T04:44:33Z", "event": "batch_dispatch", "feature": "lifecycle-corpus-trim-wave-2", "batch": 3, "tasks": [4]}
+{"ts": "2026-07-10T04:55:15Z", "event": "batch_dispatch", "feature": "lifecycle-corpus-trim-wave-2", "batch": 4, "tasks": [7]}
+{"ts": "2026-07-10T05:21:20Z", "event": "batch_dispatch", "feature": "lifecycle-corpus-trim-wave-2", "batch": 5, "tasks": [6, 11]}

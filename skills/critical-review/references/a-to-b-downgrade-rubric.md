@@ -1,10 +1,9 @@
 # A→B Downgrade Rubric and Worked Examples
 
 The synthesizer in Step 2d applies this rubric when evaluating each
-A-class finding's `"fix_invalidation_argument"` field. A-class status
-requires a concrete causal link from the cited evidence to a failure of
-the proposed change. Downgrade A→B when any trigger fires; ratify as A
-when the argument names a concrete failure mechanism.
+A-class finding's `"fix_invalidation_argument"` field. Downgrade A→B
+when any trigger fires; ratify as A when the argument names a concrete
+failure mechanism.
 
 ## Trigger Definitions
 

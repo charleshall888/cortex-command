@@ -87,7 +87,7 @@ After the critic returns its objections, the orchestrator (not the critic) class
 
 ### Dispositioning Output Contract
 
-The **sole output** of dispositioning is the `clarify_critic` event (`## Event Logging` schema, written verbatim to `events.log`, counts only). The user-facing surface is scoped to (a) the §4 Ask-merge and (b) silent Apply fixes to the confidence assessment. Alignment findings use the same Apply/Dismiss/Ask framework as primary findings; v3 logs only the resulting counts.
+The **sole output** of dispositioning is the `clarify_critic` event (`## Event Logging` schema, written verbatim to `events.log`, counts only). The user-facing surface is scoped to (a) the §4 Ask-merge and (b) silent Apply fixes to the confidence assessment. Alignment findings use the same Apply/Dismiss/Ask framework as primary findings.
 
 ## Ask-to-Q&A Merge Rule
 
@@ -118,12 +118,6 @@ status: "ok"
 v3 carries only counts, not per-finding prose, dismissal rationales, or applied-fix descriptions. `parent_epic_loaded` mirrors the dispatch decision; counts reflect post-self-resolution values.
 
 **Legacy-tolerance.** Readers MUST tolerate every prior shape forever: minimal v1, v1+dismissals, v2, YAML-block, and v3 (the only shape new producers emit).
-
-Example (single-line JSONL, written verbatim by the orchestrator):
-
-```
-{"schema_version": 3, "ts": "2026-03-23T14:05:00Z", "event": "clarify_critic", "feature": "my-feature", "parent_epic_loaded": true, "findings_count": 5, "dispositions": {"apply": 1, "dismiss": 2, "ask": 2}, "applied_fixes_count": 1, "dismissals_count": 2, "status": "ok"}
-```
 
 ## Failure Handling
 
