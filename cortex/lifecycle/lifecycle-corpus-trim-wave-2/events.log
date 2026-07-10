@@ -20,3 +20,6 @@
 {"ts": "2026-07-10T05:56:18Z", "event": "batch_dispatch", "feature": "lifecycle-corpus-trim-wave-2", "batch": 8, "tasks": [12]}
 {"ts": "2026-07-10T06:25:24Z", "event": "batch_dispatch", "feature": "lifecycle-corpus-trim-wave-2", "batch": 9, "tasks": [13]}
 {"ts": "2026-07-10T11:43:36Z", "event": "phase_transition", "feature": "lifecycle-corpus-trim-wave-2", "from": "implement", "to": "review"}
+{"ts": "2026-07-10T11:48:24Z", "event": "review_verdict", "feature": "lifecycle-corpus-trim-wave-2", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-07-10T11:48:24Z", "event": "phase_transition", "feature": "lifecycle-corpus-trim-wave-2", "from": "review", "to": "complete"}
+{"ts": "2026-07-10T11:49:00Z", "event": "feature_complete", "feature": "lifecycle-corpus-trim-wave-2", "tasks_total": 13, "rework_cycles": 0, "merge_anchor": "merge"}
