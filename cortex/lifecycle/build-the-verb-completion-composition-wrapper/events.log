@@ -14,3 +14,4 @@
 {"ts":"2026-07-10T20:13:34Z","event":"sentinel_absence","feature":"build-the-verb-completion-composition-wrapper","reviewer_angle":"overnight-fallback","reason":"absent","model_tier":"sonnet","expected_sha":"da142ce8d22c25f310e6bee1e5445d1cd5fb15315c864e0189e2145f55f81bf1","observed_sha_or_null":null}
 {"ts": "2026-07-10T23:07:47Z", "event": "plan_approved", "feature": "build-the-verb-completion-composition-wrapper", "dispatch_choice": "trunk"}
 {"ts": "2026-07-10T23:07:48Z", "event": "phase_transition", "feature": "build-the-verb-completion-composition-wrapper", "from": "plan", "to": "implement"}
+{"ts": "2026-07-10T23:10:20Z", "event": "batch_dispatch", "feature": "build-the-verb-completion-composition-wrapper", "batch": 0, "tasks": [1, 3]}
