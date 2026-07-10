@@ -149,7 +149,6 @@ FILE_EVENTS: dict[str, dict[str, int]] = {
         "lifecycle_critical_review_skipped": 1,
     },
     "skills/lifecycle/references/refine-delegation.md": {
-        "lifecycle_start": 1,
         "phase_transition": 1,
     },
 }

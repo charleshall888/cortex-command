@@ -47,8 +47,6 @@ cortex-lifecycle-enter --feature {feature} --session-id $LIFECYCLE_SESSION_ID --
 
 `{backlog-file}` is the resolver's `filename` basename (`""` on an exit-3 no-match). Exit 2 (ambiguous slug) → [backlog-writeback.md](${CLAUDE_SKILL_DIR}/references/backlog-writeback.md)'s exit-2 rule. Else act on `{state, backlog_status}`: `ready` → proceed; `blocked` (`cortex init --ensure` refused a user-correctable gate, `.session` unwritten) → halt, fix, re-run (idempotent); `ensure-failed`/`error` → halt. `already_complete` → apply backlog-writeback.md's **Backlog Status Check** (Close / Continue); `open`/`no_match` → proceed. If resuming, also report `route`/`criticality`/`tier`, offer continue-or-restart, and surface `staleness` tersely (drift hint, non-blocking; default continue).
 
-- [discovery-bootstrap.md](${CLAUDE_SKILL_DIR}/references/discovery-bootstrap.md) — index.md creation + epic detection from backlog frontmatter. Read only when `phase = none` or `research`.
-
 ## Step 3: Execute Current Phase
 
 ### /cortex-core:refine Delegation
@@ -69,7 +67,7 @@ Read **only** the current phase's reference. Do not preload others.
 
 ### Reference-path propagation (load-bearing)
 
-`${CLAUDE_SKILL_DIR}` resolves only in this body, not inside a reference you read. Wherever a reference contains a `${CLAUDE_SKILL_DIR}/…` path, substitute the body-resolved absolute path (a bare `skills/…` or `../` path resolves against CWD and breaks off-repo). Two targets sit outside this skill: `clarify-critic` → `${CLAUDE_SKILL_DIR}/../refine/references/clarify-critic.md`, refine's SKILL.md → `${CLAUDE_SKILL_DIR}/../refine/SKILL.md`. `refine-delegation.md`'s placeholders resolve to `<REFINE_SKILL_MD>`→`../refine/SKILL.md`, `<DISCOVERY_BOOTSTRAP_MD>`→`references/discovery-bootstrap.md`, `<COMPLEXITY_ESCALATION_MD>`→`references/complexity-escalation.md`, `<POST_REFINE_COMMIT_MD>`→`references/post-refine-commit.md`.
+`${CLAUDE_SKILL_DIR}` resolves only in this body, not inside a reference you read. Wherever a reference contains a `${CLAUDE_SKILL_DIR}/…` path, substitute the body-resolved absolute path (a bare `skills/…` or `../` path resolves against CWD and breaks off-repo). Two targets sit outside this skill: `clarify-critic` → `${CLAUDE_SKILL_DIR}/../refine/references/clarify-critic.md`, refine's SKILL.md → `${CLAUDE_SKILL_DIR}/../refine/SKILL.md`. `refine-delegation.md`'s `<REFINE_SKILL_MD>` placeholder resolves to `../refine/SKILL.md`.
 
 ## Phase Transition
 

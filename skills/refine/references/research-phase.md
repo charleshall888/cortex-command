@@ -4,7 +4,7 @@ Refine's research phase: sufficiency check, alignment-considerations propagation
 
 ## Sufficiency Check
 
-If `cortex/lifecycle/{lifecycle-slug}/research.md` exists, apply the Research Sufficiency Criteria (`clarify.md` §6) against Clarify's intent and scope. **Path guard**: only a file at that exact path counts (per the Refine Starting-Point Rules in `discovery-bootstrap.md`). Missing → run Research Execution.
+If `cortex/lifecycle/{lifecycle-slug}/research.md` exists, apply the Research Sufficiency Criteria (`clarify.md` §6) against Clarify's intent and scope. **Path guard**: only a file at that exact path counts (per the Refine Starting-Point Rules in `refine-delegation.md`). Missing → run Research Execution.
 
 - **Sufficient** → announce, state which signals were checked, skip to Spec.
 - **Insufficient** → state the triggering signal(s), run new research.

@@ -3,9 +3,53 @@
 Follow when `cortex/lifecycle/{feature}/research.md` and/or `spec.md` is missing and lifecycle delegates to `/cortex-core:refine`.
 
 1. **Read refine SKILL.md verbatim** (`<REFINE_SKILL_MD>`) so lifecycle stays in sync as `/cortex-core:refine` evolves.
-2. **Epic context + starting point** — read `<DISCOVERY_BOOTSTRAP_MD>` once: follow its Refine Starting-Point Rules (always), and its Epic Context Injection protocol when `epic_research_path` was recorded.
-3. **Event logging** — lifecycle owns `cortex/lifecycle/{feature}/events.log`. As `/cortex-core:refine` completes each phase:
-   - After the full Clarify phase (§3a critic review + Q&A), before Research begins, log `lifecycle_start` (tier/criticality from the post-critic, post-Q&A values in context): `cortex-lifecycle-event lifecycle-start --feature <name> --tier <simple|complex> --criticality <level>`
-   - After each phase, log a `phase_transition` — one row per boundary (clarify→research, research→specify, specify→plan): `cortex-lifecycle-event phase-transition --feature <name> --from <from> --to <to>`
-4. **Complexity escalation** — run the Research → Specify and Specify → Plan complexity-escalator gates per `<COMPLEXITY_ESCALATION_MD>`.
-5. **Post-refine commit** — after the `phase_transition specify→plan` (or `lifecycle_cancelled`) row is logged and before auto-advancing to Plan, read `<POST_REFINE_COMMIT_MD>` and follow it. On commit failure, halt rather than advance.
+2. **Epic context + starting point** — apply the Epic-Context Rules below: the Starting-Point rule always, Epic Research Detection when `phase = research`, and Epic Context Injection when `epic_research_path` was recorded.
+3. **Event logging** — lifecycle owns `cortex/lifecycle/{feature}/events.log`. After each phase, log a `phase_transition` — one row per boundary (clarify→research, research→specify, specify→plan): `cortex-lifecycle-event phase-transition --feature <name> --from <from> --to <to>`
+4. **Complexity escalation** — run the Research → Specify and Specify → Plan complexity-escalator gates below.
+5. **Post-refine commit** — after the `phase_transition specify→plan` (or `lifecycle_cancelled`) row is logged and before auto-advancing to Plan, follow the Post-Refine Commit rules below. On commit failure, halt rather than advance.
+
+## Epic-Context Rules
+
+### Epic Research Detection
+
+When `phase = research` (no lifecycle directory yet), check whether discovery already produced epic-level artifacts — consume Step 1's parsed frontmatter, don't re-scan. Take `discovery_source` as the epic research path (falling back to `research`), recording it only if the file exists (warn and treat as unset otherwise); record `spec` as `epic_spec_path` only alongside a recorded, existing research path. No match or missing field means no epic context.
+
+**Do not copy epic content into lifecycle files** — epic research spans all tickets, so copying bleeds cross-ticket context into this ticket. Record the paths as reference only; `/cortex-core:refine` produces ticket-specific research.md and spec.md that link the epic artifacts without reproducing them. If found, announce `epic_research_path` as background reference for the research and spec phases.
+
+### Epic Context Injection (during /cortex-core:refine delegation)
+
+When `epic_research_path` was recorded, read it (and `{epic_spec_path}` if present) as background before Clarify, and instruct `/cortex-core:refine` to add a `## Epic Reference` section to `research.md` and a preamble note to `spec.md` linking the epic path — scoped to this ticket, without reproducing epic content.
+
+### Refine Starting-Point Rules
+
+`/cortex-core:refine`'s Step 2 (Check State) checks for `cortex/lifecycle/{lifecycle-slug}/research.md` and `spec.md` at those exact paths. Both exist → proceeds normally. A `discovery_source`/`research` field pointing to epic research elsewhere is background only — refine still runs its full Research phase to produce `cortex/lifecycle/{slug}/research.md`.
+
+## Complexity Escalation Gates
+
+Two complexity-escalation gates run during `/cortex-core:refine` delegation.
+
+**Research → Specify gate** — at the Research → Specify transition, run `cortex-complexity-escalator <feature> --gate research_open_questions`.
+
+- Exit 0, non-empty stdout: announce the escalation message and proceed to Specify at Complex tier.
+- Exit 0, empty stdout: the gate did not fire — proceed to Specify at current tier.
+- Non-zero exit: surface the stderr message and halt the phase transition until the failure is resolved.
+
+**Specify → Plan gate** — after spec approval, before the Specify → Plan transition, run `cortex-complexity-escalator <feature> --gate specify_open_decisions`. Same hook, different gate; exit-code branching is identical to the gate above.
+
+## Post-Refine Commit
+
+Follow this when refine returns control at the Specify → Plan boundary.
+
+**Flag check** — run `cortex-read-commit-artifacts` (the `commit-artifacts` flag from `cortex/lifecycle.config.md`). `false` → skip the commit silently, return to lifecycle Step 3. `true` → proceed to Staging.
+
+**Staging** — stage the refine artifact set, then act on the verb's `signal`:
+
+```
+cortex-lifecycle-stage-artifacts --phase refine --feature {feature}
+```
+
+It prints `{"signal": "staged"|"nothing_staged", "staged_paths": [...]}`: `nothing_staged` → exit silently, return to Step 3 (auto-advances to Plan on resume); `staged` → proceed to Commit. A non-zero verb exit is a staging failure: halt before Plan rather than commit a partial set.
+
+**Commit subject** — from the staged set (approval stages `spec.md`, cancel omits it): `spec.md` staged → `Refine {feature}: research and spec`; absent → `Refine {feature}: cancelled at spec approval`. Invoke `/cortex-core:commit` with that subject and a one-line body (e.g. `- Research and spec produced by /cortex-core:refine for {feature}`).
+
+**Halt-before-Plan gate** — if `/cortex-core:commit` exits non-zero (index lock, pre-commit hook rejection, working-tree conflict), surface the error and HALT — do not auto-advance to Plan. The uncommitted `phase_transition` (or `lifecycle_cancelled`) row waits until the operator resolves the failure and re-invokes `/cortex-core:lifecycle`; resume continues from the current phase. Hand-edits made before re-invocation are staged and committed under the Refine subject as-is — do not split, re-title, or pause.
