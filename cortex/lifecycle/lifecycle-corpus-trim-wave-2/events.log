@@ -1,0 +1,9 @@
+{"schema_version": 1, "ts": "2026-07-10T00:39:20Z", "event": "lifecycle_start", "feature": "lifecycle-corpus-trim-wave-2", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-07-10T00:43:06Z", "event": "clarify_critic", "feature": "lifecycle-corpus-trim-wave-2", "parent_epic_loaded": false, "findings_count": 7, "dispositions": {"apply": 3, "dismiss": 2, "ask": 2}, "applied_fixes_count": 3, "dismissals_count": 2, "status": "ok"}
+{"ts": "2026-07-10T01:20:40Z", "event": "complexity_override", "feature": "lifecycle-corpus-trim-wave-2", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-07-10T01:20:40Z", "event": "criticality_override", "feature": "lifecycle-corpus-trim-wave-2", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts":"2026-07-10T01:31:34Z","event":"sentinel_absence","feature":"lifecycle-corpus-trim-wave-2","reviewer_angle":"verb-migration-contracts","reason":"absent","model_tier":"opus","expected_sha":"7bd74ce342a9424d91baa2dba581c94134de995c5b98cf169e0db9cedace5e11","observed_sha_or_null":null}
+{"ts": "2026-07-10T03:42:00Z", "event": "spec_approved", "feature": "lifecycle-corpus-trim-wave-2"}
+{"ts": "2026-07-10T03:42:00Z", "event": "phase_transition", "feature": "lifecycle-corpus-trim-wave-2", "from": "clarify", "to": "research"}
+{"ts": "2026-07-10T03:42:00Z", "event": "phase_transition", "feature": "lifecycle-corpus-trim-wave-2", "from": "research", "to": "specify"}
+{"ts": "2026-07-10T03:42:07Z", "event": "phase_transition", "feature": "lifecycle-corpus-trim-wave-2", "from": "specify", "to": "plan"}
