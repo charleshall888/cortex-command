@@ -7,14 +7,31 @@
 # parity test to exact marker-set equality against these `id` values, so every
 # id here MUST match a marker slug byte-for-byte — never invent, rename, or drop.
 #
+# This file is ALSO the served pause-spec registry (spec R17, epic 371 Phase C):
+# a row carrying `served_from_state` declares that the served `cortex-lifecycle-next`
+# envelope for that lifecycle state renders this pause from the wheel-owned
+# transition table's `PauseSpec`. The `served_from_state` rows are the SUBSET of
+# kept-pause SITES that are event-backed pause-gated STATES in the closed table
+# (`cortex_command/lifecycle/transition_table.py`) — today just `plan-approval`
+# (the `plan.wait-approved` hold at state `plan`). The other rows enumerate prose
+# affordances / judgment- or config-conditional pauses that the served path does
+# NOT structurally enforce (C+1 boundary, spec R12); they carry no
+# `served_from_state`. `tests/test_pause_spec_parity.py` asserts three-way
+# set-equality between the `served_from_state` rows here, the table's `PauseSpec`
+# rows, and the served envelopes — so no layer can drift.
+#
 # Fields per pause:
-#   id            marker slug (== `<!-- pause: <slug> ... -->`)
-#   kind          question | phase-exit-wait | config-conditional | relayed-consent
-#   suppressed_by optional; a lifecycle.config.md key, or "judgment" for
-#                 model-conditional rendering. Orthogonal to kind.
-#   file          repo-relative path of the marker'd prose site
-#   anchor        stable in-file locator (heading / step) for the marker
-#   rationale     why this pause is deliberately kept
+#   id                marker slug (== `<!-- pause: <slug> ... -->`)
+#   kind              question | phase-exit-wait | config-conditional | relayed-consent
+#   suppressed_by     optional; a lifecycle.config.md key, or "judgment" for
+#                     model-conditional rendering. Orthogonal to kind.
+#   file              repo-relative path of the marker'd prose site
+#   anchor            stable in-file locator (heading / step) for the marker
+#   rationale         why this pause is deliberately kept
+#   served_from_state optional; the transition-table state whose served `next`
+#                     envelope renders this pause. Present ONLY on rows the closed
+#                     table encodes as a `PauseSpec` (event-backed pause-gated
+#                     states). Its presence makes the row a served-registry entry.
 
 [[pause]]
 id = "empty-lifecycle-offer"
@@ -77,6 +94,7 @@ rationale = "Hand off after opening the PR: operator merges on GitHub then re-in
 [[pause]]
 id = "plan-approval"
 kind = "relayed-consent"
+served_from_state = "plan"
 file = "skills/lifecycle/references/plan.md"
 anchor = "Plan approval surface"
 rationale = "Substantive plan approval merged with branch/dispatch selection; overnight relays the operator's pre-authorized consent."
