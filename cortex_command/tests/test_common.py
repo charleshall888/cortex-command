@@ -10,11 +10,13 @@ from pathlib import Path
 import pytest
 
 from cortex_command.common import (
+    MOST_RESTRICTIVE_PAUSE_KIND,
     CortexProjectRootError,
     _resolve_user_project_root,
     _resolve_user_project_root_from_cwd,
     compute_dependency_batches,
     mark_task_done_in_plan,
+    reduce_lifecycle_events,
 )
 from cortex_command.pipeline.parser import FeatureTask
 
@@ -287,3 +289,48 @@ class TestMarkTaskDoneInPlan(unittest.TestCase):
         text = p.read_text(encoding="utf-8")
         self.assertIn("### Task 3a: Sub A\n- **Status**: [x]", text)
         self.assertIn("### Task 3b: Sub B\n- **Status**: [ ]", text)
+
+
+# ---------------------------------------------------------------------------
+# reduce_lifecycle_events — feature_paused pause_kind (374 R5 / hazard 3)
+# ---------------------------------------------------------------------------
+
+
+class TestReduceFeaturePausedKind(unittest.TestCase):
+    """The reducer reports a paused feature's resume-authority kind, failing
+    closed to the most-restrictive kind for a legacy under-specified row."""
+
+    def test_legacy_kindless_slugless_row_defaults_most_restrictive(self) -> None:
+        """A legacy `feature_paused` row with neither slug nor kind reduces to
+        the most-restrictive kind (relayed-consent, operator-resume-only) so an
+        under-specified pause never silently auto-resumes (hazard 3)."""
+        state, rejected = reduce_lifecycle_events([{"event": "feature_paused"}])
+        self.assertEqual(state["pause_kind"], MOST_RESTRICTIVE_PAUSE_KIND)
+        self.assertEqual(MOST_RESTRICTIVE_PAUSE_KIND, "relayed-consent")
+        # Fail-closed defaulting is NOT a vocab rejection — the line is not flagged.
+        self.assertEqual(rejected, [])
+
+    def test_out_of_vocab_kind_also_defaults_most_restrictive(self) -> None:
+        """An out-of-vocab `kind` is under-specified too → fail closed."""
+        state, rejected = reduce_lifecycle_events(
+            [{"event": "feature_paused", "slug": "plan-approval", "kind": "bogus"}]
+        )
+        self.assertEqual(state["pause_kind"], MOST_RESTRICTIVE_PAUSE_KIND)
+        self.assertEqual(rejected, [])
+
+    def test_valid_kind_is_reported_verbatim(self) -> None:
+        """A row carrying a valid in-vocab `kind` reports that kind, not the
+        default."""
+        state, _ = reduce_lifecycle_events(
+            [{"event": "feature_paused", "slug": "empty-lifecycle-offer",
+              "kind": "question"}]
+        )
+        self.assertEqual(state["pause_kind"], "question")
+
+    def test_no_paused_row_leaves_pause_kind_absent(self) -> None:
+        """Without a `feature_paused` row, the reduced state carries no
+        `pause_kind` key (additive, present only when a pause row exists)."""
+        state, _ = reduce_lifecycle_events(
+            [{"event": "lifecycle_start", "tier": "simple", "criticality": "medium"}]
+        )
+        self.assertNotIn("pause_kind", state)

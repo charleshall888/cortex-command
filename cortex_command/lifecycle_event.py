@@ -279,7 +279,14 @@ _EVENT_SUBCOMMANDS: dict[str, tuple[str, list]] = {
     "interactive-worktree-entered": ("interactive_worktree_entered", [
         ("--worktree-path", "worktree_path", _STR, True, None),
     ]),
-    "feature-paused": ("feature_paused", []),
+    "feature-paused": ("feature_paused", [
+        # 374 R5: field-additive per-pause accountability. Both optional so
+        # legacy kind-absent/slug-less rows still parse; a kind-absent row
+        # reduces to the most-restrictive kind (relayed-consent) — hazard 3.
+        ("--slug", "slug", _STR, False, None),
+        ("--kind", "kind", _STR, False,
+         ("question", "phase-exit-wait", "config-conditional", "relayed-consent")),
+    ]),
     "lifecycle-cancelled": ("lifecycle_cancelled", []),
     "drift-protocol-breach": ("drift_protocol_breach", [
         ("--state", "state", _STR, True, None),

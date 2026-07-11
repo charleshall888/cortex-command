@@ -190,8 +190,19 @@ def plan_decision(
         if _emit_plan_approved(events_log, feature, "wait"):
             emitted.append("plan_approved")
         # (b) feature_paused — NO phase transition; the feature holds at plan.
+        # 374 R5: carry the pause slug (and its kept-pause kind) so the row is
+        # per-pause accountable. This hold is the `plan-approval` pause, whose
+        # kind is `relayed-consent` (operator-resume-only) per
+        # skills/lifecycle/references/kept-pauses-data.toml.
         if not _event_exists(events_log, "feature_paused"):
-            log_event(event="feature_paused", feature=feature)
+            log_event(
+                event="feature_paused",
+                feature=feature,
+                fields=[
+                    ("str", "slug", "plan-approval"),
+                    ("str", "kind", "relayed-consent"),
+                ],
+            )
             emitted.append("feature_paused")
         return {
             "state": "wait-approved",

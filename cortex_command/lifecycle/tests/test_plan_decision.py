@@ -93,6 +93,23 @@ def test_wait_emits_plan_approved_wait_then_feature_paused_no_transition(
     assert "phase_transition" not in _event_names(feature_dir)
 
 
+def test_wait_feature_paused_row_carries_slug(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """374 R5 emission guard: the pausing arm writes a `feature_paused` row
+    carrying the pause `slug` (and its `relayed-consent` kind) so the row is
+    per-pause accountable — guards against a silent emitter regression that
+    would drop back to a bare kind-less/slug-less row."""
+    feature_dir = _scaffold(tmp_path, monkeypatch)
+    pd.plan_decision(feature="feat", decision="wait-approved")
+
+    rows = _events_rows(feature_dir)
+    paused = [x for x in rows if x["event"] == "feature_paused"]
+    assert len(paused) == 1
+    assert paused[0]["slug"] == "plan-approval"
+    assert paused[0]["kind"] == "relayed-consent"
+
+
 def test_cancelled_emits_only_lifecycle_cancelled(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

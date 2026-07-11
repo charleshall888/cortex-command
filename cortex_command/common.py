@@ -640,6 +640,17 @@ read_tier.__wrapped__ = _read_tier_inner  # type: ignore[attr-defined]
 TIER_VOCABULARY = frozenset({"simple", "complex"})
 CRITICALITY_VOCABULARY = frozenset({"low", "medium", "high", "critical"})
 
+# Closed vocabulary for the four kept-pause kinds (the discriminant in
+# skills/lifecycle/references/kept-pauses-data.toml). Ordered most- to
+# least-restrictive by resume authority: ``relayed-consent`` requires an
+# operator resume, so it is the fail-closed default for an under-specified
+# pause row (374 R5 / hazard 3 — a legacy kind-absent ``feature_paused`` row
+# must never silently auto-resume).
+PAUSE_KIND_VOCABULARY = frozenset(
+    {"question", "phase-exit-wait", "config-conditional", "relayed-consent"}
+)
+MOST_RESTRICTIVE_PAUSE_KIND = "relayed-consent"
+
 
 class LifecycleStateReduction(NamedTuple):
     """Result of reducing an events.log to its canonical lifecycle state.
@@ -703,9 +714,13 @@ def reduce_lifecycle_events(records: Iterable[dict]) -> tuple[dict[str, str], li
             the readers' historical handling.
 
     Returns:
-        ``(state, rejected_positions)``. ``state`` holds at most the keys
-        ``"criticality"`` and ``"tier"`` in criticality-then-tier insertion
-        order. ``rejected_positions`` are 0-based indices into ``records`` of
+        ``(state, rejected_positions)``. ``state`` holds the axis keys
+        ``"criticality"`` and ``"tier"`` (in criticality-then-tier insertion
+        order) plus, when a ``feature_paused`` row is present, an additive
+        ``"pause_kind"`` key carrying the pause's resume-authority kind
+        (defaulted to the most-restrictive ``relayed-consent`` for a legacy
+        kind-absent/out-of-vocab row — 374 R5 / hazard 3). ``rejected_positions``
+        are 0-based indices into ``records`` of
         records carrying an out-of-vocabulary value, each position at most
         once. Never a ``LifecycleStateReduction`` — that wrapper is a
         Path-shell concern.
@@ -749,6 +764,18 @@ def reduce_lifecycle_events(records: Iterable[dict]) -> tuple[dict[str, str], li
                     state["tier"] = value
                 else:
                     rejected = True
+        elif kind == "feature_paused":
+            # 374 R5 / hazard 3: report the pause's resume-authority kind. A
+            # kind-absent (legacy) OR out-of-vocab ``kind`` fails closed to the
+            # most-restrictive kind so an under-specified pause never silently
+            # auto-resumes. This is a fail-closed default, NOT a vocab rejection
+            # (it does not flag the line), matching the additive slug/kind
+            # extension of the ``feature_paused`` row. Last pause row wins.
+            pause_kind = record.get("kind")
+            if isinstance(pause_kind, str) and pause_kind in PAUSE_KIND_VOCABULARY:
+                state["pause_kind"] = pause_kind
+            else:
+                state["pause_kind"] = MOST_RESTRICTIVE_PAUSE_KIND
 
         # One append per rejected record (not per rejected value), so
         # rejected_positions is duplicate-free by construction and faithful
