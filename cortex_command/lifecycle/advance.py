@@ -60,8 +60,14 @@ first (a feature slug composes into a filesystem path — the real injection sur
 
 Extension seams (Tasks 14a / 14b bolt onto THIS file, serialized after this core):
   * :func:`_consent_cross_check` — Task 14b's pre-side-effect gh PR-state cross-check
-    and quoted-utterance payloads. Runs OUTSIDE the flock (network never under lock).
-    Core body returns ``None`` (no objection, no network).
+    (hazard 5, fabricated-attestation defense). Runs OUTSIDE the flock (network never
+    under lock — the claim/commit split exists for this) via an injectable subprocess
+    seam (:func:`_run_gh`), so CI mocks the ``gh`` boundary with no network. A
+    merge-consent transition (``review.approved`` — review→complete) whose feature
+    carries a recorded PR (a ``pr_opened`` row) refuses when that PR is not actually
+    merged. The companion quoted-utterance payload lands field-additively on the
+    ``plan_approved``/``spec_approved`` rows (the additive ``consent_utterance`` field,
+    threaded through :func:`_emission_plan`, NOT a new event).
   * :func:`_project_status` — Task 14a's post-commit monotonic status projection
     (cortex-backlog backend only, ADR-0016) with the archive-shadow guard. Core body
     is a no-op.
@@ -71,9 +77,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
+import subprocess
 import sys
 from pathlib import Path
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 from cortex_command.backlog import _telemetry
 from cortex_command.backlog.resolve_item import _parse_frontmatter, resolve
@@ -119,6 +127,29 @@ _SANCTIONED_OVERRIDE = (
     "cortex-lifecycle-event log --event <name> --feature <slug> [--set k=v ...] "
     "(the sanctioned out-of-band hand-append; see bin/.events-registry.md)"
 )
+
+# Merge-consent transitions (Task 14b / hazard 5): transition ids whose consent to
+# advance rests on a real merged PR. ``review.approved`` (review→complete) consummates
+# the feature — when a PR backs the work, that PR must ACTUALLY be merged, so a
+# fabricated merge attestation cannot advance the feature to complete. The cross-check
+# only fires when a ``pr_opened`` row records a PR; a trunk-mode completion carries no
+# PR and is not cross-checked (there is nothing to verify, and requiring a PR would
+# wrongly refuse the legitimate no-PR path). The check runs OUTSIDE the flock.
+_MERGE_CONSENT_TRANSITION_IDS: frozenset[str] = frozenset({"review.approved"})
+
+# The gh PR ``state`` values that count as a genuine merge (the consented state).
+_MERGED_PR_STATES: frozenset[str] = frozenset({"MERGED"})
+
+# Timeout for the gh cross-check subprocess (mirrors complete_route._GH_TIMEOUT).
+_GH_TIMEOUT = 30
+
+# The additive field the operator's verbatim consent utterance lands on for a human
+# consent underlying a plan_approved/spec_approved transition (hazard 5, fabricated-
+# attestation defense): the row carries the exact quoted text so a fabricated consent
+# is a specific, falsifiable lie rather than a bare flag. Additive-only — emitted only
+# when supplied; the legacy-vocabulary rows omit it otherwise.
+_CONSENT_UTTERANCE_FIELD = "consent_utterance"
+_CONSENT_UTTERANCE_EVENTS: frozenset[str] = frozenset({"plan_approved", "spec_approved"})
 
 # Closed set of ``state`` values advance can emit (house style): the union of the
 # four B1 cores' decision states (drift-proof — re-derived from the real modules)
@@ -273,10 +304,17 @@ def _emission_plan(
     batch: Optional[int],
     tasks: Optional[list],
     mode: Optional[str],
+    consent_utterance: Optional[str] = None,
 ) -> tuple[tt.Transition, str, list[dict]]:
     """Resolve the composed arm to its table row, decision-state, and ordered
     legacy emissions. Reuses the B1 cores' pure routing helpers (never re-derived).
     Raises :class:`_PlanError` on a malformed decision.
+
+    *consent_utterance* (Task 14b, hazard 5): when supplied, the operator's verbatim
+    quoted consent text is appended field-additively (:data:`_CONSENT_UTTERANCE_FIELD`)
+    to the ``plan_approved``/``spec_approved`` emissions ONLY — the fabricated-
+    attestation defense. Absent (``None``), the field is omitted entirely, so the
+    legacy rows keep their exact pre-14b shape.
     """
     owning = _VERB_TO_OWNING[verb]
 
@@ -369,6 +407,15 @@ def _emission_plan(
                  "match": {"from": "implement", "to": route}},
             ]
 
+    # Quoted-utterance payload (Task 14b): land the operator's verbatim consent text
+    # field-additively on the consent-bearing legacy rows (plan_approved/spec_approved)
+    # ONLY. Additive-only — appended after the arm's own fields, before advance tags
+    # the invocation_id at emit time; omitted entirely when no utterance was supplied.
+    if consent_utterance is not None:
+        for em in emissions:
+            if em["event"] in _CONSENT_UTTERANCE_EVENTS:
+                em["fields"] = [*em["fields"], (_CONSENT_UTTERANCE_FIELD, consent_utterance)]
+
     transition = tt.transition_by_arm(owning, decision_state)
     if transition is None:  # pragma: no cover — completeness test pins arm coverage
         raise _PlanError(
@@ -432,15 +479,116 @@ _DEMOTING_EVENTS: frozenset[str] = frozenset({"lifecycle_cancelled", "feature_wo
 # ---------------------------------------------------------------------------
 
 
-def _consent_cross_check(
-    *, verb: str, transition: tt.Transition, feature: str, log_path: Path, rows: List[dict]
-) -> Optional[dict]:
-    """Seam for Task 14b: merge-consent gh PR-state cross-check + quoted-utterance
-    payloads. Runs BETWEEN claim and side effects, OUTSIDE the flock (network never
-    under lock — the claim/commit split exists for this). Return a refusal envelope
-    to abort (the claim's ``advance_started`` is then a recoverable orphan). Core
-    body performs no network and never objects.
+def _run_gh(cmd: List[str]) -> Optional[subprocess.CompletedProcess]:
+    """The injectable subprocess boundary for the gh cross-check (Task 14b).
+
+    Runs *cmd* and returns the CompletedProcess, or None on any exec failure —
+    including ``gh`` not being on PATH (``shutil.which`` probe first, so a machine
+    without ``gh`` fails open rather than raising). Tests inject a fake in its place
+    (``_consent_cross_check(..., gh_run=fake)`` or ``monkeypatch`` this attribute) so
+    the boundary is exercised with NO network. This is the single seam the whole
+    cross-check funnels through — the reason the claim/commit split runs side effects
+    outside the flock is precisely so this network call never holds the log lock.
     """
+    if not cmd or shutil.which(cmd[0]) is None:
+        return None
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=_GH_TIMEOUT)
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
+def _gh_pr_state(
+    number: int, repo: str, *, run: Optional[Callable[[List[str]], Optional[subprocess.CompletedProcess]]] = None
+) -> Optional[str]:
+    """Resolve the gh PR ``state`` string (e.g. ``MERGED``/``OPEN``/``CLOSED``) for
+    *number*, or None when it cannot be resolved.
+
+    Routes the subprocess through *run* (defaulting to :func:`_run_gh`) so the
+    boundary is injectable and CI never touches the network. ``--repo`` pins the
+    query to the recorded repo (from the ``pr_opened`` row) even if ``origin`` is
+    ambiguous. Any failure — exec error, non-zero exit, unparseable JSON, missing
+    ``state`` — collapses to None (the cross-check then fails open; it refuses only on
+    a DEFINITE non-merged state, never on an unverifiable one).
+    """
+    runner = run if run is not None else _run_gh
+    cmd = ["gh", "pr", "view", str(number), "--json", "state"]
+    if repo:
+        cmd += ["--repo", repo]
+    proc = runner(cmd)
+    if proc is None or proc.returncode != 0:
+        return None
+    try:
+        data = json.loads(proc.stdout or "{}")
+    except (json.JSONDecodeError, ValueError):
+        return None
+    state = data.get("state") if isinstance(data, dict) else None
+    return state if isinstance(state, str) and state else None
+
+
+def _pr_ref_from_rows(rows: List[dict]) -> Optional[tuple[int, str]]:
+    """Return ``(number, repo)`` for the last ``pr_opened`` row in *rows*, or None
+    when no PR is recorded. ``repo`` is ``""`` when the row omits it (the query then
+    falls back to the ambient ``origin``). A trunk-mode feature that never opened a PR
+    yields None — the merge-consent cross-check then has nothing to verify."""
+    number: Optional[int] = None
+    repo = ""
+    for r in rows:
+        if r.get("event") != "pr_opened":
+            continue
+        n = r.get("number")
+        rp = r.get("repo")
+        if isinstance(n, int):
+            number = n
+        if isinstance(rp, str):
+            repo = rp
+    return (number, repo) if number is not None else None
+
+
+def _consent_cross_check(
+    *, verb: str, transition: tt.Transition, feature: str, log_path: Path, rows: List[dict],
+    gh_run: Optional[Callable[[List[str]], Optional[subprocess.CompletedProcess]]] = None,
+) -> Optional[dict]:
+    """Task 14b: merge-consent gh PR-state cross-check (hazard 5). Runs BETWEEN claim
+    and side effects, OUTSIDE the flock (network never under lock — the claim/commit
+    split exists for this). Returns a refusal envelope to abort (the claim's
+    ``advance_started`` is then a recoverable orphan), else None.
+
+    Fires only for a merge-consent transition (:data:`_MERGE_CONSENT_TRANSITION_IDS`
+    — ``review.approved``, review→complete) whose feature carries a recorded PR (a
+    ``pr_opened`` row). It cross-checks real gh PR state via the injectable
+    :func:`_run_gh` seam (*gh_run* overrides it, so CI mocks the boundary with no
+    network) and REFUSES when the PR is in a definite non-merged state — the
+    fabricated-attestation defense: a merge that did not actually happen cannot
+    advance the feature to complete. Fails OPEN when gh is unresolvable (not on PATH,
+    offline, unparseable) or when no PR is recorded (trunk-mode completion): the
+    cross-check hardens an EXISTING merge claim, it never invents a PR requirement.
+    """
+    if transition.id not in _MERGE_CONSENT_TRANSITION_IDS:
+        return None
+    ref = _pr_ref_from_rows(rows)
+    if ref is None:
+        return None  # no recorded PR (e.g. trunk-mode completion) — nothing to verify
+    number, repo = ref
+    state = _gh_pr_state(number, repo, run=gh_run)
+    if state is None:
+        return None  # gh unverifiable — fail open (best-effort hardening, never network-blocking)
+    if state.upper() not in _MERGED_PR_STATES:
+        return {
+            "reason": (
+                f"merge-consent cross-check refused {transition.id} (review→complete): "
+                f"recorded PR #{number} is in gh state {state!r}, not merged — a "
+                f"fabricated merge attestation cannot advance the feature to complete"
+            ),
+            "missing_evidence": (
+                f"gh PR #{number} in a merged state "
+                f"(got {state!r}; expected one of {sorted(_MERGED_PR_STATES)})"
+            ),
+            "gh_cross_check": {
+                "number": number, "repo": repo, "state": state,
+                "expected": sorted(_MERGED_PR_STATES),
+            },
+        }
     return None
 
 
@@ -586,6 +734,7 @@ def advance(
     batch: Optional[int] = None,
     tasks: Optional[list] = None,
     mode: Optional[str] = None,
+    consent_utterance: Optional[str] = None,
     project_root: Optional[Path] = None,
 ) -> dict:
     """Execute one composed transition under the claim/commit locking primitive.
@@ -627,7 +776,7 @@ def advance(
             verb=verb, log_path=resolved_log, decision=decision,
             dispatch_choice=dispatch_choice, verdict=verdict, cycle=cycle, drift=drift,
             breach=breach, retries=retries, emit_transition=emit_transition,
-            batch=batch, tasks=tasks, mode=mode,
+            batch=batch, tasks=tasks, mode=mode, consent_utterance=consent_utterance,
         )
     except _PlanError as exc:
         return {"state": "error", "message": exc.message}
@@ -775,8 +924,17 @@ def _build_parser() -> argparse.ArgumentParser:
                  "independent advances of the same edge).",
         )
 
+    def _consent(p: argparse.ArgumentParser) -> None:
+        p.add_argument(
+            "--consent-utterance", default=None, metavar="TEXT",
+            help="Operator's verbatim consent text (Task 14b, hazard 5); landed "
+                 "field-additively on the plan_approved/spec_approved row so a "
+                 "fabricated attestation is a specific falsifiable lie.",
+        )
+
     p_plan = sub.add_parser("plan-decision", help="Compose the plan-approval decision.")
     _common(p_plan)
+    _consent(p_plan)
     p_plan.add_argument("--decision", required=True,
                         choices=["branch-mode-approved", "wait-approved", "cancelled", "revise"])
     p_plan.add_argument("--dispatch-choice", choices=list(_pd._VALID_MODES), default=None)
@@ -791,6 +949,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     p_spec = sub.add_parser("spec-approve", help="Compose the spec-approval decision.")
     _common(p_spec)
+    _consent(p_spec)
     p_spec.add_argument("--decision", required=True, choices=["approved", "cancelled", "revise"])
     grp = p_spec.add_mutually_exclusive_group()
     grp.add_argument("--emit-transition", dest="emit_transition", action="store_true")
@@ -825,12 +984,14 @@ def main(argv: Optional[List[str]] = None) -> int:
         "discriminator": args.discriminator,
     }
     if args.verb == "plan-decision":
-        kwargs.update(decision=args.decision, dispatch_choice=args.dispatch_choice)
+        kwargs.update(decision=args.decision, dispatch_choice=args.dispatch_choice,
+                      consent_utterance=args.consent_utterance)
     elif args.verb == "review-verdict":
         kwargs.update(verdict=args.verdict, cycle=args.cycle, drift=args.drift,
                       breach=args.breach, retries=args.retries)
     elif args.verb == "spec-approve":
-        kwargs.update(decision=args.decision, emit_transition=args.emit_transition)
+        kwargs.update(decision=args.decision, emit_transition=args.emit_transition,
+                      consent_utterance=args.consent_utterance)
     elif args.verb == "implement-transition":
         kwargs.update(mode=args.mode, batch=args.batch, tasks=args.tasks)
 
