@@ -10,7 +10,7 @@ Each assertion carries a comment identifying the citing site(s) so a maintainer 
 locate the callers.
 
 Cited from:
-  - cortex_command/overnight/prompts/orchestrator-round.md:242,302,413
+  - cortex_command/overnight/prompts/orchestrator-round.md:302,413
   - cortex_command/lifecycle_config.py:8-9,162-163
   - cortex_command/overnight/report.py:965
 
@@ -36,23 +36,6 @@ def _read_headings(filename: str) -> set[str]:
 # ---------------------------------------------------------------------------
 # skills/lifecycle/references/plan.md
 # ---------------------------------------------------------------------------
-
-def test_plan_md_has_1a_heading() -> None:
-    """plan.md must contain '### 1a. Check Criticality'.
-
-    Cited by:
-      - orchestrator-round.md:242  (``plan.md`` §1a precedent)
-      - lifecycle_config.py:8,95   (``skills/lifecycle/references/plan.md`` §5 and ...)
-        [§1a cited in orchestrator-round.md only; lifecycle_config.py cites §5]
-    """
-    headings = _read_headings("plan.md")
-    assert "### 1a. Check Criticality" in headings, (
-        "plan.md is missing '### 1a. Check Criticality' — "
-        "this designator is cited normatively at "
-        "cortex_command/overnight/prompts/orchestrator-round.md:242. "
-        "Rename the heading there before removing or renaming it here."
-    )
-
 
 def test_plan_md_has_1b_heading() -> None:
     """plan.md must contain '### 1b. Competing Plans (Critical Only)'.
