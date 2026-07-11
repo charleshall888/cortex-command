@@ -61,6 +61,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from cortex_command._brief_scoring import _score_brief_patterns
+from cortex_command.lifecycle_event import log_event_at
 
 
 # ---------------------------------------------------------------------------
@@ -184,7 +185,7 @@ def resolve_events_log_path(
 
     Returns:
         The absolute path to the events.log target. Parent directory may
-        not yet exist; ``append_event`` creates it on write.
+        not yet exist; ``log_event_at`` creates it on write.
 
     Raises:
         ValueError: If ``topic`` fails slug validation.
@@ -212,57 +213,6 @@ def _has_rerun_suffix(topic: str) -> bool:
         return int(m.group(1)) >= 2
     except ValueError:
         return False
-
-
-# ---------------------------------------------------------------------------
-# Atomic events.log append (tempfile + os.replace) -- ported from
-# critical_review.py to keep both helpers consistent.
-# ---------------------------------------------------------------------------
-
-def append_event(events_log_path: Path, event: dict) -> None:
-    """Atomically append a JSON event line to ``events_log_path``.
-
-    Uses tempfile + ``os.replace`` rather than ``open(path, 'a')`` so the
-    append is atomic against concurrent emitters.
-
-    Args:
-        events_log_path: Path to the JSONL events log.
-        event: Dict to serialize as one JSONL line.
-    """
-    events_log_path.parent.mkdir(parents=True, exist_ok=True)
-    existing = b""
-    if events_log_path.exists():
-        existing = events_log_path.read_bytes()
-        if existing and not existing.endswith(b"\n"):
-            existing += b"\n"
-
-    line = (
-        json.dumps(event, separators=(",", ":"), ensure_ascii=False) + "\n"
-    ).encode("utf-8")
-
-    tmp = tempfile.NamedTemporaryFile(
-        dir=str(events_log_path.parent),
-        prefix=f".{events_log_path.name}-",
-        suffix=".tmp",
-        delete=False,
-    )
-    try:
-        tmp.write(existing)
-        tmp.write(line)
-        tmp.flush()
-        os.fsync(tmp.fileno())
-        tmp.close()
-        os.replace(tmp.name, events_log_path)
-    except BaseException:
-        try:
-            tmp.close()
-        except Exception:
-            pass
-        try:
-            os.unlink(tmp.name)
-        except OSError:
-            pass
-        raise
 
 
 # ---------------------------------------------------------------------------
@@ -478,7 +428,7 @@ def emit_checkpoint_response(
         "response": response,
         "revision_round": revision_round,
     }
-    append_event(events_log, event)
+    log_event_at(events_log, event)
     return events_log
 
 
@@ -759,7 +709,7 @@ def _cmd_generate_brief(args: argparse.Namespace) -> int:
     Reads the research.md content at ``--research-md``, dispatches a
     fresh-context sub-agent with ``GATE_BRIEF_RUBRIC`` as the system prompt,
     captures the brief, and prints it to stdout.  Emits one
-    ``gate_brief_generated`` event via ``append_event``.
+    ``gate_brief_generated`` event via ``log_event_at``.
 
     When ``--persist-to`` is supplied, the brief is written to that path after
     stdout emission, but only if it passes ``validate_brief``.  On empty
@@ -828,7 +778,7 @@ def _cmd_generate_brief(args: argparse.Namespace) -> int:
         if status == "validation_failed" and brief_text:
             payload["brief_excerpt"] = brief_text[:200]
         try:
-            append_event(events_log_path, payload)
+            log_event_at(events_log_path, payload)
         except OSError as exc:
             print(
                 f"generate-brief: warning: failed to emit event: {exc}",
@@ -1094,7 +1044,7 @@ def emit_research_sizing(
         "complexity": complexity,
         "criticality": criticality,
     }
-    append_event(events_log, event)
+    log_event_at(events_log, event)
     return events_log
 
 

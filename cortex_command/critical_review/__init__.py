@@ -39,10 +39,11 @@ import os
 import re
 import subprocess
 import sys
-import tempfile
 from collections.abc import Sequence
 from datetime import datetime, timezone
 from pathlib import Path
+
+from cortex_command.lifecycle_event import log_event_at
 
 
 # Exit code emitted when a telemetry write is suppressed because the target
@@ -456,60 +457,6 @@ def check_artifact_stable(
 
 
 # ---------------------------------------------------------------------------
-# Atomic events.log append (tempfile + os.replace)
-# ---------------------------------------------------------------------------
-
-def append_event(events_log_path: Path, event: dict) -> None:
-    """Atomically append a JSON event line to ``events_log_path``.
-
-    Uses tempfile + ``os.replace`` rather than ``open(path, 'a')`` so
-    the append is atomic against concurrent emitters: each call writes
-    (existing contents + new line) to a unique temp file in the same
-    directory and then renames over the target. The rename is atomic
-    on POSIX; the temp file is unique per-call so concurrent appenders
-    do not collide.
-
-    Args:
-        events_log_path: Path to the JSONL events log.
-        event: Dict to serialize as one JSONL line.
-    """
-    events_log_path.parent.mkdir(parents=True, exist_ok=True)
-    existing = b""
-    if events_log_path.exists():
-        existing = events_log_path.read_bytes()
-        if existing and not existing.endswith(b"\n"):
-            existing += b"\n"
-
-    line = (
-        json.dumps(event, separators=(",", ":"), ensure_ascii=False) + "\n"
-    ).encode("utf-8")
-
-    tmp = tempfile.NamedTemporaryFile(
-        dir=str(events_log_path.parent),
-        prefix=f".{events_log_path.name}-",
-        suffix=".tmp",
-        delete=False,
-    )
-    try:
-        tmp.write(existing)
-        tmp.write(line)
-        tmp.flush()
-        os.fsync(tmp.fileno())
-        tmp.close()
-        os.replace(tmp.name, events_log_path)
-    except BaseException:
-        try:
-            tmp.close()
-        except Exception:
-            pass
-        try:
-            os.unlink(tmp.name)
-        except OSError:
-            pass
-        raise
-
-
-# ---------------------------------------------------------------------------
 # Defaults: resolve lifecycle_root from git toplevel
 # ---------------------------------------------------------------------------
 
@@ -538,10 +485,10 @@ def _lifecycle_dir_exists(lifecycle_root: str, feature: str) -> bool:
     """Return whether ``Path(lifecycle_root) / feature`` is an existing directory.
 
     Used by the telemetry write-guard: the three critical-review telemetry
-    writers suppress their dir-creating ``append_event`` side effect when this
+    writers suppress their dir-creating ``log_event_at`` side effect when this
     returns ``False``, so a non-feature (``<path>``-arg) review cannot create a
     phantom lifecycle dir. The guard lives in the callers, NOT in
-    ``append_event`` (which must keep creating the dir for the legitimate
+    ``log_event_at`` (which must keep creating the dir for the legitimate
     fresh-lifecycle first-write at Site A, ``refine.py``).
     """
     return (Path(lifecycle_root) / feature).is_dir()
@@ -721,7 +668,7 @@ def _cmd_check_synth_stable(args: argparse.Namespace) -> int:
         )
         return EXIT_TELEMETRY_SKIPPED
     try:
-        append_event(events_log, event)
+        log_event_at(events_log, event)
     except OSError as e:
         print(f"WARN: failed to append synthesizer_drift event: {e}", file=sys.stderr)
     return 3
@@ -792,7 +739,7 @@ def _cmd_check_artifact_stable(args: argparse.Namespace) -> int:
         )
         return EXIT_TELEMETRY_SKIPPED
     try:
-        append_event(events_log, event)
+        log_event_at(events_log, event)
     except OSError as e:
         print(
             f"WARN: failed to append sentinel_absence event: {e}",
@@ -834,7 +781,7 @@ def _cmd_record_exclusion(args: argparse.Namespace) -> int:
         )
         return EXIT_TELEMETRY_SKIPPED
     try:
-        append_event(events_log, event)
+        log_event_at(events_log, event)
     except OSError as e:
         print(f"Failed to append sentinel_absence event: {e}", file=sys.stderr)
         return 2

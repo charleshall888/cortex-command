@@ -2,7 +2,7 @@
 
 Spec ``investigate-critical-review-telemetry-creating-phantom``, Phase 1.
 
-The guard sits immediately before the ``append_event`` call in
+The guard sits immediately before the ``log_event_at`` call in
 ``_cmd_check_synth_stable``, ``_cmd_check_artifact_stable``, and
 ``_cmd_record_exclusion`` (``cortex_command/critical_review/__init__.py``). When
 the target ``cortex/lifecycle/{feature}/`` dir does NOT already exist, the writer

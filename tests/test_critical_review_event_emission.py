@@ -12,7 +12,7 @@ Two scenarios:
    hex SHA-256 under ``snapshot_sha``. The fields flow from
    ``validate_artifact_path(..., allow_adhoc=True)`` through
    ``_build_sentinel_absence_event`` onto the dict and through
-   ``append_event``'s ``json.dumps`` write.
+   ``log_event_at``'s ``json.dumps`` write.
 
 2. ``test_newline_path_round_trips_through_json_escape`` — a candidate
    path containing a newline character passes ``validate_artifact_path``
@@ -31,9 +31,9 @@ from pathlib import Path
 
 from cortex_command.critical_review import (
     _build_sentinel_absence_event,
-    append_event,
     validate_artifact_path,
 )
+from cortex_command.lifecycle_event import log_event_at
 
 
 # ---------------------------------------------------------------------------
@@ -96,7 +96,7 @@ def test_source_path_field_round_trip(tmp_path: Path) -> None:
         snapshot_sha=result["snapshot_sha"],
     )
     events_log = feature_dir / "events.log"
-    append_event(events_log, event)
+    log_event_at(events_log, event)
 
     # The JSON row carries both new fields with the expected values.
     lines = events_log.read_text(encoding="utf-8").splitlines()
@@ -143,7 +143,7 @@ def test_newline_path_round_trips_through_json_escape(tmp_path: Path) -> None:
     assert result["source_path"] == str(src)
     assert result["snapshot_sha"] == expected_sha
 
-    # Build the event and write it through append_event.
+    # Build the event and write it through log_event_at.
     event = _build_sentinel_absence_event(
         feature=feature,
         reviewer_angle="security",
@@ -155,7 +155,7 @@ def test_newline_path_round_trips_through_json_escape(tmp_path: Path) -> None:
         snapshot_sha=result["snapshot_sha"],
     )
     events_log = feature_dir / "events.log"
-    append_event(events_log, event)
+    log_event_at(events_log, event)
 
     # The raw bytes of the events.log row contain the JSON-escaped
     # two-character sequence ``\n`` (backslash + literal 'n'), NOT a
