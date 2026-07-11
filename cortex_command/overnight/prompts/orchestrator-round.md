@@ -381,27 +381,23 @@ The `last occurrence` semantics tolerate prose that quotes the `<!--findings-jso
 
 (5) **Route on verdict + confidence**:
 
-- **`verdict ∈ {"A","B","C"}` AND `confidence ∈ {"high","medium"}`**: copy the selected variant's content to `cortex/lifecycle/{{feature_slug}}/plan.md` (verdict `"A"` → `plan-variant-A.md`, `"B"` → `plan-variant-B.md`, `"C"` → tie at high/medium confidence is a logically impossible state per the synthesizer fragment, so treat as malformed and follow the deferred branch). Then append a v2 `plan_comparison` event to `cortex/lifecycle/{{feature_slug}}/events.log`:
+- **`verdict ∈ {"A","B","C"}` AND `confidence ∈ {"high","medium"}`**: copy the selected variant's content to `cortex/lifecycle/{{feature_slug}}/plan.md` (verdict `"A"` → `plan-variant-A.md`, `"B"` → `plan-variant-B.md`, `"C"` → tie at high/medium confidence is a logically impossible state per the synthesizer fragment, so treat as malformed and follow the deferred branch). Then append a v2 `plan_comparison` event to `cortex/lifecycle/{{feature_slug}}/events.log` by shelling out to the sanctioned `cortex-lifecycle-event log` escape hatch (the ADR-0020 hand-append path — the verb owns the atomic locked append and stamps `ts`/`event`/`feature`, so no raw per-feature file append is used). Run:
 
-  ```python
-  with open(f"cortex/lifecycle/{f['slug']}/events.log", "a", encoding="utf-8") as fh:
-      fh.write(json.dumps({
-          "ts": "<ISO 8601 UTC>",
-          "event": "plan_comparison",
-          "schema_version": 2,
-          "feature": f["slug"],
-          "variants": [
-              {"label": "Plan A", "approach": "<summary>", "task_count": <N>, "risk": "<risk summary>"},
-              # plus Plan B (and Plan C if 3 variants survived)
-          ],
-          "selected": "Plan A",  # or "Plan B" / "Plan C"
-          "selection_rationale": envelope["rationale"],
-          "selector_confidence": envelope["confidence"],
-          "position_swap_check_result": "agreed",  # high/medium implies swap probe agreed
-          "disposition": "auto_select",  # overnight surface: no operator
-          "operator_choice": None,
-      }) + "\n")
+  ```sh
+  cortex-lifecycle-event log \
+    --event plan_comparison \
+    --feature {{feature_slug}} \
+    --set-json schema_version=2 \
+    --set-json variants='[{"label": "Plan A", "approach": "<summary>", "task_count": <N>, "risk": "<risk summary>"}]' \
+    --set selected="Plan A" \
+    --set selection_rationale="<envelope rationale>" \
+    --set selector_confidence="<envelope confidence>" \
+    --set position_swap_check_result=agreed \
+    --set disposition=auto_select \
+    --set-json operator_choice=null
   ```
+
+  Substitute the concrete values: `variants` is the judgment-computed JSON array of one object per surviving variant (`Plan A`, `Plan B`, and `Plan C` if 3 variants survived), passed whole via `--set-json`; `selected` is `"Plan A"`/`"Plan B"`/`"Plan C"` matching the verdict; `selection_rationale` and `selector_confidence` are `envelope["rationale"]` and `envelope["confidence"]`; `position_swap_check_result` is `agreed` (high/medium implies the swap probe agreed). The verb emits `schema_version`, `variants`, and `operator_choice` (`null`) as ordinary `--set-json` fields and everything else as `--set` string fields — the row keys/values match the prior hand-append (the verb fixes only the `ts`/`event`/`feature` base-key prefix; consumers key by name).
 
   The `disposition: "auto_select"` value is reserved for the overnight surface; `operator_choice` is always `null` here. The round continues to Step 3c for this feature.
 
