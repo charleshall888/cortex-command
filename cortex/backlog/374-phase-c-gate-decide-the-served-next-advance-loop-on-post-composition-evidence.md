@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 84506324-4fe3-4ae3-8228-770b3f5c5b68
 title: 'Phase-C gate: decide the served next/advance loop on post-composition evidence'
-status: backlog
+status: refined
 priority: medium
 type: spike
 created: 2026-07-10
@@ -11,6 +11,12 @@ parent: "371"
 tags: ['cli-served-lifecycle-state-machine']
 discovery_source: cortex/research/cli-served-lifecycle-state-machine/research.md
 blocked-by: 373
+lifecycle_phase: research
+lifecycle_slug: 374
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/374/spec.md
+areas: ['lifecycle']
 ---
 ## Why
 
