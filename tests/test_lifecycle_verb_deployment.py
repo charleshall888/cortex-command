@@ -44,6 +44,26 @@ VERBS: list[tuple[str, str, str]] = [
         "cortex_command.lifecycle.finalize:main",
         "bin/cortex-lifecycle-finalize",
     ),
+    (
+        "cortex-lifecycle-plan-decision",
+        "cortex_command.lifecycle.plan_decision:main",
+        "bin/cortex-lifecycle-plan-decision",
+    ),
+    (
+        "cortex-lifecycle-review-verdict",
+        "cortex_command.lifecycle.review_verdict:main",
+        "bin/cortex-lifecycle-review-verdict",
+    ),
+    (
+        "cortex-lifecycle-spec-approve",
+        "cortex_command.lifecycle.spec_approve:main",
+        "bin/cortex-lifecycle-spec-approve",
+    ),
+    (
+        "cortex-lifecycle-implement-transition",
+        "cortex_command.lifecycle.implement_transition:main",
+        "bin/cortex-lifecycle-implement-transition",
+    ),
 ]
 
 
