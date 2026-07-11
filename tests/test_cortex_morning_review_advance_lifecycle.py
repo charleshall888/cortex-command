@@ -64,7 +64,14 @@ def test_already_complete_skips(project_root: Path) -> None:
     assert len(_read_events(fd)) == 1
 
 
-def test_simple_medium_advances_with_four_events(project_root: Path) -> None:
+def test_simple_medium_advances_via_folded_advance_body(project_root: Path) -> None:
+    """374 fold: the review→complete transition is routed through the shared
+    ``advance`` body, so the events.log carries advance-authored rows
+    (``review_verdict`` + ``phase_transition`` review→complete, each tagged with
+    the deterministic ``invocation_id``, bracketed by ``advance_started`` /
+    ``advance_committed``) — NOT the pre-fold hand-appended four-event sequence,
+    and NO ``feature_complete`` row (the served transition table does not emit
+    it). The events-first projection is unchanged: ``complete``."""
     fd = _feature_dir(project_root)
     _write_events(
         fd,
@@ -79,26 +86,28 @@ def test_simple_medium_advances_with_four_events(project_root: Path) -> None:
     assert r["rework_cycles"] == 0
 
     events = _read_events(fd)
-    # 1 seed + 4 synthetic.
-    assert len(events) == 5
-    new_events = events[1:]
-    assert [e["event"] for e in new_events] == [
-        "phase_transition",
-        "review_verdict",
-        "phase_transition",
-        "feature_complete",
-    ]
-    assert new_events[0]["from"] == "implement"
-    assert new_events[0]["to"] == "review"
-    assert new_events[1]["verdict"] == "APPROVED"
-    assert new_events[1]["cycle"] == 0
-    assert new_events[2]["from"] == "review"
-    assert new_events[2]["to"] == "complete"
-    assert new_events[3]["tasks_total"] == 3
-    assert new_events[3]["rework_cycles"] == 0
-    for e in new_events:
+    kinds = [e["event"] for e in events[1:]]
+    # advance-authored dual emission: no transition row is hand-appended here.
+    assert kinds == ["advance_started", "review_verdict", "phase_transition", "advance_committed"]
+    # No feature_complete row: completion rides on phase_transition review→complete.
+    assert not any(e["event"] == "feature_complete" for e in events)
+    verdict_row = next(e for e in events if e["event"] == "review_verdict")
+    assert verdict_row["verdict"] == "APPROVED" and verdict_row["cycle"] == 0
+    complete_row = next(
+        e for e in events if e["event"] == "phase_transition" and e.get("to") == "complete"
+    )
+    assert complete_row["from"] == "review"
+    # Every advance-authored legacy/machine row carries the same invocation_id.
+    inv = complete_row["invocation_id"]
+    assert inv and verdict_row["invocation_id"] == inv
+    for e in events[1:]:
         assert e["feature"] == "feat"
         assert "ts" in e
+
+    # Events-first status projection is preserved: complete.
+    from cortex_command.common import resolve_lifecycle_phase
+
+    assert resolve_lifecycle_phase(fd)["route"] == "complete"
 
 
 def test_missing_plan_defaults_tasks_total_to_zero(project_root: Path) -> None:
@@ -154,13 +163,22 @@ def test_crash_recovery_appends_two_events(project_root: Path) -> None:
     assert r["rework_cycles"] == 1
 
     events = _read_events(fd)
-    assert len(events) == 5  # 3 seed + 2 synthetic
+    # The real cycle-2 review_verdict is already present, so the folded advance
+    # body emits only the missing phase_transition review→complete (no duplicate
+    # verdict), bracketed by the claim/commit machine rows — and no feature_complete.
     new_events = events[3:]
-    assert [e["event"] for e in new_events] == ["phase_transition", "feature_complete"]
-    assert new_events[0]["from"] == "review"
-    assert new_events[0]["to"] == "complete"
-    assert new_events[1]["tasks_total"] == 2
-    assert new_events[1]["rework_cycles"] == 1
+    assert [e["event"] for e in new_events] == [
+        "advance_started",
+        "phase_transition",
+        "advance_committed",
+    ]
+    complete_row = new_events[1]
+    assert complete_row["from"] == "review" and complete_row["to"] == "complete"
+    assert not any(e["event"] == "feature_complete" for e in events)
+
+    from cortex_command.common import resolve_lifecycle_phase
+
+    assert resolve_lifecycle_phase(fd)["route"] == "complete"
 
 
 def test_missing_review_writes_nothing(project_root: Path) -> None:

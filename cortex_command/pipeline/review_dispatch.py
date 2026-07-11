@@ -17,14 +17,72 @@ from importlib.resources import files
 from pathlib import Path
 from typing import Optional
 
-# Feature events.log writes ride the shared flock discipline (never the
-# unlocked pipeline-telemetry appender); the log path stays config-resolved.
-from cortex_command.lifecycle_event import log_event_at as log_event
+# 374 Phase-4 fold (R15 write path): this module no longer DECIDES or appends
+# lifecycle transition rows itself. The implement→review entry transition and the
+# review→complete completion transition are routed through the shared ``advance``
+# body (``cortex_command.lifecycle.advance.advance``), which owns the decision +
+# emission (legacy vocabulary + advance_started/advance_committed machine rows
+# under the claim/commit locking primitive). This module's review.md/verdict
+# reads are demoted to *input-gathering* — the gathered verdict/cycle/detected-
+# phase are passed as arguments. It emits NO transition-vocabulary rows of its own
+# (the positive fold-completion discriminator in tests/test_fold_completion.py
+# fails if a log_event/log_event_at transition emission is re-introduced here).
+from cortex_command.common import detect_lifecycle_phase
+from cortex_command.lifecycle.advance import advance
 from cortex_command.overnight.deferral import DeferralQuestion, write_deferral
 from cortex_command.pipeline.dispatch import dispatch_task
 from cortex_command.pipeline.merge import merge_feature
 
 logger = logging.getLogger(__name__)
+
+
+def _current_phase(feature_events_log: Path) -> str:
+    """Return the feature's artifact-detected phase — the value the claim/commit
+    primitive's from_state gate compares against (``common.detect_lifecycle_phase``).
+
+    Passing this as ``advance``'s ``from_state`` makes the gate a tautology for
+    these forced overnight transitions (the feature IS at its detected phase),
+    so ``advance`` records the arm's transition rather than refusing on a
+    gate-mismatch. Defaults to ``"implement"`` when the phase cannot be read.
+    """
+    return str(detect_lifecycle_phase(feature_events_log.parent).get("phase") or "implement")
+
+
+def _advance_to_review(feature: str, feature_events_log: Path) -> None:
+    """Route the implement→review entry transition through the shared advance body.
+
+    ``dispatch_review`` is only reached for review-required features (the
+    ``outcome_router`` gate is ``requires_review(tier, criticality) or corrupted``
+    — the same matrix ``implement_transition._resolve_route`` applies), so the
+    implement-transition arm routes to ``review`` and emits ``phase_transition``
+    implement→review. Best-effort: a gate-mismatch/refusal is a benign no-op (the
+    feature is already at/past review); the returned envelope is ignored."""
+    advance(
+        verb="implement-transition",
+        feature=feature,
+        mode="transition",
+        from_state=_current_phase(feature_events_log),
+        log_path=feature_events_log,
+    )
+
+
+def _advance_review_complete(feature: str, cycle: int, feature_events_log: Path) -> None:
+    """Route the review→complete completion through the shared advance body.
+
+    Composes the review.approved arm (``review_verdict`` → ``phase_transition``
+    review→complete) — the events-first completion signal (ADR-0025). The legacy
+    ``feature_complete`` telemetry row (with ``merge_anchor: "review"``) the
+    pre-fold path hand-appended is NOT emitted by the advance/B1 bodies; see the
+    module fold report for the metrics implication. Best-effort; envelope ignored."""
+    advance(
+        verb="review-verdict",
+        feature=feature,
+        verdict="APPROVED",
+        cycle=cycle,
+        drift="none",
+        from_state=_current_phase(feature_events_log),
+        log_path=feature_events_log,
+    )
 
 
 @dataclass
@@ -216,13 +274,8 @@ async def dispatch_review(
     feature_events_log = lifecycle_base / feature / "events.log"
     review_md_path = lifecycle_base / feature / "review.md"
 
-    # (1) Write phase_transition implement -> review
-    log_event(feature_events_log, {
-        "event": "phase_transition",
-        "feature": feature,
-        "from": "implement",
-        "to": "review",
-    })
+    # (1) Record phase_transition implement -> review via the shared advance body.
+    _advance_to_review(feature, feature_events_log)
 
     # (2) Read spec for excerpt
     try:
@@ -232,13 +285,10 @@ async def dispatch_review(
             "Cannot read spec for review of %s: %s — skipping review",
             feature, exc,
         )
-        log_event(feature_events_log, {
-            "event": "review_verdict",
-            "feature": feature,
-            "verdict": "ERROR",
-            "cycle": 0,
-            "issues": [f"spec not readable: {exc}"],
-        })
+        # FOLD (374): an ERROR is not a lifecycle transition (no review ran) and
+        # ERROR is not a canonical verdict the advance/B1 review-verdict body
+        # admits — so no transition-vocabulary row is emitted here. The
+        # SEVERITY-carrying record is the ReviewResult/deferral, not events.log.
         return ReviewResult(
             approved=False,
             deferred=True,
@@ -260,13 +310,7 @@ async def dispatch_review(
         logger.error(
             "Cannot load review prompt template: %s", exc,
         )
-        log_event(feature_events_log, {
-            "event": "review_verdict",
-            "feature": feature,
-            "verdict": "ERROR",
-            "cycle": 0,
-            "issues": [f"prompt template not readable: {exc}"],
-        })
+        # FOLD (374): ERROR is not a lifecycle transition — no events.log row.
         return ReviewResult(
             approved=False,
             deferred=True,
@@ -307,26 +351,10 @@ async def dispatch_review(
     cycle = verdict_dict.get("cycle", 0)
     issues = verdict_dict.get("issues", [])
 
-    # (6) Handle APPROVED
+    # (6) Handle APPROVED — route the review→complete transition through the
+    # shared advance body (review_verdict → phase_transition review→complete).
     if verdict_str == "APPROVED":
-        log_event(feature_events_log, {
-            "event": "review_verdict",
-            "feature": feature,
-            "verdict": "APPROVED",
-            "cycle": cycle,
-            "issues": issues,
-        })
-        log_event(feature_events_log, {
-            "event": "phase_transition",
-            "feature": feature,
-            "from": "review",
-            "to": "complete",
-        })
-        log_event(feature_events_log, {
-            "event": "feature_complete",
-            "feature": feature,
-            "merge_anchor": "review",
-        })
+        _advance_review_complete(feature, cycle, feature_events_log)
         return ReviewResult(
             approved=True,
             deferred=False,
@@ -347,13 +375,7 @@ async def dispatch_review(
         # sentinel above, so the flag — not the verdict — is what downstream
         # routing keys on to preserve vs. revert the merge.
         could_not_run = result.success
-        log_event(feature_events_log, {
-            "event": "review_verdict",
-            "feature": feature,
-            "verdict": "ERROR",
-            "cycle": cycle,
-            "issues": issues,
-        })
+        # FOLD (374): ERROR is not a lifecycle transition — no events.log row.
         _write_review_deferral(
             feature, verdict_str, cycle, issues, deferred_dir,
             could_not_run=could_not_run,
@@ -369,13 +391,12 @@ async def dispatch_review(
 
     # (8) Handle REJECTED at any cycle — write deferral file
     if verdict_str == "REJECTED":
-        log_event(feature_events_log, {
-            "event": "review_verdict",
-            "feature": feature,
-            "verdict": "REJECTED",
-            "cycle": cycle,
-            "issues": issues,
-        })
+        # FOLD (374): the pre-fold path recorded a review_verdict-only row (no
+        # phase_transition — the feature stayed at "review" for human triage).
+        # Routing REJECTED through the advance review-verdict body would emit a
+        # phase_transition review→escalated (its routed arm), CHANGING the
+        # events-first projection review→escalated. To preserve the projection,
+        # no transition-vocabulary row is emitted; the deferral is the record.
         _write_review_deferral(feature, verdict_str, cycle, issues, deferred_dir)
         return ReviewResult(
             approved=False,
@@ -387,13 +408,12 @@ async def dispatch_review(
 
     # (9) Handle CHANGES_REQUESTED — rework loop (cycle 1 only)
     if verdict_str == "CHANGES_REQUESTED":
-        log_event(feature_events_log, {
-            "event": "review_verdict",
-            "feature": feature,
-            "verdict": "CHANGES_REQUESTED",
-            "cycle": cycle,
-            "issues": issues,
-        })
+        # FOLD (374): the pre-fold path recorded a review_verdict-only row (no
+        # phase_transition). The rework loop below is driven by verdict_str, not
+        # by an events.log emission, so dropping the informational verdict row
+        # preserves the events-first projection (the feature stays at "review"
+        # through the rework window; a cycle-2 APPROVED then routes review→complete
+        # via _advance_review_complete).
 
         # Only attempt rework for cycle 1; later cycles fall through to deferral
         if cycle != 1:
@@ -596,26 +616,9 @@ async def dispatch_review(
             ]
             cycle2_verdict_str = "ERROR"
 
-        # (9h) If APPROVED, return success
+        # (9h) If APPROVED, return success — route review→complete via advance.
         if cycle2_verdict_str == "APPROVED":
-            log_event(feature_events_log, {
-                "event": "review_verdict",
-                "feature": feature,
-                "verdict": "APPROVED",
-                "cycle": cycle2_cycle,
-                "issues": cycle2_issues,
-            })
-            log_event(feature_events_log, {
-                "event": "phase_transition",
-                "feature": feature,
-                "from": "review",
-                "to": "complete",
-            })
-            log_event(feature_events_log, {
-                "event": "feature_complete",
-                "feature": feature,
-                "merge_anchor": "review",
-            })
+            _advance_review_complete(feature, cycle2_cycle, feature_events_log)
             return ReviewResult(
                 approved=True,
                 deferred=False,
@@ -634,13 +637,9 @@ async def dispatch_review(
         cycle2_could_not_run = (
             cycle2_result.success and cycle2_verdict_str == "ERROR"
         )
-        log_event(feature_events_log, {
-            "event": "review_verdict",
-            "feature": feature,
-            "verdict": cycle2_verdict_str,
-            "cycle": cycle2_cycle,
-            "issues": cycle2_issues,
-        })
+        # FOLD (374): a non-APPROVED cycle-2 verdict is not an advancing
+        # transition — no transition-vocabulary row is emitted (the deferral is
+        # the record; the events-first projection stays at "review").
         _write_review_deferral(
             feature, cycle2_verdict_str, cycle2_cycle, cycle2_issues, deferred_dir,
             could_not_run=cycle2_could_not_run,
@@ -667,13 +666,8 @@ async def dispatch_review(
         "Unexpected review verdict %r for %s — treating as ERROR",
         verdict_str, feature,
     )
-    log_event(feature_events_log, {
-        "event": "review_verdict",
-        "feature": feature,
-        "verdict": "ERROR",
-        "cycle": cycle,
-        "issues": issues + [f"unexpected verdict value: {verdict_str}"],
-    })
+    # FOLD (374): a non-canonical/ERROR verdict is not a lifecycle transition —
+    # no events.log row (the ReviewResult/deferral is the record).
     return ReviewResult(
         approved=False,
         deferred=True,
