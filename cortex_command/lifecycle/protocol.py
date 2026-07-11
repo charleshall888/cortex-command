@@ -29,6 +29,108 @@ consumers is a *protocol-floor* decision made deliberately by the operator.
 
 from __future__ import annotations
 
+from typing import Any, Literal, Mapping
+
 # The protocol integer this wheel serves. Append-only; range-compared against the
 # plugin-side expectation file — never exact-equality. See module docstring.
 PROTOCOL_VERSION = 1
+
+# --- Wheel-side compat evaluator (R7 substrate) ---------------------------------
+#
+# The Phase-5 loop and Task 13's ``next`` verb call ``classify_protocol`` to decide
+# whether a served payload is compatible with the range the prose expects. It is a
+# **pure** classification function: the CALLER reads the plugin expectation file
+# (``skills/lifecycle/references/protocol-expectation.txt``) and passes ``min``/
+# ``max`` in as ``expected_min``/``expected_max``. That caller-supplied expectation
+# is what makes the fresh-plugin/stale-wheel direction — where the expectation's
+# floor is NEWER (higher) than the served value — exercisable in a test.
+#
+# The three classifications match the spec vocabulary exactly:
+#   - ``"ok"``          — ``protocol`` present and within ``[expected_min, expected_max]``.
+#   - ``"legacy"``      — ``protocol`` field absent: a wheel predating the field.
+#   - ``"out-of-range"``— ``protocol`` present but outside the inclusive range;
+#                         includes the stale-wheel direction (served < expected_min)
+#                         and the too-new-wheel direction (served > expected_max).
+#
+# Loop-side halt behavior and the ``{"state": "protocol-skew"}`` envelope are
+# Phase 3/5 (Tasks 13/19); this module ships only the substrate + template.
+
+COMPAT_OK: Literal["ok"] = "ok"
+COMPAT_LEGACY: Literal["legacy"] = "legacy"
+COMPAT_OUT_OF_RANGE: Literal["out-of-range"] = "out-of-range"
+
+# The field every verb payload stamps (``result["protocol"] = PROTOCOL_VERSION``).
+_PROTOCOL_FIELD = "protocol"
+
+
+def classify_protocol(
+    payload: Mapping[str, Any],
+    *,
+    expected_min: int,
+    expected_max: int,
+) -> Literal["ok", "legacy", "out-of-range"]:
+    """Classify a served verb payload against a caller-supplied compat range.
+
+    ``payload`` is a served verb payload (a ``dict``/mapping that, on a
+    current wheel, carries an integer ``"protocol"`` field). ``expected_min`` and
+    ``expected_max`` are the INCLUSIVE bounds the CALLER read from the plugin-side
+    expectation file — never read here, keeping this a pure function with no I/O.
+
+    Returns one of ``"ok"`` / ``"legacy"`` / ``"out-of-range"``:
+
+    - ``"legacy"`` when the ``"protocol"`` field is absent (or ``None``) — an old
+      wheel that predates the field.
+    - ``"ok"`` when present and ``expected_min <= protocol <= expected_max``.
+    - ``"out-of-range"`` when present but below ``expected_min`` (stale wheel /
+      fresh plugin) or above ``expected_max`` (wheel newer than this prose).
+    """
+    served = payload.get(_PROTOCOL_FIELD)
+    if served is None:
+        return COMPAT_LEGACY
+    if expected_min <= served <= expected_max:
+        return COMPAT_OK
+    return COMPAT_OUT_OF_RANGE
+
+
+# The reinstall the operator runs to bring the installed wheel back into the
+# plugin's compat range — the same command the bin-wrapper exit-2 messages emit
+# (the copy-pasteable remediation template referenced by operator req 8).
+REMEDIATION_COMMAND = (
+    "uv tool install --reinstall --refresh "
+    "git+https://github.com/charleshall888/cortex-command.git@<latest-tag>"
+)
+
+# Copy-pasteable remediation message template. ``str.format``-fillable with the
+# named fields ``served`` / ``expected_min`` / ``expected_max`` / ``command`` —
+# use ``remediation_message(...)`` to fill it. Loop-side callers (Tasks 13/19)
+# surface this when ``classify_protocol`` returns ``"legacy"`` or ``"out-of-range"``.
+REMEDIATION_TEMPLATE = (
+    "protocol skew: the installed cortex-command wheel serves protocol {served} "
+    "but this plugin's loop expects the inclusive range [{expected_min}, {expected_max}]. "
+    "The wheel is out of sync with the plugin prose. To fix, run:\n"
+    "  {command}\n"
+    "then restart the session. If this happens after a recent upgrade, your wheel "
+    "may be stale; a SessionStart background install initiates healing, but the "
+    "loop stays halted until the wheel matches."
+)
+
+
+def remediation_message(
+    *,
+    served: int | None,
+    expected_min: int,
+    expected_max: int,
+) -> str:
+    """Render the copy-pasteable skew-remediation message.
+
+    ``served`` is the payload's ``protocol`` value (``None`` for a legacy payload
+    with no field); ``expected_min``/``expected_max`` are the caller-supplied
+    range. Names ``REMEDIATION_COMMAND`` — the reinstall the operator runs.
+    """
+    served_label = "<absent>" if served is None else served
+    return REMEDIATION_TEMPLATE.format(
+        served=served_label,
+        expected_min=expected_min,
+        expected_max=expected_max,
+        command=REMEDIATION_COMMAND,
+    )
