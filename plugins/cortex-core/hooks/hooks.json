@@ -8,6 +8,15 @@
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/cortex-session-start-path-bootstrap.sh"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/cortex-cli-background-install.sh",
+            "async": true
+          }
+        ]
       }
     ],
     "SessionEnd": [
