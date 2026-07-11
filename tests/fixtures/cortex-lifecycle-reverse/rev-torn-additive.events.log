@@ -1,0 +1,5 @@
+{"event": "lifecycle_start", "feature": "rev-torn-additive", "tier": "complex", "criticality": "high", "ts": "2026-07-05T06:00:00Z"}
+{"event": "advance_started", "feature": "rev-torn-additive", "from_state": "specify", "invoca
+{"event": "advance_started", "feature": "rev-torn-additive", "from_state": "specify", "invocation_id": "inv-torn-0001", "ts": "2026-07-05T06:02:00Z"}
+{"event": "phase_transition", "feature": "rev-torn-additive", "from": "specify", "to": "plan", "invocation_id": "inv-torn-0001", "ts": "2026-07-05T06:02:01Z"}
+{"event": "advance_committed", "feature": "rev-torn-additive", "to_state": "plan", "invocation_id": "inv-torn-0001", "ts": "2026-07-05T06:02:02Z"}

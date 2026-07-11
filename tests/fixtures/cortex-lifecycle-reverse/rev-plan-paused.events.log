@@ -1,0 +1,9 @@
+{"event": "lifecycle_start", "feature": "rev-plan-paused", "tier": "simple", "criticality": "medium", "ts": "2026-07-04T07:00:00Z"}
+{"event": "complexity_override", "feature": "rev-plan-paused", "from": "simple", "to": "complex", "ts": "2026-07-04T07:00:30Z"}
+{"event": "criticality_override", "feature": "rev-plan-paused", "from": "medium", "to": "high", "ts": "2026-07-04T07:00:45Z"}
+{"event": "spec_approved", "feature": "rev-plan-paused", "ts": "2026-07-04T07:01:00Z"}
+{"event": "advance_started", "feature": "rev-plan-paused", "from_state": "specify", "invocation_id": "inv-pp-0001", "ts": "2026-07-04T07:02:00Z"}
+{"event": "phase_transition", "feature": "rev-plan-paused", "from": "specify", "to": "plan", "invocation_id": "inv-pp-0001", "ts": "2026-07-04T07:02:01Z"}
+{"event": "advance_committed", "feature": "rev-plan-paused", "to_state": "plan", "invocation_id": "inv-pp-0001", "ts": "2026-07-04T07:02:02Z"}
+{"event": "feature_paused", "feature": "rev-plan-paused", "kind": "relayed-consent", "slug": "pause-await-operator", "ts": "2026-07-04T07:03:00Z"}
+{"event": "advance_started", "feature": "rev-plan-paused", "from_state": "plan", "invocation_id": "inv-pp-0002", "ts": "2026-07-04T07:04:00Z"}

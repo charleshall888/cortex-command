@@ -1,0 +1,9 @@
+{"event": "lifecycle_start", "feature": "rev-review-complete", "tier": "simple", "criticality": "medium", "ts": "2026-07-02T09:00:00Z"}
+{"event": "advance_started", "feature": "rev-review-complete", "from_state": "implement", "invocation_id": "inv-rev-0001", "ts": "2026-07-02T09:10:00Z"}
+{"event": "phase_transition", "feature": "rev-review-complete", "from": "implement", "to": "review", "invocation_id": "inv-rev-0001", "ts": "2026-07-02T09:10:01Z"}
+{"event": "advance_committed", "feature": "rev-review-complete", "to_state": "review", "invocation_id": "inv-rev-0001", "ts": "2026-07-02T09:10:02Z"}
+{"event": "review_verdict", "feature": "rev-review-complete", "verdict": "APPROVED", "cycle": 1, "ts": "2026-07-02T09:20:00Z"}
+{"event": "advance_started", "feature": "rev-review-complete", "from_state": "review", "invocation_id": "inv-rev-0002", "ts": "2026-07-02T09:30:00Z"}
+{"event": "phase_transition", "feature": "rev-review-complete", "from": "review", "to": "complete", "invocation_id": "inv-rev-0002", "ts": "2026-07-02T09:30:01Z"}
+{"event": "feature_complete", "feature": "rev-review-complete", "tasks_total": 2, "rework_cycles": 0, "invocation_id": "inv-rev-0002", "ts": "2026-07-02T09:30:02Z"}
+{"event": "advance_committed", "feature": "rev-review-complete", "to_state": "complete", "invocation_id": "inv-rev-0002", "ts": "2026-07-02T09:30:03Z"}
