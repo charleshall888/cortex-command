@@ -179,7 +179,7 @@ Move the four multi-emission decision clusters (plan approval, review verdict, s
 - **Complexity**: simple
 - **Context**: `test_plan_md_has_1a_heading` at `test_skill_section_citations.py:40-54` (asserts `"### 1a. Check Criticality"`, cited by `orchestrator-round.md:242`); sibling `test_plan_md_has_1b_heading` (`:57-69`) and the §5 pin (`:72-86`) stay — they have live citers. Registry consumer columns citing `orchestrator-round.md:256`: the `lifecycle_start` row (`:13`) and `criticality_override` row (`:19`).
 - **Verification**: (a) `just test` runs `test_skill_section_citations.py` green with the 1a function removed and no orphaned references; `grep -c 'test_plan_md_has_1a_heading' tests/test_skill_section_citations.py` = 0; (a) `bin/cortex-check-events-registry --audit` passes.
-- **Status**: [ ] pending
+- **Status**: [x] done (aa74c0b8 — 1a pin removed + stale :242 citation pruned; siblings 1b/§5 intact; plan.md §1a heading untouched; registry :256 already fixed by Task 13; 4 citation tests pass)
 
 ## Risks
 
