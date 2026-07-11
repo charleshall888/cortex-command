@@ -121,11 +121,6 @@ def _declared_and_required(subcommand: str) -> tuple[set[str], set[str]]:
 # worktree-entry.md in the lifecycle-corpus-trim-wave-2 route-conditional
 # extraction, so it is cross-validated against that file now.
 FILE_EVENTS: dict[str, dict[str, int]] = {
-    "skills/lifecycle/references/plan.md": {
-        "plan_approved": 2,
-        "feature_paused": 1,
-        "phase_transition": 1,
-    },
     "skills/lifecycle/references/review.md": {
         "review_verdict": 1,
         "drift_protocol_breach": 1,
@@ -183,6 +178,119 @@ def cross_validate(path: Path, event: str, expected_count: int) -> None:
             raise CrossValidationError(
                 f"{path}: '{subcommand}' missing required flags {missing}"
             )
+
+
+# ---------------------------------------------------------------------------
+# Per-file raw-emission zero-sweep (epic 371 Phase B)
+# ---------------------------------------------------------------------------
+#
+# Once a cluster's skill prose routes its emission sequence through a wrapper
+# verb (e.g. cortex-lifecycle-plan-decision owns plan.md §4/§5's ordered
+# plan_approved / feature_paused / phase_transition / lifecycle_cancelled
+# emissions), the prose must carry ZERO raw event-emission surfaces of ANY
+# form. This is a NEW, distinct check from the FILE_EVENTS cross-validator
+# above: ``_SUBCMD_RE``'s ``(?!log\b)`` lookahead deliberately skips the
+# ``log``-form, so a per-pair "expect 0" FILE_EVENTS row would be BLIND to a
+# ``log``-form (or module-invocation, or bare-call) reintroduction. The sweep
+# counts ALL raw-emission surfaces the prose could regress into and asserts zero.
+
+# The three raw-emission surfaces skill prose could regress into:
+#   - ``cortex-lifecycle-event``       — the console script (typed subcommands
+#     AND the ``log`` escape hatch alike)
+#   - ``cortex_command.lifecycle_event`` — the ``python3 -m`` module-invocation
+#     form, which the L201 ``cortex-check-bare-python-import`` lint does NOT
+#     catch (it flags ``import`` statements, not ``python3 -m module`` runs);
+#     the sweep + L201 together close all raw-emission forms in skill prose
+#   - ``log_event(``                   — a bare in-prose call to the events writer
+_RAW_EMISSION_RE = re.compile(
+    r"cortex-lifecycle-event|cortex_command\.lifecycle_event|log_event\("
+)
+
+# Skill files whose emission sequence now lives entirely inside a wrapper verb,
+# so their prose must carry ZERO raw-emission surfaces. Tasks 10-12 append their
+# cluster files here (review.md, implement.md, specify.md) as each lands.
+ZERO_SWEEP_FILES: tuple[str, ...] = ("skills/lifecycle/references/plan.md",)
+
+
+def count_raw_emissions(text: str) -> int:
+    """Return the number of raw event-emission surfaces in *text*.
+
+    Matches all three forms a wrapper-routed skill prose could regress into:
+    the ``cortex-lifecycle-event`` console script (typed subcommands and the
+    ``log`` escape hatch alike), the ``cortex_command.lifecycle_event``
+    ``python3 -m`` module invocation (which the L201 bare-import lint does not
+    catch — it flags ``import`` statements, not module invocations), and a bare
+    ``log_event(`` call. Counts occurrences across the whole body.
+    """
+    return len(_RAW_EMISSION_RE.findall(text))
+
+
+def assert_zero_raw_emissions(path: Path) -> None:
+    """Fail loud if *path* carries any raw event-emission surface.
+
+    Reusable across cluster tasks: a wrapper-routed skill file must emit ONLY
+    through its verb, so any residual raw-emission surface in the prose is a
+    regression.
+    """
+    found = count_raw_emissions(path.read_text(encoding="utf-8"))
+    if found != 0:
+        raise CrossValidationError(
+            f"{path}: expected 0 raw event-emission surfaces "
+            f"(cortex-lifecycle-event / cortex_command.lifecycle_event / "
+            f"log_event(), found {found}"
+        )
+
+
+@pytest.mark.parametrize("rel_path", ZERO_SWEEP_FILES)
+def test_wrapper_routed_file_has_zero_raw_emissions(rel_path: str) -> None:
+    """A wrapper-routed skill file carries zero raw event-emission surfaces."""
+    path = REPO_ROOT / rel_path
+    assert path.is_file(), f"zero-sweep file missing: {path}"
+    assert_zero_raw_emissions(path)  # must not raise
+
+
+def _write_prose(path: Path, body: str) -> Path:
+    path.write_text(
+        "Some prose.\n\n```bash\n" + body + "\n```\n", encoding="utf-8"
+    )
+    return path
+
+
+def test_zero_sweep_catches_console_script_form(tmp_path: Path) -> None:
+    """The sweep rejects a reintroduced ``cortex-lifecycle-event`` console call."""
+    bad = _write_prose(
+        tmp_path / "regressed_console.md",
+        "cortex-lifecycle-event plan-approved --feature f --dispatch-choice trunk",
+    )
+    with pytest.raises(CrossValidationError):
+        assert_zero_raw_emissions(bad)
+    # Witness: emission-free prose ACCEPTS — the form, not the fixture, trips it.
+    good = _write_prose(tmp_path / "clean_console.md", "route on the returned state")
+    assert_zero_raw_emissions(good)  # must not raise
+
+
+def test_zero_sweep_catches_module_invocation_form(tmp_path: Path) -> None:
+    """The sweep rejects the ``python3 -m cortex_command.lifecycle_event`` form.
+
+    This is the form L201 does not catch, so the sweep is its sole guard.
+    """
+    bad = _write_prose(
+        tmp_path / "regressed_module.md",
+        "python3 -m cortex_command.lifecycle_event log --event plan_approved "
+        "--feature f",
+    )
+    with pytest.raises(CrossValidationError):
+        assert_zero_raw_emissions(bad)
+
+
+def test_zero_sweep_catches_bare_log_event_call(tmp_path: Path) -> None:
+    """The sweep rejects a bare ``log_event(`` call reintroduced into prose."""
+    bad = _write_prose(
+        tmp_path / "regressed_call.md",
+        "log_event(event='plan_approved', feature='f')",
+    )
+    with pytest.raises(CrossValidationError):
+        assert_zero_raw_emissions(bad)
 
 
 # ---------------------------------------------------------------------------
