@@ -1,0 +1,684 @@
+"""cortex-lifecycle-advance — the write-side executor of the served lifecycle loop.
+
+``advance`` is the ONLY sanctioned way the served loop (``next`` reads, ``advance``
+writes) moves a feature's lifecycle state. It composes the four B1 verb decision
+cores' fixed-source-order emission bodies inside ONE gate-checked body, wrapped in
+Task 6's claim/commit locking primitive so a transition is atomic under contention
+(``cortex_command.lifecycle_event.claim_transition`` / ``commit_transition``).
+
+Why advance re-emits the legacy vocabulary rather than calling the B1 cores
+verbatim (the crux of the design): the B1 verbs emit their legacy vocabulary
+(``phase_transition``/``plan_approved``/…) through ``log_event`` WITHOUT an
+``invocation_id``. Those event names are in the primitive's ``_STATE_MOVING_EVENTS``
+interleave set, so if advance let an unmodified B1 core emit them BETWEEN its claim
+and commit, commit's re-reduce would see them as FOREIGN state-moving rows and
+refuse with "state moved since claim". advance therefore emits the same legacy rows
+itself, threading the deterministic ``invocation_id`` as an additive field, so
+commit recognises them as this invocation's own rows (``r["invocation_id"] ==
+invocation_id`` → skipped). This is exactly what the transition table's
+``Transition.emits`` was authored to reference ("the reference for advance's
+dual-emission") and what the events-registry records as the advance-authored
+``invocation_id`` field on the legacy-vocabulary rows. The B1 cores remain the
+authority for the ROUTING rules (``review_verdict._route_target`` /
+``implement_transition._resolve_route`` are imported, not re-derived) and for the
+non-advance typed-subcommand emission path.
+
+Dual-emission:
+  * PRIMARY — the exact legacy event vocabulary (``plan_approved`` /
+    ``phase_transition`` / ``review_verdict`` / ``spec_approved`` /
+    ``drift_protocol_breach`` / ``feature_paused`` / ``lifecycle_cancelled`` /
+    ``batch_dispatch``), canonically serialized (``json.dumps(row)+"\\n"``, default
+    spacing) so legacy readers (``common.detect_lifecycle_phase`` /
+    ``reduce_lifecycle_state``) parse them unchanged; each carries the additive,
+    optional ``invocation_id`` so an advance-authored row is distinguishable from an
+    independent legacy emission during the dual-emission window.
+  * ADDITIVE MACHINE ROWS — the ``advance_started`` / ``advance_committed`` pair the
+    claim/commit primitive appends, both carrying the same ``invocation_id``.
+
+Per-side-effect existence probes make the whole verb idempotent: a crash between
+claim and side effects, or between two side effects, is repaired by re-invoking the
+SAME logical advance (same business tuple → same ``invocation_id`` via
+``derive_invocation_id``); claim resumes the orphaned ``advance_started`` and each
+legacy emission is skipped when already present (parsed-field match, never a
+substring).
+
+Refusals name BOTH the missing evidence AND the sanctioned override: the documented
+out-of-band hand-append is ``cortex-lifecycle-event log`` (operator req 7). advance
+refuses on an in-flight claim, a from-state gate mismatch, a commit-time interleave,
+or an event-backed pause it may not cross.
+
+Pause enforcement is SCOPED (R12 / hazard 10 / adversarial finding 10): advance
+refuses to cross an EVENT-BACKED pause — an active ``feature_paused`` whose kind is
+enforcement-bearing (``relayed-consent`` / ``phase-exit-wait``) and which this
+invocation did not itself author — but NEVER refuses on a judgment/config-conditional
+pause KIND (``config-conditional`` / ``question``); those are describe-only metadata
+the wheel surfaces through ``next``/``describe``, never a runtime refusal.
+
+House verb style: never-crash exit-0 ``{"state": ...}`` envelopes; ``_reject_unsafe_slug``
+first (a feature slug composes into a filesystem path — the real injection surface);
+``KNOWN_STATES`` is a closed tuple.
+
+Extension seams (Tasks 14a / 14b bolt onto THIS file, serialized after this core):
+  * :func:`_consent_cross_check` — Task 14b's pre-side-effect gh PR-state cross-check
+    and quoted-utterance payloads. Runs OUTSIDE the flock (network never under lock).
+    Core body returns ``None`` (no objection, no network).
+  * :func:`_project_status` — Task 14a's post-commit monotonic status projection
+    (cortex-backlog backend only, ADR-0016) with the archive-shadow guard. Core body
+    is a no-op.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+from typing import List, Optional
+
+from cortex_command.backlog import _telemetry
+from cortex_command.common import (
+    _resolve_user_project_root_from_cwd,
+    detect_lifecycle_phase,
+    reduce_lifecycle_state,
+)
+from cortex_command.lifecycle import review_verdict as rv
+from cortex_command.lifecycle import implement_transition as it
+from cortex_command.lifecycle import transition_table as tt
+from cortex_command.lifecycle.log_resolver import resolve_events_log
+from cortex_command.lifecycle.protocol import PROTOCOL_VERSION
+from cortex_command.lifecycle_event import (
+    claim_transition,
+    commit_transition,
+    derive_invocation_id,
+    log_event_at,
+)
+
+_VERBS = ("plan-decision", "review-verdict", "spec-approve", "implement-transition")
+
+# The four B1 decision cores this verb composes, by the owning_verb key their
+# transition-table rows carry (transition_table.Transition.owning_verb).
+_VERB_TO_OWNING = {
+    "plan-decision": "plan_decision",
+    "review-verdict": "review_verdict",
+    "spec-approve": "spec_approve",
+    "implement-transition": "implement_transition",
+}
+
+# Pause kinds advance structurally enforces (event-backed): an active feature_paused
+# of one of these kinds blocks a crossing advance. The judgment/config-conditional
+# kinds (``config-conditional`` / ``question``) are describe-only metadata and are
+# deliberately absent — advance never refuses on them (R12 / hazard 10).
+_ENFORCED_PAUSE_KINDS: frozenset[str] = frozenset({"relayed-consent", "phase-exit-wait"})
+
+# The documented out-of-band hand-append every refusal points the operator at.
+_SANCTIONED_OVERRIDE = (
+    "cortex-lifecycle-event log --event <name> --feature <slug> [--set k=v ...] "
+    "(the sanctioned out-of-band hand-append; see bin/.events-registry.md)"
+)
+
+# Closed set of ``state`` values advance can emit (house style): the union of the
+# four B1 cores' decision states (drift-proof — re-derived from the real modules)
+# plus advance's own refusal state. ``error`` rides in from the B1 tuples.
+from cortex_command.lifecycle import plan_decision as _pd  # noqa: E402
+from cortex_command.lifecycle import spec_approve as _sa  # noqa: E402
+
+KNOWN_STATES = tuple(
+    sorted(
+        set(_pd.KNOWN_STATES)
+        | set(rv.KNOWN_STATES)
+        | set(_sa.KNOWN_STATES)
+        | set(it.KNOWN_STATES)
+        | {"refused"}
+    )
+)
+
+
+def _reject_unsafe_slug(feature: str) -> Optional[dict]:
+    """Return an error envelope when *feature* is empty or carries a path
+    separator / ``..`` — a path-traversal guard applied BEFORE any filesystem
+    access. Returns None when the slug is safe to use as a directory component.
+    """
+    if not feature or "/" in feature or "\\" in feature or ".." in feature:
+        return {
+            "state": "error",
+            "message": f"unsafe feature slug {feature!r}: no path separators or '..'",
+        }
+    return None
+
+
+def _read_rows(log_path: Path) -> List[dict]:
+    """Read *log_path* into an ordered list of parsed dict rows (tolerant).
+
+    A missing file yields ``[]``; a torn line or non-dict JSON value is skipped,
+    never raised — the same discipline the reducer and the primitive use.
+    """
+    try:
+        text = log_path.read_text(encoding="utf-8", errors="replace")
+    except (FileNotFoundError, IsADirectoryError, NotADirectoryError, OSError):
+        return []
+    rows: List[dict] = []
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        try:
+            obj = json.loads(line)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        if isinstance(obj, dict):
+            rows.append(obj)
+    return rows
+
+
+def _row_present(rows: List[dict], event: str, match_fields: dict) -> bool:
+    """True when *rows* already carries a parsed ``event``-field match (plus every
+    ``match_fields`` key/value) — never a substring. Mirrors the B1 cores'
+    ``_event_exists`` so an advance-authored row idempotently suppresses a duplicate
+    against either its own retry OR an independent legacy emission of the same row.
+    """
+    for r in rows:
+        if r.get("event") != event:
+            continue
+        if match_fields and any(r.get(k) != v for k, v in match_fields.items()):
+            continue
+        return True
+    return False
+
+
+def _last_significant(rows: List[dict]) -> Optional[dict]:
+    """Return the last state-significant row (the same four event kinds
+    ``common._detect_lifecycle_phase_inner`` tracks for its ``paused`` bool), or
+    None. A feature is actively paused iff this row's event is ``feature_paused``.
+    """
+    significant = ("phase_transition", "feature_complete", "feature_wontfix", "feature_paused")
+    last: Optional[dict] = None
+    for r in rows:
+        if r.get("event") in significant:
+            last = r
+    return last
+
+
+def _pause_refusal(rows: List[dict], invocation_id: str) -> Optional[dict]:
+    """Return a refusal envelope when an EVENT-BACKED pause blocks a crossing advance.
+
+    Refuses iff the last state-significant row is an active ``feature_paused`` whose
+    kind is enforcement-bearing (:data:`_ENFORCED_PAUSE_KINDS`) AND which this
+    invocation did not itself author (``invocation_id`` differs / is absent). A
+    kind-absent legacy row fails closed to the most-restrictive kind, matching the
+    reducer (``common.MOST_RESTRICTIVE_PAUSE_KIND``), so an under-specified pause is
+    still enforced. Returns None for a describe-only kind (``config-conditional`` /
+    ``question``) — those never refuse (R12 / hazard 10) — and None when this
+    invocation authored the active pause (its own wait-approved retry).
+    """
+    last = _last_significant(rows)
+    if last is None or last.get("event") != "feature_paused":
+        return None
+    if last.get("invocation_id") == invocation_id:
+        return None  # this invocation's own pause (e.g. a wait-approved retry)
+    kind = last.get("kind")
+    if not (isinstance(kind, str) and kind in tt.PAUSE_KINDS):
+        kind = "relayed-consent"  # fail closed, mirroring the reducer default
+    if kind not in _ENFORCED_PAUSE_KINDS:
+        return None  # judgment/config-conditional pause — describe-only, never refuse
+    slug = last.get("slug", "<unslugged>")
+    return {
+        "state": "refused",
+        "reason": (
+            f"event-backed pause blocks advance: an active feature_paused "
+            f"(slug={slug!r}, kind={kind!r}) is unresolved"
+        ),
+        "missing_evidence": (
+            f"a resume/override clearing the active {kind!r} pause (slug={slug!r})"
+        ),
+        "sanctioned_override": _SANCTIONED_OVERRIDE,
+        "pause": {"slug": slug, "kind": kind},
+    }
+
+
+# ---------------------------------------------------------------------------
+# Emission plans — the fixed-source-order legacy vocabulary per composed arm
+# ---------------------------------------------------------------------------
+#
+# Each plan is (transition_row, [emission, ...]) where an emission is
+# {"event", "fields": [(key, value), ...], "match": {discriminating fields}}. The
+# ``fields`` order and the ``match`` discriminants mirror the owning B1 core body
+# exactly (plan_decision / review_verdict / spec_approve / implement_transition);
+# advance appends the additive ``invocation_id`` after ``fields`` at emit time.
+
+
+class _PlanError(Exception):
+    """A malformed decision (bad arg / unknown arm) → an ``error`` envelope."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.message = message
+
+
+def _emission_plan(
+    *,
+    verb: str,
+    log_path: Path,
+    decision: Optional[str],
+    dispatch_choice: Optional[str],
+    verdict: Optional[str],
+    cycle: int,
+    drift: Optional[str],
+    breach: bool,
+    retries: int,
+    emit_transition: bool,
+    batch: Optional[int],
+    tasks: Optional[list],
+    mode: Optional[str],
+) -> tuple[tt.Transition, str, list[dict]]:
+    """Resolve the composed arm to its table row, decision-state, and ordered
+    legacy emissions. Reuses the B1 cores' pure routing helpers (never re-derived).
+    Raises :class:`_PlanError` on a malformed decision.
+    """
+    owning = _VERB_TO_OWNING[verb]
+
+    if verb == "plan-decision":
+        if decision not in ("branch-mode-approved", "wait-approved", "cancelled", "revise"):
+            raise _PlanError(f"plan-decision requires a valid --decision, got {decision!r}")
+        decision_state = decision
+        if decision == "branch-mode-approved":
+            if dispatch_choice not in _pd._VALID_MODES:
+                raise _PlanError(
+                    f"branch-mode-approved requires --dispatch-choice ∈ {_pd._VALID_MODES}, "
+                    f"got {dispatch_choice!r}"
+                )
+            emissions = [
+                {"event": "plan_approved", "fields": [("dispatch_choice", dispatch_choice)], "match": {}},
+                {"event": "phase_transition", "fields": [("from", "plan"), ("to", "implement")],
+                 "match": {"from": "plan", "to": "implement"}},
+            ]
+        elif decision == "wait-approved":
+            emissions = [
+                {"event": "plan_approved", "fields": [("dispatch_choice", "wait")], "match": {}},
+                {"event": "feature_paused",
+                 "fields": [("slug", "plan-approval"), ("kind", "relayed-consent")], "match": {}},
+            ]
+        elif decision == "cancelled":
+            emissions = [{"event": "lifecycle_cancelled", "fields": [], "match": {}}]
+        else:  # revise — short-circuit, no emissions
+            emissions = []
+
+    elif verb == "review-verdict":
+        if verdict not in rv._VERDICTS:
+            raise _PlanError(f"review-verdict requires --verdict ∈ {rv._VERDICTS}, got {verdict!r}")
+        if drift not in rv._DRIFT_VALUES:
+            raise _PlanError(f"review-verdict requires --drift ∈ {rv._DRIFT_VALUES}, got {drift!r}")
+        target = rv._route_target(verdict, cycle)  # reuse the B1 routing rule
+        decision_state = rv._TARGET_TO_STATE[target]
+        emissions = [
+            {"event": "review_verdict",
+             "fields": [("verdict", verdict), ("cycle", cycle), ("requirements_drift", drift)],
+             "match": {"cycle": cycle}},
+        ]
+        if breach:
+            emissions.append({
+                "event": "drift_protocol_breach",
+                "fields": [("state", rv._BREACH_STATE), ("suggestion", rv._BREACH_SUGGESTION),
+                           ("retries", retries), ("cycle", cycle)],
+                "match": {"cycle": cycle},
+            })
+        emissions.append({
+            "event": "phase_transition", "fields": [("from", "review"), ("to", target)],
+            "match": {"from": "review", "to": target},
+        })
+
+    elif verb == "spec-approve":
+        if decision not in ("approved", "cancelled", "revise"):
+            raise _PlanError(f"spec-approve requires a valid --decision, got {decision!r}")
+        decision_state = decision
+        if decision == "approved":
+            emissions = [
+                {"event": "spec_approved", "fields": [("decision", "approved")], "match": {}},
+            ]
+            if emit_transition:
+                emissions.append({
+                    "event": "phase_transition", "fields": [("from", "specify"), ("to", "plan")],
+                    "match": {"from": "specify", "to": "plan"},
+                })
+            # NOTE: the backend-gated status:refined write-back is Task 14a's
+            # monotonic status projection (see _project_status), not the core body.
+        elif decision == "cancelled":
+            emissions = [{"event": "lifecycle_cancelled", "fields": [], "match": {}}]
+        else:  # revise
+            emissions = []
+
+    else:  # implement-transition
+        resolved_mode = mode or ("batch" if batch is not None else "transition")
+        if resolved_mode == "batch":
+            if batch is None or tasks is None:
+                raise _PlanError("implement-transition batch mode requires --batch and --tasks")
+            decision_state = "dispatched"
+            emissions = [
+                {"event": "batch_dispatch", "fields": [("batch", batch), ("tasks", tasks)],
+                 "match": {"batch": batch}},
+            ]
+        else:  # transition — reuse the B1 §4 routing rule
+            route, tier = it._resolve_route(log_path)
+            decision_state = route
+            emissions = [
+                {"event": "phase_transition",
+                 "fields": [("from", "implement"), ("to", route), ("tier", tier)],
+                 "match": {"from": "implement", "to": route}},
+            ]
+
+    transition = tt.transition_by_arm(owning, decision_state)
+    if transition is None:  # pragma: no cover — completeness test pins arm coverage
+        raise _PlanError(
+            f"no transition-table row for arm ({owning!r}, {decision_state!r})"
+        )
+    return transition, decision_state, emissions
+
+
+# ---------------------------------------------------------------------------
+# Extension seams (Tasks 14a / 14b) — no-ops in this core body
+# ---------------------------------------------------------------------------
+
+
+def _consent_cross_check(
+    *, verb: str, transition: tt.Transition, feature: str, log_path: Path, rows: List[dict]
+) -> Optional[dict]:
+    """Seam for Task 14b: merge-consent gh PR-state cross-check + quoted-utterance
+    payloads. Runs BETWEEN claim and side effects, OUTSIDE the flock (network never
+    under lock — the claim/commit split exists for this). Return a refusal envelope
+    to abort (the claim's ``advance_started`` is then a recoverable orphan). Core
+    body performs no network and never objects.
+    """
+    return None
+
+
+def _project_status(
+    *, feature: str, transition: tt.Transition, log_path: Path, rows: List[dict],
+    project_root: Optional[Path],
+) -> None:
+    """Seam for Task 14a: post-commit monotonic status projection (cortex-backlog
+    backend only, ADR-0016) with the archive-shadow guard. Core body is a no-op.
+    """
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Core executor
+# ---------------------------------------------------------------------------
+
+
+def advance(
+    *,
+    verb: str,
+    feature: str,
+    from_state: Optional[str] = None,
+    log_path: Optional[Path] = None,
+    discriminator: str = "",
+    decision: Optional[str] = None,
+    dispatch_choice: Optional[str] = None,
+    verdict: Optional[str] = None,
+    cycle: int = 1,
+    drift: Optional[str] = None,
+    breach: bool = False,
+    retries: int = 2,
+    emit_transition: bool = False,
+    batch: Optional[int] = None,
+    tasks: Optional[list] = None,
+    mode: Optional[str] = None,
+    project_root: Optional[Path] = None,
+) -> dict:
+    """Execute one composed transition under the claim/commit locking primitive.
+
+    Flow: resolve the arm → derive the deterministic ``invocation_id`` from the
+    (feature, from_state, to_state) business tuple → pause-scoping pre-check →
+    ``claim_transition`` (gate + ``advance_started``) → consent cross-check seam →
+    emit the ordered legacy vocabulary (idempotent, ``invocation_id``-tagged, OUTSIDE
+    the flock) → ``commit_transition`` (re-validate + ``advance_committed``) → status
+    projection seam. Returns a ``{state, ...}`` envelope; never raises for a handled
+    outcome (house style).
+
+    ``from_state`` honours the ``next`` envelope's ``advance_contract.expected_from_state``
+    when supplied; omitted, it defaults to the composed arm's table ``from_state``.
+    ``log_path`` honours ``advance_contract.log_path``; omitted, it is the pinned
+    machine-verb resolver ``resolve_events_log(feature)`` (or, with *project_root*, the
+    same-tree log for tests).
+    """
+    guard = _reject_unsafe_slug(feature)
+    if guard is not None:
+        return guard
+
+    if verb not in _VERBS:
+        return {"state": "error", "message": f"unknown verb {verb!r}, expected {_VERBS}"}
+
+    # Resolve the events.log: the caller's advance_contract path wins; else the
+    # pinned machine-verb resolver (worktree-aware, main-root-anchored, R4). A
+    # project_root is the test/finalize affordance (log_event uses CWD resolution,
+    # so tests hand advance the same-tree path explicitly).
+    if log_path is not None:
+        resolved_log = Path(log_path)
+    elif project_root is not None:
+        resolved_log = Path(project_root) / "cortex" / "lifecycle" / feature / "events.log"
+    else:
+        resolved_log = resolve_events_log(feature)
+
+    try:
+        transition, decision_state, emissions = _emission_plan(
+            verb=verb, log_path=resolved_log, decision=decision,
+            dispatch_choice=dispatch_choice, verdict=verdict, cycle=cycle, drift=drift,
+            breach=breach, retries=retries, emit_transition=emit_transition,
+            batch=batch, tasks=tasks, mode=mode,
+        )
+    except _PlanError as exc:
+        return {"state": "error", "message": exc.message}
+
+    # No-op arms (revise) short-circuit before the primitive — nothing to claim.
+    if not emissions:
+        return {
+            "state": decision_state, "feature": feature, "verb": verb,
+            "from_state": transition.from_state, "to_state": transition.to_state,
+            "invocation_id": None, "advanced": False, "emitted": [],
+        }
+
+    effective_from = from_state if from_state is not None else transition.from_state
+    to_state = transition.to_state
+    # The business tuple is the STABLE identity (table endpoints), so a crash-recovery
+    # retry re-derives the same id and resumes its orphaned claim (never the volatile
+    # detected phase, which shifts once the transition lands).
+    invocation_id = derive_invocation_id(feature, effective_from, to_state, discriminator)
+
+    rows = _read_rows(resolved_log)
+
+    # Idempotent replay of a COMPLETED advance: if this invocation already committed,
+    # short-circuit before claiming. Without this, a re-invocation after the pair
+    # resolved would fresh-claim (the primitive treats a committed pair as not open)
+    # and append a DUPLICATE advance_started — and, once the phase legitimately moved,
+    # would gate-mismatch instead of reporting the benign already-done outcome.
+    if _row_present(rows, "advance_committed", {"invocation_id": invocation_id}):
+        return {
+            "state": decision_state, "feature": feature, "verb": verb,
+            "from_state": effective_from, "to_state": to_state,
+            "invocation_id": invocation_id, "commit_status": "already-committed",
+            "advanced": True, "emitted": [],
+        }
+
+    # Pause-scoping pre-check (R12 / hazard 10): refuse to cross an event-backed pause.
+    pause = _pause_refusal(rows, invocation_id)
+    if pause is not None:
+        pause.update({"feature": feature, "verb": verb, "from_state": effective_from,
+                      "to_state": to_state, "invocation_id": invocation_id})
+        return pause
+
+    # CLAIM — gate the from-state and stake the advance_started row (invocation_id).
+    claim = claim_transition(
+        feature, effective_from, to_state, invocation_id,
+        log_path=resolved_log, extra_fields={"verb": verb},
+    )
+    if not claim.ok:
+        return {
+            "state": "refused", "feature": feature, "verb": verb,
+            "from_state": effective_from, "to_state": to_state,
+            "invocation_id": invocation_id, "claim_status": claim.status,
+            "reason": claim.reason,
+            "missing_evidence": (
+                f"the feature at from_state {effective_from!r} "
+                f"(claim {claim.status!r})"
+            ),
+            "sanctioned_override": _SANCTIONED_OVERRIDE,
+            "conflicting_row": claim.conflicting_row,
+        }
+
+    # Consent cross-check seam (Task 14b) — OUTSIDE the flock, before side effects.
+    objection = _consent_cross_check(
+        verb=verb, transition=transition, feature=feature, log_path=resolved_log, rows=rows,
+    )
+    if objection is not None:
+        objection.setdefault("state", "refused")
+        objection.setdefault("sanctioned_override", _SANCTIONED_OVERRIDE)
+        objection.update({"feature": feature, "verb": verb, "from_state": effective_from,
+                          "to_state": to_state, "invocation_id": invocation_id})
+        return objection
+
+    # SIDE EFFECTS — emit the ordered legacy vocabulary (dual-emission PRIMARY),
+    # each idempotent via a parsed-field existence probe and tagged with the
+    # invocation_id so commit's re-reduce recognises them as this claim's own rows.
+    emitted: List[str] = []
+    for spec in emissions:
+        if _row_present(rows, spec["event"], spec["match"]):
+            continue
+        row_dict: dict = {"event": spec["event"], "feature": feature}
+        for key, value in spec["fields"]:
+            row_dict[key] = value
+        row_dict["invocation_id"] = invocation_id
+        log_event_at(resolved_log, row_dict)
+        emitted.append(spec["event"])
+        rows.append({**row_dict})  # so a later probe in this run sees it
+
+    # COMMIT — re-validate under lock and stake the advance_committed row.
+    commit = commit_transition(
+        feature, effective_from, to_state, invocation_id,
+        log_path=resolved_log, extra_fields={"verb": verb},
+    )
+    if not commit.ok:
+        return {
+            "state": "refused", "feature": feature, "verb": verb,
+            "from_state": effective_from, "to_state": to_state,
+            "invocation_id": invocation_id, "commit_status": commit.status,
+            "reason": commit.reason,
+            "missing_evidence": (
+                "an uninterleaved log since the claim "
+                f"(commit {commit.status!r})"
+            ),
+            "sanctioned_override": _SANCTIONED_OVERRIDE,
+            "interleaved_row": commit.interleaved_row,
+            "emitted": emitted,
+        }
+
+    # Status projection seam (Task 14a) — post-commit, no-op in the core body.
+    _project_status(feature=feature, transition=transition, log_path=resolved_log,
+                    rows=rows, project_root=project_root)
+
+    return {
+        "state": decision_state, "feature": feature, "verb": verb,
+        "from_state": effective_from, "to_state": to_state,
+        "invocation_id": invocation_id, "claim_status": claim.status,
+        "commit_status": commit.status, "advanced": True, "emitted": emitted,
+    }
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="cortex-lifecycle-advance",
+        description=(
+            "Execute one composed lifecycle transition (the write side of the served "
+            "loop) under the claim/commit locking primitive, dual-emitting the legacy "
+            "vocabulary plus the advance_started/advance_committed machine rows. "
+            "Always exit 0 with a {state, ...} JSON envelope."
+        ),
+    )
+    sub = parser.add_subparsers(dest="verb", required=True)
+
+    def _common(p: argparse.ArgumentParser) -> None:
+        p.add_argument("--feature", required=True, metavar="SLUG", help="Lifecycle feature slug.")
+        p.add_argument(
+            "--from-state", default=None, metavar="STATE",
+            help="Expected from_state (the next envelope's advance_contract.expected_from_state); "
+                 "defaults to the arm's table from_state.",
+        )
+        p.add_argument(
+            "--log-path", default=None, metavar="PATH",
+            help="Explicit events.log (advance_contract.log_path); defaults to the pinned resolver.",
+        )
+        p.add_argument(
+            "--discriminator", default="", metavar="TOKEN",
+            help="Optional per-invocation discriminator for the invocation_id (concurrent "
+                 "independent advances of the same edge).",
+        )
+
+    p_plan = sub.add_parser("plan-decision", help="Compose the plan-approval decision.")
+    _common(p_plan)
+    p_plan.add_argument("--decision", required=True,
+                        choices=["branch-mode-approved", "wait-approved", "cancelled", "revise"])
+    p_plan.add_argument("--dispatch-choice", choices=list(_pd._VALID_MODES), default=None)
+
+    p_review = sub.add_parser("review-verdict", help="Compose the review-verdict tail.")
+    _common(p_review)
+    p_review.add_argument("--verdict", required=True, choices=list(rv._VERDICTS))
+    p_review.add_argument("--cycle", required=True, type=int, metavar="N")
+    p_review.add_argument("--drift", required=True, choices=list(rv._DRIFT_VALUES))
+    p_review.add_argument("--breach", action="store_true")
+    p_review.add_argument("--retries", type=int, default=2, metavar="N")
+
+    p_spec = sub.add_parser("spec-approve", help="Compose the spec-approval decision.")
+    _common(p_spec)
+    p_spec.add_argument("--decision", required=True, choices=["approved", "cancelled", "revise"])
+    grp = p_spec.add_mutually_exclusive_group()
+    grp.add_argument("--emit-transition", dest="emit_transition", action="store_true")
+    grp.add_argument("--no-emit-transition", dest="emit_transition", action="store_false")
+    p_spec.set_defaults(emit_transition=False)
+
+    p_impl = sub.add_parser("implement-transition", help="Compose an implement-cluster emission.")
+    _common(p_impl)
+    p_impl.add_argument("--mode", choices=list(it._MODES), default=None)
+    p_impl.add_argument("--batch", type=int, default=None, metavar="N")
+    p_impl.add_argument("--tasks", type=_json_arg, default=None, metavar="JSON")
+
+    return parser
+
+
+def _json_arg(value: str) -> object:
+    """argparse ``type=`` for the JSON-typed ``--tasks`` field."""
+    try:
+        return json.loads(value)
+    except json.JSONDecodeError as exc:
+        raise argparse.ArgumentTypeError(f"invalid JSON value {value!r}: {exc}")
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    _telemetry.log_invocation("cortex-lifecycle-advance")
+    args = _build_parser().parse_args(argv)
+    kwargs: dict = {
+        "verb": args.verb,
+        "feature": args.feature,
+        "from_state": args.from_state,
+        "log_path": Path(args.log_path) if args.log_path else None,
+        "discriminator": args.discriminator,
+    }
+    if args.verb == "plan-decision":
+        kwargs.update(decision=args.decision, dispatch_choice=args.dispatch_choice)
+    elif args.verb == "review-verdict":
+        kwargs.update(verdict=args.verdict, cycle=args.cycle, drift=args.drift,
+                      breach=args.breach, retries=args.retries)
+    elif args.verb == "spec-approve":
+        kwargs.update(decision=args.decision, emit_transition=args.emit_transition)
+    elif args.verb == "implement-transition":
+        kwargs.update(mode=args.mode, batch=args.batch, tasks=args.tasks)
+
+    try:
+        result = advance(**kwargs)
+    except Exception as exc:  # noqa: BLE001 — always emit a JSON struct, never a traceback
+        result = {"state": "error", "message": repr(exc)}
+    result["protocol"] = PROTOCOL_VERSION
+    sys.stdout.write(json.dumps(result, separators=(",", ":")) + "\n")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
