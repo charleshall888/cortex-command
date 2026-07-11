@@ -23,4 +23,5 @@ Research is **always parallel** at every criticality, sized by the tier × criti
 
 Run `cortex-lifecycle-state --feature {feature}` (whole-state JSON) or with `--field <x>` (single-field JSON) for tier or criticality. It reduces the event log to current values, defaulting to `criticality=medium` / `tier=simple` when the key is absent or events.log is missing — the CLI prints `{}` or omits absent keys, so apply these defaults yourself.
 
+- **Implement→{review|complete} routing**: owned by `cortex-lifecycle-implement-transition` (the implement-cluster verb reads tier/criticality through this reducer and applies the "Review when criticality ∈ {high, critical} OR tier = complex, else Complete" rule in its body) — not restated in prose here, to avoid a prose/code drift pair. implement.md §4 hands off to the verb and routes on its returned `state`.
 - **`"corrupted": true`**: events.log is corrupted and tier/criticality are unknowable — treat the feature as requiring review (run the critical-review / orchestrator-review gate) rather than the skip rule and defaulting.

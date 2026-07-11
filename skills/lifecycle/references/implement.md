@@ -49,11 +49,13 @@ Per batch, in order:
 model=$(cortex-resolve-model --role builder --criticality "$(cortex-lifecycle-state --feature {feature} --field criticality)")
 ```
 
-Pass `$model` to each builder. On nonzero exit, halt and escalate rather than guessing. Then log the dispatch:
+Pass `$model` to each builder. On nonzero exit, halt and escalate rather than guessing. Then record the dispatch via the implement-cluster verb (it owns the `batch_dispatch` emission, idempotent per batch number):
 
 ```bash
-cortex-lifecycle-event batch-dispatch --feature <name> --batch <N> --tasks '[<task IDs>]'
+cortex-lifecycle-implement-transition --mode batch --feature <name> --batch <N> --tasks '[<task IDs>]'
 ```
+
+**Command not found** (`cortex-lifecycle-implement-transition` not on `PATH`) → halt and instruct the operator to install/upgrade the cortex-command CLI, then re-invoke. Do NOT record the dispatch by hand. <!-- Halt-arm convention: this arm names ONLY the verb and the install remedy — never a raw event-emission surface, which would defeat the per-file zero-sweep (tests/test_lifecycle_event_roundtrip.py) that keeps this cluster's emissions inside the verb. -->
 
 **c. Wait** — all batch tasks finish before proceeding.
 
@@ -101,7 +103,7 @@ If this task references the specification, read cortex/lifecycle/{feature}/spec.
 
 ### 3. Rework (Review Re-Entry)
 
-Re-entering from Review with CHANGES_REQUESTED — log the rework start: `cortex-lifecycle-event phase-transition --feature <name> --from review --to implement-rework`
+Re-entering from Review with CHANGES_REQUESTED — the rework-re-entry transition was already recorded by the review-verdict verb when the review returned CHANGES_REQUESTED (it owns that emission), so this re-entry records nothing itself.
 
 1. Read `cortex/lifecycle/{feature}/review.md` for the reviewer's feedback.
 2. For each flagged task, dispatch a fresh sub-task with the original task text + the reviewer's specific feedback + a fix instruction.
@@ -110,19 +112,21 @@ Re-entering from Review with CHANGES_REQUESTED — log the rework start: `cortex
 
 ### 4. Transition
 
-When all tasks are `[x]`, the next phase follows both tier and criticality (rules: `${CLAUDE_SKILL_DIR}/references/criticality-matrix.md` §Reading lifecycle state):
+When all tasks are `[x]`, hand off to the implement-cluster verb in transition mode. It reads tier/criticality through the shared reducer, applies the implement→{review|complete} routing rule (owned there, not restated here — `${CLAUDE_SKILL_DIR}/references/criticality-matrix.md` §Reading lifecycle state), and records the `phase_transition` idempotently. Route on the returned `state`; do not re-derive it:
 
 ```bash
-cortex-lifecycle-state --feature {feature} --field criticality
+cortex-lifecycle-implement-transition --mode transition --feature {feature}
 ```
 
-Next phase is **Review** when `criticality ∈ {high, critical}` OR `tier = complex`, else **Complete**.
+Act on the returned `state`:
 
-```bash
-cortex-lifecycle-event phase-transition --feature <name> --from implement --to <review|complete> --tier <simple|complex>
-```
+- **`review`** — the implement→review transition is recorded; proceed to Review.
+- **`complete`** — the implement→complete transition is recorded; proceed to Complete.
+- **`error`** — surface the verb's `message` and halt without advancing.
 
-**Proceed automatically** — no confirmation. The transition fires on the gate (every task `[x]`, then the review rule), not user input. Announce briefly and continue. This boundary is not a kept pause; see SKILL.md §Phase Transition.
+**Command not found** (`cortex-lifecycle-implement-transition` not on `PATH`) → halt and instruct the operator to install/upgrade the cortex-command CLI, then re-invoke. Do NOT record the transition by hand. <!-- Halt-arm convention: this arm names ONLY the verb and the install remedy — never a raw event-emission surface (see the §2b note). -->
+
+**Proceed automatically** — no confirmation. The transition fires on the gate (every task `[x]`, then the verb's route), not user input. Announce briefly and continue. This boundary is not a kept pause; see SKILL.md §Phase Transition.
 
 ## Constraints
 

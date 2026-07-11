@@ -126,10 +126,6 @@ FILE_EVENTS: dict[str, dict[str, int]] = {
         "drift_protocol_breach": 1,
         "phase_transition": 3,
     },
-    "skills/lifecycle/references/implement.md": {
-        "batch_dispatch": 1,
-        "phase_transition": 2,
-    },
     "skills/lifecycle/references/worktree-entry.md": {
         "interactive_worktree_entered": 1,
     },
@@ -209,7 +205,10 @@ _RAW_EMISSION_RE = re.compile(
 # Skill files whose emission sequence now lives entirely inside a wrapper verb,
 # so their prose must carry ZERO raw-emission surfaces. Tasks 10-12 append their
 # cluster files here (review.md, implement.md, specify.md) as each lands.
-ZERO_SWEEP_FILES: tuple[str, ...] = ("skills/lifecycle/references/plan.md",)
+ZERO_SWEEP_FILES: tuple[str, ...] = (
+    "skills/lifecycle/references/plan.md",
+    "skills/lifecycle/references/implement.md",
+)
 
 
 def count_raw_emissions(text: str) -> int:
