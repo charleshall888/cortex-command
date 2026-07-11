@@ -95,3 +95,54 @@ def test_escalations_python_blocks_compile():
     # Sanity: synthetic_globals is referenced so that any future evolution of
     # this test toward exec-time validation has the dict ready.
     assert "escalations_path" in synthetic_globals
+
+
+def test_criticality_partition_uses_shared_reducer():
+    """Task 13: Step 3b.1 reads criticality via the in-process shared reducer.
+
+    The former inline ``_read_criticality`` block (which re-implemented the
+    events.log fold and buggily read ``.criticality`` off ``criticality_override``
+    events that carry only ``from``/``to``) is replaced by an in-process import of
+    ``cortex_command.common.reduce_lifecycle_state`` — the single reducer that
+    ``cortex-lifecycle-state`` wraps. This test pins the replacement so the inline
+    block cannot silently return and so the corrupted-read fallback contract
+    (single-agent, never defer, warn on ANY corrupted read) stays documented in
+    the prompt text.
+    """
+    out = _render()
+
+    # The inline re-implementation is gone entirely.
+    assert "_read_criticality" not in out, (
+        "the inline _read_criticality block must be fully removed from the prompt"
+    )
+
+    # The partition imports and calls the single shared reducer in-process.
+    assert "reduce_lifecycle_state" in out, (
+        "Step 3b.1 must import/call cortex_command.common.reduce_lifecycle_state"
+    )
+    assert "from cortex_command.common import reduce_lifecycle_state" in out, (
+        "the shared reducer must be imported in-process (not shelled to a subprocess)"
+    )
+
+    # The single-agent-not-defer rationale comment is present, anchored on the
+    # criticality-matrix.md:26 interactive rule and the never-defer constraint.
+    assert "criticality-matrix.md:26" in out, (
+        "the single-agent-not-defer rationale comment (citing criticality-matrix.md:26) "
+        "must be present in the criticality block"
+    )
+    assert "never defer" in out.lower(), (
+        "the never-defer fallback rationale must be documented in the prompt"
+    )
+
+    # A morning-report warning is emitted on ANY corrupted read (both the
+    # unknowable arm and the present-but-stale arm surface via log_event).
+    assert '"stage": "criticality_read"' in out, (
+        "a morning-report warning must be emitted (log_event with "
+        'stage="criticality_read") on any corrupted criticality read'
+    )
+    # Both corrupted arms are handled: the unknowable arm (defaults + warns) and
+    # the present-but-stale arm (uses the value AND still warns).
+    assert "may be stale" in out, (
+        "the present-but-corrupted arm must use the present value AND still warn "
+        "(the value may be stale)"
+    )

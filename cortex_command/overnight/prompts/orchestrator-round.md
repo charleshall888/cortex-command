@@ -229,40 +229,93 @@ from cortex_command.overnight.events import (
     PLAN_SYNTHESIS_DISPATCHED,
     PLAN_SYNTHESIS_DEFERRED,
     SYNTHESIZER_ERROR,
+    log_event,
 )
-import json
+from cortex_command.common import reduce_lifecycle_state
 
 # Repo-root cortex/lifecycle.config.md (fail-closed: missing file -> gate False).
 gate_enabled = read_synthesizer_gate(Path("cortex/lifecycle.config.md"))
 
-def _read_criticality(feature_slug: str) -> str:
-    """Most-recent ``lifecycle_start`` or ``criticality_override`` event wins.
+# Effective per-feature criticality via the SINGLE shared reducer
+# (cortex_command.common.reduce_lifecycle_state — the same fold that
+# `cortex-lifecycle-state` wraps). One reducer serves both interactive and
+# overnight modes, executed here as an in-process import (not a subprocess),
+# matching this prompt's in-wheel-import execution model. This replaces the
+# former inline block, which read `.criticality` off `criticality_override`
+# events — but overrides carry `from`/`to` only, so overnight had NEVER applied
+# them. Honoring them is a bidirectional routing change gated on
+# `synthesizer_overnight_enabled` (the switch this feature exists to let
+# operators flip): with the gate on, an upgrade override pulls a feature INTO
+# `critical_subset`, and a downgrade override (e.g. critical->medium) now
+# silently drops one OUT of the review-inclusive `critical_subset` into
+# single-agent.
+#
+# Fallback = single-agent, NEVER defer. criticality-matrix.md:26's "run the
+# critical-review / orchestrator-review gate" is the INTERACTIVE-context rule;
+# the overnight analog of "reviewed" is the morning-report surface (the warning
+# line emitted below), and "never defer" is the overriding constraint per the
+# failure-handling philosophy ("surface failures in the morning report; keep
+# working unless blocked"). Routing corrupted->critical_subset was rejected:
+# critical_subset features CAN be deferred (the synthesizer marks unselected
+# variants `deferred` -> write_deferral), which would reintroduce exactly the
+# deferral this fallback forbids. Because `.corrupted` is tier-OR-criticality
+# symmetric, a PRESENT criticality can still be stale (a torn/vocab-rejected
+# `criticality_override` is rejected per-value and never enters `state`, leaving
+# the pre-override value), so the warning fires on ANY corrupted read — not only
+# the unknowable arm.
+def _effective_criticality(feature_slug: str):
+    """Return ``(criticality, warning_or_None)`` via the shared reducer.
 
-    Default to ``"medium"`` when no criticality field is found, mirroring
-    ``skills/lifecycle/references/plan.md`` §1a precedent.
+    ``warning`` is a morning-report line for ANY corrupted read; ``None`` on a
+    clean read. Criticality is only consulted for the ``== "critical"``
+    partition below (tier is not consumed here — no verb-contract change).
     """
     events_path = Path(f"cortex/lifecycle/{feature_slug}/events.log")
-    if not events_path.exists():
-        return "medium"
-    last = "medium"
-    for line in events_path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            entry = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if entry.get("event") in ("lifecycle_start", "criticality_override"):
-            crit = entry.get("criticality")
-            if isinstance(crit, str):
-                last = crit
-    return last
+    try:
+        reduction = reduce_lifecycle_state(events_path)
+    except Exception as exc:
+        # Reducer raised -> criticality truly unknowable -> single-agent + warn.
+        return "medium", (
+            f"criticality read for '{feature_slug}' raised {exc!r}; "
+            "routed to single-agent (never defer)"
+        )
+    crit = reduction.state.get("criticality")
+    if reduction.corrupted and crit is None:
+        # Corrupted with no criticality -> truly unknowable -> single-agent + warn.
+        return "medium", (
+            f"criticality for '{feature_slug}' unknowable (corrupted events.log, "
+            "no criticality present); routed to single-agent (never defer)"
+        )
+    if reduction.corrupted:
+        # Corrupted BUT criticality present -> use the value AND still warn
+        # (present value may be stale — see the .corrupted symmetry note above).
+        return crit, (
+            f"criticality for '{feature_slug}' read from a corrupted events.log "
+            f"(used '{crit}', may be stale)"
+        )
+    # Clean read: default "medium" when the criticality axis is simply absent.
+    return (crit if crit is not None else "medium"), None
 
 critical_subset = []
 single_agent_subset = []
 for f in missing:
-    if gate_enabled and _read_criticality(f["slug"]) == "critical":
+    if not gate_enabled:
+        # Gate off (default, fail-closed) -> everything single-agent, unchanged.
+        single_agent_subset.append(f)
+        continue
+    crit, warning = _effective_criticality(f["slug"])
+    if warning is not None:
+        # Morning-report surface: emit to overnight-events.log so the report's
+        # post-session triage sees the corrupted criticality read (mirrors the
+        # SYNTHESIZER_ERROR triage signal emitted in the synthesizer branch below).
+        log_event(
+            SYNTHESIZER_ERROR,
+            round={round_number},
+            feature=f["slug"],
+            details={"warning": warning, "stage": "criticality_read"},
+            log_path=Path("{events_path}"),
+        )
+    if crit == "critical":
         critical_subset.append(f)
     else:
         single_agent_subset.append(f)
