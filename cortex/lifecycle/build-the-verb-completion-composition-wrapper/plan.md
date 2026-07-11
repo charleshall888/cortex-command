@@ -152,7 +152,7 @@ Move the four multi-emission decision clusters (plan approval, review verdict, s
 - **Complexity**: complex
 - **Context**: Current emissions: `review.md:80-82` (`review_verdict`), `:91` (`drift_protocol_breach`), `:99/100/101` (`phase_transition` complete/implement-rework/escalated). FILE_EVENTS review.md row (`:129-133`) is `{review_verdict:1, drift_protocol_breach:1, phase_transition:3}`. Registry: `review_verdict` (`:15`), `drift_protocol_breach` (`:116`, producer pin `review.md:166` is stale — actual emission is `review.md:91`), `phase_transition` (`:11`). Reuse the zero-sweep helper from Task 9. Serialized after Task 10 to avoid racing on the shared `test_lifecycle_event_roundtrip.py` and `bin/.events-registry.md` files.
 - **Verification**: (a) `just test` green with the review.md zero-sweep; `grep -cE 'cortex-lifecycle-event|cortex_command\.lifecycle_event|log_event\(' skills/lifecycle/references/review.md` = 0; (a) `bin/cortex-check-events-registry --audit` passes; `cortex-check-skill-path` passes.
-- **Status**: [ ] pending
+- **Status**: [x] done (c56b4694 — §4/§4a/§5 route on the verb, drift loop stays prose + verb called after with --breach/--retries; review_verdict→manual, drift_protocol_breach stale-pin-fixed→manual, phase_transition review-cell→verb (kept gate-enforced); 36 tests; audit exit 0)
 
 ### Task 12: Spec cluster — specify.md + refine SKILL.md §5 + refine-delegation.md rewrite + zero-sweep + registry re-point
 - **Files**: `skills/refine/references/specify.md`, `skills/refine/SKILL.md`, `skills/lifecycle/references/refine-delegation.md`, `tests/test_lifecycle_event_roundtrip.py`, `bin/.events-registry.md`
