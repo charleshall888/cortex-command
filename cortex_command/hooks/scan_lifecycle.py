@@ -170,10 +170,14 @@ def _is_terminal_mismatch(
     """Return True when the events-derived phase and backlog status disagree
     on whether the feature is terminally complete.
 
-    The two sources of truth — ``events.log`` (via ``detect_lifecycle_phase``)
-    and ``cortex/backlog/index.json``'s ``status:`` — should agree on
-    whether a feature is "done". A mismatch surfaces the cases that bit
-    us in the past:
+    The two sources of truth — ``events.log`` (via the events-first
+    ``resolve_lifecycle_phase`` shared resolver) and
+    ``cortex/backlog/index.json``'s ``status:`` — should agree on whether a
+    feature is "done". This detector is a **permanent** divergence tripwire, not
+    a migration-window scaffold: under events-authority (ADR-0025) it reports the
+    events-vs-backlog divergence forever, so a hand-edited artifact (which the
+    resolver now overrides in favor of events) still surfaces here. A mismatch
+    surfaces the cases that bit us in the past:
 
     - #075-shape: backlog ``status: complete`` but events.log still
       pointing at ``implement`` (someone closed the ticket without
@@ -789,8 +793,8 @@ def main(argv: list[str] | None = None) -> int:
     # inside ``main`` means ``cortex hooks scan-lifecycle --help`` and
     # the cwd-early-exit path do not pay the package-import cost.
     from cortex_command.common import (
-        detect_lifecycle_phase,
         is_phantom_lifecycle_dir,
+        resolve_lifecycle_phase,
     )
     from cortex_command.hooks._pipeline_state import PipelineState
     from cortex_command.hooks._session_state import (
@@ -845,7 +849,7 @@ def main(argv: list[str] | None = None) -> int:
             # (The helper writes unconditionally; bash's OR-resurrection
             # is the bug we're avoiding — see spec req #6 branch OR.)
             for feature_dir in written:
-                phase_info = detect_lifecycle_phase(feature_dir)
+                phase_info = resolve_lifecycle_phase(feature_dir)
                 phase_name = phase_info.get("phase")
                 if phase_name == "complete":
                     # The feature was complete and only had an orphan
@@ -940,7 +944,7 @@ def main(argv: list[str] | None = None) -> int:
     incomplete: list[tuple[str, str, bool, str | None]] = []
     for feature_dir, feature in zip(candidate_dirs, candidate_features):
         try:
-            r = detect_lifecycle_phase(feature_dir)
+            r = resolve_lifecycle_phase(feature_dir)
         except Exception:
             continue
         phase = str(r.get("phase", "") or "")

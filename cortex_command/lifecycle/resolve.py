@@ -34,10 +34,10 @@ from cortex_command.backlog.resolve_item import (
     resolve,
 )
 from cortex_command.common import (
-    detect_lifecycle_phase,
     lifecycle_staleness,
     read_criticality,
     read_tier,
+    resolve_lifecycle_phase,
 )
 from cortex_command.lifecycle.parse_args import parse
 from cortex_command.lifecycle.protocol import PROTOCOL_VERSION
@@ -204,7 +204,7 @@ def resolve_invocation(arguments: str, project_root: Optional[Path] = None) -> d
             "next": "New feature — start the /cortex-core:refine flow at research.",
         }
 
-    det = detect_lifecycle_phase(feature_dir)
+    det = resolve_lifecycle_phase(feature_dir)
     route = phase_override or det["route"]
     out = {
         "state": "resume",

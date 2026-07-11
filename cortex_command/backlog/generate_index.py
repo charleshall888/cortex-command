@@ -23,8 +23,8 @@ from cortex_command.common import (
     TERMINAL_STATUSES,
     _resolve_user_project_root,
     atomic_write,
-    detect_lifecycle_phase,
     normalize_status,
+    resolve_lifecycle_phase,
     slugify,
 )
 
@@ -174,7 +174,7 @@ def collect_items(
         # stable for downstream index.json readers (morning-review
         # report, dashboard merges, etc.).
         if lc_dir and lc_dir.is_dir():
-            detected_phase = detect_lifecycle_phase(lc_dir)["phase"]
+            detected_phase = resolve_lifecycle_phase(lc_dir)["phase"]
             lifecycle_phase: str | None = (
                 detected_phase.removesuffix("-paused")
                 if isinstance(detected_phase, str)

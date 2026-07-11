@@ -10,6 +10,9 @@ Constants:
 Functions:
     slugify          -- Convert a title to a kebab-case slug.
     detect_lifecycle_phase -- Determine current lifecycle phase from artifacts.
+    resolve_lifecycle_phase -- Events-first shared resolver (ADR-0025): events
+                        authoritative where machine rows exist, artifact
+                        derivation the legacy fallback.
     read_criticality -- Read the most recent criticality from events.log.
     read_tier        -- Read the most recent tier from events.log.
     requires_review  -- Gating matrix: does this tier+criticality need review?
@@ -439,6 +442,155 @@ def detect_lifecycle_phase(feature_dir: Path) -> dict[str, str | int]:
 # Expose the cached inner helper on the public API so callers (and tests)
 # can introspect via ``detect_lifecycle_phase.__wrapped__`` per spec R1.
 detect_lifecycle_phase.__wrapped__ = _detect_lifecycle_phase_inner  # type: ignore[attr-defined]
+
+
+# ---------------------------------------------------------------------------
+# resolve_lifecycle_phase — events-first shared resolver (ADR-0025)
+# ---------------------------------------------------------------------------
+#
+# The single place that decides "events-first, else artifacts" for a feature's
+# lifecycle phase (spec R15 / ADR-0025). events.log is the authoritative phase
+# source **wherever machine rows exist**; ``detect_lifecycle_phase``'s
+# artifact-presence derivation demotes to a LEGACY FALLBACK reached only when
+# the log carries no state-establishing machine row. Every read-path caller
+# (``lifecycle/resolve.py``, ``backlog/generate_index.py``, ``dashboard/data.py``,
+# ``hooks/scan_lifecycle.py``) funnels through here, and ``next`` reaches it via
+# ``resolve.resolve_invocation`` — so the read path has one oracle by
+# construction. The statusline (``claude/statusline.sh``) keeps its own bash-side
+# derivation as a permanent, parity-pinned exception and is NOT migrated here.
+
+# The machine-state-setting event vocabulary: the rows an in-repo transition
+# writer (``advance`` / the B1 verb bodies) appends to MOVE the lifecycle.
+# ``phase_transition`` carries ``from``/``to``; the three terminal events pin a
+# terminal state. ``spec_approved``/``plan_approved`` are deliberately NOT here:
+# a standalone (legacy) ``refine`` emits them WITHOUT the ``phase_transition``
+# edge (transition_table ``spec.approved`` note), so an approval-only log has no
+# machine row and correctly falls through to the artifact fallback.
+_TERMINAL_EVENT_TO_STATE: dict[str, str] = {
+    "feature_complete": "complete",
+    "feature_wontfix": "complete",
+    "lifecycle_cancelled": "cancelled",
+}
+
+# The state names a ``phase_transition`` ``to`` may name and that events-authority
+# may serve. Mirror of ``transition_table.STATE_NAMES``; kept literal here to
+# keep ``common`` dependency-light, and pinned equal to the table by the resolver
+# tests (drift tripwire). A ``to`` outside this set is ignored — a malformed row
+# never overrides the artifact fallback.
+_MACHINE_STATE_NAMES: frozenset[str] = frozenset({
+    "research",
+    "specify",
+    "plan",
+    "implement",
+    "implement-rework",
+    "review",
+    "complete",
+    "escalated",
+    "cancelled",
+})
+
+# The events-authoritative terminal states (no ``-paused`` suffix is ever applied
+# to these — a terminal feature is not "paused"). Superset of the artifact
+# reader's terminal set, adding the event-only ``cancelled``.
+_EVENTS_TERMINAL_STATES: frozenset[str] = frozenset({"complete", "escalated", "cancelled"})
+
+
+def _phase_from_machine_rows(feature_dir: Path) -> tuple[str | None, bool]:
+    """Derive the events-authoritative lifecycle state from machine rows.
+
+    Returns ``(machine_state, raw_paused)``.
+
+    ``machine_state`` is the state the events.log establishes — the ``to`` of
+    the line-position-last ``phase_transition`` row, superseded by any later
+    terminal event (``feature_complete``/``feature_wontfix`` → ``complete``;
+    ``lifecycle_cancelled`` → ``cancelled``) — or ``None`` when the log carries
+    no such machine row (the legacy-fallback signal). ``raw_paused`` is True iff
+    the line-position-last significant event is ``feature_paused`` (mirrors
+    ``_detect_lifecycle_phase_inner``'s pause tracking so the events-first path
+    annotates ``-paused`` identically).
+
+    Reads events.log with ``errors="replace"`` (spec R5) and never raises: a
+    missing/unreadable log or a torn line yields ``(None, False)``.
+    """
+    events_log = feature_dir / "events.log"
+    try:
+        content = events_log.read_text(errors="replace")
+    except (OSError, ValueError):
+        return None, False
+
+    machine_state: str | None = None
+    last_significant: str | None = None
+    for raw in content.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(event, dict):
+            continue
+        etype = event.get("event")
+        if etype == "phase_transition":
+            to = event.get("to")
+            if isinstance(to, str) and to in _MACHINE_STATE_NAMES:
+                machine_state = to
+        elif etype in _TERMINAL_EVENT_TO_STATE:
+            machine_state = _TERMINAL_EVENT_TO_STATE[etype]
+        if etype in (
+            "phase_transition",
+            "feature_complete",
+            "feature_wontfix",
+            "feature_paused",
+            "lifecycle_cancelled",
+        ):
+            last_significant = etype
+
+    return machine_state, last_significant == "feature_paused"
+
+
+def resolve_lifecycle_phase(feature_dir: Path) -> dict[str, str | int]:
+    """Events-first shared resolver for a feature's lifecycle phase (ADR-0025).
+
+    The one function that decides events-vs-artifacts (spec R15). events.log is
+    the authoritative phase source **wherever machine rows exist**: when the log
+    carries a ``phase_transition`` or a terminal event, the events-derived state
+    supersedes the artifact-derived route. Otherwise ``detect_lifecycle_phase``'s
+    artifact-presence derivation stands as the LEGACY FALLBACK.
+
+    Returns the same dict shape as :func:`detect_lifecycle_phase`
+    (``phase``/``route``/``paused``/``checked``/``total``/``cycle``) so every
+    caller's consumed fields are preserved. ``checked``/``total``/``cycle`` are
+    always taken from the artifact detector — plan progress and the review-cycle
+    count are read-side artifact facts, not events-derived *state* — while
+    ``phase``/``route``/``paused`` follow events when a machine row is present.
+
+    The divergence a hand-edited artifact would introduce (e.g. plan.md
+    checkboxes flipped without an ``advance`` on a machine-rows feature) resolves
+    in favor of events here; the permanent ``scan_lifecycle`` mismatch detector
+    (``_is_terminal_mismatch``) reports the events-vs-backlog divergence forever.
+
+    Args:
+        feature_dir: Path to the lifecycle feature directory
+                     (e.g. ``Path("cortex/lifecycle/my-feature")``).
+
+    Returns:
+        The resolved phase dict (see :func:`detect_lifecycle_phase`).
+    """
+    artifact = detect_lifecycle_phase(feature_dir)
+    machine_state, raw_paused = _phase_from_machine_rows(feature_dir)
+    if machine_state is None:
+        # Legacy fallback: no machine row, artifact derivation is authoritative.
+        return artifact
+    is_paused = raw_paused and machine_state not in _EVENTS_TERMINAL_STATES
+    return {
+        "phase": f"{machine_state}-paused" if is_paused else machine_state,
+        "route": machine_state,
+        "paused": is_paused,
+        "checked": artifact["checked"],
+        "total": artifact["total"],
+        "cycle": artifact["cycle"],
+    }
 
 
 # ---------------------------------------------------------------------------

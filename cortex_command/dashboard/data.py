@@ -36,7 +36,7 @@ from pathlib import Path
 
 import markdown
 
-from cortex_command.common import detect_lifecycle_phase, normalize_status, slugify
+from cortex_command.common import normalize_status, resolve_lifecycle_phase, slugify
 
 
 def parse_overnight_state(path: Path) -> dict | None:
@@ -292,24 +292,26 @@ def parse_feature_events(feature_slug: str, lifecycle_dir: Path) -> dict:
         Dict with keys:
 
         - ``current_phase`` (str | None): the ``phase`` field from the
-          canonical ``detect_lifecycle_phase`` detector, or None when the
-          feature events.log read fails.
+          events-first ``resolve_lifecycle_phase`` resolver (events
+          authoritative where machine rows exist, artifact derivation the
+          legacy fallback — ADR-0025), or None when the feature events.log
+          read fails.
         - ``phase_transitions`` (list[dict]): each entry has ``from``,
           ``to``, and ``ts`` keys.
         - ``rework_cycles`` (int): count of ``to in {"implement",
           "implement-rework"}`` transitions that follow a
           ``to == "review"`` transition.
         - ``checked`` (int): count of completed plan tasks from the
-          canonical detector (0 when plan.md is absent).
-        - ``total`` (int): count of total plan tasks from the canonical
-          detector (0 when plan.md is absent).
+          shared resolver (0 when plan.md is absent).
+        - ``total`` (int): count of total plan tasks from the shared
+          resolver (0 when plan.md is absent).
 
         On events.log read failure, returns ``current_phase=None``,
         ``phase_transitions=[]``, ``rework_cycles=0`` with ``checked``
-        and ``total`` still pulled from the canonical detector.
+        and ``total`` still pulled from the shared resolver.
     """
     feature_dir = lifecycle_dir / feature_slug
-    detector = detect_lifecycle_phase(feature_dir)
+    detector = resolve_lifecycle_phase(feature_dir)
     checked = detector["checked"]
     total = detector["total"]
 
