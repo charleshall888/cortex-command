@@ -74,6 +74,11 @@ VERBS: list[tuple[str, str, str]] = [
         "cortex_command.lifecycle.describe:main",
         "bin/cortex-lifecycle-describe",
     ),
+    (
+        "cortex-lifecycle-next",
+        "cortex_command.lifecycle.next_verb:main",
+        "bin/cortex-lifecycle-next",
+    ),
 ]
 
 
