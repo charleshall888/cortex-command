@@ -130,9 +130,10 @@ FILE_EVENTS: dict[str, dict[str, int]] = {
     "skills/lifecycle/references/critical-review-gate.md": {
         "lifecycle_critical_review_skipped": 1,
     },
-    "skills/lifecycle/references/refine-delegation.md": {
-        "phase_transition": 1,
-    },
+    # refine-delegation.md no longer emits a typed phase_transition: the served
+    # loop (Task 19, R17) derives the refine sub-phase boundaries and routes
+    # transitions through cortex-lifecycle-advance, so the file is now in
+    # ZERO_SWEEP_FILES below rather than carrying a typed-subcommand row here.
 }
 
 
@@ -201,6 +202,12 @@ ZERO_SWEEP_FILES: tuple[str, ...] = (
     "skills/lifecycle/references/implement.md",
     "skills/lifecycle/references/review.md",
     "skills/refine/references/specify.md",
+    # Task 19 (R17) routed the interactive loop via next/advance: refine-delegation
+    # dropped its clarify→research/research→specify phase_transition typed
+    # subcommand, and complete.md's cluster is fully verb-routed — both now carry
+    # zero raw event-emission surfaces.
+    "skills/lifecycle/references/refine-delegation.md",
+    "skills/lifecycle/references/complete.md",
 )
 
 
@@ -558,38 +565,21 @@ def test_found_match_is_anti_vacuous_on_wrong_count() -> None:
         cross_validate(plan, "plan_approved", 99)
 
 
-def test_refine_delegation_phase_transition_enumerates_only_two_boundaries() -> None:
-    """refine-delegation.md's phase-transition template lists ONLY the two
-    template-owned boundaries — the specify→plan boundary is verb-owned
-    (cortex-lifecycle-spec-approve --emit-transition under lifecycle-wrapped
-    refine). Leaving specify→plan in the template while the verb also emits it
-    double-emits the row under lifecycle-wrapped refine.
-
-    This is the boundary-blindness guard the FILE_EVENTS phase_transition:1 pin
-    cannot provide: that count matches the template LINE by literal occurrence
-    and cannot see which boundaries the line enumerates, so it would pass
-    identically whether specify→plan is dropped or left in.
+def test_refine_delegation_no_longer_emits_typed_phase_transition() -> None:
+    """R17: the served loop (Task 19) routed refine-delegation off the typed
+    phase-transition subcommand. The clarify→research/research→specify
+    breadcrumbs are now derived (served by cortex-lifecycle-next) and the
+    boundary-carrying specify→plan row stays verb-owned (spec-approve), so the
+    delegation prose carries no typed phase_transition invocation at all — the
+    grep(b) rewiring gate (`grep -rn 'cortex-lifecycle-event phase-transition'
+    skills/` == 0) at the file level.
     """
     path = REPO_ROOT / "skills/lifecycle/references/refine-delegation.md"
-    template_lines = [
-        ln
-        for ln in path.read_text(encoding="utf-8").splitlines()
-        if "cortex-lifecycle-event phase-transition" in ln
-    ]
-    assert len(template_lines) == 1, (
-        f"expected exactly 1 phase-transition template line, "
-        f"found {len(template_lines)}"
+    text = path.read_text(encoding="utf-8")
+    assert "cortex-lifecycle-event phase-transition" not in text, (
+        "refine-delegation.md must not invoke the typed phase-transition "
+        "subcommand after the served-loop rewiring (R17)"
     )
-    line = template_lines[0]
-    m = re.search(r"\(([^()]*→[^()]*)\)", line)
-    assert m, f"no boundary enumeration parenthetical found in: {line!r}"
-    boundaries = {b.strip() for b in m.group(1).split(",")}
-    assert boundaries == {"clarify→research", "research→specify"}, (
-        f"template boundary enumeration must be exactly "
-        f"{{clarify→research, research→specify}} (specify→plan is verb-owned); "
-        f"got {boundaries}"
-    )
-    assert "specify→plan" not in m.group(1)
 
 
 # ---------------------------------------------------------------------------

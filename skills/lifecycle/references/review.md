@@ -92,10 +92,10 @@ When `requirements_drift` is `"none"`, or the apply succeeded, carry no breach.
 
 ### 5. Transition
 
-Hand the verdict, its cycle, the drift observation, and any §4a breach to the review-verdict verb — it owns this arm's exact ordered emissions (the `review_verdict` record, the `drift_protocol_breach` row when `--breach`, then the routed `review→{complete|implement-rework|escalated}` transition) and their idempotent replay, so you route on the returned `state`, you do not re-derive it:
+Hand the verdict, its cycle, the drift observation, and any §4a breach to advance's review-verdict arm — it owns this arm's exact ordered emissions (the `review_verdict` record, the `drift_protocol_breach` row when `--breach`, then the routed `review→{complete|implement-rework|escalated}` transition) and their idempotent replay, so you route on the returned `state`, you do not re-derive it:
 
 ```bash
-cortex-lifecycle-review-verdict --feature <name> --verdict <APPROVED|CHANGES_REQUESTED|REJECTED> --cycle <N> --drift <none|detected> [--breach --retries <N>]
+cortex-lifecycle-advance review-verdict --feature <name> --verdict <APPROVED|CHANGES_REQUESTED|REJECTED> --cycle <N> --drift <none|detected> [--breach --retries <N>]
 ```
 
 Add `--breach --retries <N>` only when §4a's drift-apply exhausted its retries. Act on the returned `state`:
@@ -105,7 +105,7 @@ Add `--breach --retries <N>` only when §4a's drift-apply exhausted its retries.
 - **`escalated`** (cycle ≥2 or REJECTED) → present the findings and await direction; do not auto-advance.
 - **`error`** → surface the verb's `message` and halt without transitioning.
 
-**Command not found** (`cortex-lifecycle-review-verdict` not on `PATH`) → halt and instruct the operator to install/upgrade the cortex-command CLI, then re-invoke. Do NOT record the verdict or transition by hand. <!-- Halt-arm convention: this arm names ONLY the verb and the install remedy — never a raw event-emission surface, which would defeat the per-file zero-sweep (tests/test_lifecycle_event_roundtrip.py) that keeps this cluster's emissions inside the verb. -->
+**Command not found** (`cortex-lifecycle-advance` not on `PATH`) → halt and instruct the operator to install/upgrade the cortex-command CLI, then re-invoke. Do NOT record the verdict or transition by hand. <!-- Halt-arm convention: this arm names ONLY the verb and the install remedy — never a raw event-emission surface, which would defeat the per-file zero-sweep (tests/test_lifecycle_event_roundtrip.py) that keeps this cluster's emissions inside the verb. -->
 
 ## Constraints
 

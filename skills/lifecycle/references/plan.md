@@ -120,7 +120,7 @@ Off `main`/`master`, the sub-choices collapse to `trunk` (the current branch), s
 <!-- pause: plan-approval relayed-consent -->
 **Compose `AskUserQuestion` `options`** (≤4): the branch modes plus **"Approve plan but wait to implement"**. The platform's **"Other"** free-text escape (appended outside the 4-cap) carries Request-changes and Cancel.
 
-**Resolve the selection to a decision.** Map the operator's choice to the plan-decision verb's `--decision` discriminant, then hand it off — the verb owns the arm's exact ordered emissions (approval record, pause, plan→implement transition) and their idempotent replay, so you route on the returned `state`, you do not re-derive it:
+**Resolve the selection to a decision.** Map the operator's choice to the advance plan-decision arm's `--decision` discriminant, then hand it off — the arm owns the exact ordered emissions (approval record, pause, plan→implement transition) and their idempotent replay, so you route on the returned `state`, you do not re-derive it:
 
 | Operator selection | `--decision` | `--dispatch-choice` |
 | --- | --- | --- |
@@ -132,8 +132,10 @@ Off `main`/`master`, the sub-choices collapse to `trunk` (the current branch), s
 | **"Other"**, any other text | `revise` | (omit) |
 
 ```bash
-cortex-lifecycle-plan-decision --feature <name> --decision <decision> [--dispatch-choice <mode>]
+cortex-lifecycle-advance plan-decision --feature <name> --decision <decision> [--dispatch-choice <mode>]
 ```
+
+The `advance` verb composes the plan-decision arm under its claim/commit lock; it defaults `from_state` to the arm's table edge (`plan`), or thread the served envelope's `advance_contract.expected_from_state` via `--from-state`.
 
 Act on the returned `state`:
 
@@ -143,11 +145,11 @@ Act on the returned `state`:
 - **`revise`** — nothing was recorded. **Request changes**: revise the plan and re-present this surface. Only a terminal branch-mode or "wait" selection records approval; revision rounds record nothing.
 - **`error`** — surface the verb's `message` and halt without advancing.
 
-**Command not found** (`cortex-lifecycle-plan-decision` not on `PATH`) → halt and instruct the operator to install/upgrade the cortex-command CLI, then re-invoke. Do NOT record the approval by hand. <!-- Halt-arm convention: this arm names ONLY the verb and the install remedy. It must not reference any raw event-emission surface — doing so would defeat the per-file zero-sweep (tests/test_lifecycle_event_roundtrip.py) that keeps this cluster's emissions inside the verb. -->
+**Command not found** (`cortex-lifecycle-advance` not on `PATH`) → halt and instruct the operator to install/upgrade the cortex-command CLI, then re-invoke. Do NOT record the approval by hand. <!-- Halt-arm convention: this arm names ONLY the verb and the install remedy. It must not reference any raw event-emission surface — doing so would defeat the per-file zero-sweep (tests/test_lifecycle_event_roundtrip.py) that keeps this cluster's emissions inside the verb. -->
 
 ### 5. Transition
 
-The plan→implement `phase_transition` is emitted by the plan-decision verb on a branch-mode selection (ordered after the approval record); §4 needs no separate transition step.
+The plan→implement `phase_transition` is emitted by advance's plan-decision arm on a branch-mode selection (ordered after the approval record); §4 needs no separate transition step.
 
 On any approval (branch-mode or "wait"), run `cortex-read-commit-artifacts`. `true` (default) → stage `cortex/lifecycle/{feature}/` and commit via `/cortex-core:commit`; `false` → skip silently. On the "wait" path the commit makes approval durable, then the lifecycle halts.
 
