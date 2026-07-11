@@ -152,6 +152,7 @@ def test_breach_inserts_drift_protocol_breach_between_verdict_and_transition(
     assert rows[1]["state"] == "detected"
     assert rows[1]["suggestion"] == "missing"
     assert rows[1]["retries"] == 2
+    assert rows[1]["cycle"] == 1
     assert rows[2]["to"] == "implement-rework"
 
 
@@ -214,7 +215,7 @@ def test_resume_after_partial_emits_only_the_missing_transition(
 def test_breach_reinvocation_is_idempotent(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The breach arm is also idempotent across a full re-invocation."""
+    """The breach arm is also idempotent across a full re-invocation (same cycle)."""
     feature_dir = _scaffold(tmp_path, monkeypatch)
     rv.review_verdict(
         feature="feat", verdict="REJECTED", cycle=1, drift="detected", breach=True
@@ -227,6 +228,32 @@ def test_breach_reinvocation_is_idempotent(
         "drift_protocol_breach",
         "phase_transition",
     ]
+
+
+def test_breach_guard_discriminates_on_cycle(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A genuine second-cycle breach is NOT suppressed by a cycle-1 breach row.
+
+    A review can breach at cycle 1 (drift detected + suggestion missing → rework)
+    and again at a later cycle; the cycle-qualified guard emits both rows, each
+    carrying its own cycle. (Regression guard for the closed event-name-only
+    residual.)"""
+    feature_dir = _scaffold(tmp_path, monkeypatch)
+    rv.review_verdict(
+        feature="feat", verdict="CHANGES_REQUESTED", cycle=1, drift="detected", breach=True
+    )
+    second = rv.review_verdict(
+        feature="feat", verdict="CHANGES_REQUESTED", cycle=2, drift="detected", breach=True
+    )
+
+    # The cycle-2 run emits its own breach (not suppressed by the cycle-1 row).
+    assert "drift_protocol_breach" in second["emitted"]
+    breach_cycles = sorted(
+        row["cycle"] for row in _events_rows(feature_dir)
+        if row["event"] == "drift_protocol_breach"
+    )
+    assert breach_cycles == [1, 2]
 
 
 # ---------------------------------------------------------------------------

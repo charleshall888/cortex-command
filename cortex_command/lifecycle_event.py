@@ -285,6 +285,10 @@ _EVENT_SUBCOMMANDS: dict[str, tuple[str, list]] = {
         ("--state", "state", _STR, True, None),
         ("--suggestion", "suggestion", _STR, True, None),
         ("--retries", "retries", _JSON, True, None),
+        # Optional cycle qualifier (additive, epic 371 Phase B follow-up): lets a
+        # per-cycle presence check distinguish a genuine second-cycle breach from
+        # the first — a review can breach at cycle 1 AND a later cycle.
+        ("--cycle", "cycle", _JSON, False, None),
     ]),
     "criticality-override": ("criticality_override", [
         ("--from", "from", _STR, True, None),

@@ -38,14 +38,15 @@ plan→implement, …), the transition presence-check matches on ``event`` PLUS
 ``from``/``to`` — an event-name-only guard would false-skip against an earlier
 transition.
 
-``review_verdict`` presence-checks on ``event`` PLUS ``cycle``: the same feature
-legitimately carries one ``review_verdict`` row per review cycle, so a cycle-2
-verdict must still emit even though a cycle-1 verdict row exists. ``drift_protocol_breach``
-presence-checks on ``event`` name alone (the typed subcommand carries no cycle
-field to qualify on, and the byte-identical-to-typed-subcommand invariant forbids
-inventing one) — this is sound for the dominant crash-recovery case (re-running
-one invocation), with the documented residual that a genuine second breach in a
-later cycle would be suppressed; see the report caveat.
+``review_verdict`` and ``drift_protocol_breach`` both presence-check on ``event``
+PLUS ``cycle``: the same feature legitimately carries one ``review_verdict`` row
+per review cycle, and a review can breach at cycle 1 AND a later cycle, so only
+``cycle`` distinguishes this cycle's row — a cycle-2 verdict (or breach) must
+still emit even though a cycle-1 row exists. The ``drift-protocol-breach`` typed
+subcommand carries an optional ``cycle`` field (additive, epic 371 Phase B
+follow-up) so the emitted row is byte-identical to what the typed subcommand
+produces; the crash-recovery idempotency (re-running one invocation emits nothing
+new) still holds within a cycle.
 
 Each emission is parsed-field matched (never a substring) and skipped when
 already present, so re-running the whole verb after a crash between emissions —
@@ -216,10 +217,13 @@ def review_verdict(
         )
         emitted.append("review_verdict")
 
-    # (b) drift_protocol_breach{state, suggestion, retries} — ONLY when the
-    #     prose's §4a drift-apply loop failed and passed --breach. Event-name
-    #     presence check (the typed subcommand carries no cycle field to qualify).
-    if breach and not _event_exists(events_log, "drift_protocol_breach"):
+    # (b) drift_protocol_breach{state, suggestion, retries, cycle} — ONLY when the
+    #     prose's §4a drift-apply loop failed and passed --breach. Cycle-qualified
+    #     presence check (mirroring review_verdict): a review can breach at cycle 1
+    #     AND a later cycle, so only ``cycle`` distinguishes this cycle's breach row.
+    if breach and not _event_exists(
+        events_log, "drift_protocol_breach", {"cycle": cycle}
+    ):
         log_event(
             event="drift_protocol_breach",
             feature=feature,
@@ -227,6 +231,7 @@ def review_verdict(
                 ("str", "state", _BREACH_STATE),
                 ("str", "suggestion", _BREACH_SUGGESTION),
                 ("json", "retries", retries),
+                ("json", "cycle", cycle),
             ],
         )
         emitted.append("drift_protocol_breach")
