@@ -68,37 +68,44 @@ After the sub-task completes and review.md is on disk: if it lacks a `## Require
 
 Register the artifact: `cortex-lifecycle-register-artifact --feature {feature} --artifact review`.
 
-| Verdict | Cycle | Action |
-|---------|-------|--------|
+Read the Verdict JSON's `verdict`, `cycle`, and `requirements_drift` fields — the discriminants §4a's drift loop and §5's verb call route on. The verb resolves verdict×cycle to the outcome:
+
+| Verdict | Cycle | Outcome |
+|---------|-------|---------|
 | APPROVED | any | Proceed to Complete |
 | CHANGES_REQUESTED | 1 | Re-enter Implement for flagged tasks with reviewer feedback |
 | CHANGES_REQUESTED | ≥2 | Escalate — present the analysis, ask for direction |
 | REJECTED | any | Escalate immediately — recommend revisiting plan or spec |
 
-The `≥2` row caps rework: cycle 2 and any later cycle escalates.
-
-Append the `review_verdict` event — `--drift` comes from the verdict JSON's `requirements_drift` field:
-
-`cortex-lifecycle-event review-verdict --feature <name> --verdict <APPROVED|CHANGES_REQUESTED|REJECTED> --cycle <N> --drift <none|detected>`
+The `≥2` row caps rework: cycle 2 and any later cycle escalates. §5 hands verdict/cycle/drift to the verb, which records the routing — do not emit it here.
 
 ### 4a. Auto-Apply Requirements Drift
 
-After logging the `review_verdict` event, if `requirements_drift` is `"detected"`:
+If `requirements_drift` is `"detected"`, run this judgment loop BEFORE the §5 verb call:
 
 1. **Parse** the `## Suggested Requirements Update` section (`File` / `Section` / `Content`) from review.md.
 2. **Apply**: append `Content` at the end of the named `Section` in the target file, then report to the user what changed (file, section, first line of the appended content).
 
-Section missing or unparseable → re-dispatch the reviewer to append it in the §2 format without touching other sections (cap 2 retries). Still failing → do **not** block verdict processing — log the breach and fall through to §5 without applying: `cortex-lifecycle-event drift-protocol-breach --feature <name> --state detected --suggestion missing --retries 2`
+Section missing or unparseable → re-dispatch the reviewer to append it in the §2 format without touching other sections (cap 2 retries). Still failing after the cap → the drift-apply has **breached**: do **not** block verdict processing. Carry `--breach --retries 2` into §5's verb call so the breach is recorded (positioned between the verdict record and the transition) — it surfaces in the morning report so the gap is visible rather than silent, without applying the unparseable update.
 
-The breach surfaces in the morning report so the gap is visible rather than silent.
+When `requirements_drift` is `"none"`, or the apply succeeded, carry no breach.
 
 ### 5. Transition
 
-Proceed automatically for APPROVED and CHANGES_REQUESTED cycle 1 — announce briefly and continue.
+Hand the verdict, its cycle, the drift observation, and any §4a breach to the review-verdict verb — it owns this arm's exact ordered emissions (the `review_verdict` record, the `drift_protocol_breach` row when `--breach`, then the routed `review→{complete|implement-rework|escalated}` transition) and their idempotent replay, so you route on the returned `state`, you do not re-derive it:
 
-- **APPROVED** → Complete: `cortex-lifecycle-event phase-transition --feature <name> --from review --to complete`
-- **CHANGES_REQUESTED cycle 1** → Implement: `cortex-lifecycle-event phase-transition --feature <name> --from review --to implement-rework`
-- **Otherwise** (cycle ≥2 or REJECTED) → log the escalation, present findings, await direction: `cortex-lifecycle-event phase-transition --feature <name> --from review --to escalated`
+```bash
+cortex-lifecycle-review-verdict --feature <name> --verdict <APPROVED|CHANGES_REQUESTED|REJECTED> --cycle <N> --drift <none|detected> [--breach --retries <N>]
+```
+
+Add `--breach --retries <N>` only when §4a's drift-apply exhausted its retries. Act on the returned `state`:
+
+- **`approved`** (APPROVED, any cycle) → Complete: announce briefly and auto-advance.
+- **`rework`** (CHANGES_REQUESTED cycle 1) → Implement: re-enter for the flagged tasks with reviewer feedback; announce briefly and continue.
+- **`escalated`** (cycle ≥2 or REJECTED) → present the findings and await direction; do not auto-advance.
+- **`error`** → surface the verb's `message` and halt without transitioning.
+
+**Command not found** (`cortex-lifecycle-review-verdict` not on `PATH`) → halt and instruct the operator to install/upgrade the cortex-command CLI, then re-invoke. Do NOT record the verdict or transition by hand. <!-- Halt-arm convention: this arm names ONLY the verb and the install remedy — never a raw event-emission surface, which would defeat the per-file zero-sweep (tests/test_lifecycle_event_roundtrip.py) that keeps this cluster's emissions inside the verb. -->
 
 ## Constraints
 

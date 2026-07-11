@@ -121,11 +121,6 @@ def _declared_and_required(subcommand: str) -> tuple[set[str], set[str]]:
 # worktree-entry.md in the lifecycle-corpus-trim-wave-2 route-conditional
 # extraction, so it is cross-validated against that file now.
 FILE_EVENTS: dict[str, dict[str, int]] = {
-    "skills/lifecycle/references/review.md": {
-        "review_verdict": 1,
-        "drift_protocol_breach": 1,
-        "phase_transition": 3,
-    },
     "skills/lifecycle/references/worktree-entry.md": {
         "interactive_worktree_entered": 1,
     },
@@ -208,6 +203,7 @@ _RAW_EMISSION_RE = re.compile(
 ZERO_SWEEP_FILES: tuple[str, ...] = (
     "skills/lifecycle/references/plan.md",
     "skills/lifecycle/references/implement.md",
+    "skills/lifecycle/references/review.md",
 )
 
 
