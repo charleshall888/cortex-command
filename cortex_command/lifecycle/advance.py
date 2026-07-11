@@ -76,11 +76,15 @@ from pathlib import Path
 from typing import List, Optional
 
 from cortex_command.backlog import _telemetry
+from cortex_command.backlog.resolve_item import _parse_frontmatter, resolve
+from cortex_command.backlog.update_item import update_item
 from cortex_command.common import (
     _resolve_user_project_root_from_cwd,
     detect_lifecycle_phase,
+    normalize_status,
     reduce_lifecycle_state,
 )
+from cortex_command.lifecycle_config import resolve_backlog_backend
 from cortex_command.lifecycle import review_verdict as rv
 from cortex_command.lifecycle import implement_transition as it
 from cortex_command.lifecycle import transition_table as tt
@@ -374,6 +378,56 @@ def _emission_plan(
 
 
 # ---------------------------------------------------------------------------
+# Status projection (Task 14a) — the status lattice, phase→status map, and the
+# closed set of demoting events.
+# ---------------------------------------------------------------------------
+
+# ADR-0016: status projection is scoped to the cortex-backlog backend ONLY.
+_CORTEX_BACKLOG_BACKEND = "cortex-backlog"
+
+# The backlog status advance projects for a transition's DESTINATION lifecycle
+# state, keyed by ``Transition.to_state`` (the machine phase advance lands the
+# feature in). Values are the canonical backlog vocabulary (the
+# ``common.normalize_status`` targets — NOT invented names). A to_state absent
+# from this map projects NO status (the projector no-ops): ``research`` /
+# ``specify`` are never an advance destination with emissions, and ``escalated``
+# carries no unambiguous backlog-status meaning (a human decides), so it is
+# deliberately omitted rather than guessed. The ``plan`` → ``refined`` row mirrors
+# the standalone-refine write-back precedent (spec_approve._apply_backlog_writeback).
+_STATE_TO_STATUS: dict[str, str] = {
+    "plan": "refined",
+    "implement": "in_progress",
+    "implement-rework": "in_progress",
+    "review": "in_progress",
+    "complete": "complete",
+    "cancelled": "abandoned",
+}
+
+# The status lattice: a monotonic rank over the canonical backlog vocabulary
+# (hazard 4). Projection only ever moves a feature FORWARD — to a rank >= its
+# current rank; a move to a strictly LOWER rank is a demotion, refused unless a
+# demoting event backs it. The three terminal statuses share the top rank
+# (distinct absorbing states — none sits below another). A current status this map
+# does not recognise ranks as 0 (the floor), so an unknown/absent status never
+# blocks a legitimate forward projection.
+_STATUS_RANK: dict[str, int] = {
+    "backlog": 0,
+    "refined": 1,
+    "in_progress": 2,
+    "complete": 3,
+    "abandoned": 3,
+    "superseded": 3,
+}
+
+# The closed set of events whose presence in the log AUTHORIZES a status demotion
+# (hazard 4). A projection that would lower the lattice rank is refused UNLESS one
+# of these backs it: ``lifecycle_cancelled`` / ``feature_wontfix`` genuinely push a
+# feature off the forward path (a future reopen event would join this set). Without
+# a demoting event, the projector never silently demotes.
+_DEMOTING_EVENTS: frozenset[str] = frozenset({"lifecycle_cancelled", "feature_wontfix"})
+
+
+# ---------------------------------------------------------------------------
 # Extension seams (Tasks 14a / 14b) — no-ops in this core body
 # ---------------------------------------------------------------------------
 
@@ -390,14 +444,123 @@ def _consent_cross_check(
     return None
 
 
+def _root_from_log(log_path: Path) -> Optional[Path]:
+    """Derive the project root from a standard events.log path
+    (``<root>/cortex/lifecycle/<feature>/events.log``).
+
+    Returns the ``<root>`` Path when the log sits under a ``cortex/lifecycle``
+    ancestor, else None (a caller-supplied non-standard ``--log-path`` simply
+    yields no projection rather than a mis-rooted write).
+    """
+    parts = Path(log_path).parts
+    for i in range(len(parts) - 1):
+        if parts[i] == "cortex" and parts[i + 1] == "lifecycle" and i > 0:
+            return Path(*parts[:i])
+    return None
+
+
+def _is_archive_shadowed(feature: str, log_path: Path) -> bool:
+    """True when an archived duplicate of the feature's lifecycle dir shadows the
+    live one (hazard 7).
+
+    The live feature dir is ``log_path.parent``; its lifecycle root is one level
+    up. An archived copy at ``<lifecycle_root>/archive/<feature>`` (wontfix_cli's
+    archive-move destination) means the feature was archived — the append path
+    must refuse and the projector must not write status for it.
+    """
+    feature_dir = Path(log_path).parent
+    lifecycle_root = feature_dir.parent
+    return (lifecycle_root / "archive" / feature).exists()
+
+
+def _has_demoting_event(rows: List[dict]) -> bool:
+    """True when *rows* carries an event whose parsed ``event`` field is in
+    :data:`_DEMOTING_EVENTS` — the events that authorize a status demotion."""
+    return any(r.get("event") in _DEMOTING_EVENTS for r in rows)
+
+
 def _project_status(
     *, feature: str, transition: tt.Transition, log_path: Path, rows: List[dict],
     project_root: Optional[Path],
-) -> None:
-    """Seam for Task 14a: post-commit monotonic status projection (cortex-backlog
-    backend only, ADR-0016) with the archive-shadow guard. Core body is a no-op.
+) -> Optional[str]:
+    """Task 14a: post-commit monotonic status projection (cortex-backlog backend
+    only, ADR-0016) with the archive-shadow guard.
+
+    Projects the committed transition onto its cortex-backlog item's frontmatter
+    ``status``, but only ever FORWARD on the status lattice (:data:`_STATUS_RANK`):
+    a move to a strictly lower rank is a demotion, refused unless a demoting event
+    (:data:`_DEMOTING_EVENTS`) backs it (hazard 4). Before any write the append path
+    checks for an archive shadow — an archived duplicate of the feature dir under
+    ``<lifecycle>/archive/<feature>`` — and refuses (no-op) when the feature is
+    shadowed (hazard 7).
+
+    Scoped to the cortex-backlog backend: any other backend is left untouched
+    (ADR-0016). Best-effort and never-raising (post-commit side channel — the
+    transition already committed, so a projection failure must not crash advance).
+    Returns a short outcome tag for observability; the caller ignores it.
     """
-    return None
+    try:
+        return _project_status_inner(
+            feature=feature, transition=transition, log_path=log_path,
+            rows=rows, project_root=project_root,
+        )
+    except Exception:  # noqa: BLE001 — post-commit projection is strictly best-effort
+        return "error"
+
+
+def _project_status_inner(
+    *, feature: str, transition: tt.Transition, log_path: Path, rows: List[dict],
+    project_root: Optional[Path],
+) -> Optional[str]:
+    """The projection body :func:`_project_status` wraps in a never-raise guard."""
+    # Only project for a to_state with an unambiguous backlog-status meaning.
+    target = _STATE_TO_STATUS.get(transition.to_state)
+    if target is None:
+        return "skip:no-mapping"
+
+    # Locate the project root: the caller's explicit root wins (test/finalize
+    # affordance); else derive it from the standard events.log layout.
+    root = Path(project_root) if project_root is not None else _root_from_log(log_path)
+    if root is None:
+        return "skip:no-root"
+
+    backlog_dir = root / "cortex" / "backlog"
+    if not backlog_dir.is_dir():
+        return "skip:no-backlog"
+
+    # ADR-0016: status projection is cortex-backlog-only. Any other backend is left
+    # untouched — the wheel never writes an external tracker.
+    if resolve_backlog_backend(root) != _CORTEX_BACKLOG_BACKEND:
+        return "skip:backend"
+
+    # Archive-shadow guard (hazard 7): if an archived copy of the feature dir
+    # shadows the live one, the append path refuses and the projector no-ops.
+    if _is_archive_shadowed(feature, log_path):
+        return "refused:archive-shadow"
+
+    # Resolve the backlog item; an unresolved/ambiguous reference is a silent skip
+    # (mirrors spec_approve's no-item semantics) — never a crash. An archived
+    # backlog item is not in the active backlog dir, so it resolves to not_found
+    # here and is skipped for free.
+    result = resolve(feature, backlog_dir)
+    if result.status != "ok" or result.item is None:
+        return f"skip:{result.status}"
+    item = result.item
+
+    # Monotonic-lattice check (hazard 4): read the current status, normalize it onto
+    # the canonical vocabulary, and refuse a strictly-demoting move unless a demoting
+    # event backs it.
+    fm = _parse_frontmatter(item)
+    current_raw = fm.get("status")
+    current = normalize_status(str(current_raw)) if current_raw else None
+    current_rank = _STATUS_RANK.get(current, 0) if current else 0
+    target_rank = _STATUS_RANK[target]
+
+    if target_rank < current_rank and not _has_demoting_event(rows):
+        return "refused:demotion"
+
+    update_item(item, {"status": target}, backlog_dir, session_id=None)
+    return f"wrote:{target}"
 
 
 # ---------------------------------------------------------------------------
