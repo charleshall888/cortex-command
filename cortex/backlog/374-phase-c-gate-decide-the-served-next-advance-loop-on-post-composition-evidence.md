@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 84506324-4fe3-4ae3-8228-770b3f5c5b68
 title: 'Phase-C gate: decide the served next/advance loop on post-composition evidence'
-status: refined
+status: in_progress
 priority: medium
 type: spike
 created: 2026-07-10
