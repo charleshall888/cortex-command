@@ -38,6 +38,9 @@ jobs:
       - name: Contract checker tests (blocking)
         run: pytest tests/test_check_contract.py
 
+      - name: Kept-pauses parity tests (blocking)
+        run: pytest tests/test_lifecycle_kept_pauses_parity.py
+
       - name: Dashboard route smoke test (fresh resolve, Starlette floored at >=1.0)
         run: |
           # Constraints-free fresh install: no -c/constraints file, so the
