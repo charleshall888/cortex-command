@@ -389,6 +389,52 @@ def test_emit_lifecycle_start_treats_yaml_null_as_absent(
 
 
 # ---------------------------------------------------------------------------
+# R2 (#374): read-after-write verify matches anywhere, not by file tail
+# ---------------------------------------------------------------------------
+
+
+def test_emit_lifecycle_start_verify_tolerates_concurrent_append(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R2: a concurrent row landing between the seed write and the verify read
+    does not cause a false ``read_after_write_mismatch``.
+
+    The verify now matches the ``lifecycle_start`` row by ``event`` + ``feature``
+    anywhere in the log rather than by file tail. We monkeypatch the module's
+    ``log_event_at`` to append an unrelated concurrent row immediately after the
+    genuine seed write, displacing the seed from the tail; the old tail-only
+    assertion would have false-failed.
+    """
+    import cortex_command.refine as refine_module
+    from cortex_command.lifecycle_event import log_event_at as real_log_event_at
+
+    monkeypatch.chdir(tmp_path)
+
+    def _wrapper(path, row):
+        real_log_event_at(path, row)  # the genuine lifecycle_start write
+        # A concurrent writer appends AFTER our row but BEFORE the verify read.
+        real_log_event_at(
+            path,
+            {
+                "event": "phase_transition",
+                "feature": "feat",
+                "from": "clarify",
+                "to": "research",
+            },
+        )
+
+    monkeypatch.setattr(refine_module, "log_event_at", _wrapper)
+
+    rc = refine_module.main(["emit-lifecycle-start", "--lifecycle-slug", "feat"])
+    assert rc == 0
+
+    rows = _read_jsonl(_events_log_path(tmp_path, "feat"))
+    # The seed is present but NOT the tail row — the tail is the concurrent row.
+    assert rows[-1]["event"] == "phase_transition"
+    assert any(r["event"] == "lifecycle_start" and r["feature"] == "feat" for r in rows)
+
+
+# ---------------------------------------------------------------------------
 # R11: backlog 227 regression scenario (simple-tier high-crit)
 # ---------------------------------------------------------------------------
 
@@ -873,8 +919,12 @@ def test_emit_row_byte_identical_to_hardcoded_contract(
 ) -> None:
     # Hand-written contract literal pinning key ORDER + SEPARATORS. NOT captured
     # from the production serializer — a regression in either fails this assert.
+    # Since #374 the row is written through the shared locked primitive
+    # (``lifecycle_event.log_event_at``), which prepends the ``ts`` base key, so
+    # the canonical order is now ``ts`` first, then the seed's ``schema_version``
+    # and remaining fields (semantics preserved; consumers key by name).
     expected = (
-        '{"schema_version": 1, "ts": "<TS>", "event": "lifecycle_start", '
+        '{"ts": "<TS>", "schema_version": 1, "event": "lifecycle_start", '
         '"feature": "feat", "tier": "simple", "criticality": "medium", '
         '"entry_point": "refine"}'
     )

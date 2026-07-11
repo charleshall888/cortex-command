@@ -23,6 +23,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
 
+from cortex_command.lifecycle_event import log_event_at
+
 
 GATE_RESEARCH = "research_open_questions"
 GATE_SPECIFY = "specify_open_decisions"
@@ -187,8 +189,14 @@ def _count_top_level_bullets(section_lines: list[str], gate: str) -> int:
 
 
 def _emit_event(events_log_path: Path, feature: str, gate: str) -> dict:
-    """Append a ``complexity_override`` event line; return the appended dict."""
-    events_log_path.parent.mkdir(parents=True, exist_ok=True)
+    """Append a ``complexity_override`` event line; return the appended dict.
+
+    Routes through the shared locked primitive (flock + O_APPEND) rather than a
+    bare unlocked ``open("a")`` — R1. ``log_event_at`` takes the explicit
+    CWD-relative path this hook resolved (preserving the writer-site baseline)
+    and prepends its own ``ts``; the ``ts`` carried on ``entry`` overrides it so
+    the returned dict and the written row agree.
+    """
     entry = {
         "ts": _now_iso(),
         "event": "complexity_override",
@@ -197,13 +205,17 @@ def _emit_event(events_log_path: Path, feature: str, gate: str) -> dict:
         "to": "complex",
         "gate": gate,
     }
-    with open(events_log_path, "a", encoding="utf-8") as f:
-        f.write(json.dumps(entry) + "\n")
+    log_event_at(events_log_path, entry)
     return entry
 
 
 def _verify_last_event(events_log_path: Path, gate: str) -> tuple[bool, str]:
-    """Re-read the last line of events.log and assert it matches the appended event.
+    """Assert the appended ``complexity_override`` row is present in events.log.
+
+    Matches the row by parsed fields (``event`` + ``to`` + ``gate``) ANYWHERE in
+    the log rather than by file tail (R2). A concurrent append landing between
+    the emit and this read would otherwise displace our row from the tail and
+    produce a false mismatch.
 
     Returns ``(True, "")`` on success or ``(False, <failure_mode>)`` where
     ``failure_mode`` is one of ``read_after_write_io_error`` or
@@ -215,21 +227,22 @@ def _verify_last_event(events_log_path: Path, gate: str) -> tuple[bool, str]:
     except OSError:
         return (False, "read_after_write_io_error")
 
-    if not lines:
-        return (False, "read_after_write_mismatch")
-
-    last = lines[-1].strip()
-    try:
-        obj = json.loads(last)
-    except (json.JSONDecodeError, ValueError):
-        return (False, "read_after_write_mismatch")
-    if (
-        obj.get("event") != "complexity_override"
-        or obj.get("gate") != gate
-        or obj.get("to") != "complex"
-    ):
-        return (False, "read_after_write_mismatch")
-    return (True, "")
+    for raw in lines:
+        stripped = raw.strip()
+        if not stripped:
+            continue
+        try:
+            obj = json.loads(stripped)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        if (
+            isinstance(obj, dict)
+            and obj.get("event") == "complexity_override"
+            and obj.get("gate") == gate
+            and obj.get("to") == "complex"
+        ):
+            return (True, "")
+    return (False, "read_after_write_mismatch")
 
 
 def _build_parser() -> argparse.ArgumentParser:

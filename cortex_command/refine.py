@@ -16,6 +16,7 @@ from pathlib import Path
 
 from cortex_command.backlog.update_item import _get_frontmatter_value
 from cortex_command.common import reduce_lifecycle_state
+from cortex_command.lifecycle_event import log_event_at
 
 
 # Allowed value sets, kept in lockstep with the canonical readers at
@@ -250,10 +251,14 @@ def _cmd_reconcile_clarify(args: argparse.Namespace) -> int:
     if not rows:
         return 0
 
+    # Route every append through the shared locked primitive (flock + O_APPEND)
+    # rather than a bare unlocked open("a") — R1. ``log_event_at`` takes the
+    # explicit path refine already resolved (preserving the CWD-relative write
+    # target the writer-site baseline pins) and preserves the extra ``gate``
+    # field that the typed criticality-override subcommand cannot carry.
     try:
-        with open(events_log, "a", encoding="utf-8") as f:
-            for row in rows:
-                f.write(json.dumps(row) + "\n")
+        for row in rows:
+            log_event_at(events_log, row)
     except (PermissionError, OSError) as e:
         print(
             f"cortex-refine: failed to append to {events_log}: {e}. "
@@ -298,9 +303,13 @@ def _cmd_emit_lifecycle_start(args: argparse.Namespace) -> int:
         "entry_point": "refine",
     }
 
+    # Route the seed append through the shared locked primitive (flock +
+    # O_APPEND) rather than a bare unlocked open("a") — R1. ``log_event_at``
+    # takes the explicit CWD-relative path refine resolved and preserves the
+    # extra ``schema_version``/``entry_point`` fields the typed lifecycle-start
+    # subcommand cannot carry.
     try:
-        with open(events_log, "a", encoding="utf-8") as f:
-            f.write(json.dumps(row) + "\n")
+        log_event_at(events_log, row)
     except (PermissionError, OSError) as e:
         print(
             f"cortex-refine: failed to append to {events_log}: {e}. "
@@ -311,7 +320,11 @@ def _cmd_emit_lifecycle_start(args: argparse.Namespace) -> int:
         )
         return 70
 
-    # Read-after-write verify: re-read the last line and assert it matches.
+    # Read-after-write verify: match our row by parsed fields ANYWHERE in the
+    # log rather than by file tail (R2). A concurrent append landing between the
+    # write above and this read would otherwise displace our row from the tail
+    # and produce a false mismatch. The idempotency guard guarantees at most one
+    # lifecycle_start row, so an event+feature match uniquely identifies ours.
     try:
         with open(events_log, "r", encoding="utf-8") as f:
             lines = f.readlines()
@@ -322,24 +335,24 @@ def _cmd_emit_lifecycle_start(args: argparse.Namespace) -> int:
         )
         return 70
 
-    mismatch = False
-    if not lines:
-        mismatch = True
-    else:
-        last = lines[-1].strip()
+    found = False
+    for raw in lines:
+        stripped = raw.strip()
+        if not stripped:
+            continue
         try:
-            obj = json.loads(last)
+            obj = json.loads(stripped)
         except (json.JSONDecodeError, ValueError):
-            mismatch = True
-        else:
-            if (
-                obj.get("event") != "lifecycle_start"
-                or obj.get("tier") != tier
-                or obj.get("criticality") != criticality
-            ):
-                mismatch = True
+            continue
+        if (
+            isinstance(obj, dict)
+            and obj.get("event") == "lifecycle_start"
+            and obj.get("feature") == lifecycle_slug
+        ):
+            found = True
+            break
 
-    if mismatch:
+    if not found:
         print("read_after_write_mismatch", file=sys.stderr)
         return 70
 

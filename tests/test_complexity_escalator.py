@@ -440,6 +440,52 @@ def test_read_after_write_failure(escalator_module, tmp_lifecycle, monkeypatch, 
 
 
 # ---------------------------------------------------------------------------
+# R2 (#374): read-after-write verifier matches anywhere, not by file tail
+# ---------------------------------------------------------------------------
+
+
+def test_verify_tolerates_concurrent_append(escalator_module, tmp_lifecycle):
+    """R2: a concurrent row appended after the escalation row still verifies.
+
+    The verifier now matches its ``complexity_override`` row by parsed fields
+    (event + to + gate) ANYWHERE in the log, not by file tail. A concurrent
+    append landing between the emit and the read displaces our row from the
+    tail; the old tail-only check would have false-failed here.
+    """
+    events_log = tmp_lifecycle["events_log"]
+    # Our escalation row lands first (through the shared locked primitive)...
+    escalator_module._emit_event(
+        events_log, tmp_lifecycle["feature"], escalator_module.GATE_RESEARCH
+    )
+    # ...then an unrelated concurrent row lands on the tail before we verify.
+    with open(events_log, "a", encoding="utf-8") as f:
+        f.write(
+            json.dumps(
+                {
+                    "ts": "2026-01-01T00:00:00Z",
+                    "event": "phase_transition",
+                    "feature": tmp_lifecycle["feature"],
+                    "from": "research",
+                    "to": "specify",
+                }
+            )
+            + "\n"
+        )
+
+    # Our row is no longer the last line, yet the verifier still finds it.
+    lines = [
+        ln
+        for ln in events_log.read_text(encoding="utf-8").splitlines()
+        if ln.strip()
+    ]
+    assert json.loads(lines[-1])["event"] == "phase_transition"
+    ok, mode = escalator_module._verify_last_event(
+        events_log, escalator_module.GATE_RESEARCH
+    )
+    assert ok, f"verify should pass with a concurrent tail row; mode={mode!r}"
+
+
+# ---------------------------------------------------------------------------
 # R10: Path-traversal rejection
 # ---------------------------------------------------------------------------
 
