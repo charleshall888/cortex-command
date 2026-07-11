@@ -143,19 +143,33 @@ Present the specification summary via the AskUserQuestion tool with these approv
 - **Trade-offs** — alternatives considered, rationale for the chosen approach.
 - **Proposed ADRs** — comma-separated `<NNNN-slug>` list from `## Proposed ADR`; `None` when that section's body is `None considered.`
 
-Enumerate the options explicitly as `Approve` | `Request changes` | `Cancel`. Route on the response:
+Enumerate the options explicitly as `Approve` | `Request changes` | `Cancel`. Map the selection to the spec-approve verb's `--decision` discriminant (`Approve`→`approved`, `Cancel`→`cancelled`, `Request changes`→`revise`) and hand it off — the verb owns this arm's exact ordered emissions (the `spec_approved` consent record, the flag-gated `specify→plan` transition, and the backend-gated `status:refined` + `spec` + `areas` write-back) and their idempotent replay, so you route on the returned `state`, you do not re-derive it:
 
-- **Approve** → append `spec_approved`, then §5's `phase_transition`, then auto-advance to Plan (no re-confirmation): `cortex-lifecycle-event spec-approved --feature <name>`
-- **Request changes** → collect the changes, revise the spec, re-present the surface. No `spec_approved` on revision loops — only the final Approve emits it.
-- **Cancel** → append `lifecycle_cancelled` and halt (resume by re-invoking `/cortex-core:lifecycle`).
+```bash
+cortex-lifecycle-spec-approve --feature <name> --decision <approved|cancelled|revise> \
+  --backend {resolved} --backlog-file {backlog-filename-slug} \
+  --spec-path cortex/lifecycle/{lifecycle-slug}/spec.md \
+  [--emit-transition|--no-emit-transition] [--areas <a> <b>|--clear-areas]
+```
+
+**Transition flag** — under standalone `/cortex-core:refine` pass `--no-emit-transition` (refine stops at `spec.md`, no `specify→plan` row); under `/cortex-core:lifecycle` (lifecycle-wrapped refine) pass `--emit-transition` (the lifecycle continues to Plan, so the verb emits the transition). This verb is now the sole emitter of the `specify→plan` row — refine-delegation.md's item-3 phase-transition template no longer enumerates that boundary, so the lifecycle-wrapped path does not double-emit it.
+
+**Write-back args** — `--backend`/`--backlog-file`/`--spec-path`/`--areas` come from the refine caller (SKILL.md §5 "Write-Back on Approval"); the verb runs the backend-gated write-back in-process (`none`/external → zero local writes). `--areas` is preserve-on-omit (omit to leave `areas` untouched); pass `--clear-areas` for the explicit empty-areas case.
+
+Act on the returned `state`:
+
+- **`approved`** — the consent record, the flag-gated transition, and the write-back are recorded; auto-advance to Plan (no re-confirmation).
+- **`revise`** (Request changes) — nothing recorded; collect the changes, revise the spec, and re-present the surface. Only the final Approve records `spec_approved`.
+- **`cancelled`** — `lifecycle_cancelled` is recorded; halt (resume by re-invoking `/cortex-core:lifecycle`).
+- **`error`** — surface the verb's `message` and halt without advancing.
+
+**Ambiguous backlog slug** — the verb exits 2 with a candidate list on stderr when `--backlog-file` matches multiple items; apply backlog-writeback.md's ambiguous-slug disambiguation (the same rule Step 5's `cortex-update-item` exit-2 uses), then re-run.
+
+**Command not found** (`cortex-lifecycle-spec-approve` not on `PATH`) → halt and instruct the operator to install/upgrade the cortex-command CLI, then re-invoke. Do NOT record the approval, transition, or write-back by hand. <!-- Halt-arm convention: names ONLY the verb and the install remedy, never a raw event-emission surface, which would defeat the per-file zero-sweep (tests/test_lifecycle_event_roundtrip.py). -->
 
 ### 5. Transition
 
-On `Approve`, append a `phase_transition` event:
-
-`cortex-lifecycle-event phase-transition --feature <name> --from specify --to plan`
-
-Under `/cortex-core:refine`, skip this emission — the `/cortex-core:lifecycle` caller owns phase-transition logging and commit-artifacts; the refine Step-2 `lifecycle_start` sentinel is exempt.
+The `specify→plan` `phase_transition` is emitted by the spec-approve verb when §4's call passes `--emit-transition` (lifecycle-wrapped refine), ordered after the `spec_approved` record; standalone refine passes `--no-emit-transition` and writes no transition row. §4's single verb call is the only emission surface here — no separate transition step, and the `/cortex-core:lifecycle` caller still owns the post-refine commit-artifacts (refine-delegation.md Post-Refine Commit).
 
 ## Hard Gate
 

@@ -87,16 +87,11 @@ Do NOT set `status: refined` before approval. After approval (specify.md §4), r
 
 ### Write-Back on Approval (Context A only)
 
-**Infer areas**: name the primary subsystem modified (canonical: `overnight-runner`, `backlog`, `skills`, `lifecycle`, `hooks`, `report`, `tests`, `docs`) — the one where most files change. Spanning 4+ with no clear primary → `areas=[]`.
+The `status: refined` + `spec` + `areas` write-back is performed **by the spec-approve verb** — specify.md §4's `cortex-lifecycle-spec-approve` call runs it in-process (via `update_item`), composed with the approval emissions in one backend-gated action; §5 supplies the args and no longer calls `cortex-update-item` for this write-back.
 
-Route these status/spec/areas write-backs through Step 3's canonical backend-gated write-back routing (the 3-arm shape), this site's fields. On `cortex-backlog`:
+**Infer areas**: name the primary subsystem modified (canonical: `overnight-runner`, `backlog`, `skills`, `lifecycle`, `hooks`, `report`, `tests`, `docs`) — the one where most files change. Spanning 4+ with no clear primary → clear the field.
 
-```bash
-cortex-update-item {backlog-filename-slug} --status refined --spec cortex/lifecycle/{lifecycle-slug}/spec.md
-cortex-update-item {backlog-filename-slug} --areas area1 area2
-```
-
-Empty areas: `cortex-update-item {backlog-filename-slug} --areas` (passing `--areas` with no values clears the list). The `none`/external arms and failure handling match Step 3.
+Hand the spec-approve verb: `--backend {resolved}` (the Step-2 backend — it gates the write-back exactly as Step 3's 3-arm routing does: `cortex-backlog` writes, `none` skips, external is best-effort), `--backlog-file {backlog-filename-slug}` (`""` in Context B), `--spec-path cortex/lifecycle/{lifecycle-slug}/spec.md`, and the areas — `--areas area1 area2` to set them, `--clear-areas` for the empty-areas case, or omit `--areas` to leave them untouched (preserve-on-omit). On the verb's exit 2 (ambiguous slug), apply backlog-writeback.md's handling as in Step 3.
 
 ## Step 6: Completion
 

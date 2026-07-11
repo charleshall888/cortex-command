@@ -124,10 +124,6 @@ FILE_EVENTS: dict[str, dict[str, int]] = {
     "skills/lifecycle/references/worktree-entry.md": {
         "interactive_worktree_entered": 1,
     },
-    "skills/refine/references/specify.md": {
-        "spec_approved": 1,
-        "phase_transition": 1,
-    },
     "skills/lifecycle/references/criticality-matrix.md": {
         "criticality_override": 1,
     },
@@ -204,6 +200,7 @@ ZERO_SWEEP_FILES: tuple[str, ...] = (
     "skills/lifecycle/references/plan.md",
     "skills/lifecycle/references/implement.md",
     "skills/lifecycle/references/review.md",
+    "skills/refine/references/specify.md",
 )
 
 
@@ -559,6 +556,40 @@ def test_found_match_is_anti_vacuous_on_wrong_count() -> None:
     plan = REPO_ROOT / "skills/lifecycle/references/plan.md"
     with pytest.raises(CrossValidationError):
         cross_validate(plan, "plan_approved", 99)
+
+
+def test_refine_delegation_phase_transition_enumerates_only_two_boundaries() -> None:
+    """refine-delegation.md's phase-transition template lists ONLY the two
+    template-owned boundaries — the specify→plan boundary is verb-owned
+    (cortex-lifecycle-spec-approve --emit-transition under lifecycle-wrapped
+    refine). Leaving specify→plan in the template while the verb also emits it
+    double-emits the row under lifecycle-wrapped refine.
+
+    This is the boundary-blindness guard the FILE_EVENTS phase_transition:1 pin
+    cannot provide: that count matches the template LINE by literal occurrence
+    and cannot see which boundaries the line enumerates, so it would pass
+    identically whether specify→plan is dropped or left in.
+    """
+    path = REPO_ROOT / "skills/lifecycle/references/refine-delegation.md"
+    template_lines = [
+        ln
+        for ln in path.read_text(encoding="utf-8").splitlines()
+        if "cortex-lifecycle-event phase-transition" in ln
+    ]
+    assert len(template_lines) == 1, (
+        f"expected exactly 1 phase-transition template line, "
+        f"found {len(template_lines)}"
+    )
+    line = template_lines[0]
+    m = re.search(r"\(([^()]*→[^()]*)\)", line)
+    assert m, f"no boundary enumeration parenthetical found in: {line!r}"
+    boundaries = {b.strip() for b in m.group(1).split(",")}
+    assert boundaries == {"clarify→research", "research→specify"}, (
+        f"template boundary enumeration must be exactly "
+        f"{{clarify→research, research→specify}} (specify→plan is verb-owned); "
+        f"got {boundaries}"
+    )
+    assert "specify→plan" not in m.group(1)
 
 
 # ---------------------------------------------------------------------------
