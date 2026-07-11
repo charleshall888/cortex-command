@@ -40,6 +40,7 @@ from cortex_command.common import (
     read_tier,
 )
 from cortex_command.lifecycle.parse_args import parse
+from cortex_command.lifecycle.protocol import PROTOCOL_VERSION
 
 # Closed set of ``state`` values, asserted for coverage by the test suite.
 KNOWN_STATES = (
@@ -247,7 +248,9 @@ def _build_parser() -> argparse.ArgumentParser:
 def main(argv: Optional[List[str]] = None) -> int:
     _telemetry.log_invocation("cortex-lifecycle-resolve")
     args = _build_parser().parse_args(argv)
-    sys.stdout.write(json.dumps(resolve_invocation(args.arguments or "")) + "\n")
+    result = resolve_invocation(args.arguments or "")
+    result["protocol"] = PROTOCOL_VERSION
+    sys.stdout.write(json.dumps(result) + "\n")
     return 0
 
 

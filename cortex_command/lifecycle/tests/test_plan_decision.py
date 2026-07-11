@@ -16,6 +16,7 @@ from pathlib import Path
 import pytest
 
 from cortex_command.lifecycle import plan_decision as pd
+from cortex_command.lifecycle.protocol import PROTOCOL_VERSION
 
 
 def _scaffold(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, feature: str = "feat") -> Path:
@@ -336,3 +337,15 @@ def test_cli_error_state_on_unexpected_exception(
     obj = json.loads(capsys.readouterr().out)
     assert obj["state"] == "error"
     assert "kaboom" in obj["message"]
+
+
+def test_cli_payload_carries_protocol_field(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
+) -> None:
+    """The emitted payload carries the additive ``protocol`` field (two-sided
+    handshake substrate)."""
+    _scaffold(tmp_path, monkeypatch)
+    rc = pd.main(["--feature", "feat", "--decision", "revise"])
+    assert rc == 0
+    obj = json.loads(capsys.readouterr().out)
+    assert obj["protocol"] == PROTOCOL_VERSION

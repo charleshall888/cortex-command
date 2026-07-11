@@ -52,6 +52,7 @@ from typing import List, Optional
 
 from cortex_command.backlog import _telemetry
 from cortex_command.common import _resolve_user_project_root_from_cwd
+from cortex_command.lifecycle.protocol import PROTOCOL_VERSION
 from cortex_command.lifecycle_event import log_event
 
 _DECISIONS = ("branch-mode-approved", "wait-approved", "cancelled", "revise")
@@ -259,6 +260,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         )
     except Exception as exc:  # noqa: BLE001 — always emit a JSON struct, never a traceback
         result = {"state": "error", "message": repr(exc)}
+    result["protocol"] = PROTOCOL_VERSION
     sys.stdout.write(json.dumps(result, separators=(",", ":")) + "\n")
     return 0
 

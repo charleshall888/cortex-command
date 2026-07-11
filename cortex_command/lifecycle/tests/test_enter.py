@@ -18,6 +18,7 @@ from pathlib import Path
 import pytest
 
 from cortex_command.lifecycle import enter as en
+from cortex_command.lifecycle.protocol import PROTOCOL_VERSION
 
 
 def _patch_primitives(
@@ -320,6 +321,19 @@ def test_cli_emits_json_and_exits_0(
     obj = json.loads(capsys.readouterr().out)
     assert obj["state"] == "ready"
     assert obj["backlog_status"] == "no_match"
+
+
+def test_cli_payload_carries_protocol_field(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
+) -> None:
+    """The emitted payload carries the additive ``protocol`` field (two-sided
+    handshake substrate)."""
+    monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
+    _patch_primitives(monkeypatch, ensure_code=0)
+    rc = en.main(_cli_args())
+    assert rc == 0
+    obj = json.loads(capsys.readouterr().out)
+    assert obj["protocol"] == PROTOCOL_VERSION
 
 
 def test_cli_exits_0_with_error_state_on_unexpected_exception(

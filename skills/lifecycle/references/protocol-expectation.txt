@@ -1,0 +1,23 @@
+# protocol-expectation.txt — plugin-side protocol compat range
+#
+# The served lifecycle loop is two-sided: the installed wheel serves a `protocol`
+# integer in every verb payload (declared by the wheel constant
+# `cortex_command/lifecycle/protocol.py`'s PROTOCOL_VERSION); this file declares
+# the inclusive compat RANGE the prose loop in this cortex-core plugin expects.
+# It is versioned in the same commit as the loop prose beside it.
+#
+# Compat is ALWAYS range-based, never exact-equality. A served protocol value V
+# is compatible iff  min <= V <= max  (inclusive). A value below `min` is a
+# stale wheel (fresh plugin, old distribution); a value above `max` is a wheel
+# newer than this prose understands. Either direction halts the loop with a
+# remediation message (see the wheel-side compat evaluator).
+#
+# FORMAT (parsed by the wheel-side compat evaluator and the loop):
+#   - Lines beginning with `#` and blank lines are ignored.
+#   - Each significant line is `key=value` with an integer value.
+#   - Required keys: `min` and `max` (both inclusive bounds).
+#
+# Both sides advance together in this repo; a parity test asserts the wheel's
+# PROTOCOL_VERSION lies within [min, max] at HEAD.
+min=1
+max=1

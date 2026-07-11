@@ -15,6 +15,7 @@ import pytest
 
 from cortex_command.common import CortexProjectRootError
 from cortex_command.lifecycle import register_artifact as ra
+from cortex_command.lifecycle.protocol import PROTOCOL_VERSION
 
 
 def _index_path(root, feature="feat"):
@@ -220,6 +221,18 @@ def test_cli_emits_compact_json_and_exits_zero(tmp_path, capsys) -> None:
     obj = json.loads(out)
     assert obj["state"] == "registered"
     assert obj["artifact"] == "research"
+
+
+def test_cli_payload_carries_protocol_field(tmp_path, capsys) -> None:
+    """The emitted payload carries the additive ``protocol`` field (two-sided
+    handshake substrate)."""
+    _write_index(tmp_path, "artifacts: []")
+    rc = ra.main(
+        ["--feature", "feat", "--artifact", "research", "--project-root", str(tmp_path)]
+    )
+    assert rc == 0
+    obj = json.loads(capsys.readouterr().out)
+    assert obj["protocol"] == PROTOCOL_VERSION
 
 
 def test_cli_rejects_unknown_artifact(tmp_path) -> None:

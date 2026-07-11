@@ -93,6 +93,7 @@ from cortex_command.common import (
 )
 from cortex_command.lifecycle import init_ensure
 from cortex_command.lifecycle.create_index import create_index
+from cortex_command.lifecycle.protocol import PROTOCOL_VERSION
 from cortex_command.lifecycle.start_sync import _Exit2, sync
 
 KNOWN_STATES = ("ready", "needs-decision", "blocked", "ensure-failed", "error")
@@ -268,6 +269,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 2
     except Exception as exc:  # noqa: BLE001 — always emit a JSON struct, never a traceback
         result = {"state": "error", "message": repr(exc)}
+    result["protocol"] = PROTOCOL_VERSION
     sys.stdout.write(json.dumps(result, separators=(",", ":")) + "\n")
     return 0
 

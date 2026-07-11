@@ -19,6 +19,7 @@ import pytest
 
 from cortex_command.backlog.resolve_item import ResolutionResult
 from cortex_command.lifecycle import spec_approve as sa
+from cortex_command.lifecycle.protocol import PROTOCOL_VERSION
 
 
 def _scaffold(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, feature: str = "feat") -> Path:
@@ -581,6 +582,27 @@ def test_cli_default_flag_state_suppresses_transition(
     assert obj["state"] == "approved"
     assert obj["emit_transition"] is False
     assert _event_names(feature_dir) == ["spec_approved"]
+
+
+def test_cli_payload_carries_protocol_field(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
+) -> None:
+    """The emitted payload carries the additive ``protocol`` field (two-sided
+    handshake substrate)."""
+    _scaffold(tmp_path, monkeypatch)
+    rc = sa.main(
+        [
+            "--feature", "feat",
+            "--decision", "revise",
+            "--backend", "none",
+            "--backlog-file", "",
+            "--spec-path", "p",
+            "--no-emit-transition",
+        ]
+    )
+    assert rc == 0
+    obj = json.loads(capsys.readouterr().out)
+    assert obj["protocol"] == PROTOCOL_VERSION
 
 
 def test_cli_error_state_on_unexpected_exception(

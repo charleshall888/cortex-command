@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 
+from cortex_command.lifecycle.protocol import PROTOCOL_VERSION
 from cortex_command.lifecycle.resolve import (
     KNOWN_STATES,
     main,
@@ -230,3 +231,12 @@ def test_cli_emits_single_json_object(capsys: pytest.CapSys) -> None:
     out = capsys.readouterr().out
     obj = json.loads(out)
     assert obj["state"] == "empty"
+
+
+def test_cli_payload_carries_protocol_field(capsys: pytest.CapSys) -> None:
+    """The emitted payload carries the additive ``protocol`` field (two-sided
+    handshake substrate)."""
+    rc = main([""])
+    assert rc == 0
+    obj = json.loads(capsys.readouterr().out)
+    assert obj["protocol"] == PROTOCOL_VERSION

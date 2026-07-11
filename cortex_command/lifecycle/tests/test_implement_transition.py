@@ -18,6 +18,7 @@ from pathlib import Path
 import pytest
 
 from cortex_command.lifecycle import implement_transition as it
+from cortex_command.lifecycle.protocol import PROTOCOL_VERSION
 
 
 def _scaffold(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, feature: str = "feat") -> Path:
@@ -317,6 +318,18 @@ def test_cli_batch_mode_inferred_emits_json_and_exits_0(
     obj = json.loads(capsys.readouterr().out)
     assert obj["state"] == "dispatched"
     assert _event_names(feature_dir) == ["batch_dispatch"]
+
+
+def test_cli_payload_carries_protocol_field(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
+) -> None:
+    """The emitted payload carries the additive ``protocol`` field (two-sided
+    handshake substrate)."""
+    _scaffold(tmp_path, monkeypatch)
+    rc = it.main(["--feature", "feat", "--batch", "1", "--tasks", "[1,2]"])
+    assert rc == 0
+    obj = json.loads(capsys.readouterr().out)
+    assert obj["protocol"] == PROTOCOL_VERSION
 
 
 def test_cli_transition_mode_emits_json_and_exits_0(

@@ -56,6 +56,7 @@ from cortex_command.common import (
     _resolve_user_project_root_from_cwd,
     atomic_write,
 )
+from cortex_command.lifecycle.protocol import PROTOCOL_VERSION
 
 KNOWN_STATES = ("registered", "already-present", "no-index", "error")
 
@@ -184,6 +185,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         )
     except Exception as exc:  # noqa: BLE001 — always emit a JSON struct, never a traceback
         result = {"state": "error", "message": repr(exc)}
+    result["protocol"] = PROTOCOL_VERSION
     sys.stdout.write(json.dumps(result, separators=(",", ":")) + "\n")
     return 0
 
