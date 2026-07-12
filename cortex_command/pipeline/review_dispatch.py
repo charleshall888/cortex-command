@@ -72,8 +72,10 @@ def _advance_review_complete(feature: str, cycle: int, feature_events_log: Path)
     Composes the review.approved arm (``review_verdict`` → ``phase_transition``
     review→complete) — the events-first completion signal (ADR-0025). The legacy
     ``feature_complete`` telemetry row (with ``merge_anchor: "review"``) the
-    pre-fold path hand-appended is NOT emitted by the advance/B1 bodies; see the
-    module fold report for the metrics implication. Best-effort; envelope ignored."""
+    pre-fold path hand-appended is NOT emitted by the advance/B1 bodies; downstream
+    metrics (``cortex_command/pipeline/metrics.py:extract_feature_metrics``) instead
+    detect completion off the ``phase_transition→complete`` row and default the
+    absent ``merge_anchor`` to ``"review"``. Best-effort; envelope ignored."""
     advance(
         verb="review-verdict",
         feature=feature,

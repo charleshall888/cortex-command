@@ -30,8 +30,11 @@ Completion is signalled by the ``phase_transition`` review→complete row the
 ``feature_complete`` telemetry row this path used to hand-append is NOT emitted
 by the ``advance``/B1 bodies (the served transition table does not list it);
 ``tasks_total``/``rework_cycles`` are still computed for the returned envelope
-but no longer land on an events.log row. See the module's fold report for the
-metrics/``merge_anchor`` implications of that change.
+but no longer land on an events.log row. Downstream metrics
+(``cortex_command/pipeline/metrics.py:extract_feature_metrics``) therefore
+detect completion events-first — off the ``phase_transition→complete`` row
+rather than ``feature_complete`` — and default a fold-completed feature's
+``merge_anchor`` to ``"review"``.
 
 States:
   no-lifecycle-dir        — ``cortex/lifecycle/{feature}/events.log`` doesn't

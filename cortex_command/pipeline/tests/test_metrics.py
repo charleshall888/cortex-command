@@ -2120,5 +2120,100 @@ def test_backfill_detection_is_marker_driven_not_shape():
     assert marked_metrics["phase_durations"][0]["duration_seconds"] is None
 
 
+def test_extract_feature_metrics_completion_is_events_first():
+    """374 rework: completion derives events-first, not off ``feature_complete``.
+
+    After the 374 write-path fold, the served ``advance`` review.approved /
+    implement.complete arms emit ``(review_verdict, phase_transition→complete)``
+    and NO ``feature_complete`` row (ADR-0025 — events are the phase authority).
+    ``extract_feature_metrics`` must therefore treat a
+    ``phase_transition`` with ``to == "complete"`` as the completion signal, or
+    fold-completed features silently count in-progress and starve the "review"
+    anchor bucket.
+
+    Pins, through the REAL ``extract_feature_metrics`` / ``compute_aggregates``
+    call path:
+
+    (a) FOLD feature — ``phase_transition→complete`` but NO ``feature_complete``:
+        counted COMPLETE, ``merge_anchor`` defaults to ``"review"``, its phase
+        duration lands in the ``avg_phase_durations_by_anchor["review"]`` bucket,
+        and the completion row's ``ts`` anchors total-duration math.
+    (b) LEGACY feature carrying BOTH a ``phase_transition→complete`` AND a later
+        ``feature_complete`` (the real-world legacy shape): still counted
+        COMPLETE exactly once, and the ``feature_complete`` row's ``ts`` /
+        ``merge_anchor`` / ``tasks_total`` win (no double-count, no regression).
+    (c) LEGACY feature with only a ``feature_complete`` row: still complete.
+    """
+    from cortex_command.pipeline.metrics import (
+        compute_aggregates,
+        extract_feature_metrics,
+    )
+
+    # ---- (a) FOLD feature: phase_transition→complete, NO feature_complete ----
+    fold_events = [
+        {"ts": "2026-07-10T12:00:00Z", "event": "lifecycle_start",
+         "feature": "fold-feat", "tier": "simple"},
+        {"ts": "2026-07-10T12:00:00Z", "event": "phase_transition",
+         "feature": "fold-feat", "from": "implement", "to": "review"},
+        {"ts": "2026-07-10T12:05:00Z", "event": "phase_transition",
+         "feature": "fold-feat", "from": "review", "to": "complete"},
+    ]
+    # Guard the premise: this fixture models the post-fold path, which emits no
+    # feature_complete row.
+    assert not any(e["event"] == "feature_complete" for e in fold_events)
+
+    fold_m = extract_feature_metrics(fold_events)
+    assert fold_m is not None, "fold-completed feature must count COMPLETE"
+    # merge_anchor defaults to "review" (no feature_complete row to carry it).
+    assert fold_m["merge_anchor"] == "review", fold_m["merge_anchor"]
+    # Total duration uses the phase_transition→complete row's ts (12:05 - 12:00).
+    assert fold_m["total_duration_seconds"] == 300.0, fold_m["total_duration_seconds"]
+    # The review→complete phase duration is present.
+    fold_pd = {f"{d['from']}_to_{d['to']}": d["duration_seconds"]
+               for d in fold_m["phase_durations"]}
+    assert fold_pd.get("review_to_complete") == 300.0, fold_pd
+
+    # ---- (b) LEGACY feature: BOTH rows present (transition then telemetry) ----
+    legacy_both_events = [
+        {"ts": "2026-07-10T13:00:00Z", "event": "lifecycle_start",
+         "feature": "legacy-feat", "tier": "simple"},
+        {"ts": "2026-07-10T13:00:00Z", "event": "phase_transition",
+         "feature": "legacy-feat", "from": "implement", "to": "review"},
+        {"ts": "2026-07-10T13:05:00Z", "event": "phase_transition",
+         "feature": "legacy-feat", "from": "review", "to": "complete"},
+        {"ts": "2026-07-10T13:10:00Z", "event": "feature_complete",
+         "feature": "legacy-feat", "tasks_total": 5, "rework_cycles": 1,
+         "merge_anchor": "merge"},
+    ]
+    legacy_m = extract_feature_metrics(legacy_both_events)
+    assert legacy_m is not None, "legacy feature_complete must still count COMPLETE"
+    # feature_complete wins the telemetry when both rows exist (no double-count).
+    assert legacy_m["merge_anchor"] == "merge", legacy_m["merge_anchor"]
+    assert legacy_m["task_count"] == 5, legacy_m["task_count"]
+    # Total duration anchors on the feature_complete ts (13:10 - 13:00 = 600),
+    # NOT the earlier transition→complete row (which would give 300).
+    assert legacy_m["total_duration_seconds"] == 600.0, legacy_m["total_duration_seconds"]
+
+    # ---- (c) LEGACY feature: feature_complete only, no transition→complete ----
+    legacy_only_events = [
+        {"ts": "2026-07-10T14:00:00Z", "event": "lifecycle_start",
+         "feature": "legacy-only", "tier": "simple"},
+        {"ts": "2026-07-10T14:10:00Z", "event": "feature_complete",
+         "feature": "legacy-only"},
+    ]
+    legacy_only_m = extract_feature_metrics(legacy_only_events)
+    assert legacy_only_m is not None, "feature_complete-only log must still count COMPLETE"
+
+    # ---- Aggregation: fold feature reaches the "review" anchor bucket ----
+    aggregates = compute_aggregates([fold_m, legacy_m])
+    assert "simple" in aggregates, list(aggregates.keys())
+    by_anchor = aggregates["simple"]["avg_phase_durations_by_anchor"]
+    # Fold feature (default "review") populates the review bucket that the fold
+    # would otherwise have starved; legacy feature ("merge") stays separate.
+    assert "review" in by_anchor, by_anchor
+    assert by_anchor["review"].get("review_to_complete") == 300.0, by_anchor["review"]
+    assert "merge" in by_anchor, by_anchor
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -209,8 +209,9 @@ def _phase_durations(
 def extract_feature_metrics(events: list[dict[str, Any]]) -> dict[str, Any] | None:
     """Compute per-feature metrics from a list of events for one feature.
 
-    Returns ``None`` for in-progress features (no ``feature_complete``
-    event).
+    Returns ``None`` for in-progress features — those whose log carries
+    neither a ``feature_complete`` row nor the events-authority completion
+    signal (a ``phase_transition`` with ``to == "complete"``; ADR-0025).
 
     Args:
         events: All parsed events for a single feature, in file order.
@@ -219,21 +220,49 @@ def extract_feature_metrics(events: list[dict[str, Any]]) -> dict[str, Any] | No
         A dict of per-feature metrics, or ``None`` if the feature is
         still in progress.
     """
-    # ---- Check for completion ----
+    # ---- Check for completion (events-first, ADR-0025) ----
+    # A feature is COMPLETE when its log carries EITHER the legacy
+    # ``feature_complete`` telemetry row OR the events-authority completion
+    # signal: a ``phase_transition`` whose ``to == "complete"`` (what the served
+    # ``advance`` review.approved / implement.complete arms emit after the 374
+    # write-path fold — those paths emit NO ``feature_complete`` row). A log with
+    # neither signal is still in progress.
     complete_events = [e for e in events if e["event"] == "feature_complete"]
-    if not complete_events:
+    phase_complete_events = [
+        e
+        for e in events
+        if e["event"] == "phase_transition" and e.get("to") == "complete"
+    ]
+    if not complete_events and not phase_complete_events:
         return None
 
-    # Use the *last* feature_complete event (handles duplicates).
-    final_complete = complete_events[-1]
+    # The completion row supplies the feature name, the completion timestamp
+    # (the duration-math endpoint), and — on legacy logs only — the
+    # ``merge_anchor`` / ``tasks_total`` / ``rework_cycles`` telemetry. Prefer
+    # the legacy ``feature_complete`` row when present: it carries that
+    # telemetry, its ``ts`` has always anchored duration math, and a legacy log
+    # may carry BOTH rows (the review→complete transition then the telemetry
+    # row) — reading ``feature_complete`` first reproduces the historical result
+    # exactly and never double-counts. Use the *last* ``feature_complete`` to
+    # collapse duplicates. Otherwise the feature was completed via the 374 fold
+    # and has no ``feature_complete`` row, so completion (and its timestamp)
+    # rides on the earliest ``phase_transition→complete`` row instead.
+    if complete_events:
+        final_complete = complete_events[-1]
+    else:
+        final_complete = phase_complete_events[0]
 
     feature_name = final_complete["feature"]
 
     # ---- Merge anchor ----
     # "review" is the legacy default (pre-restructure regime: feature_complete
     # fired at PR-create / review time).  Post-restructure interactive complete
-    # emits "merge" (after the PR is merged on GitHub).  Backwards-compatible
-    # read so historical events lacking the field keep their prior semantics.
+    # emits "merge" (after the PR is merged on GitHub).  A fold-completed feature
+    # (completion detected via ``phase_transition→complete``, no ``feature_complete``
+    # row) carries no ``merge_anchor`` and so falls to this same "review" default —
+    # correct, since the folded overnight/pipeline completion IS review-anchored.
+    # Backwards-compatible read so historical events lacking the field keep their
+    # prior semantics.
     merge_anchor: str = final_complete.get("merge_anchor", "review")
 
     # ---- Tier ----
