@@ -43,7 +43,7 @@ It always exits 0 with one JSON envelope. Consume the served envelope — not th
 <!-- pause: ambiguous-backlog-pick question -->
 **Passthrough routing states** carry a `next` directive — act on it: `new` (carries `backlog`) → Step 2 fresh; `derive-slug` (derive a 3–6 word kebab-case slug and re-run — no confirmation; user corrects via re-invocation); `empty` (offer incomplete `cortex/lifecycle/*` lifecycles via `AskUserQuestion`, then re-run); `ambiguous-backlog` (present `candidates` via `AskUserQuestion`, then re-run); `wontfix` (run the named `cortex-lifecycle-wontfix` command and halt); `error` / `needs-feature` / `no-such-lifecycle` (report and stop — do not create a lifecycle).
 
-**A resumable feature** is served as a phase-keyed envelope: `state` is the current phase, `advance_contract` (`expected_from_state` + `log_path`) threads into `cortex-lifecycle-advance` at each boundary, `pause_spec` drives the kept pauses, and `path_overview` orients the resume. Proceed to Step 2, then Step 3 at `state`. Criticality/tier/cycle/checked/total ride in `evidence_trace`; surface `staleness` tersely when present (non-blocking drift hint; default continue).
+**A resumable feature** (resolver routing state `resume`) is served as a phase-keyed envelope: `state` is the current phase, `advance_contract` (`expected_from_state` + `log_path`) threads into `cortex-lifecycle-advance` at each boundary, `pause_spec` drives the kept pauses, and `path_overview` orients the resume. Proceed to Step 2, then Step 3 at `state`. Criticality/tier/cycle/checked/total ride in `evidence_trace`; surface `staleness` tersely when present (non-blocking drift hint; default continue).
 
 `cortex-lifecycle-next` never writes — Step 2's sub-procedures do.
 
