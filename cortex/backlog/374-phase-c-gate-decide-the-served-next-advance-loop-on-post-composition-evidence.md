@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 84506324-4fe3-4ae3-8228-770b3f5c5b68
 title: 'Phase-C gate: decide the served next/advance loop on post-composition evidence'
-status: in_progress
+status: complete
 priority: medium
 type: spike
 created: 2026-07-10
-updated: 2026-07-10
+updated: 2026-07-11
 parent: "371"
 tags: ['cli-served-lifecycle-state-machine']
 discovery_source: cortex/research/cli-served-lifecycle-state-machine/research.md

@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 5021c6a3-96c2-4dd3-9d5e-849cf7d002fb
 title: 'CLI-served lifecycle state machine: phased verb-completion with a gated loop'
-status: backlog
+status: complete
 priority: high
 type: epic
 created: 2026-07-10
-updated: 2026-07-10
+updated: 2026-07-11
 tags: ['cli-served-lifecycle-state-machine']
 discovery_source: cortex/research/cli-served-lifecycle-state-machine/research.md
 ---

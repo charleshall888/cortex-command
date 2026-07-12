@@ -36,7 +36,7 @@ Build the served next/advance lifecycle loop in five sequential, independently-s
 - **Complexity**: complex
 - **Context**: `critical_review/__init__.py:462` `append_event(events_log_path, event)` — NamedTemporaryFile at `:487`, `os.replace` at `:499`. `discovery.py:222` `append_event(...)` — NamedTemporaryFile at `:243`, `os.replace` at `:255` (a byte-for-byte port of the critical_review helper). Both take an arbitrary `event: dict` whose `event` field is caller-supplied — enumerate callers to preserve types. Sink: `lifecycle_event.log_event_at` (`lifecycle_event.py:127`) prepends `ts` when absent and funnels to the flock+O_APPEND `_append_event_atomic` (`:75`); canonical serialization is `json.dumps(row_dict)+"\n"` with default spacing. Delete the now-dead `append_event` helpers and their `os.replace`/tempfile imports if no caller remains.
 - **Verification**: (a) `python3 -m pytest cortex_command/critical_review/ cortex_command/tests/ -q -k "event or append"` → all pass; and (b) `grep -rEn 'os\.replace|NamedTemporaryFile' cortex_command/critical_review/__init__.py cortex_command/discovery.py` returns 0 matches (both rewriters gone).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Route the bare-append writers through the primitive and fix their read-after-write verifiers
 - **Files**: `cortex_command/refine.py`, `cortex_command/lifecycle/complexity_escalator.py`
@@ -45,7 +45,7 @@ Build the served next/advance lifecycle loop in five sequential, independently-s
 - **Complexity**: complex
 - **Context**: `refine.py:254` (`_cmd_reconcile_clarify`, emits `complexity_override` and/or `criticality_override` with a `gate:"clarify_reconcile"` field) and `refine.py:302` (`_cmd_emit_lifecycle_start`, emits `lifecycle_start` carrying extra `schema_version`+`entry_point:"refine"`). `complexity_escalator.py:200` (`_emit_event`, emits `complexity_override` with `gate`). Routing map: `lifecycle_start`/`criticality_override` have typed subcommands (`lifecycle_event.py:270`,`:293`) but carry extra fields → use `log_event_at` with a raw dict to preserve `schema_version`/`entry_point`/`gate`; `complexity_override` has **no** typed subcommand → `log_event`/`log_event_at`. Read-after-write today: `complexity_escalator._verify_last_event` (`:205`) reads `f.readlines()` then inspects only `lines[-1]`; refine re-opens `"r"` at `refine.py:316` and checks the tail. Rewrite both to parse every line and assert a row matching the disambiguating fields (`event`+`to`+`gate`, or `event`+`feature` for `lifecycle_start`) exists. Preserve the existing `try/except (PermissionError, OSError)` → exit-70 sandbox-hint behavior and the `_lifecycle_start_present` idempotency guard.
 - **Verification**: (a) `python3 -m pytest cortex_command/tests/ cortex_command/lifecycle/tests/ -q -k "refine or complexity or escalat"` → all pass, including a new test that appends a concurrent row between write and verify and asserts the verifier still passes; (b) `grep -rEn 'open\([^)]*events[_.]?log[^)]*"a"' cortex_command/refine.py cortex_command/lifecycle/complexity_escalator.py` returns 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Neutralize the orchestrator-round raw per-feature append
 - **Files**: `cortex_command/overnight/prompts/orchestrator-round.md`
@@ -54,7 +54,7 @@ Build the served next/advance lifecycle loop in five sequential, independently-s
 - **Complexity**: simple
 - **Context**: `orchestrator-round.md:387` is the literal fenced-Python `plan_comparison` append (`schema_version:2`, `disposition:"auto_select"`); prose siblings at `:349` (single-surviving-variant) and `:429` (`disposition:"deferred"`). The whole path is gated by `synthesizer_overnight_enabled` (default false, fail-closed; read via `read_synthesizer_gate`). `plan_comparison` is an ADR-0020 hand-written-exempt event (named at `lifecycle_event.py:231`) whose canonical shape places `schema_version` before `feature` — the generic `cortex-lifecycle-event log` subcommand (parser built at `lifecycle_event.py:361`) is the sanctioned emitter. This is a prompt (natural-language instruction to an agent), so the replacement is prose telling the agent to shell out to `cortex-lifecycle-event log ...`, not Python.
 - **Verification**: (b) `grep -n 'open(' cortex_command/overnight/prompts/orchestrator-round.md` returns 0 raw events.log appends; the file still documents the `plan_comparison` emission via `cortex-lifecycle-event log`.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Add the writer-census structural test
 - **Files**: `tests/test_events_log_writer_census.py` (new)
@@ -63,7 +63,7 @@ Build the served next/advance lifecycle loop in five sequential, independently-s
 - **Complexity**: simple
 - **Context**: After Tasks 1–3 the only remaining raw per-feature writers are the sanctioned siblings (`finalize.py`, `wontfix_cli.py`, `record_pr_opened.py` on the shared primitive) and the canonical `lifecycle_event.py` itself. Explicitly EXCLUDE non-per-feature sinks the exploration confirmed are different files: `overnight/events.py:242` (session log), `overnight/auth.py:233` (auth log), `backlog/update_item.py:178` / `create_item.py:103` (`{stem}.events.jsonl`), and all test fixtures. Encode the allowlist as `{module: rationale}`. **Scope boundary (do not overclaim):** this census scans only *raw-write syntax* (`open(...,"a")`/`os.replace`/`NamedTemporaryFile`); it is NOT and cannot be the fold-completion discriminator for Task 17a — `advance_lifecycle.py`/`review_dispatch.py` emit via `log_event` and were never census hits, so a `log_event`-routed independent transition decision is invisible to it. Fold-completion gets its own positive test in Task 17a. Acceptance b: also assert `grep -En 'open\([^)]*events_log[^)]*"a"' cortex_command/` returns 0 (append-mode only; read-side opens are sanctioned).
 - **Verification**: (a) `python3 -m pytest tests/test_events_log_writer_census.py -q` → all pass.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Pin one log-resolver for machine verbs
 - **Files**: `cortex_command/lifecycle/log_resolver.py` (new, or a documented helper in `cortex_command/lifecycle_event.py`), `cortex_command/lifecycle/tests/test_log_resolver.py` (new)
@@ -72,7 +72,7 @@ Build the served next/advance lifecycle loop in five sequential, independently-s
 - **Complexity**: complex
 - **Context**: Reuse `interactive_lock._resolve_main_repo_root()` semantics (`interactive_lock.py:149`) — `CORTEX_REPO_ROOT` first, else walk up from CWD parsing the first `.git` **file** via `_main_root_from_gitfile` (`:91`, reads `commondir`) to reach the MAIN repo root, guarded by `(candidate/"cortex").is_dir()`. This differs from `common._resolve_user_project_root_from_cwd` (`common.py:123`, CWD-only, ignores env) which `log_event` uses, and from env-honoring `_resolve_user_project_root` (`common.py:58`) which `enter.py` uses — the divergence is the live hazard. Expose the resolver so the primitive (Task 6) and the verbs record the physical log path in their envelope and assert it. Keep `log_event`/`log_event_at` themselves unchanged (legacy CWD resolution stays for the typed subcommands); this resolver is the machine-verb path.
 - **Verification**: (a) `python3 -m pytest cortex_command/lifecycle/tests/test_log_resolver.py -q` → passes, including a worktree-fixture test showing the resolver picks the main-root log while `_resolve_user_project_root_from_cwd` from the same CWD would pick the worktree-local copy.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Ship the claim/commit locking primitive
 - **Files**: `cortex_command/lifecycle_event.py`, `cortex_command/tests/test_lifecycle_event_claim_commit.py` (new)
@@ -81,7 +81,7 @@ Build the served next/advance lifecycle loop in five sequential, independently-s
 - **Complexity**: complex
 - **Context**: `_append_event_atomic` (`lifecycle_event.py:75`) today opens the sibling lockfile `{name}.lock`, `flock(LOCK_EX)`, does ONE O_APPEND write, unlocks — no read under the lock. The new primitive must hold the same sibling-lock across read+validate+append. Resolve the log path via Task 5's resolver (not `_events_log_path` at `:66`). Reduce with `common.reduce_lifecycle_state` (`common.py:762`) / `detect_lifecycle_phase` (`common.py:395`) for the from_state gate. `advance_started`/`advance_committed` rows carry a deterministic `invocation_id` persisted in both rows (business-derived, generated once, reused across retries) and link the pair. Row serialization must stay canonical (`json.dumps(row)+"\n"`, default spacing) so the rows parse identically to typed subcommands. Network calls (gh) never run under flock — that split is the reason claim and commit are separate lock acquisitions.
 - **Verification**: (a) `python3 -m pytest cortex_command/tests/test_lifecycle_event_claim_commit.py -q` → passes, including: two processes racing the same transition yield exactly one `advance_committed` and one explicit refusal; and a typed-subcommand row injected between claim and commit makes commit refuse and name the interleaved row.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 7: Add the feature_paused pause-slug field and most-restrictive reducer default
 - **Files**: `cortex_command/lifecycle_event.py`, `cortex_command/common.py`, `cortex_command/lifecycle/plan_decision.py`, `bin/.events-registry.md`, `cortex_command/tests/` (reducer unit test), `cortex_command/lifecycle/tests/test_plan_decision.py`
@@ -90,7 +90,7 @@ Build the served next/advance lifecycle loop in five sequential, independently-s
 - **Complexity**: simple
 - **Context**: `feature-paused` is currently `("feature_paused", [])` at `lifecycle_event.py:282` — empty field-spec, no slug/kind. Today `feature_paused` is handled only as a `last_significant_event` marker in `_detect_lifecycle_phase_inner` (`common.py:309`,`:315`) flipping `paused`; the tier/criticality reducer `reduce_lifecycle_events` (`common.py:681`) no-ops on it. Add the field-spec entries to the subcommand table and teach the reduction path to report the most-restrictive kind when the field is absent. Emission sites that pause (`plan_decision.py:194`) pass the slug. Registry note goes under `bin/.events-registry.md`'s `## Field-additive schema extensions` (`:147`), following the existing `### <event> (<context>, <date>)` + `- field:` pattern. This is a Phase-1-local acceptance (reducer unit test only); the pause-enforcement consumers are Phase 3.
 - **Verification**: (a) `python3 -m pytest cortex_command/tests/ cortex_command/lifecycle/tests/test_plan_decision.py -q -k "paused or feature_paused or slug"` → passes, including a reducer test that reduces a legacy slug-less/kind-less row and asserts most-restrictive, AND a `test_plan_decision.py` assertion that the pausing emission arm writes a `feature_paused` row carrying the `slug` field (R5 "emission sites pass the slug" — guards against a silent emitter regression); (b) `bin/cortex-check-events-registry --staged` passes after staging the note.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 8: Ship the missing bin/cortex-lifecycle-resolve wrapper (ordered first in Phase 2)
 - **Files**: `bin/cortex-lifecycle-resolve` (new), `tests/test_lifecycle_verb_deployment.py`
@@ -99,7 +99,7 @@ Build the served next/advance lifecycle loop in five sequential, independently-s
 - **Complexity**: simple
 - **Context**: Clone `bin/cortex-lifecycle-enter` (37 lines) verbatim, substituting the module `cortex_command.lifecycle.resolve` and the prog-name string in two places. Branches: (a) `CORTEX_COMMAND_FORCE_SOURCE=1` → PYTHONPATH exec; (b) wheel probe `python3 -c "import ..."` → exec module; (c) working-tree `grep -q '^name = "cortex-command"' pyproject.toml` → PYTHONPATH exec; (d) exit-2 remediation message. `chmod +x` the file. Add a `(console_script, entry_point, bin_rel)` tuple to `VERBS` in `tests/test_lifecycle_verb_deployment.py:31`; the pyproject row already exists (`pyproject.toml:72`) so parity E002 is satisfied. Dual-source mirror: the commit will regenerate `plugins/cortex-core/bin/` — stage together.
 - **Verification**: (a) `python3 -m pytest tests/test_lifecycle_verb_deployment.py -q -k resolve` → passes; and a scripted test simulating branch-(d) (wheel absent) asserts the exit-2 remediation message.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 9: Stamp the protocol field into the eight verbs with the two-sided declaration
 - **Files**: `cortex_command/lifecycle/protocol.py` (new wheel constant), `skills/lifecycle/references/protocol-expectation.txt` (new plugin-side expectation), the eight verb modules (`plan_decision.py`, `review_verdict.py`, `spec_approve.py`, `implement_transition.py`, `enter.py`, `finalize.py`, `register_artifact.py`, `resolve.py`), `tests/test_protocol_parity.py` (new), each verb's payload test
@@ -108,7 +108,7 @@ Build the served next/advance lifecycle loop in five sequential, independently-s
 - **Complexity**: complex
 - **Context**: Payload emission is uniform — inject `protocol` into the dict returned by each core function (the `main` stdout write sites: `plan_decision.py:251`, `review_verdict.py:327`, `spec_approve.py:388`, `implement_transition.py:319`, `enter.py:271`, `finalize.py:251`, `register_artifact.py:187`, `resolve.py:250`). Note `resolve.py` uses default `json.dumps` separators and has no try/except; the other seven use `separators=(",",":")`. Import the constant from `cortex_command/lifecycle/protocol.py`. The plugin expectation file lives in the cortex-core plugin tree beside the loop prose that reads it. Compat evaluation is range-based, never exact-equality (both sides move together in-repo; skew is a distribution-lag phenomenon). Each verb's payload test asserts the field.
 - **Verification**: (a) `python3 -m pytest tests/test_protocol_parity.py cortex_command/lifecycle/tests/ -q -k "protocol or payload"` → passes; the parity test asserts wheel-constant ∈ plugin-file range.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 10: Ship the wheel-side compat evaluator and remediation template
 - **Files**: `cortex_command/lifecycle/protocol.py` (extend), `cortex_command/lifecycle/tests/test_protocol_compat.py` (new)
@@ -117,7 +117,7 @@ Build the served next/advance lifecycle loop in five sequential, independently-s
 - **Complexity**: simple
 - **Context**: The expectation is **caller-supplied** (from the plugin expectation file), which is what makes the fresh-plugin/stale-wheel direction (expectation newer than served value) exercisable. Loop-side halt behavior and the `{"state":"protocol-skew"}` envelope are Phase 3/5 (Tasks 13/19) — this task ships only the substrate helper and template. Follow house style: pure classification function, no I/O.
 - **Verification**: (a) `python3 -m pytest cortex_command/lifecycle/tests/test_protocol_compat.py -q` → passes, covering all three classifications including an expectation newer than the served value.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 11: Port the SessionStart background-install healer to cortex-core
 - **Files**: cortex-core plugin hook (new, e.g. `plugins/cortex-core/hooks/cortex-cli-background-install.sh` + its `install_core.py` port under `cortex_command/` or the plugin tree), `cortex/adr/0026-cortex-core-background-install.md` (new), tests for the skip predicates + initiate path
@@ -126,7 +126,7 @@ Build the served next/advance lifecycle loop in five sequential, independently-s
 - **Complexity**: complex
 - **Context**: Source pattern is cortex-overnight's `cortex-cli-background-install.sh` + `install_core.py`. Document skip predicates in the ADR: `CORTEX_AUTO_INSTALL=0`, probe failure, failure sentinel, install-in-progress. State in-flight semantics: a mid-session wheel replacement is benign for cross-protocol changes (the per-verb payload check halts on the next call) and same-protocol replacements are compatible by the protocol contract. ADR back-points: #235/#263, ADR-0001. Note the exploration caveat: the overnight in-flight guard tracks runner sessions only — the ported hook has no interactive-session awareness, so the correctness boundary is explicitly the per-verb check, not the guard. Hook file must be executable.
 - **Verification**: (a) `python3 -m pytest -q -k "background_install or skew_heal"` → passes, exercising the skip predicates and a dry-run initiate path; (c) `Interactive/session-dependent: the actual SessionStart async reinstall is driven by a real session and validated by dry-run + skip-predicate unit tests, not an end-to-end install in CI.`
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 12: Build the wheel-owned transition table
 - **Files**: `cortex_command/lifecycle/transition_table.py` (new), `cortex_command/lifecycle/tests/test_transition_table.py` (new)
@@ -135,7 +135,7 @@ Build the served next/advance lifecycle loop in five sequential, independently-s
 - **Complexity**: complex
 - **Context**: Generalizes the one-hop-lookahead precedent `resolve.py:_ROUTE_NEXT` (`resolve.py:59`) and the four B1 decision tables (the `KNOWN_STATES` tuples + route logic in `plan_decision.py`, `review_verdict.py`, `spec_approve.py`, `implement_transition.py`). The exact encoding (dataclass rows vs typed dicts) and the `next` module filename are implementation-level, decided here (spec Open Decisions). Every B1 verb decision arm must map to a table row. Config keys (from `lifecycle_config.py`) select parameters only — a closure test asserts config cannot introduce states. States to cover include the artifact-only ones the events already back after B1: `implement-rework`, `escalated` (from `review_verdict` routing, `review_verdict.py:151`,`:165`).
 - **Verification**: (a) `python3 -m pytest cortex_command/lifecycle/tests/test_transition_table.py -q` → passes, including a completeness test (every B1 verb decision arm maps to a row) and a closure test (config keys cannot introduce states or reorder edges).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 13: Build the read-only `next` server verb
 - **Files**: `cortex_command/lifecycle/next_verb.py` (new; module may be `next.py`), `bin/cortex-lifecycle-next` (new), `pyproject.toml`, `tests/test_lifecycle_verb_deployment.py`, `cortex_command/lifecycle/tests/test_next_verb.py` (new)
@@ -144,7 +144,7 @@ Build the served next/advance lifecycle loop in five sequential, independently-s
 - **Complexity**: complex
 - **Context**: House verb style (template = the seven shipped verbs): `main()` never tracebacks (`{"state":"error"}` at exit 0), closed `KNOWN_STATES` tuple, `_reject_unsafe_slug` first, exit-0 envelopes. Compose `resolve.py`'s `resolve_invocation` (`resolve.py:104`) and its `_ROUTE_NEXT`. Resolve the log via Task 5's resolver and record the physical path in the advance contract. Evaluate guards from Task 12's table; use Task 10's compat evaluator for the protocol-skew arm. **Naming collision (adversarial finding 9):** the resolver envelope already carries a `next` directive field — do NOT reuse `next` as a routing key in this verb's envelope; use distinct field names (`state`, `advance_contract`, …). The resolver's `next` field stays for legacy consumers until the protocol-floor bump. Deploy: add `pyproject.toml` `[project.scripts]` row (after `:76` block), clone the `bin/cortex-lifecycle-enter` wrapper, add the deployment-test tuple only after both exist. W003 orphan check needs an in-scope file carrying the literal `bin/cortex-lifecycle-next`. **Dual-source mirror:** the new `bin/cortex-lifecycle-next` is untracked, and the pre-commit drift loop's `git diff --quiet` is blind to untracked files — so the commit must explicitly `just build-plugin` and `git add plugins/cortex-core/bin/cortex-lifecycle-next`, or it ships a mirror missing the verb without failing.
 - **Verification**: (a) `python3 -m pytest cortex_command/lifecycle/tests/test_next_verb.py tests/test_lifecycle_verb_deployment.py -q -k next` → passes, including per-state envelope tests (every table state serves a well-formed envelope with the legacy projection field), a protocol-skew envelope test, and — closing R4's second acceptance clause at the verb level — a worktree-fixture test showing `next` (and `advance` in Task 14) resolve the same main-root log while a CWD `cortex-lifecycle-event` would pick the worktree-local copy, with the `scan_lifecycle` mismatch detector reporting that two-log divergence.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 14: Build the write-side `advance` executor (core body)
 - **Files**: `cortex_command/lifecycle/advance.py` (new), `bin/cortex-lifecycle-advance` (new), `pyproject.toml`, `tests/test_lifecycle_verb_deployment.py`, `cortex_command/lifecycle/tests/test_advance.py` (new)
@@ -153,7 +153,7 @@ Build the served next/advance lifecycle loop in five sequential, independently-s
 - **Complexity**: complex
 - **Context**: Pattern = the `wontfix_cli`/`enter` needs-decision composed-body shape. Claim/commit via Task 6's primitive; the composed transition bodies are the B1 cores (`plan_decision.plan_decision` at `:133`, `review_verdict.review_verdict` at `:172`, `spec_approve.spec_approve` at `:223`, `implement_transition.implement_transition` at `:164`). Dual-emission: emit the exact legacy vocabulary (`phase_transition`/`review_verdict`/`spec_approved`/`plan_approved`/`feature_complete`) with canonical serialization so old readers parse them, plus additive machine rows. Depends on Task 16 as an **ordering/governance edge, not a gate edge**: `advance_started`/`advance_committed` are `scan_coverage: manual` precisely because the events-registry `--staged` pre-commit gate scans markdown only (`skills/**`, `overnight/prompts/**`) and cannot see a Python `log_event` emission — so NOTHING mechanically blocks committing advance.py with unregistered events; the edge exists to keep events-registry governance discipline (register the event as an architectural commitment in the same logical unit as its first emitter) and because ADR-0024 (Task 16) sanctions this verb class beyond ADR-0019. Deploy like Task 13, **including the untracked-mirror `git add plugins/cortex-core/bin/cortex-lifecycle-advance` step** (the drift loop won't catch its omission). Sub-tasks 14a/14b extend this same file and are serialized to avoid same-file worktree races.
 - **Verification**: (a) `python3 -m pytest cortex_command/lifecycle/tests/test_advance.py -q` → passes for the core obligation set: write-side emission-order test per composed transition (template `test_plan_decision.py`), idempotent re-invocation, orphaned-`advance_started` recovery by `invocation_id`, dual-emission parsed-field compatibility, a refusal-envelope golden whose message names the missing evidence and the sanctioned override, AND a pause-scoping test (R12 hazard 10) asserting advance refuses to cross an event-backed pause — `feature_paused`/unmet `plan_approved`/`spec_approved` — but does NOT refuse on a judgment/config-conditional pause kind (those are describe-only metadata, never a refusal).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 14a: Advance status projection — monotonic lattice and archive-shadow guard
 - **Files**: `cortex_command/lifecycle/advance.py`, `cortex_command/lifecycle/tests/test_advance_projection.py` (new)
@@ -162,7 +162,7 @@ Build the served next/advance lifecycle loop in five sequential, independently-s
 - **Complexity**: complex
 - **Context**: Serialized after Task 14 (same file → no parallel worktree race). Status projection scopes to the cortex-backlog backend (resolve via `cortex-read-backlog-backend`; external backends untouched per ADR-0016). Monotonic means a transition that would demote status is refused unless a demoting event backs it. Archive-shadow: if the feature dir is shadowed by an archived copy, the append path refuses and the projector no-ops.
 - **Verification**: (a) `python3 -m pytest cortex_command/lifecycle/tests/test_advance_projection.py -q` → passes, including a monotonic-lattice unit test (a demotion without a demoting event is refused) and an archive-shadow refusal test.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 14b: Advance consent cross-checks — gh PR state and quoted-utterance payloads
 - **Files**: `cortex_command/lifecycle/advance.py`, `cortex_command/lifecycle/tests/test_advance_consent.py` (new)
@@ -171,7 +171,7 @@ Build the served next/advance lifecycle loop in five sequential, independently-s
 - **Complexity**: complex
 - **Context**: Serialized after 14a (same file). The gh cross-check must run **outside** the flock (network never under lock — the claim/commit split exists for this); inject the subprocess seam so CI mocks the `gh` boundary with no network. Quoted-utterance fields are additive extensions on the existing `plan_approved`/`spec_approved` rows (not new events) — register the below-table note in `bin/.events-registry.md` `## Field-additive schema extensions` alongside Task 16's rows.
 - **Verification**: (a) `python3 -m pytest cortex_command/lifecycle/tests/test_advance_consent.py -q` → passes, including a gh cross-check test with a mocked `gh` boundary (subprocess seam injected, no network) and a quoted-utterance emission test.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 15: Build the `describe` verb and its CI-diffed golden
 - **Files**: `cortex_command/lifecycle/describe.py` (new), `bin/cortex-lifecycle-describe` (new), `pyproject.toml`, `tests/test_lifecycle_verb_deployment.py`, the generated table doc (new, home per Task 20 ownership map), `tests/test_transition_table_describe_parity.py` (new)
@@ -180,7 +180,7 @@ Build the served next/advance lifecycle loop in five sequential, independently-s
 - **Complexity**: complex
 - **Context**: Follow `generate_kept_pauses.py` exactly (`cortex_command/lifecycle/generate_kept_pauses.py`): pure `generate_md(entries)` sorted deterministically, `_load()` from the table, `main(argv)` with `--write` writing the doc + stderr progress line and the else-branch writing stdout, source-tree-relative paths anchored at `Path(__file__).resolve().parents[2]`, and a `<!-- generated — do not hand-edit -->` header. Companion parity test mirrors `tests/test_lifecycle_kept_pauses_parity.py` (regenerate, diff against committed). Add the `_reject_unsafe_slug` guard first since describe reads arbitrary feature dirs (path traversal is the injection surface). Deploy the wrapper/pyproject/deployment-row like Task 13, **including the untracked-mirror `git add plugins/cortex-core/bin/cortex-lifecycle-describe` step** (the drift loop's `git diff --quiet` won't flag an unstaged new mirror).
 - **Verification**: (a) `python3 -m pytest tests/test_transition_table_describe_parity.py tests/test_lifecycle_verb_deployment.py -q -k describe` → passes; the golden test diffs regenerated output against the committed doc.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 16: Events-registry rows and ADR obligations
 - **Files**: `bin/.events-registry.md`, `cortex/adr/0020-lifecycle-event-emission-contract.md`, `cortex/adr/0024-served-lifecycle-verb-class-and-coexistence.md` (new), `tests/test_backlog_grep_targets_resolve.py` (if it enforces registry-reference resolution)
@@ -189,7 +189,7 @@ Build the served next/advance lifecycle loop in five sequential, independently-s
 - **Complexity**: simple
 - **Context**: Depends-on is `none` honestly — this task authors registry rows + ADRs and imports/reads no code (not `transition_table.py`); it is purely additive and MAY build in batch 1. Task 14 depends on it for governance-ordering (register the events with their first emitter), not the reverse. Registry table columns (`bin/.events-registry.md:9`): `event_name | target | scan_coverage | producers | consumers | category | added_date | deprecation_date | rationale | owner`. Quoted-utterance and `invocation_id` fields go under `## Field-additive schema extensions` (`:147`) as `### <event>` subsections. ADR-0020 is `status: proposed`; the "closed at 3" exception set is the three-event enumeration at `0020:13` (`plan_comparison`, `clarify_critic`, `pr_opened`) — reopen and re-close at 5 (adding `advance_started`, `advance_committed`). ADR-0024 is a new file (next free slot; 0023 is highest), `status: proposed`, promoted on merge; back-points 0019/0018/0001/0004/0009. New ADRs land as `proposed` per `cortex/adr/README.md:42`.
 - **Verification**: (a) `bin/cortex-check-events-registry --staged` passes after staging; (b) `ls cortex/adr/0024-*.md` exists and `grep -c 'status: proposed' cortex/adr/0024-*.md` = 1; ADR-0020 shows the amended exception set.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 17: Events-first shared resolver and direct-caller migration (read path)
 - **Files**: `cortex_command/common.py` (shared resolver), `cortex_command/lifecycle/resolve.py`, `cortex_command/backlog/generate_index.py`, `cortex_command/dashboard/data.py`, `cortex_command/hooks/scan_lifecycle.py`, `cortex/adr/0025-events-as-phase-authority-with-legacy-fallback.md` (new), resolver tests
@@ -198,7 +198,7 @@ Build the served next/advance lifecycle loop in five sequential, independently-s
 - **Complexity**: complex
 - **Context**: The four callers to migrate: `resolve.py:206`, `backlog/generate_index.py:177` (reads `["phase"]` then `.removesuffix("-paused")`), `dashboard/data.py:312` (reads `checked`/`total`), `hooks/scan_lifecycle.py:848` and `:943`. `detect_lifecycle_phase` is `common.py:395` (cached inner `:240`). **Do NOT migrate** `claude/statusline.sh:376-489` (permanent exception, parity-pinned by `tests/test_lifecycle_phase_parity.py`) — restate in ADR-0025. The mismatch detector `_is_terminal_mismatch` (`scan_lifecycle.py:166`) stays permanent, not migration-window-scoped. ADR-0025 records the trade-off honestly: forfeits the cheap prose-side rollback (roll-forward is the standing exit), permanent exceptions named (statusline, pipeline-run FSM). Resolver tests cover machine-rows→event-derived, legacy→artifact-derived, divergence→detector-reports.
 - **Verification**: (a) `python3 -m pytest tests/ -q -k "resolver or phase_parity or scan_lifecycle"` → passes, covering the three derivation cases; (b) `ls cortex/adr/0025-*.md` exists with `status: proposed`.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 17a: Fold the two transition-decision writers with a positive fold-completion test (write path)
 - **Files**: `cortex_command/overnight/advance_lifecycle.py`, `cortex_command/pipeline/review_dispatch.py`, `tests/test_fold_completion.py` (new), `tests/test_advance_status_projection_sweep.py` (new, arm-g), fold tests
@@ -207,7 +207,7 @@ Build the served next/advance lifecycle loop in five sequential, independently-s
 - **Complexity**: complex
 - **Context**: `advance_lifecycle.advance_lifecycle` (`:127-208`) currently assembles `phase_transition`/`review_verdict`/`feature_complete` rows directly via `log_event` on the no-review path (`:152-181`, four rows) and crash-recovery path (`:186-208`, two rows). `review_dispatch.dispatch_review` (`:151-684`) appends rows at many sites (entry `:220`, APPROVED `:311-336`, CHANGES_REQUESTED `:389-656`, etc.) and its `feature_complete` rows carry `merge_anchor:"review"` — the fold must reconcile that shape through the verb bodies. Both stop deciding transitions themselves and pass gathered facts as arguments to the table/advance bodies. **Why the census cannot be the discriminator (residue class-B, Angle-4 objection):** the Task-4 census scans only raw-write syntax; both modules already emit via `log_event` and were never census hits, so shrinking its allowlist is a no-op and it is structurally blind to a `log_event`-routed independent decision (decision authority is not a write-syntax property). Instead ship a positive discriminator: a call-site lint / AST check in `test_fold_completion.py` that FAILS if `advance_lifecycle.py` or `review_dispatch.py` contains any `log_event`/`log_event_at` call whose `event` argument is a transition-vocabulary literal (`phase_transition`/`review_verdict`/`feature_complete`/`spec_approved`/`plan_approved`) — i.e. asserts they emit no transition rows of their own — plus an assertion they invoke the advance/table body. The Task-4 census stays as the R1 raw-write gate but is explicitly NOT claimed to discriminate the fold.
 - **Verification**: (a) `python3 -m pytest tests/test_fold_completion.py cortex_command/overnight/tests/ cortex_command/pipeline/tests/ -q -k "fold or advance_lifecycle or review_dispatch"` → passes; `test_fold_completion.py` FAILS if a transition-vocabulary `log_event` call is (re)introduced into either module — the structural fold-completion discriminator; (b) `python3 -m pytest tests/test_advance_status_projection_sweep.py -q` → the arm-g status-projection differential sweep is byte-identical pre/post cutover (R15 acceptance b).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 18: Reverse-direction golden fixture set
 - **Files**: `tests/fixtures/cortex-lifecycle-reverse/` (new, with README), `tests/test_lifecycle_reverse_golden.py` (new)
@@ -216,7 +216,7 @@ Build the served next/advance lifecycle loop in five sequential, independently-s
 - **Complexity**: complex
 - **Context**: Model on `tests/fixtures/cortex-lifecycle-state/` (flat sibling files per case: `.argv`/`.stdin`/`.stdout`/`.stderr`/`.exitcode`/optional `.events.log`, one README enumerating cases + tolerances + a deterministic recapture harness, synthetic slugs staged into scratch `cortex/lifecycle/<slug>/`). Pinned reader list (enumerate by grep at build time): `cortex-lifecycle-state`/`counters` (`state_cli.py`, `counters.py`), statusline derivation, `dashboard/data.py`, `scan_lifecycle`, `generate_index.py`. Fixtures feed machine-written mixed legacy+machine logs and assert each reader's legacy-phase projection stays correct. CI-run.
 - **Verification**: (a) `python3 -m pytest tests/test_lifecycle_reverse_golden.py -q` → passes; the fixture README pins the reader list.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 19: Route the interactive loop via next/advance
 - **Files**: `skills/lifecycle/SKILL.md`, `skills/lifecycle/references/refine-delegation.md`, phase references (`plan.md`, `implement.md`, `review.md`, `complete.md`), `tests/` (skill-size, L1-ratchet, ≤4K-budget, roundtrip ZERO_SWEEP, `tests/test_loop_skew_simulation.py` new), dual-source mirror regen
@@ -225,7 +225,7 @@ Build the served next/advance lifecycle loop in five sequential, independently-s
 - **Complexity**: complex
 - **Context**: The only live typed-transition invocations in `skills/lifecycle/` prose are `critical-review-gate.md:16` (critical-review-skipped), `refine-delegation.md:7` (phase-transition, clarify→research/research→specify), `worktree-entry.md:46` (interactive-worktree-entered), `criticality-matrix.md:7` (criticality-override) — plus SKILL.md's resolver (`:31`) and enter (`:47`) calls. The minimum absorption set (fixed now): SKILL.md Steps 1–2 routing, the phase-dispatch table (`:61-66`), and the `refine-delegation.md` transition command. The loop consumes only the verb envelope (no two-`next`s ambiguity — the resolver's `next` directive field stays for legacy consumers). Use Task 10's compat evaluator for loop-side skew halts (legacy payload, out-of-range, wrapper branch-(d) exit-2, command-not-found → documented halt-with-remediation). `ZERO_SWEEP_FILES` (`test_lifecycle_event_roundtrip.py:199`) gains the newly-swept references. Any commit here triggers `just build-plugin` dual-source mirror regen — stage `plugins/cortex-core/{skills,bin}` together. The line-item map (where each absorbed block landed) is documented here; the ≤4K ceiling and minimum set are fixed.
 - **Verification**: (a) `python3 -m pytest tests/ -q -k "skill_size or l1 or loop_budget or roundtrip or loop_skew"` → passes, including the ≤4K budget test AND `test_loop_skew_simulation.py` — scripted simulations (this repo never hits the skew paths naturally, so they must be simulated) of a legacy payload (no `protocol` field), an out-of-range `protocol`, the wrapper branch-(d) exit-2 (wheel absent), and command-not-found, each asserting the loop produces the documented halt-with-remediation (R17 loop-side acceptance); (b) `grep -rn 'cortex-lifecycle-event phase-transition' skills/` returns 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 19a: Transfer the kept-pauses parity into a table-vs-envelope test
 - **Files**: `skills/lifecycle/references/kept-pauses-data.toml`, `tests/test_lifecycle_kept_pauses_parity.py` (extend) or `tests/test_pause_spec_parity.py` (new), dual-source mirror regen
@@ -234,7 +234,7 @@ Build the served next/advance lifecycle loop in five sequential, independently-s
 - **Complexity**: complex
 - **Context**: Serialized after Task 19 (same skills/lifecycle tree + shared dual-source regen → avoid the parallel-worktree race). `kept-pauses-data.toml` has 18 `[[pause]]` rows with the four-kind discriminant (`question | phase-exit-wait | config-conditional | relayed-consent`) and fields `id`/`kind`/`suppressed_by`/`file`/`anchor`/`rationale` (`generate_kept_pauses.py:_load` at `:70`). The parity test asserts TOML rows ↔ table pause specs (Task 12) ↔ served envelopes (Task 13's `next` pause spec) per pause-gated state — set-equality + freshness. This adds the first runtime consumer of the TOML (today it is render/tests-only per `SKILL.md:86`).
 - **Verification**: (a) `python3 -m pytest tests/ -q -k "kept_pauses or pause_spec or pause_parity"` → passes, including the new table-vs-envelope parity test.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 20: Write the roll-forward exit procedure
 - **Files**: `docs/rollforward-exit.md` (new, home per ownership map), `docs/policies.md` (ownership-map line), `cortex/requirements/project.md` (pointer-only edits), `tests/test_backlog_grep_targets_resolve.py`
@@ -243,7 +243,7 @@ Build the served next/advance lifecycle loop in five sequential, independently-s
 - **Complexity**: simple
 - **Context**: Doc lives in top-level `docs/` (operator-facing procedure, alongside `interactive-phases.md`), ownership registered at `docs/policies.md:37` (the `## Overnight docs source of truth` ownership sentence — extend it or add a sibling line for the transition-table + roll-forward docs). The 7 steps: (0) force-source wrappers incl. `cortex-lifecycle-resolve` (Task 8) shipped; (1) trigger + owner + decision-record home named up front; (2) revert SKILL.md prose to phase-table routing (one commit); (3) leave wheel verbs callable; (4) verify tolerant reading via the reverse-direction golden (Task 18); (5) quarantine vocabulary with a named owner (name who runs `--audit`); (6) dual-emission stays live through the grace window. project.md edits: new Architectural Constraints bullet → ADR-0024 (section `:29-50`), kept-pauses paragraph (`:27`) updated to note the runtime consumer. Its verb/token references must resolve under the `tests/test_backlog_grep_targets_resolve.py` discipline.
 - **Verification**: (a) `python3 -m pytest tests/test_backlog_grep_targets_resolve.py -q` → passes (the doc's verb/token references resolve); (b) `ls docs/rollforward-exit.md` exists and `grep -Eq '^\s*(Owner|Quarantine owner):\s*\S' docs/rollforward-exit.md` succeeds — a specifically-named owner for the vocabulary quarantine (a person/role token after the label, not the bare substring "owner"; the #377 lesson is that an unowned window accretes debt).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Risks
 - **Phase-authority cutover forfeits the cheap prose-side rollback** (Task 17). This is a decided trade-off (research Open Question 1, resolved at the exit gate under the long-term-foundation criterion): events become the one oracle and the roll-forward procedure (Task 20), not a git revert, is the standing exit. Revisit only if the operator wants to keep advisory-forever dual authority — which the spec explicitly rejected.

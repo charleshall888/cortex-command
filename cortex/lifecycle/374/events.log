@@ -8,3 +8,18 @@
 {"ts": "2026-07-11T02:33:32Z", "event": "phase_transition", "feature": "374", "from": "specify", "to": "plan"}
 {"ts": "2026-07-11T15:33:44Z", "event": "plan_approved", "feature": "374", "dispatch_choice": "wait"}
 {"ts": "2026-07-11T15:33:44Z", "event": "feature_paused", "feature": "374"}
+{"ts": "2026-07-11T15:38:28Z", "event": "batch_dispatch", "feature": "374", "batch": 0, "tasks": [1, 2, 3, 5, 7, 8, 12, 16]}
+{"ts": "2026-07-11T16:23:01Z", "event": "batch_dispatch", "feature": "374", "batch": 1, "tasks": [4, 6, 9, 11, 15]}
+{"ts": "2026-07-11T17:11:46Z", "event": "batch_dispatch", "feature": "374", "batch": 2, "tasks": [10, 13]}
+{"ts": "2026-07-11T17:26:07Z", "event": "batch_dispatch", "feature": "374", "batch": 3, "tasks": [14, 17]}
+{"ts": "2026-07-11T18:04:53Z", "event": "batch_dispatch", "feature": "374", "batch": 4, "tasks": ["14a"]}
+{"ts": "2026-07-11T18:15:02Z", "event": "batch_dispatch", "feature": "374", "batch": 5, "tasks": ["14b"]}
+{"ts": "2026-07-11T18:23:29Z", "event": "batch_dispatch", "feature": "374", "batch": 6, "tasks": ["17a", 18, 19]}
+{"ts": "2026-07-11T19:36:38Z", "event": "batch_dispatch", "feature": "374", "batch": 7, "tasks": ["19a", 20]}
+{"ts": "2026-07-11T19:52:12Z", "event": "phase_transition", "feature": "374", "from": "implement", "to": "review", "tier": "complex"}
+{"ts": "2026-07-11T20:00:40Z", "event": "review_verdict", "feature": "374", "verdict": "CHANGES_REQUESTED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-07-11T20:00:40Z", "event": "phase_transition", "feature": "374", "from": "review", "to": "implement-rework"}
+{"ts": "2026-07-12T01:28:16Z", "event": "phase_transition", "feature": "374", "from": "implement-rework", "to": "review"}
+{"ts": "2026-07-12T01:30:41Z", "event": "review_verdict", "feature": "374", "verdict": "APPROVED", "cycle": 2, "requirements_drift": "none"}
+{"ts": "2026-07-12T01:30:41Z", "event": "phase_transition", "feature": "374", "from": "review", "to": "complete"}
+{"ts": "2026-07-12T01:30:55Z", "event": "feature_complete", "feature": "374", "tasks_total": 24, "rework_cycles": 1, "merge_anchor": "merge"}
