@@ -6,3 +6,5 @@
 {"ts": "2026-07-13T13:19:48Z", "event": "criticality_override", "feature": "critical-review-sentinel-gate-excludes-async", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
 {"ts": "2026-07-13T13:58:03Z", "event": "spec_approved", "feature": "critical-review-sentinel-gate-excludes-async"}
 {"ts": "2026-07-13T13:58:16Z", "event": "phase_transition", "feature": "critical-review-sentinel-gate-excludes-async", "from": "specify", "to": "plan"}
+{"ts": "2026-07-13T14:26:54Z", "event": "plan_approved", "feature": "critical-review-sentinel-gate-excludes-async", "dispatch_choice": "wait"}
+{"ts": "2026-07-13T14:26:54Z", "event": "feature_paused", "feature": "critical-review-sentinel-gate-excludes-async"}
