@@ -367,11 +367,17 @@ def test_live_project_md_selection_oracle(tmp_path):
     assert note is None  # a real match → no fallback note
 
 
-def test_absent_glossary_literal_resolution():
-    # R8: with project.md normalized (Task 2), the absent glossary emits its
-    # FULL repo-relative path + skip-suffix — proving literal resolution, not
-    # a bare-filename heuristic.
-    lines, _ = resolve(REPO_ROOT, None)
+def test_absent_glossary_literal_resolution(tmp_path):
+    # R8: a referenced-but-absent Global Context doc emits its FULL repo-relative
+    # path + skip-suffix — proving literal resolution, not a bare-filename
+    # heuristic. Hermetic (tmp tree) so it does not depend on the live repo
+    # lacking glossary.md, which now exists as a real area doc.
+    _write_repo(
+        tmp_path,
+        global_context=["cortex/requirements/glossary.md"],
+        touch_paths=False,  # glossary.md deliberately absent → skip-suffix
+    )
+    lines, _ = resolve(tmp_path, None)
     assert "cortex/requirements/glossary.md (skipped: file absent)" in lines
 
 

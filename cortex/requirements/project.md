@@ -1,6 +1,6 @@
 # Requirements: cortex-command
 
-> Last gathered: 2026-04-01 (updated 2026-05-12)
+> Last gathered: 2026-04-01 (updated 2026-07-13)
 
 ## Overview
 
@@ -49,6 +49,7 @@ Agentic workflow toolkit for AI-assisted software development on Claude Code: sk
 - **SKILL.md L1 surface ratchet**: each skill's L1 frontmatter surface (`description` + `when_to_use` byte sum) is bounded by a deliberate per-skill budget in `tests/test_l1_surface_ratchet.py`; equal-or-lower passes, and a new skill without a budget row fails a completeness gate. The one exemption surface is the routing-pressure cluster, whose skills carry irreducible disambiguation and path-routing tokens and get their own (higher) budget rows rather than the non-cluster default. Raising any budget row — including a cluster re-cap that cannot meet a target without dropping a trigger phrase — requires a documented rationale plus a lifecycle-id, so a legitimate re-cap is distinguishable from silent drift. New-skill authoring pointer: `CLAUDE.md`. → lifecycle 298.
 - **Out-of-process runner supervision**: a persistent host-level launchd guardian plus a manual `cortex overnight recover` verb are the only session-state writers outside the runner itself (observability surfaces stay read-only). → ADR-0011: out-of-process overnight-runner supervision.
 - **Worktree containment invariant**: `create_worktree` (`cortex_command/pipeline/worktree.py`) enforces that a same-repo worktree resolves inside the repo root; an out-of-repo `CORTEX_WORKTREE_ROOT` override raises a containment-specific `worktree_escapes_repo` ValueError → CLI exit 1, leaving nothing on disk. The cross-repo / `$TMPDIR` overnight branch (`repo_path` set) is legitimately outside the repo and is exempt; the same-repo overnight path (`repo_path=None`, `session_id` set) is NOT exempt and is governed by the guard. Contract is pinned by the `test_containment_*` block in `tests/test_worktree.py`.
+- **Frontmatter-scalar write contract**: Hand-rolled backlog/lifecycle frontmatter scalars are emitted through the single key-scoped quoter `cortex_command/backlog/frontmatter_quote.py` (`STRING_INTENDED_KEYS` allowlist; None sentinel and dates stay bare). A new string-intended, numeric-looking field left off the allowlist re-exposes the type-leak; `tests/test_lifecycle_references_resolve.py` (CI-wired) is the backstop. → ADR-0027.
 
 ## Quality Attributes
 
@@ -68,6 +69,7 @@ Agentic workflow toolkit for AI-assisted software development on Claude Code: sk
 - Dashboard (~1800 LOC FastAPI), conflict resolution pipeline (~2500 LOC), remote access (Tailscale/mosh/tmux/Cloudflare Tunnel)
 - Observability (statusline, notifications, metrics, cost); global agent config
 - Multi-agent: parallel dispatch, worktrees, Haiku/Sonnet/Opus selection
+- Published teaching *content* under `docs/` (landing page, training scene deck) — a deliberate carve-out from the "no published modules" boundary below; area doc: `cortex/requirements/training.md`
 
 ### Out of Scope
 
@@ -87,6 +89,7 @@ Agentic workflow toolkit for AI-assisted software development on Claude Code: sk
 - remote access/tmux/mosh/Tailscale → cortex/requirements/remote-access.md
 - agent spawning/parallel dispatch/worktrees/model selection → cortex/requirements/multi-agent.md
 - backlog/ticketing/issue tracker/backlog backend → cortex/requirements/backlog.md
+- training/workshop/presentation/scene deck → cortex/requirements/training.md
 
 ## Global Context
 
