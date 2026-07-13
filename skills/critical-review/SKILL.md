@@ -64,7 +64,7 @@ The synthesizer applies the **A→B downgrade rubric** (inlined via `{a_to_b_rub
 
 ### Step 2d.5: Post-Synthesis (atomic SHA verification)
 
-Pipe the synthesizer's full output through `cortex-critical-review check-synth-stable --feature <name> --expected-sha <hex>` before surfacing anything or proceeding to Step 2e. Full contract and exit-code routing: `${CLAUDE_SKILL_DIR}/references/verification-gates.md`.
+Pipe the synthesizer's full output through `cortex-critical-review check-synth-stable --feature <name> --expected-sha <hex> --artifact-path <resolved_path>` before surfacing anything or proceeding to Step 2e. Full contract and exit-code routing: `${CLAUDE_SKILL_DIR}/references/verification-gates.md`.
 
 ### Step 2e: Residue Write
 

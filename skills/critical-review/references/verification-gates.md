@@ -24,13 +24,14 @@ After parallel reviewers (or the surviving subset) return, run a two-phase gate 
 
 **Phase 1 — Sentinel verification (per reviewer):**
 
-Write each reviewer's raw stdout to a tempfile unique to this invocation (not stdin — shell-quoting hazards across parallel outputs; not a shared path — concurrent runs would corrupt each other's stdout, and stale leftovers trip the Write tool's read-before-overwrite guard). Derive the path from `$LIFECYCLE_SESSION_ID` or `mktemp -d`. Then invoke:
+Write each reviewer's output — the final message the Agent tool returns — to a tempfile unique to this invocation (not stdin — shell-quoting hazards across parallel outputs; not a shared path — concurrent runs would corrupt each other's output, and stale leftovers trip the Write tool's read-before-overwrite guard). Derive the path from `$LIFECYCLE_SESSION_ID` or `mktemp -d`. Then invoke:
 
 ```bash
 cortex-critical-review check-artifact-stable \
     --feature <name> \
     --reviewer-angle <angle> \
     --expected-sha <hex> \
+    --artifact-path <resolved_path> \
     --model-tier <haiku|sonnet|opus> \
     --input-file <tmpfile-path>
 ```
@@ -39,8 +40,8 @@ cortex-critical-review check-artifact-stable \
 
 Routes based on exit code:
 
-- **Exit 0** — sentinel present on its own line (anywhere in the first 50 lines) AND SHA matches. Pass — proceed to Phase 2 for this reviewer.
-- **Exit 3** — sentinel absent, SHA mismatch (drift), or `READ_FAILED` route, event already appended (do not duplicate; see the shared write-guard note above). Emit `⚠ Reviewer {angle} excluded: {reason}` to the orchestrator log; reason maps from stdout (`EXCLUDED absent | EXCLUDED sha_mismatch | EXCLUDED read_failed`).
+- **Exit 0** — sentinel present on its own line (anywhere in the first 50 lines) AND SHA matches; OR sentinel absent but a re-hash of the pinned artifact at `--artifact-path` still matches `--expected-sha` (stable → advisory pass, tagged `sentinel_advisory`). Pass — proceed to Phase 2 for this reviewer.
+- **Exit 3** — SHA mismatch (drift), or sentinel absent with a re-hash confirming drift or an unreadable artifact, or `READ_FAILED` route — event already appended (do not duplicate; see the shared write-guard note above). Emit `⚠ Reviewer {angle} excluded: {reason}` to the orchestrator log; reason maps from stdout (`EXCLUDED absent | EXCLUDED sha_mismatch | EXCLUDED read_failed`).
 - **Exit 4** — telemetry skipped (see the shared write-guard note above). Treat as a normal pass — proceed to Phase 2; no exclusion warning, and don't count it toward the total-failure path.
 
 Excluded reviewers drop from ALL downstream tallies (A-class, B-class, C-class) and from the untagged-prose pathway; their output is not parsed or surfaced to the synthesizer. Carry the exclusion warning into the Step 2d synthesizer preamble so the synthesizer sees the reduced reviewer set explicitly.
@@ -62,15 +63,16 @@ After the synthesizer returns, pipe its **full output** through `check-synth-sta
 ```bash
 printf '%s' "$SYNTH_OUTPUT" | cortex-critical-review check-synth-stable \
     --feature <name> \
-    --expected-sha <hex>
+    --expected-sha <hex> \
+    --artifact-path <resolved_path>
 ```
 
 `<hex>` and `<name>` are the same `{artifact_sha256}` and `--feature` bound in Step 2a.5.
 
 Routes based on exit code:
 
-- **Exit 0** — `SYNTH_READ_OK:` sentinel present and SHA matches. Surface the synthesizer's prose normally, then proceed to Step 2e.
-- **Exit 3** — sentinel absent OR SHA mismatch, event already appended (do not duplicate; see the shared write-guard note above). Do NOT surface the synthesizer's prose — relay `check-synth-stable`'s own stdout verbatim; it carries the `Critical-review pass invalidated` phrasing and the resolution instruction.
+- **Exit 0** — `SYNTH_READ_OK:` sentinel present and SHA matches; OR sentinel absent but a re-hash of the pinned artifact at `--artifact-path` still matches `--expected-sha` (stable → advisory pass, tagged `sentinel_advisory`). Surface the synthesizer's prose normally, then proceed to Step 2e.
+- **Exit 3** — SHA mismatch, or sentinel absent with a re-hash confirming drift or an unreadable artifact — event already appended (do not duplicate; see the shared write-guard note above). Do NOT surface the synthesizer's prose — relay `check-synth-stable`'s own stdout verbatim; it carries the `Critical-review pass invalidated` phrasing and the resolution instruction.
 - **Exit 4** — telemetry skipped (see the shared write-guard note above). Surface the synthesizer's prose normally and proceed to Step 2e.
 
 On Exit 3, do NOT proceed to Step 2e — the pass is invalidated and a stale residue write would compound the drift. Exit 4 doesn't invalidate the pass, so Step 2e proceeds as on Exit 0.
