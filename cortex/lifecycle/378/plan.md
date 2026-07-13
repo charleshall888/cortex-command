@@ -85,7 +85,7 @@ Clear three #374 residues durably: a key-scoped frontmatter quoter + reader coer
 - **Complexity**: complex
 - **Context**: Commanding invocation at `specify.md:149`; sanctioned mentions at `specify.md:168` (halt-arm — keep the convention, update the verb name), `SKILL.md:90`, and `refine-delegation.md:7,55` (descriptions of which verb records the `specify→plan` transition — these become stale after the reroute and are in the `skills/lifecycle/` tree, outside `skills/refine/`). All are lifecycle-gated + dual-source: edit canonical `skills/**` only, run `just build-plugin`, stage the regenerated mirror IN THE SAME COMMIT (a partial edit leaves the drift loop blocking every subsequent commit). Sequence away from any concurrent skill-editing session. Legacy binary stays deployed (ADR-0024).
 - **Verification**: `grep -rn 'cortex-lifecycle-spec-approve' skills/` = 0 AND `grep -rn 'cortex-lifecycle-advance spec-approve' skills/refine/` ≥ 1 (replacement present) AND `just build-plugin` then `git diff --exit-code plugins/cortex-core/` is clean (drift-free)
-- **Status**: [ ] pending
+- **Status**: [x] done (33e58733)
 
 ### Task 8: Extend the existing roundtrip test to guard the spec-approve reroute
 - **Files**: `tests/test_lifecycle_event_roundtrip.py`
@@ -94,7 +94,7 @@ Clear three #374 residues durably: a key-scoped frontmatter quoter + reader coer
 - **Complexity**: simple
 - **Context**: `test_lifecycle_event_roundtrip.py` already runs `test_refine_delegation_no_longer_emits_typed_phase_transition` (a per-file grep sweep). Add an assertion targeting the `cortex-lifecycle-spec-approve` COMMANDING form in `skills/refine/` (not descriptive mentions — but after Task 7 the whole-`skills/` grep is 0 anyway, so a simple `cortex-lifecycle-spec-approve` sweep over `skills/refine/` suffices). Do NOT build a general absorbed-verb scanner over `skills/**` — the tree carries sanctioned descriptive mentions and actively-used verbs (`cortex-lifecycle-event phase-transition`) that a substring scanner would wrongly flag.
 - **Verification**: `.venv/bin/pytest tests/test_lifecycle_event_roundtrip.py -q` passes AND, temporarily reverting Task 7's `specify.md` edit, the new assertion fails (proves it catches a re-introduction) — `Interactive/session-dependent: the negative check is demonstrated once during implementation, not gated in CI`
-- **Status**: [ ] pending
+- **Status**: [x] done (ecc887f3)
 
 ### Task 9: Converge the pin AND make the rewriter + workflows multi-target (one commit)
 - **Files**: `plugins/cortex-core/install_core.py`, `bin/cortex-rewrite-cli-pin`, `.github/workflows/auto-release.yml`, `.github/workflows/release.yml`, plus the regenerated `plugins/cortex-core/bin/cortex-rewrite-cli-pin` mirror via `just build-plugin`
@@ -121,7 +121,7 @@ Clear three #374 residues durably: a key-scoped frontmatter quoter + reader coer
 - **Complexity**: simple
 - **Context**: `validate.yml` currently blocking-runs only `test_check_contract.py` + `test_lifecycle_kept_pauses_parity.py` + a dashboard smoke test. Add the three regression tests so a re-introduced malformed slug / spec-approve reroute regression / pin single-targeting fails CI. Depends on [2] (resolve test green), [8] (roundtrip assertion added), [10] (target-set test exists) — else CI goes red on merge.
 - **Verification**: `grep -Ec 'test_lifecycle_references_resolve|test_cli_pin_target_set|test_lifecycle_event_roundtrip' .github/workflows/validate.yml` ≥ 3
-- **Status**: [ ] pending
+- **Status**: [x] done (3948d28a)
 
 ## Risks
 - **lifecycle_phase terminal value (Task 4/5)**: some completed items ended at a non-`complete` phase (e.g. `wontfix`) — Task 4 must derive the value from the actual completion event, not a constant, and Task 5's backfill must respect that.

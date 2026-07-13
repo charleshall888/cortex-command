@@ -12,3 +12,7 @@
 {"ts": "2026-07-13T13:33:10Z", "event": "phase_transition", "feature": "378", "from": "plan", "to": "implement"}
 {"ts": "2026-07-13T13:36:26Z", "event": "batch_dispatch", "feature": "378", "batch": 0, "tasks": [1, 2, 3, 4, 9]}
 {"ts": "2026-07-13T14:09:49Z", "event": "batch_dispatch", "feature": "378", "batch": 1, "tasks": [5, 6, 10]}
+{"ts": "2026-07-13T14:31:41Z", "event": "batch_dispatch", "feature": "378", "batch": 2, "tasks": [7]}
+{"ts": "2026-07-13T14:40:56Z", "event": "batch_dispatch", "feature": "378", "batch": 3, "tasks": [8]}
+{"ts": "2026-07-13T14:45:26Z", "event": "batch_dispatch", "feature": "378", "batch": 4, "tasks": [11]}
+{"ts": "2026-07-13T14:56:53Z", "event": "phase_transition", "feature": "378", "from": "implement", "to": "review", "tier": "complex"}
