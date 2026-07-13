@@ -132,8 +132,14 @@ def _cap_slug_words(slug: str, max_words: int = _LIFECYCLE_SLUG_WORD_CAP) -> str
 
 def _resolve_lifecycle_slug(fm: dict, title: str) -> str:
     """Derive lifecycle_slug using the same fallback chain as BacklogItem.resolve_slug."""
-    if fm.get("lifecycle_slug"):
-        return fm["lifecycle_slug"]
+    slug = fm.get("lifecycle_slug")
+    if slug:
+        # Defensive reader coercion (#378 req-3): a numeric lifecycle_slug that
+        # type-leaked to int on disk (unquoted YAML scalar) resolves as its
+        # string form so `"374"` matches lifecycle dir `374`. The None sentinel
+        # is falsy here and falls through to the derivation chain — it never
+        # becomes the string "None".
+        return str(slug)
     for key in ("spec", "research"):
         artifact_path = fm.get(key)
         if artifact_path:

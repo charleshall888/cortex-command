@@ -179,6 +179,12 @@ def resolve_invocation(arguments: str, project_root: Optional[Path] = None) -> d
     resolved_from = None
     if not dir_exists and isinstance(backlog, dict):
         slug = backlog.get("lifecycle_slug")
+        # Defensive reader coercion (#378 req-3): a numeric lifecycle_slug read
+        # as int must not reach the `lifecycle_base / slug` path-join below
+        # (Path / int raises TypeError). Coerce a non-None value to str; the
+        # None sentinel stays None (falsy, so the guard skips the remap).
+        if slug is not None:
+            slug = str(slug)
         if slug and slug != feature and (lifecycle_base / slug).is_dir():
             resolved_from = feature
             feature = slug
