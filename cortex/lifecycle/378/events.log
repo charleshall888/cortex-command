@@ -6,3 +6,5 @@
 {"ts": "2026-07-13T12:03:22Z", "event": "criticality_override", "feature": "378", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
 {"ts": "2026-07-13T12:54:55Z", "event": "spec_approved", "feature": "378"}
 {"ts": "2026-07-13T12:55:02Z", "event": "phase_transition", "feature": "378", "from": "specify", "to": "plan"}
+{"ts": "2026-07-13T13:25:55Z", "event": "plan_approved", "feature": "378", "dispatch_choice": "wait"}
+{"ts": "2026-07-13T13:25:55Z", "event": "feature_paused", "feature": "378"}
