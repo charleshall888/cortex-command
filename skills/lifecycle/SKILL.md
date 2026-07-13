@@ -25,25 +25,21 @@ If `cortex/lifecycle.config.md` exists at project root, read it first — it ove
 
 ## Step 1: Read the Served State
 
-One read-only call runs the protocol handshake and serves the current state, its advance contract, and its pause spec. Pass the plugin's expected protocol range — the `min`/`max` in [protocol-expectation.txt](${CLAUDE_SKILL_DIR}/references/protocol-expectation.txt) — so the verb can flag wheel/prose skew:
+One read-only call serves the current state, its advance contract, and its pause spec. Pass the plugin's expected protocol range (`min`/`max` from [protocol-expectation.txt](${CLAUDE_SKILL_DIR}/references/protocol-expectation.txt)) so it can flag wheel/prose skew:
 
 ```bash
 cortex-lifecycle-next "$ARGUMENTS" --expect-min {min} --expect-max {max}
 ```
 
-It always exits 0 with one JSON envelope. Consume the served envelope — not the resolver's legacy `next` field.
+Consume the served envelope — not the resolver's legacy `next` field.
 
-**Skew / unavailability halts** — each ends in a documented remediation, then stop; never proceed past one:
-
-- `state: protocol-skew` → print the envelope's `remediation` and halt. This covers both a legacy payload (no `protocol` field) and an out-of-range `protocol` — the served range check classifies each and carries the copy-pasteable fix.
-- The wrapper exits 2 (cortex-command wheel absent) → relay its stderr remediation and halt.
-- `cortex-lifecycle-next` not on PATH (command not found) → halt and tell the operator to install/upgrade the cortex-command CLI, then re-invoke.
+**Halt on skew or unavailability** — a `protocol-skew` state, a wrapper exit 2 (wheel absent), or a missing command each carry their own remediation (envelope `remediation`, or stderr); relay it and stop.
 
 <!-- pause: empty-lifecycle-offer question -->
 <!-- pause: ambiguous-backlog-pick question -->
 **Passthrough routing states** carry a `next` directive — act on it: `new` (carries `backlog`) → Step 2 fresh; `derive-slug` (derive a 3–6 word kebab-case slug and re-run — no confirmation; user corrects via re-invocation); `empty` (offer incomplete `cortex/lifecycle/*` lifecycles via `AskUserQuestion`, then re-run); `ambiguous-backlog` (present `candidates` via `AskUserQuestion`, then re-run); `wontfix` (run the named `cortex-lifecycle-wontfix` command and halt); `error` / `needs-feature` / `no-such-lifecycle` (report and stop — do not create a lifecycle).
 
-**A resumable feature** (resolver routing state `resume`) is served as a phase-keyed envelope: `state` is the current phase, `advance_contract` (`expected_from_state` + `log_path`) threads into `cortex-lifecycle-advance` at each boundary, `pause_spec` drives the kept pauses, and `path_overview` orients the resume. Proceed to Step 2, then Step 3 at `state`. Criticality/tier/cycle/checked/total ride in `evidence_trace`; surface `staleness` tersely when present (non-blocking drift hint; default continue).
+**A resumable feature** (routing state `resume`) is served phase-keyed: `state` is the current phase, `advance_contract` threads into `cortex-lifecycle-advance` at each boundary, and `pause_spec` drives the kept pauses. Proceed to Step 2, then Step 3 at `state`. Surface `staleness` tersely when present (non-blocking; default continue).
 
 `cortex-lifecycle-next` never writes — Step 2's sub-procedures do.
 
@@ -57,7 +53,7 @@ One call composes the entry — create-index, the lifecycle-start write-back, `c
 cortex-lifecycle-enter --feature {feature} --session-id $LIFECYCLE_SESSION_ID --backend {resolved-backend} --phase {none-or-current-phase} --backlog-file {backlog-filename-or-empty-string}
 ```
 
-`{phase}` is `none` for `new`, else the served `state`. `{backlog-file}` is the `new` envelope's `backlog` basename; the resume envelope carries no `backlog` (the item was linked at first entry), so pass `""` on resume and on an exit-3 no-match. Exit 2 (ambiguous slug) → [backlog-writeback.md](${CLAUDE_SKILL_DIR}/references/backlog-writeback.md)'s exit-2 rule. Else act on `state`: `ready` → proceed (`backlog_status` `open`/`no_match` is informational); `needs-decision` (the item is `already_complete` and the verb ran **no** side effect — no index, sync, or `.session`) → apply backlog-writeback.md's **Backlog Status Check** — **Continue** re-runs the call above with `--acknowledge-complete` appended (drives the full composition); **Close** on `phase = none` exits immediately, creating no artifacts and calling no finalize (there is no lifecycle dir), on any other phase runs backlog-writeback.md's finalize Close arm; `blocked` (`cortex init --ensure` refused a user-correctable gate, `.session` unwritten) → halt, fix, re-run (idempotent); `ensure-failed`/`error` → halt. When resuming, report the served `state`/`criticality`/`tier`, offer continue-or-restart, and surface `staleness` tersely (non-blocking drift hint; default continue).
+`{phase}` is `none` for `new`, else the served `state`. `{backlog-file}` is the `new` envelope's `backlog` basename; resume carries no `backlog`, so pass `""` on resume and on an exit-3 no-match. Exit 2 (ambiguous slug) → [backlog-writeback.md](${CLAUDE_SKILL_DIR}/references/backlog-writeback.md)'s exit-2 rule. Else act on `state`: `ready` → proceed (`backlog_status` `open`/`no_match` is informational); `needs-decision` (the item is `already_complete` and the verb ran **no** side effect — no index, sync, or `.session`) → apply backlog-writeback.md's **Backlog Status Check** — **Continue** re-runs the call above with `--acknowledge-complete` appended (drives the full composition); **Close** on `phase = none` exits immediately, creating no artifacts and calling no finalize (there is no lifecycle dir), on any other phase runs backlog-writeback.md's finalize Close arm; `blocked` (`cortex init --ensure` refused a user-correctable gate, `.session` unwritten) → halt, fix, re-run (idempotent); `ensure-failed`/`error` → halt. When resuming, report the served `state`/`criticality`/`tier`, offer continue-or-restart, and surface `staleness` tersely (non-blocking drift hint; default continue).
 
 ## Step 3: Execute Current Phase
 
@@ -75,7 +71,7 @@ Clarify, Research, and Spec are delegated to `/cortex-core:refine`.
 | Review | [review.md](${CLAUDE_SKILL_DIR}/references/review.md) | `review.md` |
 | Complete | [complete.md](${CLAUDE_SKILL_DIR}/references/complete.md) | Git workflow + summary |
 
-The served envelope's `fragment_ref.reference` names the current phase's reference (Step 1's `state` selects the row); read **only** that one. Don't preload others.
+Read **only** the current phase's reference (the row for the served `state`). Don't preload others.
 
 ### Reference-path propagation (load-bearing)
 
@@ -85,7 +81,7 @@ The served envelope's `fragment_ref.reference` names the current phase's referen
 
 Proceed automatically — no confirmation at phase boundaries; announce and continue. Each transition summary includes **Decisions**, **Scope delta**, **Blockers** (each "None" when empty), and **Next** (phase + what it does).
 
-A boundary fires on its gate condition (e.g. `plan.md` all tasks `[x]`), not user input. Each phase reference records its transition through `cortex-lifecycle-advance` (the served write verb, threading the envelope's `advance_contract`) — no in-prose event emission. A prior "report"/"summarize" instruction sets text cadence only; it does not authorize `AskUserQuestion` (permitted at a boundary only by the Kept user pauses inventory).
+A boundary fires on its gate condition (e.g. `plan.md` all tasks `[x]`), not user input. Each phase reference records its transition through `cortex-lifecycle-advance` — no in-prose event emission. A prior "report"/"summarize" instruction sets text cadence only; it does not authorize `AskUserQuestion` (permitted at a boundary only by the Kept user pauses inventory).
 
 ### Per-phase completion rule
 

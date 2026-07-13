@@ -135,7 +135,7 @@ Off `main`/`master`, the sub-choices collapse to `trunk` (the current branch), s
 cortex-lifecycle-advance plan-decision --feature <name> --decision <decision> [--dispatch-choice <mode>]
 ```
 
-The `advance` verb composes the plan-decision arm under its claim/commit lock; it defaults `from_state` to the arm's table edge (`plan`), or thread the served envelope's `advance_contract.expected_from_state` via `--from-state`.
+`advance` defaults `from_state` to the arm's table edge (`plan`); thread the envelope's `advance_contract.expected_from_state` via `--from-state` when you have it.
 
 Act on the returned `state`:
 
