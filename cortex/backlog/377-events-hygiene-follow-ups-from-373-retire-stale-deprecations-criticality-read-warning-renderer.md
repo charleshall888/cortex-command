@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: e7b601f2-d152-4d14-8c03-e8c500be7e93
 title: 'Events hygiene follow-ups from #373: retire stale deprecations + criticality-read warning renderer'
-status: backlog
+status: complete
 priority: medium
 type: chore
 created: 2026-07-10
-updated: 2026-07-10
+updated: 2026-07-13
 tags: ['events-registry', 'observability']
 areas: ['overnight', 'lifecycle']
 ---
