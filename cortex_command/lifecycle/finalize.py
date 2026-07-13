@@ -157,7 +157,15 @@ def _apply_backlog_writeback(backend: str, backlog_file: str, root: Path) -> str
         return "no-item"
 
     # status == "ok": update_item regenerates the backlog index in its own tail.
-    update_item(result.item, {"status": "complete"}, backlog_dir, session_id=None)
+    # This is the unconditional Complete-phase writer, so it advances
+    # lifecycle_phase to ``complete`` in the SAME write — closing the #378 req-5
+    # omission that otherwise froze finalized items at their prior phase (research).
+    update_item(
+        result.item,
+        {"status": "complete", "lifecycle_phase": "complete"},
+        backlog_dir,
+        session_id=None,
+    )
     return "updated"
 
 

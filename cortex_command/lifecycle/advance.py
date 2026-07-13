@@ -450,6 +450,21 @@ _STATE_TO_STATUS: dict[str, str] = {
     "cancelled": "abandoned",
 }
 
+# The ``lifecycle_phase`` advance projects onto the frontmatter ALONGSIDE status,
+# keyed by ``Transition.to_state``. This closes the served-loop half of the #378
+# req-5 write-omission: a served-loop completion (``review.approved`` /
+# ``implement.complete`` → to_state ``complete``) must advance the item's
+# ``lifecycle_phase`` so it tracks status, else the item re-freezes at its prior
+# phase (e.g. ``research``). The value is DERIVED from the committed transition's
+# to_state, never a blind constant — so a wontfix/cancel transition (to_state
+# ``cancelled``, status ``abandoned``) is NOT mislabelled ``complete``. Only the
+# terminal ``complete`` is mapped: the non-terminal destinations keep events-first
+# phase resolution (their lifecycle dir is live, so ``generate_index`` resolves the
+# phase from the log), and ``cancelled`` has no valid ``lifecycle_phase`` value.
+_STATE_TO_PHASE: dict[str, str] = {
+    "complete": "complete",
+}
+
 # The status lattice: a monotonic rank over the canonical backlog vocabulary
 # (hazard 4). Projection only ever moves a feature FORWARD — to a rank >= its
 # current rank; a move to a strictly LOWER rank is a demotion, refused unless a
@@ -707,7 +722,15 @@ def _project_status_inner(
     if target_rank < current_rank and not _has_demoting_event(rows):
         return "refused:demotion"
 
-    update_item(item, {"status": target}, backlog_dir, session_id=None)
+    # Project status and — for the terminal ``complete`` destination — advance
+    # lifecycle_phase in the SAME write so a served-loop completion's phase tracks
+    # its status (#378 req-5). Derived from the transition, so a cancel/wontfix
+    # move (no _STATE_TO_PHASE entry) writes status only, never a stale ``complete``.
+    fields: dict[str, str] = {"status": target}
+    phase = _STATE_TO_PHASE.get(transition.to_state)
+    if phase is not None:
+        fields["lifecycle_phase"] = phase
+    update_item(item, fields, backlog_dir, session_id=None)
     return f"wrote:{target}"
 
 

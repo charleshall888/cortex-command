@@ -147,7 +147,12 @@ def test_cortex_backlog_updates_the_item(
 
     assert r["backlog"] == "updated"
     assert calls == [
-        (item_path, {"status": "complete"}, tmp_path / "cortex" / "backlog", None)
+        (
+            item_path,
+            {"status": "complete", "lifecycle_phase": "complete"},
+            tmp_path / "cortex" / "backlog",
+            None,
+        )
     ]
 
 

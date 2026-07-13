@@ -144,7 +144,14 @@ def _close_one(feature: str, identifier: str, backend: str, backlog_dir: Path) -
     buf = io.StringIO()
     try:
         with contextlib.redirect_stdout(buf):
-            update_item(item_path, {"status": "complete"}, backlog_dir)
+            # Unconditional completion writer: advance lifecycle_phase to
+            # ``complete`` in the SAME write so a closed ticket's phase tracks its
+            # status rather than freezing at its prior phase (#378 req-5).
+            update_item(
+                item_path,
+                {"status": "complete", "lifecycle_phase": "complete"},
+                backlog_dir,
+            )
     except Exception as exc:  # noqa: BLE001 — one item's failure must not abort the batch
         return {"feature": feature, "state": "error", "message": repr(exc)}
 
