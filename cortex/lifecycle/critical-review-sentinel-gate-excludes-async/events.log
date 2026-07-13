@@ -10,3 +10,6 @@
 {"ts": "2026-07-13T14:26:54Z", "event": "feature_paused", "feature": "critical-review-sentinel-gate-excludes-async"}
 {"ts": "2026-07-13T15:48:23Z", "event": "plan_approved", "feature": "critical-review-sentinel-gate-excludes-async", "dispatch_choice": "trunk"}
 {"ts": "2026-07-13T15:48:23Z", "event": "phase_transition", "feature": "critical-review-sentinel-gate-excludes-async", "from": "plan", "to": "implement"}
+{"ts": "2026-07-13T15:51:19Z", "event": "batch_dispatch", "feature": "critical-review-sentinel-gate-excludes-async", "batch": 0, "tasks": [1, 2, 5, 6]}
+{"ts": "2026-07-13T16:11:21Z", "event": "batch_dispatch", "feature": "critical-review-sentinel-gate-excludes-async", "batch": 1, "tasks": [3, 4]}
+{"ts": "2026-07-13T16:32:21Z", "event": "phase_transition", "feature": "critical-review-sentinel-gate-excludes-async", "from": "implement", "to": "review", "tier": "complex"}
