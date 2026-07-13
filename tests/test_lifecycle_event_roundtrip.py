@@ -582,6 +582,57 @@ def test_refine_delegation_no_longer_emits_typed_phase_transition() -> None:
     )
 
 
+def test_refine_prose_off_legacy_spec_approve_verb() -> None:
+    """R17 (spec req-9): the refine skill tree commands the SERVED
+    ``cortex-lifecycle-advance spec-approve`` verb, never the legacy
+    ``cortex-lifecycle-spec-approve`` binary (kept-callable per ADR-0024 but
+    no longer commanded in-repo). Task 7 rerouted all refine prose; this
+    per-file sweep guards against a silent re-introduction.
+
+    Primary (robust) assertion — ZERO occurrences of the legacy verb anywhere
+    under ``skills/refine/``. A plain substring sweep is sound because the
+    legacy token is now nowhere in the tree (``grep -rn
+    'cortex-lifecycle-spec-approve' skills/`` == 0) and does NOT collide with
+    the served form (``cortex-lifecycle-advance spec-approve`` — the ``-advance
+    `` infix means the legacy substring is absent). This is narrow by design:
+    it targets the single absorbed verb, NOT a general absorbed-verb scanner
+    over ``skills/**`` (which would wrongly flag sanctioned descriptive
+    mentions and the actively-used ``cortex-lifecycle-event phase-transition``).
+
+    Secondary — the served verb's runnable command block still carries the
+    contiguous ``cortex-lifecycle-advance spec-approve`` form in specify.md, so
+    the reroute is PRESENT, not merely the legacy token deleted. The contiguous
+    form is asserted in specify.md ONLY: SKILL.md deliberately names the BARE
+    ``cortex-lifecycle-advance`` binary in inline code with "spec-approve" in
+    surrounding prose to keep the repo's check-contract lint quiet (an inline
+    contiguous ``cortex-lifecycle-advance spec-approve`` subparser mention
+    trips E101, missing required --decision), so it is not there by design.
+    """
+    refine_root = REPO_ROOT / "skills" / "refine"
+    md_files = sorted(refine_root.rglob("*.md"))
+    assert md_files, f"no skill files found under {refine_root}"
+    offenders = [
+        str(p.relative_to(REPO_ROOT))
+        for p in md_files
+        if "cortex-lifecycle-spec-approve" in p.read_text(encoding="utf-8")
+    ]
+    assert not offenders, (
+        "refine prose must command the served 'cortex-lifecycle-advance "
+        "spec-approve' verb, never the legacy 'cortex-lifecycle-spec-approve' "
+        f"binary (R17, spec req-9); found the legacy verb in: {offenders}"
+    )
+
+    # Secondary: the served verb's runnable command block is present in
+    # specify.md (asserted there ONLY — see docstring on SKILL.md's bare form).
+    specify = refine_root / "references" / "specify.md"
+    assert "cortex-lifecycle-advance spec-approve" in specify.read_text(
+        encoding="utf-8"
+    ), (
+        "specify.md's command block must carry the served "
+        "'cortex-lifecycle-advance spec-approve' form"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Negative controls — exercised through the FILE-READING path (not synthetic
 # strings): the cross-validator must REJECT a mistyped flag-kind and a dropped
