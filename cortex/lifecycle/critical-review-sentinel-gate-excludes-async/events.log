@@ -8,3 +8,5 @@
 {"ts": "2026-07-13T13:58:16Z", "event": "phase_transition", "feature": "critical-review-sentinel-gate-excludes-async", "from": "specify", "to": "plan"}
 {"ts": "2026-07-13T14:26:54Z", "event": "plan_approved", "feature": "critical-review-sentinel-gate-excludes-async", "dispatch_choice": "wait"}
 {"ts": "2026-07-13T14:26:54Z", "event": "feature_paused", "feature": "critical-review-sentinel-gate-excludes-async"}
+{"ts": "2026-07-13T15:48:23Z", "event": "plan_approved", "feature": "critical-review-sentinel-gate-excludes-async", "dispatch_choice": "trunk"}
+{"ts": "2026-07-13T15:48:23Z", "event": "phase_transition", "feature": "critical-review-sentinel-gate-excludes-async", "from": "plan", "to": "implement"}

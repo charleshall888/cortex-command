@@ -2,7 +2,7 @@
 
 ## Overview
 
-Layer a gate-time re-hash into the critical-review CLI command wrappers so a missing `READ_OK` sentinel is disambiguated against the pinned artifact: stable → advisory pass, drifted → hard-fail. The pure verifier text-parsers stay untouched; a new `sentinel_advisory` event keeps exclusion telemetry meaningful and is registered with its phantom-lifecycle consumer. Then delete the doc/prompt language that caused and would re-seed the bug, and record the contract change as ADR-0027.
+Layer a gate-time re-hash into the critical-review CLI command wrappers so a missing `READ_OK` sentinel is disambiguated against the pinned artifact: stable → advisory pass, drifted → hard-fail. The pure verifier text-parsers stay untouched; a new `sentinel_advisory` event keeps exclusion telemetry meaningful and is registered with its phantom-lifecycle consumer. Then delete the doc/prompt language that caused and would re-seed the bug, and record the contract change as ADR-0028.
 **Architectural Pattern**: layered
 
 ## Outline
@@ -15,7 +15,7 @@ Layer a gate-time re-hash into the critical-review CLI command wrappers so a mis
 
 ### Phase 2: Doc/prompt correction + ADR (tasks: 5, 6)
 **Goal**: remove the "raw stdout" / "preamble prose before it is fine" language that seeds the bug, reframe the sentinel as advisory, and record the contract change.
-**Checkpoint**: `grep -c "raw stdout" verification-gates.md` = 0, `grep -c "preamble prose before it is fine" reviewer-prompt.md` = 0, `cortex/adr/0027-*.md` present, mirror parity green.
+**Checkpoint**: `grep -c "raw stdout" verification-gates.md` = 0, `grep -c "preamble prose before it is fine" reviewer-prompt.md` = 0, `cortex/adr/0028-*.md` present, mirror parity green.
 
 ## Tasks
 
@@ -64,19 +64,19 @@ Layer a gate-time re-hash into the critical-review CLI command wrappers so a mis
 - **Verification**: `grep -c "preamble prose before it is fine" skills/critical-review/references/reviewer-prompt.md` = 0; `grep -ci "advisory" skills/critical-review/references/reviewer-prompt.md` ≥ 1; `grep -ci "advisory" skills/critical-review/references/synthesizer-prompt.md` ≥ 1 (the synth prompt is reframed too, not just the reviewer prompt).
 - **Status**: [ ] pending
 
-### Task 6: Author ADR-0027
-- **Files**: `cortex/adr/0027-gate-time-rehash-is-authoritative-drift-check.md`
+### Task 6: Author ADR-0028
+- **Files**: `cortex/adr/0028-gate-time-rehash-is-authoritative-drift-check.md`
 - **What**: Write the ADR recording the decision to demote the read-sentinel to advisory and make the gate wrapper's re-hash authoritative on the absent branch, with the transient-drift blind spot (including mixed-cohort admission) as the accepted trade-off; cite ADR-0015 as precedent.
 - **Depends on**: none
 - **Complexity**: simple
-- **Context**: Follow `cortex/adr/README.md` structure (three-criteria gate, status, context/decision/consequences); precedent `cortex/adr/0015-review-could-not-run-vs-dispatch-crash-split.md`. Content is drafted in spec.md `## Proposed ADR`. Highest existing ADR is 0026.
-- **Verification**: `test -f cortex/adr/0027-gate-time-rehash-is-authoritative-drift-check.md`; `grep -rl "0027" cortex/adr/` resolves; the file carries the README-required sections (`grep -cE "^## (Context|Decision|Consequences|Status)" cortex/adr/0027-*.md` ≥ 3); if the repo enforces an ADR-citation/index audit, run that targeted check (not the whole suite) and it passes.
+- **Context**: Follow `cortex/adr/README.md` structure (three-criteria gate, status, context/decision/consequences); precedent `cortex/adr/0015-review-could-not-run-vs-dispatch-crash-split.md`. Content is drafted in spec.md `## Proposed ADR`. Highest existing ADR is 0027.
+- **Verification**: `test -f cortex/adr/0028-gate-time-rehash-is-authoritative-drift-check.md`; `grep -rl "0028" cortex/adr/` resolves; the file carries the README-required sections (`grep -cE "^## (Context|Decision|Consequences|Status)" cortex/adr/0028-*.md` ≥ 3); if the repo enforces an ADR-citation/index audit, run that targeted check (not the whole suite) and it passes.
 - **Status**: [ ] pending
 
 ## Risks
-- **Transient-drift blind spot (accepted).** Gate-time re-hash cannot catch change-then-restore-to-identical-SHA within one window, including mixed-cohort admission; documented in spec Edge Cases + ADR-0027, not engineered against. Revisit only if a concrete exploit emerges.
+- **Transient-drift blind spot (accepted).** Gate-time re-hash cannot catch change-then-restore-to-identical-SHA within one window, including mixed-cohort admission; documented in spec Edge Cases + ADR-0028, not engineered against. Revisit only if a concrete exploit emerges.
 - **`--artifact-path` is optional, not required (refined from the approved spec after the plan-phase critical review).** The plan-phase review showed `required` maximizes blast radius — an atomic doc↔argparse flip, a cross-commit window where committed code demands the flag but committed orchestrator prose still omits it (unguarded, since `cortex-check-contract` is placeholder-suppressed for `<...>` invocations), and churn of two unrelated tests. Optional keeps every existing caller/test working, stays fail-closed (omission degrades to today's safe exclusion, never a false pass), and preserves fail-loud on real drift via the re-hash mismatch branch. The one residual: a caller that forgets `--artifact-path` silently keeps the old behavior for that call site — mitigated by updating all three known callers (Task 4) and by the change being fail-closed. Spec R1/Open Decisions updated to match.
 - **Batch-0 commit contention (accepted, retry-absorbed).** Task 5 edits `skills/critical-review/references/*.md`, whose commit triggers the pre-commit `just build-plugin` mirror regeneration, while sibling Batch-0 tasks (1, 2, 6) commit into the same shared feature worktree — the documented dual-source-drift `.git/index.lock` contention. The overnight commit-retry loop absorbs this; no explicit serialization edge is added since the alternative (forcing a false dependency) would cost more than the occasional retry.
 
 ## Acceptance
-Running the critical-review gate on a pinned artifact that is unchanged but whose reviewers omit `READ_OK` now PASSES (advisory, exit 0, `sentinel_advisory`) instead of tripping total-failure, while a genuinely drifted artifact still hard-fails (exit 3, `sentinel_absence`); `is_phantom_lifecycle_dir` handles the new event; `just test` is green; the bug-seeding "raw stdout"/"preamble prose before it is fine" language is gone and ADR-0027 records the contract change.
+Running the critical-review gate on a pinned artifact that is unchanged but whose reviewers omit `READ_OK` now PASSES (advisory, exit 0, `sentinel_advisory`) instead of tripping total-failure, while a genuinely drifted artifact still hard-fails (exit 3, `sentinel_absence`); `is_phantom_lifecycle_dir` handles the new event; `just test` is green; the bug-seeding "raw stdout"/"preamble prose before it is fine" language is gone and ADR-0028 records the contract change.
