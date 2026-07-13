@@ -19,10 +19,14 @@ function makeTerminal(container, opts = {}) {
     return new Promise((r) => setTimeout(r, ms));
   }
 
-  async function typeLine(cls, text) {
+  async function typeLine(cls, text, snap) {
     const line = document.createElement("div");
     line.className = "term-line " + cls;
     body.appendChild(line);
+    if (snap) {
+      line.textContent = text; // instant — for punchlines that must land, not crawl
+      return;
+    }
     line.classList.add("caret");
     for (let i = 0; i < text.length; i++) {
       line.textContent = text.slice(0, i + 1);
@@ -31,14 +35,14 @@ function makeTerminal(container, opts = {}) {
     line.classList.remove("caret");
   }
 
-  async function play(script) {
-    body.innerHTML = "";
+  async function play(script, { append = false } = {}) {
+    if (!append) body.innerHTML = "";
     for (const step of script) {
       if (step.pause) await sleep(step.pause);
       if (step.lines) {
-        for (const l of step.lines) await typeLine(step.t, l);
+        for (const l of step.lines) await typeLine(step.t, l, step.snap);
       } else {
-        await typeLine(step.t, step.text);
+        await typeLine(step.t, step.text, step.snap);
       }
       await sleep(step.gap ?? LINE_GAP);
     }

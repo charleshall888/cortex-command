@@ -16,7 +16,7 @@ The curriculum skeleton is a harness-agnostic skill ladder (chatbot user → aut
 
 ### Workshop scene deck
 
-- **Description**: One self-contained hand-authored HTML deck of 12–18 scenes (v1) that follow the skill-ladder arc, built on the animation component library. Includes 2–3 interactive checkpoints (e.g., an audience member drags the autonomy slider, the room votes delegate-vs-solo), the "same ideas, different cockpits" dialect scene mapping concepts to Cursor/Codex equivalents, and a cortex-command horizon closer.
+- **Description**: One self-contained hand-authored HTML deck of 12–18 scenes (v1) that follow the skill-ladder arc, built on the animation component library. Interactive checkpoints are presenter-led show-of-hands moments at the presenter's discretion — audience data-entry polls were cut by presenter decision 2026-07-13. Includes the "same ideas, different cockpits" dialect scene mapping concepts to Cursor/Codex equivalents, and a cortex-command horizon closer.
 - **Inputs**: The component library; deck-owned prose (on-screen talking points + presenter talk track).
 - **Outputs**: A presentable deck (workshop and keynote variants) that doubles as a 1:1 vocabulary map.
 - **Acceptance criteria**:
@@ -57,7 +57,7 @@ The curriculum skeleton is a harness-agnostic skill ladder (chatbot user → aut
 - **Present-mode sparseness bar**: if a scene needs paragraphs on screen to land in a live room, it fails review — move the words to the presenter talk track (or save them for the wave-2 guide page).
 - **Volatility quarantine**: volatile facts (feature names, UI details, flags, model names, pricing) may appear only in blocks tagged with a greppable in-file marker (e.g. `<!-- volatile -->`). Concept scenes must pass: *would this scene still be true if the tool's UI changed completely?*
 - **Maintenance sweep**: a quarterly pass greps the volatile markers and opens only those blocks; the durable spine is never bulk-edited on tool releases.
-- **Tool stance**: agnostic spine, Claude Code demos — mental models are harness-agnostic by construction; every concrete demo is confidently Claude Code; the dialect scene absorbs Cursor/Codex parity; no parallel tool tracks.
+- **Tool stance**: agnostic spine, Claude Code demos — mental models are harness-agnostic by construction; every concrete demo is confidently Claude Code; the dialect scene absorbs Cursor/Codex parity; no parallel tool tracks. The presenter's own workflow (e.g. `/requirements`, `/discovery`) may appear as a worked example in small volatile-marked chips over generic stage labels — the harness is never taught as curriculum (amended 2026-07-13 per presenter direction).
 
 ## Architectural Constraints
 

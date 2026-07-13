@@ -22,6 +22,10 @@
     chains[key] = (chains[key] || Promise.resolve()).then(fn).catch(() => {});
   }
 
+  function sleep(ms) {
+    return new Promise((r) => setTimeout(r, ms));
+  }
+
   const LEFT_SCRIPT = [
     { t: "user", text: "add an empty-state to the catch log" },
     { t: "ask", text: "One question — should the empty log invite the first cast, or stay blank?", pause: 300 },
@@ -40,41 +44,70 @@
     { t: "warn", text: "✗ modified catch_odds.js — biting disabled game-wide" },
   ];
 
-  const WISH_SCRIPT = [
-    { t: "user", text: "make the catch log better" },
-    { t: "agent", text: "Adding filters, sorting, and a stats view…", pause: 200 },
-    { t: "tool", text: "Edit catch_log_view.js" },
-    { t: "add", lines: ["+ <FilterBar/>  <SortDropdown/>"] },
-    { t: "tool", text: "Write catch_stats.js" },
-    { t: "add", lines: ["+ renderCatchRateChart(entries)"] },
-    { t: "agent", text: "Also wiring up CSV export…" },
-    { t: "warn", text: "✗ 6 files changed · filters, stats, export" },
+  /* the No-loop: both design calls live in the tank, so the agent oscillates
+     between them — and the third suggestion is verbatim the first */
+  const NOLOOP_A = [
+    { t: "user", text: "dawn spawns still feel wrong — fix them" },
+    { t: "agent", text: "Rare fish hide at dawn — lowering the multiplier.", pause: 250 },
+    { t: "tool", text: "Edit spawn_table.js" },
+    { t: "del", lines: ["- DAWN_RARE_MULT = 1.0"] },
+    { t: "add", lines: ["+ DAWN_RARE_MULT = 0.4"] },
+    { t: "user", text: "NO!" },
+  ];
+  const NOLOOP_B = [
+    { t: "agent", text: "Right — dawn is the rare-fish window. Raising it.", pause: 250 },
+    { t: "tool", text: "Edit spawn_table.js" },
+    { t: "del", lines: ["- DAWN_RARE_MULT = 0.4"] },
+    { t: "add", lines: ["+ DAWN_RARE_MULT = 2.5"] },
+    { t: "user", text: "Still no." },
+  ];
+  const NOLOOP_C = [
+    { t: "agent", text: "Reconsidering — rare fish hide at dawn. Lowering.", pause: 250 },
+    { t: "del", lines: ["- DAWN_RARE_MULT = 2.5"], snap: true },
+    { t: "add", lines: ["+ DAWN_RARE_MULT = 0.4"], snap: true },
+    { t: "warn", text: "✗ turn 74 · 40 minutes · same diff as turn 71", snap: true },
   ];
 
-  const TICKET_SCRIPT = [
-    { t: "user", text: "ticket: empty-state for the catch log" },
-    { t: "user", text: "constraints: keepsake voice, no data-UI chrome" },
-    { t: "user", text: "done when: a first-night player feels invited to cast" },
-    { t: "tool", text: "Read catch_log_view.js" },
-    { t: "add", lines: ['+ EmptyState("No catches yet.", "The night is young.")'] },
-    { t: "done", text: "✓ 1 file changed · tests pass" },
+  /* the finale: Friday run right — the red pane is a freeze-frame of the
+     cold open, then interview → tickets → three parallel fresh windows */
+  const FIN_RED_FREEZE = [
+    { t: "user", text: "add an empty-state to the catch log" },
+    { t: "tool", text: "Edit catch_odds.js" },
+    { t: "del", text: "- const BASE_ODDS = 0.12" },
+    { t: "add", text: "+ const BASE_ODDS = 0.0   // empty state" },
+    { t: "warn", text: "✗ biting disabled game-wide" },
   ];
-
-  /* the full circle: the cold open's Friday, replayed with the habits */
-  const REPLAY_A = [
-    { t: "user", text: "add flip-through paging to the catch log" },
-    { t: "agent", text: "Working — pulling the whole day back in…", pause: 300 },
-    { t: "user", text: "stop — you're at 91%. write the handoff ticket first." },
-    { t: "tool", text: "Write handoff-flip-through.md" },
-    { t: "done", text: "✓ ticket written · constraints + done-when · session closed" },
+  const FIN_INTERVIEW = [
+    { t: "user", text: "interview me — scope Monday's playtest" },
+    { t: "ask", text: "what should a player wake up to?", pause: 250 },
+    { t: "user", text: "a catch in the log — and fish actually biting" },
+    { t: "ask", text: "biting's been off since 4:00 — fix first?", pause: 250 },
+    { t: "user", text: "fix it first" },
+    { t: "tool", text: "Write first-night-epic.md" },
+    { t: "done", text: "✓ epic + 3 tickets · every lesson attached" },
   ];
-
-  const REPLAY_B = [
-    { t: "user", text: "ticket: flip-through paging for the catch log" },
-    { t: "user", text: "constraints: keepsake voice · one page per catch" },
-    { t: "tool", text: "Read handoff-flip-through.md" },
-    { t: "add", lines: ["+ page.flip(direction)", "+ renderPage(entry)"] },
-    { t: "done", text: "✓ tests pass · 2 files changed" },
+  const FIN_A = [
+    { t: "user", text: "ticket: restore night biting" },
+    { t: "agent", text: "night = device clock (single-player)" },
+    { t: "del", lines: ["- const BASE_ODDS = 0.0"] },
+    { t: "add", lines: ["+ const BASE_ODDS = 0.12"] },
+    { t: "tool", text: "Run night_sim --offline" },
+    { t: "done", text: "✓ fish bite after dark · 1 file" },
+  ];
+  const FIN_B = [
+    { t: "user", text: "ticket: flip-through log page" },
+    { t: "tool", text: "Edit log_view.js" },
+    { t: "add", lines: ["+ page.flip(direction)"] },
+    { t: "warn", text: "✗ gate: run the tests first" },
+    { t: "tool", text: "Run tests --offline" },
+    { t: "done", text: "✓ gate open · 2 files" },
+  ];
+  const FIN_C = [
+    { t: "user", text: "ticket: spare rare catches" },
+    { t: "tool", text: "Edit release_rules.js" },
+    { t: "add", lines: ["+ if (fish.isRare) keep(fish)"] },
+    { t: "tool", text: "Run tests --offline" },
+    { t: "done", text: "✓ a Brass Minnow would be kept", pause: 2400 },
   ];
 
   const SCROLL_START = [
@@ -93,7 +126,6 @@
     return `<div><span class="lnum">${l.n}</span><span class="${l.gag ? "gag" : ""}">${l.text}</span></div>`;
   }
 
-  /* the gauge scene's pour: layers name themselves inside the tank */
   const GAUGE_BASE = [
     { kind: "system", pct: 6, label: "system prompt" },
     { kind: "chat", pct: 8, label: "your messages" },
@@ -105,6 +137,13 @@
     { kind: "tool", pct: 12, label: "more files" },
     { kind: "tool", pct: 10, label: "more test output" },
   ]; // → 66% — past the door, into the red
+
+  function setRail(sec, n) {
+    [1, 2, 3].forEach((i) => {
+      const el = sec.querySelector("#pipe-" + i);
+      if (el) el.classList.toggle("lit", i === n);
+    });
+  }
 
   const hooks = {
     "sc-cold-open": (sec, b) => {
@@ -130,10 +169,7 @@
         state.termLeft.play(LEFT_SCRIPT);
         state.cbLeft.set(13, { ms: 11000 });
       }
-      if (b === 3) {
-        state.termRight.play(RIGHT_SCRIPT);
-        state.cbRight.set(96, { ms: 13000 });
-      }
+      if (b === 3) state.termRight.play(RIGHT_SCRIPT); // the bar parks at 91 — the finale echoes it
       if (b === 4) sec.classList.add("spotlight"); // dim everything but the two bars
     },
 
@@ -196,10 +232,52 @@
         });
       if (b === 2)
         chain("squeeze", async () => {
-          await new Promise((r) => setTimeout(r, 2200)); // the mini-term lines land first
+          await sleep(2200); // the mini-term lines land first
           const chip = state.vSqueeze.box.querySelector(".chip");
           if (chip) chip.classList.add("needed");
         });
+    },
+
+    "sc-noloop": (sec, b) => {
+      if (b === 0) {
+        sec.classList.remove("spotlight");
+        if (!state.termLoop) {
+          state.termLoop = makeTerminal(document.getElementById("term-noloop"), { title: "same session · turn 71" });
+          state.cbLoop = makeContextBar(document.getElementById("cbar-noloop"), { h: 12 });
+        }
+        if (!state.vLoop) state.vLoop = makeVessel(document.getElementById("vessel-noloop"), { scale: 0.8 });
+        state.termLoop.clear();
+        state.vLoop.reset();
+        state.vLoop.setFill([
+          { kind: "system", pct: 8 },
+          { kind: "chat", pct: 6 },
+          { kind: "tool", pct: 16, label: "the morning's design chat" },
+          { kind: "chat", pct: 6 },
+          { kind: "tool", pct: 16 },
+        ]); // 52% — deep in the afternoon
+        state.vLoop.pinChips(
+          ['turn 14: “rare fish hide at dawn”', 'turn 62: “dawn is the rare-fish window”'],
+          { fracs: [0.66, 0.34] }
+        );
+        state.cbLoop.set(58, { ms: 600 });
+      }
+      if (b === 1)
+        chain("noloop", async () => {
+          await state.termLoop.play(NOLOOP_A);
+          state.vLoop.pinChips(['turn 72: “NO!”'], { fracs: [0.5] });
+          state.cbLoop.set(63, { ms: 800 });
+        });
+      if (b === 2)
+        chain("noloop", async () => {
+          await state.termLoop.play(NOLOOP_B, { append: true });
+          state.vLoop.pinChips(['turn 73: “Still no.”'], { fracs: [0.18] });
+          state.cbLoop.set(70, { ms: 800 });
+          await state.termLoop.play(NOLOOP_C, { append: true }); // the relapse snaps in — no crawl
+          state.vLoop.box.querySelectorAll(".chip").forEach((c, i) => {
+            if (i < 2) c.classList.add("conflict"); // the two design calls, both still live
+          });
+        });
+      if (b === 3) sec.classList.add("spotlight");
     },
 
     "sc-filmstrip": (sec, b) => {
@@ -217,18 +295,15 @@
 
     "pv-1": (sec, b) => {
       if (b === 0) state.wp1 = buildDock(document.getElementById("wp-dock-1"), { sketch: true });
-      if (b === 1) state.wp1.posts.exit.classList.add("lit");
+      if (b === 1) state.wp1.posts.window.classList.add("lit");
     },
     "pv-2": (sec, b) => {
-      if (b === 0) state.wp2 = buildDock(document.getElementById("wp-dock-2"), { sketch: true, lit: ["exit"] });
+      if (b === 0) state.wp2 = buildDock(document.getElementById("wp-dock-2"), { sketch: true, lit: ["window"] });
       if (b === 1) state.wp2.posts.page.classList.add("lit");
     },
     "pv-3": (sec, b) => {
-      if (b === 0) state.wp3 = buildDock(document.getElementById("wp-dock-3"), { sketch: true, lit: ["exit", "page"] });
-      if (b === 1) {
-        state.wp3.plank.classList.add("drawn");
-        state.wp3.posts.instructions.classList.add("pulse");
-      }
+      if (b === 0) state.wp3 = buildDock(document.getElementById("wp-dock-3"), { sketch: true, lit: ["window", "page"] });
+      if (b === 1) state.wp3.posts.clean.classList.add("lit"); // the plank waits for Friday
     },
 
     "sc-prism": (sec, b) => {
@@ -239,10 +314,12 @@
         cloud.classList.remove("sharp", "condensed");
         bubbles.forEach((q) => q.classList.remove("on"));
         tickets.forEach((t) => t.classList.remove("on"));
-        sec.querySelectorAll(".badge-clip").forEach((c) => c.classList.remove("stamped"));
+        sec.querySelectorAll(".prism-tickets .badge-clip").forEach((c) => c.classList.remove("stamped"));
         sec.querySelector(".ticket.callback").classList.remove("lit");
-        sec.querySelector(".doc").classList.remove("on");
-        sec.classList.remove("past-top", "past-mid", "fork-mode", "decided");
+        sec.querySelector(".prism-mid .doc").classList.remove("on");
+        sec.classList.remove("past-top", "past-mid", "handoff-mode");
+        if (state.cbHandoff) state.cbHandoff.set(0, { ms: 0 });
+        setRail(sec, 1);
       }
       if (b === 2) {
         bubbles.forEach((q, i) => setTimeout(() => q.classList.add("on"), 300 + i * 900));
@@ -251,7 +328,8 @@
       if (b === 3) {
         cloud.classList.add("condensed");
         sec.classList.add("past-top");
-        sec.querySelector(".doc").classList.add("on");
+        sec.querySelector(".prism-mid .doc").classList.add("on");
+        setRail(sec, 2);
       }
       if (b === 4) {
         sec.classList.add("past-mid");
@@ -260,38 +338,12 @@
         setTimeout(() => sec.querySelector(".ticket.callback").classList.add("lit"), 2200);
       }
       if (b === 5) {
-        sec.classList.add("fork-mode");
-        setTimeout(() => sec.classList.add("decided"), 2600);
+        sec.classList.add("handoff-mode");
+        setRail(sec, 3);
+        if (!state.cbHandoff) state.cbHandoff = makeContextBar(document.getElementById("cbar-handoff"), { h: 10 });
+        state.cbHandoff.set(8, { ms: 0 });
+        state.cbHandoff.set(14, { ms: 2600 });
       }
-    },
-
-    "sc-wish": (sec, b) => {
-      if (b === 0) {
-        if (state.termWish) state.termWish.clear();
-        if (state.termTicket) state.termTicket.clear();
-        if (state.cbWish) state.cbWish.set(0, { ms: 0 });
-        if (state.cbTicket) state.cbTicket.set(0, { ms: 0 });
-      }
-      if (b === 1 && !state.termWish) {
-        state.termWish = makeTerminal(document.getElementById("term-wish"), { title: "fresh session A" });
-        state.termTicket = makeTerminal(document.getElementById("term-ticket"), { title: "fresh session B" });
-        state.cbWish = makeContextBar(document.getElementById("cbar-wish"), { h: 12 });
-        state.cbTicket = makeContextBar(document.getElementById("cbar-ticket"), { h: 12 });
-      }
-      if (b === 1) {
-        state.cbWish.set(8, { ms: 700 });
-        state.cbTicket.set(8, { ms: 700 }); // identical starts — the controls of the experiment
-      }
-      if (b === 2)
-        chain("wish", () => {
-          state.cbWish.set(68, { ms: 12000 });
-          return state.termWish.play(WISH_SCRIPT);
-        });
-      if (b === 3)
-        chain("wish", () => {
-          state.cbTicket.set(18, { ms: 6000 });
-          return state.termTicket.play(TICKET_SCRIPT);
-        });
     },
 
     "sc-lines": (sec, b) => {
@@ -306,17 +358,31 @@
         ]);
         if (!state.vFresh) {
           state.vFresh = [1, 2, 3].map((i) => makeVessel(document.getElementById("vessel-fresh-" + i), { scale: 0.28 }));
+          state.cbFresh = [1, 2, 3].map((i) =>
+            makeContextBar(document.getElementById("cbar-fresh-" + i), { h: 8, label: "", readout: false, marker: null })
+          );
         }
         state.vFresh.forEach((v) => {
           v.reset();
           v.setFill([{ kind: "spec", pct: 9 }]); // fresh, carrying only the page
         });
+        state.cbFresh.forEach((cb) => cb.set(8, { ms: 0 }));
+        document.getElementById("lines-clock").textContent = "4:00 PM";
         document.getElementById("idea-scrapbook").classList.remove("lit");
-        sec.classList.remove("picked");
+        sec.classList.remove("picked", "working");
       }
       if (b === 3) {
-        document.getElementById("idea-scrapbook").classList.add("lit");
+        sec.classList.add("working");
+        state.cbFresh[0].set(26, { ms: 5200 });
+        state.cbFresh[1].set(24, { ms: 5600 });
+        state.cbFresh[2].set(27, { ms: 6000 });
+        setTimeout(() => (document.getElementById("lines-clock").textContent = "4:20 PM"), 3000);
+      }
+      if (b === 4) {
         sec.classList.add("picked");
+        const chip = document.getElementById("lines-intent");
+        const target = document.getElementById("idea-scrapbook");
+        setTimeout(() => flyIntent(chip, target, () => target.classList.add("lit")), 600);
       }
     },
 
@@ -324,22 +390,24 @@
       const card = (id, delay) => setTimeout(() => document.getElementById(id).classList.add("on"), delay);
       if (b === 0) {
         buildArrows();
+        sec.classList.remove("spec-docked");
         ["fcard-1", "fcard-2", "fcard-3"].forEach((id) => document.getElementById(id).classList.remove("on"));
         sec.querySelector(".finding-card").classList.remove("binned");
       }
-      if (b === 1) {
+      if (b === 1) setTimeout(() => sec.classList.add("spec-docked"), 1400); // the doc takes its place on the range
+      if (b === 2) {
         setTimeout(() => flyArrow("a1", 575, 160, 14, true), 200);
         card("fcard-1", 900);
         setTimeout(() => flyArrow("a2", 572, 205, -4, true), 1400);
         card("fcard-2", 2100);
       }
-      if (b === 2) {
+      if (b === 3) {
         flyArrow("a3", 585, 270, -18, false);
         setTimeout(() => document.querySelector("#arrows-svg .crack").classList.add("show"), 600);
         card("fcard-3", 800);
       }
-      if (b === 3) document.querySelector("#arrows-svg .crack").classList.add("gold");
-      if (b === 4) {
+      if (b === 4) document.querySelector("#arrows-svg .crack").classList.add("gold");
+      if (b === 5) {
         const fc = sec.querySelector(".finding-card");
         fc.classList.remove("binned");
         setTimeout(() => fc.classList.add("binned"), 3600); // room to read it aloud first
@@ -376,7 +444,7 @@
           const D = 3400;
           let gagIdx = 0;
           for (let step = 1; step <= STEPS; step++) {
-            await new Promise((r) => setTimeout(r, D / STEPS));
+            await sleep(D / STEPS);
             const p = step / STEPS;
             const n = Math.round(20 + (2041 - 20) * p * p);
             count.textContent = n.toLocaleString() + " lines";
@@ -393,7 +461,7 @@
           if (!state.vSkill) state.vSkill = makeVessel(document.getElementById("vessel-skill"), { scale: 0.8 });
           state.vSkill.reset();
           file.classList.add("shoved");
-          await new Promise((r) => setTimeout(r, 900));
+          await sleep(900);
           state.vSkill.setFill([
             { kind: "system", pct: 8 },
             { kind: "tool", pct: 20 },
@@ -414,71 +482,104 @@
     },
 
     "sc-turnstile": (sec, b) => {
-      if (b === 0) buildGate();
       const svg = document.getElementById("gate-svg");
-      if (b === 0 && state.gateRecoil) clearTimeout(state.gateRecoil);
+      if (b === 0) {
+        buildGate();
+        document.getElementById("gate-linecount").textContent = "adversarial-review · SKILL.md — 2,041 lines";
+        if (state.gateRecoil) clearTimeout(state.gateRecoil);
+      }
       if (b === 1) {
         const w = svg.querySelector(".walker");
         w.style.transform = "translateX(470px)";
+        setTimeout(() => svg.querySelector(".sign-cap").classList.add("on"), 1100); // as the walker clears the sign
         state.gateRecoil = setTimeout(
           () => ((w.style.transition = "transform 0.3s ease"), (w.style.transform = "translateX(455px)")),
           1900
         );
       }
-      if (b === 2) {
-        if (state.gateRecoil) clearTimeout(state.gateRecoil);
-        svg.querySelector(".gate-dot").setAttribute("fill", cssVar("--zone-green"));
-        svg.querySelector(".gate-label").textContent = "tests ✓";
-        const arms = svg.querySelector(".turnstile-arms");
-        arms.style.transformOrigin = "690px 218px";
-        arms.style.transform = "rotate(-120deg)";
-        const w = svg.querySelector(".walker");
-        w.style.transition = "transform 1.6s ease 0.6s";
-        w.style.transform = "translateX(760px)";
-      }
-      if (b === 3) svg.classList.add("sign-faded");
-    },
-
-    "sc-byhand": (sec, b) => {
-      const wall = sec.querySelector(".wall");
-      if (b === 0) wall.classList.remove("automated");
-      if (b === 2) wall.classList.add("automated");
-    },
-
-    "sc-replay": (sec, b) => {
-      const chips = [1, 2, 3].map((i) => document.getElementById("rchip-" + i));
-      if (b === 0) {
-        if (state.termReplay) state.termReplay.clear();
-        if (state.cbReplay) state.cbReplay.set(0, { ms: 0 });
-        chips.forEach((c) => c.classList.remove("on"));
-        setTermTitle(state.termReplay, "same session · 4:00 PM");
-      }
-      if (b === 1) {
-        if (!state.termReplay) {
-          state.termReplay = makeTerminal(document.getElementById("term-replay"), { title: "same session · 4:00 PM" });
-          state.cbReplay = makeContextBar(document.getElementById("cbar-replay"), { h: 12 });
-        }
-        state.cbReplay.set(91, { ms: 1800 }); // exactly where the cold open left it
-      }
       if (b === 2)
-        chain("replay", async () => {
-          await state.termReplay.play(REPLAY_A);
-          chips[0].classList.add("on"); // the handoff ticket IS direction on the page
+        chain("gate", async () => {
+          if (state.gateRecoil) clearTimeout(state.gateRecoil);
+          const w = svg.querySelector(".walker");
+          w.style.transition = "transform 0.6s ease";
+          w.style.transform = "translateX(430px)"; // step back from the arms
+          await sleep(700);
+          const fix = el("g", { class: "gate-fix" }, svg);
+          el("rect", { x: 428, y: 128, width: 240, height: 30, rx: 6 }, fix);
+          const ft = el("text", { x: 442, y: 148 }, fix);
+          ft.textContent = "⏺ run tests → ✓ 14 passing";
+          await sleep(1700);
+          svg.querySelector(".gate-dot").setAttribute("fill", cssVar("--zone-green"));
+          svg.querySelector(".gate-label").textContent = "tests ✓";
+          const arms = svg.querySelector(".turnstile-arms");
+          arms.style.transformOrigin = "690px 218px";
+          arms.style.transform = "rotate(-120deg)";
+          w.style.transition = "transform 1.6s ease 0.5s";
+          w.style.transform = "translateX(760px)";
+        });
+      if (b === 3) {
+        svg.classList.add("sign-faded");
+        const lc = document.getElementById("gate-linecount");
+        lc.textContent = "adversarial-review · SKILL.md — 1,988 lines";
+        lc.classList.add("ticked"); // § 1,847 came out of the file
+      }
+    },
+
+    "sc-finale": (sec, b) => {
+      if (b === 0) {
+        sec.classList.remove("f1", "f2", "f3", "f4", "f5");
+        if (!state.finRed) {
+          state.finRed = makeTerminal(document.getElementById("term-fin-red"), { title: "same session · 4:00 PM" });
+          state.finInt = makeTerminal(document.getElementById("term-fin-int"), { title: "fresh session · 4:05 PM · the interview" });
+          state.finT = ["a", "b", "c"].map((k) =>
+            makeTerminal(document.getElementById("term-fin-" + k), { title: "fresh session · 4:19 PM" })
+          );
+          state.cbFinRed = makeContextBar(document.getElementById("cbar-fin-red"), { h: 12 });
+          state.cbFinInt = makeContextBar(document.getElementById("cbar-fin-int"), { h: 12 });
+          state.cbFinT = ["a", "b", "c"].map((k) => makeContextBar(document.getElementById("cbar-fin-" + k), { h: 10 }));
+        }
+        prefill(state.finRed, FIN_RED_FREEZE); // a freeze-frame, not a rerun
+        state.finInt.clear();
+        state.finT.forEach((t) => t.clear());
+        [state.cbFinInt, ...state.cbFinT].forEach((cb) => cb.set(0, { ms: 0 }));
+        sec.querySelectorAll(".ticket-intent").forEach((t) => t.classList.remove("stamped"));
+        sec.querySelectorAll(".finale-trio .badge-clip").forEach((c) => c.classList.remove("stamped"));
+        state.cbFinRed.set(91, { ms: 1800 }); // the last red sweep of the night — plays silent
+      }
+      if (b === 1)
+        chain("fin", async () => {
+          sec.classList.add("f1"); // the red pane folds: retired
+          await sleep(900);
+          state.cbFinInt.set(7, { ms: 600 });
+          state.cbFinInt.set(12, { ms: 9000 });
+          await state.finInt.play(FIN_INTERVIEW);
+        });
+      if (b === 2)
+        chain("fin", async () => {
+          sec.classList.add("f2"); // the interview folds; the page stands
+          await sleep(700);
+          flyIntentLines(sec); // three lessons, each paid for by a dead session — silent
         });
       if (b === 3)
-        chain("replay", async () => {
-          state.termReplay.clear();
-          setTermTitle(state.termReplay, "fresh session · 4:04 PM");
-          state.cbReplay.set(8, { ms: 1600 }); // the single most legible image in the deck
-          state.cbReplay.flash();
-          chips[1].classList.add("on");
-          await new Promise((r) => setTimeout(r, 1700));
-          await state.termReplay.play(REPLAY_B);
-          state.cbReplay.set(16, { ms: 1200 });
-          chips[2].classList.add("on");
+        chain("fin", async () => {
+          sec.classList.add("f3");
+          state.cbFinT[0].set(14, { ms: 8000 });
+          state.cbFinT[1].set(18, { ms: 9500 });
+          state.cbFinT[2].set(11, { ms: 9000 });
+          const runs = [state.finT[0].play(FIN_A)];
+          await sleep(800);
+          runs.push(state.finT[1].play(FIN_B));
+          await sleep(800);
+          runs.push(state.finT[2].play(FIN_C));
+          await Promise.all(runs);
         });
-      if (b === 4) {
-        state.wpFinal = buildDock(document.getElementById("wp-dock-final"), { lit: ["page", "exit", "instructions"], plank: true });
+      if (b === 4) sec.classList.add("f4"); // triple fold — silent; results land via data-beat
+      if (b === 5) {
+        sec.classList.add("f5");
+        state.wpFinal = buildDock(document.getElementById("wp-dock-final"), {
+          lit: ["window", "page", "clean"],
+          plank: true,
+        });
       }
     },
   };
@@ -498,22 +599,22 @@
     return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   }
 
-  function setTermTitle(term, title) {
-    if (!term) return;
-    const spans = term.el.querySelectorAll(".term-bar span");
-    spans[spans.length - 1].textContent = title;
+  /* write finished terminal lines instantly — a freeze-frame */
+  function prefill(term, lines) {
+    const body = term.el.querySelector(".term-body");
+    body.innerHTML = lines.map((s) => `<div class="term-line ${s.t}">${s.text}</div>`).join("");
   }
 
-  /* the dock diagram: three posts = the three habits (left → right:
-     page · exit · instructions), the plank = the techniques laid across
-     them. Sketch = blueprint dashes; lit = built. */
+  /* the dock diagram: three posts = the three pillars (left → right:
+     window · page · clean — teaching order IS retell order now), the
+     plank = the pipeline, drawn only when Friday runs end-to-end. */
   function buildDock(container, { sketch = false, lit = [], plank = false } = {}) {
     container.innerHTML = "";
     const svg = el("svg", { viewBox: "0 0 640 210", class: "dock-diagram" });
     container.appendChild(svg);
     el("line", { class: "bp-water", x1: 0, y1: 158, x2: 640, y2: 158 }, svg);
     const posts = {};
-    const XS = { page: 101, exit: 315, instructions: 529 };
+    const XS = { window: 101, page: 315, clean: 529 };
     for (const [key, x] of Object.entries(XS)) {
       posts[key] = el("rect", { class: "bp-post" + (sketch ? " sketch" : ""), x, y: 84, width: 10, height: 74 }, svg);
       if (lit.includes(key)) posts[key].classList.add("lit");
@@ -523,31 +624,48 @@
     return { svg, posts, plank: plankEl };
   }
 
-  /* the parent epic's intent line stamps itself onto each ticket —
-     the stripe on a ticket is literally a copy of that one line */
+  /* one intent line flies from a source chip to a target — the visual verb
+     for "the page carries the lesson forward" */
+  function flyIntent(fromEl, toEl, onLand) {
+    const from = fromEl.getBoundingClientRect();
+    const to = toEl.getBoundingClientRect();
+    const ghost = fromEl.cloneNode(true);
+    ghost.className = "doc-intent mono intent-ghost";
+    ghost.style.left = from.left + "px";
+    ghost.style.top = from.top + "px";
+    document.body.appendChild(ghost);
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        ghost.style.transform = `translate(${to.left - from.left}px, ${to.top - from.top}px) scale(0.12)`;
+        ghost.style.opacity = "0.2";
+      })
+    );
+    setTimeout(() => {
+      ghost.remove();
+      if (onLand) onLand();
+    }, 560);
+  }
+
+  /* the parent epic's one intent line stamps itself onto every ticket */
   function stampTickets(sec) {
-    const intent = sec.querySelector(".doc-intent");
+    const intent = sec.querySelector(".prism-mid .doc-intent");
     const clips = [...sec.querySelectorAll(".prism-tickets .ticket .badge-clip")];
-    const from = intent.getBoundingClientRect();
     clips.forEach((clip, i) => {
+      setTimeout(() => flyIntent(intent, clip, () => clip.classList.add("stamped")), 400 + i * 350);
+    });
+  }
+
+  /* the finale's three intent lines each fly to their own ticket — 1:1 */
+  function flyIntentLines(sec) {
+    [1, 2, 3].forEach((i) => {
       setTimeout(() => {
-        const to = clip.getBoundingClientRect();
-        const ghost = intent.cloneNode(true);
-        ghost.className = "doc-intent mono intent-ghost";
-        ghost.style.left = from.left + "px";
-        ghost.style.top = from.top + "px";
-        document.body.appendChild(ghost);
-        requestAnimationFrame(() =>
-          requestAnimationFrame(() => {
-            ghost.style.transform = `translate(${to.left - from.left}px, ${to.top - from.top}px) scale(0.12)`;
-            ghost.style.opacity = "0.2";
-          })
-        );
-        setTimeout(() => {
-          ghost.remove();
-          clip.classList.add("stamped");
-        }, 560);
-      }, 400 + i * 350);
+        const from = document.getElementById("fin-il-" + i);
+        const to = document.getElementById("fin-ti-" + i);
+        flyIntent(from, to, () => {
+          to.classList.add("stamped");
+          to.closest(".ticket").querySelector(".badge-clip").classList.add("stamped");
+        });
+      }, 300 + (i - 1) * 350);
     });
   }
 
@@ -566,7 +684,7 @@
   function buildArrows() {
     const svg = document.getElementById("arrows-svg");
     svg.innerHTML = "";
-    /* the spec from the prism scene, standing like a target */
+    /* the spec from the page act, standing like a target */
     const doc = el("g", { transform: "translate(640, 80)" }, svg);
     el("rect", { class: "spec-target", width: 190, height: 240, rx: 8 }, doc);
     const title = el("text", { class: "spec-title", x: 16, y: 30 }, doc);
@@ -600,6 +718,8 @@
     t1.textContent = "§ 1,847";
     const t2 = el("text", { class: "sign-text", x: 206, y: 146 }, svg);
     t2.textContent = "please always run the tests";
+    const cap = el("text", { class: "sign-cap", x: 196, y: 186 }, svg);
+    cap.textContent = "in the window every turn — obeyed sometimes";
 
     /* the turnstile: structure */
     el("line", { class: "turnstile-frame", x1: 662, y1: 170, x2: 662, y2: 262 }, svg);

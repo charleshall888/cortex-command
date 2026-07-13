@@ -96,23 +96,26 @@ function makeVessel(container, opts = {}) {
   }
 
   /* chips pinned INSIDE the tank: the audience must see the specifics as
-     possessions before compaction loses them — cause before effect */
+     possessions before compaction loses them — cause before effect.
+     Appends, so a scene can drop chips in mid-run (the No-loop's "NO!"). */
   let pinned = [];
-  function pinChips(texts) {
+  function pinChips(texts, { fracs } = {}) {
     const r = box.getBoundingClientRect();
     const cx = ((VESSEL.TX + VESSEL.TW / 2) / VESSEL.W) * r.width;
-    const fracs = [0.24, 0.42, 0.6, 0.78];
-    pinned = texts.map((text, i) => {
+    const slots = fracs || [0.24, 0.42, 0.6, 0.78];
+    const added = texts.map((text, i) => {
       const chip = document.createElement("span");
       chip.className = "chip pinned";
       chip.textContent = text;
       chip.style.left = cx + "px";
-      chip.style.top = ((VESSEL.TY + VESSEL.TH * fracs[i % fracs.length]) / VESSEL.H) * r.height + "px";
+      chip.style.top = ((VESSEL.TY + VESSEL.TH * slots[i % slots.length]) / VESSEL.H) * r.height + "px";
       chip.style.transform = "translateX(-50%)";
       box.appendChild(chip);
       setTimeout(() => (chip.style.opacity = "0.95"), 200 + i * 260);
       return chip;
     });
+    pinned = pinned.concat(added);
+    return added;
   }
 
   /* one full-height scan: bottom → top of tank, coins tick per fill passed */
