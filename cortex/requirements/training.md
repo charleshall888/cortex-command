@@ -70,7 +70,7 @@ The curriculum skeleton is a harness-agnostic skill ladder (chatbot user → aut
 ## Dependencies
 
 - **Internal**: GitHub Pages publishing from `docs/` on main; `cortex/requirements/glossary.md` (terms: *scene*, *cockpit*); parent project doc Conditional Loading row (training/workshop/presentation → this doc).
-- **Source material**: the 2026-07-13 six-agent ideation synthesis — skill ladder + five unlocks (curriculum skeleton), scene/playlist model (superseded by the component-library decision), signature animation list (context vessel, agent loop, subagent fan-out, permission gates, plan-mode blueprint), Workshop/contractor metaphor candidate, prior-art brief (Anthropic's docs context-window widget as genre precedent; Anthropic 4D fluency framework as ready-made vocabulary; Nicky Case content-gating finding; METR 19%-slower datum for skeptical-senior credibility).
+- **Source material**: the 2026-07-13 ideation rounds, persisted as `cortex/research/training-ideation-digest.md` (skill ladder + five unlocks, audience-tier architecture, wave-2 format designs, prior-art stealables with sources, standing craft rules) alongside `training-talk-messaging-brief.md` and `training-talk-deck-outline.md`.
 - **External**: none — no new binaries, services, or env vars.
 
 ## Edge Cases
