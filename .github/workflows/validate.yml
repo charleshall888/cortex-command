@@ -41,6 +41,15 @@ jobs:
       - name: Kept-pauses parity tests (blocking)
         run: pytest tests/test_lifecycle_kept_pauses_parity.py
 
+      - name: Lifecycle reference resolve tests (blocking)
+        run: pytest tests/test_lifecycle_references_resolve.py
+
+      - name: Lifecycle event roundtrip tests (blocking)
+        run: pytest tests/test_lifecycle_event_roundtrip.py
+
+      - name: CLI pin target-set tests (blocking)
+        run: pytest tests/test_cli_pin_target_set.py
+
       - name: Dashboard route smoke test (fresh resolve, Starlette floored at >=1.0)
         run: |
           # Constraints-free fresh install: no -c/constraints file, so the
