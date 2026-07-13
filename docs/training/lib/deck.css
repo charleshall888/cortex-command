@@ -1,0 +1,390 @@
+/* ============================================================
+   Attention Is the Game — night edition of the cortex-command
+   landing-page design language. Deep ink ground, parchment text,
+   blue/ochre accents. Fraunces / JetBrains Mono / Inter, bundled.
+   ============================================================ */
+
+@font-face {
+  font-family: "Fraunces";
+  src: url("fonts/Fraunces-var.ttf") format("truetype-variations");
+  font-weight: 300 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("fonts/JetBrainsMono-var.ttf") format("truetype-variations");
+  font-weight: 100 800;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Inter";
+  src: url("fonts/Inter-var.ttf") format("truetype-variations");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root {
+  --night: #0c0f16;
+  --night-lift: #131722;
+  --parchment: #f7f4ec;
+  --parch-dim: #b9b4a6;
+  --parch-faint: #7d7a6f;
+  --rule: #2a2e3a;
+  --blue: #5b7de0;        /* landing --blue-soft, lifted for dark ground */
+  --blue-deep: #3b5fcf;
+  --ochre: #e8a865;       /* landing --ochre-soft: the lantern color */
+  --ochre-deep: #c2660a;
+  --zone-green: #4d8f6b;
+  --zone-amber: #c9a54a;
+  --zone-red: #b0533f;
+  --serif: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --ui: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  background: var(--night);
+  color: var(--parchment);
+  font-family: var(--ui);
+  overflow: hidden;
+}
+
+.mono { font-family: var(--mono); }
+.serif { font-family: var(--serif); }
+.dim { color: var(--parch-faint); }
+
+/* ---------- the night sky: one night, one dock ----------
+   The moon crosses the sky as the deck advances; dawn breaks
+   on the final scene. Ambient — must never compete with content. */
+
+#sky { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+#sky .star {
+  position: absolute;
+  width: 2px; height: 2px;
+  border-radius: 50%;
+  background: var(--parchment);
+  opacity: 0.16;
+}
+#sky .sky-moon {
+  position: absolute;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: var(--parchment);
+  opacity: 0.32;
+  box-shadow: 0 0 22px 4px rgba(247, 244, 236, 0.12);
+  transition: left 1.6s ease, top 1.6s ease, opacity 1.6s ease;
+}
+#sky .waterline {
+  position: absolute;
+  left: 0; right: 0; bottom: 7vh;
+  height: 1px;
+  background: var(--blue);
+  opacity: 0.07;
+}
+#sky .dawn-glow {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 42vh;
+  background: linear-gradient(to top, rgba(232, 168, 101, 0.16), rgba(232, 168, 101, 0.0));
+  opacity: 0;
+  transition: opacity 2.4s ease;
+}
+body.dawn #sky .sky-moon { opacity: 0; }
+body.dawn #sky .dawn-glow { opacity: 1; }
+body.dawn #sky .star { opacity: 0.05; }
+
+/* ---------- deck chrome ---------- */
+
+#deck { position: fixed; inset: 0; z-index: 1; }
+
+.scene, .card {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2.2rem;
+  padding: 4vh 6vw;
+}
+.scene.active, .card.active { display: flex; }
+
+#hud {
+  position: fixed;
+  right: 1.1rem;
+  bottom: 0.9rem;
+  font-size: 0.72rem;
+  color: var(--parch-faint);
+  opacity: 0.55;
+  letter-spacing: 0.06em;
+  user-select: none;
+}
+
+#blank {
+  position: fixed;
+  inset: 0;
+  background: var(--night);
+  display: none;
+  z-index: 99;
+}
+#blank.on { display: block; }
+
+/* beats: hidden until the engine reveals them */
+[data-beat] { opacity: 0; transform: translateY(6px); transition: opacity 0.6s ease, transform 0.6s ease; }
+[data-beat].on { opacity: 1; transform: none; }
+[data-beat="0"] { opacity: 1; transform: none; }
+
+/* ---------- typography ---------- */
+
+.scene-title {
+  font-family: var(--serif);
+  font-weight: 420;
+  font-size: clamp(1.6rem, 3.4vw, 2.6rem);
+  letter-spacing: 0.01em;
+  text-align: center;
+  color: var(--parchment);
+}
+
+.title-card { text-align: center; }
+.title-card h1 {
+  font-family: var(--serif);
+  font-weight: 560;
+  font-size: clamp(2.4rem, 5.4vw, 4.4rem);
+  margin-top: 1.2rem;
+}
+.title-card .subtitle {
+  margin-top: 0.7rem;
+  color: var(--parch-dim);
+  font-size: clamp(0.95rem, 1.6vw, 1.2rem);
+  letter-spacing: 0.14em;
+}
+
+/* ---------- scene 1: cold open ---------- */
+
+.dock { width: min(46vw, 560px); }
+.dock .water { stroke: var(--blue); stroke-width: 1.5; opacity: 0.5; }
+.dock .post, .dock .plank { fill: var(--rule); }
+.dock .rod { fill: none; stroke: var(--parch-dim); stroke-width: 2.5; stroke-linecap: round; }
+.dock .line { stroke: var(--parch-faint); stroke-width: 1; stroke-dasharray: 2 3; }
+.dock .ripple { fill: none; stroke: var(--blue); stroke-width: 1; opacity: 0.5; }
+.dock .ripple.faint { opacity: 0.22; }
+.dock .shimmer { stroke: var(--parchment); stroke-width: 1; opacity: 0.1; }
+
+/* beat >= 1 swaps title card for the stage */
+#sc-cold-open .cold-open-stage { display: none; width: 100%; flex-direction: column; align-items: center; gap: 1.6rem; }
+#sc-cold-open.staged .title-card { display: none; }
+#sc-cold-open.staged .cold-open-stage { display: flex; }
+
+.request {
+  font-size: clamp(1rem, 1.9vw, 1.4rem);
+  color: var(--ochre);
+}
+
+.twin {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3vw;
+  width: min(92vw, 1240px);
+}
+.pane { display: flex; flex-direction: column; align-items: center; gap: 0.9rem; }
+
+.avatar-slot { display: flex; align-items: flex-end; gap: 0.9rem; height: 84px; }
+.avatar { height: 76px; }
+.avatar circle { fill: none; stroke: var(--parch-dim); stroke-width: 3; }
+.avatar path { fill: none; stroke: var(--parch-dim); stroke-width: 3; stroke-linecap: round; }
+.avatar.slumped circle, .avatar.slumped path { stroke: var(--parch-faint); }
+.clock { height: 34px; }
+.clock circle { fill: none; stroke: var(--parch-faint); stroke-width: 2; }
+.clock line { stroke: var(--parch-dim); stroke-width: 2; stroke-linecap: round; }
+.fire { height: 26px; }
+.fire .flame { fill: var(--ochre-deep); animation: flicker 0.5s infinite alternate; transform-origin: 50% 100%; }
+@keyframes flicker {
+  from { transform: scaleY(1) skewX(0deg); opacity: 0.85; }
+  to   { transform: scaleY(1.15) skewX(-4deg); opacity: 1; }
+}
+
+.reveal {
+  font-size: clamp(1.3rem, 2.6vw, 2rem);
+  font-weight: 480;
+}
+.thesis {
+  font-size: clamp(1.2rem, 2.4vw, 1.8rem);
+  text-align: center;
+  color: var(--parch-dim);
+  line-height: 1.5;
+}
+.thesis em { color: var(--ochre); font-style: normal; }
+
+/* ---------- mock terminal ---------- */
+
+.term {
+  width: 100%;
+  max-width: 560px;
+  background: var(--night-lift);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  overflow: hidden;
+  font-family: var(--mono);
+  font-size: clamp(0.72rem, 1.15vw, 0.92rem);
+}
+.term-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.8rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--parch-faint);
+  font-size: 0.72em;
+  letter-spacing: 0.08em;
+}
+.term-bar .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--rule); }
+.term-body { padding: 0.9rem 1rem 1rem; min-height: 15.5em; }
+.term-line { line-height: 1.75; white-space: pre-wrap; }
+.term-line.user   { color: var(--parchment); }
+.term-line.user::before { content: "› "; color: var(--parch-faint); }
+.term-line.agent  { color: var(--parch-dim); }
+.term-line.ask    { color: var(--ochre); }
+.term-line.tool   { color: var(--blue); opacity: 0.9; }
+.term-line.tool::before { content: "⏺ "; }
+.term-line.add    { color: var(--zone-green); }
+.term-line.del    { color: var(--zone-red); }
+.term-line.done   { color: var(--zone-green); }
+.term-line.warn   { color: var(--zone-red); }
+.caret::after { content: "▌"; color: var(--parch-faint); animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ---------- vessel scenes ---------- */
+
+.stage-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4vw;
+  width: 100%;
+}
+
+.vessel-box svg { display: block; }
+.vessel-tank { fill: var(--night-lift); stroke: var(--rule); stroke-width: 2; }
+.layer-system { fill: #4a4436; }
+.layer-chat   { fill: var(--blue-deep); opacity: 0.8; }
+.layer-tool   { fill: #3a3f4c; }
+.layer-spec   { fill: var(--ochre-deep); opacity: 0.9; }
+.layer-amber  { fill: var(--ochre-deep); }
+.scanline { stroke: var(--ochre); stroke-width: 3; filter: drop-shadow(0 0 6px var(--ochre)); }
+.hatch { stroke: var(--parch-faint); stroke-width: 1; opacity: 0.5; }
+
+.zone-band { opacity: 0; transition: opacity 1.2s ease; }
+.zone-band.on { opacity: 0.1; }
+.zone-rule { stroke: var(--parch-faint); stroke-width: 1; stroke-dasharray: 4 4; opacity: 0; transition: opacity 1.2s ease 0.3s; }
+.zone-rule.on { opacity: 0.45; }
+.zone-label {
+  font-family: var(--mono);
+  font-size: 13px;
+  fill: var(--parch-faint);
+  opacity: 0;
+  transition: opacity 1.2s ease 0.4s;
+}
+.zone-label.on { opacity: 0.9; }
+.zone-pct { fill: var(--parch-dim); font-size: 15px; }
+.exit-door { opacity: 0; transition: opacity 0.8s ease 1.2s; }
+.exit-door.on { opacity: 1; }
+.exit-door rect { fill: none; stroke: var(--ochre); stroke-width: 2; }
+.exit-door circle { fill: var(--ochre); }
+
+.coin-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  color: var(--ochre);
+  font-size: clamp(1.4rem, 2.6vw, 2.2rem);
+}
+.coin-unit { font-size: 0.45em; color: var(--parch-faint); letter-spacing: 0.1em; }
+
+.poll-prompt .poll-sub {
+  display: block;
+  margin-top: 0.8rem;
+  font-family: var(--mono);
+  font-size: 0.45em;
+  color: var(--parch-faint);
+  letter-spacing: 0.05em;
+}
+
+/* squeeze */
+.piston { fill: var(--rule); stroke: var(--parch-faint); stroke-width: 1.5; }
+.chip {
+  position: absolute;
+  font-family: var(--mono);
+  font-size: clamp(0.7rem, 1.2vw, 0.95rem);
+  color: var(--parchment);
+  background: var(--night-lift);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 0.25em 0.6em;
+  white-space: nowrap;
+  opacity: 0;
+}
+.chip.fly { transition: transform 2.4s cubic-bezier(0.2, 0.6, 0.4, 1), opacity 2.4s ease; }
+
+.ghost-q { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+.bubble {
+  background: var(--night-lift);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  padding: 0.8em 1.1em;
+  font-size: clamp(0.8rem, 1.4vw, 1.05rem);
+  color: var(--parch-dim);
+}
+.ghost-chip {
+  display: inline-block;
+  margin: 0 0.35em;
+  padding: 0.1em 0.5em;
+  border: 1px dashed var(--parch-faint);
+  border-radius: 6px;
+  color: var(--parch-faint);
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+/* ---------- proverb cards ---------- */
+
+.card.proverb p:first-child {
+  font-size: clamp(1.6rem, 3.2vw, 2.6rem);
+  font-weight: 420;
+  text-align: center;
+  line-height: 1.5;
+  max-width: 26em;
+}
+.card.proverb .attr {
+  color: var(--parch-faint);
+  font-size: clamp(0.75rem, 1.2vw, 0.95rem);
+  letter-spacing: 0.14em;
+}
+
+/* ---------- pending placeholders ---------- */
+
+.scene.pending .pending-note {
+  max-width: 44em;
+  text-align: center;
+  color: var(--parch-faint);
+  line-height: 1.8;
+  font-size: clamp(0.85rem, 1.4vw, 1.05rem);
+}
+.scene.pending .pending-note .mono {
+  display: block;
+  margin-top: 1.4rem;
+  color: var(--ochre-deep);
+  letter-spacing: 0.12em;
+}
+
+/* ---------- quality floor ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

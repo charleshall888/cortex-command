@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>Attention Is the Game</title>
+<link rel="stylesheet" href="lib/deck.css" />
+</head>
+<body>
+<div id="sky" aria-hidden="true">
+  <span class="star" style="left:12vw; top:14vh"></span>
+  <span class="star" style="left:31vw; top:8vh"></span>
+  <span class="star" style="left:57vw; top:11vh"></span>
+  <span class="star" style="left:78vw; top:6vh"></span>
+  <span class="star" style="left:91vw; top:16vh"></span>
+  <span class="star" style="left:44vw; top:5vh"></span>
+  <div class="sky-moon"></div>
+  <div class="waterline"></div>
+  <div class="dawn-glow"></div>
+</div>
+<main id="deck">
+
+  <!-- ========== ACT 0 · COLD OPEN ========== -->
+  <section class="scene" id="sc-cold-open" data-title="Friday, 4:00 PM" data-beats="5">
+    <div class="title-card" data-beat="0">
+      <svg class="dock" viewBox="0 0 640 240" aria-hidden="true">
+        <line x1="0" y1="160" x2="640" y2="160" class="water"/>
+        <rect x="84" y="126" width="7" height="70" class="post"/>
+        <rect x="130" y="126" width="7" height="62" class="post"/>
+        <rect x="176" y="126" width="7" height="54" class="post"/>
+        <rect x="62" y="118" width="150" height="8" class="plank"/>
+        <path d="M 206 116 Q 300 52 392 92" class="rod"/>
+        <line x1="392" y1="92" x2="392" y2="158" class="line"/>
+        <ellipse cx="392" cy="160" rx="16" ry="3.5" class="ripple"/>
+        <ellipse cx="392" cy="160" rx="30" ry="6" class="ripple faint"/>
+        <path d="M 460 166 L 520 166 M 480 174 L 560 174 M 440 182 L 500 182" class="shimmer"/>
+      </svg>
+      <h1>Attention Is the Game</h1>
+      <p class="subtitle">working well with coding agents</p>
+    </div>
+    <div class="cold-open-stage" data-beat="1">
+      <p class="request mono">› add an empty-state to the catch log</p>
+      <div class="twin">
+        <div class="pane">
+          <div id="term-left"></div>
+          <div class="avatar-slot" data-beat="4">
+            <svg class="avatar crisp" viewBox="0 0 80 100"><circle cx="40" cy="24" r="14"/><path d="M 40 38 L 40 72 M 40 48 L 22 60 M 40 48 L 58 60 M 40 72 L 28 96 M 40 72 L 52 96"/></svg>
+          </div>
+        </div>
+        <div class="pane">
+          <div id="term-right"></div>
+          <div class="avatar-slot" data-beat="4">
+            <svg class="avatar slumped" viewBox="0 0 80 100"><circle cx="34" cy="34" r="14"/><path d="M 36 48 Q 40 60 40 74 M 38 54 L 24 68 M 38 54 L 50 70 M 40 74 L 30 96 M 40 74 L 50 96"/></svg>
+            <svg class="clock" viewBox="0 0 40 40"><circle cx="20" cy="20" r="17"/><line x1="20" y1="20" x2="20" y2="9"/><line x1="20" y1="20" x2="29" y2="24"/></svg>
+            <svg class="fire" viewBox="0 0 24 32"><path class="flame" d="M12 2 C 16 10 20 14 18 22 A 7 7 0 0 1 6 22 C 4 14 8 10 12 2 Z"/></svg>
+          </div>
+        </div>
+      </div>
+      <p class="reveal serif" data-beat="4">Same model. Same harness.</p>
+      <p class="thesis serif" data-beat="5">The model sets the ceiling.<br/><em>Everything around it determines the yield.</em></p>
+    </div>
+  </section>
+
+  <!-- ========== ACT I · THE GAUGE ========== -->
+  <section class="scene" id="sc-scan" data-title="The Scan" data-beats="3">
+    <h2 class="scene-title" data-beat="0">every turn, it re-reads everything</h2>
+    <div class="stage-row">
+      <div id="vessel-scan"></div>
+      <div class="coin-box mono" data-beat="2"><span id="coin-count">0</span><span class="coin-unit">¢ this turn</span></div>
+    </div>
+  </section>
+
+  <section class="scene" id="sc-zones" data-title="The Zones" data-beats="1">
+    <h2 class="scene-title poll-prompt" data-beat="0">what % is your session at, right now?<span class="poll-sub">type it in chat — or your best guess from memory</span></h2>
+    <div class="stage-row">
+      <div id="vessel-zones"></div>
+    </div>
+  </section>
+
+  <section class="scene" id="sc-squeeze" data-title="The Squeeze" data-beats="2">
+    <h2 class="scene-title" data-beat="0"><span class="mono dim">[ compact ]</span></h2>
+    <div class="stage-row">
+      <div id="vessel-squeeze"></div>
+      <div class="ghost-q" data-beat="2">
+        <div class="bubble mono">wait — are depths in feet<span class="ghost-chip">fathoms, not feet</span>?</div>
+        <svg class="avatar shrug" viewBox="0 0 80 100"><circle cx="40" cy="26" r="14"/><path d="M 40 40 L 40 74 M 40 50 L 20 44 M 40 50 L 60 44 M 40 74 L 28 96 M 40 74 L 52 96"/></svg>
+      </div>
+    </div>
+  </section>
+
+  <section class="card proverb" id="pv-1" data-title="—" data-beats="0">
+    <p class="serif">“A tangled line catches nothing.”</p>
+    <p class="attr mono">— NIGHTLINE loading screen</p>
+  </section>
+
+  <!-- ========== ACT II · PORTION THE WORK ========== -->
+  <section class="scene pending" id="sc-prism" data-title="Condense → Prism → Badge" data-beats="0">
+    <h2 class="scene-title">Condense → Prism → Badge</h2>
+    <p class="pending-note">core thing #1 · interview bubbles sharpen the cloud → doc condenses → foundation cameo (first 20%) → prism into badged tickets · ticket #4 = the cold-open request<span class="mono">— build pending —</span></p>
+  </section>
+
+  <section class="scene pending" id="sc-badge" data-title="The Badge Moment" data-beats="0">
+    <h2 class="scene-title">The Badge Moment</h2>
+    <p class="pending-note">schema ticket at a fork: keepsake entry vs 12-column analytics · the badge glows: “the log is a keepsake, not analytics”<span class="mono">— build pending —</span></p>
+  </section>
+
+  <section class="scene pending" id="sc-wish" data-title="Wish vs Ticket" data-beats="0">
+    <h2 class="scene-title">Wish vs Ticket</h2>
+    <p class="pending-note">staggered twin runs, same cold-open request · vague run drifts to analytics, burns its mini-gauge · empty-states side by side: “No data available. [Export CSV]” vs “No catches yet. The night is young.”<span class="mono">— build pending —</span></p>
+  </section>
+
+  <section class="card proverb" id="pv-2" data-title="—" data-beats="0">
+    <p class="serif">“You don’t catch more by reeling harder.<br/>You set more lines.”</p>
+    <p class="attr mono">— NIGHTLINE loading screen</p>
+  </section>
+
+  <!-- ========== ACT III · MORE MINDS, CLEANER MINDS ========== -->
+  <section class="scene pending" id="sc-tint" data-title="Tint Transfer" data-beats="0">
+    <h2 class="scene-title">Tint Transfer</h2>
+    <p class="pending-note">murky vessel emits one murk-tinted idea (the schema with a border) · fan to three crystal vessels → scrapbook / stats / journal → badge picks scrapbook<span class="mono">— build pending —</span></p>
+  </section>
+
+  <section class="scene pending" id="sc-filmstrip" data-title="The Filmstrip" data-beats="0">
+    <h2 class="scene-title">The Filmstrip</h2>
+    <p class="pending-note">the wonder bet · fork ghost-lane · overnight-activation flashback reddens · ONE unbroken silent take: scrub, shear, gravity, track thins, avatar straightens · note icon hops<span class="mono">— build pending —</span></p>
+  </section>
+
+  <!-- ========== ACT IV · FRESH EYES ========== -->
+  <section class="scene pending" id="sc-arrows" data-title="Arrows and the Gold Seam" data-beats="0">
+    <h2 class="scene-title">Arrows and the Gold Seam</h2>
+    <p class="pending-note">three reviewer arrows · one pierces: the Brass Minnow never makes the keepsake log · gold-seam repair, badge #3, one finding binned with satisfaction<span class="mono">— build pending —</span></p>
+  </section>
+
+  <section class="card proverb" id="pv-3" data-title="—" data-beats="0">
+    <p class="serif">“Take care of your tackle<br/>and it takes care of you.”</p>
+    <p class="attr mono">— NIGHTLINE loading screen</p>
+  </section>
+
+  <!-- ========== ACT V · WHAT YOU OWN ========== -->
+  <section class="scene pending" id="sc-assembly" data-title="Nothing Here Needed a Better Model" data-beats="0">
+    <h2 class="scene-title">Nothing Here Needed a Better Model</h2>
+    <p class="pending-note">silent assembly: vessel, badge, filmstrip, arrows lock into a shell around the engine core · one word appears: “harness.”<span class="mono">— build pending —</span></p>
+  </section>
+
+  <section class="scene pending" id="sc-scroll" data-title="The Scroll and the Drawers" data-beats="0">
+    <h2 class="scene-title">The Scroll and the Drawers</h2>
+    <p class="pending-note">core thing #3 · 20 lines → 2,041 (pause on #12, #1,003, #1,486, #2,041) · scan line sweeps the scroll · drawers alternative stays green<span class="mono">— build pending —</span></p>
+  </section>
+
+  <section class="scene pending" id="sc-turnstile" data-title="Sign vs Turnstile" data-beats="0">
+    <h2 class="scene-title">Sign vs Turnstile</h2>
+    <p class="pending-note">agent walks past the sign (scroll line #1,847: “please always run the tests”) · the turnstile won’t turn until tests pass<span class="mono">— build pending —</span></p>
+  </section>
+
+  <section class="scene pending" id="sc-byhand" data-title="The By-Hand List" data-beats="0">
+    <h2 class="scene-title">The By-Hand List</h2>
+    <p class="pending-note">the card wall automates away · three hand-drawn cards stay lit: reviewing · taste · writing skills<span class="mono">— build pending —</span></p>
+  </section>
+
+  <!-- ========== CLOSER ========== -->
+  <section class="scene pending" id="sc-dawn" data-title="Tuesday, 9:00 AM" data-beats="0">
+    <h2 class="scene-title">Tuesday, 9:00 AM</h2>
+    <p class="pending-note">dawn over the dock · the Brass Minnow on the log’s last page · recap icons: doc / gauge / card-over-scroll · “Send your agents home before Friday afternoon.”<span class="mono">— build pending —</span></p>
+  </section>
+
+</main>
+
+<div id="hud" class="mono"></div>
+<div id="blank"></div>
+
+<script src="lib/vessel.js"></script>
+<script src="lib/terminal.js"></script>
+<script src="lib/deck.js"></script>
+</body>
+</html>
