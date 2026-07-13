@@ -46,6 +46,7 @@ from pathlib import Path
 from typing import Optional
 
 from cortex_command.backlog import _telemetry
+from cortex_command.backlog.frontmatter_quote import quote_scalar
 from cortex_command.backlog.resolve_item import _item_title, _parse_frontmatter
 from cortex_command.common import (
     CortexProjectRootError,
@@ -112,7 +113,10 @@ def _render(
     id_val = str(backlog_id) if backlog_id is not None else "null"
     frontmatter = (
         "---\n"
-        f"feature: {feature}\n"
+        # ``feature`` is a string-intended slug — route through the key-scoped
+        # quoter so a numeric-keyed dir (e.g. 378) emits as "378", not int 378.
+        # ``parent_backlog_id`` is an intended int and stays bare.
+        f"feature: {quote_scalar('feature', feature)}\n"
         f"parent_backlog_uuid: {uuid_val}\n"
         f"parent_backlog_id: {id_val}\n"
         "artifacts: []\n"

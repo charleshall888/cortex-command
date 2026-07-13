@@ -24,6 +24,7 @@ from typing import Any, Optional
 
 import yaml
 
+from cortex_command.backlog.frontmatter_quote import quote_scalar
 from cortex_command.common import _resolve_user_project_root, atomic_write, read_tier, slugify
 
 from cortex_command.overnight.deferral import (
@@ -457,7 +458,7 @@ def create_followup_backlog_items(
             f"blocked-by: []\n"
             f"schema_version: \"1\"\n"
             f"uuid: {item_uuid}\n"
-            f"lifecycle_slug: {lifecycle_slug}\n"
+            f"lifecycle_slug: {quote_scalar('lifecycle_slug', lifecycle_slug)}\n"
             f"session_id: {session_id}\n"
             "---\n"
         )

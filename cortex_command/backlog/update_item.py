@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from cortex_command.backlog import _telemetry
+from cortex_command.backlog.frontmatter_quote import quote_scalar
 from cortex_command.backlog.resolve_item import (
     ResolutionError,
     ResolutionResult,
@@ -57,7 +58,13 @@ def _set_frontmatter_value(text: str, key: str, value: str) -> str:
 
     If the key does not exist in frontmatter, inserts it before the
     closing ``---``.
+
+    The scalar is routed through the key-scoped ``quote_scalar`` helper so
+    string-intended keys (``lifecycle_slug``/``feature``/``parent``/``spec``)
+    with YAML-ambiguous values are quoted, while dates, the ``null`` sentinel,
+    and non-allowlisted keys stay bare (see ADR-0027).
     """
+    rendered = quote_scalar(key, value)
     lines = text.splitlines(keepends=True)
     in_fm = False
     fm_closes = -1
@@ -78,11 +85,11 @@ def _set_frontmatter_value(text: str, key: str, value: str) -> str:
 
     for i in range(first_dash + 1, fm_closes):
         if re.match(rf"^{re.escape(key)}:\s", lines[i]):
-            lines[i] = f"{key}: {value}\n"
+            lines[i] = f"{key}: {rendered}\n"
             return "".join(lines)
 
     # Key not found — insert before closing ---
-    lines.insert(fm_closes, f"{key}: {value}\n")
+    lines.insert(fm_closes, f"{key}: {rendered}\n")
     return "".join(lines)
 
 
