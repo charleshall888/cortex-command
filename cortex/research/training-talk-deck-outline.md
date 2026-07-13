@@ -177,9 +177,12 @@ Never cut: 1, 3, 4, 9, 12, 15.
 
 ## Open items
 
-- Scene 11 assembly concept art (icons locking into the "harness" shell).
-- Night-edition art direction (deep ink ground, parchment text, blue/ochre accents, fonts bundled locally).
+> **Build status (2026-07-13): the deck is BUILT** — all 15 scenes + 3 proverb cards live at `docs/training/` with a synced presenter view (`presenter.html`; this outline's talk track is encoded per-beat in `lib/notes.js`). The assembly concept art and night-edition art direction shipped; a night-sky signature was added at build time (the moon crosses the sky as scenes advance; dawn breaks on the closer). See `docs/training/README.md` for running it and the timing knobs.
+
+- **Real-time rehearsal**: animations were validated headless in fast-forward; pacing feel, the scene-11 note-icon landing (`#11.4`), and the scene-12 toss timing (`#12.3`) need a live pass.
+- **Q&A prep (human)**: real cost numbers for the making-of scar → appendix slide; a merged-PR trail to show after; DPA check before the compliance answer.
 - Presenter's-choice list: "Great idea!" garnish (sc 1), improvised refrain touches. (First-miles/ship line: restored to script in sc 5 — it states core thing #1.)
+- Wave 2 (per `cortex/requirements/training.md`): self-serve guide page, Cockpit engine (grow from `lib/filmstrip.js` + `lib/terminal.js`), retention kit.
 
 ---
 
