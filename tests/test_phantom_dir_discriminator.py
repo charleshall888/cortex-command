@@ -69,6 +69,27 @@ def _sentinel_absence_event(feature: str, angle: str) -> dict:
     }
 
 
+def _sentinel_advisory_event(feature: str, angle: str) -> dict:
+    """A ``sentinel_advisory`` event with a recent ts (birth signature).
+
+    Advisory-clean: the read-sentinel was absent but the gate wrapper's
+    re-hash of the pinned artifact matched (stable), so the gate passes with an
+    advisory rather than a hard-fail ``sentinel_absence``. Carries the existing
+    reviewer-angle/role fields; the matched re-hash means ``observed`` equals
+    ``expected``.
+    """
+    return {
+        "ts": _recent_ts(),
+        "event": "sentinel_advisory",
+        "feature": feature,
+        "reviewer_angle": angle,
+        "reason": "absent_rehash_stable",
+        "model_tier": "sonnet",
+        "expected_sha": "c" * 64,
+        "observed_sha_or_null": "c" * 64,
+    }
+
+
 # ---------------------------------------------------------------------------
 # (a) Birth signatures of live phantoms ARE classified as phantoms.
 # ---------------------------------------------------------------------------
@@ -94,6 +115,24 @@ def test_three_sentinel_absence_is_phantom(tmp_path: Path):
             _sentinel_absence_event(feature, "Helper vs parameter callers"),
             _sentinel_absence_event(feature, "Phase dependency graph"),
         ],
+    )
+
+    assert is_phantom_lifecycle_dir(feature_dir) is True
+
+
+def test_lone_sentinel_advisory_is_phantom(tmp_path: Path):
+    """A lone recent-ts ``sentinel_advisory`` event, no artifacts -> phantom.
+
+    The advisory-clean gate outcome is a critical-review telemetry writer that
+    can create a lifecycle-shaped dir, so ``sentinel_advisory`` is in
+    ``_TELEMETRY_ONLY_EVENT_TYPES`` and a dir whose only events are advisory
+    must still classify as a phantom (not a real research-phase lifecycle).
+    """
+    feature = "sentinel-advisory-phantom"
+    feature_dir = tmp_path / feature
+    _write_events(
+        feature_dir,
+        [_sentinel_advisory_event(feature, "Phase dependency graph")],
     )
 
     assert is_phantom_lifecycle_dir(feature_dir) is True

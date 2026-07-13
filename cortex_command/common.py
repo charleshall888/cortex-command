@@ -604,6 +604,7 @@ def resolve_lifecycle_phase(feature_dir: Path) -> dict[str, str | int]:
 _TELEMETRY_ONLY_EVENT_TYPES: frozenset[str] = frozenset({
     "synthesizer_drift",
     "sentinel_absence",
+    "sentinel_advisory",
 })
 
 
