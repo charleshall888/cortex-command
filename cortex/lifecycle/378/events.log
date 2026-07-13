@@ -8,3 +8,5 @@
 {"ts": "2026-07-13T12:55:02Z", "event": "phase_transition", "feature": "378", "from": "specify", "to": "plan"}
 {"ts": "2026-07-13T13:25:55Z", "event": "plan_approved", "feature": "378", "dispatch_choice": "wait"}
 {"ts": "2026-07-13T13:25:55Z", "event": "feature_paused", "feature": "378"}
+{"ts": "2026-07-13T13:33:10Z", "event": "plan_approved", "feature": "378", "dispatch_choice": "trunk"}
+{"ts": "2026-07-13T13:33:10Z", "event": "phase_transition", "feature": "378", "from": "plan", "to": "implement"}
