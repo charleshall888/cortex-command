@@ -67,7 +67,7 @@ Clear three #374 residues durably: a key-scoped frontmatter quoter + reader coer
 - **Complexity**: simple
 - **Context**: Depends on [4] for the terminal value and [2] because the `374` file is shared (Task 2 quotes its slug first; this task, branching after Task 2 merges, edits only its phase — avoiding the same-file race). Identify targets via `grep -lE '^status: complete' cortex/backlog/*.md | xargs grep -lE '^lifecycle_phase: research$'`.
 - **Verification**: `grep -lE '^status: complete' cortex/backlog/*.md | xargs grep -lE '^lifecycle_phase: research$'` returns 0 files AND `grep -rnE '^(lifecycle_slug|feature): [0-9]+$' cortex/backlog` = 0 (the shared `374` file's slug-quote survived)
-- **Status**: [ ] pending
+- **Status**: [x] done (4e4d6c43)
 
 ### Task 6: Extend advance.py spec-approve arm with spec/areas projection (status stays _project_status-owned)
 - **Files**: `cortex_command/lifecycle/advance.py`, `tests/test_advance_spec_approve_writeback.py` (new)
@@ -76,7 +76,7 @@ Clear three #374 residues durably: a key-scoped frontmatter quoter + reader coer
 - **Complexity**: complex
 - **Context**: `advance.py` spec-approve subparser is at ~line 950. `_project_status` (advance.py:681, `_STATE_TO_STATUS["plan"]="refined"` at :444) already writes lattice-guarded `status: refined` for `to_state==plan` — do NOT re-write status. Reference `spec_approve.py:167-221` `_apply_backlog_writeback` for the write shape and areas preserve-on-omit / `--clear-areas`, but IMPLEMENT the projection in advance.py — do NOT edit `spec_approve.py`. Depends on [4] so advance.py edits serialize (Task 4 owns the `_project_status_inner` completion edit; this task edits the spec-approve subparser/arm on the post-Task-4 base). Preserve emission-only back-compat.
 - **Verification**: `.venv/bin/pytest tests/test_advance_spec_approve_writeback.py -q` passes (approved spec-approve yields `status: refined`+`spec:`+`areas:`; an item already at `complete`/`in_progress` is NOT demoted; an omit-flags caller is unchanged)
-- **Status**: [ ] pending
+- **Status**: [x] done (d1b17a6e)
 
 ### Task 7: Reroute ALL prose off the legacy verb (refine + lifecycle trees)
 - **Files**: `skills/refine/references/specify.md` (lines 149 command + 168 halt-arm), `skills/refine/SKILL.md` (line 90 description), `skills/lifecycle/references/refine-delegation.md` (lines 7, 55 descriptions), plus the regenerated `plugins/cortex-core/skills/refine/**` and `plugins/cortex-core/skills/lifecycle/references/refine-delegation.md` mirrors via `just build-plugin`
@@ -112,7 +112,7 @@ Clear three #374 residues durably: a key-scoped frontmatter quoter + reader coer
 - **Complexity**: simple
 - **Context**: `test_release_artifact_invariants.py` (`CLI_PIN_PY_RELATIVE`) reads only the overnight path today. `test_cli_pin_target_set.py` asserts both pin files are in the rewriter's target set (parse `bin/cortex-rewrite-cli-pin`'s target list / run it against a fixture and assert both files' pins change) and fails on single-target — structurally binding multi-targetness going forward.
 - **Verification**: `.venv/bin/pytest tests/test_cli_pin_target_set.py tests/test_release_artifact_invariants.py -q` passes (target set contains both pin files; both paths read; a single-target fixture fails)
-- **Status**: [ ] pending
+- **Status**: [x] done (aabe8f80)
 
 ### Task 11: Wire the regression guards into CI
 - **Files**: `.github/workflows/validate.yml`
