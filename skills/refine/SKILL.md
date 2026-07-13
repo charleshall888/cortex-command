@@ -87,7 +87,7 @@ Do NOT set `status: refined` before approval. After approval (specify.md §4), r
 
 ### Write-Back on Approval (Context A only)
 
-The `status: refined` + `spec` + `areas` write-back is performed **by the spec-approve verb** — specify.md §4's `cortex-lifecycle-spec-approve` call runs it in-process (via `update_item`), composed with the approval emissions in one backend-gated action; §5 supplies the args and no longer calls `cortex-update-item` for this write-back.
+The `status: refined` + `spec` + `areas` write-back is performed **by the spec-approve verb** — specify.md §4's `cortex-lifecycle-advance` spec-approve call runs it in-process (via `update_item`), composed with the approval emissions in one backend-gated action; §5 supplies the args and no longer calls `cortex-update-item` for this write-back.
 
 **Infer areas**: name the primary subsystem modified (canonical: `overnight-runner`, `backlog`, `skills`, `lifecycle`, `hooks`, `report`, `tests`, `docs`) — the one where most files change. Spanning 4+ with no clear primary → clear the field.
 

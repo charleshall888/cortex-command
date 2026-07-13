@@ -146,7 +146,7 @@ Present the specification summary via the AskUserQuestion tool with these approv
 Enumerate the options explicitly as `Approve` | `Request changes` | `Cancel`. Map the selection to the spec-approve verb's `--decision` discriminant (`Approve`→`approved`, `Cancel`→`cancelled`, `Request changes`→`revise`) and hand it off — the verb owns this arm's exact ordered emissions (the `spec_approved` consent record, the flag-gated `specify→plan` transition, and the backend-gated `status:refined` + `spec` + `areas` write-back) and their idempotent replay, so you route on the returned `state`, you do not re-derive it:
 
 ```bash
-cortex-lifecycle-spec-approve --feature <name> --decision <approved|cancelled|revise> \
+cortex-lifecycle-advance spec-approve --feature <name> --decision <approved|cancelled|revise> \
   --backend {resolved} --backlog-file {backlog-filename-slug} \
   --spec-path cortex/lifecycle/{lifecycle-slug}/spec.md \
   [--emit-transition|--no-emit-transition] [--areas <a> <b>|--clear-areas]
@@ -165,7 +165,7 @@ Act on the returned `state`:
 
 **Ambiguous backlog slug** — the verb exits 2 with a candidate list on stderr when `--backlog-file` matches multiple items; apply backlog-writeback.md's ambiguous-slug disambiguation (the same rule Step 5's `cortex-update-item` exit-2 uses), then re-run.
 
-**Command not found** (`cortex-lifecycle-spec-approve` not on `PATH`) → halt and instruct the operator to install/upgrade the cortex-command CLI, then re-invoke. Do NOT record the approval, transition, or write-back by hand. <!-- Halt-arm convention: names ONLY the verb and the install remedy, never a raw event-emission surface, which would defeat the per-file zero-sweep (tests/test_lifecycle_event_roundtrip.py). -->
+**Command not found** (`cortex-lifecycle-advance` not on `PATH`) → halt and instruct the operator to install/upgrade the cortex-command CLI, then re-invoke. Do NOT record the approval, transition, or write-back by hand. <!-- Halt-arm convention: names ONLY the verb and the install remedy, never a raw event-emission surface, which would defeat the per-file zero-sweep (tests/test_lifecycle_event_roundtrip.py). -->
 
 ### 5. Transition
 
