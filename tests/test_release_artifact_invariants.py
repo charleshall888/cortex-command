@@ -4,11 +4,24 @@ This test enforces two invariants on release artifacts (spec R24):
 
 (a) **CLI_PIN[0] tag-lockstep**: at any annotated tag matching ``v*.*.*``
     whose tag-date is later than the ``v1.0.2`` tag-date, the
-    ``CLI_PIN[0]`` literal at ``plugins/cortex-overnight/cli_pin.py``
-    equals the tag string. This is the property the auto-release
-    workflow (``.github/workflows/auto-release.yml``, spec R19) maintains
-    going forward, and the CI lint (release.yml, spec R18) enforces as
-    defense-in-depth.
+    ``CLI_PIN[0]`` literal in **each** plugin pin file present at that tag
+    (``plugins/cortex-overnight/cli_pin.py`` and, once it exists in a tag's
+    tree, ``plugins/cortex-core/install_core.py``) equals the tag string.
+    This is the property the auto-release workflow
+    (``.github/workflows/auto-release.yml``, spec R19) maintains going
+    forward for both pins, and the CI lint (release.yml, spec R18) enforces
+    as defense-in-depth. A pin file absent at a given tag is skipped — the
+    cortex-core pin was introduced after ``v2.35.0``, so the tag-walk arm
+    only begins asserting it at the first tag whose tree carries it.
+
+    The cortex-core pin's TARGET-SET durability guard — that
+    ``cortex-rewrite-cli-pin`` rewrites both pins together, so they cannot
+    re-drift on the next overnight-only release — lives in
+    ``tests/test_release_artifact_invariants.py``'s companion,
+    ``tests/test_cli_pin_target_set.py`` (spec 378 req-11c). The
+    ``test_both_cli_pins_present_in_working_tree`` check below is the
+    present-tree "reads both paths" companion (req-11(ii)); it is a
+    point-in-time read and deliberately NOT the structural guard.
 
 (b) **Wheel version matches HEAD's git-describe**: when HEAD is exactly
     at a tag, ``uv build --wheel`` of HEAD produces a wheel whose
@@ -55,6 +68,18 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CLI_PIN_PY_RELATIVE = "plugins/cortex-overnight/cli_pin.py"
+
+#: The cortex-core plugin pin (``install_core.py``). The pin is inlined amid
+#: surrounding code rather than a standalone tuple module, but the
+#: ``_CLI_PIN_RE`` below matches it the same way. Introduced after
+#: ``v2.35.0`` (absent from every earlier tag's tree), so the tag-lockstep
+#: walk skips it at tags whose tree does not carry it. Covered here per spec
+#: 378 req-11(b)/(ii): both pin paths are read by this file.
+CLI_PIN_CORE_PY_RELATIVE = "plugins/cortex-core/install_core.py"
+
+#: Both plugin pin files, in a stable order. The tag-lockstep walk reads
+#: each; the present-tree companion check asserts both are readable now.
+CLI_PIN_FILES = (CLI_PIN_PY_RELATIVE, CLI_PIN_CORE_PY_RELATIVE)
 
 #: The four historical tags that violated the CLI_PIN[0] tag-lockstep
 #: invariant. These are documented as the rationale for date-scoping the
@@ -133,29 +158,55 @@ def _post_boundary_tags() -> list[tuple[str, int]]:
     return results
 
 
-def _cli_pin_at_tag(tag: str) -> str:
-    """Read ``CLI_PIN[0]`` from ``cli_pin.py`` at the given tag.
+def _blob_at_tag(tag: str, path: str) -> str | None:
+    """Return the blob text of ``path`` at ``tag``, or ``None`` if absent.
 
-    Uses ``git show <tag>:<path>`` so the working tree is not touched.
-    Returns the matched tag string. Fails the test loudly on 0-or-≥2
-    matches in the file at that revision (the same fail-loud contract
-    as ``bin/cortex-rewrite-cli-pin``, spec R19.5).
+    Uses ``git show <tag>:<path>`` (working tree untouched) with a
+    non-raising invocation, so a pin file that did not yet exist at a given
+    tag (e.g. the cortex-core pin before it was introduced) is reported as
+    absent rather than raising — the tag-lockstep walk then skips it.
     """
-    blob = _run_git("show", f"{tag}:{CLI_PIN_PY_RELATIVE}")
+    result = subprocess.run(
+        ["git", "show", f"{tag}:{path}"],
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        return None
+    return result.stdout
+
+
+def _cli_pin_at_tag(tag: str, path: str = CLI_PIN_PY_RELATIVE) -> str | None:
+    """Read ``CLI_PIN[0]`` from ``path`` at the given tag.
+
+    Returns the matched tag string, or ``None`` if ``path`` does not exist
+    in that tag's tree (the cortex-core pin is absent from tags predating
+    its introduction). Fails the test loudly on 0-or-≥2 matches in a file
+    that IS present at that revision (the same fail-loud contract as
+    ``bin/cortex-rewrite-cli-pin``, spec R19.5).
+    """
+    blob = _blob_at_tag(tag, path)
+    if blob is None:
+        return None
     matches = _CLI_PIN_RE.findall(blob)
     assert len(matches) == 1, (
-        f"expected exactly one CLI_PIN literal in {CLI_PIN_PY_RELATIVE} at "
+        f"expected exactly one CLI_PIN literal in {path} at "
         f"tag {tag!r}, found {len(matches)}: {matches!r}"
     )
     return matches[0]
 
 
 def test_cli_pin_tag_lockstep_at_post_boundary_tags() -> None:
-    """Part (a): CLI_PIN[0] equals the tag string at every post-boundary tag.
+    """Part (a): each present pin's CLI_PIN[0] equals the tag at post-boundary tags.
 
     Walks every annotated ``vX.Y.Z`` tag whose tagger-date is strictly
-    greater than ``BOUNDARY_TAG``'s tagger-date, reads the ``CLI_PIN[0]``
-    literal at that tag's tree, and asserts it equals the tag string.
+    greater than ``BOUNDARY_TAG``'s tagger-date and, for **each** plugin pin
+    file in ``CLI_PIN_FILES`` that is present at that tag's tree, reads the
+    ``CLI_PIN[0]`` literal and asserts it equals the tag string. A pin file
+    absent at a tag (the cortex-core pin predates its introduction) is
+    skipped — the invariant applies only where the file exists.
 
     When no post-boundary tags exist (the state immediately after this
     test lands but before the first v2.0.0 release), the test passes
@@ -163,15 +214,48 @@ def test_cli_pin_tag_lockstep_at_post_boundary_tags() -> None:
     auto-release workflow will create the first one.
     """
     post_boundary = _post_boundary_tags()
-    violations: list[tuple[str, str]] = []
+    violations: list[tuple[str, str, str]] = []
     for tag, _ts in post_boundary:
-        pinned = _cli_pin_at_tag(tag)
-        if pinned != tag:
-            violations.append((tag, pinned))
+        for path in CLI_PIN_FILES:
+            pinned = _cli_pin_at_tag(tag, path)
+            if pinned is None:
+                continue  # pin file not present at this tag's tree
+            if pinned != tag:
+                violations.append((tag, path, pinned))
     assert not violations, (
-        "CLI_PIN[0] drift at post-boundary tags (spec R24, R18): "
-        + ", ".join(f"{tag} pins {pinned!r}" for tag, pinned in violations)
+        "CLI_PIN[0] drift at post-boundary tags (spec R24, R18, 378 req-11b): "
+        + ", ".join(
+            f"{tag}:{path} pins {pinned!r}" for tag, path, pinned in violations
+        )
     )
+
+
+def test_both_cli_pins_present_in_working_tree() -> None:
+    """req-11(ii): both plugin pin paths are read (and readable) at HEAD.
+
+    Reads each pin file in ``CLI_PIN_FILES`` from the working tree and
+    asserts it carries exactly one well-formed ``CLI_PIN`` literal. This is
+    the present-tree "reads both paths" companion to the tag-lockstep walk
+    above — meaningful today (the tag-walk is dormant until the first
+    annotated post-boundary tag, and the cortex-core pin is absent from
+    every current tag's tree, so without this the file would never actually
+    read the cortex-core path).
+
+    NOTE: this is a point-in-time read, NOT the divergence durability guard.
+    That guard is the target-set invariant in
+    ``tests/test_cli_pin_target_set.py`` (spec 378 req-11c): a present-tree
+    equality check passes green the moment both pins converge yet re-drifts
+    on the next overnight-only release, so equality here would be a false
+    sense of security. This check only asserts both paths are present and
+    parseable.
+    """
+    for path in CLI_PIN_FILES:
+        blob = (REPO_ROOT / path).read_text(encoding="utf-8")
+        matches = _CLI_PIN_RE.findall(blob)
+        assert len(matches) == 1, (
+            f"expected exactly one CLI_PIN literal in the working-tree "
+            f"{path}, found {len(matches)}: {matches!r}"
+        )
 
 
 def test_historical_violating_tags_are_excluded_by_date_window() -> None:
