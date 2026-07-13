@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>Presenter · Attention Is the Game</title>
+<style>
+  /* Self-contained presenter chrome. This window is PRIVATE — share the
+     deck window, keep focus here; arrow keys remote-control the deck. */
+  @font-face { font-family: "JetBrains Mono"; src: url("lib/fonts/JetBrainsMono-var.ttf") format("truetype-variations"); font-weight: 100 800; }
+  @font-face { font-family: "Inter"; src: url("lib/fonts/Inter-var.ttf") format("truetype-variations"); font-weight: 100 900; }
+  :root {
+    --bg: #14171f; --panel: #1b1f2a; --text: #e8e4d8; --dim: #9b968a;
+    --accent: #e8a865; --rule: #333949; --good: #5fae83;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: "Inter", system-ui, sans-serif; height: 100vh; display: flex; flex-direction: column; }
+  header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding: 0.9rem 1.4rem; border-bottom: 1px solid var(--rule);
+    font-family: "JetBrains Mono", monospace;
+  }
+  #where { font-size: 1.05rem; color: var(--accent); }
+  #timer { font-size: 1.05rem; color: var(--dim); cursor: pointer; }
+  #beats { display: flex; gap: 6px; padding: 0.8rem 1.4rem 0; }
+  .bdot { width: 26px; height: 8px; border-radius: 4px; background: var(--panel); border: 1px solid var(--rule); }
+  .bdot.done { background: var(--rule); }
+  .bdot.now { background: var(--accent); border-color: var(--accent); }
+  main { flex: 1; overflow-y: auto; padding: 1rem 1.4rem 1.2rem; display: flex; flex-direction: column; gap: 0.7rem; }
+  .cue {
+    padding: 0.75rem 0.95rem; border-radius: 8px; background: var(--panel);
+    border: 1px solid var(--rule); color: var(--dim);
+    font-size: 0.95rem; line-height: 1.55;
+  }
+  .cue.now { color: var(--text); border-color: var(--accent); }
+  .cue.next { color: var(--text); opacity: 0.75; }
+  .cue .tag { font-family: "JetBrains Mono", monospace; font-size: 0.7rem; color: var(--accent); margin-right: 0.6em; }
+  .cue.exit { border-style: dashed; }
+  footer {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.7rem 1.4rem; border-top: 1px solid var(--rule);
+    font-family: "JetBrains Mono", monospace; font-size: 0.75rem; color: var(--dim);
+  }
+  #next-scene { color: var(--text); }
+  #conn { color: var(--good); }
+  #conn.lost { color: #c96a55; }
+  kbd { border: 1px solid var(--rule); border-radius: 4px; padding: 0 0.35em; }
+</style>
+</head>
+<body>
+<header>
+  <span id="where">connecting…</span>
+  <span id="timer" title="click to reset">00:00</span>
+</header>
+<div id="beats"></div>
+<main id="cues"></main>
+<footer>
+  <span>keys here drive the deck: <kbd>→</kbd> beat · <kbd>←</kbd> back · <kbd>b</kbd> blank</span>
+  <span>next: <span id="next-scene">—</span></span>
+  <span id="conn">●</span>
+</footer>
+<script src="lib/notes.js"></script>
+<script>
+(function () {
+  const supported = "BroadcastChannel" in window;
+  const conn = document.getElementById("conn");
+  if (!supported) {
+    document.getElementById("where").textContent = "BroadcastChannel unsupported";
+    return;
+  }
+  const bc = new BroadcastChannel("nightline-deck");
+  let startedAt = null;
+  let lastSeen = 0;
+
+  /* timer */
+  setInterval(() => {
+    const t = document.getElementById("timer");
+    if (startedAt) {
+      const s = Math.floor((Date.now() - startedAt) / 1000);
+      t.textContent = String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+    }
+    conn.classList.toggle("lost", Date.now() - lastSeen > 4000 && lastSeen > 0);
+  }, 500);
+  document.getElementById("timer").addEventListener("click", () => (startedAt = Date.now()));
+
+  function render(s) {
+    lastSeen = Date.now();
+    if (!startedAt && (s.idx > 0 || s.beat > 0)) startedAt = Date.now();
+    document.getElementById("where").textContent = `${s.idx + 1} / ${s.total} · ${s.title}`;
+    document.getElementById("next-scene").textContent = s.nextTitle || "— end —";
+
+    const dots = document.getElementById("beats");
+    dots.innerHTML = "";
+    for (let i = 0; i <= s.maxBeats; i++) {
+      const d = document.createElement("span");
+      d.className = "bdot" + (i < s.beat ? " done" : i === s.beat ? " now" : "");
+      dots.appendChild(d);
+    }
+
+    const box = document.getElementById("cues");
+    box.innerHTML = "";
+    const notes = (typeof NOTES !== "undefined" && NOTES[s.id]) || { beats: [], exit: "" };
+    for (let i = 0; i <= s.maxBeats; i++) {
+      const cue = document.createElement("div");
+      cue.className = "cue" + (i === s.beat ? " now" : i === s.beat + 1 ? " next" : "");
+      cue.innerHTML = `<span class="tag">beat ${i}</span>` + (notes.beats[i] || "—");
+      box.appendChild(cue);
+    }
+    if (notes.exit) {
+      const cue = document.createElement("div");
+      cue.className = "cue exit" + (s.beat >= s.maxBeats ? " next" : "");
+      cue.innerHTML = `<span class="tag">on exit</span>` + notes.exit;
+      box.appendChild(cue);
+    }
+    const now = box.querySelector(".cue.now");
+    if (now) now.scrollIntoView({ block: "center", behavior: "smooth" });
+  }
+
+  bc.onmessage = (e) => {
+    if (e.data && e.data.type === "state") render(e.data);
+  };
+  /* keep knocking until the deck answers, so open-order doesn't matter */
+  const knock = setInterval(() => {
+    if (lastSeen) clearInterval(knock);
+    else bc.postMessage({ type: "hello" });
+  }, 1500);
+  bc.postMessage({ type: "hello" });
+
+  document.addEventListener("keydown", (e) => {
+    if (["ArrowRight", "ArrowLeft", " ", "PageDown", "PageUp", "Home", "End", "b", "B"].includes(e.key)) {
+      e.preventDefault();
+      bc.postMessage({ type: "key", key: e.key });
+    }
+  });
+})();
+</script>
+</body>
+</html>

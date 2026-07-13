@@ -515,6 +515,7 @@
     fireHook(sec);
     updateSky();
     hud.textContent = `${idx + 1} / ${sections.length} · ${sec.dataset.title || ""}`;
+    broadcastState();
   }
 
   function advance() {
@@ -523,26 +524,54 @@
       beat++;
       applyBeats(sec);
       fireHook(sec);
+      broadcastState();
     } else {
       show(idx + 1);
     }
   }
 
+  function handleKey(key) {
+    if (key === "ArrowRight" || key === " " || key === "PageDown") advance();
+    else if (key === "ArrowLeft" || key === "PageUp") show(idx - 1);
+    else if (key === "Home") show(0);
+    else if (key === "End") show(sections.length - 1);
+    else if (key === "b" || key === "B") blank.classList.toggle("on");
+  }
+
   document.addEventListener("keydown", (e) => {
-    if (e.key === "ArrowRight" || e.key === " " || e.key === "PageDown") {
+    if (["ArrowRight", "ArrowLeft", " ", "PageDown", "PageUp", "Home", "End", "b", "B"].includes(e.key)) {
       e.preventDefault();
-      advance();
-    } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
-      e.preventDefault();
-      show(idx - 1);
-    } else if (e.key === "Home") {
-      show(0);
-    } else if (e.key === "End") {
-      show(sections.length - 1);
-    } else if (e.key === "b" || e.key === "B") {
-      blank.classList.toggle("on");
+      handleKey(e.key);
     }
   });
+
+  /* presenter-view sync: the deck broadcasts its position; a presenter.html
+     window (open it beside the deck, keep focus there) shows the talk-track
+     cues and remote-controls the deck. Needs http(s) — file:// origins
+     can't share a BroadcastChannel. */
+  const bc = "BroadcastChannel" in window ? new BroadcastChannel("nightline-deck") : null;
+
+  function broadcastState() {
+    if (!bc) return;
+    const sec = sections[idx];
+    bc.postMessage({
+      type: "state",
+      idx,
+      beat,
+      total: sections.length,
+      maxBeats: maxBeats(sec),
+      title: sec.dataset.title || "",
+      id: sec.id,
+      nextTitle: sections[idx + 1] ? sections[idx + 1].dataset.title : "",
+    });
+  }
+
+  if (bc)
+    bc.onmessage = (e) => {
+      if (!e.data) return;
+      if (e.data.type === "key") handleKey(e.data.key);
+      if (e.data.type === "hello") broadcastState();
+    };
 
   /* deep-link: #<scene>[.<beat>] (1-based scene) — for rehearsal and QA */
   const m = (location.hash || "").match(/^#(\d+)(?:\.(\d+))?$/);
