@@ -1,10 +1,20 @@
 #!/usr/bin/env python3
-"""Rewrite the ``CLI_PIN[0]`` literal in ``plugins/cortex-overnight/cli_pin.py``.
+"""Rewrite the ``CLI_PIN[0]`` literal in every cortex plugin pin file.
 
 Stdlib-only. Takes one positional arg (the new tag in ``vX.Y.Z`` form) and
 performs a pattern-based, format-tolerant, read-modify-write of the
-``CLI_PIN`` literal. Preserves ``CLI_PIN[1]`` (the schema-floor major.minor
-string) unchanged.
+``CLI_PIN`` literal in **each** file of :data:`DEFAULT_TARGETS` —
+``plugins/cortex-overnight/cli_pin.py`` (a standalone tuple module) AND
+``plugins/cortex-core/install_core.py`` (the pin inlined amid surrounding
+code). Preserves ``CLI_PIN[1]`` (the schema-floor major.minor string)
+unchanged in each. The two plugin pins are bumped together at release, so a
+single rewriter pass keeps them from drifting (spec 378 req-10/req-11).
+
+A ``--path`` override rewrites a single named file instead of the default
+set (used by unit tests). A target file that is not present is skipped with a
+stderr note rather than failing the whole run, so a single-file test fixture
+exercises the default set without materializing every pin; a present file
+with a bad match count still fails loud per contract (iv).
 
 Contract (per spec R19.5 in cortex/lifecycle/close-plugin-cli-auto-update-gaps):
     (i)   **pattern-based, not line-anchored** — regex anchored on
@@ -47,10 +57,17 @@ import sys
 from pathlib import Path
 
 
-# Default target path (relative to cwd). Caller may override via --path for
+# Default target paths (relative to cwd). Caller may override via --path for
 # tests; the auto-release workflow at R19 invokes the helper from repo root
-# so the default is the canonical target.
-DEFAULT_TARGET = "plugins/cortex-overnight/cli_pin.py"
+# so the defaults are the canonical targets. Both plugin pin files are
+# rewritten in one pass so their CLI_PIN[0] tags never drift apart (spec 378
+# req-11: the target-set invariant is the durability guard). Ordered
+# overnight-first for a stable, greppable declaration; the target-set test
+# asserts membership, not order.
+DEFAULT_TARGETS = [
+    "plugins/cortex-overnight/cli_pin.py",
+    "plugins/cortex-core/install_core.py",
+]
 
 # Tag-shape validation: ``vX.Y.Z`` where X/Y/Z are non-negative integers.
 TAG_RE = re.compile(r"^v\d+\.\d+\.\d+$")
@@ -274,9 +291,10 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="cortex-rewrite-cli-pin",
         description=(
-            "Rewrite plugins/cortex-overnight/cli_pin.py's CLI_PIN[0] "
-            "literal to a new tag. Pattern-based; preserves CLI_PIN[1]. "
-            "See spec R19.5."
+            "Rewrite the CLI_PIN[0] literal to a new tag in every cortex "
+            "plugin pin file (plugins/cortex-overnight/cli_pin.py and "
+            "plugins/cortex-core/install_core.py). Pattern-based; preserves "
+            "CLI_PIN[1]. See spec R19.5 / 378 req-11."
         ),
     )
     p.add_argument(
@@ -285,10 +303,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "--path",
-        default=DEFAULT_TARGET,
+        default=None,
         help=(
-            "Target file (default: plugins/cortex-overnight/cli_pin.py). "
-            "Resolved relative to cwd."
+            "Rewrite only this single target file instead of the default "
+            "set (plugins/cortex-overnight/cli_pin.py, "
+            "plugins/cortex-core/install_core.py). Resolved relative to cwd. "
+            "Used by unit tests."
         ),
     )
     p.add_argument(
@@ -304,8 +324,38 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    target = Path(args.path)
-    return rewrite_file(target, args.tag, verify=not args.no_verify)
+
+    # Validate the tag once, up front, so an invalid tag fails before any
+    # target file is touched (multi-target: never leave one pin rewritten and
+    # another not because the tag was bad).
+    if not TAG_RE.match(args.tag):
+        print(
+            f"cortex-rewrite-cli-pin: invalid tag {args.tag!r}: "
+            f"expected form vX.Y.Z",
+            file=sys.stderr,
+        )
+        return 2
+
+    targets = [args.path] if args.path is not None else list(DEFAULT_TARGETS)
+
+    exit_code = 0
+    for target_str in targets:
+        target = Path(target_str)
+        if not target.is_file():
+            # A target absent from the working tree is skipped (not a hard
+            # failure): a single-file test fixture uses the default set
+            # without materializing every pin, and the release.yml drift lint
+            # + target-set test are the backstops for a genuinely missing pin.
+            print(
+                f"cortex-rewrite-cli-pin: target not present, skipping: "
+                f"{target}",
+                file=sys.stderr,
+            )
+            continue
+        rc = rewrite_file(target, args.tag, verify=not args.no_verify)
+        if rc != 0 and exit_code == 0:
+            exit_code = rc
+    return exit_code
 
 
 if __name__ == "__main__":

@@ -126,8 +126,12 @@ jobs:
             echo "Next tag determined: ${NEXT_TAG}"
           fi
 
-      - name: Rewrite CLI_PIN[0] to new tag
+      - name: Rewrite CLI_PIN[0] to new tag (both plugin pins)
         if: steps.bump.outputs.skip == 'false'
+        # The rewriter is multi-target: it bumps CLI_PIN[0] in BOTH
+        # plugins/cortex-overnight/cli_pin.py and
+        # plugins/cortex-core/install_core.py in one pass, so the two plugin
+        # pins never drift apart (spec 378 req-10/req-11).
         run: bin/cortex-rewrite-cli-pin "${{ steps.bump.outputs.next_tag }}"
 
       - name: "Commit release"
@@ -135,7 +139,8 @@ jobs:
         run: |
           set -euo pipefail
           NEXT_TAG="${{ steps.bump.outputs.next_tag }}"
-          git add plugins/cortex-overnight/cli_pin.py
+          # Stage BOTH plugin pin files the rewriter bumped above.
+          git add plugins/cortex-overnight/cli_pin.py plugins/cortex-core/install_core.py
           git commit -m "Release ${NEXT_TAG}"
 
       - name: Create tag at release commit

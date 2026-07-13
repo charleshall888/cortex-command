@@ -66,7 +66,7 @@ from typing import Any, Optional
 #: because cortex-core has no ``server.py`` that also needs to import it, so
 #: a single in-module constant is the leaner home. Tests monkeypatch this
 #: symbol to drive the drift comparison.
-CLI_PIN = ("v2.34.6", "2.0")
+CLI_PIN = ("v2.35.0", "2.0")
 
 
 # ---------------------------------------------------------------------------
