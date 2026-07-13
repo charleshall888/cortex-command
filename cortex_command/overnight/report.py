@@ -2655,6 +2655,52 @@ def render_effort_degradation(data: ReportData) -> str:
     return "\n".join(lines)
 
 
+def render_criticality_read_warnings(data: ReportData) -> str:
+    """Render the corrupted/stale criticality-read section (backlog #377 Item B).
+
+    Scans ``data.events`` for ``criticality_read_corrupted`` entries emitted by
+    orchestrator-round Step 3b.1 when the shared reducer read a feature's
+    criticality off a corrupted ``events.log`` (either truly unknowable, or a
+    present-but-possibly-stale value). Each affected feature still ran
+    (single-agent, never deferred) — this surfaces the degraded read so the
+    corrupted log can be inspected at source.
+
+    De-duplicates by ``(feature, warning)`` because a paused-then-resumed feature
+    re-reads and re-emits each round. Returns the empty string when no corrupted
+    reads were recorded so the section is omitted entirely.
+    """
+    seen: set[tuple] = set()
+    rows: list[tuple] = []
+    for evt in data.events:
+        if evt.get("event") != "criticality_read_corrupted":
+            continue
+        feature = evt.get("feature")
+        details = evt.get("details", {}) or {}
+        warning = details.get("warning", "")
+        key = (feature, warning)
+        if key in seen:
+            continue
+        seen.add(key)
+        rows.append(key)
+
+    if not rows:
+        return ""
+
+    total = len(rows)
+    lines: list[str] = [f"## Criticality Read Warnings ({total})", ""]
+    lines.append(
+        "The overnight runner read these features' criticality from a corrupted "
+        "`events.log`. Each still ran (single-agent, never deferred), but the "
+        "value may be unknowable or stale — inspect the feature's `events.log` "
+        "at source."
+    )
+    lines.append("")
+    for feature, warning in rows:
+        lines.append(f"- **{feature}**: {warning}")
+    lines.append("")
+    return "\n".join(lines)
+
+
 # ---------------------------------------------------------------------------
 # Top-level report generation
 # ---------------------------------------------------------------------------
@@ -2695,6 +2741,11 @@ def generate_report(data: ReportData) -> str:
     effort_degradation_section = render_effort_degradation(data)
     if effort_degradation_section:
         sections.append(effort_degradation_section)
+    # Criticality-read-warnings section (#377 Item B) — omitted entirely when no
+    # corrupted/stale overnight criticality read was recorded this session.
+    criticality_read_section = render_criticality_read_warnings(data)
+    if criticality_read_section:
+        sections.append(criticality_read_section)
     # Scheduled-fire failures section is omitted entirely when empty.
     fire_failures_section = render_scheduled_fire_failures(data)
     if fire_failures_section:

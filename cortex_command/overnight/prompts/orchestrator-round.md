@@ -229,6 +229,7 @@ from cortex_command.overnight.events import (
     PLAN_SYNTHESIS_DISPATCHED,
     PLAN_SYNTHESIS_DEFERRED,
     SYNTHESIZER_ERROR,
+    CRITICALITY_READ_CORRUPTED,
     log_event,
 )
 from cortex_command.common import reduce_lifecycle_state
@@ -305,11 +306,13 @@ for f in missing:
         continue
     crit, warning = _effective_criticality(f["slug"])
     if warning is not None:
-        # Morning-report surface: emit to overnight-events.log so the report's
-        # post-session triage sees the corrupted criticality read (mirrors the
-        # SYNTHESIZER_ERROR triage signal emitted in the synthesizer branch below).
+        # Morning-report surface: emit the dedicated CRITICALITY_READ_CORRUPTED
+        # event to overnight-events.log so the report's post-session triage sees
+        # the corrupted criticality read under its own heading (backlog #377
+        # Item B — this replaced the former SYNTHESIZER_ERROR reuse, whose
+        # details.stage="criticality_read" tag was the only disambiguator).
         log_event(
-            SYNTHESIZER_ERROR,
+            CRITICALITY_READ_CORRUPTED,
             round={round_number},
             feature=f["slug"],
             details={"warning": warning, "stage": "criticality_read"},

@@ -22,6 +22,7 @@ from cortex_command.overnight.report import (
     ReportData,
     generate_report,
     render_critical_review_residue,
+    render_criticality_read_warnings,
     render_deferred_questions,
     render_executive_summary,
     render_failed_features,
@@ -900,3 +901,46 @@ class TestDriftSessionScope:
         data = ReportData()
         data.state = _state({})  # present but empty → scope to zero
         assert render_pending_drift(data) == ""
+
+
+class TestCriticalityReadWarnings:
+    """Cover render_criticality_read_warnings (#377 Item B)."""
+
+    def test_omitted_when_no_events(self):
+        """No criticality_read_corrupted events → section omitted entirely."""
+        data = ReportData()
+        data.events = [{"event": "feature_complete", "feature": "feat-x"}]
+        assert render_criticality_read_warnings(data) == ""
+
+    def test_renders_section_with_heading_and_warning(self):
+        """A corrupted read renders under its own heading with the warning text."""
+        data = ReportData()
+        data.events = [
+            {
+                "event": "criticality_read_corrupted",
+                "feature": "feat-x",
+                "details": {
+                    "warning": "criticality for 'feat-x' read from a corrupted "
+                    "events.log (used 'high', may be stale)",
+                    "stage": "criticality_read",
+                },
+            }
+        ]
+        out = render_criticality_read_warnings(data)
+        assert "## Criticality Read Warnings (1)" in out
+        assert "feat-x" in out
+        assert "may be stale" in out
+
+    def test_dedups_by_feature_and_warning(self):
+        """A paused-then-resumed feature re-emits; identical rows collapse to one."""
+        warning = "criticality for 'feat-x' unknowable (corrupted events.log)"
+        evt = {
+            "event": "criticality_read_corrupted",
+            "feature": "feat-x",
+            "details": {"warning": warning, "stage": "criticality_read"},
+        }
+        data = ReportData()
+        data.events = [evt, dict(evt)]
+        out = render_criticality_read_warnings(data)
+        assert "## Criticality Read Warnings (1)" in out
+        assert out.count("- **feat-x**") == 1

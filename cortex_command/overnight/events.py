@@ -87,6 +87,10 @@ SYNTHESIZER_ERROR = "synthesizer_error"
 PIPELINE_SYSTEMIC_FAILURE = "pipeline_systemic_failure"
 COMPLEXITY_NORMALIZED = "complexity_normalized"
 ORCHESTRATOR_CRASH_RECOVERED = "orchestrator_crash_recovered"
+# Dedicated signal for a corrupted/possibly-stale overnight criticality read
+# (orchestrator-round Step 3b.1). Replaces the former SYNTHESIZER_ERROR reuse so
+# the morning report can surface it under its own heading (backlog #377 Item B).
+CRITICALITY_READ_CORRUPTED = "criticality_read_corrupted"
 
 EVENT_TYPES = (
     SESSION_START,
@@ -147,6 +151,7 @@ EVENT_TYPES = (
     PIPELINE_SYSTEMIC_FAILURE,
     COMPLEXITY_NORMALIZED,
     ORCHESTRATOR_CRASH_RECOVERED,
+    CRITICALITY_READ_CORRUPTED,
 )
 
 

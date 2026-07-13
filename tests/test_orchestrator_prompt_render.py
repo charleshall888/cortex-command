@@ -140,6 +140,13 @@ def test_criticality_partition_uses_shared_reducer():
         "a morning-report warning must be emitted (log_event with "
         'stage="criticality_read") on any corrupted criticality read'
     )
+    # The warning uses the dedicated CRITICALITY_READ_CORRUPTED event (#377
+    # Item B), replacing the former SYNTHESIZER_ERROR reuse — so the morning
+    # report can surface it under its own heading.
+    assert "CRITICALITY_READ_CORRUPTED" in out, (
+        "Step 3b.1 must emit the dedicated CRITICALITY_READ_CORRUPTED event on a "
+        "corrupted criticality read (not the reused SYNTHESIZER_ERROR)"
+    )
     # Both corrupted arms are handled: the unknowable arm (defaults + warns) and
     # the present-but-stale arm (uses the value AND still warns).
     assert "may be stale" in out, (
