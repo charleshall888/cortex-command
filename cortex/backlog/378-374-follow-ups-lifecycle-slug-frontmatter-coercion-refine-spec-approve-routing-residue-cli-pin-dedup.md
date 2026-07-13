@@ -2,13 +2,18 @@
 schema_version: "1"
 uuid: 73f3083d-7468-4080-9850-87e851e40739
 title: '374 follow-ups: lifecycle_slug frontmatter coercion, refine spec-approve routing residue, CLI_PIN dedup'
-status: backlog
+status: refined
 priority: medium
 type: bug
 created: 2026-07-12
-updated: 2026-07-12
+updated: 2026-07-13
 tags: ['cli-served-lifecycle-state-machine']
-areas: ['lifecycle', 'backlog']
+areas: ['backlog', 'lifecycle']
+lifecycle_phase: research
+lifecycle_slug: 378
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/378/spec.md
 ---
 ## Why
 

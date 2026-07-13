@@ -1,0 +1,8 @@
+{"ts": "2026-07-13T11:36:56Z", "schema_version": 1, "event": "lifecycle_start", "feature": "378", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"ts": "2026-07-13T11:41:53Z", "event": "clarify_critic", "feature": "378", "schema_version": 3, "parent_epic_loaded": false, "findings_count": 7, "dispositions": {"apply": 7, "dismiss": 0, "ask": 0}, "applied_fixes_count": 7, "dismissals_count": 0, "status": "ok"}
+{"ts": "2026-07-13T11:42:50Z", "event": "phase_transition", "feature": "378", "from": "clarify", "to": "research"}
+{"ts": "2026-07-13T12:03:12Z", "event": "complexity_override", "feature": "378", "from": "simple", "to": "complex", "gate": "research_open_questions"}
+{"ts": "2026-07-13T12:03:22Z", "event": "phase_transition", "feature": "378", "from": "research", "to": "specify"}
+{"ts": "2026-07-13T12:03:22Z", "event": "criticality_override", "feature": "378", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-07-13T12:54:55Z", "event": "spec_approved", "feature": "378"}
+{"ts": "2026-07-13T12:55:02Z", "event": "phase_transition", "feature": "378", "from": "specify", "to": "plan"}
