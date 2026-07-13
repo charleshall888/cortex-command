@@ -349,6 +349,126 @@ body.dawn #sky .star { opacity: 0.05; }
   text-decoration: line-through;
 }
 
+/* ---------- scene 5: condense → prism → badge ---------- */
+
+.prism-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2.4rem;
+  width: min(92vw, 1080px);
+}
+.prism-top { display: flex; align-items: flex-end; gap: 4vw; }
+.head-block { display: flex; flex-direction: column; align-items: center; }
+.avatar.head-only { height: 46px; }
+.cloud { width: 220px; transition: opacity 1s ease, transform 1s ease, filter 1s ease; }
+.cloud ellipse {
+  fill: var(--night-lift);
+  stroke: var(--parch-faint);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 5;
+  opacity: 0.85;
+}
+.cloud.sharp ellipse {
+  stroke: var(--ochre);
+  stroke-dasharray: none;
+  fill: #1a1e2b;
+}
+.cloud.condensed { opacity: 0; transform: translateY(60px) scale(0.15); }
+
+.qcol { display: flex; flex-direction: column; gap: 0.8rem; padding-bottom: 1.4rem; }
+.qbubble {
+  background: var(--night-lift);
+  border: 1px solid var(--rule);
+  border-radius: 10px 10px 10px 2px;
+  padding: 0.45em 0.85em;
+  font-size: clamp(0.72rem, 1.2vw, 0.95rem);
+  color: var(--ochre);
+  opacity: 0;
+  transform: translateX(14px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.qbubble.on { opacity: 1; transform: none; }
+
+.prism-mid { display: flex; align-items: center; gap: 4vw; }
+.doc {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  width: clamp(200px, 22vw, 260px);
+  padding: 1rem 1.1rem 1.2rem;
+  background: #1a1e2b;
+  border: 1px solid var(--ochre-deep);
+  border-radius: 8px;
+  transform: scale(0.6);
+  opacity: 0;
+  transition: opacity 0.9s ease 0.5s, transform 0.9s ease 0.5s;
+}
+.doc.on { opacity: 1; transform: none; }
+.doc-head { color: var(--parch-dim); font-size: 0.78rem; letter-spacing: 0.1em; }
+.doc-line { height: 5px; border-radius: 3px; background: var(--rule); }
+.doc-line.w9 { width: 90%; } .doc-line.w8 { width: 80%; }
+.doc-line.w7 { width: 70%; } .doc-line.w5 { width: 50%; }
+.doc-intent {
+  margin-top: 0.4rem;
+  padding: 0.3em 0.6em;
+  align-self: flex-start;
+  border: 1px solid var(--ochre);
+  border-radius: 6px;
+  color: var(--ochre);
+  font-size: 0.75rem;
+}
+
+#vessel-foundation .vessel-box svg { width: 120px; }
+
+.prism-tickets { display: flex; gap: 1.6vw; }
+.ticket {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  padding: 0.85em 1.1em;
+  background: var(--night-lift);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  font-size: clamp(0.72rem, 1.2vw, 0.95rem);
+  color: var(--parchment);
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.ticket.on { opacity: 1; transform: none; }
+.ticket:nth-child(2) { transition-delay: 0.18s; }
+.ticket:nth-child(3) { transition-delay: 0.36s; }
+.ticket:nth-child(4) { transition-delay: 0.54s; }
+.badge-clip {
+  width: 7px; height: 30px;
+  border-radius: 3px;
+  background: var(--ochre-deep);
+  box-shadow: 0 0 8px rgba(232, 168, 101, 0.35);
+}
+.ticket.callback.lit {
+  border-color: var(--ochre);
+  box-shadow: 0 0 18px rgba(232, 168, 101, 0.25);
+}
+
+/* ---------- scene 9: the filmstrip ---------- */
+
+.film-stage { position: relative; width: min(94vw, 1180px); }
+.seg-base { fill: #1a1f2c; stroke: #3a4050; stroke-width: 1.5; }
+.seg-clean { fill: #1d2c52; stroke: var(--blue-deep); stroke-width: 1.5; }
+.seg-red { fill: #3a1f1a; stroke: var(--zone-red); stroke-width: 1.5; }
+.seg-ghost { fill: none; stroke: var(--parch-faint); stroke-width: 1.2; stroke-dasharray: 5 4; }
+.fork-token { fill: var(--ochre); filter: drop-shadow(0 0 5px var(--ochre)); }
+.load-bar { fill: var(--ochre-deep); opacity: 0.55; }
+.playhead line { stroke: var(--parchment); stroke-width: 1.5; opacity: 0.85; }
+.playhead path { fill: var(--parchment); opacity: 0.85; }
+.cent { fill: var(--ochre); font-family: var(--mono); font-size: 15px; text-anchor: middle; }
+.note rect { fill: var(--night-lift); stroke: var(--ochre); stroke-width: 1.5; }
+.note path { stroke: var(--ochre); stroke-width: 1.5; fill: none; }
+.note line { stroke: var(--parch-faint); stroke-width: 1.5; }
+.film-avatar { position: absolute; right: 1vw; top: -20px; }
+.film-avatar .avatar { height: 64px; }
+
 /* ---------- proverb cards ---------- */
 
 .card.proverb p:first-child {

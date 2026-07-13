@@ -14,6 +14,13 @@
   /* ---------- scene hooks ---------- */
 
   const state = {};
+  const chains = {};
+
+  /* serialize a scene's async beats: each starts only after the previous
+     finishes, so rapid key presses (or deep links) can't interleave */
+  function chain(key, fn) {
+    chains[key] = (chains[key] || Promise.resolve()).then(fn).catch(() => {});
+  }
 
   const LEFT_SCRIPT = [
     { t: "user", text: "add an empty-state to the catch log" },
@@ -58,15 +65,17 @@
         setCoins(0);
       }
       if (b === 1)
-        state.vScan.pour([
-          { kind: "system", pct: 8 },
-          { kind: "chat", pct: 10 },
-          { kind: "tool", pct: 22 },
-          { kind: "chat", pct: 6 },
-          { kind: "tool", pct: 16 },
-        ]);
-      if (b === 2) state.vScan.sweep({ onCoin: setCoins }); // plays silent
-      if (b === 3) state.vScan.sweep({ cached: true, onCoin: setCoins });
+        chain("scan", () =>
+          state.vScan.pour([
+            { kind: "system", pct: 8 },
+            { kind: "chat", pct: 10 },
+            { kind: "tool", pct: 22 },
+            { kind: "chat", pct: 6 },
+            { kind: "tool", pct: 16 },
+          ])
+        );
+      if (b === 2) chain("scan", () => state.vScan.sweep({ onCoin: setCoins })); // plays silent
+      if (b === 3) chain("scan", () => state.vScan.sweep({ cached: true, onCoin: setCoins }));
     },
 
     "sc-zones": (sec, b) => {
@@ -80,6 +89,43 @@
         ]); // 41% — matches the presenter's own confessed number
       }
       if (b === 1) state.vZones.zones();
+    },
+
+    "sc-prism": (sec, b) => {
+      const cloud = sec.querySelector(".cloud");
+      const bubbles = [...sec.querySelectorAll(".qbubble")];
+      if (b === 0) {
+        cloud.classList.remove("sharp", "condensed");
+        bubbles.forEach((q) => q.classList.remove("on"));
+        sec.querySelector(".ticket.callback").classList.remove("lit");
+      }
+      if (b === 2) {
+        bubbles.forEach((q, i) => setTimeout(() => q.classList.add("on"), 300 + i * 900));
+        setTimeout(() => cloud.classList.add("sharp"), 1400);
+      }
+      if (b === 3) {
+        cloud.classList.add("condensed");
+        if (!state.vFound) state.vFound = makeVessel(document.getElementById("vessel-foundation"), { scale: 0.5 });
+        state.vFound.reset();
+        state.vFound.pour([
+          { kind: "spec", pct: 12 },
+          { kind: "spec", pct: 8 },
+        ]); // the first 20% — what everything else settles on
+      }
+      if (b === 5) sec.querySelector(".ticket.callback").classList.add("lit");
+    },
+
+    "sc-filmstrip": (sec, b) => {
+      if (b === 0) {
+        if (!state.film) state.film = makeFilmstrip(document.getElementById("filmstrip"));
+        chains["film"] = Promise.resolve();
+        state.film.reset();
+      }
+      if (b === 1) chain("film", () => state.film.populate());
+      if (b === 2) chain("film", () => state.film.fork());
+      if (b === 3) chain("film", () => state.film.badRun());
+      if (b === 4) chain("film", () => state.film.rewind()); // the unbroken take — plays silent
+      if (b === 5) chain("film", () => state.film.cleanBranch());
     },
 
     "sc-squeeze": (sec, b) => {
