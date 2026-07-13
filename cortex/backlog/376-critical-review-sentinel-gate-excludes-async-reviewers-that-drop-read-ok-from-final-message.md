@@ -2,12 +2,17 @@
 schema_version: "1"
 uuid: b53e47d8-305e-4a5f-bada-21f3db9ad5b8
 title: Critical-review sentinel gate excludes async reviewers that drop READ_OK from final message
-status: backlog
+status: refined
 priority: medium
 type: bug
 created: 2026-07-10
-updated: 2026-07-10
+updated: 2026-07-13
 areas: ['skills']
+lifecycle_phase: research
+lifecycle_slug: critical-review-sentinel-gate-excludes-async
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/critical-review-sentinel-gate-excludes-async/spec.md
 ---
 ## Why
 

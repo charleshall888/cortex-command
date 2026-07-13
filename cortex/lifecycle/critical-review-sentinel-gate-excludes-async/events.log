@@ -1,0 +1,8 @@
+{"ts": "2026-07-13T13:00:52Z", "schema_version": 1, "event": "lifecycle_start", "feature": "critical-review-sentinel-gate-excludes-async", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"ts": "2026-07-13T13:05:00Z", "event": "clarify_critic", "feature": "critical-review-sentinel-gate-excludes-async", "schema_version": 3, "parent_epic_loaded": false, "findings_count": 5, "dispositions": {"apply": 5, "dismiss": 0, "ask": 0}, "applied_fixes_count": 5, "dismissals_count": 0, "status": "ok"}
+{"ts": "2026-07-13T13:05:25Z", "event": "phase_transition", "feature": "critical-review-sentinel-gate-excludes-async", "from": "clarify", "to": "research"}
+{"ts": "2026-07-13T13:19:36Z", "event": "complexity_override", "feature": "critical-review-sentinel-gate-excludes-async", "from": "simple", "to": "complex", "gate": "research_open_questions"}
+{"ts": "2026-07-13T13:19:45Z", "event": "phase_transition", "feature": "critical-review-sentinel-gate-excludes-async", "from": "research", "to": "specify"}
+{"ts": "2026-07-13T13:19:48Z", "event": "criticality_override", "feature": "critical-review-sentinel-gate-excludes-async", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-07-13T13:58:03Z", "event": "spec_approved", "feature": "critical-review-sentinel-gate-excludes-async"}
+{"ts": "2026-07-13T13:58:16Z", "event": "phase_transition", "feature": "critical-review-sentinel-gate-excludes-async", "from": "specify", "to": "plan"}
