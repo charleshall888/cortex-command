@@ -42,7 +42,7 @@ function makeVessel(container, opts = {}) {
     return new Promise((r) => setTimeout(r, ms));
   }
 
-  function addLayerRect(kind, pct, animate) {
+  function addLayerRect(kind, pct, animate, label) {
     const startY = fillTopY();
     const h = (pct / 100) * VESSEL.TH;
     const rect = document.createElementNS(ns, "rect");
@@ -63,20 +63,56 @@ function makeVessel(container, opts = {}) {
       );
     }
     layerGroup.appendChild(rect);
+    if (label) {
+      /* the layer names itself inside the tank — the vessel must never
+         again be an unexplained metaphor */
+      const t = document.createElementNS(ns, "text");
+      t.setAttribute("class", "layer-label");
+      t.setAttribute("x", VESSEL.TX + 12);
+      t.setAttribute("y", startY - h / 2 + 4.5);
+      t.textContent = label;
+      if (animate) {
+        t.style.opacity = "0";
+        t.style.transition = "opacity 0.6s ease 0.6s";
+        requestAnimationFrame(() => requestAnimationFrame(() => (t.style.opacity = "1")));
+      }
+      layerGroup.appendChild(t);
+    }
     layers.push({ kind, pct, rect });
+    if (opts.onLevel) opts.onLevel(fillPct());
   }
 
   async function pour(list) {
     for (const l of list) {
-      addLayerRect(l.kind, l.pct, true);
-      await sleep(900);
+      addLayerRect(l.kind, l.pct, true, l.label);
+      await sleep(700);
     }
   }
 
   function setFill(list) {
     layerGroup.innerHTML = "";
     layers = [];
-    for (const l of list) addLayerRect(l.kind, l.pct, false);
+    for (const l of list) addLayerRect(l.kind, l.pct, false, l.label);
+  }
+
+  /* chips pinned INSIDE the tank: the audience must see the specifics as
+     possessions before compaction loses them — cause before effect */
+  let pinned = [];
+  function pinChips(texts) {
+    const r = box.getBoundingClientRect();
+    const cx = ((VESSEL.TX + VESSEL.TW / 2) / VESSEL.W) * r.width;
+    const fracs = [0.24, 0.42, 0.6, 0.78];
+    pinned = texts.map((text, i) => {
+      const chip = document.createElement("span");
+      chip.className = "chip pinned";
+      chip.textContent = text;
+      chip.style.left = cx + "px";
+      chip.style.top = ((VESSEL.TY + VESSEL.TH * fracs[i % fracs.length]) / VESSEL.H) * r.height + "px";
+      chip.style.transform = "translateX(-50%)";
+      box.appendChild(chip);
+      setTimeout(() => (chip.style.opacity = "0.95"), 200 + i * 260);
+      return chip;
+    });
   }
 
   /* one full-height scan: bottom → top of tank, coins tick per fill passed */
@@ -193,6 +229,12 @@ function makeVessel(container, opts = {}) {
     knob.setAttribute("r", 2.5);
     door.appendChild(dr);
     door.appendChild(knob);
+    const doorLbl = document.createElementNS(ns, "text");
+    doorLbl.setAttribute("class", "door-label");
+    doorLbl.setAttribute("x", VESSEL.TX + VESSEL.TW + 36);
+    doorLbl.setAttribute("y", dy + 50);
+    doorLbl.textContent = "hand off here";
+    door.appendChild(doorLbl);
     overlay.appendChild(door);
     els.push(door);
 
@@ -203,7 +245,7 @@ function makeVessel(container, opts = {}) {
 
   /* compaction: piston descends, everything collapses to one amber stripe,
      and the specific things you cared about fall out the sides */
-  async function squeeze({ chips = [] } = {}) {
+  async function squeeze({ chips = [], stripeLabel = "" } = {}) {
     const piston = document.createElementNS(ns, "rect");
     piston.setAttribute("class", "piston");
     piston.setAttribute("x", VESSEL.TX + 3);
@@ -242,34 +284,52 @@ function makeVessel(container, opts = {}) {
       })
     );
 
-    /* chips escape in a deterministic fan (left and up, away from the
-       ghost-question side), stay readable, then dissolve */
-    const FAN = [
-      { dx: -185, dy: -40, rot: -5 },
-      { dx: -285, dy: -140, rot: -8 },
-      { dx: -165, dy: -235, rot: -4 },
-      { dx: -270, dy: -330, rot: -9 },
-    ];
+    /* the pinned specifics are squeezed OUT — they fly left and land in a
+       persistent "lost" pile, readable for the rest of the scene (no
+       dissolve: the loss has to still be on screen when it bites) */
     const rect = box.getBoundingClientRect();
-    chips.forEach((text, i) => {
+    const cx = ((VESSEL.TX + VESSEL.TW / 2) / VESSEL.W) * rect.width;
+    /* the pile right-aligns against the tank's left wall, so chips of any
+       length stay clear of the tank without running off screen */
+    const pileRight = (VESSEL.TX / VESSEL.W) * rect.width - 14;
+    const dx = pileRight - cx;
+    const PILE = [
+      { dy: 0.5, rot: -4 },
+      { dy: 0.6, rot: 3 },
+      { dy: 0.7, rot: -2 },
+      { dy: 0.8, rot: 5 },
+    ];
+    const escaping = pinned.length ? pinned : [];
+    escaping.forEach((chip, i) => {
       setTimeout(() => {
-        const chip = document.createElement("span");
-        chip.className = "chip";
-        chip.textContent = text;
-        chip.style.left = rect.width / 2 + "px";
-        chip.style.top = rect.height * 0.6 + "px";
-        box.appendChild(chip);
-        const f = FAN[i % FAN.length];
-        requestAnimationFrame(() =>
-          requestAnimationFrame(() => {
-            chip.style.opacity = "1";
-            chip.classList.add("fly");
-            chip.style.transform = `translate(${f.dx}px, ${f.dy}px) rotate(${f.rot}deg)`;
-            setTimeout(() => (chip.style.opacity = "0"), 2200);
-          })
-        );
-      }, 400 + i * 420);
+        const p = PILE[i % PILE.length];
+        const targetTop = rect.height * p.dy;
+        const curTop = parseFloat(chip.style.top);
+        chip.classList.add("fly", "lost");
+        chip.style.transform = `translate(calc(-100% + ${dx}px), ${targetTop - curTop}px) rotate(${p.rot}deg)`;
+      }, 500 + i * 420);
     });
+    if (escaping.length) {
+      const lbl = document.createElement("span");
+      lbl.className = "pile-label";
+      lbl.textContent = "lost in the squeeze";
+      lbl.style.left = pileRight + "px";
+      lbl.style.top = rect.height * 0.42 + "px";
+      lbl.style.transform = "translateX(-100%)";
+      box.appendChild(lbl);
+      setTimeout(() => (lbl.style.opacity = "1"), 1400);
+    }
+    if (stripeLabel) {
+      const t = document.createElementNS(ns, "text");
+      t.setAttribute("class", "stripe-label");
+      t.setAttribute("x", VESSEL.TX + VESSEL.TW + 10);
+      t.setAttribute("y", bottomY() - stripeH / 2 + 4);
+      t.textContent = stripeLabel;
+      t.style.opacity = "0";
+      t.style.transition = "opacity 0.8s ease 2.4s";
+      overlay.appendChild(t);
+      requestAnimationFrame(() => requestAnimationFrame(() => (t.style.opacity = "1")));
+    }
 
     /* the piston did its job; get it out of the shot */
     setTimeout(() => {
@@ -286,10 +346,11 @@ function makeVessel(container, opts = {}) {
   function reset() {
     layerGroup.innerHTML = "";
     overlay.innerHTML = "";
-    box.querySelectorAll(".chip").forEach((c) => c.remove());
+    box.querySelectorAll(".chip, .pile-label").forEach((c) => c.remove());
     svg.querySelectorAll(".piston").forEach((p) => p.remove());
     layers = [];
+    pinned = [];
   }
 
-  return { box, svg, pour, setFill, sweep, zones, squeeze, reset, fillPct };
+  return { box, svg, pour, setFill, sweep, zones, squeeze, pinChips, reset, fillPct };
 }

@@ -225,6 +225,54 @@ body.dawn #sky .star { opacity: 0.05; }
 }
 .thesis em { color: var(--ochre); font-style: normal; }
 
+/* the reveal beat forces the eye to the two bars: everything else dims */
+#sc-cold-open .term, #sc-cold-open .request { transition: opacity 0.8s ease; }
+#sc-cold-open.spotlight .term, #sc-cold-open.spotlight .request { opacity: 0.4; }
+.bar-tag { color: var(--parch-faint); font-size: 0.72rem; letter-spacing: 0.1em; }
+
+/* ---------- context bar: the deck's recurring gauge ---------- */
+
+.cbar-slot { width: 100%; max-width: 560px; }
+.cbar-slot.big { max-width: 360px; }
+.cbar {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  width: 100%;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--parch-dim);
+}
+.cbar-label { color: var(--parch-faint); letter-spacing: 0.08em; font-size: 0.68rem; }
+.cbar-track {
+  position: relative;
+  flex: 1;
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+  background: linear-gradient(to right,
+    rgba(77, 143, 107, 0.14) 0 30%,
+    rgba(201, 165, 74, 0.14) 30% 50%,
+    rgba(176, 83, 63, 0.14) 50% 100%);
+}
+.cbar.bands-strong .cbar-track {
+  background: linear-gradient(to right,
+    rgba(77, 143, 107, 0.3) 0 30%,
+    rgba(201, 165, 74, 0.3) 30% 50%,
+    rgba(176, 83, 63, 0.3) 50% 100%);
+}
+.cbar-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 4px; }
+.cbar-fill.cb-green { background: var(--zone-green); }
+.cbar-fill.cb-amber { background: var(--zone-amber); }
+.cbar-fill.cb-red { background: var(--zone-red); }
+.cbar-marker { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ochre); opacity: 0.75; }
+.cbar-pct { min-width: 2.6em; text-align: right; color: var(--parchment); font-size: 0.8rem; }
+.cbar.big { font-size: 0.95rem; }
+.cbar.big .cbar-pct { font-size: 1.1rem; }
+.cbar.cbar-flash .cbar-track { animation: cbar-flash 0.9s ease; }
+@keyframes cbar-flash {
+  40% { box-shadow: 0 0 18px rgba(232, 168, 101, 0.6); }
+}
+
 /* ---------- mock terminal ---------- */
 
 .term {
@@ -273,7 +321,7 @@ body.dawn #sky .star { opacity: 0.05; }
   width: 100%;
 }
 
-.vessel-box svg { display: block; }
+.vessel-box svg { display: block; overflow: visible; }
 .vessel-tank { fill: var(--night-lift); stroke: var(--rule); stroke-width: 2; }
 .layer-system { fill: #4a4436; }
 .layer-chat   { fill: var(--blue-deep); opacity: 0.8; }
@@ -301,24 +349,54 @@ body.dawn #sky .star { opacity: 0.05; }
 .exit-door rect { fill: none; stroke: var(--ochre); stroke-width: 2; }
 .exit-door circle { fill: var(--ochre); }
 
-.coin-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.2rem;
-  color: var(--ochre);
-  font-size: clamp(1.4rem, 2.6vw, 2.2rem);
-}
-.coin-unit { font-size: 0.45em; color: var(--parch-faint); letter-spacing: 0.1em; }
-
-.poll-prompt .poll-sub {
-  display: block;
-  margin-top: 0.8rem;
+/* the gauge scene: vessel captioned + calibrated against the bar once */
+.gauge-block { display: flex; flex-direction: column; align-items: center; gap: 0.7rem; }
+.gauge-block .cbar-slot { width: 320px; }
+.vessel-cap { color: var(--parch-faint); font-size: 0.75rem; letter-spacing: 0.14em; font-family: var(--mono); }
+.gauge-side { display: flex; flex-direction: column; gap: 2.4rem; max-width: 320px; }
+.stage-cap {
   font-family: var(--mono);
-  font-size: 0.45em;
-  color: var(--parch-faint);
-  letter-spacing: 0.05em;
+  color: var(--parch-dim);
+  font-size: 0.84rem;
+  letter-spacing: 0.04em;
+  line-height: 1.6;
 }
+.gauge-avatar { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; }
+.layer-label { font-family: var(--mono); font-size: 12.5px; fill: var(--parchment); opacity: 0.85; }
+.door-label { font-family: var(--mono); font-size: 12px; fill: var(--ochre); }
+
+/* blueprint + waypoint docks: three posts = three habits; plank = techniques */
+.blueprint-sub { color: var(--parch-faint); letter-spacing: 0.1em; font-size: 0.8rem; margin-top: -1.4rem; }
+.blueprint-block { display: flex; flex-direction: column; align-items: center; gap: 1.4rem; width: min(74vw, 780px); }
+#blueprint-dock { width: 100%; }
+.dock-diagram { width: 100%; display: block; }
+.bp-water { stroke: var(--blue); opacity: 0.4; stroke-width: 1.5; }
+.bp-post { fill: var(--rule); transition: fill 1s ease, stroke 1s ease, filter 1s ease; }
+.bp-post.sketch { fill: none; stroke: var(--parch-faint); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.bp-post.lit {
+  fill: var(--ochre-deep);
+  stroke: var(--ochre);
+  stroke-dasharray: none;
+  filter: drop-shadow(0 0 8px rgba(232, 168, 101, 0.5));
+}
+.bp-post.pulse { animation: post-pulse 1.6s ease infinite; }
+@keyframes post-pulse { 50% { opacity: 0.45; } }
+.bp-plank { fill: var(--rule); transition: fill 1.2s ease, stroke 1.2s ease, filter 1.2s ease; }
+.bp-plank.sketch { fill: none; stroke: var(--parch-faint); stroke-width: 1.2; stroke-dasharray: 6 5; }
+.bp-plank.drawn {
+  fill: var(--ochre-deep);
+  stroke: var(--ochre);
+  stroke-dasharray: none;
+  filter: drop-shadow(0 0 6px rgba(232, 168, 101, 0.4));
+}
+.habit-grid { display: grid; grid-template-columns: repeat(3, 1fr); width: 100%; gap: 1rem; text-align: center; }
+.habit-grid.on .habit { animation: recap-in 0.6s ease backwards; }
+.habit-grid.on .habit:nth-child(2) { animation-delay: 0.45s; }
+.habit-grid.on .habit:nth-child(3) { animation-delay: 0.9s; }
+.habit-name { font-family: var(--serif); font-size: clamp(1rem, 1.9vw, 1.35rem); font-weight: 480; display: block; }
+.habit-sub { color: var(--parch-faint); font-size: 0.72rem; display: block; margin-top: 0.45rem; letter-spacing: 0.04em; }
+.wp-dock { width: min(30vw, 300px); }
+.wp-caption { color: var(--ochre); font-size: 0.8rem; letter-spacing: 0.1em; }
 
 /* squeeze */
 .piston { fill: var(--rule); stroke: var(--parch-faint); stroke-width: 1.5; }
@@ -333,28 +411,44 @@ body.dawn #sky .star { opacity: 0.05; }
   padding: 0.25em 0.6em;
   white-space: nowrap;
   opacity: 0;
+  z-index: 2;
 }
-.chip.fly { transition: transform 2.4s cubic-bezier(0.2, 0.6, 0.4, 1), opacity 2.4s ease; }
-
-.ghost-q { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
-.bubble {
+.chip.pinned { transition: opacity 0.6s ease; }
+.chip.fly {
+  transition: transform 1.7s cubic-bezier(0.2, 0.6, 0.4, 1), opacity 1.7s ease,
+    border-color 0.6s ease, box-shadow 0.6s ease, color 0.6s ease;
+}
+.chip.needed {
+  border-color: var(--zone-red);
+  color: var(--parchment);
+  box-shadow: 0 0 18px rgba(176, 83, 63, 0.55);
+}
+.pile-label {
+  position: absolute;
+  transform: translateX(-50%);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  color: var(--parch-faint);
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+.stripe-label { font-family: var(--mono); font-size: 12px; fill: var(--parch-dim); }
+.payoff-col { display: flex; flex-direction: column; gap: 1rem; max-width: 400px; align-items: flex-start; }
+.mini-term {
   background: var(--night-lift);
   border: 1px solid var(--rule);
-  border-radius: 12px;
-  padding: 0.8em 1.1em;
-  font-size: clamp(0.8rem, 1.4vw, 1.05rem);
-  color: var(--parch-dim);
+  border-radius: 10px;
+  padding: 0.9rem 1.1rem;
+  font-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
 }
-.ghost-chip {
-  display: inline-block;
-  margin: 0 0.35em;
-  padding: 0.1em 0.5em;
-  border: 1px dashed var(--parch-faint);
-  border-radius: 6px;
-  color: var(--parch-faint);
-  opacity: 0.45;
-  text-decoration: line-through;
-}
+.payoff-col .term-line { opacity: 0; transition: opacity 0.5s ease; }
+.payoff-col.on .term-line:nth-child(1) { opacity: 1; }
+.payoff-col.on .term-line:nth-child(2) { opacity: 1; transition-delay: 0.9s; }
+.payoff-col.on .term-line:nth-child(3) { opacity: 1; transition-delay: 1.8s; }
 
 /* ---------- scene 5: condense → prism → badge ---------- */
 
@@ -362,10 +456,22 @@ body.dawn #sky .star { opacity: 0.05; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2.4rem;
+  gap: 2.2rem;
   width: min(92vw, 1080px);
 }
+/* one stage bright at a time: finished stages dim, so the pipeline reads
+   as a pipeline instead of everything shouting at once */
+.prism-top, .prism-mid, .prism-tickets { transition: opacity 0.8s ease; }
+#sc-prism.past-top .prism-top { opacity: 0.3; }
+#sc-prism.past-mid .prism-mid { opacity: 0.35; }
+#sc-prism.fork-mode .prism-top, #sc-prism.fork-mode .prism-mid { display: none; }
+#sc-prism.fork-mode .prism-tickets { opacity: 1; }
+#sc-prism.fork-mode .prism-tickets .ticket { opacity: 0.35; }
+#sc-prism.fork-mode .prism-tickets .ticket.fork-ticket { opacity: 1; border-color: var(--ochre); }
+#sc-prism.fork-mode .prism-tickets .stage-cap { opacity: 0.25; }
 .prism-top { display: flex; align-items: flex-end; gap: 4vw; }
+.head-block .stage-cap { margin-top: 0.9rem; }
+.qcol .stage-cap { margin-bottom: 0.2rem; }
 .head-block { display: flex; flex-direction: column; align-items: center; }
 .avatar.head-only { height: 46px; }
 .cloud { width: 220px; transition: opacity 1s ease, transform 1s ease, filter 1s ease; }
@@ -397,7 +503,6 @@ body.dawn #sky .star { opacity: 0.05; }
 }
 .qbubble.on { opacity: 1; transform: none; }
 
-.prism-mid { display: flex; align-items: center; gap: 4vw; }
 .doc {
   display: flex;
   flex-direction: column;
@@ -425,10 +530,19 @@ body.dawn #sky .star { opacity: 0.05; }
   color: var(--ochre);
   font-size: 0.75rem;
 }
+.intent-ghost {
+  position: fixed;
+  z-index: 60;
+  margin: 0;
+  pointer-events: none;
+  background: var(--night);
+  transition: transform 0.55s ease, opacity 0.55s ease;
+}
 
-#vessel-foundation .vessel-box svg { width: 120px; }
-
-.prism-tickets { display: flex; gap: 1.6vw; }
+.prism-mid { display: flex; flex-direction: column; align-items: center; gap: 0.9rem; }
+.prism-tickets { display: flex; flex-wrap: wrap; gap: 1.6vw; justify-content: center; }
+.prism-tickets .stage-cap { width: 100%; text-align: center; }
+.prism-tickets .callback-cap { text-align: right; color: var(--ochre); }
 .ticket {
   display: flex;
   align-items: center;
@@ -451,6 +565,12 @@ body.dawn #sky .star { opacity: 0.05; }
   width: 7px; height: 30px;
   border-radius: 3px;
   background: var(--ochre-deep);
+  opacity: 0.2;
+  box-shadow: none;
+  transition: opacity 0.5s ease, box-shadow 0.5s ease;
+}
+.badge-clip.stamped {
+  opacity: 1;
   box-shadow: 0 0 8px rgba(232, 168, 101, 0.35);
 }
 .ticket.callback.lit {
@@ -475,11 +595,12 @@ body.dawn #sky .star { opacity: 0.05; }
 .note line { stroke: var(--parch-faint); stroke-width: 1.5; }
 .film-avatar { position: absolute; right: 1vw; top: -20px; }
 .film-avatar .avatar { height: 64px; }
+.load-label { font-family: var(--mono); font-size: 13px; fill: var(--parch-faint); letter-spacing: 1px; }
+.note-text { font-family: var(--mono); font-size: 13.5px; fill: var(--ochre); }
 
-/* ---------- scene 7: the badge moment ---------- */
+/* ---------- the fork payoff (inside the prism scene) ---------- */
 
-.badge-stage { display: flex; flex-direction: column; align-items: center; gap: 2rem; }
-.ticket.focus { opacity: 1; transform: none; }
+.fork-block { display: flex; flex-direction: column; align-items: center; gap: 1.4rem; }
 .fork-row { display: flex; align-items: center; gap: 3vw; }
 .schema-card {
   display: flex;
@@ -522,23 +643,36 @@ body.dawn #sky .star { opacity: 0.05; }
   white-space: nowrap;
 }
 .badge-big.on { box-shadow: 0 0 22px rgba(232, 168, 101, 0.3); }
-#sc-badge.decided .schema-card.keepsake { border-color: var(--ochre); box-shadow: 0 0 18px rgba(232, 168, 101, 0.22); }
-#sc-badge.decided .schema-card.analytics { opacity: 0.3; transform: rotate(1.2deg) translateY(6px); }
+#sc-prism.decided .schema-card.keepsake { border-color: var(--ochre); box-shadow: 0 0 18px rgba(232, 168, 101, 0.22); }
+#sc-prism.decided .schema-card.analytics { opacity: 0.3; transform: rotate(1.2deg) translateY(6px); }
 
-/* ---------- scene 8: wish vs ticket ---------- */
+/* ---------- wish vs ticket: the controlled experiment ---------- */
 
-.meter {
+.experiment-tag {
+  color: var(--parch-faint);
+  letter-spacing: 0.12em;
+  font-size: 0.8rem;
+  margin-top: -1.6rem;
+}
+.pane-tag { font-size: 0.95rem; color: var(--parchment); letter-spacing: 0.16em; }
+.prompt-card {
   width: 100%;
   max-width: 560px;
-  height: 6px;
-  border-radius: 3px;
   background: var(--night-lift);
   border: 1px solid var(--rule);
-  overflow: hidden;
+  border-radius: 8px;
+  padding: 0.6em 0.9em;
+  font-size: 0.78rem;
+  color: var(--ochre);
+  line-height: 1.7;
+  min-height: 4.9em;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
-.meter-fill { display: block; height: 100%; width: 0; transition: width 0.6s ease; }
-.meter-fill.red { background: var(--zone-red); }
-.meter-fill.green { background: #5fae83; }
+.scorecard { display: flex; gap: 3.5vw; font-size: 0.88rem; color: var(--parch-dim); }
+.scorecard em { font-style: normal; color: var(--parchment); }
+.scorecard em.good { color: #5fae83; }
 .screen-card {
   display: flex;
   flex-direction: column;
@@ -554,12 +688,30 @@ body.dawn #sky .star { opacity: 0.05; }
 .screen-card.warm .serif { font-size: 1.15rem; }
 .screen-card.warm .night-young { color: var(--ochre); font-style: italic; font-size: 0.95rem; }
 
-/* ---------- scene 10: tint transfer ---------- */
+/* ---------- set more lines: parallel fresh sessions ---------- */
 
-.tint-stage { display: flex; align-items: center; justify-content: center; gap: 6vw; }
-.tint-left, .tint-right { display: flex; align-items: center; gap: 2.5vw; }
-.tint-right { flex-direction: column; gap: 1.1rem; }
+.lines-stage { display: flex; align-items: flex-start; justify-content: center; gap: 5vw; width: min(94vw, 1240px); }
+.lines-left { display: flex; flex-direction: column; align-items: center; gap: 0.8rem; }
+.lines-right { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+.prompt-chip {
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 0.3em 0.7em;
+  color: var(--ochre);
+  font-size: 0.8rem;
+  background: var(--night-lift);
+}
+.beam { width: min(44vw, 620px); display: block; }
+.beam-rod { stroke: var(--parch-dim); stroke-width: 2.5; stroke-linecap: round; }
+.beam-line { stroke: var(--parch-faint); stroke-width: 1.2; stroke-dasharray: 3 4; opacity: 0; }
+.lines-right.on .beam-line { transition: opacity 0.7s ease; opacity: 0.8; }
+.lines-right.on .beam-line:nth-of-type(2) { transition-delay: 0.3s; }
+.lines-right.on .beam-line:nth-of-type(3) { transition-delay: 0.6s; }
+.lines-trio { display: flex; gap: 2.5vw; align-items: flex-start; }
+.line-col { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; }
 #vessel-murk .vessel-box svg { width: 150px; filter: saturate(0.45) brightness(0.8); }
+#sc-lines.picked .idea.fresh:not(.lit) { opacity: 0.35; }
+#sc-lines.picked .lines-left { opacity: 0.4; transition: opacity 0.8s ease; }
 .idea {
   display: flex;
   flex-direction: column;
@@ -578,17 +730,38 @@ body.dawn #sky .star { opacity: 0.05; }
 .idea.murk .idea-glyph rect, .idea.murk .idea-glyph line { stroke: #8a7a55; }
 .idea-label { color: #a89468; font-size: 0.75rem; }
 .idea-note { color: var(--parch-faint); font-size: 0.7rem; }
-.idea.fresh { opacity: 0; transform: translateX(20px); }
-.tint-right.on .idea.fresh { opacity: 1; transform: none; }
-.tint-right.on .idea.fresh:nth-child(2) { transition-delay: 0.25s; }
-.tint-right.on .idea.fresh:nth-child(3) { transition-delay: 0.5s; }
+.idea.fresh { opacity: 0; transform: translateY(14px); }
+.lines-right.on .idea.fresh { opacity: 1; transform: none; }
+.lines-right.on .line-col:nth-child(2) .idea.fresh { transition-delay: 0.3s; }
+.lines-right.on .line-col:nth-child(3) .idea.fresh { transition-delay: 0.6s; }
 .idea.fresh.lit { border-color: var(--ochre); box-shadow: 0 0 16px rgba(232, 168, 101, 0.22); }
 .badge-big.small { font-size: 0.82rem; padding: 0.4em 0.8em; }
 
 /* ---------- scene 12: arrows and the gold seam ---------- */
 
-.arrows-stage { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1.4rem; width: min(90vw, 940px); }
-#arrows-svg { width: 100%; }
+.arrows-stage { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1.4rem; width: min(94vw, 1240px); }
+.arrows-row { display: flex; align-items: center; gap: 2vw; width: 100%; }
+#arrows-svg { flex: 1; min-width: 0; }
+.finding-rail { display: flex; flex-direction: column; gap: 0.8rem; width: clamp(260px, 30vw, 350px); }
+.fcard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  background: var(--night-lift);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.78rem;
+  color: var(--parch-dim);
+  line-height: 1.5;
+  opacity: 0;
+  transform: translateX(-12px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.fcard.on { opacity: 1; transform: none; }
+.fcard.real { border-color: var(--ochre-deep); color: var(--parchment); }
+.fstamp { font-size: 0.68rem; letter-spacing: 0.06em; color: var(--parch-faint); }
+.fstamp.confirm { color: var(--ochre); }
 .spec-target { fill: var(--night-lift); stroke: var(--ochre-deep); stroke-width: 1.5; }
 .spec-line { stroke: var(--rule); stroke-width: 4; stroke-linecap: round; }
 .spec-title { fill: var(--parch-dim); font-family: var(--mono); font-size: 13px; letter-spacing: 1px; }
@@ -615,23 +788,23 @@ body.dawn #sky .star { opacity: 0.05; }
 .finding-card .verdict { color: var(--ochre); font-size: 0.72rem; letter-spacing: 0.08em; }
 .finding-card.binned { transform: translate(38vw, 34vh) rotate(24deg) scale(0.5); opacity: 0; }
 
-/* ---------- scene 14: assembly ---------- */
+/* ---------- the replay: Friday, 4:00 PM — again ---------- */
 
-.assembly-stage { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; width: min(80vw, 800px); }
-#assembly-svg { width: 100%; }
-.engine-core { fill: var(--blue-deep); opacity: 0.9; filter: drop-shadow(0 0 26px rgba(59, 95, 207, 0.65)); }
-.shell-path {
-  fill: none;
-  stroke: var(--ochre);
-  stroke-width: 2;
-  stroke-dasharray: 1400;
-  stroke-dashoffset: 1400;
-  transition: stroke-dashoffset 2.2s ease 1.4s;
+.replay-stage { display: flex; align-items: center; justify-content: center; gap: 4vw; width: min(92vw, 1100px); }
+.replay-pane { display: flex; flex-direction: column; align-items: center; gap: 0.9rem; flex: 1; max-width: 560px; }
+.replay-side { display: flex; flex-direction: column; gap: 1.8rem; align-items: center; width: clamp(240px, 26vw, 320px); }
+.rchips { display: flex; flex-direction: column; gap: 0.7rem; width: 100%; }
+.rchip {
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 0.45em 0.8em;
+  color: var(--parch-faint);
+  font-size: 0.78rem;
+  opacity: 0.3;
+  transition: opacity 0.6s ease, border-color 0.6s ease, color 0.6s ease;
 }
-.shell-path.drawn { stroke-dashoffset: 0; }
-.asm-icon { transition: transform 1.3s cubic-bezier(0.3, 0.7, 0.3, 1); }
-.asm-icon rect, .asm-icon line, .asm-icon path { stroke-width: 1.6; }
-.harness-word { font-size: clamp(1.8rem, 3.6vw, 2.8rem); color: var(--ochre); font-weight: 480; }
+.rchip.on { opacity: 1; color: var(--parchment); border-color: var(--zone-green); }
+.replay-dock { width: 100%; }
 
 /* ---------- scene 15: scroll and drawers ---------- */
 
@@ -759,6 +932,7 @@ body.dawn #sky .star { opacity: 0.05; }
 .dawn-stage { display: flex; flex-direction: column; align-items: center; gap: 1.8rem; }
 .dawn-stage .dock { width: min(38vw, 460px); }
 .dawn-stage .dock .water { stroke: var(--ochre); opacity: 0.45; }
+.dock .post.lit { fill: var(--ochre-deep); }
 .log-card {
   display: flex;
   flex-direction: column;
@@ -789,7 +963,7 @@ body.dawn #sky .star { opacity: 0.05; }
 
 /* ---------- proverb cards ---------- */
 
-.card.proverb p:first-child {
+.card.proverb p.serif {
   font-size: clamp(1.6rem, 3.2vw, 2.6rem);
   font-weight: 420;
   text-align: center;

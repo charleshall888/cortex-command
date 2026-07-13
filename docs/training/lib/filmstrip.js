@@ -76,6 +76,15 @@ function makeFilmstrip(container) {
     loadBar.setAttribute("width", Math.max(0, segX(segs.length) - X0 - GAP));
   }
 
+  /* the load bar names itself — it is the context gauge, lying on its side */
+  const loadLabel = document.createElementNS(ns, "text");
+  loadLabel.setAttribute("class", "load-label");
+  loadLabel.setAttribute("x", X0);
+  loadLabel.setAttribute("y", TRACK_Y + SEG_H / 2 + 52);
+  loadLabel.textContent = "next turn re-reads this much";
+  loadLabel.style.opacity = "0";
+  svg.appendChild(loadLabel);
+
   /* playhead */
   const playhead = document.createElementNS(ns, "g");
   playhead.setAttribute("class", "playhead");
@@ -112,6 +121,8 @@ function makeFilmstrip(container) {
     }
     setLoad();
     setPlayhead(segX(segs.length) - GAP / 2, 0);
+    loadLabel.style.transition = "opacity 0.8s ease";
+    loadLabel.style.opacity = "0.7";
   }
 
   async function fork() {
@@ -232,6 +243,18 @@ function makeFilmstrip(container) {
           }, 700);
         })
       );
+      /* the lesson the note carries, in words — intent line #2 is born here */
+      setTimeout(() => {
+        const nt = document.createElementNS(ns, "text");
+        nt.setAttribute("class", "note-text");
+        nt.setAttribute("x", forkX + 34);
+        nt.setAttribute("y", TRACK_Y + 57);
+        nt.textContent = "single-player — cheating's allowed";
+        nt.style.opacity = "0";
+        nt.style.transition = "opacity 0.8s ease";
+        g.fx.appendChild(nt);
+        requestAnimationFrame(() => requestAnimationFrame(() => (nt.style.opacity = "1")));
+      }, 1500);
     }, totalMs);
 
     /* drop the dead segments from the model's world entirely */
@@ -260,6 +283,7 @@ function makeFilmstrip(container) {
     g.fx.innerHTML = "";
     segs.length = 0;
     loadBar.setAttribute("width", 0);
+    loadLabel.style.opacity = "0";
     avatarBox.style.opacity = "0";
     const av = avatarBox.querySelector(".avatar");
     av.classList.add("slumped");

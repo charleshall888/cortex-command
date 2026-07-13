@@ -60,6 +60,23 @@
     { t: "done", text: "✓ 1 file changed · tests pass" },
   ];
 
+  /* the full circle: the cold open's Friday, replayed with the habits */
+  const REPLAY_A = [
+    { t: "user", text: "add flip-through paging to the catch log" },
+    { t: "agent", text: "Working — pulling the whole day back in…", pause: 300 },
+    { t: "user", text: "stop — you're at 91%. write the handoff ticket first." },
+    { t: "tool", text: "Write handoff-flip-through.md" },
+    { t: "done", text: "✓ ticket written · constraints + done-when · session closed" },
+  ];
+
+  const REPLAY_B = [
+    { t: "user", text: "ticket: flip-through paging for the catch log" },
+    { t: "user", text: "constraints: keepsake voice · one page per catch" },
+    { t: "tool", text: "Read handoff-flip-through.md" },
+    { t: "add", lines: ["+ page.flip(direction)", "+ renderPage(entry)"] },
+    { t: "done", text: "✓ tests pass · 2 files changed" },
+  ];
+
   const SCROLL_START = [
     { n: "#1", text: "Review the spec from an adversarial angle." },
     { n: "#7", text: "Return findings with evidence quotes." },
@@ -76,79 +93,113 @@
     return `<div><span class="lnum">${l.n}</span><span class="${l.gag ? "gag" : ""}">${l.text}</span></div>`;
   }
 
+  /* the gauge scene's pour: layers name themselves inside the tank */
+  const GAUGE_BASE = [
+    { kind: "system", pct: 6, label: "system prompt" },
+    { kind: "chat", pct: 8, label: "your messages" },
+    { kind: "tool", pct: 18, label: "files it read" },
+    { kind: "chat", pct: 4 },
+    { kind: "tool", pct: 8, label: "test output" },
+  ]; // 44% — amber, the door in sight
+  const GAUGE_LATER = [
+    { kind: "tool", pct: 12, label: "more files" },
+    { kind: "tool", pct: 10, label: "more test output" },
+  ]; // → 66% — past the door, into the red
+
   const hooks = {
     "sc-cold-open": (sec, b) => {
       if (b === 0) {
-        sec.classList.remove("staged");
+        sec.classList.remove("staged", "spotlight");
         if (state.termLeft) state.termLeft.clear();
         if (state.termRight) state.termRight.clear();
+        if (state.cbLeft) state.cbLeft.set(0, { ms: 0 });
+        if (state.cbRight) state.cbRight.set(0, { ms: 0 });
       }
       if (b === 1) {
         sec.classList.add("staged");
         if (!state.termLeft) {
           state.termLeft = makeTerminal(document.getElementById("term-left"), { title: "fresh session · 9:00 AM" });
           state.termRight = makeTerminal(document.getElementById("term-right"), { title: "same session · 4:00 PM" });
+          state.cbLeft = makeContextBar(document.getElementById("cbar-left"), { h: 12 });
+          state.cbRight = makeContextBar(document.getElementById("cbar-right"), { h: 12 });
         }
-      }
-      if (b === 2) state.termLeft.play(LEFT_SCRIPT);
-      if (b === 3) state.termRight.play(RIGHT_SCRIPT);
-    },
-
-    "sc-scan": (sec, b) => {
-      if (b === 0) {
-        if (!state.vScan) state.vScan = makeVessel(document.getElementById("vessel-scan"));
-        state.vScan.reset();
-        setCoins(0);
-      }
-      if (b === 1)
-        chain("scan", () =>
-          state.vScan.pour([
-            { kind: "system", pct: 8 },
-            { kind: "chat", pct: 10 },
-            { kind: "tool", pct: 22 },
-            { kind: "chat", pct: 6 },
-            { kind: "tool", pct: 16 },
-          ])
-        );
-      if (b === 2) chain("scan", () => state.vScan.sweep({ onCoin: setCoins })); // plays silent
-      if (b === 3) chain("scan", () => state.vScan.sweep({ cached: true, onCoin: setCoins }));
-    },
-
-    "sc-zones": (sec, b) => {
-      if (b === 0) {
-        if (!state.vZones) state.vZones = makeVessel(document.getElementById("vessel-zones"));
-        state.vZones.reset();
-        state.vZones.setFill([
-          { kind: "system", pct: 8 },
-          { kind: "chat", pct: 14 },
-          { kind: "tool", pct: 19 },
-        ]); // 41% — matches the presenter's own confessed number
-      }
-      if (b === 1) state.vZones.zones();
-    },
-
-    "sc-prism": (sec, b) => {
-      const cloud = sec.querySelector(".cloud");
-      const bubbles = [...sec.querySelectorAll(".qbubble")];
-      if (b === 0) {
-        cloud.classList.remove("sharp", "condensed");
-        bubbles.forEach((q) => q.classList.remove("on"));
-        sec.querySelector(".ticket.callback").classList.remove("lit");
+        state.cbLeft.set(8, { ms: 900 });
+        state.cbRight.set(91, { ms: 2600 }); // six hours, compressed into one sweep
       }
       if (b === 2) {
-        bubbles.forEach((q, i) => setTimeout(() => q.classList.add("on"), 300 + i * 900));
-        setTimeout(() => cloud.classList.add("sharp"), 1400);
+        state.termLeft.play(LEFT_SCRIPT);
+        state.cbLeft.set(13, { ms: 11000 });
       }
       if (b === 3) {
-        cloud.classList.add("condensed");
-        if (!state.vFound) state.vFound = makeVessel(document.getElementById("vessel-foundation"), { scale: 0.5 });
-        state.vFound.reset();
-        state.vFound.pour([
-          { kind: "spec", pct: 12 },
-          { kind: "spec", pct: 8 },
-        ]); // the first 20% — what everything else settles on
+        state.termRight.play(RIGHT_SCRIPT);
+        state.cbRight.set(96, { ms: 13000 });
       }
-      if (b === 5) sec.querySelector(".ticket.callback").classList.add("lit");
+      if (b === 4) sec.classList.add("spotlight"); // dim everything but the two bars
+    },
+
+    "sc-blueprint": (sec, b) => {
+      if (b === 0) state.bpDock = buildDock(document.getElementById("blueprint-dock"), { sketch: true });
+    },
+
+    "sc-gauge": (sec, b) => {
+      if (b === 0) {
+        const slot = document.getElementById("cbar-gauge");
+        if (!state.cbGauge) state.cbGauge = makeContextBar(slot, { h: 26, big: true, label: "" });
+        if (!state.vGauge)
+          state.vGauge = makeVessel(document.getElementById("vessel-gauge"), {
+            onLevel: (pct) => state.cbGauge.set(pct, { ms: 700 }),
+          });
+        state.vGauge.reset();
+        state.cbGauge.set(0, { ms: 0 });
+        state.cbGauge.el.classList.remove("bands-strong");
+      }
+      if (b === 1) chain("gauge", () => state.vGauge.pour(GAUGE_BASE));
+      if (b === 2) chain("gauge", () => state.vGauge.sweep()); // plays silent; caption lands after
+      if (b === 3) {
+        chain("gauge", async () => {
+          state.vGauge.zones();
+          state.cbGauge.el.classList.add("bands-strong");
+        });
+      }
+      if (b === 4)
+        chain("gauge", async () => {
+          await state.vGauge.pour(GAUGE_LATER);
+          state.cbGauge.flash();
+        });
+    },
+
+    "sc-squeeze": (sec, b) => {
+      if (b === 0) {
+        if (!state.vSqueeze) state.vSqueeze = makeVessel(document.getElementById("vessel-squeeze"));
+        if (!state.cbSqueeze) state.cbSqueeze = makeContextBar(document.getElementById("cbar-squeeze"), { h: 26, big: true, label: "" });
+        state.vSqueeze.reset();
+        state.vSqueeze.setFill([
+          { kind: "system", pct: 8 },
+          { kind: "chat", pct: 18 },
+          { kind: "tool", pct: 26 },
+          { kind: "chat", pct: 10 },
+          { kind: "tool", pct: 20 },
+          { kind: "tool", pct: 13 },
+        ]); // 95% — the moment the tool offers you the button
+        state.vSqueeze.pinChips([
+          "DON'T touch catch_odds.js",
+          "FishManager → CatchService",
+          "empty state invites first cast",
+          "tests hang without --offline",
+        ]);
+        state.cbSqueeze.set(95, { ms: 800 });
+      }
+      if (b === 1)
+        chain("squeeze", async () => {
+          state.cbSqueeze.set(30, { ms: 2600 }); // the number improves; the mind got worse
+          await state.vSqueeze.squeeze({ stripeLabel: 'kept: "building a fishing game"' });
+        });
+      if (b === 2)
+        chain("squeeze", async () => {
+          await new Promise((r) => setTimeout(r, 2200)); // the mini-term lines land first
+          const chip = state.vSqueeze.box.querySelector(".chip");
+          if (chip) chip.classList.add("needed");
+        });
     },
 
     "sc-filmstrip": (sec, b) => {
@@ -164,39 +215,86 @@
       if (b === 5) chain("film", () => state.film.cleanBranch());
     },
 
-    "sc-badge": (sec, b) => {
-      if (b === 0) sec.classList.remove("decided");
-      if (b === 3) sec.classList.add("decided");
+    "pv-1": (sec, b) => {
+      if (b === 0) state.wp1 = buildDock(document.getElementById("wp-dock-1"), { sketch: true });
+      if (b === 1) state.wp1.posts.exit.classList.add("lit");
+    },
+    "pv-2": (sec, b) => {
+      if (b === 0) state.wp2 = buildDock(document.getElementById("wp-dock-2"), { sketch: true, lit: ["exit"] });
+      if (b === 1) state.wp2.posts.page.classList.add("lit");
+    },
+    "pv-3": (sec, b) => {
+      if (b === 0) state.wp3 = buildDock(document.getElementById("wp-dock-3"), { sketch: true, lit: ["exit", "page"] });
+      if (b === 1) {
+        state.wp3.plank.classList.add("drawn");
+        state.wp3.posts.instructions.classList.add("pulse");
+      }
+    },
+
+    "sc-prism": (sec, b) => {
+      const cloud = sec.querySelector(".cloud");
+      const bubbles = [...sec.querySelectorAll(".qbubble")];
+      const tickets = [...sec.querySelectorAll(".prism-tickets .ticket")];
+      if (b === 0) {
+        cloud.classList.remove("sharp", "condensed");
+        bubbles.forEach((q) => q.classList.remove("on"));
+        tickets.forEach((t) => t.classList.remove("on"));
+        sec.querySelectorAll(".badge-clip").forEach((c) => c.classList.remove("stamped"));
+        sec.querySelector(".ticket.callback").classList.remove("lit");
+        sec.querySelector(".doc").classList.remove("on");
+        sec.classList.remove("past-top", "past-mid", "fork-mode", "decided");
+      }
+      if (b === 2) {
+        bubbles.forEach((q, i) => setTimeout(() => q.classList.add("on"), 300 + i * 900));
+        setTimeout(() => cloud.classList.add("sharp"), 1400);
+      }
+      if (b === 3) {
+        cloud.classList.add("condensed");
+        sec.classList.add("past-top");
+        sec.querySelector(".doc").classList.add("on");
+      }
+      if (b === 4) {
+        sec.classList.add("past-mid");
+        tickets.forEach((t) => t.classList.add("on"));
+        stampTickets(sec);
+        setTimeout(() => sec.querySelector(".ticket.callback").classList.add("lit"), 2200);
+      }
+      if (b === 5) {
+        sec.classList.add("fork-mode");
+        setTimeout(() => sec.classList.add("decided"), 2600);
+      }
     },
 
     "sc-wish": (sec, b) => {
       if (b === 0) {
         if (state.termWish) state.termWish.clear();
         if (state.termTicket) state.termTicket.clear();
-        document.getElementById("meter-wish").style.width = "0";
-        document.getElementById("meter-ticket").style.width = "0";
+        if (state.cbWish) state.cbWish.set(0, { ms: 0 });
+        if (state.cbTicket) state.cbTicket.set(0, { ms: 0 });
       }
       if (b === 1 && !state.termWish) {
-        state.termWish = makeTerminal(document.getElementById("term-wish"), { title: "the wish" });
-        state.termTicket = makeTerminal(document.getElementById("term-ticket"), { title: "the ticket" });
+        state.termWish = makeTerminal(document.getElementById("term-wish"), { title: "fresh session A" });
+        state.termTicket = makeTerminal(document.getElementById("term-ticket"), { title: "fresh session B" });
+        state.cbWish = makeContextBar(document.getElementById("cbar-wish"), { h: 12 });
+        state.cbTicket = makeContextBar(document.getElementById("cbar-ticket"), { h: 12 });
+      }
+      if (b === 1) {
+        state.cbWish.set(8, { ms: 700 });
+        state.cbTicket.set(8, { ms: 700 }); // identical starts — the controls of the experiment
       }
       if (b === 2)
         chain("wish", () => {
-          const m = document.getElementById("meter-wish");
-          m.style.transition = "width 9s linear";
-          m.style.width = "68%";
+          state.cbWish.set(68, { ms: 12000 });
           return state.termWish.play(WISH_SCRIPT);
         });
       if (b === 3)
         chain("wish", () => {
-          const m = document.getElementById("meter-ticket");
-          m.style.transition = "width 5s linear";
-          m.style.width = "18%";
+          state.cbTicket.set(18, { ms: 6000 });
           return state.termTicket.play(TICKET_SCRIPT);
         });
     },
 
-    "sc-tint": (sec, b) => {
+    "sc-lines": (sec, b) => {
       if (b === 0) {
         if (!state.vMurk) state.vMurk = makeVessel(document.getElementById("vessel-murk"), { scale: 0.8 });
         state.vMurk.reset();
@@ -206,49 +304,45 @@
           { kind: "system", pct: 8 },
           { kind: "tool", pct: 14 },
         ]);
+        if (!state.vFresh) {
+          state.vFresh = [1, 2, 3].map((i) => makeVessel(document.getElementById("vessel-fresh-" + i), { scale: 0.28 }));
+        }
+        state.vFresh.forEach((v) => {
+          v.reset();
+          v.setFill([{ kind: "spec", pct: 9 }]); // fresh, carrying only the page
+        });
         document.getElementById("idea-scrapbook").classList.remove("lit");
+        sec.classList.remove("picked");
       }
-      if (b === 3) document.getElementById("idea-scrapbook").classList.add("lit");
+      if (b === 3) {
+        document.getElementById("idea-scrapbook").classList.add("lit");
+        sec.classList.add("picked");
+      }
     },
 
     "sc-arrows": (sec, b) => {
-      if (b === 0) buildArrows();
-      if (b === 1) {
-        const fly = (cls, tx, ty, rot, bounce) => {
-          const a = document.querySelector(`#arrows-svg .arrow.${cls}`);
-          a.style.transition = "transform 0.55s cubic-bezier(0.3, 0, 0.7, 1)";
-          a.style.transform = `translate(${tx}px, ${ty}px) rotate(${rot}deg)`;
-          if (bounce)
-            setTimeout(() => {
-              a.style.transition = "transform 0.9s ease, opacity 0.9s ease";
-              a.style.transform = `translate(${tx - 90}px, ${ty + 70}px) rotate(${rot - 38}deg)`;
-              a.style.opacity = "0.3";
-            }, 620);
-        };
-        setTimeout(() => fly("a1", 575, 160, 14, true), 200);
-        setTimeout(() => fly("a2", 572, 205, -4, true), 900);
-        setTimeout(() => {
-          fly("a3", 585, 270, -18, false);
-          setTimeout(() => document.querySelector("#arrows-svg .crack").classList.add("show"), 600);
-        }, 1700);
+      const card = (id, delay) => setTimeout(() => document.getElementById(id).classList.add("on"), delay);
+      if (b === 0) {
+        buildArrows();
+        ["fcard-1", "fcard-2", "fcard-3"].forEach((id) => document.getElementById(id).classList.remove("on"));
+        sec.querySelector(".finding-card").classList.remove("binned");
       }
-      if (b === 2) document.querySelector("#arrows-svg .crack").classList.add("gold");
-      if (b === 3) {
-        const card = sec.querySelector(".finding-card");
-        card.classList.remove("binned");
-        setTimeout(() => card.classList.add("binned"), 3600); // room to read it aloud first
-      }
-    },
-
-    "sc-assembly": (sec, b) => {
-      if (b === 0) buildAssembly();
       if (b === 1) {
-        const slots = { vessel: [400, 132], badge: [486, 210], film: [400, 292], arrow: [314, 210] };
-        for (const [k, [x, y]] of Object.entries(slots)) {
-          const icon = document.querySelector(`#assembly-svg .asm-${k}`);
-          icon.style.transform = `translate(${x}px, ${y}px)`;
-        }
-        document.querySelector("#assembly-svg .shell-path").classList.add("drawn");
+        setTimeout(() => flyArrow("a1", 575, 160, 14, true), 200);
+        card("fcard-1", 900);
+        setTimeout(() => flyArrow("a2", 572, 205, -4, true), 1400);
+        card("fcard-2", 2100);
+      }
+      if (b === 2) {
+        flyArrow("a3", 585, 270, -18, false);
+        setTimeout(() => document.querySelector("#arrows-svg .crack").classList.add("show"), 600);
+        card("fcard-3", 800);
+      }
+      if (b === 3) document.querySelector("#arrows-svg .crack").classList.add("gold");
+      if (b === 4) {
+        const fc = sec.querySelector(".finding-card");
+        fc.classList.remove("binned");
+        setTimeout(() => fc.classList.add("binned"), 3600); // room to read it aloud first
       }
     },
 
@@ -333,7 +427,7 @@
       }
       if (b === 2) {
         if (state.gateRecoil) clearTimeout(state.gateRecoil);
-        svg.querySelector(".gate-dot").setAttribute("fill", getComputedStyle(document.documentElement).getPropertyValue("--zone-green"));
+        svg.querySelector(".gate-dot").setAttribute("fill", cssVar("--zone-green"));
         svg.querySelector(".gate-label").textContent = "tests ✓";
         const arms = svg.querySelector(".turnstile-arms");
         arms.style.transformOrigin = "690px 218px";
@@ -351,36 +445,45 @@
       if (b === 2) wall.classList.add("automated");
     },
 
-    "sc-squeeze": (sec, b) => {
+    "sc-replay": (sec, b) => {
+      const chips = [1, 2, 3].map((i) => document.getElementById("rchip-" + i));
       if (b === 0) {
-        if (!state.vSqueeze) state.vSqueeze = makeVessel(document.getElementById("vessel-squeeze"));
-        state.vSqueeze.reset();
-        state.vSqueeze.setFill([
-          { kind: "system", pct: 8 },
-          { kind: "chat", pct: 16 },
-          { kind: "tool", pct: 26 },
-          { kind: "chat", pct: 8 },
-          { kind: "tool", pct: 20 },
-        ]);
+        if (state.termReplay) state.termReplay.clear();
+        if (state.cbReplay) state.cbReplay.set(0, { ms: 0 });
+        chips.forEach((c) => c.classList.remove("on"));
+        setTermTitle(state.termReplay, "same session · 4:00 PM");
       }
-      if (b === 1)
-        state.vSqueeze.squeeze({
-          chips: [
-            "depth is in fathoms, not feet",
-            "user prefers tabs",
-            "FishManager → CatchService",
-            "DON'T touch prod config",
-          ],
+      if (b === 1) {
+        if (!state.termReplay) {
+          state.termReplay = makeTerminal(document.getElementById("term-replay"), { title: "same session · 4:00 PM" });
+          state.cbReplay = makeContextBar(document.getElementById("cbar-replay"), { h: 12 });
+        }
+        state.cbReplay.set(91, { ms: 1800 }); // exactly where the cold open left it
+      }
+      if (b === 2)
+        chain("replay", async () => {
+          await state.termReplay.play(REPLAY_A);
+          chips[0].classList.add("on"); // the handoff ticket IS direction on the page
         });
+      if (b === 3)
+        chain("replay", async () => {
+          state.termReplay.clear();
+          setTermTitle(state.termReplay, "fresh session · 4:04 PM");
+          state.cbReplay.set(8, { ms: 1600 }); // the single most legible image in the deck
+          state.cbReplay.flash();
+          chips[1].classList.add("on");
+          await new Promise((r) => setTimeout(r, 1700));
+          await state.termReplay.play(REPLAY_B);
+          state.cbReplay.set(16, { ms: 1200 });
+          chips[2].classList.add("on");
+        });
+      if (b === 4) {
+        state.wpFinal = buildDock(document.getElementById("wp-dock-final"), { lit: ["page", "exit", "instructions"], plank: true });
+      }
     },
   };
 
-  function setCoins(n) {
-    const el = document.getElementById("coin-count");
-    if (el) el.textContent = n;
-  }
-
-  /* ---------- scene-specific SVG builders ---------- */
+  /* ---------- scene-specific builders ---------- */
 
   const NS = "http://www.w3.org/2000/svg";
 
@@ -395,10 +498,75 @@
     return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   }
 
+  function setTermTitle(term, title) {
+    if (!term) return;
+    const spans = term.el.querySelectorAll(".term-bar span");
+    spans[spans.length - 1].textContent = title;
+  }
+
+  /* the dock diagram: three posts = the three habits (left → right:
+     page · exit · instructions), the plank = the techniques laid across
+     them. Sketch = blueprint dashes; lit = built. */
+  function buildDock(container, { sketch = false, lit = [], plank = false } = {}) {
+    container.innerHTML = "";
+    const svg = el("svg", { viewBox: "0 0 640 210", class: "dock-diagram" });
+    container.appendChild(svg);
+    el("line", { class: "bp-water", x1: 0, y1: 158, x2: 640, y2: 158 }, svg);
+    const posts = {};
+    const XS = { page: 101, exit: 315, instructions: 529 };
+    for (const [key, x] of Object.entries(XS)) {
+      posts[key] = el("rect", { class: "bp-post" + (sketch ? " sketch" : ""), x, y: 84, width: 10, height: 74 }, svg);
+      if (lit.includes(key)) posts[key].classList.add("lit");
+    }
+    const plankEl = el("rect", { class: "bp-plank" + (sketch ? " sketch" : ""), x: 70, y: 74, width: 500, height: 9 }, svg);
+    if (plank) plankEl.classList.add("drawn");
+    return { svg, posts, plank: plankEl };
+  }
+
+  /* the parent epic's intent line stamps itself onto each ticket —
+     the stripe on a ticket is literally a copy of that one line */
+  function stampTickets(sec) {
+    const intent = sec.querySelector(".doc-intent");
+    const clips = [...sec.querySelectorAll(".prism-tickets .ticket .badge-clip")];
+    const from = intent.getBoundingClientRect();
+    clips.forEach((clip, i) => {
+      setTimeout(() => {
+        const to = clip.getBoundingClientRect();
+        const ghost = intent.cloneNode(true);
+        ghost.className = "doc-intent mono intent-ghost";
+        ghost.style.left = from.left + "px";
+        ghost.style.top = from.top + "px";
+        document.body.appendChild(ghost);
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            ghost.style.transform = `translate(${to.left - from.left}px, ${to.top - from.top}px) scale(0.12)`;
+            ghost.style.opacity = "0.2";
+          })
+        );
+        setTimeout(() => {
+          ghost.remove();
+          clip.classList.add("stamped");
+        }, 560);
+      }, 400 + i * 350);
+    });
+  }
+
+  function flyArrow(cls, tx, ty, rot, bounce) {
+    const a = document.querySelector(`#arrows-svg .arrow.${cls}`);
+    a.style.transition = "transform 0.55s cubic-bezier(0.3, 0, 0.7, 1)";
+    a.style.transform = `translate(${tx}px, ${ty}px) rotate(${rot}deg)`;
+    if (bounce)
+      setTimeout(() => {
+        a.style.transition = "transform 0.9s ease, opacity 0.9s ease";
+        a.style.transform = `translate(${tx - 90}px, ${ty + 70}px) rotate(${rot - 38}deg)`;
+        a.style.opacity = "0.3";
+      }, 620);
+  }
+
   function buildArrows() {
     const svg = document.getElementById("arrows-svg");
     svg.innerHTML = "";
-    /* the spec, standing like a target */
+    /* the spec from the prism scene, standing like a target */
     const doc = el("g", { transform: "translate(640, 80)" }, svg);
     el("rect", { class: "spec-target", width: 190, height: 240, rx: 8 }, doc);
     const title = el("text", { class: "spec-title", x: 16, y: 30 }, doc);
@@ -418,34 +586,6 @@
       a.style.transform = s.t;
       a.style.opacity = "1";
     }
-  }
-
-  function buildAssembly() {
-    const svg = document.getElementById("assembly-svg");
-    svg.innerHTML = "";
-    el("circle", { class: "engine-core", cx: 400, cy: 210, r: 46 }, svg);
-    el("rect", { class: "shell-path", x: 268, y: 96, width: 264, height: 228, rx: 26 }, svg);
-
-    const dim = cssVar("--parch-dim");
-    const mk = (cls, start) => {
-      const icon = el("g", { class: "asm-icon asm-" + cls }, svg);
-      icon.style.transform = `translate(${start[0]}px, ${start[1]}px)`;
-      return icon;
-    };
-    const vessel = mk("vessel", [80, 60]);
-    el("rect", { x: -13, y: -27, width: 26, height: 54, rx: 4, fill: "none", stroke: dim }, vessel);
-    el("rect", { x: -10, y: 10, width: 20, height: 14, fill: "#3a3f4c" }, vessel);
-    el("rect", { x: -10, y: 0, width: 20, height: 8, fill: cssVar("--blue-deep") }, vessel);
-
-    const badge = mk("badge", [720, 80]);
-    el("rect", { x: -5, y: -15, width: 10, height: 30, rx: 3, fill: cssVar("--ochre-deep") }, badge);
-
-    const film = mk("film", [90, 380]);
-    for (const x of [-21, -4, 13]) el("rect", { x, y: -9, width: 12, height: 18, rx: 2, fill: "none", stroke: dim }, film);
-
-    const arrow = mk("arrow", [710, 370]);
-    el("line", { x1: -20, y1: 0, x2: 16, y2: 0, stroke: cssVar("--blue") }, arrow);
-    el("path", { d: "M 16 0 l -9 -5 M 16 0 l -9 5", stroke: cssVar("--blue"), fill: "none" }, arrow);
   }
 
   function buildGate() {
