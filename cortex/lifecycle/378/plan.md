@@ -31,7 +31,7 @@ Clear three #374 residues durably: a key-scoped frontmatter quoter + reader coer
 - **Complexity**: complex
 - **Context**: `update_item.py:372` calls `_set_frontmatter_value(text, key, str(value))` (type erased); `:370` passes literal `"null"` for None. `create_item.py:51-75` `_yaml_safe_title_value` (under `backlog/`) is the title-scoped precedent — reuse its escaping approach, NOT `safe_dump`, for generic keys. String-intended allowlist: `lifecycle_slug`, `feature`, `parent`, `spec` (+ bare slug/path/id-string scalars). Quote when the value mis-resolves under YAML 1.1 (int/float, bool words + case/short variants, sexagesimal `12:34`, `.inf/.nan`, hex/octal, empty, leading YAML indicator/inline `#`) EXCEPT the `null`/`~` None sentinel (stays bare). Leave non-allowlist keys bare (`updated`/`created` dates, `blocked-by`/`parent_backlog_id` ints). The three writers: `update_item.py::_set_frontmatter_value` (all scalars); `cortex_command/lifecycle/create_index.py:115` `_render` emits `f"feature: {feature}\n"` (route) and `parent_backlog_id:` (leave bare); `overnight/report.py:460` emits `f"lifecycle_slug: {name}\n"` (route). NOTE: `create_index.py` is under `cortex_command/lifecycle/`, not `backlog/`.
 - **Verification**: `.venv/bin/pytest tests/test_frontmatter_quoting.py -q` passes (asserts `lifecycle_slug=378`/`feature`/`parent` with `378`/`yes`/`12:34` → quoted; `updated` date, numeric `blocked-by`, None → bare; a value with `"`/`\`/`:` round-trips through `yaml.safe_load` to the exact string) AND `grep -c 'safe_dump' cortex_command/backlog/update_item.py` = 0 AND each of the three writers references the helper — `grep -c <helper_name> cortex_command/backlog/update_item.py cortex_command/lifecycle/create_index.py cortex_command/overnight/report.py` shows ≥1 per file
-- **Status**: [ ] pending
+- **Status**: [x] done (d090f110)
 
 ### Task 2: Backfill the 4 malformed files and confirm the gate greens
 - **Files**: `cortex/backlog/374-phase-c-gate-decide-the-served-next-advance-loop-on-post-composition-evidence.md`, `cortex/backlog/378-374-follow-ups-lifecycle-slug-frontmatter-coercion-refine-spec-approve-routing-residue-cli-pin-dedup.md`, `cortex/lifecycle/374/index.md`, `cortex/lifecycle/378/index.md`
@@ -40,7 +40,7 @@ Clear three #374 residues durably: a key-scoped frontmatter quoter + reader coer
 - **Complexity**: simple
 - **Context**: These 4 are the only numeric-valued occurrences (verified). The `374` backlog file is ALSO a Task 5 target (it is `status: complete` with `lifecycle_phase: research`) — Task 5 depends on [2] to serialize the shared-file edits, so this task edits only the slug value and Task 5 later edits only the phase value on the post-Task-2 base. `test_lifecycle_references_resolve.py` parses only `lifecycle_slug` (not `feature:`), so it proves the 2 backlog files; the 2 index `feature:` files are proven by the grep.
 - **Verification**: `grep -rnE '^(lifecycle_slug|feature): [0-9]+$' cortex/backlog cortex/lifecycle` = 0 AND `.venv/bin/pytest tests/test_lifecycle_references_resolve.py::test_every_lifecycle_reference_resolves -q` passes
-- **Status**: [ ] pending
+- **Status**: [x] done (02dfba22)
 
 ### Task 3: Defensive reader coercion at the yaml.safe_load sites
 - **Files**: `cortex_command/backlog/resolve_item.py`, `cortex_command/lifecycle/resolve.py`, `tests/test_resolve_numeric_slug_coercion.py` (new)
@@ -49,7 +49,7 @@ Clear three #374 residues durably: a key-scoped frontmatter quoter + reader coer
 - **Complexity**: simple
 - **Context**: `resolve_item.py:133-136` `_resolve_lifecycle_slug` returns `fm["lifecycle_slug"]` raw; `resolve.py:179-186` remap + `:181` `(lifecycle_base / slug).is_dir()` raises `TypeError` on an int. Disjoint from Task 1/2 files.
 - **Verification**: `.venv/bin/pytest tests/test_resolve_numeric_slug_coercion.py -q` passes (feeds `lifecycle_slug=374` int through both paths; asserts no `TypeError`/`AttributeError`, `str` result)
-- **Status**: [ ] pending
+- **Status**: [x] done (a7be02cf)
 
 ### Task 4: Advance lifecycle_phase on ALL completion writers (incl. the served-loop path)
 - **Files**: `cortex_command/lifecycle/finalize.py`, `cortex_command/overnight/close_tickets.py`, `cortex_command/lifecycle/advance.py`, `tests/test_lifecycle_phase_tracks_status.py` (new)
@@ -58,7 +58,7 @@ Clear three #374 residues durably: a key-scoped frontmatter quoter + reader coer
 - **Complexity**: complex
 - **Context**: Confirmed `status: complete` writers: `finalize.py:160`, `overnight/close_tickets.py:147` (NOT `lifecycle/close_tickets.py` — that path does not exist), and — critically — `advance.py:710` `_project_status_inner` (`_STATE_TO_STATUS["complete"]="complete"` at `:449`) is the events-first `review→complete` served-loop completion path that MUST also advance phase, else new served-loop completions re-freeze at their prior phase. Choose the terminal value (`complete`) from the completion event, not blindly (a `wontfix` item must not become `complete`). This task OWNS all advance.py edits for phase; Task 6 (spec-approve arm) depends on [4] to serialize advance.py, so no worktree race.
 - **Verification**: `.venv/bin/pytest tests/test_lifecycle_phase_tracks_status.py -q` passes (drives an item to `status: complete` via BOTH the finalize path AND the advance.py `review→complete` path, asserting `lifecycle_phase` != `research` / equals the completion value in each)
-- **Status**: [ ] pending
+- **Status**: [x] done (bad4363e)
 
 ### Task 5: Backfill the stale lifecycle_phase items
 - **Files**: `cortex/backlog/` (the `status: complete` items still at `lifecycle_phase: research`, incl. the `374` file)
@@ -103,7 +103,7 @@ Clear three #374 residues durably: a key-scoped frontmatter quoter + reader coer
 - **Complexity**: complex
 - **Context**: `bin/cortex-rewrite-cli-pin` today has only a required positional `tag`, `--path`, `--no-verify` (no dry-run/list mode) and `DEFAULT_TARGET` overnight-only; `auto-release.yml:131/138` invokes+`git add`s overnight only; `release.yml` drift lint (~:22-76) overnight-only. Add `plugins/cortex-core/install_core.py` as a rewrite target (regex-based — surrounding code, not a standalone tuple module). `install_core.py` stays stdlib-only. `bin/cortex-*` IS dual-source-mirrored (unconditional): run `just build-plugin` and stage the mirror in this commit.
 - **Verification**: `grep -h 'CLI_PIN' plugins/cortex-overnight/cli_pin.py plugins/cortex-core/install_core.py` shows matching `v2.35.0` AND `grep -c 'install_core.py' bin/cortex-rewrite-cli-pin` ≥ 1 (rewriter source names the second target) AND `grep -c 'install_core.py' .github/workflows/auto-release.yml` ≥ 1 (workflow git-adds it) AND `just build-plugin` then `git diff --exit-code plugins/cortex-core/bin/` is clean
-- **Status**: [ ] pending
+- **Status**: [x] done (2044115b)
 
 ### Task 10: Target-set invariant + release-invariant tests for both pins
 - **Files**: `tests/test_cli_pin_target_set.py` (new), `tests/test_release_artifact_invariants.py`
