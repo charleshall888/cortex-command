@@ -16,3 +16,6 @@
 {"ts": "2026-07-13T14:40:56Z", "event": "batch_dispatch", "feature": "378", "batch": 3, "tasks": [8]}
 {"ts": "2026-07-13T14:45:26Z", "event": "batch_dispatch", "feature": "378", "batch": 4, "tasks": [11]}
 {"ts": "2026-07-13T14:56:53Z", "event": "phase_transition", "feature": "378", "from": "implement", "to": "review", "tier": "complex"}
+{"ts": "2026-07-13T15:17:36Z", "event": "review_verdict", "feature": "378", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
+{"ts": "2026-07-13T15:17:45Z", "event": "phase_transition", "feature": "378", "from": "review", "to": "complete"}
+{"ts": "2026-07-13T15:18:03Z", "event": "feature_complete", "feature": "378", "tasks_total": 11, "rework_cycles": 0, "merge_anchor": "merge"}

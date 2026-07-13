@@ -2,7 +2,7 @@
 feature: "378"
 parent_backlog_uuid: 73f3083d-7468-4080-9850-87e851e40739
 parent_backlog_id: 378
-artifacts: [research, spec, plan]
+artifacts: [research, spec, plan, review]
 tags: [cli-served-lifecycle-state-machine]
 created: 2026-07-13
 updated: 2026-07-13
