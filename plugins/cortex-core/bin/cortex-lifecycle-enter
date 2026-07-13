@@ -32,5 +32,5 @@ if grep -q '^name = "cortex-command"' "${_root}/pyproject.toml" 2>/dev/null; the
 fi
 
 # Branch (d): nothing found — emit remediation message and exit 2.
-echo "cortex-lifecycle-enter: cortex-command wheel not found on PATH. To fix: run 'uv tool install --reinstall --refresh git+https://github.com/charleshall880/cortex-command.git@<latest-tag>'. If this happens after a recent upgrade, your wheel may be stale." >&2
+echo "cortex-lifecycle-enter: cortex-command wheel not found on PATH. To fix: run 'uv tool install --reinstall --refresh git+https://github.com/charleshall888/cortex-command.git@<latest-tag>'. If this happens after a recent upgrade, your wheel may be stale." >&2
 exit 2
