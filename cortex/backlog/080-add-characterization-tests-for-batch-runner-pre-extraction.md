@@ -12,7 +12,7 @@ tags: [overnight-runner, refactor, modularization, tests]
 areas: [overnight-runner]
 discovery_source: cortex/research/implement-in-autonomous-worktree-overnight-component-reuse/research.md
 session_id: null
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: add-characterization-tests-for-batch-runner-pre-extraction
 complexity: complex
 criticality: high

@@ -12,7 +12,7 @@ created: 2026-04-03
 updated: 2026-04-03
 discovery_source: cortex/research/requirements-audit/research.md
 session_id: null
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: fix-skill-sub-file-path-bug-across-all-skills
 complexity: complex
 criticality: high

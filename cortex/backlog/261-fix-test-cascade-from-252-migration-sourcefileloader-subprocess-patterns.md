@@ -9,7 +9,7 @@ created: 2026-05-20
 updated: 2026-05-25
 parent: "252"
 session_id: d3fae964-910f-4ac0-b8a8-7525d413c743
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: fix-test-cascade-from-252-migration
 complexity: complex
 criticality: medium

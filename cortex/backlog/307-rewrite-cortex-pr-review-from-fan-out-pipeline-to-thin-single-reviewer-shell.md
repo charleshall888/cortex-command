@@ -8,7 +8,7 @@ type: feature
 created: 2026-06-16
 updated: 2026-06-16
 discovery_source: cortex/research/pr-review-skill-audit/report.md
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: rewrite-cortex-pr-review-from-fan
 complexity: complex
 criticality: high

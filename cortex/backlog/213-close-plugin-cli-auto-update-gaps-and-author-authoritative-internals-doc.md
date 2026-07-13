@@ -10,7 +10,7 @@ updated: 2026-05-14
 discovery_source: 210-refresh-install-update-docs-close-mcp-only-auto-update-gaps.md
 tags: [mcp, upgrade, internals, plugin]
 session_id: null
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: close-plugin-cli-auto-update-gaps
 complexity: complex
 criticality: high

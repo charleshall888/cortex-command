@@ -10,7 +10,7 @@ updated: 2026-07-01
 parent: "340"
 tags: ['skill-efficiency-remaining-work']
 discovery_source: cortex/research/skill-efficiency-remaining-work/research.md
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: relocate-dev-router-triage-logic-to
 complexity: complex
 criticality: high

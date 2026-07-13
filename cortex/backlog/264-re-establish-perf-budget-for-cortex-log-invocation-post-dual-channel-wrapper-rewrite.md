@@ -7,7 +7,7 @@ priority: low
 type: chore
 created: 2026-05-25
 updated: 2026-05-26
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: re-establish-perf-budget-for-cortex
 complexity: complex
 criticality: medium

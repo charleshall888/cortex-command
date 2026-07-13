@@ -8,7 +8,7 @@ type: bug
 created: 2026-05-20
 updated: 2026-05-25
 session_id: null
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: revert-tmpdir-worktree-placement-and-restore
 complexity: complex
 criticality: high

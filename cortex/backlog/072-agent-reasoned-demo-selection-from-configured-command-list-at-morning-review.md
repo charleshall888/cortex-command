@@ -13,7 +13,7 @@ areas: [skills]
 blocked-by: []
 blocks: []
 session_id: null
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: agent-reasoned-demo-selection-from-configured-command-list-at-morning-review
 complexity: simple
 criticality: high

@@ -13,7 +13,7 @@ created: 2026-04-03
 updated: 2026-04-03
 discovery_source: cortex/research/harness-design-long-running-apps/research.md
 session_id: null
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: reconcile-judgment-md-with-batch-brain-md
 complexity: complex
 criticality: high

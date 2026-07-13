@@ -11,7 +11,7 @@ created: 2026-05-15
 updated: 2026-05-16
 discovery_source: cortex/research/grill-me-with-docs-learnings/research.md
 session_id: null
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: adopt-one-at-a-time-grilling
 complexity: complex
 criticality: high

@@ -7,7 +7,7 @@ priority: low
 type: bug
 created: 2026-07-02
 updated: 2026-07-02
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: fix-selected-path-interactive-worktree-orphan
 complexity: complex
 criticality: high

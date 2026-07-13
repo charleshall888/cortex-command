@@ -11,7 +11,7 @@ blocked-by: []
 created: 2026-04-06
 updated: 2026-04-07
 session_id: null
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: add-index-regeneration-to-overnight-pre-flight-and-investigate-staleness-gaps
 complexity: complex
 criticality: high

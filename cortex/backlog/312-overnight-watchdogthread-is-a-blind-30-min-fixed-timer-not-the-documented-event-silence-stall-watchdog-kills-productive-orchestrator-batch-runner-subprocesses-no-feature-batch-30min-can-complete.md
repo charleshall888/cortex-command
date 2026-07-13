@@ -7,7 +7,7 @@ priority: high
 type: bug
 created: 2026-06-22
 updated: 2026-06-22
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: overnight-watchdogthread-is-a-blind-30
 complexity: complex
 criticality: high

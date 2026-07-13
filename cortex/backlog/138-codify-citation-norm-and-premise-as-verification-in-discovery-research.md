@@ -14,7 +14,7 @@ created: 2026-04-22
 updated: 2026-04-22
 discovery_source: cortex/research/audit-and-improve-discovery-skill-rigor/research.md
 session_id: null
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: codify-citation-norm-and-premise-as-verification-in-discovery-research-phase
 complexity: complex
 criticality: high

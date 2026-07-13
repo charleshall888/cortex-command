@@ -11,7 +11,7 @@ parent: "371"
 tags: ['cli-served-lifecycle-state-machine']
 discovery_source: cortex/research/cli-served-lifecycle-state-machine/research.md
 blocked-by: 370
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: build-the-verb-completion-composition-wrapper
 complexity: complex
 criticality: high

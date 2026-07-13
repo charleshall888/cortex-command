@@ -10,7 +10,7 @@ updated: 2026-06-23
 parent: "315"
 tags: ['backlog-optional-plugin']
 discovery_source: cortex/research/backlog-optional-plugin/research.md
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: extract-backlog-management-skill-into-optional
 complexity: complex
 criticality: high

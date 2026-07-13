@@ -8,7 +8,7 @@ type: feature
 created: 2026-06-03
 updated: 2026-06-03
 tags: [cortex-init, distribution, claude-md, worktree-auth, exploration]
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: explore-best-mechanism-for-lifecycle-worktree
 complexity: complex
 criticality: high

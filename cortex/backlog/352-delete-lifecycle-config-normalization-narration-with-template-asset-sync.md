@@ -11,7 +11,7 @@ discovery_source: cortex/research/skill-value-scorecard/report.html
 created: 2026-07-02
 updated: 2026-07-02
 parent: "347"
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: trim-lifecycle-config-instance-delete-narration
 complexity: simple
 criticality: medium

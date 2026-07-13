@@ -10,7 +10,7 @@ discovery_source: cortex/research/audit-interactive-phase-output-for-decision-si
 created: 2026-04-11
 updated: 2026-04-17
 session_id: null
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: suppress-internal-narration-in-lifecycle-specify-phase
 complexity: simple
 criticality: high

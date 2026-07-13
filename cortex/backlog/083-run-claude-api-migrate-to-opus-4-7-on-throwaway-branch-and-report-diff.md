@@ -11,7 +11,7 @@ parent: "82"
 tags: [opus-4-7-harness-adaptation, spike]
 discovery_source: cortex/research/opus-4-7-harness-adaptation/research.md
 session_id: 8461c4c8-0ac6-44b0-bc40-344b81200a05
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: run-claude-api-migrate-to-opus-4-7-on-throwaway-branch-and-report-diff
 complexity: simple
 criticality: medium

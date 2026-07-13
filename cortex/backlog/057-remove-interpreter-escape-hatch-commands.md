@@ -12,7 +12,7 @@ parent: 054
 blocked-by: []
 discovery_source: cortex/research/permissions-audit/research.md
 session_id: null
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: remove-interpreter-escape-hatch-commands
 complexity: simple
 criticality: high

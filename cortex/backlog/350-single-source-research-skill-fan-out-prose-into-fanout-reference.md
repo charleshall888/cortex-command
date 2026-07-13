@@ -14,7 +14,7 @@ parent: "347"
 complexity: complex
 criticality: high
 spec: cortex/lifecycle/single-source-research-skill-fan-out/spec.md
-lifecycle_phase: research
+lifecycle_phase: complete
 ---
 ## Why
 The research skill body duplicates grid, floor, and roster content that fanout.md already owns canonically, and its inline copies carry multiplied cost because they ride into fan-out searcher prompts. The audit verified three MERGE_DEDUP (s7, s18, s4) and four COMPRESS (s3, s6, s13, s17) verdicts here — all ids in this ticket refer to skills/research/SKILL.md; ids are file-scoped, and fanout.md's own unverified s3/s4 belong to the 353 sweep — but with sharp placement preconditions a naive edit would break.

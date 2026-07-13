@@ -11,7 +11,7 @@ areas: [install]
 created: 2026-04-21
 updated: 2026-04-23
 lifecycle_slug: build-cortex-setup-subcommand-and-retire-shareable-install-scaffolding
-lifecycle_phase: research
+lifecycle_phase: complete
 session_id: null
 blocks: []
 blocked-by: []

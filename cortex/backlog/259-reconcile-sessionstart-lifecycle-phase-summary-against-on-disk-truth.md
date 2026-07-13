@@ -10,7 +10,7 @@ updated: 2026-05-25
 tags: [harness, hook, observability, lifecycle]
 discovery_source: cortex/research/harness-friction-triage/research.md
 session_id: a34c9d97-2dfe-4bcc-a1ff-17308805fe4f
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: reconcile-sessionstart-lifecycle-phase-summary-against
 complexity: complex
 criticality: high

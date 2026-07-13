@@ -12,7 +12,7 @@ complexity: simple
 criticality: high
 spec: cortex/lifecycle/add-observed-merge-auto-close-for/spec.md
 areas: ['skills']
-lifecycle_phase: research
+lifecycle_phase: complete
 ---
 ## Why
 Removing morning-review's pre-merge auto-close (#342) leaves one rare intersection uncovered: when a completed feature's mid-session `status: complete` write throws (`BACKLOG_WRITE_FAILED`) AND its PR is later merged out-of-band, the PR-merge step stops at "PR already merged" before the post-merge closer runs, so the ticket lands on main but is never closed. #342 makes this non-silent (a verify-closure advisory) but deliberately defers the actual auto-close.

@@ -10,7 +10,7 @@ updated: 2026-06-23
 complexity: complex
 criticality: high
 lifecycle_slug: overnight-dispatch-sends-opus-only-xhigh
-lifecycle_phase: research
+lifecycle_phase: complete
 spec: cortex/lifecycle/overnight-dispatch-sends-opus-only-xhigh/spec.md
 areas: ['overnight-runner']
 ---

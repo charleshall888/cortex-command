@@ -13,7 +13,7 @@ created: 2026-04-03
 updated: 2026-04-03
 discovery_source: cortex/research/harness-design-long-running-apps/research.md
 session_id: null
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: fix-non-atomic-state-writes-in-overnight-runner
 complexity: complex
 criticality: high

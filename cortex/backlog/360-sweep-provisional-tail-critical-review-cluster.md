@@ -14,7 +14,7 @@ parent: "357"
 complexity: complex
 criticality: high
 spec: cortex/lifecycle/sweep-provisional-tail-critical-review-cluster/spec.md
-lifecycle_phase: research
+lifecycle_phase: complete
 ---
 ## Why
 Child of #357's decomposition (the parent umbrella carrying the provisional tail of the skill-value audit). This child owns the critical-review cluster: 26 provisional candidates (~4.9k weighted tokens) across SKILL.md (8), references/angle-menu.md (6), references/synthesizer-prompt.md (4), references/reviewer-prompt.md (3), references/verification-gates.md (2), references/residue-write.md (2), and references/fallback-reviewer-prompt.md (1). The a-to-b-downgrade-rubric candidates are excluded (they overlap #300). None were adversarially verified.

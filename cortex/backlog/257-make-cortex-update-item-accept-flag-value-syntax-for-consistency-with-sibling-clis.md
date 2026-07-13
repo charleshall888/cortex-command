@@ -10,7 +10,7 @@ updated: 2026-05-25
 tags: [harness, cli, skill-authoring]
 discovery_source: cortex/research/harness-friction-triage/research.md
 session_id: 4e0f0814-7d4c-4551-b965-7a5306917c41
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: make-cortex-update-item-accept-flag
 complexity: complex
 criticality: high

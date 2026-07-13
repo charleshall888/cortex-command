@@ -14,7 +14,7 @@ parent: "347"
 complexity: complex
 criticality: high
 spec: cortex/lifecycle/restructure-commit-skill-lazy-load-release/spec.md
-lifecycle_phase: research
+lifecycle_phase: complete
 ---
 ## Why
 The commit skill body lands in context on every commit the lifecycle makes — many times per run — and the audit verified five of its sections as trim-safe. The release-type marker mechanics and their worked examples are only relevant when a release-worthy change is being committed, yet they are resident on every invocation.

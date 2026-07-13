@@ -8,7 +8,7 @@ type: feature
 created: 2026-05-25
 updated: 2026-05-25
 lifecycle_slug: extend-cortex-cli-version-sync-hook
-lifecycle_phase: research
+lifecycle_phase: complete
 complexity: complex
 criticality: high
 spec: cortex/lifecycle/extend-cortex-cli-version-sync-hook/spec.md

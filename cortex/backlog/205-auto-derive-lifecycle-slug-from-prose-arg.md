@@ -12,7 +12,7 @@ complexity: simple
 criticality: high
 areas: [skills]
 session_id: null
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: auto-derive-lifecycle-slug-from-prose-style-invocation-args
 spec: cortex/lifecycle/auto-derive-lifecycle-slug-from-prose-style-invocation-args/spec.md
 ---

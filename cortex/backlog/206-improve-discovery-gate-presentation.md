@@ -12,7 +12,7 @@ complexity: complex
 criticality: high
 areas: [skills]
 session_id: null
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: improve-discovery-gate-presentation
 spec: cortex/lifecycle/improve-discovery-gate-presentation/spec.md
 ---

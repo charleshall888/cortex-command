@@ -9,7 +9,7 @@ tags: [distribution, upgrade, docs, mcp]
 created: 2026-05-13
 updated: 2026-05-13
 session_id: null
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: refresh-install-update-docs-close-mcp
 complexity: complex
 criticality: high

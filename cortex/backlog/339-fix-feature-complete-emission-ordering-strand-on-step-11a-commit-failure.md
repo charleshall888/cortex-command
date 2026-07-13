@@ -11,7 +11,7 @@ parent: 336
 complexity: complex
 criticality: medium
 areas: ['lifecycle']
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: fix-feature-complete-emission-ordering-strand
 spec: cortex/lifecycle/fix-feature-complete-emission-ordering-strand/spec.md
 ---
