@@ -1,5 +1,5 @@
 ---
-feature: 374
+feature: "374"
 parent_backlog_uuid: 84506324-4fe3-4ae3-8228-770b3f5c5b68
 parent_backlog_id: 374
 artifacts: [research, spec, plan, review]

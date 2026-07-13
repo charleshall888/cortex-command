@@ -10,7 +10,7 @@ updated: 2026-07-13
 tags: ['cli-served-lifecycle-state-machine']
 areas: ['backlog', 'lifecycle']
 lifecycle_phase: research
-lifecycle_slug: 378
+lifecycle_slug: "378"
 complexity: complex
 criticality: high
 spec: cortex/lifecycle/378/spec.md

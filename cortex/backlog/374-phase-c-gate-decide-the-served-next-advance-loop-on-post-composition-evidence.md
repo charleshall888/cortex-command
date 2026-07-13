@@ -12,7 +12,7 @@ tags: ['cli-served-lifecycle-state-machine']
 discovery_source: cortex/research/cli-served-lifecycle-state-machine/research.md
 blocked-by: 373
 lifecycle_phase: research
-lifecycle_slug: 374
+lifecycle_slug: "374"
 complexity: complex
 criticality: high
 spec: cortex/lifecycle/374/spec.md
