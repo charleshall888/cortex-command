@@ -579,6 +579,47 @@ def _build_sentinel_absence_event(
     return event
 
 
+def _emit_sentinel_advisory(
+    lifecycle_root: str,
+    feature: str,
+    event: dict,
+    observed_sha: str,
+) -> int:
+    """Emit a ``sentinel_advisory`` event (write-guarded) and return exit 0.
+
+    Called from ``_cmd_check_artifact_stable``/``_cmd_check_synth_stable`` when
+    the pure verifier returned ``absent`` (the async reviewer/synth dropped its
+    read-sentinel from its final message) BUT re-hashing the pinned
+    ``--artifact-path`` matched the expected SHA — proving the artifact never
+    drifted. The advisory-clean outcome folds into the existing pass exit code
+    (0), NOT the exit-4 telemetry-skip code: an advisory-clean gate run is a
+    pass, not a suppressed write.
+
+    The dir-existence write-guard (mirroring the sibling exclusion paths) still
+    suppresses the append when the target lifecycle dir is absent, so a
+    non-feature invocation cannot create a phantom lifecycle dir; the exit code
+    stays 0 either way (the advisory verdict was already reported on stdout).
+    """
+    events_log = Path(lifecycle_root) / feature / "events.log"
+    sys.stdout.write(f"ADVISORY {observed_sha}\n")
+    # gate-class: advisory
+    if not _lifecycle_dir_exists(lifecycle_root, feature):
+        print(
+            f"telemetry skipped: lifecycle dir absent for feature "
+            f"{feature!r}; sentinel_advisory event not recorded",
+            file=sys.stderr,
+        )
+        return 0
+    try:
+        log_event_at(events_log, event)
+    except OSError as e:
+        print(
+            f"WARN: failed to append sentinel_advisory event: {e}",
+            file=sys.stderr,
+        )
+    return 0
+
+
 # ---------------------------------------------------------------------------
 # CLI subcommands
 # ---------------------------------------------------------------------------
@@ -623,6 +664,34 @@ def _cmd_check_synth_stable(args: argparse.Namespace) -> int:
     if status == "ok":
         sys.stdout.write(f"OK {observed}\n")
         return 0
+
+    # Absent-sentinel re-hash disambiguation (spec R1/R2/R3), mirroring
+    # _cmd_check_artifact_stable. An absent SYNTH_READ_OK sentinel whose pinned
+    # ``--artifact-path`` re-hashes to the expected SHA is a benign
+    # async-delivery omission → advisory pass (exit 0 + ``sentinel_advisory``),
+    # not drift. A mismatch or an unreadable/deleted file falls through to
+    # today's ``synthesizer_drift`` exclusion. This decision deliberately sits
+    # BEFORE the exit-4 telemetry write-guard below so an advisory-clean result
+    # returns 0 (never 4); omitting ``--artifact-path`` keeps exactly today's
+    # behavior (backward-compatible, fail-closed).
+    if status == "absent" and args.artifact_path is not None:
+        # gate-class: advisory
+        try:
+            rehashed: str | None = sha256_of_path(args.artifact_path)
+        except OSError:
+            rehashed = None
+        if rehashed == args.expected_sha:
+            advisory_event = {
+                "ts": _now_iso(),
+                "event": "sentinel_advisory",
+                "feature": args.feature,
+                "expected_sha": args.expected_sha,
+                "observed_sha_or_null": rehashed,
+            }
+            return _emit_sentinel_advisory(
+                lifecycle_root, args.feature, advisory_event, rehashed
+            )
+        # Drifted or unreadable → fall through to today's synthesizer_drift.
 
     events_log = Path(lifecycle_root) / args.feature / "events.log"
 
@@ -698,6 +767,37 @@ def _cmd_check_artifact_stable(args: argparse.Namespace) -> int:
     if status == "ok":
         sys.stdout.write(f"OK {observed}\n")
         return 0
+
+    # Absent-sentinel re-hash disambiguation (spec R1/R2/R3). When the pure
+    # verifier returned ``absent`` (the async reviewer dropped its READ_OK
+    # sentinel from its final message) and the caller pinned the artifact via
+    # the optional ``--artifact-path``, re-hash that path: a match proves the
+    # file never drifted, so the dropped sentinel was a benign async-delivery
+    # omission → advisory pass (exit 0 + ``sentinel_advisory``), not drift. A
+    # mismatch or an unreadable/deleted file falls through to today's exit-3
+    # exclusion. This decision deliberately sits BEFORE the exit-4 telemetry
+    # write-guard below so an advisory-clean result returns 0 (never 4); when
+    # ``--artifact-path`` is omitted, behavior is exactly today's (fail-closed).
+    if status == "absent" and args.artifact_path is not None:
+        # gate-class: advisory
+        try:
+            rehashed: str | None = sha256_of_path(args.artifact_path)
+        except OSError:
+            rehashed = None
+        if rehashed == args.expected_sha:
+            advisory_event = {
+                "ts": _now_iso(),
+                "event": "sentinel_advisory",
+                "feature": args.feature,
+                "reviewer_angle": args.reviewer_angle,
+                "model_tier": args.model_tier,
+                "expected_sha": args.expected_sha,
+                "observed_sha_or_null": rehashed,
+            }
+            return _emit_sentinel_advisory(
+                lifecycle_root, args.feature, advisory_event, rehashed
+            )
+        # Drifted or unreadable → fall through to today's exit-3 exclusion.
 
     # status is one of {"absent", "mismatch", "read_failed"}.
     # Map check_artifact_stable status -> record-exclusion reason enum.
@@ -839,6 +939,14 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     vs.add_argument("--feature", required=True)
     vs.add_argument("--expected-sha", required=True)
+    vs.add_argument("--artifact-path", default=None, help=(
+        "Optional resolved artifact path (the prepare-dispatch resolved_path). "
+        "When the SYNTH_READ_OK sentinel is absent, the wrapper re-hashes this "
+        "path via sha256_of_path: a match proves the artifact never drifted → "
+        "advisory pass (exit 0 + sentinel_advisory) instead of exit-3 "
+        "exclusion. Omit to keep today's absent→exit-3 behavior "
+        "(backward-compatible, fail-closed)."
+    ))
     vs.set_defaults(func=_cmd_check_synth_stable)
 
     vr = sub.add_parser(
@@ -872,6 +980,14 @@ def _build_parser() -> argparse.ArgumentParser:
         default=50,
         help="Leading lines of reviewer output to scan (default: 50).",
     )
+    vr.add_argument("--artifact-path", default=None, help=(
+        "Optional resolved artifact path (the prepare-dispatch resolved_path). "
+        "When the READ_OK sentinel is absent, the wrapper re-hashes this path "
+        "via sha256_of_path: a match proves the artifact never drifted → "
+        "advisory pass (exit 0 + sentinel_advisory) instead of exit-3 "
+        "exclusion. Omit to keep today's absent→exit-3 behavior "
+        "(backward-compatible, fail-closed)."
+    ))
     vr.add_argument(
         "--source-path",
         default=None,
