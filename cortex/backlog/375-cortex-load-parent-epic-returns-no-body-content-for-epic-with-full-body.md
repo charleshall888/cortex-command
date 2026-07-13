@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 991d9fc4-3c6d-4f76-87bf-7cda5186c6c5
 title: cortex-load-parent-epic returns no body content for epic with full body
-status: backlog
+status: complete
 priority: medium
 type: bug
 created: 2026-07-10
-updated: 2026-07-10
+updated: 2026-07-13
 areas: ['backlog']
 ---
 ## Why

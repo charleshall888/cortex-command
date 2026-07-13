@@ -17,7 +17,8 @@ Exits 0 on no_parent / missing / non_epic / loaded; exits 1 on unreadable.
 
 Body extraction priority:
   ``## Context from discovery`` → ``## Context`` →
-  ``## Framing (post-discovery)`` → first paragraph after H1 →
+  ``## Framing (post-discovery)`` → ``## Why`` + ``## Role`` intent sections
+  (concatenated, with headings) → first paragraph after H1 →
   ``(no body content)`` placeholder.
 
 Token cap: ≤500 tokens via ``tiktoken.get_encoding("cl100k_base")`` if
@@ -55,11 +56,21 @@ CHAR_FALLBACK_CAP = 2000
 TRUNCATION_MARKER = "… (truncated)"
 PLACEHOLDER_BODY = "(no body content)"
 
-# Body-extraction heading priority (in order).
+# Body-extraction heading priority (in order). These are the discovery-epic
+# framing sections; the first non-empty match wins.
 SECTION_PRIORITY: tuple[str, ...] = (
     "## Context from discovery",
     "## Context",
     "## Framing (post-discovery)",
+)
+
+# Standard backlog-body intent sections, tried when no discovery-framing
+# section is present (hand-authored epics use the Why/Role/Integration/Edges
+# format). Both are concatenated with their headings so the alignment rubric
+# receives the epic's stated intent (Why) and scope (Role) together.
+INTENT_SECTIONS: tuple[str, ...] = (
+    "## Why",
+    "## Role",
 )
 
 
@@ -202,12 +213,34 @@ def _first_paragraph_after_h1(body: str) -> str:
     return "\n".join(paragraph).strip()
 
 
+def _extract_intent_sections(body: str) -> str:
+    """Return the Why/Role intent sections (with headings), concatenated.
+
+    Yields the empty string when neither section is present or both are empty,
+    so the caller can fall through to the next extraction strategy.
+    """
+    parts: list[str] = []
+    for heading in INTENT_SECTIONS:
+        text = _section_text(body, heading)
+        if text is not None and text.strip():
+            parts.append(f"{heading}\n\n{text.strip()}")
+    return "\n\n".join(parts)
+
+
 def _extract_body_content(body: str) -> str:
-    """Apply the named-section-priority heuristic and return extracted text."""
+    """Apply the named-section-priority heuristic and return extracted text.
+
+    Extraction order: discovery-framing sections (``SECTION_PRIORITY``, first
+    non-empty wins) → Why/Role intent sections (concatenated) → first paragraph
+    after the H1 → ``PLACEHOLDER_BODY``.
+    """
     for heading in SECTION_PRIORITY:
         text = _section_text(body, heading)
         if text is not None and text.strip():
             return text.strip()
+    intent = _extract_intent_sections(body)
+    if intent:
+        return intent
     paragraph = _first_paragraph_after_h1(body)
     if paragraph:
         return paragraph

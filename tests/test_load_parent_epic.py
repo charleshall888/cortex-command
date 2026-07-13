@@ -223,6 +223,72 @@ def test_loaded(tmp_path):
     assert "Should not appear" not in payload["body"]
 
 
+def test_loaded_why_role_intent_sections(tmp_path):
+    """Epic in Why/Role/Integration/Edges format (no discovery-framing section,
+    no H1) → Why and Role are concatenated with headings. Regression for #375,
+    where such epics returned the (no body content) placeholder.
+    """
+    _write(
+        tmp_path / "300-test-child.md",
+        "---\ntitle: Test child\nparent: 82\n---\n",
+    )
+    epic_body = (
+        "---\n"
+        "title: Why/Role epic\n"
+        "type: epic\n"
+        "---\n\n"
+        "## Why\n\n"
+        "The recorded intent of this epic.\n\n"
+        "## Role\n\n"
+        "The scope this epic parents.\n\n"
+        "## Integration\n\n"
+        "Should not appear in the extracted intent.\n\n"
+        "## Edges\n\n"
+        "Also should not appear.\n"
+    )
+    _write(tmp_path / "082-why-role-epic.md", epic_body)
+    result = _run("300-test-child", tmp_path)
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "loaded"
+    assert payload["parent_id"] == 82
+    # Falls back to the frontmatter title when there is no H1.
+    assert payload["title"] == "Why/Role epic"
+    body = payload["body"]
+    assert "## Why" in body and "The recorded intent of this epic." in body
+    assert "## Role" in body and "The scope this epic parents." in body
+    # Integration/Edges are not part of the intent extraction.
+    assert "Should not appear" not in body
+    assert "Also should not appear" not in body
+
+
+def test_loaded_discovery_section_wins_over_intent(tmp_path):
+    """When a discovery-framing section AND Why/Role both exist, the
+    discovery-framing section still wins (priority preserved).
+    """
+    _write(
+        tmp_path / "300-test-child.md",
+        "---\ntitle: Test child\nparent: 82\n---\n",
+    )
+    epic_body = (
+        "---\n"
+        "title: Mixed epic\n"
+        "type: epic\n"
+        "---\n\n"
+        "## Context\n\n"
+        "Canonical discovery context wins.\n\n"
+        "## Why\n\n"
+        "Intent section should be ignored here.\n"
+    )
+    _write(tmp_path / "082-mixed-epic.md", epic_body)
+    result = _run("300-test-child", tmp_path)
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "loaded"
+    assert "Canonical discovery context wins." in payload["body"]
+    assert "Intent section should be ignored here." not in payload["body"]
+
+
 def test_no_extracted_body_placeholder(tmp_path):
     """Epic with no named sections AND no first paragraph → placeholder body."""
     _write(
