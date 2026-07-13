@@ -1,0 +1,33 @@
+I have enough context. Let me write the findings.
+
+## Findings: Async delivery drops the read-sentinel from the final message
+
+### What's wrong
+
+The reviewer emitted its `READ_OK:` read-attestation early — before the first
+`## ` heading, exactly as the (now-corrected) prompt once instructed — but the
+Agent/Task tool returns only this sub-agent's *final* message, so the early
+sentinel is structurally discarded by the time the gate parses this output.
+Nothing in this reviewer's substantive analysis touched the artifact after the
+read; the file the orchestrator pinned at dispatch time is byte-identical at
+gate time. The absence of the sentinel here is a benign async-delivery
+omission, not evidence of drift.
+
+### Assumptions at risk
+
+A gate that treats bare sentinel-absence as drift will invalidate this pass
+even though the artifact provably never changed. The correct disambiguation is
+a gate-time re-hash of the pinned path: if it matches, the dropped sentinel is
+advisory noise and the pass proceeds.
+
+<!--findings-json-->
+{
+  "angle": "Async delivery drops the read-sentinel from the final message",
+  "findings": [
+    {
+      "class": "C",
+      "finding": "The read-sentinel is absent from the final message, but the pinned artifact is unchanged; a re-hash of the pinned path is the authoritative stability check.",
+      "evidence_quote": "the Agent/Task tool returns only a sub-agent's final message, so a sentinel emitted early is structurally discarded"
+    }
+  ]
+}

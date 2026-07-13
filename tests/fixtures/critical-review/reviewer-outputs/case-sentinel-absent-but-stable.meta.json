@@ -1,0 +1,8 @@
+{
+  "expected_classification": "absent",
+  "expected_sha": "ec329d784bbeff228d4a266d36fd817583164d1a44245af1f076265e22004574",
+  "pinned_artifact_content": "Pinned artifact bytes for the sentinel-absent-but-stable advisory scenario.\nThe reviewer/synth dropped its read-sentinel from its final message, but the\ngate-time re-hash of these bytes matches the pinned SHA, proving no drift.\n",
+  "captured_from": "Hand-synthesized for the #376 gate-time re-hash wrapper tests (spec critical-review-sentinel-gate-excludes-async R2/R3)",
+  "captured_date": "2026-07-13",
+  "notes": "ADDED (not a re-baseline) for the CLI-wrapper advisory-pass scenario. The .txt is a sentinel-free reviewer/synthesizer output: the pure verifier (check_artifact_stable / check_synth_stable) classifies it `absent`, so it drives the wrapper's absent branch. `pinned_artifact_content` is the exact bytes of the artifact the orchestrator pinned at dispatch; `expected_sha` is its real SHA-256 (verified in-test via sha256_of_path). In the advisory-pass wrapper test the caller writes `pinned_artifact_content` to a file, passes it as --artifact-path plus --expected-sha, and the wrapper re-hashes it to the matching SHA -> exit 0 + sentinel_advisory (no drift). Distinct from case-absent, which documents the pure-verifier absent route only; this fixture documents the wrapper re-hash advisory outcome. expected_sha here is the pinned-artifact SHA, NOT a committed-file SHA."
+}

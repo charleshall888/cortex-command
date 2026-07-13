@@ -1,7 +1,19 @@
 """Unit tests for ``check_artifact_stable`` in ``cortex_command.critical_review``.
 
-Exercises the reviewer-side sentinel parser at the function-call layer
-(not the CLI surface — CLI coverage is implicit in the function tests).
+Two layers of coverage live here:
+
+  (A) the reviewer-side sentinel parser at the function-call layer
+      (``check_artifact_stable`` — the fixture-driven and inline-string
+      cases below); and
+  (B) the CLI gate wrappers ``_cmd_check_artifact_stable`` /
+      ``_cmd_check_synth_stable`` driven through ``main`` — the
+      absent-sentinel gate-time re-hash disambiguation from spec
+      ``critical-review-sentinel-gate-excludes-async`` R2/R3 (the
+      ``TestArtifactStableWrapperRehash`` / ``TestSynthStableWrapperRehash``
+      classes at the end of the file). The wrapper tests assert the three
+      new absent-branch outcomes (advisory-pass, drift, unreadable) plus
+      the no-``--artifact-path`` backward-compat exclusion, on BOTH
+      wrappers.
 
 Coverage map:
 
@@ -31,10 +43,17 @@ Coverage map:
 
 from __future__ import annotations
 
+import io
 import json
 import pathlib
 
-from cortex_command.critical_review import check_artifact_stable
+import pytest
+
+from cortex_command.critical_review import (
+    check_artifact_stable,
+    main as cr_main,
+    sha256_of_path,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -235,3 +254,320 @@ def test_window_size_default_is_50() -> None:
     # One more preamble line pushes the sentinel to line 51 (outside window).
     on_line_51 = "\n".join(["x"] * 50) + f"\nREAD_OK: /p {expected_sha}"
     assert check_artifact_stable(on_line_51, expected_sha) == ("absent", None)
+
+
+# ---------------------------------------------------------------------------
+# (3) CLI-wrapper gate-time re-hash tests
+#     (spec critical-review-sentinel-gate-excludes-async, R2/R3)
+# ---------------------------------------------------------------------------
+#
+# These drive the argparse entry point ``main`` against the two gate
+# wrappers. On an ``absent`` pure-verifier result, an optional
+# ``--artifact-path`` is re-hashed via ``sha256_of_path``:
+#   - re-hash matches expected SHA  -> exit 0 + ``sentinel_advisory``
+#   - re-hash differs (drift)        -> exit 3 (+ wrapper's drift event)
+#   - path unreadable/deleted        -> exit 3
+#   - ``--artifact-path`` omitted    -> exit 3 (today's behavior, unchanged)
+#
+# CRITICAL asymmetry (verified against the Task-2 implementation in
+# ``cortex_command/critical_review/__init__.py``): the ARTIFACT wrapper's
+# absent+drift branch emits ``sentinel_absence``; the SYNTH wrapper's
+# absent+drift branch preserves its EXISTING behavior and emits
+# ``synthesizer_drift`` (NOT ``sentinel_absence``). The advisory-clean
+# event name is ``sentinel_advisory`` on both.
+#
+# The lifecycle dir is created in every case so the write-guard does not
+# short-circuit to EXIT_TELEMETRY_SKIPPED (4); we are exercising the
+# re-hash verdict (0 / 3), not the phantom-dir guard (covered by
+# ``tests/test_critical_review_phantom_guard.py``).
+
+SENTINEL_ABSENT_STABLE = "case-sentinel-absent-but-stable"
+
+
+def _read_jsonl(path: pathlib.Path) -> list[dict]:
+    return [
+        json.loads(line)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+
+def _invoke_check_artifact_stable(
+    lifecycle_root: pathlib.Path,
+    feature: str,
+    input_file: pathlib.Path,
+    expected_sha: str,
+    artifact_path: pathlib.Path | None = None,
+) -> int:
+    """Drive ``check-artifact-stable`` through ``main`` (reviewer path)."""
+    argv = [
+        "--lifecycle-root",
+        str(lifecycle_root),
+        "check-artifact-stable",
+        "--feature",
+        feature,
+        "--reviewer-angle",
+        "code-quality",
+        "--expected-sha",
+        expected_sha,
+        "--model-tier",
+        "sonnet",
+        "--input-file",
+        str(input_file),
+    ]
+    if artifact_path is not None:
+        argv += ["--artifact-path", str(artifact_path)]
+    return cr_main(argv)
+
+
+def _invoke_check_synth_stable(
+    monkeypatch: pytest.MonkeyPatch,
+    lifecycle_root: pathlib.Path,
+    feature: str,
+    stdin_text: str,
+    expected_sha: str,
+    artifact_path: pathlib.Path | None = None,
+) -> int:
+    """Drive ``check-synth-stable`` through ``main`` (synthesizer path)."""
+    monkeypatch.setattr("sys.stdin", io.StringIO(stdin_text))
+    argv = [
+        "--lifecycle-root",
+        str(lifecycle_root),
+        "check-synth-stable",
+        "--feature",
+        feature,
+        "--expected-sha",
+        expected_sha,
+    ]
+    if artifact_path is not None:
+        argv += ["--artifact-path", str(artifact_path)]
+    return cr_main(argv)
+
+
+class TestArtifactStableWrapperRehash:
+    """``_cmd_check_artifact_stable`` absent-branch re-hash disambiguation.
+
+    The sentinel-free reviewer output (``case-sentinel-absent-but-stable``)
+    drives the pure verifier's ``absent`` branch; the ``--artifact-path``
+    re-hash decides advisory-pass vs. drift-exclusion.
+    """
+
+    def test_absent_stable_path_advisory_pass(self, tmp_path: pathlib.Path) -> None:
+        """Absent sentinel + re-hash matches -> exit 0 + ``sentinel_advisory`` (R2)."""
+        text, meta = _load_case(SENTINEL_ABSENT_STABLE)
+        expected_sha = meta["expected_sha"]
+        lifecycle_root = tmp_path / "cortex" / "lifecycle"
+        feature = "advisory-feature"
+        feature_dir = lifecycle_root / feature
+        feature_dir.mkdir(parents=True)
+
+        input_file = tmp_path / "reviewer-output.txt"
+        input_file.write_text(text, encoding="utf-8")
+
+        # The pinned artifact re-hashes to the expected SHA (proving no drift).
+        pinned = tmp_path / "pinned-artifact.md"
+        pinned.write_text(meta["pinned_artifact_content"], encoding="utf-8")
+        # Fixture-integrity sanity: the declared expected_sha IS the real hash.
+        assert sha256_of_path(str(pinned)) == expected_sha
+
+        rc = _invoke_check_artifact_stable(
+            lifecycle_root, feature, input_file, expected_sha, artifact_path=pinned
+        )
+
+        assert rc == 0
+        rows = _read_jsonl(feature_dir / "events.log")
+        assert len(rows) == 1
+        assert rows[0]["event"] == "sentinel_advisory"
+        assert rows[0]["feature"] == feature
+        assert rows[0]["reviewer_angle"] == "code-quality"
+        assert rows[0]["observed_sha_or_null"] == expected_sha
+        # The advisory outcome MUST NOT emit a (forbidden) sentinel_absence row.
+        assert all(r["event"] != "sentinel_absence" for r in rows)
+
+    def test_absent_drifted_path_exit3_sentinel_absence(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        """Absent sentinel + re-hash differs -> exit 3 + ``sentinel_absence`` (R3)."""
+        text, meta = _load_case(SENTINEL_ABSENT_STABLE)
+        expected_sha = meta["expected_sha"]
+        lifecycle_root = tmp_path / "cortex" / "lifecycle"
+        feature = "drift-feature"
+        feature_dir = lifecycle_root / feature
+        feature_dir.mkdir(parents=True)
+
+        input_file = tmp_path / "reviewer-output.txt"
+        input_file.write_text(text, encoding="utf-8")
+
+        drifted = tmp_path / "drifted-artifact.md"
+        drifted.write_text("DRIFTED: these bytes differ from the pinned artifact\n", encoding="utf-8")
+        assert sha256_of_path(str(drifted)) != expected_sha
+
+        rc = _invoke_check_artifact_stable(
+            lifecycle_root, feature, input_file, expected_sha, artifact_path=drifted
+        )
+
+        assert rc == 3
+        rows = _read_jsonl(feature_dir / "events.log")
+        assert len(rows) == 1
+        assert rows[0]["event"] == "sentinel_absence"
+        assert rows[0]["reason"] == "absent"
+        assert all(r["event"] != "sentinel_advisory" for r in rows)
+
+    def test_absent_unreadable_path_exit3(self, tmp_path: pathlib.Path) -> None:
+        """Absent sentinel + unreadable/deleted ``--artifact-path`` -> exit 3 (R3)."""
+        text, meta = _load_case(SENTINEL_ABSENT_STABLE)
+        expected_sha = meta["expected_sha"]
+        lifecycle_root = tmp_path / "cortex" / "lifecycle"
+        feature = "unreadable-feature"
+        feature_dir = lifecycle_root / feature
+        feature_dir.mkdir(parents=True)
+
+        input_file = tmp_path / "reviewer-output.txt"
+        input_file.write_text(text, encoding="utf-8")
+
+        # Never created — sha256_of_path raises OSError -> treated as drift.
+        missing = tmp_path / "does-not-exist.md"
+
+        rc = _invoke_check_artifact_stable(
+            lifecycle_root, feature, input_file, expected_sha, artifact_path=missing
+        )
+
+        assert rc == 3
+        rows = _read_jsonl(feature_dir / "events.log")
+        assert len(rows) == 1
+        assert rows[0]["event"] == "sentinel_absence"
+
+    def test_absent_no_artifact_path_exit3_backcompat(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        """Absent sentinel + no ``--artifact-path`` -> today's exit 3 exclusion (R1)."""
+        text, meta = _load_case(SENTINEL_ABSENT_STABLE)
+        expected_sha = meta["expected_sha"]
+        lifecycle_root = tmp_path / "cortex" / "lifecycle"
+        feature = "backcompat-feature"
+        feature_dir = lifecycle_root / feature
+        feature_dir.mkdir(parents=True)
+
+        input_file = tmp_path / "reviewer-output.txt"
+        input_file.write_text(text, encoding="utf-8")
+
+        rc = _invoke_check_artifact_stable(
+            lifecycle_root, feature, input_file, expected_sha, artifact_path=None
+        )
+
+        assert rc == 3
+        rows = _read_jsonl(feature_dir / "events.log")
+        assert len(rows) == 1
+        assert rows[0]["event"] == "sentinel_absence"
+        assert rows[0]["reason"] == "absent"
+
+
+class TestSynthStableWrapperRehash:
+    """``_cmd_check_synth_stable`` absent-branch re-hash disambiguation.
+
+    Distinct function from ``_cmd_check_artifact_stable``: the advisory-clean
+    event is ``sentinel_advisory`` (shared), but the absent+drift branch
+    preserves the synth wrapper's EXISTING ``synthesizer_drift`` event —
+    NOT ``sentinel_absence``.
+    """
+
+    def test_absent_stable_path_advisory_pass(
+        self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Absent SYNTH sentinel + re-hash matches -> exit 0 + ``sentinel_advisory`` (R2)."""
+        text, meta = _load_case(SENTINEL_ABSENT_STABLE)
+        expected_sha = meta["expected_sha"]
+        lifecycle_root = tmp_path / "cortex" / "lifecycle"
+        feature = "synth-advisory-feature"
+        feature_dir = lifecycle_root / feature
+        feature_dir.mkdir(parents=True)
+
+        pinned = tmp_path / "pinned-artifact.md"
+        pinned.write_text(meta["pinned_artifact_content"], encoding="utf-8")
+        assert sha256_of_path(str(pinned)) == expected_sha
+
+        rc = _invoke_check_synth_stable(
+            monkeypatch, lifecycle_root, feature, text, expected_sha, artifact_path=pinned
+        )
+
+        assert rc == 0
+        rows = _read_jsonl(feature_dir / "events.log")
+        assert len(rows) == 1
+        assert rows[0]["event"] == "sentinel_advisory"
+        assert rows[0]["feature"] == feature
+        assert rows[0]["observed_sha_or_null"] == expected_sha
+        # Synth advisory event carries no reviewer_angle/model_tier (distinct schema).
+        assert "reviewer_angle" not in rows[0]
+        assert all(r["event"] != "synthesizer_drift" for r in rows)
+
+    def test_absent_drifted_path_exit3_synthesizer_drift(
+        self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Absent SYNTH sentinel + re-hash differs -> exit 3 + ``synthesizer_drift`` (R3).
+
+        Asserts the synth wrapper's EXISTING drift event name, NOT
+        ``sentinel_absence`` — the load-bearing artifact-vs-synth asymmetry.
+        """
+        text, meta = _load_case(SENTINEL_ABSENT_STABLE)
+        expected_sha = meta["expected_sha"]
+        lifecycle_root = tmp_path / "cortex" / "lifecycle"
+        feature = "synth-drift-feature"
+        feature_dir = lifecycle_root / feature
+        feature_dir.mkdir(parents=True)
+
+        drifted = tmp_path / "drifted-artifact.md"
+        drifted.write_text("DRIFTED: synth bytes differ from the pinned artifact\n", encoding="utf-8")
+        assert sha256_of_path(str(drifted)) != expected_sha
+
+        rc = _invoke_check_synth_stable(
+            monkeypatch, lifecycle_root, feature, text, expected_sha, artifact_path=drifted
+        )
+
+        assert rc == 3
+        rows = _read_jsonl(feature_dir / "events.log")
+        assert len(rows) == 1
+        assert rows[0]["event"] == "synthesizer_drift"
+        assert rows[0]["event"] != "sentinel_absence"
+        assert all(r["event"] != "sentinel_advisory" for r in rows)
+
+    def test_absent_unreadable_path_exit3(
+        self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Absent SYNTH sentinel + unreadable ``--artifact-path`` -> exit 3 (R3)."""
+        text, meta = _load_case(SENTINEL_ABSENT_STABLE)
+        expected_sha = meta["expected_sha"]
+        lifecycle_root = tmp_path / "cortex" / "lifecycle"
+        feature = "synth-unreadable-feature"
+        feature_dir = lifecycle_root / feature
+        feature_dir.mkdir(parents=True)
+
+        missing = tmp_path / "does-not-exist.md"
+
+        rc = _invoke_check_synth_stable(
+            monkeypatch, lifecycle_root, feature, text, expected_sha, artifact_path=missing
+        )
+
+        assert rc == 3
+        rows = _read_jsonl(feature_dir / "events.log")
+        assert len(rows) == 1
+        assert rows[0]["event"] == "synthesizer_drift"
+
+    def test_absent_no_artifact_path_exit3_backcompat(
+        self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Absent SYNTH sentinel + no ``--artifact-path`` -> today's exit 3 (R1)."""
+        text, meta = _load_case(SENTINEL_ABSENT_STABLE)
+        expected_sha = meta["expected_sha"]
+        lifecycle_root = tmp_path / "cortex" / "lifecycle"
+        feature = "synth-backcompat-feature"
+        feature_dir = lifecycle_root / feature
+        feature_dir.mkdir(parents=True)
+
+        rc = _invoke_check_synth_stable(
+            monkeypatch, lifecycle_root, feature, text, expected_sha, artifact_path=None
+        )
+
+        assert rc == 3
+        rows = _read_jsonl(feature_dir / "events.log")
+        assert len(rows) == 1
+        assert rows[0]["event"] == "synthesizer_drift"
