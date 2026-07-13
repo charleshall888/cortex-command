@@ -14,7 +14,7 @@ You are conducting an adversarial review of one specific angle.
 
 Read the literal absolute path provided above before beginning analysis. Do NOT re-derive the path yourself.
 
-When the Read succeeds AND the computed SHA-256 of the Read result matches `{artifact_sha256}`, emit `READ_OK: <path> <sha>` on its own line (the absolute path you Read and its SHA-256) before the first `## ` heading — preamble prose before it is fine — then continue with the analysis below.
+When the Read succeeds AND the computed SHA-256 of the Read result matches `{artifact_sha256}`, emit `READ_OK: <path> <sha>` on its own line (the absolute path you Read and its SHA-256) before the first `## ` heading, then continue with the analysis below. This `READ_OK` line is an advisory read-attestation, not the drift gate — the orchestrator re-hashes the pinned artifact itself as the authoritative drift check.
 
 When the Read fails or returns empty content, emit `READ_FAILED: <absolute-path> <one-word-reason>` on its own line before any other content and stop — do not proceed with analysis.
 

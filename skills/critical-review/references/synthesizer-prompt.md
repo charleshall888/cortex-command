@@ -13,7 +13,7 @@ You are synthesizing findings from multiple independent adversarial reviewers in
 
 Read the literal absolute path provided above once at the START of synthesis, before the per-finding loop. Do NOT re-derive it. Treat the Read result as the source of truth for evidence-quote re-validation throughout synthesis.
 
-When the Read succeeds AND the computed SHA-256 of the Read result matches `{artifact_sha256}`, emit `SYNTH_READ_OK: <path> <sha>` (the absolute path you Read and its SHA-256) as a line in your output before any per-finding analysis, then continue with the synthesis below.
+When the Read succeeds AND the computed SHA-256 of the Read result matches `{artifact_sha256}`, emit `SYNTH_READ_OK: <path> <sha>` (the absolute path you Read and its SHA-256) as a line in your output before any per-finding analysis, then continue with the synthesis below. This `SYNTH_READ_OK` line is an advisory read-attestation, not the drift gate — the orchestrator re-hashes the pinned artifact itself as the authoritative drift check.
 
 When the Read fails or returns empty content, emit `SYNTH_READ_FAILED: <absolute-path> <one-word-reason>` as a line in your output before any per-finding analysis and stop — do not proceed with synthesis.
 
