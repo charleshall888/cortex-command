@@ -734,6 +734,94 @@ def _project_status_inner(
     return f"wrote:{target}"
 
 
+def _project_spec_areas(
+    *, feature: str, backlog_file: Optional[str], spec_path: str,
+    areas: Optional[List[str]], clear_areas: bool, log_path: Path,
+    project_root: Optional[Path],
+) -> Optional[str]:
+    """#378 req-7: post-commit projection of the spec-approval write-back's
+    ``spec:``/``areas:`` fields — the two fields :func:`_project_status`
+    deliberately does NOT touch.
+
+    advance's ``spec-approve`` arm already writes ``status: refined`` for the
+    ``to_state == plan`` row via the lattice- and archive-shadow-guarded
+    :func:`_project_status` seam (events-first, monotonic). This companion seam
+    projects ONLY ``spec`` (the approved spec artifact path) and, preserve-on-omit,
+    ``areas`` — so the served verb owns the full write-back the standalone
+    ``spec_approve._apply_backlog_writeback`` used to (routing residue from #374)
+    WITHOUT re-writing status: re-writing status here would demote an item already
+    past ``refined`` on a re-approve/kickback, reintroducing the hazard-4 demotion
+    the ``_project_status`` guard prevents.
+
+    Gated through the SAME backend resolution :func:`_project_status` uses —
+    self-resolve via ``resolve_backlog_backend(root)`` plus the archive-shadow
+    guard, NOT the caller's ``--backend`` flag — so the status write and this
+    spec/areas write can never disagree about whether the backend is writable.
+    Best-effort and never-raising (post-commit side channel); returns a short
+    outcome tag the caller ignores.
+    """
+    try:
+        return _project_spec_areas_inner(
+            feature=feature, backlog_file=backlog_file, spec_path=spec_path,
+            areas=areas, clear_areas=clear_areas, log_path=log_path,
+            project_root=project_root,
+        )
+    except Exception:  # noqa: BLE001 — post-commit projection is strictly best-effort
+        return "error"
+
+
+def _project_spec_areas_inner(
+    *, feature: str, backlog_file: Optional[str], spec_path: str,
+    areas: Optional[List[str]], clear_areas: bool, log_path: Path,
+    project_root: Optional[Path],
+) -> Optional[str]:
+    """The body :func:`_project_spec_areas` wraps in a never-raise guard.
+
+    ``areas`` preserve-on-omit: an omitted ``areas`` (``None`` and not
+    *clear_areas*) drops the key so ``update_item`` leaves the field untouched;
+    ``--clear-areas`` writes ``[]``; a non-empty list writes it — mirroring
+    ``spec_approve._apply_backlog_writeback``.
+    """
+    root = Path(project_root) if project_root is not None else _root_from_log(log_path)
+    if root is None:
+        return "skip:no-root"
+
+    backlog_dir = root / "cortex" / "backlog"
+    if not backlog_dir.is_dir():
+        return "skip:no-backlog"
+
+    # Self-resolved backend gate (ADR-0016 / req-7): use the SAME resolution
+    # _project_status uses, never the caller's --backend flag — so the status
+    # write and this spec/areas write agree on whether the backend is writable.
+    if resolve_backlog_backend(root) != _CORTEX_BACKLOG_BACKEND:
+        return "skip:backend"
+
+    # Archive-shadow guard (hazard 7): a shadowed feature's item is not written.
+    if _is_archive_shadowed(feature, log_path):
+        return "refused:archive-shadow"
+
+    # Resolve the item the caller named via --backlog-file (mirroring
+    # spec_approve's write shape, which the refine skill passes distinct from
+    # --feature); fall back to the feature slug when no basename was supplied. An
+    # empty/unresolved/ambiguous reference is a silent skip (post-commit
+    # best-effort — never the exit-2 crash the standalone verb raises).
+    ref = Path(backlog_file).stem if backlog_file else feature
+    if not ref:
+        return "skip:no-item"
+    result = resolve(ref, backlog_dir)
+    if result.status != "ok" or result.item is None:
+        return f"skip:{result.status}"
+
+    # Write ONLY spec + (preserve-on-omit) areas — status stays _project_status's.
+    fields: dict = {"spec": spec_path}
+    if clear_areas:
+        fields["areas"] = []
+    elif areas:
+        fields["areas"] = areas
+    update_item(result.item, fields, backlog_dir, session_id=None)
+    return "wrote:spec-areas"
+
+
 # ---------------------------------------------------------------------------
 # Core executor
 # ---------------------------------------------------------------------------
@@ -758,6 +846,10 @@ def advance(
     tasks: Optional[list] = None,
     mode: Optional[str] = None,
     consent_utterance: Optional[str] = None,
+    spec_path: Optional[str] = None,
+    backlog_file: Optional[str] = None,
+    areas: Optional[List[str]] = None,
+    clear_areas: bool = False,
     project_root: Optional[Path] = None,
 ) -> dict:
     """Execute one composed transition under the claim/commit locking primitive.
@@ -910,6 +1002,17 @@ def advance(
     _project_status(feature=feature, transition=transition, log_path=resolved_log,
                     rows=rows, project_root=project_root)
 
+    # Spec/areas projection seam (#378 req-7) — post-commit, spec-approve/approved
+    # ONLY, and only when the caller supplied the write-back (--spec-path). Writes
+    # ONLY spec + areas; status stays _project_status-owned (events-first). An
+    # emission-only caller that omits --spec-path is unchanged (no projection).
+    if verb == "spec-approve" and decision_state == "approved" and spec_path is not None:
+        _project_spec_areas(
+            feature=feature, backlog_file=backlog_file, spec_path=spec_path,
+            areas=areas, clear_areas=clear_areas, log_path=resolved_log,
+            project_root=project_root,
+        )
+
     return {
         "state": decision_state, "feature": feature, "verb": verb,
         "from_state": effective_from, "to_state": to_state,
@@ -978,6 +1081,36 @@ def _build_parser() -> argparse.ArgumentParser:
     grp.add_argument("--emit-transition", dest="emit_transition", action="store_true")
     grp.add_argument("--no-emit-transition", dest="emit_transition", action="store_false")
     p_spec.set_defaults(emit_transition=False)
+    # #378 req-7: spec/areas write-back projection args (status stays
+    # _project_status-owned). --spec-path is the write-back trigger; an
+    # emission-only caller that omits it keeps the pre-req-7 behavior. --backend
+    # is accepted for interface parity with the refine caller but does NOT gate
+    # the write — the projection self-resolves the backend (resolve_backlog_backend)
+    # so it can never disagree with _project_status's status write.
+    p_spec.add_argument(
+        "--spec-path", default=None, metavar="PATH",
+        help="Spec artifact path projected onto the item's spec frontmatter field "
+             "(triggers the spec/areas write-back; omit for emission-only).",
+    )
+    p_spec.add_argument(
+        "--backend", default=None, metavar="BACKEND",
+        help="Accepted for interface parity with the refine caller; the write-back "
+             "self-resolves the backend (resolve_backlog_backend), so this value "
+             "does NOT gate the projection.",
+    )
+    p_spec.add_argument(
+        "--backlog-file", default=None, metavar="BASENAME",
+        help="Resolver basename of the backlog item to project spec/areas onto "
+             "(e.g. 326-foo.md); defaults to the feature slug when omitted.",
+    )
+    p_spec.add_argument(
+        "--areas", nargs="*", default=None, metavar="AREA",
+        help="Areas to set (preserve-on-omit; omission leaves areas untouched).",
+    )
+    p_spec.add_argument(
+        "--clear-areas", action="store_true",
+        help="Explicit sentinel to clear the areas field (omission never clears).",
+    )
 
     p_impl = sub.add_parser("implement-transition", help="Compose an implement-cluster emission.")
     _common(p_impl)
@@ -1013,8 +1146,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         kwargs.update(verdict=args.verdict, cycle=args.cycle, drift=args.drift,
                       breach=args.breach, retries=args.retries)
     elif args.verb == "spec-approve":
+        # --backend is parsed for interface parity but intentionally NOT forwarded:
+        # the spec/areas projection self-resolves the backend (req-7).
         kwargs.update(decision=args.decision, emit_transition=args.emit_transition,
-                      consent_utterance=args.consent_utterance)
+                      consent_utterance=args.consent_utterance,
+                      spec_path=args.spec_path, backlog_file=args.backlog_file,
+                      areas=args.areas, clear_areas=args.clear_areas)
     elif args.verb == "implement-transition":
         kwargs.update(mode=args.mode, batch=args.batch, tasks=args.tasks)
 
