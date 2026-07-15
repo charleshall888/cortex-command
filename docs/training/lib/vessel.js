@@ -169,9 +169,9 @@ function makeVessel(container, opts = {}) {
   /* zone bands measured from the bottom: green <30, amber 30–50, red >50 */
   function zones() {
     const bands = [
-      { from: 0, to: 30, cls: "zone-green", label: "9AM", pct: "" },
-      { from: 30, to: 50, cls: "zone-amber", label: "2PM", pct: "30%" },
-      { from: 50, to: 100, cls: "zone-red", label: "4PM", pct: "50%" },
+      { from: 0, to: 30, cls: "zone-green", label: "the goldilocks zone", pct: "" },
+      { from: 30, to: 50, cls: "zone-amber", label: "", pct: "30%" },
+      { from: 50, to: 100, cls: "zone-red", label: "", pct: "50%" },
     ];
     const els = [];
     for (const b of bands) {
@@ -198,13 +198,15 @@ function makeVessel(container, opts = {}) {
         els.push(rule);
       }
 
-      const lbl = document.createElementNS(ns, "text");
-      lbl.setAttribute("class", "zone-label");
-      lbl.setAttribute("x", VESSEL.TX + VESSEL.TW + 12);
-      lbl.setAttribute("y", bottomY() - (b.from / 100) * VESSEL.TH - 8);
-      lbl.textContent = b.label;
-      overlay.appendChild(lbl);
-      els.push(lbl);
+      if (b.label) {
+        const lbl = document.createElementNS(ns, "text");
+        lbl.setAttribute("class", "zone-label");
+        lbl.setAttribute("x", VESSEL.TX + VESSEL.TW + 12);
+        lbl.setAttribute("y", bottomY() - (b.from / 100) * VESSEL.TH - 8);
+        lbl.textContent = b.label;
+        overlay.appendChild(lbl);
+        els.push(lbl);
+      }
 
       if (b.pct) {
         const pct = document.createElementNS(ns, "text");

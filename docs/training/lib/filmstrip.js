@@ -104,14 +104,6 @@ function makeFilmstrip(container) {
     phGrip.setAttribute("d", `M -7 ${TRACK_Y - SEG_H / 2 - 30} L 7 ${TRACK_Y - SEG_H / 2 - 30} L 0 ${TRACK_Y - SEG_H / 2 - 16} Z`);
   }
 
-  /* the avatar rides along: slumped during the bad run, straightens on rewind */
-  const avatarBox = document.createElement("div");
-  avatarBox.className = "film-avatar";
-  avatarBox.innerHTML =
-    '<svg class="avatar slumped" viewBox="0 0 80 100"><circle cx="34" cy="34" r="14"/><path d="M 36 48 Q 40 60 40 74 M 38 54 L 24 68 M 38 54 L 50 70 M 40 74 L 30 96 M 40 74 L 50 96"/></svg>';
-  avatarBox.style.opacity = "0";
-  container.appendChild(avatarBox);
-
   /* ---------- beats ---------- */
 
   async function populate() {
@@ -161,8 +153,6 @@ function makeFilmstrip(container) {
   }
 
   async function badRun() {
-    avatarBox.style.transition = "opacity 0.8s ease";
-    avatarBox.style.opacity = "1";
     for (let i = 0; i < 9; i++) {
       addSeg("seg-red");
       setLoad();
@@ -178,6 +168,10 @@ function makeFilmstrip(container) {
     const reds = segs.filter((s) => s.cls === "seg-red");
     const forkX = segX(FORK_AT + 1) - GAP / 2;
     const totalMs = 2400;
+
+    /* the label taught its lesson back at populate; clear the note's landing strip */
+    loadLabel.style.transition = "opacity 0.8s ease";
+    loadLabel.style.opacity = "0";
 
     setPlayhead(forkX, totalMs);
 
@@ -213,15 +207,6 @@ function makeFilmstrip(container) {
       loadBar.setAttribute("width", forkX - X0);
     }, 300);
 
-    /* the agent gets Tuesday morning back — posture only, nothing cute */
-    setTimeout(() => {
-      const av = avatarBox.querySelector(".avatar");
-      av.classList.remove("slumped");
-      av.classList.add("crisp");
-      av.innerHTML =
-        '<circle cx="40" cy="24" r="14"/><path d="M 40 38 L 40 72 M 40 48 L 22 60 M 40 48 L 58 60 M 40 72 L 28 96 M 40 72 L 52 96"/>';
-    }, totalMs - 500);
-
     /* carry the lesson, not the tokens */
     setTimeout(() => {
       const midRedX = segX(FORK_AT + 5);
@@ -239,7 +224,7 @@ function makeFilmstrip(container) {
           note.style.transform = `translate(${(midRedX + forkX) / 2}px, ${TRACK_Y - 90}px) rotate(-6deg)`;
           setTimeout(() => {
             note.style.transition = "transform 0.7s cubic-bezier(0.4, 0, 0.7, 1.4)";
-            note.style.transform = `translate(${forkX + 12}px, ${TRACK_Y + 52}px) rotate(0deg)`;
+            note.style.transform = `translate(${forkX + 12}px, ${TRACK_Y + 88}px) rotate(0deg)`;
           }, 700);
         })
       );
@@ -248,7 +233,7 @@ function makeFilmstrip(container) {
         const nt = document.createElementNS(ns, "text");
         nt.setAttribute("class", "note-text");
         nt.setAttribute("x", forkX + 34);
-        nt.setAttribute("y", TRACK_Y + 57);
+        nt.setAttribute("y", TRACK_Y + 93);
         nt.textContent = "single-player — cheating's allowed";
         nt.style.opacity = "0";
         nt.style.transition = "opacity 0.8s ease";
@@ -284,12 +269,6 @@ function makeFilmstrip(container) {
     segs.length = 0;
     loadBar.setAttribute("width", 0);
     loadLabel.style.opacity = "0";
-    avatarBox.style.opacity = "0";
-    const av = avatarBox.querySelector(".avatar");
-    av.classList.add("slumped");
-    av.classList.remove("crisp");
-    av.innerHTML =
-      '<circle cx="34" cy="34" r="14"/><path d="M 36 48 Q 40 60 40 74 M 38 54 L 24 68 M 38 54 L 50 70 M 40 74 L 30 96 M 40 74 L 50 96"/>';
     setPlayhead(X0, 0);
   }
 

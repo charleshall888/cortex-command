@@ -26,6 +26,52 @@
     return new Promise((r) => setTimeout(r, ms));
   }
 
+  /* ---------- the arrival + the lobby idle ----------
+     The cast plays once, on a cold load of scene 1 only — deep links and
+     re-visits land on the finished card. The ripple and the moon-glint are
+     scheduled with spawn-time jitter (never randomized per-frame), so the
+     idle has no discoverable loop; each timer kills itself the moment the
+     title card is no longer what's on screen. */
+
+  const REDUCED = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let introPending = !/^#\d/.test(location.hash || "");
+  let plinkTimer = null;
+  let glintTimer = null;
+
+  function lobbyVisible() {
+    const sec = document.getElementById("sc-cold-open");
+    return !!sec && sec.classList.contains("active") && !sec.classList.contains("staged");
+  }
+
+  /* re-trigger a one-shot CSS animation */
+  function replay(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();
+    el.classList.add(cls);
+  }
+
+  /* something's down there — long gaps, the occasional quick double */
+  function schedulePlink(delay) {
+    clearTimeout(plinkTimer);
+    plinkTimer = setTimeout(() => {
+      if (!lobbyVisible()) return;
+      replay(document.querySelector("#sc-cold-open .title-card .dock"), "plink");
+      const r = Math.random();
+      schedulePlink(r < 0.16 ? 2400 : 6500 + r * 9000 + (r > 0.85 ? 8000 : 0));
+    }, delay);
+  }
+
+  /* moonlight crosses the title — weather, not a loop */
+  function scheduleGlint(delay) {
+    clearTimeout(glintTimer);
+    glintTimer = setTimeout(() => {
+      if (!lobbyVisible()) return;
+      replay(document.querySelector("#sc-cold-open .title-card h1"), "glint");
+      scheduleGlint(75000 + Math.random() * 45000);
+    }, delay);
+  }
+
   const LEFT_SCRIPT = [
     { t: "user", text: "add an empty-state to the catch log" },
     { t: "ask", text: "One question — should the empty log invite the first cast, or stay blank?", pause: 300 },
@@ -44,28 +90,28 @@
     { t: "warn", text: "✗ modified catch_odds.js — biting disabled game-wide" },
   ];
 
-  /* the No-loop: both design calls live in the tank, so the agent oscillates
-     between them — and the third suggestion is verbatim the first */
-  const NOLOOP_A = [
-    { t: "user", text: "dawn spawns still feel wrong — fix them" },
-    { t: "agent", text: "Rare fish hide at dawn — lowering the multiplier.", pause: 250 },
-    { t: "tool", text: "Edit spawn_table.js" },
-    { t: "del", lines: ["- DAWN_RARE_MULT = 1.0"] },
-    { t: "add", lines: ["+ DAWN_RARE_MULT = 0.4"] },
-    { t: "user", text: "NO!" },
+  /* the death spiral: each failed attempt AND each correction stays in the
+     window, so every lap starts heavier — and the third attempt is the
+     first one again, verifiable by eye */
+  const SPIRAL_A = [
+    { t: "user", text: "bug: escaped fish are showing up in the catch log" },
+    { t: "agent", text: "Filtering escapes out of the log view.", pause: 250 },
+    { t: "tool", text: "Edit log_view.js" },
+    { t: "add", lines: ["+ if (entry.escaped) skip(entry)"] },
+    { t: "warn", text: "✗ still logged — the flip-through page renders them" },
+    { t: "user", text: "no — fix the source, not the view" },
   ];
-  const NOLOOP_B = [
-    { t: "agent", text: "Right — dawn is the rare-fish window. Raising it.", pause: 250 },
-    { t: "tool", text: "Edit spawn_table.js" },
-    { t: "del", lines: ["- DAWN_RARE_MULT = 0.4"] },
-    { t: "add", lines: ["+ DAWN_RARE_MULT = 2.5"] },
-    { t: "user", text: "Still no." },
+  const SPIRAL_B = [
+    { t: "agent", text: "Right — removing escape events at the source.", pause: 250 },
+    { t: "tool", text: "Edit catch_events.js" },
+    { t: "del", lines: ['- emit("escape", fish)'] },
+    { t: "warn", text: "✗ tackle stats broke — they count escapes" },
+    { t: "user", text: "NO — put the events back" },
   ];
-  const NOLOOP_C = [
-    { t: "agent", text: "Reconsidering — rare fish hide at dawn. Lowering.", pause: 250 },
-    { t: "del", lines: ["- DAWN_RARE_MULT = 2.5"], snap: true },
-    { t: "add", lines: ["+ DAWN_RARE_MULT = 0.4"], snap: true },
-    { t: "warn", text: "✗ turn 74 · 40 minutes · same diff as turn 71", snap: true },
+  const SPIRAL_C = [
+    { t: "agent", text: "Restoring events; filtering the view instead.", pause: 250 },
+    { t: "add", lines: ["+ if (entry.escaped) skip(entry)"], snap: true },
+    { t: "warn", text: "✗ turn 79 · the same patch as turn 71 · bug still alive", snap: true },
   ];
 
   /* the finale: Friday run right — the red pane is a freeze-frame of the
@@ -78,12 +124,12 @@
     { t: "warn", text: "✗ biting disabled game-wide" },
   ];
   const FIN_INTERVIEW = [
-    { t: "user", text: "interview me — scope Monday's playtest" },
-    { t: "ask", text: "what should a player wake up to?", pause: 250 },
+    { t: "user", text: "/discovery make Monday's playtest real" },
+    { t: "ask", text: "quick scope — what should a player wake up to?", pause: 250 },
     { t: "user", text: "a catch in the log — and fish actually biting" },
-    { t: "ask", text: "biting's been off since 4:00 — fix first?", pause: 250 },
-    { t: "user", text: "fix it first" },
-    { t: "tool", text: "Write first-night-epic.md" },
+    { t: "tool", text: "Research: catch log · biting odds · release rules" },
+    { t: "agent", text: "found it — biting's broken; that's the first ticket" },
+    { t: "tool", text: "Write first-night-epic.md · split into 3 tickets" },
     { t: "done", text: "✓ epic + 3 tickets · every lesson attached" },
   ];
   const FIN_A = [
@@ -110,25 +156,29 @@
     { t: "done", text: "✓ a Brass Minnow would be kept", pause: 2400 },
   ];
 
+  /* the exhibit stays in-domain: every line is believable review-skill
+     content — the comedy is the self-contradiction, not meta-jokes */
   const SCROLL_START = [
     { n: "#1", text: "Review the spec from an adversarial angle." },
-    { n: "#7", text: "Return findings with evidence quotes." },
-    { n: "#12", text: "Keep skills short and focused.", gag: true },
+    { n: "#7", text: "Quote the line you’re challenging — no paraphrase." },
+    { n: "#12", text: "If the spec already answers it, drop the finding." },
   ];
   const SCROLL_GAGS = [
     { n: "#212", text: "Always begin findings with a severity emoji." },
-    { n: "#1,003", text: "NEVER use the word “delve”." },
-    { n: "#1,486", text: "If unsure, re-read lines 1–1,485.", gag: true },
-    { n: "#2,041", text: "Do not add more instructions to this file.", gag: true },
+    { n: "#1,003", text: "NEVER use the word “delve” in a finding." },
+    { n: "#1,486", text: "No emoji in security findings (overrides #212).", gag: true },
+    { n: "#2,041", text: "If two rules conflict, the higher line number wins.", gag: true },
   ];
+  /* the one line that should never have been a sentence — scene 12's gate beat */
+  const SIGN_LINE = { n: "#1,847", text: "ALWAYS run the tests before committing.", sign: true };
 
   function skillLine(l) {
-    return `<div><span class="lnum">${l.n}</span><span class="${l.gag ? "gag" : ""}">${l.text}</span></div>`;
+    return `<div class="${l.sign ? "sign-line" : ""}"><span class="lnum">${l.n}</span><span class="${l.gag ? "gag" : ""}">${l.text}</span></div>`;
   }
 
   const GAUGE_BASE = [
     { kind: "system", pct: 6, label: "system prompt" },
-    { kind: "chat", pct: 8, label: "your messages" },
+    { kind: "chat", pct: 8, label: "chat — yours and its" },
     { kind: "tool", pct: 18, label: "files it read" },
     { kind: "chat", pct: 4 },
     { kind: "tool", pct: 8, label: "test output" },
@@ -149,6 +199,20 @@
     "sc-cold-open": (sec, b) => {
       if (b === 0) {
         sec.classList.remove("staged", "spotlight");
+        if (introPending) {
+          sec.classList.add("arrive"); // the cast — first cold show only
+          introPending = false;
+          if (!REDUCED) {
+            schedulePlink(9200); // first plink waits for the arrival to finish
+            scheduleGlint(6100); // the surfacing complete, moonlight passes once
+          }
+        } else {
+          sec.classList.remove("arrive");
+          if (!REDUCED) {
+            schedulePlink(4500);
+            scheduleGlint(30000);
+          }
+        }
         if (state.termLeft) state.termLeft.clear();
         if (state.termRight) state.termRight.clear();
         if (state.cbLeft) state.cbLeft.set(0, { ms: 0 });
@@ -157,8 +221,8 @@
       if (b === 1) {
         sec.classList.add("staged");
         if (!state.termLeft) {
-          state.termLeft = makeTerminal(document.getElementById("term-left"), { title: "fresh session · 9:00 AM" });
-          state.termRight = makeTerminal(document.getElementById("term-right"), { title: "same session · 4:00 PM" });
+          state.termLeft = makeTerminal(document.getElementById("term-left"), { title: "fresh session · 4:00 PM" });
+          state.termRight = makeTerminal(document.getElementById("term-right"), { title: "six-hour session · 4:00 PM" });
           state.cbLeft = makeContextBar(document.getElementById("cbar-left"), { h: 12 });
           state.cbRight = makeContextBar(document.getElementById("cbar-right"), { h: 12 });
         }
@@ -227,7 +291,7 @@
       }
       if (b === 1)
         chain("squeeze", async () => {
-          state.cbSqueeze.set(30, { ms: 2600 }); // the number improves; the mind got worse
+          state.cbSqueeze.set(5, { ms: 2600 }); // the number improves; the mind got worse
           await state.vSqueeze.squeeze({ stripeLabel: 'kept: "building a fishing game"' });
         });
       if (b === 2)
@@ -238,46 +302,41 @@
         });
     },
 
+    /* one lap per keypress: each failed attempt + your correction lands as
+       a step in the frame — the staircase descends and reddens; the bar
+       climbs the whole time */
     "sc-noloop": (sec, b) => {
+      const lap = (i) => document.getElementById("lap-" + i);
       if (b === 0) {
         sec.classList.remove("spotlight");
+        chains["noloop"] = Promise.resolve();
         if (!state.termLoop) {
-          state.termLoop = makeTerminal(document.getElementById("term-noloop"), { title: "same session · turn 71" });
+          state.termLoop = makeTerminal(document.getElementById("term-noloop"), { title: "same session · 3:00 PM · turn 71" });
           state.cbLoop = makeContextBar(document.getElementById("cbar-noloop"), { h: 12 });
         }
-        if (!state.vLoop) state.vLoop = makeVessel(document.getElementById("vessel-noloop"), { scale: 0.8 });
         state.termLoop.clear();
-        state.vLoop.reset();
-        state.vLoop.setFill([
-          { kind: "system", pct: 8 },
-          { kind: "chat", pct: 6 },
-          { kind: "tool", pct: 16, label: "the morning's design chat" },
-          { kind: "chat", pct: 6 },
-          { kind: "tool", pct: 16 },
-        ]); // 52% — deep in the afternoon
-        state.vLoop.pinChips(
-          ['turn 14: “rare fish hide at dawn”', 'turn 62: “dawn is the rare-fish window”'],
-          { fracs: [0.66, 0.34] }
-        );
+        [1, 2, 3].forEach((i) => lap(i).classList.remove("on"));
         state.cbLoop.set(58, { ms: 600 });
       }
       if (b === 1)
         chain("noloop", async () => {
-          await state.termLoop.play(NOLOOP_A);
-          state.vLoop.pinChips(['turn 72: “NO!”'], { fracs: [0.5] });
-          state.cbLoop.set(63, { ms: 800 });
+          await state.termLoop.play(SPIRAL_A);
+          lap(1).classList.add("on");
+          state.cbLoop.set(67, { ms: 800 });
         });
       if (b === 2)
         chain("noloop", async () => {
-          await state.termLoop.play(NOLOOP_B, { append: true });
-          state.vLoop.pinChips(['turn 73: “Still no.”'], { fracs: [0.18] });
-          state.cbLoop.set(70, { ms: 800 });
-          await state.termLoop.play(NOLOOP_C, { append: true }); // the relapse snaps in — no crawl
-          state.vLoop.box.querySelectorAll(".chip").forEach((c, i) => {
-            if (i < 2) c.classList.add("conflict"); // the two design calls, both still live
-          });
+          await state.termLoop.play(SPIRAL_B, { append: true });
+          lap(2).classList.add("on");
+          state.cbLoop.set(78, { ms: 800 });
         });
-      if (b === 3) sec.classList.add("spotlight");
+      if (b === 3)
+        chain("noloop", async () => {
+          await state.termLoop.play(SPIRAL_C, { append: true }); // the relapse snaps in — no crawl
+          lap(3).classList.add("on");
+          state.cbLoop.set(89, { ms: 800 });
+        });
+      if (b === 4) sec.classList.add("spotlight");
     },
 
     "sc-filmstrip": (sec, b) => {
@@ -299,10 +358,10 @@
     },
     "pv-2": (sec, b) => {
       if (b === 0) state.wp2 = buildDock(document.getElementById("wp-dock-2"), { sketch: true, lit: ["window"] });
-      if (b === 1) state.wp2.posts.page.classList.add("lit");
+      if (b === 1) state.wp2.posts.spawn.classList.add("lit");
     },
     "pv-3": (sec, b) => {
-      if (b === 0) state.wp3 = buildDock(document.getElementById("wp-dock-3"), { sketch: true, lit: ["window", "page"] });
+      if (b === 0) state.wp3 = buildDock(document.getElementById("wp-dock-3"), { sketch: true, lit: ["window", "spawn"] });
       if (b === 1) state.wp3.posts.clean.classList.add("lit"); // the plank waits for Friday
     },
 
@@ -318,7 +377,6 @@
         sec.querySelector(".ticket.callback").classList.remove("lit");
         sec.querySelector(".prism-mid .doc").classList.remove("on");
         sec.classList.remove("past-top", "past-mid", "handoff-mode");
-        if (state.cbHandoff) state.cbHandoff.set(0, { ms: 0 });
         setRail(sec, 1);
       }
       if (b === 2) {
@@ -340,74 +398,76 @@
       if (b === 5) {
         sec.classList.add("handoff-mode");
         setRail(sec, 3);
-        if (!state.cbHandoff) state.cbHandoff = makeContextBar(document.getElementById("cbar-handoff"), { h: 10 });
-        state.cbHandoff.set(8, { ms: 0 });
-        state.cbHandoff.set(14, { ms: 2600 });
       }
     },
 
+    /* the economics as ONE picture: the gauge laid along a clock — a heavy
+       ochre wedge (cliffs = auto-compacts, area = tokens re-read) vs three
+       blue slivers sharing the same origin. Widgets became annotations. */
     "sc-lines": (sec, b) => {
+      const g = (cls) => document.querySelector("#econ-svg ." + cls);
       if (b === 0) {
-        if (!state.vMurk) state.vMurk = makeVessel(document.getElementById("vessel-murk"), { scale: 0.8 });
-        state.vMurk.reset();
-        state.vMurk.setFill([
-          { kind: "system", pct: 10 },
-          { kind: "tool", pct: 20 },
-          { kind: "system", pct: 8 },
-          { kind: "tool", pct: 14 },
-        ]);
-        if (!state.vFresh) {
-          state.vFresh = [1, 2, 3].map((i) => makeVessel(document.getElementById("vessel-fresh-" + i), { scale: 0.28 }));
-          state.cbFresh = [1, 2, 3].map((i) =>
-            makeContextBar(document.getElementById("cbar-fresh-" + i), { h: 8, label: "", readout: false, marker: null })
-          );
-        }
-        state.vFresh.forEach((v) => {
-          v.reset();
-          v.setFill([{ kind: "spec", pct: 9 }]); // fresh, carrying only the page
+        buildEcon();
+        chains["econ"] = Promise.resolve();
+      }
+      if (b === 1)
+        chain("econ", async () => {
+          g("eg-clip-solo").style.width = "284px"; // the climb to the first ceiling — silent
+          await sleep(4700);
         });
-        state.cbFresh.forEach((cb) => cb.set(8, { ms: 0 }));
-        document.getElementById("lines-clock").textContent = "4:00 PM";
-        document.getElementById("idea-scrapbook").classList.remove("lit");
-        sec.classList.remove("picked", "working");
-      }
-      if (b === 3) {
-        sec.classList.add("working");
-        state.cbFresh[0].set(26, { ms: 5200 });
-        state.cbFresh[1].set(24, { ms: 5600 });
-        state.cbFresh[2].set(27, { ms: 6000 });
-        setTimeout(() => (document.getElementById("lines-clock").textContent = "4:20 PM"), 3000);
-      }
-      if (b === 4) {
-        sec.classList.add("picked");
-        const chip = document.getElementById("lines-intent");
-        const target = document.getElementById("idea-scrapbook");
-        setTimeout(() => flyIntent(chip, target, () => target.classList.add("lit")), 600);
-      }
+      if (b === 2)
+        chain("econ", async () => {
+          const clip = g("eg-clip-solo");
+          clip.style.transition = "width 5s cubic-bezier(0.4, 0, 0.6, 1)";
+          clip.style.width = "1000px"; // sawtooth to the end, one motion
+          setTimeout(() => g("eg-cliff1").classList.add("on"), 500);
+          setTimeout(() => g("eg-cliff2").classList.add("on"), 3000);
+          setTimeout(() => g("eg-done").classList.add("on"), 4600);
+          await sleep(5200);
+        });
+      if (b === 3) chain("econ", async () => g("eg-debt").classList.add("on"));
+      if (b === 4)
+        chain("econ", async () => {
+          g("eg-trio").classList.add("on");
+          g("eg-clip-trio").style.width = "355px"; // the chain draws in true time order — silent
+          setTimeout(() => g("eg-dep").classList.add("on"), 1700); // as the clock passes the unblock
+          setTimeout(() => g("eg-bills").classList.add("on"), 3800); // both bills pop together
+          await sleep(4000);
+        });
+      /* beat 5: the verdict line is data-beat markup */
     },
 
+    /* one state change per keypress: the doc's move to the target stand is
+       its own slow beat, and each finding lands (arrow, then card, then
+       stamp) on its own advance — pacing the presenter can narrate */
     "sc-arrows": (sec, b) => {
       const card = (id, delay) => setTimeout(() => document.getElementById(id).classList.add("on"), delay);
+      const stamp = (id, delay) => setTimeout(() => document.getElementById(id).classList.add("stamped"), delay);
       if (b === 0) {
         buildArrows();
         sec.classList.remove("spec-docked");
-        ["fcard-1", "fcard-2", "fcard-3"].forEach((id) => document.getElementById(id).classList.remove("on"));
+        ["fcard-1", "fcard-2", "fcard-3"].forEach((id) => document.getElementById(id).classList.remove("on", "stamped"));
         sec.querySelector(".finding-card").classList.remove("binned");
       }
-      if (b === 1) setTimeout(() => sec.classList.add("spec-docked"), 1400); // the doc takes its place on the range
-      if (b === 2) {
-        setTimeout(() => flyArrow("a1", 575, 160, 14, true), 200);
-        card("fcard-1", 900);
-        setTimeout(() => flyArrow("a2", 572, 205, -4, true), 1400);
-        card("fcard-2", 2100);
-      }
+      if (b === 2) sec.classList.add("spec-docked"); // one slow readable move — narrate over it
       if (b === 3) {
-        flyArrow("a3", 585, 270, -18, false);
-        setTimeout(() => document.querySelector("#arrows-svg .crack").classList.add("show"), 600);
-        card("fcard-3", 800);
+        flyArrow("a1", 575, 160, 14, true, 900);
+        card("fcard-1", 1000);
+        stamp("fcard-1", 2000);
       }
-      if (b === 4) document.querySelector("#arrows-svg .crack").classList.add("gold");
+      if (b === 4) {
+        flyArrow("a2", 572, 205, -4, true, 900);
+        card("fcard-2", 1000);
+        stamp("fcard-2", 2000);
+      }
       if (b === 5) {
+        flyArrow("a3", 585, 270, -18, false, 900);
+        setTimeout(() => document.querySelector("#arrows-svg .crack").classList.add("show"), 1000);
+        card("fcard-3", 1100);
+        stamp("fcard-3", 2100);
+      }
+      if (b === 6) document.querySelector("#arrows-svg .crack").classList.add("gold");
+      if (b === 7) {
         const fc = sec.querySelector(".finding-card");
         fc.classList.remove("binned");
         setTimeout(() => fc.classList.add("binned"), 3600); // room to read it aloud first
@@ -422,14 +482,16 @@
       if (b === 0) {
         body.innerHTML = SCROLL_START.map(skillLine).join("");
         count.textContent = "20 lines";
+        count.classList.remove("ticked");
         thumb.style.height = "82%";
         file.classList.remove("shoved");
         document.getElementById("tune-col").innerHTML = "";
+        document.getElementById("gate-chip").classList.remove("on");
         sec.querySelector(".drawers-block").classList.remove("on");
       }
       if (b === 2)
         chain("scroll", async () => {
-          const tunes = ["tune it", "be stricter about evidence", "add the edge cases", "catch auth issues too"];
+          const tunes = ["tune it", "be stricter about evidence", "add the edge cases", "catch perf issues too"];
           tunes.forEach((t, i) =>
             setTimeout(() => {
               const el = document.createElement("span");
@@ -458,6 +520,22 @@
         });
       if (b === 3)
         chain("scroll", async () => {
+          /* the gate beat: the one must-happen line gets struck from the
+             file and re-homed outside the window — the count ticks DOWN */
+          body.innerHTML += skillLine(SIGN_LINE);
+          while (body.children.length > 5) body.firstChild.remove();
+          await sleep(900);
+          body.querySelector(".sign-line").classList.add("struck");
+          await sleep(600);
+          for (let i = 1; i <= 8; i++) {
+            await sleep(110);
+            count.textContent = Math.round(2041 - (53 * i) / 8).toLocaleString() + " lines";
+          }
+          count.classList.add("ticked"); // §1,847 and its exception thicket came out
+          document.getElementById("gate-chip").classList.add("on");
+        });
+      if (b === 4)
+        chain("scroll", async () => {
           if (!state.vSkill) state.vSkill = makeVessel(document.getElementById("vessel-skill"), { scale: 0.8 });
           state.vSkill.reset();
           file.classList.add("shoved");
@@ -470,7 +548,7 @@
           ]);
           await state.vSkill.sweep({ duration: 2600 });
         });
-      if (b === 4) {
+      if (b === 5) {
         sec.querySelector(".drawers-block").classList.add("on");
         if (!state.vDrawers) state.vDrawers = makeVessel(document.getElementById("vessel-drawers"), { scale: 0.5 });
         state.vDrawers.reset();
@@ -481,56 +559,54 @@
       }
     },
 
-    "sc-turnstile": (sec, b) => {
-      const svg = document.getElementById("gate-svg");
+    /* the shared tackle box (the object pv-3 names but never draws): your lean
+       skill is the lure; you prove it (a fish, b1); the villain staples it onto
+       every rod, even one that never casts (b2, forced/red); the fix is the box
+       — nothing goes in till it's landed a fish (b3); a crewmate lifts it out by
+       choice (b4). No bars — prove-first and opt-in are one house rule. */
+    "sc-tackle": (sec, b) => {
+      const g = (cls) => document.querySelector("#tackle-svg ." + cls);
+      const st = document.getElementById("tackle-state");
+      const setState = (t, cls) => {
+        if (!st) return;
+        st.textContent = t;
+        st.classList.remove("forced-state", "optin-state");
+        if (cls) st.classList.add(cls);
+      };
       if (b === 0) {
-        buildGate();
-        document.getElementById("gate-linecount").textContent = "adversarial-review · SKILL.md — 2,041 lines";
-        if (state.gateRecoil) clearTimeout(state.gateRecoil);
+        buildTackle();
+        sec.classList.remove("forced");
+        setState("rigged on my own line · committed to nothing yet");
       }
       if (b === 1) {
-        const w = svg.querySelector(".walker");
-        w.style.transform = "translateX(470px)";
-        setTimeout(() => svg.querySelector(".sign-cap").classList.add("on"), 1100); // as the walker clears the sign
-        state.gateRecoil = setTimeout(
-          () => ((w.style.transition = "transform 0.3s ease"), (w.style.transform = "translateX(455px)")),
-          1900
-        );
+        g("tk-fish").classList.add("on");
+        setState("landed a fish · proven on my own line");
       }
-      if (b === 2)
-        chain("gate", async () => {
-          if (state.gateRecoil) clearTimeout(state.gateRecoil);
-          const w = svg.querySelector(".walker");
-          w.style.transition = "transform 0.6s ease";
-          w.style.transform = "translateX(430px)"; // step back from the arms
-          await sleep(700);
-          const fix = el("g", { class: "gate-fix" }, svg);
-          el("rect", { x: 428, y: 128, width: 240, height: 30, rx: 6 }, fix);
-          const ft = el("text", { x: 442, y: 148 }, fix);
-          ft.textContent = "⏺ run tests → ✓ 14 passing";
-          await sleep(1700);
-          svg.querySelector(".gate-dot").setAttribute("fill", cssVar("--zone-green"));
-          svg.querySelector(".gate-label").textContent = "tests ✓";
-          const arms = svg.querySelector(".turnstile-arms");
-          arms.style.transformOrigin = "690px 218px";
-          arms.style.transform = "rotate(-120deg)";
-          w.style.transition = "transform 1.6s ease 0.5s";
-          w.style.transform = "translateX(760px)";
-        });
+      if (b === 2) {
+        sec.classList.add("forced");
+        g("tk-clamp").classList.add("on"); // stapled onto every rod, even the one that never casts
+        setState("forced onto every rod — even the ones that never cast", "forced-state");
+      }
       if (b === 3) {
-        svg.classList.add("sign-faded");
-        const lc = document.getElementById("gate-linecount");
-        lc.textContent = "adversarial-review · SKILL.md — 1,988 lines";
-        lc.classList.add("ticked"); // § 1,847 came out of the file
+        sec.classList.remove("forced");
+        g("tk-clamp").classList.remove("on");
+        g("tk-youlure").classList.add("gone"); // your proven lure drops into the box
+        g("tk-inbox").classList.add("on");
+        setState("dropped in the shared box · nothing forced", "optin-state");
       }
+      if (b === 4) {
+        g("tk-take").classList.add("on"); // a crewmate lifts it by choice
+        setState("taken by the one who wanted it · every other line stays clean", "optin-state");
+      }
+      // b5: the verdict is data-beat markup
     },
 
     "sc-finale": (sec, b) => {
       if (b === 0) {
         sec.classList.remove("f1", "f2", "f3", "f4", "f5");
         if (!state.finRed) {
-          state.finRed = makeTerminal(document.getElementById("term-fin-red"), { title: "same session · 4:00 PM" });
-          state.finInt = makeTerminal(document.getElementById("term-fin-int"), { title: "fresh session · 4:05 PM · the interview" });
+          state.finRed = makeTerminal(document.getElementById("term-fin-red"), { title: "six-hour session · 4:00 PM" });
+          state.finInt = makeTerminal(document.getElementById("term-fin-int"), { title: "fresh session · 4:05 PM · discovery" });
           state.finT = ["a", "b", "c"].map((k) =>
             makeTerminal(document.getElementById("term-fin-" + k), { title: "fresh session · 4:19 PM" })
           );
@@ -577,10 +653,15 @@
       if (b === 5) {
         sec.classList.add("f5");
         state.wpFinal = buildDock(document.getElementById("wp-dock-final"), {
-          lit: ["window", "page", "clean"],
+          lit: ["window", "spawn", "clean"],
           plank: true,
         });
       }
+    },
+
+    "sc-dawn": (sec, b) => {
+      if (b === 0) sec.classList.remove("tug");
+      if (b === 1) sec.classList.add("tug"); // the line answers as the first page lands
     },
   };
 
@@ -595,10 +676,6 @@
     return e;
   }
 
-  function cssVar(name) {
-    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  }
-
   /* write finished terminal lines instantly — a freeze-frame */
   function prefill(term, lines) {
     const body = term.el.querySelector(".term-body");
@@ -606,7 +683,7 @@
   }
 
   /* the dock diagram: three posts = the three pillars (left → right:
-     window · page · clean — teaching order IS retell order now), the
+     window · spawn · clean — teaching order IS retell order now), the
      plank = the pipeline, drawn only when Friday runs end-to-end. */
   function buildDock(container, { sketch = false, lit = [], plank = false } = {}) {
     container.innerHTML = "";
@@ -614,7 +691,7 @@
     container.appendChild(svg);
     el("line", { class: "bp-water", x1: 0, y1: 158, x2: 640, y2: 158 }, svg);
     const posts = {};
-    const XS = { window: 101, page: 315, clean: 529 };
+    const XS = { window: 101, spawn: 315, clean: 529 };
     for (const [key, x] of Object.entries(XS)) {
       posts[key] = el("rect", { class: "bp-post" + (sketch ? " sketch" : ""), x, y: 84, width: 10, height: 74 }, svg);
       if (lit.includes(key)) posts[key].classList.add("lit");
@@ -669,16 +746,103 @@
     });
   }
 
-  function flyArrow(cls, tx, ty, rot, bounce) {
+  function flyArrow(cls, tx, ty, rot, bounce, ms = 550) {
     const a = document.querySelector(`#arrows-svg .arrow.${cls}`);
-    a.style.transition = "transform 0.55s cubic-bezier(0.3, 0, 0.7, 1)";
+    a.style.transition = `transform ${ms}ms cubic-bezier(0.3, 0, 0.7, 1)`;
     a.style.transform = `translate(${tx}px, ${ty}px) rotate(${rot}deg)`;
     if (bounce)
       setTimeout(() => {
         a.style.transition = "transform 0.9s ease, opacity 0.9s ease";
         a.style.transform = `translate(${tx - 90}px, ${ty + 70}px) rotate(${rot - 38}deg)`;
         a.style.opacity = "0.3";
-      }, 620);
+      }, ms + 80);
+  }
+
+  /* scene 10: one gauge along one clock. x: 0–5.5h → 90–1130; solo lane
+     pct → y over baseline 250; trio lanes get their own small baselines. */
+  function buildEcon() {
+    const svg = document.getElementById("econ-svg");
+    svg.innerHTML = "";
+    const X = (h) => 90 + h * 189.09;
+    const Y = (pct) => 250 - 1.9 * pct;
+    const txt = (x, y, s, attrs = {}, parent = svg) => {
+      const t = el("text", { x, y, ...attrs }, parent);
+      t.textContent = s;
+      return t;
+    };
+
+    /* frame: axis, zone rules, lane label — visible from beat 0 */
+    const frame = el("g", { class: "eg eg-frame on" }, svg);
+    const axis = el("g", { class: "eg-axis" }, frame);
+    el("line", { x1: 90, y1: 498, x2: 1130, y2: 498 }, axis);
+    for (let h = 1; h <= 5; h++) {
+      el("line", { x1: X(h), y1: 494, x2: X(h), y2: 502 }, axis);
+      txt(X(h), 516, h + "h", { "text-anchor": "middle" }, axis);
+    }
+    txt(1130, 516, "elapsed", { "text-anchor": "end" }, axis);
+    el("line", { class: "eg-rule", x1: 90, y1: Y(50), x2: 1130, y2: Y(50) }, frame);
+    el("line", { class: "eg-rule", x1: 90, y1: Y(97), x2: 1130, y2: Y(97) }, frame);
+    txt(94, Y(50) - 6, "the door · 50%", { class: "eg-rule-label" }, frame);
+    txt(94, Y(97) - 6, "full — auto-compact", { class: "eg-rule-label" }, frame);
+    const door = el("g", { class: "eg-door" }, frame);
+    el("rect", { x: 1098, y: Y(50) - 17, width: 12, height: 17, rx: 1.5 }, door);
+    txt(90, 45, "one window · the whole catch-log epic", { class: "eg-lane-label" }, frame);
+
+    /* the wedge, revealed by a clock-driven clip */
+    const clip = el("clipPath", { id: "econ-clip-solo" }, svg);
+    el("rect", { class: "eg-clip-solo", x: 90, y: 36, width: 0, height: 230 }, clip);
+    const wedge =
+      `M ${X(0)} ${Y(8)} L ${X(1.5)} ${Y(95)} L ${X(1.5)} ${Y(5)} L ${X(3.3)} ${Y(96)}` +
+      ` L ${X(3.3)} ${Y(5)} L ${X(5.25)} ${Y(88)} L ${X(5.25)} 250 L ${X(0)} 250 Z`;
+    el("path", { class: "eg-solo-fill", d: wedge, "clip-path": "url(#econ-clip-solo)" }, svg);
+
+    /* annotations that land as the wedge passes them */
+    const cliff1 = el("g", { class: "eg eg-cliff1" }, svg);
+    txt(X(1.5) + 10, 58, "auto-compact ×1 — the squeeze, again", {}, cliff1);
+    const cliff2 = el("g", { class: "eg eg-cliff2" }, svg);
+    txt(X(3.3) + 10, 58, "auto-compact ×2", {}, cliff2);
+    const done = el("g", { class: "eg eg-done" }, svg);
+    txt(1130, 95, "done · 5h 15m", { "text-anchor": "end" }, done);
+
+    const debt = el("g", { class: "eg eg-debt" }, svg);
+    for (const h of [1.3, 3.1, 5.0]) txt(X(h), 120, "✗", { class: "xmark", "text-anchor": "middle" }, debt);
+    txt(X(3.1), 145, "written deep in the red — and it ships", { "text-anchor": "middle" }, debt);
+
+    /* the trio as a dependency chain: catch events runs first; its finish
+       unblocks the other two, which run in parallel — the shared clip is
+       the clock, so the stagger reveals in true time order */
+    const trio = el("g", { class: "eg eg-trio" }, svg);
+    txt(90, 326, "three fresh windows · planned last scene · one first, then two in parallel", { class: "eg-lane-label" }, trio);
+    const tclip = el("clipPath", { id: "econ-clip-trio" }, svg);
+    el("rect", { class: "eg-clip-trio", x: 90, y: 330, width: 0, height: 148 }, tclip);
+    const UNBLOCK = 0.833; // catch events done · 0h 50m
+    const LANES = [
+      { base: 360, pct: 14, start: 0, end: UNBLOCK, name: "record catch events" },
+      { base: 415, pct: 18, start: UNBLOCK, end: 1.833, name: "flip-through log page" },
+      { base: 470, pct: 12, start: UNBLOCK, end: 1.667, name: "empty state" },
+    ];
+    for (const l of LANES) {
+      const top = l.base - 1.9 * l.pct;
+      const d =
+        `M ${X(l.start)} ${l.base} L ${X(l.start + 0.12)} ${top} L ${X(l.end - 0.06)} ${top}` +
+        ` L ${X(l.end)} ${l.base} Z`;
+      el("path", { class: "eg-trio-fill", d, "clip-path": "url(#econ-clip-trio)" }, trio);
+      txt(X(l.end) + 12, l.base - 8, l.name, {}, trio);
+    }
+    /* the dependency drop: catch events' finish line unblocks lanes 2–3 —
+       its note stacks just under the lane-1 name, clear of lane 2's top */
+    const dep = el("g", { class: "eg eg-dep" }, svg);
+    el("line", { class: "eg-dep-line", x1: X(UNBLOCK), y1: 362, x2: X(UNBLOCK), y2: 472 }, dep);
+    txt(X(UNBLOCK) + 12, 369, "✓ done — unblocks the other two", { class: "eg-dep-label" }, dep);
+
+    /* the two bills + the all-three bracket — they pop together */
+    const bills = el("g", { class: "eg eg-bills" }, svg);
+    txt(590, 205, "~4M tokens re-read", { class: "bill bill-solo", "text-anchor": "middle" }, bills);
+    el("line", { x1: 620, y1: 335, x2: 620, y2: 470 }, bills);
+    el("line", { x1: 620, y1: 335, x2: 612, y2: 335 }, bills);
+    el("line", { x1: 620, y1: 470, x2: 612, y2: 470 }, bills);
+    txt(638, 392, "✓ all three · 1h 50m · peaks ≤18%", { class: "all-three" }, bills);
+    txt(638, 424, "~500k tokens re-read", { class: "bill bill-trio" }, bills);
   }
 
   function buildArrows() {
@@ -688,8 +852,11 @@
     const doc = el("g", { transform: "translate(640, 80)" }, svg);
     el("rect", { class: "spec-target", width: 190, height: 240, rx: 8 }, doc);
     const title = el("text", { class: "spec-title", x: 16, y: 30 }, doc);
-    title.textContent = "throw small fish back";
+    title.textContent = "the requirements";
     for (const y of [66, 98, 130, 162, 194]) el("line", { class: "spec-line", x1: 18, x2: 172, y1: y, y2: y }, doc);
+    /* the section finding 3 pierces — labeled, so the crack has a referent */
+    const sub = el("text", { class: "spec-sub", x: 18, y: 150 }, doc);
+    sub.textContent = "§ the size rule";
     el("path", { class: "crack", d: "M 0 168 l 30 -14 l 20 18 l 26 -10" }, doc);
     /* three reviewers, three angles */
     const starts = [
@@ -706,36 +873,87 @@
     }
   }
 
-  function buildGate() {
-    const svg = document.getElementById("gate-svg");
+  /* scene 13: the shared tackle box — the object pv-3 names but never draws.
+     No bars: your lean skill is a lure; prove it (a fish), and the choice is
+     whether it gets stapled onto every rod (forced) or waits in the open box
+     for a line that wants it (chosen). Groups toggle .on per beat. */
+  function buildTackle() {
+    const svg = document.getElementById("tackle-svg");
     svg.innerHTML = "";
-    el("line", { class: "ground", x1: 40, y1: 262, x2: 960, y2: 262 }, svg);
+    const txt = (x, y, s, attrs = {}, parent = svg) => {
+      const t = el("text", { x, y, ...attrs }, parent);
+      t.textContent = s;
+      return t;
+    };
+    const fishGlyph = (parent, x, y, scale) => {
+      const g = el("g", { transform: `translate(${x}, ${y}) scale(${scale})` }, parent);
+      el("path", { class: "tk-fish-body", d: "M6 12 Q 20 4 32 12 Q 20 20 6 12 Z" }, g);
+      el("path", { class: "tk-fish-body", d: "M32 12 L 42 6 L 42 18 Z" }, g);
+    };
+    const rodPole = (parent, bx, tipx, tipy, casts) => {
+      el("circle", { class: "tk-reel", cx: bx, cy: 186, r: 6 }, parent);
+      el("line", { class: "tk-pole", x1: bx, y1: 192, x2: tipx, y2: tipy }, parent);
+      if (casts) el("line", { class: "tk-fline", x1: tipx, y1: tipy, x2: tipx, y2: 250 }, parent);
+    };
 
-    /* the sign: prose, politely ignored */
-    el("line", { class: "sign-post", x1: 300, y1: 262, x2: 300, y2: 156 }, svg);
-    el("rect", { class: "sign-board", x: 196, y: 106, width: 226, height: 52, rx: 4 }, svg);
-    const t1 = el("text", { class: "sign-text", x: 206, y: 126 }, svg);
-    t1.textContent = "§ 1,847";
-    const t2 = el("text", { class: "sign-text", x: 206, y: 146 }, svg);
-    t2.textContent = "please always run the tests";
-    const cap = el("text", { class: "sign-cap", x: 196, y: 186 }, svg);
-    cap.textContent = "in the window every turn — obeyed sometimes";
+    /* the dock rail + water */
+    const frame = el("g", { class: "tk-frame" }, svg);
+    el("line", { class: "tk-water", x1: 40, y1: 278, x2: 880, y2: 278 }, frame);
+    el("rect", { class: "tk-rail", x: 40, y: 196, width: 840, height: 9, rx: 2 }, frame);
+    for (const x of [110, 690, 840]) el("rect", { class: "tk-post", x, y: 205, width: 8, height: 60 }, frame);
 
-    /* the turnstile: structure */
-    el("line", { class: "turnstile-frame", x1: 662, y1: 170, x2: 662, y2: 262 }, svg);
-    el("line", { class: "turnstile-frame", x1: 718, y1: 170, x2: 718, y2: 262 }, svg);
-    const arms = el("g", { class: "turnstile-arms" }, svg);
-    el("line", { x1: 690, y1: 218, x2: 690, y2: 184 }, arms);
-    el("line", { x1: 690, y1: 218, x2: 719.4, y2: 235 }, arms);
-    el("line", { x1: 690, y1: 218, x2: 660.6, y2: 235 }, arms);
-    el("circle", { class: "gate-dot", cx: 690, cy: 150, r: 5, fill: cssVar("--zone-red") }, svg);
-    const lbl = el("text", { class: "gate-label", x: 706, y: 155 }, svg);
-    lbl.textContent = "tests ✗";
+    /* YOU — your rod, the lean skill hanging as its lure */
+    const you = el("g", { class: "tk-you" }, svg);
+    rodPole(you, 150, 190, 76, true);
+    el("ellipse", { class: "tk-ripple", cx: 190, cy: 278, rx: 15, ry: 3.5 }, you);
+    el("ellipse", { class: "tk-ripple faint", cx: 190, cy: 278, rx: 27, ry: 6 }, you);
+    const yl = el("g", { class: "tk-youlure" }, you);
+    el("rect", { class: "tk-lure-card", x: 144, y: 240, width: 92, height: 22, rx: 5 }, yl);
+    txt(190, 255, "SKILL.md", { class: "tk-lure-txt", "text-anchor": "middle" }, yl);
+    txt(150, 176, "you", { class: "tk-label", "text-anchor": "middle" }, you);
 
-    /* the agent, out for a walk */
-    const w = el("g", { class: "walker" }, svg);
-    el("circle", { cx: 110, cy: 205, r: 11 }, w);
-    el("path", { d: "M 110 216 L 110 240 M 110 222 L 98 232 M 110 222 L 122 232 M 110 240 L 100 262 M 110 240 L 120 262" }, w);
+    /* b1: proof — a fish on your line, just under the lure */
+    const fish = el("g", { class: "tk tk-fish" }, svg);
+    fishGlyph(fish, 166, 262, 1.05);
+    txt(250, 266, "it catches", { class: "tk-note" }, fish);
+
+    /* the OPEN tackle box on the rail — an owned object that's naturally shared */
+    const box = el("g", { class: "tk-box" }, svg);
+    el("polygon", { class: "tk-lid", points: "398,162 522,162 548,134 424,134" }, box);
+    el("rect", { class: "tk-box-body", x: 398, y: 162, width: 124, height: 38, rx: 3 }, box);
+    for (const x of [438, 482]) el("line", { class: "tk-divider", x1: x, y1: 166, x2: x, y2: 196 }, box);
+    el("rect", { class: "tk-lure-card faint", x: 406, y: 172, width: 24, height: 14, rx: 2 }, box);
+    txt(460, 124, "the crew’s tackle box", { class: "tk-boxtag", "text-anchor": "middle" }, box);
+
+    /* CREW — three rods on the same rail; one never casts toward the water */
+    const crew = el("g", { class: "tk-crew" }, svg);
+    const rA = el("g", { class: "tk-rod" }, crew);
+    rodPole(rA, 620, 660, 76, true);
+    el("ellipse", { class: "tk-ripple faint", cx: 660, cy: 278, rx: 20, ry: 4 }, rA);
+    const rB = el("g", { class: "tk-rod" }, crew);
+    rodPole(rB, 725, 765, 76, false);
+    txt(725, 176, "never casts here", { class: "tk-label", "text-anchor": "middle" }, rB);
+    const rC = el("g", { class: "tk-rod" }, crew);
+    rodPole(rC, 830, 870, 76, true);
+    el("ellipse", { class: "tk-ripple faint", cx: 870, cy: 278, rx: 20, ry: 4 }, rC);
+
+    /* b2: FORCE — the lure stapled onto EVERY rod, even the one that never casts */
+    const clamp = el("g", { class: "tk tk-clamp" }, svg);
+    for (const tx of [660, 765, 870]) {
+      el("rect", { class: "tk-forced-card", x: tx - 34, y: 106, width: 68, height: 18, rx: 4 }, clamp);
+      txt(tx, 119, "SKILL.md", { class: "tk-forced-txt", "text-anchor": "middle" }, clamp);
+      el("path", { class: "tk-staple", d: `M ${tx - 7} 106 l 0 -6 l 14 0 l 0 6` }, clamp);
+    }
+
+    /* b3: the proven lure now waits in the box */
+    const inbox = el("g", { class: "tk tk-inbox" }, svg);
+    el("rect", { class: "tk-lure-card", x: 448, y: 172, width: 26, height: 14, rx: 2 }, inbox);
+
+    /* b4: CHOOSE — a crewmate lifts it from the box, by choice */
+    const take = el("g", { class: "tk tk-take" }, svg);
+    el("path", { class: "tk-take-line", d: "M 505 176 Q 585 120 660 114" }, take);
+    el("rect", { class: "tk-green-card", x: 626, y: 106, width: 68, height: 18, rx: 4 }, take);
+    txt(660, 119, "SKILL.md", { class: "tk-green-txt", "text-anchor": "middle" }, take);
   }
 
   /* ---------- engine ---------- */

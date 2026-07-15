@@ -1,5 +1,5 @@
 /* ============================================================
-   Attention Is the Game — night edition of the cortex-command
+   Context Is the Game — night edition of the cortex-command
    landing-page design language. Deep ink ground, parchment text,
    blue/ochre accents. Fraunces / JetBrains Mono / Inter, bundled.
    ============================================================ */
@@ -37,6 +37,7 @@
   --zone-green: #4d8f6b;
   --zone-amber: #c9a54a;
   --zone-red: #b0533f;
+  --glint-gold: #ffd9a0; /* first light on the closer — between parchment and the lantern */
   --serif: "Fraunces", "Iowan Old Style", Georgia, serif;
   --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
   --ui: "Inter", system-ui, -apple-system, sans-serif;
@@ -67,6 +68,13 @@ html, body {
   border-radius: 50%;
   background: var(--parchment);
   opacity: 0.16;
+  /* mostly rest, one slow swell per period — at any moment at most a star or two stirs */
+  animation: star-breathe var(--d, 22.3s) ease-in-out infinite;
+  animation-delay: calc(var(--d, 22.3s) * -0.7);
+}
+@keyframes star-breathe {
+  0%, 82%, 100% { opacity: 0.16; }
+  91% { opacity: 0.42; }
 }
 #sky .sky-moon {
   position: absolute;
@@ -76,6 +84,18 @@ html, body {
   opacity: 0.32;
   box-shadow: 0 0 22px 4px rgba(247, 244, 236, 0.12);
   transition: left 1.6s ease, top 1.6s ease, opacity 1.6s ease;
+}
+#sky .sky-moon::after {
+  content: "";
+  position: absolute;
+  inset: -16px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(247, 244, 236, 0.13), transparent 72%);
+  animation: moon-breathe 19s ease-in-out infinite;
+}
+@keyframes moon-breathe {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
 }
 #sky .waterline {
   position: absolute;
@@ -90,11 +110,20 @@ html, body {
   height: 42vh;
   background: linear-gradient(to top, rgba(232, 168, 101, 0.16), rgba(232, 168, 101, 0.0));
   opacity: 0;
-  transition: opacity 2.4s ease;
+  /* sunrise, not a lightswitch — light accelerates as it arrives */
+  transition: opacity 8s linear(0, 0.03 15%, 0.12 35%, 0.32 55%, 0.62 75%, 0.86 90%, 1);
 }
-body.dawn #sky .sky-moon { opacity: 0; }
+body.dawn #sky .sky-moon {
+  opacity: 0;
+  transition: left 1.6s ease, top 1.6s ease, opacity 4.5s ease;
+}
 body.dawn #sky .dawn-glow { opacity: 1; }
-body.dawn #sky .star { opacity: 0.05; }
+body.dawn #sky .star {
+  opacity: 0.05;
+  animation: none; /* stars stop stirring, then go out one by one */
+  transition: opacity 2.6s ease;
+  transition-delay: var(--fd, 0s);
+}
 
 /* ---------- deck chrome ---------- */
 
@@ -154,6 +183,7 @@ body.dawn #sky .star { opacity: 0.05; }
   font-weight: 560;
   font-size: clamp(2.4rem, 5.4vw, 4.4rem);
   margin-top: 1.2rem;
+  letter-spacing: 0.01em; /* the arrival's tracking settle needs a fixed landing value */
 }
 .title-card .subtitle {
   margin-top: 0.7rem;
@@ -161,6 +191,13 @@ body.dawn #sky .star { opacity: 0.05; }
   font-size: clamp(0.95rem, 1.6vw, 1.2rem);
   letter-spacing: 0.14em;
 }
+.title-card .game-intro {
+  margin-top: 1.7rem;
+  color: var(--parch-dim);
+  font-size: 0.82rem;
+  letter-spacing: 0.05em;
+}
+.title-card .game-intro em { color: var(--ochre); font-style: normal; }
 .title-card .start-hint {
   margin-top: 3.2rem;
   color: var(--parch-faint);
@@ -184,6 +221,121 @@ body.dawn #sky .star { opacity: 0.05; }
 #sc-cold-open .cold-open-stage { display: none; width: 100%; flex-direction: column; align-items: center; gap: 1.6rem; }
 #sc-cold-open.staged .title-card { display: none; }
 #sc-cold-open.staged .cold-open-stage { display: flex; }
+
+/* ---------- the arrival: the cast (plays once, on a cold load) ----------
+   The dock draws itself in, the line drops, and the title surfaces on the
+   same frame the ripple blooms. All transform/opacity/dashoffset — cheap,
+   and it survives screen-share encoding. Deep links and re-visits land on
+   the finished state (deck.js only sets .arrive on the first cold show). */
+
+.dock .post, .dock .plank, .dock .line, .dock .ripple, .line-sway { transform-box: fill-box; }
+
+#sc-cold-open.arrive .dock .water {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: draw-on 1.4s cubic-bezier(0.22, 1, 0.36, 1) 0.5s forwards;
+}
+#sc-cold-open.arrive .dock .post {
+  transform-origin: 50% 100%;
+  animation: post-rise 0.55s cubic-bezier(0.34, 1.3, 0.64, 1) both; /* driven in like piles */
+}
+#sc-cold-open.arrive .dock rect.post:nth-of-type(1) { animation-delay: 1.35s; }
+#sc-cold-open.arrive .dock rect.post:nth-of-type(2) { animation-delay: 1.5s; }
+#sc-cold-open.arrive .dock rect.post:nth-of-type(3) { animation-delay: 1.65s; }
+#sc-cold-open.arrive .dock .plank { animation: settle-in 0.4s ease-out 2s both; }
+#sc-cold-open.arrive .dock .rod {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: draw-on 0.9s cubic-bezier(0.4, 0, 0.2, 1) 2.15s forwards;
+}
+#sc-cold-open.arrive .dock .line {
+  transform-origin: 50% 0%;
+  animation: line-drop 0.45s cubic-bezier(0.55, 0, 1, 0.45) 3.05s both; /* gravity */
+}
+#sc-cold-open.arrive .dock .ripple {
+  transform-origin: 50% 50%;
+  animation: ripple-bloom 1.6s cubic-bezier(0.16, 1, 0.3, 1) 3.5s both;
+}
+#sc-cold-open.arrive .dock .ripple.faint { animation-delay: 3.65s; }
+#sc-cold-open.arrive .dock .shimmer {
+  animation: fade-from-0 1.2s ease 3.7s both, shimmer-drift 8.9s ease-in-out 4.9s infinite;
+}
+/* the touch: title and ripple share the beat */
+#sc-cold-open.arrive .title-card h1 {
+  animation:
+    title-surface 1.8s cubic-bezier(0.22, 1, 0.36, 1) 3.55s both,
+    title-track 2.2s cubic-bezier(0.22, 1, 0.36, 1) 3.55s both;
+}
+#sc-cold-open.arrive .title-card .subtitle { animation: fade-from-0 0.9s ease 4.6s both; }
+#sc-cold-open.arrive .title-card .game-intro { animation: fade-from-0 0.9s ease 5.3s both; }
+#sc-cold-open.arrive .title-card .start-hint {
+  animation: fade-from-0 0.9s ease 6.4s both, hint-breathe 4.8s ease-in-out 7.3s infinite;
+}
+
+/* keyframes with only a from-frame end at each element's own resting style */
+@keyframes draw-on { to { stroke-dashoffset: 0; } }
+@keyframes post-rise { from { transform: scaleY(0); } }
+@keyframes settle-in { from { opacity: 0; transform: translateY(-4px); } }
+@keyframes line-drop { from { transform: scaleY(0); } }
+@keyframes ripple-bloom { from { transform: scale(0.2); opacity: 0.75; } }
+@keyframes fade-from-0 { from { opacity: 0; } }
+@keyframes title-surface { from { opacity: 0; filter: blur(8px); transform: translateY(10px); } }
+@keyframes title-track { from { letter-spacing: 0.07em; } }
+
+/* ---------- the lobby idle: five minutes that never visibly repeat ----------
+   Every period is incommensurate with every other; the ripple and the
+   moon-glint are JS-scheduled with spawn-time jitter (deck.js), so the
+   composite has no discoverable loop. Ambient — never competes with content. */
+
+#sc-cold-open .line-sway {
+  transform-origin: 50% 0%; /* the rod tip */
+  animation: line-sway 13.7s ease-in-out infinite;
+}
+#sc-cold-open .dock .shimmer { animation: shimmer-drift 8.9s ease-in-out infinite; }
+#sc-cold-open .start-hint { animation: hint-breathe 4.8s ease-in-out infinite; }
+
+@keyframes line-sway {
+  0%, 100% { transform: rotate(0deg); }
+  30% { transform: rotate(-1.4deg); }
+  72% { transform: rotate(1.2deg); }
+}
+@keyframes shimmer-drift {
+  0%, 100% { opacity: 0.07; }
+  50% { opacity: 0.15; }
+}
+@keyframes hint-breathe {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 0.38; }
+}
+
+/* something's down there — deck.js re-arms .plink at jittered intervals */
+#sc-cold-open .dock.plink .ripple {
+  transform-origin: 50% 50%;
+  animation: ripple-bloom 1.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+#sc-cold-open .dock.plink .ripple.faint { animation-duration: 2.3s; animation-delay: 0.12s; }
+
+/* moonlight crosses the title — rare, JS-scheduled; silver at the open,
+   the closer answers in gold at dawn (the same gesture, the same light) */
+#sc-cold-open .title-card h1.glint {
+  background: linear-gradient(100deg, var(--parchment) 0% 38%, #ffffff 50%, var(--parchment) 62% 100%);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation:
+    glint-sweep 2.6s cubic-bezier(0.65, 0, 0.35, 1) both,
+    glint-shade 2.6s cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+@keyframes glint-sweep {
+  from { background-position: 100% 0; }
+  to { background-position: 0% 0; }
+}
+/* the flanks dim a breath while the light passes, so the band reads */
+@keyframes glint-shade {
+  0%, 100% { filter: brightness(1); }
+  18%, 82% { filter: brightness(0.93); }
+}
 
 .request {
   font-size: clamp(1rem, 1.9vw, 1.4rem);
@@ -224,6 +376,11 @@ body.dawn #sky .star { opacity: 0.05; }
   line-height: 1.5;
 }
 .thesis em { color: var(--ochre); font-style: normal; }
+
+/* both cold-open terminals hold the same fixed body height, so the two
+   context bars — and the tags and avatars below them — stay vertically
+   aligned no matter how each scripted run wraps */
+#sc-cold-open .term-body { height: 19em; min-height: 0; overflow: hidden; }
 
 /* the reveal beat forces the eye to the two bars: everything else dims */
 #sc-cold-open .term, #sc-cold-open .request { transition: opacity 0.8s ease; }
@@ -361,7 +518,6 @@ body.dawn #sky .star { opacity: 0.05; }
   letter-spacing: 0.04em;
   line-height: 1.6;
 }
-.gauge-avatar { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; }
 .layer-label { font-family: var(--mono); font-size: 12.5px; fill: var(--parchment); opacity: 0.85; }
 .door-label { font-family: var(--mono); font-size: 12px; fill: var(--ochre); }
 
@@ -468,7 +624,7 @@ body.dawn #sky .star { opacity: 0.05; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2.2rem;
+  gap: 1.3rem;
   width: min(92vw, 1080px);
 }
 /* one stage bright at a time: finished stages dim, so the pipeline reads
@@ -480,9 +636,13 @@ body.dawn #sky .star { opacity: 0.05; }
 #sc-prism.handoff-mode .prism-tickets .ticket { opacity: 0.35; }
 #sc-prism.handoff-mode .prism-tickets .ticket.callback { opacity: 1; border-color: var(--ochre); }
 #sc-prism.handoff-mode .prism-tickets .stage-cap { opacity: 0.25; }
+/* unrevealed blocks must not push the title off the top */
+#sc-prism { gap: 1.2rem; padding-top: 2.5vh; padding-bottom: 2.5vh; }
+#sc-prism .scene-title { font-size: clamp(1.4rem, 2.7vw, 2.1rem); }
+#sc-prism .handoff-block:not(.on), #sc-prism .handoff-cap:not(.on) { height: 0; overflow: hidden; margin: 0; }
 
 /* the pipeline rail: the presenter's real workflow, named on screen */
-.pipe-rail { display: flex; align-items: center; gap: 1.2vw; font-size: 0.78rem; color: var(--parch-faint); margin-top: -1.2rem; }
+.pipe-rail { display: flex; align-items: center; gap: 1.2vw; font-size: 0.78rem; color: var(--parch-faint); margin-top: 0.2rem; }
 .pipe-step {
   padding: 0.35em 0.8em;
   border: 1px solid var(--rule);
@@ -508,12 +668,21 @@ body.dawn #sky .star { opacity: 0.05; }
 }
 .anatomy-line { font-size: 0.82rem; color: var(--parchment); line-height: 1.5; }
 .anatomy-line.dim { color: var(--parch-dim); font-size: 0.75rem; }
-.handoff-arrow { font-size: 1.6rem; color: var(--parch-faint); }
-.handoff-pane { display: flex; flex-direction: column; gap: 0.6rem; width: clamp(260px, 28vw, 360px); }
-.handoff-term .term-line { opacity: 0; transition: opacity 0.5s ease; }
-.handoff-block.on .handoff-term .term-line:nth-child(1) { opacity: 1; transition-delay: 0.5s; }
-.handoff-block.on .handoff-term .term-line:nth-child(2) { opacity: 1; transition-delay: 1.3s; }
-.handoff-block.on .handoff-term .term-line:nth-child(3) { opacity: 1; transition-delay: 2.2s; }
+.anatomy-dep { margin-top: 0.15rem; color: var(--ochre); font-size: 0.72rem; letter-spacing: 0.04em; }
+.offer-col { display: flex; flex-direction: column; gap: 0.7rem; align-items: center; }
+.win-row { display: flex; gap: 0.9rem; }
+.win-wait {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.7em 0.9em;
+  border: 1px dashed var(--parch-faint);
+  border-radius: 8px;
+  color: var(--parchment);
+  font-size: 0.72rem;
+}
+.win-wait .dep-tag { color: var(--ochre); font-size: 0.85em; letter-spacing: 0.04em; }
+.wait-bar { width: 96px; height: 6px; border-radius: 3px; background: var(--night-lift); border: 1px solid var(--rule); }
 .handoff-cap { text-align: center; }
 .prism-top { display: flex; align-items: flex-end; gap: 4vw; }
 .head-block .stage-cap { margin-top: 0.9rem; }
@@ -639,8 +808,6 @@ body.dawn #sky .star { opacity: 0.05; }
 .note rect { fill: var(--night-lift); stroke: var(--ochre); stroke-width: 1.5; }
 .note path { stroke: var(--ochre); stroke-width: 1.5; fill: none; }
 .note line { stroke: var(--parch-faint); stroke-width: 1.5; }
-.film-avatar { position: absolute; right: 1vw; top: -20px; }
-.film-avatar .avatar { height: 64px; }
 .load-label { font-family: var(--mono); font-size: 13px; fill: var(--parch-faint); letter-spacing: 1px; }
 .note-text { font-family: var(--mono); font-size: 13.5px; fill: var(--ochre); }
 
@@ -672,6 +839,48 @@ body.dawn #sky .star { opacity: 0.05; }
 #sc-noloop .term, #sc-noloop .bar-tag { transition: opacity 0.8s ease; }
 #sc-noloop.spotlight .term { opacity: 0.45; }
 .conflict-cap { color: var(--zone-red); }
+.win-frame {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  padding: 1.8rem 1.4rem 1rem;
+  border: 1px dashed var(--parch-faint);
+  border-radius: 12px;
+  width: clamp(330px, 37vw, 480px);
+}
+.spiral-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.spiral-row.on { opacity: 1; transform: none; }
+#lap-2 { margin-left: 1.7rem; }
+#lap-3 { margin-left: 3.4rem; }
+.lap-chip {
+  padding: 0.45em 0.8em;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--night-lift);
+  color: var(--parchment);
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+#lap-2 .lap-chip { border-color: var(--ochre-deep); }
+#lap-3 .lap-chip { border-color: var(--zone-red); background: rgba(176, 83, 63, 0.1); }
+.no-chip {
+  padding: 0.3em 0.65em;
+  border: 1px solid var(--blue);
+  border-radius: 6px;
+  color: var(--parchment);
+  background: var(--night-lift);
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+.no-chip.lap-stamp { border-color: var(--zone-red); color: var(--zone-red); font-weight: 600; }
 .chip.speaking { border-color: var(--ochre); box-shadow: 0 0 14px rgba(232, 168, 101, 0.4); }
 .chip.conflict { border-color: var(--zone-red); box-shadow: 0 0 12px rgba(176, 83, 63, 0.45); }
 
@@ -681,7 +890,7 @@ body.dawn #sky .star { opacity: 0.05; }
   color: var(--parch-faint);
   letter-spacing: 0.12em;
   font-size: 0.8rem;
-  margin-top: -1.6rem;
+  margin-top: -0.3rem;
 }
 .pane-tag { font-size: 0.82rem; color: var(--parchment); letter-spacing: 0.1em; }
 .scorecard { display: flex; gap: 3.5vw; font-size: 0.88rem; color: var(--parch-dim); }
@@ -703,81 +912,36 @@ body.dawn #sky .star { opacity: 0.05; }
 .screen-card.warm .serif { font-size: 1.15rem; }
 .screen-card.warm .night-young { color: var(--ochre); font-style: italic; font-size: 0.95rem; }
 
-/* ---------- set more lines: parallel fresh sessions ---------- */
+/* ---------- set more lines: one gauge, laid along a clock ---------- */
 
-.lines-stage { display: flex; align-items: flex-start; justify-content: center; gap: 5vw; width: min(94vw, 1240px); }
-.lines-left { display: flex; flex-direction: column; align-items: center; gap: 0.8rem; }
-.lines-right { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
-.prompt-chip {
-  border: 1px solid var(--rule);
-  border-radius: 6px;
-  padding: 0.3em 0.7em;
-  color: var(--ochre);
-  font-size: 0.8rem;
-  background: var(--night-lift);
-}
-.beam { width: min(44vw, 620px); display: block; }
-.beam-rod { stroke: var(--parch-dim); stroke-width: 2.5; stroke-linecap: round; }
-.beam-line { stroke: var(--parch-faint); stroke-width: 1.2; stroke-dasharray: 3 4; opacity: 0; }
-.lines-right.on .beam-line { transition: opacity 0.7s ease; opacity: 0.8; }
-.lines-right.on .beam-line:nth-of-type(2) { transition-delay: 0.3s; }
-.lines-right.on .beam-line:nth-of-type(3) { transition-delay: 0.6s; }
-.lines-trio { display: flex; gap: 2.5vw; align-items: flex-start; }
+.econ-stage { width: min(96vw, 1240px); }
+#econ-svg { width: 100%; display: block; }
+#econ-svg text { font-family: var(--mono); fill: var(--parch-dim); font-size: 13px; letter-spacing: 0.4px; }
+#econ-svg .eg { opacity: 0; transition: opacity 0.7s ease; }
+#econ-svg .eg.on { opacity: 1; }
+#econ-svg .eg-axis line { stroke: var(--rule); stroke-width: 2; }
+#econ-svg .eg-axis text { fill: var(--parch-faint); font-size: 12px; }
+#econ-svg .eg-rule { stroke: var(--parch-faint); stroke-width: 1; stroke-dasharray: 5 5; opacity: 0.5; }
+#econ-svg .eg-rule-label { fill: var(--parch-faint); font-size: 12px; }
+#econ-svg .eg-lane-label { fill: var(--parchment); font-size: 14.5px; letter-spacing: 0.8px; }
+#econ-svg .eg-door rect { fill: none; stroke: var(--ochre); stroke-width: 1.5; }
+#econ-svg .eg-solo-fill { fill: rgba(194, 102, 10, 0.28); stroke: var(--ochre); stroke-width: 1.5; }
+#econ-svg .eg-trio-fill { fill: rgba(91, 125, 224, 0.3); stroke: var(--blue); stroke-width: 1.2; }
+#econ-svg .eg-clip-solo { transition: width 4.5s cubic-bezier(0.4, 0, 0.6, 1); }
+#econ-svg .eg-clip-trio { transition: width 3.5s ease; }
+#econ-svg .eg-cliff1 text, #econ-svg .eg-cliff2 text { fill: var(--ochre); }
+#econ-svg .eg-done text { fill: var(--parchment); }
+#econ-svg .eg-debt text { fill: var(--zone-red); }
+#econ-svg .eg-debt .xmark { font-size: 17px; }
+#econ-svg .eg-bills .bill { font-size: 19px; }
+#econ-svg .eg-bills .bill-solo { fill: var(--ochre); }
+#econ-svg .eg-bills .bill-trio { fill: var(--blue); }
+#econ-svg .eg-bills .all-three { fill: #5fae83; }
+#econ-svg .eg-bills line { stroke: var(--parch-faint); stroke-width: 1.5; }
+#econ-svg .eg-dep-line { stroke: var(--blue); stroke-width: 1.2; stroke-dasharray: 4 4; opacity: 0.8; }
+#econ-svg .eg-dep-label { fill: #5fae83; font-size: 12px; }
+.econ-verdict-line { font-size: clamp(0.95rem, 1.75vw, 1.3rem); }
 .line-col { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; }
-.lines-head { display: flex; align-items: center; gap: 1.6vw; }
-.clock-chip { color: var(--parchment); }
-.cbar-slot.mini { width: 90px; }
-.working-dots { display: flex; gap: 5px; height: 8px; opacity: 0; transition: opacity 0.5s ease; }
-.working-dots span {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--ochre);
-  animation: dot-pulse 1.1s ease infinite;
-}
-.working-dots span:nth-child(2) { animation-delay: 0.22s; }
-.working-dots span:nth-child(3) { animation-delay: 0.44s; }
-@keyframes dot-pulse { 50% { opacity: 0.25; transform: translateY(-3px); } }
-#sc-lines.working .working-dots { opacity: 1; }
-#sc-lines.picked .working-dots { opacity: 0; }
-.you-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  align-self: center;
-  margin-left: 2vw;
-  color: var(--parch-faint);
-  font-size: 0.72rem;
-}
-.you-card .avatar { height: 40px; }
-.parallel-cap { color: var(--ochre); }
-#vessel-murk .vessel-box svg { width: 150px; filter: saturate(0.45) brightness(0.8); }
-#sc-lines.picked .idea.fresh:not(.lit) { opacity: 0.35; }
-#sc-lines.picked .lines-left { opacity: 0.4; transition: opacity 0.8s ease; }
-.idea {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.9rem 1.1rem;
-  background: var(--night-lift);
-  border: 1px solid var(--rule);
-  border-radius: 10px;
-  transition: opacity 0.6s ease, transform 0.6s ease, border-color 0.6s ease, box-shadow 0.6s ease;
-}
-.idea-glyph { width: 84px; }
-.idea-glyph rect, .idea-glyph line { fill: none; stroke: var(--parch-dim); stroke-width: 1.4; }
-.idea.murk { border-color: #4a4436; background: #191712; }
-.idea.murk .idea-glyph rect.heavy-border { stroke: #8a7a55; stroke-width: 3; }
-.idea.murk .idea-glyph rect, .idea.murk .idea-glyph line { stroke: #8a7a55; }
-.idea-label { color: #a89468; font-size: 0.75rem; }
-.idea-note { color: var(--parch-faint); font-size: 0.7rem; }
-.idea.fresh { opacity: 0; transform: translateY(14px); }
-/* the ideas surface only as the parallel work finishes (beat 3) */
-#sc-lines.working .idea.fresh { opacity: 1; transform: none; transition-delay: 4.2s; }
-#sc-lines.working .line-col:nth-child(2) .idea.fresh { transition-delay: 4.6s; }
-#sc-lines.working .line-col:nth-child(3) .idea.fresh { transition-delay: 5s; }
-#sc-lines.picked .idea.fresh { transition-delay: 0s; }
-.idea.fresh.lit { border-color: var(--ochre); box-shadow: 0 0 16px rgba(232, 168, 101, 0.22); }
 .badge-big.small { font-size: 0.82rem; padding: 0.4em 0.8em; }
 
 /* ---------- scene 12: arrows and the gold seam ---------- */
@@ -801,8 +965,13 @@ body.dawn #sky .star { opacity: 0.05; }
 .prep-doc .doc { transform: none; }
 .rail-col { display: flex; flex-direction: column; gap: 0.9rem; width: clamp(280px, 32vw, 380px); }
 .prep-term { display: flex; flex-direction: column; gap: 0.5rem; }
-#sc-arrows.spec-docked .prep-doc { opacity: 0; transform: translateX(16vw) scale(0.7); }
-#sc-arrows .arrows-row { opacity: 0.12; transition: opacity 0.9s ease 0.4s; }
+#sc-arrows .prep-term.on { transition-delay: 1.9s; } /* lands after the doc docks */
+#sc-arrows.spec-docked .prep-doc {
+  opacity: 0;
+  transform: translateX(16vw) scale(0.7);
+  transition: transform 1.8s cubic-bezier(0.4, 0, 0.5, 1), opacity 1.2s ease 0.9s;
+}
+#sc-arrows .arrows-row { opacity: 0.12; transition: opacity 0.9s ease 1.4s; }
 #sc-arrows.spec-docked .arrows-row { opacity: 1; }
 .judge-cap { color: var(--ochre); }
 
@@ -826,11 +995,13 @@ body.dawn #sky .star { opacity: 0.05; }
 }
 .fcard.on { opacity: 1; transform: none; }
 .fcard.real { border-color: var(--ochre-deep); color: var(--parchment); }
-.fstamp { font-size: 0.68rem; letter-spacing: 0.06em; color: var(--parch-faint); }
+.fstamp { font-size: 0.68rem; letter-spacing: 0.06em; color: var(--parch-faint); opacity: 0; transform: translateY(3px); transition: opacity 0.5s ease, transform 0.5s ease; }
+.fcard.stamped .fstamp { opacity: 1; transform: none; }
 .fstamp.confirm { color: var(--ochre); }
 .spec-target { fill: var(--night-lift); stroke: var(--ochre-deep); stroke-width: 1.5; }
 .spec-line { stroke: var(--rule); stroke-width: 4; stroke-linecap: round; }
 .spec-title { fill: var(--parch-dim); font-family: var(--mono); font-size: 13px; letter-spacing: 1px; }
+.spec-sub { fill: var(--parch-faint); font-family: var(--mono); font-size: 11px; letter-spacing: 0.5px; }
 .arrow line { stroke-width: 2.5; stroke-linecap: round; }
 .arrow path { stroke-width: 2.5; fill: none; }
 .arrow.a1 line, .arrow.a1 path { stroke: var(--blue); }
@@ -856,7 +1027,10 @@ body.dawn #sky .star { opacity: 0.05; }
 
 /* ---------- the finale: Friday, run right ---------- */
 
-#sc-finale { gap: 0.8rem; padding-top: 3vh; }
+#sc-finale { gap: 0.8rem; padding-top: 2.5vh; padding-bottom: 2.5vh; }
+#sc-finale .finale-page:not(.on), #sc-finale .finale-trio:not(.on),
+#sc-finale .finale-results:not(.on), #sc-finale .finale-close:not(.on),
+#sc-finale .fterm:not(.on) { height: 0; overflow: hidden; margin: 0; padding: 0; }
 #sc-finale .scene-title { font-size: clamp(1.4rem, 2.6vw, 2rem); }
 #sc-finale.f5 .finale-ask, #sc-finale.f5 .experiment-tag { display: none; }
 .finale-ask { font-size: clamp(0.85rem, 1.5vw, 1.1rem); }
@@ -916,7 +1090,7 @@ body.dawn #sky .star { opacity: 0.05; }
 }
 .tune-wrap { display: flex; flex-direction: column; gap: 0.6rem; }
 .tune-head { color: var(--parch-faint); font-size: 0.68rem; letter-spacing: 0.1em; }
-.lesson-col { display: flex; flex-direction: column; gap: 1rem; max-width: 300px; align-items: flex-start; }
+.lesson-col { display: flex; flex-direction: column; gap: 0.8rem; max-width: 300px; align-items: flex-start; }
 .lesson-line {
   font-style: italic;
   font-size: clamp(0.95rem, 1.6vw, 1.15rem);
@@ -948,6 +1122,40 @@ body.dawn #sky .star { opacity: 0.05; }
 .skill-body { padding: 0.9rem 1rem 1.1rem; min-height: 11em; font-size: 0.78rem; line-height: 1.9; color: var(--parch-dim); }
 .skill-body .lnum { color: var(--parch-faint); margin-right: 0.8em; }
 .skill-body .gag { color: var(--ochre-deep); } /* highlighted file content, not deck voice */
+.skill-col { display: flex; flex-direction: column; align-items: center; gap: 0.7rem; }
+.skill-body .sign-line { background: rgba(232, 168, 101, 0.07); }
+.skill-body .sign-line span:last-child { position: relative; color: var(--ochre); transition: opacity 0.45s ease; }
+.skill-body .sign-line span:last-child::after {
+  content: "";
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  top: 52%;
+  height: 2px;
+  background: var(--zone-red);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.45s ease;
+}
+.skill-body .sign-line.struck span:last-child { opacity: 0.5; }
+.skill-body .sign-line.struck span:last-child::after { transform: scaleX(1); }
+.line-count.ticked { color: var(--zone-green); }
+.gate-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.5em 0.8em;
+  border: 1px solid var(--zone-green);
+  border-radius: 8px;
+  font-size: 0.74rem;
+  color: var(--parchment);
+  background: rgba(77, 143, 107, 0.07);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.gate-chip.on { opacity: 1; transform: none; }
+.gate-chip .gate-sub { color: var(--parch-faint); font-size: 0.85em; }
 .fake-scrollbar { position: absolute; right: 3px; top: 38px; bottom: 6px; width: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.04); }
 .fake-scrollbar .thumb { width: 100%; height: 82%; border-radius: 3px; background: var(--parch-faint); opacity: 0.7; transition: height 3.2s ease; }
 .tune-col { display: flex; flex-direction: column; gap: 0.7rem; min-width: 110px; }
@@ -966,19 +1174,19 @@ body.dawn #sky .star { opacity: 0.05; }
 }
 .tune-bubble.on { opacity: 1; transform: none; }
 .scroll-vessel #vessel-skill .vessel-box svg { width: 130px; }
-.drawers-block { display: flex; flex-direction: column; align-items: center; gap: 0.9rem; }
-.index-card {
-  padding: 0.5em 0.9em;
-  background: #1a1e2b;
-  border: 1px solid var(--parch-faint);
-  border-radius: 6px;
-  color: var(--parchment);
-  font-size: 0.78rem;
+.drawers-block { display: flex; flex-direction: column; align-items: center; gap: 0.8rem; }
+.fix-zone { position: relative; border: 1px dashed var(--parch-faint); border-radius: 12px; padding: 1.6rem 1.1rem 1rem; }
+.fix-file {
+  width: clamp(240px, 25vw, 320px);
+  background: var(--night-lift);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  overflow: hidden;
 }
-.drawers { display: flex; flex-direction: column; gap: 5px; }
+.fix-body { min-height: 0; padding: 0.7rem 0.9rem 0.85rem; font-size: 0.72rem; line-height: 1.9; }
+.ref-row { display: flex; gap: 6px; }
 .drawer {
-  width: 130px;
-  padding: 0.35em 0.7em;
+  padding: 0.3em 0.6em;
   background: var(--night-lift);
   border: 1px solid var(--rule);
   border-radius: 4px;
@@ -986,39 +1194,61 @@ body.dawn #sky .star { opacity: 0.05; }
   font-size: 0.7rem;
   transition: transform 0.7s ease 0.9s, border-color 0.7s ease 0.9s, color 0.7s ease 0.9s;
 }
-.drawers-block.on .drawer.open { transform: translateX(26px); border-color: var(--ochre); color: var(--ochre); }
+.drawers-block.on .drawer.open { transform: translateY(-4px); border-color: var(--ochre); color: var(--ochre); }
 .drawers-block #vessel-drawers .vessel-box svg { width: 90px; }
 
-/* ---------- sign vs turnstile ---------- */
+/* ---------- The Tackle Box: prove it, then let the crew choose it ---------- */
 
-.gate-stage { width: min(92vw, 1000px); }
-#gate-svg { width: 100%; }
-.line-chip {
-  padding: 0.35em 0.8em;
-  border: 1px solid var(--rule);
-  border-radius: 7px;
-  color: var(--parch-faint);
-  font-size: 0.78rem;
-  transition: color 0.6s ease, border-color 0.6s ease;
+#sc-tackle { gap: 1.1rem; }
+#sc-tackle .scene-title { font-size: clamp(1.4rem, 2.7vw, 2.1rem); }
+.tackle-state { font-family: var(--mono); font-size: 0.8rem; color: var(--parch-faint); letter-spacing: 0.06em; transition: color 0.6s ease; margin-top: -0.3rem; }
+.tackle-state.forced-state { color: var(--zone-red); }
+.tackle-state.optin-state { color: var(--zone-green); }
+.box-stage { width: min(92vw, 980px); }
+#tackle-svg { width: 100%; display: block; overflow: visible; }
+#tackle-svg text { font-family: var(--mono); fill: var(--parch-dim); }
+#tackle-svg .tk { opacity: 0; transition: opacity 0.6s ease; }
+#tackle-svg .tk.on { opacity: 1; }
+.tk-water { stroke: var(--blue); stroke-width: 1.5; opacity: 0.5; }
+.tk-ripple { fill: none; stroke: var(--blue); stroke-width: 1; opacity: 0.5; }
+.tk-ripple.faint { opacity: 0.22; }
+.tk-rail { fill: var(--rule); transition: fill 0.6s ease; }
+.tk-post { fill: var(--rule); }
+#sc-tackle.forced .tk-rail { fill: var(--zone-red); }
+.tk-reel { fill: none; stroke: var(--parch-dim); stroke-width: 2; }
+.tk-pole { stroke: var(--parch-dim); stroke-width: 2.5; stroke-linecap: round; }
+.tk-fline { stroke: var(--parch-faint); stroke-width: 1; stroke-dasharray: 2 3; }
+.tk-lure-card { fill: var(--night-lift); stroke: var(--ochre); stroke-width: 1.5; transition: opacity 0.5s ease; }
+.tk-lure-card.faint { stroke: var(--parch-faint); opacity: 0.5; }
+.tk-youlure.gone { opacity: 0; }
+.tk-lure-txt { fill: var(--ochre); font-size: 12px; }
+.tk-label { fill: var(--parch-faint); font-size: 12.5px; letter-spacing: 0.04em; }
+.tk-fish-body { fill: none; stroke: var(--ochre); stroke-width: 1.7; }
+.tk-note { fill: var(--ochre); font-size: 12.5px; }
+.tk-lid { fill: #20242f; stroke: var(--parch-dim); stroke-width: 1.5; }
+.tk-box-body { fill: var(--night-lift); stroke: var(--parch-dim); stroke-width: 1.5; }
+.tk-divider { stroke: var(--rule); stroke-width: 1; }
+.tk-boxtag { fill: var(--parch-dim); font-size: 13.5px; letter-spacing: 0.06em; }
+.tk-forced-card { fill: rgba(176, 83, 63, 0.16); stroke: var(--zone-red); stroke-width: 1.3; }
+.tk-forced-txt { fill: var(--zone-red); font-size: 11px; }
+.tk-staple { fill: none; stroke: var(--zone-red); stroke-width: 1.6; }
+.tk-take-line { fill: none; stroke: var(--zone-green); stroke-width: 1.3; stroke-dasharray: 4 3; opacity: 0.85; }
+.tk-green-card { fill: rgba(95, 174, 131, 0.14); stroke: var(--zone-green); stroke-width: 1.5; }
+.tk-green-txt { fill: #5fae83; font-size: 11px; }
+.box-fork { display: flex; flex-direction: column; align-items: center; gap: 0.7rem; }
+.box-rule { color: var(--parch-dim); font-size: 0.82rem; letter-spacing: 0.03em; }
+.share-fork {
+  display: grid;
+  grid-template-columns: auto auto;
+  column-gap: 0.7rem;
+  row-gap: 0.45rem;
+  align-items: baseline;
+  font-size: 0.82rem;
+  line-height: 1.4;
 }
-.line-chip.ticked { color: var(--ochre); border-color: var(--ochre-deep); }
-.sign-cap { font-family: var(--mono); font-size: 12px; fill: var(--parch-faint); opacity: 0; transition: opacity 0.8s ease; }
-.sign-cap.on { opacity: 0.9; }
-.gate-fix rect { fill: var(--night-lift); stroke: var(--zone-green); stroke-width: 1.2; }
-.gate-fix text { font-family: var(--mono); font-size: 13px; fill: var(--zone-green); }
-.gate-anchor { color: var(--ochre); }
-.ground { stroke: var(--rule); stroke-width: 2; }
-.sign-post { stroke: var(--rule); stroke-width: 5; }
-.sign-board { fill: var(--night-lift); stroke: var(--parch-faint); stroke-width: 1.2; transition: opacity 1.4s ease; }
-.sign-text { fill: var(--parch-dim); font-family: var(--mono); font-size: 12.5px; transition: opacity 1.4s ease; }
-.sign-faded .sign-board, .sign-faded .sign-text { opacity: 0.12; }
-.turnstile-frame { stroke: var(--parch-dim); stroke-width: 4; fill: none; }
-.turnstile-arms { stroke: var(--ochre); stroke-width: 4; stroke-linecap: round; transition: transform 1.1s cubic-bezier(0.5, 0, 0.4, 1); }
-.gate-dot { transition: fill 0.5s ease; }
-.gate-label { font-family: var(--mono); font-size: 13px; fill: var(--parch-dim); }
-.walker { transition: transform 1.8s ease; }
-.walker circle, .walker path { fill: none; stroke: var(--parch-dim); stroke-width: 3; stroke-linecap: round; }
-
+.fork-key { color: var(--ochre); text-align: right; }
+.fork-out { color: var(--parch-dim); text-align: left; }
+.tackle-verdict { font-size: clamp(1rem, 1.9vw, 1.4rem); text-align: center; }
 
 /* ---------- scene 18: dawn ---------- */
 
@@ -1026,6 +1256,26 @@ body.dawn #sky .star { opacity: 0.05; }
 .dawn-stage .dock { width: min(38vw, 460px); }
 .dawn-stage .dock .water { stroke: var(--ochre); opacity: 0.45; }
 .dock .post.lit { fill: var(--ochre-deep); }
+
+/* first light finds the posts one at a time, after the glow is underway */
+#sc-dawn.active .dawn-stage .post.lit { animation: post-light 0.9s ease both; }
+#sc-dawn.active .dawn-stage rect.post.lit:nth-of-type(1) { animation-delay: 2.4s; }
+#sc-dawn.active .dawn-stage rect.post.lit:nth-of-type(2) { animation-delay: 2.9s; }
+#sc-dawn.active .dawn-stage rect.post.lit:nth-of-type(3) { animation-delay: 3.4s; }
+@keyframes post-light { from { fill: var(--rule); } }
+
+/* the line answers as the Brass Minnow's page lands (deck.js sets .tug on beat 1) */
+#sc-dawn.tug .dock .line { animation: line-tug 0.9s ease-in-out; }
+@keyframes line-tug {
+  0%, 66%, 100% { transform: translateY(0); }
+  18% { transform: translateY(3.5px); }
+  32% { transform: translateY(0.5px); }
+  48% { transform: translateY(4px); }
+}
+#sc-dawn.tug .dock .ripple {
+  transform-origin: 50% 50%;
+  animation: ripple-bloom 1.5s cubic-bezier(0.16, 1, 0.3, 1) 0.5s 2;
+}
 .log-card {
   display: flex;
   flex-direction: column;
@@ -1045,6 +1295,8 @@ body.dawn #sky .star { opacity: 0.05; }
 .recap svg rect, .recap svg line { fill: none; stroke: var(--parch-dim); stroke-width: 1.6; }
 .recap span { color: var(--parch-faint); font-size: 0.72rem; letter-spacing: 0.04em; }
 .recap span:first-of-type { color: var(--parch-dim); }
+.recap .habit-num { color: var(--ochre); font-size: 0.7rem; margin-bottom: 0; }
+.recap .habit-num + span { color: var(--parch-dim); }
 .recap .recap-sub { font-size: 0.62rem; opacity: 0.75; }
 .recap-row.on .recap { animation: recap-in 0.6s ease backwards; }
 .recap-row.on .recap:nth-child(2) { animation-delay: 0.5s; }
@@ -1054,6 +1306,16 @@ body.dawn #sky .star { opacity: 0.05; }
   to { opacity: 1; transform: none; }
 }
 .closer { font-size: clamp(1.3rem, 2.6vw, 2rem); }
+/* the bookend: the title was lit by silver moonlight at the open; the
+   closer arrives by the same gesture in first-light gold */
+#sc-dawn .closer.on {
+  background: linear-gradient(100deg, var(--parchment) 0% 36%, var(--glint-gold) 50%, var(--parchment) 64% 100%);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: glint-sweep 2.8s cubic-bezier(0.65, 0, 0.35, 1) 1s both;
+}
 .linkline { color: var(--parch-faint); font-size: 0.78rem; letter-spacing: 0.08em; }
 
 /* ---------- proverb cards ---------- */
