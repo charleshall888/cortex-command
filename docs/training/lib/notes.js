@@ -117,12 +117,11 @@ const NOTES = {
     beats: [
       "(exhibit frame) “The moment you think the wrapper matters, you'll tune it. Here's the trap.”",
       "(tidy 20-line file) “Standing instructions, poured into every window. Twenty lines. Started perfect.”",
-      "(ratchet — let them read the bloat) “Models don't need many instructions — they love writing them. Every ‘tune it’ adds a line, till it contradicts itself and needs a rule to sort the rules.” SCAR: “writing the instructions is the one job I never hand over.”",
-      "(gate — line struck, count ticks DOWN) “One line's different: always run the tests. A must-happen doesn't belong in a sentence. Made it a hook — runs every time, costs nothing, argues with no one. File got 53 lines shorter.”",
-      "(shove + sweep) “This rides in every window; you re-pay it every turn. A bloated skill file means Monday starts tired.” SCAR: “if I could go back — hand-craft the simple skills myself, let Claude build the CLI around them.”",
-      "(the fix) “Same skill, rebuilt: a 30-line core, detail in files you open per task. Reviewing a plan? The window gets the core plus plans.md — nothing else.”",
+      "(ratchet to 6,000 — let them read the bloat) “Models don't need many instructions — they love writing them. Every ‘tune it’ adds a line, till it contradicts itself and needs a rule just to sort the rules.” SCAR: “writing the instructions is the one job I never hand over.”",
+      "(sweep — the file stays up) “All six thousand lines ride in every window, and you re-pay them every turn. A bloated skill file means Monday starts tired.” SCAR: “if I could go back — hand-craft the simple skills myself, let Claude build the CLI around them.”",
+      "(the fix, beside the monster) “Same skill, rebuilt: a 30-line core, detail in files you open per task. Reviewing a plan? The window gets the core plus plans.md — nothing else.”",
     ],
-    exit: "“Tackle's sharp — lean core, per-task files, gates for the must-happens. Last question: when do you hand it to everyone else?”",
+    exit: "“Tackle's sharp — a lean core and per-task files. Last question: when do you hand it to everyone else?”",
   },
   "sc-tackle": {
     beats: [
@@ -138,7 +137,7 @@ const NOTES = {
   "pv-3": {
     beats: [
       "SAY NOTHING — let them read the proverb.",
-      "(post lights) SILENT — let “keep your workspace clean” land: lean instructions, gates for the must-happens, tooling proved on your own bench first.",
+      "(post lights) SILENT — let “keep your workspace clean” land: lean instruction files, and tooling you prove on your own bench first.",
     ],
     exit: "“Three posts down. One plank missing on that dock — and one Friday to lay it.”",
   },

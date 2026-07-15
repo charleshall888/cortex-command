@@ -164,16 +164,14 @@
     { n: "#12", text: "If the spec already answers it, drop the finding." },
   ];
   const SCROLL_GAGS = [
-    { n: "#212", text: "Always begin findings with a severity emoji." },
-    { n: "#1,003", text: "NEVER use the word “delve” in a finding." },
-    { n: "#1,486", text: "No emoji in security findings (overrides #212).", gag: true },
-    { n: "#2,041", text: "If two rules conflict, the higher line number wins.", gag: true },
+    { n: "#348", text: "Always begin findings with a severity emoji." },
+    { n: "#2,970", text: "NEVER use the word “delve” in a finding." },
+    { n: "#4,401", text: "No emoji in security findings (overrides #348).", gag: true },
+    { n: "#5,994", text: "If two rules conflict, the higher line number wins.", gag: true },
   ];
-  /* the one line that should never have been a sentence — scene 12's gate beat */
-  const SIGN_LINE = { n: "#1,847", text: "ALWAYS run the tests before committing.", sign: true };
 
   function skillLine(l) {
-    return `<div class="${l.sign ? "sign-line" : ""}"><span class="lnum">${l.n}</span><span class="${l.gag ? "gag" : ""}">${l.text}</span></div>`;
+    return `<div><span class="lnum">${l.n}</span><span class="${l.gag ? "gag" : ""}">${l.text}</span></div>`;
   }
 
   const GAUGE_BASE = [
@@ -478,15 +476,11 @@
       const body = document.getElementById("skill-body");
       const count = document.getElementById("line-count");
       const thumb = document.getElementById("scroll-thumb");
-      const file = document.getElementById("skill-file");
       if (b === 0) {
         body.innerHTML = SCROLL_START.map(skillLine).join("");
         count.textContent = "20 lines";
-        count.classList.remove("ticked");
         thumb.style.height = "82%";
-        file.classList.remove("shoved");
         document.getElementById("tune-col").innerHTML = "";
-        document.getElementById("gate-chip").classList.remove("on");
         sec.querySelector(".drawers-block").classList.remove("on");
       }
       if (b === 2)
@@ -501,14 +495,14 @@
               requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add("on")));
             }, i * 800)
           );
-          thumb.style.height = "4%";
-          const STEPS = 68;
-          const D = 3400;
+          thumb.style.height = "2%"; // 20 lines of 6,000 — a sliver
+          const STEPS = 80;
+          const D = 3800;
           let gagIdx = 0;
           for (let step = 1; step <= STEPS; step++) {
             await sleep(D / STEPS);
             const p = step / STEPS;
-            const n = Math.round(20 + (2041 - 20) * p * p);
+            const n = Math.round(20 + (6000 - 20) * p * p);
             count.textContent = n.toLocaleString() + " lines";
             const due = Math.min(SCROLL_GAGS.length, Math.floor(p * (SCROLL_GAGS.length + 0.99)));
             while (gagIdx < due) {
@@ -518,28 +512,13 @@
             }
           }
         });
+      /* the rent beat: the whole 6,000-line file stays on screen and rides
+         in the window — the vessel fills and the scan re-reads it every turn */
       if (b === 3)
-        chain("scroll", async () => {
-          /* the gate beat: the one must-happen line gets struck from the
-             file and re-homed outside the window — the count ticks DOWN */
-          body.innerHTML += skillLine(SIGN_LINE);
-          while (body.children.length > 5) body.firstChild.remove();
-          await sleep(900);
-          body.querySelector(".sign-line").classList.add("struck");
-          await sleep(600);
-          for (let i = 1; i <= 8; i++) {
-            await sleep(110);
-            count.textContent = Math.round(2041 - (53 * i) / 8).toLocaleString() + " lines";
-          }
-          count.classList.add("ticked"); // §1,847 and its exception thicket came out
-          document.getElementById("gate-chip").classList.add("on");
-        });
-      if (b === 4)
         chain("scroll", async () => {
           if (!state.vSkill) state.vSkill = makeVessel(document.getElementById("vessel-skill"), { scale: 0.8 });
           state.vSkill.reset();
-          file.classList.add("shoved");
-          await sleep(900);
+          await sleep(300);
           state.vSkill.setFill([
             { kind: "system", pct: 8 },
             { kind: "tool", pct: 20 },
@@ -548,7 +527,7 @@
           ]);
           await state.vSkill.sweep({ duration: 2600 });
         });
-      if (b === 5) {
+      if (b === 4) {
         sec.querySelector(".drawers-block").classList.add("on");
         if (!state.vDrawers) state.vDrawers = makeVessel(document.getElementById("vessel-drawers"), { scale: 0.5 });
         state.vDrawers.reset();
