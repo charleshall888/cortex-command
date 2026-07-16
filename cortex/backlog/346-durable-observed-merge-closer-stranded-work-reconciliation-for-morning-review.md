@@ -2,11 +2,17 @@
 schema_version: "1"
 uuid: 6eb2c913-9f89-41d4-8404-38ef1d8ecc1e
 title: Durable observed-merge closer + stranded-work reconciliation for morning-review
-status: backlog
+status: in_progress
 priority: low
 type: feature
 created: 2026-07-02
-updated: 2026-07-02
+updated: 2026-07-16
+lifecycle_phase: research
+lifecycle_slug: durable-observed-merge-closer-stranded-work
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/durable-observed-merge-closer-stranded-work/spec.md
+areas: ['overnight-runner']
 ---
 ## Why
 The morning-review observed-merge advisory (#345) deliberately stops at a fetch-first manual advisory on the "PR already merged" exit, because a correct automatic close there is not cheaply achievable today: the post-merge sync step is skipped on that exit so the local checkout is stale, there is no push path on that exit to update main, and no durable remote signal exists to confirm a completed feature's work and ticket state on main. Research for #345 also surfaced two adjacent robustness gaps that were explicitly deferred: stranded merged work left behind on declined or abandoned integration branches, and an unstated assumption in the post-merge closer that a bare numeric backlog id always matches the current backlog numbering. These are recorded here so they are not lost.
