@@ -2,13 +2,18 @@
 schema_version: "1"
 uuid: 99d6aaf6-4300-4428-9711-f1a6aa1f714f
 title: lifecycle.config template ships dormant skip-specify/skip-review live, warning on every CLI invocation
-status: backlog
+status: in_progress
 priority: low
 type: chore
 created: 2026-07-15
-updated: 2026-07-15
+updated: 2026-07-16
 tags: ['lifecycle', 'cli', 'config']
 areas: ['lifecycle']
+lifecycle_phase: research
+lifecycle_slug: lifecycleconfig-template-ships-dormant-skip-specify
+complexity: complex
+criticality: medium
+spec: cortex/lifecycle/lifecycleconfig-template-ships-dormant-skip-specify/spec.md
 ---
 ## Why
 
