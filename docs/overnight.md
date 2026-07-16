@@ -45,7 +45,7 @@ The overnight runner can be launched from any repo — not just cortex-command.
 
 ### Setup: cortex/lifecycle.config.md
 
-Before running overnight in a new repo, create a `cortex/lifecycle.config.md` at the repo root — run `cortex init` to scaffold it, or copy the template from the cortex-core plugin asset `skills/lifecycle/assets/lifecycle.config.md`. That asset's frontmatter is the canonical, annotated scaffolded field list (including the `backlog:` backend block), kept byte-identical to what `cortex init` scaffolds by a CI parity gate — see ADR-0017 — so it is the one place to copy from rather than an inline example that can drift.
+Before running overnight in a new repo, create a `cortex/lifecycle.config.md` at the repo root — run `cortex init` to scaffold it, or copy the template from the cortex-core plugin asset `skills/lifecycle/assets/lifecycle.config.md`. That asset's frontmatter is the canonical, annotated scaffolded field list (including the `backlog:` backend block), kept byte-identical to the `cortex init` template by a parity test run under `just test` — see ADR-0017 — so it is the one place to copy from rather than an inline example that can drift.
 
 The most important field is **`test-command`**. This is the shell command that runs after each feature branch merges to the integration branch during overnight execution. If tests fail, the runner attempts automated repair via a repair agent. If repair fails, the feature is paused and surfaced in the morning report.
 
@@ -54,7 +54,6 @@ The most important field is **`test-command`**. This is the shell command that r
 Other fields:
 - **`type`**: Informs model selection heuristics and review criteria
 - **`demo-command`** / **`demo-commands`**: Optional. When `demo-command:` is set to a single string, the morning-review walkthrough (Section 2a) offers to spin up a demo worktree from the overnight integration branch and print that launch command. The agent prints the command for you to run manually — it never executes it. Only offered when the session is local (no `$SSH_CONNECTION`) and the overnight branch exists. Examples: `godot res://main.tscn`, `uv run fastapi run src/main.py`, `npm start`. Alternatively, `demo-commands:` may be configured as a list of `label:` / `command:` entries; the morning-review agent reasons from the completed-feature context (Section 2 "Key files changed") to select the most relevant entry and offer it. If none is relevant to the completed feature, the section is skipped silently.
-- **`skip-specify`** / **`skip-review`**: Skip lifecycle phases when they don't add value for this repo
 - **`commit-artifacts`**: Whether lifecycle artifacts (spec, plan, review) are committed to the repo
 
 ### Launching from another repo
