@@ -5,8 +5,10 @@ config-sources.md (ADR-0017). The lifecycle config schema lives in two
 independently-maintained files in different distribution channels — the
 cortex-core plugin asset ``skills/lifecycle/assets/lifecycle.config.md`` and the
 CLI init template ``cortex_command/init/templates/cortex/lifecycle.config.md``.
-This test fails ``just test`` / CI if their **frontmatter regions** diverge, or
-if the asset loses one of the load-bearing ``backlog:`` option lines.
+This test fails developer-run ``just test`` if their **frontmatter regions**
+diverge, or if the asset loses one of the load-bearing ``backlog:`` option
+lines. It is not currently wired into CI's blocking allowlist, so it does not
+gate merges.
 
 Why a byte-slice and not the production parser: the comparison reads raw bytes
 and slices the region **between** the two ``---`` delimiters. It deliberately
