@@ -703,7 +703,7 @@ The returned dict has five top-level keys:
 
 ### cortex/lifecycle.config.md consumers and absence behavior
 
-`cortex/lifecycle.config.md` is a per-project config file. The canonical scaffolded field list is the cortex-core plugin asset `skills/lifecycle/assets/lifecycle.config.md`, whose frontmatter a CI parity gate keeps byte-identical to the `cortex init` template (see ADR-0017). There is no centralized Python loader — each consumer reads it directly — so each consumer decides its own absence behavior. Scaffolded fields include `type`, `test-command`, `demo-command` / `demo-commands`, `default-tier`, `default-criticality`, `skip-specify`, `skip-review`, `commit-artifacts`, `synthesizer_overnight_enabled`, `branch-mode`, and the `backlog:` backend block.
+`cortex/lifecycle.config.md` is a per-project config file. The canonical scaffolded field list is the cortex-core plugin asset `skills/lifecycle/assets/lifecycle.config.md`, whose frontmatter a parity test checks byte-identical to the `cortex init` template under developer-run `just test` (see ADR-0017 for the gate's design and trade-offs). There is no centralized Python loader — each consumer reads it directly — so each consumer decides its own absence behavior. Scaffolded fields include `type`, `test-command`, `demo-command` / `demo-commands`, `commit-artifacts`, `synthesizer_overnight_enabled`, `branch-mode`, and the `backlog:` backend block, plus four **dormant** fields — `default-tier`, `default-criticality`, `skip-specify`, `skip-review` — that are scaffolded and set in live configs but read by no consumer today.
 
 **Files**: `skills/lifecycle/assets/lifecycle.config.md` (the gate-kept source of truth for the scaffolded field list), plus the consumers in `skills/lifecycle/`, `skills/critical-review/`, and `skills/morning-review/`.
 
@@ -712,7 +712,7 @@ Absence behavior per consumer (what happens when the project has no `cortex/life
 - **morning-review**: skips Section 2a (the demo-commands walkthrough) and continues the rest of the review.
 - **lifecycle complete**: skips the test step with a note that no `test-command` was configured.
 - **critical-review**: omits the `## Project Context` section of the generated review.
-- **lifecycle specify/plan**: reads optional defaults (`default-tier`, `default-criticality`, `skip-specify`, `skip-review`) and falls back to skill-level defaults when absent.
+- **lifecycle specify/plan**: `default-tier`, `default-criticality`, `skip-specify`, and `skip-review` are scaffolded but dormant — no consumer reads them (see the dormant-field note above). specify/plan always run their own auto-assessment regardless of whether the file, or these fields within it, are present.
 
 `branch-mode` is read by `read_branch_mode` (the lifecycle branch-selection preflight) and is now scaffolded into both the asset and the init template with a behavior-preserving default of `prompt` (the picker fires every time, byte-identical to the field being absent). The ADR-0017 parity gate binds the asset and init-template frontmatter byte-for-byte, so the two must be edited together.
 
