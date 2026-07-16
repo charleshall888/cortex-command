@@ -17,3 +17,5 @@
 {"ts": "2026-07-16T21:36:30Z", "event": "advance_started", "feature": "lifecycleconfig-template-ships-dormant-skip-specify", "from_state": "implement", "to_state": "implement", "invocation_id": "7a583b8e980e0bad", "verb": "implement-transition"}
 {"ts": "2026-07-16T21:36:30Z", "event": "batch_dispatch", "feature": "lifecycleconfig-template-ships-dormant-skip-specify", "batch": 0, "tasks": ["1", "3", "4", "5", "6", "9", "7"], "invocation_id": "7a583b8e980e0bad"}
 {"ts": "2026-07-16T21:36:30Z", "event": "advance_committed", "feature": "lifecycleconfig-template-ships-dormant-skip-specify", "from_state": "implement", "to_state": "implement", "invocation_id": "7a583b8e980e0bad", "verb": "implement-transition"}
+{"ts": "2026-07-16T21:45:19Z", "event": "phase_transition", "feature": "lifecycleconfig-template-ships-dormant-skip-specify", "from": "implement", "to": "review"}
+{"ts": "2026-07-16T22:04:22Z", "event": "feature_complete", "feature": "lifecycleconfig-template-ships-dormant-skip-specify", "tasks_total": 9, "rework_cycles": 0, "merge_anchor": "merge"}
