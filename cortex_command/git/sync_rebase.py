@@ -8,6 +8,8 @@ Exit codes:
   0 — success (rebase + push completed, or nothing to rebase)
   1 — conflict (rebase aborted, user must resolve manually)
   2 — push failed (rebase succeeded but push to origin/main failed)
+  3 — behind-count undetermined (git rev-list failed or returned
+      unparseable output; sync state is unknown, nothing was rebased)
 
 The allowlist file contains glob patterns for files that may be
 auto-resolved using ``--theirs`` (remote wins) during a conflict pass.
@@ -127,18 +129,35 @@ def _stale_rebase_in_progress(repo_root: Path) -> bool:
     )
 
 
-def _behind_count(repo_root: Path) -> int:
-    """Return the number of commits HEAD is behind origin/main."""
+def _behind_count(repo_root: Path) -> Optional[int]:
+    """Return the number of commits HEAD is behind origin/main.
+
+    Returns ``None`` when the count could not be determined — a missing
+    ``origin/main``, a shallow clone, an auth or network failure, or output
+    git did not render as an integer. ``None`` is distinct from a legitimate
+    ``0``: collapsing the two would render every such failure as "already up
+    to date" and exit 0 without pushing anything.
+    """
     result = _git(
         ["rev-list", "HEAD..origin/main", "--count"],
         cwd=repo_root,
     )
     if result.returncode != 0:
-        return 0
+        _log(
+            f"Error: could not determine behind-count — git rev-list "
+            f"HEAD..origin/main exited {result.returncode}: "
+            f"{result.stderr.strip()}"
+        )
+        return None
     try:
         return int(result.stdout.strip())
     except ValueError:
-        return 0
+        _log(
+            f"Error: could not determine behind-count — git rev-list "
+            f"HEAD..origin/main returned unparseable output: "
+            f"{result.stdout.strip()!r}"
+        )
+        return None
 
 
 def _conflicted_files(repo_root: Path) -> List[str]:
@@ -166,7 +185,8 @@ def sync_rebase(
     :param repo_root: Absolute path to the git repository root.
     :param allowlist_file: Path to the glob-pattern allowlist. Defaults to
         ``<repo_root>/cortex_command/overnight/sync-allowlist.conf``.
-    :returns: Exit code: 0=success, 1=unresolvable conflict, 2=push failure.
+    :returns: Exit code: 0=success, 1=unresolvable conflict, 2=push failure,
+        3=behind-count undetermined.
     """
     if allowlist_file is None:
         allowlist_file = repo_root / _DEFAULT_ALLOWLIST_REL
@@ -185,6 +205,12 @@ def sync_rebase(
 
     # Step 3: check if rebase is needed.
     behind = _behind_count(repo_root)
+    if behind is None:
+        _log(
+            "Error: aborting sync — the behind-count check failed, so the "
+            "sync state is unknown. Nothing was rebased or pushed."
+        )
+        return 3
     if behind == 0:
         _log("Already up to date with origin/main — nothing to rebase")
         return 0

@@ -23,6 +23,7 @@ from pathlib import Path
 
 import pytest
 
+import cortex_command.git.sync_rebase as sync_rebase_mod
 from cortex_command.git.sync_rebase import (
     _load_allowlist,
     _matches_allowlist,
@@ -367,6 +368,102 @@ def test_sync_rebase_auto_resolves_allowlisted_conflict(tmp_path: Path) -> None:
     )
     remote_log = _git("log", "--oneline", "main", cwd=remote).stdout
     assert "Local commit" in remote_log, f"push did not land on origin: {remote_log}"
+
+
+def _make_up_to_date_fixture(tmp_path: Path) -> Path:
+    """Build a local clone sitting exactly at origin/main.
+
+    The behind-count here is a *legitimate* zero, which is what makes this
+    fixture the right control for the failing-rev-list test: the two tests
+    differ only by the stub, so a stub that still exits 0 is provably
+    collapsing the error path into the real "up to date" answer.
+
+    :returns: the ``local`` clone path.
+    """
+    remote = tmp_path / "origin.git"
+    _git("init", "--bare", "-b", "main", str(remote), cwd=tmp_path)
+
+    local = tmp_path / "local"
+    _git("clone", str(remote), str(local), cwd=tmp_path)
+    _git("config", "user.name", "Test", cwd=local)
+    _git("config", "user.email", "test@example.com", cwd=local)
+    _git("config", "commit.gpgsign", "false", cwd=local)
+
+    (local / "README.md").write_text("hello\n")
+    allowlist_dir = local / "cortex_command" / "overnight"
+    allowlist_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy(SYNC_ALLOWLIST, allowlist_dir / "sync-allowlist.conf")
+    _git("add", "-A", cwd=local)
+    _git("-c", "commit.gpgsign=false", "commit", "-m", "Initial commit", cwd=local)
+    _git("push", "origin", "main", cwd=local)
+
+    return local
+
+
+def test_sync_rebase_reports_failure_when_behind_count_cannot_be_determined(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture,
+) -> None:
+    """A failing ``git rev-list`` must not render as "already up to date".
+
+    A missing origin/main, a shallow clone, an auth failure or a dropped
+    network all make the behind-count unanswerable. Returning 0 for those --
+    as the pre-fix code did for both the non-zero rc and the ValueError --
+    reports success while pushing nothing: a silent false success that tells
+    the morning review the sync landed when no sync occurred.
+
+    The exit code must therefore fall outside the three codes a caller can
+    already interpret (0 success, 1 conflict, 2 push failure).
+    """
+    local = _make_up_to_date_fixture(tmp_path)
+
+    real_git = sync_rebase_mod._git
+
+    def fake_git(args: list[str], **kwargs):
+        if args[:1] == ["rev-list"]:
+            return subprocess.CompletedProcess(
+                args=["git", *args],
+                returncode=128,
+                stdout="",
+                stderr="fatal: ambiguous argument 'HEAD..origin/main': "
+                "unknown revision or path not in the working tree.\n",
+            )
+        return real_git(args, **kwargs)
+
+    monkeypatch.setattr(sync_rebase_mod, "_git", fake_git)
+
+    rc = sync_rebase(repo_root=local)
+
+    assert rc not in (0, 1, 2), (
+        "a failed behind-count must not reuse success (0), conflict (1) or "
+        f"push-failure (2) — a caller cannot tell them apart; got {rc}"
+    )
+    assert rc == 3, f"expected the documented behind-count exit code 3, got {rc}"
+
+    stderr = capsys.readouterr().err
+    assert "behind-count" in stderr, (
+        f"the diagnostic must name the behind-count step so an operator can "
+        f"tell this from a conflict or a push failure; got: {stderr!r}"
+    )
+    assert "up to date" not in stderr.lower(), (
+        f"a failed check must never claim the branch is up to date: {stderr!r}"
+    )
+
+
+def test_sync_rebase_still_exits_zero_when_genuinely_up_to_date(
+    tmp_path: Path,
+) -> None:
+    """A real behind-count of zero remains an exit-0 noop.
+
+    The control for the test above: same fixture, no stub. Distinguishing the
+    error path must not disturb the legitimate "nothing to rebase" answer.
+    """
+    local = _make_up_to_date_fixture(tmp_path)
+
+    assert sync_rebase(repo_root=local) == 0, (
+        "an up-to-date branch is a legitimate zero and must still exit 0"
+    )
 
 
 def test_sync_rebase_aborts_on_non_allowlisted_conflict(tmp_path: Path) -> None:
