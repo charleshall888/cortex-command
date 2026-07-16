@@ -23,7 +23,12 @@ from pathlib import Path
 
 import pytest
 
-from cortex_command.git.sync_rebase import _load_allowlist, _matches_allowlist
+from cortex_command.git.sync_rebase import (
+    _load_allowlist,
+    _matches_allowlist,
+    _stale_rebase_in_progress,
+    sync_rebase,
+)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SYNC_REBASE_SH = REPO_ROOT / "bin" / "cortex-git-sync-rebase"
@@ -279,4 +284,119 @@ def test_git_sync_rebase_clean_rebase_succeeds(tmp_path: Path) -> None:
     remote_log = _git("log", "--oneline", "main", cwd=remote).stdout
     assert "Local commit" in remote_log, (
         f"push did not land on origin: {remote_log}"
+    )
+
+
+def _make_conflict_fixture(tmp_path: Path, conflict_path: str) -> tuple[Path, Path]:
+    """Build an origin + local clone staged for a guaranteed rebase conflict.
+
+    ``conflict_path`` is written with three different bodies: a base revision
+    on origin/main, a remote revision pushed by a second clone, and a local
+    revision committed but not pushed.  Rebasing local onto origin/main is
+    then forced through the conflict-resolution loop for exactly that path,
+    which lets a caller choose whether the conflict lands on an allowlisted
+    path or a non-allowlisted one.
+
+    :returns: ``(local, remote)`` paths.
+    """
+    remote = tmp_path / "origin.git"
+    _git("init", "--bare", "-b", "main", str(remote), cwd=tmp_path)
+
+    # ---- Seed origin/main with the base revision + the live allowlist ----
+    seed = tmp_path / "seed"
+    _git("clone", str(remote), str(seed), cwd=tmp_path)
+    seed_file = seed / conflict_path
+    seed_file.parent.mkdir(parents=True, exist_ok=True)
+    seed_file.write_text("base\n")
+    allowlist_dir = seed / "cortex_command" / "overnight"
+    allowlist_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy(SYNC_ALLOWLIST, allowlist_dir / "sync-allowlist.conf")
+    _git("add", "-A", cwd=seed)
+    _git("-c", "commit.gpgsign=false", "commit", "-m", "Initial commit", cwd=seed)
+    _git("push", "origin", "main", cwd=seed)
+
+    # ---- Local clone, pinned to a repo-local identity ----
+    # sync_rebase() shells out to git without injecting author env, so the
+    # rebase it drives must find an identity in the fixture's own config.
+    local = tmp_path / "local"
+    _git("clone", str(remote), str(local), cwd=tmp_path)
+    _git("config", "user.name", "Test", cwd=local)
+    _git("config", "user.email", "test@example.com", cwd=local)
+    _git("config", "commit.gpgsign", "false", cwd=local)
+
+    # ---- Upstream advances origin/main, touching the same lines ----
+    upstream = tmp_path / "upstream"
+    _git("clone", str(remote), str(upstream), cwd=tmp_path)
+    (upstream / conflict_path).write_text("remote revision\n")
+    _git("add", "-A", cwd=upstream)
+    _git("-c", "commit.gpgsign=false", "commit", "-m", "Upstream commit", cwd=upstream)
+    _git("push", "origin", "main", cwd=upstream)
+
+    # ---- Local commits a competing revision of the same file ----
+    (local / conflict_path).write_text("local revision\n")
+    _git("add", "-A", cwd=local)
+    _git("-c", "commit.gpgsign=false", "commit", "-m", "Local commit", cwd=local)
+
+    return local, remote
+
+
+def test_sync_rebase_auto_resolves_allowlisted_conflict(tmp_path: Path) -> None:
+    """A conflict on an allowlisted path is auto-resolved and the rebase lands.
+
+    ``cortex/backlog/index.md`` is one of the paths the conf claims to cover.
+    This is the §6a auto-resolution the morning-review sync advertises, and
+    the arm that stays green only while the conf's patterns actually match
+    git's repo-relative conflict paths.
+    """
+    local, remote = _make_conflict_fixture(tmp_path, "cortex/backlog/index.md")
+
+    rc = sync_rebase(repo_root=local)
+
+    assert rc == 0, "an allowlisted conflict should auto-resolve, rebase, and push"
+
+    # Which side survives is deliberately unasserted: git inverts ours/theirs
+    # during a rebase, so `checkout --theirs` keeps the LOCAL revision, not the
+    # remote one the module docstring and the conf header both promise. Pinning
+    # either side here would certify a semantic nobody has ruled on yet.
+    assert not _stale_rebase_in_progress(local), "rebase state left behind"
+    assert _git("status", "--porcelain", cwd=local).stdout == "", "tree not clean"
+
+    log = _git("log", "--oneline", "main", cwd=local).stdout
+    assert "Local commit" in log and "Upstream commit" in log, (
+        f"expected both commits in rebased history: {log}"
+    )
+    remote_log = _git("log", "--oneline", "main", cwd=remote).stdout
+    assert "Local commit" in remote_log, f"push did not land on origin: {remote_log}"
+
+
+def test_sync_rebase_aborts_on_non_allowlisted_conflict(tmp_path: Path) -> None:
+    """A conflict outside the allowlist aborts the rebase and exits 1.
+
+    ``README.md`` matches no conf pattern, so the loop must refuse to guess,
+    abort, and leave the repo back on the un-rebased local tip with no
+    half-finished rebase for the next session to trip over.
+    """
+    local, remote = _make_conflict_fixture(tmp_path, "README.md")
+
+    head_before = _git("rev-parse", "HEAD", cwd=local).stdout.strip()
+
+    rc = sync_rebase(repo_root=local)
+
+    assert rc == 1, "a non-allowlisted conflict must report the conflict exit code"
+
+    # The abort must be complete: no rebase-merge/rebase-apply directory, a
+    # clean tree, and HEAD back where it started.
+    assert not _stale_rebase_in_progress(local), (
+        "aborted rebase left a rebase-merge/rebase-apply directory behind"
+    )
+    status = _git("status", "--porcelain", cwd=local).stdout
+    assert status == "", f"aborted rebase left a dirty tree: {status!r}"
+    assert _git("rev-parse", "HEAD", cwd=local).stdout.strip() == head_before, (
+        "abort should restore the pre-rebase local tip"
+    )
+
+    # Nothing was pushed — origin still lacks the local commit.
+    remote_log = _git("log", "--oneline", "main", cwd=remote).stdout
+    assert "Local commit" not in remote_log, (
+        f"a failed sync must not push: {remote_log}"
     )
