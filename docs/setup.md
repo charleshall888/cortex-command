@@ -115,9 +115,11 @@ cortex/.cortex-init       cortex/README.md
 
 Then run `/cortex-core:lifecycle <feature>` to begin a feature — this produces `cortex/lifecycle/<feature>/` and guides you through research → spec → plan → implementation → review. Re-running it in a later session resumes from the current phase recorded in that feature's `events.log`. This sequence — `cortex init` then `/cortex-core:lifecycle <feature>` — is the end-to-end verification that both the CLI scaffold and the lifecycle skill work in your environment.
 
-**`cortex/lifecycle.config.md` schema** — `cortex init` scaffolds this file with YAML frontmatter for project-specific overrides. The annotated, canonical field list lives in the cortex-core plugin asset `skills/lifecycle/assets/lifecycle.config.md` — a CI parity gate keeps its frontmatter byte-identical to what `cortex init` scaffolds (see ADR-0017), so that asset is the single place to read the scaffolded schema rather than re-listing it here.
+**`cortex/lifecycle.config.md` schema** — `cortex init` scaffolds this file with YAML frontmatter for project-specific overrides. The annotated, canonical field list lives in the cortex-core plugin asset `skills/lifecycle/assets/lifecycle.config.md` — a developer-run `just test` parity test checks its frontmatter stays byte-identical to what `cortex init` scaffolds (see ADR-0017), so that asset is the single place to read the scaffolded schema rather than re-listing it here.
 
-Of the scaffolded keys, the ones consumed by code today are `test-command` (overnight runner test step), `commit-artifacts` (lifecycle-artifact staging), `demo-commands` (morning-review demo offer), `backlog.backend` (ticketing backend — default `cortex-backlog`, see ADR-0016), and `synthesizer_overnight_enabled` (gate for the overnight critical-tier dual-plan synthesizer). The remaining keys — `type`, `skip-specify`, `skip-review`, `default-tier`, `default-criticality` — are advisory or read only as optional overrides. When a future ticket wires up an advisory key, update the asset's inline comment to describe the consumer.
+Of the scaffolded keys, the ones consumed by code today are `test-command` (overnight runner test step), `commit-artifacts` (lifecycle-artifact staging), `demo-commands` (morning-review demo offer), `backlog.backend` (ticketing backend — default `cortex-backlog`, see ADR-0016), and `synthesizer_overnight_enabled` (gate for the overnight critical-tier dual-plan synthesizer). `type` is consumed too, but by skill prose rather than a parser.
+
+The other four scaffolded keys are dormant: set in configs and read by nothing today. See the asset's inline comments for the current consumer inventory.
 
 </details>
 
