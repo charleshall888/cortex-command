@@ -35,7 +35,6 @@ from typing import List, Optional
 
 _DEFAULT_ALLOWLIST_REL = "cortex_command/overnight/sync-allowlist.conf"
 _MAX_PASSES = 10
-_MAX_NON_ALLOWLIST = 3
 
 
 # ---------------------------------------------------------------------------
@@ -272,16 +271,6 @@ def sync_rebase(
                 f"Resolved {resolved} file(s), {len(non_allowlist)} non-allowlist "
                 "conflict(s) remain"
             )
-
-            if len(non_allowlist) > _MAX_NON_ALLOWLIST:
-                _log(
-                    f"Error: {len(non_allowlist)} non-allowlist conflicts exceed "
-                    f"threshold ({_MAX_NON_ALLOWLIST}) — aborting rebase"
-                )
-                for f in non_allowlist:
-                    _log(f"  Unresolved: {f}")
-                _git(["rebase", "--abort"], cwd=repo_root)
-                return 1
 
             if non_allowlist:
                 _log(
