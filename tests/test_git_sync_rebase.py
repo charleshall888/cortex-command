@@ -23,9 +23,52 @@ from pathlib import Path
 
 import pytest
 
+from cortex_command.git.sync_rebase import _load_allowlist, _matches_allowlist
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SYNC_REBASE_SH = REPO_ROOT / "bin" / "cortex-git-sync-rebase"
 SYNC_ALLOWLIST = REPO_ROOT / "cortex_command" / "overnight" / "sync-allowlist.conf"
+
+# Representative repo-relative paths, in the same shape git reports conflict
+# paths: rooted at the repo, carrying the `cortex/` umbrella prefix. Every
+# pattern in sync-allowlist.conf must match at least one of these.
+REPRESENTATIVE_PATHS = (
+    "cortex/backlog/346-x.md",
+    "cortex/backlog/index.md",
+    "cortex/backlog/archive/300-done.md",
+    "cortex/lifecycle/pipeline-events.log",
+    "cortex/lifecycle/foo/research.md",
+    "cortex/lifecycle/foo/spec.md",
+    "cortex/lifecycle/foo/plan.md",
+    "cortex/lifecycle/foo/agent-activity.jsonl",
+    "cortex/lifecycle/sessions/s1/",
+    "cortex/lifecycle/sessions/s1/batch-results.md",
+)
+
+
+def _allowlist_patterns() -> list[str]:
+    """Load the live conf, failing loudly if it has gone empty."""
+    patterns = _load_allowlist(SYNC_ALLOWLIST)
+    assert patterns, f"no patterns loaded from {SYNC_ALLOWLIST}"
+    return patterns
+
+
+@pytest.mark.parametrize("pattern", _allowlist_patterns())
+def test_every_allowlist_pattern_matches_a_real_path(pattern: str) -> None:
+    """Each conf pattern must match at least one representative real path.
+
+    Asserted per-pattern (not in aggregate) so one live pattern cannot mask
+    dead siblings — the exact failure that let the `cortex/` umbrella
+    relocation (c8110de5) strand all nine patterns for two months, silently
+    disabling the §6a auto-resolution the morning-review sync advertises.
+    """
+    matched = [p for p in REPRESENTATIVE_PATHS if _matches_allowlist(p, [pattern])]
+    assert matched, (
+        f"allowlist pattern {pattern!r} matches none of the representative "
+        f"paths — it is dead and can never auto-resolve a conflict. Check the "
+        f"`cortex/` umbrella prefix, and note that patterns ending in '/' are "
+        f"matched as literal prefixes (a '*' inside one never matches)."
+    )
 
 
 def _git(*args: str, cwd: Path, check: bool = True) -> subprocess.CompletedProcess:
