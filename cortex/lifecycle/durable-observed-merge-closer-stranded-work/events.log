@@ -6,3 +6,7 @@
 {"ts": "2026-07-16T21:03:01Z", "event": "spec_approved", "feature": "durable-observed-merge-closer-stranded-work", "decision": "approved", "invocation_id": "d1f30aae60884bab"}
 {"ts": "2026-07-16T21:03:01Z", "event": "phase_transition", "feature": "durable-observed-merge-closer-stranded-work", "from": "specify", "to": "plan", "invocation_id": "d1f30aae60884bab"}
 {"ts": "2026-07-16T21:03:01Z", "event": "advance_committed", "feature": "durable-observed-merge-closer-stranded-work", "from_state": "specify", "to_state": "plan", "invocation_id": "d1f30aae60884bab", "verb": "spec-approve"}
+{"ts": "2026-07-16T22:06:01Z", "event": "advance_started", "feature": "durable-observed-merge-closer-stranded-work", "from_state": "plan", "to_state": "implement", "invocation_id": "85f3d0e59863fadd", "verb": "plan-decision"}
+{"ts": "2026-07-16T22:06:01Z", "event": "plan_approved", "feature": "durable-observed-merge-closer-stranded-work", "dispatch_choice": "trunk", "invocation_id": "85f3d0e59863fadd"}
+{"ts": "2026-07-16T22:06:01Z", "event": "phase_transition", "feature": "durable-observed-merge-closer-stranded-work", "from": "plan", "to": "implement", "invocation_id": "85f3d0e59863fadd"}
+{"ts": "2026-07-16T22:06:01Z", "event": "advance_committed", "feature": "durable-observed-merge-closer-stranded-work", "from_state": "plan", "to_state": "implement", "invocation_id": "85f3d0e59863fadd", "verb": "plan-decision"}

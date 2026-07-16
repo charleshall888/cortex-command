@@ -2,7 +2,7 @@
 feature: durable-observed-merge-closer-stranded-work
 parent_backlog_uuid: 6eb2c913-9f89-41d4-8404-38ef1d8ecc1e
 parent_backlog_id: 346
-artifacts: [research]
+artifacts: [research, plan]
 tags: []
 created: 2026-07-16
 updated: 2026-07-16
