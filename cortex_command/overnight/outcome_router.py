@@ -11,7 +11,7 @@ import asyncio
 import logging
 import os
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional, TYPE_CHECKING
 
@@ -84,6 +84,11 @@ class OutcomeContext:
     feature_names: list[str]
     config: BatchConfig
     home_worktree_path: Path | None = None
+    # Per-feature backlog ``uuid``, when the item carries one. Preferred over
+    # backlog_ids at write-back time: a uuid survives a renumbering of the
+    # backlog files, whereas the numeric id resolves on the filename prefix.
+    # Defaulted so a context built without it degrades to the numeric path.
+    backlog_uuids: dict[str, str | None] = field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -399,10 +404,22 @@ _OVERNIGHT_TO_BACKLOG: dict[str, dict[str, Any]] = {
 }
 
 
-def _find_backlog_item_path(feature: str, backlog_id: Optional[int] = None) -> Optional[Path]:
+def _find_backlog_item_path(
+    feature: str,
+    backlog_id: Optional[int] = None,
+    backlog_uuid: Optional[str] = None,
+) -> Optional[Path]:
     """Locate the backlog item file for *feature*.
 
-    Strategy:
+    When *backlog_uuid* is set it is the sole authority: it is the only
+    identifier captured at plan time that still names the same item after the
+    backlog files are renumbered, whereas both the exact-stem match and the
+    resolver's numeric step key off the filename. A uuid that no longer resolves
+    means the item is gone or rewritten, so this returns ``None`` rather than
+    falling through to a filename match that could land on a *different* item
+    now wearing the old number.
+
+    Without a uuid (items predating the field), resolution is:
       1. Exact match: ``cortex/backlog/NNN-{feature}.md``
       2. Canonical resolution via ``_find_item`` → ``resolve_item.resolve``,
          tried against *backlog_id* first when provided (the resolver's numeric
@@ -418,6 +435,11 @@ def _find_backlog_item_path(feature: str, backlog_id: Optional[int] = None) -> O
     Degrading to ``None`` costs a logged ``BACKLOG_WRITE_FAILED`` no-write.
     """
     backlog_dir = _backlog_dir if _backlog_dir is not None else _resolve_user_project_root() / "cortex" / "backlog"
+
+    # 0. Renumber-proof path: the resolver's step 1 matches a uuid prefix
+    #    against frontmatter, so the captured uuid is passed through as-is.
+    if backlog_uuid:
+        return _backlog_find_item(backlog_uuid, backlog_dir=backlog_dir)
 
     # 1. Exact slug match
     for p in sorted(backlog_dir.glob("[0-9]*-*.md")):
@@ -448,6 +470,7 @@ def _write_back_to_backlog(
     log_path: Path,
     backlog_id: Optional[int] = None,
     *,
+    backlog_uuid: Optional[str] = None,
     recoverable_branch: Optional[str] = None,
 ) -> None:
     """Best-effort write of canonical status back to the backlog item.
@@ -468,10 +491,11 @@ def _write_back_to_backlog(
         return  # No write-back defined for this status (e.g. "pending")
 
     try:
-        item_path = _find_backlog_item_path(feature, backlog_id)
+        item_path = _find_backlog_item_path(feature, backlog_id, backlog_uuid)
         if item_path is None:
             raise FileNotFoundError(
                 f"Backlog item not found for feature {feature!r}"
+                + (f" (backlog_uuid={backlog_uuid})" if backlog_uuid else "")
                 + (f" (backlog_id={backlog_id})" if backlog_id else "")
             )
 
@@ -553,6 +577,7 @@ def _apply_feature_result(
                 name, "paused", ctx.config.batch_id,
                 ctx.config.overnight_events_path,
                 backlog_id=ctx.backlog_ids.get(name),
+                backlog_uuid=ctx.backlog_uuids.get(name),
             )
             return
         subprocess.run(
@@ -599,6 +624,7 @@ def _apply_feature_result(
                 name, "merged", ctx.config.batch_id,
                 ctx.config.overnight_events_path,
                 backlog_id=ctx.backlog_ids.get(name),
+                backlog_uuid=ctx.backlog_uuids.get(name),
             )
             # Delete repair branch.
             subprocess.run(
@@ -628,6 +654,7 @@ def _apply_feature_result(
                 name, "paused", ctx.config.batch_id,
                 ctx.config.overnight_events_path,
                 backlog_id=ctx.backlog_ids.get(name),
+                backlog_uuid=ctx.backlog_uuids.get(name),
             )
 
     elif result.status == "completed":
@@ -657,6 +684,7 @@ def _apply_feature_result(
                 name, "paused", ctx.config.batch_id,
                 ctx.config.overnight_events_path,
                 backlog_id=ctx.backlog_ids.get(name),
+                backlog_uuid=ctx.backlog_uuids.get(name),
             )
             return
 
@@ -682,6 +710,7 @@ def _apply_feature_result(
                 name, "paused", ctx.config.batch_id,
                 ctx.config.overnight_events_path,
                 backlog_id=ctx.backlog_ids.get(name),
+                backlog_uuid=ctx.backlog_uuids.get(name),
             )
             return
         merge_result = merge_feature(
@@ -719,6 +748,7 @@ def _apply_feature_result(
                 name, "merged", ctx.config.batch_id,
                 ctx.config.overnight_events_path,
                 backlog_id=ctx.backlog_ids.get(name),
+                backlog_uuid=ctx.backlog_uuids.get(name),
             )
             # Clean up worktree
             try:
@@ -771,6 +801,7 @@ def _apply_feature_result(
                 name, "deferred", ctx.config.batch_id,
                 ctx.config.overnight_events_path,
                 backlog_id=ctx.backlog_ids.get(name),
+                backlog_uuid=ctx.backlog_uuids.get(name),
             )
         elif merge_result.conflict:
             # Genuine merge conflict that exhausted automated repair: the
@@ -817,6 +848,7 @@ def _apply_feature_result(
                 name, "deferred", ctx.config.batch_id,
                 ctx.config.overnight_events_path,
                 backlog_id=ctx.backlog_ids.get(name),
+                backlog_uuid=ctx.backlog_uuids.get(name),
                 recoverable_branch=recoverable_branch,
             )
         else:
@@ -836,6 +868,7 @@ def _apply_feature_result(
                 name, "paused", ctx.config.batch_id,
                 ctx.config.overnight_events_path,
                 backlog_id=ctx.backlog_ids.get(name),
+                backlog_uuid=ctx.backlog_uuids.get(name),
             )
 
     elif result.status == "deferred":
@@ -854,6 +887,7 @@ def _apply_feature_result(
             name, "deferred", ctx.config.batch_id,
             ctx.config.overnight_events_path,
             backlog_id=ctx.backlog_ids.get(name),
+            backlog_uuid=ctx.backlog_uuids.get(name),
         )
 
     elif result.status == "failed":
@@ -876,6 +910,7 @@ def _apply_feature_result(
             name, "failed", ctx.config.batch_id,
             ctx.config.overnight_events_path,
             backlog_id=ctx.backlog_ids.get(name),
+            backlog_uuid=ctx.backlog_uuids.get(name),
         )
 
     else:  # paused
@@ -897,6 +932,7 @@ def _apply_feature_result(
             name, "paused", ctx.config.batch_id,
             ctx.config.overnight_events_path,
             backlog_id=ctx.backlog_ids.get(name),
+            backlog_uuid=ctx.backlog_uuids.get(name),
         )
 
     if ctx.cb_state.consecutive_pauses >= CIRCUIT_BREAKER_THRESHOLD:
@@ -1229,6 +1265,7 @@ async def _recovery_review_gate(
             name, "deferred", ctx.config.batch_id,
             ctx.config.overnight_events_path,
             backlog_id=ctx.backlog_ids.get(name),
+            backlog_uuid=ctx.backlog_uuids.get(name),
         )
         return True
 
@@ -1299,6 +1336,7 @@ async def _recovery_review_gate(
             name, "deferred", ctx.config.batch_id,
             ctx.config.overnight_events_path,
             backlog_id=ctx.backlog_ids.get(name),
+            backlog_uuid=ctx.backlog_uuids.get(name),
         )
         return True
 
@@ -1423,6 +1461,7 @@ async def _repair_completed_review_gate(
             name, "paused", ctx.config.batch_id,
             ctx.config.overnight_events_path,
             backlog_id=ctx.backlog_ids.get(name),
+            backlog_uuid=ctx.backlog_uuids.get(name),
         )
         return
 
@@ -1464,6 +1503,7 @@ async def _repair_completed_review_gate(
             name, "paused", ctx.config.batch_id,
             ctx.config.overnight_events_path,
             backlog_id=ctx.backlog_ids.get(name),
+            backlog_uuid=ctx.backlog_uuids.get(name),
         )
         return
 
@@ -1514,6 +1554,7 @@ async def _repair_completed_review_gate(
         name, "merged", ctx.config.batch_id,
         ctx.config.overnight_events_path,
         backlog_id=ctx.backlog_ids.get(name),
+        backlog_uuid=ctx.backlog_uuids.get(name),
     )
     # Delete repair branch.
     subprocess.run(
@@ -1643,6 +1684,7 @@ async def _repair_review_or_revert(
             name, "deferred", ctx.config.batch_id,
             ctx.config.overnight_events_path,
             backlog_id=ctx.backlog_ids.get(name),
+            backlog_uuid=ctx.backlog_uuids.get(name),
         )
         return True
 
@@ -1719,6 +1761,7 @@ async def _repair_review_or_revert(
             name, "deferred", ctx.config.batch_id,
             ctx.config.overnight_events_path,
             backlog_id=ctx.backlog_ids.get(name),
+            backlog_uuid=ctx.backlog_uuids.get(name),
         )
         return True
 
@@ -1833,6 +1876,7 @@ async def apply_feature_result(
                 name, "paused", ctx.config.batch_id,
                 ctx.config.overnight_events_path,
                 backlog_id=ctx.backlog_ids.get(name),
+                backlog_uuid=ctx.backlog_uuids.get(name),
             )
             return
         merge_result = merge_feature(
@@ -2012,6 +2056,7 @@ async def apply_feature_result(
                             name, "deferred", ctx.config.batch_id,
                             ctx.config.overnight_events_path,
                             backlog_id=ctx.backlog_ids.get(name),
+                            backlog_uuid=ctx.backlog_uuids.get(name),
                         )
                         try:
                             cleanup_worktree(name, branch=f"pipeline/{name}", repo_path=repo_path, worktree_path=worktree_path)
@@ -2103,6 +2148,7 @@ async def apply_feature_result(
                         name, "deferred", ctx.config.batch_id,
                         ctx.config.overnight_events_path,
                         backlog_id=ctx.backlog_ids.get(name),
+                        backlog_uuid=ctx.backlog_uuids.get(name),
                     )
                     return
 
@@ -2120,6 +2166,7 @@ async def apply_feature_result(
                 name, "merged", ctx.config.batch_id,
                 ctx.config.overnight_events_path,
                 backlog_id=ctx.backlog_ids.get(name),
+                backlog_uuid=ctx.backlog_uuids.get(name),
             )
             try:
                 cleanup_worktree(name, branch=f"pipeline/{name}", repo_path=repo_path, worktree_path=worktree_path)
@@ -2175,6 +2222,7 @@ async def apply_feature_result(
                 name, "deferred", ctx.config.batch_id,
                 ctx.config.overnight_events_path,
                 backlog_id=ctx.backlog_ids.get(name),
+                backlog_uuid=ctx.backlog_uuids.get(name),
             )
             return
 
@@ -2239,6 +2287,7 @@ async def apply_feature_result(
                     name, "paused", ctx.config.batch_id,
                     ctx.config.overnight_events_path,
                     backlog_id=ctx.backlog_ids.get(name),
+                    backlog_uuid=ctx.backlog_uuids.get(name),
                 )
             return
         # Re-acquire the lock to cover the recovery re-merge ITSELF (the
@@ -2298,6 +2347,7 @@ async def apply_feature_result(
                     name, "merged", ctx.config.batch_id,
                     ctx.config.overnight_events_path,
                     backlog_id=ctx.backlog_ids.get(name),
+                    backlog_uuid=ctx.backlog_uuids.get(name),
                 )
                 try:
                     cleanup_worktree(name, branch=f"pipeline/{name}", repo_path=repo_path, worktree_path=worktree_path)
@@ -2336,6 +2386,7 @@ async def apply_feature_result(
                     name, "merged", ctx.config.batch_id,
                     ctx.config.overnight_events_path,
                     backlog_id=ctx.backlog_ids.get(name),
+                    backlog_uuid=ctx.backlog_uuids.get(name),
                 )
                 try:
                     cleanup_worktree(name, branch=f"pipeline/{name}", repo_path=repo_path, worktree_path=worktree_path)
@@ -2365,6 +2416,7 @@ async def apply_feature_result(
                     name, "paused", ctx.config.batch_id,
                     ctx.config.overnight_events_path,
                     backlog_id=ctx.backlog_ids.get(name),
+                    backlog_uuid=ctx.backlog_uuids.get(name),
                 )
 
                 # Check circuit breaker after pause (site 2 of 2)

@@ -257,9 +257,10 @@ async def run_batch(config: BatchConfig) -> BatchResult:
         log_path=config.overnight_events_path,
     )
 
-    # Load spec_path, backlog_id, recovery_attempts, repo_path, and integration_branches per feature from overnight state
+    # Load spec_path, backlog_id, backlog_uuid, recovery_attempts, repo_path, and integration_branches per feature from overnight state
     spec_paths: dict[str, Optional[str]] = {}
     backlog_ids: dict[str, Optional[int]] = {}
+    backlog_uuids: dict[str, Optional[str]] = {}
     recovery_attempts_map: dict[str, int] = {}
     repo_path_map: dict[str, Path | None] = {}
     integration_branches: dict[str, str] = {}
@@ -278,6 +279,7 @@ async def run_batch(config: BatchConfig) -> BatchResult:
             fs = overnight_state.features.get(name, OvernightFeatureStatus())
             spec_paths[name] = fs.spec_path if fs else None
             backlog_ids[name] = fs.backlog_id if fs else None
+            backlog_uuids[name] = fs.backlog_uuid if fs else None
             recovery_attempts_map[name] = fs.recovery_attempts
             repo_path_map[name] = Path(fs.repo_path).expanduser() if fs.repo_path else None
     except Exception as exc:
@@ -298,6 +300,7 @@ async def run_batch(config: BatchConfig) -> BatchResult:
             pass
         spec_paths = {name: None for name in feature_names}
         backlog_ids = {name: None for name in feature_names}
+        backlog_uuids = {name: None for name in feature_names}
         recovery_attempts_map = {name: 0 for name in feature_names}
         repo_path_map = {name: None for name in feature_names}
         integration_branches = {}
@@ -440,6 +443,7 @@ async def run_batch(config: BatchConfig) -> BatchResult:
             integration_branches=integration_branches,
             session_id=session_id,
             backlog_ids=backlog_ids,
+            backlog_uuids=backlog_uuids,
             feature_names=feature_names,
             config=config,
             home_worktree_path=home_worktree_path,
@@ -532,6 +536,7 @@ async def run_batch(config: BatchConfig) -> BatchResult:
                 integration_branches=integration_branches,
                 session_id=session_id,
                 backlog_ids=backlog_ids,
+                backlog_uuids=backlog_uuids,
                 feature_names=feature_names,
                 config=config,
                 home_worktree_path=home_worktree_path,

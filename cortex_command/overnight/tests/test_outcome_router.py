@@ -1117,6 +1117,127 @@ class TestFindBacklogItemPathNumericId(unittest.TestCase):
         self.assertIn("backlog_write_failed", contents)
 
 
+class TestFindBacklogItemPathUuid(unittest.TestCase):
+    """The captured uuid outranks the captured numeric id at write-back time.
+
+    The renumbering hazard the uuid closes: an item planned as 042 is renumbered
+    to 077 while the session runs, and an unrelated item takes over 042. The
+    numeric id resolves on the filename prefix, so it now names the *wrong*
+    ticket — and a write-back keyed on it would stamp a terminal status onto it.
+    The uuid is captured from frontmatter, which renumbering does not touch.
+    """
+
+    # A feature slug matching no filename stem, lifecycle_slug or title, so
+    # resolution can only reach an item via the id or the uuid.
+    UNMATCHED_FEATURE = "feature-slug-matching-nothing-on-disk"
+    ALPHA_UUID = "0123abcd-aaaa-bbbb-cccc-000000000042"
+    BETA_UUID = "0123abcd-aaaa-bbbb-cccc-000000000099"
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.backlog_dir = Path(self._tmp.name)
+        set_backlog_dir(self.backlog_dir)
+        # Planned as 042, renumbered to 077 mid-session; uuid unchanged.
+        self.alpha = self._write_item(
+            "077-alpha-feature", "Alpha feature", "alpha-feature", self.ALPHA_UUID
+        )
+        # A different ticket now wears the number the session captured.
+        self.beta = self._write_item(
+            "042-beta-feature", "Beta feature", "beta-feature", self.BETA_UUID
+        )
+
+    def tearDown(self) -> None:
+        set_backlog_dir(None)  # type: ignore[arg-type]
+        self._tmp.cleanup()
+
+    def _write_item(self, stem: str, title: str, slug: str, uuid: str | None) -> Path:
+        item = self.backlog_dir / f"{stem}.md"
+        item.write_text(
+            "---\n"
+            + (f"uuid: {uuid}\n" if uuid else "")
+            + f"title: {title}\n"
+            f"lifecycle_slug: {slug}\n"
+            "status: refined\n"
+            "---\n"
+            "Body.\n",
+            encoding="utf-8",
+        )
+        return item
+
+    def test_numeric_id_alone_lands_on_the_renumbered_wrong_item(self) -> None:
+        # Establishes the hazard is real rather than hypothetical: without the
+        # uuid, id 42 resolves to beta — a ticket this session never touched.
+        self.assertEqual(
+            _find_backlog_item_path(self.UNMATCHED_FEATURE, backlog_id=42), self.beta
+        )
+
+    def test_uuid_outranks_a_stale_numeric_id(self) -> None:
+        resolved = _find_backlog_item_path(
+            self.UNMATCHED_FEATURE, backlog_id=42, backlog_uuid=self.ALPHA_UUID
+        )
+        self.assertEqual(resolved, self.alpha)
+        self.assertNotEqual(resolved, self.beta)
+
+    def test_write_back_updates_the_uuids_item_not_the_ids(self) -> None:
+        log_path = self.backlog_dir / "events.log"
+        with patch(
+            "cortex_command.overnight.outcome_router._backlog_update_item"
+        ) as mock_update:
+            _write_back_to_backlog(
+                self.UNMATCHED_FEATURE,
+                overnight_status="merged",
+                round_number=1,
+                log_path=log_path,
+                backlog_id=42,
+                backlog_uuid=self.ALPHA_UUID,
+            )
+
+        mock_update.assert_called_once()
+        self.assertEqual(mock_update.call_args.args[0], self.alpha)
+
+    def test_unresolvable_uuid_does_not_fall_back_to_the_numeric_match(self) -> None:
+        # The uuid names an item no longer on disk (deleted or rewritten). The
+        # numeric id would still "resolve" — to beta — so the uuid must decide
+        # alone: no write beats a wrong-ticket write.
+        missing_uuid = "0123abcd-aaaa-bbbb-cccc-000000000404"
+        log_path = self.backlog_dir / "events.log"
+
+        resolved = _find_backlog_item_path(
+            self.UNMATCHED_FEATURE, backlog_id=42, backlog_uuid=missing_uuid
+        )
+        self.assertIsNone(resolved)
+
+        with patch(
+            "cortex_command.overnight.outcome_router._backlog_update_item"
+        ) as mock_update:
+            _write_back_to_backlog(
+                self.UNMATCHED_FEATURE,
+                overnight_status="merged",
+                round_number=1,
+                log_path=log_path,
+                backlog_id=42,
+                backlog_uuid=missing_uuid,
+            )
+
+        mock_update.assert_not_called()
+        contents = log_path.read_text(encoding="utf-8") if log_path.exists() else ""
+        self.assertIn("backlog_write_failed", contents)
+
+    def test_uuid_less_item_still_resolves_numerically(self) -> None:
+        # 25 of 374 items predate the uuid field, so the numeric path stays live.
+        self._tmp.cleanup()
+        self._tmp = tempfile.TemporaryDirectory()
+        self.backlog_dir = Path(self._tmp.name)
+        set_backlog_dir(self.backlog_dir)
+        item = self._write_item("042-alpha-feature", "Alpha feature", "alpha-feature", None)
+        self._write_item("099-other-feature", "Other feature", "other-feature", None)
+
+        resolved = _find_backlog_item_path(
+            self.UNMATCHED_FEATURE, backlog_id=42, backlog_uuid=None
+        )
+        self.assertEqual(resolved, item)
+
+
 class TestRecoverableWriteBack(unittest.TestCase):
     """Task 3 — recoverable write-back records in_progress + the branch.
 

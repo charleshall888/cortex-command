@@ -425,6 +425,7 @@ def initialize_overnight_state(
                 spec_path=item.spec,
                 plan_path=item.plan if item.plan else f"cortex/lifecycle/{slug}/plan.md",
                 backlog_id=item.id if item.id else None,
+                backlog_uuid=item.uuid,
                 repo_path=item.repo,
             )
             features[slug].intra_session_blocked_by = selection.intra_session_deps.get(slug, [])

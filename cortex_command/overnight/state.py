@@ -81,6 +81,10 @@ class OvernightFeatureStatus:
         backlog_id: Numeric backlog item ID (e.g. 56 for backlog/056-*.md).
             Used to identify the item's section within a batch spec.
             None for features not sourced from numbered backlog files.
+        backlog_uuid: The backlog item's ``uuid`` frontmatter value. Unlike
+            backlog_id, it survives a renumbering of the backlog files, so the
+            close-time write-back prefers it when resolving the item. None for
+            items predating the uuid field.
         repo_path: Filesystem path to the target repository for this feature.
             None for features targeting the default (current) repository.
         intra_session_blocked_by: Slugs of other in-session features that must
@@ -102,6 +106,7 @@ class OvernightFeatureStatus:
     spec_path: Optional[str] = None
     plan_path: Optional[str] = None
     backlog_id: Optional[int] = None
+    backlog_uuid: Optional[str] = None
     recovery_attempts: int = 0
     recovery_depth: int = 0
     repo_path: Optional[str] = None
