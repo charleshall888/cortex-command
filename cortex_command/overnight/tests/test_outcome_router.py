@@ -965,11 +965,11 @@ class TestFindBacklogItemPathLifecycleSlug(unittest.TestCase):
     """Task 8 — the runtime resolver resolves slug != filename-stem.
 
     Covers the common case where a feature's lifecycle-slug differs from the
-    backlog filename stem: the exact-stem and backlog_id strategies miss, so
-    resolution falls through to ``_find_item`` → ``resolve_item.resolve``, which
-    matches on ``lifecycle_slug`` frontmatter. (Regression coverage retained
-    after the redundant explicit strategy-4 wrapper was removed — strategy-3
-    already routes through the same canonical resolver.)
+    backlog filename stem: the exact-stem strategy misses, so resolution falls
+    through to ``_find_item`` → ``resolve_item.resolve``, which matches on
+    ``lifecycle_slug`` frontmatter. (Regression coverage retained after the
+    redundant explicit strategy-4 wrapper was removed — the canonical-resolver
+    strategy already routes through the same resolver.)
     """
 
     SLUG = "build-the-grinder-agnostic-knowledge-layer"
@@ -1012,8 +1012,8 @@ class TestFindBacklogItemPathLifecycleSlug(unittest.TestCase):
         self._tmp.cleanup()
 
     def test_resolves_when_lifecycle_slug_differs_from_stem(self) -> None:
-        # Feature slug != filename stem, no backlog_id → strategies 1-2 miss and
-        # strategy 3 (_find_item → canonical resolve) matches on lifecycle_slug.
+        # Feature slug != filename stem, no backlog_id → the exact-stem strategy
+        # misses and _find_item → canonical resolve matches on lifecycle_slug.
         resolved = _find_backlog_item_path(self.SLUG)
         self.assertEqual(resolved, self.item)
 
@@ -1035,6 +1035,86 @@ class TestFindBacklogItemPathLifecycleSlug(unittest.TestCase):
         self.assertEqual(mock_update.call_args.args[0], self.item)
         contents = log_path.read_text(encoding="utf-8") if log_path.exists() else ""
         self.assertNotIn("backlog_write_failed", contents)
+
+
+class TestFindBacklogItemPathNumericId(unittest.TestCase):
+    """The backlog_id lookup refuses to guess when the id is ambiguous.
+
+    The blind ``sorted(glob(f"{padded}-*.md"))[0]`` this replaces would return a
+    silently-chosen file when two items share a numeric prefix — writing a
+    terminal status onto the wrong ticket. Routing through the canonical
+    resolver degrades that to ``None`` (caller logs BACKLOG_WRITE_FAILED and
+    skips the write) while keeping the unambiguous case resolving.
+    """
+
+    # A feature slug that matches no filename stem, no lifecycle_slug and no
+    # title, so resolution can only reach the item via backlog_id.
+    UNMATCHED_FEATURE = "feature-slug-matching-nothing-on-disk"
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.backlog_dir = Path(self._tmp.name)
+        set_backlog_dir(self.backlog_dir)
+
+    def tearDown(self) -> None:
+        set_backlog_dir(None)  # type: ignore[arg-type]
+        self._tmp.cleanup()
+
+    def _write_item(self, stem: str, title: str, slug: str) -> Path:
+        item = self.backlog_dir / f"{stem}.md"
+        item.write_text(
+            "---\n"
+            f"uuid: 0123abcd-aaaa-bbbb-cccc-0000000000{stem[:2]}\n"
+            f"title: {title}\n"
+            f"lifecycle_slug: {slug}\n"
+            "status: refined\n"
+            "---\n"
+            "Body.\n",
+            encoding="utf-8",
+        )
+        return item
+
+    def test_duplicate_numeric_prefix_returns_none(self) -> None:
+        # Two files share id 42 — the renumbering hazard. Neither is a
+        # defensible answer, so the lookup must refuse rather than first-match.
+        first = self._write_item("042-alpha-feature", "Alpha feature", "alpha-feature")
+        second = self._write_item("042-beta-feature", "Beta feature", "beta-feature")
+
+        resolved = _find_backlog_item_path(self.UNMATCHED_FEATURE, backlog_id=42)
+
+        self.assertIsNone(resolved)
+        # Guard the real failure mode: not merely "not first", but "neither".
+        self.assertNotIn(resolved, (first, second))
+
+    def test_unique_numeric_id_resolves(self) -> None:
+        item = self._write_item("042-alpha-feature", "Alpha feature", "alpha-feature")
+        self._write_item("099-other-feature", "Other feature", "other-feature")
+
+        resolved = _find_backlog_item_path(self.UNMATCHED_FEATURE, backlog_id=42)
+
+        self.assertEqual(resolved, item)
+
+    def test_ambiguous_id_write_back_skips_the_write(self) -> None:
+        # End-to-end: the refusal degrades to a logged no-write, not a crash and
+        # not a wrong-ticket write.
+        self._write_item("042-alpha-feature", "Alpha feature", "alpha-feature")
+        self._write_item("042-beta-feature", "Beta feature", "beta-feature")
+        log_path = self.backlog_dir / "events.log"
+
+        with patch(
+            "cortex_command.overnight.outcome_router._backlog_update_item"
+        ) as mock_update:
+            _write_back_to_backlog(
+                self.UNMATCHED_FEATURE,
+                overnight_status="merged",
+                round_number=1,
+                log_path=log_path,
+                backlog_id=42,
+            )
+
+        mock_update.assert_not_called()
+        contents = log_path.read_text(encoding="utf-8") if log_path.exists() else ""
+        self.assertIn("backlog_write_failed", contents)
 
 
 class TestRecoverableWriteBack(unittest.TestCase):

@@ -404,12 +404,18 @@ def _find_backlog_item_path(feature: str, backlog_id: Optional[int] = None) -> O
 
     Strategy:
       1. Exact match: ``cortex/backlog/NNN-{feature}.md``
-      2. If *backlog_id* is provided, match ``cortex/backlog/{NNN}-*.md``
-      3. Canonical resolution via ``_find_item`` → ``resolve_item.resolve``,
-         which matches ``uuid``/``backlog_id``/``lifecycle_slug`` frontmatter —
+      2. Canonical resolution via ``_find_item`` → ``resolve_item.resolve``,
+         tried against *backlog_id* first when provided (the resolver's numeric
+         step matches a leading-digit filename prefix) and then against
+         *feature*, which matches ``uuid``/kebab-stem/``lifecycle_slug``/title —
          covering the common case where the lifecycle slug differs from the
          backlog filename stem. Returns ``None`` on a no-match or ambiguous
          result so the caller's best-effort swallow applies.
+
+    There is deliberately no glob-and-take-the-first fallback: an id that maps
+    to more than one file is an ambiguity the resolver refuses to guess at, and
+    a wrong guess here silently writes a terminal status onto the wrong ticket.
+    Degrading to ``None`` costs a logged ``BACKLOG_WRITE_FAILED`` no-write.
     """
     backlog_dir = _backlog_dir if _backlog_dir is not None else _resolve_user_project_root() / "cortex" / "backlog"
 
@@ -421,19 +427,18 @@ def _find_backlog_item_path(feature: str, backlog_id: Optional[int] = None) -> O
         if slug_part == feature:
             return p
 
-    # 2. Match by backlog_id
-    if backlog_id is not None:
-        padded = str(backlog_id).zfill(3)
-        candidates = sorted(backlog_dir.glob(f"{padded}-*.md"))
-        if candidates:
-            return candidates[0]
+    # 2. Canonical resolution via update_item's finder, which delegates to
+    #    resolve_item.resolve. ``_find_item`` takes a single fuzzy reference, so
+    #    the id and the feature slug are separate attempts in precedence order;
+    #    each returns None on a no-match/ambiguous result.
+    references = [str(backlog_id)] if backlog_id is not None else []
+    references.append(feature)
+    for reference in references:
+        found = _backlog_find_item(reference, backlog_dir=backlog_dir)
+        if found is not None:
+            return found
 
-    # 3. Canonical resolution via update_item's finder, which delegates to
-    #    resolve_item.resolve — matches uuid/backlog_id/lifecycle_slug frontmatter,
-    #    covering the common case where the lifecycle slug differs from the
-    #    filename stem. Returns None on a no-match/ambiguous result so the
-    #    caller's best-effort swallow applies.
-    return _backlog_find_item(feature, backlog_dir=backlog_dir)
+    return None
 
 
 def _write_back_to_backlog(
