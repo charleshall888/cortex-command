@@ -1,10 +1,10 @@
 # Requirements: cortex-command
 
-> Last gathered: 2026-04-01 (updated 2026-07-13)
+> Last gathered: 2026-07-16
 
 ## Overview
 
-Agentic workflow toolkit for AI-assisted software development on Claude Code: skills, lifecycle state machine, pipeline orchestrator, overnight execution. North star: autonomous multi-hour development — Claude works from a plan, spins up teams, reports afterward. Ships CLI-first as a non-editable wheel plus Claude Code plugins (→ ADR-0002).
+Agentic workflow toolkit for AI-assisted software development on Claude Code: skills, lifecycle state machine, pipeline orchestrator, overnight execution. North star: autonomous multi-hour development — Claude works from a plan, spins up teams, reports afterward. Ships CLI-first as a non-editable wheel plus Claude Code plugins (→ ADR-0002). Token economy is a first-class quality bar: measured runtime cost is turns × context (`cache_read ∝ requests^1.68`; cache hit rate already ~98%), so the harness optimizes for short sessions, few turns, and narrow fan-out — not resident-prose micro-trims.
 
 ## Philosophy of Work
 
@@ -18,7 +18,11 @@ Agentic workflow toolkit for AI-assisted software development on Claude Code: sk
 
 **Complexity**: Must earn its place by solving a real problem now. When in doubt, simpler wins.
 
-**Solution horizon**: Long-term project — fixes reflect that. Before suggesting a fix, ask: do I already know this needs redoing (follow-up planned, patch applies in multiple known places, sidesteps a known constraint)? If yes, propose the durable version or surface both with tradeoff. If no, **Complexity** applies. A scoped phase of a multi-phase lifecycle is not a stop-gap (stop-gap means unplanned-redo). Test: current knowledge, not prediction.
+**Token economy (autonomy-lean)**: Runtime cost is turns × context — `cache_read ∝ requests^1.68` (orchestrator, r=0.98, n=126) and `∝ turns^1.55` (subagents); caching is already ~98% effective, so the levers are session length, turn count, and fan-out width. Keep the minimal machinery that makes overnight autonomy and disposable sessions possible (state machine, events.log, fan-out dispatch); anything that exists to police or observe the harness itself is presumed deletable unless it names specific evidence.
+
+**Deletion bias**: Keeps, safeguards, and measurement tooling must clear the same evidence bar as new features — named, specific evidence, not hypotheticals; when a trim is proposed, the burden of proof sits on keeping, not deleting. Verify with existing tools (grep/read/one-off script) before building measurement tooling; the standing token-measurement tool is the ad-hoc prototype (`cortex/research/token-economics-2026-07-16/analyze.py`, dedup by `message.id`), and re-measurement follows shipped cuts rather than gating them.
+
+**Solution horizon**: Long-term project — fixes reflect that. Before suggesting a fix, ask: do I already know this needs redoing (follow-up planned, patch applies in multiple known places, sidesteps a known constraint)? If yes, propose the durable version or surface both with tradeoff. If no, **Complexity** applies. A scoped phase of a multi-phase lifecycle is not a stop-gap (stop-gap means unplanned-redo). Test: current knowledge, not prediction. The same test applies symmetrically to keeps and safeguards — a defense retained without named evidence is complexity too (**Deletion bias**).
 
 **Quality bar**: Tests pass; the feature works as specced. ROI matters — ship faster, not be a project.
 
@@ -30,7 +34,10 @@ Agentic workflow toolkit for AI-assisted software development on Claude Code: sk
 
 - **File-based state**: → ADR-0001: File-based state, no database
 - **Per-repo sandbox registration**: → ADR-0003: Per-repo sandbox registration
-- **SKILL.md-to-bin parity enforcement**: `bin/cortex-*` scripts wire through an in-scope SKILL.md/requirements/docs/hooks/justfile/tests reference. `bin/cortex-check-parity` blocks drift; exceptions at `bin/.parity-exceptions.md`.
+- **Phase boundaries are session boundaries**: the default workflow splits sessions at lifecycle phase boundaries — a fresh session after refine (spec approval) runs plan+implement, and a plan that consumed heavy context hands implement to another fresh session; phase-keyed `resume` routing is the re-entry path. Rationale: session carry is superlinear in turns (measured 37–61% of orchestrator spend); a fresh session re-caches for ~50k tokens (~0.7% of one long session's cache-read).
+- **Critical-review gates at spec only**: the adversarial review gate runs on the spec; the plan phase carries no critical-review gate (the end-of-implementation review is the backstop). Default width is 2 reviewers routed to Sonnet with an Opus synthesizer; escalate to 3–4 reviewers when criticality is high/critical or the artifact introduces claims the spec lacked. Supersedes #383.
+- **Dispatched agents are bounded**: every dispatched agent carries a turn cap (~40; on hit it returns what it has), and dispatch handling includes a returned-nothing branch routing hung agents to the existing Partial-coverage path. Rationale: 2.9% of agents exceed 60 turns and consume 19% of fan-out spend (`∝ turns^1.55`).
+- **Enforcement gates carry named evidence**: a pre-commit/CI gate survives only by naming the specific, evidenced failure it prevents (commit-message validation, worktree containment, sandbox preflight, shipped-bug regressions). Prose-scanners, parity/citation audits, and similar self-policing lints retire; per-gate disposition lands via a lifecycle. Reference prose follows verb-first with a stated size direction: behavior moves into CLI verbs, prose keeps only control flow, targeting ~10x reduction of `skills/*/references/`.
 - **SKILL.md size cap**: 500 lines (`tests/test_skill_size_budget.py`). Exceptions via in-file `<!-- size-budget-exception: ... -->`. Default fix: extract to `skills/<name>/references/`.
 - **Skill-helper modules**: when a SKILL.md dispatch ceremony invites paraphrase, collapse it into atomic `cortex_command/<skill>.py` subcommands fusing validation+mutation+telemetry. Promoted modules expose a `[project.scripts]` console-script entry (e.g. `cortex-<skill>`) as the recommended invocation idiom; `python3 -m cortex_command.<skill> <subcommand>` is retained as a readable fallback for ad-hoc invocation. New events register in `bin/.events-registry.md`.
 - **Backlog status vocabulary**: Canonical terminal statuses are maintained in `cortex_command/common.py:TERMINAL_STATUSES` (frozenset) and mirrored in `cortex_command/overnight/plan.py:_TERMINAL`. Extensions to terminal status vocabulary (e.g. adding `superseded`) must update both locations and add a corresponding `normalize_status` map entry. The frozenset in `cortex_command/overnight/backlog.py` is a known divergence tracked for a separate follow-up.
@@ -42,8 +49,6 @@ Agentic workflow toolkit for AI-assisted software development on Claude Code: sk
 - **Consumer `EnterWorktree` authorization surface**: `cortex init` writes **no** clause to consumer `CLAUDE.md`; the lifecycle implement phase authorizes `EnterWorktree` via the user's live picker selection at implement time. → ADR-0008: picker-selection authorizes `EnterWorktree` (supersedes ADR-0006).
 - **Install-state shared-constant contract**: the install-in-progress marker path (`XDG_STATE_HOME`-aware, 600s stale threshold) is defined by the stdlib-only `cortex_command/init/install_state.py` and duplicated inline in `plugins/cortex-overnight/install_core.py` because the SessionStart hook invokes it via bare system `python3` where the wheel is not importable. Parity is enforced by `tests/test_install_state_path_parity.py`; the wheel never imports from `plugins/cortex-overnight/`.
 - **`CORTEX_AUTO_ENSURE=0` opt-out**: mirrors the `CORTEX_AUTO_INSTALL=0` shape from the overnight plugin. Silences `cortex init --ensure` (and `cortex-lifecycle-init-ensure`) without disabling manual init verbs. Foreign-content protection for unanticipated misfires is structural (R19 gate) rather than reliant on this opt-out.
-- **Backlog `grep -c` resolution**: Backlog tickets that include `grep -c "<token>"` as Done-When/acceptance checks must reference tokens in `bin/.events-registry.md` or literal strings under `cortex_command/`, so acceptance criteria can't pass trivially against hallucinated event names. Enforced by `tests/test_backlog_grep_targets_resolve.py`.
-- **Bare-Python skill-invocation prohibition (L201)**: skill files (`skills/**/*.md`) and related corpus must not carry bare-Python `cortex_command` imports (static or dynamic); use `cortex-<skill>` console-script invocations instead. Caught at pre-commit by `cortex-check-bare-python-import`; suppress an intentional illustrative form with `<!-- bare-python-lint:ignore-next -->`.
 - **Skill-dir path-resolution invariant (SP001/SP002)**: enforced at pre-commit by `cortex-check-skill-path` (D1: raw `${CLAUDE_SKILL_DIR}` / bare `*.md` consult-ref inside a subagent prompt; D2: bare-relative Read/execute path not carried by a `${CLAUDE_SKILL_DIR}/` prefix); rationale in ADR-0009 and the CLAUDE.md skill-authoring design principle. Suppress an intentional illustrative form with `<!-- skill-path-lint:ignore-next -->`.
 - **Distributed-CLI dependency bounds**: `uv tool install` from a git ref ignores `uv.lock`, so the `pyproject.toml` `[project.dependencies]` bounds that travel in the wheel's `requires-dist` are the only governance reaching every install path. Cap the drift-prone web stack at the next breaking major, and promote a transitive to a direct, capped dependency when an uncapped upstream parent would otherwise let it drift across a breaking boundary (bounds in `pyproject.toml`). The fresh-resolve route test (`cortex_command/dashboard/tests/test_routes_smoke.py`, run in `validate.yml`) is the structural anti-revert guard.
 - **SKILL.md L1 surface ratchet**: each skill's L1 frontmatter surface (`description` + `when_to_use` byte sum) is bounded by a deliberate per-skill budget in `tests/test_l1_surface_ratchet.py`; equal-or-lower passes, and a new skill without a budget row fails a completeness gate. The one exemption surface is the routing-pressure cluster, whose skills carry irreducible disambiguation and path-routing tokens and get their own (higher) budget rows rather than the non-cluster default. Raising any budget row — including a cluster re-cap that cannot meet a target without dropping a trigger phrase — requires a documented rationale plus a lifecycle-id, so a legitimate re-cap is distinguishable from silent drift. New-skill authoring pointer: `CLAUDE.md`. → lifecycle 298.
@@ -54,7 +59,7 @@ Agentic workflow toolkit for AI-assisted software development on Claude Code: sk
 ## Quality Attributes
 
 - **Graceful partial failure**: Tasks may fail. The system retries, optionally hands off to a fresh agent, fails gracefully — completing the rest.
-- **Maintainability through simplicity**: Complexity is managed by iteratively trimming skills/workflows.
+- **Maintainability through simplicity**: Complexity is managed by iteratively trimming skills, workflows, and — symmetrically — safeguards and enforcement layers (**Deletion bias**).
 - **Iterative improvement**: Architecture tolerates exploratory development; design emerges through use.
 - **Defense-in-depth for permissions**: `settings.json` ships minimal allow, comprehensive deny, sandbox on. For sandbox-excluded commands (git, gh, WebFetch) the allow/deny list is sole enforcement — keep global allows read-only. Overnight runs `--dangerously-skip-permissions`; sandbox is the critical surface.
 - **Defense-in-depth for captured subprocess output**: child stderr captured for diagnostics is scrubbed at source by a cue-anchored credential allowlist (`pipeline/dispatch.py:_redact`) before it reaches the brain prompt or the morning report committed to local `main`. The allowlist is defense-in-depth, NOT complete (prefixless secrets and uncued families may pass); it deliberately uses no prefixless fixed-length blob matcher so benign high-entropy diagnostics (SHAs, UUIDs, base64) survive. → #309.
@@ -64,7 +69,7 @@ Agentic workflow toolkit for AI-assisted software development on Claude Code: sk
 
 ### In Scope
 
-- AI workflow orchestration (skills, lifecycle, pipeline). Discovery is documented inline (no area doc): `skills/discovery/SKILL.md`. Backlog has its own area doc (`cortex/requirements/backlog.md`); `cortex/backlog/index.md` is the local-backend (`cortex-backlog`) store. Ticket body authoring is enforced via `skills/backlog-author/` (the shared sub-skill) and validated at pre-commit by `bin/cortex-check-prescriptive-prose` (LEX-1 scanner, covering `## Why`, `## Role`, `## Integration`, `## Edges`).
+- AI workflow orchestration (skills, lifecycle, pipeline). Discovery is documented inline (no area doc): `skills/discovery/SKILL.md`. Backlog has its own area doc (`cortex/requirements/backlog.md`); `cortex/backlog/index.md` is the local-backend (`cortex-backlog`) store. Ticket body authoring is via `skills/backlog-author/` (the shared sub-skill).
 - Overnight execution: framework, sessions, scheduled launch, morning report
 - Dashboard (~1800 LOC FastAPI), conflict resolution pipeline (~2500 LOC), remote access (Tailscale/mosh/tmux/Cloudflare Tunnel)
 - Observability (statusline, notifications, metrics, cost); global agent config
@@ -81,6 +86,7 @@ Agentic workflow toolkit for AI-assisted software development on Claude Code: sk
 
 - Migration from file-based state if complexity demands it
 - Cross-repo work in one overnight session
+- Merging Clarify+Research+Spec into one tracked state — measured token value ~0.3% and they already run in one session, so no split point is lost; fold into the lifecycle reference shrink when that reworks the transition surface, not before
 
 ## Conditional Loading
 
@@ -102,3 +108,4 @@ Content here is prunable under token pressure — skip without losing spec-requi
 - **Sandbox preflight gate**: `bin/cortex-check-parity` validates `cortex/lifecycle/{feature}/preflight.md` on sandbox-source diffs, failing on a missing or invalid preflight.
 - **Two-mode gate pattern**: pre-commit gates pair `--staged` (diff schema) with `--audit` (time/repo-wide, `just <recipe>-audit`); the `--staged` scope must stay corpus-congruent with `--audit` (same files at all depths). See `bin/cortex-check-events-registry`.
 - **Workflow trimming**: unearned workflows are removed wholesale. Retirements in `CHANGELOG.md`.
+- **Known-bad numbers (2026-07-16 token audit)**: verb-turn counts in #390/#391 were computed on undeduplicated JSONL lines — true billed counts are 2.7–30x lower (`cortex-lifecycle-state` ≈5, not 160); #392's "isSidechain is dead" claim is false (it is True on >99.9% of subagent records — a valid orchestrator/subagent splitter); the corpus dollar total re-measured ~$5.3k, not $4,473. Rule: dedup by `message.id` before summing `usage`.
