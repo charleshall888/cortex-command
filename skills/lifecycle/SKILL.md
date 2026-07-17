@@ -81,6 +81,8 @@ Read **only** the current phase's reference (the row for the served `state`). Do
 
 Proceed automatically — no confirmation at phase boundaries; announce and continue. Each transition summary includes **Decisions**, **Scope delta**, **Blockers** (each "None" when empty), and **Next** (phase + what it does).
 
+Entering Plan or Implement, append the served `session_split_hint` as one line — suggest ending the session and re-invoking `/cortex-core:lifecycle {feature}` to resume the phase fresh (a suggestion, not a gate).
+
 A boundary fires on its gate condition (e.g. `plan.md` all tasks `[x]`), not user input. Each phase reference records its transition through `cortex-lifecycle-advance` — no in-prose event emission. A prior "report"/"summarize" instruction sets text cadence only; it does not authorize `AskUserQuestion` (permitted at a boundary only by the Kept user pauses inventory).
 
 ### Per-phase completion rule

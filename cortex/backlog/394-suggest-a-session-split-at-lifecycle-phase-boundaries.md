@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: f0306e22-2dc0-4031-93cc-751862d16c8e
 title: Suggest a session split at lifecycle phase boundaries
-status: backlog
+status: done
 priority: high
 type: feature
 created: 2026-07-16

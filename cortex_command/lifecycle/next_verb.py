@@ -49,6 +49,7 @@ Envelope schema (served / resume case)::
       "path_overview": {"nominal": [...], "outgoing": [...]},   # default-on at resume
       "guards": {"advisory": true, "note": ..., "edges": [ ... ]},
       "evidence_trace": [ <derivation step>, ... ],
+      "session_split_hint": <one-line split suggestion; plan/implement only>,
       "protocol": <PROTOCOL_VERSION>
     }
 
@@ -128,6 +129,18 @@ _ADVISORY_NOTE = (
     "Guards are ADVISORY (ADR-0008 / hazard 6): a hint the loop may render, "
     "never an authorization. The authoritative gate re-runs inside `advance` "
     "at act time."
+)
+
+# The refine→plan and plan→implement boundaries, keyed by their target state —
+# where a session split pays most ("Phase boundaries are session boundaries",
+# cortex/requirements/project.md: carry is superlinear in turns; a fresh
+# session re-caches for ~50k tokens). One optional envelope key; the
+# interactive loop renders it as a one-line suggestion, never a gate.
+_SESSION_SPLIT_STATES = ("plan", "implement")
+_SESSION_SPLIT_HINT = (
+    "Consider ending this session and resuming fresh — re-invoking "
+    "/cortex-core:lifecycle <feature> routes back to this phase, and a fresh "
+    "session avoids superlinear context carry."
 )
 
 
@@ -332,6 +345,8 @@ def build_served_envelope(
         "evidence_trace": evidence_trace,
         "protocol": PROTOCOL_VERSION,
     }
+    if state in _SESSION_SPLIT_STATES:
+        envelope["session_split_hint"] = _SESSION_SPLIT_HINT
     if at_resume or explain:
         envelope["path_overview"] = {
             "nominal": _nominal_forward_path(state),
