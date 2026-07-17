@@ -119,6 +119,17 @@ _SANCTIONED_OVERRIDE = (
     "(the sanctioned out-of-band hand-append; see bin/.events-registry.md)"
 )
 
+# Typed resume arms per pause slug (#400): a pause refusal whose slug has a
+# typed verb arm names it FIRST — the untyped hand-append stays the fallback,
+# not the recommendation. A refusal that recommends the escape hatch over its
+# own typed surface trains operators away from the verb layer.
+_PAUSE_TYPED_RESUMES: dict[str, str] = {
+    "plan-approval": (
+        "cortex-lifecycle-advance plan-decision --feature <slug> "
+        "--decision {branch-mode-approved,wait-approved,cancelled,revise}"
+    ),
+}
+
 # Merge-consent transitions (Task 14b / hazard 5): transition ids whose consent to
 # advance rests on a real merged PR. ``review.approved`` (review→complete) consummates
 # the feature — when a PR backs the work, that PR must ACTUALLY be merged, so a
@@ -245,7 +256,7 @@ def _pause_refusal(rows: List[dict]) -> Optional[dict]:
     if kind not in _ENFORCED_PAUSE_KINDS:
         return None  # judgment/config-conditional pause — describe-only, never refuse
     slug = last.get("slug", "<unslugged>")
-    return {
+    refusal = {
         "state": "refused",
         "reason": (
             f"event-backed pause blocks advance: an active feature_paused "
@@ -254,9 +265,15 @@ def _pause_refusal(rows: List[dict]) -> Optional[dict]:
         "missing_evidence": (
             f"a resume/override clearing the active {kind!r} pause (slug={slug!r})"
         ),
-        "sanctioned_override": _SANCTIONED_OVERRIDE,
         "pause": {"slug": slug, "kind": kind},
     }
+    typed = _PAUSE_TYPED_RESUMES.get(slug)
+    if typed is not None:
+        refusal["typed_resume"] = (
+            f"{typed} (the typed arm for this pause — prefer it over the hand-append)"
+        )
+    refusal["sanctioned_override"] = _SANCTIONED_OVERRIDE
+    return refusal
 
 
 # ---------------------------------------------------------------------------

@@ -3,10 +3,10 @@
 ``cortex-lifecycle-create-index --feature {slug} --backlog-file {basename|""}``
 owns the 7-field lifecycle ``index.md`` creation template that
 ``discovery-bootstrap.md`` previously narrated as hand-executed prose. It writes
-``{root}/cortex/lifecycle/{feature}/index.md`` (skip-if-exists) and emits a
-single compact-JSON signal on stdout::
+``{root}/cortex/lifecycle/{feature}/index.md`` (skip-if-exists, with the one
+repair carve-out below) and emits a single compact-JSON signal on stdout::
 
-    {"signal": "created"|"skipped", "path": "cortex/lifecycle/{slug}/index.md"}
+    {"signal": "created"|"repaired"|"skipped", "path": "cortex/lifecycle/{slug}/index.md"}
 
 Two shapes:
 
@@ -22,6 +22,17 @@ Two shapes:
 * **Shape B** (``--backlog-file ""``) — the ad-hoc form: bare unquoted ``null``
   for ``parent_backlog_uuid``/``parent_backlog_id``, ``tags: []``, and no
   heading/body.
+
+**Repair carve-out (#400):** a non-empty ``--backlog-file`` against an EXISTING
+index that is still an unlinked Shape B — its ``parent_backlog_uuid``,
+``parent_backlog_id``, and ``tags`` lines all byte-match the Shape-B defaults —
+rewrites exactly those three lines (plus ``updated:``) from the backlog item and
+reports ``repaired``. Without this, an index created before the backlog match was
+known (e.g. a resume that passed ``""``) kept ``tags: []`` forever, silently
+narrowing every ``cortex-load-requirements`` load to ``project.md``. Anything
+that does NOT byte-match all three defaults — a hand-edited or already-linked
+index — is left untouched (``skipped``); ``artifacts``/``created``/body are
+never rewritten either way.
 
 The template is rendered as a manual f-string (atomic temp + ``os.replace``,
 pinned trailing newline): PyYAML cannot reproduce the ordered-block +
@@ -152,8 +163,50 @@ def _atomic_write(target: Path, content: str) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _repair_unlinked_index(
+    target: Path, backlog_file: str, root: Path, rel: str
+) -> dict:
+    """Repair an EXISTING index that is still an unlinked Shape B.
+
+    Fires only when the ``parent_backlog_uuid``/``parent_backlog_id``/``tags``
+    lines ALL byte-match the Shape-B defaults — a hand-edited or already-linked
+    index never matches and is skipped, so the repair cannot clobber one. Only
+    those three lines (plus ``updated:``) are rewritten; ``artifacts``,
+    ``created``, and any body are preserved byte-for-byte.
+    """
+    try:
+        text = target.read_text(encoding="utf-8")
+    except OSError:
+        return {"signal": "skipped", "path": rel}
+
+    defaults = (
+        "parent_backlog_uuid: null\n",
+        "parent_backlog_id: null\n",
+        "tags: []\n",
+    )
+    if not all(line in text for line in defaults):
+        return {"signal": "skipped", "path": rel}
+
+    backlog_path = root / "cortex" / "backlog" / Path(backlog_file).name
+    fm = _parse_frontmatter(backlog_path)  # raises OSError if absent (exit 1)
+    uuid = fm.get("uuid")
+    tags = fm.get("tags") or []
+    match = _ID_PREFIX.match(Path(backlog_file).name)
+    backlog_id = int(match.group(1)) if match else None
+
+    uuid_val = uuid if uuid else "null"
+    id_val = str(backlog_id) if backlog_id is not None else "null"
+    text = text.replace(defaults[0], f"parent_backlog_uuid: {uuid_val}\n", 1)
+    text = text.replace(defaults[1], f"parent_backlog_id: {id_val}\n", 1)
+    text = text.replace(defaults[2], f"tags: {_render_tags(tags)}\n", 1)
+    text = re.sub(r"^updated: .*$", f"updated: {_today()}", text, count=1, flags=re.MULTILINE)
+    _atomic_write(target, text)
+    return {"signal": "repaired", "path": rel}
+
+
 def create_index(feature: str, backlog_file: str, root: Path) -> dict:
-    """Create ``{root}/cortex/lifecycle/{feature}/index.md`` (skip-if-exists).
+    """Create ``{root}/cortex/lifecycle/{feature}/index.md`` (skip-if-exists,
+    except the unlinked-Shape-B repair carve-out — see the module docstring).
 
     Returns a ``{"signal", "path"}`` dict. Raises ``OSError`` when *backlog_file*
     is non-empty but its resolved path under ``cortex/backlog/`` is absent — a
@@ -162,6 +215,8 @@ def create_index(feature: str, backlog_file: str, root: Path) -> dict:
     rel = f"cortex/lifecycle/{feature}/index.md"
     target = root / "cortex" / "lifecycle" / feature / "index.md"
     if target.exists():
+        if backlog_file:
+            return _repair_unlinked_index(target, backlog_file, root, rel)
         return {"signal": "skipped", "path": rel}
 
     today = _today()
@@ -213,8 +268,9 @@ def _build_parser() -> argparse.ArgumentParser:
         prog="cortex-lifecycle-create-index",
         description=(
             "Create the lifecycle index.md from its byte-faithful 7-field "
-            "creation template (skip-if-exists) and emit a {signal, path} JSON "
-            "verdict on stdout."
+            "creation template (skip-if-exists; a non-empty --backlog-file "
+            "repairs an existing unlinked Shape-B index in place) and emit a "
+            "{signal, path} JSON verdict on stdout."
         ),
     )
     parser.add_argument(

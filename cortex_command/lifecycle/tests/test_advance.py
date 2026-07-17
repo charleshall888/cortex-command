@@ -341,7 +341,9 @@ def test_refusal_on_gate_mismatch_names_evidence_and_override(tmp_path: Path) ->
 
 def test_advance_refuses_to_cross_event_backed_pause(tmp_path: Path) -> None:
     """An active feature_paused of an enforced kind (relayed-consent) blocks a
-    crossing advance; the refusal names the pause AND the sanctioned override."""
+    crossing advance; the refusal names the pause, the TYPED resume arm for a
+    slug that has one (#400 — the hand-append stays the fallback, never the
+    recommendation), AND the sanctioned override."""
     fd = _feature_dir(tmp_path)
     _seed(fd, [
         {"event": "plan_approved", "feature": "feat", "dispatch_choice": "wait"},
@@ -354,8 +356,20 @@ def test_advance_refuses_to_cross_event_backed_pause(tmp_path: Path) -> None:
     assert r["state"] == "refused"
     assert r["pause"]["kind"] == "relayed-consent"
     assert "plan-approval" in r["missing_evidence"]
+    assert "cortex-lifecycle-advance plan-decision" in r["typed_resume"]
     assert "cortex-lifecycle-event log" in r["sanctioned_override"]
     assert _names(fd).count("feature_paused") == 1  # refused before any emission
+
+
+def test_pause_refusal_without_typed_arm_omits_typed_resume(tmp_path: Path) -> None:
+    """A pause slug with no typed verb arm carries no typed_resume — only the
+    generic hand-append fallback."""
+    r = adv._pause_refusal([
+        {"event": "feature_paused", "feature": "feat", "slug": "phase-exit",
+         "kind": "phase-exit-wait"},
+    ])
+    assert r is not None and "typed_resume" not in r
+    assert "cortex-lifecycle-event log" in r["sanctioned_override"]
 
 
 def test_legacy_kindless_pause_fails_closed_and_refuses(tmp_path: Path) -> None:

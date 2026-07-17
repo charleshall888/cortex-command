@@ -43,6 +43,7 @@ Envelope schema (served / resume case)::
     {
       "state": <current lifecycle state, a transition-table state name>,
       "legacy_display_phase": <the artifact-derived projection for the state>,
+      "backlog": <resolver backlog metadata {filename, ...} or null>,
       "fragment_ref": {"state", "directive", "reference", "flavor": "selector"},
       "pause_spec": {"specs": [{"slug", "kind"}], "active", "active_kind"},
       "advance_contract": {"expected_from_state", "log_path", "flock_path"},
@@ -471,6 +472,13 @@ def next_state(
         )
         envelope["feature"] = feature
         envelope["paused"] = bool(resolved.get("paused"))
+        # The resolver's backlog linkage rides on the served envelope (#400): a
+        # resume that re-enters via cortex-lifecycle-enter threads
+        # backlog.filename instead of "" so an unlinked Shape-B index can be
+        # repaired with the tags the resolver already matched. None when the
+        # feature has no backlog item.
+        backlog = resolved.get("backlog")
+        envelope["backlog"] = backlog if isinstance(backlog, dict) else None
         if resolved.get("resolved_from") is not None:
             envelope["resolved_from"] = resolved["resolved_from"]
         return envelope

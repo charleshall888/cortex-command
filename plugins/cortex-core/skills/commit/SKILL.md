@@ -9,7 +9,7 @@ Create a single git commit from the current working tree changes.
 
 ## Workflow
 
-Run `cortex-commit-preflight` for status, diff, and recent history (one JSON document); stage relevant files with `git add` (specific files, not `-A`); compose the message per the format below and commit with `git commit -m`. Do not push, branch, or emit conversational text — only tool calls.
+Run `cortex-commit-preflight` for status, diff, and recent history (one JSON document); stage relevant files with `git add` (specific files, not `-A`); compose the message per the format below and commit with `git commit --only -m "..." -- <the same paths>`. Concurrent sessions share one git index, and a bare `git commit` sweeps whatever a sibling session staged — `--only` bounds the commit to the named paths. After committing, confirm with `git show --stat HEAD` that only the intended files landed. Do not push, branch, or emit conversational text — only tool calls.
 
 A PreToolUse hook validates the message before execution; if it rejects the commit, fix the message — don't bypass it via `git commit -F` or an editor, which the hook can't see.
 
@@ -21,4 +21,4 @@ Subject: imperative mood, ~72 chars, the *why* over the *what* ("Add"/"Fix"/"Rem
 
 ## Commit Command
 
-`git commit -m` (a second `-m` for a multi-line body); never HEREDOC or command substitution — both create temp files that fail sandboxed; never disable the sandbox.
+`git commit --only -m "..." [-m "..."] -- <paths>` (a second `-m` for a multi-line body; the trailing pathspec is what makes the commit concurrency-safe); never HEREDOC or command substitution — both create temp files that fail sandboxed; never disable the sandbox.

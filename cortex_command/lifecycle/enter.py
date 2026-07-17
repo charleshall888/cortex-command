@@ -41,7 +41,11 @@ States (the ``state`` discriminant reflects the ``cortex init --ensure`` gate,
 the one composed step that can refuse a lifecycle entry — plus the
 ``needs-decision`` short-circuit above):
 
-  ready         — all four steps succeeded; ``.session`` was written.
+  ready         — all four steps succeeded; ``.session`` was written. The
+                  ``index`` field passes through ``create_index``'s signal
+                  (``created``/``repaired``/``skipped`` — ``repaired`` means a
+                  previously-unlinked Shape-B index just received its backlog
+                  uuid/id/tags, #400).
   needs-decision — the backlog item is ``already_complete`` and
                   ``--acknowledge-complete`` was not passed. NO side effect ran
                   (no index, no sync, no init-ensure, no ``.session``); the skill

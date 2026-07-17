@@ -46,7 +46,7 @@ Per batch, in order:
 **Model** — resolve at dispatch, never hardcode:
 
 ```bash
-model=$(cortex-resolve-model --role builder --criticality "$(cortex-lifecycle-state --feature {feature} --field criticality)")
+model=$(cortex-resolve-model --role builder --criticality "$(cortex-lifecycle-state --feature {feature} --field criticality --raw)")
 ```
 
 Pass `$model` to each builder. On nonzero exit, halt and escalate rather than guessing. Then record the dispatch via advance's implement-transition arm (it owns the `batch_dispatch` emission, idempotent per batch number):

@@ -283,3 +283,92 @@ def test_nonempty_missing_backlog_file_returns_1(tmp_path, monkeypatch, capsys):
     assert "999-does-not-exist.md" in err
     # No index.md was written (no silent fall-back).
     assert not (root / "cortex" / "lifecycle" / SLUG / "index.md").exists()
+
+
+# ---------------------------------------------------------------------------
+# (g) #400 repair carve-out — an unlinked Shape-B index backfills its linkage
+# once the backlog match is known; hand-edited/linked indexes stay untouched
+# ---------------------------------------------------------------------------
+
+DATE2 = "2026-07-17"
+
+
+def test_repair_backfills_unlinked_shape_b(tmp_path, monkeypatch, capsys):
+    root = _repo(tmp_path)
+    monkeypatch.chdir(root)
+    # A resume that passed "" created the unlinked Shape-B index first.
+    assert create_index(SLUG, "", root)["signal"] == "created"
+    assert _read_index(root) == GOLDEN_B
+
+    _write_ticket(root)
+    monkeypatch.setattr(ci, "_today", lambda: DATE2)
+    rc = main(["--feature", SLUG, "--backlog-file", TICKET])
+    out = capsys.readouterr().out
+
+    assert rc == 0
+    assert json.loads(out)["signal"] == "repaired"
+    content = _read_index(root)
+    # Linkage backfilled; created preserved; updated bumped; no body invented.
+    assert f"parent_backlog_uuid: {UUID}\n" in content
+    assert "parent_backlog_id: 326\n" in content
+    assert _tags_line(content) == "tags: [lifecycle, cli-verbs]"
+    assert _extract_tags([_tags_line(content)]) == ["lifecycle", "cli-verbs"]
+    assert f"created: {DATE}\n" in content
+    assert f"updated: {DATE2}\n" in content
+    assert content.endswith("---\n")  # Shape-B body absence preserved
+
+    # The repair is idempotent-terminal: a second call is a plain skip (the
+    # defaults no longer match), never a second rewrite.
+    assert create_index(SLUG, TICKET, root)["signal"] == "skipped"
+
+
+def test_repair_preserves_artifacts_and_body(tmp_path, monkeypatch):
+    root = _repo(tmp_path)
+    _write_ticket(root)
+    lc = root / "cortex" / "lifecycle" / SLUG
+    lc.mkdir(parents=True, exist_ok=True)
+    hand_body = "# Hand-written heading\n\nNotes an operator added.\n"
+    (lc / "index.md").write_text(
+        "---\n"
+        f"feature: {SLUG}\n"
+        "parent_backlog_uuid: null\n"
+        "parent_backlog_id: null\n"
+        "artifacts: [research, spec]\n"
+        "tags: []\n"
+        f"created: {DATE}\n"
+        f"updated: {DATE}\n"
+        "---\n" + hand_body
+    )
+    monkeypatch.chdir(root)
+
+    r = create_index(SLUG, TICKET, root)
+
+    assert r["signal"] == "repaired"
+    content = _read_index(root)
+    assert "artifacts: [research, spec]\n" in content  # registered artifacts kept
+    assert content.endswith(hand_body)  # body byte-preserved
+    assert _tags_line(content) == "tags: [lifecycle, cli-verbs]"
+
+
+def test_repair_never_touches_hand_edited_or_linked_index(tmp_path, monkeypatch):
+    root = _repo(tmp_path)
+    _write_ticket(root)
+    monkeypatch.chdir(root)
+
+    # Already-linked Shape A: uuid/id/tags differ from the Shape-B defaults.
+    create_index(SLUG, TICKET, root)
+    before = _read_index(root)
+    assert create_index(SLUG, TICKET, root)["signal"] == "skipped"
+    assert _read_index(root) == before
+
+    # Hand-edited tags on an otherwise-unlinked index: one default line not
+    # byte-matching is enough to disarm the repair entirely.
+    other = "other-feature"
+    lc = root / "cortex" / "lifecycle" / other
+    lc.mkdir(parents=True, exist_ok=True)
+    hand = GOLDEN_B.replace(f"feature: {SLUG}", f"feature: {other}").replace(
+        "tags: []", "tags: [hand-picked]"
+    )
+    (lc / "index.md").write_text(hand)
+    assert create_index(other, TICKET, root)["signal"] == "skipped"
+    assert (lc / "index.md").read_text() == hand

@@ -6,14 +6,14 @@ Two-stage review: spec compliance first, then code quality. Complex tier only. T
 
 ### 1. Gather Review Inputs
 
-Read `cortex/lifecycle/{feature}/spec.md` (requirements) and `plan.md` (verification strategy), and identify the files changed during implementation (git log since the lifecycle started, or plan.md's file lists). Load requirements per the shared protocol (`${CLAUDE_SKILL_DIR}/references/load-requirements.md`): run `cortex-load-requirements --feature {feature}`, read every listed non-skipped path, and record the printed path list for the reviewer prompt. On the verb's no-match fallback note, the drift check covers project.md only.
+Read `cortex/lifecycle/{feature}/spec.md` (requirements) and `plan.md` (verification strategy), and identify the files changed during implementation (git log since the lifecycle started, or plan.md's file lists). Load requirements per the shared protocol (`${CLAUDE_SKILL_DIR}/references/load-requirements.md`): run `cortex-load-requirements --feature {feature}`, read every listed non-skipped path, and record the printed path list for the reviewer prompt. The verb's no-match fallback note (`no area docs matched`) is a **warning, not a routine fallback** — it means the drift check narrows to project.md only, so any area doc governing this feature goes unassessed. Surface it to the user before dispatching; the usual cause is an index.md that never received its backlog tags, repaired by re-running `cortex-lifecycle-enter` with the served backlog filename (SKILL.md §Step 2).
 
 ### 2. Launch Review Sub-Task
 
 **Model** — resolve at dispatch, never hardcode:
 
 ```bash
-model=$(cortex-resolve-model --role review --criticality "$(cortex-lifecycle-state --feature {feature} --field criticality)")
+model=$(cortex-resolve-model --role review --criticality "$(cortex-lifecycle-state --feature {feature} --field criticality --raw)")
 ```
 
 Pass `$model` to the reviewer sub-task. On nonzero exit, halt and escalate rather than guessing. Dispatch the sub-task read-only with the prompt below, substituting `{spec_path}` with the absolute spec path.

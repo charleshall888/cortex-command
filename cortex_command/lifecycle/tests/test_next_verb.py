@@ -229,6 +229,33 @@ def test_resume_plan_incomplete_serves_implement(repo_root: Path) -> None:
     assert r["state"] == "implement"
 
 
+def test_resume_serves_backlog_linkage(
+    repo_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#400: the resolver's backlog match rides on the served resume envelope
+    (``backlog.filename``) so Step 2 can thread it into ``cortex-lifecycle-enter``
+    instead of passing ``""`` — the write that left index.md tags empty forever.
+    Null when the feature has no backlog item."""
+    backlog = repo_root / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
+    (backlog / "350-wild-light.md").write_text(
+        "---\ntitle: 'Wild light'\nuuid: 1234\ntags: [2-5d]\n"
+        f"lifecycle_slug: {_SLUG}\nstatus: backlog\n---\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("CORTEX_BACKLOG_DIR", str(backlog))
+    _seed_feature(repo_root, _SLUG, {"spec.md": "# spec\n", "events.log": _SPEC_APPROVED})
+
+    r = next_state(_SLUG)
+    assert r["state"] == "plan"
+    assert r["backlog"]["filename"] == "350-wild-light.md"
+
+    # No-backlog resume: the key is present and null, never absent.
+    monkeypatch.setenv("CORTEX_BACKLOG_DIR", str(repo_root / "no-backlog"))
+    r = next_state(_SLUG)
+    assert r["backlog"] is None
+
+
 def test_explain_expands_evidence_trace(repo_root: Path) -> None:
     """--explain adds the guards step to the evidence trace and the explain marker."""
     _seed_feature(repo_root, _SLUG, {"spec.md": "# spec\n", "events.log": _SPEC_APPROVED})

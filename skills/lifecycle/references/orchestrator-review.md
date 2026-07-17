@@ -26,7 +26,7 @@ Per flagged issue, pick a fix mode:
 
 - **Fresh subagent** (Task tool) — for rework needing no user input; avoids anchoring to the flawed artifact. Resolve its model, never hardcoding:
   ```bash
-  model=$(cortex-resolve-model --role orchestrator-fix --criticality "$(cortex-lifecycle-state --feature {feature} --field criticality)")
+  model=$(cortex-resolve-model --role orchestrator-fix --criticality "$(cortex-lifecycle-state --feature {feature} --field criticality --raw)")
   ```
   Pass `$model`; on nonzero exit, halt and escalate. Dispatch with the template at `${CLAUDE_SKILL_DIR}/references/fix-agent-prompt-template.md`.
 - **Same conversation** — for rework needing user input (preference decides): explain the issue, gather input, revise in place.

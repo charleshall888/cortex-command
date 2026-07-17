@@ -9,7 +9,7 @@ When criticality is `critical`, dispatch 2-3 independent plan agents — as many
 **b. Dispatch plan agents** — launch each as a parallel Task sub-task with the template below **verbatim** (substitute variables, don't paraphrase). Resolve each agent's model, never hardcoding:
 
 ```bash
-model=$(cortex-resolve-model --role competing-plan --criticality "$(cortex-lifecycle-state --feature {feature} --field criticality)")
+model=$(cortex-resolve-model --role competing-plan --criticality "$(cortex-lifecycle-state --feature {feature} --field criticality --raw)")
 ```
 
 Dispatch with the captured `$model`; on nonzero exit, halt and escalate.

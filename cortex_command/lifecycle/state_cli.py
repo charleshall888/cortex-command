@@ -3,7 +3,7 @@
 Usage:
   cortex-lifecycle-state --feature <slug>
   cortex-lifecycle-state --feature <slug> --field criticality
-  cortex-lifecycle-state --feature <slug> --field tier
+  cortex-lifecycle-state --feature <slug> --field tier [--raw]
 
 Output:
   Without --field: {"criticality": "<value>", "tier": "<value>"} — keys absent
@@ -11,6 +11,12 @@ Output:
   to "medium", tier to "simple"). When events.log is missing, output {}.
 
   With --field: JSON containing only the requested key (omitted when empty).
+
+  With --field --raw: the bare scalar (no JSON), for command substitution —
+  e.g. cortex-resolve-model --criticality "$(cortex-lifecycle-state ... --raw)".
+  An axis never set emits the documented caller default (criticality "medium",
+  tier "simple"); a corrupted log whose axis is unknowable exits 2 instead of
+  guessing (use the JSON form, which carries "corrupted": true).
 
 Canonical rules (delegated to cortex_command.common.reduce_lifecycle_state,
 the single tolerant reducer shared with read_tier / read_criticality and
@@ -47,7 +53,7 @@ cortex-lifecycle-state — emit a feature's canonical criticality and tier as JS
 Usage:
   cortex-lifecycle-state --feature <slug>
   cortex-lifecycle-state --feature <slug> --field criticality
-  cortex-lifecycle-state --feature <slug> --field tier
+  cortex-lifecycle-state --feature <slug> --field tier [--raw]
 
 Output:
   Without --field: {"criticality": "<value>", "tier": "<value>"} — keys absent
@@ -55,6 +61,11 @@ Output:
   to "medium", tier to "simple"). When events.log is missing, output {}.
 
   With --field: JSON containing only the requested key (omitted when empty).
+
+  With --field --raw: the bare scalar (no JSON), for command substitution.
+  An axis never set emits the documented caller default (criticality "medium",
+  tier "simple"); a corrupted log whose axis is unknowable exits 2 instead of
+  guessing (use the JSON form, which carries "corrupted": true).
 
 Canonical rules (delegated to cortex_command.common.reduce_lifecycle_state,
 shared with read_tier / read_criticality and refine):
@@ -66,6 +77,10 @@ shared with read_tier / read_criticality and refine):
 A torn or out-of-vocabulary line is skipped (last valid value wins) rather
 than collapsing the reduction; stdout is the accumulator dict, never "null".
 """
+
+# The documented caller-side defaults (--raw emits them when the axis was
+# never set, so a command substitution always yields a valid enum).
+_RAW_DEFAULTS = {"criticality": "medium", "tier": "simple"}
 
 # Accepted --field values (from bash script lines 61-67).
 _ACCEPTED_FIELDS = frozenset({"criticality", "tier"})
@@ -111,6 +126,7 @@ def main(argv: Optional[List[str]] = None) -> None:
 
     feature: Optional[str] = None
     field: str = ""
+    raw = False
     i = 0
     while i < len(args):
         arg = args[i]
@@ -120,6 +136,8 @@ def main(argv: Optional[List[str]] = None) -> None:
         elif arg == "--field":
             i += 1
             field = args[i] if i < len(args) else ""
+        elif arg == "--raw":
+            raw = True
         elif arg in ("-h", "--help"):
             sys.stdout.write(_HELP_TEXT)
             sys.exit(0)
@@ -143,9 +161,20 @@ def main(argv: Optional[List[str]] = None) -> None:
         )
         sys.exit(2)
 
+    if raw and not field:
+        sys.stderr.write(
+            "cortex-lifecycle-state: --raw requires --field\n"
+        )
+        sys.exit(2)
+
     events_path = Path("cortex") / "lifecycle" / feature / "events.log"
 
     if not events_path.is_file():
+        if raw:
+            # No log at all: the documented caller default, same as an axis
+            # never set — a command substitution still yields a valid enum.
+            sys.stdout.write(_RAW_DEFAULTS[field] + "\n")
+            sys.exit(0)
         sys.stdout.write("{}\n")
         sys.exit(0)
 
@@ -163,6 +192,25 @@ def main(argv: Optional[List[str]] = None) -> None:
         )
 
     result = reduction.state
+
+    if raw:
+        # Bare-scalar composition mode (#400): the value when present, the
+        # documented caller default when the axis was simply never set, and a
+        # loud exit 2 when corruption left it unknowable — never a silently
+        # defaulted enum a gate-deciding consumer would trust.
+        value = result.get(field)
+        if value is not None:
+            sys.stdout.write(str(value) + "\n")
+            sys.exit(0)
+        if reduction.corrupted:
+            sys.stderr.write(
+                f"cortex-lifecycle-state: {field} unknowable (corrupted "
+                f"events.log) — use the JSON form, which carries "
+                f'"corrupted": true\n'
+            )
+            sys.exit(2)
+        sys.stdout.write(_RAW_DEFAULTS[field] + "\n")
+        sys.exit(0)
 
     if field:
         result = _filter_field(result, field)
