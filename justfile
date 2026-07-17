@@ -376,6 +376,10 @@ check-contract-audit:
 check-events-registry:
     bin/cortex-check-events-registry --staged
 
+# Audit v3 clarify_critic events across cortex/lifecycle/**/events.log (#186 schema gate)
+check-clarify-critic-events:
+    bin/cortex-check-clarify-critic-events
+
 # Check ticket bodies / skill prose for prescriptive-prose violations (LEX-1 scanner, R6/R7)
 check-prescriptive-prose *args:
     bin/cortex-check-prescriptive-prose --staged {{args}}

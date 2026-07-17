@@ -117,6 +117,8 @@ status: "ok"
 
 v3 carries only counts, not per-finding prose, dismissal rationales, or applied-fix descriptions. `parent_epic_loaded` mirrors the dispatch decision; counts reflect post-self-resolution values.
 
+The v3 field shape and the dismissals invariant are programmatically enforced by `cortex-check-clarify-critic-events` (#186; repo-wide audit wired into the test suite) — a malformed event fails with a pointer to the violating line.
+
 **Legacy-tolerance.** Readers MUST tolerate every prior shape forever: minimal v1, v1+dismissals, v2, YAML-block, and v3 (the only shape new producers emit).
 
 ## Failure Handling
