@@ -34,19 +34,14 @@ Act on `state`:
 
 **Step v — Auto-enter sequence** (steps ii–iv were absorbed into `cortex-lifecycle-prepare-worktree`; the i→v gap is intentional — do not renumber, tests and cross-refs anchor on these labels)
 
-After `state: ok`, run in this order — the event must be emitted from inside the worktree so `_resolve_user_project_root_from_cwd()` lands the row in the worktree's events.log:
+After `state: ok`, run in this order:
 
 1. **Capture origin pwd** — `_origin_pwd=$(pwd)`; hold it for the session (restore at Complete or on fallback).
-2. **Suppressed-picker structural branch** — `suppressed` skips the `cortex-worktree-precondition` probe AND the auto-enter, routing structurally to the cd-shim: `cd $(cortex-worktree-resolve interactive-{slug})`, surfacing the stable literal `EnterWorktree skipped: suppressed-picker (branch-mode worktree-interactive)`, then jumping to op 5. `selected` skips this branch and continues to op 3.
+2. **Suppressed-picker structural branch** — `suppressed` skips the `cortex-worktree-precondition` probe AND the auto-enter, routing structurally to the cd-shim: `cd $(cortex-worktree-resolve interactive-{slug})`, surfacing the stable literal `EnterWorktree skipped: suppressed-picker (branch-mode worktree-interactive)`, then continuing to §2. `selected` skips this branch and continues to op 3.
 3. **Already-in-worktree probe** (`selected`) — `cortex-worktree-precondition`. Exit 0 = not inside a worktree (proceed); exit 1 = already inside (skip op 4, route to fallback naming the detected worktree).
 4. **Auto-enter** (`selected`, probe returned 0) — `EnterWorktree(path=<resolved-path>)` where `<resolved-path>` is `cortex-worktree-resolve interactive-{slug}`'s output (never a hardcoded prefix — R3). Sets session CWD to the worktree for all subsequent Bash calls and clears CWD-dependent caches. Error (path not in `git worktree list`, schema rejection, "Must not already be in a worktree" race) → fallback.
-5. **Emit event** — once CWD is rooted in the worktree (via `EnterWorktree` on `selected`, or the cd-shim on `suppressed`):
 
-   ```bash
-   cortex-lifecycle-event interactive-worktree-entered --feature {slug} --worktree-path "$(pwd)"
-   ```
-
-**Fallback — `EnterWorktree skipped`.** On the `selected` path (op-3 probe non-zero, op-4 `EnterWorktree` error, or the skill declines the tool): cd-shim handoff `cd $(cortex-worktree-resolve interactive-{slug})` then op 5, with a one-line diagnostic beginning `EnterWorktree skipped` naming the failure mode. Auto-enter affects only orchestrator-session Bash calls; §2 sub-agent `Agent(isolation: "worktree")` dispatch and §2(e) merge-back are unaffected.
+**Fallback — `EnterWorktree skipped`.** On the `selected` path (op-3 probe non-zero, op-4 `EnterWorktree` error, or the skill declines the tool): cd-shim handoff `cd $(cortex-worktree-resolve interactive-{slug})`, with a one-line diagnostic beginning `EnterWorktree skipped` naming the failure mode. Auto-enter affects only orchestrator-session Bash calls; §2 sub-agent `Agent(isolation: "worktree")` dispatch and §2(e) merge-back are unaffected.
 
 **vi.** On `suppressed`, `cd $(git rev-parse --show-toplevel)` is the only restoration needed. Surface the worktree path with a one-line warning: on session exit the harness prompts to keep/remove — "remove" discards uncommitted work, so commit or push first. Mid-session, `ExitWorktree action="keep"` clears state cleanly, or `cd $(git rev-parse --show-toplevel)` navigates back deferring the prompt.
 

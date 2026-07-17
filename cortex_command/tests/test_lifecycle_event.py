@@ -811,18 +811,6 @@ class TestEventSubcommands:
              "--set", "tier=complex", "--set", "criticality=high"],
         ),
         (
-            ["critical-review-skipped", "--phase", "plan",
-             "--tier", "complex", "--criticality", "low"],
-            ["log", "--event", "lifecycle_critical_review_skipped",
-             "--set", "phase=plan", "--set", "tier=complex",
-             "--set", "criticality=low"],
-        ),
-        (
-            ["interactive-worktree-entered", "--worktree-path", "/tmp/wt"],
-            ["log", "--event", "interactive_worktree_entered",
-             "--set", "worktree_path=/tmp/wt"],
-        ),
-        (
             ["feature-paused"],
             ["log", "--event", "feature_paused"],
         ),

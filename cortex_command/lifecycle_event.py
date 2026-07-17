@@ -735,14 +735,6 @@ _EVENT_SUBCOMMANDS: dict[str, tuple[str, list]] = {
         ("--tier", "tier", _STR, True, ("simple", "complex")),
         ("--criticality", "criticality", _STR, True, _CRITICALITY),
     ]),
-    "critical-review-skipped": ("lifecycle_critical_review_skipped", [
-        ("--phase", "phase", _STR, True, None),
-        ("--tier", "tier", _STR, True, ("simple", "complex")),
-        ("--criticality", "criticality", _STR, True, _CRITICALITY),
-    ]),
-    "interactive-worktree-entered": ("interactive_worktree_entered", [
-        ("--worktree-path", "worktree_path", _STR, True, None),
-    ]),
     "feature-paused": ("feature_paused", [
         # 374 R5: field-additive per-pause accountability. Both optional so
         # legacy kind-absent/slug-less rows still parse; a kind-absent row

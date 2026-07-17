@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: c6f9873c-ad45-4bca-afa4-4354f3e2a5fa
 title: Delete zero-reader lifecycle events and audit the untyped log escape hatch
-status: backlog
+status: complete
 priority: low
 type: chore
 created: 2026-07-16

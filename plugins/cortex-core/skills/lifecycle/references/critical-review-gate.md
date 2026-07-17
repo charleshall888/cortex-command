@@ -12,5 +12,4 @@ Same "untrustworthy tier → review, don't skip" posture for a second seed-tier 
 
 ## Run/Skip Matrix
 
-- **Skip-silent** when `tier = simple` (any criticality): proceed directly to user approval, no event logged.
-- **Log+skip** when `tier = complex` AND `criticality = low`: append the event below so the skip rate is observable, then proceed to user approval: `cortex-lifecycle-event critical-review-skipped --feature <name> --phase specify --tier complex --criticality low`
+- **Skip** when `tier = simple` (any criticality), or when `tier = complex` AND `criticality = low`: proceed directly to user approval.

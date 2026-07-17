@@ -116,19 +116,10 @@ def _declared_and_required(subcommand: str) -> tuple[set[str], set[str]]:
 
 
 # Per-file expected invocation counts per event (the on-disk reality). Keyed by
-# event name; the subcommand is resolved via ``_EVENT_TO_SUB``. The
-# ``interactive_worktree_entered`` emission moved out of implement.md into
-# worktree-entry.md in the lifecycle-corpus-trim-wave-2 route-conditional
-# extraction, so it is cross-validated against that file now.
+# event name; the subcommand is resolved via ``_EVENT_TO_SUB``.
 FILE_EVENTS: dict[str, dict[str, int]] = {
-    "skills/lifecycle/references/worktree-entry.md": {
-        "interactive_worktree_entered": 1,
-    },
     "skills/lifecycle/references/criticality-matrix.md": {
         "criticality_override": 1,
-    },
-    "skills/lifecycle/references/critical-review-gate.md": {
-        "lifecycle_critical_review_skipped": 1,
     },
     # refine-delegation.md no longer emits a typed phase_transition: the served
     # loop (Task 19, R17) derives the refine sub-phase boundaries and routes
@@ -357,14 +348,6 @@ GOLDEN_CASES: list[tuple[str, str, list[str], str]] = [
         '"from": "low", "to": "high"}' % FIXED_TS,
     ),
     (
-        "lifecycle_critical_review_skipped",
-        "lifecycle_critical_review_skipped",
-        ["--set", "phase=plan", "--set", "tier=complex", "--set", "criticality=low"],
-        '{"ts": "%s", "event": "lifecycle_critical_review_skipped", '
-        '"feature": "f", "phase": "plan", "tier": "complex", '
-        '"criticality": "low"}' % FIXED_TS,
-    ),
-    (
         "lifecycle_start",
         "lifecycle_start",
         ["--set", "tier=simple", "--set", "criticality=medium"],
@@ -388,13 +371,6 @@ GOLDEN_CASES: list[tuple[str, str, list[str], str]] = [
         "feature_complete",
         [],
         '{"ts": "%s", "event": "feature_complete", "feature": "f"}' % FIXED_TS,
-    ),
-    (
-        "interactive_worktree_entered",
-        "interactive_worktree_entered",
-        ["--set", "worktree_path=/tmp/wt"],
-        '{"ts": "%s", "event": "interactive_worktree_entered", "feature": "f", '
-        '"worktree_path": "/tmp/wt"}' % FIXED_TS,
     ),
 ]
 
