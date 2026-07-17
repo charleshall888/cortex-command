@@ -66,12 +66,11 @@ def test_already_complete_skips(project_root: Path) -> None:
 
 def test_simple_medium_advances_via_folded_advance_body(project_root: Path) -> None:
     """374 fold: the review→complete transition is routed through the shared
-    ``advance`` body, so the events.log carries advance-authored rows
-    (``review_verdict`` + ``phase_transition`` review→complete, each tagged with
-    the deterministic ``invocation_id``, bracketed by ``advance_started`` /
-    ``advance_committed``) — NOT the pre-fold hand-appended four-event sequence,
-    and NO ``feature_complete`` row (the served transition table does not emit
-    it). The events-first projection is unchanged: ``complete``."""
+    ``advance`` body, so the events.log carries the advance-authored rows
+    (``review_verdict`` + ``phase_transition`` review→complete) — NOT the
+    pre-fold hand-appended four-event sequence, and NO ``feature_complete`` row
+    (the served transition table does not emit it). The events-first projection
+    is unchanged: ``complete``."""
     fd = _feature_dir(project_root)
     _write_events(
         fd,
@@ -87,8 +86,8 @@ def test_simple_medium_advances_via_folded_advance_body(project_root: Path) -> N
 
     events = _read_events(fd)
     kinds = [e["event"] for e in events[1:]]
-    # advance-authored dual emission: no transition row is hand-appended here.
-    assert kinds == ["advance_started", "review_verdict", "phase_transition", "advance_committed"]
+    # advance-authored emission: no transition row is hand-appended here.
+    assert kinds == ["review_verdict", "phase_transition"]
     # No feature_complete row: completion rides on phase_transition review→complete.
     assert not any(e["event"] == "feature_complete" for e in events)
     verdict_row = next(e for e in events if e["event"] == "review_verdict")
@@ -97,9 +96,6 @@ def test_simple_medium_advances_via_folded_advance_body(project_root: Path) -> N
         e for e in events if e["event"] == "phase_transition" and e.get("to") == "complete"
     )
     assert complete_row["from"] == "review"
-    # Every advance-authored legacy/machine row carries the same invocation_id.
-    inv = complete_row["invocation_id"]
-    assert inv and verdict_row["invocation_id"] == inv
     for e in events[1:]:
         assert e["feature"] == "feat"
         assert "ts" in e
@@ -165,14 +161,10 @@ def test_crash_recovery_appends_two_events(project_root: Path) -> None:
     events = _read_events(fd)
     # The real cycle-2 review_verdict is already present, so the folded advance
     # body emits only the missing phase_transition review→complete (no duplicate
-    # verdict), bracketed by the claim/commit machine rows — and no feature_complete.
+    # verdict) — and no feature_complete.
     new_events = events[3:]
-    assert [e["event"] for e in new_events] == [
-        "advance_started",
-        "phase_transition",
-        "advance_committed",
-    ]
-    complete_row = new_events[1]
+    assert [e["event"] for e in new_events] == ["phase_transition"]
+    complete_row = new_events[0]
     assert complete_row["from"] == "review" and complete_row["to"] == "complete"
     assert not any(e["event"] == "feature_complete" for e in events)
 

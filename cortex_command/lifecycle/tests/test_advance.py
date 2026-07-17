@@ -1,12 +1,12 @@
 """Tests for cortex-lifecycle-advance — the write-side executor that composes the
-four B1 decision cores' fixed-source-order emission bodies inside the claim/commit
-locking primitive (Task 6).
+four B1 decision cores' fixed-source-order emission bodies inside one gate-checked
+body (#397 retired the claim/commit locking primitive that used to wrap it).
 
 The tests hand ``advance`` an explicit ``log_path`` under ``tmp_path`` (rather than
-relying on CWD/main-root resolution), so the primitive, the idempotency probes, and
+relying on CWD/main-root resolution), so the gate, the idempotency probes, and
 the assertions all read/write the same physical log deterministically. Assertions
-parse the real appended ``events.log`` rows — the write-side ordering invariant and
-the dual-emission are the whole point of the verb.
+parse the real appended ``events.log`` rows — the write-side ordering invariant is
+the whole point of the verb.
 """
 
 from __future__ import annotations
@@ -92,9 +92,9 @@ def _implement_phase(fd: Path, *, tier: str = "simple") -> int:
 # ---------------------------------------------------------------------------
 
 
-def test_plan_branch_mode_emits_claim_then_legacy_then_commit(tmp_path: Path) -> None:
-    """plan-decision/branch-mode-approved: advance_started → plan_approved →
-    phase_transition(plan→implement) → advance_committed, in that order."""
+def test_plan_branch_mode_emits_legacy_rows_in_order(tmp_path: Path) -> None:
+    """plan-decision/branch-mode-approved: plan_approved →
+    phase_transition(plan→implement), in that order — and nothing else."""
     fd = _feature_dir(tmp_path)
     before = _plan_phase(fd)
     r = adv.advance(
@@ -104,17 +104,10 @@ def test_plan_branch_mode_emits_claim_then_legacy_then_commit(tmp_path: Path) ->
     assert r["state"] == "branch-mode-approved"
     assert r["advanced"] is True
     assert r["emitted"] == ["plan_approved", "phase_transition"]
-    assert _appended(fd, before) == [
-        "advance_started", "plan_approved", "phase_transition", "advance_committed",
-    ]
-    inv = r["invocation_id"]
+    assert _appended(fd, before) == ["plan_approved", "phase_transition"]
     rows = _rows(fd)[before:]
-    # Both machine rows carry the deterministic invocation_id.
-    assert rows[0]["event"] == "advance_started" and rows[0]["invocation_id"] == inv
-    assert rows[-1]["event"] == "advance_committed" and rows[-1]["invocation_id"] == inv
-    # The legacy rows carry the additive invocation_id (advance-authored, distinguishable).
-    assert rows[1]["dispatch_choice"] == "trunk" and rows[1]["invocation_id"] == inv
-    assert rows[2]["from"] == "plan" and rows[2]["to"] == "implement" and rows[2]["invocation_id"] == inv
+    assert rows[0]["dispatch_choice"] == "trunk"
+    assert rows[1]["from"] == "plan" and rows[1]["to"] == "implement"
 
 
 def test_review_verdict_approved_emission_order(tmp_path: Path) -> None:
@@ -126,12 +119,10 @@ def test_review_verdict_approved_emission_order(tmp_path: Path) -> None:
         drift="none", from_state="review", log_path=_log(fd),
     )
     assert r["state"] == "approved" and r["to_state"] == "complete"
-    assert _appended(fd, before) == [
-        "advance_started", "review_verdict", "phase_transition", "advance_committed",
-    ]
+    assert _appended(fd, before) == ["review_verdict", "phase_transition"]
     rows = _rows(fd)[before:]
-    assert rows[1]["verdict"] == "APPROVED" and rows[1]["cycle"] == 1
-    assert rows[2]["from"] == "review" and rows[2]["to"] == "complete"
+    assert rows[0]["verdict"] == "APPROVED" and rows[0]["cycle"] == 1
+    assert rows[1]["from"] == "review" and rows[1]["to"] == "complete"
 
 
 def test_review_verdict_breach_interleaves_drift_row(tmp_path: Path) -> None:
@@ -145,8 +136,7 @@ def test_review_verdict_breach_interleaves_drift_row(tmp_path: Path) -> None:
     )
     assert r["state"] == "rework"
     assert _appended(fd, before) == [
-        "advance_started", "review_verdict", "drift_protocol_breach",
-        "phase_transition", "advance_committed",
+        "review_verdict", "drift_protocol_breach", "phase_transition",
     ]
     breach = [x for x in _rows(fd) if x["event"] == "drift_protocol_breach"][0]
     assert breach["retries"] == 3 and breach["cycle"] == 1
@@ -162,9 +152,7 @@ def test_spec_approve_emit_transition_order(tmp_path: Path) -> None:
         from_state="specify", log_path=_log(fd),
     )
     assert r["state"] == "approved" and r["to_state"] == "plan"
-    assert _appended(fd, before) == [
-        "advance_started", "spec_approved", "phase_transition", "advance_committed",
-    ]
+    assert _appended(fd, before) == ["spec_approved", "phase_transition"]
 
 
 def test_spec_approve_no_transition_suppresses_edge(tmp_path: Path) -> None:
@@ -196,14 +184,14 @@ def test_implement_transition_routes_via_reducer(tmp_path: Path) -> None:
 
 def test_batch_dispatches_are_idempotent_per_batch_number(tmp_path: Path) -> None:
     """Each batch is its own logical advance: batch 1 must not short-circuit on
-    batch 0's committed pair.
+    batch 0's recorded row.
 
-    Regression (#393): the invocation_id derived from the bare business tuple,
-    and the batch arm's table endpoints are implement→implement for EVERY batch —
-    so batch 1 re-derived batch 0's id, returned already-committed with an empty
-    emission list, and its batch_dispatch row was silently dropped (batches 1–6
-    of the discovering lifecycle went unrecorded). The registry and implement.md
-    §2b both document the emission as idempotent per batch number.
+    Regression (#393): the batch arm's table endpoints are implement→implement
+    for EVERY batch, so any replay detection keyed on the bare endpoints would
+    silently drop batch N's row after batch 0 landed (batches 1–6 of the
+    discovering lifecycle went unrecorded). The emission-plan ``match`` carries
+    the batch number, so the replay probe is idempotent per batch — the
+    semantics the registry and implement.md §2b document.
     """
     fd = _feature_dir(tmp_path)
     _implement_phase(fd)
@@ -212,23 +200,21 @@ def test_batch_dispatches_are_idempotent_per_batch_number(tmp_path: Path) -> Non
     second = adv.advance(verb="implement-transition", feature="feat", mode="batch",
                          batch=1, tasks=[3], from_state="implement", log_path=_log(fd))
     assert first["state"] == second["state"] == "dispatched"
-    # Distinct batches are distinct claims — both rows land.
-    assert first["invocation_id"] != second["invocation_id"]
+    # Distinct batches are distinct advances — both rows land.
     assert second["emitted"] == ["batch_dispatch"]
     dispatched = [r for r in _rows(fd) if r["event"] == "batch_dispatch"]
     assert [r["batch"] for r in dispatched] == [0, 1]
-    assert _names(fd).count("advance_committed") == 2
-    # A retry of the SAME batch still resumes its own pair — no duplicate row.
+    # A retry of the SAME batch replays benignly — no duplicate row.
     retry = adv.advance(verb="implement-transition", feature="feat", mode="batch",
                         batch=1, tasks=[3], from_state="implement", log_path=_log(fd))
-    assert retry["invocation_id"] == second["invocation_id"]
-    assert retry["commit_status"] == "already-committed" and retry["emitted"] == []
+    assert retry["replay"] == "already-emitted" and retry["emitted"] == []
+    assert retry["advanced"] is True
     assert [r["batch"] for r in _rows(fd) if r["event"] == "batch_dispatch"] == [0, 1]
 
 
 def test_plan_wait_emits_paused_and_holds(tmp_path: Path) -> None:
     """wait-approved: plan_approved{wait} → feature_paused{plan-approval,relayed-consent};
-    to_state holds at plan; feature_paused carries the advance invocation_id."""
+    to_state holds at plan."""
     fd = _feature_dir(tmp_path)
     _plan_phase(fd)
     r = adv.advance(
@@ -238,7 +224,6 @@ def test_plan_wait_emits_paused_and_holds(tmp_path: Path) -> None:
     assert r["state"] == "wait-approved" and r["to_state"] == "plan"
     paused = [x for x in _rows(fd) if x["event"] == "feature_paused"][0]
     assert paused["slug"] == "plan-approval" and paused["kind"] == "relayed-consent"
-    assert paused["invocation_id"] == r["invocation_id"]
 
 
 def test_revise_short_circuits_no_claim(tmp_path: Path) -> None:
@@ -252,68 +237,62 @@ def test_revise_short_circuits_no_claim(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Idempotent re-invocation (crash-between-emissions repair)
+# Idempotent re-invocation (replay + crash-between-emissions repair)
 # ---------------------------------------------------------------------------
 
 
 def test_double_invocation_is_idempotent(tmp_path: Path) -> None:
-    """Re-running the same logical advance appends no duplicate legacy rows and
-    exactly one advance_committed; the second run re-derives the same invocation_id
-    and reports already-committed."""
+    """Re-running the same logical advance appends no duplicate legacy rows; the
+    second run short-circuits as a benign replay (all planned emissions present)
+    even though the phase has already moved past the gate."""
     fd = _feature_dir(tmp_path)
     _plan_phase(fd)
-    first = adv.advance(verb="plan-decision", feature="feat",
-                        decision="branch-mode-approved", dispatch_choice="trunk",
-                        from_state="plan", log_path=_log(fd))
+    adv.advance(verb="plan-decision", feature="feat",
+                decision="branch-mode-approved", dispatch_choice="trunk",
+                from_state="plan", log_path=_log(fd))
     second = adv.advance(verb="plan-decision", feature="feat",
                          decision="branch-mode-approved", dispatch_choice="trunk",
                          from_state="plan", log_path=_log(fd))
-    assert first["invocation_id"] == second["invocation_id"]
-    assert second["commit_status"] == "already-committed"
+    assert second["replay"] == "already-emitted"
+    assert second["advanced"] is True
     assert second["emitted"] == []
     names = _names(fd)
     assert names.count("plan_approved") == 1
     assert names.count("phase_transition") == 1
-    assert names.count("advance_committed") == 1
 
 
-# ---------------------------------------------------------------------------
-# Orphaned advance_started recovery by invocation_id
-# ---------------------------------------------------------------------------
-
-
-def test_orphaned_claim_recovered_by_invocation_id(tmp_path: Path) -> None:
-    """A crash after claim but before the legacy side effects leaves an orphaned
-    advance_started; re-invoking the same logical advance resumes that claim (same
-    invocation_id, no duplicate advance_started) and completes the transition."""
+def test_partial_crash_resumes_missing_emissions(tmp_path: Path) -> None:
+    """A crash between appends (the non-phase-moving row landed, the
+    phase_transition was lost) resumes on re-invocation: on an events-authority
+    log (a phase_transition row present, the served loop's normal shape) the gate
+    still sees the pre-transition phase, the present row is skipped, and the
+    missing row lands."""
     fd = _feature_dir(tmp_path)
-    inv = adv.derive_invocation_id("feat", "plan", "implement", "")
-    # Simulate the orphan: only the claim row landed (side effects + commit lost).
-    _seed(fd, [{"ts": "t", "event": "advance_started", "feature": "feat",
-                "from_state": "plan", "to_state": "implement", "invocation_id": inv}])
+    _plan_phase(fd)
+    _seed(fd, [{"ts": "t", "event": "phase_transition", "feature": "feat",
+                "from": "specify", "to": "plan"},
+               {"ts": "t", "event": "plan_approved", "feature": "feat",
+                "dispatch_choice": "trunk"}])
     r = adv.advance(verb="plan-decision", feature="feat",
                     decision="branch-mode-approved", dispatch_choice="trunk",
                     from_state="plan", log_path=_log(fd))
-    assert r["invocation_id"] == inv
-    assert r["claim_status"] == "resumed"
     assert r["advanced"] is True
-    # Exactly one advance_started (the orphan was reused, not duplicated).
-    assert _names(fd).count("advance_started") == 1
-    assert _names(fd) == [
-        "advance_started", "plan_approved", "phase_transition", "advance_committed",
-    ]
+    assert r["emitted"] == ["phase_transition"]
+    assert _names(fd).count("plan_approved") == 1
+    plan_exits = [x for x in _rows(fd)
+                  if x["event"] == "phase_transition" and x.get("from") == "plan"]
+    assert len(plan_exits) == 1 and plan_exits[0]["to"] == "implement"
 
 
 # ---------------------------------------------------------------------------
-# Dual-emission parsed-field compatibility — INDEPENDENT legacy reader
+# Parsed-field compatibility — INDEPENDENT legacy reader
 # ---------------------------------------------------------------------------
 
 
-def test_dual_emission_independent_legacy_reader_parses(tmp_path: Path) -> None:
-    """The advance-authored legacy rows are canonically serialized and carry only
-    an ADDITIVE invocation_id, so the INDEPENDENT legacy readers
-    (detect_lifecycle_phase / reduce_lifecycle_state) parse them unchanged and see
-    the phase advance — not a self-read of advance's own machine rows."""
+def test_emitted_rows_parse_for_independent_legacy_reader(tmp_path: Path) -> None:
+    """The advance-authored legacy rows are canonically serialized, so the
+    INDEPENDENT legacy readers (detect_lifecycle_phase / reduce_lifecycle_state)
+    parse them unchanged and see the phase advance."""
     fd = _feature_dir(tmp_path)
     # Seed a plan-phase feature (spec.md + plan.md present, plan not yet approved).
     (fd / "spec.md").write_text("spec", encoding="utf-8")
@@ -328,13 +307,10 @@ def test_dual_emission_independent_legacy_reader_parses(tmp_path: Path) -> None:
     # transition advance's legacy rows carry (1 checked / 1 total → review).
     detected = detect_lifecycle_phase(fd)
     assert detected["phase"] == "review"
-    # The reducer tolerates the additive invocation_id on the phase_transition row.
     assert reduce_lifecycle_state(_log(fd)).corrupted is False
-    # Prove the assertion reads the advance-authored legacy row, not a machine row,
-    # and that invocation_id is purely ADDITIVE on top of the legacy field contract.
+    # The emitted row is exactly the legacy field contract — nothing additive.
     pt = [x for x in _rows(fd) if x["event"] == "phase_transition"][0]
-    assert pt.get("invocation_id") is not None  # advance-authored
-    assert {"ts", "event", "feature", "from", "to", "invocation_id"} == set(pt)
+    assert {"ts", "event", "feature", "from", "to"} == set(pt)
 
 
 # ---------------------------------------------------------------------------
@@ -351,37 +327,11 @@ def test_refusal_on_gate_mismatch_names_evidence_and_override(tmp_path: Path) ->
                     decision="branch-mode-approved", dispatch_choice="trunk",
                     from_state="plan", log_path=_log(fd))
     assert r["state"] == "refused"
-    assert r["claim_status"] == "gate-mismatch"
+    assert r["refusal"] == "gate-mismatch"
     assert "plan" in r["missing_evidence"]
     assert "cortex-lifecycle-event log" in r["sanctioned_override"]
-    # No advance_committed landed; the claim never staked either.
-    assert "advance_committed" not in _names(fd)
-
-
-def test_refusal_on_interleaved_state_moving_row(tmp_path: Path) -> None:
-    """A foreign state-moving row landing between advance's side effects and commit
-    makes commit refuse ('state moved since claim') and name the interleaved row."""
-    fd = _feature_dir(tmp_path)
-    _plan_phase(fd)
-    orig_log_event_at = adv.log_event_at
-
-    def _inject(log_path, event_dict):  # emit, then slip in a foreign transition
-        orig_log_event_at(log_path, event_dict)
-        if event_dict.get("event") == "phase_transition":
-            orig_log_event_at(log_path, {"event": "review_verdict", "feature": "feat",
-                                         "verdict": "APPROVED", "cycle": 9})
-
-    adv.log_event_at = _inject
-    try:
-        r = adv.advance(verb="plan-decision", feature="feat",
-                        decision="branch-mode-approved", dispatch_choice="trunk",
-                        from_state="plan", log_path=_log(fd))
-    finally:
-        adv.log_event_at = orig_log_event_at
-    assert r["state"] == "refused"
-    assert r["commit_status"] == "state-moved"
-    assert r["interleaved_row"]["event"] == "review_verdict"
-    assert "cortex-lifecycle-event log" in r["sanctioned_override"]
+    # Nothing landed — the refusal precedes every emission.
+    assert _names(fd) == []
 
 
 # ---------------------------------------------------------------------------
@@ -405,7 +355,7 @@ def test_advance_refuses_to_cross_event_backed_pause(tmp_path: Path) -> None:
     assert r["pause"]["kind"] == "relayed-consent"
     assert "plan-approval" in r["missing_evidence"]
     assert "cortex-lifecycle-event log" in r["sanctioned_override"]
-    assert "advance_started" not in _names(fd)  # refused before the claim
+    assert _names(fd).count("feature_paused") == 1  # refused before any emission
 
 
 def test_legacy_kindless_pause_fails_closed_and_refuses(tmp_path: Path) -> None:
@@ -429,11 +379,11 @@ def test_advance_does_not_refuse_on_describe_only_pause_kind(tmp_path: Path) -> 
     # Decision-level: an ACTIVE config-conditional pause is not a refusal.
     active_config = [{"event": "feature_paused", "feature": "feat",
                       "slug": "some-conditional", "kind": "config-conditional"}]
-    assert adv._pause_refusal(active_config, "someid") is None
+    assert adv._pause_refusal(active_config) is None
     # ...whereas an active enforced pause IS a refusal (the discriminator).
     active_enforced = [{"event": "feature_paused", "feature": "feat",
                         "slug": "plan-approval", "kind": "relayed-consent"}]
-    assert adv._pause_refusal(active_enforced, "someid") is not None
+    assert adv._pause_refusal(active_enforced) is not None
 
     # End-to-end: a config-conditional pause superseded by a later transition (so the
     # feature is advanceable, detect == 'plan') never blocks advance.
@@ -451,38 +401,40 @@ def test_advance_does_not_refuse_on_describe_only_pause_kind(tmp_path: Path) -> 
 
 
 def test_wait_approved_retry_is_not_self_blocked(tmp_path: Path) -> None:
-    """The pause pre-check exempts the invocation that authored the active pause, so
-    a wait-approved retry resumes idempotently rather than refusing on its own pause."""
+    """A wait-approved retry replays idempotently (all its emissions are already
+    present) rather than refusing on the pause it authored."""
     fd = _feature_dir(tmp_path)
     _plan_phase(fd)
-    first = adv.advance(verb="plan-decision", feature="feat", decision="wait-approved",
-                        from_state="plan", log_path=_log(fd))
+    adv.advance(verb="plan-decision", feature="feat", decision="wait-approved",
+                from_state="plan", log_path=_log(fd))
     second = adv.advance(verb="plan-decision", feature="feat", decision="wait-approved",
                          from_state="plan", log_path=_log(fd))
-    assert first["invocation_id"] == second["invocation_id"]
     assert second["state"] == "wait-approved"
+    assert second["replay"] == "already-emitted"
     assert second["emitted"] == []  # idempotent — no duplicate rows
     assert _names(fd).count("feature_paused") == 1
-    assert _names(fd).count("advance_started") == 1  # no duplicate claim on replay
 
 
 # ---------------------------------------------------------------------------
-# Concurrency: exactly one commit, one explicit in-flight refusal
+# Historical machine rows (retired claim/commit pair) stay inert
 # ---------------------------------------------------------------------------
 
 
-def test_second_claimant_refused_in_flight(tmp_path: Path) -> None:
-    """A different invocation (via --discriminator) that finds an unresolved claim on
-    the same (feature, from_state) is refused 'in-flight transition'."""
+def test_historical_machine_rows_are_inert(tmp_path: Path) -> None:
+    """Logs written under the retired claim/commit protocol carry
+    advance_started/advance_committed rows and invocation_id fields; advance
+    ignores them (they match no emission probe and no significant-event set)."""
     fd = _feature_dir(tmp_path)
-    inv_a = adv.derive_invocation_id("feat", "plan", "implement", "sessionA")
+    _plan_phase(fd)
     _seed(fd, [{"ts": "t", "event": "advance_started", "feature": "feat",
-                "from_state": "plan", "to_state": "implement", "invocation_id": inv_a}])
+                "from_state": "specify", "to_state": "plan", "invocation_id": "abc"},
+               {"ts": "t", "event": "advance_committed", "feature": "feat",
+                "from_state": "specify", "to_state": "plan", "invocation_id": "abc"}])
     r = adv.advance(verb="plan-decision", feature="feat",
                     decision="branch-mode-approved", dispatch_choice="trunk",
-                    from_state="plan", discriminator="sessionB", log_path=_log(fd))
-    assert r["state"] == "refused" and r["claim_status"] == "in-flight"
-    assert "cortex-lifecycle-event log" in r["sanctioned_override"]
+                    from_state="plan", log_path=_log(fd))
+    assert r["state"] == "branch-mode-approved" and r["advanced"] is True
+    assert r["emitted"] == ["plan_approved", "phase_transition"]
 
 
 # ---------------------------------------------------------------------------

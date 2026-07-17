@@ -21,8 +21,8 @@ from typing import Optional
 # lifecycle transition rows itself. The implement→review entry transition and the
 # review→complete completion transition are routed through the shared ``advance``
 # body (``cortex_command.lifecycle.advance.advance``), which owns the decision +
-# emission (legacy vocabulary + advance_started/advance_committed machine rows
-# under the claim/commit locking primitive). This module's review.md/verdict
+# emission (the legacy vocabulary, gate-checked and idempotent — #397 retired
+# the claim/commit machine rows). This module's review.md/verdict
 # reads are demoted to *input-gathering* — the gathered verdict/cycle/detected-
 # phase are passed as arguments. It emits NO transition-vocabulary rows of its own
 # (the positive fold-completion discriminator in tests/test_fold_completion.py

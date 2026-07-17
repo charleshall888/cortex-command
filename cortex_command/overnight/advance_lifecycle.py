@@ -15,10 +15,9 @@ appends transition rows itself. Its artifact reads (``events.log``,
 ``plan.md``) are demoted to *input-gathering*; the transition
 decision + emission is owned by the shared ``advance`` verb body
 (``cortex_command.lifecycle.advance.advance``), which composes the B1 verb
-cores under the claim/commit locking primitive and emits the legacy
-vocabulary (``review_verdict`` → ``phase_transition`` review→complete) plus
-the ``advance_started``/``advance_committed`` machine rows carrying the
-deterministic ``invocation_id``. This module gathers the facts the overnight
+cores inside one gate-checked body and emits the legacy vocabulary
+(``review_verdict`` → ``phase_transition`` review→complete) idempotently
+(#397 retired the claim/commit machine rows). This module gathers the facts the overnight
 gate needs (tier/criticality, whether a real review ran, the current detected
 phase) and passes them as arguments; it emits NO transition-vocabulary rows of
 its own (the positive fold-completion discriminator in

@@ -2,50 +2,48 @@
 
 ``advance`` is the ONLY sanctioned way the served loop (``next`` reads, ``advance``
 writes) moves a feature's lifecycle state. It composes the four B1 verb decision
-cores' fixed-source-order emission bodies inside ONE gate-checked body, wrapped in
-Task 6's claim/commit locking primitive so a transition is atomic under contention
-(``cortex_command.lifecycle_event.claim_transition`` / ``commit_transition``).
+cores' fixed-source-order emission bodies inside ONE gate-checked body, appending
+each row through the shared flock'd single-append writer
+(``cortex_command.lifecycle_event.log_event_at``).
 
-Why advance re-emits the legacy vocabulary rather than calling the B1 cores
-verbatim (the crux of the design): the B1 verbs emit their legacy vocabulary
-(``phase_transition``/``plan_approved``/…) through ``log_event`` WITHOUT an
-``invocation_id``. Those event names are in the primitive's ``_STATE_MOVING_EVENTS``
-interleave set, so if advance let an unmodified B1 core emit them BETWEEN its claim
-and commit, commit's re-reduce would see them as FOREIGN state-moving rows and
-refuse with "state moved since claim". advance therefore emits the same legacy rows
-itself, threading the deterministic ``invocation_id`` as an additive field, so
-commit recognises them as this invocation's own rows (``r["invocation_id"] ==
-invocation_id`` → skipped). This is exactly what the transition table's
-``Transition.emits`` was authored to reference ("the reference for advance's
-dual-emission") and what the events-registry records as the advance-authored
-``invocation_id`` field on the legacy-vocabulary rows. The B1 cores remain the
-authority for the ROUTING rules (``review_verdict._route_target`` /
+advance re-emits the legacy vocabulary itself rather than calling the B1 cores
+verbatim: the transition table's ``Transition.emits`` is authored as the reference
+for exactly this emission set, and keeping the emission here lets ONE body own the
+gate + ordered rows for every composed arm. The B1 cores remain the authority for
+the ROUTING rules (``review_verdict._route_target`` /
 ``implement_transition._resolve_route`` are imported, not re-derived) and for the
 non-advance typed-subcommand emission path.
 
-Dual-emission:
-  * PRIMARY — the exact legacy event vocabulary (``plan_approved`` /
-    ``phase_transition`` / ``review_verdict`` / ``spec_approved`` /
-    ``drift_protocol_breach`` / ``feature_paused`` / ``lifecycle_cancelled`` /
-    ``batch_dispatch``), canonically serialized (``json.dumps(row)+"\\n"``, default
-    spacing) so legacy readers (``common.detect_lifecycle_phase`` /
-    ``reduce_lifecycle_state``) parse them unchanged; each carries the additive,
-    optional ``invocation_id`` so an advance-authored row is distinguishable from an
-    independent legacy emission during the dual-emission window.
-  * ADDITIVE MACHINE ROWS — the ``advance_started`` / ``advance_committed`` pair the
-    claim/commit primitive appends, both carrying the same ``invocation_id``.
+Emission is the exact legacy event vocabulary (``plan_approved`` /
+``phase_transition`` / ``review_verdict`` / ``spec_approved`` /
+``drift_protocol_breach`` / ``feature_paused`` / ``lifecycle_cancelled`` /
+``batch_dispatch``), canonically serialized (``json.dumps(row)+"\\n"``, default
+spacing) so the independent readers (``common.detect_lifecycle_phase`` /
+``reduce_lifecycle_state``) parse them unchanged.
 
-Per-side-effect existence probes make the whole verb idempotent: a crash between
-claim and side effects, or between two side effects, is repaired by re-invoking the
-SAME logical advance (same business tuple → same ``invocation_id`` via
-``derive_invocation_id``); claim resumes the orphaned ``advance_started`` and each
-legacy emission is skipped when already present (parsed-field match, never a
-substring).
+Idempotency is per-emission: each row is skipped when already present
+(parsed-field match on the arm's discriminants, never a substring), and an
+invocation whose planned emissions are ALL already present short-circuits as a
+benign replay before gating. Phase-moving rows are ordered last in every arm's
+plan, so on an events-authority log (any ``phase_transition`` row present — the
+served loop's normal shape) a crash between appends resumes cleanly on
+re-invocation: the gate still sees the pre-transition phase until the final row
+lands.
 
-Refusals name BOTH the missing evidence AND the sanctioned override: the documented
-out-of-band hand-append is ``cortex-lifecycle-event log`` (operator req 7). advance
-refuses on an in-flight claim, a from-state gate mismatch, a commit-time interleave,
-or an event-backed pause it may not cross.
+Refusals name the missing evidence, the typed resume arm when one exists, AND the
+sanctioned override: the documented out-of-band hand-append is
+``cortex-lifecycle-event log`` (operator req 7). advance refuses on a from-state
+gate mismatch or an event-backed pause it may not cross.
+
+HISTORY (#397): between 2026-07-11 and 2026-07-17 this body ran inside a
+two-phase claim/commit locking primitive that bracketed the legacy rows with an
+``advance_started``/``advance_committed`` machine pair keyed by a deterministic
+``invocation_id``. Its refusal machinery never once fired on a real collision
+(zero across the protocol's whole recorded history — the interactive loop is
+single-writer by construction, and the overnight surfaces serialize per feature),
+so it was deleted per the deletion-bias requirement. Supersession record:
+ADR-0020 (#397 amendment). Historical logs still carry the machine rows; readers
+stay tolerant of them.
 
 Pause enforcement is SCOPED (R12 / hazard 10 / adversarial finding 10): advance
 refuses to cross an EVENT-BACKED pause — an active ``feature_paused`` whose kind is
@@ -60,9 +58,9 @@ first (a feature slug composes into a filesystem path — the real injection sur
 
 Extension seams (Tasks 14a / 14b bolt onto THIS file, serialized after this core):
   * :func:`_consent_cross_check` — Task 14b's pre-side-effect gh PR-state cross-check
-    (hazard 5, fabricated-attestation defense). Runs OUTSIDE the flock (network never
-    under lock — the claim/commit split exists for this) via an injectable subprocess
-    seam (:func:`_run_gh`), so CI mocks the ``gh`` boundary with no network. A
+    (hazard 5, fabricated-attestation defense). Runs before any emission and never
+    under a lock, via an injectable subprocess seam (:func:`_run_gh`), so CI mocks
+    the ``gh`` boundary with no network. A
     merge-consent transition (``review.approved`` — review→complete) whose feature
     carries a recorded PR (a ``pr_opened`` row) refuses when that PR is not actually
     merged. The companion quoted-utterance payload lands field-additively on the
@@ -87,10 +85,8 @@ from cortex_command.backlog import _telemetry
 from cortex_command.backlog.resolve_item import _parse_frontmatter, resolve
 from cortex_command.backlog.update_item import update_item
 from cortex_command.common import (
-    _resolve_user_project_root_from_cwd,
-    detect_lifecycle_phase,
     normalize_status,
-    reduce_lifecycle_state,
+    resolve_lifecycle_phase,
 )
 from cortex_command.lifecycle_config import resolve_backlog_backend
 from cortex_command.lifecycle import review_verdict as rv
@@ -98,12 +94,7 @@ from cortex_command.lifecycle import implement_transition as it
 from cortex_command.lifecycle import transition_table as tt
 from cortex_command.lifecycle.log_resolver import resolve_events_log
 from cortex_command.lifecycle.protocol import PROTOCOL_VERSION
-from cortex_command.lifecycle_event import (
-    claim_transition,
-    commit_transition,
-    derive_invocation_id,
-    log_event_at,
-)
+from cortex_command.lifecycle_event import log_event_at
 
 _VERBS = ("plan-decision", "review-verdict", "spec-approve", "implement-transition")
 
@@ -233,23 +224,21 @@ def _last_significant(rows: List[dict]) -> Optional[dict]:
     return last
 
 
-def _pause_refusal(rows: List[dict], invocation_id: str) -> Optional[dict]:
+def _pause_refusal(rows: List[dict]) -> Optional[dict]:
     """Return a refusal envelope when an EVENT-BACKED pause blocks a crossing advance.
 
     Refuses iff the last state-significant row is an active ``feature_paused`` whose
-    kind is enforcement-bearing (:data:`_ENFORCED_PAUSE_KINDS`) AND which this
-    invocation did not itself author (``invocation_id`` differs / is absent). A
-    kind-absent legacy row fails closed to the most-restrictive kind, matching the
-    reducer (``common.MOST_RESTRICTIVE_PAUSE_KIND``), so an under-specified pause is
-    still enforced. Returns None for a describe-only kind (``config-conditional`` /
-    ``question``) — those never refuse (R12 / hazard 10) — and None when this
-    invocation authored the active pause (its own wait-approved retry).
+    kind is enforcement-bearing (:data:`_ENFORCED_PAUSE_KINDS`). A kind-absent
+    legacy row fails closed to the most-restrictive kind, matching the reducer
+    (``common.MOST_RESTRICTIVE_PAUSE_KIND``), so an under-specified pause is still
+    enforced. Returns None for a describe-only kind (``config-conditional`` /
+    ``question``) — those never refuse (R12 / hazard 10). A retry of the advance
+    that authored the active pause never reaches this check: its emissions are all
+    already present, so it short-circuits as a replay first.
     """
     last = _last_significant(rows)
     if last is None or last.get("event") != "feature_paused":
         return None
-    if last.get("invocation_id") == invocation_id:
-        return None  # this invocation's own pause (e.g. a wait-approved retry)
     kind = last.get("kind")
     if not (isinstance(kind, str) and kind in tt.PAUSE_KINDS):
         kind = "relayed-consent"  # fail closed, mirroring the reducer default
@@ -277,8 +266,7 @@ def _pause_refusal(rows: List[dict], invocation_id: str) -> Optional[dict]:
 # Each plan is (transition_row, [emission, ...]) where an emission is
 # {"event", "fields": [(key, value), ...], "match": {discriminating fields}}. The
 # ``fields`` order and the ``match`` discriminants mirror the owning B1 core body
-# exactly (plan_decision / review_verdict / spec_approve / implement_transition);
-# advance appends the additive ``invocation_id`` after ``fields`` at emit time.
+# exactly (plan_decision / review_verdict / spec_approve / implement_transition).
 
 
 class _PlanError(Exception):
@@ -409,8 +397,8 @@ def _emission_plan(
 
     # Quoted-utterance payload (Task 14b): land the operator's verbatim consent text
     # field-additively on the consent-bearing legacy rows (plan_approved/spec_approved)
-    # ONLY. Additive-only — appended after the arm's own fields, before advance tags
-    # the invocation_id at emit time; omitted entirely when no utterance was supplied.
+    # ONLY. Additive-only — appended after the arm's own fields; omitted entirely
+    # when no utterance was supplied.
     if consent_utterance is not None:
         for em in emissions:
             if em["event"] in _CONSENT_UTTERANCE_EVENTS:
@@ -502,8 +490,8 @@ def _run_gh(cmd: List[str]) -> Optional[subprocess.CompletedProcess]:
     without ``gh`` fails open rather than raising). Tests inject a fake in its place
     (``_consent_cross_check(..., gh_run=fake)`` or ``monkeypatch`` this attribute) so
     the boundary is exercised with NO network. This is the single seam the whole
-    cross-check funnels through — the reason the claim/commit split runs side effects
-    outside the flock is precisely so this network call never holds the log lock.
+    cross-check funnels through; it runs before any emission and never holds the
+    log lock.
     """
     if not cmd or shutil.which(cmd[0]) is None:
         return None
@@ -564,10 +552,10 @@ def _consent_cross_check(
     *, verb: str, transition: tt.Transition, feature: str, log_path: Path, rows: List[dict],
     gh_run: Optional[Callable[[List[str]], Optional[subprocess.CompletedProcess]]] = None,
 ) -> Optional[dict]:
-    """Task 14b: merge-consent gh PR-state cross-check (hazard 5). Runs BETWEEN claim
-    and side effects, OUTSIDE the flock (network never under lock — the claim/commit
-    split exists for this). Returns a refusal envelope to abort (the claim's
-    ``advance_started`` is then a recoverable orphan), else None.
+    """Task 14b: merge-consent gh PR-state cross-check (hazard 5). Runs after the
+    gate and before any emission, never under a lock (network never runs while the
+    log flock is held). Returns a refusal envelope to abort — no row has been
+    appended yet — else None.
 
     Fires only for a merge-consent transition (:data:`_MERGE_CONSENT_TRANSITION_IDS`
     — ``review.approved``, review→complete) whose feature carries a recorded PR (a
@@ -833,7 +821,6 @@ def advance(
     feature: str,
     from_state: Optional[str] = None,
     log_path: Optional[Path] = None,
-    discriminator: str = "",
     decision: Optional[str] = None,
     dispatch_choice: Optional[str] = None,
     verdict: Optional[str] = None,
@@ -852,15 +839,13 @@ def advance(
     clear_areas: bool = False,
     project_root: Optional[Path] = None,
 ) -> dict:
-    """Execute one composed transition under the claim/commit locking primitive.
+    """Execute one composed transition.
 
-    Flow: resolve the arm → derive the deterministic ``invocation_id`` from the
-    (feature, from_state, to_state) business tuple → pause-scoping pre-check →
-    ``claim_transition`` (gate + ``advance_started``) → consent cross-check seam →
-    emit the ordered legacy vocabulary (idempotent, ``invocation_id``-tagged, OUTSIDE
-    the flock) → ``commit_transition`` (re-validate + ``advance_committed``) → status
-    projection seam. Returns a ``{state, ...}`` envelope; never raises for a handled
-    outcome (house style).
+    Flow: resolve the arm → replay short-circuit (every planned emission already
+    present) → pause-scoping pre-check → from-state gate (events-first,
+    ADR-0025) → consent cross-check seam → emit the ordered legacy vocabulary
+    (idempotent per row) → status projection seam. Returns a ``{state, ...}``
+    envelope; never raises for a handled outcome (house style).
 
     ``from_state`` honours the ``next`` envelope's ``advance_contract.expected_from_state``
     when supplied; omitted, it defaults to the composed arm's table ``from_state``.
@@ -896,75 +881,64 @@ def advance(
     except _PlanError as exc:
         return {"state": "error", "message": exc.message}
 
-    # No-op arms (revise) short-circuit before the primitive — nothing to claim.
+    # No-op arms (revise) short-circuit before any read — nothing to emit.
     if not emissions:
         return {
             "state": decision_state, "feature": feature, "verb": verb,
             "from_state": transition.from_state, "to_state": transition.to_state,
-            "invocation_id": None, "advanced": False, "emitted": [],
+            "advanced": False, "emitted": [],
         }
 
     effective_from = from_state if from_state is not None else transition.from_state
     to_state = transition.to_state
-    # The business tuple is the STABLE identity (table endpoints), so a crash-recovery
-    # retry re-derives the same id and resumes its orphaned claim (never the volatile
-    # detected phase, which shifts once the transition lands). A batch dispatch's
-    # endpoints are implement→implement for EVERY batch, so the batch number must
-    # join the tuple: without it, batch N re-derives batch 0's id, short-circuits on
-    # batch 0's advance_committed below, and its batch_dispatch row is silently
-    # dropped (#393). With it, the emission is idempotent per batch number — the
-    # semantics the events registry and implement.md §2b document — while a retry
-    # of the SAME batch still resumes its own claim.
-    id_discriminator = discriminator
-    if verb == "implement-transition" and decision_state == "dispatched":
-        batch_key = f"batch={batch}"
-        id_discriminator = (
-            batch_key if not discriminator else f"{discriminator}\x1f{batch_key}"
-        )
-    invocation_id = derive_invocation_id(feature, effective_from, to_state, id_discriminator)
 
     rows = _read_rows(resolved_log)
 
-    # Idempotent replay of a COMPLETED advance: if this invocation already committed,
-    # short-circuit before claiming. Without this, a re-invocation after the pair
-    # resolved would fresh-claim (the primitive treats a committed pair as not open)
-    # and append a DUPLICATE advance_started — and, once the phase legitimately moved,
-    # would gate-mismatch instead of reporting the benign already-done outcome.
-    if _row_present(rows, "advance_committed", {"invocation_id": invocation_id}):
+    # Idempotent replay of a COMPLETED advance: when every planned emission is
+    # already present (parsed-field match on the arm's discriminants), report the
+    # benign already-done outcome BEFORE the pause and gate checks — once the
+    # phase legitimately moved, re-gating would refuse instead. The match fields
+    # carry the arm's identity, so a batch dispatch replays per batch number
+    # (#393 semantics: batch N's probe never matches batch M's row).
+    if all(_row_present(rows, spec["event"], spec["match"]) for spec in emissions):
         return {
             "state": decision_state, "feature": feature, "verb": verb,
             "from_state": effective_from, "to_state": to_state,
-            "invocation_id": invocation_id, "commit_status": "already-committed",
-            "advanced": True, "emitted": [],
+            "replay": "already-emitted", "advanced": True, "emitted": [],
         }
 
     # Pause-scoping pre-check (R12 / hazard 10): refuse to cross an event-backed pause.
-    pause = _pause_refusal(rows, invocation_id)
+    pause = _pause_refusal(rows)
     if pause is not None:
         pause.update({"feature": feature, "verb": verb, "from_state": effective_from,
-                      "to_state": to_state, "invocation_id": invocation_id})
+                      "to_state": to_state})
         return pause
 
-    # CLAIM — gate the from-state and stake the advance_started row (invocation_id).
-    claim = claim_transition(
-        feature, effective_from, to_state, invocation_id,
-        log_path=resolved_log, extra_fields={"verb": verb},
-    )
-    if not claim.ok:
+    # From-state gate: the events-first resolved phase must match the caller's
+    # expected from_state (ADR-0025). This MUST NOT use detect_lifecycle_phase:
+    # that artifact-presence derivation is the LEGACY FALLBACK, and it reports
+    # `review` the moment plan.md's tasks are all `[x]`. Since implement.md §2d
+    # flips those checkboxes *before* §4 calls the implement-transition verb,
+    # gating on it made the implement->review transition unfireable by
+    # construction — its precondition was its own refusal condition.
+    phase = resolve_lifecycle_phase(resolved_log.parent).get("phase")
+    if phase != effective_from:
         return {
             "state": "refused", "feature": feature, "verb": verb,
             "from_state": effective_from, "to_state": to_state,
-            "invocation_id": invocation_id, "claim_status": claim.status,
-            "reason": claim.reason,
+            "refusal": "gate-mismatch",
+            "reason": (
+                f"from_state gate: detected phase {phase!r} does not match "
+                f"expected from_state {effective_from!r}"
+            ),
             "missing_evidence": (
                 f"the feature at from_state {effective_from!r} "
-                f"(claim {claim.status!r})"
+                f"(detected {phase!r})"
             ),
             "sanctioned_override": _SANCTIONED_OVERRIDE,
-            "conflicting_row": claim.conflicting_row,
         }
 
-    # Consent cross-check seam (Task 14b) — OUTSIDE the flock, before side effects.
+    # Consent cross-check seam (Task 14b) — before any emission.
     objection = _consent_cross_check(
         verb=verb, transition=transition, feature=feature, log_path=resolved_log, rows=rows,
     )
@@ -972,12 +946,12 @@ def advance(
         objection.setdefault("state", "refused")
         objection.setdefault("sanctioned_override", _SANCTIONED_OVERRIDE)
         objection.update({"feature": feature, "verb": verb, "from_state": effective_from,
-                          "to_state": to_state, "invocation_id": invocation_id})
+                          "to_state": to_state})
         return objection
 
-    # SIDE EFFECTS — emit the ordered legacy vocabulary (dual-emission PRIMARY),
-    # each idempotent via a parsed-field existence probe and tagged with the
-    # invocation_id so commit's re-reduce recognises them as this claim's own rows.
+    # EMIT the ordered legacy vocabulary, each row idempotent via a parsed-field
+    # existence probe. Phase-moving rows are last in every plan, so a crash
+    # between appends leaves the gate satisfied for the resuming re-invocation.
     emitted: List[str] = []
     for spec in emissions:
         if _row_present(rows, spec["event"], spec["match"]):
@@ -985,30 +959,9 @@ def advance(
         row_dict: dict = {"event": spec["event"], "feature": feature}
         for key, value in spec["fields"]:
             row_dict[key] = value
-        row_dict["invocation_id"] = invocation_id
         log_event_at(resolved_log, row_dict)
         emitted.append(spec["event"])
         rows.append({**row_dict})  # so a later probe in this run sees it
-
-    # COMMIT — re-validate under lock and stake the advance_committed row.
-    commit = commit_transition(
-        feature, effective_from, to_state, invocation_id,
-        log_path=resolved_log, extra_fields={"verb": verb},
-    )
-    if not commit.ok:
-        return {
-            "state": "refused", "feature": feature, "verb": verb,
-            "from_state": effective_from, "to_state": to_state,
-            "invocation_id": invocation_id, "commit_status": commit.status,
-            "reason": commit.reason,
-            "missing_evidence": (
-                "an uninterleaved log since the claim "
-                f"(commit {commit.status!r})"
-            ),
-            "sanctioned_override": _SANCTIONED_OVERRIDE,
-            "interleaved_row": commit.interleaved_row,
-            "emitted": emitted,
-        }
 
     # Status projection seam (Task 14a) — post-commit, no-op in the core body.
     _project_status(feature=feature, transition=transition, log_path=resolved_log,
@@ -1028,8 +981,7 @@ def advance(
     return {
         "state": decision_state, "feature": feature, "verb": verb,
         "from_state": effective_from, "to_state": to_state,
-        "invocation_id": invocation_id, "claim_status": claim.status,
-        "commit_status": commit.status, "advanced": True, "emitted": emitted,
+        "advanced": True, "emitted": emitted,
     }
 
 
@@ -1038,9 +990,8 @@ def _build_parser() -> argparse.ArgumentParser:
         prog="cortex-lifecycle-advance",
         description=(
             "Execute one composed lifecycle transition (the write side of the served "
-            "loop) under the claim/commit locking primitive, dual-emitting the legacy "
-            "vocabulary plus the advance_started/advance_committed machine rows. "
-            "Always exit 0 with a {state, ...} JSON envelope."
+            "loop), gate-checked events-first and emitting the legacy vocabulary "
+            "idempotently. Always exit 0 with a {state, ...} JSON envelope."
         ),
     )
     sub = parser.add_subparsers(dest="verb", required=True)
@@ -1055,11 +1006,6 @@ def _build_parser() -> argparse.ArgumentParser:
         p.add_argument(
             "--log-path", default=None, metavar="PATH",
             help="Explicit events.log (advance_contract.log_path); defaults to the pinned resolver.",
-        )
-        p.add_argument(
-            "--discriminator", default="", metavar="TOKEN",
-            help="Optional per-invocation discriminator for the invocation_id (concurrent "
-                 "independent advances of the same edge).",
         )
 
     def _consent(p: argparse.ArgumentParser) -> None:
@@ -1149,7 +1095,6 @@ def main(argv: Optional[List[str]] = None) -> int:
         "feature": args.feature,
         "from_state": args.from_state,
         "log_path": Path(args.log_path) if args.log_path else None,
-        "discriminator": args.discriminator,
     }
     if args.verb == "plan-decision":
         kwargs.update(decision=args.decision, dispatch_choice=args.dispatch_choice,

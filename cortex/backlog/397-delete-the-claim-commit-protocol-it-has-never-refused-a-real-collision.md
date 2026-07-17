@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 33779683-4c39-4b3a-8b6b-357a0e6ff6cb
 title: 'Delete the claim/commit protocol: it has never refused a real collision'
-status: backlog
+status: complete
 priority: low
 type: chore
 created: 2026-07-17
@@ -10,6 +10,8 @@ updated: 2026-07-17
 tags: ['token-efficiency', 'telemetry', 'lifecycle', 'deletion-bias']
 areas: ['lifecycle']
 ---
+> **SHIPPED (2026-07-17).** The primitive is gone: ~460 lines out of `lifecycle_event.py` (claim/commit, the machine-row pair, `derive_invocation_id`, the hold-lock read-validate-append machinery), leaving the plain flock'd append every typed subcommand uses. `advance` keeps the events-first from-state gate inline (ADR-0025), keeps per-emission parsed-field idempotency, and gained an all-emissions-present replay short-circuit — which also carries #393's per-batch semantics without the discriminator machinery (`--discriminator` is deleted; nothing referenced it). ADR-0020 superseded via in-file #397 amendment recording the zero fire-rate (332 logs, 10,694 rows, 11 claims, 0 refusals) and the single-writer confirmation the Edges asked for: interactive is single-writer by construction, morning-review/pipeline advance sequentially per feature, and the interactive lock excludes cross-mode concurrency. Both registry rows quarantined `deprecated-pending-removal` (30-day window, named owner); historical machine rows stay reader-tolerated, pinned by the untouched reverse-golden. The `log` escape hatch survives untouched. Accepted trade, stated in the ADR: a mid-append crash on a legacy-shaped (artifact-fallback) log now refuses loudly instead of silently resuming; on events-authority logs phase-movers are ordered last, so crash-resume still holds.
+
 ## Why
 
 > **Evidence gathered 2026-07-17 under the #391 task that replaced the "instrument it first" idea.** `cortex/requirements/project.md` (Deletion bias) puts the burden of proof on keeping and prefers existing-tool verification over building instrumentation. The one-off grep has now run. This ticket is the disposition it was meant to produce.

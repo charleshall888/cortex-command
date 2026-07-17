@@ -40,7 +40,7 @@ Do **not** delete or disable `cortex-lifecycle-next`, `cortex-lifecycle-advance`
 
 ## Step 4 — Verify tolerant reading via the reverse-direction golden
 
-Prove that old readers still project correctly over the machine-written logs the loop already emitted. The reverse-direction golden (spec R16 arm h; driven by `tests/test_lifecycle_reverse_golden.py`, whose fixture `README.md` pins the reader set) covers exactly this guarantee: each enumerated legacy reader — `cortex-lifecycle-state`, `cortex-lifecycle-counters`, the statusline derivation, `dashboard/data.py`, `scan_lifecycle`, and `generate_index.py` — reproduces its correct legacy-phase projection over a mixed log carrying the additive `advance_started` / `advance_committed` rows and the `invocation_id` field. Run it:
+Prove that old readers still project correctly over the machine-written logs the loop already emitted. The reverse-direction golden (spec R16 arm h; driven by `tests/test_lifecycle_reverse_golden.py`, whose fixture `README.md` pins the reader set) covers exactly this guarantee: each enumerated legacy reader — `cortex-lifecycle-state`, `cortex-lifecycle-counters`, the statusline derivation, `dashboard/data.py`, `scan_lifecycle`, and `generate_index.py` — reproduces its correct legacy-phase projection over a mixed log carrying the `advance_started` / `advance_committed` rows and the `invocation_id` field (historical content since #397 retired the claim/commit protocol — see ADR-0020's #397 amendment — but permanent in the on-disk corpus). Run it:
 
 ```
 uv run pytest tests/test_lifecycle_reverse_golden.py -q
@@ -58,7 +58,7 @@ Note the differing trigger: the served verbs' *eventual* retirement runs through
 
 ## Step 6 — Keep dual-emission live through the grace window
 
-Do not narrow the dual-emission window as part of the roll-forward. While any advance-authored transition may still be read by an old consumer, the `advance` verb keeps emitting the exact legacy event vocabulary — `phase_transition`, `review_verdict`, `spec_approved`, `plan_approved`, `feature_complete` — as primary rows (so old readers parse them), with the additive machine rows and the optional `invocation_id` field alongside. The dual-emission window contracts **only** at an operator-decided protocol-floor bump (ADR-0024), never as a side effect of exiting the loop. Collapsing it early would strand exactly the out-of-repo readers Step 3 and Step 5 are protecting.
+Do not narrow the legacy-vocabulary emission as part of the roll-forward. While any advance-authored transition may still be read by an old consumer, the `advance` verb keeps emitting the exact legacy event vocabulary — `phase_transition`, `review_verdict`, `spec_approved`, `plan_approved`, `feature_complete` — as its rows, so old readers parse them. (The additive `advance_started`/`advance_committed` machine rows and `invocation_id` field that used to ride alongside were retired with the claim/commit protocol — #397, ADR-0020 amendment — and survive only as historical log content.) The legacy vocabulary contracts **only** at an operator-decided protocol-floor bump (ADR-0024), never as a side effect of exiting the loop. Collapsing it early would strand exactly the out-of-repo readers Step 3 and Step 5 are protecting.
 
 ## At a glance
 

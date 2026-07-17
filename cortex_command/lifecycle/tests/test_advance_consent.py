@@ -19,7 +19,7 @@ plan:
     entirely when no utterance is supplied (the legacy rows keep their pre-14b shape).
 
 Isolation mirrors ``test_advance.py``: an explicit ``log_path`` under ``tmp_path`` and
-phase scaffolds so the claim's from_state gate passes. The gh boundary is ALWAYS
+phase scaffolds so the from_state gate passes. The gh boundary is ALWAYS
 mocked — either by passing ``gh_run=`` directly into the seam or by monkeypatching
 ``advance._run_gh`` for the end-to-end path.
 """
@@ -209,8 +209,7 @@ def test_advance_refuses_review_approved_when_pr_open(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """End-to-end: review-verdict APPROVED on a feature whose recorded PR gh reports
-    as OPEN refuses BEFORE side effects — no advance_committed, no legacy transition
-    row, and the orphaned advance_started stays recoverable by invocation_id. gh is
+    as OPEN refuses BEFORE any emission — no legacy transition row lands. gh is
     mocked at the module seam (no network)."""
     fd = _feature_dir(tmp_path)
     _review_phase(fd, with_pr=True)
@@ -226,9 +225,8 @@ def test_advance_refuses_review_approved_when_pr_open(
     assert r["gh_cross_check"]["state"] == "OPEN"
     assert "cortex-lifecycle-event log" in r["sanctioned_override"]
     names = _names(fd)
-    assert "advance_committed" not in names
-    assert "review_verdict" not in names  # refused before side effects
-    assert names.count("advance_started") == 1  # recoverable orphan
+    assert "review_verdict" not in names  # refused before any emission
+    assert "phase_transition" not in names
 
 
 def test_advance_completes_review_approved_when_pr_merged(
@@ -247,7 +245,7 @@ def test_advance_completes_review_approved_when_pr_merged(
     assert r["state"] == "approved" and r["to_state"] == "complete"
     assert r["advanced"] is True
     names = _names(fd)
-    assert "review_verdict" in names and "advance_committed" in names
+    assert "review_verdict" in names and "phase_transition" in names
 
 
 def test_advance_trunk_mode_completion_needs_no_gh(
