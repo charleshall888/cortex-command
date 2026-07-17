@@ -1163,6 +1163,58 @@ body.dawn #sky .star {
 .drawers-block.on .drawer.open { transform: translateY(-4px); border-color: var(--ochre); color: var(--ochre); }
 .drawers-block #vessel-drawers .vessel-box svg { width: 90px; }
 
+/* ---------- The Marker Buoys: the memory it keeps on its own water ----------
+   Deliberately spare: three markers, one rope, one label. Notes are bare text
+   mounted in a gap in each staff (no boxes); each buoy earns at most ONE
+   stamp (✓ keep / ✎ fixed itself / ✗ strike). */
+
+#sc-buoys { gap: 1rem; }
+#sc-buoys .scene-title { font-size: clamp(1.4rem, 2.7vw, 2.1rem); }
+.buoy-seam { font-size: 0.8rem; color: var(--parch-faint); letter-spacing: 0.06em; margin-top: -0.3rem; }
+.buoys-stage { width: min(90vw, 940px); }
+#buoys-svg { width: 100%; display: block; overflow: visible; }
+#buoys-svg text { font-family: var(--mono); fill: var(--parch-dim); }
+.bu-water { stroke: var(--blue); stroke-width: 1.5; opacity: 0.5; }
+.bu-plank, .bu-piling { fill: var(--rule); }
+.bu-cleat { fill: var(--parch-faint); }
+.bu-label { fill: var(--parch-faint); font-size: 12.5px; letter-spacing: 0.04em; }
+/* the index: one rope back to the dock — every session pulls it taut (b1) */
+.bu-rope { fill: none; stroke: var(--ochre-deep); stroke-width: 1.6; opacity: 0.5; transition: opacity 0.8s ease, stroke 0.8s ease; }
+#sc-buoys.lit .bu-rope { stroke: var(--ochre); opacity: 0.9; }
+#sc-buoys.verdicts .bu-rope-b { opacity: 0.12; } /* the audit cuts the struck marker loose */
+.bu-float { fill: var(--night-lift); stroke: var(--parch-dim); stroke-width: 2; }
+.bu-staff { stroke: var(--parch-dim); stroke-width: 2.2; stroke-linecap: round; }
+.bu-lamp { fill: var(--parch-faint); transition: fill 0.9s ease; }
+#sc-buoys.lit .bu-lamp { fill: var(--ochre); }
+.bu-halo { fill: var(--ochre); opacity: 0; transition: opacity 0.9s ease; }
+#sc-buoys.lit .bu-halo { opacity: 0.16; }
+.bu-refl { stroke: var(--ochre); stroke-width: 2; stroke-dasharray: 7 5; opacity: 0; transition: opacity 0.9s ease; }
+#sc-buoys.lit .bu-refl { opacity: 0.22; }
+.bu-note { font-size: 13.5px; }
+/* b2: the agent re-inks its own marker — fresh ink in amber */
+.bu-fix { opacity: 0; transition: opacity 0.6s ease; }
+#sc-buoys.fixed .bu-fix { opacity: 1; }
+#sc-buoys.fixed .bu-oldline { fill: var(--parch-faint); }
+.bu-strikeline { stroke: var(--zone-amber); stroke-width: 2; }
+.bu-newtxt { fill: var(--zone-amber); }
+.bu-fixstamp { fill: var(--zone-amber); font-size: 12.5px; letter-spacing: 0.06em; }
+/* b5: the audit's verdicts — stamps from the audit, never from the buoys */
+.bu-v { opacity: 0; transition: opacity 0.7s ease; }
+#sc-buoys.verdicts .bu-v { opacity: 1; }
+.bu-keep { fill: var(--zone-green); font-size: 12.5px; letter-spacing: 0.06em; }
+.bu-strike { fill: var(--zone-red); font-size: 12.5px; letter-spacing: 0.06em; }
+.bu-redline { stroke: var(--zone-red); stroke-width: 2; }
+#sc-buoys.verdicts .bu-b3 .bu-note { fill: var(--parch-faint); }
+.bu-b3 { transition: transform 1.1s ease, opacity 1.1s ease; }
+#sc-buoys.verdicts .bu-b3 { transform: translate(18px, 5px); opacity: 0.55; }
+#sc-buoys.verdicts .bu-b3 .bu-lamp { fill: var(--parch-faint); }
+#sc-buoys.verdicts .bu-b3 .bu-halo, #sc-buoys.verdicts .bu-b3 .bu-refl { opacity: 0; }
+.buoys-limit { align-self: center; }
+.audit-block { display: flex; flex-direction: column; gap: 0.55rem; align-items: center; }
+.audit-block .mini-term { font-size: 0.78rem; }
+.audit-foot { font-size: 0.72rem; color: var(--parch-faint); }
+.buoys-verdict { font-size: clamp(1rem, 1.9vw, 1.4rem); text-align: center; }
+
 /* ---------- The Tackle Box: prove it, then let the crew choose it ---------- */
 
 #sc-tackle { gap: 1.1rem; }

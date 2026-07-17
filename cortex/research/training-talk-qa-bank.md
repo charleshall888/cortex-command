@@ -60,6 +60,10 @@
 "Every technique tonight runs my actual repo — including work that merged while I slept. The staging is so it's clean on screen and nobody's real code gets dunked on, not because the real thing doesn't exist. Grab me after and I'll show you a real session log and the PR trail."
 → staging disclosure · **PREP: have one real morning report / merged-PR trail ready to show**
 
+**15. "If memory saves wrong notes, why not just turn it off? Or doesn't it clean itself up anyway?"**
+"Don't turn it off — a right note saves every future session the same discovery; that's compounding value, and the rename fix you watched it make is exactly the kind of thing you never want to re-derive. And it genuinely does tend itself — you saw it re-ink its own marker mid-task. But the tending is touch-based: it fixes what it happens to reread, and there's a published benchmark on exactly this — in passing, the best frontier models recognize barely half of stale memories. So the deliberate read-back stays: ten minutes on a cadence — keep, update, strike — and memory stays an asset instead of sediment. Security folks have a harsher name for the worst case — memory poisoning: a bad note planted once steers every session after it, which is one more reason the audit is a habit, not a someday."
+→ the buoys' self-fix beat + the audit's strike
+
 ## Hard prep dependencies (before the talk)
 
 1. Pull real token/cost numbers for the making-of story (Q2) — hold as an appendix slide.

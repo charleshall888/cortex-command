@@ -121,7 +121,19 @@ const NOTES = {
       "(sweep — the file stays up) “All six thousand lines ride in every window, and you re-pay them every turn. A bloated skill file means Monday starts tired.” SCAR: “if I could go back — hand-craft the simple skills myself, let Claude build the CLI around them.”",
       "(the fix, beside the monster) “Same skill, rebuilt: a 30-line core, detail in files you open per task. Reviewing a plan? The window gets the core plus plans.md — nothing else.”",
     ],
-    exit: "“Tackle's sharp — a lean core and per-task files. Last question: when do you hand it to everyone else?”",
+    exit: "“The instructions stay lean — and they stay yours. Now step to the end of the dock — it keeps something of its own out on the water.”",
+  },
+  "sc-buoys": {
+    beats: [
+      "(the buoys land — let them read all three) “Out past the dock it keeps markers — notes it writes to itself, one lesson each. Nobody typed these.” SEAM: “the scroll was instructions — those stay yours. Its own notes? That's what memory is for.”",
+      "(lamps come up — SAY it, it's not on screen) “Every session picks this rope up first. What one session learns, the next one knows.”",
+      "(FishManager struck, CatchService inked) “And it tends its own markers — mid-task it caught the rename and re-inked the tag. Nobody asked.”",
+      "Let “it tends what it touches — an unread note just sits” land. Then: “the rope gets picked up every session — the markers only when it rows out to one. And a wrong one glows just as bright.”",
+      "(terminal lands) “Now and then: fresh eyes, one job — row out, read every marker back. Still true, against the repo AND the requirements? Keep it, fix it, or strike it.”",
+      "(verdicts land — slow down on the strike) “The warning, kept. The middle one it already fixed. And this one was never true — it watched rares vanish and wrote it down as the rule. The Brass Minnow bug. Cut it loose.”",
+      "SILENT — let “What it learns, it keeps. What it keeps, you check.” land. Then: “ten minutes, once in a while. That's the whole habit.”",
+    ],
+    exit: "“Markers honest, core lean — now, the tackle. When do you hand it to everyone else?”",
   },
   "sc-tackle": {
     beats: [
@@ -137,7 +149,7 @@ const NOTES = {
   "pv-3": {
     beats: [
       "SAY NOTHING — let them read the proverb.",
-      "(post lights) SILENT — let “keep your workspace clean” land: lean instruction files, and tooling you prove on your own bench first.",
+      "(post lights) SILENT — let “keep your workspace clean” land: lean instruction files, a memory you audit, and tooling you prove on your own bench first.",
     ],
     exit: "“Three posts down. One plank missing on that dock — and one Friday to lay it.”",
   },

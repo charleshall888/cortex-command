@@ -538,6 +538,24 @@
       }
     },
 
+    /* the marker buoys: the memory the harness keeps for itself, floating on
+       its own water. One rope (the index) ties every marker back to the dock;
+       b1 the lamps come up — every session pulls the rope taut (additive:
+       illumination, never a wipe). b2 the agent re-inks its OWN marker
+       mid-task (self-tending is real). b3 the honest limit lands as text —
+       deliberately NO visual change: a wrong marker glows exactly as bright
+       as a right one, which is why you row out at all. b4 the audit; b5 its
+       verdicts (keep · keep · strike — the cut rope, the drift). */
+    "sc-buoys": (sec, b) => {
+      if (b === 0) {
+        buildBuoys();
+        sec.classList.remove("lit", "fixed", "verdicts");
+      }
+      if (b === 1) sec.classList.add("lit");
+      if (b === 2) sec.classList.add("fixed");
+      if (b === 5) sec.classList.add("verdicts");
+    },
+
     /* the shared tackle box (the object pv-3 names but never draws): your lean
        skill is the lure; you prove it (a fish, b1); the villain staples it onto
        every rod, even one that never casts (b2, forced/red); the fix is the box
@@ -852,7 +870,75 @@
     }
   }
 
-  /* scene 13: the shared tackle box — the object pv-3 names but never draws.
+  /* scene 13: the marker buoys — the harness's memory drawn as lit markers
+     moored on its own water, one lesson each, one rope (the index) back to
+     the dock. Spare on purpose (presenter: less stuff everywhere): notes are
+     bare two-line text mounted in a gap in each staff — no boxes — and each
+     buoy earns at most ONE stamp (✓ keep / ✎ fixed itself / ✗ strike).
+     Stamps and strike-lines live inside each buoy's group so the adrift
+     transform (the struck marker cut loose) carries them with it. */
+  function buildBuoys() {
+    const svg = document.getElementById("buoys-svg");
+    svg.innerHTML = "";
+    const txt = (x, y, s, attrs = {}, parent = svg) => {
+      const t = el("text", { x, y, ...attrs }, parent);
+      t.textContent = s;
+      return t;
+    };
+
+    /* the dock's edge — the rope leaves from the cleat */
+    const dock = el("g", {}, svg);
+    el("rect", { class: "bu-plank", x: 0, y: 240, width: 118, height: 10, rx: 2 }, dock);
+    el("rect", { class: "bu-piling", x: 70, y: 250, width: 12, height: 74 }, dock);
+    el("rect", { class: "bu-cleat", x: 92, y: 233, width: 12, height: 7, rx: 2 }, dock);
+
+    el("line", { class: "bu-water", x1: 20, y1: 322, x2: 900, y2: 322 }, svg);
+
+    /* the index: one rope, dock → every marker; the last segment is the one
+       the audit cuts */
+    el("path", { class: "bu-rope bu-rope-a", d: "M 98 240 Q 130 314 190 310 Q 340 326 490 310" }, svg);
+    el("path", { class: "bu-rope bu-rope-b", d: "M 490 310 Q 640 326 790 310" }, svg);
+    txt(122, 294, "picked up first, every session", { class: "bu-label" }, svg);
+
+    const BUOYS = [
+      { x: 190, cls: "bu-b1", lines: ["catch_odds.js", "one wrong number — nothing bites"] },
+      { x: 490, cls: "bu-b2", lines: ["the catch logic", "lives in FishManager"] },
+      { x: 790, cls: "bu-b3", lines: ["release_rules.js", "rares get released — by design"] },
+    ];
+    const groups = {};
+    for (const b of BUOYS) {
+      const g = el("g", { class: "bu-buoy " + b.cls }, svg);
+      groups[b.cls] = g;
+      el("circle", { class: "bu-float", cx: b.x, cy: 310, r: 11 }, g);
+      /* the staff splits around the note — a sign band on a channel marker */
+      el("line", { class: "bu-staff", x1: b.x, y1: 300, x2: b.x, y2: 216 }, g);
+      el("line", { class: "bu-staff", x1: b.x, y1: 142, x2: b.x, y2: 108 }, g);
+      el("circle", { class: "bu-halo", cx: b.x, cy: 100, r: 15 }, g);
+      el("circle", { class: "bu-lamp", cx: b.x, cy: 100, r: 6.5 }, g);
+      el("line", { class: "bu-refl", x1: b.x, y1: 334, x2: b.x, y2: 372 }, g);
+      b.lines.forEach((s, i) =>
+        txt(b.x, 164 + i * 21, s, {
+          class: "bu-note" + (s === "lives in FishManager" ? " bu-oldline" : ""),
+          "text-anchor": "middle",
+        }, g)
+      );
+    }
+
+    /* b2: the agent's own fix — the old line struck, the correction inked
+       fresh; its ✎ is this buoy's one and only stamp */
+    const fix = el("g", { class: "bu-fix" }, groups["bu-b2"]);
+    el("line", { class: "bu-strikeline", x1: 412, y1: 181, x2: 568, y2: 181 }, fix);
+    txt(490, 206, "lives in CatchService", { class: "bu-note bu-newtxt", "text-anchor": "middle" }, fix);
+    txt(490, 74, "✎ fixed itself", { class: "bu-fixstamp", "text-anchor": "middle" }, fix);
+
+    /* b5: the audit's verdicts — one stamp each for the other two */
+    txt(190, 74, "✓ keep", { class: "bu-v bu-keep", "text-anchor": "middle" }, groups["bu-b1"]);
+    txt(790, 74, "✗ strike", { class: "bu-v bu-strike", "text-anchor": "middle" }, groups["bu-b3"]);
+    el("line", { class: "bu-v bu-redline", x1: 725, y1: 160, x2: 855, y2: 160 }, groups["bu-b3"]);
+    el("line", { class: "bu-v bu-redline", x1: 668, y1: 181, x2: 912, y2: 181 }, groups["bu-b3"]);
+  }
+
+  /* scene 14: the shared tackle box — the object pv-3 names but never draws.
      No bars: your lean skill is a lure; prove it (a fish), and the choice is
      whether it gets stapled onto every rod (forced) or waits in the open box
      for a line that wants it (chosen). Groups toggle .on per beat. */
