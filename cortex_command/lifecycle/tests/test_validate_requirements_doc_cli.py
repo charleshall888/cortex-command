@@ -8,7 +8,6 @@ from __future__ import annotations
 import json
 
 import pytest
-import tiktoken
 
 from cortex_command.lifecycle import validate_requirements_doc_cli as vd
 
@@ -94,13 +93,6 @@ x
 """
 
 
-def _exact_token_text(n: int) -> str:
-    """Return text whose cl100k_base token count is exactly `n`."""
-    enc = tiktoken.get_encoding("cl100k_base")
-    overshoot = enc.encode("lorem ipsum dolor sit amet " * (n + 5))
-    return enc.decode(overshoot[:n])
-
-
 def test_pass_project_doc(tmp_path) -> None:
     p = tmp_path / "project.md"
     p.write_text(_VALID_PROJECT_DOC, encoding="utf-8")
@@ -136,7 +128,8 @@ def test_fail_missing_section(tmp_path) -> None:
 
 
 def test_fail_optional_over_budget(tmp_path) -> None:
-    over_budget_text = _exact_token_text(vd.OPTIONAL_TOKEN_BUDGET + 1)
+    # Body far above the 1,200-token budget (4 chars/token → ~2,000 tokens).
+    over_budget_text = "a " * 4000
     text = _VALID_PROJECT_DOC.replace(
         "## Optional\n\n- short note\n", f"## Optional\n\n{over_budget_text}\n"
     )
@@ -150,32 +143,26 @@ def test_fail_optional_over_budget(tmp_path) -> None:
 
 
 def test_pass_optional_at_exact_budget(tmp_path) -> None:
-    # BPE token counts are context-sensitive: encoding text standalone and
-    # then re-encoding it embedded inside the full document can differ by a
-    # token at the seam. Binary-search word count using the module's own
-    # extraction + counting (the real pipeline) rather than assuming a
-    # standalone tiktoken encode/decode round-trip survives embedding
-    # unchanged, so this actually lands on the boundary it claims to test.
-    words = ("lorem " * (vd.OPTIONAL_TOKEN_BUDGET + 50)).split()
-
-    def _measure(word_count):
-        candidate = " ".join(words[:word_count])
+    # The estimate is a deterministic 4-chars/token count, so land the extracted
+    # section exactly on the budget via the real extraction+count pipeline. The
+    # count rises by 1 every 4 chars (never overshoots), so nudging the body
+    # length from the ~budget*4 starting point converges in a couple of steps.
+    def _measure(body: str):
         text = _VALID_PROJECT_DOC.replace(
-            "## Optional\n\n- short note\n", f"## Optional\n\n{candidate}\n"
+            "## Optional\n\n- short note\n", f"## Optional\n\n{body}\n"
         )
         section = vd._section_text(text, vd.OPTIONAL_HEADING)
-        return vd._count_tokens_cl100k(section), text
+        return vd._estimate_tokens(section), text
 
-    lo, hi = 0, len(words)
-    while lo < hi:
-        mid = (lo + hi) // 2
-        count, _ = _measure(mid)
-        if count >= vd.OPTIONAL_TOKEN_BUDGET:
-            hi = mid
-        else:
-            lo = mid + 1
-    count, text = _measure(lo)
-    assert count == vd.OPTIONAL_TOKEN_BUDGET, "binary search did not land exactly on budget"
+    body_len = vd.OPTIONAL_TOKEN_BUDGET * 4
+    count, text = _measure("a" * body_len)
+    while count > vd.OPTIONAL_TOKEN_BUDGET:
+        body_len -= 1
+        count, text = _measure("a" * body_len)
+    while count < vd.OPTIONAL_TOKEN_BUDGET:
+        body_len += 1
+        count, text = _measure("a" * body_len)
+    assert count == vd.OPTIONAL_TOKEN_BUDGET
 
     p = tmp_path / "project.md"
     p.write_text(text, encoding="utf-8")

@@ -5,7 +5,7 @@ requirements-write/SKILL.md's templates state two acceptance properties in
 prose and previously relied on the model to self-report conformance: every
 canonical H2 section must be present (verbatim — "downstream consumers grep
 section names"), and (project scope only) the `## Optional` section's token
-budget must stay ≤1,200 `cl100k_base` tokens. This verb turns both into a
+budget must stay ≤1,200 estimated tokens. This verb turns both into a
 mechanical check the skill runs instead of self-reporting; judgment about
 where a given answer belongs, or how to fix a failing doc, stays with the
 model.
@@ -25,18 +25,18 @@ verify the H3 substructure the templates also prescribe (e.g. Project
 Boundaries' `### In Scope`/`### Out of Scope`/`### Deferred`), since only
 the H2 names are documented as the downstream-grep contract.
 
-Token counting uses `tiktoken.get_encoding("cl100k_base")` directly —
-`tiktoken` is a hard `pyproject.toml` dependency (not optional), so no
-ImportError fallback is needed. This deliberately does NOT reuse
-`bin/cortex-count-tokens`: that script counts via the Anthropic SDK's
-`messages.count_tokens` API, which requires network access and a resolved
-API key — unsuitable for a mechanical acceptance gate that must run
-offline and deterministically. The precedent for a stdlib+tiktoken,
-network-free `cl100k_base` count already in production is
-`cortex_command/backlog/load_parent_epic.py`'s `_truncate` helper; this
-module follows the same encoding choice without importing that
-file-private, differently-shaped helper (it truncates for prompt
-injection; this validates against a budget).
+Token counting uses a stdlib chars/token heuristic (`_estimate_tokens`,
+~4 chars/token) — no tokenizer dependency. This is a soft authoring
+guardrail, not an exact accounting: Claude's tokenizer is not publicly
+available, so any local count is approximate anyway, and the estimate is
+network-free and deterministic (the properties this gate requires). It
+deliberately does NOT reuse `bin/cortex-count-tokens`: that script counts
+via the Anthropic SDK's `messages.count_tokens` API, which requires network
+access and a resolved API key — unsuitable for a mechanical acceptance gate
+that must run offline and deterministically. The same 4-chars/token basis
+backs `cortex_command/backlog/load_parent_epic.py`'s `_truncate` char cap
+(2000 chars ≈ 500 tokens); each site keeps its own small helper (that one
+truncates for prompt injection; this validates against a budget).
 
 States:
   pass            — every check passed.
@@ -52,11 +52,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from pathlib import Path
 from typing import List, Optional
-
-import tiktoken
 
 from cortex_command.backlog import _telemetry
 
@@ -112,9 +111,13 @@ def _section_text(text: str, heading: str) -> str:
     return "\n".join(out)
 
 
-def _count_tokens_cl100k(text: str) -> int:
-    enc = tiktoken.get_encoding("cl100k_base")
-    return len(enc.encode(text))
+def _estimate_tokens(text: str) -> int:
+    """Estimate token count via a 4-chars-per-token heuristic.
+
+    Network-free and deterministic; approximate by design (see module
+    docstring) — sufficient for a soft ≤``OPTIONAL_TOKEN_BUDGET`` guardrail.
+    """
+    return math.ceil(len(text) / 4)
 
 
 def validate_requirements_doc(path: Path, scope: str) -> dict:
@@ -145,7 +148,7 @@ def validate_requirements_doc(path: Path, scope: str) -> dict:
 
     if scope == "project":
         optional_text = _section_text(text, OPTIONAL_HEADING)
-        token_count = _count_tokens_cl100k(optional_text)
+        token_count = _estimate_tokens(optional_text)
         checks.append(
             {
                 "name": "optional-token-budget",

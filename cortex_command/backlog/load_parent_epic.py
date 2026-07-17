@@ -21,9 +21,10 @@ Body extraction priority:
   (concatenated, with headings) → first paragraph after H1 →
   ``(no body content)`` placeholder.
 
-Token cap: ≤500 tokens via ``tiktoken.get_encoding("cl100k_base")`` if
-importable, else a coarse ≤2000-character fallback. Truncation marker
-``… (truncated)`` is appended on cap hit.
+Size cap: a coarse ≤2000-character truncation (~500 tokens at 4 chars/token).
+Truncation marker ``… (truncated)`` is appended on cap hit. This is a prompt-
+injection guard on an epic body, so an approximate char cap is sufficient — it
+deliberately avoids a heavyweight tokenizer dependency.
 
 Sanitization: ``</parent_epic_body>`` substrings are replaced with
 ``</parent_epic_body_INVALID>`` (case-sensitive); ``<parent_epic_body``
@@ -51,8 +52,7 @@ from cortex_command.backlog.build_epic_map import normalize_parent
 # Constants
 # ---------------------------------------------------------------------------
 
-TOKEN_CAP = 500
-CHAR_FALLBACK_CAP = 2000
+CHAR_FALLBACK_CAP = 2000  # ~500 tokens at 4 chars/token
 TRUNCATION_MARKER = "… (truncated)"
 PLACEHOLDER_BODY = "(no body content)"
 
@@ -252,25 +252,16 @@ def _extract_body_content(body: str) -> str:
 # ---------------------------------------------------------------------------
 
 def _truncate(text: str) -> str:
-    """Truncate ``text`` to ≤500 tokens (or ≤2000 chars fallback).
+    """Truncate ``text`` to ≤``CHAR_FALLBACK_CAP`` chars (~500 tokens).
 
     Appends ``TRUNCATION_MARKER`` on cap hit.
     """
     if text == PLACEHOLDER_BODY:
         return text
-    try:
-        import tiktoken  # type: ignore[import-not-found]
-        enc = tiktoken.get_encoding("cl100k_base")
-        tokens = enc.encode(text)
-        if len(tokens) <= TOKEN_CAP:
-            return text
-        truncated = enc.decode(tokens[:TOKEN_CAP])
-        return truncated.rstrip() + " " + TRUNCATION_MARKER
-    except ImportError:
-        if len(text) <= CHAR_FALLBACK_CAP:
-            return text
-        truncated = text[:CHAR_FALLBACK_CAP]
-        return truncated.rstrip() + " " + TRUNCATION_MARKER
+    if len(text) <= CHAR_FALLBACK_CAP:
+        return text
+    truncated = text[:CHAR_FALLBACK_CAP]
+    return truncated.rstrip() + " " + TRUNCATION_MARKER
 
 
 # ---------------------------------------------------------------------------
