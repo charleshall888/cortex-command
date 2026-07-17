@@ -401,6 +401,25 @@ Ticket closure results:
   data-pipeline    no ticket found
 ```
 
+Then commit and push the closes — until they reach `main` a closed ticket reads
+`complete` only on this machine, which hides the open ticket rather than fixing it:
+
+```
+cortex-morning-review-push-closures --path {changed_path} [--path ...] --ticket {id} [--ticket ...]
+```
+
+Pass every `changed_paths` entry from every `closed` item as `--path`, and the `id` of
+each `closed` item whose `status_changed` is true as `--ticket`. Re-closing a ticket the
+overnight run already completed rewrites only its `updated:` timestamp, so with no
+`--ticket` the verb commits nothing rather than pushing churn. Map the returned `state`:
+
+| `state` | Report |
+|---|---|
+| `pushed` | `closures pushed to main ({commit})` |
+| `no-op` | say nothing — the tickets were already complete on main |
+| `push-failed` | surface `message` and name `unpushed_tickets` as committed locally but not on main; the review did not fully succeed |
+| `error` | `push step failed: {message}` |
+
 After this section, the review is complete.
 
 ---

@@ -89,6 +89,7 @@ cortex-morning-review-advance-lifecycle = "cortex_command.overnight.advance_life
 cortex-morning-review-close-tickets = "cortex_command.overnight.close_tickets:main"
 cortex-morning-review-complete-session = "cortex_command.overnight.complete_morning_review_session:main"
 cortex-morning-review-gc-demo-worktrees = "cortex_command.overnight.gc_demo_worktrees:main"
+cortex-morning-review-push-closures = "cortex_command.overnight.push_closures:main"
 cortex-morning-review-resolve-demo-config = "cortex_command.overnight.resolve_demo_config:main"
 cortex-pipeline-metrics = "cortex_command.pipeline.metrics:main"
 cortex-refine = "cortex_command.refine:main"
