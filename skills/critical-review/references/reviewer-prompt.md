@@ -39,6 +39,9 @@ For any A-class finding, include a `fix_invalidation_argument` — one sentence 
 If one observed problem decomposes into both an A-class and a B-class concern, **split** into two separate findings. If the concerns cannot be cleanly split, **bias up to A** — the conservative class wins on unsplittable cases.
 
 ## Instructions
+
+Work within a ~40-turn cap. On reaching it, stop investigating and return what you have — a partial return beats no return.
+
 1. Focus exclusively on your assigned angle; be specific — cite exact artifact text in quotes ("This might not scale" is not acceptable).
 2. Return findings in this exact format:
 

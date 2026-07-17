@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 23ddd7ca-c593-4cf8-ba5e-e8c5ea75bff0
 title: 'Bound dispatched agents: turn cap, wall-clock deadline, and return budgets'
-status: backlog
+status: complete
 priority: high
 type: feature
 created: 2026-07-16

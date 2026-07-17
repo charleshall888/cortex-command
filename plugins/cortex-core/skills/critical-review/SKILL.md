@@ -45,11 +45,12 @@ The orchestrator (main conversation context) derives the challenge angles from t
 
 ### Step 2c: Dispatch Parallel Reviewers
 
-Dispatch one general-purpose agent per angle as a parallel Task sub-task, all simultaneously, using the canonical reviewer prompt from `${CLAUDE_SKILL_DIR}/references/reviewer-prompt.md` verbatim, substituting `{artifact_path}`, `{artifact_sha256}`, `{angle name}`, `{angle description}`, and the Step 2a Project Context block at runtime.
+Dispatch one general-purpose agent per angle as a parallel Task sub-task, all simultaneously, using the canonical reviewer prompt from `${CLAUDE_SKILL_DIR}/references/reviewer-prompt.md` verbatim, substituting `{artifact_path}`, `{artifact_sha256}`, `{angle name}`, `{angle description}`, and the Step 2a Project Context block at runtime. The template carries a ~40-turn cap — on hit the reviewer stops investigating and returns what it has, and its partial findings route through the Partial branch below.
 
 #### Failure Handling
 
 - **Partial** (some agents succeed, some fail) → proceed to Step 2d with the successful findings only, prefixing the synthesis per the partial-coverage rule in `${CLAUDE_SKILL_DIR}/references/verification-gates.md`.
+- **Returned nothing** (an agent died loudly, or idled without reporting) → treat it as a failed agent and take the Partial branch with the reviewers that did return; never wait on it indefinitely. All agents returning nothing is the Total branch.
 - **Total** (all fail) → fall back to one general-purpose agent with the canonical fallback prompt from `${CLAUDE_SKILL_DIR}/references/fallback-reviewer-prompt.md` (substituting `{artifact_path}`, `{artifact_sha256}`). Output its result directly with no Step 2d synthesis, prefixed `Note: parallel dispatch failed, falling back to single reviewer`, then proceed to Step 3.
 
 ### Step 2c.5: Sentinel-First Verification Gate
