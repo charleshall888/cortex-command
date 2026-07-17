@@ -2,14 +2,16 @@
 schema_version: "1"
 uuid: f369e0e7-508b-42e7-9953-e49fdcacea57
 title: implement-transition gate refuses because all-tasks-[x] is both its precondition and what makes its detector say review
-status: backlog
+status: complete
 priority: high
 type: bug
 created: 2026-07-16
-updated: 2026-07-16
+updated: 2026-07-17
 tags: ['lifecycle', 'served-loop', 'phase-authority']
 areas: ['lifecycle']
 ---
+> **SHIPPED (2026-07-17).** The split authority this ticket describes was closed by `e6857ec9` (the advance claim gate now resolves phase through `resolve_lifecycle_phase`, events-first per ADR-0025 — same fix tracked in [[393-advance-claim-gate-resolved-phase-by-artifact-making-the-implement-to-review-transition-unfireable]]). This session added the regression the fix lacked: the gate test is now parametrized over all three artifact-driven boundaries (implement→review, review→rework, review→complete) in `cortex_command/tests/test_lifecycle_event_claim_commit.py`, so the next boundary of this shape is a param, not a rediscovery. The crash-recovery property held: the invocation id still derives from stable table endpoints. Operators see the fix once the next release tag lands (the CLI is a non-editable wheel; see #393's release note).
+
 ## Why
 
 The implement→review transition cannot be recorded through the verb that owns it. The implement phase's reference instructs the orchestrator to flip every task to `[x]` and then call `cortex-lifecycle-advance implement-transition --mode transition`. That verb gates on `from_state: implement`, and the gate resolves the current phase through `cortex_command/common.py`'s `_detect_lifecycle_phase_inner`, whose Step 3 returns `review` as soon as `total > 0 and checked == total`. The instructed precondition is therefore exactly the condition that makes the gate report a different phase and refuse. Hit live on lifecycle 380 with all nine tasks complete: every implement-arm call returned `claim_status: gate-mismatch`, `reason: from_state gate: detected phase 'review' does not match expected from_state 'implement'`, and the only way forward was the `sanctioned_override` hand-append the refusal itself names.

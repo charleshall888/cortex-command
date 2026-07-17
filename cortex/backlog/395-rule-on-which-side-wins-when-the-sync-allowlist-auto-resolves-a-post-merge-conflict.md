@@ -2,15 +2,17 @@
 schema_version: "1"
 uuid: 442b4caa-4b05-4b53-93c4-08f657354abe
 title: Rule on which side wins when the sync allowlist auto-resolves a post-merge conflict
-status: backlog
+status: complete
 priority: high
 type: bug
 created: 2026-07-16
-updated: 2026-07-16
+updated: 2026-07-17
 tags: ['overnight', 'morning-review', 'git']
 areas: ['agentic-layer']
 ---
 # Rule on which side wins when the sync allowlist auto-resolves a post-merge conflict
+
+> **RULED + SHIPPED (2026-07-17, ADR-0029).** The winning side is a per-pattern property, exactly as the "single global flag is likely the wrong shape" hunch predicted: lifecycle phase artifacts (research/spec/plan.md) keep **remote** (the merged PR owns them), backlog item files keep **local** (the review's closes are the later, better-informed writes). The conf format is now `<side> <pattern>` with no silent default — a side-less line resolves nothing and its conflicts abort loudly. A replayed commit wholly superseded by remote-wins resolution is dropped via `git rebase --skip`. Tests pin both semantics and the fail-safe; pipeline.md, the conf header, and the sync docstring now state the ruling instead of describing unratified behavior. The pipeline-events.log stays un-allowlisted (union merge remains the named fix if revisited). Full rationale, rejected alternatives, and the merge-strategy coupling: `cortex/adr/0029-per-pattern-side-ruling-for-sync-allowlist-conflicts.md`.
 
 ## Why
 

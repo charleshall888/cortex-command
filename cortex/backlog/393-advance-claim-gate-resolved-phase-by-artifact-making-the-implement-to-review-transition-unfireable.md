@@ -2,15 +2,17 @@
 schema_version: "1"
 uuid: 4d4ab38e-210d-4c40-98e8-97623360ea74
 title: Advance claim gate resolved phase by artifact, making the implement-to-review transition unfireable
-status: backlog
+status: complete
 priority: high
 type: bug
 created: 2026-07-16
-updated: 2026-07-16
+updated: 2026-07-17
 tags: ['lifecycle', 'events-log']
 areas: ['agentic-layer']
 ---
 # Advance claim gate resolved phase by artifact, making the implement-to-review transition unfireable
+
+> **SHIPPED (2026-07-17).** Both halves are now closed. The gate half landed as `e6857ec9` (events-first claim gate). The still-open batch half landed this session: advance's invocation id now folds in the batch number (`cortex_command/lifecycle/advance.py`), so a second batch is its own claim/commit pair instead of short-circuiting on batch 0's committed pair — the emission is genuinely "idempotent per batch number" as the registry and implement.md always claimed, and the docs needed no correction. Regression tests: batch 0 + batch 1 both recorded, same-batch retry still idempotent (`test_advance.py`), and the gate regression is parametrized over the three artifact-driven boundaries per the Edges note. Inert until the next release tag (non-editable wheel).
 
 ## Why
 

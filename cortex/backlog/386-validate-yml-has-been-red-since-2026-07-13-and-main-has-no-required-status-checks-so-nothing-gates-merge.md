@@ -2,14 +2,16 @@
 schema_version: "1"
 uuid: 2bdd3566-8d3d-4c51-9395-dc6b71a16934
 title: validate.yml has been red since 2026-07-13 and main has no required status checks, so nothing gates merge
-status: backlog
+status: complete
 priority: high
 type: bug
 created: 2026-07-16
-updated: 2026-07-16
+updated: 2026-07-17
 tags: ['ci', 'enforcement', 'tests']
 areas: ['tests']
 ---
+> **SHIPPED except the ruleset (2026-07-17).** What landed: (1) the red step is fixed — the six unresolved citations all pointed at gitignored/untracked local dirs (`lifecycle/sessions/`, a leftover `lifecycle/feat/` probe dir), and `_slug_resolves` now consults the git index (the same authority `git ls-files` enumerates from), so a green local run IS evidence CI is green; (2) every blocking step carries `if: !cancelled()`, so one red step can no longer hide the rest; (3) the two deferred candidates (config parity, dormancy pin) are blocking steps — ADR-0017 and docs/setup.md updated; (4) the ~28 order-dependent dashboard failures were root-caused and fixed: `dashboard/templates/` is a namespace package, so `as_file()` extracted templates to a TemporaryDirectory that a module reload (test_cli_dashboard's PID-path tests) orphaned for the next cyclic GC to delete — the loader now resolves through the regular `dashboard` package to a stable real path. The 2 remaining full-suite reds are the known pre-existing refine-writeback pins (stale prose contract superseded by #378's reroute), tracked separately. **Still open, deliberately: the branch ruleset.** Required status checks end direct pushes to `main` — an explicit operator decision this ticket can specify but not land. Spec for when ruled: add a `required_status_checks` rule for the `validate` job (plus a pull-request rule) to the existing `protect-main-history` ruleset or a sibling.
+
 ## Why
 
 The repository's test enforcement does not exist in the form its documentation assumed. Two independent findings, both verified against GitHub during lifecycle 380:
