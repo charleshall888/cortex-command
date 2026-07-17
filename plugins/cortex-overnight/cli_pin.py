@@ -6,4 +6,4 @@ module so both ``server.py`` and the SessionStart-async sync hook can import
 the pin without pulling in the MCP server's runtime dependencies.
 """
 
-CLI_PIN = ("v2.36.1", "2.0")
+CLI_PIN = ("v2.37.0", "2.0")
