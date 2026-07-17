@@ -3,17 +3,19 @@ schema_version: "1"
 uuid: 067e739f-eda7-4ea6-88c9-c4c76e219e68
 title: "Clarify-critic schema validator + warning-template runtime validator (per #178 R7 follow-on)"
 type: feature
-status: proposed
+status: complete
 priority: medium
 parent: 178
 blocked-by: []
 tags: [oq3, schema-validator, clarify-critic, follow-on, events-log]
 created: 2026-05-06
-updated: 2026-05-06
+updated: 2026-07-17
 complexity: simple
 criticality: medium
 areas: [skills, hooks]
 ---
+
+> **SHIPPED (2026-07-17), rescoped to the v3 schema this ticket predates.** The event moved to a counts-only v3 write shape after filing, which changed what is enforceable. Landed: `cortex_command/lint/clarify_critic_events.py` (`cortex-check-clarify-critic-events`, `just check-clarify-critic-events`, repo-audit test in the suite) validating the v3 field shape plus the surviving invariant — `dismissals_count == dispositions.dismiss` — scoped to `schema_version >= 3` rows so history never false-fails (the ticket's stated risk, handled by its own suggested mitigation). Not landed, with cause: the alignment/`parent_epic_loaded` cross-field invariant has nothing to read — v3 carries no `findings[]`; the warning-template runtime validator has nothing to observe — the missing/unreadable warnings are emitted conversationally by the orchestrating agent and never persisted, so the two allowlist templates remain prose-specified. `clarify-critic.md` §Event Logging now points at the enforcement.
 
 # Clarify-critic schema validator + warning-template runtime validator
 

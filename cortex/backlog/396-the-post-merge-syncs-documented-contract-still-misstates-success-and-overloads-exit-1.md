@@ -2,14 +2,16 @@
 schema_version: "1"
 uuid: 746eeb6a-5aa8-405c-b187-81d39549d42c
 title: The post-merge sync's documented contract still misstates success and overloads exit 1
-status: backlog
+status: complete
 priority: medium
 type: bug
 created: 2026-07-16
-updated: 2026-07-16
+updated: 2026-07-17
 tags: ['overnight', 'morning-review', 'git']
 areas: ['agentic-layer']
 ---
+> **SHIPPED (2026-07-17).** The fetch failure got its own code — exit 4 — documented in the module header beside the others, mapped in the walkthrough's §6a arm (network/auth, nothing rebased, no conflict to resolve, re-run after checking connectivity), and pinned by a stubbed-subprocess test copying the behind-count idiom. The success criterion in `pipeline.md` is now one-sided, as the code can hold: not-behind only, with `cortex-morning-review-push-closures` named as the reason the other direction is deliberately unpromised. The third exit-1 site is diagnosed, not just listed: exhausted passes deliberately **shares** exit 1 with the conflict abort — both leave the same aborted-and-restored state with the same manual remedy — and the walkthrough's exit-1 arm now names both causes with stderr as the discriminator, so the operator prose is truthful for every exit-1 fire.
+
 # The post-merge sync's documented contract still misstates success and overloads exit 1
 
 ## Why

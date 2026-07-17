@@ -2,14 +2,16 @@
 schema_version: "1"
 uuid: 490a98ee-5d44-4bd4-88b0-0eb4969ed707
 title: cortex init --ensure raises in marker-less seeded repos, so lifecycle entry is dead there
-status: backlog
+status: complete
 priority: medium
 type: bug
 created: 2026-07-16
-updated: 2026-07-16
+updated: 2026-07-17
 tags: ['init', 'lifecycle', 'consumer-repos']
 areas: ['lifecycle']
 ---
+> **SHIPPED (2026-07-17).** The open provenance question resolved first: the marker is gitignored by init's own `_GITIGNORE_TARGETS`, so it never survives a clone — every fresh checkout of a cortex-initialized repo is seeded-but-marker-less, and both named repos are exactly that (each carries all four committed signature templates). Fix: `_run_ensure`'s case (iv) now discriminates by those signature templates (`scaffold.find_signature_content`) and **adopts** — additive scaffold + first-time marker write, nothing overwritten, one-time stderr notice naming the marker — while signature-less content still hits R19, whose message now names the marker and both remedies so the two cases are tellable apart. Tests cover adoption (customized files byte-untouched, second run silent no-op) and the decline. `gaggimate-barista` / `Team-Builder-Bot` become usable at the next lifecycle entry once the fix releases (or today via terminal `cortex init --update`).
+
 ## Why
 
 Two of the four cortex-using repos on this machine carry a populated `cortex/` tree but no `cortex/.cortex-init` marker. `cortex init --ensure` routes a marker-absent repo to the content-aware decline gate, which raises rather than returning — and `--ensure` is invoked automatically from lifecycle entry, in-process, on every `/cortex-core:lifecycle` run. So in those repos lifecycle entry errors before it begins, and the framework is effectively unusable there while looking installed.

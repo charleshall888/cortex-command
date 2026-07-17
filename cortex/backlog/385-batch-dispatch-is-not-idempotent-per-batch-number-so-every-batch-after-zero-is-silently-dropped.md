@@ -2,14 +2,16 @@
 schema_version: "1"
 uuid: cd7ac4f3-3737-401b-b8f1-29271c4a60bf
 title: batch_dispatch is not idempotent per batch number, so every batch after zero is silently dropped
-status: backlog
+status: complete
 priority: medium
 type: bug
 created: 2026-07-16
-updated: 2026-07-16
+updated: 2026-07-17
 tags: ['lifecycle', 'served-loop', 'events']
 areas: ['lifecycle']
 ---
+> **SHIPPED (2026-07-17).** Landed as `2bdb750e` under the #393 closure batch, one commit before this ticket was picked up: the batch number now joins the invocation-id derivation (`advance.py` composes it with any caller `--discriminator` via a `\x1f` separator, so that flag's concurrent-invocation purpose survives), making the emission idempotent per batch number while a retry of the same batch still resumes its own claim. `test_batch_dispatches_are_idempotent_per_batch_number` pins it. The registry row and `implement.md` §2b needed no edits — the semantics they document are now the semantics the verb has. Historical single-row logs stay as they are.
+
 ## Why
 
 `bin/.events-registry.md` records `batch_dispatch` as emitted by the implement-cluster verb "idempotent per batch number", and the implement phase's reference prescribes `cortex-lifecycle-advance implement-transition --mode batch --feature <name> --batch <N> --tasks '[...]'`. The verb derives its invocation id from `(feature, from_state, to_state, discriminator)`, and `discriminator` is a separate CLI flag defaulting to the empty string — `--batch` never reaches it. Batch mode's endpoints are both `implement`, so every batch of a given feature derives the *same* id. Batch 1 therefore matches batch 0's committed pair, hits the idempotent-replay short-circuit, and returns `commit_status: already-committed`, `emitted: []`.

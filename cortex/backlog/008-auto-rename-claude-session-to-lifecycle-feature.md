@@ -2,14 +2,16 @@
 id: 008
 title: "Auto-rename Claude Code session to active lifecycle feature name"
 type: feature
-status: blocked
+status: complete
 priority: medium
 tags: [lifecycle, session-naming, observability]
-blocked-by: [anthropics/claude-code#34243]
+blocked-by: []
 created: 2026-04-03
-updated: 2026-04-03
+updated: 2026-07-17
 discovery_source: cortex/research/session-window-naming/research.md
 ---
+
+> **SHIPPED (2026-07-17).** Unblocked not by the upstream issue (anthropics/claude-code#34243 is still open — no CLI rename subcommand exists) but by the SessionStart hook contract growing `hookSpecificOutput.sessionTitle`: same effect as interactive `/rename`, honored on startup/resume sources, ignored on clear/compact. `cortex hooks scan-lifecycle` now stamps the active feature slug as the session title in the same envelope that injects lifecycle context — set only when a single active feature resolves (`.session` match or single-candidate claim), never on the multi-incomplete prompt. Tests pin both the positive and the no-active-feature case. The "overnight sessions may need separate handling" question stays moot: if a headless session runs the SessionStart chain it gets the same title, which is harmless-to-useful.
 
 # Auto-rename Claude Code session to active lifecycle feature name
 
