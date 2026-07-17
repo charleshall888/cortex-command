@@ -9,10 +9,10 @@ overnight write-back stays in the local working tree and never reaches
 open for everyone else. This verb closes that gap.
 
 What it does NOT do is delegate the push to ``cortex-git-sync-rebase``. That
-binary returns at ``if behind == 0: return 0`` (sync_rebase.py ~L187–190) more
-than 100 lines before its ``git push`` (~L292–294), and this situation — a
-fresh local commit against a remote ``main`` that has not moved — *is*
-``behind == 0``. Its exit 0 is documented as "rebase + push completed, **or**
+binary returns at its up-to-date early exit (sync_rebase.py, ``if behind == 0:
+return 0``) roughly a hundred lines before its ``git push``, and this
+situation — a fresh local commit against a remote ``main`` that has not
+moved — *is* ``behind == 0``. Its exit 0 is documented as "rebase + push completed, **or**
 nothing to rebase", so its success signal cannot evidence a push. This verb
 pushes directly and observes the result.
 

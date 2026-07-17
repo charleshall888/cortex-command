@@ -99,6 +99,12 @@ SCAN_FIXTURE_DIR="$REPO_ROOT/tests/fixtures/hooks/scan-lifecycle"
 SCAN_TMPDIR="$TMPDIR/test_hooks_scan_$$"
 mkdir -p "$SCAN_TMPDIR"
 
+# The staged fixtures carry no events.log, which the staleness filter treats
+# as stale and suppresses; disable it so these tests pin the emission contract
+# regardless of the installed CLI's filter default (the pytest twins in
+# tests/test_hooks_scan_lifecycle.py set the same override).
+export CORTEX_SCAN_LIFECYCLE_STALE_DAYS=0
+
 # --- Test: no-lifecycle-dir — exits 0 with no output ---
 
 output=$(sed "s|__TMPDIR__|$SCAN_TMPDIR|g" "$SCAN_FIXTURE_DIR/no-lifecycle-dir.json" \
