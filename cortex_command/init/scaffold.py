@@ -76,6 +76,30 @@ _HASH_INPUT_TEMPLATES: tuple[str, ...] = (
 # A populated non-marker repo with any of these present fires the gate.
 _CONTENT_DECLINE_TARGETS = ("cortex",)
 
+# Committed template paths distinctive enough to establish cortex authorship
+# of a marker-less cortex/ tree (#387). The marker is gitignored, so it never
+# survives a clone: a fresh checkout of a cortex-initialized repo arrives
+# seeded-but-marker-less. ``cortex/.gitignore`` is deliberately excluded —
+# too generic a name to signal authorship on its own.
+_SIGNATURE_TEMPLATE_PATHS: tuple[str, ...] = (
+    "cortex/lifecycle.config.md",
+    "cortex/backlog/README.md",
+    "cortex/lifecycle/README.md",
+    "cortex/requirements/project.md",
+)
+
+
+def find_signature_content(repo_root: Path) -> list[str]:
+    """Return the cortex signature template paths present under *repo_root*.
+
+    A non-empty result establishes cortex authorship of a marker-less
+    ``cortex/`` tree — the discrimination the ``--ensure`` dispatch uses to
+    adopt a cloned repo instead of firing the R19 foreign-content decline.
+    Presence-only: a customized signature file still counts (the additive
+    adoption pass never overwrites, so drifted content is safe either way).
+    """
+    return [rel for rel in _SIGNATURE_TEMPLATE_PATHS if (repo_root / rel).is_file()]
+
 
 def _compute_init_artifacts_hash() -> str:
     """Return a deterministic content hash over all init artifact inputs.
@@ -155,10 +179,12 @@ def check_content_decline(repo_root: Path) -> None:
         if _target_has_content(repo_root / rel):
             raise ScaffoldError(
                 "`cortex init`: one or more target paths exist with "
-                "pre-existing content (no `.cortex-init` marker). Run "
-                "`cortex init --update` to add missing templates without "
-                "overwriting, or `cortex init --force` to overwrite with "
-                "backup."
+                "pre-existing content and no `cortex/.cortex-init` marker. "
+                "If this repo is cortex-managed (the marker is gitignored, "
+                "so a fresh clone lacks it), run `cortex init --update` to "
+                "adopt it additively without overwriting; otherwise this "
+                "refusal is protecting non-cortex content (`cortex init "
+                "--force` overwrites with backup)."
             )
 
 

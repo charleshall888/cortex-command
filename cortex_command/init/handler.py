@@ -126,8 +126,10 @@ def _run_ensure(args: argparse.Namespace) -> int:
         ScaffoldError: On worktree-attached refusal, install-in-progress
             timeout, marker provenance failure, marker-absent clean-repo
             refusal (#273: directs the user to terminal ``cortex init``),
-            or R19/R5 foreign-content decline.  Caller (:func:`main`)
-            translates to exit 2.
+            or R19/R5 foreign-content decline. A marker-absent repo whose
+            ``cortex/`` carries cortex signature templates is adopted
+            (additive scaffold + marker write) instead of declined (#387).
+            Caller (:func:`main`) translates to exit 2.
 
     Per #273 this in-session path performs **no** ``~/.claude/`` write:
     the pre-flight ``validate_settings`` and the post-dispatch
@@ -222,10 +224,32 @@ def _run_ensure(args: argparse.Namespace) -> int:
                 "then re-run /lifecycle."
             )
         else:
-            # Case (iv): marker-absent + cortex/ has content → R5 boundary.
-            # Fire R19 to preserve the foreign-repo / wrong-window protection.
-            scaffold.check_content_decline(repo_root)
-            # Unreachable — check_content_decline raises when content found.
+            # Case (iv): marker-absent + cortex/ has content → discriminate
+            # cortex-authored from foreign before the R5/R19 boundary (#387).
+            # The marker is gitignored, so it never survives a clone: a fresh
+            # checkout of a cortex-initialized repo arrives here benignly.
+            # Committed signature templates establish authorship; adoption is
+            # the additive no-overwrite pass plus a first-time marker write,
+            # so existing (possibly customized) files are never touched.
+            signatures = scaffold.find_signature_content(repo_root)
+            if signatures:
+                print(
+                    "cortex init --ensure: cortex/ carries cortex-authored "
+                    f"content ({signatures[0]}) but no cortex/.cortex-init "
+                    "marker (the marker is gitignored, so a clone never has "
+                    "one); adopting — writing the marker and any missing "
+                    "templates, existing files untouched.",
+                    file=sys.stderr,
+                )
+                scaffold.scaffold(repo_root, overwrite=False, backup_dir=None)
+                scaffold.write_marker(repo_root, refresh=False)
+            else:
+                # No signature → foreign content; R19's protection is the
+                # point. The decline message names the marker and both
+                # remedies so an operator can tell the benign case from this
+                # one without reading the scaffold source.
+                scaffold.check_content_decline(repo_root)
+                # Unreachable — check_content_decline raises when content found.
 
     # Post-dispatch: idempotent repo-scope writes only (#273). The standard
     # init path additionally writes the `~/.claude/` grant and runs the
@@ -452,9 +476,10 @@ def main(args: argparse.Namespace) -> int:
         ensure                -- bool, hash-compare dispatch: no-op when
                                  hash matches; refresh when mismatch;
                                  bootstrap when cortex/ absent/empty;
-                                 decline when cortex/ has content but no
-                                 marker (R4–R8). Honors
-                                 ``CORTEX_AUTO_ENSURE=0`` opt-out.
+                                 adopt when cortex/ carries signature
+                                 templates but no marker (#387); decline
+                                 when the content is foreign (R4–R8).
+                                 Honors ``CORTEX_AUTO_ENSURE=0`` opt-out.
 
     ``--update``, ``--unregister``, and ``--ensure`` are mutually exclusive
     at argparse time; ``--force`` is a modifier and may combine with the

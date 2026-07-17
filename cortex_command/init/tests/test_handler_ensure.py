@@ -320,6 +320,62 @@ def test_r4_case_iv_foreign_cortex_content_exit2(
 
     captured = capsys.readouterr()
     assert "cortex init" in captured.err or "pre-existing content" in captured.err
+    # The refusal names the marker so an operator can tell foreign content
+    # from a benign clone that merely lost its gitignored marker (#387).
+    assert ".cortex-init" in captured.err
+    assert "--update" in captured.err
+
+
+def test_case_iv_signature_content_adopted(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Case (iv) adoption (#387): marker-absent + cortex signature templates
+    → adopt, not decline.
+
+    The marker is gitignored, so a fresh clone of a cortex-initialized repo
+    is always seeded-but-marker-less; ``--ensure`` runs in-process on every
+    lifecycle entry, so a decline here makes the framework dead in every
+    clone. Adoption is the additive pass: marker written, missing templates
+    filled in, existing (customized) files byte-untouched.
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git_init(repo)
+    _isolate_home(monkeypatch, tmp_path)
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg-state"))
+
+    # A cloned cortex repo: signature template present, content customized
+    # (differs from the shipped template), no marker.
+    cortex_dir = repo / "cortex"
+    (cortex_dir / "requirements").mkdir(parents=True)
+    config = cortex_dir / "lifecycle.config.md"
+    custom_config = "# my customized lifecycle config\n"
+    config.write_text(custom_config, encoding="utf-8")
+    customized_reqs = cortex_dir / "requirements" / "project.md"
+    customized_reqs.write_text("# consumer requirements\n", encoding="utf-8")
+
+    rc = init_main(_make_ensure_args(repo))
+    assert rc == 0
+
+    err = capsys.readouterr().err
+    assert ".cortex-init" in err and "adopt" in err.lower()
+
+    # Marker written with full provenance.
+    marker = json.loads(
+        (cortex_dir / ".cortex-init").read_text(encoding="utf-8")
+    )
+    assert marker.get("init_artifacts_hash", "").startswith("v1:")
+
+    # No overwrite: the customized files keep their bytes.
+    assert config.read_text(encoding="utf-8") == custom_config
+    assert customized_reqs.read_text(encoding="utf-8") == "# consumer requirements\n"
+
+    # Adoption is one-time: the next --ensure is the case-(i) silent no-op.
+    assert init_main(_make_ensure_args(repo)) == 0
+    second = capsys.readouterr()
+    assert second.err == ""
 
 
 def test_r3_clean_repo_directive_distinct_from_refusal_messages(
