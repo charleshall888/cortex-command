@@ -179,12 +179,24 @@ def _repair_unlinked_index(
     except OSError:
         return {"signal": "skipped", "path": rel}
 
+    # Bound the check AND the rewrite to the frontmatter block: a body that
+    # happens to contain a default-looking line must neither arm the repair
+    # nor be touched by it. A file without a well-formed leading frontmatter
+    # block is a hand-edit — skip.
+    if not text.startswith("---\n"):
+        return {"signal": "skipped", "path": rel}
+    closing = text.find("\n---\n", 4)
+    if closing == -1:
+        return {"signal": "skipped", "path": rel}
+    split = closing + len("\n---\n")
+    frontmatter, body = text[:split], text[split:]
+
     defaults = (
         "parent_backlog_uuid: null\n",
         "parent_backlog_id: null\n",
         "tags: []\n",
     )
-    if not all(line in text for line in defaults):
+    if not all(line in frontmatter for line in defaults):
         return {"signal": "skipped", "path": rel}
 
     backlog_path = root / "cortex" / "backlog" / Path(backlog_file).name
@@ -196,11 +208,13 @@ def _repair_unlinked_index(
 
     uuid_val = uuid if uuid else "null"
     id_val = str(backlog_id) if backlog_id is not None else "null"
-    text = text.replace(defaults[0], f"parent_backlog_uuid: {uuid_val}\n", 1)
-    text = text.replace(defaults[1], f"parent_backlog_id: {id_val}\n", 1)
-    text = text.replace(defaults[2], f"tags: {_render_tags(tags)}\n", 1)
-    text = re.sub(r"^updated: .*$", f"updated: {_today()}", text, count=1, flags=re.MULTILINE)
-    _atomic_write(target, text)
+    frontmatter = frontmatter.replace(defaults[0], f"parent_backlog_uuid: {uuid_val}\n", 1)
+    frontmatter = frontmatter.replace(defaults[1], f"parent_backlog_id: {id_val}\n", 1)
+    frontmatter = frontmatter.replace(defaults[2], f"tags: {_render_tags(tags)}\n", 1)
+    frontmatter = re.sub(
+        r"^updated: .*$", f"updated: {_today()}", frontmatter, count=1, flags=re.MULTILINE
+    )
+    _atomic_write(target, frontmatter + body)
     return {"signal": "repaired", "path": rel}
 
 

@@ -372,3 +372,34 @@ def test_repair_never_touches_hand_edited_or_linked_index(tmp_path, monkeypatch)
     (lc / "index.md").write_text(hand)
     assert create_index(other, TICKET, root)["signal"] == "skipped"
     assert (lc / "index.md").read_text() == hand
+
+
+def test_repair_is_bounded_to_the_frontmatter_block(tmp_path, monkeypatch):
+    """Default-looking lines in the BODY neither arm the repair nor get
+    rewritten: the check and the rewrite operate on the frontmatter only."""
+    root = _repo(tmp_path)
+    _write_ticket(root)
+    monkeypatch.chdir(root)
+
+    # Linked frontmatter + a body quoting the Shape-B defaults verbatim: the
+    # body occurrences must not arm a repair against the linked frontmatter.
+    quoted = "Notes quoting defaults:\nparent_backlog_uuid: null\nparent_backlog_id: null\ntags: []\n"
+    linked = tmp_path / "cortex" / "lifecycle" / "linked-feature"
+    linked.mkdir(parents=True, exist_ok=True)
+    content = GOLDEN_A.replace(f"feature: {SLUG}", "feature: linked-feature") + quoted
+    (linked / "index.md").write_text(content)
+    assert create_index("linked-feature", TICKET, root)["signal"] == "skipped"
+    assert (linked / "index.md").read_text() == content
+
+    # Unlinked frontmatter + the same quoting body: repair fires, but rewrites
+    # ONLY the frontmatter — the body's default-looking lines stay verbatim.
+    unlinked = tmp_path / "cortex" / "lifecycle" / "unlinked-feature"
+    unlinked.mkdir(parents=True, exist_ok=True)
+    (unlinked / "index.md").write_text(
+        GOLDEN_B.replace(f"feature: {SLUG}", "feature: unlinked-feature") + quoted
+    )
+    assert create_index("unlinked-feature", TICKET, root)["signal"] == "repaired"
+    repaired = (unlinked / "index.md").read_text()
+    assert repaired.endswith(quoted)  # body untouched, still quoting the defaults
+    fm_part = repaired.split("---\n")[1]
+    assert "tags: [lifecycle, cli-verbs]" in fm_part  # frontmatter repaired
