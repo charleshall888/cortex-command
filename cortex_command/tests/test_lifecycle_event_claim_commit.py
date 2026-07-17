@@ -170,6 +170,83 @@ class TestFromStateGate:
         # Nothing was written.
         assert _events(_read_rows(log_path), "advance_started") == []
 
+    def test_implement_to_review_claim_fires_when_every_task_is_checked(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The gate must resolve events-first, not by artifact presence.
+
+        Regression: the gate used ``detect_lifecycle_phase``, whose step 3
+        reports "review" as soon as plan.md's tasks are all ``[x]``. Because
+        implement.md §2d flips those checkboxes *before* §4 calls the
+        implement-transition verb, the implement->review claim was refused by
+        construction — its precondition was its own refusal condition. Every
+        recorded implement->review row in the repo bypassed this gate.
+
+        The events log is authoritative (ADR-0025): it says "implement", so a
+        claim from_state="implement" must be granted even though the artifact
+        derivation has already run ahead to "review".
+        """
+        log_path = _pin_root(tmp_path, monkeypatch)
+        feature_dir = log_path.parent
+        # An approved plan whose tasks are ALL complete — what §4 sees at hand-off.
+        (feature_dir / "plan.md").write_text(
+            "### Task 1: a\n- **Status**: [x] done\n"
+            "### Task 2: b\n- **Status**: [x] done\n",
+            encoding="utf-8",
+        )
+        # Machine rows establishing the events-derived state as "implement".
+        log_path.write_text(
+            json.dumps({"event": "plan_approved", "feature": FEATURE})
+            + "\n"
+            + json.dumps(
+                {
+                    "event": "phase_transition",
+                    "feature": FEATURE,
+                    "from": "plan",
+                    "to": "implement",
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        # Guard the premise: the legacy artifact detector disagrees with events.
+        from cortex_command.common import (
+            detect_lifecycle_phase,
+            resolve_lifecycle_phase,
+        )
+
+        assert detect_lifecycle_phase(feature_dir)["phase"] == "review"
+        assert resolve_lifecycle_phase(feature_dir)["phase"] == "implement"
+
+        inv = derive_invocation_id(FEATURE, "implement", "review")
+        claim = claim_transition(FEATURE, "implement", "review", inv)
+        assert claim.ok, f"implement->review refused: {claim.reason}"
+        assert claim.status == "claimed"
+        assert _events(_read_rows(log_path), "advance_started")[0]["to_state"] == "review"
+
+    def test_gate_still_refuses_a_genuine_events_mismatch(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Events-first must not mean gate-free: a real mismatch still refuses."""
+        log_path = _pin_root(tmp_path, monkeypatch)
+        log_path.write_text(
+            json.dumps(
+                {
+                    "event": "phase_transition",
+                    "feature": FEATURE,
+                    "from": "plan",
+                    "to": "implement",
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        # Events say "implement"; a claim from "review" must not be granted.
+        inv = derive_invocation_id(FEATURE, "review", "complete")
+        claim = claim_transition(FEATURE, "review", "complete", inv)
+        assert not claim.ok and claim.status == "gate-mismatch"
+
 
 class TestClaimIdempotency:
     def test_same_invocation_resumes_without_duplicate(

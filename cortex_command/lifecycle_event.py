@@ -52,7 +52,7 @@ from typing import Iterator, NamedTuple, Optional
 from cortex_command.common import (
     CortexProjectRootError,
     _resolve_user_project_root_from_cwd,
-    detect_lifecycle_phase,
+    resolve_lifecycle_phase,
 )
 from cortex_command.lifecycle.log_resolver import resolve_events_log
 
@@ -409,7 +409,8 @@ def claim_transition(
     Args:
         feature: Feature slug.
         from_state: The lifecycle phase the caller expects to transition FROM;
-            gated against ``detect_lifecycle_phase(...)["phase"]``.
+            gated against ``resolve_lifecycle_phase(...)["phase"]`` (events-first,
+            ADR-0025 — never the legacy artifact detector; see the gate comment).
         to_state: The target phase (recorded in both rows for the audit pair).
         invocation_id: Deterministic id (see :func:`derive_invocation_id`),
             persisted in both the ``advance_started`` and ``advance_committed``
@@ -475,8 +476,17 @@ def claim_transition(
                 conflicting_row=None,
             )
 
-        # Fresh claim: gate the from_state against the reduced/detected phase.
-        phase = detect_lifecycle_phase(feature_dir).get("phase")
+        # Fresh claim: gate the from_state against the events-first resolved
+        # phase (ADR-0025). This MUST NOT use detect_lifecycle_phase: that
+        # artifact-presence derivation is the LEGACY FALLBACK, and it reports
+        # `review` the moment plan.md's tasks are all `[x]`. Since implement.md
+        # §2d flips those checkboxes *before* §4 calls the implement-transition
+        # verb, gating on it made the implement->review claim unfireable by
+        # construction — its precondition was its own refusal condition.
+        # Event-driven transitions were unaffected (each verb stakes its claim
+        # before emitting the event that moves the detector), which is why this
+        # surfaced only on the one artifact-driven boundary.
+        phase = resolve_lifecycle_phase(feature_dir).get("phase")
         if phase != from_state:
             return ClaimResult(
                 ok=False,
