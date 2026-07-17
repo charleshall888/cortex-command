@@ -399,6 +399,47 @@ def test_golden_f_pipeline_state_with_statuses_additionalContext(
 # ----------------------------------------------------------------------------
 
 
+def test_session_title_named_after_active_feature(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """#8: an active lifecycle feature auto-renames the session.
+
+    ``hookSpecificOutput.sessionTitle`` carries the active feature slug so
+    the session is identifiable in the /resume screen without a manual
+    ``/rename``. Case (b)'s single incomplete feature becomes active via the
+    crash-recovery claim, so its slug is the expected title.
+    """
+    payload, _expected = _load_fixture_pair("b_single_incomplete_feature")
+    repo = _stage_for_case("b_single_incomplete_feature", tmp_path)
+    stdout = _run_main(
+        payload, repo, monkeypatch=monkeypatch, capsys=capsys
+    )
+    envelope = json.loads(stdout)
+    assert envelope["hookSpecificOutput"].get("sessionTitle") == "feature-b"
+
+
+def test_session_title_absent_without_active_feature(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """#8 negative: no active feature → no ``sessionTitle`` key.
+
+    Case (c)'s multiple incomplete features leave no single active feature
+    (no ``.session`` match, no single-candidate claim), so the hook offers
+    context without renaming the session to a feature it did not resolve.
+    """
+    payload, _expected = _load_fixture_pair("c_multiple_incomplete_features")
+    repo = _stage_for_case("c_multiple_incomplete_features", tmp_path)
+    stdout = _run_main(
+        payload, repo, monkeypatch=monkeypatch, capsys=capsys
+    )
+    envelope = json.loads(stdout)
+    assert "sessionTitle" not in envelope["hookSpecificOutput"]
+
+
 def test_session_mutation_P1(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

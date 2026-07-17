@@ -1085,13 +1085,18 @@ def main(argv: list[str] | None = None) -> int:
         metrics_summary=metrics_summary,
     )
 
-    if context:
-        envelope = {
-            "hookSpecificOutput": {
-                "hookEventName": "SessionStart",
-                "additionalContext": context,
-            }
-        }
+    if context or active_feature:
+        hook_output: dict = {"hookEventName": "SessionStart"}
+        if context:
+            hook_output["additionalContext"] = context
+        # Auto-rename the session to the active lifecycle feature (#8):
+        # ``sessionTitle`` renames the session the way interactive ``/rename``
+        # does (honored on startup/resume sources, ignored on clear/compact),
+        # so the feature is identifiable in the /resume screen and session
+        # list without manual intervention.
+        if active_feature:
+            hook_output["sessionTitle"] = active_feature
+        envelope = {"hookSpecificOutput": hook_output}
         # ``ensure_ascii=False`` preserves emoji-bearing context strings
         # byte-for-byte against bash output (jq -n --arg ctx ... at bash
         # precedent lines 482-489 emits UTF-8 verbatim; the Python port
