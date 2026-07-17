@@ -126,12 +126,11 @@ const NOTES = {
   "sc-buoys": {
     beats: [
       "(the buoys land — let them read all three) “Out past the dock it keeps markers — notes it writes to itself, one lesson each. Nobody typed these.” SEAM: “the scroll was instructions — those stay yours. Its own notes? That's what memory is for.”",
-      "(lamps come up — SAY it, it's not on screen) “Every session picks this rope up first. What one session learns, the next one knows.”",
-      "(FishManager struck, CatchService inked) “And it tends its own markers — mid-task it caught the rename and re-inked the tag. Nobody asked.”",
-      "Let “it tends what it touches — an unread note just sits” land. Then: “the rope gets picked up every session — the markers only when it rows out to one. And a wrong one glows just as bright.”",
-      "(terminal lands) “Now and then: fresh eyes, one job — row out, read every marker back. Still true, against the repo AND the requirements? Keep it, fix it, or strike it.”",
-      "(verdicts land — slow down on the strike) “The warning, kept. The middle one it already fixed. And this one was never true — it watched rares vanish and wrote it down as the rule. The Brass Minnow bug. Cut it loose.”",
-      "SILENT — let “What it learns, it keeps. What it keeps, you check.” land. Then: “ten minutes, once in a while. That's the whole habit.”",
+      "(lamps come up — SAY it, it's not on screen) “Every session loads all of them. What one session learns, the next one already knows.”",
+      "(FishManager struck, CatchService inked) “It re-tunes them too — but only the conflict it happens to notice. Mid-task it caught the rename and re-inked the tag. Nobody asked.”",
+      "Let “it only re-inks the ones it catches fighting reality” land. Then: “the ones it never notices just sit there — steering every session. And a wrong marker glows just as bright as a right one.”",
+      "(verdicts land — slow down on the strike) “So now and then, you sift. This warning — keep it. The middle one it already fixed. This last one was never true — it watched rares vanish and wrote it down as the rule. The Brass Minnow bug — weeks of agents ‘knowing’ the wrong thing, and you'd never guess why from the outside. Cut it loose.”",
+      "SILENT — let “A stale note steers you quietly — and you won't know why. Sift them, now and then.” land. Then: “ten minutes, once in a while. That's the whole habit.”",
     ],
     exit: "“Markers honest, core lean — now, the tackle. When do you hand it to everyone else?”",
   },

@@ -542,10 +542,11 @@
        its own water. One rope (the index) ties every marker back to the dock;
        b1 the lamps come up — every session pulls the rope taut (additive:
        illumination, never a wipe). b2 the agent re-inks its OWN marker
-       mid-task (self-tending is real). b3 the honest limit lands as text —
-       deliberately NO visual change: a wrong marker glows exactly as bright
-       as a right one, which is why you row out at all. b4 the audit; b5 its
-       verdicts (keep · keep · strike — the cut rope, the drift). */
+       mid-task, but only the conflict it happens to notice. b3 the honest
+       limit lands as text — deliberately NO visual change: a wrong marker
+       glows exactly as bright as a right one, which is why a stale note is a
+       footgun. b4 the verdicts (keep · already-fixed · strike — the cut rope,
+       the drift): you sift and cut the one it never caught. */
     "sc-buoys": (sec, b) => {
       if (b === 0) {
         buildBuoys();
@@ -553,7 +554,7 @@
       }
       if (b === 1) sec.classList.add("lit");
       if (b === 2) sec.classList.add("fixed");
-      if (b === 5) sec.classList.add("verdicts");
+      if (b === 4) sec.classList.add("verdicts");
     },
 
     /* the shared tackle box (the object pv-3 names but never draws): your lean
@@ -898,7 +899,6 @@
        the audit cuts */
     el("path", { class: "bu-rope bu-rope-a", d: "M 98 240 Q 130 314 190 310 Q 340 326 490 310" }, svg);
     el("path", { class: "bu-rope bu-rope-b", d: "M 490 310 Q 640 326 790 310" }, svg);
-    txt(122, 294, "picked up first, every session", { class: "bu-label" }, svg);
 
     const BUOYS = [
       { x: 190, cls: "bu-b1", lines: ["catch_odds.js", "one wrong number — nothing bites"] },
@@ -965,7 +965,7 @@
     const frame = el("g", { class: "tk-frame" }, svg);
     el("line", { class: "tk-water", x1: 40, y1: 278, x2: 880, y2: 278 }, frame);
     el("rect", { class: "tk-rail", x: 40, y: 196, width: 840, height: 9, rx: 2 }, frame);
-    for (const x of [110, 690, 840]) el("rect", { class: "tk-post", x, y: 205, width: 8, height: 60 }, frame);
+    for (const x of [110, 620, 840]) el("rect", { class: "tk-post", x, y: 205, width: 8, height: 60 }, frame);
 
     /* YOU — your rod, the lean skill hanging as its lure */
     const you = el("g", { class: "tk-you" }, svg);
@@ -975,7 +975,7 @@
     const yl = el("g", { class: "tk-youlure" }, you);
     el("rect", { class: "tk-lure-card", x: 144, y: 240, width: 92, height: 22, rx: 5 }, yl);
     txt(190, 255, "SKILL.md", { class: "tk-lure-txt", "text-anchor": "middle" }, yl);
-    txt(150, 176, "you", { class: "tk-label", "text-anchor": "middle" }, you);
+    txt(136, 182, "you", { class: "tk-label", "text-anchor": "end" }, you);
 
     /* b1: proof — a fish on your line, just under the lure */
     const fish = el("g", { class: "tk tk-fish" }, svg);
@@ -997,7 +997,7 @@
     el("ellipse", { class: "tk-ripple faint", cx: 660, cy: 278, rx: 20, ry: 4 }, rA);
     const rB = el("g", { class: "tk-rod" }, crew);
     rodPole(rB, 725, 765, 76, false);
-    txt(725, 176, "never casts here", { class: "tk-label", "text-anchor": "middle" }, rB);
+    txt(730, 240, "never casts here", { class: "tk-label", "text-anchor": "middle" }, rB);
     const rC = el("g", { class: "tk-rod" }, crew);
     rodPole(rC, 830, 870, 76, true);
     el("ellipse", { class: "tk-ripple faint", cx: 870, cy: 278, rx: 20, ry: 4 }, rC);

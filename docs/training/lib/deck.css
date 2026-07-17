@@ -1209,10 +1209,7 @@ body.dawn #sky .star {
 #sc-buoys.verdicts .bu-b3 { transform: translate(18px, 5px); opacity: 0.55; }
 #sc-buoys.verdicts .bu-b3 .bu-lamp { fill: var(--parch-faint); }
 #sc-buoys.verdicts .bu-b3 .bu-halo, #sc-buoys.verdicts .bu-b3 .bu-refl { opacity: 0; }
-.buoys-limit { align-self: center; }
-.audit-block { display: flex; flex-direction: column; gap: 0.55rem; align-items: center; }
-.audit-block .mini-term { font-size: 0.78rem; }
-.audit-foot { font-size: 0.72rem; color: var(--parch-faint); }
+.buoys-limit { align-self: center; text-align: center; max-width: 46rem; }
 .buoys-verdict { font-size: clamp(1rem, 1.9vw, 1.4rem); text-align: center; }
 
 /* ---------- The Tackle Box: prove it, then let the crew choose it ---------- */
@@ -1247,11 +1244,11 @@ body.dawn #sky .star {
 .tk-box-body { fill: var(--night-lift); stroke: var(--parch-dim); stroke-width: 1.5; }
 .tk-divider { stroke: var(--rule); stroke-width: 1; }
 .tk-boxtag { fill: var(--parch-dim); font-size: 13.5px; letter-spacing: 0.06em; }
-.tk-forced-card { fill: rgba(176, 83, 63, 0.16); stroke: var(--zone-red); stroke-width: 1.3; }
+.tk-forced-card { fill: #261a1c; stroke: var(--zone-red); stroke-width: 1.3; }
 .tk-forced-txt { fill: var(--zone-red); font-size: 11px; }
 .tk-staple { fill: none; stroke: var(--zone-red); stroke-width: 1.6; }
 .tk-take-line { fill: none; stroke: var(--zone-green); stroke-width: 1.3; stroke-dasharray: 4 3; opacity: 0.85; }
-.tk-green-card { fill: rgba(95, 174, 131, 0.14); stroke: var(--zone-green); stroke-width: 1.5; }
+.tk-green-card { fill: #182525; stroke: var(--zone-green); stroke-width: 1.5; }
 .tk-green-txt { fill: #5fae83; font-size: 11px; }
 .box-fork { display: flex; flex-direction: column; align-items: center; gap: 0.7rem; }
 .box-rule { color: var(--parch-dim); font-size: 0.82rem; letter-spacing: 0.03em; }
