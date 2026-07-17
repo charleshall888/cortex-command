@@ -128,10 +128,10 @@ The pipeline area covers the overnight execution framework: how sessions are orc
 
 - **Description**: After morning review merges the overnight PR, local `main` diverges from remote (local has the morning report commit and review artifacts; remote has the PR merge commit). A post-merge sync step rebases local onto remote, resolves conflicts in overnight-managed files automatically, and pushes.
 - **Inputs**: `cortex_command/overnight/sync-allowlist.conf` (glob patterns for auto-resolvable files), local `main` branch state, remote `origin/main` after PR merge
-- **Outputs**: Local `main` synced and pushed to `origin/main`; conflicts in allowlist files auto-resolved with `--theirs` (remote wins)
+- **Outputs**: Local `main` synced and pushed to `origin/main`; conflicts in allowlist files auto-resolved with `--theirs`, which during a rebase keeps the local/replayed revision
 - **Acceptance criteria**:
   - After sync completes successfully, `git rev-list HEAD..origin/main --count` = 0 and `git rev-list origin/main..HEAD --count` = 0 (local and remote identical)
-  - Conflicts in files matching `sync-allowlist.conf` patterns are auto-resolved with `--theirs` (remote/overnight version is authoritative)
+  - Conflicts in files matching `sync-allowlist.conf` patterns are auto-resolved with `--theirs`. Git swaps the ours/theirs nomenclature during a rebase — the remote commits are checked out first and the local commits replayed on top — so `--theirs` names the replayed side and the **local** version survives, not the remote/overnight one. Whether local is the side that should win is an open question tracked separately; this criterion records the behavior rather than endorsing it
   - Non-allowlist conflicts are surfaced to the user; if >3 non-allowlist files conflict or conflicts are unresolvable, the rebase is aborted
   - Multi-pass resolution handles sequential conflicts from replaying multiple local-only commits
   - Dirty rebase state (`.git/rebase-merge/` or `.git/rebase-apply/` from a prior crash) is detected and cleaned up before sync

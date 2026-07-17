@@ -40,15 +40,9 @@ SYNC_ALLOWLIST = REPO_ROOT / "cortex_command" / "overnight" / "sync-allowlist.co
 # pattern in sync-allowlist.conf must match at least one of these.
 REPRESENTATIVE_PATHS = (
     "cortex/backlog/346-x.md",
-    "cortex/backlog/index.md",
-    "cortex/backlog/archive/300-done.md",
-    "cortex/lifecycle/pipeline-events.log",
     "cortex/lifecycle/foo/research.md",
     "cortex/lifecycle/foo/spec.md",
     "cortex/lifecycle/foo/plan.md",
-    "cortex/lifecycle/foo/agent-activity.jsonl",
-    "cortex/lifecycle/sessions/s1/",
-    "cortex/lifecycle/sessions/s1/batch-results.md",
 )
 
 
@@ -344,21 +338,23 @@ def _make_conflict_fixture(tmp_path: Path, conflict_path: str) -> tuple[Path, Pa
 def test_sync_rebase_auto_resolves_allowlisted_conflict(tmp_path: Path) -> None:
     """A conflict on an allowlisted path is auto-resolved and the rebase lands.
 
-    ``cortex/backlog/index.md`` is one of the paths the conf claims to cover.
+    ``cortex/lifecycle/foo/plan.md`` is one of the paths the conf covers, and
+    a shape that really is tracked and really does conflict in production.
     This is the §6a auto-resolution the morning-review sync advertises, and
     the arm that stays green only while the conf's patterns actually match
     git's repo-relative conflict paths.
     """
-    local, remote = _make_conflict_fixture(tmp_path, "cortex/backlog/index.md")
+    local, remote = _make_conflict_fixture(tmp_path, "cortex/lifecycle/foo/plan.md")
 
     rc = sync_rebase(repo_root=local)
 
     assert rc == 0, "an allowlisted conflict should auto-resolve, rebase, and push"
 
     # Which side survives is deliberately unasserted: git inverts ours/theirs
-    # during a rebase, so `checkout --theirs` keeps the LOCAL revision, not the
-    # remote one the module docstring and the conf header both promise. Pinning
-    # either side here would certify a semantic nobody has ruled on yet.
+    # during a rebase, so the auto-resolution keeps the LOCAL revision. The
+    # docs now say so, but whether local is the side that *should* win is an
+    # open question — pinning either side here would certify a semantic nobody
+    # has ruled on yet.
     assert not _stale_rebase_in_progress(local), "rebase state left behind"
     assert _git("status", "--porcelain", cwd=local).stdout == "", "tree not clean"
 

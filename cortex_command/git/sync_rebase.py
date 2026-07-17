@@ -12,7 +12,13 @@ Exit codes:
       unparseable output; sync state is unknown, nothing was rebased)
 
 The allowlist file contains glob patterns for files that may be
-auto-resolved using ``--theirs`` (remote wins) during a conflict pass.
+auto-resolved using ``--theirs`` during a conflict pass. Git swaps the
+ours/theirs nomenclature during a rebase — the upstream (remote) commits are
+checked out first and the local commits are replayed on top — so ``--theirs``
+names the replayed side: auto-resolution keeps the **local** revision and
+discards the remote one (see the Note in ``git-checkout(1)``). Whether local
+is the side that should win is an open question tracked separately; this
+docstring records the behavior, not an endorsement of it.
 Default allowlist path: ``<repo-root>/cortex_command/overnight/sync-allowlist.conf``.
 
 Subprocess invocations for git plumbing are retained verbatim — no
