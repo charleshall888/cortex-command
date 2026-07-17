@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import re
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -404,6 +405,17 @@ _OVERNIGHT_TO_BACKLOG: dict[str, dict[str, Any]] = {
 }
 
 
+def _numeric_prefix(path: Path) -> Optional[int]:
+    """Return the item's filename id (``042-foo.md`` → ``42``), or None.
+
+    Zero-padding is not significant: files below 100 are padded on disk but
+    ids are carried unpadded, and ``resolve_item._resolve_numeric`` compares
+    them as ints for the same reason.
+    """
+    match = re.match(r"^(\d+)-", path.name)
+    return int(match.group(1)) if match else None
+
+
 def _find_backlog_item_path(
     feature: str,
     backlog_id: Optional[int] = None,
@@ -422,12 +434,18 @@ def _find_backlog_item_path(
     Without a uuid (items predating the field), resolution is:
       1. Exact match: ``cortex/backlog/NNN-{feature}.md``
       2. Canonical resolution via ``_find_item`` → ``resolve_item.resolve``,
-         tried against *backlog_id* first when provided (the resolver's numeric
-         step matches a leading-digit filename prefix) and then against
+         tried against *backlog_id* first when provided and then against
          *feature*, which matches ``uuid``/kebab-stem/``lifecycle_slug``/title —
          covering the common case where the lifecycle slug differs from the
          backlog filename stem. Returns ``None`` on a no-match or ambiguous
          result so the caller's best-effort swallow applies.
+
+    The id attempt is constrained to what the resolver's numeric step alone
+    would match. ``resolve`` takes one fuzzy reference and runs its whole
+    ordered chain, so a bare id whose file is gone falls past the numeric step
+    into the title-phrase step, where it can substring-match an unrelated
+    item's title (in the live backlog, id 500 single-matches item 291 via the
+    "500d" in its title). An id means a filename number and nothing else.
 
     There is deliberately no glob-and-take-the-first fallback: an id that maps
     to more than one file is an ambiguity the resolver refuses to guess at, and
@@ -453,14 +471,18 @@ def _find_backlog_item_path(
     #    resolve_item.resolve. ``_find_item`` takes a single fuzzy reference, so
     #    the id and the feature slug are separate attempts in precedence order;
     #    each returns None on a no-match/ambiguous result.
-    references = [str(backlog_id)] if backlog_id is not None else []
-    references.append(feature)
-    for reference in references:
-        found = _backlog_find_item(reference, backlog_dir=backlog_dir)
-        if found is not None:
+    #
+    #    The id attempt keeps only a result the numeric step itself produced:
+    #    that step matches when the filename's NNN- prefix equals the id, so
+    #    re-checking the prefix on the way out readmits exactly its matches and
+    #    discards anything a later step in the chain reached. A discarded
+    #    result leaves the feature attempt below to answer on its own terms.
+    if backlog_id is not None:
+        found = _backlog_find_item(str(backlog_id), backlog_dir=backlog_dir)
+        if found is not None and _numeric_prefix(found) == backlog_id:
             return found
 
-    return None
+    return _backlog_find_item(feature, backlog_dir=backlog_dir)
 
 
 def _write_back_to_backlog(

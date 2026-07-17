@@ -1094,6 +1094,36 @@ class TestFindBacklogItemPathNumericId(unittest.TestCase):
 
         self.assertEqual(resolved, item)
 
+    def test_stale_id_does_not_title_match_an_unrelated_item(self) -> None:
+        # Taken from the live backlog: id 500 names no file, but the resolver's
+        # title-phrase step substring-matches the "500d" inside item 291's
+        # title, so handing the bare id to the whole chain single-matches a
+        # ticket the session never touched. An id means a filename number.
+        unrelated = self._write_item(
+            "291-harden-the-cli-against-dependency-drift",
+            "Harden the CLI against transitive drift dashboard 500d on a fresh install",
+            "harden-the-cli-against-dependency-drift",
+        )
+
+        resolved = _find_backlog_item_path(self.UNMATCHED_FEATURE, backlog_id=500)
+
+        self.assertIsNone(resolved)
+        self.assertNotEqual(resolved, unrelated)
+
+    def test_stale_id_leaves_the_feature_slug_free_to_resolve(self) -> None:
+        # Constraining the id attempt withholds a wrong answer; it must not
+        # withhold the right one. The feature slug reaches this item by its
+        # lifecycle_slug, which differs from the filename stem.
+        item = self._write_item(
+            "291-harden-the-cli-against-dependency-drift",
+            "Harden the CLI against transitive drift dashboard 500d on a fresh install",
+            "harden-cli-lifecycle",
+        )
+
+        resolved = _find_backlog_item_path("harden-cli-lifecycle", backlog_id=500)
+
+        self.assertEqual(resolved, item)
+
     def test_ambiguous_id_write_back_skips_the_write(self) -> None:
         # End-to-end: the refusal degrades to a logged no-write, not a crash and
         # not a wrong-ticket write.
