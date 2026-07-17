@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 9d91fa5d-6d62-44cd-821d-0ae574b73378
 title: Make lifecycle skills consume the served envelope instead of re-fetching state
-status: backlog
+status: done
 priority: low
 type: chore
 created: 2026-07-16

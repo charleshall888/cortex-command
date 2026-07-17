@@ -114,11 +114,10 @@ Before user presentation, read and follow the orchestrator-review protocol (the 
 
 ### 3b. Critical Review
 
-After orchestrator review passes, read tier and criticality (rules: criticality-matrix.md §Reading lifecycle state — the propagated `<target>` path):
+After orchestrator review passes, read tier and criticality with one batched whole-state call (rules: criticality-matrix.md §Reading lifecycle state — the propagated `<target>` path):
 
 ```bash
-cortex-lifecycle-state --feature {feature} --field tier
-cortex-lifecycle-state --feature {feature} --field criticality
+cortex-lifecycle-state --feature {feature}
 ```
 
 The caller may have escalated tier between Research and Spec — trust this read, not Clarify's value. `"corrupted": true` → treat as requiring review (run the gate), not `simple`-and-skip; canonical rule + full matrix in criticality-matrix.md.
