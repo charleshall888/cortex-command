@@ -15,6 +15,20 @@ separate skill steps that run AFTER this resolves.
 
 Emits one JSON object on stdout, always exit 0 — a routing ``state`` is not an
 error. ``state`` is one of the closed set in ``KNOWN_STATES``.
+
+Identity (#379): a lifecycle's identity is the backlog item's canonical
+``lifecycle_slug``; a ticket number, uuid prefix, filename stem, or title
+phrase is input normalization — accepted here, stored nowhere. Every state
+including ``new`` emits the canonical slug, with ``resolved_from`` carrying the
+raw token as an evidence trail.
+
+Accepted consequence — first-entry identity is provisional until ``enter``
+pins it. When an item has no ``lifecycle_slug`` in frontmatter, the slug is
+derived from its title, so editing the title between this resolve and the
+``enter`` that writes ``index.md`` would derive a different slug. The window is
+one skill turn: ``enter`` pins the slug at Step 2 before ``refine`` re-resolves
+at Step 3, and frontmatter is priority-1 thereafter (``resolve_item.py:135``).
+Not solved; the drift is bounded and self-closing.
 """
 
 from __future__ import annotations
@@ -177,6 +191,7 @@ def resolve_invocation(arguments: str, project_root: Optional[Path] = None) -> d
         }
 
     resolved_from = None
+    canonical_slug = None
     if not dir_exists and isinstance(backlog, dict):
         slug = backlog.get("lifecycle_slug")
         # Defensive reader coercion (#378 req-3): a numeric lifecycle_slug read
@@ -185,11 +200,13 @@ def resolve_invocation(arguments: str, project_root: Optional[Path] = None) -> d
         # None sentinel stays None (falsy, so the guard skips the remap).
         if slug is not None:
             slug = str(slug)
-        if slug and slug != feature and (lifecycle_base / slug).is_dir():
-            resolved_from = feature
-            feature = slug
-            feature_dir = lifecycle_base / slug
-            dir_exists = True
+        if slug and slug != feature:
+            canonical_slug = slug
+            if (lifecycle_base / slug).is_dir():
+                resolved_from = feature
+                feature = slug
+                feature_dir = lifecycle_base / slug
+                dir_exists = True
 
     if mode == "resume" and not dir_exists:
         return {
@@ -202,13 +219,27 @@ def resolve_invocation(arguments: str, project_root: Optional[Path] = None) -> d
         }
 
     if not dir_exists:
-        return {
+        # #379 R8: a first entry keyed by ticket number (or any alias) is still
+        # the backlog item's lifecycle, so the envelope names it by its
+        # canonical slug — the same rule the resume arm above already applies,
+        # minus the is_dir() conjunct that arm needs and this one cannot have
+        # (there is no dir yet; that is what makes this state `new`). The state
+        # itself is untouched: #370's edge — a backlog ID with no dir under its
+        # slug still resolves `new` — is preserved (R9).
+        if canonical_slug is not None:
+            resolved_from = feature
+            feature = canonical_slug
+        out = {
             "state": "new",
             "feature": feature,
             "backlog": backlog,
             "phase": phase_override or "research",
             "next": "New feature — start the /cortex-core:refine flow at research.",
         }
+        if resolved_from is not None:
+            # Evidence trail: the invocation token that remapped onto the slug.
+            out["resolved_from"] = resolved_from
+        return out
 
     det = resolve_lifecycle_phase(feature_dir)
     route = phase_override or det["route"]

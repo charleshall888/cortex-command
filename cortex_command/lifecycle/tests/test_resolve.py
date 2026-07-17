@@ -195,10 +195,56 @@ def test_numeric_id_without_slug_dir_stays_new(
     root: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """True-new preserved: backlog match with lifecycle_slug but no dir on
-    disk under either key still resolves state:new."""
+    disk under either key still resolves state:new (#370's edge, R9).
+
+    #379 R8/R12: the envelope now names the item by its canonical slug with
+    ``resolved_from`` carrying the raw token — only ``feature``'s value and
+    ``resolved_from``'s presence change; the state does not.
+    """
     _slugged_backlog(root, monkeypatch)
     r = resolve_invocation("308", project_root=root)
     assert r["state"] == "new"
+    assert r["feature"] == "render-thing-lifecycle"
+    assert r["resolved_from"] == "308"
+
+
+def test_new_branch_normalizes_numeric_lifecycle_slug(
+    root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#378 coercion holds on the new branch: an unquoted numeric
+    lifecycle_slug read as int is str-coerced before it reaches ``feature``."""
+    backlog = root / "the-backlog"
+    backlog.mkdir()
+    (backlog / "374-numeric-slug.md").write_text(
+        "---\ntitle: numeric slug\nstatus: refined\nlifecycle_slug: 374\n---\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("CORTEX_BACKLOG_DIR", str(backlog))
+    r = resolve_invocation("numeric-slug", project_root=root)
+    assert r["state"] == "new"
+    assert r["feature"] == "374"
+    assert r["resolved_from"] == "numeric-slug"
+
+
+def test_new_branch_without_backlog_match_keeps_caller_token(root: Path) -> None:
+    """#379 R10 — Context B: with no backlog match, ``feature`` stays the
+    caller's token and no ``resolved_from`` is emitted."""
+    r = resolve_invocation("some-adhoc-slug-with-no-item", project_root=root)
+    assert r["state"] == "new"
+    assert r["feature"] == "some-adhoc-slug-with-no-item"
+    assert r["backlog"] is None
+    assert "resolved_from" not in r
+
+
+def test_new_branch_slug_equal_to_token_emits_no_resolved_from(
+    root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#379 R11: the normalization fires only when slug != token, so a caller
+    already naming the canonical slug gets a byte-identical envelope."""
+    _slugged_backlog(root, monkeypatch)
+    r = resolve_invocation("render-thing-lifecycle", project_root=root)
+    assert r["state"] == "new"
+    assert r["feature"] == "render-thing-lifecycle"
     assert "resolved_from" not in r
 
 
