@@ -3,7 +3,7 @@ schema_version: "1"
 uuid: 9d91fa5d-6d62-44cd-821d-0ae574b73378
 title: Make lifecycle skills consume the served envelope instead of re-fetching state
 status: backlog
-priority: medium
+priority: low
 type: chore
 created: 2026-07-16
 updated: 2026-07-16
@@ -11,6 +11,8 @@ tags: ['token-efficiency', 'lifecycle', 'bookkeeping']
 areas: ['skills', 'lifecycle']
 ---
 ## Why
+
+> **CORRECTED + DEMOTED TO LOW 2026-07-16.** The sizing below was computed on **undeduplicated JSONL lines** — the exact error class #392 catalogues (one billed response logs once per content block). Deduplicated by billed `message.id`: `cortex-lifecycle-state` is ~5 requests (not 160), `cortex-lifecycle-event` ~118 (not 477), `cortex-resolve-model` ~10 (not 179); requests whose only tool call is a `cortex-*` verb are 0.6–1.1% of the corpus (not 4.4%), so the modelled ~7% carry saving collapses to ~1%. Two further corrections: the served envelope does **not** carry tier/criticality as flat fields — they sit nested in `evidence_trace[1]["reduction"]` (`next_verb.py`), so consumption means indexing the trace or a one-key envelope change; and the SessionStart-hook idea is withdrawn (it trades one request for permanently carried tokens, failing the requirements Deletion-bias bar). The call-site hygiene remains correct — do it opportunistically when these files are open for other work, not as a standalone effort.
 
 `cortex-lifecycle-next` already serves everything the orchestrator needs in one call. `skills/lifecycle/SKILL.md:28`:
 

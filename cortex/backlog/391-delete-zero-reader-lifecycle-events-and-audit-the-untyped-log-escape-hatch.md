@@ -12,6 +12,8 @@ areas: ['lifecycle']
 ---
 ## Why
 
+> **UPDATED 2026-07-16 after independent verification.** (1) The `log` open question below is answered: the escape hatch demonstrably writes orphaned events in production — `cortex_command/overnight/prompts/orchestrator-round.md` emits `plan_comparison`, which has zero readers outside a comment at `lifecycle_event.py:685`. Add it to the delete list alongside the two events below. (2) The counts in this ticket are raw JSONL line counts, not billed requests — deduplicated by `message.id`, `cortex-lifecycle-event` is ~118 requests total (the subcommand split below is proportionally indicative only). The deletions stay free hygiene either way; the token sizing just shrinks. (3) The "instrument claim/commit before judging" item in Edges is withdrawn per the requirements Deletion-bias bar — existing-tool verification beats building instrumentation: grep the corpus's `events.log`/claim files once for an actual in-flight-refusal row; if none has ever fired, ticket the deletion of the ~450-line protocol instead.
+
 `cortex-lifecycle-event` is the highest-turn verb in the harness — **477 full-context requests** across the measured corpus, 2.7x the next verb. Most of it is load-bearing state and must stay. Some of it is a write into a void.
 
 Decomposed by subcommand:

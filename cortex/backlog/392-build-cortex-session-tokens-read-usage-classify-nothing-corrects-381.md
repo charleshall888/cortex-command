@@ -3,7 +3,7 @@ schema_version: "1"
 uuid: 453fa70e-0737-4245-b846-3faa03732bf7
 title: 'Build cortex-session-tokens: read usage, classify nothing (corrects #381)'
 status: backlog
-priority: high
+priority: low
 type: feature
 created: 2026-07-16
 updated: 2026-07-16
@@ -11,6 +11,8 @@ tags: ['telemetry', 'token-efficiency', 'cost-model']
 areas: ['lifecycle', 'report']
 ---
 ## Why
+
+> **DEMOTED TO LOW 2026-07-16 (requirements decision) — this verb gates nothing.** Per `cortex/requirements/project.md` (Deletion bias), the standing measurement tool is the ad-hoc prototype at `cortex/research/token-economics-2026-07-16/analyze.py` plus the dedup-by-`message.id` rule; re-measurement follows shipped cuts rather than preceding them. Corrections to this ticket's own claims from an independent re-derivation: **`isSidechain` is not dead** — it is `True` on >99.9% of subagent assistant records on this machine and is a valid orchestrator/subagent splitter (file-location splitting remains fine; the stated justification was wrong). The **$4,473 total did not reproduce** — every corpus slice measured ~$5.3k (the power laws and the subagent tail reproduced near-exactly; the dollar total is snapshot/scope-sensitive, one more reason not to trust absolute dollars). And the error class this ticket names claimed two more victims after it was written: #390/#391 shipped with undeduplicated verb counts.
 
 **The harness can already report its own runtime cost. The data has been on disk the whole time.** #381 was written on the premise that it cannot, and proposes reconstructing estimates from `subagent_tokens`. That premise is false.
 

@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 3f7a61bc-69b1-406a-8c07-f85b5eb8a8be
 title: Plan-phase critical-review fires at full width regardless of whether the plan adds claims the spec lacked
-status: backlog
+status: superseded
 priority: low
 type: chore
 created: 2026-07-16
@@ -11,6 +11,8 @@ tags: ['token-efficiency', 'critical-review', 'gating']
 areas: ['skills', 'lifecycle']
 ---
 ## Why
+
+> **SUPERSEDED 2026-07-16 by a requirements decision. Do not work this ticket.** `cortex/requirements/project.md` ("Critical-review gates at spec only") removes the plan-phase gate outright — the end-of-implementation review is the backstop — and sets the spec gate to 2 Sonnet reviewers + an Opus synthesizer, escalating to 3–4 on high/critical criticality or novel claims. That answers this ticket's question without the novelty-detection machinery it proposed, and without waiting for #392's telemetry. Audit note (2026-07-16, independent verification): every code claim below held — the gate condition is byte-identical at `plan.md:105` / `specify.md:128`, and `angle-menu.md` keys count only off artifact length.
 
 The critical-review gate condition is identical at both boundaries — `tier = complex AND criticality IN {medium, high, critical}` — so a plan review dispatches the same reviewer count as a spec review (`skills/lifecycle/references/plan.md` 3b, `skills/refine/references/specify.md` 3b, both routing through the same `angle-menu.md` count). But a plan is often a mechanical decomposition of a spec that the same gate has *already* interrogated, so its marginal yield can be much lower for identical cost.
 

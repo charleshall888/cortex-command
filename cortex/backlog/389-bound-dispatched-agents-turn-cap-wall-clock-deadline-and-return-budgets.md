@@ -39,12 +39,10 @@ Polling is not free: 229 requests across the corpus were spent waiting, producin
 
 ## Proposed direction
 
-Two branches, because the failure modes differ:
+> **RESCOPED 2026-07-16 (requirements decision + independent re-derivation).** The tail statistics reproduced near-exactly (worst agent 170 turns / 602k peak / 58.8M cache-read; 2.9% of agents >60 turns = 19% of fan-out spend; `∝ turns^1.55` holds), so the mechanism is sound — but the modelled saving is **~5.3%** of total spend at a 40-turn cap, not 6.4% (the original figure inherited an understated spend denominator; see #392's correction box). Scope trimmed from four mechanisms to the two below: the wall-clock deadline and the `truncated: true` marker are cut as scope creep (the cap subsumes the runaway case, and this ticket's own Edges note that a deadline would not have beaten the harness's error for `native`), and return budgets are cut per the same measurement (return payload is ~11% of orchestrator context — turns are the driver, not payload size). Mandated by `cortex/requirements/project.md` ("Dispatched agents are bounded").
 
-- **Turn/context cap** — bound each dispatched agent (~40 turns as a starting point). On hit, **escalate rather than kill**: have the agent return what it has with a `truncated: true` marker so the synthesizer can weigh it, instead of losing the work.
-- **Wall-clock deadline** — a dispatch deadline for agents that hang without erroring. On expiry, route to the existing Partial-coverage path.
+- **Turn cap** — bound each dispatched agent (~40 turns as a starting point). On hit, the agent returns what it has; the synthesizer weighs partial coverage the same way the existing Partial route does.
 - **Returned-nothing fallback** — extend the Partial/Total structure to a third case: agent returned nothing (died loudly, or idled silently). Today both collapse into "wait forever".
-- **Return budgets** — `reviewer-prompt.md`, `angle-templates.md`, and `skills/research/SKILL.md` contain **zero** output-size constraints (verified by exhaustive grep for word|length|budget|max|char|concise|brief|"<="). State that internal probing is unbounded and encouraged, but the returned envelope is bounded. Probing inside an agent is cheap; the return is what re-enters the orchestrator.
 
 ## Role
 
