@@ -8,7 +8,7 @@ If the `cortex-lifecycle-state` read contains `"corrupted": true`, follow the ca
 
 ## Non-Local Seed-Tier Rule
 
-Same "untrustworthy tier → review, don't skip" posture for a second seed-tier hole: when the backend (`cortex-read-backlog-backend`) ≠ `cortex-backlog` AND the §3b decision would skip-silent at `tier = simple` AND `cortex/lifecycle/{feature}/research.md` exists (Clarify may have been bypassed, leaving state stuck at the `simple/medium` seed), require review instead. The local (`cortex-backlog`) path is exempt — its `reconcile-clarify --backlog-slug` re-sources tier/criticality from backlog frontmatter on resume, so its seed is trustworthy.
+Same "untrustworthy tier → review, don't skip" posture for a second seed-tier hole: when the backend (`cortex-read-backlog-backend`) ≠ `cortex-backlog` AND the §3b decision would skip at `tier = simple` AND `cortex/lifecycle/{feature}/research.md` exists (Clarify may have been bypassed, leaving state stuck at the `simple/medium` seed), require review instead. The local (`cortex-backlog`) path is exempt — its `reconcile-clarify --backlog-slug` re-sources tier/criticality from backlog frontmatter on resume, so its seed is trustworthy.
 
 ## Run/Skip Matrix
 
