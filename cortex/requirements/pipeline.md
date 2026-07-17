@@ -132,7 +132,7 @@ The pipeline area covers the overnight execution framework: how sessions are orc
 - **Acceptance criteria**:
   - After sync completes successfully, `git rev-list HEAD..origin/main --count` = 0 and `git rev-list origin/main..HEAD --count` = 0 (local and remote identical)
   - Conflicts in files matching `sync-allowlist.conf` patterns are auto-resolved with `--theirs`. Git swaps the ours/theirs nomenclature during a rebase — the remote commits are checked out first and the local commits replayed on top — so `--theirs` names the replayed side and the **local** version survives, not the remote/overnight one. Whether local is the side that should win is an open question tracked separately; this criterion records the behavior rather than endorsing it
-  - Non-allowlist conflicts are surfaced to the user; if >3 non-allowlist files conflict or conflicts are unresolvable, the rebase is aborted
+  - Any conflict outside the allowlist aborts the rebase and exits non-zero, leaving no partial resolution behind; every unresolved path is named so the user can finish the sync by hand
   - Multi-pass resolution handles sequential conflicts from replaying multiple local-only commits
   - Dirty rebase state (`.git/rebase-merge/` or `.git/rebase-apply/` from a prior crash) is detected and cleaned up before sync
   - The `--merge` PR merge strategy is a load-bearing dependency — `--theirs` semantics during rebase depend on it
