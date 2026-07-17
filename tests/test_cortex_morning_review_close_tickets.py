@@ -42,7 +42,15 @@ def test_closed_sets_status_and_reports_id(tmp_path: Path, backlog_dir: Path) ->
     item = make_item(backlog_dir, "001-auth-api.md", "Auth API", extra="status: in_progress\n")
     r = ct.close_tickets([("auth-api", "1")], backend="cortex-backlog", project_root=tmp_path)
     assert r["state"] == "ok"
-    assert r["results"] == [{"feature": "auth-api", "state": "closed", "id": "001"}]
+    assert r["results"] == [
+        {
+            "feature": "auth-api",
+            "state": "closed",
+            "id": "001",
+            "changed_paths": ["cortex/backlog/001-auth-api.md"],
+            "status_changed": True,
+        }
+    ]
     assert _status(item) == "complete"
 
 

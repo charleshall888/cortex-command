@@ -16,6 +16,7 @@ import os
 import re
 import subprocess
 import sys
+from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -195,19 +196,24 @@ def _remove_uuid_from_blocked_by(
     closed_id: str | None,
     today: str,
     backlog_dir: Path,
-) -> None:
+) -> list[Path]:
     """Remove the closed item's UUID (or numeric ID) from ``blocked-by``
     arrays in all active backlog items.
 
     Handles both UUID strings and legacy integer IDs for backward
     compatibility during migration.
+
+    Returns the paths actually rewritten — items whose ``blocked-by`` did not
+    reference the closed item are skipped and never appear.
     """
     if backlog_dir is None:
         raise TypeError("backlog_dir is required")
     if not backlog_dir.is_dir():
-        return
+        return []
     if not closed_uuid and not closed_id:
-        return
+        return []
+
+    written: list[Path] = []
 
     pattern = re.compile(
         r"^(blocked-by:\s*\[)(.*?)(\])\s*$",
@@ -244,6 +250,9 @@ def _remove_uuid_from_blocked_by(
         updated = pattern.sub(new_line, text)
         updated = _set_frontmatter_value(updated, "updated", today)
         atomic_write(p, updated)
+        written.append(p)
+
+    return written
 
 
 def _check_and_close_parent(
@@ -335,12 +344,50 @@ def _check_and_close_parent(
 # Public API
 # ---------------------------------------------------------------------------
 
+def _is_gitignored_backlog_artifact(path: Path) -> bool:
+    """True for files under ``cortex/backlog/`` that ``cortex/.gitignore`` excludes.
+
+    Both are derived state regenerated from the items themselves: the index
+    (``index.md``/``index.json``) and the per-item append-only event sidecars
+    (``*.events.jsonl``). They must never reach ``UpdateResult.changed_paths``,
+    whose whole contract is that a caller can stage every path in it.
+    """
+    return path.name in ("index.md", "index.json") or path.name.endswith(".events.jsonl")
+
+
+@dataclass(frozen=True)
+class UpdateResult:
+    """What one ``update_item()`` call wrote.
+
+    changed_paths:
+        Every git-tracked file the call rewrote, deduplicated and sorted: the
+        item itself, each item whose ``blocked-by`` referenced the now-closed
+        item, and the parent epic when the terminal-status cascade closed it.
+        Gitignored derived state is filtered out (see
+        ``_is_gitignored_backlog_artifact``).
+    status_changed:
+        Whether ``status`` actually moved. False when the call re-wrote the
+        status the item already had — a re-close. The item file is written
+        either way, because ``updated:`` is bumped unconditionally, so
+        "changed_paths is non-empty" is NOT evidence that anything but the
+        timestamp moved.
+    parent_closed:
+        The parent epic's path when the cascade closed it, else ``None``.
+        Also present in ``changed_paths``; named separately so callers need
+        not re-derive which of the reported paths was the parent.
+    """
+
+    changed_paths: tuple[Path, ...]
+    status_changed: bool
+    parent_closed: Path | None
+
+
 def update_item(
     item_path: Path,
     fields: dict[str, Any],
     backlog_dir: Path,
     session_id: str | None = None,
-) -> None:
+) -> UpdateResult:
     """Update a backlog item's frontmatter fields atomically in place.
 
     Always sets ``updated`` to today. Appends ``status_changed`` or
@@ -355,6 +402,11 @@ def update_item(
             route explicitly through the correct worktree's backlog.
         session_id: Session ID for event attribution. Defaults to
             ``LIFECYCLE_SESSION_ID`` env var or ``"manual"``.
+
+    Returns:
+        An ``UpdateResult`` describing what was written. Reporting only — the
+        write behavior is unchanged, and callers that ignore the return value
+        keep their historic semantics.
     """
     if backlog_dir is None:
         raise TypeError("backlog_dir is required")
@@ -383,13 +435,17 @@ def update_item(
 
     # Write atomically
     atomic_write(item_path, text)
+    written: list[Path] = [item_path]
 
     # Determine new values for event logging
     new_status = fields.get("status")
     new_phase = fields.get("lifecycle_phase")
 
-    # Append events
-    if new_status is not None and str(new_status) != old_status:
+    # Append events. `status_changed` is the same condition that gates the
+    # event — a re-close of an already-complete item is False here even though
+    # the item file was still rewritten (the `updated` bump above).
+    status_changed = new_status is not None and str(new_status) != old_status
+    if status_changed:
         _append_event(
             item_path,
             "status_changed",
@@ -407,11 +463,17 @@ def update_item(
             details={"from": old_phase, "to": str(new_phase)},
         )
 
-    # Cascade for terminal status changes
+    # Cascade for terminal status changes. Both cascades write real state that
+    # a caller staging this close must know about: the dependents whose
+    # `blocked-by` no longer references the closed item, and the parent epic.
+    parent_closed: Path | None = None
     if new_status is not None and str(new_status) in TERMINAL_STATUSES:
-        _remove_uuid_from_blocked_by(item_uuid, item_id, today, backlog_dir)
+        written.extend(
+            _remove_uuid_from_blocked_by(item_uuid, item_id, today, backlog_dir)
+        )
         parent_closed = _check_and_close_parent(item_path, today, backlog_dir)
         if parent_closed:
+            written.append(parent_closed)
             print(f"Parent epic also closed: {parent_closed}")
 
     # Regenerate index (non-fatal)
@@ -426,6 +488,14 @@ def update_item(
             f"WARNING: Index regeneration failed (exit {result.returncode})",
             file=sys.stderr,
         )
+
+    return UpdateResult(
+        changed_paths=tuple(
+            sorted(p for p in set(written) if not _is_gitignored_backlog_artifact(p))
+        ),
+        status_changed=status_changed,
+        parent_closed=parent_closed,
+    )
 
 
 # ---------------------------------------------------------------------------

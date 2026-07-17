@@ -31,7 +31,16 @@ Per-item states (nested in ``results[i]["state"]``):
   closed           — the item was resolved and its status set to complete.
                      ``id`` carries the item's numeric ID; ``parent_closed``
                      is set (true) only when the update cascaded a parent
-                     epic close.
+                     epic close. ``changed_paths`` lists every git-tracked
+                     file the close wrote, project-root-relative and sorted —
+                     the item, any dependent whose ``blocked-by`` referenced
+                     it, and the cascaded parent epic. ``status_changed`` is
+                     false when the item was already complete: the overnight
+                     success path maps ``merged`` → ``status: complete``
+                     before §6b runs, so the common case is a re-close that
+                     moves nothing but the ``updated`` timestamp. Callers
+                     staging this set must read ``changed_paths`` (the files
+                     are rewritten either way), not ``status_changed``.
   no-ticket        — the resolver found no matching item.
   ambiguous        — the resolver found multiple candidates; ``message``
                      carries the same candidate listing
@@ -78,8 +87,6 @@ KNOWN_ITEM_STATES = (
 _CORTEX_BACKLOG = "cortex-backlog"
 _DISABLED_BACKEND = "none"
 
-_PARENT_CLOSED_MARKER = "Parent epic also closed:"
-
 
 class _ItemAction(argparse.Action):
     """Collect repeated ``--item FEATURE=IDENTIFIER`` tokens into an ordered
@@ -105,7 +112,23 @@ class _ItemAction(argparse.Action):
         items.append((feature, identifier))
 
 
-def _close_one(feature: str, identifier: str, backend: str, backlog_dir: Path) -> dict:
+def _rel(path: Path, root: Path) -> str:
+    """Render *path* relative to the project root for the JSON struct.
+
+    Task 10's committer runs git from the root, so root-relative is the form it
+    can stage directly; it also keeps machine-specific absolute paths out of the
+    morning report. A path outside *root* cannot be made relative and is
+    reported absolute rather than dropped — the caller must still see it.
+    """
+    try:
+        return str(path.relative_to(root))
+    except ValueError:
+        return str(path)
+
+
+def _close_one(
+    feature: str, identifier: str, backend: str, backlog_dir: Path, root: Path
+) -> dict:
     """Close one feature's backlog ticket, or report why it wasn't closed."""
     if backend == _DISABLED_BACKEND:
         return {"feature": feature, "state": "skipped-disabled"}
@@ -137,17 +160,16 @@ def _close_one(feature: str, identifier: str, backend: str, backlog_dir: Path) -
     item_path = result.item
     assert item_path is not None  # status="ok" guarantees item is set
 
-    # update_item() prints "Parent epic also closed: <path>" to stdout when
-    # the terminal-status cascade closes a parent epic — captured here rather
-    # than re-deriving the cascade condition, since that logic (all siblings
-    # terminal) already lives in update_item._check_and_close_parent.
-    buf = io.StringIO()
+    # update_item() prints "Parent epic also closed: <path>" for its own CLI
+    # users; swallow that stdout so this verb's contract (exactly one JSON
+    # struct on stdout) survives a cascading close. What was written is read
+    # off the returned UpdateResult, not scraped back out of the print.
     try:
-        with contextlib.redirect_stdout(buf):
+        with contextlib.redirect_stdout(io.StringIO()):
             # Unconditional completion writer: advance lifecycle_phase to
             # ``complete`` in the SAME write so a closed ticket's phase tracks its
             # status rather than freezing at its prior phase (#378 req-5).
-            update_item(
+            written = update_item(
                 item_path,
                 {"status": "complete", "lifecycle_phase": "complete"},
                 backlog_dir,
@@ -155,8 +177,14 @@ def _close_one(feature: str, identifier: str, backend: str, backlog_dir: Path) -
     except Exception as exc:  # noqa: BLE001 — one item's failure must not abort the batch
         return {"feature": feature, "state": "error", "message": repr(exc)}
 
-    entry: dict = {"feature": feature, "state": "closed", "id": _get_item_id(item_path)}
-    if _PARENT_CLOSED_MARKER in buf.getvalue():
+    entry: dict = {
+        "feature": feature,
+        "state": "closed",
+        "id": _get_item_id(item_path),
+        "changed_paths": [_rel(p, root) for p in written.changed_paths],
+        "status_changed": written.status_changed,
+    }
+    if written.parent_closed is not None:
         entry["parent_closed"] = True
     return entry
 
@@ -174,7 +202,7 @@ def close_tickets(
     root = project_root or _resolve_user_project_root()
     backlog_dir = root / "cortex" / "backlog"
     results = [
-        _close_one(feature, identifier, backend, backlog_dir)
+        _close_one(feature, identifier, backend, backlog_dir, root)
         for feature, identifier in items
     ]
     return {"state": "ok", "results": results}
