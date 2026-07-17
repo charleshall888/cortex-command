@@ -65,8 +65,9 @@ composed primitives, mirroring their own CLIs; exit 3 is this verb's own:
   exit 2 — ``sync`` raised ``_Exit2`` (a ``cortex-update-item`` call hit an
            ambiguous slug; its candidate list is already on stderr).
   exit 3 — a fail-loud guard rejected the invocation before any side effect ran
-           (``_GuardRejected``): an unsafe ``--feature`` token, or a resume
-           (``--phase`` != ``none``) of a lifecycle whose dir does not exist.
+           (``_GuardRejected``): an unsafe ``--feature`` token, a resume
+           (``--phase`` != ``none``) of a lifecycle whose dir does not exist, or
+           an entry whose target dir already belongs to a DIFFERENT backlog item.
            These are contract violations of the verb's OWN args + filesystem
            preconditions, so they deliberately do NOT route through the
            ``state: "error"`` channel — that is the exit-0 catch-all for
@@ -96,6 +97,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from cortex_command.backlog import _telemetry
+from cortex_command.backlog.resolve_item import _parse_frontmatter
 from cortex_command.common import (
     CortexProjectRootError,
     _resolve_user_project_root,
@@ -171,6 +173,70 @@ def _reject_missing_lifecycle(feature: str, phase: str, root: Path) -> None:
     )
 
 
+def _parent_uuid(path: Path) -> Optional[str]:
+    """Return *path*'s frontmatter ``uuid``/``parent_backlog_uuid`` scalar, or
+    ``None`` when it is absent, null, or unreadable.
+
+    ``create_index._render`` emits the literal ``null`` for an uuid-less Shape-B
+    index (``create_index.py:112``), which ``yaml.safe_load`` yields as ``None``;
+    the defensive ``"null"`` string arm covers a hand-edited quoted form. Either
+    way the answer is "no uuid recorded" — never a uuid to compare against.
+
+    A read/parse failure is also ``None``: an unresolvable ``--backlog-file`` is
+    already ``create_index``'s exit-1 contract, and a malformed ``index.md``
+    cannot establish that two items DIFFER, which is what the guard must prove
+    before it refuses. Neither is this guard's trip to make.
+    """
+    try:
+        fm = _parse_frontmatter(path)
+    except Exception:  # noqa: BLE001 — OSError | yaml.YAMLError; both mean "cannot compare"
+        return None
+    value = fm.get("uuid", fm.get("parent_backlog_uuid"))
+    if value is None or str(value) in ("", "null"):
+        return None
+    return str(value)
+
+
+# gate-class: hygiene
+def _reject_cross_item_merge(feature: str, backlog_file: str, root: Path) -> None:
+    """Raise ``_GuardRejected`` when ``{root}/cortex/lifecycle/{feature}/index.md``
+    already records a DIFFERENT backlog item than *backlog_file* names.
+
+    Closes the silent cross-ticket merge that ``create_index``'s skip-if-exists
+    (``create_index.py:164-165``) makes reachable once derived-slug identity lands:
+    two items whose titles truncate to the same 6-word slug would otherwise land
+    in one dir, the second entry silently adopting the first's index. The dir is
+    left byte-identical — the guard only reads.
+
+    The comparison is on the **uuid**, never the filename: a uuid is immutable
+    across renames and renumbering, so it is the only field that still answers
+    "same ticket?" after a title edit — the very drift that motivates the
+    derived-slug pin.
+
+    **Inert by design when *backlog_file* is ``""``** (the ``no_match`` /
+    ad-hoc Shape-B entry): there is no item to collide on, so there is nothing
+    to compare and the check is skipped. A stated coverage limit, not an
+    oversight.
+    """
+    if not backlog_file:
+        return
+    existing = _parent_uuid(root / "cortex" / "lifecycle" / feature / "index.md")
+    if existing is None:
+        return
+    incoming = _parent_uuid(root / "cortex" / "backlog" / Path(backlog_file).name)
+    if incoming is None or incoming == existing:
+        return
+    raise _GuardRejected(
+        f"lifecycle {feature!r} already belongs to backlog item "
+        f"{existing!r}, but --backlog-file {Path(backlog_file).name!r} is item "
+        f"{incoming!r}. Entering would silently merge two tickets into one "
+        "lifecycle. Give the new item its own --feature slug (two titles "
+        "truncating to the same slug is the usual cause), or re-run "
+        "cortex-lifecycle-next and thread its resolved --feature verbatim if "
+        "the identity was mis-threaded. Changing nothing."
+    )
+
+
 def _backlog_status(backlog_file: str, root: Path) -> str:
     """Report the pre-entry backlog status (``no_match``/``already_complete``/
     ``open``) WITHOUT ever auto-closing.
@@ -223,14 +289,17 @@ def enter(
     pre-verb "completed item creates no artifacts" carve-out. The verb never
     decides on its own; the acknowledgement is caller-passed.
 
-    Both fail-loud guards run FIRST — before ``_backlog_status``'s read, before
-    the ``needs-decision`` short-circuit, and before ``create_index`` — so an
-    unsafe token never reaches a filesystem op, and a rejected invocation is a
+    All three fail-loud guards run FIRST — before ``_backlog_status``'s read,
+    before the ``needs-decision`` short-circuit, and before ``create_index`` — so
+    an unsafe token never reaches a filesystem op, and a rejected invocation is a
     ``_GuardRejected`` (→ exit 3) rather than a ``needs-decision`` envelope that
-    a caller would read as a routine Close/Continue prompt.
+    a caller would read as a routine Close/Continue prompt. ``_reject_unsafe_slug``
+    stays strictly first: the two guards behind it build paths from *feature*, so
+    the token must be proven safe before either reads the filesystem.
     """
     _reject_unsafe_slug(feature)
     _reject_missing_lifecycle(feature, phase, root)
+    _reject_cross_item_merge(feature, backlog_file, root)
 
     backlog_status = _backlog_status(backlog_file, root)
 
@@ -280,8 +349,9 @@ def _build_parser() -> argparse.ArgumentParser:
             "{state, backlog_status, ...} JSON struct on stdout. All "
             "discriminants are caller-passed (ADR-0019); exit 1/2 propagate the "
             "composed primitives' contract failures, exit 3 is a fail-loud guard "
-            "rejection (unsafe --feature, or a resume of a lifecycle that does "
-            "not exist), else exit 0."
+            "rejection (unsafe --feature, a resume of a lifecycle that does not "
+            "exist, or a target dir owned by a different backlog item), else "
+            "exit 0."
         ),
     )
     parser.add_argument("--feature", required=True, metavar="SLUG", help="Lifecycle feature slug.")

@@ -12,12 +12,14 @@ CLI contract. Root resolution uses the env-var flavor
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
 import pytest
 
 from cortex_command.lifecycle import enter as en
+from cortex_command.lifecycle.create_index import create_index as real_create_index
 from cortex_command.lifecycle.protocol import PROTOCOL_VERSION
 
 
@@ -335,6 +337,86 @@ def test_grandfathered_numeric_lifecycle_passes_guards(
     assert r["state"] == "ready"
 
 
+def test_entering_a_dir_owned_by_a_different_item_exits_3_and_changes_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
+) -> None:
+    """R5: item A owns the dir; entering it with item B's --backlog-file is a
+    silent cross-ticket merge (create_index would skip-if-exists and B would
+    adopt A's index). Fail loud with exit 3, leaving A's index.md byte-identical.
+
+    The fixture index.md is written by the REAL create_index — the same producer
+    whose ``parent_backlog_uuid`` frontmatter the guard reads in production —
+    rather than by a hand-rolled lookalike that could drift from it.
+    """
+    monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
+    _write_backlog(tmp_path, "380-item-a.md", "refined", uuid="aaaaaaaa-1111")
+    _write_backlog(tmp_path, "381-item-b.md", "refined", uuid="bbbbbbbb-2222")
+    real_create_index("shared-slug", "380-item-a.md", tmp_path)
+    index = tmp_path / "cortex" / "lifecycle" / "shared-slug" / "index.md"
+    before = hashlib.sha256(index.read_bytes()).hexdigest()
+
+    def _forbidden(*args, **kwargs):
+        raise AssertionError("a composed primitive ran despite a guard rejection")
+
+    monkeypatch.setattr(en, "create_index", _forbidden)
+    monkeypatch.setattr(en, "sync", _forbidden)
+    monkeypatch.setattr(en.init_ensure, "main", _forbidden)
+    rc = en.main([
+        "--feature", "shared-slug",
+        "--session-id", "X",
+        "--backend", "cortex-backlog",
+        "--phase", "none",
+        "--backlog-file", "381-item-b.md",
+    ])
+    assert rc == 3
+    err = capsys.readouterr().err
+    assert err.startswith("cortex-lifecycle-enter: ")
+    assert "already belongs to backlog item" in err
+    assert hashlib.sha256(index.read_bytes()).hexdigest() == before
+
+
+def test_reentering_a_dir_owned_by_the_same_item_passes_the_guard(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R5's non-fire arm: a matching uuid is the ordinary resume — the guard must
+    not block a lifecycle from re-entering its own dir."""
+    _patch_primitives(monkeypatch, ensure_code=0)
+    _write_backlog(tmp_path, "380-item-a.md", "refined", uuid="aaaaaaaa-1111")
+    real_create_index("own-slug", "380-item-a.md", tmp_path)
+    r = en.enter(
+        feature="own-slug",
+        session_id="s",
+        backend="cortex-backlog",
+        phase="plan",
+        backlog_file="380-item-a.md",
+        root=tmp_path,
+    )
+    assert r["state"] == "ready"
+
+
+def test_null_parent_uuid_with_empty_backlog_file_passes_the_guard(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R5 is inert by design for the ad-hoc (Shape B / no_match) entry: the index
+    records ``parent_backlog_uuid: null`` and --backlog-file is "", so there is
+    no item to collide on. A stated coverage limit, pinned so the literal string
+    ``null`` is never mistaken for a uuid to compare."""
+    _patch_primitives(monkeypatch, ensure_code=0)
+    real_create_index("adhoc-slug", "", tmp_path)
+    index = tmp_path / "cortex" / "lifecycle" / "adhoc-slug" / "index.md"
+    assert "parent_backlog_uuid: null" in index.read_text(encoding="utf-8")
+    assert en._parent_uuid(index) is None
+    r = en.enter(
+        feature="adhoc-slug",
+        session_id="s",
+        backend="none",
+        phase="plan",
+        backlog_file="",
+        root=tmp_path,
+    )
+    assert r["state"] == "ready"
+
+
 # ---------------------------------------------------------------------------
 # backlog_status
 # ---------------------------------------------------------------------------
@@ -355,14 +437,14 @@ def test_backlog_status_no_match_on_empty_backlog_file(
     assert r["backlog_status"] == "no_match"
 
 
-def _write_backlog(root: Path, name: str, status: str) -> None:
+def _write_backlog(root: Path, name: str, status: str, uuid: str = "abc-123") -> None:
     path = root / "cortex" / "backlog" / name
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         "---\n"
         f"title: A ticket\n"
         f"status: {status}\n"
-        "uuid: abc-123\n"
+        f"uuid: {uuid}\n"
         "---\n\nBody\n",
         encoding="utf-8",
     )
