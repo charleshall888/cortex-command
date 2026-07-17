@@ -32,8 +32,10 @@ A gating-policy refinement, not a mechanism change. Distinct from #382 (which cu
 
 ## Integration
 
-- **Gated on #381.** The evidence here is n=1 and should not be acted on from a single anecdote — exactly the failure mode #381 exists to end. Decide from per-phase telemetry (dispatch count vs A-class yield across real runs), not from this ticket story.
-- Sibling: #382 (payload-path efficiency), #340 (resident-prose efficiency).
+- **Gated on #392** (`cortex-session-tokens`), which supersedes #381 — #381's own premise and figures measured false; see its superseded box. The evidence here is n=1 and should not be acted on from a single anecdote. Decide from per-phase telemetry (dispatch count vs A-class yield across real runs), not from this ticket's story. **This ticket's discipline was correct and is the model for the others** — it is the only one of the three that refused to act on its own anecdote.
+- Sibling: #382 (rescoped 2026-07-16 to a correctness fix — the reviewer envelope has no field for probe/measurement evidence; its token framing was worth ~5%), #340 (resident-prose efficiency), #389 (bound dispatched agents).
+- **Verified 2026-07-16 — every claim in this ticket holds.** Gate conditions are byte-identical at `plan.md:105` and `specify.md:128`. `angle-menu.md` has **no criticality or phase matrix at all** — the count keys only off artifact length ("< 10 lines: minimum 2 angles. Otherwise: target 3-4 angles"), so criticality gates only *whether* review runs, never *how wide*. The "same width at both boundaries" claim is therefore true, though by a different mechanism than the ticket implies.
+- The adjacent question — whether to cut reviewer count generally — is open and worth ~4.7% of total spend. It is not settled by doctrine; the same telemetry that answers this ticket answers that one.
 
 ## Edges
 

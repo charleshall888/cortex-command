@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 32f3d2d2-76b7-4f05-8458-748e65ea5d35
 title: Measure runtime agent payload accumulation — the cost model only sees resident prose
-status: backlog
+status: superseded
 priority: high
 type: feature
 created: 2026-07-16
@@ -11,6 +11,18 @@ tags: ['telemetry', 'token-efficiency', 'cost-model']
 areas: ['lifecycle', 'report']
 ---
 ## Why
+
+> **SUPERSEDED 2026-07-16 by #392 (`cortex-session-tokens`). Do not work this ticket. Read this box, then #392.**
+>
+> The instinct — measure before ranking — was exactly right, and #392 carries it forward. Every specific below is wrong:
+>
+> - **The core premise is false.** "The harness cannot report its own runtime cost" — it can, and always could. Every session transcript at `~/.claude/projects/<repo>/<session>.jsonl` carries a complete per-request `usage` object (`input_tokens`, `output_tokens`, `cache_read_input_tokens`, `cache_creation_input_tokens` with a per-TTL `cache_creation` breakdown) plus `model` and `attributionSkill`; subagents live in `<session>/subagents/*.jsonl`. Exact billing is reconstructible today. This ticket proposes reconstructing *estimates* from `subagent_tokens` — the exact data was already on disk.
+> - **Its own numbers are the failure mode it was written to end.** The estimated split ("~150k agent reports returning verbatim, ~50k dispatch prompts") measures at **57k / 42.5k** — 2.6x over on the figure the whole ticket rests on. It opens by criticising an audit done "using a model recollection", and is itself a model recollection.
+> - **The Edges claim is backwards.** "Prompt caching makes resident tokens cheap in dollars but does nothing for attention-dilution or the context ceiling" — cache-read is **61% of cost-weighted** orchestrator spend (97.6% of raw tokens). Caching *discounts* carry ~10x; it does not remove it. Measured cache hit rate is already 98.1% — there is no caching win left to chase.
+> - **The metric is wrong.** Return-payload tokens is not the driver. The law is `cache_read ∝ turns^1.68` (r=0.98, n=126 sessions) — cost is the *integral of context over turns*, so the lever is turn count and session length, not payload size.
+> - **Its foreclosure of phase-isolation is contradicted by evidence.** "The fix is **not** re-opening the L/XL context-architecture rewrite" — but sessions already span 3+ lifecycle phases, the orchestrator already re-reads `spec.md`/`plan.md` from disk in 24% of late-session tool calls (it does not trust its own memory), human steering is 2.3% of turns, and a fresh session costs ~50.7k to re-cache the floor (~0.72% of one session's read). Splitting is worth **37–61%** and is not an architecture project — the maintainer already does it by habit. The `resume` routing state (`SKILL.md:42`, `resolve.py:216`) already serves it phase-keyed.
+>
+> **The one durable lesson**, recorded here because it generalises: across this investigation, *every* number read straight from `usage` held, and *every* number requiring the analyst to classify content (bucket a command, attribute a verb, infer thinking) was wrong — including four produced while auditing this ticket. #392 is scoped to read `usage` and classify nothing, deliberately.
 
 Every measurement tool in this repo points at **static/resident** surface: `cortex-count-tokens` counts documentation tokens, `cortex-measure-l1-surface` measures skill `description:`/`when_to_use:` bytes, `cortex-invocation-report` aggregates *which* `bin/cortex-*` scripts ran. Nothing observes the **transient** payload that dispatched agents send back into the orchestrator context.
 
