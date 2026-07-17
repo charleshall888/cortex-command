@@ -58,8 +58,8 @@ def _run(argv, capsys):
     [
         ("review", "low", "sonnet"),
         ("review", "medium", "sonnet"),
-        ("review", "high", "opus"),
-        ("review", "critical", "opus"),
+        ("review", "high", "sonnet"),
+        ("review", "critical", "sonnet"),
         ("builder", "low", "sonnet"),
         ("builder", "medium", "sonnet"),
         ("builder", "high", "opus"),
@@ -139,17 +139,26 @@ def test_unknown_criticality_exits_2(capsys):
 
 
 def test_role_threshold_discriminator_at_high(capsys):
-    """At high, orchestrator-fix=sonnet but review=opus — the role threshold."""
-    code, out, _ = _run(["--role", "orchestrator-fix", "--criticality", "high"], capsys)
-    assert code == 0 and out == "sonnet\n", f"orchestrator-fix@high: got {out!r}"
+    """At high, review/orchestrator-fix=sonnet but builder=opus — the role threshold."""
+    code, out, _ = _run(["--role", "builder", "--criticality", "high"], capsys)
+    assert code == 0 and out == "opus\n", f"builder@high: got {out!r}"
     code, out, _ = _run(["--role", "review", "--criticality", "high"], capsys)
-    assert code == 0 and out == "opus\n", f"review@high: got {out!r}"
+    assert code == 0 and out == "sonnet\n", f"review@high: got {out!r}"
 
 
-@pytest.mark.parametrize("role", ["orchestrator-fix", "review", "builder"])
+@pytest.mark.parametrize("role", ["orchestrator-fix", "builder"])
 def test_highest_stakes_critical_cells_are_opus(role, capsys):
     code, out, _ = _run(["--role", role, "--criticality", "critical"], capsys)
     assert code == 0 and out == "opus\n", f"{role}@critical: got {out!r}"
+
+
+def test_review_is_sonnet_at_every_criticality(capsys):
+    """Reviewer agents route to sonnet uniformly (requirements ruling 2026-07-16):
+    escalation buys reviewer count and the opus synthesizer, never a
+    per-reviewer model upgrade."""
+    for criticality in CRITICALITY_COLUMNS:
+        code, out, _ = _run(["--role", "review", "--criticality", criticality], capsys)
+        assert code == 0 and out == "sonnet\n", f"review@{criticality}: got {out!r}"
 
 
 # ---------------------------------------------------------------------------
@@ -167,9 +176,14 @@ def _expected_golden_matrix():
     was removed, so freezing is safe. Transcribed from the spec's stated cells,
     NOT copied from the module's ``_LIFECYCLE_MATRIX`` — a same-module copy would
     degrade the assertion to a circular module == module.
+
+    The ``review`` row was re-set to uniform sonnet by the 2026-07-16
+    requirements ruling (cortex/requirements/project.md, "Critical-review gates
+    at spec only": reviewers route to sonnet; the synthesizer stays opus),
+    superseding spec #334 for that row only.
     """
     return {
-        "review": {"low": "sonnet", "medium": "sonnet", "high": "opus", "critical": "opus"},
+        "review": {"low": "sonnet", "medium": "sonnet", "high": "sonnet", "critical": "sonnet"},
         "builder": {"low": "sonnet", "medium": "sonnet", "high": "opus", "critical": "opus"},
         "orchestrator-fix": {
             "low": "sonnet",

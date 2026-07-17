@@ -50,4 +50,4 @@ cortex-critical-review-write-residue --feature "$FEATURE" <<< "$PAYLOAD_JSON"
 
 - Zero B-class findings → no file, no note.
 - Synthesis failure → write `synthesis_status: "failed"` with B-class findings from Step 2c reviewers' envelopes.
-- Path-argument and auto-trigger invocations (specify.md §3b / plan.md) both obey session-bound resolution — the argument path does not re-bind `{feature}`.
+- Path-argument and auto-trigger invocations (specify.md §3b) both obey session-bound resolution — the argument path does not re-bind `{feature}`.

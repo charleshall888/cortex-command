@@ -1,10 +1,10 @@
 # Critical Review Gate
 
-Shared skip-path protocol for the §3b Critical Review gate in Specify and Plan phases — consulted after the inline command pair has run, only when the skip branch applies.
+Skip-path protocol for Specify's §3b Critical Review gate — consulted after the inline state read has run, only when the skip branch applies. The gate runs at spec only; the plan phase dispatches no critical-review (the end-of-implementation review is the backstop).
 
 ## Corrupted State Rule
 
-If either `cortex-lifecycle-state` read contains `"corrupted": true`, follow the canonical corrupted-state rule in `${CLAUDE_SKILL_DIR}/references/criticality-matrix.md` — treat the feature as requiring review rather than skipping.
+If the `cortex-lifecycle-state` read contains `"corrupted": true`, follow the canonical corrupted-state rule in `${CLAUDE_SKILL_DIR}/references/criticality-matrix.md` — treat the feature as requiring review rather than skipping.
 
 ## Non-Local Seed-Tier Rule
 
@@ -13,5 +13,4 @@ Same "untrustworthy tier → review, don't skip" posture for a second seed-tier 
 ## Run/Skip Matrix
 
 - **Skip-silent** when `tier = simple` (any criticality): proceed directly to user approval, no event logged.
-- **Log+skip** when `tier = complex` AND `criticality = low`: append the event below so the skip rate is observable, then proceed to user approval: `cortex-lifecycle-event critical-review-skipped --feature <name> --phase <phase> --tier complex --criticality low`
-  Substitute `<phase>` with the active phase (`specify` or `plan`).
+- **Log+skip** when `tier = complex` AND `criticality = low`: append the event below so the skip rate is observable, then proceed to user approval: `cortex-lifecycle-event critical-review-skipped --feature <name> --phase specify --tier complex --criticality low`

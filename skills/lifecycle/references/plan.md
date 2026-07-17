@@ -93,17 +93,6 @@ After writing `plan.md`, register the artifact: `cortex-lifecycle-register-artif
 
 Before user presentation, read and follow `${CLAUDE_SKILL_DIR}/references/orchestrator-review.md` (shared protocol) plus its Post-Plan checklist `${CLAUDE_SKILL_DIR}/references/orchestrator-checklist-plan.md` for the `plan` phase. It must pass before approval.
 
-### 3b. Critical Review
-
-After orchestrator review passes, read tier and criticality (rules: `${CLAUDE_SKILL_DIR}/references/criticality-matrix.md` §Reading lifecycle state):
-
-```bash
-cortex-lifecycle-state --feature {feature} --field tier
-cortex-lifecycle-state --feature {feature} --field criticality
-```
-
-**Run** when `tier = complex` AND `criticality ∈ {medium, high, critical}`: invoke the `critical-review` skill with the plan artifact; present its synthesis before approval. Otherwise read and follow `${CLAUDE_SKILL_DIR}/references/critical-review-gate.md` for the `plan` phase.
-
 ### 4. User Approval (merged branch/dispatch surface)
 
 This surface folds the Implement branch/dispatch selection into plan approval — each branch option implies plan approval. Present the plan summary (overview + task list) plus **Produced** (one-line artifact summary) and **Trade-offs** (alternatives considered + rationale).

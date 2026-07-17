@@ -12,8 +12,7 @@ Weight by the loaded domain: games, mobile, and workflow/tooling (this repo's us
 
 ## Angle Count
 
-- If the artifact is very short (< 10 lines): minimum 2 angles.
-- Otherwise: target 3-4 angles.
+Default **2 angles**. Escalate to 3-4 only when criticality is `high`/`critical`, or the artifact introduces claims its inputs lacked (mechanisms, measured figures, or verification approaches not present in the spec/research it derives from).
 
 ## Acceptance Criteria
 

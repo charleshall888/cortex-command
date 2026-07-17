@@ -39,19 +39,23 @@ from typing import List, Optional
 # The Lifecycle Matrix: (role, criticality) -> model, for the tier-keyed roles.
 #
 # Load-bearing: this is the discriminator that makes --role mandatory. At
-# `high`, `review`/`builder` resolve to `opus` while `orchestrator-fix`
-# resolves to `sonnet` — a deliberate role threshold (both correct), not drift.
+# `high`, `builder` resolves to `opus` while `review`/`orchestrator-fix`
+# resolve to `sonnet` — a deliberate role threshold (both correct), not drift.
 # Because the model differs by role at the same criticality, criticality alone
 # cannot determine the model; the role is required. The full design rationale
-# (parallel→sonnet, exploration→haiku, reviews-follow-criticality, etc.) lives
-# in docs/internals/sdk.md.
+# (parallel→sonnet, exploration→haiku, etc.) lives in docs/internals/sdk.md.
+#
+# `review` is deliberately uniform: reviewer agents route to sonnet at every
+# criticality (requirements ruling 2026-07-16 — escalation buys reviewer count
+# and the opus synthesizer, not a per-reviewer model). The row stays tier-keyed
+# so the call-site contract (--criticality required) is stable.
 #
 # `competing-plan` is critical-gated: it only dispatches at `critical`, so the
 # low/medium/high cells are intentionally absent (resolving one is a wiring
 # error → exit 2), not filled with a default.
 # ---------------------------------------------------------------------------
 _LIFECYCLE_MATRIX: dict[str, dict[str, str]] = {
-    "review": {"low": "sonnet", "medium": "sonnet", "high": "opus", "critical": "opus"},
+    "review": {"low": "sonnet", "medium": "sonnet", "high": "sonnet", "critical": "sonnet"},
     "builder": {"low": "sonnet", "medium": "sonnet", "high": "opus", "critical": "opus"},
     "orchestrator-fix": {
         "low": "sonnet",

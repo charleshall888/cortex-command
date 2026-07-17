@@ -150,7 +150,7 @@ The durable rationale behind the routing choices, worded version-agnostically:
 - **Judgment dispatches inherit the parent, deliberately.** The research **adversarial** wave, **critical-review**'s parallel reviewers, and the **clarify-critic** are intentionally left inheriting the parent model rather than routed to `searcher` — they are judgment, not gather, and routing them to Sonnet would be a downgrade. This judgment-inherit contract is recorded here (and in ADR-0023) so a future editor of any of those surfaces finds the omission deliberate, not an oversight.
 - **Exploration → haiku unless high/critical.** Read-only pattern discovery is Haiku's sweet spot; upgrade to sonnet at high/critical, where the findings feed all downstream phases and warrant more nuanced analysis.
 - **Complex + low/medium → sonnet (not opus).** Sonnet's faster latency and lower over-engineering tendency make it the better default at standard criticality; reserve opus for when criticality demands maximum quality.
-- **Reviews follow criticality, not complexity.** Review quality depends on how much the bugs matter, not how many files changed — high/critical features warrant opus review regardless of implementation complexity.
+- **Reviewers route to sonnet; synthesis buys the depth.** The lifecycle `review` role is uniform sonnet at every criticality (requirements ruling 2026-07-16): escalation raises reviewer count, and the opus synthesizer carries the judgment — never a per-reviewer model upgrade.
 
 Two load-bearing model-profile facts not owned elsewhere: Opus has a **128K max output token** ceiling, and Claude Code's built-in **Explore agent uses Haiku**.
 
