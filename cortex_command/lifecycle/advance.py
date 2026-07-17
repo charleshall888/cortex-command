@@ -33,7 +33,9 @@ lands.
 Refusals name the missing evidence, the typed resume arm when one exists, AND the
 sanctioned override: the documented out-of-band hand-append is
 ``cortex-lifecycle-event log`` (operator req 7). advance refuses on a from-state
-gate mismatch or an event-backed pause it may not cross.
+gate mismatch or an event-backed pause it may not cross — a pause's OWNING verb
+(the arm recording the decision the pause waits for, e.g. ``plan-decision`` for
+``plan-approval``) crosses its own pause; that crossing is the typed resume.
 
 HISTORY (#397): between 2026-07-11 and 2026-07-17 this body ran inside a
 two-phase claim/commit locking primitive that bracketed the legacy rows with an
@@ -128,6 +130,18 @@ _PAUSE_TYPED_RESUMES: dict[str, str] = {
         "cortex-lifecycle-advance plan-decision --feature <slug> "
         "--decision {branch-mode-approved,wait-approved,cancelled,revise}"
     ),
+}
+
+# The verb whose decision an enforced pause is WAITING FOR, per pause slug: a
+# plan-approval pause exists to hold the feature until the operator's plan
+# decision is relayed, so the plan-decision arm that records that decision may
+# cross its own pause — otherwise the typed resume the refusal recommends
+# would itself be refused, and the only way out of a pause would be the
+# untyped hand-append (the circularity #400 finding 3 exists to close). Every
+# OTHER verb still refuses; the pause keeps doing the one job it has (blocking
+# advances that would skip the consent gate).
+_PAUSE_OWNING_VERBS: dict[str, str] = {
+    "plan-approval": "plan-decision",
 }
 
 # Merge-consent transitions (Task 14b / hazard 5): transition ids whose consent to
@@ -235,17 +249,14 @@ def _last_significant(rows: List[dict]) -> Optional[dict]:
     return last
 
 
-def _pause_refusal(rows: List[dict]) -> Optional[dict]:
-    """Return a refusal envelope when an EVENT-BACKED pause blocks a crossing advance.
+def _active_enforced_pause(rows: List[dict]) -> Optional[dict]:
+    """Return ``{slug, kind}`` when the last state-significant row is an active
+    ``feature_paused`` of an enforcement-bearing kind, else None.
 
-    Refuses iff the last state-significant row is an active ``feature_paused`` whose
-    kind is enforcement-bearing (:data:`_ENFORCED_PAUSE_KINDS`). A kind-absent
-    legacy row fails closed to the most-restrictive kind, matching the reducer
-    (``common.MOST_RESTRICTIVE_PAUSE_KIND``), so an under-specified pause is still
-    enforced. Returns None for a describe-only kind (``config-conditional`` /
-    ``question``) — those never refuse (R12 / hazard 10). A retry of the advance
-    that authored the active pause never reaches this check: its emissions are all
-    already present, so it short-circuits as a replay first.
+    A kind-absent legacy row fails closed to the most-restrictive kind, matching
+    the reducer (``common.MOST_RESTRICTIVE_PAUSE_KIND``), so an under-specified
+    pause is still enforced. A describe-only kind (``config-conditional`` /
+    ``question``) yields None — those never refuse (R12 / hazard 10).
     """
     last = _last_significant(rows)
     if last is None or last.get("event") != "feature_paused":
@@ -254,8 +265,26 @@ def _pause_refusal(rows: List[dict]) -> Optional[dict]:
     if not (isinstance(kind, str) and kind in tt.PAUSE_KINDS):
         kind = "relayed-consent"  # fail closed, mirroring the reducer default
     if kind not in _ENFORCED_PAUSE_KINDS:
-        return None  # judgment/config-conditional pause — describe-only, never refuse
-    slug = last.get("slug", "<unslugged>")
+        return None
+    return {"slug": last.get("slug", "<unslugged>"), "kind": kind}
+
+
+def _pause_refusal(rows: List[dict], verb: str) -> Optional[dict]:
+    """Return a refusal envelope when an EVENT-BACKED pause blocks a crossing advance.
+
+    Refuses iff :func:`_active_enforced_pause` finds one AND *verb* is not the
+    pause's owning verb (:data:`_PAUSE_OWNING_VERBS`) — the owning verb records
+    the very decision the pause is waiting for, so it crosses; refusing it too
+    would make the pause escapable only via the untyped hand-append. A retry of
+    the advance that authored the active pause never reaches this check: its
+    emissions are all already present, so it short-circuits as a replay first.
+    """
+    pause = _active_enforced_pause(rows)
+    if pause is None:
+        return None
+    slug, kind = pause["slug"], pause["kind"]
+    if _PAUSE_OWNING_VERBS.get(slug) == verb:
+        return None  # the pause's own decision arm — crossing it IS the resume
     refusal = {
         "state": "refused",
         "reason": (
@@ -924,8 +953,9 @@ def advance(
             "replay": "already-emitted", "advanced": True, "emitted": [],
         }
 
-    # Pause-scoping pre-check (R12 / hazard 10): refuse to cross an event-backed pause.
-    pause = _pause_refusal(rows)
+    # Pause-scoping pre-check (R12 / hazard 10): refuse to cross an event-backed
+    # pause — unless *verb* is the pause's owning decision arm (the typed resume).
+    pause = _pause_refusal(rows, verb)
     if pause is not None:
         pause.update({"feature": feature, "verb": verb, "from_state": effective_from,
                       "to_state": to_state})
@@ -938,22 +968,35 @@ def advance(
     # flips those checkboxes *before* §4 calls the implement-transition verb,
     # gating on it made the implement->review transition unfireable by
     # construction — its precondition was its own refusal condition.
+    #
+    # Paused suffix carve-out: an actively paused feature resolves to
+    # "<state>-paused" while the advance contract names the bare state. The
+    # suffixed phase satisfies the gate ONLY for the crossing the pause check
+    # just authorized (the owning verb's typed resume) — for every other
+    # caller the mismatch still refuses.
     phase = resolve_lifecycle_phase(resolved_log.parent).get("phase")
     if phase != effective_from:
-        return {
-            "state": "refused", "feature": feature, "verb": verb,
-            "from_state": effective_from, "to_state": to_state,
-            "refusal": "gate-mismatch",
-            "reason": (
-                f"from_state gate: detected phase {phase!r} does not match "
-                f"expected from_state {effective_from!r}"
-            ),
-            "missing_evidence": (
-                f"the feature at from_state {effective_from!r} "
-                f"(detected {phase!r})"
-            ),
-            "sanctioned_override": _SANCTIONED_OVERRIDE,
-        }
+        active_pause = _active_enforced_pause(rows)
+        crossing_own_pause = (
+            phase == f"{effective_from}-paused"
+            and active_pause is not None
+            and _PAUSE_OWNING_VERBS.get(active_pause["slug"]) == verb
+        )
+        if not crossing_own_pause:
+            return {
+                "state": "refused", "feature": feature, "verb": verb,
+                "from_state": effective_from, "to_state": to_state,
+                "refusal": "gate-mismatch",
+                "reason": (
+                    f"from_state gate: detected phase {phase!r} does not match "
+                    f"expected from_state {effective_from!r}"
+                ),
+                "missing_evidence": (
+                    f"the feature at from_state {effective_from!r} "
+                    f"(detected {phase!r})"
+                ),
+                "sanctioned_override": _SANCTIONED_OVERRIDE,
+            }
 
     # Consent cross-check seam (Task 14b) — before any emission.
     objection = _consent_cross_check(

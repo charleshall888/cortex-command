@@ -340,8 +340,8 @@ def test_refusal_on_gate_mismatch_names_evidence_and_override(tmp_path: Path) ->
 
 
 def test_advance_refuses_to_cross_event_backed_pause(tmp_path: Path) -> None:
-    """An active feature_paused of an enforced kind (relayed-consent) blocks a
-    crossing advance; the refusal names the pause, the TYPED resume arm for a
+    """An active feature_paused of an enforced kind (relayed-consent) blocks any
+    NON-owning verb; the refusal names the pause, the TYPED resume arm for a
     slug that has one (#400 — the hand-append stays the fallback, never the
     recommendation), AND the sanctioned override."""
     fd = _feature_dir(tmp_path)
@@ -350,24 +350,51 @@ def test_advance_refuses_to_cross_event_backed_pause(tmp_path: Path) -> None:
         {"event": "feature_paused", "feature": "feat", "slug": "plan-approval",
          "kind": "relayed-consent"},
     ])
-    r = adv.advance(verb="plan-decision", feature="feat",
-                    decision="branch-mode-approved", dispatch_choice="trunk",
-                    from_state="plan", log_path=_log(fd))
+    r = adv.advance(verb="implement-transition", feature="feat", mode="batch",
+                    batch=0, tasks=[1], from_state="implement", log_path=_log(fd))
     assert r["state"] == "refused"
     assert r["pause"]["kind"] == "relayed-consent"
     assert "plan-approval" in r["missing_evidence"]
     assert "cortex-lifecycle-advance plan-decision" in r["typed_resume"]
     assert "cortex-lifecycle-event log" in r["sanctioned_override"]
-    assert _names(fd).count("feature_paused") == 1  # refused before any emission
+    assert "batch_dispatch" not in _names(fd)  # refused before any emission
+
+
+def test_owning_verb_resumes_through_its_own_pause(tmp_path: Path) -> None:
+    """The typed resume the refusal recommends must actually work: the pause's
+    owning verb (plan-decision for plan-approval) crosses its own pause,
+    supersedes it with the routed transition, and the gate accepts the
+    '-paused' phase suffix for exactly that crossing (#400 finding 3 — without
+    this the only way out of a pause is the untyped hand-append the refusal is
+    supposed to demote)."""
+    fd = _feature_dir(tmp_path)
+    _plan_phase(fd)
+    _seed(fd, [
+        {"ts": "t", "event": "phase_transition", "feature": "feat",
+         "from": "specify", "to": "plan"},
+        {"ts": "t", "event": "plan_approved", "feature": "feat",
+         "dispatch_choice": "wait"},
+        {"ts": "t", "event": "feature_paused", "feature": "feat",
+         "slug": "plan-approval", "kind": "relayed-consent"},
+    ])
+    r = adv.advance(verb="plan-decision", feature="feat",
+                    decision="branch-mode-approved", dispatch_choice="trunk",
+                    from_state="plan", log_path=_log(fd))
+    assert r["state"] == "branch-mode-approved" and r["advanced"] is True
+    assert r["emitted"] == ["phase_transition"]  # plan_approved probe: already present
+    # The pause is superseded — the feature resolves to implement, unpaused.
+    from cortex_command.common import resolve_lifecycle_phase
+    assert resolve_lifecycle_phase(fd)["phase"] == "implement"
 
 
 def test_pause_refusal_without_typed_arm_omits_typed_resume(tmp_path: Path) -> None:
     """A pause slug with no typed verb arm carries no typed_resume — only the
-    generic hand-append fallback."""
-    r = adv._pause_refusal([
+    generic hand-append fallback — and no owning verb, so nothing crosses it."""
+    rows = [
         {"event": "feature_paused", "feature": "feat", "slug": "phase-exit",
          "kind": "phase-exit-wait"},
-    ])
+    ]
+    r = adv._pause_refusal(rows, "plan-decision")
     assert r is not None and "typed_resume" not in r
     assert "cortex-lifecycle-event log" in r["sanctioned_override"]
 
@@ -393,11 +420,13 @@ def test_advance_does_not_refuse_on_describe_only_pause_kind(tmp_path: Path) -> 
     # Decision-level: an ACTIVE config-conditional pause is not a refusal.
     active_config = [{"event": "feature_paused", "feature": "feat",
                       "slug": "some-conditional", "kind": "config-conditional"}]
-    assert adv._pause_refusal(active_config) is None
-    # ...whereas an active enforced pause IS a refusal (the discriminator).
+    assert adv._pause_refusal(active_config, "spec-approve") is None
+    # ...whereas an active enforced pause IS a refusal (the discriminator) for
+    # any verb that does not own the pause slug.
     active_enforced = [{"event": "feature_paused", "feature": "feat",
                         "slug": "plan-approval", "kind": "relayed-consent"}]
-    assert adv._pause_refusal(active_enforced) is not None
+    assert adv._pause_refusal(active_enforced, "spec-approve") is not None
+    assert adv._pause_refusal(active_enforced, "plan-decision") is None  # owning verb
 
     # End-to-end: a config-conditional pause superseded by a later transition (so the
     # feature is advanceable, detect == 'plan') never blocks advance.
