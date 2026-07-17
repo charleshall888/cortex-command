@@ -404,6 +404,10 @@ check-skill-path-audit:
 measure-l1-surface:
     bin/cortex-measure-l1-surface
 
+# Report the harness's own runtime token cost from session transcripts (usage-only, classifies nothing)
+session-tokens *ARGS:
+    bin/cortex-session-tokens {{ARGS}}
+
 # Audit the events registry for stale deprecation rows or missing owners (R5 audit mode, off critical path)
 check-events-registry-audit:
     bin/cortex-check-events-registry --audit

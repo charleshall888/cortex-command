@@ -2,14 +2,16 @@
 schema_version: "1"
 uuid: 453fa70e-0737-4245-b846-3faa03732bf7
 title: 'Build cortex-session-tokens: read usage, classify nothing (corrects #381)'
-status: backlog
+status: complete
 priority: low
 type: feature
 created: 2026-07-16
-updated: 2026-07-16
+updated: 2026-07-17
 tags: ['telemetry', 'token-efficiency', 'cost-model']
 areas: ['lifecycle', 'report']
 ---
+> **SHIPPED (2026-07-17).** `cortex-session-tokens` (module `cortex_command/session_tokens.py`, console script + `bin/` wrapper, JSON + human output) implements the full non-negotiable contract: message.id dedup (fallback requestId → uuid, first-wins per the prototype), per-TTL price table from the published pricing reference (Opus 5/25, Sonnet 5's 3/15 sticker, Haiku 1/5, Fable/Mythos 10/50; cw 1.25x/2x, cr 0.1x; breakdown-absent → 1h rate, the prototype's conservative bound), file-path orchestrator/subagent split, per-session requests/peak-context/read/write/output/cost, the `turns^k` log-log fit, and the p50/p90/p99 subagent tail. One deliberate deviation from the prototype: an out-of-table model is **counted but never silently priced** — surfaced as `unpriced_requests` with a totals-understate warning — instead of defaulting to opus rates (silently guessing a price is exactly the error class this ticket documents). Verified live against this repo's 70-session corpus: the verb independently reproduced the durable law (orchestrator `cache_read ∝ requests^1.58`, r=0.99, n=69; subagent `∝ turns^1.45`, r=0.92, n=623 — vs the investigation's 1.68/1.55 on its older corpus) and the warning fired on 22 real synthetic-model requests. 14 tests pin the arithmetic by hand. Classifies nothing.
+
 ## Why
 
 > **DEMOTED TO LOW 2026-07-16 (requirements decision) — this verb gates nothing.** Per `cortex/requirements/project.md` (Deletion bias), the standing measurement tool is the ad-hoc prototype at `cortex/research/token-economics-2026-07-16/analyze.py` plus the dedup-by-`message.id` rule; re-measurement follows shipped cuts rather than preceding them. Corrections to this ticket's own claims from an independent re-derivation: **`isSidechain` is not dead** — it is `True` on >99.9% of subagent assistant records on this machine and is a valid orchestrator/subagent splitter (file-location splitting remains fine; the stated justification was wrong). The **$4,473 total did not reproduce** — every corpus slice measured ~$5.3k (the power laws and the subagent tail reproduced near-exactly; the dollar total is snapshot/scope-sensitive, one more reason not to trust absolute dollars). And the error class this ticket names claimed two more victims after it was written: #390/#391 shipped with undeduplicated verb counts.
