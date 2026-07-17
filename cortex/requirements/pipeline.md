@@ -127,15 +127,17 @@ The pipeline area covers the overnight execution framework: how sessions are orc
 ### Post-Session Sync
 
 - **Description**: After morning review merges the overnight PR, local `main` diverges from remote (local has the morning report commit and review artifacts; remote has the PR merge commit). A post-merge sync step rebases local onto remote, resolves conflicts in overnight-managed files automatically, and pushes.
-- **Inputs**: `cortex_command/overnight/sync-allowlist.conf` (glob patterns for auto-resolvable files), local `main` branch state, remote `origin/main` after PR merge
-- **Outputs**: Local `main` synced and pushed to `origin/main`; conflicts in allowlist files auto-resolved with `--theirs`, which during a rebase keeps the local/replayed revision
+- **Inputs**: `cortex_command/overnight/sync-allowlist.conf` (`<side> <pattern>` lines for auto-resolvable files), local `main` branch state, remote `origin/main` after PR merge
+- **Outputs**: Local `main` synced and pushed to `origin/main`; conflicts in allowlist files auto-resolved per the pattern's ruled side (ADR-0029)
 - **Acceptance criteria**:
   - After sync completes successfully, `git rev-list HEAD..origin/main --count` = 0 and `git rev-list origin/main..HEAD --count` = 0 (local and remote identical)
-  - Conflicts in files matching `sync-allowlist.conf` patterns are auto-resolved with `--theirs`. Git swaps the ours/theirs nomenclature during a rebase — the remote commits are checked out first and the local commits replayed on top — so `--theirs` names the replayed side and the **local** version survives, not the remote/overnight one. Whether local is the side that should win is an open question tracked separately; this criterion records the behavior rather than endorsing it
+  - Conflicts in files matching `sync-allowlist.conf` patterns are auto-resolved keeping the pattern's ruled side (ADR-0029): **remote** for lifecycle phase artifacts (the merged PR owns them), **local** for backlog item files (the review's closes are the later, better-informed writes). Git swaps the ours/theirs nomenclature during a rebase — the remote commits are checked out first and the local commits replayed on top — so `--theirs` names the replayed/local side and `--ours` the remote; the conf's `side` column is the semantic authority, never the flag name
+  - A conf line without a valid side resolves nothing (skipped with a warning); its conflicts abort the rebase loudly rather than silently picking a side
+  - A replayed commit wholly superseded by remote-wins resolution is dropped via `git rebase --skip`, never left to fail `--continue`
   - Any conflict outside the allowlist aborts the rebase and exits non-zero, leaving no partial resolution behind; every unresolved path is named so the user can finish the sync by hand
   - Multi-pass resolution handles sequential conflicts from replaying multiple local-only commits
   - Dirty rebase state (`.git/rebase-merge/` or `.git/rebase-apply/` from a prior crash) is detected and cleaned up before sync
-  - The `--merge` PR merge strategy is a load-bearing dependency — `--theirs` semantics during rebase depend on it
+  - The `--merge` PR merge strategy is a load-bearing dependency — the resolution's side semantics depend on it (ADR-0029 inherits this coupling)
 - **Priority**: must-have
 
 ## Non-Functional Requirements

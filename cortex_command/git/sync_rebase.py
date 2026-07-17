@@ -11,14 +11,22 @@ Exit codes:
   3 — behind-count undetermined (git rev-list failed or returned
       unparseable output; sync state is unknown, nothing was rebased)
 
-The allowlist file contains glob patterns for files that may be
-auto-resolved using ``--theirs`` during a conflict pass. Git swaps the
-ours/theirs nomenclature during a rebase — the upstream (remote) commits are
-checked out first and the local commits are replayed on top — so ``--theirs``
-names the replayed side: auto-resolution keeps the **local** revision and
-discards the remote one (see the Note in ``git-checkout(1)``). Whether local
-is the side that should win is an open question tracked separately; this
-docstring records the behavior, not an endorsement of it.
+The allowlist file contains ``<side> <pattern>`` lines: a glob pattern for
+files whose conflicts may be auto-resolved, and which side wins for that
+pattern — ``remote`` (the merged pull request's revision) or ``local`` (the
+replayed session commit's revision). The per-pattern ruling is ADR-0029:
+lifecycle phase artifacts are owned by the merged PR (remote wins); backlog
+item files carry the review's later, better-informed closes (local wins). A
+line without a valid side is skipped with a warning, so a mis-edited entry
+fails safe: its conflicts abort the rebase loudly instead of silently picking
+a side.
+
+Git swaps the ours/theirs nomenclature during a rebase — the upstream
+(remote) commits are checked out first and the local commits are replayed on
+top — so ``--theirs`` names the replayed side (**local**) and ``--ours``
+names the upstream side (**remote**); see the Note in ``git-checkout(1)``.
+When a remote-wins resolution supersedes everything the replayed commit
+carried, the emptied commit is dropped via ``git rebase --skip``.
 Default allowlist path: ``<repo-root>/cortex_command/overnight/sync-allowlist.conf``.
 
 Subprocess invocations for git plumbing are retained verbatim — no
@@ -32,7 +40,7 @@ import fnmatch
 import subprocess
 import sys
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 
 # ---------------------------------------------------------------------------
@@ -59,46 +67,66 @@ def _log(msg: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _load_allowlist(allowlist_file: Path) -> List[str]:
-    """Parse the allowlist file and return a list of non-blank, non-comment patterns.
+# The two resolvable sides (ADR-0029). ``local`` keeps the replayed session
+# commit's revision (``git checkout --theirs`` during a rebase); ``remote``
+# keeps the merged pull request's revision (``--ours``).
+_SIDES = ("local", "remote")
+_SIDE_TO_CHECKOUT_FLAG = {"local": "--theirs", "remote": "--ours"}
 
-    Mirrors the bash original's comment-stripping and whitespace-trimming
-    behaviour: inline comments are stripped, leading/trailing whitespace is
-    removed, blank results are skipped.
+
+def _load_allowlist(allowlist_file: Path) -> List[Tuple[str, str]]:
+    """Parse the allowlist file into ordered ``(side, pattern)`` entries.
+
+    Each non-blank, non-comment line is ``<side> <pattern>`` where ``side`` is
+    ``local`` or ``remote`` (ADR-0029: which revision survives a conflict on
+    that pattern). Inline comments are stripped and whitespace trimmed. A line
+    that does not carry a valid side is skipped WITH a warning — never
+    defaulted: a mis-edited entry must fail safe (its conflicts abort the
+    rebase loudly) rather than silently pick a side nobody ruled on.
     """
     if not allowlist_file.is_file():
         _log(f"Warning: allowlist file not found: {allowlist_file}")
         return []
 
-    patterns: List[str] = []
+    entries: List[Tuple[str, str]] = []
     text = allowlist_file.read_text(encoding="utf-8")
     for raw_line in text.splitlines():
         # Strip inline comments (everything from first '#' onward).
         line = raw_line.split("#", 1)[0]
         line = line.strip()
-        if line:
-            patterns.append(line)
+        if not line:
+            continue
+        tokens = line.split()
+        if len(tokens) != 2 or tokens[0] not in _SIDES:
+            _log(
+                f"Warning: skipping malformed allowlist line {line!r} — "
+                f"expected '<side> <pattern>' with side in {_SIDES}; conflicts "
+                "on this pattern will abort the rebase instead"
+            )
+            continue
+        entries.append((tokens[0], tokens[1]))
 
-    _log(f"Loaded {len(patterns)} allowlist patterns from {allowlist_file}")
-    return patterns
+    _log(f"Loaded {len(entries)} allowlist patterns from {allowlist_file}")
+    return entries
 
 
-def _matches_allowlist(filepath: str, patterns: List[str]) -> bool:
-    """Return True if filepath matches any allowlist pattern.
+def _resolve_side(filepath: str, entries: List[Tuple[str, str]]) -> Optional[str]:
+    """Return the winning side for *filepath*, or None when no pattern matches.
 
-    Directory patterns (trailing ``/``) match any file whose path starts with
-    that prefix. Other patterns use :func:`fnmatch.fnmatch` for glob-style
-    matching, mirroring bash's ``case`` statement ``fnmatch``-style behaviour.
+    First matching entry wins (declaration order). Directory patterns
+    (trailing ``/``) match any file whose path starts with that prefix. Other
+    patterns use :func:`fnmatch.fnmatch` for glob-style matching, mirroring
+    bash's ``case`` statement ``fnmatch``-style behaviour.
     """
-    for pattern in patterns:
+    for side, pattern in entries:
         if pattern.endswith("/"):
             # Directory prefix match.
             if filepath.startswith(pattern):
-                return True
+                return side
         else:
             if fnmatch.fnmatch(filepath, pattern):
-                return True
-    return False
+                return side
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -264,9 +292,14 @@ def sync_rebase(
             non_allowlist: List[str] = []
 
             for filepath in conflicted:
-                if _matches_allowlist(filepath, patterns):
-                    _log(f"  Auto-resolving (theirs): {filepath}")
-                    _git(["checkout", "--theirs", "--", filepath], cwd=repo_root)
+                side = _resolve_side(filepath, patterns)
+                if side is not None:
+                    # ADR-0029 per-pattern ruling. Git inverts ours/theirs in a
+                    # rebase: --theirs is the replayed (local) side, --ours the
+                    # upstream (remote) side.
+                    flag = _SIDE_TO_CHECKOUT_FLAG[side]
+                    _log(f"  Auto-resolving (keep {side}): {filepath}")
+                    _git(["checkout", flag, "--", filepath], cwd=repo_root)
                     _git(["add", "--", filepath], cwd=repo_root)
                     resolved += 1
                 else:
@@ -288,9 +321,18 @@ def sync_rebase(
                 _git(["rebase", "--abort"], cwd=repo_root)
                 return 1
 
-            # All conflicts resolved this pass — continue rebase.
+            # All conflicts resolved this pass — continue the rebase. When a
+            # remote-wins resolution superseded everything the replayed commit
+            # carried, the index now matches HEAD and --continue would refuse
+            # ("no changes"); the emptied commit is dropped with --skip instead.
+            staged = _git(["diff", "--cached", "--quiet"], cwd=repo_root)
+            if staged.returncode == 0:
+                _log("Replayed commit emptied by resolution — skipping it")
+                step = "--skip"
+            else:
+                step = "--continue"
             cont = subprocess.run(
-                ["git", "rebase", "--continue"],
+                ["git", "rebase", step],
                 capture_output=True,
                 text=True,
                 cwd=str(repo_root),
@@ -300,7 +342,7 @@ def sync_rebase(
                 _log(f"Rebase completed after {pass_num} pass(es)")
                 completed = True
                 break
-            # --continue didn't finish — more commits with conflicts; loop.
+            # --continue/--skip didn't finish — more commits with conflicts; loop.
 
         if not completed:
             _log(

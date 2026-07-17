@@ -26,7 +26,7 @@ import pytest
 import cortex_command.git.sync_rebase as sync_rebase_mod
 from cortex_command.git.sync_rebase import (
     _load_allowlist,
-    _matches_allowlist,
+    _resolve_side,
     _stale_rebase_in_progress,
     sync_rebase,
 )
@@ -46,15 +46,15 @@ REPRESENTATIVE_PATHS = (
 )
 
 
-def _allowlist_patterns() -> list[str]:
+def _allowlist_entries() -> list[tuple[str, str]]:
     """Load the live conf, failing loudly if it has gone empty."""
-    patterns = _load_allowlist(SYNC_ALLOWLIST)
-    assert patterns, f"no patterns loaded from {SYNC_ALLOWLIST}"
-    return patterns
+    entries = _load_allowlist(SYNC_ALLOWLIST)
+    assert entries, f"no entries loaded from {SYNC_ALLOWLIST}"
+    return entries
 
 
-@pytest.mark.parametrize("pattern", _allowlist_patterns())
-def test_every_allowlist_pattern_matches_a_real_path(pattern: str) -> None:
+@pytest.mark.parametrize("side, pattern", _allowlist_entries())
+def test_every_allowlist_pattern_matches_a_real_path(side: str, pattern: str) -> None:
     """Each conf pattern must match at least one representative real path.
 
     Asserted per-pattern (not in aggregate) so one live pattern cannot mask
@@ -62,7 +62,7 @@ def test_every_allowlist_pattern_matches_a_real_path(pattern: str) -> None:
     relocation (c8110de5) strand all nine patterns for two months, silently
     disabling the §6a auto-resolution the morning-review sync advertises.
     """
-    matched = [p for p in REPRESENTATIVE_PATHS if _matches_allowlist(p, [pattern])]
+    matched = [p for p in REPRESENTATIVE_PATHS if _resolve_side(p, [(side, pattern)])]
     assert matched, (
         f"allowlist pattern {pattern!r} matches none of the representative "
         f"paths — it is dead and can never auto-resolve a conflict. Check the "
@@ -335,11 +335,13 @@ def _make_conflict_fixture(tmp_path: Path, conflict_path: str) -> tuple[Path, Pa
     return local, remote
 
 
-def test_sync_rebase_auto_resolves_allowlisted_conflict(tmp_path: Path) -> None:
-    """A conflict on an allowlisted path is auto-resolved and the rebase lands.
+def test_sync_rebase_lifecycle_artifact_conflict_keeps_remote(tmp_path: Path) -> None:
+    """A conflict on a lifecycle phase artifact resolves REMOTE-wins (ADR-0029).
 
-    ``cortex/lifecycle/foo/plan.md`` is one of the paths the conf covers, and
-    a shape that really is tracked and really does conflict in production.
+    ``cortex/lifecycle/foo/plan.md`` is a merged-PR-owned phase output: the
+    reviewed, reconciled revision from the merged pull request is
+    authoritative, and the stale local copy is discarded. The local commit
+    carried nothing else, so it empties and is dropped via ``rebase --skip``.
     This is the §6a auto-resolution the morning-review sync advertises, and
     the arm that stays green only while the conf's patterns actually match
     git's repo-relative conflict paths.
@@ -349,21 +351,72 @@ def test_sync_rebase_auto_resolves_allowlisted_conflict(tmp_path: Path) -> None:
     rc = sync_rebase(repo_root=local)
 
     assert rc == 0, "an allowlisted conflict should auto-resolve, rebase, and push"
-
-    # Which side survives is deliberately unasserted: git inverts ours/theirs
-    # during a rebase, so the auto-resolution keeps the LOCAL revision. The
-    # docs now say so, but whether local is the side that *should* win is an
-    # open question — pinning either side here would certify a semantic nobody
-    # has ruled on yet.
     assert not _stale_rebase_in_progress(local), "rebase state left behind"
     assert _git("status", "--porcelain", cwd=local).stdout == "", "tree not clean"
 
+    # The ADR-0029 semantic: the merged PR's revision survives.
+    content = (local / "cortex/lifecycle/foo/plan.md").read_text()
+    assert content == "remote revision\n", (
+        f"lifecycle artifact conflict must keep the remote (merged-PR) "
+        f"revision; got {content!r}"
+    )
+    # The local commit was wholly superseded by the resolution, so it was
+    # dropped as an emptied patch rather than left as an empty commit.
+    log = _git("log", "--oneline", "main", cwd=local).stdout
+    assert "Upstream commit" in log, f"upstream commit missing: {log}"
+    assert "Local commit" not in log, (
+        f"a wholly-superseded local commit should be skipped, not kept: {log}"
+    )
+
+
+def test_sync_rebase_backlog_item_conflict_keeps_local(tmp_path: Path) -> None:
+    """A conflict on a backlog item file resolves LOCAL-wins (ADR-0029).
+
+    ``cortex/backlog/346-x.md`` is a file the review itself writes: its close
+    is the later, better-informed act and must survive the sync — the
+    post-sync content check depends on local session commits surviving.
+    """
+    local, remote = _make_conflict_fixture(tmp_path, "cortex/backlog/346-x.md")
+
+    rc = sync_rebase(repo_root=local)
+
+    assert rc == 0, "an allowlisted conflict should auto-resolve, rebase, and push"
+    assert not _stale_rebase_in_progress(local), "rebase state left behind"
+    assert _git("status", "--porcelain", cwd=local).stdout == "", "tree not clean"
+
+    # The ADR-0029 semantic: the review's (local) revision survives.
+    content = (local / "cortex/backlog/346-x.md").read_text()
+    assert content == "local revision\n", (
+        f"backlog item conflict must keep the local (review-written) "
+        f"revision; got {content!r}"
+    )
     log = _git("log", "--oneline", "main", cwd=local).stdout
     assert "Local commit" in log and "Upstream commit" in log, (
         f"expected both commits in rebased history: {log}"
     )
     remote_log = _git("log", "--oneline", "main", cwd=remote).stdout
     assert "Local commit" in remote_log, f"push did not land on origin: {remote_log}"
+
+
+def test_sync_rebase_sideless_allowlist_line_fails_safe(tmp_path: Path) -> None:
+    """An allowlist line without a valid side resolves nothing — its conflicts
+    abort the rebase loudly (exit 1) instead of silently picking a side.
+
+    Pins the fail-safe half of the ADR-0029 format: the pre-ruling one-column
+    format (a bare pattern) must never be silently interpreted as either side.
+    """
+    local, remote = _make_conflict_fixture(tmp_path, "cortex/lifecycle/foo/plan.md")
+    # A legacy side-less conf covering the conflicted path, handed to the sync
+    # explicitly (outside the repo, so mid-rebase tree states cannot swap it).
+    legacy_conf = tmp_path / "legacy-sideless.conf"
+    legacy_conf.write_text("cortex/lifecycle/*/plan.md\n", encoding="utf-8")
+
+    rc = sync_rebase(repo_root=local, allowlist_file=legacy_conf)
+
+    assert rc == 1, "a side-less allowlist line must not auto-resolve anything"
+    assert not _stale_rebase_in_progress(local), "abort must clean up rebase state"
+    remote_log = _git("log", "--oneline", "main", cwd=remote).stdout
+    assert "Local commit" not in remote_log, f"a failed sync must not push: {remote_log}"
 
 
 def _make_up_to_date_fixture(tmp_path: Path) -> Path:
