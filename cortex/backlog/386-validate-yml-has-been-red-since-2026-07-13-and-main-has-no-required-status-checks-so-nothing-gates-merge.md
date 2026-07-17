@@ -31,6 +31,7 @@ Touches the validate workflow's step ordering and failure semantics, the reposit
 ## Edges
 
 - Fixing the red step and gating merges are separable; either alone is an improvement, and the ordering fix (so later steps run) is independent of both.
+- **A second failure set is hiding behind the red step (measured 2026-07-17).** A clean-tree full-suite run has **30 failures**, only ~2 of which are the known-pre-existing ones (refine-writeback, mcp-DNS). The other ~28 are almost all `cortex_command/dashboard/tests/test_templates.py` (plus `test_feature_cards_pr_url.py`), and they are **test-order pollution, not real breakage**: they pass in isolation and fail only in a full-suite run. This ticket's own note that "later steps are `skipped` behind the first failure" is likely why they have gone unseen. Consequence for sequencing: **the ordering fix and required checks will surface them immediately** — fixing step order without fixing the pollution turns 28 order-dependent failures into a merge block. Whether that is in this ticket's scope or a sibling is a decision, but it cannot be discovered after the fact.
 - Branch protection is a repo-admin action, not a code change — this ticket can specify it but cannot land it.
 - Turning on required checks changes the operator's direct-push workflow to `main`; that is a real cost and an explicit decision, not a side effect.
 
