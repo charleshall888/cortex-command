@@ -5,11 +5,22 @@ Post-merge sync: fetch, rebase with allowlist conflict resolution, push.
 Usage: ``cortex-git-sync-rebase [allowlist-file]``
 
 Exit codes:
-  0 — success (rebase + push completed, or nothing to rebase)
-  1 — conflict (rebase aborted, user must resolve manually)
+  0 — success (rebase + push completed, or already up to date). Success
+      means "local is not behind remote", never "local and remote are
+      identical": the up-to-date early exit pushes nothing, so a
+      successful run routinely leaves local-ahead commits unpushed
+      (``cortex-morning-review-push-closures`` carries its own push for
+      exactly this reason).
+  1 — rebase aborted, local tree restored. Two causes share this code —
+      a conflict outside the allowlist, and an exhausted resolution-pass
+      budget (``_MAX_PASSES``) — because both leave the same state and
+      the same remedy (resolve manually); stderr distinguishes them.
   2 — push failed (rebase succeeded but push to origin/main failed)
   3 — behind-count undetermined (git rev-list failed or returned
       unparseable output; sync state is unknown, nothing was rebased)
+  4 — fetch failed (network or auth fault reaching origin; nothing was
+      fetched, rebased, or pushed — local main is untouched, and no
+      conflict exists to resolve)
 
 The allowlist file contains ``<side> <pattern>`` lines: a glob pattern for
 files whose conflicts may be auto-resolved, and which side wins for that
@@ -218,8 +229,9 @@ def sync_rebase(
     :param repo_root: Absolute path to the git repository root.
     :param allowlist_file: Path to the glob-pattern allowlist. Defaults to
         ``<repo_root>/cortex_command/overnight/sync-allowlist.conf``.
-    :returns: Exit code: 0=success, 1=unresolvable conflict, 2=push failure,
-        3=behind-count undetermined.
+    :returns: Exit code: 0=success, 1=rebase aborted (non-allowlist conflict
+        or exhausted passes), 2=push failure, 3=behind-count undetermined,
+        4=fetch failure.
     """
     if allowlist_file is None:
         allowlist_file = repo_root / _DEFAULT_ALLOWLIST_REL
@@ -234,7 +246,12 @@ def sync_rebase(
     fetch = _git(["fetch", "origin"], cwd=repo_root)
     if fetch.returncode != 0:
         _log(f"Error: git fetch failed: {fetch.stderr.strip()}")
-        return 1
+        _log(
+            "Error: aborting sync — origin could not be fetched (network or "
+            "auth fault). Nothing was rebased or pushed; local main is "
+            "untouched."
+        )
+        return 4
 
     # Step 3: check if rebase is needed.
     behind = _behind_count(repo_root)

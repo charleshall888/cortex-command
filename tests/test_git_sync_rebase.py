@@ -500,6 +500,56 @@ def test_sync_rebase_reports_failure_when_behind_count_cannot_be_determined(
     )
 
 
+def test_sync_rebase_reports_fetch_failure_distinctly(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture,
+) -> None:
+    """A failed ``git fetch`` must not render as a conflict (#396).
+
+    The fetch is the sync's first network touch: an offline machine or an
+    expired credential fails here, before anything is rebased. The pre-fix
+    code returned 1 — the conflict code — so the morning review told the
+    operator that local main was diverged and handed them a manual-rebase
+    command that fails the same way the fetch just did. Same shape as the
+    behind-count failure that earned exit 3: an infrastructure fault
+    masquerading as a normal outcome.
+    """
+    local = _make_up_to_date_fixture(tmp_path)
+
+    real_git = sync_rebase_mod._git
+
+    def fake_git(args: list[str], **kwargs):
+        if args[:1] == ["fetch"]:
+            return subprocess.CompletedProcess(
+                args=["git", *args],
+                returncode=128,
+                stdout="",
+                stderr="fatal: unable to access remote: Could not resolve host\n",
+            )
+        return real_git(args, **kwargs)
+
+    monkeypatch.setattr(sync_rebase_mod, "_git", fake_git)
+
+    rc = sync_rebase(repo_root=local)
+
+    assert rc not in (0, 1, 2, 3), (
+        "a failed fetch must not reuse success (0), conflict (1), "
+        "push-failure (2) or behind-count (3) — a caller cannot tell them "
+        f"apart; got {rc}"
+    )
+    assert rc == 4, f"expected the documented fetch-failure exit code 4, got {rc}"
+
+    stderr = capsys.readouterr().err
+    assert "fetch" in stderr.lower(), (
+        f"the diagnostic must name the fetch step so an operator can tell "
+        f"this from a conflict; got: {stderr!r}"
+    )
+    assert "conflict" not in stderr.lower(), (
+        f"a fetch failure must never claim a conflict occurred: {stderr!r}"
+    )
+
+
 def test_sync_rebase_still_exits_zero_when_genuinely_up_to_date(
     tmp_path: Path,
 ) -> None:

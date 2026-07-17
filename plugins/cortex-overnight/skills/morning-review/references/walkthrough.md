@@ -354,13 +354,19 @@ while remote main has the merge commit; this step reconciles the two.
 
 1. Run `cortex-git-sync-rebase cortex_command/overnight/sync-allowlist.conf`.
 2. Handle the exit code:
-   - **0**: "Local main synced and pushed — fully up to date."
-   - **1**: "Sync encountered unresolvable conflicts. Local main is diverged — resolve
-     manually with `git pull --rebase origin main`."
+   - **0**: "Local main synced — nothing left to pull from remote." (Success means
+     not-behind; the sync pushes only when it rebased, so local-ahead commits may
+     remain — §6b's closure push handles those.)
+   - **1**: "Sync aborted the rebase — either conflicts outside the allowlist or the
+     resolution-pass budget ran out (stderr says which). Local main is diverged —
+     resolve manually with `git pull --rebase origin main`."
    - **2**: "Rebase succeeded but push failed. Run `git push origin main` when network is
      available."
    - **3**: "Sync state undetermined — the behind-count could not be read. Nothing was
      rebased or pushed. Check with `git log --oneline origin/main..main` before pushing."
+   - **4**: "Fetch from origin failed — network or auth fault. Nothing was rebased or
+     pushed; local main is untouched and there is no conflict to resolve. Check
+     connectivity/`gh auth status` and re-run the sync."
    - **any other code**: "Sync exited with an unrecognized code {code} — treat local main
      as unsynced and reconcile manually."
 
