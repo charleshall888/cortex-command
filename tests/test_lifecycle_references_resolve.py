@@ -32,6 +32,7 @@ deliberately-broken citations do not fail the run.
 
 from __future__ import annotations
 
+import functools
 import re
 import subprocess
 from pathlib import Path
@@ -92,14 +93,28 @@ KNOWN_PROSE_COLLISIONS: tuple[tuple[str, str], ...] = (
         "init",
         "cortex/lifecycle/explore-best-mechanism-for-lifecycle-worktree/review.md",
     ),
+    # Review quotes hypothetical probe paths (`lifecycle/feat/spec.md`,
+    # `lifecycle/feat/learnings/outline.md`) from an acceptance matrix; ``feat``
+    # is an example slug, not a feature. The doc is a completed-lifecycle
+    # artifact (immutable history), so it is exempted here rather than
+    # reworded. (An untracked local `cortex/lifecycle/feat/` probe dir used to
+    # mask this on developer machines — see the tracked-file resolution note
+    # on ``_slug_resolves``.)
+    (
+        "feat",
+        "cortex/lifecycle/cortex-init-scaffolds-cortex-gitignore-for/review.md",
+    ),
 )
 # When prose abbreviates `skills/lifecycle/references/<file>.md` to
 # `lifecycle/references/<file>.md`, the slug `references` is a path component
 # inside the lifecycle SKILL, not a feature directory. Same for any future
-# non-feature subdirectory under skills/lifecycle/. Exclude these from the
-# citation grammar so path-abbreviation prose isn't flagged as a broken
-# feature citation.
-NON_FEATURE_SUBDIRS = frozenset({"references", "assets"})
+# non-feature subdirectory under skills/lifecycle/, and for runtime-state dirs
+# under cortex/lifecycle/ that are gitignored by design (`sessions/` holds
+# per-session overnight state — a path there is a runtime pointer, not a
+# feature citation, and can never resolve in a fresh clone). Exclude these
+# from the citation grammar so such prose isn't flagged as a broken feature
+# citation.
+NON_FEATURE_SUBDIRS = frozenset({"references", "assets", "sessions"})
 
 # Five citation-form regexes from spec §"Slug-and-citation grammar".
 # Order matters when applied to a single span: more-specific forms must
@@ -175,20 +190,51 @@ FILE_LINE_SCAN_PREFIXES: tuple[str, ...] = (
 FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
 
 
-def _slug_resolves(slug: str) -> bool:
-    """Return True if a top-level or archived dir exists for ``slug``.
+@functools.lru_cache(maxsize=1)
+def _tracked_lifecycle_slugs() -> frozenset[str]:
+    """Slugs with at least one git-tracked file under a lifecycle dir.
 
-    Lifecycle artifacts written pre-relocation cite ``lifecycle/<slug>`` by
-    convention; the canonical tree now lives under ``cortex/lifecycle/``.
-    Both the legacy and umbrella paths are accepted so historical citations
-    in immutable artifact bodies (review.md, plan.md) remain resolvable.
+    Accepts both the canonical umbrella tree (``cortex/lifecycle/<slug>/``,
+    plus ``archive/<slug>/``) and the legacy pre-relocation root
+    (``lifecycle/<slug>/``), so historical citations in immutable artifact
+    bodies (review.md, plan.md) remain resolvable.
     """
-    return (
-        (REPO_ROOT / "cortex" / "lifecycle" / slug).is_dir()
-        or (REPO_ROOT / "cortex" / "lifecycle" / "archive" / slug).is_dir()
-        or (REPO_ROOT / "lifecycle" / slug).is_dir()
-        or (REPO_ROOT / "lifecycle" / "archive" / slug).is_dir()
+    result = subprocess.run(
+        ["git", "ls-files", "--", "cortex/lifecycle", "lifecycle"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
     )
+    slugs: set[str] = set()
+    for tracked in result.stdout.splitlines():
+        parts = tracked.split("/")
+        if parts[:2] == ["cortex", "lifecycle"]:
+            parts = parts[1:]
+        if parts[:1] != ["lifecycle"]:
+            continue
+        if len(parts) >= 3:  # lifecycle/<slug>/<file...>
+            # ``archive`` itself resolves here too — an ``lifecycle/archive/x``
+            # citation captures slug "archive", which the filesystem check
+            # always accepted as a directory.
+            slugs.add(parts[1])
+        if parts[1:2] == ["archive"] and len(parts) >= 4:
+            slugs.add(parts[2])  # lifecycle/archive/<slug>/<file...>
+    return frozenset(slugs)
+
+
+def _slug_resolves(slug: str) -> bool:
+    """Return True if a git-tracked lifecycle dir (live or archived) exists
+    for ``slug``.
+
+    Resolution consults the git index — the same authority the file walk
+    (``git ls-files``) enumerates from — NOT the filesystem: a gitignored or
+    untracked directory that exists only on a developer's machine used to make
+    a citation resolve locally while failing in CI's fresh clone, so a green
+    local run was not evidence CI would agree (#386). Tracked files are
+    identical in both places by construction.
+    """
+    return slug in _tracked_lifecycle_slugs()
 
 
 def _resolve_file_line_citation(

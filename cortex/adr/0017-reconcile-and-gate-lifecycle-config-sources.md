@@ -69,10 +69,10 @@ avoiding:
   slated for activation) — a named "applies in multiple known places" condition
   that argues for a cheap durable gate now.
 
-The parity test runs under developer-run `just test`, not commit-time, and is
-not currently CI-blocking — a deliberate friction trade-off, since the
-asset↔mirror pair is already pre-commit-blocking and the asset↔template pair
-is lower-stakes. Reconcile is
+The parity test runs under developer-run `just test`, not commit-time, and —
+since the #386 CI repair — also as a blocking step in `validate.yml` (the
+push-time allowlist), superseding the earlier deliberate deferral; the
+asset↔mirror pair remains pre-commit-blocking as well. Reconcile is
 **up**, never down: editing the template would change the init-artifacts hash and
 fire a one-time `.cortex-init` drift report into every initialized repo, and a
 collapse-down would silently regress #317 (no test catches it —

@@ -57,8 +57,21 @@ def _root() -> Path:
 
 _template_resource_stack = ExitStack()
 atexit.register(_template_resource_stack.close)
+# Resolve templates/ through the REGULAR ``cortex_command.dashboard`` package,
+# never as the ``...dashboard.templates`` package name: templates/ has no
+# __init__.py, so naming it directly makes importlib treat it as a namespace
+# package and ``as_file`` extract every template to a TemporaryDirectory. That
+# temp dir is owned by this module-level stack — and a module reload (e.g.
+# tests re-resolving the PID path) rebinds the stack, so the orphaned old one
+# is torn down at the next cyclic GC, deleting the extraction out from under
+# every ``templates`` reference captured before the reload (TemplateNotFound).
+# The parent package is a real filesystem directory in every supported install
+# (wheels unpack; nothing runs zipped), so as_file returns the stable real
+# path and the stack holds no temp state.
 _templates_dir = _template_resource_stack.enter_context(
-    importlib.resources.as_file(importlib.resources.files("cortex_command.dashboard.templates"))
+    importlib.resources.as_file(
+        importlib.resources.files("cortex_command.dashboard") / "templates"
+    )
 )
 templates = Jinja2Templates(directory=str(_templates_dir))
 
