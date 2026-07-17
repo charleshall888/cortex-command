@@ -359,14 +359,19 @@ while remote main has the merge commit; this step reconciles the two.
      manually with `git pull --rebase origin main`."
    - **2**: "Rebase succeeded but push failed. Run `git push origin main` when network is
      available."
+   - **3**: "Sync state undetermined — the behind-count could not be read. Nothing was
+     rebased or pushed. Check with `git log --oneline origin/main..main` before pushing."
+   - **any other code**: "Sync exited with an unrecognized code {code} — treat local main
+     as unsynced and reconcile manually."
 
-After this section, proceed to Section 6b.
+After this section, proceed to Section 6b whatever the exit code — ticket closure is
+authorized by the confirmed merge in Section 6, not by the sync result.
 
 ---
 
 ## Section 6b — Close Backlog Tickets
 
-Run immediately after a successful post-merge sync in Section 6a. Skip this section
+Run immediately after the post-merge sync in Section 6a. Skip this section
 entirely if the merge was declined, skipped, or the PR was already merged/closed before
 this review — tickets close only when the merge is confirmed in the current session.
 
