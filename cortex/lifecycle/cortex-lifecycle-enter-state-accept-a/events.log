@@ -11,3 +11,6 @@
 {"ts": "2026-07-16T21:11:23Z", "event": "plan_approved", "feature": "cortex-lifecycle-enter-state-accept-a", "dispatch_choice": "trunk", "invocation_id": "e2cbf494ea10c480"}
 {"ts": "2026-07-16T21:11:23Z", "event": "phase_transition", "feature": "cortex-lifecycle-enter-state-accept-a", "from": "plan", "to": "implement", "invocation_id": "e2cbf494ea10c480"}
 {"ts": "2026-07-16T21:11:23Z", "event": "advance_committed", "feature": "cortex-lifecycle-enter-state-accept-a", "from_state": "plan", "to_state": "implement", "invocation_id": "e2cbf494ea10c480", "verb": "plan-decision"}
+{"ts": "2026-07-17T01:56:56Z", "event": "advance_started", "feature": "cortex-lifecycle-enter-state-accept-a", "from_state": "implement", "to_state": "implement", "invocation_id": "ae16b5908b0cc462", "verb": "implement-transition"}
+{"ts": "2026-07-17T01:56:56Z", "event": "batch_dispatch", "feature": "cortex-lifecycle-enter-state-accept-a", "batch": 0, "tasks": [1], "invocation_id": "ae16b5908b0cc462"}
+{"ts": "2026-07-17T01:56:56Z", "event": "advance_committed", "feature": "cortex-lifecycle-enter-state-accept-a", "from_state": "implement", "to_state": "implement", "invocation_id": "ae16b5908b0cc462", "verb": "implement-transition"}

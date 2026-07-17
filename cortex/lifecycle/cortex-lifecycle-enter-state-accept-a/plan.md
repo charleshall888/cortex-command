@@ -38,7 +38,7 @@ Harden the one lifecycle writer that materializes a directory (`enter.py`) with 
 - **Verification**: two checks, both required.
   (1) `uv run pytest cortex_command/lifecycle/tests/test_enter.py -q` → exit 0, all pass, including new tests asserting (a) `main()` returns `3` and stderr matches `no such lifecycle` for `--feature no-such-thing --phase research`, with the dir still absent; (b) `main()` returns `3` for `--feature '../../../tmp/evil' --phase none` and nothing is written outside the lifecycle root; (c) `--feature brand-new-slug --phase none` still returns `state == "ready"` (R2); (d) a feature whose dir exists passes with `--phase specify` (R4); (e) `test_cli_exits_0_with_error_state_on_unexpected_exception` passes **unmodified**.
   (2) R1 demands the command's OWN exit code, not a downstream check — from an empty scratch root: `CORTEX_REPO_ROOT=$(mktemp -d) uv run python -m cortex_command.lifecycle.enter --feature no-such-thing --phase research --session-id X --backend cortex-backlog --backlog-file ""; echo $?` → prints `3`, stderr matches `no such lifecycle`, and `test -d "$CORTEX_REPO_ROOT/cortex/lifecycle/no-such-thing"` → exit 1. Pass = all three; any other exit code fails. (`enter.py:277-278` already has the `__main__` block, so `-m` exercises the same `main()` the console script calls.)
-- **Status**: [ ] pending
+- **Status**: [x] done — `d2d1bac1`; blacklist idiom chosen; guards at top of `enter()` before `_backlog_status`. Correction: `_lifecycle_dir_exists` lives at `cortex_command/critical_review/__init__.py:484`, not under `cortex_command/lifecycle/` as the spec and Task 2 below cite.
 
 ### Task 2: Add the same-item-uuid guard to `enter`
 - **Files**: `cortex_command/lifecycle/enter.py`, `cortex_command/lifecycle/tests/test_enter.py`
@@ -53,7 +53,7 @@ Harden the one lifecycle writer that materializes a directory (`enter.py`) with 
   - Guard ordering: this one needs a filesystem read, so it sits after Task 1's unsafe-slug guard (which must stay first) and can sit beside the existence guard. It must still precede `create_index` at `:169`.
   - Live reference for the frontmatter shape: `cortex/lifecycle/cortex-lifecycle-enter-state-accept-a/index.md`.
 - **Verification**: `uv run pytest cortex_command/lifecycle/tests/test_enter.py -q` → exit 0, including a new test that creates a lifecycle for item A, invokes `enter` with A's slug and B's `--backlog-file`, asserts the return code is `3` and A's `index.md` sha256 is unchanged before/after; plus a test that a `parent_backlog_uuid: null` index.md with `--backlog-file ""` passes the guard (inert-by-design arm).
-- **Status**: [ ] pending
+- **Status**: [x] done — `f7291f98`; reuses Task 1's `_GuardRejected`. Known trade: `_parent_uuid` returns `None` on a malformed `index.md`, so a corrupt index silently disables the check for that dir (keeps the guard from stealing `create_index`'s exit-1 contract).
 
 ### Task 3: Emit the canonical slug from `resolve_invocation`'s `new` branch
 - **Files**: `cortex_command/lifecycle/resolve.py`, `cortex_command/lifecycle/tests/test_resolve.py`
@@ -70,7 +70,7 @@ Harden the one lifecycle writer that materializes a directory (`enter.py`) with 
   - Docstring home for the accepted title-drift window (research OQ3): document "first-entry identity is provisional until `enter` pins it — one skill turn" in `resolve.py`'s docstring. Code docstrings and `spec.md` only — zero skill-prose edits.
   - No file under `skills/` or `plugins/*/skills/` is touched. `PROTOCOL_VERSION` is not bumped (`protocol.py:24-27` — value semantics, not envelope shape).
 - **Verification**: `uv run pytest cortex_command/lifecycle/tests/test_resolve.py -q` → exit 0, including (a) the updated pinned test asserting `state == "new"`, `feature == "core-skill-efficiency-survivors-of-the"`-shaped normalization and `resolved_from == <raw token>`; (b) a Context-B test asserting `feature` is the caller token and `resolved_from` is absent when no item matches.
-- **Status**: [ ] pending
+- **Status**: [x] done — `2195762b`; split the `:188` predicate into a `canonical_slug` local rather than deleting the `is_dir()` conjunct, so #370's resume bound stays intact. R12's `state` assertion verified unchanged as diff context.
 
 ### Task 4: Run the corpus drift acceptance check and the full suite
 - **Files**: none (verification-only; no source edits)
@@ -86,7 +86,7 @@ Harden the one lifecycle writer that materializes a directory (`enter.py`) with 
   (1) Baseline-then-compare, because `just test` has two known-red pre-existing failures (refine writeback, mcp DNS) and will not exit 0: capture the failing-test node-id set on `HEAD` before the change, run `just test` after, and diff the two sets. Pass = the after-set is a subset of the before-set (no new failures); fail = any node id present after but not before.
   (2) Corpus drift loop: for every `d` in `cortex/lifecycle/*/`, compare `basename $d` against the `feature` field returned for that basename. Pass = the count of rows where they differ is exactly `0`; any nonzero count fails. Additionally `374` → `feature == "374"`, `state == "resume"`, `resolved_from` absent.
   (3) `git diff --stat` → grep for `^ *skills/` and `^ *plugins/.*/skills/` returns zero matches (R6a).
-- **Status**: [ ] pending
+- **Status**: [x] done — all three pass. (1) Baseline `09a11815` vs `2195762b`, both run in identical detached worktrees so only code differs: **42 failures before, the same 42 after, zero new**. The pre-existing set is far larger than the "refine writeback + mcp DNS" pair on record — most are environment-dependent (seatbelt, init-ensure, PR-gating) and unrelated to this change. (2) Corpus drift: **177 dirs checked, 0 drift rows**; `374` → `feature=374`, `state=resume`, no `resolved_from`. (3) Zero `skills/` or `plugins/*/skills/` files across `09a11815..HEAD` — the whole change is 4 files, all under `cortex_command/lifecycle/`.
 
 ## Risks
 
