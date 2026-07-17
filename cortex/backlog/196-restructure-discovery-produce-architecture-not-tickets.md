@@ -3,12 +3,12 @@ schema_version: "1"
 uuid: 8689319e-cc16-4db9-ae47-5316d3eaddfc
 title: "Restructure discovery: produce architecture, not tickets"
 type: feature
-status: closed
+status: superseded
 priority: high
 blocked-by: []
 tags: [discovery, skill-rewrite, superseded]
 created: 2026-05-11
-updated: 2026-05-11
+updated: 2026-07-17
 discovery_source: cortex/research/discovery-architectural-posture-rewrite/research.md
 superseded_by: 195
 ---

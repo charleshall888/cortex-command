@@ -3,12 +3,12 @@ schema_version: "1"
 uuid: b6f13a48-2777-43c5-8e0a-5b1a0edba201
 title: "Independently-sourced phrase corpus for skill routing"
 type: feature
-status: closed
+status: wontfix
 priority: medium
 blocked-by: []
 tags: [testing, skill-design, routing]
 created: 2026-05-11
-updated: 2026-05-12
+updated: 2026-07-17
 ---
 
 # Independently-sourced phrase corpus for skill routing
