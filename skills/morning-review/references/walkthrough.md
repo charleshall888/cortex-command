@@ -288,16 +288,22 @@ on the integration branch, not main.
    missing or the field is absent/empty, skip this section: "No integration branch
    found — skipping PR step."
 
-2. Run `gh pr list --head {integration_branch} --json number,url,state,title,isDraft` and
-   parse the array.
+2. Run `gh pr list --head {integration_branch} --state all --json number,url,state,title,isDraft`
+   and parse the array. `--state all` is required — `gh` defaults to `open`, which hides
+   merged and closed PRs and misreports them as "no PR found".
+
+   Head branch names repeat across sessions, so the array can hold more than one PR:
    - Empty → "No PR found for `{integration_branch}`. The runner may have failed to
      create one. Use `/pr` to create it manually." Stop.
-   - `state == "MERGED"` → "PR already merged — main is up to date." Stop. This skips
-     Section 6a's sync, so local `main` may lag the out-of-band merge — `git fetch origin
-     main` (or pull) first. If features completed this session, check their backlog
-     tickets (Section 2's `backlog_id`s); a rare write failure could leave one open
-     despite the merge — close it via Section 6b's closer, then push.
-   - `state == "CLOSED"` → "PR was closed without merging." Stop.
+   - More than one entry → show every candidate (`number`, `state`, `title`, `url`) and
+     stop: "Several PRs share the head branch `{integration_branch}` — identify this
+     session's PR and act on it manually." Never pick one on the reader's behalf.
+   - `state == "MERGED"` → "A PR for `{integration_branch}` is already merged: {url}."
+     Stop. Report only: leave backlog tickets as they are, and do not state that this
+     session's work landed. A same-named branch from an earlier session produces this
+     same match, and this step does not establish whose commits are in main.
+   - `state == "CLOSED"` → "The PR for `{integration_branch}` was closed without merging:
+     {url}." Stop.
 
 3. Display the open PR (only `"OPEN"` reaches here):
    ```
