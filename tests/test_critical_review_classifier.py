@@ -83,14 +83,16 @@ def _extract_synthesizer_template():
     Pre-#360 this template lived inline in SKILL.md between `---` delimiters and
     was extracted from there; it has since been factored into its own reference
     file, so this helper now mirrors the SKILL.md Step 2d dispatch (which Reads
-    `references/synthesizer-prompt.md` verbatim and substitutes `{a_to_b_rubric}`
-    with the full content of `references/a-to-b-downgrade-rubric.md` before
-    dispatch). We (1) read the canonical synthesizer prompt, (2) take the template
-    body — everything after the first `---` line that separates the doc's usage
-    note from the prompt itself — and (3) inline the A→B downgrade rubric into the
-    `{a_to_b_rubric}` placeholder. The remaining placeholders (`{artifact_path}`,
-    `{artifact_sha256}`, `{all reviewer findings ...}`) are substituted by each
-    caller with its own stub artifact and reviewer envelope.
+    `references/synthesizer-prompt.md` verbatim and substitutes
+    `{a_to_b_rubric_path}` with the absolute path of
+    `references/a-to-b-downgrade-rubric.md` before dispatch — the synthesizer
+    Reads the rubric itself; #382 stopped the orchestrator inlining it). We (1)
+    read the canonical synthesizer prompt, (2) take the template body —
+    everything after the first `---` line that separates the doc's usage note
+    from the prompt itself — and (3) bind the rubric's absolute path into the
+    `{a_to_b_rubric_path}` placeholder. The remaining placeholders
+    (`{artifact_path}`, `{artifact_sha256}`, `{all reviewer findings ...}`) are
+    substituted by each caller with its own stub artifact and reviewer envelope.
     """
     prompt_doc = SYNTHESIZER_PROMPT_PATH.read_text()
     delim = re.search(r'^---\s*$', prompt_doc, re.MULTILINE)
@@ -100,12 +102,14 @@ def _extract_synthesizer_template():
     )
     template = prompt_doc[delim.end():].strip("\n")
 
-    rubric = A_TO_B_RUBRIC_PATH.read_text().strip("\n")
-    assert rubric, f"A→B downgrade rubric is empty at {A_TO_B_RUBRIC_PATH}"
-    template = template.replace("{a_to_b_rubric}", rubric)
-    assert "{a_to_b_rubric}" not in template, (
-        "rubric inlining failed: {a_to_b_rubric} placeholder still present after "
-        "substitution — the dispatch path inlines it, so the test must too"
+    assert A_TO_B_RUBRIC_PATH.read_text().strip(), (
+        f"A→B downgrade rubric is empty at {A_TO_B_RUBRIC_PATH}"
+    )
+    template = template.replace("{a_to_b_rubric_path}", str(A_TO_B_RUBRIC_PATH))
+    assert "{a_to_b_rubric_path}" not in template, (
+        "rubric path binding failed: {a_to_b_rubric_path} placeholder still "
+        "present after substitution — the dispatch path binds it, so the test "
+        "must too"
     )
     return template
 

@@ -59,9 +59,9 @@ After parallel reviewers return, run the two-phase verification gate (sentinel c
 
 ### Step 2d: Opus Synthesis
 
-After parallel reviewers (or the successful subset) clear Step 2c.5, resolve the synthesizer model by running `cortex-resolve-model --role synthesizer` (no `--criticality` flag and no lifecycle-state read — the standalone path may have no lifecycle session, so a missing state must never block synthesis); on nonzero exit, halt and escalate rather than substitute a model. Read `${CLAUDE_SKILL_DIR}/references/a-to-b-downgrade-rubric.md` and substitute its full content into `{a_to_b_rubric}`, then dispatch one synthesizer agent with the resolved model and the canonical prompt from `${CLAUDE_SKILL_DIR}/references/synthesizer-prompt.md` verbatim, with `{artifact_path}`, `{artifact_sha256}`, `{a_to_b_rubric}`, and the reviewer-findings payload substituted at runtime. The prompt directs the synthesizer to Read the artifact once at start and emit `SYNTH_READ_OK: <path> <sha>` in output before per-finding analysis.
+After parallel reviewers (or the successful subset) clear Step 2c.5, resolve the synthesizer model by running `cortex-resolve-model --role synthesizer` (no `--criticality` flag and no lifecycle-state read — the standalone path may have no lifecycle session, so a missing state must never block synthesis); on nonzero exit, halt and escalate rather than substitute a model. Dispatch one synthesizer agent with the resolved model and the canonical prompt from `${CLAUDE_SKILL_DIR}/references/synthesizer-prompt.md` verbatim, with `{artifact_path}`, `{artifact_sha256}`, `{a_to_b_rubric_path}` ← the resolved absolute path of `${CLAUDE_SKILL_DIR}/references/a-to-b-downgrade-rubric.md` (the synthesizer Reads it — do not Read or inline the rubric here), and the reviewer-findings payload substituted at runtime. The prompt directs the synthesizer to Read the artifact once at start and emit `SYNTH_READ_OK: <path> <sha>` in output before per-finding analysis.
 
-The synthesizer applies the **A→B downgrade rubric** (inlined via `{a_to_b_rubric}`) to each A-class finding's `"fix_invalidation_argument"` field.
+The synthesizer applies the **A→B downgrade rubric** (Read by path via `{a_to_b_rubric_path}`) to each A-class finding's `"fix_invalidation_argument"` field.
 
 ### Step 2d.5: Post-Synthesis (atomic SHA verification)
 

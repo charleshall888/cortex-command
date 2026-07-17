@@ -14,7 +14,7 @@ You are conducting an adversarial review of one specific angle.
 
 Read the literal absolute path provided above before beginning analysis. Do NOT re-derive the path yourself.
 
-When the Read succeeds AND the computed SHA-256 of the Read result matches `{artifact_sha256}`, emit `READ_OK: <path> <sha>` on its own line (the absolute path you Read and its SHA-256) before the first `## ` heading, then continue with the analysis below. This `READ_OK` line is an advisory read-attestation, not the drift gate — the orchestrator re-hashes the pinned artifact itself as the authoritative drift check.
+When the Read succeeds AND the computed SHA-256 of the Read result matches `{artifact_sha256}`, emit `READ_OK: <path> <sha>` on its own line (the absolute path you Read and its SHA-256) as the first line of your output, then continue with the analysis below. This `READ_OK` line is an advisory read-attestation, not the drift gate — the orchestrator re-hashes the pinned artifact itself as the authoritative drift check.
 
 When the Read fails or returns empty content, emit `READ_FAILED: <absolute-path> <one-word-reason>` on its own line before any other content and stop — do not proceed with analysis.
 
@@ -43,18 +43,10 @@ If one observed problem decomposes into both an A-class and a B-class concern, *
 Work within a ~40-turn cap. On reaching it, stop investigating and return what you have — a partial return beats no return.
 
 1. Focus exclusively on your assigned angle; be specific — cite exact artifact text in quotes ("This might not scale" is not acceptable).
-2. Return findings in this exact format:
+2. Investigate freely — run probes, measurements, and live commands as needed; that work happens in your own context and is encouraged over speculation.
+3. Do not cover other angles. Do not be balanced.
 
-## Findings: {angle name}
-
-### What's wrong
-### Assumptions at risk
-### Convergence signal
-[One line: whether this angle's concerns likely overlap with other possible review angles, and which]
-
-Do not cover other angles. Do not be balanced.
-
-After the prose findings above, emit a JSON envelope so the orchestrator can extract structured class tags. Place the `<!--findings-json-->` delimiter on a line by itself, then the JSON object on subsequent lines:
+**The JSON envelope is your entire deliverable — there is no prose report.** Only the envelope is read; anything outside it is discarded. Put probe output, in-engine numbers, and any other empirical evidence in the `measurement` field — that is its only home. Place the `<!--findings-json-->` delimiter on a line by itself, then the JSON object on subsequent lines:
 
 <!--findings-json-->
 {
@@ -64,6 +56,7 @@ After the prose findings above, emit a JSON envelope so the orchestrator can ext
       "class": "A" | "B" | "C",
       "finding": "<text>",
       "evidence_quote": "<verbatim quote from the artifact>",
+      "measurement": "<optional: probe/measurement output backing this finding, verbatim>",
       "fix_invalidation_argument": "<optional, A-class only>",
       "straddle_rationale": "<optional: split or bias-up-to-A rationale>"
     }

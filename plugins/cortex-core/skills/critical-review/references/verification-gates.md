@@ -44,7 +44,7 @@ Routes based on exit code:
 - **Exit 3** — SHA mismatch (drift), or sentinel absent with a re-hash confirming drift or an unreadable artifact, or `READ_FAILED` route — event already appended (do not duplicate; see the shared write-guard note above). Emit `⚠ Reviewer {angle} excluded: {reason}` to the orchestrator log; reason maps from stdout (`EXCLUDED absent | EXCLUDED sha_mismatch | EXCLUDED read_failed`).
 - **Exit 4** — telemetry skipped (see the shared write-guard note above). Treat as a normal pass — proceed to Phase 2; no exclusion warning, and don't count it toward the total-failure path.
 
-Excluded reviewers drop from ALL downstream tallies (A-class, B-class, C-class) and from the untagged-prose pathway; their output is not parsed or surfaced to the synthesizer. Carry the exclusion warning into the Step 2d synthesizer preamble so the synthesizer sees the reduced reviewer set explicitly.
+Excluded reviewers drop from ALL downstream tallies (A-class, B-class, C-class); their output is not parsed or surfaced to the synthesizer. Carry the exclusion warning into the Step 2d synthesizer preamble so the synthesizer sees the reduced reviewer set explicitly.
 
 **Total-failure path (all reviewers excluded)**: when every reviewer returns exit 3, surface verbatim to the user — do NOT proceed to Step 2d synthesis:
 
@@ -53,8 +53,8 @@ Excluded reviewers drop from ALL downstream tallies (A-class, B-class, C-class) 
 **Phase 2 — Envelope extraction (only for reviewers that passed Phase 1):**
 
 1. Locate the `<!--findings-json-->` delimiter using the LAST occurrence (`re.findall(r'^<!--findings-json-->\s*$', output, re.MULTILINE)`, split at the last match — tolerates prose that quotes the delimiter).
-2. `json.loads` the post-delimiter tail. Assert schema: top-level `angle: str`, `findings: list`; each finding has `class ∈ {"A","B","C"}`, `finding: str`, `evidence_quote: str`, optional `straddle_rationale`, optional `fix_invalidation_argument`.
-3. On any extraction or validation failure, emit `⚠ Reviewer {angle} emitted malformed JSON envelope ({reason}) — class tags UNAVAILABLE. Prose findings presented as-is; excluded from the A-class count rather than treated as C-class.`, then pass the reviewer's prose to the synthesizer as an untagged block. Step 2d renders it under `## Concerns`, excluded from the A-class tally — never silently coerced to C-class. This handler applies only after Phase 1 has passed; a reviewer with a missing or drifted sentinel never reaches it.
+2. `json.loads` the post-delimiter tail. Assert schema: top-level `angle: str`, `findings: list`; each finding has `class ∈ {"A","B","C"}`, `finding: str`, `evidence_quote: str`, optional `measurement`, optional `straddle_rationale`, optional `fix_invalidation_argument`.
+3. On any extraction or validation failure, emit `⚠ Reviewer {angle} emitted malformed JSON envelope ({reason}) — no findings recovered.` and drop the reviewer. The envelope is the reviewer's whole return (`reviewer-prompt.md`), so a malformed one leaves nothing to salvage — there is no untagged-prose pathway. Treat it as a reviewer that returned nothing: take the Step 2c Partial branch with the reviewers that did return, counting it among the excluded in the partial-coverage prefix below. If no reviewer survives, take the Step 2c Total branch. This handler applies only after Phase 1 has passed; a reviewer with a missing or drifted sentinel never reaches it.
 
 ## Step 2d.5: Post-Synthesis (atomic SHA verification)
 
