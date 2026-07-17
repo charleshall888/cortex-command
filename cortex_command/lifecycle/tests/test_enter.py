@@ -150,6 +150,9 @@ def test_sync_receives_caller_passed_discriminants(
     the lifecycle-slug — it never self-resolves the backend or new-vs-resume."""
     calls: list = []
     _patch_primitives(monkeypatch, ensure_code=0, sync_calls=calls)
+    # --phase plan is a resume, so the existence guard requires the dir to be
+    # there; this test is about the sync seam, not the guard.
+    (tmp_path / "cortex" / "lifecycle" / "feat").mkdir(parents=True)
     en.enter(
         feature="feat",
         session_id="sess",
@@ -167,6 +170,169 @@ def test_sync_receives_caller_passed_discriminants(
             "lifecycle_slug": "feat",
         }
     ]
+
+
+# ---------------------------------------------------------------------------
+# Fail-loud guards (stderr + exit 3, no side effect)
+#
+# The guards run inside ``enter`` BEFORE the composed primitives, so these need
+# no ``_patch_primitives`` seam — reaching a primitive at all would be the bug.
+# ---------------------------------------------------------------------------
+
+
+def test_resume_of_nonexistent_lifecycle_exits_3_and_creates_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
+) -> None:
+    """R1: --phase != none with no lifecycle dir is a resume of nothing — fail
+    loud on stderr with exit 3 rather than silently materializing a shadow dir
+    the morning report can never find (#379)."""
+    monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
+    rc = en.main([
+        "--feature", "no-such-thing",
+        "--session-id", "X",
+        "--backend", "cortex-backlog",
+        "--phase", "research",
+        "--backlog-file", "",
+    ])
+    assert rc == 3
+    err = capsys.readouterr().err
+    assert err.startswith("cortex-lifecycle-enter: ")
+    assert "no such lifecycle" in err
+    assert not (tmp_path / "cortex" / "lifecycle" / "no-such-thing").exists()
+
+
+def test_guard_message_names_feature_and_both_causes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
+) -> None:
+    """R7: one trip, two remediations — the message must name the feature and
+    distinguish "dir vanished mid-flight" (TOCTOU) from "caller mis-threaded the
+    identity", pointing at the served-slug remedy for the latter."""
+    monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
+    rc = en.main([
+        "--feature", "vanished-feature",
+        "--session-id", "X",
+        "--backend", "cortex-backlog",
+        "--phase", "plan",
+        "--backlog-file", "",
+    ])
+    assert rc == 3
+    err = capsys.readouterr().err
+    assert "vanished-feature" in err
+    assert "vanished mid-flight" in err
+    assert "mis-threaded" in err
+    assert "cortex-lifecycle-next" in err
+
+
+@pytest.mark.parametrize(
+    "feature",
+    ["../../../tmp/evil", "..", "a/b", "a\\b", ""],
+)
+def test_unsafe_feature_slug_exits_3(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys, feature: str
+) -> None:
+    """R3: the house blacklist predicate (empty, /, \\, ..) rejects before any
+    filesystem op, via the same stderr + exit-3 channel as R1."""
+    monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
+    rc = en.main([
+        "--feature", feature,
+        "--session-id", "X",
+        "--backend", "cortex-backlog",
+        "--phase", "none",
+        "--backlog-file", "",
+    ])
+    assert rc == 3
+    err = capsys.readouterr().err
+    assert err.startswith("cortex-lifecycle-enter: ")
+    assert "unsafe feature slug" in err
+
+
+def test_unsafe_slug_writes_nothing_outside_the_lifecycle_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R3: the traversal target is never materialized — nothing is written
+    outside cortex/lifecycle/, and no filesystem op runs at all."""
+    monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path / "repo"))
+    escape = tmp_path / "escape"
+    escape.mkdir()
+    rc = en.main([
+        "--feature", "../../escape/evil",
+        "--session-id", "X",
+        "--backend", "cortex-backlog",
+        "--phase", "none",
+        "--backlog-file", "",
+    ])
+    assert rc == 3
+    assert list(escape.iterdir()) == []
+    assert not (tmp_path / "repo" / "cortex").exists()
+
+
+def test_guards_raise_before_any_composed_primitive(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The guards precede _backlog_status, the needs-decision short-circuit, and
+    create_index — a rejected invocation must fail loud, never return an
+    envelope a caller would read as a routine outcome."""
+
+    def _forbidden(*args, **kwargs):
+        raise AssertionError("a composed primitive ran despite a guard rejection")
+
+    monkeypatch.setattr(en, "create_index", _forbidden)
+    monkeypatch.setattr(en, "sync", _forbidden)
+    monkeypatch.setattr(en.init_ensure, "main", _forbidden)
+    # An already_complete item would otherwise short-circuit to needs-decision.
+    _write_backlog(tmp_path, "370-foo.md", "complete")
+    with pytest.raises(en._GuardRejected):
+        en.enter(
+            feature="../evil",
+            session_id="s",
+            backend="cortex-backlog",
+            phase="none",
+            backlog_file="370-foo.md",
+            root=tmp_path,
+        )
+
+
+def test_guard_exception_is_not_an_oserror(tmp_path: Path) -> None:
+    """Regression pin: _GuardRejected must not subclass OSError — main's
+    except-OSError arm is the exit-1 create-index contract and would swallow it,
+    reporting a guard rejection as a missing --backlog-file."""
+    assert not issubclass(en._GuardRejected, OSError)
+
+
+def test_brand_new_lifecycle_with_phase_none_still_creates(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R2: --phase none is the caller-passed brand-new signal — the existence
+    guard must not fire, or the verb could never create a lifecycle at all."""
+    _patch_primitives(monkeypatch, ensure_code=0)
+    r = en.enter(
+        feature="brand-new-slug",
+        session_id="s",
+        backend="cortex-backlog",
+        phase="none",
+        backlog_file="",
+        root=tmp_path,
+    )
+    assert r["state"] == "ready"
+
+
+def test_grandfathered_numeric_lifecycle_passes_guards(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R4: a feature whose dir exists passes every guard regardless of token
+    shape — the numeric-keyed corpus (374/, 378/) keeps resuming. This is why
+    the guard adopts the blacklist rather than a kebab-only whitelist."""
+    _patch_primitives(monkeypatch, ensure_code=0)
+    (tmp_path / "cortex" / "lifecycle" / "374").mkdir(parents=True)
+    r = en.enter(
+        feature="374",
+        session_id="s",
+        backend="cortex-backlog",
+        phase="specify",
+        backlog_file="",
+        root=tmp_path,
+    )
+    assert r["state"] == "ready"
 
 
 # ---------------------------------------------------------------------------

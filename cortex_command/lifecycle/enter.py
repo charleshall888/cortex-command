@@ -56,14 +56,23 @@ the one composed step that can refuse a lifecycle entry — plus the
                   catches it so the CLI always emits a JSON struct and exits 0
                   rather than a traceback (the ``prepare_worktree`` pattern).
 
-Two hard exit codes propagate from the composed primitives, mirroring their own
-CLIs (these do NOT emit an envelope — the caller handles them exactly as it
-handled the underlying verbs):
+Three hard exit codes bypass the envelope entirely (the caller handles them
+exactly as it handled the underlying verbs). Exits 1 and 2 propagate from the
+composed primitives, mirroring their own CLIs; exit 3 is this verb's own:
 
   exit 1 — ``create_index`` raised ``OSError`` (a non-empty ``--backlog-file``
            did not resolve to an existing ticket; a contract violation).
   exit 2 — ``sync`` raised ``_Exit2`` (a ``cortex-update-item`` call hit an
            ambiguous slug; its candidate list is already on stderr).
+  exit 3 — a fail-loud guard rejected the invocation before any side effect ran
+           (``_GuardRejected``): an unsafe ``--feature`` token, or a resume
+           (``--phase`` != ``none``) of a lifecycle whose dir does not exist.
+           These are contract violations of the verb's OWN args + filesystem
+           preconditions, so they deliberately do NOT route through the
+           ``state: "error"`` channel — that is the exit-0 catch-all for
+           *unexpected* exceptions, and is invisible to every caller that
+           branches on the exit code rather than parsing stdout JSON (including
+           ``bin/cortex-lifecycle-enter``'s ``exec`` passthrough wrapper).
 
 The write root resolves via ``_resolve_user_project_root`` (honoring
 ``CORTEX_REPO_ROOT``) so ``.session`` lands in the same tree as the
@@ -101,6 +110,65 @@ KNOWN_STATES = ("ready", "needs-decision", "blocked", "ensure-failed", "error")
 # First-match-wins frontmatter status scalar; ``.`` never crosses the newline so
 # the capture is confined to the one ``status:`` line.
 _STATUS_RE = re.compile(r"^status:\s*(\S+)", re.MULTILINE)
+
+
+class _GuardRejected(Exception):
+    """Signals a fail-loud guard rejection to ``main`` (→ stderr + exit 3).
+
+    Deliberately NOT an ``OSError`` subclass: ``main``'s ``except OSError`` arm
+    is the exit-1 create-index contract and would silently swallow this.
+    """
+
+
+# gate-class: hygiene
+def _reject_unsafe_slug(feature: str) -> None:
+    """Raise ``_GuardRejected`` when *feature* is empty or carries a path
+    separator / ``..`` — a path-traversal guard applied BEFORE any filesystem
+    access (including the ``--backlog-file`` read). Returns None when the slug is
+    safe to use as a directory component.
+
+    The house ``describe.py:_reject_unsafe_slug`` blacklist predicate, raising
+    instead of returning an error envelope: this verb's guards must surface as a
+    nonzero exit, not as an exit-0 ``state: "error"`` payload. The blacklist (not
+    ``wontfix_cli``'s stricter ``_SLUG_RE`` whitelist) is deliberate — the
+    grandfathered corpus holds numeric-keyed lifecycles (``374/``, ``378/``) that
+    a kebab-only whitelist would be one edit away from orphaning.
+    """
+    if not feature or "/" in feature or "\\" in feature or ".." in feature:
+        raise _GuardRejected(
+            f"unsafe feature slug {feature!r}: no path separators or '..'"
+        )
+
+
+# gate-class: hygiene
+def _reject_missing_lifecycle(feature: str, phase: str, root: Path) -> None:
+    """Raise ``_GuardRejected`` when *phase* is a resume (``!= "none"``) and
+    ``{root}/cortex/lifecycle/{feature}/`` is not an existing directory.
+
+    The fourth application of ``critical_review._lifecycle_dir_exists``: the
+    guard lives in the caller, never in the write primitive — ``create_index``
+    must keep materializing the dir for the legitimate ``--phase none``
+    fresh-lifecycle first write. ``--phase none`` is the caller-passed
+    brand-new-lifecycle signal (ADR-0019: the verb never re-derives
+    new-vs-resume), so it is the only shape allowed to create a dir; every other
+    phase asserts the lifecycle already exists, and a resume that finds nothing
+    fails loud rather than inventing a shadow lifecycle the morning report can
+    never find (#379).
+    """
+    if phase == "none":
+        return
+    if (root / "cortex" / "lifecycle" / feature).is_dir():
+        return
+    raise _GuardRejected(
+        f"no such lifecycle {feature!r}: --phase {phase!r} is a resume, but "
+        f"cortex/lifecycle/{feature}/ does not exist, so there is nothing to "
+        "resume. Either the dir vanished mid-flight (deleted between the "
+        "resolver and this call — recover the dir, then re-run), or the caller "
+        "mis-threaded the identity (a raw token such as a ticket number passed "
+        "where the resolver's canonical slug belonged — re-run "
+        "cortex-lifecycle-next and thread its resolved --feature verbatim). "
+        "Creating nothing."
+    )
 
 
 def _backlog_status(backlog_file: str, root: Path) -> str:
@@ -154,7 +222,16 @@ def enter(
     step unless *acknowledge_complete* is set — the structural form of the
     pre-verb "completed item creates no artifacts" carve-out. The verb never
     decides on its own; the acknowledgement is caller-passed.
+
+    Both fail-loud guards run FIRST — before ``_backlog_status``'s read, before
+    the ``needs-decision`` short-circuit, and before ``create_index`` — so an
+    unsafe token never reaches a filesystem op, and a rejected invocation is a
+    ``_GuardRejected`` (→ exit 3) rather than a ``needs-decision`` envelope that
+    a caller would read as a routine Close/Continue prompt.
     """
+    _reject_unsafe_slug(feature)
+    _reject_missing_lifecycle(feature, phase, root)
+
     backlog_status = _backlog_status(backlog_file, root)
 
     if backlog_status == "already_complete" and not acknowledge_complete:
@@ -202,7 +279,9 @@ def _build_parser() -> argparse.ArgumentParser:
             "init-ensure, and the .session write — into a single "
             "{state, backlog_status, ...} JSON struct on stdout. All "
             "discriminants are caller-passed (ADR-0019); exit 1/2 propagate the "
-            "composed primitives' contract failures, else exit 0."
+            "composed primitives' contract failures, exit 3 is a fail-loud guard "
+            "rejection (unsafe --feature, or a resume of a lifecycle that does "
+            "not exist), else exit 0."
         ),
     )
     parser.add_argument("--feature", required=True, metavar="SLUG", help="Lifecycle feature slug.")
@@ -267,6 +346,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 1
     except _Exit2:
         return 2
+    except _GuardRejected as exc:
+        sys.stderr.write(f"cortex-lifecycle-enter: {exc}\n")
+        return 3
     except Exception as exc:  # noqa: BLE001 — always emit a JSON struct, never a traceback
         result = {"state": "error", "message": repr(exc)}
     result["protocol"] = PROTOCOL_VERSION
