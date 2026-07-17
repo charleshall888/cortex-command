@@ -10,3 +10,13 @@
 {"ts": "2026-07-16T22:06:01Z", "event": "plan_approved", "feature": "durable-observed-merge-closer-stranded-work", "dispatch_choice": "trunk", "invocation_id": "85f3d0e59863fadd"}
 {"ts": "2026-07-16T22:06:01Z", "event": "phase_transition", "feature": "durable-observed-merge-closer-stranded-work", "from": "plan", "to": "implement", "invocation_id": "85f3d0e59863fadd"}
 {"ts": "2026-07-16T22:06:01Z", "event": "advance_committed", "feature": "durable-observed-merge-closer-stranded-work", "from_state": "plan", "to_state": "implement", "invocation_id": "85f3d0e59863fadd", "verb": "plan-decision"}
+{"ts": "2026-07-16T22:08:42Z", "event": "advance_started", "feature": "durable-observed-merge-closer-stranded-work", "from_state": "implement", "to_state": "implement", "invocation_id": "0278a1be1df2d7d6", "verb": "implement-transition"}
+{"ts": "2026-07-16T22:08:42Z", "event": "batch_dispatch", "feature": "durable-observed-merge-closer-stranded-work", "batch": 0, "tasks": [1, 5, 7], "invocation_id": "0278a1be1df2d7d6"}
+{"ts": "2026-07-16T22:08:42Z", "event": "advance_committed", "feature": "durable-observed-merge-closer-stranded-work", "from_state": "implement", "to_state": "implement", "invocation_id": "0278a1be1df2d7d6", "verb": "implement-transition"}
+{"ts": "2026-07-17T01:14:49Z", "event": "phase_transition", "feature": "durable-observed-merge-closer-stranded-work", "from": "implement", "to": "review"}
+{"ts": "2026-07-17T01:24:43Z", "event": "review_verdict", "feature": "durable-observed-merge-closer-stranded-work", "verdict": "CHANGES_REQUESTED", "cycle": "1", "requirements_drift": "none"}
+{"ts": "2026-07-17T01:24:43Z", "event": "phase_transition", "feature": "durable-observed-merge-closer-stranded-work", "from": "review", "to": "implement-rework"}
+{"ts": "2026-07-17T01:39:20Z", "event": "phase_transition", "feature": "durable-observed-merge-closer-stranded-work", "from": "implement-rework", "to": "review"}
+{"ts": "2026-07-17T01:54:09Z", "event": "review_verdict", "feature": "durable-observed-merge-closer-stranded-work", "verdict": "APPROVED", "cycle": "2", "requirements_drift": "none"}
+{"ts": "2026-07-17T01:54:09Z", "event": "phase_transition", "feature": "durable-observed-merge-closer-stranded-work", "from": "review", "to": "complete"}
+{"ts": "2026-07-17T01:54:28Z", "event": "feature_complete", "feature": "durable-observed-merge-closer-stranded-work", "tasks_total": 11, "rework_cycles": 1, "merge_anchor": "merge"}

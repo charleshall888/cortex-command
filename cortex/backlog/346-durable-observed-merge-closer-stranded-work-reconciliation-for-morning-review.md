@@ -2,12 +2,12 @@
 schema_version: "1"
 uuid: 6eb2c913-9f89-41d4-8404-38ef1d8ecc1e
 title: Durable observed-merge closer + stranded-work reconciliation for morning-review
-status: in_progress
+status: complete
 priority: low
 type: feature
 created: 2026-07-02
 updated: 2026-07-16
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: durable-observed-merge-closer-stranded-work
 complexity: complex
 criticality: high
