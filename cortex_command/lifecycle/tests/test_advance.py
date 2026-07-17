@@ -194,6 +194,38 @@ def test_implement_transition_routes_via_reducer(tmp_path: Path) -> None:
     assert pt["from"] == "implement" and pt["to"] == "review" and pt["tier"] == "complex"
 
 
+def test_batch_dispatches_are_idempotent_per_batch_number(tmp_path: Path) -> None:
+    """Each batch is its own logical advance: batch 1 must not short-circuit on
+    batch 0's committed pair.
+
+    Regression (#393): the invocation_id derived from the bare business tuple,
+    and the batch arm's table endpoints are implement→implement for EVERY batch —
+    so batch 1 re-derived batch 0's id, returned already-committed with an empty
+    emission list, and its batch_dispatch row was silently dropped (batches 1–6
+    of the discovering lifecycle went unrecorded). The registry and implement.md
+    §2b both document the emission as idempotent per batch number.
+    """
+    fd = _feature_dir(tmp_path)
+    _implement_phase(fd)
+    first = adv.advance(verb="implement-transition", feature="feat", mode="batch",
+                        batch=0, tasks=[1, 2], from_state="implement", log_path=_log(fd))
+    second = adv.advance(verb="implement-transition", feature="feat", mode="batch",
+                         batch=1, tasks=[3], from_state="implement", log_path=_log(fd))
+    assert first["state"] == second["state"] == "dispatched"
+    # Distinct batches are distinct claims — both rows land.
+    assert first["invocation_id"] != second["invocation_id"]
+    assert second["emitted"] == ["batch_dispatch"]
+    dispatched = [r for r in _rows(fd) if r["event"] == "batch_dispatch"]
+    assert [r["batch"] for r in dispatched] == [0, 1]
+    assert _names(fd).count("advance_committed") == 2
+    # A retry of the SAME batch still resumes its own pair — no duplicate row.
+    retry = adv.advance(verb="implement-transition", feature="feat", mode="batch",
+                        batch=1, tasks=[3], from_state="implement", log_path=_log(fd))
+    assert retry["invocation_id"] == second["invocation_id"]
+    assert retry["commit_status"] == "already-committed" and retry["emitted"] == []
+    assert [r["batch"] for r in _rows(fd) if r["event"] == "batch_dispatch"] == [0, 1]
+
+
 def test_plan_wait_emits_paused_and_holds(tmp_path: Path) -> None:
     """wait-approved: plan_approved{wait} → feature_paused{plan-approval,relayed-consent};
     to_state holds at plan; feature_paused carries the advance invocation_id."""

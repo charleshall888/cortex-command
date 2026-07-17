@@ -170,45 +170,99 @@ class TestFromStateGate:
         # Nothing was written.
         assert _events(_read_rows(log_path), "advance_started") == []
 
-    def test_implement_to_review_claim_fires_when_every_task_is_checked(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    # The artifact-driven boundaries: wherever the artifact that TRIGGERS a
+    # transition is written before the verb that records it, the artifact
+    # derivation has already advanced past the state the gate demands. Each
+    # param is (artifacts, machine_transitions, from_state, to_state,
+    # artifact_phase): the artifact set the triggering step leaves behind, the
+    # phase_transition edges establishing the events-derived state, the claim's
+    # gated edge, and the phase the LEGACY detector runs ahead to. A future
+    # boundary of this shape is covered by adding a param, not a test copy.
+    _ALL_CHECKED_PLAN = (
+        "### Task 1: a\n- **Status**: [x] done\n"
+        "### Task 2: b\n- **Status**: [x] done\n"
+    )
+    ARTIFACT_BOUNDARIES = (
+        pytest.param(
+            {"plan.md": _ALL_CHECKED_PLAN},
+            [("plan", "implement")],
+            "implement",
+            "review",
+            "review",
+            id="implement-to-review",
+        ),
+        pytest.param(
+            {
+                "plan.md": _ALL_CHECKED_PLAN,
+                "review.md": '{"verdict": "CHANGES_REQUESTED"}\n',
+            },
+            [("plan", "implement"), ("implement", "review")],
+            "review",
+            "implement-rework",
+            "implement-rework",
+            id="review-to-rework",
+        ),
+        pytest.param(
+            {
+                "plan.md": _ALL_CHECKED_PLAN,
+                "review.md": '{"verdict": "APPROVED"}\n',
+            },
+            [("plan", "implement"), ("implement", "review")],
+            "review",
+            "complete",
+            "complete",
+            id="review-to-complete",
+        ),
+    )
+
+    @pytest.mark.parametrize(
+        "artifacts, machine_transitions, from_state, to_state, artifact_phase",
+        ARTIFACT_BOUNDARIES,
+    )
+    def test_artifact_driven_boundary_claim_fires(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        artifacts: dict[str, str],
+        machine_transitions: list[tuple[str, str]],
+        from_state: str,
+        to_state: str,
+        artifact_phase: str,
     ) -> None:
         """The gate must resolve events-first, not by artifact presence.
 
-        Regression: the gate used ``detect_lifecycle_phase``, whose step 3
-        reports "review" as soon as plan.md's tasks are all ``[x]``. Because
-        implement.md §2d flips those checkboxes *before* §4 calls the
-        implement-transition verb, the implement->review claim was refused by
-        construction — its precondition was its own refusal condition. Every
-        recorded implement->review row in the repo bypassed this gate.
+        Regression: the gate used ``detect_lifecycle_phase``, which runs ahead
+        of the events log on every artifact-driven boundary — step 3 reports
+        "review" as soon as plan.md's tasks are all ``[x]`` (flipped by
+        implement.md §2d *before* §4 calls the verb), and step 2 reports the
+        verdict's target as soon as the reviewer's verdict lands in review.md
+        (written *before* the review-verdict verb is invoked). Each such claim
+        was refused by construction — its precondition was its own refusal
+        condition. All three boundaries were hit live in one lifecycle run;
+        every recorded implement->review row in the repo bypassed this gate.
 
-        The events log is authoritative (ADR-0025): it says "implement", so a
-        claim from_state="implement" must be granted even though the artifact
-        derivation has already run ahead to "review".
+        The events log is authoritative (ADR-0025): it still says *from_state*,
+        so the claim must be granted even though the artifact derivation has
+        already run ahead.
         """
         log_path = _pin_root(tmp_path, monkeypatch)
         feature_dir = log_path.parent
-        # An approved plan whose tasks are ALL complete — what §4 sees at hand-off.
-        (feature_dir / "plan.md").write_text(
-            "### Task 1: a\n- **Status**: [x] done\n"
-            "### Task 2: b\n- **Status**: [x] done\n",
-            encoding="utf-8",
-        )
-        # Machine rows establishing the events-derived state as "implement".
-        log_path.write_text(
-            json.dumps({"event": "plan_approved", "feature": FEATURE})
-            + "\n"
-            + json.dumps(
-                {
-                    "event": "phase_transition",
-                    "feature": FEATURE,
-                    "from": "plan",
-                    "to": "implement",
-                }
+        for name, content in artifacts.items():
+            (feature_dir / name).write_text(content, encoding="utf-8")
+        # Machine rows establishing the events-derived state as *from_state*.
+        rows = [json.dumps({"event": "plan_approved", "feature": FEATURE})]
+        for edge_from, edge_to in machine_transitions:
+            rows.append(
+                json.dumps(
+                    {
+                        "event": "phase_transition",
+                        "feature": FEATURE,
+                        "from": edge_from,
+                        "to": edge_to,
+                    }
+                )
             )
-            + "\n",
-            encoding="utf-8",
-        )
+        log_path.write_text("\n".join(rows) + "\n", encoding="utf-8")
 
         # Guard the premise: the legacy artifact detector disagrees with events.
         from cortex_command.common import (
@@ -216,14 +270,14 @@ class TestFromStateGate:
             resolve_lifecycle_phase,
         )
 
-        assert detect_lifecycle_phase(feature_dir)["phase"] == "review"
-        assert resolve_lifecycle_phase(feature_dir)["phase"] == "implement"
+        assert detect_lifecycle_phase(feature_dir)["phase"] == artifact_phase
+        assert resolve_lifecycle_phase(feature_dir)["phase"] == from_state
 
-        inv = derive_invocation_id(FEATURE, "implement", "review")
-        claim = claim_transition(FEATURE, "implement", "review", inv)
-        assert claim.ok, f"implement->review refused: {claim.reason}"
+        inv = derive_invocation_id(FEATURE, from_state, to_state)
+        claim = claim_transition(FEATURE, from_state, to_state, inv)
+        assert claim.ok, f"{from_state}->{to_state} refused: {claim.reason}"
         assert claim.status == "claimed"
-        assert _events(_read_rows(log_path), "advance_started")[0]["to_state"] == "review"
+        assert _events(_read_rows(log_path), "advance_started")[0]["to_state"] == to_state
 
     def test_gate_still_refuses_a_genuine_events_mismatch(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

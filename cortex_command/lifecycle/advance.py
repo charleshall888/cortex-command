@@ -908,8 +908,20 @@ def advance(
     to_state = transition.to_state
     # The business tuple is the STABLE identity (table endpoints), so a crash-recovery
     # retry re-derives the same id and resumes its orphaned claim (never the volatile
-    # detected phase, which shifts once the transition lands).
-    invocation_id = derive_invocation_id(feature, effective_from, to_state, discriminator)
+    # detected phase, which shifts once the transition lands). A batch dispatch's
+    # endpoints are implement→implement for EVERY batch, so the batch number must
+    # join the tuple: without it, batch N re-derives batch 0's id, short-circuits on
+    # batch 0's advance_committed below, and its batch_dispatch row is silently
+    # dropped (#393). With it, the emission is idempotent per batch number — the
+    # semantics the events registry and implement.md §2b document — while a retry
+    # of the SAME batch still resumes its own claim.
+    id_discriminator = discriminator
+    if verb == "implement-transition" and decision_state == "dispatched":
+        batch_key = f"batch={batch}"
+        id_discriminator = (
+            batch_key if not discriminator else f"{discriminator}\x1f{batch_key}"
+        )
+    invocation_id = derive_invocation_id(feature, effective_from, to_state, id_discriminator)
 
     rows = _read_rows(resolved_log)
 
