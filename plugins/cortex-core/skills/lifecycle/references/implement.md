@@ -8,6 +8,8 @@ Dispatch a fresh sub-task per task — a clean context prevents stale assumption
 
 Read `cortex/lifecycle/{feature}/plan.md`; identify pending tasks (`[ ]`).
 
+**Short road (no plan.md)** — the feature arrived via `spec.approved-direct` (simple tier, low/medium criticality; Plan was skipped by the state machine, this is not a missing artifact): derive the task list from spec.md's acceptance criteria and implement in-session — no task batching, no sub-task dispatch, no `batch_dispatch` emissions. Run the branch decision below, do the work, then exit via §4 unchanged.
+
 **Branch decision** — one read-only call composes the current-branch check, plan-time `dispatch_choice`, per-repo `branch-mode`, and picker-fire gate:
 
 ```bash
@@ -112,7 +114,7 @@ Re-entering from Review with CHANGES_REQUESTED — the rework-re-entry transitio
 
 ### 4. Transition
 
-When all tasks are `[x]`, hand off to advance's implement-transition arm in transition mode. It reads tier/criticality through the shared reducer, applies the implement→{review|complete} routing rule (owned there, not restated here — `${CLAUDE_SKILL_DIR}/references/criticality-matrix.md` §Reading lifecycle state), and records the `phase_transition` idempotently. Route on the returned `state`; do not re-derive it:
+When all tasks are `[x]` (short road: when every spec acceptance criterion is met), hand off to advance's implement-transition arm in transition mode. It reads tier/criticality through the shared reducer, applies the implement→{review|complete} routing rule (owned there, not restated here — `${CLAUDE_SKILL_DIR}/references/criticality-matrix.md` §Reading lifecycle state), and records the `phase_transition` idempotently. Route on the returned `state`; do not re-derive it:
 
 ```bash
 cortex-lifecycle-advance implement-transition --mode transition --feature {feature}

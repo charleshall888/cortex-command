@@ -142,17 +142,61 @@ def test_review_verdict_breach_interleaves_drift_row(tmp_path: Path) -> None:
     assert breach["retries"] == 3 and breach["cycle"] == 1
 
 
-def test_spec_approve_emit_transition_order(tmp_path: Path) -> None:
-    """spec-approve/approved with --emit-transition: spec_approved →
-    phase_transition(specify→plan). Backend write-back is Task 14a (not core)."""
+def test_spec_approve_emit_transition_short_road(tmp_path: Path) -> None:
+    """spec-approve/approved with --emit-transition and no tier/criticality
+    recorded: the reducer defaults (simple/medium) take the short road —
+    spec_approved → phase_transition(specify→implement, tier-stamped), arm
+    approved-direct. Backend write-back is Task 14a (not core)."""
     fd = _feature_dir(tmp_path)
     before = _specify_phase(fd)
     r = adv.advance(
         verb="spec-approve", feature="feat", decision="approved", emit_transition=True,
         from_state="specify", log_path=_log(fd),
     )
+    assert r["state"] == "approved-direct" and r["to_state"] == "implement"
+    assert _appended(fd, before) == ["spec_approved", "phase_transition"]
+    edge = _rows(fd)[-1]
+    assert edge["from"] == "specify" and edge["to"] == "implement"
+    assert edge["tier"] == "simple"
+
+
+def test_spec_approve_emit_transition_long_road_complex(tmp_path: Path) -> None:
+    """A complex tier routes the spec exit to plan (arm approved) with the
+    pre-fork byte shape — from/to only, no tier stamp."""
+    fd = _feature_dir(tmp_path)
+    (fd / "research.md").write_text("r", encoding="utf-8")
+    (fd / "spec.md").write_text("s", encoding="utf-8")
+    _seed(fd, [
+        {"event": "lifecycle_start", "feature": "feat",
+         "criticality": "low", "tier": "complex"},
+    ])
+    before = len(_rows(fd))
+    r = adv.advance(
+        verb="spec-approve", feature="feat", decision="approved", emit_transition=True,
+        from_state="specify", log_path=_log(fd),
+    )
     assert r["state"] == "approved" and r["to_state"] == "plan"
     assert _appended(fd, before) == ["spec_approved", "phase_transition"]
+    edge = _rows(fd)[-1]
+    assert edge["from"] == "specify" and edge["to"] == "plan"
+    assert "tier" not in edge
+
+
+def test_spec_approve_emit_transition_long_road_high_criticality(tmp_path: Path) -> None:
+    """High criticality routes the spec exit to plan even at simple tier —
+    the same predicate as the implement-exit rule."""
+    fd = _feature_dir(tmp_path)
+    (fd / "research.md").write_text("r", encoding="utf-8")
+    (fd / "spec.md").write_text("s", encoding="utf-8")
+    _seed(fd, [
+        {"event": "lifecycle_start", "feature": "feat",
+         "criticality": "high", "tier": "simple"},
+    ])
+    r = adv.advance(
+        verb="spec-approve", feature="feat", decision="approved", emit_transition=True,
+        from_state="specify", log_path=_log(fd),
+    )
+    assert r["state"] == "approved" and r["to_state"] == "plan"
 
 
 def test_spec_approve_no_transition_suppresses_edge(tmp_path: Path) -> None:

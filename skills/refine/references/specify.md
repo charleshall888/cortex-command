@@ -142,7 +142,7 @@ Present the specification summary via the AskUserQuestion tool with these approv
 - **Trade-offs** — alternatives considered, rationale for the chosen approach.
 - **Proposed ADRs** — comma-separated `<NNNN-slug>` list from `## Proposed ADR`; `None` when that section's body is `None considered.`
 
-Enumerate the options explicitly as `Approve` | `Request changes` | `Cancel`. Map the selection to the spec-approve verb's `--decision` discriminant (`Approve`→`approved`, `Cancel`→`cancelled`, `Request changes`→`revise`) and hand it off — the verb owns this arm's exact ordered emissions (the `spec_approved` consent record, the flag-gated `specify→plan` transition, and the backend-gated `status:refined` + `spec` + `areas` write-back) and their idempotent replay, so you route on the returned `state`, you do not re-derive it:
+Enumerate the options explicitly as `Approve` | `Request changes` | `Cancel`. Map the selection to the spec-approve verb's `--decision` discriminant (`Approve`→`approved`, `Cancel`→`cancelled`, `Request changes`→`revise`) and hand it off — the verb owns this arm's exact ordered emissions (the `spec_approved` consent record, the flag-gated spec-exit transition, and the backend-gated `status:refined` + `spec` + `areas` write-back) and their idempotent replay, so you route on the returned `state`, you do not re-derive it:
 
 ```bash
 cortex-lifecycle-advance spec-approve --feature <name> --decision <approved|cancelled|revise> \
@@ -158,6 +158,7 @@ cortex-lifecycle-advance spec-approve --feature <name> --decision <approved|canc
 Act on the returned `state`:
 
 - **`approved`** — the consent record, the flag-gated transition, and the write-back are recorded; auto-advance to Plan (no re-confirmation).
+- **`approved-direct`** — same records; the verb routed the spec exit down the short road (simple tier, low/medium criticality): auto-advance to Implement — no Plan phase, no plan.md. Implement derives its tasks from the spec.
 - **`revise`** (Request changes) — nothing recorded; collect the changes, revise the spec, and re-present the surface. Only the final Approve records `spec_approved`.
 - **`cancelled`** — `lifecycle_cancelled` is recorded; halt (resume by re-invoking `/cortex-core:lifecycle`).
 - **`error`** — surface the verb's `message` and halt without advancing.
@@ -168,7 +169,7 @@ Act on the returned `state`:
 
 ### 5. Transition
 
-The `specify→plan` `phase_transition` is emitted by the spec-approve verb when §4's call passes `--emit-transition` (lifecycle-wrapped refine), ordered after the `spec_approved` record; standalone refine passes `--no-emit-transition` and writes no transition row. §4's single verb call is the only emission surface here — no separate transition step, and the `/cortex-core:lifecycle` caller still owns the post-refine commit-artifacts (refine-delegation.md Post-Refine Commit).
+The spec-exit `phase_transition` (`specify→plan`, or `specify→implement` on the short road — the verb routes it from recorded tier/criticality; you never pick) is emitted by the spec-approve verb when §4's call passes `--emit-transition` (lifecycle-wrapped refine), ordered after the `spec_approved` record; standalone refine passes `--no-emit-transition` and writes no transition row. §4's single verb call is the only emission surface here — no separate transition step, and the `/cortex-core:lifecycle` caller still owns the post-refine commit-artifacts (refine-delegation.md Post-Refine Commit).
 
 ## Hard Gate
 

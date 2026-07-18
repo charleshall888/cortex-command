@@ -318,3 +318,37 @@ def test_projection_never_raises(
     )
 
     assert outcome == "error"
+
+
+def test_short_road_approval_still_projects_spec_and_areas(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The approved-direct arm (specify→implement short road) must reach the
+    spec/areas projection seam exactly as the approved arm does — the seam gates
+    on the approval arms, not on the literal "approved" state. Regression pin:
+    the seam originally tested decision_state == "approved" only, silently
+    skipping the spec: write for every short-roaded feature."""
+    root, log_path, backlog_dir = _scaffold(tmp_path)
+    item = _write_item(backlog_dir, "backlog")
+    (root / "cortex" / "lifecycle" / _FEATURE / "research.md").write_text("r", encoding="utf-8")
+    (root / "cortex" / "lifecycle" / _FEATURE / "spec.md").write_text("s", encoding="utf-8")
+    monkeypatch.setattr(
+        "cortex_command.backlog.update_item.subprocess.run",
+        lambda *a, **k: types.SimpleNamespace(returncode=0, stderr=b""),
+    )
+    monkeypatch.chdir(root)
+
+    r = adv.advance(
+        verb="spec-approve", feature=_FEATURE, decision="approved",
+        emit_transition=True, from_state="specify", log_path=log_path,
+        spec_path=f"cortex/lifecycle/{_FEATURE}/spec.md",
+        backlog_file=item.name, areas=["lifecycle"], project_root=root,
+    )
+
+    # No tier recorded → reducer defaults (simple/medium) → the short road.
+    assert r["state"] == "approved-direct" and r["to_state"] == "implement"
+    text = item.read_text(encoding="utf-8")
+    assert f"spec: cortex/lifecycle/{_FEATURE}/spec.md" in text
+    assert "lifecycle" in text
+    # Status projected from to_state=implement (in_progress), not plan/refined.
+    assert "status: in_progress" in text

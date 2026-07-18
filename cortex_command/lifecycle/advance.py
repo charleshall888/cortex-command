@@ -411,9 +411,18 @@ def _emission_plan(
                 {"event": "spec_approved", "fields": [("decision", "approved")], "match": {}},
             ]
             if emit_transition:
+                # Spec-exit fork — reuse the B1 routing rule (never re-derived).
+                # plan = long road (unchanged byte shape); implement = short
+                # road, decision_state "approved-direct", tier stamped like the
+                # implement-exit row it mirrors.
+                route, tier = _sa._resolve_spec_route(log_path)
+                fields = [("from", "specify"), ("to", route)]
+                if route == "implement":
+                    decision_state = "approved-direct"
+                    fields.append(("tier", tier))
                 emissions.append({
-                    "event": "phase_transition", "fields": [("from", "specify"), ("to", "plan")],
-                    "match": {"from": "specify", "to": "plan"},
+                    "event": "phase_transition", "fields": fields,
+                    "match": {"from": "specify", "to": route},
                 })
             # NOTE: the backend-gated status:refined write-back is Task 14a's
             # monotonic status projection (see _project_status), not the core body.
@@ -1027,11 +1036,16 @@ def advance(
     _project_status(feature=feature, transition=transition, log_path=resolved_log,
                     rows=rows, project_root=project_root)
 
-    # Spec/areas projection seam (#378 req-7) — post-commit, spec-approve/approved
-    # ONLY, and only when the caller supplied the write-back (--spec-path). Writes
-    # ONLY spec + areas; status stays _project_status-owned (events-first). An
-    # emission-only caller that omits --spec-path is unchanged (no projection).
-    if verb == "spec-approve" and decision_state == "approved" and spec_path is not None:
+    # Spec/areas projection seam (#378 req-7) — post-commit, spec-approve approval
+    # arms ONLY (both roads: approved AND approved-direct — the short road still
+    # records the spec), and only when the caller supplied the write-back
+    # (--spec-path). Writes ONLY spec + areas; status stays _project_status-owned
+    # (events-first). An emission-only caller omitting --spec-path is unchanged.
+    if (
+        verb == "spec-approve"
+        and decision_state in ("approved", "approved-direct")
+        and spec_path is not None
+    ):
         _project_spec_areas(
             feature=feature, backlog_file=backlog_file, spec_path=spec_path,
             areas=areas, clear_areas=clear_areas, log_path=resolved_log,

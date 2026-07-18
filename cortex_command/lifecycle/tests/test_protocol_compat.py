@@ -26,7 +26,8 @@ from cortex_command.lifecycle.protocol import (
 def test_ok_when_present_and_within_range() -> None:
     payload = {"state": "specify", "protocol": PROTOCOL_VERSION}
     assert (
-        classify_protocol(payload, expected_min=1, expected_max=1) == COMPAT_OK
+        classify_protocol(payload, expected_min=1, expected_max=PROTOCOL_VERSION)
+        == COMPAT_OK
     )
 
 

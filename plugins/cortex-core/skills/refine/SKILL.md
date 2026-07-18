@@ -6,7 +6,7 @@ inputs:
   - "topic: string (required) — backlog item ID (numeric), slug (kebab-case), or title (quoted phrase); or ad-hoc topic name if no backlog item exists"
 outputs:
   - "cortex/lifecycle/{slug}/research.md — implementation-level research artifact"
-  - "cortex/lifecycle/{slug}/spec.md — approved specification ready for planning"
+  - "cortex/lifecycle/{slug}/spec.md — approved specification ready for execution"
   - "cortex/backlog/{item}.md — updated with complexity:, criticality:, status: refined, spec: path, areas:"
 preconditions:
   - "Run from project root"

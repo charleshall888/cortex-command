@@ -178,11 +178,13 @@ def test_monotonic_across_tiers(grid):
         )
 
 
-def test_floor_is_three(grid):
-    """The lowest-effort corner (simple + low) is the floor value 3."""
+def test_floor_is_one(grid):
+    """The lowest-effort corner (simple + low) is the floor value 1 — the
+    Codebase-only short road; Web and Requirements join per fanout.md's
+    tier-scoped core rule, not unconditionally."""
     floor = grid["simple"][CRITICALITY_COLUMNS.index("low")]
-    assert floor == 3, (
-        f"Fan-out matrix floor (simple + low) must be 3, found {floor}."
+    assert floor == 1, (
+        f"Fan-out matrix floor (simple + low) must be 1, found {floor}."
     )
 
 

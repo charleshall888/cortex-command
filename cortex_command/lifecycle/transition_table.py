@@ -380,11 +380,44 @@ TRANSITIONS: tuple[Transition, ...] = (
         to_state="plan",
         edge_kind=EDGE_KIND_PHASE_TRANSITION,
         emits=("spec_approved", "phase_transition"),
-        param_selectors=("backend",),
+        guard=Guard(
+            precondition=(
+                "criticality in {high, critical} OR tier == complex "
+                "(or corrupted reduction — cautious default to plan), "
+                "or standalone refine (--no-emit-transition, no edge emitted)"
+            ),
+            reads=("criticality", "tier"),
+        ),
+        param_selectors=("backend", "criticality", "tier"),
         notes=(
             "phase_transition specify->plan emits ONLY when the caller wraps refine "
             "in the lifecycle (--emit-transition); standalone refine records "
-            "spec_approved and the backend-gated write-back but suppresses the edge."
+            "spec_approved and the backend-gated write-back but suppresses the edge. "
+            "The long road of the spec-exit fork; the short road is spec.approved-direct."
+        ),
+    ),
+    Transition(
+        id="spec.approved-direct",
+        owning_verb="spec_approve",
+        decision_state="approved-direct",
+        from_state="specify",
+        to_state="implement",
+        edge_kind=EDGE_KIND_PHASE_TRANSITION,
+        emits=("spec_approved", "phase_transition"),
+        guard=Guard(
+            precondition=(
+                "criticality not in {high, critical} AND tier != complex "
+                "(the short road: simple/low-medium skips Plan; only taken "
+                "under --emit-transition — standalone refine emits no edge)"
+            ),
+            reads=("criticality", "tier"),
+        ),
+        param_selectors=("backend", "criticality", "tier"),
+        notes=(
+            "Short road of the spec-exit fork: same predicate as the implement-exit "
+            "rule, so a simple/low-medium feature runs specify->implement->complete "
+            "and never enters plan or review. Implement derives its task list from "
+            "spec.md acceptance criteria (no plan.md exists on this road)."
         ),
     ),
     Transition(

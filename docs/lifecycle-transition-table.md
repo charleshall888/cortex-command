@@ -34,7 +34,8 @@ One row per B1 verb decision arm. `Edge` is the move kind; `Guard` is the adviso
 | `review.approved` | `review_verdict` | `approved` | `review` → `complete` | phase-transition | `review_verdict`, `phase_transition` | verdict == APPROVED (any cycle) | — | — | — |
 | `review.escalated` | `review_verdict` | `escalated` | `review` → `escalated` | phase-transition | `review_verdict`, `phase_transition` | verdict == REJECTED (any cycle), or CHANGES_REQUESTED and cycle >= 2 | — | — | — |
 | `review.rework` | `review_verdict` | `rework` | `review` → `implement-rework` | phase-transition | `review_verdict`, `phase_transition` | verdict == CHANGES_REQUESTED and cycle == 1 | — | — | — |
-| `spec.approved` | `spec_approve` | `approved` | `specify` → `plan` | phase-transition | `spec_approved`, `phase_transition` | — | — | `backend` | phase_transition specify->plan emits ONLY when the caller wraps refine in the lifecycle (--emit-transition); standalone refine records spec_approved and the backend-gated write-back but suppresses the edge. |
+| `spec.approved` | `spec_approve` | `approved` | `specify` → `plan` | phase-transition | `spec_approved`, `phase_transition` | criticality in {high, critical} OR tier == complex (or corrupted reduction — cautious default to plan), or standalone refine (--no-emit-transition, no edge emitted) | — | `backend`, `criticality`, `tier` | phase_transition specify->plan emits ONLY when the caller wraps refine in the lifecycle (--emit-transition); standalone refine records spec_approved and the backend-gated write-back but suppresses the edge. The long road of the spec-exit fork; the short road is spec.approved-direct. |
+| `spec.approved-direct` | `spec_approve` | `approved-direct` | `specify` → `implement` | phase-transition | `spec_approved`, `phase_transition` | criticality not in {high, critical} AND tier != complex (the short road: simple/low-medium skips Plan; only taken under --emit-transition — standalone refine emits no edge) | — | `backend`, `criticality`, `tier` | Short road of the spec-exit fork: same predicate as the implement-exit rule, so a simple/low-medium feature runs specify->implement->complete and never enters plan or review. Implement derives its task list from spec.md acceptance criteria (no plan.md exists on this road). |
 | `spec.cancelled` | `spec_approve` | `cancelled` | `specify` → `cancelled` | cancel | `lifecycle_cancelled` | — | — | — | — |
 | `spec.revise` | `spec_approve` | `revise` | `specify` → `specify` | no-op | — | — | — | — | Short-circuit before any mutation; the spec is revised out-of-band. |
 
@@ -293,15 +294,49 @@ Machine-readable rendering of the same table (states sorted by name, transitions
         "phase_transition"
       ],
       "from_state": "specify",
-      "guard": null,
+      "guard": {
+        "precondition": "criticality in {high, critical} OR tier == complex (or corrupted reduction — cautious default to plan), or standalone refine (--no-emit-transition, no edge emitted)",
+        "reads": [
+          "criticality",
+          "tier"
+        ]
+      },
       "id": "spec.approved",
-      "notes": "phase_transition specify->plan emits ONLY when the caller wraps refine in the lifecycle (--emit-transition); standalone refine records spec_approved and the backend-gated write-back but suppresses the edge.",
+      "notes": "phase_transition specify->plan emits ONLY when the caller wraps refine in the lifecycle (--emit-transition); standalone refine records spec_approved and the backend-gated write-back but suppresses the edge. The long road of the spec-exit fork; the short road is spec.approved-direct.",
       "owning_verb": "spec_approve",
       "param_selectors": [
-        "backend"
+        "backend",
+        "criticality",
+        "tier"
       ],
       "pause": null,
       "to_state": "plan"
+    },
+    {
+      "decision_state": "approved-direct",
+      "edge_kind": "phase-transition",
+      "emits": [
+        "spec_approved",
+        "phase_transition"
+      ],
+      "from_state": "specify",
+      "guard": {
+        "precondition": "criticality not in {high, critical} AND tier != complex (the short road: simple/low-medium skips Plan; only taken under --emit-transition — standalone refine emits no edge)",
+        "reads": [
+          "criticality",
+          "tier"
+        ]
+      },
+      "id": "spec.approved-direct",
+      "notes": "Short road of the spec-exit fork: same predicate as the implement-exit rule, so a simple/low-medium feature runs specify->implement->complete and never enters plan or review. Implement derives its task list from spec.md acceptance criteria (no plan.md exists on this road).",
+      "owning_verb": "spec_approve",
+      "param_selectors": [
+        "backend",
+        "criticality",
+        "tier"
+      ],
+      "pause": null,
+      "to_state": "implement"
     },
     {
       "decision_state": "cancelled",

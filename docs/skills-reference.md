@@ -69,7 +69,7 @@ Plan and launch autonomous overnight development sessions. Selects eligible feat
 These three skills overlap and route to each other — here is when to use each:
 
 - **`/cortex-core:dev`** — general entry point when you are not sure what to do next. It analyzes your request, runs backlog triage if invoked bare, and routes automatically to `/cortex-core:lifecycle`, `/overnight`, `/cortex-core:discovery`, or direct implementation. Start here if you do not already know which workflow you need.
-- **`/cortex-core:lifecycle`** — invoke directly when you already know the feature and want to work through it phase by phase (research → spec → plan → implement → review → complete). It is a structured, interactive state machine for a single feature. `/cortex-core:dev` routes non-trivial single features here automatically.
+- **`/cortex-core:lifecycle`** — invoke directly when you already know the feature and want to work through it phase by phase (research → spec → plan → implement → review → complete; simple-tier low/medium features take the short road, skipping plan and review). It is a structured, interactive state machine for a single feature. `/cortex-core:dev` routes non-trivial single features here automatically.
 - **`/overnight`** — invoke directly when features already have their research and spec artifacts (produced by `/cortex-core:refine` or `/cortex-core:lifecycle`) and you want autonomous unattended execution. It handles plan approval and hands off to the runner; no interactive research or spec phases occur. `/cortex-core:dev` recommends this when all backlog children are refined.
 
 ---

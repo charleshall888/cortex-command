@@ -14,8 +14,8 @@ Research is **always parallel** at every criticality, sized by the tier × criti
 
 | Criticality | Review phase | Orchestrator review | Planning |
 |-------------|-------------|--------------------|---------|
-| low | tier-based (skip for simple) | skipped for simple, active for complex | single plan |
-| medium | tier-based (skip for simple) | active at phase boundaries | single plan |
+| low | tier-based (skip for simple) | skipped for simple, active for complex | tier-based (skip for simple) |
+| medium | tier-based (skip for simple) | active at phase boundaries | tier-based (skip for simple) |
 | high | forced regardless of tier | active at all phase boundaries | single plan |
 | critical | forced regardless of tier | active at all phase boundaries | competing plans |
 
@@ -24,4 +24,5 @@ Research is **always parallel** at every criticality, sized by the tier × criti
 Run `cortex-lifecycle-state --feature {feature}` (whole-state JSON) or with `--field <x>` (single-field JSON) for tier or criticality. It reduces the event log to current values, defaulting to `criticality=medium` / `tier=simple` when the key is absent or events.log is missing — the CLI prints `{}` or omits absent keys, so apply these defaults yourself.
 
 - **Implement→{review|complete} routing**: owned by `cortex-lifecycle-implement-transition` (the implement-cluster verb reads tier/criticality through this reducer and applies the "Review when criticality ∈ {high, critical} OR tier = complex, else Complete" rule in its body) — not restated in prose here, to avoid a prose/code drift pair. implement.md §4 hands off to the verb and routes on its returned `state`.
+- **Specify→{plan|implement} routing**: owned by `cortex-lifecycle-spec-approve` under `--emit-transition` — the same predicate applied at spec exit, so simple + low/medium takes the short road (no Plan phase). specify.md §4 routes on the returned `state` (`approved` | `approved-direct`).
 - **`"corrupted": true`**: events.log is corrupted and tier/criticality are unknowable — treat the feature as requiring review (run the critical-review / orchestrator-review gate) rather than the skip rule and defaulting.

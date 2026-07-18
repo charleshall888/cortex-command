@@ -72,7 +72,9 @@ def test_approved_emit_transition_orders_spec_approved_then_transition(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Lifecycle-wrapped refine (--emit-transition): spec_approved{decision}
-    THEN phase_transition specify->plan, in that order."""
+    THEN the phase_transition, in that order. With no tier/criticality recorded
+    the reducer defaults (simple/medium) take the short road: specify->implement,
+    tier-stamped, arm approved-direct."""
     feature_dir = _scaffold(tmp_path, monkeypatch)
     r = sa.spec_approve(
         feature="feat",
@@ -83,7 +85,7 @@ def test_approved_emit_transition_orders_spec_approved_then_transition(
         emit_transition=True,
     )
 
-    assert r["state"] == "approved"
+    assert r["state"] == "approved-direct"
     assert r["decision"] == "approved"
     assert r["emit_transition"] is True
     assert r["emitted"] == ["spec_approved", "phase_transition"]
@@ -92,7 +94,54 @@ def test_approved_emit_transition_orders_spec_approved_then_transition(
     assert [x["event"] for x in rows] == ["spec_approved", "phase_transition"]
     assert rows[0]["decision"] == "approved"
     assert rows[1]["from"] == "specify"
-    assert rows[1]["to"] == "plan"
+    assert rows[1]["to"] == "implement"
+    assert rows[1]["tier"] == "simple"
+
+
+def test_approved_emit_transition_complex_routes_plan(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A complex tier takes the long road: specify->plan, arm approved, and the
+    row keeps the pre-fork byte shape (from/to only, no tier stamp)."""
+    feature_dir = _scaffold(tmp_path, monkeypatch)
+    (feature_dir / "events.log").write_text(
+        json.dumps({
+            "event": "lifecycle_start", "feature": "feat",
+            "criticality": "low", "tier": "complex",
+        }) + "\n",
+        encoding="utf-8",
+    )
+    r = sa.spec_approve(
+        feature="feat", decision="approved", backend="none",
+        backlog_file="", spec_path="p", emit_transition=True,
+    )
+    assert r["state"] == "approved"
+    assert r["emitted"] == ["spec_approved", "phase_transition"]
+    edge = _events_rows(feature_dir)[-1]
+    assert edge["from"] == "specify" and edge["to"] == "plan"
+    assert "tier" not in edge
+
+
+def test_approved_emit_transition_high_criticality_routes_plan(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """High criticality takes the long road even at simple tier — the spec-exit
+    fork shares the implement-exit predicate."""
+    feature_dir = _scaffold(tmp_path, monkeypatch)
+    (feature_dir / "events.log").write_text(
+        json.dumps({
+            "event": "lifecycle_start", "feature": "feat",
+            "criticality": "high", "tier": "simple",
+        }) + "\n",
+        encoding="utf-8",
+    )
+    r = sa.spec_approve(
+        feature="feat", decision="approved", backend="none",
+        backlog_file="", spec_path="p", emit_transition=True,
+    )
+    assert r["state"] == "approved"
+    edge = _events_rows(feature_dir)[-1]
+    assert edge["to"] == "plan"
 
 
 def test_approved_no_emit_transition_suppresses_transition(
@@ -172,7 +221,9 @@ def test_approved_backend_none_skips_writeback_but_emits(
         spec_path="p",
         emit_transition=emit_transition,
     )
-    assert r["state"] == "approved"
+    # No tier recorded: --emit-transition takes the short road (approved-direct);
+    # standalone stays fork-blind (approved).
+    assert r["state"] == ("approved-direct" if emit_transition else "approved")
     assert r["backlog"] == "skipped"
     assert "spec_approved" in _event_names(feature_dir)
 
@@ -461,7 +512,9 @@ def test_phase_transition_guard_ignores_earlier_transitions(
     assert "phase_transition" in r["emitted"]
     transitions = [x for x in _events_rows(feature_dir) if x["event"] == "phase_transition"]
     assert {"from": "research", "to": "specify"}.items() <= transitions[0].items()
-    assert {"from": "specify", "to": "plan"}.items() <= transitions[1].items()
+    # No tier recorded → the short road; the point is the from/to-qualified
+    # guard fired despite the earlier phase_transition row.
+    assert {"from": "specify", "to": "implement"}.items() <= transitions[1].items()
 
 
 # ---------------------------------------------------------------------------
@@ -516,15 +569,17 @@ def test_every_state_is_known(
     monkeypatch.setattr(sa, "update_item", lambda *a, **k: None)
     seen = set()
     for feat, kwargs in [
-        ("f1", {"decision": "approved"}),
-        ("f2", {"decision": "cancelled"}),
-        ("f3", {"decision": "revise"}),
+        ("f1", {"decision": "approved", "emit_transition": False}),
+        # No tier recorded + --emit-transition → the short road (approved-direct).
+        ("f1d", {"decision": "approved", "emit_transition": True}),
+        ("f2", {"decision": "cancelled", "emit_transition": False}),
+        ("f3", {"decision": "revise", "emit_transition": False}),
     ]:
         _scaffold(tmp_path, monkeypatch, feature=feat)
         seen.add(
             sa.spec_approve(
                 feature=feat, backend="none", backlog_file="",
-                spec_path="p", emit_transition=False, **kwargs
+                spec_path="p", **kwargs
             )["state"]
         )
 

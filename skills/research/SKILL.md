@@ -52,7 +52,7 @@ Every dispatched agent is turn-capped; append this verbatim text to every agent 
 
 When `research-considerations-file` is present (Step 1), inject its content as a `### Considerations to investigate alongside the primary scope` section into the **mandatory core angles only** (Codebase, Web, Requirements & Constraints) — never Tradeoffs or Adversarial.
 
-The angle set is **hybrid**: fixed mandatory core, plus `agent_count − core − (adversarial, if high/critical)` orchestrator-chosen distinct angles (selection rule: fanout.md's hybrid-angle-selection section — apply it), plus an always-last adversarial pass for high/critical work.
+The angle set is **hybrid**: the tier-scoped mandatory core (fanout.md's hybrid-angle-selection section — at simple tier only Codebase is unconditional), plus `agent_count − core − (adversarial, if high/critical)` orchestrator-chosen distinct angles (same section's selection rule — apply it), plus an always-last adversarial pass for high/critical work.
 
 #### Codebase (core)
 Tools: Read, Glob, Grep

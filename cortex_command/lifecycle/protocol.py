@@ -33,7 +33,9 @@ from typing import Any, Literal, Mapping
 
 # The protocol integer this wheel serves. Append-only; range-compared against the
 # plugin-side expectation file — never exact-equality. See module docstring.
-PROTOCOL_VERSION = 1
+# 2: spec-approve may return state "approved-direct" (the specify->implement
+#    short road) — prose predating the fork has no route for that state.
+PROTOCOL_VERSION = 2
 
 # --- Wheel-side compat evaluator (R7 substrate) ---------------------------------
 #

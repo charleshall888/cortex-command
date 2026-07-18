@@ -131,6 +131,7 @@ When a request appears trivial (Branch 4), confirm before skipping lifecycle:
 If the user confirms direct implementation:
 - Implement the change in the current conversation
 - Commit the result
+- If the request resolved a backlog item, close it: `cortex-update-item {backlog-filename-slug} --status complete` (skip when there is no item or the backend is external)
 
 If the user declines:
 - Perform the criticality pre-assessment (Step 2)

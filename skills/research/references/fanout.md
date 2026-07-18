@@ -8,18 +8,20 @@ Agent count is the cell where the task's tier (row) meets its criticality (colum
 
 | tier \ criticality | low | medium | high | critical |
 |--------------------|-----|--------|------|----------|
-| **simple**         | 3   | 4      | 5    | 6        |
+| **simple**         | 1   | 2      | 3    | 4        |
 | **complex**        | 5   | 6      | 8    | 10       |
 
 The count is an **upper bound on breadth, not a quota** — dispatch fewer if the task offers fewer genuinely distinct angles than its cell allows.
 
 ## Hybrid angle selection
 
-Three angles are the **mandatory core**, run at every cell:
+The **mandatory core** is tier-scoped:
 
-- **Codebase** — how the existing system works, where the change lands, what it touches.
-- **Web** — external prior art, libraries, patterns, and known pitfalls.
-- **Requirements & Constraints** — project/area requirements, scope boundaries, non-negotiables.
+- **Codebase** — how the existing system works, where the change lands, what it touches. Mandatory at **every** cell.
+- **Web** — external prior art, libraries, patterns, and known pitfalls. Mandatory at **complex** tier; at simple tier dispatch it only when the task names an external dependency, protocol, or library question.
+- **Requirements & Constraints** — project/area requirements, scope boundaries, non-negotiables. Mandatory at **complex** tier; at simple tier Clarify's requirements-alignment note already covers this — dispatch it only when that note was `partial` or `conflict`.
+
+The simple row is deliberately thin: simple work is defined (clarify.md) as an existing pattern followed exactly, and the complexity escalator ratchets tier up when research surfaces open questions — a too-thin pass escalates on evidence rather than silently proceeding.
 
 An **Adversarial** angle is **always present for high/critical** work (optional below that, at orchestrator discretion). It runs **last**, over a summary of the other agents' findings rather than the raw task.
 

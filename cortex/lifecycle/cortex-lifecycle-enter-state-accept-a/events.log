@@ -14,3 +14,10 @@
 {"ts": "2026-07-17T01:56:56Z", "event": "advance_started", "feature": "cortex-lifecycle-enter-state-accept-a", "from_state": "implement", "to_state": "implement", "invocation_id": "ae16b5908b0cc462", "verb": "implement-transition"}
 {"ts": "2026-07-17T01:56:56Z", "event": "batch_dispatch", "feature": "cortex-lifecycle-enter-state-accept-a", "batch": 0, "tasks": [1], "invocation_id": "ae16b5908b0cc462"}
 {"ts": "2026-07-17T01:56:56Z", "event": "advance_committed", "feature": "cortex-lifecycle-enter-state-accept-a", "from_state": "implement", "to_state": "implement", "invocation_id": "ae16b5908b0cc462", "verb": "implement-transition"}
+{"ts": "2026-07-17T02:33:34Z", "event": "advance_started", "feature": "cortex-lifecycle-enter-state-accept-a", "from_state": "implement", "to_state": "review", "invocation_id": "525d06353c15cc7a", "verb": "implement-transition"}
+{"ts": "2026-07-17T02:33:34Z", "event": "phase_transition", "feature": "cortex-lifecycle-enter-state-accept-a", "from": "implement", "to": "review", "tier": "complex", "invocation_id": "525d06353c15cc7a"}
+{"ts": "2026-07-17T02:33:34Z", "event": "advance_committed", "feature": "cortex-lifecycle-enter-state-accept-a", "from_state": "implement", "to_state": "review", "invocation_id": "525d06353c15cc7a", "verb": "implement-transition"}
+{"ts": "2026-07-17T02:55:59Z", "event": "advance_started", "feature": "cortex-lifecycle-enter-state-accept-a", "from_state": "review", "to_state": "complete", "invocation_id": "c5825a2db0437026", "verb": "review-verdict"}
+{"ts": "2026-07-17T02:55:59Z", "event": "review_verdict", "feature": "cortex-lifecycle-enter-state-accept-a", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected", "invocation_id": "c5825a2db0437026"}
+{"ts": "2026-07-17T02:55:59Z", "event": "phase_transition", "feature": "cortex-lifecycle-enter-state-accept-a", "from": "review", "to": "complete", "invocation_id": "c5825a2db0437026"}
+{"ts": "2026-07-17T02:55:59Z", "event": "advance_committed", "feature": "cortex-lifecycle-enter-state-accept-a", "from_state": "review", "to_state": "complete", "invocation_id": "c5825a2db0437026", "verb": "review-verdict"}

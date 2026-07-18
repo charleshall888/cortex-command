@@ -47,8 +47,8 @@ Write or present these five outputs — the handoff package for Research:
 1. **Clarified intent statement** — one sentence: what's being built and why (from the backlog description in Context A, or the user's answers in Context B). The anchor for research scope.
 2. **Complexity** — `simple` or `complex`:
    - simple: 1–3 files, mechanical (rename, reword, add a field), an existing pattern followed exactly, no behavioral effect on callers.
-   - complex: 4+ files, OR shared infrastructure/core workflow orchestration, OR cross-cutting effects on other skills/downstream processes, OR design-trade-off judgment calls, OR new patterns.
-   When in doubt, prefer `complex`.
+   - complex: 4+ files, OR cross-cutting effects on other skills/downstream processes, OR design-trade-off judgment calls, OR new patterns. ("Touches shared infrastructure" is not by itself complex — in a harness repo that matches everything; ask whether the change *reshapes* it or follows its existing pattern.)
+   When in doubt, prefer `simple` — doubt resolves down, evidence resolves up: `cortex-complexity-escalator` ratchets to complex when research surfaces open questions, so an underestimate self-corrects while an overestimate never does.
 3. **Criticality** — `low | medium | high | critical`:
    - low: minimal impact, easily reversed, no meaningful downstream deps (comment fix, typo).
    - medium: affects users or developers but recoverable; isolated tooling change with no downstream consumers.

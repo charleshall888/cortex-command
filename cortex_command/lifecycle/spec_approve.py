@@ -21,11 +21,21 @@ This verb owns spec approval across THREE contexts, distinguished only by the
     repaired by re-running the whole verb; each emission presence-checks
     independently.
 
-The three decision arms and their EXACT ordered emissions:
+The decision arms and their EXACT ordered emissions:
 
   approved  → (a) ``spec_approved`` {decision: approved} — the optional consent
                   field records durable operator approval (Task-6 field)
-              (b) IF ``--emit-transition``: ``phase_transition`` from=specify to=plan
+              (b) IF ``--emit-transition``: ``phase_transition`` from=specify
+                  to=<plan|implement> — the spec-exit fork. The route reads the
+                  shared reducer via ``_resolve_spec_route`` (the same predicate
+                  as ``implement_transition``'s §4 rule): ``plan`` when
+                  criticality ∈ {high, critical} OR tier == complex (or the
+                  reduction is corrupted — cautious long road), else
+                  ``implement`` (the short road: simple/low-medium skips Plan).
+                  The returned ``state`` echoes the arm: ``approved`` for the
+                  plan route, ``approved-direct`` for the implement route.
+                  Without ``--emit-transition`` no edge emits and ``state`` is
+                  always ``approved`` (standalone refine is fork-blind).
               (c) backend-gated backlog write-back (status:refined + spec + areas)
                   via in-process ``update_item`` — the finalize precedent
   cancelled → (a) ``lifecycle_cancelled`` — nothing else
@@ -93,7 +103,10 @@ from cortex_command.backlog.resolve_item import (
     resolve,
 )
 from cortex_command.backlog.update_item import update_item
-from cortex_command.common import _resolve_user_project_root_from_cwd
+from cortex_command.common import (
+    _resolve_user_project_root_from_cwd,
+    reduce_lifecycle_state,
+)
 from cortex_command.lifecycle.protocol import PROTOCOL_VERSION
 from cortex_command.lifecycle_event import log_event
 
@@ -101,10 +114,45 @@ _DECISIONS = ("approved", "cancelled", "revise")
 
 KNOWN_STATES = (
     "approved",
+    "approved-direct",
     "cancelled",
     "revise",
     "error",
 )
+
+# The reducer's documented defaults for an absent (but not corruption-unknowable)
+# axis — the same defaults implement_transition applies (criticality-matrix.md:24).
+_DEFAULT_CRITICALITY = "medium"
+_DEFAULT_TIER = "simple"
+_LONG_ROAD_CRITICALITIES = frozenset({"high", "critical"})
+
+
+def _resolve_spec_route(events_log: Path) -> tuple[str, str]:
+    """Resolve the spec-exit route and the tier to stamp on the transition row.
+
+    The spec-side twin of ``implement_transition._resolve_route`` — the SAME
+    predicate, so a feature's spec exit and implement exit agree on which road
+    it is on:
+
+      * ``corrupted`` → ``("plan", "complex")`` — the cautious default when
+        tier/criticality are unknowable (mirror of the implement rule's
+        default-to-review).
+      * otherwise, default an absent axis (criticality=medium / tier=simple)
+        then route ``plan`` when criticality ∈ {high, critical} OR
+        tier == complex, else ``implement`` (the short road); the returned
+        tier is the resolved tier.
+
+    Returns ``(route, tier)`` where ``route`` ∈ {"plan", "implement"} and
+    ``tier`` ∈ {"simple", "complex"}.
+    """
+    reduction = reduce_lifecycle_state(events_log)
+    if reduction.corrupted:
+        return "plan", "complex"
+    criticality = reduction.state.get("criticality", _DEFAULT_CRITICALITY)
+    tier = reduction.state.get("tier", _DEFAULT_TIER)
+    if criticality in _LONG_ROAD_CRITICALITIES or tier == "complex":
+        return "plan", tier
+    return "implement", tier
 
 _CORTEX_BACKLOG = "cortex-backlog"
 
@@ -271,25 +319,34 @@ def spec_approve(
                 fields=[("str", "decision", "approved")],
             )
             emitted.append("spec_approved")
-        # (b) phase_transition specify->plan — ONLY when the caller wraps refine
-        #     in the lifecycle (--emit-transition). Standalone refine suppresses
-        #     it. from/to qualified so it never false-skips an earlier transition.
-        if emit_transition and not _event_exists(
-            events_log, "phase_transition", {"from": "specify", "to": "plan"}
-        ):
-            log_event(
-                event="phase_transition",
-                feature=feature,
-                fields=[("str", "from", "specify"), ("str", "to", "plan")],
-            )
-            emitted.append("phase_transition")
+        # (b) phase_transition specify-><route> — ONLY when the caller wraps
+        #     refine in the lifecycle (--emit-transition). Standalone refine
+        #     suppresses it and stays fork-blind (state "approved"). The route
+        #     reads the shared reducer: plan (long road) or implement (short
+        #     road). from/to qualified so it never false-skips an earlier
+        #     transition; tier stamped like the implement-exit row.
+        state = "approved"
+        if emit_transition:
+            route, tier = _resolve_spec_route(events_log)
+            # The long-road row stays byte-identical to the pre-fork shape
+            # (from/to only); the short-road row stamps tier like the
+            # implement-exit row it mirrors.
+            fields = [("str", "from", "specify"), ("str", "to", route)]
+            if route == "implement":
+                state = "approved-direct"
+                fields.append(("str", "tier", tier))
+            if not _event_exists(
+                events_log, "phase_transition", {"from": "specify", "to": route}
+            ):
+                log_event(event="phase_transition", feature=feature, fields=fields)
+                emitted.append("phase_transition")
         # (c) backend-gated backlog write-back — status:refined + spec + areas.
         #     May raise _Exit2 on an ambiguous slug (→ exit 2). Idempotent.
         backlog_signal = _apply_backlog_writeback(
             backend, backlog_file, spec_path, areas, clear_areas, root
         )
         return {
-            "state": "approved",
+            "state": state,
             "feature": feature,
             "decision": "approved",
             "backend": backend,

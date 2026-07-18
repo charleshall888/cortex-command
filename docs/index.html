@@ -5905,11 +5905,11 @@
         <div class="ax-compare-h">a simple change</div>
         <div class="ax-compare-name">adding a new lure</div>
         <div class="ax-compare-stats">
-          <div class="ax-compare-stat"><span class="ax-compare-stat-v">5</span><span class="ax-compare-stat-k">gates</span></div>
+          <div class="ax-compare-stat"><span class="ax-compare-stat-v">4</span><span class="ax-compare-stat-k">gates</span></div>
           <div class="ax-compare-stat"><span class="ax-compare-stat-v">~200k</span><span class="ax-compare-stat-k">tokens</span></div>
           <div class="ax-compare-stat"><span class="ax-compare-stat-v">~10 min</span><span class="ax-compare-stat-k">wall clock</span></div>
         </div>
-        <div class="ax-compare-extras">ships in one pass — no critical-review fork, no plan race, no escalated reviewer.</div>
+        <div class="ax-compare-extras">ships in one pass — no plan phase (spec goes straight to implement), no critical-review fork, no escalated reviewer.</div>
       </div>
       <div class="ax-compare-card critical">
         <div class="ax-compare-h">a critical change</div>
@@ -7296,7 +7296,7 @@
           <div class="why-card">
             <div class="ix"><span>01 · <em>setup</em></span></div>
             <div class="title">Five agents, one artifact.</div>
-            <div class="body"><code>/critical-review</code> fans out <strong>four parallel reviewer angles</strong> plus an Opus synthesizer. All five must judge the <em>same bytes</em>.</div>
+            <div class="body"><code>/critical-review</code> fans out <strong>parallel reviewer angles</strong> (two by default, 3–4 at high/critical) plus an Opus synthesizer. All must judge the <em>same bytes</em>.</div>
           </div>
 
           <div class="why-card problem">
@@ -8159,20 +8159,24 @@
     // tiers, mirroring the canonical enum (common.py TIER_VOCABULARY /
     // CRITICALITY_VOCABULARY) and the escalation rules in
     // skills/lifecycle/references/criticality-matrix.md:
+    //   • one predicate governs every fork: criticality ∈ {high, critical} OR
+    //     tier == complex takes the long road; everything else takes the short
+    //     road — simple + (low|medium) skips plan (spec→implement) and review
     //   • /critical-review fires for complex + (medium|high|critical)
     //   • the review phase escalates to Opus (reviewO) at high|critical,
     //     forced regardless of tier
     //   • competing plans (planB) are critical-only
-    //   • research runs at every level
+    //   • research runs at every level, sized by the same tier × criticality
+    //     grid (simple rows dispatch as little as one Codebase agent)
     const MATRIX = [
       // low
       [
-        ['clarify','research','spec','plan','implement','complete'],
+        ['clarify','research','spec','implement','complete'],
         ['clarify','research','spec','plan','implement','review','complete'],
       ],
       // medium
       [
-        ['clarify','research','spec','plan','implement','review','complete'],
+        ['clarify','research','spec','implement','complete'],
         ['clarify','research','spec','review1','plan','implement','review','complete'],
       ],
       // high
@@ -8195,6 +8199,7 @@
     function summarize(seq) {
       const set = new Set(seq);
       const parts = [`${seq.length} phases`];
+      if (!set.has('plan'))    parts.push('short road — spec straight to implement');
       if (set.has('review1'))  parts.push('adversarial pre-plan');
       if (set.has('planB'))    parts.push('race two plans');
       if (set.has('reviewO'))  parts.push('escalated reviewer');
