@@ -42,7 +42,18 @@ instance pointing at the harness surface underneath it:
 
 ## Proposed direction
 
-Land the small, high-leverage prose/verb changes; measure before anything structural:
+Decide the dispatch mode FIRST — items 1 and 2 are one decision, not two (operator question,
+2026-07-18). Claude Code's default synchronous Agent dispatch returns the subagent's final
+message as the tool result (natural reporting, zero round-trips) but parallel calls return
+together — a built-in batch barrier that makes item 1 moot and item 2 impossible. Background/
+teammate dispatch (what the #353 session's runtime supplied; not a project setting — verified
+absent from settings/agent dirs) inverts both: it is the substrate pipelining needs and it let
+the orchestrator checkpoint/attribute/coordinate mid-batch, but reports arrive only via the
+item-1 template mandate. The implement prose was written for the synchronous contract; the
+observed cost was the mode mismatch, not either piece alone. Cheap probe: dispatch one unnamed
+Agent in a fresh session and observe whether its report returns synchronously.
+
+Then land the small, high-leverage prose/verb changes; measure before anything structural:
 
 1. **Builder prompt template** (`skills/lifecycle/references/implement.md`): add a mandatory
    final step — deliver the exit report (status, files, verification outcome, commit hash,
