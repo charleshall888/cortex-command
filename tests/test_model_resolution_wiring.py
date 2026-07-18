@@ -270,16 +270,26 @@ def test_writeback_routing_defined_once_and_referenced() -> None:
     assert "canonical **backend-gated write-back routing**" in text, (
         "refine Step 3 must define the canonical backend-gated write-back routing"
     )
-    assert "Step 3's canonical backend-gated write-back routing" in text, (
-        "refine Step 5 must reference Step 3's canonical routing rather than "
+    assert "Step 3's 3-arm routing" in text, (
+        "refine Step 5's Write-Back must reference Step 3's routing rather than "
         "restating the 3-arm shape"
     )
 
 
-def test_writeback_preserves_empty_areas_clearing_quirk() -> None:
-    """The site-specific empty-`--areas` clearing quirk must survive at its site (:171)."""
+def test_writeback_documents_explicit_area_clearing() -> None:
+    """Area clearing on spec-approval is explicit (`--clear-areas`) with preserve-on-omit.
+
+    Supersedes the old empty-`--areas`-clears quirk: the spec-approve verb
+    (spec_approve.py) now clears the areas field only on the explicit
+    ``--clear-areas`` flag and leaves it untouched when ``--areas`` is omitted.
+    refine Step 5's Write-Back must document both halves at its call site.
+    """
     text = _read(_REFINE)
-    assert "passing `--areas` with no values clears the list" in text, (
-        "the empty-`--areas` clearing quirk must be preserved at its call site "
-        "despite the routing single-source"
+    assert "`--clear-areas`" in text, (
+        "refine Step 5 must document the explicit `--clear-areas` flag for the "
+        "empty-areas case (it replaced the old empty-`--areas`-clears quirk)"
+    )
+    assert "preserve-on-omit" in text, (
+        "refine Step 5 must document preserve-on-omit — omitting `--areas` "
+        "leaves the field untouched"
     )
