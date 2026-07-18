@@ -202,10 +202,13 @@ def test_dry_run_initiate_reports_argv_without_spawning(monkeypatch, state):
     assert result["target"] == "v9.9.9"
     argv = result["argv"]
     assert "--refresh-package" in argv and "cortex-command" in argv
-    assert (
-        "git+https://github.com/charleshall888/cortex-command.git@v9.9.9"
-        in argv
-    )
+    # The requirement is a PEP 508 direct reference carrying the [all] extra
+    # (dashboard + overnight SDK) and pinning the CLI_PIN tag.
+    assert any(
+        a.startswith("cortex-command[all] @ ")
+        and "git+https://github.com/charleshall888/cortex-command.git@v9.9.9" in a
+        for a in argv
+    ), argv
     # Dry-run must not have written the in-progress marker.
     assert not (state / "install.in-progress").exists()
 

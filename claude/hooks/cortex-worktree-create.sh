@@ -32,7 +32,7 @@ fi
 # .resolve_worktree_root). Do NOT duplicate the path logic inline — the hook
 # fails loud if the resolver is unreachable.
 if ! command -v cortex-worktree-resolve >/dev/null 2>&1; then
-  echo "WorktreeCreate hook error: cortex-worktree-resolve not on PATH or failed. Possible causes: (1) cortex-command not installed (install via 'uv tool install git+https://github.com/charleshall888/cortex-command.git@<tag>'); (2) Claude Code launched via Dock/Finder on macOS — launchd's minimal PATH may not include the cortex-tool bin dir; try launching Claude Code from Terminal, OR add the cortex-tool bin path to a launchd plist (see docs/setup.md)." >&2
+  echo "WorktreeCreate hook error: cortex-worktree-resolve not on PATH or failed. Possible causes: (1) cortex-command not installed (install via 'uv tool install "cortex-command[all] @ git+https://github.com/charleshall888/cortex-command.git@<tag>"'); (2) Claude Code launched via Dock/Finder on macOS — launchd's minimal PATH may not include the cortex-tool bin dir; try launching Claude Code from Terminal, OR add the cortex-tool bin path to a launchd plist (see docs/setup.md)." >&2
   exit 1
 fi
 
@@ -41,7 +41,7 @@ fi
 # cross-repo overnight features. Both paths route through the single
 # `resolve_worktree_root()` chokepoint in cortex_command/pipeline/worktree.py.
 if ! WORKTREE_PATH=$(cortex-worktree-resolve "$NAME"); then
-  echo "WorktreeCreate hook error: cortex-worktree-resolve not on PATH or failed. Possible causes: (1) cortex-command not installed (install via 'uv tool install git+https://github.com/charleshall888/cortex-command.git@<tag>'); (2) Claude Code launched via Dock/Finder on macOS — launchd's minimal PATH may not include the cortex-tool bin dir; try launching Claude Code from Terminal, OR add the cortex-tool bin path to a launchd plist (see docs/setup.md)." >&2
+  echo "WorktreeCreate hook error: cortex-worktree-resolve not on PATH or failed. Possible causes: (1) cortex-command not installed (install via 'uv tool install "cortex-command[all] @ git+https://github.com/charleshall888/cortex-command.git@<tag>"'); (2) Claude Code launched via Dock/Finder on macOS — launchd's minimal PATH may not include the cortex-tool bin dir; try launching Claude Code from Terminal, OR add the cortex-tool bin path to a launchd plist (see docs/setup.md)." >&2
   exit 1
 fi
 BRANCH="worktree/$NAME"

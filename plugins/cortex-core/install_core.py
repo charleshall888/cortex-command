@@ -360,7 +360,13 @@ def _probe_installed_version() -> Optional[str]:
 
 
 def _install_argv() -> list[str]:
-    """Return the ``uv tool install --reinstall`` argv pinned to ``CLI_PIN``."""
+    """Return the ``uv tool install --reinstall`` argv pinned to ``CLI_PIN``.
+
+    The requirement carries the ``[all]`` extra: the dashboard and overnight
+    runner live behind optional ``pyproject.toml`` extras (so a bare install
+    stays lean), and a no-extra reinstall would silently strip the Claude Agent
+    SDK the runner needs. PEP 508 direct reference (``name[extra] @ git+url``).
+    """
     return [
         "uv",
         "tool",
@@ -368,7 +374,10 @@ def _install_argv() -> list[str]:
         "--reinstall",
         "--refresh-package",
         "cortex-command",
-        f"git+https://github.com/charleshall888/cortex-command.git@{CLI_PIN[0]}",
+        (
+            "cortex-command[all] @ "
+            f"git+https://github.com/charleshall888/cortex-command.git@{CLI_PIN[0]}"
+        ),
     ]
 
 

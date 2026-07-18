@@ -477,7 +477,17 @@ def _dispatch_dashboard(args: argparse.Namespace) -> int:
     installed-wheel layout where the package install is read-only).
     """
 
-    import uvicorn
+    try:
+        import uvicorn
+    except ImportError:
+        print(
+            "The dashboard requires the optional 'dashboard' extra "
+            "(fastapi + uvicorn + jinja2 + markdown), also included in 'all'. "
+            "Reinstall cortex-command with that extra, e.g. "
+            "`uv tool install 'cortex-command[all] @ git+<repo-url>@<tag>'`.",
+            file=sys.stderr,
+        )
+        return 1
 
     port = int(args.port)
     # Make the resolved port visible to any in-process consumer that reads

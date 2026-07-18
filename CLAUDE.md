@@ -2,7 +2,7 @@
 
 ## What This Repo Is
 
-An opinionated AI workflow framework for Claude Code: skills (slash commands), hooks (event handlers), an autonomous overnight runner, a web dashboard, a lifecycle state machine, and backlog management. Ships as a CLI (`uv tool install git+https://github.com/charleshall888/cortex-command.git@<latest-tag>`, where `<latest-tag>` is the highest `vX.Y.Z` ref from `git ls-remote --tags` — full snippet in `docs/setup.md`) plus plugins installed via `/plugin install`; no symlinks into `~/.claude/`. `cortex init` registers the repo's `cortex/` umbrella path in `~/.claude/settings.local.json`'s `sandbox.filesystem.allowWrite` array so interactive sessions and the overnight runner can write under it without sandbox prompts.
+An opinionated AI workflow framework for Claude Code: skills (slash commands), hooks (event handlers), an autonomous overnight runner, a web dashboard, a lifecycle state machine, and backlog management. Ships as a CLI (`uv tool install "cortex-command[all] @ git+https://github.com/charleshall888/cortex-command.git@<latest-tag>"`, where `<latest-tag>` is the highest `vX.Y.Z` ref from `git ls-remote --tags`, and the `[all]` extra pulls the dashboard + overnight stacks that live behind optional extras — full snippet in `docs/setup.md`) plus plugins installed via `/plugin install`; no symlinks into `~/.claude/`. `cortex init` registers the repo's `cortex/` umbrella path in `~/.claude/settings.local.json`'s `sandbox.filesystem.allowWrite` array so interactive sessions and the overnight runner can write under it without sandbox prompts.
 
 ## Repository Structure
 

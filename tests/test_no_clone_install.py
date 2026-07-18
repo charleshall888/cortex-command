@@ -439,9 +439,9 @@ def test_mcp_first_install_hook(
         f"install argv missing `--refresh-package cortex-command` adjacent "
         f"to `--reinstall`; argv: {argv!r}"
     )
-    # The git URL trailer must reference CLI_PIN[0].
+    # PEP 508 direct reference carrying the [all] extra, pinned to CLI_PIN[0].
     final_arg = install_calls[0][-1]
-    assert final_arg.startswith("git+"), (
+    assert final_arg.startswith("cortex-command[all] @ git+"), (
         f"unexpected final argv element: {final_arg!r}"
     )
     assert final_arg.endswith(f"@{server.CLI_PIN[0]}"), (

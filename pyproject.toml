@@ -6,18 +6,47 @@ build-backend = "hatchling.build"
 name = "cortex-command"
 dynamic = ["version"]
 requires-python = ">=3.12"
+# Base install = the lifecycle/backlog/commit/refine CLI. Lean by design
+# (pyyaml + psutil only) so a bare `uv tool install` pulls no web/agent stack.
+# The dashboard and overnight runner are opt-in extras below.
+#
+# IMPORTANT: the auto-installer (cortex-overnight MCP server + SessionStart
+# hooks, via install_core.py) installs `cortex-command[all]`, so overnight and
+# dashboard users get the full stack automatically — a no-extra reinstall would
+# silently strip the Claude Agent SDK the runner needs. Only a *manual* bare
+# `uv tool install` (no extras) is lean.
 dependencies = [
-    "claude-agent-sdk>=0.1.46,<0.1.47",
+    "psutil>=5.9,<8",
+    "pyyaml>=6.0",
+]
+
+# Opt-in feature groups. Full install (what the auto-installer uses):
+#   uv tool install "cortex-command[all] @ git+https://github.com/charleshall888/cortex-command.git@<tag>"
+[project.optional-dependencies]
+# `cortex dashboard` — the agent monitoring web app.
+dashboard = [
     "fastapi<1.0",
     # Plain uvicorn (not [standard]): the dashboard uses no websockets/reload,
     # so uvloop/httptools/watchfiles/websockets would be pure install baggage.
     "uvicorn<1.0",
     "jinja2",
     "markdown<4",
-    "psutil>=5.9,<8",
-    "pyyaml>=6.0",
-    # Direct because FastAPI depends on starlette with no upper bound and its maintainers refuse to add one (discussions #6211/#15193), so the app must own this cap; it also governs the mcp/sse-starlette starlette paths.
+    # Constraint pin (not imported directly): FastAPI depends on starlette with
+    # no upper bound and its maintainers refuse to add one (discussions
+    # #6211/#15193), so the app owns this cap wherever starlette is pulled in.
     "starlette>=0.49.1,<2.0",
+]
+# `cortex overnight` / pipeline dispatch — pulls the Claude Agent SDK (which
+# bundles a ~197 MB `claude` CLI plus the mcp subtree). Kept out of the base so
+# a bare install is not dominated by a binary the runner routes around
+# (cli_resolver prefers the system `claude`).
+overnight = [
+    "claude-agent-sdk>=0.1.46,<0.1.47",
+    # Same starlette cap governs the mcp/sse-starlette paths the SDK pulls in.
+    "starlette>=0.49.1,<2.0",
+]
+all = [
+    "cortex-command[dashboard,overnight]",
 ]
 
 [project.scripts]

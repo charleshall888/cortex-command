@@ -813,8 +813,9 @@ def test_r13_schema_floor_emits_remediation_stderr(
         f"stderr missing 'Schema-floor violation: installed CLI "
         f"schema_version=' literal; captured stderr: {captured.err!r}"
     )
-    assert "uv tool install --reinstall git+" in captured.err, (
-        f"stderr missing 'uv tool install --reinstall git+' literal; "
+    assert "cortex-command[all] @ git+" in captured.err, (
+        f"stderr missing 'cortex-command[all] @ git+' remediation literal "
+        f"(the [all] extra keeps the overnight SDK); "
         f"captured stderr: {captured.err!r}"
     )
 

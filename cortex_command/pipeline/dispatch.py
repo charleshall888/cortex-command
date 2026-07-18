@@ -642,8 +642,10 @@ async def dispatch_task(
     """
     if not _SDK_AVAILABLE:
         raise RuntimeError(
-            "claude_agent_sdk is not installed. "
-            "Install it with: pip install claude-agent-sdk"
+            "claude_agent_sdk is not installed — it ships with the optional "
+            "'overnight' extra (also in 'all'). Reinstall cortex-command with "
+            "that extra, e.g. "
+            "`uv tool install 'cortex-command[all] @ git+<repo-url>@<tag>'`."
         )
 
     tier = TIER_CONFIG[complexity] if complexity in TIER_CONFIG else None

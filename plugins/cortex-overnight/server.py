@@ -194,8 +194,9 @@ def _check_version(payload: dict, *, verb: str) -> None:
             f"(MCP_REQUIRED_CLI_VERSION={MCP_REQUIRED_CLI_VERSION!r}); "
             f"downgrade plugin OR run `uv tool install --reinstall "
             f"--refresh-package cortex-command "
+            f"'cortex-command[all] @ "
             f"git+https://github.com/charleshall888/cortex-command.git"
-            f"@{CLI_PIN[0]}` to upgrade cortex CLI to the matching version."
+            f"@{CLI_PIN[0]}'` to upgrade cortex CLI to the matching version."
         )
 
 
@@ -491,8 +492,9 @@ def _ensure_cortex_installed() -> None:
             f"not retrying. Prior failure: {prior}. "
             f"Run `uv tool install --reinstall "
             f"--refresh-package cortex-command "
+            f"'cortex-command[all] @ "
             f"git+https://github.com/charleshall888/cortex-command.git"
-            f"@{CLI_PIN[0]}` manually to recover."
+            f"@{CLI_PIN[0]}'` manually to recover."
         )
 
     # ------------------------------------------------------------------
@@ -1444,8 +1446,9 @@ def _schema_floor_violated(cortex_root_payload: dict[str, Any]) -> bool:
                 f"{cli_version}, required={CLI_PIN[1]}; run "
                 f"'uv tool install --reinstall "
                 f"--refresh-package cortex-command "
+                '"cortex-command[all] @ '
                 f"git+https://github.com/charleshall888/cortex-command.git"
-                f"@{CLI_PIN[0]}' to upgrade",
+                f'@{CLI_PIN[0]}"\' to upgrade',
                 file=sys.stderr,
             )
             return False

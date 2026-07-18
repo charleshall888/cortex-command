@@ -14,11 +14,14 @@ python-setup:
         echo "uv not found — install with: brew install uv"
         exit 1
     fi
-    uv sync
+    # --all-extras: dev needs the dashboard + overnight stacks to run the full
+    # test suite. End users get a lean base install (extras are opt-in; the
+    # auto-installer requests [all]).
+    uv sync --all-extras
 
 # Upgrade Python dependencies to latest and update uv.lock
 upgrade-deps:
-    uv sync --upgrade
+    uv sync --upgrade --all-extras
 
 # Add tmux socket to sandbox allowlist so sandboxed sessions can access tmux
 setup-tmux-socket:

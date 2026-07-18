@@ -74,10 +74,12 @@ Install any of them with `/plugin install <name>@cortex-command`.
 ```bash
 LATEST_TAG=$(git ls-remote --tags --refs https://github.com/charleshall888/cortex-command.git \
   | awk -F/ '{print $NF}' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
-uv tool install git+https://github.com/charleshall888/cortex-command.git@"$LATEST_TAG"
+uv tool install "cortex-command[all] @ git+https://github.com/charleshall888/cortex-command.git@$LATEST_TAG"
 ```
 
-This installs the CLI as a non-editable `uv tool` directly from the tagged git URL — no clone is required. The `cortex` binary lands on your `PATH` (run `uv tool update-shell` once if it does not). To pin to a specific tag, replace `"$LATEST_TAG"` with the tag literal (for example, `v1.0.2`). If you do not have `uv` yet, the `install.sh` bootstrap installs `uv` first and runs the same resolve-then-install command:
+This installs the CLI as a non-editable `uv tool` directly from the tagged git URL — no clone is required. The `cortex` binary lands on your `PATH` (run `uv tool update-shell` once if it does not). To pin to a specific tag, replace `$LATEST_TAG` with the tag literal (for example, `v1.0.2`). If you do not have `uv` yet, the `install.sh` bootstrap installs `uv` first and runs the same resolve-then-install command:
+
+> **Optional-dependency extras.** The base package is a lean CLI (just `pyyaml` + `psutil`); the heavier stacks are opt-in. `[all]` (used above and by the auto-installer) pulls everything. For a subset, use `[dashboard]` (the `cortex dashboard` web app) or `[overnight]` (the `cortex overnight` runner + pipeline dispatch, which pulls the Claude Agent SDK). A bare `uv tool install git+…@<tag>` with **no** extra installs only the base CLI — `cortex dashboard`/`cortex overnight` will then print an install hint rather than run.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/charleshall888/cortex-command/main/install.sh | sh

@@ -320,8 +320,9 @@ try:
         emit_context(
             "cortex CLI is not installed. Run `uv tool install --reinstall "
             "--refresh-package cortex-command "
+            "'cortex-command[all] @ "
             "git+https://github.com/charleshall888/cortex-command.git"
-            "@{expected_tag}` to install, or invoke any cortex-overnight MCP "
+            "@{expected_tag}'` to install, or invoke any cortex-overnight MCP "
             "tool to auto-install.".format(expected_tag=expected_tag)
         )
         sys.exit(0)
@@ -353,8 +354,9 @@ try:
             "Schema-floor violation: installed CLI "
             "schema_version={installed_schema}, required={expected_schema}; "
             "run 'uv tool install --reinstall --refresh-package cortex-command "
+            '"cortex-command[all] @ '
             "git+https://github.com/charleshall888/cortex-command.git"
-            "@{expected_tag}' to upgrade".format(
+            "@{expected_tag}\"' to upgrade".format(
                 installed_schema=installed_schema,
                 expected_schema=expected_schema,
                 expected_tag=expected_tag,
@@ -377,8 +379,9 @@ try:
             "automatically. Bash 'cortex …' calls before then may fail "
             "with 'No such command' or import errors; if so, run "
             "'uv tool install --reinstall --refresh-package cortex-command "
+            '"cortex-command[all] @ '
             "git+https://github.com/charleshall888/cortex-command.git"
-            "@v{expected}' manually.".format(
+            "@v{expected}\"' manually.".format(
                 installed=installed_disp,
                 expected=expected_disp,
             )
@@ -417,8 +420,9 @@ try:
                 "{ts}; installed v{installed}, expected v{expected}. "
                 "Manual remediation: `uv tool install --reinstall "
                 "--refresh-package cortex-command "
+                "'cortex-command[all] @ "
                 "git+https://github.com/charleshall888/cortex-command.git"
-                "@v{expected}`".format(
+                "@v{expected}'`".format(
                     ts=failure_iso,
                     installed=installed_disp,
                     expected=expected_disp,
