@@ -465,6 +465,7 @@ body.dawn #sky .star {
 .term-line.del    { color: var(--zone-red); }
 .term-line.done   { color: var(--zone-green); }
 .term-line.warn   { color: var(--zone-red); }
+.term-line.caution { color: var(--zone-amber); }
 .caret::after { content: "▌"; color: var(--parch-faint); animation: blink 1s steps(1) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
 
@@ -912,35 +913,6 @@ body.dawn #sky .star {
 .screen-card.warm .serif { font-size: 1.15rem; }
 .screen-card.warm .night-young { color: var(--ochre); font-style: italic; font-size: 0.95rem; }
 
-/* ---------- set more lines: one gauge, laid along a clock ---------- */
-
-.econ-stage { width: min(96vw, 1240px); }
-#econ-svg { width: 100%; display: block; }
-#econ-svg text { font-family: var(--mono); fill: var(--parch-dim); font-size: 13px; letter-spacing: 0.4px; }
-#econ-svg .eg { opacity: 0; transition: opacity 0.7s ease; }
-#econ-svg .eg.on { opacity: 1; }
-#econ-svg .eg-axis line { stroke: var(--rule); stroke-width: 2; }
-#econ-svg .eg-axis text { fill: var(--parch-faint); font-size: 12px; }
-#econ-svg .eg-rule { stroke: var(--parch-faint); stroke-width: 1; stroke-dasharray: 5 5; opacity: 0.5; }
-#econ-svg .eg-rule-label { fill: var(--parch-faint); font-size: 12px; }
-#econ-svg .eg-lane-label { fill: var(--parchment); font-size: 14.5px; letter-spacing: 0.8px; }
-#econ-svg .eg-door rect { fill: none; stroke: var(--ochre); stroke-width: 1.5; }
-#econ-svg .eg-solo-fill { fill: rgba(194, 102, 10, 0.28); stroke: var(--ochre); stroke-width: 1.5; }
-#econ-svg .eg-trio-fill { fill: rgba(91, 125, 224, 0.3); stroke: var(--blue); stroke-width: 1.2; }
-#econ-svg .eg-clip-solo { transition: width 4.5s cubic-bezier(0.4, 0, 0.6, 1); }
-#econ-svg .eg-clip-trio { transition: width 3.5s ease; }
-#econ-svg .eg-cliff1 text, #econ-svg .eg-cliff2 text { fill: var(--ochre); }
-#econ-svg .eg-done text { fill: var(--parchment); }
-#econ-svg .eg-debt text { fill: var(--zone-red); }
-#econ-svg .eg-debt .xmark { font-size: 17px; }
-#econ-svg .eg-bills .bill { font-size: 19px; }
-#econ-svg .eg-bills .bill-solo { fill: var(--ochre); }
-#econ-svg .eg-bills .bill-trio { fill: var(--blue); }
-#econ-svg .eg-bills .all-three { fill: #5fae83; }
-#econ-svg .eg-bills line { stroke: var(--parch-faint); stroke-width: 1.5; }
-#econ-svg .eg-dep-line { stroke: var(--blue); stroke-width: 1.2; stroke-dasharray: 4 4; opacity: 0.8; }
-#econ-svg .eg-dep-label { fill: #5fae83; font-size: 12px; }
-.econ-verdict-line { font-size: clamp(0.95rem, 1.75vw, 1.3rem); }
 .line-col { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; }
 .badge-big.small { font-size: 0.82rem; padding: 0.4em 0.8em; }
 
@@ -1043,6 +1015,24 @@ body.dawn #sky .star {
 #sc-finale.f1 #fpane-red .term-body { max-height: 0; padding-top: 0; padding-bottom: 0; opacity: 0.2; }
 #sc-finale.f2 .finale-rail .fpane:nth-child(2) .term-body { max-height: 0; padding-top: 0; padding-bottom: 0; opacity: 0.2; }
 .fold-tag { color: var(--ochre); font-size: 0.72rem; letter-spacing: 0.06em; }
+.red-cap { color: var(--zone-red); font-size: 0.72rem; letter-spacing: 0.06em; opacity: 0.85; }
+#sc-finale.f1 .red-cap { display: none; } /* folds out; the retired tag takes its place */
+/* each task in the one-window run fades in on its own step as the bar climbs */
+.rt-group { opacity: 0; transition: opacity 0.55s ease; }
+.rt-group.shown { opacity: 1; }
+
+/* task-identity chip: the SAME three tasks, braided in the red window (left),
+   split one-per-ticket on the right. Numeral = identity; tint = the window's
+   fate (red = the overloaded run, green = the fresh runs). */
+.fin-t {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.45em; height: 1.45em; flex: none;
+  border-radius: 4px; border: 1px solid currentColor;
+  font-family: var(--mono); font-size: 0.82em; font-weight: 600;
+  line-height: 1; text-decoration: none; vertical-align: -0.28em;
+}
+#term-fin-red .fin-t { color: #e79a86; background: rgba(176, 83, 63, 0.22); margin-right: 0.15em; }
+.finale-trio .fin-t { color: var(--zone-green); background: rgba(77, 143, 107, 0.16); margin-right: 0.1em; }
 .finale-page { display: flex; flex-direction: column; align-items: center; gap: 0.6rem;
   transition: opacity 0.8s ease; }
 .finale-page .doc { width: clamp(230px, 26vw, 300px); }

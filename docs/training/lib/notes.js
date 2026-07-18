@@ -73,25 +73,13 @@ const NOTES = {
   },
   "sc-prism": {
     beats: [
-      "“The first 20% of a session steers all the rest — so I get the direction out of my head first.” (next three scenes are one story — ask the room to hold questions)",
+      "“The first 20% of a session steers all the rest — so I get the direction out of my head first.”",
       "(head + cloud) “The epic — still just a cloud in my head.”",
       "(interview bubbles) “It interviews ME. First question — recognize it? Cold open. Last one — the death-spiral bug, asked here instead of fought over at turn 79.”",
       "(doc + intent) SILENT — let “a keepsake, not analytics” land. “The doc survives; your context doesn't.”",
-      "(tickets, stamps fly) “Discovery splits the epic into three, each carrying one line of intent. Last ticket — the cold-open ask. Never a one-off; a shard of a plan.”",
-      "(handoff) “Its last job: hand off, not build. Catch events first, ready now; flip-through waits on it; empty state rides alongside.”",
+      "(tickets, stamps fly) “Discovery splits the epic into three, each carrying one line of intent. Last ticket — the cold-open ask. Never a one-off; a shard of a plan. You see it run end-to-end at the finale — here, just the shape.”",
     ],
-    exit: "(protected triplet) if interrupted: “hold that thought — two minutes, you'll see it answered.”",
-  },
-  "sc-lines": {
-    beats: [
-      "“Same epic, two ways, one clock. Top lane: hand it all to one window and say go.”",
-      "(SILENT ~5s, wedge climbs) then: “the gauge again, laid along a clock — climbing past the door. No plan.”",
-      "(sawtooth) “Full, compact, full, compact — the squeeze, twice, uninvited. It does finish. Five and a quarter hours.”",
-      "(point at the ✗s) “Written up there in the red — a helper that existed, a format it already rejected, tests that hang without --offline. All of it ships.”",
-      "(SILENT while the chain draws) “Same three tickets, dependency order. Catch events first — unblocks the other two, side by side. None ever sees the door.” (read the two bills)",
-      "SILENT — let “an eighth of the tokens · a third of the clock · nothing in the red” land. SCAR: “same move works on ideas — this deck was built by fanning out four angles; the fact-checker caught a claim I had exactly backwards.”",
-    ],
-    exit: "“That's the fan-out. One more use for a fresh window — point it at your own work.”",
+    exit: "“That's the setup — the epic broken into tickets, one per fresh window. And a fresh window has one more use: point it at your own work.”",
   },
   "sc-arrows": {
     beats: [
@@ -104,7 +92,7 @@ const NOTES = {
       "(gold seam, badge) SILENT — let “never punish a rare catch” land. SCAR: “sometimes this steers me wrong. More often it makes things better.”",
       "(manufactured finding bins itself) “Frame-accurate input-latency compensation — for a fishing game. It'll always find something. You judge what counts.”",
     ],
-    exit: "“Crank it too hard and you get armor-plated docs and dead good ideas.” Then: “fresh windows built it, fresh eyes checked it — that's the whole second post.”",
+    exit: "“Crank it too hard and you get armor-plated docs and dead good ideas.” Then: “fresh windows built it, fresh eyes checked it — a fact-checker window even caught a claim I'd gotten exactly backwards — that's the whole second post.”",
   },
   "pv-2": {
     beats: [
@@ -154,11 +142,11 @@ const NOTES = {
   },
   "sc-finale": {
     beats: [
-      "(red pane sweeps to 91 — LET IT FINISH) “Still Friday, four o'clock. Same agent we left here. One more ask just landed — make Monday's playtest real.”",
-      "(red pane folds; discovery runs) “Read the bar — past the door. We don't argue, we don't compact. Retired. Hand the wish to discovery: it interviews, researches, writes the epic. It caught that biting's still broken — Friday's wreckage is ticket one.”",
-      "(doc rises, three stamps fly — SAY NOTHING during the flights) “Three lines: single-player from the rewind, keepsake from the interview, rare catch from the review. Each one paid for by a session that's already dead.”",
-      "(three windows, parallel) “4:19, one per ticket. Night biting doesn't relitigate server time — its ticket says cheating's allowed. Flip-through bounces off the gate, then ships. And that --offline scar? Lives in an instruction file now — every fresh window's born knowing it.”",
-      "(fold — SAY NOTHING till the log card lands) “5:58. Three tickets, nothing broken, no bar ever left the green.” (scorecard is the whole talk in two columns) Let “No catches yet. The night is young.” land.",
+      "(tasks reveal as the bar climbs — LET IT CLIMB) “Still Friday, four o'clock, same tired agent — you hand it the cold open's exact ask again: add an empty-state to the catch log. In one window it balloons — record the catches, the log page, then the empty state itself — stacking up. Task 1, near-empty context, green — clean. Task 2, half-full, amber — ships, but it slips. Task 3, ninety-one percent, red — no room left to think; it skips the tests and, watch, disables biting game-wide — the exact cold open. Same agent every time; the only thing that changed is how full the window got. Hold those three numbers; they come back, one to a window.”",
+      "(red pane folds; discovery runs) “Read the bar — past the door. We don't argue, we don't compact. Retired. Hand the same ask to discovery: it interviews, researches, writes the epic — and it even catches that biting's still broken from this afternoon and quietly fixes it. That's the note on the doc.”",
+      "(doc rises, the lessons ride onto the work — SAY NOTHING during the flights) “The doc keeps all three lessons, each from a dead session — but only two fit these tickets: never-punish-a-rare rides onto how we record catches, keepsake onto the log page. The third, single-player from the rewind, is what fixed the biting. And the last ticket — empty state — needs no lesson; it's the very thing Friday first asked for.”",
+      "(three windows, parallel) “4:19 — the same three, now one to a window. Task 1 records every catch — a rare under the size limit still reaches the log. Task 2 flip-through bounces off the gate, then ships. Task 3 is the empty state itself — the cold open's ask, done right. And that --offline scar? Lives in an instruction file now — every fresh window's born knowing it.”",
+      "(fold — SAY NOTHING till the log card lands) “5:58. Three tickets, nothing broken, no bar ever left the green — and biting's back. That card is ticket three, live.” (scorecard is the whole talk in two columns) Let “No catches yet. The night is young.” land.",
       "(thesis) SILENT — let “Nothing here needed a better model.” land: “same model as the disaster.”",
     ],
     exit: "into dawn: “come back Tuesday morning — let's see what bit.”",

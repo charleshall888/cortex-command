@@ -116,29 +116,44 @@
 
   /* the finale: Friday run right — the red pane is a freeze-frame of the
      cold open, then interview → tickets → three parallel fresh windows */
-  const FIN_RED_FREEZE = [
-    { t: "user", text: "add an empty-state to the catch log" },
-    { t: "tool", text: "Edit catch_odds.js" },
-    { t: "del", text: "- const BASE_ODDS = 0.12" },
-    { t: "add", text: "+ const BASE_ODDS = 0.0   // empty state" },
-    { t: "warn", text: "✗ biting disabled game-wide" },
-  ];
+  /* the one-window run: the SAME three tasks the right side splits into fresh
+     windows, here stacked into a single tired window. Task 1 lands on a
+     near-empty context — clean. Task 2, half-full, ships but slips. Task 3,
+     at 91%, has no room left and breaks. The bar climbs green→amber→red as
+     the tasks stack; that climb IS the point. Built as HTML (not typed) so
+     the numeral chips render and each task group can fade in on its own step. */
+  const RT = (n) => `<span class="fin-t">${n}</span>`;
+  const FIN_RED_HTML =
+    `<div class="term-line user">add an empty-state to the catch log — before you go</div>` +
+    `<div class="rt-group" data-g="1">` +
+      `<div class="term-line tool">${RT(1)} catch_log.js   + log.record(catch)</div>` +
+      `<div class="term-line done">✓ catches recorded — first task, clean</div>` +
+    `</div>` +
+    `<div class="rt-group" data-g="2">` +
+      `<div class="term-line tool">${RT(2)} log_view.js   + page.flip()</div>` +
+      `<div class="term-line caution">slipped on the gate — fixed it on a re-read</div>` +
+      `<div class="term-line done">✓ log page ships — a bit sloppy</div>` +
+    `</div>` +
+    `<div class="rt-group" data-g="3">` +
+      `<div class="term-line tool">${RT(3)} log_view.js   + empty-state copy</div>` +
+      `<div class="term-line warn">✗ 91% full — reaches for catch_odds.js, skips the tests</div>` +
+      `<div class="term-line warn">✗ biting disabled game-wide · no room left to notice</div>` +
+    `</div>`;
   const FIN_INTERVIEW = [
-    { t: "user", text: "/discovery make Monday's playtest real" },
-    { t: "ask", text: "quick scope — what should a player wake up to?", pause: 250 },
-    { t: "user", text: "a catch in the log — and fish actually biting" },
-    { t: "tool", text: "Research: catch log · biting odds · release rules" },
-    { t: "agent", text: "found it — biting's broken; that's the first ticket" },
-    { t: "tool", text: "Write first-night-epic.md · split into 3 tickets" },
-    { t: "done", text: "✓ epic + 3 tickets · every lesson attached" },
+    { t: "user", text: "/discovery add an empty-state to the catch log" },
+    { t: "ask", text: "quick scope — what should a first-night player see?", pause: 250 },
+    { t: "user", text: "an invite to cast, with the log ready underneath" },
+    { t: "tool", text: "Research: catch log · log view · release rules" },
+    { t: "agent", text: "heads-up — biting's still broken from this afternoon; fixed it (device clock)" },
+    { t: "tool", text: "Write catch-log-epic.md · split into 3 tickets" },
+    { t: "done", text: "✓ epic + 3 tickets · biting restored · every lesson attached" },
   ];
   const FIN_A = [
-    { t: "user", text: "ticket: restore night biting" },
-    { t: "agent", text: "night = device clock (single-player)" },
-    { t: "del", lines: ["- const BASE_ODDS = 0.0"] },
-    { t: "add", lines: ["+ const BASE_ODDS = 0.12"] },
-    { t: "tool", text: "Run night_sim --offline" },
-    { t: "done", text: "✓ fish bite after dark · 1 file" },
+    { t: "user", text: "ticket: record catch events" },
+    { t: "agent", text: "log every catch — even a rare under the size limit" },
+    { t: "add", lines: ["+ log.record(catch)  // rares included"] },
+    { t: "tool", text: "Run tests --offline" },
+    { t: "done", text: "✓ every catch reaches the log · 1 file" },
   ];
   const FIN_B = [
     { t: "user", text: "ticket: flip-through log page" },
@@ -149,11 +164,11 @@
     { t: "done", text: "✓ gate open · 2 files" },
   ];
   const FIN_C = [
-    { t: "user", text: "ticket: spare rare catches" },
-    { t: "tool", text: "Edit release_rules.js" },
-    { t: "add", lines: ["+ if (fish.isRare) keep(fish)"] },
+    { t: "user", text: "ticket: empty state" },
+    { t: "tool", text: "Edit log_view.js" },
+    { t: "add", lines: ['+ if (log.isEmpty) show("The night is young.")'] },
     { t: "tool", text: "Run tests --offline" },
-    { t: "done", text: "✓ a Brass Minnow would be kept", pause: 2400 },
+    { t: "done", text: "✓ empty log invites the first cast", pause: 2400 },
   ];
 
   /* the exhibit stays in-domain: every line is believable review-skill
@@ -374,7 +389,7 @@
         sec.querySelectorAll(".prism-tickets .badge-clip").forEach((c) => c.classList.remove("stamped"));
         sec.querySelector(".ticket.callback").classList.remove("lit");
         sec.querySelector(".prism-mid .doc").classList.remove("on");
-        sec.classList.remove("past-top", "past-mid", "handoff-mode");
+        sec.classList.remove("past-top", "past-mid");
         setRail(sec, 1);
       }
       if (b === 2) {
@@ -391,48 +406,9 @@
         sec.classList.add("past-mid");
         tickets.forEach((t) => t.classList.add("on"));
         stampTickets(sec);
+        setRail(sec, 3); // tickets land — the pipeline reaches "one ticket, one fresh window"
         setTimeout(() => sec.querySelector(".ticket.callback").classList.add("lit"), 2200);
       }
-      if (b === 5) {
-        sec.classList.add("handoff-mode");
-        setRail(sec, 3);
-      }
-    },
-
-    /* the economics as ONE picture: the gauge laid along a clock — a heavy
-       ochre wedge (cliffs = auto-compacts, area = tokens re-read) vs three
-       blue slivers sharing the same origin. Widgets became annotations. */
-    "sc-lines": (sec, b) => {
-      const g = (cls) => document.querySelector("#econ-svg ." + cls);
-      if (b === 0) {
-        buildEcon();
-        chains["econ"] = Promise.resolve();
-      }
-      if (b === 1)
-        chain("econ", async () => {
-          g("eg-clip-solo").style.width = "284px"; // the climb to the first ceiling — silent
-          await sleep(4700);
-        });
-      if (b === 2)
-        chain("econ", async () => {
-          const clip = g("eg-clip-solo");
-          clip.style.transition = "width 5s cubic-bezier(0.4, 0, 0.6, 1)";
-          clip.style.width = "1000px"; // sawtooth to the end, one motion
-          setTimeout(() => g("eg-cliff1").classList.add("on"), 500);
-          setTimeout(() => g("eg-cliff2").classList.add("on"), 3000);
-          setTimeout(() => g("eg-done").classList.add("on"), 4600);
-          await sleep(5200);
-        });
-      if (b === 3) chain("econ", async () => g("eg-debt").classList.add("on"));
-      if (b === 4)
-        chain("econ", async () => {
-          g("eg-trio").classList.add("on");
-          g("eg-clip-trio").style.width = "355px"; // the chain draws in true time order — silent
-          setTimeout(() => g("eg-dep").classList.add("on"), 1700); // as the clock passes the unblock
-          setTimeout(() => g("eg-bills").classList.add("on"), 3800); // both bills pop together
-          await sleep(4000);
-        });
-      /* beat 5: the verdict line is data-beat markup */
     },
 
     /* one state change per keypress: the doc's move to the target stand is
@@ -612,13 +588,24 @@
           state.cbFinInt = makeContextBar(document.getElementById("cbar-fin-int"), { h: 12 });
           state.cbFinT = ["a", "b", "c"].map((k) => makeContextBar(document.getElementById("cbar-fin-" + k), { h: 10 }));
         }
-        prefill(state.finRed, FIN_RED_FREEZE); // a freeze-frame, not a rerun
         state.finInt.clear();
         state.finT.forEach((t) => t.clear());
         [state.cbFinInt, ...state.cbFinT].forEach((cb) => cb.set(0, { ms: 0 }));
         sec.querySelectorAll(".ticket-intent").forEach((t) => t.classList.remove("stamped"));
         sec.querySelectorAll(".finale-trio .badge-clip").forEach((c) => c.classList.remove("stamped"));
-        state.cbFinRed.set(91, { ms: 1800 }); // the last red sweep of the night — plays silent
+        // reveal the tasks one at a time as the context climbs: task 1 on a
+        // near-empty window (green, clean), task 2 half-full (amber, sloppy),
+        // task 3 at 91% (red) with no room left — it breaks. The climb is the
+        // whole argument for bite-size tasks, so it plays out, silent.
+        const redBody = state.finRed.el.querySelector(".term-body");
+        redBody.innerHTML = FIN_RED_HTML;
+        state.cbFinRed.set(8, { ms: 0 });
+        chain("fin", async () => {
+          const show = (g) => redBody.querySelector(`.rt-group[data-g="${g}"]`).classList.add("shown");
+          await sleep(500); show(1); state.cbFinRed.set(20, { ms: 900 });
+          await sleep(1500); show(2); state.cbFinRed.set(46, { ms: 1000 });
+          await sleep(1600); show(3); state.cbFinRed.set(91, { ms: 1300 });
+        });
       }
       if (b === 1)
         chain("fin", async () => {
@@ -674,12 +661,6 @@
     return e;
   }
 
-  /* write finished terminal lines instantly — a freeze-frame */
-  function prefill(term, lines) {
-    const body = term.el.querySelector(".term-body");
-    body.innerHTML = lines.map((s) => `<div class="term-line ${s.t}">${s.text}</div>`).join("");
-  }
-
   /* the dock diagram: three posts = the three pillars (left → right:
      window · spawn · clean — teaching order IS retell order now), the
      plank = the pipeline, drawn only when Friday runs end-to-end. */
@@ -730,18 +711,21 @@
     });
   }
 
-  /* the finale's three intent lines each fly to their own ticket — 1:1 */
+  /* the doc holds all three learned lessons; two ride onto the catch-log
+     tickets they shaped (never-punish-rare → record events, keepsake → the
+     log page). single-player (il-1) stays on the doc — it fixed the biting
+     Friday broke, not a catch-log ticket. The empty-state ticket is the cold
+     open's own ask, so it stamps in place with no lesson to inherit. */
   function flyIntentLines(sec) {
-    [1, 2, 3].forEach((i) => {
-      setTimeout(() => {
-        const from = document.getElementById("fin-il-" + i);
-        const to = document.getElementById("fin-ti-" + i);
-        flyIntent(from, to, () => {
-          to.classList.add("stamped");
-          to.closest(".ticket").querySelector(".badge-clip").classList.add("stamped");
-        });
-      }, 300 + (i - 1) * 350);
+    const stamp = (tid) => {
+      const to = document.getElementById(tid);
+      to.classList.add("stamped");
+      to.closest(".ticket").querySelector(".badge-clip").classList.add("stamped");
+    };
+    [["fin-il-3", "fin-ti-1"], ["fin-il-2", "fin-ti-2"]].forEach(([f, t], k) => {
+      setTimeout(() => flyIntent(document.getElementById(f), document.getElementById(t), () => stamp(t)), 300 + k * 350);
     });
+    setTimeout(() => stamp("fin-ti-3"), 300 + 2 * 350);
   }
 
   function flyArrow(cls, tx, ty, rot, bounce, ms = 550) {
@@ -754,93 +738,6 @@
         a.style.transform = `translate(${tx - 90}px, ${ty + 70}px) rotate(${rot - 38}deg)`;
         a.style.opacity = "0.3";
       }, ms + 80);
-  }
-
-  /* scene 10: one gauge along one clock. x: 0–5.5h → 90–1130; solo lane
-     pct → y over baseline 250; trio lanes get their own small baselines. */
-  function buildEcon() {
-    const svg = document.getElementById("econ-svg");
-    svg.innerHTML = "";
-    const X = (h) => 90 + h * 189.09;
-    const Y = (pct) => 250 - 1.9 * pct;
-    const txt = (x, y, s, attrs = {}, parent = svg) => {
-      const t = el("text", { x, y, ...attrs }, parent);
-      t.textContent = s;
-      return t;
-    };
-
-    /* frame: axis, zone rules, lane label — visible from beat 0 */
-    const frame = el("g", { class: "eg eg-frame on" }, svg);
-    const axis = el("g", { class: "eg-axis" }, frame);
-    el("line", { x1: 90, y1: 498, x2: 1130, y2: 498 }, axis);
-    for (let h = 1; h <= 5; h++) {
-      el("line", { x1: X(h), y1: 494, x2: X(h), y2: 502 }, axis);
-      txt(X(h), 516, h + "h", { "text-anchor": "middle" }, axis);
-    }
-    txt(1130, 516, "elapsed", { "text-anchor": "end" }, axis);
-    el("line", { class: "eg-rule", x1: 90, y1: Y(50), x2: 1130, y2: Y(50) }, frame);
-    el("line", { class: "eg-rule", x1: 90, y1: Y(97), x2: 1130, y2: Y(97) }, frame);
-    txt(94, Y(50) - 6, "the door · 50%", { class: "eg-rule-label" }, frame);
-    txt(94, Y(97) - 6, "full — auto-compact", { class: "eg-rule-label" }, frame);
-    const door = el("g", { class: "eg-door" }, frame);
-    el("rect", { x: 1098, y: Y(50) - 17, width: 12, height: 17, rx: 1.5 }, door);
-    txt(90, 45, "one window · the whole catch-log epic", { class: "eg-lane-label" }, frame);
-
-    /* the wedge, revealed by a clock-driven clip */
-    const clip = el("clipPath", { id: "econ-clip-solo" }, svg);
-    el("rect", { class: "eg-clip-solo", x: 90, y: 36, width: 0, height: 230 }, clip);
-    const wedge =
-      `M ${X(0)} ${Y(8)} L ${X(1.5)} ${Y(95)} L ${X(1.5)} ${Y(5)} L ${X(3.3)} ${Y(96)}` +
-      ` L ${X(3.3)} ${Y(5)} L ${X(5.25)} ${Y(88)} L ${X(5.25)} 250 L ${X(0)} 250 Z`;
-    el("path", { class: "eg-solo-fill", d: wedge, "clip-path": "url(#econ-clip-solo)" }, svg);
-
-    /* annotations that land as the wedge passes them */
-    const cliff1 = el("g", { class: "eg eg-cliff1" }, svg);
-    txt(X(1.5) + 10, 58, "auto-compact ×1 — the squeeze, again", {}, cliff1);
-    const cliff2 = el("g", { class: "eg eg-cliff2" }, svg);
-    txt(X(3.3) + 10, 58, "auto-compact ×2", {}, cliff2);
-    const done = el("g", { class: "eg eg-done" }, svg);
-    txt(1130, 95, "done · 5h 15m", { "text-anchor": "end" }, done);
-
-    const debt = el("g", { class: "eg eg-debt" }, svg);
-    for (const h of [1.3, 3.1, 5.0]) txt(X(h), 120, "✗", { class: "xmark", "text-anchor": "middle" }, debt);
-    txt(X(3.1), 145, "written deep in the red — and it ships", { "text-anchor": "middle" }, debt);
-
-    /* the trio as a dependency chain: catch events runs first; its finish
-       unblocks the other two, which run in parallel — the shared clip is
-       the clock, so the stagger reveals in true time order */
-    const trio = el("g", { class: "eg eg-trio" }, svg);
-    txt(90, 326, "three fresh windows · planned last scene · one first, then two in parallel", { class: "eg-lane-label" }, trio);
-    const tclip = el("clipPath", { id: "econ-clip-trio" }, svg);
-    el("rect", { class: "eg-clip-trio", x: 90, y: 330, width: 0, height: 148 }, tclip);
-    const UNBLOCK = 0.833; // catch events done · 0h 50m
-    const LANES = [
-      { base: 360, pct: 14, start: 0, end: UNBLOCK, name: "record catch events" },
-      { base: 415, pct: 18, start: UNBLOCK, end: 1.833, name: "flip-through log page" },
-      { base: 470, pct: 12, start: UNBLOCK, end: 1.667, name: "empty state" },
-    ];
-    for (const l of LANES) {
-      const top = l.base - 1.9 * l.pct;
-      const d =
-        `M ${X(l.start)} ${l.base} L ${X(l.start + 0.12)} ${top} L ${X(l.end - 0.06)} ${top}` +
-        ` L ${X(l.end)} ${l.base} Z`;
-      el("path", { class: "eg-trio-fill", d, "clip-path": "url(#econ-clip-trio)" }, trio);
-      txt(X(l.end) + 12, l.base - 8, l.name, {}, trio);
-    }
-    /* the dependency drop: catch events' finish line unblocks lanes 2–3 —
-       its note stacks just under the lane-1 name, clear of lane 2's top */
-    const dep = el("g", { class: "eg eg-dep" }, svg);
-    el("line", { class: "eg-dep-line", x1: X(UNBLOCK), y1: 362, x2: X(UNBLOCK), y2: 472 }, dep);
-    txt(X(UNBLOCK) + 12, 369, "✓ done — unblocks the other two", { class: "eg-dep-label" }, dep);
-
-    /* the two bills + the all-three bracket — they pop together */
-    const bills = el("g", { class: "eg eg-bills" }, svg);
-    txt(590, 205, "~4M tokens re-read", { class: "bill bill-solo", "text-anchor": "middle" }, bills);
-    el("line", { x1: 620, y1: 335, x2: 620, y2: 470 }, bills);
-    el("line", { x1: 620, y1: 335, x2: 612, y2: 335 }, bills);
-    el("line", { x1: 620, y1: 470, x2: 612, y2: 470 }, bills);
-    txt(638, 392, "✓ all three · 1h 50m · peaks ≤18%", { class: "all-three" }, bills);
-    txt(638, 424, "~500k tokens re-read", { class: "bill bill-trio" }, bills);
   }
 
   function buildArrows() {
