@@ -2,13 +2,18 @@
 schema_version: "1"
 uuid: a5d0a0c4-933c-4a6a-acfa-84bdd39aabba
 title: 'Trim the interactive implement loop''s orchestration overhead: report round-trips, batch barriers, flat model tiering'
-status: backlog
+status: in_progress
 priority: medium
 type: chore
 created: 2026-07-18
 updated: 2026-07-18
 tags: ['lifecycle', 'skills', 'token-efficiency', 'subagents']
 areas: ['skills', 'lifecycle']
+lifecycle_phase: research
+lifecycle_slug: trim-the-interactive-implement-loops-orchestration
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/trim-the-interactive-implement-loops-orchestration/spec.md
 ---
 ## Why
 
