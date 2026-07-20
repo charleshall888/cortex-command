@@ -1,16 +1,22 @@
 import json, glob, os
-# CORRECTED pricing per Mtok (Opus 4.8 = $5/$25; Sonnet 5 = $3/$15)
+# Pricing per Mtok, verified 2026-07-20 against the claude-api skill's model table.
 # cache write: 1.25x input (5m TTL), 2x input (1h TTL). cache read: 0.1x input.
+# Sonnet 5 carries introductory $2/$10 through 2026-08-31; sticker is $3/$15 after.
 PRICE = {
-  "opus":   dict(inp=5.0, out=25.0, cw5=6.25, cw1h=10.00, cr=0.50),
-  "sonnet": dict(inp=3.0, out=15.0, cw5=3.75, cw1h=6.00,  cr=0.30),
-  "haiku":  dict(inp=1.0, out=5.0,  cw5=1.25, cw1h=2.00,  cr=0.10),
+  "fable":  dict(inp=10.0, out=50.0, cw5=12.50, cw1h=20.00, cr=1.00),
+  "opus":   dict(inp=5.0,  out=25.0, cw5=6.25,  cw1h=10.00, cr=0.50),
+  "sonnet": dict(inp=2.0,  out=10.0, cw5=2.50,  cw1h=4.00,  cr=0.20),
+  "haiku":  dict(inp=1.0,  out=5.0,  cw5=1.25,  cw1h=2.00,  cr=0.10),
 }
 def fam(m):
+    # Fail loud. This previously defaulted to "opus", which silently priced
+    # claude-fable-5 (37% of records, 2x Opus rates) at half its true cost and
+    # understated the 2026-07-16 corpus total by ~39%. Any model absent from
+    # PRICE is a pricing gap, not an Opus-shaped one -- add it before measuring.
     m=(m or "").lower()
     for k in PRICE:
         if k in m: return k
-    return "opus"
+    raise KeyError(f"unpriced model {m!r} -- add it to PRICE (synthetic records carry no billable usage)")
 def cost(u, model):
     p=PRICE[fam(model)]
     cc=u.get("cache_creation") or {}
