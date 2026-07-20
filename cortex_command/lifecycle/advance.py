@@ -1004,6 +1004,11 @@ def advance(
                     f"the feature at from_state {effective_from!r} "
                     f"(detected {phase!r})"
                 ),
+                "preferred_remedy": (
+                    "re-sync: re-run cortex-lifecycle-next and thread its "
+                    "advance_contract.expected_from_state through --from-state "
+                    "(the sanctioned re-sync — never pass the detected phase)"
+                ),
                 "sanctioned_override": _SANCTIONED_OVERRIDE,
             }
 
