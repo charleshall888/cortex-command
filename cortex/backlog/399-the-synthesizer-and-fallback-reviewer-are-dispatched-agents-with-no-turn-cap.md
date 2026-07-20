@@ -2,13 +2,15 @@
 schema_version: "1"
 uuid: e16ac07d-cc62-471f-93ae-5b96396e48e9
 title: The synthesizer and fallback reviewer are dispatched agents with no turn cap
-status: backlog
+status: wontfix
 priority: low
 type: feature
 created: 2026-07-17
-updated: 2026-07-17
+updated: 2026-07-20
 tags: ['token-efficiency', 'reliability', 'critical-review', 'subagents']
 areas: ['skills', 'lifecycle']
+lifecycle_phase: wontfix
+lifecycle_slug: the-synthesizer-and-fallback-reviewer-are
 ---
 ## Why
 
