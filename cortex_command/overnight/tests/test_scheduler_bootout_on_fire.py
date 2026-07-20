@@ -28,6 +28,12 @@ It is ``skipif(not darwin)`` because it requires a real ``launchctl`` and a
 GUI launchd domain. If ``launchctl bootstrap`` itself cannot register the
 job (no GUI session, sandboxed CI), the test ``skip``s rather than failing,
 since the bootout behaviour cannot be observed without a registered job.
+The same reasoning covers a registered job launchd never spawns (no
+stdout/stderr log files, no spawn-outcome token): newer macOS Background
+Task Management can hold a freshly-added unsigned label without failing the
+bootstrap, and a fire that never happens leaves the bootout unobservable —
+that path ``skip``s too (first seen Darwin 25.5, 2026-07-20). A job that
+DID spawn but stays registered still fails: that is the subject regressing.
 """
 
 from __future__ import annotations
@@ -197,6 +203,27 @@ def test_launcher_boots_out_own_label_after_started_fire(
                 deregistered = True
                 break
             time.sleep(2.0)
+
+        if not deregistered:
+            # Discriminate "the subject regressed" from "the fire never
+            # happened". launchd creates the Standard{Out,Error}Path files
+            # when it spawns the job, so their absence plus a missing
+            # spawn-outcome token means the launcher never ran at all —
+            # the bootout is unobservable (BTM hold / launchd deferral),
+            # which is the bootstrap-skip's reasoning one step later.
+            job_spawned = (
+                (session_dir / "spawn-outcome").exists()
+                or (session_dir / "launchd-stdout.log").exists()
+                or (session_dir / "launchd-stderr.log").exists()
+            )
+            if not job_spawned:
+                pytest.skip(
+                    "launchd registered the job but never spawned it within "
+                    "the 150s budget (no stdout/stderr log, no spawn-outcome "
+                    "token) — Background Task Management can hold a fresh "
+                    "unapproved label without failing bootstrap; cannot "
+                    "observe self-bootout without a fire"
+                )
 
         assert deregistered, (
             "label is still registered after its near-future fire — the "
