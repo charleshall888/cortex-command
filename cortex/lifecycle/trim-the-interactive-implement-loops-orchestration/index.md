@@ -2,7 +2,7 @@
 feature: trim-the-interactive-implement-loops-orchestration
 parent_backlog_uuid: a5d0a0c4-933c-4a6a-acfa-84bdd39aabba
 parent_backlog_id: 401
-artifacts: [research, spec, plan]
+artifacts: [research, spec, plan, review]
 tags: [lifecycle, skills, token-efficiency, subagents]
 created: 2026-07-18
 updated: 2026-07-20
