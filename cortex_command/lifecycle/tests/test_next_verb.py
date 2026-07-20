@@ -289,6 +289,20 @@ def test_resume_serves_ready_to_run_enter_command(
     assert opts["--session-id"] == "$LIFECYCLE_SESSION_ID"
 
 
+def test_enter_command_parses_against_enters_own_parser(repo_root: Path) -> None:
+    """Drift pin: the served command is a projection of enter's CLI surface.
+    If enter grows/renames a required flag without next following, sessions
+    would pay a failed call again — fail here first, at build time."""
+    from cortex_command.lifecycle import enter as enter_mod
+
+    _seed_feature(repo_root, _SLUG, {"spec.md": "# spec\n", "events.log": _SPEC_APPROVED})
+    tokens = shlex.split(next_state(_SLUG)["enter_command"])
+    assert tokens[0] == "cortex-lifecycle-enter"
+    # argparse exits nonzero (SystemExit) on any missing/unknown option.
+    ns = enter_mod._build_parser().parse_args(tokens[1:])
+    assert ns.feature == _SLUG
+
+
 def test_new_passthrough_serves_enter_command_with_phase_none(repo_root: Path) -> None:
     """The create path pre-binds too (--phase none, empty backlog-file) — the
     268 incident was a raw number hand-substituted on exactly this path."""
