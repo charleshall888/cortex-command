@@ -380,7 +380,7 @@ body.dawn #sky .star {
 /* both cold-open terminals hold the same fixed body height, so the two
    context bars — and the tags and avatars below them — stay vertically
    aligned no matter how each scripted run wraps */
-#sc-cold-open .term-body { height: 19em; min-height: 0; overflow: hidden; }
+#sc-cold-open .term-body { height: 15em; min-height: 0; overflow: hidden; }
 
 /* the reveal beat forces the eye to the two bars: everything else dims */
 #sc-cold-open .term, #sc-cold-open .request { transition: opacity 0.8s ease; }
@@ -487,7 +487,14 @@ body.dawn #sky .star {
 .layer-spec   { fill: var(--ochre-deep); opacity: 0.9; }
 .layer-amber  { fill: var(--ochre-deep); }
 .scanline { stroke: var(--ochre); stroke-width: 3; filter: drop-shadow(0 0 6px var(--ochre)); }
-.hatch { stroke: var(--parch-faint); stroke-width: 1; opacity: 0.5; }
+.scanline.cached { stroke: var(--blue); filter: drop-shadow(0 0 6px var(--blue)); }
+/* hatching = the unchanged prefix, stamped in behind the cached sweep;
+   layers keep their full color underneath — cached content is cheaper,
+   never lighter */
+.hatch { stroke: var(--parch-faint); stroke-width: 1; opacity: 0; transition: opacity 0.3s ease; }
+.hatch.on { opacity: 0.5; }
+.cache-tag { font-family: var(--mono); font-size: 13px; fill: var(--parch-dim); opacity: 0; transition: opacity 0.8s ease 0.5s; }
+.cache-tag.on { opacity: 0.9; }
 
 .zone-band { opacity: 0; transition: opacity 1.2s ease; }
 .zone-band.on { opacity: 0.1; }
@@ -519,6 +526,7 @@ body.dawn #sky .star {
   letter-spacing: 0.04em;
   line-height: 1.6;
 }
+.stage-cap.cap-strong { color: var(--parchment); margin-top: -1.6rem; }
 .layer-label { font-family: var(--mono); font-size: 12.5px; fill: var(--parchment); opacity: 0.85; }
 .door-label { font-family: var(--mono); font-size: 12px; fill: var(--ochre); }
 
@@ -641,6 +649,72 @@ body.dawn #sky .star {
 #sc-prism { gap: 1.2rem; padding-top: 2.5vh; padding-bottom: 2.5vh; }
 #sc-prism .scene-title { font-size: clamp(1.4rem, 2.7vw, 2.1rem); }
 #sc-prism .handoff-block:not(.on), #sc-prism .handoff-cap:not(.on) { height: 0; overflow: hidden; margin: 0; }
+#sc-prism .prism-stage:not(.on) { height: 0; overflow: hidden; margin: 0; }
+
+/* ---------- the crossing: the first 20% steers the rest ----------
+   Presenter-gated: b1 draws the bearing, b2 runs both wakes with IDENTICAL
+   timing (the widening gap is geometry, not authoring), b3 folds the sea
+   away before the rail appears — the two never share the stage. */
+
+.plot-sea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  width: min(90vw, 1000px);
+  max-height: 420px;
+  transition: max-height 0.7s cubic-bezier(0.6, 0, 0.3, 1), opacity 0.5s ease;
+}
+.plot-sea svg { width: 100%; display: block; overflow: visible; }
+#sc-prism.railed .plot-sea { max-height: 0; opacity: 0; overflow: hidden; margin: 0; }
+#sc-prism:not(.railed) .pipe-rail { display: none; }
+#sc-prism.railed .pipe-rail { animation: fade-from-0 0.8s ease 0.4s both; }
+.sea-frame { color: var(--parch-faint); letter-spacing: 0.1em; font-size: 0.72rem; }
+.ps-pier { fill: var(--rule); }
+.ps-shimmer { stroke: var(--parchment); stroke-width: 1; opacity: 0.08; }
+.ps-lamp { fill: var(--ochre); filter: drop-shadow(0 0 6px var(--ochre)); }
+.ps-halo { fill: var(--ochre); opacity: 0.16; transform-box: fill-box; transform-origin: 50% 50%; }
+.ps-ring { fill: none; stroke: var(--blue); stroke-width: 1; opacity: 0.5; }
+.ps-ring.faint { opacity: 0.22; }
+.ps-label { font-family: var(--mono); font-size: 13px; fill: var(--parch-faint); letter-spacing: 0.5px; }
+.ps-red { fill: var(--zone-red); }
+.ps-ochre { fill: var(--ochre); }
+.ps-bearing {
+  stroke: var(--ochre);
+  stroke-width: 1.5;
+  opacity: 0.6;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+}
+#sc-prism.plotted .ps-bearing {
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 1.7s cubic-bezier(0.3, 0, 0.35, 1);
+}
+.ps-dir-label { opacity: 0; transition: opacity 0.6s ease; }
+#sc-prism.plotted .ps-dir-label { opacity: 1; transition-delay: 1.2s; }
+.ps-wake {
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+}
+.ps-wake-a { stroke: var(--blue); }
+.ps-wake-b { stroke: var(--zone-red); }
+#sc-prism.run .ps-wake {
+  stroke-dashoffset: 0;
+  /* brisk departure, long constant middle, soft arrive — same curve for both */
+  transition: stroke-dashoffset 4.2s linear(0, 0.2 12%, 0.55 50%, 0.86 82%, 1);
+}
+#sc-prism.run .ps-halo { animation: ripple-bloom 1.4s cubic-bezier(0.16, 1, 0.3, 1) 4.1s both; }
+.ps-b2 { opacity: 0; transition: opacity 0.6s ease; }
+#sc-prism.run .ps-b2 { opacity: 1; transition-delay: 4.3s; }
+path.ps-bracket, path.ps-miss { fill: none; stroke-width: 1.5; }
+path.ps-bracket { stroke: var(--ochre); }
+path.ps-miss { stroke: var(--zone-red); }
+#sc-prism.run .ps-b2.ps-label { opacity: 0.9; }
+.plot-payoff { opacity: 0; transition: opacity 0.7s ease 4.6s; }
+#sc-prism.run .plot-payoff { opacity: 1; }
 
 /* the pipeline rail: the presenter's real workflow, named on screen */
 .pipe-rail { display: flex; align-items: center; gap: 1.2vw; font-size: 0.78rem; color: var(--parch-faint); margin-top: 0.2rem; }
@@ -811,6 +885,7 @@ body.dawn #sky .star {
 .note line { stroke: var(--parch-faint); stroke-width: 1.5; }
 .load-label { font-family: var(--mono); font-size: 13px; fill: var(--parch-faint); letter-spacing: 1px; }
 .note-text { font-family: var(--mono); font-size: 13.5px; fill: var(--ochre); }
+.story-label { font-family: var(--mono); font-size: 13.5px; fill: var(--parch-dim); letter-spacing: 0.5px; }
 
 /* ---------- shared card garnish ---------- */
 
@@ -895,23 +970,9 @@ body.dawn #sky .star {
 }
 .pane-tag { font-size: 0.82rem; color: var(--parchment); letter-spacing: 0.1em; }
 .scorecard { display: flex; gap: 3.5vw; font-size: 0.88rem; color: var(--parch-dim); }
-.scorecard.vertical { flex-direction: column; gap: 0.6rem; align-items: flex-start; }
+.scorecard.vertical { flex-direction: column; gap: 0.6rem; align-items: center; }
 .scorecard em { font-style: normal; color: var(--parchment); }
 .scorecard em.good { color: #5fae83; }
-.screen-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 1rem 1.6rem;
-  border-radius: 10px;
-  border: 1px solid var(--rule);
-}
-.screen-card.ui { background: #171a22; color: var(--parch-dim); }
-.screen-card.ui .btn { border: 1px solid var(--parch-faint); border-radius: 4px; padding: 0.15em 0.5em; font-size: 0.8em; color: var(--parch-faint); }
-.screen-card.warm { background: #171522; border-color: var(--ochre-deep); }
-.screen-card.warm .serif { font-size: 1.15rem; }
-.screen-card.warm .night-young { color: var(--ochre); font-style: italic; font-size: 0.95rem; }
 
 .line-col { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; }
 .badge-big.small { font-size: 0.82rem; padding: 0.4em 0.8em; }
@@ -967,8 +1028,12 @@ body.dawn #sky .star {
 }
 .fcard.on { opacity: 1; transform: none; }
 .fcard.real { border-color: var(--ochre-deep); color: var(--parchment); }
+.fcard > span:first-child { transition: color 0.5s ease; }
+/* a refused proposal dies visibly: struck through the moment the "no" lands */
+.fcard.stamped:not(.real) > span:first-child { text-decoration: line-through; color: var(--parch-faint); }
 .fstamp { font-size: 0.68rem; letter-spacing: 0.06em; color: var(--parch-faint); opacity: 0; transform: translateY(3px); transition: opacity 0.5s ease, transform 0.5s ease; }
 .fcard.stamped .fstamp { opacity: 1; transform: none; }
+.fstamp.bounce::before { content: "✗ "; color: var(--zone-red); }
 .fstamp.confirm { color: var(--ochre); }
 .spec-target { fill: var(--night-lift); stroke: var(--ochre-deep); stroke-width: 1.5; }
 .spec-line { stroke: var(--rule); stroke-width: 4; stroke-linecap: round; }
@@ -982,20 +1047,6 @@ body.dawn #sky .star {
 .crack { stroke: var(--zone-red); stroke-width: 2; fill: none; stroke-dasharray: 200; stroke-dashoffset: 200; transition: stroke-dashoffset 0.8s ease; }
 .crack.show { stroke-dashoffset: 0; }
 .crack.gold { stroke: var(--ochre); filter: drop-shadow(0 0 5px rgba(232, 168, 101, 0.6)); }
-.finding-card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  padding: 0.8rem 1.1rem;
-  background: var(--night-lift);
-  border: 1px solid var(--rule);
-  border-radius: 8px;
-  font-size: 0.82rem;
-  color: var(--parch-dim);
-  transition: transform 1.1s cubic-bezier(0.5, -0.2, 0.8, 0.6), opacity 1.1s ease;
-}
-.finding-card .verdict { color: var(--ochre); font-size: 0.72rem; letter-spacing: 0.08em; }
-.finding-card.binned { transform: translate(38vw, 34vh) rotate(24deg) scale(0.5); opacity: 0; }
 
 /* ---------- the finale: Friday, run right ---------- */
 
@@ -1007,10 +1058,16 @@ body.dawn #sky .star {
 #sc-finale.f5 .finale-ask, #sc-finale.f5 .experiment-tag { display: none; }
 .finale-ask { font-size: clamp(0.85rem, 1.5vw, 1.1rem); }
 .finale-stage { display: flex; flex-direction: column; align-items: center; gap: 0.8rem; width: min(96vw, 1240px); }
-.finale-rail { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5vw; width: 100%; max-width: 1140px; }
+.finale-rail { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5vw; width: 100%; max-width: 1140px;
+  max-height: 360px;
+  transition: max-height 0.9s cubic-bezier(0.6, 0, 0.3, 1), opacity 0.6s ease, transform 0.9s ease; }
+/* once the trio takes the stage, the two spent panes leave it — folded stubs
+   must not pile up under the live work */
+#sc-finale.f3 .finale-rail { max-height: 0; opacity: 0; transform: translateY(-12px); overflow: hidden; margin: 0; }
 .fpane { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
 .fpane .term { font-size: 0.72rem; }
-.fpane .term-body { min-height: 0; max-height: 220px; overflow: hidden;
+/* fixed body height: typed lines must never shove the bar below them */
+.fpane .term-body { height: 200px; min-height: 0; max-height: 220px; overflow: hidden;
   transition: max-height 0.8s ease, opacity 0.8s ease, padding 0.8s ease; }
 #sc-finale.f1 #fpane-red .term-body { max-height: 0; padding-top: 0; padding-bottom: 0; opacity: 0.2; }
 #sc-finale.f2 .finale-rail .fpane:nth-child(2) .term-body { max-height: 0; padding-top: 0; padding-bottom: 0; opacity: 0.2; }
@@ -1044,15 +1101,14 @@ body.dawn #sky .star {
 .finale-trio .ticket { width: 100%; }
 .finale-trio .term { font-size: 0.7rem; max-width: none; }
 .finale-trio .fterm { width: 100%; display: flex; flex-direction: column; gap: 0.4rem; }
-.finale-trio .fterm .term-body { min-height: 0; max-height: 170px; overflow: hidden;
+.finale-trio .fterm .term-body { height: 140px; min-height: 0; max-height: 170px; overflow: hidden;
   transition: max-height 0.7s ease, opacity 0.7s ease; }
 #sc-finale.f4 .finale-trio .fterm .term-body { max-height: 0; padding-top: 0; padding-bottom: 0; opacity: 0.2; }
 .tk-body { display: flex; flex-direction: column; gap: 0.25rem; text-align: left; }
 .ticket-intent { color: var(--ochre); font-size: 0.66rem; opacity: 0; transition: opacity 0.5s ease; }
 .ticket-intent.stamped { opacity: 1; }
-.finale-results { display: flex; align-items: center; gap: 3vw; }
-.results-left { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
-#sc-finale.f5 .finale-rail, #sc-finale.f5 .finale-trio { opacity: 0.55; transition: opacity 0.8s ease; }
+.finale-results { display: flex; align-items: center; justify-content: center; gap: 3vw; width: 100%; }
+#sc-finale.f5 .finale-trio { opacity: 0.55; transition: opacity 0.8s ease; }
 .finale-close { display: flex; flex-direction: column; align-items: center; gap: 0.8rem; }
 .finale-close .wp-dock { width: min(22vw, 240px); }
 
@@ -1257,9 +1313,16 @@ body.dawn #sky .star {
 
 /* ---------- scene 18: dawn ---------- */
 
-.dawn-stage { display: flex; flex-direction: column; align-items: center; gap: 1.8rem; }
-.dawn-stage .dock { width: min(38vw, 460px); }
+.dawn-stage { display: flex; flex-direction: column; align-items: center; gap: 1.3rem; width: min(86vw, 1100px); }
+.dawn-stage .dock { width: 100%; }
 .dawn-stage .dock .water { stroke: var(--ochre); opacity: 0.45; }
+/* the lower band shares the dock's width: 4fr = the posts' 0–640 zone (recap
+   columns center under their posts by construction), 1fr = the rod's bay
+   (the log card lands under its line at 90%) */
+.dawn-lower { display: grid; grid-template-columns: 4fr 1fr; width: 100%; align-items: start; }
+/* the card centers on its cell (= the line's x) but may run wider than it */
+.dawn-lower .log-card { justify-self: center; width: max-content; max-width: 270px; }
+.recap .recap-sub { text-wrap: balance; }
 .dock .post.lit { fill: var(--ochre-deep); }
 
 /* first light finds the posts one at a time, after the glow is underway */
@@ -1292,12 +1355,10 @@ body.dawn #sky .star {
   border-radius: 10px;
 }
 .log-head { color: var(--parch-faint); font-size: 0.7rem; letter-spacing: 0.12em; }
-.log-name { font-size: 1.25rem; }
+.log-name { font-size: 1.4rem; }
 .log-note { color: var(--parch-faint); font-size: 0.72rem; }
-.recap-row { display: flex; gap: 3.5vw; }
-.recap { display: flex; flex-direction: column; align-items: center; gap: 0.55rem; }
-.recap svg { width: 44px; }
-.recap svg rect, .recap svg line { fill: none; stroke: var(--parch-dim); stroke-width: 1.6; }
+.recap-row { display: grid; grid-template-columns: repeat(3, 1fr); justify-items: center; }
+.recap { display: flex; flex-direction: column; align-items: center; gap: 0.55rem; text-align: center; }
 .recap span { color: var(--parch-faint); font-size: 0.72rem; letter-spacing: 0.04em; }
 .recap span:first-of-type { color: var(--parch-dim); }
 .recap .habit-num { color: var(--ochre); font-size: 0.7rem; margin-bottom: 0; }

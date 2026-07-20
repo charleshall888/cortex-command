@@ -118,11 +118,19 @@ function makeVessel(container, opts = {}) {
     return added;
   }
 
-  /* one full-height scan: bottom → top of tank, coins tick per fill passed */
+  /* one full-height scan: bottom → top of tank, coins tick per fill passed.
+     cached: the sweep still walks the WHOLE tank (that's the honest part) —
+     but hatching stamps in behind the line over the unchanged prefix, the
+     line runs cool blue there, and it flips to full-price ochre only at the
+     one just-poured layer the provider hasn't seen before. */
   function sweep({ cached = false, onCoin = null, duration = 4000 } = {}) {
     return new Promise((resolve) => {
+      const hatches = [];
+      let cacheTopY = null; // top edge of the cached (unchanged) span
       if (cached) {
-        for (const l of layers) {
+        const prefix = layers.length > 1 ? layers.slice(0, -1) : layers;
+        cacheTopY = Math.min(...prefix.map((l) => parseFloat(l.rect.getAttribute("y"))));
+        for (const l of prefix) {
           const y = parseFloat(l.rect.getAttribute("y"));
           const h = parseFloat(l.rect.getAttribute("height"));
           for (let hy = y + 6; hy < y + h; hy += 12) {
@@ -133,11 +141,19 @@ function makeVessel(container, opts = {}) {
             hl.setAttribute("y1", hy);
             hl.setAttribute("y2", hy - 6);
             overlay.appendChild(hl);
+            hatches.push({ el: hl, y: hy, done: false });
           }
         }
+        const tag = document.createElementNS(ns, "text");
+        tag.setAttribute("class", "cache-tag");
+        tag.setAttribute("x", VESSEL.TX + VESSEL.TW + 12);
+        tag.setAttribute("y", (cacheTopY + bottomY()) / 2 + 4);
+        tag.textContent = "cached";
+        overlay.appendChild(tag);
+        requestAnimationFrame(() => requestAnimationFrame(() => tag.classList.add("on")));
       }
       const line = document.createElementNS(ns, "line");
-      line.setAttribute("class", "scanline");
+      line.setAttribute("class", "scanline" + (cached ? " cached" : ""));
       line.setAttribute("x1", VESSEL.TX + 2);
       line.setAttribute("x2", VESSEL.TX + VESSEL.TW - 2);
       overlay.appendChild(line);
@@ -152,6 +168,14 @@ function makeVessel(container, opts = {}) {
         const y = yFrom + (yTo - yFrom) * t;
         line.setAttribute("y1", y);
         line.setAttribute("y2", y);
+        if (cached) {
+          for (const hp of hatches)
+            if (!hp.done && hp.y >= y) {
+              hp.el.classList.add("on");
+              hp.done = true;
+            }
+          if (cacheTopY != null && y < cacheTopY) line.classList.remove("cached"); // the new layer re-reads at full price
+        }
         if (onCoin) {
           const pctPassed = Math.min(t * 100, filled);
           onCoin(Math.round(pctPassed * rate * 3));

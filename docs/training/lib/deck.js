@@ -72,22 +72,23 @@
     }, delay);
   }
 
+  /* terminal scripts stay summary-level on purpose: the room reads them while
+     the presenter talks, so every line is a plain clause — never a diff hunk.
+     The one code line kept anywhere is the empty-state copy itself. */
   const LEFT_SCRIPT = [
     { t: "user", text: "add an empty-state to the catch log" },
     { t: "ask", text: "One question — should the empty log invite the first cast, or stay blank?", pause: 300 },
     { t: "user", text: "invite the first cast" },
-    { t: "tool", text: "Read catch_log_view.js" },
-    { t: "add", lines: ["+ if (entries.length === 0)", '+   return EmptyState("No catches yet.", "The night is young.")'] },
+    { t: "tool", text: "Edit catch_log_view.js" },
+    { t: "add", lines: ['+ "No catches yet. The night is young."'] },
     { t: "done", text: "✓ empty state renders · tests pass" },
   ];
 
   const RIGHT_SCRIPT = [
     { t: "user", text: "add an empty-state to the catch log" },
     { t: "agent", text: "Great idea! Refactoring the logging pipeline for empty states…", pause: 300 },
-    { t: "tool", text: "Edit catch_odds.js" },
-    { t: "del", lines: ["- const BASE_ODDS = 0.12"] },
-    { t: "add", lines: ["+ const BASE_ODDS = 0.0   // empty state"] },
-    { t: "warn", text: "✗ modified catch_odds.js — biting disabled game-wide" },
+    { t: "tool", text: "Edit catch_odds.js — the biting odds, not the log" },
+    { t: "warn", text: "✗ biting disabled game-wide" },
   ];
 
   /* the death spiral: each failed attempt AND each correction stays in the
@@ -96,22 +97,21 @@
   const SPIRAL_A = [
     { t: "user", text: "bug: escaped fish are showing up in the catch log" },
     { t: "agent", text: "Filtering escapes out of the log view.", pause: 250 },
-    { t: "tool", text: "Edit log_view.js" },
-    { t: "add", lines: ["+ if (entry.escaped) skip(entry)"] },
-    { t: "warn", text: "✗ still logged — the flip-through page renders them" },
+    { t: "tool", text: "Edit log_view.js — skip escaped entries" },
+    { t: "warn", text: "✗ still logged — the flip-through page shows them" },
     { t: "user", text: "no — fix the source, not the view" },
   ];
   const SPIRAL_B = [
     { t: "agent", text: "Right — removing escape events at the source.", pause: 250 },
-    { t: "tool", text: "Edit catch_events.js" },
-    { t: "del", lines: ['- emit("escape", fish)'] },
+    { t: "tool", text: "Edit catch_events.js — drop escape events" },
     { t: "warn", text: "✗ tackle stats broke — they count escapes" },
     { t: "user", text: "NO — put the events back" },
   ];
+  /* attempt 3's edit line is verbatim attempt 1's — the relapse, verifiable by eye */
   const SPIRAL_C = [
     { t: "agent", text: "Restoring events; filtering the view instead.", pause: 250 },
-    { t: "add", lines: ["+ if (entry.escaped) skip(entry)"], snap: true },
-    { t: "warn", text: "✗ turn 79 · the same patch as turn 71 · bug still alive", snap: true },
+    { t: "tool", text: "Edit log_view.js — skip escaped entries", snap: true },
+    { t: "warn", text: "✗ turn 79 · the same edit as turn 71 · bug still alive", snap: true },
   ];
 
   /* the finale: Friday run right — the red pane is a freeze-frame of the
@@ -126,39 +126,36 @@
   const FIN_RED_HTML =
     `<div class="term-line user">add an empty-state to the catch log — before you go</div>` +
     `<div class="rt-group" data-g="1">` +
-      `<div class="term-line tool">${RT(1)} catch_log.js   + log.record(catch)</div>` +
-      `<div class="term-line done">✓ catches recorded — first task, clean</div>` +
+      `<div class="term-line tool">${RT(1)} record catch events</div>` +
+      `<div class="term-line done">✓ clean — the window was near-empty</div>` +
     `</div>` +
     `<div class="rt-group" data-g="2">` +
-      `<div class="term-line tool">${RT(2)} log_view.js   + page.flip()</div>` +
-      `<div class="term-line caution">slipped on the gate — fixed it on a re-read</div>` +
-      `<div class="term-line done">✓ log page ships — a bit sloppy</div>` +
+      `<div class="term-line tool">${RT(2)} flip-through log page</div>` +
+      `<div class="term-line caution">✓ ships — half-full now, a bit sloppy</div>` +
     `</div>` +
     `<div class="rt-group" data-g="3">` +
-      `<div class="term-line tool">${RT(3)} log_view.js   + empty-state copy</div>` +
-      `<div class="term-line warn">✗ 91% full — reaches for catch_odds.js, skips the tests</div>` +
-      `<div class="term-line warn">✗ biting disabled game-wide · no room left to notice</div>` +
+      `<div class="term-line tool">${RT(3)} empty state</div>` +
+      `<div class="term-line warn">✗ 91% full — grabs catch_odds.js, skips the tests</div>` +
+      `<div class="term-line warn">✗ biting disabled game-wide</div>` +
     `</div>`;
   const FIN_INTERVIEW = [
     { t: "user", text: "/discovery add an empty-state to the catch log" },
     { t: "ask", text: "quick scope — what should a first-night player see?", pause: 250 },
     { t: "user", text: "an invite to cast, with the log ready underneath" },
-    { t: "tool", text: "Research: catch log · log view · release rules" },
+    { t: "tool", text: "Research the catch-log code" },
     { t: "agent", text: "heads-up — biting's still broken from this afternoon; fixed it (device clock)" },
-    { t: "tool", text: "Write catch-log-epic.md · split into 3 tickets" },
-    { t: "done", text: "✓ epic + 3 tickets · biting restored · every lesson attached" },
+    { t: "tool", text: "Write the catch-log epic · split into 3 tickets" },
+    { t: "done", text: "✓ epic + 3 tickets · biting restored" },
   ];
   const FIN_A = [
     { t: "user", text: "ticket: record catch events" },
-    { t: "agent", text: "log every catch — even a rare under the size limit" },
-    { t: "add", lines: ["+ log.record(catch)  // rares included"] },
+    { t: "agent", text: "logging every catch — rares included" },
     { t: "tool", text: "Run tests --offline" },
-    { t: "done", text: "✓ every catch reaches the log · 1 file" },
+    { t: "done", text: "✓ tests pass · 1 file" },
   ];
   const FIN_B = [
     { t: "user", text: "ticket: flip-through log page" },
     { t: "tool", text: "Edit log_view.js" },
-    { t: "add", lines: ["+ page.flip(direction)"] },
     { t: "warn", text: "✗ gate: run the tests first" },
     { t: "tool", text: "Run tests --offline" },
     { t: "done", text: "✓ gate open · 2 files" },
@@ -166,9 +163,9 @@
   const FIN_C = [
     { t: "user", text: "ticket: empty state" },
     { t: "tool", text: "Edit log_view.js" },
-    { t: "add", lines: ['+ if (log.isEmpty) show("The night is young.")'] },
+    { t: "add", lines: ['+ "No catches yet. The night is young."'] },
     { t: "tool", text: "Run tests --offline" },
-    { t: "done", text: "✓ empty log invites the first cast", pause: 2400 },
+    { t: "done", text: "✓ the empty log invites the first cast", pause: 2400 },
   ];
 
   /* the exhibit stays in-domain: every line is believable review-skill
@@ -196,6 +193,7 @@
     { kind: "chat", pct: 4 },
     { kind: "tool", pct: 8, label: "test output" },
   ]; // 44% — amber, the door in sight
+  const GAUGE_TURN = [{ kind: "chat", pct: 3, label: "this turn" }]; // the only uncached thing
   const GAUGE_LATER = [
     { kind: "tool", pct: 12, label: "more files" },
     { kind: "tool", pct: 10, label: "more test output" },
@@ -268,13 +266,20 @@
       }
       if (b === 1) chain("gauge", () => state.vGauge.pour(GAUGE_BASE));
       if (b === 2) chain("gauge", () => state.vGauge.sweep()); // plays silent; caption lands after
-      if (b === 3) {
+      if (b === 3)
+        chain("gauge", async () => {
+          // the caching beat: one new sliver, then the discounted re-read —
+          // hatching stamps in behind a faster sweep that still walks it all
+          await state.vGauge.pour(GAUGE_TURN);
+          await state.vGauge.sweep({ cached: true, duration: 2200 });
+        });
+      if (b === 4) {
         chain("gauge", async () => {
           state.vGauge.zones();
           state.cbGauge.el.classList.add("bands-strong");
         });
       }
-      if (b === 4)
+      if (b === 5)
         chain("gauge", async () => {
           await state.vGauge.pour(GAUGE_LATER);
           state.cbGauge.flash();
@@ -378,11 +383,14 @@
       if (b === 1) state.wp3.posts.clean.classList.add("lit"); // the plank waits for Friday
     },
 
+    /* the crossing plays first (b1 plot · b2 run · b3 hand-off), then the
+       scene becomes the familiar rail + interview flow at b4+ */
     "sc-prism": (sec, b) => {
       const cloud = sec.querySelector(".cloud");
       const bubbles = [...sec.querySelectorAll(".qbubble")];
       const tickets = [...sec.querySelectorAll(".prism-tickets .ticket")];
       if (b === 0) {
+        sec.classList.remove("plotted", "run", "railed");
         cloud.classList.remove("sharp", "condensed");
         bubbles.forEach((q) => q.classList.remove("on"));
         tickets.forEach((t) => t.classList.remove("on"));
@@ -390,19 +398,24 @@
         sec.querySelector(".ticket.callback").classList.remove("lit");
         sec.querySelector(".prism-mid .doc").classList.remove("on");
         sec.classList.remove("past-top", "past-mid");
+      }
+      if (b === 1) sec.classList.add("plotted"); // the bearing draws — one ruler stroke
+      if (b === 2) sec.classList.add("run"); // both wakes, identical timing — the gap is pure geometry
+      if (b === 3) {
+        sec.classList.add("railed"); // the sea folds; the rail takes the stage
         setRail(sec, 1);
       }
-      if (b === 2) {
+      if (b === 5) {
         bubbles.forEach((q, i) => setTimeout(() => q.classList.add("on"), 300 + i * 900));
         setTimeout(() => cloud.classList.add("sharp"), 1400);
       }
-      if (b === 3) {
+      if (b === 6) {
         cloud.classList.add("condensed");
         sec.classList.add("past-top");
         sec.querySelector(".prism-mid .doc").classList.add("on");
         setRail(sec, 2);
       }
-      if (b === 4) {
+      if (b === 7) {
         sec.classList.add("past-mid");
         tickets.forEach((t) => t.classList.add("on"));
         stampTickets(sec);
@@ -421,7 +434,6 @@
         buildArrows();
         sec.classList.remove("spec-docked");
         ["fcard-1", "fcard-2", "fcard-3"].forEach((id) => document.getElementById(id).classList.remove("on", "stamped"));
-        sec.querySelector(".finding-card").classList.remove("binned");
       }
       if (b === 2) sec.classList.add("spec-docked"); // one slow readable move — narrate over it
       if (b === 3) {
@@ -441,11 +453,7 @@
         stamp("fcard-3", 2100);
       }
       if (b === 6) document.querySelector("#arrows-svg .crack").classList.add("gold");
-      if (b === 7) {
-        const fc = sec.querySelector(".finding-card");
-        fc.classList.remove("binned");
-        setTimeout(() => fc.classList.add("binned"), 3600); // room to read it aloud first
-      }
+      // b7: the judge-cap is data-beat markup — nothing to drive
     },
 
     "sc-scroll": (sec, b) => {
@@ -578,6 +586,7 @@
     "sc-finale": (sec, b) => {
       if (b === 0) {
         sec.classList.remove("f1", "f2", "f3", "f4", "f5");
+        chains["fin"] = Promise.resolve(); // a re-entry must not queue behind a stale run
         if (!state.finRed) {
           state.finRed = makeTerminal(document.getElementById("term-fin-red"), { title: "six-hour session · 4:00 PM" });
           state.finInt = makeTerminal(document.getElementById("term-fin-int"), { title: "fresh session · 4:05 PM · discovery" });
@@ -797,10 +806,13 @@
     el("path", { class: "bu-rope bu-rope-a", d: "M 98 240 Q 130 314 190 310 Q 340 326 490 310" }, svg);
     el("path", { class: "bu-rope bu-rope-b", d: "M 490 310 Q 640 326 790 310" }, svg);
 
+    /* one line per marker — short enough to read while the presenter talks.
+       b1 is the squeeze chip's warning, re-learned the hard way and written
+       down by the agent itself this time. */
     const BUOYS = [
-      { x: 190, cls: "bu-b1", lines: ["catch_odds.js", "one wrong number — nothing bites"] },
-      { x: 490, cls: "bu-b2", lines: ["the catch logic", "lives in FishManager"] },
-      { x: 790, cls: "bu-b3", lines: ["release_rules.js", "rares get released — by design"] },
+      { x: 190, cls: "bu-b1", lines: ["DON'T touch catch_odds.js"] },
+      { x: 490, cls: "bu-b2", lines: ["catch logic lives in FishManager"] },
+      { x: 790, cls: "bu-b3", lines: ["rares never reach the log"] },
     ];
     const groups = {};
     for (const b of BUOYS) {
@@ -814,8 +826,8 @@
       el("circle", { class: "bu-lamp", cx: b.x, cy: 100, r: 6.5 }, g);
       el("line", { class: "bu-refl", x1: b.x, y1: 334, x2: b.x, y2: 372 }, g);
       b.lines.forEach((s, i) =>
-        txt(b.x, 164 + i * 21, s, {
-          class: "bu-note" + (s === "lives in FishManager" ? " bu-oldline" : ""),
+        txt(b.x, 176 + i * 21, s, {
+          class: "bu-note" + (s.includes("FishManager") ? " bu-oldline" : ""),
           "text-anchor": "middle",
         }, g)
       );
@@ -824,15 +836,14 @@
     /* b2: the agent's own fix — the old line struck, the correction inked
        fresh; its ✎ is this buoy's one and only stamp */
     const fix = el("g", { class: "bu-fix" }, groups["bu-b2"]);
-    el("line", { class: "bu-strikeline", x1: 412, y1: 181, x2: 568, y2: 181 }, fix);
-    txt(490, 206, "lives in CatchService", { class: "bu-note bu-newtxt", "text-anchor": "middle" }, fix);
+    el("line", { class: "bu-strikeline", x1: 360, y1: 171, x2: 620, y2: 171 }, fix);
+    txt(490, 202, "lives in CatchService", { class: "bu-note bu-newtxt", "text-anchor": "middle" }, fix);
     txt(490, 74, "✎ fixed itself", { class: "bu-fixstamp", "text-anchor": "middle" }, fix);
 
     /* b5: the audit's verdicts — one stamp each for the other two */
     txt(190, 74, "✓ keep", { class: "bu-v bu-keep", "text-anchor": "middle" }, groups["bu-b1"]);
     txt(790, 74, "✗ strike", { class: "bu-v bu-strike", "text-anchor": "middle" }, groups["bu-b3"]);
-    el("line", { class: "bu-v bu-redline", x1: 725, y1: 160, x2: 855, y2: 160 }, groups["bu-b3"]);
-    el("line", { class: "bu-v bu-redline", x1: 668, y1: 181, x2: 912, y2: 181 }, groups["bu-b3"]);
+    el("line", { class: "bu-v bu-redline", x1: 682, y1: 171, x2: 898, y2: 171 }, groups["bu-b3"]);
   }
 
   /* scene 14: the shared tackle box — the object pv-3 names but never draws.

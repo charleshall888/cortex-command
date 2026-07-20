@@ -1,7 +1,13 @@
 /* The filmstrip: a conversation as a timeline you can fork and rewind.
    This component is the seed of the wave-2 Cockpit engine.
    The rewind is the deck's wonder bet: one unbroken take — stillness,
-   then scrub, shear, gravity, the track thins, the agent straightens. */
+   then scrub, shear, gravity, the track thins, the agent straightens.
+
+   The story it plays: overnight fishing must happen in the player's REAL
+   night — and the cheating question eats the session. A branch tries the
+   device clock (travelers can game it); the main lane grinds on
+   server-enforced time (spoofable anyway); the realization — single-player,
+   cheating's allowed — is the note the rewind carries home. */
 
 function makeFilmstrip(container) {
   const ns = "http://www.w3.org/2000/svg";
@@ -85,6 +91,25 @@ function makeFilmstrip(container) {
   loadLabel.style.opacity = "0";
   svg.appendChild(loadLabel);
 
+  /* one story line under the track — swaps per phase, so each keypress
+     reads as a chapter heading, never a wall of text */
+  const story = document.createElementNS(ns, "text");
+  story.setAttribute("class", "story-label");
+  story.setAttribute("x", X0);
+  story.setAttribute("y", TRACK_Y + SEG_H / 2 + 119); // clear of the rewind note's landing strip
+  story.style.opacity = "0";
+  story.style.transition = "opacity 0.5s ease";
+  svg.appendChild(story);
+
+  function setStory(text) {
+    story.style.opacity = "0";
+    if (!text) return;
+    setTimeout(() => {
+      story.textContent = text;
+      story.style.opacity = "0.85";
+    }, 400);
+  }
+
   /* playhead */
   const playhead = document.createElementNS(ns, "g");
   playhead.setAttribute("class", "playhead");
@@ -107,6 +132,7 @@ function makeFilmstrip(container) {
   /* ---------- beats ---------- */
 
   async function populate() {
+    setStory("the ask — overnight fishing happens in the player's real night");
     for (let i = 0; i < FORK_AT + 1; i++) {
       addSeg("seg-base");
       await sleep(140);
@@ -118,7 +144,9 @@ function makeFilmstrip(container) {
   }
 
   async function fork() {
-    /* a ghost lane branches up-right, explores, and hands one answer back */
+    /* a ghost lane branches up-right, explores, and hands one answer back —
+       here the answer is a "no": the device clock can't stop a cheater */
+    setStory("a branch tries the device clock — travelers can game it ✗");
     const fx = segX(FORK_AT) + SEG_W / 2;
     for (let i = 1; i <= 4; i++) {
       const gr = document.createElementNS(ns, "rect");
@@ -153,6 +181,7 @@ function makeFilmstrip(container) {
   }
 
   async function badRun() {
+    setStory("the main lane grinds on server-enforced time — spoofable anyway ✗");
     for (let i = 0; i < 9; i++) {
       addSeg("seg-red");
       setLoad();
@@ -172,6 +201,7 @@ function makeFilmstrip(container) {
     /* the label taught its lesson back at populate; clear the note's landing strip */
     loadLabel.style.transition = "opacity 0.8s ease";
     loadLabel.style.opacity = "0";
+    setStory(""); // the note carries the lesson from here
 
     setPlayhead(forkX, totalMs);
 
@@ -254,6 +284,7 @@ function makeFilmstrip(container) {
   }
 
   async function cleanBranch() {
+    setStory("the simple path — device clock, no anti-cheat · done");
     for (let i = 0; i < 3; i++) {
       addSeg("seg-clean");
       setLoad();
@@ -269,6 +300,7 @@ function makeFilmstrip(container) {
     segs.length = 0;
     loadBar.setAttribute("width", 0);
     loadLabel.style.opacity = "0";
+    story.style.opacity = "0";
     setPlayhead(X0, 0);
   }
 

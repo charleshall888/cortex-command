@@ -20,10 +20,12 @@ function makeContextBar(container, opts = {}) {
   const fill = root.querySelector(".cbar-fill");
   const pctEl = root.querySelector(".cbar-pct");
   let value = 0;
+  let painted = 0; // where the fill visibly IS — a canceled animation resumes from here, never from the stale target
   let raf = null;
 
   function paint(v) {
     v = Math.max(0, Math.min(100, v));
+    painted = v;
     fill.style.width = v + "%";
     fill.classList.toggle("cb-green", v < 30);
     fill.classList.toggle("cb-amber", v >= 30 && v < 50);
@@ -33,7 +35,7 @@ function makeContextBar(container, opts = {}) {
 
   function set(pct, { ms = 1200 } = {}) {
     if (raf) cancelAnimationFrame(raf);
-    const from = value;
+    const from = painted;
     value = pct;
     if (ms <= 0) return paint(pct);
     const start = performance.now();
