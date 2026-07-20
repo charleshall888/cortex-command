@@ -162,6 +162,69 @@ def test_review_is_sonnet_at_every_criticality(capsys):
 
 
 # ---------------------------------------------------------------------------
+# (c2) Per-task builder tiering — downgrade-only --task-complexity (R13).
+#      Soft input: absent → unchanged; {trivial,simple} on an opus cell drops to
+#      sonnet; complex, or any low/medium cell already sonnet, stays unchanged;
+#      an out-of-set value warns on stderr and inherits the cell (exit 0).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "criticality,task_complexity,model",
+    [
+        # opus cells (high/critical) downgrade for trivial/simple, hold for complex.
+        ("high", "trivial", "sonnet"),
+        ("high", "simple", "sonnet"),
+        ("high", "complex", "opus"),
+        ("critical", "trivial", "sonnet"),
+        ("critical", "simple", "sonnet"),
+        ("critical", "complex", "opus"),
+        # low/medium cells are already sonnet — the downgrade is a no-op.
+        ("medium", "simple", "sonnet"),
+        ("medium", "complex", "sonnet"),
+        ("low", "trivial", "sonnet"),
+    ],
+)
+def test_builder_task_complexity_downgrade(criticality, task_complexity, model, capsys):
+    code, out, err = _run(
+        [
+            "--role",
+            "builder",
+            "--criticality",
+            criticality,
+            "--task-complexity",
+            task_complexity,
+        ],
+        capsys,
+    )
+    assert code == 0, f"builder/{criticality}/{task_complexity}: expected exit 0, got {code}"
+    assert out == model + "\n", (
+        f"builder/{criticality}/{task_complexity}: expected {model!r}, got {out!r}"
+    )
+    assert err == "", f"a valid --task-complexity must not warn: {err!r}"
+
+
+def test_builder_task_complexity_absent_is_unchanged(capsys):
+    """Flag absent → identical to today: builder@high stays opus."""
+    code, out, err = _run(["--role", "builder", "--criticality", "high"], capsys)
+    assert code == 0 and out == "opus\n", f"builder@high, no flag: got {out!r}"
+    assert err == "", f"no flag must not warn: {err!r}"
+
+
+def test_builder_bogus_task_complexity_warns_and_inherits(capsys):
+    """Out-of-set value → stderr warning + unchanged cell + exit 0 (never halts)."""
+    code, out, err = _run(
+        ["--role", "builder", "--criticality", "high", "--task-complexity", "bogus"],
+        capsys,
+    )
+    assert code == 0, f"bogus --task-complexity must not halt: got exit {code}"
+    assert out == "opus\n", f"bogus value must inherit the opus cell: got {out!r}"
+    assert err != "" and "bogus" in err, (
+        f"expected a stderr warning naming the value: {err!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
 # (d) Golden anchor — frozen literal (spec #334 Req 3) compared to the module.
 # ---------------------------------------------------------------------------
 

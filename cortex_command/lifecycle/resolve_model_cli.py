@@ -7,10 +7,13 @@ lookup (mechanism) to this verb. Pure, stdlib-only; it does NOT import from
 ``cortex_command/pipeline/dispatch.py`` (the SDK pipeline matrix
 ``resolve_model(complexity, criticality)`` is a structurally different lattice:
 ``orchestrator-fix``'s ``sonnet|sonnet|sonnet|opus`` row is unrepresentable in
-the complexity×criticality pipeline matrix, so the two stay separate).
+the complexity×criticality pipeline matrix, so the two stay separate). The
+optional ``--task-complexity`` layer added here is downgrade-only and builder-
+scoped: it rides on top of the already-resolved cell and never re-imports the
+pipeline's complexity axis, so that lattice separation is preserved.
 
 Usage:
-  cortex-resolve-model --role <r> [--criticality <c>]
+  cortex-resolve-model --role <r> [--criticality <c>] [--task-complexity <t>]
 
 Roles:
   review, builder, orchestrator-fix, competing-plan  — tier-keyed (need --criticality)
@@ -27,6 +30,16 @@ Fail-loud (exit 2 + stderr, never a default):
 A default would silently mask a typo'd role or a wrong-criticality wiring, so
 the verb never substitutes a model — the calling site is expected to halt and
 escalate on a nonzero exit.
+
+Soft-input exception — ``--task-complexity`` (builder-only, downgrade-only) is
+the one input that does NOT fail loud, because the interactive implement loop
+must not halt on a per-task ``Complexity`` typo. It takes a free string (no
+argparse ``choices=``, whose violation would ``sys.exit(2)`` before ``main``
+runs). Absent → behavior identical to a run without it. A value outside
+``{trivial, simple, complex}`` → stderr warning + the unchanged cell + exit 0
+(inherit, never downgrade, never halt). Only ``{trivial, simple}`` on a cell
+that resolved ``opus`` downgrades it to ``sonnet`` — the floor; interactive
+builders never resolve haiku.
 """
 
 from __future__ import annotations
@@ -85,6 +98,13 @@ _CRITICALITY_INDEPENDENT: dict[str, str] = {"synthesizer": "opus", "searcher": "
 _ROLE_CHOICES = sorted(set(_LIFECYCLE_MATRIX) | set(_CRITICALITY_INDEPENDENT))
 _CRITICALITY_CHOICES = ["low", "medium", "high", "critical"]
 
+# Optional per-task builder tiering (R13): a downgrade-only, soft-input layer on
+# top of the resolved cell. Deliberately NOT wired as argparse choices — an
+# out-of-set value must warn and inherit the cell (exit 0), not sys.exit(2)
+# before main() runs. Only trivial/simple drop an opus builder cell to sonnet.
+_TASK_COMPLEXITY_VALUES = frozenset({"trivial", "simple", "complex"})
+_DOWNGRADE_COMPLEXITIES = frozenset({"trivial", "simple"})
+
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -114,6 +134,20 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "Lifecycle criticality. Required for tier-keyed roles; ignored "
             "for the criticality-independent synthesizer and searcher roles."
+        ),
+    )
+    parser.add_argument(
+        "--task-complexity",
+        required=False,
+        default=None,
+        # Deliberately NO choices=: a soft input. An out-of-set value must warn
+        # and inherit the cell (exit 0), never sys.exit(2) before main() runs.
+        help=(
+            "Optional per-task complexity for --role builder. When the resolved "
+            "builder cell is opus and this is 'trivial' or 'simple', downgrade "
+            "to sonnet; otherwise the cell is returned unchanged. Any value "
+            "outside {trivial, simple, complex} warns on stderr and inherits "
+            "the cell (exit 0)."
         ),
     )
     return parser
@@ -159,6 +193,22 @@ def main(argv: Optional[List[str]] = None) -> int:
             f"role: {', '.join(sorted(row))})\n"
         )
         return 2
+
+    # Soft-input, downgrade-only per-task tiering (R13), builder-scoped. Absent →
+    # no change. An out-of-set value warns and inherits the cell (never halts).
+    # Only a trivial/simple builder task on an opus cell drops to sonnet (the
+    # floor; builders never resolve haiku).
+    task_complexity: Optional[str] = args.task_complexity
+    if role == "builder" and task_complexity is not None:
+        if task_complexity not in _TASK_COMPLEXITY_VALUES:
+            sys.stderr.write(
+                f"cortex-resolve-model: unknown --task-complexity "
+                f"{task_complexity!r} (expected one of: "
+                f"{', '.join(sorted(_TASK_COMPLEXITY_VALUES))}); inheriting the "
+                f"{model!r} cell unchanged\n"
+            )
+        elif task_complexity in _DOWNGRADE_COMPLEXITIES and model == "opus":
+            model = "sonnet"
 
     sys.stdout.write(model + "\n")
     return 0
