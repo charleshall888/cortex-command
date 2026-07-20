@@ -8,6 +8,8 @@ Two-stage review: spec compliance first, then code quality. Complex tier only. T
 
 Read `cortex/lifecycle/{feature}/spec.md` (requirements) and `plan.md` (verification strategy), and identify the files changed during implementation (git log since the lifecycle started, or plan.md's file lists). Load requirements per the shared protocol (`${CLAUDE_SKILL_DIR}/references/load-requirements.md`): run `cortex-load-requirements --feature {feature}`, read every listed non-skipped path, and record the printed path list for the reviewer prompt. The verb's no-match fallback note (`no area docs matched`) is a **warning, not a routine fallback** — it means the drift check narrows to project.md only, so any area doc governing this feature goes unassessed. Surface it to the user before dispatching; the usual cause is an index.md that never received its backlog tags, repaired by re-running `cortex-lifecycle-enter` with the served backlog filename (SKILL.md §Step 2).
 
+**Test Baseline** — run the configured `test-command` (`cortex/lifecycle.config.md`) once, capturing a pass/fail summary and a log path (never the full transcript). If implementation commits land after the baseline, re-run it once and replace the summary; the reviewer and any sub-agent it spawns consume this baseline and never re-run the full suite.
+
 ### 2. Launch Review Sub-Task
 
 **Model** — resolve at dispatch, never hardcode:
@@ -17,6 +19,8 @@ model=$(cortex-resolve-model --role review --criticality "$(cortex-lifecycle-sta
 ```
 
 Pass `$model` to the reviewer sub-task. On nonzero exit, halt and escalate rather than guessing. Dispatch the sub-task read-only with the prompt below, substituting `{spec_path}` with the absolute spec path.
+
+**Single-writer rule** — only the reviewer role writes `cortex/lifecycle/{feature}/review.md`: this reviewer sub-task plus §4's missing-drift re-dispatch and §4a's cap-2 re-dispatches are the same authorized role; any sub-agent the reviewer spawns is dispatched read-only and returns findings as a message envelope (the `skills/critical-review/` findings-envelope precedent), never file writes.
 
 ### Reviewer Prompt Template
 
@@ -31,6 +35,9 @@ Read `{spec_path}`.
 
 ## Changed Files
 {files modified during implementation}
+
+## Test Baseline
+{the §1 pass/fail summary + log path — never the full transcript; do not re-run the suite}
 
 ## Stage 1 — Spec Compliance
 Per requirement: read the relevant source, check acceptance criteria, rate PASS / FAIL / PARTIAL. Any FAIL → skip Stage 2 and write the verdict.
@@ -104,6 +111,7 @@ Add `--breach --retries <N>` only when §4a's drift-apply exhausted its retries.
 - **`rework`** (CHANGES_REQUESTED cycle 1) → Implement: re-enter for the flagged tasks with reviewer feedback; announce briefly and continue.
 - **`escalated`** (cycle ≥2 or REJECTED) → present the findings and await direction; do not auto-advance.
 - **`error`** → surface the verb's `message` and halt without transitioning.
+- **`refused`** — a gate mismatch: relay the envelope's `reason` and `preferred_remedy`, re-run `cortex-lifecycle-next`, and re-invoke threading its `advance_contract.expected_from_state` via `--from-state`. If the mismatch persists after re-sync, escalate to the operator with the detected phase and the expected from_state — never pass the detected phase.
 
 **Command not found** (`cortex-lifecycle-advance` not on `PATH`) → halt and instruct the operator to install/upgrade the cortex-command CLI, then re-invoke. Do NOT record the verdict or transition by hand. <!-- Halt-arm convention: this arm names ONLY the verb and the install remedy — never a raw event-emission surface, which would defeat the per-file zero-sweep (tests/test_lifecycle_event_roundtrip.py) that keeps this cluster's emissions inside the verb. -->
 
