@@ -6,3 +6,5 @@
 {"ts": "2026-07-18T17:31:00Z", "event": "sentinel_advisory", "feature": "trim-the-interactive-implement-loops-orchestration", "reviewer_angle": "verb-contract-semantics", "model_tier": "sonnet", "expected_sha": "1b715ade157ce277fce7dd2d6c40059d881f9cc4f22fbb45e05da35ac65a1a1a", "observed_sha_or_null": "1b715ade157ce277fce7dd2d6c40059d881f9cc4f22fbb45e05da35ac65a1a1a"}
 {"ts": "2026-07-18T19:25:54Z", "event": "spec_approved", "feature": "trim-the-interactive-implement-loops-orchestration", "decision": "approved"}
 {"ts": "2026-07-18T19:25:54Z", "event": "phase_transition", "feature": "trim-the-interactive-implement-loops-orchestration", "from": "specify", "to": "plan"}
+{"ts": "2026-07-20T13:11:58Z", "event": "plan_approved", "feature": "trim-the-interactive-implement-loops-orchestration", "dispatch_choice": "trunk"}
+{"ts": "2026-07-20T13:11:58Z", "event": "phase_transition", "feature": "trim-the-interactive-implement-loops-orchestration", "from": "plan", "to": "implement"}

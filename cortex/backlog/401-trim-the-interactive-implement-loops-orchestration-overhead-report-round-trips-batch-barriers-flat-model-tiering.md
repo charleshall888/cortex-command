@@ -6,7 +6,7 @@ status: in_progress
 priority: medium
 type: chore
 created: 2026-07-18
-updated: 2026-07-18
+updated: 2026-07-20
 tags: ['lifecycle', 'skills', 'token-efficiency', 'subagents']
 areas: ['skills', 'lifecycle']
 lifecycle_phase: research
