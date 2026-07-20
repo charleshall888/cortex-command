@@ -45,10 +45,10 @@ Per batch, in order:
 
 **b. Dispatch** — launch all batch tasks concurrently as parallel sub-tasks. Use the builder template below **verbatim** per task (substitute variables only), adding 2-3 sentences of architectural context from the plan's Overview.
 
-**Model** — resolve at dispatch, never hardcode:
+**Model** — resolve per task at dispatch, never hardcode; pass each task's `Complexity` field via `--task-complexity` (absent/malformed → the verb inherits the feature cell):
 
 ```bash
-model=$(cortex-resolve-model --role builder --criticality "$(cortex-lifecycle-state --feature {feature} --field criticality --raw)")
+model=$(cortex-resolve-model --role builder --criticality "$(cortex-lifecycle-state --feature {feature} --field criticality --raw)" --task-complexity "<task Complexity>")
 ```
 
 Pass `$model` to each builder. On nonzero exit, halt and escalate rather than guessing. Then record the dispatch via advance's implement-transition arm (it owns the `batch_dispatch` emission, idempotent per batch number):
@@ -59,13 +59,13 @@ cortex-lifecycle-advance implement-transition --mode batch --feature <name> --ba
 
 **Command not found** (`cortex-lifecycle-advance` not on `PATH`) → halt and instruct the operator to install/upgrade the cortex-command CLI, then re-invoke. Do NOT record the dispatch by hand. <!-- Halt-arm convention: this arm names ONLY the verb and the install remedy — never a raw event-emission surface, which would defeat the per-file zero-sweep (tests/test_lifecycle_event_roundtrip.py) that keeps this cluster's emissions inside the verb. -->
 
-**c. Wait** — all batch tasks finish before proceeding.
+**c. Wait** — all batch tasks finish before proceeding. Send no follow-up "send your report" messages: the report is the builder's final message in whatever shape the runtime delivers it (tool result or completion notification), and completion is always derived from the §2d git checkpoint, never from return-delivery shape.
 
 **d. Checkpoint** — verify each task produced a commit:
 - **Worktree dispatch**: `git log HEAD..worktree/{task-name} --oneline` from the main repo CWD (`{task-name}` = the `name` passed to `Agent(isolation: "worktree")`). Zero lines → the sub-agent made no commits → mark failed. The orchestrator must NOT commit on the sub-agent's behalf.
 - **Sequential dispatch**: `git log --oneline -N` (N = batch task count) to confirm commits.
 
-Then flip `[ ]` → `[x]` for every task that succeeded.
+Then flip `[ ]` → `[x] done (<short-sha> <commit-ts>)` for every task that succeeded — the sha just verified plus its committer timestamp from `git log -1 --format=%cI <sha>`. Rework re-checkpoints (§3) update the annotation to the newest verifying sha.
 
 **e. Worktree Integration** — skip entirely for sequential dispatch. For worktree dispatch, follow the five-case merge-back at `${CLAUDE_SKILL_DIR}/references/merge-back.md`.
 
@@ -95,9 +95,9 @@ You are implementing a single task for the {feature} feature.
 ## Instructions
 1. Implement exactly what the task specifies.
 2. File paths must match the spec exactly — flag a wrong-looking path rather than silently deviating.
-3. Verify your implementation per the Verification field.
+3. Verify your implementation per the Verification field — and only that; do not run broader suites unless the Verification field names them.
 4. Commit via the Skill tool (`skill: "commit"`) — never raw `git commit` or `git -C`.
-5. Report per task: name, status (completed/partial/failed), files modified, verification outcome, deviations.
+5. Report as your final message: task name, status (completed/partial/failed), files modified, verification outcome, commit hash, deviations.
 6. Do not create files solely to satisfy your own verification — flag self-sealing checks (an artifact this task created being used to verify itself) in your exit report rather than self-certifying.
 
 If this task references the specification, read cortex/lifecycle/{feature}/spec.md. Do not implement other tasks, modify unlisted files, or add unspecified features.
@@ -125,6 +125,7 @@ Act on the returned `state`:
 - **`review`** — the implement→review transition is recorded; proceed to Review.
 - **`complete`** — the implement→complete transition is recorded; proceed to Complete.
 - **`error`** — surface the verb's `message` and halt without advancing.
+- **`refused`** — a gate mismatch: relay the envelope's `reason` and `preferred_remedy`, re-run `cortex-lifecycle-next`, and re-invoke threading its `advance_contract.expected_from_state` via `--from-state`. If the mismatch persists after re-sync, escalate to the operator with the detected phase and the expected from_state — never pass the detected phase.
 
 **Command not found** (`cortex-lifecycle-advance` not on `PATH`) → halt and instruct the operator to install/upgrade the cortex-command CLI, then re-invoke. Do NOT record the transition by hand. <!-- Halt-arm convention: this arm names ONLY the verb and the install remedy — never a raw event-emission surface (see the §2b note). -->
 
