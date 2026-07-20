@@ -79,6 +79,10 @@ Tasks that create files, modify JSON settings, create symlinks, set permissions,
 
 **Dependencies** — every task carries `**Depends on**` between **What** and **Context**: `[N, M]` or `none`. Implement dispatches independent tasks in parallel; a missing or malformed field blocks parallelism.
 
+**Straggler isolation** — when the dependency graph allows, don't co-batch a `complex` task with `trivial`/`simple` siblings at the same topological level; split levels so a heavy straggler occupies its own wave rather than idling a batch barrier.
+
+**Hub-file seam** — when ≥3 tasks would edit one coordinator file, give it a registration seam in an early task so later tasks add files instead of serializing edit chains.
+
 **Sub-task headings** — a task may split into `### Task 3a:`, `### Task 3b:` (single lowercase suffix), first-class dispatchable units ordered `3` < `3a` < `3b` < `4`. The integer part accepts `0`; a group need not start at `a`. Reference by full id (`[3a]`, `[13a, 13b]`) — a bare `[3]` means literal task `3`. Multi-letter (`3ab`), uppercase (`3A`), space-separated (`3 a`) fail loud. Same-batch siblings sharing a `Depends on` co-schedule into one worktree, so same-file writes race — give them disjoint `Files`, or serialize with an explicit edge (`3b` depends on `[3a]`).
 
 **Files/Verification consistency** — every file Verification implies must be in Files; builders can't modify files outside their Files list.
@@ -86,6 +90,8 @@ Tasks that create files, modify JSON settings, create symlinks, set permissions,
 **Caller enumeration** — when a task changes or removes a function/command/interface, search the codebase first and list ALL callers/dependents in **Files**.
 
 **Code budget** — prose with structural context only: paths, directory structures, function signatures, type field names/types, pattern references, config keys/values, inter-task contracts. No copy-paste-ready code, and no self-sealing verification (steps referencing artifacts the same task creates solely to satisfy the check).
+
+**Dress rehearsal** — a task that builds a capture/evidence rig must produce and validate a discarded sample of the exact committed-evidence shape end-to-end.
 
 After writing `plan.md`, register the artifact: `cortex-lifecycle-register-artifact --feature {feature} --artifact plan`.
 
@@ -133,6 +139,7 @@ Act on the returned `state`:
 - **`cancelled`** — the lifecycle is halted; stop here.
 - **`revise`** — nothing was recorded. **Request changes**: revise the plan and re-present this surface. Only a terminal branch-mode or "wait" selection records approval; revision rounds record nothing.
 - **`error`** — surface the verb's `message` and halt without advancing.
+- **`refused`** — a gate mismatch: relay the envelope's `reason` and `preferred_remedy`, re-run `cortex-lifecycle-next`, and re-invoke threading its `advance_contract.expected_from_state` via `--from-state`. If the mismatch persists after re-sync, escalate to the operator with the detected phase and the expected from_state — never pass the detected phase.
 
 **Command not found** (`cortex-lifecycle-advance` not on `PATH`) → halt and instruct the operator to install/upgrade the cortex-command CLI, then re-invoke. Do NOT record the approval by hand. <!-- Halt-arm convention: this arm names ONLY the verb and the install remedy. It must not reference any raw event-emission surface — doing so would defeat the per-file zero-sweep (tests/test_lifecycle_event_roundtrip.py) that keeps this cluster's emissions inside the verb. -->
 
