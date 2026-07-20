@@ -11,12 +11,16 @@ lines. It is not currently wired into CI's blocking allowlist, so it does not
 gate merges.
 
 Why a byte-slice and not the production parser: the comparison reads raw bytes
-and slices the region **between** the two ``---`` delimiters. It deliberately
-does NOT route through ``cortex_command.lifecycle_config._extract_frontmatter_text``,
-whose ``splitlines()`` + ``"\\n".join()`` normalizes line endings and would mask
-a CRLF / trailing-newline divergence. Comparing the frontmatter region only means
-the asset's body-only "Copy this file to your project root…" sentence is tolerated
-for free, with no allowlist.
+and slices the region between the two ``---`` delimiter **lines**. The region
+boundary is the same one the production reader uses — a line that strips to
+``---``, never three dashes inside a comment (#388: a byte-anywhere split let a
+triple-dash in a comment silently truncate the compared region and misattribute
+the failure to the option lines). But the comparison deliberately does NOT route
+through ``cortex_command.lifecycle_config._extract_frontmatter_text``, whose
+``splitlines()`` + ``"\\n".join()`` normalizes line endings and would mask a
+CRLF / trailing-newline divergence — the interior bytes here stay raw. Comparing
+the frontmatter region only means the asset's body-only "Copy this file to your
+project root…" sentence is tolerated for free, with no allowlist.
 
 Two gaps a bare two-file byte compare leaves, both closed here:
   - vacuous pass if extraction returned empty for both files — the positive
@@ -53,18 +57,31 @@ _REQUIRED_OPTION_LINES = (
 
 
 def _frontmatter_region(raw: bytes) -> bytes:
-    """Return the raw bytes between the opening and closing ``---`` delimiters.
+    """Return the raw bytes between the opening and closing ``---`` delimiter
+    lines.
 
-    Operates on raw bytes (no line-ending normalization), so the comparison
-    stays CRLF / trailing-newline sensitive. Neither file's body contains a
-    ``---`` line, so the first two markers bound the frontmatter exactly.
+    A delimiter is a whole line that strips to ``---`` — the same boundary
+    ``lifecycle_config._extract_frontmatter_text`` uses — so a triple-dash
+    inside a comment is content, not a truncation point (#388). The interior
+    bytes are returned un-normalized (``keepends`` splitting, re-joined
+    verbatim), so the comparison stays CRLF / trailing-newline sensitive.
     """
-    parts = raw.split(b"---", 2)
-    if len(parts) < 3:
-        raise AssertionError(
-            f"could not locate two '---' frontmatter delimiters (found {len(parts) - 1})"
+    start = None
+    lines = raw.splitlines(keepends=True)
+    for idx, line in enumerate(lines):
+        if line.strip() == b"---":
+            if start is None:
+                start = idx + 1
+                continue
+            return b"".join(lines[start:idx])
+    raise AssertionError(
+        "could not locate two '---' frontmatter delimiter LINES "
+        + (
+            "(no opening delimiter line)"
+            if start is None
+            else "(opening found, closing delimiter line missing)"
         )
-    return parts[1]
+    )
 
 
 def _assert_regions_equal(asset_region: bytes, template_region: bytes) -> None:
@@ -107,6 +124,35 @@ def test_divergence_sentinel() -> None:
     mutated = region + b"drift\n"
     with pytest.raises(AssertionError):
         _assert_regions_equal(mutated, region)
+
+
+def test_comment_triple_dash_does_not_truncate_region() -> None:
+    """#388: three dashes inside a comment are content, not a delimiter. Under
+    the old byte-anywhere split this truncated the region mid-comment and the
+    failure misattributed itself to missing option lines elsewhere in the file.
+    """
+    raw = (
+        b"---\nbacklog:\n  backend: cortex-backlog\n"
+        b"# hint --- with a triple-dash\n# backend: jira\n---\nbody\n"
+    )
+    region = _frontmatter_region(raw)
+    assert b"# hint --- with a triple-dash\n" in region
+    assert b"# backend: jira\n" in region
+
+
+def test_crlf_sensitivity_survives_line_aware_boundary() -> None:
+    """The deliberate CRLF sensitivity is untouched: identical content with
+    CRLF endings yields different region bytes than its LF twin."""
+    assert _frontmatter_region(b"---\na: 1\n---\n") != _frontmatter_region(
+        b"---\r\na: 1\r\n---\r\n"
+    )
+
+
+def test_missing_closing_delimiter_names_the_real_cause() -> None:
+    """A closing marker that is not its own line (e.g. glued to content by a
+    lost trailing newline) fails naming the delimiter, not the option lines."""
+    with pytest.raises(AssertionError, match="closing delimiter line missing"):
+        _frontmatter_region(b"---\na: 1\n")
 
 
 def test_convergent_loss_sentinel() -> None:
