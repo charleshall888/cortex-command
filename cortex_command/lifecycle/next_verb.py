@@ -47,12 +47,23 @@ Envelope schema (served / resume case)::
       "fragment_ref": {"state", "directive", "reference", "flavor": "selector"},
       "pause_spec": {"specs": [{"slug", "kind"}], "active", "active_kind"},
       "advance_contract": {"expected_from_state", "log_path", "flock_path"},
+      "enter_command": <ready-to-run cortex-lifecycle-enter line, pre-bound>,
       "path_overview": {"nominal": [...], "outgoing": [...]},   # default-on at resume
       "guards": {"advisory": true, "note": ..., "edges": [ ... ]},
       "evidence_trace": [ <derivation step>, ... ],
       "session_split_hint": <one-line split suggestion; plan/implement only>,
+      "ignored_tokens": [ <trailing tokens the grammar dropped>, ... ],
       "protocol": <PROTOCOL_VERSION>
     }
+
+``enter_command`` (#402, protocol 3) pre-binds every discriminant the Step-2
+entry needs — ``--feature`` (the CANONICAL slug, never the user's raw token),
+``--phase``, ``--backlog-file``, and ``--backend`` (resolved in-process by the
+same reader ``cortex-read-backlog-backend`` wraps) — leaving
+``$LIFECYCLE_SESSION_ID`` as the one shell-expanded value. It also rides the
+``new`` passthrough (with ``--phase none``). Serving the exact command closes
+the identity mis-threading trap where a ticket number pasted into a
+``{feature}`` placeholder exit-3'd a valid resume.
 
 The passthrough routing states (``derive-slug`` / ``empty`` / ``needs-feature`` /
 ``wontfix`` / ``no-such-lifecycle`` / ``ambiguous-backlog`` / ``new``) are
@@ -65,12 +76,14 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shlex
 import sys
 from pathlib import Path
 from typing import List, Optional
 
 from cortex_command.backlog import _telemetry
 from cortex_command.common import LifecycleStateReduction, reduce_lifecycle_state
+from cortex_command.lifecycle_config import resolve_backlog_backend
 from cortex_command.lifecycle import resolve as resolve_mod
 from cortex_command.lifecycle import transition_table as tt
 from cortex_command.lifecycle.log_resolver import (
@@ -156,6 +169,26 @@ def _reject_unsafe_slug(feature: str) -> Optional[dict]:
             "message": f"unsafe feature slug {feature!r}: no path separators or '..'",
         }
     return None
+
+
+def _enter_command(feature: str, phase: str, backlog, root: Path) -> str:
+    """The ready-to-run Step-2 entry command, every discriminant pre-bound (#402).
+
+    The prose substitution step is where identity mis-threading lived: a raw
+    ticket number pasted where the canonical slug belonged exit-3'd a valid
+    resume. Binding here keeps a single resolution authority — the values come
+    from the same resolution that produced the envelope, and the backend from
+    the same ``resolve_backlog_backend`` reader the shell wrapper calls.
+    ``$LIFECYCLE_SESSION_ID`` stays literal for shell expansion at run time.
+    """
+    filename = backlog.get("filename") if isinstance(backlog, dict) else None
+    return (
+        f"cortex-lifecycle-enter --feature {shlex.quote(feature)} "
+        '--session-id "$LIFECYCLE_SESSION_ID" '
+        f"--backend {shlex.quote(resolve_backlog_backend(root))} "
+        f"--phase {shlex.quote(phase)} "
+        f"--backlog-file {shlex.quote(str(filename or ''))}"
+    )
 
 
 def _terminal_directive(state: str) -> str:
@@ -436,6 +469,13 @@ def next_state(
     # (they carry the resolver's legacy ``next`` directive, kept for consumers).
     if state in _ROUTING_PASSTHROUGH:
         out = dict(resolved)
+        if state == "new":
+            # A fresh lifecycle enters with --phase none; pre-bind it too so the
+            # create path never sees a hand-substituted token (#402 — the 268
+            # incident was a raw number on exactly this path).
+            out["enter_command"] = _enter_command(
+                out["feature"], "none", out.get("backlog"), root
+            )
         out["protocol"] = PROTOCOL_VERSION
         return out
     if state == "error":
@@ -479,8 +519,15 @@ def next_state(
         # feature has no backlog item.
         backlog = resolved.get("backlog")
         envelope["backlog"] = backlog if isinstance(backlog, dict) else None
+        # Ready-to-run Step-2 entry (#402): --feature is the canonical slug the
+        # resolver produced, --phase the served state. Never rebuilt by prose.
+        envelope["enter_command"] = _enter_command(
+            feature, route, envelope["backlog"], root
+        )
         if resolved.get("resolved_from") is not None:
             envelope["resolved_from"] = resolved["resolved_from"]
+        if resolved.get("ignored_tokens"):
+            envelope["ignored_tokens"] = resolved["ignored_tokens"]
         return envelope
 
     # Any other resolver state is unexpected for the served path.

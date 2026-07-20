@@ -117,11 +117,24 @@ def _resolve_backlog(feature: str) -> Optional[dict]:
 
 
 def resolve_invocation(arguments: str, project_root: Optional[Path] = None) -> dict:
-    """Classify + resolve a raw ``$ARGUMENTS`` string into one action struct."""
+    """Classify + resolve a raw ``$ARGUMENTS`` string into one action struct.
+
+    Trailing tokens the grammar dropped (#402) ride the struct as
+    ``ignored_tokens`` — evidence the caller may surface, never a route.
+    """
+    parsed = parse(arguments)
+    out = _resolve_parsed(parsed, arguments, project_root)
+    if parsed.get("ignored_tokens"):
+        out.setdefault("ignored_tokens", parsed["ignored_tokens"])
+    return out
+
+
+def _resolve_parsed(
+    parsed: dict, arguments: str, project_root: Optional[Path] = None
+) -> dict:
+    """Resolve an already-classified ``parse()`` struct to the action struct."""
     root = project_root or Path.cwd()
     lifecycle_base = root / "cortex" / "lifecycle"
-
-    parsed = parse(arguments)
     mode = parsed["mode"]
     feature = parsed["feature"]
     phase_override = parsed["phase"]

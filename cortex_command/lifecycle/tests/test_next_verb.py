@@ -28,6 +28,7 @@ Coverage map (spec R11 / plan Task 13 verification arm e):
 from __future__ import annotations
 
 import json
+import shlex
 from pathlib import Path
 
 import pytest
@@ -254,6 +255,59 @@ def test_resume_serves_backlog_linkage(
     monkeypatch.setenv("CORTEX_BACKLOG_DIR", str(repo_root / "no-backlog"))
     r = next_state(_SLUG)
     assert r["backlog"] is None
+
+
+def test_resume_serves_ready_to_run_enter_command(
+    repo_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#402: the envelope carries the exact Step-2 entry command, pre-bound to
+    the CANONICAL slug — even when the invocation token was a ticket number.
+    The prose substitution step (where a raw token exit-3'd a valid resume) is
+    gone; only $LIFECYCLE_SESSION_ID stays for shell expansion."""
+    backlog = repo_root / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
+    (backlog / "350-wild-light.md").write_text(
+        "---\ntitle: 'Wild light'\nuuid: 1234\ntags: [2-5d]\n"
+        f"lifecycle_slug: {_SLUG}\nstatus: backlog\n---\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("CORTEX_BACKLOG_DIR", str(backlog))
+    _seed_feature(repo_root, _SLUG, {"spec.md": "# spec\n", "events.log": _SPEC_APPROVED})
+
+    r = next_state("350")
+    assert r["state"] == "plan"
+    assert r["resolved_from"] == "350"
+
+    tokens = shlex.split(r["enter_command"])
+    assert tokens[0] == "cortex-lifecycle-enter"
+    opts = dict(zip(tokens[1::2], tokens[2::2]))
+    assert opts["--feature"] == _SLUG  # canonical slug, never the raw token
+    assert opts["--phase"] == "plan"
+    assert opts["--backlog-file"] == "350-wild-light.md"
+    assert opts["--backend"] == "cortex-backlog"
+    # Left literal for the shell; shlex.split preserves it inside the quotes.
+    assert opts["--session-id"] == "$LIFECYCLE_SESSION_ID"
+
+
+def test_new_passthrough_serves_enter_command_with_phase_none(repo_root: Path) -> None:
+    """The create path pre-binds too (--phase none, empty backlog-file) — the
+    268 incident was a raw number hand-substituted on exactly this path."""
+    r = next_state("ghost-feature")
+    assert r["state"] == "new"
+    tokens = shlex.split(r["enter_command"])
+    opts = dict(zip(tokens[1::2], tokens[2::2]))
+    assert opts["--feature"] == "ghost-feature"
+    assert opts["--phase"] == "none"
+    assert opts["--backlog-file"] == ""
+
+
+def test_resume_surfaces_ignored_tokens(repo_root: Path) -> None:
+    """Trailing natural language ("resume implementing") is dropped by the
+    grammar and reported on the envelope instead of failing route projection."""
+    _seed_feature(repo_root, _SLUG, {"spec.md": "# spec\n", "events.log": _SPEC_APPROVED})
+    r = next_state(f"{_SLUG} resume implementing")
+    assert r["state"] == "plan"
+    assert r["ignored_tokens"] == ["resume", "implementing"]
 
 
 def test_explain_expands_evidence_trace(repo_root: Path) -> None:

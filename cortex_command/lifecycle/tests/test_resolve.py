@@ -84,6 +84,19 @@ def test_bare_feature_with_no_dir_is_new(root: Path) -> None:
     assert r["backlog"] is None
 
 
+def test_trailing_non_phase_tokens_ride_as_ignored_tokens(root: Path) -> None:
+    """#402: trailing natural language is never a phase override — the struct
+    resolves as if it were absent, and the dropped tokens ride the struct as
+    ``ignored_tokens`` evidence."""
+    _feature_dir(root, "in-flight")
+    r = resolve_invocation("in-flight resume implementing", project_root=root)
+    assert r["state"] == "resume"
+    assert r["feature"] == "in-flight"
+    assert r["ignored_tokens"] == ["resume", "implementing"]
+    # A clean invocation never carries the key.
+    assert "ignored_tokens" not in resolve_invocation("in-flight", project_root=root)
+
+
 def test_existing_lifecycle_resumes_with_composed_state(root: Path) -> None:
     d = _feature_dir(root, "in-flight")
     (d / "research.md").write_text("# research", encoding="utf-8")

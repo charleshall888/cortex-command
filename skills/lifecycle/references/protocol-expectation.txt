@@ -19,5 +19,7 @@
 #
 # Both sides advance together in this repo; a parity test asserts the wheel's
 # PROTOCOL_VERSION lies within [min, max] at HEAD.
-min=1
-max=2
+# min=3: the Step-2 prose runs the served `enter_command` verbatim (#402);
+# a wheel older than 3 serves no such field.
+min=3
+max=3

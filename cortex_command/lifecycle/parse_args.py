@@ -16,6 +16,12 @@ Reserved first-words {wontfix, resume, complete} INVERT the default
 sets ``phase=complete``. A leading ``#`` suppresses reserved-matching (the
 documented "this is a literal id" sigil), so ``#wontfix`` is the feature slug
 ``wontfix``, not the verb route.
+
+The ``phase`` slot only ever carries a member of the phase vocabulary (#402):
+a word-2 token outside it — trailing natural language like ``356 resume
+implementing`` — is never threaded as a route. Dropped tokens are reported in
+an ``ignored_tokens`` list (present only when non-empty) so the caller can
+surface what the grammar discarded rather than silently eating a typo'd phase.
 """
 
 from __future__ import annotations
@@ -55,9 +61,30 @@ PHASE_TOKENS = ("research", "specify", "plan", "implement", "review")
 # imported.
 _VALID_SLUG = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 
+# The full phase vocabulary a word-2 override may carry. ``complete`` doubles as
+# a phase here even though it is reserved-matched as word #1.
+_OVERRIDE_PHASES = PHASE_TOKENS + ("complete",)
 
-def _result(mode: str, feature: str = "", phase: str = "") -> dict:
-    return {"mode": mode, "feature": feature, "phase": phase}
+
+def _result(
+    mode: str, feature: str = "", phase: str = "", ignored: Optional[List[str]] = None
+) -> dict:
+    out = {"mode": mode, "feature": feature, "phase": phase}
+    if ignored:
+        out["ignored_tokens"] = list(ignored)
+    return out
+
+
+def _phase_and_ignored(rest: List[str]) -> tuple:
+    """Split the tokens after the feature into (phase, ignored). Only a member
+    of the phase vocabulary becomes the override (lowercased); anything else —
+    and everything after a valid override — is ignored, never a route (#402)."""
+    if not rest:
+        return "", []
+    head = rest[0].lower()
+    if head in _OVERRIDE_PHASES:
+        return head, list(rest[1:])
+    return "", list(rest)
 
 
 def parse(arguments: str) -> dict:
@@ -73,29 +100,38 @@ def parse(arguments: str) -> dict:
     if first.startswith("#"):
         target = first[1:]
         if _VALID_SLUG.match(target):
-            return _result("feature", feature=target, phase=second)
+            phase, ignored = _phase_and_ignored(tokens[1:])
+            return _result("feature", feature=target, phase=phase, ignored=ignored)
         return _result("needs-derivation")
 
     low = first.lower()
 
     # Reserved first-words invert the default order (word #2 is the target).
     if low == "wontfix":
-        return _result("wontfix", feature=second) if second else _result("error")
+        if second:
+            return _result("wontfix", feature=second, ignored=tokens[2:])
+        return _result("error")
     if low == "resume":
         # resume with no slug falls back to the incomplete-lifecycle scan.
-        return _result("resume", feature=second) if second else _result("empty")
+        if second:
+            return _result("resume", feature=second, ignored=tokens[2:])
+        return _result("empty")
     if low == "complete":
         if second:
-            return _result("complete", feature=second, phase="complete")
+            return _result(
+                "complete", feature=second, phase="complete", ignored=tokens[2:]
+            )
         return _result("phase", phase="complete")
 
     # Bare phase token (sole word) -> feature-required fallback.
     if low in PHASE_TOKENS and len(tokens) == 1:
         return _result("phase", phase=low)
 
-    # Default <feature> [phase]: word #1 is the feature, word #2 an override.
+    # Default <feature> [phase]: word #1 is the feature, word #2 an override
+    # only when it is a phase token (#402) — never trailing natural language.
     if _VALID_SLUG.match(first):
-        return _result("feature", feature=first, phase=second)
+        phase, ignored = _phase_and_ignored(tokens[1:])
+        return _result("feature", feature=first, phase=phase, ignored=ignored)
     return _result("needs-derivation")
 
 

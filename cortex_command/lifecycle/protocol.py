@@ -35,7 +35,10 @@ from typing import Any, Literal, Mapping
 # plugin-side expectation file — never exact-equality. See module docstring.
 # 2: spec-approve may return state "approved-direct" (the specify->implement
 #    short road) — prose predating the fork has no route for that state.
-PROTOCOL_VERSION = 2
+# 3: next serves ``enter_command`` (the pre-bound Step-2 entry, #402) on resume
+#    and new envelopes; prose consuming it requires >= 3 (older wheels serve no
+#    such field, so the plugin floor moves to 3 in the same commit).
+PROTOCOL_VERSION = 3
 
 # --- Wheel-side compat evaluator (R7 substrate) ---------------------------------
 #

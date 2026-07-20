@@ -35,6 +35,47 @@ from cortex_command.lifecycle.parse_args import KNOWN_MODES, parse
         ),
         # numeric slug (a backlog id used as a slug) is a valid feature.
         ("329", {"mode": "feature", "feature": "329", "phase": ""}),
+        # word-2 override is phase-vocabulary-validated (#402): trailing
+        # natural language is ignored and reported, never threaded as a route.
+        (
+            "356 resume implementing",
+            {
+                "mode": "feature",
+                "feature": "356",
+                "phase": "",
+                "ignored_tokens": ["resume", "implementing"],
+            },
+        ),
+        # a valid override is case-normalized; tokens after it are ignored.
+        (
+            "my-feature Plan now",
+            {
+                "mode": "feature",
+                "feature": "my-feature",
+                "phase": "plan",
+                "ignored_tokens": ["now"],
+            },
+        ),
+        # reserved forms report their dropped trailers too.
+        (
+            "resume add-foo implementing",
+            {
+                "mode": "resume",
+                "feature": "add-foo",
+                "phase": "",
+                "ignored_tokens": ["implementing"],
+            },
+        ),
+        # #-sigil branch validates word 2 the same way.
+        (
+            "#356 stuff",
+            {
+                "mode": "feature",
+                "feature": "356",
+                "phase": "",
+                "ignored_tokens": ["stuff"],
+            },
+        ),
     ],
 )
 def test_grammar_reserved_and_default(arguments, expected):
