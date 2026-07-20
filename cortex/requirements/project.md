@@ -95,7 +95,7 @@ Agentic workflow toolkit for AI-assisted software development on Claude Code: sk
 - statusline/dashboard/notifications → cortex/requirements/observability.md
 - pipeline/overnight runner/conflict resolution/deferral → cortex/requirements/pipeline.md
 - remote access/tmux/mosh/Tailscale → cortex/requirements/remote-access.md
-- agent spawning/parallel dispatch/worktrees/model selection → cortex/requirements/multi-agent.md
+- agent spawning/subagents/multi-agent/parallel dispatch/worktrees/model selection → cortex/requirements/multi-agent.md
 - backlog/ticketing/issue tracker/backlog backend → cortex/requirements/backlog.md
 - training/workshop/presentation/scene deck → cortex/requirements/training.md
 
