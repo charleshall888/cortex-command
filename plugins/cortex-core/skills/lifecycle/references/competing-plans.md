@@ -41,12 +41,4 @@ Read the spec at {spec_path} and the research at {research_path}. Before any pla
 - **`verdict ∈ {A,B,C}` AND `confidence ∈ {high,medium}`** — present the chosen variant with the synthesizer's `rationale`; default rubber-stamp (Enter), override by typing a different label. Write it to `cortex/lifecycle/{feature}/plan.md`. Verdict `C` (tie) at high/medium is logically impossible — treat as malformed and fall to the table below.
 - **`confidence: low` OR malformed envelope** — show the legacy comparison table for a manual pick, hiding the synthesizer rationale so the operator judges independently: columns **Plan A** / **Plan B** / **Plan C** (drop C if not dispatched), rows **Approach**, **Task count**, **Risk profile**, **Key trade-offs**. On selection, write that variant to `plan.md`; on reject-all, fall back to the single-plan flow. The operator may also **combine** variants (base + a grafted task/module from another) — record the graft in `selection_rationale` below.
 
-**g. Log v2 `plan_comparison` event** — append to `cortex/lifecycle/{feature}/events.log`:
-
-```
-{"ts": "<ISO 8601>", "event": "plan_comparison", "schema_version": 2, "feature": "<name>", "variants": [{"label": "Plan A", "approach": "<summary>", "task_count": <N>, "risk": "<risk summary>"}], "selected": "Plan A|none", "selection_rationale": "<synthesizer rationale or fallback string>", "selector_confidence": "high|medium|low", "position_swap_check_result": "agreed|disagreed", "disposition": "rubber_stamp|override|deferred|auto_select", "operator_choice": "Plan A|null"}
-```
-
-`selection_rationale`/`selector_confidence` mirror the synthesizer, or a fallback string / `low` on the legacy-table path. `position_swap_check_result`: `agreed` at high/medium confidence, else `disagreed`. `disposition`: `rubber_stamp` (Enter), `override` (typed a different label), `deferred` (rejected all), or `auto_select` (overnight only, not emitted here). `operator_choice`: the chosen label or `null`.
-
-After logging, go to plan.md §3a if a variant was selected, or plan.md §3 if the operator rejected all on the fallback path.
+**g. Hand off** — go to plan.md §3a if a variant was selected, or plan.md §3 if the operator rejected all on the fallback path.

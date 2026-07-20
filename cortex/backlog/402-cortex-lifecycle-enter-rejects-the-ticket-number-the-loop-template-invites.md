@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 47f91f1b-faab-41d5-857b-ebffeb761b48
 title: 'cortex-lifecycle-enter rejects the raw ticket number the loop template invites, exit-3ing a valid resume'
-status: backlog
+status: complete
 priority: medium
 type: bug
 created: 2026-07-18
-updated: 2026-07-18
+updated: 2026-07-20
 tags: ['lifecycle', 'verbs', 'skills', 'ergonomics']
 areas: ['lifecycle', 'skills']
 ---

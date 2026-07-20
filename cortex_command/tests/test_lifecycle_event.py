@@ -901,6 +901,6 @@ class TestEventSubcommands:
         """The subcommand table never shadows an ADR-0020 hand-written event."""
         from cortex_command.lifecycle_event import _EVENT_SUBCOMMANDS
 
-        exempt = {"plan_comparison", "clarify_critic", "pr_opened"}
+        exempt = {"clarify_critic", "pr_opened"}
         emitted = {ev for ev, _specs in _EVENT_SUBCOMMANDS.values()}
         assert emitted.isdisjoint(exempt), emitted & exempt

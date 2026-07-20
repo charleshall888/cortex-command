@@ -238,8 +238,9 @@ class _SetFieldAction(argparse.Action):
 # subcommand; consumers key by name, and ADR-0020 fixes only the ts/event/
 # feature base-key prefix). The generic ``log`` subcommand is retained as the
 # escape hatch and the ONLY path for the ADR-0020 hand-written exempt events
-# (``plan_comparison``, ``clarify_critic``, ``pr_opened``) whose canonical
-# shape places ``schema_version`` before ``feature``.
+# (``clarify_critic``, ``pr_opened``) whose canonical shape places
+# ``schema_version`` before ``feature`` (``plan_comparison`` left the set when
+# #398 deleted the event — zero production readers).
 #
 # The subcommand name is the event name with ``_`` rendered as ``-``. Each
 # FieldSpec is ``(flag, emit_key, kind, required, choices)``: ``flag`` is the

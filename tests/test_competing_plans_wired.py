@@ -85,10 +85,21 @@ def test_plan_md_1b_stub_names_target() -> None:
 
 
 def test_competing_plans_contains_key_content_token() -> None:
+    """The synthesizer-dispatch step is the reference's load-bearing core.
+
+    (The former token was the ``plan_comparison`` event schema; #398 deleted
+    that event — zero production readers — so the pin moved to the synthesizer
+    fragment path, which the extraction flow cannot function without.)
+    """
     canonical = (
         _repo_root() / "skills" / "lifecycle" / "references" / "competing-plans.md"
     )
     text = canonical.read_text(encoding="utf-8")
-    assert "plan_comparison" in text, (
-        "competing-plans.md must contain the plan_comparison event schema token"
+    assert "plan-synthesizer.md" in text, (
+        "competing-plans.md must name the canonical plan-synthesizer prompt "
+        "fragment its synthesizer dispatch loads"
+    )
+    assert "plan_comparison" not in text, (
+        "the plan_comparison event was deleted in #398 (zero production "
+        "readers); its emission must not reappear in competing-plans.md"
     )

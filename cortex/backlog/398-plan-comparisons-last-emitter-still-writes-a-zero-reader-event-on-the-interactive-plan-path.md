@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: b3daa28c-5f48-4657-aaee-512cd45e86f2
 title: plan_comparison's last emitter still writes a zero-reader event on the interactive plan path
-status: backlog
+status: complete
 priority: low
 type: chore
 created: 2026-07-17
-updated: 2026-07-17
+updated: 2026-07-20
 tags: ['token-efficiency', 'telemetry', 'lifecycle']
 areas: ['lifecycle']
 ---

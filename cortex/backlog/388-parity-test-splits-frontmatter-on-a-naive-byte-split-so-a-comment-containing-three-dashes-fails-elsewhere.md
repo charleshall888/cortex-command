@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: ff0c5545-2ada-49f7-aec6-a39e843f1e0b
 title: Parity test splits frontmatter on a naive byte split, so a comment containing three dashes fails elsewhere
-status: backlog
+status: complete
 priority: low
 type: bug
 created: 2026-07-16
-updated: 2026-07-16
+updated: 2026-07-20
 tags: ['tests', 'config', 'parity']
 areas: ['tests']
 ---

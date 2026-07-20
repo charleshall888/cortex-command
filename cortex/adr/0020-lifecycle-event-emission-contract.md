@@ -43,4 +43,6 @@ The 374 Amendment above is **superseded**: the claim/commit primitive, the `adva
 
 **Exception set closes back at three.** The Decision's hand-written/exempt set returns to `plan_comparison`, `clarify_critic`, `pr_opened`.
 
+**Exception set closes at two (2026-07-20, #398).** `plan_comparison` leaves the exempt set because the event itself is deleted: it had zero production readers (registry consumers were tests-only), #391 removed the overnight orchestrator-round emitter, and #398 removed the last one — the interactive `competing-plans.md` §g append — along with the registry row. The exempt set is now `clarify_critic`, `pr_opened`. Historical `plan_comparison` rows survive in archived logs; name-keyed readers stay tolerant of them (pinned by the mixed-log test in `cortex_command/pipeline/tests/test_metrics.py`).
+
 **Historical rows stay valid.** Logs written during the protocol's window carry the machine rows and `invocation_id` fields; every reader remains tolerant of them (pinned by `tests/test_lifecycle_reverse_golden.py`), and the events-registry rows are marked `deprecated-pending-removal` rather than dropped.

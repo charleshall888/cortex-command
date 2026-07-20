@@ -13,8 +13,8 @@ Task 9:
      given a canned orchestrator stdout containing a high-confidence
      ``<!--findings-json-->`` envelope, the post-orchestrator-turn
      processing logic copies the selected variant to
-     ``cortex/lifecycle/{feature}/plan.md`` and appends a v2
-     ``plan_comparison`` event.
+     ``cortex/lifecycle/{feature}/plan.md``. (It formerly also appended a
+     v2 ``plan_comparison`` event; that event is deleted — #391/#398.)
   3. ``test_synthesizer_post_orchestrator_low_confidence_defers`` — same
      setup with ``confidence: "low"``; ``PLAN_SYNTHESIS_DEFERRED`` is
      logged and ``deferral.write_deferral`` is called (mocked) with a
@@ -35,9 +35,8 @@ Requirement 7 — not by these unit tests.
 
 **Path-(b) note**: ``runner.py`` does not currently expose an
 envelope-handler entry point as a callable Python function — the
-orchestrator agent itself writes ``plan.md`` and emits the v2
-``plan_comparison`` event from inside its subprocess turn (per
-``orchestrator-round.md`` Step 3b). Per Task 9's Context guidance,
+orchestrator agent itself writes ``plan.md`` from inside its subprocess
+turn (per ``orchestrator-round.md`` Step 3b). Per Task 9's Context guidance,
 tests 2 and 3 therefore exercise the helper-level invariants the
 runner / orchestrator code path depends on (LAST-occurrence regex
 extraction, ``events.log_event`` signature, ``write_deferral``
@@ -131,8 +130,6 @@ def _process_synthesizer_envelope(
 
     On ``verdict ∈ {"A","B","C"}`` AND ``confidence ∈ {"high","medium"}``:
       - Copies ``plan-variant-{verdict}.md`` content to ``plan.md``.
-      - Appends a v2 ``plan_comparison`` event with
-        ``disposition: "auto_select"``, ``schema_version: 2``.
 
     On ``confidence: "low"`` OR malformed envelope:
       - Logs ``PLAN_SYNTHESIS_DEFERRED`` to events.
@@ -156,30 +153,10 @@ def _process_synthesizer_envelope(
         plan_path.write_text(
             variant_path.read_text(encoding="utf-8"), encoding="utf-8"
         )
-        # The v2 ``plan_comparison`` row is written as raw JSONL append
-        # to the per-feature events.log (matching orchestrator-round.md
-        # Step 3b.5, lines 335-354). It is NOT routed through
-        # events.log_event — that helper validates the event name
-        # against EVENT_TYPES (overnight session-scope events only) and
-        # tags entries with the session id; the per-feature
-        # plan_comparison row is feature-scoped, not session-scoped.
-        comparison_row = {
-            "ts": "2026-05-04T00:00:00+00:00",
-            "event": "plan_comparison",
-            "schema_version": 2,
-            "feature": feature,
-            "selected": verdict,
-            "selection_rationale": envelope.get("rationale", ""),
-            "selector_confidence": confidence,
-            "position_swap_check_result": envelope.get(
-                "position_swap_check_result", "agreed"
-            ),
-            "disposition": "auto_select",
-            "operator_choice": None,
-        }
-        events_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(events_path, "a", encoding="utf-8") as fh:
-            fh.write(json.dumps(comparison_row) + "\n")
+        # (The prompt formerly also prescribed a raw-JSONL v2
+        # ``plan_comparison`` append here; the event is deleted — #391
+        # removed the orchestrator-round.md prescription, #398 the
+        # interactive emitter — so the auto-select path only copies.)
         return {"disposition": "auto_select", "verdict": verdict}
 
     # Low-confidence or malformed → emit PLAN_SYNTHESIS_DEFERRED + write_deferral.
@@ -332,26 +309,25 @@ class TestSynthesizerGate:
 
 
 # ---------------------------------------------------------------------------
-# Test 2: high-confidence envelope → plan.md + v2 plan_comparison event
+# Test 2: high-confidence envelope → plan.md from the selected variant
 # ---------------------------------------------------------------------------
 
 
 class TestPostOrchestratorHighConfidence:
-    """High-confidence canned envelope produces plan.md + v2 plan_comparison.
+    """High-confidence canned envelope produces plan.md from the variant.
 
     The orchestrator subprocess is NOT spawned. A canned stdout is fed
     through a thin in-test scaffold that mirrors the post-orchestrator-
-    turn invariants prescribed by ``orchestrator-round.md`` Step 3b.5
-    (LAST-occurrence anchor extraction → variant copy → events.log
-    append). The assertions are over Python-observable artifacts: the
-    on-disk ``plan.md`` content and the JSONL row appended to
-    ``events.log``.
+    turn invariants prescribed by ``orchestrator-round.md`` Step 3b
+    (LAST-occurrence anchor extraction → variant copy). The assertions
+    are over Python-observable artifacts: the on-disk ``plan.md``
+    content and the events.log staying free of dead-event rows.
     """
 
     def test_synthesizer_post_orchestrator_high_confidence_writes_plan_md(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """High-confidence verdict A → plan.md == variant-A; v2 plan_comparison logged."""
+        """High-confidence verdict A → plan.md == variant-A."""
         # Set LIFECYCLE_SESSION_ID so events.log_event tags entries.
         monkeypatch.setenv("LIFECYCLE_SESSION_ID", "overnight-2026-05-04-synth-hc")
 
@@ -395,25 +371,12 @@ class TestPostOrchestratorHighConfidence:
         assert plan_path.exists(), "plan.md was not written"
         assert plan_path.read_text(encoding="utf-8") == variant_a_text
 
-        # events.log gained a plan_comparison row with v2 schema fields.
-        # The row is appended as raw JSONL (top-level keys), matching the
-        # orchestrator-round.md Step 3b.5 prescription.
+        # The dead ``plan_comparison`` event (#391/#398) is never appended:
+        # events.log still holds only the lifecycle_start fixture row.
         rows = _read_jsonl(events_path)
-        # First row is the lifecycle_start fixture; the appended row is
-        # the plan_comparison event.
-        plan_comparison_rows = [r for r in rows if r.get("event") == "plan_comparison"]
-        assert len(plan_comparison_rows) == 1, (
-            f"expected exactly 1 plan_comparison row, "
-            f"got events={[r.get('event') for r in rows]}"
+        assert [r.get("event") for r in rows] == ["lifecycle_start"], (
+            f"auto-select must not append events; got {[r.get('event') for r in rows]}"
         )
-        rec = plan_comparison_rows[0]
-        assert rec.get("schema_version") == 2, (
-            f"expected schema_version=2, got {rec.get('schema_version')!r}"
-        )
-        assert rec.get("disposition") == "auto_select"
-        assert rec.get("selected") == "A"
-        assert rec.get("selector_confidence") == "high"
-        assert rec.get("operator_choice") is None
         # No deferred dir written for high-confidence path.
         assert not deferred_dir.exists() or not list(deferred_dir.glob("*.md"))
 

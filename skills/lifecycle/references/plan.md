@@ -21,7 +21,7 @@ cortex-lifecycle-state --feature {feature} --field criticality
 
 ### 1b. Competing Plans (Critical Only)
 
-The competing-plans protocol (dispatch variants → synthesize → route → log the v2 comparison event) lives in `${CLAUDE_SKILL_DIR}/references/competing-plans.md`; §1a's `critical` branch loads it, and only that arm reaches it.
+The competing-plans protocol (dispatch variants → synthesize → route) lives in `${CLAUDE_SKILL_DIR}/references/competing-plans.md`; §1a's `critical` branch loads it, and only that arm reaches it.
 
 ### 3. Write Plan Artifact
 
