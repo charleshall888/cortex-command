@@ -8,3 +8,5 @@
 {"ts": "2026-07-18T19:25:54Z", "event": "phase_transition", "feature": "trim-the-interactive-implement-loops-orchestration", "from": "specify", "to": "plan"}
 {"ts": "2026-07-20T13:11:58Z", "event": "plan_approved", "feature": "trim-the-interactive-implement-loops-orchestration", "dispatch_choice": "trunk"}
 {"ts": "2026-07-20T13:11:58Z", "event": "phase_transition", "feature": "trim-the-interactive-implement-loops-orchestration", "from": "plan", "to": "implement"}
+{"ts": "2026-07-20T13:13:52Z", "event": "batch_dispatch", "feature": "trim-the-interactive-implement-loops-orchestration", "batch": 0, "tasks": [1, 2, 5, 7]}
+{"ts": "2026-07-20T13:25:11Z", "event": "batch_dispatch", "feature": "trim-the-interactive-implement-loops-orchestration", "batch": 1, "tasks": [3, 4, 6]}
