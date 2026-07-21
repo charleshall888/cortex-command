@@ -133,6 +133,10 @@ backlog-index:
 kept-pauses:
     cortex-generate-kept-pauses --write
 
+# Seed missing reference-size pins and lower stale ones — down-only; growth needs an annotated '# raised:' exception in size-pin.txt
+ratchet-refs:
+    python3 scripts/ratchet_refs.py --write
+
 # Mark a backlog item as complete by name, ID, or UUID (updates frontmatter in place, cleans blocked-by, regenerates index)
 backlog-close feature="":
     cortex-update-item {{ feature }} --status complete
@@ -477,7 +481,7 @@ test-init:
 
 # Run skill-design test infrastructure (descriptions, handoffs, size budget, lifecycle refs)
 test-skill-design:
-    .venv/bin/pytest tests/test_skill_descriptions.py tests/test_skill_handoff.py tests/test_skill_size_budget.py tests/test_lifecycle_references_resolve.py -q
+    .venv/bin/pytest tests/test_skill_descriptions.py tests/test_skill_handoff.py tests/test_skill_size_budget.py tests/test_reference_size_ratchet.py tests/test_lifecycle_references_resolve.py -q
 
 # Run all pipeline and overnight test suites and print aggregate pass/fail summary
 test:

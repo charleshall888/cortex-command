@@ -12,6 +12,8 @@ Prefer structural separation over prose-only enforcement for sequential gates (`
 
 New skills go in `skills/` with `name` and `description` frontmatter; `when_to_use:` is optional and concatenated to `description:` for routing. A new skill's `description` + `when_to_use` SUM is bounded by the L1 surface budget — default ≤400B for non-cluster skills, enforced by `tests/test_l1_surface_ratchet.py`; see the "SKILL.md L1 surface ratchet" constraint in `cortex/requirements/project.md` for the cluster exemption and re-cap rule.
 
+Reference prose is ratcheted down-only: every `references/` directory (canonical `skills/<name>/` and hand-maintained plugin skills) carries a `size-pin.txt` byte pin, enforced by `tests/test_reference_size_ratchet.py`. Growth over the pin fails — apply verb-first (behavior moves into CLI verbs; prose keeps only control flow) rather than raising the pin. Lowering is always allowed and expected: after any trim, run `just ratchet-refs` to lock in the new floor (it seeds missing pins — the first commit of a references directory sets its pin — and lowers stale ones, never raises). Growth a correctness fix genuinely needs takes an in-file exception: hand-raise the pin with a `# raised: <reason ≥30 chars>, lifecycle-id=<NNN>, date=<YYYY-MM-DD>` line, and re-ratchet afterward.
+
 New global utilities ship via the `cortex-core` plugin's `bin/` directory; canonical source lives in the repo-root `bin/` and mirrors via dual-source enforcement.
 
 ## Design principle: prescribe What and Why, not How

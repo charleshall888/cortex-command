@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: ea055171-a605-44a2-8b1e-b37826464d99
 title: Enforce the verb-first reference-size direction with a down-only ratchet
-status: backlog
+status: complete
 priority: medium
 type: feature
 created: 2026-07-21

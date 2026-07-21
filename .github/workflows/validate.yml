@@ -70,6 +70,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: pytest tests/test_lifecycle_config_dormant_template.py
 
+      - name: Reference-size ratchet tests (blocking)
+        if: ${{ !cancelled() }}
+        run: pytest tests/test_reference_size_ratchet.py
+
       - name: Dashboard route smoke test (fresh resolve, Starlette floored at >=1.0)
         if: ${{ !cancelled() }}
         run: |
