@@ -107,12 +107,15 @@ Before user presentation, read and follow `${CLAUDE_SKILL_DIR}/references/orches
 
 This surface folds the Implement branch/dispatch selection into plan approval — each branch option implies plan approval. Present the plan summary (overview + task list) plus **Produced** (one-line artifact summary) and **Trade-offs** (alternatives considered + rationale).
 
-**Assemble the option set.** On `main`/`master`, assemble the adaptive branch options with Implement §1's branch-mode preflight — it owns the picker guards (uncommitted-changes demotion; the `cortex-lifecycle-prepare-worktree` runtime-probe degrade that hides the worktree option when absent), and [worktree-entry.md](${CLAUDE_SKILL_DIR}/references/worktree-entry.md) owns the suppressed-picker routing:
+**Assemble the option set.** On `main`/`master`, resolve the branch/dispatch state with the same composed verb Implement §1 calls — §4 owns rendering the guards from its payload itself, not Implement §1:
 
 ```bash
-cortex-lifecycle-branch-mode .
-cortex-lifecycle-picker-decision . {feature} {branch_mode}
+cortex-lifecycle-branch-decision --feature {feature}
 ```
+
+On `state: prompt`, render guards exactly as Implement §1 does — `uncommitted_changes` demotes only the current-branch option (prepend the warning, drop `recommended`); `worktree_option_available: false` drops the worktree option only when the CLI is absent. A `dirty_tree` reason here is expected: plan.md itself is uncommitted until §5, so §4 structurally dirties its own tree, and that alone is not a worktree blocker — the demotion warning still renders on any dirty tree, and dirt beyond this feature's own just-written artifacts (other sessions') is the strongest case for choosing isolation, not against it.
+
+On `state: resolved`, two distinct `source`s carry different weight: **`branch_mode`** is config-pinned (ADR-0012) — fold the fixed mode into the options below rather than opening the full picker. **`dispatch_choice`** is a stale carryover from a prior approval pass (a `plan_approved` row this verb finds ahead of config or the picker gate) — still render the full option surface, with the carried mode only as a pre-selected default; its `entry_mode: selected` is not a live selection at §4 and authorizes no worktree auto-entry (ADR-0008).
 
 Off `main`/`master`, the sub-choices collapse to `trunk` (the current branch), so the surface offers only `[Approve & implement (current branch), Approve plan but wait to implement]`.
 
@@ -129,6 +132,8 @@ Off `main`/`master`, the sub-choices collapse to `trunk` (the current branch), s
 | `Approve plan but wait to implement` | `wait-approved` | (omit) |
 | **"Other"**, cancel-intent | `cancelled` | (omit) |
 | **"Other"**, any other text | `revise` | (omit) |
+
+**Trunk cost** (`Implement on current branch`): no isolation, so same-file tasks serialize — the plan must carry write-serialization edges; when this plan.md already carries any (`grep -c 'write-serialization' cortex/lifecycle/{feature}/plan.md`), cite the count in the note.
 
 ```bash
 cortex-lifecycle-advance plan-decision --feature <name> --decision <decision> [--dispatch-choice <mode>]
