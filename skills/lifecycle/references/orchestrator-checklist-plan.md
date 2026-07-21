@@ -14,5 +14,6 @@ Orchestrator-review `plan`-phase checklist (`plan.md`); rate each item **pass** 
 | P8 | Architectural Pattern present + in taxonomy | `**Architectural Pattern**` valued in {event-driven, pipeline, layered, shared-state, plug-in}; gated on `criticality = critical` (when §1b ran), N/A otherwise. Semantic fit belongs to the synthesizer. |
 | P9 | Outline present | `## Outline`; ≥2 phases for `complexity=complex`, ≥1 for `simple`. Each phase names its task IDs plus `**Goal**` and `**Checkpoint**`. |
 | P10 | Acceptance on complex plans | `complexity=complex` plans have a `## Acceptance` whole-feature criterion. Skip on simple — the last-phase Checkpoint is the contract there. |
-| P11 | Hub-file seam | Flag any file appearing in ≥3 tasks' `Files` lists with no early seam task and no serializing `Depends on` chain. |
+| P11 | Hub-file seam | Flag any file two tasks would both edit with no early seam task and no serializing `Depends on` chain (an annotated write-serialization edge qualifies as the chain). |
 | P12 | Trivial-consistency | Flag any task tagged `trivial` whose What/Verification implies a commit — plan.md defines `trivial` as no-commit and the interactive loop fails zero-commit tasks at §2d; remedy: retag `simple`. |
+| P13 | Graph width | Flag single-task levels between multi-task levels, or a level count approaching half the task count — counting every edge at face value; the flag rationale lists any write-serialization-annotated segments as dissolve-first candidates, never as a depth discount. |
