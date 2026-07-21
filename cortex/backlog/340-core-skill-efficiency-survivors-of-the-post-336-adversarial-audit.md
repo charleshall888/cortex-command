@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: ccbb7f99-da2e-4e2d-802d-3016b916f7a6
 title: Core-skill efficiency survivors of the post-#336 adversarial audit
-status: backlog
+status: wontfix
 priority: low
 type: epic
 created: 2026-06-30
-updated: 2026-06-30
+updated: 2026-07-21
 tags: ['skill-efficiency-remaining-work']
 discovery_source: cortex/research/skill-efficiency-remaining-work/research.md
 ---
@@ -33,3 +33,20 @@ Shared discipline every child carries: preserve every test-pinned and overnight-
 - skills/lifecycle/references/plan.md
 - skills/morning-review/SKILL.md
 - skills/dev/SKILL.md
+
+## Closure ruling (2026-07-21)
+
+The banner's premise question is ruled: the resident-prose trimming thesis fails under the current
+requirements stance — `project.md` names the token levers as turns × context and explicitly not
+resident-prose micro-trims (cache ~98% effective), and the 2026-07-16 audit measured the resident
+axis as small. Disposition of the four scoped children (none were ever created as items):
+
+- **Plan-phase reference slimming** and **dev-router triage relocation** — dead; both are exactly
+  the rejected resident-prose category.
+- **Morning-review close-ordering correctness fix** — survives on correctness merits (a live
+  contradiction over a destructive action); spun out as #406.
+- **Phase-isolation decision record** — folded into this note: the context-architecture rewrite
+  (isolate phases) remains declined, and the targeted-trim lever the record would have endorsed is
+  now itself retired by the requirements stance above. No standalone record needed.
+
+Closed wontfix; no lifecycle ran.
