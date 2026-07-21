@@ -1,6 +1,6 @@
 # Interactive Worktree Entry
 
-Loaded from implement.md §1 whenever the worktree arm is entered — on the `resolved` state with `worktree-interactive`, or on the `prompt` state when the picker selection is the worktree option (the branch-decision verb returns `prompt` before the choice exists, so the load keys on the selection, not the verb state). §1 hands off one thing: the **entry mode** marker. Follow this file to completion, then return to implement.md §2 — the session stays inside the worktree.
+Loaded from implement.md §1 whenever the worktree arm is entered — on the `resolved` state with `worktree-interactive`, or on the `prompt` state when the picker selection is the worktree option (the branch-decision verb returns `prompt` before the choice exists, so the load keys on the selection, not the verb state). §1 hands off one thing: the **entry mode** marker. Follow this file to completion, then return to implement.md §2 — the session stays inside the worktree. This isolation is the payoff: same-file tasks dispatch concurrently instead of having to serialize, the trunk-mode cost this path avoids.
 
 Route on the carried entry mode:
 

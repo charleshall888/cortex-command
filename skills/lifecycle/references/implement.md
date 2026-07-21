@@ -25,7 +25,7 @@ Act on `state`:
 
 **Picker options**:
 
-- **Implement on current branch** (recommended) — trunk workflow; changes land on the current branch.
+- **Implement on current branch** (recommended) — trunk workflow; changes land on the current branch. Trunk cost: no isolation, so same-file tasks serialize — the plan must carry write-serialization edges.
 - **Implement on feature branch with worktree** — creates an `interactive/{slug}` worktree at `<repo>/.claude/worktrees/interactive-{slug}/` and auto-enters via `EnterWorktree`. Proceeds to worktree entry.
 - **Create feature branch** — create `feature/{lifecycle-slug}` for a PR flow. NOTE: runs `git checkout` on the main session and can corrupt parallel sessions in this repo.
 
