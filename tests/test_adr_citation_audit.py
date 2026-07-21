@@ -1,8 +1,6 @@
 """Hermetic tests for ``cortex_command.adr_citation_audit`` (R9).
 
 Exercises requirements 2–7 via subprocess with ``--root <tmp_path tree>``.
-Modeled on ``tests/test_requirements_parity_audit.py``.
-
 Invocation: ``python3 -m cortex_command.adr_citation_audit --root <dir>``
 (NOT the bin/ wrapper path — module invocation exercises the working tree
 directly per spec Technical Constraints.)

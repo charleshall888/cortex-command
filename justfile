@@ -347,14 +347,12 @@ validate-skills:
 validate-skill-preconditions skill:
     ./scripts/validate-preconditions.py {{skill}}
 
-# Check SKILL.md-to-bin parity (per DR-5 / lifecycle 102)
-# Uses `uv run` so the module picks up the project's managed deps (PyYAML
-# is required by the sandbox-preflight gate's YAML parser; system python3
+# Sandbox preflight gate (spec Req 17 — named survivor per the enforcement-
+# gates constraint). Uses `uv run` so the module picks up the project's
+# managed deps (PyYAML is required by the gate's YAML parser; system python3
 # on Homebrew is PEP-668-protected and cannot install pyyaml directly).
-# bin/cortex-check-parity is now a dual-channel bash wrapper; invoke the
-# module directly to avoid shell-in-Python confusion in the pre-commit hook.
-check-parity *args:
-    uv run python3 -m cortex_command.parity_check {{args}}
+check-sandbox-preflight:
+    uv run python3 -m cortex_command.sandbox_preflight
 
 # Append one event row to a feature's events.log via the cortex-lifecycle-event CLI
 # Usage: just emit-event <event-name> <feature-slug> [worktree-path]
@@ -374,18 +372,6 @@ check-contract *args:
 # Audit entire repo for argparse-contract violations (off critical path)
 check-contract-audit:
     bin/cortex-check-contract --audit
-
-# Check skill-prompt emissions are declared in bin/.events-registry.md (R5 staged-mode gate)
-check-events-registry:
-    bin/cortex-check-events-registry --staged
-
-# Audit v3 clarify_critic events across cortex/lifecycle/**/events.log (#186 schema gate)
-check-clarify-critic-events:
-    bin/cortex-check-clarify-critic-events
-
-# Check ticket bodies / skill prose for prescriptive-prose violations (LEX-1 scanner, R6/R7)
-check-prescriptive-prose *args:
-    bin/cortex-check-prescriptive-prose --staged {{args}}
 
 # Check skills and backlog for bare cortex_command Python imports (L201, staged-diff mode)
 check-bare-python-import *args:
@@ -411,29 +397,9 @@ measure-l1-surface:
 session-tokens *ARGS:
     bin/cortex-session-tokens {{ARGS}}
 
-# Audit the events registry for stale deprecation rows or missing owners (R5 audit mode, off critical path)
-check-events-registry-audit:
-    bin/cortex-check-events-registry --audit
-
-# Audit repo for bare bare-python-m cortex_command callsites against allowlist (R12, off critical path)
-check-bare-python-callsites:
-    uv run python3 -m cortex_command.parity_check --audit-bare-python-m-callsites
-
-# Check Python sources for bare-prefix path literals (#203 — prevents pre-#202 layout regression)
-check-path-hardcoding *args:
-    bin/cortex-check-path-hardcoding --staged {{args}}
-
-# Audit the whole repo for bare-prefix path literals (off critical path)
-check-path-hardcoding-audit:
-    bin/cortex-check-path-hardcoding --audit
-
 # Audit ADR citation coverage across lifecycle artifacts (report-only, always exits 0)
 adr-citation-audit:
     bin/cortex-adr-citation-audit
-
-# Audit logged-vs-applied requirements drift suggestions (R9, informational JSON to stdout)
-requirements-parity-audit:
-    bin/cortex-requirements-parity-audit
 
 # Cross-cutting acceptance gate for the GATE_BRIEF rubric (feature
 # fix-validate-brief-substring-anchors-that, Phase 1 + Phase 2).

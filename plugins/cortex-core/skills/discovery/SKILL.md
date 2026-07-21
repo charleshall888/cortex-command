@@ -66,7 +66,7 @@ Between Research and Decompose a single-question user-blocking gate fires — no
 
 ### Decompose-commit batch-review gate
 
-In the Decompose phase, a user-blocking post-decompose batch-review gate (`checkpoint: decompose-commit`) fires after all ticket bodies are authored and the prescriptive-prose scanner has passed, before any commit to `cortex/backlog/`. See decompose.md §5 for the five response options and full gate semantics.
+In the Decompose phase, a user-blocking post-decompose batch-review gate (`checkpoint: decompose-commit`) fires after all ticket bodies are authored, before any commit to `cortex/backlog/`. See decompose.md §5 for the five response options and full gate semantics.
 
 ## Phase Transition
 

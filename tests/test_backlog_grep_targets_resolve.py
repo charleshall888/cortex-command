@@ -14,9 +14,8 @@ This file is a pure-python pytest lint. It walks ``cortex/backlog/*.md``
 and ``grep -c '<token>'`` invocation (both in fenced code blocks and inline
 prose), filters to tokens that look like event names
 (``re.fullmatch(r'[a-z_]+', token)``), and for each such token verifies
-that it appears in EITHER the registry at ``bin/.events-registry.md`` OR as
-a literal string under ``cortex_command/`` (via ``git grep -F``). Tokens
-that fail both checks are reported as ``UNREGISTERED_GREP_TARGET`` with
+that it appears as a literal string under ``cortex_command/`` (via
+``git grep -F``). Tokens that fail are reported as ``UNREGISTERED_GREP_TARGET`` with
 the offending ticket path and line number.
 
 Self-tests at the bottom of the file exercise the helper against
@@ -39,7 +38,6 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 BACKLOG_DIR = REPO_ROOT / "cortex" / "backlog"
-REGISTRY_PATH = REPO_ROOT / "bin" / ".events-registry.md"
 
 # Capture the token inside the quotes after ``grep -c``. Either quote style
 # (single or double) is accepted; the closing quote must match-or-mismatch
@@ -83,7 +81,6 @@ def _token_emitted_in_codebase(token: str, root: Path) -> bool:
 
 def _find_unregistered_grep_targets(
     backlog_dir: Path,
-    registry_path: Path,
     root: Path,
 ) -> list[str]:
     """Walk ``backlog_dir`` and return diagnostic strings for hallucinated tokens.
@@ -91,8 +88,6 @@ def _find_unregistered_grep_targets(
     Each returned string is the operator-facing failure message:
     ``UNREGISTERED_GREP_TARGET: <ticket-path>:<line> references "<token>" ...``
     """
-    registry_text = registry_path.read_text(encoding="utf-8") if registry_path.exists() else ""
-
     diagnostics: list[str] = []
     for ticket in _iter_backlog_files(backlog_dir):
         try:
@@ -106,14 +101,11 @@ def _find_unregistered_grep_targets(
                     continue
                 if token in _ALLOWLIST:
                     continue
-                if token in registry_text:
-                    continue
                 if _token_emitted_in_codebase(token, root):
                     continue
                 diagnostics.append(
                     f"UNREGISTERED_GREP_TARGET: {ticket}:{lineno} "
-                    f'references "{token}" which is neither a '
-                    "registered event nor an emitted string"
+                    f'references "{token}" which is not an emitted string'
                 )
     return diagnostics
 
@@ -123,17 +115,14 @@ def _find_unregistered_grep_targets(
 # ---------------------------------------------------------------------------
 
 
-def _seed_fake_repo(tmp_path: Path, registry_body: str, codebase_files: dict[str, str]) -> None:
-    """Initialise a minimal git repo with a registry and codebase strings.
+def _seed_fake_repo(tmp_path: Path, codebase_files: dict[str, str]) -> None:
+    """Initialise a minimal git repo with codebase strings.
 
     The lint uses ``git grep`` for the codebase check, so the fixture must
     be a real git repo with the cortex_command/ files committed (or at
     least tracked). We commit so ``git grep`` picks them up without
     requiring ``--cached`` semantics.
     """
-    (tmp_path / "bin").mkdir(parents=True, exist_ok=True)
-    (tmp_path / "bin" / ".events-registry.md").write_text(registry_body, encoding="utf-8")
-
     (tmp_path / "cortex_command").mkdir(parents=True, exist_ok=True)
     for rel, body in codebase_files.items():
         full = tmp_path / "cortex_command" / rel
@@ -187,11 +176,10 @@ def _write_backlog(tmp_path: Path, name: str, body: str) -> Path:
     return target
 
 
-def test_fixture_positive_registered_event_passes_lint(tmp_path: Path) -> None:
-    """A backlog grep target whose token appears in the registry passes."""
+def test_fixture_positive_emitted_event_passes_lint(tmp_path: Path) -> None:
+    """A backlog grep target whose token is emitted in the codebase passes."""
     _seed_fake_repo(
         tmp_path,
-        registry_body="| `dispatch_complete` | per-feature-events-log | gate-enforced |\n",
         codebase_files={"pipeline/dispatch.py": '"event": "dispatch_complete"\n'},
     )
     _write_backlog(
@@ -202,7 +190,6 @@ def test_fixture_positive_registered_event_passes_lint(tmp_path: Path) -> None:
 
     diagnostics = _find_unregistered_grep_targets(
         tmp_path / "cortex" / "backlog",
-        tmp_path / "bin" / ".events-registry.md",
         tmp_path,
     )
 
@@ -210,10 +197,9 @@ def test_fixture_positive_registered_event_passes_lint(tmp_path: Path) -> None:
 
 
 def test_fixture_negative_hallucinated_event_fails_lint(tmp_path: Path) -> None:
-    """A backlog grep target with no registry/codebase backing is reported."""
+    """A backlog grep target with no codebase backing is reported."""
     _seed_fake_repo(
         tmp_path,
-        registry_body="| `dispatch_complete` | per-feature-events-log | gate-enforced |\n",
         codebase_files={"pipeline/dispatch.py": '"event": "dispatch_complete"\n'},
     )
     backlog_path = _write_backlog(
@@ -224,7 +210,6 @@ def test_fixture_negative_hallucinated_event_fails_lint(tmp_path: Path) -> None:
 
     diagnostics = _find_unregistered_grep_targets(
         tmp_path / "cortex" / "backlog",
-        tmp_path / "bin" / ".events-registry.md",
         tmp_path,
     )
 
@@ -247,7 +232,6 @@ def test_live_backlog_has_no_unregistered_grep_targets() -> None:
     """Every shape-matching ``grep -c`` token in cortex/backlog/ must resolve."""
     diagnostics = _find_unregistered_grep_targets(
         BACKLOG_DIR,
-        REGISTRY_PATH,
         REPO_ROOT,
     )
     assert diagnostics == [], "\n".join(diagnostics)

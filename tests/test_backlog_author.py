@@ -34,7 +34,6 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parent.parent
 FIXTURES_DIR = REPO_ROOT / "tests" / "fixtures" / "backlog_author"
 SKILL_MD = REPO_ROOT / "skills" / "backlog-author" / "SKILL.md"
-LEX1_SCRIPT = REPO_ROOT / "bin" / "cortex-check-prescriptive-prose"
 CREATE_ITEM_BIN = REPO_ROOT / "bin" / "cortex-create-backlog-item"
 
 
@@ -46,15 +45,6 @@ CREATE_ITEM_BIN = REPO_ROOT / "bin" / "cortex-create-backlog-item"
 def _read_fixture(name: str) -> str:
     """Return the text content of a fixture file by basename."""
     return (FIXTURES_DIR / name).read_text(encoding="utf-8")
-
-
-def _run_lex1(file_path: Path) -> subprocess.CompletedProcess[bytes]:
-    """Invoke the LEX-1 scanner in positional file-arg mode on *file_path*."""
-    return subprocess.run(
-        [sys.executable, str(LEX1_SCRIPT), str(file_path)],
-        capture_output=True,
-        check=False,
-    )
 
 
 def _extract_skill_section(text: str, section_heading: str) -> str:
@@ -131,17 +121,6 @@ def test_interview_mode_routes_through_askuserquestion() -> None:
     assert count >= 1, (
         f"interview section of SKILL.md contains {count} AskUserQuestion reference(s); "
         "expected ≥1 (interview mode must use AskUserQuestion per R6)"
-    )
-
-
-def test_lex1_rejects_code_block_in_why_section() -> None:
-    """LEX-1 exits non-zero when Why section contains a fenced code block."""
-    fixture_path = FIXTURES_DIR / "why_with_code_block.md"
-    result = _run_lex1(fixture_path)
-
-    assert result.returncode != 0, (
-        "LEX-1 scanner returned exit 0 for a fixture whose ## Why section "
-        "contains a fenced code block — expected non-zero exit (LEX-1 violation)"
     )
 
 

@@ -43,9 +43,6 @@ Console-script entry point (wheel-generated binstub; bash wrapper retired):
 Task 4b (Python ``#!/usr/bin/env python3``):
   - cortex-archive-rewrite-paths
   - cortex-archive-sample-select
-  - cortex-check-events-registry
-  - cortex-check-path-hardcoding
-  - cortex-requirements-parity-audit
   - cortex-rewrite-cli-pin
 
 Task 4b (PEP 723 ``#!/usr/bin/env -S uv run --script``):
@@ -243,45 +240,6 @@ def test_cortex_archive_sample_select_no_log_invocation_warning(tmp_path: Path) 
     _assert_no_syntax_error(result, "cortex-archive-sample-select")
     assert result.returncode == 0, (
         f"cortex-archive-sample-select: --help returned exit {result.returncode}.\n"
-        f"stderr = {result.stderr!r}"
-    )
-
-
-def test_cortex_check_events_registry_no_log_invocation_warning(tmp_path: Path) -> None:
-    """cortex-check-events-registry: --help exits 0 with no log-invocation warning."""
-    script = BIN_DIR / "cortex-check-events-registry"
-    env = _base_env(str(tmp_path))
-    result = _run([sys.executable, str(script), "--help"], env=env)
-    _assert_no_log_invocation_warning(result, "cortex-check-events-registry")
-    _assert_no_syntax_error(result, "cortex-check-events-registry")
-    assert result.returncode == 0, (
-        f"cortex-check-events-registry: --help returned exit {result.returncode}.\n"
-        f"stderr = {result.stderr!r}"
-    )
-
-
-def test_cortex_check_path_hardcoding_no_log_invocation_warning(tmp_path: Path) -> None:
-    """cortex-check-path-hardcoding: --help exits 0 with no log-invocation warning."""
-    script = BIN_DIR / "cortex-check-path-hardcoding"
-    env = _base_env(str(tmp_path))
-    result = _run([sys.executable, str(script), "--help"], env=env)
-    _assert_no_log_invocation_warning(result, "cortex-check-path-hardcoding")
-    _assert_no_syntax_error(result, "cortex-check-path-hardcoding")
-    assert result.returncode == 0, (
-        f"cortex-check-path-hardcoding: --help returned exit {result.returncode}.\n"
-        f"stderr = {result.stderr!r}"
-    )
-
-
-def test_cortex_requirements_parity_audit_no_log_invocation_warning(tmp_path: Path) -> None:
-    """cortex-requirements-parity-audit: --help exits 0 with no log-invocation warning."""
-    script = BIN_DIR / "cortex-requirements-parity-audit"
-    env = _base_env(str(tmp_path))
-    result = _run([sys.executable, str(script), "--help"], env=env)
-    _assert_no_log_invocation_warning(result, "cortex-requirements-parity-audit")
-    _assert_no_syntax_error(result, "cortex-requirements-parity-audit")
-    assert result.returncode == 0, (
-        f"cortex-requirements-parity-audit: --help returned exit {result.returncode}.\n"
         f"stderr = {result.stderr!r}"
     )
 

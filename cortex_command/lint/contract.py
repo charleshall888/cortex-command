@@ -79,8 +79,8 @@ class ExtractionError:
 class Violation:
     """A lint violation produced by ``validate()``.
 
-    Shape mirrors ``cortex_command.parity_check.Violation`` so that downstream
-    consumers can treat both interchangeably.
+    Shape matches the retired ``parity_check.Violation`` so downstream
+    consumers written against it keep working.
     """
 
     path: str
@@ -455,10 +455,7 @@ _HARD_EXCLUDE_EXACT: frozenset[str] = frozenset(
     }
 )
 
-_HARD_EXCLUDE_GLOBS: tuple[str, ...] = (
-    "bin/.audit-*-allowlist.md",
-    "bin/.parity-exceptions.md",
-)
+_HARD_EXCLUDE_GLOBS: tuple[str, ...] = ()
 
 # Regex for cortex-* binary names.
 _BINARY_RE = re.compile(r"cortex-[a-z][a-z0-9-]*")
@@ -700,7 +697,7 @@ def _scan_file_for_invocations(path: Path) -> list[Invocation]:
     lines = text.splitlines()
     invocations: list[Invocation] = []
 
-    # Fence state machine (ported from prescriptive_prose.py:113-156).
+    # Fence state machine: track fenced code blocks so fenced content is skipped.
     in_fence = False
     fence_delim: str | None = None
 
@@ -888,7 +885,7 @@ def scan_corpus(
 
 
 # ---------------------------------------------------------------------------
-# tomllib helpers (mirrors cortex_command/parity_check.py:gather_entry_point_names)
+# tomllib helpers
 # ---------------------------------------------------------------------------
 
 

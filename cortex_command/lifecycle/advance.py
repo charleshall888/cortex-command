@@ -118,7 +118,7 @@ _ENFORCED_PAUSE_KINDS: frozenset[str] = frozenset({"relayed-consent", "phase-exi
 # The documented out-of-band hand-append every refusal points the operator at.
 _SANCTIONED_OVERRIDE = (
     "cortex-lifecycle-event log --event <name> --feature <slug> [--set k=v ...] "
-    "(the sanctioned out-of-band hand-append; see bin/.events-registry.md)"
+    "(the sanctioned out-of-band hand-append)"
 )
 
 # Typed resume arms per pause slug (#400): a pause refusal whose slug has a

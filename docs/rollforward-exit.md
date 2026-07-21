@@ -50,11 +50,11 @@ A green run confirms the additive machine content is inert to every old reader, 
 
 ## Step 5 — Quarantine the transition vocabulary under a named owner
 
-If the roll-forward makes any transition event dead in-repo, quarantine it rather than deleting it. Mark the row in `bin/.events-registry.md` as `deprecated-pending-removal` with a filled `deprecation_date` and a rationale, exactly as the existing retired-event rows do. **The #377 lesson is that an unowned deprecation window accretes debt**, so each quarantined row carries a named owner.
+If the roll-forward makes any transition event dead in-repo, quarantine it rather than deleting it: stop emitting it, keep readers tolerant of it (the Historical-compatibility-shim constraint in `cortex/requirements/project.md` — archived logs must still parse), and record the deprecation with a date, rationale, and named owner in this document's revision or the roll-forward PR. **The #377 lesson is that an unowned deprecation window accretes debt**, so every quarantined event carries a named owner. (The former `bin/.events-registry.md` quarantine-row mechanism and its `--audit` cadence retired with the events-registry gate, #407.)
 
-Quarantine owner: **charliemhall@gmail.com** — runs `just check-events-registry-audit` (`bin/cortex-check-events-registry --audit`) on a recurring cadence to surface stale `deprecated-pending-removal` rows, and owns the follow-up cleanup PR that prunes each row once its grace window has elapsed and no in-flight session can still emit it. The audit's `owner` column is the bump authority of record; a row without a named owner fails the audit.
+Quarantine owner: **charliemhall@gmail.com** — owns the follow-up cleanup PR that prunes each quarantined event's reader tolerance once its grace window has elapsed and no in-flight session can still emit it.
 
-Note the differing trigger: the served verbs' *eventual* retirement runs through the same `deprecated-pending-removal` template but fires on a **protocol-floor bump**, not a calendar grace window (ADR-0024). This step covers only vocabulary made dead by *this* roll-forward.
+Note the differing trigger: the served verbs' *eventual* retirement follows the same quarantine shape but fires on a **protocol-floor bump**, not a calendar grace window (ADR-0024). This step covers only vocabulary made dead by *this* roll-forward.
 
 ## Step 6 — Keep dual-emission live through the grace window
 

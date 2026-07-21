@@ -65,15 +65,13 @@ Then:
 
 Path:line citations, `§N`/`RN` section-index citations, and multi-line fenced code blocks belong only in `## Touch points` — never in `## Role`, `## Integration`, or `## Edges`.
 
-**Forbidden sections (per ticket body)**: `## Why`, `## Role`, `## Integration`, `## Edges`. **Permitted section**: `## Touch points`. (The scanner owns the exact match patterns; author against the worked examples below.)
+**Forbidden sections (per ticket body)**: `## Why`, `## Role`, `## Integration`, `## Edges`. **Permitted section**: `## Touch points`. (Author against the worked examples below.)
 
 **Worked examples**: `## Edges` → "Breaks if the phase-transition contract changes" passes (named contract, no path:line). `## Edges` → "must update decompose.md:147 to replace the ban" flags (path:line in a forbidden section). `## Integration` → "Follows the pattern in §3a" flags (section-index in a forbidden section). `## Role` → "The helper `cortex-update-item` writes the state" does not flag (inline backtick, not a fenced block, no path:line or section-index).
 
-The scanner runs once at ticket-write time; the pre-commit hook re-runs it before any ticket lands in `cortex/backlog/`.
-
 #### Post-decompose batch-review gate (R15)
 
-After all N ticket bodies are authored and the prescriptive-prose scanner has passed, but before any commit to `cortex/backlog/`, a user-blocking gate fires: without it, the user's first encounter with ticket bodies would be a pre-commit hook failure.
+After all N ticket bodies are authored, but before any commit to `cortex/backlog/`, a user-blocking gate fires: it is the user's first encounter with the ticket bodies before they land.
 
 The gate presents all ticket titles and bodies via a single AskUserQuestion-style surface and offers five options:
 
@@ -154,7 +152,7 @@ Show the user:
 
 - **Architecture-section-driven**: pieces come only from the approved `### Pieces` set (§2); never re-derive them from raw findings. Grouping (§4) coarsens ticket *count* without mutating that set — `split-piece` re-derives from it.
 - **Uniform body template** (§2): no per-shape branching.
-- **Touch-points exclusivity** (§5): the pre-commit scanner enforces it.
+- **Touch-points exclusivity** (§5): citations and fenced code blocks stay out of the other sections.
 - **No implementation planning**: role, integration, and structural edges only — mechanism is `/cortex-core:lifecycle`'s plan phase.
 - **One epic max**: a single discovery produces at most one epic with children.
 - **Respect backlog conventions**: follow the backlog skill's frontmatter schema exactly.

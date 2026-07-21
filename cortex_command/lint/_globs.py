@@ -2,9 +2,8 @@
 
 This is the single canonical implementation of the ``**``=zero-or-more-segments
 glob-membership decision used by every ``--staged`` corpus-membership test in
-the pre-commit checker family (``parity_check``, ``prescriptive_prose``,
-``bare_python_import``, ``contract``, and — via an inline parity-pinned copy —
-the standalone ``bin/cortex-check-events-registry``).
+the pre-commit checker family (``bare_python_import``, ``contract``, and
+``skill_path``).
 
 The matcher treats each glob's ``**`` as *zero or more* path segments, so a
 single ``dir/**/*.ext`` glob admits ``dir/foo.ext`` (depth-1, zero mid-dirs),

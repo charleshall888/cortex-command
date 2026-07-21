@@ -428,9 +428,8 @@ ORCHESTRATOR_CRASH_PAUSED_REASON = "orchestrator_crash"
 RECOVERY_COMPLETE_SIDECAR = "recovery-complete.json"
 
 #: The event name emitted to ``overnight-events.log`` when recovery completes
-#: (spec §R10). Registered in ``bin/.events-registry.md`` by Task 12; until the
-#: matching ``EVENT_TYPES`` constant is added in ``events.py`` the emit is
-#: swallowed best-effort (see :func:`recover_session`).
+#: (spec §R10). Until the matching ``EVENT_TYPES`` constant is added in
+#: ``events.py`` the emit is swallowed best-effort (see :func:`recover_session`).
 ORCHESTRATOR_CRASH_RECOVERED_EVENT = "orchestrator_crash_recovered"
 
 

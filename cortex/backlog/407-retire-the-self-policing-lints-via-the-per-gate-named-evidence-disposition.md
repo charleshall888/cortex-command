@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 7d3061f2-5b08-4d23-921d-3a3f2c98b8cb
 title: Retire the self-policing lints via the per-gate named-evidence disposition
-status: backlog
+status: complete
 priority: medium
 type: chore
 created: 2026-07-21

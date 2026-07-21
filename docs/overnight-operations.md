@@ -444,7 +444,7 @@ Every overnight session persists state as files under `cortex/lifecycle/`. The r
 
 State file reads are not lock-protected by design — forward-only phase transitions and atomic replace writes make torn reads impossible. A reader either sees the pre-write state or the post-write state, never a partial record.
 
-The allowlist of event names emitted across the three `events.log` surfaces above, together with their documented consumers and the pre-commit gate that enforces producer registration, lives in `bin/.events-registry.md` — see [`docs/internals/events-registry.md`](internals/events-registry.md) for the schema, scope split, and `--staged`/`--audit` modes.
+Event names emitted across the three `events.log` surfaces above are declared where they are produced: pipeline events in `cortex_command/overnight/events.py` (`EVENT_TYPES`), lifecycle transition events in `cortex_command/lifecycle/transition_table.py`. (The former `bin/.events-registry.md` allowlist and its pre-commit gate retired without named evidence, #407.)
 
 ### Escalation System (escalations.jsonl)
 

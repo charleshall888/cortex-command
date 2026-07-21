@@ -558,7 +558,7 @@ def classify(slug: str, root: Path) -> dict:
                 # row and the 3-key close row alike), never on field count.
                 complete_seen = True
                 # Canonical convention: absent merge_anchor defaults to "review"
-                # (bin/.events-registry.md + metrics.py).  A missing-anchor row
+                # (metrics.py).  A missing-anchor row
                 # is therefore NOT a retry trigger.
                 if ev.get("merge_anchor", "review") == "merge":
                     has_merge_anchor_row = True

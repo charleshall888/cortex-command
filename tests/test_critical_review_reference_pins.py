@@ -2,8 +2,7 @@
 critical-review reference family.
 
 `skills/critical-review/references/verification-gates.md` carries route-reaction
-prose and a user-facing total-failure string that NO existing static gate covers
-(`tests/test_skill_section_citations.py` pins only the *lifecycle* references).
+prose and a user-facing total-failure string that NO existing static gate covers.
 A careless trim of these files breaks nothing detectably while silently degrading
 review quality. This module pins the smallest *localizing* set that catches a
 deletion, rename, or paraphrase of the structure the four SKILL.md pointers and

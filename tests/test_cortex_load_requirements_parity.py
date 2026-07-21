@@ -6,13 +6,10 @@ golden-replay parity test: there is no original bin script to replay — the
 ``skills/lifecycle/references/load-requirements.md``. The replay harness in
 ``tests/test_parity_contract.py`` therefore does not apply.
 
-Instead this file pins the verb's deploy surface and carries the in-scope
-wiring reference that satisfies ``cortex-check-parity`` (W003): the contiguous
-path-qualified ``bin/cortex-load-requirements`` literal in ``WRAPPER_REL``
-below is the wiring signal that proves the deployed console-script /
-``bin/`` wrapper is referenced in scope (a bare ``python3 -m`` module path is
-not). The assertions below also guarantee ≥1 collected test so pytest never
-returns exit 5 ("no tests collected").
+Instead this file pins the verb's deploy surface (bin/ wrapper present and
+executable, console-script entry registered). The assertions below also
+guarantee ≥1 collected test so pytest never returns exit 5 ("no tests
+collected").
 """
 
 from __future__ import annotations

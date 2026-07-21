@@ -559,8 +559,8 @@ def _build_sentinel_absence_event(
     Returns:
         Dict with the base ``sentinel_absence`` keys; ``source_path`` and
         ``snapshot_sha`` are appended only when the corresponding kwarg
-        is not ``None`` (field-additive extension; the events-registry
-        row declares both as optional).
+        is not ``None`` (field-additive extension; both fields are
+        optional).
     """
     event: dict = {
         "ts": _now_iso(),
