@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # Mode-agnostic interactive dispatch prose
@@ -22,3 +22,7 @@ Consequences deferred (not built):
 - **A `task_complete` completion event** — deferred for the same reason. Under the batch barrier a checkpoint-time event would measure the barrier, not the task, and the commit timestamps recorded at the git checkpoint are strictly better data. Revisit only alongside pipelining.
 
 Trade-off accepted: bounded wall-clock idling behind stragglers — mitigated at plan time by straggler isolation, not by runtime coordination — in exchange for prose that is correct on every runtime version and zero new coordination machinery. This reverses the source ticket's "decide the dispatch mode first" framing: the durable decision is to **not couple the harness to either mode**.
+
+## Reaffirmed by ADR-0031
+
+This section amends ADR-0030 to record that [ADR-0031](0031-reaffirm-batch-barrier-and-ordering-only-serialization-annotation.md) evaluated backlog ticket #404's #358 evidence against the "measured case survives token accounting" bar this ADR set for revisiting dependency-pipelined dispatch, and found it insufficient (single mid-run simulation, real durations for only 12 of the 24 tasks, placeholders concentrated in exactly the moved tasks, run 54% complete, source artifact off-disk). The batch barrier named above is reaffirmed as-is; ADR-0031 additionally adopts an ordering-only write-serialization annotation as the plan-authoring complement (closing the authoring gap #358's fake dependency edge was working around) and names the concrete preconditions any future pipelining proposal must clear. Per the ADR-README promotion gate, this amendment co-promotes this ADR's Status field from `proposed` to `accepted` in the same commit.
