@@ -4,9 +4,11 @@ Five-section template for backlog ticket bodies, in order; all required except `
 
 ## Why
 
-The problem in symptom-voice: what's broken, missing, or degraded in observable terms, as a user or operator would describe it — not the solution or mechanism (one paragraph).
+The problem in symptom-voice: what's broken, missing, or degraded in observable terms — not the solution or mechanism (one paragraph).
 
 **Why-vs-Role rule**: Why is the problem in symptom-voice; Role is the slot this piece fills after the ticket lands (arc42 Responsibility — the task it fulfills). Omit Why when it collapses to one sentence restating Role's lead; otherwise required.
+
+**Evidence rule**: a ticket adding harness machinery (prose, hooks, gates, config — any resident surface) names specific evidence in Why: measured cost or observed failure, not a hypothetical. An efficiency-framed ticket also states its expected net effect on the surface it claims to shrink. Rationale and bar: Deletion bias, `cortex/requirements/project.md`.
 
 ## Role
 
@@ -22,4 +24,4 @@ Structural constraints and Boundary conditions: what breaks if an upstream contr
 
 ## Touch points
 
-Implementation locations — file paths with line numbers, section indices (§N, RN), or code excerpts, one bullet per location. Omit entirely when none are known at authoring time (optional by design).
+Implementation locations — file paths with line numbers, section indices (§N, RN), or code excerpts, one bullet per location. Omit when none are known at authoring time.
