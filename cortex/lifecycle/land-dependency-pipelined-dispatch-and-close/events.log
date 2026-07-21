@@ -8,3 +8,9 @@
 {"ts": "2026-07-20T20:08:10Z", "event": "phase_transition", "feature": "land-dependency-pipelined-dispatch-and-close", "from": "specify", "to": "plan"}
 {"ts": "2026-07-20T23:25:49Z", "event": "plan_approved", "feature": "land-dependency-pipelined-dispatch-and-close", "dispatch_choice": "trunk"}
 {"ts": "2026-07-20T23:25:49Z", "event": "phase_transition", "feature": "land-dependency-pipelined-dispatch-and-close", "from": "plan", "to": "implement"}
+{"ts": "2026-07-21T00:51:11Z", "event": "batch_dispatch", "feature": "land-dependency-pipelined-dispatch-and-close", "batch": 0, "tasks": [1, 2, 4, 5, 6]}
+{"ts": "2026-07-21T01:38:33Z", "event": "batch_dispatch", "feature": "land-dependency-pipelined-dispatch-and-close", "batch": 1, "tasks": [3]}
+{"ts": "2026-07-21T01:53:34Z", "event": "phase_transition", "feature": "land-dependency-pipelined-dispatch-and-close", "from": "implement", "to": "review", "tier": "complex"}
+{"ts": "2026-07-21T02:08:04Z", "event": "review_verdict", "feature": "land-dependency-pipelined-dispatch-and-close", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-07-21T02:08:04Z", "event": "phase_transition", "feature": "land-dependency-pipelined-dispatch-and-close", "from": "review", "to": "complete"}
+{"ts": "2026-07-21T02:08:48Z", "event": "feature_complete", "feature": "land-dependency-pipelined-dispatch-and-close", "tasks_total": 6, "rework_cycles": 0, "merge_anchor": "merge"}

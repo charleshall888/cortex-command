@@ -72,7 +72,7 @@ sdk.md no longer says "synchronously coupled"; `just test` green (incl. `test_ad
   `grep -cEi 'dissolve-first|face value|face-value' skills/lifecycle/references/plan.md` ≥ 1; then
   `just test` (green). Assembled-prose correctness (2-writer caveat reads right, width signals named)
   is a Review-phase check — no test pins reference prose.
-- **Status**: [ ] pending
+- **Status**: [x] done (9f23bda3 2026-07-20T19:54:03-05:00)
 
 ### Task 2: orchestrator-checklist-plan.md — P13 width row + P11 2-writer update (R4)
 - **Files**: `skills/lifecycle/references/orchestrator-checklist-plan.md`
@@ -92,7 +92,7 @@ sdk.md no longer says "synchronously coupled"; `just test` green (incl. `test_ad
 - **Verification**: (b) `grep -c 'P13' skills/lifecycle/references/orchestrator-checklist-plan.md` ≥ 1
   AND `grep -c '≥3' skills/lifecycle/references/orchestrator-checklist-plan.md` = 0; then `just test`
   (green).
-- **Status**: [ ] pending
+- **Status**: [x] done (dfc0d56b 2026-07-20T20:02:30-05:00)
 
 ### Task 3: plan.md §4 picker protocol fix + trunk-cost copy (R5, R6a)
 - **Files**: `skills/lifecycle/references/plan.md`
@@ -135,7 +135,7 @@ sdk.md no longer says "synchronously coupled"; `just test` green (incl. `test_ad
   `grep -c 'serialize' skills/lifecycle/references/plan.md` ≥ 1; then `just test` (green, incl.
   `test_skill_section_citations.py`). The two-`resolved`-source distinction and stale-carryover
   wording are Review-phase prose checks.
-- **Status**: [ ] pending
+- **Status**: [x] done (24beed6c 2026-07-20T20:46:03-05:00)
 
 ### Task 4: trunk-cost copy at implement §1 and worktree-entry (R6b, R6c)
 - **Files**: `skills/lifecycle/references/implement.md`, `skills/lifecycle/references/worktree-entry.md`
@@ -159,7 +159,7 @@ sdk.md no longer says "synchronously coupled"; `just test` green (incl. `test_ad
 - **Verification**: (b) `grep -c 'serialize' skills/lifecycle/references/implement.md` ≥ 1 AND
   `grep -c 'serialize' skills/lifecycle/references/worktree-entry.md` ≥ 1; then `just test` (green,
   incl. `test_lifecycle_picker_label_pins_worktree.py` and `test_lifecycle_kept_pauses_parity.py`).
-- **Status**: [ ] pending
+- **Status**: [x] done (54392e09 2026-07-20T20:10:11-05:00)
 
 ### Task 5: ADR-0031 + ADR-0030 amendment/promotion (R7)
 - **Files**: `cortex/adr/0031-reaffirm-batch-barrier-and-ordering-only-serialization-annotation.md`,
@@ -194,7 +194,7 @@ sdk.md no longer says "synchronously coupled"; `just test` green (incl. `test_ad
   AND `grep -c 'status: proposed' cortex/adr/0030-mode-agnostic-interactive-dispatch.md` = 0 AND
   `grep -c 'ADR-0031' cortex/adr/0030-mode-agnostic-interactive-dispatch.md` ≥ 1; then `just test`
   (green, incl. `test_adr_citation_audit.py`).
-- **Status**: [ ] pending
+- **Status**: [x] done (2a4d6e5a 2026-07-20T20:18:39-05:00)
 
 ### Task 6: correct stale sdk.md run_in_background line (R8)
 - **Files**: `docs/internals/sdk.md`
@@ -209,7 +209,7 @@ sdk.md no longer says "synchronously coupled"; `just test` green (incl. `test_ad
   commit ⇒ simple (not trivial).
 - **Verification**: (b) `grep -c 'synchronously coupled' docs/internals/sdk.md` = 0 AND
   `grep -c 'ADR-0030' docs/internals/sdk.md` ≥ 1; then `just test` (green).
-- **Status**: [ ] pending
+- **Status**: [x] done (82e7f145 2026-07-20T20:26:04-05:00)
 
 ## Risks
 
