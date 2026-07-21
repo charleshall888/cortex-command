@@ -79,9 +79,13 @@ Tasks that create files, modify JSON settings, create symlinks, set permissions,
 
 **Dependencies** — every task carries `**Depends on**` between **What** and **Context**: `[N, M]` or `none`. Implement dispatches independent tasks in parallel; a missing or malformed field blocks parallelism.
 
+**Write-serialization edges** — when a `Depends on` edge exists only to order same-file writes rather than express a logical dependency, mark it with the parenthetical dialect the parser already strips: `**Depends on**: [12] (write-serialization: night_rig.gd)`. A trailing single-hyphen note (`[12] - note`) is not stripped and fails overnight conformance (R4) — use the parenthetical form instead. The semantics are ordering-only: an executor running per-task isolation may relax the edge to not-before, no executor deletes it, and the overnight pipeline still treats it as a real edge.
+
 **Straggler isolation** — when the dependency graph allows, don't co-batch a `complex` task with `trivial`/`simple` siblings at the same topological level; split levels so a heavy straggler occupies its own wave rather than idling a batch barrier.
 
-**Hub-file seam** — when ≥3 tasks would edit one coordinator file, give it a registration seam in an early task so later tasks add files instead of serializing edit chains.
+**Graph width** — prefer wide levels: treat a single-task level between multi-task levels, or a level count approaching half the task count (#358 ran 11 levels for 24 tasks), as a restructure signal — never merge tasks to shrink depth, which trades the scheduling problem for an oversized-task one (**Task sizing**). Every edge counts at face value when judging depth; annotated write-serialization segments are the exception worth naming — they're dissolve-first candidates (restructure, or pick isolated dispatch at approval), not a discount on the measured depth.
+
+**Hub-file seam** — when any two tasks would edit one coordinator file, give it a registration seam in an early task so later tasks add files instead of serializing edit chains. When a seam can't apply — structural rework, deletions, re-pointing — the honest remedy is an annotated write-serialization edge, not a plain `Depends on`.
 
 **Sub-task headings** — a task may split into `### Task 3a:`, `### Task 3b:` (single lowercase suffix), first-class dispatchable units ordered `3` < `3a` < `3b` < `4`. The integer part accepts `0`; a group need not start at `a`. Reference by full id (`[3a]`, `[13a, 13b]`) — a bare `[3]` means literal task `3`. Multi-letter (`3ab`), uppercase (`3A`), space-separated (`3 a`) fail loud. Same-batch siblings sharing a `Depends on` co-schedule into one worktree, so same-file writes race — give them disjoint `Files`, or serialize with an explicit edge (`3b` depends on `[3a]`).
 
