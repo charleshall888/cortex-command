@@ -1,0 +1,5 @@
+{"ts": "2026-07-21T20:42:51Z", "event": "discovery_research_sizing", "topic": "dashboard-command-station", "complexity": "complex", "criticality": "high"}
+{"ts": "2026-07-21T21:29:52Z", "event": "gate_brief_generated", "status": "ok_over_cap", "brief_word_count": 290, "patterns_detected_count": 0}
+{"ts": "2026-07-21T21:33:15Z", "event": "approval_checkpoint_responded", "topic": "dashboard-command-station", "checkpoint": "research-decompose", "response": "approve", "revision_round": 0}
+{"ts": "2026-07-21T21:37:31Z", "event": "approval_checkpoint_responded", "topic": "dashboard-command-station", "checkpoint": "decompose-commit", "response": "consolidate-pieces", "revision_round": 1}
+{"ts": "2026-07-21T21:38:39Z", "event": "approval_checkpoint_responded", "topic": "dashboard-command-station", "checkpoint": "decompose-commit", "response": "approve-all", "revision_round": 2}
