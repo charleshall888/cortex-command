@@ -33,3 +33,7 @@ The rule rides the existing single choke point: skills/backlog-author/references
 - skills/backlog-author/references/body-template.md (Why section — the Evidence rule)
 - cortex/requirements/project.md (Philosophy of Work, Deletion bias — symmetric bar + anti-pattern evidence)
 - skills/backlog-author/references/size-pin.txt (annotated raise)
+
+## Correction (2026-07-21)
+
+The template carrier was wrong: the body template ships with the cortex-core plugin into consumer repos, where "Deletion bias" and this repo's requirements don't exist — shipped surfaces must not carry cortex-command-repo governance. The Evidence rule moved to this repo's CLAUDE.md Conventions (the general no-repo-governance-in-shipped-surfaces rule was recorded there alongside it); the template reverted, and its pin re-ratcheted below the original seed since the offsetting trims stayed.

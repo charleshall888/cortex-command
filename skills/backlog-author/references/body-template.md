@@ -8,8 +8,6 @@ The problem in symptom-voice: what's broken, missing, or degraded in observable 
 
 **Why-vs-Role rule**: Why is the problem in symptom-voice; Role is the slot this piece fills after the ticket lands (arc42 Responsibility — the task it fulfills). Omit Why when it collapses to one sentence restating Role's lead; otherwise required.
 
-**Evidence rule**: a ticket adding harness machinery (prose, hooks, gates, config — any resident surface) names specific evidence in Why: measured cost or observed failure, not a hypothetical. An efficiency-framed ticket also states its expected net effect on the surface it claims to shrink. Rationale and bar: Deletion bias, `cortex/requirements/project.md`.
-
 ## Role
 
 What this piece does by its Responsibility (arc42 framing), not its mechanism: the job that exists after the ticket lands that didn't before (one paragraph; not how it's built or which files it touches).

@@ -29,6 +29,8 @@ Run `just` to see all recipes — key ones: `just backlog-index`, `just validate
 - Resolve `${CLAUDE_SKILL_DIR}` only in a SKILL.md body, then propagate the absolute path to references and subagent prompts — enforced by the `cortex-check-skill-path` lint; rationale in `cortex/adr/0009-skill-path-resolution-for-plugin-distributed-skills.md`.
 - Settings JSON must remain valid JSON; hook/notification scripts must be executable (`chmod +x`). Agent-specific config goes in `claude/`.
 - Before authoring or editing skills, hooks, phase templates, or overnight docs, read `docs/policies.md` — it owns the skill/phase authoring guidelines (kept-pauses affordances, What/Why-not-How, L1 surface budgets), the MUST-escalation policy, the overnight docs ownership map, and the tone policy.
+- Shipped surfaces (`skills/`, `plugins/`) carry no cortex-command-repo governance — they install into consumer repos where this repo's clauses don't exist. Directions for working on the harness itself belong here, in `docs/policies.md`, or in `cortex/requirements/`.
+- Backlog tickets follow the front-door evidence bar: a ticket adding harness machinery names specific evidence in its Why (measured cost or observed failure, not a hypothetical), and an efficiency-framed ticket states its expected net effect on the surface it claims to shrink. Canonical statement: Deletion bias, `cortex/requirements/project.md`.
 
 ## Solution horizon
 
