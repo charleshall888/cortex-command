@@ -238,7 +238,7 @@ The SDK's `resume: session_id` parameter is a different capability — it restor
 | `EnterPlanMode` / `ExitPlanMode` | Lifecycle phases are structurally separated; read-only enforcement not yet added |
 | `EnterWorktree` / `ExitWorktree` | `isolation: "worktree"` on Agent is the safe path in sandbox |
 | `RemoteTrigger` | Tailscale + mosh + tmux handles remote access |
-| `run_in_background` | Interactive skill dispatch is synchronously coupled to the batch verify-and-merge loop |
+| `run_in_background` | Dispatch mode (sync vs. background) is owned by the Claude Code runtime, not this repo; the builder's exit report lives in its final message in whatever shape the runtime delivers, and per-task completion is derived from the git checkpoint, never the return-delivery shape (ADR-0030) |
 | `resume` (Agent parameter) | `interrupt.py` handles correctness; in-memory context restoration not yet needed |
 | Per-agent `mode` override | Overnight agents use global `bypassPermissions`; skill agents inherit |
 | `model` override on Agent tool | Interactive agents inherit parent model; overnight agents use dispatch.py matrix |
