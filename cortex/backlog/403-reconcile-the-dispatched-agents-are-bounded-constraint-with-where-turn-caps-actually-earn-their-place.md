@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: ff919988-d939-47f5-8aa0-c14914e424fa
 title: Reconcile the 'Dispatched agents are bounded' constraint with where turn caps actually earn their place
-status: backlog
+status: complete
 priority: low
 type: chore
 created: 2026-07-20
-updated: 2026-07-20
+updated: 2026-07-21
 tags: ['token-efficiency', 'requirements', 'skills', 'subagents']
 areas: ['skills', 'lifecycle']
 ---
