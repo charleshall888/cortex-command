@@ -1,14 +1,11 @@
 """Tests for read_dispatch_choice — the Plan→Implement carry-forward resolver.
 
 Covers the line-position-last contract and the three "no recorded branch mode"
-fallback shapes the Implement consumer must treat as picker-fallback, plus a
-subprocess smoke that the cortex-lifecycle-dispatch-choice CLI exits 0.
+fallback shapes the Implement consumer must treat as picker-fallback.
 """
 
 from __future__ import annotations
 
-import subprocess
-import sys
 from pathlib import Path
 
 from cortex_command.lifecycle_implement import read_dispatch_choice
@@ -87,22 +84,3 @@ def test_torn_line_skipped_not_collapsed(tmp_path: Path) -> None:
         '{"event": "plan_approved", "feature": "f", "dispatch_choice": "trunk"}',
     )
     assert read_dispatch_choice(log) == "trunk"
-
-
-def test_cli_subprocess_exits_zero(tmp_path: Path) -> None:
-    # Smoke: the console-script main() runs and exits 0 with the recorded value.
-    feature_dir = tmp_path / "cortex" / "lifecycle" / "feat"
-    feature_dir.mkdir(parents=True)
-    _write(
-        feature_dir / "events.log",
-        '{"event": "plan_approved", "feature": "feat", "dispatch_choice": "trunk"}',
-    )
-    result = subprocess.run(
-        [sys.executable, "-m", "cortex_command.lifecycle.dispatch_choice_cli", "--feature", "feat"],
-        cwd=tmp_path,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == 0
-    assert result.stdout.strip() == "trunk"

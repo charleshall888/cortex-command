@@ -1,7 +1,6 @@
 """cortex-read-backlog-backend — emit the active backlog backend for a repo.
 
-Graceful console-script reader (spec R2) mirroring
-``cortex_command.lifecycle.branch_mode_cli``. Consumers shell to this
+Graceful console-script reader (spec R2). Consumers shell to this
 command argless to learn the active backend; it ALWAYS resolves to
 ``cortex-backlog`` for any degenerate input (fail-open, interactive) so
 the interactive fail-safe lives here and no consumer carries fallback

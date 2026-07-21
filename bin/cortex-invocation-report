@@ -137,8 +137,6 @@ _check_entry_points() {
         "backlog:build_epic_map" \
         "backlog:ready" \
         "overnight:complete_morning_review_session" \
-        "lifecycle:branch_mode_cli" \
-        "lifecycle:picker_decision_cli" \
         "critical_review:resolve_feature_cli" \
         "critical_review:write_residue_cli"; do
         pkg="${pair%:*}"

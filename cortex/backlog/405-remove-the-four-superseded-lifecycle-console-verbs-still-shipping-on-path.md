@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 2801ee9a-7bbe-467f-b2fc-592e84335c52
 title: Remove the four superseded lifecycle console verbs still shipping on PATH
-status: backlog
+status: complete
 priority: medium
 type: chore
 created: 2026-07-21

@@ -1,12 +1,11 @@
-"""cortex-lifecycle-parse-args — classify a /cortex-core:lifecycle invocation.
+"""Classify a /cortex-core:lifecycle invocation string.
 
-Usage:
-    cortex-lifecycle-parse-args "<arguments>"
-
-Emits a single JSON object on stdout: ``{"mode": ..., "feature": ..., "phase": ...}``.
-This is the structural source of truth for the invocation grammar that SKILL.md
-Step 1 used to parse in prose. The model still finishes the irreducible
-prose->slug derivation (signalled by ``mode == "needs-derivation"``).
+``parse()`` returns ``{"mode": ..., "feature": ..., "phase": ...}`` and is
+consumed by the ``cortex-lifecycle-resolve`` façade verb (its former console
+wrapper, ``cortex-lifecycle-parse-args``, was retired by #405). This is the
+structural source of truth for the invocation grammar that SKILL.md Step 1
+used to parse in prose. The model still finishes the irreducible prose->slug
+derivation (signalled by ``mode == "needs-derivation"``).
 
 Grammar (canonical parse order):
     empty-check -> #-sigil handling -> reserved-word match -> slug/prose-derive
@@ -26,13 +25,8 @@ surface what the grammar discarded rather than silently eating a typo'd phase.
 
 from __future__ import annotations
 
-import argparse
-import json
 import re
-import sys
 from typing import List, Optional
-
-from cortex_command.backlog import _telemetry
 
 # Closed set of mode values the parser can emit. Asserted for coverage by
 # tests/test_lifecycle_invocation_grammar_parity.py (every literal must have a
@@ -133,32 +127,3 @@ def parse(arguments: str) -> dict:
         phase, ignored = _phase_and_ignored(tokens[1:])
         return _result("feature", feature=first, phase=phase, ignored=ignored)
     return _result("needs-derivation")
-
-
-def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        prog="cortex-lifecycle-parse-args",
-        description=(
-            "Classify a /cortex-core:lifecycle invocation string into a "
-            "{mode, feature, phase} JSON object on stdout."
-        ),
-    )
-    parser.add_argument(
-        "arguments",
-        nargs="?",
-        default="",
-        help="The raw $ARGUMENTS string (a single quoted argument).",
-    )
-    return parser
-
-
-def main(argv: Optional[List[str]] = None) -> int:
-    _telemetry.log_invocation("cortex-lifecycle-parse-args")
-    parser = _build_parser()
-    args = parser.parse_args(argv)
-    sys.stdout.write(json.dumps(parse(args.arguments or "")) + "\n")
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
