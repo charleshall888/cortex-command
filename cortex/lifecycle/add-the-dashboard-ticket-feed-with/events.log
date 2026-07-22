@@ -1,0 +1,7 @@
+{"ts": "2026-07-21T21:49:25Z", "schema_version": 1, "event": "lifecycle_start", "feature": "add-the-dashboard-ticket-feed-with", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"ts": "2026-07-21T21:57:12Z", "event": "clarify_critic", "feature": "add-the-dashboard-ticket-feed-with", "schema_version": 3, "parent_epic_loaded": true, "findings_count": 12, "dispositions": {"apply": 7, "dismiss": 1, "ask": 4}, "applied_fixes_count": 7, "dismissals_count": 1, "status": "ok"}
+{"ts": "2026-07-21T23:15:16Z", "event": "complexity_override", "feature": "add-the-dashboard-ticket-feed-with", "from": "simple", "to": "complex", "gate": "research_open_questions"}
+{"ts": "2026-07-22T19:29:34Z", "event": "criticality_override", "feature": "add-the-dashboard-ticket-feed-with", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-07-22T19:48:54Z", "event": "sentinel_advisory", "feature": "add-the-dashboard-ticket-feed-with", "expected_sha": "e89bb499f3aae1809e6f02cb65dd5ca8464117446db89f1b7979f42e0df1567a", "observed_sha_or_null": "e89bb499f3aae1809e6f02cb65dd5ca8464117446db89f1b7979f42e0df1567a"}
+{"ts": "2026-07-22T20:00:46Z", "event": "spec_approved", "feature": "add-the-dashboard-ticket-feed-with", "decision": "approved"}
+{"ts": "2026-07-22T20:00:46Z", "event": "phase_transition", "feature": "add-the-dashboard-ticket-feed-with", "from": "specify", "to": "plan"}
