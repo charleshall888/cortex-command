@@ -577,5 +577,126 @@ def test_dispatch_complete_exact_key_list():
     asyncio.run(_run())
 
 
+# ---------------------------------------------------------------------------
+# Tests: observed-model capture (ADR-0032)
+# ---------------------------------------------------------------------------
+
+def test_dispatch_model_observed_fires_once_with_the_running_model():
+    """cortex pins no model, so it reads back the one the CLI actually used.
+
+    The observed model must surface on a one-shot ``dispatch_model_observed``
+    event (so the dashboard can badge a dispatch that is still running) and
+    again on ``dispatch_complete`` (so the cost aggregators can bucket it).
+    ``dispatch_start`` must carry no model at all — nothing has replied yet.
+    """
+    import asyncio
+
+    async def _run():
+        with tempfile.TemporaryDirectory() as tmp:
+            log_path = Path(tmp) / "pipeline-events.log"
+
+            # Three assistant turns, all on the same model: the observed-model
+            # event must fire exactly once, not once per turn.
+            msgs = [
+                AssistantMessage(content=[TextBlock(text=f"turn {i}")], model="some-model-id")
+                for i in range(3)
+            ]
+            result_msg = ResultMessage(
+                subtype="success", duration_ms=100, duration_api_ms=80,
+                is_error=False, num_turns=3, session_id="sess-obs", total_cost_usd=0.0,
+            )
+
+            seen_options = []
+
+            async def mock_query(**kwargs):
+                # Captured, not asserted inline: an exception raised inside the
+                # query generator is absorbed by dispatch_task's error
+                # classification, so an inline assert would vanish into a
+                # dispatch_error instead of failing the test.
+                seen_options.append(kwargs["options"])
+                async for m in _async_gen(*msgs, result_msg):
+                    yield m
+
+            with patch.object(_dispatch_module, "query", mock_query):
+                await _dispatch_module.dispatch_task(
+                    feature="obs-feat",
+                    task="do work",
+                    worktree_path=Path(tmp),
+                    complexity="simple",
+                    system_prompt="",
+                    log_path=log_path,
+                    skill="implement",
+                )
+
+            # The dispatch must not pin a model on the SDK options.
+            assert len(seen_options) == 1
+            assert getattr(seen_options[0], "model", None) is None, (
+                "dispatch_task must leave ClaudeAgentOptions.model unset so the "
+                "CLI default applies (ADR-0032)"
+            )
+
+            events = _read_jsonl(log_path)
+
+            observed = [e for e in events if e["event"] == "dispatch_model_observed"]
+            assert len(observed) == 1, (
+                f"expected exactly 1 dispatch_model_observed, got {len(observed)}"
+            )
+            assert observed[0]["model"] == "some-model-id"
+            assert observed[0]["feature"] == "obs-feat"
+            assert observed[0]["skill"] == "implement"
+
+            start = [e for e in events if e["event"] == "dispatch_start"][0]
+            assert "model" not in start, "dispatch_start must not carry a model"
+
+            complete = [e for e in events if e["event"] == "dispatch_complete"][0]
+            assert complete["model"] == "some-model-id"
+
+            # The observed event must precede the completion, or the dashboard
+            # could not badge a running dispatch.
+            assert events.index(observed[0]) < events.index(complete)
+
+    asyncio.run(_run())
+
+
+def test_dispatch_complete_model_is_none_when_no_assistant_message():
+    """A dispatch that never gets an assistant reply reports model=None.
+
+    The key must still be present so downstream consumers can rely on its
+    shape; only the value is unknown.
+    """
+    import asyncio
+
+    async def _run():
+        with tempfile.TemporaryDirectory() as tmp:
+            log_path = Path(tmp) / "pipeline-events.log"
+            result_msg = ResultMessage(
+                subtype="success", duration_ms=10, duration_api_ms=5,
+                is_error=False, num_turns=0, session_id="sess-empty", total_cost_usd=0.0,
+            )
+
+            async def mock_query(**kwargs):
+                async for m in _async_gen(result_msg):
+                    yield m
+
+            with patch.object(_dispatch_module, "query", mock_query):
+                await _dispatch_module.dispatch_task(
+                    feature="quiet-feat",
+                    task="do work",
+                    worktree_path=Path(tmp),
+                    complexity="simple",
+                    system_prompt="",
+                    log_path=log_path,
+                    skill="implement",
+                )
+
+            events = _read_jsonl(log_path)
+            assert not [e for e in events if e["event"] == "dispatch_model_observed"]
+            complete = [e for e in events if e["event"] == "dispatch_complete"][0]
+            assert "model" in complete
+            assert complete["model"] is None
+
+    asyncio.run(_run())
+
+
 if __name__ == "__main__":
     unittest.main()

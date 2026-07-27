@@ -74,7 +74,11 @@ class ResultMessage:
 
 @dataclass
 class ClaudeAgentOptions:
-    model: str = "sonnet"
+    # Mirrors the real SDK, whose `model` default is None: cortex pins no model
+    # (ADR-0032), so an unset field must mean "no --model flag, CLI default"
+    # here exactly as it does in production. A non-None default would silently
+    # mask a re-added model pin.
+    model: str | None = None
     max_turns: int = 20
     max_budget_usd: float = 25.0
     cwd: str = "."

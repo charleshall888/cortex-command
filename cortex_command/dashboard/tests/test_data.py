@@ -939,6 +939,67 @@ class TestParsePipelineDispatch(unittest.TestCase):
                 "feat-b": {"model": "claude-sonnet-4-5", "complexity": "simple"},
             })
 
+    def test_model_arrives_from_dispatch_model_observed_mid_run(self):
+        """Current event shape: the model is not known at dispatch_start.
+
+        cortex pins no model (ADR-0032), so dispatch_start carries none and the
+        badge fills in from the one-shot dispatch_model_observed event — which
+        fires as soon as the agent replies, i.e. while the dispatch is still
+        running. Reading only dispatch_start would leave the badge blank for
+        the whole run.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            lifecycle_dir = Path(tmp)
+            path = lifecycle_dir / "pipeline-events.log"
+            content = (
+                json.dumps({
+                    "event": "dispatch_start",
+                    "feature": "feat-a",
+                    "complexity": "complex",
+                }) + "\n"
+                + json.dumps({
+                    "event": "dispatch_model_observed",
+                    "feature": "feat-a",
+                    "model": "claude-opus-4-7",
+                }) + "\n"
+            )
+            path.write_bytes(content.encode("utf-8"))
+
+            result = parse_pipeline_dispatch(lifecycle_dir)
+
+            self.assertEqual(result, {
+                "feat-a": {"model": "claude-opus-4-7", "complexity": "complex"},
+            })
+
+    def test_redispatch_clears_the_previous_attempts_model(self):
+        """A retry must not display the prior attempt's model as if it were live.
+
+        The new dispatch_start resets the badge; it refills when that attempt's
+        own dispatch_model_observed arrives.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            lifecycle_dir = Path(tmp)
+            path = lifecycle_dir / "pipeline-events.log"
+            content = (
+                json.dumps({
+                    "event": "dispatch_start", "feature": "feat-a",
+                    "complexity": "complex",
+                }) + "\n"
+                + json.dumps({
+                    "event": "dispatch_model_observed", "feature": "feat-a",
+                    "model": "claude-opus-4-7",
+                }) + "\n"
+                + json.dumps({
+                    "event": "dispatch_start", "feature": "feat-a",
+                    "complexity": "complex",
+                }) + "\n"
+            )
+            path.write_bytes(content.encode("utf-8"))
+
+            result = parse_pipeline_dispatch(lifecycle_dir)
+
+            self.assertEqual(result["feat-a"]["model"], "")
+
     def test_duplicate_feature_last_entry_wins(self):
         """When a feature appears twice, the last dispatch_start entry wins."""
         with tempfile.TemporaryDirectory() as tmp:

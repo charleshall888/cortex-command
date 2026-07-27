@@ -215,6 +215,27 @@ class TestPairDispatchEvents(unittest.TestCase):
         self.assertEqual(result[0]["model"], "opus")
         self.assertEqual(result[0]["tier"], "complex")
 
+    def test_orchestrator_round_shape_recovers_its_model(self):
+        """start carries an explicit model=None, complete carries the real one.
+
+        This is the orchestrator-round telemetry shape (runner.py emits
+        ``model: None`` on start — pinned by test_orchestrator_round_telemetry —
+        then reads the true model out of the result envelope for the completion
+        event). Reading the model off the *start* event bucketed every one of
+        these as ``"unknown"``; reading it off the completion recovers it.
+        """
+        start = self._start("feat-round", complexity="complex")
+        start["model"] = None
+        events = [
+            start,
+            self._complete("feat-round", cost_usd=3.0, num_turns=9, model="claude-opus-4-7"),
+        ]
+        result = self._fn(events)
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["model"], "claude-opus-4-7")
+        self.assertEqual(result[0]["tier"], "complex")
+
     def test_complete_event_model_wins_over_start_event(self):
         """When both carry a model, the observed one (on complete) wins."""
         events = [
