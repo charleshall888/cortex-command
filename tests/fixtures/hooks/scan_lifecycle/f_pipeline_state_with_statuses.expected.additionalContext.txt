@@ -3,4 +3,4 @@ Multiple incomplete lifecycles — select one to resume:
   - exec-feature-f1 (Plan)
   - failed-feature-f3 (Specify)
   - paused-feature-f2 (Specify)
-Resume with /cortex-core:lifecycle resume <feature>.
+Resume with /cortex-core:build resume <feature>.

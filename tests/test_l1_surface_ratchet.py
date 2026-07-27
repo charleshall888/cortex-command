@@ -58,7 +58,7 @@ _BASELINES: dict[str, int] = {
     "dev": 285,
     "discovery": 932,
     "interview": 361,
-    "lifecycle": 890,
+    "build": 890,
     "morning-review": 320,
     "overnight": 314,
     "pr": 237,

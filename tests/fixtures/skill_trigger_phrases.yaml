@@ -20,6 +20,11 @@ skills:
     must_contain:
     - write a ticket body
     - author a backlog item
+  build:
+    must_contain:
+    - build this
+    - implement this ticket
+    - plan, implement, review, and complete
   commit:
     must_contain:
     - /cortex-core:commit
@@ -47,12 +52,6 @@ skills:
     - General-purpose priming interview
     - grilling
     - help you think through a topic
-  lifecycle:
-    must_contain:
-    - start a lifecycle
-    - lifecycle research/specify/plan/implement/review/complete
-    - start a feature lifecycle
-    - structured phases
   morning-review:
     must_contain:
     - /morning-review
@@ -72,7 +71,6 @@ skills:
     must_contain:
     - refine backlog item
     - prepare for overnight
-    - prepare feature for execution
     - "Clarify \u2192 Research \u2192 Spec"
   requirements:
     must_contain:

@@ -72,15 +72,7 @@ Codebase-pointing claims carry an inline `[file:line]` citation or an explicit `
 
 ## 4. Review and hand off
 
-Run the orchestrator-review protocol (propagated **orchestrator-review** path) for the `research` phase, against the **Post-Research checklist** below. It must pass before the next step.
-
-| # | Item |
-|---|------|
-| R1 | Every research question has a specific finding, not a hand-wavy generalization |
-| R2 | Feasibility cites specific codebase patterns, API capabilities, or documented behavior — not "this should be possible" |
-| R3 | No critical unknown is left unacknowledged; unresolvable ones appear in Open Questions with why |
-| R4 | Open Questions are genuine unknowns or decisions needing user input — not deferrals of what more investigation would have answered |
-| R5 | External dependencies confirmed present and non-deprecated at the endpoint/method/flag level |
+Run the orchestrator-review protocol (propagated **orchestrator-review** path) for the `research` phase. It must pass before the next step.
 
 In the fix-agent dispatch, substitute `{topic} discovery topic` for `{feature}` and `cortex/research/{topic}/{artifact}` for the lifecycle artifact path; the fix agent returns plain prose (`changed [path] — [rationale]`), not lifecycle's YAML envelope.
 

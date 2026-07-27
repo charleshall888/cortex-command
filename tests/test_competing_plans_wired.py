@@ -24,20 +24,20 @@ def _repo_root() -> pathlib.Path:
 
 
 def _plan_lines() -> list[str]:
-    plan = _repo_root() / "skills" / "lifecycle" / "references" / "plan.md"
+    plan = _repo_root() / "skills" / "build" / "references" / "plan.md"
     return plan.read_text(encoding="utf-8").splitlines()
 
 
 def test_competing_plans_reference_and_mirror_exist() -> None:
     root = _repo_root()
-    canonical = root / "skills" / "lifecycle" / "references" / "competing-plans.md"
+    canonical = root / "skills" / "build" / "references" / "competing-plans.md"
     assert canonical.exists(), f"competing-plans.md missing at {canonical}"
     mirror = (
         root
         / "plugins"
         / "cortex-core"
         / "skills"
-        / "lifecycle"
+        / "build"
         / "references"
         / "competing-plans.md"
     )
@@ -92,7 +92,7 @@ def test_competing_plans_contains_key_content_token() -> None:
     fragment path, which the extraction flow cannot function without.)
     """
     canonical = (
-        _repo_root() / "skills" / "lifecycle" / "references" / "competing-plans.md"
+        _repo_root() / "skills" / "build" / "references" / "competing-plans.md"
     )
     text = canonical.read_text(encoding="utf-8")
     assert "plan-synthesizer.md" in text, (

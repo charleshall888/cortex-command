@@ -388,7 +388,7 @@ class TestGateCleanAncestorCleanupsRuns:
 
     def test_complete_md_documents_cleanup_gate(self) -> None:
         """complete.md Step 8 must document both gate conditions explicitly."""
-        complete_md = Path(__file__).parent.parent / "skills" / "lifecycle" / "references" / "complete.md"
+        complete_md = Path(__file__).parent.parent / "skills" / "build" / "references" / "complete.md"
         text = complete_md.read_text(encoding="utf-8")
 
         assert "git status --porcelain" in text, (
@@ -400,7 +400,7 @@ class TestGateCleanAncestorCleanupsRuns:
 
     def test_complete_md_documents_warning_for_dirty_skip(self) -> None:
         """complete.md Step 8 must say cleanup is skipped with a warning for dirty worktree."""
-        complete_md = Path(__file__).parent.parent / "skills" / "lifecycle" / "references" / "complete.md"
+        complete_md = Path(__file__).parent.parent / "skills" / "build" / "references" / "complete.md"
         text = complete_md.read_text(encoding="utf-8")
 
         # Spec §13: "dirty → skip with warning"
@@ -410,7 +410,7 @@ class TestGateCleanAncestorCleanupsRuns:
 
     def test_complete_md_documents_warning_for_non_ancestor_skip(self) -> None:
         """complete.md Step 8 must say cleanup is skipped with a warning for non-ancestor branch."""
-        complete_md = Path(__file__).parent.parent / "skills" / "lifecycle" / "references" / "complete.md"
+        complete_md = Path(__file__).parent.parent / "skills" / "build" / "references" / "complete.md"
         text = complete_md.read_text(encoding="utf-8")
 
         # Spec §13: "non-ancestor → skip with warning"

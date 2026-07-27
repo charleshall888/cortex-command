@@ -8,8 +8,8 @@ mirror is still caught at test time.
 
 Scope: the three canonical lifecycle reference files in scope for the
 vertical-planning-adoption-as-replacement ticket. Each canonical file at
-``skills/lifecycle/references/<name>.md`` is byte-compared against its
-mirror at ``plugins/cortex-core/skills/lifecycle/references/<name>.md``.
+``skills/build/references/<name>.md`` is byte-compared against its
+mirror at ``plugins/cortex-core/skills/build/references/<name>.md``.
 """
 
 from __future__ import annotations
@@ -20,9 +20,9 @@ import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-CANONICAL_DIR = REPO_ROOT / "skills" / "lifecycle" / "references"
+CANONICAL_DIR = REPO_ROOT / "skills" / "build" / "references"
 MIRROR_DIR = (
-    REPO_ROOT / "plugins" / "cortex-core" / "skills" / "lifecycle" / "references"
+    REPO_ROOT / "plugins" / "cortex-core" / "skills" / "build" / "references"
 )
 
 # specify.md relocated to skills/refine/references/ (commit 8c2ec8ce); its

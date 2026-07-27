@@ -1,10 +1,10 @@
 """Marker-set parity + freshness + per-kind semantic checks for kept pauses.
 
 The kept-pause taxonomy has a single durable source of truth,
-``skills/lifecycle/references/kept-pauses-data.toml`` — one ``[[pause]]`` row per
+``skills/build/references/kept-pauses-data.toml`` — one ``[[pause]]`` row per
 ``<!-- pause: <slug> <kind> -->`` marker across ``skills/lifecycle`` and
 ``skills/refine``. The human-readable inventory
-``skills/lifecycle/references/kept-pauses.md`` is GENERATED from that data file by
+``skills/build/references/kept-pauses.md`` is GENERATED from that data file by
 the ``cortex-generate-kept-pauses`` generator (``generate_md``); never hand-edit
 it. This test replaces the retired line-anchored inventory-bullet scheme
 (``LINE_TOLERANCE`` / rough ``file:line`` anchors).
@@ -41,11 +41,11 @@ from pathlib import Path
 from cortex_command.lifecycle.generate_kept_pauses import generate_md
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-KEPT_PAUSES_MD = REPO_ROOT / "skills" / "lifecycle" / "references" / "kept-pauses.md"
+KEPT_PAUSES_MD = REPO_ROOT / "skills" / "build" / "references" / "kept-pauses.md"
 KEPT_PAUSES_DATA = (
-    REPO_ROOT / "skills" / "lifecycle" / "references" / "kept-pauses-data.toml"
+    REPO_ROOT / "skills" / "build" / "references" / "kept-pauses-data.toml"
 )
-SKILL_DIRS = ("skills/lifecycle", "skills/refine")
+SKILL_DIRS = ("skills/build", "skills/refine")
 
 # `<!-- pause: <slug> <kind> -->` marker. Strict slug (kebab) + kind classes so
 # the literal `<!-- pause: <slug> <kind> -->` placeholder text inside

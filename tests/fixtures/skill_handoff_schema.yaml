@@ -1,7 +1,7 @@
 handoff_fields:
   - name: discovery_source
     producer: discovery
-    consumers: [lifecycle, refine]
+    consumers: [refine]
   - name: research-considerations-file
     producer: refine
     consumers: [research]

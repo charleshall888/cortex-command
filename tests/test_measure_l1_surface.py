@@ -78,7 +78,7 @@ def _utility_rows() -> dict[str, int]:
 # - commit:          description only (no when_to_use)        — single-line plain
 # - critical-review: description + when_to_use (double-quoted escaped form)
 # - lifecycle:       description + when_to_use (double-quoted escaped form)
-CALIBRATION_SKILLS = ("commit", "lifecycle", "critical-review")
+CALIBRATION_SKILLS = ("commit", "build", "critical-review")
 
 
 @pytest.mark.parametrize("skill", CALIBRATION_SKILLS)

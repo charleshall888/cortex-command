@@ -1188,7 +1188,7 @@ def test_interrupted_hint_paused() -> None:
     h = hint("implement-paused:3/5", "my-feature")
     assert "Resume with" in h
     assert "3 of 5" in h
-    assert "/cortex-core:lifecycle my-feature" in h
+    assert "/cortex-core:build my-feature" in h
     # Active implement (no paused suffix) keeps the same hint shape.
     h2 = hint("implement:3/5", "my-feature")
     assert "Resume with" in h2

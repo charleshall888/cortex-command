@@ -57,10 +57,10 @@ def _window(text: str, anchor: str, size: int = 500) -> str:
 # (relpath, role) for each site that must resolve the model against feature
 # criticality and halt on resolve failure.
 _CRITICALITY_KEYED_SITES = [
-    ("skills/lifecycle/references/implement.md", "builder"),
-    ("skills/lifecycle/references/review.md", "review"),
-    ("skills/lifecycle/references/orchestrator-review.md", "orchestrator-fix"),
-    ("skills/lifecycle/references/competing-plans.md", "competing-plan"),
+    ("skills/build/references/implement.md", "builder"),
+    ("skills/build/references/review.md", "review"),
+    ("skills/build/references/orchestrator-review.md", "orchestrator-fix"),
+    ("skills/build/references/competing-plans.md", "competing-plan"),
 ]
 
 
@@ -93,7 +93,7 @@ def test_criticality_keyed_sites_halt_on_resolve_failure() -> None:
 # ---------------------------------------------------------------------------
 
 _SYNTHESIZER_SITES = [
-    "skills/lifecycle/references/competing-plans.md",
+    "skills/build/references/competing-plans.md",
     "skills/critical-review/SKILL.md",
 ]
 
@@ -200,9 +200,9 @@ def test_discovery_entry_point_points_to_fanout_and_binds_searcher() -> None:
 # R8 single-source structure: corrupted:true (Task 9a)
 # ---------------------------------------------------------------------------
 
-_CORRUPTED_CANONICAL = "skills/lifecycle/SKILL.md"
+_CORRUPTED_CANONICAL = "skills/build/SKILL.md"
 _CORRUPTED_CITATIONS = [
-    "skills/lifecycle/references/orchestrator-review.md",
+    "skills/build/references/orchestrator-review.md",
     "skills/refine/references/specify.md",
 ]
 # Distinctive fragment of the canonical rule body — must appear exactly once

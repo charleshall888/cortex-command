@@ -142,7 +142,7 @@ def test_d2_read_bare_relative_flags() -> None:
 
 def test_d2_cat_bash_bare_relative_flags() -> None:
     """`cat skills/.../check.sh | bash` flags SP002."""
-    text = "cat skills/lifecycle/references/_interactive_overnight_check.sh | bash -s -- x\n"
+    text = "cat skills/build/references/_interactive_overnight_check.sh | bash -s -- x\n"
     violations = scan_text(text, Path("implement.md"))
     assert any(v.code == "SP002" for v in violations), (
         f"bare-relative cat|bash target should flag SP002, got: {violations}"

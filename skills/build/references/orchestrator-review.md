@@ -28,28 +28,14 @@ model=$(cortex-resolve-model --role orchestrator-fix --criticality "$(cortex-lif
 
 On nonzero exit, halt and escalate. Dispatch with:
 
+Brief it with the flagged checklist item and what is wrong, the artifact path to read, and the phase's format requirements. It must **rewrite the entire artifact** to address the flag while preserving all correct existing content — never patch sections — and add nothing beyond what the phase requires. It ends with this envelope and no prose around it:
+
 ```
-You are fixing a flagged issue in the {phase} artifact for the {feature} feature.
-
-## Issue
-{the flagged checklist item and what is wrong}
-
-## Current Artifact
-Read cortex/lifecycle/{feature}/{artifact} for the current content.
-
-## Phase-Specific Checklist
-{the relevant checklist}
-
-## Instructions
-1. Rewrite the ENTIRE artifact to address the flagged issue, preserving all correct existing content — don't patch sections.
-2. Write the revised artifact to cortex/lifecycle/{feature}/{artifact}.
-3. End your return with this envelope, no prose before or after it:
-   verdict: revised | failed
-   files_changed: [<path>, ...]
-   rationale: <≤15 words>
-
-The artifact must conform to the {phase} phase reference's format. Do not add content beyond what the phase requires.
+verdict: revised | failed
+files_changed: [<path>, ...]
+rationale: <≤15 words>
 ```
+
 
 Rework needing user input (preference decides) → explain the issue, gather input, revise in place.
 

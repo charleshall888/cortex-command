@@ -3,7 +3,7 @@
 To run multiple lifecycle features at once ("lifecycle 120 and 121 in parallel"), use the `Agent` tool with `isolation: "worktree"` per feature:
 
 ```
-Agent(isolation: "worktree", prompt: "/cortex-core:lifecycle {feature}")
+Agent(isolation: "worktree", prompt: "/cortex-core:build {feature}")
 ```
 
 **Prefer this over manual `git worktree add`.** Same-repo worktrees resolve to `<repo>/.claude/worktrees/{feature}/` under the project trust scope, and the Agent tool creates and auto-cleans them. If manual creation is unavoidable, compute the target via `cortex-worktree-resolve {name}` — never hardcode it — and `git branch -d <name>` before retrying, since a failed checkout can orphan the branch.

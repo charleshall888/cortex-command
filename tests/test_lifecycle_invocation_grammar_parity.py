@@ -1,7 +1,7 @@
 """Docs-derived drift-guard for the /cortex-core:lifecycle invocation grammar.
 
-This test scrapes the advertised ``/cortex-core:lifecycle <form>`` occurrences
-from the LIVE doc bytes (``skills/lifecycle/SKILL.md`` + ``references/*.md``),
+This test scrapes the advertised ``/cortex-core:build <form>`` occurrences
+from the LIVE doc bytes (``skills/build/SKILL.md`` + ``references/*.md``),
 normalizes their placeholders to concrete test tokens, feeds each through
 ``cortex_command.lifecycle.parse_args.parse``, and asserts each classifies to
 the ``mode`` its SHAPE intends (a small independent shape->mode oracle). A doc
@@ -28,8 +28,8 @@ from cortex_command.lifecycle.parse_args import KNOWN_MODES, PHASE_TOKENS, parse
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SKILL_MD = REPO_ROOT / "skills" / "lifecycle" / "SKILL.md"
-REFERENCES_DIR = REPO_ROOT / "skills" / "lifecycle" / "references"
+SKILL_MD = REPO_ROOT / "skills" / "build" / "SKILL.md"
+REFERENCES_DIR = REPO_ROOT / "skills" / "build" / "references"
 
 # Capture 1-2 argument tokens after the command. Tokens exclude whitespace,
 # backticks, and double-quotes (the inline-code / quoted-string delimiters), so
@@ -37,7 +37,7 @@ REFERENCES_DIR = REPO_ROOT / "skills" / "lifecycle" / "references"
 # "does not exit `/cortex-core:lifecycle`") yields no match and is dropped. The
 # {1,2} bound keeps reserved two-token forms (``wontfix <slug>``) intact rather
 # than degrading them to their lone first word.
-_FORM_RE = re.compile(r"/cortex-core:lifecycle((?:[ \t]+[^\s`\"]+){1,2})")
+_FORM_RE = re.compile(r"/cortex-core:build((?:[ \t]+[^\s`\"]+){1,2})")
 
 # Placeholder -> canonical concrete test token. ``<phase>``/``{{phase}}`` map to
 # a real phase token so a ``<feature> <phase>`` form parses with a valid word #2.

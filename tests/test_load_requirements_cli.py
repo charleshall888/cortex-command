@@ -2,7 +2,7 @@
 
 Pins the selection set and the fallback string. Goldens for the uncontested
 behaviors (substring match, ordering, skip-suffix) are hand-authored from the
-prose algorithm in ``skills/lifecycle/references/load-requirements.md`` — NOT
+prose algorithm in ``skills/build/references/load-requirements.md`` — NOT
 captured from the verb's own output. For the behaviors the prose does not
 settle — the two documented corrections (empty-tag strip; load-Global-Context-
 in-fallback) and the GC-position-wins dedup rule — the expected values encode

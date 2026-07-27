@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Render skills/lifecycle/references/kept-pauses.md from the declarative
+"""Render skills/build/references/kept-pauses.md from the declarative
 kept-pause taxonomy data file (kept-pauses-data.toml).
 
 The TOML data file is the durable source of truth: one ``[[pause]]`` row per
-``<!-- pause: <slug> <kind> -->`` marker across ``skills/lifecycle`` and
+``<!-- pause: <slug> <kind> -->`` marker across ``skills/build`` and
 ``skills/refine``. This module renders a human-readable inventory from it. It is
 a source-tree tool (like the parity test it feeds), so it resolves both the data
 file and the output relative to this file's position in the repo, not to any
@@ -23,7 +23,7 @@ from pathlib import Path
 
 # cortex_command/lifecycle/generate_kept_pauses.py -> repo root is parents[2].
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_REFERENCES = _REPO_ROOT / "skills" / "lifecycle" / "references"
+_REFERENCES = _REPO_ROOT / "skills" / "build" / "references"
 _DATA_FILE = _REFERENCES / "kept-pauses-data.toml"
 _OUTPUT_FILE = _REFERENCES / "kept-pauses.md"
 
@@ -48,7 +48,7 @@ def generate_md(entries: list[dict]) -> str:
         "",
         "Canonical inventory of the deliberate, in-scope user-facing pauses across "
         "the lifecycle and refine skills. Generated from "
-        "`skills/lifecycle/references/kept-pauses-data.toml` — one row per "
+        "`skills/build/references/kept-pauses-data.toml` — one row per "
         "`<!-- pause: <slug> <kind> -->` marker. The `suppressed_by` column names a "
         "`lifecycle.config.md` key or `judgment` (model-conditional rendering), "
         "orthogonal to kind.",

@@ -143,7 +143,7 @@ def test_in_scan_scope_imports() -> None:
     # skills/**/*.md — depth-2
     ("skills/demo/SKILL.md", True),
     # skills/**/*.md — depth-3+ (the lifecycle/references case from spec)
-    ("skills/lifecycle/references/implement.md", True),
+    ("skills/build/references/implement.md", True),
     # docs/**/*.md — depth-1 (zero mid-dirs)
     ("docs/agentic-layer.md", True),
     # docs/**/*.md — depth-2
@@ -189,7 +189,7 @@ def test_staged_deep_file_violation_detected(tmp_path: Path) -> None:
     """A staged depth-3 in-scope file carrying an E101 violation is flagged.
 
     Sets up a minimal git repo with the contract-checker stub, stages a file
-    at depth 3 (skills/lifecycle/references/SKILL.md) that contains a real
+    at depth 3 (skills/build/references/SKILL.md) that contains a real
     missing-required-flag invocation, then asserts --staged exits 1 with E101.
     """
     import shutil
@@ -237,7 +237,7 @@ def test_staged_deep_file_violation_detected(tmp_path: Path) -> None:
     )
 
     # Create depth-3 in-scope file carrying a violation (missing --status, --type)
-    deep_dir = repo / "skills" / "lifecycle" / "references"
+    deep_dir = repo / "skills" / "build" / "references"
     deep_dir.mkdir(parents=True)
     deep_file = deep_dir / "implement.md"
     deep_file.write_text(textwrap.dedent("""\

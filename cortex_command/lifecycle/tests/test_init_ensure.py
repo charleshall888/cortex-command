@@ -7,8 +7,8 @@ R9 — console-script and ``python3 -m cortex_command.lifecycle.init_ensure``
 
 R10 — ``cortex-lifecycle-enter`` (the Step-2 wrapper that composes init-ensure
       in-process) is referenced in both the canonical
-      ``skills/lifecycle/SKILL.md`` and the regenerated mirror under
-      ``plugins/cortex-core/skills/lifecycle/SKILL.md``; the existing
+      ``skills/build/SKILL.md`` and the regenerated mirror under
+      ``plugins/cortex-core/skills/build/SKILL.md``; the existing
       dual-source-drift test suite exits 0. (The corpus-trim wave-2 rewiring
       replaced the standalone ``cortex-lifecycle-init-ensure`` prose call with
       the ``cortex-lifecycle-enter`` composition; the init-ensure binary and its
@@ -35,9 +35,9 @@ import pytest
 # [3] repo root
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 
-_CANONICAL_SKILL_MD = _REPO_ROOT / "skills" / "lifecycle" / "SKILL.md"
+_CANONICAL_SKILL_MD = _REPO_ROOT / "skills" / "build" / "SKILL.md"
 _MIRROR_SKILL_MD = (
-    _REPO_ROOT / "plugins" / "cortex-core" / "skills" / "lifecycle" / "SKILL.md"
+    _REPO_ROOT / "plugins" / "cortex-core" / "skills" / "build" / "SKILL.md"
 )
 _DUAL_SOURCE_TEST = _REPO_ROOT / "tests" / "test_dual_source_reference_parity.py"
 
@@ -240,7 +240,7 @@ def test_r9c_namespace_shape_equivalence(
 
 
 def test_r10a_canonical_skill_md_references_enter() -> None:
-    """R10(a): canonical skills/lifecycle/SKILL.md mentions cortex-lifecycle-enter."""
+    """R10(a): canonical skills/build/SKILL.md mentions cortex-lifecycle-enter."""
     assert _CANONICAL_SKILL_MD.is_file(), (
         f"Canonical SKILL.md missing: {_CANONICAL_SKILL_MD}"
     )
@@ -258,7 +258,7 @@ def test_r10a_canonical_skill_md_references_enter() -> None:
 
 
 def test_r10b_mirror_skill_md_references_enter() -> None:
-    """R10(b): plugins/cortex-core/skills/lifecycle/SKILL.md mentions cortex-lifecycle-enter."""
+    """R10(b): plugins/cortex-core/skills/build/SKILL.md mentions cortex-lifecycle-enter."""
     assert _MIRROR_SKILL_MD.is_file(), (
         f"Mirror SKILL.md missing: {_MIRROR_SKILL_MD}"
     )

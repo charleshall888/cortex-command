@@ -36,4 +36,4 @@ Act on `state`: **`overnight-active`** or **`lock-held`** (a live same-slug sess
 
 **vi.** On `suppressed`, `cd $(git rev-parse --show-toplevel)` is the only restoration needed. Surface the worktree path with a one-line warning: on session exit the harness prompts to keep or remove, and "remove" discards uncommitted work — commit or push first. Mid-session, `ExitWorktree action="keep"` clears state cleanly, or `cd $(git rev-parse --show-toplevel)` navigates back deferring the prompt.
 
-**vii.** Do not exit `/cortex-core:lifecycle` — the session is inside the worktree; proceed to §2.
+**vii.** Do not exit `/cortex-core:build` — the session is inside the worktree; proceed to §2.

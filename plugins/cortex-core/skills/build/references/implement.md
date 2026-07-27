@@ -60,27 +60,9 @@ Let in-flight tasks finish — don't abort them. Checkpoint the successes, ident
 <!-- pause: implement-batch-failure question -->
 Then ask the user via `AskUserQuestion`: **retry**, **skip** (mark failed, continue non-dependents), or **abort**.
 
-### Builder prompt template
+### Builder brief
 
-```
-You are implementing a single task for the {feature} feature.
-
-## Task
-{full task text from plan.md}
-
-## Architectural Context
-{2-3 sentences from plan Overview section}
-
-## Instructions
-1. Implement exactly what the task specifies.
-2. File paths must match the spec exactly — flag a wrong-looking path rather than silently deviating.
-3. Verify per the Verification field — and only that; do not run broader suites unless it names them.
-4. Commit via the Skill tool (`skill: "commit"`) — never raw `git commit` or `git -C`.
-5. Report as your final message: task name, status (completed/partial/failed), files modified, verification outcome, commit hash, deviations.
-6. Do not create files solely to satisfy your own verification — flag self-sealing checks in your exit report rather than self-certifying.
-
-If this task references the specification, read cortex/lifecycle/{feature}/spec.md. Do not implement other tasks, modify unlisted files, or add unspecified features.
-```
+Each builder gets: the task's full block from plan.md, 2–3 sentences of architectural context from the plan's Overview, and these standing instructions — implement exactly what the task specifies and nothing else; treat the task's file paths as authoritative and flag a wrong-looking one rather than silently deviating; verify per the Verification field and only that, never a broader suite it doesn't name; commit via the Skill tool (`skill: "commit"`), never raw `git commit` or `git -C`; read `cortex/lifecycle/{feature}/spec.md` only if the task references it; and flag any self-sealing check in the exit report rather than self-certifying. Its final message reports task name, status (completed/partial/failed), files modified, verification outcome, commit hash, and deviations.
 
 ### 3. Rework (Review Re-Entry)
 
@@ -94,6 +76,6 @@ When all tasks are `[x]` (short road: when every acceptance criterion is met):
 cortex-lifecycle-advance implement-transition --mode transition --feature {feature}
 ```
 
-The verb reads tier and criticality through the shared reducer, applies the implement→{review|complete} routing rule it owns, and records the transition idempotently. Route on the returned `state` — **`review`** or **`complete`** → proceed there (shared `error`/`refused`/command-not-found arms: SKILL.md § Advance-verb routing).
+The verb reads tier and criticality through the shared reducer, applies the implement→{review|complete} routing rule it owns, and records the transition idempotently. Route on the returned `state` per SKILL.md § Advance-verb routing — **`review`** or **`complete`** → proceed there.
 
 Proceed automatically; the transition fires on the gate, not user input. Batch N+1 waits for batch N, and every commit goes through `/cortex-core:commit` — orchestrator checkpoints and worktree sub-agents included, never raw git.

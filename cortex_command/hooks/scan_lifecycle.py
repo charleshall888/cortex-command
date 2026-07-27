@@ -115,7 +115,7 @@ def _interrupted_hint(encoded_phase: str, active_feature: str) -> str:
         Wire-format phase string as produced by :func:`_encode_phase`.
     active_feature:
         Feature slug of the active lifecycle, used to render the
-        ``/cortex-core:lifecycle <feature>`` resume command and the
+        ``/cortex-core:build <feature>`` resume command and the
         ``cortex/lifecycle/<feature>/review.md`` artifact path.
 
     Returns
@@ -145,7 +145,7 @@ def _interrupted_hint(encoded_phase: str, active_feature: str) -> str:
             return (
                 f"Interrupted: implementation in progress "
                 f"({checked} of {total} tasks done). "
-                f"Resume with /cortex-core:lifecycle {active_feature}."
+                f"Resume with /cortex-core:build {active_feature} (or /cortex-core:refine if it has no spec yet)."
             )
         return ""
     if encoded_phase.startswith("implement-rework:"):
@@ -153,7 +153,7 @@ def _interrupted_hint(encoded_phase: str, active_feature: str) -> str:
         return (
             f"Interrupted: review cycle {cycle} returned CHANGES_REQUESTED. "
             f"Re-enter implementation to address feedback. "
-            f"Resume with /cortex-core:lifecycle {active_feature}."
+            f"Resume with /cortex-core:build {active_feature} (or /cortex-core:refine if it has no spec yet)."
         )
     if encoded_phase == "escalated":
         return (
@@ -661,7 +661,7 @@ def _build_additional_context(
                     f"{header_line} — mismatches: {mismatch_count} total"
                 )
             footer_line = (
-                "Switch with /cortex-core:lifecycle resume <feature>."
+                "Switch with /cortex-core:build resume <feature>."
             )
             # Overhead = current context + header + footer + 3 separators.
             overhead = (
@@ -681,7 +681,7 @@ def _build_additional_context(
             header_line = (
                 f"{header_line} — mismatches: {mismatch_count} total"
             )
-        footer_line = "Resume with /cortex-core:lifecycle resume <feature>."
+        footer_line = "Resume with /cortex-core:build resume <feature>."
         overhead = len(header_line) + len(footer_line) + 2
         entry_lines, _, _ = _sort_and_truncate(incomplete, overhead)
         context = header_line

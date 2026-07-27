@@ -3,7 +3,7 @@
 The served lifecycle loop is two-sided: the wheel constant
 (``cortex_command/lifecycle/protocol.py``'s ``PROTOCOL_VERSION``) declares what
 the wheel serves; the plugin expectation file
-(``skills/lifecycle/references/protocol-expectation.txt``) declares the inclusive
+(``skills/build/references/protocol-expectation.txt``) declares the inclusive
 compat range the prose loop expects. Both sides move together *in this repo* — so
 at HEAD the served value MUST lie within the expected range. Skew is only a
 distribution-lag phenomenon (a shipped wheel older/newer than an installed
@@ -23,7 +23,7 @@ from cortex_command.lifecycle.protocol import PROTOCOL_VERSION
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 EXPECTATION_FILE = (
-    REPO_ROOT / "skills" / "lifecycle" / "references" / "protocol-expectation.txt"
+    REPO_ROOT / "skills" / "build" / "references" / "protocol-expectation.txt"
 )
 
 

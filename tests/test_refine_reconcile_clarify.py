@@ -10,7 +10,7 @@ shortcut:
     `cortex-lifecycle-state` CLI surface reports `complex`/`high`, so the §3b
     critical-review gate fires instead of silently skipping.
 
-  - R12 delegated: under `/cortex-core:lifecycle`, lifecycle logs a corrected
+  - R12 delegated: under `/cortex-core:build`, lifecycle logs a corrected
     post-Clarify `lifecycle_start(complex/high)` before Research. reconcile-
     clarify must then no-op (the state-based no-op guard suppresses it because
     the reduced state already reads complex/high — NOT via supersession), so
@@ -165,7 +165,7 @@ def test_reconcile_clarify_delegated_path_noops(
     monkeypatch.chdir(tmp_path)
     feature = "delegated-feat"
 
-    # Under /cortex-core:lifecycle, the corrected post-Clarify lifecycle_start
+    # Under /cortex-core:build, the corrected post-Clarify lifecycle_start
     # (complex/high) is logged before Research — moving the reduced state.
     events_log = _seed_events(
         tmp_path,

@@ -18,6 +18,16 @@ const NOTES = {
     ],
     exit: "PLANT: “one study — experienced engineers, 19% SLOWER with AI. I believe it. By the end you'll know the mechanism I blame.”",
   },
+  "sc-rig": {
+    beats: [
+      "(rig draws) “Everything between you and the fish. A rod, a reel, a line — and a few things I tied on myself tonight.”",
+      "(the line gets named; the brace lands) “Everybody argues about the line. You rent the same one as everyone in this room.” Then, on the brace: “THIS is the harness — the tool you're handed, plus whatever you build on top of it. It's the half you actually control, and nobody talks about it.”",
+      "(the leader sheds) “That wire leader was there because I couldn't hold a hard fight on bare line. Better line came along — and now it's just stiff, and the fish can see it.” Land the mechanism: “you build scaffolding around a weakness. The weakness goes. The scaffolding doesn't leave on its own — it sits there charging rent.”",
+      "(the float goes; the hook sinks and settles) “That float was the only thing holding me up in the chop. Every ripple, all night.” Land it: “don't be the one tossed around by every new thing — get anchored somewhere and go deep.” Then: “one workflow you know cold beats five you're always switching between. Get the boring part right — context — before you go build your own agent contraption.”",
+      "(thesis) SILENT — let “The rig gets simpler. The habit behind it doesn't.” land.",
+    ],
+    exit: "“So the model wasn't the variable — the rest of it was. That's the half you control. Here's the map of it.”",
+  },
   "sc-blueprint": {
     beats: [
       "(dock sketch + headline land) beat, then: “that's the job.”",
@@ -111,7 +121,7 @@ const NOTES = {
       "(tidy 20-line file) “Standing instructions, poured into every window. Twenty lines. Started perfect.”",
       "(ratchet to 6,000 — let them read the bloat) “Models don't need many instructions — they love writing them. Every ‘tune it’ adds a line, till it contradicts itself and needs a rule just to sort the rules.” SCAR: “writing the instructions is the one job I never hand over.”",
       "(sweep — the file stays up) “All six thousand lines ride in every window, and you re-pay them every turn. A bloated skill file means Monday starts tired.” SCAR: “if I could go back — hand-craft the simple skills myself, let Claude build the CLI around them.”",
-      "(the fix, beside the monster) “Same skill, rebuilt: a 30-line core, detail in files you open per task. Reviewing a plan? The window gets the core plus plans.md — nothing else.”",
+      "(the fix, beside the monster) “Same skill, rebuilt: a 30-line core, detail in files you open per task. Reviewing a plan? The window gets the core plus plans.md — nothing else.” CALLBACK to the rig: “half of what got cut was propping up something the model outgrew. That's the leader coming off — the habit stays, the scaffolding goes.”",
     ],
     exit: "“The instructions stay lean — and they stay yours. Now step to the end of the dock — it keeps something of its own out on the water.”",
   },

@@ -1,7 +1,7 @@
 """Three-way SERVED-pause-spec parity: TOML registry ↔ table ↔ envelope (R17).
 
 This is the *parity half* of spec R17 (the routing half landed with the loop
-rewiring). ``skills/lifecycle/references/kept-pauses-data.toml`` is, as of Phase C,
+rewiring). ``skills/build/references/kept-pauses-data.toml`` is, as of Phase C,
 the SERVED pause-spec registry: a row carrying ``served_from_state`` declares that
 the served ``cortex-lifecycle-next`` envelope for that lifecycle state renders the
 pause from the wheel-owned transition table's ``PauseSpec``.
@@ -57,7 +57,7 @@ from cortex_command.lifecycle import transition_table as tt
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 KEPT_PAUSES_DATA = (
-    REPO_ROOT / "skills" / "lifecycle" / "references" / "kept-pauses-data.toml"
+    REPO_ROOT / "skills" / "build" / "references" / "kept-pauses-data.toml"
 )
 
 # A dummy log path: build_served_envelope does no I/O on it (it is stringified for

@@ -35,6 +35,6 @@ cortex-lifecycle-record-pr-opened --feature {slug} --number {pr-number} --url {p
 
 Exit with this handoff and go no further:
 
-> PR open at `<url>`; merge on GitHub, then re-run `/cortex-core:lifecycle complete <slug>` to finalize.
+> PR open at `<url>`; merge on GitHub, then re-run `/cortex-core:build complete <slug>` to finalize.
 
 Don't poll — manual re-invocation is the gate.

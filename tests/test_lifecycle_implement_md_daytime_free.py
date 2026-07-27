@@ -2,14 +2,14 @@
 
 Guards against sibling-PR revert of the daytime-autonomous-pipeline removal
 (#246). If any future change re-introduces "cortex-daytime" or
-"Daytime Dispatch" into skills/lifecycle/references/implement.md, this test
+"Daytime Dispatch" into skills/build/references/implement.md, this test
 fails immediately — Adversarial F15 mitigation.
 """
 
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-IMPLEMENT_MD = REPO_ROOT / "skills" / "lifecycle" / "references" / "implement.md"
+IMPLEMENT_MD = REPO_ROOT / "skills" / "build" / "references" / "implement.md"
 
 
 def test_implement_md_is_daytime_free() -> None:

@@ -105,10 +105,10 @@ KNOWN_PROSE_COLLISIONS: tuple[tuple[str, str], ...] = (
         "cortex/lifecycle/cortex-init-scaffolds-cortex-gitignore-for/review.md",
     ),
 )
-# When prose abbreviates `skills/lifecycle/references/<file>.md` to
+# When prose abbreviates `skills/build/references/<file>.md` to
 # `lifecycle/references/<file>.md`, the slug `references` is a path component
 # inside the lifecycle SKILL, not a feature directory. Same for any future
-# non-feature subdirectory under skills/lifecycle/, and for runtime-state dirs
+# non-feature subdirectory under skills/build/, and for runtime-state dirs
 # under cortex/lifecycle/ that are gitignored by design (`sessions/` holds
 # per-session overnight state — a path there is a runtime pointer, not a
 # feature citation, and can never resolve in a fresh clone). Exclude these

@@ -3,7 +3,7 @@
 Unlike the sibling ``test_cortex_*_parity.py`` files, this is **not** a
 golden-replay parity test: there is no original bin script to replay — the
 "original" is the LLM-hand-executed prose in
-``skills/lifecycle/references/load-requirements.md``. The replay harness in
+``skills/build/references/load-requirements.md``. The replay harness in
 ``tests/test_parity_contract.py`` therefore does not apply.
 
 Instead this file pins the verb's deploy surface (bin/ wrapper present and

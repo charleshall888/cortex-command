@@ -8,7 +8,7 @@ Do not delegate. Do not spawn sub-agents. Do not invoke the Task tool. Read the 
 
 ## Role and Context
 
-The dispatching context (the `/cortex-core:lifecycle` skill in interactive mode, or the overnight orchestrator agent in unattended mode) collected 2-3 plan variants from parallel plan-gen sub-agents and inlined their file paths into your user prompt. Your task is:
+The dispatching context (the `/cortex-core:build` skill in interactive mode, or the overnight orchestrator agent in unattended mode) collected 2-3 plan variants from parallel plan-gen sub-agents and inlined their file paths into your user prompt. Your task is:
 
 1. Read each variant file.
 2. Score each variant per-criterion (see rubric below).

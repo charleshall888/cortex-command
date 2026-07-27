@@ -2,7 +2,7 @@
 
 The worktree entry machinery (§1 Step A + the §1a interactive-worktree
 sequence) moved out of ``implement.md`` into
-``skills/lifecycle/references/worktree-entry.md`` in the
+``skills/build/references/worktree-entry.md`` in the
 lifecycle-corpus-trim-wave-2 route-conditional extraction: trunk-mode runs
 no longer load it. ``implement.md`` §1 keeps the picker (its labels are the
 ``EnterWorktree`` authorization handoff) and hands off the entry-mode marker
@@ -41,9 +41,9 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-IMPLEMENT_MD = REPO_ROOT / "skills" / "lifecycle" / "references" / "implement.md"
+IMPLEMENT_MD = REPO_ROOT / "skills" / "build" / "references" / "implement.md"
 WORKTREE_ENTRY_MD = (
-    REPO_ROOT / "skills" / "lifecycle" / "references" / "worktree-entry.md"
+    REPO_ROOT / "skills" / "build" / "references" / "worktree-entry.md"
 )
 
 # Read once at module scope per the task specification.

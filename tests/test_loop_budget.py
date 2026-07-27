@@ -1,7 +1,7 @@
 """Loop-body token budget (epic 371 Phase C, Task 19 / R17).
 
 The interactive lifecycle **loop body** — the always-resident prose the
-`/cortex-core:lifecycle` skill loads every session (`skills/lifecycle/SKILL.md`)
+`/cortex-core:build` skill loads every session (`skills/build/SKILL.md`)
 — is bounded to **≤ 4000 tokens**. This is a test-gated ceiling, a guardrail
 against future bloat as the served next/advance routing accretes, NOT a tight
 fit: the R17 line-item map documents *where* each absorbed block landed, and the
@@ -30,7 +30,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 # The resident interactive-loop body.
-LOOP_BODY = REPO_ROOT / "skills" / "lifecycle" / "SKILL.md"
+LOOP_BODY = REPO_ROOT / "skills" / "build" / "SKILL.md"
 
 # The test-gated ceiling (R17). Tokens, not bytes.
 TOKEN_CEILING = 4000

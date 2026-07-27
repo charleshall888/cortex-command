@@ -124,11 +124,11 @@ Research fan-out is always parallel and sized by a tier×criticality matrix (ran
 
 ## Workflow Narratives
 
-> **See also:** [Interactive Phases Guide](interactive-phases.md) — covers what questions to expect, what each phase produces, and how artifacts flow between `/cortex-core:lifecycle`, `/cortex-core:refine`, and `/cortex-core:discovery`.
+> **See also:** [Interactive Phases Guide](interactive-phases.md) — covers what questions to expect, what each phase produces, and how artifacts flow between `/cortex-core:build`, `/cortex-core:refine`, and `/cortex-core:discovery`.
 
 ### 1. Structured Single-Feature
 
-The most common path. The user asks `/cortex-core:dev` what to work on, or names a specific feature. `/cortex-core:dev` classifies the request as a single non-trivial feature and routes to `/cortex-core:lifecycle feature-name`. The lifecycle skill starts with a Clarify phase — focused questions about scope, complexity, and criticality — then runs research (codebase exploration plus a read of `cortex/requirements/project.md`), then moves to specify, where an interview surfaces acceptance criteria. Planning produces a task breakdown that the orchestrator reviews before approval. Implementation proceeds as a series of commits, one per task *(PreToolUse hook: `hooks/cortex-validate-commit.sh` fires here and blocks any `git commit` whose message fails the style rules)*. If the feature is complex tier (6+ files, novel pattern) or high/critical criticality, the review phase runs a multi-agent verdict — four Sonnet reviewers in parallel, then an Opus cross-validator. On completion, `events.log` is updated, the backlog item is closed, and a PR is created.
+The most common path. The user asks `/cortex-core:dev` what to work on, or names a specific feature. `/cortex-core:dev` classifies the request as a single non-trivial feature and routes to `/cortex-core:refine feature-name` then `/cortex-core:build feature-name`. The lifecycle skill starts with a Clarify phase — focused questions about scope, complexity, and criticality — then runs research (codebase exploration plus a read of `cortex/requirements/project.md`), then moves to specify, where an interview surfaces acceptance criteria. Planning produces a task breakdown that the orchestrator reviews before approval. Implementation proceeds as a series of commits, one per task *(PreToolUse hook: `hooks/cortex-validate-commit.sh` fires here and blocks any `git commit` whose message fails the style rules)*. If the feature is complex tier (6+ files, novel pattern) or high/critical criticality, the review phase runs a multi-agent verdict — four Sonnet reviewers in parallel, then an Opus cross-validator. On completion, `events.log` is updated, the backlog item is closed, and a PR is created.
 
 ### 2. Multiple Features via /cortex-overnight:overnight
 
@@ -140,7 +140,7 @@ In the evening, the user runs `/cortex-overnight:overnight` to plan a batch of f
 
 ### 4. Discovery to Backlog
 
-The user has a vague topic or area of uncertainty rather than a concrete feature. `/cortex-core:discovery topic` runs a deep research phase — exploring the codebase, reading requirements, and potentially searching external sources — then produces a structured spec and decomposes the work into discrete backlog tickets. Each ticket gets YAML frontmatter that may include `research:` and `spec:` fields pointing to the discovery artifacts. When the user later runs `/cortex-backlog:backlog pick` on one of those tickets and routes it through `/cortex-core:lifecycle`, the lifecycle skill detects the pre-existing artifacts and skips the research and specify phases, bootstrapping directly into planning.
+The user has a vague topic or area of uncertainty rather than a concrete feature. `/cortex-core:discovery topic` runs a deep research phase — exploring the codebase, reading requirements, and potentially searching external sources — then produces a structured spec and decomposes the work into discrete backlog tickets. Each ticket gets YAML frontmatter that may include `research:` and `spec:` fields pointing to the discovery artifacts. When the user later runs `/cortex-backlog:backlog pick` on one of those tickets and routes it through `/cortex-core:build`, the lifecycle skill detects the pre-existing artifacts and skips the research and specify phases, bootstrapping directly into planning.
 
 ---
 
@@ -241,17 +241,17 @@ For overnight runner operations and architecture (state schemas, recovery, allow
 
 ## Integration Points
 
-1. **events.log** — Append-only per-feature lifecycle journal stored at `cortex/lifecycle/{feature}/events.log`. Phase transitions write structured entries; `/cortex-core:lifecycle resume` reads the log to determine which phase to restart from. `/cortex-overnight:morning-review` scans it to identify completions. Powers all progress reporting.
+1. **events.log** — Append-only per-feature lifecycle journal stored at `cortex/lifecycle/{feature}/events.log`. Phase transitions write structured entries; `/cortex-core:build resume` reads the log to determine which phase to restart from. `/cortex-overnight:morning-review` scans it to identify completions. Powers all progress reporting.
 
 2. **cortex-scan-lifecycle hook** — Runs at SessionStart and injects `LIFECYCLE_SESSION_ID`, the active feature's current phase, and overnight execution state into the session context. This is what makes the system appear continuous across `/clear` invocations and new terminal sessions.
 
 3. **cortex-validate-commit hook** — Pre-execution gate on all `git commit` commands. Enforces imperative mood, ≤72-character subject line, no trailing period, and a blank line before the body.
 
-4. **Backlog index** (`cortex/backlog/index.md`) — Generated locally and **not version-controlled**; regenerated on demand by `/cortex-backlog:backlog reindex`, on every `cortex-update-item`, and by consumers that read it when it is absent. `/cortex-core:dev` reads it during triage to identify ready work. Items are auto-closed by `/cortex-core:lifecycle complete` and `/cortex-overnight:morning-review`, keeping the index current without manual intervention.
+4. **Backlog index** (`cortex/backlog/index.md`) — Generated locally and **not version-controlled**; regenerated on demand by `/cortex-backlog:backlog reindex`, on every `cortex-update-item`, and by consumers that read it when it is absent. `/cortex-core:dev` reads it during triage to identify ready work. Items are auto-closed by `/cortex-core:build complete` and `/cortex-overnight:morning-review`, keeping the index current without manual intervention.
 
 5. **pipeline-state.json** — Persistent execution state written by the overnight runner's `cortex_command/pipeline/state.py`. Records which features are complete, in-progress, or blocked. Enables the overnight runner to resume interrupted execution — features already merged are skipped when the runner restarts.
 
-6. **Discovery bootstrap** — When `/cortex-core:lifecycle` starts a feature, it checks the backlog item's YAML frontmatter for `research:` and `spec:` fields. If those fields point to existing artifacts from a prior `/cortex-core:discovery` run, it copies them into `cortex/lifecycle/{feature}/` and skips the research and specify phases entirely, saving hours of redundant exploration.
+6. **Discovery bootstrap** — When `/cortex-core:build` starts a feature, it checks the backlog item's YAML frontmatter for `research:` and `spec:` fields. If those fields point to existing artifacts from a prior `/cortex-core:discovery` run, it copies them into `cortex/lifecycle/{feature}/` and skips the research and specify phases entirely, saving hours of redundant exploration.
 
 7. **requirements context** — `cortex/requirements/project.md` and per-area requirement files inform both lifecycle research and discovery sessions. The `/cortex-core:requirements` skill maintains them. They act as a stable design compass that keeps individual feature work aligned with broader project goals.
 

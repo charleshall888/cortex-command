@@ -37,7 +37,7 @@ CANONICAL_FIXTURE = repo_root() / "tests" / "fixtures" / "skill_trigger_phrases.
 # utterances and therefore need disambiguation-grade routing precision.
 ROUTING_PRESSURE_CLUSTER = (
     "dev",
-    "lifecycle",
+    "build",
     "refine",
     "research",
     "discovery",

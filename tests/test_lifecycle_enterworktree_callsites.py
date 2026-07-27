@@ -1,6 +1,6 @@
 """Parity test pinning EnterWorktree call-site co-location with its preconditions.
 
-Every literal ``EnterWorktree(...)`` call site under ``skills/lifecycle/``
+Every literal ``EnterWorktree(...)`` call site under ``skills/build/``
 must be co-located with the worktree-creation and precondition-probe
 surface that the auto-enter sequence depends on. Concretely, within
 ±60 lines of each call site we require:
@@ -37,7 +37,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).parent.parent
-SKILLS_LIFECYCLE_DIR = REPO_ROOT / "skills" / "lifecycle"
+SKILLS_LIFECYCLE_DIR = REPO_ROOT / "skills" / "build"
 
 # Regex matches a literal ``EnterWorktree(`` token, optionally with
 # whitespace between the identifier and the open-paren. The open-paren
@@ -67,7 +67,7 @@ _PRECONDITION_TOKENS = (
 
 
 def _iter_lifecycle_markdown_files() -> list[Path]:
-    """Return all markdown files under ``skills/lifecycle/`` for scanning."""
+    """Return all markdown files under ``skills/build/`` for scanning."""
     return sorted(SKILLS_LIFECYCLE_DIR.rglob("*.md"))
 
 
@@ -109,7 +109,7 @@ def test_at_least_one_enterworktree_callsite_exists() -> None:
     """At least one literal ``EnterWorktree(`` call site must exist.
 
     The auto-enter sequence is the central deliverable of the
-    auto-enter lifecycle. Zero call sites under ``skills/lifecycle/``
+    auto-enter lifecycle. Zero call sites under ``skills/build/``
     means the wiring has been removed — surface that loud and clear
     rather than letting the per-call-site loop silently pass on an
     empty iteration.
@@ -120,7 +120,7 @@ def test_at_least_one_enterworktree_callsite_exists() -> None:
         f"{SKILLS_LIFECYCLE_DIR.relative_to(REPO_ROOT)}. The auto-enter "
         "wiring landed by T10 of the lifecycle-implement-auto-enter-"
         "worktree-via feature has been removed. Restore the call site "
-        "in ``skills/lifecycle/references/implement.md`` §1a step v."
+        "in ``skills/build/references/implement.md`` §1a step v."
     )
 
 

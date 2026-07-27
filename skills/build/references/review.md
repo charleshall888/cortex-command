@@ -20,46 +20,18 @@ On nonzero exit, halt and escalate. Dispatch read-only with the prompt below, su
 
 **Single-writer rule** — only the reviewer role writes `review.md`: this sub-task plus §3's missing-drift re-dispatch and §3a's cap-2 re-dispatches. Any sub-agent the reviewer spawns is read-only and returns findings as a message envelope.
 
+The reviewer is read-only and must modify no source file. Hand it the spec path to read, the §1 requirements path list (or the verb's no-match note), the changed-file list, and the §1 test baseline — summary and log path only, never the transcript, and it never re-runs the suite.
+
+**Stage 1 — spec compliance**: per requirement, read the relevant source, check acceptance criteria, rate PASS / FAIL / PARTIAL. Any FAIL skips Stage 2. **Stage 2 — code quality** (only when no FAIL): naming consistency, error handling, whether the plan's verification steps were executed, pattern consistency. **Requirements drift** is an observation that does not affect the verdict: `none` when the implementation matches the requirements and adds no unreflected behavior, `detected` when it introduces or changes behavior they don't capture.
+
+It writes `cortex/lifecycle/{feature}/review.md` with a `## Requirements Drift` section carrying **State** (`none` | `detected`), **Findings** (one bullet per drifted item, or "None"), and **Update needed** (a requirements file path, or "None"). On `detected` it adds `## Suggested Requirements Update`, one entry per drifted file, each naming **File**, **Section** (an existing heading), and **Content** — the exact 1–3 lines to append, written as they should appear rather than described.
+
+It ends with a Verdict JSON object using exactly these field names — not "overall"/"result"/"status", and not the Stage-1 PASS/FAIL values:
+
 ```
-You are reviewing the {feature} implementation against its specification. Read-only — do NOT modify any source file.
-
-## Specification
-Read `{spec_path}`.
-
-## Project Requirements
-{the path list cortex-load-requirements printed in §1, one per line; if it emitted its no-match note, relay that instead}
-
-## Changed Files
-{files modified during implementation}
-
-## Test Baseline
-{the §1 pass/fail summary + log path — never the full transcript; do not re-run the suite}
-
-## Stage 1 — Spec Compliance
-Per requirement: read the relevant source, check acceptance criteria, rate PASS / FAIL / PARTIAL. Any FAIL → skip Stage 2 and write the verdict.
-
-## Stage 2 — Code Quality (only when no FAIL)
-Assess naming consistency, error handling, test coverage (were the plan's verification steps executed?), and pattern consistency with the project.
-
-## Requirements Drift (observation only — does not affect the verdict)
-Compare the implementation to the project requirements above: `none` if it matches all and adds no unreflected behavior; `detected` if it introduces or changes behavior the requirements don't capture.
-
-## Write review.md
-Write to `cortex/lifecycle/{feature}/review.md`, including a `## Requirements Drift` section:
-
-**State**: none | detected
-**Findings**: one bullet per drifted item, or "None"
-**Update needed**: requirements file path, or "None"
-
-When State is `detected`, add a `## Suggested Requirements Update` section (omit when `none`; one per drifted file):
-
-**File**: e.g. cortex/requirements/project.md
-**Section**: existing heading, e.g. "## Quality Attributes"
-**Content**: exact 1-3 line markdown to append, as it should appear (not a description)
-
-End with a Verdict — a JSON object using exactly these fields (not "overall"/"result"/"status"; not the Stage-1 "PASS"/"FAIL" values):
 {"verdict": "APPROVED"|"CHANGES_REQUESTED"|"REJECTED", "cycle": <int>, "issues": [<strings>], "requirements_drift": "none"|"detected"}
 ```
+
 
 Flag minor code-quality issues as PARTIAL with notes — they compound. If uncertain about drift, log `detected` with a note: a false positive auto-applies a small update, a false negative silently hides drift.
 
@@ -83,7 +55,7 @@ Section missing or unparseable → re-dispatch the reviewer to append it in the 
 cortex-lifecycle-advance review-verdict --feature <name> --verdict <APPROVED|CHANGES_REQUESTED|REJECTED> --cycle <N> --drift <none|detected> [--breach --retries <N>]
 ```
 
-The verb owns this arm's ordered emissions (verdict record, breach row when `--breach`, then the routed transition) and their idempotent replay. Add `--breach` only when §3a exhausted its retries. Route on the returned `state` (shared `error`/`refused`/command-not-found arms: SKILL.md § Advance-verb routing):
+The verb owns this arm's ordered emissions (verdict record, breach row when `--breach`, then the routed transition) and their idempotent replay. Add `--breach` only when §3a exhausted its retries. Route on the returned `state` per SKILL.md § Advance-verb routing:
 
 - **`approved`** → Complete: announce briefly and auto-advance.
 - **`rework`** → Implement: re-enter for the flagged tasks with reviewer feedback.

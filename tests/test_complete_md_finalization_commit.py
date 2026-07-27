@@ -2,7 +2,7 @@
 
 Slices the ``<!-- finalization-commit-step -->`` …
 ``<!-- /finalization-commit-step -->`` region out of the canonical
-``skills/lifecycle/references/complete.md`` and asserts:
+``skills/build/references/complete.md`` and asserts:
 
 After #331 Phase 2 the Step-11a staging mechanics (the enumerated ``git add``,
 the resolver lookup, the ``-u`` sweep, the "never directory-glob" warnings)
@@ -92,7 +92,7 @@ def _extract_region(text: str) -> str:
 def test_finalization_commit_region_positive_tokens() -> None:
     """All required tokens must be present within the anchored region."""
     repo_root = _repo_root()
-    complete_md = repo_root / "skills" / "lifecycle" / "references" / "complete.md"
+    complete_md = repo_root / "skills" / "build" / "references" / "complete.md"
     assert complete_md.exists(), f"complete.md missing at {complete_md}"
 
     region = _extract_region(complete_md.read_text(encoding="utf-8"))
@@ -142,7 +142,7 @@ def test_finalization_commit_region_positive_tokens() -> None:
 def test_finalization_commit_region_negative_tokens() -> None:
     """Forbidden tokens must NOT appear within the anchored region."""
     repo_root = _repo_root()
-    complete_md = repo_root / "skills" / "lifecycle" / "references" / "complete.md"
+    complete_md = repo_root / "skills" / "build" / "references" / "complete.md"
     assert complete_md.exists(), f"complete.md missing at {complete_md}"
 
     region = _extract_region(complete_md.read_text(encoding="utf-8"))

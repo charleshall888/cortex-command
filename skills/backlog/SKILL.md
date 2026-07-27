@@ -28,7 +28,7 @@ Run `cortex-generate-backlog-index` if `cortex/backlog/index.md` is missing (a l
 
 ### pick
 
-Run `cortex-backlog-ready`. Take the first non-empty priority group (`critical → contingent`) and present it via `AskUserQuestion` — one item offered directly, several as the top 4 by priority (label `"NNN — Title"`) noting omissions, none as "the backlog is clear". Then ask what to do: **Start lifecycle** (`/cortex-core:lifecycle {{item}}`), **View details**, or **Mark in-progress** (status `in_progress`, bump `updated`).
+Run `cortex-backlog-ready`. Take the first non-empty priority group (`critical → contingent`) and present it via `AskUserQuestion` — one item offered directly, several as the top 4 by priority (label `"NNN — Title"`) noting omissions, none as "the backlog is clear". Then ask what to do: **Start work** (`/cortex-core:refine {{item}}`, or `/cortex-core:build {{item}}` when already refined), **View details**, or **Mark in-progress** (status `in_progress`, bump `updated`).
 
 ### ready
 

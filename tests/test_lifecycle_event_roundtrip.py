@@ -186,16 +186,15 @@ _RAW_EMISSION_RE = re.compile(
 # so their prose must carry ZERO raw-emission surfaces. Tasks 10-12 append their
 # cluster files here (review.md, implement.md, specify.md) as each lands.
 ZERO_SWEEP_FILES: tuple[str, ...] = (
-    "skills/lifecycle/references/plan.md",
-    "skills/lifecycle/references/implement.md",
-    "skills/lifecycle/references/review.md",
+    "skills/build/references/plan.md",
+    "skills/build/references/implement.md",
+    "skills/build/references/review.md",
     "skills/refine/references/specify.md",
     # Task 19 (R17) routed the interactive loop via next/advance: refine-delegation
     # dropped its clarify→research/research→specify phase_transition typed
     # subcommand, and complete.md's cluster is fully verb-routed — both now carry
     # zero raw event-emission surfaces.
-    "skills/lifecycle/references/refine-delegation.md",
-    "skills/lifecycle/references/complete.md",
+    "skills/build/references/complete.md",
 )
 
 
@@ -533,27 +532,9 @@ def test_every_subcommand_event_has_a_golden_case() -> None:
 
 def test_found_match_is_anti_vacuous_on_wrong_count() -> None:
     """A deliberately-wrong expected count makes cross_validate fail loud."""
-    plan = REPO_ROOT / "skills/lifecycle/references/plan.md"
+    plan = REPO_ROOT / "skills/build/references/plan.md"
     with pytest.raises(CrossValidationError):
         cross_validate(plan, "plan_approved", 99)
-
-
-def test_refine_delegation_no_longer_emits_typed_phase_transition() -> None:
-    """R17: the served loop (Task 19) routed refine-delegation off the typed
-    phase-transition subcommand. The clarify→research/research→specify
-    breadcrumbs are now derived (served by cortex-lifecycle-next) and the
-    boundary-carrying specify→plan row stays verb-owned (spec-approve), so the
-    delegation prose carries no typed phase_transition invocation at all — the
-    grep(b) rewiring gate (`grep -rn 'cortex-lifecycle-event phase-transition'
-    skills/` == 0) at the file level.
-    """
-    path = REPO_ROOT / "skills/lifecycle/references/refine-delegation.md"
-    text = path.read_text(encoding="utf-8")
-    assert "cortex-lifecycle-event phase-transition" not in text, (
-        "refine-delegation.md must not invoke the typed phase-transition "
-        "subcommand after the served-loop rewiring (R17)"
-    )
-
 
 def test_refine_prose_off_legacy_spec_approve_verb() -> None:
     """R17 (spec req-9): the refine skill tree commands the SERVED

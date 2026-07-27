@@ -28,7 +28,7 @@ TRUTH_TABLE = [
     # Row 2 — depth-2 against dir/**/*.ext.
     ("depth-2", "docs/internals/pipeline.md", "docs/**/*.md", True),
     # Row 3 — depth-≥3 against dir/**/*.ext.
-    ("depth-3", "skills/lifecycle/references/implement.md", "skills/**/*.md", True),
+    ("depth-3", "skills/build/references/implement.md", "skills/**/*.md", True),
     # Row 4 — single-* over-scan rejection (* must not cross '/').
     ("star-overscan-reject", "cortex/backlog/sub/x.md", "cortex/backlog/*.md", False),
     # Row 5 — deep literal-prefix single-* (interior-segment anchoring).
@@ -72,7 +72,7 @@ def test_matches_any_glob_truth_table(rel_path: str, glob: str, expected: bool) 
 def test_matches_any_glob_returns_true_when_any_glob_matches() -> None:
     """A path matching the 2nd glob in a tuple is in-scope (any-semantics)."""
     globs = ("cortex/backlog/*.md", "skills/**/*.md")
-    assert matches_any_glob("skills/lifecycle/references/implement.md", globs) is True
+    assert matches_any_glob("skills/build/references/implement.md", globs) is True
 
 
 def test_matches_any_glob_false_when_no_glob_matches() -> None:

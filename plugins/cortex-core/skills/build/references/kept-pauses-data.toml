@@ -3,7 +3,7 @@
 # One [[pause]] row per `<!-- pause: <slug> <kind> -->` marker across
 # skills/lifecycle and skills/refine (18 markers as of Phase B, epic 371).
 # The `cortex-generate-kept-pauses` console script renders
-# skills/lifecycle/references/kept-pauses.md from this file. Task 5 flips the
+# skills/build/references/kept-pauses.md from this file. Task 5 flips the
 # parity test to exact marker-set equality against these `id` values, so every
 # id here MUST match a marker slug byte-for-byte — never invent, rename, or drop.
 #
@@ -36,21 +36,21 @@
 [[pause]]
 id = "empty-lifecycle-offer"
 kind = "question"
-file = "skills/lifecycle/SKILL.md"
+file = "skills/build/SKILL.md"
 anchor = "Step 1: Read the served state (resolver `empty` state)"
 rationale = "No topic given and incomplete lifecycles exist: offer them for the operator to pick, then re-run."
 
 [[pause]]
 id = "ambiguous-backlog-pick"
 kind = "question"
-file = "skills/lifecycle/SKILL.md"
+file = "skills/build/SKILL.md"
 anchor = "Step 1: Read the served state (resolver `ambiguous-backlog` state)"
 rationale = "Backlog match is ambiguous: present candidates for the operator to disambiguate, then re-run."
 
 [[pause]]
 id = "complete-orphan-pr-pick"
 kind = "question"
-file = "skills/lifecycle/references/complete.md"
+file = "skills/build/references/complete.md"
 anchor = "Router verdict (`orphan_ambiguous`)"
 rationale = "Multiple orphan PRs match interactive/<slug>: ask which PR to finalize before writing pr.json."
 
@@ -58,21 +58,21 @@ rationale = "Multiple orphan PRs match interactive/<slug>: ask which PR to final
 id = "implement-branch-pick"
 kind = "config-conditional"
 suppressed_by = "branch-mode"
-file = "skills/lifecycle/references/implement.md"
+file = "skills/build/references/implement.md"
 anchor = "1. Pre-flight (`prompt` state picker)"
 rationale = "Fallback branch picker on main; suppressed when branch-mode is set, the tree is clean, and no live worktree exists for the slug."
 
 [[pause]]
 id = "implement-batch-failure"
 kind = "question"
-file = "skills/lifecycle/references/implement.md"
+file = "skills/build/references/implement.md"
 anchor = "Failure Handling"
 rationale = "A batch task failed: ask retry / skip / abort before continuing non-dependent tasks."
 
 [[pause]]
 id = "resume-feature-pick"
 kind = "question"
-file = "skills/lifecycle/SKILL.md"
+file = "skills/build/SKILL.md"
 anchor = "Situational references (listing incomplete features)"
 rationale = "Multiple incomplete features and none specified: list them and ask which to resume."
 
@@ -80,14 +80,14 @@ rationale = "Multiple incomplete features and none specified: list them and ask 
 id = "complete-test-command-ask"
 kind = "question"
 suppressed_by = "test-command"
-file = "skills/lifecycle/references/complete-first-run.md"
+file = "skills/build/references/complete-first-run.md"
 anchor = "Step 1 — Tests"
 rationale = "Config present but without test-command: ask whether tests exist; suppressed when test-command is set (just run it)."
 
 [[pause]]
 id = "complete-merge-wait"
 kind = "phase-exit-wait"
-file = "skills/lifecycle/references/complete-first-run.md"
+file = "skills/build/references/complete-first-run.md"
 anchor = "Step 5 — Phase-exit pause"
 rationale = "Hand off after opening the PR: operator merges on GitHub then re-invokes complete; manual re-invocation is the gate."
 
@@ -95,7 +95,7 @@ rationale = "Hand off after opening the PR: operator merges on GitHub then re-in
 id = "plan-approval"
 kind = "relayed-consent"
 served_from_state = "plan"
-file = "skills/lifecycle/references/plan.md"
+file = "skills/build/references/plan.md"
 anchor = "4. Approval (merged branch/dispatch surface)"
 rationale = "Substantive plan approval merged with branch/dispatch selection; overnight relays the operator's pre-authorized consent."
 
@@ -103,14 +103,14 @@ rationale = "Substantive plan approval merged with branch/dispatch selection; ov
 id = "backlog-already-complete-pick"
 kind = "config-conditional"
 suppressed_by = "backlog.backend"
-file = "skills/lifecycle/references/backlog-writeback.md"
+file = "skills/build/references/backlog-writeback.md"
 anchor = "Backlog Status Check"
 rationale = "Item already marked complete: ask Close vs Continue; the backend arm gates the write-back (none skips it) and overnight defaults to Continue without asking."
 
 [[pause]]
 id = "backlog-ambiguous-slug-reinvoke"
 kind = "question"
-file = "skills/lifecycle/references/backlog-writeback.md"
+file = "skills/build/references/backlog-writeback.md"
 anchor = "Exit-2 (ambiguous slug, canonical)"
 rationale = "Ambiguous slug on write-back: present the stderr candidates and ask the operator to re-invoke disambiguated."
 

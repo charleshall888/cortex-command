@@ -248,6 +248,29 @@
       if (b === 4) sec.classList.add("spotlight"); // dim everything but the two bars
     },
 
+    /* the vocabulary scene. Nothing is ever deleted to zero — shed tackle
+       settles on the bottom, faint but still there, because "you need no
+       harness" is not the claim. The drop line lengthens to keep the line
+       continuous as pieces come off it. */
+    "sc-rig": (sec, b) => {
+      const g = (cls) => document.querySelector("#rig-svg ." + cls);
+      const drop = (h) => g("rg-drop").setAttribute("height", h);
+      if (b === 0) {
+        buildRig();
+        sec.classList.remove("named");
+      }
+      if (b === 1) sec.classList.add("named"); // "the line" → "the model"; the brace lands
+      if (b === 2) {
+        g("rg-leader").classList.add("shed");
+        drop(100); // bare line closes the gap the leader left
+      }
+      if (b === 3) {
+        g("rg-float").classList.add("shed");
+        g("rg-terminal").classList.add("deep"); // nothing holds it up now — it finds the fish
+        drop(186);
+      }
+    },
+
     "sc-blueprint": (sec, b) => {
       if (b === 0) state.bpDock = buildDock(document.getElementById("blueprint-dock"), { sketch: true });
     },
@@ -850,6 +873,88 @@
      No bars: your lean skill is a lure; prove it (a fish), and the choice is
      whether it gets stapled onto every rod (forced) or waits in the open box
      for a line that wants it (chosen). Groups toggle .on per beat. */
+  /* The rig — everything between you and the fish, drawn once and named.
+     Two textures do the definitional work before any label is read: the rod
+     and reel are one clean unbroken stroke (handed to you), the tackle is
+     discrete pieces with visible knots (tied on by hand). The brace groups
+     both; the line runs through it unbracketed, because that's the model. */
+  function buildRig() {
+    const svg = document.getElementById("rig-svg");
+    svg.innerHTML = "";
+    const txt = (x, y, s, attrs = {}, parent = svg) => {
+      const t = el("text", { x, y, ...attrs }, parent);
+      t.textContent = s;
+      return t;
+    };
+    const knot = (parent, x, y) => el("circle", { class: "rg-knot", cx: x, cy: y, r: 2.6 }, parent);
+
+    /* the water: the work is under it, and the rod never gets wet */
+    const sea = el("g", { class: "rg-sea" }, svg);
+    el("line", { class: "rg-water", x1: 16, y1: 190, x2: 500, y2: 190 }, sea);
+    el("path", { class: "rg-shimmer", d: "M 60 218 L 132 218 M 180 246 L 244 246" }, sea);
+
+    /* the base harness — one clean taper, no knots anywhere on it. You were
+       handed this; the texture is the tell before any label is read. */
+    const base = el("g", { class: "rg-base" }, svg);
+    el("path", { class: "rg-rod-butt", d: "M 46 150 Q 105 133 168 107" }, base);
+    el("path", { class: "rg-rod-tip", d: "M 168 107 Q 231 80 296 44" }, base);
+    el("line", { class: "rg-grip", x1: 46, y1: 150, x2: 88, y2: 138 }, base);
+    el("line", { class: "rg-reel-stem", x1: 96, y1: 131, x2: 96, y2: 138 }, base);
+    el("circle", { class: "rg-reel", cx: 96, cy: 147, r: 9 }, base);
+
+    /* the model: one filament, run straight through. You swap it whole —
+       you never tune it, and it is the only thing here you don't own. */
+    el("path", { class: "rg-line", d: "M 296 44 L 332 190" }, svg);
+
+    /* the drop — lengthens as pieces come off, so the line stays unbroken */
+    el("rect", { class: "rg-drop", x: 331.2, y: 190, width: 1.6, height: 62 }, svg);
+
+    /* your tackle, piece one: the wire leader (b2) */
+    const leader = el("g", { class: "rg-leader" }, svg);
+    el("line", { class: "rg-leader-wire", x1: 332, y1: 252, x2: 332, y2: 286 }, leader);
+    knot(leader, 332, 252);
+    txt(354, 274, "leader", { class: "rg-part" }, leader);
+
+    /* your tackle, piece two: the float (b3) — the only reason the hook
+       sits up in the chop instead of down where the fish are */
+    const float = el("g", { class: "rg-float" }, svg);
+    el("ellipse", { class: "rg-float-lo", cx: 332, cy: 196, rx: 8.5, ry: 7.5 }, float);
+    el("path", { class: "rg-float-hi", d: "M 323.5 190 A 8.5 8.5 0 0 1 340.5 190 Z" }, float);
+    knot(float, 332, 183);
+    txt(354, 187, "float", { class: "rg-part" }, float);
+
+    /* what stays: shot and hook — tied on by you, but compensating for
+       nothing. This is the piece that never sheds. */
+    const term = el("g", { class: "rg-terminal" }, svg);
+    el("circle", { class: "rg-shot", cx: 332, cy: 290, r: 3.5 }, term);
+    el("path", { class: "rg-hook", d: "M 332 294 L 332 310 Q 332 320 323 320 Q 315 320 315 312" }, term);
+
+    const fish = el("g", { class: "rg-fish" }, svg);
+    el("path", { class: "rg-fish-body", d: "M 396 372 Q 416 362 436 372 Q 416 382 396 372 Z" }, fish);
+    el("path", { class: "rg-fish-body", d: "M 436 372 L 448 365 L 448 379 Z" }, fish);
+
+    /* the callout column — one anatomy list, read top to bottom. The model
+       sits ABOVE the brace and outside it: that exclusion is the whole point. */
+    el("line", { class: "rg-lead-tick", x1: 554, y1: 78, x2: 312, y2: 78 }, svg);
+    txt(560, 82, "the line", { class: "rg-name rg-name-a" });
+    txt(560, 82, "the model", { class: "rg-name rg-name-b" });
+    txt(560, 100, "the same one everybody rents", { class: "rg-sub rg-model-sub" });
+
+    el("line", { class: "rg-lead-tick", x1: 554, y1: 162, x2: 112, y2: 162 }, svg);
+    txt(560, 166, "rod & reel", { class: "rg-group" });
+    txt(560, 184, "handed to you", { class: "rg-sub" });
+
+    el("line", { class: "rg-lead-tick", x1: 554, y1: 254, x2: 348, y2: 254 }, svg);
+    txt(560, 258, "your tackle", { class: "rg-group" });
+    txt(560, 276, "tied on by you, tonight", { class: "rg-sub" });
+
+    /* the brace: the definition. It gathers exactly two of the three rows —
+       and the one it leaves out is the model. */
+    const brace = el("g", { class: "rg-brace" }, svg);
+    el("path", { class: "rg-brace-path", d: "M 548 152 L 540 152 L 540 206 L 530 214 L 540 222 L 540 284 L 548 284" }, brace);
+    txt(516, 224, "the harness", { class: "rg-harness", "text-anchor": "end" }, brace);
+  }
+
   function buildTackle() {
     const svg = document.getElementById("tackle-svg");
     svg.innerHTML = "";

@@ -81,7 +81,7 @@ Then: `cortex-lifecycle-register-artifact --feature {feature} --artifact plan`.
 
 ## 3. Orchestrator review
 
-Follow `${CLAUDE_SKILL_DIR}/references/orchestrator-review.md` with `${CLAUDE_SKILL_DIR}/references/orchestrator-checklist-plan.md`. Must pass before approval.
+Follow `${CLAUDE_SKILL_DIR}/references/orchestrator-review.md` for the `plan` phase. Must pass before approval.
 
 ## 4. Approval (merged branch/dispatch surface)
 
@@ -117,7 +117,7 @@ Off `main`/`master` the sub-choices collapse, so the surface offers only `[Appro
 cortex-lifecycle-advance plan-decision --feature <name> --decision <decision> [--dispatch-choice <mode>]
 ```
 
-Thread the envelope's `advance_contract.expected_from_state` via `--from-state` when you have it (default: `plan`). Route on the returned `state` (shared `error`/`refused`/command-not-found arms: SKILL.md § Advance-verb routing):
+Thread the envelope's `advance_contract.expected_from_state` via `--from-state` when you have it (default: `plan`). Route on the returned `state` per SKILL.md § Advance-verb routing:
 
 - **`branch-mode-approved`** → auto-advance to Implement, which consumes `dispatch_choice` and skips its own picker.
 - **`wait-approved`** → approval recorded, feature holds at plan; **halt**. Re-invocation routes to `implement` and Implement fires its fallback picker. If backlog-linked, warn that overnight may still execute the item — its eligibility does not yet honor a paused feature.

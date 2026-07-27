@@ -1,6 +1,6 @@
 """Routing tests for the Complete phase, migrated to target the verb (#331 T4).
 
-Historically this file grepped ``skills/lifecycle/references/complete.md``
+Historically this file grepped ``skills/build/references/complete.md``
 prose for the Step-7 routing table's exit-message substrings and command/order
 tokens. Step 7's PR-state router has been extracted into the
 ``cortex-lifecycle-complete-route <slug>`` classifier verb
@@ -52,7 +52,7 @@ import pytest
 from cortex_command.lifecycle.complete_route import classify, main
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-COMPLETE_MD = REPO_ROOT / "skills" / "lifecycle" / "references" / "complete.md"
+COMPLETE_MD = REPO_ROOT / "skills" / "build" / "references" / "complete.md"
 VERB_SOURCE = REPO_ROOT / "cortex_command" / "lifecycle" / "complete_route.py"
 GH_STUB_SOURCE = REPO_ROOT / "tests" / "fixtures" / "gh-stub.sh"
 

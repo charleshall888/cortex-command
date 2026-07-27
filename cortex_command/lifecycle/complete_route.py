@@ -504,7 +504,7 @@ def _branch4(result: dict, slug: str, root: Path, pr_obj: dict, lifecycle_dir: P
         result["message"] = (
             f"PR {url} was closed without merging. Either reopen and merge, "
             f"run `git worktree remove {path}` manually to abandon, or invoke "
-            f"`/cortex-core:lifecycle wontfix {slug}` if appropriate. "
+            f"`/cortex-core:build wontfix {slug}` if appropriate. "
             "(Worktree retained.)"
         )
         return result

@@ -863,7 +863,7 @@ class TestR9FieldNameRenameDriftGuard(_PlanParseMixin, unittest.TestCase):
 
     The parser keys extraction on the literal ``Files`` / ``Depends on`` tokens.
     R2's fail-loud invariant cannot catch a *rename* of an ordering-critical
-    field in the canonical template (``skills/lifecycle/references/plan.md``):
+    field in the canonical template (``skills/build/references/plan.md``):
     if ``Depends on`` were renamed to e.g. ``Prerequisites`` there, the label
     would no longer be present, so R2 would not fire and ``depends_on`` would
     silently drop to ``[]``.

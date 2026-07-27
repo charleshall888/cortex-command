@@ -153,7 +153,7 @@ _ADVISORY_NOTE = (
 _SESSION_SPLIT_STATES = ("plan", "implement")
 _SESSION_SPLIT_HINT = (
     "Consider ending this session and resuming fresh — re-invoking "
-    "/cortex-core:lifecycle <feature> routes back to this phase, and a fresh "
+    "/cortex-core:build <feature> routes back to this phase, and a fresh "
     "session avoids superlinear context carry."
 )
 

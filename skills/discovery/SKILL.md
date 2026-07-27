@@ -1,7 +1,7 @@
 ---
 name: discovery
 description: Ideation research for topics not ready for implementation — checks aim, investigates the problem space, then decomposes findings into backlog tickets grouped by epic. Use when user says "/cortex-core:discovery", "discover this", "break this down into tickets", "decompose into backlog", or wants to understand a topic before committing to build. Requires a topic argument; for "what should I work on" or "next task" routing without a specific topic, use /cortex-core:dev instead.
-when_to_use: "Use when investigating a topic deeply before committing to build it. Different from /cortex-core:research — research produces a research.md and stops; discovery wraps clarify→research→decompose and ends with backlog tickets. Different from /cortex-core:lifecycle — discovery stops at backlog tickets rather than proceeding to plan/implement."
+when_to_use: "Use when investigating a topic deeply before committing to build it. Different from /cortex-core:research — research produces a research.md and stops; discovery wraps clarify→research→decompose and ends with backlog tickets. Different from /cortex-core:refine and /cortex-core:build — discovery stops at backlog tickets rather than speccing or building one."
 argument-hint: "<topic>"
 ---
 
@@ -65,6 +65,6 @@ cortex-discovery emit-checkpoint-response --topic <topic> --checkpoint research-
 
 Wherever a phase creates tickets, resolve the backend first with `cortex-read-backlog-backend` (argless): **`cortex-backlog`** → create normally; **`none`** → skip the create CLI, preserve the authored titles and bodies in `cortex/research/{topic}/decomposed.md` with a one-line advisory, and write nothing to `cortex/backlog/`; **anything else** → file the equivalent best-effort per `backlog.instructions`, surfacing bodies inline if filing fails.
 
-## Relationship to /cortex-core:lifecycle
+## Relationship to /cortex-core:refine
 
-Every ticket discovery creates carries `discovery_source:` pointing at the research artifact. When `/cortex-core:lifecycle` starts on that ticket it auto-loads the prior research, summarizes it, and asks whether to skip re-investigation (default skip; pipeline and overnight contexts skip automatically).
+Every ticket discovery creates carries `discovery_source:` pointing at the research artifact. When `/cortex-core:refine` starts on that ticket it auto-loads the prior research as background, summarizes it, and asks whether to skip re-investigation (default skip; pipeline and overnight contexts skip automatically).

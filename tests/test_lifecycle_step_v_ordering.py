@@ -1,7 +1,7 @@
 """Parity test pinning the operation order of worktree-entry.md §1a step v.
 
 The interactive-worktree-entry reference at
-``skills/lifecycle/references/worktree-entry.md`` §1a step v (the
+``skills/build/references/worktree-entry.md`` §1a step v (the
 "Auto-enter sequence") performs three operations on the
 ``selected`` (picker-fired) entry-mode path in a load-bearing order:
 
@@ -48,7 +48,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).parent.parent
 WORKTREE_ENTRY_MD = (
-    REPO_ROOT / "skills" / "lifecycle" / "references" / "worktree-entry.md"
+    REPO_ROOT / "skills" / "build" / "references" / "worktree-entry.md"
 )
 
 # §1a step v block bounded by the ``**Step v — Auto-enter sequence**``

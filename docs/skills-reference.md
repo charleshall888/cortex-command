@@ -25,7 +25,7 @@ Route development requests to the right workflow. Analyzes a request and delegat
 ### lifecycle
 Structured feature development lifecycle with phases for research, specification, planning, implementation, review, and completion. Enforces research-before-code discipline through a file-based state machine that survives context loss and can be resumed across sessions.
 
-[skills/lifecycle/SKILL.md](../skills/lifecycle/SKILL.md)
+[skills/build/SKILL.md](../skills/build/SKILL.md)
 
 ---
 
@@ -44,7 +44,7 @@ Ideation research for topics not ready for implementation. Investigates the prob
 ---
 
 ### research
-Parallel research orchestrator for pre-implementation investigation. Dispatches 3–10 agents (sized by a tier×criticality matrix) across independent angles (codebase, web, requirements, tradeoffs, adversarial) and synthesizes findings into a structured `research.md` artifact. Used directly via `/cortex-core:research` or invoked automatically by `/cortex-core:refine` and `/cortex-core:lifecycle`.
+Parallel research orchestrator for pre-implementation investigation. Dispatches 3–10 agents (sized by a tier×criticality matrix) across independent angles (codebase, web, requirements, tradeoffs, adversarial) and synthesizes findings into a structured `research.md` artifact. Used directly via `/cortex-core:research` or invoked automatically by `/cortex-core:refine` and `/cortex-core:build`.
 
 [skills/research/SKILL.md](../skills/research/SKILL.md)
 
@@ -58,19 +58,19 @@ Manage project backlog items as individual markdown files with YAML frontmatter.
 ---
 
 ### overnight
-Plan and launch autonomous overnight development sessions. Selects eligible features from the backlog, presents a session plan for user approval, and hands off to the runner for unattended execution. Requires features to already have research and spec artifacts produced by `/cortex-core:refine` or `/cortex-core:lifecycle`.
+Plan and launch autonomous overnight development sessions. Selects eligible features from the backlog, presents a session plan for user approval, and hands off to the runner for unattended execution. Requires features to already have research and spec artifacts produced by `/cortex-core:refine` or `/cortex-core:build`.
 
 [skills/overnight/SKILL.md](../skills/overnight/SKILL.md)
 
 ---
 
-### Choosing between `/cortex-core:dev`, `/cortex-core:lifecycle`, and `/overnight`
+### Choosing between `/cortex-core:dev`, `/cortex-core:build`, and `/overnight`
 
 These three skills overlap and route to each other — here is when to use each:
 
-- **`/cortex-core:dev`** — general entry point when you are not sure what to do next. It analyzes your request, runs backlog triage if invoked bare, and routes automatically to `/cortex-core:lifecycle`, `/overnight`, `/cortex-core:discovery`, or direct implementation. Start here if you do not already know which workflow you need.
-- **`/cortex-core:lifecycle`** — invoke directly when you already know the feature and want to work through it phase by phase (research → spec → plan → implement → review → complete; simple-tier low/medium features take the short road, skipping plan and review). It is a structured, interactive state machine for a single feature. `/cortex-core:dev` routes non-trivial single features here automatically.
-- **`/overnight`** — invoke directly when features already have their research and spec artifacts (produced by `/cortex-core:refine` or `/cortex-core:lifecycle`) and you want autonomous unattended execution. It handles plan approval and hands off to the runner; no interactive research or spec phases occur. `/cortex-core:dev` recommends this when all backlog children are refined.
+- **`/cortex-core:dev`** — general entry point when you are not sure what to do next. It analyzes your request, runs backlog triage if invoked bare, and routes automatically to `/cortex-core:build`, `/overnight`, `/cortex-core:discovery`, or direct implementation. Start here if you do not already know which workflow you need.
+- **`/cortex-core:build`** — invoke directly when you already know the feature and want to work through it phase by phase (research → spec → plan → implement → review → complete; simple-tier low/medium features take the short road, skipping plan and review). It is a structured, interactive state machine for a single feature. `/cortex-core:dev` routes non-trivial single features here automatically.
+- **`/overnight`** — invoke directly when features already have their research and spec artifacts (produced by `/cortex-core:refine` or `/cortex-core:build`) and you want autonomous unattended execution. It handles plan approval and hands off to the runner; no interactive research or spec phases occur. `/cortex-core:dev` recommends this when all backlog children are refined.
 
 ---
 

@@ -81,17 +81,7 @@ Define WHAT to build, not HOW — no implementation code in this phase.
 
 ### 3a. Orchestrator Review
 
-Run the orchestrator-review protocol (propagated **orchestrator-review** path) for `specify` against this checklist, rating each **pass** or **flag**. It must pass before approval.
-
-| # | Item |
-|---|------|
-| S1 | Acceptance criteria satisfy the binary-checkable rule; "confirm it works" fails |
-| S2 | Edge Cases covers failure modes, unexpected inputs, boundaries, concurrency |
-| S3 | MoSCoW reflects real priority, not "everything is must-have" |
-| S4 | Non-requirements name concrete boundaries |
-| S5 | Constraints cite specific codebase patterns, ADRs, or decisions — not generic best practices |
-| S6 | Modifying/removing/extending behavior gets `## Changes to Existing Behavior` |
-| S7 | `## Phases` present, each requirement's `**Phase**` tag matching one. Skip on `criticality=low AND tier=simple` |
+Run the orchestrator-review protocol (propagated **orchestrator-review** path) for `specify`. It must pass before approval.
 
 ### 3b. Critical Review
 
@@ -124,11 +114,9 @@ cortex-lifecycle-advance spec-approve --feature <name> --decision <approved|canc
   [--emit-transition|--no-emit-transition] [--areas <a> <b>|--clear-areas]
 ```
 
-Standalone `/cortex-core:refine` passes `--no-emit-transition`; lifecycle-wrapped refine passes `--emit-transition`. This verb is the sole emitter of the `specify→plan` row.
+`/cortex-core:refine` passes `--no-emit-transition` — it stops at `spec.md`. This verb is the sole emitter of the `specify→plan` row.
 
-- **`approved`** → auto-advance to Plan, no re-confirmation.
-- **`approved-direct`** → the verb routed the spec exit down the short road (simple tier, low/medium criticality): auto-advance to Implement, no Plan phase, no plan.md.
+- **`approved`** / **`approved-direct`** → the spec is approved and written back; refine is done. The `approved-direct` variant records that the verb routed the spec exit down the short road (simple tier, low/medium criticality), which `/cortex-core:build` reads to skip the Plan phase.
 - **`revise`** → nothing recorded; collect changes, revise, re-present. Only the final Approve records consent.
 - **`cancelled`** → `lifecycle_cancelled` recorded; halt.
-- **`error`** → surface `message` and halt. **exit 2** → ambiguous backlog slug; apply backlog-writeback.md's disambiguation and re-run.
-- **command not found** → halt, instruct the operator to install/upgrade the cortex-command CLI, re-invoke. Do NOT record anything by hand.
+- **`error`** → surface `message` and halt. **exit 2** → ambiguous backlog slug; apply the build skill's backlog-writeback.md disambiguation and re-run. Missing verb → halt and tell the operator to install or upgrade the cortex-command CLI; never record the approval, transition, or write-back by hand.

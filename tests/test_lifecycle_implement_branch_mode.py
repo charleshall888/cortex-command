@@ -15,7 +15,7 @@ Two test classes:
     (a5) ``branch-mode: None`` (unset) → branch_mode_unset_or_invalid.
 
 * ``TestImplementMdWiring`` is a documentation-shape check on
-  ``skills/lifecycle/references/implement.md``: asserts that the dispatch
+  ``skills/build/references/implement.md``: asserts that the dispatch
   helpers are named, that the open-paren invocation form is present, that
   the invocation appears before the §1 picker ``AskUserQuestion`` call site,
   and that each of the four closed-set branch-mode values appears within
@@ -39,7 +39,7 @@ from cortex_command.lifecycle_implement import should_fire_picker
 
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
-IMPLEMENT_MD = REPO_ROOT / "skills" / "lifecycle" / "references" / "implement.md"
+IMPLEMENT_MD = REPO_ROOT / "skills" / "build" / "references" / "implement.md"
 
 
 def _init_clean_repo(tmp_path: pathlib.Path) -> None:

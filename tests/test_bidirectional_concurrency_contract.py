@@ -16,7 +16,7 @@ Sub-tests:
 
   C — overnight → interactive rejection mirror (actual sidecar bash):
       synthetic ``active-session.json`` + ``runner.pid``; sidecar at
-      ``skills/lifecycle/references/_interactive_overnight_check.sh`` invoked
+      ``skills/build/references/_interactive_overnight_check.sh`` invoked
       via ``cat ... | bash -s -- '<wording>' '<repo>'``; asserts non-zero exit
       AND stderr contains ``"the run to complete"``.
 
@@ -243,7 +243,7 @@ def test_bidirectional_contract_C_overnight_interactive_rejection(
     """Synthetic active-session.json + runner.pid causes the sidecar to exit 1
     with the R7 rejection wording on stderr.
 
-    The sidecar at ``skills/lifecycle/references/_interactive_overnight_check.sh``
+    The sidecar at ``skills/build/references/_interactive_overnight_check.sh``
     is invoked via ``cat ... | bash -s -- '<wording>' '<repo>'`` — the same
     invocation shape used in implement.md §1 Step A.  No re-implementation of
     the four-bash-call logic in Python.
@@ -300,7 +300,7 @@ def test_bidirectional_contract_C_overnight_interactive_rejection(
     ).format(pid=os.getpid())
 
     # Sidecar path — relative to repo root; the bash -c below CWDs to repo root.
-    sidecar_rel = "skills/lifecycle/references/_interactive_overnight_check.sh"
+    sidecar_rel = "skills/build/references/_interactive_overnight_check.sh"
 
     # Build the env with HOME redirected so the sidecar reads from tmp dir.
     # Set TMPDIR to a writable sandbox path so bash can create the temp files

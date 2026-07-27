@@ -43,12 +43,12 @@ def test_negative_fixture_yields_zero_violations() -> None:
 
 def test_live_skills_corpus_clean() -> None:
     """Post-Task-1 implement.md must contain zero L201 violations."""
-    impl_md = REPO_ROOT / "skills" / "lifecycle" / "references" / "implement.md"
+    impl_md = REPO_ROOT / "skills" / "build" / "references" / "implement.md"
     assert impl_md.exists(), f"Expected file: {impl_md}"
     text = impl_md.read_text(encoding="utf-8")
     violations = scan_text(text, impl_md)
     assert violations == [], (
-        f"skills/lifecycle/references/implement.md has bare-Python cortex_command "
+        f"skills/build/references/implement.md has bare-Python cortex_command "
         f"imports that should have been removed in Task 1:\n"
         + "\n".join(v.format_text() for v in violations)
     )
@@ -245,13 +245,13 @@ def test_staged_glob_matches_deep_skills_path() -> None:
     """Regression: --staged mode must recognize deep skills/ paths via ** recursion.
 
     Path.match("skills/**/*.md") treats ** as a single component and returns False
-    for skills/lifecycle/references/implement.md — silently skipping the actual
+    for skills/build/references/implement.md — silently skipping the actual
     scan corpus during pre-commit. _matches_scan_glob must route through the
     shared cortex_command.lint._globs matcher (** = zero-or-more segments).
     """
     from cortex_command.lint.bare_python_import import _matches_scan_glob
 
-    assert _matches_scan_glob("skills/lifecycle/references/implement.md"), (
+    assert _matches_scan_glob("skills/build/references/implement.md"), (
         "deep skills/ path must match skills/**/*.md glob — pre-commit hook depends on it"
     )
     assert _matches_scan_glob("docs/internals/pipeline.md"), (
@@ -312,7 +312,7 @@ def test_staged_deep_nested_file_flags_via_real_git(tmp_path: Path) -> None:
     reported violation — a bare non-zero exit alone is as weak as a grep.
     """
     _init_real_repo(tmp_path)
-    deep = "skills/lifecycle/references/deep_probe.md"  # depth-≥3
+    deep = "skills/build/references/deep_probe.md"  # depth-≥3
     shallow = "skills/depth1_probe.md"  # depth-1 (** = zero segments)
     violation = "# Probe\n\n```python\nimport cortex_command\n```\n"
     _write_file(tmp_path, deep, violation)

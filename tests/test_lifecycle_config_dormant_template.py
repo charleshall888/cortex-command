@@ -59,8 +59,8 @@ REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 # direct assertion rather than relying on the hook alone.
 TEMPLATE_PATHS = (
     REPO_ROOT / "cortex_command" / "init" / "templates" / "cortex" / "lifecycle.config.md",
-    REPO_ROOT / "skills" / "lifecycle" / "assets" / "lifecycle.config.md",
-    REPO_ROOT / "plugins" / "cortex-core" / "skills" / "lifecycle" / "assets" / "lifecycle.config.md",
+    REPO_ROOT / "skills" / "build" / "assets" / "lifecycle.config.md",
+    REPO_ROOT / "plugins" / "cortex-core" / "skills" / "build" / "assets" / "lifecycle.config.md",
 )
 
 

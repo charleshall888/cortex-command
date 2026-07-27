@@ -1,6 +1,6 @@
 """Parity test pinning the §1 branch-selection picker's worktree option label.
 
-The implement-phase reference at ``skills/lifecycle/references/implement.md``
+The implement-phase reference at ``skills/build/references/implement.md``
 contains a §1 branch-selection picker that presents three options to the
 user. One of those options — today rendered as
 ``**Implement on feature branch with worktree**`` — is the authorization
@@ -25,7 +25,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).parent.parent
-IMPLEMENT_MD = REPO_ROOT / "skills" / "lifecycle" / "references" / "implement.md"
+IMPLEMENT_MD = REPO_ROOT / "skills" / "build" / "references" / "implement.md"
 
 # §1 picker block bounded by the ``**Picker options**`` heading and the next
 # line-start ``**``-prefixed boundary (``**Step A**``). The branch decision is
