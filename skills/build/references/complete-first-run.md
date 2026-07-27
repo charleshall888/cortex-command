@@ -18,7 +18,7 @@ Failures → report and halt until resolved. First-run only; the router skips th
 
 Push the branch, then create a PR whose title and body reflect the feature's purpose and link the lifecycle directory. Capture the PR number, URL, and current branch for Step 4.
 
-If this lifecycle runs from inside an `interactive/{slug}` worktree — both `read_lock(slug)` returns non-None **and** `git rev-parse --show-toplevel` is that worktree root — wrap `/cortex-core:pr` in a cd-in-then-out around the worktree. Otherwise invoke it from the current cwd. Advisory, non-blocking.
+Running from inside an `interactive/{slug}` worktree — both `read_lock(slug)` non-None **and** `git rev-parse --show-toplevel` is that worktree root — wrap `/cortex-core:pr` in a cd-in-then-out around the worktree; otherwise invoke it from the current cwd. Advisory, non-blocking.
 
 ## Step 4 — Record it
 
@@ -28,7 +28,7 @@ One call resolves repo identity, atomically writes `cortex/lifecycle/{slug}/pr.j
 cortex-lifecycle-record-pr-opened --feature {slug} --number {pr-number} --url {pr-url} --head-branch {head-branch}
 ```
 
-`ok` → Step 5. `gh-error` → surface `message` and halt; do not hand off without a recorded PR. `repo` is resolved at PR-creation time and locked, so complete.md's router hits the right repository even if `origin` later changes.
+`ok` → Step 5. `gh-error` → surface `message` and halt; never hand off without a recorded PR. `repo` is locked at PR-creation time, so complete.md's router hits the right repository even if `origin` later changes.
 
 <!-- pause: complete-merge-wait phase-exit-wait -->
 ## Step 5 — Phase-exit pause

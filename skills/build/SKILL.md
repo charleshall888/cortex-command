@@ -29,7 +29,7 @@ A **`resume`** state is served phase-keyed: `state` is the current phase, `advan
 
 ## Step 2: Enter the resolved state
 
-Run the envelope's `enter_command` **verbatim** — it composes create-index, the lifecycle-start write-back, `cortex init --ensure`, and `.session` with every discriminant pre-bound:
+Run the envelope's `enter_command` **verbatim** — a `cortex-lifecycle-enter` invocation composing create-index, the lifecycle-start write-back, `cortex init --ensure`, and `.session`, with every discriminant pre-bound:
 
 ```bash
 {envelope.enter_command}

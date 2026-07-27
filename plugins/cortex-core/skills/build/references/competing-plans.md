@@ -11,7 +11,7 @@ Each agent reads the spec and research itself and designs an **architecturally d
 
 **c. Collect** — wait for all agents, continuing past any crash, timeout, or garbage output. Exactly 1 succeeds → use it as the sole variant, skip to plan.md §3. All fail → fall back to plan.md's single-plan flow.
 
-**d. Synthesize** — one fresh read-only sub-agent compares the variants and picks one with structured rationale. This is the judgment step; weigh the model accordingly. System prompt: load `cortex_command/overnight/prompts/plan-synthesizer.md` via `importlib.resources` — don't paraphrase or inline it. User prompt: the variant paths (`plan-variant-A.md`, `-B.md`, optionally `-C.md`) plus the swap-and-require-agreement instruction, directing a JSON envelope.
+**d. Synthesize** — one fresh read-only sub-agent compares the variants and picks one with structured rationale; this is the judgment step, so weigh the model accordingly. System prompt: load `cortex_command/overnight/prompts/plan-synthesizer.md` via `importlib.resources` — don't paraphrase or inline it. User prompt: the variant paths (`plan-variant-A.md`, `-B.md`, optionally `-C.md`) plus the swap-and-require-agreement instruction, directing a JSON envelope.
 
 **e. Extract** — split on the LAST `<!--findings-json-->` delimiter, `json.loads` the tail, and validate `schema_version: 2` (int), `per_criterion` (object), `verdict ∈ {A,B,C}` (string), `confidence ∈ {high,medium,low}` (string), `rationale` (string). Any failure → treat as `confidence: "low"`.
 

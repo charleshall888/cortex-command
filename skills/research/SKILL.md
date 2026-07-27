@@ -16,13 +16,13 @@ Dispatch N agents across independent angles and synthesize. Options: $ARGUMENTS 
 
 Size and select angles per [`fanout.md`](${CLAUDE_SKILL_DIR}/references/fanout.md) (canonical, shared with `/cortex-core:discovery`). Agents are read-only: no `isolation: "worktree"`. Pick each agent's model yourself — gather angles are breadth-first read-and-report, so a cheaper tier usually fits.
 
-Compose each angle's prompt yourself. State the angle, what it must cover, and its `## <Angle name>` output heading — that heading becomes a section of research.md. The mandatory core angles cover:
+Compose each angle's prompt yourself, stating the angle, what it must cover, and its `## <Angle name>` output heading — that heading becomes a section of research.md. The mandatory core angles cover:
 
 - **Codebase** — files to create or modify, existing patterns and conventions to follow, integration points and dependencies. Tools: Read, Glob, Grep.
 - **Web** — prior art, reference implementations, documentation, known patterns and anti-patterns. Tools: WebSearch, WebFetch (`bypassPermissions`; fall back to search-only if fetch is denied, noting unreachable URLs).
 - **Requirements & Constraints** — architectural constraints, explicit requirements, and scope boundaries from `requirements/`, with source paths. Report only; tradeoffs and failure modes belong to other angles. Tools: Read, Glob, Grep.
 
-An orchestrator-chosen angle must name what it covers that no other angle does. **Tradeoffs & Alternatives** is the common choice — alternative approaches weighed on complexity, maintainability, performance, and fit with existing patterns, ending in a recommendation. The **Adversarial** angle runs last over a summary of the other agents' findings, hunting failure modes, anti-patterns, security concerns, and assumptions that won't hold; fold its critique into synthesis.
+An orchestrator-chosen angle must name what it covers that no other angle does. **Tradeoffs & Alternatives** is the common choice — approaches weighed on complexity, maintainability, performance, and fit with existing patterns, ending in a recommendation. The **Adversarial** angle runs last over a summary of the other agents' findings, hunting failure modes, anti-patterns, security concerns, and assumptions that won't hold; fold its critique into synthesis.
 
 Append to every agent prompt, verbatim:
 
@@ -32,7 +32,7 @@ Append to every agent prompt, verbatim:
 
 ## Synthesize
 
-The schema is **angle-driven**: one `##` section per dispatched angle, in order, titled by its output heading. There is no fixed heading roster — the one fixed-contract heading is `## Open Questions`, machine-parsed by `cortex-complexity-escalator`.
+The schema is **angle-driven**: one `##` section per dispatched angle, in order, titled by its output heading. No fixed heading roster — the one fixed-contract heading is `## Open Questions`, machine-parsed by `cortex-complexity-escalator`.
 
 ```markdown
 # Research: {topic}

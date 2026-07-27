@@ -18,15 +18,15 @@ A legacy directory, or Research entered before Clarify ran, returns discovery's 
 
 ## 2. Dispatch the fan-out
 
-Size and dispatch per the **fanout** sibling reference `fanout.md` (propagated absolute path) — count matrix, mandatory core, always-last adversarial rule. Apply it; don't re-derive it. The count is an upper bound on breadth, not a quota.
+Size and dispatch per the **fanout** sibling reference `fanout.md` (propagated absolute path) — count matrix, mandatory core, always-last adversarial rule. Apply it; don't re-derive it.
 
 Beyond the mandatory core, discovery's natural dimensions fill the remaining slots: **Domain & Prior Art** (comparable implementations, industry patterns, trade-offs, lessons learned) and **Feasibility** (technical risks, unknowns, prerequisites, rough S/M/L/XL effort), plus any finer-grained angle the topic warrants.
 
-Agents are read-only — no `isolation: "worktree"`, no project-file writes. Prerequisites that are really codebase-state checks belong to the Codebase angle, whose findings carry citations or report `NOT_FOUND(query, scope)`; what remains in §3's Feasibility Prerequisites column is implementation sequencing only.
+Agents are read-only — no `isolation: "worktree"`, no project-file writes. Prerequisites that are really codebase-state checks belong to the Codebase angle; §3's Feasibility Prerequisites column carries implementation sequencing only.
 
 ## 3. Write the artifact
 
-Compose into **discovery's own schema** below — do not adopt `/cortex-core:research`'s. `## Architecture` → `### Pieces` / `### How they connect` are machine-parsed downstream by the Research→Decompose gate and by decompose.md, so synthesis must land in exactly this structure. Where agents contradict each other, surface the contradiction under `## Open Questions` rather than picking a side.
+Compose into **discovery's own schema** below — not `/cortex-core:research`'s. `## Architecture` → `### Pieces` / `### How they connect` are machine-parsed by the Research→Decompose gate and by decompose.md, so synthesis must land in exactly this structure. Where agents contradict each other, surface the contradiction under `## Open Questions` rather than picking a side.
 
 ```markdown
 # Research: {topic}
@@ -62,7 +62,7 @@ Compose into **discovery's own schema** below — do not adopt `/cortex-core:res
 - [Questions needing answers before spec or implementation]
 ```
 
-Codebase-pointing claims carry an inline `[file:line]` citation or an explicit `[premise-unverified: not-searched]` marker. A search returning nothing is reported inline as `NOT_FOUND(query=<search-string>, scope=<path-or-glob>)` — distinct from an uninvestigated premise. Findings live in the artifact, not in context; research the topic as described, not adjacent ones.
+Codebase-pointing claims carry an inline `[file:line]` citation or an explicit `[premise-unverified: not-searched]` marker. A search returning nothing reports inline as `NOT_FOUND(query=<search-string>, scope=<path-or-glob>)` — distinct from an uninvestigated premise. Findings live in the artifact, not in context; research the topic as described, not adjacent ones.
 
 ## 4. Review and hand off
 

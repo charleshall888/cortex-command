@@ -11,11 +11,9 @@ Topic: $ARGUMENTS — required. Empty → halt with "discovery requires a topic 
 
 ## Step 1: Resolve the phase
 
-Scan `cortex/research/{{topic}}/`: absent → **clarify**; `research.md` without `decomposed.md` → **decompose**; `decomposed.md` present → complete (offer to re-run or update). Report the detected phase and offer to continue or restart earlier.
+Scan `cortex/research/{{topic}}/`: absent → **clarify**; `research.md` without `decomposed.md` → **decompose**; `decomposed.md` present → complete (offer to re-run or update). Report the detected phase and offer to continue or restart earlier. One active discovery at a time — if several `cortex/research/*/` directories lack `decomposed.md`, list them and ask which to resume.
 
-One active discovery at a time — if several `cortex/research/*/` directories lack `decomposed.md`, list them and ask which to resume.
-
-**Re-run from scratch** (not resume, not update-in-place) over an existing directory never overwrites the prior artifact. Take a fresh slug `{{topic}}-N`, N the smallest integer ≥2 unique under `cortex/research/`; open the new `research.md` with `superseded:` frontmatter naming the artifact it supersedes (the immediately-prior `-N`, not the original); leave the existing directory untouched as a durable audit trail. Reconciliation — surfacing differences, repointing `discovery_source:`, archiving the old artifact — is an explicit user decision outside this skill.
+**Re-run from scratch** (not resume, not update-in-place) never overwrites the prior artifact. Take a fresh slug `{{topic}}-N`, N the smallest integer ≥2 unique under `cortex/research/`; open the new `research.md` with `superseded:` frontmatter naming the artifact it supersedes (the immediately-prior `-N`, not the original); leave the existing directory untouched as a durable audit trail. Reconciliation — surfacing differences, repointing `discovery_source:`, archiving the old artifact — is an explicit user decision outside this skill.
 
 ## Step 2: Execute the phase
 
@@ -36,9 +34,7 @@ After each phase, commit `cortex/research/{{topic}}/`, summarize, and proceed au
 
 ## Step 3: Research → Decompose gate
 
-A single-question user-blocking gate, reached either by finishing Research or by resuming directly into Decompose. No decompose work starts until the user answers it.
-
-Generate the brief that leads the gate:
+A single-question user-blocking gate, reached by finishing Research or by resuming into Decompose. No decompose work starts until the user answers it.
 
 ```
 cortex-discovery generate-brief --research-md cortex/research/<topic>/research.md \
@@ -51,7 +47,7 @@ Four options:
 
 - **`approve`** — proceed to Decompose.
 - **`revise`** — free-text revision scoped to the Architecture section: re-walk it against the live template in `references/research.md` §3, re-emitting `### Pieces` then `### How they connect`, re-present the gate, increment `revision_round`. Loops until `approve` or `drop`.
-- **`drop`** — neutral terminus, motive-agnostic: close discovery when research is sufficient and no tickets are warranted, OR abandon outright. Exit without writing to `cortex/backlog/`; the research artifact stays as an audit trail.
+- **`drop`** — neutral terminus, motive-agnostic: close discovery when research is sufficient and no tickets are warranted, OR abandon outright. Exit without writing to `cortex/backlog/`; the research artifact stays as the audit trail.
 - **`promote-sub-topic`** — the user supplies a sub-topic; compose a body via `/backlog-author compose` including a `## Promoted from` section reading exactly `## Promoted from\n\nDiscovery: cortex/research/<current-topic>/` (the body section is the sole linkage — no frontmatter pointer, no nested discovery). Create one `needs-discovery` ticket under the backend routing below, then return to this gate.
 
 Emit one event per response — never hardcode the log path:

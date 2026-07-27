@@ -6,7 +6,7 @@ Turn the approved Architecture section into backlog tickets — the core value o
 
 Read `cortex/research/{topic}/research.md`. `### Pieces` is the analytical piece set (one bullet per piece, named by role); `### How they connect` is where dependencies come from. **Never re-derive pieces from raw findings.**
 
-A piece is not always a ticket — §4 groups tightly-coupled pieces into ticket units. If the piece set itself looks *wrong* (missing, mis-named, mis-split, or two pieces sharing identical Touch points and Role paragraphs), that is research's to fix: surface it and offer to return to research rather than rewriting the research-owned set here. Distinct-but-coupled pieces are a *packaging* question for §4, not a defect.
+A piece is not always a ticket — §4 groups tightly-coupled pieces into ticket units. A piece set that looks *wrong* (missing, mis-named, mis-split, or two pieces sharing identical Touch points and Role paragraphs) is research's to fix: surface it and offer to return to research rather than rewriting the research-owned set here. Distinct-but-coupled pieces are a *packaging* question for §4, not a defect.
 
 ### 4. Determine Grouping
 
@@ -14,7 +14,7 @@ Grouping coarsens ticket units without mutating `### Pieces`.
 
 **One piece** → one ticket, no epic. **Zero pieces** → no tickets, but still write `decomposed.md` as an audit trail with frontmatter `decomposition_verdict: zero-piece`, holding either `## Fold-into` (the finding belongs on an existing open ticket — its number plus a one-line rationale) or `## Verdict` (no actionable work). **Two or more** → group first, then one epic and one child per *group*.
 
-Group pieces that share a connection seam, form one integration cluster, carry substantially the same role, or deliver operator-visible value only once both land. Grouping is **opportunistic, never forced** — only gross, architecture-visible over-splitting; no evident coupling falls back to 1:1. Subtler couplings surfacing once bodies are drafted belong to `consolidate-pieces` at the §5a gate.
+Group pieces that share a connection seam, form one integration cluster, carry substantially the same role, or deliver operator-visible value only once both land. Grouping is **opportunistic, never forced** — only gross, architecture-visible over-splitting; no evident coupling falls back to 1:1. Subtler couplings surfacing once bodies are drafted belong to `consolidate-pieces` at §5a.
 
 A `blocked-by` relationship *among* grouped pieces becomes an intra-ticket ordering note, never a dropped one: carry it into the body as an explicit sequence and record it in `## Grouping Notes`. Dependencies from outside the group retarget the surviving ticket.
 
@@ -26,7 +26,7 @@ Capture alongside each: **title** (imperative, ≤72 chars), **priority** (low e
 
 ### 5a. Post-Decompose Batch-Review Gate
 
-After all N bodies are authored and **before any commit to `cortex/backlog/`**, a user-blocking gate fires — the user's first encounter with the bodies. Present every title and body, and offer:
+After all N bodies are authored and **before any commit to `cortex/backlog/`**, a user-blocking gate fires — the user's first encounter with the bodies. Present every title and body, then offer:
 
 - **`approve-all`** — write all N tickets.
 - **`revise-piece <N>`** — free-text revision scoped to ticket N; re-walk it in full, then re-present the FULL batch.
@@ -68,11 +68,11 @@ After `approve-all`, resolve the backend (SKILL.md § Backend routing). Under `c
 - `cortex/backlog/NNN-slug.md` — [title]
 ```
 
-`## Grouping Notes` makes every grouping auditable and gives `split-piece` the ordering to restore — omit when no grouping occurred. The single-piece branch omits the Epic subsection; the zero-piece branch replaces Work Items with `## Fold-into` or `## Verdict`.
+`## Grouping Notes` gives `split-piece` the ordering to restore — omit when no grouping occurred. The single-piece branch omits the Epic subsection; the zero-piece branch replaces Work Items with `## Fold-into` or `## Verdict`.
 
 ### 7. Update Index
 
-Re-resolve the active backend **here** with `cortex-read-backlog-backend` (argless, fail-open) — don't reuse §6's resolution, which is scoped to its create flow and never runs on the zero-piece branch. Under `cortex-backlog` run `cortex-generate-backlog-index` to update the backlog index; any other value (`none` or external) → skip with a one-line advisory, since `cortex-generate-backlog-index` targets the `cortex-backlog` engine and there is no index to regenerate.
+Re-resolve the backend **here** with `cortex-read-backlog-backend` (argless, fail-open) — §6's resolution is scoped to its create flow and never runs on the zero-piece branch. Under `cortex-backlog` run `cortex-generate-backlog-index`; any other value (`none` or external) → skip with a one-line advisory, since there is no index to regenerate.
 
 ### 8. Commit and Summarize
 
