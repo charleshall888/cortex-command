@@ -70,7 +70,7 @@ class RepairResult:
     resolution_rationale: str = ""
     test_result: Optional["TestResult"] = None
     error: Optional[str] = None
-    model_used: Optional[str] = None
+    attempts_used: Optional[int] = None
     cost_usd: Optional[float] = None
 
 
@@ -216,14 +216,16 @@ async def dispatch_repair_agent(
 ) -> RepairResult:
     """Orchestrate the full repair lifecycle for a complex merge conflict.
 
-    Creates a repair worktree, dispatches a Sonnet agent, reads the exit
-    report, verifies no conflict markers remain, optionally escalates to
-    Opus on agent quality failure, runs the test gate, and returns a
+    Creates a repair worktree, dispatches a repair agent, reads the exit
+    report, verifies no conflict markers remain, optionally makes one more
+    attempt on agent quality failure, runs the test gate, and returns a
     RepairResult.
 
-    Escalates to Opus ONLY on agent quality failure (unresolved markers or
-    deferral question after a successful SDK dispatch).  Does NOT escalate
-    on SDK exceptions or test failures.
+    Retries ONLY on agent quality failure (unresolved markers or deferral
+    question after a successful SDK dispatch).  Does NOT retry on SDK
+    exceptions or test failures.  The cap is two attempts total; it used to
+    spend the second one climbing sonnet -> opus, but cortex no longer selects
+    models.
 
     Args:
         feature: Feature name.
@@ -238,13 +240,13 @@ async def dispatch_repair_agent(
             to ``None`` (backward-compatible).
 
     Returns:
-        RepairResult with success status, model used, resolved files, and cost.
+        RepairResult with success status, attempts used, resolved files, and cost.
     """
     from cortex_command.pipeline.merge import run_tests  # lazy: avoid circular import
     from cortex_command.overnight.events import (  # lazy: avoid circular import via overnight.__init__
         REPAIR_AGENT_START,
         REPAIR_AGENT_COMPLETE,
-        REPAIR_AGENT_ESCALATED,
+        REPAIR_AGENT_RETRIED,
         REPAIR_AGENT_FAILED,
     )
 
@@ -258,7 +260,6 @@ async def dispatch_repair_agent(
         "feature": feature,
         "conflicted_files": conflict_classification.conflicted_files,
         "repair_branch": repair_branch,
-        "model": "sonnet",
     })
 
     # Create repair worktree and merge feature branch.
@@ -338,8 +339,8 @@ async def dispatch_repair_agent(
                 pass
         return False
 
-    async def _run_dispatch(model: str) -> tuple[object, Optional[dict], bool]:
-        """Dispatch to model. Returns (result, exit_report, is_sdk_exception)."""
+    async def _run_dispatch() -> tuple[object, Optional[dict], bool]:
+        """Dispatch a repair attempt. Returns (result, exit_report, is_sdk_exception)."""
         # Remove stale exit report before dispatch.
         try:
             exit_report_path.unlink(missing_ok=True)
@@ -353,7 +354,6 @@ async def dispatch_repair_agent(
             complexity="simple",
             system_prompt="",
             log_path=config.pipeline_events_path,
-            model_override=model,
             repo_root=repo_root,
             skill="conflict-repair",
         )
@@ -376,11 +376,11 @@ async def dispatch_repair_agent(
             return True
         return False
 
-    # --- Sonnet attempt ---
-    sonnet_result, sonnet_report, sonnet_sdk_exc = await _run_dispatch("sonnet")
+    # --- First attempt ---
+    first_result, first_report, first_sdk_exc = await _run_dispatch()
 
-    if sonnet_sdk_exc:
-        error = sonnet_result.error_detail or "sonnet dispatch failed"
+    if first_sdk_exc:
+        error = first_result.error_detail or "repair dispatch failed"
         _cleanup_repair_worktree(worktree_path, repair_branch, repo, delete_branch=True)
         pipeline_log_event(config.pipeline_events_path, {
             "event": REPAIR_AGENT_FAILED,
@@ -393,26 +393,28 @@ async def dispatch_repair_agent(
             feature=feature,
             recovery_type="merge_conflict",
             outcome="paused",
-            what_was_tried="(SDK exception during Sonnet dispatch)",
+            what_was_tried="(SDK exception during the first repair dispatch)",
             result=error,
         )
         return RepairResult(success=False, feature=feature, error=error, cost_usd=total_cost)
 
-    if _is_agent_quality_failure(sonnet_report):
-        # --- Opus escalation ---
+    if _is_agent_quality_failure(first_report):
+        # --- Second and final attempt ---
+        # This used to climb sonnet -> opus. cortex no longer selects models, so
+        # it is now simply one more attempt on the same git-index snapshot; the
+        # two-attempt cap is unchanged.
         pipeline_log_event(config.pipeline_events_path, {
-            "event": REPAIR_AGENT_ESCALATED,
+            "event": REPAIR_AGENT_RETRIED,
             "feature": feature,
-            "from_model": "sonnet",
-            "to_model": "opus",
+            "attempt": 2,
         })
 
-        opus_result, opus_report, opus_sdk_exc = await _run_dispatch("opus")
-        model_used = "opus"
+        second_result, second_report, second_sdk_exc = await _run_dispatch()
+        attempts_used = 2
         total_cost = sum(costs) if costs else None
 
-        if opus_sdk_exc:
-            error = opus_result.error_detail or "opus dispatch failed"
+        if second_sdk_exc:
+            error = second_result.error_detail or "repair dispatch failed"
             _cleanup_repair_worktree(worktree_path, repair_branch, repo, delete_branch=True)
             pipeline_log_event(config.pipeline_events_path, {
                 "event": REPAIR_AGENT_FAILED,
@@ -424,19 +426,19 @@ async def dispatch_repair_agent(
                 feature=feature,
                 recovery_type="merge_conflict",
                 outcome="paused",
-                what_was_tried="(SDK exception during Opus dispatch after Sonnet quality failure)",
+                what_was_tried="(SDK exception during the second repair dispatch)",
                 result=error,
             )
             return RepairResult(
                 success=False, feature=feature, error=error,
-                model_used=model_used, cost_usd=total_cost,
+                attempts_used=attempts_used, cost_usd=total_cost,
             )
 
-        if _is_agent_quality_failure(opus_report):
-            if opus_report and opus_report.get("action") == "question":
-                error = f"deferral: {opus_report.get('question', '')}"
+        if _is_agent_quality_failure(second_report):
+            if second_report and second_report.get("action") == "question":
+                error = f"deferral: {second_report.get('question', '')}"
             else:
-                error = "agent_quality_failure: markers remain after Opus"
+                error = "agent_quality_failure: markers remain after the final attempt"
             _cleanup_repair_worktree(worktree_path, repair_branch, repo, delete_branch=True)
             pipeline_log_event(config.pipeline_events_path, {
                 "event": REPAIR_AGENT_FAILED,
@@ -444,7 +446,7 @@ async def dispatch_repair_agent(
                 "error": error,
                 "repair_branch": repair_branch,
             })
-            _rationale = json.dumps((opus_report or {}).get("rationale", {}))
+            _rationale = json.dumps((second_report or {}).get("rationale", {}))
             write_recovery_log_entry(
                 feature=feature,
                 recovery_type="merge_conflict",
@@ -454,13 +456,13 @@ async def dispatch_repair_agent(
             )
             return RepairResult(
                 success=False, feature=feature, error=error,
-                model_used=model_used, cost_usd=total_cost,
+                attempts_used=attempts_used, cost_usd=total_cost,
             )
 
-        final_report = opus_report
+        final_report = second_report
     else:
-        model_used = "sonnet"
-        final_report = sonnet_report
+        attempts_used = 1
+        final_report = first_report
         total_cost = sum(costs) if costs else None
 
     # --- Clean resolution: run test gate ---
@@ -493,7 +495,7 @@ async def dispatch_repair_agent(
             success=False,
             feature=feature,
             error=error,
-            model_used=model_used,
+            attempts_used=attempts_used,
             resolved_files=resolved_files,
             resolution_rationale=resolution_rationale,
             test_result=test_result,
@@ -505,7 +507,7 @@ async def dispatch_repair_agent(
     pipeline_log_event(config.pipeline_events_path, {
         "event": REPAIR_AGENT_COMPLETE,
         "feature": feature,
-        "model_used": model_used,
+        "attempts_used": attempts_used,
         "resolved_files": resolved_files,
         "cost_usd": total_cost,
     })
@@ -523,7 +525,7 @@ async def dispatch_repair_agent(
         resolved_files=resolved_files,
         resolution_rationale=resolution_rationale,
         test_result=test_result,
-        model_used=model_used,
+        attempts_used=attempts_used,
         cost_usd=total_cost,
     )
 

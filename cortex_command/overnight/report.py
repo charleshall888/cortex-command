@@ -2642,15 +2642,17 @@ def render_effort_degradation(data: ReportData) -> str:
         "the dispatched `claude` CLI version if this recurs (see ADR-0014)."
     )
     lines.append("")
+    # The model is reported only when known. cortex does not choose one, so a
+    # `retry_effort_clamped` raised before any agent reply carries no model.
     for feature, model, to_effort in clamped:
         lines.append(
-            f"- **{feature}** ({model}): `--effort` rejected by the CLI → "
-            f"clamped to `{to_effort}` and retried."
+            f"- **{feature}**{f' ({model})' if model else ''}: `--effort` "
+            f"rejected by the CLI → clamped to `{to_effort}` and retried."
         )
     for feature, model, effort in ignored:
         lines.append(
-            f"- **{feature}** ({model}): requested effort `{effort}` was "
-            f"warn-ignored by the CLI → ran at the default effort."
+            f"- **{feature}**{f' ({model})' if model else ''}: requested effort "
+            f"`{effort}` was warn-ignored by the CLI → ran at the default effort."
         )
     lines.append("")
     return "\n".join(lines)

@@ -14,13 +14,7 @@ Dispatch N agents across independent angles and synthesize. Options: $ARGUMENTS 
 
 ## Dispatch
 
-Size and select angles per [`fanout.md`](${CLAUDE_SKILL_DIR}/references/fanout.md) (canonical, shared with `/cortex-core:discovery`). Resolve the gather model once in this body, before the core wave:
-
-```bash
-model=$(cortex-resolve-model --role searcher)
-```
-
-Bind it as every core-wave agent's `model:`. On nonzero exit, dispatch with no `model:` and warn — do not halt. Agents are read-only: no `isolation: "worktree"`.
+Size and select angles per [`fanout.md`](${CLAUDE_SKILL_DIR}/references/fanout.md) (canonical, shared with `/cortex-core:discovery`). Agents are read-only: no `isolation: "worktree"`. Pick each agent's model yourself — gather angles are breadth-first read-and-report, so a cheaper tier usually fits.
 
 Compose each angle's prompt yourself. State the angle, what it must cover, and its `## <Angle name>` output heading — that heading becomes a section of research.md. The mandatory core angles cover:
 

@@ -2,7 +2,7 @@
 
 #400 finding 2: the lifecycle references document, verbatim,
 
-    cortex-resolve-model --criticality "$(cortex-lifecycle-state --feature f \
+    some-verb --criticality "$(cortex-lifecycle-state --feature f \
         --field criticality --raw)"
 
 so the substitution must ALWAYS yield a valid criticality/tier enum on a clean

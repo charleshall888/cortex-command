@@ -15,7 +15,7 @@ The dispatching context (the `/cortex-core:build` skill in interactive mode, or 
 3. Determine a verdict (`A`, `B`, or `C`) and confidence (`high`, `medium`, or `low`).
 4. Emit a JSON envelope with positional-order fields.
 
-The variants are labeled `Variant 1`, `Variant 2`, and (optionally) `Variant 3` — these are blinded labels. You will **never** see generator IDs, model names, or "Plan A by Sonnet-Generator-1"-style attribution. Treat the variants as anonymous.
+The variants are labeled `Variant 1`, `Variant 2`, and (optionally) `Variant 3` — these are blinded labels. You will **never** see generator IDs, model names, or "Plan A by Generator-1"-style attribution. Treat the variants as anonymous.
 
 ## Untrusted Variant Data
 

@@ -62,7 +62,11 @@ class TestPairDispatchEvents(unittest.TestCase):
     # Helpers for building synthetic events
     # ------------------------------------------------------------------
 
-    def _start(self, feature, complexity="complex", model="opus", skill="implement", ts="2026-04-01T00:00:00Z"):
+    # NOTE: dispatch_start no longer carries a model — cortex does not choose
+    # one, and nothing has replied yet when the event is written. The observed
+    # model rides on dispatch_complete instead. `_legacy_start` reproduces the
+    # historical shape so the start-event fallback stays covered.
+    def _start(self, feature, complexity="complex", skill="implement", ts="2026-04-01T00:00:00Z"):
         from cortex_command.pipeline.dispatch import resolve_effort
         criticality = "high"
         return {
@@ -71,14 +75,20 @@ class TestPairDispatchEvents(unittest.TestCase):
             "feature": feature,
             "complexity": complexity,
             "criticality": criticality,
-            "model": model,
             "skill": skill,
-            "effort": resolve_effort(complexity, criticality, skill, model),
+            "effort": resolve_effort(complexity, criticality, skill),
             "max_turns": 30,
             "max_budget_usd": 50.0,
         }
 
-    def _complete(self, feature, cost_usd=1.23, num_turns=5, ts="2026-04-01T00:01:00Z"):
+    def _legacy_start(self, feature, model="opus", **kwargs):
+        """A pre-change dispatch_start, which did carry the resolved model."""
+        evt = self._start(feature, **kwargs)
+        evt["model"] = model
+        return evt
+
+    def _complete(self, feature, cost_usd=1.23, num_turns=5, model="opus",
+                  ts="2026-04-01T00:01:00Z"):
         return {
             "event": "dispatch_complete",
             "ts": ts,
@@ -86,6 +96,7 @@ class TestPairDispatchEvents(unittest.TestCase):
             "cost_usd": cost_usd,
             "duration_ms": 5000,
             "num_turns": num_turns,
+            "model": model,
         }
 
     def _error(self, feature, error_type="timeout", ts="2026-04-01T00:01:00Z"):
@@ -112,8 +123,8 @@ class TestPairDispatchEvents(unittest.TestCase):
     def test_basic_pair_complete(self):
         """One start + one complete pairs correctly with all fields populated."""
         events = [
-            self._start("feat-a", complexity="complex", model="opus"),
-            self._complete("feat-a", cost_usd=2.50, num_turns=7),
+            self._start("feat-a", complexity="complex"),
+            self._complete("feat-a", cost_usd=2.50, num_turns=7, model="opus"),
         ]
         result = self._fn(events)
 
@@ -136,10 +147,10 @@ class TestPairDispatchEvents(unittest.TestCase):
         """Feature A start, feature B start, feature A complete, feature B
         complete: each complete pairs to its own feature's start."""
         events = [
-            self._start("feat-a", complexity="simple", model="sonnet", ts="2026-04-01T00:00:01Z"),
-            self._start("feat-b", complexity="trivial", model="haiku", ts="2026-04-01T00:00:02Z"),
-            self._complete("feat-a", cost_usd=0.50, num_turns=3, ts="2026-04-01T00:01:00Z"),
-            self._complete("feat-b", cost_usd=0.10, num_turns=2, ts="2026-04-01T00:01:01Z"),
+            self._start("feat-a", complexity="simple", ts="2026-04-01T00:00:01Z"),
+            self._start("feat-b", complexity="trivial", ts="2026-04-01T00:00:02Z"),
+            self._complete("feat-a", cost_usd=0.50, num_turns=3, model="sonnet", ts="2026-04-01T00:01:00Z"),
+            self._complete("feat-b", cost_usd=0.10, num_turns=2, model="haiku", ts="2026-04-01T00:01:01Z"),
         ]
         result = self._fn(events)
 
@@ -163,9 +174,9 @@ class TestPairDispatchEvents(unittest.TestCase):
         to start[0], second complete pairs to start[1], start[2] remains
         unmatched (no orphan emitted for unmatched starts)."""
         events = [
-            self._start("feat-a", complexity="complex", model="opus", ts="2026-04-01T00:00:01Z"),
-            self._start("feat-a", complexity="complex", model="opus", ts="2026-04-01T00:00:02Z"),
-            self._start("feat-a", complexity="complex", model="opus", ts="2026-04-01T00:00:03Z"),
+            self._start("feat-a", complexity="complex", ts="2026-04-01T00:00:01Z"),
+            self._start("feat-a", complexity="complex", ts="2026-04-01T00:00:02Z"),
+            self._start("feat-a", complexity="complex", ts="2026-04-01T00:00:03Z"),
             self._complete("feat-a", cost_usd=1.0, num_turns=5, ts="2026-04-01T00:01:00Z"),
             self._complete("feat-a", cost_usd=2.0, num_turns=8, ts="2026-04-01T00:01:01Z"),
         ]
@@ -185,6 +196,36 @@ class TestPairDispatchEvents(unittest.TestCase):
     # (d) Orphan dispatch_complete → untiered
     # ------------------------------------------------------------------
 
+    def test_historical_log_reads_model_off_the_start_event(self):
+        """Logs written before model selection was removed still bucket.
+
+        Those runs put the resolved model on dispatch_start and nothing on
+        dispatch_complete. The pairing falls back to the start value so old
+        metrics.json inputs keep their per-model buckets.
+        """
+        legacy_complete = self._complete("feat-old", cost_usd=1.0, num_turns=3)
+        del legacy_complete["model"]
+        events = [
+            self._legacy_start("feat-old", complexity="complex", model="opus"),
+            legacy_complete,
+        ]
+        result = self._fn(events)
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["model"], "opus")
+        self.assertEqual(result[0]["tier"], "complex")
+
+    def test_complete_event_model_wins_over_start_event(self):
+        """When both carry a model, the observed one (on complete) wins."""
+        events = [
+            self._legacy_start("feat-x", complexity="complex", model="stale"),
+            self._complete("feat-x", cost_usd=1.0, num_turns=3, model="observed"),
+        ]
+        result = self._fn(events)
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["model"], "observed")
+
     def test_orphan_dispatch_complete_untiered(self):
         """A lone complete with no preceding start emits an untiered record
         and raises a UserWarning."""
@@ -199,7 +240,9 @@ class TestPairDispatchEvents(unittest.TestCase):
         rec = result[0]
         self.assertTrue(rec["untiered"])
         self.assertIsNone(rec["tier"])
-        self.assertIsNone(rec["model"])
+        # The model rides on dispatch_complete, so an orphan still carries it —
+        # only the tier is unknowable without a matching start.
+        self.assertEqual(rec["model"], "opus")
         self.assertEqual(rec["outcome"], "complete")
 
         # A UserWarning must have been emitted
@@ -276,8 +319,8 @@ class TestPairDispatchEvents(unittest.TestCase):
         due to the (ts, event_priority) sort tie-break."""
         same_ts = "2026-04-01T00:00:00Z"
         events = [
-            self._complete("feat-a", cost_usd=1.0, num_turns=3, ts=same_ts),
-            self._start("feat-a", complexity="simple", model="sonnet", ts=same_ts),
+            self._complete("feat-a", cost_usd=1.0, num_turns=3, model="sonnet", ts=same_ts),
+            self._start("feat-a", complexity="simple", ts=same_ts),
         ]
         # Even though complete is listed first, the tie-break should sort
         # start before complete at the same timestamp.
@@ -311,7 +354,7 @@ class TestPairDispatchEvents(unittest.TestCase):
         error_with_cwd["exit_code"] = 1
         error_with_cwd["cwd"] = "/Users/agent/worktrees/feat-diag"
         events = [
-            self._start("feat-diag", complexity="complex", model="opus"),
+            self._legacy_start("feat-diag", complexity="complex", model="opus"),
             error_with_cwd,
         ]
         result = self._fn(events)
@@ -915,7 +958,7 @@ class TestPairAggregatorEndToEnd(unittest.TestCase):
     """
 
     def _start(self, feature, skill="implement", complexity="simple",
-               model="sonnet", cycle=None, ts="2026-04-01T00:00:00Z"):
+               cycle=None, ts="2026-04-01T00:00:00Z"):
         from cortex_command.pipeline.dispatch import resolve_effort
         criticality = "high"
         evt = {
@@ -924,9 +967,8 @@ class TestPairAggregatorEndToEnd(unittest.TestCase):
             "feature": feature,
             "complexity": complexity,
             "criticality": criticality,
-            "model": model,
             "skill": skill,
-            "effort": resolve_effort(complexity, criticality, skill, model),
+            "effort": resolve_effort(complexity, criticality, skill),
             "max_turns": 30,
             "max_budget_usd": 50.0,
         }
@@ -934,7 +976,7 @@ class TestPairAggregatorEndToEnd(unittest.TestCase):
             evt["cycle"] = cycle
         return evt
 
-    def _complete(self, feature, cost_usd=1.0, num_turns=4,
+    def _complete(self, feature, cost_usd=1.0, num_turns=4, model="sonnet",
                   ts="2026-04-01T00:01:00Z"):
         return {
             "event": "dispatch_complete",
@@ -943,6 +985,7 @@ class TestPairAggregatorEndToEnd(unittest.TestCase):
             "cost_usd": cost_usd,
             "duration_ms": 5000,
             "num_turns": num_turns,
+            "model": model,
         }
 
     def test_pair_propagates_skill_to_aggregator_non_review_fix(self):
@@ -958,11 +1001,10 @@ class TestPairAggregatorEndToEnd(unittest.TestCase):
             compute_skill_tier_dispatch_aggregates,
             pair_dispatch_events,
         )
-        expected_effort = resolve_effort("simple", "high", "implement", "sonnet")
+        expected_effort = resolve_effort("simple", "high", "implement")
         expected_key = f"implement,simple,{expected_effort}"
         events = [
-            self._start("feat-a", skill="implement", complexity="simple",
-                        model="sonnet"),
+            self._start("feat-a", skill="implement", complexity="simple"),
             self._complete("feat-a", cost_usd=1.5, num_turns=5),
         ]
         paired = pair_dispatch_events(events)
@@ -989,11 +1031,10 @@ class TestPairAggregatorEndToEnd(unittest.TestCase):
             compute_skill_tier_dispatch_aggregates,
             pair_dispatch_events,
         )
-        expected_effort = resolve_effort("simple", "high", "review-fix", "sonnet")
+        expected_effort = resolve_effort("simple", "high", "review-fix")
         expected_key = f"review-fix,simple,{expected_effort},2"
         events = [
-            self._start("feat-rf", skill="review-fix", complexity="simple",
-                        model="sonnet", cycle=2),
+            self._start("feat-rf", skill="review-fix", complexity="simple", cycle=2),
             self._complete("feat-rf", cost_usd=2.0, num_turns=6),
         ]
         paired = pair_dispatch_events(events)
@@ -1060,6 +1101,7 @@ class TestReportTierDispatch(unittest.TestCase):
                     "cost_usd": rec.get("cost_usd"),
                     "num_turns": rec.get("num_turns"),
                     "duration_ms": 1000,
+                    "model": rec.get("model"),
                 })
             elif rec.get("outcome") == "error":
                 from cortex_command.pipeline.dispatch import resolve_effort
@@ -1067,6 +1109,8 @@ class TestReportTierDispatch(unittest.TestCase):
                 _complexity = rec.get("tier", "simple")
                 _criticality = rec.get("criticality", "high")
                 _skill = rec.get("skill", "implement")
+                # dispatch_error carries no model: the agent may never have
+                # replied, so the start-event value is all history has.
                 _model = rec.get("model", "sonnet")
                 raw_events.append({
                     "event": "dispatch_start",
@@ -1075,7 +1119,7 @@ class TestReportTierDispatch(unittest.TestCase):
                     "complexity": _complexity,
                     "criticality": _criticality,
                     "model": _model,
-                    "effort": resolve_effort(_complexity, _criticality, _skill, _model),
+                    "effort": resolve_effort(_complexity, _criticality, _skill),
                     "max_turns": 20,
                     "max_budget_usd": 10.0,
                 })
@@ -1099,8 +1143,7 @@ class TestReportTierDispatch(unittest.TestCase):
                     "feature": rec["feature"],
                     "complexity": _complexity,
                     "criticality": _criticality,
-                    "model": _model,
-                    "effort": resolve_effort(_complexity, _criticality, _skill, _model),
+                    "effort": resolve_effort(_complexity, _criticality, _skill),
                     "max_turns": 20,
                     "max_budget_usd": 10.0,
                 })
@@ -1111,6 +1154,7 @@ class TestReportTierDispatch(unittest.TestCase):
                     "cost_usd": rec.get("cost_usd"),
                     "num_turns": rec.get("num_turns"),
                     "duration_ms": 1000,
+                    "model": _model,
                 })
 
         log_path = lifecycle_dir / "pipeline-events.log"

@@ -13,7 +13,7 @@ Output:
   With --field: JSON containing only the requested key (omitted when empty).
 
   With --field --raw: the bare scalar (no JSON), for command substitution —
-  e.g. cortex-resolve-model --criticality "$(cortex-lifecycle-state ... --raw)".
+  e.g. some-verb --criticality "$(cortex-lifecycle-state ... --raw)".
   An axis never set emits the documented caller default (criticality "medium",
   tier "simple"); a corrupted log whose axis is unknowable exits 2 instead of
   guessing (use the JSON form, which carries "corrupted": true).

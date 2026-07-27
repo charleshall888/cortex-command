@@ -107,42 +107,30 @@ def _make_unique_diff_fn():
 # ---------------------------------------------------------------------------
 
 class TestRetryThreadsKwargs(unittest.IsolatedAsyncioTestCase):
-    """Verify retry_task threads attempt/escalated/escalation_event correctly.
+    """Verify retry_task threads the per-attempt kwargs correctly.
 
     Patches dispatch_task at its import site in retry.py so we can capture
     each call's kwargs without spawning real sub-agents.
     """
 
-    async def test_retry_threads_attempt_escalated_and_escalation_event(self):
-        """Drive 4 attempts (Sonnet→Opus escalation → 2 retries at Opus).
+    async def test_retry_threads_attempt_number_and_no_model(self):
+        """Drive 4 attempts and assert the kwargs each one receives.
 
-        Per-attempt expectations for (attempt, escalated, escalation_event):
+        This test used to assert a Sonnet -> Opus escalation and the
+        ``escalated`` / ``escalation_event`` flags that tracked it. cortex no
+        longer selects a model, so all four attempts are identical apart from
+        the attempt counter, and no model-bearing kwarg is threaded at all.
 
-          - Attempt 1: (1, False, False) — initial Sonnet dispatch.
-            Returns agent_test_failure → ERROR_RECOVERY classifies as
-            "escalate", so retry.py upgrades sonnet → opus for attempt 2.
-          - Attempt 2: (2, True, True) — first dispatch at the escalated
-            tier. escalated=True (sticky: opus != sonnet); escalation_event=True
-            (one-shot: opus != prev sonnet). Returns task_failure →
-            "retry" recovery, so attempt 3 stays at Opus.
-          - Attempt 3: (3, True, False) — still at Opus. escalated stays
-            sticky-True; escalation_event flips to False because
-            current_model == previous_attempt_model (both opus).
-            Returns task_failure → "retry", attempt 4 stays at Opus.
-          - Attempt 4: (4, True, False) — final attempt. Same kwarg shape
-            as attempt 3 (sticky-True / one-shot-False). Returns success
-            so the loop exits cleanly without exhausting retries.
+          - Attempt 1: agent_test_failure -> "retry" recovery (it used to be
+            "escalate" and would have upgraded the tier here).
+          - Attempts 2 and 3: task_failure -> "retry".
+          - Attempt 4: success, so the loop exits without exhausting retries.
         """
-        # Sequential side_effects driving the 4-attempt scenario:
-        #   1) sonnet fails with agent_test_failure  → escalate
-        #   2) opus fails with task_failure          → retry
-        #   3) opus fails with task_failure          → retry
-        #   4) opus succeeds                         → loop exits
         side_effects = [
-            _failed("agent_test_failure"),   # attempt 1: triggers Sonnet→Opus escalation
-            _failed("task_failure"),         # attempt 2: retry-class failure at Opus
-            _failed("task_failure"),         # attempt 3: retry-class failure at Opus
-            _succeeded(),                    # attempt 4: terminate the loop
+            _failed("agent_test_failure"),
+            _failed("task_failure"),
+            _failed("task_failure"),
+            _succeeded(),
         ]
 
         captured_calls: list[dict] = []
@@ -167,7 +155,6 @@ class TestRetryThreadsKwargs(unittest.IsolatedAsyncioTestCase):
                     feature="feat",
                     task="do something",
                     worktree_path=Path(tmp),
-                    # simple + medium → sonnet initially; escalates to opus.
                     complexity="simple",
                     criticality="medium",
                     system_prompt="",
@@ -185,33 +172,13 @@ class TestRetryThreadsKwargs(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result.success, f"final attempt should succeed: {result}")
         self.assertEqual(result.attempts, 4)
 
-        # ---- Attempt 1: initial Sonnet dispatch — neither flag set. ----
-        kwargs = captured_calls[0]
-        self.assertEqual(kwargs["attempt"], 1, "attempt 1 kwargs[attempt] mismatch")
-        self.assertEqual(kwargs["escalated"], False, "attempt 1 kwargs[escalated] mismatch")
-        self.assertEqual(kwargs["escalation_event"], False, "attempt 1 kwargs[escalation_event] mismatch")
-        self.assertEqual(kwargs["model_override"], "sonnet", "attempt 1 should run on Sonnet")
-
-        # ---- Attempt 2: first dispatch at Opus — both flags set. ----
-        kwargs = captured_calls[1]
-        self.assertEqual(kwargs["attempt"], 2, "attempt 2 kwargs[attempt] mismatch")
-        self.assertEqual(kwargs["escalated"], True, "attempt 2 kwargs[escalated] mismatch")
-        self.assertEqual(kwargs["escalation_event"], True, "attempt 2 kwargs[escalation_event] mismatch")
-        self.assertEqual(kwargs["model_override"], "opus", "attempt 2 should run on Opus after escalation")
-
-        # ---- Attempt 3: stays at Opus — escalated sticky, escalation_event one-shot off. ----
-        kwargs = captured_calls[2]
-        self.assertEqual(kwargs["attempt"], 3, "attempt 3 kwargs[attempt] mismatch")
-        self.assertEqual(kwargs["escalated"], True, "attempt 3 kwargs[escalated] mismatch (must stay sticky)")
-        self.assertEqual(kwargs["escalation_event"], False, "attempt 3 kwargs[escalation_event] mismatch (one-shot off)")
-        self.assertEqual(kwargs["model_override"], "opus", "attempt 3 should remain on Opus")
-
-        # ---- Attempt 4: still Opus — same shape as attempt 3. ----
-        kwargs = captured_calls[3]
-        self.assertEqual(kwargs["attempt"], 4, "attempt 4 kwargs[attempt] mismatch")
-        self.assertEqual(kwargs["escalated"], True, "attempt 4 kwargs[escalated] mismatch (still sticky)")
-        self.assertEqual(kwargs["escalation_event"], False, "attempt 4 kwargs[escalation_event] mismatch (still one-shot off)")
-        self.assertEqual(kwargs["model_override"], "opus", "attempt 4 should remain on Opus")
+        for idx, kwargs in enumerate(captured_calls, start=1):
+            self.assertEqual(kwargs["attempt"], idx, f"attempt {idx} kwargs[attempt] mismatch")
+            # No model-bearing kwargs survive: selection and the escalation
+            # flags that tracked it were both removed.
+            self.assertNotIn("model_override", kwargs, f"attempt {idx} must not pin a model")
+            self.assertNotIn("escalated", kwargs, f"attempt {idx} must not carry escalated")
+            self.assertNotIn("escalation_event", kwargs, f"attempt {idx} must not carry escalation_event")
 
 
 class TestPauseHumanErrorType(unittest.IsolatedAsyncioTestCase):

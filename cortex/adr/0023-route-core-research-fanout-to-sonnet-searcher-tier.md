@@ -1,5 +1,6 @@
 ---
-status: accepted
+status: superseded
+superseded_by: 0032
 ---
 
 # 0023 — Route the core research fan-out to a Sonnet `searcher` tier

@@ -218,14 +218,16 @@ class TestErrorRecovery(unittest.TestCase):
     def test_agent_timeout_recovery_is_retry(self):
         self.assertEqual(_dispatch_module.ERROR_RECOVERY["agent_timeout"], "retry")
 
-    def test_agent_test_failure_recovery_is_escalate(self):
-        self.assertEqual(_dispatch_module.ERROR_RECOVERY["agent_test_failure"], "escalate")
+    def test_agent_test_failure_recovery_is_retry(self):
+        # Formerly "escalate" (climb the model ladder). cortex no longer picks
+        # models, so there is no tier to climb and it plain-retries.
+        self.assertEqual(_dispatch_module.ERROR_RECOVERY["agent_test_failure"], "retry")
 
     def test_agent_refusal_recovery_is_pause_human(self):
         self.assertEqual(_dispatch_module.ERROR_RECOVERY["agent_refusal"], "pause_human")
 
-    def test_agent_confused_recovery_is_escalate(self):
-        self.assertEqual(_dispatch_module.ERROR_RECOVERY["agent_confused"], "escalate")
+    def test_agent_confused_recovery_is_retry(self):
+        self.assertEqual(_dispatch_module.ERROR_RECOVERY["agent_confused"], "retry")
 
     def test_task_failure_recovery_is_retry(self):
         self.assertEqual(_dispatch_module.ERROR_RECOVERY["task_failure"], "retry")
@@ -1071,49 +1073,37 @@ def test_effort_matrix_policy():
 
 
 def test_effort_skill_overrides():
-    """Exercises review-fix and integration-recovery on opus and on sonnet.
+    """``review-fix`` and ``integration-recovery`` always resolve ``max``.
 
-    Spec Req #3 + §2: ``review-fix`` and ``integration-recovery`` get
-    ``effort="max"`` when the resolved (post-``model_override``) model is opus;
-    on any other model the matrix value applies. No silent downgrade.
+    The override used to be gated on the resolved model being opus. cortex no
+    longer selects a model, so the gate is gone and the override is
+    unconditional — these two skills get the highest ceiling wherever they run.
     """
-    # review-fix on opus -> max (overrides the matrix's xhigh).
-    assert _dispatch_module.resolve_effort(
-        complexity="complex", criticality="high",
-        skill="review-fix", model="opus",
-    ) == "max"
-    assert _dispatch_module.resolve_effort(
-        complexity="complex", criticality="critical",
-        skill="review-fix", model="opus",
-    ) == "max"
+    for complexity, criticality in (
+        ("complex", "high"),
+        ("complex", "critical"),
+        ("simple", "high"),
+        ("complex", "low"),
+        ("trivial", "low"),
+    ):
+        assert _dispatch_module.resolve_effort(
+            complexity=complexity, criticality=criticality, skill="review-fix",
+        ) == "max"
+        assert _dispatch_module.resolve_effort(
+            complexity=complexity, criticality=criticality,
+            skill="integration-recovery",
+        ) == "max"
 
-    # review-fix on sonnet -> matrix value (high), no override.
+    # A non-overriding skill still takes the matrix value.
     assert _dispatch_module.resolve_effort(
-        complexity="simple", criticality="high",
-        skill="review-fix", model="sonnet",
-    ) == "high"
-    assert _dispatch_module.resolve_effort(
-        complexity="complex", criticality="low",
-        skill="review-fix", model="sonnet",
-    ) == "high"
-
-    # integration-recovery on opus -> max.
-    assert _dispatch_module.resolve_effort(
-        complexity="complex", criticality="high",
-        skill="integration-recovery", model="opus",
-    ) == "max"
-
-    # integration-recovery on sonnet -> matrix value (high).
-    assert _dispatch_module.resolve_effort(
-        complexity="complex", criticality="medium",
-        skill="integration-recovery", model="sonnet",
-    ) == "high"
-
-    # Non-overriding skill on opus -> matrix value (xhigh, no override).
-    assert _dispatch_module.resolve_effort(
-        complexity="complex", criticality="high",
-        skill="implement", model="opus",
+        complexity="complex", criticality="high", skill="implement",
     ) == "xhigh"
+    assert _dispatch_module.resolve_effort(
+        complexity="simple", criticality="high", skill="implement",
+    ) == "high"
+    assert _dispatch_module.resolve_effort(
+        complexity="trivial", criticality="low", skill="implement",
+    ) == "low"
 
 
 def test_effort_value_passthrough():
@@ -1183,28 +1173,22 @@ def test_effort_value_passthrough():
         sys.modules.update(saved)
 
 
-def test_effort_runtime_guard_rejects_unsupported_effort_for_model(monkeypatch):
-    """Asserts the runtime guard fires loudly when a resolved effort is not
-    supported by the resolved model per spec §3.
+def test_effort_rejects_unknown_tier_and_criticality():
+    """``resolve_effort`` owns the enum guards that ``resolve_model`` used to.
 
-    The runtime guard MUST be ``raise ValueError`` (not ``assert``) per the
-    plan's Risks section — ``assert`` is stripped under ``python -O`` /
-    ``PYTHONOPTIMIZE=1``, defeating spec §3's "MUST fail loudly" intent.
-
-    We force a synthetic matrix entry to ``"xhigh"`` for a (complexity,
-    criticality) pair that resolves to a non-Opus model, then call
-    ``resolve_effort`` for a non-overriding skill so the guard branch fires.
+    The old model-capability guard (fail loudly when e.g. ``xhigh`` was
+    resolved for Sonnet) is deliberately gone: cortex does not choose the
+    model, so the check cannot be evaluated here. An unacceptable ``--effort``
+    is caught at the CLI boundary instead — see the ``effort_unsupported``
+    classification and the one-shot clamp in retry.py.
     """
-    forced = dict(_dispatch_module._EFFORT_MATRIX)
-    forced[("simple", "low")] = "xhigh"
-    monkeypatch.setattr(_dispatch_module, "_EFFORT_MATRIX", forced)
-
-    with pytest.raises(ValueError, match="not supported by model 'haiku'"):
+    with pytest.raises(ValueError, match="Unknown complexity tier"):
         _dispatch_module.resolve_effort(
-            complexity="simple",
-            criticality="low",
-            skill="implement",
-            model="haiku",
+            complexity="medium", criticality="high", skill="implement",
+        )
+    with pytest.raises(ValueError, match="Unknown criticality"):
+        _dispatch_module.resolve_effort(
+            complexity="simple", criticality="urgent", skill="implement",
         )
 
 
@@ -1213,25 +1197,26 @@ def test_effort_runtime_guard_rejects_unsupported_effort_for_model(monkeypatch):
 # normalization of out-of-vocabulary complexity (OOV-complexity hardening)
 # ---------------------------------------------------------------------------
 
-def test_resolve_model_raises_on_directly_passed_unknown_tier():
-    """The enum guard at ``resolve_model`` still fires for a directly-passed
-    out-of-vocabulary tier (R3 invariant backstop preserved).
+def test_resolve_effort_raises_on_directly_passed_unknown_tier():
+    """The tier enum guard still fires for a directly-passed OOV complexity.
 
     Parser-boundary normalization (Task 1) coerces a present-but-OOV
     ``**Complexity**`` to ``complex`` before it reaches dispatch — but the
-    ``resolve_model`` ``ValueError`` is an independent invariant assertion that
-    must keep firing for any unknown value reaching it directly. ``"medium"``
-    is the canonical OOV value: it is a valid *criticality* but not a member of
-    the ``{trivial, simple, complex}`` complexity vocabulary.
+    ``ValueError`` is an independent invariant assertion that must keep firing
+    for any unknown value reaching it directly. ``"medium"`` is the canonical
+    OOV value: it is a valid *criticality* but not a member of the
+    ``{trivial, simple, complex}`` complexity vocabulary. The guard used to live
+    on ``resolve_model``; it moved to ``resolve_effort`` when model selection
+    was removed.
     """
     with pytest.raises(ValueError, match="Unknown complexity tier"):
-        _dispatch_module.resolve_model("medium", "high")
+        _dispatch_module.resolve_effort("medium", "high", "implement")
 
 
-def test_normalized_plan_never_triggers_resolve_model_guard(tmp_path):
+def test_normalized_plan_never_triggers_tier_guard(tmp_path):
     """An end-to-end normalized plan never reaches the enum guard on the normal
     path: a present-but-OOV ``**Complexity**: medium`` is normalized to
-    ``complex`` by ``parse_feature_plan`` (Task 1), so ``resolve_model`` on the
+    ``complex`` by ``parse_feature_plan`` (Task 1), so ``resolve_effort`` on the
     parsed tier returns without raising.
 
     This proves the guard is a backstop, not a live failure mode, once
@@ -1260,9 +1245,9 @@ def test_normalized_plan_never_triggers_resolve_model_guard(tmp_path):
     task = parsed.tasks[0]
     assert task.complexity == "complex"
 
-    # The normalized tier reaches resolve_model without tripping the guard.
-    model = _dispatch_module.resolve_model(task.complexity, "high")
-    assert model in {"haiku", "sonnet", "opus"}
+    # The normalized tier reaches resolve_effort without tripping the guard.
+    effort = _dispatch_module.resolve_effort(task.complexity, "high", "implement")
+    assert effort in {"low", "medium", "high", "xhigh", "max"}
 
 
 # ---------------------------------------------------------------------------

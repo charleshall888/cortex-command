@@ -59,7 +59,7 @@ MERGE_RECOVERY_FAILED = "merge_recovery_failed"
 MERGE_CONFLICT_CLASSIFIED = "merge_conflict_classified"
 REPAIR_AGENT_START = "repair_agent_start"
 REPAIR_AGENT_COMPLETE = "repair_agent_complete"
-REPAIR_AGENT_ESCALATED = "repair_agent_escalated"
+REPAIR_AGENT_RETRIED = "repair_agent_retried"
 REPAIR_AGENT_FAILED = "repair_agent_failed"
 REPAIR_AGENT_RESOLVED = "repair_agent_resolved"
 TRIVIAL_CONFLICT_RESOLVED = "trivial_conflict_resolved"
@@ -123,7 +123,7 @@ EVENT_TYPES = (
     MERGE_CONFLICT_CLASSIFIED,
     REPAIR_AGENT_START,
     REPAIR_AGENT_COMPLETE,
-    REPAIR_AGENT_ESCALATED,
+    REPAIR_AGENT_RETRIED,
     REPAIR_AGENT_FAILED,
     REPAIR_AGENT_RESOLVED,
     TRIVIAL_CONFLICT_RESOLVED,

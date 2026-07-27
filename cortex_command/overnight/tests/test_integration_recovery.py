@@ -1,9 +1,12 @@
 """Integration-style tests for cortex_command.overnight.integration_recovery.
 
-Verifies the dispatch-site fix from spec Req #3a: the production caller at
-integration_recovery.py:215-225 must pass model_override="opus" to
-dispatch_task so the skill-based effort override (integration-recovery -> max,
-gated on resolved model == "opus") fires reliably for every dispatch.
+Spec Req #3a originally required the production caller to pass
+model_override="opus" so the skill-based effort override
+(integration-recovery -> max) would fire, because that override was gated on
+the resolved model being opus. cortex no longer selects models: the gate is
+gone and the override is unconditional, so the requirement is now satisfied by
+pinning no model at all. This asserts the dispatch stays model-free and still
+resolves max effort.
 """
 
 from __future__ import annotations
@@ -27,11 +30,11 @@ def _make_proc(returncode: int = 0, stdout: str = "", stderr: str = "") -> Compl
     return result
 
 
-class TestIntegrationRecoveryForcesOpus(unittest.TestCase):
-    """Spec Req #3a: dispatch_task must receive model_override="opus"."""
+class TestIntegrationRecoveryPinsNoModel(unittest.TestCase):
+    """Spec Req #3a, post-model-selection-removal: no model is pinned."""
 
-    def test_integration_recovery_forces_opus(self):
-        """Integration-recovery dispatch passes model_override="opus"."""
+    def test_integration_recovery_pins_no_model(self):
+        """Integration-recovery dispatch passes no model_override."""
         recorded: dict = {}
 
         async def _spy_dispatch(*args, **kwargs):
@@ -90,14 +93,26 @@ class TestIntegrationRecoveryForcesOpus(unittest.TestCase):
         # Verify dispatch_task was actually invoked.
         self.assertIn("kwargs", recorded, "dispatch_task was not called")
 
-        # Spec Req #3a: model_override must be "opus" so the skill override
-        # (integration-recovery -> max effort) fires reliably.
+        # No model is chosen anywhere in cortex; the dispatch must not pin one.
+        self.assertNotIn(
+            "model_override",
+            recorded["kwargs"],
+            "dispatch_task must not be pinned to a model — cortex leaves the "
+            "choice to the CLI default.",
+        )
         self.assertEqual(
-            recorded["kwargs"].get("model_override"),
-            "opus",
-            "dispatch_task must be called with model_override='opus' "
-            "(spec Req #3a) so the integration-recovery skill effort "
-            "override fires reliably.",
+            recorded["kwargs"].get("skill"),
+            "integration-recovery",
+            "the skill name is what drives the max-effort override now that "
+            "the opus gate is gone.",
+        )
+
+        # The effort override the old model pin existed to guarantee now fires
+        # unconditionally, which is what made the pin unnecessary.
+        from cortex_command.pipeline.dispatch import resolve_effort
+        self.assertEqual(
+            resolve_effort("complex", "medium", "integration-recovery"),
+            "max",
         )
 
 

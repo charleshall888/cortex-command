@@ -12,11 +12,7 @@ Load requirements: `cortex-load-requirements --feature {feature}`, read every li
 
 ## 2. Dispatch
 
-```bash
-model=$(cortex-resolve-model --role review --criticality "$(cortex-lifecycle-state --feature {feature} --field criticality --raw)")
-```
-
-On nonzero exit, halt and escalate. Dispatch read-only with the prompt below, substituting the absolute spec path.
+Dispatch read-only with the prompt below, substituting the absolute spec path. Pick the reviewer model yourself — no `model:` bind is required.
 
 **Single-writer rule** — only the reviewer role writes `review.md`: this sub-task plus §3's missing-drift re-dispatch and §3a's cap-2 re-dispatches. Any sub-agent the reviewer spawns is read-only and returns findings as a message envelope.
 

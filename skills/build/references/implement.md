@@ -33,13 +33,7 @@ Batch by topological level: **batch 0** is pending tasks with `**Depends on**: n
 
 **a. Extract** each task's full block from plan.md (`### Task N:` to the next task heading).
 
-**b. Dispatch** all batch tasks concurrently, using the builder template below **verbatim** (substitute variables only) plus 2–3 sentences of architectural context from the plan's Overview. Resolve the model per task, passing that task's `Complexity` (absent or malformed → the verb inherits the feature cell):
-
-```bash
-model=$(cortex-resolve-model --role builder --criticality "$(cortex-lifecycle-state --feature {feature} --field criticality --raw)" --task-complexity "<task Complexity>")
-```
-
-On nonzero exit, halt and escalate. Then record the dispatch (idempotent per batch):
+**b. Dispatch** all batch tasks concurrently, using the builder template below **verbatim** (substitute variables only) plus 2–3 sentences of architectural context from the plan's Overview. Choose each builder's model yourself from the task's `Complexity` and the feature's criticality. Then record the dispatch (idempotent per batch):
 
 ```bash
 cortex-lifecycle-advance implement-transition --mode batch --feature <name> --batch <N> --tasks '[<task IDs>]'

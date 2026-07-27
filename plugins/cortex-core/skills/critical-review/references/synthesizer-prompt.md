@@ -1,4 +1,4 @@
-# Opus Synthesizer Prompt Template
+# Synthesizer Prompt Template
 
 Substitute `{artifact_path}` and the reviewer-findings payload at runtime.
 

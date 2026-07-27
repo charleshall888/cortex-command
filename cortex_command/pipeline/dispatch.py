@@ -1,8 +1,12 @@
 """Agent SDK dispatch wrapper for pipeline task execution.
 
-Wraps claude_agent_sdk.query() to provide model/budget tier selection based
+Wraps claude_agent_sdk.query() to provide effort/budget tier selection based
 on task complexity, progress streaming via state event logging, and structured
 error classification for the retry module.
+
+Model selection is deliberately absent: dispatches leave ``model`` unset and
+run on the CLI default. The model each dispatch actually used is read back off
+``AssistantMessage`` and reported on ``dispatch_complete`` for cost aggregation.
 """
 
 from __future__ import annotations
@@ -126,35 +130,29 @@ def _load_project_settings(repo_root: Path) -> dict:
 # ---------------------------------------------------------------------------
 
 TIER_CONFIG: dict[str, dict] = {
-    "trivial": {"model": "haiku", "max_turns": 15, "max_budget_usd": 5.00},
-    "simple": {"model": "sonnet", "max_turns": 20, "max_budget_usd": 25.00},
-    "complex": {"model": "opus", "max_turns": 30, "max_budget_usd": 50.00},
+    "trivial": {"max_turns": 15, "max_budget_usd": 5.00},
+    "simple": {"max_turns": 20, "max_budget_usd": 25.00},
+    "complex": {"max_turns": 30, "max_budget_usd": 50.00},
 }
 
-# 2D model matrix: (complexity, criticality) -> model name
-# Criticality levels: low, medium, high, critical
-_MODEL_MATRIX: dict[tuple[str, str], str] = {
-    ("trivial", "low"):      "haiku",
-    ("trivial", "medium"):   "haiku",
-    ("trivial", "high"):     "sonnet",
-    ("trivial", "critical"): "sonnet",
-    ("simple",  "low"):      "sonnet",
-    ("simple",  "medium"):   "sonnet",
-    ("simple",  "high"):     "sonnet",
-    ("simple",  "critical"): "sonnet",
-    ("complex", "low"):      "sonnet",
-    ("complex", "medium"):   "sonnet",
-    ("complex", "high"):     "opus",
-    ("complex", "critical"): "opus",
-}
+# NOTE: cortex no longer selects a model for dispatched agents. `model` is left
+# unset on ClaudeAgentOptions so the dispatched agent runs on the CLI's own
+# default, and the model it actually ran on is read back off AssistantMessage
+# and recorded on `dispatch_complete` for the cost aggregators and dashboard.
+# Selection was previously a (complexity, criticality) matrix plus a
+# haiku -> sonnet -> opus retry ladder; both were removed deliberately.
 
 # 2D effort matrix: (complexity, criticality) -> effort level for ClaudeAgentOptions.
-# Mirrors the shape of _MODEL_MATRIX. Cell values follow the policy table in
-# spec §1 (lifecycle/adopt-xhigh-effort-default-for-overnight-lifecycle-implement
-# /spec.md). Sonnet-tier dispatches uniformly run at "high" per Anthropic's
-# Sonnet 4.6 baseline guidance; Opus-tier dispatches at (complex, high) and
-# (complex, critical) lift to "xhigh" per Anthropic's "start with xhigh for
-# coding" recommendation.
+# Cell values follow the policy table in spec §1
+# (lifecycle/adopt-xhigh-effort-default-for-overnight-lifecycle-implement
+# /spec.md): baseline dispatches run at "high" per Anthropic's Sonnet 4.6
+# baseline guidance, and (complex, high) / (complex, critical) lift to "xhigh"
+# per Anthropic's "start with xhigh for coding" recommendation.
+#
+# Effort is now resolved without reference to a model, because cortex no longer
+# picks one. An effort the running model does not accept is handled at the CLI
+# boundary, loudly, by the existing clamp/`dispatch_effort_ignored` path — see
+# the `effort_override` docstring on dispatch_task.
 _EFFORT_MATRIX: dict[tuple[str, str], str] = {
     ("trivial", "low"):      "low",
     ("trivial", "medium"):   "low",
@@ -170,23 +168,15 @@ _EFFORT_MATRIX: dict[tuple[str, str], str] = {
     ("complex", "critical"): "xhigh",
 }
 
-# Skill-based effort overrides applied AFTER matrix lookup, gated on
-# resolved model == "opus". Per spec §2 Technical Constraints: review-fix and
-# integration-recovery on Opus warrant the highest reasoning ceiling. Kept as a
-# small flat dict (not a 3D matrix) per spec Non-Requirements; promote only if
-# a third skill-specific exception lands.
+# Skill-based effort overrides applied AFTER matrix lookup. Per spec §2
+# Technical Constraints: review-fix and integration-recovery warrant the highest
+# reasoning ceiling. Formerly gated on resolved model == "opus"; the gate went
+# with model selection, so these now apply unconditionally. Kept as a small flat
+# dict (not a 3D matrix) per spec Non-Requirements; promote only if a third
+# skill-specific exception lands.
 _SKILL_EFFORT_OVERRIDES: dict[str, str] = {
     "review-fix":           "max",
     "integration-recovery": "max",
-}
-
-# Per-model supported effort vocabularies (spec §3 Technical Constraints). Used
-# by the runtime guard in resolve_effort to fail loudly when a resolved effort
-# would not be accepted by the resolved model.
-_MODEL_SUPPORTED_EFFORTS: dict[str, frozenset[str]] = {
-    "haiku":  frozenset({"low", "medium", "high"}),
-    "sonnet": frozenset({"low", "medium", "high", "max"}),
-    "opus":   frozenset({"low", "medium", "high", "xhigh", "max"}),
 }
 
 _VALID_CRITICALITY = {"low", "medium", "high", "critical"}
@@ -206,28 +196,35 @@ Skill = Literal[
     "orchestrator-round",  # documentation-only: never passed to dispatch_task; runner.py emits via pipeline.state.log_event
 ]
 
-# Model escalation ladder used by the retry loop (Req 8).
-# Maps each model name to the next higher tier, or None when already at max.
-MODEL_ESCALATION_LADDER: dict[str, Optional[str]] = {
-    "haiku":  "sonnet",
-    "sonnet": "opus",
-    "opus":   None,
-}
+def resolve_effort(complexity: str, criticality: str, skill: str) -> str:
+    """Resolve an effort level from the centralized matrix + skill override.
 
-
-def resolve_model(complexity: str, criticality: str = "medium") -> str:
-    """Resolve a model name from a complexity tier and criticality level.
+    Looks up ``_EFFORT_MATRIX[(complexity, criticality)]`` for the baseline,
+    then applies the skill override: ``review-fix`` and ``integration-recovery``
+    get bumped to ``"max"`` (per spec §2). Effort is a behavioral signal capping
+    the model's *maximum* reasoning depth — see Anthropic's effort docs and spec
+    §1 for the adaptive-thinking framing.
 
     Args:
         complexity: Complexity tier key ("trivial", "simple", or "complex").
         criticality: Criticality level ("low", "medium", "high", or "critical").
-            Defaults to "medium".
+        skill: The dispatching skill name (e.g. "implement", "review-fix").
+            Selects the skill override; unknown skills receive the matrix value.
 
     Returns:
-        Model name string ("haiku", "sonnet", or "opus").
+        An effort level string from the closed vocabulary
+        ``{"low", "medium", "high", "xhigh", "max"}``.
 
     Raises:
         ValueError: If complexity or criticality is not a recognized value.
+
+    Note:
+        This used to take the resolved model and fail loudly when the cell
+        requested an effort that model could not accept (e.g. ``xhigh`` on
+        Sonnet). cortex no longer chooses the model, so that guard cannot be
+        evaluated here; an unacceptable ``--effort`` is instead caught at the
+        CLI boundary and surfaced loudly (clamp to ``max`` on a hard reject, a
+        ``dispatch_effort_ignored`` note on a warn-ignore).
     """
     if complexity not in TIER_CONFIG:
         raise ValueError(
@@ -239,54 +236,9 @@ def resolve_model(complexity: str, criticality: str = "medium") -> str:
             f"Unknown criticality {criticality!r}; "
             f"must be one of {sorted(_VALID_CRITICALITY)}"
         )
-    return _MODEL_MATRIX[(complexity, criticality)]
-
-
-def resolve_effort(complexity: str, criticality: str, skill: str, model: str) -> str:
-    """Resolve an effort level from the centralized matrix + skill-override gate.
-
-    Looks up ``_EFFORT_MATRIX[(complexity, criticality)]`` for the baseline,
-    then applies the skill-override gate: ``review-fix`` and
-    ``integration-recovery`` on Opus get bumped to ``"max"`` (per spec §2). On
-    any non-Opus model the matrix value applies. Effort is a behavioral signal
-    capping the model's *maximum* reasoning depth — see Anthropic's effort docs
-    and spec §1 for the adaptive-thinking framing.
-
-    Args:
-        complexity: Complexity tier key ("trivial", "simple", or "complex").
-        criticality: Criticality level ("low", "medium", "high", or "critical").
-        skill: The dispatching skill name (e.g. "implement", "review-fix").
-            Used to gate the skill-override; unknown skills receive the matrix
-            value.
-        model: The *effective* (post-``model_override``) model name. Required
-            because the override is gated on ``model == "opus"`` — callers
-            must pass the post-override model so escalation boundaries
-            re-evaluate the gate per spec Edge Cases.
-
-    Returns:
-        An effort level string from the closed vocabulary
-        ``{"low", "medium", "high", "xhigh", "max"}``.
-
-    Raises:
-        ValueError: If the resolved effort is not supported by the resolved
-            model per spec §3 (e.g. ``xhigh`` on Sonnet). Per the Risks section
-            in the implementation plan, this is ``raise ValueError`` rather
-            than the ``assert`` literally specified in spec §3 — ``assert`` is
-            stripped under ``python -O`` / ``PYTHONOPTIMIZE=1``, defeating the
-            "MUST fail loudly" intent. ``ValueError`` matches the existing
-            convention in :func:`resolve_model` and ``dispatch_task``.
-    """
-    effort = _EFFORT_MATRIX[(complexity, criticality)]
-    if model == "opus" and skill in _SKILL_EFFORT_OVERRIDES:
-        effort = _SKILL_EFFORT_OVERRIDES[skill]
-    supported = _MODEL_SUPPORTED_EFFORTS.get(model)
-    if supported is not None and effort not in supported:
-        raise ValueError(
-            f"resolved effort {effort!r} is not supported by model {model!r}; "
-            f"supported levels: {sorted(supported)} (complexity={complexity!r}, "
-            f"criticality={criticality!r}, skill={skill!r})"
-        )
-    return effort
+    if skill in _SKILL_EFFORT_OVERRIDES:
+        return _SKILL_EFFORT_OVERRIDES[skill]
+    return _EFFORT_MATRIX[(complexity, criticality)]
 
 
 # Tools available to all dispatched agents
@@ -348,9 +300,12 @@ class DispatchResult:
 # Recovery path for each error type.  Consumed by retry logic and morning report.
 ERROR_RECOVERY: dict[str, str] = {
     "agent_timeout":          "retry",
-    "agent_test_failure":     "escalate",
+    # Formerly "escalate": these climbed a haiku -> sonnet -> opus ladder before
+    # pausing. cortex no longer selects models, so there is no tier to climb;
+    # both now retry with accumulated learnings and pause when attempts run out.
+    "agent_test_failure":     "retry",
     "agent_refusal":          "pause_human",
-    "agent_confused":         "escalate",
+    "agent_confused":         "retry",
     "task_failure":           "retry",
     "infrastructure_failure": "pause_human",
     "budget_exhausted":       "pause_session",
@@ -566,22 +521,24 @@ async def dispatch_task(
     log_path: Optional[Path] = None,
     criticality: str = "medium",
     activity_log_path: Optional[Path] = None,
-    model_override: Optional[str] = None,
     effort_override: Optional[str] = None,
     integration_base_path: Optional[Path] = None,
     repo_root: Optional[Path] = None,
     *,
     skill: Skill,
     attempt: int = 1,
-    escalated: bool = False,
-    escalation_event: bool = False,
     cycle: int | None = None,
 ) -> DispatchResult:
     """Dispatch a task to a Claude agent via the Agent SDK.
 
-    Selects model, budget, and turn limits based on the task's complexity
+    Selects effort, budget, and turn limits based on the task's complexity
     tier and criticality level. Streams progress events to the event log
     and collects output text from assistant messages.
+
+    Does NOT select a model: ``ClaudeAgentOptions.model`` is left unset so the
+    dispatched agent runs on the CLI's own default. The model it actually ran
+    on is read back off the first ``AssistantMessage`` and reported on the
+    ``dispatch_complete`` event.
 
     Args:
         feature: Feature name (for logging context).
@@ -596,9 +553,6 @@ async def dispatch_task(
         activity_log_path: Optional path to per-agent activity JSONL log.
             If provided, tool use and result events are appended via
             _write_activity_event (non-blocking).
-        model_override: If provided, use this model name directly instead of
-            resolving from complexity/criticality.  Used by the retry loop to
-            implement model-tier escalation (Haiku → Sonnet → Opus).
         effort_override: If provided, use this effort level directly instead of
             resolving from the complexity/criticality cell via ``_EFFORT_MATRIX``
             and skill-based overrides.  Accepts any value accepted by
@@ -621,11 +575,6 @@ async def dispatch_task(
             added to the ``Skill`` Literal at module scope before use.
         attempt: 1-based retry attempt number for this dispatch. Defaults to
             ``1`` for the first attempt.
-        escalated: True when this dispatch is running on an escalated model
-            tier (e.g. Sonnet → Opus) relative to the original tier choice.
-        escalation_event: True when this dispatch represents the boundary
-            event where the escalation actually occurred (distinct from
-            subsequent attempts that merely run on the escalated tier).
         cycle: Review cycle number for ``review-fix`` dispatches only.
             Must be ``None`` for every other skill; passing a non-None value
             with any other ``skill`` raises ``ValueError``.
@@ -654,14 +603,23 @@ async def dispatch_task(
             f"Unknown complexity tier {complexity!r}; "
             f"must be one of {sorted(TIER_CONFIG)}"
         )
+    # Validated here rather than only inside resolve_effort, so the criticality
+    # contract holds on the effort_override path too (it used to be enforced by
+    # the now-deleted resolve_model, which ran unconditionally).
+    if criticality not in _VALID_CRITICALITY:
+        raise ValueError(
+            f"Unknown criticality {criticality!r}; "
+            f"must be one of {sorted(_VALID_CRITICALITY)}"
+        )
 
     if skill not in get_args(Skill):
         raise ValueError(f"unregistered skill {skill!r}; must be one of {sorted(get_args(Skill))}")
     if cycle is not None and skill != "review-fix":
         raise ValueError(f"cycle is only valid for skill='review-fix'; got skill={skill!r} with cycle={cycle!r}")
 
-    model = model_override if model_override is not None else resolve_model(complexity, criticality)
-    effort = effort_override if effort_override is not None else resolve_effort(complexity, criticality, skill, model)
+    effort = effort_override if effort_override is not None else resolve_effort(complexity, criticality, skill)
+    # Populated from the first AssistantMessage; reported on dispatch_complete.
+    observed_model: Optional[str] = None
 
     # Clear CLAUDECODE so the sub-agent doesn't hit the nested-session guard.
     # The SDK merges options.env on top of os.environ (proven by existing CLAUDECODE
@@ -788,7 +746,9 @@ async def dispatch_task(
             _stderr_lines.append(line)
 
     options = ClaudeAgentOptions(
-        model=model,
+        # `model` is deliberately unset — cortex does not choose one. The agent
+        # runs on the CLI default; what it actually ran on is captured from
+        # AssistantMessage below and reported on dispatch_complete.
         max_turns=tier["max_turns"],
         max_budget_usd=tier["max_budget_usd"],
         cwd=str(worktree_path),
@@ -811,14 +771,13 @@ async def dispatch_task(
             "feature": feature,
             "skill": skill,
             "attempt": attempt,
-            "escalated": escalated,
-            "escalation_event": escalation_event,
         }
         if cycle is not None:
             event_dict["cycle"] = cycle
         event_dict["complexity"] = complexity
         event_dict["criticality"] = criticality
-        event_dict["model"] = model
+        # No "model" key here by design: it is not known until the agent
+        # replies. dispatch_complete carries the observed model instead.
         event_dict["effort"] = effort
         event_dict["max_turns"] = tier["max_turns"]
         event_dict["max_budget_usd"] = tier["max_budget_usd"]
@@ -833,6 +792,22 @@ async def dispatch_task(
     try:
         async for message in query(prompt=task, options=options):
             if isinstance(message, AssistantMessage):
+                # Record what the CLI actually ran on. First non-empty value
+                # wins; the SDK reports it per assistant message and it does
+                # not change mid-dispatch. Emitted as a one-shot event so the
+                # dashboard can show the model *while* the dispatch runs —
+                # dispatch_start cannot carry it, since nothing has replied yet.
+                if observed_model is None:
+                    observed_model = getattr(message, "model", None) or None
+                    if observed_model and log_path:
+                        log_event(log_path, {
+                            "event": "dispatch_model_observed",
+                            "feature": feature,
+                            "skill": skill,
+                            "attempt": attempt,
+                            "model": observed_model,
+                        })
+
                 for block in message.content:
                     if isinstance(block, TextBlock):
                         output_parts.append(block.text)
@@ -894,7 +869,7 @@ async def dispatch_task(
                             "event": "dispatch_truncation",
                             "feature": feature,
                             "stop_reason": _stop_reason,
-                            "model": model,
+                            "model": observed_model,
                             "effort": effort,
                         })
                     log_event(log_path, {
@@ -904,6 +879,9 @@ async def dispatch_task(
                         "duration_ms": message.duration_ms,
                         "num_turns": message.num_turns,
                         "stop_reason": _stop_reason,
+                        # The model the CLI actually ran on (cortex no longer
+                        # picks it). None if no AssistantMessage arrived.
+                        "model": observed_model,
                     })
 
                 if activity_log_path is not None:
@@ -943,7 +921,7 @@ async def dispatch_task(
                     log_event(log_path, {
                         "event": "dispatch_effort_ignored",
                         "feature": feature,
-                        "model": model,
+                        "model": observed_model,
                         "effort": effort,
                         "stderr_line": _stderr_line,
                     })

@@ -5958,7 +5958,7 @@
           <div class="ax-compare-stat"><span class="ax-compare-stat-v">10</span><span class="ax-compare-stat-k">research agents</span></div>
           <div class="ax-compare-stat"><span class="ax-compare-stat-v">2</span><span class="ax-compare-stat-k">review gates</span></div>
         </div>
-        <div class="ax-compare-extras">ten-angle research ending in an adversarial pass · <em>/critical-review</em> before the spec is approved · two plans race for the winner · an Opus builder implements it · a review phase before merge.</div>
+        <div class="ax-compare-extras">ten-angle research ending in an adversarial pass · <em>/critical-review</em> before the spec is approved · two plans race for the winner · a builder implements it · a review phase before merge.</div>
       </div>
     </div>
 
@@ -6031,7 +6031,7 @@
       <div class="leader"></div>
       <div class="rev">R3</div>
       <span class="stamp">phase complete</span>
-      <h3>Specify <span class="phase-tag">phase 03</span><span class="gloss" title="parallel adversarial reviewers, then an Opus synthesis — dispatched before the spec is approved">/critical-review before approval</span></h3>
+      <h3>Specify <span class="phase-tag">phase 03</span><span class="gloss" title="parallel adversarial reviewers, then a synthesis — dispatched before the spec is approved">/critical-review before approval</span></h3>
       <div class="status-line">status: <span class="ok">resolving → locked</span> · acceptance criteria pinned</div>
       <div class="body">
         <span class="placeholder">[ pending — system + edge cases resolve here ]</span>
@@ -6393,14 +6393,15 @@
         <h3>Climbs when stuck — <em>stops calmly when it can't.</em></h3>
         <div class="tg-frame">
           <svg viewBox="0 0 260 140" preserveAspectRatio="xMidYMid meet" class="tg-fig-climb" aria-hidden="true">
-            <!-- Vertical ladder centered-left. Each rung is a model-tier
-                 with TWO labels: the action (retry / escalate / brain)
-                 right of the ladder, and the model name (sonnet / opus /
-                 triage) further right. Generous horizontal spacing so
-                 nothing overlaps. -->
+            <!-- Vertical ladder centered-left. Each rung is an ATTEMPT with
+                 TWO labels: the action (retry / last try / brain) right of
+                 the ladder, and which attempt it is further right. This used
+                 to be a model-tier ladder; cortex selects no models now
+                 (ADR-0032), so the rungs count attempts instead. Generous
+                 horizontal spacing so nothing overlaps. -->
 
             <!-- caption (top) -->
-            <text class="schem-cap" x="130" y="14" text-anchor="middle">model ladder</text>
+            <text class="schem-cap" x="130" y="14" text-anchor="middle">attempt ladder</text>
 
             <!-- ladder rails -->
             <line class="schem-line" x1="34" y1="28" x2="34" y2="106"/>
@@ -6412,15 +6413,15 @@
             <line class="schem-line rung-3 solid-blue" x1="34" y1="62" x2="58" y2="62" stroke-width="1.4"/>
             <line class="schem-line ochre" x1="34" y1="44" x2="58" y2="44" stroke-width="1.4"/>
 
-            <!-- per-rung labels: action @ x=66, model @ x=124 -->
-            <text class="schem-tag" x="66" y="100">retry</text>
-            <text class="schem-tag dim" x="124" y="100">sonnet</text>
+            <!-- per-rung labels: action @ x=66, attempt @ x=124 -->
+            <text class="schem-tag" x="66" y="100">try</text>
+            <text class="schem-tag dim" x="124" y="100">attempt 1</text>
 
             <text class="schem-tag" x="66" y="82">retry</text>
-            <text class="schem-tag dim" x="124" y="82">sonnet</text>
+            <text class="schem-tag dim" x="124" y="82">+ learnings</text>
 
-            <text class="schem-tag blue" x="66" y="64">escalate</text>
-            <text class="schem-tag dim" x="124" y="64">opus</text>
+            <text class="schem-tag blue" x="66" y="64">last try</text>
+            <text class="schem-tag dim" x="124" y="64">+ learnings</text>
 
             <text class="schem-tag ochre" x="66" y="46">brain</text>
             <text class="schem-tag dim" x="124" y="46">triage</text>
@@ -6477,9 +6478,9 @@
             <text class="schem-cap" x="130" y="130" text-anchor="middle">three rungs · one judge · calm pause</text>
           </svg>
         </div>
-        <p class="tg-body">Failed gates don't loop blindly. A retry-classified failure runs again on the same model with the previous attempt's learnings appended; an escalate-classified one climbs exactly one rung of the <code>haiku → sonnet → opus</code> ladder. When the attempts are spent, a separate brain agent triages: <code>SKIP</code>, <code>DEFER</code>, or <code>PAUSE</code>. There is deliberately no <code>RETRY</code> verdict — it would re-enter the caller that just gave up.</p>
+        <p class="tg-body">Failed gates don't loop blindly. A failure that's worth another go runs again with the previous attempt's learnings appended — each retry is a fresh process, so nothing carries over but the notes. A refusal or an infrastructure failure skips the retries entirely and pauses on the spot. When the attempts are spent, a separate brain agent triages: <code>SKIP</code>, <code>DEFER</code>, or <code>PAUSE</code>. There is deliberately no <code>RETRY</code> verdict — it would re-enter the caller that just gave up.</p>
         <p class="tg-body">A <code>DEFER</code> writes <code>deferred/&lt;slug&gt;-q001.md</code> with what it tried and what it needs from you — then carries on with the rest of the queue. Three rungs, a judge, one calm exit.</p>
-        <div class="tg-cap">retry → escalate → triage → calm pause</div>
+        <div class="tg-cap">try → retry → triage → calm pause</div>
       </article>
 
       <!-- FIG 5 — Stays in its lane. -->
@@ -8267,13 +8268,12 @@
     //   • /critical-review fires for complex + (medium|high|critical), and it
     //     fires AT SPEC, before approval — never at plan
     //     (skills/refine/references/specify.md §3b)
-    //   • the review phase is FORCED at high|critical regardless of tier, but
-    //     its model never escalates: `--role review` is uniform sonnet at every
-    //     criticality (cortex_command/lifecycle/resolve_model_cli.py, ruling
-    //     recorded in docs/internals/sdk.md). What Opus buys at high|critical is
-    //     the BUILDER (`--role builder`), not the reviewer.
-    //   • competing plans (planB) are critical-only (`--role competing-plan`
-    //     has no low/medium/high cell at all)
+    //   • the review phase is FORCED at high|critical regardless of tier.
+    //     What escalating criticality buys is reviewer COUNT and the
+    //     adversarial gate — never a model upgrade: cortex selects no models
+    //     at all (cortex/adr/0032-cortex-selects-no-model.md), so the
+    //     dispatching agent picks.
+    //   • competing plans (planB) are critical-only
     //   • research runs at every cell — what the grid patches is its BREADTH,
     //     not its presence (RESEARCH_AGENTS below, from fanout.md)
     const MATRIX = [
@@ -8309,9 +8309,6 @@
       [4, 10],  // critical
     ];
 
-    // `--role builder` resolves opus at high|critical, sonnet below.
-    const builderModel = crit => (crit >= 2 ? 'opus' : 'sonnet');
-
     const AXIS = {
       complexity:  ['simple', 'complex'],
       criticality: ['low', 'medium', 'high', 'critical'],
@@ -8324,7 +8321,7 @@
       parts.push(`${RESEARCH_AGENTS[crit][cplx]}-angle research`);
       if (set.has('review1'))  parts.push('adversarial gate at spec');
       if (set.has('planB'))    parts.push('race two plans');
-      if (crit >= 2)           parts.push('opus builder');
+      if (crit >= 2)           parts.push('review forced');
       if (!set.has('review') && !set.has('review1'))
         parts.push('one-pass ship');
       return parts.join(' · ');
@@ -8682,14 +8679,13 @@
       critEl.textContent = AXIS.criticality[crit];
       summaryEl.textContent = summarize(seq, crit, cplx);
 
-      // Cell-dependent sublabels. `research` is the only node whose grid effect
-      // is breadth rather than presence; `implement` and `review` carry their
-      // resolved model, which is where the real high/critical escalation lands
-      // — the builder climbs to opus, the reviewer never does.
+      // Cell-dependent sublabels. `research` is the only node whose grid
+      // effect is breadth rather than presence, so it is the only one with a
+      // sublabel. `implement` and `review` used to carry their resolved model
+      // here; cortex selects no models now (ADR-0032), and criticality changes
+      // nothing else about those two nodes beyond whether they run.
       const SUBTEXT = {
-        research:  `${RESEARCH_AGENTS[crit][cplx]} ${RESEARCH_AGENTS[crit][cplx] === 1 ? 'angle' : 'angles'}`,
-        implement: builderModel(crit),
-        review:    'sonnet',
+        research: `${RESEARCH_AGENTS[crit][cplx]} ${RESEARCH_AGENTS[crit][cplx] === 1 ? 'angle' : 'angles'}`,
       };
 
       const d = cablePath(seq);
@@ -8715,12 +8711,8 @@
         refs.text.setAttribute('fill', on ? (gold ? 'var(--ochre)' : 'var(--ink)') : 'var(--ink-faint)');
         refs.text.setAttribute('font-weight', on ? 500 : 400);
         if (refs.sub) {
-          refs.sub.textContent = on ? SUBTEXT[m.id] : '';
-          // opus is the one escalation on the bench worth an accent.
-          refs.sub.setAttribute(
-            'fill',
-            SUBTEXT[m.id] === 'opus' ? 'var(--ochre)' : 'var(--ink-faint)',
-          );
+          refs.sub.textContent = on ? (SUBTEXT[m.id] || '') : '';
+          refs.sub.setAttribute('fill', 'var(--ink-faint)');
         }
       });
 

@@ -81,7 +81,7 @@ Read state with `cortex-lifecycle-state --feature {feature}` (whole-state JSON) 
 | high | forced regardless of tier | active at all boundaries | single plan |
 | critical | forced regardless of tier | active at all boundaries | competing plans |
 
-Per-role model resolution belongs to `cortex-resolve-model` at each dispatch site, never to this table. The implement→{review|complete} routing rule lives in its verb, not in prose.
+Model choice is the dispatching agent's call at each site, never this table's. The implement→{review|complete} routing rule lives in its verb, not in prose.
 
 ## Situational references
 

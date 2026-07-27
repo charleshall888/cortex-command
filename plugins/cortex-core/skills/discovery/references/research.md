@@ -22,12 +22,6 @@ Size and dispatch per the **fanout** sibling reference `fanout.md` (propagated a
 
 Beyond the mandatory core, discovery's natural dimensions fill the remaining slots: **Domain & Prior Art** (comparable implementations, industry patterns, trade-offs, lessons learned) and **Feasibility** (technical risks, unknowns, prerequisites, rough S/M/L/XL effort), plus any finer-grained angle the topic warrants.
 
-Resolve the gather model in this orchestrator body, not inside an angle prompt, and bind it to every core-wave agent:
-
-```bash
-model=$(cortex-resolve-model --role searcher)
-```
-
 Agents are read-only — no `isolation: "worktree"`, no project-file writes. Prerequisites that are really codebase-state checks belong to the Codebase angle, whose findings carry citations or report `NOT_FOUND(query, scope)`; what remains in §3's Feasibility Prerequisites column is implementation sequencing only.
 
 ## 3. Write the artifact

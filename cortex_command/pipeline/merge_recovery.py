@@ -3,7 +3,7 @@
 When a freshly merged feature causes test failures, this module orchestrates
 recovery: first a flaky guard (re-merge with no changes to check for
 transient failures), then up to two code-repair attempts via dispatched
-agents with model escalation (sonnet -> opus).  A SHA-based circuit breaker
+agents (up to two attempts).  A SHA-based circuit breaker
 detects when the repair agent produces no commits, pausing before wasting
 further budget.
 """
@@ -209,8 +209,7 @@ async def recover_test_failure(
     2. Flaky guard — re-merge without any code changes. If tests pass, the
        original failure was transient.
     3. Repair cycle — up to 2 attempts: dispatch a repair agent, then
-       re-merge and re-test. Model escalation: sonnet on attempt 1,
-       opus on attempt 2.
+       re-merge and re-test.
 
     Args:
         feature: Feature name.
@@ -294,8 +293,8 @@ async def recover_test_failure(
             )
 
         # --- Repair cycle (up to 2 attempts) ---
-        # Model escalation: sonnet for attempt 1, opus for attempt 2
-        model_sequence = ["sonnet", "opus"]
+        # Both attempts run on whatever model the CLI defaults to; the second
+        # used to climb sonnet -> opus, but cortex no longer selects models.
         agent_output = "(no agent output)"
 
         for attempt in range(1, 3):
@@ -336,7 +335,6 @@ async def recover_test_failure(
             )
 
             # 3. Dispatch repair agent
-            model = model_sequence[attempt - 1]
             dispatch_result = await dispatch_task(
                 feature=feature,
                 task=prompt,
@@ -344,7 +342,6 @@ async def recover_test_failure(
                 complexity="simple",
                 system_prompt=prompt,
                 log_path=pipeline_log_path,
-                model_override=model,
                 repo_root=repo_path,
                 skill="merge-test-repair",
             )

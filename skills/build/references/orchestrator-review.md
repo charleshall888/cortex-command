@@ -20,15 +20,7 @@ Evaluate every item individually — a gestalt "looks mostly fine" misses specif
 
 The orchestrator does not edit phase artifacts directly — dispatching preserves separation of concerns and creates an audit trail.
 
-Rework needing no user input → a **fresh subagent**, which avoids anchoring to the flawed artifact:
-
-```bash
-model=$(cortex-resolve-model --role orchestrator-fix --criticality "$(cortex-lifecycle-state --feature {feature} --field criticality --raw)")
-```
-
-On nonzero exit, halt and escalate. Dispatch with:
-
-Brief it with the flagged checklist item and what is wrong, the artifact path to read, and the phase's format requirements. It must **rewrite the entire artifact** to address the flag while preserving all correct existing content — never patch sections — and add nothing beyond what the phase requires. It ends with this envelope and no prose around it:
+Rework needing no user input → a **fresh subagent**, which avoids anchoring to the flawed artifact. Brief it with the flagged checklist item and what is wrong, the artifact path to read, and the phase's format requirements. It must **rewrite the entire artifact** to address the flag while preserving all correct existing content — never patch sections — and add nothing beyond what the phase requires. It ends with this envelope and no prose around it:
 
 ```
 verdict: revised | failed

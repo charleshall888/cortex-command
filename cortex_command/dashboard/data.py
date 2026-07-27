@@ -1093,10 +1093,12 @@ def parse_backlog_titles(backlog_dir: Path) -> dict[str, str]:
 def parse_pipeline_dispatch(lifecycle_dir: Path) -> dict[str, dict]:
     """Read pipeline-events.log and return per-feature dispatch info.
 
-    Scans ``lifecycle_dir/pipeline-events.log`` for ``dispatch_start``
-    events and extracts the ``model`` and ``complexity`` fields for each
-    feature.  If a feature appears multiple times (re-dispatch), only the
-    last entry is kept.
+    Scans ``lifecycle_dir/pipeline-events.log`` for ``dispatch_start`` events
+    and extracts the ``complexity`` field for each feature.  The model is not
+    known at dispatch_start (cortex does not choose one), so it is picked up
+    from the later ``dispatch_model_observed`` / ``dispatch_complete`` events —
+    with a ``dispatch_start`` fallback for historical logs.  If a feature
+    appears multiple times (re-dispatch), only the last entry is kept.
 
     Args:
         lifecycle_dir: Path to the ``cortex/lifecycle/`` directory.
@@ -1111,14 +1113,20 @@ def parse_pipeline_dispatch(lifecycle_dir: Path) -> dict[str, dict]:
 
     result: dict[str, dict] = {}
     for event in events:
-        if event.get("event") != "dispatch_start":
-            continue
+        kind = event.get("event")
         feature = event.get("feature")
         if not feature:
             continue
-        model = event.get("model", "")
-        complexity = event.get("complexity", "")
-        result[feature] = {"model": model, "complexity": complexity}
+        if kind == "dispatch_start":
+            result[feature] = {
+                # Historical logs carried the model here; current ones do not.
+                "model": event.get("model") or "",
+                "complexity": event.get("complexity", ""),
+            }
+        elif kind in ("dispatch_model_observed", "dispatch_complete"):
+            model = event.get("model")
+            if model and feature in result:
+                result[feature]["model"] = model
 
     return result
 
@@ -1497,19 +1505,24 @@ def parse_dispatch_details(lifecycle_dir: Path) -> dict[str, dict]:
     events, _ = _read_all_jsonl(path)
     out: dict[str, dict] = {}
     for ev in events:
-        if ev.get("event") != "dispatch_start":
-            continue
+        kind = ev.get("event")
         feature = ev.get("feature")
         if not feature:
             continue
-        out[feature] = {
-            "model": ev.get("model", ""),
-            "complexity": ev.get("complexity", ""),
-            "criticality": ev.get("criticality", ""),
-            "max_turns": ev.get("max_turns"),
-            "max_budget_usd": ev.get("max_budget_usd"),
-            "ts": ev.get("ts", ""),
-        }
+        if kind == "dispatch_start":
+            out[feature] = {
+                # See parse_pipeline_dispatch: the model arrives later.
+                "model": ev.get("model") or "",
+                "complexity": ev.get("complexity", ""),
+                "criticality": ev.get("criticality", ""),
+                "max_turns": ev.get("max_turns"),
+                "max_budget_usd": ev.get("max_budget_usd"),
+                "ts": ev.get("ts", ""),
+            }
+        elif kind in ("dispatch_model_observed", "dispatch_complete"):
+            model = ev.get("model")
+            if model and feature in out:
+                out[feature]["model"] = model
     return out
 
 

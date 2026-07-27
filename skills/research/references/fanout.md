@@ -27,7 +27,7 @@ Remaining slots are orchestrator-chosen: distinct, non-redundant angles each inv
 
 ## Dispatch order
 
-1. **Core wave (parallel)** — every angle except the adversarial one, each bound to `model=$(cortex-resolve-model --role searcher)`. On nonzero resolve it degrades loud — dispatch with no `model:` plus a one-line warning, never halting.
-2. **Adversarial wave (last)** — summarize the core wave, dispatch over that summary, omit `model:` (inherits the parent, not the cheaper searcher).
+1. **Core wave (parallel)** — every angle except the adversarial one. Gather angles are breadth-first read-and-report, so a cheaper model usually fits; the choice is yours per dispatch.
+2. **Adversarial wave (last)** — summarize the core wave and dispatch over that summary. This one is judgment rather than gather, so don't cheap it out relative to the core wave.
 
 At low/medium criticality with no adversarial agent, the core wave is the whole dispatch.

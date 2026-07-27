@@ -1,13 +1,13 @@
 ---
 name: critical-review
-description: Parallel adversarial review — dispatches reviewer agents on distinct challenge angles, then synthesizes findings with an Opus agent. Use when user says "critical review", "pressure test", "adversarial review", or "challenge from multiple angles". Auto-triggers in the lifecycle for Complex + medium/high/critical features before spec approval.
+description: Parallel adversarial review — dispatches reviewer agents on distinct challenge angles, then synthesizes their findings. Use when user says "critical review", "pressure test", "adversarial review", or "challenge from multiple angles". Auto-triggers in the lifecycle for Complex + medium/high/critical features before spec approval.
 when_to_use: "Use when you want to stress-test a plan, spec, or research artifact before committing (\"poke holes in the plan\"). Different from /devils-advocate — devils-advocate runs inline in the current agent context for a lightweight solo deliberation; critical-review dispatches parallel sub-agents and synthesizes findings."
 argument-hint: "[<artifact-path>]"
 ---
 
 # Critical Review
 
-One fresh reviewer agent per angle, dispatched in parallel — full independence, no anchoring to the reasoning that produced the artifact — then an Opus synthesis.
+One fresh reviewer agent per angle, dispatched in parallel — full independence, no anchoring to the reasoning that produced the artifact — then a synthesis pass.
 
 ## Step 1: Find the artifact
 
@@ -35,11 +35,7 @@ If some reviewers fail or return nothing, synthesize from the rest and prefix th
 
 ## Step 5: Synthesize
 
-```bash
-cortex-resolve-model --role synthesizer
-```
-
-Resolve with no `--criticality` flag and no lifecycle-state read — the standalone path may have no lifecycle session, and a missing state must never block synthesis. On nonzero exit, halt and escalate rather than substituting a model. Dispatch one synthesizer with the resolved model and `${CLAUDE_SKILL_DIR}/references/synthesizer-prompt.md` verbatim, with the reviewer findings substituted.
+Dispatch one synthesizer with `${CLAUDE_SKILL_DIR}/references/synthesizer-prompt.md` verbatim, with the reviewer findings substituted. Synthesis is the judgment step of this skill — weigh the model accordingly.
 
 ## Step 6: Write B-class residue
 

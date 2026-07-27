@@ -228,7 +228,7 @@ counts across the cortex/research corpus, applying the 2.5× compression
 baseline from the prior reader study, rounded to the nearest 25 words →
 150 words.
 
-Loosened to 250 after observing that the Sonnet sub-agent producing the
+Loosened to 250 after observing that the sub-agent producing the
 brief consistently emits ~300-word output regardless of the explicit
 word target in the rubric — a well-known SDK pattern where word-count
 instructions in system prompts are weakly enforced.
@@ -674,7 +674,7 @@ async def _run_brief_query(
         _env["CLAUDE_CODE_OAUTH_TOKEN"] = _oauth_token
 
     options = _ClaudeAgentOptions(
-        model="sonnet",
+        # No model pinned — the gate-brief agent runs on the CLI default.
         max_turns=3,
         system_prompt=GATE_BRIEF_RUBRIC,
         env=_env,
@@ -808,7 +808,7 @@ def _cmd_generate_brief(args: argparse.Namespace) -> int:
     # Decision-content anchor + word-cap validation.
     valid, reason = validate_brief(brief)
 
-    # Retry once on validation failure: the Sonnet sub-agent weakly enforces
+    # Retry once on validation failure: the sub-agent weakly enforces
     # word targets and decision-anchor instructions from system prompts, so a
     # second dispatch with the specific failure as feedback recovers many
     # otherwise-rejected briefs without expanding the contract.

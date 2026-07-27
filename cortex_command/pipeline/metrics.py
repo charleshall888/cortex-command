@@ -494,7 +494,10 @@ def pair_dispatch_events(events: list[dict]) -> list[dict]:
                 results.append({
                     "ts": evt.get("ts", ""),
                     "feature": feature,
-                    "model": start.get("model"),
+                    # The observed model rides on dispatch_complete now that
+                    # cortex no longer chooses one up front. The start-event
+                    # fallback keeps historical logs bucketing correctly.
+                    "model": evt.get("model") or start.get("model"),
                     "tier": start.get("complexity"),
                     "outcome": "complete",
                     "cost_usd": evt.get("cost_usd"),
@@ -513,7 +516,7 @@ def pair_dispatch_events(events: list[dict]) -> list[dict]:
                 results.append({
                     "ts": evt.get("ts", ""),
                     "feature": feature,
-                    "model": None,
+                    "model": evt.get("model"),
                     "tier": None,
                     "outcome": "complete",
                     "cost_usd": evt.get("cost_usd"),
@@ -529,7 +532,7 @@ def pair_dispatch_events(events: list[dict]) -> list[dict]:
                 results.append({
                     "ts": evt.get("ts", ""),
                     "feature": feature,
-                    "model": start.get("model"),
+                    "model": start.get("model"),  # historical logs only
                     "tier": start.get("complexity"),
                     "outcome": "error",
                     "cost_usd": None,

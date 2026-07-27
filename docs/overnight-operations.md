@@ -159,7 +159,7 @@ When a feature branch fails to merge cleanly, `batch_runner.execute_feature()` c
 The decision:
 
 - **Trivial fast-path** fires iff `len(conflicted_files) <= 3` AND none of the conflicted files appears in `hot_files`. `resolve_trivial_conflict()` in `cortex_command/pipeline/conflict.py` runs a deterministic rebase-and-resolve against the integration branch; no agent is dispatched. This is the common case for a concurrent tiny merge on an unrelated file.
-- **Repair fallback** fires otherwise. `dispatch_repair_agent` loads `repair-agent.md` and dispatches at complexity=sonnet; on failure the single Sonnet→Opus escalation described under [Repair caps](#repair-caps) applies. This is the merge-conflict codepath specifically — test-failure repair is a different codepath (`integration_recovery.py`) with a different cap; the two are intentionally not unified.
+- **Repair fallback** fires otherwise. `dispatch_repair_agent` loads `repair-agent.md` and dispatches a repair agent; on an agent quality failure the single extra attempt described under [Repair caps](#repair-caps) applies. This is the merge-conflict codepath specifically — test-failure repair is a different codepath (`integration_recovery.py`) with a different cap; the two are intentionally not unified.
 - **Per-feature budget.** `recovery_depth < 1` gates the repair fallback; a feature that has already consumed one repair attempt this session is deferred on its next conflict rather than looping.
 
 On repair success the feature re-merges and continues; on repair failure the feature is marked failed in the batch results, the integration branch stays at the last clean merge point, and `/morning-review` surfaces it as a blocking item. If the failure path fires on `integration_recovery` (the test-gate sibling), `cortex_command/overnight/runner.py` additionally sets `integration_health="degraded"` in `overnight-strategy.json` so subsequent rounds can consult it in their own conflict-recovery decisions.
@@ -360,36 +360,38 @@ The [Test Gate and integration_health](#test-gate-and-integration_health) subsec
 - **`integration_health` in `overnight-strategy.json`**. `healthy` is the implicit baseline; `degraded` is set by `cortex_command/overnight/runner.py` when `integration_recovery` fails (alongside `INTEGRATION_DEGRADED=true` and a warning file prepended to the PR body). Downstream rounds consult this field in conflict-recovery decisions.
 - **Repair dispatch is unconditional** on gate failure — there is no suppression flag. If you need to skip repair, skip the gate (set `--test-command` to a no-op) rather than trying to gate the repair.
 
-### Model selection matrix (tier × criticality → role)
+### Review gating (tier × criticality)
 
-This document owns tier × criticality → role *dispatch*; detailed per-role SDK model configuration lives in [sdk.md](internals/sdk.md) — that file is the source of truth for model IDs, fallback chains, and `ClaudeAgentOptions` plumbing.
+cortex selects no model for any dispatch (→ [ADR-0032](../cortex/adr/0032-cortex-selects-no-model.md)); what tier and criticality still drive is whether the review phase runs and how many repair attempts a failure gets. `ClaudeAgentOptions` plumbing lives in [sdk.md](internals/sdk.md).
 
-| Tier | Criticality | Review required? | Repair role |
-|------|-------------|------------------|-------------|
-| `simple` | `low`, `medium` | No | Sonnet (first attempt) |
-| `simple` | `high`, `critical` | Yes | Sonnet → Opus on escalation |
-| `complex` | any | Yes | Sonnet → Opus on escalation |
+| Tier | Criticality | Review required? | Repair attempts |
+|------|-------------|------------------|-----------------|
+| `simple` | `low`, `medium` | No | 1 |
+| `simple` | `high`, `critical` | Yes | up to 2 |
+| `complex` | any | Yes | up to 2 |
 
-Review gating is implemented by `requires_review(tier, criticality)` in `cortex_command/common.py`: review runs when `tier == "complex" or criticality in ("high", "critical")`. The escalation ladder is one-directional (haiku → sonnet → opus, no downgrade); see [sdk.md](internals/sdk.md) for the concrete model IDs wired into each role.
+Review gating is implemented by `requires_review(tier, criticality)` in `cortex_command/common.py`: review runs when `tier == "complex" or criticality in ("high", "critical")`.
 
 ### Repair caps
 
 The runner has **two distinct repair caps** with different numbers. They are intentionally *not unified* — the codepaths, artifacts, and recovery semantics differ enough that a single number would hide the divergence.
 
-- **Merge-conflict repair: single Sonnet→Opus escalation.** One attempt at Sonnet, then one escalation to Opus, then give up and defer. Rationale: merge-conflict repair operates on a git-index snapshot; a second Sonnet attempt on the same snapshot is unlikely to succeed where the first failed, so the cap spends its second slot climbing the model ladder rather than retrying at the same tier. Codepath: `cortex_command/pipeline/conflict.py` and `cortex_command/pipeline/merge_recovery.py`.
-- **Test-failure repair: max 2 attempts.** Two full repair cycles for the integration test gate. Rationale: test failures often expose a different error on the second attempt (the first fix unblocks the next assertion), so a retry at the same tier has meaningful information gain that a merge-conflict retry does not. Codepath: `cortex_command/overnight/integration_recovery.py`.
+- **Merge-conflict repair: 2 attempts, and only on an agent quality failure.** One attempt, then one retry if the agent left markers or wrote a deferral question, then give up and defer. An SDK exception or a test failure does *not* buy the second attempt. The second slot used to be spent climbing sonnet → opus rather than retrying at the same tier; with model selection gone (→ ADR-0032) it is a plain second attempt on the same git-index snapshot, so the historical caveat applies — a repeat attempt on an unchanged snapshot is a weaker bet than a test-failure retry. Codepath: `cortex_command/pipeline/conflict.py` and `cortex_command/pipeline/merge_recovery.py`.
+- **Test-failure repair: max 2 attempts.** Two full repair cycles for the integration test gate. Rationale: test failures often expose a different error on the second attempt (the first fix unblocks the next assertion), so a retry has meaningful information gain that a merge-conflict retry does not. Codepath: `cortex_command/overnight/integration_recovery.py`.
 
 Do not describe these as "the repair cap" in prose — collapsing them to one number misleads readers at 2am when observed behavior does not match.
 
 ### Effort policy rationale and rollback monitoring
 
-This subsection covers *why* the effort matrix flipped Sonnet baseline to `high` and lifted Opus complex+high/critical to `xhigh`, *what framing* bounds the cost-regression risk, and *how* an operator detects regression and reverts. The matrix mechanics (the 12 cells, the `review-fix` / `integration-recovery` overrides, the runtime guard) live in [sdk.md](internals/sdk.md) — do not duplicate the table here.
+This subsection covers *why* the effort matrix flipped its baseline to `high` and lifted complex+high/critical to `xhigh`, *what framing* bounds the cost-regression risk, and *how* an operator detects regression and reverts. The matrix mechanics (the 12 cells and the `review-fix` / `integration-recovery` overrides) live in [sdk.md](internals/sdk.md) — do not duplicate the table here.
+
+**Effort is now model-independent.** The cells were originally chosen against the model each was expected to run on, and a pre-dispatch guard rejected an unsupported pairing. cortex no longer picks the model (→ [ADR-0032](../cortex/adr/0032-cortex-selects-no-model.md)), so an `xhigh` cell can now reach a model that does not accept it. That is caught loudly at the CLI boundary — hard-reject clamps once to `max`, warn-ignore emits `dispatch_effort_ignored` and the morning report renders it — rather than silently. If `dispatch_effort_ignored` starts appearing on every complex+high dispatch, the runner default is a model without `xhigh` support, and the fix is the CLI default, not the matrix.
 
 **Anthropic guidance.** Per Anthropic's Claude 4.7 migration guide, `xhigh` is "the best setting for most coding and agentic use cases," and `high` is recommended as the minimum for intelligence-sensitive workloads. Sonnet 4.6 carries an elevated baseline expectation that the prior `medium` setting did not meet. The flip aligns the dispatch policy with that recommendation across the matrix.
 
 **#089 closure rationale.** Backlog ticket #089 previously parked the `xhigh` adoption decision pending a stronger empirical signal. It was closed because the available data — n=1 + a single synthetic task — could not carry the decision weight needed to overturn vendor guidance. The community estimate (~1.5× tokens for ~5–6% quality boost on agentic coding) is the pre-flip prior we accepted in lieu of a controlled local benchmark. The post-flip rollback monitoring procedure below is the empirical check that runs continuously now, replacing the one-shot benchmark that #089 was waiting on.
 
-**Adaptive-thinking framing.** Per Anthropic's effort docs, `effort` is a behavioral signal that caps the *maximum reasoning depth* the model may use — it is not a strict token budget. The model adapts thinking down for simpler tasks: a simple task running under `xhigh` may consume little more than under `high`, while a complex task may meaningfully exceed it. So the cost regression from the flip is bounded by *task complexity*, not by the effort setting alone. This is why the `metrics.json` rollback check below buckets by `(model, tier, skill, effort)` — a per-effort regression at the same complexity is the signal worth investigating; an aggregate cost rise that tracks complexity mix is not.
+**Adaptive-thinking framing.** Per Anthropic's effort docs, `effort` is a behavioral signal that caps the *maximum reasoning depth* the model may use — it is not a strict token budget. The model adapts thinking down for simpler tasks: a simple task running under `xhigh` may consume little more than under `high`, while a complex task may meaningfully exceed it. So the cost regression from the flip is bounded by *task complexity*, not by the effort setting alone. This is why the `metrics.json` rollback check below buckets by `(model, tier, skill, effort)` — a per-effort regression at the same complexity is the signal worth investigating; an aggregate cost rise that tracks complexity mix is not. The `model` axis is still recorded: cortex reads back the model each dispatch actually ran on and reports it on `dispatch_complete`, so these buckets survive ADR-0032 intact.
 
 **Rollback monitoring procedure.** `metrics.py` now buckets dispatch aggregates by `(model, tier, skill, effort)` (see Task 6 of the implementation plan). The post-flip cost watch is a per-bucket comparison against the pre-flip baseline. Query the per-effort cost mean from `metrics.json` like so:
 

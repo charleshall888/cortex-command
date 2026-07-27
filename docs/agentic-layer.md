@@ -107,16 +107,16 @@ Features are classified into one of two tiers before planning begins:
 - **Simple**: 1–5 files, existing pattern, clear requirements. Skips the Review phase.
 - **Complex**: 6+ files, novel pattern, or ambiguous scope. Includes the Review phase.
 
-### Criticality and Model Selection
+### Criticality
 
-Criticality is set per-feature and drives which models run at each phase and whether review is forced:
+Criticality is set per-feature and drives how much work each phase does and whether review is forced. It does **not** drive model selection — cortex chooses no models anywhere; the dispatching agent does (→ [ADR-0032](../cortex/adr/0032-cortex-selects-no-model.md)).
 
-| Criticality | Research | Plan | Explore model | Build model | Review |
-|-------------|----------|------|---------------|-------------|--------|
-| low | Parallel (matrix-sized) | Single | Haiku | Sonnet | Tier-based |
-| medium | Parallel (matrix-sized) | Single | Haiku | Sonnet | Tier-based |
-| high | Parallel (matrix-sized) | Single | Sonnet | Opus | Forced |
-| critical | Parallel (matrix-sized) | Competing plans | Sonnet | Opus | Forced (Opus reviewer) |
+| Criticality | Research | Plan | Review |
+|-------------|----------|------|--------|
+| low | Parallel (matrix-sized) | Single | Tier-based |
+| medium | Parallel (matrix-sized) | Single | Tier-based |
+| high | Parallel (matrix-sized) | Single | Forced |
+| critical | Parallel (matrix-sized) | Competing plans | Forced |
 
 Research fan-out is always parallel and sized by a tier×criticality matrix (range 3–10) — see [`skills/research/references/fanout.md`](../skills/research/references/fanout.md). Competing/parallel plans remain critical-only.
 
@@ -128,7 +128,7 @@ Research fan-out is always parallel and sized by a tier×criticality matrix (ran
 
 ### 1. Structured Single-Feature
 
-The most common path. The user asks `/cortex-core:dev` what to work on, or names a specific feature. `/cortex-core:dev` classifies the request as a single non-trivial feature and routes to `/cortex-core:refine feature-name` then `/cortex-core:build feature-name`. The lifecycle skill starts with a Clarify phase — focused questions about scope, complexity, and criticality — then runs research (codebase exploration plus a read of `cortex/requirements/project.md`), then moves to specify, where an interview surfaces acceptance criteria. Planning produces a task breakdown that the orchestrator reviews before approval. Implementation proceeds as a series of commits, one per task *(PreToolUse hook: `hooks/cortex-validate-commit.sh` fires here and blocks any `git commit` whose message fails the style rules)*. If the feature is complex tier (6+ files, novel pattern) or high/critical criticality, the review phase runs a multi-agent verdict — four Sonnet reviewers in parallel, then an Opus cross-validator. On completion, `events.log` is updated, the backlog item is closed, and a PR is created.
+The most common path. The user asks `/cortex-core:dev` what to work on, or names a specific feature. `/cortex-core:dev` classifies the request as a single non-trivial feature and routes to `/cortex-core:refine feature-name` then `/cortex-core:build feature-name`. The lifecycle skill starts with a Clarify phase — focused questions about scope, complexity, and criticality — then runs research (codebase exploration plus a read of `cortex/requirements/project.md`), then moves to specify, where an interview surfaces acceptance criteria. Planning produces a task breakdown that the orchestrator reviews before approval. Implementation proceeds as a series of commits, one per task *(PreToolUse hook: `hooks/cortex-validate-commit.sh` fires here and blocks any `git commit` whose message fails the style rules)*. If the feature is complex tier (6+ files, novel pattern) or high/critical criticality, the review phase runs a multi-agent verdict — several reviewers in parallel, then a cross-validator. On completion, `events.log` is updated, the backlog item is closed, and a PR is created.
 
 ### 2. Multiple Features via /cortex-overnight:overnight
 

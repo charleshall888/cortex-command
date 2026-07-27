@@ -51,55 +51,51 @@ async for message in query(prompt=task, options=options):
 
 | Option | Value |
 |--------|-------|
-| `model` | Resolved from complexity × criticality matrix (see below) |
+| `model` | **Unset.** cortex selects no model; the dispatch runs on the CLI default (→ ADR-0032) |
 | `max_turns` | 15 / 20 / 30 (trivial / simple / complex) |
 | `max_budget_usd` | $5 / $25 / $50 (trivial / simple / complex) |
 | `permission_mode` | `"bypassPermissions"` — overnight agents run without permission prompts |
 | `allowed_tools` | `["Read", "Write", "Edit", "Bash", "Glob", "Grep"]` |
 
-**Model selection matrix (complexity × criticality):**
+**Model selection: none.** cortex does not choose a model for any dispatch — interactive or overnight. `ClaudeAgentOptions.model` is left unset, so each dispatch runs on the CLI's own default, and the dispatching agent picks the model where one is picked at all. The former *(complexity, criticality)* pipeline matrix, the *(role, criticality)* lifecycle matrix behind the `cortex-resolve-model` verb, and the `haiku → sonnet → opus` retry ladder were all removed together; see `adr/0032-cortex-selects-no-model` for what was traded away and why.
 
-|  | low | medium | high | critical |
-|---|-----|--------|------|----------|
-| **trivial** | Haiku | Haiku | Sonnet | Sonnet |
-| **simple** | Sonnet | Sonnet | Sonnet | Sonnet |
-| **complex** | Sonnet | Sonnet | Opus | Opus |
+Max turns and budget still scale on the complexity axis.
 
-Max turns and budget scale on the complexity axis only; criticality affects model selection.
+**Model observability.** Not choosing the model does not mean not recording it. `AssistantMessage` reports the model each dispatch actually ran on; `dispatch.py` captures the first non-empty value and emits it twice — once as a one-shot `dispatch_model_observed` event (so the dashboard can badge a dispatch that is still running) and again on `dispatch_complete` (so `pair_dispatch_events` can bucket it). `dispatch_start` carries no `model` key, because nothing has replied when it is written; the pairing falls back to the start event so metrics written before ADR-0032 still aggregate.
 
 **Effort selection matrix (`_EFFORT_MATRIX`):**
 
-Effort is resolved centrally in `cortex_command/pipeline/dispatch.py` via `resolve_effort(complexity, criticality, skill, model)`. The 2D `_EFFORT_MATRIX` constant replaces the legacy 1D `EFFORT_MAP` (which keyed only on complexity). The matrix has 12 cells (3 complexity × 4 criticality):
+Effort is resolved centrally in `cortex_command/pipeline/dispatch.py` via `resolve_effort(complexity, criticality, skill)`. The 2D `_EFFORT_MATRIX` constant replaces the legacy 1D `EFFORT_MAP` (which keyed only on complexity). The matrix has 12 cells (3 complexity × 4 criticality):
 
-| (complexity, criticality) | Resolved model | Effort |
-|---|---|---|
-| (trivial, low) | haiku | low |
-| (trivial, medium) | haiku | low |
-| (trivial, high) | sonnet | high |
-| (trivial, critical) | sonnet | high |
-| (simple, low) | sonnet | high |
-| (simple, medium) | sonnet | high |
-| (simple, high) | sonnet | high |
-| (simple, critical) | sonnet | high |
-| (complex, low) | sonnet | high |
-| (complex, medium) | sonnet | high |
-| (complex, high) | opus | xhigh |
-| (complex, critical) | opus | xhigh |
+| (complexity, criticality) | Effort |
+|---|---|
+| (trivial, low) | low |
+| (trivial, medium) | low |
+| (trivial, high) | high |
+| (trivial, critical) | high |
+| (simple, low) | high |
+| (simple, medium) | high |
+| (simple, high) | high |
+| (simple, critical) | high |
+| (complex, low) | high |
+| (complex, medium) | high |
+| (complex, high) | xhigh |
+| (complex, critical) | xhigh |
 
 `xhigh` aligns with Anthropic's Opus 4.7 guidance (*"Start with `xhigh` for coding and agentic use cases"*). Effort is a behavioral signal that caps the *maximum* reasoning depth — the model adapts thinking down for simpler tasks rather than always spending the full ceiling.
 
-**Skill-based effort overrides (applied after matrix lookup, gated on resolved model == "opus"):**
+`resolve_effort` no longer takes a model. It used to, for two reasons that are both gone: the skill overrides below were gated on the resolved model being opus, and a runtime guard checked the cell against a per-model supported-effort vocabulary. cortex no longer selects a model (→ ADR-0032), so neither can be evaluated here. `resolve_effort` still owns the complexity and criticality enum guards, which `resolve_model` used to carry.
 
-| Skill | Effort override | Applies when |
-|---|---|---|
-| `review-fix` | max | Resolved post-`model_override` model is opus; otherwise the matrix value applies |
-| `integration-recovery` | max | Resolved post-`model_override` model is opus. The dispatch site at `integration_recovery.py` forces `model_override="opus"`, so this override fires reliably for every integration-recovery dispatch. |
+**Skill-based effort overrides (applied after matrix lookup, unconditional):**
 
-The `model` argument to `resolve_effort` is the *effective* model — `model_override` (passed by callers like `merge_recovery.py` and `conflict.py`) takes precedence over `_MODEL_MATRIX` resolution before the override gate is evaluated. All other skills (`implement`, `review`, `conflict-repair`, `merge-test-repair`, `brain`) use the matrix value with no override.
+| Skill | Effort override |
+|---|---|
+| `review-fix` | max |
+| `integration-recovery` | max |
 
-**Coverage caveat — `review-fix → max` fires for ~25% of review-fix dispatches.** `requires_review()` returns true for `(complex, *) OR (*, high|critical)` — six cells trigger review. Of these, only `(complex, high)` and `(complex, critical)` resolve to Opus; the remaining four resolve to Sonnet. So the `review-fix → max` override only fires for that ~25% subset; the other ~75% of review-fix dispatches run on Sonnet at the matrix value (`high`). Operators reading aggregate cost metrics should account for this when interpreting per-skill cost shape.
+These fire for every dispatch of those two skills. The opus gate that formerly restricted them — and the `model_override="opus"` that `integration_recovery.py` passed specifically to satisfy it — were removed together, so the coverage caveat that used to sit here (the override firing for only ~25% of review-fix dispatches) no longer applies. All other skills (`implement`, `review`, `conflict-repair`, `merge-test-repair`, `brain`) use the matrix value.
 
-**Effort vocabulary support per model:**
+**Effort vocabulary support per model** (informational — cortex cannot act on it, since it does not know which model will run):
 
 | Model | Supported effort levels |
 |---|---|
@@ -107,7 +103,7 @@ The `model` argument to `resolve_effort` is the *effective* model — `model_ove
 | sonnet | low, medium, high, max (xhigh NOT supported) |
 | opus 4.7 | low, medium, high, xhigh, max |
 
-The matrix and overrides are designed so no cell + override combination requests `xhigh` on a non-Opus model. A runtime guard in `resolve_effort` enforces this model-capability invariant and raises `ValueError` at dispatch time if violated, surfacing as a feature-level pause via the existing dispatch error path.
+Because the running model is not known at resolve time, a cell requesting an unsupported effort is caught at the CLI boundary rather than by a pre-dispatch guard. That path is described next, and it was already the backstop before model selection was removed.
 
 **What actually rejects an unsupported `--effort` is the dispatched CLI binary, not the model (#313).** The SDK renders `effort` as a raw `--effort` flag, and the *binary* validates it: old `claude` (≤2.1.69, e.g. the version `claude-agent-sdk` bundled) **hard-rejects** an unsupported value (`error: option '--effort <level>' argument '…' is invalid`, exit ≠ 0); modern `claude` (≥2.1.186) **warn-ignores** it (`Warning: Unknown --effort value '…' — ignoring it`, exit 0, runs at the default effort). Neither "silently downgrades." Because the SDK's `_find_cli` prefers its bundled binary, cortex resolves the **best-available** CLI (`cortex_command/cli_resolver.py`, → ADR-0014) and pins it via `ClaudeAgentOptions(cli_path=…)`; an `--effort` hard-reject then clamps once to `max` (universally accepted) and a warn-ignore is surfaced as a `dispatch_effort_ignored` note — degradation is always loud, never silent.
 
@@ -120,37 +116,32 @@ Classification is heuristic — triggers are substring matches against lowercase
 | Error type | Trigger | Recovery |
 |------------|---------|----------|
 | `agent_timeout` | `asyncio.TimeoutError` | retry |
-| `agent_test_failure` | "test failed", "pytest" in output | escalate model |
+| `agent_test_failure` | "test failed", "pytest" in output | retry |
 | `agent_refusal` | "i cannot", "i will not" | pause for human |
-| `agent_confused` | "i'm not sure", "i don't understand" | escalate model |
+| `agent_confused` | "i'm not sure", "i don't understand" | retry |
 | `infrastructure_failure` | `CLIConnectionError` | pause for human |
 | `budget_exhausted` | `ResultMessage.is_error=True` | pause session |
 | `api_rate_limit` | "rate_limit_error" in message | pause session |
 | `task_failure` / `unknown` | `ProcessError`, other exceptions | retry |
 
-Model escalation ladder on retry: Haiku → Sonnet → Opus (terminal).
+There is no model escalation on retry — the ladder was removed with model selection (→ ADR-0032). A retry-classified failure re-dispatches with accumulated learnings; when attempts run out the loop pauses for a human.
 
 **Where `query()` is called:**
 
 - `cortex_command/pipeline/dispatch.py` — main implementation dispatch
-- `cortex_command/pipeline/conflict.py` — repair agent dispatch for merge conflicts (Sonnet, escalates to Opus)
+- `cortex_command/pipeline/conflict.py` — repair agent dispatch for merge conflicts (up to two attempts)
 
 ---
 
 ## Model Selection Rationale
 
-Two matrices govern which model a dispatch uses, and they are intentionally separate — the lifecycle `orchestrator-fix` row (sonnet at low/medium/high, opus only at critical) is not representable in the pipeline's complexity × criticality shape, so the two are structurally unmergeable:
+**cortex no longer selects models** (→ ADR-0032 `adr/0032-cortex-selects-no-model`). There is no lifecycle role matrix, no pipeline matrix, and no escalation ladder; the dispatching agent chooses, or the CLI default applies.
 
-- **Lifecycle role matrix** (interactive, Path A) is owned by the `cortex-resolve-model` verb, which resolves the deterministic *(role, criticality) → model* lookup for the value-bearing lifecycle roles at dispatch time. It is the authority for lifecycle model selection — do not restate its table here; the golden-anchor test (`tests/test_resolve_model.py`) is the parity anchor that pins it.
-- **Pipeline matrix** (autonomous, Path B) is owned by `resolve_model()` / `_MODEL_MATRIX` in `cortex_command/pipeline/dispatch.py`, the *(complexity, criticality) → model* lookup for the overnight pipeline.
+What survives is guidance at the dispatch sites, not a lookup. It is worth stating once here so an editor of any one site knows the shape:
 
-The durable rationale behind the routing choices, worded version-agnostically:
-
-- **Parallel agents → sonnet.** Parallel research and competing-plan dispatches benefit from breadth across multiple agents rather than maximum depth per agent; the orchestrator synthesizes the outputs, so individual-agent quality need not be maximal. The interactive research/discovery **core-wave** gather fan-out instantiates this via the criticality-independent `searcher → sonnet` role in `cortex-resolve-model`: the whole core wave (mandatory core + all chosen angles, including Tradeoffs) routes to `searcher`, while the always-last adversarial wave inherits the parent (→ ADR-0023 `adr/0023-route-core-research-fanout-to-sonnet-searcher-tier`). On resolver failure the core wave degrades loud to the inherited parent rather than halting.
-- **Judgment dispatches inherit the parent, deliberately.** The research **adversarial** wave, **critical-review**'s parallel reviewers, and the **clarify-critic** are intentionally left inheriting the parent model rather than routed to `searcher` — they are judgment, not gather, and routing them to Sonnet would be a downgrade. This judgment-inherit contract is recorded here (and in ADR-0023) so a future editor of any of those surfaces finds the omission deliberate, not an oversight.
-- **Exploration → haiku unless high/critical.** Read-only pattern discovery is Haiku's sweet spot; upgrade to sonnet at high/critical, where the findings feed all downstream phases and warrant more nuanced analysis.
-- **Complex + low/medium → sonnet (not opus).** Sonnet's faster latency and lower over-engineering tendency make it the better default at standard criticality; reserve opus for when criticality demands maximum quality.
-- **Reviewers route to sonnet; synthesis buys the depth.** The lifecycle `review` role is uniform sonnet at every criticality (requirements ruling 2026-07-16): escalation raises reviewer count, and the opus synthesizer carries the judgment — never a per-reviewer model upgrade.
+- **Gather fan-out is breadth-first read-and-report.** Parallel research and competing-plan dispatches benefit from breadth across many agents rather than maximum depth in each; the orchestrator synthesizes, so per-agent depth is not the bottleneck. A cheaper tier usually fits.
+- **Judgment dispatches are not gather.** The research **adversarial** wave (which runs last, over a summary of the others), **critical-review**'s reviewers and synthesizer, and the **clarify-critic** exist to catch what the cheap pass missed. Cheaping them out is a false economy — this is the one asymmetry worth remembering when choosing.
+- **Reviewer count, not reviewer model, is what criticality buys.** Escalating criticality raises the number of reviewer angles and triggers the adversarial wave; it was never a per-reviewer model upgrade (requirements ruling 2026-07-16, retained).
 
 Two load-bearing model-profile facts not owned elsewhere: Opus has a **128K max output token** ceiling, and Claude Code's built-in **Explore agent uses Haiku**.
 

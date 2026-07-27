@@ -46,7 +46,7 @@ Spawns a new overnight runner.
 - **Input (optional):** `state_path: string`.
 - **Output:** `{session_id, pid, started_at}`.
 
-This tool spawns a multi-hour autonomous agent that bypasses permission prompts and consumes Opus tokens. The `confirm_dangerously_skip_permissions` parameter is required precisely so that a model cannot silently start a run without an operator's explicit instruction. Calls without the parameter return a tool-execution error whose body re-states this warning, not a bare schema-validation failure — so the model sees the warning text in the error response.
+This tool spawns a multi-hour autonomous agent that bypasses permission prompts and consumes a lot of tokens. The `confirm_dangerously_skip_permissions` parameter is required precisely so that a model cannot silently start a run without an operator's explicit instruction. Calls without the parameter return a tool-execution error whose body re-states this warning, not a bare schema-validation failure — so the model sees the warning text in the error response.
 
 If another runner is already alive on the same lock, the tool returns `{started: false, reason: "concurrent_runner_alive", existing_session_id: ...}`. There is no race window.
 

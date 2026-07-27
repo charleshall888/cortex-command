@@ -2895,15 +2895,12 @@ def run(
                 from cortex_command.pipeline.dispatch import (
                     resolve_effort,
                 )
-                # The orchestrator-round dispatch starts with model=None because
-                # the actual model is only known after the envelope is parsed.
-                # Resolve effort against "sonnet" as a stable fallback so paired
-                # records carry a non-None effort axis through pair_dispatch_events
-                # and the bucket-by-effort signal fires for orchestrator-round
-                # dispatches (Task 5/Task 6 of the xhigh-effort feature).
-                _round_effort = resolve_effort(
-                    tier, "medium", "orchestrator-round", "sonnet"
-                )
+                # Effort no longer depends on a model, so this resolves the
+                # cell directly; paired records still carry a non-None effort
+                # axis through pair_dispatch_events so the bucket-by-effort
+                # signal fires for orchestrator-round dispatches (Task 5/Task 6
+                # of the xhigh-effort feature).
+                _round_effort = resolve_effort(tier, "medium", "orchestrator-round")
                 pipeline_log_event(
                     pipeline_events_path,
                     {

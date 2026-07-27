@@ -327,7 +327,7 @@ for f in missing:
 For each feature in `critical_subset`, run the synthesizer dual-plan flow described in (1)–(8) below. After the critical_subset processing finishes, the surviving features (those that the synthesizer auto-selected a variant for) have their `plan.md` written; deferred features are marked `deferred` in the orchestrator agent's exit-report envelope (worker-style wrapper) so `runner.py` can route them through the existing `cortex_command/overnight/deferral.py:write_deferral` channel. Features in `single_agent_subset` continue to the existing single-agent dispatch template below — no change to non-critical-tier behavior.
 
 (1) **Variant dispatch (criticality == critical branch)**: For each feature whose criticality is `critical`,
-dispatch 2-3 parallel Sonnet plan-gen Task sub-agents writing to `plan-variant-A.md`,
+dispatch 2-3 parallel plan-gen Task sub-agents writing to `plan-variant-A.md`,
 `plan-variant-B.md`, optionally `plan-variant-C.md` under `cortex/lifecycle/{{feature_slug}}/`.
 The orchestrator agent decides 2 vs 3 based on how many distinct approaches are identifiable from spec+research; minimum 2, maximum 3. Each sub-agent uses the **same** plan-agent prompt template as the single-agent path below (lines reading "You are generating an implementation plan ..."), substituting `{{feature_plan_path}}` per variant. Emit `PLAN_SYNTHESIS_DISPATCHED` before dispatch:
 
@@ -353,7 +353,7 @@ log_event(
 - If **all variants failed**: fall back to the single-agent path — append the feature back to `single_agent_subset` so it goes through the existing dispatch template below.
 - If **≥2 variants succeeded**: proceed to the synthesizer Task sub-agent dispatch in (3) below.
 
-(3) **Synthesizer dispatch**: Dispatch one fresh Opus synthesizer Task sub-agent per critical feature with ≥2 surviving variants. The sub-agent's **system prompt** is the shared fragment loaded from `cortex_command/overnight/prompts/plan-synthesizer.md` via `importlib.resources.files("cortex_command.overnight.prompts").joinpath("plan-synthesizer.md").read_text()` — do not paraphrase or inline. The **user prompt** inlines the surviving variant paths (`cortex/lifecycle/{{feature_slug}}/plan-variant-A.md`, etc.) and the swap-and-require-agreement instruction directing the synthesizer to compare the variants twice with order swapped before assigning `confidence: "high"` or `"medium"`, and to emit a JSON envelope per the schema in the system prompt fragment. The synthesizer is read-only; no worktree isolation is required.
+(3) **Synthesizer dispatch**: Dispatch one fresh synthesizer Task sub-agent per critical feature with ≥2 surviving variants. The sub-agent's **system prompt** is the shared fragment loaded from `cortex_command/overnight/prompts/plan-synthesizer.md` via `importlib.resources.files("cortex_command.overnight.prompts").joinpath("plan-synthesizer.md").read_text()` — do not paraphrase or inline. The **user prompt** inlines the surviving variant paths (`cortex/lifecycle/{{feature_slug}}/plan-variant-A.md`, etc.) and the swap-and-require-agreement instruction directing the synthesizer to compare the variants twice with order swapped before assigning `confidence: "high"` or `"medium"`, and to emit a JSON envelope per the schema in the system prompt fragment. The synthesizer is read-only; no worktree isolation is required.
 
 (4) **Envelope extraction (LAST-occurrence anchor)**: Parse the synthesizer Task sub-agent's output using the same LAST-occurrence anchor pattern as the canonical `skills/lifecycle/references/competing-plans.md` §1b:
 
@@ -407,7 +407,7 @@ The `last occurrence` semantics tolerate prose that quotes the `<!--findings-jso
   # orchestrator-side deferral source.
   ```
 
-(6) **Synthesizer SDK error**: If the Opus synthesizer Task sub-agent crashes, times out, or the SDK call raises, treat the result as `confidence: "low"` for routing purposes. Emit `SYNTHESIZER_ERROR` **before** the `PLAN_SYNTHESIS_DEFERRED` event so post-session triage has both signals:
+(6) **Synthesizer SDK error**: If the synthesizer Task sub-agent crashes, times out, or the SDK call raises, treat the result as `confidence: "low"` for routing purposes. Emit `SYNTHESIZER_ERROR` **before** the `PLAN_SYNTHESIS_DEFERRED` event so post-session triage has both signals:
 
 ```python
 log_event(

@@ -279,22 +279,23 @@ class TestActivityLogJSONL(unittest.IsolatedAsyncioTestCase):
         """dispatch_start JSONL emission contains new keys in spec'd order.
 
         Verifies (a) review-fix invocation with cycle=1 produces keys in the
-        order: event, feature, skill, attempt, escalated, escalation_event,
-        cycle, complexity, criticality, model, effort, max_turns,
-        max_budget_usd; and (b) non-review-fix invocation (skill='implement')
-        omits the cycle key entirely.
+        order: event, feature, skill, attempt,
+        cycle, complexity, criticality, effort, max_turns, max_budget_usd; and
+        (b) non-review-fix invocation (skill='implement') omits the cycle key
+        entirely.
+
+        No `model` key: cortex does not choose one, and nothing has replied yet
+        at dispatch_start. The observed model lands on dispatch_model_observed
+        and dispatch_complete instead.
         """
         expected_with_cycle = [
             "event",
             "feature",
             "skill",
             "attempt",
-            "escalated",
-            "escalation_event",
             "cycle",
             "complexity",
             "criticality",
-            "model",
             "effort",
             "max_turns",
             "max_budget_usd",
@@ -333,8 +334,6 @@ class TestActivityLogJSONL(unittest.IsolatedAsyncioTestCase):
                     log_path=log_path,
                     skill="review-fix",
                     attempt=1,
-                    escalated=False,
-                    escalation_event=False,
                     cycle=1,
                 )
 
@@ -568,6 +567,8 @@ def test_dispatch_complete_exact_key_list():
                 "duration_ms",
                 "num_turns",
                 "stop_reason",
+                # The model the CLI actually ran on, read off AssistantMessage.
+                "model",
             }
             assert keys == expected, (
                 f"dispatch_complete key set mismatch; expected {expected}, got {keys}"

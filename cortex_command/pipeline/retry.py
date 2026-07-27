@@ -7,9 +7,9 @@ retries produce identical diffs (no progress) and pauses the task.
 
 Failure classification drives retry strategy (via ERROR_RECOVERY in dispatch):
 - agent_timeout:          immediate retry with learnings           (retry)
-- agent_test_failure:     escalate to next model tier, or pause    (escalate)
+- agent_test_failure:     immediate retry with learnings           (retry)
 - agent_refusal:          pause immediately for human triage       (pause_human)
-- agent_confused:         escalate to next model tier, or pause    (escalate)
+- agent_confused:         immediate retry with learnings           (retry)
 - task_failure:           immediate retry with learnings           (retry)
 - infrastructure_failure: pause immediately for human triage       (pause_human)
 - unknown:                immediate retry with learnings           (retry)
@@ -28,9 +28,7 @@ from cortex_command.pipeline.dispatch import (
     dispatch_task,
     DispatchDiagnostics,
     ERROR_RECOVERY,
-    MODEL_ESCALATION_LADDER,
     Skill,
-    resolve_model,
 )
 from cortex_command.pipeline.state import log_event
 from cortex_command.pipeline.worktree import cleanup_stale_lock
@@ -223,13 +221,6 @@ async def retry_task(
     learnings_path: Optional[Path] = None
     total_attempts = max_retries + 1
 
-    # Resolve and track the active model so the escalation ladder can
-    # upgrade it on each "escalate" recovery path (Req 8).
-    _criticality_val = criticality if criticality is not None else "medium"
-    current_model: str = resolve_model(complexity, _criticality_val)
-    initial_model = current_model
-    previous_attempt_model: Optional[str] = None
-
     # #313 R4: one-shot effort clamp. On an `--effort` hard-rejection
     # (error_type == "effort_unsupported") the loop clamps to `max` (universally
     # accepted) exactly once via effort_override, instead of blind-retrying the
@@ -258,22 +249,8 @@ async def retry_task(
                 "feature": feature,
                 "attempt": attempt,
                 "max_attempts": total_attempts,
-                "model": current_model,
             })
 
-        # Compute escalation metadata for this attempt:
-        # - is_escalated (sticky): true on every attempt at a non-initial tier.
-        # - is_escalation_event (one-shot): true on the first attempt at a
-        #   newly-escalated tier. Guarded so the very first attempt
-        #   (previous_attempt_model is None) never reports True.
-        is_escalated = current_model != initial_model
-        is_escalation_event = (
-            previous_attempt_model is not None
-            and current_model != previous_attempt_model
-        )
-
-        # Dispatch the task, forwarding the active model so that escalation
-        # overrides take effect even if complexity/criticality stay constant.
         result = await dispatch_task(
             feature=feature,
             task=task,
@@ -283,21 +260,12 @@ async def retry_task(
             log_path=log_path,
             criticality=criticality,
             activity_log_path=activity_log_path,
-            model_override=current_model,
             effort_override=current_effort_override,
             integration_base_path=integration_base_path,
             repo_root=repo_path,
             skill=skill,
             attempt=attempt,
-            escalated=is_escalated,
-            escalation_event=is_escalation_event,
         )
-
-        # Snapshot the model used in this just-completed dispatch BEFORE any
-        # subsequent escalate arm in this iteration can mutate current_model.
-        # The next iteration's is_escalation_event compares the next attempt's
-        # current_model against this snapshot.
-        previous_attempt_model = current_model
 
         total_cost += result.cost_usd or 0.0
 
@@ -362,7 +330,6 @@ async def retry_task(
                         "attempt": attempt,
                         "from_effort": from_effort,
                         "to_effort": "max",
-                        "model": current_model,
                     })
                 continue
             # Rejection on the final attempt: no remaining budget to clamp into;
@@ -453,48 +420,9 @@ async def retry_task(
                 last_dispatch_diagnostics=result.diagnostics,
             )
 
-        elif recovery_path == "escalate":
-            # Model-tier escalation ladder: Haiku → Sonnet → Opus (Req 8).
-            # Upgrade the model for the next attempt on every escalate failure.
-            # If already at Opus, the ladder is exhausted — pause for human.
-            next_model = MODEL_ESCALATION_LADDER.get(current_model)
-
-            if next_model is None:
-                # Already at max tier (opus); surface to human for triage.
-                if log_path:
-                    log_event(log_path, {
-                        "event": "retry_paused_for_human",
-                        "feature": feature,
-                        "attempt": attempt,
-                        "error_type": error_type,
-                        "model": current_model,
-                        "reason": "escalation ladder exhausted at opus",
-                    })
-
-                return RetryResult(
-                    success=False,
-                    attempts=attempt,
-                    final_output=result.output,
-                    learnings_path=learnings_path,
-                    paused=True,
-                    total_cost_usd=total_cost,
-                    last_dispatch_diagnostics=result.diagnostics,
-                )
-
-            if log_path:
-                log_event(log_path, {
-                    "event": "retry_escalate",
-                    "feature": feature,
-                    "attempt": attempt,
-                    "error_type": error_type,
-                    "from_model": current_model,
-                    "to_model": next_model,
-                })
-
-            current_model = next_model
-
-        # recovery_path == "retry": agent_timeout, task_failure, unknown
-        # → immediate retry with accumulated learnings (fresh process)
+        # recovery_path == "retry": agent_timeout, agent_test_failure,
+        # agent_confused, task_failure, unknown → immediate retry with
+        # accumulated learnings (fresh process). Attempts exhausted → pause.
 
     # All retries exhausted
     if log_path:

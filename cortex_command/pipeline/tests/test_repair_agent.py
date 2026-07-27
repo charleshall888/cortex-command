@@ -71,11 +71,11 @@ def _base_cc() -> ConflictClassification:
 
 
 # ---------------------------------------------------------------------------
-# (a) Sonnet success
+# (a) First-attempt success
 # ---------------------------------------------------------------------------
 
-def test_sonnet_success(tmp_path: Path) -> None:
-    """Sonnet resolves on first attempt → success=True, model_used='sonnet'."""
+def test_first_attempt_success(tmp_path: Path) -> None:
+    """Resolves on the first attempt → success=True, attempts_used=1."""
     feature = "my-feature"
     worktree = tmp_path / f"repair-{feature}-1"
     worktree.mkdir()
@@ -110,17 +110,21 @@ def test_sonnet_success(tmp_path: Path) -> None:
         ))
 
     assert result.success is True
-    assert result.model_used == "sonnet"
+    assert result.attempts_used == 1
     assert result.resolved_files == ["foo.py"]
     dispatch_mock.assert_awaited_once()
 
 
 # ---------------------------------------------------------------------------
-# (b) Sonnet quality failure → Opus escalation → success
+# (b) First-attempt quality failure → second attempt → success
 # ---------------------------------------------------------------------------
 
-def test_sonnet_quality_failure_opus_succeeds(tmp_path: Path) -> None:
-    """Sonnet writes deferral question → Opus resolves cleanly → success, model_used='opus'."""
+def test_quality_failure_then_second_attempt_succeeds(tmp_path: Path) -> None:
+    """Attempt 1 writes a deferral question → attempt 2 resolves cleanly.
+
+    This used to be a Sonnet -> Opus escalation. cortex no longer selects a
+    model, so it is simply a second attempt; the two-attempt cap is unchanged.
+    """
     feature = "my-feature"
     worktree = tmp_path / f"repair-{feature}-1"
     worktree.mkdir()
@@ -129,18 +133,18 @@ def test_sonnet_quality_failure_opus_succeeds(tmp_path: Path) -> None:
     def dispatch_side_effect(*args, **kwargs):
         call_count[0] += 1
         if call_count[0] == 1:
-            # Sonnet: deferral question → agent quality failure
+            # Attempt 1: deferral question → agent quality failure
             _write_exit_report(worktree, feature, {
                 "action": "question",
                 "question": "Which foo() wins?",
                 "context": "foo.py line 42",
             })
         else:
-            # Opus: clean resolution
+            # Attempt 2: clean resolution
             _write_exit_report(worktree, feature, {
                 "action": "complete",
                 "resolved_files": ["foo.py"],
-                "rationale": {"foo.py": "kept opus side"},
+                "rationale": {"foo.py": "kept the incoming side"},
             })
         return _make_dispatch_result()
 
@@ -165,12 +169,12 @@ def test_sonnet_quality_failure_opus_succeeds(tmp_path: Path) -> None:
         ))
 
     assert result.success is True
-    assert result.model_used == "opus"
+    assert result.attempts_used == 2
     assert dispatch_mock.await_count == 2
 
 
 # ---------------------------------------------------------------------------
-# (c) Both Sonnet and Opus produce quality failures (no deferral question)
+# (c) Both attempts produce quality failures (no deferral question)
 # ---------------------------------------------------------------------------
 
 def test_opus_quality_failure(tmp_path: Path) -> None:
