@@ -1205,6 +1205,32 @@
     padding-bottom: 8px;
   }
 
+  /* The refine|build seam under the last locked phase — the artifact that
+     crosses, and who picks it up. Not a gate; it carries no lock state. */
+  .spec-stream .stream-handoff {
+    margin: -28px 0 0 90px;
+    padding: 14px 0 0;
+    border-top: 1px dashed var(--rule-soft);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 14px;
+  }
+  .spec-stream .sh-artifact {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    color: var(--blue);
+  }
+  .spec-stream .sh-note {
+    font-size: 12.5px;
+    color: var(--ink-faint);
+    line-height: 1.5;
+  }
+  .spec-stream .sh-note em { font-family: var(--mono); font-size: 0.92em; font-style: normal; color: var(--ink-2); }
+  .spec-stream .sh-note code { font-family: var(--mono); font-size: 0.92em; color: var(--ochre); }
+  @media (max-width: 760px) { .spec-stream .stream-handoff { margin-left: 0; } }
+
   .sec {
     position: relative;
     margin-bottom: 64px;
@@ -1488,7 +1514,7 @@
     text-transform: lowercase;
   }
 
-  /* ───────────── Trust grid (§3.2) ─────────────
+  /* ───────────── Trust grid (§3.3) ─────────────
      Card grid that lives between the pipeline diagram and the install
      section. Each card is a self-contained mini-figure (FIG 3..9) showing
      ONE behavior of the harness. Vocabulary intentionally rhymes with
@@ -1517,6 +1543,77 @@
     max-width: 920px;
   }
   .trust-grid h2 em { font-style: italic; color: var(--ochre); }
+
+  /* Risk note. Ochre rather than --red: --red is only declared in one theme
+     block, so it would fall through to `initial` in the other two. */
+  .tg-warn {
+    max-width: 920px;
+    margin: 26px 0 4px;
+    padding: 20px 24px 18px;
+    background: var(--parchment-2);
+    border: 1px solid var(--rule-soft);
+    border-left: 3px solid var(--ochre);
+  }
+  .tg-warn-head { display: flex; align-items: center; gap: 9px; margin-bottom: 11px; }
+  .tg-warn-glyph { color: var(--ochre); display: inline-flex; flex: 0 0 auto; }
+  .tg-warn-glyph svg { width: 17px; height: 17px; display: block; }
+  .tg-warn-title {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    color: var(--ochre);
+    text-transform: uppercase;
+    line-height: 1.35;
+  }
+  .tg-warn-body {
+    font-size: 14.5px;
+    line-height: 1.62;
+    color: var(--ink-2);
+    margin: 0 0 10px;
+    max-width: 74ch;
+  }
+  .tg-warn-body code, .tg-warn-list code {
+    font-family: var(--mono); font-size: 0.86em; color: var(--ochre);
+    /* keep --dangerously-skip-permissions from splitting across lines mid-flag;
+       at 0.86em it still fits the aside at the 760px breakpoint */
+    white-space: nowrap;
+  }
+  .tg-warn-body strong { font-weight: 600; color: var(--ink); }
+  .tg-warn-list {
+    list-style: none;
+    margin: 0 0 12px;
+    padding: 0;
+    display: grid;
+    gap: 7px;
+    max-width: 74ch;
+  }
+  .tg-warn-list li {
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--ink-2);
+    padding-left: 16px;
+    position: relative;
+  }
+  .tg-warn-list li::before {
+    content: "—";
+    position: absolute;
+    left: 0;
+    color: var(--ochre);
+  }
+  .tg-warn-list .tw-k {
+    font-family: var(--mono);
+    font-size: 0.86em;
+    letter-spacing: 0.03em;
+    color: var(--ink);
+    margin-right: 5px;
+  }
+  .tg-warn-close {
+    margin: 0;
+    padding-top: 11px;
+    border-top: 1px dashed var(--rule-soft);
+    color: var(--ink-faint);
+  }
+  @media (max-width: 760px) { .tg-warn { padding: 17px 16px 15px; } }
   .trust-grid .tg-lede {
     font-family: var(--serif);
     font-size: clamp(15px, 1.2vw, 17px);
@@ -1535,7 +1632,7 @@
     .trust-grid .tg-cards { grid-template-columns: 1fr; }
   }
 
-  /* ── §3.2 collapse: Overnight figures are opt-in (closed by default) ──
+  /* ── §3.3 collapse: Overnight figures are opt-in (closed by default) ──
      Native <details>; the trust-grid IntersectionObserver resumes the
      FIG animations when the panel is expanded into view. */
   .trust-grid .tg-collapse { margin: 4px 0 0; }
@@ -5374,7 +5471,7 @@
       <li data-section="part-1">
         <span class="ms-tick" aria-hidden="true"></span>
         <span class="ms-name">the method</span>
-        <span class="ms-desc">requirements &rarr; discovery &rarr; refine &middot; pick the harness</span>
+        <span class="ms-desc">requirements &rarr; discovery &rarr; refine &rarr; build</span>
       </li>
       <li data-section="part-2">
         <span class="ms-tick" aria-hidden="true"></span>
@@ -5384,7 +5481,7 @@
       <li data-section="part-3">
         <span class="ms-tick" aria-hidden="true"></span>
         <span class="ms-name">the night shift</span>
-        <span class="ms-desc">overnight handoff &middot; the safety contract</span>
+        <span class="ms-desc">pick the harness &middot; overnight handoff &middot; the safety contract</span>
       </li>
       <li data-section="part-4">
         <span class="ms-tick" aria-hidden="true"></span>
@@ -5424,7 +5521,7 @@
         <span class="pd-num">Part 1</span>
         <span class="pd-title">The Method</span>
       </div>
-      <p class="pd-dek">The commands you invoke, in order — turning a vague brief into a spec worth trusting, then a fork: hand it to the night, or ship it beside you.</p>
+      <p class="pd-dek">The commands you invoke, in order — turning a vague brief into a spec worth trusting.</p>
     </div>
   </div>
 
@@ -5436,7 +5533,7 @@
   <section class="rr-sec" style="border-top: none; padding-top: 0; margin-top: 44px;">
     <div class="rr-sec-eyebrow">§1.1 · the run</div>
     <h2>What gets <em>run</em></h2>
-    <p class="rr-lede">You invoke these in order. <code>/requirements</code> sets the charter, <code>/discovery</code> fans it into tickets, then a ticket runs the track in two halves — <code>/refine</code> earns the spec, <code>/build</code> ships it. <code>/dev</code> reads a ticket's status and routes it to whichever half it needs. Underneath runs the charter — <em>project.md</em> — which every stage reads to stay on course.</p>
+    <p class="rr-lede">You invoke these in order. <code>/requirements</code> sets the charter, <code>/discovery</code> fans it into tickets, then each ticket runs in two halves — <code>/refine</code> earns the spec, <code>/build</code> ships it, and <code>/dev</code> picks which half a ticket needs.</p>
 
     <div class="rr-ex-fig rr-fig-rail" data-fig="fig · the run — /refine earns the spec, /build ships it" style="padding: 22px 18px 16px;">
       <svg viewBox="0 0 720 170" preserveAspectRatio="xMidYMid meet" style="height: 168px;">
@@ -5819,68 +5916,6 @@
       </div>
     </div>
 
-    <div class="hero-fork" aria-labelledby="hf-h">
-      <div class="hf-head">
-        <span class="hf-num">§1.5</span>
-        <h2>Earn the spec, <em>pick the harness.</em></h2>
-      </div>
-
-      <div class="hf-body">
-        <div class="hf-source">
-          <span class="hf-source-tag">specs/ · 4 ready</span>
-          <div class="hf-source-list">
-            <div class="hf-source-item"><span class="hf-source-name">nightline-loop</span><span class="hf-source-scope">L</span><span class="hf-source-rev">R3</span></div>
-            <div class="hf-source-item"><span class="hf-source-name">dawn-reveal</span><span class="hf-source-scope">M</span><span class="hf-source-rev">R2</span></div>
-            <div class="hf-source-item"><span class="hf-source-name">tackle-progression</span><span class="hf-source-scope">XL</span><span class="hf-source-rev">R5</span></div>
-            <div class="hf-source-item"><span class="hf-source-name">weather-tables</span><span class="hf-source-scope">S</span><span class="hf-source-rev">R1</span></div>
-          </div>
-        </div>
-
-        <div class="hf-connector" aria-hidden="true">
-          <svg viewBox="0 0 80 200" preserveAspectRatio="none">
-            <!-- spine: short rule from left edge to fork -->
-            <path class="hf-spine" d="M 0 100 L 32 100" />
-            <!-- top branch: rises into the top option card -->
-            <path class="hf-branch over"    d="M 32 100 L 50 50 L 80 50" />
-            <!-- bottom branch: drops into the bottom option card -->
-            <path class="hf-branch guided"  d="M 32 100 L 50 150 L 80 150" />
-            <!-- fork node + halo at the split -->
-            <circle class="hf-fork-halo" cx="32" cy="100" r="9" />
-            <circle class="hf-fork-node" cx="32" cy="100" r="3.5" />
-          </svg>
-        </div>
-
-        <div class="hf-options">
-          <div class="hf-opt over">
-            <span class="hf-opt-icon" aria-hidden="true">
-              <!-- moon -->
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M19.5 14.5 A8 8 0 1 1 9.5 4.5 A6 6 0 0 0 19.5 14.5 Z" fill="currentColor" fill-opacity="0.12"/>
-                <circle cx="4.5" cy="5.5" r="0.6" fill="currentColor" stroke="none"/>
-                <circle cx="20" cy="19" r="0.6" fill="currentColor" stroke="none"/>
-                <circle cx="6.5" cy="20" r="0.5" fill="currentColor" stroke="none"/>
-              </svg>
-            </span>
-            <span class="hf-opt-tag">option a · overnight harness</span>
-            <div class="hf-opt-name">ships by morning, while you sleep</div>
-            <div class="hf-opt-desc"><em>/overnight</em> batches it. A scheduled overnight process runs on the CLI and orchestrates the full pipeline — with safeguards and error handling — then <em>/morning-review</em> hands you a full summary of what was done.</div>
-          </div>
-
-          <div class="hf-opt guided">
-            <span class="hf-opt-icon" aria-hidden="true">
-              <!-- sun -->
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="4" fill="currentColor" fill-opacity="0.18"/>
-                <path d="M12 2 V4 M12 20 V22 M2 12 H4 M20 12 H22 M4.9 4.9 L6.3 6.3 M17.7 17.7 L19.1 19.1 M19.1 4.9 L17.7 6.3 M6.3 17.7 L4.9 19.1"/>
-              </svg>
-            </span>
-            <span class="hf-opt-tag">option b · guided lifecycle</span>
-            <div class="hf-opt-name">ships with you, in-session</div>
-            <div class="hf-opt-desc">One ticket at a time, planned and shipped with you in the terminal. Optionally runs in an isolated worktree so your working tree stays clean.</div>
-          </div>
-        </div>
-      </div>
-    </div>
 
   <!-- ═══════════════════ PART 2 · THE RIGOR ═══════════════════ -->
   <div class="part-divider" id="part-2" data-part="2">
@@ -5900,30 +5935,30 @@
     <div class="pg-header">
       <div class="marker">§2.1 · the patch atlas</div>
       <h2 class="pg-title">Complexity earns ceremony. <em>Simplicity skips it.</em></h2>
-      <p class="pg-lede">Two values in your spec — <code>complexity</code> and <code>criticality</code> — set how much rigor the work earns. The harness reads them and patches the lifecycle to match.</p>
+      <p class="pg-lede">Two values on the ticket — <code>complexity</code> and <code>criticality</code> — set how much rigor the work earns. <em>/refine</em> pins them in Clarify, before a line of research is dispatched; every stage after that reads them and patches the track to match.</p>
     </div>
 
     <!-- Comparison strip: two ends of the spectrum, in real numbers. -->
     <div class="ax-compare">
       <div class="ax-compare-card simple">
-        <div class="ax-compare-h">a simple change</div>
+        <div class="ax-compare-h">simple · low</div>
         <div class="ax-compare-name">adding a new lure</div>
         <div class="ax-compare-stats">
-          <div class="ax-compare-stat"><span class="ax-compare-stat-v">4</span><span class="ax-compare-stat-k">gates</span></div>
-          <div class="ax-compare-stat"><span class="ax-compare-stat-v">~200k</span><span class="ax-compare-stat-k">tokens</span></div>
-          <div class="ax-compare-stat"><span class="ax-compare-stat-v">~10 min</span><span class="ax-compare-stat-k">wall clock</span></div>
+          <div class="ax-compare-stat"><span class="ax-compare-stat-v">5</span><span class="ax-compare-stat-k">phases</span></div>
+          <div class="ax-compare-stat"><span class="ax-compare-stat-v">1</span><span class="ax-compare-stat-k">research agent</span></div>
+          <div class="ax-compare-stat"><span class="ax-compare-stat-v">0</span><span class="ax-compare-stat-k">review gates</span></div>
         </div>
-        <div class="ax-compare-extras">ships in one pass — no plan phase (spec goes straight to implement), no critical-review fork, no escalated reviewer.</div>
+        <div class="ax-compare-extras">ships in one pass — one codebase-only research agent, no plan phase (spec goes straight to implement), no adversarial fork, no review phase.</div>
       </div>
       <div class="ax-compare-card critical">
-        <div class="ax-compare-h">a critical change</div>
+        <div class="ax-compare-h">complex · critical</div>
         <div class="ax-compare-name">the nightline game loop</div>
         <div class="ax-compare-stats">
-          <div class="ax-compare-stat"><span class="ax-compare-stat-v">10</span><span class="ax-compare-stat-k">gates</span></div>
-          <div class="ax-compare-stat"><span class="ax-compare-stat-v">~2M</span><span class="ax-compare-stat-k">tokens</span></div>
-          <div class="ax-compare-stat"><span class="ax-compare-stat-v">~90 min</span><span class="ax-compare-stat-k">wall clock</span></div>
+          <div class="ax-compare-stat"><span class="ax-compare-stat-v">9</span><span class="ax-compare-stat-k">phases</span></div>
+          <div class="ax-compare-stat"><span class="ax-compare-stat-v">10</span><span class="ax-compare-stat-k">research agents</span></div>
+          <div class="ax-compare-stat"><span class="ax-compare-stat-v">2</span><span class="ax-compare-stat-k">review gates</span></div>
         </div>
-        <div class="ax-compare-extras">adversarial pre-plan review · two plans race for the winner · escalated Opus reviewer before merge.</div>
+        <div class="ax-compare-extras">ten-angle research ending in an adversarial pass · <em>/critical-review</em> before the spec is approved · two plans race for the winner · an Opus builder implements it · a review phase before merge.</div>
       </div>
     </div>
 
@@ -5934,7 +5969,7 @@
   <!-- ───────── Spec stream (locking) — concrete walkthrough of the gates above ───────── -->
   <section class="spec-stream" id="spec-stream">
     <div class="stream-header">
-      <span>§2.2 · /refine writes the spec · scrolls to lock</span>
+      <span>§2.2 · the track, gate by gate · scrolls to lock</span>
       <span>4 gates · 0 of 4 cleared</span>
     </div>
 
@@ -5996,7 +6031,7 @@
       <div class="leader"></div>
       <div class="rev">R3</div>
       <span class="stamp">phase complete</span>
-      <h3>Specify <span class="phase-tag">phase 03</span></h3>
+      <h3>Specify <span class="phase-tag">phase 03</span><span class="gloss" title="parallel adversarial reviewers, then an Opus synthesis — dispatched before the spec is approved">/critical-review before approval</span></h3>
       <div class="status-line">status: <span class="ok">resolving → locked</span> · acceptance criteria pinned</div>
       <div class="body">
         <span class="placeholder">[ pending — system + edge cases resolve here ]</span>
@@ -6005,6 +6040,14 @@
         </div>
       </div>
     </article>
+
+    <!-- The refine|build seam. Everything above is /refine; Plan below is
+         /build's first phase — and on the short road (simple + low|medium) it
+         is skipped outright, spec going straight to implement. See §2.1. -->
+    <div class="stream-handoff">
+      <span class="sh-artifact">cortex/lifecycle/{slug}/spec.md</span>
+      <span class="sh-note">spec approved · <code>status: refined</code> written back to the ticket. <em>/refine</em> is done — <em>/build</em> picks it up here.</span>
+    </div>
 
     <article class="sec" data-phase="plan" id="sec-plan">
       <div class="margin">
@@ -6017,7 +6060,7 @@
       <div class="leader"></div>
       <div class="rev">R3</div>
       <span class="stamp">phase complete</span>
-      <h3>Plan <span class="phase-tag">phase 04</span><span class="gloss" title="adversarial review by a fresh agent">/critical-review available before approval</span></h3>
+      <h3>Plan <span class="phase-tag">/build · phase 04</span><span class="gloss" title="the short road: simple tier at low or medium criticality routes spec straight to implement, deriving its task list from the spec's acceptance criteria">skipped on the short road</span></h3>
       <div class="status-line">status: <span class="ok">drafting → locked</span> · 5 tasks · 1 named risk</div>
       <div class="body">
         <span class="placeholder">[ pending — implementation order resolves here ]</span>
@@ -6037,16 +6080,80 @@
         <span class="pd-num">Part 3</span>
         <span class="pd-title">The Night Shift</span>
       </div>
-      <p class="pd-dek">What happens after you walk away — the overnight handoff in motion, and the safety contract that makes “work while you sleep” a claim you can check.</p>
+      <p class="pd-dek">The spec is earned — now pick the harness. What happens after you walk away, and the safety contract that makes “work while you sleep” a claim you can check.</p>
     </div>
   </div>
+
+  <!-- ───────── §3.1 · the fork · pick the harness (moved from Part 1) ───────── -->
+    <div class="hero-fork" aria-labelledby="hf-h">
+      <div class="hf-head">
+        <span class="hf-num">§3.1</span>
+        <h2 id="hf-h">Earn the spec, <em>pick the harness.</em></h2>
+      </div>
+
+      <div class="hf-body">
+        <div class="hf-source">
+          <span class="hf-source-tag">specs/ · 4 ready</span>
+          <div class="hf-source-list">
+            <div class="hf-source-item"><span class="hf-source-name">nightline-loop</span><span class="hf-source-scope">L</span><span class="hf-source-rev">R3</span></div>
+            <div class="hf-source-item"><span class="hf-source-name">dawn-reveal</span><span class="hf-source-scope">M</span><span class="hf-source-rev">R2</span></div>
+            <div class="hf-source-item"><span class="hf-source-name">tackle-progression</span><span class="hf-source-scope">XL</span><span class="hf-source-rev">R5</span></div>
+            <div class="hf-source-item"><span class="hf-source-name">weather-tables</span><span class="hf-source-scope">S</span><span class="hf-source-rev">R1</span></div>
+          </div>
+        </div>
+
+        <div class="hf-connector" aria-hidden="true">
+          <svg viewBox="0 0 80 200" preserveAspectRatio="none">
+            <!-- spine: short rule from left edge to fork -->
+            <path class="hf-spine" d="M 0 100 L 32 100" />
+            <!-- top branch: rises into the top option card -->
+            <path class="hf-branch over"    d="M 32 100 L 50 50 L 80 50" />
+            <!-- bottom branch: drops into the bottom option card -->
+            <path class="hf-branch guided"  d="M 32 100 L 50 150 L 80 150" />
+            <!-- fork node + halo at the split -->
+            <circle class="hf-fork-halo" cx="32" cy="100" r="9" />
+            <circle class="hf-fork-node" cx="32" cy="100" r="3.5" />
+          </svg>
+        </div>
+
+        <div class="hf-options">
+          <div class="hf-opt over">
+            <span class="hf-opt-icon" aria-hidden="true">
+              <!-- moon -->
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19.5 14.5 A8 8 0 1 1 9.5 4.5 A6 6 0 0 0 19.5 14.5 Z" fill="currentColor" fill-opacity="0.12"/>
+                <circle cx="4.5" cy="5.5" r="0.6" fill="currentColor" stroke="none"/>
+                <circle cx="20" cy="19" r="0.6" fill="currentColor" stroke="none"/>
+                <circle cx="6.5" cy="20" r="0.5" fill="currentColor" stroke="none"/>
+              </svg>
+            </span>
+            <span class="hf-opt-tag">option a · overnight harness</span>
+            <div class="hf-opt-name">ships by morning, while you sleep</div>
+            <div class="hf-opt-desc"><em>/overnight</em> batches it. A scheduled overnight process runs on the CLI and orchestrates the full pipeline — with safeguards and error handling — then <em>/morning-review</em> hands you a full summary of what was done.</div>
+          </div>
+
+          <div class="hf-opt guided">
+            <span class="hf-opt-icon" aria-hidden="true">
+              <!-- sun -->
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="4" fill="currentColor" fill-opacity="0.18"/>
+                <path d="M12 2 V4 M12 20 V22 M2 12 H4 M20 12 H22 M4.9 4.9 L6.3 6.3 M17.7 17.7 L19.1 19.1 M19.1 4.9 L17.7 6.3 M6.3 17.7 L4.9 19.1"/>
+              </svg>
+            </span>
+            <span class="hf-opt-tag">option b · guided lifecycle</span>
+            <div class="hf-opt-name">ships with you, in-session</div>
+            <div class="hf-opt-desc">One ticket at a time, planned and shipped with you in the terminal. Optionally runs in an isolated worktree so your working tree stays clean.</div>
+          </div>
+        </div>
+      </div>
+    </div>
 
   <!-- ───────── Pipeline activation (sticky scrub) ───────── -->
   <section class="pipe-wrap" id="pipe-section">
     <div class="pipe-stage" id="pipe-stage">
       <div class="starfield" aria-hidden="true"></div>
 
-      <div class="pipe-header">§3.1 · the overnight payoff · scroll to scrub</div>
+      <div class="pipe-header">§3.2 · the overnight payoff · scroll to scrub</div>
       <h2 class="pipe-title">If a spec earns it, <em>this is what handoff looks like.</em></h2>
 
       <svg class="pipe-svg" id="pipe-svg" viewBox="0 0 1800 960" preserveAspectRatio="xMidYMid meet"></svg>
@@ -6058,11 +6165,11 @@
       </div>
       <div class="pipe-annot" id="annot-refine"
            style="left: 47%; top: 70%;">
-        each ticket runs in its own claude window · clears spec → research → critical-review before a plan is approved
+        each ticket runs in its own claude window · clears clarify → research → spec, with /critical-review before the spec is approved
       </div>
       <div class="pipe-annot" id="annot-morning"
            style="right: 4%; top: 70%;">
-        merges PRs · closes lifecycles · drops a morning-report.md you can skim with coffee
+        walks the report · answers deferrals · closes lifecycles · hands you one session PR to merge
       </div>
 
       <!-- Vertical manifest fallback — shown below 900px instead of the SVG -->
@@ -6072,14 +6179,14 @@
           <div>
             <div class="pm-name">spec earned</div>
             <div class="pm-sub">lifecycle/{slug}/spec.md</div>
-            <div class="pm-detail">all four phases locked. the orchestrator now has a tight enough spec to work without you.</div>
+            <div class="pm-detail">all three refine phases locked. the orchestrator now has a tight enough spec to work without you.</div>
           </div>
         </li>
         <li class="pm-row fanout">
           <span class="pm-dot"></span>
           <div>
             <div class="pm-name">/discovery — fan-out</div>
-            <div class="pm-sub">lifecycle-research/{topic}/*.md</div>
+            <div class="pm-sub">cortex/research/{topic}/research.md</div>
             <div class="pm-detail">spawns research branches in parallel — one rail per reference signal.</div>
             <ul class="pm-children">
               <li class="pm-child">→ Stardew Valley · feedback-loop ref</li>
@@ -6101,7 +6208,7 @@
           <span class="pm-dot"></span>
           <div>
             <div class="pm-name">/refine — per ticket</div>
-            <div class="pm-sub">clarify · research · spec · plan · critical-review</div>
+            <div class="pm-sub">clarify · research · spec (+ /critical-review)</div>
             <div class="pm-detail">each ticket clears its own gates. five tickets → five tight specs.</div>
             <ul class="pm-children">
               <li class="pm-child">→ tackle data model</li>
@@ -6117,7 +6224,7 @@
           <div>
             <div class="pm-name">/overnight — parallel rails</div>
             <div class="pm-sub">overnight-state.json · MCP server</div>
-            <div class="pm-detail">orchestrator runs the tickets in parallel. <code>read_spec → advance_phase</code> per ticket. branches and PRs created as they pass critical-review.</div>
+            <div class="pm-detail">orchestrator runs the tickets in parallel, one git worktree and branch each. <code>cortex-lifecycle-advance</code> moves each ticket's phase; work merges onto the session integration branch as each round's gate passes.</div>
           </div>
         </li>
         <li class="pm-row gold">
@@ -6125,7 +6232,7 @@
           <div>
             <div class="pm-name">/morning-review — converge</div>
             <div class="pm-sub">lifecycle/morning-report.md</div>
-            <div class="pm-detail">merges PRs · closes lifecycles · drops a report you can skim with coffee.</div>
+            <div class="pm-detail">walks the report with you · answers deferred questions · closes lifecycles · one session PR left to merge.</div>
           </div>
         </li>
       </ol>
@@ -6150,10 +6257,36 @@
 
   <!-- Playground moved up to sit with the lifecycle/spec section -->
 
-  <!-- ───────── §3.2 · Trust grid · what the harness does when you're not watching ───────── -->
+  <!-- ───────── §3.3 · Trust grid · what the harness does when you're not watching ───────── -->
   <section class="trust-grid" id="trust-grid" aria-labelledby="tg-h">
-    <div class="marker">§3.2 · /overnight · the safety contract</div>
+    <div class="marker">§3.3 · /overnight · the safety contract</div>
     <h2 id="tg-h">Inside <code style="font-family:var(--mono); font-size:0.78em; font-weight:500; letter-spacing:0;">/overnight</code> · <em>the safety contract.</em></h2>
+
+    <!-- The caveat lands BEFORE the seven reassuring figures, deliberately.
+         Sourced: runner.py passes --dangerously-skip-permissions; the per-spawn
+         Seatbelt settings are the actual enforcement layer (and a bypassed
+         prompt does NOT override a kernel denial); the sandbox's named limits
+         are macOS-only, Bash-tool-only, and a static main/master deny-set.
+         See docs/overnight-operations.md § Security and Trust Boundaries. -->
+    <aside class="tg-warn" role="note">
+      <div class="tg-warn-head">
+        <span class="tg-warn-glyph" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3.5 L21.5 20 H2.5 Z"/><path d="M12 10 V14.5"/><circle cx="12" cy="17.4" r="0.9" fill="currentColor" stroke="none"/>
+          </svg>
+        </span>
+        <span class="tg-warn-title">This runs on bypassed permissions. You are accepting risk.</span>
+      </div>
+      <p class="tg-warn-body">Everything below is real, and none of it changes the premise: an unattended run launches <code>claude</code> with <code>--dangerously-skip-permissions</code>. The prompt that normally asks before a tool touches your machine is <strong>off for the whole session</strong> — that is what makes "work while you sleep" possible at all.</p>
+      <p class="tg-warn-body">What replaces it is an OS-kernel sandbox applied per spawn, and it holds where it applies — a bypassed prompt cannot override a kernel denial. But its edges are worth knowing before you hand over the keys:</p>
+      <ul class="tg-warn-list">
+        <li><span class="tw-k">macOS only.</span> Enforcement is Seatbelt. On Linux the builder warns and continues — behavior is <em>undefined</em>, not merely weaker.</li>
+        <li><span class="tw-k">Bash writes only.</span> Write and Edit run in-process in the SDK and never reach the sandbox; MCP servers run unsandboxed.</li>
+        <li><span class="tw-k">A named deny-set.</span> It protects <code>main</code>, <code>master</code>, <code>HEAD</code>, and <code>packed-refs</code> by enumeration — a repo whose default branch is <code>develop</code> or <code>trunk</code> is not covered.</li>
+      </ul>
+      <p class="tg-warn-body tg-warn-close">Run it on work you could afford to throw away and re-do — a repo you can <code>git reset</code>, pushed somewhere you trust, on a machine you own. The circuit breakers, the worktree fence, and the audit logs below are what make that bet a reasonable one. They don't make it a free one.</p>
+    </aside>
+
     <details class="tg-collapse">
       <summary class="tg-collapse-toggle">
         <span class="tgc-chev" aria-hidden="true"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l4 4-4 4"/></svg></span>
@@ -6249,7 +6382,7 @@
             <text class="schem-tag dim" x="10" y="104">three counters · graceful exit</text>
           </svg>
         </div>
-        <p class="tg-body">Three independent counters watch the run. <code>zero_progress</code> trips when nothing has advanced in 5 rounds. <code>time</code> trips at 10 hours. <code>failures</code> trips when the same ticket keeps blowing up. Any one of them ends the run cleanly — saves state, writes the report, exits — instead of churning until your wallet or your repo notices.</p>
+        <p class="tg-body">Three independent stop conditions watch the run. <code>zero-progress</code> trips when two consecutive rounds merge nothing. <code>time</code> trips at <code>--time-limit</code> — six hours by default. The <code>stall watchdog</code> trips when a child stops making progress at all: 30 minutes of inactivity, or a four-hour absolute ceiling that never resets. Any one of them ends the run cleanly — saves state, writes the report, exits — instead of churning until your wallet or your repo notices.</p>
         <div class="tg-cap">three circuit breakers · zero-progress · time · watchdog</div>
       </article>
 
@@ -6336,7 +6469,7 @@
             <!-- subtle file annotation under the stamp, fades in with it -->
             <text class="schem-tag dim paused-stamp" x="222" y="70" text-anchor="middle" style="opacity:0; font-size:6.5px">
               <animate attributeName="opacity" values="0;0;0;1;1" keyTimes="0;0.74;0.80;0.86;1" dur="8s" repeatCount="indefinite"/>
-              ./deferred/&lt;ticket&gt;.md
+              deferred/&lt;slug&gt;-q001.md
             </text>
 
             <!-- bottom rule + caption -->
@@ -6344,8 +6477,8 @@
             <text class="schem-cap" x="130" y="130" text-anchor="middle">three rungs · one judge · calm pause</text>
           </svg>
         </div>
-        <p class="tg-body">Failed gates don't loop blindly. The first retry runs on the same model; the next escalates to <code>opus</code>; the third hands off to a separate brain agent that decides <code>SKIP</code>, <code>DEFER</code>, or continue.</p>
-        <p class="tg-body">When even the brain can't decide cleanly, the harness writes <code>./deferred/&lt;ticket&gt;.md</code> with what it tried and what it needs from you — then carries on with the rest of the queue. Three rungs, a judge, one calm exit.</p>
+        <p class="tg-body">Failed gates don't loop blindly. A retry-classified failure runs again on the same model with the previous attempt's learnings appended; an escalate-classified one climbs exactly one rung of the <code>haiku → sonnet → opus</code> ladder. When the attempts are spent, a separate brain agent triages: <code>SKIP</code>, <code>DEFER</code>, or <code>PAUSE</code>. There is deliberately no <code>RETRY</code> verdict — it would re-enter the caller that just gave up.</p>
+        <p class="tg-body">A <code>DEFER</code> writes <code>deferred/&lt;slug&gt;-q001.md</code> with what it tried and what it needs from you — then carries on with the rest of the queue. Three rungs, a judge, one calm exit.</p>
         <div class="tg-cap">retry → escalate → triage → calm pause</div>
       </article>
 
@@ -6503,7 +6636,7 @@
             <text class="schem-cap" x="100" y="108" text-anchor="middle">interrupt → reconcile</text>
           </svg>
         </div>
-        <p class="tg-body">Every phase transition writes <code>overnight-state.json</code> atomically before continuing. Close your laptop mid-run, lose power, kill the process — on restart, <code>interrupt.py</code> reads the last checkpoint, reconciles any half-finished branch, and resumes from exactly where it left off. No double-merges, no orphaned worktrees, no lost work.</p>
+        <p class="tg-body">Every state write lands atomically — tempfile plus <code>os.replace()</code>, so a reader sees the old bytes or the new bytes, never a torn mix. Close your laptop mid-run, lose power, kill the process — on restart, <code>interrupt.py</code> inspects each still-<code>running</code> ticket's worktree, logs an <code>interrupted</code> event with the evidence it found, and hands the ticket back to the queue as <code>pending</code>. No double-merges, no orphaned worktrees, no half-applied state.</p>
         <div class="tg-cap">atomic state · resumes cleanly</div>
       </article>
 
@@ -6542,7 +6675,7 @@
             <text class="schem-cap" x="120" y="108" text-anchor="middle">five logs → one report</text>
           </svg>
         </div>
-        <p class="tg-body">Five JSONL streams record everything during the run: phase transitions, agent spawns, retries, conflicts, and brain triage decisions. At dawn they’re collated into a single <code>morning-report.md</code> — what merged, what was skipped and why, what’s waiting for you. Every decision is auditable; nothing happens off the record.</p>
+        <p class="tg-body">Five append-only JSONL streams record the run at five different scopes: session events, per-task dispatch and merge outcomes, per-feature phase transitions, per-turn agent tool calls, and the worker↔orchestrator escalation channel. Each has exactly one writing module, so ownership can't drift. At dawn they're collated into a single <code>morning-report.md</code> — what merged, what was skipped and why, what's waiting for you. Every decision is auditable; nothing happens off the record.</p>
         <div class="tg-cap">five logs · one morning-report</div>
       </article>
 
@@ -7033,7 +7166,7 @@
                   <text class="a-mono dim sm"   x="650" y="1334">reads F · accepts merged · prompts on paused + deferred</text>
 
                   <text class="a-mono b"        x="636" y="1362">2 · answer the blocking question</text>
-                  <text class="a-mono dim sm"   x="650" y="1380">writes the decision back to deferred/q001.md</text>
+                  <text class="a-mono dim sm"   x="650" y="1380">writes the decision back to deferred/&lt;slug&gt;-q001.md</text>
 
                   <text class="a-mono b"        x="636" y="1408">3 · advance and archive</text>
                   <text class="a-mono dim sm"   x="650" y="1426">moves merged tickets out of the live queue</text>
@@ -7081,7 +7214,7 @@
                 <div>
                   <div class="hm-name">round 2 · 00:30 → 02:15</div>
                   <div class="hm-sub">planner ④ · ralph loop exhausted · brain.py DEFER</div>
-                  <div class="hm-detail">feature ④ writes a blocking question to deferred/q001.md. integration held.</div>
+                  <div class="hm-detail">feature ④ writes a blocking question to deferred/&lt;slug&gt;-q001.md. integration held.</div>
                 </div>
               </li>
               <li class="hm-row" data-state="skipped">
@@ -7302,7 +7435,7 @@
           <div class="why-card">
             <div class="ix"><span>01 · <em>setup</em></span></div>
             <div class="title">Approving a spec is not one write.</div>
-            <div class="body">It records consent, checks the gate, emits the <code>specify→plan</code> transition, and writes <code>status: refined</code> back to the ticket. <strong>Order matters</strong>, and a resumed session must not replay any of it twice.</div>
+            <div class="body">It re-reads the log, checks the gate, records consent, routes the spec exit for this ticket's tier, and writes <code>status: refined</code> plus the spec path back to the ticket — which regenerates the backlog index. <strong>Order matters</strong>, and a resumed session must not replay any of it twice.</div>
           </div>
 
           <div class="why-card problem">
@@ -7461,7 +7594,7 @@
 
   <!-- ───────── What ships ───────── -->
   <section class="install" id="install">
-    <div class="marker">§4.3 · what installs · 3 plugins · one CLI underneath</div>
+    <div class="marker">§4.3 · what installs · 3 core plugins · one CLI underneath</div>
     <h2>Start with the core. <em>It's complete on its own</em> — add the rest as you want them.</h2>
 
     <div class="ship-stack">
@@ -7616,7 +7749,7 @@
   <div class="body">
     <div class="top">Achievement</div>
     <div class="title">Spec Earned</div>
-    <div class="sub">all four phases locked · ready for handoff</div>
+    <div class="sub">all three refine phases locked · ready for handoff</div>
   </div>
 </div>
 
@@ -7659,8 +7792,16 @@
   function activateAgent(_phase) {
     // (sidebar agents replaced by meta-spec; nothing to activate here)
   }
+  const STREAM_GATES = sections.length;
+  // "Spec Earned" fires when Specify locks, not at the end of the stream: the
+  // spec is earned at the refine|build seam. Plan belongs to /build and the
+  // short road skips it, so it can't be what earns the spec.
+  const SPEC_GATE = sections.findIndex(s => s.dataset.phase === 'specify') + 1;
   function updateCounter() {
-    if (headerCounter) headerCounter.textContent = `4 gates · ${locked.size} of 4 cleared`;
+    if (headerCounter) {
+      headerCounter.textContent =
+        `${STREAM_GATES} gates · ${locked.size} of ${STREAM_GATES} cleared`;
+    }
   }
   function tryLock() {
     const anchor = window.innerHeight * 0.55;
@@ -7678,7 +7819,7 @@
         locked.add(i);
         activateAgent(sec.dataset.phase);
         updateCounter();
-        if (locked.size === 4 && !toastShown) {
+        if (locked.size === SPEC_GATE && !toastShown) {
           toastShown = true;
           setTimeout(() => toastSpec.classList.add('show'), 350);
           setTimeout(() => toastSpec.classList.remove('show'), 6800);
@@ -8108,23 +8249,33 @@
       planB:     { label: 'plan B' },
       implement: { label: 'implement' },
       review:    { label: 'review' },
-      reviewO:   { label: 'review · Opus' },
       complete:  { label: 'complete' },
     };
 
     // Indexed [criticality][complexity]: 4 criticality levels × 2 complexity
     // tiers, mirroring the canonical enum (common.py TIER_VOCABULARY /
-    // CRITICALITY_VOCABULARY) and the escalation rules in
-    // skills/build/SKILL.md § Criticality:
-    //   • one predicate governs every fork: criticality ∈ {high, critical} OR
-    //     tier == complex takes the long road; everything else takes the short
-    //     road — simple + (low|medium) skips plan (spec→implement) and review
-    //   • /critical-review fires for complex + (medium|high|critical)
-    //   • the review phase escalates to Opus (reviewO) at high|critical,
-    //     forced regardless of tier
-    //   • competing plans (planB) are critical-only
-    //   • research runs at every level, sized by the same tier × criticality
-    //     grid (simple rows dispatch as little as one Codebase agent)
+    // CRITICALITY_VOCABULARY). Every fork below is a row in the closed
+    // transition table (cortex_command/lifecycle/transition_table.py, rendered
+    // in docs/lifecycle-transition-table.md) or a documented dispatch rule:
+    //   • ONE predicate governs the spec exit and the implement exit:
+    //     criticality ∈ {high, critical} OR tier == complex takes the long
+    //     road (`spec.approved` → plan; `implement.review` → review);
+    //     everything else takes the short road (`spec.approved-direct` →
+    //     implement; `implement.complete` → complete), so simple + (low|medium)
+    //     never enters plan or review and derives its task list from spec.md's
+    //     acceptance criteria — no plan.md exists on that road
+    //   • /critical-review fires for complex + (medium|high|critical), and it
+    //     fires AT SPEC, before approval — never at plan
+    //     (skills/refine/references/specify.md §3b)
+    //   • the review phase is FORCED at high|critical regardless of tier, but
+    //     its model never escalates: `--role review` is uniform sonnet at every
+    //     criticality (cortex_command/lifecycle/resolve_model_cli.py, ruling
+    //     recorded in docs/internals/sdk.md). What Opus buys at high|critical is
+    //     the BUILDER (`--role builder`), not the reviewer.
+    //   • competing plans (planB) are critical-only (`--role competing-plan`
+    //     has no low/medium/high cell at all)
+    //   • research runs at every cell — what the grid patches is its BREADTH,
+    //     not its presence (RESEARCH_AGENTS below, from fanout.md)
     const MATRIX = [
       // low
       [
@@ -8138,29 +8289,43 @@
       ],
       // high
       [
-        ['clarify','research','spec','plan','implement','reviewO','complete'],
-        ['clarify','research','spec','review1','plan','implement','reviewO','complete'],
+        ['clarify','research','spec','plan','implement','review','complete'],
+        ['clarify','research','spec','review1','plan','implement','review','complete'],
       ],
       // critical
       [
-        ['clarify','research','spec','plan','planB','implement','reviewO','complete'],
-        ['clarify','research','spec','review1','plan','planB','implement','reviewO','complete'],
+        ['clarify','research','spec','plan','planB','implement','review','complete'],
+        ['clarify','research','spec','review1','plan','planB','implement','review','complete'],
       ],
     ];
+
+    // Research fan-out breadth per cell — the canonical count matrix in
+    // skills/research/references/fanout.md (an upper bound on breadth, not a
+    // quota). Indexed [criticality][complexity], same order as MATRIX.
+    const RESEARCH_AGENTS = [
+      [1, 5],   // low
+      [2, 6],   // medium
+      [3, 8],   // high
+      [4, 10],  // critical
+    ];
+
+    // `--role builder` resolves opus at high|critical, sonnet below.
+    const builderModel = crit => (crit >= 2 ? 'opus' : 'sonnet');
 
     const AXIS = {
       complexity:  ['simple', 'complex'],
       criticality: ['low', 'medium', 'high', 'critical'],
     };
 
-    function summarize(seq) {
+    function summarize(seq, crit, cplx) {
       const set = new Set(seq);
       const parts = [`${seq.length} phases`];
       if (!set.has('plan'))    parts.push('short road — spec straight to implement');
-      if (set.has('review1'))  parts.push('adversarial pre-plan');
+      parts.push(`${RESEARCH_AGENTS[crit][cplx]}-angle research`);
+      if (set.has('review1'))  parts.push('adversarial gate at spec');
       if (set.has('planB'))    parts.push('race two plans');
-      if (set.has('reviewO'))  parts.push('escalated reviewer');
-      if (!set.has('review') && !set.has('review1') && !set.has('reviewO'))
+      if (crit >= 2)           parts.push('opus builder');
+      if (!set.has('review') && !set.has('review1'))
         parts.push('one-pass ship');
       return parts.join(' · ');
     }
@@ -8175,13 +8340,20 @@
       { id: 'planB',     col: 4, y:  1 },
       { id: 'implement', col: 5, y:  0 },
       { id: 'review',    col: 6, y:  0 },
-      { id: 'reviewO',   col: 6, y:  1 },
       { id: 'complete',  col: 7, y:  0 },
     ];
     const BAY_COLS = 7;
     const BAY_IDX = Object.fromEntries(BAY.map((m, i) => [m.id, i]));
-    const BIG = { W: 980, H: 220, railY: 80, fork: 34, modW: 40, modH: 26 };
-    const bigX = col  => 26 + col * ((BIG.W - 52) / BAY_COLS);
+    const BIG = { W: 980, H: 248, railY: 80, fork: 34, modW: 40, modH: 26 };
+
+    // The /refine | /build seam. Every node up to and including /critical-review
+    // belongs to /refine (the adversarial gate runs at spec); plan onward is
+    // /build. spec.md is the artifact that crosses.
+    const SEAM_COL = 3.5;
+    // Asymmetric padding: the left margin is wider than the right to seat the
+    // /dev fork and its trivial off-ramp before the track begins.
+    const BIG_PAD_L = 120, BIG_PAD_R = 34;
+    const bigX = col  => BIG_PAD_L + col * ((BIG.W - BIG_PAD_L - BIG_PAD_R) / BAY_COLS);
     const bigY = lane => BIG.railY + lane * BIG.fork;
     const node = id => ({ x: bigX(BAY[BAY_IDX[id]].col), y: bigY(BAY[BAY_IDX[id]].y) });
 
@@ -8194,9 +8366,12 @@
       planB:     ['plan B'],
       implement: ['implement'],
       review:    ['review'],
-      reviewO:   ['review', '(Opus)'],
       complete:  ['complete'],
     };
+
+    // Nodes carrying a cell-dependent sublabel, re-rendered on every state
+    // change: research shows its fan-out breadth, implement its builder model.
+    const SUBLABEL = { research: true, implement: true, review: true };
 
     // Cable topology: sequential through `seq`; when planB fires, fork
     // between the node before plan and the node after planB to show the race.
@@ -8247,7 +8422,7 @@
       <div class="ax-bench">
         <div class="ax-bench-head">
           <div class="ax-bench-head-l">
-            <span class="ax-bench-tag">current lifecycle</span>
+            <span class="ax-bench-tag">the patched track</span>
             <span class="ax-bench-config">
               <span class="ax-config-axis">complexity</span>
               <span class="ax-config-val" data-config="cplx"></span>
@@ -8267,6 +8442,7 @@
           </defs>
           <rect x="0" y="0" width="${BIG.W}" height="${BIG.H}" fill="url(#ax-grid)"/>
           <g data-lanes></g>
+          <g data-seam></g>
           <path data-cable-glow fill="none" stroke="var(--blue)" stroke-width="2.4" stroke-opacity="0.85" stroke-linecap="round" filter="url(#ax-glow)"/>
           <path data-cable fill="none" stroke="var(--blue)" stroke-width="1.5" stroke-linecap="round"/>
           <g data-modules></g>
@@ -8293,6 +8469,108 @@
         stroke: 'var(--rule-soft)', 'stroke-width': 0.7, 'stroke-dasharray': '3 5',
       }));
     });
+
+    // ── /refine | /build seam + per-half brackets ──
+    // Static: the seam never moves. Only the cable crossing it changes — on the
+    // short road it leaves `spec` and lands on `implement`, which is exactly
+    // what "/build enters at implement" looks like.
+    (function drawSeam() {
+      const seam = skeleton.querySelector('[data-seam]');
+      const sx = bigX(SEAM_COL);
+      const braceY = 196, labelY = 214;
+
+      seam.appendChild(svgEl('line', {
+        x1: sx, x2: sx, y1: 26, y2: 182,
+        stroke: 'var(--blue)', 'stroke-width': 1, 'stroke-opacity': 0.5,
+        'stroke-dasharray': '2 3',
+      }));
+      const artifact = svgEl('text', {
+        x: sx, y: 20, 'text-anchor': 'middle', fill: 'var(--blue)',
+        'font-family': 'JetBrains Mono', 'font-size': 9, 'letter-spacing': '0.06em',
+      });
+      artifact.textContent = 'spec.md ↓';
+      seam.appendChild(artifact);
+
+      [
+        { name: '/refine', from: 0, to: SEAM_COL, sub: 'ticket → approved spec' },
+        { name: '/build',  from: SEAM_COL, to: BAY_COLS, sub: 'spec → shipped PR' },
+      ].forEach(half => {
+        const x1 = bigX(half.from) + (half.from === 0 ? -8 : 8);
+        const x2 = bigX(half.to) + (half.to === BAY_COLS ? 8 : -8);
+        seam.appendChild(svgEl('path', {
+          d: `M ${x1} ${braceY - 5} L ${x1} ${braceY} L ${x2} ${braceY} L ${x2} ${braceY - 5}`,
+          fill: 'none', stroke: 'var(--rule-soft)', 'stroke-width': 0.8,
+        }));
+        const t = svgEl('text', {
+          x: (x1 + x2) / 2, y: labelY, 'text-anchor': 'middle',
+          'font-family': 'JetBrains Mono', 'font-size': 10, 'letter-spacing': '0.05em',
+          fill: 'var(--ink-2)',
+        });
+        t.textContent = half.name;
+        const s = svgEl('tspan', {
+          x: (x1 + x2) / 2, dy: 13, 'font-size': 8, fill: 'var(--ink-faint)',
+        });
+        s.textContent = half.sub;
+        t.appendChild(s);
+        seam.appendChild(t);
+      });
+    })();
+
+    // ── the trivial off-ramp ──
+    // Deliberately STATIC — no escalator drives it, because `trivial` is not a
+    // tier. TIER_VOCABULARY (common.py) is closed at {simple, complex}, so no
+    // ticket can ever carry complexity:trivial. This is a ROUTING verdict /dev
+    // reaches before any lifecycle exists (skills/dev/SKILL.md Step 1 rule 4:
+    // single file, existing pattern, one obvious approach → implement here,
+    // commit, close the item). The work leaves the track entirely; no
+    // cortex/lifecycle/{slug}/ directory is created. Drawn muted and dashed so
+    // it reads as an exit rather than competing with the live blue rail.
+    (function drawOffRamp() {
+      const seam  = skeleton.querySelector('[data-seam]');
+      const forkX = 60, railY = bigY(0), dropY = 148;
+      const clarifyEdge = bigX(0) - BIG.modW / 2;
+
+      const path = (d, extra) => seam.appendChild(svgEl('path', Object.assign({
+        d, fill: 'none', stroke: 'var(--ink-faint)', 'stroke-width': 1,
+      }, extra)));
+
+      // entry stub: the fork sits on the rail, left of clarify
+      path(`M 24 ${railY} L ${clarifyEdge} ${railY}`, { 'stroke-opacity': 0.5 });
+      seam.appendChild(svgEl('circle', {
+        cx: forkX, cy: railY, r: 3,
+        fill: 'var(--parchment-2)', stroke: 'var(--ink-faint)', 'stroke-width': 1,
+      }));
+
+      const devLabel = svgEl('text', {
+        x: forkX, y: railY - 13, 'text-anchor': 'middle',
+        'font-family': 'JetBrains Mono', 'font-size': 9, 'letter-spacing': '0.05em',
+        fill: 'var(--ink-2)',
+      });
+      devLabel.textContent = '/dev';
+      seam.appendChild(devLabel);
+
+      // the off-ramp: drops out of the track and terminates
+      path(
+        `M ${forkX} ${railY} L ${forkX} ${dropY - 8} Q ${forkX} ${dropY} ${forkX + 8} ${dropY} L ${forkX + 52} ${dropY}`,
+        { 'stroke-dasharray': '3 3', 'stroke-opacity': 0.8 },
+      );
+      seam.appendChild(svgEl('path', {
+        d: `M ${forkX + 58} ${dropY} l -6 -3.4 l 0 6.8 z`,
+        fill: 'var(--ink-faint)', stroke: 'none',
+      }));
+
+      const exit = svgEl('text', {
+        x: forkX + 66, y: dropY + 3, 'font-family': 'JetBrains Mono',
+        'font-size': 9, 'letter-spacing': '0.05em', fill: 'var(--ink-2)',
+      });
+      exit.textContent = 'trivial → implement · commit · close the ticket';
+      const note = svgEl('tspan', {
+        x: forkX + 66, dy: 12, 'font-size': 8, fill: 'var(--ink-faint)',
+      });
+      note.textContent = 'no lifecycle directory is ever created';
+      exit.appendChild(note);
+      seam.appendChild(exit);
+    })();
 
     const modulesG = skeleton.querySelector('[data-modules]');
     const cableEl  = skeleton.querySelector('[data-cable]');
@@ -8333,8 +8611,21 @@
         text.appendChild(ts);
       });
       g.append(rect, pin1, pin2, ledDot, ledHalo, text);
+
+      // Cell-dependent sublabel, placed one line past the name.
+      let sub = null;
+      if (SUBLABEL[m.id]) {
+        sub = svgEl('text', {
+          x,
+          y: above ? labelY - 12 : labelY + 12 + (lines.length - 1) * 12,
+          'text-anchor': 'middle', 'font-family': 'JetBrains Mono', 'font-size': 8,
+          'letter-spacing': '0.05em',
+        });
+        g.appendChild(sub);
+      }
+
       modulesG.appendChild(g);
-      modGroups[m.id] = { g, rect, pin1, pin2, ledDot, ledHalo, text, isGold };
+      modGroups[m.id] = { g, rect, pin1, pin2, ledDot, ledHalo, text, sub, isGold };
     });
 
     // Escalators
@@ -8389,7 +8680,17 @@
 
       cplxEl.textContent = AXIS.complexity[cplx];
       critEl.textContent = AXIS.criticality[crit];
-      summaryEl.textContent = summarize(seq);
+      summaryEl.textContent = summarize(seq, crit, cplx);
+
+      // Cell-dependent sublabels. `research` is the only node whose grid effect
+      // is breadth rather than presence; `implement` and `review` carry their
+      // resolved model, which is where the real high/critical escalation lands
+      // — the builder climbs to opus, the reviewer never does.
+      const SUBTEXT = {
+        research:  `${RESEARCH_AGENTS[crit][cplx]} ${RESEARCH_AGENTS[crit][cplx] === 1 ? 'angle' : 'angles'}`,
+        implement: builderModel(crit),
+        review:    'sonnet',
+      };
 
       const d = cablePath(seq);
       cableEl.setAttribute('d', d);
@@ -8413,6 +8714,14 @@
         refs.ledHalo.setAttribute('opacity', on ? 0.25 : 0);
         refs.text.setAttribute('fill', on ? (gold ? 'var(--ochre)' : 'var(--ink)') : 'var(--ink-faint)');
         refs.text.setAttribute('font-weight', on ? 500 : 400);
+        if (refs.sub) {
+          refs.sub.textContent = on ? SUBTEXT[m.id] : '';
+          // opus is the one escalation on the bench worth an accent.
+          refs.sub.setAttribute(
+            'fill',
+            SUBTEXT[m.id] === 'opus' ? 'var(--ochre)' : 'var(--ink-faint)',
+          );
+        }
       });
 
       ['complexity', 'criticality'].forEach(axis => {
