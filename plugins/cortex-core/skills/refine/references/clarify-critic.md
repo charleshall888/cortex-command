@@ -4,14 +4,14 @@ A fresh agent challenges whether §2's confidence ratings are supported by the s
 
 ## Parent epic loading (orchestrator, Context A only)
 
-Call `cortex-load-parent-epic <backlog-filename-slug>` (the `cortex/backlog/{slug}.md` stem — the lifecycle slug returns `not found`). Only `loaded` sets `parent_epic_loaded = true` and includes the alignment section. `missing` and `unreadable` also emit a warning verbatim — never raw filesystem error text:
+Call `cortex-load-parent-epic <slug>` — it accepts any reference form the other backlog verbs do. Only `loaded` sets `parent_epic_loaded = true` and includes the alignment section. `missing` and `unreadable` also emit a warning verbatim — never raw filesystem error text:
 
 - `missing`: `"Parent epic <id> referenced but file missing — alignment evaluation skipped."`
 - `unreadable`: `"Parent epic <id> referenced but file is unreadable — alignment evaluation skipped."`
 
 ## Dispatch
 
-A fresh read-only `general-purpose` agent, no worktree isolation. It reads no files — everything is in the prompt. Pass verbatim:
+A fresh read-only `general-purpose` agent, no worktree isolation; everything it needs is in the prompt. Pass verbatim:
 
 ---
 
@@ -58,9 +58,9 @@ End with: "These are the objections. Proceed as you see fit." One-sided: focus o
 
 ## Disposition
 
-Classify each objection **Apply** (fix silently, revising the affected dimension), **Dismiss** (including when it rests on an assumption the source explicitly rules out), or **Ask** — matching `/cortex-core:critical-review` Step 7's logic; keep the two in sync. Check against the requirements context first and resolve on verifiable evidence where you can; the Apply bar is unambiguous-and-high-confidence, else Ask.
+Classify each objection **Apply** (fix silently, revising the affected dimension), **Dismiss** (including when it rests on an assumption the source explicitly rules out), or **Ask** — matching `/cortex-core:critical-review` Step 7's logic; keep the two in sync. Check the requirements context first and resolve on verifiable evidence where you can; the Apply bar is unambiguous-and-high-confidence, else Ask.
 
-Ask items fold into §4's question list as one consolidated round — not a separate escalation. Alignment findings use the same framework. The **sole output** of dispositioning is the event below; the user-facing surface is limited to the §4 Ask-merge and the silent Apply fixes.
+Ask items fold into §4's question list as one consolidated round, not a separate escalation; alignment findings use the same framework. The **sole output** of dispositioning is the event below — the user-facing surface is the §4 Ask-merge and the silent Apply fixes.
 
 ## Event
 
@@ -73,8 +73,8 @@ dispositions: {apply, dismiss, ask}, applied_fixes_count: <int>,
 dismissals_count: <int>, status: "ok"
 ```
 
-Counts only — no per-finding prose or rationales. Keep `dismissals_count == dispositions.dismiss`. Readers must tolerate every prior shape (v1, v1+dismissals, v2, YAML-block) forever; new producers emit only v3.
+Counts only — no per-finding prose or rationales. Keep `dismissals_count == dispositions.dismiss`. Readers tolerate every prior shape (v1, v1+dismissals, v2, YAML-block) forever; new producers emit only v3.
 
-Critic failure, error, or timeout → write the event with `status: "failed"` and all counts zero (`parent_epic_loaded` per the pre-dispatch result), then proceed to §4 as if it hadn't run, covering all original low-confidence dimensions. Don't surface it as a blocking error.
+Critic failure, error, or timeout → write the event with `status: "failed"` and all counts zero (`parent_epic_loaded` per the pre-dispatch result), then proceed to §4 as if it hadn't run, covering all original low-confidence dimensions. Not a blocking error.
 
 **Soft cap of 5 rubric dimensions.** A sixth requires replacing one or extracting a separate critic.

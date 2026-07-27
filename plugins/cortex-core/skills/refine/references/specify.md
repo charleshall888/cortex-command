@@ -4,7 +4,7 @@ Structured interview surfacing hidden requirements, edge cases, and priorities b
 
 ### 1. Load Context
 
-Read `cortex/lifecycle/{feature}/research.md` and `cortex/lifecycle.config.md` if present. Under `/cortex-core:refine` requirements were already loaded in Clarify — skip re-loading. Use them to avoid re-asking settled questions; surface any concept missing from the glossary in the next requirements interview.
+Read `cortex/lifecycle/{feature}/research.md` and `cortex/lifecycle.config.md` if present. Requirements were loaded in Clarify — don't re-load. Use them to avoid re-asking settled questions; surface any concept missing from the glossary in the next requirements interview.
 
 ### 2. Structured Interview
 
@@ -45,7 +45,7 @@ Silent on pass; on failure surface only the failing item as one bullet (≤15 wo
 
 ### 3. Write Specification Artifact
 
-Compile into `cortex/lifecycle/{feature}/spec.md`. If §2a ended with the user declining to loop back, prepend a short advisory blockquote before `## Problem Statement` — unresolved research gaps, requirements may be incomplete, downstream phases proceed normally — one bullet per flagged signal.
+Compile into `cortex/lifecycle/{feature}/spec.md`. Define WHAT to build, not HOW — no implementation code. If §2a ended with the user declining to loop back, prepend a short advisory blockquote before `## Problem Statement` — unresolved research gaps, requirements may be incomplete, downstream phases proceed normally — one bullet per flagged signal.
 
 ```markdown
 # Specification: {feature}
@@ -77,23 +77,15 @@ None considered.
 <!-- Replace with `### Proposed ADR: <NNNN-slug>` + one paragraph of context, decision, and trade-off. -->
 ```
 
-Define WHAT to build, not HOW — no implementation code in this phase.
-
 ### 3a. Orchestrator Review
 
 Run the orchestrator-review protocol (propagated **orchestrator-review** path) for `specify`. It must pass before approval.
 
 ### 3b. Critical Review
 
-```bash
-cortex-lifecycle-state --feature {feature}
-```
+Use the tier and criticality Step 4's `reconcile-clarify` just ratcheted; read them with `cortex-lifecycle-state --feature {feature}` if they aren't in context. Trust that read over Clarify's original value — the caller may have escalated tier between Research and Spec. `"corrupted": true` → run the gate rather than skipping, never treating it as `simple` (canonical rule: SKILL.md § Criticality).
 
-The caller may have escalated tier between Research and Spec — trust this read, not Clarify's value. `"corrupted": true` → run the gate rather than skipping, never treating it as `simple` (canonical rule: SKILL.md § Criticality).
-
-Resolve the backend once (`cortex-read-backlog-backend`) before deciding to skip.
-
-**Run** `/cortex-core:critical-review` on the spec, presenting the synthesis before approval, when `tier = complex` AND `criticality ∈ {medium, high, critical}` — **or** when the backend ≠ `cortex-backlog` AND the condition failed only because `tier = simple` AND research.md exists. That second arm is a seed-tier fail-safe: on a non-local backend Clarify may have been bypassed, leaving state at the `simple/medium` seed. The local `cortex-backlog` path is exempt — `reconcile-clarify --backlog-slug` re-sources tier from frontmatter on resume.
+**Run** `/cortex-core:critical-review` on the spec, presenting the synthesis before approval, when `tier = complex` AND `criticality ∈ {medium, high, critical}` — **or** when the backend ≠ `cortex-backlog` AND the condition failed only because `tier = simple` AND research.md exists. That second arm is a seed-tier fail-safe: on a non-local backend Clarify may have been bypassed, leaving state at the `simple/medium` seed. The local `cortex-backlog` path is exempt — `reconcile-clarify --backlog-slug` re-sources tier from frontmatter on resume. (Backend comes from Step 1's envelope; `cortex-read-backlog-backend` re-reads it only if it isn't in context.)
 
 Otherwise the critical-review gate protocol skips to approval. The gate runs at spec only; the plan phase dispatches none — end-of-implementation review is the backstop.
 
@@ -116,7 +108,7 @@ cortex-lifecycle-advance spec-approve --feature <name> --decision <approved|canc
 
 `/cortex-core:refine` passes `--no-emit-transition` — it stops at `spec.md`. This verb is the sole emitter of the `specify→plan` row.
 
-- **`approved`** / **`approved-direct`** → the spec is approved and written back; refine is done. The `approved-direct` variant records that the verb routed the spec exit down the short road (simple tier, low/medium criticality), which `/cortex-core:build` reads to skip the Plan phase.
+- **`approved`** / **`approved-direct`** → the spec is approved and written back; refine is done. `approved-direct` records that the verb routed the spec exit down the short road (simple tier, low/medium criticality), which `/cortex-core:build` reads to skip the Plan phase.
 - **`revise`** → nothing recorded; collect changes, revise, re-present. Only the final Approve records consent.
 - **`cancelled`** → `lifecycle_cancelled` recorded; halt.
 - **`error`** → surface `message` and halt. **exit 2** → ambiguous backlog slug; apply the build skill's backlog-writeback.md disambiguation and re-run. Missing verb → halt and tell the operator to install or upgrade the cortex-command CLI; never record the approval, transition, or write-back by hand.

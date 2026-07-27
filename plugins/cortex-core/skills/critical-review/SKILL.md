@@ -7,11 +7,11 @@ argument-hint: "[<artifact-path>]"
 
 # Critical Review
 
-One fresh reviewer agent per angle, dispatched in parallel — full independence, no anchoring to the reasoning that produced the artifact — then a synthesis pass.
+One fresh reviewer agent per angle, dispatched in parallel — no anchoring to the reasoning that produced the artifact — then a synthesis pass.
 
 ## Step 1: Find the artifact
 
-If a lifecycle is active, take the most relevant of `cortex/lifecycle/{feature}/plan.md` → `spec.md` → `research.md`, in that order; otherwise use conversation context. Nothing clear enough to challenge → ask "What should I critically review?" first. Resolve it to an absolute path — reviewers read that literal path, they do not re-derive it.
+If a lifecycle is active, take the most relevant of `cortex/lifecycle/{feature}/plan.md` → `spec.md` → `research.md`, in that order; otherwise use conversation context. Nothing clear enough to challenge → ask "What should I critically review?" first. Resolve it to an absolute path — reviewers read that literal path.
 
 ## Step 2: Derive angles
 
@@ -31,7 +31,7 @@ One general-purpose agent per angle, all in parallel, using `${CLAUDE_SKILL_DIR}
 
 Extract each reviewer's envelope: split on the **last** `<!--findings-json-->` line, `json.loads` the tail, and assert top-level `angle: str` and `findings: list`, each finding carrying `class ∈ {A,B,C}`, `finding`, and `evidence_quote`. The envelope is the reviewer's whole deliverable, so a malformed one leaves nothing to salvage — warn `⚠ Reviewer {angle} emitted malformed JSON envelope ({reason})` and drop it.
 
-If some reviewers fail or return nothing, synthesize from the rest and prefix the output "N of M reviewer angles completed." Never wait on a silent agent. If *all* fail, dispatch a single general-purpose agent to derive 3–4 angles itself and produce the same output shape, prefix its result `Note: parallel dispatch failed, falling back to single reviewer`, and skip synthesis.
+Some reviewers failing → synthesize from the rest and prefix "N of M reviewer angles completed." Never wait on a silent agent. *All* failing → dispatch a single general-purpose agent to derive 3–4 angles itself and produce the same output shape, prefix `Note: parallel dispatch failed, falling back to single reviewer`, and skip synthesis.
 
 ## Step 5: Synthesize
 
@@ -39,19 +39,13 @@ Dispatch one synthesizer with `${CLAUDE_SKILL_DIR}/references/synthesizer-prompt
 
 ## Step 6: Write B-class residue
 
-Resolve the feature from `$LIFECYCLE_SESSION_ID`:
+With ≥1 B-class finding, write the sidecar the morning report reads — the verb resolves the feature from the session id itself:
 
 ```bash
-FEATURE=$(cortex-critical-review-resolve-feature "$LIFECYCLE_SESSION_ID")
+cortex-critical-review-write-residue --session-id "$LIFECYCLE_SESSION_ID" <<< "$PAYLOAD_JSON"
 ```
 
-On a unique match with ≥1 B-class finding, write the sidecar the morning report reads:
-
-```bash
-cortex-critical-review-write-residue --feature "$FEATURE" <<< "$PAYLOAD_JSON"
-```
-
-Payload: `ts`, `feature`, `artifact`, `synthesis_status` (`ok`|`failed`), `reviewers: {completed, dispatched}`, and `findings` — each `{class: "B", finding, reviewer_angle, evidence_quote}`. Zero B-class findings → no file, no note. Zero matches → `Note: B-class residue not written — no active lifecycle context.` Multiple matches → `Note: multiple active lifecycle sessions matched $LIFECYCLE_SESSION_ID; B-class residue write skipped.` Synthesis failure still writes, with `synthesis_status: "failed"` and the B-class findings from the reviewers' own envelopes.
+Payload: `ts`, `feature`, `artifact`, `synthesis_status` (`ok`|`failed`), `reviewers: {completed, dispatched}`, and `findings` — each `{class: "B", finding, reviewer_angle, evidence_quote}`. Zero B-class findings → skip the call, no file, no note. `state: no-context` (zero matches) or `state: ambiguous` (multiple active lifecycle sessions matched) → nothing written; relay the returned `note` verbatim. Synthesis failure still writes, with `synthesis_status: "failed"` and the B-class findings from the reviewers' own envelopes.
 
 ## Step 7: Present and apply
 

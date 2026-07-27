@@ -41,6 +41,6 @@ Both surfaces are pure renderings of ticket-feed state on their own slow trigger
 - `cortex_command/dashboard/templates/base.html:2151-2208` — panel section registration
 - `cortex_command/dashboard/DESIGN.md:83-92` — data-table macro forward-reference
 - `cortex_command/dashboard/tests/test_routes_smoke.py:40-51` — PARTIAL_ROUTES list
-- `skills/dev/references/triage-rendering.md` — decision-information baseline to meet
+- `cortex_command/backlog/triage.py` (`render`) — decision-information baseline to meet (the rules moved here from the retired dev-skill triage reference)
 - `cortex/backlog/306-generate-a-cross-lifecycle-phase-index-wired-to-morning-review.md:44-53` — close-out constraints the strip honors
 - `justfile:150-152` — manual lifecycle-archive recipe (the absent standing sweep)

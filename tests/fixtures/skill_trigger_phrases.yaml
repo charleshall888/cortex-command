@@ -77,15 +77,6 @@ skills:
     - /cortex-core:requirements
     - gather requirements
     - define project scope
-  requirements-gather:
-    must_contain:
-    - Interview-only sub-skill
-    - produces a structured Q&A markdown block
-  requirements-write:
-    must_contain:
-    - Synthesize-only sub-skill
-    - v2-compliant
-    - never conducts an interview itself
   research:
     must_contain:
     - /cortex-core:research

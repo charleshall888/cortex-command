@@ -49,8 +49,6 @@ PLUGINS: dict[str, tuple[str, ...]] = {
         "lifecycle",
         "backlog-author",
         "requirements",
-        "requirements-gather",
-        "requirements-write",
         "research",
         "discovery",
         "refine",

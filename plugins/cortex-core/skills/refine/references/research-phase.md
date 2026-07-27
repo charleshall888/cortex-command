@@ -10,7 +10,7 @@ If `cortex/lifecycle/{lifecycle-slug}/research.md` exists, apply clarify.md §6'
 
 ## Alignment-considerations propagation
 
-Collect every clarify-critic finding with `origin: "alignment"` dispositioned **Apply** (or Ask resolved to Apply). Dismissed findings don't propagate. **Only when ≥1 survives**: write them to `cortex/lifecycle/{lifecycle-slug}/research-considerations.md` (overwrite, never append — newline-delimited bullets, one one-sentence paraphrase each) **and** pass `research-considerations-file=` on the dispatch. Always paired: no Applied alignment findings → neither the write nor the argument.
+Collect every clarify-critic finding with `origin: "alignment"` dispositioned **Apply** (or Ask resolved to Apply); dismissed findings don't propagate. **Only when ≥1 survives**: write them to `cortex/lifecycle/{lifecycle-slug}/research-considerations.md` (overwrite, never append — newline-delimited bullets, one one-sentence paraphrase each) **and** pass `research-considerations-file=` on the dispatch. Always paired.
 
 ## Execution
 
@@ -18,7 +18,7 @@ Collect every clarify-critic finding with `origin: "alignment"` dispositioned **
 /cortex-core:research topic="{clarified intent}" lifecycle-slug="{lifecycle-slug}" tier={tier} criticality={criticality}
 ```
 
-The **clarified intent, not the ticket body**, is the research scope anchor. For complex-tier or high/critical features carrying a suggested implementation, research must explore ≥1 alternative alongside it — exploring isn't rejecting; validating the suggestion is a fine outcome.
+The **clarified intent, not the ticket body**, is the research scope anchor. For complex-tier or high/critical features carrying a suggested implementation, research must explore ≥1 alternative alongside it — validating the suggestion is a fine outcome.
 
 Afterwards verify `research.md` exists and is non-empty (else surface and halt), then register it: `cortex-lifecycle-register-artifact --feature {lifecycle-slug} --artifact research`.
 

@@ -20,7 +20,7 @@ A prescriptive ticket body does NOT make scope more bounded — treat implementa
 
 ## 3. Critic review
 
-Follow `${CLAUDE_SKILL_DIR}/references/clarify-critic.md`. Afterwards the orchestrator (not the critic) writes the `clarify_critic` event to `cortex/lifecycle/{feature}/events.log`.
+Follow `${CLAUDE_SKILL_DIR}/references/clarify-critic.md`. The orchestrator, not the critic, writes the `clarify_critic` event to `cortex/lifecycle/{feature}/events.log`.
 
 ## 4. Question threshold
 
@@ -48,6 +48,6 @@ None apply → skip re-running, proceed to Spec. Any apply → name the signal, 
 
 ## 7. Write back
 
-Write complexity and criticality per refine SKILL.md Step 3's canonical routing (Context B skips).
+Write complexity and criticality per refine SKILL.md Step 2's canonical routing (Context B skips).
 
-Out of scope here: the deep requirements interview (that's Specify, after Research) and technical feasibility (that's Research). Clarify checks intent, scope, and alignment only.
+Clarify checks intent, scope, and alignment only — the deep requirements interview belongs to Specify, technical feasibility to Research.

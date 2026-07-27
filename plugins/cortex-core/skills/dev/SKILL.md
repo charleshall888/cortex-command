@@ -27,13 +27,14 @@ Otherwise suggest a level from the feature description: **critical** for securit
 
 ## Step 3: Backlog triage
 
-Resolve the backend first with `cortex-read-backlog-backend`. Anything but `cortex-backlog` means the local index isn't authoritative — say so, point the user at that backend, and route through `/cortex-core:refine` or `/cortex-core:discovery` without touching the index.
+```bash
+cortex-backlog-triage
+```
 
-Under `cortex-backlog`:
+One call resolves the backend, regenerates the index, builds the epic map, and renders both triage blocks. Act on `state`:
 
-1. Run `cortex-generate-backlog-index`. On failure, fall back to reading `cortex/backlog/index.md`; if that's missing too, report it and suggest `/cortex-backlog:backlog add`.
-2. The **ready set** is `## Refined` ∪ `## Backlog` — the generator already excludes blocked, deferred, and non-actionable items, so presence in either section is the readiness signal. The master table at top is the full ledger, not a candidate list; surface non-ready items at most as a parked/blocked footnote. Both sections empty → report it and suggest checking blocked items or creating new ones.
-3. Run `cortex-build-epic-map` (reads `index.json`, groups non-epics under their normalized parent, prints JSON). Exit 1 (missing/malformed) → warn and fall back to `index.md`'s table columns. Exit 2 (`schema_version` mismatch) → report and halt; don't mask a schema-bump signal.
-4. Read `${CLAUDE_SKILL_DIR}/references/triage-rendering.md` and render Blocks 1–2 per its protocol, then ask which item to pick up.
+- **`ok`** → print `blocks` verbatim, then ask which item to pick up.
+- **`external-backend`** → relay `message`; the local index isn't authoritative, so route through `/cortex-core:refine` or `/cortex-core:discovery` without touching it.
+- **`no-index`** / **`error`** → relay `message` and stop.
 
 If the user overrides any suggested route, honor it immediately without re-arguing. If they change the scope, re-classify from Step 1.

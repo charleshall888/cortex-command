@@ -64,8 +64,6 @@ _BASELINES: dict[str, int] = {
     "pr": 237,
     "refine": 624,
     "requirements": 231,
-    "requirements-gather": 347,
-    "requirements-write": 353,
     "research": 379,
     "total": 7177,
 }

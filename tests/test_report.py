@@ -604,8 +604,21 @@ class Test_critical_review_residue:
         assert parsed["synthesis_status"] == "failed"
         assert "degraded: synthesis failed" in output
 
-    def test_operator_note_literals_in_skill_md(self):
-        """(xii) Operator-note literal strings appear verbatim in SKILL.md body or its references."""
+    def test_operator_note_literals_are_owned_and_relayed(self):
+        """(xii) Every operator note has exactly one owner, and the skill relays it.
+
+        The R4/R5 session-resolution notes moved into
+        ``cortex-critical-review-write-residue`` when the resolve step folded
+        into the write step: the verb now decides which arm fired, so it owns
+        the wording and the skill relays it. Pinning the literals in prose
+        would let the two drift into different sentences for the same state.
+        Notes the skill still decides itself (the malformed-envelope warning)
+        stay pinned in prose.
+        """
+        import inspect
+
+        from cortex_command.critical_review import write_residue_cli
+
         skill_dir = (
             Path(__file__).resolve().parents[1]
             / "skills"
@@ -621,17 +634,27 @@ class Test_critical_review_residue:
                 searched_texts.append(ref.read_text(encoding="utf-8"))
         haystack = "\n".join(searched_texts)
 
-        # R5: ad-hoc no-context note
-        assert "B-class residue not written — no active lifecycle context." in haystack, (
-            "Missing R5 operator note: 'B-class residue not written — no active lifecycle context.'"
+        verb_src = inspect.getsource(write_residue_cli)
+
+        # R5 / R4: owned by the verb, verbatim.
+        assert "B-class residue not written — no active lifecycle context." in verb_src, (
+            "Missing R5 operator note in cortex-critical-review-write-residue: "
+            "'B-class residue not written — no active lifecycle context.'"
+        )
+        assert "multiple active lifecycle sessions matched" in verb_src, (
+            "Missing R4 operator note in cortex-critical-review-write-residue: "
+            "'multiple active lifecycle sessions matched'"
         )
 
-        # R4: multiple-match note
-        assert "multiple active lifecycle sessions matched" in haystack, (
-            "Missing R4 operator note: 'multiple active lifecycle sessions matched'"
+        # ...and the skill must relay them rather than inventing its own wording.
+        assert "no-context" in haystack and "ambiguous" in haystack, (
+            "SKILL.md must route the verb's no-context / ambiguous states"
+        )
+        assert "note" in haystack, (
+            "SKILL.md must relay the verb's returned `note` verbatim"
         )
 
-        # Malformed JSON envelope operator note
+        # Malformed JSON envelope: still the skill's own decision, so still pinned.
         assert "emitted malformed JSON envelope" in haystack, (
             "Missing operator note for malformed JSON envelope"
         )
