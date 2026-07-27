@@ -1,8 +1,24 @@
-# Deck outline: "Context Is the Game" — v1 workshop deck (rev 22)
+# Deck outline: "Context Is the Game" — v1 workshop deck (rev 23)
 
 > Drafted: 2026-07-13 · rev 3 after two adversarial rounds · rev 4 after the presenter's first slide-by-slide review · rev 5 same day (second review) · rev 6 same day (third review; three-angle fan-out) · rev 7 same day (fourth review; five-angle fan-out) · rev 8 same day (fifth review; direct fixes) · rev 9 same day (pattern-lens audit applied) · **rev 10 same day, after the presenter's sixth review** (anatomy-card zoom label, ~4M/~500k bills, compaction to ~5%, scorecard timestamp cut, numbered recap, `?v=N` cache-busters — the deck at `docs/training/` is the build of THIS rev)
 > Source: `training-talk-messaging-brief.md` · Q&A prep: `training-talk-qa-bank.md`
 > Timing: ~36 min on paper after the rev-5 cuts/adds — **stopwatch pass mandatory** (rev 11 adds one scene; rev 12 adds another, ~36.5 min on paper; re-time).
+
+## What rev 23 changed and why (two small §2 corrections, 2026-07-27)
+
+Presenter: *"Instead of 'reused' should say 'cached'"* and *"remove the 2 gray lines going off the bottom of the harness icon."*
+
+**"cached", not "reused".** The window tag and the caption both now read *cached*, matching §5's on-screen line word for word. The deck already had one name for this and was using a second one two scenes earlier.
+
+**The discards are gone.** The two grey curves falling from the diamond's bottom vertex are cut, and with them `.pt-drop` and its `.grown` fade. This changes what the icon claims: rejection is no longer *shown*, it is **inferred** — four strands arrive, two leave, and the room does the subtraction. That is a smaller claim honestly made, and it removes the one element carrying a self-objection (converge-then-diverge is also the glyph for a network hub, and hubs forward rather than drop; the discards had to be shortened specifically to avoid reading as routing). Nothing else depended on them: the survivors were always outside the scale group, so `#2.4`'s "less sorting left to do" still reads on the diamond flattening alone, and the bracket-crossing argument only ever needed the survivors. Elements 11 → 9. The b1 cue now counts it out loud — *"four things went in. Two came out."* — which is cheaper than the two marks it replaces.
+
+**The contrast floor survives the deletion.** It was documented on `.pt-drop`, which no longer exists; it is re-homed as a standing note on the harness block, because it applies to every mark on the slide: `--rule` is 1.42:1 on `--night` and is for structure the room is *not* meant to read; anything carrying meaning needs `--parch-faint` (3.7:1) or brighter, checked at its **composited** value.
+
+**Then two further corrections in the same round.** *"'it all goes again every turn — only the unchanged start is cached' is not accurate. Maybe remove that line entirely."* — correct, and the cleanest fix is deletion rather than a longer line. Honest prefix caching needs three qualifications at once (reuse runs to a **breakpoint**, of which there are at most four; there is a **per-model minimum** below which nothing caches; and the **tail past the last breakpoint is re-read at full price even when byte-identical**). None of that survives compression to a single caption, and the compressed version reads as a claim an engineer in the room can correct. So `#2.3` now carries **no caption**: the hatch, the stop edge and the "cached" tag carry the shape, and the cue carries the qualifications out loud.
+
+*"the harness icon has the 4 orange lines coming out, maybe it should replace that 1 gray line coming from the docs icon, and instead it has the 3 lines from the 3 docs into the harness."* — this closes the icon's last open question. The fan previously began at `x=234`, out of thin air, downstream of an anonymous grey connector; a diagnosis earlier in this round had flagged exactly that ("four rows from nowhere, so *some of what* is never established"). Now **three strands leave the sheets at `x=162`** — one per item the sub-label names — and run unbroken into the diamond. Three in, two out. Both anonymous connectors either side of the harness are now gone (the survivors already replaced the outbound one), so every line touching this object names its own material. The strands sit **outside** `.pt-har-scale` so they stay anchored to the stack when the diamond flattens at `#2.4`; they start slightly inside the stack's right edge so they remain attached at `#2.5` when the sheets shrink.
+
+deck.css `?v=44`, deck.js `?v=46`, notes.js `?v=42`. Validated: 0 console errors, `pt-drop` absent from js and css, three `pt-fan` strands, two `pt-keep` survivors, one remaining `pt-arrow` in the whole scene (window→model).
 
 ## What rev 22 changed and why (the title card splits off and the vocabulary scene moves ahead of the mystery, 2026-07-27)
 

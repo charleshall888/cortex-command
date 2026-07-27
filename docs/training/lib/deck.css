@@ -1297,7 +1297,15 @@ path.ps-miss { stroke: var(--zone-red); }
 .pt-strata-x { opacity: 0; transition: opacity 0.9s ease 0.2s; }
 .pt-model-scale { transform-box: fill-box; transform-origin: 50% 100%; transition: transform 1s cubic-bezier(0.33, 0.8, 0.4, 1); }
 
-/* the harness: a decision diamond, because it is the one glyph this room
+/* CONTRAST FLOOR, measured and standing for every mark on this slide: --rule
+   is 1.42:1 on --night, i.e. invisible on a projector. Two rejected harness
+   drafts drew their dropped rows in it, so on the wall each read as "a box
+   with two ochre lines in it" and the icon was never once seen doing its job.
+   --rule is for structure the room is NOT meant to read; anything carrying
+   meaning needs --parch-faint (3.7:1) or brighter, and check the COMPOSITED
+   value — a bright token at low alpha lands under the floor.
+
+   the harness: a decision diamond, because it is the one glyph this room
    parses without a label. What continues is the same ochre as your sheets —
    that continuity is what says "some of WHAT" — and what falls goes grey.
    The only place on the slide where ochre turns grey is the moment of
@@ -1306,23 +1314,6 @@ path.ps-miss { stroke: var(--zone-red); }
 .pt-node { fill: var(--night-lift); stroke: var(--parchment); stroke-width: 2.4; }
 .pt-keep { fill: none; stroke: var(--ochre); stroke-width: 3; opacity: 0.9; }
 .pt-keep-head { fill: var(--ochre); opacity: 0.9; }
-/* no arrowhead, ends in open space: a curve that bends down and stops says
-   "shed" unaided — a terminating wall is what made the rectangle read as one.
-   OPACITIES ARE CONTRAST-FLOORED, not taste: the two rejected rectangles drew
-   their dropped rows in --rule, which is 1.42:1 on --night — invisible on a
-   projector, so on the wall both versions read as "a box with two ochre lines
-   in it" and the icon was never seen doing its job. 0.62 = 4.2:1 here, and
-   the faded state holds 2.5:1 rather than collapsing to 1.5:1, which is what
-   "nothing sheds to zero" has to mean in practice and not just in the CSS. */
-.pt-drop {
-  fill: none;
-  stroke: var(--parch-dim);
-  stroke-width: 2.4;
-  opacity: 0.62;
-  stroke-linecap: round;
-  transition: opacity 0.9s ease;
-}
-
 /* the diamond collapses toward its own centre — a claim about how much
    sorting is left, not about the size of a box */
 .pt-har-scale {
@@ -1376,7 +1367,6 @@ path.ps-miss { stroke: var(--zone-red); }
 #sc-parts.grown .pt-model-scale { transform: scale(1.16); }
 #sc-parts.grown .pt-strata-x { opacity: 0.4; }
 #sc-parts.grown .pt-har-scale { transform: scaleY(0.55); }
-#sc-parts.grown .pt-drop { opacity: 0.42; }
 
 /* b5 is yours: the habit arrives at the head of the chain and what you wrote
    gets shorter in the same beat, because it is what shortened it. Nothing

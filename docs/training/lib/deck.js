@@ -267,7 +267,7 @@
         sec.querySelectorAll(".pt-b" + n).forEach((g) => g.classList.toggle("on", b >= n));
       });
       // three causes, one per beat, so each shrink has exactly one author:
-      // b3 the window is re-sent and its unchanged prefix reused, b4 the
+      // b3 the window is re-sent and its unchanged prefix cached, b4 the
       // model's doing (it takes more on, the harness carries less), b5 yours
       // (the habit arrives, and what you wrote gets shorter).
       sec.classList.toggle("cached", b >= 3);
@@ -891,7 +891,7 @@
     "the window is one turn’s worth of everything it knows",
     "the harness decides what makes the cut",
     "you pick the harness. You write what it picks up.",
-    "it all goes again every turn — only the unchanged start is reused",
+    "",
     "the model takes more on — the harness carries less",
     "so you go back and cut what it outgrew",
     "so you go back and cut what it outgrew",
@@ -958,18 +958,21 @@
        cross x=402, so "some of your material leaves your half, the rest never
        does" is drawn rather than claimed. */
     const har = el("g", { class: "pt-g pt-b1" }, svg);
+    /* the strands leave the sheets themselves — one per item the sub-label
+       names — instead of an anonymous connector feeding a fan that started
+       from nowhere. That was the icon's last unanswered question: four rows
+       arriving out of thin air never established "some of WHAT". Three in,
+       two out, and the count is the whole claim. They sit OUTSIDE the scale
+       group so they stay anchored to the stack when the diamond flattens. */
+    [100, 118, 136].forEach((y) => {
+      el("line", { class: "pt-fan", x1: 162, y1: y, x2: 280, y2: 120 }, har);
+    });
     const hbody = el("g", { class: "pt-har-scale" }, har);
-    [76, 105, 135, 164].forEach((y) => {
-      el("line", { class: "pt-fan", x1: 234, y1: y, x2: 280, y2: 120 }, hbody);
-    });
     el("polygon", { class: "pt-node", points: "306,94 332,120 306,146 280,120" }, hbody);
-    /* the rejects stop short and carry no head. Deliberately shorter than the
-       first draft: converge-then-diverge is also the glyph for a network hub,
-       and a hub FORWARDS — these have to visibly quit inside the harness's
-       own footprint or they plant a phantom second destination. */
-    ["M 306 146 Q 328 160 350 164", "M 306 146 Q 320 163 332 174"].forEach((d) => {
-      el("path", { class: "pt-drop", d }, hbody);
-    });
+    /* what didn't make the cut simply doesn't leave the node — the count does
+       the work. An earlier build drew the rejects as two grey curves falling
+       away; they were cut on the presenter's call, and the scene is better for
+       it: four arrive, two leave, and the room does that subtraction itself. */
     // survivors sit OUTSIDE the scale group: the harness thinning is a claim
     // about how much sorting is left, not about what got through
     ["M 332 120 L 362 112 L 428 112", "M 332 120 L 362 128 L 428 128"].forEach((d) => {
@@ -994,7 +997,6 @@
     });
     txt(113, 196, "what you write", "pt-name", files);
     txt(113, 214, "skills · docs · memory", "pt-sub", files);
-    arrow(176, 228, files);
 
     /* b3 — caching, drawn ON the window because that is where it happens.
        IT IS A PREFIX, NOT "everything that didn't change": reuse runs from
@@ -1005,16 +1007,16 @@
        Still no price claim; the gauge owns the economics and reuses this
        exact hatch, so introducing it here makes that scene cheaper. */
     const defs = el("defs", {}, svg);
-    const clip = el("clipPath", { id: "pt-reused-clip" }, defs);
+    const clip = el("clipPath", { id: "pt-cached-clip" }, defs);
     el("rect", { x: 440, y: 108, width: 35, height: 24, rx: 4 }, clip);
     const cache = el("g", { class: "pt-cache" }, svg);
-    const hatched = el("g", { "clip-path": "url(#pt-reused-clip)" }, cache);
+    const hatched = el("g", { "clip-path": "url(#pt-cached-clip)" }, cache);
     for (let x = 426; x < 486; x += 6) {
       el("line", { class: "pt-hatch", x1: x, y1: 134, x2: x + 12, y2: 104 }, hatched);
     }
     // where the reuse stops — the breakpoint, drawn rather than described
     el("line", { class: "pt-cache-edge", x1: 475, y1: 106, x2: 475, y2: 134 }, cache);
-    txt(457, 99, "reused", "pt-cache-tag", cache);
+    txt(457, 99, "cached", "pt-cache-tag", cache);
 
     /* b5 — the habits, as a BRACKET over the two things they act on. A habit
        is not a stage in the pipeline and not an artifact in it — it is how
