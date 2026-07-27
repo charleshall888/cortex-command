@@ -32,7 +32,7 @@ from __future__ import annotations
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-DECOMPOSE_GATE = REPO_ROOT / "skills" / "discovery" / "references" / "decompose-gate.md"
+DECOMPOSE_GATE = REPO_ROOT / "skills" / "discovery" / "SKILL.md"
 
 # Marker phrases pinned verbatim. These are part of the canonical contract —
 # if they change, downstream consumers (this test, any future tooling that

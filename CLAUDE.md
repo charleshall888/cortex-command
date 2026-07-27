@@ -23,7 +23,8 @@ Run `just` to see all recipes — key ones: `just backlog-index`, `just validate
 
 ## Conventions
 
-- Always commit using the `/cortex-core:commit` skill — never run `git commit` manually. A shared hook validates messages (imperative mood, capitalized, no trailing period, max 72-char subject).
+- Always commit using the `/cortex-core:commit` skill — never run `git commit` manually. A shared hook validates messages (imperative mood, capitalized, no trailing period, max 72-char subject); if it rejects a commit, fix the message rather than bypassing it via `git commit -F` or an editor, which the hook cannot see.
+- **Release-type markers** drive this repo's auto-release semver bump on every push to `main` (default **patch**). Put `[release-type: minor]` (backward-compatible feature) or `[release-type: major]` (breaking change) alone on its own line in the commit body — matched by `(?im)^\s*\[release-type:\s*(major|minor)\s*\]\s*$`, so an indented or inline marker is ignored. Precedence across commits since the last tag is `major` > `minor` > `patch`; a column-0 `BREAKING:` / `BREAKING CHANGE:` token forces major as a backstop. Preview with `cortex-auto-bump-version --dry-run` (read-only, exits 0 even on `no-bump`).
 - Editing `skills/`, `hooks/`, `claude/hooks/`, `bin/cortex-*`, `cortex_command/common.py`, `plugins/cortex-pr-review/`, or `plugins/cortex-ui-extras/` is lifecycle-gated — run `/cortex-core:lifecycle` first. Edit canonical sources only; the `plugins/cortex-core/{skills,hooks,bin}/` mirrors regenerate via the pre-commit hook.
 - Prefer structural separation over prose-only enforcement for sequential gates; prose-only is appropriate only where occasional deviation is cheap.
 - Resolve `${CLAUDE_SKILL_DIR}` only in a SKILL.md body, then propagate the absolute path to references and subagent prompts — enforced by the `cortex-check-skill-path` lint; rationale in `cortex/adr/0009-skill-path-resolution-for-plugin-distributed-skills.md`.

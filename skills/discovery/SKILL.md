@@ -3,79 +3,68 @@ name: discovery
 description: Ideation research for topics not ready for implementation — checks aim, investigates the problem space, then decomposes findings into backlog tickets grouped by epic. Use when user says "/cortex-core:discovery", "discover this", "break this down into tickets", "decompose into backlog", or wants to understand a topic before committing to build. Requires a topic argument; for "what should I work on" or "next task" routing without a specific topic, use /cortex-core:dev instead.
 when_to_use: "Use when investigating a topic deeply before committing to build it. Different from /cortex-core:research — research produces a research.md and stops; discovery wraps clarify→research→decompose and ends with backlog tickets. Different from /cortex-core:lifecycle — discovery stops at backlog tickets rather than proceeding to plan/implement."
 argument-hint: "<topic>"
-inputs:
-  - "topic: string (required) — the topic or feature area to research and decompose into backlog tickets"
-  - "phase: string (optional) — explicit phase to enter: clarify|research|decompose"
-outputs:
-  - "cortex/backlog/NNN-{{topic}}.md — decomposed backlog tickets grouped by epic"
-  - "cortex/research/{{topic}}/ — durable research artifact"
-preconditions:
-  - "Run from project root"
-  - "cortex/backlog/ directory exists"
 ---
 
 # Discovery
 
-## Step 1: Identify the Topic
+Topic: $ARGUMENTS — required. Empty → halt with "discovery requires a topic argument; for 'what should I work on' or 'next task' routing, use `/cortex-core:dev` instead." Lowercase-kebab-case for the directory name (`cortex/research/plugin-system/`).
 
-Topic: $ARGUMENTS (required — non-empty topic).
+## Step 1: Resolve the phase
 
-Determine the `{{topic}}` from invocation. Use lowercase-kebab-case for directory naming (e.g., `cortex/research/plugin-system/`).
+Scan `cortex/research/{{topic}}/`: absent → **clarify**; `research.md` without `decomposed.md` → **decompose**; `decomposed.md` present → complete (offer to re-run or update). Report the detected phase and offer to continue or restart earlier.
 
-**If `$ARGUMENTS` is empty**: halt with the message "discovery requires a topic argument; for 'what should I work on' or 'next task' routing, use `/cortex-core:dev` instead."
+One active discovery at a time — if several `cortex/research/*/` directories lack `decomposed.md`, list them and ask which to resume.
 
-## Step 2: Check for Existing State
+**Re-run from scratch** (not resume, not update-in-place) over an existing directory never overwrites the prior artifact. Take a fresh slug `{{topic}}-N`, N the smallest integer ≥2 unique under `cortex/research/`; open the new `research.md` with `superseded:` frontmatter naming the artifact it supersedes (the immediately-prior `-N`, not the original); leave the existing directory untouched as a durable audit trail. Reconciliation — surfacing differences, repointing `discovery_source:`, archiving the old artifact — is an explicit user decision outside this skill.
 
-Scan for `cortex/research/{{topic}}/` at the project root:
-
-```
-if no cortex/research/{{topic}}/ directory exists:
-    phase = clarify
-elif research.md exists and no decomposed.md:
-    phase = decompose
-elif decomposed.md exists:
-    phase = complete (offer to re-run or update)
-```
-
-If resuming, report the detected phase and offer to continue or restart from an earlier phase.
-
-### Re-run slug-collision semantics (spec R13)
-
-On a re-run-from-scratch (not resume or update in place) of an existing `cortex/research/{{topic}}/`, read and follow `${CLAUDE_SKILL_DIR}/references/rerun-semantics.md` before writing anything — it governs slugging, frontmatter, and reconciliation.
-
-## Step 3: Execute Current Phase
+## Step 2: Execute the phase
 
 | Phase | Reference | Artifact |
 |-------|-----------|----------|
-| Clarify | [clarify.md](${CLAUDE_SKILL_DIR}/references/clarify.md) | none (conversation output only) |
+| Clarify | [clarify.md](${CLAUDE_SKILL_DIR}/references/clarify.md) | none (conversation only) |
 | Research | [research.md](${CLAUDE_SKILL_DIR}/references/research.md) | `cortex/research/{{topic}}/research.md` |
 | Decompose | [decompose.md](${CLAUDE_SKILL_DIR}/references/decompose.md) | Epic + backlog tickets |
 
-Read **only** the reference for the current phase.
+Read **only** the current phase's reference.
 
-**Sibling-path propagation (load-bearing).** `clarify.md` and `research.md` load files that live in sibling skills, not in discovery's own `references/`. Resolve these in the body (where `${CLAUDE_SKILL_DIR}/../…` resolves) and substitute the absolute paths wherever the current-phase reference points at a sibling:
+**Sibling-path propagation (load-bearing).** `${CLAUDE_SKILL_DIR}` resolves only in this body. Where a phase reference points at a sibling skill, substitute the absolute path resolved here:
 
-- **load-requirements** → `${CLAUDE_SKILL_DIR}/../lifecycle/references/load-requirements.md`
-- **fanout** (research-sizing matrix) → `${CLAUDE_SKILL_DIR}/../research/references/fanout.md`
-- **orchestrator-review** (canonical protocol) → `${CLAUDE_SKILL_DIR}/../lifecycle/references/orchestrator-review.md`
-- **fix-agent-prompt-template** → `${CLAUDE_SKILL_DIR}/../lifecycle/references/fix-agent-prompt-template.md`
+- **fanout** → `${CLAUDE_SKILL_DIR}/../research/references/fanout.md`
+- **orchestrator-review** → `${CLAUDE_SKILL_DIR}/../lifecycle/references/orchestrator-review.md`
 
-### Research → Decompose approval gate (spec R4)
+After each phase, commit `cortex/research/{{topic}}/`, summarize, and proceed automatically — except across the Research → Decompose gate below.
 
-Between Research and Decompose a single-question user-blocking gate fires — no decompose work begins until the user answers it. Whether reached by completing Research in this session or by resuming directly into Decompose, read and follow `${CLAUDE_SKILL_DIR}/references/decompose-gate.md`.
+## Step 3: Research → Decompose gate
 
-### Decompose-commit batch-review gate
+A single-question user-blocking gate, reached either by finishing Research or by resuming directly into Decompose. No decompose work starts until the user answers it.
 
-In the Decompose phase, a user-blocking post-decompose batch-review gate (`checkpoint: decompose-commit`) fires after all ticket bodies are authored, before any commit to `cortex/backlog/`. See decompose.md §5 for the five response options and full gate semantics.
+Generate the brief that leads the gate:
 
-## Phase Transition
+```
+cortex-discovery generate-brief --research-md cortex/research/<topic>/research.md \
+    --persist-to cortex/research/<topic>/brief.md
+```
 
-After completing a phase artifact, commit the `cortex/research/{{topic}}/` directory, summarize findings, and proceed to the next phase automatically.
+Non-zero exit, missing file, or failed decision-content validation → fall back to displaying the dense `## Architecture` section with a warning naming the failure (`brief_generation_failed: <reason>`). Valid but over the advisory word cap → display it anyway, followed by a one-line note.
 
-## Multiple Discoveries
+Four options:
 
-One active discovery at a time. If multiple incomplete `cortex/research/*/` directories exist (those without `decomposed.md`), list them and ask which to resume.
+- **`approve`** — proceed to Decompose.
+- **`revise`** — free-text revision scoped to the Architecture section: re-walk it against the live template in `references/research.md` §3, re-emitting `### Pieces` then `### How they connect`, re-present the gate, increment `revision_round`. Loops until `approve` or `drop`.
+- **`drop`** — neutral terminus, motive-agnostic: close discovery when research is sufficient and no tickets are warranted, OR abandon outright. Exit without writing to `cortex/backlog/`; the research artifact stays as an audit trail.
+- **`promote-sub-topic`** — the user supplies a sub-topic; compose a body via `/backlog-author compose` including a `## Promoted from` section reading exactly `## Promoted from\n\nDiscovery: cortex/research/<current-topic>/` (the body section is the sole linkage — no frontmatter pointer, no nested discovery). Create one `needs-discovery` ticket under the backend routing below, then return to this gate.
+
+Emit one event per response — never hardcode the log path:
+
+```
+cortex-discovery emit-checkpoint-response --topic <topic> --checkpoint research-decompose \
+    --response <approve|revise|drop|promote-sub-topic> --revision-round <int>
+```
+
+## Backend routing
+
+Wherever a phase creates tickets, resolve the backend first with `cortex-read-backlog-backend` (argless): **`cortex-backlog`** → create normally; **`none`** → skip the create CLI, preserve the authored titles and bodies in `cortex/research/{topic}/decomposed.md` with a one-line advisory, and write nothing to `cortex/backlog/`; **anything else** → file the equivalent best-effort per `backlog.instructions`, surfacing bodies inline if filing fails.
 
 ## Relationship to /cortex-core:lifecycle
 
-When `/cortex-core:discovery` creates backlog tickets, each receives a `discovery_source:` field pointing to the research artifact. When `/cortex-core:lifecycle` starts on that ticket, it auto-loads the prior research, presents a summary, and asks whether to skip re-investigation (default: skip; pipeline/overnight contexts apply the skip automatically). Choose N at the prompt to re-investigate from scratch.
+Every ticket discovery creates carries `discovery_source:` pointing at the research artifact. When `/cortex-core:lifecycle` starts on that ticket it auto-loads the prior research, summarizes it, and asks whether to skip re-investigation (default skip; pipeline and overnight contexts skip automatically).

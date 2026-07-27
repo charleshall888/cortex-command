@@ -6,6 +6,12 @@ Requirements: `cortex/requirements/training.md` · Story/talk track: `cortex/res
 ## Running it
 
 ```bash
+just training     # serves the deck and opens both windows (TRAINING_PORT=8000 by default)
+```
+
+Or by hand:
+
+```bash
 cd docs/training && python3 -m http.server 8000
 ```
 

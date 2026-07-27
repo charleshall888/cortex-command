@@ -2,104 +2,82 @@
 name: refine
 description: Prepare a backlog item for execution by running it through Clarify → Research → Spec. Use when user says "/cortex-core:refine", "refine backlog item", "prepare for overnight", or "prepare feature for execution". Produces cortex/lifecycle/{slug}/research.md and cortex/lifecycle/{slug}/spec.md, then sets status:refined on the backlog item.
 when_to_use: "Use when preparing a backlog item for execution (\"spec this out\"). Different from /cortex-core:lifecycle — refine produces spec only; lifecycle wraps refine and continues to plan/implement."
-inputs:
-  - "topic: string (required) — backlog item ID (numeric), slug (kebab-case), or title (quoted phrase); or ad-hoc topic name if no backlog item exists"
-outputs:
-  - "cortex/lifecycle/{slug}/research.md — implementation-level research artifact"
-  - "cortex/lifecycle/{slug}/spec.md — approved specification ready for execution"
-  - "cortex/backlog/{item}.md — updated with complexity:, criticality:, status: refined, spec: path, areas:"
-preconditions:
-  - "Run from project root"
-  - "cortex/backlog/ directory exists"
 argument-hint: "<topic>"
 ---
 
 # /cortex-core:refine
 
-Prepares a single backlog item for execution through three phases: **Clarify** (intent gate + requirements alignment), **Research** (implementation-level exploration), **Spec** (structured requirements interview). On completion: `status: refined`, linked spec, ready to plan.
+Three phases — **Clarify** (intent gate + requirements alignment), **Research** (implementation-level exploration), **Spec** (structured requirements interview). On completion: `status: refined`, linked spec, ready to plan.
 
 <!-- pause: refine-empty-topic-prompt question -->
-Topic: $ARGUMENTS (backlog item slug, title, or description). If empty, prompt the user first.
+Topic: $ARGUMENTS. If empty, prompt the user first.
 
-## Step 1: Resolve Input
+## Step 1: Resolve the item
 
 ```bash
 cortex-resolve-backlog-item <input>
 ```
 
-Unique match → JSON (`filename`, `backlog_filename_slug`, `title`, `lifecycle_slug`); use it directly, don't re-derive the slugs. Ambiguous → candidates on stderr; let the user pick. No match → ad-hoc Context B (per `${CLAUDE_SKILL_DIR}/references/clarify.md` §1); if prose rather than a kebab slug, derive a short kebab `{lifecycle-slug}`, announce it, proceed without confirming. Hard error → surface the resolver's message and halt.
+Unique match → use the returned `filename`, `backlog_filename_slug`, `title`, `lifecycle_slug` directly; don't re-derive the slugs. Ambiguous → candidates on stderr, let the user pick. No match → ad-hoc Context B; if the input is prose rather than a kebab slug, derive a short kebab `{lifecycle-slug}`, announce it, and proceed without confirming. Hard error → surface and halt.
 
-## Step 2: Check State
-
-Resolve the resume point (read-only):
+## Step 2: Resume point and seeding
 
 ```bash
 cortex-refine resume-point --lifecycle-slug {lifecycle-slug}
 ```
 
-Branch on the returned `resume` (`clarify | research | spec | complete`) — judgment the CLI can't encode:
+Branch on `resume` — judgment the CLI can't encode:
 
-- **`complete`** — both artifacts exist; announce, skip to Step 6, no prompt. Re-run only on explicit request ("re-run refine", "redo the spec") — overwrites the spec, resets `status: in_progress` until re-approved.
-- **`research`** — spec.md exists, research.md missing. Warn overnight needs both, run Research, skip Clarify (intent was set when the spec was written).
-- **`spec`** — research.md exists, no spec; resume at Spec, where the Research Sufficiency Check (`clarify.md` §6) applies at entry.
+- **`complete`** — both artifacts exist; announce and skip to Step 6. Re-run only on explicit request; that overwrites the spec and resets `status: in_progress` until re-approved.
+- **`research`** — spec exists without research. Warn that overnight needs both, run Research, skip Clarify (intent was set when the spec was written).
+- **`spec`** — research exists; resume at Spec, where the Research Sufficiency Check applies at entry.
 - **`clarify`** — neither exists; start at Clarify.
 
-**Resolve the backlog backend once** with `cortex-read-backlog-backend` (no args) and carry it through refine — it keys the seed, write-back, reconcile routing, and gates the §3b decision.
-
-Then seed the `lifecycle_start` row so it precedes every other event (idempotent, safe on resume — one unconditional call passing the backend):
+Resolve the backend once with `cortex-read-backlog-backend` and carry it through — it keys the seed, the write-backs, reconcile routing, and the §3b gate. Then seed `lifecycle_start` so it precedes every other event (idempotent, safe on resume):
 
 ```bash
 cortex-refine emit-lifecycle-start --backend {resolved} --lifecycle-slug {lifecycle-slug} --backlog-slug {backlog-filename-slug}
 ```
 
-Omit `--backlog-slug` for Context B, otherwise always pass it — the verb's `--backend` guard, not this call site, owns the non-local slug-drop.
+Omit `--backlog-slug` for Context B; otherwise always pass it — the verb's `--backend` guard owns the non-local slug-drop, not this call site.
 
-**Tier ratchet ordering invariant**: keep the seed → reconcile → §3b-read ordering so the §3b read observes the **tier ratchet**'s output, not the seed default. Rationale and the tier-ratchet definition: `${CLAUDE_SKILL_DIR}/references/seed-reconcile-gate-ordering.md`.
+**Ordering invariant: seed → reconcile → §3b tier read.** On a non-local backend (or Context B) the seed carries the canonical `simple`/`medium` defaults, and the critical-review gate would skip silently at `tier = simple`. The gate stays alive only because Step 5's `reconcile-clarify` ratchets state up from Clarify's *computed* values before specify.md §3b reads it. Reversing the order lets §3b observe the seed default and skip review. The local `cortex-backlog` arm is immune either way — its `--backlog-slug` re-sources from backlog frontmatter.
 
-## Step 3: Clarify Phase
+## Step 3: Clarify
 
-Read `${CLAUDE_SKILL_DIR}/references/clarify.md` and follow its full protocol (§2–§7). Requirements loading uses the shared protocol at `${CLAUDE_SKILL_DIR}/../lifecycle/references/load-requirements.md`. Carry its §5 outputs forward into later phases.
+Follow `${CLAUDE_SKILL_DIR}/references/clarify.md`. Carry its §4 outputs forward into later phases.
 
-Once complexity and criticality are set, run the write-back immediately (Context A only), gated on the Step-2 backend — the canonical **backend-gated write-back routing**, the 3-arm shape Step 5's Write-Back also uses (each site supplies its own fields):
+Once complexity and criticality are set, write them back immediately (Context A only), gated on the Step-2 backend — the canonical **backend-gated write-back routing**, the 3-arm shape every backend-gated write in this skill uses:
 
 - **`cortex-backlog`** → `cortex-update-item {backlog-filename-slug} --complexity {value} --criticality {value}`
-- **`none`** → skip with a one-line advisory that write-back is disabled for this repo.
-- **external** → apply the equivalent complexity/criticality update best-effort per `backlog.instructions`; surface the values if it can't complete.
+- **`none`** → skip with a one-line advisory
+- **external** → apply the equivalent update best-effort per `backlog.instructions`; surface the values if it can't complete
 
-Every backend still feeds the critical-review gate — Step 5's `reconcile-clarify` carries Clarify's tier/criticality forward regardless. On `cortex-update-item` failure, surface and wait; on exit 2, apply backlog-writeback.md's ambiguous-slug handling.
+Every backend still feeds the critical-review gate — Step 5's `reconcile-clarify` carries the values forward regardless. On failure, surface and wait; on exit 2, apply the ambiguous-slug rule in `${CLAUDE_SKILL_DIR}/../lifecycle/references/backlog-writeback.md`.
 
-## Step 4: Research Phase
+## Step 4: Research
 
-Read `${CLAUDE_SKILL_DIR}/references/research-phase.md` and follow it — sufficiency check, alignment-considerations propagation, research dispatch, and exit gate.
+Follow `${CLAUDE_SKILL_DIR}/references/research-phase.md`.
 
-## Step 5: Spec Phase
+## Step 5: Spec
 
-**Reconcile lifecycle state to the Clarify assessment first** — the `lifecycle_start` seed carries pre-Clarify tier/criticality; reconcile so §3a/§3b observe the Clarify-assessed values. One unconditional call passing `--backend {resolved}`; remaining flags follow item-existence context (per Step 2's `--backend` guard):
+**Reconcile first** — the seed carries pre-Clarify values, so reconcile before §3a/§3b observe them. One unconditional call:
 
-- **Context A** (local item): `cortex-refine reconcile-clarify --backend {resolved} --lifecycle-slug {lifecycle-slug} --backlog-slug {backlog-filename-slug}` — re-sources tier/criticality from backlog frontmatter.
-- **Context B** (no item): `cortex-refine reconcile-clarify --backend {resolved} --lifecycle-slug {lifecycle-slug} --complexity {value} --criticality {value}` — passes **Clarify's computed** values. On a non-local backend this is the **tier ratchet** (Step 2's ordering invariant) that keeps the critical-review gate fed.
+- **Context A**: `cortex-refine reconcile-clarify --backend {resolved} --lifecycle-slug {lifecycle-slug} --backlog-slug {backlog-filename-slug}` — re-sources from backlog frontmatter.
+- **Context B**: `cortex-refine reconcile-clarify --backend {resolved} --lifecycle-slug {lifecycle-slug} --complexity {value} --criticality {value}` — passes Clarify's computed values (the tier ratchet named in Step 2).
 
-Idempotent — safe on resume; no-op under `/cortex-core:lifecycle`.
+Idempotent; no-op under `/cortex-core:lifecycle`.
 
-Read `${CLAUDE_SKILL_DIR}/references/specify.md` and follow its full protocol. Its §3a/§3b gates and criticality matrix reference "the propagated `<target>` path"; standalone refine has no lifecycle manifest, so resolve them here: orchestrator-review → `${CLAUDE_SKILL_DIR}/../lifecycle/references/orchestrator-review.md`, critical-review-gate → `${CLAUDE_SKILL_DIR}/../lifecycle/references/critical-review-gate.md`, criticality-matrix → `${CLAUDE_SKILL_DIR}/../lifecycle/references/criticality-matrix.md`.
+Then read `${CLAUDE_SKILL_DIR}/references/specify.md` and follow it in full. Standalone refine has no lifecycle manifest, so resolve its propagated targets here: orchestrator-review → `${CLAUDE_SKILL_DIR}/../lifecycle/references/orchestrator-review.md`.
 
-Do NOT set `status: refined` before approval. After approval (specify.md §4), register the spec artifact: `cortex-lifecycle-register-artifact --feature {lifecycle-slug} --artifact spec`.
+Do NOT set `status: refined` before approval. After approval, register the artifact: `cortex-lifecycle-register-artifact --feature {lifecycle-slug} --artifact spec`.
 
-### Write-Back on Approval (Context A only)
+**Write-back on approval (Context A)** is performed *by the spec-approve verb* in-process, backend-gated exactly as Step 3's 3-arm routing is, and composed with the approval emissions — this step supplies the args, it does not call `cortex-update-item` itself. Hand the verb `--backend {resolved}`, `--backlog-file {backlog-filename-slug}` (`""` in Context B), `--spec-path cortex/lifecycle/{lifecycle-slug}/spec.md`, and areas: `--areas a b` to set, `--clear-areas` for the empty case, omit to leave them untouched (preserve-on-omit).
 
-The `status: refined` + `spec` + `areas` write-back is performed **by the spec-approve verb** — specify.md §4's `cortex-lifecycle-advance` spec-approve call runs it in-process (via `update_item`), composed with the approval emissions in one backend-gated action; §5 supplies the args and no longer calls `cortex-update-item` for this write-back.
-
-**Infer areas**: name the primary subsystem modified (canonical: `overnight-runner`, `backlog`, `skills`, `lifecycle`, `hooks`, `report`, `tests`, `docs`) — the one where most files change. Spanning 4+ with no clear primary → clear the field.
-
-Hand the spec-approve verb: `--backend {resolved}` (the Step-2 backend — it gates the write-back exactly as Step 3's 3-arm routing does: `cortex-backlog` writes, `none` skips, external is best-effort), `--backlog-file {backlog-filename-slug}` (`""` in Context B), `--spec-path cortex/lifecycle/{lifecycle-slug}/spec.md`, and the areas — `--areas area1 area2` to set them, `--clear-areas` for the empty-areas case, or omit `--areas` to leave them untouched (preserve-on-omit). On the verb's exit 2 (ambiguous slug), apply backlog-writeback.md's handling as in Step 3.
+**Infer areas** by naming the primary subsystem modified — the one where most files change (canonical: `overnight-runner`, `backlog`, `skills`, `lifecycle`, `hooks`, `report`, `tests`, `docs`). Spanning 4+ with no clear primary → clear the field.
 
 ## Step 6: Completion
 
-Announce refine is complete: the item (`{backlog-filename-slug}`), the lifecycle directory (`cortex/lifecycle/{lifecycle-slug}/`), the artifacts produced (research.md, spec.md), and the backlog fields written (`complexity`, `criticality`, `status: refined`, `spec`, `areas`).
+Announce: the item, the lifecycle directory, the artifacts produced, and the fields written (`complexity`, `criticality`, `status: refined`, `spec`, `areas`).
 
-## Constraints
-
-| Thought | Reality |
-|---------|---------|
-| "Use the lifecycle-slug as the cortex-update-item argument" | cortex-update-item takes the backlog-filename-slug (e.g. 119-create-refine-skill), not the lifecycle-slug. |
-| "Use the lifecycle-slug as the cortex-load-parent-epic argument" | cortex-load-parent-epic takes the backlog-filename-slug too — the lifecycle-slug returns `not found`. |
+> `cortex-update-item` and `cortex-load-parent-epic` both take the **backlog-filename slug** (e.g. `119-create-refine-skill`), never the lifecycle slug — the lifecycle slug returns `not found`.

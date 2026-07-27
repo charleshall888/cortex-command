@@ -37,21 +37,21 @@
 id = "empty-lifecycle-offer"
 kind = "question"
 file = "skills/lifecycle/SKILL.md"
-anchor = "Step 1: Resolve the Invocation (resolver `empty` state)"
+anchor = "Step 1: Read the served state (resolver `empty` state)"
 rationale = "No topic given and incomplete lifecycles exist: offer them for the operator to pick, then re-run."
 
 [[pause]]
 id = "ambiguous-backlog-pick"
 kind = "question"
 file = "skills/lifecycle/SKILL.md"
-anchor = "Step 1: Resolve the Invocation (resolver `ambiguous-backlog` state)"
+anchor = "Step 1: Read the served state (resolver `ambiguous-backlog` state)"
 rationale = "Backlog match is ambiguous: present candidates for the operator to disambiguate, then re-run."
 
 [[pause]]
 id = "complete-orphan-pr-pick"
 kind = "question"
 file = "skills/lifecycle/references/complete.md"
-anchor = "Route the verdict (`orphan_ambiguous`)"
+anchor = "Router verdict (`orphan_ambiguous`)"
 rationale = "Multiple orphan PRs match interactive/<slug>: ask which PR to finalize before writing pr.json."
 
 [[pause]]
@@ -59,7 +59,7 @@ id = "implement-branch-pick"
 kind = "config-conditional"
 suppressed_by = "branch-mode"
 file = "skills/lifecycle/references/implement.md"
-anchor = "§1 branch selection (`prompt` state picker)"
+anchor = "1. Pre-flight (`prompt` state picker)"
 rationale = "Fallback branch picker on main; suppressed when branch-mode is set, the tree is clean, and no live worktree exists for the slug."
 
 [[pause]]
@@ -72,8 +72,8 @@ rationale = "A batch task failed: ask retry / skip / abort before continuing non
 [[pause]]
 id = "resume-feature-pick"
 kind = "question"
-file = "skills/lifecycle/references/concurrent-sessions.md"
-anchor = "Listing incomplete features"
+file = "skills/lifecycle/SKILL.md"
+anchor = "Situational references (listing incomplete features)"
 rationale = "Multiple incomplete features and none specified: list them and ask which to resume."
 
 [[pause]]
@@ -81,14 +81,14 @@ id = "complete-test-command-ask"
 kind = "question"
 suppressed_by = "test-command"
 file = "skills/lifecycle/references/complete-first-run.md"
-anchor = "Step 1 — Run Tests"
+anchor = "Step 1 — Tests"
 rationale = "Config present but without test-command: ask whether tests exist; suppressed when test-command is set (just run it)."
 
 [[pause]]
 id = "complete-merge-wait"
 kind = "phase-exit-wait"
 file = "skills/lifecycle/references/complete-first-run.md"
-anchor = "Step 6 — Phase-Exit Pause (Handoff Message)"
+anchor = "Step 5 — Phase-exit pause"
 rationale = "Hand off after opening the PR: operator merges on GitHub then re-invokes complete; manual re-invocation is the gate."
 
 [[pause]]
@@ -96,7 +96,7 @@ id = "plan-approval"
 kind = "relayed-consent"
 served_from_state = "plan"
 file = "skills/lifecycle/references/plan.md"
-anchor = "Plan approval surface"
+anchor = "4. Approval (merged branch/dispatch surface)"
 rationale = "Substantive plan approval merged with branch/dispatch selection; overnight relays the operator's pre-authorized consent."
 
 [[pause]]
@@ -119,7 +119,7 @@ id = "clarify-question-batch"
 kind = "question"
 suppressed_by = "judgment"
 file = "skills/refine/references/clarify.md"
-anchor = "4. Question Threshold"
+anchor = "4. Question threshold"
 rationale = "Clarify question batch; suppressed by model judgment when all confidence dimensions are high and the critic raised no Ask items."
 
 [[pause]]
@@ -133,7 +133,7 @@ rationale = "Empty $ARGUMENTS: prompt the operator for a topic before resolving 
 id = "spec-interview-gapfill"
 kind = "question"
 file = "skills/refine/references/specify.md"
-anchor = "§2 Structured interview"
+anchor = "2. Interview"
 rationale = "Structured spec interview: probe one question at a time via AskUserQuestion until ambiguities resolve."
 
 [[pause]]
@@ -141,7 +141,7 @@ id = "spec-confidence-loopback"
 kind = "question"
 suppressed_by = "judgment"
 file = "skills/refine/references/specify.md"
-anchor = "2a. Research Confidence Check (cycle >= 2)"
+anchor = "2a. Research confidence check (cycle >= 2)"
 rationale = "On flagged confidence signals at cycle >= 2, ask whether to loop back to Research or proceed; rendered on the model's signal assessment."
 
 [[pause]]
@@ -149,7 +149,7 @@ id = "spec-open-decision-ask"
 kind = "question"
 suppressed_by = "judgment"
 file = "skills/refine/references/specify.md"
-anchor = "2b. Pre-Write Checks (Open Decision resolution)"
+anchor = "2b. Pre-write checks (Open Decision resolution)"
 rationale = "Ask the operator to resolve an open decision when it cannot be resolved from research or safely deferred; model judgment gates rendering."
 
 [[pause]]
@@ -157,12 +157,12 @@ id = "spec-complexity-value-gate"
 kind = "question"
 suppressed_by = "judgment"
 file = "skills/refine/references/specify.md"
-anchor = "4. User Approval (complexity/value gate)"
+anchor = "4. User approval (complexity/value gate)"
 rationale = "Complexity/value proportionality pick-menu; renders only when the recommendation is not full scope or confidence is low, else folds into the approval surface."
 
 [[pause]]
 id = "spec-approval"
 kind = "relayed-consent"
 file = "skills/refine/references/specify.md"
-anchor = "4. User Approval (approval surface)"
+anchor = "4. User approval (approval surface)"
 rationale = "Substantive spec approval surface (Approve / Request changes / Cancel); overnight relays the operator's pre-authorized consent."

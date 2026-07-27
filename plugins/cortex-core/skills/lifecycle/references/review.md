@@ -1,28 +1,24 @@
 # Review Phase
 
-Two-stage review: spec compliance first, then code quality. Complex tier only. The reviewer must NOT modify any files.
+Two-stage review: spec compliance, then code quality. Complex tier only. The reviewer must NOT modify any files.
 
-## Protocol
+## 1. Gather inputs
 
-### 1. Gather Review Inputs
+Read `spec.md` and `plan.md`, and identify the files changed during implementation (git log since the lifecycle started, or plan.md's file lists).
 
-Read `cortex/lifecycle/{feature}/spec.md` (requirements) and `plan.md` (verification strategy), and identify the files changed during implementation (git log since the lifecycle started, or plan.md's file lists). Load requirements per the shared protocol (`${CLAUDE_SKILL_DIR}/references/load-requirements.md`): run `cortex-load-requirements --feature {feature}`, read every listed non-skipped path, and record the printed path list for the reviewer prompt. The verb's no-match fallback note (`no area docs matched`) is a **warning, not a routine fallback** — it means the drift check narrows to project.md only, so any area doc governing this feature goes unassessed. Surface it to the user before dispatching; the usual cause is an index.md that never received its backlog tags, repaired by re-running `cortex-lifecycle-enter` with the served backlog filename (SKILL.md §Step 2).
+Load requirements: `cortex-load-requirements --feature {feature}`, read every listed non-skipped path, record the printed list for the reviewer prompt. Its no-match note (`no area docs matched`) is a **warning, not a routine fallback** — the drift check narrows to project.md only, leaving any area doc governing this feature unassessed. Surface it before dispatching; the usual cause is an index.md that never received its backlog tags, repaired by re-running `cortex-lifecycle-enter` with the served backlog filename.
 
-**Test Baseline** — run the configured `test-command` (`cortex/lifecycle.config.md`) once, capturing a pass/fail summary and a log path (never the full transcript). If implementation commits land after the baseline, re-run it once and replace the summary; the reviewer and any sub-agent it spawns consume this baseline and never re-run the full suite.
+**Test baseline** — run the configured `test-command` once, capturing a pass/fail summary and a log path, never the full transcript. If commits land after the baseline, re-run once and replace it. The reviewer and anything it spawns consume this baseline and never re-run the suite.
 
-### 2. Launch Review Sub-Task
-
-**Model** — resolve at dispatch, never hardcode:
+## 2. Dispatch
 
 ```bash
 model=$(cortex-resolve-model --role review --criticality "$(cortex-lifecycle-state --feature {feature} --field criticality --raw)")
 ```
 
-Pass `$model` to the reviewer sub-task. On nonzero exit, halt and escalate rather than guessing. Dispatch the sub-task read-only with the prompt below, substituting `{spec_path}` with the absolute spec path.
+On nonzero exit, halt and escalate. Dispatch read-only with the prompt below, substituting the absolute spec path.
 
-**Single-writer rule** — only the reviewer role writes `cortex/lifecycle/{feature}/review.md`: this reviewer sub-task plus §4's missing-drift re-dispatch and §4a's cap-2 re-dispatches are the same authorized role; any sub-agent the reviewer spawns is dispatched read-only and returns findings as a message envelope (the `skills/critical-review/` findings-envelope precedent), never file writes.
-
-### Reviewer Prompt Template
+**Single-writer rule** — only the reviewer role writes `review.md`: this sub-task plus §3's missing-drift re-dispatch and §3a's cap-2 re-dispatches. Any sub-agent the reviewer spawns is read-only and returns findings as a message envelope.
 
 ```
 You are reviewing the {feature} implementation against its specification. Read-only — do NOT modify any source file.
@@ -31,7 +27,7 @@ You are reviewing the {feature} implementation against its specification. Read-o
 Read `{spec_path}`.
 
 ## Project Requirements
-{the path list cortex-load-requirements printed in §1, one per line; if the verb emitted its no-match fallback note, relay that instead}
+{the path list cortex-load-requirements printed in §1, one per line; if it emitted its no-match note, relay that instead}
 
 ## Changed Files
 {files modified during implementation}
@@ -65,57 +61,30 @@ End with a Verdict — a JSON object using exactly these fields (not "overall"/"
 {"verdict": "APPROVED"|"CHANGES_REQUESTED"|"REJECTED", "cycle": <int>, "issues": [<strings>], "requirements_drift": "none"|"detected"}
 ```
 
-### 3. Review Artifact Format
+Flag minor code-quality issues as PARTIAL with notes — they compound. If uncertain about drift, log `detected` with a note: a false positive auto-applies a small update, a false negative silently hides drift.
 
-Downstream parsing depends only on the Verdict JSON block (exact field names and values from §2).
+## 3. Process the verdict
 
-### 4. Process Verdict
+Downstream parsing depends only on the Verdict JSON block. If review.md lacks `## Requirements Drift` (the reviewer ran out of context), re-dispatch once — "review.md is missing the ## Requirements Drift section; read the existing file and append it in the correct format, modifying nothing else." Still absent → escalate.
 
-After the sub-task completes and review.md is on disk: if it lacks a `## Requirements Drift` section (the reviewer ran out of context), re-dispatch once — "review.md is missing the ## Requirements Drift section; read the existing file and append it in the correct format, modifying nothing else." Still absent after one retry → escalate.
+Register it: `cortex-lifecycle-register-artifact --feature {feature} --artifact review`.
 
-Register the artifact: `cortex-lifecycle-register-artifact --feature {feature} --artifact review`.
+Read `verdict`, `cycle`, and `requirements_drift` — the discriminants §3a and §4 route on. The verb resolves verdict × cycle: APPROVED → Complete; CHANGES_REQUESTED cycle 1 → re-enter Implement for the flagged tasks; CHANGES_REQUESTED cycle ≥2 → escalate; REJECTED → escalate immediately, recommending a return to plan or spec. Cycle 2 and later escalates — that caps rework.
 
-Read the Verdict JSON's `verdict`, `cycle`, and `requirements_drift` fields — the discriminants §4a's drift loop and §5's verb call route on. The verb resolves verdict×cycle to the outcome:
+## 3a. Auto-apply requirements drift
 
-| Verdict | Cycle | Outcome |
-|---------|-------|---------|
-| APPROVED | any | Proceed to Complete |
-| CHANGES_REQUESTED | 1 | Re-enter Implement for flagged tasks with reviewer feedback |
-| CHANGES_REQUESTED | ≥2 | Escalate — present the analysis, ask for direction |
-| REJECTED | any | Escalate immediately — recommend revisiting plan or spec |
+When drift is `"detected"`, before §4: parse `## Suggested Requirements Update` (`File` / `Section` / `Content`), append `Content` at the end of the named `Section` in the target file, and report what changed.
 
-The `≥2` row caps rework: cycle 2 and any later cycle escalates. §5 hands verdict/cycle/drift to the verb, which records the routing — do not emit it here.
+Section missing or unparseable → re-dispatch the reviewer to append it in the §2 format without touching anything else, cap 2 retries. Still failing → the drift-apply has **breached**: do **not** block verdict processing. Carry `--breach --retries 2` into §4 so it surfaces in the morning report rather than vanishing, without applying the unparseable update.
 
-### 4a. Auto-Apply Requirements Drift
-
-If `requirements_drift` is `"detected"`, run this judgment loop BEFORE the §5 verb call:
-
-1. **Parse** the `## Suggested Requirements Update` section (`File` / `Section` / `Content`) from review.md.
-2. **Apply**: append `Content` at the end of the named `Section` in the target file, then report to the user what changed (file, section, first line of the appended content).
-
-Section missing or unparseable → re-dispatch the reviewer to append it in the §2 format without touching other sections (cap 2 retries). Still failing after the cap → the drift-apply has **breached**: do **not** block verdict processing. Carry `--breach --retries 2` into §5's verb call so the breach is recorded (positioned between the verdict record and the transition) — it surfaces in the morning report so the gap is visible rather than silent, without applying the unparseable update.
-
-When `requirements_drift` is `"none"`, or the apply succeeded, carry no breach.
-
-### 5. Transition
-
-Hand the verdict, its cycle, the drift observation, and any §4a breach to advance's review-verdict arm — it owns this arm's exact ordered emissions (the `review_verdict` record, the `drift_protocol_breach` row when `--breach`, then the routed `review→{complete|implement-rework|escalated}` transition) and their idempotent replay, so you route on the returned `state`, you do not re-derive it:
+## 4. Transition
 
 ```bash
 cortex-lifecycle-advance review-verdict --feature <name> --verdict <APPROVED|CHANGES_REQUESTED|REJECTED> --cycle <N> --drift <none|detected> [--breach --retries <N>]
 ```
 
-Add `--breach --retries <N>` only when §4a's drift-apply exhausted its retries. Act on the returned `state`:
+The verb owns this arm's ordered emissions (verdict record, breach row when `--breach`, then the routed transition) and their idempotent replay. Add `--breach` only when §3a exhausted its retries. Route on the returned `state` (shared `error`/`refused`/command-not-found arms: SKILL.md § Advance-verb routing):
 
-- **`approved`** (APPROVED, any cycle) → Complete: announce briefly and auto-advance.
-- **`rework`** (CHANGES_REQUESTED cycle 1) → Implement: re-enter for the flagged tasks with reviewer feedback; announce briefly and continue.
-- **`escalated`** (cycle ≥2 or REJECTED) → present the findings and await direction; do not auto-advance.
-- **`error`** → surface the verb's `message` and halt without transitioning.
-- **`refused`** — a gate mismatch: relay the envelope's `reason` and `preferred_remedy`, re-run `cortex-lifecycle-next`, and re-invoke threading its `advance_contract.expected_from_state` via `--from-state`. If the mismatch persists after re-sync, escalate to the operator with the detected phase and the expected from_state — never pass the detected phase.
-
-**Command not found** (`cortex-lifecycle-advance` not on `PATH`) → halt and instruct the operator to install/upgrade the cortex-command CLI, then re-invoke. Do NOT record the verdict or transition by hand. <!-- Halt-arm convention: this arm names ONLY the verb and the install remedy — never a raw event-emission surface, which would defeat the per-file zero-sweep (tests/test_lifecycle_event_roundtrip.py) that keeps this cluster's emissions inside the verb. -->
-
-## Constraints
-
-- Flag minor code-quality issues as PARTIAL with notes — minor issues compound.
-- If uncertain about requirements drift, log `detected` with a note — a false positive auto-applies a small update; a false negative silently hides drift.
+- **`approved`** → Complete: announce briefly and auto-advance.
+- **`rework`** → Implement: re-enter for the flagged tasks with reviewer feedback.
+- **`escalated`** → present the findings and await direction; do not auto-advance.

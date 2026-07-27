@@ -139,15 +139,6 @@ Then enable the desired plugin per project in `.claude/settings.json`.
 
 ---
 
-## Utilities
-
-### diagnose
-Systematic 4-phase debugging for skills, hooks, lifecycle, and overnight runner issues. Finds root cause, fixes the underlying problem, and verifies the fix with a structured loop. Use when something is unexpectedly broken or not triggering as expected.
-
-[skills/diagnose/SKILL.md](../skills/diagnose/SKILL.md)
-
----
-
 ## Keeping This Document Current
 
 When a skill is added, removed, or renamed, update this file. When trigger phrases change significantly, update the description.

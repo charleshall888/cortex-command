@@ -505,7 +505,7 @@ def test_gate_renders_brief_not_architecture(tmp_path: Path) -> None:
     # phase boundary. The options appear as individual bolded bullets; we check
     # each is present.
     decompose_gate_ref = (
-        REPO_ROOT / "skills" / "discovery" / "references" / "decompose-gate.md"
+        REPO_ROOT / "skills" / "discovery" / "SKILL.md"
     )
     gate_text = decompose_gate_ref.read_text(encoding="utf-8")
     for option in _GATE_OPTION_ITEMS:

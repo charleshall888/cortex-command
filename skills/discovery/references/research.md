@@ -1,87 +1,62 @@
 # Research Phase
 
-Multi-dimensional investigation to build deep understanding of a topic.
+Multi-dimensional investigation building deep understanding of a topic.
 
-## Protocol
+## 1. Set up
 
-### 1. Define Research Questions
+Articulate 3–7 specific research questions — the acceptance criteria; research isn't done until each has a confident answer or is explicitly marked unanswerable. Present them for review and add any the user raises.
 
-Before investigating, articulate 3-7 specific questions this research needs to answer — the acceptance criteria; research isn't done until each has a confident answer or is explicitly marked unanswerable. Present them to the user for review and add any they raise.
+Load requirements: `cortex-load-requirements` (omit `--feature`), read every listed non-skipped path, relay any fallback note. Use them to find where this topic intersects established constraints.
 
-### 1a. Load Requirements Context
-
-Run `cortex-load-requirements` (omit `--feature`; discovery has no lifecycle index, so it falls back to project.md + Global Context) per the shared tag-based protocol (`load-requirements.md`). Read every listed non-skipped path into context and inject the printed path list downstream (relay any fallback note). Use requirements to identify where this topic intersects with established constraints. No `cortex/requirements/` directory or files → note this and skip.
-
-### 1b. Read the Research-Sizing Assessment
-
-Read the complexity/criticality assessment Clarify persisted (conversation memory does not survive a phase-resume):
+Read back the sizing Clarify persisted (conversation memory doesn't survive a phase resume):
 
 ```
 cortex-discovery read-research-sizing --topic <topic>
 ```
 
-When none was persisted — a legacy discovery directory, or Research entered before Clarify ran — this returns discovery's floor default `{"complexity":"simple","criticality":"medium"}` (criticality floors at `medium`, never `low`) and never errors. These two values size the fan-out below.
+A legacy directory, or Research entered before Clarify ran, returns discovery's floor default `{"complexity":"simple","criticality":"medium"}` and never errors.
 
-### 2. Size and Dispatch the Research Fan-Out
+## 2. Dispatch the fan-out
 
-Gather findings via a sized wave of parallel, angle-specialized agents, then synthesize into discovery's own schema (§4), not /research's. The count matrix, mandatory-core set, always-last adversarial rule, and angle-selection rules are authoritative in the **fanout** sibling reference (`${CLAUDE_SKILL_DIR}/../research/references/fanout.md`, propagated from SKILL.md Step 3). Apply it; do not re-derive here.
+Size and dispatch per the **fanout** sibling reference `fanout.md` (propagated absolute path) — count matrix, mandatory core, always-last adversarial rule. Apply it; don't re-derive it. The count is an upper bound on breadth, not a quota.
 
-**Size it.** Look up `agent_count` in the fanout.md count matrix using the `complexity` (tier row) and `criticality` (column) from §1b. The count is an upper bound on investigation breadth, not a quota — dispatch fewer if the topic offers fewer genuinely distinct angles than its cell allows.
+Beyond the mandatory core, discovery's natural dimensions fill the remaining slots: **Domain & Prior Art** (comparable implementations, industry patterns, trade-offs, lessons learned) and **Feasibility** (technical risks, unknowns, prerequisites, rough S/M/L/XL effort), plus any finer-grained angle the topic warrants.
 
-**Choose the angles.** Discovery's natural investigation dimensions form the angle pool: **Domain & Prior Art** (comparable implementations, industry patterns, trade-offs, lessons learned) and **Feasibility** (technical risks, unknowns, prerequisites, rough S/M/L/XL effort) fill the remaining slots, plus any finer-grained angle the topic warrants.
-
-**Dispatch it.** Follow fanout.md's two-wave protocol with the Agent tool — read-only research agents, no `isolation: "worktree"`, mirroring how `/cortex-core:research` Step 3 dispatches. Before the core wave, resolve the gather model in this orchestrator body (not inside any angle-prompt block):
+Resolve the gather model in this orchestrator body, not inside an angle prompt, and bind it to every core-wave agent:
 
 ```bash
 model=$(cortex-resolve-model --role searcher)
 ```
 
-Pass the captured `$model` as each core-wave Agent's `model:` parameter, per fanout.md's dispatch-protocol routing rule.
+Agents are read-only — no `isolation: "worktree"`, no project-file writes. Prerequisites that are really codebase-state checks belong to the Codebase angle, whose findings carry citations or report `NOT_FOUND(query, scope)`; what remains in §3's Feasibility Prerequisites column is implementation sequencing only.
 
-Each agent returns its findings for synthesis; no agent writes project files. Prerequisites entries describing codebase-state checks (e.g., 'Identify pattern X in {file}') belong to the Codebase angle — its findings carry citations, or are reported as `NOT_FOUND(query, scope)`. Entries remaining in §4's Feasibility Prerequisites column are implementation-sequencing only.
+## 3. Write the artifact
 
-### 3. Synthesize the Findings
-
-Compose the returned findings into discovery's own schema in §4 — do **not** adopt `/cortex-core:research`'s Codebase/Web/Tradeoffs/Adversarial schema. Discovery's `## Architecture` → `### Pieces` / `### How they connect` headings are machine-parsed downstream (the Research→Decompose gate and decompose.md's decomposition source of record), so synthesis must land in §4's structure exactly. Where agents contradict each other, surface the contradiction under `## Open Questions` rather than silently picking a side.
-
-### 4. Write Research Artifact
-
-Combine findings into `cortex/research/{topic}/research.md`:
+Compose into **discovery's own schema** below — do not adopt `/cortex-core:research`'s. `## Architecture` → `### Pieces` / `### How they connect` are machine-parsed downstream by the Research→Decompose gate and by decompose.md, so synthesis must land in exactly this structure. Where agents contradict each other, surface the contradiction under `## Open Questions` rather than picking a side.
 
 ```markdown
 # Research: {topic}
 
 ## Research Questions
 1. [Question] → **[Answer or "Unresolved: reason"]**
-2. ...
 
 ## Codebase Analysis
-- [Existing patterns]
-- [Files/modules affected]
-- [Integration points]
-- [Constraints]
+[Existing patterns, files/modules affected, integration points, constraints]
 
 ## Web & Documentation Research
-<!-- Omit section if skipped -->
-- [Best practices]
-- [Library/API findings]
-- [Pitfalls]
+<!-- Omit if skipped -->
 
 ## Domain & Prior Art
-<!-- Omit section if skipped -->
-- [Similar implementations]
-- [Industry patterns]
-- [Lessons learned]
+<!-- Omit if skipped -->
 
 ## Feasibility Assessment
 | Approach | Effort | Risks | Prerequisites |
 |----------|--------|-------|---------------|
-| [A] | S/M/L/XL | [risks] | [prereqs] |
 
 ## Architecture
 
 ### Pieces
-- [Piece name by role, not by mechanism — one bullet per piece]
+- [Piece named by role, not by mechanism — one bullet per piece]
 
 ### How they connect
 [How the pieces connect and what each piece's boundaries depend on.]
@@ -90,26 +65,23 @@ Combine findings into `cortex/research/{topic}/research.md`:
 <!-- Key trade-offs and alternatives considered, one paragraph each -->
 
 ## Open Questions
-- [Questions that need answers before spec or implementation]
+- [Questions needing answers before spec or implementation]
 ```
 
-### 4a. Orchestrator Review
+Codebase-pointing claims carry an inline `[file:line]` citation or an explicit `[premise-unverified: not-searched]` marker. A search returning nothing is reported inline as `NOT_FOUND(query=<search-string>, scope=<path-or-glob>)` — distinct from an uninvestigated premise. Findings live in the artifact, not in context; research the topic as described, not adjacent ones.
 
-<!-- `references/orchestrator-review.md` here intentionally targets discovery's OWN local delta file, NOT the propagated lifecycle canonical — the delta supplies discovery's Post-Research Checklist and fix-agent path/persona substitutions, and itself reads the lifecycle canonical via SKILL.md's propagation. -->
-Before committing, read and follow `references/orchestrator-review.md` for the `research` phase. It must pass before §4b.
+## 4. Review and hand off
 
-### 4b. Critical Review
+Run the orchestrator-review protocol (propagated **orchestrator-review** path) for the `research` phase, against the **Post-Research checklist** below. It must pass before the next step.
 
-Run `/cortex-core:critical-review` on `cortex/research/{topic}/research.md`. Address any significant challenges before proceeding.
+| # | Item |
+|---|------|
+| R1 | Every research question has a specific finding, not a hand-wavy generalization |
+| R2 | Feasibility cites specific codebase patterns, API capabilities, or documented behavior — not "this should be possible" |
+| R3 | No critical unknown is left unacknowledged; unresolvable ones appear in Open Questions with why |
+| R4 | Open Questions are genuine unknowns or decisions needing user input — not deferrals of what more investigation would have answered |
+| R5 | External dependencies confirmed present and non-deprecated at the endpoint/method/flag level |
 
-### 5. Transition
+In the fix-agent dispatch, substitute `{topic} discovery topic` for `{feature}` and `cortex/research/{topic}/{artifact}` for the lifecycle artifact path; the fix agent returns plain prose (`changed [path] — [rationale]`), not lifecycle's YAML envelope.
 
-Stage and commit `cortex/research/{topic}/` using `/cortex-core:commit`. Summarize key findings and proceed to the Research → Decompose approval gate (SKILL.md) — do not begin Decompose until the user answers it.
-
-## Constraints
-
-- **Read-only**: Do not modify project files except the research artifact
-- **All findings in the artifact**: They won't survive in context alone
-- **Scope**: Research the topic as described, not adjacent topics
-- **Citations**: codebase-pointing claims carry an inline `[file:line]` citation traceable to codebase-agent findings, or an explicit `[premise-unverified: not-searched]` marker when not investigated.
-- **Empty-corpus reporting**: a search returning no results is reported inline as `NOT_FOUND(query=<search-string>, scope=<path-or-glob>)` — distinct from `premise-unverified: not-searched` (no investigation attempted).
+Then run `/cortex-core:critical-review` on the artifact and address any significant challenges. Commit `cortex/research/{topic}/`, summarize, and hand off to the Research → Decompose gate — do not begin Decompose until the user answers it.

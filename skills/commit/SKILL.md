@@ -5,20 +5,14 @@ description: Create git commits with consistent, well-formatted messages. Use wh
 
 # Commit
 
-Create a single git commit from the current working tree changes.
+Run `cortex-commit-preflight` for status, diff, and history in one JSON document. Stage the relevant files with `git add` (specific paths, never `-A`), then:
 
-## Workflow
+```
+git commit --only -m "..." [-m "..."] -- <the same paths>
+```
 
-Run `cortex-commit-preflight` for status, diff, and recent history (one JSON document); stage relevant files with `git add` (specific files, not `-A`); compose the message per the format below and commit with `git commit --only -m "..." -- <the same paths>`. Concurrent sessions share one git index, and a bare `git commit` sweeps whatever a sibling session staged — `--only` bounds the commit to the named paths. After committing, confirm with `git show --stat HEAD` that only the intended files landed. Do not push, branch, or emit conversational text — only tool calls.
+Concurrent sessions share one git index, so a bare `git commit` sweeps whatever a sibling session staged — the trailing pathspec with `--only` is what makes this safe. Confirm with `git show --stat HEAD`. Never HEREDOC or `$(...)`: both create temp files that fail sandboxed, and never disable the sandbox.
 
-A PreToolUse hook validates the message before execution; if it rejects the commit, fix the message — don't bypass it via `git commit -F` or an editor, which the hook can't see.
+Subject: imperative mood, ≤72 chars, the *why* over the *what*. Body only when the change needs motivation.
 
-## Commit Message Format
-
-Subject: imperative mood, ~72 chars, the *why* over the *what* ("Add"/"Fix"/"Remove", never "Adds"/"Added"/"Fixes" — unenforced by the hook). Add a blank-line body only when the change needs motivation, with `- ` bullets for multiple items.
-
-**Release-type marker** drives the auto-release semver bump (default **patch**), alone on its own line: `[release-type: minor]` for a backward-compatible feature, `[release-type: major]` for a breaking change. Read `${CLAUDE_SKILL_DIR}/references/release-type.md` for the regex, the `BREAKING:` fallback, precedence, and the `--dry-run` check.
-
-## Commit Command
-
-`git commit --only -m "..." [-m "..."] -- <paths>` (a second `-m` for a multi-line body; the trailing pathspec is what makes the commit concurrency-safe); never HEREDOC or command substitution — both create temp files that fail sandboxed; never disable the sandbox.
+Do not push or branch. Emit tool calls, not conversational text.

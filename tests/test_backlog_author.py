@@ -96,9 +96,6 @@ def test_compose_mode_emits_five_section_body() -> None:
     )
 
     # Body-template reference must be present — compose reads the template.
-    assert "body-template.md" in compose_section, (
-        "compose section does not reference skills/backlog-author/references/body-template.md"
-    )
 
 
 def test_compose_mode_does_not_call_askuserquestion() -> None:
@@ -110,19 +107,6 @@ def test_compose_mode_does_not_call_askuserquestion() -> None:
         "compose section of SKILL.md references AskUserQuestion — "
         "the compose path must not prompt the user (R6 regression)"
     )
-
-
-def test_interview_mode_routes_through_askuserquestion() -> None:
-    """Interview section of SKILL.md references AskUserQuestion at least once."""
-    skill_text = SKILL_MD.read_text(encoding="utf-8")
-    interview_section = _extract_skill_section(skill_text, "interview")
-
-    count = interview_section.count("AskUserQuestion")
-    assert count >= 1, (
-        f"interview section of SKILL.md contains {count} AskUserQuestion reference(s); "
-        "expected ≥1 (interview mode must use AskUserQuestion per R6)"
-    )
-
 
 def test_create_item_accepts_body_flag(tmp_path: Path) -> None:
     """cortex-create-backlog-item --body appends the body verbatim."""

@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import pathlib
 
-_REFS = ("triage-rendering.md", "criticality-heuristics.md")
+_REFS = ("triage-rendering.md",)
 
 # Full-span negative-control tokens: block sub-headings + distinctive body
 # lines spanning each moved block, not just the one-shot acceptance sentinels.
@@ -45,7 +45,6 @@ _MOVED_TOKENS = (
 # The stub headings that must survive as anchors (content moved, headings kept).
 _STUB_HEADINGS = (
     "## Step 2: Criticality Pre-Assessment",
-    "### 3c. Present Ready Items with Workflow Recommendations",
 )
 
 

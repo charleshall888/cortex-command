@@ -1,31 +1,24 @@
 # Plan Phase
 
-Produce an implementation plan of numbered tasks with file paths and verification steps. Plans are prose with structural context, not code.
+Numbered tasks with file paths and verification steps. Prose with structural context, not code.
 
-## Protocol
+## 1. Load context
 
-### 1. Load Context
+Read `cortex/lifecycle/{feature}/research.md` and `spec.md`, plus `cortex/lifecycle.config.md` if present.
 
-Read `cortex/lifecycle/{feature}/research.md` and `spec.md`, plus `cortex/lifecycle.config.md` at project root if it exists.
-
-### 1a. Check Criticality
-
-Read criticality (rules: `${CLAUDE_SKILL_DIR}/references/criticality-matrix.md` §Reading lifecycle state):
+### 1a. Check criticality
 
 ```bash
 cortex-lifecycle-state --feature {feature} --field criticality
 ```
 
-- **`critical`** → read and follow `${CLAUDE_SKILL_DIR}/references/competing-plans.md`, then proceed per its guidance.
-- **Otherwise** (low/medium/high) → §3, the standard single-plan flow.
+**`critical`** → read and follow `${CLAUDE_SKILL_DIR}/references/competing-plans.md`, then proceed per its guidance. **Otherwise** → §2.
 
 ### 1b. Competing Plans (Critical Only)
 
-The competing-plans protocol (dispatch variants → synthesize → route) lives in `${CLAUDE_SKILL_DIR}/references/competing-plans.md`; §1a's `critical` branch loads it, and only that arm reaches it.
+Lives in `${CLAUDE_SKILL_DIR}/references/competing-plans.md`; only §1a's `critical` arm reaches it.
 
-### 3. Write Plan Artifact
-
-Produce `cortex/lifecycle/{feature}/plan.md`:
+## 2. Write plan.md
 
 ```markdown
 # Plan: {feature}
@@ -36,11 +29,11 @@ Produce `cortex/lifecycle/{feature}/plan.md`:
 <!-- Only when the implementation commits to one of: event-driven, pipeline, layered, shared-state, plug-in. Omit otherwise. -->
 
 ## Outline
-<!-- Phase decomposition above the task list. H3 phase headings (### Phase N: <name>) — H2 breaks the parser. ≥1 phase when complexity=simple, ≥2 when complexity=complex. -->
+<!-- H3 phase headings — H2 breaks the parser. ≥1 phase when complexity=simple, ≥2 when complex. -->
 
 ### Phase 1: {name} (tasks: 1, 2, ...)
 **Goal**: {one-line objective}
-**Checkpoint**: {observable end state — e.g. "tests green for module X"}
+**Checkpoint**: {observable end state}
 
 ## Tasks
 
@@ -49,80 +42,65 @@ Produce `cortex/lifecycle/{feature}/plan.md`:
 - **What**: {what this accomplishes, 1-2 sentences}
 - **Depends on**: none
 - **Complexity**: trivial|simple|complex
-- **Context**: {file paths, signatures, type defs, pattern references — structural context for the implementer}
+- **Context**: {paths, signatures, type defs, pattern references}
 - **Verification**: one of (a) command + expected output + pass/fail; (b) file/pattern check (e.g. `grep -c 'keyword' path` = 1); (c) `Interactive/session-dependent: [one-sentence rationale]`
 - **Status**: [ ] pending
 
 ## Risks
-[Design choices or scope calls the user might revisit before implementation. "None" if uncontroversial.]
+[Design choices or scope calls the user might revisit. "None" if uncontroversial.]
 
 ## Acceptance
-<!-- Only when complexity=complex; omit on simple. -->
-[~3 lines whole-feature acceptance criterion — the observable end-state proving the feature works. Distinct from per-task Verification, which checks task-local effects.]
+<!-- Only when complexity=complex. ~3 lines: the observable end state proving the feature works, distinct from per-task Verification. -->
 ```
 
-> Prose-only Verification fails the P4 checklist — use (a)/(b)/(c).
+Prose-only Verification fails the checklist — use (a), (b), or (c).
 
 ### Authoring rules
 
-**Task sizing** — a coherent, self-contained unit an implementer with no prior context can complete from the task text and its referenced files alone. Split when a task spans unrelated concerns or grows too large for one focused pass.
+**Task sizing** — a self-contained unit an implementer with no prior context can complete from the task text and its referenced files alone.
 
-**Complexity** — every task carries `**Complexity**`:
+**Complexity** drives model and turn-limit selection in the overnight pipeline: `trivial` = single-file edit, no side effects, no commit; `simple` = 1–3 files, commit required; `complex` = 4+ files, architectural change, new pattern, or multi-component integration. Anything creating files, modifying JSON settings, creating symlinks, setting permissions, or committing is `simple` **minimum** — a trivial turn budget exhausts before the commit step.
 
-| Tier | When |
-|------|------|
-| `trivial` | single-file edit, no side effects, no commit |
-| `simple` | 1–3 files, commit required, may run/validate commands |
-| `complex` | 4+ files, architectural change, new pattern, or multi-component integration |
+**Dependencies** — `**Depends on**` sits between **What** and **Context**: `[N, M]` or `none`. Implement parallelizes on it, so a missing or malformed field blocks parallelism.
 
-Tasks that create files, modify JSON settings, create symlinks, set permissions, or must commit are `simple` minimum — never `trivial` (its lower turn budget exhausts before the commit step). The field drives model and turn-limit selection in the overnight pipeline.
+**Write-serialization edges** — an edge that only orders same-file writes takes the parenthetical dialect the parser strips: `**Depends on**: [12] (write-serialization: night_rig.gd)`. A trailing single-hyphen note is *not* stripped and fails overnight conformance. Ordering-only semantics: an executor with per-task isolation may relax it to not-before; none deletes it.
 
-**Dependencies** — every task carries `**Depends on**` between **What** and **Context**: `[N, M]` or `none`. Implement dispatches independent tasks in parallel; a missing or malformed field blocks parallelism.
+**Graph shape** — prefer wide levels. A single-task level between multi-task levels, or a level count approaching half the task count, is a restructure signal; never merge tasks to shrink depth. Every edge counts at face value; write-serialization-annotated segments are dissolve-first candidates, not a depth discount. Don't co-batch a `complex` task with `trivial`/`simple` siblings at one level — give a heavy straggler its own wave.
 
-**Write-serialization edges** — when a `Depends on` edge exists only to order same-file writes rather than express a logical dependency, mark it with the parenthetical dialect the parser already strips: `**Depends on**: [12] (write-serialization: night_rig.gd)`. A trailing single-hyphen note (`[12] - note`) is not stripped and fails overnight conformance (R4) — use the parenthetical form instead. The semantics are ordering-only: an executor running per-task isolation may relax the edge to not-before, no executor deletes it, and the overnight pipeline still treats it as a real edge.
+**Hub-file seam** — when two tasks would edit one coordinator file, add a registration seam in an early task so later tasks add files instead of serializing edits. Where a seam can't apply (structural rework, deletions, re-pointing), the honest remedy is an annotated write-serialization edge.
 
-**Straggler isolation** — when the dependency graph allows, don't co-batch a `complex` task with `trivial`/`simple` siblings at the same topological level; split levels so a heavy straggler occupies its own wave rather than idling a batch barrier.
+**Sub-task headings** — `### Task 3a:`, `### Task 3b:` (single lowercase suffix) are first-class dispatchable units ordered `3` < `3a` < `3b` < `4`. Reference by full id; a bare `[3]` means literal task 3. `3ab`, `3A`, `3 a` fail loud. Same-batch siblings sharing a `Depends on` co-schedule into one worktree, so give them disjoint `Files` or an explicit serializing edge.
 
-**Graph width** — prefer wide levels: treat a single-task level between multi-task levels, or a level count approaching half the task count (#358 ran 11 levels for 24 tasks), as a restructure signal — never merge tasks to shrink depth, which trades the scheduling problem for an oversized-task one (**Task sizing**). Every edge counts at face value when judging depth; annotated write-serialization segments are the exception worth naming — they're dissolve-first candidates (restructure, or pick isolated dispatch at approval), not a discount on the measured depth.
+**Files/Verification consistency** — every file a Verification implies must be in Files; builders can't touch files outside their list.
 
-**Hub-file seam** — when any two tasks would edit one coordinator file, give it a registration seam in an early task so later tasks add files instead of serializing edit chains. When a seam can't apply — structural rework, deletions, re-pointing — the honest remedy is an annotated write-serialization edge, not a plain `Depends on`.
+**Caller enumeration** — when a task changes or removes a function, command, or interface, search first and list ALL callers in **Files**.
 
-**Sub-task headings** — a task may split into `### Task 3a:`, `### Task 3b:` (single lowercase suffix), first-class dispatchable units ordered `3` < `3a` < `3b` < `4`. The integer part accepts `0`; a group need not start at `a`. Reference by full id (`[3a]`, `[13a, 13b]`) — a bare `[3]` means literal task `3`. Multi-letter (`3ab`), uppercase (`3A`), space-separated (`3 a`) fail loud. Same-batch siblings sharing a `Depends on` co-schedule into one worktree, so same-file writes race — give them disjoint `Files`, or serialize with an explicit edge (`3b` depends on `[3a]`).
+**Code budget** — structural context only: paths, signatures, type field names, pattern references, config keys, inter-task contracts. No copy-paste-ready code. No self-sealing verification. A task building a capture or evidence rig must produce and validate a discarded sample of the exact committed-evidence shape end to end.
 
-**Files/Verification consistency** — every file Verification implies must be in Files; builders can't modify files outside their Files list.
+Then: `cortex-lifecycle-register-artifact --feature {feature} --artifact plan`.
 
-**Caller enumeration** — when a task changes or removes a function/command/interface, search the codebase first and list ALL callers/dependents in **Files**.
+## 3. Orchestrator review
 
-**Code budget** — prose with structural context only: paths, directory structures, function signatures, type field names/types, pattern references, config keys/values, inter-task contracts. No copy-paste-ready code, and no self-sealing verification (steps referencing artifacts the same task creates solely to satisfy the check).
+Follow `${CLAUDE_SKILL_DIR}/references/orchestrator-review.md` with `${CLAUDE_SKILL_DIR}/references/orchestrator-checklist-plan.md`. Must pass before approval.
 
-**Dress rehearsal** — a task that builds a capture/evidence rig must produce and validate a discarded sample of the exact committed-evidence shape end-to-end.
+## 4. Approval (merged branch/dispatch surface)
 
-After writing `plan.md`, register the artifact: `cortex-lifecycle-register-artifact --feature {feature} --artifact plan`.
+Folds Implement's branch selection into plan approval — each branch option implies approval. Present the plan summary plus **Produced** (one-line artifact summary) and **Trade-offs** (alternatives considered + rationale).
 
-### 3a. Orchestrator Review
-
-Before user presentation, read and follow `${CLAUDE_SKILL_DIR}/references/orchestrator-review.md` (shared protocol) plus its Post-Plan checklist `${CLAUDE_SKILL_DIR}/references/orchestrator-checklist-plan.md` for the `plan` phase. It must pass before approval.
-
-### 4. User Approval (merged branch/dispatch surface)
-
-This surface folds the Implement branch/dispatch selection into plan approval — each branch option implies plan approval. Present the plan summary (overview + task list) plus **Produced** (one-line artifact summary) and **Trade-offs** (alternatives considered + rationale).
-
-**Assemble the option set.** On `main`/`master`, resolve the branch/dispatch state with the same composed verb Implement §1 calls — §4 owns rendering the guards from its payload itself, not Implement §1:
+On `main`/`master`, resolve the option set with the verb Implement §1 calls; §4 renders the guards from its payload itself:
 
 ```bash
 cortex-lifecycle-branch-decision --feature {feature}
 ```
 
-On `state: prompt`, render guards exactly as Implement §1 does — `uncommitted_changes` demotes only the current-branch option (prepend the warning, drop `recommended`); `worktree_option_available: false` drops the worktree option only when the CLI is absent. A `dirty_tree` reason here is expected: plan.md itself is uncommitted until §5, so §4 structurally dirties its own tree, and that alone is not a worktree blocker — the demotion warning still renders on any dirty tree, and dirt beyond this feature's own just-written artifacts (other sessions') is the strongest case for choosing isolation, not against it.
+`state: prompt` → render guards as Implement §1 does. A `dirty_tree` reason is expected: plan.md is uncommitted until §5, so §4 structurally dirties its own tree. That alone is not a worktree blocker, and dirt from another session is the strongest case *for* isolation, not against it.
 
-On `state: resolved`, two distinct `source`s carry different weight: **`branch_mode`** is config-pinned (ADR-0012) — fold the fixed mode into the options below rather than opening the full picker. **`dispatch_choice`** is a stale carryover from a prior approval pass (a `plan_approved` row this verb finds ahead of config or the picker gate) — still render the full option surface, with the carried mode only as a pre-selected default; its `entry_mode: selected` is not a live selection at §4 and authorizes no worktree auto-entry (ADR-0008).
+`state: resolved` → **`branch_mode`** is config-pinned; fold the fixed mode in rather than opening the picker. **`dispatch_choice`** is a stale carryover from a prior approval pass; still render the full surface with the carried mode as a pre-selected default only — it authorizes no worktree auto-entry.
 
-Off `main`/`master`, the sub-choices collapse to `trunk` (the current branch), so the surface offers only `[Approve & implement (current branch), Approve plan but wait to implement]`.
+Off `main`/`master` the sub-choices collapse, so the surface offers only `[Approve & implement (current branch), Approve plan but wait to implement]`.
 
 <!-- pause: plan-approval relayed-consent -->
-**Compose `AskUserQuestion` `options`** (≤4): the branch modes plus **"Approve plan but wait to implement"**. The platform's **"Other"** free-text escape (appended outside the 4-cap) carries Request-changes and Cancel.
-
-**Resolve the selection to a decision.** Map the operator's choice to the advance plan-decision arm's `--decision` discriminant, then hand it off — the arm owns the exact ordered emissions (approval record, pause, plan→implement transition) and their idempotent replay, so you route on the returned `state`, you do not re-derive it:
+**Compose `AskUserQuestion` options** (≤4): the branch modes plus **"Approve plan but wait to implement"**. The platform's **"Other"** free-text escape carries Request-changes and Cancel.
 
 | Operator selection | `--decision` | `--dispatch-choice` |
 | --- | --- | --- |
@@ -133,31 +111,20 @@ Off `main`/`master`, the sub-choices collapse to `trunk` (the current branch), s
 | **"Other"**, cancel-intent | `cancelled` | (omit) |
 | **"Other"**, any other text | `revise` | (omit) |
 
-**Trunk cost** (`Implement on current branch`): no isolation, so same-file tasks serialize — the plan must carry write-serialization edges; when this plan.md already carries any (`grep -c 'write-serialization' cortex/lifecycle/{feature}/plan.md`), cite the count in the note.
+**Trunk cost**: no isolation, so same-file tasks serialize — the plan must carry write-serialization edges. When this plan already has some (`grep -c 'write-serialization' cortex/lifecycle/{feature}/plan.md`), cite the count.
 
 ```bash
 cortex-lifecycle-advance plan-decision --feature <name> --decision <decision> [--dispatch-choice <mode>]
 ```
 
-`advance` defaults `from_state` to the arm's table edge (`plan`); thread the envelope's `advance_contract.expected_from_state` via `--from-state` when you have it.
+Thread the envelope's `advance_contract.expected_from_state` via `--from-state` when you have it (default: `plan`). Route on the returned `state` (shared `error`/`refused`/command-not-found arms: SKILL.md § Advance-verb routing):
 
-Act on the returned `state`:
+- **`branch-mode-approved`** → auto-advance to Implement, which consumes `dispatch_choice` and skips its own picker.
+- **`wait-approved`** → approval recorded, feature holds at plan; **halt**. Re-invocation routes to `implement` and Implement fires its fallback picker. If backlog-linked, warn that overnight may still execute the item — its eligibility does not yet honor a paused feature.
+- **`cancelled`** → stop here. **`revise`** → nothing recorded; revise and re-present.
 
-- **`branch-mode-approved`** — approval and the plan→implement transition are recorded. Auto-advance to Implement (it consumes `dispatch_choice` and skips its own picker).
-- **`wait-approved`** — approval is recorded and the feature holds at plan; **halt** (no auto-advance, no dispatch). Re-invocation routes to `implement` (the plan IS approved); Implement §1 fires its fallback picker since `wait` is not a branch mode. If the feature is backlog-linked, warn now that the overnight runner may still execute the item unless paused — overnight eligibility does not yet honor a paused feature.
-- **`cancelled`** — the lifecycle is halted; stop here.
-- **`revise`** — nothing was recorded. **Request changes**: revise the plan and re-present this surface. Only a terminal branch-mode or "wait" selection records approval; revision rounds record nothing.
-- **`error`** — surface the verb's `message` and halt without advancing.
-- **`refused`** — a gate mismatch: relay the envelope's `reason` and `preferred_remedy`, re-run `cortex-lifecycle-next`, and re-invoke threading its `advance_contract.expected_from_state` via `--from-state`. If the mismatch persists after re-sync, escalate to the operator with the detected phase and the expected from_state — never pass the detected phase.
+## 5. Transition
 
-**Command not found** (`cortex-lifecycle-advance` not on `PATH`) → halt and instruct the operator to install/upgrade the cortex-command CLI, then re-invoke. Do NOT record the approval by hand. <!-- Halt-arm convention: this arm names ONLY the verb and the install remedy. It must not reference any raw event-emission surface — doing so would defeat the per-file zero-sweep (tests/test_lifecycle_event_roundtrip.py) that keeps this cluster's emissions inside the verb. -->
+The plan→implement transition rides the plan-decision arm — no separate step. On any approval run `cortex-read-commit-artifacts`: `true` (default) → stage `cortex/lifecycle/{feature}/` and commit via `/cortex-core:commit`; `false` → skip silently. On "wait" the commit makes approval durable, then the lifecycle halts.
 
-### 5. Transition
-
-The plan→implement `phase_transition` is emitted by advance's plan-decision arm on a branch-mode selection (ordered after the approval record); §4 needs no separate transition step.
-
-On any approval (branch-mode or "wait"), run `cortex-read-commit-artifacts`. `true` (default) → stage `cortex/lifecycle/{feature}/` and commit via `/cortex-core:commit`; `false` → skip silently. On the "wait" path the commit makes approval durable, then the lifecycle halts.
-
-## Hard Gate
-
-Backlog items suggest approaches — they don't prescribe them. Unless the item has linked research/spec artifacts that already validated the approach, evaluate it critically and weigh alternatives.
+**Hard gate**: backlog items suggest approaches, they don't prescribe them. Unless the item has linked research/spec artifacts that already validated the approach, evaluate it critically and weigh alternatives.

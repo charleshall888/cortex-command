@@ -123,6 +123,40 @@ dashboard-seed:
 dashboard-seed-clean:
     uv run cortex-dashboard-seed --clean
 
+# --- Training deck ---
+
+training_port := env_var_or_default("TRAINING_PORT", "8000")
+
+# Serve the workshop deck and open both windows (deck to share, presenter to drive it)
+training:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    URL="http://localhost:{{training_port}}"
+    REUSED=0
+    if curl -sf -o /dev/null "$URL/index.html"; then
+        echo "Already serving on port {{training_port}} — reusing it."
+        REUSED=1
+    else
+        # http:// is required: the presenter drives the deck over a BroadcastChannel,
+        # which file:// windows can't share.
+        python3 -m http.server {{training_port}} --directory docs/training >/dev/null 2>&1 &
+        SERVER=$!
+        trap 'kill $SERVER 2>/dev/null || true' EXIT
+        for _ in $(seq 25); do
+            curl -sf -o /dev/null "$URL/index.html" && break
+            sleep 0.2
+        done
+    fi
+    echo "Deck:      $URL                 — share THIS window on the call"
+    echo "Presenter: $URL/presenter.html  — keep focus HERE; its arrow keys drive the deck"
+    # Deck first, presenter last so the presenter lands frontmost — drag the deck
+    # tab into its own window to share it.
+    open "$URL" "$URL/presenter.html" 2>/dev/null || true
+    if [ "$REUSED" -eq 0 ]; then
+        echo "Ctrl-C to stop the server."
+        wait $SERVER
+    fi
+
 # --- Backlog ---
 
 # Regenerate the backlog index
@@ -580,7 +614,7 @@ build-plugin:
         BIN=()
         case "$p" in
             cortex-core)
-                SKILLS=(commit pr lifecycle backlog-author requirements requirements-gather requirements-write research discovery refine dev diagnose critical-review interview)
+                SKILLS=(commit pr lifecycle backlog-author requirements requirements-gather requirements-write research discovery refine dev critical-review interview)
                 HOOKS=(hooks/cortex-validate-commit.sh hooks/cortex-cleanup-session.sh hooks/cortex-cli-background-install.sh claude/hooks/cortex-session-start-path-bootstrap.sh claude/hooks/cortex-worktree-create.sh claude/hooks/cortex-worktree-remove.sh)
                 BIN=(cortex-)
                 ;;

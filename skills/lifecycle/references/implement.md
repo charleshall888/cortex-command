@@ -2,86 +2,65 @@
 
 Dispatch a fresh sub-task per task — a clean context prevents stale assumptions.
 
-## Protocol
-
 ### 1. Pre-Flight Check
 
 Read `cortex/lifecycle/{feature}/plan.md`; identify pending tasks (`[ ]`).
 
-**Short road (no plan.md)** — the feature arrived via `spec.approved-direct` (simple tier, low/medium criticality; Plan was skipped by the state machine, this is not a missing artifact): derive the task list from spec.md's acceptance criteria and implement in-session — no task batching, no sub-task dispatch, no `batch_dispatch` emissions. Run the branch decision below, do the work, then exit via §4 unchanged.
+**Short road (no plan.md)** — the feature arrived via `spec.approved-direct` (Plan was skipped by the state machine; this is not a missing artifact). Derive tasks from spec.md's acceptance criteria and implement in-session: no batching, no sub-task dispatch, no batch emissions. Run the branch decision, do the work, exit via §4.
 
-**Branch decision** — one read-only call composes the current-branch check, plan-time `dispatch_choice`, per-repo `branch-mode`, and picker-fire gate:
+**Branch decision** — one call composes the current-branch check, plan-time `dispatch_choice`, per-repo `branch-mode`, and picker-fire gate:
 
 ```bash
 cortex-lifecycle-branch-decision --feature {slug}
 ```
 
-Act on `state`:
-
 - **`skip`** — not on `main`/`master`; proceed on the current branch to §2.
-- **`resolved`** — a branch mode was fixed without prompting; run the same post-selection routing so every downstream guard runs. `trunk` → §2 on the current branch. `feature-branch` → create/checkout `feature/{lifecycle-slug}`, then §2. `worktree-interactive` → record the returned `entry_mode` (`selected` or `suppressed`), then read `${CLAUDE_SKILL_DIR}/references/worktree-entry.md` and follow it to completion before returning to §2.
+- **`resolved`** — a mode was fixed without prompting; run the same post-selection routing so every downstream guard still runs. `trunk` → §2. `feature-branch` → create/checkout `feature/{lifecycle-slug}`, then §2. `worktree-interactive` → record the returned `entry_mode` (`selected` or `suppressed`), then follow `${CLAUDE_SKILL_DIR}/references/worktree-entry.md` to completion before returning to §2.
 <!-- pause: implement-branch-pick config-conditional -->
-- **`prompt`** — render the picker below via `AskUserQuestion`, applying the returned guards: on `uncommitted_changes`, demote the current-branch option in place (prepend `Warning: uncommitted changes in working tree — this will mix them into the commit on main.`, drop any `(recommended)`); when `worktree_option_available` is false, drop the worktree option. On selection — **current branch** → §2; **feature branch** → create/checkout `feature/{lifecycle-slug}` → §2; **worktree** → record entry mode `selected`, then read `${CLAUDE_SKILL_DIR}/references/worktree-entry.md` and follow it to completion before returning to §2.
+- **`prompt`** — render the picker via `AskUserQuestion` with the returned guards: on `uncommitted_changes` demote the current-branch option in place (prepend `Warning: uncommitted changes in working tree — this will mix them into the commit on main.`, drop any `(recommended)`); when `worktree_option_available` is false, drop the worktree option.
 
 **Picker options**:
 
-- **Implement on current branch** (recommended) — trunk workflow; changes land on the current branch. Trunk cost: no isolation, so same-file tasks serialize — the plan must carry write-serialization edges.
-- **Implement on feature branch with worktree** — creates an `interactive/{slug}` worktree at `<repo>/.claude/worktrees/interactive-{slug}/` and auto-enters via `EnterWorktree`. Proceeds to worktree entry.
-- **Create feature branch** — create `feature/{lifecycle-slug}` for a PR flow. NOTE: runs `git checkout` on the main session and can corrupt parallel sessions in this repo.
+- **Implement on current branch** (recommended) — trunk workflow. Trunk cost: no isolation, so same-file tasks serialize; the plan must carry write-serialization edges.
+- **Implement on feature branch with worktree** — creates an `interactive/{slug}` worktree at `<repo>/.claude/worktrees/interactive-{slug}/` and auto-enters via `EnterWorktree`. Record entry mode `selected`, then follow worktree-entry.md to completion before §2.
+- **Create feature branch** — creates `feature/{lifecycle-slug}` for a PR flow. NOTE: runs `git checkout` on the main session and can corrupt parallel sessions in this repo.
 
-**Dependency graph**: parse `**Depends on**` from every pending task into an adjacency list; a cycle stops the phase — dispatch nothing.
+**Dependency graph**: parse `**Depends on**` from every pending task into an adjacency list. A cycle stops the phase — dispatch nothing.
 
 ### 2. Task Dispatch
 
-Compute batches by topological level:
-- **Batch 0**: pending tasks with `**Depends on**: none` (or deps already `[x]`).
-- **Batch N**: tasks whose deps are all in batches 0..N-1.
+Batch by topological level: **batch 0** is pending tasks with `**Depends on**: none` (or deps already `[x]`); **batch N** is tasks whose deps are all in earlier batches. Batching keys on full task identity including letter-suffixed sub-tasks; same-batch siblings must have disjoint `Files`.
 
-Batching keys on full task identity, including letter-suffixed sub-tasks (`### Task 3a:`) — first-class units (see plan.md "Sub-task headings"). **Same-batch sub-task siblings must have disjoint `Files`** — rationale and the serialize-via-`Depends on` workaround live in that section.
+**a. Extract** each task's full block from plan.md (`### Task N:` to the next task heading).
 
-Per batch, in order:
-
-**a. Extract task texts** — copy each task's full block from plan.md (`### Task N:` to the next task heading).
-
-**b. Dispatch** — launch all batch tasks concurrently as parallel sub-tasks. Use the builder template below **verbatim** per task (substitute variables only), adding 2-3 sentences of architectural context from the plan's Overview.
-
-**Model** — resolve per task at dispatch, never hardcode; pass each task's `Complexity` field via `--task-complexity` (absent/malformed → the verb inherits the feature cell):
+**b. Dispatch** all batch tasks concurrently, using the builder template below **verbatim** (substitute variables only) plus 2–3 sentences of architectural context from the plan's Overview. Resolve the model per task, passing that task's `Complexity` (absent or malformed → the verb inherits the feature cell):
 
 ```bash
 model=$(cortex-resolve-model --role builder --criticality "$(cortex-lifecycle-state --feature {feature} --field criticality --raw)" --task-complexity "<task Complexity>")
 ```
 
-Pass `$model` to each builder. On nonzero exit, halt and escalate rather than guessing. Then record the dispatch via advance's implement-transition arm (it owns the `batch_dispatch` emission, idempotent per batch number):
+On nonzero exit, halt and escalate. Then record the dispatch (idempotent per batch):
 
 ```bash
 cortex-lifecycle-advance implement-transition --mode batch --feature <name> --batch <N> --tasks '[<task IDs>]'
 ```
 
-**Command not found** (`cortex-lifecycle-advance` not on `PATH`) → halt and instruct the operator to install/upgrade the cortex-command CLI, then re-invoke. Do NOT record the dispatch by hand. <!-- Halt-arm convention: this arm names ONLY the verb and the install remedy — never a raw event-emission surface, which would defeat the per-file zero-sweep (tests/test_lifecycle_event_roundtrip.py) that keeps this cluster's emissions inside the verb. -->
+**c. Wait** for every batch task. Send no "send your report" follow-ups: the report is the builder's final message in whatever shape the runtime delivers, and completion derives from the §2d git checkpoint, never from return-delivery shape.
 
-**c. Wait** — all batch tasks finish before proceeding. Send no follow-up "send your report" messages: the report is the builder's final message in whatever shape the runtime delivers it (tool result or completion notification), and completion is always derived from the §2d git checkpoint, never from return-delivery shape.
+**d. Checkpoint** — verify each task produced a commit. Worktree dispatch: `git log HEAD..worktree/{task-name} --oneline` from the main repo CWD; zero lines means no commits → mark failed, and **the orchestrator must NOT commit on its behalf**. Sequential: `git log --oneline -N`. Flip `[ ]` → `[x] done (<short-sha> <commit-ts>)` per success, using the verified sha plus `git log -1 --format=%cI <sha>`. Rework re-checkpoints update to the newest verifying sha.
 
-**d. Checkpoint** — verify each task produced a commit:
-- **Worktree dispatch**: `git log HEAD..worktree/{task-name} --oneline` from the main repo CWD (`{task-name}` = the `name` passed to `Agent(isolation: "worktree")`). Zero lines → the sub-agent made no commits → mark failed. The orchestrator must NOT commit on the sub-agent's behalf.
-- **Sequential dispatch**: `git log --oneline -N` (N = batch task count) to confirm commits.
+**e. Merge back** — worktree dispatch only. Per task in order: no changes → already auto-cleaned. Failed commit → skip the merge, then `git worktree remove "$(cortex-worktree-resolve {task-name})"` and `git branch -d worktree/{task-name}`. Passed → `git merge worktree/{task-name}` from the feature branch, then the same cleanup. Conflict → surface as an integration error naming the branch, continue remaining tasks, don't roll back merged branches. Runs before the next batch so later worktrees branch from an updated HEAD.
 
-Then flip `[ ]` → `[x] done (<short-sha> <commit-ts>)` for every task that succeeded — the sha just verified plus its committer timestamp from `git log -1 --format=%cI <sha>`. Rework re-checkpoints (§3) update the annotation to the newest verifying sha.
+**f. Report** the batch before dispatching the next.
 
-**e. Worktree Integration** — skip entirely for sequential dispatch. For worktree dispatch, follow the five-case merge-back at `${CLAUDE_SKILL_DIR}/references/merge-back.md`.
+### Failure handling
 
-**f. Report** — summarize the batch before dispatching the next.
+Let in-flight tasks finish — don't abort them. Checkpoint the successes, identify downstream tasks transitively blocked, and surface which task failed, the error, and what's blocked.
 
-### Failure Handling
-
-When a batch task fails:
-1. Let other in-flight batch tasks finish — do not abort them.
-2. Checkpoint successful tasks as `[x]`.
-3. Identify downstream tasks transitively depending on the failed one — these are blocked.
-4. Surface which task failed, the error, and which downstream tasks are now blocked.
 <!-- pause: implement-batch-failure question -->
-5. Ask the user: **retry**, **skip** (mark failed, continue non-dependents), or **abort**.
+Then ask the user via `AskUserQuestion`: **retry**, **skip** (mark failed, continue non-dependents), or **abort**.
 
-### Builder Prompt Template
+### Builder prompt template
 
 ```
 You are implementing a single task for the {feature} feature.
@@ -95,43 +74,26 @@ You are implementing a single task for the {feature} feature.
 ## Instructions
 1. Implement exactly what the task specifies.
 2. File paths must match the spec exactly — flag a wrong-looking path rather than silently deviating.
-3. Verify your implementation per the Verification field — and only that; do not run broader suites unless the Verification field names them.
+3. Verify per the Verification field — and only that; do not run broader suites unless it names them.
 4. Commit via the Skill tool (`skill: "commit"`) — never raw `git commit` or `git -C`.
 5. Report as your final message: task name, status (completed/partial/failed), files modified, verification outcome, commit hash, deviations.
-6. Do not create files solely to satisfy your own verification — flag self-sealing checks (an artifact this task created being used to verify itself) in your exit report rather than self-certifying.
+6. Do not create files solely to satisfy your own verification — flag self-sealing checks in your exit report rather than self-certifying.
 
 If this task references the specification, read cortex/lifecycle/{feature}/spec.md. Do not implement other tasks, modify unlisted files, or add unspecified features.
 ```
 
 ### 3. Rework (Review Re-Entry)
 
-Re-entering from Review with CHANGES_REQUESTED — the rework-re-entry transition was already recorded by advance's review-verdict arm when the review returned CHANGES_REQUESTED (it owns that emission), so this re-entry records nothing itself.
-
-1. Read `cortex/lifecycle/{feature}/review.md` for the reviewer's feedback.
-2. For each flagged task, dispatch a fresh sub-task with the original task text + the reviewer's specific feedback + a fix instruction.
-3. Non-flagged tasks keep their `[x]`.
-4. Return to Review.
+The rework transition was already recorded by the review-verdict arm, so this re-entry records nothing. Read `review.md`, dispatch a fresh sub-task per flagged task with the original task text plus the reviewer's feedback and a fix instruction, leave non-flagged tasks `[x]`, return to Review.
 
 ### 4. Transition
 
-When all tasks are `[x]` (short road: when every spec acceptance criterion is met), hand off to advance's implement-transition arm in transition mode. It reads tier/criticality through the shared reducer, applies the implement→{review|complete} routing rule (owned there, not restated here — `${CLAUDE_SKILL_DIR}/references/criticality-matrix.md` §Reading lifecycle state), and records the `phase_transition` idempotently. Route on the returned `state`; do not re-derive it:
+When all tasks are `[x]` (short road: when every acceptance criterion is met):
 
 ```bash
 cortex-lifecycle-advance implement-transition --mode transition --feature {feature}
 ```
 
-Act on the returned `state`:
+The verb reads tier and criticality through the shared reducer, applies the implement→{review|complete} routing rule it owns, and records the transition idempotently. Route on the returned `state` — **`review`** or **`complete`** → proceed there (shared `error`/`refused`/command-not-found arms: SKILL.md § Advance-verb routing).
 
-- **`review`** — the implement→review transition is recorded; proceed to Review.
-- **`complete`** — the implement→complete transition is recorded; proceed to Complete.
-- **`error`** — surface the verb's `message` and halt without advancing.
-- **`refused`** — a gate mismatch: relay the envelope's `reason` and `preferred_remedy`, re-run `cortex-lifecycle-next`, and re-invoke threading its `advance_contract.expected_from_state` via `--from-state`. If the mismatch persists after re-sync, escalate to the operator with the detected phase and the expected from_state — never pass the detected phase.
-
-**Command not found** (`cortex-lifecycle-advance` not on `PATH`) → halt and instruct the operator to install/upgrade the cortex-command CLI, then re-invoke. Do NOT record the transition by hand. <!-- Halt-arm convention: this arm names ONLY the verb and the install remedy — never a raw event-emission surface (see the §2b note). -->
-
-**Proceed automatically** — no confirmation. The transition fires on the gate (every task `[x]`, then the verb's route), not user input. Announce briefly and continue. This boundary is not a kept pause; see SKILL.md §Phase Transition.
-
-## Constraints
-
-- Batch N+1 waits for batch N.
-- Always commit via `/cortex-core:commit` — orchestrator checkpoints and worktree sub-agents included; never raw git.
+Proceed automatically; the transition fires on the gate, not user input. Batch N+1 waits for batch N, and every commit goes through `/cortex-core:commit` — orchestrator checkpoints and worktree sub-agents included, never raw git.

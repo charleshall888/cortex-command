@@ -118,9 +118,6 @@ def _declared_and_required(subcommand: str) -> tuple[set[str], set[str]]:
 # Per-file expected invocation counts per event (the on-disk reality). Keyed by
 # event name; the subcommand is resolved via ``_EVENT_TO_SUB``.
 FILE_EVENTS: dict[str, dict[str, int]] = {
-    "skills/lifecycle/references/criticality-matrix.md": {
-        "criticality_override": 1,
-    },
     # refine-delegation.md no longer emits a typed phase_transition: the served
     # loop (Task 19, R17) derives the refine sub-phase boundaries and routes
     # transitions through cortex-lifecycle-advance, so the file is now in

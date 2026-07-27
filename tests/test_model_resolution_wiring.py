@@ -200,11 +200,10 @@ def test_discovery_entry_point_points_to_fanout_and_binds_searcher() -> None:
 # R8 single-source structure: corrupted:true (Task 9a)
 # ---------------------------------------------------------------------------
 
-_CORRUPTED_CANONICAL = "skills/lifecycle/references/criticality-matrix.md"
+_CORRUPTED_CANONICAL = "skills/lifecycle/SKILL.md"
 _CORRUPTED_CITATIONS = [
     "skills/lifecycle/references/orchestrator-review.md",
-    "skills/lifecycle/references/critical-review-gate.md",
-    "skills/refine/SKILL.md",
+    "skills/refine/references/specify.md",
 ]
 # Distinctive fragment of the canonical rule body — must appear exactly once
 # across the canonical + all citation sites.
@@ -212,7 +211,7 @@ _CORRUPTED_BODY_FRAGMENT = "tier/criticality are unknowable"
 
 
 def test_corrupted_rule_defined_once_in_canonical() -> None:
-    """The canonical corrupted:true rule body lives in criticality-matrix.md."""
+    """The canonical corrupted:true rule body lives in lifecycle SKILL.md."""
     text = _read(_CORRUPTED_CANONICAL)
     assert '`"corrupted": true`' in text
     assert _CORRUPTED_BODY_FRAGMENT in text, (
@@ -226,18 +225,18 @@ def test_corrupted_rule_body_is_single_sourced() -> None:
     hits = [rel for rel in files if _CORRUPTED_BODY_FRAGMENT in _read(rel)]
     assert hits == [_CORRUPTED_CANONICAL], (
         "the corrupted:true rule body must be single-sourced in "
-        f"criticality-matrix.md; found restated in: "
+        f"lifecycle SKILL.md; found restated in: "
         f"{[h for h in hits if h != _CORRUPTED_CANONICAL]}"
     )
 
 
 def test_corrupted_citation_sites_point_to_canonical() -> None:
-    """Each non-canonical corrupted:true site cites criticality-matrix.md."""
+    """Each non-canonical corrupted:true site cites the lifecycle criticality section."""
     for rel in _CORRUPTED_CITATIONS:
         text = _read(rel)
-        assert "criticality-matrix.md" in text, (
+        assert "SKILL.md \u00a7 Criticality" in text, (
             f"{rel}: must cite the canonical corrupted:true rule in "
-            f"criticality-matrix.md rather than restating it"
+            f"lifecycle SKILL.md \u00a7 Criticality rather than restating it"
         )
 
 
@@ -253,7 +252,7 @@ def test_refine_preserves_site_specific_corrupted_mapping() -> None:
     section_3b = text.split("### 3b.")[1].split("### 4.")[0]
     assert '"corrupted": true' in section_3b and "run the gate" in section_3b, (
         "specify.md §3b must keep the corrupted-state → run-the-gate mapping "
-        "inline alongside the criticality-matrix.md citation"
+        "inline alongside the canonical citation"
     )
 
 

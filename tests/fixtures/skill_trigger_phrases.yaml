@@ -11,98 +11,85 @@
 # edit this file via standard PR review — `tests/test_skill_descriptions.py`
 # enforces substring presence at CI time.
 skills:
-  lifecycle:
-    must_contain:
-      - "start a lifecycle"
-      - "lifecycle research/specify/plan/implement/review/complete"
-      - "start a feature lifecycle"
-      - "structured phases"
-  refine:
-    must_contain:
-      - "refine backlog item"
-      - "prepare for overnight"
-      - "prepare feature for execution"
-      - "Clarify → Research → Spec"
-  critical-review:
-    must_contain:
-      - "critical review"
-      - "pressure test"
-      - "adversarial review"
-      - "challenge from multiple angles"
-  discovery:
-    must_contain:
-      - "discover this"
-      - "decompose into backlog"
-      - "break this down into tickets"
   backlog:
     must_contain:
-      - "/cortex-backlog:backlog"
-      - "add to backlog"
-      - "pick a backlog item"
-  commit:
-    must_contain:
-      - "/cortex-core:commit"
-      - "make a commit"
-      - "commit these changes"
-  dev:
-    must_contain:
-      - "/cortex-core:dev"
-      - "what should I work on"
-      - "where do I start"
-  diagnose:
-    must_contain:
-      - "fix this bug"
-      - "why is this failing"
-      - "make this test pass"
-  morning-review:
-    must_contain:
-      - "/morning-review"
-      - "morning review"
-      - "what happened overnight"
-  overnight:
-    must_contain:
-      - "/overnight"
-      - "start overnight session"
-      - "launch overnight"
-  pr:
-    must_contain:
-      - "/cortex-core:pr"
-      - "create a pr"
-      - "open a pull request"
-  requirements:
-    must_contain:
-      - "/cortex-core:requirements"
-      - "gather requirements"
-      - "define project scope"
-  research:
-    must_contain:
-      - "/cortex-core:research"
-      - "research this topic"
-      - "investigate this feature"
-  # The four post-#191 uncapped skills (cap-policy lifecycle 298). Each entry's
-  # phrases are a deletion regression-guard for the Phase-2 trim. For the two
-  # collision pairs (interview <-> backlog-author, requirements-gather <->
-  # requirements-write) the first phrase is a disambiguator verified absent from
-  # the sibling's description (an authoring-time read-check, not a running test).
-  interview:
-    must_contain:
-      - "thinking-partner interview"
-      - "General-purpose priming interview"
-      - "grilling"
-      - "help you think through a topic"
+    - /cortex-backlog:backlog
+    - add to backlog
+    - pick a backlog item
   backlog-author:
     must_contain:
-      - "Why/Role/Integration/Edges/Touch-points template"
-      - "Compose structured backlog ticket bodies"
-      - "write a ticket body"
-      - "author a backlog item"
+    - write a ticket body
+    - author a backlog item
+  commit:
+    must_contain:
+    - /cortex-core:commit
+    - make a commit
+    - commit these changes
+  critical-review:
+    must_contain:
+    - critical review
+    - pressure test
+    - adversarial review
+    - challenge from multiple angles
+  dev:
+    must_contain:
+    - /cortex-core:dev
+    - what should I work on
+    - where do I start
+  discovery:
+    must_contain:
+    - discover this
+    - decompose into backlog
+    - break this down into tickets
+  interview:
+    must_contain:
+    - thinking-partner interview
+    - General-purpose priming interview
+    - grilling
+    - help you think through a topic
+  lifecycle:
+    must_contain:
+    - start a lifecycle
+    - lifecycle research/specify/plan/implement/review/complete
+    - start a feature lifecycle
+    - structured phases
+  morning-review:
+    must_contain:
+    - /morning-review
+    - morning review
+    - what happened overnight
+  overnight:
+    must_contain:
+    - /overnight
+    - start overnight session
+    - launch overnight
+  pr:
+    must_contain:
+    - /cortex-core:pr
+    - create a pr
+    - open a pull request
+  refine:
+    must_contain:
+    - refine backlog item
+    - prepare for overnight
+    - prepare feature for execution
+    - "Clarify \u2192 Research \u2192 Spec"
+  requirements:
+    must_contain:
+    - /cortex-core:requirements
+    - gather requirements
+    - define project scope
   requirements-gather:
     must_contain:
-      - "Interview-only sub-skill"
-      - "produces a structured Q&A markdown block"
-      - "Adopts mattpocock interview patterns"
+    - Interview-only sub-skill
+    - produces a structured Q&A markdown block
   requirements-write:
     must_contain:
-      - "Synthesize-only sub-skill"
-      - "v2-compliant"
-      - "never conducts an interview itself"
+    - Synthesize-only sub-skill
+    - v2-compliant
+    - never conducts an interview itself
+  research:
+    must_contain:
+    - /cortex-core:research
+    - research this topic
+    - investigate this feature

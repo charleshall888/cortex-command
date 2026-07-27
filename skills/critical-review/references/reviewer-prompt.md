@@ -1,52 +1,38 @@
 # Per-Angle Reviewer Prompt Template
 
-Canonical prompt template for the per-angle reviewer agents dispatched in Step 2c
-of the critical-review skill. Only the body after `---` is dispatched, verbatim, with the Step 2a substitutions applied.
+Dispatched verbatim (body after the `---`) with the Step 2–3 substitutions applied.
 
 ---
 
 You are conducting an adversarial review of one specific angle.
 
-## Artifact
-
-- Path: `{artifact_path}`
-- Expected SHA-256: `{artifact_sha256}`
-
-Read the literal absolute path provided above before beginning analysis. Do NOT re-derive the path yourself.
-
-When the Read succeeds AND the computed SHA-256 of the Read result matches `{artifact_sha256}`, emit `READ_OK: <path> <sha>` on its own line (the absolute path you Read and its SHA-256) as the first line of your output, then continue with the analysis below. This `READ_OK` line is an advisory read-attestation, not the drift gate — the orchestrator re-hashes the pinned artifact itself as the authoritative drift check.
-
-When the Read fails or returns empty content, emit `READ_FAILED: <absolute-path> <one-word-reason>` on its own line before any other content and stop — do not proceed with analysis.
+Read `{artifact_path}` — the literal absolute path above. Do NOT re-derive it.
 
 ## Project Context
-{## Project Context block from Step 2a, omit this entire section if no context was loaded}
+{## Project Context block, omit this entire section if none was loaded}
 
 ## Your Angle
-**{angle name}**: {angle description — 1-2 sentences describing what this angle investigates}
+**{angle name}**: {angle description}
 
 ## Finding Classes
 
-Tag each finding with exactly one class — no multi-class tags.
+Tag each finding with exactly one class.
 
-- **A — fix-invalidating**: the artifact's proposed change does not work as described, or makes the situation worse. Worked example: "the refactor removes a null check the caller depends on."
-- **B — adjacent-gap**: the proposed change is internally correct but an adjacent code path, callsite, or contract is left misaligned. Worked example: "the fix is correct but the analytics event a layer up still fires on the old path."
-- **C — framing**: the artifact's narrative or framing misrepresents the change, scope, or motivation. Worked example: "the commit message misrepresents the change scope."
+- **A — fix-invalidating**: the artifact's proposed change does not work as described, or makes things worse. ("The refactor removes a null check the caller depends on.")
+- **B — adjacent-gap**: the change is internally correct but an adjacent code path, callsite, or contract is left misaligned. ("The fix is correct but the analytics event a layer up still fires on the old path.")
+- **C — framing**: the narrative misrepresents the change, scope, or motivation.
 
-For any A-class finding, include a `fix_invalidation_argument` — one sentence explaining why the proposed change as written would fail to produce its stated outcome (not merely that an adjacent concern exists).
+Every A-class finding needs a `fix_invalidation_argument`: one sentence naming the concrete mechanism by which the change, as written, fails to produce its stated outcome — not merely that an adjacent concern exists.
 
-### Straddle Protocol
-
-If one observed problem decomposes into both an A-class and a B-class concern, **split** into two separate findings. If the concerns cannot be cleanly split, **bias up to A** — the conservative class wins on unsplittable cases.
+If one problem decomposes into both an A and a B concern, **split it into two findings**. If they can't be cleanly split, **bias up to A** and say why in `straddle_rationale`.
 
 ## Instructions
 
-Work within a ~40-turn cap. On reaching it, stop investigating and return what you have — a partial return beats no return.
+Work within a ~40-turn cap; on reaching it, return what you have.
 
-1. Focus exclusively on your assigned angle; be specific — cite exact artifact text in quotes ("This might not scale" is not acceptable).
-2. Investigate freely — run probes, measurements, and live commands as needed; that work happens in your own context and is encouraged over speculation.
-3. Do not cover other angles. Do not be balanced.
+Focus exclusively on your angle — do not cover others, do not be balanced. Cite exact artifact text in quotes; "this might not scale" is not acceptable. Investigate freely: probes, measurements, and live commands happen in your own context and are strongly preferred over speculation.
 
-**The JSON envelope is your entire deliverable — there is no prose report.** Only the envelope is read; anything outside it is discarded. Put probe output, in-engine numbers, and any other empirical evidence in the `measurement` field — that is its only home. Place the `<!--findings-json-->` delimiter on a line by itself, then the JSON object on subsequent lines:
+**The JSON envelope is your entire deliverable.** Anything outside it is discarded, so empirical evidence belongs in `measurement` — that is its only home. Put the delimiter on its own line, then the object:
 
 <!--findings-json-->
 {
@@ -56,9 +42,9 @@ Work within a ~40-turn cap. On reaching it, stop investigating and return what y
       "class": "A" | "B" | "C",
       "finding": "<text>",
       "evidence_quote": "<verbatim quote from the artifact>",
-      "measurement": "<optional: probe/measurement output backing this finding, verbatim>",
+      "measurement": "<optional: probe output backing this finding, verbatim>",
       "fix_invalidation_argument": "<optional, A-class only>",
-      "straddle_rationale": "<optional: split or bias-up-to-A rationale>"
+      "straddle_rationale": "<optional: split or bias-up rationale>"
     }
   ]
 }

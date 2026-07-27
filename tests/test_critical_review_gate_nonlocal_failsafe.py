@@ -48,7 +48,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 GATE_REF = (
-    REPO_ROOT / "skills" / "lifecycle" / "references" / "critical-review-gate.md"
+    REPO_ROOT / "skills" / "refine" / "references" / "specify.md"
 )
 SPECIFY_REF = REPO_ROOT / "skills" / "refine" / "references" / "specify.md"
 

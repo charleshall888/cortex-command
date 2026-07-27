@@ -56,7 +56,6 @@ _BASELINES: dict[str, int] = {
     "commit": 208,
     "critical-review": 795,
     "dev": 285,
-    "diagnose": 294,
     "discovery": 932,
     "interview": 361,
     "lifecycle": 890,

@@ -1,41 +1,33 @@
 # Research Fan-Out
 
-Shared, canonical protocol for sizing and dispatching parallel research agents — single source for the agent-count matrix, angle-selection rule, and dispatch order. Cited by both consuming entry points (`/cortex-core:research`, `/cortex-core:discovery`) so their fan-out cannot drift apart.
+Shared by `/cortex-core:research` and `/cortex-core:discovery` so their fan-out cannot drift apart.
 
 ## Count matrix
-
-Agent count is the cell where the task's tier (row) meets its criticality (column):
 
 | tier \ criticality | low | medium | high | critical |
 |--------------------|-----|--------|------|----------|
 | **simple**         | 1   | 2      | 3    | 4        |
 | **complex**        | 5   | 6      | 8    | 10       |
 
-The count is an **upper bound on breadth, not a quota** — dispatch fewer if the task offers fewer genuinely distinct angles than its cell allows.
+An **upper bound on breadth, not a quota** — dispatch fewer when the task offers fewer genuinely distinct angles.
 
-## Hybrid angle selection
+## Angle selection
 
-The **mandatory core** is tier-scoped:
+The mandatory core is tier-scoped:
 
-- **Codebase** — how the existing system works, where the change lands, what it touches. Mandatory at **every** cell.
-- **Web** — external prior art, libraries, patterns, and known pitfalls. Mandatory at **complex** tier; at simple tier dispatch it only when the task names an external dependency, protocol, or library question.
-- **Requirements & Constraints** — project/area requirements, scope boundaries, non-negotiables. Mandatory at **complex** tier; at simple tier Clarify's requirements-alignment note already covers this — dispatch it only when that note was `partial` or `conflict`.
+- **Codebase** — mandatory at every cell.
+- **Web** — mandatory at complex tier; at simple tier only when the task names an external dependency, protocol, or library question.
+- **Requirements & Constraints** — mandatory at complex tier; at simple tier only when Clarify's requirements-alignment note was `partial` or `conflict`.
 
-The simple row is deliberately thin: simple work is defined (clarify.md) as an existing pattern followed exactly, and the complexity escalator ratchets tier up when research surfaces open questions — a too-thin pass escalates on evidence rather than silently proceeding.
+The simple row is deliberately thin: simple work follows an existing pattern exactly, and `cortex-complexity-escalator` ratchets tier up when research surfaces open questions — a too-thin pass escalates on evidence rather than proceeding silently.
 
-An **Adversarial** angle is **always present for high/critical** work (optional below that, at orchestrator discretion). It runs **last**, over a summary of the other agents' findings rather than the raw task.
+**Adversarial** is always present for high/critical (optional below), and runs **last**, over a summary of the other agents' findings.
 
-The **remaining slots** are **chosen by the orchestrator per task** — distinct, non-redundant angles, each investigating something the others don't. *Tradeoffs* is a common choice. Subdivide an existing angle by scope (e.g., Codebase into per-subsystem agents) only once distinct angles are exhausted; note in `## Open Questions` when subdivision was driven by the cell's count rather than genuine distinctness.
+Remaining slots are orchestrator-chosen: distinct, non-redundant angles each investigating something the others don't. Subdivide an existing angle by scope only once distinct angles are exhausted, and note in `## Open Questions` when subdivision was driven by the cell's count rather than genuine distinctness.
 
-## Dispatch protocol
+## Dispatch order
 
-1. **Core wave (parallel) — binds the `searcher` model.** Dispatch the mandatory core plus orchestrator-chosen angles — every angle except the always-last adversarial one — in parallel. Each consuming orchestrator body resolves `model=$(cortex-resolve-model --role searcher)` and binds it as every core-wave `Agent`'s `model:`; on nonzero resolve it degrades loud — dispatch with **no** `model:` (inherit the parent) plus a one-line warning, never halting.
-2. **Adversarial wave (last) — inherits the parent.** For high/critical work, once the core wave returns, summarize its findings and dispatch the adversarial agent over that summary; fold its critique into synthesis. It omits `model:` (not routed to the cheaper `searcher`).
+1. **Core wave (parallel)** — every angle except the adversarial one, each bound to `model=$(cortex-resolve-model --role searcher)`. On nonzero resolve it degrades loud — dispatch with no `model:` plus a one-line warning, never halting.
+2. **Adversarial wave (last)** — summarize the core wave, dispatch over that summary, omit `model:` (inherits the parent, not the cheaper searcher).
 
 At low/medium criticality with no adversarial agent, the core wave is the whole dispatch.
-
-This file authors the *rule*; each consumer carries its own runnable resolve + `model:` bind.
-
-## Why this protocol
-
-The two factors compound rather than max, so complex+critical peaks the count (10) at a concurrency-and-diminishing-returns ceiling. Discovery biases sizing toward this grid's high end (see clarify.md for why).
