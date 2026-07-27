@@ -39,8 +39,8 @@
   let glintTimer = null;
 
   function lobbyVisible() {
-    const sec = document.getElementById("sc-cold-open");
-    return !!sec && sec.classList.contains("active") && !sec.classList.contains("staged");
+    const sec = document.getElementById("sc-title");
+    return !!sec && sec.classList.contains("active");
   }
 
   /* re-trigger a one-shot CSS animation */
@@ -56,7 +56,7 @@
     clearTimeout(plinkTimer);
     plinkTimer = setTimeout(() => {
       if (!lobbyVisible()) return;
-      replay(document.querySelector("#sc-cold-open .title-card .dock"), "plink");
+      replay(document.querySelector("#sc-title .title-card .dock"), "plink");
       const r = Math.random();
       schedulePlink(r < 0.16 ? 2400 : 6500 + r * 9000 + (r > 0.85 ? 8000 : 0));
     }, delay);
@@ -67,7 +67,7 @@
     clearTimeout(glintTimer);
     glintTimer = setTimeout(() => {
       if (!lobbyVisible()) return;
-      replay(document.querySelector("#sc-cold-open .title-card h1"), "glint");
+      replay(document.querySelector("#sc-title .title-card h1"), "glint");
       scheduleGlint(75000 + Math.random() * 45000);
     }, delay);
   }
@@ -207,45 +207,53 @@
   }
 
   const hooks = {
+    /* the title card is its own scene, so the arrival and the lobby idle live
+       here — nothing else on this scene moves, which is the point: the room
+       joins during the idle and leaves during Q&A, so the craft budget goes
+       to what they actually sit and look at. */
+    "sc-title": (sec) => {
+      if (introPending) {
+        sec.classList.add("arrive"); // the cast — first cold show only
+        introPending = false;
+        if (!REDUCED) {
+          schedulePlink(9200); // first plink waits for the arrival to finish
+          scheduleGlint(6100); // the surfacing complete, moonlight passes once
+        }
+      } else {
+        sec.classList.remove("arrive");
+        if (!REDUCED) {
+          schedulePlink(4500);
+          scheduleGlint(30000);
+        }
+      }
+    },
+
+    /* the mystery, now landing AFTER the vocabulary scene: the room already
+       knows what the bar is, so this reads as the payoff rather than a cold
+       puzzle. Beats are one lower than they were when the title card shared
+       this scene — the stage is on screen from b0. */
     "sc-cold-open": (sec, b) => {
       if (b === 0) {
-        sec.classList.remove("staged", "spotlight");
-        if (introPending) {
-          sec.classList.add("arrive"); // the cast — first cold show only
-          introPending = false;
-          if (!REDUCED) {
-            schedulePlink(9200); // first plink waits for the arrival to finish
-            scheduleGlint(6100); // the surfacing complete, moonlight passes once
-          }
-        } else {
-          sec.classList.remove("arrive");
-          if (!REDUCED) {
-            schedulePlink(4500);
-            scheduleGlint(30000);
-          }
-        }
-        if (state.termLeft) state.termLeft.clear();
-        if (state.termRight) state.termRight.clear();
-        if (state.cbLeft) state.cbLeft.set(0, { ms: 0 });
-        if (state.cbRight) state.cbRight.set(0, { ms: 0 });
-      }
-      if (b === 1) {
-        sec.classList.add("staged");
+        sec.classList.remove("spotlight");
         if (!state.termLeft) {
           state.termLeft = makeTerminal(document.getElementById("term-left"), { title: "fresh session · 4:00 PM" });
           state.termRight = makeTerminal(document.getElementById("term-right"), { title: "six-hour session · 4:00 PM" });
           state.cbLeft = makeContextBar(document.getElementById("cbar-left"), { h: 12 });
           state.cbRight = makeContextBar(document.getElementById("cbar-right"), { h: 12 });
         }
+        state.termLeft.clear();
+        state.termRight.clear();
+        state.cbLeft.set(0, { ms: 0 });
+        state.cbRight.set(0, { ms: 0 });
         state.cbLeft.set(8, { ms: 900 });
         state.cbRight.set(91, { ms: 2600 }); // six hours, compressed into one sweep
       }
-      if (b === 2) {
+      if (b === 1) {
         state.termLeft.play(LEFT_SCRIPT);
         state.cbLeft.set(13, { ms: 11000 });
       }
-      if (b === 3) state.termRight.play(RIGHT_SCRIPT); // the bar parks at 91 — the finale echoes it
-      if (b === 4) sec.classList.add("spotlight"); // dim everything but the two bars
+      if (b === 2) state.termRight.play(RIGHT_SCRIPT); // the bar parks at 91 — the finale echoes it
+      if (b === 3) sec.classList.add("spotlight"); // dim everything but the two bars
     },
 
     /* the vocabulary scene. The chain builds right-to-left — the window and
@@ -883,7 +891,7 @@
     "the window is one turn’s worth of everything it knows",
     "the harness decides what makes the cut",
     "you pick the harness. You write what it picks up.",
-    "it all goes again every turn — the part that didn’t change is reused",
+    "it all goes again every turn — only the unchanged start is reused",
     "the model takes more on — the harness carries less",
     "so you go back and cut what it outgrew",
     "so you go back and cut what it outgrew",
@@ -935,29 +943,43 @@
     txt(714, 196, "the model", "pt-name", known);
     arrow(644, 670, known);
 
-    /* b1 — the harness: a gate, not a panel. Four rows go in; two pass all
-       the way through and out toward the window, two dead-end against a stop
-       inside it. The icon does its own explaining — you can watch it choose,
-       so "some of what you wrote made it, some didn't" costs no words. */
+    /* b1 — the harness as a DECISION DIAMOND. Two earlier builds drew it as a
+       rectangle with rows inside, and both failed for the same reason: every
+       other object here matches something the room already has a word for —
+       the sheets are papers, the slab is a monolith, the window is a meter —
+       while a rectangle with lines in it is the residual shape you draw when
+       you haven't decided what the thing IS. With no object, the choosing had
+       to happen inside a generic frame, which meant showing it as STATE (lit
+       rows vs dim ones), which put the whole message on brightness — the
+       first thing a projector kills. The diamond is a noun to this room, and
+       it moves the message into geometry: four strands fan in, two leave to
+       the right and land in the window, two fall away and reach nothing.
+       The bracket makes this free — the survivors are the only things that
+       cross x=402, so "some of your material leaves your half, the rest never
+       does" is drawn rather than claimed. */
     const har = el("g", { class: "pt-g pt-b1" }, svg);
     const hbody = el("g", { class: "pt-har-scale" }, har);
-    el("path", {
-      class: "pt-box",
-      d: "M 238 70 L 388 70 L 402 84 L 402 164 A 6 6 0 0 1 396 170 L 238 170 A 6 6 0 0 1 232 164 L 232 76 A 6 6 0 0 1 238 70 Z",
-    }, hbody);
-    [[88, 1], [106, 0], [124, 1], [142, 0]].forEach(([y, through]) => {
-      if (through) {
-        // past the wall on purpose: crossing the edge is what makes "this one
-        // made it out" readable without a label
-        el("line", { class: "pt-row lit", x1: 240, y1: y, x2: 412, y2: y }, hbody);
-      } else {
-        el("line", { class: "pt-row", x1: 240, y1: y, x2: 318, y2: y }, hbody);
-        el("line", { class: "pt-stop", x1: 321, y1: y - 6, x2: 321, y2: y + 6 }, hbody);
-      }
+    [76, 105, 135, 164].forEach((y) => {
+      el("line", { class: "pt-fan", x1: 234, y1: y, x2: 280, y2: 120 }, hbody);
+    });
+    el("polygon", { class: "pt-node", points: "306,94 332,120 306,146 280,120" }, hbody);
+    /* the rejects stop short and carry no head. Deliberately shorter than the
+       first draft: converge-then-diverge is also the glyph for a network hub,
+       and a hub FORWARDS — these have to visibly quit inside the harness's
+       own footprint or they plant a phantom second destination. */
+    ["M 306 146 Q 328 160 350 164", "M 306 146 Q 320 163 332 174"].forEach((d) => {
+      el("path", { class: "pt-drop", d }, hbody);
+    });
+    // survivors sit OUTSIDE the scale group: the harness thinning is a claim
+    // about how much sorting is left, not about what got through
+    ["M 332 120 L 362 112 L 428 112", "M 332 120 L 362 128 L 428 128"].forEach((d) => {
+      el("path", { class: "pt-keep", d }, har);
+    });
+    [112, 128].forEach((y) => {
+      el("path", { class: "pt-keep-head", d: `M 436 ${y} l -8 -4.5 l 0 9 z` }, har);
     });
     txt(317, 196, "the harness", "pt-name", har);
     txt(317, 214, "Claude Code · Cursor · Codex", "pt-sub", har);
-    arrow(406, 436, har);
 
     /* b2 — your half: the files the harness picks up. Three sheets, drawn
        with visible edges so they read as made by hand, not shipped. */
@@ -974,37 +996,40 @@
     txt(113, 214, "skills · docs · memory", "pt-sub", files);
     arrow(176, 228, files);
 
-    /* b3 — caching, drawn ON the window because that is where it happens:
-       the whole thing is sent again every turn, and the prefix that didn't
-       change is reused rather than re-read from scratch. Deliberately makes
-       no price claim — the gauge owns the economics, and it reuses this exact
-       hatch, so introducing it here makes that scene cheaper rather than
-       teaching the same idea twice. */
+    /* b3 — caching, drawn ON the window because that is where it happens.
+       IT IS A PREFIX, NOT "everything that didn't change": reuse runs from
+       the start to a breakpoint, and the tail past it is re-read at full
+       price even when it is byte-identical. An earlier build hatched most of
+       the fill and left a "new" sliver, which quietly claimed the opposite —
+       so the hatch stops at a marked edge and the caption says "the start".
+       Still no price claim; the gauge owns the economics and reuses this
+       exact hatch, so introducing it here makes that scene cheaper. */
     const defs = el("defs", {}, svg);
     const clip = el("clipPath", { id: "pt-reused-clip" }, defs);
-    el("rect", { x: 440, y: 108, width: 44, height: 24, rx: 4 }, clip);
+    el("rect", { x: 440, y: 108, width: 35, height: 24, rx: 4 }, clip);
     const cache = el("g", { class: "pt-cache" }, svg);
     const hatched = el("g", { "clip-path": "url(#pt-reused-clip)" }, cache);
-    for (let x = 426; x < 492; x += 6) {
+    for (let x = 426; x < 486; x += 6) {
       el("line", { class: "pt-hatch", x1: x, y1: 134, x2: x + 12, y2: 104 }, hatched);
     }
-    el("rect", { class: "pt-new", x: 484, y: 108, width: 15, height: 24, rx: 2 }, cache);
-    txt(456, 99, "reused", "pt-cache-tag", cache);
-    txt(514, 99, "new", "pt-cache-tag pt-cache-new", cache);
+    // where the reuse stops — the breakpoint, drawn rather than described
+    el("line", { class: "pt-cache-edge", x1: 475, y1: 106, x2: 475, y2: 134 }, cache);
+    txt(457, 99, "reused", "pt-cache-tag", cache);
 
-    /* b5 — the habit. It stands at the HEAD of the chain rather than arcing
-       back over it: as an arc it read as ambiguous feedback, and as a step it
-       says the true thing — this is where your half starts, because the files
-       never write or shorten themselves. Still not a box: a return loop, in
-       your ochre, so it stays visibly something you DO rather than something
-       you own. It points into what you write in the same beat that stack
-       thins, because it is what thinned it. */
+    /* b5 — the habits, as a BRACKET over the two things they act on. A habit
+       is not a stage in the pipeline and not an artifact in it — it is how
+       you use what you wrote and the harness you run it in, so it spans them
+       both and belongs to neither. This also fixes what the earlier arc and
+       the head-of-chain step both got wrong: each implied a single hand-off
+       point, when the real relationship is that these two are the half you
+       actually operate. The bracket is the deck's own grammar (§2's earlier
+       cut used one to gather and name a group), and it lands in the same beat
+       your files thin, because the habits are what thinned them. */
     const habit = el("g", { class: "pt-habit" }, svg);
-    el("path", { class: "pt-loop", pathLength: 100, d: "M -33.2 100.4 A 23 23 0 1 1 -62.8 100.4" }, habit);
-    el("path", { class: "pt-loop-head", d: "M -59 97.2 L -63.3 106.1 L -68.5 99.9 Z" }, habit);
-    txt(-48, 196, "the habit", "pt-name pt-habit-name", habit);
-    txt(-48, 214, "look, then cut", "pt-sub", habit);
-    arrow(-18, 54, habit);
+    el("path", { class: "pt-brace", pathLength: 100, d: "M 60 60 L 60 50 L 402 50 L 402 60" }, habit);
+    el("path", { class: "pt-brace-stem", d: "M 231 50 L 231 43" }, habit);
+    txt(231, 24, "your habits", "pt-name pt-habit-name", habit);
+    txt(231, 38, "how you use these", "pt-sub", habit);
   }
 
   /* scene 14: the shared tackle box — the object pv-3 names but never draws.

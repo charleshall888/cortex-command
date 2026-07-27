@@ -8,27 +8,32 @@
    Appendix A. */
 
 const NOTES = {
-  "sc-cold-open": {
+  "sc-title": {
     beats: [
       "“Nightline — set your lines overnight, wake up to your catch. Every demo lives here.”",
-      "(request + panes; LET both bars fill — don't talk over the right one's sweep) “Two agents, same request — same model, same tools. Watch the bars.”",
+    ],
+    exit: "“Before any of that — ninety seconds on the machinery. Four pieces, and one of them turns out to be the whole talk.”",
+  },
+  "sc-cold-open": {
+    beats: [
+      "(request + panes; LET both bars fill — don't talk over the right one's sweep) “Two agents, same request — same model, same tools. Watch the bars.” They know what those bars are now — you don't have to explain them, just point.",
       "(LEFT plays ~20s) “One question first — then it nailed it.”",
       "(RIGHT plays) “This one's patching a file with nothing to do with the log.” (let “biting disabled game-wide” land on its own)",
       "(dims to the two bars) Let “Same model. Same tools. Same request.” land. Then: “six hours in — that's mine, my actual Friday.” DISCLOSURE: “I staged both — the stories I tell over it are real.” Land it: “the only thing that changed on this screen is that bar.”",
     ],
-    exit: "PLANT: “one study — experienced engineers, 19% SLOWER with AI. I believe it. By the end you'll know the mechanism I blame.”",
+    exit: "“So the model wasn’t the variable there — my half was.” PLANT: “one study — experienced engineers, 19% SLOWER with AI. I believe it. By the end you'll know the mechanism I blame.”",
   },
   "sc-parts": {
     beats: [
-      "(the window and the model \u2014 the two things they were just looking at) \u201cThat bar from a second ago has a name: the context window. One turn\u2019s worth of everything the model knows.\u201d Then the arrow: \u201cit reads that, and nothing else. Not your repo, not your head \u2014 that.\u201d",
-      "(the harness lands \u2014 four rows go in, two run out the far side, two stop dead) \u201cSomething has to decide what goes in there. That thing is the harness \u2014 Claude Code, Cursor, Codex. Whichever one you\u2019re in, that\u2019s its whole job.\u201d Point at the two that stop: \u201cthose exist too. They didn\u2019t make the cut this turn.\u201d IF ASKED where the model ends and the harness begins: \u201cthe window is the model\u2019s. What\u2019s in it is the harness\u2019s \u2014 and what the harness gets to choose from is yours.\u201d",
+      "(two objects: a bar, and the thing that reads it) \u201cStart with the two pieces everything else hangs off. This bar is the context window \u2014 one turn\u2019s worth of everything the model knows.\u201d Then the arrow: \u201cit reads that, and nothing else. Not your repo, not your head \u2014 that.\u201d DON\u2019T oversell it here; you\u2019re about to show them two of these bars side by side, and that\u2019s where it lands.",
+      "(four strands fan into a diamond; two leave to the right and land in the bar, two fall away and reach nothing) \u201cSomething has to decide what goes in there. That thing is the harness \u2014 Claude Code, Cursor, Codex. Whichever one you\u2019re in, that\u2019s its whole job.\u201d Point at the two that fall: \u201cthose exist too. They didn\u2019t make the cut this turn.\u201d Then the colour, if it helps: \u201cwhat carries on is the same colour as your files. What drops out goes grey.\u201d IF ASKED where the model ends and the harness begins: \u201cthe window is the model\u2019s. What\u2019s in it is the harness\u2019s \u2014 and what the harness gets to choose from is yours.\u201d",
       "(your files arrive on the left) \u201cAnd it picks up from what you wrote \u2014 skills, docs, the memory it keeps. Two of these three are a choice you make: you pick the harness, and you write what it picks up.\u201d",
-      "(hatching stamps over most of the window; one bright sliver is left at the end) \u201cEvery turn, the whole thing goes again \u2014 start to finish. But the part that didn\u2019t change since last turn gets reused, not re-read from scratch.\u201d Point at the sliver: \u201cthat\u2019s the only new part.\u201d DON\u2019T price it here \u2014 the gauge does that two slides from now.",
-      "(the slab grows and gains layers; the harness thins in front of it) \u201cThe model takes more on with every release \u2014 and the harness carries less because of it. That part isn\u2019t your doing: you didn\u2019t build it, and you can swap it out.\u201d THE EVIDENCE (the note line): \u201cthis isn\u2019t hypothetical. When Opus 5 shipped, Anthropic cut about eighty percent of the prompt guidance out of Claude Code \u2014 the model had outgrown it.\u201d Notice what didn\u2019t move: \u201cthe window. Same size it always was.\u201d",
-      "(the habit arrives at the head of the chain and points into your files; the stack thins to one sheet) \u201cHalf of what you wrote was propping up something the model couldn\u2019t do yet. It can now \u2014 and nothing you wrote takes itself back out.\u201d THE HABIT: \u201cso every so often you go look at what\u2019s actually in that window, and you cut what the model outgrew.\u201d Why it sits where it sits: \u201cit\u2019s the only thing on this slide that isn\u2019t a part \u2014 it\u2019s what you do to them, and it\u2019s where your half starts. The files don\u2019t write themselves and they don\u2019t shorten themselves.\u201d The hedge, plainly (the note line): \u201cand better doesn\u2019t mean free \u2014 still billed by the token, still sharper in a clean window. That\u2019s why the cutting never stops.\u201d",
+      "(hatching stamps over the front of the window and stops at a marked edge) \u201cEvery turn, the whole thing goes again \u2014 start to finish. The unchanged run at the start gets reused instead of re-read from scratch.\u201d Point at the edge: \u201cbut it\u2019s the start, not everything that stayed the same. Past that mark you pay for it again \u2014 even if not one character of it changed.\u201d DON\u2019T price it here \u2014 the gauge does that two slides from now.",
+      "(the slab grows and gains layers; the diamond flattens and the discards fade) \u201cThe model takes more on with every release \u2014 and there\u2019s less for the harness to sort because of it. That part isn\u2019t your doing: you didn\u2019t build it, and you can swap it out.\u201d THE EVIDENCE (the note line): \u201cthis isn\u2019t hypothetical. When Opus 5 shipped, Anthropic cut about eighty percent of the prompt guidance out of Claude Code \u2014 the model had outgrown it.\u201d Notice what didn\u2019t move: \u201cthe window. Same size it always was.\u201d",
+      "(a bracket closes over your files AND the harness; the stack thins to one sheet) \u201cHalf of what you wrote was propping up something the model couldn\u2019t do yet. It can now \u2014 and nothing you wrote takes itself back out.\u201d THE HABITS, tracing the bracket: \u201cso every so often you go look at what\u2019s actually in that window, and you cut what the model outgrew.\u201d Why it spans two things: \u201cyour habits aren\u2019t another part in the line \u2014 they\u2019re how you use the two parts that are actually yours. You picked the harness. You wrote what it picks up. What you do with those two is the whole of your half.\u201d The hedge, plainly (the note line): \u201cand better doesn\u2019t mean free \u2014 still billed by the token, still sharper in a clean window. That\u2019s why the cutting never stops.\u201d",
       "(thesis) SILENT \u2014 let \u201cHabits shift. The game doesn\u2019t.\u201d land. If you say anything: \u201cthe specifics age out. Managing what\u2019s in that window is the same job it was two years ago, and it\u2019ll be the same job two years from now.\u201d",
     ],
-    exit: "\u201cSo the model wasn\u2019t the variable a minute ago \u2014 my half was. And one workflow you know cold beats five you keep switching between. Here\u2019s the map of that half \u2014 and here\u2019s the game.\u201d",
+    exit: "\u201cThat\u2019s the whole apparatus \u2014 and the only part you can\u2019t change is the one everybody argues about. Now watch what happens when the same request goes through it twice on the same afternoon.\u201d",
   },
   "sc-blueprint": {
     beats: [

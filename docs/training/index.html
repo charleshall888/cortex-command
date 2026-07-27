@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex" />
 <title>Context Is the Game</title>
 <link rel="icon" href="data:," />
-<link rel="stylesheet" href="lib/deck.css?v=37" />
+<link rel="stylesheet" href="lib/deck.css?v=42" />
 </head>
 <body>
 <div id="sky" aria-hidden="true">
@@ -31,7 +31,7 @@
 <main id="deck">
 
   <!-- ========== ACT 0 · THE MYSTERY ========== -->
-  <section class="scene" id="sc-cold-open" data-title="Friday, 4:00 PM" data-beats="4">
+  <section class="scene" id="sc-title" data-title="Context Is the Game" data-beats="0">
     <div class="title-card" data-beat="0">
       <svg class="dock" viewBox="0 0 640 240" aria-hidden="true">
         <line x1="0" y1="160" x2="640" y2="160" class="water" pathLength="100"/>
@@ -50,30 +50,6 @@
       <p class="game-intro mono">every demo lives in <em>NIGHTLINE</em> — a fictional fishing game: set lines overnight, wake up to your catch</p>
       <p class="start-hint mono">press → to begin</p>
     </div>
-    <div class="cold-open-stage" data-beat="1">
-      <p class="request mono">› add an empty-state to the catch log</p>
-      <div class="twin">
-        <div class="pane">
-          <div id="term-left"></div>
-          <div class="cbar-slot" id="cbar-left"></div>
-          <p class="bar-tag mono">started fresh</p>
-          <div class="avatar-slot" data-beat="4">
-            <svg class="avatar crisp" viewBox="0 0 80 100"><circle cx="40" cy="24" r="14"/><path d="M 40 38 L 40 72 M 40 48 L 22 60 M 40 48 L 58 60 M 40 72 L 28 96 M 40 72 L 52 96"/></svg>
-          </div>
-        </div>
-        <div class="pane">
-          <div id="term-right"></div>
-          <div class="cbar-slot" id="cbar-right"></div>
-          <p class="bar-tag mono">six hours deep</p>
-          <div class="avatar-slot" data-beat="4">
-            <svg class="avatar slumped" viewBox="0 0 80 100"><circle cx="34" cy="34" r="14"/><path d="M 36 48 Q 40 60 40 74 M 38 54 L 24 68 M 38 54 L 50 70 M 40 74 L 30 96 M 40 74 L 50 96"/></svg>
-            <svg class="clock" viewBox="0 0 40 40"><circle cx="20" cy="20" r="17"/><line x1="20" y1="20" x2="20" y2="9"/><line x1="20" y1="20" x2="29" y2="24"/></svg>
-            <svg class="fire" viewBox="0 0 24 32"><path class="flame" d="M12 2 C 16 10 20 14 18 22 A 7 7 0 0 1 6 22 C 4 14 8 10 12 2 Z"/></svg>
-          </div>
-        </div>
-      </div>
-      <p class="reveal serif" data-beat="4">Same model. Same tools. Same request.</p>
-    </div>
   </section>
 
   <!-- The parts: the vocabulary scene, and the only schematic in the deck.
@@ -86,9 +62,7 @@
   <section class="scene" id="sc-parts" data-title="The Parts" data-beats="6">
     <h2 class="scene-title" data-beat="0">However good it gets, it only sees what you send</h2>
     <div class="parts-stage">
-      <!-- the box starts left of zero: the habit stands at the head of the
-           chain, so the drawing extends past the first part -->
-      <svg id="parts-svg" viewBox="-96 0 876 240" aria-hidden="true"></svg>
+      <svg id="parts-svg" viewBox="0 0 780 240" aria-hidden="true"></svg>
     </div>
     <div class="parts-caps">
       <p id="parts-cap" class="stage-cap mono"></p>
@@ -96,6 +70,37 @@
     </div>
     <p class="thesis serif parts-verdict" data-beat="6">Habits shift. The <em>game</em> doesn’t.</p>
   </section>
+
+  <!-- The mystery, now that the room has the vocabulary: two sessions,
+       one request, and the only thing that differs is the bar §2 just
+       named. Reads as a payoff rather than a cold puzzle. -->
+  <section class="scene" id="sc-cold-open" data-title="Friday, 4:00 PM" data-beats="3">
+    <div class="cold-open-stage" data-beat="0">
+      <p class="request mono">› add an empty-state to the catch log</p>
+      <div class="twin">
+        <div class="pane">
+          <div id="term-left"></div>
+          <div class="cbar-slot" id="cbar-left"></div>
+          <p class="bar-tag mono">started fresh</p>
+          <div class="avatar-slot" data-beat="3">
+            <svg class="avatar crisp" viewBox="0 0 80 100"><circle cx="40" cy="24" r="14"/><path d="M 40 38 L 40 72 M 40 48 L 22 60 M 40 48 L 58 60 M 40 72 L 28 96 M 40 72 L 52 96"/></svg>
+          </div>
+        </div>
+        <div class="pane">
+          <div id="term-right"></div>
+          <div class="cbar-slot" id="cbar-right"></div>
+          <p class="bar-tag mono">six hours deep</p>
+          <div class="avatar-slot" data-beat="3">
+            <svg class="avatar slumped" viewBox="0 0 80 100"><circle cx="34" cy="34" r="14"/><path d="M 36 48 Q 40 60 40 74 M 38 54 L 24 68 M 38 54 L 50 70 M 40 74 L 30 96 M 40 74 L 50 96"/></svg>
+            <svg class="clock" viewBox="0 0 40 40"><circle cx="20" cy="20" r="17"/><line x1="20" y1="20" x2="20" y2="9"/><line x1="20" y1="20" x2="29" y2="24"/></svg>
+            <svg class="fire" viewBox="0 0 24 32"><path class="flame" d="M12 2 C 16 10 20 14 18 22 A 7 7 0 0 1 6 22 C 4 14 8 10 12 2 Z"/></svg>
+          </div>
+        </div>
+      </div>
+      <p class="reveal serif" data-beat="3">Same model. Same tools. Same request.</p>
+    </div>
+  </section>
+
 
   <section class="scene" id="sc-blueprint" data-title="The Whole Game" data-beats="1">
     <h2 class="scene-title" data-beat="0">The whole game is managing context</h2>
@@ -532,6 +537,6 @@
 <script src="lib/vessel.js?v=11"></script>
 <script src="lib/terminal.js?v=10"></script>
 <script src="lib/filmstrip.js?v=11"></script>
-<script src="lib/deck.js?v=40"></script>
+<script src="lib/deck.js?v=44"></script>
 </body>
 </html>
