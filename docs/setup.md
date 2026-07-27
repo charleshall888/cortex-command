@@ -115,7 +115,7 @@ cortex/.cortex-init       cortex/README.md
 .gitignore   ← updated with cortex ignore entries
 ```
 
-Then run `/cortex-core:lifecycle <feature>` to begin a feature — this produces `cortex/lifecycle/<feature>/` and guides you through research → spec → plan → implementation → review. Re-running it in a later session resumes from the current phase recorded in that feature's `events.log`. This sequence — `cortex init` then `/cortex-core:lifecycle <feature>` — is the end-to-end verification that both the CLI scaffold and the lifecycle skill work in your environment.
+Then run `/cortex-core:refine <feature>` to earn an approved spec, followed by `/cortex-core:build <feature>` to take it through plan → implement → review → complete. Both produce and read `cortex/lifecycle/<feature>/`, and re-running either in a later session resumes from the current phase recorded in that feature's `events.log`. This sequence — `cortex init`, then refine, then build — is the end-to-end verification that both the CLI scaffold and the skills work in your environment.
 
 **`cortex/lifecycle.config.md` schema** — `cortex init` scaffolds this file with YAML frontmatter for project-specific overrides. The annotated, canonical field list lives in the cortex-core plugin asset `skills/lifecycle/assets/lifecycle.config.md` — a parity test (developer-run `just test`, and a blocking `validate.yml` CI step) checks its frontmatter stays byte-identical to what `cortex init` scaffolds (see ADR-0017), so that asset is the single place to read the scaffolded schema rather than re-listing it here.
 

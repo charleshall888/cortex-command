@@ -32,7 +32,7 @@ Every backlog item uses the following YAML frontmatter contract. Fields listed a
 | `parent` | integer | no | Numeric ID of a parent epic item |
 | `research` | string | no | Path to prior research artifact (e.g. `cortex/research/topic/research.md`); set by `/cortex-core:discovery` |
 | `spec` | string | no | Path to spec artifact; set by `/cortex-core:refine` (e.g. `cortex/lifecycle/{slug}/spec.md`) |
-| `discovery_source` | string | no | Path to the `/cortex-core:discovery` research artifact that produced this ticket; triggers auto-copy to lifecycle on `/cortex-core:lifecycle` start |
+| `discovery_source` | string | no | Path to the `/cortex-core:discovery` research artifact that produced this ticket; triggers auto-load of the prior research on `/cortex-core:refine` start |
 | `repo` | string | no | Absolute path to target repository (e.g. `~/Workspaces/wild-light`); `null` = current repo (default) |
 | `complexity` | string | no | Lifecycle complexity tier (`simple`, `complex`) |
 | `criticality` | string | no | Criticality tier (`low`, `medium`, `high`, `critical`) |
@@ -152,7 +152,7 @@ Items that pass all five gates are scored and grouped into batches for overnight
 
 When `/cortex-core:discovery` decomposes research into backlog tickets, it writes a `discovery_source` frontmatter field on each created item pointing to the research artifact (e.g. `cortex/research/my-topic/research.md`).
 
-When `/cortex-core:lifecycle` starts on an item that has `discovery_source` set, it automatically loads the prior research, presents a summary, and asks whether to skip re-investigation (default: skip). In overnight contexts the skip is applied automatically. If the user declines, the research artifact is loaded as additional context and investigation proceeds normally.
+When `/cortex-core:refine` starts on an item that has `discovery_source` set, it automatically loads the prior research, presents a summary, and asks whether to skip re-investigation (default: skip). In overnight contexts the skip is applied automatically. If the user declines, the research artifact is loaded as additional context and investigation proceeds normally.
 
 This coupling means that features discovered via `/cortex-core:discovery` arrive at lifecycle with research already in hand, avoiding redundant investigation.
 

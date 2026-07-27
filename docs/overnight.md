@@ -111,14 +111,14 @@ that fail the gate are reported as ineligible with a reason — they don't silen
 ```
 
 `/cortex-core:refine` is the dedicated prep tool for overnight: it stops at spec, writes `status: refined`,
-and does not proceed to plan or implement. Use `/cortex-core:lifecycle <feature>` instead when you want
+and does not proceed to plan or implement. Use `/cortex-core:build <feature>` instead when you want
 the full interactive research-specify-plan-implement flow for a single feature.
 
 See [Interactive Phases Guide](interactive-phases.md) for details on what `/cortex-core:refine` asks
 during each phase and how artifacts flow to the overnight runner.
 
 `plan.md` is generated automatically by the orchestrator on demand — you don't need to
-run `/cortex-core:lifecycle plan` before an overnight session.
+run `/cortex-core:build plan` before an overnight session.
 
 ---
 
@@ -280,8 +280,8 @@ required preparation:
 | **Spec needed** | Runs it | Must exist already |
 | **Plan** | Runs it | Auto-generated if missing |
 | **Execution** | Interactive | Python runner (detached fork) |
-| **Resume** | `/cortex-core:lifecycle resume` | `/overnight resume` |
-| **Morning close-out** | Manual or `/cortex-core:lifecycle complete` | `/morning-review` |
+| **Resume** | `/cortex-core:build resume` | `/overnight resume` |
+| **Morning close-out** | Manual or `/cortex-core:build complete` | `/morning-review` |
 
 **Choose overnight when**: You have a backlog of prepared features and want to make
 progress while not at your computer.

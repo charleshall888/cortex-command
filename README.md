@@ -6,7 +6,7 @@ Cortex Command is an AI workflow framework for Claude Code built on a single ins
 
 📖 **[Read the overview →](https://charleshall888.github.io/cortex-command/)**
 
-The front half of the lifecycle is human-driven — discovery maps the problem space, refine clarifies scope, and lifecycle drives features through research, spec, plan, implement, and review. Once scope is genuinely clear, run `/cortex-core:lifecycle` for interactive development or queue refined items for `/cortex-overnight:overnight` and wake up to a morning report with PRs ready to review. For a visual of the full pipeline, see [docs/agentic-layer.md](docs/agentic-layer.md#diagram-a--main-workflow-flow).
+The front half of the lifecycle is human-driven — discovery maps the problem space, `/cortex-core:refine` clarifies scope and earns an approved spec, and `/cortex-core:build` drives that spec through plan, implement, review, and complete. (`/cortex-core:dev` reads a ticket's status and routes it to whichever half it needs.) Once scope is genuinely clear, run `/cortex-core:build` for interactive development or queue refined items for `/cortex-overnight:overnight` and wake up to a morning report with PRs ready to review. For a visual of the full pipeline, see [docs/agentic-layer.md](docs/agentic-layer.md#diagram-a--main-workflow-flow).
 
 ## Prerequisites
 
@@ -25,7 +25,7 @@ claude /plugin install cortex-core@cortex-command        # Base skills + hooks
 claude /plugin install cortex-backlog@cortex-command     # RECOMMENDED - markdown backlog backend (required by overnight)
 claude /plugin install cortex-overnight@cortex-command   # OPTIONAL - autonomous overnight runs (requires cortex-backlog)
 
-# 3. In each project, before running /lifecycle. Required per-project setup.
+# 3. In each project, before running /refine or /build. Required per-project setup.
 # Registers Cortex's umbrella path with the repo's Claude Code sandbox;
 # installs validation rules, settings, demo-commands, etc.
 cd <your-project>
