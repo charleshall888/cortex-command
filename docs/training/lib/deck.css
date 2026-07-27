@@ -1260,87 +1260,83 @@ path.ps-miss { stroke: var(--zone-red); }
 
 /* ---------- The Tackle Box: prove it, then let the crew choose it ---------- */
 
-/* ---------- §2 The Rig: the vocabulary scene ---------- */
+/* ---------- §2 The Parts: the schematic, and the deck's one plain scene ---------- */
 
-#sc-rig { gap: 0.7rem; }
-#sc-rig .scene-title { font-size: clamp(1.25rem, 2.4vw, 1.9rem); max-width: 62ch; }
-.rig-seam { font-size: 0.8rem; color: var(--parch-faint); letter-spacing: 0.06em; margin-top: -0.1rem; }
-.rig-stage { width: min(72vw, 780px); }
-#rig-svg { width: 100%; display: block; overflow: visible; }
-#rig-svg text { font-family: var(--mono); fill: var(--parch-dim); }
-/* captions hold their own space so the picture never shifts under them */
-.rig-caps { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; min-height: 3rem; }
-.rig-verdict { font-size: clamp(1rem, 2vw, 1.45rem); }
+#sc-parts { gap: 1.1rem; }
+#sc-parts .scene-title { font-size: clamp(1.45rem, 2.9vw, 2.2rem); }
+.parts-stage { width: min(66vw, 740px); }
+#parts-svg { width: 100%; display: block; overflow: visible; }
+/* fixed slot: the caption swaps text per beat, so nothing below it reflows */
+.parts-caps { display: flex; flex-direction: column; align-items: center; gap: 0.35rem; min-height: 3rem; }
+#parts-cap, #parts-note { opacity: 0; }
+#parts-cap { color: var(--parchment); }
+#parts-cap.in, #parts-note.in { animation: pt-cap-in 0.55s ease forwards; }
+@keyframes pt-cap-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: none; }
+}
+.parts-hedge { font-size: 0.76rem; color: var(--parch-faint); letter-spacing: 0.05em; }
+.parts-verdict { font-size: clamp(1.05rem, 2.1vw, 1.55rem); }
 
-.rg-water { stroke: var(--blue); stroke-width: 1.5; opacity: 0.5; }
-.rg-shimmer { fill: none; stroke: var(--blue); stroke-width: 1; opacity: 0.18; }
+/* each group arrives on its own beat; the SVG never reflows, so an unrevealed
+   group costs no layout — the trap that has bitten the HTML scenes twice */
+.pt-g { opacity: 0; transition: opacity 0.7s ease; }
+.pt-g.on { opacity: 1; }
 
-/* the base harness reads as ONE clean stroke — nothing hand-tied about it */
-.rg-rod-butt, .rg-rod-tip, .rg-grip, .rg-reel-stem { fill: none; stroke: var(--parch-dim); stroke-linecap: round; }
-.rg-rod-butt { stroke-width: 3.4; }
-.rg-rod-tip { stroke-width: 1.8; }
-.rg-grip { stroke-width: 6; }
-.rg-reel-stem { stroke-width: 2; }
-.rg-reel { fill: none; stroke: var(--parch-dim); stroke-width: 2; }
+.pt-name { font-family: var(--mono); font-size: 13px; fill: var(--parchment); }
+.pt-sub { font-family: var(--mono); font-size: 11px; fill: var(--parch-faint); letter-spacing: 0.02em; }
+.pt-arrow { stroke: var(--rule); stroke-width: 2; }
+.pt-head { fill: var(--rule); }
 
-/* the model: dim and unremarked until it's named, then it's the brightest
-   thing on screen — the reveal the whole scene is built around */
-.rg-line {
+/* the window: the cold open's object, redrawn — same track, same green,
+   same 30% the "started fresh" pane held */
+.pt-win-track { fill: rgba(255, 255, 255, 0.05); stroke: var(--rule); stroke-width: 1; }
+.pt-win-fill { fill: var(--zone-green); opacity: 0.85; }
+
+/* the model: one machined slab, no seams — the part nobody hand-builds */
+.pt-slab { fill: var(--night-lift); stroke: var(--parch-dim); stroke-width: 1.6; }
+.pt-strata { stroke: var(--parch-dim); stroke-width: 1.2; opacity: 0.4; }
+.pt-strata-x { opacity: 0; transition: opacity 0.9s ease 0.2s; }
+.pt-model-scale { transform-box: fill-box; transform-origin: 50% 100%; transition: transform 1s cubic-bezier(0.33, 0.8, 0.4, 1); }
+
+.pt-box { fill: none; stroke: var(--parch-dim); stroke-width: 1.6; }
+/* what made it into the window this turn, and what stayed out */
+.pt-slot { fill: var(--rule); }
+.pt-slot.lit { fill: var(--ochre); opacity: 0.85; }
+
+/* your half: hand-drawn edges, visibly made rather than shipped */
+.pt-sheet { fill: rgba(232, 168, 101, 0.05); stroke: var(--ochre); stroke-width: 1.5; }
+.pt-sheet-back { opacity: 0.55; transition: opacity 0.9s ease; }
+.pt-ln { stroke: var(--ochre); stroke-width: 1.4; opacity: 0.5; }
+.pt-ln-x { transition: opacity 0.7s ease; }
+
+/* the habit: the one thing on this slide that isn't a part. It arcs back
+   over the chain, drawing right-to-left — you read what's in the window,
+   then you go edit what you wrote. Ochre, because it's your side. */
+.pt-loop {
   fill: none;
-  stroke: var(--parch-faint);
+  stroke: var(--ochre);
   stroke-width: 1.6;
-  transition: stroke 0.8s ease, filter 0.8s ease;
+  opacity: 0.75;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  transition: stroke-dashoffset 1.3s cubic-bezier(0.4, 0.1, 0.3, 1);
 }
-#sc-rig.named .rg-line { stroke: var(--ochre); filter: drop-shadow(0 0 5px rgba(232, 168, 101, 0.55)); }
-.rg-drop {
-  fill: var(--parch-faint);
-  transition: height 1.1s cubic-bezier(0.33, 0.8, 0.4, 1), fill 0.8s ease;
-}
-#sc-rig.named .rg-drop { fill: var(--ochre); }
+.pt-loop-head { fill: var(--ochre); opacity: 0; transition: opacity 0.4s ease 1.1s; }
+.pt-loop-name { font-family: var(--mono); font-size: 12.5px; fill: var(--ochre); opacity: 0; transition: opacity 0.5s ease 0.95s; }
 
-.rg-name { font-size: 13.5px; letter-spacing: 0.04em; transition: opacity 0.6s ease; }
-.rg-name-a { opacity: 1; }
-.rg-name-b { opacity: 0; fill: var(--ochre); }
-#sc-rig.named .rg-name-a { opacity: 0; }
-#sc-rig.named .rg-name-b { opacity: 1; }
-.rg-lead-tick { stroke: var(--parch-faint); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.5; }
-.rg-model-sub { opacity: 0; transition: opacity 0.6s ease 0.3s; }
-#sc-rig.named .rg-model-sub { opacity: 1; }
+/* b3 is the model's doing: the slab grows and gains layers, and the window
+   in front of it does not move */
+#sc-parts.grown .pt-model-scale { transform: scale(1.16); }
+#sc-parts.grown .pt-strata-x { opacity: 0.4; }
 
-/* your tackle: discrete pieces with visible knots — the texture is the tell */
-.rg-knot { fill: var(--ochre); opacity: 0.85; }
-.rg-leader-wire { stroke: var(--parch-dim); stroke-width: 4.5; stroke-linecap: round; }
-.rg-float-lo { fill: var(--ochre-deep); }
-.rg-float-hi { fill: var(--parchment); }
-.rg-shot { fill: var(--parch-dim); }
-.rg-hook { fill: none; stroke: var(--parch-dim); stroke-width: 2; stroke-linecap: round; }
-.rg-fish-body { fill: none; stroke: var(--blue); stroke-width: 1.6; opacity: 0.65; }
-.rg-part { font-size: 12px; fill: var(--parch-faint); letter-spacing: 0.04em; }
-.rg-group { font-size: 13.5px; fill: var(--parchment); letter-spacing: 0.04em; }
-.rg-sub { font-size: 11.5px; fill: var(--parch-faint); letter-spacing: 0.03em; }
-
-/* shed gear settles on the bottom and STAYS there, faint. Nothing here goes
-   to zero — "you need no harness" is not the claim being made. */
-.rg-leader, .rg-float { transition: transform 1.2s cubic-bezier(0.4, 0.1, 0.3, 1), opacity 1.2s ease; }
-.rg-leader.shed { transform: translate(-230px, 100px); opacity: 0.15; }
-.rg-float.shed { transform: translate(-96px, 196px); opacity: 0.15; }
-
-/* the float is the only thing riding the chop; once it's gone, the hook
-   settles to where the fish actually are and the bobbing stops */
-.rg-float { animation: rg-bob 3.4s ease-in-out infinite; }
-.rg-float.shed { animation: none; }
-@keyframes rg-bob {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(3.5px); }
-}
-.rg-terminal { transition: transform 1.3s cubic-bezier(0.33, 0.8, 0.4, 1); }
-.rg-terminal.deep { transform: translateY(86px); }
-
-/* the brace lands with the name — the definitional beat */
-.rg-brace { opacity: 0; transition: opacity 0.9s ease; }
-#sc-rig.named .rg-brace { opacity: 1; }
-.rg-brace-path { fill: none; stroke: var(--ochre-deep); stroke-width: 1.7; opacity: 0.95; }
-.rg-harness { font-size: 19px; fill: var(--ochre); letter-spacing: 0.1em; }
+/* b4 is yours: the arc lands and the stack thins in the same beat, because
+   the arc is what thinned it. Nothing goes to zero */
+#sc-parts.thinned .pt-loop { stroke-dashoffset: 0; }
+#sc-parts.thinned .pt-loop-head { opacity: 0.85; }
+#sc-parts.thinned .pt-loop-name { opacity: 0.9; }
+#sc-parts.thinned .pt-sheet-back { opacity: 0.12; }
+#sc-parts.thinned .pt-ln-x { opacity: 0; }
 
 #sc-tackle { gap: 1.1rem; }
 #sc-tackle .scene-title { font-size: clamp(1.4rem, 2.7vw, 2.1rem); }

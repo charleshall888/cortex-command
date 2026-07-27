@@ -18,15 +18,16 @@ const NOTES = {
     ],
     exit: "PLANT: “one study — experienced engineers, 19% SLOWER with AI. I believe it. By the end you'll know the mechanism I blame.”",
   },
-  "sc-rig": {
+  "sc-parts": {
     beats: [
-      "(rig draws) “Everything between you and the fish. A rod, a reel, a line — and a few things I tied on myself tonight.”",
-      "(the line gets named; the brace lands) “Everybody argues about the line. You rent the same one as everyone in this room.” Then, on the brace: “THIS is the harness — the tool you're handed, plus whatever you build on top of it. It's the half you actually control, and nobody talks about it.”",
-      "(the leader sheds) “That wire leader was there because I couldn't hold a hard fight on bare line. Better line came along — and now it's just stiff, and the fish can see it.” Land the mechanism: “you build scaffolding around a weakness. The weakness goes. The scaffolding doesn't leave on its own — it sits there charging rent.”",
-      "(the float goes; the hook sinks and settles) “That float was the only thing holding me up in the chop. Every ripple, all night.” Land it: “don't be the one tossed around by every new thing — get anchored somewhere and go deep.” Then: “one workflow you know cold beats five you're always switching between. Get the boring part right — context — before you go build your own agent contraption.”",
-      "(thesis) SILENT — let “The rig gets simpler. The habit behind it doesn't.” land.",
+      "(the window and the model \u2014 the two things they were just looking at) \u201cThat bar from a second ago has a name: the context window. One turn\u2019s worth of everything the model knows.\u201d Then the arrow: \u201cit reads that, and nothing else. Not your repo, not your head \u2014 that.\u201d",
+      "(the harness lands, some rows lit, some not) \u201cSomething has to decide what goes in there. That thing is the harness \u2014 Claude Code, Cursor, Codex. Whichever one you\u2019re in, that\u2019s its whole job.\u201d Point at the dim rows: \u201cthose exist too. They didn\u2019t make the cut this turn.\u201d IF ASKED where the model ends and the harness begins: \u201cthe window is the model\u2019s. What\u2019s in it is the harness\u2019s \u2014 and what the harness gets to choose from is yours.\u201d",
+      "(your files arrive on the left) \u201cAnd it picks up from what you wrote \u2014 skills, docs, the memory it keeps. Two of these three are a choice you make: you pick the harness, and you write what it picks up.\u201d",
+      "(the model grows and gains layers \u2014 nothing else on screen moves) \u201cModels get better. That one isn\u2019t your doing \u2014 you didn\u2019t build it and you can swap it out.\u201d Then the hedge, plainly: \u201cand better doesn\u2019t mean free. It\u2019s better at long jobs now \u2014 it\u2019s still billed by the token, and it\u2019s still sharper in a clean window. Notice what didn\u2019t change: the window in front of it.\u201d",
+      "(the arc draws back over the chain and lands on your files; the stack thins to one sheet) \u201cHalf of what you wrote was propping up something the model couldn\u2019t do yet. It can now \u2014 and nothing you wrote takes itself back out.\u201d THE HABIT, pointing at the arc: \u201cso every so often you go look at what\u2019s actually in that window, and you cut what the model outgrew. That\u2019s the loop. It\u2019s the only thing on this slide that isn\u2019t a part \u2014 it\u2019s the thing you do to them.\u201d THE EVIDENCE (the note line): \u201cthis isn\u2019t hypothetical. When Opus 5 shipped, Anthropic cut about eighty percent of the prompt guidance out of Claude Code \u2014 the model had outgrown it.\u201d The point to land, and it is the whole scene: \u201cthe guidance went. The pruning didn\u2019t. Somebody still had to go look and decide what came out \u2014 that\u2019s the same job it always was, there\u2019s just less of it.\u201d IF IT LANDS: \u201cthe files don\u2019t maintain themselves. That arc is why they got shorter.\u201d",
+      "(thesis) SILENT \u2014 let \u201cHabits shift. The game doesn\u2019t.\u201d land. If you say anything: \u201cthe specifics age out. Managing what\u2019s in that window is the same job it was two years ago, and it\u2019ll be the same job two years from now.\u201d",
     ],
-    exit: "“So the model wasn't the variable — the rest of it was. That's the half you control. Here's the map of it.”",
+    exit: "\u201cSo the model wasn\u2019t the variable a minute ago \u2014 my half was. And one workflow you know cold beats five you keep switching between. Here\u2019s the map of that half \u2014 and here\u2019s the game.\u201d",
   },
   "sc-blueprint": {
     beats: [
@@ -121,7 +122,7 @@ const NOTES = {
       "(tidy 20-line file) “Standing instructions, poured into every window. Twenty lines. Started perfect.”",
       "(ratchet to 6,000 — let them read the bloat) “Models don't need many instructions — they love writing them. Every ‘tune it’ adds a line, till it contradicts itself and needs a rule just to sort the rules.” SCAR: “writing the instructions is the one job I never hand over.”",
       "(sweep — the file stays up) “All six thousand lines ride in every window, and you re-pay them every turn. A bloated skill file means Monday starts tired.” SCAR: “if I could go back — hand-craft the simple skills myself, let Claude build the CLI around them.”",
-      "(the fix, beside the monster) “Same skill, rebuilt: a 30-line core, detail in files you open per task. Reviewing a plan? The window gets the core plus plans.md — nothing else.” CALLBACK to the rig: “half of what got cut was propping up something the model outgrew. That's the leader coming off — the habit stays, the scaffolding goes.”",
+      "(the fix, beside the monster) “Same skill, rebuilt: a 30-line core, detail in files you open per task. Reviewing a plan? The window gets the core plus plans.md — nothing else.” CALLBACK to slide 2: “half of what got cut was propping up something the model outgrew. That's the stack thinning — the habit stays, the scaffolding goes.”",
     ],
     exit: "“The instructions stay lean — and they stay yours. Now step to the end of the dock — it keeps something of its own out on the water.”",
   },

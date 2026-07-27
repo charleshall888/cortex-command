@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex" />
 <title>Context Is the Game</title>
 <link rel="icon" href="data:," />
-<link rel="stylesheet" href="lib/deck.css?v=29" />
+<link rel="stylesheet" href="lib/deck.css?v=35" />
 </head>
 <body>
 <div id="sky" aria-hidden="true">
@@ -76,22 +76,23 @@
     </div>
   </section>
 
-  <!-- The rig: the vocabulary scene. The cold open held "same model, same
-       tools" constant and asked what changed; this names the parts before
-       the blueprint narrows to the one that matters. The bracket IS the
-       definition — base harness + your layer, with the line (the model)
-       running through unbracketed. -->
-  <section class="scene" id="sc-rig" data-title="The Rig" data-beats="4">
-    <h2 class="scene-title" data-beat="0">Everybody talks about the model. The rest of it matters just as much.</h2>
-    <p class="rig-seam mono" data-beat="0">the harness — the tool you’re handed, plus what you tie on yourself</p>
-    <div class="rig-stage">
-      <svg id="rig-svg" viewBox="0 0 800 430" aria-hidden="true"></svg>
+  <!-- The parts: the vocabulary scene, and the only schematic in the deck.
+       Deliberately NOT fishing — the world starts at the blueprint; this one
+       slide names the pieces plainly and shows how they connect. Read left
+       to right: what you write → the harness that picks from it → the window
+       it fills → the model that reads the window and nothing else. Two of
+       the four nouns (window, model) came free from the cold open. The
+       caption is ONE swapping slot, so nothing reflows between beats. -->
+  <section class="scene" id="sc-parts" data-title="The Parts" data-beats="5">
+    <h2 class="scene-title" data-beat="0">However good it gets, it only sees what you send</h2>
+    <div class="parts-stage">
+      <svg id="parts-svg" viewBox="0 0 780 240" aria-hidden="true"></svg>
     </div>
-    <div class="rig-caps">
-      <p class="stage-cap mono" data-beat="2">the wire leader was for a fight you couldn’t hold on bare line</p>
-      <p class="stage-cap mono" data-beat="3">off the surface — steady, and deep</p>
+    <div class="parts-caps">
+      <p id="parts-cap" class="stage-cap mono"></p>
+      <p id="parts-note" class="parts-hedge mono"></p>
     </div>
-    <p class="thesis serif rig-verdict" data-beat="4">The rig gets simpler. The <em>habit</em> behind it doesn’t.</p>
+    <p class="thesis serif parts-verdict" data-beat="5">Habits shift. The <em>game</em> doesn’t.</p>
   </section>
 
   <section class="scene" id="sc-blueprint" data-title="The Whole Game" data-beats="1">
@@ -529,6 +530,6 @@
 <script src="lib/vessel.js?v=11"></script>
 <script src="lib/terminal.js?v=10"></script>
 <script src="lib/filmstrip.js?v=11"></script>
-<script src="lib/deck.js?v=30"></script>
+<script src="lib/deck.js?v=38"></script>
 </body>
 </html>

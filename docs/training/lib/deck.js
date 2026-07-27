@@ -248,27 +248,27 @@
       if (b === 4) sec.classList.add("spotlight"); // dim everything but the two bars
     },
 
-    /* the vocabulary scene. Nothing is ever deleted to zero — shed tackle
-       settles on the bottom, faint but still there, because "you need no
-       harness" is not the claim. The drop line lengthens to keep the line
-       continuous as pieces come off it. */
-    "sc-rig": (sec, b) => {
-      const g = (cls) => document.querySelector("#rig-svg ." + cls);
-      const drop = (h) => g("rg-drop").setAttribute("height", h);
-      if (b === 0) {
-        buildRig();
-        sec.classList.remove("named");
-      }
-      if (b === 1) sec.classList.add("named"); // "the line" → "the model"; the brace lands
-      if (b === 2) {
-        g("rg-leader").classList.add("shed");
-        drop(100); // bare line closes the gap the leader left
-      }
-      if (b === 3) {
-        g("rg-float").classList.add("shed");
-        g("rg-terminal").classList.add("deep"); // nothing holds it up now — it finds the fish
-        drop(186);
-      }
+    /* the vocabulary scene. The chain builds right-to-left — the window and
+       the model are already known from the cold open, so each new beat can
+       define its noun in terms of one already on screen. Nothing is ever
+       deleted to zero: at b3 the files thin, they don't vanish. */
+    "sc-parts": (sec, b) => {
+      const svg = document.getElementById("parts-svg");
+      if (b === 0 || !svg.firstChild) buildParts();
+      [0, 1, 2].forEach((n) => {
+        sec.querySelectorAll(".pt-b" + n).forEach((g) => g.classList.toggle("on", b >= n));
+      });
+      // b3 is the model's doing, b4 is yours — split on purpose, so the arc
+      // that arrives at b4 is unmistakably what thinned the files.
+      sec.classList.toggle("grown", b >= 3);
+      sec.classList.toggle("thinned", b >= 4);
+      [["parts-cap", PARTS_CAPS], ["parts-note", PARTS_NOTES]].forEach(([id, lines]) => {
+        const p = document.getElementById(id);
+        const line = lines[Math.min(b, lines.length - 1)];
+        if (p.textContent === line) return;
+        p.textContent = line;
+        replay(p, "in");
+      });
     },
 
     "sc-blueprint": (sec, b) => {
@@ -869,92 +869,108 @@
     el("line", { class: "bu-v bu-redline", x1: 682, y1: 171, x2: 898, y2: 171 }, groups["bu-b3"]);
   }
 
+  /* The parts — the deck's one schematic, and its one non-fishing scene.
+     Four nouns on a single left-to-right chain, each named in place: what
+     you write → the harness → the context window → the model. Two of them
+     the cold open already taught, so only two are new. The window is drawn
+     at the same 30% the "started fresh" pane held, so it reads as the same
+     object. Texture carries the split before a word is read: your files are
+     hand-drawn sheets with visible edges, the model is one machined slab. */
+  const PARTS_CAPS = [
+    "the window is one turn’s worth of everything it knows",
+    "something decides what goes in it — that’s the harness",
+    "you pick the harness. You write what it picks up.",
+    "the model gets better — that part isn’t your doing",
+    "so you go back and cut what it outgrew",
+    "so you go back and cut what it outgrew",
+  ];
+
+  /* the second line under the picture: one honest note per half of the turn.
+     b3 hedges the model's improvement, b4 proves the files really do shrink —
+     and that the job behind them didn't. Same slot, so nothing grows. */
+  const PARTS_NOTES = [
+    "", "", "",
+    "better at long jobs · still priced by the token · still sharper in a clean window",
+    "Opus 5 shipped · Claude Code cut ~80% of its own prompt guidance · same job, less of it",
+    "Opus 5 shipped · Claude Code cut ~80% of its own prompt guidance · same job, less of it",
+  ];
+
+  function buildParts() {
+    const svg = document.getElementById("parts-svg");
+    svg.innerHTML = "";
+    const MID = 120;
+    const txt = (x, y, s, cls, parent) => {
+      const t = el("text", { x, y, class: cls, "text-anchor": "middle" }, parent);
+      t.textContent = s;
+      return t;
+    };
+    // one arrow shape, three times — the chain has to read in one direction
+    const arrow = (x1, x2, parent) => {
+      el("line", { class: "pt-arrow", x1, y1: MID, x2: x2 - 7, y2: MID }, parent);
+      el("path", { class: "pt-head", d: `M ${x2} ${MID} l -8 -4.5 l 0 9 z` }, parent);
+    };
+
+    /* b0 — the two nouns the cold open already taught: the window it fills,
+       and the model that reads it. The model is the only thing on the far
+       side of the arrow, which is the whole argument of the slide. */
+    const known = el("g", { class: "pt-g pt-b0" }, svg);
+    el("rect", { class: "pt-win-track", x: 440, y: 108, width: 196, height: 24, rx: 4 }, known);
+    el("rect", { class: "pt-win-fill", x: 440, y: 108, width: 59, height: 24, rx: 4 }, known);
+    txt(538, 196, "the context window", "pt-name", known);
+
+    const mg = el("g", { class: "pt-model-scale" }, known);
+    el("rect", { class: "pt-slab", x: 680, y: 68, width: 68, height: 104, rx: 7 }, mg);
+    // strata = the weights inside it; the faint extra ones arrive at b3
+    [82, 98, 114, 130, 146, 162].forEach((y) => {
+      el("line", { class: "pt-strata", x1: 692, y1: y, x2: 736, y2: y }, mg);
+    });
+    [90, 106, 122, 138, 154].forEach((y) => {
+      el("line", { class: "pt-strata pt-strata-x", x1: 692, y1: y, x2: 736, y2: y }, mg);
+    });
+    txt(714, 196, "the model", "pt-name", known);
+    arrow(644, 670, known);
+
+    /* b1 — the harness: the thing that chooses. The lit rows are what made
+       it into the window this turn; the dim ones exist and stayed out. */
+    const har = el("g", { class: "pt-g pt-b1" }, svg);
+    el("rect", { class: "pt-box", x: 232, y: 70, width: 170, height: 100, rx: 6 }, har);
+    [[88, 1], [106, 0], [124, 1], [142, 0]].forEach(([y, lit]) => {
+      el("rect", { class: "pt-slot" + (lit ? " lit" : ""), x: 254, y, width: 126, height: 8, rx: 2 }, har);
+    });
+    txt(317, 196, "the harness", "pt-name", har);
+    txt(317, 214, "Claude Code · Cursor · Codex", "pt-sub", har);
+    arrow(406, 436, har);
+
+    /* b2 — your half: the files the harness picks up. Three sheets, drawn
+       with visible edges so they read as made by hand, not shipped. */
+    const files = el("g", { class: "pt-g pt-b2" }, svg);
+    [[60, 75], [67, 82]].forEach(([x, y]) => {
+      el("rect", { class: "pt-sheet pt-sheet-back", x, y, width: 92, height: 62, rx: 3 }, files);
+    });
+    el("rect", { class: "pt-sheet", x: 74, y: 89, width: 92, height: 62, rx: 3 }, files);
+    [[104, 0], [116, 0], [128, 1], [140, 1]].forEach(([y, sheds]) => {
+      el("line", { class: "pt-ln" + (sheds ? " pt-ln-x" : ""), x1: 86, y1: y, x2: 154, y2: y }, files);
+    });
+    txt(113, 196, "what you write", "pt-name", files);
+    txt(113, 214, "skills · docs · memory", "pt-sub", files);
+    arrow(176, 228, files);
+
+    /* b4 — the habit. NOT a fifth box: everything else on this slide is an
+       artifact in a pipeline, and a habit is something you do TO one. So it
+       arcs backward over the chain — you look at what's actually in the
+       window, and you go edit what you wrote. It draws right-to-left, and
+       it lands on the sheets in the same beat they thin, because the habit
+       is what thinned them. The files never maintain themselves. */
+    const loop = el("g", { class: "pt-loop-g" }, svg);
+    el("path", { class: "pt-loop", pathLength: 100, d: "M 538 100 C 450 26, 113 26, 113 66" }, loop);
+    el("path", { class: "pt-loop-head", d: "M 113 68 l -4.5 -9 l 9 0 z" }, loop);
+    txt(292, 28, "the habit", "pt-loop-name", loop);
+  }
+
   /* scene 14: the shared tackle box — the object pv-3 names but never draws.
      No bars: your lean skill is a lure; prove it (a fish), and the choice is
      whether it gets stapled onto every rod (forced) or waits in the open box
      for a line that wants it (chosen). Groups toggle .on per beat. */
-  /* The rig — everything between you and the fish, drawn once and named.
-     Two textures do the definitional work before any label is read: the rod
-     and reel are one clean unbroken stroke (handed to you), the tackle is
-     discrete pieces with visible knots (tied on by hand). The brace groups
-     both; the line runs through it unbracketed, because that's the model. */
-  function buildRig() {
-    const svg = document.getElementById("rig-svg");
-    svg.innerHTML = "";
-    const txt = (x, y, s, attrs = {}, parent = svg) => {
-      const t = el("text", { x, y, ...attrs }, parent);
-      t.textContent = s;
-      return t;
-    };
-    const knot = (parent, x, y) => el("circle", { class: "rg-knot", cx: x, cy: y, r: 2.6 }, parent);
-
-    /* the water: the work is under it, and the rod never gets wet */
-    const sea = el("g", { class: "rg-sea" }, svg);
-    el("line", { class: "rg-water", x1: 16, y1: 190, x2: 500, y2: 190 }, sea);
-    el("path", { class: "rg-shimmer", d: "M 60 218 L 132 218 M 180 246 L 244 246" }, sea);
-
-    /* the base harness — one clean taper, no knots anywhere on it. You were
-       handed this; the texture is the tell before any label is read. */
-    const base = el("g", { class: "rg-base" }, svg);
-    el("path", { class: "rg-rod-butt", d: "M 46 150 Q 105 133 168 107" }, base);
-    el("path", { class: "rg-rod-tip", d: "M 168 107 Q 231 80 296 44" }, base);
-    el("line", { class: "rg-grip", x1: 46, y1: 150, x2: 88, y2: 138 }, base);
-    el("line", { class: "rg-reel-stem", x1: 96, y1: 131, x2: 96, y2: 138 }, base);
-    el("circle", { class: "rg-reel", cx: 96, cy: 147, r: 9 }, base);
-
-    /* the model: one filament, run straight through. You swap it whole —
-       you never tune it, and it is the only thing here you don't own. */
-    el("path", { class: "rg-line", d: "M 296 44 L 332 190" }, svg);
-
-    /* the drop — lengthens as pieces come off, so the line stays unbroken */
-    el("rect", { class: "rg-drop", x: 331.2, y: 190, width: 1.6, height: 62 }, svg);
-
-    /* your tackle, piece one: the wire leader (b2) */
-    const leader = el("g", { class: "rg-leader" }, svg);
-    el("line", { class: "rg-leader-wire", x1: 332, y1: 252, x2: 332, y2: 286 }, leader);
-    knot(leader, 332, 252);
-    txt(354, 274, "leader", { class: "rg-part" }, leader);
-
-    /* your tackle, piece two: the float (b3) — the only reason the hook
-       sits up in the chop instead of down where the fish are */
-    const float = el("g", { class: "rg-float" }, svg);
-    el("ellipse", { class: "rg-float-lo", cx: 332, cy: 196, rx: 8.5, ry: 7.5 }, float);
-    el("path", { class: "rg-float-hi", d: "M 323.5 190 A 8.5 8.5 0 0 1 340.5 190 Z" }, float);
-    knot(float, 332, 183);
-    txt(354, 187, "float", { class: "rg-part" }, float);
-
-    /* what stays: shot and hook — tied on by you, but compensating for
-       nothing. This is the piece that never sheds. */
-    const term = el("g", { class: "rg-terminal" }, svg);
-    el("circle", { class: "rg-shot", cx: 332, cy: 290, r: 3.5 }, term);
-    el("path", { class: "rg-hook", d: "M 332 294 L 332 310 Q 332 320 323 320 Q 315 320 315 312" }, term);
-
-    const fish = el("g", { class: "rg-fish" }, svg);
-    el("path", { class: "rg-fish-body", d: "M 396 372 Q 416 362 436 372 Q 416 382 396 372 Z" }, fish);
-    el("path", { class: "rg-fish-body", d: "M 436 372 L 448 365 L 448 379 Z" }, fish);
-
-    /* the callout column — one anatomy list, read top to bottom. The model
-       sits ABOVE the brace and outside it: that exclusion is the whole point. */
-    el("line", { class: "rg-lead-tick", x1: 554, y1: 78, x2: 312, y2: 78 }, svg);
-    txt(560, 82, "the line", { class: "rg-name rg-name-a" });
-    txt(560, 82, "the model", { class: "rg-name rg-name-b" });
-    txt(560, 100, "the same one everybody rents", { class: "rg-sub rg-model-sub" });
-
-    el("line", { class: "rg-lead-tick", x1: 554, y1: 162, x2: 112, y2: 162 }, svg);
-    txt(560, 166, "rod & reel", { class: "rg-group" });
-    txt(560, 184, "handed to you", { class: "rg-sub" });
-
-    el("line", { class: "rg-lead-tick", x1: 554, y1: 254, x2: 348, y2: 254 }, svg);
-    txt(560, 258, "your tackle", { class: "rg-group" });
-    txt(560, 276, "tied on by you, tonight", { class: "rg-sub" });
-
-    /* the brace: the definition. It gathers exactly two of the three rows —
-       and the one it leaves out is the model. */
-    const brace = el("g", { class: "rg-brace" }, svg);
-    el("path", { class: "rg-brace-path", d: "M 548 152 L 540 152 L 540 206 L 530 214 L 540 222 L 540 284 L 548 284" }, brace);
-    txt(516, 224, "the harness", { class: "rg-harness", "text-anchor": "end" }, brace);
-  }
-
   function buildTackle() {
     const svg = document.getElementById("tackle-svg");
     svg.innerHTML = "";
