@@ -258,10 +258,13 @@
       [0, 1, 2].forEach((n) => {
         sec.querySelectorAll(".pt-b" + n).forEach((g) => g.classList.toggle("on", b >= n));
       });
-      // b3 is the model's doing, b4 is yours — split on purpose, so the arc
-      // that arrives at b4 is unmistakably what thinned the files.
-      sec.classList.toggle("grown", b >= 3);
-      sec.classList.toggle("thinned", b >= 4);
+      // three causes, one per beat, so each shrink has exactly one author:
+      // b3 the window is re-sent and its unchanged prefix reused, b4 the
+      // model's doing (it takes more on, the harness carries less), b5 yours
+      // (the habit arrives, and what you wrote gets shorter).
+      sec.classList.toggle("cached", b >= 3);
+      sec.classList.toggle("grown", b >= 4);
+      sec.classList.toggle("thinned", b >= 5);
       [["parts-cap", PARTS_CAPS], ["parts-note", PARTS_NOTES]].forEach(([id, lines]) => {
         const p = document.getElementById(id);
         const line = lines[Math.min(b, lines.length - 1)];
@@ -878,21 +881,23 @@
      hand-drawn sheets with visible edges, the model is one machined slab. */
   const PARTS_CAPS = [
     "the window is one turn’s worth of everything it knows",
-    "something decides what goes in it — that’s the harness",
+    "the harness decides what makes the cut",
     "you pick the harness. You write what it picks up.",
-    "the model gets better — that part isn’t your doing",
+    "it all goes again every turn — the part that didn’t change is reused",
+    "the model takes more on — the harness carries less",
     "so you go back and cut what it outgrew",
     "so you go back and cut what it outgrew",
   ];
 
-  /* the second line under the picture: one honest note per half of the turn.
-     b3 hedges the model's improvement, b4 proves the files really do shrink —
-     and that the job behind them didn't. Same slot, so nothing grows. */
+  /* the second line under the picture: one honest note per cause. b4 is the
+     model's doing, so it carries the evidence that a harness really does
+     shrink; b5 is yours, so it carries the hedge — which is also the reason
+     the cutting never stops. Same slot, so nothing grows. */
   const PARTS_NOTES = [
-    "", "", "",
+    "", "", "", "",
+    "Opus 5 shipped · Claude Code cut ~80% of its own prompt guidance",
     "better at long jobs · still priced by the token · still sharper in a clean window",
-    "Opus 5 shipped · Claude Code cut ~80% of its own prompt guidance · same job, less of it",
-    "Opus 5 shipped · Claude Code cut ~80% of its own prompt guidance · same job, less of it",
+    "better at long jobs · still priced by the token · still sharper in a clean window",
   ];
 
   function buildParts() {
@@ -930,12 +935,25 @@
     txt(714, 196, "the model", "pt-name", known);
     arrow(644, 670, known);
 
-    /* b1 — the harness: the thing that chooses. The lit rows are what made
-       it into the window this turn; the dim ones exist and stayed out. */
+    /* b1 — the harness: a gate, not a panel. Four rows go in; two pass all
+       the way through and out toward the window, two dead-end against a stop
+       inside it. The icon does its own explaining — you can watch it choose,
+       so "some of what you wrote made it, some didn't" costs no words. */
     const har = el("g", { class: "pt-g pt-b1" }, svg);
-    el("rect", { class: "pt-box", x: 232, y: 70, width: 170, height: 100, rx: 6 }, har);
-    [[88, 1], [106, 0], [124, 1], [142, 0]].forEach(([y, lit]) => {
-      el("rect", { class: "pt-slot" + (lit ? " lit" : ""), x: 254, y, width: 126, height: 8, rx: 2 }, har);
+    const hbody = el("g", { class: "pt-har-scale" }, har);
+    el("path", {
+      class: "pt-box",
+      d: "M 238 70 L 388 70 L 402 84 L 402 164 A 6 6 0 0 1 396 170 L 238 170 A 6 6 0 0 1 232 164 L 232 76 A 6 6 0 0 1 238 70 Z",
+    }, hbody);
+    [[88, 1], [106, 0], [124, 1], [142, 0]].forEach(([y, through]) => {
+      if (through) {
+        // past the wall on purpose: crossing the edge is what makes "this one
+        // made it out" readable without a label
+        el("line", { class: "pt-row lit", x1: 240, y1: y, x2: 412, y2: y }, hbody);
+      } else {
+        el("line", { class: "pt-row", x1: 240, y1: y, x2: 318, y2: y }, hbody);
+        el("line", { class: "pt-stop", x1: 321, y1: y - 6, x2: 321, y2: y + 6 }, hbody);
+      }
     });
     txt(317, 196, "the harness", "pt-name", har);
     txt(317, 214, "Claude Code · Cursor · Codex", "pt-sub", har);
@@ -944,27 +962,49 @@
     /* b2 — your half: the files the harness picks up. Three sheets, drawn
        with visible edges so they read as made by hand, not shipped. */
     const files = el("g", { class: "pt-g pt-b2" }, svg);
+    const fbody = el("g", { class: "pt-files-scale" }, files);
     [[60, 75], [67, 82]].forEach(([x, y]) => {
-      el("rect", { class: "pt-sheet pt-sheet-back", x, y, width: 92, height: 62, rx: 3 }, files);
+      el("rect", { class: "pt-sheet pt-sheet-back", x, y, width: 92, height: 62, rx: 3 }, fbody);
     });
-    el("rect", { class: "pt-sheet", x: 74, y: 89, width: 92, height: 62, rx: 3 }, files);
+    el("rect", { class: "pt-sheet", x: 74, y: 89, width: 92, height: 62, rx: 3 }, fbody);
     [[104, 0], [116, 0], [128, 1], [140, 1]].forEach(([y, sheds]) => {
-      el("line", { class: "pt-ln" + (sheds ? " pt-ln-x" : ""), x1: 86, y1: y, x2: 154, y2: y }, files);
+      el("line", { class: "pt-ln" + (sheds ? " pt-ln-x" : ""), x1: 86, y1: y, x2: 154, y2: y }, fbody);
     });
     txt(113, 196, "what you write", "pt-name", files);
     txt(113, 214, "skills · docs · memory", "pt-sub", files);
     arrow(176, 228, files);
 
-    /* b4 — the habit. NOT a fifth box: everything else on this slide is an
-       artifact in a pipeline, and a habit is something you do TO one. So it
-       arcs backward over the chain — you look at what's actually in the
-       window, and you go edit what you wrote. It draws right-to-left, and
-       it lands on the sheets in the same beat they thin, because the habit
-       is what thinned them. The files never maintain themselves. */
-    const loop = el("g", { class: "pt-loop-g" }, svg);
-    el("path", { class: "pt-loop", pathLength: 100, d: "M 538 100 C 450 26, 113 26, 113 66" }, loop);
-    el("path", { class: "pt-loop-head", d: "M 113 68 l -4.5 -9 l 9 0 z" }, loop);
-    txt(292, 28, "the habit", "pt-loop-name", loop);
+    /* b3 — caching, drawn ON the window because that is where it happens:
+       the whole thing is sent again every turn, and the prefix that didn't
+       change is reused rather than re-read from scratch. Deliberately makes
+       no price claim — the gauge owns the economics, and it reuses this exact
+       hatch, so introducing it here makes that scene cheaper rather than
+       teaching the same idea twice. */
+    const defs = el("defs", {}, svg);
+    const clip = el("clipPath", { id: "pt-reused-clip" }, defs);
+    el("rect", { x: 440, y: 108, width: 44, height: 24, rx: 4 }, clip);
+    const cache = el("g", { class: "pt-cache" }, svg);
+    const hatched = el("g", { "clip-path": "url(#pt-reused-clip)" }, cache);
+    for (let x = 426; x < 492; x += 6) {
+      el("line", { class: "pt-hatch", x1: x, y1: 134, x2: x + 12, y2: 104 }, hatched);
+    }
+    el("rect", { class: "pt-new", x: 484, y: 108, width: 15, height: 24, rx: 2 }, cache);
+    txt(456, 99, "reused", "pt-cache-tag", cache);
+    txt(514, 99, "new", "pt-cache-tag pt-cache-new", cache);
+
+    /* b5 — the habit. It stands at the HEAD of the chain rather than arcing
+       back over it: as an arc it read as ambiguous feedback, and as a step it
+       says the true thing — this is where your half starts, because the files
+       never write or shorten themselves. Still not a box: a return loop, in
+       your ochre, so it stays visibly something you DO rather than something
+       you own. It points into what you write in the same beat that stack
+       thins, because it is what thinned it. */
+    const habit = el("g", { class: "pt-habit" }, svg);
+    el("path", { class: "pt-loop", pathLength: 100, d: "M -33.2 100.4 A 23 23 0 1 1 -62.8 100.4" }, habit);
+    el("path", { class: "pt-loop-head", d: "M -59 97.2 L -63.3 106.1 L -68.5 99.9 Z" }, habit);
+    txt(-48, 196, "the habit", "pt-name pt-habit-name", habit);
+    txt(-48, 214, "look, then cut", "pt-sub", habit);
+    arrow(-18, 54, habit);
   }
 
   /* scene 14: the shared tackle box — the object pv-3 names but never draws.

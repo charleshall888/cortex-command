@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex" />
 <title>Context Is the Game</title>
 <link rel="icon" href="data:," />
-<link rel="stylesheet" href="lib/deck.css?v=35" />
+<link rel="stylesheet" href="lib/deck.css?v=37" />
 </head>
 <body>
 <div id="sky" aria-hidden="true">
@@ -83,16 +83,18 @@
        it fills → the model that reads the window and nothing else. Two of
        the four nouns (window, model) came free from the cold open. The
        caption is ONE swapping slot, so nothing reflows between beats. -->
-  <section class="scene" id="sc-parts" data-title="The Parts" data-beats="5">
+  <section class="scene" id="sc-parts" data-title="The Parts" data-beats="6">
     <h2 class="scene-title" data-beat="0">However good it gets, it only sees what you send</h2>
     <div class="parts-stage">
-      <svg id="parts-svg" viewBox="0 0 780 240" aria-hidden="true"></svg>
+      <!-- the box starts left of zero: the habit stands at the head of the
+           chain, so the drawing extends past the first part -->
+      <svg id="parts-svg" viewBox="-96 0 876 240" aria-hidden="true"></svg>
     </div>
     <div class="parts-caps">
       <p id="parts-cap" class="stage-cap mono"></p>
       <p id="parts-note" class="parts-hedge mono"></p>
     </div>
-    <p class="thesis serif parts-verdict" data-beat="5">Habits shift. The <em>game</em> doesn’t.</p>
+    <p class="thesis serif parts-verdict" data-beat="6">Habits shift. The <em>game</em> doesn’t.</p>
   </section>
 
   <section class="scene" id="sc-blueprint" data-title="The Whole Game" data-beats="1">
@@ -530,6 +532,6 @@
 <script src="lib/vessel.js?v=11"></script>
 <script src="lib/terminal.js?v=10"></script>
 <script src="lib/filmstrip.js?v=11"></script>
-<script src="lib/deck.js?v=38"></script>
+<script src="lib/deck.js?v=40"></script>
 </body>
 </html>

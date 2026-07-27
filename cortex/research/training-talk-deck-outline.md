@@ -1,8 +1,24 @@
-# Deck outline: "Context Is the Game" — v1 workshop deck (rev 18)
+# Deck outline: "Context Is the Game" — v1 workshop deck (rev 19)
 
 > Drafted: 2026-07-13 · rev 3 after two adversarial rounds · rev 4 after the presenter's first slide-by-slide review · rev 5 same day (second review) · rev 6 same day (third review; three-angle fan-out) · rev 7 same day (fourth review; five-angle fan-out) · rev 8 same day (fifth review; direct fixes) · rev 9 same day (pattern-lens audit applied) · **rev 10 same day, after the presenter's sixth review** (anatomy-card zoom label, ~4M/~500k bills, compaction to ~5%, scorecard timestamp cut, numbered recap, `?v=N` cache-busters — the deck at `docs/training/` is the build of THIS rev)
 > Source: `training-talk-messaging-brief.md` · Q&A prep: `training-talk-qa-bank.md`
 > Timing: ~36 min on paper after the rev-5 cuts/adds — **stopwatch pass mandatory** (rev 11 adds one scene; rev 12 adds another, ~36.5 min on paper; re-time).
+
+## What rev 19 changed and why (§2 gets caching, two authors for two shrinks, and the habit moves to the head, 2026-07-27)
+
+Seven presenter items on the rev-18 build of §2, all applied. §2 goes to **6 beats + thesis** (`data-beats="6"`).
+
+**The habit stopped being an arc.** The presenter's read: *"the line with 'the habit' doesn't make sense visually… Maybe it should be a separate step to the left of 'What you write'?"* Rev 18 argued a habit must not be a box because everything else on the slide is an artifact in a pipeline and a habit is what you do *to* one — that reasoning was right about the category and wrong about the geometry. An arc thrown back over the whole chain reads as ambiguous feedback: it does not say what connects to what. As the **head of the chain** it says something true and stronger — this is where your half starts, because the files never write or shorten themselves. The category distinction survives visually rather than positionally: it is a **return loop in ochre**, not a box, so it still reads as something you *do*. Cost: the viewBox extends left to `-96 0 876 240`, and `.parts-stage` widens to `min(72vw, 828px)` so the drawing keeps its size.
+
+**Two shrinks, two authors, one per beat.** The presenter asked for the harness to shrink when the model grows (`#2.4`, `scaleY(0.66)`) *and* for what-you-write to shrink when the habit draws (`#2.5`, `scale(0.82)`). Splitting them is the whole gain: the model taking more on is **not your doing**, and the pruning **is**, so each beat has exactly one author and the `~80% of Claude Code's own prompt guidance` evidence line moved to `#2.4` where it now lands on the object it actually describes — a *harness* shrinking because a model grew. The hedge (*still priced by the token · still sharper in a clean window*) moved to `#2.5`, where it reads as the reason the cutting never stops.
+
+**Caching, without teaching it twice.** Added at `#2.3`, on the window because that is where it happens: hatching over the unchanged prefix, one bright sliver left as the new part. §4's caching beat at `#4.3` already owns the economics ("~10× cheaper to re-read", "cheaper, not lighter — it still reads all of it"), and rev 13 cut an entire scene for teaching one idea at three altitudes — so §2 makes **no price claim at all**, only that the unchanged part is *reused*. It uses the same hatch mark §4 uses, which means introducing it here makes that scene cheaper rather than redundant.
+
+**The harness icon became a gate.** It was a rectangle with four bars — a generic panel that had to be explained. Now four rows go in, two run through and **out past the right edge** toward the window, two **stop dead** against a tick. The icon does its own explaining, so "some of what you wrote made it in, some didn't" costs no words.
+
+**Wording.** `"something decides what goes in it — that's the harness"` → **"the harness decides what makes the cut"** (the old line named the thing twice and buried it behind an indefinite pronoun). `"the model gets better — that part isn't your doing"` → **"the model takes more on — the harness carries less"**, per the presenter's own framing, which also states the beat's visual instead of narrating around it.
+
+Validated headless: 7-beat state-class sweep (`cached` / `grown` / `thinned` gate at the right beats), SVG element inventory, caption/note text per beat, dead-class check (`pt-slot` / `pt-loop-name` / `pt-loop-g` all gone), 0 page console errors, no reflow of the caption slot between beats, no overflow at 1280×720. deck.css `?v=37`, deck.js `?v=40`, notes.js `?v=37`. **Owed: presenter eyeball, rehearsal re-time (one added beat).**
 
 ## What rev 18 changed and why (§2 leaves the metaphor, 2026-07-27)
 
