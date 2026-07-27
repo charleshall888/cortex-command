@@ -39,11 +39,11 @@ Batch by topological level: **batch 0** is pending tasks with `**Depends on**: n
 cortex-lifecycle-advance implement-transition --mode batch --feature <name> --batch <N> --tasks '[<task IDs>]'
 ```
 
-**c. Wait** for every batch task. Send no "send your report" follow-ups: the report is the builder's final message in whatever shape the runtime delivers, and completion derives from the §2d git checkpoint, never from return-delivery shape.
+**c. Wait** for every batch task, sending no "send your report" follow-ups — completion derives from the §2d git checkpoint, never from the report's delivery shape.
 
 **d. Checkpoint** — verify each task produced a commit. Worktree dispatch: `git log HEAD..worktree/{task-name} --oneline` from the main repo CWD; zero lines means no commits → mark failed, and **the orchestrator must NOT commit on its behalf**. Sequential: `git log --oneline -N`. Flip `[ ]` → `[x] done (<short-sha> <commit-ts>)` per success, using the verified sha plus `git log -1 --format=%cI <sha>`. Rework re-checkpoints update to the newest verifying sha.
 
-**e. Merge back** — worktree dispatch only. Per task in order: no changes → already auto-cleaned. Failed commit → skip the merge, then `git worktree remove "$(cortex-worktree-resolve {task-name})"` and `git branch -d worktree/{task-name}`. Passed → `git merge worktree/{task-name}` from the feature branch, then the same cleanup. Conflict → surface as an integration error naming the branch, continue remaining tasks, don't roll back merged branches. Runs before the next batch so later worktrees branch from an updated HEAD.
+**e. Merge back** — worktree dispatch only, before the next batch so later worktrees branch from an updated HEAD. Per task in order: no changes → already auto-cleaned. Failed commit → skip the merge, then `git worktree remove "$(cortex-worktree-resolve {task-name})"` and `git branch -d worktree/{task-name}`. Passed → `git merge worktree/{task-name}` from the feature branch, then the same cleanup. Conflict → surface as an integration error naming the branch, continue remaining tasks, don't roll back merged branches.
 
 **f. Report** the batch before dispatching the next.
 
@@ -56,7 +56,16 @@ Then ask the user via `AskUserQuestion`: **retry**, **skip** (mark failed, conti
 
 ### Builder brief
 
-Each builder gets: the task's full block from plan.md, 2–3 sentences of architectural context from the plan's Overview, and these standing instructions — implement exactly what the task specifies and nothing else; treat the task's file paths as authoritative and flag a wrong-looking one rather than silently deviating; verify per the Verification field and only that, never a broader suite it doesn't name; commit via the Skill tool (`skill: "commit"`), never raw `git commit` or `git -C`; read `cortex/lifecycle/{feature}/spec.md` only if the task references it; and flag any self-sealing check in the exit report rather than self-certifying. Its final message reports task name, status (completed/partial/failed), files modified, verification outcome, commit hash, and deviations.
+Each builder gets the task's full block from plan.md, 2–3 sentences of architectural context from the plan's Overview, and these standing instructions:
+
+- Implement exactly what the task specifies and nothing else.
+- Treat the task's file paths as authoritative; flag a wrong-looking one rather than silently deviating.
+- Verify per the Verification field and only that, never a broader suite it doesn't name.
+- Commit via the Skill tool (`skill: "commit"`), never raw `git commit` or `git -C`.
+- Read `cortex/lifecycle/{feature}/spec.md` only if the task references it.
+- Flag any self-sealing check in the exit report rather than self-certifying.
+
+Its final message reports task name, status (completed/partial/failed), files modified, verification outcome, commit hash, and deviations.
 
 ### 3. Rework (Review Re-Entry)
 
@@ -72,4 +81,4 @@ cortex-lifecycle-advance implement-transition --mode transition --feature {featu
 
 The verb reads tier and criticality through the shared reducer, applies the implement→{review|complete} routing rule it owns, and records the transition idempotently. Route on the returned `state` per SKILL.md § Advance-verb routing — **`review`** or **`complete`** → proceed there.
 
-Proceed automatically; the transition fires on the gate, not user input. Batch N+1 waits for batch N, and every commit goes through `/cortex-core:commit` — orchestrator checkpoints and worktree sub-agents included, never raw git.
+Every commit goes through `/cortex-core:commit` — orchestrator checkpoints and worktree sub-agents included, never raw git.

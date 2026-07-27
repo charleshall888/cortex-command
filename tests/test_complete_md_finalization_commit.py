@@ -104,8 +104,16 @@ def test_finalization_commit_region_positive_tokens() -> None:
         "enumerated git-add / resolver lookup / -u sweep collapsed into it"
     )
 
-    assert "cortex-read-commit-artifacts" in region, (
-        "finalization-commit-step region must invoke the cortex-read-commit-artifacts binstub"
+    # The commit-artifacts flag read folded INTO stage-artifacts (one round-trip
+    # instead of two), so the region no longer invokes the standalone binstub —
+    # it must route the verb's config_disabled signal instead.
+    assert "cortex-read-commit-artifacts" not in region, (
+        "finalization-commit-step region must NOT invoke cortex-read-commit-artifacts "
+        "separately — cortex-lifecycle-stage-artifacts reads the flag itself"
+    )
+    assert "config_disabled" in region, (
+        "finalization-commit-step region must route the stage-artifacts "
+        "'config_disabled' signal (the folded commit-artifacts read)"
     )
     assert "/cortex-core:commit" in region, (
         "finalization-commit-step region must invoke /cortex-core:commit"

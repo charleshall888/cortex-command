@@ -14,8 +14,16 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from cortex_command.backlog.resolve_item import ResolutionError
+from cortex_command.backlog.resolve_item import _build_json as _build_item_json
+from cortex_command.backlog.resolve_item import _parse_frontmatter as _parse_item_frontmatter
+from cortex_command.backlog.resolve_item import resolve as _resolve_backlog
 from cortex_command.backlog.update_item import _get_frontmatter_value
-from cortex_command.common import reduce_lifecycle_state
+from cortex_command.common import (
+    _resolve_user_project_root_from_cwd as _project_root,
+    reduce_lifecycle_state,
+)
+from cortex_command.lifecycle_config import resolve_backlog_backend
 from cortex_command.lifecycle_event import log_event_at
 
 
@@ -404,6 +412,136 @@ def _cmd_resume_point(args: argparse.Namespace) -> int:
     return 0
 
 
+def _epic_context(backlog_path: Path | None) -> dict:
+    """Resolve the item's epic-research and epic-spec paths, existence-checked.
+
+    ``discovery_source`` wins over ``research``; the spec path is recorded only
+    alongside a recorded, existing research path. A referenced-but-absent file
+    yields ``epic_research: null`` plus a ``warning`` the caller relays, so the
+    skill never has to stat these itself.
+    """
+    out: dict = {"epic_research": None, "epic_spec": None, "warning": None}
+    if backlog_path is None or not backlog_path.is_file():
+        return out
+    text = backlog_path.read_text(encoding="utf-8")
+    raw = _get_frontmatter_value(text, "discovery_source") or _get_frontmatter_value(
+        text, "research"
+    )
+    if raw is None or raw in _YAML_NULL_LITERALS:
+        return out
+    if not Path(raw).is_file():
+        out["warning"] = f"epic research path {raw!r} referenced but missing — treating as unset"
+        return out
+    out["epic_research"] = raw
+    spec = _get_frontmatter_value(text, "spec")
+    if spec is not None and spec not in _YAML_NULL_LITERALS and Path(spec).is_file():
+        out["epic_spec"] = spec
+    return out
+
+
+def _cmd_start(args: argparse.Namespace) -> int:
+    """Compose refine's entry: resolve, backend, epic context, resume, seed.
+
+    Replaces the four-round-trip opening sequence (``cortex-resolve-backlog-item``
+    → ``cortex-read-backlog-backend`` → ``cortex-refine resume-point`` →
+    ``cortex-refine emit-lifecycle-start``) with one call.
+
+    Exit codes mirror the verbs it absorbs: ``2`` on an ambiguous reference
+    (candidates on stderr, nothing seeded), ``70`` on a seed write failure.
+    Otherwise ``0`` with a ``context``-tagged envelope. A reference that
+    matches nothing is Context B: without ``--lifecycle-slug`` the verb
+    returns ``state: "needs-slug"`` and seeds nothing, because deriving the
+    kebab slug from prose is the caller's judgment.
+    """
+    backlog_dir = Path("cortex/backlog")
+    resolution = None
+    if not args.no_resolve:
+        try:
+            resolution = _resolve_backlog(args.reference, backlog_dir)
+        except ResolutionError as exc:
+            print(f"cortex-refine: {exc}", file=sys.stderr)
+            return 70
+        if resolution.status == "ambiguous":
+            print(
+                f"cortex-refine: ambiguous reference {args.reference!r}; "
+                f"re-invoke with one of:",
+                file=sys.stderr,
+            )
+            for candidate in resolution.candidates:
+                print(f"  {candidate.stem}", file=sys.stderr)
+            return 2
+
+    backend = resolve_backlog_backend(_project_root())
+
+    item = None
+    backlog_path = None
+    if resolution is not None and resolution.status == "ok":
+        backlog_path = resolution.item
+        item = _build_item_json(backlog_path, _parse_item_frontmatter(backlog_path))
+
+    context = "A" if item is not None else "B"
+    lifecycle_slug = args.lifecycle_slug or (
+        item["lifecycle_slug"] if item is not None else None
+    )
+    if lifecycle_slug is None:
+        print(
+            json.dumps(
+                {
+                    "state": "needs-slug",
+                    "context": "B",
+                    "backend": backend,
+                    "message": (
+                        f"No backlog item matches {args.reference!r}. Derive a "
+                        f"3-6 word kebab-case lifecycle slug, announce it, and "
+                        f"re-run with --lifecycle-slug."
+                    ),
+                },
+                separators=(",", ":"),
+            )
+        )
+        return 0
+
+    base = Path("cortex/lifecycle") / lifecycle_slug
+    spec_exists = (base / "spec.md").is_file()
+    research_exists = (base / "research.md").is_file()
+    if spec_exists and research_exists:
+        resume = "complete"
+    elif spec_exists:
+        resume = "research"
+    elif research_exists:
+        resume = "spec"
+    else:
+        resume = "clarify"
+
+    seed_args = argparse.Namespace(
+        lifecycle_slug=lifecycle_slug,
+        backlog_slug=(item["backlog_filename_slug"] if context == "A" else None),
+        backend=backend,
+    )
+    rc = _cmd_emit_lifecycle_start(seed_args)
+    if rc != 0:
+        return rc
+
+    envelope = {
+        "state": "ready",
+        "context": context,
+        "backend": backend,
+        "lifecycle_slug": lifecycle_slug,
+        "resume": resume,
+        "spec_exists": spec_exists,
+        "research_exists": research_exists,
+    }
+    if item is not None:
+        envelope["filename"] = item["filename"]
+        envelope["backlog_filename_slug"] = item["backlog_filename_slug"]
+        envelope["title"] = item["title"]
+    envelope.update(
+        {k: v for k, v in _epic_context(backlog_path).items() if v is not None}
+    )
+    print(json.dumps(envelope, separators=(",", ":")))
+    return 0
+
+
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="cortex-refine",
@@ -522,6 +660,36 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Lifecycle feature slug under cortex/lifecycle/.",
     )
     rp.set_defaults(func=_cmd_resume_point)
+
+    # start
+    st = sub.add_parser(
+        "start",
+        help=(
+            "Compose refine's entry in one call: resolve the reference, read "
+            "the backlog backend, existence-check epic context, classify the "
+            "resume point, and idempotently seed lifecycle_start. Prints one "
+            "JSON envelope. Exit 2 = ambiguous reference (candidates on "
+            "stderr); 70 = seed write failure."
+        ),
+    )
+    st.add_argument(
+        "reference",
+        help="Any backlog reference — numeric ID, slug, UUID prefix, or title phrase.",
+    )
+    st.add_argument(
+        "--lifecycle-slug",
+        default=None,
+        help=(
+            "Override the resolved lifecycle slug. Required on the Context-B "
+            "path, where the caller derives the kebab slug from prose."
+        ),
+    )
+    st.add_argument(
+        "--no-resolve",
+        action="store_true",
+        help="Skip backlog resolution and treat the run as Context B (ad-hoc).",
+    )
+    st.set_defaults(func=_cmd_start)
 
     return p
 

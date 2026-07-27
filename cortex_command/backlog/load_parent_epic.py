@@ -46,6 +46,8 @@ import yaml
 
 from cortex_command.backlog import _telemetry
 from cortex_command.backlog.build_epic_map import normalize_parent
+from cortex_command.backlog.resolve_item import ResolutionError
+from cortex_command.backlog.resolve_item import resolve as _resolve
 
 
 # ---------------------------------------------------------------------------
@@ -289,11 +291,22 @@ def _sanitize(text: str) -> str:
 # ---------------------------------------------------------------------------
 
 def _resolve_child(slug: str, backlog_dir: Path) -> Path | None:
-    """Return the child-backlog Path matching ``slug`` (filename stem), or None."""
-    candidate = backlog_dir / f"{slug}.md"
-    if candidate.is_file():
-        return candidate
-    return None
+    """Return the child-backlog Path matching ``slug``, or None.
+
+    Delegates to the shared 5-step resolver so this verb accepts every
+    reference form its sibling verbs do — filename stem, bare numeric ID,
+    UUID prefix, ``lifecycle_slug`` frontmatter, and title phrase. An
+    ambiguous reference resolves to None (the caller reports not-found);
+    this verb's contract has no exit-2 candidate arm.
+    """
+    fast_path = backlog_dir / f"{slug}.md"
+    if fast_path.is_file():
+        return fast_path
+    try:
+        result = _resolve(slug, backlog_dir)
+    except ResolutionError:
+        return None
+    return result.item if result.status == "ok" else None
 
 
 def _resolve_parent_by_id(parent_id: int, backlog_dir: Path) -> Path | None:
@@ -336,8 +349,8 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "child_slug",
         help=(
-            "Backlog filename slug for the child item (e.g. "
-            "'085-audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns')."
+            "Any reference to the child item — filename stem, numeric ID, "
+            "UUID prefix, lifecycle slug, or title phrase."
         ),
     )
     return parser

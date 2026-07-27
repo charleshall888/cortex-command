@@ -2,13 +2,11 @@
 
 Quality gate: nothing reaches the user until the artifact passes its checklist or hits the cycle cap.
 
-**Skip** when criticality is `low` AND tier is `simple` — proceed directly to user presentation, logging no orchestrator events. Run for all other combinations. Read both fields with `cortex-lifecycle-state --feature {feature}` (defaults `medium`/`simple` when a key is absent); on `"corrupted": true`, apply the canonical rule in SKILL.md § Criticality — treat the feature as requiring review.
+**Skip** when criticality is `low` AND tier is `simple` — proceed directly to user presentation, logging no orchestrator events. Run for all other combinations. Use the tier and criticality already carried into this context; fall back to `cortex-lifecycle-state --feature {feature}` (defaults `medium`/`simple` when a key is absent) only if they never reached it. On `"corrupted": true`, apply the canonical rule in SKILL.md § Criticality — treat the feature as requiring review.
 
 ## 1. Execute
 
-Rate every item in the phase checklist — Post-Specify (`spec.md`) or Post-Plan (`plan.md`) — **pass** or **flag**. Flag anything unsatisfied or materially weak; a flag requires a fix before user presentation. Run in the main conversation; the artifact is already in context, so no subagent.
-
-Evaluate every item individually — a gestalt "looks mostly fine" misses specific gaps, and a single unflagged issue becomes the user's problem. Flag minor issues too: the fix agent may resolve one quickly, and letting them pass compounds across phases.
+Rate every item in the phase checklist — Post-Specify (`spec.md`) or Post-Plan (`plan.md`) — **pass** or **flag**, individually rather than as a gestalt. Flag anything unsatisfied or materially weak, minor issues included; a flag requires a fix before user presentation. Run in the main conversation; the artifact is already in context, so no subagent.
 
 **Binary-checkable** (checklist items S1 and P4) means one of: (a) a runnable command with observable output and pass/fail; (b) an observable state naming the file path, the string or pattern, and the expected true/false; (c) `Interactive/session-dependent: [one-sentence rationale]` when neither applies.
 

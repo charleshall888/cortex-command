@@ -1,6 +1,6 @@
 # Interactive Worktree Entry
 
-Loaded from implement.md §1 on the worktree arm — the `resolved` state with `worktree-interactive`, or the `prompt` state when the picker selection is the worktree option (the verb returns `prompt` before the choice exists, so the load keys on the selection, not the verb state). §1 hands off one thing: the **entry mode** marker. Follow this to completion, then return to implement.md §2 — the session stays inside the worktree. That isolation is the payoff: same-file tasks dispatch concurrently instead of serializing, the trunk-mode cost this path avoids.
+Loaded from implement.md §1 on the worktree arm — the `resolved` state with `worktree-interactive`, or the `prompt` state when the picker selection is the worktree option (the load keys on the selection, since the verb returns `prompt` before the choice exists). §1 hands off one thing: the **entry mode** marker. Follow this to completion, then return to implement.md §2 — the session stays inside the worktree, so same-file tasks dispatch concurrently instead of serializing.
 
 Route on the entry mode:
 
@@ -25,7 +25,7 @@ cortex-lifecycle-prepare-worktree --feature {slug}
 
 Act on `state`: **`overnight-active`** or **`lock-held`** (a live same-slug session holds it) → surface `message` verbatim and exit §1a without creating a worktree. **`create-failed`** → surface `message` and exit §1a; the verb already released the lock if this session owned it. **`ok`** → `worktree_path` is set; relay any `warning` (a stale runner.pid) as a one-line diagnostic, then continue to Step v.
 
-**Step v — Auto-enter sequence** (steps ii–iv were absorbed into `cortex-lifecycle-prepare-worktree`; the i→v gap is intentional — do not renumber, tests and cross-refs anchor on these labels)
+**Step v — Auto-enter sequence** (the i→v gap is intentional — do not renumber; tests and cross-refs anchor on these labels)
 
 1. **Capture origin pwd** — `_origin_pwd=$(pwd)`; hold it for the session.
 2. **Suppressed-picker structural branch** — `suppressed` skips both the `cortex-worktree-precondition` probe and the auto-enter, routing structurally to the cd-shim: `cd $(cortex-worktree-resolve interactive-{slug})`, surfacing the stable literal `EnterWorktree skipped: suppressed-picker (branch-mode worktree-interactive)`, then continuing to §2. `selected` skips this branch and continues to op 3.

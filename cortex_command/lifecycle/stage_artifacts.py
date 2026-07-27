@@ -7,7 +7,7 @@ directory-glob"** discipline. It extracts the staging shared by
 ``complete.md`` Step 11a and ``post-refine-commit.md`` and emits a single
 compact-JSON signal on stdout::
 
-    {"signal": "staged"|"nothing_staged", "staged_paths": [...]}
+    {"signal": "staged"|"nothing_staged"|"config_disabled", "staged_paths": [...]}
 
 The caller acts on ``signal``: ``nothing_staged`` (the index matches HEAD after
 staging — equivalent to ``git diff --cached --quiet`` exiting 0) → skip
@@ -15,6 +15,13 @@ staging — equivalent to ``git diff --cached --quiet`` exiting 0) → skip
 lifecycle Step 3); ``staged`` → proceed to commit. ``staged_paths`` is the
 sorted ``git diff --cached --name-only`` set (repo-relative) — the actual
 staged index, the same set the per-phase staged-set test pins.
+
+``config_disabled`` folds in what callers previously spent a second round-trip
+on: the verb reads ``commit-artifacts`` from ``cortex/lifecycle.config.md``
+itself (default true when absent) and, when it is false, stages nothing and
+returns that signal with an empty ``staged_paths`` and a ``message`` the caller
+relays. ``cortex-read-commit-artifacts`` remains available for callers that
+need the flag without staging.
 
 Per-phase staged set
 --------------------
@@ -79,6 +86,7 @@ from pathlib import Path
 from typing import Optional
 
 from cortex_command.backlog.resolve_item import resolve
+from cortex_command.lifecycle_config import read_commit_artifacts
 from cortex_command.common import (
     CortexProjectRootError,
     _resolve_user_project_root_from_cwd,
@@ -248,6 +256,14 @@ def collect_paths(phase: str, slug: str, root: Path) -> list[str]:
             candidates.append(f"cortex/backlog/{backlog_name}")
         candidates.append("cortex/backlog/index.md")
 
+    elif phase == "plan":
+        # Plan approval commits the lifecycle directory as it stands: the
+        # artifacts written so far plus the log. No backlog write-back happens
+        # at this boundary, so no ticket file is staged.
+        for name in ("research", "spec", "plan", "index"):
+            candidates.append(f"{lifecycle_rel}/{name}.md")
+        candidates.append(f"{lifecycle_rel}/events.log")
+
     elif phase == "refine":
         submode = _detect_refine_submode(root / lifecycle_rel / "events.log")
         candidates.append(f"{lifecycle_rel}/research.md")
@@ -274,10 +290,22 @@ def collect_paths(phase: str, slug: str, root: Path) -> list[str]:
 def stage(phase: str, slug: str, root: Path) -> dict:
     """Stage the per-phase artifact set and report the staging signal.
 
-    Runs a single ``git add -- <explicit paths>`` (never a directory or ``-u``
-    add), then reads ``git diff --cached --name-only`` to derive both the
-    ``signal`` and ``staged_paths``.
+    Honours ``commit-artifacts`` first: when the config turns it off, stage
+    nothing and report ``config_disabled``. Otherwise runs a single
+    ``git add -- <explicit paths>`` (never a directory or ``-u`` add), then
+    reads ``git diff --cached --name-only`` to derive both the ``signal`` and
+    ``staged_paths``.
     """
+    if not read_commit_artifacts(root):
+        return {
+            "signal": "config_disabled",
+            "staged_paths": [],
+            "message": (
+                "commit-artifacts is false — lifecycle artifacts and any "
+                "uncommitted source are left for the operator to commit "
+                "deliberately."
+            ),
+        }
     paths = collect_paths(phase, slug, root)
     if paths:
         _run(["add", "--"] + paths, cwd=str(root))
@@ -312,7 +340,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--phase",
         required=True,
-        choices=["complete", "refine"],
+        choices=["complete", "plan", "refine"],
         help="Lifecycle phase whose staged set to assemble.",
     )
     parser.add_argument(

@@ -8,9 +8,7 @@ Read `cortex/lifecycle/{feature}/research.md` and `spec.md`, plus `cortex/lifecy
 
 ### 1a. Check criticality
 
-```bash
-cortex-lifecycle-state --feature {feature} --field criticality
-```
+Use the criticality SKILL.md Step 2 carried forward; read it with `cortex-lifecycle-state --feature {feature} --field criticality` only if it never reached this context.
 
 **`critical`** → read and follow `${CLAUDE_SKILL_DIR}/references/competing-plans.md`, then proceed per its guidance. **Otherwise** → §2.
 
@@ -125,6 +123,12 @@ Thread the envelope's `advance_contract.expected_from_state` via `--from-state` 
 
 ## 5. Transition
 
-The plan→implement transition rides the plan-decision arm — no separate step. On any approval run `cortex-read-commit-artifacts`: `true` (default) → stage `cortex/lifecycle/{feature}/` and commit via `/cortex-core:commit`; `false` → skip silently. On "wait" the commit makes approval durable, then the lifecycle halts.
+The plan→implement transition rides the plan-decision arm — no separate step. On any approval:
+
+```bash
+cortex-lifecycle-stage-artifacts --phase plan --feature {feature}
+```
+
+The verb reads `commit-artifacts` itself. Act on `signal`: `config_disabled` → relay its `message` and skip the commit; `nothing_staged` → skip silently; `staged` → commit via `/cortex-core:commit`. A non-zero exit is a staging failure — halt rather than commit a partial set. On "wait" the commit makes approval durable, then the lifecycle halts.
 
 **Hard gate**: backlog items suggest approaches, they don't prescribe them. Unless the item has linked research/spec artifacts that already validated the approach, evaluate it critically and weigh alternatives.

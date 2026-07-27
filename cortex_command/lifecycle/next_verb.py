@@ -574,17 +574,57 @@ def _build_parser() -> argparse.ArgumentParser:
         metavar="N",
         help="Caller-supplied upper bound of the protocol compat range.",
     )
+    parser.add_argument(
+        "--expect-file",
+        default=None,
+        metavar="PATH",
+        help=(
+            "Path to the plugin's protocol-expectation.txt. The verb parses its "
+            "min=/max= keys so the caller need not read the file. Explicit "
+            "--expect-min/--expect-max win; an unreadable or keyless file is "
+            "ignored (no expectation, skew check skipped)."
+        ),
+    )
     return parser
+
+
+def _expectation_from_file(path: Optional[str]) -> tuple[Optional[int], Optional[int]]:
+    """Parse ``min=``/``max=`` from a plugin protocol-expectation file.
+
+    Comment and blank lines are ignored. Any read or parse failure yields
+    ``(None, None)`` — a malformed expectation file must not break the loop,
+    it simply supplies no expectation and the skew check is skipped.
+    """
+    if not path:
+        return None, None
+    bounds: dict[str, int] = {}
+    try:
+        text = Path(path).read_text(encoding="utf-8")
+    except OSError:
+        return None, None
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, _, value = stripped.partition("=")
+        key = key.strip()
+        if key in ("min", "max"):
+            try:
+                bounds[key] = int(value.strip())
+            except ValueError:
+                continue
+    return bounds.get("min"), bounds.get("max")
 
 
 def main(argv: Optional[List[str]] = None) -> int:
     _telemetry.log_invocation("cortex-lifecycle-next")
     args = _build_parser().parse_args(argv)
+    file_min, file_max = _expectation_from_file(args.expect_file)
     try:
         result = next_state(
             args.arguments or "",
-            expect_min=args.expect_min,
-            expect_max=args.expect_max,
+            expect_min=args.expect_min if args.expect_min is not None else file_min,
+            expect_max=args.expect_max if args.expect_max is not None else file_max,
             explain=args.explain,
         )
     except Exception as exc:  # noqa: BLE001 — always emit a JSON struct, never a traceback

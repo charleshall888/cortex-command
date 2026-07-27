@@ -28,6 +28,7 @@ from pathlib import Path
 
 import pytest
 
+from cortex_command import refine as refine_mod
 from cortex_command.lifecycle import state_cli
 from cortex_command.lifecycle.state_cli import _reduce_events
 from cortex_command.refine import main
@@ -252,8 +253,10 @@ def test_reconcile_clarify_non_local_explicit_flags_ratchets_tier(
 def test_refine_non_local_reconcile_branch_is_value_aware() -> None:
     body = _REFINE_SKILL.read_text(encoding="utf-8")
 
-    # One-call shape: both verbs now lead with --backend {resolved}.
-    assert "emit-lifecycle-start --backend {resolved}" in body
+    # One-call shape: reconcile leads with --backend {resolved}. The seed's own
+    # --backend threading moved inside `cortex-refine start`, which resolves the
+    # backend itself, so the skill body no longer spells that flag for the seed.
+    assert "cortex-refine start" in body
     assert "reconcile-clarify --backend {resolved}" in body
 
     # Positive contiguous-shape pins for the item-existence invariant. Context A
@@ -275,6 +278,16 @@ def test_refine_non_local_reconcile_branch_is_value_aware() -> None:
     assert not re.search(r"reconcile-clarify[^\n]*--complexity\s+simple", body)
     assert not re.search(r"reconcile-clarify[^\n]*--criticality\s+medium", body)
 
-    # The backend resolver is referenced so routing is keyed on the resolved
-    # backend, not a static branch.
-    assert "cortex-read-backlog-backend" in body
+    # Routing stays keyed on a RESOLVED backend rather than a static branch.
+    # The standalone `cortex-read-backlog-backend` call folded into
+    # `cortex-refine start`, which resolves and returns it, so the body pins
+    # the resolved value's threading instead of the resolver invocation.
+    assert "{resolved}" in body
+    assert "`backend`" in body, (
+        "refine SKILL.md must name the backend field the start verb returns, "
+        "so downstream write-backs key on it"
+    )
+    assert refine_mod.resolve_backlog_backend is not None, (
+        "cortex-refine no longer imports the backend resolver; `start` would "
+        "return a static backend"
+    )
