@@ -10,7 +10,7 @@ Compose one ticket body per invocation from the provided context block (a caller
 
 ### compose
 
-Emit only the five-section markdown body block to stdout — the sections in order — `## Why`, `## Role`, `## Integration`, `## Edges`, `## Touch points` — all required except `## Touch points`. Prose only — no path:line or `§N` citations and no fenced code blocks outside `## Touch points`, where those forms are the norm.
+Emit the five-section markdown body to stdout, sections in order — `## Why`, `## Role`, `## Integration`, `## Edges`, `## Touch points` — all required except `## Touch points`. Prose only: no path:line or `§N` citations and no fenced code blocks outside `## Touch points`, where those forms are the norm.
 
 - **`## Why`** — the problem in symptom-voice: what is broken, missing, or degraded, in observable terms. Not the solution. Omit this section when it collapses to a restatement of Role's lead.
 - **`## Role`** — the job this piece does once the ticket lands that nothing did before (arc42 Responsibility), not its mechanism.

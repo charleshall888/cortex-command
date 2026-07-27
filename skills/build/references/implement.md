@@ -6,7 +6,7 @@ Dispatch a fresh sub-task per task — a clean context prevents stale assumption
 
 Read `cortex/lifecycle/{feature}/plan.md`; identify pending tasks (`[ ]`).
 
-**Short road (no plan.md)** — the feature arrived via `spec.approved-direct` (Plan was skipped by the state machine; this is not a missing artifact). Derive tasks from spec.md's acceptance criteria and implement in-session: no batching, no sub-task dispatch, no batch emissions. Run the branch decision, do the work, exit via §4.
+**Short road (no plan.md)** — the feature arrived via `spec.approved-direct`, so Plan was skipped by the state machine rather than the artifact going missing. Derive tasks from spec.md's acceptance criteria and implement in-session: no batching, no sub-task dispatch, no batch emissions. Run the branch decision, do the work, exit via §4.
 
 **Branch decision** — one call composes the current-branch check, plan-time `dispatch_choice`, per-repo `branch-mode`, and picker-fire gate:
 
@@ -15,7 +15,7 @@ cortex-lifecycle-branch-decision --feature {slug}
 ```
 
 - **`skip`** — not on `main`/`master`; proceed on the current branch to §2.
-- **`resolved`** — a mode was fixed without prompting; run the same post-selection routing so every downstream guard still runs. `trunk` → §2. `feature-branch` → create/checkout `feature/{lifecycle-slug}`, then §2. `worktree-interactive` → record the returned `entry_mode` (`selected` or `suppressed`), then follow `${CLAUDE_SKILL_DIR}/references/worktree-entry.md` to completion before returning to §2.
+- **`resolved`** — a mode was fixed without prompting; run the same post-selection routing so every downstream guard still fires. `trunk` → §2. `feature-branch` → create/checkout `feature/{lifecycle-slug}`, then §2. `worktree-interactive` → record the returned `entry_mode` (`selected` or `suppressed`), then follow `${CLAUDE_SKILL_DIR}/references/worktree-entry.md` to completion before returning to §2.
 <!-- pause: implement-branch-pick config-conditional -->
 - **`prompt`** — render the picker via `AskUserQuestion` with the returned guards: on `uncommitted_changes` demote the current-branch option in place (prepend `Warning: uncommitted changes in working tree — this will mix them into the commit on main.`, drop any `(recommended)`); when `worktree_option_available` is false, drop the worktree option.
 
@@ -29,7 +29,7 @@ cortex-lifecycle-branch-decision --feature {slug}
 
 ### 2. Task Dispatch
 
-Batch by topological level: **batch 0** is pending tasks with `**Depends on**: none` (or deps already `[x]`); **batch N** is tasks whose deps are all in earlier batches. Batching keys on full task identity including letter-suffixed sub-tasks; same-batch siblings must have disjoint `Files`.
+Batch by topological level: **batch 0** is pending tasks with `**Depends on**: none` (or deps already `[x]`); **batch N** is tasks whose deps all sit in earlier batches. Batching keys on full task identity including letter-suffixed sub-tasks; same-batch siblings must have disjoint `Files`.
 
 **a. Extract** each task's full block from plan.md (`### Task N:` to the next task heading).
 
@@ -49,7 +49,7 @@ cortex-lifecycle-advance implement-transition --mode batch --feature <name> --ba
 
 ### Failure handling
 
-Let in-flight tasks finish — don't abort them. Checkpoint the successes, identify downstream tasks transitively blocked, and surface which task failed, the error, and what's blocked.
+Let in-flight tasks finish. Checkpoint the successes, identify downstream tasks transitively blocked, and surface which task failed, the error, and what's blocked.
 
 <!-- pause: implement-batch-failure question -->
 Then ask the user via `AskUserQuestion`: **retry**, **skip** (mark failed, continue non-dependents), or **abort**.
@@ -69,7 +69,7 @@ Its final message reports task name, status (completed/partial/failed), files mo
 
 ### 3. Rework (Review Re-Entry)
 
-The rework transition was already recorded by the review-verdict arm, so this re-entry records nothing. Read `review.md`, dispatch a fresh sub-task per flagged task with the original task text plus the reviewer's feedback and a fix instruction, leave non-flagged tasks `[x]`, return to Review.
+The review-verdict arm already recorded the rework transition, so this re-entry records nothing. Read `review.md`, dispatch a fresh sub-task per flagged task with the original task text plus the reviewer's feedback and a fix instruction, leave non-flagged tasks `[x]`, return to Review.
 
 ### 4. Transition
 

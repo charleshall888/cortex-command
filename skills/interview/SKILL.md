@@ -11,7 +11,7 @@ A thinking-partner conversation that helps the user reason through a topic. Anch
 
 ## The loop
 
-**One question at a time, in prose.** Wait for the reply, let it shape the next. Not a list fixed up front, and not batched `AskUserQuestion` calls — either form commits to later questions before earlier answers arrive.
+**One question at a time, in prose.** Wait for the reply, let it shape the next. Neither a list fixed up front nor batched `AskUserQuestion` calls — both commit to later questions before earlier answers arrive.
 
 **Recommend before asking.** Lead with your defensible default and reasoning, then ask them to confirm or redirect. Suppress this on taste questions, where recommending contaminates the preference you meant to elicit.
 
@@ -19,6 +19,6 @@ A thinking-partner conversation that helps the user reason through a topic. Anch
 
 **Funnel broad to narrow.** Map the territory before closing in.
 
-**Stop at saturation** — when new answers stop changing the picture, not at coverage of a template. Honor an early stop immediately; once substantial ground is covered, offer a "keep going or wrap up?" check.
+**Stop at saturation** — when new answers stop changing the picture, not at template coverage. Honor an early stop immediately; once substantial ground is covered, offer a "keep going or wrap up?" check.
 
 Close with a concise brief: the topic, the decisions reached, and their rationale.

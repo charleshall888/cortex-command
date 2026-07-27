@@ -10,11 +10,9 @@ Read `cortex/lifecycle/{feature}/research.md` and `spec.md`, plus `cortex/lifecy
 
 Use the criticality SKILL.md Step 2 carried forward; read it with `cortex-lifecycle-state --feature {feature} --field criticality` only if it never reached this context.
 
-**`critical`** → read and follow `${CLAUDE_SKILL_DIR}/references/competing-plans.md`, then proceed per its guidance. **Otherwise** → §2.
-
 ### 1b. Competing Plans (Critical Only)
 
-Lives in `${CLAUDE_SKILL_DIR}/references/competing-plans.md`; only §1a's `critical` arm reaches it.
+**`critical`** → read and follow `${CLAUDE_SKILL_DIR}/references/competing-plans.md`, then proceed per its guidance. **Otherwise** → §2.
 
 ## 2. Write plan.md
 
@@ -91,9 +89,9 @@ On `main`/`master`, resolve the option set with the verb Implement §1 calls; §
 cortex-lifecycle-branch-decision --feature {feature}
 ```
 
-`state: prompt` → render guards as Implement §1 does. A `dirty_tree` reason is expected: plan.md is uncommitted until §5, so §4 structurally dirties its own tree. That alone is not a worktree blocker, and dirt from another session is the strongest case *for* isolation, not against it.
+`state: prompt` → render guards as Implement §1 does. A `dirty_tree` reason is expected: plan.md is uncommitted until §5, so §4 dirties its own tree. That alone is not a worktree blocker, and dirt from another session is the strongest case *for* isolation, not against it.
 
-`state: resolved` → **`branch_mode`** is config-pinned; fold the fixed mode in rather than opening the picker. **`dispatch_choice`** is a stale carryover from a prior approval pass; still render the full surface with the carried mode as a pre-selected default only — it authorizes no worktree auto-entry.
+`state: resolved` → **`branch_mode`** is config-pinned; fold the fixed mode in rather than opening the picker. **`dispatch_choice`** is a stale carryover from a prior approval pass; render the full surface with the carried mode as a pre-selected default only — it authorizes no worktree auto-entry.
 
 Off `main`/`master` the sub-choices collapse, so the surface offers only `[Approve & implement (current branch), Approve plan but wait to implement]`.
 

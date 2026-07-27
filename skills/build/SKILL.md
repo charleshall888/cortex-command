@@ -17,7 +17,7 @@ cortex-lifecycle-next "$ARGUMENTS" --expect-file ${CLAUDE_SKILL_DIR}/references/
 
 One read-only call serves the current state, its advance contract, and its pause spec; `--expect-file` hands it the plugin's protocol range so it can flag wheel/prose skew. Consume the served envelope, not the resolver's legacy `next` field. **Halt on skew or unavailability** — a `protocol-skew` state, a wrapper exit 2 (wheel absent), or a missing command each carry their own remediation; relay it and stop.
 
-Invocation forms: `/cortex-core:build <feature>`, `<feature> <phase>`, and the reserved `complete <slug>` / `resume <feature>`.
+Invocation forms: `/cortex-core:build <feature>`, `<feature> <phase>`, reserved `complete <slug>` / `resume <feature>`.
 
 **Not yet refined.** A served `state` of `research`, `specify`, or `new` means there is no spec to build from: say so and hand off to `/cortex-core:refine {feature}`. Never start a plan without both `research.md` and `spec.md` — `spec.md` alone is an inconsistent pair (overnight needs both), so warn and route to refine.
 
@@ -35,13 +35,13 @@ Run the envelope's `enter_command` **verbatim** — a `cortex-lifecycle-enter` i
 {envelope.enter_command}
 ```
 
-Never rebuild it, and never substitute the user's typed token for its `--feature` value. Its bound backlog-file is what lets a resume repair an index that never received its backlog tags (`"index": "repaired"`); without it every requirements load silently narrows to project.md.
+Never rebuild it, and never substitute the user's typed token for its `--feature` value. Its bound backlog-file lets a resume repair an index that never received its backlog tags (`"index": "repaired"`); without it every requirements load silently narrows to project.md.
 
 `ready` → proceed. `needs-decision` → the item is `already_complete` and the verb ran **no** side effect; apply the Backlog Status Check in [backlog-writeback.md](${CLAUDE_SKILL_DIR}/references/backlog-writeback.md). `blocked` → a user-correctable gate refused and `.session` is unwritten; halt, fix, re-run (idempotent). `ensure-failed` / `error` → halt. Exit 2 → ambiguous slug; apply backlog-writeback.md's exit-2 rule. Mention any `ignored_tokens` in one line.
 
 When resuming, report the served `state`/`criticality`/`tier`, offer continue-or-restart, and surface `staleness` tersely (non-blocking; default continue).
 
-**Carry the served `criticality` and `tier` forward.** Phase references consume these values rather than re-reading state; a fresh `cortex-lifecycle-state` call is only for a feature whose values never reached this context.
+**Carry the served `criticality` and `tier` forward** — phase references consume them rather than re-reading state.
 
 ## Step 3: Execute the phase
 
@@ -68,9 +68,7 @@ A boundary fires on its gate condition (e.g. `plan.md` all tasks `[x]`), not use
 
 ## Criticality
 
-Override at any time with `cortex-lifecycle-event criticality-override --feature <name> --from <old> --to <new>`; a user override always supersedes the monotonic-up-only Clarify reconciliation.
-
-`cortex-lifecycle-state --feature {feature}` (whole-state JSON) or `--field <x>` reduces the event log to current values. The CLI omits absent keys, so apply the defaults `criticality=medium` / `tier=simple` yourself. **`"corrupted": true`** means tier/criticality are unknowable — treat the feature as *requiring* review rather than applying the skip rule.
+Override at any time with `cortex-lifecycle-event criticality-override --feature <name> --from <old> --to <new>`, which supersedes the monotonic-up-only Clarify reconciliation. `cortex-lifecycle-state --feature {feature}` (or `--field <x>`) reduces the event log to current values, omitting absent keys — apply the defaults `criticality=medium` / `tier=simple` yourself. **`"corrupted": true`** means tier/criticality are unknowable: treat the feature as *requiring* review rather than applying the skip rule.
 
 | Criticality | Review phase | Orchestrator review | Planning |
 |-------------|-------------|--------------------|---------|
@@ -82,8 +80,6 @@ Override at any time with `cortex-lifecycle-event criticality-override --feature
 Model choice is the dispatching agent's call at each site, never this table's. The implement→{review|complete} routing rule lives in its verb, not in prose.
 
 ## Situational references
-
-Consult only when the condition applies — don't preload:
 
 - [parallel-execution.md](${CLAUDE_SKILL_DIR}/references/parallel-execution.md) — parallel features via `Agent(isolation: "worktree")`
 - [wontfix.md](${CLAUDE_SKILL_DIR}/references/wontfix.md) — operator-decided lifecycle termination

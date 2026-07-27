@@ -6,7 +6,7 @@ Dispatched verbatim (body after the `---`) with the Step 2–3 substitutions app
 
 You are conducting an adversarial review of one specific angle.
 
-Read `{artifact_path}` — the literal absolute path above. Do NOT re-derive it.
+Read `{artifact_path}` — literal, do not re-derive.
 
 ## Project Context
 {## Project Context block, omit this entire section if none was loaded}
@@ -16,7 +16,7 @@ Read `{artifact_path}` — the literal absolute path above. Do NOT re-derive it.
 
 ## Finding Classes
 
-Tag each finding with exactly one class.
+Exactly one class per finding.
 
 - **A — fix-invalidating**: the artifact's proposed change does not work as described, or makes things worse. ("The refactor removes a null check the caller depends on.")
 - **B — adjacent-gap**: the change is internally correct but an adjacent code path, callsite, or contract is left misaligned. ("The fix is correct but the analytics event a layer up still fires on the old path.")
@@ -30,7 +30,7 @@ If one problem decomposes into both an A and a B concern, **split it into two fi
 
 Work within a ~40-turn cap; on reaching it, return what you have.
 
-Focus exclusively on your angle — do not cover others, do not be balanced. Cite exact artifact text in quotes; "this might not scale" is not acceptable. Investigate freely: probes, measurements, and live commands happen in your own context and are strongly preferred over speculation.
+Focus exclusively on your angle — do not cover others, do not be balanced. Cite exact artifact text in quotes; "this might not scale" is not acceptable. Investigate freely: probes, measurements, and live commands run in your own context and beat speculation.
 
 **The JSON envelope is your entire deliverable.** Anything outside it is discarded, so empirical evidence belongs in `measurement` — that is its only home. Put the delimiter on its own line, then the object:
 
