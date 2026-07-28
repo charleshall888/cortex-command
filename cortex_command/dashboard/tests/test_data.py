@@ -7,6 +7,7 @@ Tests cover:
   - tail_jsonl: absent file returns ([], 0)
   - parse_backlog_counts: counts by status field from YAML frontmatter
   - parse_backlog_counts: skips malformed/missing frontmatter files
+  - parse_backlog_titles: one pass yields both slug→title and id→title
   - parse_overnight_state: returns None for absent path
   - parse_overnight_state: returns None for JSON decode error
   - parse_pipeline_state: returns None for absent path
@@ -28,6 +29,7 @@ from cortex_command.dashboard.data import (
     compute_slow_flags,
     get_last_activity_ts,
     parse_backlog_counts,
+    parse_backlog_titles,
     parse_feature_cost_delta,
     parse_feature_timestamps,
     parse_fleet_cards,
@@ -307,6 +309,86 @@ class TestParseBacklogCounts(unittest.TestCase):
 # ---------------------------------------------------------------------------
 # Tests: parse_overnight_state
 # ---------------------------------------------------------------------------
+
+class TestParseBacklogTitles(unittest.TestCase):
+    """Both title maps come from the function's single corpus pass (#411 R13)."""
+
+    def _write_backlog_file(self, directory: Path, filename: str, frontmatter: str) -> None:
+        content = f"---\n{frontmatter}---\n\nBody text.\n"
+        (directory / filename).write_text(content, encoding="utf-8")
+
+    def test_returns_both_slug_and_id_maps(self):
+        """by_slug keeps its historical shape; by_id keys on the filename id."""
+        with tempfile.TemporaryDirectory() as tmp:
+            backlog_dir = Path(tmp)
+            self._write_backlog_file(backlog_dir, "007-alpha.md", "title: Alpha Feature\n")
+            self._write_backlog_file(backlog_dir, "412-beta.md", "title: Beta Board\n")
+
+            result = parse_backlog_titles(backlog_dir)
+
+            self.assertEqual(
+                result.by_slug,
+                {"alpha-feature": "Alpha Feature", "beta-board": "Beta Board"},
+            )
+            self.assertEqual(
+                result.by_id, {"7": "Alpha Feature", "412": "Beta Board"}
+            )
+
+    def test_id_key_is_unpadded(self):
+        """Keys mirror collect_items' unpadded ids so a join needs no zfill dance."""
+        with tempfile.TemporaryDirectory() as tmp:
+            backlog_dir = Path(tmp)
+            self._write_backlog_file(backlog_dir, "003-gamma.md", "title: Gamma\n")
+
+            result = parse_backlog_titles(backlog_dir)
+
+            self.assertIn("3", result.by_id)
+            self.assertNotIn("003", result.by_id)
+
+    def test_terminal_items_are_included(self):
+        """The blocked-why join resolves blockers that are already complete."""
+        with tempfile.TemporaryDirectory() as tmp:
+            backlog_dir = Path(tmp)
+            self._write_backlog_file(
+                backlog_dir, "228-done.md", "title: Finished Work\nstatus: complete\n"
+            )
+
+            result = parse_backlog_titles(backlog_dir)
+
+            self.assertEqual(result.by_id["228"], "Finished Work")
+
+    def test_archive_subdirectory_is_not_scanned(self):
+        """The glob is non-recursive; archived blockers resolve with no title."""
+        with tempfile.TemporaryDirectory() as tmp:
+            backlog_dir = Path(tmp)
+            archive = backlog_dir / "archive"
+            archive.mkdir()
+            self._write_backlog_file(archive, "050-archived.md", "title: Archived\n")
+            self._write_backlog_file(backlog_dir, "051-active.md", "title: Active\n")
+
+            result = parse_backlog_titles(backlog_dir)
+
+            self.assertEqual(result.by_id, {"51": "Active"})
+
+    def test_absent_directory_returns_two_empty_maps(self):
+        """Degenerate corpora yield empty maps, never a raise."""
+        with tempfile.TemporaryDirectory() as tmp:
+            result = parse_backlog_titles(Path(tmp) / "does-not-exist")
+
+            self.assertEqual(result.by_slug, {})
+            self.assertEqual(result.by_id, {})
+
+    def test_untitled_item_appears_in_neither_map(self):
+        """A missing title is skipped for both keys, not stored as empty."""
+        with tempfile.TemporaryDirectory() as tmp:
+            backlog_dir = Path(tmp)
+            self._write_backlog_file(backlog_dir, "009-untitled.md", "status: backlog\n")
+
+            result = parse_backlog_titles(backlog_dir)
+
+            self.assertEqual(result.by_slug, {})
+            self.assertEqual(result.by_id, {})
+
 
 class TestParseOvernightState(unittest.TestCase):
     """Tests for parse_overnight_state."""

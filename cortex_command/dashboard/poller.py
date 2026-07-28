@@ -365,7 +365,7 @@ async def _poll_slow(state: DashboardState, root: Path) -> None:
             state.backlog_backend = backend
             if backend == "cortex-backlog":
                 state.backlog_counts = parse_backlog_counts(backlog_dir)
-                state.backlog_titles = parse_backlog_titles(backlog_dir)
+                state.backlog_titles = parse_backlog_titles(backlog_dir).by_slug
             else:
                 # Non-local backend: stand down — never surface stale local
                 # counts/titles as authoritative.

@@ -17,7 +17,7 @@ Functions:
     parse_session_list     -- summary rows for all completed sessions
     parse_session_detail   -- all data for a single session detail page
     parse_backlog_counts   -- counts backlog items by status
-    parse_backlog_titles   -- maps lifecycle slug → human-readable backlog title
+    parse_backlog_titles   -- one corpus pass yielding both slug→title and id→title
     _read_all_jsonl        -- reads all JSONL events from byte 0 (initial-read primitive)
     parse_feature_cost_delta -- incremental cost delta and new byte offset for a feature
     parse_metrics          -- reads cortex/lifecycle/metrics.json
@@ -33,6 +33,7 @@ import re
 import statistics
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import NamedTuple
 
 import markdown
 
@@ -1025,15 +1026,40 @@ def parse_backlog_counts(backlog_dir: Path) -> dict[str, int]:
     return counts
 
 
-def parse_backlog_titles(backlog_dir: Path) -> dict[str, str]:
-    """Return a mapping of lifecycle-slug → human-readable backlog title.
+class BacklogTitles(NamedTuple):
+    """Both title lookups produced by one pass over ``cortex/backlog/``.
+
+    Attributes:
+        by_slug: ``slugify(title)`` → title. The feature-slug lookup the
+            feature-card and escalation panels have always consumed.
+        by_id: stringified, unpadded item id → title. Added for the ticket
+            feed's blocked-why join (#411 R13), which must resolve blocker
+            ids to titles across *terminal* items — something neither
+            ``collect_items``' ``all_items`` (id/status/uuid only) nor the
+            slug map (keyed for feature matching, not by id) can serve.
+            Keys mirror ``generate_index.collect_items``' unpadded form.
+
+    Both maps are built in the single existing glob because the slow poll
+    already reads this corpus twice per 30s cycle; a third title pass would
+    be a fourth full scan.  ``archive/`` is out of scope by construction —
+    the glob is non-recursive — so an archived blocker resolves with a
+    ``None`` title rather than appearing under a wrong one.
+    """
+
+    by_slug: dict[str, str]
+    by_id: dict[str, str]
+
+
+def parse_backlog_titles(backlog_dir: Path) -> BacklogTitles:
+    """Return slug→title and id→title maps from one pass over ``backlog_dir``.
 
     Scans ``backlog_dir`` for files matching the pattern
     ``[0-9]*-*.md``, reads the YAML frontmatter between ``---``
-    markers, and extracts the ``title`` field.  The lookup key is
+    markers, and extracts the ``title`` field.  The slug key is
     derived by ``slugify(title)`` from ``cortex_command.common`` (lowercase,
     underscores/slashes to spaces, strip non-alphanumeric, collapse
-    whitespace/hyphens).
+    whitespace/hyphens); the id key is the leading digits of the filename,
+    unpadded and stringified.
 
     Files with missing or malformed frontmatter are skipped silently.
 
@@ -1041,14 +1067,15 @@ def parse_backlog_titles(backlog_dir: Path) -> dict[str, str]:
         backlog_dir: Path to the ``cortex/backlog/`` directory.
 
     Returns:
-        Dict mapping slug string to title string.  Returns ``{}`` if
-        ``backlog_dir`` is absent or on ``OSError``.
+        :class:`BacklogTitles`.  Both maps are ``{}`` if ``backlog_dir`` is
+        absent or on ``OSError``.
     """
     titles: dict[str, str] = {}
+    titles_by_id: dict[str, str] = {}
     try:
         files = sorted(backlog_dir.glob("[0-9]*-*.md"))
     except OSError:
-        return titles
+        return BacklogTitles(titles, titles_by_id)
 
     for filepath in files:
         try:
@@ -1087,7 +1114,11 @@ def parse_backlog_titles(backlog_dir: Path) -> dict[str, str]:
         if slug:
             titles[slug] = title
 
-    return titles
+        id_match = re.match(r"^(\d+)-", filepath.name)
+        if id_match:
+            titles_by_id[str(int(id_match.group(1)))] = title
+
+    return BacklogTitles(titles, titles_by_id)
 
 
 def parse_pipeline_dispatch(lifecycle_dir: Path) -> dict[str, dict]:
