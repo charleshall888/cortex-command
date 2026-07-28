@@ -2,7 +2,7 @@
 
 The seeder is a shipped console script that used to write fixtures into the
 operator's own repository, so the properties under test here are containment
-properties first and fixture-content properties not at all:
+properties first:
 
   - ``write_all`` writes under the root it is handed and nowhere else — no
     writer resolves the project root on its own any more (R3)
@@ -12,6 +12,12 @@ properties first and fixture-content properties not at all:
   - the one-time legacy sweep removes the five backlog fixture files a
     pre-containment seed run left in a project repository, leaves real tickets
     alone, and refuses to delete a git-tracked match (R7)
+
+…and then corpus properties, read back through the real feed layer rather
+than off the fixture table (R11, R17): ``build_backlog_snapshot`` computes
+``phase``, ``deferred_status``, ``deferred_tag``, and the blocker kind/title
+joins that nothing in ``collect_items`` produces, so a corpus that diverges
+from what the feed expects is only visible from this side of the call.
 """
 
 from __future__ import annotations
@@ -33,6 +39,12 @@ from cortex_command.dashboard.seed import (
     write_all,
     write_seed_marker,
 )
+from cortex_command.dashboard.ticket_feed import build_backlog_snapshot
+
+# Imported rather than re-derived: the pinned R3 key set has exactly one
+# definition, so #411 changing its snapshot surfaces here as a failure of
+# this corpus instead of as two lists drifting quietly apart.
+from cortex_command.dashboard.tests.test_ticket_feed import EXPECTED_KEYS
 
 #: Deterministic stand-in for the module's wall-clock ``SESSION_ID``. It must
 #: carry ``SEED_PREFIX`` because that prefix is how ``clean_all`` recognises a
@@ -204,6 +216,141 @@ class TestLegacySweep(unittest.TestCase):
 
         self.assertEqual(removed, [])
         self.assertTrue((self.backlog_dir / "229-foo.md").exists())
+
+
+class TestFeedSnapshot(_RootTestCase):
+    """The enriched corpus, read back through #411's snapshot builder (R11, R17).
+
+    Every assertion here goes through ``build_backlog_snapshot`` with the
+    signature the poller uses, because the states this corpus exists to cover
+    are computed in that builder and appear nowhere in ``collect_items``.
+    """
+
+    #: The poller supplies the timestamp; the builder never stamps its own.
+    POLLED_TS = "2026-01-01T00:00:00+00:00"
+
+    def setUp(self):
+        super().setUp()
+        self.seed(self.root)
+        self.snapshot = build_backlog_snapshot(
+            self.root / "cortex" / "backlog",
+            self.root / "cortex" / "lifecycle",
+            titles_by_id={},
+            polled_ts=self.POLLED_TS,
+        )
+
+    def blockers(self, item_id: str) -> list[dict]:
+        """Return the ``blocked_why`` entries for ``item_id``.
+
+        Blocker coverage is asserted from here rather than from readiness
+        reason strings: a terminal internal blocker leaves the item ready with
+        no reason at all, which is indistinguishable from a fixture that
+        declares no blockers.
+        """
+        return self.snapshot["blocked_why"].get(item_id, [])
+
+    def test_snapshot_over_the_seeded_root_carries_the_pinned_schema(self):
+        # Equality, not containment: a key the corpus stops populating is the
+        # regression the consuming views cannot defend themselves against.
+        self.assertEqual(sorted(self.snapshot.keys()), EXPECTED_KEYS)
+        self.assertEqual(self.snapshot["schema_version"], "1")
+        self.assertEqual(self.snapshot["polled_ts"], self.POLLED_TS)
+        self.assertFalse(self.snapshot["stale"])
+
+    def test_snapshot_carries_an_epic_with_both_its_children(self):
+        epics = self.snapshot["epics"]["epics"]
+
+        self.assertIn("6", epics)
+        self.assertEqual(
+            sorted(child["id"] for child in epics["6"]["children"]), [7, 8]
+        )
+
+    def test_snapshot_drops_a_child_whose_parent_is_not_an_epic(self):
+        # 009 names 001 — a feature — as its parent, so the epic map drops the
+        # relationship silently while the raw frontmatter keeps it.
+        self.assertEqual(self.snapshot["items"]["9"]["parent"], "001")
+        for epic in self.snapshot["epics"]["epics"].values():
+            self.assertNotIn(9, [child["id"] for child in epic["children"]])
+
+    def test_snapshot_reports_all_four_blocker_outcomes(self):
+        # Internal, non-terminal: blocks 007 and is why it is ineligible.
+        self.assertEqual(
+            self.blockers("7"),
+            [{
+                "ref": "002",
+                "kind": "internal",
+                "status": "in_progress",
+                "title": None,
+            }],
+        )
+        # Internal, terminal: 008 is ready anyway, and the blocker is still
+        # listed — the state that has no readiness-side signal at all.
+        self.assertEqual(
+            self.blockers("8"),
+            [{"ref": "005", "kind": "internal", "status": "complete", "title": None}],
+        )
+        self.assertIn("8", self.snapshot["ready"])
+        # External: a reference to work outside this backlog entirely.
+        self.assertEqual(
+            self.blockers("9"),
+            [{
+                "ref": "anthropics/claude-code#34243",
+                "kind": "external",
+                "status": None,
+                "title": None,
+            }],
+        )
+        # not_found: a well-formed UUID matching no item, which renders
+        # differently from an external reference.
+        self.assertEqual(
+            self.blockers("10"),
+            [{
+                "ref": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+                "kind": "not_found",
+                "status": None,
+                "title": None,
+            }],
+        )
+
+    def test_snapshot_reports_an_ineligible_item_of_kind_status(self):
+        status_ineligible = [
+            entry for entry in self.snapshot["ineligible"]
+            if entry["kind"] == "status"
+        ]
+
+        self.assertEqual([entry["id"] for entry in status_ineligible], ["11"])
+
+    def test_snapshot_carries_both_deferral_forms_independently(self):
+        # A deferred *status*, which is also what makes 011 ineligible.
+        deferred_status = self.snapshot["items"]["11"]
+        self.assertTrue(deferred_status["deferred_status"])
+        self.assertFalse(deferred_status["deferred_tag"])
+        self.assertNotIn("11", self.snapshot["ready"])
+
+        # A deferred *tag* at an eligible status: legitimately ready and
+        # deferred at once, which a view must be able to badge distinctly.
+        deferred_tag = self.snapshot["items"]["12"]
+        self.assertFalse(deferred_tag["deferred_status"])
+        self.assertTrue(deferred_tag["deferred_tag"])
+        self.assertIn("12", self.snapshot["ready"])
+
+    def test_snapshot_reports_a_non_null_phase_for_the_artifact_fixture(self):
+        # 004 is the fixture whose lifecycle_slug resolves to a directory the
+        # seeder really writes; phase exists only on the snapshot.
+        self.assertEqual(self.snapshot["items"]["4"]["lifecycle_slug"],
+                         "seed-feature-delta")
+        self.assertIsNotNone(self.snapshot["items"]["4"]["phase"])
+        # …and the dangling-artifact fixture is the counterexample: it names a
+        # lifecycle slug the seeder deliberately never creates.
+        self.assertIsNone(self.snapshot["items"]["13"]["phase"])
+
+    def test_snapshot_carries_archive_ids_outside_the_active_set(self):
+        self.assertTrue(self.snapshot["archive_ids"])
+        self.assertEqual(
+            self.snapshot["counts"]["archived"], len(self.snapshot["archive_ids"])
+        )
+        for archived_id in self.snapshot["archive_ids"]:
+            self.assertNotIn(archived_id, self.snapshot["active_ids"])
 
 
 if __name__ == "__main__":
