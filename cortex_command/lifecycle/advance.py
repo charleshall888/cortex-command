@@ -1007,7 +1007,12 @@ def advance(
                 "preferred_remedy": (
                     "re-sync: re-run cortex-lifecycle-next and thread its "
                     "advance_contract.expected_from_state through --from-state "
-                    "(the sanctioned re-sync — never pass the detected phase)"
+                    "(the sanctioned re-sync — never pass the detected phase). "
+                    "A programmatic caller that already knows which verb it is "
+                    "firing should instead omit --from-state entirely and let "
+                    "the transition table's own from_state stand — a verb has "
+                    "exactly one departure state, so the arm already carries the "
+                    "correct expected phase."
                 ),
                 "sanctioned_override": _SANCTIONED_OVERRIDE,
             }

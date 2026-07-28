@@ -374,6 +374,12 @@ def test_refusal_on_gate_mismatch_names_evidence_and_override(tmp_path: Path) ->
     assert r["refusal"] == "gate-mismatch"
     assert "plan" in r["missing_evidence"]
     assert "cortex-lifecycle-event log" in r["sanctioned_override"]
+    # Both remedies, not just the re-sync one. Naming only the re-sync route
+    # reads as "thread a from_state through" and leads a programmatic caller
+    # straight back into deriving one from artifacts — the exact bug that lost
+    # every APPROVED overnight review's verdict row.
+    assert "advance_contract.expected_from_state" in r["preferred_remedy"]
+    assert "omit --from-state" in r["preferred_remedy"]
     # Nothing landed — the refusal precedes every emission.
     assert _names(fd) == []
 
