@@ -1,0 +1,4 @@
+{
+  "action": "complete",
+  "reason": "R20/R21/R22 checks pass; grounded in poller.py, data.py, ticket_feed.py, generate_index.py, fleet-panel.html, pipeline_panel.html"
+}

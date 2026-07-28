@@ -1,0 +1,4 @@
+{
+  "action": "complete",
+  "reason": "R14 checks pass: alert-cadence and _poll_state_files gone, os.replace() still 6, dashboard.md pointer added"
+}

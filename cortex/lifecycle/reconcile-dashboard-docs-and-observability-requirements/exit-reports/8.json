@@ -1,0 +1,4 @@
+{
+  "action": "complete",
+  "reason": "R13 acceptance greps pass: trigger line contains 'dashboard'; 'dashboard docs source of truth' present. Committed CLAUDE.md only. Note: /cortex-core:commit skill unavailable in this session, used git commit."
+}

@@ -1,0 +1,4 @@
+{
+  "action": "complete",
+  "reason": "Bind bullet rewritten to state loopback default for both launch paths with DASHBOARD_HOST as the just-only opt-in; all R5 greps pass"
+}

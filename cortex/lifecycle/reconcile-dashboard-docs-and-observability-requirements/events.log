@@ -3,3 +3,4 @@
 {"ts": "2026-07-28T02:07:29Z", "event": "complexity_override", "feature": "reconcile-dashboard-docs-and-observability-requirements", "from": "simple", "to": "complex", "gate": "research_open_questions"}
 {"ts": "2026-07-28T02:09:44Z", "event": "criticality_override", "feature": "reconcile-dashboard-docs-and-observability-requirements", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
 {"ts": "2026-07-28T02:46:39Z", "event": "spec_approved", "feature": "reconcile-dashboard-docs-and-observability-requirements", "decision": "approved"}
+{"ts": "2026-07-28T12:33:18Z", "event": "phase_transition", "feature": "reconcile-dashboard-docs-and-observability-requirements", "from": "implement", "to": "review", "tier": "complex"}

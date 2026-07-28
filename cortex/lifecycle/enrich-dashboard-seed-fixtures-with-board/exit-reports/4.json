@@ -1,0 +1,4 @@
+{
+  "action": "complete",
+  "reason": "Cleaner is table-derived, content-gated, prunes dirs bottom-up; --sweep-legacy added. All task verifications pass."
+}

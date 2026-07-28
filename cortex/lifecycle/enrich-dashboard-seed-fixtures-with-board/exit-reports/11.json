@@ -1,0 +1,4 @@
+{
+  "action": "complete",
+  "reason": "R18 met: git ls-files cortex/lifecycle/pipeline-state.json is empty, file remains on disk, and a .gitignore entry keeps it out of git status. overnight-events.log left tracked per spec."
+}

@@ -1,0 +1,4 @@
+{
+  "action": "complete",
+  "reason": "--print-root prints the XDG fixture root and writes nothing; --help lists --root; committed seed.py only"
+}

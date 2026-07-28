@@ -1,0 +1,4 @@
+{
+  "action": "complete",
+  "reason": "Reservation deleted (grep 990 = 0); stale NNN-seed-*.md ignored (230 not 995); archive/ scanned (501); 989->990->991; all 8 create_item tests pass"
+}

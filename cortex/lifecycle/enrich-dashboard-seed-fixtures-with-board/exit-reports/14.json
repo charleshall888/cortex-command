@@ -1,0 +1,4 @@
+{
+  "action": "complete",
+  "reason": "ADR-0033 written with proposed frontmatter, decision date, and all three trade-offs; all verification checks pass"
+}

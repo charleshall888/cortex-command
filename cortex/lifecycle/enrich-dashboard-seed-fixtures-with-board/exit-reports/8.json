@@ -1,0 +1,4 @@
+{
+  "action": "complete",
+  "reason": "Fixture table restructured into optional-field records; 13 active + 1 archived fixture verified through collect_items and build_backlog_snapshot; 200 dashboard tests pass"
+}

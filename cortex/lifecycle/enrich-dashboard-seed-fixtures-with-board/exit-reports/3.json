@@ -1,0 +1,4 @@
+{
+  "action": "complete",
+  "reason": "cortex dashboard --help lists --root; flag sets CORTEX_REPO_ROOT in-process before uvicorn.run(), verified via stubbed uvicorn; existing CLI dashboard tests pass"
+}

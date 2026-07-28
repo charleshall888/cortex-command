@@ -1,0 +1,4 @@
+{
+  "action": "complete",
+  "reason": "Commit c738df7e: both overnight writers take an explicit root. Verified write_all(tmp) writes 50 files under tmp and leaves the real repo untouched; 194 dashboard tests pass. grep count 0 as planned (Task 4 restores 1)."
+}

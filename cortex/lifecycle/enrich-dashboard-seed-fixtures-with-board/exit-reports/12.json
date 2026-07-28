@@ -1,0 +1,4 @@
+{
+  "action": "complete",
+  "reason": "dashboard-demo recipe added; just --show shows cortex-dashboard-seed and cortex dashboard --root, just --list count = 1"
+}

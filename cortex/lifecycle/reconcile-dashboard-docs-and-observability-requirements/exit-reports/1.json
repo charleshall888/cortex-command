@@ -1,0 +1,4 @@
+{
+  "action": "complete",
+  "reason": "justfile dashboard recipe binds 127.0.0.1 by default with DASHBOARD_HOST opt-in; all R1/R2/R3 spec checks pass on just 1.55.1"
+}
