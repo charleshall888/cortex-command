@@ -600,11 +600,9 @@ All five are append-only JSONL and safe to `tail -f` live. The first four are wr
 
 The dashboard is a pull-based observer — it never shares memory with the runner, it just re-reads state files on fixed intervals.
 
-**Files**: `cortex_command/dashboard/poller.py` (`_poll_state_files`, `_poll_jsonl_events`, `_poll_slow`, `_poll_alerts`), `cortex_command/dashboard/data.py` (parse helpers).
+**Files**: `cortex_command/dashboard/poller.py`, `cortex_command/dashboard/data.py` (parse helpers). The poll loops, the files they read, and their cadences are owned by [`docs/dashboard.md`](dashboard.md) — see its Data Sources and Polling Intervals sections.
 
-**Inputs**: `cortex/lifecycle/sessions/{id}/overnight-state.json`, `cortex/lifecycle/sessions/latest-pipeline/pipeline-state.json`, `cortex/lifecycle/sessions/{id}/overnight-events.log` (incremental JSONL tail via byte offset), per-feature `cortex/lifecycle/{feature}/events.log` and `agent-activity.jsonl`, `cortex/backlog/`.
-
-Polling cadence: state files every 2s, `overnight-events.log` every 1s (offset-tracked so already-seen events are never re-emitted), backlog counts every 30s, alert evaluation every 5s. The TOCTOU concern (what if the writer updates a file mid-read?) is resolved by convention at the write side: the overnight runner writes all state JSON via tempfile + `os.replace()`, which is atomic on the same filesystem, so the poller's `json.loads(path.read_text())` either sees the old bytes or the new bytes — never a torn mix. Append-only JSONL logs (`overnight-events.log`, `agent-activity.jsonl`) are tailed by byte offset, which means a write partway through a line will be re-read on the next tick once the line is complete. The practical consequence: a momentarily-stale dashboard is normal, an internally-inconsistent dashboard view is not.
+The TOCTOU concern (what if the writer updates a file mid-read?) is resolved by convention at the write side: the overnight runner writes all state JSON via tempfile + `os.replace()`, which is atomic on the same filesystem, so the poller's `json.loads(path.read_text())` either sees the old bytes or the new bytes — never a torn mix. Append-only JSONL logs (`overnight-events.log`, `agent-activity.jsonl`) are tailed by byte offset, which means a write partway through a line will be re-read on the next tick once the line is complete. The practical consequence: a momentarily-stale dashboard is normal, an internally-inconsistent dashboard view is not.
 
 ### Session Hooks (SessionStart, SessionEnd, notification hooks)
 
