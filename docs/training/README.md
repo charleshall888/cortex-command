@@ -20,6 +20,8 @@ cd docs/training && python3 -m http.server 8000
 
 Controls: **→/space** one beat · **←** previous scene · **b** blank (valves/Q&A) · **Home/End** · URL hash `#8.4` deep-links to section 8, beat 4 (rehearsal/QA).
 
+On a touch screen, **tap** anywhere to advance a beat and tap the **left quarter** to go back. Mouse clicks are not bound on purpose — clicking the deck window to focus or share it must never skip a beat.
+
 ### The hosted copy
 
 GitHub Pages serves this repo's `main:/docs`, so whatever is on `main` is already live at

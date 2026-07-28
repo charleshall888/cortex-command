@@ -51,6 +51,10 @@ html, body {
   color: var(--parchment);
   font-family: var(--ui);
   overflow: hidden;
+  /* tap-to-advance means quick double taps: suppress double-tap zoom so two
+     beats in a row don't zoom the slide instead. Pinch-zoom still works. */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .mono { font-family: var(--mono); }

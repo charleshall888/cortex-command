@@ -1184,6 +1184,33 @@
     }
   });
 
+  /* touch: tap anywhere to advance a beat, tap the left quarter to go back —
+     phones and tablets have no arrow keys. Mouse clicks are deliberately NOT
+     bound: the presenter clicks the deck window to focus or share it, and that
+     must not skip a beat mid-talk. A drag past the slop threshold (a scroll or
+     a pinch) is not a tap. */
+  const TAP_SLOP = 24;
+  let tapX = 0;
+  let tapY = 0;
+  let tapping = false;
+
+  document.addEventListener("pointerdown", (e) => {
+    tapping = e.pointerType !== "mouse" && e.isPrimary;
+    tapX = e.clientX;
+    tapY = e.clientY;
+  });
+
+  document.addEventListener("pointerup", (e) => {
+    if (!tapping) return;
+    tapping = false;
+    if (Math.abs(e.clientX - tapX) > TAP_SLOP || Math.abs(e.clientY - tapY) > TAP_SLOP) return;
+    handleKey(e.clientX < window.innerWidth * 0.25 ? "ArrowLeft" : "ArrowRight");
+  });
+
+  document.addEventListener("pointercancel", () => {
+    tapping = false;
+  });
+
   /* presenter-view sync: the deck broadcasts its position; a presenter.html
      window (open it beside the deck, keep focus there) shows the talk-track
      cues and remote-controls the deck. Needs http(s) — file:// origins
