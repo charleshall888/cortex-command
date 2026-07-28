@@ -50,6 +50,10 @@ from cortex_command.dashboard.data import (
     parse_tool_usage,
     tail_jsonl,
 )
+from cortex_command.dashboard.ticket_feed import (
+    build_backlog_snapshot,
+    mark_snapshot_stale,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +78,11 @@ class DashboardState:
             tuple sourced from the canonical detector when ``plan.md``
             exists, else ``None``.
         backlog_counts: Status -> count mapping from cortex/backlog/ directory.
+        backlog_snapshot: The ticket-feed snapshot documented in
+            ``cortex_command.dashboard.ticket_feed``, or None when the
+            backlog has never been polled locally. None is a distinct fact
+            from an empty snapshot: a fresh consumer repo with no backlog
+            directory still gets a schema-complete structure.
         last_updated: ISO 8601 timestamp of the most recent successful poll.
     """
 
@@ -88,6 +97,7 @@ class DashboardState:
     circuit_breaker_active: bool = False
     circuit_breaker_notified: bool = False
     backlog_counts: dict = field(default_factory=dict)
+    backlog_snapshot: dict | None = None
     backlog_titles: dict = field(default_factory=dict)
     backlog_backend: str = "cortex-backlog"
     feature_cost_totals: dict = field(default_factory=dict)
@@ -351,9 +361,18 @@ async def _poll_jsonl_events(state: DashboardState, root: Path) -> None:
 
 
 async def _poll_slow(state: DashboardState, root: Path) -> None:
-    """Poll backlog counts every 30 seconds."""
+    """Poll backlog counts and the ticket-feed snapshot every 30 seconds."""
     backlog_dir = root / "cortex" / "backlog"
     lifecycle_dir = root / "cortex" / "lifecycle"
+
+    # One warning per fault episode. A deterministic fault here — an
+    # unreadable file, a decode error — recurs every cycle forever, and no
+    # logging rotation is configured anywhere in this package, so an
+    # unsuppressed warning is ~2,880 identical lines a day. Reset on
+    # recovery so the next episode is reported. Loop-local rather than
+    # snapshot-derived: a repo whose very first poll faults has no prior
+    # snapshot to carry the episode on.
+    feed_fault_logged = False
 
     while True:
         try:
@@ -365,12 +384,41 @@ async def _poll_slow(state: DashboardState, root: Path) -> None:
             state.backlog_backend = backend
             if backend == "cortex-backlog":
                 state.backlog_counts = parse_backlog_counts(backlog_dir)
-                state.backlog_titles = parse_backlog_titles(backlog_dir).by_slug
+                titles = parse_backlog_titles(backlog_dir)
+                state.backlog_titles = titles.by_slug
+
+                # Bulkheaded on its own, not covered by the outer handler:
+                # pipeline_dispatch, dispatch_details and metrics are all
+                # assigned after this gate block, so an unguarded raise in
+                # here would blank three shipped panels that have nothing to
+                # do with the backlog. Broader than the narrow handlers
+                # elsewhere in this file, and deliberately so.
+                try:
+                    snapshot = build_backlog_snapshot(
+                        backlog_dir, lifecycle_dir, titles.by_id, _now_iso()
+                    )
+                    feed_fault_logged = False
+                except Exception as exc:  # noqa: BLE001
+                    # Retain the last good picture rather than blanking it,
+                    # flagged so a view can say how old it is.
+                    snapshot = mark_snapshot_stale(state.backlog_snapshot)
+                    if not feed_fault_logged:
+                        logger.warning(
+                            "_poll_slow ticket feed error (suppressing until "
+                            "recovery): %s", exc
+                        )
+                        feed_fault_logged = True
+
+                # Single assignment: every value above resolved before any
+                # write, so a raise leaves the previous snapshot whole
+                # instead of pairing fresh items with a stale epic map.
+                state.backlog_snapshot = snapshot
             else:
                 # Non-local backend: stand down — never surface stale local
                 # counts/titles as authoritative.
                 state.backlog_counts = {}
                 state.backlog_titles = {}
+                state.backlog_snapshot = None
 
             state.pipeline_dispatch = parse_pipeline_dispatch(lifecycle_dir)
             state.dispatch_details = parse_dispatch_details(lifecycle_dir)

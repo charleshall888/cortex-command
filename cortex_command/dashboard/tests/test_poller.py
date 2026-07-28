@@ -204,10 +204,12 @@ class TestPollSlowBackendGate(unittest.IsolatedAsyncioTestCase):
     DashboardState() would be insufficient (its dicts already default to {}).
     """
 
-    async def _run_one_cycle(self, root: Path) -> DashboardState:
+    async def _run_one_cycle(
+        self, root: Path, state: DashboardState | None = None
+    ) -> DashboardState:
         from cortex_command.dashboard.poller import _poll_slow
 
-        state = DashboardState()
+        state = DashboardState() if state is None else state
         task = asyncio.create_task(_poll_slow(state, root))
         # Let the synchronous poll body run once, up to its `await sleep(30)`.
         for _ in range(5):
@@ -229,7 +231,9 @@ class TestPollSlowBackendGate(unittest.IsolatedAsyncioTestCase):
                     "cortex_command.dashboard.poller.parse_backlog_counts"
                 ) as spy_counts, mock.patch(
                     "cortex_command.dashboard.poller.parse_backlog_titles"
-                ) as spy_titles:
+                ) as spy_titles, mock.patch(
+                    "cortex_command.dashboard.poller.build_backlog_snapshot"
+                ) as spy_feed:
                     state = await self._run_one_cycle(root)
                 # (a) Only passes if the poller actually ran AND wrote the
                 # resolved value — fails for a never-run poller (default
@@ -240,6 +244,39 @@ class TestPollSlowBackendGate(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(state.backlog_titles, {})
                 spy_counts.assert_not_called()
                 spy_titles.assert_not_called()
+                spy_feed.assert_not_called()
+
+    async def test_nonlocal_arm_clears_a_populated_snapshot(self):
+        """A mid-session backend switch must not leave local data on screen.
+
+        Pre-populating is load-bearing: the snapshot defaults to None, so a
+        poller that simply never assigns it would pass a fresh-state check.
+        """
+        for backend in ("none", "github-issues"):
+            with self.subTest(backend=backend), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                _write_repo(root, backend)
+
+                state = DashboardState()
+                state.backlog_snapshot = {"schema_version": "1", "items": {"1": {}}}
+                await self._run_one_cycle(root, state=state)
+
+                self.assertEqual(state.backlog_backend, backend)
+                self.assertIsNone(state.backlog_snapshot)
+
+    async def test_cortex_backlog_arm_populates_the_snapshot(self):
+        """Positive control for the gate's local arm."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_repo(root, "cortex-backlog")
+            state = await self._run_one_cycle(root)
+
+        self.assertIsNotNone(state.backlog_snapshot)
+        self.assertEqual(state.backlog_snapshot["schema_version"], "1")
+        self.assertFalse(state.backlog_snapshot["stale"])
+        # The two backlog-status items survive; the complete one is terminal.
+        self.assertEqual(sorted(state.backlog_snapshot["items"]), ["1", "2"])
+        self.assertTrue(state.backlog_snapshot["polled_ts"])
 
     async def test_cortex_backlog_arm_reads_known_counts(self):
         """Positive control: known-value dict (NOT == parse_backlog_counts(dir))."""
@@ -258,6 +295,148 @@ class TestPollSlowBackendGate(unittest.IsolatedAsyncioTestCase):
             state = await self._run_one_cycle(root)
         self.assertEqual(state.backlog_backend, "cortex-backlog")
         self.assertEqual(state.backlog_counts, _EXPECTED_COUNTS)
+
+
+class TestTicketFeedBulkhead(unittest.IsolatedAsyncioTestCase):
+    """A backlog fault must not blank panels that have nothing to do with it.
+
+    Every fault modelled here is deterministic and persistent — an unreadable
+    file or a decode error recurs on every 30s cycle forever — so the tests
+    drive multiple cycles rather than one.
+    """
+
+    async def _run_cycles(self, root: Path, count: int, state: DashboardState | None = None):
+        """Drive `count` full poll bodies by making the 30s sleep a no-op."""
+        from cortex_command.dashboard import poller as poller_mod
+
+        state = DashboardState() if state is None else state
+        cycles = 0
+
+        async def _counting_sleep(_seconds):
+            nonlocal cycles
+            cycles += 1
+            if cycles >= count:
+                raise asyncio.CancelledError
+            await asyncio.sleep(0)
+
+        with mock.patch.object(poller_mod.asyncio, "sleep", _counting_sleep):
+            task = asyncio.create_task(poller_mod._poll_slow(state, root))
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+        return state
+
+    async def test_post_gate_panels_survive_a_raising_producer(self):
+        """pipeline_dispatch, dispatch_details and metrics are assigned after
+        the gate block, so an unguarded raise inside it would blank all three."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_repo(root, "cortex-backlog")
+            lifecycle = root / "cortex" / "lifecycle"
+            (lifecycle / "metrics.json").write_text('{"total": 7}', encoding="utf-8")
+            (lifecycle / "pipeline-events.log").write_text(
+                json.dumps({
+                    "event": "dispatch_start", "feature": "feat-a", "complexity": "simple",
+                }) + "\n",
+                encoding="utf-8",
+            )
+
+            with mock.patch(
+                "cortex_command.dashboard.poller.build_backlog_snapshot",
+                side_effect=PermissionError("unreadable backlog file"),
+            ):
+                state = await self._run_cycles(root, 1)
+
+        self.assertIsNone(state.backlog_snapshot)
+        self.assertEqual(state.metrics, {"total": 7})
+        self.assertIn("feat-a", state.pipeline_dispatch)
+        self.assertIsInstance(state.dispatch_details, dict)
+
+    async def test_fault_retains_the_prior_snapshot_and_freezes_its_timestamp(self):
+        """Retention beats blanking, and last_updated cannot speak for this
+        data — a different loop rewrites it every two seconds."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_repo(root, "cortex-backlog")
+
+            prior = {
+                "schema_version": "1", "polled_ts": "2026-01-01T00:00:00+00:00",
+                "stale": False, "items": {"1": {"title": "Kept"}},
+            }
+            state = DashboardState()
+            state.backlog_snapshot = prior
+
+            with mock.patch(
+                "cortex_command.dashboard.poller.build_backlog_snapshot",
+                side_effect=RuntimeError("epic map exploded"),
+            ):
+                await self._run_cycles(root, 1, state=state)
+
+        self.assertTrue(state.backlog_snapshot["stale"])
+        self.assertEqual(state.backlog_snapshot["polled_ts"], "2026-01-01T00:00:00+00:00")
+        self.assertEqual(state.backlog_snapshot["items"], {"1": {"title": "Kept"}})
+        # The commit is a single assignment of a fully-built value, so the
+        # previous object is never edited underneath a concurrent reader.
+        self.assertFalse(prior["stale"])
+        self.assertIsNot(state.backlog_snapshot, prior)
+
+    async def test_partial_snapshot_is_never_observable(self):
+        """A raise part-way through the build leaves state wholly untouched."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_repo(root, "cortex-backlog")
+
+            prior = {"schema_version": "1", "polled_ts": "T0", "stale": False, "items": {}}
+            state = DashboardState()
+            state.backlog_snapshot = prior
+            observed = []
+
+            def _explode_mid_build(*args, **kwargs):
+                observed.append(dict(state.backlog_snapshot))
+                raise ValueError("half-way")
+
+            with mock.patch(
+                "cortex_command.dashboard.poller.build_backlog_snapshot",
+                side_effect=_explode_mid_build,
+            ):
+                await self._run_cycles(root, 1, state=state)
+
+        # Mid-build, state still held the untouched prior value.
+        self.assertEqual(observed, [prior])
+
+    async def test_persistent_fault_logs_once_then_recovers(self):
+        """At 30s a persistent fault would emit ~2,880 lines a day unrotated."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_repo(root, "cortex-backlog")
+
+            state = DashboardState()
+            state.backlog_snapshot = {
+                "schema_version": "1", "polled_ts": "2026-01-01T00:00:00+00:00",
+                "stale": False, "items": {},
+            }
+
+            with mock.patch(
+                "cortex_command.dashboard.poller.build_backlog_snapshot",
+                side_effect=OSError("still broken"),
+            ), self.assertLogs("cortex_command.dashboard.poller", level="WARNING") as logs:
+                await self._run_cycles(root, 3, state=state)
+
+            feed_warnings = [r for r in logs.records if "ticket feed" in r.getMessage()]
+            self.assertEqual(len(feed_warnings), 1, "one warning per fault episode")
+            self.assertTrue(state.backlog_snapshot["stale"])
+            self.assertEqual(
+                state.backlog_snapshot["polled_ts"], "2026-01-01T00:00:00+00:00"
+            )
+
+            # Fourth cycle succeeds: the flag clears and the clock moves on.
+            await self._run_cycles(root, 1, state=state)
+
+        self.assertFalse(state.backlog_snapshot["stale"])
+        self.assertNotEqual(
+            state.backlog_snapshot["polled_ts"], "2026-01-01T00:00:00+00:00"
+        )
 
 
 class TestLifespanStartupResolution(unittest.IsolatedAsyncioTestCase):
