@@ -2,16 +2,19 @@
 schema_version: "1"
 uuid: c5abd455-85fa-457b-8087-c99ccfd55566
 title: Add the triage board panel and the active-vs-archive landscape strip
-status: backlog
+status: refined
 priority: medium
 type: feature
 created: 2026-07-21
-updated: 2026-07-21
+updated: 2026-07-27
 discovery_source: cortex/research/dashboard-command-station/research.md
 parent: "410"
 tags: ['dashboard-command-station', 'dashboard']
 areas: ['dashboard']
 blocked-by: 411
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/add-the-triage-board-panel-and/spec.md
 ---
 ## Why
 
