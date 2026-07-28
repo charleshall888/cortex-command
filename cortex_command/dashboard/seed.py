@@ -11,12 +11,16 @@ Entry point: python3 -m cortex_command.dashboard.seed
 import argparse
 import json
 import os
+import re
 import shutil
+import subprocess
 import sys
 import uuid
 from contextlib import suppress
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+from cortex_command import common as _common
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -1079,7 +1083,10 @@ _BACKLOG_UUIDS = {
 
 
 def write_backlog_items(repo_root: Path) -> list[Path]:
-    """Write 5 seed backlog items to cortex/backlog/990-seed-*.md through cortex/backlog/994-seed-*.md.
+    """Write one ``cortex/backlog/{number}-{slug}.md`` file per ``_BACKLOG_ITEMS`` entry.
+
+    ``clean_all`` derives its backlog removals from the same table and the same
+    filename shape, so renumbering the fixtures cannot desynchronize the pair.
 
     Frontmatter follows the schema at skills/backlog/references/schema.md
     (schema_version, uuid, title, status, priority, type, created, updated) so
@@ -1199,32 +1206,94 @@ def run_seed(root: Path) -> None:
     print(f"  cortex dashboard --root {root}")
 
 
-def clean_all(repo_root: Path) -> None:
-    """Remove all files created by a previous seed run.
+def _seed_content_signals() -> list[str]:
+    """Return the fixture names that identify a file as this seeder's output.
+
+    Derived from the same tables the writers render, so renaming a fixture can
+    never leave the cleaner matching a name nothing writes any more.
+    """
+    return [slug for slug, *_ in _FEATURES] + list(PIPELINE_FEATURES)
+
+
+def _unlink_if_seed_content(path: Path, rel: str, removed: list[str]) -> None:
+    """Unlink ``path`` only when its content names one of the seed fixtures.
+
+    ``--clean`` runs against whatever root it is handed, and a real repository
+    keeps live ``pipeline-state.json`` / ``pipeline-events.log`` /
+    ``metrics.json`` files at exactly these paths — some of them git-tracked.
+    The pre-containment cleaner unlinked all three unconditionally, so a
+    ``--clean`` in a never-seeded repository deleted real, tracked state. Every
+    removal is now gated on the file naming a fixture the writers produce.
+    """
+    if not path.exists():
+        return
+    try:
+        text = path.read_text(encoding="utf-8")
+    except Exception as exc:
+        print(f"  WARNING: could not read {rel} ({exc}), skipping.")
+        return
+    if any(signal in text for signal in _seed_content_signals()):
+        path.unlink()
+        removed.append(rel)
+    else:
+        print(f"  WARNING: {rel} names no seed fixture — not a seed file, skipping.")
+
+
+def _prune_empty_dirs(candidates: list[Path], root: Path, removed: list[str]) -> None:
+    """Remove each candidate directory under ``root``, deepest first, when empty.
+
+    The writers create directories as well as files — ``exit-reports/``,
+    ``learnings/``, one directory per feature, the session directory, and the
+    ``.claude/`` marker directory — and ``write_all``'s hand-assembled
+    ``written_paths`` records none of them. Without this pass a seed/clean cycle
+    leaves the tree littered with empty directories rather than returning it to
+    its prior state. A directory goes only when it is empty once its own files
+    are gone, so anything the seeder did not write keeps its parent alive.
+    """
+    for directory in sorted(set(candidates), key=lambda p: len(p.parts), reverse=True):
+        if directory == root or root not in directory.parents:
+            continue
+        if not directory.is_dir():
+            continue
+        # rmdir raises OSError when the directory still holds anything.
+        with suppress(OSError):
+            directory.rmdir()
+            removed.append(f"{directory.relative_to(root)}/")
+
+
+def clean_all(root: Path) -> None:
+    """Remove every file and directory a previous seed run wrote under ``root``.
+
+    Scoped entirely to ``root`` — the resolved fixture root — and derived from
+    the same tables the writers render, so the writer/cleaner pair cannot
+    desynchronize when the fixtures are renamed or renumbered.
 
     Removal order:
-    1. cortex/lifecycle/overnight-state.json — only if session_id contains "overnight-seed"
-    2. cortex/lifecycle/overnight-events.log — only if first line contains "overnight-seed"
-    3. cortex/lifecycle/sessions/overnight-seed-*/ directories (shutil.rmtree)
-    4. cortex/lifecycle/seed-feature-*/ directories (shutil.rmtree)
-    5. cortex/lifecycle/pipeline-state.json
-    6. cortex/lifecycle/pipeline-events.log
-    7. cortex/lifecycle/metrics.json
-    8. cortex/backlog/990-seed-*.md through cortex/backlog/994-seed-*.md
+    1. cortex/lifecycle/overnight-state.json — only if session_id names a seed session
+    2. cortex/lifecycle/overnight-events.log — only if its first line names one
+    3. cortex/lifecycle/sessions/{SEED_PREFIX}-*/ directories (shutil.rmtree)
+    4. One cortex/lifecycle/{slug}/ directory per ``_FEATURES`` entry (shutil.rmtree)
+    5. cortex/lifecycle/{pipeline-state.json,pipeline-events.log,metrics.json} —
+       only when their content names a seed fixture
+    6. One cortex/backlog/{number}-{slug}.md file per ``_BACKLOG_ITEMS`` entry
+    7. The ``.claude/`` seed marker file
+    8. Every directory the writers created, pruned bottom-up when empty
 
     Args:
-        repo_root: Absolute path to the repository root.
+        root: Absolute path to the fixture root to clean.
     """
     removed: list[str] = []
-    lifecycle_dir = repo_root / "cortex" / "lifecycle"
+    prune: list[Path] = []
+    lifecycle_dir = root / "cortex" / "lifecycle"
+    backlog_dir = root / "cortex" / "backlog"
 
-    # 1. cortex/lifecycle/overnight-state.json — guard: session_id must contain "overnight-seed"
+    # 1. cortex/lifecycle/overnight-state.json — guard: session_id must name a seed session
     overnight_state = lifecycle_dir / "overnight-state.json"
     if overnight_state.exists():
         try:
             data = json.loads(overnight_state.read_text(encoding="utf-8"))
             session_id = data.get("session_id", "")
-            if "overnight-seed" in session_id:
+            if SEED_PREFIX in session_id:
                 overnight_state.unlink()
                 removed.append("cortex/lifecycle/overnight-state.json")
             else:
@@ -1235,55 +1304,66 @@ def clean_all(repo_root: Path) -> None:
         except Exception as exc:
             print(f"  WARNING: could not parse cortex/lifecycle/overnight-state.json ({exc}), skipping.")
 
-    # 2. cortex/lifecycle/overnight-events.log — guard: first line must contain "overnight-seed"
+    # 2. cortex/lifecycle/overnight-events.log — guard: first line must name a seed session
     overnight_events = lifecycle_dir / "overnight-events.log"
     if overnight_events.exists():
         try:
             first_line = overnight_events.read_text(encoding="utf-8").splitlines()[0]
-            if "overnight-seed" in first_line:
+            if SEED_PREFIX in first_line:
                 overnight_events.unlink()
                 removed.append("cortex/lifecycle/overnight-events.log")
             else:
                 print(
-                    "  WARNING: cortex/lifecycle/overnight-events.log first line does not contain"
-                    " 'overnight-seed' — not a seed file, skipping."
+                    "  WARNING: cortex/lifecycle/overnight-events.log first line does not name"
+                    f" a seed session ({SEED_PREFIX}) — not a seed file, skipping."
                 )
         except Exception as exc:
             print(f"  WARNING: could not read cortex/lifecycle/overnight-events.log ({exc}), skipping.")
 
-    # 3. cortex/lifecycle/sessions/overnight-seed-*/ directories
+    # 3. Session directories — the prefix the seeder builds SESSION_ID from
     sessions_dir = lifecycle_dir / "sessions"
-    for session_dir in sessions_dir.glob("overnight-seed-*/"):
-        shutil.rmtree(session_dir)
-        removed.append(f"cortex/lifecycle/sessions/{session_dir.name}/")
+    for session_dir in sorted(sessions_dir.glob(f"{SEED_PREFIX}-*")):
+        if session_dir.is_dir():
+            shutil.rmtree(session_dir)
+            removed.append(f"cortex/lifecycle/sessions/{session_dir.name}/")
+    prune.append(sessions_dir)
 
-    # 4. cortex/lifecycle/seed-feature-*/ directories
-    for feature_dir in lifecycle_dir.glob("seed-feature-*/"):
-        shutil.rmtree(feature_dir)
-        removed.append(f"cortex/lifecycle/{feature_dir.name}/")
+    # 4. One feature directory per _FEATURES entry — the same table write_all
+    #    iterates, rather than a glob that would also match a real feature.
+    for slug, *_ in _FEATURES:
+        feature_dir = lifecycle_dir / slug
+        prune.extend([feature_dir / "exit-reports", feature_dir / "learnings", feature_dir])
+        if feature_dir.is_dir():
+            shutil.rmtree(feature_dir)
+            removed.append(f"cortex/lifecycle/{slug}/")
 
-    # 5. cortex/lifecycle/pipeline-state.json
+    # 5. Pipeline and metrics fixtures — content-gated (see _unlink_if_seed_content)
+    for name in ("pipeline-state.json", "pipeline-events.log", "metrics.json"):
+        _unlink_if_seed_content(lifecycle_dir / name, f"cortex/lifecycle/{name}", removed)
+
+    # 6. One backlog file per _BACKLOG_ITEMS entry, named exactly as
+    #    write_backlog_items names it.
+    for number, slug, *_ in _BACKLOG_ITEMS:
+        path = backlog_dir / f"{number}-{slug}.md"
+        with suppress(FileNotFoundError):
+            path.unlink()
+            removed.append(f"cortex/backlog/{path.name}")
+
+    # 7. The .claude/ marker file write_seed_marker created
+    marker_dir = root / ".claude"
     with suppress(FileNotFoundError):
-        (lifecycle_dir / "pipeline-state.json").unlink()
-        removed.append("cortex/lifecycle/pipeline-state.json")
+        (marker_dir / SEED_MARKER_NAME).unlink()
+        removed.append(f".claude/{SEED_MARKER_NAME}")
 
-    # 6. cortex/lifecycle/pipeline-events.log
-    with suppress(FileNotFoundError):
-        (lifecycle_dir / "pipeline-events.log").unlink()
-        removed.append("cortex/lifecycle/pipeline-events.log")
-
-    # 7. cortex/lifecycle/metrics.json
-    with suppress(FileNotFoundError):
-        (lifecycle_dir / "metrics.json").unlink()
-        removed.append("cortex/lifecycle/metrics.json")
-
-    # 8. cortex/backlog/990-seed-*.md through cortex/backlog/994-seed-*.md
-    backlog_dir = repo_root / "cortex" / "backlog"
-    for prefix in range(990, 995):
-        for path in backlog_dir.glob(f"{prefix}-seed-*.md"):
-            with suppress(FileNotFoundError):
-                path.unlink()
-                removed.append(f"cortex/backlog/{path.name}")
+    # 8. Prune the directories the writers created, bottom-up, when empty
+    prune.extend([
+        marker_dir,
+        backlog_dir / "archive",
+        backlog_dir,
+        lifecycle_dir,
+        root / "cortex",
+    ])
+    _prune_empty_dirs(prune, root, removed)
 
     # Summary
     if removed:
@@ -1302,6 +1382,84 @@ def run_clean(root: Path) -> None:
     """
     print(f"Cleaning seed fixture files under {root} …")
     clean_all(root)
+    print("Done.")
+
+
+# ---------------------------------------------------------------------------
+# Legacy fixture sweep (one-time migration off the pre-containment seeder)
+# ---------------------------------------------------------------------------
+
+#: Filenames the pre-containment seeder wrote into a project repository's own
+#: ``cortex/backlog/``. Anchored to exactly the five fixture names it produced:
+#: a broader ``^\d+-seed-`` would also match a real ticket titled something like
+#: "Seed feature flags system", whose file the operator would then lose.
+_LEGACY_FIXTURE_RE = re.compile(
+    r"^99\d-seed-feature-(alpha|beta|gamma|delta|epsilon)\.md$"
+)
+
+
+def _is_git_tracked(root: Path, path: Path) -> bool:
+    """Return True when git reports ``path`` as tracked inside ``root``."""
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "--error-unmatch", str(path)],
+            capture_output=True,
+            check=False,
+        )
+    except OSError:
+        # No git available (or no repository) — treat the file as untracked.
+        return False
+    return result.returncode == 0
+
+
+def sweep_legacy_backlog(project_root: Path) -> list[str]:
+    """Remove pre-containment seed fixture files from a project repository.
+
+    A one-time migration for operators who ran the seeder before it was
+    contained to an isolated fixture root: those runs left fixture files in the
+    real ``cortex/backlog/``, and with the ID reservation deleted the allocator
+    now sees them and would push a real sequence past them permanently.
+
+    Git-tracked matches are reported and left in place — untracking a committed
+    file is a reviewable commit, not something a fixture script does silently.
+
+    Args:
+        project_root: Absolute path to the project repository to sweep.
+
+    Returns:
+        Repo-relative paths of the files that were removed.
+    """
+    backlog_dir = project_root / "cortex" / "backlog"
+    removed: list[str] = []
+    for path in sorted(backlog_dir.glob("*.md")):
+        if not _LEGACY_FIXTURE_RE.match(path.name):
+            continue
+        if _is_git_tracked(project_root, path):
+            print(
+                f"  WARNING: cortex/backlog/{path.name} is git-tracked — skipping."
+                " Remove it with `git rm` so the deletion is reviewed."
+            )
+            continue
+        with suppress(FileNotFoundError):
+            path.unlink()
+            removed.append(f"cortex/backlog/{path.name}")
+    return removed
+
+
+def run_sweep_legacy(project_root: Path) -> None:
+    """Sweep pre-containment fixture files from ``project_root`` and report.
+
+    Args:
+        project_root: Absolute path to the project repository to sweep.
+    """
+    print(f"Sweeping pre-containment seed fixtures from {project_root} …")
+    removed = sweep_legacy_backlog(project_root)
+    if removed:
+        print("\nRemoved:")
+        for item in removed:
+            print(f"  {item}")
+    else:
+        print("  Nothing to remove.")
     print("Done.")
 
 
@@ -1334,6 +1492,18 @@ def main() -> None:
         help="Remove all files previously written by the seed script.",
     )
     parser.add_argument(
+        "--sweep-legacy",
+        metavar="PATH",
+        nargs="?",
+        const="",
+        help=(
+            "One-time migration: remove the backlog fixture files an older, "
+            "pre-containment seed run left in a project repository at PATH "
+            "(default: the resolved cortex project root). Git-tracked matches "
+            "are reported and left alone. Combine with --clean, or run alone."
+        ),
+    )
+    parser.add_argument(
         "--print-root",
         action="store_true",
         help="Print the resolved fixture root and exit without writing anything.",
@@ -1347,9 +1517,19 @@ def main() -> None:
 
     if args.print_root:
         print(root)
-    elif args.clean:
+        return
+
+    sweeping = args.sweep_legacy is not None
+    if sweeping:
+        if args.sweep_legacy:
+            sweep_root = Path(args.sweep_legacy).expanduser().absolute()
+        else:
+            sweep_root = _common._resolve_user_project_root()
+        run_sweep_legacy(sweep_root)
+
+    if args.clean:
         run_clean(root)
-    else:
+    elif not sweeping:
         run_seed(root)
 
 
