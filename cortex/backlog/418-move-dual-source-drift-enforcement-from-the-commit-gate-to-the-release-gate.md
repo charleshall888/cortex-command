@@ -2,13 +2,15 @@
 schema_version: "1"
 uuid: 11027594-cce7-4a46-b3ff-6cdb286c70e6
 title: Move dual-source drift enforcement from the commit gate to the release gate
-status: backlog
+status: abandoned
 priority: medium
 type: bug
 created: 2026-07-27
-updated: 2026-07-27
+updated: 2026-07-28
 tags: ['harness', 'git-hooks', 'ci']
 areas: ['tooling']
+complexity: complex
+criticality: high
 ---
 ## Why
 
