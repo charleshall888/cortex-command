@@ -13,11 +13,12 @@ covered by the parity test at ``tests/test_lifecycle_phase_parity.py``.
 from __future__ import annotations
 
 
-def phase_label(encoded_phase: str) -> str:
+def phase_label(encoded_phase: str | None) -> str:
     """Translate an encoded phase string into a human-readable label.
 
     Mapping rules:
 
+    * ``None``                        -> ``""``
     * ``"research"``                  -> ``"Research"``
     * ``"specify"``                   -> ``"Specify"``
     * ``"plan"``                      -> ``"Plan"``
@@ -33,13 +34,19 @@ def phase_label(encoded_phase: str) -> str:
     Parameters
     ----------
     encoded_phase:
-        Wire-format phase string as produced by the canonical encoder.
+        Wire-format phase string as produced by the canonical encoder, or
+        ``None`` for an item with no resolvable phase. Most backlog items
+        carry no lifecycle directory, so ``None`` is the common case for
+        any caller reading whole-corpus item records.
 
     Returns
     -------
     str
-        The human-readable phase label.
+        The human-readable phase label; ``""`` for ``None``.
     """
+
+    if encoded_phase is None:
+        return ""
 
     # Paused recognition: strip the -paused suffix, compute the base label
     # via the existing rules below, then append " — paused".
