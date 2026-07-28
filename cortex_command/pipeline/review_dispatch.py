@@ -23,29 +23,22 @@ from typing import Optional
 # body (``cortex_command.lifecycle.advance.advance``), which owns the decision +
 # emission (the legacy vocabulary, gate-checked and idempotent — #397 retired
 # the claim/commit machine rows). This module's review.md/verdict
-# reads are demoted to *input-gathering* — the gathered verdict/cycle/detected-
-# phase are passed as arguments. It emits NO transition-vocabulary rows of its own
+# reads are demoted to *input-gathering* — the gathered verdict/cycle are passed
+# as arguments. It emits NO transition-vocabulary rows of its own
 # (the positive fold-completion discriminator in tests/test_fold_completion.py
 # fails if a log_event/log_event_at transition emission is re-introduced here).
-from cortex_command.common import detect_lifecycle_phase
+#
+# Neither arm supplies ``from_state``. A verb has exactly one departure state
+# across the closed table, so ``advance`` derives the expected phase from the
+# composed arm itself (``advance.py`` — ``effective_from = transition.from_state``)
+# and the events-first gate compares it against the same oracle every other
+# caller uses. Deriving it here from artifacts is what broke these arms.
 from cortex_command.lifecycle.advance import advance
 from cortex_command.overnight.deferral import DeferralQuestion, write_deferral
 from cortex_command.pipeline.dispatch import dispatch_task
 from cortex_command.pipeline.merge import merge_feature
 
 logger = logging.getLogger(__name__)
-
-
-def _current_phase(feature_events_log: Path) -> str:
-    """Return the feature's artifact-detected phase — the value the claim/commit
-    primitive's from_state gate compares against (``common.detect_lifecycle_phase``).
-
-    Passing this as ``advance``'s ``from_state`` makes the gate a tautology for
-    these forced overnight transitions (the feature IS at its detected phase),
-    so ``advance`` records the arm's transition rather than refusing on a
-    gate-mismatch. Defaults to ``"implement"`` when the phase cannot be read.
-    """
-    return str(detect_lifecycle_phase(feature_events_log.parent).get("phase") or "implement")
 
 
 def _advance_or_warn(
@@ -100,7 +93,6 @@ def _advance_to_review(feature: str, feature_events_log: Path) -> None:
         verb="implement-transition",
         feature=feature,
         mode="transition",
-        from_state=_current_phase(feature_events_log),
         log_path=feature_events_log,
     )
 
@@ -116,18 +108,19 @@ def _advance_review_complete(feature: str, cycle: int, feature_events_log: Path)
     detect completion off the ``phase_transition→complete`` row and default the
     absent ``merge_anchor`` to ``"review"``.
 
-    KNOWN DEFECT (unfixed, see the backlog ticket): this arm's ``from_state``
-    gate does not reliably hold, so an APPROVED overnight review can record
-    nothing. ``_current_phase()`` and ``advance``'s own gate are separate
-    detectors and they disagree — reproduced against session
-    overnight-2026-07-28-1216, where ``_current_phase()`` returned ``complete``
-    while ``advance`` detected ``review`` and refused with ``gate-mismatch``.
-    #415 was reviewed and APPROVED, no ``review_verdict`` row was written, and
-    ``cortex-morning-review-advance-lifecycle`` reported ``missing-review`` for
-    a feature that had passed review. Hardcoding ``"review"`` here was tried
-    and rejected: it satisfies that one case but mismatches in the opposite
-    direction on other artifact sets, so it trades one silent refusal for
-    another. The refusal is at least no longer silent — see
+    This arm used to derive ``from_state`` from the artifact-presence detector —
+    the documented LEGACY FALLBACK — while ``advance``'s gate resolves phase
+    events-first (ADR-0025). The two disagree on any log carrying real machine
+    rows, so the gate refused and BOTH required rows were lost together (they
+    share one gated emission list). Reproduced against session
+    overnight-2026-07-28-1216: #415 was reviewed and APPROVED, no
+    ``review_verdict`` row was written, and
+    ``cortex-morning-review-advance-lifecycle`` reported ``missing-review`` for a
+    feature that had passed review. The fix is to supply no ``from_state`` at
+    all: ``review_verdict``'s three table arms all depart from ``review``, so the
+    arm itself already knows the expected phase, and the gate compares two
+    readings of the same events-first oracle. A refusal now means the feature
+    genuinely is not at ``review`` — and stays audible via
     :func:`_advance_or_warn`."""
     _advance_or_warn(
         "review-verdict",
@@ -137,7 +130,6 @@ def _advance_review_complete(feature: str, cycle: int, feature_events_log: Path)
         verdict="APPROVED",
         cycle=cycle,
         drift="none",
-        from_state=_current_phase(feature_events_log),
         log_path=feature_events_log,
     )
 
