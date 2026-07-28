@@ -55,7 +55,7 @@ all three falsified claims with its original Role/Integration/Edges text byte-un
 - **Verification**: `uv run python -c "from cortex_command.phase_labels import phase_label; print(repr(phase_label(None)))"`
   prints `''` and exits 0; `uv run pytest tests/test_phase_labels_none.py tests/test_lifecycle_phase_parity.py -q`
   passes.
-- **Status**: [ ] pending
+- **Status**: [x] done (16b52d4c 2026-07-27T22:14:41-04:00)
 
 ### Task 2: Emit an id-keyed title map from the existing title scan
 - **Files**: `cortex_command/dashboard/data.py`, `cortex_command/dashboard/poller.py`,
@@ -83,7 +83,7 @@ all three falsified claims with its original Role/Integration/Edges text byte-un
 - **Verification**: `grep -c 'glob("\[0-9\]\*-\*\.md")' cortex_command/dashboard/data.py` = 2;
   `uv run pytest cortex_command/dashboard/tests/ -q` passes (whole-directory regression gate — a
   failure outside this task's Files is a blocker to surface, not to patch).
-- **Status**: [ ] pending
+- **Status**: [x] done (65ebee59 2026-07-27T22:16:30-04:00)
 
 ### Task 3: Build the snapshot module and pin its schema
 - **Files**: `cortex_command/dashboard/ticket_feed.py` (new),
@@ -149,7 +149,7 @@ all three falsified claims with its original Role/Integration/Edges text byte-un
   = 0; and against this repo's **live** corpus (not a fixture),
   `uv run python -c "from pathlib import Path; from cortex_command.dashboard.ticket_feed import build_backlog_snapshot as b; s=b(Path('cortex/backlog'), Path('cortex/lifecycle'), {}, 'T'); print(sorted(s), len(s['items']), len(s['ready']))"`
   prints R3's key list, a non-zero item count, and a non-zero ready count, and exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (731b46de 2026-07-27T22:20:55-04:00)
 
 ### Task 4: Wire the snapshot into `_poll_slow` behind its own bulkhead
 - **Files**: `cortex_command/dashboard/poller.py`, `cortex_command/dashboard/tests/test_poller.py`
@@ -202,7 +202,7 @@ all three falsified claims with its original Role/Integration/Edges text byte-un
   `grep -c 'backlog_snapshot: dict | None = None' cortex_command/dashboard/poller.py` = 1;
   `grep -c 'create_task' cortex_command/dashboard/poller.py` = 4;
   `grep -c '"refined"\|"implementing"' cortex_command/dashboard/poller.py` = 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (7da75de9 2026-07-27T22:30:27-04:00)
 
 ### Task 5: Correct #230's blocker-key spelling
 - **Files**: `cortex/backlog/230-release-gate-empirical-from-claude-session-smoke-test-for-228-daytime-dispatch.md`
@@ -218,7 +218,7 @@ all three falsified claims with its original Role/Integration/Edges text byte-un
   two readers above all agree on underscore → hyphen, which is what this task does.
 - **Verification**: `grep -c '^blocked_by:' cortex/backlog/230-*.md` = 0 AND
   `grep -c '^blocked-by:' cortex/backlog/230-*.md` = 1.
-- **Status**: [ ] pending
+- **Status**: [x] done (cf42a9f4 2026-07-27T22:16:43-04:00)
 
 ### Task 6: Reconcile ticket #411's falsified claims by appending
 - **Files**: `cortex/backlog/411-add-the-dashboard-ticket-feed-with-upstream-blocker-key-hygiene.md`
@@ -243,7 +243,7 @@ all three falsified claims with its original Role/Integration/Edges text byte-un
   `title:` line is removed; every other change is an addition);
   `grep -c 'upstream blocker-key hygiene' cortex/backlog/411-*.md` = 0; and
   `grep -c '^## Update — reconciled at spec time' cortex/backlog/411-*.md` = 1.
-- **Status**: [ ] pending
+- **Status**: [x] done (0a48668e 2026-07-27T22:17:45-04:00)
 
 ## Risks
 
