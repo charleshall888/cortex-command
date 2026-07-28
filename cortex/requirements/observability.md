@@ -38,17 +38,17 @@ The observability area covers five subsystems that give the developer visibility
   - Session change (new overnight session started) resets event offset and re-reads from the beginning
 - **Priority**: must-have
 
-### Notifications
+### Permission-prompt audit log
 
-- **Description**: macOS desktop notifications via `terminal-notifier` (`hooks/cortex-notify.sh`) deliver alerts on Stop/Notification events.
-- **Inputs**: Claude Code Stop/Notification hook JSON; dashboard alert evaluation
-- **Outputs**: macOS desktop notification; terminal bell
+- **Description**: The `Notification` hook appends one line per permission prompt to a session-scoped log so operators can diagnose sandbox tuning. Implemented by `claude/hooks/cortex-permission-audit-log.sh` (mirrored into the cortex-overnight plugin).
+- **Inputs**: Claude Code Notification hook JSON
+- **Outputs**: `$TMPDIR/claude-permissions-{session_key}.log`, one `REQUESTED` line per prompt
 - **Acceptance criteria**:
-  - macOS notification fires on session stop with correct type label (permission / idle / complete)
-  - Subagent sessions are suppressed (no notification when `agent_id` is present in hook JSON)
-  - Notification delivery failure is silent (hook exits 0; session is not blocked)
-  - Dashboard-triggered notifications respect the same deduplication (stall fires once; clears when resolved)
+  - Session key prefers `LIFECYCLE_SESSION_ID`, then payload `session_id`, then a date-based fallback
+  - The hook is non-blocking and advisory — always exits 0, never stalls a session
 - **Priority**: must-have
+
+> **Retired: desktop notifications.** An earlier design delivered macOS notifications on Stop/Notification via `terminal-notifier` (`hooks/cortex-notify.sh`). That script and the notify-subprocess path were removed in `13c4acde`, and the `Notification` hook slot now carries the permission audit log above. Session-completion signalling is served by the dashboard and the morning report instead; there is no desktop-notification requirement.
 
 ### Overnight Kill/Stall Telemetry
 

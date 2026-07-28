@@ -9,6 +9,8 @@ argument-hint: "<topic>"
 
 Three phases — **Clarify** (intent gate + requirements alignment), **Research** (implementation-level exploration), **Spec** (structured requirements interview). On completion: `status: refined`, linked spec, ready for `/cortex-core:build`.
 
+Phase boundaries **auto-advance** — announce and continue, no confirmation. `<!-- pause: -->` markers, here and in the references, are the only sanctioned asks; a prior "report" or "summarize" instruction sets text cadence, not a boundary gate.
+
 <!-- pause: refine-empty-topic-prompt question -->
 Topic: $ARGUMENTS. If empty, prompt the user first.
 

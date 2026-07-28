@@ -45,7 +45,7 @@ Full setup guide: [docs/setup.md](docs/setup.md).
 | cortex-overnight | OPTIONAL - Integrates the cortex MCP server and overnight skill runner hooks to drive autonomous lifecycle execution; requires cortex-backlog (or another configured backlog backend) |
 | android-dev-extras | Android development skills vendored from Google's Android Skills (Apache 2.0): R8 analyzer, edge-to-edge migration, and Android CLI orchestration |
 | cortex-dev-extras | Devil's advocate inline challenge for solo deliberation |
-| cortex-pr-review | Multi-agent GitHub pull request review pipeline for Claude Code. |
+| cortex-pr-review | Single high-effort GitHub pull request reviewer — no-autopost by default, with a dropped-findings observability footer |
 | cortex-ui-extras | EXPERIMENTAL - UI design skills for Claude Code interactive workflows |
 
 ## Documentation

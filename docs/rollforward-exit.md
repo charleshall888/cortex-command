@@ -40,7 +40,7 @@ Do **not** delete or disable `cortex-lifecycle-next`, `cortex-lifecycle-advance`
 
 ## Step 4 — Verify tolerant reading via the reverse-direction golden
 
-Prove that old readers still project correctly over the machine-written logs the loop already emitted. The reverse-direction golden (spec R16 arm h; driven by `tests/test_lifecycle_reverse_golden.py`, whose fixture `README.md` pins the reader set) covers exactly this guarantee: each enumerated legacy reader — `cortex-lifecycle-state`, `cortex-lifecycle-counters`, the statusline derivation, `dashboard/data.py`, `scan_lifecycle`, and `generate_index.py` — reproduces its correct legacy-phase projection over a mixed log carrying the `advance_started` / `advance_committed` rows and the `invocation_id` field (historical content since #397 retired the claim/commit protocol — see ADR-0020's #397 amendment — but permanent in the on-disk corpus). Run it:
+Prove that old readers still project correctly over the machine-written logs the loop already emitted. The reverse-direction golden (spec R16 arm h; driven by `tests/test_lifecycle_reverse_golden.py`, whose fixture `README.md` pins the reader set) covers exactly this guarantee: each enumerated legacy reader — `cortex-lifecycle-state`, `cortex-lifecycle-counters`, the statusline derivation, `cortex_command/dashboard/data.py`, `scan_lifecycle`, and `generate_index.py` — reproduces its correct legacy-phase projection over a mixed log carrying the `advance_started` / `advance_committed` rows and the `invocation_id` field (historical content since #397 retired the claim/commit protocol — see ADR-0020's #397 amendment — but permanent in the on-disk corpus). Run it:
 
 ```
 uv run pytest tests/test_lifecycle_reverse_golden.py -q

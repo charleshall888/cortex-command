@@ -2,11 +2,11 @@
 
 # Overnight: In Depth
 
-**For:** Users with features ready to run in autonomous overnight sessions.  **Assumes:** Familiarity with the lifecycle skill and at least one backlog item with `status: refined`.
+**For:** Users with features ready to run in autonomous overnight sessions.  **Assumes:** Familiarity with `/cortex-core:refine` and `/cortex-core:build`, and at least one backlog item with `status: refined`.
 
 The overnight system runs fully autonomous development sessions while you sleep. You
 select features from the backlog, approve a session plan, launch the runner as a
-detached Python process, and go to bed. In the morning, `/morning-review` walks the
+detached Python process, and go to bed. In the morning, `/cortex-overnight:morning-review` walks the
 results, closes completed features, and surfaces any decisions that needed a human.
 
 This document covers how it all works — the planning step you do before bed, the
@@ -14,7 +14,7 @@ execution machinery running while you sleep, and the morning close-out.
 
 For mechanics, state files, recovery, and debugging procedures, see [overnight-operations.md](overnight-operations.md).
 
-> **Jump to:** [Quick-Start](#quick-start-checklist) | [Per-repo Overnight](#per-repo-overnight) | [Prerequisites](#prerequisites--what-makes-a-feature-overnight-ready) | [Planning](#the-planning-phase) | [Deferral System](#the-deferral-system) | [Morning Review](#the-morning-review) | [Commands](#command-reference) | [Best Practices](#best-practices) | [Overnight vs Lifecycle](#overnight-vs-lifecycle)
+> **Jump to:** [Quick-Start](#quick-start-checklist) | [Per-repo Overnight](#per-repo-overnight) | [Prerequisites](#prerequisites--what-makes-a-feature-overnight-ready) | [Planning](#the-planning-phase) | [Deferral System](#the-deferral-system) | [Morning Review](#the-morning-review) | [Commands](#command-reference) | [Best Practices](#best-practices) | [Overnight vs interactive](#overnight-vs-interactive-refine--build)
 
 ---
 
@@ -25,14 +25,14 @@ For mechanics, state files, recovery, and debugging procedures, see [overnight-o
 - [ ] Features in backlog have `status: refined`
 - [ ] Each feature has `research:` and `spec:` frontmatter fields pointing to existing files
 - [ ] `cortex/lifecycle/{slug}/spec.md` exists for each feature (run `/cortex-core:refine <item>` to produce it)
-- [ ] Python venv is set up (`just python-setup` if not done)
-- [ ] Run `/overnight` in Claude Code — review and approve the session plan
-- [ ] (Optional) Launch the [dashboard](dashboard.md) in a separate terminal: `just dashboard`
+- [ ] The cortex CLI is installed with the overnight stack (`cortex-command[all]`; see [setup](setup.md)). Contributors working from a clone run `just python-setup` instead.
+- [ ] Run `/cortex-overnight:overnight` in Claude Code — review and approve the session plan
+- [ ] (Optional) Launch the [dashboard](dashboard.md) in a separate terminal: `cortex dashboard`
 - [ ] Run `cortex overnight start` in a terminal
 
 ### Morning (after the session)
 
-- [ ] Run `/morning-review` in Claude Code
+- [ ] Run `/cortex-overnight:morning-review` in Claude Code
 - [ ] Answer any deferred questions from `deferred/`
 - [ ] Review and merge the session PR (from `overnight/{session_id}` to main)
 - [ ] Carry over any failed or deferred features to next session
@@ -64,7 +64,7 @@ Other fields:
 
 1. Ensure `cortex/lifecycle.config.md` exists at the repo root with `test-command` configured.
 2. Open a Claude session in that repo's directory.
-3. Run `/overnight` — it will generate the session plan and write the state file to `cortex/lifecycle/sessions/{session_id}/overnight-state.json` inside that repo.
+3. Run `/cortex-overnight:overnight` — it will generate the session plan and write the state file to `cortex/lifecycle/sessions/{session_id}/overnight-state.json` inside that repo.
 4. In a terminal, launch the runner with the explicit state file path:
    ```bash
    cortex overnight start --state cortex/lifecycle/sessions/{session_id}/overnight-state.json
@@ -107,12 +107,12 @@ that fail the gate are reported as ineligible with a reason — they don't silen
     → produces cortex/lifecycle/{slug}/spec.md
     → sets status: refined on the backlog item
 
-/overnight                  → select features, approve plan, launch
+/cortex-overnight:overnight             → select features, approve plan, launch
 ```
 
 `/cortex-core:refine` is the dedicated prep tool for overnight: it stops at spec, writes `status: refined`,
-and does not proceed to plan or implement. Use `/cortex-core:build <feature>` instead when you want
-the full interactive research-specify-plan-implement flow for a single feature.
+and does not proceed to plan or implement. Run `/cortex-core:build <feature>` after it when you want to
+carry that same single feature through plan → implement → review → complete interactively.
 
 See [Interactive Phases Guide](interactive-phases.md) for details on what `/cortex-core:refine` asks
 during each phase and how artifacts flow to the overnight runner.
@@ -124,7 +124,7 @@ run `/cortex-core:build plan` before an overnight session.
 
 ## The Planning Phase
 
-Run `/overnight` to start the interactive planning session. The skill walks five steps:
+Run `/cortex-overnight:overnight` to start the interactive planning session. The skill walks five steps:
 
 ### 1. Select eligible features
 
@@ -186,7 +186,7 @@ does **not** block the entire session. Instead it defers the question:
 | `informational` | Something unexpected found; FYI only | Writes deferral, continues | Work continues |
 
 Deferral files are written to `deferred/{feature-slug}-q{NNN}.md`. The morning report
-surfaces them grouped by severity. `/morning-review` presents blocking questions first
+surfaces them grouped by severity. `/cortex-overnight:morning-review` presents blocking questions first
 and lets you answer them before proceeding to feature close-out.
 
 **Important: non-blocking deferrals mean committed code, not just a logged note.**
@@ -201,7 +201,7 @@ messages.
 
 ## The Morning Review
 
-Run `/morning-review` the morning after an overnight session.
+Run `/cortex-overnight:morning-review` the morning after an overnight session.
 
 The skill:
 
@@ -212,7 +212,7 @@ The skill:
 5. **Archives closed backlog items** — resolved items move to `cortex/backlog/archive/`
 
 The session PR (from `overnight/{session_id}` to `main`) is created automatically at
-session end. `/morning-review` surfaces its URL so you can review and merge.
+session end. `/cortex-overnight:morning-review` surfaces its URL so you can review and merge.
 
 > For runner internals, state files, and recovery procedures, see [overnight-operations.md](overnight-operations.md).
 
@@ -224,12 +224,12 @@ session end. `/morning-review` surfaces its URL so you can review and merge.
 |---------|-------------|
 | `cortex overnight start` | Launch runner as a detached Python process (no tmux) |
 | `cortex overnight start --max-rounds 5` | Launch with round cap |
-| `just overnight-run` | Launch runner in foreground (useful for debugging) |
+| `just overnight-run` | Launch runner in foreground (useful for debugging). Contributor-only — needs a cortex-command clone |
 | `cortex overnight status` | Print session status (`--format json` for machine-readable) |
 | `cortex overnight logs` | Tail the active session's event log |
-| `just overnight-smoke-test` | Verify worker commit round-trip (pre-launch sanity check) |
-| `/overnight resume` | Check state and relaunch a paused session |
-| `/morning-review` | Morning close-out: walk report, answer deferrals, close features |
+| `just overnight-smoke-test` | Verify worker commit round-trip (pre-launch sanity check). Contributor-only — needs a cortex-command clone |
+| `/cortex-overnight:overnight resume` | Check state and relaunch a paused session |
+| `/cortex-overnight:morning-review` | Morning close-out: walk report, answer deferrals, close features |
 
 ---
 
@@ -244,17 +244,17 @@ The runner scales well — you can queue as many features as you like. There is 
 - Run `/cortex-backlog:backlog pick` → `/cortex-core:refine <item>` for each target feature
 - `/cortex-core:refine` runs Clarify → Research → Spec and sets `status: refined` — takes ~15 min per feature
 - Verify `cortex/lifecycle/{slug}/spec.md` exists: `ls cortex/lifecycle/*/spec.md`
-- Run `just overnight-smoke-test` once to verify the toolchain is healthy
+- Contributors working from a cortex-command clone can run `just overnight-smoke-test` once to verify the toolchain is healthy
 
 ### Morning workflow
 
-Don't merge the overnight PR directly from GitHub. Run `/morning-review` first — it
+Don't merge the overnight PR directly from GitHub. Run `/cortex-overnight:morning-review` first — it
 closes lifecycle artifacts and archives backlog items in the right order. Then merge.
 
 ### If something goes wrong mid-session
 
 - Inspect the runner: `cortex overnight status` (and `cortex overnight logs <session-id>` to tail the events log)
-- If stalled: send SIGINT/SIGTERM to the runner process to exit gracefully. Then `/overnight resume` + `cortex overnight start --state <path> --time-limit <seconds>`
+- If stalled: send SIGINT/SIGTERM to the runner process to exit gracefully. Then `/cortex-overnight:overnight resume` + `cortex overnight start --state <path> --time-limit <seconds>`
 - Check `deferred/` for blocking questions that paused features
 
 ### Readiness gate: file existence, not quality
@@ -267,24 +267,24 @@ deferrals and plan-generation failures during overnight execution.
 
 ---
 
-## Overnight vs Lifecycle
+## Overnight vs interactive refine + build
 
-Both are development orchestration skills — they differ in interactivity and
+Both are development orchestration paths — they differ in interactivity and
 required preparation:
 
-| | Lifecycle | Overnight |
+| | Interactive (`refine` + `build`) | Overnight |
 |--|-----------|-----------|
 | **User present** | Throughout all phases | Approval only |
 | **Features** | Single | 2+ (fully prepared) |
-| **Research needed** | Runs it | Must exist already |
-| **Spec needed** | Runs it | Must exist already |
-| **Plan** | Runs it | Auto-generated if missing |
+| **Research needed** | `refine` runs it | Must exist already |
+| **Spec needed** | `refine` runs it | Must exist already |
+| **Plan** | `build` runs it | Auto-generated if missing |
 | **Execution** | Interactive | Python runner (detached fork) |
-| **Resume** | `/cortex-core:build resume` | `/overnight resume` |
-| **Morning close-out** | Manual or `/cortex-core:build complete` | `/morning-review` |
+| **Resume** | `/cortex-core:build resume` | `/cortex-overnight:overnight resume` |
+| **Morning close-out** | Manual or `/cortex-core:build complete` | `/cortex-overnight:morning-review` |
 
 **Choose overnight when**: You have a backlog of prepared features and want to make
 progress while not at your computer.
 
-**Choose lifecycle when**: You're working on a single feature and want the full
-interactive research-specify-plan-implement flow.
+**Choose interactive `refine` + `build` when**: You're working on a single feature and want to
+stay in the loop across clarify → research → specify, then plan → implement → review → complete.

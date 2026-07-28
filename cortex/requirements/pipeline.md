@@ -153,7 +153,7 @@ The pipeline area covers the overnight execution framework: how sessions are orc
 - **State file locking**: State file reads are not protected by locks by design. Writers use atomic `os.replace()`; readers may observe a state mid-mutation, but forward-only transitions make this safe. This is a permanent architectural constraint.
 - **Repair attempt cap**: The repair attempt limit (max 2 attempts for test failures; single Sonnet → Opus escalation for merge conflicts) is a fixed architectural constraint. It is cost-bounded and circuit-breaker backed; unlimited retries would be cost-prohibitive for autonomous overnight sessions.
 - **Integration branch persistence**: Integration branches (`overnight/{session_id}`) are not auto-deleted after session completion. They persist for manual PR creation and review.
-- **Dashboard access**: The web dashboard is unauthenticated and accessible to any host on the local network (binds to `0.0.0.0`) by design (see `requirements/observability.md`).
+- **Dashboard access**: The web dashboard is unauthenticated and accessible to any host on the local network (binds to `0.0.0.0`) by design (see `cortex/requirements/observability.md`).
 
 ## Dependencies
 
@@ -165,7 +165,7 @@ The pipeline area covers the overnight execution framework: how sessions are orc
 - `cortex/lifecycle/sessions/{session_id}/escalations.jsonl` — escalation audit log
 - `cortex_command/overnight/sync-allowlist.conf` — glob patterns for auto-resolvable files during post-merge sync
 - `bin/cortex-git-sync-rebase` — post-merge sync script
-- Multi-agent orchestration (see `requirements/multi-agent.md`) — agent spawning, worktrees, model selection
+- Multi-agent orchestration (see `cortex/requirements/multi-agent.md`) — agent spawning, worktrees, model selection
 - Smoke test gate (`cortex_command/overnight/smoke_test.py`) — post-merge verification
 - `cortex/lifecycle/sessions/{session_id}/runner.pid` — per-session runner IPC contract (JSON schema, mode 0o600, atomic write); see `docs/overnight-operations.md` "Runner concurrency guard" for the schema fields and the magic/start_time verification detail.
 - `~/.local/share/overnight-sessions/active-session.json` — host-global active-session pointer sharing the `runner.pid` schema plus a `phase` field; a transient `phase: "starting"` value is observable during the spawn handshake window but is never persisted. See `docs/overnight-operations.md`, `docs/internals/mcp-contract.md`, and `docs/internals/pipeline.md`.

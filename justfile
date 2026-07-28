@@ -163,7 +163,7 @@ training:
 backlog-index:
     cortex-generate-backlog-index
 
-# Regenerate skills/lifecycle/references/kept-pauses.md from kept-pauses-data.toml
+# Regenerate skills/build/references/kept-pauses.md from kept-pauses-data.toml
 kept-pauses:
     cortex-generate-kept-pauses --write
 

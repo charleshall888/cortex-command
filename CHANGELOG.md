@@ -4,6 +4,38 @@ All notable changes to cortex-command will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+> **On release cadence.** Every push to `main` auto-tags a release (see the release-type markers in `CLAUDE.md`), so version numbers are minted mechanically and most are small. Entries below v2.0.0 are per-version; the section that follows groups the ~111 releases from v2.0.1 to v4.1.0 by theme instead, noting the version each theme landed in. For per-commit detail, use the git history or GitHub Releases.
+
+## [v2.0.1 → v4.1.0] - 2026-05-13 → 2026-07-28
+
+Grouped by theme rather than by version. Two breaking changes in this span — the lifecycle split (v3.0.0) and the model-selection handoff (v4.0.0).
+
+### Breaking
+
+- **The `lifecycle` skill split into `refine` and `build`** (v3.0.0). `/cortex-core:lifecycle` no longer exists. `/cortex-core:refine` owns Clarify → Research → Specify and sets `status: refined`; `/cortex-core:build` takes a refined ticket through Plan → Implement → Review → Complete and requires `research.md` and `spec.md` to already exist. `/cortex-core:dev` reads a ticket's status and routes to whichever half it needs. **Operator action**: replace `/cortex-core:lifecycle` in any saved prompts, scripts, or muscle memory with `/cortex-core:dev`, or call the halves directly.
+- **The harness stopped choosing models** (v4.0.0). Model selection was removed from the dispatch path; the dispatching agent now decides. **Operator action**: any config or prose that pinned a tier for dispatched agents no longer has an effect.
+
+### Added
+
+- **A served lifecycle loop** (v2.36.0) — a wheel-owned transition table (`cortex_command/lifecycle/transition_table.py`) with read-only `next` and write-side `advance` verbs, a `describe` verb that renders the table to `docs/lifecycle-transition-table.md` under a golden-parity test (`tests/test_transition_table_describe_parity.py`), and events promoted to the authoritative source for a feature's phase via one shared resolver.
+- **`cortex-session-tokens`** (v2.38.0) — the harness reports its own runtime cost.
+- **A `backlog-author` skill** (v2.7.0) — composes a structured ticket body from a context block, reached from the backlog, discovery, and morning-review surfaces.
+- **An ADR mechanism** (v2.1.0) — `cortex/adr/`, with a report-only citation auditor.
+- **Worktree registration in `cortex init`** (v2.5.0) — the worktree base is added to `allowWrite` and `additionalDirectories` so sandboxed sessions can use it without prompts.
+
+### Changed
+
+- **Deterministic skill procedure moved into CLI verbs** (v2.34.0 onward) — nine CLI surfaces first, then worktree and PR mechanics, then composite verbs collapsing multi-step skill round-trips (v4.1.0). Skill prose shrank correspondingly, and a down-only ratchet now enforces the direction (v3.0.0). Behavior lives in verbs; prose is re-read on every load, verbs are not.
+- **Dashboard and overnight dependencies became optional extras** (v2.39.0) — a bare `uv tool install` is now lean (pyyaml + psutil). The auto-installer uses `cortex-command[all]`, so overnight and dashboard users still get the full stack. **Operator action**: a *manual* bare install without `[all]` omits the Claude Agent SDK the runner needs.
+- **Dispatched agents are bounded** (v2.37.0) — a turn cap plus an explicit returned-nothing branch.
+- **Skills retrimmed for Opus 5** (v3.0.0).
+
+### Removed
+
+- **Zero-reader lifecycle events and their emissions** (v2.37.0).
+- **The requirements sub-skill split** (v4.1.0) — `requirements-gather` and `requirements-write` are gone; interview and synthesis live in the one `requirements` skill, so an abandoned interview leaves no partial doc behind.
+- **The `bin/.events-registry.md` allowlist and its pre-commit gate** (#407) — event names are now declared where they are produced.
+
 ## [v2.0.0] - 2026-05-13
 
 Closes the plugin/CLI auto-update gaps end-to-end (#213). This is a major release because the print-root JSON envelope's `version` field semantic changes (see BREAKING below) and the schema-version floor bumps 1.x → 2.0.

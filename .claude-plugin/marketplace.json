@@ -31,7 +31,7 @@
     {
       "name": "cortex-backlog",
       "source": "./plugins/cortex-backlog",
-      "description": "Optional interactive backlog management skill — local cortex/backlog/ ticket files, extracted from cortex-core so repos that track work in an external system can omit it",
+      "description": "Recommended — plain-markdown backlog tickets the cortex CLI reads and writes directly; the default backlog backend and a prerequisite for cortex-overnight unless the repo configures another backend (e.g. GitHub Issues)",
       "category": "development"
     },
     {

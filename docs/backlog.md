@@ -5,7 +5,7 @@
 
 The backlog is a flat directory of numbered markdown files (`cortex/backlog/NNN-slug.md`). Each file contains YAML frontmatter describing the item, followed by an optional markdown body. The overnight orchestration system reads these files to select work; the `/cortex-backlog:backlog` skill manages them interactively.
 
-Automated write-backs to frontmatter use the `cortex-update-item` console script (installed by `pyproject.toml`). Earlier versions of this doc referenced `python3 cortex/backlog/update_item.py …`; that direct invocation is no longer canonical — always invoke via the `cortex-update-item` command.
+Automated write-backs to frontmatter use the `cortex-update-item` console script (installed by `pyproject.toml`). Earlier versions of this doc referenced `python3 cortex_command/backlog/update_item.py …`; that direct invocation is no longer canonical — always invoke via the `cortex-update-item` command.
 
 ---
 
@@ -160,7 +160,7 @@ This coupling means that features discovered via `/cortex-core:discovery` arrive
 
 ## `cortex-update-item` CLI Reference
 
-`cortex-update-item` (registered as a console script in `pyproject.toml`; canonical source lives at `cortex/backlog/update_item.py`) is the canonical tool for automated write-backs to backlog frontmatter. It is used by the `/cortex-core:refine` skill, lifecycle hooks, and the overnight pipeline to update items without manual editing.
+`cortex-update-item` (registered as a console script in `pyproject.toml`; canonical source lives at `cortex_command/backlog/update_item.py`) is the canonical tool for automated write-backs to backlog frontmatter. It is used by the `/cortex-core:refine` skill, lifecycle hooks, and the overnight pipeline to update items without manual editing.
 
 ```
 cortex-update-item <slug-or-uuid> [--flag value ...]
@@ -173,7 +173,7 @@ cortex-update-item <slug-or-uuid> [--flag value ...]
 **Side effects on every update:**
 - Writes the updated file atomically (write-then-rename).
 - Appends `status_changed` or `phase_changed` events to the sidecar `{stem}.events.jsonl` log.
-- Regenerates `cortex/backlog/index.json` and `cortex/backlog/index.md` via the `cortex-generate-backlog-index` console script (canonical source `cortex/backlog/generate_index.py`; users invoke the console script, not the file directly). These index files are a **regenerated local cache and are not version-controlled** (gitignored): they are rebuilt on every `cortex-update-item` and on demand by consumers that read them, so they never need to be committed.
+- Regenerates `cortex/backlog/index.json` and `cortex/backlog/index.md` via the `cortex-generate-backlog-index` console script (canonical source `cortex_command/backlog/generate_index.py`; users invoke the console script, not the file directly). These index files are a **regenerated local cache and are not version-controlled** (gitignored): they are rebuilt on every `cortex-update-item` and on demand by consumers that read them, so they never need to be committed.
 
 **Additional side effects for terminal status transitions** (`complete`, `abandoned`, `done`, `resolved`, `wontfix`, `wont-do`, `won't-do` — full list in `cortex_command/common.py`):
 - Removes the closed item's ID and UUID from `blocked-by` arrays across all active backlog items.
@@ -206,5 +206,5 @@ This document describes the backlog system as implemented at the time of writing
 - `cortex_command/overnight/backlog.py` — changes to `ELIGIBLE_STATUSES`, `TERMINAL_STATUSES`, or `filter_ready()` gate logic
 - `skills/backlog/references/schema.md` — additions or removals from the frontmatter schema
 - `skills/backlog/SKILL.md` — new subcommands or changed subcommand behavior
-- `cortex/backlog/update_item.py` (invoked as `cortex-update-item`) — changes to the CLI interface or side-effect behavior
+- `cortex_command/backlog/update_item.py` (invoked as `cortex-update-item`) — changes to the CLI interface or side-effect behavior
 - `skills/discovery/SKILL.md` — changes to how `discovery_source` is written or consumed

@@ -9,21 +9,21 @@ A grouped inventory of the skills in this repo. Each entry shows what the skill 
 
 See also [Optional Plugins](#optional-plugins) below for UI skills and `pr-review`, which ship as separate plugins in the `cortex-command` marketplace.
 
-> **Note on `pipeline`:** `pipeline` is not a user-facing skill and has no entry in `skills/`. It is an internal Python orchestration module (`cortex_command/pipeline/`, `cortex_command/overnight/`) invoked automatically by `/overnight` to manage multi-feature batch execution. Use `/overnight` to trigger pipeline behavior; do not invoke `pipeline` directly. For internals, see [docs/internals/pipeline.md](internals/pipeline.md).
+> **Note on `pipeline`:** `pipeline` is not a user-facing skill and has no entry in `skills/`. It is an internal Python orchestration module (`cortex_command/pipeline/`, `cortex_command/overnight/`) invoked automatically by `/cortex-overnight:overnight` to manage multi-feature batch execution. Use that skill to trigger pipeline behavior; do not invoke `pipeline` directly. For internals, see [docs/internals/pipeline.md](internals/pipeline.md).
 
 ---
 
 ## Development Workflow
 
 ### dev
-Route development requests to the right workflow. Analyzes a request and delegates to lifecycle, overnight, discovery, or direct implementation. Also runs backlog triage when invoked without arguments so you always know what to work on next.
+Route development requests to the right workflow. Analyzes a request and delegates to refine, build, overnight, discovery, or direct implementation. Also runs backlog triage when invoked without arguments so you always know what to work on next.
 
 [skills/dev/SKILL.md](../skills/dev/SKILL.md)
 
 ---
 
-### lifecycle
-Structured feature development lifecycle with phases for research, specification, planning, implementation, review, and completion. Enforces research-before-code discipline through a file-based state machine that survives context loss and can be resumed across sessions.
+### build
+Take a refined ticket through plan, implement, review, and complete. Enforces research-before-code discipline through a file-based state machine that survives context loss and can be resumed across sessions. Requires `research.md` and `spec.md` — run `/cortex-core:refine` first if either is missing.
 
 [skills/build/SKILL.md](../skills/build/SKILL.md)
 
@@ -37,9 +37,16 @@ Prepare a backlog item for overnight execution by running it through Clarify →
 ---
 
 ### discovery
-Ideation research for topics not ready for implementation. Investigates the problem space thoroughly, then decomposes findings into backlog tickets grouped by epic. Stops at backlog tickets rather than proceeding to plan or implement — use lifecycle for that next step.
+Ideation research for topics not ready for implementation. Investigates the problem space thoroughly, then decomposes findings into backlog tickets grouped by epic. Stops at backlog tickets rather than proceeding to plan or implement — use `/cortex-core:refine` for that next step.
 
 [skills/discovery/SKILL.md](../skills/discovery/SKILL.md)
+
+---
+
+### backlog-author
+Compose a structured backlog ticket body from a context block, using the Why/Role/Integration/Edges/Touch-points template. Emits one ticket body per invocation to stdout; writing frontmatter is the ticket-creation verb's job, not this skill's.
+
+[skills/backlog-author/SKILL.md](../skills/backlog-author/SKILL.md)
 
 ---
 
@@ -58,24 +65,24 @@ Manage project backlog items as individual markdown files with YAML frontmatter.
 ---
 
 ### overnight
-Plan and launch autonomous overnight development sessions. Selects eligible features from the backlog, presents a session plan for user approval, and hands off to the runner for unattended execution. Requires features to already have research and spec artifacts produced by `/cortex-core:refine` or `/cortex-core:build`.
+Plan and launch autonomous overnight development sessions. Selects eligible features from the backlog, presents a session plan for user approval, and hands off to the runner for unattended execution. Requires features to already have research and spec artifacts produced by `/cortex-core:refine` or `/cortex-core:build`. Ships in the `cortex-overnight` plugin, so it is invoked as `/cortex-overnight:overnight`.
 
 [skills/overnight/SKILL.md](../skills/overnight/SKILL.md)
 
 ---
 
-### Choosing between `/cortex-core:dev`, `/cortex-core:build`, and `/overnight`
+### Choosing between `/cortex-core:dev`, `/cortex-core:build`, and `/cortex-overnight:overnight`
 
 These three skills overlap and route to each other — here is when to use each:
 
-- **`/cortex-core:dev`** — general entry point when you are not sure what to do next. It analyzes your request, runs backlog triage if invoked bare, and routes automatically to `/cortex-core:build`, `/overnight`, `/cortex-core:discovery`, or direct implementation. Start here if you do not already know which workflow you need.
-- **`/cortex-core:build`** — invoke directly when you already know the feature and want to work through it phase by phase (research → spec → plan → implement → review → complete; simple-tier low/medium features take the short road, skipping plan and review). It is a structured, interactive state machine for a single feature. `/cortex-core:dev` routes non-trivial single features here automatically.
-- **`/overnight`** — invoke directly when features already have their research and spec artifacts (produced by `/cortex-core:refine` or `/cortex-core:build`) and you want autonomous unattended execution. It handles plan approval and hands off to the runner; no interactive research or spec phases occur. `/cortex-core:dev` recommends this when all backlog children are refined.
+- **`/cortex-core:dev`** — general entry point when you are not sure what to do next. It analyzes your request, runs backlog triage if invoked bare, and routes automatically to `/cortex-core:refine`, `/cortex-core:build`, `/cortex-overnight:overnight`, `/cortex-core:discovery`, or direct implementation. Start here if you do not already know which workflow you need.
+- **`/cortex-core:build`** — invoke directly when the ticket is already refined and you want to work through it phase by phase (plan → implement → review → complete; simple-tier low/medium features take the short road, skipping plan and review). It is a structured, interactive state machine for a single feature. `/cortex-core:dev` routes refined single features here automatically.
+- **`/cortex-overnight:overnight`** — invoke directly when features already have their research and spec artifacts (produced by `/cortex-core:refine` or `/cortex-core:build`) and you want autonomous unattended execution. It handles plan approval and hands off to the runner; no interactive research or spec phases occur. `/cortex-core:dev` recommends this when all backlog children are refined.
 
 ---
 
 ### morning-review
-Guide the user through the morning report after an overnight session. Displays the Executive Summary, walks each report section in order, collects answers to deferred questions, advances completed-feature lifecycles to Complete, and auto-closes backlog tickets at the end.
+Guide the user through the morning report after an overnight session. Displays the Executive Summary, walks each report section in order, collects answers to deferred questions, advances completed-feature lifecycles to Complete, and auto-closes backlog tickets at the end. Ships in the `cortex-overnight` plugin, so it is invoked as `/cortex-overnight:morning-review`.
 
 [skills/morning-review/SKILL.md](../skills/morning-review/SKILL.md)
 
@@ -100,14 +107,21 @@ Create GitHub pull requests with well-crafted titles and descriptions. Detects t
 ## Thinking Tools
 
 ### critical-review
-Derives challenge angles from the artifact and project context (default 2, escalating to 3-4 on high/critical criticality or novel claims), then dispatches one reviewer agent per angle in parallel for deep, unanchored criticism. A synthesis agent merges the parallel findings into a single coherent challenge. Also auto-triggers in the lifecycle for Complex + medium/high/critical features before spec approval.
+Derives challenge angles from the artifact and project context (default 2, escalating to 3-4 on high/critical criticality or novel claims), then dispatches one reviewer agent per angle in parallel for deep, unanchored criticism. A synthesis agent merges the parallel findings into a single coherent challenge. Also auto-triggers during refine for Complex + medium/high/critical features before spec approval.
 
 [skills/critical-review/SKILL.md](../skills/critical-review/SKILL.md)
 
 ---
 
+### interview
+A structured "grilling" loop that helps you think through a topic, then emits a concise brief. A thinking-partner conversation, not ticket authoring — for a ticket body use `/cortex-core:backlog-author`.
+
+[skills/interview/SKILL.md](../skills/interview/SKILL.md)
+
+---
+
 ### requirements
-Gather and document project-level and feature-area requirements through structured interviews. Creates a `requirements/` directory with a master project doc and area-specific docs. Downstream skills (lifecycle, discovery) consult these automatically during research, spec, and review.
+Gather and document project-level and feature-area requirements through structured interviews. Creates a `cortex/requirements/` directory with a master project doc and area-specific docs. Downstream skills (refine, build, discovery) consult these automatically during research, spec, and review.
 
 Carries `disable-model-invocation: true` — reached only by the explicit slash command. Interview and synthesis live in the one skill; nothing is written until the interview completes, so an abandoned interview leaves no partial doc behind.
 

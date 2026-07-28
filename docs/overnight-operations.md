@@ -60,7 +60,7 @@ Forward-only phase transitions apply — the shutdown path writes `paused` via t
 
 `overnight-strategy.json` is the cross-round continuity artifact: fields the orchestrator wants this round to know from last round. The on-disk schema is documented under [Strategy File (overnight-strategy.json) schema](#strategy-file-overnight-strategyjson-schema) in Observability — this subsection covers who writes which field and who reads it, without repeating the JSON shape.
 
-**Files**: `cortex_command/overnight/strategy.py` (`OvernightStrategy`, `load_strategy`, `save_strategy`), `cortex_command/overnight/runner.py` (writes on integration-recovery failure), `cortex_command/overnight/prompts/orchestrator-round.md` (end-of-round writer), `cortex_command/pipeline/batch_runner.py` (reader for conflict-recovery decisions).
+**Files**: `cortex_command/overnight/strategy.py` (`OvernightStrategy`, `load_strategy`, `save_strategy`), `cortex_command/overnight/runner.py` (writes on integration-recovery failure), `cortex_command/overnight/prompts/orchestrator-round.md` (end-of-round writer), `cortex_command/overnight/feature_executor.py` (reader for conflict-recovery decisions).
 
 **Mutators** (who writes):
 
@@ -70,7 +70,7 @@ Forward-only phase transitions apply — the shutdown path writes `paused` via t
 **Consumers** (who reads):
 
 - **Orchestrator prompt, round start.** Round-startup state assembly is mediated by `aggregate_round_context` (see [aggregate_round_context — round-startup state aggregator](#aggregate_round_context--round-startup-state-aggregator)), which reads `overnight-strategy.json` (alongside `overnight-state.json`, `escalations.jsonl`, and `session-plan.md`) and returns a single dict. The orchestrator accesses `recovery_log_summary` and `round_history_notes` via the `strategy` key of that dict rather than reading the file directly.
-- **`batch_runner.execute_feature()`.** Reads `hot_files` for the trivial-fast-path decision in [Conflict Recovery](#conflict-recovery-trivial-fast-path-and-repair-fallback): a conflicted file that appears in `hot_files` disqualifies the trivial path and forces a repair dispatch.
+- **`feature_executor.execute_feature()`.** Reads `hot_files` for the trivial-fast-path decision in [Conflict Recovery](#conflict-recovery-trivial-fast-path-and-repair-fallback): a conflicted file that appears in `hot_files` disqualifies the trivial path and forces a repair dispatch.
 
 `load_strategy()` tolerates missing files, invalid JSON, and unexpected shapes by returning a default instance — safe to read at any time, including from external tooling.
 
@@ -85,7 +85,7 @@ Forward-only phase transitions apply — the shutdown path writes `paused` via t
 | `plan.py` | Session plan renderer; writes `overnight-plan.md` |
 | `strategy.py` | Cross-round integration health tracking (`OvernightStrategy`) |
 | `batch_plan.py` | Per-batch master plan generation; maps pipeline results back to overnight state |
-| `batch_runner.py` | Batch execution: dispatches pipeline workers, handles deferrals, merges |
+| `batch_runner.py` | CLI shim: builds `BatchConfig` and calls `orchestrator.run_batch`, which dispatches pipeline workers, handles deferrals, and merges |
 | `brain.py` | Post-retry triage agent (SKIP/DEFER/PAUSE decisions via Claude API) |
 | `throttle.py` | Subscription-aware ConcurrencyManager enforcing tier-bound concurrency cap |
 | `interrupt.py` | Startup recovery: resets `running` features to `pending` with reason logging |
@@ -98,13 +98,13 @@ Forward-only phase transitions apply — the shutdown path writes `paused` via t
 
 ### Post-Merge Review (review_dispatch)
 
-After a feature merges to the integration branch, `batch_runner.execute_feature()` consults `requires_review(tier, criticality)` in `cortex_command/common.py` — review fires when `tier == "complex"` or `criticality in ("high", "critical")`. Gated features invoke `dispatch_review()` in `cortex_command/pipeline/review_dispatch.py`, which loads `cortex_command/pipeline/prompts/review.md` via `_load_review_prompt()` and runs a review agent against the merged state on the integration branch.
+After a feature merges to the integration branch, `feature_executor.execute_feature()` consults `requires_review(tier, criticality)` in `cortex_command/common.py` — review fires when `tier == "complex"` or `criticality in ("high", "critical")`. Gated features invoke `dispatch_review()` in `cortex_command/pipeline/review_dispatch.py`, which loads `cortex_command/pipeline/prompts/review.md` via `_load_review_prompt()` and runs a review agent against the merged state on the integration branch.
 
-**Files**: `cortex_command/pipeline/review_dispatch.py` (`dispatch_review`, `parse_verdict`, `_write_review_deferral`), `cortex_command/pipeline/prompts/review.md`, `cortex_command/common.py` (`requires_review`), `cortex_command/pipeline/batch_runner.py` (`execute_feature` owns the review/rework loop).
+**Files**: `cortex_command/pipeline/review_dispatch.py` (`dispatch_review`, `parse_verdict`, `_write_review_deferral`), `cortex_command/pipeline/prompts/review.md`, `cortex_command/common.py` (`requires_review`), `cortex_command/overnight/outcome_router.py` (owns the review gate and rework routing), `cortex_command/overnight/feature_executor.py` (`execute_feature`).
 
 **Inputs**: integration branch HEAD at merge time; feature metadata; prior orchestrator notes at `cortex/lifecycle/{feature}/learnings/orchestrator-note.md`.
 
-The verdict is parsed from a ```json``` block inside the review agent's `review.md` artifact — `APPROVED`, `CHANGES_REQUESTED`, or `REJECTED`. The review agent writes only `review.md`; `batch_runner` owns every `events.log` write (`phase_transition`, `review_verdict`, `feature_complete`) so review artifacts and state transitions never interleave.
+The verdict is parsed from a ```json``` block inside the review agent's `review.md` artifact — `APPROVED`, `CHANGES_REQUESTED`, or `REJECTED`. The review agent writes only `review.md`; every `events.log` write (`phase_transition`, `review_verdict`, `feature_complete`) goes through the `cortex-lifecycle-event` verb so review artifacts and state transitions never interleave.
 
 The rework cycle is single-shot:
 
@@ -150,9 +150,9 @@ The three dispositions `brain.py` surfaces:
 
 ### Conflict Recovery (trivial fast-path and repair fallback)
 
-When a feature branch fails to merge cleanly, `batch_runner.execute_feature()` chooses between a trivial fast-path and a full repair dispatch based on the set of conflicted files and the session's `hot_files` list. The policy is declared in the orchestrator prompt at `cortex_command/overnight/prompts/orchestrator-round.md` (the "Conflict Recovery" step) and implemented in `batch_runner.execute_feature()`.
+When a feature branch fails to merge cleanly, `feature_executor.execute_feature()` chooses between a trivial fast-path and a full repair dispatch based on the set of conflicted files and the session's `hot_files` list. The policy is declared in the orchestrator prompt at `cortex_command/overnight/prompts/orchestrator-round.md` (the "Conflict Recovery" step) and implemented in `feature_executor.execute_feature()`.
 
-**Files**: `cortex_command/pipeline/batch_runner.py` (`execute_feature`), `cortex_command/pipeline/conflict.py` (`resolve_trivial_conflict`), `cortex_command/pipeline/merge_recovery.py`, `cortex_command/overnight/prompts/repair-agent.md`, `cortex_command/overnight/prompts/orchestrator-round.md` (Conflict Recovery step).
+**Files**: `cortex_command/overnight/feature_executor.py` (`execute_feature`), `cortex_command/pipeline/conflict.py` (`resolve_trivial_conflict`), `cortex_command/pipeline/merge_recovery.py`, `cortex_command/overnight/prompts/repair-agent.md`, `cortex_command/overnight/prompts/orchestrator-round.md` (Conflict Recovery step).
 
 **Inputs**: conflicted file list from the failed merge; `hot_files` read from `overnight-strategy.json`; per-feature `recovery_depth` counter.
 
@@ -285,7 +285,7 @@ The naming convention is "per-task, per-feature" — one prompt file per role an
 
 **Inputs**: session state loaded by the orchestrator; escalation history; strategy file; feature-level learnings directories.
 
-The two directories are kept separate because their audiences differ: `pipeline/prompts` agents never see session state, and `overnight/prompts` agents never edit a single feature's code directly — they route work through `pipeline/dispatch.py`. Keeping them in sibling trees makes the scope boundary visible from an import path alone.
+The two directories are kept separate because their audiences differ: `pipeline/prompts` agents never see session state, and `overnight/prompts` agents never edit a single feature's code directly — they route work through `cortex_command/pipeline/dispatch.py`. Keeping them in sibling trees makes the scope boundary visible from an import path alone.
 
 ---
 
@@ -317,7 +317,7 @@ A **crash-loop resume guard** on `cortex overnight start` refuses to auto-resume
 
 ### The persistent guardian (automatic trigger)
 
-`cortex overnight guardian scan` / `guardian install` / `guardian remove` manage a **single host-level** launchd LaunchAgent — one agent for the whole host, not one per session — that scans every `executing` session on a `StartInterval` cadence (default 300s), applies the detection predicate, and invokes the recovery core for each session that needs it. One persistent agent avoids the install/garbage-collect-per-session problem a per-session design would carry. It reuses the `scheduler/macos.py` launchd machinery.
+`cortex overnight guardian scan` / `guardian install` / `guardian remove` manage a **single host-level** launchd LaunchAgent — one agent for the whole host, not one per session — that scans every `executing` session on a `StartInterval` cadence (default 300s), applies the detection predicate, and invokes the recovery core for each session that needs it. One persistent agent avoids the install/garbage-collect-per-session problem a per-session design would carry. It reuses the `cortex_command/overnight/scheduler/macos.py` launchd machinery.
 
 **Who watches the watchman.** The guardian deliberately does **not** use a bare `KeepAlive`. Its `StartInterval` periodic re-fire is itself the restart-on-crash supervision: if a guardian invocation crashes, launchd re-launches it at the next interval regardless, so the cadence doubles as the liveness backstop. `ThrottleInterval` is the crash-loop floor that bounds how fast a persistently-failing guardian can re-fire. The guardian is bounded by design — a single host-level agent, a false-positive-free primary signal, and the manual verb as a backstop — so the supervision layer does not itself become an unbounded new failure surface.
 
@@ -435,12 +435,12 @@ Every overnight session persists state as files under `cortex/lifecycle/`. The r
 |------|--------|------|
 | `cortex/lifecycle/overnight-state.json` | `cortex_command/overnight/state.py` (`save_state` — atomic tempfile + `os.replace`) | Session state: phase, per-feature status, round counter. Source of truth for "is this session still running." |
 | `cortex/lifecycle/overnight-events.log` | `cortex_command/overnight/events.py` (`log_event`) | Append-only JSONL event stream at the session level (round boundaries, feature lifecycle, circuit breakers). |
-| `cortex/lifecycle/sessions/{id}/pipeline-events.log` | `cortex_command/pipeline/events.py` via `batch_runner` | Append-only JSONL of per-task dispatch/merge/test events inside each feature. |
+| `cortex/lifecycle/sessions/{id}/pipeline-events.log` | `cortex_command/pipeline/state.py` (`log_event`), path configured by `batch_runner` | Append-only JSONL of per-task dispatch/merge/test events inside each feature. |
 | `cortex/lifecycle/sessions/{id}/overnight-strategy.json` | `cortex_command/overnight/strategy.py` (`save_strategy` — atomic tempfile + `os.replace`) | Cross-round strategy: `hot_files`, `integration_health`, `recovery_log_summary`, `round_history_notes`. |
 | `cortex/lifecycle/sessions/{session_id}/escalations.jsonl` | `cortex_command/overnight/deferral.py` (`write_escalation`) | Append-only JSONL of worker escalations, orchestrator resolutions, and cycle-break promotions. |
-| `cortex/lifecycle/{feature}/events.log` | `cortex_command/pipeline/batch_runner.py` | Per-feature phase-transition journal (`phase_transition`, `review_verdict`, `feature_complete`). Read by `/cortex-core:build resume` and `/morning-review`. |
+| `cortex/lifecycle/{feature}/events.log` | `cortex_command/lifecycle_event.py` (the `cortex-lifecycle-event` verb) | Per-feature phase-transition journal (`phase_transition`, `review_verdict`, `feature_complete`). Read by `/cortex-core:build resume` and `/morning-review`. |
 | `cortex/lifecycle/{feature}/agent-activity.jsonl` | `cortex_command/pipeline/dispatch.py` (`_write_activity_event`) | Per-feature per-turn agent tool-call breadcrumbs (tool names, success/failure, turn cost). |
-| `cortex/lifecycle/{feature}/learnings/orchestrator-note.md` | orchestrator prompt + `batch_runner` (review rework cycle) | Accumulated orchestrator feedback handed to the next worker dispatch. |
+| `cortex/lifecycle/{feature}/learnings/orchestrator-note.md` | orchestrator prompt + `cortex_command/pipeline/review_dispatch.py` and `cortex_command/overnight/feature_executor.py` (review rework cycle) | Accumulated orchestrator feedback handed to the next worker dispatch. |
 | `cortex/lifecycle/morning-report.md` | `cortex_command/overnight/report.py` (`write_report` — atomic tempfile + `os.replace`) | The morning report (see below). Runner emits `morning_report_generate_result` and `morning_report_commit_result` events to `overnight-events.log` around the write + commit so the operator can confirm the file landed on `main`. |
 | `deferred/*.md` | `cortex_command/overnight/deferral.py` (`write_deferral`) | Blocking human-decision questions filed during the session. |
 
@@ -534,7 +534,7 @@ The morning-report commit is the only runner commit that stays on local `main`; 
 
 `render_sandbox_denials` (in `cortex_command/overnight/report.py`) emits the morning report's `## Sandbox Denials` section by classifying Bash-routed `Operation not permitted` failures at render time. There is no separate sandbox-violation hook — classification reuses two existing signal sources:
 
-- **Tool-failure tracker** (`hooks/cortex-tool-failure-tracker.sh`, PostToolUse Bash) writes each failed Bash invocation's `command` and truncated `stderr` to `cortex/lifecycle/sessions/<id>/tool-failures/bash.log` as YAML literal block scalars.
+- **Tool-failure tracker** (`claude/hooks/cortex-tool-failure-tracker.sh`, PostToolUse Bash) writes each failed Bash invocation's `command` and truncated `stderr` to `cortex/lifecycle/sessions/<id>/tool-failures/bash.log` as YAML literal block scalars.
 - **Per-spawn sidecar deny-lists** at `cortex/lifecycle/sessions/<id>/sandbox-deny-lists/<spawn-id>.json`, written by both overnight spawn sites (`cortex_command/overnight/runner.py` for the orchestrator and `cortex_command/pipeline/dispatch.py` for per-feature dispatches) immediately after each spawn's `--settings` deny-list is constructed. Files are never overwritten — each spawn writes a uniquely-keyed file (e.g. `orchestrator-1.json`, `feature-foo-1.json`) and the aggregator unions them.
 
 `collect_sandbox_denials(session_id)` reads both sources, filters the bash log to entries whose `stderr` contains `Operation not permitted`, and applies a 4-layer classifier to each entry's command:
@@ -594,7 +594,7 @@ Overnight writes several JSONL logs at different scopes. Pick the one that match
 | `cortex/lifecycle/{feature}/agent-activity.jsonl` | Investigating what tools an agent actually invoked inside a dispatch and whether they succeeded — the "what did the worker really do" log. |
 | `cortex/lifecycle/sessions/{session_id}/escalations.jsonl` | Investigating which features blocked on questions, how the orchestrator answered, and which were cycle-break-promoted to deferrals. |
 
-All five are append-only JSONL and safe to `tail -f` live. The first four are written by four different modules — session events by `cortex_command/overnight/events.py`, pipeline events by `cortex_command/pipeline/events.py`, per-feature lifecycle by `cortex_command/pipeline/batch_runner.py`, and agent activity by `cortex_command/pipeline/dispatch.py` — so ownership drift is contained. A symptom that spans "did the orchestrator try to merge?" plus "what did the merge agent do?" requires grepping both `pipeline-events.log` and the feature's `agent-activity.jsonl`.
+All five are append-only JSONL and safe to `tail -f` live. The first four are written by four different modules — session events by `cortex_command/overnight/events.py`, pipeline events by `cortex_command/pipeline/state.py`, per-feature lifecycle by `cortex_command/lifecycle_event.py`, and agent activity by `cortex_command/pipeline/dispatch.py` — so ownership drift is contained. A symptom that spans "did the orchestrator try to merge?" plus "what did the merge agent do?" requires grepping both `pipeline-events.log` and the feature's `agent-activity.jsonl`.
 
 ### Dashboard Polling and dashboard state
 

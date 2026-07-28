@@ -29,12 +29,12 @@ graph TD
     START([New idea / request])
     DEV["/cortex-core:dev · routing hub"]
 
-    LC["/lifecycle\nfull interactive · single feature\nClarify → Research → Specify → Plan → Implement → Review → Complete"]
-    DISC["/discovery\nresearch + decompose\ncreates backlog tickets"]
+    LC["/cortex-core:build\ninteractive · single feature\nPlan → Implement → Review → Complete"]
+    DISC["/cortex-core:discovery\nresearch + decompose\ncreates backlog tickets"]
     BACKLOG[("Backlog<br/>draft → refined → complete")]
     REQ([cortex/requirements/project.md])
 
-    REFINE["/refine\nClarify → Research → Specify\nsets status: refined"]
+    REFINE["/cortex-core:refine\nClarify → Research → Specify\nsets status: refined"]
     GATE{"Readiness\ngate\nresearch ✓  spec ✓"}
 
     OVN["/cortex-overnight:overnight\nselect · plan · execute\nparallel workers per feature"]
@@ -45,7 +45,8 @@ graph TD
     MAIN([main branch])
 
     START --> DEV
-    DEV -->|"interactive · single feature"| LC
+    DEV -->|"needs scope · not yet refined"| REFINE
+    DEV -->|"already refined · build it"| LC
     DEV -->|"vague / research"| DISC
     DEV -->|"batch / what's next"| BACKLOG
 
@@ -53,9 +54,10 @@ graph TD
 
     REQ -->|"informs scope"| DISC
 
-    BACKLOG -->|"autonomous · pick item"| REFINE
+    BACKLOG -->|"pick item"| REFINE
     REFINE -->|"status: refined + artifacts"| GATE
-    GATE -->|"eligible"| OVN
+    GATE -->|"eligible · unattended"| OVN
+    GATE -->|"interactive · single feature"| LC
     GATE -->|"needs more prep"| REFINE
 
     OVN --> INTBR
@@ -128,7 +130,7 @@ Research fan-out is always parallel and sized by a tier×criticality matrix (ran
 
 ### 1. Structured Single-Feature
 
-The most common path. The user asks `/cortex-core:dev` what to work on, or names a specific feature. `/cortex-core:dev` classifies the request as a single non-trivial feature and routes to `/cortex-core:refine feature-name` then `/cortex-core:build feature-name`. The lifecycle skill starts with a Clarify phase — focused questions about scope, complexity, and criticality — then runs research (codebase exploration plus a read of `cortex/requirements/project.md`), then moves to specify, where an interview surfaces acceptance criteria. Planning produces a task breakdown that the orchestrator reviews before approval. Implementation proceeds as a series of commits, one per task *(PreToolUse hook: `hooks/cortex-validate-commit.sh` fires here and blocks any `git commit` whose message fails the style rules)*. If the feature is complex tier (6+ files, novel pattern) or high/critical criticality, the review phase runs a multi-agent verdict — several reviewers in parallel, then a cross-validator. On completion, `events.log` is updated, the backlog item is closed, and a PR is created.
+The most common path. The user asks `/cortex-core:dev` what to work on, or names a specific feature. `/cortex-core:dev` classifies the request as a single non-trivial feature and routes by the ticket's readiness: no `spec:` field yet → `/cortex-core:refine feature-name`; already `status: refined` with a `spec:` → `/cortex-core:build feature-name`. Refine starts with a Clarify phase — focused questions about scope, complexity, and criticality — then runs research (codebase exploration plus a read of `cortex/requirements/project.md`), then moves to specify, where an interview surfaces acceptance criteria, and stops. Build picks up from there: planning produces a task breakdown that the orchestrator reviews before approval, and implementation proceeds as a series of commits, one per task *(PreToolUse hook: `hooks/cortex-validate-commit.sh` fires here and blocks any `git commit` whose message fails the style rules)*. If the feature is complex tier (6+ files, novel pattern) or high/critical criticality, the review phase runs a multi-agent verdict — several reviewers in parallel, then a cross-validator. On completion, `events.log` is updated, the backlog item is closed, and a PR is created.
 
 ### 2. Multiple Features via /cortex-overnight:overnight
 
@@ -140,7 +142,7 @@ In the evening, the user runs `/cortex-overnight:overnight` to plan a batch of f
 
 ### 4. Discovery to Backlog
 
-The user has a vague topic or area of uncertainty rather than a concrete feature. `/cortex-core:discovery topic` runs a deep research phase — exploring the codebase, reading requirements, and potentially searching external sources — then produces a structured spec and decomposes the work into discrete backlog tickets. Each ticket gets YAML frontmatter that may include `research:` and `spec:` fields pointing to the discovery artifacts. When the user later runs `/cortex-backlog:backlog pick` on one of those tickets and routes it through `/cortex-core:build`, the lifecycle skill detects the pre-existing artifacts and skips the research and specify phases, bootstrapping directly into planning.
+The user has a vague topic or area of uncertainty rather than a concrete feature. `/cortex-core:discovery topic` runs a deep research phase — exploring the codebase, reading requirements, and potentially searching external sources — then produces a structured spec and decomposes the work into discrete backlog tickets. Each ticket gets YAML frontmatter that may include `research:` and `spec:` fields pointing to the discovery artifacts. When the user later runs `/cortex-backlog:backlog pick` on one of those tickets, those artifacts are what `/cortex-core:build` requires — so the ticket can go straight to build, bootstrapping directly into planning without a separate `/cortex-core:refine` pass.
 
 ---
 

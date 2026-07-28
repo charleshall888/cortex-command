@@ -24,4 +24,4 @@ Afterwards verify `research.md` exists and is non-empty (else surface and halt),
 
 ## Exit gate
 
-Scan `## Open Questions`: an item is **resolved** with an inline answer, **deferred** when explicitly marked so with written rationale. A bare unannotated bullet is neither — present those and resolve or explicitly defer each before Spec. An absent section passes.
+Scan `## Open Questions`: an item is **resolved** with an inline answer, **deferred** when explicitly marked so with written rationale. A bare unannotated bullet is neither — resolve each from research or defer with rationale before Spec. An absent section passes.

@@ -11,7 +11,7 @@ Evaluate each overnight runner component against its original rationale using th
 
 | Component | File | Original rationale | Initial classification |
 |---|---|---|---|
-| Round loop | `cortex_command/overnight/runner.sh` | Safety loop that spawns fresh orchestrators per round; enforces wall-clock limits and circuit breakers | load-bearing |
+| Round loop | `cortex_command/overnight/runner.py` | Safety loop that spawns fresh orchestrators per round; enforces wall-clock limits and circuit breakers. (Replaced the retired `runner.sh` — see `docs/overnight-operations.md`.) | load-bearing |
 | Orchestrator prompt | `cortex_command/overnight/prompts/orchestrator-round.md` | Thin orchestrator prevents context saturation across rounds — reads state only, does not accumulate implementation details | load-bearing |
 | Batch runner | `cortex_command/overnight/batch_runner.py` | Parallel feature dispatch; manages retry budget per task; auto-merges to main | load-bearing |
 | Batch plan hand-off | `cortex_command/overnight/batch_plan.py` + orchestrator prompt §6 | Orchestrator writes batch plan as markdown file; batch runner parses it; adds a parse boundary between planning and execution | pruning-candidate |
