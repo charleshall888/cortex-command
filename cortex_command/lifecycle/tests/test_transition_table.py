@@ -18,6 +18,8 @@ logic it absorbs rather than a parallel invention.
 
 from __future__ import annotations
 
+import dataclasses
+
 import pytest
 
 from cortex_command.lifecycle import (
@@ -214,6 +216,52 @@ def test_all_edge_endpoints_are_declared_states() -> None:
     for t in tt.TRANSITIONS:
         assert t.from_state in tt.STATE_NAMES
         assert t.to_state in tt.STATE_NAMES
+
+
+def _departure_states_by_verb(transitions) -> dict[str, set[str]]:
+    """Group *transitions* by ``owning_verb`` into the set of states each departs from."""
+    by_verb: dict[str, set[str]] = {}
+    for t in transitions:
+        by_verb.setdefault(t.owning_verb, set()).add(t.from_state)
+    return by_verb
+
+
+def test_each_verb_declares_exactly_one_from_state() -> None:
+    """A verb IS the gate for the state it fires from, so it cannot have two.
+
+    Programmatic callers rely on this: they omit ``--from-state`` and let the
+    composed arm's table ``from_state`` stand as the expected departure phase.
+    That is only safe while every arm of a verb agrees. ``_check_invariants``
+    does NOT enforce it — it asserts only that ``(owning_verb, decision_state)``
+    keys are unique, so a row giving an existing verb a divergent ``from_state``
+    passes it cleanly and would silently break those callers.
+    """
+    divergent = {
+        verb: sorted(states)
+        for verb, states in _departure_states_by_verb(tt.TRANSITIONS).items()
+        if len(states) != 1
+    }
+    assert not divergent, f"verbs with more than one departure state: {divergent}"
+
+
+def test_the_from_state_invariant_check_catches_a_divergent_row() -> None:
+    """The grouping above must be able to fail — pinned against a synthetic row.
+
+    Without this the invariant test is indistinguishable from one that asserts
+    nothing, since today's table satisfies it.
+    """
+    rogue = dataclasses.replace(
+        tt.transition_by_arm("review_verdict", "approved"),
+        id="review.rogue",
+        decision_state="rogue",
+        from_state="implement",
+    )
+    divergent = {
+        verb: states
+        for verb, states in _departure_states_by_verb([*tt.TRANSITIONS, rogue]).items()
+        if len(states) != 1
+    }
+    assert "review_verdict" in divergent
 
 
 def test_frozen_rows_are_immutable() -> None:
