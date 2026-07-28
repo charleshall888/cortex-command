@@ -1149,6 +1149,13 @@ def test_batch_runner_tolerates_unusable_project_root(tmp_path: Path) -> None:
         captured = _spawn_batch_runner_capturing(tmp_path, bad_root)
         kwargs = captured["kwargs"]
         assert kwargs["cwd"] is None, f"expected no cwd for {bad_root!r}"
-        assert "CORTEX_REPO_ROOT" not in kwargs["env"]
+        # An unusable root must not be injected or override anything. An
+        # ambient CORTEX_REPO_ROOT passes through untouched — the scheduler's
+        # env snapshot forwards it on purpose — so assert "unchanged from the
+        # ambient value", not "absent".
+        assert kwargs["env"].get("CORTEX_REPO_ROOT") == os.environ.get(
+            "CORTEX_REPO_ROOT"
+        ), f"unusable root {bad_root!r} must not change CORTEX_REPO_ROOT"
+        assert kwargs["env"].get("CORTEX_REPO_ROOT") != str(bad_root)
         for handle in (kwargs["stdout"], kwargs["stderr"]):
             handle.close()
