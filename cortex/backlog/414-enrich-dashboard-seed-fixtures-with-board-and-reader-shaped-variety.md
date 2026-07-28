@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 3d7da067-8be9-4a37-98b9-70ab47ed7a4d
 title: Enrich dashboard seed fixtures with board- and reader-shaped variety
-status: in_progress
+status: complete
 priority: medium
 type: chore
 created: 2026-07-21
