@@ -1,12 +1,12 @@
 ---
 schema_version: "1"
 uuid: 47ae0d5b-f2bc-42b1-9bd5-97b3409915f5
-title: Add the dashboard ticket feed with upstream blocker-key hygiene
+title: Add the dashboard ticket feed
 status: in_progress
 priority: high
 type: feature
 created: 2026-07-21
-updated: 2026-07-22
+updated: 2026-07-27
 discovery_source: cortex/research/dashboard-command-station/research.md
 parent: "410"
 tags: ['dashboard-command-station', 'dashboard']
@@ -47,3 +47,33 @@ Fixes the stray key and adds the warn guard at the shared parse boundary first (
 - `cortex_command/dashboard/poller.py:62-119,353-384` — DashboardState and the backend-gated slow poll
 - `cortex_command/backlog/build_epic_map.py:93-173` — epic map helper
 - `cortex_command/backlog/readiness.py:89-213` — readiness partition and reason strings
+
+## Update — reconciled at spec time (#411)
+
+Research and adversarial review falsified three claims made above. The original text is left intact
+as the record of what was believed at authoring time; this section states what replaced it.
+
+1. **There is no shared parse boundary, so no correction is inherited.** Role and Integration assert
+   a single boundary whose fix three readers pick up. Six independent frontmatter parsers were
+   verified instead — `generate_index.py:46`, `resolve_item.py:76`, `load_parent_epic.py:113`,
+   `overnight/backlog.py:232`, and two hand-rolled regex scans at `dashboard/data.py:971,1028`.
+   Nothing inherits anything. Unifying them is an explicit non-goal of the spec.
+
+2. **The warn guard is not built.** Role and Edges promise a boundary that warns loudly on
+   unrecognized blocker-key variants. A runtime guard in a surface that ships to other repos polices
+   a corpus whose maintainer never reads the log, which the shipped-surfaces rule forbids; a
+   corpus test in `tests/` is not in the wheel and so is unreachable from any consumer repo. Neither
+   ships. The one live occurrence is corrected directly in `cortex/backlog/230-*.md:14` and is inert
+   — that item is terminal and skipped before the key is read.
+
+3. **The seed-ID range position was reversed, to no filter at all.** Edges promised an explicit
+   position on the reserved range before the board renders live data. The operator resolved it on
+   2026-07-21 the other way: no `_BACKLOG_UUIDS` import, no `dashboard-seed` tag filter, no 990–999
+   ID-range filter. The feed renders seed fixtures exactly as every other panel already does. The
+   `#231` tag-collision hazard that motivated filtering was checked and found wrong — #231 is
+   `status: complete` and is dropped before its tags are read.
+
+Consequently the second half of this ticket collapsed from a parse-boundary change plus a guard to
+a single frontmatter line, and the `title:` above was amended to match what the work actually is.
+The Why paragraph's account of the lossy blocker key remains accurate as written; what it does not
+convey is that the loss is currently unobserved in practice.
