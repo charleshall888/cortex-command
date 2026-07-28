@@ -2,13 +2,16 @@
 schema_version: "1"
 uuid: 21a08006-ba43-4456-98cd-ed42cec6087c
 title: Make the review-verdict transition record instead of silently refusing
-status: backlog
+status: refined
 priority: high
 type: bug
 created: 2026-07-28
 updated: 2026-07-28
 tags: ['harness', 'overnight', 'lifecycle', 'observability']
-areas: ['tooling']
+areas: ['overnight-runner']
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/make-the-review-verdict-transition-record/spec.md
 ---
 ## Why
 

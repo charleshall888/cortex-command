@@ -1,0 +1,5 @@
+{"ts": "2026-07-28T19:43:30Z", "schema_version": 1, "event": "lifecycle_start", "feature": "make-the-review-verdict-transition-record", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"ts": "2026-07-28T19:50:24Z", "event": "clarify_critic", "feature": "make-the-review-verdict-transition-record", "schema_version": 3, "parent_epic_loaded": false, "findings_count": 11, "dispositions": {"apply": 11, "dismiss": 0, "ask": 0}, "applied_fixes_count": 11, "dismissals_count": 0, "status": "ok"}
+{"ts": "2026-07-28T20:13:51Z", "event": "complexity_override", "feature": "make-the-review-verdict-transition-record", "from": "simple", "to": "complex", "gate": "research_open_questions"}
+{"ts": "2026-07-28T20:14:10Z", "event": "criticality_override", "feature": "make-the-review-verdict-transition-record", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-07-28T20:39:59Z", "event": "spec_approved", "feature": "make-the-review-verdict-transition-record", "decision": "approved"}
