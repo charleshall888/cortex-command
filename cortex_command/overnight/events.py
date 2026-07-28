@@ -71,6 +71,12 @@ SESSION_BUDGET_EXHAUSTED = "session_budget_exhausted"
 INTEGRATION_WORKTREE_MISSING = "integration_worktree_missing"
 ORCHESTRATOR_NO_PLAN = "orchestrator_no_plan"
 BATCH_RUNNER_STALLED = "batch_runner_stalled"
+# A non-zero exit from the batch_runner *subprocess*. Distinct from
+# ORCHESTRATOR_FAILED: by the time batch_runner runs, the orchestrator agent
+# has already produced its batch plan and exited successfully, so reusing the
+# orchestrator event names the wrong component and sends the reader to the
+# wrong artifact.
+BATCH_RUNNER_FAILED = "batch_runner_failed"
 ARTIFACT_COMMIT_FAILED = "artifact_commit_failed"
 PUSH_FAILED = "push_failed"
 MORNING_REPORT_COMMIT_FAILED = "morning_report_commit_failed"
@@ -135,6 +141,7 @@ EVENT_TYPES = (
     INTEGRATION_WORKTREE_MISSING,
     ORCHESTRATOR_NO_PLAN,
     BATCH_RUNNER_STALLED,
+    BATCH_RUNNER_FAILED,
     ARTIFACT_COMMIT_FAILED,
     PUSH_FAILED,
     MORNING_REPORT_COMMIT_FAILED,

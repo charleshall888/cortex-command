@@ -1018,3 +1018,137 @@ def test_denywrite_overrides_allowwrite_under_srt(tmp_path: Path) -> None:
         f"deny target unexpectedly created despite srt deny-overrides-allow "
         f"precedence: {deny_target}"
     )
+
+
+# ---------------------------------------------------------------------------
+# batch_runner spawn environment (regression: session overnight-2026-07-28-0256)
+# ---------------------------------------------------------------------------
+#
+# That session died 167ms into the batch child, before dispatching a single
+# feature, and reported the cause as two feature failures. Root cause: launchd
+# leaves cwd at ``/`` (``scheduler/launcher.sh`` never chdirs and says so in its
+# own comments), the child inherited it, and
+# ``pipeline/worktree.py:_repo_root()`` shells ``git rev-parse --show-toplevel``
+# with ``check=True`` and no ``cwd`` — ``CalledProcessError(128)`` from ``/``,
+# raised inside ``run_batch``'s unguarded ``create_worktree`` loop. The
+# traceback was unrecoverable because the child's stderr went to a
+# ``subprocess.PIPE`` nothing ever drained.
+
+
+def _spawn_batch_runner_capturing(tmp_path: Path, project_root):
+    """Invoke ``_spawn_batch_runner`` with a recording Popen; return kwargs."""
+    from cortex_command.overnight import runner as runner_module
+
+    captured: dict = {}
+
+    class _CapturingPopen:
+        def __init__(self, argv, **kwargs) -> None:
+            captured["argv"] = list(argv)
+            captured["kwargs"] = kwargs
+            self.pid = 4242
+            self.stdout = None
+            self.stderr = None
+            self.returncode = None
+
+        def poll(self) -> int | None:
+            return None
+
+    class _NoopWatchdog:
+        def __init__(self, **kwargs) -> None:
+            pass
+
+        def start(self) -> None:
+            pass
+
+    session_dir = tmp_path / "session"
+    session_dir.mkdir(exist_ok=True)
+    batch_plan_path = session_dir / "batch-plan-round-1.md"
+    batch_plan_path.write_text("# plan\n")
+
+    with patch.object(runner_module.subprocess, "Popen", _CapturingPopen), \
+         patch.object(runner_module, "WatchdogThread", _NoopWatchdog):
+        runner_module._spawn_batch_runner(
+            batch_plan_path=batch_plan_path,
+            batch_id=1,
+            tier="medium",
+            integration_branch="main",
+            state_path=session_dir / "state.json",
+            events_path=session_dir / "overnight-events.log",
+            test_command=None,
+            coord=MagicMock(),
+            spawned_procs=[],
+            pipeline_events_path=session_dir / "pipeline-events.log",
+            project_root=project_root,
+        )
+
+    captured["session_dir"] = session_dir
+    return captured
+
+
+def test_batch_runner_spawns_inside_the_repo(tmp_path: Path) -> None:
+    """The child runs in the home repo, with CORTEX_REPO_ROOT set to match.
+
+    Both halves matter: ``cwd`` fixes the resolvers that shell out to git
+    (``worktree.py`` and ``merge.py`` each have their own cwd-relative
+    ``_repo_root()``), and the env var fixes the ones that read it directly
+    (``common.py``'s project-root walk). Fixing this at the spawn boundary is
+    what makes the whole class of cwd-dependent resolvers safe under launchd.
+    """
+    project_root = tmp_path / "repo"
+    project_root.mkdir()
+
+    captured = _spawn_batch_runner_capturing(tmp_path, project_root)
+    kwargs = captured["kwargs"]
+
+    assert kwargs["cwd"] == str(project_root), (
+        "batch_runner must run inside the home repo; under launchd the "
+        "inherited cwd is / and every git-shelling resolver fails there"
+    )
+    assert kwargs["env"]["CORTEX_REPO_ROOT"] == str(project_root)
+    # The pre-existing R28 marker must survive the env rebuild.
+    assert kwargs["env"]["CORTEX_RUNNER_CHILD"] == "1"
+
+
+def test_batch_runner_output_is_captured_to_files_not_pipes(
+    tmp_path: Path,
+) -> None:
+    """stdout/stderr go to real files, never to undrained pipes.
+
+    ``_poll_subprocess`` only calls ``proc.wait()``, so a ``subprocess.PIPE``
+    here is both a silent diagnostic loss (a crashing child's traceback dies
+    with it) and a deadlock once the child outgrows the OS pipe buffer.
+    """
+    project_root = tmp_path / "repo"
+    project_root.mkdir()
+
+    captured = _spawn_batch_runner_capturing(tmp_path, project_root)
+    kwargs = captured["kwargs"]
+    session_dir = captured["session_dir"]
+
+    assert kwargs["stdout"] is not subprocess.PIPE
+    assert kwargs["stderr"] is not subprocess.PIPE
+    assert hasattr(kwargs["stdout"], "write"), "stdout must be a file handle"
+    assert hasattr(kwargs["stderr"], "write"), "stderr must be a file handle"
+
+    # Anchored beside the round's other artifacts so the morning report can
+    # name the path (see runner's BATCH_RUNNER_FAILED event details).
+    assert (session_dir / "batch-runner-round-1.stdout.log").exists()
+    assert (session_dir / "batch-runner-round-1.stderr.log").exists()
+
+    for handle in (kwargs["stdout"], kwargs["stderr"]):
+        handle.close()
+
+
+def test_batch_runner_tolerates_unusable_project_root(tmp_path: Path) -> None:
+    """A missing/None project_root leaves cwd unset rather than raising.
+
+    Popen raises before the child starts if handed a nonexistent ``cwd``,
+    which would convert a recoverable round into a runner crash.
+    """
+    for bad_root in (None, tmp_path / "does-not-exist"):
+        captured = _spawn_batch_runner_capturing(tmp_path, bad_root)
+        kwargs = captured["kwargs"]
+        assert kwargs["cwd"] is None, f"expected no cwd for {bad_root!r}"
+        assert "CORTEX_REPO_ROOT" not in kwargs["env"]
+        for handle in (kwargs["stdout"], kwargs["stderr"]):
+            handle.close()

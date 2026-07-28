@@ -170,11 +170,46 @@ class TestMissingResultsFallback(unittest.TestCase):
         for name in ("alpha", "beta"):
             fs = state.features[name]
             self.assertEqual(fs.status, "failed", f"{name} should be failed")
-            self.assertEqual(
+            # With no cause supplied the message must still attribute the
+            # failure to the harness rather than to the feature, and must
+            # say the cause was not recorded.
+            self.assertIn(
+                "harness fault, feature did not run",
                 fs.error,
-                "batch_runner.py did not produce results file",
-                f"{name} should have the no-results error",
+                f"{name} should be attributed to the harness",
             )
+            self.assertIn(
+                "without a recorded cause",
+                fs.error,
+                f"{name} should say the cause was not recorded",
+            )
+
+    def test_supplied_cause_is_surfaced(self):
+        """A caller-supplied cause reaches every feature's error verbatim."""
+        state = _make_state(
+            features={
+                "alpha": OvernightFeatureStatus(status="pending"),
+                "beta": OvernightFeatureStatus(status="pending"),
+            }
+        )
+        _write_state(state, self._state_path)
+        _write_master_plan(self._plan_path, ["alpha", "beta"])
+
+        cause = "batch_runner exited 1; see /tmp/s/batch-runner-round-1.stderr.log"
+        _handle_missing_results(self._plan_path, self._state_path, cause=cause)
+
+        state = load_state(self._state_path)
+        for name in ("alpha", "beta"):
+            fs = state.features[name]
+            self.assertEqual(fs.status, "failed", f"{name} should be failed")
+            self.assertIn(
+                "harness fault, feature did not run",
+                fs.error,
+                f"{name} should be attributed to the harness",
+            )
+            # The exit code and the log path are what turn a morning report
+            # into a diagnosis, so both must survive into the error.
+            self.assertIn(cause, fs.error, f"{name} should carry the cause")
 
 
 class TestFallbackRespectsTerminalStatus(unittest.TestCase):

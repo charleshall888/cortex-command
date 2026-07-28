@@ -86,6 +86,11 @@ KILL_ESCALATION_SECONDS: float = DEFAULT_KILL_ESCALATION_SECONDS
 #: subprocess is considered stalled). Matches ``runner.sh:646``.
 STALL_TIMEOUT_SECONDS: float = 1800.0
 
+#: Wall-clock bound on the post-report follow-up push. This push runs during
+#: session teardown, after all real work has landed, so it is capped rather
+#: than allowed to block on an unreachable remote or a credential prompt.
+FOLLOWUP_PUSH_TIMEOUT_SECONDS: float = 120.0
+
 #: Runner-level heartbeat cadence (spec Req 11, Task 14). A runner-owned
 #: daemon thread emits a ``HEARTBEAT`` event every this-many seconds across
 #: ALL ``executing`` sub-phases — the planning span (between ``ROUND_START``
@@ -620,7 +625,7 @@ def _commit_followup_in_worktree(
     worktree_path: Path,
     session_id: str,
     events_path: Path,
-) -> None:
+) -> bool:
     """Commit follow-up backlog items under ``worktree_path/cortex/backlog/``.
 
     Mirrors the bash runner's post-SIGHUP/post-loop commit (`runner.sh`
@@ -632,9 +637,15 @@ def _commit_followup_in_worktree(
     On non-zero ``git commit`` exit (e.g. rejected by the Phase 0 hook
     guard), emits a stderr line and a structured ``followup_commit_failed``
     event to ``events_path`` so morning review can debug the rejection.
+
+    Returns:
+        ``True`` when a commit was actually created, so the caller can push
+        it. This runs *after* the integration branch was pushed and the PR
+        opened, so an uncommunicated commit here stays local and is lost
+        when the merged branch is deleted.
     """
     if not worktree_path.is_dir():
-        return
+        return False
     env = {k: v for k, v in os.environ.items() if k != "GIT_DIR"}
     try:
         subprocess.run(
@@ -652,7 +663,7 @@ def _commit_followup_in_worktree(
             check=False,
         )
         if diff.returncode == 0:
-            return
+            return False
         commit_result = subprocess.run(
             [
                 "git",
@@ -706,7 +717,77 @@ def _commit_followup_in_worktree(
                 )
             except Exception:
                 pass
+            return False
+        return True
     except (OSError, subprocess.SubprocessError):
+        return False
+
+
+def _push_followup_commit(
+    worktree_path: Path,
+    integration_branch: str,
+    session_id: str,
+    events_path: Path,
+) -> None:
+    """Push the follow-up commit to the already-pushed integration branch.
+
+    The branch push and PR creation both happen earlier in ``_post_loop``,
+    before the morning report exists — and the follow-up backlog items are
+    generated *by* that report, so their commit cannot be moved ahead of the
+    push. Instead the commit is pushed on its own here; because the PR is
+    already open against this branch, the extra commit joins it.
+
+    Best-effort by design: the session is over and its real work already
+    landed, so a push failure is logged and never raised.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "push", "origin", f"HEAD:{integration_branch}"],
+            cwd=str(worktree_path),
+            env={k: v for k, v in os.environ.items() if k != "GIT_DIR"},
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            # Bounded so a hung credential prompt or unreachable remote
+            # cannot stall session teardown indefinitely.
+            timeout=FOLLOWUP_PUSH_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        print(
+            f"runner: followup push failed for session={session_id}: {exc!r}",
+            file=sys.stderr,
+            flush=True,
+        )
+        return
+
+    if result.returncode == 0:
+        print(
+            f"Pushed followup backlog items to {integration_branch}",
+            flush=True,
+        )
+        return
+
+    print(
+        f"runner: followup push failed for session={session_id} "
+        f"branch={integration_branch} rc={result.returncode}",
+        file=sys.stderr,
+        flush=True,
+    )
+    try:
+        events.log_event(
+            events.PUSH_FAILED,
+            round=0,
+            details={
+                "session_id": session_id,
+                "branch": integration_branch,
+                "returncode": result.returncode,
+                "stderr": (result.stderr or "")[:2000],
+                "phase": "followup",
+            },
+            log_path=events_path,
+        )
+    except Exception:
         pass
 
 
@@ -1347,27 +1428,40 @@ def _apply_batch_results(
     state_path: Path,
     strategy_path: Path,
     coord: RunnerCoordination,
+    missing_results_cause: Optional[str] = None,
 ) -> None:
     """Update state + strategy from a round's batch-results JSON.
 
     Calls the internal map_results helpers directly — no ``python3 -m``
     subprocess dispatch. When the results file is absent, invokes the
     missing-results fallback (marks features as failed).
+
+    ``missing_results_cause`` is the caller's explanation for *why* the
+    results file is missing — typically the batch child's exit code and
+    the path to its captured stderr. Without it the fallback can only say
+    the file is absent, which reads as a per-feature fault when the real
+    fault is the harness; the features in question never started.
     """
     results_path = batch_plan_path.parent / f"batch-{batch_id}-results.json"
     if results_path.exists():
         try:
             results = json.loads(results_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+        except (OSError, json.JSONDecodeError) as exc:
             with coord.state_lock, deferred_signals(coord):
-                map_results._handle_missing_results(batch_plan_path, state_path)
+                map_results._handle_missing_results(
+                    batch_plan_path,
+                    state_path,
+                    cause=f"batch results file at {results_path} is unreadable: {exc}",
+                )
             return
         with coord.state_lock, deferred_signals(coord):
             map_results._map_results_to_state(results, state_path, batch_id)
             map_results._update_strategy(results, batch_id, strategy_path)
     else:
         with coord.state_lock, deferred_signals(coord):
-            map_results._handle_missing_results(batch_plan_path, state_path)
+            map_results._handle_missing_results(
+                batch_plan_path, state_path, cause=missing_results_cause
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -1786,6 +1880,7 @@ def _spawn_batch_runner(
     coord: RunnerCoordination,
     spawned_procs: list[tuple[subprocess.Popen, str]],
     pipeline_events_path: Path,
+    project_root: Optional[Path] = None,
 ) -> tuple[subprocess.Popen, WatchdogContext, WatchdogThread]:
     """Spawn ``cortex-batch-runner`` console-script shim with a watchdog.
 
@@ -1802,7 +1897,34 @@ def _spawn_batch_runner(
     same file passed here). Growth of that worker-written log resets the
     inactivity timer so a productively-working batch survives past the
     blind 30-minute timer; genuine silence still trips (Req 9).
+
+    ``project_root`` is the home repo the child must run *inside*. Under
+    launchd the runner's cwd is ``/`` (``scheduler/launcher.sh`` never
+    chdirs, and its own comments say so), and this child inherits it.
+    Several resolvers the child reaches are cwd-relative and fail-loud
+    there — ``pipeline/worktree.py:_repo_root()`` and
+    ``pipeline/merge.py:_repo_root()`` both run
+    ``git rev-parse --show-toplevel`` with ``check=True`` and no ``cwd``,
+    which raises ``CalledProcessError(128)`` from ``/``. The first is
+    reached from ``create_worktree`` inside ``run_batch``'s unguarded
+    worktree loop, so the child dies before dispatching any feature.
+    Setting ``cwd`` **and** ``CORTEX_REPO_ROOT`` fixes the whole class at
+    the boundary rather than patching each resolver: the env var covers
+    resolvers that read it directly (``common.py``'s project-root walk),
+    the cwd covers the ones that shell out to git.
+
+    stdout/stderr go to per-round files under the session directory
+    rather than ``subprocess.PIPE``. Nothing drains this child's pipes —
+    ``_poll_subprocess`` only calls ``proc.wait()`` — so piped output was
+    both discarded (a crashing child's traceback was unrecoverable) and a
+    deadlock risk once the child outgrew the OS pipe buffer.
     """
+    # ``result_dir`` in the child is ``Path(--plan).parent`` (see
+    # ``batch_runner.main``), so anchoring the logs here keeps every
+    # artifact for a round in the same directory the child already writes.
+    session_dir = batch_plan_path.parent
+    stdout_path = session_dir / f"batch-runner-round-{batch_id}.stdout.log"
+    stderr_path = session_dir / f"batch-runner-round-{batch_id}.stderr.log"
     cmd = [
         "cortex-batch-runner",
         "--plan",
@@ -1820,15 +1942,28 @@ def _spawn_batch_runner(
         "--test-command",
         test_command if test_command else "none",
     ]
+    child_env = {**os.environ, "CORTEX_RUNNER_CHILD": "1"}
+    # Only trust an existing directory: a stale ``project_root`` would make
+    # Popen raise before the child ever starts, converting a recoverable
+    # round into a runner crash.
+    child_cwd: Optional[str] = None
+    if project_root is not None and project_root.is_dir():
+        child_cwd = str(project_root)
+        child_env["CORTEX_REPO_ROOT"] = str(project_root)
+
+    session_dir.mkdir(parents=True, exist_ok=True)
+    stdout_handle = open(stdout_path, "ab")
+    stderr_handle = open(stderr_path, "ab")
     proc = subprocess.Popen(
         cmd,
         stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=stdout_handle,
+        stderr=stderr_handle,
         start_new_session=True,
+        cwd=child_cwd,
         # R28: mark this child as runner-spawned so the install guard
         # carve-out (b) fires on any cortex-package import inside it.
-        env={**os.environ, "CORTEX_RUNNER_CHILD": "1"},
+        env=child_env,
     )
     spawned_procs.append((proc, "batch_runner"))
     wctx = WatchdogContext(stall_flag=threading.Event())
@@ -2529,7 +2664,17 @@ def _post_loop(
             state = state_module.load_state(state_path)
             if state.worktree_path:
                 wt_path = Path(state.worktree_path)
-                _commit_followup_in_worktree(wt_path, session_id, events_path)
+                committed = _commit_followup_in_worktree(
+                    wt_path, session_id, events_path
+                )
+                # The branch was pushed and the PR opened above, before this
+                # commit existed. Push it separately or it never leaves this
+                # machine and dies with the merged branch. No branch name
+                # means nothing was pushed earlier either — leave it local.
+                if committed and integration_branch:
+                    _push_followup_commit(
+                        wt_path, integration_branch, session_id, events_path
+                    )
         except Exception:
             pass
 
@@ -3043,6 +3188,10 @@ def run(
             # Spawn batch_runner + watchdog (if a batch plan was produced).
             # -----------------------------------------------------------
             batch_plan_path = session_dir / f"batch-plan-round-{round_num}.md"
+            # Set when the batch child exits non-zero, so the per-feature
+            # fallback below can attribute the failure instead of stamping
+            # every feature with a generic results-file message.
+            batch_failure_cause: Optional[str] = None
             if not batch_plan_path.exists():
                 events.log_event(
                     events.ORCHESTRATOR_NO_PLAN,
@@ -3069,6 +3218,13 @@ def run(
                     # pipeline-events.log (see _spawn_batch_runner) — wire
                     # the watchdog's inactivity probe to it (Req 9).
                     pipeline_events_path=pipeline_events_path,
+                    # Run the child inside the home repo. Same resolution
+                    # _spawn_orchestrator uses for its deny-list; here it is
+                    # load-bearing, because launchd leaves cwd at ``/`` and
+                    # the child's git-shelling resolvers fail-loud there.
+                    project_root=(
+                        Path(state.project_root) if state.project_root else None
+                    ),
                 )
                 batch_exit = _poll_subprocess(b_proc, coord)
                 if batch_exit is None:
@@ -3109,14 +3265,30 @@ def run(
                     )
                     break
                 elif batch_exit != 0:
+                    # The child's own diagnostics land here (see
+                    # _spawn_batch_runner); name the file in both the console
+                    # line and the event so the reader is one `cat` away from
+                    # the traceback instead of guessing at a cause.
+                    batch_stderr_path = (
+                        session_dir
+                        / f"batch-runner-round-{round_num}.stderr.log"
+                    )
+                    batch_failure_cause = (
+                        f"batch_runner exited {batch_exit}; "
+                        f"see {batch_stderr_path}"
+                    )
                     print(
-                        f"Warning: batch_runner exited with code {batch_exit}",
+                        f"Warning: batch_runner exited with code {batch_exit} "
+                        f"— diagnostics in {batch_stderr_path}",
                         flush=True,
                     )
                     events.log_event(
-                        events.ORCHESTRATOR_FAILED,
+                        events.BATCH_RUNNER_FAILED,
                         round=round_num,
-                        details={"exit_code": batch_exit},
+                        details={
+                            "exit_code": batch_exit,
+                            "stderr_log": str(batch_stderr_path),
+                        },
                         log_path=events_path,
                     )
 
@@ -3143,6 +3315,7 @@ def run(
                         state_path=state_path,
                         strategy_path=strategy_path,
                         coord=coord,
+                        missing_results_cause=batch_failure_cause,
                     )
                 except Exception as exc:
                     print(

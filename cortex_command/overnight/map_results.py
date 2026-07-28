@@ -17,6 +17,7 @@ import json
 import sys
 from collections import defaultdict
 from pathlib import Path
+from typing import Optional
 
 from cortex_command.overnight.state import (
     OvernightFeatureStatus,
@@ -150,18 +151,38 @@ def _map_results_to_state(
 def _handle_missing_results(
     plan_path: Path,
     state_path: Path,
+    cause: Optional[str] = None,
 ) -> None:
     """Fallback when batch results file is missing.
 
     Reads the batch plan to identify assigned features and marks each as
     "failed" unless already at a terminal status.
 
+    Every feature in the batch plan gets the same error, because the
+    absence of a results file says nothing about any individual feature —
+    it means the batch child never reported. When ``cause`` names why the
+    child failed, the error says so explicitly, and the ``started_at:
+    null`` these features carry is the corroborating signal that none of
+    them ever ran.
+
     Args:
         plan_path: Path to batch-plan-round-N.md.
         state_path: Path to overnight-state.json.
+        cause: Caller's explanation for the missing file (e.g. the batch
+            child's exit code and captured-stderr path). When ``None``,
+            the child's fate is genuinely unknown and the error says that
+            rather than implying a feature-level fault.
     """
     master_plan = parse_master_plan(plan_path)
     state = load_state(state_path)
+
+    if cause:
+        error = f"harness fault, feature did not run: {cause}"
+    else:
+        error = (
+            "harness fault, feature did not run: batch_runner produced no "
+            "results file and exited without a recorded cause"
+        )
 
     for feature in master_plan.features:
         name = feature.name
@@ -172,7 +193,7 @@ def _handle_missing_results(
         if fs.status in _TERMINAL_STATUSES:
             continue
         fs.status = "failed"
-        fs.error = "batch_runner.py did not produce results file"
+        fs.error = error
 
     save_state(state, state_path)
 
@@ -253,6 +274,9 @@ def _run() -> None:
             f"marking batch plan features as failed.",
             file=sys.stderr,
         )
+        # Standalone invocation has no visibility into the child's exit
+        # code, so it passes no cause — the fallback's default wording
+        # already says the cause was not recorded.
         _handle_missing_results(plan_path, state_path)
 
 
