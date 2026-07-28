@@ -18,8 +18,6 @@ from contextlib import suppress
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from cortex_command.common import _resolve_user_project_root
-
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -149,12 +147,17 @@ def _feature_entry(slug: str, status: str, round_assigned: int,
     }
 
 
-def write_overnight_state(session_dir: Path, session_id: str) -> None:
+def write_overnight_state(root: Path, session_dir: Path, session_id: str) -> None:
     """Write the overnight state JSON to the session directory and canonical path.
 
     Writes to:
       {session_dir}/overnight-state.json
-      cortex/lifecycle/overnight-state.json  (copy via shutil.copy2)
+      {root}/cortex/lifecycle/overnight-state.json  (copy via shutil.copy2)
+
+    Args:
+        root: Absolute path to the fixture root every path is written under.
+        session_dir: Session directory for this seed run (under ``root``).
+        session_id: Session ID string for the seed session.
     """
     # Build features dict
     features: dict = {}
@@ -224,26 +227,30 @@ def write_overnight_state(session_dir: Path, session_id: str) -> None:
     session_path.write_text(json.dumps(state, indent=2))
 
     # Copy to canonical path (must be a regular file, not a symlink)
-    repo_root = _resolve_user_project_root()
-    canonical = repo_root / "cortex" / "lifecycle" / "overnight-state.json"
+    canonical = root / "cortex" / "lifecycle" / "overnight-state.json"
     canonical.parent.mkdir(parents=True, exist_ok=True)
     # Remove symlink or existing file before copy so shutil.copy2 writes a fresh regular file
     if canonical.exists() or canonical.is_symlink():
         canonical.unlink()
     shutil.copy2(str(session_path), str(canonical))
 
-    print(f"  Wrote {session_path.relative_to(repo_root)}")
+    print(f"  Wrote {session_path.relative_to(root)}")
     print(f"  Copied to cortex/lifecycle/overnight-state.json")
 
 
-def write_overnight_events(session_dir: Path, session_id: str) -> None:
+def write_overnight_events(root: Path, session_dir: Path, session_id: str) -> None:
     """Write the overnight events JSONL log to the session directory and canonical path.
 
     Writes to:
       {session_dir}/overnight-events.log
-      cortex/lifecycle/overnight-events.log  (copy via shutil.copy2)
+      {root}/cortex/lifecycle/overnight-events.log  (copy via shutil.copy2)
 
     Produces 30+ JSONL events covering the full session timeline.
+
+    Args:
+        root: Absolute path to the fixture root every path is written under.
+        session_dir: Session directory for this seed run (under ``root``).
+        session_id: Session ID string for the seed session.
     """
     events = []
 
@@ -325,15 +332,14 @@ def write_overnight_events(session_dir: Path, session_id: str) -> None:
     session_path.write_text(content)
 
     # Copy to canonical path (must be a regular file, not a symlink)
-    repo_root = _resolve_user_project_root()
-    canonical = repo_root / "cortex" / "lifecycle" / "overnight-events.log"
+    canonical = root / "cortex" / "lifecycle" / "overnight-events.log"
     canonical.parent.mkdir(parents=True, exist_ok=True)
     # Remove symlink or existing file before copy so shutil.copy2 writes a fresh regular file
     if canonical.exists() or canonical.is_symlink():
         canonical.unlink()
     shutil.copy2(str(session_path), str(canonical))
 
-    print(f"  Wrote {session_path.relative_to(repo_root)} ({len(events)} events)")
+    print(f"  Wrote {session_path.relative_to(root)} ({len(events)} events)")
     print(f"  Copied to cortex/lifecycle/overnight-events.log")
 
 
@@ -1135,11 +1141,11 @@ def write_all(repo_root: Path, session_id: str) -> None:
     session_dir = repo_root / "cortex" / "lifecycle" / "sessions" / session_id
     written_paths: list[Path] = []
 
-    write_overnight_state(session_dir, session_id)
+    write_overnight_state(repo_root, session_dir, session_id)
     written_paths.append(session_dir / "overnight-state.json")
     written_paths.append(repo_root / "cortex" / "lifecycle" / "overnight-state.json")
 
-    write_overnight_events(session_dir, session_id)
+    write_overnight_events(repo_root, session_dir, session_id)
     written_paths.append(session_dir / "overnight-events.log")
     written_paths.append(repo_root / "cortex" / "lifecycle" / "overnight-events.log")
 
