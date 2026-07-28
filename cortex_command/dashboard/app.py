@@ -8,7 +8,7 @@ Routes:
     GET /        -- renders base.html with current dashboard state
 
 Entry point (uvicorn):
-    uv run uvicorn cortex_command.dashboard.app:app --host 0.0.0.0 --port 8080
+    uv run uvicorn cortex_command.dashboard.app:app --host 127.0.0.1 --port 8080
 """
 
 from __future__ import annotations

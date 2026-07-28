@@ -100,20 +100,35 @@ overnight-logs:
 
 dashboard_port := env_var_or_default("DASHBOARD_PORT", "8080")
 
+# Loopback by default: the dashboard is unauthenticated. Exposing it on another
+# interface is opt-in via DASHBOARD_HOST=<addr> or `just dashboard_host=<addr> dashboard`.
+# `DASHBOARD_HOST=` reads back as set-but-empty, and an empty --host binds every
+# interface in asyncio, so coalesce it to loopback rather than launching unintended.
+dashboard_host_env := env_var_or_default("DASHBOARD_HOST", "")
+dashboard_host := if dashboard_host_env == "" { "127.0.0.1" } else { dashboard_host_env }
+
+# `just --dry-run` expands only just-level interpolations, never shell variables,
+# so the display host is rendered here rather than in the recipe body.
+dashboard_display_host := if dashboard_host == "127.0.0.1" { "localhost" } else { dashboard_host }
+
 # Start the dashboard FastAPI server (no-op if already running)
 dashboard:
     #!/usr/bin/env bash
     set -e
     PID_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/cortex/dashboard.pid"
+    RUNNING_PID=""
     if [ -f "$PID_FILE" ]; then
         PID=$(cat "$PID_FILE")
         if kill -0 "$PID" 2>/dev/null; then
-            echo "Dashboard already running (PID $PID). Open http://localhost:{{dashboard_port}}"
-            exit 0
+            RUNNING_PID="$PID"
+            echo "Dashboard already running (PID $PID)."
         fi
     fi
-    echo "Dashboard running at http://0.0.0.0:{{dashboard_port}}"
-    uv run uvicorn cortex_command.dashboard.app:app --host 0.0.0.0 --port {{dashboard_port}}
+    echo "Dashboard running at http://{{dashboard_display_host}}:{{dashboard_port}}"
+    if [ -n "$RUNNING_PID" ]; then
+        exit 0
+    fi
+    uv run uvicorn cortex_command.dashboard.app:app --host "{{dashboard_host}}" --port {{dashboard_port}}
 
 # Write fixture files for visual dashboard testing (overnight state, events, features, backlog)
 dashboard-seed:

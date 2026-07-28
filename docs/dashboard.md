@@ -6,7 +6,7 @@
 
 The dashboard is a real-time FastAPI web app that monitors overnight autonomous development sessions. It reads the same files the overnight runner writes and displays live state in a browser via HTMX polling. It is optional but recommended for unattended sessions — open it on a second monitor before you go to bed.
 
-The dashboard binds to `127.0.0.1` (loopback only) when launched via `cortex dashboard`. The contributor recipe `just dashboard` binds to `0.0.0.0` for LAN access during development.
+Both launch paths bind `127.0.0.1` (loopback only) by default: the shipped `cortex dashboard` verb always binds loopback, and the contributor recipe `just dashboard` defaults to loopback with LAN exposure available only as an explicit opt-in — `DASHBOARD_HOST=0.0.0.0 just dashboard`, or equivalently `just dashboard_host=0.0.0.0 dashboard`.
 
 ---
 
@@ -26,6 +26,16 @@ Contributors with a clone of cortex-command can alternatively run `just dashboar
 
 - Python 3.12+ and the project uv venv (`just python-setup` — same prerequisite as the overnight runner)
 - No additional setup required
+
+### Viewing the Dashboard Remotely
+
+Loopback-only is deliberate for the shipped `cortex dashboard` verb, which offers no `--host` flag. Remote viewing is served by port-forwarding over the existing Tailscale mesh rather than by binding another interface:
+
+```
+ssh -L 8080:127.0.0.1:8080 <host>
+```
+
+With the tunnel open, browse to `http://localhost:8080` on the viewing machine — the dashboard stays bound to loopback on the machine running the session, and the Tailscale mesh supplies the secure channel.
 
 ---
 
@@ -89,11 +99,30 @@ Navigate to `/sessions` to list past sessions. `/sessions/{session_id}` shows th
 
 The dashboard reads directly from files written by the overnight runner — no separate data pipeline is needed:
 
+**Session state**
+
+- `~/.local/share/overnight-sessions/active-session.json` — session pointer. Resolves which session directory the state and event files live in; the dashboard falls back to the local `cortex/lifecycle/` copies when the pointer is absent.
 - `overnight-state.json` — session metadata and per-feature statuses. Key fields: `session_id` (unique session identifier), `phase` (session phase: `planning` | `executing` | `complete` | `paused`), `current_round` (1-based round number), `started_at` (ISO 8601 UTC timestamp), `features` (mapping of feature slug → status object with `status`, `started_at`, `completed_at`, `error`, and `recovery_attempts`), `round_history` (list of completed round summaries).
 - `overnight-events.log` — NDJSON event stream (one JSON object per line). Each line has the form: `{"v": 1, "ts": "<ISO-8601>", "event": "<type>", "session_id": "...", "round": N}` with optional `"feature"` and `"details"` fields. Event types include `session_start`, `feature_start`, `feature_complete`, `feature_failed`, `circuit_breaker`, and others.
-- `cortex/lifecycle/{slug}/plan.md` — task-level progress for each feature
+- `pipeline-state.json` — interactive pipeline state, read from `cortex/lifecycle/sessions/latest-pipeline/`. Absent is the normal "no active pipeline" signal, and the Pipeline panel reflects that.
+- `pipeline-events.log` — `dispatch_start` events supplying each feature's model tier, complexity, budget, and criticality.
+- `metrics.json` — API cost and token-usage data
+
+**Per-feature files** (under `cortex/lifecycle/{slug}/`)
+
+- `plan.md` — task-level progress for each feature
+- `events.log` — phase transitions and per-phase timings
+- `agent-activity.jsonl` — tool activity, last-activity timestamps, and incremental cost deltas (read by offset, so no double-counting)
+- `escalations.jsonl` — open questions and worker-to-orchestrator escalations
+- `exit-reports/*.json` — per-task worker exit reports
+- `pr.json` — the feature's PR artifact
+- `learnings/progress.txt` — recovery attempt history for failed and paused features
+
+**Backlog and configuration**
+
 - `cortex/backlog/*.md` — feature titles and frontmatter status fields
-- `metrics.json` — API cost data
+- `cortex/backlog/archive/*.md` — archived items, so a blocker pointing at a terminal ticket resolves as resolved rather than missing
+- `cortex/lifecycle.config.md` — backlog backend. The `cortex/backlog/` reads above happen only while `resolve_backlog_backend(root)` resolves to `cortex-backlog`; under any other backend the dashboard stands down rather than showing stale local counts.
 
 For the schemas, state machine, and lifecycle of these files, see [overnight-operations.md](overnight-operations.md).
 
@@ -103,9 +132,10 @@ The dashboard uses two polling layers:
 
 | Layer | Target | Interval |
 |-------|--------|----------|
-| Backend (server-side) | `overnight-state.json` and per-feature files | every 2 s |
-| Backend (server-side) | `overnight-events.log` (NDJSON tail) | every 1 s |
-| Backend (server-side) | Backlog counts | every 30 s |
+| Backend `_poll_state_files` | `overnight-state.json`, `pipeline-state.json`, and per-feature files | every 2 s |
+| Backend `_poll_jsonl_events` | `overnight-events.log` (NDJSON tail) | every 1 s |
+| Backend `_poll_alerts` | Alert evaluation (stalls, failures, circuit breaker) | every 5 s |
+| Backend `_poll_slow` | Backlog counts, ticket feed, dispatch details, metrics | every 30 s |
 | HTMX (browser-side) | Alerts Banner, Session, Feature Cards, Agent Fleet, Swim-Lane, Round History, Escalations | every 5 s |
 | HTMX (browser-side) | Recent Activity Stream | every 3 s |
 | HTMX (browser-side) | Metrics Baseline, Backlog | every 30 s |
@@ -156,6 +186,12 @@ The MCP server is pinned to a specific version in `.mcp.json` to avoid regressio
 
 ## Known Limitations
 
-- No authentication layer — when launched via `cortex dashboard`, the server binds to `127.0.0.1` (loopback only), so the dashboard is reachable only from the local machine. The contributor recipe `just dashboard` binds to `0.0.0.0` (all interfaces) for LAN access during development; do not expose that port beyond a trusted local network.
+- No authentication layer — both launch paths bind `127.0.0.1` (loopback only) by default, so the dashboard is reachable only from the local machine. The contributor recipe `just dashboard` can bind other interfaces via an explicit opt-in (`DASHBOARD_HOST=0.0.0.0 just dashboard`); the shipped `cortex dashboard` verb offers no equivalent, and remote viewing goes through the `ssh -L` port-forward described above.
 - Session history is read-only — the dashboard cannot trigger retries or modify session state.
-- Visual layout may vary between active and idle states; some panels (Agent Fleet, Pipeline) are hidden when there is no active session.
+- Visual layout may vary between active and idle states; with no active session the Agent Fleet and Pipeline panels stay in place and render empty-state text (`fleet stood down · no session`, `no pipeline · refinement queue empty`) rather than disappearing.
+
+### Threat model
+
+The loopback default is defense-in-depth, not a sanitizer. The dashboard renders agent-generated markdown as unescaped HTML and validates neither the `Host` nor the `Origin` header, so a residual DNS-rebinding risk against an unauthenticated local service remains accepted rather than closed. What the bind default changes is who can reach the server at all.
+
+With the default in place, only the local machine can. Once the `DASHBOARD_HOST` opt-in binds another interface, anyone on the same layer-2 broadcast domain can read session state, feature names, and log excerpts without authenticating. Do not expose that port to the public internet, and do not treat "local network" as equivalent to "home network" — hotel Wi-Fi, coworking Wi-Fi, and shared office VLANs are all "local" to a non-loopback bind and are not trusted peers. The framing trap bites hardest at 2am, so the corollary is worth stating plainly: the opt-in assumes a peer set the operator controls end-to-end, and every other case is better served by the `ssh -L` port-forward above.
