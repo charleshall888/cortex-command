@@ -29,6 +29,40 @@ Contributors with a clone of cortex-command can alternatively run `just dashboar
 
 ---
 
+## Seeding Fixture Data
+
+```
+just dashboard-demo
+```
+
+`dashboard-demo` is the single command: it seeds the fixture corpus into an isolated per-user root and serves the dashboard against that root in one invocation. Without the justfile, run the same two steps directly:
+
+```
+cortex-dashboard-seed                    # writes the fixture root, then prints the serve command
+cortex dashboard --root <printed root>   # serves the dashboard against that root
+```
+
+### Where the fixtures land
+
+The seeder writes to `${XDG_STATE_HOME:-$HOME/.local/state}/cortex-command/dashboard-seed/`. Seeding no longer writes into your own repo. Earlier versions targeted the operator's real repository so fixtures would appear alongside real work, and that is what made them dangerous: they clobbered canonical lifecycle files, replaced the single-active-session `overnight-state.json` symlink with a regular file, installed a fake `executing` session that the launchd guardian treated as an unattended recovery target, and leaked fixture output into git history. Containing the seeder to an isolated root removes all of it by construction — `--clean` can no longer reach a tracked file, and the 990–999 backlog ID reservation the old regime required is gone rather than replaced.
+
+`cortex-dashboard-seed --root PATH` overrides the default root; `--print-root` prints the resolved root and exits; `--clean` removes only what the seeder wrote, under that same resolved root. If you ran the pre-containment seeder against a project repo, `cortex-dashboard-seed --sweep-legacy` removes the stray `99[0-9]-seed-*.md` backlog files it left behind — a one-time migration, not part of normal use.
+
+`cortex dashboard --root PATH` sets the root for that one process only. Do not export or inline-prefix `CORTEX_REPO_ROOT` to view fixtures: it is the unvalidated root funnel for most of the codebase, and a fixture root satisfies every marker check that guards it — so any persistence beyond one command silently redirects backlog creation, lifecycle verbs, and overnight writes into the throwaway tree.
+
+**Behavioral note**: `just dashboard-seed` alone no longer populates your own dashboard. `just dashboard-demo` is the replacement.
+
+### Seeded and unseeded runs cover different regimes
+
+Both regimes matter, and neither substitutes for the other:
+
+| Run | Corpus | What it exercises |
+|-----|--------|-------------------|
+| Unseeded (`cortex dashboard`) | your real project | An unseeded project is the only exercise of the near-empty and degraded rendering path the panels commit to |
+| Seeded (`just dashboard-demo`) | isolated fixture root | Seeded runs cover volume and state variety — epics and children, every blocker outcome, both deferral vocabularies, lifecycle artifacts, and rendered markdown |
+
+---
+
 ## What It Shows
 
 The dashboard is divided into ten panels plus an Alerts Banner.
@@ -128,9 +162,10 @@ Playwright MCP gives Claude interactive browser access to the running dashboard 
 Before using Playwright MCP tools, start the dashboard with fixture data:
 
 ```
-just dashboard-seed   # load fixture data
-just dashboard        # start dashboard server at http://localhost:8080
+just dashboard-demo   # seed the fixture root and serve the dashboard against it
 ```
+
+The server comes up at `http://localhost:8080`. See [Seeding Fixture Data](#seeding-fixture-data) for what the fixtures cover and where they live.
 
 Then ask Claude to navigate and screenshot the dashboard — for example: *"Take a screenshot of the dashboard at localhost:8080 and describe what you see."*
 
