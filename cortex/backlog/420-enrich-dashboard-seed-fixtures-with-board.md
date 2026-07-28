@@ -1,6 +1,6 @@
 ---
 title: 'Retry deferred: enrich-dashboard-seed-fixtures-with-board'
-status: backlog
+status: wontfix
 priority: medium
 type: feature
 tags: ['dashboard-command-station', 'dashboard']
