@@ -41,3 +41,6 @@ cortex/.cortex-init-backup/
 
 # Transient flock lock files written by cortex-lifecycle-event (events.log writer)
 events.log.lock
+
+# Local pipeline state (runtime artifact; was 100% dashboard-seed output when tracked)
+cortex/lifecycle/pipeline-state.json
