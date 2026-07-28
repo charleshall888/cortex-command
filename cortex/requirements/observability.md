@@ -104,7 +104,7 @@ The observability area covers five subsystems that give the developer visibility
 
 ## Architectural Constraints
 
-- Dashboard binds to all network interfaces (`0.0.0.0`) and has no authentication. It is unauthenticated and accessible to any host on the local network by design. Not suitable for untrusted networks.
+- Dashboard has no authentication. Both launch paths — the `cortex dashboard` verb and the `just dashboard` recipe — bind `127.0.0.1` by default, so it is reachable only from the local host. Setting `DASHBOARD_HOST` (honoured by the `just` recipe only) is the sole way to expose it beyond loopback, and every host that can reach the bound interface gets unauthenticated access. Not suitable for untrusted networks.
 - Dashboard is read-only and cannot modify session state, trigger retries, or dispatch features.
 - ANSI output uses the basic 16-color palette (not 256-color or truecolor) to avoid byte overhead in Claude Code terminal width calculations.
 - Notifications are stateless — no retention, no inbox.
