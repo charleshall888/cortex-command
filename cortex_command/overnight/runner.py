@@ -103,8 +103,20 @@ FOLLOWUP_PUSH_TIMEOUT_SECONDS: float = 120.0
 #: event-log staleness a valid liveness signal in every phase (Task 15).
 RUNNER_HEARTBEAT_INTERVAL_SECONDS: float = 300.0
 
-#: Orchestrator ``claude -p`` turn cap. Matches ``runner.sh:643``.
-ORCHESTRATOR_MAX_TURNS: int = 50
+#: Orchestrator ``claude -p`` turn cap. Raised from 50 alongside
+#: ``dispatch.TIER_CONFIG``, but deliberately NOT to the same magnitude.
+#:
+#: Dispatched agents get ``max_budget_usd`` on ``ClaudeAgentOptions``, so their
+#: turn ceiling can be enormous — cost is capped independently. The orchestrator
+#: is spawned as a bare ``claude -p`` subprocess with no budget flag, so this
+#: number is its ONLY ceiling on spend. Observed rounds used 13 turns ($7.60)
+#: and 9 turns ($0.72); at that ~$0.58/turn a 300-turn cap would permit roughly
+#: $175 for a single round with nothing to stop it. 100 keeps ~8x headroom over
+#: the busiest observed round while bounding a runaway at ~$58.
+#:
+#: The real gap here is the missing budget ceiling, not the turn count. Give the
+#: orchestrator a cost cap and this can rise to match the dispatch tiers.
+ORCHESTRATOR_MAX_TURNS: int = 100
 
 #: Crash-loop resume bound (spec §R9, Task 11). ``cortex overnight start``
 #: refuses to auto-resume a session paused with

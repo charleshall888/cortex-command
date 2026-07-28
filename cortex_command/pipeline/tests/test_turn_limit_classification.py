@@ -56,3 +56,60 @@ def test_turn_limit_recovery_is_retry_not_unknown():
     unclassified bucket the review gate treats as could-not-run.
     """
     assert ERROR_RECOVERY["turn_limit_exhausted"] == "retry"
+
+
+# ---------------------------------------------------------------------------
+# Turn ceilings are a backstop, not a working constraint
+# ---------------------------------------------------------------------------
+#
+# Measured across every session on disk when these numbers were set: 32
+# dispatches with a recorded turn count, successful runs spanning 7-30 turns
+# (median 14). The old ceilings were 15/20/30 — the busiest healthy dispatch
+# landed exactly on the `complex` cap, and two dispatches were killed at 21/20
+# and 31/30, the latter reverting an already-merged feature.
+
+_OBSERVED_MAX_HEALTHY_TURNS = 30
+
+
+def test_every_tier_ceiling_clears_observed_work_by_a_wide_margin():
+    """A ceiling reachable by ordinary work is not a backstop."""
+    from cortex_command.pipeline.dispatch import TIER_CONFIG
+
+    for tier, cfg in TIER_CONFIG.items():
+        assert cfg["max_turns"] >= _OBSERVED_MAX_HEALTHY_TURNS * 4, (
+            f"tier {tier!r} caps at {cfg['max_turns']} turns, too close to the "
+            f"{_OBSERVED_MAX_HEALTHY_TURNS} a healthy dispatch has already used"
+        )
+
+
+def test_every_tier_keeps_a_budget_cap():
+    """Cost control lives in the budget, which is why turns can be generous.
+
+    Raising the turn ceilings is only safe because ``max_budget_usd`` is
+    enforced independently and pauses the session when tripped. Dropping a
+    budget cap would silently convert the raised turn ceiling into the sole —
+    and now very loose — spend guard.
+    """
+    from cortex_command.pipeline.dispatch import TIER_CONFIG
+
+    for tier, cfg in TIER_CONFIG.items():
+        assert cfg.get("max_budget_usd", 0) > 0, (
+            f"tier {tier!r} has no budget cap; turns must not be the only guard"
+        )
+
+
+def test_orchestrator_ceiling_stays_bounded_while_it_has_no_budget_cap():
+    """The orchestrator is spawned without a budget flag.
+
+    ``claude -p`` gets ``--max-turns`` and nothing else, so this constant is the
+    only thing bounding a runaway round. It may rise when the orchestrator gains
+    a cost cap; until then it must stay small enough that a runaway is
+    affordable — observed rounds cost ~$0.58/turn.
+    """
+    from cortex_command.overnight.runner import ORCHESTRATOR_MAX_TURNS
+
+    assert ORCHESTRATOR_MAX_TURNS >= 100, "must clear observed rounds comfortably"
+    assert ORCHESTRATOR_MAX_TURNS <= 150, (
+        "without a budget cap this is the only spend ceiling on an orchestrator "
+        "round; at ~$0.58/turn a larger value permits a runaway costing >$85"
+    )

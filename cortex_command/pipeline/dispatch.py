@@ -129,10 +129,31 @@ def _load_project_settings(repo_root: Path) -> dict:
 # Tier configuration
 # ---------------------------------------------------------------------------
 
+# ``max_budget_usd`` is the real cost guard: it is enforced by the CLI, and
+# tripping it surfaces as ``budget_exhausted`` whose recovery pauses the whole
+# session. ``max_turns`` is only a runaway-loop backstop, so it belongs an order
+# of magnitude above real work rather than inside it.
+#
+# The previous ceilings (15/20/30) sat squarely in the working range and bound
+# routinely. Measured across every session on disk at the time of this change —
+# 32 dispatches with a recorded turn count — successful runs spanned 7 to 30
+# turns (median 14), i.e. the busiest healthy dispatch landed exactly on the
+# ``complex`` ceiling. The two that hit the limit were not runaways: an
+# implement dispatch stopped at 21 of 20 and a review at 31 of 30, and the
+# review's kill reverted an already-merged feature (session
+# overnight-2026-07-28-1216, #414). A backstop that fires on ordinary work is
+# not a backstop.
+#
+# Cost stays bounded because the budget cap still binds first: at the worst
+# observed cost-per-turn ($0.585), even the smallest new ceiling would imply
+# ~$88 against a $5 trivial cap, so an agent burning money is stopped by
+# ``max_budget_usd`` long before it exhausts turns. What the turn ceiling now
+# catches is the cheap pathological loop — an agent cycling on near-free calls
+# that the budget guard would never notice.
 TIER_CONFIG: dict[str, dict] = {
-    "trivial": {"max_turns": 15, "max_budget_usd": 5.00},
-    "simple": {"max_turns": 20, "max_budget_usd": 25.00},
-    "complex": {"max_turns": 30, "max_budget_usd": 50.00},
+    "trivial": {"max_turns": 150, "max_budget_usd": 5.00},
+    "simple": {"max_turns": 200, "max_budget_usd": 25.00},
+    "complex": {"max_turns": 300, "max_budget_usd": 50.00},
 }
 
 # NOTE: cortex no longer selects a model for dispatched agents. `model` is left
