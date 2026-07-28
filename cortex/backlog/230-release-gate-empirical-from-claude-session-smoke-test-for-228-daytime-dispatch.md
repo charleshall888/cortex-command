@@ -11,7 +11,7 @@ updated: 2026-05-17
 complexity: simple
 criticality: high
 areas: [overnight-runner]
-blocked_by: [228]
+blocked-by: [228]
 spec: cortex/lifecycle/release-gate-empirical-from-claude-session/spec.md
 session_id: null
 lifecycle_phase: plan
