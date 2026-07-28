@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 3d7da067-8be9-4a37-98b9-70ab47ed7a4d
 title: Enrich dashboard seed fixtures with board- and reader-shaped variety
-status: refined
+status: backlog
 priority: medium
 type: chore
 created: 2026-07-21
-updated: 2026-07-27
+updated: 2026-07-28
 discovery_source: cortex/research/dashboard-command-station/research.md
 parent: "410"
 tags: ['dashboard-command-station', 'dashboard']
@@ -14,6 +14,7 @@ areas: ['dashboard', 'backlog', 'tests', 'docs']
 complexity: complex
 criticality: high
 spec: cortex/lifecycle/enrich-dashboard-seed-fixtures-with-board/spec.md
+session_id: null
 ---
 ## Why
 
