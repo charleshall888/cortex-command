@@ -48,6 +48,41 @@ def _current_phase(feature_events_log: Path) -> str:
     return str(detect_lifecycle_phase(feature_events_log.parent).get("phase") or "implement")
 
 
+def _advance_or_warn(
+    _label: str,
+    _events_log: Path,
+    **advance_kwargs,
+) -> None:
+    """Call :func:`advance` and make a refusal audible instead of silent.
+
+    These arms were written "best-effort; envelope ignored", which turns a
+    refused transition into missing history nobody notices until a downstream
+    reader trips over it — the review-verdict arm was refused on every APPROVED
+    overnight review, and the only symptom was
+    ``cortex-morning-review-advance-lifecycle`` reporting ``missing-review``
+    for features that had in fact been reviewed. Best-effort is still the
+    contract (a refusal must not fail the run); it just stops being quiet.
+    """
+    _feature = advance_kwargs.get("feature", "?")
+    try:
+        envelope = advance(**advance_kwargs)
+    except Exception as exc:  # pragma: no cover - defensive, matches prior contract
+        logger.warning(
+            "lifecycle advance %s raised for %s: %r", _label, _feature, exc
+        )
+        return
+    if isinstance(envelope, dict) and envelope.get("state") == "refused":
+        logger.warning(
+            "lifecycle advance %s REFUSED for %s (%s): %s — %s is missing this "
+            "transition",
+            _label,
+            _feature,
+            envelope.get("refusal"),
+            envelope.get("reason"),
+            _events_log,
+        )
+
+
 def _advance_to_review(feature: str, feature_events_log: Path) -> None:
     """Route the implement→review entry transition through the shared advance body.
 
@@ -55,9 +90,13 @@ def _advance_to_review(feature: str, feature_events_log: Path) -> None:
     ``outcome_router`` gate is ``requires_review(tier, criticality) or corrupted``
     — the same matrix ``implement_transition._resolve_route`` applies), so the
     implement-transition arm routes to ``review`` and emits ``phase_transition``
-    implement→review. Best-effort: a gate-mismatch/refusal is a benign no-op (the
-    feature is already at/past review); the returned envelope is ignored."""
-    advance(
+    implement→review. Best-effort: a gate-mismatch/refusal here is genuinely
+    benign (the feature is already at/past review), but it is now logged rather
+    than discarded — the sibling arm's silent refusal is exactly what hid a
+    whole class of missing lifecycle history."""
+    _advance_or_warn(
+        "implement-transition",
+        feature_events_log,
         verb="implement-transition",
         feature=feature,
         mode="transition",
@@ -75,8 +114,24 @@ def _advance_review_complete(feature: str, cycle: int, feature_events_log: Path)
     pre-fold path hand-appended is NOT emitted by the advance/B1 bodies; downstream
     metrics (``cortex_command/pipeline/metrics.py:extract_feature_metrics``) instead
     detect completion off the ``phase_transition→complete`` row and default the
-    absent ``merge_anchor`` to ``"review"``. Best-effort; envelope ignored."""
-    advance(
+    absent ``merge_anchor`` to ``"review"``.
+
+    KNOWN DEFECT (unfixed, see the backlog ticket): this arm's ``from_state``
+    gate does not reliably hold, so an APPROVED overnight review can record
+    nothing. ``_current_phase()`` and ``advance``'s own gate are separate
+    detectors and they disagree — reproduced against session
+    overnight-2026-07-28-1216, where ``_current_phase()`` returned ``complete``
+    while ``advance`` detected ``review`` and refused with ``gate-mismatch``.
+    #415 was reviewed and APPROVED, no ``review_verdict`` row was written, and
+    ``cortex-morning-review-advance-lifecycle`` reported ``missing-review`` for
+    a feature that had passed review. Hardcoding ``"review"`` here was tried
+    and rejected: it satisfies that one case but mismatches in the opposite
+    direction on other artifact sets, so it trades one silent refusal for
+    another. The refusal is at least no longer silent — see
+    :func:`_advance_or_warn`."""
+    _advance_or_warn(
+        "review-verdict",
+        feature_events_log,
         verb="review-verdict",
         feature=feature,
         verdict="APPROVED",
