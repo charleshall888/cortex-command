@@ -181,11 +181,13 @@ cortex-morning-review-advance-lifecycle --feature {feature}
 ```
 
 This owns the checkbox count against `plan.md`, the tier/criticality review gate (complex
-tier at any criticality, or any tier at high/critical criticality, requires review;
-default tier `"simple"`, criticality `"medium"` when absent), and the matching
-`events.log` append (four synthetic events when review isn't required; two when a real
-`cycle >= 1` review already ran but `feature_complete` is missing — crash recovery; none
-otherwise). Map the returned `state` to a report line:
+tier at any criticality, any tier at high/critical criticality, or a corrupted reduction,
+requires review; default tier `"simple"`, criticality `"medium"` when absent), and the
+matching `events.log` append (one `phase_transition` implement→complete when review isn't
+required; `review_verdict` + `phase_transition` review→complete when a real `cycle >= 1`
+review already ran but the completion row is missing — crash recovery, or the
+`phase_transition` alone when that verdict row is already present; none otherwise). Map
+the returned `state` to a report line:
 
 | `state` | Report |
 |---|---|
@@ -193,7 +195,12 @@ otherwise). Map the returned `state` to a report line:
 | `already-complete` | `already complete` |
 | `advanced-complete` | `advanced → complete` |
 | `advanced-crash-recovery` | `advanced → complete (crash recovery)` |
-| `missing-review` | `missing review — expected review but none found` (the feature was expected to be reviewed overnight but wasn't; no synthetic events are written) |
+| `missing-review` | `missing review — expected review but none found` (the feature was expected to be reviewed overnight but wasn't; nothing is written) |
+| `advance-refused` | `advance refused — no completion row written` (the lifecycle gate declined the transition; the feature is NOT complete and needs an operator to look at its `events.log`) |
+
+Any other `state` — including `error` — is reported verbatim as
+`unrecognized state: {state}` and flagged for the operator. Never treat an unlisted state
+as success, and never omit the feature from the summary because its state has no row here.
 
 Display an inline summary before moving to Section 3:
 
