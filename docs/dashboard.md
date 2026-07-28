@@ -99,11 +99,30 @@ Navigate to `/sessions` to list past sessions. `/sessions/{session_id}` shows th
 
 The dashboard reads directly from files written by the overnight runner — no separate data pipeline is needed:
 
+**Session state**
+
+- `~/.local/share/overnight-sessions/active-session.json` — session pointer. Resolves which session directory the state and event files live in; the dashboard falls back to the local `cortex/lifecycle/` copies when the pointer is absent.
 - `overnight-state.json` — session metadata and per-feature statuses. Key fields: `session_id` (unique session identifier), `phase` (session phase: `planning` | `executing` | `complete` | `paused`), `current_round` (1-based round number), `started_at` (ISO 8601 UTC timestamp), `features` (mapping of feature slug → status object with `status`, `started_at`, `completed_at`, `error`, and `recovery_attempts`), `round_history` (list of completed round summaries).
 - `overnight-events.log` — NDJSON event stream (one JSON object per line). Each line has the form: `{"v": 1, "ts": "<ISO-8601>", "event": "<type>", "session_id": "...", "round": N}` with optional `"feature"` and `"details"` fields. Event types include `session_start`, `feature_start`, `feature_complete`, `feature_failed`, `circuit_breaker`, and others.
-- `cortex/lifecycle/{slug}/plan.md` — task-level progress for each feature
+- `pipeline-state.json` — interactive pipeline state, read from `cortex/lifecycle/sessions/latest-pipeline/`. Absent is the normal "no active pipeline" signal, and the Pipeline panel reflects that.
+- `pipeline-events.log` — `dispatch_start` events supplying each feature's model tier, complexity, budget, and criticality.
+- `metrics.json` — API cost and token-usage data
+
+**Per-feature files** (under `cortex/lifecycle/{slug}/`)
+
+- `plan.md` — task-level progress for each feature
+- `events.log` — phase transitions and per-phase timings
+- `agent-activity.jsonl` — tool activity, last-activity timestamps, and incremental cost deltas (read by offset, so no double-counting)
+- `escalations.jsonl` — open questions and worker-to-orchestrator escalations
+- `exit-reports/*.json` — per-task worker exit reports
+- `pr.json` — the feature's PR artifact
+- `learnings/progress.txt` — recovery attempt history for failed and paused features
+
+**Backlog and configuration**
+
 - `cortex/backlog/*.md` — feature titles and frontmatter status fields
-- `metrics.json` — API cost data
+- `cortex/backlog/archive/*.md` — archived items, so a blocker pointing at a terminal ticket resolves as resolved rather than missing
+- `cortex/lifecycle.config.md` — backlog backend. The `cortex/backlog/` reads above happen only while `resolve_backlog_backend(root)` resolves to `cortex-backlog`; under any other backend the dashboard stands down rather than showing stale local counts.
 
 For the schemas, state machine, and lifecycle of these files, see [overnight-operations.md](overnight-operations.md).
 
@@ -113,9 +132,10 @@ The dashboard uses two polling layers:
 
 | Layer | Target | Interval |
 |-------|--------|----------|
-| Backend (server-side) | `overnight-state.json` and per-feature files | every 2 s |
-| Backend (server-side) | `overnight-events.log` (NDJSON tail) | every 1 s |
-| Backend (server-side) | Backlog counts | every 30 s |
+| Backend `_poll_state_files` | `overnight-state.json`, `pipeline-state.json`, and per-feature files | every 2 s |
+| Backend `_poll_jsonl_events` | `overnight-events.log` (NDJSON tail) | every 1 s |
+| Backend `_poll_alerts` | Alert evaluation (stalls, failures, circuit breaker) | every 5 s |
+| Backend `_poll_slow` | Backlog counts, ticket feed, dispatch details, metrics | every 30 s |
 | HTMX (browser-side) | Alerts Banner, Session, Feature Cards, Agent Fleet, Swim-Lane, Round History, Escalations | every 5 s |
 | HTMX (browser-side) | Recent Activity Stream | every 3 s |
 | HTMX (browser-side) | Metrics Baseline, Backlog | every 30 s |
@@ -168,7 +188,7 @@ The MCP server is pinned to a specific version in `.mcp.json` to avoid regressio
 
 - No authentication layer — both launch paths bind `127.0.0.1` (loopback only) by default, so the dashboard is reachable only from the local machine. The contributor recipe `just dashboard` can bind other interfaces via an explicit opt-in (`DASHBOARD_HOST=0.0.0.0 just dashboard`); the shipped `cortex dashboard` verb offers no equivalent, and remote viewing goes through the `ssh -L` port-forward described above.
 - Session history is read-only — the dashboard cannot trigger retries or modify session state.
-- Visual layout may vary between active and idle states; some panels (Agent Fleet, Pipeline) are hidden when there is no active session.
+- Visual layout may vary between active and idle states; with no active session the Agent Fleet and Pipeline panels stay in place and render empty-state text (`fleet stood down · no session`, `no pipeline · refinement queue empty`) rather than disappearing.
 
 ### Threat model
 
