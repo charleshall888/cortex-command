@@ -1,1 +1,2 @@
-20889
+21074
+# raised: section 2b gained an advance-refused row and a catch-all rule so a refused advance stops reading as a silently absent feature, lifecycle-id=421, date=2026-07-28

@@ -180,14 +180,10 @@ For each completed feature (same list and order as Section 2), run:
 cortex-morning-review-advance-lifecycle --feature {feature}
 ```
 
-This owns the checkbox count against `plan.md`, the tier/criticality review gate (complex
-tier at any criticality, any tier at high/critical criticality, or a corrupted reduction,
-requires review; default tier `"simple"`, criticality `"medium"` when absent), and the
-matching `events.log` append (one `phase_transition` implement→complete when review isn't
-required; `review_verdict` + `phase_transition` review→complete when a real `cycle >= 1`
-review already ran but the completion row is missing — crash recovery, or the
-`phase_transition` alone when that verdict row is already present; none otherwise). Map
-the returned `state` to a report line:
+This owns the checkbox count against `plan.md`, the review gate (complex tier, high/critical
+criticality, or a corrupted reduction requires review; defaults `"simple"`/`"medium"`), and
+the resulting `events.log` append — it decides which rows land, so read them off the verb's
+`state` rather than predicting them. Map that `state` to a report line:
 
 | `state` | Report |
 |---|---|
@@ -195,12 +191,12 @@ the returned `state` to a report line:
 | `already-complete` | `already complete` |
 | `advanced-complete` | `advanced → complete` |
 | `advanced-crash-recovery` | `advanced → complete (crash recovery)` |
-| `missing-review` | `missing review — expected review but none found` (the feature was expected to be reviewed overnight but wasn't; nothing is written) |
-| `advance-refused` | `advance refused — no completion row written` (the lifecycle gate declined the transition; the feature is NOT complete and needs an operator to look at its `events.log`) |
+| `missing-review` | `missing review — expected review but none found` (expected to be reviewed overnight but wasn't; nothing written) |
+| `advance-refused` | `advance refused — no completion row written` (the gate declined; the feature is NOT complete and its `events.log` needs an operator) |
 
-Any other `state` — including `error` — is reported verbatim as
-`unrecognized state: {state}` and flagged for the operator. Never treat an unlisted state
-as success, and never omit the feature from the summary because its state has no row here.
+Report any other `state`, `error` included, as `unrecognized state: {state}` and flag it.
+Never read an unlisted state as success or drop the feature from the summary for lacking a
+row here.
 
 Display an inline summary before moving to Section 3:
 

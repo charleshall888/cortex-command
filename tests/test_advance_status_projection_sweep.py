@@ -54,6 +54,22 @@ _PLAN_DONE = "- **Status**: [x] a\n- **Status**: [x] b\n"
 _LS_SIMPLE = {"event": "lifecycle_start", "feature": FEATURE, "tier": "simple", "criticality": "medium"}
 _LS_COMPLEX = {"event": "lifecycle_start", "feature": FEATURE, "tier": "complex", "criticality": "medium"}
 
+# The machine rows that put a feature at ``implement``/``review`` before the
+# transition under test. Both _post_al seeds carried none, so the events-first
+# resolver fell back to the artifact detector and the advance body's gate had
+# nothing real to compare against — the same unrepresentative-fixture trap #421
+# found in three other files, and the reason a refusal here went unnoticed.
+_SHORT_ROAD = [
+    {"event": "spec_approved", "feature": FEATURE, "decision": "approved-direct"},
+    {"event": "phase_transition", "feature": FEATURE, "from": "specify", "to": "implement"},
+]
+_LONG_ROAD = [
+    {"event": "phase_transition", "feature": FEATURE, "from": "specify", "to": "plan"},
+    {"event": "plan_approved", "feature": FEATURE, "dispatch_choice": "trunk"},
+    {"event": "phase_transition", "feature": FEATURE, "from": "plan", "to": "implement"},
+    {"event": "phase_transition", "feature": FEATURE, "from": "implement", "to": "review"},
+]
+
 
 # ---------------------------------------------------------------------------
 # Scenarios: (id, plan_md, pre_rows, seed_rows, post_producer)
@@ -85,15 +101,16 @@ def _post_rd_rejected(feature_dir: Path) -> None:
 SCENARIOS = [
     pytest.param(
         _PLAN_MIXED,
-        # pre-fold no-review completion: 4 hand-appended rows.
+        # pre-fold no-review completion: 4 hand-appended rows over the short road.
         [
             _LS_SIMPLE,
+            *_SHORT_ROAD,
             {"event": "phase_transition", "feature": FEATURE, "from": "implement", "to": "review"},
             {"event": "review_verdict", "feature": FEATURE, "verdict": "APPROVED", "cycle": 0},
             {"event": "phase_transition", "feature": FEATURE, "from": "review", "to": "complete"},
             {"event": "feature_complete", "feature": FEATURE, "tasks_total": 2, "rework_cycles": 0},
         ],
-        [_LS_SIMPLE],
+        [_LS_SIMPLE, *_SHORT_ROAD],
         _post_al,
         id="advance_lifecycle-no-review-complete",
     ),
@@ -102,6 +119,7 @@ SCENARIOS = [
         # pre-fold crash-recovery: 2 hand-appended rows over a real-review seed.
         [
             _LS_COMPLEX,
+            *_LONG_ROAD,
             {"event": "review_verdict", "feature": FEATURE, "verdict": "CHANGES_REQUESTED", "cycle": 1},
             {"event": "review_verdict", "feature": FEATURE, "verdict": "APPROVED", "cycle": 2},
             {"event": "phase_transition", "feature": FEATURE, "from": "review", "to": "complete"},
@@ -109,6 +127,7 @@ SCENARIOS = [
         ],
         [
             _LS_COMPLEX,
+            *_LONG_ROAD,
             {"event": "review_verdict", "feature": FEATURE, "verdict": "CHANGES_REQUESTED", "cycle": 1},
             {"event": "review_verdict", "feature": FEATURE, "verdict": "APPROVED", "cycle": 2},
         ],

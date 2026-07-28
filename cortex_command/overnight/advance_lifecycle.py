@@ -43,9 +43,10 @@ States:
                             terminal ``feature_complete``/``feature_wontfix``/
                             ``lifecycle_cancelled``); nothing written.
   advanced-complete       — review not required (simple/low or simple/medium);
-                            the review→complete transition is routed through the
-                            ``advance`` body. ``tasks_total`` and ``rework_cycles``
-                            (always 0) are set.
+                            the implement→complete transition is routed through
+                            the ``advance`` body's implement-transition arm.
+                            ``tasks_total`` and ``rework_cycles`` (always 0) are
+                            set.
   advanced-crash-recovery — review required and a real (``cycle >= 1``)
                             ``review_verdict`` is present but the feature is not
                             yet machine-complete; the review→complete transition
@@ -53,7 +54,23 @@ States:
                             ``tasks_total`` and ``rework_cycles`` are set.
   missing-review          — review required but no real review event is
                             present; nothing written (the feature was expected
-                            to be reviewed overnight but wasn't).
+                            to be reviewed overnight but wasn't). Also returned
+                            when the reduction is corrupted (tier/criticality
+                            unknowable, so review is the cautious default), and
+                            when the implement-exit arm routes somewhere other
+                            than ``complete`` — its own verdict is that this
+                            feature needs review, so reporting completion would
+                            be a lie.
+  advance-refused         — the ``advance`` body refused the transition (an
+                            unsatisfied gate: wrong departure phase, an active
+                            enforcement-bearing pause, or an unmerged recorded
+                            PR). NO completion row was written, so the feature is
+                            NOT complete. A warning naming the feature and its
+                            events log is logged. Best-effort still holds: a
+                            refusal returns a state, it never raises or fails the
+                            run — it just stops being silent, which is what let a
+                            passing review read as ``missing-review`` for a whole
+                            session.
   error                   — an unexpected exception escaped ``advance_lifecycle``
                             itself; ``main`` catches it here so the CLI always
                             emits a JSON struct and exits 0.
@@ -66,6 +83,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 from pathlib import Path
 from typing import List, Optional
@@ -73,11 +91,12 @@ from typing import List, Optional
 from cortex_command.backlog import _telemetry
 from cortex_command.common import (
     _resolve_user_project_root_from_cwd,
-    detect_lifecycle_phase,
     reduce_lifecycle_state,
 )
 from cortex_command.lifecycle.advance import advance
 from cortex_command.lifecycle.counters import count_rework_cycles, count_tasks
+
+logger = logging.getLogger(__name__)
 
 KNOWN_STATES = (
     "no-lifecycle-dir",
@@ -85,6 +104,7 @@ KNOWN_STATES = (
     "advanced-complete",
     "advanced-crash-recovery",
     "missing-review",
+    "advance-refused",
     "error",
 )
 
@@ -176,6 +196,42 @@ def _is_machine_complete(events: list[dict]) -> bool:
     return False
 
 
+def _refusal_state(envelope: object, feature: str, events_path: Path) -> Optional[dict]:
+    """Return the ``advance-refused`` state when *envelope* is a refusal, else None.
+
+    This call site used to set its ``state`` BEFORE calling ``advance`` and return
+    it unconditionally, so a refusal was reported to the CLI as success with no
+    events written and no warning — a worse failure surface than a loud one,
+    since the operator had nothing to act on. ``review_dispatch._advance_or_warn``
+    is the sibling shape; best-effort still holds, so this returns a state rather
+    than raising.
+    """
+    if not isinstance(envelope, dict) or envelope.get("state") != "refused":
+        return None
+    logger.warning(
+        "lifecycle advance REFUSED for %s (%s): %s — %s carries no completion "
+        "row, so the feature is NOT complete",
+        feature,
+        envelope.get("refusal"),
+        envelope.get("reason"),
+        events_path,
+    )
+    return {"state": "advance-refused"}
+
+
+def _envelope_route(envelope: object) -> Optional[str]:
+    """Return the destination state *envelope* actually moved to, or None.
+
+    The implement-transition arm's ``state`` IS its resolved route
+    (``"review"``/``"complete"``); ``to_state`` carries the same fact from the
+    table row and survives the replay short-circuit.
+    """
+    if not isinstance(envelope, dict):
+        return None
+    to_state = envelope.get("to_state")
+    return str(to_state) if to_state is not None else None
+
+
 def advance_lifecycle(feature: str, project_root: Optional[Path] = None) -> dict:
     """Advance one completed feature's lifecycle per walkthrough §2b.
 
@@ -197,46 +253,73 @@ def advance_lifecycle(feature: str, project_root: Optional[Path] = None) -> dict
     reduction = reduce_lifecycle_state(events_path)
     tier = reduction.state.get("tier", "simple")
     criticality = reduction.state.get("criticality", "medium")
-    review_required = tier == "complex" or criticality in _HIGH_CRITICALITY
+    # ``corrupted`` must be review-required, matching what the arm itself will
+    # decide: ``implement_transition._resolve_route`` treats a corrupted
+    # reduction as ("review", "complex"). When the two rules disagree, this
+    # caller takes the no-review branch, the arm routes to ``review``, and the
+    # feature lands ``phase_transition{to: "review"}`` under an
+    # ``advanced-complete`` report — and since ``_is_machine_complete`` matches
+    # only ``to: "complete"``, every later run replays and reports completion
+    # forever. Any future edit to either rule must change both.
+    review_required = (
+        tier == "complex" or criticality in _HIGH_CRITICALITY or reduction.corrupted
+    )
 
     plan_path = feature_dir / "plan.md"
 
     if review_required and not _has_real_review_verdict(events):
         return {"state": "missing-review"}
 
-    # FOLD (374 R15): the review→complete transition is decided + emitted by the
-    # shared ``advance`` body, not hand-appended here. Gather the facts it needs
-    # (the current detected phase to satisfy the claim's from_state gate — which
-    # is artifact-based, ``common.detect_lifecycle_phase`` — and the review cycle)
-    # and pass them as arguments. ``verdict=APPROVED`` composes the review.approved
-    # arm (review_verdict → phase_transition review→complete); the cycle-qualified
-    # presence check inside the body suppresses a duplicate verdict on the
-    # crash-recovery path where a real verdict already exists.
+    # FOLD (374 R15): the transition is decided + emitted by the shared ``advance``
+    # body, not hand-appended here. Neither branch supplies ``from_state``: a verb
+    # has exactly one departure state across the closed table, so the composed arm
+    # already carries the correct expected phase, and the gate then compares two
+    # readings of the same events-first oracle. Deriving one from artifacts here is
+    # what silently refused every transition on a log carrying real machine rows.
     tasks_total, _ = count_tasks(plan_path)
-    if not review_required:
-        cycle = 0
-        rework_cycles = 0
-        state = "advanced-complete"
-    else:
-        cycle = _last_real_review_cycle(events)
-        rework_cycles = count_rework_cycles(events_path)
-        state = "advanced-crash-recovery"
 
-    from_state = str(detect_lifecycle_phase(feature_dir).get("phase") or "review")
-    advance(
+    if not review_required:
+        # The feature never entered review, so the review-verdict arm is the
+        # wrong arm — it departs from ``review`` and would fabricate a synthetic
+        # APPROVED verdict for something nobody reviewed. The implement-exit arm
+        # resolves its own route from the same reduction and emits
+        # phase_transition implement→<route>.
+        envelope = advance(
+            verb="implement-transition",
+            feature=feature,
+            mode="transition",
+            project_root=root,
+        )
+        refused = _refusal_state(envelope, feature, events_path)
+        if refused is not None:
+            return refused
+        # Assert the route we actually got. Requirement 5 should make a non-complete
+        # route unreachable, but reporting completion on the arm's say-so without
+        # checking is precisely how the divergence above stayed invisible.
+        if _envelope_route(envelope) != "complete":
+            return {"state": "missing-review"}
+        return {"state": "advanced-complete", "tasks_total": tasks_total, "rework_cycles": 0}
+
+    # Crash recovery: a real verdict exists but the completion row is missing.
+    # ``verdict=APPROVED`` composes the review.approved arm (review_verdict →
+    # phase_transition review→complete); the cycle-qualified presence check inside
+    # the body suppresses a duplicate verdict against the already-present one.
+    envelope = advance(
         verb="review-verdict",
         feature=feature,
         verdict="APPROVED",
-        cycle=cycle,
+        cycle=_last_real_review_cycle(events),
         drift="none",
-        from_state=from_state,
         project_root=root,
     )
+    refused = _refusal_state(envelope, feature, events_path)
+    if refused is not None:
+        return refused
 
     return {
-        "state": state,
+        "state": "advanced-crash-recovery",
         "tasks_total": tasks_total,
-        "rework_cycles": rework_cycles,
+        "rework_cycles": count_rework_cycles(events_path),
     }
 
 
