@@ -112,6 +112,7 @@ FEATURE_SLUGS = [
     "seed-feature-gamma",
     "seed-feature-delta",
     "seed-feature-epsilon",
+    "seed-feature-zeta",
 ]
 
 PIPELINE_FEATURES = [
@@ -124,14 +125,20 @@ PIPELINE_FEATURES = [
 # Overnight state and events writers
 # ---------------------------------------------------------------------------
 
-# Feature definitions: slug -> (status, round_assigned, started_offset, completed_offset, error)
+# Feature definitions: slug -> (status, started_offset, completed_offset, error)
 # Offsets are minutes_ago values (higher = further in the past)
+#
+# ``deferred`` is the overnight *run outcome*, not a backlog frontmatter state:
+# it has dedicated rendering (``app.py`` ``badge-amber``/``⚠``) that no other
+# fixture reaches, and no backlog record can express it — hence the sixth slug
+# rather than a status swap on an existing one.
 _FEATURES = [
     ("seed-feature-alpha", "merged",  88, 75, None),
     ("seed-feature-beta",  "merged",  85, 70, None),
     ("seed-feature-gamma", "running", 40, None, None),
     ("seed-feature-delta", "paused",  60, None, None),
     ("seed-feature-epsilon","failed", 35, 28, "Agent exited with non-zero status"),
+    ("seed-feature-zeta",  "deferred", 43, 25, None),
 ]
 
 
@@ -171,6 +178,7 @@ def write_overnight_state(root: Path, session_dir: Path, session_id: str) -> Non
         "seed-feature-gamma":   3,
         "seed-feature-delta":   2,
         "seed-feature-epsilon": 3,
+        "seed-feature-zeta":    3,
     }
     for slug, status, started_offset, completed_offset, error in _FEATURES:
         features[slug] = _feature_entry(
@@ -203,10 +211,14 @@ def write_overnight_state(root: Path, session_dir: Path, session_id: str) -> Non
         },
         {
             "round_number": 3,
-            "features_attempted": ["seed-feature-gamma", "seed-feature-epsilon"],
+            "features_attempted": [
+                "seed-feature-gamma",
+                "seed-feature-epsilon",
+                "seed-feature-zeta",
+            ],
             "features_merged":    [],
             "features_paused":    [],
-            "features_deferred":  [],
+            "features_deferred":  ["seed-feature-zeta"],
             "started_at":         ts_at(44),
             "completed_at":       None,
         },
@@ -289,9 +301,16 @@ def write_overnight_events(root: Path, session_dir: Path, session_id: str) -> No
     # --- Round 3: gamma (running) + epsilon (failed) ---
     events.append(evt(44, "ROUND_START",    3))
     events.append(evt(43, "BATCH_ASSIGNED", 3,
-                       features=["seed-feature-gamma", "seed-feature-epsilon"]))
+                       features=["seed-feature-gamma", "seed-feature-epsilon",
+                                 "seed-feature-zeta"]))
     events.append(evt(42, "FEATURE_START",  3, feature="seed-feature-gamma"))
     events.append(evt(41, "FEATURE_START",  3, feature="seed-feature-epsilon"))
+    events.append(evt(40, "FEATURE_START",  3, feature="seed-feature-zeta"))
+
+    # zeta is deferred rather than merged, paused, or failed — the one run
+    # outcome with no backlog-frontmatter equivalent.
+    events.append(evt(25, "FEATURE_DEFERRED", 3, feature="seed-feature-zeta",
+                       reason="Deferred to a later round: depends on gamma landing"))
 
     # epsilon intermediate events before failure
     events.append(evt(38, "FEATURE_CHECKPOINT", 3, feature="seed-feature-epsilon",
@@ -352,6 +371,31 @@ def write_overnight_events(root: Path, session_dir: Path, session_id: str) -> No
 # ---------------------------------------------------------------------------
 
 
+#: Backlog fixture each pipeline feature claims to implement, by slug. The
+#: ``backlog_id`` written into ``pipeline-state.json`` is looked up from
+#: ``_BACKLOG_ITEMS`` through this map rather than written as a literal, so a
+#: renumbered fixture can never leave the pipeline state pointing at an id no
+#: backlog file carries.
+_PIPELINE_BACKLOG_SLUGS = {
+    "seed-pipeline-feature-one":   "seed-feature-alpha",
+    "seed-pipeline-feature-two":   "seed-feature-beta",
+    "seed-pipeline-feature-three": "seed-feature-gamma",
+}
+
+
+def _backlog_id_for_slug(slug: str) -> str:
+    """Return the zero-padded id of the ``_BACKLOG_ITEMS`` record for ``slug``.
+
+    Raises ``KeyError`` rather than inventing an id, so a slug that leaves the
+    fixture table fails loudly at seed time instead of writing a dangling
+    reference.
+    """
+    for record in _BACKLOG_ITEMS:
+        if record["slug"] == slug:
+            return f"{record['id']:03d}"
+    raise KeyError(f"No backlog fixture declares slug {slug!r}")
+
+
 def write_pipeline_fixtures(repo_root: Path) -> None:
     """Write cortex/lifecycle/pipeline-state.json and cortex/lifecycle/pipeline-events.log."""
     lifecycle_dir = repo_root / "cortex" / "lifecycle"
@@ -359,29 +403,19 @@ def write_pipeline_fixtures(repo_root: Path) -> None:
 
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
+    pipeline_statuses = ["implemented", "implemented", "pending"]
     pipeline_state = {
         "phase": "complete",
         "mode": "sequential",
         "base_branch": "main",
         "features": [
             {
-                "name": PIPELINE_FEATURES[0],
-                "backlog_id": "990",
-                "priority": 1,
-                "status": "implemented",
-            },
-            {
-                "name": PIPELINE_FEATURES[1],
-                "backlog_id": "991",
-                "priority": 2,
-                "status": "implemented",
-            },
-            {
-                "name": PIPELINE_FEATURES[2],
-                "backlog_id": "992",
-                "priority": 3,
-                "status": "pending",
-            },
+                "name": name,
+                "backlog_id": _backlog_id_for_slug(_PIPELINE_BACKLOG_SLUGS[name]),
+                "priority": i + 1,
+                "status": pipeline_statuses[i],
+            }
+            for i, name in enumerate(PIPELINE_FEATURES)
         ],
         "overlap_analysis": (
             "Features are independent with no shared file paths. "
@@ -426,6 +460,7 @@ def write_pipeline_fixtures(repo_root: Path) -> None:
         "seed-feature-gamma":   ("opus",   "complex", 25.0),
         "seed-feature-delta":   ("sonnet", "complex", 25.0),
         "seed-feature-epsilon": ("haiku",  "trivial",  5.0),
+        "seed-feature-zeta":    ("sonnet", "simple",  10.0),
     }
     seed_offsets = {
         "seed-feature-alpha":   88,
@@ -433,6 +468,7 @@ def write_pipeline_fixtures(repo_root: Path) -> None:
         "seed-feature-gamma":   42,
         "seed-feature-delta":   62,
         "seed-feature-epsilon": 41,
+        "seed-feature-zeta":    40,
     }
     for slug, (model, complexity, budget) in seed_dispatch_variants.items():
         event = {
@@ -474,6 +510,7 @@ def write_metrics(repo_root: Path) -> None:
         ("seed-feature-gamma",   1500.0, 0, True),
         ("seed-feature-delta",   1200.0, 1, False),
         ("seed-feature-epsilon", 2400.0, 0, True),
+        ("seed-feature-zeta",     900.0, 0, True),
     ]
 
     for slug, duration, rework, fpa in feature_data:
@@ -521,6 +558,99 @@ def write_metrics(repo_root: Path) -> None:
 # ---------------------------------------------------------------------------
 # Per-feature file writers
 # ---------------------------------------------------------------------------
+
+#: Reader-renderable lifecycle prose, keyed by slug. Only the feature a backlog
+#: fixture links to through ``lifecycle_slug`` needs these, so this is a lookup
+#: rather than something every feature gets — the same per-feature-variance
+#: pattern ``_FEATURE_TIER`` and ``_FEATURE_ESCALATIONS`` use. Each body is
+#: ``##``-sectioned markdown so the ticket reader has real structure to render
+#: rather than a placeholder line.
+_FEATURE_ARTIFACTS = {
+    "seed-feature-delta": {
+        "research.md": """\
+# Research: Implement rate limiting for export endpoints
+
+## Problem
+
+The export endpoints share a process-wide connection pool with the rest of the
+API, so a single client draining a bulk export starves interactive traffic. No
+limit is enforced today; the only backpressure is the pool timeout, which
+surfaces to callers as an opaque 500.
+
+## Prior Art
+
+Two shapes exist in the codebase already. The webhook handler retries on a
+fixed interval with no server-side limit, and the ingest path caps concurrency
+with a semaphore rather than a rate. Neither generalizes: a semaphore bounds
+in-flight work but not request volume, and client-side retry cannot protect a
+shared pool from a client that ignores it.
+
+## Options Considered
+
+- **Per-endpoint token bucket** — each export route gets its own budget.
+  Isolates a hot route, but a client fanning across routes still saturates the
+  pool.
+- **Global rolling window** — one shared quota across the API surface. Protects
+  the pool directly, at the cost of letting one noisy route consume everything.
+- **Hybrid** — a global ceiling with per-endpoint floors. Strictly better
+  behavior, materially more state to maintain and reason about.
+
+## Open Questions
+
+Whether export endpoints draw from the same quota as the rest of the API is
+unresolved, and the spec's own section 3.2 reads both ways. That ambiguity is
+what the escalation on this feature is about.
+""",
+        "spec.md": """\
+# Specification: Implement rate limiting for export endpoints
+
+## Problem Statement
+
+Bulk export requests share the API's connection pool with interactive traffic
+and are subject to no volume limit, so one client can starve every other caller
+until the pool times out.
+
+## Requirements
+
+1. **Export routes enforce a request-rate limit.** Requests beyond the limit
+   receive `429` rather than queuing against the pool.
+2. **The limit is observable.** Each response carries the remaining budget, so
+   a well-behaved client can pace itself without probing for the ceiling.
+3. **Rejections are retryable on a stated schedule** rather than leaving the
+   backoff strategy to each client's guess.
+
+## Edge Cases
+
+- **Clock skew across workers** — buckets refill against a monotonic source,
+  not wall time, so a skewed worker cannot hand out a larger budget.
+- **In-flight requests at a limit change** — a config reload never revokes
+  budget already granted; the new ceiling applies from the next refill.
+
+## Open Decisions
+
+Whether the quota is per-endpoint or shared across the API surface. Section 3.2
+of the source ticket references both, and the acceptance scaffolding assumes
+the opposite of what the plan task does — escalated rather than guessed.
+""",
+    },
+}
+
+
+def write_feature_artifacts(repo_root: Path, slug: str) -> list[str]:
+    """Write the reader-renderable lifecycle artifacts declared for ``slug``.
+
+    Returns the filenames written — empty for a feature with no entry in
+    ``_FEATURE_ARTIFACTS``.
+    """
+    artifacts = _FEATURE_ARTIFACTS.get(slug)
+    if not artifacts:
+        return []
+
+    feature_dir = repo_root / "cortex" / "lifecycle" / slug
+    feature_dir.mkdir(parents=True, exist_ok=True)
+    for name, body in artifacts.items():
+        (feature_dir / name).write_text(body, encoding="utf-8")
+    return list(artifacts)
 
 
 def write_feature_files(repo_root: Path, slug: str, status: str) -> None:
@@ -657,6 +787,7 @@ _FEATURE_TIER = {
     "seed-feature-gamma":   "complex",
     "seed-feature-delta":   "complex",
     "seed-feature-epsilon": "trivial",
+    "seed-feature-zeta":    "simple",
 }
 
 _FEATURE_CLARIFY_FINDINGS = {
@@ -665,6 +796,7 @@ _FEATURE_CLARIFY_FINDINGS = {
     "seed-feature-gamma":   5,
     "seed-feature-delta":   9,
     "seed-feature-epsilon": 1,
+    "seed-feature-zeta":    2,
 }
 
 # PR numbers for merged features
@@ -681,6 +813,7 @@ _FEATURE_DISPATCH_IDS = {
     "seed-feature-gamma":   uuid.UUID("33333333-3333-4333-8333-333333333333").hex,
     "seed-feature-delta":   uuid.UUID("44444444-4444-4444-8444-444444444444").hex,
     "seed-feature-epsilon": uuid.UUID("55555555-5555-4555-8555-555555555555").hex,
+    "seed-feature-zeta":    uuid.UUID("66666666-6666-4666-8666-666666666666").hex,
 }
 
 # Escalation question/context pairs for the paused (delta) and failed (epsilon)
@@ -805,6 +938,10 @@ def write_exit_reports(repo_root: Path, slug: str, status: str) -> int:
         "seed-feature-epsilon": [
             "Identified all callers of legacy webhook handler",
             "Removed handler module and updated routing table",
+        ],
+        "seed-feature-zeta": [
+            "Catalogued the CSV export paths the timeline view would reuse",
+            "Drafted spec for the multi-repo fleet roll-up",
         ],
     }
 
@@ -1440,6 +1577,10 @@ def write_all(repo_root: Path, session_id: str) -> None:
         written_paths.append(feature_dir / "agent-activity.jsonl")
         written_paths.append(feature_dir / "events.log")
         written_paths.append(feature_dir / "plan.md")
+
+        # research.md / spec.md for the feature a backlog fixture links to.
+        for name in write_feature_artifacts(repo_root, slug):
+            written_paths.append(feature_dir / name)
 
         # Extended fixtures for the new dashboard panels.
         # write_enriched_events_log replaces the basic events.log written above.
