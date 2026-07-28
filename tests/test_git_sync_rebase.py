@@ -596,3 +596,111 @@ def test_sync_rebase_aborts_on_non_allowlisted_conflict(tmp_path: Path) -> None:
     assert "Local commit" not in remote_log, (
         f"a failed sync must not push: {remote_log}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Already-upstream commits (regression: morning review of
+# overnight-2026-07-28-0256)
+# ---------------------------------------------------------------------------
+#
+# Post-merge sync is the exact shape that triggers this: the session's PR
+# merges the integration branch (which carried the local commits) into main,
+# so when local main rebases onto the new origin/main every replayed commit is
+# already upstream. Git stops with the patch emptied and *nothing conflicted*,
+# waiting for --skip. The old no-conflict branch ran --continue
+# unconditionally, git refused ("No changes - did you forget to use 'git
+# add'?"), the rebase stayed exactly where it was, and the loop burned all ten
+# passes before aborting with a conflict-budget message for a sync that had no
+# conflicts at all. Observed live: ten "No conflicted files remain — continuing
+# rebase" lines, then "exceeded maximum resolution passes (10)".
+
+
+def test_advance_rebase_skips_a_patch_with_nothing_left_to_commit(
+    tmp_path: Path,
+) -> None:
+    """``_advance_rebase`` picks --skip when the index matches HEAD."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git("init", "-b", "main", cwd=repo)
+    (repo / "f.txt").write_text("one\n")
+    _git("add", "f.txt", cwd=repo)
+    _git("commit", "-m", "init", cwd=repo)
+
+    calls: list[list[str]] = []
+
+    def _fake_run(argv, **kwargs):
+        calls.append(list(argv))
+        return subprocess.CompletedProcess(argv, 0, "", "")
+
+    # Clean tree => `git diff --cached --quiet` exits 0 => nothing staged.
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(sync_rebase_mod.subprocess, "run", _fake_run)
+        sync_rebase_mod._advance_rebase(repo)
+
+    assert calls, "_advance_rebase must invoke git"
+    assert calls[-1] == ["git", "rebase", "--skip"], (
+        "a stopped rebase with nothing staged must be skipped; --continue "
+        "refuses this state and leaves the rebase unchanged, which is what "
+        "made the resolution loop spin"
+    )
+
+
+@pytest.mark.skipif(
+    shutil.which("bash") is None, reason="bash required for shell test"
+)
+def test_sync_rebase_fails_fast_when_no_rebase_ever_started(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A dirty working tree must not be reported as a conflict-budget overrun.
+
+    ``git pull --rebase`` refuses on unstaged changes ("cannot pull with
+    rebase: You have unstaged changes", exit 128) and starts no rebase. The
+    resolution loop then found nothing conflicted, ran ``git rebase
+    --continue``, got "fatal: no rebase in progress", and repeated until the
+    pass budget was exhausted — blaming conflicts for a sync that never began.
+    This is the exact shape hit during the morning review of
+    overnight-2026-07-28-0256, where a concurrent session's unstaged edits
+    were sitting in the tree.
+    """
+    origin = tmp_path / "origin.git"
+    origin.mkdir()
+    _git("init", "--bare", "-b", "main", cwd=origin)
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git("init", "-b", "main", cwd=repo)
+    _git("remote", "add", "origin", str(origin), cwd=repo)
+    (repo / "base.txt").write_text("base\n")
+    _git("add", "base.txt", cwd=repo)
+    _git("commit", "-m", "base", cwd=repo)
+    _git("push", "-u", "origin", "main", cwd=repo)
+
+    # Put origin ahead so a rebase is genuinely required.
+    other = tmp_path / "other"
+    _git("clone", str(origin), str(other), cwd=tmp_path)
+    (other / "upstream.txt").write_text("upstream\n")
+    _git("add", "upstream.txt", cwd=other)
+    _git("commit", "-m", "upstream commit", cwd=other)
+    _git("push", "origin", "main", cwd=other)
+
+    # ...and dirty the local tree, as a concurrent session would.
+    (repo / "base.txt").write_text("base\nlocally modified\n")
+
+    rc = sync_rebase(repo, SYNC_ALLOWLIST)
+
+    assert rc == 1, f"expected the failure exit code, got {rc}"
+
+    err = capsys.readouterr().err
+    assert "without starting a rebase" in err, (
+        "the operator must be told no rebase began, not that conflicts "
+        f"exhausted a budget; stderr was:\n{err}"
+    )
+    assert "exceeded maximum resolution passes" not in err, (
+        f"must not report a conflict-budget overrun; stderr was:\n{err}"
+    )
+    # The pass loop must not have run at all.
+    assert "Conflict resolution pass" not in err, (
+        f"no resolution pass should run when no rebase started:\n{err}"
+    )
+    # The local edit must survive untouched.
+    assert "locally modified" in (repo / "base.txt").read_text()

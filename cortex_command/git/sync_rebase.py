@@ -11,10 +11,12 @@ Exit codes:
       successful run routinely leaves local-ahead commits unpushed
       (``cortex-morning-review-push-closures`` carries its own push for
       exactly this reason).
-  1 — rebase aborted, local tree restored. Two causes share this code —
-      a conflict outside the allowlist, and an exhausted resolution-pass
-      budget (``_MAX_PASSES``) — because both leave the same state and
-      the same remedy (resolve manually); stderr distinguishes them.
+  1 — rebase aborted, local tree restored. Three causes share this code —
+      a conflict outside the allowlist, an exhausted resolution-pass
+      budget (``_MAX_PASSES``), and a ``git pull --rebase`` that failed
+      before starting a rebase at all (a dirty working tree being the
+      everyday case) — because all three leave the same state and the
+      same remedy (resolve manually); stderr distinguishes them.
   2 — push failed (rebase succeeded but push to origin/main failed)
   3 — behind-count undetermined (git rev-list failed or returned
       unparseable output; sync state is unknown, nothing was rebased)
@@ -48,6 +50,7 @@ bash original's PATH dependency on ``git``.
 from __future__ import annotations
 
 import fnmatch
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -215,6 +218,48 @@ def _conflicted_files(repo_root: Path) -> List[str]:
     return [line for line in result.stdout.splitlines() if line]
 
 
+def _advance_rebase(repo_root: Path) -> subprocess.CompletedProcess:
+    """Step the rebase forward, choosing ``--skip`` over ``--continue``.
+
+    A stopped rebase whose staged tree matches HEAD has nothing left to
+    commit — either a resolution kept the upstream side wholesale, or the
+    replayed commit was already upstream to begin with. ``git rebase
+    --continue`` refuses that state ("No changes - did you forget to use
+    'git add'?") and, crucially, leaves the rebase exactly where it was, so
+    a caller that loops on ``--continue`` makes no progress at all.
+    ``--skip`` drops the emptied commit and moves on.
+
+    This decision belongs to every caller stepping the rebase, not just the
+    one that resolved conflicts: the no-conflict path reaches the identical
+    state whenever git stops on an already-upstream commit.
+    """
+    staged = _git(["diff", "--cached", "--quiet"], cwd=repo_root)
+    if staged.returncode == 0:
+        _log("Nothing left to commit for this patch — skipping it")
+        step = "--skip"
+    else:
+        step = "--continue"
+    return subprocess.run(
+        ["git", "rebase", step],
+        capture_output=True,
+        text=True,
+        cwd=str(repo_root),
+        env={**os.environ, "GIT_EDITOR": "true"},
+    )
+
+
+def _log_git_failure(result: subprocess.CompletedProcess) -> None:
+    """Surface git's own message when a rebase step fails.
+
+    Without this the loop discards the one line that explains why it is not
+    progressing, and a stall is reported only as a pass-budget overrun.
+    """
+    detail = (result.stderr or result.stdout or "").strip()
+    if detail:
+        first = detail.splitlines()[0]
+        _log(f"  git: {first}")
+
+
 # ---------------------------------------------------------------------------
 # Core sync logic
 # ---------------------------------------------------------------------------
@@ -277,6 +322,21 @@ def sync_rebase(
 
     if pull.returncode == 0:
         _log("Rebase completed cleanly")
+    elif not _stale_rebase_in_progress(repo_root):
+        # ``git pull --rebase`` can fail *without* starting a rebase at all —
+        # a dirty working tree is the everyday case ("cannot pull with rebase:
+        # You have unstaged changes", exit 128), and auth/network faults land
+        # here too. There is no rebase to resolve and no conflict to inspect:
+        # every pass of the loop below would find nothing conflicted, run
+        # `git rebase --continue`, get "fatal: no rebase in progress", and try
+        # again until the pass budget ran out — reporting a conflict-budget
+        # overrun for a sync that never began. Report git's own error instead.
+        _log(
+            "Error: git pull --rebase failed without starting a rebase — "
+            "nothing was rebased and local main is untouched"
+        )
+        _log_git_failure(pull)
+        return 1
     else:
         # Step 5: multi-pass conflict resolution loop.
         patterns = _load_allowlist(allowlist_file)
@@ -288,19 +348,21 @@ def sync_rebase(
             conflicted = _conflicted_files(repo_root)
 
             if not conflicted:
-                _log("No conflicted files remain — continuing rebase")
-                cont = subprocess.run(
-                    ["git", "rebase", "--continue"],
-                    capture_output=True,
-                    text=True,
-                    cwd=str(repo_root),
-                    env={**__import__("os").environ, "GIT_EDITOR": "true"},
-                )
+                # A rebase can stop with nothing conflicted when the replayed
+                # commit is already upstream — git empties it and waits for
+                # --skip. --continue refuses ("No changes - did you forget to
+                # use 'git add'?"), and because that leaves the rebase in the
+                # exact same state, an unconditional --continue here spins
+                # every remaining pass and then aborts, reporting a conflict
+                # budget overrun for a run that had no conflicts at all.
+                cont = _advance_rebase(repo_root)
                 if cont.returncode == 0:
                     _log(f"Rebase completed after {pass_num} pass(es)")
                     completed = True
                     break
-                # --continue surfaced new conflicts in the next commit; loop.
+                _log_git_failure(cont)
+                # Otherwise the step surfaced new conflicts in the next
+                # commit; loop and resolve them.
                 continue
 
             _log(f"{len(conflicted)} conflicted file(s) found")
@@ -338,27 +400,16 @@ def sync_rebase(
                 _git(["rebase", "--abort"], cwd=repo_root)
                 return 1
 
-            # All conflicts resolved this pass — continue the rebase. When a
+            # All conflicts resolved this pass — advance the rebase. When a
             # remote-wins resolution superseded everything the replayed commit
             # carried, the index now matches HEAD and --continue would refuse
             # ("no changes"); the emptied commit is dropped with --skip instead.
-            staged = _git(["diff", "--cached", "--quiet"], cwd=repo_root)
-            if staged.returncode == 0:
-                _log("Replayed commit emptied by resolution — skipping it")
-                step = "--skip"
-            else:
-                step = "--continue"
-            cont = subprocess.run(
-                ["git", "rebase", step],
-                capture_output=True,
-                text=True,
-                cwd=str(repo_root),
-                env={**__import__("os").environ, "GIT_EDITOR": "true"},
-            )
+            cont = _advance_rebase(repo_root)
             if cont.returncode == 0:
                 _log(f"Rebase completed after {pass_num} pass(es)")
                 completed = True
                 break
+            _log_git_failure(cont)
             # --continue/--skip didn't finish — more commits with conflicts; loop.
 
         if not completed:
