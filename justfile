@@ -102,7 +102,10 @@ dashboard_port := env_var_or_default("DASHBOARD_PORT", "8080")
 
 # Loopback by default: the dashboard is unauthenticated. Exposing it on another
 # interface is opt-in via DASHBOARD_HOST=<addr> or `just dashboard_host=<addr> dashboard`.
-dashboard_host := env_var_or_default("DASHBOARD_HOST", "127.0.0.1")
+# `DASHBOARD_HOST=` reads back as set-but-empty, and an empty --host binds every
+# interface in asyncio, so coalesce it to loopback rather than launching unintended.
+dashboard_host_env := env_var_or_default("DASHBOARD_HOST", "")
+dashboard_host := if dashboard_host_env == "" { "127.0.0.1" } else { dashboard_host_env }
 
 # `just --dry-run` expands only just-level interpolations, never shell variables,
 # so the display host is rendered here rather than in the recipe body.
