@@ -452,6 +452,123 @@ def test_signal_staged_then_nothing_staged_on_noop_rerun(tmp_path: Path) -> None
 
 
 # ---------------------------------------------------------------------------
+# Concurrent-session scoping (#417) — the report is this verb's set, not the
+# whole index. Both harms need a *foreign* staged path: on a trunk repo two
+# lifecycles share one worktree and therefore one index.
+# ---------------------------------------------------------------------------
+
+FOREIGN = "scenarios/probe/other_session_work.json"
+
+
+def test_concurrent_staged_file_absent_from_report(tmp_path: Path) -> None:
+    """Harm 1: a sibling session's staged file must not appear in staged_paths."""
+    root = tmp_path
+    _new_repo(root)
+    _write(root, "README.md", "base\n")
+    _commit_all(root, "Initial commit")
+
+    _write_complete_artifacts(root, _review_no_drift())
+    _write_ticket(root)
+    _write(root, "cortex/backlog/index.md", "backlog index\n")
+
+    # A concurrent session stages its own in-flight, untracked work.
+    _write(root, FOREIGN, '{"probe": true}\n')
+    _git("add", "--", FOREIGN, cwd=root)
+
+    result = stage("complete", SLUG, root)
+
+    expected = sorted(LIFECYCLE_COMPLETE + [TICKET_REL, "cortex/backlog/index.md"])
+    assert result["staged_paths"] == expected
+    assert FOREIGN not in result["staged_paths"]
+    # Discriminating: the foreign path IS genuinely in the shared index — the
+    # verb scopes its report, it does not unstage anyone else's work.
+    assert FOREIGN in _staged(root)
+    assert _staged(root) == sorted(expected + [FOREIGN])
+
+
+def test_signal_false_positive_from_concurrent_staging(tmp_path: Path) -> None:
+    """Harm 2: signal must stay nothing_staged when only a sibling has staged.
+
+    This is the spurious-commit case — every artifact of ours is already
+    committed, so a ``staged`` signal here triggers a commit on a clean phase
+    exit that sweeps the other session's work.
+    """
+    root = tmp_path
+    _new_repo(root)
+    _write(root, "README.md", "base\n")
+    _commit_all(root, "Initial commit")
+
+    _write_complete_artifacts(root, _review_no_drift())
+    _write_ticket(root)
+    _write(root, "cortex/backlog/index.md", "backlog index\n")
+
+    # Stage and commit our full set, so a re-run has nothing of its own to add.
+    assert stage("complete", SLUG, root)["signal"] == "staged"
+    _commit_all(root, "Stage and commit finalization artifacts")
+    assert _diff_cached_quiet_exit(root) == 0
+
+    # Only now does the concurrent session stage.
+    _write(root, FOREIGN, '{"probe": true}\n')
+    _git("add", "--", FOREIGN, cwd=root)
+    # The whole-index view says "staged" — the pre-fix source of the false
+    # positive — so this assertion is what discriminates scoped from unscoped.
+    assert _diff_cached_quiet_exit(root) == 1
+
+    result = stage("complete", SLUG, root)
+
+    assert result["signal"] == "nothing_staged"
+    assert result["staged_paths"] == []
+
+
+def test_refine_cancel_scoping_does_not_resurrect_spec(tmp_path: Path) -> None:
+    """Edge: spec.md staged by a sibling stays out of the cancel path's report."""
+    root = tmp_path
+    _new_repo(root)
+    _write(root, "README.md", "base\n")
+    _commit_all(root, "Initial commit")
+
+    _write(root, f"{LC}/research.md", "research\n")
+    _write(root, f"{LC}/spec.md", "spec PRESENT but must NOT stage\n")
+    _write(root, f"{LC}/index.md", "lifecycle index\n")
+    _write(root, f"{LC}/events.log", _CANCEL_EVENTS)
+    _write_ticket(root)
+
+    # Someone else stages spec.md — it is in the index but not in our path set.
+    _git("add", "--", f"{LC}/spec.md", cwd=root)
+
+    result = stage("refine", SLUG, root)
+
+    expected = sorted(
+        [
+            f"{LC}/research.md",
+            f"{LC}/index.md",
+            f"{LC}/events.log",
+            TICKET_REL,
+        ]
+    )
+    assert result["staged_paths"] == expected
+    assert f"{LC}/spec.md" not in result["staged_paths"]
+    assert f"{LC}/spec.md" in _staged(root)  # still in the shared index
+
+
+def test_no_candidates_on_disk_reports_nothing_staged(tmp_path: Path) -> None:
+    """Empty path set must short-circuit: ``diff --cached --`` reads everything."""
+    root = tmp_path
+    _new_repo(root)
+    _write(root, "README.md", "base\n")
+    _commit_all(root, "Initial commit")
+
+    # No lifecycle artifacts written at all → collect_paths resolves to [].
+    _write(root, FOREIGN, '{"probe": true}\n')
+    _git("add", "--", FOREIGN, cwd=root)
+
+    result = stage("complete", SLUG, root)
+
+    assert result["signal"] == "nothing_staged"
+    assert result["staged_paths"] == []
+
+
+# ---------------------------------------------------------------------------
 # CLI contract — main() emits one compact JSON line and exits 0
 # ---------------------------------------------------------------------------
 

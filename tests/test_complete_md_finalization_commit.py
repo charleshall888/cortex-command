@@ -16,9 +16,6 @@ Positive tokens (all must be present in the region):
   ``git add`` / resolver lookup / ``-u`` sweep collapsed into (Req 14)
 - ``cortex-read-commit-artifacts`` — binstub invocation (Flag Check stays prose)
 - ``/cortex-core:commit`` — commit skill invocation
-- ``git diff --cached --quiet`` — the stage-first idempotent guard; the verb's
-  ``signal`` is documented as equivalent to this exit, and it stays prose
-  control flow (not absorbed by the verb)
 - A halt-on-failure clause for a non-zero commit/stage exit
 - A ``main`` / ``master`` non-default-branch advisory (R13)
 
@@ -46,6 +43,12 @@ Negative tokens (must NOT appear in the region):
 - ``cortex/backlog/*-`` — the tail-anchored slug-glob matches zero files
   (the lifecycle slug is a truncated prefix of the backlog filename slug);
   the resolver's ``filename`` is used instead
+- ``git diff --cached --quiet`` — previously asserted *present* as the
+  stage-first idempotent guard, on the premise that the verb's ``signal`` was
+  equivalent to its exit. #417 scoped the verb's read to its own paths, so the
+  equivalence is false on a shared index: the unscoped exit goes 1 on a
+  concurrent session's staging alone. Documenting it taught consumers to commit
+  on a false positive
 
 Scoping to the anchored region is required because ``git push`` and
 ``gh pr create`` may legitimately appear elsewhere in complete.md (e.g.
@@ -118,17 +121,12 @@ def test_finalization_commit_region_positive_tokens() -> None:
     assert "/cortex-core:commit" in region, (
         "finalization-commit-step region must invoke /cortex-core:commit"
     )
-    assert "git diff --cached --quiet" in region, (
-        "finalization-commit-step region must include the stage-first idempotent guard "
-        "'git diff --cached --quiet' (the verb's signal is equivalent to this exit; "
-        "the guard stays prose control flow)"
-    )
-
     # NOTE: the enumerated lifecycle filenames, 'Suggested Requirements Update',
     # and 'cortex-resolve-backlog-item' staging-mechanics tokens moved into the
     # stage-artifacts verb (Req 14) and are now pinned by the verb's behavioral
     # staged-set test (tests/test_stage_artifacts.py, Req 13). 'git add -u
-    # cortex/backlog/' flipped to a negative token (bug-2, Req 11) — see below.
+    # cortex/backlog/' and 'git diff --cached --quiet' flipped to negative tokens
+    # (bug-2 Req 11; #417) — see below.
 
     # Halt-on-failure clause: commit failure must stop progress
     region_lower = region.lower()
@@ -154,6 +152,17 @@ def test_finalization_commit_region_negative_tokens() -> None:
     assert complete_md.exists(), f"complete.md missing at {complete_md}"
 
     region = _extract_region(complete_md.read_text(encoding="utf-8"))
+
+    # #417: the verb's signal is scoped to its OWN paths, so it is NOT equivalent
+    # to a whole-index 'git diff --cached --quiet'. On a trunk repo two lifecycles
+    # share one index, and the unscoped exit goes 1 on a concurrent session's
+    # staging alone — documenting the equivalence taught consumers to trust a
+    # false positive and commit a sibling's in-flight work.
+    assert "git diff --cached --quiet" not in region, (
+        "finalization-commit-step region must NOT equate the verb's signal to "
+        "'git diff --cached --quiet' (#417) — that exit reflects the whole shared "
+        "index, while signal reflects only this verb's own staged paths"
+    )
 
     assert "git push" not in region, (
         "finalization-commit-step region must not contain 'git push' — "

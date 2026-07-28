@@ -57,6 +57,12 @@ Staging is always ``git add -- <explicit paths>`` over paths present on disk;
 **never** the ``-u`` tracked-modified form on ``cortex/lifecycle/``,
 ``cortex/backlog/``, or ``cortex/requirements/``.
 
+The *read-back* is scoped to the same explicit paths. On a trunk repo two
+lifecycles share one worktree and therefore one index, so an unscoped
+``git diff --cached`` would attribute a concurrent session's staged files to
+this invocation — reporting them in ``staged_paths`` for a consumer to commit,
+and returning ``staged`` even when this verb staged nothing of its own.
+
 NOT backend-aware
 -----------------
 
@@ -293,8 +299,14 @@ def stage(phase: str, slug: str, root: Path) -> dict:
     Honours ``commit-artifacts`` first: when the config turns it off, stage
     nothing and report ``config_disabled``. Otherwise runs a single
     ``git add -- <explicit paths>`` (never a directory or ``-u`` add), then
-    reads ``git diff --cached --name-only`` to derive both the ``signal`` and
-    ``staged_paths``.
+    reads ``git diff --cached --name-only -- <the same paths>`` to derive both
+    the ``signal`` and ``staged_paths``.
+
+    Both return values describe *this invocation's* set, never the whole index:
+    ``staged_paths`` is what a consumer can commit as-is, and ``signal`` means
+    "this verb staged something". ``nothing_staged`` means nothing of ours was
+    left to stage (every artifact already committed) — not that the index is
+    empty.
     """
     if not read_commit_artifacts(root):
         return {
@@ -307,10 +319,14 @@ def stage(phase: str, slug: str, root: Path) -> dict:
             ),
         }
     paths = collect_paths(phase, slug, root)
-    if paths:
-        _run(["add", "--"] + paths, cwd=str(root))
+    if not paths:
+        # No candidate resolved on disk, so nothing of ours can be staged. Must
+        # return here rather than fall through: an empty pathspec after ``--``
+        # is not an empty filter — git reads the whole index.
+        return {"signal": "nothing_staged", "staged_paths": []}
+    _run(["add", "--"] + paths, cwd=str(root))
 
-    diff = _run(["diff", "--cached", "--name-only"], cwd=str(root))
+    diff = _run(["diff", "--cached", "--name-only", "--"] + paths, cwd=str(root))
     if diff is None or diff.returncode != 0:
         staged: list[str] = []
     else:

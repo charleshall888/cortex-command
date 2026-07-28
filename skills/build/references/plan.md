@@ -49,7 +49,7 @@ Use the criticality SKILL.md Step 2 carried forward; read it with `cortex-lifecy
 <!-- Only when complexity=complex. ~3 lines: the observable end state proving the feature works, distinct from per-task Verification. -->
 ```
 
-Prose-only Verification fails the checklist — use (a), (b), or (c).
+Prose-only Verification fails review — use (a), (b), or (c).
 
 ### Authoring rules
 
