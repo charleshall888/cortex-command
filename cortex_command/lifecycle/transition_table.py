@@ -212,7 +212,7 @@ class Guard:
     reads: tuple[str, ...]
 
 
-# Kept-pause kinds (skills/lifecycle/references/kept-pauses-data.toml's
+# Kept-pause kinds (skills/build/references/kept-pauses-data.toml's
 # four-kind discriminant). Enumerated here so a PauseSpec cannot carry an
 # unknown kind (import-time check).
 PAUSE_KINDS: frozenset[str] = frozenset(

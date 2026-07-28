@@ -705,9 +705,9 @@ The returned dict has five top-level keys:
 
 ### cortex/lifecycle.config.md consumers and absence behavior
 
-`cortex/lifecycle.config.md` is a per-project config file. The canonical scaffolded field list is the cortex-core plugin asset `skills/lifecycle/assets/lifecycle.config.md`, whose frontmatter a parity test checks byte-identical to the `cortex init` template under developer-run `just test` (see ADR-0017 for the gate's design and trade-offs). There is no centralized Python loader — each consumer reads it directly — so each consumer decides its own absence behavior. Scaffolded fields include `type`, `test-command`, `demo-command` / `demo-commands`, `commit-artifacts`, `synthesizer_overnight_enabled`, `branch-mode`, and the `backlog:` backend block, plus four **dormant** fields — `default-tier`, `default-criticality`, `skip-specify`, `skip-review` — that are scaffolded and set in live configs but read by no consumer today.
+`cortex/lifecycle.config.md` is a per-project config file. The canonical scaffolded field list is the cortex-core plugin asset `skills/build/assets/lifecycle.config.md`, whose frontmatter a parity test checks byte-identical to the `cortex init` template under developer-run `just test` (see ADR-0017 for the gate's design and trade-offs). There is no centralized Python loader — each consumer reads it directly — so each consumer decides its own absence behavior. Scaffolded fields include `type`, `test-command`, `demo-command` / `demo-commands`, `commit-artifacts`, `synthesizer_overnight_enabled`, `branch-mode`, and the `backlog:` backend block, plus four **dormant** fields — `default-tier`, `default-criticality`, `skip-specify`, `skip-review` — that are scaffolded and set in live configs but read by no consumer today.
 
-**Files**: `skills/lifecycle/assets/lifecycle.config.md` (the gate-kept source of truth for the scaffolded field list), plus the consumers in `skills/lifecycle/`, `skills/critical-review/`, and `skills/morning-review/`.
+**Files**: `skills/build/assets/lifecycle.config.md` (the gate-kept source of truth for the scaffolded field list), plus the consumers in `skills/build/`, `skills/critical-review/`, and `skills/morning-review/`.
 
 Absence behavior per consumer (what happens when the project has no `cortex/lifecycle.config.md`):
 
@@ -725,7 +725,7 @@ The closed set of `branch-mode` values (case-sensitive; any out-of-set value fal
 - `feature-branch` — create and check out `feature/{slug}` in the current working tree.
 - `prompt` — the picker fires every time (equivalent to leaving the field unset).
 
-Regardless of `branch-mode`, the picker still fires when the working tree is dirty or a live interactive worktree session exists for the feature (`cortex/lifecycle/sessions/{slug}.interactive.pid` with a live PID). Full per-value routing and carve-out semantics live in `skills/lifecycle/references/implement.md` §2 and `cortex_command/lifecycle_implement.py` (`should_fire_picker`).
+Regardless of `branch-mode`, the picker still fires when the working tree is dirty or a live interactive worktree session exists for the feature (`cortex/lifecycle/sessions/{slug}.interactive.pid` with a live PID). Full per-value routing and carve-out semantics live in `skills/build/references/implement.md` §2 and `cortex_command/lifecycle_implement.py` (`should_fire_picker`).
 
 Because field drift across consumers is possible, the asset's gate-kept frontmatter (above) is the one place to check before assuming a scaffolded field exists; do not enumerate the scaffolded fields in more than one doc.
 

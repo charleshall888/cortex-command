@@ -1,7 +1,7 @@
 """cortex-load-requirements — emit the tag-relevant requirements file list.
 
-Deterministic selection verb that replaces the hand-executed prose algorithm
-in ``skills/lifecycle/references/load-requirements.md``. Reads project.md's
+Deterministic selection verb that replaced a hand-executed prose algorithm
+in the lifecycle skill (that reference is retired). Reads project.md's
 ``## Conditional Loading`` + ``## Global Context`` sections and a feature's
 ``index.md`` ``tags:``, then prints the resolved repo-relative path list
 (paths only, never file contents) to stdout and a no-match fallback note to

@@ -30,7 +30,7 @@ Decision-record home: a new ADR under `cortex/adr/` (an amendment to ADR-0024/AD
 
 ## Step 2 — Revert the SKILL.md prose to phase-table routing (one commit)
 
-De-route the shipped prose off the served verbs in a **single commit**. `skills/lifecycle/SKILL.md` (and any phase-reference prose absorbed into the loop) stops invoking `cortex-lifecycle-next` / `cortex-lifecycle-advance` and returns to the phase-dispatch-table routing it used before the loop landed. Keep the change to prose only: this commit must not touch the wheel verbs, the transition table, or the events schema. Commit via `/cortex-core:commit`; the dual-source mirrors regenerate at pre-commit.
+De-route the shipped prose off the served verbs in a **single commit**. `skills/build/SKILL.md` (and any phase-reference prose absorbed into the loop) stops invoking `cortex-lifecycle-next` / `cortex-lifecycle-advance` and returns to the phase-dispatch-table routing it used before the loop landed. Keep the change to prose only: this commit must not touch the wheel verbs, the transition table, or the events schema. Commit via `/cortex-core:commit`; the dual-source mirrors regenerate at pre-commit.
 
 After this commit no shipped prose commands the served verbs, which narrows the served loop's blast radius to the wheel side while everything below stays callable.
 

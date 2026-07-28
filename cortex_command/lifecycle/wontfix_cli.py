@@ -11,7 +11,7 @@ The order is load-bearing — the move first lands the safe end-state (the
 name-based archive-skip at ``cortex_command/hooks/scan_lifecycle.py:907`` drops
 the lifecycle from enumeration even if a later step fails). The structural
 ordering here replaces the prose 3-step gate that used to live in
-``skills/lifecycle/references/wontfix.md``; see ADR-0004 for the multi-step
+``skills/build/references/wontfix.md``; see ADR-0004 for the multi-step
 sequentially-ordered-phase precedent this back-points to.
 
 Fail-forward, never transactional: the move is never rolled back. On

@@ -1171,7 +1171,7 @@ def _read_drift_protocol_breaches(feature: str) -> list[dict]:
     Returns the list of parsed event records (newest last), or an empty
     list if no events.log exists or no breaches were emitted. Each breach
     event carries the schema documented in
-    ``skills/lifecycle/references/review.md`` §4a:
+    ``skills/build/references/review.md`` §4a:
 
         {"ts": "<ISO 8601>", "event": "drift_protocol_breach",
          "feature": "<name>", "state": "detected",

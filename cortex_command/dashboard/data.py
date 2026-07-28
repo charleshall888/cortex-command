@@ -1388,7 +1388,7 @@ def parse_feature_pr_artifact(lifecycle_dir: Path, feature_slug: str) -> dict | 
     """Return parsed ``pr.json`` dict for a feature, or None when absent or invalid.
 
     Reads ``lifecycle_dir/{feature_slug}/pr.json``. The canonical schema
-    (per ``skills/lifecycle/references/complete.md``) contains ``number``,
+    (per ``skills/build/references/complete.md``) contains ``number``,
     ``url``, ``head_branch``, ``opened_at``, and ``repo``. Only ``number``
     and ``url`` are required for template rendering; additional fields are
     tolerated without raising.

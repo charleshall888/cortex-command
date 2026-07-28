@@ -194,7 +194,7 @@ def plan_decision(
         # 374 R5: carry the pause slug (and its kept-pause kind) so the row is
         # per-pause accountable. This hold is the `plan-approval` pause, whose
         # kind is `relayed-consent` (operator-resume-only) per
-        # skills/lifecycle/references/kept-pauses-data.toml.
+        # skills/build/references/kept-pauses-data.toml.
         if not _event_exists(events_log, "feature_paused"):
             log_event(
                 event="feature_paused",

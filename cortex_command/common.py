@@ -338,7 +338,7 @@ def _detect_lifecycle_phase_inner(
         }
 
     # Terminal-state check: feature_wontfix is the operator-decided
-    # terminal marker (per skills/lifecycle/references/wontfix.md). Treat
+    # terminal marker (per skills/build/references/wontfix.md). Treat
     # it as phase=complete so SessionStart enumeration drops the lifecycle
     # and statusline / dashboard surfaces match. Exact-match on event_type
     # (not substring scan) — placed before the legacy feature_complete
@@ -794,7 +794,7 @@ TIER_VOCABULARY = frozenset({"simple", "complex"})
 CRITICALITY_VOCABULARY = frozenset({"low", "medium", "high", "critical"})
 
 # Closed vocabulary for the four kept-pause kinds (the discriminant in
-# skills/lifecycle/references/kept-pauses-data.toml). Ordered most- to
+# skills/build/references/kept-pauses-data.toml). Ordered most- to
 # least-restrictive by resume authority: ``relayed-consent`` requires an
 # operator resume, so it is the fail-closed default for an under-specified
 # pause row (374 R5 / hazard 3 — a legacy kind-absent ``feature_paused`` row

@@ -15,7 +15,7 @@ since ``EnterWorktree`` is an Agent-SDK tool call this verb cannot make.
 
 The overnight-guard check here intentionally RE-IMPLEMENTS (does not
 subprocess into) the sidecar at
-``skills/lifecycle/references/_interactive_overnight_check.sh``: the sidecar
+``skills/build/references/_interactive_overnight_check.sh``: the sidecar
 is a skill-tree asset installed via the Claude Code plugin channel, while this
 module ships in the separately-installed cortex-command wheel — the two
 channels are not guaranteed co-located on disk at runtime, so this verb
@@ -124,7 +124,7 @@ def _check_overnight_guard(repo_root: Path) -> tuple[bool, Optional[str]]:
     # Coerce int-like pid values (e.g. a numeric string) before the liveness
     # check so this agrees with the sidecar's `kill -0 "$pid"` semantics,
     # which treats any numeric string as live. KEEP IN SYNC with
-    # skills/lifecycle/references/_interactive_overnight_check.sh — a change
+    # skills/build/references/_interactive_overnight_check.sh — a change
     # to one side's pid-shape handling must be mirrored in the other.
     try:
         pid = int(str(runner.get("pid")))

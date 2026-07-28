@@ -11,7 +11,7 @@ payload. The integer is declared **once per layer**:
 
 - **This constant** (``PROTOCOL_VERSION``) states what the *wheel* serves.
 - A **plugin-side expectation file**
-  (``skills/lifecycle/references/protocol-expectation.txt``, mirrored into the
+  (``skills/build/references/protocol-expectation.txt``, mirrored into the
   cortex-core plugin tree beside the loop prose that reads it) states the compat
   *range* the *prose* expects, versioned in the same commit as the prose.
 
@@ -45,7 +45,7 @@ PROTOCOL_VERSION = 3
 # The Phase-5 loop and Task 13's ``next`` verb call ``classify_protocol`` to decide
 # whether a served payload is compatible with the range the prose expects. It is a
 # **pure** classification function: the CALLER reads the plugin expectation file
-# (``skills/lifecycle/references/protocol-expectation.txt``) and passes ``min``/
+# (``skills/build/references/protocol-expectation.txt``) and passes ``min``/
 # ``max`` in as ``expected_min``/``expected_max``. That caller-supplied expectation
 # is what makes the fresh-plugin/stale-wheel direction — where the expectation's
 # floor is NEWER (higher) than the served value — exercisable in a test.
