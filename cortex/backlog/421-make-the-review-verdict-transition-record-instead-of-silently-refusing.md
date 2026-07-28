@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 21a08006-ba43-4456-98cd-ed42cec6087c
 title: Make the review-verdict transition record instead of silently refusing
-status: refined
+status: complete
 priority: high
 type: bug
 created: 2026-07-28
@@ -12,6 +12,7 @@ areas: ['overnight-runner']
 complexity: complex
 criticality: high
 spec: cortex/lifecycle/make-the-review-verdict-transition-record/spec.md
+lifecycle_phase: complete
 ---
 ## Why
 

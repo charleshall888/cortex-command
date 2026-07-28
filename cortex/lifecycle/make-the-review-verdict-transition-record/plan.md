@@ -70,7 +70,7 @@ a catch-all for any unlisted one.
   `grep -n 'if appended' cortex_command/pipeline/tests/test_review_verdict_recording.py` each return
   no matches; `uv run pytest cortex_command/pipeline/tests/test_review_verdict_recording.py tests/test_fold_completion.py -q`
   exits 0 (baseline: 79 passed across the five affected files).
-- **Status**: [ ] pending
+- **Status**: [x] done (b6efad53 2026-07-28T18:17:20-04:00)
 
 ### Task 2: Name omission as a sanctioned remedy in the from-state refusal
 - **Files**: `cortex_command/lifecycle/advance.py`, `cortex_command/lifecycle/tests/test_advance.py`
@@ -91,7 +91,7 @@ a catch-all for any unlisted one.
     are present in `preferred_remedy` rather than adding a parallel test.
 - **Verification**: `uv run pytest cortex_command/lifecycle/tests/test_advance.py -q` exits 0 and
   `grep -c 'preferred_remedy' cortex_command/lifecycle/tests/test_advance.py` ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] done (842b8aea 2026-07-28T18:17:43-04:00)
 
 ### Task 3: Pin the per-verb `from_state` invariant
 - **Files**: `cortex_command/lifecycle/tests/test_transition_table.py`
@@ -117,7 +117,7 @@ a catch-all for any unlisted one.
     editing the real table.
 - **Verification**: `uv run pytest cortex_command/lifecycle/tests/test_transition_table.py -q`
   exits 0 with two more tests collected than the baseline.
-- **Status**: [ ] pending
+- **Status**: [x] done (d707acb2 2026-07-28T18:18:20-04:00)
 
 ### Task 4: Document `advance-refused` and correct the stale event-count prose
 - **Files**: `skills/morning-review/references/walkthrough.md`,
@@ -148,7 +148,7 @@ a catch-all for any unlisted one.
   and `grep -c 'four synthetic events' skills/morning-review/references/walkthrough.md` = 0; after
   `just build-plugin` (working tree only, nothing staged) both checks hold for
   `plugins/cortex-overnight/skills/morning-review/references/walkthrough.md`.
-- **Status**: [ ] pending
+- **Status**: [x] done (44bc06bd 2026-07-28T18:19:37-04:00)
 
 ### Task 5: Make the morning-review call site route, gate, and report correctly
 - **Files**: `cortex_command/overnight/advance_lifecycle.py`,
@@ -221,7 +221,7 @@ a catch-all for any unlisted one.
   `git grep -n 'detect_lifecycle_phase' -- cortex_command/overnight/advance_lifecycle.py` and
   `git grep -n 'from_state=' -- cortex_command/overnight/advance_lifecycle.py` return no matches
   (the kwarg and the import, not explanatory prose).
-- **Status**: [ ] pending
+- **Status**: [x] done (14a951d7 2026-07-28T18:39:40-04:00)
 
 ## Risks
 
