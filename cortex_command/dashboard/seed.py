@@ -1,14 +1,16 @@
 """Dashboard seed script for writing realistic fixture files.
 
 Enables visual testing of every dashboard panel without running a real overnight
-workflow. All fixture files are written to their canonical dashboard-polled paths
-so the dashboard renders immediately after seeding.
+workflow. Fixtures are written under an isolated per-user fixture root — never
+the operator's own repository — at their canonical dashboard-polled paths, so
+``cortex dashboard --root <fixture root>`` renders them immediately.
 
 Entry point: python3 -m cortex_command.dashboard.seed
 """
 
 import argparse
 import json
+import os
 import shutil
 import sys
 import uuid
@@ -23,6 +25,50 @@ from cortex_command.common import _resolve_user_project_root
 # ---------------------------------------------------------------------------
 
 SEED_PREFIX = "overnight-seed"
+
+#: Marker file written inside the fixture root's ``.claude/`` directory. The
+#: dashboard's lifespan refuses to start against a root with no ``.claude/``
+#: (``app.py`` "Dashboard lifecycle root appears wrong"), so the directory is
+#: load-bearing; the marker gives the cleaner a content signal so it can prune
+#: ``.claude/`` only when the seeder is the sole thing that put anything there.
+SEED_MARKER_NAME = ".dashboard-seed-marker"
+
+
+# ---------------------------------------------------------------------------
+# Fixture root resolution
+# ---------------------------------------------------------------------------
+
+
+def _resolve_fixture_root() -> Path:
+    """Return ``${XDG_STATE_HOME:-$HOME/.local/state}/cortex-command/dashboard-seed``.
+
+    Resolved fresh on each call so tests can redirect ``XDG_STATE_HOME`` via
+    ``monkeypatch`` without any module-level caching — mirroring
+    ``cortex_command/init/install_state.py``.
+    """
+    return (
+        Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local" / "state")))
+        / "cortex-command"
+        / "dashboard-seed"
+    )
+
+
+def write_seed_marker(root: Path) -> Path:
+    """Create ``<root>/.claude/`` with the seed marker file and return its path.
+
+    The dashboard's startup guard requires a ``.claude/`` directory under the
+    root it serves, so the fixture root needs one. The marker file inside makes
+    the directory identifiable as seeder-created: an operator who points
+    ``--root`` at a real repository must never lose their own ``.claude/``.
+    """
+    marker_dir = root / ".claude"
+    marker_dir.mkdir(parents=True, exist_ok=True)
+    marker = marker_dir / SEED_MARKER_NAME
+    marker.write_text(
+        "Created by cortex-dashboard-seed to satisfy the dashboard's root check.\n",
+        encoding="utf-8",
+    )
+    return marker
 
 # All timestamps in fixture data are anchored so the session appears to have
 # started ~90 minutes ago
@@ -1133,11 +1179,18 @@ def write_all(repo_root: Path, session_id: str) -> None:
         print(f"  {path.relative_to(repo_root)}")
 
 
-def run_seed() -> None:
-    """Write all fixture files to their canonical locations."""
-    print(f"Seeding dashboard fixtures (session: {SESSION_ID}) …")
-    write_all(_resolve_user_project_root(), SESSION_ID)
+def run_seed(root: Path) -> None:
+    """Write all fixture files under ``root`` and print the viewing command.
+
+    Args:
+        root: Absolute path to the fixture root to seed.
+    """
+    print(f"Seeding dashboard fixtures into {root} (session: {SESSION_ID}) …")
+    write_seed_marker(root)
+    write_all(root, SESSION_ID)
     print("Done.")
+    print("\nView the seeded fixtures with:")
+    print(f"  cortex dashboard --root {root}")
 
 
 def clean_all(repo_root: Path) -> None:
@@ -1235,10 +1288,14 @@ def clean_all(repo_root: Path) -> None:
         print("  Nothing to remove.")
 
 
-def run_clean() -> None:
-    """Remove all files created by a previous seed run."""
-    print("Cleaning seed fixture files …")
-    clean_all(_resolve_user_project_root())
+def run_clean(root: Path) -> None:
+    """Remove all files created by a previous seed run under ``root``.
+
+    Args:
+        root: Absolute path to the fixture root to clean.
+    """
+    print(f"Cleaning seed fixture files under {root} …")
+    clean_all(root)
     print("Done.")
 
 
@@ -1248,12 +1305,21 @@ def run_clean() -> None:
 
 
 def main() -> None:
-    """Parse CLI arguments and dispatch to seed or clean."""
+    """Parse CLI arguments, resolve the fixture root, and dispatch."""
     parser = argparse.ArgumentParser(
         prog="python3 -m cortex_command.dashboard.seed",
         description=(
             "Write realistic fixture files for the monitoring dashboard, "
-            "enabling visual testing without running a real overnight workflow."
+            "enabling visual testing without running a real overnight workflow. "
+            "Fixtures go to an isolated per-user fixture root, not your repository."
+        ),
+    )
+    parser.add_argument(
+        "--root",
+        metavar="PATH",
+        help=(
+            "Seed (or clean) PATH instead of the default per-user fixture root "
+            "${XDG_STATE_HOME:-$HOME/.local/state}/cortex-command/dashboard-seed."
         ),
     )
     parser.add_argument(
@@ -1261,12 +1327,24 @@ def main() -> None:
         action="store_true",
         help="Remove all files previously written by the seed script.",
     )
+    parser.add_argument(
+        "--print-root",
+        action="store_true",
+        help="Print the resolved fixture root and exit without writing anything.",
+    )
     args = parser.parse_args()
 
-    if args.clean:
-        run_clean()
+    if args.root:
+        root = Path(args.root).expanduser().absolute()
     else:
-        run_seed()
+        root = _resolve_fixture_root()
+
+    if args.print_root:
+        print(root)
+    elif args.clean:
+        run_clean(root)
+    else:
+        run_seed(root)
 
 
 if __name__ == "__main__":
