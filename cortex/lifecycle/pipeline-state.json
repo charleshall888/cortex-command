@@ -1,0 +1,28 @@
+{
+  "phase": "complete",
+  "mode": "sequential",
+  "base_branch": "main",
+  "features": [
+    {
+      "name": "seed-pipeline-feature-one",
+      "backlog_id": "990",
+      "priority": 1,
+      "status": "implemented"
+    },
+    {
+      "name": "seed-pipeline-feature-two",
+      "backlog_id": "991",
+      "priority": 2,
+      "status": "implemented"
+    },
+    {
+      "name": "seed-pipeline-feature-three",
+      "backlog_id": "992",
+      "priority": 3,
+      "status": "pending"
+    }
+  ],
+  "overlap_analysis": "Features are independent with no shared file paths. Sequential execution is safe; no merge conflicts anticipated.",
+  "created": "2026-05-18",
+  "updated": "2026-05-18"
+}

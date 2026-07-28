@@ -1,11 +1,10 @@
 """Unit tests for :func:`cortex_command.backlog.create_item._get_next_id`.
 
-Covers:
-  - No reserved band: 990-999 are ordinary IDs, allocated like any other.
-  - Stale pre-containment seed fixtures are ignored, so a contaminated repo's
-    ID sequence is not jumped past them.
-  - Archived IDs participate in allocation, so an archived ID is never reused.
-  - Plain max(all) + 1, and zero-padding of IDs below 1000.
+Covers three cases:
+  - Seed range present: IDs 990-999 exist alongside normal IDs; allocator skips
+    the seed range and returns max(non-seed) + 1.
+  - No seed range: allocator returns max(all) + 1 as usual.
+  - Zero-padding: IDs below 1000 are zero-padded to three digits.
 """
 
 from __future__ import annotations
@@ -25,47 +24,20 @@ def _stub(backlog_dir: Path, filename: str) -> None:
     (backlog_dir / filename).write_text("# stub", encoding="utf-8")
 
 
-def test_allocates_into_the_former_reserved_band(tmp_path: Path) -> None:
-    """990-999 carry no reservation: they allocate like any other IDs.
+def test_skips_seed_range_when_seeds_present(tmp_path: Path) -> None:
+    """Allocator skips 990-999 seed range and returns max(non-seed) + 1.
 
-    A corpus topping out at 989 gets "990"; once that item exists, the next
-    allocation is "991". The old exclusion made 990 a permanent ceiling.
-    """
-    _stub(tmp_path, "989-foo.md")
-
-    assert _get_next_id(tmp_path) == "990"
-
-    _stub(tmp_path, "990-bar.md")
-
-    assert _get_next_id(tmp_path) == "991"
-
-
-def test_ignores_stale_pre_containment_seed_fixtures(tmp_path: Path) -> None:
-    """Stray ``99[0-9]-seed-*.md`` files never advance the ID sequence.
-
-    A repo that ran the pre-containment dashboard seeder and never cleaned up
-    carries 990-994; the next real ticket must still be "230", not "995".
+    Backlog contains item 229-foo.md plus seed fixtures 990-994.
+    Expected next ID is "230" (229 + 1), not 995.
     """
     _stub(tmp_path, "229-foo.md")
-    _stub(tmp_path, "990-seed-feature-alpha.md")
-    _stub(tmp_path, "991-seed-feature-beta.md")
-    _stub(tmp_path, "992-seed-feature-gamma.md")
-    _stub(tmp_path, "993-seed-feature-delta.md")
-    _stub(tmp_path, "994-seed-feature-epsilon.md")
+    _stub(tmp_path, "990-seed-alpha.md")
+    _stub(tmp_path, "991-seed-beta.md")
+    _stub(tmp_path, "992-seed-gamma.md")
+    _stub(tmp_path, "993-seed-delta.md")
+    _stub(tmp_path, "994-seed-epsilon.md")
 
     assert _get_next_id(tmp_path) == "230"
-
-
-def test_includes_archived_ids(tmp_path: Path) -> None:
-    """Archived IDs participate in allocation, so they are never reallocated.
-
-    An archived 500 above the main directory's max 010 yields "501".
-    """
-    _stub(tmp_path, "010-y.md")
-    (tmp_path / "archive").mkdir()
-    _stub(tmp_path / "archive", "500-x.md")
-
-    assert _get_next_id(tmp_path) == "501"
 
 
 def test_falls_back_to_max_plus_one_without_seeds(tmp_path: Path) -> None:

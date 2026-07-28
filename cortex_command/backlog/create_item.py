@@ -35,28 +35,13 @@ from cortex_command.common import _resolve_user_project_root, atomic_write, slug
 # ID and slug helpers
 # ---------------------------------------------------------------------------
 
-# Filenames the pre-containment dashboard seeder (cortex_command/dashboard/seed.py)
-# wrote into project repos. They are transient fixture data, never real backlog
-# items, so a repo that ran the old seeder and never cleaned up must not have its
-# ID sequence jumped past them.
-_SEED_FIXTURE_RE = re.compile(r"^\d+-seed-.+\.md$")
-
-
 def _get_next_id(backlog_dir: Path) -> str:
-    """Return the next available numeric ID (no zero-padding for IDs > 999).
-
-    Scans ``backlog_dir`` and its ``archive/`` subdirectory, so an archived ID is
-    never reallocated to a new item, and skips stale dashboard-seed fixtures.
-    """
-    paths = [
-        *backlog_dir.glob("[0-9]*-*.md"),
-        *(backlog_dir / "archive").glob("[0-9]*-*.md"),
-    ]
+    """Return the next available numeric ID (no zero-padding for IDs > 999)."""
     ids = [
         int(m.group(1))
-        for p in paths
-        if not _SEED_FIXTURE_RE.match(p.name)
+        for p in backlog_dir.glob("[0-9]*-*.md")
         if (m := re.match(r"^(\d+)-", p.name))
+        if not (990 <= int(m.group(1)) <= 999)  # reserved for dashboard-seed fixtures (cortex_command/dashboard/seed.py)
     ]
     next_id = (max(ids) + 1) if ids else 1
     return f"{next_id:03d}" if next_id < 1000 else str(next_id)

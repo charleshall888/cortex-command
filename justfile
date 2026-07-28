@@ -138,15 +138,6 @@ dashboard-seed:
 dashboard-seed-clean:
     uv run cortex-dashboard-seed --clean
 
-# Seed the isolated fixture root and serve the dashboard against it in one step
-dashboard-demo:
-    #!/usr/bin/env bash
-    set -e
-    uv run cortex-dashboard-seed
-    ROOT=$(uv run cortex-dashboard-seed --print-root)
-    echo "Dashboard running at http://127.0.0.1:{{dashboard_port}} (fixture root: $ROOT)"
-    uv run cortex dashboard --root "$ROOT" --port {{dashboard_port}}
-
 # --- Training deck ---
 
 training_port := env_var_or_default("TRAINING_PORT", "8000")

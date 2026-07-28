@@ -469,15 +469,6 @@ def _dispatch_dashboard(args: argparse.Namespace) -> int:
     ``uvicorn.run()`` so that any downstream readers in the FastAPI app
     see the same value the verb resolved (single source of truth).
 
-    ``--root`` follows the same in-process pattern: when supplied, the
-    resolved path is set as ``CORTEX_REPO_ROOT`` in this process only,
-    just before ``uvicorn.run()``. This is how a seeded fixture root is
-    viewed without the operator ever exporting or inline-prefixing
-    ``CORTEX_REPO_ROOT`` — that variable is the unvalidated root funnel
-    read by dozens of modules, so any persistence beyond this one command
-    would silently redirect backlog creation, lifecycle verbs, and
-    overnight writes into the throwaway tree.
-
     The PID file is written by the FastAPI app's lifespan to the
     XDG-compliant location resolved by
     :func:`cortex_command.dashboard.app._resolve_pid_path` —
@@ -503,14 +494,6 @@ def _dispatch_dashboard(args: argparse.Namespace) -> int:
     # ``DASHBOARD_PORT`` (preserves backward compatibility for code that
     # honored the env var before the ``--port`` flag existed).
     os.environ["DASHBOARD_PORT"] = str(port)
-
-    if args.root is not None:
-        from pathlib import Path
-
-        # In-process only: scoped to this server, never the operator's shell.
-        os.environ["CORTEX_REPO_ROOT"] = str(
-            Path(args.root).expanduser().resolve()
-        )
 
     uvicorn.run(
         "cortex_command.dashboard.app:app",
@@ -1244,15 +1227,6 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "TCP port to bind on 127.0.0.1 (default: 8080; honors "
             "DASHBOARD_PORT env var as fallback)"
-        ),
-    )
-    dashboard.add_argument(
-        "--root",
-        default=None,
-        help=(
-            "Project root to render (default: auto-discovered from cwd). "
-            "Set in-process for this server only — use it to view a seeded "
-            "fixture root without exporting CORTEX_REPO_ROOT into your shell."
         ),
     )
     dashboard.set_defaults(func=_dispatch_dashboard)

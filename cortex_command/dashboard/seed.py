@@ -1,76 +1,28 @@
 """Dashboard seed script for writing realistic fixture files.
 
 Enables visual testing of every dashboard panel without running a real overnight
-workflow. Fixtures are written under an isolated per-user fixture root — never
-the operator's own repository — at their canonical dashboard-polled paths, so
-``cortex dashboard --root <fixture root>`` renders them immediately.
+workflow. All fixture files are written to their canonical dashboard-polled paths
+so the dashboard renders immediately after seeding.
 
 Entry point: python3 -m cortex_command.dashboard.seed
 """
 
 import argparse
 import json
-import os
-import re
 import shutil
-import subprocess
 import sys
 import uuid
 from contextlib import suppress
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from cortex_command import common as _common
+from cortex_command.common import _resolve_user_project_root
 
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
 SEED_PREFIX = "overnight-seed"
-
-#: Marker file written inside the fixture root's ``.claude/`` directory. The
-#: dashboard's lifespan refuses to start against a root with no ``.claude/``
-#: (``app.py`` "Dashboard lifecycle root appears wrong"), so the directory is
-#: load-bearing; the marker gives the cleaner a content signal so it can prune
-#: ``.claude/`` only when the seeder is the sole thing that put anything there.
-SEED_MARKER_NAME = ".dashboard-seed-marker"
-
-
-# ---------------------------------------------------------------------------
-# Fixture root resolution
-# ---------------------------------------------------------------------------
-
-
-def _resolve_fixture_root() -> Path:
-    """Return ``${XDG_STATE_HOME:-$HOME/.local/state}/cortex-command/dashboard-seed``.
-
-    Resolved fresh on each call so tests can redirect ``XDG_STATE_HOME`` via
-    ``monkeypatch`` without any module-level caching — mirroring
-    ``cortex_command/init/install_state.py``.
-    """
-    return (
-        Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local" / "state")))
-        / "cortex-command"
-        / "dashboard-seed"
-    )
-
-
-def write_seed_marker(root: Path) -> Path:
-    """Create ``<root>/.claude/`` with the seed marker file and return its path.
-
-    The dashboard's startup guard requires a ``.claude/`` directory under the
-    root it serves, so the fixture root needs one. The marker file inside makes
-    the directory identifiable as seeder-created: an operator who points
-    ``--root`` at a real repository must never lose their own ``.claude/``.
-    """
-    marker_dir = root / ".claude"
-    marker_dir.mkdir(parents=True, exist_ok=True)
-    marker = marker_dir / SEED_MARKER_NAME
-    marker.write_text(
-        "Created by cortex-dashboard-seed to satisfy the dashboard's root check.\n",
-        encoding="utf-8",
-    )
-    return marker
 
 # All timestamps in fixture data are anchored so the session appears to have
 # started ~90 minutes ago
@@ -112,7 +64,6 @@ FEATURE_SLUGS = [
     "seed-feature-gamma",
     "seed-feature-delta",
     "seed-feature-epsilon",
-    "seed-feature-zeta",
 ]
 
 PIPELINE_FEATURES = [
@@ -125,20 +76,14 @@ PIPELINE_FEATURES = [
 # Overnight state and events writers
 # ---------------------------------------------------------------------------
 
-# Feature definitions: slug -> (status, started_offset, completed_offset, error)
+# Feature definitions: slug -> (status, round_assigned, started_offset, completed_offset, error)
 # Offsets are minutes_ago values (higher = further in the past)
-#
-# ``deferred`` is the overnight *run outcome*, not a backlog frontmatter state:
-# it has dedicated rendering (``app.py`` ``badge-amber``/``⚠``) that no other
-# fixture reaches, and no backlog record can express it — hence the sixth slug
-# rather than a status swap on an existing one.
 _FEATURES = [
     ("seed-feature-alpha", "merged",  88, 75, None),
     ("seed-feature-beta",  "merged",  85, 70, None),
     ("seed-feature-gamma", "running", 40, None, None),
     ("seed-feature-delta", "paused",  60, None, None),
     ("seed-feature-epsilon","failed", 35, 28, "Agent exited with non-zero status"),
-    ("seed-feature-zeta",  "deferred", 43, 25, None),
 ]
 
 
@@ -158,17 +103,12 @@ def _feature_entry(slug: str, status: str, round_assigned: int,
     }
 
 
-def write_overnight_state(root: Path, session_dir: Path, session_id: str) -> None:
+def write_overnight_state(session_dir: Path, session_id: str) -> None:
     """Write the overnight state JSON to the session directory and canonical path.
 
     Writes to:
       {session_dir}/overnight-state.json
-      {root}/cortex/lifecycle/overnight-state.json  (copy via shutil.copy2)
-
-    Args:
-        root: Absolute path to the fixture root every path is written under.
-        session_dir: Session directory for this seed run (under ``root``).
-        session_id: Session ID string for the seed session.
+      cortex/lifecycle/overnight-state.json  (copy via shutil.copy2)
     """
     # Build features dict
     features: dict = {}
@@ -178,7 +118,6 @@ def write_overnight_state(root: Path, session_dir: Path, session_id: str) -> Non
         "seed-feature-gamma":   3,
         "seed-feature-delta":   2,
         "seed-feature-epsilon": 3,
-        "seed-feature-zeta":    3,
     }
     for slug, status, started_offset, completed_offset, error in _FEATURES:
         features[slug] = _feature_entry(
@@ -211,14 +150,10 @@ def write_overnight_state(root: Path, session_dir: Path, session_id: str) -> Non
         },
         {
             "round_number": 3,
-            "features_attempted": [
-                "seed-feature-gamma",
-                "seed-feature-epsilon",
-                "seed-feature-zeta",
-            ],
+            "features_attempted": ["seed-feature-gamma", "seed-feature-epsilon"],
             "features_merged":    [],
             "features_paused":    [],
-            "features_deferred":  ["seed-feature-zeta"],
+            "features_deferred":  [],
             "started_at":         ts_at(44),
             "completed_at":       None,
         },
@@ -243,30 +178,26 @@ def write_overnight_state(root: Path, session_dir: Path, session_id: str) -> Non
     session_path.write_text(json.dumps(state, indent=2))
 
     # Copy to canonical path (must be a regular file, not a symlink)
-    canonical = root / "cortex" / "lifecycle" / "overnight-state.json"
+    repo_root = _resolve_user_project_root()
+    canonical = repo_root / "cortex" / "lifecycle" / "overnight-state.json"
     canonical.parent.mkdir(parents=True, exist_ok=True)
     # Remove symlink or existing file before copy so shutil.copy2 writes a fresh regular file
     if canonical.exists() or canonical.is_symlink():
         canonical.unlink()
     shutil.copy2(str(session_path), str(canonical))
 
-    print(f"  Wrote {session_path.relative_to(root)}")
+    print(f"  Wrote {session_path.relative_to(repo_root)}")
     print(f"  Copied to cortex/lifecycle/overnight-state.json")
 
 
-def write_overnight_events(root: Path, session_dir: Path, session_id: str) -> None:
+def write_overnight_events(session_dir: Path, session_id: str) -> None:
     """Write the overnight events JSONL log to the session directory and canonical path.
 
     Writes to:
       {session_dir}/overnight-events.log
-      {root}/cortex/lifecycle/overnight-events.log  (copy via shutil.copy2)
+      cortex/lifecycle/overnight-events.log  (copy via shutil.copy2)
 
     Produces 30+ JSONL events covering the full session timeline.
-
-    Args:
-        root: Absolute path to the fixture root every path is written under.
-        session_dir: Session directory for this seed run (under ``root``).
-        session_id: Session ID string for the seed session.
     """
     events = []
 
@@ -301,16 +232,9 @@ def write_overnight_events(root: Path, session_dir: Path, session_id: str) -> No
     # --- Round 3: gamma (running) + epsilon (failed) ---
     events.append(evt(44, "ROUND_START",    3))
     events.append(evt(43, "BATCH_ASSIGNED", 3,
-                       features=["seed-feature-gamma", "seed-feature-epsilon",
-                                 "seed-feature-zeta"]))
+                       features=["seed-feature-gamma", "seed-feature-epsilon"]))
     events.append(evt(42, "FEATURE_START",  3, feature="seed-feature-gamma"))
     events.append(evt(41, "FEATURE_START",  3, feature="seed-feature-epsilon"))
-    events.append(evt(40, "FEATURE_START",  3, feature="seed-feature-zeta"))
-
-    # zeta is deferred rather than merged, paused, or failed — the one run
-    # outcome with no backlog-frontmatter equivalent.
-    events.append(evt(25, "FEATURE_DEFERRED", 3, feature="seed-feature-zeta",
-                       reason="Deferred to a later round: depends on gamma landing"))
 
     # epsilon intermediate events before failure
     events.append(evt(38, "FEATURE_CHECKPOINT", 3, feature="seed-feature-epsilon",
@@ -355,45 +279,21 @@ def write_overnight_events(root: Path, session_dir: Path, session_id: str) -> No
     session_path.write_text(content)
 
     # Copy to canonical path (must be a regular file, not a symlink)
-    canonical = root / "cortex" / "lifecycle" / "overnight-events.log"
+    repo_root = _resolve_user_project_root()
+    canonical = repo_root / "cortex" / "lifecycle" / "overnight-events.log"
     canonical.parent.mkdir(parents=True, exist_ok=True)
     # Remove symlink or existing file before copy so shutil.copy2 writes a fresh regular file
     if canonical.exists() or canonical.is_symlink():
         canonical.unlink()
     shutil.copy2(str(session_path), str(canonical))
 
-    print(f"  Wrote {session_path.relative_to(root)} ({len(events)} events)")
+    print(f"  Wrote {session_path.relative_to(repo_root)} ({len(events)} events)")
     print(f"  Copied to cortex/lifecycle/overnight-events.log")
 
 
 # ---------------------------------------------------------------------------
 # Pipeline fixtures
 # ---------------------------------------------------------------------------
-
-
-#: Backlog fixture each pipeline feature claims to implement, by slug. The
-#: ``backlog_id`` written into ``pipeline-state.json`` is looked up from
-#: ``_BACKLOG_ITEMS`` through this map rather than written as a literal, so a
-#: renumbered fixture can never leave the pipeline state pointing at an id no
-#: backlog file carries.
-_PIPELINE_BACKLOG_SLUGS = {
-    "seed-pipeline-feature-one":   "seed-feature-alpha",
-    "seed-pipeline-feature-two":   "seed-feature-beta",
-    "seed-pipeline-feature-three": "seed-feature-gamma",
-}
-
-
-def _backlog_id_for_slug(slug: str) -> str:
-    """Return the zero-padded id of the ``_BACKLOG_ITEMS`` record for ``slug``.
-
-    Raises ``KeyError`` rather than inventing an id, so a slug that leaves the
-    fixture table fails loudly at seed time instead of writing a dangling
-    reference.
-    """
-    for record in _BACKLOG_ITEMS:
-        if record["slug"] == slug:
-            return f"{record['id']:03d}"
-    raise KeyError(f"No backlog fixture declares slug {slug!r}")
 
 
 def write_pipeline_fixtures(repo_root: Path) -> None:
@@ -403,19 +303,29 @@ def write_pipeline_fixtures(repo_root: Path) -> None:
 
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-    pipeline_statuses = ["implemented", "implemented", "pending"]
     pipeline_state = {
         "phase": "complete",
         "mode": "sequential",
         "base_branch": "main",
         "features": [
             {
-                "name": name,
-                "backlog_id": _backlog_id_for_slug(_PIPELINE_BACKLOG_SLUGS[name]),
-                "priority": i + 1,
-                "status": pipeline_statuses[i],
-            }
-            for i, name in enumerate(PIPELINE_FEATURES)
+                "name": PIPELINE_FEATURES[0],
+                "backlog_id": "990",
+                "priority": 1,
+                "status": "implemented",
+            },
+            {
+                "name": PIPELINE_FEATURES[1],
+                "backlog_id": "991",
+                "priority": 2,
+                "status": "implemented",
+            },
+            {
+                "name": PIPELINE_FEATURES[2],
+                "backlog_id": "992",
+                "priority": 3,
+                "status": "pending",
+            },
         ],
         "overlap_analysis": (
             "Features are independent with no shared file paths. "
@@ -460,7 +370,6 @@ def write_pipeline_fixtures(repo_root: Path) -> None:
         "seed-feature-gamma":   ("opus",   "complex", 25.0),
         "seed-feature-delta":   ("sonnet", "complex", 25.0),
         "seed-feature-epsilon": ("haiku",  "trivial",  5.0),
-        "seed-feature-zeta":    ("sonnet", "simple",  10.0),
     }
     seed_offsets = {
         "seed-feature-alpha":   88,
@@ -468,7 +377,6 @@ def write_pipeline_fixtures(repo_root: Path) -> None:
         "seed-feature-gamma":   42,
         "seed-feature-delta":   62,
         "seed-feature-epsilon": 41,
-        "seed-feature-zeta":    40,
     }
     for slug, (model, complexity, budget) in seed_dispatch_variants.items():
         event = {
@@ -510,7 +418,6 @@ def write_metrics(repo_root: Path) -> None:
         ("seed-feature-gamma",   1500.0, 0, True),
         ("seed-feature-delta",   1200.0, 1, False),
         ("seed-feature-epsilon", 2400.0, 0, True),
-        ("seed-feature-zeta",     900.0, 0, True),
     ]
 
     for slug, duration, rework, fpa in feature_data:
@@ -558,99 +465,6 @@ def write_metrics(repo_root: Path) -> None:
 # ---------------------------------------------------------------------------
 # Per-feature file writers
 # ---------------------------------------------------------------------------
-
-#: Reader-renderable lifecycle prose, keyed by slug. Only the feature a backlog
-#: fixture links to through ``lifecycle_slug`` needs these, so this is a lookup
-#: rather than something every feature gets — the same per-feature-variance
-#: pattern ``_FEATURE_TIER`` and ``_FEATURE_ESCALATIONS`` use. Each body is
-#: ``##``-sectioned markdown so the ticket reader has real structure to render
-#: rather than a placeholder line.
-_FEATURE_ARTIFACTS = {
-    "seed-feature-delta": {
-        "research.md": """\
-# Research: Implement rate limiting for export endpoints
-
-## Problem
-
-The export endpoints share a process-wide connection pool with the rest of the
-API, so a single client draining a bulk export starves interactive traffic. No
-limit is enforced today; the only backpressure is the pool timeout, which
-surfaces to callers as an opaque 500.
-
-## Prior Art
-
-Two shapes exist in the codebase already. The webhook handler retries on a
-fixed interval with no server-side limit, and the ingest path caps concurrency
-with a semaphore rather than a rate. Neither generalizes: a semaphore bounds
-in-flight work but not request volume, and client-side retry cannot protect a
-shared pool from a client that ignores it.
-
-## Options Considered
-
-- **Per-endpoint token bucket** — each export route gets its own budget.
-  Isolates a hot route, but a client fanning across routes still saturates the
-  pool.
-- **Global rolling window** — one shared quota across the API surface. Protects
-  the pool directly, at the cost of letting one noisy route consume everything.
-- **Hybrid** — a global ceiling with per-endpoint floors. Strictly better
-  behavior, materially more state to maintain and reason about.
-
-## Open Questions
-
-Whether export endpoints draw from the same quota as the rest of the API is
-unresolved, and the spec's own section 3.2 reads both ways. That ambiguity is
-what the escalation on this feature is about.
-""",
-        "spec.md": """\
-# Specification: Implement rate limiting for export endpoints
-
-## Problem Statement
-
-Bulk export requests share the API's connection pool with interactive traffic
-and are subject to no volume limit, so one client can starve every other caller
-until the pool times out.
-
-## Requirements
-
-1. **Export routes enforce a request-rate limit.** Requests beyond the limit
-   receive `429` rather than queuing against the pool.
-2. **The limit is observable.** Each response carries the remaining budget, so
-   a well-behaved client can pace itself without probing for the ceiling.
-3. **Rejections are retryable on a stated schedule** rather than leaving the
-   backoff strategy to each client's guess.
-
-## Edge Cases
-
-- **Clock skew across workers** — buckets refill against a monotonic source,
-  not wall time, so a skewed worker cannot hand out a larger budget.
-- **In-flight requests at a limit change** — a config reload never revokes
-  budget already granted; the new ceiling applies from the next refill.
-
-## Open Decisions
-
-Whether the quota is per-endpoint or shared across the API surface. Section 3.2
-of the source ticket references both, and the acceptance scaffolding assumes
-the opposite of what the plan task does — escalated rather than guessed.
-""",
-    },
-}
-
-
-def write_feature_artifacts(repo_root: Path, slug: str) -> list[str]:
-    """Write the reader-renderable lifecycle artifacts declared for ``slug``.
-
-    Returns the filenames written — empty for a feature with no entry in
-    ``_FEATURE_ARTIFACTS``.
-    """
-    artifacts = _FEATURE_ARTIFACTS.get(slug)
-    if not artifacts:
-        return []
-
-    feature_dir = repo_root / "cortex" / "lifecycle" / slug
-    feature_dir.mkdir(parents=True, exist_ok=True)
-    for name, body in artifacts.items():
-        (feature_dir / name).write_text(body, encoding="utf-8")
-    return list(artifacts)
 
 
 def write_feature_files(repo_root: Path, slug: str, status: str) -> None:
@@ -787,7 +601,6 @@ _FEATURE_TIER = {
     "seed-feature-gamma":   "complex",
     "seed-feature-delta":   "complex",
     "seed-feature-epsilon": "trivial",
-    "seed-feature-zeta":    "simple",
 }
 
 _FEATURE_CLARIFY_FINDINGS = {
@@ -796,7 +609,6 @@ _FEATURE_CLARIFY_FINDINGS = {
     "seed-feature-gamma":   5,
     "seed-feature-delta":   9,
     "seed-feature-epsilon": 1,
-    "seed-feature-zeta":    2,
 }
 
 # PR numbers for merged features
@@ -813,7 +625,6 @@ _FEATURE_DISPATCH_IDS = {
     "seed-feature-gamma":   uuid.UUID("33333333-3333-4333-8333-333333333333").hex,
     "seed-feature-delta":   uuid.UUID("44444444-4444-4444-8444-444444444444").hex,
     "seed-feature-epsilon": uuid.UUID("55555555-5555-4555-8555-555555555555").hex,
-    "seed-feature-zeta":    uuid.UUID("66666666-6666-4666-8666-666666666666").hex,
 }
 
 # Escalation question/context pairs for the paused (delta) and failed (epsilon)
@@ -938,10 +749,6 @@ def write_exit_reports(repo_root: Path, slug: str, status: str) -> int:
         "seed-feature-epsilon": [
             "Identified all callers of legacy webhook handler",
             "Removed handler module and updated routing table",
-        ],
-        "seed-feature-zeta": [
-            "Catalogued the CSV export paths the timeline view would reuse",
-            "Drafted spec for the multi-repo fleet roll-up",
         ],
     }
 
@@ -1197,338 +1004,40 @@ def write_enriched_events_log(repo_root: Path, slug: str, status: str) -> None:
 # Backlog seed items
 # ---------------------------------------------------------------------------
 
-#: The tag every fixture carries and the prefix every fixture title starts
-#: with. Both are applied by the renderer rather than repeated in the table, so
-#: a record cannot be added without them: the feed side does no filtering at
-#: all, and self-identification is the only thing separating fixtures from real
-#: work in a corpus that renders them identically.
-SEED_TAG = "dashboard-seed"
-SEED_TITLE_PREFIX = "Seed: "
-
-_DEFAULT_BODY = (
-    "Seed backlog item for dashboard visual testing, written by\n"
-    "`cortex-dashboard-seed` into an isolated fixture root — never a real backlog.\n"
-)
-
-#: The epic fixture's body. Its children are listed in prose as well as being
-#: reachable through each child's ``parent`` field, so a view that renders
-#: markdown and a view that walks the epic map both have something to show.
-_EPIC_BODY = """\
-## Summary
-
-Umbrella item for the command-station dashboard. The board reads its children
-through the epic map; this body states them literally so the reader has the
-same fact without a second lookup.
-
-## Children
-
-- 007 — board columns for the command station
-- 008 — ticket reader for the command station
-"""
-
-#: The one fixture body that exercises the full markdown pipeline. The reader
-#: enables only ``fenced_code`` and ``tables``, so a body carrying headings, a
-#: fenced block, and a pipe table covers every extension actually turned on.
-_RICH_BODY = """\
-## Context
-
-The reader renders item bodies with only the `fenced_code` and `tables`
-markdown extensions enabled. This body exercises both, plus headings, so a
-rendering regression in any of the three shows up against the seeded corpus.
-
-## Approach
-
-```python
-def render(item: dict) -> str:
-    # Render one ticket body through the dashboard's markdown pipeline.
-    return markdown.markdown(item["body"], extensions=["fenced_code", "tables"])
-```
-
-## Trade-offs
-
-| Option | Render cost | Fidelity |
-|---|---|---|
-| Raw text | none | none |
-| Fenced code only | low | partial |
-| Fenced code and tables | low | full |
-"""
-
-# Backlog fixture records. Required keys — ``id``, ``slug``, ``status``,
-# ``priority``, ``type``, ``title`` — are on every record; every other key is
-# optional and is emitted only when a record declares it, never as an empty
-# scalar. Optional keys: ``areas``, ``parent``, ``blocked_by``,
-# ``lifecycle_slug``, ``spec``, ``extra_tags``, ``body``, ``archived``.
-#
-# The roster is a coverage matrix, not a sample: between them these records
-# carry an epic with children, a child pointing at a non-epic parent, a
-# terminal status, all four blocker outcomes (internal non-terminal, internal
-# terminal, external, and not-found), both deferral vocabularies, a resolvable
-# lifecycle slug, a deliberately unresolvable one, and an archived id.
-#
-# IDs are ordinary low numbers: fixtures reach no real backlog any more, so
-# nothing needs a reserved band to stay out of an allocator's way.
-_BACKLOG_ITEMS: list[dict] = [
-    # 001 — the non-epic parent 009 points at, and the only record with areas.
-    {
-        "id": 1,
-        "slug": "seed-feature-alpha",
-        "status": "backlog",
-        "priority": "medium",
-        "type": "feature",
-        "title": "Add authentication to API gateway",
-        "areas": ["dashboard", "docs"],
-    },
-    # 002 — non-terminal blocker target for 007.
-    {
-        "id": 2,
-        "slug": "seed-feature-beta",
-        "status": "in_progress",
-        "priority": "high",
-        "type": "feature",
-        "title": "Migrate database schema to v2",
-    },
-    # 003 — terminal status: present on disk, filtered out of active items.
-    {
-        "id": 3,
-        "slug": "seed-feature-gamma",
-        "status": "abandoned",
-        "priority": "low",
-        "type": "chore",
-        "title": "Refactor notification pipeline",
-    },
-    # 004 — the one fixture whose lifecycle_slug resolves to a real directory,
-    # which is what gives the snapshot a non-null phase to report.
-    {
-        "id": 4,
-        "slug": "seed-feature-delta",
-        "status": "refined",
-        "priority": "medium",
-        "type": "feature",
-        "title": "Implement rate limiting for export endpoints",
-        "lifecycle_slug": "seed-feature-delta",
-    },
-    # 005 — terminal blocker target for 008: resolves silently, so the item it
-    # blocks still lands ready while the blocker stays listed.
-    {
-        "id": 5,
-        "slug": "seed-feature-epsilon",
-        "status": "complete",
-        "priority": "low",
-        "type": "chore",
-        "title": "Deprecate legacy webhook handler",
-    },
-    # 006 — the epic. schema_version must render as the string "1": the epic
-    # map raises SchemaVersionError on anything else, and this record is the
-    # one that flows through that path.
-    {
-        "id": 6,
-        "slug": "seed-epic-command-station",
-        "status": "backlog",
-        "priority": "high",
-        "type": "epic",
-        "title": "Command-station dashboard",
-        "body": _EPIC_BODY,
-    },
-    # 007 — epic child plus internal non-terminal blocker, so it is both a
-    # child in the epic map and ineligible with a blocker cause.
-    {
-        "id": 7,
-        "slug": "seed-epic-child-blocked",
-        "status": "backlog",
-        "priority": "medium",
-        "type": "feature",
-        "title": "Board columns for the command station",
-        "parent": "006",
-        "blocked_by": ["002"],
-    },
-    # 008 — epic child plus internal terminal blocker plus the rich body.
-    {
-        "id": 8,
-        "slug": "seed-epic-child-rich",
-        "status": "refined",
-        "priority": "high",
-        "type": "feature",
-        "title": "Ticket reader for the command station",
-        "parent": "006",
-        "blocked_by": ["005"],
-        "body": _RICH_BODY,
-    },
-    # 009 — parent names a feature, not an epic, so the epic map drops the
-    # relationship silently; the blocker is an external reference.
-    {
-        "id": 9,
-        "slug": "seed-orphan-child-external",
-        "status": "backlog",
-        "priority": "low",
-        "type": "chore",
-        "title": "Track the upstream sandbox regression",
-        "parent": "001",
-        "blocked_by": ["anthropics/claude-code#34243"],
-    },
-    # 010 — a well-formed UUID matching no item in the corpus: not_found, which
-    # is a different outcome from an external reference and renders differently.
-    {
-        "id": 10,
-        "slug": "seed-blocked-missing-uuid",
-        "status": "backlog",
-        "priority": "medium",
-        "type": "bug",
-        "title": "Poller drops the first event after a restart",
-        "blocked_by": ["6ba7b810-9dad-11d1-80b4-00c04fd430c8"],
-    },
-    # 011 — deferral vocabulary one: a deferred *status*, which is also the
-    # only fixture ineligible for a status reason rather than a blocker.
-    {
-        "id": 11,
-        "slug": "seed-deferred-status",
-        "status": "deferred",
-        "priority": "low",
-        "type": "feature",
-        "title": "Multi-repo fleet view",
-    },
-    # 012 — deferral vocabulary two: a deferred *tag* at an eligible status, so
-    # the item is legitimately ready and deferred at the same time.
-    {
-        "id": 12,
-        "slug": "seed-deferred-tag",
-        "status": "backlog",
-        "priority": "medium",
-        "type": "chore",
-        "title": "Prune the stale worktree registry",
-        "extra_tags": ["deferred"],
-    },
-    # 013 — the deliberate dead artifact link. Both paths name a lifecycle slug
-    # the seeder never creates, so every reader that follows them dangles. Do
-    # NOT "fix" this by pointing it at a directory that exists: dead artifact
-    # links are the defect the command-station epic exists to surface, and this
-    # is the corpus's only coverage of that state.
-    {
-        "id": 13,
-        "slug": "seed-dangling-artifact",
-        "status": "backlog",
-        "priority": "low",
-        "type": "feature",
-        "title": "Export the session timeline as CSV",
-        "lifecycle_slug": "seed-feature-missing",
-        "spec": "cortex/lifecycle/seed-feature-missing/spec.md",
-    },
-    # 014 — the archived fixture, written under cortex/backlog/archive/ so the
-    # snapshot has a non-empty archive id set and a non-zero archived count.
-    {
-        "id": 14,
-        "slug": "seed-archived-item",
-        "status": "complete",
-        "priority": "low",
-        "type": "chore",
-        "title": "Retire the v1 metrics exporter",
-        "archived": True,
-    },
+# Backlog seed definitions: (number, slug-suffix, status, priority, type, title)
+# Statuses are drawn from the canonical enum in skills/backlog/references/schema.md
+# so the items parse cleanly against any tool that validates frontmatter.
+_BACKLOG_ITEMS = [
+    (990, "seed-feature-alpha",   "backlog",     "medium", "feature", "Seed: Add authentication to API gateway"),
+    (991, "seed-feature-beta",    "in_progress", "high",   "feature", "Seed: Migrate database schema to v2"),
+    (992, "seed-feature-gamma",   "abandoned",   "low",    "chore",   "Seed: Refactor notification pipeline"),
+    (993, "seed-feature-delta",   "refined",     "medium", "feature", "Seed: Implement rate limiting for export endpoints"),
+    (994, "seed-feature-epsilon", "complete",    "low",    "chore",   "Seed: Deprecate legacy webhook handler"),
 ]
 
 # Deterministic UUIDs for seed backlog items so reruns don't churn frontmatter.
 # Distinct from the dispatch-ID range used for seed-feature-* lifecycle dirs.
-# One entry per _BACKLOG_ITEMS record, keyed by slug — a record without one
-# fails loudly at write time rather than emitting a colliding id.
 _BACKLOG_UUIDS = {
-    "seed-feature-alpha":         "5eed0001-0000-4000-8000-000000000001",
-    "seed-feature-beta":          "5eed0002-0000-4000-8000-000000000002",
-    "seed-feature-gamma":         "5eed0003-0000-4000-8000-000000000003",
-    "seed-feature-delta":         "5eed0004-0000-4000-8000-000000000004",
-    "seed-feature-epsilon":       "5eed0005-0000-4000-8000-000000000005",
-    "seed-epic-command-station":  "5eed0006-0000-4000-8000-000000000006",
-    "seed-epic-child-blocked":    "5eed0007-0000-4000-8000-000000000007",
-    "seed-epic-child-rich":       "5eed0008-0000-4000-8000-000000000008",
-    "seed-orphan-child-external": "5eed0009-0000-4000-8000-000000000009",
-    "seed-blocked-missing-uuid":  "5eed0010-0000-4000-8000-000000000010",
-    "seed-deferred-status":       "5eed0011-0000-4000-8000-000000000011",
-    "seed-deferred-tag":          "5eed0012-0000-4000-8000-000000000012",
-    "seed-dangling-artifact":     "5eed0013-0000-4000-8000-000000000013",
-    "seed-archived-item":         "5eed0014-0000-4000-8000-000000000014",
+    "seed-feature-alpha":   "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    "seed-feature-beta":    "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    "seed-feature-gamma":   "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    "seed-feature-delta":   "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+    "seed-feature-epsilon": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
 }
 
 
-def _quoted(value: str) -> str:
-    """Return ``value`` as a YAML double-quoted scalar."""
-    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
-    return f'"{escaped}"'
-
-
-def _inline_list(values: list[str]) -> str:
-    """Render a YAML array in the inline ``[a, b]`` form.
-
-    The backlog schema requires this form and the index reader's parser
-    understands no other, so the multiline ``- item`` form would silently
-    produce an empty list rather than an error.
-    """
-    return "[" + ", ".join(values) + "]"
-
-
-def _backlog_item_path(backlog_dir: Path, record: dict) -> Path:
-    """Return the file path for one fixture record — archived or active.
-
-    ``write_backlog_items`` and ``clean_all`` both route through this helper,
-    so the archive fixture can never be written to one path and looked for at
-    another. The archive directory is created under the isolated fixture root
-    only; the seeder never ``mkdir``s into a project tree.
-    """
-    directory = backlog_dir / "archive" if record.get("archived") else backlog_dir
-    return directory / f"{record['id']:03d}-{record['slug']}.md"
-
-
-def _render_backlog_item(record: dict, today: str) -> str:
-    """Render one fixture record as backlog markdown.
-
-    Fields are emitted in the canonical order from
-    skills/backlog/references/schema.md, and an optional field a record does
-    not declare is omitted entirely rather than written as an empty scalar —
-    an empty scalar reads back as a populated-but-blank field, which is a
-    different fact from "absent".
-
-    ``parent``, ``spec``, and ``lifecycle_slug`` are quoted because they sit on
-    the string-intended-key allowlist: unquoted, a numeric-looking value reads
-    back as an integer. ``schema_version`` is emitted as the exact string
-    ``"1"`` because the epic map raises on anything else.
-    """
-    lines = [
-        "---",
-        'schema_version: "1"',
-        f"uuid: {_BACKLOG_UUIDS[record['slug']]}",
-        f"title: {_quoted(SEED_TITLE_PREFIX + record['title'])}",
-        f"status: {record['status']}",
-        f"priority: {record['priority']}",
-        f"type: {record['type']}",
-        f"tags: {_inline_list([SEED_TAG, *record.get('extra_tags', [])])}",
-    ]
-    if "areas" in record:
-        lines.append(f"areas: {_inline_list(record['areas'])}")
-    lines.append(f"created: {today}")
-    lines.append(f"updated: {today}")
-    if "lifecycle_slug" in record:
-        lines.append(f"lifecycle_slug: {_quoted(record['lifecycle_slug'])}")
-    if "blocked_by" in record:
-        lines.append(f"blocked-by: {_inline_list(record['blocked_by'])}")
-    if "parent" in record:
-        lines.append(f"parent: {_quoted(record['parent'])}")
-    if "spec" in record:
-        lines.append(f"spec: {_quoted(record['spec'])}")
-    lines.append("---")
-
-    return "\n".join(lines) + "\n\n" + record.get("body", _DEFAULT_BODY)
-
-
 def write_backlog_items(repo_root: Path) -> list[Path]:
-    """Write one backlog markdown file per ``_BACKLOG_ITEMS`` record.
+    """Write 5 seed backlog items to cortex/backlog/990-seed-*.md through cortex/backlog/994-seed-*.md.
 
-    Active fixtures land in ``cortex/backlog/``; the archived fixture lands in
-    ``cortex/backlog/archive/``. ``clean_all`` derives its backlog removals
-    from the same table through the same ``_backlog_item_path`` helper, so
-    renumbering or re-siting a fixture cannot desynchronize the pair.
+    Frontmatter follows the schema at skills/backlog/references/schema.md
+    (schema_version, uuid, title, status, priority, type, created, updated) so
+    every tool that scans cortex/backlog/ parses these items without error.
 
     Args:
         repo_root: Absolute path to the repository root.
 
     Returns:
-        List of Paths that were written, archived fixture included.
+        List of Paths that were written.
     """
     backlog_dir = repo_root / "cortex" / "backlog"
     backlog_dir.mkdir(parents=True, exist_ok=True)
@@ -1536,13 +1045,30 @@ def write_backlog_items(repo_root: Path) -> list[Path]:
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     written: list[Path] = []
-    for record in _BACKLOG_ITEMS:
-        path = _backlog_item_path(backlog_dir, record)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(_render_backlog_item(record, today), encoding="utf-8")
+    for number, slug, status, priority, item_type, title in _BACKLOG_ITEMS:
+        filename = f"{number}-{slug}.md"
+        # YAML scalar containing a colon must be quoted so the second colon
+        # isn't parsed as a nested mapping key.
+        title_escaped = title.replace('"', '\\"')
+        content = (
+            f"---\n"
+            f"schema_version: \"1\"\n"
+            f"uuid: {_BACKLOG_UUIDS[slug]}\n"
+            f"title: \"{title_escaped}\"\n"
+            f"status: {status}\n"
+            f"priority: {priority}\n"
+            f"type: {item_type}\n"
+            f"tags: [dashboard-seed]\n"
+            f"created: {today}\n"
+            f"updated: {today}\n"
+            f"---\n"
+            f"\n"
+            f"Seed backlog item for dashboard visual testing.\n"
+        )
+        path = backlog_dir / filename
+        path.write_text(content, encoding="utf-8")
         written.append(path)
-        rel = path.relative_to(backlog_dir).as_posix()
-        print(f"  wrote cortex/backlog/{rel}")
+        print(f"  wrote cortex/backlog/{filename}")
 
     return written
 
@@ -1563,11 +1089,11 @@ def write_all(repo_root: Path, session_id: str) -> None:
     session_dir = repo_root / "cortex" / "lifecycle" / "sessions" / session_id
     written_paths: list[Path] = []
 
-    write_overnight_state(repo_root, session_dir, session_id)
+    write_overnight_state(session_dir, session_id)
     written_paths.append(session_dir / "overnight-state.json")
     written_paths.append(repo_root / "cortex" / "lifecycle" / "overnight-state.json")
 
-    write_overnight_events(repo_root, session_dir, session_id)
+    write_overnight_events(session_dir, session_id)
     written_paths.append(session_dir / "overnight-events.log")
     written_paths.append(repo_root / "cortex" / "lifecycle" / "overnight-events.log")
 
@@ -1577,10 +1103,6 @@ def write_all(repo_root: Path, session_id: str) -> None:
         written_paths.append(feature_dir / "agent-activity.jsonl")
         written_paths.append(feature_dir / "events.log")
         written_paths.append(feature_dir / "plan.md")
-
-        # research.md / spec.md for the feature a backlog fixture links to.
-        for name in write_feature_artifacts(repo_root, slug):
-            written_paths.append(feature_dir / name)
 
         # Extended fixtures for the new dashboard panels.
         # write_enriched_events_log replaces the basic events.log written above.
@@ -1611,109 +1133,39 @@ def write_all(repo_root: Path, session_id: str) -> None:
         print(f"  {path.relative_to(repo_root)}")
 
 
-def run_seed(root: Path) -> None:
-    """Write all fixture files under ``root`` and print the viewing command.
-
-    Args:
-        root: Absolute path to the fixture root to seed.
-    """
-    print(f"Seeding dashboard fixtures into {root} (session: {SESSION_ID}) …")
-    write_seed_marker(root)
-    write_all(root, SESSION_ID)
+def run_seed() -> None:
+    """Write all fixture files to their canonical locations."""
+    print(f"Seeding dashboard fixtures (session: {SESSION_ID}) …")
+    write_all(_resolve_user_project_root(), SESSION_ID)
     print("Done.")
-    print("\nView the seeded fixtures with:")
-    print(f"  cortex dashboard --root {root}")
 
 
-def _seed_content_signals() -> list[str]:
-    """Return the fixture names that identify a file as this seeder's output.
-
-    Derived from the same tables the writers render, so renaming a fixture can
-    never leave the cleaner matching a name nothing writes any more.
-    """
-    return [slug for slug, *_ in _FEATURES] + list(PIPELINE_FEATURES)
-
-
-def _unlink_if_seed_content(path: Path, rel: str, removed: list[str]) -> None:
-    """Unlink ``path`` only when its content names one of the seed fixtures.
-
-    ``--clean`` runs against whatever root it is handed, and a real repository
-    keeps live ``pipeline-state.json`` / ``pipeline-events.log`` /
-    ``metrics.json`` files at exactly these paths — some of them git-tracked.
-    The pre-containment cleaner unlinked all three unconditionally, so a
-    ``--clean`` in a never-seeded repository deleted real, tracked state. Every
-    removal is now gated on the file naming a fixture the writers produce.
-    """
-    if not path.exists():
-        return
-    try:
-        text = path.read_text(encoding="utf-8")
-    except Exception as exc:
-        print(f"  WARNING: could not read {rel} ({exc}), skipping.")
-        return
-    if any(signal in text for signal in _seed_content_signals()):
-        path.unlink()
-        removed.append(rel)
-    else:
-        print(f"  WARNING: {rel} names no seed fixture — not a seed file, skipping.")
-
-
-def _prune_empty_dirs(candidates: list[Path], root: Path, removed: list[str]) -> None:
-    """Remove each candidate directory under ``root``, deepest first, when empty.
-
-    The writers create directories as well as files — ``exit-reports/``,
-    ``learnings/``, one directory per feature, the session directory, and the
-    ``.claude/`` marker directory — and ``write_all``'s hand-assembled
-    ``written_paths`` records none of them. Without this pass a seed/clean cycle
-    leaves the tree littered with empty directories rather than returning it to
-    its prior state. A directory goes only when it is empty once its own files
-    are gone, so anything the seeder did not write keeps its parent alive.
-    """
-    for directory in sorted(set(candidates), key=lambda p: len(p.parts), reverse=True):
-        if directory == root or root not in directory.parents:
-            continue
-        if not directory.is_dir():
-            continue
-        # rmdir raises OSError when the directory still holds anything.
-        with suppress(OSError):
-            directory.rmdir()
-            removed.append(f"{directory.relative_to(root)}/")
-
-
-def clean_all(root: Path) -> None:
-    """Remove every file and directory a previous seed run wrote under ``root``.
-
-    Scoped entirely to ``root`` — the resolved fixture root — and derived from
-    the same tables the writers render, so the writer/cleaner pair cannot
-    desynchronize when the fixtures are renamed or renumbered.
+def clean_all(repo_root: Path) -> None:
+    """Remove all files created by a previous seed run.
 
     Removal order:
-    1. cortex/lifecycle/overnight-state.json — only if session_id names a seed session
-    2. cortex/lifecycle/overnight-events.log — only if its first line names one
-    3. cortex/lifecycle/sessions/{SEED_PREFIX}-*/ directories (shutil.rmtree)
-    4. One cortex/lifecycle/{slug}/ directory per ``_FEATURES`` entry (shutil.rmtree)
-    5. cortex/lifecycle/{pipeline-state.json,pipeline-events.log,metrics.json} —
-       only when their content names a seed fixture
-    6. One backlog file per ``_BACKLOG_ITEMS`` record, active or archived,
-       resolved through the same ``_backlog_item_path`` helper the writer uses
-    7. The ``.claude/`` seed marker file
-    8. Every directory the writers created, pruned bottom-up when empty
+    1. cortex/lifecycle/overnight-state.json — only if session_id contains "overnight-seed"
+    2. cortex/lifecycle/overnight-events.log — only if first line contains "overnight-seed"
+    3. cortex/lifecycle/sessions/overnight-seed-*/ directories (shutil.rmtree)
+    4. cortex/lifecycle/seed-feature-*/ directories (shutil.rmtree)
+    5. cortex/lifecycle/pipeline-state.json
+    6. cortex/lifecycle/pipeline-events.log
+    7. cortex/lifecycle/metrics.json
+    8. cortex/backlog/990-seed-*.md through cortex/backlog/994-seed-*.md
 
     Args:
-        root: Absolute path to the fixture root to clean.
+        repo_root: Absolute path to the repository root.
     """
     removed: list[str] = []
-    prune: list[Path] = []
-    lifecycle_dir = root / "cortex" / "lifecycle"
-    backlog_dir = root / "cortex" / "backlog"
+    lifecycle_dir = repo_root / "cortex" / "lifecycle"
 
-    # 1. cortex/lifecycle/overnight-state.json — guard: session_id must name a seed session
+    # 1. cortex/lifecycle/overnight-state.json — guard: session_id must contain "overnight-seed"
     overnight_state = lifecycle_dir / "overnight-state.json"
     if overnight_state.exists():
         try:
             data = json.loads(overnight_state.read_text(encoding="utf-8"))
             session_id = data.get("session_id", "")
-            if SEED_PREFIX in session_id:
+            if "overnight-seed" in session_id:
                 overnight_state.unlink()
                 removed.append("cortex/lifecycle/overnight-state.json")
             else:
@@ -1724,66 +1176,55 @@ def clean_all(root: Path) -> None:
         except Exception as exc:
             print(f"  WARNING: could not parse cortex/lifecycle/overnight-state.json ({exc}), skipping.")
 
-    # 2. cortex/lifecycle/overnight-events.log — guard: first line must name a seed session
+    # 2. cortex/lifecycle/overnight-events.log — guard: first line must contain "overnight-seed"
     overnight_events = lifecycle_dir / "overnight-events.log"
     if overnight_events.exists():
         try:
             first_line = overnight_events.read_text(encoding="utf-8").splitlines()[0]
-            if SEED_PREFIX in first_line:
+            if "overnight-seed" in first_line:
                 overnight_events.unlink()
                 removed.append("cortex/lifecycle/overnight-events.log")
             else:
                 print(
-                    "  WARNING: cortex/lifecycle/overnight-events.log first line does not name"
-                    f" a seed session ({SEED_PREFIX}) — not a seed file, skipping."
+                    "  WARNING: cortex/lifecycle/overnight-events.log first line does not contain"
+                    " 'overnight-seed' — not a seed file, skipping."
                 )
         except Exception as exc:
             print(f"  WARNING: could not read cortex/lifecycle/overnight-events.log ({exc}), skipping.")
 
-    # 3. Session directories — the prefix the seeder builds SESSION_ID from
+    # 3. cortex/lifecycle/sessions/overnight-seed-*/ directories
     sessions_dir = lifecycle_dir / "sessions"
-    for session_dir in sorted(sessions_dir.glob(f"{SEED_PREFIX}-*")):
-        if session_dir.is_dir():
-            shutil.rmtree(session_dir)
-            removed.append(f"cortex/lifecycle/sessions/{session_dir.name}/")
-    prune.append(sessions_dir)
+    for session_dir in sessions_dir.glob("overnight-seed-*/"):
+        shutil.rmtree(session_dir)
+        removed.append(f"cortex/lifecycle/sessions/{session_dir.name}/")
 
-    # 4. One feature directory per _FEATURES entry — the same table write_all
-    #    iterates, rather than a glob that would also match a real feature.
-    for slug, *_ in _FEATURES:
-        feature_dir = lifecycle_dir / slug
-        prune.extend([feature_dir / "exit-reports", feature_dir / "learnings", feature_dir])
-        if feature_dir.is_dir():
-            shutil.rmtree(feature_dir)
-            removed.append(f"cortex/lifecycle/{slug}/")
+    # 4. cortex/lifecycle/seed-feature-*/ directories
+    for feature_dir in lifecycle_dir.glob("seed-feature-*/"):
+        shutil.rmtree(feature_dir)
+        removed.append(f"cortex/lifecycle/{feature_dir.name}/")
 
-    # 5. Pipeline and metrics fixtures — content-gated (see _unlink_if_seed_content)
-    for name in ("pipeline-state.json", "pipeline-events.log", "metrics.json"):
-        _unlink_if_seed_content(lifecycle_dir / name, f"cortex/lifecycle/{name}", removed)
-
-    # 6. One backlog file per _BACKLOG_ITEMS record, sited exactly where
-    #    write_backlog_items sited it — archive/ included.
-    for record in _BACKLOG_ITEMS:
-        path = _backlog_item_path(backlog_dir, record)
-        with suppress(FileNotFoundError):
-            path.unlink()
-            removed.append(f"cortex/backlog/{path.relative_to(backlog_dir).as_posix()}")
-
-    # 7. The .claude/ marker file write_seed_marker created
-    marker_dir = root / ".claude"
+    # 5. cortex/lifecycle/pipeline-state.json
     with suppress(FileNotFoundError):
-        (marker_dir / SEED_MARKER_NAME).unlink()
-        removed.append(f".claude/{SEED_MARKER_NAME}")
+        (lifecycle_dir / "pipeline-state.json").unlink()
+        removed.append("cortex/lifecycle/pipeline-state.json")
 
-    # 8. Prune the directories the writers created, bottom-up, when empty
-    prune.extend([
-        marker_dir,
-        backlog_dir / "archive",
-        backlog_dir,
-        lifecycle_dir,
-        root / "cortex",
-    ])
-    _prune_empty_dirs(prune, root, removed)
+    # 6. cortex/lifecycle/pipeline-events.log
+    with suppress(FileNotFoundError):
+        (lifecycle_dir / "pipeline-events.log").unlink()
+        removed.append("cortex/lifecycle/pipeline-events.log")
+
+    # 7. cortex/lifecycle/metrics.json
+    with suppress(FileNotFoundError):
+        (lifecycle_dir / "metrics.json").unlink()
+        removed.append("cortex/lifecycle/metrics.json")
+
+    # 8. cortex/backlog/990-seed-*.md through cortex/backlog/994-seed-*.md
+    backlog_dir = repo_root / "cortex" / "backlog"
+    for prefix in range(990, 995):
+        for path in backlog_dir.glob(f"{prefix}-seed-*.md"):
+            with suppress(FileNotFoundError):
+                path.unlink()
+                removed.append(f"cortex/backlog/{path.name}")
 
     # Summary
     if removed:
@@ -1794,92 +1235,10 @@ def clean_all(root: Path) -> None:
         print("  Nothing to remove.")
 
 
-def run_clean(root: Path) -> None:
-    """Remove all files created by a previous seed run under ``root``.
-
-    Args:
-        root: Absolute path to the fixture root to clean.
-    """
-    print(f"Cleaning seed fixture files under {root} …")
-    clean_all(root)
-    print("Done.")
-
-
-# ---------------------------------------------------------------------------
-# Legacy fixture sweep (one-time migration off the pre-containment seeder)
-# ---------------------------------------------------------------------------
-
-#: Filenames the pre-containment seeder wrote into a project repository's own
-#: ``cortex/backlog/``. Anchored to exactly the five fixture names it produced:
-#: a broader ``^\d+-seed-`` would also match a real ticket titled something like
-#: "Seed feature flags system", whose file the operator would then lose.
-_LEGACY_FIXTURE_RE = re.compile(
-    r"^99\d-seed-feature-(alpha|beta|gamma|delta|epsilon)\.md$"
-)
-
-
-def _is_git_tracked(root: Path, path: Path) -> bool:
-    """Return True when git reports ``path`` as tracked inside ``root``."""
-    try:
-        result = subprocess.run(
-            ["git", "-C", str(root), "ls-files", "--error-unmatch", str(path)],
-            capture_output=True,
-            check=False,
-        )
-    except OSError:
-        # No git available (or no repository) — treat the file as untracked.
-        return False
-    return result.returncode == 0
-
-
-def sweep_legacy_backlog(project_root: Path) -> list[str]:
-    """Remove pre-containment seed fixture files from a project repository.
-
-    A one-time migration for operators who ran the seeder before it was
-    contained to an isolated fixture root: those runs left fixture files in the
-    real ``cortex/backlog/``, and with the ID reservation deleted the allocator
-    now sees them and would push a real sequence past them permanently.
-
-    Git-tracked matches are reported and left in place — untracking a committed
-    file is a reviewable commit, not something a fixture script does silently.
-
-    Args:
-        project_root: Absolute path to the project repository to sweep.
-
-    Returns:
-        Repo-relative paths of the files that were removed.
-    """
-    backlog_dir = project_root / "cortex" / "backlog"
-    removed: list[str] = []
-    for path in sorted(backlog_dir.glob("*.md")):
-        if not _LEGACY_FIXTURE_RE.match(path.name):
-            continue
-        if _is_git_tracked(project_root, path):
-            print(
-                f"  WARNING: cortex/backlog/{path.name} is git-tracked — skipping."
-                " Remove it with `git rm` so the deletion is reviewed."
-            )
-            continue
-        with suppress(FileNotFoundError):
-            path.unlink()
-            removed.append(f"cortex/backlog/{path.name}")
-    return removed
-
-
-def run_sweep_legacy(project_root: Path) -> None:
-    """Sweep pre-containment fixture files from ``project_root`` and report.
-
-    Args:
-        project_root: Absolute path to the project repository to sweep.
-    """
-    print(f"Sweeping pre-containment seed fixtures from {project_root} …")
-    removed = sweep_legacy_backlog(project_root)
-    if removed:
-        print("\nRemoved:")
-        for item in removed:
-            print(f"  {item}")
-    else:
-        print("  Nothing to remove.")
+def run_clean() -> None:
+    """Remove all files created by a previous seed run."""
+    print("Cleaning seed fixture files …")
+    clean_all(_resolve_user_project_root())
     print("Done.")
 
 
@@ -1889,21 +1248,12 @@ def run_sweep_legacy(project_root: Path) -> None:
 
 
 def main() -> None:
-    """Parse CLI arguments, resolve the fixture root, and dispatch."""
+    """Parse CLI arguments and dispatch to seed or clean."""
     parser = argparse.ArgumentParser(
         prog="python3 -m cortex_command.dashboard.seed",
         description=(
             "Write realistic fixture files for the monitoring dashboard, "
-            "enabling visual testing without running a real overnight workflow. "
-            "Fixtures go to an isolated per-user fixture root, not your repository."
-        ),
-    )
-    parser.add_argument(
-        "--root",
-        metavar="PATH",
-        help=(
-            "Seed (or clean) PATH instead of the default per-user fixture root "
-            "${XDG_STATE_HOME:-$HOME/.local/state}/cortex-command/dashboard-seed."
+            "enabling visual testing without running a real overnight workflow."
         ),
     )
     parser.add_argument(
@@ -1911,46 +1261,12 @@ def main() -> None:
         action="store_true",
         help="Remove all files previously written by the seed script.",
     )
-    parser.add_argument(
-        "--sweep-legacy",
-        metavar="PATH",
-        nargs="?",
-        const="",
-        help=(
-            "One-time migration: remove the backlog fixture files an older, "
-            "pre-containment seed run left in a project repository at PATH "
-            "(default: the resolved cortex project root). Git-tracked matches "
-            "are reported and left alone. Combine with --clean, or run alone."
-        ),
-    )
-    parser.add_argument(
-        "--print-root",
-        action="store_true",
-        help="Print the resolved fixture root and exit without writing anything.",
-    )
     args = parser.parse_args()
 
-    if args.root:
-        root = Path(args.root).expanduser().absolute()
-    else:
-        root = _resolve_fixture_root()
-
-    if args.print_root:
-        print(root)
-        return
-
-    sweeping = args.sweep_legacy is not None
-    if sweeping:
-        if args.sweep_legacy:
-            sweep_root = Path(args.sweep_legacy).expanduser().absolute()
-        else:
-            sweep_root = _common._resolve_user_project_root()
-        run_sweep_legacy(sweep_root)
-
     if args.clean:
-        run_clean(root)
-    elif not sweeping:
-        run_seed(root)
+        run_clean()
+    else:
+        run_seed()
 
 
 if __name__ == "__main__":
