@@ -1,6 +1,6 @@
 # Requirements: observability
 
-> Last gathered: 2026-04-03 (updated 2026-04-08)
+> Last gathered: 2026-04-03 (updated 2026-07-28)
 
 **Parent doc**: [requirements/project.md](project.md)
 
@@ -26,9 +26,9 @@ The observability area covers five subsystems that give the developer visibility
 
 ### Dashboard
 
-- **Description**: A read-only FastAPI web application at `http://localhost:$DASHBOARD_PORT` (default 8080) that monitors overnight sessions in real time. Renders session panels, feature cards, fleet overview, alerts, and a swim-lane timeline via HTMX polling.
-- **Inputs**: `cortex/lifecycle/overnight-state.json`, `cortex/lifecycle/pipeline-events.log`, per-feature `events.log` and `plan.md`, `cortex/lifecycle/active-session.json`
-- **Outputs**: Live HTML UI updated via HTMX at ~5s intervals; alert notifications dispatched via notify scripts
+- **Description**: A read-only FastAPI web application at `http://localhost:$DASHBOARD_PORT` (default 8080) that renders live session and pipeline state via HTMX polling. The panel inventory is owned by `docs/dashboard.md` and is not enumerated here.
+- **Inputs**: `~/.local/share/overnight-sessions/active-session.json` (session pointer), and per-session `overnight-state.json`, `overnight-events.log`, `pipeline-state.json`, `pipeline-events.log`, `metrics.json`; `cortex/lifecycle.config.md`; `cortex/backlog/*.md` and `cortex/backlog/archive/*.md` (read only when `resolve_backlog_backend(root) == "cortex-backlog"`); per-feature `events.log`, `plan.md`, `agent-activity.jsonl`, `escalations.jsonl`, `exit-reports/*.json`, `pr.json`, `learnings/progress.txt`
+- **Outputs**: Live HTML UI updated via HTMX at ~5s intervals; alerts surfaced in the UI and written to the dashboard process log (no external dispatch)
 - **Acceptance criteria**:
   - Feature status badges, model, and phase progress reflect actual state within 7s of a state file change
   - Cost tracking accumulates correctly from `agent-activity.jsonl` (incremental reads, no double-counting)
@@ -104,7 +104,7 @@ The observability area covers five subsystems that give the developer visibility
 
 ## Architectural Constraints
 
-- Dashboard binds to all network interfaces (`0.0.0.0`) and has no authentication. It is unauthenticated and accessible to any host on the local network by design. Not suitable for untrusted networks.
+- Dashboard has no authentication. Both launch paths — the `cortex dashboard` verb and the `just dashboard` recipe — bind `127.0.0.1` by default, so it is reachable only from the local host. Setting `DASHBOARD_HOST` (honoured by the `just` recipe only) is the sole way to expose it beyond loopback, and every host that can reach the bound interface gets unauthenticated access. Not suitable for untrusted networks.
 - Dashboard is read-only and cannot modify session state, trigger retries, or dispatch features.
 - ANSI output uses the basic 16-color palette (not 256-color or truecolor) to avoid byte overhead in Claude Code terminal width calculations.
 - Notifications are stateless — no retention, no inbox.
@@ -113,7 +113,6 @@ The observability area covers five subsystems that give the developer visibility
 
 - **Statusline**: `jq` (with pure-bash fallback), `git`
 - **Dashboard**: Python 3, FastAPI, Jinja2, HTMX (embedded in templates); file-based session state at `lifecycle/`
-- **Notifications (macOS)**: `terminal-notifier` (installed via `brew install terminal-notifier`); Ghostty terminal
 - **In-Session Status CLI**: Python 3, `cortex_command` package (installed as `cortex` console script via `uv tool install`); file-based session state at `cortex/lifecycle/sessions/` and `~/.local/share/overnight-sessions/`
 - **Sandbox Socket Access**: `jq`, `just` (setup recipe); `~/.claude/settings.json` and `~/.claude/settings.local.json`
 
