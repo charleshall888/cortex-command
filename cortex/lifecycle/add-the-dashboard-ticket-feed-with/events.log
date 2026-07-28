@@ -5,3 +5,5 @@
 {"ts": "2026-07-22T19:48:54Z", "event": "sentinel_advisory", "feature": "add-the-dashboard-ticket-feed-with", "expected_sha": "e89bb499f3aae1809e6f02cb65dd5ca8464117446db89f1b7979f42e0df1567a", "observed_sha_or_null": "e89bb499f3aae1809e6f02cb65dd5ca8464117446db89f1b7979f42e0df1567a"}
 {"ts": "2026-07-22T20:00:46Z", "event": "spec_approved", "feature": "add-the-dashboard-ticket-feed-with", "decision": "approved"}
 {"ts": "2026-07-22T20:00:46Z", "event": "phase_transition", "feature": "add-the-dashboard-ticket-feed-with", "from": "specify", "to": "plan"}
+{"ts": "2026-07-28T01:48:04Z", "event": "plan_approved", "feature": "add-the-dashboard-ticket-feed-with", "dispatch_choice": "trunk"}
+{"ts": "2026-07-28T01:48:04Z", "event": "phase_transition", "feature": "add-the-dashboard-ticket-feed-with", "from": "plan", "to": "implement"}
