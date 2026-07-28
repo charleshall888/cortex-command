@@ -1,30 +1,36 @@
 #!/bin/bash
-# tests/test_drift_enforcement.sh — verify the .githooks/pre-commit hook
-# detects dual-source drift under the policy-aware four-phase design
-# (classification guard, staged-driven build decision, conditional rebuild,
-# per-build-output-plugin drift loop).
+# tests/test_drift_enforcement.sh — verify the .githooks/pre-commit hook keeps
+# the plugin mirrors consistent under the policy-aware three-phase design
+# (classification guard, staged-driven build decision, staged-blob mirror
+# reconciliation).
+#
+# The reconciliation phase does NOT block on drift. It rebuilds the mirrors from
+# the STAGED blobs and folds the corrections into the commit, so the expected
+# outcome for a seeded source edit is exit 0 plus a staged mirror — not a
+# rejection. Building from the staged tree is what makes a concurrent session's
+# uncommitted work invisible here.
 #
 # Seven subtests:
 #   A) Seed drift in skills/commit/SKILL.md (top-level source) and stage it.
-#      Expect non-zero exit: Phase 2 flags BUILD_NEEDED, Phase 3 rebuilds,
-#      Phase 4 detects working-tree vs index drift.
+#      Expect exit 0, the mirror named in the hook output, staged, and carrying
+#      the seeded edit.
 #   B) Seed drift in hooks/cortex-validate-commit.sh (top-level source) and
-#      stage it. Same expected behavior as A.
+#      stage it. Same as A, and additionally asserts the mirror keeps mode
+#      100755 — flattening it to 100644 would ship broken plugin binstubs.
 #   C) Seed a no-op marker in plugins/cortex-ui-extras/skills/ui-lint/SKILL.md
 #      (hand-maintained plugin tree) and stage it. Expect exit 0: Phase 2 sees
-#      no build-output triggers so BUILD_NEEDED=0, Phase 3 skips, Phase 4
-#      iterates only BUILD_OUTPUT plugins so the hand-maintained edit is not
-#      inspected.
+#      no build-output triggers so BUILD_NEEDED=0 and the reconciliation phase
+#      is skipped entirely, leaving the hand-maintained edit untouched.
 #   D) Same as C but against plugins/cortex-pr-review/skills/pr-review/SKILL.md.
 #   E) Create plugins/cortex-unclassified/.claude-plugin/plugin.json with a
 #      valid name but an unclassified plugin dir. Stage it. Expect non-zero
-#      exit and stderr mentioning the fail-closed guard.
+#      exit and stderr mentioning the fail-closed guard. This is the only
+#      remaining blocking path in the hook's plugin handling.
 #   F) Seed a no-op marker directly in plugins/cortex-core/skills/commit/SKILL.md
 #      (build-output plugin tree) WITHOUT touching the top-level source, and
-#      stage only the plugin-tree path. Expect non-zero exit: Phase 2's
-#      build-output-plugin-path check fires, Phase 3 rebuilds from the
-#      unchanged top-level source, Phase 4 detects the regenerated tree
-#      diverges from the staged hand-edit.
+#      stage only the plugin-tree path. Expect exit 0 and the hand-edit gone
+#      from the staged mirror: the rebuild regenerates it from the unchanged
+#      canonical source, so the canonical side always wins.
 #   G) Seed drift in claude/hooks/cortex-tool-failure-tracker.sh (top-level
 #      source, mirrored into plugins/cortex-overnight/hooks/) and stage it.
 #      Same expected behavior as A and B. Regression guard for the Phase 2
@@ -32,6 +38,14 @@
 #      BUILD_NEEDED so the mirror cannot drift silently.
 #
 # Exit 0 iff all seven subtests pass. On failure, leaves the repo restored.
+#
+# Deliberately NOT wired into `just test`, despite the `run_test "test-install"
+# bash tests/test_install.sh` precedent in the justfile. This test seeds drift in
+# the real working tree and brackets it with `git stash push -u`; running that on
+# every test invocation, in a repo where concurrent sessions share one checkout,
+# reintroduces the class of hazard this hook exists to avoid — a stash taken
+# while a sibling session is mid-edit. Run it by hand when changing the hook:
+#     bash tests/test_drift_enforcement.sh
 
 set -uo pipefail
 
@@ -64,9 +78,14 @@ git stash push -u -- \
 cleanup_on_exit() {
     # Ordering is load-bearing: subtest E's untracked-from-HEAD residue must
     # be gone before stash pop runs, or pop refuses and the pre-existing
-    # dirty state stash is abandoned.
+    # dirty state stash is abandoned. The reconciliation phase stages mirrors
+    # into the real index when the hook is invoked standalone (as here), so any
+    # leftover staged mirror must be unstaged for the same reason — `git stash
+    # pop` refuses over a staged modification, and its failure is swallowed.
     rm -rf plugins/cortex-unclassified/ 2>/dev/null || true
     git restore --staged plugins/cortex-unclassified/ 2>/dev/null || true
+    git restore --staged "$INTERACTIVE_SKILL" 2>/dev/null || true
+    rm -f "$(git rev-parse --git-dir)/cortex-reconciled" 2>/dev/null || true
     git stash pop 2>/dev/null || true
 }
 
@@ -93,22 +112,27 @@ HOOK_OUTPUT_A="$("$HOOK" 2>&1)"
 HOOK_EXIT_A=$?
 set -e
 
-if [ "$HOOK_EXIT_A" -eq 0 ]; then
-    report_fail "Subtest A: hook exited 0 but drift was seeded (expected non-zero)."
+if [ "$HOOK_EXIT_A" -ne 0 ]; then
+    report_fail "Subtest A: hook exited $HOOK_EXIT_A (expected 0 — reconciliation folds the mirror in, it does not block)."
     echo "--- hook output ---"
     echo "$HOOK_OUTPUT_A"
     echo "-------------------"
 elif ! echo "$HOOK_OUTPUT_A" | grep -q "skills/commit/SKILL.md"; then
-    report_fail "Subtest A: hook exit $HOOK_EXIT_A but output does not mention skills/commit/SKILL.md."
+    report_fail "Subtest A: hook exit 0 but output does not name the reconciled skills/commit/SKILL.md mirror."
     echo "--- hook output ---"
     echo "$HOOK_OUTPUT_A"
     echo "-------------------"
+elif ! git diff --cached --name-only | grep -qx "$INTERACTIVE_SKILL"; then
+    report_fail "Subtest A: mirror $INTERACTIVE_SKILL was not staged into the commit."
+elif ! git show ":$INTERACTIVE_SKILL" 2>/dev/null | grep -q "drift-test-marker"; then
+    report_fail "Subtest A: staged mirror does not carry the seeded source edit."
 else
-    report_pass "Subtest A: hook detected skills drift (exit $HOOK_EXIT_A)."
+    report_pass "Subtest A: skills edit reconciled into the commit (exit 0)."
 fi
 
-git restore --staged "$SKILL_SRC" 2>/dev/null || true
-git checkout -- "$SKILL_SRC" 2>/dev/null || true
+git restore --staged "$SKILL_SRC" "$INTERACTIVE_SKILL" 2>/dev/null || true
+git checkout -- "$SKILL_SRC" "$INTERACTIVE_SKILL" 2>/dev/null || true
+rm -f "$(git rev-parse --git-dir)/cortex-reconciled"
 just build-plugin >/dev/null 2>&1 || true
 
 # --- Subtest B: top-level hook-script drift ---
@@ -122,22 +146,28 @@ HOOK_OUTPUT_B="$("$HOOK" 2>&1)"
 HOOK_EXIT_B=$?
 set -e
 
-if [ "$HOOK_EXIT_B" -eq 0 ]; then
-    report_fail "Subtest B: hook exited 0 but drift was seeded (expected non-zero)."
+B_MIRROR="plugins/cortex-core/hooks/cortex-validate-commit.sh"
+if [ "$HOOK_EXIT_B" -ne 0 ]; then
+    report_fail "Subtest B: hook exited $HOOK_EXIT_B (expected 0 — reconciliation folds the mirror in, it does not block)."
     echo "--- hook output ---"
     echo "$HOOK_OUTPUT_B"
     echo "-------------------"
-elif ! echo "$HOOK_OUTPUT_B" | grep -q "plugins/cortex-core/hooks/cortex-validate-commit.sh"; then
-    report_fail "Subtest B: hook exit $HOOK_EXIT_B but output does not mention plugins/cortex-core/hooks/cortex-validate-commit.sh."
+elif ! echo "$HOOK_OUTPUT_B" | grep -q "$B_MIRROR"; then
+    report_fail "Subtest B: hook exit 0 but output does not name the reconciled $B_MIRROR."
     echo "--- hook output ---"
     echo "$HOOK_OUTPUT_B"
     echo "-------------------"
+elif ! git diff --cached --name-only | grep -qx "$B_MIRROR"; then
+    report_fail "Subtest B: mirror $B_MIRROR was not staged into the commit."
+elif [ "$(git ls-files -s -- "$B_MIRROR" | awk '{print $1}')" != "100755" ]; then
+    report_fail "Subtest B: staged mirror lost its executable bit (expected mode 100755)."
 else
-    report_pass "Subtest B: hook detected hook-script drift (exit $HOOK_EXIT_B)."
+    report_pass "Subtest B: hook-script edit reconciled into the commit, mode preserved (exit 0)."
 fi
 
-git restore --staged "$HOOK_SRC" 2>/dev/null || true
-git checkout -- "$HOOK_SRC" 2>/dev/null || true
+git restore --staged "$HOOK_SRC" "$B_MIRROR" 2>/dev/null || true
+git checkout -- "$HOOK_SRC" "$B_MIRROR" 2>/dev/null || true
+rm -f "$(git rev-parse --git-dir)/cortex-reconciled"
 just build-plugin >/dev/null 2>&1 || true
 
 # --- Subtest C: hand-maintained pass-through (cortex-ui-extras) ---
@@ -228,22 +258,25 @@ HOOK_OUTPUT_F="$("$HOOK" 2>&1)"
 HOOK_EXIT_F=$?
 set -e
 
-if [ "$HOOK_EXIT_F" -eq 0 ]; then
-    report_fail "Subtest F: hook exited 0 but a staged hand-edit to a build-output plugin tree was seeded (expected non-zero)."
+if [ "$HOOK_EXIT_F" -ne 0 ]; then
+    report_fail "Subtest F: hook exited $HOOK_EXIT_F (expected 0 — the hand-edit is reverted from the canonical source, not blocked)."
     echo "--- hook output ---"
     echo "$HOOK_OUTPUT_F"
     echo "-------------------"
 elif ! echo "$HOOK_OUTPUT_F" | grep -q "plugins/cortex-core/skills/commit/SKILL.md"; then
-    report_fail "Subtest F: hook exit $HOOK_EXIT_F but output does not mention plugins/cortex-core/skills/commit/SKILL.md."
+    report_fail "Subtest F: hook exit 0 but output does not name the reconciled plugins/cortex-core/skills/commit/SKILL.md."
     echo "--- hook output ---"
     echo "$HOOK_OUTPUT_F"
     echo "-------------------"
+elif git show ":$INTERACTIVE_SKILL" 2>/dev/null | grep -q "drift-test-marker"; then
+    report_fail "Subtest F: the staged mirror still carries the hand-edit — it should be rebuilt from the unchanged canonical source."
 else
-    report_pass "Subtest F: hook detected direct build-output plugin hand-edit (exit $HOOK_EXIT_F)."
+    report_pass "Subtest F: direct build-output hand-edit reconciled away from the canonical source (exit 0)."
 fi
 
 git restore --staged "$INTERACTIVE_SKILL" 2>/dev/null || true
 git checkout -- "$INTERACTIVE_SKILL" 2>/dev/null || true
+rm -f "$(git rev-parse --git-dir)/cortex-reconciled"
 just build-plugin >/dev/null 2>&1 || true
 
 # --- Subtest G: top-level claude/hooks/cortex-* drift ---
@@ -261,22 +294,26 @@ HOOK_OUTPUT_G="$("$HOOK" 2>&1)"
 HOOK_EXIT_G=$?
 set -e
 
-if [ "$HOOK_EXIT_G" -eq 0 ]; then
-    report_fail "Subtest G: hook exited 0 but drift was seeded (expected non-zero)."
+G_MIRROR="plugins/cortex-overnight/hooks/cortex-tool-failure-tracker.sh"
+if [ "$HOOK_EXIT_G" -ne 0 ]; then
+    report_fail "Subtest G: hook exited $HOOK_EXIT_G (expected 0 — reconciliation folds the mirror in, it does not block)."
     echo "--- hook output ---"
     echo "$HOOK_OUTPUT_G"
     echo "-------------------"
-elif ! echo "$HOOK_OUTPUT_G" | grep -q "plugins/cortex-overnight/hooks/cortex-tool-failure-tracker.sh"; then
-    report_fail "Subtest G: hook exit $HOOK_EXIT_G but output does not mention plugins/cortex-overnight/hooks/cortex-tool-failure-tracker.sh."
+elif ! echo "$HOOK_OUTPUT_G" | grep -q "$G_MIRROR"; then
+    report_fail "Subtest G: hook exit 0 but output does not name the reconciled $G_MIRROR — the Phase 2 claude/hooks/cortex- trigger has regressed."
     echo "--- hook output ---"
     echo "$HOOK_OUTPUT_G"
     echo "-------------------"
+elif ! git diff --cached --name-only | grep -qx "$G_MIRROR"; then
+    report_fail "Subtest G: mirror $G_MIRROR was not staged into the commit."
 else
-    report_pass "Subtest G: hook detected claude/hooks/cortex-* drift (exit $HOOK_EXIT_G)."
+    report_pass "Subtest G: claude/hooks/cortex-* edit reconciled into the commit (exit 0)."
 fi
 
-git restore --staged "$CLAUDE_HOOK_SRC" 2>/dev/null || true
-git checkout -- "$CLAUDE_HOOK_SRC" 2>/dev/null || true
+git restore --staged "$CLAUDE_HOOK_SRC" "$G_MIRROR" 2>/dev/null || true
+git checkout -- "$CLAUDE_HOOK_SRC" "$G_MIRROR" 2>/dev/null || true
+rm -f "$(git rev-parse --git-dir)/cortex-reconciled"
 just build-plugin >/dev/null 2>&1 || true
 
 TOTAL=$((PASS_COUNT + FAIL_COUNT))

@@ -1,0 +1,30 @@
+#!/bin/bash
+# post-commit — resync the real index after the pre-commit mirror reconciliation.
+#
+# Under `git commit --only -- <paths>` (the form /cortex-core:commit mandates)
+# git builds a temporary index from HEAD plus the pathspec and holds
+# .git/index.lock for the entire pre-commit hook. The reconciliation phase can
+# therefore write only that temporary index; the real index keeps the previous
+# mirror blob. The commit itself is correct, but `git status` is left showing a
+# staged reversion of every mirror the hook corrected — which a later careless
+# `git commit` would apply.
+#
+# The lock is released by the time this runs, so resyncing those paths to HEAD
+# clears the residue. The working tree already matches HEAD (the reconciliation
+# copied the rebuilt blobs, or removed them), so this leaves a clean tree.
+#
+# Scoped strictly to the paths pre-commit recorded: no bare `git reset`, which
+# would unstage a concurrent session's work from the shared index.
+set -euo pipefail
+
+GIT_DIR_PATH="$(git rev-parse --git-dir)"
+RECORD="$GIT_DIR_PATH/cortex-reconciled"
+[ -f "$RECORD" ] || exit 0
+
+while IFS= read -r rel; do
+    [ -n "$rel" ] || continue
+    git reset -q HEAD -- "$rel" >/dev/null 2>&1 || true
+done < "$RECORD"
+
+rm -f "$RECORD"
+exit 0

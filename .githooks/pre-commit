@@ -522,7 +522,9 @@ fi
 # -----------------------------------------------------------------------------
 # Phase 2 — Short-circuit decision
 # -----------------------------------------------------------------------------
-staged=$(git diff --cached --name-only --diff-filter=ACMR)
+# D is included deliberately: a commit that only deletes a mirrored source must
+# still trigger the rebuild, or its mirror is orphaned in the tree.
+staged=$(git diff --cached --name-only --diff-filter=ACMRD)
 BUILD_NEEDED=0
 
 if echo "$staged" | grep -qE '^(skills/|bin/cortex-|hooks/cortex-|claude/hooks/cortex-)'; then
@@ -540,44 +542,84 @@ if [ "$BUILD_NEEDED" -eq 0 ]; then
 fi
 
 # -----------------------------------------------------------------------------
-# Phase 3 — Conditional build
+# Phase 3 — Staged-blob mirror reconciliation
 # -----------------------------------------------------------------------------
+# Rebuilds the plugin mirrors from the STAGED blobs — never the working tree —
+# and folds the result into this commit. Building from the staged tree is what
+# makes concurrent sessions safe: a sibling's uncommitted edits are absent from
+# this commit's index, so they can reach neither the mirrors nor the commit, and
+# the hook writes no source file in the shared working tree.
+#
+# This replaces the former Phase 3 (rebuild into the working tree) and Phase 4
+# (working-tree-vs-index drift block). That pair compared the wrong things: it
+# fired on a sibling session's unrelated edits, and under `git commit --only`
+# it degenerated to working-tree-vs-HEAD. It was also the only mechanism putting
+# rebuilt mirrors into a commit, so it could not simply be deleted.
+#
+# Under `--only`, git holds .git/index.lock for the whole hook, so only its
+# temporary index is writable here; `.githooks/post-commit` resyncs the real
+# index afterwards. Without that companion, `git status` retains a stale mirror
+# blob that reads as a staged reversion.
 if [ "$BUILD_NEEDED" -eq 1 ]; then
-    if ! just build-plugin >/dev/null 2>&1; then
-        echo "pre-commit: 'just build-plugin' failed — cannot verify plugin tree." >&2
-        just build-plugin >&2 || true
+    TMP="$(mktemp -d)"
+    trap 'rm -rf "$TMP"' EXIT
+
+    if ! git ls-files -z -- skills bin hooks claude/hooks plugins justfile \
+        | git checkout-index --prefix="$TMP/" -z --stdin; then
+        echo "pre-commit: could not materialise the staged tree for the mirror rebuild." >&2
         exit 1
     fi
-fi
 
-# -----------------------------------------------------------------------------
-# Phase 4 — Drift loop
-# -----------------------------------------------------------------------------
-drift_found=0
-drift_report=""
-for p in "${BO[@]}"; do
-    # Skip build-output plugins that exist neither on disk nor in the index
-    # (declared in policy but not yet materialized — no drift possible).
-    if [ ! -d "plugins/$p" ] && ! git ls-files --error-unmatch -- "plugins/$p/" >/dev/null 2>&1; then
-        continue
+    # The mirror file set before the rebuild is exactly the staged one. Diffing
+    # it against the set after tells us which paths `build-plugin` owns, so the
+    # justfile's SKILLS/HOOKS/BIN manifest is never duplicated here — and files
+    # under plugins/ that it does not write (cli_pin.py, server.py, .mcp.json,
+    # install_guard.py) appear in both sets unchanged and are left alone.
+    before="$(cd "$TMP" && find plugins -type f 2>/dev/null | LC_ALL=C sort)"
+    if ! ( cd "$TMP" && just build-plugin >/dev/null 2>&1 ); then
+        echo "pre-commit: 'just build-plugin' failed on the staged tree." >&2
+        ( cd "$TMP" && just build-plugin >&2 ) || true
+        exit 1
     fi
-    if ! git diff --quiet -- "plugins/$p/"; then
-        drift_found=1
-        drift_report+="  plugin: $p"$'\n'
-        while IFS= read -r line; do
-            drift_report+="    $line"$'\n'
-        done < <(git diff --name-only -- "plugins/$p/")
-    fi
-done
+    after="$(cd "$TMP" && find plugins -type f 2>/dev/null | LC_ALL=C sort)"
 
-if [ "$drift_found" -eq 1 ]; then
-    echo "pre-commit: dual-source drift detected in one or more build-output plugins." >&2
-    echo "The following files differ from the freshly-built plugin tree:" >&2
-    printf '%s' "$drift_report" >&2
-    echo "" >&2
-    echo "Fix: edit the top-level source (skills/, bin/cortex-*, hooks/cortex-validate-commit.sh)," >&2
-    echo "     run 'just build-plugin', and stage the regenerated plugin files." >&2
-    exit 1
+    reconciled=0
+    record="$(git rev-parse --git-dir)/cortex-reconciled"
+    : > "$record"
+
+    # Mirrors the rebuild created or changed.
+    while IFS= read -r rel; do
+        [ -n "$rel" ] || continue
+        newhash="$(git hash-object -w -- "$TMP/$rel")"
+        oldhash="$(git rev-parse ":$rel" 2>/dev/null || true)"
+        [ "$newhash" = "$oldhash" ] && continue
+        # Preserve the executable bit: bin/cortex-* and hooks/*.sh mirrors are
+        # mode 100755, and flattening them to 100644 would ship broken plugins.
+        if [ -x "$TMP/$rel" ]; then mode=100755; else mode=100644; fi
+        git update-index --add --cacheinfo "$mode,$newhash,$rel"
+        mkdir -p "$(dirname "$rel")"
+        cp -p "$TMP/$rel" "$rel"
+        printf '%s\n' "$rel" >> "$record"
+        reconciled=$((reconciled + 1))
+        echo "    $rel" >&2
+    done <<< "$after"
+
+    # Mirrors the rebuild removed, because their canonical source is deleted in
+    # this commit. Without this the mirror is orphaned in HEAD.
+    while IFS= read -r rel; do
+        [ -n "$rel" ] || continue
+        git update-index --force-remove -- "$rel"
+        rm -f "$rel"
+        printf '%s\n' "$rel" >> "$record"
+        reconciled=$((reconciled + 1))
+        echo "    $rel (removed)" >&2
+    done < <(comm -23 <(printf '%s\n' "$before") <(printf '%s\n' "$after"))
+
+    if [ "$reconciled" -gt 0 ]; then
+        echo "pre-commit: reconciled $reconciled plugin-mirror file(s) into this commit." >&2
+    else
+        rm -f "$record"
+    fi
 fi
 
 exit 0
