@@ -1060,43 +1060,338 @@ def write_enriched_events_log(repo_root: Path, slug: str, status: str) -> None:
 # Backlog seed items
 # ---------------------------------------------------------------------------
 
-# Backlog seed definitions: (number, slug-suffix, status, priority, type, title)
-# Statuses are drawn from the canonical enum in skills/backlog/references/schema.md
-# so the items parse cleanly against any tool that validates frontmatter.
-_BACKLOG_ITEMS = [
-    (990, "seed-feature-alpha",   "backlog",     "medium", "feature", "Seed: Add authentication to API gateway"),
-    (991, "seed-feature-beta",    "in_progress", "high",   "feature", "Seed: Migrate database schema to v2"),
-    (992, "seed-feature-gamma",   "abandoned",   "low",    "chore",   "Seed: Refactor notification pipeline"),
-    (993, "seed-feature-delta",   "refined",     "medium", "feature", "Seed: Implement rate limiting for export endpoints"),
-    (994, "seed-feature-epsilon", "complete",    "low",    "chore",   "Seed: Deprecate legacy webhook handler"),
+#: The tag every fixture carries and the prefix every fixture title starts
+#: with. Both are applied by the renderer rather than repeated in the table, so
+#: a record cannot be added without them: the feed side does no filtering at
+#: all, and self-identification is the only thing separating fixtures from real
+#: work in a corpus that renders them identically.
+SEED_TAG = "dashboard-seed"
+SEED_TITLE_PREFIX = "Seed: "
+
+_DEFAULT_BODY = (
+    "Seed backlog item for dashboard visual testing, written by\n"
+    "`cortex-dashboard-seed` into an isolated fixture root — never a real backlog.\n"
+)
+
+#: The epic fixture's body. Its children are listed in prose as well as being
+#: reachable through each child's ``parent`` field, so a view that renders
+#: markdown and a view that walks the epic map both have something to show.
+_EPIC_BODY = """\
+## Summary
+
+Umbrella item for the command-station dashboard. The board reads its children
+through the epic map; this body states them literally so the reader has the
+same fact without a second lookup.
+
+## Children
+
+- 007 — board columns for the command station
+- 008 — ticket reader for the command station
+"""
+
+#: The one fixture body that exercises the full markdown pipeline. The reader
+#: enables only ``fenced_code`` and ``tables``, so a body carrying headings, a
+#: fenced block, and a pipe table covers every extension actually turned on.
+_RICH_BODY = """\
+## Context
+
+The reader renders item bodies with only the `fenced_code` and `tables`
+markdown extensions enabled. This body exercises both, plus headings, so a
+rendering regression in any of the three shows up against the seeded corpus.
+
+## Approach
+
+```python
+def render(item: dict) -> str:
+    # Render one ticket body through the dashboard's markdown pipeline.
+    return markdown.markdown(item["body"], extensions=["fenced_code", "tables"])
+```
+
+## Trade-offs
+
+| Option | Render cost | Fidelity |
+|---|---|---|
+| Raw text | none | none |
+| Fenced code only | low | partial |
+| Fenced code and tables | low | full |
+"""
+
+# Backlog fixture records. Required keys — ``id``, ``slug``, ``status``,
+# ``priority``, ``type``, ``title`` — are on every record; every other key is
+# optional and is emitted only when a record declares it, never as an empty
+# scalar. Optional keys: ``areas``, ``parent``, ``blocked_by``,
+# ``lifecycle_slug``, ``spec``, ``extra_tags``, ``body``, ``archived``.
+#
+# The roster is a coverage matrix, not a sample: between them these records
+# carry an epic with children, a child pointing at a non-epic parent, a
+# terminal status, all four blocker outcomes (internal non-terminal, internal
+# terminal, external, and not-found), both deferral vocabularies, a resolvable
+# lifecycle slug, a deliberately unresolvable one, and an archived id.
+#
+# IDs are ordinary low numbers: fixtures reach no real backlog any more, so
+# nothing needs a reserved band to stay out of an allocator's way.
+_BACKLOG_ITEMS: list[dict] = [
+    # 001 — the non-epic parent 009 points at, and the only record with areas.
+    {
+        "id": 1,
+        "slug": "seed-feature-alpha",
+        "status": "backlog",
+        "priority": "medium",
+        "type": "feature",
+        "title": "Add authentication to API gateway",
+        "areas": ["dashboard", "docs"],
+    },
+    # 002 — non-terminal blocker target for 007.
+    {
+        "id": 2,
+        "slug": "seed-feature-beta",
+        "status": "in_progress",
+        "priority": "high",
+        "type": "feature",
+        "title": "Migrate database schema to v2",
+    },
+    # 003 — terminal status: present on disk, filtered out of active items.
+    {
+        "id": 3,
+        "slug": "seed-feature-gamma",
+        "status": "abandoned",
+        "priority": "low",
+        "type": "chore",
+        "title": "Refactor notification pipeline",
+    },
+    # 004 — the one fixture whose lifecycle_slug resolves to a real directory,
+    # which is what gives the snapshot a non-null phase to report.
+    {
+        "id": 4,
+        "slug": "seed-feature-delta",
+        "status": "refined",
+        "priority": "medium",
+        "type": "feature",
+        "title": "Implement rate limiting for export endpoints",
+        "lifecycle_slug": "seed-feature-delta",
+    },
+    # 005 — terminal blocker target for 008: resolves silently, so the item it
+    # blocks still lands ready while the blocker stays listed.
+    {
+        "id": 5,
+        "slug": "seed-feature-epsilon",
+        "status": "complete",
+        "priority": "low",
+        "type": "chore",
+        "title": "Deprecate legacy webhook handler",
+    },
+    # 006 — the epic. schema_version must render as the string "1": the epic
+    # map raises SchemaVersionError on anything else, and this record is the
+    # one that flows through that path.
+    {
+        "id": 6,
+        "slug": "seed-epic-command-station",
+        "status": "backlog",
+        "priority": "high",
+        "type": "epic",
+        "title": "Command-station dashboard",
+        "body": _EPIC_BODY,
+    },
+    # 007 — epic child plus internal non-terminal blocker, so it is both a
+    # child in the epic map and ineligible with a blocker cause.
+    {
+        "id": 7,
+        "slug": "seed-epic-child-blocked",
+        "status": "backlog",
+        "priority": "medium",
+        "type": "feature",
+        "title": "Board columns for the command station",
+        "parent": "006",
+        "blocked_by": ["002"],
+    },
+    # 008 — epic child plus internal terminal blocker plus the rich body.
+    {
+        "id": 8,
+        "slug": "seed-epic-child-rich",
+        "status": "refined",
+        "priority": "high",
+        "type": "feature",
+        "title": "Ticket reader for the command station",
+        "parent": "006",
+        "blocked_by": ["005"],
+        "body": _RICH_BODY,
+    },
+    # 009 — parent names a feature, not an epic, so the epic map drops the
+    # relationship silently; the blocker is an external reference.
+    {
+        "id": 9,
+        "slug": "seed-orphan-child-external",
+        "status": "backlog",
+        "priority": "low",
+        "type": "chore",
+        "title": "Track the upstream sandbox regression",
+        "parent": "001",
+        "blocked_by": ["anthropics/claude-code#34243"],
+    },
+    # 010 — a well-formed UUID matching no item in the corpus: not_found, which
+    # is a different outcome from an external reference and renders differently.
+    {
+        "id": 10,
+        "slug": "seed-blocked-missing-uuid",
+        "status": "backlog",
+        "priority": "medium",
+        "type": "bug",
+        "title": "Poller drops the first event after a restart",
+        "blocked_by": ["6ba7b810-9dad-11d1-80b4-00c04fd430c8"],
+    },
+    # 011 — deferral vocabulary one: a deferred *status*, which is also the
+    # only fixture ineligible for a status reason rather than a blocker.
+    {
+        "id": 11,
+        "slug": "seed-deferred-status",
+        "status": "deferred",
+        "priority": "low",
+        "type": "feature",
+        "title": "Multi-repo fleet view",
+    },
+    # 012 — deferral vocabulary two: a deferred *tag* at an eligible status, so
+    # the item is legitimately ready and deferred at the same time.
+    {
+        "id": 12,
+        "slug": "seed-deferred-tag",
+        "status": "backlog",
+        "priority": "medium",
+        "type": "chore",
+        "title": "Prune the stale worktree registry",
+        "extra_tags": ["deferred"],
+    },
+    # 013 — the deliberate dead artifact link. Both paths name a lifecycle slug
+    # the seeder never creates, so every reader that follows them dangles. Do
+    # NOT "fix" this by pointing it at a directory that exists: dead artifact
+    # links are the defect the command-station epic exists to surface, and this
+    # is the corpus's only coverage of that state.
+    {
+        "id": 13,
+        "slug": "seed-dangling-artifact",
+        "status": "backlog",
+        "priority": "low",
+        "type": "feature",
+        "title": "Export the session timeline as CSV",
+        "lifecycle_slug": "seed-feature-missing",
+        "spec": "cortex/lifecycle/seed-feature-missing/spec.md",
+    },
+    # 014 — the archived fixture, written under cortex/backlog/archive/ so the
+    # snapshot has a non-empty archive id set and a non-zero archived count.
+    {
+        "id": 14,
+        "slug": "seed-archived-item",
+        "status": "complete",
+        "priority": "low",
+        "type": "chore",
+        "title": "Retire the v1 metrics exporter",
+        "archived": True,
+    },
 ]
 
 # Deterministic UUIDs for seed backlog items so reruns don't churn frontmatter.
 # Distinct from the dispatch-ID range used for seed-feature-* lifecycle dirs.
+# One entry per _BACKLOG_ITEMS record, keyed by slug — a record without one
+# fails loudly at write time rather than emitting a colliding id.
 _BACKLOG_UUIDS = {
-    "seed-feature-alpha":   "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-    "seed-feature-beta":    "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-    "seed-feature-gamma":   "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
-    "seed-feature-delta":   "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
-    "seed-feature-epsilon": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+    "seed-feature-alpha":         "5eed0001-0000-4000-8000-000000000001",
+    "seed-feature-beta":          "5eed0002-0000-4000-8000-000000000002",
+    "seed-feature-gamma":         "5eed0003-0000-4000-8000-000000000003",
+    "seed-feature-delta":         "5eed0004-0000-4000-8000-000000000004",
+    "seed-feature-epsilon":       "5eed0005-0000-4000-8000-000000000005",
+    "seed-epic-command-station":  "5eed0006-0000-4000-8000-000000000006",
+    "seed-epic-child-blocked":    "5eed0007-0000-4000-8000-000000000007",
+    "seed-epic-child-rich":       "5eed0008-0000-4000-8000-000000000008",
+    "seed-orphan-child-external": "5eed0009-0000-4000-8000-000000000009",
+    "seed-blocked-missing-uuid":  "5eed0010-0000-4000-8000-000000000010",
+    "seed-deferred-status":       "5eed0011-0000-4000-8000-000000000011",
+    "seed-deferred-tag":          "5eed0012-0000-4000-8000-000000000012",
+    "seed-dangling-artifact":     "5eed0013-0000-4000-8000-000000000013",
+    "seed-archived-item":         "5eed0014-0000-4000-8000-000000000014",
 }
 
 
+def _quoted(value: str) -> str:
+    """Return ``value`` as a YAML double-quoted scalar."""
+    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
+
+
+def _inline_list(values: list[str]) -> str:
+    """Render a YAML array in the inline ``[a, b]`` form.
+
+    The backlog schema requires this form and the index reader's parser
+    understands no other, so the multiline ``- item`` form would silently
+    produce an empty list rather than an error.
+    """
+    return "[" + ", ".join(values) + "]"
+
+
+def _backlog_item_path(backlog_dir: Path, record: dict) -> Path:
+    """Return the file path for one fixture record — archived or active.
+
+    ``write_backlog_items`` and ``clean_all`` both route through this helper,
+    so the archive fixture can never be written to one path and looked for at
+    another. The archive directory is created under the isolated fixture root
+    only; the seeder never ``mkdir``s into a project tree.
+    """
+    directory = backlog_dir / "archive" if record.get("archived") else backlog_dir
+    return directory / f"{record['id']:03d}-{record['slug']}.md"
+
+
+def _render_backlog_item(record: dict, today: str) -> str:
+    """Render one fixture record as backlog markdown.
+
+    Fields are emitted in the canonical order from
+    skills/backlog/references/schema.md, and an optional field a record does
+    not declare is omitted entirely rather than written as an empty scalar —
+    an empty scalar reads back as a populated-but-blank field, which is a
+    different fact from "absent".
+
+    ``parent``, ``spec``, and ``lifecycle_slug`` are quoted because they sit on
+    the string-intended-key allowlist: unquoted, a numeric-looking value reads
+    back as an integer. ``schema_version`` is emitted as the exact string
+    ``"1"`` because the epic map raises on anything else.
+    """
+    lines = [
+        "---",
+        'schema_version: "1"',
+        f"uuid: {_BACKLOG_UUIDS[record['slug']]}",
+        f"title: {_quoted(SEED_TITLE_PREFIX + record['title'])}",
+        f"status: {record['status']}",
+        f"priority: {record['priority']}",
+        f"type: {record['type']}",
+        f"tags: {_inline_list([SEED_TAG, *record.get('extra_tags', [])])}",
+    ]
+    if "areas" in record:
+        lines.append(f"areas: {_inline_list(record['areas'])}")
+    lines.append(f"created: {today}")
+    lines.append(f"updated: {today}")
+    if "lifecycle_slug" in record:
+        lines.append(f"lifecycle_slug: {_quoted(record['lifecycle_slug'])}")
+    if "blocked_by" in record:
+        lines.append(f"blocked-by: {_inline_list(record['blocked_by'])}")
+    if "parent" in record:
+        lines.append(f"parent: {_quoted(record['parent'])}")
+    if "spec" in record:
+        lines.append(f"spec: {_quoted(record['spec'])}")
+    lines.append("---")
+
+    return "\n".join(lines) + "\n\n" + record.get("body", _DEFAULT_BODY)
+
+
 def write_backlog_items(repo_root: Path) -> list[Path]:
-    """Write one ``cortex/backlog/{number}-{slug}.md`` file per ``_BACKLOG_ITEMS`` entry.
+    """Write one backlog markdown file per ``_BACKLOG_ITEMS`` record.
 
-    ``clean_all`` derives its backlog removals from the same table and the same
-    filename shape, so renumbering the fixtures cannot desynchronize the pair.
-
-    Frontmatter follows the schema at skills/backlog/references/schema.md
-    (schema_version, uuid, title, status, priority, type, created, updated) so
-    every tool that scans cortex/backlog/ parses these items without error.
+    Active fixtures land in ``cortex/backlog/``; the archived fixture lands in
+    ``cortex/backlog/archive/``. ``clean_all`` derives its backlog removals
+    from the same table through the same ``_backlog_item_path`` helper, so
+    renumbering or re-siting a fixture cannot desynchronize the pair.
 
     Args:
         repo_root: Absolute path to the repository root.
 
     Returns:
-        List of Paths that were written.
+        List of Paths that were written, archived fixture included.
     """
     backlog_dir = repo_root / "cortex" / "backlog"
     backlog_dir.mkdir(parents=True, exist_ok=True)
@@ -1104,30 +1399,13 @@ def write_backlog_items(repo_root: Path) -> list[Path]:
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     written: list[Path] = []
-    for number, slug, status, priority, item_type, title in _BACKLOG_ITEMS:
-        filename = f"{number}-{slug}.md"
-        # YAML scalar containing a colon must be quoted so the second colon
-        # isn't parsed as a nested mapping key.
-        title_escaped = title.replace('"', '\\"')
-        content = (
-            f"---\n"
-            f"schema_version: \"1\"\n"
-            f"uuid: {_BACKLOG_UUIDS[slug]}\n"
-            f"title: \"{title_escaped}\"\n"
-            f"status: {status}\n"
-            f"priority: {priority}\n"
-            f"type: {item_type}\n"
-            f"tags: [dashboard-seed]\n"
-            f"created: {today}\n"
-            f"updated: {today}\n"
-            f"---\n"
-            f"\n"
-            f"Seed backlog item for dashboard visual testing.\n"
-        )
-        path = backlog_dir / filename
-        path.write_text(content, encoding="utf-8")
+    for record in _BACKLOG_ITEMS:
+        path = _backlog_item_path(backlog_dir, record)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(_render_backlog_item(record, today), encoding="utf-8")
         written.append(path)
-        print(f"  wrote cortex/backlog/{filename}")
+        rel = path.relative_to(backlog_dir).as_posix()
+        print(f"  wrote cortex/backlog/{rel}")
 
     return written
 
@@ -1275,7 +1553,8 @@ def clean_all(root: Path) -> None:
     4. One cortex/lifecycle/{slug}/ directory per ``_FEATURES`` entry (shutil.rmtree)
     5. cortex/lifecycle/{pipeline-state.json,pipeline-events.log,metrics.json} —
        only when their content names a seed fixture
-    6. One cortex/backlog/{number}-{slug}.md file per ``_BACKLOG_ITEMS`` entry
+    6. One backlog file per ``_BACKLOG_ITEMS`` record, active or archived,
+       resolved through the same ``_backlog_item_path`` helper the writer uses
     7. The ``.claude/`` seed marker file
     8. Every directory the writers created, pruned bottom-up when empty
 
@@ -1341,13 +1620,13 @@ def clean_all(root: Path) -> None:
     for name in ("pipeline-state.json", "pipeline-events.log", "metrics.json"):
         _unlink_if_seed_content(lifecycle_dir / name, f"cortex/lifecycle/{name}", removed)
 
-    # 6. One backlog file per _BACKLOG_ITEMS entry, named exactly as
-    #    write_backlog_items names it.
-    for number, slug, *_ in _BACKLOG_ITEMS:
-        path = backlog_dir / f"{number}-{slug}.md"
+    # 6. One backlog file per _BACKLOG_ITEMS record, sited exactly where
+    #    write_backlog_items sited it — archive/ included.
+    for record in _BACKLOG_ITEMS:
+        path = _backlog_item_path(backlog_dir, record)
         with suppress(FileNotFoundError):
             path.unlink()
-            removed.append(f"cortex/backlog/{path.name}")
+            removed.append(f"cortex/backlog/{path.relative_to(backlog_dir).as_posix()}")
 
     # 7. The .claude/ marker file write_seed_marker created
     marker_dir = root / ".claude"
