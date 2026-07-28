@@ -314,6 +314,13 @@ ERROR_RECOVERY: dict[str, str] = {
     # Its recovery clamps effort once to `max` (universally accepted) instead of
     # blind-retrying the rejected value; see retry.py's clamp_effort arm.
     "effort_unsupported":     "clamp_effort",
+    # The agent ran out of turns mid-tool-use. Retry is right: the work so far
+    # is intact and a fresh attempt carries accumulated learnings. Critically,
+    # this must NOT be classified "unknown" — the review gate reads an
+    # unclassified dispatch failure as a could-not-run ERROR and reverts an
+    # already-merged feature (observed: session overnight-2026-07-28-1216 lost
+    # #414's merge to a review that stopped at turn 31 of 30).
+    "turn_limit_exhausted":   "retry",
     "unknown":                "retry",
 }
 
@@ -424,6 +431,28 @@ def _redact(line: str) -> str:
     for pattern, replacement in _REDACTION_RULES:
         line = pattern.sub(replacement, line)
     return line
+
+
+def _is_turn_limit_stop(
+    stop_reason: str | None,
+    num_turns: int | None,
+    max_turns: int | None,
+) -> bool:
+    """Return True when a dispatch died because it ran out of turns.
+
+    The CLI exits 1 when it hits ``--max-turns`` while the model still wants
+    to call a tool. The SDK surfaces that only as ``Command failed with exit
+    code 1`` with no child stderr, so the exception alone is indistinguishable
+    from a real crash. The reliable signature is the last ``ResultMessage``:
+    ``stop_reason == "tool_use"`` with ``num_turns`` at or past the configured
+    ceiling — the CLI reports the turn that could not complete, so ``num_turns``
+    is typically ``max_turns + 1``.
+    """
+    if stop_reason != "tool_use":
+        return False
+    if num_turns is None or max_turns is None:
+        return False
+    return num_turns >= max_turns
 
 
 def classify_error(error: Exception, output: str = "") -> str:
@@ -788,6 +817,12 @@ async def dispatch_task(
     _tool_name_map: dict[str, str] = {}
     _budget_exhausted: bool = False
     _budget_subtype: str = ""
+    # Retained past the message loop so the except handlers can tell a genuine
+    # crash from a turn-limit stop. The CLI exits 1 when it runs out of turns
+    # mid-tool-use, which reaches us only as the SDK's opaque "Command failed
+    # with exit code 1" — see _is_turn_limit_stop.
+    _last_stop_reason: str | None = None
+    _last_num_turns: int | None = None
 
     try:
         async for message in query(prompt=task, options=options):
@@ -849,6 +884,8 @@ async def dispatch_task(
 
             elif isinstance(message, ResultMessage):
                 cost_usd = message.total_cost_usd
+                _last_stop_reason = getattr(message, "stop_reason", None)
+                _last_num_turns = getattr(message, "num_turns", None)
                 if message.is_error:
                     _budget_exhausted = True
                     _budget_subtype = message.subtype or ""
@@ -935,6 +972,8 @@ async def dispatch_task(
 
     except (ProcessError, CLIConnectionError, asyncio.TimeoutError) as exc:
         error_type = classify_error(exc, "\n".join(output_parts) + ("\n" + "\n".join(_stderr_lines) if _stderr_lines else ""))
+        if _is_turn_limit_stop(_last_stop_reason, _last_num_turns, tier["max_turns"]):
+            error_type = "turn_limit_exhausted"
         error_detail = f"{type(exc).__name__}: {exc}"
         # The real child stderr lives in _stderr_lines (already redacted/capped
         # by _on_stderr), NOT in ProcessError.stderr — the SDK hardcodes the
@@ -952,6 +991,12 @@ async def dispatch_task(
                 "child_stderr": child_stderr,
                 "exit_code": exit_code,
                 "cwd": str(worktree_path),
+                # Turn accounting travels with every dispatch failure: when the
+                # child stderr is empty (the SDK's usual case here) these two
+                # numbers are the only evidence of why the CLI exited.
+                "num_turns": _last_num_turns,
+                "max_turns": tier["max_turns"],
+                "stop_reason": _last_stop_reason,
             })
 
         return DispatchResult(
@@ -971,22 +1016,35 @@ async def dispatch_task(
         error_detail = f"{type(exc).__name__}: {exc}\n{traceback.format_exc()}"
         child_stderr = "\n".join(_stderr_lines)
         exit_code = getattr(exc, "exit_code", None)
+        # The SDK reports a turn-limit exit as a bare Exception out of its
+        # message reader, so this arm — not the typed one above — is where a
+        # review that ran out of turns actually lands.
+        error_type = (
+            "turn_limit_exhausted"
+            if _is_turn_limit_stop(
+                _last_stop_reason, _last_num_turns, tier["max_turns"]
+            )
+            else "unknown"
+        )
 
         if log_path:
             log_event(log_path, {
                 "event": "dispatch_error",
                 "feature": feature,
-                "error_type": "unknown",
+                "error_type": error_type,
                 "error_detail": error_detail,
                 "child_stderr": child_stderr,
                 "exit_code": exit_code,
                 "cwd": str(worktree_path),
+                "num_turns": _last_num_turns,
+                "max_turns": tier["max_turns"],
+                "stop_reason": _last_stop_reason,
             })
 
         return DispatchResult(
             success=False,
             output="\n".join(output_parts),
-            error_type="unknown",
+            error_type=error_type,
             error_detail=error_detail,
             cost_usd=cost_usd,
             diagnostics=DispatchDiagnostics(
