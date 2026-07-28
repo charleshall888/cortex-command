@@ -12,7 +12,7 @@ Column derivation:
                       (the area slug) for every other doc.
   last_gathered     — the date parsed from the doc's leading
                       `> Last gathered: {YYYY-MM-DD}` blockquote (both
-                      templates in requirements-write/SKILL.md open with this
+                      templates in the requirements SKILL.md open with this
                       line). A trailing `(updated ...)` annotation, as seen in
                       this repo's own `project.md`, is ignored — only the
                       first YYYY-MM-DD token counts. `null` when the doc has

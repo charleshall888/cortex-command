@@ -240,12 +240,53 @@ def _d2_exempt(line: str, match_start: int) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# D3 (SP003): ${CLAUDE_SKILL_DIR} target existence
+# ---------------------------------------------------------------------------
+
+# Any ${CLAUDE_SKILL_DIR}-prefixed file target, own-dir or sibling form.
+_D3_TARGET_RE = re.compile(
+    r"\$\{CLAUDE_SKILL_DIR\}/(?P<target>[A-Za-z0-9_./-]+\.(?:md|txt|sh|toml))"
+)
+
+_SP003_MESSAGE = (
+    "${{CLAUDE_SKILL_DIR}} target does not exist: {target!r}. The path "
+    "form is correct but nothing is there — a renamed or deleted sibling skill "
+    "leaves the pointer silently dangling, and the phase that follows it "
+    "degrades without an error. Fix the path or drop the pointer."
+)
+
+
+def _skill_root(path: Path) -> Optional[Path]:
+    """Return the directory whose SKILL.md owns *path*, or None.
+
+    ``${CLAUDE_SKILL_DIR}`` resolves to the SKILL.md directory — not to the
+    directory of the reference file doing the mentioning — so a reference under
+    ``references/`` resolves against its parent skill.
+    """
+    current = path.resolve().parent
+    while True:
+        if (current / "SKILL.md").exists():
+            return current
+        if current.parent == current:
+            return None
+        current = current.parent
+
+
+def _resolve_skill_dir_target(path: Path, target: str) -> Optional[Path]:
+    """Resolve a ${CLAUDE_SKILL_DIR}-relative *target*, or None if unrooted."""
+    root = _skill_root(path)
+    if root is None:
+        return None
+    return (root / target).resolve()
+
+
+# ---------------------------------------------------------------------------
 # Scanner
 # ---------------------------------------------------------------------------
 
 
 def scan_text(text: str, path: Path) -> list[Violation]:
-    """Scan *text* for SP001 (D1) and SP002 (D2) violations.
+    """Scan *text* for SP001 (D1), SP002 (D2), and SP003 (D3) violations.
 
     D1 regions: lines inside a ``<!-- BEGIN SUBAGENT PROMPT -->`` …
     ``<!-- END SUBAGENT PROMPT -->`` fence, OR every line when *path* is a
@@ -358,6 +399,22 @@ def scan_text(text: str, path: Path) -> list[Violation]:
                         code="SP002",
                         message=_SP002_MESSAGE,
                     ))
+
+        # ------------------------------------------------------------------ #
+        # D3 (SP003): ${CLAUDE_SKILL_DIR} target that does not exist.        #
+        # ------------------------------------------------------------------ #
+        if not suppressed:
+            for m in _D3_TARGET_RE.finditer(raw):
+                target = _resolve_skill_dir_target(path, m.group("target"))
+                if target is None or target.exists():
+                    continue
+                violations.append(Violation(
+                    path=path,
+                    line=idx,
+                    col=m.start("target") + 1,
+                    code="SP003",
+                    message=_SP003_MESSAGE.format(target=m.group("target")),
+                ))
 
         if raw.strip():
             prev_nonblank = raw

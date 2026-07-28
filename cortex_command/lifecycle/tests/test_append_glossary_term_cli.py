@@ -1,4 +1,4 @@
-"""Tests for cortex-append-glossary-term — the requirements-gather glossary
+"""Tests for cortex-append-glossary-term — the requirements-skill glossary
 file I/O verb: a read-only probe mode (omit --definition) and a guarded-write
 mode (pass --definition) against cortex/requirements/glossary.md's
 ## Language section.

@@ -109,7 +109,7 @@ Derives challenge angles from the artifact and project context (default 2, escal
 ### requirements
 Gather and document project-level and feature-area requirements through structured interviews. Creates a `requirements/` directory with a master project doc and area-specific docs. Downstream skills (lifecycle, discovery) consult these automatically during research, spec, and review.
 
-`requirements-gather` and `requirements-write` are internal sub-skills with `disable-model-invocation: true` — they are invoked only by the `requirements` orchestrator, never directly by the user or model.
+Carries `disable-model-invocation: true` — reached only by the explicit slash command. Interview and synthesis live in the one skill; nothing is written until the interview completes, so an abandoned interview leaves no partial doc behind.
 
 [skills/requirements/SKILL.md](../skills/requirements/SKILL.md)
 

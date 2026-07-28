@@ -1,7 +1,7 @@
-"""cortex-append-glossary-term — the file I/O for requirements-gather's
+"""cortex-append-glossary-term — the file I/O for the requirements skill's
 per-term glossary write.
 
-requirements-gather/SKILL.md's "Glossary writes" section describes a
+the requirements skill's "Glossary" section describes a
 probe-before-classify, append-after-gate flow against
 `cortex/requirements/glossary.md`'s `## Language` section: before the binary
 classifier and user-confirmation gate ever run, the skill must check whether

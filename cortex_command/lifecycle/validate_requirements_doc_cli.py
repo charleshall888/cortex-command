@@ -1,7 +1,7 @@
 """cortex-validate-requirements-doc — mechanical acceptance gate for a
 just-written cortex/requirements/{project|area}.md.
 
-requirements-write/SKILL.md's templates state two acceptance properties in
+the requirements skill's templates state two acceptance properties in
 prose and previously relied on the model to self-report conformance: every
 canonical H2 section must be present (verbatim — "downstream consumers grep
 section names"), and (project scope only) the `## Optional` section's token
@@ -10,7 +10,7 @@ mechanical check the skill runs instead of self-reporting; judgment about
 where a given answer belongs, or how to fix a failing doc, stays with the
 model.
 
-Canonical H2 names (verbatim from requirements-write/SKILL.md's Project/Area
+Canonical H2 names (verbatim from the requirements skill's Project/Area
 templates — a downstream-grep contract; do not rename these strings without
 updating both the templates and this module together):
   Project (8): Overview, Philosophy of Work, Architectural Constraints,
@@ -175,7 +175,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="cortex-validate-requirements-doc",
         description=(
-            "Run requirements-write's mechanical acceptance checks (required "
+            "Run the requirements skill's mechanical acceptance checks (required "
             "H2 sections; project-scope ## Optional token budget) against a "
             "written requirements doc, emitting a {state, checks} JSON "
             "struct on stdout (always exit 0)."

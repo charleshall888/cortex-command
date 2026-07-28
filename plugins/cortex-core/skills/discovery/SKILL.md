@@ -28,7 +28,7 @@ Read **only** the current phase's reference.
 **Sibling-path propagation (load-bearing).** `${CLAUDE_SKILL_DIR}` resolves only in this body. Where a phase reference points at a sibling skill, substitute the absolute path resolved here:
 
 - **fanout** → `${CLAUDE_SKILL_DIR}/../research/references/fanout.md`
-- **orchestrator-review** → `${CLAUDE_SKILL_DIR}/../lifecycle/references/orchestrator-review.md`
+- **orchestrator-review** → `${CLAUDE_SKILL_DIR}/../build/references/orchestrator-review.md`
 
 After each phase, commit `cortex/research/{{topic}}/`, summarize, and proceed automatically — except across the Research → Decompose gate below.
 

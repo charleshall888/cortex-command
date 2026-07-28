@@ -355,7 +355,7 @@ log_event(
 
 (3) **Synthesizer dispatch**: Dispatch one fresh synthesizer Task sub-agent per critical feature with ≥2 surviving variants. The sub-agent's **system prompt** is the shared fragment loaded from `cortex_command/overnight/prompts/plan-synthesizer.md` via `importlib.resources.files("cortex_command.overnight.prompts").joinpath("plan-synthesizer.md").read_text()` — do not paraphrase or inline. The **user prompt** inlines the surviving variant paths (`cortex/lifecycle/{{feature_slug}}/plan-variant-A.md`, etc.) and the swap-and-require-agreement instruction directing the synthesizer to compare the variants twice with order swapped before assigning `confidence: "high"` or `"medium"`, and to emit a JSON envelope per the schema in the system prompt fragment. The synthesizer is read-only; no worktree isolation is required.
 
-(4) **Envelope extraction (LAST-occurrence anchor)**: Parse the synthesizer Task sub-agent's output using the same LAST-occurrence anchor pattern as the canonical `skills/lifecycle/references/competing-plans.md` §1b:
+(4) **Envelope extraction (LAST-occurrence anchor)**: Parse the synthesizer Task sub-agent's output using the same LAST-occurrence anchor pattern as the canonical `skills/build/references/competing-plans.md` §1b:
 
 ```python
 import re
@@ -442,7 +442,7 @@ Read the following files:
 
 Follow the lifecycle plan phase protocol: design an implementation approach, then
 write a complete plan to {{feature_plan_path}} using the canonical plan.md format defined
-in skills/lifecycle/references/plan.md. Each task's per-field lines use a leading bullet
+in skills/build/references/plan.md. Each task's per-field lines use a leading bullet
 with the colon OUTSIDE the bold span — emit them in exactly this literal syntax:
 
 - **Files**: {exact paths to create or modify}

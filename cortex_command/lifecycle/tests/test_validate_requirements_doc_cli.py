@@ -1,4 +1,4 @@
-"""Tests for cortex-validate-requirements-doc — requirements-write's
+"""Tests for cortex-validate-requirements-doc — the requirements skill's
 mechanical acceptance gate (required H2 sections; project-scope ## Optional
 token budget).
 """

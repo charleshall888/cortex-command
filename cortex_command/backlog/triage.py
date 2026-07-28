@@ -2,7 +2,7 @@
 
 ``cortex-backlog-triage`` replaces the four-round-trip triage opening
 (``cortex-read-backlog-backend`` → ``cortex-generate-backlog-index`` →
-``cortex-build-epic-map`` → read ``references/triage-rendering.md``) with one
+``cortex-build-epic-map`` → read the dev-skill triage reference) with one
 call that also *renders* both triage blocks. The rendering is fully
 mechanical — grouping, badge selection, and the per-epic recommendation
 sentence are decided by item status and the presence of ``spec:`` — so it
