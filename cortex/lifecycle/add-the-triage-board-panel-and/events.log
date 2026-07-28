@@ -1,0 +1,5 @@
+{"ts": "2026-07-28T01:37:01Z", "schema_version": 1, "event": "lifecycle_start", "feature": "add-the-triage-board-panel-and", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"ts": "2026-07-28T01:45:52Z", "event": "clarify_critic", "feature": "add-the-triage-board-panel-and", "schema_version": 3, "parent_epic_loaded": true, "findings_count": 14, "dispositions": {"apply": 10, "dismiss": 0, "ask": 4}, "applied_fixes_count": 10, "dismissals_count": 0, "status": "ok"}
+{"ts": "2026-07-28T02:15:51Z", "event": "complexity_override", "feature": "add-the-triage-board-panel-and", "from": "simple", "to": "complex", "gate": "research_open_questions"}
+{"ts": "2026-07-28T02:16:33Z", "event": "criticality_override", "feature": "add-the-triage-board-panel-and", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-07-28T02:44:06Z", "event": "spec_approved", "feature": "add-the-triage-board-panel-and", "decision": "approved"}

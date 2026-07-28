@@ -2,15 +2,18 @@
 schema_version: "1"
 uuid: c7139b02-b906-419f-90b0-bc9bc14a137a
 title: Reconcile dashboard docs and observability requirements with reality
-status: backlog
+status: refined
 priority: medium
 type: chore
 created: 2026-07-21
-updated: 2026-07-21
+updated: 2026-07-27
 discovery_source: cortex/research/dashboard-command-station/research.md
 parent: "410"
 tags: ['dashboard-command-station', 'dashboard']
 areas: ['dashboard', 'docs']
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/reconcile-dashboard-docs-and-observability-requirements/spec.md
 ---
 ## Why
 

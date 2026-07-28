@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 47ae0d5b-f2bc-42b1-9bd5-97b3409915f5
 title: Add the dashboard ticket feed
-status: in_progress
+status: complete
 priority: high
 type: feature
 created: 2026-07-21
@@ -11,7 +11,7 @@ discovery_source: cortex/research/dashboard-command-station/research.md
 parent: "410"
 tags: ['dashboard-command-station', 'dashboard']
 areas: ['dashboard', 'backlog']
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: add-the-dashboard-ticket-feed-with
 complexity: complex
 criticality: high

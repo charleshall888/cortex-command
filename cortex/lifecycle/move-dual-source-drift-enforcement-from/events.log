@@ -1,0 +1,1 @@
+{"ts": "2026-07-28T02:43:09Z", "schema_version": 1, "event": "lifecycle_start", "feature": "move-dual-source-drift-enforcement-from", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
