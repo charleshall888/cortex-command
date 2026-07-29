@@ -61,17 +61,27 @@
       <strong class="cell-numeral">—</strong>
       {% endif %}
       <span class="cell-of">session cost</span>
-      {# Inline sparkline over per-feature costs (sorted by start time). #}
-      {% set costs = [] %}
-      {% if state.feature_display_order %}
-        {% for s in state.feature_display_order %}
-          {% set c = state.feature_cost_totals.get(s) %}
-          {% if c is not none %}{% set _ = costs.append(c) %}{% endif %}
-        {% endfor %}
-      {% endif %}
-      {% if costs | length >= 2 %}
-        {% set cmax = costs | max %}
-        {% if cmax > 0 %}
+    </div>
+    {# Sparkline over per-feature costs, sorted by start time. On its own row
+       rather than inline beside the numeral: inline it competed with "session
+       cost" for a ~200px cell, wrapping the label onto two lines and leaving
+       the chart floating in the gap between two cells, where it read as a
+       stray rule rather than a chart.
+
+       Drawn only when the costs actually vary. With every feature at the same
+       spend — the common shape early in a session, and exactly what the
+       fixtures produce — the path is a perfectly flat line that carries no
+       information and looks like a rendering fault. #}
+    {% set costs = [] %}
+    {% if state.feature_display_order %}
+      {% for s in state.feature_display_order %}
+        {% set c = state.feature_cost_totals.get(s) %}
+        {% if c is not none %}{% set _ = costs.append(c) %}{% endif %}
+      {% endfor %}
+    {% endif %}
+    {% if costs | length >= 2 and (costs | max) > (costs | min) %}
+      {% set cmax = costs | max %}
+      <div class="cell-aux">
         <svg class="sparkline" viewBox="0 0 80 18" preserveAspectRatio="none" aria-label="per-feature cost trend">
           {% set step = 80.0 / (costs | length - 1) %}
           {% set parts = [] %}
@@ -85,9 +95,9 @@
           {% set lasty = (17 - (costs[-1] / cmax) * 16) | round(2) %}
           <circle class="spark-dot" cx="{{ lastx }}" cy="{{ lasty }}" r="1.5"/>
         </svg>
-        {% endif %}
-      {% endif %}
-    </div>
+        <span class="phase-label">per feature</span>
+      </div>
+    {% endif %}
     {% if state.open_questions_total %}
     <div class="cell-aux"><a href="#escalations-panel" class="text-brand-primary">{{ state.open_questions_total }} open questions ↘</a></div>
     {% else %}
@@ -147,7 +157,7 @@
   <span class="phase-label">of {{ last_session.features_total }} total</span>
 </div>
 <div class="card-row">
-  <span class="phase-label">ended {{ last_session.ended_hours_ago | round(1) }}h ago</span>
+  <span class="phase-label">ended {% if last_session.ended_at %}{{ last_session.ended_at | format_elapsed }}{% else %}{{ last_session.ended_hours_ago | round(1) }}h ago{% endif %}</span>
 </div>
 <div class="card-row mt-2">
   <a href="/sessions/{{ last_session.session_id }}" class="text-brand-primary">view morning report →</a>

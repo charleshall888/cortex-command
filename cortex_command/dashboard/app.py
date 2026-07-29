@@ -29,6 +29,7 @@ from cortex_command.common import _resolve_user_project_root
 from cortex_command.lifecycle_config import resolve_backlog_backend
 from cortex_command.dashboard.data import (
     build_swim_lane_data,
+    load_ticket_body,
     parse_last_session,
     parse_session_detail,
     parse_session_list,
@@ -292,6 +293,22 @@ async def index(request: Request):
     )
 
 
+@app.get("/backlog")
+async def backlog_view(request: Request):
+    """Render the backlog view — the ledger and triage board as a peer page.
+
+    Both panels are served by the existing ``/partials/backlog`` and
+    ``/partials/triage-board`` fragments, so this handler only supplies the
+    page shell; the 30s HTMX poll fills it exactly as it did when the two
+    sections sat at the bottom of the overnight page.
+    """
+    return templates.TemplateResponse(
+        request,
+        "backlog.html",
+        {"request": request, "state": state},
+    )
+
+
 @app.get("/sessions")
 async def sessions_list(request: Request):
     """Render the session history list page."""
@@ -436,4 +453,26 @@ async def triage_board(request: Request):
         request,
         "triage_board.html",
         {"request": request, "state": state},
+    )
+
+
+@app.get("/partials/ticket/{item_id}")
+async def ticket_body(request: Request, item_id: str):
+    """Return one ticket's rendered description.
+
+    Fetched when a board row is first expanded, not carried in the 30s
+    snapshot — see ``load_ticket_body`` for why. Sits behind the same backend
+    gate as every other backlog read: under a non-local backend there is no
+    ``cortex/backlog/`` to read and the panel stands down rather than
+    reporting a missing file as an error.
+    """
+    root = _root()
+    if resolve_backlog_backend(root) != "cortex-backlog":
+        ticket = None
+    else:
+        ticket = load_ticket_body(item_id, root / "cortex" / "backlog")
+    return templates.TemplateResponse(
+        request,
+        "ticket_body.html",
+        {"request": request, "ticket": ticket},
     )

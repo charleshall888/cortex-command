@@ -23,9 +23,13 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from cortex_command.dashboard.data import (
+    TICKET_BODY_MAX_CHARS,
     _exit_report_sort_key,
+    _lane_label_width_pct,
     _read_all_jsonl,
     build_swim_lane_data,
+    load_ticket_body,
+    parse_recent_session_events,
     compute_slow_flags,
     get_last_activity_ts,
     parse_backlog_counts,
@@ -645,6 +649,126 @@ class TestBuildSwimLaneData(unittest.TestCase):
             for event in lane["events"]:
                 self.assertGreaterEqual(event["x_pct"], 0)
                 self.assertLessEqual(event["x_pct"], 100)
+
+    def _crowded_lane(self) -> dict:
+        """One lane whose events all fall inside a few seconds of each other.
+
+        The realistic shape at a phase boundary: a feature completes and
+        transitions in the same breath, so two long labels land on effectively
+        the same x.
+        """
+        session_ts = "2026-02-26T09:00:00+00:00"
+        overnight = {"features": {"feat-a": {"status": "merged"}}}
+        events = [
+            {"event": "session_start", "ts": session_ts},
+            {"event": "feature_start", "feature": "feat-a",
+             "ts": "2026-02-26T09:30:00+00:00"},
+            {"event": "feature_complete", "feature": "feat-a",
+             "ts": "2026-02-26T09:30:02+00:00"},
+        ]
+        feature_states = {
+            "feat-a": {
+                "phase_transitions": [
+                    {"from": "specify", "to": "plan",
+                     "ts": "2026-02-26T09:30:01+00:00"},
+                    {"from": "plan", "to": "implement",
+                     "ts": "2026-02-26T09:30:03+00:00"},
+                ]
+            }
+        }
+        end = datetime(2026, 2, 26, 10, 0, 0, tzinfo=timezone.utc)
+        return build_swim_lane_data(
+            overnight, events, feature_states, Path("."), end_dt=end
+        )
+
+    def test_crowded_lane_labels_do_not_overlap(self):
+        """Near-simultaneous events are spread so their labels stay readable.
+
+        Regression: labels were positioned at raw elapsed percentages with no
+        collision handling, so "complete" and "specify→implement" rendered on
+        top of one another as an unreadable composite — the failure DESIGN.md's
+        "Operational usefulness" criterion names explicitly.
+        """
+        lane = self._crowded_lane()["lanes"][0]
+        self.assertGreaterEqual(len(lane["events"]), 4)
+        placed = sorted(
+            ((e["x_pct"], _lane_label_width_pct(e["label"])) for e in lane["events"]),
+            key=lambda pair: pair[0],
+        )
+        for (x, width), (next_x, _) in zip(placed, placed[1:]):
+            self.assertLessEqual(
+                x + width, next_x + 1e-9,
+                f"label at {x:.2f}% (width {width:.2f}%) runs into {next_x:.2f}%",
+            )
+
+    def test_spread_labels_stay_inside_the_track(self):
+        """No label extends past the right edge after the forward sweep."""
+        lane = self._crowded_lane()["lanes"][0]
+        for event in lane["events"]:
+            right = event["x_pct"] + _lane_label_width_pct(event["label"])
+            self.assertGreaterEqual(event["x_pct"], 0)
+            self.assertLessEqual(right, 100.0 + 1e-9, f"{event['label']} overflows")
+
+    def test_spread_preserves_chronological_order(self):
+        """Nudging apart must not reorder events relative to their timestamps."""
+        lane = self._crowded_lane()["lanes"][0]
+        by_time = sorted(lane["events"], key=lambda e: e["elapsed_secs"])
+        xs = [e["x_pct"] for e in by_time]
+        self.assertEqual(xs, sorted(xs))
+
+
+# ---------------------------------------------------------------------------
+# Tests: parse_recent_session_events
+# ---------------------------------------------------------------------------
+
+class TestParseRecentSessionEvents(unittest.TestCase):
+    """The activity stream is labelled 'newest first' and must actually be."""
+
+    @staticmethod
+    def _events() -> list[dict]:
+        """Events whose append order is NOT their timestamp order.
+
+        This is the real log shape, not a contrived one: the runner
+        interleaves writers, so a round-level heartbeat lands after the
+        per-feature checkpoints it postdates.
+        """
+        return [
+            {"event": "feature_checkpoint", "ts": "2026-02-26T12:30:00+00:00",
+             "feature": "feat-a", "note": "step 2"},
+            {"event": "feature_checkpoint", "ts": "2026-02-26T13:05:00+00:00",
+             "feature": "feat-a", "note": "step 12"},
+            {"event": "plan_loaded", "ts": "2026-02-26T11:45:00+00:00"},
+            {"event": "branch_synced", "ts": "2026-02-26T12:10:00+00:00"},
+            {"event": "heartbeat", "ts": "2026-02-26T13:08:00+00:00"},
+        ]
+
+    def test_returns_events_newest_first(self):
+        # Regression: the old implementation sliced the last N in FILE order
+        # and reversed, so the panel rendered a 5m/1h/8m/45m jumble under a
+        # heading promising descending time.
+        result = parse_recent_session_events(self._events())
+        stamps = [entry["ts"] for entry in result]
+        self.assertEqual(stamps, sorted(stamps, reverse=True))
+        self.assertEqual(result[0]["event"], "heartbeat")
+
+    def test_keeps_the_newest_events_when_truncating(self):
+        # Truncation must drop the OLDEST, which a positional tail does not:
+        # here the oldest event (plan_loaded) is fourth from the end in file
+        # order, so a tail of 2 would have kept it and dropped a newer one.
+        result = parse_recent_session_events(self._events(), last_n=2)
+        self.assertEqual(len(result), 2)
+        self.assertEqual(
+            [entry["ts"] for entry in result],
+            ["2026-02-26T13:08:00+00:00", "2026-02-26T13:05:00+00:00"],
+        )
+
+    def test_events_without_a_timestamp_do_not_raise(self):
+        events = self._events() + [{"event": "heartbeat"}, {"event": "heartbeat", "ts": None}]
+        result = parse_recent_session_events(events)
+        self.assertEqual(len(result), len(events))
+        # A missing stamp sorts last under reverse ordering — surfaced, not
+        # dropped, and never crashing the comparison.
+        self.assertEqual([entry["ts"] for entry in result][-2:], ["", ""])
 
 
 # ---------------------------------------------------------------------------
@@ -1457,6 +1581,151 @@ class TestBuildSwimLaneDataTicks(unittest.TestCase):
         labels = [t["label"] for t in ticks]
         self.assertIn("0m", labels)
         self.assertIn("1h 30m", labels)
+
+
+class TestLoadTicketBody(unittest.TestCase):
+    """The per-ticket description read behind /partials/ticket/{id}."""
+
+    def _corpus(self, tmp: str) -> Path:
+        backlog = Path(tmp) / "backlog"
+        (backlog / "archive").mkdir(parents=True)
+        (backlog / "042-a-real-ticket.md").write_text(
+            "---\ntitle: A real ticket\nstatus: backlog\n---\n\n"
+            "## Context\n\nProse with a `code span`.\n\n"
+            "| Option | Cost |\n|---|---|\n| One | low |\n",
+            encoding="utf-8",
+        )
+        (backlog / "007-frontmatter-only.md").write_text(
+            "---\ntitle: Frontmatter only\n---\n", encoding="utf-8"
+        )
+        (backlog / "archive" / "900-closed-ticket.md").write_text(
+            "---\ntitle: Closed ticket\n---\n\nStill readable.\n", encoding="utf-8"
+        )
+        return backlog
+
+    def test_renders_headings_and_tables(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            got = load_ticket_body("42", self._corpus(tmp))
+            self.assertEqual(got["title"], "A real ticket")
+            self.assertIn("<h2>Context</h2>", got["html"])
+            self.assertIn("<table>", got["html"])
+            self.assertIn("<code>code span</code>", got["html"])
+            self.assertFalse(got["truncated"])
+
+    def test_frontmatter_is_stripped_from_the_body(self):
+        # The reader shows the description, not the fields the row already has.
+        with tempfile.TemporaryDirectory() as tmp:
+            got = load_ticket_body("42", self._corpus(tmp))
+            self.assertNotIn("status: backlog", got["html"])
+            self.assertNotIn("title: A real ticket", got["html"])
+
+    def test_frontmatter_only_ticket_yields_empty_html(self):
+        # Distinct from "no such ticket": the template says so differently.
+        with tempfile.TemporaryDirectory() as tmp:
+            got = load_ticket_body("7", self._corpus(tmp))
+            self.assertIsNotNone(got)
+            self.assertEqual(got["html"], "")
+
+    def test_archived_ticket_is_still_readable(self):
+        # A blocker frequently points at a closed ticket; being unable to read
+        # it is the case the reader most needs to cover.
+        with tempfile.TemporaryDirectory() as tmp:
+            got = load_ticket_body("900", self._corpus(tmp))
+            self.assertIsNotNone(got)
+            self.assertIn("Still readable.", got["html"])
+
+    def test_raw_html_in_a_body_is_stripped_not_executed(self):
+        # Bodies quote material this repo did not author. Python-Markdown has
+        # no safe mode, so raw HTML would otherwise reach the page verbatim.
+        with tempfile.TemporaryDirectory() as tmp:
+            backlog = self._corpus(tmp)
+            (backlog / "500-hostile.md").write_text(
+                "---\ntitle: Hostile\n---\n\n"
+                "<script>fetch('/exfil')</script>\n\n"
+                '<img src=x onerror="alert(1)">\n\n'
+                '<a href="javascript:alert(1)">click</a>\n\n'
+                '<div onclick="steal()">text survives</div>\n',
+                encoding="utf-8",
+            )
+            html = load_ticket_body("500", backlog)["html"]
+            self.assertNotIn("<script", html)
+            self.assertNotIn("<img", html)
+            self.assertNotIn("<iframe", html)
+            self.assertNotIn("onerror", html)
+            self.assertNotIn("onclick", html)
+            self.assertNotIn("javascript:", html)
+            # Script *contents* go too — unwrapping would print the payload.
+            self.assertNotIn("fetch('/exfil')", html)
+            # A disallowed wrapper is unwrapped, but its prose is still shown.
+            self.assertIn("text survives", html)
+
+    def test_code_fences_are_not_double_escaped(self):
+        # Regression: escaping the source before rendering double-escaped every
+        # fenced block, because Markdown escapes `&` again inside code — so
+        # `-> str` reached the page as the literal text `-&gt; str`.
+        with tempfile.TemporaryDirectory() as tmp:
+            backlog = self._corpus(tmp)
+            (backlog / "502-code.md").write_text(
+                "---\ntitle: Code\n---\n\n"
+                "```python\ndef f(x: dict) -> str:\n    return x[\"k\"] < 3 and y > 1\n```\n",
+                encoding="utf-8",
+            )
+            html = load_ticket_body("502", backlog)["html"]
+            self.assertNotIn("&amp;gt;", html)
+            self.assertNotIn("&amp;lt;", html)
+            self.assertNotIn("&amp;quot;", html)
+            self.assertIn("-&gt; str", html)
+            self.assertIn("&lt; 3", html)
+
+    def test_markdown_structure_and_safe_links_survive_sanitising(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            backlog = self._corpus(tmp)
+            (backlog / "503-links.md").write_text(
+                "---\ntitle: Links\n---\n\n"
+                "See [the docs](https://example.com/x) and [a file](../spec.md).\n\n"
+                "> a quote\n\n- one\n- two\n",
+                encoding="utf-8",
+            )
+            html = load_ticket_body("503", backlog)["html"]
+            self.assertIn('href="https://example.com/x"', html)
+            self.assertIn('href="../spec.md"', html)
+            self.assertIn("<blockquote>", html)
+            self.assertIn("<li>one</li>", html)
+
+    def test_oversized_body_is_truncated_and_flagged(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            backlog = self._corpus(tmp)
+            (backlog / "501-huge.md").write_text(
+                "---\ntitle: Huge\n---\n\n" + ("x" * (TICKET_BODY_MAX_CHARS + 500)),
+                encoding="utf-8",
+            )
+            got = load_ticket_body("501", backlog)
+            self.assertTrue(got["truncated"])
+            self.assertLess(len(got["html"]), TICKET_BODY_MAX_CHARS + 200)
+
+    def test_non_integer_ids_are_rejected_before_any_filesystem_call(self):
+        # The id comes straight off the URL path.
+        with tempfile.TemporaryDirectory() as tmp:
+            backlog = self._corpus(tmp)
+            for bad in ("../../etc/passwd", "42; rm -rf /", "*", "", "42a", "-1"):
+                with self.subTest(item_id=bad):
+                    self.assertIsNone(load_ticket_body(bad, backlog))
+
+    def test_traversal_via_a_symlink_out_of_the_backlog_dir_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            backlog = self._corpus(tmp)
+            secret = Path(tmp) / "secret.md"
+            secret.write_text("---\ntitle: Secret\n---\n\ntop secret\n", encoding="utf-8")
+            try:
+                (backlog / "808-escape.md").symlink_to(secret)
+            except (OSError, NotImplementedError):
+                self.skipTest("symlinks unavailable on this platform")
+            self.assertIsNone(load_ticket_body("808", backlog))
+
+    def test_unknown_id_and_missing_dir_return_none(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertIsNone(load_ticket_body("99999", self._corpus(tmp)))
+            self.assertIsNone(load_ticket_body("42", Path(tmp) / "nope"))
 
 
 if __name__ == "__main__":

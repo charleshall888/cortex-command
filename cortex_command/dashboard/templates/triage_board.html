@@ -26,7 +26,7 @@
    (null-normalized), not ``lifecycle_phase``, which still carries the
    literal string "none" for some items. #}
 {% from "patterns/badge.html" import badge %}
-<span class="sec-num"><strong>§ 11</strong>triage</span>
+<span class="sec-num"><strong>§ 02</strong>triage</span>
 {% set snap = state.backlog_snapshot %}
 
 {# The backlog status / priority / type vocabularies mapped to the badge
@@ -71,7 +71,8 @@
    separate ticket, and dead placeholder links are the defect this panel's
    epic exists to avoid. #}
 {% macro ticket_row(item_id, record, ineligible, blockers, is_ready,
-                    status_class, priority_class, type_class, fallback_class) %}
+                    status_class, priority_class, type_class, fallback_class,
+                    row_class='', child_count=none) %}
 {% set status = record.get('status') or 'unknown' %}
 {% set priority = record.get('priority') or 'unset' %}
 {% set kind = record.get('type') or 'unset' %}
@@ -80,23 +81,89 @@
    ``blocked_by`` is over-inclusive, since blockers pointing only at terminal
    items resolve silently. #}
 {% set is_blocked = ineligible and ineligible.get('kind') == 'blocker' %}
-<details class="ticket-row" id="ticket-{{ item_id }}">
-  <summary class="card-row">
-    <span class="num num--sm">#{{ item_id }}</span>
-    <strong>{{ record.get('title') or 'untitled' }}</strong>
-    {{ badge(css_class=status_class.get(status, fallback_class), label=status) }}
-    {{ badge(css_class=priority_class.get(priority, fallback_class), label=priority) }}
-    {{ badge(css_class=type_class.get(kind, fallback_class), label=kind) }}
-    {% if is_blocked %}{{ badge(css_class='badge-red', label='blocked') }}{% endif %}
-    {# The tag flag is deliberately not a badge: it must never be mistakable
-       for the unrelated overnight-run outcome of the same name. #}
-    {% if record.get('deferred_tag') %}<span class="phase-label">tag · deferred</span>{% endif %}
-    {% if record.get('phase') %}<span class="phase-label">phase · {{ record.get('phase') }}</span>{% endif %}
-    {% if is_ready %}<span class="phase-label ml-auto">ready</span>
-    {% elif ineligible %}<span class="phase-label ml-auto">hold · {{ ineligible.get('reason') }}</span>
-    {% else %}<span class="phase-label ml-auto">—</span>{% endif %}
+{# The summary is a five-cell grid rather than a flex run, so id, title, tags
+   and disposition line up down the board. As a flex row each cell started
+   wherever the previous one happened to end, and with titles varying by 40
+   characters the badge stack landed at a different x on every row — the
+   status vocabulary was there but not scannable as a column. #}
+<details class="ticket-row{% if row_class %} {{ row_class }}{% endif %}" id="ticket-{{ item_id }}">
+  <summary{% if is_blocked %} class="is-blocked"{% endif %}>
+    <span class="num num--sm ticket-row__id">#{{ item_id }}</span>
+    {# The <strong> is wrapped rather than being the cell itself so the cell can
+       carry a leader — the dot rule that runs from the end of the title to the
+       status column. The gap between a short title and the qualifier columns
+       runs to several hundred pixels, and a leader is the printed-index answer
+       to tracking a line across it. It also lets the row separator go: the
+       leader gives the eye a horizontal to follow, which is what the rule was
+       there for. #}
+    <span class="ticket-row__title"><strong>{{ record.get('title') or 'untitled' }}</strong></span>
+    {# Status, priority and type each get their OWN fixed grid cell rather than
+       sharing one content-sized run. Sharing one cell is what made the three
+       vocabularies unscannable: the run was right-aligned, so `type` — which
+       reads "feature" on nearly every row and carries the least information —
+       held the only stable column, while `status`, the value an operator
+       actually scans for, drifted across a measured 163px range.
+
+       All three stay .badge elements carrying a badge- modifier: the open
+       vocabularies render verbatim through a fallback class, which is the
+       contract R10 fixes in place. They are differentiated by cell treatment
+       in base.html instead — solid / outline / ghost — so the row reads as a
+       hierarchy rather than three identical boxes. #}
+    <span class="ticket-row__cell ticket-row__status">
+      {{ badge(css_class=status_class.get(status, fallback_class), label=status) }}
+    </span>
+    <span class="ticket-row__cell ticket-row__prio">
+      {{ badge(css_class=priority_class.get(priority, fallback_class), label=priority) }}
+    </span>
+    <span class="ticket-row__cell ticket-row__type">
+      {{ badge(css_class=type_class.get(kind, fallback_class), label=kind) }}
+    </span>
+    <span class="ticket-row__note">
+      {# An epic heading carries both its child count and its own disposition;
+         everything else carries disposition alone. #}
+      {% if child_count is not none %}<span class="phase-label">{{ child_count }} active</span>{% endif %}
+      {% if record.get('phase') %}<span class="phase-label">phase · {{ record.get('phase') }}</span>{% endif %}
+      {# The tag flag is deliberately not a badge: it must never be mistakable
+         for the unrelated overnight-run outcome of the same name. #}
+      {% if record.get('deferred_tag') %}<span class="phase-label">tag · deferred</span>{% endif %}
+      {% if is_ready %}<span class="phase-label ticket-row__ready">ready</span>
+      {% elif is_blocked %}{{ badge(css_class='badge-red', label='blocked') }}
+      {% elif ineligible %}<span class="phase-label ticket-row__hold">hold</span>
+      {% elif child_count is none %}<span class="phase-label">—</span>{% endif %}
+    </span>
     <span class="feature-row__chev" aria-hidden="true">▸</span>
+    {# The reason gets a full-width line of its own beneath the row rather than
+       an ellipsis and a title= attribute. "What is blocked on what" is one of
+       the two questions this whole view exists to answer, and it was
+       previously answerable only by opening the row: the text clipped at
+       "blocked by non-termin…" and the full string lived in a tooltip, which
+       is invisible to touch, to keyboard, and to most screen-reader flows. #}
+    {% if ineligible and not is_ready %}
+    <span class="ticket-row__why">{{ ineligible.get('reason') }}</span>
+    {% endif %}
   </summary>
+
+  {# The description, fetched the first time this row is opened.
+
+     `toggle once` is the trigger because <details> fires `toggle` on open and
+     on close, and the body never changes within a session in a way this panel
+     needs to chase — one fetch per row per page load is the whole budget.
+     `hx-preserve` on the target is what makes it survive the 30s morph: the
+     polled fragment re-renders this row with an empty placeholder, and without
+     it idiomorph would replace the loaded prose with that placeholder on the
+     next tick while the row sat open.
+
+     This is the one hx-get on a row, and it is not navigation: it loads the
+     ticket in place. The affordance the board still refuses is a link that
+     goes somewhere and a placeholder that goes nowhere. #}
+  <div class="ticket-desc"
+       id="ticket-desc-{{ item_id }}"
+       hx-preserve="true"
+       hx-get="/partials/ticket/{{ item_id }}"
+       hx-trigger="toggle once from:closest details"
+       hx-swap="innerHTML">
+    <p class="empty-state">loading description</p>
+  </div>
 
   <div class="feature-detail">
     <div class="feature-detail-block">
@@ -154,13 +221,25 @@
   {% set _ = ineligible_by_id.update({entry['id']: entry}) %}
 {% endfor %}
 
-{# Every epic's children, stringified, so the flat list below can be defined
-   as "every active id that is nobody's child". Epic items are themselves
-   nobody's child and so land in the flat list — deliberately, and it is why
-   the group header is a heading rather than a row: exactly one row per
-   active id keeps the disclosure element ids unique. #}
+{# Every epic's children, stringified, PLUS every epic's own id, so the flat
+   list below can be defined as "every active id that is neither somebody's
+   child nor an epic that already heads its own group".
+
+   The epic ids matter as much as the children. An epic is nobody's child, so
+   a children-only exclusion left it in the flat list as well — #6 rendered
+   once as the "Seed: Command-station dashboard / epic / 2 active" group
+   heading and again, further down, as an ordinary "Unparented" row for the
+   same ticket. Two entries for one id reads as a duplication bug, and the
+   second one asserts something false: an epic that heads a group is not
+   unparented, it is the parent.
+
+   The element-id uniqueness this list protects is unaffected — the group
+   heading is a plain <h3>, not a ticket_row disclosure, so dropping the
+   redundant row leaves exactly one `#ticket-{id}` per active id, which is
+   still what base.html's sessionStorage restore requires. #}
 {% set child_ids = [] %}
 {% for epic_key, epic in epic_map.items() %}
+  {% set _ = child_ids.append(epic_key | string) %}
   {% for child in epic['children'] | default([], true) %}
     {% set _ = child_ids.append(child['id'] | string) %}
   {% endfor %}
@@ -197,15 +276,21 @@
   {% for item_id in item_order if item_id in epic_children %}
     {% set _ = epic_rows.append(item_id) %}
   {% endfor %}
+  {# The epic's own ticket row IS the group heading. It used to be a separate
+     <h3> carrying only id / title / count, which forced the epic's real row —
+     with its status, priority, blockers and readiness — to be rendered a
+     second time down in the flat list, where it also asserted the falsehood
+     that a group-heading epic is "unparented". Promoting the row to the
+     heading keeps exactly one row per active id (the invariant base.html's
+     sessionStorage restore depends on) while losing none of the epic's own
+     detail. #}
   <div class="epic-group mt-3">
-    <h3 class="card-row epic-head">
-      <span class="num num--sm">#{{ epic_key }}</span>
-      {% if epic_item.get('title') %}<strong>{{ epic_item.get('title') }}</strong>{% endif %}
-      <span class="phase-label">epic</span>
-      <span class="phase-label ml-auto">{{ epic_rows | length }} active</span>
-    </h3>
+    {{ ticket_row(epic_key, epic_item, ineligible_by_id.get(epic_key),
+                  blocked_why.get(epic_key, []), epic_key in ready_ids,
+                  status_class, priority_class, type_class, fallback_class,
+                  row_class='epic-head', child_count=epic_rows | length) }}
     {% if epic_rows %}
-    <div class="feature-list">
+    <div class="feature-list epic-children">
       {% for item_id in epic_rows %}
         {{ ticket_row(item_id, snap_items.get(item_id, {}), ineligible_by_id.get(item_id),
                       blocked_why.get(item_id, []), item_id in ready_ids,
@@ -225,11 +310,23 @@
   {% set _ = flat_ids.append(item_id) %}
 {% endfor %}
 <div class="flat-group mt-3">
-  <h3 class="card-row flat-head">
-    <strong>Unparented</strong>
-    <span class="phase-label">no epic</span>
-    <span class="phase-label ml-auto">{{ flat_ids | length }} active</span>
+  {# Deliberately not `.card-row`: that is a flex run, so this heading shared
+     no column with the rows beneath it and its tally floated to wherever the
+     text happened to end. It carries the row grid instead, with the leading
+     cells empty, so a group head and a ticket row are visibly the same object
+     — one that sometimes carries a ticket and sometimes does not, which is
+     already true of the epic heads above.
+
+     "Standalone" rather than "Unparented": on a normal board most items have
+     no epic (8 of 11 in the seeded corpus), and naming the majority case by
+     what it lacks reads as a defect rather than a category. #}
+  <h3 class="flat-head">
+    <span class="flat-head__title"><strong>Standalone</strong> <span class="phase-label">no epic</span></span>
+    <span class="ticket-row__note"><span class="phase-label">{{ flat_ids | length }} active</span></span>
   </h3>
+  {# Genuinely parentless tickets only. Epics head their own groups above and
+     are excluded from ``child_ids``' complement, so they no longer appear
+     here as well. #}
   {% if flat_ids %}
   <div class="feature-list">
     {% for item_id in flat_ids %}

@@ -75,6 +75,34 @@ class TestSessionList(unittest.TestCase):
             # Most recent session (Jan 2) should come first
             self.assertEqual(result[0]["session_id"], "overnight-2026-01-02-2200")
 
+    def test_latest_overnight_pointer_is_not_listed_as_its_own_session(self):
+        """A session reached through the pointer symlink is not listed twice.
+
+        Regression: ``sessions/latest-overnight`` is a symlink the runner
+        repoints at every start, and a ``*/overnight-state.json`` glob matches
+        straight through it — so the newest run appeared twice on /sessions,
+        under the same id both times. Every repo that has run overnight since
+        the pointer shipped has the link, so this was live, not hypothetical.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            lifecycle_dir = Path(tmp)
+            sessions_dir = lifecycle_dir / "sessions"
+            _write_session(
+                sessions_dir,
+                "overnight-2026-01-02-2200",
+                "2026-01-02T22:00:00Z",
+                "2026-01-02T23:00:00Z",
+                {"feat-b": {"status": "merged"}},
+            )
+            (sessions_dir / "latest-overnight").symlink_to(
+                "overnight-2026-01-02-2200", target_is_directory=True
+            )
+
+            result = parse_session_list(lifecycle_dir)
+
+            self.assertEqual([row["session_id"] for row in result],
+                             ["overnight-2026-01-02-2200"])
+
     def test_session_list_empty_dir(self):
         """Returns [] when the sessions directory is absent."""
         with tempfile.TemporaryDirectory() as tmp:

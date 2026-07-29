@@ -23,6 +23,7 @@ from what the feed expects is only visible from this side of the call.
 from __future__ import annotations
 
 import io
+import json
 import os
 import subprocess
 import tempfile
@@ -32,6 +33,7 @@ from pathlib import Path
 from unittest import mock
 
 from cortex_command.dashboard import seed as seed_module
+from cortex_command.dashboard.poller import _resolve_session_path
 from cortex_command.dashboard.seed import (
     SEED_PREFIX,
     clean_all,
@@ -121,6 +123,69 @@ class TestContainment(_RootTestCase):
         # it. Pin the count instead: one reference, in the --sweep-legacy path.
         source = Path(seed_module.__file__).read_text(encoding="utf-8")
         self.assertEqual(source.count("_resolve_user_project_root"), 1)
+
+
+class TestLatestOvernightPointer(_RootTestCase):
+    """The seeded session is reachable through the pointer the poller reads."""
+
+    def _pointer(self, root: Path) -> Path:
+        return root / "cortex" / "lifecycle" / "sessions" / "latest-overnight"
+
+    def test_seed_publishes_a_pointer_the_poller_resolves(self):
+        # The regression: the seeder wrote overnight-state.json to the session
+        # directory and to cortex/lifecycle/, but _resolve_session_path reads
+        # neither — absent the ~/.local/share pointer it falls back to
+        # sessions/latest-overnight/ and nothing else. So `just dashboard-demo`
+        # rendered an idle, sessionless dashboard over a full fixture corpus.
+        self.seed(self.root)
+        pointer = self._pointer(self.root)
+        self.assertTrue(pointer.is_symlink(), "seeder published no pointer")
+        # Relative, so the fixture root stays movable.
+        self.assertEqual(os.readlink(pointer), SESSION_ID)
+        self.assertTrue((pointer / "overnight-state.json").is_file())
+        self.assertTrue((pointer / "overnight-events.log").is_file())
+
+    def test_the_pointer_resolves_the_same_state_the_dashboard_renders(self):
+        # Pin the actual consumer, not just the link's existence: the poller's
+        # resolver must land on the seeded session's real state file.
+        self.seed(self.root)
+        # _resolve_session_path prefers ~/.local/share/overnight-sessions's
+        # pointer when it names an executing session. Redirect HOME at a bare
+        # tmp dir so this asserts the fallback arm on every machine, including
+        # a developer's with a live overnight session running.
+        fake_home = self.tmp / "home"
+        fake_home.mkdir()
+        with mock.patch("pathlib.Path.home", return_value=fake_home):
+            state_path, events_path = _resolve_session_path(self.root)
+        self.assertTrue(state_path.is_file())
+        self.assertTrue(events_path.is_file())
+        payload = json.loads(state_path.read_text(encoding="utf-8"))
+        self.assertEqual(payload["session_id"], SESSION_ID)
+        self.assertTrue(payload["features"], "resolved state names no features")
+
+    def test_clean_removes_a_seed_pointer(self):
+        self.seed(self.root)
+        with redirect_stdout(io.StringIO()):
+            clean_all(self.root)
+        self.assertFalse(self._pointer(self.root).is_symlink())
+        self.assertFalse(self._pointer(self.root).exists())
+
+    def test_clean_leaves_a_pointer_into_a_real_session_alone(self):
+        # --clean runs against whatever root it is handed, and a real repo
+        # keeps the runner's own latest-overnight link at exactly this path.
+        # Unlinking it would blind every reader that resolves through it.
+        sessions = self.root / "cortex" / "lifecycle" / "sessions"
+        real_session = sessions / "2026-07-29-real-work"
+        real_session.mkdir(parents=True)
+        (real_session / "overnight-state.json").write_text("{}", encoding="utf-8")
+        pointer = self._pointer(self.root)
+        pointer.symlink_to(real_session.name, target_is_directory=True)
+
+        with redirect_stdout(io.StringIO()):
+            clean_all(self.root)
+
+        self.assertTrue(pointer.is_symlink())
+        self.assertEqual(os.readlink(pointer), real_session.name)
 
 
 class TestWriterCleanerSymmetry(_RootTestCase):

@@ -1,5 +1,17 @@
+{# Feature slugs are long hyphenated tokens, and a hyphen is a line-break
+   opportunity by default — so "seed-feature-alpha, seed-feature-beta" wrapped
+   as "seed-feature-alpha, seed-" / "feature-beta", which reads as a third
+   feature that does not exist. No word-break value fixes this (they govern
+   inter-letter breaking, not hyphens), so each slug is emitted as its own
+   nowrap span and the cell breaks between slugs instead of inside them. #}
+{% macro slug_list(slugs, shown) %}
+{%- for slug in slugs[:shown] -%}
+<span class="slug-atom">{{ slug }}</span>{% if not loop.last %}, {% endif %}
+{%- endfor -%}
+{%- if slugs | length > shown %} +{{ slugs | length - shown }}{% endif -%}
+{% endmacro %}
 <span class="sec-num"><strong>§ 08</strong>rounds</span>
-<h2>Round <em>history</em> <span class="phase-tag">{% if state.overnight and state.overnight.round_history %}{{ state.overnight.round_history | length }} cleared{% else %}—{% endif %}</span></h2>
+<h2>Round <em>history</em> <span class="phase-tag">{% if state.overnight and state.overnight.round_history %}{{ state.overnight.round_history | length }} cleared{% else %}none cleared{% endif %}</span></h2>
 {% if state.overnight and state.overnight.round_history %}
 <div class="stream-line">
   <span>doc · round_history[]</span>
@@ -31,10 +43,10 @@
       <td><span class="round-id">R{{ round.round_number }}</span></td>
       <td>{{ rt.get('started_at') | format_date }}</td>
       <td>{{ rt.get('started_at') | format_duration(rt.get('completed_at')) }}</td>
-      <td>{% if batch %}<span class="round-cell">{{ batch | length }} · {{ batch[:3] | join(', ') }}{% if batch | length > 3 %} +{{ batch | length - 3 }}{% endif %}</span>{% else %}—{% endif %}</td>
-      <td>{% if merged %}<span class="round-cell round-cell--good">{{ merged | length }} · {{ merged[:2] | join(', ') }}{% if merged | length > 2 %} +{{ merged | length - 2 }}{% endif %}</span>{% else %}—{% endif %}</td>
-      <td>{% if paused %}<span class="round-cell round-cell--warn">{{ paused | length }} · {{ paused[:2] | join(', ') }}{% if paused | length > 2 %} +{{ paused | length - 2 }}{% endif %}</span>{% else %}—{% endif %}</td>
-      <td>{% if deferred %}<span class="round-cell round-cell--warn">{{ deferred | length }} · {{ deferred[:2] | join(', ') }}{% if deferred | length > 2 %} +{{ deferred | length - 2 }}{% endif %}</span>{% else %}—{% endif %}</td>
+      <td>{% if batch %}<span class="round-cell">{{ batch | length }} · {{ slug_list(batch, 3) }}</span>{% else %}—{% endif %}</td>
+      <td>{% if merged %}<span class="round-cell round-cell--good">{{ merged | length }} · {{ slug_list(merged, 2) }}</span>{% else %}—{% endif %}</td>
+      <td>{% if paused %}<span class="round-cell round-cell--warn">{{ paused | length }} · {{ slug_list(paused, 2) }}</span>{% else %}—{% endif %}</td>
+      <td>{% if deferred %}<span class="round-cell round-cell--warn">{{ deferred | length }} · {{ slug_list(deferred, 2) }}</span>{% else %}—{% endif %}</td>
     </tr>
     {% endfor %}
   </tbody>

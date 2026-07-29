@@ -416,10 +416,18 @@ _BOARD_TEMPLATE = _TEMPLATE_DIR / "triage_board.html"
 # the badge(status=…) path — emits markup matching no rule.
 _BADGE_CLASS_RE = re.compile(r"^badge-(red|amber|gray|green|blue|purple)$")
 
-# Attributes that would make a row navigational. The per-ticket reader is a
-# separate ticket; dead placeholder links are the defect this panel exists to
-# avoid, so their absence is asserted rather than assumed.
-_NAVIGATION_ATTRS = ("href", "hx-get", "hx-push-url", "onclick")
+# Attributes that would take the operator somewhere else. Dead placeholder
+# links are the defect this panel's epic cites, so their absence is asserted
+# rather than assumed.
+#
+# `hx-get` was on this list while the board had no reader at all, when any
+# fetch on a row could only have been a stub. It is off the list now that the
+# row lazy-loads its own description in place: that request renders into the
+# open row and moves nobody anywhere, which is the opposite of the defect
+# being guarded. The guard did not weaken — `test_row_fetch_targets_a_live_
+# route` below asserts the thing the old blanket ban was standing in for,
+# namely that a row's fetch resolves to a real endpoint rather than "#".
+_NAVIGATION_ATTRS = ("href", "hx-push-url", "onclick")
 
 # One corpus exercising most of the board's joins at once, so the joins are
 # tested against a single realistic snapshot rather than one contrived per
@@ -622,9 +630,32 @@ class TestTriageBoardRows(unittest.TestCase):
     def test_each_active_item_renders_exactly_one_row(self):
         # Element ids must stay unique: base.html's sessionStorage restore
         # keys on d.id, so a ticket rendered twice — once under its epic and
-        # once in the flat list — makes the restore ambiguous.
+        # once in the flat list — makes the restore ambiguous. An epic is the
+        # case that used to break this: it is nobody's child, so it landed in
+        # the flat list on top of heading its own group. The epic's row now
+        # IS that heading, which is what keeps the count at exactly one.
         rendered = _row_ids(self.dom)
         self.assertEqual(sorted(rendered), sorted(self.snapshot["item_order"]))
+
+    def test_an_epic_renders_once_as_its_group_head(self):
+        # Regression: #410 rendered twice — as the epic-group heading and
+        # again as an "Unparented" row for the same ticket, which also
+        # asserted the falsehood that a group-heading epic has no parent.
+        epic_rows = self.dom.find_all("details", "epic-head")
+        self.assertEqual(len(epic_rows), 1)
+        self.assertEqual(epic_rows[0].attrs.get("id"), "ticket-410")
+        self.assertEqual(_row_ids(self.dom).count("410"), 1)
+        flat = self.dom.find_all("div", "flat-group")[0]
+        self.assertNotIn("410", _row_ids(flat))
+
+    def test_epic_head_keeps_the_epics_own_classification(self):
+        # Promoting the row to the heading must not cost the epic its own
+        # status/priority/type badges — the old <h3> heading carried none of
+        # them, which is why the duplicate flat row existed at all.
+        epic_row = self.dom.find_all("details", "epic-head")[0]
+        labels = [badge.text for badge in _badges(epic_row.find_all("summary")[0])]
+        self.assertIn("epic", labels)
+        self.assertIn("2 active", epic_row.find_all("summary")[0].text)
 
     def test_ineligible_rows_display_their_reason(self):
         # R4: the reason is the whole point of showing a rejected item.
@@ -703,16 +734,17 @@ class TestTriageBoardEpicMap(unittest.TestCase):
         self.assertEqual(shape(6), (6, 1))
 
     def test_unparented_items_land_in_the_flat_list(self):
-        # R8: every item_order id that is nobody's child renders below, and
-        # the epic item itself is nobody's child — so exactly one row per
-        # active id, which is what keeps the disclosure ids unique.
+        # R8: every item_order id that is neither somebody's child nor an epic
+        # heading its own group renders below. Epics are excluded because they
+        # already render once above, as their group's head row — #410 is the
+        # epic here, and it belongs to the epic group, not to "Unparented".
         html = _render_board(_board_snapshot(_BOARD_CORPUS))
         dom = _parse(html)
         flat = dom.find_all("div", "flat-group")
         self.assertEqual(len(flat), 1)
-        self.assertEqual(set(_row_ids(flat[0])), {"410", "156", "201", "300"})
+        self.assertEqual(set(_row_ids(flat[0])), {"156", "201", "300"})
         epic_group = dom.find_all("div", "epic-group")[0]
-        self.assertEqual(set(_row_ids(epic_group)), {"411", "412"})
+        self.assertEqual(set(_row_ids(epic_group)), {"410", "411", "412"})
 
     def test_epic_with_zero_active_children_says_so(self):
         # R15: build_epic_map seeds its map with every epic id, zero-child
@@ -854,14 +886,51 @@ class TestTriageBoardRowIdentity(unittest.TestCase):
         self.assertNotEqual(forward, backward)
 
     def test_rows_carry_no_navigation_affordance(self):
-        # The /tickets/{id} reader is a separate ticket, and live href="#"
-        # placeholders are the exact defect this panel's epic cites.
+        # Live href="#" placeholders are the exact defect this panel's epic
+        # cites. A row reads in place or not at all; it never moves the
+        # operator to another surface.
         html = _render_board(_board_snapshot(_BOARD_CORPUS))
         for item_id, row in _rows(html).items():
             for element in [row, *row.find_all()]:
                 with self.subTest(item=item_id, tag=element.tag):
                     for attr in _NAVIGATION_ATTRS:
                         self.assertNotIn(attr, element.attrs)
+
+    def test_row_fetch_targets_a_live_route(self):
+        # What the blanket hx-get ban was really standing in for: a fetch on a
+        # row must resolve to a real endpoint carrying the row's own id, never
+        # a placeholder. "#" or an id-less path would reproduce the dead-link
+        # defect through htmx instead of through href.
+        html = _render_board(_board_snapshot(_BOARD_CORPUS))
+        rows = _rows(html)
+        self.assertTrue(rows, "fixture must render at least one row")
+        for item_id, row in rows.items():
+            targets = [
+                element.attrs["hx-get"]
+                for element in [row, *row.find_all()]
+                if "hx-get" in element.attrs
+            ]
+            with self.subTest(item=item_id):
+                self.assertEqual(
+                    targets,
+                    [f"/partials/ticket/{item_id}"],
+                    f"row {item_id} must carry exactly one fetch, at its own id",
+                )
+
+    def test_row_description_target_survives_a_morph(self):
+        # The board re-renders every 30s and the description is lazy-loaded, so
+        # the placeholder the poll re-emits would overwrite loaded prose in an
+        # open row unless the target is both id-addressable and preserved.
+        html = _render_board(_board_snapshot(_BOARD_CORPUS))
+        for item_id, row in _rows(html).items():
+            holders = [
+                element
+                for element in row.find_all()
+                if element.attrs.get("id") == f"ticket-desc-{item_id}"
+            ]
+            with self.subTest(item=item_id):
+                self.assertEqual(len(holders), 1)
+                self.assertEqual(holders[0].attrs.get("hx-preserve"), "true")
 
 
 class TestTriageBoardStates(unittest.TestCase):
@@ -884,14 +953,17 @@ class TestTriageBoardStates(unittest.TestCase):
     def test_every_state_keeps_the_section_label(self):
         # R14: no state self-hides — every panel renders its shell and swaps
         # only inner content, and the morph swap replaces the shell's own
-        # label on first load.
+        # label on first load. The number is § 02 rather than § 11 since the
+        # board became the Backlog view's second section instead of the
+        # overnight page's eleventh; the register is per-view.
         for name, html in (
             ("never polled", self.never_polled),
             ("empty", self.empty),
             ("stale", self.stale),
         ):
             with self.subTest(state=name):
-                self.assertIn("§ 11", html)
+                self.assertIn("§ 02", html)
+                self.assertIn("triage", html)
 
     def test_never_polled_renders_a_loading_state(self):
         self.assertIn("loading triage board", self.never_polled)

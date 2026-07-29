@@ -24,7 +24,7 @@
   "heartbeat": "var(--color-ink-faint)",
   "feature_checkpoint": "var(--color-ink-mute)",
 } %}
-<span class="sec-num"><strong>§ 04</strong>recent<br>activity</span>
+<span class="sec-num"><strong>§ 04</strong>recent activity</span>
 <h2>Activity <em>stream</em> <span class="phase-tag">{% if state.recent_events %}last {{ state.recent_events | length }} events · newest first{% else %}awaiting signal{% endif %}</span></h2>
 {% if state.recent_events %}
 <div class="stream-line">

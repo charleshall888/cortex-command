@@ -7,7 +7,12 @@
   <title>{% block title %}Cortex · Overnight{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,300..700,30..100,0..1;1,9..144,300..700,30..100,0..1&family=JetBrains+Mono:wght@300;400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  {# Inter was dropped from this request: `--font-ui` declared it in two
+     places and no rule anywhere referenced `var(--font-ui)`, so three weights
+     of a webfont were fetched on every load of a page that polls continuously
+     and never rendered a glyph. Fraunces and JetBrains Mono are the two faces
+     this dashboard actually sets. #}
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,300..700,30..100,0..1;1,9..144,300..700,30..100,0..1&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
   <script src="https://unpkg.com/htmx-ext-idiomorph@2.0.1/idiomorph-ext.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -84,7 +89,6 @@
       /* Typography */
       --font-serif: "Fraunces", "Iowan Old Style", Georgia, serif;
       --font-mono:  "JetBrains Mono", ui-monospace, "Cascadia Code", "Fira Code", monospace;
-      --font-ui:    "Inter", system-ui, -apple-system, sans-serif;
       --font-sans:  var(--font-serif);
 
       --text-xs:   0.75rem;
@@ -216,7 +220,33 @@
          does not always re-emit --font-* tokens at :root scope. */
       --font-serif: "Fraunces", "Iowan Old Style", Georgia, serif;
       --font-mono:  "JetBrains Mono", ui-monospace, "Cascadia Code", "Fira Code", monospace;
-      --font-ui:    "Inter", system-ui, -apple-system, sans-serif;
+
+      /* Spatial scale, restated at :root for the same reason as the fonts —
+         and it is not optional. `--s-*` is not one of Tailwind's recognized
+         @theme namespaces (unlike the --color-, --font- and --text- prefixes),
+         so the CDN drops it entirely rather than re-emitting it. Every raw-CSS
+         `gap: var(--s-3)` then resolves to nothing and falls back to the
+         initial value: `.feature-row`'s nine-column grid was rendering with
+         `gap: normal` (= 0), which is why status badges sat flush against
+         the phase text they abut. Keep these in sync with the @theme copy. */
+      --s-1: 4px;
+      --s-2: 8px;
+      --s-3: 12px;
+      --s-4: 16px;
+      --s-5: 24px;
+      --s-6: 32px;
+      --s-7: 48px;
+      --s-8: 64px;
+
+      /* Type scale, restated for the same reason: `.card-row`'s
+         `font-size: var(--text-sm)` was resolving to nothing, so every
+         triage and feature row inherited the 16px body size instead. */
+      --text-xs:   0.75rem;
+      --text-sm:   0.8125rem;
+      --text-base: 0.9375rem;
+      --text-md:   1.0625rem;
+      --text-lg:   1.25rem;
+      --text-xl:   1.5rem;
 
       --grid-tint:        rgba(30, 64, 175, 0.07);
       --grid-tint-soft:   rgba(30, 64, 175, 0.05);
@@ -275,14 +305,32 @@
         font-family: var(--font-serif);
         font-size: 16px;
         line-height: 1.55;
-        font-feature-settings: "liga" 1, "kern" 1, "onum" 1, "ss01" 1;
+        /* Lining, tabular figures are the default because this is a dashboard:
+           almost every figure on screen is an id, count, cost or duration that
+           has to align in a column and be compared against its neighbour.
+           `onum` (oldstyle) was the previous default — it sets figures at
+           x-height with ascenders and descenders, so "#13" bobbed against "#6"
+           and cost columns lost their vertical edge. Oldstyle is opt-in per
+           component now via `.figs-old`, for running prose only. */
+        font-feature-settings: "liga" 1, "kern" 1, "lnum" 1, "tnum" 1, "ss01" 1;
       }
       body {
         margin: 0;
         padding: 0;
         background-color: var(--color-parchment);
         color: var(--color-ink);
-        font-variation-settings: "opsz" 144;
+        /* Fraunces carries an optical-size axis spanning 9..144. This used to
+           be pinned at 144 — the poster cut — and inherited into every element
+           on the page, so 15-16px body text and dense data rows rendered with
+           hairline strokes and display-tight sidebearings. That single
+           declaration was the largest single cause of "hard to read".
+           `auto` lets the browser track opsz to each element's rendered size,
+           so small text gets the sturdy small-optical cut and only genuinely
+           large display type gets the poster cut. Elements that want the
+           poster cut regardless (the masthead wordmark) set their own explicit
+           font-variation-settings and are unaffected by this. */
+        font-optical-sizing: auto;
+        font-variation-settings: normal;
         min-height: 100vh;
       }
       body::before {
@@ -309,7 +357,7 @@
         z-index: 2;
         max-width: 1320px;
         margin: 0 auto;
-        padding: 0 56px 96px;
+        padding: 0 56px 64px;
       }
       @media (max-width: 1024px) { .page-wrap { padding: 0 32px 72px; } }
       @media (max-width: 600px)  { .page-wrap { padding: 0 16px 56px; } }
@@ -317,8 +365,8 @@
       /* ── Manuscript header ──────────────────────────────────────── */
       header.manuscript {
         position: relative;
-        padding: 40px 0 28px;
-        margin-bottom: 32px;
+        padding: 28px 0 20px;
+        margin-bottom: 24px;
         border-bottom: 1px solid var(--color-rule);
         display: grid;
         grid-template-columns: 1fr auto;
@@ -416,18 +464,33 @@
         0%, 100% { opacity: 1; }
         50%      { opacity: 0.38; }
       }
+      /* Liveness pulse for elements that carry TEXT. `pulse` animates the
+         whole element's opacity, which is correct for a bare dot or pip but
+         drops a badge's label to 38% every cycle — the running badge spent
+         half its life unreadable, on a surface meant to be watched for hours.
+         This animates only the fill behind the label, so the state stays
+         legible at every frame while still reading as live. */
+      @keyframes pulse-fill {
+        0%, 100% { background-color: color-mix(in srgb, var(--c-state-running) 26%, transparent); }
+        50%      { background-color: color-mix(in srgb, var(--c-state-running)  8%, transparent); }
+      }
       @media (prefers-reduced-motion: no-preference) {
         .live-indicator--active .live-dot { animation: pulse 1.8s ease-in-out infinite; }
       }
 
       /* ── Main + sections (the .sec spec-card vocabulary) ───────────── */
-      main { display: flex; flex-direction: column; gap: 28px; }
+      main { display: flex; flex-direction: column; gap: var(--s-5); }
 
       section {
         position: relative;
         background: var(--color-parchment-2);
         border: 1px solid var(--color-rule-soft);
-        padding: 28px 32px 30px var(--margin-col-width);
+        /* Tightened from 28/32/30. The editorial margin column stays — it is
+           the register the whole layout is built on — but the generous
+           interior padding was buying whitespace at the cost of forcing a
+           single session across five screens of scroll, which is the opposite
+           of what a monitoring surface is for. */
+        padding: 20px 26px 22px var(--margin-col-width);
         box-shadow:
           inset 0 1px 0 var(--shadow-tint),
           0 14px 36px -28px var(--shadow-tint-deep);
@@ -435,7 +498,19 @@
       section::before {
         content: "";
         position: absolute;
-        inset: 0;
+        /* The graph-paper grid is confined to the editorial margin column.
+           It used to cover the full section (`inset: 0`) at a 14px pitch —
+           within a pixel or two of the rendered text size, so it beat against
+           the letterforms at the same spatial frequency and put a visible
+           lattice directly behind every row of data. Ruled paper is the right
+           metaphor for the margin, where the § marks sit and no body text
+           does; behind running text it is interference, not texture.
+           Keeping it here preserves the ledger character exactly where it
+           reads as deliberate, and leaves the reading field clean. */
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: calc(var(--margin-col-width) - 8px);
         background-image:
           linear-gradient(to right,  var(--grid-tint) 1px, transparent 1px),
           linear-gradient(to bottom, var(--grid-tint) 1px, transparent 1px);
@@ -454,22 +529,24 @@
         pointer-events: none;
       }
       section > * { position: relative; z-index: 1; }
-      section[data-sec]::after { display: block; }
-      section[data-sec] {
-        --section-num: attr(data-sec);
-      }
-      section[data-sec] > h2 {
-        position: relative;
-      }
-      section[data-sec] > h2::before {
-        content: "§ " attr(data-numlabel, '');
-      }
+      /* An earlier `section[data-sec]` / `data-numlabel` mechanism for the
+         section register was removed here: no template in the package emits
+         either attribute, so all four rules matched nothing, and the
+         `--section-num: attr(data-sec)` declaration was invalid regardless —
+         `attr()` resolves only inside `content` in any shipping browser. The
+         `.sec-num` span below is the mechanism that actually renders, and is
+         the one the comment already calls preferred. */
       /* Section register marker placed via separate sec-num span (preferred).
-         Word-break is normal so multi-word labels read as one phrase, not as
-         vertical poetry. The strong is the §-number; the label flows below. */
+         The strong is the §-number; the label flows below it in the margin
+         column. Multi-word labels wrap at their spaces rather than being
+         glued into one overflowing token — the margin column is only ~60px
+         wide, so "open questions" cannot fit on one line at any weight, and
+         forcing it to try pushed the text out through the section's left
+         border. Wrapping is the affordance; `break-word` is the backstop for
+         a single label longer than the column. */
       .sec-num {
         position: absolute;
-        top: 30px;
+        top: 22px;
         left: 0;
         width: calc(var(--margin-col-width) - 16px);
         text-align: right;
@@ -480,6 +557,7 @@
         color: var(--color-ink-faint);
         line-height: 1.4;
         word-spacing: 0.05em;
+        overflow-wrap: break-word;
       }
       .sec-num strong {
         display: block;
@@ -489,9 +567,8 @@
         letter-spacing: 0.04em;
         margin-bottom: 2px;
       }
-      .sec-num br { display: none; }
       section h2 {
-        margin: 0 0 14px;
+        margin: 0 0 10px;
         font-family: var(--font-serif);
         font-weight: 400;
         font-size: 21px;
@@ -517,8 +594,8 @@
         letter-spacing: var(--register);
         text-transform: uppercase;
         color: var(--color-ink-faint);
-        margin: -8px 0 18px;
-        padding-bottom: 8px;
+        margin: -4px 0 12px;
+        padding-bottom: 6px;
         border-bottom: 1px dashed var(--color-rule-soft);
         display: flex;
         gap: 14px;
@@ -655,7 +732,7 @@
       @media (prefers-reduced-motion: no-preference) {
         .badge-blue,
         .badge-running {
-          animation: pulse 2.4s ease-in-out infinite;
+          animation: pulse-fill 2.4s ease-in-out infinite;
         }
       }
       .badge-red {
@@ -806,7 +883,13 @@
         letter-spacing: 0.06em;
         text-transform: uppercase;
         color: var(--color-ink-faint);
+        /* Without this a two-part label ("1h 33m") wraps at its space into a
+           second line that falls outside the 18px axis. */
+        white-space: nowrap;
       }
+      /* The final tick sits at left:100%; centering it there hangs half the
+         label past the panel's right edge. Anchor it inside instead. */
+      .tick-label--last { transform: translateX(-100%); }
       .lane-tick-mark {
         background-color: var(--color-lane-tick);
         opacity: 0.55;
@@ -930,6 +1013,332 @@
       .prose ul li::marker { color: var(--color-blue); }
 
       /* Footer-rule pattern — small mono line below sections */
+      /* ── Triage board ─────────────────────────────────────────────────
+         The board shipped with no styles of its own: every ticket was a bare
+         .card-row, so an epic heading, its children and the unparented list
+         all rendered as one undifferentiated stack of rows and the grouping
+         the template works hard to compute was invisible. These rules make
+         the hierarchy legible — group container, epic head, indented
+         children — without introducing a second row vocabulary. */
+      .epic-group,
+      .flat-group {
+        border: 1px solid var(--color-rule-soft);
+        border-radius: 2px;
+        background: color-mix(in srgb, var(--color-ink) 2%, transparent);
+      }
+      .ticket-row > summary {
+        display: grid;
+        /* Every track that carries a scannable value is a FIXED width, and
+           that is the whole point. Each <summary> is its own grid container,
+           so a content-sized track (`auto`, `max-content`) resolves against
+           that row's own content and lands at a different x on every row —
+           grid tracks do not align across sibling grid containers. The
+           qualifier track was `minmax(0, auto)`, which put the status badge
+           anywhere across a measured 163px range down a 13-row board: the
+           column existed in the markup but was not scannable on screen.
+           Only the title and disposition tracks flex, because neither is
+           read by scanning down a column. */
+        grid-template-columns:
+          4.5ch                  /* #id, tabular so the column is exact */
+          minmax(12ch, 1fr)      /* title — read per row, not down a column */
+          108px                  /* status   — fits "in_progress" at 99px */
+          74px                   /* priority — fits "critical" / "medium" */
+          76px                   /* type     — scanned down the column */
+          minmax(10ch, 26ch)     /* ready · hold · child count */
+          14px;                  /* disclosure chevron */
+        align-items: center;
+        gap: var(--s-3);
+        padding: 7px 12px;
+        cursor: pointer;
+        list-style: none;
+        /* No row separator. It was 1px of dotted rule every ~31px down the
+           board, and once the columns align and the title carries a leader,
+           it is drawing a boundary the eye no longer needs — the hover ground
+           marks the row under the cursor. Rules survive at the group edge and
+           under a group head, where they separate things that differ. */
+        transition: background 0.18s ease;
+      }
+      .ticket-row__id {
+        font-variant-numeric: tabular-nums slashed-zero;
+        text-align: right;
+      }
+      .ticket-row__title {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        min-width: 0;
+      }
+      .ticket-row__title > strong {
+        font-family: var(--font-serif);
+        font-weight: 500;
+        font-size: 15px;
+        letter-spacing: -0.005em;
+        color: var(--color-ink-1);
+        /* One line per ticket: the board is a scan surface, and a wrapped
+           title breaks the column rhythm that makes it scannable. The full
+           text stays reachable in the disclosure below. */
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      /* The leader: dots from the end of the title to the status column. */
+      .ticket-row__title::after {
+        content: "";
+        flex: 1 1 auto;
+        min-width: 2ch;
+        height: 3px;
+        transform: translateY(-0.18em);
+        background-image: radial-gradient(circle at 50% 50%, var(--color-ink-30) 0.9px, transparent 1px);
+        background-size: 6px 3px;
+        background-repeat: repeat-x;
+        opacity: 0.5;
+      }
+      /* ── Backlog ledger lede ──────────────────────────────────────────
+         The one line at the top of § 01 that says what the queue is doing.
+         Replaces an inline-styled card-row: DESIGN.md forbids `style=` on
+         new components, and that row carried both a raw `font-size: 32px`
+         and a token colour inline. */
+      .ledger-lede {
+        display: flex;
+        align-items: baseline;
+        flex-wrap: wrap;
+        gap: 10px 14px;
+      }
+      .ledger-lede__n {
+        font-family: var(--font-serif);
+        font-size: 34px;
+        font-weight: 500;
+        line-height: 1;
+        color: var(--c-state-merged);
+      }
+      .ledger-lede__label {
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--color-ink-2);
+      }
+      .ledger-lede__rule {
+        flex: 1 1 24px;
+        height: 1px;
+        background: var(--color-rule-soft);
+        align-self: center;
+        min-width: 16px;
+      }
+      .ledger-lede__stat {
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        letter-spacing: 0.02em;
+        color: var(--color-ink-4);
+        white-space: nowrap;
+      }
+      .ledger-lede__stat .num {
+        font-size: 14px;
+        color: var(--color-ink-2);
+        margin-right: 2px;
+      }
+      /* A non-zero blocked count is the only stat here that asks for action. */
+      .ledger-lede__stat.is-blocked .num { color: var(--c-state-failed); }
+
+      /* One classification value per fixed cell. Left-aligned inside the cell
+         so the badge's leading edge — not its trailing edge — is what lines
+         up down the board, because that is the edge the eye tracks. */
+      .ticket-row__cell {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+      }
+      .ticket-row__cell .badge {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: inline-block;
+      }
+      /* Three dimensions, three weights of the same badge form — so the row
+         reads as a hierarchy instead of three interchangeable boxes.
+         Status is what an operator scans for, so it keeps the solid fill it
+         already had (set by its badge- colour class). Priority steps down to
+         an outline. Type steps down again to a borderless ghost: it reads
+         "feature" on most rows and is near-zero information in the scan,
+         but it is not free to delete — R10 fixes the open vocabulary in
+         place, and "epic" / "bug" / "chore" do carry signal when they
+         appear. Muting it costs nothing and buys back the column. */
+      /* Status always gets a ground, whatever its colour class. Deriving the
+         fill from `currentColor` rather than from a specific state token is
+         what makes the tier hold: the most common status on any real board is
+         `backlog`, which maps to `.badge-gray` — and `.badge-gray` sets
+         `background: transparent`. Without this rule the solid/outline/ghost
+         hierarchy inverted to transparent/transparent/transparent on exactly
+         the majority of rows, so the tier existed only on the minority that
+         happened to carry a coloured status. */
+      .ticket-row__status .badge {
+        background: color-mix(in srgb, currentColor 15%, transparent);
+        border-style: solid;
+      }
+      .ticket-row__prio .badge {
+        background: transparent;
+        font-weight: 500;
+      }
+      .ticket-row__type .badge {
+        background: transparent;
+        border-color: transparent;
+        /* ink-3, not ink-4: with no border and no ground this is the weakest
+           thing in the row, so it cannot also sit at the lowest ink step. */
+        color: var(--color-ink-3);
+        padding-left: 0;
+        padding-right: 0;
+        letter-spacing: 0.06em;
+      }
+      /* A blocked row is the one thing on this board that wants to be found
+         from across the room, so it is marked on the row itself rather than
+         only by a badge inside it. */
+      .ticket-row > summary.is-blocked {
+        box-shadow: inset 2px 0 0 0 var(--c-state-failed);
+      }
+      /* The reason line: full width beneath the row, never truncated. */
+      .ticket-row__why {
+        grid-column: 3 / -1;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        line-height: 1.45;
+        color: var(--color-ink-3);
+        white-space: normal;
+        margin-top: 3px;
+      }
+      .ticket-row__why::before {
+        content: "↳ ";
+        color: var(--color-ink-4);
+      }
+      .ticket-row__note {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        justify-content: flex-end;
+        min-width: 0;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+      /* Disposition is the board's headline answer to "what can I pick up",
+         so ready and hold are the only two colour-carrying words in a row. */
+      .ticket-row__ready { color: var(--c-state-merged); }
+      .ticket-row__hold  { color: var(--c-state-paused); }
+      .ticket-row__note .phase-label { overflow: hidden; text-overflow: ellipsis; }
+      .ticket-row > summary::-webkit-details-marker { display: none; }
+      .ticket-row:last-child > summary { border-bottom: none; }
+      .ticket-row > summary:hover { background: color-mix(in srgb, var(--color-blue) 6%, transparent); }
+      .ticket-row[open] > summary { background: color-mix(in srgb, var(--color-blue) 4%, transparent); }
+      .ticket-row[open] > summary .feature-row__chev { transform: rotate(90deg); color: var(--color-ink-1); }
+      /* The epic head reads as a heading first and a row second: heavier
+         ground, a state stripe, and its title at heading weight. */
+      .ticket-row.epic-head > summary {
+        /* Opaque, not a color-mix over transparent: these heads are sticky,
+           and rows scrolling underneath a translucent head show through it. */
+        background: var(--color-parchment-3);
+        border-bottom: 1px solid var(--color-rule-soft);
+        box-shadow: inset 3px 0 0 0 var(--color-ochre);
+        /* 12px, matching every other row and the flat head, so all three
+           head types start their title on one x. The stripe is an inset
+           box-shadow and takes no layout space, so it needs no extra room. */
+        padding-left: 12px;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+      }
+      /* A blocked epic is blocked FIRST and an epic second, so the failure
+         colour takes the stripe. This rule has to exist: `.epic-head > summary`
+         and `> summary.is-blocked` have identical specificity (0,2,1), and
+         box-shadow does not accumulate across rules — so source order alone
+         decided, the later epic-head rule won, and a blocked epic head
+         silently rendered the ochre stripe. The one row type where a blocked
+         marker matters most was the one row type that never showed it. */
+      .ticket-row.epic-head > summary.is-blocked {
+        box-shadow: inset 3px 0 0 0 var(--c-state-failed);
+      }
+      .ticket-row.epic-head > summary strong { font-size: 16px; }
+      .ticket-row.epic-head > summary:hover { background: color-mix(in srgb, var(--color-ochre) 8%, transparent); }
+      /* Children are indented under their epic by a rule rather than by
+         whitespace, so the association survives a long title wrapping. */
+      .epic-children {
+        margin-left: 14px;
+        border-left: 1px solid var(--color-rule-soft);
+      }
+      /* Same grid as a ticket row, so the head's title and its tally land on
+         the columns the rows beneath them use. The leading cells are empty:
+         a group head has no id and no classification of its own. */
+      .flat-head {
+        display: grid;
+        grid-template-columns:
+          4.5ch minmax(12ch, 1fr) 108px 74px 76px minmax(10ch, 26ch) 14px;
+        align-items: center;
+        gap: var(--s-3);
+        margin: 0;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--color-rule-soft);
+        background: var(--color-parchment-3);
+        position: sticky;
+        top: 0;
+        z-index: 2;
+      }
+      .flat-head__title { grid-column: 2; display: flex; align-items: baseline; gap: 8px; }
+      .flat-head .ticket-row__note { grid-column: 6; }
+      .flat-head strong { font-size: 16px; }
+      @media (max-width: 1100px) {
+        .flat-head { grid-template-columns: 4.5ch minmax(12ch, 1fr) 108px 74px minmax(8ch, 20ch) 14px; }
+        .flat-head .ticket-row__note { grid-column: 5; }
+      }
+      @media (max-width: 900px) {
+        .flat-head { grid-template-columns: 4.5ch minmax(0, 1fr) 108px minmax(8ch, 14ch) 14px; }
+        .flat-head .ticket-row__note { grid-column: 4; }
+      }
+      .ticket-row .feature-detail { padding: 12px 16px 16px 26px; }
+      /* Narrow viewports drop the two qualifier columns rather than letting
+         them squeeze the title into an ellipsis at three characters. */
+      @media (max-width: 1100px) {
+        /* Drop type first — it is the least-carrying column — and keep status
+           and priority as long as there is room for them. */
+        .ticket-row > summary {
+          grid-template-columns: 4.5ch minmax(12ch, 1fr) 108px 74px minmax(8ch, 20ch) 14px;
+        }
+        .ticket-row__type { display: none; }
+        .ticket-row__why { grid-column: 3 / -1; }
+      }
+      @media (max-width: 900px) {
+        /* Drop priority, never disposition. `ready` and the `blocked` badge
+           live in the note cell, and hiding it took "what can I pick up" —
+           the question this whole view exists to answer — off the board at
+           narrow widths, leaving only "why not" for the subset of rows that
+           carry a reason. Priority is the one qualifier that can go, because
+           the rows are already ordered by it. */
+        .ticket-row > summary {
+          grid-template-columns: 4.5ch minmax(0, 1fr) 108px minmax(8ch, 14ch) 14px;
+        }
+        .ticket-row__prio { display: none; }
+        .ticket-row__why { grid-column: 2 / -1; }
+      }
+
+      /* Cross-view handoff: the one-line pointer at the foot of each page to
+         the peer view that owns what this page deliberately does not show.
+         Deliberately not a section — it carries no data and must not read as
+         another numbered entry in the register. */
+      .handoff {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: var(--s-2) var(--s-4);
+        margin-top: var(--s-2);
+        padding: var(--s-3) 0 var(--s-3) var(--margin-col-width);
+        border-top: 1px dashed var(--color-rule-soft);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: var(--register);
+        text-transform: uppercase;
+        color: var(--color-ink-3);
+      }
+      @media (max-width: 720px) { .handoff { padding-left: 0; } }
+
       .colophon {
         margin-top: 28px;
         padding-top: 18px;
@@ -1011,7 +1420,12 @@
         font-weight: 400;
         font-size: 28px;
         line-height: 1;
-        font-variation-settings: "opsz" 144, "SOFT" 30;
+        /* opsz tracks the rendered size. These are the KPI numerals — the
+           merged count, the spend, the in-flight count — so they are among the
+           most-looked-at glyphs on the dashboard, and 28px is nowhere near the
+           144pt the poster cut is drawn for. SOFT is retained: it is the
+           character axis, and unlike opsz it is not size-dependent. */
+        font-variation-settings: "opsz" 28, "SOFT" 30;
         color: var(--color-ink);
       }
       .cell-numeral--alert { color: var(--color-status-red); }
@@ -1063,7 +1477,7 @@
         border-radius: 1px;
       }
       .pip--merged   { background: var(--c-state-merged); border-color: var(--c-state-merged); }
-      .pip--running  { background: color-mix(in srgb, var(--c-state-running) 60%, transparent); border-color: var(--c-state-running); animation: pulse 1.8s ease-in-out infinite; }
+      .pip--running  { background: color-mix(in srgb, var(--c-state-running) 60%, transparent); border-color: var(--c-state-running); }
       .pip--paused   { background: transparent; border-color: var(--c-state-paused); border-style: dashed; }
       .pip--deferred { background: transparent; border-color: var(--c-state-deferred); border-style: dashed; }
       .pip--failed   { background: color-mix(in srgb, var(--c-state-failed) 50%, transparent); border-color: var(--c-state-failed); }
@@ -1301,9 +1715,17 @@
       .open-q-body + .open-q-body { margin-top: 12px; }
       .open-q-body p {
         font-family: var(--font-serif);
-        font-style: italic;
-        font-size: 14.5px;
-        line-height: 1.5;
+        /* Roman, not italic. This is the longest-form text on the dashboard —
+           a blocking question an operator has to read carefully enough to
+           answer — and it ran two to three lines of italic serif. Italic is an
+           emphasis device: it earns its keep on a word or a clause, and costs
+           legibility across a paragraph, where the slanted, more-cursive
+           letterforms slow reading measurably. The serif stays, so the
+           question still reads as a quoted human voice rather than log output;
+           only the slant goes. */
+        font-style: normal;
+        font-size: 15px;
+        line-height: 1.55;
         color: var(--color-ink);
         margin: 0 0 6px;
       }
@@ -1388,7 +1810,12 @@
       }
       .event-detail {
         color: var(--color-ink-mute);
-        font-style: italic;
+        /* Roman for the same reason as the escalation question: this is the
+           event stream's payload text, read left-to-right as content, not an
+           aside. The stream already separates it from the feature name by
+           colour and weight, so the slant was carrying no distinction the
+           row did not already make. */
+        font-style: normal;
         font-family: var(--font-serif);
         font-size: 12.5px;
         line-height: 1.4;
@@ -1418,11 +1845,13 @@
         letter-spacing: 0.06em;
       }
       .round-cell {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
         font-family: var(--font-mono);
       }
+      /* One feature slug, treated as an atom. Hyphens are line-break
+         opportunities by default, so a wrapping cell split "seed-feature-
+         alpha" across two lines and invented a feature that does not exist.
+         The break belongs between slugs, at the comma. */
+      .slug-atom { white-space: nowrap; }
       .round-cell--good { color: var(--color-blue); }
       .round-cell--warn { color: var(--color-ochre); }
 
@@ -1509,7 +1938,7 @@
         font-size: 22px;
         line-height: 1;
         color: var(--color-ink);
-        font-variation-settings: "opsz" 144, "SOFT" 30;
+        font-variation-settings: "opsz" 22, "SOFT" 30;
       }
       .backlog-cell-pct {
         font-family: var(--font-mono);
@@ -1647,9 +2076,9 @@
         display: grid;
         grid-template-columns:
           14px                            /* pip */
-          minmax(0, 1.7fr)                /* title + slug */
+          minmax(0, 1.5fr)                /* title + slug */
           auto                            /* status badge */
-          minmax(120px, 0.9fr)            /* phase track */
+          minmax(170px, 1.1fr)            /* phase track */
           auto                            /* model+complexity */
           minmax(110px, 0.7fr)            /* cost+budget */
           minmax(80px, 0.6fr)             /* duration */
@@ -1682,7 +2111,18 @@
       }
       .feature-row--running .feature-row__pip {
         background: color-mix(in srgb, var(--c-state) 60%, transparent);
-        animation: pulse 2s ease-in-out infinite;
+      }
+      /* Both running pips animate only here. They previously carried
+         `animation: pulse` inline in their own rules, outside any guard, so
+         `prefers-reduced-motion: reduce` silenced the badge and the live dot
+         but left these two blinking. Sharing the 1.8s period with the live
+         dot also stops four independent pulses (1.8 / 1.8 / 2.0 / 2.4s) from
+         beating against each other across the page. */
+      @media (prefers-reduced-motion: no-preference) {
+        .pip--running,
+        .feature-row--running .feature-row__pip {
+          animation: pulse 1.8s ease-in-out infinite;
+        }
       }
       .feature-row__title {
         font-family: var(--font-serif);
@@ -1706,6 +2146,21 @@
         overflow: hidden;
         text-overflow: ellipsis;
       }
+      /* The phase cell carries up to four children of mixed shape: a phase
+         label, a task ratio, a full-width progress bar, and a stall note.
+         Without a layout of its own they laid out as raw inline content that
+         ran to the cell's edges and read as one run-on token with the status
+         badge beside it. Wrapping is allowed (the stall note is long), and
+         the bar claims its own line rather than competing for inline space. */
+      .feature-row__phase-cell {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 2px 6px;
+        min-width: 0;
+        line-height: 1.35;
+      }
+      .feature-row__phase-cell > .feature-row__bar { flex: 0 0 100%; }
       .feature-row__dispatch {
         display: flex;
         gap: 4px;
@@ -1830,6 +2285,48 @@
       }
 
       /* ── Expanded feature detail (the launchpad pane) ─────────────── */
+      /* ── Ticket description ───────────────────────────────────────────
+         The rendered markdown body, lazy-loaded into an expanded board row.
+         It reads before the classification/readiness grid because it is the
+         prose an operator opened the row for; the field blocks below are
+         reference, and the row already showed most of them. */
+      .ticket-desc {
+        padding: 14px 22px 4px 26px;
+        max-width: 78ch;
+      }
+      .ticket-desc .ticket-prose {
+        font-size: 14px;
+        line-height: 1.6;
+      }
+      /* The body arrives with its own top-level heading structure, so the
+         first heading must not push the block away from the row it belongs
+         to. Later headings keep their leading. */
+      .ticket-desc .ticket-prose > :first-child { margin-top: 0; }
+      .ticket-desc .ticket-prose table {
+        border-collapse: collapse;
+        margin: 0.6rem 0;
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+      }
+      .ticket-desc .ticket-prose th,
+      .ticket-desc .ticket-prose td {
+        border: 1px solid var(--color-rule-soft);
+        padding: 4px 9px;
+        text-align: left;
+      }
+      .ticket-desc .ticket-prose th {
+        color: var(--color-ink-2);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-size: 10px;
+      }
+      .ticket-desc .ticket-prose blockquote {
+        margin: 0.6rem 0;
+        padding-left: 12px;
+        border-left: 2px solid var(--color-ochre);
+        color: var(--color-ink-2);
+      }
+
       .feature-detail {
         padding: 18px 22px 22px;
         display: grid;
@@ -2038,7 +2535,6 @@
         width: 80px;
         height: 18px;
         vertical-align: middle;
-        margin-left: 8px;
       }
       .sparkline path {
         fill: none;
@@ -2130,16 +2626,22 @@
   <a href="#main-content" class="skip-link">skip to dashboard</a>
   <div class="page-wrap">
     <header class="manuscript">
+      {# The header is shared by three peer views, so its register line, its
+         wordmark and its nav all read from `view` rather than assuming the
+         overnight page. `view` defaults to "overnight" so a template that
+         does not set it keeps the original masthead. #}
+      {% set view = view | default('overnight') %}
       <div class="manuscript-meta">
-        <span>§ 00 · overnight runner · live</span>
+        <span>§ 00 · {% if view == 'backlog' %}backlog ledger · queue{% elif view == 'history' %}session archive · read-only{% else %}overnight runner · live{% endif %}</span>
         <span class="reg-divider"></span>
         <span>doc · cortex-command/dashboard</span>
-        <span>rev R{% if state is defined and state.overnight %}{{ state.overnight.current_round }}{% else %}0{% endif %}</span>
+        {% if view == 'overnight' %}<span>rev R{% if state is defined and state.overnight %}{{ state.overnight.current_round }}{% else %}0{% endif %}</span>{% endif %}
       </div>
-      <h1>cortex <em>overnight</em></h1>
+      <h1>cortex <em>{% if view == 'backlog' %}backlog{% elif view == 'history' %}history{% else %}overnight{% endif %}</em></h1>
       <div class="crest">
         <nav>
-          <a href="/" class="nav-link {% if request.url.path == '/' %}nav-link-active{% endif %}">Live</a>
+          <a href="/" class="nav-link {% if request.url.path == '/' %}nav-link-active{% endif %}">Overnight</a>
+          <a href="/backlog" class="nav-link {% if request.url.path.startswith('/backlog') %}nav-link-active{% endif %}">Backlog</a>
           <a href="/sessions" class="nav-link {% if request.url.path.startswith('/sessions') %}nav-link-active{% endif %}">History</a>
         </nav>
         <span id="live-indicator" class="live-indicator">{% if state is defined and state.overnight and state.overnight.phase == 'executing' %}<span class="live-dot"></span> Live{% else %}No session · idle{% endif %}</span>
@@ -2156,7 +2658,7 @@
       </section>
 
       <section id="escalations-panel" class="section-attention" aria-live="polite" hx-get="/partials/escalations" hx-trigger="load, every 5s" hx-swap="morph">
-        <span class="sec-num"><strong>§ 02</strong>open<br>questions</span>
+        <span class="sec-num"><strong>§ 02</strong>open questions</span>
         <p class="empty-state">loading escalations</p>
       </section>
 
@@ -2168,7 +2670,7 @@
       <div class="dash-grid">
         <div class="dash-grid-main">
           <section id="activity-stream" aria-label="Recent activity" aria-live="polite" aria-busy="false" hx-get="/partials/activity-stream" hx-trigger="load, every 3s" hx-swap="morph">
-            <span class="sec-num"><strong>§ 04</strong>recent<br>activity</span>
+            <span class="sec-num"><strong>§ 04</strong>recent activity</span>
             <p class="empty-state">loading activity stream</p>
           </section>
         </div>
@@ -2202,15 +2704,16 @@
         {% block pipeline_panel %}{% include "pipeline_panel.html" %}{% endblock %}
       </section>
 
-      <section id="backlog-panel" aria-label="Backlog ledger" aria-live="polite" hx-get="/partials/backlog" hx-trigger="load, every 30s" hx-swap="morph">
-        <span class="sec-num"><strong>§ 10</strong>backlog</span>
-        <p class="empty-state">loading backlog ledger</p>
-      </section>
-
-      <section id="triage-board" aria-label="Triage board" aria-live="polite" hx-get="/partials/triage-board" hx-trigger="load, every 30s" hx-swap="morph">
-        <span class="sec-num"><strong>§ 11</strong>triage</span>
-        <p class="empty-state">loading triage board</p>
-      </section>
+      {# The backlog ledger and triage board are NOT here: they are the
+         Backlog view's own sections, reachable from the masthead nav. They
+         describe what is queued rather than what a session is doing, they
+         poll on a 30s cadence against this page's 3-5s, and appended to the
+         bottom of a nine-section overnight page they read as an overnight
+         subsection — which is precisely what they are not. #}
+      <div class="handoff">
+        <span>queue state lives in the <a href="/backlog" class="text-brand-primary">backlog view</a></span>
+        <span class="phase-label">what is ready, what is blocked, what each epic still holds</span>
+      </div>
 
       <div class="colophon">
         <span>cortex-command · overnight dashboard</span>

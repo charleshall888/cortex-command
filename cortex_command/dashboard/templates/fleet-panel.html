@@ -1,6 +1,6 @@
 {% import "patterns/feature-card.html" as fc %}
 <span class="sec-num"><strong>§ 05</strong>fleet</span>
-<h2>Agent <em>fleet</em> <span class="phase-tag">{% if state.agent_fleet %}{{ state.agent_fleet | length }} active · live roster{% else %}—{% endif %}</span></h2>
+<h2>Agent <em>fleet</em> {% if state.agent_fleet %}<span class="phase-tag">{{ state.agent_fleet | length }} active · live roster</span>{% else %}<span class="phase-tag">stood down</span>{% endif %}</h2>
 {% if state.agent_fleet %}
   <div class="stream-line">
     <span>doc · running features only</span>

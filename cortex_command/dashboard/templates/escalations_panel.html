@@ -1,6 +1,6 @@
 {% from "patterns/badge.html" import badge %}
 {% from "patterns/alert-banner.html" import alert_badge %}
-<span class="sec-num"><strong>§ 02</strong>open<br>questions</span>
+<span class="sec-num"><strong>§ 02</strong>open questions</span>
 <h2>Open <em>questions</em> <span class="phase-tag">{% if state.open_questions_total %}{{ state.open_questions_total }} awaiting an answer{% else %}clear · no human input required{% endif %}</span></h2>
 {% set ns = namespace(any_shown=false) %}
 {% if state.open_questions_total > 0 %}

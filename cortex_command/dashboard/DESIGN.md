@@ -35,7 +35,17 @@ This dashboard uses Jinja2 HTML templates with htmx — not React/shadcn. Adapt 
 
 **Badges:**
 - Use `.badge` + `.badge-{color}` classes for status indicators (existing pattern)
-- Color meaning: green=success/merged, blue=running, red=failed, amber=deferred/paused, gray=pending, purple=opus
+- The class names are historical and **do not describe the hue they render** under `carbon`. What each
+  actually paints: `badge-green` / `badge-merged` → blue `--c-state-merged`; `badge-blue` /
+  `badge-running` → cyan-green `--c-state-running`; `badge-red` → `--c-state-failed`; `badge-amber` →
+  ochre (paused *and* deferred); `badge-gray` → `--color-ink-faint`, transparent ground;
+  `badge-purple` → `--color-ochre-soft` (not purple). Read the rule before assuming the colour.
+- Border style is a real second channel and is load-bearing for colour-blind readers: solid vs dashed
+  currently distinguishes some states. Keep the mechanism when adding badges.
+- Two known collisions, both cross-dimension rather than within one vocabulary: `badge-purple`
+  (ochre-soft `#f5cb95`) sits close to `badge-amber` (ochre `#f0b870`), and priority `high` reuses
+  `badge-purple` while status `deferred` uses `badge-amber`. On the triage board these are
+  disambiguated by *position* — each vocabulary owns a fixed column — not by hue.
 
 **Layout:**
 - Use `<section>` for content containers (existing pattern)
@@ -69,16 +79,27 @@ These patterns are explicitly prohibited for new code.
 
 ## Palette Reference (existing dashboard)
 
-The existing CSS uses these hardcoded values. Map them to tokens for new work:
+The active theme is `html[data-stain="carbon"]` — cream on charcoal. These are the values it actually sets:
 
-| Hex | Token | Tailwind class |
-|-----|-------|---------------|
-| `#0d1117` | `--color-surface` | `bg-surface` |
-| `#161b22` | `--color-surface-raised` | `bg-surface-raised` |
-| `#1c2128` | `--color-surface-overlay` | `bg-surface-overlay` |
-| `#30363d` | `--color-border` | `border-border` |
-| `#e6edf3` | `--color-text-primary` | `text-text-primary` |
-| `#7d8590` | `--color-text-secondary` | `text-text-secondary` |
+| Hex | Token | Role |
+|-----|-------|------|
+| `#15151a` | `--color-parchment` (`--color-surface`) | page ground |
+| `#1a1a1f` | `--color-parchment-2` (`--color-surface-raised`) | section ground |
+| `#1d1d23` | `--color-parchment-3` (`--color-surface-overlay`) | raised / overlay |
+| `#34333c` | `--color-rule-soft` (`--color-border`) | rules and dividers |
+| `#ece6d3` | `--color-ink-1` (`--color-text-primary`) | primary values, headlines |
+| `#d8d2bf` | `--color-ink-2` | secondary values, costs, durations |
+| `#b6b0a0` | `--color-ink-3` (`--color-ink-mute`) | meta tokens, chips |
+| `#9a9486` | `--color-ink-4` (`--color-ink-faint`) | labels only |
+
+> An earlier revision of this table listed `#0d1117 / #161b22 / #1c2128 / #30363d / #e6edf3 / #7d8590`
+> as "the existing palette". None of those six values appears anywhere in `base.html` — they are
+> GitHub-dark defaults, and the table predates the carbon theme. They are recorded here only so the
+> stale set is recognisable if it resurfaces; do not reintroduce them.
+
+A `:root` parchment (light) palette is also defined and is what `carbon` overrides. Prefer the semantic
+aliases (`--color-surface`, `--color-text-primary`, …) over the raw `--color-parchment-*` / `--color-ink-*`
+names for new work, so a component works under either stain.
 
 ## Pattern Examples
 

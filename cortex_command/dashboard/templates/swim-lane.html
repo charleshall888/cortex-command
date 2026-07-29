@@ -26,7 +26,7 @@
 {% if ticks %}
 <div class="lane-tick-axis">
   {% for tick in ticks %}
-  <span class="tick-label absolute -translate-x-1/2" style="left: {{ tick.x_pct }}%">{{ tick.label }}</span>
+  <span class="tick-label absolute {% if loop.last %}tick-label--last{% else %}-translate-x-1/2{% endif %}" style="left: {{ tick.x_pct }}%">{{ tick.label }}</span>
   {% endfor %}
 </div>
 {% endif %}

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{# The Backlog view — a peer of the Overnight view, not a section of it.
+
+   Both panels here read the same 30s slow-poll snapshot the overnight page
+   used to render at its very bottom (§ 10 and § 11 of eleven). They answer a
+   different question from every other panel in this dashboard: not "what is
+   the runner doing right now" but "what is queued, what is ready, and what is
+   blocked on what" — a question that outlives any single session and that an
+   operator asks while no session is running at all.
+
+   Section numbering restarts at § 01 because the register is per-view. #}
+{% set view = 'backlog' %}
+{% block title %}Cortex · Backlog{% endblock %}
+{% block page_main %}
+<section id="backlog-panel" class="section-primary" aria-label="Backlog ledger" aria-live="polite" hx-get="/partials/backlog" hx-trigger="load, every 30s" hx-swap="morph">
+  <span class="sec-num"><strong>§ 01</strong>ledger</span>
+  <p class="empty-state">loading backlog ledger</p>
+</section>
+
+<section id="triage-board" class="section-primary" aria-label="Triage board" aria-live="polite" hx-get="/partials/triage-board" hx-trigger="load, every 30s" hx-swap="morph">
+  <span class="sec-num"><strong>§ 02</strong>triage</span>
+  <p class="empty-state">loading triage board</p>
+</section>
+
+<div class="handoff">
+  <span>live session state lives in the <a href="/" class="text-brand-primary">overnight view</a></span>
+  <span class="phase-label">what is running, what escalated, what each round cleared</span>
+</div>
+
+<div class="colophon">
+  <span>cortex-command · backlog ledger</span>
+  <span><em>the standing queue · refresh every 30s</em></span>
+</div>
+{% endblock %}

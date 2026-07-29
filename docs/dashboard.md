@@ -58,6 +58,8 @@ The seeder writes to `${XDG_STATE_HOME:-$HOME/.local/state}/cortex-command/dashb
 
 `cortex-dashboard-seed --root PATH` overrides the default root; `--print-root` prints the resolved root and exits; `--clean` removes only what the seeder wrote, under that same resolved root. If you ran the pre-containment seeder against a project repo, `cortex-dashboard-seed --sweep-legacy` removes the stray `99[0-9]-seed-*.md` backlog files it left behind — a one-time migration, not part of normal use.
 
+The seeder also publishes `cortex/lifecycle/sessions/latest-overnight` as a relative symlink to the seeded session, mirroring what the runner does at startup. That pointer is what the dashboard poller's fallback path resolves; without it the seeded dashboard rendered as an idle, sessionless page — every panel downstream of the session state showing its empty branch — while the fixture files sat on disk unread. `--clean` removes the link only while it still resolves to a seed session, so a `--clean` pointed at a real repository cannot unlink the runner's own pointer.
+
 `cortex dashboard --root PATH` sets the root for that one process only. Do not export or inline-prefix `CORTEX_REPO_ROOT` to view fixtures: it is the unvalidated root funnel for most of the codebase, and a fixture root satisfies every marker check that guards it — so any persistence beyond one command silently redirects backlog creation, lifecycle verbs, and overnight writes into the throwaway tree.
 
 **Behavioral note**: `just dashboard-seed` alone no longer populates your own dashboard. `just dashboard-demo` is the replacement.
@@ -75,7 +77,13 @@ Both regimes matter, and neither substitutes for the other:
 
 ## What It Shows
 
-The dashboard is divided into ten panels plus an Alerts Banner.
+The dashboard is divided into three peer views, reachable from the masthead nav: **Overnight** (`/`), **Backlog** (`/backlog`), and **History** (`/sessions`). Section numbering (`§ 01`, `§ 02`, …) restarts in each view, because the register is per-view rather than per-app.
+
+The split is what the two groups of panels are *for*. Overnight answers "what is the runner doing right now" and refreshes every 3–5 s; Backlog answers "what is queued, what is ready, and what is blocked on what" — a question that outlives any one session and that an operator asks while nothing is running at all — and refreshes every 30 s. The backlog panels previously sat at the bottom of the overnight page as § 10 and § 11 of eleven, which read as an overnight subsection.
+
+## Overnight view (`/`)
+
+Nine panels plus an Alerts Banner.
 
 ### Alerts Banner
 
@@ -117,17 +125,35 @@ Chronological list of completed rounds with feature counts and per-round duratio
 
 Monitors active interactive pipeline execution (separate from overnight). Visible only when an interactive pipeline session is running alongside the overnight session.
 
-### 10. Backlog
+---
 
-Backlog status counts and ready-queue summary, sourced from `cortex/backlog/`. Provides context on what's queued for the next session without leaving the dashboard.
+## Backlog view (`/backlog`)
 
-### 11. Triage Board
+Two panels, both served from the same 30 s slow-poll snapshot.
 
-Every active ticket as a row, grouped one section per epic with a flat list beneath for items no epic parents, sourced from the same backlog snapshot as § 10. Rows carry status, priority, and type, plus an ineligibility reason, unresolved blocker refs, or a deferral flag where they apply — the persistent answer to "what should I work on, and what's blocked on what" without re-running triage in a session. Rows are non-navigational disclosures; the per-ticket reader is a separate surface.
+### 1. Backlog Ledger
+
+Leads with **readiness** — how many active items are ready to pick up — followed by blocked, active, and completed counts, then the status distribution across `cortex/backlog/`. Provides context on what's queued for the next session without leaving the dashboard.
+
+The lede reads the readiness partition from the same ticket-feed snapshot § 02 renders, not the status histogram, and falls back to the completed/tracked ratio when no snapshot has been polled yet. It previously led with completion share, which is the one number on this panel that cannot change what an operator does next: the denominator grows with every ticket filed, so the percentage falls while the project is going well, and a given value reads the same for a healthy queue and an abandoned one.
+
+### 2. Triage Board
+
+Every active ticket as a row, grouped one section per epic with a flat list beneath for items no epic parents, sourced from the same backlog snapshot as § 01. Rows carry status, priority, and type, plus an ineligibility reason, unresolved blocker refs, or a deferral flag where they apply — the persistent answer to "what should I work on, and what's blocked on what" without re-running triage in a session. Rows are non-navigational disclosures; the per-ticket reader is a separate surface.
+
+Status, priority, and type each occupy a fixed column, so each vocabulary is scannable down the board rather than only readable per row. An ineligibility reason renders in full on its own line beneath the row it belongs to, and a blocked row is marked on its leading edge: the reason answers half of what this view is for, and it previously clipped to an ellipsis with the full text reachable only through a `title` tooltip — invisible to touch, to keyboard, and to most screen-reader flows.
+
+**Ticket descriptions.** Expanding a row renders that ticket's markdown body — headings, fenced code, and tables — above its classification and readiness fields. The body is fetched once per row per page load from `/partials/ticket/{id}`, not carried in the 30 s snapshot: this repo's backlog is ~1.5 MB across 416 files, so embedding bodies would morph hundreds of KB into the DOM twice a minute to show prose nobody asked for. Only an opened row pays. The loaded description is `hx-preserve`d, so a poll landing while the row is open does not replace it with the placeholder.
+
+Rows remain non-navigational — the fetch renders in place and moves the operator nowhere. Ids resolve padding-agnostically (`7` finds `007-*.md`) and fall back to `cortex/backlog/archive/`, so a blocker pointing at a closed ticket is still readable. The route is behind the same backend gate as every other backlog read.
+
+Rendered HTML is filtered to an allowlist of the tags Markdown emits, dropping raw HTML carried in from the file. Ticket bodies routinely quote material the repo did not author — pasted error output, a GitHub issue, a tool transcript — and Python-Markdown has no safe mode, so an injected `<script>` would otherwise run with the dashboard's origin. Filtering happens after rendering rather than by escaping the source, because escaping first double-escapes every fenced code block.
+
+An epic's own row **is** its group's heading, so each active ticket renders exactly once. (An epic is nobody's child, so a children-only exclusion previously left it in the flat list as well — rendering the same ticket twice, the second time labelled "Unparented", which a group-heading epic is not.) The heading carries the epic's own status, priority, and disposition alongside its active-child count.
 
 ---
 
-## Session History
+## History view (`/sessions`)
 
 Navigate to `/sessions` to list past sessions. `/sessions/{session_id}` shows the per-session detail view for any completed session. Both views are read-only.
 
@@ -176,9 +202,12 @@ The dashboard uses two polling layers:
 | Backend `_poll_slow` | Backlog counts, ticket feed, dispatch details, metrics | every 30 s |
 | HTMX (browser-side) | Alerts Banner, Session, Feature Cards, Agent Fleet, Swim-Lane, Round History, Escalations | every 5 s |
 | HTMX (browser-side) | Recent Activity Stream | every 3 s |
-| HTMX (browser-side) | Metrics Baseline, Backlog, Triage Board | every 30 s |
+| HTMX (browser-side) | Metrics Baseline (Overnight); Backlog Ledger and Triage Board (Backlog view) | every 30 s |
+| HTMX (browser-side) | Ticket description (`/partials/ticket/{id}`) | once, on first expand |
 
-Total state-change latency is up to approximately 7 seconds (2 s backend read + 5 s HTMX refresh) for panels on the 5 s HTMX interval. For 30 s-polling panels (Metrics Baseline, Backlog, Triage Board), end-to-end latency is up to approximately 32 seconds.
+Total state-change latency is up to approximately 7 seconds (2 s backend read + 5 s HTMX refresh) for panels on the 5 s HTMX interval. For 30 s-polling panels (Metrics Baseline, Backlog Ledger, Triage Board), end-to-end latency is up to approximately 32 seconds.
+
+The backend pollers are view-independent: all four run for the process, so switching views costs a page load but never a cold start.
 
 ---
 

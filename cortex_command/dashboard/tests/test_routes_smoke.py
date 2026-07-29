@@ -10,7 +10,7 @@ raises ``TypeError: unhashable type: 'dict'`` -> HTTP 500. Only a route test
 that drives each handler through the real ASGI app + ``TemplateResponse`` layer
 can guard against that regression.
 
-This test drives ``GET /``, ``/sessions``, ``/health``, and each of the eleven
+This test drives ``GET /``, ``/sessions``, ``/health``, and each of the twelve
 ``/partials/*`` routes and asserts 200, plus ``GET /sessions/{missing}`` -> 404
 (the ``status_code`` path). On the dev venv (Starlette 0.52.1) both call forms
 return 200, so locally this proves only well-formedness; it becomes
@@ -36,7 +36,7 @@ from starlette.testclient import TestClient
 
 from cortex_command.dashboard.app import app
 
-# The eleven HTMX partial routes, in the order documented by the spec.
+# The twelve HTMX partial routes, in the order documented by the spec.
 PARTIAL_ROUTES = [
     "/partials/fleet-panel",
     "/partials/alerts-banner",
@@ -49,10 +49,17 @@ PARTIAL_ROUTES = [
     "/partials/metrics",
     "/partials/swim-lane",
     "/partials/triage-board",
+    # Path-parameterised. Renders its "description unavailable" arm against the
+    # fixture root, which has no cortex/backlog/ — a missing ticket is a normal
+    # render, not a status code, because the fragment lands inside a row the
+    # operator merely expanded.
+    "/partials/ticket/1",
 ]
 
-# Page + health routes that must render 200.
-PAGE_ROUTES = ["/", "/sessions", "/health"]
+# Page + health routes that must render 200. ``/backlog`` is the Backlog
+# view — a peer page of ``/``, not a fragment — so it goes through the same
+# TemplateResponse path this module exists to guard.
+PAGE_ROUTES = ["/", "/backlog", "/sessions", "/health"]
 
 ALL_OK_ROUTES = PAGE_ROUTES + PARTIAL_ROUTES
 

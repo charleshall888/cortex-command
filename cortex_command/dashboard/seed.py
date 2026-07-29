@@ -1552,6 +1552,39 @@ def write_backlog_items(repo_root: Path) -> list[Path]:
 # ---------------------------------------------------------------------------
 
 
+def write_latest_overnight_pointer(session_dir: Path) -> bool:
+    """Point ``sessions/latest-overnight`` at the seeded session directory.
+
+    Without this the seeded dashboard renders as an idle, sessionless page.
+    The seeder writes a copy of the state and event files at
+    ``cortex/lifecycle/`` and the real session files under
+    ``sessions/{session_id}/``, but the poller's ``_resolve_session_path``
+    reads neither: absent the ``~/.local/share/overnight-sessions`` pointer it
+    falls back to ``sessions/latest-overnight/`` and nothing else. So every
+    panel downstream of ``state.overnight`` — session, features, fleet,
+    timeline, rounds, escalations, activity — showed its empty state, and
+    ``just dashboard-demo`` demonstrated an empty dashboard.
+
+    Mirrors ``overnight.runner._point_latest_overnight``: a relative symlink so
+    the fixture root stays movable, best-effort so a filesystem without symlink
+    support degrades to the old behaviour rather than failing the seed, and a
+    real directory at that path is left alone. Returns True when the link is in
+    place, so the caller lists it among the files written.
+    """
+    link = session_dir.parent / "latest-overnight"
+    try:
+        if link.is_symlink():
+            link.unlink()
+        elif link.exists():
+            print(f"  WARNING: {link} is a real directory — leaving it alone.")
+            return False
+        link.symlink_to(session_dir.name, target_is_directory=True)
+        return True
+    except OSError as exc:
+        print(f"  WARNING: could not point latest-overnight at {session_dir.name} ({exc}).")
+        return False
+
+
 def write_all(repo_root: Path, session_id: str) -> None:
     """Write all fixture files: overnight state, events, per-feature files,
     pipeline fixtures, metrics, and backlog items.
@@ -1570,6 +1603,9 @@ def write_all(repo_root: Path, session_id: str) -> None:
     write_overnight_events(repo_root, session_dir, session_id)
     written_paths.append(session_dir / "overnight-events.log")
     written_paths.append(repo_root / "cortex" / "lifecycle" / "overnight-events.log")
+
+    if write_latest_overnight_pointer(session_dir):
+        written_paths.append(session_dir.parent / "latest-overnight")
 
     for slug, status, *_ in _FEATURES:
         write_feature_files(repo_root, slug, status)
@@ -1742,6 +1778,21 @@ def clean_all(root: Path) -> None:
 
     # 3. Session directories — the prefix the seeder builds SESSION_ID from
     sessions_dir = lifecycle_dir / "sessions"
+    # The latest-overnight pointer goes first, and only while it still resolves
+    # to a seed session: in a real repository the same path is the runner's own
+    # link to live state. ``is_symlink`` is the guard that keeps a real
+    # directory at that path intact, and readlink is compared rather than
+    # followed so a dangling seed link is still cleaned up.
+    pointer = sessions_dir / "latest-overnight"
+    if pointer.is_symlink():
+        if os.readlink(pointer).startswith(SEED_PREFIX):
+            pointer.unlink()
+            removed.append("cortex/lifecycle/sessions/latest-overnight")
+        else:
+            print(
+                "  WARNING: cortex/lifecycle/sessions/latest-overnight points outside"
+                f" a seed session ({SEED_PREFIX}) — not a seed link, skipping."
+            )
     for session_dir in sorted(sessions_dir.glob(f"{SEED_PREFIX}-*")):
         if session_dir.is_dir():
             shutil.rmtree(session_dir)

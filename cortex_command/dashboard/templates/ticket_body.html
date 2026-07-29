@@ -1,0 +1,23 @@
+{# One ticket's rendered description, swapped into an expanded board row.
+
+   Fragment only — no section shell. ``ticket`` is None when the backlog
+   backend is not local, when the id matches no file, or when the file could
+   not be read; all three are the same thing from the reader's point of view
+   (there is nothing to show) and none of them is an error worth a banner on a
+   row the operator merely opened.
+
+   ``html`` is marked safe because ``load_ticket_body`` escapes the source's
+   angle brackets before rendering — the markup reaching here is what
+   Python-Markdown emitted, never raw HTML carried in from the ticket file. #}
+{% if ticket and ticket.html %}
+<div class="prose ticket-prose">
+  {{ ticket.html | safe }}
+  {% if ticket.truncated %}
+  <p class="empty-state">description truncated · open the file for the rest</p>
+  {% endif %}
+</div>
+{% elif ticket %}
+<p class="empty-state">no description · this ticket is frontmatter only</p>
+{% else %}
+<p class="empty-state">description unavailable</p>
+{% endif %}

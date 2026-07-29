@@ -32,6 +32,8 @@ import json
 import re
 import statistics
 from datetime import datetime, timezone
+from html import escape
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import NamedTuple
 
@@ -535,6 +537,70 @@ def parse_fleet_cards(
     return fleet_cards, dict(agent_activity_offsets)
 
 
+# Nominal geometry for the swim-lane de-overlap sweep. The track is a flex
+# child whose real pixel width is a browser-side fact the server cannot know,
+# so label widths are estimated against a representative rendered width and the
+# result is expressed in percent. Over-estimating the track only under-spreads
+# (labels sit closer than ideal); under-estimating it over-spreads (labels drift
+# further from their true time). Both degrade gracefully — unlike no sweep at
+# all, which renders "specify→implement" straight through "complete".
+_LANE_TRACK_NOMINAL_PX = 900.0
+_LANE_CHAR_PX = 6.2          # JetBrains Mono at 9.5px, uppercased
+_LANE_LABEL_PADDING_PX = 14.0  # .lane-event horizontal padding + border
+_LANE_LABEL_GAP_PX = 4.0     # breathing room between adjacent labels
+
+
+def _lane_label_width_pct(label: str) -> float:
+    """Estimate a lane label's rendered width as a percentage of the track."""
+    px = len(label) * _LANE_CHAR_PX + _LANE_LABEL_PADDING_PX
+    return (px / _LANE_TRACK_NOMINAL_PX) * 100.0
+
+
+def _spread_lane_events(events: list[dict]) -> list[dict]:
+    """Nudge lane events apart so their labels do not render on top of one another.
+
+    Events are absolutely positioned at ``left: x_pct%`` inside a shared track,
+    and two events close in time — a ``complete`` immediately followed by a
+    ``specify→implement`` transition, which is the common case at a phase
+    boundary — overlapped into an unreadable composite. DESIGN.md's
+    "Operational usefulness" criterion names a legible swim-lane with no
+    overlapping labels explicitly.
+
+    Positions are advisory rather than exact: a lane is a qualitative "what
+    happened, roughly when" reading, not a measuring instrument, and the
+    tooltip carries each event's true timestamp. So the sweep preserves order
+    and relative spacing while guaranteeing separation.
+
+    Two passes. Forward, each event is pushed right far enough to clear its
+    predecessor. That can push the last events past the track's right edge, so
+    the backward pass pulls any overflow back left, which can in turn re-collide
+    at the left — bounded by the track holding more label-widths than a lane
+    has events in every realistic session. Events keep their original list
+    order for the caller; only ``x_pct`` moves.
+    """
+    if len(events) < 2:
+        return events
+
+    ordered = sorted(events, key=lambda e: e["elapsed_secs"])
+    widths = [_lane_label_width_pct(e["label"]) for e in ordered]
+
+    # Forward: never start before the previous label ends.
+    cursor = 0.0
+    for i, event in enumerate(ordered):
+        x = max(event["x_pct"], cursor)
+        event["x_pct"] = x
+        cursor = x + widths[i] + (_LANE_LABEL_GAP_PX / _LANE_TRACK_NOMINAL_PX) * 100.0
+
+    # Backward: nothing may extend past the right edge.
+    limit = 100.0
+    for i in range(len(ordered) - 1, -1, -1):
+        x = min(ordered[i]["x_pct"], limit - widths[i])
+        ordered[i]["x_pct"] = max(0.0, x)
+        limit = ordered[i]["x_pct"] - (_LANE_LABEL_GAP_PX / _LANE_TRACK_NOMINAL_PX) * 100.0
+
+    return events
+
+
 def build_swim_lane_data(
     overnight: dict | None,
     overnight_events: list,
@@ -673,7 +739,7 @@ def build_swim_lane_data(
         lanes.append({
             "slug": slug,
             "status": status,
-            "events": lane_events,
+            "events": _spread_lane_events(lane_events),
             "tool_tick_xs": [],  # reserved for future agent-activity integration
         })
 
@@ -699,10 +765,33 @@ def build_swim_lane_data(
     }
 
 
+def _session_state_files(sessions_dir: Path) -> list[Path]:
+    """Return one ``overnight-state.json`` per real session directory.
+
+    ``sessions/`` holds pointer symlinks alongside the session directories
+    themselves — ``latest-overnight`` is created by the runner on every start
+    and by the dashboard seeder — and a plain ``*/overnight-state.json`` glob
+    matches through them. The pointer and its target are the same session, so
+    the newest run was listed twice on ``/sessions``, once under its real id
+    and once more under the identical id resolved through the link.
+
+    Skipping symlinked directories is the same rule ``cli_handler`` and
+    ``guardian`` already apply when they enumerate sessions; only this module
+    was missing it. Returns [] rather than raising when ``sessions/`` is
+    absent, which is the normal state of a repo that has never run overnight.
+    """
+    try:
+        candidates = list(sessions_dir.glob("*/overnight-state.json"))
+    except OSError:
+        return []
+    return [path for path in candidates if not path.parent.is_symlink()]
+
+
 def parse_last_session(lifecycle_dir: Path) -> dict | None:
     """Return a summary dict for the most recently completed overnight session.
 
-    Globs ``lifecycle_dir/sessions/*/overnight-state.json``, parses each file,
+    Reads one ``overnight-state.json`` per real session directory (pointer
+    symlinks are skipped — see ``_session_state_files``), parses each file,
     and returns a summary for the session with the latest ``updated_at``
     timestamp.
 
@@ -716,16 +805,12 @@ def parse_last_session(lifecycle_dir: Path) -> dict | None:
         - ``features_failed`` (int)
         - ``features_total`` (int)
         - ``ended_hours_ago`` (float)
+        - ``ended_at`` (str) -- ISO-8601 value of ``updated_at``
 
         Returns None if ``lifecycle_dir/sessions/`` is absent, empty, or all
         files are unreadable.
     """
-    sessions_dir = lifecycle_dir / "sessions"
-    try:
-        candidates = list(sessions_dir.glob("*/overnight-state.json"))
-    except OSError:
-        return None
-
+    candidates = _session_state_files(lifecycle_dir / "sessions")
     if not candidates:
         return None
 
@@ -763,13 +848,19 @@ def parse_last_session(lifecycle_dir: Path) -> dict | None:
         "features_failed": statuses.count("failed"),
         "features_total": len(statuses),
         "ended_hours_ago": ended_hours_ago,
+        # The raw end timestamp, so views can render elapsed time at whatever
+        # resolution reads well. ``ended_hours_ago`` alone bottoms out at
+        # "0.0h ago" for anything under three minutes, which is exactly when
+        # an operator is most likely to be looking.
+        "ended_at": best.get("updated_at", ""),
     }
 
 
 def parse_session_list(lifecycle_dir: Path) -> list[dict]:
     """Return a summary row for every completed overnight session found on disk.
 
-    Globs ``lifecycle_dir/sessions/*/overnight-state.json``, extracts a
+    Reads one ``overnight-state.json`` per real session directory (pointer
+    symlinks are skipped — see ``_session_state_files``), extracts a
     summary dict from each readable file, and returns all rows sorted
     most-recent-first by ``end_ts`` (sessions with no parseable ``end_ts``
     are appended at the end in arbitrary order).
@@ -792,11 +883,7 @@ def parse_session_list(lifecycle_dir: Path) -> list[dict]:
         Returns ``[]`` if the sessions directory is absent, empty, or all
         files are unreadable.
     """
-    sessions_dir = lifecycle_dir / "sessions"
-    try:
-        candidates = list(sessions_dir.glob("*/overnight-state.json"))
-    except OSError:
-        return []
+    candidates = _session_state_files(lifecycle_dir / "sessions")
 
     rows: list[dict] = []
 
@@ -1119,6 +1206,202 @@ def parse_backlog_titles(backlog_dir: Path) -> BacklogTitles:
             titles_by_id[str(int(id_match.group(1)))] = title
 
     return BacklogTitles(titles, titles_by_id)
+
+
+#: Tags Python-Markdown emits for the extensions this dashboard enables, plus
+#: the inline formatting a ticket body legitimately uses. Anything outside this
+#: set is dropped from the rendered output.
+_TICKET_ALLOWED_TAGS = frozenset(
+    """a blockquote br code del em h1 h2 h3 h4 h5 h6 hr li ol p pre strong
+       sub sup table tbody td th thead tr ul""".split()
+)
+
+#: Tags whose *contents* are dropped along with the tag. For everything else,
+#: unwrapping keeps the text; for these it would leak script source as prose.
+_TICKET_VOID_CONTENT_TAGS = frozenset({"script", "style", "iframe", "object", "embed"})
+
+#: Attributes worth preserving, per tag. `class` survives only on code/pre
+#: because that is where the fenced-code extension puts `language-*`.
+_TICKET_ALLOWED_ATTRS = {
+    "a": {"href", "title"},
+    "code": {"class"},
+    "pre": {"class"},
+    "td": {"align"},
+    "th": {"align"},
+}
+
+_TICKET_SAFE_URL_RE = re.compile(r"^(?:https?:|mailto:|#|/|\.{0,2}/)", re.I)
+
+
+class _TicketBodySanitizer(HTMLParser):
+    """Rebuild rendered markdown keeping only an allowlist of tags.
+
+    Ticket bodies routinely quote material this repo did not author — pasted
+    error output, a GitHub issue, a tool transcript — and Python-Markdown has
+    no safe mode, so raw HTML in a body reaches the page verbatim. An injected
+    ``<script>`` would run with the dashboard's origin; there is no auth to
+    defeat, but it could read what the dashboard renders and reach other
+    services on loopback.
+
+    Sanitizing the *output* rather than escaping the *input* is deliberate.
+    Escaping the source first double-escapes every fenced code block, because
+    Markdown escapes ``&`` again inside code — ``-> str`` rendered as
+    ``-&gt; str`` on screen. Rendering first and filtering after leaves code
+    blocks correct and still drops raw HTML.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=False)
+        self.out: list[str] = []
+        self._suppress_depth = 0
+
+    def handle_starttag(self, tag: str, attrs: list) -> None:
+        if tag in _TICKET_VOID_CONTENT_TAGS:
+            self._suppress_depth += 1
+            return
+        if self._suppress_depth or tag not in _TICKET_ALLOWED_TAGS:
+            return
+        allowed = _TICKET_ALLOWED_ATTRS.get(tag, set())
+        rendered = ""
+        for name, value in attrs:
+            if name not in allowed or value is None:
+                continue
+            if name == "href" and not _TICKET_SAFE_URL_RE.match(value.strip()):
+                continue
+            rendered += f' {name}="{escape(value, quote=True)}"'
+        self.out.append(f"<{tag}{rendered}>")
+
+    def handle_startendtag(self, tag: str, attrs: list) -> None:
+        if not self._suppress_depth and tag in _TICKET_ALLOWED_TAGS:
+            self.out.append(f"<{tag} />")
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in _TICKET_VOID_CONTENT_TAGS:
+            self._suppress_depth = max(0, self._suppress_depth - 1)
+            return
+        if self._suppress_depth or tag not in _TICKET_ALLOWED_TAGS:
+            return
+        self.out.append(f"</{tag}>")
+
+    def handle_data(self, data: str) -> None:
+        if not self._suppress_depth:
+            self.out.append(escape(data, quote=False))
+
+    def handle_entityref(self, name: str) -> None:
+        if not self._suppress_depth:
+            self.out.append(f"&{name};")
+
+    def handle_charref(self, name: str) -> None:
+        if not self._suppress_depth:
+            self.out.append(f"&#{name};")
+
+
+def _sanitize_ticket_html(html: str) -> str:
+    """Return *html* with every non-allowlisted tag removed."""
+    parser = _TicketBodySanitizer()
+    parser.feed(html)
+    parser.close()
+    return "".join(parser.out)
+
+
+#: Ceiling on a rendered ticket body, in characters of source markdown. The
+#: largest body in this repo's own corpus is ~21 KB and the mean is ~3.6 KB, so
+#: 64 KB is well clear of real content while bounding what one request can pull
+#: into the page if a body is ever pathological (a pasted log, a base64 blob).
+#: Truncation is reported to the reader rather than silently swallowing text.
+TICKET_BODY_MAX_CHARS = 64_000
+
+
+def load_ticket_body(item_id: str, backlog_dir: Path) -> dict | None:
+    """Return ``{id, title, html, truncated}`` for one backlog ticket, or None.
+
+    Reads the markdown body of ``cortex/backlog/<item_id>-*.md`` — falling back
+    to ``archive/`` so a blocker pointing at a closed ticket is still readable —
+    strips the YAML frontmatter, and renders what remains to HTML.
+
+    This is a per-request read rather than part of the 30s snapshot on purpose.
+    Bodies are large relative to everything else the poller carries: this repo's
+    corpus is ~1.5 MB across 416 files, so folding them into the polled fragment
+    would morph hundreds of KB into the DOM twice a minute to display prose the
+    operator has usually not asked for. Only an opened row pays.
+
+    Args:
+        item_id: The ticket's numeric id, as a string, straight off the URL.
+        backlog_dir: Path to the ``cortex/backlog/`` directory.
+
+    Returns:
+        A dict with the rendered body, or ``None`` when *item_id* is not a bare
+        integer, no file matches it, or the file cannot be read.
+    """
+    # The id arrives from the URL path, so it is validated as a bare integer
+    # before it reaches any filesystem call. This rejects "..", absolute paths,
+    # and glob metacharacters by construction rather than by escaping them.
+    if not re.fullmatch(r"\d{1,9}", item_id or ""):
+        return None
+
+    wanted = int(item_id)
+    normalized = str(wanted)
+
+    # Filenames are zero-padded (``007-…``, ``042-…``) while every id the board
+    # carries is unpadded — ``parse_backlog_titles`` keys them by
+    # ``str(int(...))``. Globbing the id literally therefore missed every
+    # padded file, so the match is made on the parsed leading integer and is
+    # padding-agnostic in both directions.
+    def _match(directory: Path) -> list[Path]:
+        try:
+            files = sorted(directory.glob("[0-9]*-*.md"))
+        except OSError:
+            return []
+        found = []
+        for candidate in files:
+            head = re.match(r"^(\d+)-", candidate.name)
+            if head and int(head.group(1)) == wanted:
+                found.append(candidate)
+        return found
+
+    candidates = _match(backlog_dir) or _match(backlog_dir / "archive")
+    if not candidates:
+        return None
+
+    path = candidates[0]
+    # Belt and braces on top of the id validation: confirm the resolved file
+    # really sits under the backlog directory before reading it.
+    try:
+        resolved = path.resolve()
+        root = backlog_dir.resolve()
+        if not resolved.is_relative_to(root):
+            return None
+        text = resolved.read_text(encoding="utf-8")
+    except (OSError, ValueError):
+        return None
+
+    title = None
+    body = text
+    lines = text.splitlines()
+    if lines and lines[0].strip() == "---":
+        for i in range(1, len(lines)):
+            if lines[i].strip() == "---":
+                for fm_line in lines[1:i]:
+                    match = re.match(r"^title\s*:\s*(.+)$", fm_line)
+                    if match:
+                        title = match.group(1).strip().strip("\"'")
+                        break
+                body = "\n".join(lines[i + 1 :])
+                break
+
+    body = body.strip()
+    truncated = len(body) > TICKET_BODY_MAX_CHARS
+    if truncated:
+        body = body[:TICKET_BODY_MAX_CHARS]
+
+    # Same two extensions the morning-report render enables, and the pair the
+    # seeded fixture corpus is written to exercise. Rendered first, then
+    # filtered to an allowlist — see _TicketBodySanitizer for why that order.
+    html = _sanitize_ticket_html(
+        markdown.markdown(body, extensions=["fenced_code", "tables"])
+    )
+
+    return {"id": normalized, "title": title, "html": html, "truncated": truncated}
 
 
 def parse_pipeline_dispatch(lifecycle_dir: Path) -> dict[str, dict]:
@@ -1658,18 +1941,30 @@ def parse_recent_session_events(
             return "session start"
         return ""
 
-    out: list[dict] = []
-    for ev in overnight_events[-last_n:]:
-        out.append({
+    # Sort by timestamp before slicing rather than trusting file order. The
+    # panel is labelled "newest first", and append order does not guarantee
+    # that: the runner interleaves writers (per-round heartbeats alongside
+    # per-feature checkpoints), so a purely positional tail rendered a
+    # 5m/1h/8m/45m jumble under a heading promising descending time. ISO-8601
+    # UTC strings sort lexicographically in timestamp order, so no parse is
+    # needed. Events missing a ``ts`` sort last (newest-first) rather than
+    # crashing the comparison, and Python's stable sort keeps same-timestamp
+    # events in the order the runner emitted them.
+    ordered = sorted(
+        overnight_events,
+        key=lambda ev: (ev.get("ts") or ""),
+        reverse=True,
+    )
+    return [
+        {
             "event": (ev.get("event") or "").lower(),
             "ts": ev.get("ts") or "",
             "round": ev.get("round"),
             "feature": ev.get("feature"),
             "detail": _detail(ev),
-        })
-    # Reverse so newest first for display
-    out.reverse()
-    return out
+        }
+        for ev in ordered[:last_n]
+    ]
 
 
 def parse_checkpoints_per_feature(
