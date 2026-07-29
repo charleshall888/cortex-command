@@ -62,9 +62,9 @@ Every phase boundary hands off to `cortex-lifecycle-advance`, which owns that ar
 
 ## Phase transitions
 
-Proceed automatically — announce and continue, no confirmation at boundaries. Each summary carries **Decisions**, **Scope delta**, **Blockers** (each "None" when empty), and **Next**. Entering Plan or Implement, append the served `session_split_hint` as one line — a suggestion, not a gate.
+Cross boundaries automatically — announce and continue; add no stop of your own unless a `<!-- pause: -->` marker or the arm's own routed outcome says otherwise. Each summary carries **Decisions**, **Scope delta**, **Blockers** (each "None" when empty), then **Next** last. Entering Plan or Implement, put the served `session_split_hint` before **Next** — operator information, never a question to wait on.
 
-A boundary fires on its gate condition (e.g. `plan.md` all tasks `[x]`), not user input; each phase reference owns its gate, and Plan additionally gates on a user-approval surface. A prior "report" or "summarize" instruction sets text cadence only — it does not authorize `AskUserQuestion` at a boundary.
+A boundary fires on its gate condition (e.g. `plan.md` all tasks `[x]`), not user input; each phase reference owns its gate, and Plan additionally gates on a user-approval surface. A prior "report" or "summarize" instruction sets text cadence, not a boundary gate.
 
 ## Criticality
 

@@ -51,7 +51,7 @@ Envelope schema (served / resume case)::
       "path_overview": {"nominal": [...], "outgoing": [...]},   # default-on at resume
       "guards": {"advisory": true, "note": ..., "edges": [ ... ]},
       "evidence_trace": [ <derivation step>, ... ],
-      "session_split_hint": <one-line split suggestion; plan/implement only>,
+      "session_split_hint": <one-line split affordance; plan/implement only>,
       "ignored_tokens": [ <trailing tokens the grammar dropped>, ... ],
       "protocol": <PROTOCOL_VERSION>
     }
@@ -148,13 +148,17 @@ _ADVISORY_NOTE = (
 # The refine→plan and plan→implement boundaries, keyed by their target state —
 # where a session split pays most ("Phase boundaries are session boundaries",
 # cortex/requirements/project.md: carry is superlinear in turns; a fresh
-# session re-caches for ~50k tokens). One optional envelope key; the
-# interactive loop renders it as a one-line suggestion, never a gate.
+# session re-caches for ~50k tokens). One optional envelope key.
+#
+# Worded as a statement of the affordance rather than "Consider …" (#423): the
+# earlier phrasing read as a deliberation prompt, so the interactive loop
+# treated it as a decision point and stopped to ask at a boundary it was told
+# to cross automatically. The operator reads this and acts on it; the loop
+# renders it and keeps going.
 _SESSION_SPLIT_STATES = ("plan", "implement")
 _SESSION_SPLIT_HINT = (
-    "Consider ending this session and resuming fresh — re-invoking "
-    "/cortex-core:build <feature> routes back to this phase, and a fresh "
-    "session avoids superlinear context carry."
+    "Session-split point: re-invoking /cortex-core:build <feature> resumes "
+    "here in a fresh session, which avoids superlinear context carry."
 )
 
 

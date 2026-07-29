@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 757b1a7a-2076-4726-9e50-80dc592d5e98
 title: build loop pauses at phase boundaries it is told to cross automatically; the session-split hint is unconditional and context-blind
-status: backlog
+status: complete
 priority: medium
 type: bug
 created: 2026-07-28
-updated: 2026-07-28
+updated: 2026-07-29
 tags: ['harness', 'lifecycle', 'interactive-loop']
 areas: ['build-skill']
 ---
