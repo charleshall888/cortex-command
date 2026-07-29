@@ -10,7 +10,7 @@ raises ``TypeError: unhashable type: 'dict'`` -> HTTP 500. Only a route test
 that drives each handler through the real ASGI app + ``TemplateResponse`` layer
 can guard against that regression.
 
-This test drives ``GET /``, ``/sessions``, ``/health``, and each of the ten
+This test drives ``GET /``, ``/sessions``, ``/health``, and each of the eleven
 ``/partials/*`` routes and asserts 200, plus ``GET /sessions/{missing}`` -> 404
 (the ``status_code`` path). On the dev venv (Starlette 0.52.1) both call forms
 return 200, so locally this proves only well-formedness; it becomes
@@ -36,7 +36,7 @@ from starlette.testclient import TestClient
 
 from cortex_command.dashboard.app import app
 
-# The ten HTMX partial routes, in the order documented by the spec.
+# The eleven HTMX partial routes, in the order documented by the spec.
 PARTIAL_ROUTES = [
     "/partials/fleet-panel",
     "/partials/alerts-banner",
@@ -48,6 +48,7 @@ PARTIAL_ROUTES = [
     "/partials/backlog",
     "/partials/metrics",
     "/partials/swim-lane",
+    "/partials/triage-board",
 ]
 
 # Page + health routes that must render 200.
