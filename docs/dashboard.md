@@ -121,6 +121,10 @@ Monitors active interactive pipeline execution (separate from overnight). Visibl
 
 Backlog status counts and ready-queue summary, sourced from `cortex/backlog/`. Provides context on what's queued for the next session without leaving the dashboard.
 
+### 11. Triage Board
+
+Every active ticket as a row, grouped one section per epic with a flat list beneath for items no epic parents, sourced from the same backlog snapshot as § 10. Rows carry status, priority, and type, plus an ineligibility reason, unresolved blocker refs, or a deferral flag where they apply — the persistent answer to "what should I work on, and what's blocked on what" without re-running triage in a session. Rows are non-navigational disclosures; the per-ticket reader is a separate surface.
+
 ---
 
 ## Session History
@@ -172,9 +176,9 @@ The dashboard uses two polling layers:
 | Backend `_poll_slow` | Backlog counts, ticket feed, dispatch details, metrics | every 30 s |
 | HTMX (browser-side) | Alerts Banner, Session, Feature Cards, Agent Fleet, Swim-Lane, Round History, Escalations | every 5 s |
 | HTMX (browser-side) | Recent Activity Stream | every 3 s |
-| HTMX (browser-side) | Metrics Baseline, Backlog | every 30 s |
+| HTMX (browser-side) | Metrics Baseline, Backlog, Triage Board | every 30 s |
 
-Total state-change latency is up to approximately 7 seconds (2 s backend read + 5 s HTMX refresh) for panels on the 5 s HTMX interval. For 30 s-polling panels (Metrics Baseline, Backlog), end-to-end latency is up to approximately 32 seconds.
+Total state-change latency is up to approximately 7 seconds (2 s backend read + 5 s HTMX refresh) for panels on the 5 s HTMX interval. For 30 s-polling panels (Metrics Baseline, Backlog, Triage Board), end-to-end latency is up to approximately 32 seconds.
 
 ---
 
