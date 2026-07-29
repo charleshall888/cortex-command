@@ -87,6 +87,8 @@ from cortex_command.backlog import _telemetry
 from cortex_command.backlog.resolve_item import _parse_frontmatter, resolve
 from cortex_command.backlog.update_item import update_item
 from cortex_command.common import (
+    _MACHINE_STATE_NAMES,
+    _TERMINAL_EVENT_TO_STATE,
     normalize_status,
     resolve_lifecycle_phase,
 )
@@ -195,6 +197,28 @@ def _reject_unsafe_slug(feature: str) -> Optional[dict]:
             "message": f"unsafe feature slug {feature!r}: no path separators or '..'",
         }
     return None
+
+
+def _has_machine_rows(rows: List[dict]) -> bool:
+    """Whether *rows* carry any events-derived phase evidence.
+
+    Mirrors ``common._phase_from_machine_rows``'s definition of a machine row
+    (a ``phase_transition`` naming a known state, or a terminal event), reusing
+    its constants so the two cannot drift. ``False`` means
+    ``resolve_lifecycle_phase`` has no events to read and silently degrades to
+    the artifact detector.
+    """
+    for event in rows:
+        if not isinstance(event, dict):
+            continue
+        etype = event.get("event")
+        if etype == "phase_transition":
+            to = event.get("to")
+            if isinstance(to, str) and to in _MACHINE_STATE_NAMES:
+                return True
+        elif etype in _TERMINAL_EVENT_TO_STATE:
+            return True
+    return False
 
 
 def _read_rows(log_path: Path) -> List[dict]:
@@ -983,8 +1007,24 @@ def advance(
     # suffixed phase satisfies the gate ONLY for the crossing the pause check
     # just authorized (the owning verb's typed resume) — for every other
     # caller the mismatch still refuses.
+    # A table-derived from_state on a log with no machine rows has nothing to
+    # gate against. resolve_lifecycle_phase falls back to detect_lifecycle_phase
+    # there — the very LEGACY FALLBACK this gate must not consult — so refusing
+    # on it makes the first machine row unwritable whenever the artifacts
+    # disagree: no row -> fallback -> refuse -> still no row. Observed in session
+    # overnight-2026-07-29-0145, where #412 emitted zero lifecycle rows across a
+    # whole run: implement-transition refused against artifact-derived 'plan',
+    # then once review.md landed review-verdict refused against 'complete', both
+    # against an events.log that never changed.
+    #
+    # An explicit caller-supplied from_state is a different claim: it can be
+    # wrong, and catching that is the gate's purpose, so it is still gated with
+    # no machine rows present. Only the composed-arm path — from_state omitted
+    # so the closed transition table supplies the verb's one departure state —
+    # is exempt.
+    gate_applies = _has_machine_rows(rows) or from_state is not None
     phase = resolve_lifecycle_phase(resolved_log.parent).get("phase")
-    if phase != effective_from:
+    if phase != effective_from and gate_applies:
         active_pause = _active_enforced_pause(rows)
         crossing_own_pause = (
             phase == f"{effective_from}-paused"

@@ -270,14 +270,23 @@ def test_a_refused_advance_is_audible_and_returns_advance_refused(
     This call site set its ``state`` before calling ``advance`` and returned it
     unconditionally, so a refused transition surfaced to the CLI as
     ``advanced-complete`` with no events written and no warning — the operator
-    had nothing to act on. Here the log carries no ``phase_transition`` rows, so
-    the resolver falls back to the artifact detector, which reports ``complete``
-    against the arm's table ``from_state`` of ``review``.
+    had nothing to act on.
+
+    The refusal is manufactured with **real machine rows that contradict**: the
+    log's last ``phase_transition`` lands the feature at ``plan`` while the
+    review arm's table ``from_state`` is ``review``. An artifact-fallback log
+    (no ``phase_transition`` rows at all) no longer refuses — a table-derived
+    from_state has nothing to gate against there, and gating on the artifact
+    detector made the first machine row unwritable by construction.
     """
     fd = _feature_dir(project_root)
     seed = [
         {"event": "lifecycle_start", "feature": "feat", "tier": "complex", "criticality": "high"},
+        # A real verdict, so the review-verdict arm is the one selected...
         {"event": "review_verdict", "feature": "feat", "verdict": "APPROVED", "cycle": 1},
+        # ...but the line-position-last machine row puts the feature at `plan`,
+        # which that arm's table from_state of `review` contradicts.
+        {"event": "phase_transition", "feature": "feat", "from": "specify", "to": "plan"},
     ]
     _write_events(fd, seed)
     (fd / "review.md").write_text(
@@ -367,14 +376,16 @@ def test_every_state_is_known(project_root: Path) -> None:
     )
     seen.add(al.advance_lifecycle("f4", project_root=project_root)["state"])
 
-    # A refusal: no machine rows, so the artifact detector reports complete
-    # against the review arm's table from_state.
+    # A refusal: real machine rows land the feature at `plan`, contradicting the
+    # review arm's table from_state of `review`. (An artifact-fallback log no
+    # longer refuses — see test_a_refused_advance_is_audible_and_returns_advance_refused.)
     fd5 = _feature_dir(project_root, "f5")
     _write_events(
         fd5,
         [
             {"event": "lifecycle_start", "feature": "f5", "tier": "complex", "criticality": "high"},
             {"event": "review_verdict", "feature": "f5", "verdict": "APPROVED", "cycle": 1},
+            {"event": "phase_transition", "feature": "f5", "from": "specify", "to": "plan"},
         ],
     )
     (fd5 / "review.md").write_text(

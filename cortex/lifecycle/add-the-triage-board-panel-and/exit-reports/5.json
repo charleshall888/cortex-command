@@ -1,0 +1,4 @@
+{
+  "action": "complete",
+  "reason": "Board tests render against build_backlog_snapshot over on-disk fixtures; 72 template+smoke tests pass and mutation checks confirm they catch the spec's silent-join failures. triage_board.html needed no change."
+}
