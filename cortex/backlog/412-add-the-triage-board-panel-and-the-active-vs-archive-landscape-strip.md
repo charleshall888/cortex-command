@@ -16,6 +16,7 @@ complexity: complex
 criticality: high
 spec: cortex/lifecycle/add-the-triage-board-panel-and/spec.md
 session_id: null
+lifecycle_phase: complete
 ---
 ## Why
 

@@ -41,7 +41,7 @@ No recovery log exists for this feature — this is a first planning pass.
 
   **Design system.** Use existing token classes only — `empty-state`, `stream-line`, `ml-auto`, `phase-label`, `phase-tag`, `sec-num`, `num`, `badge-*`. No raw hex, no `bg-gray-*`/`text-gray-*`, no `px` values inside `style` attributes (`DESIGN.md:58-68`). Add no new CSS.
 - **Verification**: Over `cortex_command/dashboard/templates/triage_board.html`: `grep -cE '#[0-9a-fA-F]{3,6}\b'` = 0, `grep -cE '(bg|text)-gray-'` = 0, `grep -cE 'style="[^"]*[0-9]+px'` = 0, `grep -cE 'href=|hx-get=|hx-push-url=|onclick='` = 0, `grep -c '<section'` = 0, `grep -c '§ 11'` = 1, `grep -c 'refresh · 30s'` ≥ 1, `grep -cE "snap\.items|snap\.keys|snap\.values"` = 0, `grep -c "snap\['epics'\]\['epics'\]"` ≥ 1. Then render the never-polled arm through the shipped Jinja environment: `.venv/bin/python -c "import types; from cortex_command.dashboard.app import templates; s=types.SimpleNamespace(backlog_snapshot=None); h=templates.env.get_template('triage_board.html').render(request=types.SimpleNamespace(url=types.SimpleNamespace(path='/')), state=s); assert '§ 11' in h and 'empty-state' in h; print('ok')"` — exits 0 printing `ok`; a Jinja syntax error or missing label fails it.
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 2: Build the reusable backlog fixture-corpus generator
 - **Files**: `cortex_command/dashboard/tests/backlog_fixtures.py`
@@ -54,7 +54,7 @@ No recovery log exists for this feature — this is a first planning pass.
 
   The generator must be able to express, in one call path: an epic with children, an epic with zero children, an item blocked by a terminal item, an item blocked by a non-terminal item, `status: deferred`, `tags: ['deferred']` at an eligible status, out-of-vocabulary `status`/`type`/`priority`, and `lifecycle_phase` present vs. `none`. Callers own their own `tempfile.TemporaryDirectory`; the module creates no state of its own at import time.
 - **Verification**: `.venv/bin/python -c "import tempfile, pathlib, cortex_command.dashboard.tests.backlog_fixtures as f; …"` — build a throwaway corpus containing one epic, one child, one `status: deferred` item, and one item blocked by a non-terminal item; call the generator's snapshot function; assert `snap['schema_version'] == '1'`, `len(snap['epics']['epics']) == 1`, `snap['ineligible']` is non-empty, `snap['blocked_why']` is non-empty, and every id in `snap['item_order']` is a key of `snap['items']`; print `ok` and exit 0. The assertions are against the shipped `ticket_feed.build_backlog_snapshot`, not against anything this task writes, so a generator that emits malformed frontmatter fails here rather than silently yielding an empty snapshot. Discard the temp corpus.
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 3: Reconcile ticket #412's own record by appending
 - **Files**: `cortex/backlog/412-add-the-triage-board-panel-and-the-active-vs-archive-landscape-strip.md`
@@ -67,7 +67,7 @@ No recovery log exists for this feature — this is a first planning pass.
 
   This file is not lifecycle-gated for code purposes, but `.githooks/pre-commit:183` runs the bare-python-import linter over staged `cortex/backlog/*.md`; do not introduce a `python3 -c "import cortex_command"` callsite in the new prose.
 - **Verification**: `grep -c '^## Update — reconciled at spec time (#412)$' cortex/backlog/412-*.md` = 1; `awk '/^## Update — reconciled/{exit} /landscape strip/{c++} END{print c+0}' cortex/backlog/412-*.md` = 0 (no occurrence survives outside the Update section, including in the title); `git diff -U0 cortex/backlog/412-*.md | grep -c '^-[^-]'` = 1 (the old `title:` line is the only removal).
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 4: Register the route, the `§ 11` section shell, and the smoke-route entry
 - **Files**: `cortex_command/dashboard/app.py`, `cortex_command/dashboard/templates/base.html`, `cortex_command/dashboard/tests/test_routes_smoke.py`
@@ -82,7 +82,7 @@ No recovery log exists for this feature — this is a first planning pass.
 
   (c) `test_routes_smoke.py` — add `"/partials/triage-board"` to `PARTIAL_ROUTES` (`:40-51`) and correct the "ten" counts in the module docstring (`:13`) and the list comment (`:39`) to eleven. Note the honest coverage position: this fixture drives `TestClient` **without** entering the lifespan, so no poller runs and CI exercises only the never-polled arm.
 - **Verification**: `.venv/bin/pytest cortex_command/dashboard/tests/test_routes_smoke.py -q` exits 0 reporting **15 passed** (14 before this task: 3 page routes + 10 partials + 1 missing-session). Then the section-label multiset check, whose pre-change baseline is 23 total `§ NN` occurrences across `cortex_command/dashboard/templates/` with zero `§ 11`: `grep -ro '§ [0-9][0-9]' cortex_command/dashboard/templates/ | wc -l` = 25, `grep -rl '§ 11' cortex_command/dashboard/templates/ | sort` lists exactly `base.html` and `triage_board.html`, and `grep -c '§ 10' cortex_command/dashboard/templates/base.html` = 1 (no existing section renumbered).
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 5: Author the board's template tests against the real feed
 - **Files**: `cortex_command/dashboard/tests/test_templates.py`, `cortex_command/dashboard/templates/triage_board.html`
@@ -109,7 +109,7 @@ No recovery log exists for this feature — this is a first planning pass.
   - **R14** — `backlog_snapshot is None`, a populated snapshot with empty `item_order`, and a `stale: true` snapshot produce three mutually different rendered strings, and all three contain `§ 11`. `mark_snapshot_stale` (`ticket_feed.py:243`) produces the stale arm's input.
   - **R15** — a corpus with one epic and zero active children renders that group with an explicit "no active children" line, not an empty body and not a suppressed group.
 - **Verification**: `.venv/bin/pytest cortex_command/dashboard/tests/test_templates.py -q` exits 0 with a pass count strictly greater than the pre-change **26 passed**, and `grep -c 'build_backlog_snapshot' cortex_command/dashboard/tests/test_templates.py` ≥ 1. Then confirm the whole dashboard suite is green: `.venv/bin/pytest cortex_command/dashboard/tests/ -q` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ## Risks
 
