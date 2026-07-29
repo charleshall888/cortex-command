@@ -1,12 +1,12 @@
 ---
 schema_version: "1"
 uuid: c5abd455-85fa-457b-8087-c99ccfd55566
-title: Add the triage board panel and the active-vs-archive landscape strip
-status: refined
+title: Add the triage board panel
+status: complete
 priority: medium
 type: feature
 created: 2026-07-21
-updated: 2026-07-27
+updated: 2026-07-28
 discovery_source: cortex/research/dashboard-command-station/research.md
 parent: "410"
 tags: ['dashboard-command-station', 'dashboard']
@@ -15,6 +15,7 @@ blocked-by: 411
 complexity: complex
 criticality: high
 spec: cortex/lifecycle/add-the-triage-board-panel-and/spec.md
+session_id: null
 ---
 ## Why
 
@@ -47,3 +48,47 @@ Both surfaces are pure renderings of ticket-feed state on their own slow trigger
 - `cortex_command/backlog/triage.py` (`render`) — decision-information baseline to meet (the rules moved here from the retired dev-skill triage reference)
 - `cortex/backlog/306-generate-a-cross-lifecycle-phase-index-wired-to-morning-review.md:44-53` — close-out constraints the strip honors
 - `justfile:150-152` — manual lifecycle-archive recipe (the absent standing sweep)
+
+## Update — reconciled at spec time (#412)
+
+Research and critical review falsified five claims made above and dropped the second of the two
+surfaces this ticket bundled. The original text is left intact as the record of what was believed at
+authoring time; this section states what replaced it.
+
+1. **"170 of 177 top-level lifecycle dirs" does not reproduce.** The Why's headline count is wrong on
+   both terms — measured 178 top-level lifecycle dirs, of which 167 match the archiver predicate. The
+   direction of the observation survives; the figure does not.
+
+2. **The "morning-report flooding" precedent was already fixed at the consumer.** The Why cites #294,
+   which is `status: complete`: its session-scope gates at `report.py:924` and `report.py:1341` stop
+   the unswept mass from reaching the report. The cited operator noise is therefore historical, not
+   standing, and cannot motivate a new surface.
+
+3. **"No standing sweep" is false.** `cortex/lifecycle/archive/.archive-manifest.jsonl` carries an
+   entry dated 2026-07-27. Further, 111 of its 145 entries landed inside one 7-minute window on
+   2026-04-27, which `justfile:191` documents as an incident where `just lifecycle-archive --dry-run`
+   ran destructively — so the archive the strip would have reported against is largely residue from
+   that incident rather than evidence of accumulation.
+
+4. **The Integration's "active/archive split the feed already computes" is a *backlog* split.** It is
+   8 active / 0 archived in this repo and describes ticket state, not lifecycle directories; it could
+   never have sourced a lifecycle landscape. The claim is moot now that the surface is dropped.
+
+5. **The Edges list inverts #306.** It names "standalone" among what #306 rejected. #306:53 blessed
+   the opposite — "a gitignored, regenerate-on-demand, standalone index" over indexing "every live
+   lifecycle" — and required that the settled-corpus question be reconsidered *jointly* with the
+   archive verb (B4), since "keep history + index it" vs "archive it" is one design decision.
+
+Additionally, the touch point `justfile:150-152` resolves to the training-deck server recipe, not the
+archive recipe; `lifecycle-archive` begins at `justfile:184`.
+
+**The active-vs-archive landscape strip is dropped from this ticket**, and the `title:` above was
+amended to match. Its evidence did not survive the corrections in 1–3: the noise it cited is fixed at
+the consumer, archiving is not standing down, and the corpus it would report against is `--dry-run`
+residue. Beyond that, its third term would count conformance with a shipped instruction
+(`skills/build/references/complete.md:53`: "Preserve `cortex/lifecycle/{slug}/` as project history"),
+and it is un-actionable in consumer repos — none of the three sampled has a `justfile` at all, so
+`lifecycle-archive` does not exist there. #306's revival clause requires the settled-corpus question
+be taken up with the archive verb in a paired ticket rather than split from it. This ticket is the
+board: the panel, its data joins, badge vocabulary, and tests. No lifecycle-directory scan and no
+`lifecycle_landscape` state field ship with it.

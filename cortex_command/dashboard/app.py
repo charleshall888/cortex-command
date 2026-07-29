@@ -427,3 +427,13 @@ async def swim_lane(request: Request):
             "ticks": swim_data["ticks"],
         },
     )
+
+
+@app.get("/partials/triage-board")
+async def triage_board(request: Request):
+    """Return the triage board panel for HTMX polling."""
+    return templates.TemplateResponse(
+        request,
+        "triage_board.html",
+        {"request": request, "state": state},
+    )
