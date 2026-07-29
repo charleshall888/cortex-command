@@ -171,6 +171,74 @@ def test_create_item_omits_tags_and_areas_when_not_passed(
     assert "areas:" not in text
 
 
+# ---------------------------------------------------------------------------
+# #422: the emitted file ends with exactly one newline, so the standard
+# pre-commit-hooks `end-of-file-fixer` never modifies it. A modified file
+# aborts the caller's commit, and the abort is buried under passing-hook
+# output — a deterministic first-attempt failure that self-heals on retry.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        pytest.param("Some body text", id="no-trailing-newline"),
+        pytest.param("Some body text\n", id="one-trailing-newline"),
+        pytest.param("Some body text\n\n", id="several-trailing-newlines"),
+        pytest.param("", id="empty-body"),
+        pytest.param(None, id="no-body"),
+    ],
+)
+def test_create_item_emits_exactly_one_trailing_newline(
+    body: str | None, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The written file ends in exactly one ``\\n`` for every ``body`` shape.
+
+    Both directions abort a commit under ``end-of-file-fixer``: a missing
+    trailing newline gets one added, and a surplus one gets truncated.
+    ``--body ""`` is included because normalizing the body alone would leave a
+    blank line after the frontmatter and fail the same way.
+    """
+    from cortex_command.backlog import create_item
+
+    monkeypatch.setattr(create_item.subprocess, "run", lambda *a, **k: None)
+
+    item_path = create_item.create_item(
+        title="trailing newline probe",
+        status="backlog",
+        item_type="chore",
+        backlog_dir=tmp_path,
+        body=body,
+    )
+
+    raw = item_path.read_bytes()
+    assert raw.endswith(b"\n"), "file must end with a newline"
+    assert not raw.endswith(b"\n\n"), "file must not end with a blank line"
+
+
+def test_create_item_preserves_body_content(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Newline normalization is confined to the end of the file.
+
+    Interior blank lines are part of the markdown the caller asked for and
+    must survive; only the trailing run is collapsed.
+    """
+    from cortex_command.backlog import create_item
+
+    monkeypatch.setattr(create_item.subprocess, "run", lambda *a, **k: None)
+
+    item_path = create_item.create_item(
+        title="body content probe",
+        status="backlog",
+        item_type="chore",
+        backlog_dir=tmp_path,
+        body="## Why\n\nFirst para.\n\nSecond para.\n",
+    )
+
+    text = item_path.read_text(encoding="utf-8")
+    assert text.endswith("## Why\n\nFirst para.\n\nSecond para.\n")
+
+
 def test_create_item_cli_accepts_tags_and_areas_flags(tmp_path: Path) -> None:
     """``cortex-create-backlog-item --tags ... --areas ...`` (space-separated,
     matching ``cortex-update-item``'s ``nargs="*"`` convention) writes valid

@@ -172,7 +172,14 @@ def create_item(
     if body is not None:
         lines.append(body)
 
-    atomic_write(item_path, "".join(lines))
+    # Emit exactly one trailing newline. A caller-supplied --body almost never
+    # ends in one (shell strings and $(cat file) both drop it), and a body that
+    # ends in several is just as bad: the standard pre-commit-hooks
+    # `end-of-file-fixer` modifies the file in either direction, which aborts
+    # the caller's commit. Normalizing the assembled document rather than the
+    # body alone also covers `--body ""`, where appending to the body would
+    # leave a blank line after the frontmatter and abort for the same reason.
+    atomic_write(item_path, "".join(lines).rstrip("\n") + "\n")
 
     _append_event(
         item_path,

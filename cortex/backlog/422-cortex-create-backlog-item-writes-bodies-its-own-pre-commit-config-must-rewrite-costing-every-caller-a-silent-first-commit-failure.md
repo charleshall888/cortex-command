@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 3f941c1b-e844-4b43-9524-1523a36176cb
 title: cortex-create-backlog-item writes bodies its own pre-commit config must rewrite, costing every caller a silent first-commit failure
-status: backlog
+status: complete
 priority: medium
 type: bug
 created: 2026-07-28
-updated: 2026-07-28
+updated: 2026-07-29
 tags: ['harness', 'backlog', 'cli', 'dx']
 ---
 **Every `--body` caller creates a file that `end-of-file-fixer` is guaranteed to modify, which aborts the caller pre-commit run by design.** The abort is then buried under ~200 lines of green hook output and reads as success.
