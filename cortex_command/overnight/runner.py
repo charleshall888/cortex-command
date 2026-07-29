@@ -2742,6 +2742,36 @@ def _post_loop(
 # Public entry
 # ---------------------------------------------------------------------------
 
+def _point_latest_overnight(session_dir: Path) -> None:
+    """Repoint ``sessions/latest-overnight`` at this session's directory.
+
+    Ten readers resolve session artifacts through this pointer — among them
+    ``cli_handler._auto_discover_state``, the dashboard poller's fallback
+    paths, ``batch_runner``'s ``--state-path``/``--events-path`` defaults, the
+    morning-review skill's report lookup, and ``justfile``'s ``overnight-run``
+    recipe — but nothing ever created it, so each silently took a fallback or
+    missed outright. ``/morning-review`` reported "no overnight session has
+    been run" for a session that had just finished.
+
+    The link is relative (just the session directory's name) so it survives the
+    repo being moved or copied. Best-effort: a filesystem or platform without
+    symlink support must not fail the run, and a real directory sitting at that
+    path is left alone rather than destroyed — every reader still has its
+    fallback.
+    """
+    link = session_dir.parent / "latest-overnight"
+    try:
+        if link.is_symlink():
+            link.unlink()
+        link.symlink_to(session_dir.name, target_is_directory=True)
+    except OSError as exc:
+        print(
+            f"WARN: could not repoint latest-overnight at {session_dir.name}: {exc!r}",
+            file=sys.stderr,
+            flush=True,
+        )
+
+
 def run(
     state_path: Path,
     session_dir: Path,
@@ -2803,6 +2833,9 @@ def run(
     sandbox_settings.cleanup_stale_tempfiles(
         session_dir, runner_start_ts=time.time()
     )
+
+    # Publish the session pointer its readers already assume exists.
+    _point_latest_overnight(session_dir)
 
     # Dry-run concurrent-start guard. The non-dry-run path takes the
     # locked, authoritative check inside ``_start_session`` (which
