@@ -1,0 +1,247 @@
+{# Triage board — the read-only render of the ticket-feed snapshot that
+   ``cortex_command/dashboard/ticket_feed.py`` commits on the 30s slow poll.
+   Fragment only: the polled section shell lives in base.html, and this file
+   re-emits the section label because the morph swap replaces the shell's
+   inner content on first load.
+
+   Two lookup rules govern everything below, and both fail silently rather
+   than loudly when broken:
+
+   * ``snap`` is a plain dict and Jinja tries ``getattr`` before
+     ``__getitem__``, so dotted access to an ``items`` key resolves to the
+     bound ``dict.items`` METHOD, never the snapshot's data. Every snapshot
+     key is therefore read with a subscript. The same trap applies to any
+     per-item key named keys / values / get / update / copy / pop.
+   * ``epics`` is ``build_epic_map``'s two-key envelope, so the epic id map
+     lives one level in at ``snap['epics']['epics']``. Iterating the outer
+     dict yields the literal keys ``schema_version`` and ``epics`` and zero
+     epic ids.
+
+   Every per-row display field resolves through ``snap['items'][id]``, never
+   through an epic child record: a child carries only id / spec / status /
+   title, so priority, type, phase and the two deferral flags are simply
+   absent there. Child ids are ints while ``items`` is str-keyed, so they are
+   stringified before the join — an unconverted lookup yields a Jinja
+   Undefined that renders blank instead of raising. Rows read ``phase``
+   (null-normalized), not ``lifecycle_phase``, which still carries the
+   literal string "none" for some items. #}
+{% from "patterns/badge.html" import badge %}
+<span class="sec-num"><strong>§ 11</strong>triage</span>
+{% set snap = state.backlog_snapshot %}
+
+{# The backlog status / priority / type vocabularies mapped to the badge
+   classes defined in base.html. Deliberately not backlog_panel.html's map,
+   whose values are CSS custom properties consumed as an inline ``--c`` and
+   would emit a class matching no rule; and deliberately not the
+   ``badge(status=…)`` path, whose map is the feature/run-outcome vocabulary.
+   All three vocabularies are open in practice — the item-creation verb
+   applies no restriction — so every lookup carries a fallback and the raw
+   value is always what gets displayed. #}
+{% set status_class = {
+  "backlog":     "badge-gray",
+  "open":        "badge-gray",
+  "proposed":    "badge-gray",
+  "archived":    "badge-gray",
+  "refined":     "badge-blue",
+  "in-progress": "badge-blue",
+  "in_progress": "badge-blue",
+  "deferred":    "badge-amber",
+  "on-hold":     "badge-amber",
+  "complete":    "badge-green",
+  "merged":      "badge-green",
+  "done":        "badge-green",
+  "abandoned":   "badge-red",
+  "superseded":  "badge-red",
+} %}
+{% set priority_class = {
+  "critical": "badge-red",
+  "high":     "badge-purple",
+  "medium":   "badge-gray",
+  "low":      "badge-gray",
+} %}
+{% set type_class = {"epic": "badge-purple"} %}
+{% set fallback_class = "badge-gray" %}
+
+{# One disclosure per ticket. Everything the row needs arrives as an explicit
+   argument rather than by closure over template-level state, and the element
+   id is ticket-derived so the sessionStorage restore in base.html reattaches
+   to the same ticket across morphs — ``item_order`` re-sorts on any priority
+   or status change, so a positional id would reopen the wrong rows. The row
+   carries no navigation affordance of any kind: the per-ticket reader is a
+   separate ticket, and dead placeholder links are the defect this panel's
+   epic exists to avoid. #}
+{% macro ticket_row(item_id, record, ineligible, blockers, is_ready,
+                    status_class, priority_class, type_class, fallback_class) %}
+{% set status = record.get('status') or 'unknown' %}
+{% set priority = record.get('priority') or 'unset' %}
+{% set kind = record.get('type') or 'unset' %}
+{# Blocked is derived, never a status value: it is true only when the
+   readiness partition rejected this item ON a blocker. A truthy
+   ``blocked_by`` is over-inclusive, since blockers pointing only at terminal
+   items resolve silently. #}
+{% set is_blocked = ineligible and ineligible.get('kind') == 'blocker' %}
+<details class="ticket-row" id="ticket-{{ item_id }}">
+  <summary class="card-row">
+    <span class="num num--sm">#{{ item_id }}</span>
+    <strong>{{ record.get('title') or 'untitled' }}</strong>
+    {{ badge(css_class=status_class.get(status, fallback_class), label=status) }}
+    {{ badge(css_class=priority_class.get(priority, fallback_class), label=priority) }}
+    {{ badge(css_class=type_class.get(kind, fallback_class), label=kind) }}
+    {% if is_blocked %}{{ badge(css_class='badge-red', label='blocked') }}{% endif %}
+    {# The tag flag is deliberately not a badge: it must never be mistakable
+       for the unrelated overnight-run outcome of the same name. #}
+    {% if record.get('deferred_tag') %}<span class="phase-label">tag · deferred</span>{% endif %}
+    {% if record.get('phase') %}<span class="phase-label">phase · {{ record.get('phase') }}</span>{% endif %}
+    {% if is_ready %}<span class="phase-label ml-auto">ready</span>
+    {% elif ineligible %}<span class="phase-label ml-auto">hold · {{ ineligible.get('reason') }}</span>
+    {% else %}<span class="phase-label ml-auto">—</span>{% endif %}
+    <span class="feature-row__chev" aria-hidden="true">▸</span>
+  </summary>
+
+  <div class="feature-detail">
+    <div class="feature-detail-block">
+      <h3>classification</h3>
+      <dl>
+        <dt>id</dt><dd>{{ item_id }}</dd>
+        <dt>status</dt><dd>{{ status }}</dd>
+        <dt>priority</dt><dd>{{ priority }}</dd>
+        <dt>type</dt><dd>{{ kind }}</dd>
+        {% if record.get('phase') %}<dt>phase</dt><dd>{{ record.get('phase') }}</dd>{% endif %}
+        {% if record.get('parent') %}<dt>parent</dt><dd>#{{ record.get('parent') }}</dd>{% endif %}
+        {% if record.get('tags') %}<dt>tags</dt><dd>{{ record.get('tags') | join(' · ') }}</dd>{% endif %}
+        {% if record.get('areas') %}<dt>areas</dt><dd>{{ record.get('areas') | join(' · ') }}</dd>{% endif %}
+        {% if record.get('updated') %}<dt>updated</dt><dd>{{ record.get('updated') }}</dd>{% endif %}
+      </dl>
+    </div>
+
+    <div class="feature-detail-block">
+      <h3>readiness</h3>
+      <dl>
+        <dt>triage</dt>
+        <dd>{% if is_ready %}ready{% elif ineligible %}{{ ineligible.get('reason') }}{% else %}unclassified{% endif %}</dd>
+        {# The two deferral flags are independent: a tag-deferred item at an
+           eligible status legitimately appears in the ready set. #}
+        {% if record.get('deferred_status') %}<dt>deferral</dt><dd>status</dd>{% endif %}
+        {% if record.get('deferred_tag') %}<dt>tag flag</dt><dd>deferred</dd>{% endif %}
+        {% if blockers %}
+        <dt>blockers</dt>
+        <dd>{% for entry in blockers %}#{{ entry.get('ref') }} ({{ entry.get('status') or entry.get('kind') }}){% if not loop.last %} · {% endif %}{% endfor %}</dd>
+        {% endif %}
+      </dl>
+    </div>
+  </div>
+</details>
+{% endmacro %}
+
+<h2>Triage <em>board</em> <span class="phase-tag">{% if snap is none %}awaiting first poll{% else %}{{ (snap['item_order'] | default([], true)) | length }} active · {{ (snap['ready'] | default([], true)) | length }} ready{% if snap['stale'] %} · stale{% endif %}{% endif %}</span></h2>
+
+{% if snap is none %}
+{# Never polled, or a non-local backlog backend, which clears the snapshot to
+   None. Distinct from a polled-and-empty corpus below. #}
+<p class="empty-state">loading triage board</p>
+{% else %}
+{% set item_order = snap['item_order'] | default([], true) %}
+{% set snap_items = snap['items'] | default({}, true) %}
+{% set ready_ids = snap['ready'] | default([], true) %}
+{% set blocked_why = snap['blocked_why'] | default({}, true) %}
+{% set epics_envelope = snap['epics'] | default({}, true) %}
+{% set epic_map = (snap['epics']['epics'] | default({}, true)) if epics_envelope else {} %}
+
+{# ``ineligible`` is a list of {id, reason, kind}; index it once so each row
+   is a lookup rather than a scan. #}
+{% set ineligible_by_id = {} %}
+{% for entry in snap['ineligible'] | default([], true) %}
+  {% set _ = ineligible_by_id.update({entry['id']: entry}) %}
+{% endfor %}
+
+{# Every epic's children, stringified, so the flat list below can be defined
+   as "every active id that is nobody's child". Epic items are themselves
+   nobody's child and so land in the flat list — deliberately, and it is why
+   the group header is a heading rather than a row: exactly one row per
+   active id keeps the disclosure element ids unique. #}
+{% set child_ids = [] %}
+{% for epic_key, epic in epic_map.items() %}
+  {% for child in epic['children'] | default([], true) %}
+    {% set _ = child_ids.append(child['id'] | string) %}
+  {% endfor %}
+{% endfor %}
+
+<div class="stream-line">
+  <span>doc · cortex/backlog/*.md frontmatter</span>
+  <span>order · priority then id</span>
+  {# ``polled_ts`` is the honest timestamp: it is frozen at the last
+     successful poll, while the page-level last-updated stamp is rewritten
+     every 2s by a different loop and reads fresh over days-old data. #}
+  {% if snap['stale'] %}<span>stale · frozen at {{ snap['polled_ts'] | format_elapsed }}</span>{% endif %}
+  <span class="ml-auto">refresh · 30s</span>
+</div>
+
+{% if not item_order %}
+<p class="empty-state">no active backlog items · corpus polled and empty</p>
+{% else %}
+
+{# One group per epic id present in the map, then one flat list. Presence
+   selects the layout; no count threshold does, because unparented items are
+   a primary view at scale rather than a small-set fallback. #}
+{% for epic_key, epic in epic_map.items() %}
+  {# Joined on the raw string key. An epic key that is non-numeric or absent
+     from ``items`` renders under that raw key with no title and leaves the
+     rest of the board intact — never a swallowed exception that degrades the
+     whole map to empty, which is indistinguishable from "no epics". #}
+  {% set epic_item = snap_items.get(epic_key, {}) %}
+  {% set epic_children = [] %}
+  {% for child in epic['children'] | default([], true) %}
+    {% set _ = epic_children.append(child['id'] | string) %}
+  {% endfor %}
+  {% set epic_rows = [] %}
+  {% for item_id in item_order if item_id in epic_children %}
+    {% set _ = epic_rows.append(item_id) %}
+  {% endfor %}
+  <div class="epic-group mt-3">
+    <h3 class="card-row epic-head">
+      <span class="num num--sm">#{{ epic_key }}</span>
+      {% if epic_item.get('title') %}<strong>{{ epic_item.get('title') }}</strong>{% endif %}
+      <span class="phase-label">epic</span>
+      <span class="phase-label ml-auto">{{ epic_rows | length }} active</span>
+    </h3>
+    {% if epic_rows %}
+    <div class="feature-list">
+      {% for item_id in epic_rows %}
+        {{ ticket_row(item_id, snap_items.get(item_id, {}), ineligible_by_id.get(item_id),
+                      blocked_why.get(item_id, []), item_id in ready_ids,
+                      status_class, priority_class, type_class, fallback_class) }}
+      {% endfor %}
+    </div>
+    {% else %}
+    {# Reachable the moment a non-terminal epic's last active child completes:
+       the map is seeded with every epic id, zero-child ones included. #}
+    <p class="empty-state">no active children</p>
+    {% endif %}
+  </div>
+{% endfor %}
+
+{% set flat_ids = [] %}
+{% for item_id in item_order if item_id not in child_ids %}
+  {% set _ = flat_ids.append(item_id) %}
+{% endfor %}
+<div class="flat-group mt-3">
+  <h3 class="card-row flat-head">
+    <strong>Unparented</strong>
+    <span class="phase-label">no epic</span>
+    <span class="phase-label ml-auto">{{ flat_ids | length }} active</span>
+  </h3>
+  {% if flat_ids %}
+  <div class="feature-list">
+    {% for item_id in flat_ids %}
+      {{ ticket_row(item_id, snap_items.get(item_id, {}), ineligible_by_id.get(item_id),
+                    blocked_why.get(item_id, []), item_id in ready_ids,
+                    status_class, priority_class, type_class, fallback_class) }}
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="empty-state">no unparented items</p>
+  {% endif %}
+</div>
+
+{% endif %}
+{% endif %}

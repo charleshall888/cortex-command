@@ -2207,6 +2207,11 @@
         <p class="empty-state">loading backlog ledger</p>
       </section>
 
+      <section id="triage-board" aria-label="Triage board" aria-live="polite" hx-get="/partials/triage-board" hx-trigger="load, every 30s" hx-swap="morph">
+        <span class="sec-num"><strong>§ 11</strong>triage</span>
+        <p class="empty-state">loading triage board</p>
+      </section>
+
       <div class="colophon">
         <span>cortex-command · overnight dashboard</span>
         <span><em>a spec being filled in by the agents · refresh every 3-5s</em></span>
