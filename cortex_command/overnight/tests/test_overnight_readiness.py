@@ -14,6 +14,7 @@ from cortex_command.overnight.backlog import (
     filter_ready,
     group_into_batches,
     score_items,
+    select_overnight_batch,
 )
 
 
@@ -833,3 +834,95 @@ def test_intra_session_round_assignment() -> None:
         if b_batch_id != a_batch_id + 1:
             pytest.fail(f"expected B batch_id={a_batch_id + 1}, got {b_batch_id}")
             return
+
+
+# ---------------------------------------------------------------------------
+# Test: a completed blocker absent from the active-only index still resolves
+# ---------------------------------------------------------------------------
+
+def test_completed_blocker_missing_from_index_does_not_block() -> None:
+    """select_overnight_batch() resolves blocked-by against the backlog dir.
+
+    generate_index.py skips TERMINAL_STATUSES, so a blocker that has since
+    completed is absent from index.json. Resolving blocked-by against the
+    index alone made that ref read as "external blocker: <id>", which kept
+    the dependent permanently ineligible for overnight execution.
+    """
+    import json as _json
+    import os
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        backlog_dir = root / "cortex" / "backlog"
+        backlog_dir.mkdir(parents=True)
+
+        # Blocker: complete, therefore excluded from the index by design.
+        (backlog_dir / "411-upstream-blocker.md").write_text(
+            "---\n"
+            "uuid: 47ae0d5b-f2bc-42b1-9bd5-97b3409915f5\n"
+            "title: Upstream blocker\n"
+            "status: complete\n"
+            "priority: high\n"
+            "type: feature\n"
+            "---\n## Why\nDone.\n"
+        )
+
+        # Dependent: active, blocked by the completed item above.
+        slug = "dependent-feature"
+        (backlog_dir / "412-dependent-feature.md").write_text(
+            "---\n"
+            "uuid: c5abd455-85fa-457b-8087-c99ccfd55566\n"
+            "title: Dependent feature\n"
+            "status: refined\n"
+            "priority: medium\n"
+            "type: feature\n"
+            "blocked-by: 411\n"
+            f"lifecycle_slug: {slug}\n"
+            "---\n## Why\nBlocked on 411, which is complete.\n"
+        )
+
+        # index.json mirrors the generator: active items only, no 411.
+        (backlog_dir / "index.json").write_text(_json.dumps([{
+            "id": 412,
+            "title": "Dependent feature",
+            "status": "refined",
+            "priority": "medium",
+            "type": "feature",
+            "tags": [],
+            "areas": [],
+            "created": "2026-07-21",
+            "updated": "2026-07-27",
+            "blocks": [],
+            "blocked_by": ["411"],
+            "parent": None,
+            "research": None,
+            "spec": None,
+            "plan": None,
+            "uuid": "c5abd455-85fa-457b-8087-c99ccfd55566",
+            "lifecycle_slug": slug,
+            "session_id": None,
+            "lifecycle_phase": None,
+            "schema_version": "1",
+            "repo": None,
+        }]))
+
+        artifacts = root / "cortex" / "lifecycle" / slug
+        artifacts.mkdir(parents=True)
+        (artifacts / "research.md").write_text("# Research\n")
+        (artifacts / "spec.md").write_text("# Spec\n")
+
+        # filter_ready() resolves artifact paths against cwd.
+        prev = Path.cwd()
+        os.chdir(root)
+        try:
+            selection = select_overnight_batch(backlog_dir=backlog_dir)
+        finally:
+            os.chdir(prev)
+
+        selected_ids = [i.id for b in selection.batches for i in b.items]
+        if selected_ids != [412]:
+            reasons = [(item.id, reason) for item, reason in selection.ineligible]
+            pytest.fail(
+                f"expected #412 selected once its completed blocker resolves, "
+                f"got selected={selected_ids} ineligible={reasons}"
+            )

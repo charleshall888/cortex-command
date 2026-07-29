@@ -29,6 +29,9 @@ lifecycle/overnight-events*.log
 lifecycle/**/pipeline-events.log
 lifecycle/metrics.json
 lifecycle/sessions/
+# Live session state bootstrap_session rewrites each run; the per-session copy
+# under lifecycle/sessions/ is already ignored above.
+lifecycle/overnight-state.json
 
 # Transient refine->research considerations hand-off input (written by refine,
 # read by a single research dispatch, never a phase deliverable)

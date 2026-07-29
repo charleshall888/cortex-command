@@ -1040,7 +1040,25 @@ def select_overnight_batch(
         import warnings
         warnings.warn(f"index.json unavailable ({exc}), falling back to file reads")
         all_items = parse_backlog_dir(backlog_dir)
-    readiness = filter_ready(all_items, all_items=all_items)
+        resolution_set = all_items
+    else:
+        # The index carries active items only (generate_index.py skips
+        # TERMINAL_STATUSES), but blocked-by refs must resolve against
+        # completed blockers too. Resolving against the index alone makes a
+        # blocker that has since completed read as an unknown external ref,
+        # which blocks its dependent forever.
+        #
+        # Union rather than swap: the index is authoritative for active items
+        # and may be the only source for them (callers that write index.json
+        # without backing files), while the directory is the only source for
+        # terminal ones.
+        resolution_set = list(all_items)
+        seen_ids = {str(item.id) for item in all_items}
+        for item in parse_backlog_dir(backlog_dir):
+            if str(item.id) not in seen_ids:
+                resolution_set.append(item)
+
+    readiness = filter_ready(all_items, all_items=resolution_set)
 
     if readiness.eligible:
         scored = score_items(readiness.eligible)
