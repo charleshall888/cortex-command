@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: c5abd455-85fa-457b-8087-c99ccfd55566
 title: Add the triage board panel
-status: refined
+status: complete
 priority: medium
 type: feature
 created: 2026-07-21
-updated: 2026-07-27
+updated: 2026-07-28
 discovery_source: cortex/research/dashboard-command-station/research.md
 parent: "410"
 tags: ['dashboard-command-station', 'dashboard']
@@ -15,6 +15,7 @@ blocked-by: 411
 complexity: complex
 criticality: high
 spec: cortex/lifecycle/add-the-triage-board-panel-and/spec.md
+session_id: null
 ---
 ## Why
 
