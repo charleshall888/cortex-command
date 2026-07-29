@@ -260,6 +260,27 @@ def _row_present(rows: List[dict], event: str, match_fields: dict) -> bool:
     return False
 
 
+# The implement arm is the only one with two legal departure states —
+# `implement` on the first pass, `implement-rework` after a CHANGES_REQUESTED
+# rework. Every other arm's table row names its single departure, which is why
+# hardcoding the literal was correct there and wrong here (#424).
+_IMPLEMENT_DEPARTURE_STATES = ("implement", "implement-rework")
+
+
+def _implement_departure(resolved_log: Path) -> Optional[str]:
+    """The events-first departure state for the implement arm, or ``None``.
+
+    Returns the resolved phase when it is one of the arm's two legal departures,
+    so the emitted row, its replay-match key, and the from-state gate all name
+    the state the feature is actually leaving. ``None`` — no opinion — when the
+    phase is anything else, including the artifact fallback on a log with no
+    machine rows; the caller then keeps the table's single ``from_state`` and
+    behaviour is unchanged.
+    """
+    phase = resolve_lifecycle_phase(resolved_log.parent).get("phase")
+    return phase if phase in _IMPLEMENT_DEPARTURE_STATES else None
+
+
 def _last_significant(rows: List[dict]) -> Optional[dict]:
     """Return the last state-significant row (the same four event kinds
     ``common._detect_lifecycle_phase_inner`` tracks for its ``paused`` bool), or
@@ -363,6 +384,7 @@ def _emission_plan(
     tasks: Optional[list],
     mode: Optional[str],
     consent_utterance: Optional[str] = None,
+    departure: Optional[str] = None,
 ) -> tuple[tt.Transition, str, list[dict]]:
     """Resolve the composed arm to its table row, decision-state, and ordered
     legacy emissions. Reuses the B1 cores' pure routing helpers (never re-derived).
@@ -468,10 +490,16 @@ def _emission_plan(
         else:  # transition — reuse the B1 §4 routing rule
             route, tier = it._resolve_route(log_path)
             decision_state = route
+            # Both the row and its replay key name the state actually being
+            # left. Keying `match` on the literal made cycle 1's genuine
+            # implement→review row satisfy the rework→review probe, so the
+            # second transition was swallowed as a replay and the feature
+            # stalled at implement-rework (#424).
+            departed = departure or "implement"
             emissions = [
                 {"event": "phase_transition",
-                 "fields": [("from", "implement"), ("to", route), ("tier", tier)],
-                 "match": {"from": "implement", "to": route}},
+                 "fields": [("from", departed), ("to", route), ("tier", tier)],
+                 "match": {"from": departed, "to": route}},
             ]
 
     # Quoted-utterance payload (Task 14b): land the operator's verbatim consent text
@@ -950,12 +978,22 @@ def advance(
     else:
         resolved_log = resolve_events_log(feature)
 
+    # The implement arm departs either `implement` or `implement-rework`, and
+    # only the log knows which — the table carries one row per arm. Resolve it
+    # before planning the emission so the row, its replay key, and the
+    # from-state gate all name the same state (#424). An explicit caller
+    # --from-state still wins: checking that claim is the gate's whole purpose.
+    departure = from_state
+    if departure is None and verb == "implement-transition":
+        departure = _implement_departure(resolved_log)
+
     try:
         transition, decision_state, emissions = _emission_plan(
             verb=verb, log_path=resolved_log, decision=decision,
             dispatch_choice=dispatch_choice, verdict=verdict, cycle=cycle, drift=drift,
             breach=breach, retries=retries, emit_transition=emit_transition,
             batch=batch, tasks=tasks, mode=mode, consent_utterance=consent_utterance,
+            departure=departure,
         )
     except _PlanError as exc:
         return {"state": "error", "message": exc.message}
@@ -968,7 +1006,7 @@ def advance(
             "advanced": False, "emitted": [],
         }
 
-    effective_from = from_state if from_state is not None else transition.from_state
+    effective_from = departure if departure is not None else transition.from_state
     to_state = transition.to_state
 
     rows = _read_rows(resolved_log)

@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: a147090a-4423-436e-a953-d469bca58443
 title: implement-transition dedups phase_transition on a hardcoded from=implement, so rework to review silently no-ops
-status: backlog
+status: complete
 priority: medium
 type: fix
 created: 2026-07-29

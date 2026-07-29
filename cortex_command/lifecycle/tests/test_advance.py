@@ -226,6 +226,120 @@ def test_implement_transition_routes_via_reducer(tmp_path: Path) -> None:
     assert pt["from"] == "implement" and pt["to"] == "review" and pt["tier"] == "complex"
 
 
+# ---------------------------------------------------------------------------
+# #424: the implement arm has TWO legal departure states — `implement` and
+# `implement-rework`. Hardcoding the literal made cycle 1's genuine
+# implement→review row satisfy the rework→review replay probe, so the second
+# transition was swallowed and the feature stalled at implement-rework behind a
+# success-shaped envelope. Observed twice (wild-light #367, #375), each time
+# cleared only by a hand-appended row.
+#
+# These seed the full machine-row chain rather than leaning on the artifact
+# fallback: a log missing its phase_transition rows resolves through the LEGACY
+# artifact detector, where this bug is invisible.
+# ---------------------------------------------------------------------------
+
+def _rework_cycle(fd: Path, *, tier: str = "complex") -> int:
+    """A log that has been through review once and routed back to rework:
+    …→implement→review, CHANGES_REQUESTED, review→implement-rework."""
+    (fd / "plan.md").write_text("- **Status**: [ ] a\n", encoding="utf-8")
+    _seed(fd, [
+        {"event": "lifecycle_start", "feature": "feat", "criticality": "high", "tier": tier},
+        {"event": "phase_transition", "feature": "feat", "from": "specify", "to": "plan"},
+        {"event": "plan_approved", "feature": "feat", "dispatch_choice": "trunk"},
+        {"event": "phase_transition", "feature": "feat", "from": "plan", "to": "implement"},
+        {"event": "phase_transition", "feature": "feat", "from": "implement",
+         "to": "review", "tier": tier},
+        {"event": "review_verdict", "feature": "feat", "verdict": "CHANGES_REQUESTED",
+         "cycle": 1, "drift": "none"},
+        {"event": "phase_transition", "feature": "feat", "from": "review",
+         "to": "implement-rework"},
+    ])
+    return len(_rows(fd))
+
+
+def _transitions(fd: Path) -> list[tuple]:
+    return [(r.get("from"), r.get("to")) for r in _rows(fd)
+            if r["event"] == "phase_transition"]
+
+
+def test_rework_transition_emits_despite_first_cycle_row(tmp_path: Path) -> None:
+    """rework→review emits even though implement→review is already in the log.
+
+    The departure state is resolved from the log, so no --from-state is needed:
+    the caller that hit this had no way to know the first envelope was lying.
+    """
+    fd = _feature_dir(tmp_path)
+    _rework_cycle(fd)
+    r = adv.advance(verb="implement-transition", feature="feat", mode="transition",
+                    log_path=_log(fd))
+    assert r["from_state"] == "implement-rework"
+    assert r["to_state"] == "review"
+    assert r["emitted"] == ["phase_transition"], "the row must actually be written"
+    assert r.get("replay") is None
+    assert ("implement-rework", "review") in _transitions(fd)
+
+
+def test_rework_transition_row_records_its_true_departure(tmp_path: Path) -> None:
+    """The emitted row names implement-rework, not the literal implement — the
+    log misattributed provenance even when the arm did fire."""
+    fd = _feature_dir(tmp_path)
+    _rework_cycle(fd)
+    adv.advance(verb="implement-transition", feature="feat", mode="transition",
+                log_path=_log(fd))
+    pt = [x for x in _rows(fd) if x["event"] == "phase_transition"][-1]
+    assert pt["from"] == "implement-rework" and pt["to"] == "review"
+
+
+def test_rework_transition_replays_without_duplicating(tmp_path: Path) -> None:
+    """The guard still does its job: a true retry of the rework transition
+    replays cleanly rather than appending a second row."""
+    fd = _feature_dir(tmp_path)
+    _rework_cycle(fd)
+    adv.advance(verb="implement-transition", feature="feat", mode="transition",
+                log_path=_log(fd))
+    # Pin that there is something to replay — without it this passes vacuously
+    # against the bug, where neither invocation writes anything.
+    assert ("implement-rework", "review") in _transitions(fd)
+    before = len(_transitions(fd))
+    second = adv.advance(verb="implement-transition", feature="feat", mode="transition",
+                         log_path=_log(fd))
+    assert second["replay"] == "already-emitted"
+    assert second["emitted"] == []
+    assert len(_transitions(fd)) == before
+
+
+def test_batch_dispatch_during_rework_is_not_refused(tmp_path: Path) -> None:
+    """Batch dispatch while the feature sits at implement-rework dispatches.
+
+    Same root cause, second symptom: the arm's departure came from the table's
+    single `implement` row, so the from-state gate saw implement-rework and
+    refused. Resolving the real departure clears both.
+    """
+    fd = _feature_dir(tmp_path)
+    _rework_cycle(fd)
+    r = adv.advance(verb="implement-transition", feature="feat", mode="batch",
+                    batch=0, tasks=["t1"], log_path=_log(fd))
+    assert r["state"] == "dispatched"
+    assert r["from_state"] == "implement-rework"
+    assert r["emitted"] == ["batch_dispatch"]
+
+
+def test_first_pass_implement_transition_still_dedups(tmp_path: Path) -> None:
+    """The pre-existing implement→review replay behaviour is untouched."""
+    fd = _feature_dir(tmp_path)
+    _implement_phase(fd, tier="complex")
+    first = adv.advance(verb="implement-transition", feature="feat", mode="transition",
+                        log_path=_log(fd))
+    assert first["from_state"] == "implement"
+    assert ("implement", "review") in _transitions(fd)
+    before = len(_transitions(fd))
+    second = adv.advance(verb="implement-transition", feature="feat", mode="transition",
+                         log_path=_log(fd))
+    assert second["replay"] == "already-emitted" and second["emitted"] == []
+    assert len(_transitions(fd)) == before
+
+
 def test_batch_dispatches_are_idempotent_per_batch_number(tmp_path: Path) -> None:
     """Each batch is its own logical advance: batch 1 must not short-circuit on
     batch 0's recorded row.
