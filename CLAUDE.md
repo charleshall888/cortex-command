@@ -19,7 +19,7 @@ An opinionated AI workflow framework for Claude Code: skills (slash commands), h
 
 ## Commands
 
-Run `just` to see all recipes — key ones: `just backlog-index`, `just validate-commit`, `just test`. Dependencies: [just](https://github.com/casey/just), Python 3, [uv](https://docs.astral.sh/uv/). Run `just setup-githooks` after clone to enable the dual-source hooks — skipping it means your commits land canonical-source edits without their regenerated plugin mirrors. `cortex-jcc <recipe>` runs recipes from any directory in this repo's context (repo-specific operations only; for another repo's files use the item verbs like `cortex-update-item`).
+Run `just` to see all recipes — key ones: `just backlog-index`, `just validate-commit`, `just test`. Dependencies: [just](https://github.com/casey/just), Python 3, [uv](https://docs.astral.sh/uv/). Run `just setup-githooks` after clone to enable the dual-source hooks — skipping it means your commits land canonical-source edits without their regenerated plugin mirrors. `cortex-jcc <recipe>` runs recipes from any directory in this repo's context (repo-specific operations only; for another repo's files use the item verbs like `cortex-update-item`). It is not a console script and `bin/` is not on PATH by default — it needs `CORTEX_COMMAND_ROOT` exported and `bin/` added to PATH in your shell profile, otherwise use `just` from the repo root.
 
 ## Conventions
 

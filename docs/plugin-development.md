@@ -135,19 +135,33 @@ reinstall the plugin (`/plugin install`) or restart the session.
 Some scripts (e.g. `update-item`, `create-backlog-item`,
 `generate-backlog-index`) need to be available as commands from any working
 directory, not just when invoked via `python3 cortex/backlog/...` from the repo
-root. These are deployed via the `cortex-core` plugin's `bin/` directory.
+root. Availability comes from a console-script entry point, not from the plugin.
 
 ### Per-script deployment mechanism
 
 1. **Add the script source to the canonical top-level location** (e.g.
    `cortex/backlog/my_script.py`). Build-output plugins are assembled from these
    top-level sources by `just build-plugin`.
-2. **Expose it via the `cortex-core` plugin's `bin/` directory.** The
-   plugin loader adds `plugins/cortex-core/bin/` to PATH automatically, so
-   the script becomes available as a command in any working directory with
-   no shell configuration. Wrappers and entry points in
-   `plugins/cortex-core/bin/` are the canonical surface; do not rely on
-   adding scripts to a user's PATH manually.
+2. **Give it a `[project.scripts]` entry in `pyproject.toml`.** That is what
+   makes it a command: `uv tool install` writes the entry point into
+   `~/.local/bin`, and `claude/hooks/cortex-session-start-path-bootstrap.sh` prepends
+   `~/.local/bin` to PATH at SessionStart so it is reachable from the first tool
+   call even under a minimal launchd PATH (macOS Dock/Finder launches).
+
+   **The plugin's `bin/` directory is not on PATH.** Claude Code's plugin
+   components are skills, agents, hooks, MCP/LSP servers, monitors, and themes —
+   there is no `bin/` component and no PATH injection. Scripts *inside* a plugin
+   are reached by explicit `${CLAUDE_PLUGIN_ROOT}` substitution, which is how
+   this plugin's `hooks.json` invokes its own hooks. The mirrored
+   `plugins/cortex-core/bin/` tree exists so plugin-local callers can resolve
+   those paths, not to expose commands.
+
+   A repo-maintenance tool that consumers never call is the deliberate
+   exception: skip the `pyproject.toml` entry and invoke it by explicit relative
+   path from the repo root, as `justfile` does for `bin/cortex-measure-l1-surface`.
+   `bin/cortex-jcc` is the one such tool meant for use from any directory; per
+   its own header it needs `CORTEX_COMMAND_ROOT` exported **and** `bin/` added to
+   PATH in your shell profile.
 3. **Commit the canonical source.** The pre-commit hook regenerates the
    assembled tree under `plugins/cortex-core/` from your staged blobs and
    includes it in the commit; run `just build-plugin` yourself only if you want
@@ -183,3 +197,11 @@ Use `Path(__file__).resolve().parent` only for resources that genuinely
 live alongside the script in the plugin tree (e.g. sibling Python modules
 imported via `sys.path`). Use `Path.cwd()` for everything that belongs to
 the user's working project.
+
+**Third case — resources in the cortex-command checkout itself**, such as
+`cortex_command/lifecycle/generate_kept_pauses.py` walking `parents[2]` to reach
+`skills/`. This is neither of the above, and it only resolves correctly under
+this repo's editable install: from a global `uv tool install`, `__file__` sits in
+`site-packages`, whose parent holds no `skills/` and never will. Recipes calling
+such a verb must hit `.venv/bin`, which the `justfile` PATH preamble guarantees.
+Prefer `Path.cwd()` unless the tool is genuinely repo-maintenance-only.
