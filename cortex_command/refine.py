@@ -29,6 +29,15 @@ from cortex_command.lifecycle_config import resolve_backlog_backend
 from cortex_command.lifecycle_event import log_event_at
 
 
+# Every subcommand below builds a filesystem path from --lifecycle-slug, which
+# arrives either from the flag or from a backlog item's `lifecycle_slug:`
+# frontmatter. Refine was the one lifecycle-writing surface with no slug guard,
+# so a `..` slug wrote events.log and the session marker outside
+# cortex/lifecycle/ entirely. Message shared so all three arms read alike.
+_UNSAFE_SLUG_MSG = (
+    "cortex-refine: unsafe lifecycle slug {slug!r}: no path separators or '..'"
+)
+
 # Allowed value sets, kept in lockstep with the canonical readers at
 # ``cortex_command/common.py:_read_criticality_inner`` and ``_read_tier_inner``.
 _ALLOWED_CRITICALITY: frozenset[str] = frozenset({"low", "medium", "high", "critical"})
@@ -215,6 +224,9 @@ def _cmd_reconcile_clarify(args: argparse.Namespace) -> int:
     frontmatter (Context A); absent both, the canonical defaults apply.
     """
     lifecycle_slug: str = args.lifecycle_slug
+    if session_marker.is_unsafe_slug(lifecycle_slug):
+        print(_UNSAFE_SLUG_MSG.format(slug=lifecycle_slug), file=sys.stderr)
+        return 2
     backlog_slug: str | None = args.backlog_slug
     backlog_slug = _apply_backend_guard(args.backend.strip(), backlog_slug)
 
@@ -329,6 +341,9 @@ def _cmd_emit_lifecycle_start(args: argparse.Namespace) -> int:
     entry_point``), and re-reads the last line to verify the write landed.
     """
     lifecycle_slug: str = args.lifecycle_slug
+    if session_marker.is_unsafe_slug(lifecycle_slug):
+        print(_UNSAFE_SLUG_MSG.format(slug=lifecycle_slug), file=sys.stderr)
+        return 2
     backlog_slug: str | None = args.backlog_slug
     backlog_slug = _apply_backend_guard(args.backend.strip(), backlog_slug)
 
@@ -539,6 +554,15 @@ def _cmd_start(args: argparse.Namespace) -> int:
             )
         )
         return 0
+
+    # Slug guard BEFORE any write. The slug reaches here from --lifecycle-slug
+    # or from a backlog item's `lifecycle_slug:` frontmatter, and every path
+    # below builds a filesystem location from it; a `..` slug wrote events.log
+    # and the session marker outside cortex/lifecycle/ entirely. The sibling
+    # lifecycle verbs all carry this blacklist predicate — refine did not.
+    if session_marker.is_unsafe_slug(lifecycle_slug):
+        print(_UNSAFE_SLUG_MSG.format(slug=lifecycle_slug), file=sys.stderr)
+        return 2
 
     base = Path("cortex/lifecycle") / lifecycle_slug
     spec_exists = (base / "spec.md").is_file()

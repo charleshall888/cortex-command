@@ -758,3 +758,67 @@ def test_no_captures_dir_is_unchanged_behavior(tmp_path: Path) -> None:
             TICKET_REL,
         ]
     )
+
+
+# ---------------------------------------------------------------------------
+# Batching — a capture set can exceed the platform's ARG_MAX
+# ---------------------------------------------------------------------------
+
+
+def test_batch_paths_respects_the_budget() -> None:
+    from cortex_command.lifecycle.stage_artifacts import _batch_paths
+
+    paths = [f"cortex/lifecycle/x/captures/{i:06d}.png" for i in range(1000)]
+    batches = _batch_paths(paths, budget=500)
+
+    assert [p for b in batches for p in b] == paths  # no path lost or reordered
+    assert len(batches) > 1
+    for batch in batches:
+        # Each batch is under budget, except one unavoidably-oversized path.
+        assert sum(len(p) + 1 for p in batch) <= 500 or len(batch) == 1
+
+
+def test_batch_paths_keeps_an_oversized_single_path() -> None:
+    from cortex_command.lifecycle.stage_artifacts import _batch_paths
+
+    long_path = "a" * 200
+    assert _batch_paths([long_path], budget=50) == [[long_path]]
+
+
+def test_large_capture_set_still_stages_the_prose(tmp_path: Path) -> None:
+    """A multi-batch staging run yields the same complete set as a single call.
+
+    Scope, stated honestly: 2,600 paths is ~230 KB, which spans 3 batches at the
+    100 KB budget — so this pins that splitting loses no path and that the
+    read-back unions correctly across batches. It does NOT reproduce the
+    ARG_MAX overflow that motivated batching; that needs ~20k files to clear the
+    1 MB platform limit and takes several seconds, so it is verified manually
+    rather than in the suite.
+
+    The motivating failure: one `git add` past the platform limit raises
+    OSError, which the subprocess helper maps to None and `stage` read as an
+    empty index — returning `nothing_staged`, whose documented meaning tells the
+    caller to skip the commit entirely. research.md and spec.md went with it.
+    """
+    root = tmp_path
+    _new_repo(root)
+    _write(root, "README.md", "base\n")
+    _commit_all(root, "Initial commit")
+
+    _write(root, f"{LC}/research.md", "research\n")
+    _write(root, f"{LC}/spec.md", "spec\n")
+    _write(root, f"{LC}/index.md", "lifecycle index\n")
+    _write(root, f"{LC}/events.log", _APPROVAL_EVENTS)
+    _write_ticket(root)
+    captures = root / LC / "captures"
+    captures.mkdir(parents=True)
+    for i in range(2600):
+        (captures / f"frame-{i:05d}-with-a-fairly-long-descriptive-name.png").write_text("x")
+
+    result = stage("refine", SLUG, root)
+
+    assert result["signal"] == "staged"
+    assert f"{LC}/spec.md" in result["staged_paths"]
+    assert f"{LC}/research.md" in result["staged_paths"]
+    assert len(result["staged_paths"]) == 2600 + 5
+    assert _staged(root) == sorted(result["staged_paths"])

@@ -284,3 +284,64 @@ def test_refine_start_is_idempotent_on_resume(
     assert second["index"] == "skipped"
     assert index.read_text() == body
     assert second["session_recorded"] is True
+
+
+# ---------------------------------------------------------------------------
+# Slug guard — refine builds filesystem paths from an attacker-influencable slug
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("bad_slug", ["../../escaped", "..", "a/b", "a\\b", ""])
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["start", "no-such-ticket", "--lifecycle-slug", "{slug}"],
+        ["emit-lifecycle-start", "--lifecycle-slug", "{slug}",
+         "--backend", "cortex-backlog"],
+        ["reconcile-clarify", "--lifecycle-slug", "{slug}",
+         "--backend", "cortex-backlog"],
+    ],
+    ids=["start", "emit-lifecycle-start", "reconcile-clarify"],
+)
+def test_unsafe_slug_is_refused_before_any_write(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, bad_slug: str, argv: list[str],
+) -> None:
+    """Every refine arm that writes must reject a traversal slug first.
+
+    The slug arrives from `--lifecycle-slug` or from a backlog item's
+    `lifecycle_slug:` frontmatter, and each arm builds a path from it. Refine was
+    the one lifecycle-writing surface carrying no guard, so `--lifecycle-slug
+    ../../escaped` wrote `events.log` (and, once refine started recording it, the
+    session marker) outside `cortex/lifecycle/` entirely.
+    """
+    (tmp_path / "cortex" / "backlog").mkdir(parents=True)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv(session_marker.SESSION_ID_ENV, SESSION)
+    canary = tmp_path / "escaped"
+
+    rc = refine_module.main([a.format(slug=bad_slug) for a in argv])
+
+    if bad_slug == "" and argv[0] == "start":
+        # An empty --lifecycle-slug is "not supplied", not a bad slug: start
+        # falls through to its needs-slug arm and asks the caller to derive one.
+        # It still writes nothing, which is what this test is really guarding.
+        assert rc == 0
+    else:
+        assert rc == 2
+    assert not canary.exists()
+    # Nothing was written anywhere outside the backlog dir we created.
+    assert not (tmp_path / "cortex" / "lifecycle").exists()
+
+
+def test_write_session_refuses_a_traversal_slug(tmp_path: Path) -> None:
+    """The shared writer guards itself, so a caller that forgets cannot escape."""
+    with pytest.raises(ValueError, match="unsafe feature slug"):
+        session_marker.write_session(tmp_path, "../escaped", SESSION)
+    assert not (tmp_path / "escaped").exists()
+
+
+def test_write_session_accepts_a_normal_slug(tmp_path: Path) -> None:
+    """Discriminator: the guard rejects traversal, not ordinary slugs."""
+    path = session_marker.write_session(tmp_path, "render-perf-spike", SESSION)
+    assert path.read_text() == SESSION
+    assert path == tmp_path / "cortex" / "lifecycle" / "render-perf-spike" / ".session"

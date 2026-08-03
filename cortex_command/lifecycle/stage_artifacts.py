@@ -113,6 +113,17 @@ from cortex_command.common import (
 
 _GIT_TIMEOUT = 10
 
+# Max bytes of pathspec handed to any one git invocation. Staging a lifecycle's
+# captures/ made the path list unbounded for the first time — a render-heavy
+# feature can leave tens of thousands of frame PNGs — and one exec past the
+# platform's ARG_MAX (1 MB on macOS) raises OSError, which `_run` maps to None
+# and `stage` reads as an empty index. That is the worst possible failure here:
+# it reports `nothing_staged`, whose documented meaning tells the caller to skip
+# the commit and continue, so research.md and spec.md would be dropped too.
+# 100 KB stays far under every platform's limit while keeping the batch count
+# to single digits for realistic capture sets.
+_ARGV_BUDGET = 100_000
+
 _DRIFT_HEADING = "## Suggested Requirements Update"
 _FILE_LINE = re.compile(r"\*\*File\*\*:\s*(.+)")
 
@@ -120,6 +131,28 @@ _FILE_LINE = re.compile(r"\*\*File\*\*:\s*(.+)")
 # ---------------------------------------------------------------------------
 # Subprocess helper (graceful degradation — any failure maps to None)
 # ---------------------------------------------------------------------------
+
+
+def _batch_paths(paths: list[str], budget: int = _ARGV_BUDGET) -> list[list[str]]:
+    """Split *paths* into runs whose joined length stays under *budget*.
+
+    A single path longer than the budget still gets its own batch — splitting
+    below one pathspec is not possible, and git's own limit is far higher than
+    any single path length.
+    """
+    batches: list[list[str]] = []
+    current: list[str] = []
+    size = 0
+    for path in paths:
+        cost = len(path) + 1
+        if current and size + cost > budget:
+            batches.append(current)
+            current, size = [], 0
+        current.append(path)
+        size += cost
+    if current:
+        batches.append(current)
+    return batches
 
 
 def _run(args: list[str], cwd: str) -> Optional[subprocess.CompletedProcess]:
@@ -379,15 +412,25 @@ def stage(phase: str, slug: str, root: Path) -> dict:
         # return here rather than fall through: an empty pathspec after ``--``
         # is not an empty filter — git reads the whole index.
         return {"signal": "nothing_staged", "staged_paths": []}
-    _run(["add", "--"] + paths, cwd=str(root))
+    batches = _batch_paths(paths)
+    for batch in batches:
+        _run(["add", "--"] + batch, cwd=str(root))
 
-    diff = _run(["diff", "--cached", "--name-only", "--"] + paths, cwd=str(root))
-    if diff is None or diff.returncode != 0:
-        staged: list[str] = []
-    else:
-        staged = sorted(
+    # Read back over the same batches. A failure in ANY batch collapses the
+    # whole result to empty, preserving the pre-batching contract exactly:
+    # a partial read must never be reported as if it were the full staged set.
+    staged: list[str] = []
+    for batch in batches:
+        diff = _run(
+            ["diff", "--cached", "--name-only", "--"] + batch, cwd=str(root)
+        )
+        if diff is None or diff.returncode != 0:
+            staged = []
+            break
+        staged.extend(
             line.strip() for line in diff.stdout.splitlines() if line.strip()
         )
+    staged = sorted(set(staged))
     return {
         "signal": "staged" if staged else "nothing_staged",
         "staged_paths": staged,

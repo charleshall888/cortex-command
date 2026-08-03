@@ -46,12 +46,30 @@ def session_id_from_env() -> str:
     return os.environ.get(SESSION_ID_ENV, "").strip()
 
 
+def is_unsafe_slug(feature: str) -> bool:
+    """True when *feature* is empty or carries a path separator / ``..``.
+
+    The house blacklist predicate (``describe.py:_reject_unsafe_slug`` and its
+    siblings), applied here so the shared writer cannot be used to escape
+    ``cortex/lifecycle/`` even by a caller that forgot its own guard.
+    """
+    return not feature or "/" in feature or "\\" in feature or ".." in feature
+
+
 def write_session(root: Path, feature: str, session_id: str) -> Path:
     """Record *session_id* as the owner of ``{root}/cortex/lifecycle/{feature}``.
 
     Writes the canonical ``.session`` name. Creating the directory is deliberate:
     the phase verbs that call this also seed ``events.log`` there.
+
+    Raises ``ValueError`` on an unsafe slug — a path-traversal write is never a
+    recoverable condition, and swallowing it would leave a marker outside the
+    lifecycle tree that no reader here would ever find.
     """
+    if is_unsafe_slug(feature):
+        raise ValueError(
+            f"unsafe feature slug {feature!r}: no path separators or '..'"
+        )
     path = root / "cortex" / "lifecycle" / feature / MARKER_NAMES[0]
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(session_id, encoding="utf-8")
