@@ -23,7 +23,7 @@ Rewrite `skills/build/references/orchestrator-review.md` §3 so fix routing bran
 - **Complexity**: simple
 - **Context**: File is 2756 B. §3 spans `## 3. Fix dispatch` → `## 4. Escalation` (934 B). Original wording at `428e54ea` was "A full rewrite maintains internal coherence across sections that cross-reference each other." Canonical source only — `plugins/cortex-core/skills/build/references/orchestrator-review.md` is rebuilt from staged blobs by `.githooks/pre-commit`; never stage it by hand. Spec requirements R1, R2, R3.
 - **Verification**: `grep -c "creates an audit trail" skills/build/references/orchestrator-review.md` = `0`; `grep -c "does not edit phase artifacts directly" skills/build/references/orchestrator-review.md` = `1`; `sed -n '/^## 3\. Fix dispatch/,/^## 4\. Escalation/p' skills/build/references/orchestrator-review.md | grep -ci "coheren"` ≥ `1`
-- **Status**: [ ] pending
+- **Status**: [x] done (cc2a10a4 2026-08-03T18:40:13-04:00)
 
 ### Task 2: Add the confined-flag routing branch and the `changed_beyond_flag` envelope field
 - **Files**: `skills/build/references/orchestrator-review.md`
@@ -32,16 +32,16 @@ Rewrite `skills/build/references/orchestrator-review.md` §3 so fix routing bran
 - **Complexity**: simple
 - **Context**: Route on flag count only — spec R4 bans defect-character language via `grep -Eci "reasoning-level|expression-only|precision-only|defect (class|type)|substantive versus"` = 0. **Two traps**: (i) the prose `verdict: failed` instance must sit *inline*, not at column zero, or it adds a second `^verdict: ` match and breaks R8's required count of 1; (ii) exactly one fenced envelope block may exist, serving both branches. A compliant §3 measures ~1114 B against the current 934 B — roughly +180 B, which Task 3 funds. Spec requirements R4, R5, R6, R7, R8, R9, R13.
 - **Verification**: `sed -n '/^## 3\. Fix dispatch/,/^## 4\. Escalation/p' skills/build/references/orchestrator-review.md | grep -ci "confined to a single requirement"` ≥ `1`; `grep -Eci "reasoning-level|expression-only|precision-only|defect (class|type)|substantive versus" skills/build/references/orchestrator-review.md` = `0`; `grep -i "confined to a single requirement" skills/build/references/orchestrator-review.md | grep -ci subagent` = `1`; `grep -c "preserving all correct existing content" skills/build/references/orchestrator-review.md` = `0`; `awk '/^\`\`\`$/{f=!f; next} f' skills/build/references/orchestrator-review.md | grep -c "changed_beyond_flag"` ≥ `1`; `grep -c "^verdict: " skills/build/references/orchestrator-review.md` = `1`; `grep -c "verdict: failed" skills/build/references/orchestrator-review.md` ≥ `1`
-- **Status**: [ ] pending
+- **Status**: [x] done (f95cba98 2026-08-03T18:47:00-04:00)
 
 ### Task 3: Fund the growth by compressing the file's header, §1 and §2
 - **Files**: `skills/build/references/orchestrator-review.md`
-- **What**: `skills/build/references/` sits at exactly its 57870-byte pin, so §3's growth must be paid for inside the same file. Compress the pre-§3 region (currently 1494 B) by roughly 180 B. §1's three-clause binary-checkable definition is the routing input for every phase gate and for this spec's own criteria — it must survive verbatim. §4 must not be touched at all.
+- **What**: `skills/build/references/` sits at exactly its 57870-byte pin, so §3's growth must be paid for inside the same file. **Measured after Task 2: the directory is 58230 B, so 360 B must come out — double the 180 B this task originally assumed, because §3 landed at ~1294 B rather than the estimated ~1114 B.** Take it from two places: tighten §3's own prose (it carries editorial phrasing that adds no control flow), and compress the pre-§3 region (currently 1494 B). Splitting the cut avoids forcing a 24% reduction out of the header/§1/§2 alone. §1's three-clause binary-checkable definition must survive verbatim; §4 must not be touched at all.
 - **Depends on**: [2] (write-serialization: skills/build/references/orchestrator-review.md)
 - **Complexity**: simple
 - **Context**: `skills/build/references/size-pin.txt` reads `57870` and already carries a `# raised:` annotation for lifecycle-id 433 dated 2026-08-03 — do **not** add a second raise, and do not take bytes from a sibling reference file. `scripts/ratchet_refs.py:measure()` sums every regular file in the directory except `size-pin.txt`; the plugin mirror is content-hash deduped and does not double-count. If ~180 B cannot be found without cutting control flow or reaching §1's definition, halt and surface rather than raising the pin. Spec requirements R10, R10a, R10b, R11, R12.
 - **Verification**: `uv run python -m pytest tests/test_reference_size_ratchet.py -q` exits `0`; `git diff --exit-code skills/build/references/size-pin.txt` exits `0`; `awk '/^## 3\. Fix dispatch/{exit} {n+=length($0)+1} END{print (n < 1494)}' skills/build/references/orchestrator-review.md` prints `1`; each of `grep -c "(a) a runnable command"`, `grep -c "(b) an observable state"`, `grep -c '(c) \`Interactive/session-dependent:'` against the file returns `1`; `grep -c "Max \*\*2 review cycles per phase\*\*" skills/build/references/orchestrator-review.md` = `1`
-- **Status**: [ ] pending
+- **Status**: [x] done (80390487 2026-08-03T18:47:13-04:00)
 
 ## Risks
 
