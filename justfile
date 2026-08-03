@@ -1,6 +1,14 @@
 set dotenv-load
 set quiet
 
+# Recipes calling bare `cortex-*` console scripts must hit this repo's editable
+# install, not whatever `uv tool install cortex-command` put on the caller's
+# PATH. The two resolve differently: repo-maintenance verbs anchor paths on
+# __file__ (cortex_command/lifecycle/generate_kept_pauses.py:25), so the global
+# copy reads its own site-packages and dies. Harmless when .venv is absent —
+# PATH entries that don't exist are skipped. Run `just python-setup` to create it.
+export PATH := justfile_directory() / ".venv" / "bin" + ":" + env_var('PATH')
+
 default:
     @just --list
 
