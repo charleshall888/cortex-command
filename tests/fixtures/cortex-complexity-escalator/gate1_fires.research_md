@@ -1,3 +1,9 @@
 ## Open Questions
 - First open question about design choices
 - Second open question about implementation approach
+- Third open question about data migration
+- Fourth open question about rollback
+- Fifth open question about observability
+- Sixth open question about access control
+- Seventh open question about backfill ordering
+- Eighth open question about the cutover window

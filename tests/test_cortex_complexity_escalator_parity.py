@@ -21,12 +21,12 @@ etc.) in the appropriate feature subdirectory, then runs the module.
 
 Fixture cases:
 
-  gate1_fires        Gate 1 (research_open_questions) threshold met — 2 bullets
+  gate1_fires        Gate 1 (research_open_questions) threshold met — 8 bullets
                      in ``## Open Questions``; ``complexity_override`` event is
                      emitted; stdout contains the escalation announcement; exit 0.
 
   gate1_no_fire      Gate 1 threshold NOT met — 1 bullet in ``## Open Questions``
-                     (threshold is 2); no event emitted; empty stdout; exit 0.
+                     (threshold is 8); no event emitted; empty stdout; exit 0.
 
   already_complex    Feature has a pre-existing ``complexity_override`` event in
                      events.log (tier guard fires); no second event emitted;

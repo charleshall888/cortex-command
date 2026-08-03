@@ -165,9 +165,9 @@ class TestComplexityEscalatorCwdPinned:
         feature_dir = tmp_path / "cortex" / "lifecycle" / feature
         feature_dir.mkdir(parents=True)
 
-        # Two qualifying bullets to trigger escalation.
+        # Eight qualifying bullets to trigger escalation (Gate 1 threshold).
         (feature_dir / "research.md").write_text(
-            "## Open Questions\n- q1?\n- q2?\n", encoding="utf-8"
+            "## Open Questions\n" + "".join(f"- q{i}?\n" for i in range(1, 9)), encoding="utf-8"
         )
 
         result = subprocess.run(
@@ -198,7 +198,7 @@ class TestComplexityEscalatorCwdPinned:
             feature_dir = cwd / "cortex" / "lifecycle" / feature
             feature_dir.mkdir(parents=True)
             (feature_dir / "research.md").write_text(
-                "## Open Questions\n- q1?\n- q2?\n", encoding="utf-8"
+                "## Open Questions\n" + "".join(f"- q{i}?\n" for i in range(1, 9)), encoding="utf-8"
             )
             result = subprocess.run(
                 [
@@ -232,7 +232,7 @@ class TestComplexityEscalatorCwdPinned:
         feature_dir = explicit_dir / feature
         feature_dir.mkdir(parents=True)
         (feature_dir / "research.md").write_text(
-            "## Open Questions\n- q1?\n- q2?\n", encoding="utf-8"
+            "## Open Questions\n" + "".join(f"- q{i}?\n" for i in range(1, 9)), encoding="utf-8"
         )
 
         result = subprocess.run(

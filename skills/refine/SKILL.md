@@ -55,10 +55,12 @@ Every backend still feeds the critical-review gate — Step 4's `reconcile-clari
 Follow `${CLAUDE_SKILL_DIR}/references/research-phase.md`. At the Research → Specify transition, run the complexity-escalation gate:
 
 ```bash
-cortex-complexity-escalator <feature> --gate research_open_questions
+cortex-complexity-escalator <feature> --gate research_open_questions --allow-downgrade
 ```
 
-Exit 0 with output → announce the escalation and proceed at Complex tier. Exit 0 empty → the gate didn't fire; proceed at the current tier. Non-zero → surface stderr and halt the transition until resolved.
+Exit 0 with output → announce the tier change and proceed at the announced tier. The gate is bidirectional: it reads `## Open Questions` and prints either `Escalating to Complex tier` or, when it had previously escalated this feature and the questions have since been resolved, `Returning to Simple tier`. Exit 0 empty → the gate didn't fire; proceed at the current tier. Non-zero → surface stderr and halt the transition until resolved.
+
+Only **unresolved** bullets count — an item resolved inline or explicitly deferred per the exit gate in `${CLAUDE_SKILL_DIR}/references/research-phase.md` does not push the tier up. Answering your own questions is the intended way to stay at Simple.
 
 ## Step 4: Spec
 

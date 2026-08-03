@@ -28,15 +28,15 @@ compares stdout/stderr/exit-code byte-for-byte against these files.
 
 | Case              | Gate                      | Scenario                                             | Threshold met? | stdout                      | exit |
 |-------------------|---------------------------|------------------------------------------------------|----------------|-----------------------------|------|
-| `gate1_fires`     | `research_open_questions` | 2 bullets in `## Open Questions` (threshold = 2)     | yes            | escalation announcement     | 0    |
-| `gate1_no_fire`   | `research_open_questions` | 1 bullet in `## Open Questions` (threshold = 2)      | no             | empty                       | 0    |
+| `gate1_fires`     | `research_open_questions` | 8 bullets in `## Open Questions` (threshold = 8)     | yes            | escalation announcement     | 0    |
+| `gate1_no_fire`   | `research_open_questions` | 1 bullet in `## Open Questions` (threshold = 8)      | no             | empty                       | 0    |
 | `already_complex` | `research_open_questions` | Pre-existing `complexity_override` event; tier guard fires | n/a       | empty                       | 0    |
 
 ### Case details
 
-**`gate1_fires`**: Covers fixture requirement (a) — escalation trigger met, `complexity_override` event emitted. The research.md has exactly 2 top-level bullets under `## Open Questions`, which meets Gate 1's threshold of ≥2. The module writes the event to events.log and prints the escalation announcement to stdout.
+**`gate1_fires`**: Covers fixture requirement (a) — escalation trigger met, `complexity_override` event emitted. The research.md has exactly 8 top-level bullets under `## Open Questions`, which meets Gate 1's threshold of ≥8. The module writes the event to events.log and prints the escalation announcement to stdout.
 
-**`gate1_no_fire`**: Covers fixture requirement (b) — trigger not met, no event emitted. The research.md has 1 bullet (below the threshold of 2). The module exits 0 silently.
+**`gate1_no_fire`**: Covers fixture requirement (b) — trigger not met, no event emitted. The research.md has 1 bullet (below the threshold of 8). The module exits 0 silently.
 
 **`already_complex`**: Covers fixture requirement (c) — ambiguous-tier path. The events.log already contains a `complexity_override` event with `"to": "complex"`. Even though research.md has enough bullets to trigger escalation (3 bullets), the tier guard fires first and the module exits 0 silently without appending a second event.
 
