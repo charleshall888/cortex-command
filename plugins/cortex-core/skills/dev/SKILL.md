@@ -33,7 +33,9 @@ cortex-backlog-triage
 
 One call resolves the backend, regenerates the index, builds the epic map, and renders both triage blocks. Act on `state`:
 
-- **`ok`** → print `blocks` verbatim, then ask which item to pick up.
+- **`ok`** → print `blocks` verbatim, then ask which item to pick up. Once picked,
+  route it from Step 1 (first match wins) — the item's `type` and readiness are what
+  rules 3-5 need.
 - **`external-backend`** → relay `message`; the local index isn't authoritative, so route through `/cortex-core:refine` or `/cortex-core:discovery` without touching it.
 - **`no-index`** / **`error`** → relay `message` and stop.
 
