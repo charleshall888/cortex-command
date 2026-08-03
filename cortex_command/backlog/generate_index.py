@@ -72,8 +72,20 @@ def _parse_inline_str_list(raw: str) -> list[str]:
 
 
 def _is_deferred(item: dict) -> bool:
-    """Return True iff the item carries a ``deferred`` tag (whole-element match)."""
-    return any(tag.strip().lower() == "deferred" for tag in item.get("tags", []))
+    """Return True iff the item is parked, by ``deferred`` tag or by status.
+
+    Two mechanisms express one concept. The tag is the older spelling; the
+    status is what ``skills/backlog/references/schema.md`` actually directs
+    authors to use ("park via a non-eligible ``status`` instead"), so both
+    must annotate. Collapsing them onto one spelling is a migration that
+    would have to reach consumer repos this predicate cannot touch.
+
+    Parked is *not* terminal — a parked item is genuinely unfinished, and
+    this predicate only controls annotation and ready-list exclusion.
+    """
+    if any(tag.strip().lower() == "deferred" for tag in item.get("tags", [])):
+        return True
+    return str(item.get("status", "")).strip().lower() == "deferred"
 
 
 def _opt(fm: dict[str, str], key: str) -> str | None:
@@ -232,7 +244,11 @@ def generate_md(
         blocked_display = ", ".join(item["blocked_by"]) if item["blocked_by"] else "\u2014"
         parent_display = item["parent"] if item["parent"] else "\u2014"
         spec_display = "\u2713" if item["spec"] else "\u2014"
-        status_display = f"{item['status']} (deferred)" if _is_deferred(item) else item["status"]
+        # A status-parked item already reads as deferred; only the tag-parked
+        # spelling needs the suffix to make the parking visible.
+        status_display = item["status"]
+        if _is_deferred(item) and status_display.strip().lower() != "deferred":
+            status_display = f"{status_display} (deferred)"
         lines.append(
             f"| {item['id']} | {item['title']} | {status_display} | "
             f"{item['priority']} | {item['type']} | {blocked_display} | "

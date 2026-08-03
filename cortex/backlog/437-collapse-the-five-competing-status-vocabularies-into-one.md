@@ -9,7 +9,7 @@ created: 2026-08-03
 updated: 2026-08-03
 parent: "434"
 tags: ['staged-epic-gate-tickets']
-blocked-by: [435, 436]
+blocked-by: []
 discovery_source: cortex/research/staged-epic-gate-tickets/research.md
 ---
 ## Why

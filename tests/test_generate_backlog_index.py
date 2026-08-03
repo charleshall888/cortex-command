@@ -250,3 +250,59 @@ class TestGenerateJsonUnchanged:
         json_str = _gen_index.generate_json([ITEM_A])
         records = json.loads(json_str)
         assert "deferred" in records[0]["tags"]
+
+
+# ---------------------------------------------------------------------------
+# Status-side parking (#436 arm A)
+#
+# `skills/backlog/references/schema.md` directs authors to park an item via a
+# non-eligible `status` rather than the tag, so `_is_deferred` must recognize
+# both spellings. Observed damage: wild-light carries 8 `status: deferred`
+# items that the tag-only predicate treated as unparked.
+# ---------------------------------------------------------------------------
+
+#: (f) status-parked item — no deferred tag, status is the parking signal
+ITEM_F = _make_item(id=6, title="Status Parked", status="deferred", tags=[])
+
+#: (g) status-parked, capitalized — case-insensitive variant
+ITEM_G = _make_item(id=7, title="Cased Status Parked", status="Deferred", tags=[])
+
+
+class TestStatusSideParking:
+    """A `status: deferred` item is parked even with no `deferred` tag."""
+
+    def test_status_parked_item_is_deferred(self):
+        """(f) _is_deferred is True on status alone."""
+        assert _gen_index._is_deferred(ITEM_F) is True
+
+    def test_status_parked_item_is_case_insensitive(self):
+        """(g) 'Deferred' status parks identically to 'deferred'."""
+        assert _gen_index._is_deferred(ITEM_G) is True
+
+    def test_status_parked_row_is_not_double_annotated(self):
+        """(f) Status cell reads 'deferred', never 'deferred (deferred)'."""
+        md = _md_for([ITEM_F])
+        assert "deferred (deferred)" not in md, (
+            "a status-parked item already reads as deferred; the suffix would double it"
+        )
+        assert "| 6 | Status Parked | deferred | medium | feature | — | — | — |" in md
+
+    def test_tag_parked_item_still_annotated(self):
+        """(a) The tag spelling keeps its suffix — this is additive, not a swap."""
+        md = _md_for([ITEM_A])
+        assert "| 1 | Parked Feature | backlog (deferred) | medium | feature | — | — | — |" in md
+
+    def test_status_parked_absent_from_ready_sections(self):
+        """(f) A parked item is in neither ## Refined nor ## Backlog."""
+        md = _md_for([ITEM_F])
+        assert "- **6**" not in md
+
+    def test_status_parked_json_status_is_raw(self):
+        """(f) index.json keeps the raw 'deferred' — parking is a render concern."""
+        records = json.loads(_gen_index.generate_json([ITEM_F]))
+        assert records[0]["status"] == "deferred"
+
+    def test_parked_is_not_terminal(self):
+        """A parked item is genuinely unfinished and must not read as terminal."""
+        from cortex_command.common import TERMINAL_STATUSES
+        assert "deferred" not in TERMINAL_STATUSES

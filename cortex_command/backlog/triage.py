@@ -42,8 +42,8 @@ def _ready_set(items: list[dict]) -> list[dict]:
     """Return the ``## Refined`` ∪ ``## Backlog`` set, in priority order.
 
     Mirrors ``generate_index``'s two section passes exactly — same eligible
-    statuses, same deferred-tag exclusion, same blocker treatment — so triage
-    and the written index can never disagree about what is ready.
+    statuses, same parked exclusion (tag or status), same blocker treatment —
+    so triage and the written index can never disagree about what is ready.
     """
     all_ns = [SimpleNamespace(**rec) for rec in items]
     ready: list[dict] = []

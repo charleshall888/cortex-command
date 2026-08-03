@@ -1242,6 +1242,7 @@ _STATUS_MAP: dict[str, str] = {
     "done": "complete",
     "resolved": "complete",
     "closed": "complete",
+    "completed": "complete",
     "wontfix": "abandoned",
     "ready": "refined",
     "superseded": "superseded",
@@ -1258,10 +1259,16 @@ def normalize_status(raw: str) -> str:
         done        -> complete
         resolved    -> complete
         closed      -> complete
+        completed   -> complete
         wontfix     -> abandoned
         ready       -> refined
 
     Unknown values pass through unchanged.
+
+    Note: this is read-time only. ``update_item``'s parent-closing cascade
+    compares *raw* frontmatter against ``TERMINAL_STATUSES`` without routing
+    through here, so an alias added above does not make the cascade see the
+    item as terminal.
 
     Args:
         raw: The raw status string to normalize.

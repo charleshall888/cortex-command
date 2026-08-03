@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: e5d142b1-9995-4927-a355-b0f5e5648045
 title: Recognize finished work spelled outside the canonical status set
-status: backlog
+status: complete
 priority: high
 type: bug
 created: 2026-08-03
