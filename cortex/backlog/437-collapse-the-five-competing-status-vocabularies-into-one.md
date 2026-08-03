@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 757293e2-4dd1-45ca-8e60-4e2b125732ed
 title: Collapse the five competing status vocabularies into one
-status: backlog
+status: complete
 priority: medium
 type: chore
 created: 2026-08-03
@@ -38,3 +38,11 @@ Consolidates onto the terminal-status set that the readiness predicate, index ge
 - `cortex_command/backlog/update_item.py:299`, `:333` (raw reads) and `:469-477` (the cascade that forbids bulk use of the verb).
 - `docs/backlog.md:23` — points at the dead constants as the canonical list.
 - Direct-rewrite precedent: `cortex_command/init/_relocation_migration.py:45`.
+
+## What shipped, and what did not (2026-08-03)
+
+Delivered: the three unread constants (`STATUSES`, `PRIORITIES`, `TYPES`) are gone, `ELIGIBLE_STATUSES` stays and is now labelled as the selection gate it is rather than a vocabulary declaration, `docs/backlog.md` points at the two live declarations instead of the dead one, and tests pin both the removal and the subset relationship between the gate and the vocabulary.
+
+Deliberately **not** delivered: narrowing `TERMINAL_STATUSES` to the canonical spellings. The Edge above says to normalize the corpus first, but normalizing is not sufficient — `update_item.py`'s parent-closing cascade compares *raw* frontmatter against the set and never routes through `normalize_status`, so dropping a legacy value strands finished work as active in the one place that closes parent epics. #435's alias fix does not reach that code path either. Narrowing requires the cascade to normalize first; the constraint is now recorded at the declaration site.
+
+Also found: `cortex/backlog/ready.py` is a stale tracked duplicate of `cortex_command/backlog/ready.py` carrying a sixth declaration (`_ELIGIBLE_STATUSES`). Filed as #441 rather than deleted here, because deletion needs positive evidence of deadness.

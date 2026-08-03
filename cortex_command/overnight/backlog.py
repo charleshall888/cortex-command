@@ -29,19 +29,21 @@ from cortex_command.common import TERMINAL_STATUSES, normalize_status, slugify
 
 
 # ---------------------------------------------------------------------------
-# Valid enum values for validation
+# Overnight pickup gate
 # ---------------------------------------------------------------------------
 
 _LIFECYCLE_SLUG_WORD_CAP = 6
 
 
-STATUSES = (
-    "open", "in-progress", "blocked", "resolved", "wontfix", "done",
-    "backlog", "ready", "refined", "in_progress", "implementing", "review", "complete", "abandoned",
-)
+# Statuses an item may hold and still be picked up by an overnight run. This
+# is a *selection* gate, not a vocabulary declaration — it is deliberately
+# narrower than the set of statuses an item may legally carry.
+#
+# The status vocabulary itself is declared in exactly two places, both in
+# cortex_command/common.py: TERMINAL_STATUSES (which values mean finished)
+# and _STATUS_MAP (which spellings normalize to which canonical value).
+# Nothing validates the `status` field on write, so neither is an allow-list.
 ELIGIBLE_STATUSES = ("backlog", "ready", "in_progress", "implementing", "refined")
-PRIORITIES = ("critical", "high", "medium", "low")
-TYPES = ("feature", "bug", "chore", "spike", "idea", "epic")
 
 
 # ---------------------------------------------------------------------------

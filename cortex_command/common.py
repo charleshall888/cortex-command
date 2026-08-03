@@ -175,8 +175,17 @@ def _resolve_user_project_root_from_cwd() -> Path:
 # shell should use "wont-do" (no apostrophe) — the apostrophe in "won't-do"
 # will be misinterpreted by the shell if not carefully quoted.
 #
-# NOTE: cortex_command/overnight/backlog.py defines its own TERMINAL_STATUSES tuple
-# (5 values, missing the wont-do variants). Unifying that is a follow-up task.
+# This set and _STATUS_MAP below are the only two declarations of the status
+# vocabulary. Everything else is a narrower gate over them: overnight's
+# ELIGIBLE_STATUSES selects what a run may pick up, and ready.py's
+# _ELIGIBLE_STATUSES mirrors it. Nothing validates `status` on write, so this
+# is not an allow-list — unrecognized values reach every reader unchanged.
+#
+# Do NOT narrow this set to the canonical spellings alone. update_item.py's
+# parent-closing cascade compares *raw* frontmatter against it without routing
+# through normalize_status, so dropping a legacy value here makes finished work
+# read as active in the one place that closes parent epics. Narrowing needs the
+# cascade to normalize first.
 
 TERMINAL_STATUSES: frozenset[str] = frozenset({
     "complete",

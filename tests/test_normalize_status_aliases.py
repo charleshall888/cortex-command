@@ -61,3 +61,46 @@ class TestNonFinishedValuesUnaffected:
 
     def test_unknown_value_passes_through(self):
         assert normalize_status("some-invented-status") == "some-invented-status"
+
+
+class TestSingleVocabularyDeclaration:
+    """The status vocabulary is declared in exactly two places (#437).
+
+    Three constants in `cortex_command/overnight/backlog.py` — STATUSES,
+    PRIORITIES and TYPES — sat under a comment claiming they were "for
+    validation" with no reader anywhere, and `docs/backlog.md` named STATUSES
+    as the canonical list. A reader could not tell which declaration was
+    authoritative. These pin the consolidation so they cannot creep back.
+    """
+
+    def test_overnight_backlog_declares_no_status_vocabulary(self):
+        from cortex_command.overnight import backlog as ob
+        for dead in ("STATUSES", "PRIORITIES", "TYPES"):
+            assert not hasattr(ob, dead), (
+                f"{dead} was removed as unread in #437; a re-added copy is a "
+                "second vocabulary declaration competing with common.py"
+            )
+
+    def test_overnight_backlog_reuses_the_canonical_terminal_set(self):
+        """It must import TERMINAL_STATUSES, not define a divergent tuple."""
+        from cortex_command.overnight import backlog as ob
+        from cortex_command.common import TERMINAL_STATUSES as canonical
+        assert ob.TERMINAL_STATUSES is canonical
+
+    def test_eligible_statuses_survives_as_a_selection_gate(self):
+        """ELIGIBLE_STATUSES is read by the dashboard and filter_ready — keep it."""
+        from cortex_command.overnight.backlog import ELIGIBLE_STATUSES
+        assert "backlog" in ELIGIBLE_STATUSES
+
+    def test_eligible_statuses_is_narrower_than_the_vocabulary(self):
+        """The pickup gate is a subset, not a competing vocabulary: no
+        terminal status may be overnight-eligible."""
+        from cortex_command.overnight.backlog import ELIGIBLE_STATUSES
+        from cortex_command.common import TERMINAL_STATUSES
+        assert not (set(ELIGIBLE_STATUSES) & set(TERMINAL_STATUSES))
+
+    def test_ready_eligible_set_mirrors_the_overnight_gate(self):
+        """`ready.py` mirrors the gate; drift between them is the bug #437 closes."""
+        from cortex_command.backlog.ready import _ELIGIBLE_STATUSES
+        from cortex_command.overnight.backlog import ELIGIBLE_STATUSES
+        assert set(_ELIGIBLE_STATUSES) == set(ELIGIBLE_STATUSES)

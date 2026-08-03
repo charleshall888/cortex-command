@@ -18,7 +18,7 @@ Every backlog item uses the following YAML frontmatter contract. Fields listed a
 | `schema_version` | string | yes | `"1"` |
 | `uuid` | string | yes | UUID v4 — stable cross-reference key |
 | `title` | string | yes | Short human-readable name |
-| `status` | enum | yes | `backlog`, `ready`, `refined`, `in_progress`, `implementing`, `review`, `complete`, `abandoned` (plus legacy values `open`, `in-progress`, `blocked`, `resolved`, `wontfix`, `done` — see `cortex_command/overnight/backlog.py` for the full canonical list) |
+| `status` | enum | yes | `backlog`, `ready`, `refined`, `in_progress`, `implementing`, `review`, `complete`, `abandoned` (plus legacy spellings `open`, `in-progress`, `blocked`, `closed`, `completed`, `resolved`, `wontfix`, `done`, and `deferred` to park an item). Nothing validates this field on write, so it is a convention rather than an enum: see `cortex_command.common._STATUS_MAP` for which spellings normalize to which canonical value, and `cortex_command.common.TERMINAL_STATUSES` for which count as finished |
 | `priority` | enum | yes | `critical`, `high`, `medium`, `low` |
 | `type` | enum | yes | `feature`, `bug`, `chore`, `spike`, `idea`, `epic` |
 | `tags` | array | no | Inline YAML only: `[tag1, tag2]` |
@@ -203,7 +203,8 @@ cortex-update-item 030-cf-tunnel-fallback-polish --status complete --session-id 
 
 This document describes the backlog system as implemented at the time of writing. When any of the following change, update this document:
 
-- `cortex_command/overnight/backlog.py` — changes to `ELIGIBLE_STATUSES`, `TERMINAL_STATUSES`, or `filter_ready()` gate logic
+- `cortex_command/common.py` — changes to `TERMINAL_STATUSES` or `_STATUS_MAP`, the two declarations of the status vocabulary
+- `cortex_command/overnight/backlog.py` — changes to `ELIGIBLE_STATUSES` or `filter_ready()` gate logic
 - `skills/backlog/references/schema.md` — additions or removals from the frontmatter schema
 - `skills/backlog/SKILL.md` — new subcommands or changed subcommand behavior
 - `cortex_command/backlog/update_item.py` (invoked as `cortex-update-item`) — changes to the CLI interface or side-effect behavior
