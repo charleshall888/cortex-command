@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: b0f04331-b8a0-41fc-a00d-e484fdbcda07
 title: The implement-rework state is a dead end, so every review rework cycle needs an out-of-band event append
-status: backlog
+status: complete
 priority: medium
 type: bug
 created: 2026-08-03

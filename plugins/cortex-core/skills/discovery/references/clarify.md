@@ -6,17 +6,17 @@ Pre-research ideation gate: confirm the topic is well-aimed, novel, and aligned 
 
 Run `cortex-load-requirements` (omit `--feature`; discovery has no lifecycle index, so it falls back to project.md + Global Context). Read every listed non-skipped path and inject the printed path list into downstream prompts, relaying any fallback note. No `cortex/requirements/` → note it and continue.
 
-### 3. Check Existing Backlog Coverage
+### 2. Check Existing Backlog Coverage
 
 Resolve the backend once with `cortex-read-backlog-backend` (argless). **Two arms**, not decompose's three — a read path has no external-tracker query to fall to. Any backend other than `cortex-backlog` → skip the scan with a one-line advisory that backlog coverage checking is disabled for this repo, defaulting novelty to "no overlap detected" (the safe, non-blocking direction). Under **`cortex-backlog`** → scan `cortex/backlog/[0-9]*-*.md` titles, tags, and descriptions for overlap; an item already covering this topic substantially → surface it and ask whether to proceed with discovery or work from the existing ticket.
 
-### 4. Confidence Assessment
+### 3. Confidence Assessment
 
 Four dimensions: **topic aim** (one problem space vs. vague or conflated), **domain** (belongs to one area vs. spans unrelated ones without a unifying question), **novelty** (no substantial backlog overlap), **requirements alignment** (no conflicts).
 
 All four high → skip to §4. Any low → ask ≤4 targeted questions covering only what's genuinely unclear, and wait for answers.
 
-### 6. Produce Clarify Output
+### 4. Produce Clarify Output
 
 1. **Clarified topic statement** — one sentence on what this will investigate and why.
 2. **Domain note** — which area(s) of the project this touches.
@@ -28,7 +28,7 @@ All four high → skip to §4. Any low → ask ≤4 targeted questions covering 
 
 State each assessment with brief reasoning.
 
-### 7. Persist the Research-Sizing Assessment
+### 5. Persist the Research-Sizing Assessment
 
 Conversation memory does not survive a phase resume — persist outputs 5–6 so Research can read them back:
 

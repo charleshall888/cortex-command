@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 7e90d5be-df19-4f60-87b2-d0adbb86c61a
 title: "Discovery clarify.md has a self-referential 'skip to §4' and two missing sections, so the confidence gate has no exit"
-status: backlog
+status: complete
 priority: low
 type: bug
 created: 2026-08-03

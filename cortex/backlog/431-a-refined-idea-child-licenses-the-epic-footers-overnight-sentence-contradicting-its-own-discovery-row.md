@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 3a1202a7-57ae-4e93-a323-caef43150ebd
 title: A refined idea child licenses the epic footer's overnight sentence, contradicting its own discovery row
-status: backlog
+status: complete
 priority: low
 type: bug
 created: 2026-08-03
