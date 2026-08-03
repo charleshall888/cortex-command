@@ -18,11 +18,12 @@ Rate the artifact against the authoring rules of the phase reference you just ex
 
 The orchestrator does not edit phase artifacts directly — dispatching preserves separation of concerns.
 
-Rework needing no user input → a **fresh subagent**, which avoids anchoring to the flawed artifact. Brief it with the flagged rule and what is wrong, the artifact path to read, and the phase's format requirements. It must **rewrite the entire artifact** to address the flag while preserving all correct existing content — never patch sections — and add nothing beyond what the phase requires. A full rewrite maintains internal coherence across sections that cross-reference each other. It ends with this envelope and no prose around it:
+Rework needing no user input → route by blast radius, not by who holds the pen: a **fresh subagent** takes every repair, avoiding anchoring to the flawed artifact. Brief it with the flagged rule, what's wrong, the artifact path, and the phase's format requirements. Flags confined to a single requirement get a targeted edit to that requirement's section; flags spanning more than one requirement, or the artifact's cross-references, get a full rewrite — the only way to keep cross-referencing sections coherent, so never patch several sections piecemeal. If a targeted edit proves not confinable once the subagent is inside the artifact, it reports `verdict: failed` on the envelope below rather than forcing an inconsistent patch. It ends with this envelope and no prose around it:
 
 ```
 verdict: revised | failed
 files_changed: [<path>, ...]
+changed_beyond_flag: <none | ≤15-word summary>
 rationale: <≤15 words>
 ```
 
