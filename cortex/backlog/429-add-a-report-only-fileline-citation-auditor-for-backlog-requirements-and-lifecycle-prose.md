@@ -81,3 +81,39 @@ Minimum useful checks, in increasing cost:
   scope boundary this ticket extends)
 - `bin/cortex-requirements-parity-audit` (informational-auditor precedent)
 - `bin/cortex-adr-citation-audit`
+
+## Folded in from #444 (2026-08-03)
+
+#444 ("Catch a decompose ticket body that contradicts its source research") asked whether one
+auditor covers three failure shapes: a citation that does not resolve (this ticket), a citation
+that resolves but whose stated behavior contradicts its source research (#444), and a research
+artifact that asserts an unverified fact (#411). **It does not, and the reason is worth
+recording before anyone builds the anchor check.**
+
+#444's founding incident is invisible to this auditor. The contradicted claim was #436's
+Integration sentence — *"The parent-closing cascade reads the same normalized status"* — which
+carried **no `file:line` citation at all**. The research it contradicted did carry one
+(`cortex/research/staged-epic-gate-tickets/research.md:31`, citing `:299` and `:333`). An
+auditor that checks citations found nothing to check. #436's second wrong claim ("Three epics
+are held open this way" — two) was an uncited count verifiable only by a census in another repo.
+
+The three shapes do not share an oracle. This ticket's oracle is the filesystem (does the path
+exist, is the line in range, does the symbol appear nearby) — deterministic, runnable anytime
+over tracked markdown. #444's oracle is another prose document, and #411's is the code itself.
+Only the first is a citation audit; the other two are judgments. Merging them would put an
+LLM comparison behind the same verb as a `stat()` call and would inherit #444's own warning that
+"an agent-authored comparison of prose against prose is exactly the kind of judgment that
+produces false confidence."
+
+**What this ticket absorbs from #444:** extend the scan targets to include the research artifact
+a ticket's `discovery_source` points at (a real, populated field — 230 tickets carry it, read by
+`refine.py:492` and indexed by `generate_index.py:208`). A citation in a research artifact rots
+exactly the way one in a ticket body does, and auditing both is free once the engine exists.
+
+**What is explicitly declined:** the general prose-against-prose comparison. No mechanical check
+catches an uncited assertion that contradicts a cited source — the heuristic of flagging factual
+claims that name no line does not fire on #436's sentence either, which names no backticked
+symbol. The instrument that caught it was a reader opening the function. Reaching that case
+structurally means requiring load-bearing claims to carry citations at the decompose boundary,
+which is a convention change and a real authoring tax on the 4-in-5 tickets that were faithful —
+out of scope here and not currently filed.

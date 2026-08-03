@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: afc093ee-d8e7-469f-8951-fbce31413b78
 title: Stop the backlog recording states that contradict reality
-status: backlog
+status: complete
 priority: medium
 type: epic
 created: 2026-08-03
@@ -28,3 +28,15 @@ Reaches the read-time status normalization, the deferred-item predicate, the rea
 - No new ticket type and no new status value is introduced; the vocabulary narrows rather than grows.
 - The final child produces a decision and its rationale, not an implementation.
 - Ordering across children is load-bearing: normalization lands before the vocabulary narrows, and epic visibility lands before the decision that consumes the census it enables.
+
+## Outcome (2026-08-03): complete, with scope dropped
+
+Eight of ten children shipped. Two did not, and `status: complete` alone does not say so:
+
+- **#443** (`wont-do`) — teach discovery to emit fog as a piece. Retracted; the harness already had it.
+- **#444** (`superseded`) — catch a decompose body that contradicts its source research. Folded
+  into #429 after checking whether one auditor covers it; it does not. See #444's Disposition.
+
+Recorded by hand because the cascade that closed this epic ran from the installed wheel, which
+predates the mixed-outcome note #442 added. Once the next release is installed, a close of this
+shape names the dropped children on stderr at the moment it happens.

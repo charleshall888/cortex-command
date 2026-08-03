@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 7bbed9f5-1716-4b4f-88b2-865f6f8fcb53
 title: Catch a decompose ticket body that contradicts its source research
-status: backlog
+status: superseded
 priority: medium
 type: bug
 created: 2026-08-03
@@ -38,3 +38,29 @@ Sits at the decompose boundary, where `### Pieces` and `### How they connect` ar
 - `cortex/research/staged-epic-gate-tickets/research.md:31` — the correct statement.
 - `cortex/backlog/436-surface-work-parked-by-status-and-unwedge-the-epics-it-blocks.md` — its Correction section records the divergence.
 - `cortex/adr/0034-fog-becomes-a-piece-and-dependents-declare-the-blocker.md` — the decision that scopes this out.
+
+## Disposition (2026-08-03): superseded by #429
+
+Folded into #429 as a recorded scope boundary, not as a feature. The ticket's own closing Edge
+asked whether one auditor covers this case, #429's, and #411's; the answer is no, and checking
+it first is what closed this ticket rather than building it.
+
+**This ticket's own founding incident is out of reach of the auditor it proposed folding into.**
+#436's contradicting sentence carried no `file:line` citation. The research it contradicted did
+(`cortex/research/staged-epic-gate-tickets/research.md:31`, citing `:299` and `:333`). A citation
+auditor had nothing to audit. The heuristic fallback — flag a factual claim that names no line —
+does not fire either, because the sentence names no backticked symbol.
+
+What remains is the general prose-against-prose comparison this ticket's third Edge already
+warned about. It is the only instrument that reaches the case, it is an LLM judgment on a hot
+path, and by the ticket's own cost discipline it must be cheap enough to run on the four
+faithful tickets in five. Declined on that basis.
+
+The durable version, if this recurs: require load-bearing claims in a decompose-authored body to
+carry a citation, which converts the problem into #429's and gets coverage for free. That is a
+convention change with an authoring tax, needs "load-bearing" defined, and is deliberately not
+filed on a single incident — the front-door evidence bar in `CLAUDE.md` wants a measured cost or
+a repeated failure, and this is one.
+
+`discovery_source` was verified real and populated (230 tickets; `refine.py:492`,
+`generate_index.py:208`), so that claim in the Edges above stands. #429 absorbs it as a scan target.
