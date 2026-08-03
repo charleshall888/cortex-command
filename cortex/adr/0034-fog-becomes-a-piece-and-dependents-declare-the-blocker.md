@@ -18,30 +18,32 @@ Two mechanisms were charted and both are rejected here; see Alternatives conside
 
 Uncertainty is named as work at planning time rather than discovered mid-epic.
 
-When the research phase authors `### Pieces` and cannot state a piece precisely — applying wayfinder's fog test, *whether the question can be stated precisely now, not whether it can be answered* (`research.md:57`) — the uncertainty itself becomes a piece: a research or requirements piece whose deliverable is to clear that fog. Pieces that depend on the answer record that dependency in `### How they connect`.
+When the research phase authors `### Pieces` and cannot state a piece precisely — applying wayfinder's fog test, *whether the question can be stated precisely now, not whether it can be answered* (`research.md:57`) — and the missing answer is one only the operator can give, the uncertainty itself becomes a piece whose deliverable is to clear that fog. Pieces that depend on the answer record that dependency in `### How they connect`.
 
 Decompose then packages the fog piece like any other and wires the dependency it already reads from `### How they connect`, so dependent tickets are authored carrying `blocked-by` the fog ticket **at the moment they are written**.
 
 Every ticket is still created in one flow, and the piece set is still complete.
 
-A fog piece names how it will be cleared, because fog comes in two kinds and they are answered by different instruments:
+**Fog is only ever a question the research phase cannot answer itself.** In practice that means one thing: the answer belongs to a human who is not in the room. `/cortex-core:requirements` carries `disable-model-invocation: true` and `/cortex-core:interview` needs a live counterpart — an agent cannot settle what we *want* on its own initiative, and that is the correct constraint rather than an obstacle. A dependency on someone outside the run is what a blocker is for.
 
-- **Intent fog** — the question is what we want, or where the boundary sits. Cleared by `/cortex-core:requirements` (which writes `cortex/requirements/{project|area}.md`) or `/cortex-core:interview` (which produces a brief). Note that `requirements` carries `disable-model-invocation: true`: an agent cannot resolve intent fog on its own initiative, which is the correct constraint rather than an obstacle.
-- **Fact fog** — the question is how the codebase or the world actually behaves. Cleared by `/cortex-core:research`, which writes a `research.md`.
+A fog piece therefore names its clearing route and terminates in an artifact — a `cortex/requirements/{project|area}.md` or an interview brief — which gives it a definition of done a status flip alone cannot satisfy (`research.md:57`: resolution is *"a produced artifact plus an explicit handoff step, not a status flip"*). That artifact is what the dependents are reconciled against once the blocker lifts.
 
-**The routes compose; they are not exclusive.** Intent fog routinely needs a research pass first, because an unresearched question wastes the human's turn: "how should we prevent stale tickets?" is unanswerable, while "the census shows 6 of 198, three in one epic, each costing a refine — is that enough to act on?" is answerable in one sentence. A fog piece may therefore carry a research step whose output exists to sharpen the questions the interview then asks. This decision itself was taken that way.
+Reaching the human is usually worth a research pass first, because an unresearched question wastes their turn: "how should we prevent stale tickets?" is unanswerable, while "the census shows 6 of 198, three in one epic, each costing a refine — enough to act on?" is answerable in a sentence. That research is part of clearing the fog, not a separate piece. This decision was taken that way.
 
-Each route terminates in an artifact, which gives the fog ticket a definition of done that a status flip alone cannot satisfy — wayfinder's observation that resolution is *"a produced artifact plus an explicit handoff step, not a status flip"* (`research.md:57`). The artifact is what the dependent tickets are reconciled against once the blocker lifts.
+**Questions of fact are not fog and must not become tickets.** How the codebase behaves is exactly what the research phase's fan-out exists to establish, and it is reachable during the run. Deferring a fact into its own ticket buys a blocker, a lifecycle pass, and per-ticket ceremony — the friction ADR-0007's Context already names — to answer something a grep settles now. Where research genuinely cannot establish a fact its pieces rest on, that is a research defect and `decompose.md:9` already routes it: surface it and return to research rather than materializing a placeholder.
 
-**Calibration: fog is what more than one sibling rests on.** A fact only one ticket depends on is not fog — the refine phase checks it as a matter of course, locally and cheaply. It becomes fog when several pieces are authored against the same unverified assumption, because that is when being wrong multiplies. Epic #434 is the worked example, and it predates this decision: #435 and #436 shipped with contradictory claims about a single fact (whether the parent-closing cascade normalizes status — it does not, `update_item.py:33`). That one unchecked fact made #436's unwedge arm unachievable as scoped, made #437's narrowing unsafe on grounds its own Edges misidentified, and made #438's touch-points understate the work. One grep, unasked, cost three mid-flight rewrites.
+Epic #434 is the evidence for that exclusion, not against it. Its tickets shipped disagreeing about whether the parent-closing cascade normalizes status — and there was no fog. `research.md:31` had established it correctly, with line numbers (*"reads **raw, unnormalized** status (`:299`, `:333`)"*); #435 and #437 quoted it accurately; #436's Integration asserted the opposite and cost three mid-flight rewrites. The failure was a ticket body contradicting its own source, which no amount of extra research would have prevented. Tracked as its own defect — see Cross-references.
 
 ## Trade-off
 
 Enforcement is structural and already live: a ticket with an unresolved `blocked-by` is absent from the ready list, from triage recommendations, and from overnight eligibility. Nothing new enforces anything, and nobody has to remember anything later — the blocker is written when the ticket is written.
 
+Scope is deliberately narrow. Fog is only what an agent cannot settle during the run, which in practice means questions for a human. That keeps the mechanism from becoming per-ticket ceremony: a blocker is spent on a genuine external dependency, never on work the research phase could have done in the same pass.
+
 The costs are real:
 
 - **Fog must be recognized at planning time.** A piece confidently mis-stated during research produces no fog piece and no blocker, and this decision does nothing for it. It converts a reconciliation problem into a recognition problem; it does not eliminate the failure.
+- **It does not address bodies that contradict their own research.** That is the failure epic #434 actually suffered, and it is a fidelity problem in decompose, not an uncertainty problem. A separate defect.
 - **A stalled fog ticket stalls its dependents.** That is the mechanism working as designed, but an epic can now be held by one unresolved question in a way it could not before.
 - **Over-application is a real failure mode.** Naming fog too eagerly produces long blocker chains and an epic that looks unworkable. The fog test is the guard, and it is judgment.
 
@@ -66,3 +68,4 @@ The accepted residual: this prevents work against a *known-uncertain* premise, n
 - Compatible with ADR-0007: the analytical piece set stays complete and research-owned; grouping is untouched.
 - Prerequisite: #438 (epic visibility), which made the deciding census possible.
 - Implementation: #443.
+- Excluded and tracked separately: #444 — a decompose body contradicting its source research, which is a fidelity defect rather than uncertainty, and is what epic #434 actually suffered.
