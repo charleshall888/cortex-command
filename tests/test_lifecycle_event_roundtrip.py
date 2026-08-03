@@ -344,6 +344,13 @@ GOLDEN_CASES: list[tuple[str, str, list[str], str]] = [
         '"from": "low", "to": "high"}' % FIXED_TS,
     ),
     (
+        "complexity_override",
+        "complexity_override",
+        ["--set", "from=complex", "--set", "to=moderate"],
+        '{"ts": "%s", "event": "complexity_override", "feature": "f", '
+        '"from": "complex", "to": "moderate"}' % FIXED_TS,
+    ),
+    (
         "lifecycle_start",
         "lifecycle_start",
         ["--set", "tier=simple", "--set", "criticality=medium"],

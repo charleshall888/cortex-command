@@ -1,12 +1,16 @@
-"""Evaluate a complexity-escalation gate for a lifecycle feature.
+"""Report a complexity signal for a lifecycle feature. Advisory only.
 
 Counts *unresolved* top-level bullets under ``## Open Questions`` (Gate 1) or
-``## Open Decisions`` (Gate 2) and, when the count meets the gate's
-threshold AND the feature is not already at the ``complex`` tier,
-appends a ``complexity_override`` event to
-``lifecycle/<feature>/events.log`` and prints a one-line announcement
-to stdout. On any non-firing path (already-complex, missing inputs,
-empty section, below-threshold) the hook exits 0 silently.
+``## Open Decisions`` (Gate 2) and, when the count meets the gate's threshold
+AND the feature is not already ``complex``, prints a one-line recommendation to
+stdout. On every other path it exits 0 silently.
+
+**It writes nothing.** The tier is the assessment's to set, not a bullet
+count's: the count measures how much uncertainty got written down, which is not
+the same as how hard the work is. The caller re-assesses with the research in
+hand and records any change itself via ``cortex-lifecycle-event
+complexity-override``. This hook previously appended the override directly,
+which made the counter the decider and left the assessment no way to disagree.
 
 Bullets the author has already settled — ``[x]``, ``~~struck~~``, ``✓``, or a
 leading ALL-CAPS RESOLVED/ANSWERED/DECIDED/DEFERRED tag — do not count,
@@ -16,13 +20,6 @@ question to be resolved or deferred before Spec. The word markers must be
 ALL-CAPS and delimited (bolded, or followed by a colon, a dash, or
 end-of-line) so that a question merely *beginning* with one of those words
 ("Deferred rendering: should we adopt it?") still counts.
-
-Under ``--allow-downgrade`` the gate is bidirectional: an escalation that
-*this gate* emitted is reversed once the section falls back below threshold.
-Escalations of other origin (human, other gates) are never auto-reversed.
-
-See ``--help`` for the full CLI surface. The full requirements list
-lives at ``lifecycle/migrate-gate-1-researchspecify-open-questions-escalation-to-python-hook-remove-gate-2-entirely/spec.md``.
 """
 
 from __future__ import annotations
@@ -32,11 +29,9 @@ import json
 import os
 import re
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
 
-from cortex_command.lifecycle_event import log_event_at
 
 
 GATE_RESEARCH = "research_open_questions"
@@ -46,11 +41,10 @@ GATE_CONFIG = {
     GATE_RESEARCH: {
         "artifact": "research.md",
         "section": "## Open Questions",
-        # Calibrated against 201 real research.md files (median 6 open
-        # questions). The original threshold of 2 fired on 97% of features,
-        # so it measured "research happened" rather than "this is complex";
-        # 8 fires on the ~28% that carry meaningfully more uncertainty than a
-        # typical feature.
+        # Set well above a typical feature's open-question count. A gate that
+        # fires on nearly everything is detecting that research happened, not
+        # that the work is hard; escalation has to stay exceptional to mean
+        # anything. Repos with a different research style should tune this.
         "threshold": 8,
         "noun": "research surfaced {n} unresolved questions",
     },
@@ -64,31 +58,28 @@ GATE_CONFIG = {
 
 SLUG_RE = re.compile(r"^[a-zA-Z0-9._-]+$")
 
+# Kept in lockstep with ``common.TIER_VOCABULARY``. Duplicated rather than
+# imported so this hook stays importable from the bin wrapper without pulling
+# the wider package in.
+_TIER_VOCABULARY = frozenset({"simple", "moderate", "complex"})
 
-def _now_iso() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
+def read_effective_tier(events_log_path: Path) -> str:
+    """Return the effective complexity tier per latest-event semantics.
 
-def read_latest_override(events_log_path: Path) -> tuple[str, Optional[dict]]:
-    """Return ``(effective_tier, latest_override_entry)`` per latest-event semantics.
+    Mirrors the canonical reduction in ``lifecycle/state_cli.py``:
+    ``lifecycle_start.tier`` superseded by ``complexity_override.to``, whichever
+    appears most recently. Recognizes the three historical override payload
+    shapes: ``tier`` field, ``to`` field, or neither (bare presence implies an
+    escalation).
 
-    Scans ``events.log`` for ``complexity_override`` events and resolves the
-    effective tier of the latest one in file order. Recognizes three payload
-    shapes: ``tier`` field (test fixture), ``to`` field (standard), or neither
-    (YAML-style: bare event presence implies escalation).
-
-    The entry is returned alongside the tier so callers can distinguish a
-    gate-emitted escalation (carries a ``gate`` field) from a human or
-    other-origin one — only the former may be automatically reversed.
-
-    Returns ``("simple", None)`` if the log does not exist or contains no
-    matching events.
+    Returns ``"simple"`` when the log is absent or carries no tier at all — the
+    rank floor, so a missing log never suppresses the advisory.
     """
     if not events_log_path.exists():
-        return ("simple", None)
+        return "simple"
 
     latest_tier = "simple"
-    latest_entry: Optional[dict] = None
     try:
         with open(events_log_path, "r", encoding="utf-8") as f:
             for line in f:
@@ -101,7 +92,13 @@ def read_latest_override(events_log_path: Path) -> tuple[str, Optional[dict]]:
                     continue
                 if not isinstance(obj, dict):
                     continue
-                if obj.get("event") != "complexity_override":
+                event = obj.get("event")
+                if event == "lifecycle_start":
+                    tier = obj.get("tier")
+                    if isinstance(tier, str) and tier:
+                        latest_tier = tier
+                    continue
+                if event != "complexity_override":
                     continue
                 if "tier" in obj:
                     latest_tier = obj["tier"]
@@ -109,20 +106,10 @@ def read_latest_override(events_log_path: Path) -> tuple[str, Optional[dict]]:
                     latest_tier = obj["to"]
                 else:
                     latest_tier = "complex"
-                latest_entry = obj
     except OSError:
-        return ("simple", None)
+        return "simple"
 
-    return (latest_tier, latest_entry)
-
-
-def read_effective_tier(events_log_path: Path) -> str:
-    """Return the effective complexity tier per latest-event semantics.
-
-    Thin wrapper over :func:`read_latest_override` retained as the stable
-    single-value entry point.
-    """
-    return read_latest_override(events_log_path)[0]
+    return latest_tier
 
 
 def _is_fence_line(line: str) -> bool:
@@ -251,71 +238,6 @@ def _count_top_level_bullets(section_lines: list[str], gate: str) -> int:
     return count
 
 
-def _emit_event(
-    events_log_path: Path,
-    feature: str,
-    gate: str,
-    from_tier: str = "simple",
-    to_tier: str = "complex",
-) -> dict:
-    """Append a ``complexity_override`` event line; return the appended dict.
-
-    Routes through the shared locked primitive (flock + O_APPEND) rather than a
-    bare unlocked ``open("a")`` — R1. ``log_event_at`` takes the explicit
-    CWD-relative path this hook resolved (preserving the writer-site baseline)
-    and prepends its own ``ts``; the ``ts`` carried on ``entry`` overrides it so
-    the returned dict and the written row agree.
-    """
-    entry = {
-        "ts": _now_iso(),
-        "event": "complexity_override",
-        "feature": feature,
-        "from": from_tier,
-        "to": to_tier,
-        "gate": gate,
-    }
-    log_event_at(events_log_path, entry)
-    return entry
-
-
-def _verify_last_event(
-    events_log_path: Path, gate: str, to_tier: str = "complex"
-) -> tuple[bool, str]:
-    """Assert the appended ``complexity_override`` row is present in events.log.
-
-    Matches the row by parsed fields (``event`` + ``to`` + ``gate``) ANYWHERE in
-    the log rather than by file tail (R2). A concurrent append landing between
-    the emit and this read would otherwise displace our row from the tail and
-    produce a false mismatch.
-
-    Returns ``(True, "")`` on success or ``(False, <failure_mode>)`` where
-    ``failure_mode`` is one of ``read_after_write_io_error`` or
-    ``read_after_write_mismatch``.
-    """
-    try:
-        with open(events_log_path, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-    except OSError:
-        return (False, "read_after_write_io_error")
-
-    for raw in lines:
-        stripped = raw.strip()
-        if not stripped:
-            continue
-        try:
-            obj = json.loads(stripped)
-        except (json.JSONDecodeError, ValueError):
-            continue
-        if (
-            isinstance(obj, dict)
-            and obj.get("event") == "complexity_override"
-            and obj.get("gate") == gate
-            and obj.get("to") == to_tier
-        ):
-            return (True, "")
-    return (False, "read_after_write_mismatch")
-
-
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="cortex-complexity-escalator",
@@ -339,17 +261,6 @@ def _build_parser() -> argparse.ArgumentParser:
             "Which gate to evaluate. Use research_open_questions for Gate 1 "
             "(Research → Specify) or specify_open_decisions for Gate 2 "
             "(Specify → Plan)."
-        ),
-    )
-    parser.add_argument(
-        "--allow-downgrade",
-        action="store_true",
-        help=(
-            "Also permit the reverse transition: if the feature is already at "
-            "complex BECAUSE THIS GATE escalated it, and the section has since "
-            "dropped below threshold, record a complex -> simple override. "
-            "Escalations that were not gate-emitted (human calls, other gates) "
-            "are never reversed."
         ),
     )
     parser.add_argument(
@@ -387,15 +298,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     artifact_path = feature_dir / cfg["artifact"]
     events_log_path = feature_dir / "events.log"
 
-    # R6 + R7: tier guard via latest-event semantics.
-    effective_tier, latest_override = read_latest_override(events_log_path)
-    already_complex = effective_tier == "complex"
-    if already_complex and not args.allow_downgrade:
+    # Tier guard via latest-event semantics — read only, never written.
+    if read_effective_tier(events_log_path) == "complex":
         return 0
 
-    # R11: graceful no-op when artifact missing. In downgrade mode this is
-    # deliberately conservative: an absent artifact means the section cannot be
-    # measured, which is not the same as measuring zero, so the tier stands.
+    # R11: graceful no-op when the artifact is missing or the section absent.
     if not artifact_path.exists():
         return 0
 
@@ -407,45 +314,21 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     section_lines = _slice_section(text, cfg["section"])
     if not section_lines:
-        # Heading absent or empty; graceful no-op (R11).
         return 0
 
     count = _count_top_level_bullets(section_lines, gate)
-    over_threshold = count >= cfg["threshold"]
+    if count < cfg["threshold"]:
+        return 0
 
-    if already_complex:
-        # Downgrade arm: only reachable under --allow-downgrade. Reverse the
-        # tier only when THIS gate raised it and the reason has since cleared.
-        if over_threshold:
-            return 0
-        if (latest_override or {}).get("gate") != gate:
-            return 0
-        from_tier, to_tier = "complex", "simple"
-        verb = "Returning to Simple tier — "
-    else:
-        if not over_threshold:
-            return 0
-        from_tier, to_tier = "simple", "complex"
-        verb = "Escalating to Complex tier — "
-
-    # Fire: append event + read-after-write verification.
-    try:
-        _emit_event(events_log_path, feature, gate, from_tier, to_tier)
-    except OSError as exc:
-        sys.stderr.write(
-            f"failed to append complexity_override event to {events_log_path}: {exc}\n"
-        )
-        return 2
-
-    ok, mode = _verify_last_event(events_log_path, gate, to_tier)
-    if not ok:
-        sys.stderr.write(
-            f"{mode}: expected complexity_override gate={gate} to={to_tier} "
-            f"as last line of {events_log_path}\n"
-        )
-        return 2
-
-    sys.stdout.write(verb + cfg["noun"].format(n=count) + "\n")
+    # Advisory only. This hook reports a signal; it does not decide the tier and
+    # writes nothing. The caller re-assesses with the research in hand and, if it
+    # changes its mind, records that itself via
+    # ``cortex-lifecycle-event complexity-override``. A bullet count is evidence
+    # about how much uncertainty got written down, which is not the same thing as
+    # how hard the work is — it should inform the assessment, not replace it.
+    sys.stdout.write(
+        "Consider Complex tier — " + cfg["noun"].format(n=count) + "\n"
+    )
     return 0
 
 

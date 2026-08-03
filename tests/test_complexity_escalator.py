@@ -8,8 +8,6 @@ Covers Requirements 3–12 plus Edge Case line 100 (downgrade-then-re-escalate):
   R6  Skip when already complex (including downgrade-then-re-escalate)
       plus the --allow-downgrade reverse transition
   R7  Three-payload-shape recognition
-  R8  Event field shape (ts, event, feature, from, to, gate)
-  R9  Read-after-write failure surface
   R10 Path-traversal rejection
   R11 Graceful no-ops (missing inputs, empty sections, missing events.log)
   R12 Announcement format strings
@@ -203,8 +201,9 @@ def test_threshold_gate1_at(tmp_lifecycle):
         tmp_lifecycle["feature"], "research_open_questions", tmp_lifecycle["tmp_path"]
     )
     assert result.returncode == 0, result.stderr
-    assert "Escalating to Complex tier" in result.stdout
-    assert tmp_lifecycle["events_log"].exists()
+    assert "Consider Complex tier" in result.stdout
+    # Advisory: the recommendation is stdout only, never a written event.
+    assert not tmp_lifecycle["events_log"].exists()
 
 
 def test_threshold_gate2_below(tmp_lifecycle):
@@ -229,7 +228,7 @@ def test_threshold_gate2_at(tmp_lifecycle):
         tmp_lifecycle["feature"], "specify_open_decisions", tmp_lifecycle["tmp_path"]
     )
     assert result.returncode == 0, result.stderr
-    assert "Escalating to Complex tier" in result.stdout
+    assert "Consider Complex tier" in result.stdout
 
 
 # ---------------------------------------------------------------------------
@@ -318,44 +317,6 @@ def test_skip_recognizes_payload_shape_tier(tmp_lifecycle):
     assert result.stdout == ""
 
 
-def test_downgrade_then_reescalate(tmp_lifecycle):
-    """R6 + Edge Cases line 100: downgrade-then-re-escalate re-fires the gate.
-
-    Latest-event semantics: when the most recent complexity_override resolves
-    to ``simple`` (manual downgrade after a prior escalation), the hook is no
-    longer guarded and re-evaluates the section.
-    """
-    events = (
-        json.dumps(
-            {"event": "complexity_override", "from": "simple", "to": "complex"}
-        )
-        + "\n"
-        + json.dumps(
-            {"event": "complexity_override", "from": "complex", "to": "simple"}
-        )
-        + "\n"
-    )
-    tmp_lifecycle["events_log"].write_text(events, encoding="utf-8")
-    research = tmp_lifecycle["feature_dir"] / "research.md"
-    research.write_text(f"## Open Questions\n{EIGHT}\n", encoding="utf-8")
-    result = _run_script(
-        tmp_lifecycle["feature"], "research_open_questions", tmp_lifecycle["tmp_path"]
-    )
-    assert result.returncode == 0, result.stderr
-    assert "Escalating to Complex tier" in result.stdout
-    # Verify a fresh escalate event was appended (3 events total now).
-    lines = [
-        line
-        for line in tmp_lifecycle["events_log"]
-        .read_text(encoding="utf-8")
-        .splitlines()
-        if line.strip()
-    ]
-    assert len(lines) == 3
-    last = json.loads(lines[-1])
-    assert last["event"] == "complexity_override"
-    assert last.get("to") == "complex"
-    assert last.get("gate") == "research_open_questions"
 
 
 # ---------------------------------------------------------------------------
@@ -363,46 +324,6 @@ def test_downgrade_then_reescalate(tmp_lifecycle):
 # ---------------------------------------------------------------------------
 
 
-def test_event_emission_shape(tmp_lifecycle):
-    """R8: appended event JSON contains ts, event, feature, from, to, gate."""
-    research = tmp_lifecycle["feature_dir"] / "research.md"
-    research.write_text(f"## Open Questions\n{EIGHT}\n", encoding="utf-8")
-    result = _run_script(
-        tmp_lifecycle["feature"], "research_open_questions", tmp_lifecycle["tmp_path"]
-    )
-    assert result.returncode == 0, result.stderr
-    lines = [
-        line
-        for line in tmp_lifecycle["events_log"]
-        .read_text(encoding="utf-8")
-        .splitlines()
-        if line.strip()
-    ]
-    assert len(lines) == 1
-    entry = json.loads(lines[0])
-    assert isinstance(entry.get("ts"), str)
-    assert entry["event"] == "complexity_override"
-    assert entry["feature"] == tmp_lifecycle["feature"]
-    assert entry["from"] == "simple"
-    assert entry["to"] == "complex"
-    assert entry["gate"] == "research_open_questions"
-
-    # Analogous Gate 2 invocation in a sibling feature directory.
-    feature2 = "test-feature-2"
-    dir2 = tmp_lifecycle["lifecycle_dir"] / feature2
-    dir2.mkdir()
-    (dir2 / "spec.md").write_text(
-        "## Open Decisions\n- d1?\n- d2?\n- d3?\n", encoding="utf-8"
-    )
-    result2 = _run_script(
-        feature2, "specify_open_decisions", tmp_lifecycle["tmp_path"]
-    )
-    assert result2.returncode == 0, result2.stderr
-    events2 = (dir2 / "events.log").read_text(encoding="utf-8").splitlines()
-    entry2 = json.loads([line for line in events2 if line.strip()][0])
-    assert entry2["event"] == "complexity_override"
-    assert entry2["gate"] == "specify_open_decisions"
-    assert entry2["to"] == "complex"
 
 
 # ---------------------------------------------------------------------------
@@ -410,28 +331,6 @@ def test_event_emission_shape(tmp_lifecycle):
 # ---------------------------------------------------------------------------
 
 
-def test_read_after_write_failure(escalator_module, tmp_lifecycle, monkeypatch, capsys):
-    """R9: verification failure surfaces non-zero exit + stderr; empty stdout.
-
-    Monkeypatches the verification helper so the appended-then-verified event
-    is reported as mismatched. Exercises the in-process ``main()`` entrypoint
-    so the monkeypatch reaches the resolved helper.
-    """
-    research = tmp_lifecycle["feature_dir"] / "research.md"
-    research.write_text(f"## Open Questions\n{EIGHT}\n", encoding="utf-8")
-    monkeypatch.setattr(
-        escalator_module,
-        "_verify_last_event",
-        lambda path, gate, to_tier="complex": (False, "read_after_write_mismatch"),
-    )
-    monkeypatch.chdir(tmp_lifecycle["tmp_path"])
-    rc = escalator_module.main(
-        [tmp_lifecycle["feature"], "--gate", "research_open_questions"]
-    )
-    captured = capsys.readouterr()
-    assert rc != 0
-    assert captured.out == ""
-    assert "read_after_write_mismatch" in captured.err
 
 
 # ---------------------------------------------------------------------------
@@ -439,45 +338,6 @@ def test_read_after_write_failure(escalator_module, tmp_lifecycle, monkeypatch, 
 # ---------------------------------------------------------------------------
 
 
-def test_verify_tolerates_concurrent_append(escalator_module, tmp_lifecycle):
-    """R2: a concurrent row appended after the escalation row still verifies.
-
-    The verifier now matches its ``complexity_override`` row by parsed fields
-    (event + to + gate) ANYWHERE in the log, not by file tail. A concurrent
-    append landing between the emit and the read displaces our row from the
-    tail; the old tail-only check would have false-failed here.
-    """
-    events_log = tmp_lifecycle["events_log"]
-    # Our escalation row lands first (through the shared locked primitive)...
-    escalator_module._emit_event(
-        events_log, tmp_lifecycle["feature"], escalator_module.GATE_RESEARCH
-    )
-    # ...then an unrelated concurrent row lands on the tail before we verify.
-    with open(events_log, "a", encoding="utf-8") as f:
-        f.write(
-            json.dumps(
-                {
-                    "ts": "2026-01-01T00:00:00Z",
-                    "event": "phase_transition",
-                    "feature": tmp_lifecycle["feature"],
-                    "from": "research",
-                    "to": "specify",
-                }
-            )
-            + "\n"
-        )
-
-    # Our row is no longer the last line, yet the verifier still finds it.
-    lines = [
-        ln
-        for ln in events_log.read_text(encoding="utf-8").splitlines()
-        if ln.strip()
-    ]
-    assert json.loads(lines[-1])["event"] == "phase_transition"
-    ok, mode = escalator_module._verify_last_event(
-        events_log, escalator_module.GATE_RESEARCH
-    )
-    assert ok, f"verify should pass with a concurrent tail row; mode={mode!r}"
 
 
 # ---------------------------------------------------------------------------
@@ -599,7 +459,7 @@ def test_announcement_format_gate1(tmp_lifecycle):
     assert result.returncode == 0, result.stderr
     assert (
         result.stdout
-        == "Escalating to Complex tier — research surfaced 8 unresolved questions\n"
+        == "Consider Complex tier — research surfaced 8 unresolved questions\n"
     )
 
 
@@ -616,7 +476,7 @@ def test_announcement_format_gate2(tmp_lifecycle):
     assert result.returncode == 0, result.stderr
     assert (
         result.stdout
-        == "Escalating to Complex tier — spec contains 5 unresolved decisions\n"
+        == "Consider Complex tier — spec contains 5 unresolved decisions\n"
     )
 
 
@@ -660,7 +520,7 @@ def test_gate1_threshold_is_eight(tmp_lifecycle, n, should_fire):
     )
     assert result.returncode == 0, result.stderr
     assert bool(result.stdout.strip()) is should_fire
-    assert tmp_lifecycle["events_log"].exists() is should_fire
+    assert not tmp_lifecycle["events_log"].exists()
 
 
 # ---------------------------------------------------------------------------
@@ -717,120 +577,18 @@ def test_research_that_answers_itself_does_not_escalate(tmp_lifecycle):
 # ---------------------------------------------------------------------------
 
 
-def _seed_override(tmp_lifecycle, **fields):
-    entry = {
-        "ts": "2026-01-01T00:00:00Z",
-        "event": "complexity_override",
-        "feature": tmp_lifecycle["feature"],
-        "from": "simple",
-        "to": "complex",
-    }
-    entry.update(fields)
-    tmp_lifecycle["events_log"].write_text(
-        json.dumps(entry) + "\n", encoding="utf-8"
-    )
 
 
-def test_downgrade_when_gate_escalated_and_reason_cleared(tmp_lifecycle):
-    """A gate-emitted escalation reverses once the section drops below threshold."""
-    _seed_override(tmp_lifecycle, gate="research_open_questions")
-    research = tmp_lifecycle["feature_dir"] / "research.md"
-    research.write_text("## Open Questions\n- q1?\n- q2?\n", encoding="utf-8")
-    result = _run_script(
-        tmp_lifecycle["feature"],
-        "research_open_questions",
-        tmp_lifecycle["tmp_path"],
-        extra_args=["--allow-downgrade"],
-    )
-    assert result.returncode == 0, result.stderr
-    assert "Returning to Simple tier" in result.stdout
-    lines = [
-        l for l in tmp_lifecycle["events_log"].read_text(encoding="utf-8").splitlines()
-        if l.strip()
-    ]
-    assert len(lines) == 2
-    last = json.loads(lines[-1])
-    assert last["from"] == "complex"
-    assert last["to"] == "simple"
-    assert last["gate"] == "research_open_questions"
 
 
-def test_downgrade_requires_the_flag(tmp_lifecycle):
-    """Without --allow-downgrade the tier guard still short-circuits."""
-    _seed_override(tmp_lifecycle, gate="research_open_questions")
-    research = tmp_lifecycle["feature_dir"] / "research.md"
-    research.write_text("## Open Questions\n- q1?\n", encoding="utf-8")
-    before = tmp_lifecycle["events_log"].read_text(encoding="utf-8")
-    result = _run_script(
-        tmp_lifecycle["feature"], "research_open_questions", tmp_lifecycle["tmp_path"]
-    )
-    assert result.returncode == 0, result.stderr
-    assert result.stdout == ""
-    assert tmp_lifecycle["events_log"].read_text(encoding="utf-8") == before
 
 
-def test_downgrade_refuses_non_gate_escalation(tmp_lifecycle):
-    """A human or other-gate escalation is never auto-reversed."""
-    _seed_override(tmp_lifecycle, gate="ticket_complexity_complex")
-    research = tmp_lifecycle["feature_dir"] / "research.md"
-    research.write_text("## Open Questions\n- q1?\n", encoding="utf-8")
-    before = tmp_lifecycle["events_log"].read_text(encoding="utf-8")
-    result = _run_script(
-        tmp_lifecycle["feature"],
-        "research_open_questions",
-        tmp_lifecycle["tmp_path"],
-        extra_args=["--allow-downgrade"],
-    )
-    assert result.returncode == 0, result.stderr
-    assert result.stdout == ""
-    assert tmp_lifecycle["events_log"].read_text(encoding="utf-8") == before
 
 
-def test_downgrade_refuses_when_gate_field_absent(tmp_lifecycle):
-    """A bare override with no ``gate`` field is treated as human-origin."""
-    _seed_override(tmp_lifecycle)
-    research = tmp_lifecycle["feature_dir"] / "research.md"
-    research.write_text("## Open Questions\n- q1?\n", encoding="utf-8")
-    result = _run_script(
-        tmp_lifecycle["feature"],
-        "research_open_questions",
-        tmp_lifecycle["tmp_path"],
-        extra_args=["--allow-downgrade"],
-    )
-    assert result.returncode == 0, result.stderr
-    assert result.stdout == ""
 
 
-def test_downgrade_noop_while_still_over_threshold(tmp_lifecycle):
-    """Still >= threshold means the escalation still stands."""
-    _seed_override(tmp_lifecycle, gate="research_open_questions")
-    research = tmp_lifecycle["feature_dir"] / "research.md"
-    research.write_text(f"## Open Questions\n{EIGHT}\n", encoding="utf-8")
-    before = tmp_lifecycle["events_log"].read_text(encoding="utf-8")
-    result = _run_script(
-        tmp_lifecycle["feature"],
-        "research_open_questions",
-        tmp_lifecycle["tmp_path"],
-        extra_args=["--allow-downgrade"],
-    )
-    assert result.returncode == 0, result.stderr
-    assert result.stdout == ""
-    assert tmp_lifecycle["events_log"].read_text(encoding="utf-8") == before
 
 
-def test_downgrade_conservative_when_artifact_missing(tmp_lifecycle):
-    """An unmeasurable section is not the same as measuring zero."""
-    _seed_override(tmp_lifecycle, gate="research_open_questions")
-    before = tmp_lifecycle["events_log"].read_text(encoding="utf-8")
-    result = _run_script(
-        tmp_lifecycle["feature"],
-        "research_open_questions",
-        tmp_lifecycle["tmp_path"],
-        extra_args=["--allow-downgrade"],
-    )
-    assert result.returncode == 0, result.stderr
-    assert result.stdout == ""
-    assert tmp_lifecycle["events_log"].read_text(encoding="utf-8") == before
 
 
 @pytest.mark.parametrize(

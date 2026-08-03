@@ -50,17 +50,17 @@ Once complexity and criticality are set, write them back immediately (Context A 
 
 Every backend still feeds the critical-review gate — Step 4's `reconcile-clarify` carries the values forward regardless. On failure, surface and wait; on exit 2, apply the ambiguous-slug rule in `${CLAUDE_SKILL_DIR}/../build/references/backlog-writeback.md`.
 
+**Stop at `simple`.** If Clarify lands on `simple`, this work does not need a lifecycle: say so, hand back to direct implementation (dev Step 1.4), and stop — no research, no spec. Continue below only at `moderate` or `complex`.
+
 ## Step 3: Research
 
 Follow `${CLAUDE_SKILL_DIR}/references/research-phase.md`. At the Research → Specify transition, run the complexity-escalation gate:
 
 ```bash
-cortex-complexity-escalator <feature> --gate research_open_questions --allow-downgrade
+cortex-complexity-escalator <feature> --gate research_open_questions
 ```
 
-Exit 0 with output → announce the tier change and proceed at the announced tier. The gate is bidirectional: it reads `## Open Questions` and prints either `Escalating to Complex tier` or, when it had previously escalated this feature and the questions have since been resolved, `Returning to Simple tier`. Exit 0 empty → the gate didn't fire; proceed at the current tier. Non-zero → surface stderr and halt the transition until resolved.
-
-Only **unresolved** bullets count — an item resolved inline or explicitly deferred per the exit gate in `${CLAUDE_SKILL_DIR}/references/research-phase.md` does not push the tier up. Answering your own questions is the intended way to stay at Simple.
+**Advisory — it writes nothing.** Output means the unresolved-question count is unusually high; empty means it isn't. Either way *you* re-assess the tier now, with the research in hand, against Step 2's rubric. Only if your assessment changed, record it: `cortex-lifecycle-event complexity-override --feature <feature> --from <old> --to <new>` (either direction). Non-zero exit → surface stderr and halt.
 
 ## Step 4: Spec
 

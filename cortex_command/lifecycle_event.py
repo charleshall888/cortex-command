@@ -258,7 +258,7 @@ _EVENT_SUBCOMMANDS: dict[str, tuple[str, list]] = {
     "phase-transition": ("phase_transition", [
         ("--from", "from", _STR, True, None),
         ("--to", "to", _STR, True, None),
-        ("--tier", "tier", _STR, False, ("simple", "complex")),
+        ("--tier", "tier", _STR, False, ("simple", "moderate", "complex")),
     ]),
     "plan-approved": ("plan_approved", [
         ("--dispatch-choice", "dispatch_choice", _STR, True,
@@ -279,7 +279,7 @@ _EVENT_SUBCOMMANDS: dict[str, tuple[str, list]] = {
         ("--drift", "requirements_drift", _STR, True, ("none", "detected")),
     ]),
     "lifecycle-start": ("lifecycle_start", [
-        ("--tier", "tier", _STR, True, ("simple", "complex")),
+        ("--tier", "tier", _STR, True, ("simple", "moderate", "complex")),
         ("--criticality", "criticality", _STR, True, _CRITICALITY),
     ]),
     "feature-paused": ("feature_paused", [
@@ -301,6 +301,15 @@ _EVENT_SUBCOMMANDS: dict[str, tuple[str, list]] = {
         ("--cycle", "cycle", _JSON, False, None),
     ]),
     "criticality-override": ("criticality_override", [
+        ("--from", "from", _STR, True, None),
+        ("--to", "to", _STR, True, None),
+    ]),
+    # The symmetric half of criticality-override. Without it the ONLY writer of
+    # complexity_override was cortex-complexity-escalator, so a bullet count —
+    # not the assessment — owned the tier, and a post-research reassessment had
+    # no way to be recorded. Like its sibling it supersedes the monotonic-up-only
+    # reconcile, so it can lower a tier as well as raise one.
+    "complexity-override": ("complexity_override", [
         ("--from", "from", _STR, True, None),
         ("--to", "to", _STR, True, None),
     ]),

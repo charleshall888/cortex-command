@@ -148,10 +148,13 @@ class TestRefineEmitLifecycleStartCwdPinned:
 
 
 class TestComplexityEscalatorCwdPinned:
-    """Pin current write-target resolution for ``bin/cortex-complexity-escalator``.
+    """Pin path resolution for ``bin/cortex-complexity-escalator``.
 
-    With the default ``--lifecycle-dir cortex/lifecycle`` (bare relative),
-    the write lands at ``{CWD}/cortex/lifecycle/{feature}/events.log``.
+    With the default ``--lifecycle-dir cortex/lifecycle`` (bare relative), the
+    hook reads ``{CWD}/cortex/lifecycle/{feature}/research.md``. The hook is
+    advisory and writes nothing, so CWD-pinning is observed through which
+    research.md it finds — the recommendation appears only when the file under
+    the invoking CWD clears the threshold.
     """
 
     def test_default_lifecycle_dir_resolves_relative_to_cwd(
@@ -160,7 +163,7 @@ class TestComplexityEscalatorCwdPinned:
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """events.log created at CWD/cortex/lifecycle/{feature}/events.log."""
+        """research.md read from CWD/cortex/lifecycle/{feature}/research.md."""
         feature = "esc-feature"
         feature_dir = tmp_path / "cortex" / "lifecycle" / feature
         feature_dir.mkdir(parents=True)
@@ -177,19 +180,19 @@ class TestComplexityEscalatorCwdPinned:
             text=True,
         )
         assert result.returncode == 0, result.stderr
-        assert "Escalating" in result.stdout
+        assert "Consider Complex tier" in result.stdout
 
-        expected = tmp_path / "cortex" / "lifecycle" / feature / "events.log"
-        assert expected.exists(), f"expected write at {expected}"
+        # Advisory: the signal is stdout only — nothing is written anywhere.
+        assert not (tmp_path / "cortex" / "lifecycle" / feature / "events.log").exists()
 
     def test_cwd_change_redirects_write(
         self,
         tmp_path: Path,
     ) -> None:
-        """Write lands under whichever CWD the script is invoked from.
+        """The read follows whichever CWD the script is invoked from.
 
-        Two invocations from different CWDs produce events.log files in
-        those respective directories, confirming CWD-pinning.
+        Each CWD holds its own research.md; both invocations must find one and
+        emit the recommendation, confirming CWD-pinned resolution.
         """
         feature = "esc-feature"
 
@@ -214,17 +217,17 @@ class TestComplexityEscalatorCwdPinned:
                 text=True,
             )
             assert result.returncode == 0, result.stderr
-            events_log = cwd / "cortex" / "lifecycle" / feature / "events.log"
-            assert events_log.exists(), f"expected write under {cwd}"
+            assert "Consider Complex tier" in result.stdout, f"no read under {cwd}"
+            assert not (cwd / "cortex" / "lifecycle" / feature / "events.log").exists()
 
     def test_explicit_lifecycle_dir_overrides_default(
         self,
         tmp_path: Path,
     ) -> None:
-        """When ``--lifecycle-dir`` is supplied explicitly the write lands there.
+        """When ``--lifecycle-dir`` is supplied explicitly the read lands there.
 
         The bare-default is ``cortex/lifecycle``; supplying an absolute path
-        for ``--lifecycle-dir`` shows the write follows the argument, not CWD.
+        for ``--lifecycle-dir`` shows the read follows the argument, not CWD.
         This pins the current API surface.
         """
         feature = "esc-feature"
@@ -251,11 +254,11 @@ class TestComplexityEscalatorCwdPinned:
             text=True,
         )
         assert result.returncode == 0, result.stderr
-        events_log = feature_dir / "events.log"
-        assert events_log.exists(), f"expected write at {events_log}"
-        rows = _read_jsonl(events_log)
-        assert len(rows) == 1
-        assert rows[0]["event"] == "complexity_override"
+        # Advisory: the read followed --lifecycle-dir, proven by the signal.
+        assert "Consider Complex tier" in result.stdout
+        # ...and nothing was written, under either root.
+        assert not (feature_dir / "events.log").exists()
+        assert not (tmp_path / "cortex").exists()
 
 
 # ===========================================================================
