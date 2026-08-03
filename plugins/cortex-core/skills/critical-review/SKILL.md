@@ -45,7 +45,7 @@ With ≥1 B-class finding, write the sidecar the morning report reads — the ve
 cortex-critical-review-write-residue --session-id "$LIFECYCLE_SESSION_ID" <<< "$PAYLOAD_JSON"
 ```
 
-Payload: `ts`, `feature`, `artifact`, `synthesis_status` (`ok`|`failed`), `reviewers: {completed, dispatched}`, and `findings` — each `{class: "B", finding, reviewer_angle, evidence_quote}`. Zero B-class findings → skip the call, no file, no note. `state: no-context` (zero matches) or `state: ambiguous` (multiple active lifecycle sessions matched) → nothing written; relay the returned `note` verbatim. Synthesis failure still writes, with `synthesis_status: "failed"` and the B-class findings from the reviewers' own envelopes.
+Payload: `ts`, `feature`, `artifact`, `synthesis_status` (`ok`|`failed`), `reviewers: {completed, dispatched}`, and `findings` — each `{class: "B", finding, reviewer_angle, evidence_quote}`. Zero B-class findings → skip the call, no file, no note. `state: no-context` (no lifecycle at all), `state: unowned` (lifecycles exist, none owned by this session — the findings are NOT persisted), or `state: ambiguous` (several matched) → nothing written; relay the returned `note` verbatim. Synthesis failure still writes, with `synthesis_status: "failed"` and the B-class findings from the reviewers' own envelopes.
 
 ## Step 7: Present and apply
 

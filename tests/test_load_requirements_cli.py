@@ -30,6 +30,10 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 EXPECTED_FALLBACK_EMPTY = "no area docs matched for tags: []; loaded project.md only"
 EXPECTED_FALLBACK_SINGLE = "no area docs matched for tags: [foo]; loaded project.md only"
 EXPECTED_FALLBACK_MULTI = "no area docs matched for tags: [foo, bar]; loaded project.md only"
+EXPECTED_NO_INDEX = (
+    "no lifecycle index at cortex/lifecycle/ghost-feature/index.md, so no tags "
+    "were available; loaded project.md only — area coverage is UNVERIFIED, not empty"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -104,13 +108,21 @@ def test_feature_matching_tags_loads_area_docs(tmp_path):
 
 
 def test_feature_absent_index_falls_back(tmp_path):
+    """A NAMED feature whose index is absent says so — coverage is unverified.
+
+    Distinct from the tag-mismatch note: a bare project.md result must not read
+    the same when coverage was never determined as when it was determined to be
+    empty. Only the first is repairable, and at a fresh refine (before the index
+    is written) it is the case that actually occurs.
+    """
     _write_repo(tmp_path,
                 conditional=[("pipeline", "cortex/requirements/pipeline.md")],
                 global_context=["cortex/requirements/glossary.md"])
     lines, note = resolve(tmp_path, "ghost-feature")
     assert "cortex/requirements/pipeline.md" not in lines
     assert lines[0] == "cortex/requirements/project.md"
-    assert note == EXPECTED_FALLBACK_EMPTY
+    assert note == EXPECTED_NO_INDEX
+    assert note != EXPECTED_FALLBACK_EMPTY  # the distinction is the point
 
 
 def test_no_feature_falls_back(tmp_path):
@@ -121,7 +133,14 @@ def test_no_feature_falls_back(tmp_path):
     assert note == EXPECTED_FALLBACK_EMPTY
 
 
-def test_feature_absent_index_byte_equals_no_feature(tmp_path):
+def test_feature_absent_index_selects_same_docs_as_no_feature(tmp_path):
+    """Same SELECTION as the argless call, deliberately different note.
+
+    stdout must stay byte-identical — an absent index changes nothing about
+    which docs load. stderr must not: naming a feature whose index is missing is
+    the repairable case, while omitting --feature entirely is discovery's normal
+    argless call and keeps the plain tag-mismatch note.
+    """
     _write_repo(tmp_path,
                 conditional=[("pipeline", "cortex/requirements/pipeline.md")],
                 global_context=["cortex/requirements/glossary.md"])
@@ -129,7 +148,9 @@ def test_feature_absent_index_byte_equals_no_feature(tmp_path):
     b = _run(tmp_path)
     assert a.returncode == 0 and b.returncode == 0
     assert a.stdout == b.stdout  # byte-for-byte
-    assert a.stderr == b.stderr
+    assert a.stderr.strip() == EXPECTED_NO_INDEX
+    assert b.stderr.strip() == EXPECTED_FALLBACK_EMPTY
+    assert a.stderr != b.stderr
 
 
 # ---------------------------------------------------------------------------

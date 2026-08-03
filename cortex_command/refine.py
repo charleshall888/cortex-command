@@ -23,6 +23,8 @@ from cortex_command.common import (
     _resolve_user_project_root_from_cwd as _project_root,
     reduce_lifecycle_state,
 )
+from cortex_command.lifecycle import session_marker
+from cortex_command.lifecycle.create_index import create_index
 from cortex_command.lifecycle_config import resolve_backlog_backend
 from cortex_command.lifecycle_event import log_event_at
 
@@ -230,7 +232,11 @@ def _cmd_reconcile_clarify(args: argparse.Namespace) -> int:
 
     ts = _now_iso()
     rows: list[dict] = []
+    # The values the log will hold once these rows land — reported back so the
+    # caller can route on the reconciled state without a second round-trip.
+    new_tier, new_criticality = current_tier, current_criticality
     if _TIER_RANK.get(desired_tier, -1) > _TIER_RANK.get(current_tier, -1):
+        new_tier = desired_tier
         rows.append(
             {
                 "ts": ts,
@@ -244,6 +250,7 @@ def _cmd_reconcile_clarify(args: argparse.Namespace) -> int:
     if _CRITICALITY_RANK.get(desired_criticality, -1) > _CRITICALITY_RANK.get(
         current_criticality, -1
     ):
+        new_criticality = desired_criticality
         rows.append(
             {
                 "ts": ts,
@@ -256,7 +263,24 @@ def _cmd_reconcile_clarify(args: argparse.Namespace) -> int:
         )
 
     # State-based no-op: already reconciled (or a downgrade was suppressed).
+    # Reported rather than silent — the call is a state ratchet whose result a
+    # later gate reads (specify.md decides whether to run critical-review from
+    # the tier/criticality reconciled here), and an empty stdout left the caller
+    # unable to tell "ratcheted" from "already reconciled" from "suppressed a
+    # downgrade" without a second cortex-lifecycle-state round-trip.
+    # `noop` is the common, legitimate result on resume — not an error.
     if not rows:
+        print(
+            json.dumps(
+                {
+                    "state": "noop",
+                    "rows": 0,
+                    "tier": current_tier,
+                    "criticality": current_criticality,
+                },
+                separators=(",", ":"),
+            )
+        )
         return 0
 
     # Route every append through the shared locked primitive (flock + O_APPEND)
@@ -277,6 +301,21 @@ def _cmd_reconcile_clarify(args: argparse.Namespace) -> int:
         )
         return 70
 
+    print(
+        json.dumps(
+            {
+                "state": "ratcheted",
+                "rows": len(rows),
+                "tier": new_tier,
+                "criticality": new_criticality,
+                "overrides": [
+                    {"field": r["event"], "from": r["from"], "to": r["to"]}
+                    for r in rows
+                ],
+            },
+            separators=(",", ":"),
+        )
+    )
     return 0
 
 
@@ -522,6 +561,39 @@ def _cmd_start(args: argparse.Namespace) -> int:
     if rc != 0:
         return rc
 
+    # Refine is a first-class session owner, not just a build-phase concern.
+    # Nothing else writes the marker before Clarify, so every verb that resolves
+    # a feature *by session id* used to come up empty during refine — most
+    # damagingly the critical-review residue writer, which returned
+    # {"state": "no-context"} at exit 0 and silently discarded the findings of a
+    # review that specify.md had mandated.
+    root = _project_root()
+    session_id = args.session_id or session_marker.session_id_from_env()
+    session_recorded = False
+    if session_id:
+        try:
+            session_marker.write_session(root, lifecycle_slug, session_id)
+            session_recorded = True
+        except OSError:
+            # The marker is a local convenience; failing to write it must not
+            # fail refine's entry. The envelope reports the miss instead.
+            session_recorded = False
+
+    # Create index.md here rather than leaving it to the build phase. It is the
+    # tag source cortex-load-requirements reads, and before this the file could
+    # not exist until `enter`, so Clarify's requirements-alignment rating -- which
+    # feeds the critical-review gate -- was made against project.md alone even
+    # for a ticket carrying area tags.
+    index_signal = None
+    if context == "A" and item is not None:
+        try:
+            index_signal = create_index(
+                lifecycle_slug, item["filename"], root
+            ).get("signal")
+        except OSError:
+            # A resolvable item whose file vanished between resolve and here.
+            index_signal = "error"
+
     envelope = {
         "state": "ready",
         "context": context,
@@ -530,7 +602,10 @@ def _cmd_start(args: argparse.Namespace) -> int:
         "resume": resume,
         "spec_exists": spec_exists,
         "research_exists": research_exists,
+        "session_recorded": session_recorded,
     }
+    if index_signal is not None:
+        envelope["index"] = index_signal
     if item is not None:
         envelope["filename"] = item["filename"]
         envelope["backlog_filename_slug"] = item["backlog_filename_slug"]
@@ -688,6 +763,16 @@ def _build_parser() -> argparse.ArgumentParser:
         "--no-resolve",
         action="store_true",
         help="Skip backlog resolution and treat the run as Context B (ad-hoc).",
+    )
+    st.add_argument(
+        "--session-id",
+        default=None,
+        help=(
+            "Session id to record as the lifecycle's owner; defaults to "
+            "$LIFECYCLE_SESSION_ID. The marker is what lets later verbs resolve "
+            "this feature by session (e.g. the critical-review residue writer). "
+            "Local and gitignored — never committed."
+        ),
     )
     st.set_defaults(func=_cmd_start)
 

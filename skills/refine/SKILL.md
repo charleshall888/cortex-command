@@ -20,7 +20,7 @@ Topic: $ARGUMENTS. If empty, prompt the user first.
 cortex-refine start <input>
 ```
 
-One call resolves the item, reads the backlog backend, existence-checks epic context, classifies the resume point, and idempotently seeds `lifecycle_start`. Use its fields directly; don't re-derive them.
+One call resolves the item, reads the backlog backend, existence-checks epic context, classifies the resume point, idempotently seeds `lifecycle_start`, records the session marker, and creates `index.md`. Use its fields directly; don't re-derive them.
 
 - **`state: ready`** — proceed. Carry `backend`, `lifecycle_slug`, and `backlog_filename_slug` through the whole run: they key the write-backs, reconcile routing, and the §3b gate.
 - **`state: needs-slug`** — Context B (no matching item). Derive a short kebab slug from the input, announce it, and re-run with `--lifecycle-slug`; no confirmation needed.

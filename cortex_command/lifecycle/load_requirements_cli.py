@@ -61,6 +61,16 @@ ARROW = "→"  # → separator in Conditional Loading bullets
 FALLBACK_NOTE_TEMPLATE = (
     "no area docs matched for tags: {tags}; loaded project.md only"
 )
+# Distinct note for the case where there were no tags to match *because the
+# index does not exist yet*. Collapsing this into the template above made a
+# bare project.md result indistinguishable from "this feature genuinely has no
+# area docs" — at the one phase (a fresh refine, before the index is written)
+# where the index cannot exist. Coverage there is UNVERIFIED, not empty, and
+# the rating built on it feeds the critical-review gate.
+NO_INDEX_NOTE_TEMPLATE = (
+    "no lifecycle index at {path}, so no tags were available; loaded "
+    "project.md only — area coverage is UNVERIFIED, not empty"
+)
 
 
 def _frontmatter_lines(text: str) -> Optional[List[str]]:
@@ -116,6 +126,10 @@ def _extract_tags(block: List[str]) -> List[str]:
     return []
 
 
+def _index_path(project_root: Path, feature_slug: str) -> Path:
+    return project_root / "cortex" / "lifecycle" / feature_slug / "index.md"
+
+
 def _read_tags(project_root: Path, feature_slug: Optional[str]) -> List[str]:
     """Return the feature's ``tags:`` list, empty/whitespace entries stripped.
 
@@ -124,9 +138,7 @@ def _read_tags(project_root: Path, feature_slug: Optional[str]) -> List[str]:
     """
     if not feature_slug:
         return []
-    index_path = (
-        project_root / "cortex" / "lifecycle" / feature_slug / "index.md"
-    )
+    index_path = _index_path(project_root, feature_slug)
     try:
         text = index_path.read_text(encoding="utf-8")
     except OSError:
@@ -235,9 +247,21 @@ def resolve(
 
     fallback_note: Optional[str] = None
     if not matched:
-        fallback_note = FALLBACK_NOTE_TEMPLATE.format(
-            tags="[" + ", ".join(tags) + "]"
-        )
+        # An absent index is a different failure from an index whose tags match
+        # nothing: the first means coverage was never determined, the second
+        # that it was determined to be empty. Only the first is a defect the
+        # caller can repair.
+        index_absent = bool(feature_slug) and not _index_path(
+            project_root, feature_slug
+        ).is_file()
+        if index_absent:
+            fallback_note = NO_INDEX_NOTE_TEMPLATE.format(
+                path=f"cortex/lifecycle/{feature_slug}/index.md"
+            )
+        else:
+            fallback_note = FALLBACK_NOTE_TEMPLATE.format(
+                tags="[" + ", ".join(tags) + "]"
+            )
 
     return lines, fallback_note
 

@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import List, NamedTuple, Optional
 
 from cortex_command.backlog import _telemetry
+from cortex_command.lifecycle import session_marker
 
 
 _FEATURE_SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
@@ -36,24 +37,43 @@ class _Resolved(NamedTuple):
     note: str
 
 
-def _resolve_feature(session_id: str) -> _Resolved:
-    """Map a lifecycle session id to its feature slug via ``.session`` files.
+def _resolve_feature(session_id: str, root: Optional[Path] = None) -> _Resolved:
+    """Map a lifecycle session id to its feature slug via the session marker.
 
-    Returns the note the caller relays verbatim on the two non-unique arms,
-    so the skill carries no wording of its own for them.
+    Returns the note the caller relays verbatim on the non-``ok`` arms, so the
+    skill carries no wording of its own for them.
+
+    Resolution goes through the shared ``lifecycle.session_marker`` (which reads
+    both ``.session`` and the chain-migrated ``.session-owner``). Globbing
+    ``.session`` alone here was one half of the defect that lost every
+    refine-phase critical review's findings; the other half was that refine
+    wrote no marker at all.
+
+    The two empty arms are reported distinctly:
+
+    * ``no-context`` — the repo holds no lifecycle directory, so this is a
+      conversation-context review that legitimately has nowhere to write. This
+      arm must stay quiet: it is the intended skip, not a failure.
+    * ``unowned`` — lifecycles exist but none carries this session id. That is a
+      real gap, and saying "no active lifecycle context" for it told an operator
+      standing inside a populated lifecycle exactly the wrong thing while four
+      B-class findings were dropped at exit 0.
     """
-    matches = []
-    for session_file in Path("cortex/lifecycle").glob("*/.session"):
-        try:
-            if session_file.read_text().strip() == session_id:
-                matches.append(session_file)
-        except OSError:
-            continue
+    base = root if root is not None else Path.cwd()
+    matches = session_marker.resolve_features_by_session(base, session_id)
     if not matches:
+        if not session_marker.has_any_lifecycle(base):
+            return _Resolved(
+                "no-context",
+                None,
+                "Note: B-class residue not written — no active lifecycle context.",
+            )
         return _Resolved(
-            "no-context",
+            "unowned",
             None,
-            "Note: B-class residue not written — no active lifecycle context.",
+            f"Note: B-class residue not written — lifecycle directories exist "
+            f"but none is owned by session {session_id}. The owning phase did "
+            f"not record a session marker; findings are NOT persisted.",
         )
     if len(matches) > 1:
         return _Resolved(
@@ -62,7 +82,7 @@ def _resolve_feature(session_id: str) -> _Resolved:
             f"Note: multiple active lifecycle sessions matched {session_id}; "
             f"B-class residue write skipped.",
         )
-    return _Resolved("ok", matches[0].parent.name, "")
+    return _Resolved("ok", matches[0], "")
 
 
 def _feature_slug(value: str) -> str:

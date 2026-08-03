@@ -149,6 +149,18 @@ def test_reconcile_clarify_standalone_headline_scenario(
     )
     assert rc == 0
 
+    # The verb reports what it did, so the caller can route without a second
+    # cortex-lifecycle-state round-trip.
+    envelope = json.loads(capsys.readouterr().out.strip())
+    assert envelope["state"] == "ratcheted"
+    assert envelope["rows"] == 2
+    assert envelope["tier"] == "complex"
+    assert envelope["criticality"] == "high"
+    assert {o["field"] for o in envelope["overrides"]} == {
+        "complexity_override",
+        "criticality_override",
+    }
+
     # The §3b read surface (cortex-lifecycle-state) now reports the Clarify values.
     assert _state_field(capsys, feature, "tier") == {"tier": "complex"}
     assert _state_field(capsys, feature, "criticality") == {"criticality": "high"}
@@ -161,7 +173,8 @@ def test_reconcile_clarify_standalone_headline_scenario(
 
 
 def test_reconcile_clarify_delegated_path_noops(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     monkeypatch.chdir(tmp_path)
     feature = "delegated-feat"
@@ -196,6 +209,55 @@ def test_reconcile_clarify_delegated_path_noops(
     # state already reads complex/high — not via supersession).
     assert _count_overrides(events_log) == overrides_before == 0
     assert _reduce_events(events_log) == {"tier": "complex", "criticality": "high"}
+
+    # The no-op is REPORTED, not silent. Previously this arm and the ratcheted
+    # arm both printed nothing, so the caller could not tell "already
+    # reconciled" from "ratcheted" from "suppressed a downgrade" without a
+    # second cortex-lifecycle-state read. `noop` is legitimate on resume and
+    # must not read as an error: rc is still 0.
+    envelope = json.loads(capsys.readouterr().out.strip())
+    assert envelope["state"] == "noop"
+    assert envelope["rows"] == 0
+    assert envelope["tier"] == "complex"
+    assert envelope["criticality"] == "high"
+
+
+def test_reconcile_clarify_reports_noop_when_a_downgrade_is_suppressed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A suppressed downgrade reports `noop` at the value that survived.
+
+    The monotonic no-downgrade guard is silent by design; reporting the state
+    it left behind is what lets the caller see that its requested value did not
+    win, rather than assuming it did.
+    """
+    monkeypatch.chdir(tmp_path)
+    feature = "downgrade-feat"
+    events_log = _seed_events(
+        tmp_path, feature, [_lifecycle_start_line(feature, "complex", "high")]
+    )
+
+    rc = main(
+        [
+            "reconcile-clarify",
+            "--lifecycle-slug",
+            feature,
+            "--complexity",
+            "simple",
+            "--criticality",
+            "low",
+        ]
+    )
+    assert rc == 0
+    assert _count_overrides(events_log) == 0
+
+    envelope = json.loads(capsys.readouterr().out.strip())
+    assert envelope["state"] == "noop"
+    assert envelope["rows"] == 0
+    # The surviving (not the requested) values.
+    assert envelope["tier"] == "complex"
+    assert envelope["criticality"] == "high"
 
 
 # ---------------------------------------------------------------------------
@@ -233,6 +295,10 @@ def test_reconcile_clarify_non_local_explicit_flags_ratchets_tier(
         ]
     )
     assert rc == 0
+
+    envelope = json.loads(capsys.readouterr().out.strip())
+    assert envelope["state"] == "ratcheted"
+    assert envelope["rows"] == 2
 
     # The §3b read surface now reports the ratcheted Clarify values, so the
     # critical-review gate fires instead of skipping silently at simple.

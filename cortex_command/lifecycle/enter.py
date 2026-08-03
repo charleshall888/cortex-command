@@ -106,7 +106,7 @@ from cortex_command.common import (
     CortexProjectRootError,
     _resolve_user_project_root,
 )
-from cortex_command.lifecycle import init_ensure
+from cortex_command.lifecycle import init_ensure, session_marker
 from cortex_command.lifecycle.create_index import create_index
 from cortex_command.lifecycle.protocol import PROTOCOL_VERSION
 from cortex_command.lifecycle.start_sync import _Exit2, sync
@@ -265,10 +265,12 @@ def _backlog_status(backlog_file: str, root: Path) -> str:
 
 
 def _write_session(feature: str, session_id: str, root: Path) -> None:
-    """Record *session_id* in ``{root}/cortex/lifecycle/{feature}/.session``."""
-    path = root / "cortex" / "lifecycle" / feature / ".session"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(session_id, encoding="utf-8")
+    """Record *session_id* in ``{root}/cortex/lifecycle/{feature}/.session``.
+
+    Delegates to the shared marker module so this writer and every reader of the
+    marker stay in agreement (see ``lifecycle.session_marker``).
+    """
+    session_marker.write_session(root, feature, session_id)
 
 
 def enter(

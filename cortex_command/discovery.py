@@ -61,6 +61,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from cortex_command._brief_scoring import _score_brief_patterns
+from cortex_command.lifecycle import session_marker
 from cortex_command.lifecycle_event import log_event_at
 
 
@@ -107,27 +108,11 @@ def _active_lifecycle_slug(repo_root: Path) -> str | None:
         The matching lifecycle slug, or ``None`` if no env var is set, no
         ``cortex/lifecycle/`` directory exists, or no slug's ``.session`` matches.
     """
-    session_id = os.environ.get("LIFECYCLE_SESSION_ID", "").strip()
-    if not session_id:
-        return None
-    lifecycle_dir = repo_root / "cortex" / "lifecycle"
-    if not lifecycle_dir.is_dir():
-        return None
-    for candidate in sorted(lifecycle_dir.iterdir()):
-        if not candidate.is_dir():
-            continue
-        if candidate.name == "archive":
-            continue
-        for marker_name in (".session", ".session-owner"):
-            marker = candidate / marker_name
-            if not marker.is_file():
-                continue
-            try:
-                content = marker.read_text(encoding="utf-8").strip()
-            except OSError:
-                continue
-            if content == session_id:
-                return candidate.name
+    matches = session_marker.resolve_features_by_session(
+        repo_root, session_marker.session_id_from_env()
+    )
+    if matches:
+        return matches[0]
     return None
 
 
