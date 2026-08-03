@@ -2,13 +2,14 @@
 schema_version: "1"
 uuid: 93eb087a-438d-4462-ad99-c15ab2c6b097
 title: Decide how an epic records a mixed outcome
-status: backlog
+status: complete
 priority: medium
 type: spike
 created: 2026-08-03
 updated: 2026-08-03
 parent: "434"
 tags: ['staged-epic-gate-tickets']
+complexity: simple
 ---
 ## Why
 
@@ -34,3 +35,18 @@ Rides the same parent-closing cascade #438 changed — `_derive_parent_outcome` 
 - `cortex_command/backlog/update_item.py` — `_derive_parent_outcome`, the `return "complete"` that discards the mixed case.
 - Observed here: epics 49, 82, 113, 126, 303, 315.
 - `cortex/backlog/index-full.json` — the full-corpus view that makes the census possible.
+
+## Decision
+
+**Keep `complete`; report the dropped children.** No new status value. `_derive_parent_outcome`
+still collapses a mixed set to `complete`, but the close now emits a note naming each child
+that did not ship and its status.
+
+Introducing a vocabulary for "delivered, with scope dropped" was rejected on this ticket's
+own second Edge — it would have to reach `TERMINAL_STATUSES`, the alias map, the doc table,
+the pickup gate's non-intersection invariant, and every consumer repo, and #434's Edges rule
+out new status values. The note carries the same information at the one moment it is known
+for free.
+
+Retroactive correction of the six already-closed epics (49, 82, 113, 126, 303, 315) stays out
+of scope, as the ticket's fourth Edge states.

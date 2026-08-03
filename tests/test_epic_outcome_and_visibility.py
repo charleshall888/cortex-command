@@ -25,7 +25,7 @@ from cortex_command.backlog.update_item import _derive_parent_outcome
 
 
 def _write(backlog_dir, item_id, title, *, status, item_type="feature",
-           parent=None, uuid=None):
+           parent=None, uuid=None, tags=None):
     fm = [
         "---",
         'schema_version: "1"',
@@ -37,6 +37,8 @@ def _write(backlog_dir, item_id, title, *, status, item_type="feature",
         "created: 2026-01-01",
         "updated: 2026-01-01",
     ]
+    if tags is not None:
+        fm.append(f"tags: [{', '.join(tags)}]")
     if parent is not None:
         fm.append(f'parent: "{parent}"')
     fm += ["---", "", "## Why", "", "Body.", ""]
@@ -206,3 +208,118 @@ class TestLateArrivingChildIsSurfaced:
 
         assert proc.returncode == 0, proc.stderr
         assert "Warning" not in proc.stderr
+
+
+# ---------------------------------------------------------------------------
+# Arm 4 — an epic held open only by parked children is audible (#440)
+# ---------------------------------------------------------------------------
+
+class TestParkedChildrenAreSurfaced:
+    """Parked is non-terminal by design, so the all-siblings-terminal check can
+    never clear it. The epic must stay open and say why, not close silently."""
+
+    def _run(self, tmp_path, capsys, *, other_status, other_tags=None):
+        backlog = tmp_path / "cortex" / "backlog"
+        backlog.mkdir(parents=True)
+        epic = _write(backlog, 600, "Held Epic", status="backlog", item_type="epic")
+        done = _write(backlog, 601, "Shipped", status="complete", parent=600)
+        _write(backlog, 602, "Parked", status=other_status,
+               tags=other_tags, parent=600)
+
+        from cortex_command.backlog.update_item import _check_and_close_parent
+        result = _check_and_close_parent(done, "2026-08-03", backlog_dir=backlog)
+        return epic, result, capsys.readouterr().err
+
+    def test_status_parked_child_holds_the_epic_and_says_so(self, tmp_path, capsys):
+        epic, result, err = self._run(tmp_path, capsys, other_status="deferred")
+
+        assert result is None, "a parked child is unfinished — must not close"
+        assert "status: backlog" in epic.read_text(), "the epic must not be written"
+        assert "closeable except for parked" in err
+        assert "602" in err, "the note must name the child holding it"
+
+    def test_tag_parked_child_counts_the_same(self, tmp_path, capsys):
+        """`tags: [deferred]` is the older spelling of the same concept."""
+        _epic, result, err = self._run(
+            tmp_path, capsys, other_status="backlog", other_tags=["deferred"]
+        )
+
+        assert result is None
+        assert "closeable except for parked" in err
+
+    def test_ordinary_open_child_stays_silent(self, tmp_path, capsys):
+        """Genuinely outstanding work is not a wedge and needs no note."""
+        _epic, result, err = self._run(tmp_path, capsys, other_status="backlog")
+
+        assert result is None
+        assert "closeable except for parked" not in err
+
+    def test_parked_plus_open_is_not_a_wedge(self, tmp_path, capsys):
+        backlog = tmp_path / "cortex" / "backlog"
+        backlog.mkdir(parents=True)
+        _write(backlog, 610, "Held Epic", status="backlog", item_type="epic")
+        done = _write(backlog, 611, "Shipped", status="complete", parent=610)
+        _write(backlog, 612, "Parked", status="deferred", parent=610)
+        _write(backlog, 613, "Still Open", status="backlog", parent=610)
+
+        from cortex_command.backlog.update_item import _check_and_close_parent
+        result = _check_and_close_parent(done, "2026-08-03", backlog_dir=backlog)
+
+        assert result is None
+        assert "closeable except for parked" not in capsys.readouterr().err
+
+
+# ---------------------------------------------------------------------------
+# Arm 5 — a mixed-outcome close names what was dropped (#442)
+# ---------------------------------------------------------------------------
+
+class TestMixedOutcomeIsSurfaced:
+    """`complete` is kept — no status means "delivered, with scope dropped" —
+    but the dropped children are named rather than silently discarded."""
+
+    def _close(self, tmp_path, capsys, child_statuses):
+        backlog = tmp_path / "cortex" / "backlog"
+        backlog.mkdir(parents=True)
+        epic = _write(backlog, 700, "Mixed Epic", status="backlog", item_type="epic")
+        last = None
+        for offset, status in enumerate(child_statuses, start=1):
+            last = _write(backlog, 700 + offset, f"Child {offset}",
+                          status=status, parent=700)
+
+        from cortex_command.backlog.update_item import _check_and_close_parent
+        closed = _check_and_close_parent(last, "2026-08-03", backlog_dir=backlog)
+        return epic, closed, capsys.readouterr().err
+
+    def test_mixed_close_names_the_dropped_children(self, tmp_path, capsys):
+        epic, closed, err = self._close(
+            tmp_path, capsys, ["complete", "complete", "abandoned"]
+        )
+
+        assert closed is not None
+        assert "status: complete" in epic.read_text(), "no new vocabulary invented"
+        assert "did not ship" in err
+        assert "703" in err and "abandoned" in err
+        assert "1 of its 3 children" in err
+
+    def test_wontfix_spelling_is_reported_as_dropped(self, tmp_path, capsys):
+        """`wontfix` normalizes to `abandoned` — still a drop, still reported."""
+        _epic, closed, err = self._close(tmp_path, capsys, ["complete", "wontfix"])
+
+        assert closed is not None
+        assert "did not ship" in err
+
+    def test_uniform_complete_close_is_silent(self, tmp_path, capsys):
+        _epic, closed, err = self._close(tmp_path, capsys, ["complete", "complete"])
+
+        assert closed is not None
+        assert "did not ship" not in err
+
+    def test_uniform_drop_is_silent_because_the_status_already_says_it(
+        self, tmp_path, capsys
+    ):
+        """An all-abandoned epic closes `abandoned`; nothing is being discarded."""
+        epic, closed, err = self._close(tmp_path, capsys, ["abandoned", "abandoned"])
+
+        assert closed is not None
+        assert "status: abandoned" in epic.read_text()
+        assert "did not ship" not in err

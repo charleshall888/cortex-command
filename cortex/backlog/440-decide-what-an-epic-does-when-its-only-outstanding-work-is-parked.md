@@ -2,13 +2,14 @@
 schema_version: "1"
 uuid: 249c5e09-d2ad-4d38-bc2e-40240ad60237
 title: Decide what an epic does when its only outstanding work is parked
-status: backlog
+status: complete
 priority: medium
 type: feature
 created: 2026-08-03
 updated: 2026-08-03
 parent: "434"
 tags: ['staged-epic-gate-tickets']
+complexity: simple
 ---
 ## Why
 
@@ -34,3 +35,18 @@ Rides the all-siblings-terminal check in the parent-closing cascade, which fires
 - `cortex_command/backlog/update_item.py:333` — the all-siblings-terminal check the parked value never satisfies.
 - `cortex_command/backlog/update_item.py:300` — the already-closed-parent bail, same raw read.
 - Census method: group children by parent, exclude epics whose non-terminal children are not all parked.
+
+## Decision
+
+**Surface, do not auto-close.** When every non-terminal child of an epic is parked,
+`_check_and_close_parent` now prints a note naming those children and still returns
+`None`; the epic is not written.
+
+Auto-closing was rejected because it would make deliberately deferred work read as
+delivered — the exact class of defect epic #434 exists to remove. Surfacing also sidesteps
+this ticket's third Edge: no write means no exposure to the read-modify-write race, and it
+matches the shape already used one branch above for the already-closed-parent case.
+
+Parked-ness is read through `generate_index._is_deferred`, so both sanctioned spellings
+(`status: deferred` and `tags: [deferred]`) count and the vocabulary stays in one place.
+`TERMINAL_STATUSES` is untouched.

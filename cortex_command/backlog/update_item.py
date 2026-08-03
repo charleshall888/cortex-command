@@ -23,6 +23,10 @@ from typing import Any
 
 from cortex_command.backlog import _telemetry
 from cortex_command.backlog.frontmatter_quote import quote_scalar
+from cortex_command.backlog.generate_index import (
+    _is_deferred,
+    _parse_inline_str_list,
+)
 from cortex_command.backlog.resolve_item import (
     ResolutionError,
     ResolutionResult,
@@ -320,8 +324,10 @@ def _check_and_close_parent(
     parent_id_for_match = _get_item_id(parent_path)
     parent_uuid = _get_frontmatter_value(parent_text, "uuid")
 
-    # Collect sibling statuses from both active and archive dirs
-    sibling_statuses: list[str] = []
+    # Collect sibling statuses from both active and archive dirs. Names ride
+    # along so the parked and mixed-outcome notes below can say which child
+    # they mean rather than only that some child qualifies.
+    siblings: list[tuple[str, str, bool]] = []  # (filename, status, is_parked)
     for search_dir in [backlog_dir, archive_dir]:
         if not search_dir.is_dir():
             continue
@@ -342,18 +348,42 @@ def _check_and_close_parent(
                 matches = True
             if matches:
                 status = _get_frontmatter_value(t, "status") or "open"
-                sibling_statuses.append(status)
+                tags = _parse_inline_str_list(
+                    _get_frontmatter_value(t, "tags") or ""
+                )
+                parked = _is_deferred({"status": status, "tags": tags})
+                siblings.append((p.name, status, parked))
 
-    if not sibling_statuses:
+    if not siblings:
         return None
-    if not all(s in TERMINAL_STATUSES for s in sibling_statuses):
+
+    sibling_statuses = [s for _, s, _ in siblings]
+    outstanding = [
+        (name, parked) for name, s, parked in siblings if s not in TERMINAL_STATUSES
+    ]
+    if outstanding:
+        # An epic whose only outstanding children are parked would otherwise
+        # stay open forever with nothing saying why: parked is non-terminal by
+        # design, so the check above can never clear. Say so instead of closing
+        # it. Auto-closing would make deferred work read as delivered, and the
+        # parent write is a read-modify-write with no compare-and-swap, so
+        # surfacing costs nothing and risks nothing.
+        if all(parked for _, parked in outstanding):
+            names = ", ".join(name for name, _ in outstanding)
+            print(
+                f"Note: parent {parent_path.name} is closeable except for "
+                f"parked {'child' if len(outstanding) == 1 else 'children'} "
+                f"{names}. Unpark or drop {'it' if len(outstanding) == 1 else 'them'} "
+                f"to let the epic close.",
+                file=sys.stderr,
+            )
         return None
 
     # All siblings are terminal — close the parent with the outcome its
     # children actually reached, not an unconditional success.
-    parent_text = _set_frontmatter_value(
-        parent_text, "status", _derive_parent_outcome(sibling_statuses)
-    )
+    outcome = _derive_parent_outcome(sibling_statuses)
+    _warn_if_mixed_outcome(parent_path.name, outcome, siblings)
+    parent_text = _set_frontmatter_value(parent_text, "status", outcome)
     parent_text = _set_frontmatter_value(parent_text, "updated", today)
     atomic_write(parent_path, parent_text)
     return parent_path
@@ -381,6 +411,38 @@ def _derive_parent_outcome(sibling_statuses: list[str]) -> str:
     if len(outcomes) == 1:
         return outcomes.pop()
     return "complete"
+
+
+def _warn_if_mixed_outcome(
+    parent_name: str, outcome: str, siblings: list[tuple[str, str, bool]]
+) -> None:
+    """Say which children were dropped when a mixed epic closes as delivered.
+
+    ``_derive_parent_outcome`` collapses a mixed set to ``complete``, so an
+    epic that shipped four children and dropped a fifth records the same
+    status as one that shipped all five. Naming the dropped children at the
+    moment of the close is the whole repair: there is no status meaning
+    "delivered, with scope dropped", and inventing one would have to reach
+    ``TERMINAL_STATUSES``, the alias map, the pickup gate's non-intersection
+    invariant, and every consumer repo. Reporting keeps the information
+    without spending that.
+    """
+    if outcome != "complete":
+        return
+    dropped = [
+        f"{name} ({status})"
+        for name, status, _ in siblings
+        if normalize_status(status) != "complete"
+    ]
+    if not dropped:
+        return
+    print(
+        f"Note: closing {parent_name} as 'complete', but "
+        f"{len(dropped)} of its {len(siblings)} children did not ship: "
+        f"{', '.join(dropped)}. Record the dropped scope in the epic body — "
+        f"'complete' alone will read as fully delivered.",
+        file=sys.stderr,
+    )
 
 
 def _is_gitignored_backlog_artifact(path: Path) -> bool:

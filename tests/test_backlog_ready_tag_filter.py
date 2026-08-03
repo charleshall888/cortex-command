@@ -1,4 +1,4 @@
-"""Behavior tests for the ``--tag`` filter on ``cortex/backlog/ready.py``.
+"""Behavior tests for the ``--tag`` filter on ``cortex_command/backlog/ready.py``.
 
 Covers Reqs 2–7 from spec ``add-tag-filter-to-backlog-query``:
 
@@ -21,12 +21,12 @@ contract snapshot.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-_READY_PY = REPO_ROOT / "cortex" / "backlog" / "ready.py"
 
 
 # ---------------------------------------------------------------------------
@@ -110,11 +110,17 @@ def _build_backlog(tmp_path: Path, records: list[dict]) -> Path:
 
 
 def _run(tmp_path: Path, *cli_args: str) -> subprocess.CompletedProcess:
+    # Invoke the repo tree rather than the ``cortex-backlog-ready`` console
+    # script, which resolves to the installed wheel and would mask changes
+    # made here. ``cwd`` is the fixture repo, so PYTHONPATH carries the
+    # import root for ``cortex_command``.
+    env = {**os.environ, "PYTHONPATH": str(REPO_ROOT)}
     return subprocess.run(
-        [sys.executable, str(_READY_PY), *cli_args],
+        [sys.executable, "-m", "cortex_command.backlog.ready", *cli_args],
         capture_output=True,
         text=True,
         cwd=tmp_path,
+        env=env,
     )
 
 
