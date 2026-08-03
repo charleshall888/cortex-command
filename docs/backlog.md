@@ -18,7 +18,7 @@ Every backlog item uses the following YAML frontmatter contract. Fields listed a
 | `schema_version` | string | yes | `"1"` |
 | `uuid` | string | yes | UUID v4 — stable cross-reference key |
 | `title` | string | yes | Short human-readable name |
-| `status` | enum | yes | `backlog`, `ready`, `refined`, `in_progress`, `implementing`, `review`, `complete`, `abandoned` (plus legacy spellings `open`, `in-progress`, `blocked`, `closed`, `completed`, `resolved`, `wontfix`, `done`, and `deferred` to park an item). Nothing validates this field on write, so it is a convention rather than an enum: see `cortex_command.common._STATUS_MAP` for which spellings normalize to which canonical value, and `cortex_command.common.TERMINAL_STATUSES` for which count as finished |
+| `status` | enum | yes | Canonical: `backlog`, `refined`, `in_progress`, `implementing`, `review`, `complete`, `abandoned`, `superseded`, `wont-do`. Legacy spellings that normalize to one of those: `open`, `blocked` → `backlog`; `ready` → `refined`; `in-progress` → `in_progress`; `done`, `resolved`, `closed`, `completed` → `complete`; `wontfix` → `abandoned`. Plus `deferred`, which parks an item (see [Parking an item](#parking-an-item)). Nothing validates this field on write, so it is a convention, not an enum: unrecognized values pass through to every reader unchanged. Authority is `cortex_command.common._STATUS_MAP` (which spelling means what) and `cortex_command.common.TERMINAL_STATUSES` (which count as finished) |
 | `priority` | enum | yes | `critical`, `high`, `medium`, `low` |
 | `type` | enum | yes | `feature`, `bug`, `chore`, `spike`, `idea`, `epic` |
 | `tags` | array | no | Inline YAML only: `[tag1, tag2]` |
@@ -39,6 +39,12 @@ Every backlog item uses the following YAML frontmatter contract. Fields listed a
 | `areas` | array | no | Inline YAML list of area tags (`[area1, area2]`); written by `/cortex-core:refine` |
 
 **Inline array syntax is mandatory.** All array fields (`tags`, `blocks`, `blocked-by`) must use `[value1, value2]` form — never the multiline `- item` form.
+
+### Parking an item
+
+Two spellings park an item, and both are honoured: `status: deferred`, or a `deferred` entry in `tags`. A parked item is annotated in `index.md` and excluded from the `## Refined` / `## Backlog` ready sections and from triage.
+
+Parked is **not** terminal. The item is genuinely unfinished, so it does not count toward closing a parent epic — an epic whose only remaining children are parked stays open.
 
 ### Minimal item template
 

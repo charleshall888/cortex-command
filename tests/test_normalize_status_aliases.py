@@ -104,3 +104,53 @@ class TestSingleVocabularyDeclaration:
         from cortex_command.backlog.ready import _ELIGIBLE_STATUSES
         from cortex_command.overnight.backlog import ELIGIBLE_STATUSES
         assert set(_ELIGIBLE_STATUSES) == set(ELIGIBLE_STATUSES)
+
+
+class TestDocumentedVocabularyMatchesCode:
+    """`docs/backlog.md` must describe the vocabulary the code implements.
+
+    #437 removed a doc pointer at a dead constant, but a prose table can drift
+    straight back out of sync — the first rewrite of it silently listed `ready`
+    as canonical (it normalizes to `refined`) and omitted `superseded` and the
+    wont-do variants entirely. This pins the table to the two declarations so
+    the next status change cannot land without the doc following.
+    """
+
+    @staticmethod
+    def _status_row() -> str:
+        from pathlib import Path
+        doc = Path(__file__).resolve().parents[1] / "docs" / "backlog.md"
+        for line in doc.read_text(encoding="utf-8").splitlines():
+            if line.startswith("| `status`"):
+                return line
+        raise AssertionError("no `status` row found in docs/backlog.md schema table")
+
+    @pytest.mark.parametrize("alias", sorted(__import__(
+        "cortex_command.common", fromlist=["_STATUS_MAP"])._STATUS_MAP))
+    def test_every_alias_is_documented(self, alias):
+        assert f"`{alias}`" in self._status_row(), (
+            f"{alias!r} normalizes to something but docs/backlog.md never mentions it"
+        )
+
+    @pytest.mark.parametrize("terminal", sorted(TERMINAL_STATUSES))
+    def test_every_terminal_status_is_documented(self, terminal):
+        row = self._status_row()
+        # "won't-do" is documented via its shell-safe spelling "wont-do";
+        # common.py tells callers to prefer that form.
+        if terminal == "won't-do":
+            assert "`wont-do`" in row
+            return
+        assert f"`{terminal}`" in row, (
+            f"{terminal!r} closes parent epics but docs/backlog.md never mentions it"
+        )
+
+    def test_parking_value_is_documented(self):
+        assert "`deferred`" in self._status_row()
+
+    def test_parking_section_exists(self):
+        """The status row links to it, so a dangling anchor is a real defect."""
+        from pathlib import Path
+        doc = Path(__file__).resolve().parents[1] / "docs" / "backlog.md"
+        text = doc.read_text(encoding="utf-8")
+        assert "(#parking-an-item)" in text
+        assert "### Parking an item" in text
