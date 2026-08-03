@@ -33,6 +33,37 @@ from cortex_command.overnight.feature_executor import execute_feature
 
 
 # ---------------------------------------------------------------------------
+# Test isolation
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _isolate_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Run every test in this module from a throwaway CWD.
+
+    ``resolve_trivial_conflict`` records each attempt through
+    ``write_recovery_log_entry``, whose log path defaults to the CWD-relative
+    ``cortex/lifecycle/{feature}/learnings/recovery-log.md`` when no
+    ``_log_path`` override is given — and the flow never passes one. With
+    ``feature = "feat"`` and no chdir, every run of this module appended four
+    entries to the *developer's own checkout*, which had accumulated 680 of them
+    over a month before anyone noticed. The file is gitignored, so it never
+    risked being committed and nothing failed; it simply grew.
+
+    Autouse rather than per-test so a test added later cannot reintroduce the
+    leak by forgetting. Safe for the assertions here: they compare against
+    ``Path.cwd()``, which is evaluated inside the same chdir window as the
+    production call, so both see the same directory.
+
+    The ``cortex/`` child makes *tmp_path* a resolvable cortex project root —
+    the ``execute_feature`` tests in this module reach code that resolves the
+    root from the CWD and raise ``CortexProjectRootError`` without it.
+    """
+    (tmp_path / "cortex").mkdir(exist_ok=True)
+    monkeypatch.chdir(tmp_path)
+
+
+# ---------------------------------------------------------------------------
 # Test helpers
 # ---------------------------------------------------------------------------
 

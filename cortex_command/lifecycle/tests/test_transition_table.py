@@ -22,6 +22,7 @@ import dataclasses
 
 import pytest
 
+from cortex_command.lifecycle import advance as adv
 from cortex_command.lifecycle import (
     implement_transition,
     plan_decision,
@@ -226,6 +227,12 @@ def _departure_states_by_verb(transitions) -> dict[str, set[str]]:
     return by_verb
 
 
+# The one verb allowed more than one departure, and the exact set it may use.
+# Sourced from advance's own declaration rather than restated, so the table and
+# the resolver cannot drift apart.
+_MULTI_DEPARTURE_VERBS = {"implement_transition": set(adv._IMPLEMENT_DEPARTURE_STATES)}
+
+
 def test_each_verb_declares_exactly_one_from_state() -> None:
     """A verb IS the gate for the state it fires from, so it cannot have two.
 
@@ -235,13 +242,41 @@ def test_each_verb_declares_exactly_one_from_state() -> None:
     does NOT enforce it — it asserts only that ``(owning_verb, decision_state)``
     keys are unique, so a row giving an existing verb a divergent ``from_state``
     passes it cleanly and would silently break those callers.
+
+    ``implement_transition`` is the one sanctioned exception, because a feature
+    leaves the implement cluster from either ``implement`` or ``implement-rework``
+    and only the log knows which. It is safe there precisely because the verb does
+    NOT fall back to the table's ``from_state``: advance resolves the departure
+    events-first and passes it to the B1 body, which owns the routing for both.
+    The exception is bounded to advance's declared departure set, so a third
+    departure still fails here.
     """
     divergent = {
         verb: sorted(states)
         for verb, states in _departure_states_by_verb(tt.TRANSITIONS).items()
-        if len(states) != 1
+        if len(states) != 1 and states != _MULTI_DEPARTURE_VERBS.get(verb)
     }
     assert not divergent, f"verbs with more than one departure state: {divergent}"
+
+
+def test_the_multi_departure_exception_is_bounded() -> None:
+    """A departure outside advance's declared set is still a failure.
+
+    Guards the carve-out above from degenerating into "implement_transition may
+    depart anything".
+    """
+    rogue = dataclasses.replace(
+        tt.transition_by_arm("implement_transition", "review"),
+        id="implement.rogue",
+        decision_state="rogue",
+        from_state="specify",
+    )
+    divergent = {
+        verb: states
+        for verb, states in _departure_states_by_verb([*tt.TRANSITIONS, rogue]).items()
+        if len(states) != 1 and states != _MULTI_DEPARTURE_VERBS.get(verb)
+    }
+    assert "implement_transition" in divergent
 
 
 def test_the_from_state_invariant_check_catches_a_divergent_row() -> None:

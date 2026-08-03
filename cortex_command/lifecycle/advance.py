@@ -487,15 +487,21 @@ def _emission_plan(
                 {"event": "batch_dispatch", "fields": [("batch", batch), ("tasks", tasks)],
                  "match": {"batch": batch}},
             ]
-        else:  # transition — reuse the B1 §4 routing rule
-            route, tier = it._resolve_route(log_path)
-            decision_state = route
+        else:  # transition — reuse the B1 arm's own departure-aware routing
+            # Delegated rather than re-deriving the route here. Applying the §4
+            # criticality/tier rule regardless of departure emitted
+            # `implement-rework → complete` for a simple/low feature — an edge
+            # the closed table does not contain, and one that ships the
+            # reviewer's requested changes unread. The B1 body owns the rule for
+            # both departures; this call is what keeps the two paths agreeing.
+            departed, route, tier, decision_state = it._resolve_transition(
+                log_path, departure
+            )
             # Both the row and its replay key name the state actually being
             # left. Keying `match` on the literal made cycle 1's genuine
             # implement→review row satisfy the rework→review probe, so the
             # second transition was swallowed as a replay and the feature
             # stalled at implement-rework (#424).
-            departed = departure or "implement"
             emissions = [
                 {"event": "phase_transition",
                  "fields": [("from", departed), ("to", route), ("tier", tier)],

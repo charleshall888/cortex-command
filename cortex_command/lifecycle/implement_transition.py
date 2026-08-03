@@ -174,8 +174,21 @@ def _resolve_route(events_log: Path) -> tuple[str, str]:
     return "complete", tier
 
 
-def _resolve_transition(events_log: Path) -> tuple[str, str, str, str]:
+def _resolve_transition(
+    events_log: Path, departure: Optional[str] = None
+) -> tuple[str, str, str, str]:
     """Resolve the departure state, exit route, stamped tier and envelope state.
+
+    THE single source of truth for the implement arm's exit, shared by this verb
+    and by ``advance._emission_plan``. Keeping two copies let the two paths
+    disagree: advance applied the §4 rule regardless of departure, so a
+    simple/low-criticality feature sitting in ``implement-rework`` emitted
+    ``implement-rework → complete`` — an edge the closed table does not contain,
+    shipping the reviewer's requested changes unread.
+
+    *departure* lets a caller that already resolved the state (advance, which
+    also honours an explicit ``--from-state``) pass it in rather than have it
+    re-read; ``None`` means resolve it here.
 
     Two departures are possible. From ``implement`` the §4 rule decides between
     ``review`` and ``complete`` (see :func:`_resolve_route`). From
@@ -193,7 +206,8 @@ def _resolve_transition(events_log: Path) -> tuple[str, str, str, str]:
 
     Returns ``(departure, route, tier, state)``.
     """
-    departure = resolve_lifecycle_phase(events_log.parent).get("route")
+    if departure is None:
+        departure = resolve_lifecycle_phase(events_log.parent).get("route")
     if departure == _REWORK_STATE:
         # Tier is still stamped from the reducer so the row matches the shape
         # every other phase_transition carries; only the routing is fixed.

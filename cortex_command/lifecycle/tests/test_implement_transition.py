@@ -302,6 +302,20 @@ def test_every_state_is_known(
     _seed(fdir3, _start("high", "simple"))
     seen.add(it.implement_transition(feature="f3", mode="transition")["state"])
 
+    # The rework departure. Needs real machine rows carrying the feature into
+    # implement-rework: the state is events-only, so an artifact-derived fixture
+    # cannot reach it. Deliberately low/simple — the departure, not the §4
+    # criticality/tier rule, is what must decide the route here.
+    fdir5 = _scaffold(tmp_path, monkeypatch, feature="f5")
+    _seed(
+        fdir5,
+        _start("low", "simple"),
+        {"event": "phase_transition", "feature": "f5", "from": "implement", "to": "review"},
+        {"event": "review_verdict", "feature": "f5", "verdict": "CHANGES_REQUESTED", "cycle": 1},
+        {"event": "phase_transition", "feature": "f5", "from": "review", "to": "implement-rework"},
+    )
+    seen.add(it.implement_transition(feature="f5", mode="transition")["state"])
+
     _scaffold(tmp_path, monkeypatch, feature="f4")
     seen.add(it.implement_transition(feature="../x", mode="transition")["state"])
 
