@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: a56a1b6c-3e28-4bed-81c2-dcd6edc50bfd
 title: stage-artifacts never stages a lifecycle's captures/ directory, silently omitting the evidence its own artifacts cite
-status: backlog
+status: complete
 priority: medium
 type: bug
 created: 2026-08-03

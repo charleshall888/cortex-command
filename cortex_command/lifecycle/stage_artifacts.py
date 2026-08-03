@@ -49,6 +49,11 @@ Per-phase staged set
   wrote it);
 * the resolved ticket file (Context A — an originating backlog item exists).
 
+Every phase additionally stages the lifecycle's ``captures/`` tree, each file
+enumerated explicitly — the durable evidence a phase's own artifacts cite by
+path. A gitignored capture is simply never staged (``git add`` reports it and
+stages the rest), so an ignored blob costs nothing here.
+
 Explicit-add discipline
 -----------------------
 
@@ -56,6 +61,14 @@ Staging is always ``git add -- <explicit paths>`` over paths present on disk;
 **never** a directory-scoped add (``git add cortex/lifecycle/`` etc.) and
 **never** the ``-u`` tracked-modified form on ``cortex/lifecycle/``,
 ``cortex/backlog/``, or ``cortex/requirements/``.
+
+The discipline constrains what is handed to *git*, not how the path list is
+built. ``captures/`` is therefore **enumerated file by file** (see
+``_capture_files``) and appended at every phase: the hazard the rule exists for
+is a directory pathspec sweeping a concurrent session's dirty files on a shared
+trunk index, and enumerating one feature's own subtree cannot do that. The
+result is still an exact, auditable path list — which is what keeps
+``staged_paths`` a true description of the staged set.
 
 The *read-back* is scoped to the same explicit paths. On a trunk repo two
 lifecycles share one worktree and therefore one index, so an unscoped
@@ -126,6 +139,43 @@ def _run(args: list[str], cwd: str) -> Optional[subprocess.CompletedProcess]:
 # ---------------------------------------------------------------------------
 # events.log reader (tolerant per-line json.loads — matches complete_route)
 # ---------------------------------------------------------------------------
+
+
+def _capture_files(root: Path, lifecycle_rel: str) -> list[str]:
+    """Enumerate the lifecycle's ``captures/`` files as explicit repo-relative paths.
+
+    Consumers are told to put durable evidence — probe dumps, measurement series,
+    frame captures and their manifests — under
+    ``cortex/lifecycle/{slug}/captures/`` precisely so it outlives ``/tmp``. The
+    per-phase allowlists named only ``*.md`` artifacts plus ``events.log``, so the
+    verb staged the prose that *cites* that evidence while silently omitting the
+    evidence itself, leaving a committed spec pointing at a path that was never
+    committed.
+
+    Each file is enumerated individually rather than staged as a directory: the
+    module's explicit-add discipline forbids handing git a *directory* pathspec
+    (``git add cortex/lifecycle/``), because on a trunk repo that sweeps whatever
+    a concurrent session left dirty. Enumerating this one feature's own
+    ``captures/`` subtree does not reintroduce that hazard — a sibling session
+    works under a different slug — and it keeps ``staged_paths`` an exact
+    description of what was staged.
+
+    Dot-entries are skipped at every level, which keeps the local-only
+    ``.session`` / ``.session-owner`` markers untrackable through this path even
+    if one is ever written below the lifecycle root.
+    """
+    base = root / lifecycle_rel / "captures"
+    if not base.is_dir():
+        return []
+    found: list[str] = []
+    for path in base.rglob("*"):
+        if not path.is_file():
+            continue
+        rel = path.relative_to(root)
+        if any(part.startswith(".") for part in rel.parts):
+            continue
+        found.append(rel.as_posix())
+    return sorted(found)
 
 
 def _read_events(events_log: Path) -> list[dict]:
@@ -281,6 +331,11 @@ def collect_paths(phase: str, slug: str, root: Path) -> list[str]:
         backlog_name = _resolve_backlog_filename(slug, root)
         if backlog_name is not None:
             candidates.append(f"cortex/backlog/{backlog_name}")
+
+    # Durable evidence, at every phase: a capture is cited by whichever artifact
+    # the phase writes, so it must be committed alongside it or the citation
+    # dangles.
+    candidates.extend(_capture_files(root, lifecycle_rel))
 
     # Filter to paths present on disk (so the single git add never aborts on a
     # missing pathspec), dedupe, and sort.

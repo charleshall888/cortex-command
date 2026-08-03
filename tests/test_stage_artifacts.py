@@ -596,3 +596,165 @@ def test_cli_main_emits_compact_json_line(tmp_path: Path, monkeypatch, capsys) -
     parsed = json.loads(out)
     assert set(parsed) == {"signal", "staged_paths"}
     assert parsed["signal"] == "staged"
+
+
+# ---------------------------------------------------------------------------
+# captures/ — the durable evidence a phase's own artifacts cite by path
+# ---------------------------------------------------------------------------
+
+
+def test_refine_stages_captures_tree(tmp_path: Path) -> None:
+    """A capture cited by the spec must be committed alongside it.
+
+    Reproduces the field report: `stage-artifacts --phase refine` returned
+    `staged` over the prose while omitting `captures/`, so a spec would ship
+    citing a file that was never committed and whose only other copy is in
+    `/tmp`, GC'd within a day.
+    """
+    root = tmp_path
+    _new_repo(root)
+    _write(root, "README.md", "base\n")
+    _commit_all(root, "Initial commit")
+
+    _write(root, f"{LC}/research.md", "research\n")
+    _write(root, f"{LC}/spec.md", "spec citing captures/probe-dump.md\n")
+    _write(root, f"{LC}/index.md", "lifecycle index\n")
+    _write(root, f"{LC}/events.log", _APPROVAL_EVENTS)
+    _write_ticket(root)
+    # Evidence: a flat file, a nested one, and a binary-ish blob.
+    _write(root, f"{LC}/captures/probe-dump.md", "probe output\n")
+    _write(root, f"{LC}/captures/README.md", "what these captures are\n")
+    _write(root, f"{LC}/captures/series/post-fix.md", "measurement series\n")
+
+    result = stage("refine", SLUG, root)
+
+    expected = sorted(
+        [
+            f"{LC}/research.md",
+            f"{LC}/spec.md",
+            f"{LC}/index.md",
+            f"{LC}/events.log",
+            f"{LC}/captures/probe-dump.md",
+            f"{LC}/captures/README.md",
+            f"{LC}/captures/series/post-fix.md",
+            TICKET_REL,
+        ]
+    )
+    assert _staged(root) == expected
+    assert result["staged_paths"] == expected
+    assert result["signal"] == "staged"
+
+
+def test_complete_stages_captures_tree(tmp_path: Path) -> None:
+    """Every phase stages captures, not just refine."""
+    root = tmp_path
+    _new_repo(root)
+    _write(root, "README.md", "base\n")
+    _commit_all(root, "Initial commit")
+
+    _write_complete_artifacts(root, _review_no_drift())
+    _write_ticket(root)
+    _write(root, "cortex/backlog/index.md", "backlog index\n")
+    _write(root, f"{LC}/captures/baseline.md", "baseline\n")
+
+    result = stage("complete", SLUG, root)
+
+    expected = sorted(
+        LIFECYCLE_COMPLETE
+        + [TICKET_REL, "cortex/backlog/index.md", f"{LC}/captures/baseline.md"]
+    )
+    assert _staged(root) == expected
+    assert result["staged_paths"] == expected
+
+
+def test_captures_staging_does_not_sweep_a_sibling_lifecycle(tmp_path: Path) -> None:
+    """The enumerate-never-glob discipline still holds.
+
+    A concurrent session's dirty captures under a DIFFERENT slug must not be
+    staged — that is the hazard the no-directory-glob rule exists for, and the
+    reason captures are enumerated file by file rather than added as a directory.
+    """
+    root = tmp_path
+    _new_repo(root)
+    _write(root, "README.md", "base\n")
+    _write(root, "cortex/lifecycle/other-feature/captures/theirs.md", "sibling v1\n")
+    _commit_all(root, "Initial commit")
+
+    # The sibling session dirties its own capture concurrently.
+    _write(root, "cortex/lifecycle/other-feature/captures/theirs.md", "sibling v2 DIRTY\n")
+
+    _write(root, f"{LC}/research.md", "research\n")
+    _write(root, f"{LC}/spec.md", "spec\n")
+    _write(root, f"{LC}/index.md", "lifecycle index\n")
+    _write(root, f"{LC}/events.log", _APPROVAL_EVENTS)
+    _write_ticket(root)
+    _write(root, f"{LC}/captures/mine.md", "mine\n")
+
+    result = stage("refine", SLUG, root)
+
+    assert "cortex/lifecycle/other-feature/captures/theirs.md" in _unstaged(root)
+    assert "cortex/lifecycle/other-feature/captures/theirs.md" not in _staged(root)
+    assert "cortex/lifecycle/other-feature/captures/theirs.md" not in result["staged_paths"]
+    assert f"{LC}/captures/mine.md" in _staged(root)
+
+
+def test_gitignored_capture_is_a_noop_not_a_failure(tmp_path: Path) -> None:
+    """An ignored capture costs nothing: the rest of the set still stages.
+
+    Consumers may well gitignore large intermediates under `captures/`. `git add`
+    exits non-zero when a named path is ignored but still stages every other path
+    in the pathspec, and this module does not check that exit code — so the
+    outcome is simply that the ignored file is absent. Pinned because it is the
+    one candidate source outside the verb's control, and because a future change
+    that *did* check the add's exit code would regress this into a hard failure.
+    """
+    root = tmp_path
+    _new_repo(root)
+    _write(root, "README.md", "base\n")
+    _write(root, ".gitignore", "cortex/lifecycle/*/captures/*.bin\n")
+    _commit_all(root, "Initial commit")
+
+    _write(root, f"{LC}/research.md", "research\n")
+    _write(root, f"{LC}/spec.md", "spec\n")
+    _write(root, f"{LC}/index.md", "lifecycle index\n")
+    _write(root, f"{LC}/events.log", _APPROVAL_EVENTS)
+    _write_ticket(root)
+    _write(root, f"{LC}/captures/keep.md", "kept\n")
+    _write(root, f"{LC}/captures/huge.bin", "ignored blob\n")
+
+    result = stage("refine", SLUG, root)
+
+    assert result["signal"] == "staged"
+    # The prose still stages — the whole point.
+    assert f"{LC}/spec.md" in _staged(root)
+    assert f"{LC}/research.md" in _staged(root)
+    assert f"{LC}/captures/keep.md" in _staged(root)
+    # The ignored capture is simply absent.
+    assert f"{LC}/captures/huge.bin" not in _staged(root)
+    assert f"{LC}/captures/huge.bin" not in result["staged_paths"]
+
+
+def test_no_captures_dir_is_unchanged_behavior(tmp_path: Path) -> None:
+    """Lifecycles without captures/ stage exactly what they staged before."""
+    root = tmp_path
+    _new_repo(root)
+    _write(root, "README.md", "base\n")
+    _commit_all(root, "Initial commit")
+
+    _write(root, f"{LC}/research.md", "research\n")
+    _write(root, f"{LC}/spec.md", "spec\n")
+    _write(root, f"{LC}/index.md", "lifecycle index\n")
+    _write(root, f"{LC}/events.log", _APPROVAL_EVENTS)
+    _write_ticket(root)
+
+    result = stage("refine", SLUG, root)
+
+    assert result["staged_paths"] == sorted(
+        [
+            f"{LC}/research.md",
+            f"{LC}/spec.md",
+            f"{LC}/index.md",
+            f"{LC}/events.log",
+            TICKET_REL,
+        ]
+    )
