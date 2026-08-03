@@ -349,6 +349,61 @@ def test_unrefined_idea_child_licenses_neither_refine_nor_overnight() -> None:
     assert "/cortex-overnight:overnight" not in blocks
 
 
+def test_refined_idea_child_also_withholds_the_overnight_sentence() -> None:
+    """A *refined* idea withholds the overnight sentence too.
+
+    The exclusion is keyed on the child's type, not on its refinement: an idea
+    carrying a `spec:` still renders `/cortex-core:discovery` on its own row
+    (requirement 5), and overnight's readiness scan will not honor a discovery
+    topic. Partitioning on refinement first dropped such a child out of the idea
+    bucket entirely, so an all-refined epic emitted "auto-select them" over a row
+    that said discovery — the same contradiction requirement 6 removed for the
+    unrefined case.
+    """
+    items = [
+        _item(id=700, title="Refined-idea epic", type="epic", status="refined",
+              spec="cortex/lifecycle/refined-idea-epic/spec.md"),
+        _item(id=701, title="Refined idea", type="idea", status="refined",
+              parent=700, spec="cortex/lifecycle/refined-idea/spec.md"),
+        _item(id=702, title="Refined feature", type="feature", status="refined",
+              parent=700, spec="cortex/lifecycle/refined-feature/spec.md"),
+    ]
+
+    blocks, _ = render(items, build_epic_map(items))
+
+    assert blocks == (
+        "## Epics\n"
+        "\n"
+        "### Epic 700 — Refined-idea epic _(epic, not directly workable)_\n"
+        "\n"
+        "- **701** Refined idea — refined `/cortex-core:discovery`\n"
+        "- **702** Refined feature — refined `/cortex-core:build`\n"
+    )
+    assert "/cortex-overnight:overnight" not in blocks
+    # The idea is not refine work either — it must not be listed for refining.
+    assert "Run `/cortex-core:refine` on each unrefined child" not in blocks
+
+
+def test_overnight_sentence_still_fires_with_no_idea_children() -> None:
+    """The exclusion is scoped: an all-refined epic of real work still routes.
+
+    Guards against over-correcting requirement 6 into withholding the overnight
+    sentence from every epic.
+    """
+    items = [
+        _item(id=800, title="Workable epic", type="epic", status="refined",
+              spec="cortex/lifecycle/workable-epic/spec.md"),
+        _item(id=801, title="Refined feature", type="feature", status="refined",
+              parent=800, spec="cortex/lifecycle/rf/spec.md"),
+        _item(id=802, title="Refined bug", type="bug", status="refined",
+              parent=800, spec="cortex/lifecycle/rb/spec.md"),
+    ]
+
+    blocks, _ = render(items, build_epic_map(items))
+
+    assert "Run `/cortex-overnight:overnight`" in blocks
+
+
 # ---------------------------------------------------------------------------
 # Requirement 9 — ticket-425 regression guard.
 # ---------------------------------------------------------------------------

@@ -131,22 +131,32 @@ def _render_epic_block(epic_id: str, epic: dict, by_id: dict[int, dict]) -> list
         )
     if not recommendable:
         return lines
-    unrefined = [c for c in recommendable if not _is_refined(c)]
+    # Idea-ness is evaluated over EVERY recommendable child, not just the
+    # unrefined ones, so this footer applies `_recommendation`'s own precedence:
+    # `idea` is a readiness statement checked BEFORE `spec:` presence. A refined
+    # idea — an idea carrying a spec — still routes to `/cortex-core:discovery`
+    # on its row, so partitioning on refinement first would drop it out of the
+    # idea bucket and let it license an overnight sentence its own row
+    # contradicts. Overnight's readiness scan will not honor a discovery topic
+    # at any refinement level.
     is_idea = {
         c["id"]: _resolve_child(c, by_id).get("type", "feature") == "idea"
-        for c in unrefined
+        for c in recommendable
     }
-    unrefined_ideas = [c for c in unrefined if is_idea[c["id"]]]
-    unrefined_work = [c for c in unrefined if not is_idea[c["id"]]]
+    ideas = [c for c in recommendable if is_idea[c["id"]]]
+    unrefined_work = [
+        c for c in recommendable if not is_idea[c["id"]] and not _is_refined(c)
+    ]
     if unrefined_work:
         listed = ", ".join(f"{c['id']} {c['title']}" for c in unrefined_work)
         lines.append(
             "Run `/cortex-core:refine` on each unrefined child, one at a time "
             f"(each needs interactive spec approval before the next): {listed}."
         )
-    elif not unrefined_ideas:
-        # Ideas are unrefinable by design, so their absence — not merely the
-        # absence of refine work — is what licenses the overnight sentence.
+    elif not ideas:
+        # Ideas are not overnight-routable at any refinement level, so their
+        # absence — not merely the absence of refine work — licenses the
+        # overnight sentence.
         lines.append(
             "Run `/cortex-overnight:overnight` — it will auto-select them via "
             "its own readiness scan."
