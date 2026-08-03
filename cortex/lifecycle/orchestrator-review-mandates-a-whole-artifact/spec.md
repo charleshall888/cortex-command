@@ -2,7 +2,7 @@
 
 ## Problem Statement
 
-`skills/build/references/orchestrator-review.md` §3 permits exactly one repair for a flagged artifact when no user input is needed: a fresh subagent rewrites the **entire** artifact. For a flag confined to one requirement — a criterion missing its file path, a run count left unquantified — this dispatches a full rewrite of a 200-line spec to fix one line. The route is expensive enough that practitioners avoid it: on 2026-08-03 a wild-light #432 refine session routed two precision flags through §3's *user-input* branch instead, and the second fix rode along on the first.
+`skills/build/references/orchestrator-review.md` §3 permits exactly one repair for a flagged artifact when no user input is needed: a fresh subagent rewrites the **entire** artifact. For a flag confined to one requirement — a criterion missing its file path, a run count left unquantified — this dispatches a full rewrite of a 200-line spec to fix one line. On 2026-08-03 a wild-light #432 refine session routed two precision flags through §3's *user-input* branch instead, and the second fix rode along on the first. **State the evidence precisely**: what was observed is that the mandated route was not taken. No whole-artifact rewrite was dispatched and no content was lost, so the route's cost is inferred rather than measured, and one of the two flags was genuinely an operator call — a §2 disposition problem this spec does not address (see Non-Requirements). The frequency of confined-flag repairs is **not measurable today and remains so after this change**, because the event that would count them (`orchestrator_dispatch_fix`) was deleted as dead and is not reintroduced.
 
 The rule's stated justification has also rotted, in two incidental steps that nobody decided. It shipped in the initial commit (`428e54ea`) justified by *"a full rewrite maintains internal coherence across sections that cross-reference each other"* — the only rationale that ever justified rewriting the **entire** artifact. `9e42a82f` deleted that sentence in a prose trim. Separately, §3 claims dispatching *"creates an audit trail"*; that was true when it emitted an `orchestrator_dispatch_fix` event, and `239b080b` deleted the event as dead code while leaving the claim standing. No writer for it exists today in `cortex_command/`, `bin/`, `hooks/`, or `claude/`. So the section now asserts a benefit it does not deliver, and has lost the argument that justified its central mandate.
 
@@ -47,7 +47,7 @@ This bounds the blast radius of a repair to the requirements actually flagged �
 
 ## Non-Requirements
 
-- **§2's verdict scheme is not changed.** Orchestrator-review remains binary Pass/Flag with no Dismiss-with-rationale disposition. `cortex/research/archive/refine-load-epic-context/research.md:92` identified this as a live gap for C3 (deliberate-descope) cases, and adversarial review argued it may be where the friction actually lives. Deliberately out of scope: it is a §2 change with no evidence of its own beyond a prior research note, and folding it in would make this two changes to two sections.
+- **§2's verdict scheme is not changed.** Orchestrator-review remains binary Pass/Flag with no Dismiss-with-rationale disposition. `cortex/research/archive/refine-load-epic-context/research.md:92` identified this as a live gap for C3 (deliberate-descope) cases, and adversarial review argued it may be where the friction actually lives. Deliberately out of scope: it is a §2 change with no evidence of its own beyond a prior research note, and folding it in would make this two changes to two sections. **Acknowledged cost of that exclusion**: roughly half the motivating incident is attributable to this gap — one of the two #432 flags was an operator call on the acceptance bar, and Phase 2's branch would not have changed how it was handled, since it already used the in-place path.
 - **The §1 review-anchoring finding is recorded, not fixed.** §1 rates the artifact in the main conversation, by the agent that authored it — so the *review* is anchored today while only the *repair* is insulated. Fixing this means dispatching the rating itself, materially larger than this ticket.
 - **Event logging is not reintroduced.** R1 deletes a false claim; it does not restore the `orchestrator_dispatch_fix` event, which was removed as dead with no consumers.
 - **§1's binary-checkable definition is unchanged.** Research established it describes how a rule is *verified*, not what defect triggered a flag — so it is not a routing input.
@@ -70,6 +70,15 @@ This bounds the blast radius of a repair to the requirements actually flagged �
 - **ADDED** — the coherence rationale on the whole-artifact branch, restoring text deleted by `9e42a82f`.
 - **MODIFIED** — the file's header, §1 and §2 are compressed by roughly 180 B to fund §3's growth under the zero-headroom pin. This is a disclosed consequence of R10, not incidental scope: a compliant §3 cannot be paid for out of §3's own deletions. §1's three-clause binary-checkable definition is protected by R10b; §4 is protected by R11.
 - Unchanged: §4, and all five callsites, which propagate a path rather than rule text.
+
+## Expected Net Effect
+
+`cortex/requirements/project.md`'s front-door bar requires an efficiency-framed ticket to state its expected net effect on the surface it claims to shrink. Stated plainly, with the uncertainty intact:
+
+- **Reference prose**: net **zero bytes**. R10 makes this binary and CI-enforced, not an estimate.
+- **Repair cost**: one avoided whole-artifact re-emission per confined-flag repair. For a 200-line spec that is roughly the artifact's own token count, once per repair — the saving is real but single-digit-turns, not order-of-magnitude, because `cortex_command/pipeline/dispatch.py`'s 150/200/300 turn ceilings are nowhere near binding.
+- **Frequency**: **unknown and unmeasurable**, before or after. No telemetry is added, so this change cannot be evaluated after the fact by counting. That is a deliberate consequence of not reintroducing the deleted event, and it means the ticket's central premise stays unfalsifiable.
+- **Net**: the byte claim is verified; the cost claim is directionally sound but unquantified; the frequency claim is unsupported. A reader deciding whether to build Phase 2 should weigh it on the rationale-rot findings and the structural argument, not on a measured saving.
 
 ## Technical Constraints
 
