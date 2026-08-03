@@ -746,13 +746,17 @@ def _read_tier_inner(
     The ``(exists, mtime_ns, size)`` triple is part of the cache key so
     cached results invalidate when the events.log file changes.
     """
+    # Absent/unset defaults to "moderate", not "simple": the two-tier era
+    # wrote "simple" for what "moderate" now means, so defaulting to the
+    # new lightest tier would hand unlabelled features a lighter road than
+    # they were ever assessed for.
     if not exists:
-        return "simple"
+        return "moderate"
 
     # Delegate to the shared tolerant reducer so all three reader sites agree
     # by construction (spec R5: reads flow through errors="replace").
     return reduce_lifecycle_state(Path(events_path_str)).state.get(
-        "tier", "simple"
+        "tier", "moderate"
     )
 
 
@@ -790,7 +794,7 @@ read_tier.__wrapped__ = _read_tier_inner  # type: ignore[attr-defined]
 
 # Closed vocabularies for the two state axes. A parsed value outside its
 # vocabulary is rejected (does not enter the accumulator) and flags its line.
-TIER_VOCABULARY = frozenset({"simple", "complex"})
+TIER_VOCABULARY = frozenset({"simple", "moderate", "complex"})
 CRITICALITY_VOCABULARY = frozenset({"low", "medium", "high", "critical"})
 
 # Closed vocabulary for the four kept-pause kinds (the discriminant in
@@ -1032,7 +1036,7 @@ def requires_review(tier: str, criticality: str) -> bool:
         - otherwise -> skip
 
     Args:
-        tier: Feature tier (e.g. "simple", "complex").
+        tier: Feature tier ("simple", "moderate", or "complex").
         criticality: Feature criticality (e.g. "low", "medium",
             "high", "critical").
 

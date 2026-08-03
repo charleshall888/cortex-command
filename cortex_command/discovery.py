@@ -24,7 +24,7 @@ phase's research-sizing assessment (complexity + criticality) as a
 phase-resume boundary. ``read-research-sizing`` prints the most recent such
 assessment as JSON; when none is present (legacy directory, or Research
 entered before Clarify ran) it prints discovery's floor default --
-``{"complexity": "simple", "criticality": "medium"}`` (criticality floors
+``{"complexity": "moderate", "criticality": "medium"}`` (criticality floors
 at ``medium`` per discovery's upward bias, never ``low``) -- and exits 0
 without erroring.
 
@@ -994,9 +994,9 @@ def _cmd_score_corpus(args: argparse.Namespace) -> int:
 # upward bias (clarify.md output 6): discovery sets an epic's initial
 # direction, so a missing assessment defaults to the cautious floor rather
 # than the absolute minimum.
-DEFAULT_RESEARCH_SIZING: dict = {"complexity": "simple", "criticality": "medium"}
+DEFAULT_RESEARCH_SIZING: dict = {"complexity": "moderate", "criticality": "medium"}
 
-_RESEARCH_SIZING_COMPLEXITY = ("simple", "complex")
+_RESEARCH_SIZING_COMPLEXITY = ("simple", "moderate", "complex")
 _RESEARCH_SIZING_CRITICALITY = ("low", "medium", "high", "critical")
 
 
@@ -1039,7 +1039,7 @@ def read_research_sizing(topic: str, repo_root: Path) -> dict:
     Scans the resolved events.log for the latest ``discovery_research_sizing``
     row and returns ``{"complexity": ..., "criticality": ...}``. When the log
     is missing/empty or contains no such row, returns
-    ``DEFAULT_RESEARCH_SIZING`` (discovery's simple/medium floor) so a missing
+    ``DEFAULT_RESEARCH_SIZING`` (discovery's moderate/medium floor) so a missing
     assessment is never an unhandled error -- it is the documented default.
 
     Malformed JSONL lines are skipped (Tolerant Reader).

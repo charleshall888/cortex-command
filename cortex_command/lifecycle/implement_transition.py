@@ -18,7 +18,7 @@ Two independently-invocable modes (the caller picks via ``--mode`` / the args):
     state via the shared ``common.reduce_lifecycle_state`` reducer (NEVER raw
     events.log parsing — the SAME reducer ``cortex-lifecycle-state`` wraps), route to
     ``review`` or ``complete`` per the §4 rule, and emit
-    ``phase_transition{from: implement, to: <review|complete>, tier: <simple|complex>}``.
+    ``phase_transition{from: implement, to: <review|complete>, tier: <simple|moderate|complex>}``.
     The presence check matches on ``event`` PLUS ``from``/``to`` — the feature's log
     already carries earlier ``phase_transition`` rows (spec→plan, plan→implement, …),
     so only the from/to pair distinguishes the row this verb owns.
@@ -31,7 +31,7 @@ Two independently-invocable modes (the caller picks via ``--mode`` / the args):
     default (treat as review-requiring rather than trusting a skip rule on unknowable
     input).
   * otherwise, apply the reducer's documented defaults for an absent axis yourself
-    (``criticality=medium`` / ``tier=simple``), then route ``review`` when
+    (``criticality=medium`` / ``tier=moderate``), then route ``review`` when
     ``criticality ∈ {high, critical}`` OR ``tier == complex``, else ``complete``. The
     emitted ``tier`` is the resolved tier (``simple``/``complex``).
 
@@ -93,7 +93,10 @@ _REWORK_STATE = "implement-rework"
 # The reducer's documented defaults for an absent (but not corruption-unknowable)
 # axis — the same defaults criticality-matrix.md:24 tells the prose to apply.
 _DEFAULT_CRITICALITY = "medium"
-_DEFAULT_TIER = "simple"
+# The two-tier era defaulted to "simple", which meant what "moderate" now
+# means. Defaulting to "simple" would silently hand unlabelled features the
+# lighter road, so the default moves with the rename.
+_DEFAULT_TIER = "moderate"
 _REVIEW_CRITICALITIES = frozenset({"high", "critical"})
 
 
@@ -157,12 +160,12 @@ def _resolve_route(events_log: Path) -> tuple[str, str]:
 
       * ``corrupted`` → ``("review", "complex")`` — the cautious
         criticality-matrix.md:26 default when tier/criticality are unknowable.
-      * otherwise, default an absent axis (criticality=medium / tier=simple) then
+      * otherwise, default an absent axis (criticality=medium / tier=moderate) then
         route ``review`` when criticality ∈ {high, critical} OR tier == complex,
         else ``complete``; the emitted tier is the resolved tier.
 
     Returns ``(route, tier)`` where ``route`` ∈ {"review", "complete"} and ``tier``
-    ∈ {"simple", "complex"}.
+    ∈ {"simple", "moderate", "complex"}.
     """
     reduction = reduce_lifecycle_state(events_log)
     if reduction.corrupted:

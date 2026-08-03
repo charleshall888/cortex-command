@@ -146,13 +146,13 @@ def _load_project_settings(repo_root: Path) -> dict:
 #
 # Cost stays bounded because the budget cap still binds first: at the worst
 # observed cost-per-turn ($0.585), even the smallest new ceiling would imply
-# ~$88 against a $5 trivial cap, so an agent burning money is stopped by
+# ~$88 against a $5 simple cap, so an agent burning money is stopped by
 # ``max_budget_usd`` long before it exhausts turns. What the turn ceiling now
 # catches is the cheap pathological loop — an agent cycling on near-free calls
 # that the budget guard would never notice.
 TIER_CONFIG: dict[str, dict] = {
-    "trivial": {"max_turns": 150, "max_budget_usd": 5.00},
-    "simple": {"max_turns": 200, "max_budget_usd": 25.00},
+    "simple": {"max_turns": 150, "max_budget_usd": 5.00},
+    "moderate": {"max_turns": 200, "max_budget_usd": 25.00},
     "complex": {"max_turns": 300, "max_budget_usd": 50.00},
 }
 
@@ -175,18 +175,18 @@ TIER_CONFIG: dict[str, dict] = {
 # boundary, loudly, by the existing clamp/`dispatch_effort_ignored` path — see
 # the `effort_override` docstring on dispatch_task.
 _EFFORT_MATRIX: dict[tuple[str, str], str] = {
-    ("trivial", "low"):      "low",
-    ("trivial", "medium"):   "low",
-    ("trivial", "high"):     "high",
-    ("trivial", "critical"): "high",
-    ("simple",  "low"):      "high",
-    ("simple",  "medium"):   "high",
-    ("simple",  "high"):     "high",
-    ("simple",  "critical"): "high",
-    ("complex", "low"):      "high",
-    ("complex", "medium"):   "high",
-    ("complex", "high"):     "xhigh",
-    ("complex", "critical"): "xhigh",
+    ("simple",   "low"):      "low",
+    ("simple",   "medium"):   "low",
+    ("simple",   "high"):     "high",
+    ("simple",   "critical"): "high",
+    ("moderate", "low"):      "high",
+    ("moderate", "medium"):   "high",
+    ("moderate", "high"):     "high",
+    ("moderate", "critical"): "high",
+    ("complex",  "low"):      "high",
+    ("complex",  "medium"):   "high",
+    ("complex",  "high"):     "xhigh",
+    ("complex",  "critical"): "xhigh",
 }
 
 # Skill-based effort overrides applied AFTER matrix lookup. Per spec §2
@@ -227,7 +227,7 @@ def resolve_effort(complexity: str, criticality: str, skill: str) -> str:
     §1 for the adaptive-thinking framing.
 
     Args:
-        complexity: Complexity tier key ("trivial", "simple", or "complex").
+        complexity: Complexity tier key ("simple", "moderate", or "complex").
         criticality: Criticality level ("low", "medium", "high", or "critical").
         skill: The dispatching skill name (e.g. "implement", "review-fix").
             Selects the skill override; unknown skills receive the matrix value.
@@ -594,7 +594,7 @@ async def dispatch_task(
         feature: Feature name (for logging context).
         task: The prompt/task description to send to the agent.
         worktree_path: Working directory for the agent (git worktree).
-        complexity: Complexity tier key ("trivial", "simple", or "complex").
+        complexity: Complexity tier key ("simple", "moderate", or "complex").
         system_prompt: System prompt to configure the agent's behavior.
         log_path: Optional path to JSONL event log. If provided, progress
             events are appended via state.log_event.

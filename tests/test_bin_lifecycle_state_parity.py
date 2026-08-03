@@ -13,7 +13,7 @@ tests/fixtures/bin_parity/<slug>/, the test:
      pinned counters regexes from common.py:182-183).
 
 Treats bin-side omitted keys as equivalent to Python-side defaults:
-- bin tier absent -> read_tier defaults "simple"
+- bin tier absent -> read_tier defaults "moderate"
 - bin criticality absent -> read_criticality defaults "medium"
 """
 
@@ -123,9 +123,9 @@ def test_bin_lifecycle_state_matches_python(slug: str, tmp_path: Path) -> None:
     expected_criticality = read_criticality(slug, lifecycle_base=lifecycle_base)
 
     # bin omits keys when no relevant event found; Python defaults to
-    # "simple" / "medium". Apply the same default-fallback on the bin side
+    # "moderate" / "medium". Apply the same default-fallback on the bin side
     # to compare semantic equivalence.
-    assert bin_out.get("tier", "simple") == expected_tier, (
+    assert bin_out.get("tier", "moderate") == expected_tier, (
         f"tier mismatch for {slug}: bin={bin_out!r} python={expected_tier!r}"
     )
     assert bin_out.get("criticality", "medium") == expected_criticality, (
@@ -196,21 +196,21 @@ _AGREEMENT_AXES = [
     (
         "torn-start-only",
         b'{"event":"lifecycle_start","tier":"comp\n',
-        "simple",
+        "moderate",
         "medium",
         True,
     ),
     (
         "non-utf8-structure",
         b"\xff\xfe structure-break \xfa\n",
-        "simple",
+        "moderate",
         "medium",
         True,
     ),
     (
         "non-utf8-in-string-vocab",
         b'{"event":"lifecycle_start","tier":"\xff","criticality":"high"}\n',
-        "simple",
+        "moderate",
         "high",
         True,
     ),
@@ -223,8 +223,8 @@ _AGREEMENT_AXES = [
         "high",
         False,
     ),
-    ("missing-file", None, "simple", "medium", False),
-    ("empty-valid", b"", "simple", "medium", False),
+    ("missing-file", None, "moderate", "medium", False),
+    ("empty-valid", b"", "moderate", "medium", False),
 ]
 
 
@@ -272,7 +272,7 @@ def test_all_readers_agree_on_effective_state(
     assert isinstance(bin_out, dict), (
         f"bin emitted non-object for {axis}: {result.stdout!r}"
     )
-    bin_tier = bin_out.get("tier", "simple")
+    bin_tier = bin_out.get("tier", "moderate")
     bin_crit = bin_out.get("criticality", "medium")
 
     # Python readers, each with its own default projection.
@@ -315,7 +315,7 @@ def _metrics_log_bytes(*event_dicts: dict) -> bytes:
 # axis id, expected metrics tier (hand-computed oracle), whether read_tier's
 # value should equal the metrics tier (True only when the effective tier is
 # in-vocab; for the dropped out-of-vocab seed the two diverge by projection —
-# metrics None vs read_tier's "simple" default — so agreement is not asserted).
+# metrics None vs read_tier's "moderate" default — so agreement is not asserted).
 _METRICS_ORACLE_AXES = [
     ("in-vocab-escalated", "complex", True),
     ("out-of-vocab-seed", None, False),

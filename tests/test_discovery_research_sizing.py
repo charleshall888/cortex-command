@@ -259,7 +259,7 @@ def test_research_sizing_default_on_resume_without_assessment(
         topic="never-assessed-topic", repo_root=repo_root
     )
 
-    assert sizing["complexity"] == "simple", (
+    assert sizing["complexity"] == "moderate", (
         f"resume-without-assessment must default complexity to 'simple'; "
         f"got {sizing!r}"
     )
@@ -307,4 +307,4 @@ def test_research_sizing_default_when_log_has_no_sizing_event(
     )
 
     sizing = read_research_sizing(topic=topic, repo_root=repo_root)
-    assert sizing == {"complexity": "simple", "criticality": "medium"}, sizing
+    assert sizing == {"complexity": "moderate", "criticality": "medium"}, sizing

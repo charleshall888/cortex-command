@@ -635,7 +635,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     start.add_argument(
         "--tier",
-        choices=("simple", "complex"),
+        choices=("simple", "moderate", "complex"),
         default="simple",
         help="Throttle tier passed to the orchestrator and batch_runner",
     )

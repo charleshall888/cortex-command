@@ -56,7 +56,7 @@ def test_raw_defaults_when_axis_never_set(tmp_path, monkeypatch, capsys) -> None
     assert (code, out) == (0, "medium\n")
     code, out, _ = _run(monkeypatch, capsys, tmp_path,
                         ["--feature", SLUG, "--field", "tier", "--raw"])
-    assert (code, out) == (0, "simple\n")
+    assert (code, out) == (0, "moderate\n")
 
 
 def test_raw_defaults_when_log_missing(tmp_path, monkeypatch, capsys) -> None:

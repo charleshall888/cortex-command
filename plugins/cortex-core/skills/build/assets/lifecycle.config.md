@@ -7,7 +7,7 @@
 #     command: "godot res://main.tscn"
 #   - label: "FastAPI dashboard"
 #     command: "uv run fastapi run src/main.py"
-# default-tier:           # simple | complex
+# default-tier:           # simple | moderate | complex
 # default-criticality:    # low | medium | high | critical
 # skip-specify:           # true | false
 # skip-review:            # true | false

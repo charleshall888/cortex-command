@@ -143,7 +143,7 @@ def _resolve_spec_route(events_log: Path) -> tuple[str, str]:
         tier is the resolved tier.
 
     Returns ``(route, tier)`` where ``route`` ∈ {"plan", "implement"} and
-    ``tier`` ∈ {"simple", "complex"}.
+    ``tier`` ∈ {"simple", "moderate", "complex"}.
     """
     reduction = reduce_lifecycle_state(events_log)
     if reduction.corrupted:

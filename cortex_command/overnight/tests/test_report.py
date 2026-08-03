@@ -579,7 +579,7 @@ class TestTenFixtureVerificationRendering:
         _write_plan(tmp_path, feature, _plan_legacy_verification("legacy-text-f3."))
         # No events.log -> defaults to simple tier.
 
-        assert read_tier(feature, lifecycle_base=tmp_path / "cortex" / "lifecycle") == "simple"
+        assert read_tier(feature, lifecycle_base=tmp_path / "cortex" / "lifecycle") == "moderate"
         assert _render_how_to_try(feature) == "legacy-text-f3."
 
     # Fixture 4 -------------------------------------------------------------
@@ -756,7 +756,7 @@ class TestTenFixtureVerificationRendering:
         )
 
         # R13a default: returns "simple" when events.log is malformed.
-        assert read_tier(feature, lifecycle_base=tmp_path / "cortex" / "lifecycle") == "simple"
+        assert read_tier(feature, lifecycle_base=tmp_path / "cortex" / "lifecycle") == "moderate"
         # Acceptance text exists in the plan but is not consulted on simple tier.
         assert _read_acceptance(feature) == "acceptance-text-f10."
         # No Outline -> no last-phase checkpoint.

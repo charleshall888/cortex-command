@@ -448,7 +448,7 @@ with the colon OUTSIDE the bold span — emit them in exactly this literal synta
 - **Files**: {exact paths to create or modify}
 - **What**: {what this task accomplishes in 1-2 sentences}
 - **Depends on**: [N] (or `none`)
-- **Complexity**: trivial|simple|complex
+- **Complexity**: simple|moderate|complex
 - **Context**: {structural context for the implementer}
 - **Verification**: {command + expected output + pass/fail, or file/pattern check}
 - **Status**: [ ] pending

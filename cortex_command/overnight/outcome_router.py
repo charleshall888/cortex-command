@@ -1079,7 +1079,7 @@ def _review_required(name: str) -> bool:
     could invert the fail-safe.
     """
     reduction = reduce_lifecycle_state(Path(f"cortex/lifecycle/{name}/events.log"))
-    tier = reduction.state.get("tier", "simple")
+    tier = reduction.state.get("tier", "moderate")
     criticality = reduction.state.get("criticality", "medium")
     return requires_review(tier, criticality) or reduction.corrupted
 

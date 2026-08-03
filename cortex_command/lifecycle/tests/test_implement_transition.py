@@ -174,10 +174,10 @@ def test_transition_absent_axes_apply_reducer_defaults(
     # No seed at all — missing events.log, reducer returns empty, not corrupted.
     r = it.implement_transition(feature="feat", mode="transition")
     assert r["state"] == "complete"
-    assert r["tier"] == "simple"
+    assert r["tier"] == "moderate"
     row = [x for x in _events_rows(feature_dir) if x["event"] == "phase_transition"][0]
     assert row["to"] == "complete"
-    assert row["tier"] == "simple"
+    assert row["tier"] == "moderate"
 
 
 # ---------------------------------------------------------------------------

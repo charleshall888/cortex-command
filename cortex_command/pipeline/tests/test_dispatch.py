@@ -1050,18 +1050,18 @@ def test_effort_matrix_policy():
     12 cells change effort relative to the previous 1D ``EFFORT_MAP``.
     """
     expected: dict[tuple[str, str], str] = {
-        ("trivial", "low"):      "low",
-        ("trivial", "medium"):   "low",
-        ("trivial", "high"):     "high",
-        ("trivial", "critical"): "high",
-        ("simple",  "low"):      "high",
-        ("simple",  "medium"):   "high",
-        ("simple",  "high"):     "high",
-        ("simple",  "critical"): "high",
-        ("complex", "low"):      "high",
-        ("complex", "medium"):   "high",
-        ("complex", "high"):     "xhigh",
-        ("complex", "critical"): "xhigh",
+        ("simple",   "low"):      "low",
+        ("simple",   "medium"):   "low",
+        ("simple",   "high"):     "high",
+        ("simple",   "critical"): "high",
+        ("moderate", "low"):      "high",
+        ("moderate", "medium"):   "high",
+        ("moderate", "high"):     "high",
+        ("moderate", "critical"): "high",
+        ("complex",  "low"):      "high",
+        ("complex",  "medium"):   "high",
+        ("complex",  "high"):     "xhigh",
+        ("complex",  "critical"): "xhigh",
     }
     assert len(_dispatch_module._EFFORT_MATRIX) == 12, (
         "matrix must have exactly 12 cells (3 complexity x 4 criticality)"
@@ -1084,7 +1084,7 @@ def test_effort_skill_overrides():
         ("complex", "critical"),
         ("simple", "high"),
         ("complex", "low"),
-        ("trivial", "low"),
+        ("simple", "low"),
     ):
         assert _dispatch_module.resolve_effort(
             complexity=complexity, criticality=criticality, skill="review-fix",
@@ -1102,7 +1102,7 @@ def test_effort_skill_overrides():
         complexity="simple", criticality="high", skill="implement",
     ) == "high"
     assert _dispatch_module.resolve_effort(
-        complexity="trivial", criticality="low", skill="implement",
+        complexity="simple", criticality="low", skill="implement",
     ) == "low"
 
 

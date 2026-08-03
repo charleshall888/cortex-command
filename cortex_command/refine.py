@@ -41,17 +41,22 @@ _UNSAFE_SLUG_MSG = (
 # Allowed value sets, kept in lockstep with the canonical readers at
 # ``cortex_command/common.py:_read_criticality_inner`` and ``_read_tier_inner``.
 _ALLOWED_CRITICALITY: frozenset[str] = frozenset({"low", "medium", "high", "critical"})
-_ALLOWED_COMPLEXITY: frozenset[str] = frozenset({"simple", "complex"})
+_ALLOWED_COMPLEXITY: frozenset[str] = frozenset({"simple", "moderate", "complex"})
 
-# Legacy pre-two-tier complexity vocabulary, coerced with a stderr warning
-# instead of hard-failing (readers tolerate every prior shape — see
-# clarify-critic.md's event-schema rule). Mid-scale values map to "complex"
-# per clarify.md §5's "when in doubt, prefer complex"; Clarify re-assesses
-# and writes the reconciled value back regardless.
+# Legacy complexity vocabulary, coerced with a stderr warning instead of
+# hard-failing (readers tolerate every prior shape — see clarify-critic.md's
+# event-schema rule). Clarify re-assesses and writes the reconciled value back
+# regardless.
+#
+# The two-tier era wrote ``simple`` for what the three-tier vocabulary calls
+# ``moderate`` — a feature that enters the lifecycle and takes the short road.
+# That value is NOT remapped: both lower tiers satisfy the short road's
+# ``tier != complex`` predicate, so a historical ``simple`` replays identically
+# either way, and rewriting it would falsify what the run actually recorded.
+# ``trivial`` was the old name for the new lightest tier.
 _LEGACY_COMPLEXITY_MAP: dict[str, str] = {
     "trivial": "simple",
-    "medium": "complex",
-    "moderate": "complex",
+    "medium": "moderate",
 }
 
 # The regex frontmatter reader returns YAML nulls as literal strings; treat
@@ -63,7 +68,7 @@ _YAML_NULL_LITERALS: frozenset[str] = frozenset({"null", "~", "None"})
 # Unknown values rank below every canonical value (-1) so a non-canonical
 # current state reconciles up toward a canonical desired value rather than
 # raising a KeyError.
-_TIER_RANK: dict[str, int] = {"simple": 0, "complex": 1}
+_TIER_RANK: dict[str, int] = {"simple": 0, "moderate": 1, "complex": 2}
 _CRITICALITY_RANK: dict[str, int] = {"low": 0, "medium": 1, "high": 2, "critical": 3}
 
 
@@ -71,7 +76,13 @@ def _read_backlog_frontmatter(backlog_slug: str | None) -> tuple[str, str]:
     """Return ``(tier, criticality)`` from a backlog item's frontmatter.
 
     When ``backlog_slug`` is ``None`` or the backlog file does not exist,
-    returns the canonical defaults ``("simple", "medium")`` — matching the
+    returns ``("simple", "medium")`` — the *rank floor*, deliberately NOT the
+    reader default of ``"moderate"``. This value feeds the monotonic-up
+    reconcile: an absent backlog value is not an authoritative assessment, so
+    it must be inert for the ratchet. Defaulting to ``"moderate"`` here would
+    ratchet every legitimately ``simple`` feature up one tier the first time
+    reconcile ran without a backlog file. Reader defaults live in
+    ``_read_tier_inner`` and are a separate question — matching the
     behavior of ``_read_tier_inner`` / ``_read_criticality_inner`` when no
     ``lifecycle_start`` event has been emitted.
 
@@ -80,8 +91,8 @@ def _read_backlog_frontmatter(backlog_slug: str | None) -> tuple[str, str]:
     :func:`_get_frontmatter_value`. Absent keys fall back to defaults.
 
     Validates ``criticality`` against ``{low, medium, high, critical}`` and
-    ``complexity`` against ``{simple, complex}``. Legacy pre-two-tier
-    complexity values (``trivial``, ``medium``, ``moderate``) are coerced
+    ``complexity`` against ``{simple, moderate, complex}``. Legacy
+    complexity values (``trivial``, ``medium``) are coerced
     via :data:`_LEGACY_COMPLEXITY_MAP` with a stderr warning; YAML null
     literals are treated as absent. On any other invalid value, prints a
     stderr diagnostic naming the invalid value, file path, allowed set,
@@ -118,7 +129,7 @@ def _read_backlog_frontmatter(backlog_slug: str | None) -> tuple[str, str]:
         print(
             f"cortex-refine: legacy complexity value {complexity!r} in "
             f"{backlog_path} coerced to {coerced!r} (Clarify re-assesses "
-            f"and writes back the two-tier value)",
+            f"and writes back the canonical value)",
             file=sys.stderr,
         )
         complexity = coerced
@@ -200,7 +211,7 @@ def _reduce_current_state(events_log: Path) -> tuple[str, str]:
     a field unset, matching the canonical reader defaults.
     """
     state = reduce_lifecycle_state(events_log).state
-    return (state.get("tier", "simple"), state.get("criticality", "medium"))
+    return (state.get("tier", "moderate"), state.get("criticality", "medium"))
 
 
 def _cmd_reconcile_clarify(args: argparse.Namespace) -> int:

@@ -24,7 +24,7 @@ FANOUT_MD = REPO_ROOT / "skills" / "research" / "references" / "fanout.md"
 # Column order for the criticality axis, low -> critical.
 CRITICALITY_COLUMNS = ["low", "medium", "high", "critical"]
 # Row order for the tier axis, simple -> complex.
-TIER_ROWS = ["simple", "complex"]
+TIER_ROWS = ["simple", "moderate", "complex"]
 
 
 def _split_markdown_row(line):
@@ -168,14 +168,14 @@ def test_monotonic_across_criticality(grid):
 
 
 def test_monotonic_across_tiers(grid):
-    """For each criticality column, complex >= simple."""
-    simple_row = grid["simple"]
-    complex_row = grid["complex"]
-    for j, crit in enumerate(CRITICALITY_COLUMNS):
-        assert complex_row[j] >= simple_row[j], (
-            f"Fan-out matrix not monotonic across tiers for criticality "
-            f"'{crit}': complex ({complex_row[j]}) < simple ({simple_row[j]})."
-        )
+    """For each criticality column, each tier is >= the tier below it."""
+    for lower, upper in zip(TIER_ROWS, TIER_ROWS[1:]):
+        lower_row, upper_row = grid[lower], grid[upper]
+        for j, crit in enumerate(CRITICALITY_COLUMNS):
+            assert upper_row[j] >= lower_row[j], (
+                f"Fan-out matrix not monotonic across tiers for criticality "
+                f"'{crit}': {upper} ({upper_row[j]}) < {lower} ({lower_row[j]})."
+            )
 
 
 def test_floor_is_one(grid):

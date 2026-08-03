@@ -80,7 +80,7 @@ than collapsing the reduction; stdout is the accumulator dict, never "null".
 
 # The documented caller-side defaults (--raw emits them when the axis was
 # never set, so a command substitution always yields a valid enum).
-_RAW_DEFAULTS = {"criticality": "medium", "tier": "simple"}
+_RAW_DEFAULTS = {"criticality": "medium", "tier": "moderate"}
 
 # Accepted --field values (from bash script lines 61-67).
 _ACCEPTED_FIELDS = frozenset({"criticality", "tier"})

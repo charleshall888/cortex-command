@@ -148,7 +148,7 @@ class TestPairDispatchEvents(unittest.TestCase):
         complete: each complete pairs to its own feature's start."""
         events = [
             self._start("feat-a", complexity="simple", ts="2026-04-01T00:00:01Z"),
-            self._start("feat-b", complexity="trivial", ts="2026-04-01T00:00:02Z"),
+            self._start("feat-b", complexity="simple", ts="2026-04-01T00:00:02Z"),
             self._complete("feat-a", cost_usd=0.50, num_turns=3, model="sonnet", ts="2026-04-01T00:01:00Z"),
             self._complete("feat-b", cost_usd=0.10, num_turns=2, model="haiku", ts="2026-04-01T00:01:01Z"),
         ]
@@ -161,7 +161,7 @@ class TestPairDispatchEvents(unittest.TestCase):
         self.assertEqual(by_feature["feat-a"]["model"], "sonnet")
         self.assertFalse(by_feature["feat-a"]["untiered"])
 
-        self.assertEqual(by_feature["feat-b"]["tier"], "trivial")
+        self.assertEqual(by_feature["feat-b"]["tier"], "simple")
         self.assertEqual(by_feature["feat-b"]["model"], "haiku")
         self.assertFalse(by_feature["feat-b"]["untiered"])
 
@@ -2000,7 +2000,7 @@ def test_extract_feature_metrics_initial_tier_skips_leading_out_of_vocab_seed():
 def test_extract_feature_metrics_out_of_vocab_tier_dropped_and_excluded(tmp_path):
     """R7: an out-of-vocab lifecycle_start tier yields tier=None and the
     feature is excluded from compute_aggregates. read_tier projects its own
-    'simple' default on the same log — both agree 'trivial' is not a tier."""
+    'moderate' default on the same log — both agree 'trivial' is not a tier."""
     import json as _json
 
     from cortex_command.common import read_tier
@@ -2026,7 +2026,7 @@ def test_extract_feature_metrics_out_of_vocab_tier_dropped_and_excluded(tmp_path
     m = extract_feature_metrics(parse_events(log_path))
     assert m is not None
     assert m["tier"] is None
-    assert read_tier(feature, lifecycle_base=tmp_path) == "simple"
+    assert read_tier(feature, lifecycle_base=tmp_path) == "moderate"
 
     aggregates = compute_aggregates([m])
     assert aggregates == {}, (

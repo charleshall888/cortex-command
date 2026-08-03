@@ -310,7 +310,7 @@ def _build_async_spawn_argv(args: argparse.Namespace, state_path: Path) -> list[
         "--state",
         str(state_path),
         "--tier",
-        str(getattr(args, "tier", "simple")),
+        str(getattr(args, "tier", "moderate")),
     ]
     time_limit = getattr(args, "time_limit", None)
     if isinstance(time_limit, int):

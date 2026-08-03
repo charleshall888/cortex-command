@@ -443,7 +443,7 @@ class TestOutlineSectionAndH3PhasesRegression(unittest.TestCase):
                 "### Task 2: Second task",
                 Files="`src/b.py`",
                 What="do thing two",
-                Complexity="moderate",
+                Complexity="enormous",
             )
         )
         # Build a plan with `## Outline` inserted between Overview and Tasks.
@@ -467,7 +467,7 @@ class TestOutlineSectionAndH3PhasesRegression(unittest.TestCase):
         self.assertEqual(plan.tasks[1].number, 2)
         self.assertEqual(plan.tasks[1].description, "Second task")
         self.assertEqual(plan.tasks[1].files, ["src/b.py"])
-        # Authored "moderate" is OOV and normalizes to "complex".
+        # Authored "enormous" is OOV and normalizes to "complex".
         self.assertEqual(plan.tasks[1].complexity, "complex")
 
     def test_h3_phase_headings_inside_outline_do_not_truncate_tasks(self):
@@ -496,7 +496,7 @@ class TestOutlineSectionAndH3PhasesRegression(unittest.TestCase):
                 "### Task 2: Second task",
                 Files="`src/b.py`",
                 What="do thing two",
-                Complexity="moderate",
+                Complexity="enormous",
             )
         )
         base = _make_plan(tasks_body)
@@ -514,7 +514,7 @@ class TestOutlineSectionAndH3PhasesRegression(unittest.TestCase):
         self.assertEqual(plan.tasks[1].number, 2)
         self.assertEqual(plan.tasks[1].description, "Second task")
         self.assertEqual(plan.tasks[1].files, ["src/b.py"])
-        # Authored "moderate" is OOV and normalizes to "complex".
+        # Authored "enormous" is OOV and normalizes to "complex".
         self.assertEqual(plan.tasks[1].complexity, "complex")
 
     def test_unrelated_h2_after_last_task_truncates_task_body(self):
@@ -548,7 +548,7 @@ class TestOutlineSectionAndH3PhasesRegression(unittest.TestCase):
                 "### Task 2: Second task",
                 Files="`src/b.py`",
                 What="do thing two",
-                Complexity="trivial",
+                Complexity="simple",
             )
             + "\n"
             "## SomeOther\n"
@@ -567,10 +567,10 @@ class TestOutlineSectionAndH3PhasesRegression(unittest.TestCase):
         self.assertEqual(plan.tasks[0].files, ["src/a.py"])
 
         # Task 2's body was truncated at the ``## SomeOther`` H2, so its
-        # Complexity remains "trivial" — the ``complex`` value sitting
+        # Complexity remains "simple" — the ``complex`` value sitting
         # under ``## SomeOther`` did NOT leak into Task 2's parsed fields.
         self.assertEqual(plan.tasks[1].number, 2)
-        self.assertEqual(plan.tasks[1].complexity, "trivial")
+        self.assertEqual(plan.tasks[1].complexity, "simple")
         self.assertEqual(plan.tasks[1].files, ["src/b.py"])
 
 

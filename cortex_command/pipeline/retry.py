@@ -204,7 +204,7 @@ async def retry_task(
         feature: Feature name (for logging and lock cleanup).
         task: The task description/prompt to send to the agent.
         worktree_path: Git worktree directory for the agent.
-        complexity: Complexity tier ("trivial", "simple", "complex").
+        complexity: Complexity tier ("simple", "moderate", "complex").
         system_prompt: Base system prompt for the agent.
         learnings_dir: Directory for progress.txt learnings file.
         log_path: Optional path to JSONL event log.

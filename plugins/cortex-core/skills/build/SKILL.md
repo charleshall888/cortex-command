@@ -68,12 +68,12 @@ A boundary fires on its gate condition (e.g. `plan.md` all tasks `[x]`), not use
 
 ## Criticality
 
-Override at any time with `cortex-lifecycle-event criticality-override --feature <name> --from <old> --to <new>`, which supersedes the monotonic-up-only Clarify reconciliation. `cortex-lifecycle-state --feature {feature}` (or `--field <x>`) reduces the event log to current values, omitting absent keys — apply the defaults `criticality=medium` / `tier=simple` yourself. **`"corrupted": true`** means tier/criticality are unknowable: treat the feature as *requiring* review rather than applying the skip rule.
+Override at any time with `cortex-lifecycle-event criticality-override --feature <name> --from <old> --to <new>`, which supersedes the monotonic-up-only Clarify reconciliation. `cortex-lifecycle-state --feature {feature}` (or `--field <x>`) reduces the event log to current values, omitting absent keys — apply the defaults `criticality=medium` / `tier=moderate` yourself. **`"corrupted": true`** means tier/criticality are unknowable: treat the feature as *requiring* review rather than applying the skip rule.
 
 | Criticality | Review phase | Orchestrator review | Planning |
 |-------------|-------------|--------------------|---------|
-| low | tier-based (skip for simple) | skipped for simple, active for complex | tier-based |
-| medium | tier-based (skip for simple) | active at phase boundaries | tier-based |
+| low | tier-based (skip below complex) | skipped below complex, active for complex | tier-based |
+| medium | tier-based (skip below complex) | active at phase boundaries | tier-based |
 | high | forced regardless of tier | active at all boundaries | single plan |
 | critical | forced regardless of tier | active at all boundaries | competing plans |
 

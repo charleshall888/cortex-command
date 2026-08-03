@@ -128,7 +128,7 @@ PARAMETERS: dict[str, frozenset] = {
     "backend": frozenset({"cortex-backlog", "none", "external"}),
     # implement-exit routing axes (implement_transition §4 rule inputs).
     "criticality": frozenset({"low", "medium", "high", "critical"}),
-    "tier": frozenset({"simple", "complex"}),
+    "tier": frozenset({"simple", "moderate", "complex"}),
 }
 
 # The default parameter selection — the byte-identical-to-today local behavior a
@@ -140,7 +140,7 @@ DEFAULT_PARAMETERS: dict[str, object] = {
     "commit_artifacts": True,
     "backend": "cortex-backlog",
     "criticality": "medium",
-    "tier": "simple",
+    "tier": "moderate",
 }
 
 # Translation from a ``lifecycle.config.md`` frontmatter key to the table

@@ -6,7 +6,8 @@ Shared by `/cortex-core:research` and `/cortex-core:discovery` so their fan-out 
 
 | tier \ criticality | low | medium | high | critical |
 |--------------------|-----|--------|------|----------|
-| **simple**         | 1   | 2      | 3    | 4        |
+| **simple**         | 1   | 1      | 2    | 3        |
+| **moderate**       | 1   | 2      | 3    | 4        |
 | **complex**        | 5   | 6      | 8    | 10       |
 
 An **upper bound on breadth, not a quota** — dispatch fewer when the task offers fewer genuinely distinct angles.
@@ -16,10 +17,10 @@ An **upper bound on breadth, not a quota** — dispatch fewer when the task offe
 The mandatory core is tier-scoped:
 
 - **Codebase** — mandatory at every cell.
-- **Web** — mandatory at complex tier; at simple tier only when the task names an external dependency, protocol, or library question.
-- **Requirements & Constraints** — mandatory at complex tier; at simple tier only when Clarify's requirements-alignment note was `partial` or `conflict`.
+- **Web** — mandatory at complex tier; below it only when the task names an external dependency, protocol, or library question.
+- **Requirements & Constraints** — mandatory at complex tier; below it only when Clarify's requirements-alignment note was `partial` or `conflict`.
 
-The simple row is deliberately thin: simple work follows an existing pattern exactly, and `cortex-complexity-escalator` ratchets tier up when research surfaces open questions — a too-thin pass escalates on evidence.
+The lower rows are thin by design: simple work follows an existing pattern, and `cortex-complexity-escalator` raises the tier when research surfaces unresolved uncertainty.
 
 **Adversarial** is always present for high/critical (optional below), and runs **last**, over a summary of the other agents' findings.
 

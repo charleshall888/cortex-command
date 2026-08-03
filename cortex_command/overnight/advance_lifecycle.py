@@ -251,7 +251,7 @@ def advance_lifecycle(feature: str, project_root: Optional[Path] = None) -> dict
         return {"state": "already-complete"}
 
     reduction = reduce_lifecycle_state(events_path)
-    tier = reduction.state.get("tier", "simple")
+    tier = reduction.state.get("tier", "moderate")
     criticality = reduction.state.get("criticality", "medium")
     # ``corrupted`` must be review-required, matching what the arm itself will
     # decide: ``implement_transition._resolve_route`` treats a corrupted

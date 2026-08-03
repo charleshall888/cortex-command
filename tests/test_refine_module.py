@@ -317,8 +317,7 @@ def test_emit_lifecycle_start_rejects_invalid_value(
     "legacy_value,expected_tier",
     [
         ("trivial", "simple"),
-        ("medium", "complex"),
-        ("moderate", "complex"),
+        ("medium", "moderate"),
     ],
 )
 def test_emit_lifecycle_start_coerces_legacy_complexity(

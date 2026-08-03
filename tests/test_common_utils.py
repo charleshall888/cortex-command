@@ -2,7 +2,7 @@
 
 Tests cover:
   - read_tier: existing events.log with tier field, empty file,
-    missing file (default "simple"), complexity_override event.
+    missing file (default "moderate"), complexity_override event.
   - requires_review: all 8 cells of the gating matrix
     (2 tiers x 4 criticalities).
 """
@@ -69,7 +69,7 @@ class TestReadTier:
         assert result == "complex"
 
     def test_returns_default_for_empty_file(self, tmp_path: Path):
-        """Empty events.log returns the default tier 'simple'."""
+        """Empty events.log returns the default tier 'moderate'."""
         feature = "test-feature"
         feature_dir = tmp_path / feature
         feature_dir.mkdir()
@@ -77,14 +77,14 @@ class TestReadTier:
         events_log.write_text("", encoding="utf-8")
 
         result = read_tier(feature, lifecycle_base=tmp_path)
-        assert result == "simple"
+        assert result == "moderate"
 
     def test_returns_default_for_missing_file(self, tmp_path: Path):
-        """Missing events.log returns the default tier 'simple'."""
+        """Missing events.log returns the default tier 'moderate'."""
         feature = "test-feature"
         # Don't create the feature directory at all
         result = read_tier(feature, lifecycle_base=tmp_path)
-        assert result == "simple"
+        assert result == "moderate"
 
     def test_complexity_override_to_field_updates_tier(self, tmp_path: Path):
         """complexity_override with `to` field overrides the baseline tier."""
@@ -118,7 +118,7 @@ class TestReadTier:
         assert result == "complex"
 
     def test_returns_default_when_no_tier_field_present(self, tmp_path: Path):
-        """Events without a tier field leave the default 'simple' unchanged."""
+        """Events without a tier field leave the default 'moderate' unchanged."""
         feature = "test-feature"
         feature_dir = tmp_path / feature
         feature_dir.mkdir()
@@ -130,7 +130,7 @@ class TestReadTier:
         events_log.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
         result = read_tier(feature, lifecycle_base=tmp_path)
-        assert result == "simple"
+        assert result == "moderate"
 
 
 # ---------------------------------------------------------------------------
@@ -373,7 +373,7 @@ def test_read_tier_ignores_complexity_field_only_returns_default(
     tmp_path: Path,
 ) -> None:
     """T-A: read_tier on an events.log containing only a ``complexity`` field
-    (no ``tier`` field) returns ``"simple"`` — the default. The wrong key is
+    (no ``tier`` field) returns ``"moderate"`` — the default. The wrong key is
     silently ignored."""
     feature = "tA-complexity-only"
     feature_dir = tmp_path / "cortex" / "lifecycle" / feature
@@ -385,7 +385,7 @@ def test_read_tier_ignores_complexity_field_only_returns_default(
         encoding="utf-8",
     )
 
-    assert read_tier(feature, lifecycle_base=tmp_path / "cortex" / "lifecycle") == "simple"
+    assert read_tier(feature, lifecycle_base=tmp_path / "cortex" / "lifecycle") == "moderate"
 
 
 def test_read_tier_canonical_tier_wins_over_stray_complexity(

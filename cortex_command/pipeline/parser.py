@@ -16,7 +16,7 @@ from typing import Optional
 # The accepted per-task complexity vocabulary. A present-but-out-of-vocabulary
 # value is normalized to ``complex`` (safe over-provision) at the parser
 # boundary; an absent field keeps the ``simple`` default.
-VALID_COMPLEXITIES = frozenset({"trivial", "simple", "complex"})
+VALID_COMPLEXITIES = frozenset({"simple", "moderate", "complex"})
 
 
 # ---------------------------------------------------------------------------
