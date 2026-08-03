@@ -75,13 +75,21 @@ def _is_refined(item: dict) -> bool:
     return bool(spec) and spec not in ("null", "~", "None")
 
 
-def _workflow(item: dict) -> str:
-    kind = item.get("type", "feature")
-    if kind == "idea":
+def _recommendation(item: dict) -> str:
+    """Route one item by readiness, on a single line with no embedded newline.
+
+    ``idea`` is checked first because it is a readiness statement — an idea has
+    nothing to spec yet. Every other type is governed by ``spec:`` presence, so
+    the flat Ready row and the per-child epic mark can never disagree.
+    """
+    if item.get("type", "feature") == "idea":
         return "`/cortex-core:discovery`"
-    if kind in ("bug", "chore"):
-        return "direct implementation"
     return "`/cortex-core:build`" if _is_refined(item) else "`/cortex-core:refine`"
+
+
+def _resolve_child(child: dict, by_id: dict[int, dict]) -> dict:
+    """Resolve an epic child to its full record — the envelope carries no type."""
+    return by_id.get(child["id"]) or child
 
 
 def _render_epic_block(epic_id: str, epic: dict, by_id: dict[int, dict]) -> list[str]:
@@ -92,7 +100,7 @@ def _render_epic_block(epic_id: str, epic: dict, by_id: dict[int, dict]) -> list
     children = epic.get("children", [])
     for child in children:
         full = by_id.get(child["id"], {})
-        marks = ["[refined]" if _is_refined(child) else "[needs /cortex-core:refine]"]
+        marks = [_recommendation(_resolve_child(child, by_id))]
         if full.get("status") == "blocked" or full.get("blocked_by"):
             marks.append("[blocked]")
         lines.append(
@@ -124,13 +132,21 @@ def _render_epic_block(epic_id: str, epic: dict, by_id: dict[int, dict]) -> list
     if not recommendable:
         return lines
     unrefined = [c for c in recommendable if not _is_refined(c)]
-    if unrefined:
-        listed = ", ".join(f"{c['id']} {c['title']}" for c in unrefined)
+    is_idea = {
+        c["id"]: _resolve_child(c, by_id).get("type", "feature") == "idea"
+        for c in unrefined
+    }
+    unrefined_ideas = [c for c in unrefined if is_idea[c["id"]]]
+    unrefined_work = [c for c in unrefined if not is_idea[c["id"]]]
+    if unrefined_work:
+        listed = ", ".join(f"{c['id']} {c['title']}" for c in unrefined_work)
         lines.append(
             "Run `/cortex-core:refine` on each unrefined child, one at a time "
             f"(each needs interactive spec approval before the next): {listed}."
         )
-    else:
+    elif not unrefined_ideas:
+        # Ideas are unrefinable by design, so their absence — not merely the
+        # absence of refine work — is what licenses the overnight sentence.
         lines.append(
             "Run `/cortex-overnight:overnight` — it will auto-select them via "
             "its own readiness scan."
@@ -173,7 +189,7 @@ def render(items: list[dict], epic_map: dict) -> tuple[str, list[dict]]:
         for item in flat:
             lines.append(
                 f"- `{item.get('priority', '?')}` `{item.get('type', '?')}` "
-                f"**{item['id']}** {item['title']} → {_workflow(item)}"
+                f"**{item['id']}** {item['title']} → {_recommendation(item)}"
             )
     if not lines:
         lines = [

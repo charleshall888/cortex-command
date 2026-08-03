@@ -98,7 +98,7 @@ def test_verb_renders_the_blocks() -> None:
     )
     render_src = inspect.getsource(triage_mod.render) + inspect.getsource(
         triage_mod._render_epic_block
-    ) + inspect.getsource(triage_mod._workflow)
+    ) + inspect.getsource(triage_mod._recommendation)
     for token in ("## Epics", "## Ready", "/cortex-core:refine", "/cortex-overnight:overnight"):
         assert token in render_src, (
             f"the renderer lost the {token!r} anchor — the block protocol regressed"
