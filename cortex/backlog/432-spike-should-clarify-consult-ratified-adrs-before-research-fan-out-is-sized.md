@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 40b01bd6-a4a4-4950-9925-04533957160e
 title: 'Spike: should Clarify consult ratified ADRs before research fan-out is sized?'
-status: wontfix
+status: abandoned
 priority: medium
 type: spike
 created: 2026-08-03
