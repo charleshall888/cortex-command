@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: f893afae-aba6-484a-805e-e74199436ae1
 title: Teach discovery to emit fog as a piece and wire its dependents
-status: backlog
+status: wont-do
 priority: medium
 type: feature
 created: 2026-08-03
@@ -39,3 +39,16 @@ Rides two contracts that already exist. `### Pieces` is research-owned and decom
 - `skills/discovery/references/decompose.md:9` — the piece-set contract and the `### How they connect` dependency read.
 - `skills/discovery/SKILL.md` — gate-option inventory if the fog test surfaces a gate.
 - `cortex/adr/0034-fog-becomes-a-piece-and-dependents-declare-the-blocker.md` — the decision this implements.
+
+## Closed unimplemented (2026-08-03)
+
+Every behavior this ticket would build already ships. Decompose already emits an operator-only
+question as its own piece with its blocker declared at authoring time — #439, the spike that
+commissioned this work, was itself written by decompose as `type: spike`, `blocked-by: [438]`.
+`decompose.md:45` already writes `blocked-by` at creation and `:25` already sources dependencies
+from `### How they connect`. Keeping human-bound work out of unattended runs belongs to the
+curation gate (ADR-0021), which sets poor unattended candidates aside with per-item reasons at a
+gate where a human is present, and explicitly rejects the deterministic marker considered here.
+
+ADR-0034 is deprecated with the full reasoning. The defect the evidence actually pointed at —
+tickets asserting facts nobody verified — is #429 and #444.

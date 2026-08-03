@@ -44,4 +44,16 @@ What was adopted is the third option the research had already surfaced but this 
 
 Rationale, costs, and the rejected alternatives are in ADR-0034 — not restated here, per the ADR no-content-duplication rule.
 
-Implementation is #443, as this ticket's Edges require.
+### Correction, same day: the adopted mechanism already existed
+
+ADR-0034 was deprecated hours after it was written, before anything was built, and #443 was closed unimplemented. Reviewing it against the harness showed every part already shipped:
+
+- Decompose already emits an operator-only question as its own piece with its blocker declared at authoring time. **This ticket is the proof** — decompose wrote it as `type: spike`, `blocked-by: [438]`, deliverable a decision. The mechanism was demonstrated by the very artifact that proposed it.
+- `decompose.md:45` already writes `blocked-by: [<ids>]` at creation; `:25` already sources them from `### How they connect`.
+- Keeping human-bound work out of unattended runs is the curation gate's job (ADR-0021), which deliberately rejects the deterministic marker considered here.
+
+The deeper error was in this ticket's framing, not only in the answer. The Why asserts that nothing structurally stops work proceeding on a changed understanding, and the evidence offered for it — #411, #412, #415 — does not show that. #411's falsified claims were two unverified facts about the codebase and one point of intent already settled six days earlier. The failure across every examined case is a ticket asserting facts nobody checked, which is a verification defect, not an uncertainty one, and no fog mechanism addresses it.
+
+**The standing answer to this ticket's question is therefore: the structure already exists, and the real exposure is unverified claims — tracked at #429 and #444.**
+
+Both correction and deprecation are recorded rather than erased, on the same principle as this epic's other reversals.

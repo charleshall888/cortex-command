@@ -29,6 +29,7 @@ Sits at the decompose boundary, where `### Pieces` and `### How they connect` ar
 - An agent-authored comparison of prose against prose is exactly the kind of judgment that produces false confidence. Weigh a narrow mechanical check (do the cited `file:line` references and their stated behavior match the research's?) against a general one.
 - `discovery_source` already links a ticket back to its research artifact, so the pairing needs no new field.
 - Cost discipline: #434's four other tickets were faithful. A check that fires on 1 in 5 must be cheap enough to be worth running on the other four.
+- **Overlaps #429 and should probably be folded into it.** #429 audits `file:line` citations in backlog, requirements and lifecycle prose, on the same premise — *"downstream work treats them as verified"* — with four instances from a single wild-light refine run. This ticket is the adjacent case where the citation resolves but the claim contradicts its source, and #411 shows the third: the research itself asserted an unverified fact (one shared parse boundary; six parsers exist). Decide whether one auditor covers all three before building either.
 - `skills/discovery/` is lifecycle-gated, so this routes through `/cortex-core:dev`.
 
 ## Touch points

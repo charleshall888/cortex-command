@@ -1,8 +1,37 @@
 ---
-status: accepted
+status: deprecated
 ---
 
 # Fog becomes a piece, and its dependents declare the blocker
+
+> **DEPRECATED the day it was written (2026-08-03), before any implementation.** Every behavior it
+> decides already exists, and the decision was reached without checking that. Kept rather than
+> deleted so the next person to propose this mechanism finds the reason it is unnecessary instead of
+> re-deriving it.
+>
+> - **"Uncertainty becomes its own piece."** Decompose already does this. #439 — the spike that
+>   produced this ADR — was itself emitted by decompose as `type: spike` with `blocked-by: [438]`:
+>   a question only the operator could answer, materialized as a piece, blocker declared at
+>   authoring time, terminating in a decision artifact. The archetype existed before the decision.
+> - **"Dependents declare `blocked-by` when authored."** `decompose.md:45` already writes
+>   `blocked-by: [<ids>]` from Integration-shape dependencies at creation, and `:25` already
+>   captures those dependencies from `### How they connect`.
+> - **"Human-bound work must not run unattended."** Owned by the curation gate — ADR-0021, whose
+>   title is *"suitability is not a selection gate"*, has the LLM set poor unattended candidates
+>   aside with per-item reasons at a gate where a human is present, and explicitly rejects a
+>   deterministic marker because *"a Python matcher would be brittle"*. A `needs-operator` field was
+>   considered here and contradicts that.
+>
+> The motivating evidence did not fit either. #411's three "falsified claims" were two facts about
+> the codebase (six frontmatter parsers where the ticket asserted one shared boundary; a warn guard
+> the shipped-surfaces rule forbids) and one point of operator intent that had already been resolved
+> six days before the reconciliation. #436 contradicted research that was correct at
+> `research.md:31`. None of these is uncertainty; all are claims asserted without verification.
+> That defect is real and is tracked at #429 and #444.
+>
+> Naming, for the record, needs no new type: DR-1 forbids one, research Q4 found *"nothing that
+> survives inspection"* distinguishes a decision ticket from `spike`, and `requirements` is already
+> taken by `cortex/requirements/` and `/cortex-core:requirements`.
 
 ## Context
 
