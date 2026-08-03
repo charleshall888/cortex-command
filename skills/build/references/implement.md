@@ -69,7 +69,7 @@ Its final message reports task name, status (completed/partial/failed), files mo
 
 ### 3. Rework (Review Re-Entry)
 
-The review-verdict arm already recorded the rework transition, so this re-entry records nothing. Read `review.md`, dispatch a fresh sub-task per flagged task with the original task text plus the reviewer's feedback and a fix instruction, leave non-flagged tasks `[x]`, return to Review.
+The review-verdict arm already recorded the rework transition, so this re-entry records nothing. Read `review.md`, dispatch a fresh sub-task per flagged task with the original task text plus the reviewer's feedback and a fix instruction, leave non-flagged tasks `[x]`, return to Review through §4.
 
 ### 4. Transition
 
@@ -79,6 +79,6 @@ When all tasks are `[x]` (short road: when every acceptance criterion is met):
 cortex-lifecycle-advance implement-transition --mode transition --feature {feature}
 ```
 
-The verb reads tier and criticality through the shared reducer, applies the implement→{review|complete} routing rule it owns, and records the transition idempotently. Route on the returned `state` per SKILL.md § Advance-verb routing — **`review`** or **`complete`** → proceed there.
+The verb reads departure state, tier and criticality through the reducer, applies the routing it owns, and records the transition idempotently. Route on the returned `state` per SKILL.md § Advance-verb routing — **`review`**, **`complete`** or **`rework-review`** → proceed there.
 
 Every commit goes through `/cortex-core:commit` — orchestrator checkpoints and worktree sub-agents included, never raw git.

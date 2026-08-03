@@ -27,6 +27,7 @@ One row per B1 verb decision arm. `Edge` is the move kind; `Guard` is the adviso
 | `implement.complete` | `implement_transition` | `complete` | `implement` → `complete` | phase-transition | `phase_transition` | criticality not in {high, critical} AND tier != complex (the else arm of the implement-exit rule) | — | `criticality`, `tier` | — |
 | `implement.dispatched` | `implement_transition` | `dispatched` | `implement` → `implement` | in-state-action | `batch_dispatch` | — | — | — | Records one implementation batch; does not change phase. |
 | `implement.review` | `implement_transition` | `review` | `implement` → `review` | phase-transition | `phase_transition` | criticality in {high, critical} OR tier == complex (or corrupted reduction — cautious default to review) | — | `criticality`, `tier` | — |
+| `implement.rework-review` | `implement_transition` | `rework-review` | `implement-rework` → `review` | phase-transition | `phase_transition` | departure state is implement-rework (unconditional — the §4 criticality/tier rule is NOT re-run; a rework is always re-reviewed) | — | `tier` | The sole exit from implement-rework, the state review.rework lands in. Without it implement-rework was a dead end and every rework cycle had to hand-append its phase_transition row out of band. |
 | `plan.branch-mode-approved` | `plan_decision` | `branch-mode-approved` | `plan` → `implement` | phase-transition | `plan_approved`, `phase_transition` | — | — | `branch_mode` | dispatch_choice ∈ branch_mode selects the approved dispatch mode. |
 | `plan.cancelled` | `plan_decision` | `cancelled` | `plan` → `cancelled` | cancel | `lifecycle_cancelled` | — | — | — | — |
 | `plan.revise` | `plan_decision` | `revise` | `plan` → `plan` | no-op | — | — | — | — | Short-circuit before any mutation; the plan is revised out-of-band. |
@@ -151,6 +152,26 @@ Machine-readable rendering of the same table (states sorted by name, transitions
       "owning_verb": "implement_transition",
       "param_selectors": [
         "criticality",
+        "tier"
+      ],
+      "pause": null,
+      "to_state": "review"
+    },
+    {
+      "decision_state": "rework-review",
+      "edge_kind": "phase-transition",
+      "emits": [
+        "phase_transition"
+      ],
+      "from_state": "implement-rework",
+      "guard": {
+        "precondition": "departure state is implement-rework (unconditional — the §4 criticality/tier rule is NOT re-run; a rework is always re-reviewed)",
+        "reads": []
+      },
+      "id": "implement.rework-review",
+      "notes": "The sole exit from implement-rework, the state review.rework lands in. Without it implement-rework was a dead end and every rework cycle had to hand-append its phase_transition row out of band.",
+      "owning_verb": "implement_transition",
+      "param_selectors": [
         "tier"
       ],
       "pause": null,

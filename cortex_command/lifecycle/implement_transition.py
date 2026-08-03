@@ -65,6 +65,7 @@ from cortex_command.backlog import _telemetry
 from cortex_command.common import (
     _resolve_user_project_root_from_cwd,
     reduce_lifecycle_state,
+    resolve_lifecycle_phase,
 )
 from cortex_command.lifecycle.protocol import PROTOCOL_VERSION
 from cortex_command.lifecycle_event import log_event
@@ -75,8 +76,19 @@ KNOWN_STATES = (
     "dispatched",
     "review",
     "complete",
+    "rework-review",
     "error",
 )
+
+# The state a feature sits in between `review.rework` and its re-review. It is
+# NOT a second implement state with its own exit rule: a feature only reaches it
+# from `review.rework`, which fires solely on CHANGES_REQUESTED at cycle 1 (cycle
+# >= 2 escalates instead), so the work that put it here was already judged
+# review-requiring. Its one exit is therefore back to `review`, unconditionally —
+# re-running the §4 criticality/tier rule here could route a reworked feature
+# straight to `complete` without anyone re-reading the changes that were asked
+# for, which is the one outcome a rework cycle exists to prevent.
+_REWORK_STATE = "implement-rework"
 
 # The reducer's documented defaults for an absent (but not corruption-unknowable)
 # axis — the same defaults criticality-matrix.md:24 tells the prose to apply.
@@ -162,6 +174,35 @@ def _resolve_route(events_log: Path) -> tuple[str, str]:
     return "complete", tier
 
 
+def _resolve_transition(events_log: Path) -> tuple[str, str, str, str]:
+    """Resolve the departure state, exit route, stamped tier and envelope state.
+
+    Two departures are possible. From ``implement`` the §4 rule decides between
+    ``review`` and ``complete`` (see :func:`_resolve_route`). From
+    ``implement-rework`` the only exit is back to ``review`` — see
+    ``_REWORK_STATE``'s note for why the §4 rule must not be re-run there.
+
+    The departure is read through the events-first ``resolve_lifecycle_phase``
+    (its ``route`` key, the bare machine state with any ``-paused`` suffix already
+    stripped), never through ``detect_lifecycle_phase``: the artifact derivation
+    reports ``review`` as soon as plan.md's boxes are ticked, which implement.md
+    §2d does *before* calling this verb. Anything other than ``implement-rework``
+    — including the legacy artifact fallback on a log with no machine rows — takes
+    the ``implement`` departure, so a feature that has never emitted a machine row
+    still gets its first transition written.
+
+    Returns ``(departure, route, tier, state)``.
+    """
+    departure = resolve_lifecycle_phase(events_log.parent).get("route")
+    if departure == _REWORK_STATE:
+        # Tier is still stamped from the reducer so the row matches the shape
+        # every other phase_transition carries; only the routing is fixed.
+        _, tier = _resolve_route(events_log)
+        return _REWORK_STATE, "review", tier, "rework-review"
+    route, tier = _resolve_route(events_log)
+    return "implement", route, tier, route
+
+
 def implement_transition(
     *,
     feature: str,
@@ -211,26 +252,27 @@ def implement_transition(
         }
 
     if mode == "transition":
-        route, tier = _resolve_route(events_log)
-        # phase_transition{from: implement, to: <route>, tier} — from/to qualified
+        departure, route, tier, state = _resolve_transition(events_log)
+        # phase_transition{from: <departure>, to: <route>, tier} — from/to qualified
         # so it never false-skips against an earlier transition, and re-invocation
         # after the transition already landed emits nothing.
         if not _event_exists(
-            events_log, "phase_transition", {"from": "implement", "to": route}
+            events_log, "phase_transition", {"from": departure, "to": route}
         ):
             log_event(
                 event="phase_transition",
                 feature=feature,
                 fields=[
-                    ("str", "from", "implement"),
+                    ("str", "from", departure),
                     ("str", "to", route),
                     ("str", "tier", tier),
                 ],
             )
             emitted.append("phase_transition")
         return {
-            "state": route,
+            "state": state,
             "feature": feature,
+            "transition_from": departure,
             "transition_to": route,
             "tier": tier,
             "emitted": emitted,

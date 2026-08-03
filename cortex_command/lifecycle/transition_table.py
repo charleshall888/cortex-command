@@ -484,6 +484,28 @@ TRANSITIONS: tuple[Transition, ...] = (
         ),
         param_selectors=("criticality", "tier"),
     ),
+    Transition(
+        id="implement.rework-review",
+        owning_verb="implement_transition",
+        decision_state="rework-review",
+        from_state="implement-rework",
+        to_state="review",
+        edge_kind=EDGE_KIND_PHASE_TRANSITION,
+        emits=("phase_transition",),
+        guard=Guard(
+            precondition=(
+                "departure state is implement-rework (unconditional — the §4 "
+                "criticality/tier rule is NOT re-run; a rework is always re-reviewed)"
+            ),
+            reads=(),
+        ),
+        param_selectors=("tier",),
+        notes=(
+            "The sole exit from implement-rework, the state review.rework lands in. "
+            "Without it implement-rework was a dead end and every rework cycle had to "
+            "hand-append its phase_transition row out of band."
+        ),
+    ),
 )
 
 # Reserved (retired-but-never-reused) transition ids. Empty today; the R10

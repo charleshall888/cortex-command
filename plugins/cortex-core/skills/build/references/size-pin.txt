@@ -1,1 +1,2 @@
-57862
+57870
+# raised: implement.md SS3 must route its Review return through SS4 and SS4 must list the rework-review state, because the prescribed rework loop was previously unrepresentable in the state machine, lifecycle-id=433, date=2026-08-03
