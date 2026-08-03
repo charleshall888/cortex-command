@@ -2,13 +2,15 @@
 schema_version: "1"
 uuid: 9f7c269f-0dfd-4e96-88ed-83bca9e88da7
 title: Add a report-only file:line citation auditor for backlog, requirements, and lifecycle prose
-status: backlog
+status: abandoned
 priority: medium
 type: feature
 created: 2026-08-03
 updated: 2026-08-03
 tags: ['tooling', 'auditor', 'docs', 'citations']
 areas: ['tooling']
+complexity: complex
+criticality: medium
 ---
 ## Why
 
@@ -117,3 +119,64 @@ symbol. The instrument that caught it was a reader opening the function. Reachin
 structurally means requiring load-bearing claims to carry citations at the decompose boundary,
 which is a convention change and a real authoring tax on the 4-in-5 tickets that were faithful —
 out of scope here and not currently filed.
+
+## Closed 2026-08-03 — premise did not survive measurement
+
+Closed at the Clarify gate of `/cortex-core:refine`, before research. Per project.md's
+"Verify with existing tools (grep/read/one-off script) before building measurement tooling",
+the oracle was reproduced in throwaway scripts first. It does not support the ticket.
+
+**The citation form this ticket is built on is a minority of the corpus.** Across tracked
+markdown in the named scan targets, excluding `archive/` — 7,755 backticked `file:line`
+citations in non-terminal artifacts:
+
+| Form | Count | Share |
+|---|---|---|
+| Repo-relative path, resolves as written | 2,359 | 33% |
+| Bare basename (`batch_runner.py:206`) | 3,695 | 48% — 1,316 ambiguous across 2–9 tracked files |
+| Partial path (`overnight/events.py`, `lifecycle/resolve.py`) | ~1,088 | 14% — nearly all real files under `cortex_command/` |
+| Genuinely dangling | remainder | — |
+
+The Role section assumes `path/to/file.gd:NNN`. Two-thirds of the corpus is not that shape, so
+*path resolution with an ambiguity policy* precedes every check the ticket names, and the ticket
+never mentions it. Run naively, the cheapest check alone reports ~4,800 findings on this repo —
+the exact "turned off within a week" outcome the Edges section warns about.
+
+**The stated exclusion mechanism does not function.** Edges says "Scope by `status:` and/or by
+directory." `status:` frontmatter exists on **13 of 1,653** files under `cortex/lifecycle/` and
+**0 of 129** under `cortex/research/` — it cannot reach the directories holding the citations.
+That leaves directory scoping, and the directories it would have to exclude are the ones the
+ticket names as scan targets.
+
+**Two of five scan targets carry no corpus.** `cortex/requirements/` contains exactly one
+`file:line` citation repo-wide (`resolve_item.py:137-141` — itself a partial path that would not
+resolve without the policy above). `CLAUDE.md` contains zero. The title names "requirements".
+
+**The #444 fold contradicts the Edges constraint.** It adds `discovery_source` research artifacts
+as "free once the engine exists". Research artifacts are the canonical historical record, carry no
+`status:` field, and are ~65% dangling at HEAD — the single largest false-positive generator in
+the repo, added by the section meant to narrow scope.
+
+**The anchor check's premise is false here.** "The dominant convention" — a backticked symbol near
+the citation — holds for ~31% of citations even at a generous ±200-char window, and 35% are line
+ranges, for which the ticket concedes a different rule is needed without saying what it is.
+
+**Its own citations demonstrate the thesis and the blind spot.** Touch points cite
+`bin/cortex-requirements-parity-audit`, deleted in `e3aef4e5` and listed in project.md under
+"Retired without named evidence". Meanwhile the founding evidence is entirely wild-light paths
+(`cortex/requirements/engineering.md:807`, `tests/unit/test_migration_cutover.gd:122-171`) cited
+from a cortex-command ticket — correct-as-written and unresolvable here by construction. Cross-repo
+citation is not an edge case; it is how this ticket's own evidence is recorded, and the ticket has
+no answer for it.
+
+**Precedent argues against the sizing.** #304 shipped `complexity: complex` for a strictly narrower
+job: one citation form, one directory, 24 citations, a closed filename convention as its oracle —
+and cost a 344-line module, a test file, a four-branch wrapper, a scripts entry, a justfile recipe,
+and a plugin mirror.
+
+**Disposition.** The measurement scripts were the deliverable. The rot is real — instances (1)–(4)
+happened — but the mechanical oracle that would catch them does not exist at acceptable precision
+over this corpus, and the shape that actually bit (a line-range acceptance anchor naming a member
+that is absent from the cited file) was caught by a critical reviewer, which is already the
+backstop. Anything filed later should target that narrow slice and start from the numbers above,
+not from this ticket's premise.

@@ -1,0 +1,4 @@
+{"ts": "2026-08-03T20:18:13Z", "schema_version": 1, "event": "lifecycle_start", "feature": "add-a-report-only-fileline-citation", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"ts": "2026-08-03T20:40:00Z", "event": "clarify_critic", "feature": "add-a-report-only-fileline-citation", "schema_version": 3, "parent_epic_loaded": false, "findings_count": 13, "dispositions": {"apply": 10, "dismiss": 1, "ask": 2}, "applied_fixes_count": 10, "dismissals_count": 1, "status": "ok"}
+{"ts": "2026-08-03T20:40:00Z", "event": "complexity_override", "feature": "add-a-report-only-fileline-citation", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-08-03T20:40:00Z", "event": "lifecycle_cancelled", "feature": "add-a-report-only-fileline-citation"}
