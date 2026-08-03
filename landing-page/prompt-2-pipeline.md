@@ -32,7 +32,7 @@ INTERACTIVITY (minimal — restraint is the point):
 - Hover any pipeline node → small popover with the node's name and the artifact path it produces (e.g., "Refine: tackle data model · produces cortex/lifecycle/{slug}/spec.md"). Tooltips, not full panels.
 - No criticality toggle. No complexity slider in the pipeline section.
 
-PLAYGROUND SECTION (after the main pipeline, collapsed by default). One element: a complexity slider (simple → complex → critical). When dragged, run a 1.5s ghost-train down the new pipeline shape so the viewer SEES which gates fire in sequence. Closed by default; revealed by a small "explore the lifecycle gates →" link.
+PLAYGROUND SECTION (after the main pipeline, collapsed by default). Two independent sliders, because rigor is set by two separate axes on the ticket: **complexity** (simple → moderate → complex) and **criticality** (low → medium → high → critical). Do not merge them into one slider. `simple` is the tier with no lifecycle — dragging to it must empty the track and light a `/dev` off-ramp instead, not just shorten the pipeline. When either slider moves, run a 1.5s ghost-train down the new pipeline shape so the viewer SEES which gates fire in sequence. Closed by default; revealed by a small "explore the lifecycle gates →" link.
 
 KONAMI EASTER EGG (best-effort feature). Implement ↑↑↓↓←→←→BA → toggles "redlined spec mode": the fishing spec gains pencil annotations in a different voice (lowercase, dry, occasionally self-deprecating). Sample annotations:
 - next to autonomous overnight runner: "i killed three of these before the morning report was useful. you'll probably kill two."

@@ -52,8 +52,8 @@ async for message in query(prompt=task, options=options):
 | Option | Value |
 |--------|-------|
 | `model` | **Unset.** cortex selects no model; the dispatch runs on the CLI default (→ ADR-0032) |
-| `max_turns` | 15 / 20 / 30 (trivial / simple / complex) |
-| `max_budget_usd` | $5 / $25 / $50 (trivial / simple / complex) |
+| `max_turns` | 150 / 200 / 300 (simple / moderate / complex) |
+| `max_budget_usd` | $5 / $25 / $50 (simple / moderate / complex) |
 | `permission_mode` | `"bypassPermissions"` — overnight agents run without permission prompts |
 | `allowed_tools` | `["Read", "Write", "Edit", "Bash", "Glob", "Grep"]` |
 
@@ -69,14 +69,14 @@ Effort is resolved centrally in `cortex_command/pipeline/dispatch.py` via `resol
 
 | (complexity, criticality) | Effort |
 |---|---|
-| (trivial, low) | low |
-| (trivial, medium) | low |
-| (trivial, high) | high |
-| (trivial, critical) | high |
-| (simple, low) | high |
-| (simple, medium) | high |
+| (simple, low) | low |
+| (simple, medium) | low |
 | (simple, high) | high |
 | (simple, critical) | high |
+| (moderate, low) | high |
+| (moderate, medium) | high |
+| (moderate, high) | high |
+| (moderate, critical) | high |
 | (complex, low) | high |
 | (complex, medium) | high |
 | (complex, high) | xhigh |

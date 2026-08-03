@@ -8,7 +8,7 @@ For full skill descriptions and trigger details, see [skills-reference.md](skill
 
 The agentic layer is the workflow orchestration system built on top of Claude Code skills. It coordinates how development work flows from a vague idea through research, specification, planning, implementation, and review — across single features, parallel batches, or fully autonomous overnight sessions. Skills are the primitive units; hooks wire them into the development environment at the right moments; and state files let the system resume across sessions and tool invocations.
 
-This document is a reference for the full skill inventory, the main workflow diagrams, and the lifecycle phase map. It covers the core skills organized by functional group, both ASCII diagrams showing how they connect, and the tier/criticality model that governs model selection and review requirements. Start with the diagrams for an orientation, then consult the skill table for individual trigger and output details. Optional skills (UI design enforcement, `cortex-pr-review`) ship as separate plugins in the `cortex-command` marketplace; see [docs/setup.md](setup.md) for install instructions.
+This document is a reference for the full skill inventory, the main workflow diagrams, and the lifecycle phase map. It covers the core skills organized by functional group, both ASCII diagrams showing how they connect, and the tier/criticality model that governs research breadth and review requirements (it does not govern model selection — cortex selects no models; → [ADR-0032](../cortex/adr/0032-cortex-selects-no-model.md)). Start with the diagrams for an orientation, then consult the skill table for individual trigger and output details. Optional skills (UI design enforcement, `cortex-pr-review`) ship as separate plugins in the `cortex-command` marketplace; see [docs/setup.md](setup.md) for install instructions.
 
 ---
 
@@ -83,9 +83,10 @@ graph TD
                                                                   ^--------------+
 
 Review phase conditions:
-  - Skipped for simple tier (1-5 files, existing pattern, clear requirements)
-  - Required for complex tier (6+ files, novel pattern, ambiguous scope)
+  - Skipped for moderate tier (the approach is known; the work is not a decision)
+  - Required for complex tier (novel pattern, ambiguous scope, real decisions)
   - Always forced for high and critical criticality
+  - Simple tier never reaches here — it never enters the lifecycle at all
 ```
 
 ---
@@ -104,10 +105,13 @@ Review phase conditions:
 
 ### Tiers
 
-Features are classified into one of two tiers before planning begins:
+Complexity is one of three tiers (`TIER_VOCABULARY` in `cortex_command/common.py`), set during Clarify. Size is not the test — what separates them is how much is genuinely undecided:
 
-- **Simple**: 1–5 files, existing pattern, clear requirements. Skips the Review phase.
-- **Complex**: 6+ files, novel pattern, or ambiguous scope. Includes the Review phase.
+- **Simple**: you already know the approach, or one read confirms it; nothing to decide. **No lifecycle at all** — `/cortex-core:dev` implements it in the conversation, commits, and closes the ticket, and `/cortex-core:refine` stops if Clarify lands here. No `cortex/lifecycle/{slug}/` directory is created.
+- **Moderate**: takes the short road. Clarify → Research → Specify → Implement → Complete; skips Plan and Review unless criticality forces Review.
+- **Complex**: takes the full road, including Plan and Review, and admits `/cortex-core:critical-review` at spec.
+
+One predicate carves both roads: `tier == complex` (or criticality in {high, critical}) takes the long road; everything else takes the short one. Moderate and simple are indistinguishable to that predicate — what separates them is that simple is routed out before a lifecycle exists.
 
 ### Criticality
 
@@ -120,7 +124,7 @@ Criticality is set per-feature and drives how much work each phase does and whet
 | high | Parallel (matrix-sized) | Single | Forced |
 | critical | Parallel (matrix-sized) | Competing plans | Forced |
 
-Research fan-out is always parallel and sized by a tier×criticality matrix (range 3–10) — see [`skills/research/references/fanout.md`](../skills/research/references/fanout.md). Competing/parallel plans remain critical-only.
+Research fan-out is always parallel and sized by a tier×criticality matrix (range 1–10) — see [`skills/research/references/fanout.md`](../skills/research/references/fanout.md). Competing/parallel plans remain critical-only.
 
 ---
 
@@ -130,7 +134,7 @@ Research fan-out is always parallel and sized by a tier×criticality matrix (ran
 
 ### 1. Structured Single-Feature
 
-The most common path. The user asks `/cortex-core:dev` what to work on, or names a specific feature. `/cortex-core:dev` classifies the request as a single non-trivial feature and routes by the ticket's readiness: no `spec:` field yet → `/cortex-core:refine feature-name`; already `status: refined` with a `spec:` → `/cortex-core:build feature-name`. Refine starts with a Clarify phase — focused questions about scope, complexity, and criticality — then runs research (codebase exploration plus a read of `cortex/requirements/project.md`), then moves to specify, where an interview surfaces acceptance criteria, and stops. Build picks up from there: planning produces a task breakdown that the orchestrator reviews before approval, and implementation proceeds as a series of commits, one per task *(PreToolUse hook: `hooks/cortex-validate-commit.sh` fires here and blocks any `git commit` whose message fails the style rules)*. If the feature is complex tier (6+ files, novel pattern) or high/critical criticality, the review phase runs a multi-agent verdict — several reviewers in parallel, then a cross-validator. On completion, `events.log` is updated, the backlog item is closed, and a PR is created.
+The most common path. The user asks `/cortex-core:dev` what to work on, or names a specific feature. `/cortex-core:dev` classifies the request as a single feature above the `simple` tier (a `simple` one it would just implement on the spot) and routes by the ticket's readiness: no `spec:` field yet → `/cortex-core:refine feature-name`; already `status: refined` with a `spec:` → `/cortex-core:build feature-name`. Refine starts with a Clarify phase — focused questions about scope, complexity, and criticality — then runs research (codebase exploration plus a read of `cortex/requirements/project.md`), then moves to specify, where an interview surfaces acceptance criteria, and stops. Build picks up from there: planning produces a task breakdown that the orchestrator reviews before approval, and implementation proceeds as a series of commits, one per task *(PreToolUse hook: `hooks/cortex-validate-commit.sh` fires here and blocks any `git commit` whose message fails the style rules)*. If the feature is complex tier (novel pattern, ambiguous scope) or high/critical criticality, the review phase runs a multi-agent verdict — several reviewers in parallel, then a cross-validator. On completion, `events.log` is updated, the backlog item is closed, and a PR is created.
 
 ### 2. Multiple Features via /cortex-overnight:overnight
 

@@ -49,7 +49,7 @@ You do not need to run all three skills — `/cortex-core:build` on a fresh feat
 | Phase | What happens | Artifact produced | Interactive? |
 |-------|-------------|-------------------|-------------|
 | Clarify | Agent asks intent, complexity, and criticality | none (output captured internally) | Yes — up to 5 questions |
-| Research | Agent reads codebase, dependencies, and requirements | `cortex/lifecycle/{feature}/research.md` | Minimal — complexity escalation prompt only |
+| Research | Agent reads codebase, dependencies, and requirements | `cortex/lifecycle/{feature}/research.md` | Minimal — a tier re-assessment note only |
 | Specify | Structured requirements interview covering problem statement, requirements, non-requirements, edge cases, technical constraints | `cortex/lifecycle/{feature}/spec.md` | Yes — spec approval required |
 | Plan | Agent produces a task breakdown; orchestrator reviews before approval | `cortex/lifecycle/{feature}/plan.md` | Yes — plan approval (merged with the branch/dispatch choice) |
 | Implement | Agent executes tasks as commits | Source code + commits | Optional — user can monitor or leave it running |
@@ -60,7 +60,7 @@ You do not need to run all three skills — `/cortex-core:build` on a fresh feat
 
 **Clarify** — The agent asks focused questions: What problem does this solve? Who benefits? Any specific requirements? What is the scope? Expect at most 5 questions. Answer these directly; this is not the deep requirements interview — that happens in Specify.
 
-**Research** — Mostly automated. The agent reads relevant files and may surface an escalation prompt: "This looks more complex than anticipated — escalate to Complex tier?" Answer yes or no. If it looks straightforward, say no. Complexity can also be escalated manually at any time.
+**Research** — Mostly automated. The agent reads relevant files, then re-assesses the tier with the research in hand and tells you if its assessment changed. A `cortex-complexity-escalator` hook may print a "Consider Complex tier" note when the unresolved-question count is unusually high, but it is advisory and writes nothing — the assessment decides, not the bullet count. The tier can also be changed manually at any time, in either direction.
 
 **Specify** — The agent conducts a structured requirements interview covering:
 - Problem statement (one paragraph)
@@ -91,12 +91,12 @@ The agent presents a draft spec and asks for approval. Review it carefully — o
 
 Two parameters govern the lifecycle:
 
-- **Complexity tier** (`simple` | `complex`) — set during Clarify, affects whether Review runs and how planning proceeds. Simple features skip the Review phase. Complex features include it and may use the critical-review skill on the spec.
-- **Criticality** (`low` | `medium` | `high` | `critical`) — set during Clarify, affects model selection and forces Review for high/critical regardless of tier.
+- **Complexity tier** (`simple` | `moderate` | `complex`) — set during Clarify, governs research breadth and which phases run. `simple` means there is nothing to decide, and it gets **no lifecycle at all**: the agent implements it in the conversation and closes the ticket, and `/cortex-core:refine` stops rather than speccing it. `moderate` takes the short road, skipping Plan and Review. `complex` takes the full road and may use the critical-review skill on the spec.
+- **Criticality** (`low` | `medium` | `high` | `critical`) — set during Clarify, sets research breadth and reviewer count, and forces Review for high/critical regardless of tier. It does **not** affect model selection; cortex selects no models (→ [ADR-0032](../cortex/adr/0032-cortex-selects-no-model.md)).
 
 Both can be overridden at any point by asking the agent to change them.
 
-**Persistence note**: When the complexity tier is escalated mid-lifecycle (either automatically at phase transitions or manually on request), the escalation is recorded as a `complexity_override` event in `cortex/lifecycle/{feature}/events.log`. It is NOT written back to the backlog item's YAML frontmatter — the `complexity:` field in the backlog item is set only during the Clarify phase and does not change thereafter. The active tier for all subsequent phases is determined by reading `events.log` at resume time.
+**Persistence note**: When the complexity tier changes mid-lifecycle, the agent records it as a `complexity_override` event in `cortex/lifecycle/{feature}/events.log` — in either direction, since the override supersedes the otherwise up-only reconcile. It is NOT written back to the backlog item's YAML frontmatter — the `complexity:` field in the backlog item is set only during the Clarify phase and does not change thereafter. The active tier for all subsequent phases is determined by reading `events.log` at resume time.
 
 ---
 

@@ -4156,7 +4156,7 @@
     border: 1px solid var(--rule-soft); border-radius: 2px;
   }
   /* ═════════════════════════════════════════════════════════════════
-     COMPARISON STRIP — two cards (simple vs critical) showing the
+     COMPARISON STRIP — two cards (moderate vs critical) showing the
      spectrum in real numbers (gates · tokens · wall clock).
      ═════════════════════════════════════════════════════════════════ */
   .ax-compare {
@@ -4171,14 +4171,14 @@
     display: flex; flex-direction: column; gap: 8px;
     position: relative;
   }
-  .ax-compare-card.simple   { box-shadow: inset 3px 0 0 var(--blue); }
+  .ax-compare-card.moderate { box-shadow: inset 3px 0 0 var(--blue); }
   .ax-compare-card.critical { box-shadow: inset 3px 0 0 var(--ochre); }
   .ax-compare-h {
     font-family: var(--mono); font-size: 9.5px;
     letter-spacing: 0.18em; text-transform: uppercase;
     color: var(--ink-faint);
   }
-  .ax-compare-card.simple   .ax-compare-h { color: var(--blue); }
+  .ax-compare-card.moderate .ax-compare-h { color: var(--blue); }
   .ax-compare-card.critical .ax-compare-h { color: var(--ochre); }
   .ax-compare-name {
     font-family: var(--serif); font-weight: 350;
@@ -4196,7 +4196,7 @@
     color: var(--ink); letter-spacing: -0.005em;
     font-variant-numeric: tabular-nums;
   }
-  .ax-compare-card.simple   .ax-compare-stat-v { color: var(--blue); }
+  .ax-compare-card.moderate .ax-compare-stat-v { color: var(--blue); }
   .ax-compare-card.critical .ax-compare-stat-v { color: var(--ochre); }
   .ax-compare-stat-k {
     font-family: var(--mono); font-size: 9px;
@@ -5935,13 +5935,16 @@
     <div class="pg-header">
       <div class="marker">§2.1 · the patch atlas</div>
       <h2 class="pg-title">Complexity earns ceremony. <em>Simplicity skips it.</em></h2>
-      <p class="pg-lede">Two values on the ticket — <code>complexity</code> and <code>criticality</code> — set how much rigor the work earns. <em>/refine</em> pins them in Clarify, before a line of research is dispatched; every stage after that reads them and patches the track to match.</p>
+      <p class="pg-lede">Two values on the ticket — <code>complexity</code> (<em>simple · moderate · complex</em>) and <code>criticality</code> — set how much rigor the work earns. <em>/refine</em> pins them in Clarify, before a line of research is dispatched; every stage after that reads them and patches the track to match. Below <em>moderate</em> there is no track at all: <em>simple</em> work is implemented on the spot.</p>
     </div>
 
-    <!-- Comparison strip: two ends of the spectrum, in real numbers. -->
+    <!-- Comparison strip: the two ends of the lifecycle, in real numbers. The
+         lightest tier (`simple`) is deliberately not a card — it never enters
+         the track, so it has no phase count to compare. The atlas below teaches
+         that off-ramp on its own rung. -->
     <div class="ax-compare">
-      <div class="ax-compare-card simple">
-        <div class="ax-compare-h">simple · low</div>
+      <div class="ax-compare-card moderate">
+        <div class="ax-compare-h">moderate · low</div>
         <div class="ax-compare-name">adding a new lure</div>
         <div class="ax-compare-stats">
           <div class="ax-compare-stat"><span class="ax-compare-stat-v">5</span><span class="ax-compare-stat-k">phases</span></div>
@@ -6042,7 +6045,7 @@
     </article>
 
     <!-- The refine|build seam. Everything above is /refine; Plan below is
-         /build's first phase — and on the short road (simple + low|medium) it
+         /build's first phase — and on the short road (moderate + low|medium) it
          is skipped outright, spec going straight to implement. See §2.1. -->
     <div class="stream-handoff">
       <span class="sh-artifact">cortex/lifecycle/{slug}/spec.md</span>
@@ -6060,7 +6063,7 @@
       <div class="leader"></div>
       <div class="rev">R3</div>
       <span class="stamp">phase complete</span>
-      <h3>Plan <span class="phase-tag">/build · phase 04</span><span class="gloss" title="the short road: simple tier at low or medium criticality routes spec straight to implement, deriving its task list from the spec's acceptance criteria">skipped on the short road</span></h3>
+      <h3>Plan <span class="phase-tag">/build · phase 04</span><span class="gloss" title="the short road: moderate tier at low or medium criticality routes spec straight to implement, deriving its task list from the spec's acceptance criteria">skipped on the short road</span></h3>
       <div class="status-line">status: <span class="ok">drafting → locked</span> · 5 tasks · 1 named risk</div>
       <div class="body">
         <span class="placeholder">[ pending — implementation order resolves here ]</span>
@@ -6902,7 +6905,7 @@
                     <text class="a-mono sm" x="16" y="122"><tspan class="a-mono b">tier:</tspan>complex · <tspan fill="#1e40af" font-weight="600">review ✓ APPROVED</tspan></text>
                   </g>
 
-                  <!-- worker 2 · feature ② · tier:simple · review SKIPPED (gate not met) -->
+                  <!-- worker 2 · feature ② · tier:moderate · review SKIPPED (gate not met) -->
                   <g transform="translate(442, 562)">
                     <rect class="a-rect fill-soft" width="396" height="144"/>
                     <text class="a-mono b" x="16" y="28">feature ② · lead</text>
@@ -6917,7 +6920,7 @@
                       <text class="a-mono sm dim" x="312" y="18" text-anchor="middle">review —</text>
                     </g>
                     <text class="a-mono sm dim" x="16" y="98">reads plan.md + spec.md · own worktree</text>
-                    <text class="a-mono sm" x="16" y="122"><tspan class="a-mono b">tier:</tspan>simple · <tspan fill="var(--ink-faint)">review skipped</tspan></text>
+                    <text class="a-mono sm" x="16" y="122"><tspan class="a-mono b">tier:</tspan>moderate · <tspan fill="var(--ink-faint)">review skipped</tspan></text>
                   </g>
 
                   <!-- worker 3 · feature ③ · tier:complex · CHANGES_REQUESTED → fix → APPROVED
@@ -7357,7 +7360,7 @@
         <ul class="commands">
           <li><span class="cmd">cortex-refine emit-lifecycle-start</span><span class="desc">seed lifecycle_start event</span></li>
           <li><span class="cmd">cortex-lifecycle-counters</span><span class="desc">tally for morning report</span></li>
-          <li><span class="cmd">cortex-complexity-escalator</span><span class="desc">open-question threshold check</span></li>
+          <li><span class="cmd">cortex-complexity-escalator</span><span class="desc">open-question signal · advisory</span></li>
         </ul>
         <div class="callers">/refine · /build · /morning-review</div>
       </article>
@@ -8253,18 +8256,23 @@
       complete:  { label: 'complete' },
     };
 
-    // Indexed [criticality][complexity]: 4 criticality levels × 2 complexity
-    // tiers, mirroring the canonical enum (common.py TIER_VOCABULARY /
-    // CRITICALITY_VOCABULARY). Every fork below is a row in the closed
-    // transition table (cortex_command/lifecycle/transition_table.py, rendered
-    // in docs/lifecycle-transition-table.md) or a documented dispatch rule:
+    // Indexed [criticality][complexity]: 4 criticality levels × 3 complexity
+    // tiers, mirroring the canonical enum (common.py TIER_VOCABULARY =
+    // {simple, moderate, complex} / CRITICALITY_VOCABULARY). Every fork below
+    // is a row in the closed transition table
+    // (cortex_command/lifecycle/transition_table.py, rendered in
+    // docs/lifecycle-transition-table.md) or a documented dispatch rule:
+    //   • `simple` has NO lifecycle. It is routed off the track before one
+    //     exists — /dev Step 1 rule 4 implements it in the conversation, and
+    //     /refine Step 2 stops there if Clarify lands on it. Its column is
+    //     empty on purpose; the off-ramp below lights up in its place.
     //   • ONE predicate governs the spec exit and the implement exit:
     //     criticality ∈ {high, critical} OR tier == complex takes the long
     //     road (`spec.approved` → plan; `implement.review` → review);
     //     everything else takes the short road (`spec.approved-direct` →
-    //     implement; `implement.complete` → complete), so simple + (low|medium)
-    //     never enters plan or review and derives its task list from spec.md's
-    //     acceptance criteria — no plan.md exists on that road
+    //     implement; `implement.complete` → complete), so moderate +
+    //     (low|medium) never enters plan or review and derives its task list
+    //     from spec.md's acceptance criteria — no plan.md exists on that road
     //   • /critical-review fires for complex + (medium|high|critical), and it
     //     fires AT SPEC, before approval — never at plan
     //     (skills/refine/references/specify.md §3b)
@@ -8274,26 +8282,30 @@
     //     at all (cortex/adr/0032-cortex-selects-no-model.md), so the
     //     dispatching agent picks.
     //   • competing plans (planB) are critical-only
-    //   • research runs at every cell — what the grid patches is its BREADTH,
-    //     not its presence (RESEARCH_AGENTS below, from fanout.md)
+    //   • research runs at every cell the track reaches — what the grid
+    //     patches is its BREADTH, not its presence (RESEARCH_AGENTS, fanout.md)
     const MATRIX = [
       // low
       [
+        [],
         ['clarify','research','spec','implement','complete'],
         ['clarify','research','spec','plan','implement','review','complete'],
       ],
       // medium
       [
+        [],
         ['clarify','research','spec','implement','complete'],
         ['clarify','research','spec','review1','plan','implement','review','complete'],
       ],
       // high
       [
+        [],
         ['clarify','research','spec','plan','implement','review','complete'],
         ['clarify','research','spec','review1','plan','implement','review','complete'],
       ],
       // critical
       [
+        [],
         ['clarify','research','spec','plan','planB','implement','review','complete'],
         ['clarify','research','spec','review1','plan','planB','implement','review','complete'],
       ],
@@ -8301,20 +8313,27 @@
 
     // Research fan-out breadth per cell — the canonical count matrix in
     // skills/research/references/fanout.md (an upper bound on breadth, not a
-    // quota). Indexed [criticality][complexity], same order as MATRIX.
+    // quota). Indexed [criticality][complexity], same order as MATRIX. The
+    // simple column is carried for fidelity with fanout.md, which still sizes
+    // a standalone /research call at that tier; the lifecycle never reaches
+    // research there, so the bench never renders it.
     const RESEARCH_AGENTS = [
-      [1, 5],   // low
-      [2, 6],   // medium
-      [3, 8],   // high
-      [4, 10],  // critical
+      [1, 1, 5],   // low
+      [1, 2, 6],   // medium
+      [2, 3, 8],   // high
+      [3, 4, 10],  // critical
     ];
 
     const AXIS = {
-      complexity:  ['simple', 'complex'],
+      complexity:  ['simple', 'moderate', 'complex'],
       criticality: ['low', 'medium', 'high', 'critical'],
     };
 
+    const SIMPLE = 0;  // the tier with no lifecycle; see MATRIX note above
+
     function summarize(seq, crit, cplx) {
+      if (cplx === SIMPLE)
+        return 'no lifecycle · /dev implements it here, commits, closes the ticket';
       const set = new Set(seq);
       const parts = [`${seq.length} phases`];
       if (!set.has('plan'))    parts.push('short road — spec straight to implement');
@@ -8348,7 +8367,7 @@
     // /build. spec.md is the artifact that crosses.
     const SEAM_COL = 3.5;
     // Asymmetric padding: the left margin is wider than the right to seat the
-    // /dev fork and its trivial off-ramp before the track begins.
+    // /dev fork and its simple-tier off-ramp before the track begins.
     const BIG_PAD_L = 120, BIG_PAD_R = 34;
     const bigX = col  => BIG_PAD_L + col * ((BIG.W - BIG_PAD_L - BIG_PAD_R) / BAY_COLS);
     const bigY = lane => BIG.railY + lane * BIG.fork;
@@ -8451,8 +8470,9 @@
       <div class="ax-footnote">
         <strong>teaches</strong>
         <span class="ax-footnote-body">
-          The harness doesn't punish simple work with critical-tier ceremony — and it doesn't
-          ship critical work without it. Rigor is a budget; this is how it's spent.
+          The harness doesn't punish light work with critical-tier ceremony — the lightest tier
+          skips the track entirely — and it doesn't ship critical work without it. Rigor is a
+          budget; this is how it's spent.
         </span>
       </div>
     `;
@@ -8513,30 +8533,33 @@
       });
     })();
 
-    // ── the trivial off-ramp ──
-    // Deliberately STATIC — no escalator drives it, because `trivial` is not a
-    // tier. TIER_VOCABULARY (common.py) is closed at {simple, complex}, so no
-    // ticket can ever carry complexity:trivial. This is a ROUTING verdict /dev
-    // reaches before any lifecycle exists (skills/dev/SKILL.md Step 1 rule 4:
-    // single file, existing pattern, one obvious approach → implement here,
-    // commit, close the item). The work leaves the track entirely; no
-    // cortex/lifecycle/{slug}/ directory is created. Drawn muted and dashed so
-    // it reads as an exit rather than competing with the live blue rail.
-    (function drawOffRamp() {
+    // ── the simple-tier off-ramp ──
+    // `simple` IS a tier (TIER_VOCABULARY = {simple, moderate, complex}), but
+    // it is the one tier with no lifecycle: /dev Step 1 rule 4 implements it in
+    // the conversation, commits, and closes the item, and /refine Step 2 stops
+    // if Clarify lands there. So the ramp is the simple rung's rendering — it
+    // lights up exactly when the track goes dark, and sits muted and dashed
+    // otherwise so it never competes with the live blue rail.
+    const setOffRamp = (function drawOffRamp() {
       const seam  = skeleton.querySelector('[data-seam]');
       const forkX = 60, railY = bigY(0), dropY = 148;
       const clarifyEdge = bigX(0) - BIG.modW / 2;
 
-      const path = (d, extra) => seam.appendChild(svgEl('path', Object.assign({
-        d, fill: 'none', stroke: 'var(--ink-faint)', 'stroke-width': 1,
-      }, extra)));
+      const strokes = [], fills = [];
+      const path = (d, extra) => {
+        const el = seam.appendChild(svgEl('path', Object.assign({
+          d, fill: 'none', stroke: 'var(--ink-faint)', 'stroke-width': 1,
+        }, extra)));
+        strokes.push(el);
+        return el;
+      };
 
       // entry stub: the fork sits on the rail, left of clarify
       path(`M 24 ${railY} L ${clarifyEdge} ${railY}`, { 'stroke-opacity': 0.5 });
-      seam.appendChild(svgEl('circle', {
+      strokes.push(seam.appendChild(svgEl('circle', {
         cx: forkX, cy: railY, r: 3,
         fill: 'var(--parchment-2)', stroke: 'var(--ink-faint)', 'stroke-width': 1,
-      }));
+      })));
 
       const devLabel = svgEl('text', {
         x: forkX, y: railY - 13, 'text-anchor': 'middle',
@@ -8551,22 +8574,32 @@
         `M ${forkX} ${railY} L ${forkX} ${dropY - 8} Q ${forkX} ${dropY} ${forkX + 8} ${dropY} L ${forkX + 52} ${dropY}`,
         { 'stroke-dasharray': '3 3', 'stroke-opacity': 0.8 },
       );
-      seam.appendChild(svgEl('path', {
+      fills.push(seam.appendChild(svgEl('path', {
         d: `M ${forkX + 58} ${dropY} l -6 -3.4 l 0 6.8 z`,
         fill: 'var(--ink-faint)', stroke: 'none',
-      }));
+      })));
 
       const exit = svgEl('text', {
         x: forkX + 66, y: dropY + 3, 'font-family': 'JetBrains Mono',
         'font-size': 9, 'letter-spacing': '0.05em', fill: 'var(--ink-2)',
       });
-      exit.textContent = 'trivial → implement · commit · close the ticket';
+      exit.textContent = 'simple → implement · commit · close the ticket';
       const note = svgEl('tspan', {
         x: forkX + 66, dy: 12, 'font-size': 8, fill: 'var(--ink-faint)',
       });
       note.textContent = 'no lifecycle directory is ever created';
       exit.appendChild(note);
       seam.appendChild(exit);
+
+      return function setOffRamp(on) {
+        const c = on ? 'var(--blue)' : 'var(--ink-faint)';
+        strokes.forEach(el => el.setAttribute('stroke', c));
+        fills.forEach(el => el.setAttribute('fill', c));
+        devLabel.setAttribute('fill', on ? 'var(--blue)' : 'var(--ink-2)');
+        exit.setAttribute('fill', on ? 'var(--ink)' : 'var(--ink-2)');
+        exit.setAttribute('font-weight', on ? 500 : 400);
+        note.setAttribute('fill', on ? 'var(--ink-mute)' : 'var(--ink-faint)');
+      };
     })();
 
     const modulesG = skeleton.querySelector('[data-modules]');
@@ -8627,7 +8660,9 @@
 
     // Escalators
     const controls = skeleton.querySelector('[data-controls]');
-    const escState = { complexity: { idx: 0 }, criticality: { idx: 1 } };
+    // Opens on moderate, not simple: simple renders an empty bench (that IS the
+    // lesson), but it makes a poor first frame for the section.
+    const escState = { complexity: { idx: 1 }, criticality: { idx: 1 } };
     const escConfigs = [
       { axis: 'complexity',  glyph: '◇', hint: 'how hard is the work?' },
       { axis: 'criticality', glyph: '!', hint: 'how much will it hurt if it breaks?' },
@@ -8678,6 +8713,7 @@
       cplxEl.textContent = AXIS.complexity[cplx];
       critEl.textContent = AXIS.criticality[crit];
       summaryEl.textContent = summarize(seq, crit, cplx);
+      setOffRamp(cplx === SIMPLE);
 
       // Cell-dependent sublabels. `research` is the only node whose grid
       // effect is breadth rather than presence, so it is the only one with a

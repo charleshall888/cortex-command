@@ -407,7 +407,7 @@ TRANSITIONS: tuple[Transition, ...] = (
         guard=Guard(
             precondition=(
                 "criticality not in {high, critical} AND tier != complex "
-                "(the short road: simple/low-medium skips Plan; only taken "
+                "(the short road: moderate/low-medium skips Plan; only taken "
                 "under --emit-transition — standalone refine emits no edge)"
             ),
             reads=("criticality", "tier"),
@@ -415,9 +415,11 @@ TRANSITIONS: tuple[Transition, ...] = (
         param_selectors=("backend", "criticality", "tier"),
         notes=(
             "Short road of the spec-exit fork: same predicate as the implement-exit "
-            "rule, so a simple/low-medium feature runs specify->implement->complete "
+            "rule, so a moderate/low-medium feature runs specify->implement->complete "
             "and never enters plan or review. Implement derives its task list from "
-            "spec.md acceptance criteria (no plan.md exists on this road)."
+            "spec.md acceptance criteria (no plan.md exists on this road). The simple "
+            "tier never reaches this fork at all — it is routed out of the lifecycle "
+            "before one exists (dev Step 1 rule 4, refine Step 2 stop)."
         ),
     ),
     Transition(

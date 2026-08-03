@@ -36,7 +36,7 @@ One row per B1 verb decision arm. `Edge` is the move kind; `Guard` is the adviso
 | `review.escalated` | `review_verdict` | `escalated` | `review` → `escalated` | phase-transition | `review_verdict`, `phase_transition` | verdict == REJECTED (any cycle), or CHANGES_REQUESTED and cycle >= 2 | — | — | — |
 | `review.rework` | `review_verdict` | `rework` | `review` → `implement-rework` | phase-transition | `review_verdict`, `phase_transition` | verdict == CHANGES_REQUESTED and cycle == 1 | — | — | — |
 | `spec.approved` | `spec_approve` | `approved` | `specify` → `plan` | phase-transition | `spec_approved`, `phase_transition` | criticality in {high, critical} OR tier == complex (or corrupted reduction — cautious default to plan), or standalone refine (--no-emit-transition, no edge emitted) | — | `backend`, `criticality`, `tier` | phase_transition specify->plan emits ONLY when the caller wraps refine in the lifecycle (--emit-transition); standalone refine records spec_approved and the backend-gated write-back but suppresses the edge. The long road of the spec-exit fork; the short road is spec.approved-direct. |
-| `spec.approved-direct` | `spec_approve` | `approved-direct` | `specify` → `implement` | phase-transition | `spec_approved`, `phase_transition` | criticality not in {high, critical} AND tier != complex (the short road: simple/low-medium skips Plan; only taken under --emit-transition — standalone refine emits no edge) | — | `backend`, `criticality`, `tier` | Short road of the spec-exit fork: same predicate as the implement-exit rule, so a simple/low-medium feature runs specify->implement->complete and never enters plan or review. Implement derives its task list from spec.md acceptance criteria (no plan.md exists on this road). |
+| `spec.approved-direct` | `spec_approve` | `approved-direct` | `specify` → `implement` | phase-transition | `spec_approved`, `phase_transition` | criticality not in {high, critical} AND tier != complex (the short road: moderate/low-medium skips Plan; only taken under --emit-transition — standalone refine emits no edge) | — | `backend`, `criticality`, `tier` | Short road of the spec-exit fork: same predicate as the implement-exit rule, so a moderate/low-medium feature runs specify->implement->complete and never enters plan or review. Implement derives its task list from spec.md acceptance criteria (no plan.md exists on this road). The simple tier never reaches this fork at all — it is routed out of the lifecycle before one exists (dev Step 1 rule 4, refine Step 2 stop). |
 | `spec.cancelled` | `spec_approve` | `cancelled` | `specify` → `cancelled` | cancel | `lifecycle_cancelled` | — | — | — | — |
 | `spec.revise` | `spec_approve` | `revise` | `specify` → `specify` | no-op | — | — | — | — | Short-circuit before any mutation; the spec is revised out-of-band. |
 
@@ -342,14 +342,14 @@ Machine-readable rendering of the same table (states sorted by name, transitions
       ],
       "from_state": "specify",
       "guard": {
-        "precondition": "criticality not in {high, critical} AND tier != complex (the short road: simple/low-medium skips Plan; only taken under --emit-transition — standalone refine emits no edge)",
+        "precondition": "criticality not in {high, critical} AND tier != complex (the short road: moderate/low-medium skips Plan; only taken under --emit-transition — standalone refine emits no edge)",
         "reads": [
           "criticality",
           "tier"
         ]
       },
       "id": "spec.approved-direct",
-      "notes": "Short road of the spec-exit fork: same predicate as the implement-exit rule, so a simple/low-medium feature runs specify->implement->complete and never enters plan or review. Implement derives its task list from spec.md acceptance criteria (no plan.md exists on this road).",
+      "notes": "Short road of the spec-exit fork: same predicate as the implement-exit rule, so a moderate/low-medium feature runs specify->implement->complete and never enters plan or review. Implement derives its task list from spec.md acceptance criteria (no plan.md exists on this road). The simple tier never reaches this fork at all — it is routed out of the lifecycle before one exists (dev Step 1 rule 4, refine Step 2 stop).",
       "owning_verb": "spec_approve",
       "param_selectors": [
         "backend",

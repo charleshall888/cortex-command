@@ -51,7 +51,7 @@ Compose a structured backlog ticket body from a context block, using the Why/Rol
 ---
 
 ### research
-Parallel research orchestrator for pre-implementation investigation. Dispatches 3–10 agents (sized by a tier×criticality matrix) across independent angles (codebase, web, requirements, tradeoffs, adversarial) and synthesizes findings into a structured `research.md` artifact. Used directly via `/cortex-core:research` or invoked automatically by `/cortex-core:refine` and `/cortex-core:build`.
+Parallel research orchestrator for pre-implementation investigation. Dispatches 1–10 agents (sized by a tier×criticality matrix) across independent angles (codebase, web, requirements, tradeoffs, adversarial) and synthesizes findings into a structured `research.md` artifact. Used directly via `/cortex-core:research` or invoked automatically by `/cortex-core:refine` and `/cortex-core:build`.
 
 [skills/research/SKILL.md](../skills/research/SKILL.md)
 
@@ -76,7 +76,7 @@ Plan and launch autonomous overnight development sessions. Selects eligible feat
 These three skills overlap and route to each other — here is when to use each:
 
 - **`/cortex-core:dev`** — general entry point when you are not sure what to do next. It analyzes your request, runs backlog triage if invoked bare, and routes automatically to `/cortex-core:refine`, `/cortex-core:build`, `/cortex-overnight:overnight`, `/cortex-core:discovery`, or direct implementation. Start here if you do not already know which workflow you need.
-- **`/cortex-core:build`** — invoke directly when the ticket is already refined and you want to work through it phase by phase (plan → implement → review → complete; simple-tier low/medium features take the short road, skipping plan and review). It is a structured, interactive state machine for a single feature. `/cortex-core:dev` routes refined single features here automatically.
+- **`/cortex-core:build`** — invoke directly when the ticket is already refined and you want to work through it phase by phase (plan → implement → review → complete; moderate-tier low/medium features take the short road, skipping plan and review). It is a structured, interactive state machine for a single feature. `/cortex-core:dev` routes refined single features here automatically.
 - **`/cortex-overnight:overnight`** — invoke directly when features already have their research and spec artifacts (produced by `/cortex-core:refine` or `/cortex-core:build`) and you want autonomous unattended execution. It handles plan approval and hands off to the runner; no interactive research or spec phases occur. `/cortex-core:dev` recommends this when all backlog children are refined.
 
 ---

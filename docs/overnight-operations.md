@@ -336,7 +336,7 @@ For the hard-dead case the **immediate** path is the manual `cortex overnight re
 
 ### --tier concurrency (Concurrency Tuning)
 
-The user-facing `--tier` CLI flag on `cortex overnight start` accepts only `simple` or `complex` (default `simple`); see `cortex_command/cli.py`. The flag is currently a no-op for concurrency — every value silently maps to the `max_100` throttle profile. The accepted values describe feature-shape intent rather than a concurrency knob.
+The user-facing `--tier` CLI flag on `cortex overnight start` accepts `simple`, `moderate`, or `complex` (default `simple`); see `cortex_command/cli.py`. The flag is currently a no-op for concurrency — every value silently maps to the `max_100` throttle profile. The accepted values describe feature-shape intent rather than a concurrency knob.
 
 Internally, `cortex_command/overnight/throttle.py` defines three throttle-profile tier modes — `max_5`, `max_100`, and `max_200` — that map to `(runners, workers)` pairs as follows:
 
@@ -366,11 +366,13 @@ cortex selects no model for any dispatch (→ [ADR-0032](../cortex/adr/0032-cort
 
 | Tier | Criticality | Review required? | Repair attempts |
 |------|-------------|------------------|-----------------|
-| `simple` | `low`, `medium` | No | 1 |
-| `simple` | `high`, `critical` | Yes | up to 2 |
+| `moderate` | `low`, `medium` | No | 1 |
+| `moderate` | `high`, `critical` | Yes | up to 2 |
 | `complex` | any | Yes | up to 2 |
 
 Review gating is implemented by `requires_review(tier, criticality)` in `cortex_command/common.py`: review runs when `tier == "complex" or criticality in ("high", "critical")`.
+
+The `simple` tier is absent from the table by construction, not by omission: `simple` work is implemented directly in the interactive session and never reaches an overnight dispatch. Were one to arrive, `requires_review` would treat it exactly as `moderate` — the predicate keys on `tier == "complex"`, and the two are indistinguishable to it.
 
 ### Repair caps
 
@@ -409,7 +411,7 @@ jq '.model_tier_dispatch_aggregates | to_entries | map({key, mean: .value.cost_u
   cortex/lifecycle/sessions/<session_id>/metrics.json
 ```
 
-Bucket key shape after Task 6 is `"<model>,<tier>,<effort>"` (e.g. `"opus,complex,xhigh"`, `"sonnet,simple,high"`); skill-specific aggregates use the analogous `skill_tier_dispatch_aggregates` slice with skill in the key. The exact aggregate field names are owned by `cortex_command/pipeline/metrics.py` — if the path above does not resolve in a given `metrics.json`, dump the top-level keys with `jq 'keys' metrics.json` and follow the structure from there.
+Bucket key shape after Task 6 is `"<model>,<tier>,<effort>"` (e.g. `"opus,complex,xhigh"`, `"sonnet,moderate,high"`); skill-specific aggregates use the analogous `skill_tier_dispatch_aggregates` slice with skill in the key. The exact aggregate field names are owned by `cortex_command/pipeline/metrics.py` — if the path above does not resolve in a given `metrics.json`, dump the top-level keys with `jq 'keys' metrics.json` and follow the structure from there.
 
 **Threshold that triggers human investigation: > 2× per-bucket mean cost over 2–3 overnight rounds.** A single round can spike on outliers (one truncated dispatch, one unusually deep reasoning chain); two-to-three consecutive rounds at >2× baseline mean for the same `(model, tier, skill, effort)` bucket is the signal that the flip is paying more than the quality boost is worth on this workload.
 
