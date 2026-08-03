@@ -134,7 +134,7 @@ id = "spec-interview-gapfill"
 kind = "question"
 file = "skills/refine/references/specify.md"
 anchor = "2. Interview"
-rationale = "Structured spec interview: probe one question at a time via AskUserQuestion until ambiguities resolve."
+rationale = "Structured spec interview: probe via AskUserQuestion, batching only independent questions."
 
 [[pause]]
 id = "spec-confidence-loopback"

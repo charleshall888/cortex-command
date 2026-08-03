@@ -11,7 +11,7 @@ A thinking-partner conversation that helps the user reason through a topic. Anch
 
 ## The loop
 
-**One question at a time, in prose.** Wait for the reply, let it shape the next. Neither a list fixed up front nor batched `AskUserQuestion` calls — both commit to later questions before earlier answers arrive.
+**Ask in prose, and let each answer shape what follows.** Group questions that stand independent of each other; hold back any question whose shape or existence depends on an answer you don't have yet. A list fixed up front commits to later questions before earlier answers arrive.
 
 **Recommend before asking.** Lead with your defensible default and reasoning, then ask them to confirm or redirect. Suppress this on taste questions, where recommending contaminates the preference you meant to elicit.
 

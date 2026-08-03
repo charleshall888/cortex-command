@@ -13,7 +13,7 @@ Per area, judge first whether research already answers it: **clear** → state i
 Problem statement (what it solves, who benefits, cost of not building) · Requirements (acceptance criteria each; must-have vs nice-to-have) · ADR posture (draft any hard-to-reverse, surprising, real-trade-off decision into `## Proposed ADR` in the same turn — don't defer) · Non-requirements (push back on vague boundaries) · Edge cases (challenge optimistic assumptions) · Technical constraints (from research).
 
 <!-- pause: spec-interview-gapfill question -->
-Probe via `AskUserQuestion`, one question at a time, never batched, until ambiguities resolve.
+Probe via `AskUserQuestion` until ambiguities resolve; batch only independent questions.
 
 Interactive in-session verification is a legitimate default — don't interrogate how criteria would be verified overnight. Name the grounding file for a code-derived criterion so a wrong location surfaces before code is written; omit rather than fabricate for intent-only criteria. Where criteria look under-specified, invent and surface one concrete stress scenario before locking.
 

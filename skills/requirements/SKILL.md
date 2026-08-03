@@ -21,7 +21,7 @@ The target is `cortex/requirements/{scope}.md`. When it already exists, refine i
 
 ## 1. Interview
 
-Run the interview loop from `/cortex-core:interview`: one question at a time, codebase-trumps-interview, recommend before asking. Every question carries a **Recommended answer:** grounded in explored code, the existing target doc, the parent requirements (area scope), or stated conventions — or `none — open question` with the gap explained.
+Run the interview loop from `/cortex-core:interview`: batch only independent questions, codebase-trumps-interview, recommend before asking. Every question carries a **Recommended answer:** grounded in explored code, the existing target doc, the parent requirements (area scope), or stated conventions — or `none — open question` with the gap explained.
 
 Anchor each question block to one section, in template order. **Project**: Overview, Philosophy of Work, Architectural Constraints, Quality Attributes, Project Boundaries, Conditional Loading, Optional. **Area**: Overview, Functional Requirements, Non-Functional Requirements, Architectural Constraints, Dependencies, Edge Cases, Open Questions — reusing parent context from `cortex/requirements/project.md` rather than re-asking settled project-level positions.
 
