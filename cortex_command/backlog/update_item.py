@@ -30,7 +30,12 @@ from cortex_command.backlog.resolve_item import (
     _parse_frontmatter,
     resolve,
 )
-from cortex_command.common import TERMINAL_STATUSES, _resolve_user_project_root, atomic_write
+from cortex_command.common import (
+    TERMINAL_STATUSES,
+    _resolve_user_project_root,
+    atomic_write,
+    normalize_status,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -298,6 +303,17 @@ def _check_and_close_parent(
     parent_text = parent_path.read_text()
     parent_status = _get_frontmatter_value(parent_text, "status") or "open"
     if parent_status in TERMINAL_STATUSES:
+        # A child finishing under an already-closed parent. Reopening it here
+        # would be a read-modify-write with no compare-and-swap, so a race
+        # could silently undo a deliberate human close; saying so and leaving
+        # the parent alone is the safer shape. Without this the event is
+        # invisible — the parent's `updated:` does not move either.
+        print(
+            f"Note: parent {parent_path.name} is already {parent_status!r}; "
+            f"leaving it closed. A child finished after its epic closed — "
+            f"reopen it by hand if the epic's outcome should change.",
+            file=sys.stderr,
+        )
         return None  # already closed
 
     # Get the parent identifier for sibling matching
@@ -333,8 +349,11 @@ def _check_and_close_parent(
     if not all(s in TERMINAL_STATUSES for s in sibling_statuses):
         return None
 
-    # All siblings are terminal — close the parent
-    parent_text = _set_frontmatter_value(parent_text, "status", "complete")
+    # All siblings are terminal — close the parent with the outcome its
+    # children actually reached, not an unconditional success.
+    parent_text = _set_frontmatter_value(
+        parent_text, "status", _derive_parent_outcome(sibling_statuses)
+    )
     parent_text = _set_frontmatter_value(parent_text, "updated", today)
     atomic_write(parent_path, parent_text)
     return parent_path
@@ -344,6 +363,26 @@ def _check_and_close_parent(
 # Public API
 # ---------------------------------------------------------------------------
 
+def _derive_parent_outcome(sibling_statuses: list[str]) -> str:
+    """Return the status to close a parent epic with, given its children's.
+
+    Applies only where the children agree: if every child normalizes to the
+    same terminal value, the parent inherits it, so an epic whose whole scope
+    was dropped reads as dropped rather than delivered. Where they disagree
+    there is no vocabulary for the mixed outcome, so the parent keeps the
+    historical ``complete`` — deliberately out of scope rather than invented
+    here.
+
+    Normalizes first because the corpus carries several spellings per
+    outcome; three children reading ``wontfix``, ``wontfix`` and ``abandoned``
+    agree on the outcome even though the raw strings differ.
+    """
+    outcomes = {normalize_status(s) for s in sibling_statuses}
+    if len(outcomes) == 1:
+        return outcomes.pop()
+    return "complete"
+
+
 def _is_gitignored_backlog_artifact(path: Path) -> bool:
     """True for files under ``cortex/backlog/`` that ``cortex/.gitignore`` excludes.
 
@@ -352,7 +391,11 @@ def _is_gitignored_backlog_artifact(path: Path) -> bool:
     (``*.events.jsonl``). They must never reach ``UpdateResult.changed_paths``,
     whose whole contract is that a caller can stage every path in it.
     """
-    return path.name in ("index.md", "index.json") or path.name.endswith(".events.jsonl")
+    return path.name in (
+        "index.md",
+        "index.json",
+        "index-full.json",
+    ) or path.name.endswith(".events.jsonl")
 
 
 @dataclass(frozen=True)

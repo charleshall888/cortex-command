@@ -44,6 +44,7 @@ lifecycle/**/critical-review-residue.json
 # Backlog audit log + regenerated index cache
 backlog/*.events.jsonl
 backlog/index.json
+backlog/index-full.json
 backlog/index.md
 
 # Ad-hoc critical-review snapshots (pruned by cortex-clean --adhoc)

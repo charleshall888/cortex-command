@@ -156,46 +156,41 @@ def collect_items(
             continue
 
         status = normalize_status(fm.get("status", "open"))
-        # Track every non-archived item (active + terminal) in the full corpus
-        # so the helper resolves blocker references against terminal items
-        # the same way the legacy `int(b) not in active_ids` short-circuit
-        # silently treated them as resolved.
-        all_items.append({
-            "id": item_id,
-            "status": status,
-            "uuid": _opt(fm, "uuid"),
-        })
-
-        if status in TERMINAL_STATUSES:
-            continue
-
-        active_ids.add(item_id)
+        is_terminal = status in TERMINAL_STATUSES
 
         title = fm.get("title", "").strip().strip("\"'")
 
-        lc_slug = fm.get("lifecycle_slug", "").strip().strip("\"'") or slugify(title)
-        lc_dir = LIFECYCLE_DIR / lc_slug if lc_slug else None
-        # `lifecycle_phase` value set: {"research", "specify", "plan",
-        # "implement", "implement-rework", "review", "complete", "escalated"}.
-        # `"implement-rework"` was added when phase detection was unified
-        # around `claude/common.py`. See skills/backlog/references/schema.md
-        # for the full backlog schema. The index.json `lifecycle_phase`
-        # field stores the BASE phase; the `-paused` state lives in the
-        # events.log and is recoverable via `cortex-common detect-phase`.
-        # Stripping at the write boundary keeps the closed-set invariant
-        # stable for downstream index.json readers (morning-review
-        # report, dashboard merges, etc.).
-        if lc_dir and lc_dir.is_dir():
-            detected_phase = resolve_lifecycle_phase(lc_dir)["phase"]
-            lifecycle_phase: str | None = (
-                detected_phase.removesuffix("-paused")
-                if isinstance(detected_phase, str)
-                else detected_phase
-            )
+        # Live phase detection stats a directory and reads an events log per
+        # item. It is only meaningful while work is in flight, so a terminal
+        # item takes its recorded value verbatim — which is what keeps the
+        # full-corpus pass affordable on a backlog where terminal items
+        # outnumber active ones by an order of magnitude.
+        if is_terminal:
+            lifecycle_phase: str | None = _opt(fm, "lifecycle_phase")
         else:
-            lifecycle_phase = _opt(fm, "lifecycle_phase")
+            lc_slug = fm.get("lifecycle_slug", "").strip().strip("\"'") or slugify(title)
+            lc_dir = LIFECYCLE_DIR / lc_slug if lc_slug else None
+            # `lifecycle_phase` value set: {"research", "specify", "plan",
+            # "implement", "implement-rework", "review", "complete", "escalated"}.
+            # `"implement-rework"` was added when phase detection was unified
+            # around `claude/common.py`. See skills/backlog/references/schema.md
+            # for the full backlog schema. The index.json `lifecycle_phase`
+            # field stores the BASE phase; the `-paused` state lives in the
+            # events.log and is recoverable via `cortex-common detect-phase`.
+            # Stripping at the write boundary keeps the closed-set invariant
+            # stable for downstream index.json readers (morning-review
+            # report, dashboard merges, etc.).
+            if lc_dir and lc_dir.is_dir():
+                detected_phase = resolve_lifecycle_phase(lc_dir)["phase"]
+                lifecycle_phase = (
+                    detected_phase.removesuffix("-paused")
+                    if isinstance(detected_phase, str)
+                    else detected_phase
+                )
+            else:
+                lifecycle_phase = _opt(fm, "lifecycle_phase")
 
-        items.append({
+        record = {
             "id": item_id,
             "title": title,
             "status": status,
@@ -218,10 +213,37 @@ def collect_items(
             "lifecycle_phase": lifecycle_phase,
             "schema_version": _opt(fm, "schema_version"),
             "repo": _opt(fm, "repo"),
-        })
+        }
+
+        # Track every non-archived item (active + terminal) in the full corpus
+        # so the helper resolves blocker references against terminal items
+        # the same way the legacy `int(b) not in active_ids` short-circuit
+        # silently treated them as resolved. Archived items are appended above
+        # as id/status/uuid stubs; only these carry the full record, which is
+        # what lets `type` and `parent` reach the epic map without widening
+        # the active list.
+        all_items.append(record)
+
+        if is_terminal:
+            continue
+
+        active_ids.add(item_id)
+        items.append(record)
 
     items.sort(key=lambda x: (_PRIORITY_RANK.get(x["priority"], 9), x["id"]))
     return items, active_ids, archive_ids, all_items
+
+
+def full_corpus(all_items: list[dict]) -> list[dict]:
+    """Return the non-archived records from ``collect_items``' ``all_items``.
+
+    Archived entries are id/status/uuid stubs and carry no ``type``, so they
+    cannot participate in epic detection; everything else is a full record.
+    This is the view the epic map needs — active *and* terminal — and it is
+    deliberately a separate accessor so no caller mistakes it for the ready
+    list.
+    """
+    return [rec for rec in all_items if "type" in rec]
 
 
 def generate_json(items: list[dict]) -> str:
@@ -341,6 +363,10 @@ def main() -> int:
     lifecycle_dir = project_root / "cortex" / "lifecycle"
     items, active_ids, archive_ids, all_items = collect_items(backlog_dir, lifecycle_dir)
     atomic_write(backlog_dir / "index.json", generate_json(items))
+    # index-full.json is the same record shape over the whole non-archived
+    # corpus. It exists because the epic map needs terminal items to see an
+    # epic at all, while index.json must keep meaning "what is still open".
+    atomic_write(backlog_dir / "index-full.json", generate_json(full_corpus(all_items)))
     atomic_write(
         backlog_dir / "index.md",
         generate_md(items, active_ids, archive_ids, all_items),

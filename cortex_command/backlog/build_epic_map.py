@@ -196,6 +196,21 @@ ascending. Each child's keys are inserted in lexicographic order (id, spec,
 status, title). A non-null "spec" marks the child as refined."""
 
 
+#: Full non-archived corpus — active *and* terminal. An epic is usually
+#: terminal by the time anyone asks about it, so reading the active-only index
+#: made most epics invisible to this tool.
+FULL_INDEX = Path("cortex/backlog/index-full.json")
+#: Active-only index. Still the fallback: a repo that has not regenerated its
+#: index since index-full.json was introduced has only this file, and a
+#: partial epic map beats a hard failure.
+ACTIVE_INDEX = Path("cortex/backlog/index.json")
+
+
+def _default_index_path() -> Path:
+    """Prefer the full corpus; fall back to the active-only index."""
+    return FULL_INDEX if FULL_INDEX.is_file() else ACTIVE_INDEX
+
+
 def _build_argparser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="cortex-build-epic-map",
@@ -208,8 +223,13 @@ def _build_argparser() -> argparse.ArgumentParser:
     parser.add_argument(
         "index_path",
         nargs="?",
-        default="cortex/backlog/index.json",
-        help="Path to backlog index.json (default: cortex/backlog/index.json, resolved relative to CWD).",
+        default=None,
+        help=(
+            "Path to a backlog index JSON array. Defaults to "
+            "cortex/backlog/index-full.json (the whole non-archived corpus), "
+            "falling back to cortex/backlog/index.json when that file is "
+            "absent. Both resolved relative to CWD."
+        ),
     )
     parser.add_argument(
         "--describe-schema",
@@ -229,7 +249,7 @@ def main(argv: list[str] | None = None) -> int:
         print(_SCHEMA_DESCRIPTION)
         return 0
 
-    index_path = Path(args.index_path)
+    index_path = Path(args.index_path) if args.index_path else _default_index_path()
     try:
         text = index_path.read_text(encoding="utf-8")
     except FileNotFoundError:

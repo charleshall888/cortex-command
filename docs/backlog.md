@@ -179,7 +179,9 @@ cortex-update-item <slug-or-uuid> [--flag value ...]
 **Side effects on every update:**
 - Writes the updated file atomically (write-then-rename).
 - Appends `status_changed` or `phase_changed` events to the sidecar `{stem}.events.jsonl` log.
-- Regenerates `cortex/backlog/index.json` and `cortex/backlog/index.md` via the `cortex-generate-backlog-index` console script (canonical source `cortex_command/backlog/generate_index.py`; users invoke the console script, not the file directly). These index files are a **regenerated local cache and are not version-controlled** (gitignored): they are rebuilt on every `cortex-update-item` and on demand by consumers that read them, so they never need to be committed.
+- Regenerates `cortex/backlog/index.json`, `cortex/backlog/index-full.json` and `cortex/backlog/index.md` via the `cortex-generate-backlog-index` console script (canonical source `cortex_command/backlog/generate_index.py`; users invoke the console script, not the file directly). These index files are a **regenerated local cache and are not version-controlled** (gitignored): they are rebuilt on every `cortex-update-item` and on demand by consumers that read them, so they never need to be committed.
+
+**`index.json` vs `index-full.json`.** Same record shape, different corpus. `index.json` holds only active items and answers "what is still open" — it is what the ready list, triage's ready set, and overnight selection read. `index-full.json` holds every non-archived item, active and terminal, and exists because an epic is usually terminal by the time anyone asks about it: reading the active-only index made most epics invisible to `cortex-build-epic-map`. Anything grouping or counting epics should read `index-full.json`; anything deciding what to work on next must not.
 
 **Additional side effects for terminal status transitions** (`complete`, `abandoned`, `done`, `resolved`, `wontfix`, `wont-do`, `won't-do` — full list in `cortex_command/common.py`):
 - Removes the closed item's ID and UUID from `blocked-by` arrays across all active backlog items.

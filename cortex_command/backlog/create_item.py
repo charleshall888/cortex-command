@@ -28,7 +28,45 @@ from uuid import uuid4
 import yaml
 
 from cortex_command.backlog import _telemetry
-from cortex_command.common import _resolve_user_project_root, atomic_write, slugify
+from cortex_command.common import (
+    TERMINAL_STATUSES,
+    _resolve_user_project_root,
+    atomic_write,
+    normalize_status,
+    slugify,
+)
+
+
+def _warn_if_parent_closed(parent: str | None, backlog_dir: Path) -> None:
+    """Say so when a new item is filed under an already-closed epic.
+
+    A closed epic absorbs later children silently: nothing reopens it, and its
+    ``updated:`` does not move, so the growth leaves no trace. The item is
+    still created — filing follow-up work under a delivered epic is legitimate
+    — but it stops being invisible.
+
+    Best-effort by construction: a parent that cannot be resolved is not worth
+    failing a creation over.
+    """
+    if not parent:
+        return
+    try:
+        parent_id = int(str(parent).strip().strip("\"'"))
+    except (TypeError, ValueError):
+        return  # UUID-shaped or malformed — resolution is not worth the cost here
+    for path in sorted(backlog_dir.glob(f"{parent_id:03d}-*.md")):
+        m = re.search(r"^status:\s*(.+)$", path.read_text(encoding="utf-8"), re.M)
+        if not m:
+            return
+        raw = m.group(1).strip().strip("\"'")
+        if raw in TERMINAL_STATUSES or normalize_status(raw) in TERMINAL_STATUSES:
+            print(
+                f"Warning: parent epic {path.name} is already {raw!r}. "
+                f"The epic stays closed and its `updated:` does not move, so "
+                f"this child is invisible in the epic's own record.",
+                file=sys.stderr,
+            )
+        return
 
 
 # ---------------------------------------------------------------------------
@@ -238,6 +276,7 @@ def main() -> int:
             body=args.body,
         )
         print(str(item_path))
+        _warn_if_parent_closed(args.parent, BACKLOG_DIR)
         return 0
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)

@@ -175,15 +175,23 @@ def render(items: list[dict], epic_map: dict) -> tuple[str, list[dict]]:
     ready = _ready_set(items)
     epics = epic_map.get("epics", {})
 
-    child_ids = {
-        c["id"] for epic in epics.values() for c in epic.get("children", [])
-    }
-
     lines: list[str] = []
     ready_epic_ids = [
         str(i["id"]) for i in ready
         if i.get("type") == "epic" and str(i["id"]) in epics
     ]
+
+    # Only children of epics actually rendered in Block 1 may be suppressed
+    # from Block 2. Deriving this from every epic in the map would silently
+    # hide a ready child whose parent epic is closed — the map now carries
+    # closed epics, and a closed epic never reaches ready_epic_ids, so such a
+    # child would appear in no block at all. That is precisely the
+    # late-arriving child this epic exists to surface.
+    child_ids = {
+        c["id"]
+        for epic_id in ready_epic_ids
+        for c in epics[epic_id].get("children", [])
+    }
     if ready_epic_ids:
         lines += ["## Epics", ""]
         for epic_id in ready_epic_ids:
@@ -265,7 +273,8 @@ def main(argv: list[str] | None = None) -> int:
         except Exception:  # noqa: BLE001 — fall back to the on-disk index
             index_state = "stale"
 
-    index_path = root / "cortex" / "backlog" / "index.json"
+    backlog_dir = root / "cortex" / "backlog"
+    index_path = backlog_dir / "index.json"
     try:
         items = json.loads(index_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -285,8 +294,19 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
 
+    # The epic map is built from the full corpus so a closed epic is still
+    # recognizable as an epic; the ready set above stays active-only. Falling
+    # back to `items` keeps a repo whose index predates index-full.json
+    # working, just with the old active-only blind spot.
     try:
-        epic_map = build_epic_map(items)
+        full_items = json.loads(
+            (backlog_dir / "index-full.json").read_text(encoding="utf-8")
+        )
+    except (OSError, json.JSONDecodeError):
+        full_items = items
+
+    try:
+        epic_map = build_epic_map(full_items)
     except Exception:  # noqa: BLE001 — a bad map degrades to the flat list
         epic_map = {"epics": {}}
 

@@ -432,18 +432,22 @@ def test_refined_chore_routes_to_build_in_ready_block() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Requirement 10 — known hole, pinned rather than fixed.
+# Requirement 10 — the hole above, now closed (#438).
 # ---------------------------------------------------------------------------
 
-def test_ready_child_of_non_ready_epic_disappears_entirely() -> None:
-    """PINS A KNOWN BUG, does not assert desired behavior.
+def test_ready_child_of_non_ready_epic_is_still_listed() -> None:
+    """A ready child whose epic is not rendered must appear in ``## Ready``.
 
-    An individually-ready child lands in ``child_ids`` (``triage.py:152-154``)
-    and is therefore excluded from ``## Ready``, but its epic is not in the
-    ready set, so no epic block is rendered for it (``:161-165``). The child's
-    id appears nowhere in the output. Fixing this is a separate ticket; this
-    test exists so the fix is a deliberate, visible change rather than a
-    silent one.
+    This previously pinned a known bug: the child landed in ``child_ids`` and
+    was suppressed from Block 2, but its epic was not in the ready set, so no
+    epic block was rendered either — the id appeared nowhere in the output.
+    ``child_ids`` is now derived only from the epics actually rendered, so
+    suppression can never outlive the block that justifies it.
+
+    The fix became load-bearing when the epic map widened to the full corpus:
+    every *closed* epic is now in the map, and a closed epic is never in the
+    ready set, so the old derivation would have hidden every ready child of
+    every closed epic — the late-arriving child #438 exists to surface.
     """
     items = [
         _item(id=7770, title="Epic underway", type="epic", status="in_progress",
@@ -454,9 +458,25 @@ def test_ready_child_of_non_ready_epic_disappears_entirely() -> None:
 
     blocks, flat = render(items, build_epic_map(items))
 
-    assert "8881" not in blocks
-    assert flat == []
-    assert blocks == (
-        "Backlog is clear — no ready items. Check blocked items or create "
-        "new ones with `/cortex-backlog:backlog add`.\n"
-    )
+    assert [i["id"] for i in flat] == [8881]
+    assert "8881" in blocks
+    assert "## Ready" in blocks
+
+
+def test_ready_child_of_rendered_epic_is_not_duplicated() -> None:
+    """The suppression still works where it is justified.
+
+    When the epic *is* rendered in Block 1, its children are listed there, so
+    they must not repeat in Block 2.
+    """
+    items = [
+        _item(id=7771, title="Epic ready", type="epic", status="refined",
+              spec="cortex/lifecycle/epic-ready/spec.md"),
+        _item(id=8882, title="Listed child", status="refined", parent=7771,
+              spec="cortex/lifecycle/listed-child/spec.md"),
+    ]
+
+    blocks, flat = render(items, build_epic_map(items))
+
+    assert [i["id"] for i in flat] == []
+    assert blocks.count("8882") == 1
