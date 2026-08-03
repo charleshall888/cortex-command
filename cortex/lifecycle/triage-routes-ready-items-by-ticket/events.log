@@ -5,3 +5,12 @@
 {"ts": "2026-08-03T13:09:33Z", "event": "spec_approved", "feature": "triage-routes-ready-items-by-ticket", "decision": "approved"}
 {"ts": "2026-08-03T13:21:25Z", "event": "plan_approved", "feature": "triage-routes-ready-items-by-ticket", "dispatch_choice": "trunk"}
 {"ts": "2026-08-03T13:21:25Z", "event": "phase_transition", "feature": "triage-routes-ready-items-by-ticket", "from": "plan", "to": "implement"}
+{"ts": "2026-08-03T13:22:50Z", "event": "batch_dispatch", "feature": "triage-routes-ready-items-by-ticket", "batch": 0, "tasks": [1, 2]}
+{"ts": "2026-08-03T13:26:49Z", "event": "batch_dispatch", "feature": "triage-routes-ready-items-by-ticket", "batch": 1, "tasks": [3]}
+{"ts": "2026-08-03T13:36:55Z", "event": "phase_transition", "feature": "triage-routes-ready-items-by-ticket", "from": "implement", "to": "review", "tier": "complex"}
+{"ts": "2026-08-03T13:49:30Z", "event": "review_verdict", "feature": "triage-routes-ready-items-by-ticket", "verdict": "CHANGES_REQUESTED", "cycle": 1, "requirements_drift": "detected"}
+{"ts": "2026-08-03T13:49:30Z", "event": "phase_transition", "feature": "triage-routes-ready-items-by-ticket", "from": "review", "to": "implement-rework"}
+{"ts": "2026-08-03T13:57:03Z", "event": "phase_transition", "feature": "triage-routes-ready-items-by-ticket", "from": "implement-rework", "to": "review", "tier": "complex"}
+{"ts": "2026-08-03T13:57:07Z", "event": "review_verdict", "feature": "triage-routes-ready-items-by-ticket", "verdict": "APPROVED", "cycle": 2, "requirements_drift": "none"}
+{"ts": "2026-08-03T13:57:07Z", "event": "phase_transition", "feature": "triage-routes-ready-items-by-ticket", "from": "review", "to": "complete"}
+{"ts": "2026-08-03T13:57:40Z", "event": "feature_complete", "feature": "triage-routes-ready-items-by-ticket", "tasks_total": 3, "rework_cycles": 1, "merge_anchor": "merge"}

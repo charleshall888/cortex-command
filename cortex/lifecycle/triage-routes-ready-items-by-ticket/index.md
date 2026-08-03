@@ -2,8 +2,8 @@
 feature: triage-routes-ready-items-by-ticket
 parent_backlog_uuid: d7894ec3-bf36-454c-812b-73010fe3674f
 parent_backlog_id: 425
-artifacts: [plan]
-tags: [triage, dev, routing, readiness]
+artifacts: [plan, review]
+tags: [backlog, triage, dev, routing, readiness]
 created: 2026-08-03
 updated: 2026-08-03
 ---

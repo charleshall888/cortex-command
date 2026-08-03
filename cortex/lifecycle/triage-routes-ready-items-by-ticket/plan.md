@@ -35,7 +35,7 @@ Key architectural decision: the shared function is the structural enforcement of
   - `tests/test_dev_triage_refs_wired.py:99-101` concatenates `inspect.getsource` of `render` + `_render_epic_block` + `_workflow`; repoint the third binding to `_recommendation`. The four tokens asserted at `:102` all survive: `## Epics` / `## Ready` in `render`, `/cortex-core:refine` in both `_recommendation` and the footer, `/cortex-overnight:overnight` in the footer.
   - `triage.py` is a wheel module and is **not** in the dual-source mirror set (`.githooks/pre-commit:530` covers only `skills/`, `bin/cortex-*`, `hooks/cortex-*`, `claude/hooks/cortex-*`).
 - **Verification**: `uv run pytest tests/test_dev_triage_refs_wired.py tests/test_build_epic_map.py -q` → `24 passed`; `grep -c "direct implementation" cortex_command/backlog/triage.py` → `0`; `grep -c "cortex-core:build" cortex_command/backlog/triage.py` → `1`. Pass = all three.
-- **Status**: [ ] pending
+- **Status**: [x] done (f468c8f7 2026-08-03T09:24:52-04:00)
 
 ### Task 2: Route a picked triage item back through Step 1 in the dev skill
 - **Files**: `skills/dev/SKILL.md`
@@ -49,7 +49,7 @@ Key architectural decision: the shared function is the structural enforcement of
   - File is 41 lines against a 500-line cap; the `dev` L1 ratchet row is `285/285` bytes with zero headroom but keys on frontmatter only, which this edit does not touch.
   - `skills/dev/SKILL.md` **is** in the dual-source mirror set — the pre-commit hook rebuilds `plugins/cortex-core/skills/dev/SKILL.md` from the staged blob and folds it in. Never hand-stage the mirror.
 - **Verification**: `grep -c "route it from Step 1" skills/dev/SKILL.md` → `1`; `uv run pytest tests/test_dev_triage_refs_wired.py -q` → passes. Pass = both.
-- **Status**: [ ] pending
+- **Status**: [x] done (460ca112 2026-08-03, reworked from 93ad9dc7 per review cycle 1)
 
 ### Task 3: Add behavioral coverage for `render()` in `tests/test_triage_render.py`
 - **Files**: `tests/test_triage_render.py`
@@ -70,7 +70,7 @@ Key architectural decision: the shared function is the structural enforcement of
   - **Requirement 8 remaining cases**: ready epic whose children span both readiness states and all four types; flat item with and without `spec`; epic with zero active children (`triage.py:111-116`); empty backlog (`:178-182`); deferred item absent from both blocks. Assert exact rendered lines, not substrings, so the recommendation syntax is pinned.
   - No Layer B subprocess snapshot — the spec's requirements scope coverage to Layer A.
 - **Verification**: (1) `uv run pytest tests/test_triage_render.py -q` → passes, no failures; (2) non-vacuity of the parametrization, since the guard otherwise only verifies itself — `uv run pytest tests/test_triage_render.py --collect-only -q -k byte_identical | grep -c '::'` → `4`, exactly one collected node id per type (any other number means the cross-block guard is not parametrized over four types; `1` means it collapsed to a single, likely `feature`-only, case); (3) the four type literals really live in that parametrize list rather than in unrelated fixtures — `grep -cF '@pytest.mark.parametrize("item_type", ["bug", "chore", "idea", "feature"])' tests/test_triage_render.py` → `1` (a `0` means the decorator was reshaped, so check 2's count is no longer attributable to the four types); (4) `uv run pytest tests/ -q` → no new failures against the pre-change baseline. Pass = all four, with 2 and 3 both required, since either alone can be satisfied by a guard that collects four cases over the wrong axis.
-- **Status**: [ ] pending
+- **Status**: [x] done (eb84b296 2026-08-03T09:33:47-04:00)
 
 ## Risks
 

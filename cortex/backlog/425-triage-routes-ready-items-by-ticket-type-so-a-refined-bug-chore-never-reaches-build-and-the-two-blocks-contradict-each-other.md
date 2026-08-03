@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: d7894ec3-bf36-454c-812b-73010fe3674f
 title: Triage routes Ready items by ticket type, so a refined bug/chore never reaches build and the two blocks contradict each other
-status: refined
+status: complete
 priority: medium
 type: bug
 created: 2026-08-03
@@ -12,6 +12,7 @@ areas: ['backlog']
 complexity: complex
 criticality: high
 spec: cortex/lifecycle/triage-routes-ready-items-by-ticket/spec.md
+lifecycle_phase: complete
 ---
 ## Why
 
