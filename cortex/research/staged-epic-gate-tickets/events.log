@@ -1,0 +1,2 @@
+{"ts": "2026-08-03T15:26:39Z", "event": "discovery_research_sizing", "topic": "staged-epic-gate-tickets", "complexity": "complex", "criticality": "high"}
+{"ts": "2026-08-03T15:26:39Z", "event": "approval_checkpoint_responded", "topic": "staged-epic-gate-tickets", "checkpoint": "research-decompose", "response": "revise", "revision_round": 1}
