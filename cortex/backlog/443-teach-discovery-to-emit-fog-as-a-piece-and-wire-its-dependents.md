@@ -25,7 +25,8 @@ Rides two contracts that already exist. `### Pieces` is research-owned and decom
 ## Edges
 
 - The fog test is wayfinder's: whether the question can be stated precisely now, not whether it can be answered. A piece failing that test becomes a fog piece; one that passes does not.
-- A fog piece must name its resolution route, because the two kinds are answered by different instruments — intent fog by `/cortex-core:requirements` or `/cortex-core:interview`, fact fog by `/cortex-core:research`. Each terminates in an artifact, which is the fog ticket's definition of done.
+- A fog piece must name its resolution route, because the two kinds are answered by different instruments — intent fog by `/cortex-core:requirements` or `/cortex-core:interview`, fact fog by `/cortex-core:research`. Each terminates in an artifact, which is the fog ticket's definition of done. The routes compose: intent fog often needs a research step first so the questions put to the human are worth their turn.
+- The calibration is ADR-0034's — fog is what more than one sibling rests on; a fact only one ticket depends on stays a refine-phase check. Epic #434 is the worked example to test any implementation against, since it shipped with three tickets corrupted by one unchecked fact.
 - `/cortex-core:requirements` carries `disable-model-invocation: true`. An agent cannot clear intent fog unprompted, and the implementation must not route around that.
 - Over-application is the live failure mode: naming fog too eagerly yields long blocker chains and an epic that reads as unworkable. Whatever calibration ships should be checkable on the existing corpus rather than asserted.
 - Non-goal: retroactive fog detection on the 35 existing epics. This changes what new discoveries emit.

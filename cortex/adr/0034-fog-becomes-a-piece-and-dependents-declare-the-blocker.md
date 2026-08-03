@@ -29,7 +29,11 @@ A fog piece names how it will be cleared, because fog comes in two kinds and the
 - **Intent fog** — the question is what we want, or where the boundary sits. Cleared by `/cortex-core:requirements` (which writes `cortex/requirements/{project|area}.md`) or `/cortex-core:interview` (which produces a brief). Note that `requirements` carries `disable-model-invocation: true`: an agent cannot resolve intent fog on its own initiative, which is the correct constraint rather than an obstacle.
 - **Fact fog** — the question is how the codebase or the world actually behaves. Cleared by `/cortex-core:research`, which writes a `research.md`.
 
+**The routes compose; they are not exclusive.** Intent fog routinely needs a research pass first, because an unresearched question wastes the human's turn: "how should we prevent stale tickets?" is unanswerable, while "the census shows 6 of 198, three in one epic, each costing a refine — is that enough to act on?" is answerable in one sentence. A fog piece may therefore carry a research step whose output exists to sharpen the questions the interview then asks. This decision itself was taken that way.
+
 Each route terminates in an artifact, which gives the fog ticket a definition of done that a status flip alone cannot satisfy — wayfinder's observation that resolution is *"a produced artifact plus an explicit handoff step, not a status flip"* (`research.md:57`). The artifact is what the dependent tickets are reconciled against once the blocker lifts.
+
+**Calibration: fog is what more than one sibling rests on.** A fact only one ticket depends on is not fog — the refine phase checks it as a matter of course, locally and cheaply. It becomes fog when several pieces are authored against the same unverified assumption, because that is when being wrong multiplies. Epic #434 is the worked example, and it predates this decision: #435 and #436 shipped with contradictory claims about a single fact (whether the parent-closing cascade normalizes status — it does not, `update_item.py:33`). That one unchecked fact made #436's unwedge arm unachievable as scoped, made #437's narrowing unsafe on grounds its own Edges misidentified, and made #438's touch-points understate the work. One grep, unasked, cost three mid-flight rewrites.
 
 ## Trade-off
 
