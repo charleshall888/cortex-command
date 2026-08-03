@@ -1,0 +1,5 @@
+{"ts": "2026-08-03T17:56:18Z", "schema_version": 1, "event": "lifecycle_start", "feature": "spike-should-clarify-consult-ratified-adrs", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"ts": "2026-08-03T18:12:49Z", "event": "clarify_critic", "feature": "spike-should-clarify-consult-ratified-adrs", "schema_version": 3, "parent_epic_loaded": false, "findings_count": 12, "dispositions": {"apply": 10, "dismiss": 1, "ask": 1}, "applied_fixes_count": 10, "dismissals_count": 1, "status": "ok"}
+{"ts": "2026-08-03T18:32:59Z", "event": "complexity_override", "feature": "spike-should-clarify-consult-ratified-adrs", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-08-03T18:32:59Z", "event": "criticality_override", "feature": "spike-should-clarify-consult-ratified-adrs", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-08-03T18:54:32Z", "event": "lifecycle_cancelled", "feature": "spike-should-clarify-consult-ratified-adrs"}
