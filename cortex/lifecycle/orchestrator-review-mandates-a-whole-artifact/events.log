@@ -3,3 +3,5 @@
 {"ts": "2026-08-03T20:55:42Z", "event": "complexity_override", "feature": "orchestrator-review-mandates-a-whole-artifact", "from": "moderate", "to": "complex"}
 {"ts": "2026-08-03T20:55:52Z", "event": "criticality_override", "feature": "orchestrator-review-mandates-a-whole-artifact", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
 {"ts": "2026-08-03T21:34:25Z", "event": "spec_approved", "feature": "orchestrator-review-mandates-a-whole-artifact", "decision": "approved"}
+{"ts": "2026-08-03T22:39:01Z", "event": "plan_approved", "feature": "orchestrator-review-mandates-a-whole-artifact", "dispatch_choice": "trunk"}
+{"ts": "2026-08-03T22:39:01Z", "event": "phase_transition", "feature": "orchestrator-review-mandates-a-whole-artifact", "from": "plan", "to": "implement"}
