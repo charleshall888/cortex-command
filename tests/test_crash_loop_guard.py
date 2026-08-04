@@ -29,6 +29,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from cortex_command.overnight import interrupt as interrupt_mod
 from cortex_command.overnight import runner
 from cortex_command.overnight.recovery import RECOVERY_COMPLETE_SIDECAR
@@ -46,6 +48,20 @@ from cortex_command.overnight.state import (
 )
 
 SESSION_ID = "overnight-2026-06-17-crashloop"
+
+
+@pytest.fixture(autouse=True)
+def _pin_project_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Resolve the project root to this test's tmp tree, not the live repo.
+
+    ``events.events_log_path`` defaults ``lifecycle_root`` to
+    ``_resolve_user_project_root() / cortex / lifecycle`` when a caller does
+    not pass one, so a session built under ``tmp_path`` still wrote
+    ``cortex/lifecycle/overnight-events-{SESSION_ID}.log`` into the real tree.
+    Every test here lays its session out under ``tmp_path``, so pointing the
+    resolver there makes the default land where the fixture already is.
+    """
+    monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
 
 
 def _build_session(

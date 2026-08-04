@@ -321,13 +321,20 @@ def _events_log_meta(feature_dir: Path) -> dict[str, str | None]:
     return {"latest_ts": latest_ts, "last_event": last_event}
 
 
-def _emit_diag(record: dict) -> None:
+def _emit_diag(record: dict, root: Path) -> None:
     """Append a single-line JSON record to the session-bound diagnostic.
 
-    Destination: ``cortex/lifecycle/sessions/${LIFECYCLE_SESSION_ID}/scan-lifecycle-diag.jsonl``
-    (relative to the current working directory). Fail-open: never raises.
-    Silent no-op when ``LIFECYCLE_SESSION_ID`` is unset or empty — the
-    diagnostic is best-effort observability, not load-bearing.
+    Destination: ``{root}/cortex/lifecycle/sessions/${LIFECYCLE_SESSION_ID}/scan-lifecycle-diag.jsonl``.
+    ``root`` is the project directory ``main`` resolved from the hook
+    payload's ``cwd`` — the same root every other path in this module is
+    built from. It was previously ``os.getcwd()``, which ignored the cwd the
+    hook was handed: a hook invoked from a subdirectory wrote a stray
+    ``cortex/`` tree there, and a caller that staged a project elsewhere had
+    its diagnostics land in whatever directory the process happened to be in.
+
+    Fail-open: never raises. Silent no-op when ``LIFECYCLE_SESSION_ID`` is
+    unset or empty — the diagnostic is best-effort observability, not
+    load-bearing.
     """
 
     session_id = os.environ.get("LIFECYCLE_SESSION_ID", "")
@@ -335,7 +342,7 @@ def _emit_diag(record: dict) -> None:
         return
     try:
         diag_dir = (
-            Path(os.getcwd())
+            root
             / "cortex"
             / "lifecycle"
             / "sessions"
@@ -358,6 +365,7 @@ def _emit_candidate_diag(
     encoded_phase: str | None,
     backlog_status_map: dict[str, str],
     stale_days: int,
+    root: Path,
 ) -> None:
     """Construct and emit one per-candidate JSONL diagnostic record.
 
@@ -396,7 +404,7 @@ def _emit_candidate_diag(
         "backlog_status": backlog_status,
         "index_json_resolved": feature in backlog_status_map,
         "mismatch": has_mismatch,
-    })
+    }, root)
 
 
 def _is_stale(feature_dir: Path, threshold_days: int) -> bool:
@@ -913,7 +921,7 @@ def main(argv: list[str] | None = None) -> int:
         if _is_stale(child, stale_days):
             _emit_candidate_diag(
                 child, feature, "excluded", "stale", None,
-                backlog_status_map, stale_days,
+                backlog_status_map, stale_days, cwd,
             )
             continue
         # Phantom guard (runs AFTER _is_stale, so the empty/absent/unparseable
@@ -925,7 +933,7 @@ def main(argv: list[str] | None = None) -> int:
         if is_phantom_lifecycle_dir(child):
             _emit_candidate_diag(
                 child, feature, "excluded", "phantom", None,
-                backlog_status_map, stale_days,
+                backlog_status_map, stale_days, cwd,
             )
             continue
         # Suppress Morning Review batch features.
@@ -934,7 +942,7 @@ def main(argv: list[str] | None = None) -> int:
         ):
             _emit_candidate_diag(
                 child, feature, "excluded", "morning_review", None,
-                backlog_status_map, stale_days,
+                backlog_status_map, stale_days, cwd,
             )
             continue
         candidate_dirs.append(child)
@@ -988,7 +996,7 @@ def main(argv: list[str] | None = None) -> int:
                 # surfaces in the JSONL for post-mortem review.
                 _emit_candidate_diag(
                     feature_dir, feature, "excluded", "complete_no_pr",
-                    encoded, backlog_status_map, stale_days,
+                    encoded, backlog_status_map, stale_days, cwd,
                 )
                 continue
 
@@ -1001,7 +1009,7 @@ def main(argv: list[str] | None = None) -> int:
         # their respective continue branches above.
         _emit_candidate_diag(
             feature_dir, feature, "included", None, encoded,
-            backlog_status_map, stale_days,
+            backlog_status_map, stale_days, cwd,
         )
 
     # No incomplete features and no pipeline context — nothing to inject.

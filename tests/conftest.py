@@ -36,6 +36,44 @@ PYTEST_SESSION_ID = "pytest-isolated"
 _OPERATOR_SESSION_KEY = pytest.StashKey[str]()
 
 
+#: Stash slot for live-tree drift found by the advisory sweep, rendered in the
+#: terminal summary by :func:`pytest_terminal_summary`.
+_TREE_DRIFT_KEY = pytest.StashKey[list]()
+
+
+def _lifecycle_tree_snapshot() -> dict[str, str]:
+    """Map every live ``cortex/lifecycle`` file to a content hash.
+
+    Excludes the suite's own sentinel session directory, which is created
+    during the run and removed by :func:`pytest_unconfigure` — that teardown
+    runs *after* session-fixture teardown, so including it would report the
+    suite's own bookkeeping as a leak on every run.
+    """
+    root = repo_root() / "cortex" / "lifecycle"
+    if not root.is_dir():
+        return {}
+    sentinel = root / "sessions" / PYTEST_SESSION_ID
+    snapshot: dict[str, str] = {}
+    for path in root.rglob("*"):
+        if not path.is_file() or sentinel in path.parents:
+            continue
+        try:
+            snapshot[str(path.relative_to(root))] = hashlib.sha256(
+                path.read_bytes()
+            ).hexdigest()
+        except OSError:
+            continue
+    return snapshot
+
+
+def _lifecycle_tree_drift(before: dict[str, str]) -> set[str]:
+    """Return paths that appeared, vanished, or changed since ``before``."""
+    after = _lifecycle_tree_snapshot()
+    return set(before) ^ set(after) | {
+        p for p in set(before) & set(after) if before[p] != after[p]
+    }
+
+
 def _operator_session_digest(session_id: str) -> str | None:
     """Hash the operator's session directory, or None when it isn't there."""
     if not session_id:
@@ -64,7 +102,14 @@ def _operator_session_untouched(request):
     """
     session_id = request.config.stash.get(_OPERATOR_SESSION_KEY, "")
     before = _operator_session_digest(session_id)
+    before_tree = _lifecycle_tree_snapshot()
     yield
+    # Advisory sweep first, so a broad leak is still reported even when the
+    # narrow assertion below is what fails the run.
+    drifted = sorted(_lifecycle_tree_drift(before_tree))
+    if drifted:
+        request.config.stash[_TREE_DRIFT_KEY] = drifted
+
     after = _operator_session_digest(session_id)
     if before != after:
         pytest.fail(
@@ -102,6 +147,32 @@ def pytest_configure(config):
     """
     config.stash[_OPERATOR_SESSION_KEY] = os.environ.get("LIFECYCLE_SESSION_ID", "")
     os.environ["LIFECYCLE_SESSION_ID"] = PYTEST_SESSION_ID
+
+
+def pytest_terminal_summary(terminalreporter, exitstatus, config):
+    """Report live-tree drift as a warning rather than a failure.
+
+    A leak here is worth surfacing, but it is deliberately **not** an
+    assertion: `cortex/lifecycle/` is also written by any concurrent session
+    working in this repo, which is this project's normal mode. Failing the
+    run on that would make the suite flake for a reason the operator did not
+    cause and cannot see — and a flaky guard gets disabled, taking the real
+    signal with it. The hard assertion stays on the operator's own session
+    directory, which only the suite writes.
+    """
+    drifted = config.stash.get(_TREE_DRIFT_KEY, None)
+    if not drifted:
+        return
+    terminalreporter.write_sep("=", "live cortex/lifecycle drift", yellow=True)
+    terminalreporter.write_line(
+        f"{len(drifted)} path(s) under cortex/lifecycle/ changed during this run. "
+        "Expected: zero. A test is resolving a project root or session id that "
+        "points at the live tree — or a concurrent session wrote here."
+    )
+    for path in drifted[:10]:
+        terminalreporter.write_line(f"  {path}")
+    if len(drifted) > 10:
+        terminalreporter.write_line(f"  ... and {len(drifted) - 10} more")
 
 
 def pytest_unconfigure(config):

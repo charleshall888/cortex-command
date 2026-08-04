@@ -296,7 +296,16 @@ def test_settings_tempfile_used(tmp_path):
     """Mock the SDK call, dispatch a feature, assert the captured
     ClaudeAgentOptions.settings is a filepath that exists, and its JSON contents
     contain the documented sandbox shape (spec Req 5)."""
-    captured = _capture_dispatch_options({"LIFECYCLE_SESSION_ID": f"test-{tmp_path.name}"})
+    # CORTEX_REPO_ROOT alongside the session id (the sibling pattern below):
+    # dispatch resolves its sandbox-deny-list sidecar directory from the repo
+    # root independently of tmp_path, so the session id alone leaves the
+    # sidecar in the live cortex/lifecycle/sessions/ tree.
+    captured = _capture_dispatch_options(
+        {
+            "LIFECYCLE_SESSION_ID": f"test-{tmp_path.name}",
+            "CORTEX_REPO_ROOT": str(tmp_path),
+        }
+    )
 
     settings_path = captured["options_kwargs"].get("settings")
     assert settings_path is not None, "ClaudeAgentOptions.settings must be set"
@@ -331,7 +340,12 @@ def test_dispatched_env_locks_tmpdir(tmp_path):
     """Mock the SDK call; assert the captured env dict contains TMPDIR with a
     non-empty value (spec Req 5/Req 10 — locked into dispatched-agent env to
     prevent unset-fallback to /tmp/)."""
-    captured = _capture_dispatch_options({"LIFECYCLE_SESSION_ID": f"test-{tmp_path.name}"})
+    captured = _capture_dispatch_options(
+        {
+            "LIFECYCLE_SESSION_ID": f"test-{tmp_path.name}",
+            "CORTEX_REPO_ROOT": str(tmp_path),
+        }
+    )
 
     env = captured["options_kwargs"].get("env")
     assert isinstance(env, dict), f"Expected env dict, got {type(env)}"
