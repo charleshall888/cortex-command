@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 5be773ec-dd91-4862-a41c-380f8ab8ffea
 title: Isolate the test suite from the live cortex/backlog and session telemetry
-status: backlog
+status: complete
 priority: medium
 type: bug
 created: 2026-08-03
-updated: 2026-08-03
+updated: 2026-08-04
 tags: ['harness', 'testing', 'backlog-verbs']
 areas: ['backlog']
 ---
