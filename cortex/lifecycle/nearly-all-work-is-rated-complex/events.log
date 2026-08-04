@@ -1,2 +1,5 @@
 {"ts": "2026-08-04T15:38:02Z", "schema_version": 1, "event": "lifecycle_start", "feature": "nearly-all-work-is-rated-complex", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
 {"ts": "2026-08-04T15:43:02Z", "event": "clarify_critic", "feature": "nearly-all-work-is-rated-complex", "schema_version": 3, "parent_epic_loaded": false, "findings_count": 7, "dispositions": {"apply": 7, "dismiss": 0, "ask": 0}, "applied_fixes_count": 7, "dismissals_count": 0, "status": "ok"}
+{"ts": "2026-08-04T17:13:56Z", "event": "clarify_critic", "feature": "nearly-all-work-is-rated-complex", "schema_version": 3, "parent_epic_loaded": false, "findings_count": 0, "dispositions": {"apply": 0, "dismiss": 0, "ask": 0}, "applied_fixes_count": 0, "dismissals_count": 0, "status": "skipped_rescope"}
+{"ts": "2026-08-04T17:14:21Z", "event": "complexity_override", "feature": "nearly-all-work-is-rated-complex", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
+{"ts": "2026-08-04T17:14:21Z", "event": "criticality_override", "feature": "nearly-all-work-is-rated-complex", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
