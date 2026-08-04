@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 44fe5e7d-7ad7-42c4-bf1a-9741c9689c4f
 title: Orchestrator-review mandates a whole-artifact rewrite for precision-only flags, so practitioners route around it
-status: refined
+status: complete
 priority: low
 type: chore
 created: 2026-08-03
@@ -12,6 +12,7 @@ areas: ['skills']
 complexity: complex
 criticality: high
 spec: cortex/lifecycle/orchestrator-review-mandates-a-whole-artifact/spec.md
+lifecycle_phase: complete
 ---
 ## Why
 

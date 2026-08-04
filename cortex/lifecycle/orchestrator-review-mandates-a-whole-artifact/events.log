@@ -5,3 +5,10 @@
 {"ts": "2026-08-03T21:34:25Z", "event": "spec_approved", "feature": "orchestrator-review-mandates-a-whole-artifact", "decision": "approved"}
 {"ts": "2026-08-03T22:39:01Z", "event": "plan_approved", "feature": "orchestrator-review-mandates-a-whole-artifact", "dispatch_choice": "trunk"}
 {"ts": "2026-08-03T22:39:01Z", "event": "phase_transition", "feature": "orchestrator-review-mandates-a-whole-artifact", "from": "plan", "to": "implement"}
+{"ts": "2026-08-03T22:39:47Z", "event": "batch_dispatch", "feature": "orchestrator-review-mandates-a-whole-artifact", "batch": 0, "tasks": ["1"]}
+{"ts": "2026-08-03T22:41:07Z", "event": "batch_dispatch", "feature": "orchestrator-review-mandates-a-whole-artifact", "batch": 1, "tasks": ["2"]}
+{"ts": "2026-08-03T22:44:11Z", "event": "batch_dispatch", "feature": "orchestrator-review-mandates-a-whole-artifact", "batch": 2, "tasks": ["3"]}
+{"ts": "2026-08-03T22:52:40Z", "event": "phase_transition", "feature": "orchestrator-review-mandates-a-whole-artifact", "from": "implement", "to": "review", "tier": "complex"}
+{"ts": "2026-08-04T00:09:43Z", "event": "review_verdict", "feature": "orchestrator-review-mandates-a-whole-artifact", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-08-04T00:09:43Z", "event": "phase_transition", "feature": "orchestrator-review-mandates-a-whole-artifact", "from": "review", "to": "complete"}
+{"ts": "2026-08-04T00:09:59Z", "event": "feature_complete", "feature": "orchestrator-review-mandates-a-whole-artifact", "tasks_total": 3, "rework_cycles": 0, "merge_anchor": "merge"}

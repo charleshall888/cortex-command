@@ -1,0 +1,65 @@
+# Review: orchestrator-review-mandates-a-whole-artifact
+
+Cycle 1. Reviewed `skills/build/references/orchestrator-review.md` at HEAD (`c35a0b4e`) against `spec.md`. Every acceptance command below was executed by the reviewer, not taken from the implementation report. Test baseline (`just test` → 8/8) accepted as given; `tests/test_reference_size_ratchet.py` was re-run independently (9 passed).
+
+## Stage 1 — Spec compliance
+
+| Req | Rating | Evidence |
+|---|---|---|
+| **R1** — false audit-trail claim removed | PASS | `grep -c "creates an audit trail"` → `0`. §3's opener is now the bare `The orchestrator does not edit phase artifacts directly.` |
+| **R2** — separation-of-concerns survives | PASS | `grep -c "does not edit phase artifacts directly"` → `1`. |
+| **R3** — coherence rationale restored on the whole-artifact branch | PASS | `sed §3 \| grep -ci coheren` → `1`. Landed text: *"get a full rewrite to keep cross-referencing sections coherent"* — the justification attaches to the **entire**-artifact branch specifically, which is what `9e42a82f` had removed. This is a substantive restoration, not a keyword placed to satisfy the grep. |
+| **R4** — routing branches on a countable test | PASS (note) | `sed §3 \| grep -ci "confined to a single requirement"` → `1`; banned-terms `grep -Eci` → `0`. **Judged on the prose, not the grep**: the landed sentence is *"Flags confined to a single requirement get a targeted edit to that requirement's section; flags spanning more than one, or the artifact's cross-references, get a full rewrite."* The discriminant an executing agent applies is *how many requirements the flags touch* — a count. No defect-character language (reasoning vs. expression, substantive vs. precision) is present in any form, paraphrased or otherwise. See Stage 2 for the one non-count predicate that rides along. |
+| **R5** — both branches stay dispatched | PASS | `grep -i "confined to a single requirement" \| grep -ci subagent` → `1`; the ordering `awk` exits `0`. Substantively strong: the branch is subordinated to *"a **fresh subagent** takes every repair"*, so the subagent is established as the actor for **both** branches before either is named. The orchestrator does not acquire the pen anywhere in §3 — the only in-place path remains the pre-existing user-input branch, which is unchanged. |
+| **R6** — unverifiable preservation clause replaced | PASS | `grep -c "preserving all correct existing content"` → `0`. Also correctly removed: `never patch sections`, which the new targeted branch would have contradicted. |
+| **R7** — envelope reports changes beyond the flag | PARTIAL | `awk` fenced-block extraction `\| grep -c changed_beyond_flag` → `1`. The field is inside the mandatory envelope and §3 says *"Ends with this envelope, no prose"*, so it is a real obligation a fix agent must discharge, not decoration — and `<none \| ≤15-word summary>` supplies the explicit-empty-value the spec's edge case requires. **Partial because**: the obligation is carried *entirely* by the field name plus its value spec. No prose sentence tells the agent what "beyond the flag" means, and on the whole-artifact branch — where the agent re-emits the entire file by mandate — the field's semantics are undefined. The sensible reading ("no substantive change beyond addressing the flag") is available but not stated. Non-blocking; see Stage 2. |
+| **R8** — one envelope serves both branches | PASS | `grep -c "^verdict: "` → `1`; `grep -c '^```$'` → `2`, i.e. exactly one fenced block in the file. The Task 2 column-zero trap was avoided. |
+| **R9** — a non-confinable repair does not proceed silently | PASS | `sed §3 \| grep -c changed_beyond_flag` → `1`; `grep -c "verdict: failed"` → `1`, from the inline backticked prose instance *"it reports `verdict: failed` rather than an inconsistent patch"* — distinct from the `verdict: revised \| failed` template and correctly not at column zero, so R8 and R9 are jointly satisfied as the spec required. Both permitted outcomes are reachable by a fix agent: the escape is stated in prose, the declare-it alternative is stated by the envelope field. Followable, not decorative. |
+| **R10** — net-neutral-or-smaller, no pin raise | PASS | `uv run python -m pytest tests/test_reference_size_ratchet.py -q` → 9 passed, exit `0`. `git diff --exit-code skills/build/references/size-pin.txt` → exit `0`; the file still reads `57870` and carries only the pre-existing lifecycle-433 `# raised:` annotation. `ratchet_refs.measure()` reports the directory at **57867 B** against the 57870 pin — 3 B under, i.e. genuinely net-negative rather than merely non-growing. |
+| **R10a** — offsetting bytes come from this file's own header/§1/§2 | PASS | `git diff --name-only HEAD -- skills/build/references/` → empty (tree clean); across the implementation range the only touched path in that directory is `orchestrator-review.md`. Pre-§3 region `awk` → **1377 B**, down from 1494 B (−117 B), and the predicate prints `1`. §3 grew 934 → 1048 B (+114 B). Net file −3 B, reconciling exactly with the directory measurement. No sibling reference file was raided. |
+| **R10b** — §1's binary-checkable definition intact | PASS | All three greps return `1`. The clause survives **byte-identical** to its pre-change form — confirmed against `cc2a10a4^`; the Task 3 trim did not enter that line at all. |
+| **R11** — the 2-cycle cap is untouched | PASS | `git diff HEAD` clean; `grep -c "Max \*\*2 review cycles per phase\*\*"` → `1`. Verified structurally rather than by grep alone: §4 extracted from `cc2a10a4^` and from HEAD diffs **identical**, and the implementation hunk spans only lines 1–32 (§4 begins at line 34). No §4 line changed. |
+| **R12** — plugin mirror matches canonical | PASS | `diff skills/build/references/orchestrator-review.md plugins/cortex-core/skills/build/references/orchestrator-review.md` → no output. Working tree clean for both paths, so the mirror landed in the commits via the pre-commit hook rather than by hand. |
+| **R13** — routing identical with no user present | PASS | `grep -ci "confined to a single requirement"` → `1`; `grep -Eci "overnight\|interactive[- ]only"` → `0`. The branch condition is stated unqualified — no session-dependent hedge attaches to it, so the overnight path takes the same route. |
+
+No FAIL. Proceeding to Stage 2.
+
+## Stage 2 — Code quality
+
+**Plan verification steps were actually executed.** All three tasks are `[x] done` with commit SHAs and timestamps, and every verification command listed in the plan reproduces the stated result on re-run. The Task 3 amendment is honest work rather than a post-hoc rationalization: it records that §3 landed at ~1294 B rather than the estimated ~1114 B, doubling the required cut to 360 B, and it split the cut between §3's own editorial phrasing and the pre-§3 region instead of forcing a 24% reduction out of the header/§1/§2 alone. That split is the right call — the alternative would have pushed the trim into §1's protected definition, which the spec's edge case says should have triggered a halt.
+
+**Nothing load-bearing was lost in the header, §1 or §2.** I diffed the trim clause by clause:
+
+- Header and Skip paragraph: pure rephrasing. Every discriminant survives — the `low` AND `simple` skip condition, "logging no orchestrator events", the `cortex-lifecycle-state` fallback, the `medium`/`simple` defaults, and the `"corrupted": true` → treat-as-requiring-review rule.
+- §1: the rating rules, the pass/flag-never-gestalt instruction, the three flag triggers, the fix-before-presentation gate, and the run-in-main-conversation/no-subagent instruction all survive. The definition survives verbatim.
+- §2: `**Flag** → Escalation at cycle 3+, else Fix Dispatch` is semantically identical to the longer original and arguably crisper.
+
+Two minor precision losses, both recoverable from context and neither worth a rework cycle:
+- §1 now says *"the phase reference's authoring rules"* where it said *"the phase reference you just executed"*. The referent is supplied by the callsite (all five say "for the `<phase>` phase"), so no agent is actually left guessing.
+- The Skip paragraph's `(defaults medium/simple when absent)` dropped "when a key is absent", very slightly blurring per-key defaulting into whole-output defaulting.
+
+**One removal in §3 is not listed in the spec's Changes to Existing Behavior.** The trim also dropped *"and add nothing beyond what the phase requires"* from the fix-agent brief. The spec's REMOVED list names only the audit-trail claim and the preservation clause. The removal is defensible — `changed_beyond_flag` converts that prohibition into a declaration duty, which is precisely the direction R6 endorses — but it is a behavior change the artifact does not account for. Worth knowing; not a compliance failure, since no requirement protects that clause.
+
+**One non-count predicate rides along in the R4 branch.** *"flags spanning more than one, **or the artifact's cross-references**"* adds a second trigger for the whole-artifact branch that is not a requirement count. It is still a *scope* test rather than a *defect-character* test, so it does not violate R4's actual prohibition, and it errs toward the safe default (full rewrite) while giving the restored coherence rationale something concrete to bite on. But the spec's Edge Cases describe the default branch purely as "flags spanning two or more requirements", and a cross-reference-touching flag confined to one requirement is a case the spec's own framing would route to the targeted branch. An executing agent will get a defensible answer either way; the ambiguity is small but real, and this is prose agents execute.
+
+**Readability / ambiguity.** §3 is now one dense 4-sentence paragraph carrying the branch condition, both actions, the brief contents, and the escape hatch. It is legible, but the branch structure is embedded in prose where sibling references (`review.md` §3, `implement.md`) tend to use explicit `→` routing lines. Given the zero-headroom pin, the compression is the right trade, and the `→` marker on the two top-level paths is preserved. The `changed_beyond_flag` under-specification noted at R7 is the one place a fix agent could plausibly hesitate.
+
+**Pattern consistency with siblings.** The surgical-redispatch idiom in `skills/build/references/review.md:33` (*"append it in the correct format, modifying nothing else"*) is the precedent the spec named, and the targeted branch's *"a targeted edit to that requirement's section"* is consistent with it. The envelope keeps the existing `verdict` / `files_changed` / `rationale` shape and adds one field rather than introducing a second format — correct per R8. Naming is consistent: `changed_beyond_flag` reuses "flag" as §1/§2 already define it.
+
+**Minor, no action required.** The directory now measures 3 B under its pin. R10 forbids touching `size-pin.txt`, so leaving those 3 B unreclaimed is correct here; a future `just ratchet-refs` will collect them.
+
+## Requirements Drift
+
+**State**: `none`
+
+**Findings**: None.
+
+- The landed change adds no enforcement gate, no lint, and no test — the spec lists this as an explicit non-requirement, and that matches project.md's "Enforcement gates carry named evidence" clause, which admits a new gate only with its named failure stated there. Nothing needs adding to the survivors list.
+- The reference-size ratchet's stated direction is unaffected: no pin was raised, no `# raised:` annotation was added, and the directory ended net-negative. The clause's "growth fails, lowering is expected" framing is satisfied as-is.
+- `cortex/requirements/project.md` and `glossary.md` record no orchestrator-review fix-dispatch internals at all (`grep` for `orchestrator.review`, `whole.artifact`, `fix dispatch`, `changed_beyond`, `audit trail` returns nothing in either). §3's routing is skill-internal behavior below the granularity these documents track, so there is no existing statement this change contradicts or extends. The one adjacent record — `cortex/requirements/pipeline.md:82`'s 2-cycle rework loop — describes the pipeline's own loop and is untouched by R11's protection of §4.
+
+**Update needed**: None.
+
+```
+{"verdict": "APPROVED", "cycle": 1, "issues": ["R7 PARTIAL: the changed_beyond_flag obligation is carried entirely by the envelope field name and its value spec; no prose defines what 'beyond the flag' means, and its semantics on the whole-artifact branch (where the agent re-emits the whole file by mandate) are undefined.", "The Task 3 trim also removed 'and add nothing beyond what the phase requires' from the fix-agent brief; this is a behavior change not listed in the spec's Changes to Existing Behavior, though it is consistent with R6's prohibit-to-declare direction.", "The R4 branch adds a second, non-count trigger for the whole-artifact path ('or the artifact's cross-references') that the spec's Edge Cases do not describe; still a scope test rather than a defect-character test, so R4's prohibition is not violated."], "requirements_drift": "none"}
+```
