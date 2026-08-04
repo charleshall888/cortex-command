@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 0bcb4676-db5a-48b3-bcb6-c8976c5c9868
 title: The tier split cannot reduce ceremony, because plan and review are gated on criticality rather than tier
-status: backlog
+status: complete
 priority: high
 type: bug
 created: 2026-08-04

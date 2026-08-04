@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: dfab1253-db48-4eb7-ad1c-16edf64b8ef1
 title: complexity_override records no rationale, and the seeded simple tier is indistinguishable from an assessed one
-status: backlog
+status: complete
 priority: medium
 type: feature
 created: 2026-08-04
