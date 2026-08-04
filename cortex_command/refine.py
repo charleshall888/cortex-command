@@ -72,8 +72,18 @@ _TIER_RANK: dict[str, int] = {"simple": 0, "moderate": 1, "complex": 2}
 _CRITICALITY_RANK: dict[str, int] = {"low": 0, "medium": 1, "high": 2, "critical": 3}
 
 
-def _read_backlog_frontmatter(backlog_slug: str | None) -> tuple[str, str]:
-    """Return ``(tier, criticality)`` from a backlog item's frontmatter.
+def _read_backlog_frontmatter(
+    backlog_slug: str | None,
+) -> tuple[str, str, frozenset[str]]:
+    """Return ``(tier, criticality, seeded)`` from a backlog item's frontmatter.
+
+    ``seeded`` names the fields that fell back to a default rather than
+    carrying an assessed value — a subset of ``{"tier", "criticality"}``. The
+    defaults below are placeholders, not judgments, but nothing downstream
+    could tell the difference: every escalation from the floor reads
+    ``simple -> complex`` whether or not ``moderate`` was ever weighed. The
+    set makes the placeholder legible without changing its *value*, which
+    must stay at the rank floor for the reason given below.
 
     When ``backlog_slug`` is ``None`` or the backlog file does not exist,
     returns ``("simple", "medium")`` — the *rank floor*, deliberately NOT the
@@ -99,19 +109,23 @@ def _read_backlog_frontmatter(backlog_slug: str | None) -> tuple[str, str]:
     and the ``cortex-update-item`` remediation, then exits with status 64
     (``EX_USAGE``).
     """
+    _BOTH_SEEDED = frozenset({"tier", "criticality"})
     if backlog_slug is None:
-        return ("simple", "medium")
+        return ("simple", "medium", _BOTH_SEEDED)
 
     backlog_path = Path("cortex/backlog") / f"{backlog_slug}.md"
     if not backlog_path.exists():
-        return ("simple", "medium")
+        return ("simple", "medium", _BOTH_SEEDED)
 
     text = backlog_path.read_text(encoding="utf-8")
     criticality = _get_frontmatter_value(text, "criticality")
     complexity = _get_frontmatter_value(text, "complexity")
 
+    seeded: set[str] = set()
+
     if criticality is None or criticality in _YAML_NULL_LITERALS:
         criticality = "medium"
+        seeded.add("criticality")
     elif criticality not in _ALLOWED_CRITICALITY:
         allowed = ", ".join(sorted(_ALLOWED_CRITICALITY))
         print(
@@ -124,6 +138,7 @@ def _read_backlog_frontmatter(backlog_slug: str | None) -> tuple[str, str]:
 
     if complexity is None or complexity in _YAML_NULL_LITERALS:
         complexity = "simple"
+        seeded.add("tier")
     elif complexity in _LEGACY_COMPLEXITY_MAP:
         coerced = _LEGACY_COMPLEXITY_MAP[complexity]
         print(
@@ -143,7 +158,7 @@ def _read_backlog_frontmatter(backlog_slug: str | None) -> tuple[str, str]:
         )
         sys.exit(64)
 
-    return (complexity, criticality)
+    return (complexity, criticality, frozenset(seeded))
 
 
 def _apply_backend_guard(backend: str, backlog_slug: str | None) -> str | None:
@@ -245,7 +260,7 @@ def _cmd_reconcile_clarify(args: argparse.Namespace) -> int:
     events_log.parent.mkdir(parents=True, exist_ok=True)
 
     # Desired values: explicit flags take precedence over backlog frontmatter.
-    base_tier, base_criticality = _read_backlog_frontmatter(backlog_slug)
+    base_tier, base_criticality, _seeded = _read_backlog_frontmatter(backlog_slug)
     desired_tier = args.complexity if args.complexity is not None else base_tier
     desired_criticality = (
         args.criticality if args.criticality is not None else base_criticality
@@ -364,7 +379,7 @@ def _cmd_emit_lifecycle_start(args: argparse.Namespace) -> int:
     if _lifecycle_start_present(events_log):
         return 0
 
-    tier, criticality = _read_backlog_frontmatter(backlog_slug)
+    tier, criticality, seeded = _read_backlog_frontmatter(backlog_slug)
 
     row = {
         "schema_version": 1,
@@ -375,6 +390,12 @@ def _cmd_emit_lifecycle_start(args: argparse.Namespace) -> int:
         "criticality": criticality,
         "entry_point": "refine",
     }
+    # Field-additive marker: names any value in this row that is a rank-floor
+    # placeholder rather than an assessment. Emitted only when something was
+    # actually seeded, so rows carrying two real values keep their existing
+    # shape and no reader has to learn a new key to stay correct.
+    if seeded:
+        row["seeded"] = sorted(seeded)
 
     # Route the seed append through the shared locked primitive (flock +
     # O_APPEND) rather than a bare unlocked open("a") — R1. ``log_event_at``

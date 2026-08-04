@@ -922,10 +922,14 @@ def test_emit_row_byte_identical_to_hardcoded_contract(
     # (``lifecycle_event.log_event_at``), which prepends the ``ts`` base key, so
     # the canonical order is now ``ts`` first, then the seed's ``schema_version``
     # and remaining fields (semantics preserved; consumers key by name).
+    # This case passes no backlog slug, so BOTH values are rank-floor
+    # placeholders rather than assessments — the row carries the ``seeded``
+    # marker naming them. See test_lifecycle_start_omits_seeded_when_assessed
+    # for the contrast: a row with real values keeps the shorter shape.
     expected = (
         '{"ts": "<TS>", "schema_version": 1, "event": "lifecycle_start", '
         '"feature": "feat", "tier": "simple", "criticality": "medium", '
-        '"entry_point": "refine"}'
+        '"entry_point": "refine", "seeded": ["criticality", "tier"]}'
     )
     for i, backend_args in enumerate([[], ["--backend", "cortex-backlog"]]):
         workdir = tmp_path / f"run{i}"
@@ -939,6 +943,63 @@ def test_emit_row_byte_identical_to_hardcoded_contract(
 
         line = _events_log_path(workdir, "feat").read_text().strip()
         assert _mask_ts(line) == expected
+
+
+def test_lifecycle_start_omits_seeded_when_assessed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An assessed tier/criticality pair emits no ``seeded`` marker.
+
+    The marker exists to distinguish a rank-floor placeholder from a judgment,
+    so it must be absent — not ``[]`` — when both values came from the backlog
+    item. That keeps the row shape unchanged for the common case and means a
+    reader can treat presence of the key as the signal.
+    """
+    workdir = tmp_path / "assessed"
+    (workdir / "cortex" / "backlog").mkdir(parents=True)
+    (workdir / "cortex" / "backlog" / "001-feat.md").write_text(
+        "---\ntitle: Feat\ncomplexity: complex\ncriticality: high\n---\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(workdir)
+
+    rc = main([
+        "emit-lifecycle-start", "--lifecycle-slug", "feat",
+        "--backend", "cortex-backlog", "--backlog-slug", "001-feat",
+    ])
+    assert rc == 0
+
+    row = json.loads(_events_log_path(workdir, "feat").read_text().strip())
+    assert row["tier"] == "complex"
+    assert row["criticality"] == "high"
+    assert "seeded" not in row, (
+        f"assessed values must not carry the placeholder marker; got {row!r}"
+    )
+
+
+def test_lifecycle_start_marks_only_the_seeded_field(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A partially-assessed item marks only the field that fell back."""
+    workdir = tmp_path / "partial"
+    (workdir / "cortex" / "backlog").mkdir(parents=True)
+    # complexity assessed, criticality absent → only criticality is a placeholder.
+    (workdir / "cortex" / "backlog" / "002-feat.md").write_text(
+        "---\ntitle: Feat\ncomplexity: moderate\n---\n", encoding="utf-8"
+    )
+    monkeypatch.chdir(workdir)
+
+    rc = main([
+        "emit-lifecycle-start", "--lifecycle-slug", "feat",
+        "--backend", "cortex-backlog", "--backlog-slug", "002-feat",
+    ])
+    assert rc == 0
+
+    row = json.loads(_events_log_path(workdir, "feat").read_text().strip())
+    assert row["tier"] == "moderate"
+    assert row["seeded"] == ["criticality"], (
+        f"only the defaulted field may be marked; got {row.get('seeded')!r}"
+    )
 
 
 def test_reconcile_override_row_byte_identical_to_hardcoded_contract(

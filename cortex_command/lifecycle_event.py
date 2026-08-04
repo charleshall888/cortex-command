@@ -300,9 +300,17 @@ _EVENT_SUBCOMMANDS: dict[str, tuple[str, list]] = {
         # the first — a review can breach at cycle 1 AND a later cycle.
         ("--cycle", "cycle", _JSON, False, None),
     ]),
+    # Both override verbs carry an optional one-line ``--reason``. Recorded as
+    # an outcome alone, an override is unauditable: reconstructing why nine
+    # post-split tier calls were made cost a full read of nine research/spec/plan
+    # sets, re-deriving reasoning the assessment had already done and discarded.
+    # Optional rather than required on purpose — a mandatory flag invites a
+    # filler string, which is worse than an absent one because it reads as
+    # evidence. One line only; the argument itself belongs in research.md.
     "criticality-override": ("criticality_override", [
         ("--from", "from", _STR, True, None),
         ("--to", "to", _STR, True, None),
+        ("--reason", "reason", _STR, False, None),
     ]),
     # The symmetric half of criticality-override. Without it the ONLY writer of
     # complexity_override was cortex-complexity-escalator, so a bullet count —
@@ -312,6 +320,7 @@ _EVENT_SUBCOMMANDS: dict[str, tuple[str, list]] = {
     "complexity-override": ("complexity_override", [
         ("--from", "from", _STR, True, None),
         ("--to", "to", _STR, True, None),
+        ("--reason", "reason", _STR, False, None),
     ]),
     "batch-dispatch": ("batch_dispatch", [
         ("--batch", "batch", _JSON, True, None),
