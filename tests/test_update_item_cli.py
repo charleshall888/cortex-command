@@ -16,11 +16,13 @@ from pathlib import Path
 
 import pytest
 
+from cortex_command.backlog.generate_index import _parse_inline_str_list
 from cortex_command.backlog.update_item import (
     _DEST_TO_FRONTMATTER_KEY,
     _SCALAR_DESTS,
     _argv_preflight,
     _build_parser,
+    _remove_uuid_from_blocked_by,
 )
 
 
@@ -163,3 +165,93 @@ def test_subprocess_legacy_positional_exits_2_with_hint() -> None:
         f"stdout={result.stdout!r}, stderr={result.stderr!r}"
     )
     assert "Detected legacy positional argument" in result.stderr
+
+
+# ---------------------------------------------------------------------------
+# (f) blocked-by cascade: scalar spelling and the null sentinel
+#
+# The cascade regex was list-only, so closing an item never cleared blockers
+# recorded as a bare scalar (`blocked-by: 411`) even though the index reader
+# accepts that spelling as a one-element list — the item stayed blocked with
+# no surviving blocker.
+# ---------------------------------------------------------------------------
+
+def _write_item(directory: Path, item_id: int, name: str, blocked_by_line: str) -> Path:
+    path = directory / f"{item_id}-{name}.md"
+    path.write_text(
+        "---\n"
+        f"uuid: u-{name}\n"
+        f"title: {name}\n"
+        "status: backlog\n"
+        f"{blocked_by_line}\n"
+        "updated: 2026-01-01\n"
+        "---\n"
+        "body\n"
+    )
+    return path
+
+
+def _blocked_by_line(path: Path) -> str | None:
+    for line in path.read_text().splitlines():
+        if line.startswith("blocked-by:"):
+            return line
+    return None
+
+
+def test_cascade_clears_scalar_blocked_by(tmp_path: Path) -> None:
+    item = _write_item(tmp_path, 101, "scalar", "blocked-by: 411")
+    written = _remove_uuid_from_blocked_by(None, "411", "2026-08-03", tmp_path)
+    assert written == [item]
+    assert _blocked_by_line(item) == "blocked-by: []"
+
+
+def test_cascade_clears_zero_padded_scalar_blocked_by(tmp_path: Path) -> None:
+    item = _write_item(tmp_path, 101, "padded", "blocked-by: 045")
+    written = _remove_uuid_from_blocked_by(None, "45", "2026-08-03", tmp_path)
+    assert written == [item]
+    assert _blocked_by_line(item) == "blocked-by: []"
+
+
+def test_cascade_still_filters_list_blocked_by(tmp_path: Path) -> None:
+    item = _write_item(tmp_path, 101, "list", "blocked-by: [411, 412]")
+    written = _remove_uuid_from_blocked_by(None, "411", "2026-08-03", tmp_path)
+    assert written == [item]
+    assert _blocked_by_line(item) == "blocked-by: [412]"
+
+
+def test_cascade_leaves_unrelated_scalar_blocker_untouched(tmp_path: Path) -> None:
+    item = _write_item(tmp_path, 101, "other", "blocked-by: 412")
+    assert _remove_uuid_from_blocked_by(None, "411", "2026-08-03", tmp_path) == []
+    assert _blocked_by_line(item) == "blocked-by: 412"
+    assert "updated: 2026-01-01" in item.read_text()
+
+
+def test_cascade_leaves_null_sentinel_untouched(tmp_path: Path) -> None:
+    item = _write_item(tmp_path, 101, "cleared", "blocked-by: null")
+    assert _remove_uuid_from_blocked_by(None, "411", "2026-08-03", tmp_path) == []
+    assert _blocked_by_line(item) == "blocked-by: null"
+
+
+@pytest.mark.parametrize(
+    "raw, expected",
+    [
+        ("[411, 412]", ["411", "412"]),
+        ("411", ["411"]),
+        ("[]", []),
+        ("", []),
+        ("null", []),
+        ("NULL", []),
+        ("~", []),
+        ("'null'", []),
+    ],
+)
+def test_parse_inline_str_list_reads_null_sentinel_as_empty(
+    raw: str, expected: list[str]
+) -> None:
+    """A cleared list field must not read back as a live one-element list.
+
+    `cortex-update-item --blocked-by ""` writes the literal `null` sentinel
+    (ADR-0027); without this the scalar fallback returned `["null"]`, which
+    readiness treats as a blocker referencing a nonexistent item.
+    """
+    assert _parse_inline_str_list(raw) == expected

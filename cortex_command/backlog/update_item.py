@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Any
 
 from cortex_command.backlog import _telemetry
-from cortex_command.backlog.frontmatter_quote import quote_scalar
+from cortex_command.backlog.frontmatter_quote import _YAML_NULL_TOKENS, quote_scalar
 from cortex_command.backlog.generate_index import (
     _is_deferred,
     _parse_inline_str_list,
@@ -224,8 +224,12 @@ def _remove_uuid_from_blocked_by(
 
     written: list[Path] = []
 
+    # Both spellings must match. The bracketed form is what writers emit, but
+    # hand-authored items carry the bare scalar (``blocked-by: 411``) and the
+    # index reader accepts it as a one-element list — so a list-only pattern
+    # silently strands those blockers here while they still gate the item.
     pattern = re.compile(
-        r"^(blocked-by:\s*\[)(.*?)(\])\s*$",
+        r"^blocked-by:[ \t]*(?:\[(?P<list>.*?)\]|(?P<scalar>[^\[\n].*?))?[ \t]*$",
         re.MULTILINE,
     )
 
@@ -235,7 +239,12 @@ def _remove_uuid_from_blocked_by(
         if not m:
             continue
 
-        entries_raw = m.group(2)
+        if m.group("list") is not None:
+            entries_raw = m.group("list")
+        else:
+            entries_raw = m.group("scalar") or ""
+            if entries_raw.strip().strip("\"'") in _YAML_NULL_TOKENS:
+                entries_raw = ""
         entries = [e.strip().strip("'\"") for e in entries_raw.split(",") if e.strip()]
 
         # Build the set of identifiers to remove

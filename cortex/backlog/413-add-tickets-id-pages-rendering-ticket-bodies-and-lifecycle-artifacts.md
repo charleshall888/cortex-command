@@ -11,7 +11,6 @@ discovery_source: cortex/research/dashboard-command-station/research.md
 parent: "410"
 tags: ['dashboard-command-station', 'dashboard']
 areas: ['dashboard']
-blocked-by: 411
 ---
 ## Why
 

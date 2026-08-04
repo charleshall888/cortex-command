@@ -18,6 +18,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from cortex_command.backlog import _telemetry
+from cortex_command.backlog.frontmatter_quote import _YAML_NULL_TOKENS
 from cortex_command.backlog.readiness import is_item_ready
 from cortex_command.common import (
     TERMINAL_STATUSES,
@@ -61,13 +62,25 @@ def _parse_frontmatter(text: str) -> dict[str, str]:
 
 
 def _parse_inline_str_list(raw: str) -> list[str]:
-    """Parse an inline YAML list like ``[tag1, tag2]`` into a list of strings."""
+    """Parse an inline YAML list like ``[tag1, tag2]`` into a list of strings.
+
+    A bare scalar is accepted as a one-element list, so the legacy
+    ``blocked-by: 411`` spelling reads the same as ``blocked-by: [411]``.
+
+    The ``null`` sentinel reads as empty. Writers spell a cleared field as
+    literal ``null`` (ADR-0027; ``update_item.py`` writes it for a ``None``
+    value), and ``_opt`` already honors that for scalar keys — without the
+    same treatment here, clearing a list-valued key would leave ``["null"]``
+    behind and, for ``blocked-by``, read back as a live blocker.
+    """
     raw = raw.strip()
     if raw.startswith("[") and raw.endswith("]"):
         inner = raw[1:-1].strip()
         if not inner:
             return []
         return [item.strip().strip("'\"") for item in inner.split(",") if item.strip()]
+    if raw.strip("\"'") in _YAML_NULL_TOKENS:
+        return []
     return [raw] if raw else []
 
 
