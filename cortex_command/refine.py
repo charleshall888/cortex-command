@@ -229,6 +229,62 @@ def _reduce_current_state(events_log: Path) -> tuple[str, str]:
     return (state.get("tier", "moderate"), state.get("criticality", "medium"))
 
 
+def _seeded_fields_at_start(events_log: Path) -> frozenset[str]:
+    """Return the fields ``lifecycle_start`` recorded as rank-floor placeholders.
+
+    Reads the ``seeded`` key this module writes in
+    :func:`_cmd_emit_lifecycle_start`. Empty when the row predates that key or
+    carried two assessed values — both mean "nothing known to be a placeholder",
+    which is the safe reading: a marker is only ever added, never assumed.
+    """
+    if not events_log.exists():
+        return frozenset()
+    try:
+        for line in events_log.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except (ValueError, TypeError):
+                continue
+            if row.get("event") == "lifecycle_start":
+                seeded = row.get("seeded")
+                if isinstance(seeded, list):
+                    return frozenset(s for s in seeded if isinstance(s, str))
+                return frozenset()
+    except OSError:
+        pass
+    return frozenset()
+
+
+def _fields_already_overridden(events_log: Path) -> frozenset[str]:
+    """Return which of ``tier``/``criticality`` an override has already moved.
+
+    Once a field carries an override its current value is an assessment, so the
+    seed marker no longer describes it.
+    """
+    if not events_log.exists():
+        return frozenset()
+    found: set[str] = set()
+    try:
+        for line in events_log.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except (ValueError, TypeError):
+                continue
+            if row.get("event") == "complexity_override":
+                found.add("tier")
+            elif row.get("event") == "criticality_override":
+                found.add("criticality")
+    except OSError:
+        pass
+    return frozenset(found)
+
+
 def _cmd_reconcile_clarify(args: argparse.Namespace) -> int:
     """Reconcile ``events.log`` to the Clarify-determined tier/criticality.
 
@@ -268,6 +324,18 @@ def _cmd_reconcile_clarify(args: argparse.Namespace) -> int:
 
     current_tier, current_criticality = _reduce_current_state(events_log)
 
+    # Which of the values we are about to move *from* are rank-floor
+    # placeholders rather than assessments. Without this an override row reads
+    # `simple -> complex` identically whether `moderate` was weighed and
+    # rejected or never considered at all — and the override row is what every
+    # corpus count reads, so the marker on lifecycle_start alone forces a join
+    # that no reader performs. Only meaningful before the first override moves
+    # a field; after that the current value is an assessment, not the seed.
+    seeded_at_start = _seeded_fields_at_start(events_log)
+    moved = _fields_already_overridden(events_log)
+    tier_from_seed = "tier" in seeded_at_start and "tier" not in moved
+    crit_from_seed = "criticality" in seeded_at_start and "criticality" not in moved
+
     ts = _now_iso()
     rows: list[dict] = []
     # The values the log will hold once these rows land — reported back so the
@@ -283,6 +351,7 @@ def _cmd_reconcile_clarify(args: argparse.Namespace) -> int:
                 "from": current_tier,
                 "to": desired_tier,
                 "gate": "clarify_reconcile",
+                **({"from_seeded": True} if tier_from_seed else {}),
             }
         )
     if _CRITICALITY_RANK.get(desired_criticality, -1) > _CRITICALITY_RANK.get(
@@ -297,6 +366,7 @@ def _cmd_reconcile_clarify(args: argparse.Namespace) -> int:
                 "from": current_criticality,
                 "to": desired_criticality,
                 "gate": "clarify_reconcile",
+                **({"from_seeded": True} if crit_from_seed else {}),
             }
         )
 

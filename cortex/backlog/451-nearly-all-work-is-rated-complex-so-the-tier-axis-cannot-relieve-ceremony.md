@@ -9,6 +9,8 @@ created: 2026-08-04
 updated: 2026-08-04
 tags: ['lifecycle', 'tiering', 'ceremony']
 areas: ['lifecycle']
+complexity: complex
+criticality: high
 ---
 ## Why
 
@@ -40,13 +42,13 @@ The tier is decided at Clarify (`skills/refine/references/clarify.md` §5.2). It
 
 - **The rubric may be right and the work genuinely complex.** A prior audit of eight post-split calls found all eight earned. Settle this before touching the definitions; re-cutting a correct rubric to hit a distribution is the quota-filling failure #447 warned against.
 - "When torn, take the lower tier" already exists in §5.2 and is not producing lower tiers. Understand why before adding more prose telling the assessor the same thing — that is prose-only enforcement of a judgment, the weakest available lever.
-- The escalator (`cortex-complexity-escalator`) only ratchets **up**. If it fires readily, it is a one-way pump toward complex and is part of the mechanism.
+- The escalator (`cortex-complexity-escalator`) **writes nothing** — it prints a one-line recommendation and exits, and the tier only moves if the assessor records a `complexity_override` themselves. But its advice is one-*directional*: it fires only when the feature is **not already `complex`**, so it can never suggest going down. That asymmetry is a candidate contributor; a mechanical ratchet it is not.
 - Do not measure success by the tier distribution alone. The observable is which phases actually ran, which the 20-line reduction over `events.log` used here already answers without new instrumentation.
 - Sample: one consumer repo, game/graphics work, Feb–Aug 2026. cortex-command's own corpus is explicitly not representative and should not be substituted.
 
 ## Touch points
 
 - `skills/refine/references/clarify.md` §5.2 — the tier definitions
-- `cortex_command/complexity_escalator.py` — the up-only ratchet
+- `cortex_command/lifecycle/complexity_escalator.py` — the one-directional advisory
 - `skills/build/SKILL.md` — the criticality gate table the tier feeds
 - Commits `e3ee3b4c` (split), `c6528012` (depth), `b854bbf3` (the underfounded narrowing, reverted)
