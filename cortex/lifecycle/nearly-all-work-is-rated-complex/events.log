@@ -6,3 +6,8 @@
 {"ts": "2026-08-04T17:36:52Z", "event": "spec_approved", "feature": "nearly-all-work-is-rated-complex", "decision": "approved"}
 {"ts": "2026-08-04T17:43:38Z", "event": "plan_approved", "feature": "nearly-all-work-is-rated-complex", "dispatch_choice": "trunk"}
 {"ts": "2026-08-04T17:43:38Z", "event": "phase_transition", "feature": "nearly-all-work-is-rated-complex", "from": "plan", "to": "implement"}
+{"ts": "2026-08-04T17:44:30Z", "event": "batch_dispatch", "feature": "nearly-all-work-is-rated-complex", "batch": 0, "tasks": ["1", "2"]}
+{"ts": "2026-08-04T17:49:29Z", "event": "phase_transition", "feature": "nearly-all-work-is-rated-complex", "from": "implement", "to": "review", "tier": "complex"}
+{"ts": "2026-08-04T17:51:21Z", "event": "review_verdict", "feature": "nearly-all-work-is-rated-complex", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-08-04T17:51:21Z", "event": "phase_transition", "feature": "nearly-all-work-is-rated-complex", "from": "review", "to": "complete"}
+{"ts": "2026-08-04T17:51:31Z", "event": "feature_complete", "feature": "nearly-all-work-is-rated-complex", "tasks_total": 3, "rework_cycles": 0, "merge_anchor": "merge"}
