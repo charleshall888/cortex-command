@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: b16a9e89-dd0c-4516-8691-fbe3bdd06ec3
 title: Build loop ends its turn mid-lifecycle after sub-agent reports land; prose cannot reach turn-end
-status: backlog
+status: complete
 priority: medium
 type: bug
 created: 2026-08-03
