@@ -84,7 +84,9 @@ def test_update_item_writes_to_passed_backlog_dir(tmp_path: Path):
     assert not (HOME_BACKLOG / "001-x.md").exists()
 
 
-def test_write_back_to_backlog_routes_to_worktree(tmp_path: Path, monkeypatch):
+def test_write_back_to_backlog_routes_to_worktree(
+    tmp_path: Path, monkeypatch, isolated_repo_root
+):
     """outcome_router._write_back_to_backlog writes to worktree, not home."""
     from cortex_command.overnight import outcome_router
 

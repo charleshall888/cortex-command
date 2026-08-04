@@ -61,7 +61,11 @@ def test_ready_regenerates_on_missing_index(tmp_path, monkeypatch, capsys):
     # The cache-miss path: no index.json exists.
     assert not (backlog_dir / "index.json").exists()
 
-    monkeypatch.setattr(ready_mod, "BACKLOG_DIR", backlog_dir)
+    # ready.py resolves its backlog directory at call time via
+    # _resolve_user_project_root(), which trusts CORTEX_REPO_ROOT verbatim.
+    # Pointing the env at tmp_path exercises the real resolution path rather
+    # than patching over it.
+    monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
     rc = ready_mod.main([])
 
     assert rc == 0, "ready.py must regenerate on a missing index, not hard-fail"

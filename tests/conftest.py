@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import pathlib
+import shutil
 
 import pytest
 import yaml
@@ -18,6 +20,127 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         if "slow" in item.keywords:
             item.add_marker(skip_slow)
+
+
+# ---------------------------------------------------------------------------
+# Operator-session isolation
+# ---------------------------------------------------------------------------
+
+#: Session id the suite runs under. Every telemetry writer keys its output
+#: directory off ``LIFECYCLE_SESSION_ID``, so pinning it to one sentinel
+#: funnels all suite-written session state into a single removable directory.
+PYTEST_SESSION_ID = "pytest-isolated"
+
+#: Stash slot holding the operator's real session id, captured before the pin
+#: below overwrites it, so the guard fixture knows which directory to watch.
+_OPERATOR_SESSION_KEY = pytest.StashKey[str]()
+
+
+def _operator_session_digest(session_id: str) -> str | None:
+    """Hash the operator's session directory, or None when it isn't there."""
+    if not session_id:
+        return None
+    target = repo_root() / "cortex" / "lifecycle" / "sessions" / session_id
+    if not target.is_dir():
+        return None
+    digest = hashlib.sha256()
+    for path in sorted(target.rglob("*")):
+        if path.is_file():
+            digest.update(str(path.relative_to(target)).encode())
+            digest.update(path.read_bytes())
+    return digest.hexdigest()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _operator_session_untouched(request):
+    """Fail the run if it wrote into the operator's own session directory.
+
+    The pin in :func:`pytest_configure` is the fix; this is the alarm that
+    tells us when a new writer has slipped past it. Scoped to the one
+    directory whose corruption actually misleads — a polluted
+    ``bin-invocations.jsonl`` reads as a record of what the operator's
+    session did, which is how a forensic conclusion got inverted on
+    2026-08-03.
+    """
+    session_id = request.config.stash.get(_OPERATOR_SESSION_KEY, "")
+    before = _operator_session_digest(session_id)
+    yield
+    after = _operator_session_digest(session_id)
+    if before != after:
+        pytest.fail(
+            "The test suite wrote into the operator's live session directory "
+            f"cortex/lifecycle/sessions/{session_id}/. That path is gitignored, "
+            "so the damage is invisible to `git status` and will be read back "
+            "as genuine session telemetry.\n"
+            "A writer is resolving LIFECYCLE_SESSION_ID from somewhere the "
+            "pytest_configure pin in tests/conftest.py does not reach.",
+            pytrace=False,
+        )
+
+
+def pytest_configure(config):
+    """Pin the suite's session id away from the operator's own.
+
+    ``cortex-*`` entry points log one JSONL record per invocation to
+    ``cortex/lifecycle/sessions/$LIFECYCLE_SESSION_ID/bin-invocations.jsonl``
+    (``cortex_command/backlog/_telemetry.py``), and the dispatch path writes
+    sandbox-deny-list sidecars alongside it. Both resolve the session
+    directory independently of any ``backlog_dir`` a test redirects, so tests
+    that are otherwise well isolated still write into the live tree — and
+    because ``cortex/.gitignore`` covers ``lifecycle/sessions/``, none of it
+    shows up in ``git status``.
+
+    That invisibility is the actual hazard. On 2026-08-03 a suite-written
+    ``cortex-update-item`` record was read back as evidence of what a session
+    had done, and inverted a forensic conclusion.
+
+    This runs in ``pytest_configure`` rather than an autouse fixture because
+    some writes happen at module import during collection, before any
+    per-test fixture can apply. Subprocesses inherit ``os.environ``, so the
+    pin covers them too. Tests that need a specific session id still set
+    their own via ``monkeypatch.setenv``.
+    """
+    config.stash[_OPERATOR_SESSION_KEY] = os.environ.get("LIFECYCLE_SESSION_ID", "")
+    os.environ["LIFECYCLE_SESSION_ID"] = PYTEST_SESSION_ID
+
+
+def pytest_unconfigure(config):
+    """Remove the sentinel session directory the run created.
+
+    Scoped deliberately narrowly: only the one directory named by
+    :data:`PYTEST_SESSION_ID`, only under ``cortex/lifecycle/sessions/``, and
+    only when it is a real directory rather than a symlink. Session state the
+    suite writes under an explicitly-chosen id is left alone — that is a
+    separate leak, and silently deleting paths this hook did not create is
+    how a cleanup step becomes a data-loss bug.
+    """
+    sessions = repo_root() / "cortex" / "lifecycle" / "sessions"
+    target = sessions / PYTEST_SESSION_ID
+    if target.is_dir() and not target.is_symlink():
+        shutil.rmtree(target, ignore_errors=True)
+
+
+@pytest.fixture
+def isolated_repo_root(tmp_path_factory, monkeypatch) -> pathlib.Path:
+    """Point project-root resolution at a throwaway sandbox for one test.
+
+    Opt-in, deliberately **not** autouse. ``_resolve_user_project_root``
+    consults ``CORTEX_REPO_ROOT`` *before* walking up from cwd, so pinning it
+    for every test overrides the ``monkeypatch.chdir`` isolation most of the
+    suite already uses correctly — measured 2026-08-04: a blanket pin failed
+    30 otherwise-passing tests across 7 files.
+
+    Use this only for tests that set ``LIFECYCLE_SESSION_ID`` without
+    chdir-ing, which would otherwise write session telemetry into the live
+    ``cortex/lifecycle/sessions/`` tree. The ``.git`` marker is required —
+    ``_telemetry._resolve_repo_root`` validates it before trusting the env.
+    """
+    root = tmp_path_factory.mktemp("cortex_root")
+    (root / ".git").mkdir()
+    (root / "cortex" / "lifecycle" / "sessions").mkdir(parents=True)
+    (root / "cortex" / "backlog").mkdir(parents=True)
+    monkeypatch.setenv("CORTEX_REPO_ROOT", str(root))
+    return root
 
 
 def repo_root() -> pathlib.Path:

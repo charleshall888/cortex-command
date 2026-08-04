@@ -54,8 +54,18 @@ from typing import Any
 
 from cortex_command.backlog import _telemetry, partition_ready
 from cortex_command.common import TERMINAL_STATUSES  # noqa: F401
+from cortex_command.common import CortexProjectRootError, _resolve_user_project_root
 
-BACKLOG_DIR = Path.cwd() / "cortex" / "backlog"
+def _backlog_dir() -> Path:
+    """Resolve the backlog directory at call time.
+
+    Matches the resolution the other backlog verbs use
+    (``update_item.py`` / ``create_item.py``): honors ``CORTEX_REPO_ROOT``
+    and walks upward from cwd, rather than assuming cwd *is* the project
+    root. Resolved per call, never at import, so a caller that chdirs —
+    or a test that redirects the root — gets the directory it asked for.
+    """
+    return _resolve_user_project_root() / "cortex" / "backlog"
 
 # Canonical priority ordering. Unknown priorities sort alphabetically
 # *after* "contingent" and are only emitted when non-empty.
@@ -414,6 +424,12 @@ def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
 
     try:
+        # An unresolvable project root is the same user-facing condition as an
+        # absent backlog/ — report it as such rather than as an internal error.
+        try:
+            BACKLOG_DIR = _backlog_dir()
+        except CortexProjectRootError:
+            return _emit_error("backlog/ not found in cwd")
         if not BACKLOG_DIR.is_dir():
             return _emit_error("backlog/ not found in cwd")
 
