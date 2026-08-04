@@ -3,3 +3,4 @@
 {"ts": "2026-08-04T17:13:56Z", "event": "clarify_critic", "feature": "nearly-all-work-is-rated-complex", "schema_version": 3, "parent_epic_loaded": false, "findings_count": 0, "dispositions": {"apply": 0, "dismiss": 0, "ask": 0}, "applied_fixes_count": 0, "dismissals_count": 0, "status": "skipped_rescope"}
 {"ts": "2026-08-04T17:14:21Z", "event": "complexity_override", "feature": "nearly-all-work-is-rated-complex", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
 {"ts": "2026-08-04T17:14:21Z", "event": "criticality_override", "feature": "nearly-all-work-is-rated-complex", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-08-04T17:36:52Z", "event": "spec_approved", "feature": "nearly-all-work-is-rated-complex", "decision": "approved"}

@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: dfeb6b8c-7b48-4de6-a3ef-61e4328e7ae2
 title: Tier assessment has three upward forces and no downward path
-status: backlog
+status: refined
 priority: high
 type: feature
 created: 2026-08-04
@@ -12,6 +12,7 @@ areas: ['lifecycle']
 complexity: complex
 criticality: high
 lifecycle_slug: nearly-all-work-is-rated-complex
+spec: cortex/lifecycle/nearly-all-work-is-rated-complex/spec.md
 ---
 ## Why
 
