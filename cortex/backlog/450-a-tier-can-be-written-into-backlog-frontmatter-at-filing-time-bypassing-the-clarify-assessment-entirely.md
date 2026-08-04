@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: f2ff13f3-bd84-4274-8633-d757c9d4148a
 title: A tier can be written into backlog frontmatter at filing time, bypassing the Clarify assessment entirely
-status: backlog
+status: wontfix
 priority: low
 type: bug
 created: 2026-08-04

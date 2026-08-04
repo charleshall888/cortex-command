@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: d7749b8a-3332-4463-b900-781a10abf051
 title: The tier distribution cannot be measured, because the simple bucket leaves no record
-status: backlog
+status: wontfix
 priority: medium
 type: feature
 created: 2026-08-04
