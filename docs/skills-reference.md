@@ -51,7 +51,7 @@ Compose a structured backlog ticket body from a context block, using the Why/Rol
 ---
 
 ### research
-Parallel research orchestrator for pre-implementation investigation. Dispatches 1–10 agents (sized by a tier×criticality matrix) across independent angles (codebase, web, requirements, tradeoffs, adversarial) and synthesizes findings into a structured `research.md` artifact. Used directly via `/cortex-core:research` or invoked automatically by `/cortex-core:refine` and `/cortex-core:build`.
+Parallel research orchestrator for pre-implementation investigation. Dispatches 1–6 agents (sized by a tier×criticality matrix) across independent angles (codebase, web, requirements, tradeoffs, adversarial) and synthesizes findings into a structured `research.md` artifact. Used directly via `/cortex-core:research` or invoked automatically by `/cortex-core:refine` and `/cortex-core:build`.
 
 [skills/research/SKILL.md](../skills/research/SKILL.md)
 

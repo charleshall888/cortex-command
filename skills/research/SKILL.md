@@ -1,6 +1,6 @@
 ---
 name: research
-description: Parallel research orchestrator. Use when the user says "/cortex-core:research", "research this topic", "investigate this feature", or when /cortex-core:refine delegates its research phase. Dispatches 3–10 parallel agents across independent angles, synthesizes into research.md or conversation output.
+description: Parallel research orchestrator. Use when the user says "/cortex-core:research", "research this topic", "investigate this feature", or when /cortex-core:refine delegates its research phase. Dispatches 1–6 parallel agents across independent angles, synthesizes into research.md or conversation output.
 argument-hint: "topic=\"<topic>\" [lifecycle-slug=<slug>] [tier=simple|moderate|complex] [criticality=low|medium|high|critical]"
 ---
 

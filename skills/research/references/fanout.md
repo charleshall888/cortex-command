@@ -8,7 +8,7 @@ Shared by `/cortex-core:research` and `/cortex-core:discovery` so their fan-out 
 |--------------------|-----|--------|------|----------|
 | **simple**         | 1   | 1      | 2    | 3        |
 | **moderate**       | 1   | 2      | 3    | 4        |
-| **complex**        | 5   | 6      | 8    | 10       |
+| **complex**        | 3   | 4      | 5    | 6        |
 
 An **upper bound on breadth, not a quota** — dispatch fewer when the task offers fewer genuinely distinct angles.
 

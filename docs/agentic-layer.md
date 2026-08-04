@@ -124,7 +124,7 @@ Criticality is set per-feature and drives how much work each phase does and whet
 | high | Parallel (matrix-sized) | Single | Forced |
 | critical | Parallel (matrix-sized) | Competing plans | Forced |
 
-Research fan-out is always parallel and sized by a tier×criticality matrix (range 1–10) — see [`skills/research/references/fanout.md`](../skills/research/references/fanout.md). Competing/parallel plans remain critical-only.
+Research fan-out is always parallel and sized by a tier×criticality matrix (range 1–6) — see [`skills/research/references/fanout.md`](../skills/research/references/fanout.md). Competing/parallel plans remain critical-only.
 
 ---
 

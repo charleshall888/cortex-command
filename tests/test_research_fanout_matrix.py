@@ -188,17 +188,20 @@ def test_floor_is_one(grid):
     )
 
 
-def test_corner_is_ten(grid):
-    """The highest-effort corner (complex + critical) is 10."""
+def test_corner_is_six(grid):
+    """The highest-effort corner (complex + critical) is 6 — the 3 mandatory
+    core angles plus Adversarial, leaving 2 orchestrator-chosen slots. Lowered
+    from 10 once the corpus showed the complex row carries ~75% of runs, so
+    its upper cells were funding scope-subdivision rather than distinct angles."""
     corner = grid["complex"][CRITICALITY_COLUMNS.index("critical")]
-    assert corner == 10, (
-        f"Fan-out matrix corner (complex + critical) must be 10, found "
+    assert corner == 6, (
+        f"Fan-out matrix corner (complex + critical) must be 6, found "
         f"{corner}."
     )
 
 
 def test_cap_is_corner(grid):
-    """No cell exceeds the corner value (10)."""
+    """No cell exceeds the corner value (6)."""
     corner = grid["complex"][CRITICALITY_COLUMNS.index("critical")]
     for tier in TIER_ROWS:
         for j, value in enumerate(grid[tier]):
