@@ -16,9 +16,9 @@ Rate the artifact against the phase reference's authoring rules. Take each separ
 
 ## 3. Fix dispatch
 
-The orchestrator does not edit phase artifacts directly.
+The orchestrator does not edit phase artifacts directly — dispatching preserves separation of concerns.
 
-Rework needing no user input → a **fresh subagent** takes every repair, avoiding anchoring to the flawed artifact; briefed with the flagged rule, what's wrong, the artifact path, and format requirements. Flags confined to a single requirement get a targeted edit to that requirement's section; flags spanning more than one, or the artifact's cross-references, get a full rewrite to keep cross-referencing sections coherent. If a targeted edit proves not confinable once inside the artifact, it reports `verdict: failed` rather than an inconsistent patch. Ends with this envelope, no prose:
+Rework needing no user input → a **fresh subagent** takes every repair, avoiding anchoring to the flawed artifact; briefed with the flagged rule, what's wrong, the artifact path, and format requirements. Flags confined to a single requirement get a targeted edit to that requirement; flags spanning more than one, or the artifact's cross-references, get a full rewrite to keep cross-referencing sections coherent. If a targeted edit proves not confinable, it reports `verdict: failed` rather than an inconsistent patch. Ends with this envelope, no prose:
 
 ```
 verdict: revised | failed
@@ -29,7 +29,7 @@ rationale: <≤15 words>
 
 Rework needing user input (preference decides) → explain the issue, gather input, revise in place.
 
-After all fixes, increment the cycle counter and return to §1 with the same rules; relay only the re-review verdict from the envelope.
+After all fixes, increment the cycle counter and return to §1 with the same rules; relay only the re-review verdict.
 
 ## 4. Escalation
 
