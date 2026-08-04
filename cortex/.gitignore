@@ -22,6 +22,12 @@ lifecycle/**/.session-owner
 lifecycle/**/.dispatching
 lifecycle/**/.lock
 
+# Stop-hook auto-continue state: the per-phase consecutive-continue counter and
+# the operator's hand-back marker. Both are session-scoped (SessionEnd clears
+# them), never project history.
+lifecycle/**/.autocontinue
+lifecycle/**/.autocontinue-off
+
 # Lifecycle runtime artifacts
 lifecycle/**/agent-activity.jsonl
 lifecycle/**/learnings/recovery-log.md

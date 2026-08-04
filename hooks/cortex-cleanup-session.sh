@@ -30,6 +30,11 @@ for session_file in "$LIFECYCLE_DIR"/*/.session; do
   if [[ "$file_id" == "$SESSION_ID" ]]; then
     rm -f "$session_file"
     rm -f "${session_file%.session}.session-owner"
+    # Stop-hook auto-continue state is session-scoped: a stale counter would
+    # spend the next session's cap, and a stale hand-back marker would
+    # silently disable auto-continue for a session that never asked for it.
+    rm -f "${session_file%.session}.autocontinue"
+    rm -f "${session_file%.session}.autocontinue-off"
   fi
 done
 
