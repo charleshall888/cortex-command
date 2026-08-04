@@ -4,3 +4,5 @@
 {"ts": "2026-08-04T17:14:21Z", "event": "complexity_override", "feature": "nearly-all-work-is-rated-complex", "from": "simple", "to": "complex", "gate": "clarify_reconcile"}
 {"ts": "2026-08-04T17:14:21Z", "event": "criticality_override", "feature": "nearly-all-work-is-rated-complex", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
 {"ts": "2026-08-04T17:36:52Z", "event": "spec_approved", "feature": "nearly-all-work-is-rated-complex", "decision": "approved"}
+{"ts": "2026-08-04T17:43:38Z", "event": "plan_approved", "feature": "nearly-all-work-is-rated-complex", "dispatch_choice": "trunk"}
+{"ts": "2026-08-04T17:43:38Z", "event": "phase_transition", "feature": "nearly-all-work-is-rated-complex", "from": "plan", "to": "implement"}
