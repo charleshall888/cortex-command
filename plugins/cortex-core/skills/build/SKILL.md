@@ -68,14 +68,16 @@ A boundary fires on its gate condition (e.g. `plan.md` all tasks `[x]`), not use
 
 ## Criticality
 
-Override at any time with `cortex-lifecycle-event criticality-override --feature <name> --from <old> --to <new>`, which supersedes the monotonic-up-only Clarify reconciliation. `cortex-lifecycle-state --feature {feature}` (or `--field <x>`) reduces the event log to current values, omitting absent keys — apply the defaults `criticality=medium` / `tier=moderate` yourself. **`"corrupted": true`** means tier/criticality are unknowable: treat the feature as *requiring* review rather than applying the skip rule.
+Override at any time with `cortex-lifecycle-event criticality-override --feature <name> --from <old> --to <new> --reason "<one line>"`, which supersedes the monotonic-up-only Clarify reconciliation. Carry the reason — an override recorded as an outcome alone leaves the next reader re-deriving it from the artifacts. `cortex-lifecycle-state --feature {feature}` (or `--field <x>`) reduces the event log to current values, omitting absent keys — apply the defaults `criticality=medium` / `tier=moderate` yourself. **`"corrupted": true`** means tier/criticality are unknowable: treat the feature as *requiring* review rather than applying the skip rule.
 
 | Criticality | Review phase | Orchestrator review | Planning |
 |-------------|-------------|--------------------|---------|
 | low | tier-based (skip below complex) | skipped below complex, active for complex | tier-based |
 | medium | tier-based (skip below complex) | active at phase boundaries | tier-based |
-| high | forced regardless of tier | active at all boundaries | single plan |
-| critical | forced regardless of tier | active at all boundaries | competing plans |
+| high | forced at every tier; Stage 2 at complex only | active at all boundaries | single plan |
+| critical | forced at every tier; Stage 2 at complex only | active at all boundaries | competing plans |
+
+Criticality decides whether Review runs; tier decides how deep it reads. Forcing the full two-stage read at every tier was what kept a lighter tier from costing less, since criticality lands `high` for most non-trivial work.
 
 Model choice is the dispatching agent's call at each site, never this table's. The implement→{review|complete} routing rule lives in its verb, not in prose.
 

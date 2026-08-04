@@ -1,6 +1,6 @@
 # Review Phase
 
-Two-stage review: spec compliance, then code quality. Complex tier only. The reviewer must NOT modify any files.
+Two-stage review: spec compliance, then code quality. Stage 1 runs at complex tier, or any tier once criticality is `high`/`critical`; Stage 2 is complex-only. The reviewer must NOT modify any files.
 
 ## 1. Gather inputs
 
@@ -16,7 +16,7 @@ Dispatch one read-only reviewer, choosing its model yourself. Hand it the absolu
 
 **Single-writer rule** — only the reviewer role writes `review.md`: this sub-task plus §3's missing-drift re-dispatch and §3a's cap-2 re-dispatches. Any sub-agent the reviewer spawns is read-only and returns findings as a message envelope.
 
-**Stage 1 — spec compliance**: per requirement, read the relevant source, check acceptance criteria, rate PASS / FAIL / PARTIAL. Any FAIL skips Stage 2. **Stage 2 — code quality** (only when no FAIL): naming consistency, error handling, whether the plan's verification steps were executed, pattern consistency. **Requirements drift** is an observation that does not affect the verdict: `none` when the implementation matches the requirements and adds no unreflected behavior, `detected` when it introduces or changes behavior they don't capture.
+**Stage 1 — spec compliance**: per requirement, read the relevant source, check acceptance criteria, rate PASS / FAIL / PARTIAL. Any FAIL skips Stage 2. **Stage 2 — code quality** (only when no FAIL; complex only): naming consistency, error handling, whether the plan's verification steps were executed, pattern consistency. **Requirements drift** is an observation that does not affect the verdict: `none` when the implementation matches the requirements and adds no unreflected behavior, `detected` when it introduces or changes behavior they don't capture.
 
 It writes `cortex/lifecycle/{feature}/review.md` with a `## Requirements Drift` section carrying **State** (`none` | `detected`), **Findings** (one bullet per drifted item, or "None"), and **Update needed** (a requirements file path, or "None"). On `detected` it adds `## Suggested Requirements Update`, one entry per drifted file, each naming **File**, **Section** (an existing heading), and **Content** — the exact 1–3 lines to append, written as they should appear rather than described.
 
