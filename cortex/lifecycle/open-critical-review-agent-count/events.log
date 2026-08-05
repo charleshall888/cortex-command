@@ -3,3 +3,5 @@
 {"ts": "2026-08-05T01:27:40Z", "event": "complexity_override", "feature": "open-critical-review-agent-count", "from": "simple", "to": "moderate", "gate": "clarify_reconcile"}
 {"ts": "2026-08-05T01:27:40Z", "event": "criticality_override", "feature": "open-critical-review-agent-count", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
 {"ts": "2026-08-05T01:32:54Z", "event": "spec_approved", "feature": "open-critical-review-agent-count", "decision": "approved"}
+{"ts": "2026-08-05T01:58:39Z", "event": "plan_approved", "feature": "open-critical-review-agent-count", "dispatch_choice": "trunk"}
+{"ts": "2026-08-05T01:58:39Z", "event": "phase_transition", "feature": "open-critical-review-agent-count", "from": "plan", "to": "implement"}
