@@ -1,0 +1,5 @@
+{"ts": "2026-08-05T00:34:11Z", "schema_version": 1, "event": "lifecycle_start", "feature": "reassess-ticket-body-format-rules", "tier": "simple", "criticality": "medium", "entry_point": "refine", "seeded": ["criticality", "tier"]}
+schema_version: 3, ts: 2026-08-05T00:40:24Z, event: clarify_critic, feature: reassess-ticket-body-format-rules, parent_epic_loaded: false, findings_count: 8, dispositions: {apply: 8, dismiss: 0, ask: 0}, applied_fixes_count: 8, dismissals_count: 0, status: "ok"
+{"ts": "2026-08-05T01:59:21Z", "event": "complexity_override", "feature": "reassess-ticket-body-format-rules", "from": "simple", "to": "complex", "gate": "clarify_reconcile", "from_seeded": true}
+{"ts": "2026-08-05T01:59:21Z", "event": "criticality_override", "feature": "reassess-ticket-body-format-rules", "from": "medium", "to": "high", "gate": "clarify_reconcile", "from_seeded": true}
+{"ts": "2026-08-05T12:47:42Z", "event": "spec_approved", "feature": "reassess-ticket-body-format-rules", "decision": "approved"}
