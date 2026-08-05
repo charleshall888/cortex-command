@@ -1,0 +1,5 @@
+{"ts": "2026-08-05T00:26:35Z", "schema_version": 1, "event": "lifecycle_start", "feature": "open-critical-review-agent-count", "tier": "simple", "criticality": "medium", "entry_point": "refine"}
+{"schema_version": 3, "ts": "2026-08-05T00:32:10Z", "event": "clarify_critic", "feature": "open-critical-review-agent-count", "parent_epic_loaded": false, "findings_count": 12, "dispositions": {"apply": 6, "dismiss": 0, "ask": 6}, "applied_fixes_count": 6, "dismissals_count": 0, "status": "ok"}
+{"ts": "2026-08-05T01:27:40Z", "event": "complexity_override", "feature": "open-critical-review-agent-count", "from": "simple", "to": "moderate", "gate": "clarify_reconcile"}
+{"ts": "2026-08-05T01:27:40Z", "event": "criticality_override", "feature": "open-critical-review-agent-count", "from": "medium", "to": "high", "gate": "clarify_reconcile"}
+{"ts": "2026-08-05T01:32:54Z", "event": "spec_approved", "feature": "open-critical-review-agent-count", "decision": "approved"}
