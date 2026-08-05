@@ -108,7 +108,13 @@ routing; SKILL.md is smaller than at HEAD.
 - **Verification**: `uv run pytest tests/test_dual_source_reference_parity.py tests/test_reference_size_ratchet.py tests/test_skill_size_budget.py`
   passes; `test $(wc -c < skills/critical-review/SKILL.md) -lt $(git show HEAD:skills/critical-review/SKILL.md | wc -c)` exits 0;
   `git show --stat HEAD` after commit lists the three source files plus regenerated mirror paths
-- **Status**: [ ] pending
+- **Status**: [x] done (77dc91c4 2026-08-04T22:12:22-04:00)
+
+  Note: SKILL.md 6201 → 6188 bytes (R9 passes). Mirror reconciliation required a
+  hand-staged repair — `just build-plugin`'s `rsync -a` (justfile:669,674,678) has no
+  `--checksum`, so a same-byte-length content change with matching mtimes is invisible
+  to its quick check and the pre-commit hook reconciled 0 files at exit 0. Latent bug
+  affecting every mirrored skill/hook/bin file; out of scope here.
 
 ## Risks
 
