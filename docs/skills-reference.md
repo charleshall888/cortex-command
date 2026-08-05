@@ -107,7 +107,7 @@ Create GitHub pull requests with well-crafted titles and descriptions. Detects t
 ## Thinking Tools
 
 ### critical-review
-Derives challenge angles from the artifact and project context (default 2, escalating to 3-4 on high/critical criticality or novel claims), then dispatches one reviewer agent per angle in parallel for deep, unanchored criticism. A synthesis agent merges the parallel findings into a single coherent challenge. Also auto-triggers during refine for Complex + medium/high/critical features before spec approval.
+Derives challenge angles from the artifact and project context (1-2 reviewers, weighted toward 2 on high/critical criticality or novel claims), then dispatches one reviewer agent per angle in parallel for deep, unanchored criticism. A synthesis agent merges the parallel findings into a single coherent challenge. Also auto-triggers during refine for Complex + medium/high/critical features before spec approval.
 
 [skills/critical-review/SKILL.md](../skills/critical-review/SKILL.md)
 
