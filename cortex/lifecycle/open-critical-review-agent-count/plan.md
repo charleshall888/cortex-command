@@ -51,7 +51,7 @@ routing; SKILL.md is smaller than at HEAD.
   `sed -n '/## Step 2:/,/## Step 3:/p' skills/critical-review/SKILL.md | grep -Ec "not widen|don't widen|does not widen"` ≥ 1;
   `grep -c "^## Step 7: Present and apply" skills/critical-review/SKILL.md` = 1;
   `uv run pytest tests/test_skill_routing_disambiguation.py tests/test_l1_surface_ratchet.py` passes
-- **Status**: [ ] pending
+- **Status**: [x] done (5430bb66 2026-08-04T22:03:54-04:00)
 
 ### Task 2: Update the skills-reference width description
 - **Files**: `docs/skills-reference.md`
@@ -67,7 +67,7 @@ routing; SKILL.md is smaller than at HEAD.
   Spec R7.
 - **Verification**: `grep -n "3-4\|3–4" docs/skills-reference.md` returns no line in
   the critical-review entry; `grep -c "A synthesis agent merges" docs/skills-reference.md` = 1
-- **Status**: [ ] pending
+- **Status**: [x] done (65812df9 2026-08-04T22:00:50-04:00)
 
 ### Task 3: Amend the ratified width constraint in project.md
 - **Files**: `cortex/requirements/project.md`
@@ -88,7 +88,7 @@ routing; SKILL.md is smaller than at HEAD.
   `grep -c "Critical-review gates at spec only.*1–2" cortex/requirements/project.md` = 1,
   `grep -c "Opus synthesizer" cortex/requirements/project.md` = 0, and
   `grep -c "Supersedes #383" cortex/requirements/project.md` = 1
-- **Status**: [ ] pending
+- **Status**: [x] done (0b853af5 2026-08-04T22:01:06-04:00)
 
 ### Task 4: Verify acceptance end to end and commit
 - **Files**: `skills/critical-review/SKILL.md`, `docs/skills-reference.md`,

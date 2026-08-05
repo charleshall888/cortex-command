@@ -31,7 +31,7 @@ One general-purpose agent per angle, all in parallel, using `${CLAUDE_SKILL_DIR}
 
 Extract each reviewer's envelope: split on the **last** `<!--findings-json-->` line, `json.loads` the tail, and assert top-level `angle: str` and `findings: list`, each finding carrying `class ∈ {A,B,C}`, `finding`, and `evidence_quote`. The envelope is the reviewer's whole deliverable, so a malformed one leaves nothing to salvage — warn `⚠ Reviewer {angle} emitted malformed JSON envelope ({reason})` and drop it.
 
-One reviewer failing at width 2 → synthesize from the survivor, prefixed "1 of 2 reviewer angles completed." Never wait on a silent agent. Total failure — both at 2, or the lone angle at 1 — → one general-purpose agent derives 1–2 angles itself, same output shape, prefixed `Note: parallel dispatch failed, falling back to single reviewer`; skip synthesis.
+One reviewer failing at width 2 → synthesize from the survivor, prefixed "1 of 2 reviewer angles completed." Never wait on a silent agent. Total failure — both at 2, or the lone angle at 1 — → one general-purpose agent derives 1–2 angles itself, same output shape, prefixed `Note: reviewer dispatch failed, falling back to single reviewer`; skip synthesis.
 
 ## Step 5: Synthesize
 
