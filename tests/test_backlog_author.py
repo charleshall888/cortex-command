@@ -7,15 +7,8 @@ Covers the gameable behaviors specified in Requirement 12 of the
   body that contains all five expected section headings with non-empty content.
 - ``test_compose_mode_does_not_call_askuserquestion``: the compose section of
   SKILL.md contains zero ``AskUserQuestion`` references (R6 regression guard).
-- ``test_interview_mode_routes_through_askuserquestion``: the interview section
-  of SKILL.md references ``AskUserQuestion`` at least once.
-- ``test_lex1_rejects_code_block_in_why_section``: LEX-1 scanner exits non-zero
-  when given a fixture whose ``## Why`` section contains a fenced code block.
 - ``test_create_item_accepts_body_flag``: ``cortex-create-backlog-item --body``
   appends the body verbatim after the frontmatter closing delimiter.
-
-Test functions are added in Task 9. This module provides the skeleton
-(imports, fixtures, helpers) that Task 9 will populate.
 """
 
 from __future__ import annotations
