@@ -5,3 +5,5 @@ schema_version: 3, ts: 2026-08-05T00:40:24Z, event: clarify_critic, feature: rea
 {"ts": "2026-08-05T12:47:42Z", "event": "spec_approved", "feature": "reassess-ticket-body-format-rules", "decision": "approved"}
 {"ts": "2026-08-05T13:00:57Z", "event": "plan_approved", "feature": "reassess-ticket-body-format-rules", "dispatch_choice": "trunk"}
 {"ts": "2026-08-05T13:00:57Z", "event": "phase_transition", "feature": "reassess-ticket-body-format-rules", "from": "plan", "to": "implement"}
+{"ts": "2026-08-05T13:01:41Z", "event": "batch_dispatch", "feature": "reassess-ticket-body-format-rules", "batch": 0, "tasks": ["1", "2", "3"]}
+{"ts": "2026-08-05T13:04:27Z", "event": "batch_dispatch", "feature": "reassess-ticket-body-format-rules", "batch": 1, "tasks": ["4"]}
