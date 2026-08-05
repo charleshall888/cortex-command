@@ -1,13 +1,13 @@
 ---
 name: critical-review
-description: Parallel adversarial review — dispatches reviewer agents on distinct challenge angles, then synthesizes their findings. Use when user says "critical review", "pressure test", "adversarial review", or "challenge from multiple angles". Auto-triggers in the lifecycle for Complex + medium/high/critical features before spec approval.
-when_to_use: "Use when you want to stress-test a plan, spec, or research artifact before committing (\"poke holes in the plan\"). Different from /devils-advocate — devils-advocate runs inline in the current agent context for a lightweight solo deliberation; critical-review dispatches parallel sub-agents and synthesizes findings."
+description: Adversarial review — dispatches 1–2 reviewer agents on distinct challenge angles, then synthesizes their findings. Use when user says "critical review", "pressure test", "adversarial review", or "challenge from multiple angles". Auto-triggers in the lifecycle for Complex + medium/high/critical features before spec approval.
+when_to_use: "Use when you want to stress-test a plan, spec, or research artifact before committing (\"poke holes in the plan\"). Different from /devils-advocate — devils-advocate runs inline in the current agent context for a lightweight solo deliberation; critical-review dispatches 1–2 sub-agents and synthesizes findings."
 argument-hint: "[<artifact-path>]"
 ---
 
 # Critical Review
 
-One fresh reviewer agent per angle, dispatched in parallel — no anchoring to the reasoning that produced the artifact — then a synthesis pass.
+One fresh reviewer agent per angle — no anchoring to the reasoning that produced the artifact — then a synthesis pass.
 
 ## Step 1: Find the artifact
 
@@ -15,9 +15,9 @@ If a lifecycle is active, take the most relevant of `cortex/lifecycle/{feature}/
 
 ## Step 2: Derive angles
 
-Derive the challenge angles from the artifact yourself, in this conversation. **Default 2**; escalate to 3–4 only when criticality is `high`/`critical`, or the artifact introduces claims its inputs lacked (mechanisms, measured figures, or verification approaches absent from the spec or research it derives from).
+Derive the challenge angles from the artifact yourself, in this conversation. Choose **1 or 2** — a hard ceiling, not a starting point. Weight toward 2 when criticality is `high`/`critical`; that's a preference, not an escalation path.
 
-Each angle must cite a specific section, claim, assumption, or design choice in *this* artifact, and no two may re-phrase the same concern. "Fragile assumptions" alone is not an angle; "the retry logic in §3 assumes idempotent endpoints, which breaks for the payment webhook in §5" is. Architectural risk, integration risk, and scope creep are a diversity nudge, not a checklist — weight toward the failure modes of whatever domain the artifact lives in.
+Each angle must cite a specific section, claim, assumption, or design choice in *this* artifact, and no two may re-phrase the same concern. "Fragile assumptions" alone is not an angle; "the retry logic in §3 assumes idempotent endpoints, which breaks for the payment webhook in §5" is. Architectural risk, integration risk, and scope creep are a diversity nudge, not a checklist — weight toward the failure modes of whatever domain the artifact lives in. More weaknesses than slots → highest-severity wins, don't widen past 2.
 
 ## Step 3: Assemble project context
 
@@ -31,7 +31,7 @@ One general-purpose agent per angle, all in parallel, using `${CLAUDE_SKILL_DIR}
 
 Extract each reviewer's envelope: split on the **last** `<!--findings-json-->` line, `json.loads` the tail, and assert top-level `angle: str` and `findings: list`, each finding carrying `class ∈ {A,B,C}`, `finding`, and `evidence_quote`. The envelope is the reviewer's whole deliverable, so a malformed one leaves nothing to salvage — warn `⚠ Reviewer {angle} emitted malformed JSON envelope ({reason})` and drop it.
 
-Some reviewers failing → synthesize from the rest and prefix "N of M reviewer angles completed." Never wait on a silent agent. *All* failing → dispatch a single general-purpose agent to derive 3–4 angles itself and produce the same output shape, prefix `Note: parallel dispatch failed, falling back to single reviewer`, and skip synthesis.
+One reviewer failing at width 2 → synthesize from the survivor, prefixed "1 of 2 reviewer angles completed." Never wait on a silent agent. Total failure — both at 2, or the lone angle at 1 — → one general-purpose agent derives 1–2 angles itself, same output shape, prefixed `Note: parallel dispatch failed, falling back to single reviewer`; skip synthesis.
 
 ## Step 5: Synthesize
 
