@@ -102,6 +102,37 @@ def _count_overrides(events_log: Path) -> int:
     return count
 
 
+def _override_rows(events_log: Path) -> list[dict]:
+    """Every override row in the log, in append order.
+
+    Distinct from :func:`_count_overrides`: the reason tests assert on the row
+    *shape* (which keys are present, and in what order), so a count is not
+    enough — a missing-`reason` assertion made against the whole file's text
+    would also pass if no row had been appended at all.
+    """
+    rows: list[dict] = []
+    for line in events_log.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(row, dict) and row.get("event") in (
+            "complexity_override",
+            "criticality_override",
+        ):
+            rows.append(row)
+    return rows
+
+
+def _only(rows: list[dict], event: str) -> dict:
+    matches = [r for r in rows if r.get("event") == event]
+    assert len(matches) == 1, f"expected exactly one {event} row, got {len(matches)}"
+    return matches[0]
+
+
 def _state_field(
     capsys: pytest.CaptureFixture[str], feature: str, field: str
 ) -> dict:
@@ -357,3 +388,216 @@ def test_refine_non_local_reconcile_branch_is_value_aware() -> None:
         "cortex-refine no longer imports the backend resolver; `start` would "
         "return a static backend"
     )
+
+
+# ---------------------------------------------------------------------------
+# Clause-tagged override reasons: the criticality axis is only auditable if the
+# reasoning Clarify already computed has a destination on the row a corpus
+# count reads. The reason is per-axis and optional, and an unknown clause tag
+# must be rejected *before* anything is appended (R4/R5/R6).
+# ---------------------------------------------------------------------------
+
+
+def test_reconcile_clarify_records_criticality_reason_per_axis(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A reason lands on its own axis only, at the pinned key position.
+
+    Both axes ratchet in this one call, but only ``--criticality-reason`` is
+    supplied — so the criticality row carries the reason and the complexity row
+    must not inherit it. The key order is pinned because matching the field
+    order ``lifecycle_event.py`` declares for the typed override verbs (from,
+    to, reason) across both writers is the point of placing it there.
+    """
+    monkeypatch.chdir(tmp_path)
+    feature = "reason-per-axis"
+    events_log = _seed_events(
+        tmp_path, feature, [_lifecycle_start_line(feature, "simple", "medium")]
+    )
+
+    rc = main(
+        [
+            "reconcile-clarify",
+            "--lifecycle-slug",
+            feature,
+            "--complexity",
+            "complex",
+            "--criticality",
+            "high",
+            "--criticality-reason",
+            "exposure: shared skill prose",
+        ]
+    )
+    assert rc == 0
+
+    envelope = json.loads(capsys.readouterr().out.strip())
+    assert envelope["state"] == "ratcheted"
+    assert envelope["rows"] == 2
+
+    rows = _override_rows(events_log)
+    assert len(rows) == 2
+
+    crit = _only(rows, "criticality_override")
+    assert crit["reason"] == "exposure: shared skill prose"
+    assert list(crit.keys()) == [
+        "ts",
+        "event",
+        "feature",
+        "from",
+        "to",
+        "reason",
+        "gate",
+    ]
+
+    # Per-axis independence: the untagged axis stays byte-identical in shape to
+    # a pre-reason override row.
+    tier = _only(rows, "complexity_override")
+    assert "reason" not in tier
+    assert list(tier.keys()) == ["ts", "event", "feature", "from", "to", "gate"]
+
+
+def test_reconcile_clarify_rejects_out_of_set_clause_tag_without_appending(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """An unknown clause tag exits 2 and leaves the log byte-identical.
+
+    Asserted on the file's bytes rather than a row count: validation runs before
+    the rows are built, so a partial append (tier written, criticality rejected)
+    is exactly the failure this pins against. The exit code is pinned to the
+    specific value 2 rather than "non-zero" so that a crash in the verb — which
+    would also append nothing — cannot satisfy this test.
+    """
+    monkeypatch.chdir(tmp_path)
+    feature = "reason-bad-tag"
+    events_log = _seed_events(
+        tmp_path, feature, [_lifecycle_start_line(feature, "simple", "medium")]
+    )
+    before = events_log.read_bytes()
+
+    rc = main(
+        [
+            "reconcile-clarify",
+            "--lifecycle-slug",
+            feature,
+            "--complexity",
+            "complex",
+            "--criticality",
+            "high",
+            "--criticality-reason",
+            "bogus: x",
+        ]
+    )
+    assert rc == 2
+    assert events_log.read_bytes() == before
+
+    captured = capsys.readouterr()
+    assert captured.out.strip() == ""
+    assert "bogus" in captured.err
+
+
+def test_reconcile_clarify_without_reason_flags_omits_the_key(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Omission drops the key entirely rather than writing a null.
+
+    Asserted positively — the override rows must actually have been appended,
+    with the right ``from``/``to`` — because "the string `reason` does not
+    appear in this file" is also true of a verb that never ran.
+    """
+    monkeypatch.chdir(tmp_path)
+    feature = "reason-omitted"
+    events_log = _seed_events(
+        tmp_path, feature, [_lifecycle_start_line(feature, "simple", "medium")]
+    )
+
+    rc = main(
+        [
+            "reconcile-clarify",
+            "--lifecycle-slug",
+            feature,
+            "--complexity",
+            "complex",
+            "--criticality",
+            "high",
+        ]
+    )
+    assert rc == 0
+
+    envelope = json.loads(capsys.readouterr().out.strip())
+    assert envelope["state"] == "ratcheted"
+    assert envelope["rows"] == 2
+
+    rows = _override_rows(events_log)
+    crit = _only(rows, "criticality_override")
+    assert (crit["from"], crit["to"]) == ("medium", "high")
+    assert "reason" not in crit
+
+    tier = _only(rows, "complexity_override")
+    assert (tier["from"], tier["to"]) == ("simple", "complex")
+    assert "reason" not in tier
+
+
+def test_reconcile_clarify_accepts_untagged_reason_verbatim(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """No colon → nothing is parsed as a clause, so the text is recorded as-is."""
+    monkeypatch.chdir(tmp_path)
+    feature = "reason-untagged"
+    events_log = _seed_events(
+        tmp_path, feature, [_lifecycle_start_line(feature, "simple", "medium")]
+    )
+
+    rc = main(
+        [
+            "reconcile-clarify",
+            "--lifecycle-slug",
+            feature,
+            "--criticality",
+            "high",
+            "--criticality-reason",
+            "plain text",
+        ]
+    )
+    assert rc == 0
+
+    envelope = json.loads(capsys.readouterr().out.strip())
+    assert envelope["state"] == "ratcheted"
+
+    crit = _only(_override_rows(events_log), "criticality_override")
+    assert crit["reason"] == "plain text"
+
+
+def test_reconcile_clarify_accepts_a_colon_inside_the_reason_body(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Only the text before the FIRST colon is the clause tag.
+
+    A valid tag whose body itself contains a colon must still be accepted and
+    stored verbatim — a naive "reject any reason with more than one colon" would
+    fail here, and a naive split on every colon would store a truncated reason.
+    """
+    monkeypatch.chdir(tmp_path)
+    feature = "reason-inner-colon"
+    events_log = _seed_events(
+        tmp_path, feature, [_lifecycle_start_line(feature, "simple", "medium")]
+    )
+    reason = "exposure: consumed by overnight/: runner"
+
+    rc = main(
+        [
+            "reconcile-clarify",
+            "--lifecycle-slug",
+            feature,
+            "--criticality",
+            "high",
+            "--criticality-reason",
+            reason,
+        ]
+    )
+    assert rc == 0
+
+    envelope = json.loads(capsys.readouterr().out.strip())
+    assert envelope["state"] == "ratcheted"
+
+    crit = _only(_override_rows(events_log), "criticality_override")
+    assert crit["reason"] == reason
