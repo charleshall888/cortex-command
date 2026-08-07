@@ -53,12 +53,17 @@ LC = f"cortex/lifecycle/{SLUG}"
 TICKET = "007-my-feature-with-extra-detail.md"
 TICKET_REL = f"cortex/backlog/{TICKET}"
 
+# The complete-phase set includes the prior-cycle review archives: review.md is
+# overwritten each rework cycle, so a feature that reached cycle 3 carries
+# review-cycle-1.md and review-cycle-2.md alongside it.
 LIFECYCLE_COMPLETE = sorted(
     [
         f"{LC}/research.md",
         f"{LC}/spec.md",
         f"{LC}/plan.md",
         f"{LC}/review.md",
+        f"{LC}/review-cycle-1.md",
+        f"{LC}/review-cycle-2.md",
         f"{LC}/index.md",
         f"{LC}/events.log",
     ]
@@ -214,6 +219,8 @@ def _write_complete_artifacts(root: Path, review_text: str) -> None:
     _write(root, f"{LC}/spec.md", "spec\n")
     _write(root, f"{LC}/plan.md", "plan\n")
     _write(root, f"{LC}/review.md", review_text)
+    _write(root, f"{LC}/review-cycle-1.md", "cycle 1 review\n")
+    _write(root, f"{LC}/review-cycle-2.md", "cycle 2 review\n")
     _write(root, f"{LC}/index.md", "lifecycle index\n")
     _write(root, f"{LC}/events.log", _COMPLETE_EVENTS)
 

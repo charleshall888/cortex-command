@@ -30,6 +30,9 @@ Per-phase staged set
 
 * ``cortex/lifecycle/{slug}/{research,spec,plan,review,index}.md`` +
   ``events.log`` — those present on disk;
+* every prior-cycle review archive ``review-cycle-{N}.md`` (see
+  ``_review_cycle_archives``), each enumerated explicitly — ``review.md`` is
+  overwritten each rework cycle, so without these the earlier verdicts are lost;
 * the review-drift ``**File**:`` path(s) — iff ``review.md`` carries a
   ``## Suggested Requirements Update`` section, by the exact recorded path
   (no directory-scoped add on ``cortex/requirements/``);
@@ -211,6 +214,28 @@ def _capture_files(root: Path, lifecycle_rel: str) -> list[str]:
     return sorted(found)
 
 
+def _review_cycle_archives(root: Path, lifecycle_rel: str) -> list[str]:
+    """Enumerate ``review-cycle-{N}.md`` archives as explicit repo-relative paths.
+
+    Each rework cycle overwrites ``review.md`` after copying the outgoing cycle to
+    ``review-cycle-{N-1}.md``, so the archives are the only surviving record of
+    the earlier verdicts — and the interactive rework brief reads its checklist
+    from the newest one. They are variable in number, which is why they cannot be
+    named in the fixed allowlist; enumerating them by glob still yields an exact
+    path list, so the module's explicit-add discipline (which constrains what is
+    handed to *git*, never how the list is built) holds exactly as it does for
+    ``captures/``.
+    """
+    base = root / lifecycle_rel
+    if not base.is_dir():
+        return []
+    return sorted(
+        path.relative_to(root).as_posix()
+        for path in base.glob("review-cycle-*.md")
+        if path.is_file()
+    )
+
+
 def _read_events(events_log: Path) -> list[dict]:
     """Return the parsed event dicts from *events_log* (tolerant, in order)."""
     if not events_log.is_file():
@@ -337,6 +362,8 @@ def collect_paths(phase: str, slug: str, root: Path) -> list[str]:
         for name in ("research", "spec", "plan", "review", "index"):
             candidates.append(f"{lifecycle_rel}/{name}.md")
         candidates.append(f"{lifecycle_rel}/events.log")
+        # Prior-cycle review archives — variable in number, so enumerated.
+        candidates.extend(_review_cycle_archives(root, lifecycle_rel))
         # Review-drift requirements file(s), by exact recorded path.
         candidates.extend(_extract_drift_files(root / lifecycle_rel / "review.md"))
         # Narrowed backlog write-back: resolved ticket file + index.md only.
