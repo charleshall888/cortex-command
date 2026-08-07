@@ -66,8 +66,10 @@ cortex-complexity-escalator <feature> --gate research_open_questions
 
 **Reconcile first** — the seed carries pre-Clarify values, so reconcile before §3a/§3b observe them. One unconditional, idempotent call:
 
-- **Context A**: `cortex-refine reconcile-clarify --backend {resolved} --lifecycle-slug {lifecycle-slug} --backlog-slug {backlog-filename-slug}` — re-sources from backlog frontmatter.
-- **Context B**: `cortex-refine reconcile-clarify --backend {resolved} --lifecycle-slug {lifecycle-slug} --complexity {value} --criticality {value}` — passes Clarify's computed values (the tier ratchet named in Step 1).
+- **Context A**: `cortex-refine reconcile-clarify --backend {resolved} --lifecycle-slug {lifecycle-slug} --backlog-slug {backlog-filename-slug} --criticality-reason "{tag}: {why}"` — re-sources from backlog frontmatter.
+- **Context B**: `cortex-refine reconcile-clarify --backend {resolved} --lifecycle-slug {lifecycle-slug} --complexity {value} --criticality {value} --criticality-reason "{tag}: {why}"` — passes Clarify's computed values (the tier ratchet named in Step 1).
+
+`--criticality-reason` is optional and records *why* this criticality — reuse the reasoning Clarify already stated, condensed to one line led by a `{tag}` from `reversibility:`, `exposure:`, `consequence:`, `other:`. An unknown tag is rejected and nothing is written. Omit the flag rather than filling it with placeholder text.
 
 Then read `${CLAUDE_SKILL_DIR}/references/specify.md` and follow it in full, resolving its propagated target: orchestrator-review → `${CLAUDE_SKILL_DIR}/../build/references/orchestrator-review.md`.
 
