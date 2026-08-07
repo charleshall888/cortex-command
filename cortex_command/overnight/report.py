@@ -1687,7 +1687,10 @@ def render_integration_worktree_loss(data: ReportData) -> str:
         )
         lines.append("")
 
-    for feature, branch, error in sorted(deferrals):
+    # ``branch`` is legitimately None when the worktree was never created, so
+    # the key coerces it — a bare sorted() compares None with str and raises.
+    ordered = sorted(deferrals, key=lambda d: (d[0], d[1] or "", d[2]))
+    for feature, branch, error in ordered:
         location = (
             f"is on `{branch}`" if branch
             else (

@@ -1561,6 +1561,42 @@ def test_worktree_loss_renders_branch_not_recorded_when_absent() -> None:
     assert "retry or investigate" not in section, f"got:\n{section}"
 
 
+def test_worktree_loss_sorts_mixed_branch_nullness() -> None:
+    """Two deferrals sharing a feature name but differing in branch-nullness must
+    still order — a bare sorted() compares None with str and raises TypeError,
+    which takes the whole morning report down with it.
+
+    Hand-built events, deliberately: the property under test is sort stability
+    over event details, and a producer cannot be made to emit two same-named
+    deferrals in one session. The producer-driven fixtures above cover the
+    contract itself, so the producer-driven rule is not forgotten here.
+    """
+    from cortex_command.overnight.report import (
+        ReportData,
+        render_integration_worktree_loss,
+    )
+
+    def _deferral(branch: str | None) -> dict:
+        return {
+            "event": "feature_deferred",
+            "feature": "feat",
+            "details": {
+                "error": "integration worktree unresolved",
+                "unresolved_worktree": True,
+                "branch": branch,
+            },
+        }
+
+    data = ReportData(session_id="s", date="2026-08-07", events=[
+        _deferral("pipeline/s-feat"),
+        _deferral(None),
+    ])
+    section = render_integration_worktree_loss(data)
+
+    assert "pipeline/s-feat" in section, f"got:\n{section}"
+    assert "branch not recorded" in section, f"got:\n{section}"
+
+
 # ---------------------------------------------------------------------------
 # render_built_merge_blocked coverage (Req 11). The function is NOT modified by
 # this task; these tests are its first coverage, and they pin it as a
