@@ -2,7 +2,7 @@
 feature: overnight-session-worktree-lives-in-tmpdir
 parent_backlog_uuid: 4d90ab14-c32d-4c17-b52d-48007767d9d6
 parent_backlog_id: 465
-artifacts: [research, spec]
+artifacts: [research, spec, plan]
 tags: []
 created: 2026-08-07
 updated: 2026-08-07

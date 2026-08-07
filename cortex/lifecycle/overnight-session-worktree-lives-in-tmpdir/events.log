@@ -3,3 +3,5 @@
 {"ts": "2026-08-07T11:50:44Z", "event": "complexity_override", "feature": "overnight-session-worktree-lives-in-tmpdir", "from": "moderate", "to": "complex", "reason": "Research: amends ratified recoverable_branch definition; has-commits semantics unresolved (see research.md Open Questions)"}
 {"ts": "2026-08-07T11:51:15Z", "event": "criticality_override", "feature": "overnight-session-worktree-lives-in-tmpdir", "from": "medium", "to": "high", "gate": "clarify_reconcile", "from_seeded": true}
 {"ts": "2026-08-07T12:25:24Z", "event": "spec_approved", "feature": "overnight-session-worktree-lives-in-tmpdir", "decision": "approved"}
+{"ts": "2026-08-07T15:06:29Z", "event": "plan_approved", "feature": "overnight-session-worktree-lives-in-tmpdir", "dispatch_choice": "wait"}
+{"ts": "2026-08-07T15:06:29Z", "event": "feature_paused", "feature": "overnight-session-worktree-lives-in-tmpdir", "slug": "plan-approval", "kind": "relayed-consent"}
