@@ -63,6 +63,41 @@ Worth considering: a pre-merge existence check that re-creates the worktree from
 integration branch rather than raising, since the branch ref survives even when the
 checkout does not.
 
+## Amendment (2026-08-07): the fault also killed the session early
+
+The blast radius is larger than "two features mislabelled". Because a merge cannot succeed
+without the worktree, **every round reported zero progress**, which tripped the
+zero-progress circuit breaker:
+
+```
+Round 1 complete: 0 features merged this round
+--- Round 2 (4 features pending) ---
+Round 2 complete: 0 features merged this round
+Circuit breaker: 2 consecutive rounds with zero progress — stopping
+```
+
+The circuit breaker did its job on the signal it was given; the signal was wrong. Three
+further features (`campfire-ambience-is-still-welded-to`,
+`two-concurrent-test-palette-editorpy-runs`, `two-uncoordinated-retry-budgets-share-the`)
+were **never dispatched** — the runner's own summary says "3 features still pending". So
+one purged directory cost three features stranded *and* three features never started, out
+of six.
+
+Two further symptoms from the same root, both in `runner-stdout.log`:
+
+- **The no-commits check is wrong.** `Zero-progress session with no branch commits — no PR
+  created` fired while three `pipeline/*` branches carried 25 commits between them. The
+  check evidently reads the integration branch, which the failed merges had left empty, and
+  concludes nothing was built.
+- **The round count is off by one.** The summary prints `Rounds executed: 1` after two
+  rounds ran (`Round 1 complete`, `Round 2 complete`, and `Per-round timing: Round 1: 83m,
+  Round 2: 32m` in the report).
+
+This suggests the fix wants a third element beyond relocating the worktree and
+reclassifying the error: **an infrastructure fault must not be counted as zero progress**
+for circuit-breaker purposes, or a transient fault will keep converting itself into an
+early session stop.
+
 ## Edges
 
 - **Non-goal**: recovering session `overnight-2026-08-07-0252`. Already merged by hand
