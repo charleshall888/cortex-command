@@ -416,9 +416,10 @@ def _cmd_reconcile_clarify(args: argparse.Namespace) -> int:
                 # drops the key entirely rather than writing a null. The
                 # omission TEST diverges from that module deliberately: it
                 # keys off truthiness, so an empty reason writes no key here,
-                # where lifecycle_event.py:364 still keys off `is not None`
-                # and would record `"reason": ""` — an empty string is not an
-                # axis a corpus tally can bucket on.
+                # where lifecycle_event.py's `_emit_subcommand` optional-flag
+                # drop still keys off `is not None` and would record
+                # `"reason": ""` — an empty string is not an axis a corpus
+                # tally can bucket on.
                 **({"reason": tier_reason} if tier_reason else {}),
                 "gate": "clarify_reconcile",
                 **({"from_seeded": True} if tier_from_seed else {}),
