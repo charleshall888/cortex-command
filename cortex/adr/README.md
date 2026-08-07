@@ -33,14 +33,14 @@ Every ADR file (but not this README — see below) begins with a YAML frontmatte
 ```yaml
 ---
 status: <proposed|accepted|deprecated|superseded>
-superseded_by: NNNN  # optional; required only when status is "superseded"
+superseded_by: <NNNN-slug>  # optional; required only when status is "superseded"
 ---
 ```
 
 Fields:
 
-- `status` — one of `proposed`, `accepted`, `deprecated`, or `superseded`. New ADRs land as `proposed` (see promotion gate below). `deprecated` marks an ADR whose decision no longer applies but is preserved for history. `superseded` marks an ADR replaced by a newer one and **must** be paired with `superseded_by: NNNN` pointing at the replacement's four-digit number.
-- `superseded_by` — optional; the zero-padded four-digit number of the superseding ADR. Omit unless `status: superseded`.
+- `status` — one of `proposed`, `accepted`, `deprecated`, or `superseded`. New ADRs land as `proposed` (see promotion gate below). `deprecated` marks an ADR whose decision no longer applies but is preserved for history. `superseded` marks an ADR replaced by a newer one and **must** be paired with `superseded_by: <NNNN-slug>` pointing at the replacement's full filename stem.
+- `superseded_by` — optional; the superseding ADR's full `NNNN-slug` filename stem. Omit unless `status: superseded`.
 
 No `area:` field is defined. Area tagging was considered and deliberately not adopted (no consumer); do not invent one ad hoc.
 
