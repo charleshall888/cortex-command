@@ -49,8 +49,32 @@ Phase 2 of this lifecycle starts collecting the per-clause data this decision de
 is greppable without new tooling:
 
 ```
-find cortex/lifecycle -name events.log -exec cat {} + | python3 -c "import sys,json,collections; c=collections.Counter(); [c.update([r['reason'].split(':')[0]]) for l in sys.stdin for r in [json.loads(l)] if r.get('event')=='criticality_override' and r.get('reason')]; print(c)" 2>/dev/null
+find cortex/lifecycle -name events.log -exec cat {} + | python3 -c "
+import sys, json, collections
+c = collections.Counter()
+for line in sys.stdin:
+    line = line.strip()
+    if not line.startswith('{'):
+        continue
+    try:
+        r = json.loads(line)
+    except ValueError:
+        continue
+    if r.get('event') == 'criticality_override' and r.get('reason'):
+        c.update([r['reason'].split(':')[0]])
+print(c)
+"
 ```
+
+The line filter and the `except` are load-bearing, not defensive padding: ~4,600 lines under
+`cortex/lifecycle/**/events.log` are legacy YAML-format rows, blanks, or malformed, and an unguarded
+`json.loads` per line aborts on the first one. Do not silence stderr here — a suppressed traceback reads
+identically to "no clause data yet".
+
+Note that pre-existing `reason` values are **untagged free prose**, so the tally buckets each row by its
+entire first clause (seven whole-sentence buckets today, e.g. `Clarify rubric`, `clarify-critic`,
+`Per clarify.md §5 default`) rather than by one of the four tags — do not mistake those buckets for clause
+tags.
 
 A bare `grep … cortex/lifecycle/*/events.log` is **not** valid on two counts: the glob matches 188 of 353
 `events.log` files, missing all of `archive/` — while the research behind this decision covered `archive/` —
