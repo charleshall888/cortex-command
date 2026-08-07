@@ -19,6 +19,8 @@ Covers:
   - absent pipeline renders "no pipeline · refinement queue empty"
   - round_history empty list renders "no rounds cleared yet"
   - triage board rows, groups, badges, and states, rendered against the feed
+  - ticket_page.html badge strip, epic children, and per-artifact panels
+  - ticket_page.html / ticket_artifact.html non-local-backend gate
 
 The triage-board tests below differ from every other test in this file in one
 way that is load-bearing: their input is not a hand-written dict. Each builds a
@@ -1091,6 +1093,209 @@ class TestTriageBoardTemplateSource(unittest.TestCase):
         self.assertEqual(
             re.findall(r"\| *(?:length|count) *[<>]=? *[0-9]", self.source), []
         )
+
+
+# ---------------------------------------------------------------------------
+# Ticket page (templates/ticket_page.html, templates/ticket_artifact.html)
+# ---------------------------------------------------------------------------
+#
+# Unlike the triage-board section above, these tests render against a
+# hand-written dict rather than a real ``load_ticket_page`` call: the loader
+# itself (the two-key artifact join, the epic-child corpus scan) is Task 5's
+# composite-loader coverage in ``test_data.py``. What is tested here is the
+# template's own contract — given the loader's documented shape, does the
+# page render the right badges, the right panels, and the right gate.
+
+
+def _ticket_page_fixture(**overrides) -> dict:
+    """Return a minimal ``load_ticket_page()``-shaped dict for rendering tests."""
+    base = {
+        "id": "42",
+        "title": "Sample ticket",
+        "status": "open",
+        "priority": "high",
+        "type": "feature",
+        "parent": None,
+        "areas": [],
+        "body": {
+            "id": "42",
+            "title": "Sample ticket",
+            "html": "<p>Body prose.</p>",
+            "truncated": False,
+        },
+        "artifacts": [],
+        "children": None,
+    }
+    base.update(overrides)
+    return base
+
+
+class TestTicketPageBadgeStrip(unittest.TestCase):
+    """The frontmatter badge strip uses backlog_badges.html's map, not the
+    overnight feature-pipeline vocabulary (R7)."""
+
+    def test_status_priority_type_render_as_badges(self):
+        ticket = _ticket_page_fixture(status="wontfix", priority="critical", type="epic")
+        html = _render_partial(
+            "ticket_page.html", item_id="42", ticket=ticket, backend="cortex-backlog"
+        )
+        badge_texts = [b.text for b in _badges(_parse(html))]
+        self.assertIn("wontfix", badge_texts)
+        self.assertIn("critical", badge_texts)
+        self.assertIn("epic", badge_texts)
+
+    def test_parent_and_areas_render_when_present(self):
+        ticket = _ticket_page_fixture(parent="7", areas=["dashboard", "backlog"])
+        html = _render_partial(
+            "ticket_page.html", item_id="42", ticket=ticket, backend="cortex-backlog"
+        )
+        self.assertIn("#7", html)
+        self.assertIn("dashboard", html)
+        self.assertIn("backlog", html)
+
+    def test_parent_and_areas_absent_when_unset(self):
+        ticket = _ticket_page_fixture()
+        html = _render_partial(
+            "ticket_page.html", item_id="42", ticket=ticket, backend="cortex-backlog"
+        )
+        self.assertNotIn("parent ·", html)
+        self.assertNotIn("areas ·", html)
+
+
+class TestTicketPageArtifactPanels(unittest.TestCase):
+    """One lazily-fetched <details> panel per present artifact kind (R9, R10)."""
+
+    def test_one_details_panel_per_present_kind(self):
+        ticket = _ticket_page_fixture(artifacts=["spec", "plan"])
+        html = _render_partial(
+            "ticket_page.html", item_id="42", ticket=ticket, backend="cortex-backlog"
+        )
+        panels = {
+            d.attrs.get("id"): d
+            for d in _parse(html).find_all("details", "ticket-artifact")
+        }
+        self.assertEqual(set(panels), {"spec", "plan"})
+        for kind, panel in panels.items():
+            with self.subTest(kind=kind):
+                fetchers = [e for e in panel.find_all() if "hx-get" in e.attrs]
+                self.assertEqual(len(fetchers), 1)
+                self.assertEqual(
+                    fetchers[0].attrs["hx-get"], f"/partials/ticket/42/artifact/{kind}"
+                )
+                self.assertEqual(
+                    fetchers[0].attrs.get("hx-trigger"), "toggle once from:closest details"
+                )
+
+    def test_absent_kinds_render_no_panel(self):
+        ticket = _ticket_page_fixture(artifacts=["spec"])
+        html = _render_partial(
+            "ticket_page.html", item_id="42", ticket=ticket, backend="cortex-backlog"
+        )
+        self.assertNotIn('id="plan"', html)
+        self.assertNotIn('id="research"', html)
+        self.assertNotIn('id="review"', html)
+
+    def test_no_artifacts_renders_no_artifacts_section(self):
+        ticket = _ticket_page_fixture(artifacts=[])
+        html = _render_partial(
+            "ticket_page.html", item_id="42", ticket=ticket, backend="cortex-backlog"
+        )
+        self.assertNotIn("ticket-artifact", html)
+
+    def test_page_renders_no_artifact_prose_before_expansion(self):
+        # R10: opening the page issues no artifact render. The body's own
+        # "prose ticket-prose" block is the sole one on the page; each
+        # artifact panel holds a loading placeholder, never the fetched
+        # fragment ticket_artifact.html itself would render.
+        ticket = _ticket_page_fixture(artifacts=["spec", "plan"])
+        html = _render_partial(
+            "ticket_page.html", item_id="42", ticket=ticket, backend="cortex-backlog"
+        )
+        prose_blocks = _parse(html).find_all("div", "ticket-prose")
+        self.assertEqual(len(prose_blocks), 1)
+        self.assertIn("loading spec", html)
+        self.assertIn("loading plan", html)
+
+
+class TestTicketPageEpicChildren(unittest.TestCase):
+    """Epic children render as links to their own /tickets/{id} pages (R14)."""
+
+    def test_children_render_as_links(self):
+        ticket = _ticket_page_fixture(
+            type="epic",
+            children=[
+                {"id": 5, "spec": None, "status": "open", "title": "Child A"},
+                {"id": 9, "spec": None, "status": "backlog", "title": None},
+            ],
+        )
+        html = _render_partial(
+            "ticket_page.html", item_id="42", ticket=ticket, backend="cortex-backlog"
+        )
+        self.assertIn('href="/tickets/5"', html)
+        self.assertIn('href="/tickets/9"', html)
+        self.assertIn("Child A", html)
+
+    def test_non_epic_has_no_children_section(self):
+        ticket = _ticket_page_fixture(type="feature", children=None)
+        html = _render_partial(
+            "ticket_page.html", item_id="42", ticket=ticket, backend="cortex-backlog"
+        )
+        self.assertNotIn("Epic", html)
+        self.assertNotIn("§ 03", html)
+
+    def test_epic_with_no_active_children_renders_empty_state(self):
+        ticket = _ticket_page_fixture(type="epic", children=[])
+        html = _render_partial(
+            "ticket_page.html", item_id="42", ticket=ticket, backend="cortex-backlog"
+        )
+        self.assertIn("no active children", html)
+
+
+class TestTicketPageBackendGate(unittest.TestCase):
+    """ticket_page.html renders a backend-aware 3-way — gated / not-found /
+    found (R5, R13), in the style of TestBacklogPanelBackendGate."""
+
+    def test_none_backend_renders_placeholder(self):
+        html = _render_partial("ticket_page.html", item_id="1", ticket=None, backend="none")
+        self.assertIn("backlog tracking disabled", html)
+        self.assertNotIn("ticket not found", html)
+
+    def test_external_backend_names_the_backend(self):
+        html = _render_partial(
+            "ticket_page.html", item_id="1", ticket=None, backend="github-issues"
+        )
+        self.assertIn("tracked externally via", html)
+        self.assertIn("github-issues", html)
+        self.assertNotIn("ticket not found", html)
+
+    def test_missing_ticket_under_local_backend_renders_not_found(self):
+        html = _render_partial(
+            "ticket_page.html", item_id="999999", ticket=None, backend="cortex-backlog"
+        )
+        self.assertIn("ticket not found", html)
+        self.assertNotIn("tracking disabled", html)
+        self.assertNotIn("tracked externally", html)
+
+
+class TestTicketArtifactBackendGate(unittest.TestCase):
+    """ticket_artifact.html's single `artifact is None` arm covers a
+    non-local backend the same way ticket_body.html's `ticket is None` arm
+    does (R13) — see the template's own docstring for why the cases collapse."""
+
+    def test_artifact_none_renders_unavailable(self):
+        html = _render_partial("ticket_artifact.html", artifact=None)
+        self.assertIn("artifact unavailable", html)
+
+    def test_artifact_present_renders_prose(self):
+        artifact = {"kind": "spec", "html": "<p>Spec prose.</p>", "truncated": False}
+        html = _render_partial("ticket_artifact.html", artifact=artifact)
+        self.assertIn("Spec prose.", html)
+        self.assertIn("ticket-prose", html)
+
+    def test_artifact_truncated_shows_the_notice(self):
+        artifact = {"kind": "spec", "html": "<p>Spec prose.</p>", "truncated": True}
+        html = _render_partial("ticket_artifact.html", artifact=artifact)
+        self.assertIn("truncated", html)
 
 
 if __name__ == "__main__":

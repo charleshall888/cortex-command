@@ -1,0 +1,26 @@
+{# One lifecycle artifact's rendered prose, swapped into an expanded panel on
+   the ticket page.
+
+   Fragment only — no section shell, same as ticket_body.html. ``artifact``
+   is None when the backlog backend is not local, when the id doesn't
+   resolve to a ticket, when the ticket has no resolvable artifact
+   directory, or when that directory holds no file for this kind; all four
+   read the same from here — there is nothing to show, and none of them is
+   an error worth a banner on a panel the operator merely opened. This
+   mirrors ticket_body.html's collapse of "backend not local" and "file
+   missing" into one `ticket is None` arm.
+
+   ``html`` is marked safe for the same reason as ticket_body.html: it is
+   ``load_ticket_artifact``'s already-sanitized output — Python-Markdown's
+   own tags, filtered through the shared allowlist sanitizer — never raw
+   artifact content. #}
+{% if artifact and artifact.html %}
+<div class="prose ticket-prose">
+  {{ artifact.html | safe }}
+  {% if artifact.truncated %}
+  <p class="empty-state">description truncated · open the file for the rest</p>
+  {% endif %}
+</div>
+{% else %}
+<p class="empty-state">artifact unavailable</p>
+{% endif %}

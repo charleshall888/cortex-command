@@ -29,7 +29,9 @@ from cortex_command.common import _resolve_user_project_root
 from cortex_command.lifecycle_config import resolve_backlog_backend
 from cortex_command.dashboard.data import (
     build_swim_lane_data,
+    load_ticket_artifact,
     load_ticket_body,
+    load_ticket_page,
     parse_last_session,
     parse_session_detail,
     parse_session_list,
@@ -333,6 +335,39 @@ async def session_detail(session_id: str, request: Request):
     )
 
 
+@app.get("/tickets/{item_id}")
+def ticket_page(request: Request, item_id: str):
+    """Render the deep-linkable reading page for one backlog ticket.
+
+    Declared ``def``, not ``async def`` — every other handler in this file
+    is a coroutine, but this one and the artifact partial below deliberately
+    are not (requirement 11 / ADR-0026). Starlette dispatches a non-coroutine
+    handler to the threadpool (``starlette/routing.py:request_response``),
+    which is what keeps this handler's disk reads and markdown render (worst
+    measured 38ms) off the four polling loops instead of blocking them on
+    the event loop.
+
+    Stands down under a non-local backlog backend rather than reading the
+    filesystem; ``backend`` travels into the template so it can render the
+    gated arm instead of the not-found one. See ``ticket_page.html`` for the
+    three-arm body this feeds.
+    """
+    root = _root()
+    backend = resolve_backlog_backend(root)
+    ticket = (
+        load_ticket_page(item_id, root / "cortex" / "backlog", root / "cortex" / "lifecycle")
+        if backend == "cortex-backlog"
+        else None
+    )
+    status_code = 404 if ticket is None else 200
+    return templates.TemplateResponse(
+        request,
+        "ticket_page.html",
+        {"request": request, "item_id": item_id, "ticket": ticket, "backend": backend},
+        status_code=status_code,
+    )
+
+
 @app.get("/partials/fleet-panel")
 async def fleet_panel(request: Request):
     """Return the agent fleet panel HTML fragment for HTMX polling."""
@@ -475,4 +510,30 @@ async def ticket_body(request: Request, item_id: str):
         request,
         "ticket_body.html",
         {"request": request, "ticket": ticket},
+    )
+
+
+@app.get("/partials/ticket/{item_id}/artifact/{kind}")
+def ticket_artifact_partial(request: Request, item_id: str, kind: str):
+    """Return one lifecycle artifact's rendered prose for a lazily-opened panel.
+
+    Declared ``def``, not ``async def`` — see ``ticket_page`` above for why.
+
+    Always 200, never a status code: a fragment landing inside a panel the
+    operator opened reports "unavailable" the way ``ticket_body`` above does,
+    whether the cause is a non-local backend, an unresolved ticket, an
+    unresolved artifact directory, or a missing kind — see
+    ``ticket_artifact.html``.
+    """
+    root = _root()
+    if resolve_backlog_backend(root) != "cortex-backlog":
+        artifact = None
+    else:
+        artifact = load_ticket_artifact(
+            item_id, kind, root / "cortex" / "backlog", root / "cortex" / "lifecycle"
+        )
+    return templates.TemplateResponse(
+        request,
+        "ticket_artifact.html",
+        {"request": request, "artifact": artifact},
     )

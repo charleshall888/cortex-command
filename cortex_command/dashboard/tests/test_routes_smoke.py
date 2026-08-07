@@ -10,9 +10,10 @@ raises ``TypeError: unhashable type: 'dict'`` -> HTTP 500. Only a route test
 that drives each handler through the real ASGI app + ``TemplateResponse`` layer
 can guard against that regression.
 
-This test drives ``GET /``, ``/sessions``, ``/health``, and each of the twelve
-``/partials/*`` routes and asserts 200, plus ``GET /sessions/{missing}`` -> 404
-(the ``status_code`` path). On the dev venv (Starlette 0.52.1) both call forms
+This test drives ``GET /``, ``/sessions``, ``/health``, ``/tickets/{id}``, and
+each of the thirteen ``/partials/*`` routes and asserts 200, plus
+``GET /sessions/{missing}`` -> 404 and ``GET /tickets/{missing}`` -> 404 (the
+``status_code`` path). On the dev venv (Starlette 0.52.1) both call forms
 return 200, so locally this proves only well-formedness; it becomes
 discriminating on a fresh Starlette >= 1.0 resolve (the CI step), where the
 pre-rewrite name-first form 500s.
@@ -36,7 +37,7 @@ from starlette.testclient import TestClient
 
 from cortex_command.dashboard.app import app
 
-# The twelve HTMX partial routes, in the order documented by the spec.
+# The thirteen HTMX partial routes, in the order documented by the spec.
 PARTIAL_ROUTES = [
     "/partials/fleet-panel",
     "/partials/alerts-banner",
@@ -54,12 +55,17 @@ PARTIAL_ROUTES = [
     # render, not a status code, because the fragment lands inside a row the
     # operator merely expanded.
     "/partials/ticket/1",
+    # The artifact partial is always 200 regardless of whether the artifact
+    # resolves — see ticket_artifact_partial's docstring. Ticket 1 and its
+    # spec.md are seeded by fixture_root below.
+    "/partials/ticket/1/artifact/spec",
 ]
 
 # Page + health routes that must render 200. ``/backlog`` is the Backlog
 # view — a peer page of ``/``, not a fragment — so it goes through the same
-# TemplateResponse path this module exists to guard.
-PAGE_ROUTES = ["/", "/backlog", "/sessions", "/health"]
+# TemplateResponse path this module exists to guard. ``/tickets/1`` is the
+# seeded ticket from fixture_root below.
+PAGE_ROUTES = ["/", "/backlog", "/sessions", "/health", "/tickets/1"]
 
 ALL_OK_ROUTES = PAGE_ROUTES + PARTIAL_ROUTES
 
@@ -72,9 +78,32 @@ def fixture_root(tmp_path, monkeypatch):
     ``app.py``; ``_resolve_user_project_root`` returns ``CORTEX_REPO_ROOT``
     verbatim and does not itself require ``.claude/``) and an empty
     ``cortex/lifecycle/`` so the dashboard data parsers resolve cleanly.
+
+    Also seeds one backlog ticket (id 1) with a resolvable ``spec.md`` under
+    ``cortex/lifecycle/`` — ``PAGE_ROUTES``/``PARTIAL_ROUTES`` above hardcode
+    ``/tickets/1`` and its artifact partial, so this ticket must exist for
+    every test that drives ``client`` through this fixture.
     """
     (tmp_path / ".claude").mkdir()
     (tmp_path / "cortex" / "lifecycle").mkdir(parents=True)
+    (tmp_path / "cortex" / "backlog").mkdir(parents=True)
+    (tmp_path / "cortex" / "backlog" / "1-smoke-test-ticket.md").write_text(
+        "---\n"
+        "title: Smoke test ticket\n"
+        "status: open\n"
+        "priority: medium\n"
+        "type: feature\n"
+        "lifecycle_slug: smoke-test-ticket\n"
+        "---\n\n"
+        "Ticket body used by the route smoke suite.\n",
+        encoding="utf-8",
+    )
+    lifecycle_feature_dir = tmp_path / "cortex" / "lifecycle" / "smoke-test-ticket"
+    lifecycle_feature_dir.mkdir()
+    (lifecycle_feature_dir / "spec.md").write_text(
+        "# Spec\n\nSpec artifact prose used by the route smoke suite.\n",
+        encoding="utf-8",
+    )
     monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
     return tmp_path
 
@@ -102,4 +131,10 @@ def test_route_renders_200(client, route):
 def test_missing_session_returns_404(client):
     """``GET /sessions/{missing-id}`` returns 404 (the status_code path, not 500)."""
     response = client.get("/sessions/this-session-id-does-not-exist")
+    assert response.status_code == 404
+
+
+def test_missing_ticket_returns_404(client):
+    """``GET /tickets/{unseeded-numeric-id}`` returns 404, not 500."""
+    response = client.get("/tickets/999999")
     assert response.status_code == 404

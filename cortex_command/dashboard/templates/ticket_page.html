@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{# The deep-linkable reading page for one backlog ticket — id, badges, body,
+   epic children, and one lazily-loaded panel per lifecycle artifact.
+
+   Shaped after session_detail.html: a detail page reached by link, `view =
+   'backlog'` so the masthead reads the right register without adding a nav
+   entry of its own (spec.md Non-Requirements: "A nav-bar entry for the
+   page"). Section numbering restarts at § 01 for the same reason the backlog
+   view's does — the register is per-view, not per-site. #}
+{% set view = 'backlog' %}
+{% from "patterns/backlog_badges.html" import status_badge, priority_badge, type_badge %}
+
+{% block title %}Cortex · Ticket {{ item_id }}{% endblock %}
+
+{% block page_main %}
+{# Three-arm body — gated / not-found / found — mirroring backlog_panel.html's
+   backend-aware three-way (R5, R6c). `ticket` is None in both the gated and
+   not-found arms; `backend` alone tells them apart, which is what makes each
+   arm assertable from a direct-Jinja template test without a live route. #}
+{% if backend != "cortex-backlog" %}
+<section>
+  <span class="sec-num"><strong>§ —</strong>ticket</span>
+  <h2>Ticket <span class="phase-tag">{% if backend == "none" %}disabled{% else %}external{% endif %}</span></h2>
+  <p class="empty-state">{% if backend == "none" %}backlog tracking disabled{% else %}backlog tracked externally via `{{ backend }}`{% endif %}</p>
+  <p style="margin-top: 14px;"><a href="/backlog" class="text-brand-primary">← back to backlog</a></p>
+</section>
+{% elif ticket is none %}
+<section>
+  <span class="sec-num"><strong>§ —</strong>missing</span>
+  <h2>Ticket not found <span class="phase-tag">no such id on record</span></h2>
+  <p class="empty-state">ticket not found</p>
+  <p style="margin-top: 14px;"><a href="/backlog" class="text-brand-primary">← back to backlog</a></p>
+</section>
+{% else %}
+
+{# ── 1. Identity + badge strip ───────────────────────────────────────────── #}
+<section class="section-primary">
+  <span class="sec-num"><strong>§ 01</strong>ticket</span>
+  <h2>{{ ticket.title if ticket.title else ('#' ~ ticket.id) }} <span class="phase-tag">#{{ ticket.id }}</span></h2>
+  <div class="card-row" style="margin-top: 12px;">
+    {{ status_badge(ticket.status) }}
+    {{ priority_badge(ticket.priority) }}
+    {{ type_badge(ticket.type) }}
+    {% if ticket.parent %}<span class="phase-label">parent · #{{ ticket.parent }}</span>{% endif %}
+    {% if ticket.areas %}<span class="phase-label">areas · {{ ticket.areas | join(' · ') }}</span>{% endif %}
+  </div>
+</section>
+
+{# ── 2. Body ──────────────────────────────────────────────────────────────
+   Reuses load_ticket_body's output verbatim (R8) — no second frontmatter
+   strip or render — through the same three arms ticket_body.html already
+   renders: prose, frontmatter-only, or (unreachable here, since `ticket` is
+   never None in this arm) unavailable. #}
+<section>
+  <span class="sec-num"><strong>§ 02</strong>body</span>
+  <h2>Description</h2>
+  <div class="prose ticket-prose">
+    {% if ticket.body.html %}
+      {{ ticket.body.html | safe }}
+      {% if ticket.body.truncated %}
+      <p class="empty-state">description truncated · open the file for the rest</p>
+      {% endif %}
+    {% else %}
+      <p class="empty-state">no description · this ticket is frontmatter only</p>
+    {% endif %}
+  </div>
+</section>
+
+{# ── 3. Epic children (R14) ──────────────────────────────────────────────
+   `ticket.children` is None for a non-epic ticket — the corpus scan behind
+   it never runs for one (see load_ticket_page) — so this section is absent
+   entirely rather than rendered empty. #}
+{% if ticket.children is not none %}
+<section>
+  <span class="sec-num"><strong>§ 03</strong>children</span>
+  <h2>Epic <em>children</em> <span class="phase-tag">{{ ticket.children | length }} active</span></h2>
+  {% if ticket.children %}
+  <ul class="feature-list">
+    {% for child in ticket.children %}
+    <li class="card-row"><a href="/tickets/{{ child.id }}">#{{ child.id }} {{ child.title if child.title else 'untitled' }}</a>{% if child.status %} <span class="phase-label">{{ child.status }}</span>{% endif %}</li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="empty-state">no active children</p>
+  {% endif %}
+</section>
+{% endif %}
+
+{# ── 4. Lifecycle artifacts (R9, R10, Edge Cases) ────────────────────────
+   One `<details>` per PRESENT kind only — absent kinds never render as empty
+   shells. Each panel's id is the bare kind (`spec`, `plan`, …), matching
+   feature_cards.html's `/tickets/{id}#spec` anchors, and fetches its own
+   prose exactly once, on first open — `toggle once from:closest details` is
+   triage_board.html's lazy idiom, minus `hx-preserve`: nothing on this page
+   re-renders this row out from under an open panel the way the 30s board
+   poll does. An unhashed page load issues zero of these requests (R10);
+   `{% block body_extra %}` below is what opens the matching panel when the
+   page loads at `#spec` from a feature card. #}
+{% if ticket.artifacts %}
+<section>
+  <span class="sec-num"><strong>§ 04</strong>artifacts</span>
+  <h2>Lifecycle <em>artifacts</em> <span class="phase-tag">{{ ticket.artifacts | length }} present</span></h2>
+  {% for kind in ticket.artifacts %}
+  <details id="{{ kind }}" class="ticket-artifact">
+    <summary>{{ kind }}.md</summary>
+    <div class="ticket-artifact__panel"
+         hx-get="/partials/ticket/{{ item_id }}/artifact/{{ kind }}"
+         hx-trigger="toggle once from:closest details"
+         hx-swap="innerHTML">
+      <p class="empty-state">loading {{ kind }}</p>
+    </div>
+  </details>
+  {% endfor %}
+</section>
+{% endif %}
+
+{% endif %}
+{% endblock %}
+
+{% block body_extra %}
+<script>
+  // Open the artifact panel named by the URL hash on load, so a
+  // /tickets/{id}#spec link from a feature card lands on the artifact rather
+  // than a closed disclosure. Setting `.open` fires the same native `toggle`
+  // event a click does, which is what triggers the panel's own hx-get — no
+  // separate fetch call needed here. A page loaded with no hash opens
+  // nothing, so it issues zero artifact requests (R10).
+  (function () {
+    var hash = window.location.hash;
+    if (!hash) return;
+    var panel = document.getElementById(hash.slice(1));
+    if (panel && panel.tagName === "DETAILS") {
+      panel.open = true;
+    }
+  })();
+</script>
+{% endblock %}
