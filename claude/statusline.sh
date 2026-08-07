@@ -357,7 +357,7 @@ if [ -d "$_lc_base" ]; then
       implement:*|implement) printf '🔨' ;;
       implement-rework) printf '🔨' ;;
       review)           printf '🔎' ;;
-      escalated)        printf '⚠️' ;;
+      escalated|escalated:*) printf '⚠️' ;;
       *)                printf '🔄' ;;
     esac
   }
@@ -427,7 +427,27 @@ if [ -d "$_lc_base" ]; then
       _lc_verdict=$(grep -o '"verdict"[[:space:]]*:[[:space:]]*"[A-Z_]*"' "$_lc_fdir/review.md" 2>/dev/null | tail -1 | sed 's/.*"\([A-Z_]*\)".*/\1/')
       case "$_lc_verdict" in
         APPROVED)          _lc_phase="complete" ;;
-        CHANGES_REQUESTED) _lc_phase="implement-rework" ;;
+        CHANGES_REQUESTED)
+          # Mirror common._detect_lifecycle_phase_inner's rework-cap rung. The
+          # review cycle is the count of review_verdict rows in events.log — NOT
+          # verdict matches in review.md, which is overwritten each cycle and so
+          # would stick at 1 forever and desync this ladder from Python. A cycle
+          # of 2 or more means the rework cap is spent, so the feature escalates
+          # with the cap named rather than routing another rework pass.
+          # `|| true`: grep exits 1 on zero matches and 2 on a missing file,
+          # either of which would abort the script under `set -euo pipefail`.
+          _lc_cycle=$(grep -c '"event"[[:space:]]*:[[:space:]]*"review_verdict"' "$_lc_fdir/events.log" 2>/dev/null || true)
+          # Floor at 1, mirroring Python's `count if count > 0 else 1`. An empty
+          # value is the missing-file case (grep wrote nothing to stdout).
+          case "$_lc_cycle" in
+            ''|0) _lc_cycle=1 ;;
+          esac
+          if [ "$_lc_cycle" -ge 2 ]; then
+            _lc_phase="escalated:rework-cap:$_lc_cycle"
+          else
+            _lc_phase="implement-rework"
+          fi
+          ;;
         REJECTED)          _lc_phase="escalated" ;;
       esac
     fi
@@ -468,14 +488,18 @@ if [ -d "$_lc_base" ]; then
     [ -z "$_lc_phase" ] && _lc_phase="research"
 
     # Apply -paused suffix when the most recent significant event was
-    # feature_paused. Terminal phases (complete, escalated, awaiting-merge)
+    # feature_paused. Terminal phases (complete, escalated and its
+    # discriminated forms such as escalated:rework-cap:N, awaiting-merge)
     # are not suffixed — they bypass the paused state. The suffix inserts
     # before any :N/M payload so wire-format stays implement-paused:3/5
-    # rather than implement:3/5-paused.
-    if [ "$_lc_paused" = "1" ] \
-        && [ "$_lc_phase" != "complete" ] \
-        && [ "$_lc_phase" != "escalated" ] \
-        && [ "$_lc_phase" != "complete:awaiting-merge" ]; then
+    # rather than implement:3/5-paused; without the escalated:* exclusion
+    # below that rewrite would mangle the cap form into
+    # escalated-paused:rework-cap:2.
+    _lc_paused_eligible=1
+    case "$_lc_phase" in
+      complete|complete:awaiting-merge|escalated|escalated:*) _lc_paused_eligible=0 ;;
+    esac
+    if [ "$_lc_paused" = "1" ] && [ "$_lc_paused_eligible" -eq 1 ]; then
       case "$_lc_phase" in
         *:*) _lc_phase="${_lc_phase%%:*}-paused:${_lc_phase#*:}" ;;
         *)   _lc_phase="${_lc_phase}-paused" ;;
@@ -550,6 +574,9 @@ if [ -d "$_lc_base" ]; then
     # Normalize phase key for grouping: strip implement:N/M counts to "implement"
     case "$_lc_entry_phase" in
       implement:*) _lc_phase_key="implement" ;;
+      # Group every discriminated escalated form (escalated:rework-cap:N) under
+      # "escalated" so two capped features at different cycles form one group.
+      escalated:*) _lc_phase_key="escalated" ;;
       *)           _lc_phase_key="$_lc_entry_phase" ;;
     esac
 
@@ -595,6 +622,7 @@ if [ -d "$_lc_base" ]; then
           implement)               _lc_display="Implement" ;;
           implement-rework)        _lc_display="Implement (rework)" ;;
           escalated)               _lc_display="Escalated" ;;
+          escalated:rework-cap:*)  _lc_display="Escalated (rework cap)" ;;
           complete:awaiting-merge) _lc_display="Complete (awaiting merge)" ;;
           *)                       _lc_display="$_lc_phase_key" ;;
         esac
@@ -614,6 +642,7 @@ if [ -d "$_lc_base" ]; then
           plan)                    _lc_display="Plan" ;;
           implement-rework)        _lc_display="Implement (rework)" ;;
           escalated)               _lc_display="Escalated" ;;
+          escalated:rework-cap:*)  _lc_display="Escalated (rework cap)" ;;
           complete:awaiting-merge) _lc_display="Complete (awaiting merge)" ;;
           implement:*)
             _lc_frac="${_lc_single_phase#implement:}"
