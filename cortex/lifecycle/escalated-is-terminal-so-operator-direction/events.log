@@ -4,3 +4,5 @@
 {"ts": "2026-08-07T01:47:03Z", "event": "criticality_override", "feature": "escalated-is-terminal-so-operator-direction", "from": "medium", "to": "high", "gate": "clarify_reconcile", "from_seeded": true}
 {"ts": "2026-08-07T02:28:06Z", "event": "complexity_override", "feature": "escalated-is-terminal-so-operator-direction", "from": "complex", "to": "moderate", "reason": "Design fork closed: spec adopts the existing encoded-phase suffix pattern, no competing designs remain"}
 {"ts": "2026-08-07T02:28:10Z", "event": "spec_approved", "feature": "escalated-is-terminal-so-operator-direction", "decision": "approved"}
+{"ts": "2026-08-07T11:09:04Z", "event": "plan_approved", "feature": "escalated-is-terminal-so-operator-direction", "dispatch_choice": "trunk"}
+{"ts": "2026-08-07T11:09:04Z", "event": "phase_transition", "feature": "escalated-is-terminal-so-operator-direction", "from": "plan", "to": "implement"}
