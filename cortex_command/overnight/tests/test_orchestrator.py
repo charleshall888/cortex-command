@@ -26,6 +26,9 @@ All patch targets live on ``cortex_command.overnight.orchestrator`` (or
 from __future__ import annotations
 
 import asyncio
+import os
+import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -122,6 +125,7 @@ class TestOrchestratorRunBatch(unittest.IsolatedAsyncioTestCase):
         mock_manager: MagicMock | None = None,
         patch_create_task: bool = True,
         patch_log_event: bool = True,
+        patch_apply_result: bool = True,
     ) -> dict:
         """Patch every orchestrator-module dependency used by ``run_batch``.
 
@@ -180,13 +184,15 @@ class TestOrchestratorRunBatch(unittest.IsolatedAsyncioTestCase):
             )
 
         # apply_feature_result — autospec'd AsyncMock.
-        async def _apply_side(name, result, ctx):
-            return None
-        apply_mock = self._start_patch(
-            "cortex_command.overnight.outcome_router.apply_feature_result",
-            autospec=True,
-            side_effect=_apply_side,
-        )
+        apply_mock = None
+        if patch_apply_result:
+            async def _apply_side(name, result, ctx):
+                return None
+            apply_mock = self._start_patch(
+                "cortex_command.overnight.outcome_router.apply_feature_result",
+                autospec=True,
+                side_effect=_apply_side,
+            )
 
         create_task_mock = None
         if patch_create_task:
@@ -679,6 +685,212 @@ class TestOrchestratorRunBatch(unittest.IsolatedAsyncioTestCase):
         self.assertIn("feat-b", execute_called)
         self.assertIn("feat-c", execute_called)
         self.assertIn("feat-d", execute_called)
+
+    # ------------------------------------------------------------------
+    # Scenario 8 — backlog write-back survives a purged home worktree
+    # across a round boundary (Req 6)
+    # ------------------------------------------------------------------
+
+    def _git(self, cwd: Path, *args: str) -> str:
+        return subprocess.run(
+            ["git", *args],
+            cwd=str(cwd),
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+
+    def _real_update_item(self):
+        """Return the genuine ``backlog.update_item.update_item``.
+
+        ``conftest.py`` pre-installs a no-op stub for that module, which would
+        make an on-disk assertion vacuous — the write-back would "succeed"
+        without writing anything. Loading the real module from file under a
+        private name restores the write without disturbing the stub other
+        tests in this package rely on.
+        """
+        import importlib.util
+        import sys
+
+        import cortex_command
+
+        path = Path(cortex_command.__file__).parent / "backlog" / "update_item.py"
+        spec = importlib.util.spec_from_file_location(
+            "_real_backlog_update_item", path
+        )
+        module = importlib.util.module_from_spec(spec)
+        # Registered before exec: the module defines a dataclass, and
+        # dataclasses resolves its annotations through ``sys.modules``.
+        sys.modules[spec.name] = module
+        self.addCleanup(sys.modules.pop, spec.name, None)
+        spec.loader.exec_module(module)
+        return module.update_item
+
+    def _build_home_repo(
+        self, feature: str, base_branch: str
+    ) -> tuple[Path, Path, Path]:
+        """Build a real home repo, its integration worktree, and a backlog item.
+
+        The backlog item is committed on ``main`` before *base_branch* forks off
+        it, so the integration worktree carries it — including a worktree that
+        ``git worktree add`` re-creates after a purge.
+
+        Returns ``(home, worktree, item_path_in_worktree)``.
+        """
+        home = self._tmp / "home"
+        home.mkdir()
+        self._git(home, "init", "-q", "-b", "main")
+        self._git(home, "config", "user.email", "t@example.com")
+        self._git(home, "config", "user.name", "Test")
+        self._git(home, "config", "commit.gpgsign", "false")
+
+        backlog = home / "cortex" / "backlog"
+        backlog.mkdir(parents=True)
+        (backlog / f"001-{feature}.md").write_text(
+            "---\n"
+            "id: 1\n"
+            "title: Purged worktree write-back\n"
+            "status: implementing\n"
+            "priority: high\n"
+            "type: feature\n"
+            "created: 2026-08-07\n"
+            "updated: 2026-08-07\n"
+            "---\n"
+            "\nBody.\n"
+        )
+        self._git(home, "add", "-A")
+        self._git(home, "commit", "-q", "-m", "seed")
+
+        # Feature branch carrying a commit — the branch name run_batch's
+        # mocked create_worktree reports (``pipeline/{name}``).
+        self._git(home, "checkout", "-q", "-b", f"pipeline/{feature}")
+        (home / "feature.txt").write_text("feature work\n")
+        self._git(home, "add", "feature.txt")
+        self._git(home, "commit", "-q", "-m", "feature commit")
+        self._git(home, "checkout", "-q", "main")
+
+        # Integration branch at the seed, checked out in its own worktree —
+        # the home integration worktree a TMPDIR purge takes away.
+        self._git(home, "branch", base_branch, "main")
+        worktree = self._tmp / "integration-wt"
+        self._git(home, "worktree", "add", "-q", str(worktree), base_branch)
+
+        return home, worktree, worktree / "cortex" / "backlog" / f"001-{feature}.md"
+
+    async def test_backlog_write_back_survives_purge_across_rounds(self):
+        """Req 6 — a purged home integration worktree is re-created IN PLACE,
+        so the backlog write-back keeps working in the round that lost it *and*
+        in the next one.
+
+        ``outcome_router._backlog_dir`` is re-derived from
+        ``state.worktree_path`` at the start of every ``run_batch``, so a
+        re-creation that landed anywhere else (a ``-lazy-`` sibling, say) would
+        be silently reverted at the round boundary and every later write-back
+        would glob an empty deleted directory — ``_find_backlog_item_path``
+        returning None, ``_write_back_to_backlog`` swallowing the
+        ``FileNotFoundError``, and the loss surfacing only as a
+        ``backlog_write_failed`` event. Hence: two rounds, real repo, real
+        ``update_item``, and an assertion on the absence of that event.
+        """
+        from cortex_command.overnight.orchestrator import run_batch
+        from cortex_command.overnight.state import (
+            _normalize_repo_key,
+            load_state,
+            save_state,
+        )
+
+        feature = "purged-wt-writeback"
+        base_branch = "overnight/s1"
+        home, worktree, item_path = self._build_home_repo(feature, base_branch)
+
+        state = self._OvernightState(
+            session_id="s1",
+            plan_ref="plan.md",
+            worktree_path=str(worktree),
+            project_root=str(home),
+            integration_branches={_normalize_repo_key(str(home)): base_branch},
+            features={feature: self._OvernightFeatureStatus(recovery_attempts=0)},
+        )
+        save_state(state, self._config.overnight_state_path)
+        self._config.base_branch = base_branch
+
+        self._install_base_patches(
+            feature_names=[feature],
+            execute_return=FeatureResult(name=feature, status="completed"),
+            patch_apply_result=False,
+        )
+        # Both rounds read the one state file on disk, so the round-boundary
+        # re-derivation of _backlog_dir is the real one.
+        self._start_patch(
+            "cortex_command.overnight.orchestrator.load_state", new=load_state
+        )
+        # Non-merge helpers only: _get_changed_files takes no repo_path and
+        # would diff the test runner's own checkout; the rest keep a real merge
+        # from pulling in review dispatch, `gh`, or worktree teardown.
+        self._start_patch(
+            "cortex_command.overnight.outcome_router._get_changed_files",
+            return_value=["feature.txt"],
+        )
+        self._start_patch("cortex_command.overnight.outcome_router.cleanup_worktree")
+        self._start_patch(
+            "cortex_command.overnight.outcome_router._review_required",
+            return_value=False,
+        )
+        self._start_patch(
+            "cortex_command.pipeline.merge._check_ci_status", return_value="skipped"
+        )
+        self._start_patch(
+            "cortex_command.overnight.outcome_router._backlog_update_item",
+            new=self._real_update_item(),
+        )
+        # update_item shells out to regenerate the index at the project root;
+        # anchor that at the fixture so it cannot touch the developer's repo.
+        env_patch = patch.dict(os.environ, {"CORTEX_REPO_ROOT": str(home)})
+        env_patch.start()
+        self.addCleanup(env_patch.stop)
+
+        # The purge: TMPDIR takes the integration worktree mid-session.
+        shutil.rmtree(worktree)
+        self.assertFalse(worktree.exists())
+
+        round_1 = await run_batch(self._config)
+        self._config.batch_id = 2
+        round_2 = await run_batch(self._config)
+
+        events = read_events(self._config.overnight_events_path)
+
+        # The claim, first: no round lost its write-back.
+        self.assertEqual(
+            [e for e in events if e["event"] == "backlog_write_failed"],
+            [],
+        )
+
+        # The degraded path actually ran — an absence assertion over a code
+        # path that never executed pins nothing.
+        missing = [e for e in events if e["event"] == "integration_worktree_missing"]
+        self.assertEqual(
+            len(missing), 1, f"expected exactly one purge detection: {missing}"
+        )
+        self.assertIs(missing[0]["details"]["recreated"], True)
+        self.assertEqual(missing[0]["details"]["worktree_path"], str(worktree))
+
+        # Re-created in place: the path the state (and _backlog_dir) names.
+        self.assertTrue(worktree.exists())
+        self.assertEqual(
+            self._git(worktree, "rev-parse", "--abbrev-ref", "HEAD"), base_branch
+        )
+
+        # Both rounds merged and wrote back.
+        self.assertEqual(round_1.features_merged, [feature])
+        self.assertEqual(round_2.features_merged, [feature])
+        self.assertEqual(
+            len([e for e in events if e["event"] == "feature_complete"]),
+            2,
+            "both rounds should reach the merged write-back",
+        )
+
+        # And the write landed on disk, in the re-created worktree.
+        self.assertIn("status: complete", item_path.read_text())
 
 
 if __name__ == "__main__":
