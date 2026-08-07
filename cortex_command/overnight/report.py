@@ -1636,6 +1636,75 @@ def render_built_merge_blocked(data: ReportData) -> str:
     return "\n".join(lines)
 
 
+def render_integration_worktree_loss(data: ReportData) -> str:
+    """Render the integration-worktree-loss section (a purged home worktree).
+
+    A TMPDIR purge can delete the home integration worktree mid-session. The
+    merge-target resolver re-creates it in place when it can, and logs
+    ``integration_worktree_missing`` either way; when re-creation is impossible
+    the feature is routed to ``deferred`` with no ``recoverable_branch``, which
+    is precisely why it reaches no other section — ``render_failed_features``
+    filters on failed/paused, ``render_deferred_questions`` renders question
+    deferrals, and ``render_built_merge_blocked`` filters on a recovery branch
+    this path deliberately never records.
+
+    The re-created losses render as a single count (nothing is owed on them);
+    each deferral renders the branch its finished work is on, so the operator
+    verifies and merges that branch rather than rebuilding from scratch.
+
+    Returns the empty string when neither occurred so the section is omitted
+    entirely from the report.
+    """
+    rebuilt = 0
+    for evt in data.events:
+        if evt.get("event") != "integration_worktree_missing":
+            continue
+        details = evt.get("details", {}) or {}
+        if details.get("recreated") is True:
+            rebuilt += 1
+
+    deferrals: list[tuple[str, Optional[str], str]] = []
+    for evt in data.events:
+        if evt.get("event") != "feature_deferred":
+            continue
+        details = evt.get("details", {}) or {}
+        if details.get("unresolved_worktree") is not True:
+            continue
+        deferrals.append((
+            evt.get("feature", ""),
+            details.get("branch"),
+            details.get("error", ""),
+        ))
+
+    if not rebuilt and not deferrals:
+        return ""
+
+    lines: list[str] = ["## Integration Worktree Loss", ""]
+    if rebuilt:
+        lines.append(
+            f"- The home integration worktree went missing and was re-created "
+            f"in place {rebuilt} time(s) — those features continued normally."
+        )
+        lines.append("")
+
+    for feature, branch, error in sorted(deferrals):
+        location = (
+            f"is on `{branch}`" if branch
+            else (
+                "is on the feature branch — **branch not recorded** in the "
+                f"event log; find it with `git branch --list 'pipeline/{feature}*'`"
+            )
+        )
+        lines.append(
+            f"- **{feature}**: deferred — the integration worktree could not be "
+            f"resolved, so the merge never ran. The finished work {location}."
+        )
+        lines.append(f"  - **Suggested next step**: {_suggest_next_step(error)}")
+    if deferrals:
+        lines.append("")
+    return "\n".join(lines)
+
+
 def collect_tool_failures(session_id: str) -> dict[str, dict[str, Any]]:
     """Collect tool failure data from the session-scoped failure directory.
 
@@ -2206,6 +2275,17 @@ def render_new_backlog_items(data: ReportData) -> str:
 def _suggest_next_step(error: str) -> str:
     """Derive a suggested next step from an error message."""
     error_lower = error.lower()
+    # Checked FIRST: an unresolved integration worktree is a local storage loss,
+    # not a build failure. The work is finished and sitting on the feature
+    # branch, so the generic "retry or investigate" tail — and every retry-shaped
+    # branch below it — would advise a rebuild that discards it.
+    if "integration worktree unresolved" in error_lower:
+        return (
+            "Verify the work on the branch named above and merge it by hand. Do "
+            "NOT re-run the feature — it was built successfully and a re-run "
+            "rebuilds it from scratch, discarding that work. Only the "
+            "integration worktree was lost."
+        )
     if "merge conflict" in error_lower or "conflict" in error_lower:
         return "Resolve conflict manually, then retry"
     if "test fail" in error_lower:
@@ -2729,6 +2809,15 @@ def generate_report(data: ReportData) -> str:
         render_deferred_questions(data),
         render_critical_review_residue(data),
         render_built_merge_blocked(data),
+    ])
+    # Integration-worktree-loss section (#465 Req 8/9) — omitted entirely when
+    # no worktree was re-created and no feature was deferred on an unresolved
+    # one. Sits next to the built-but-merge-blocked section because both name a
+    # branch holding finished work; the two dispositions stay distinct.
+    worktree_loss_section = render_integration_worktree_loss(data)
+    if worktree_loss_section:
+        sections.append(worktree_loss_section)
+    sections.extend([
         render_failed_features(data),
         render_new_backlog_items(data),
         render_action_checklist(data),

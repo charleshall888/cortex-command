@@ -1287,3 +1287,341 @@ def test_report_diagnostics_markers_match_brain_constants() -> None:
         == _brain_module._DIAGNOSTICS_UNKNOWN_EXIT
     )
 
+
+
+# ---------------------------------------------------------------------------
+# Integration-worktree loss: the reader half of the purged-worktree lifecycle
+# (#465 Reqs 8, 9, 11).
+#
+# The event fixtures below are PRODUCER-DRIVEN: each one drives the real
+# outcome_router path (Task 1's merge-target resolver, Task 2's deferral
+# terminus) against a real on-disk git repo and reads back the log those paths
+# actually wrote. Hand-written event dicts would green this reader against a
+# contract the producer may not emit, which is the exact failure mode the
+# section exists to catch.
+# ---------------------------------------------------------------------------
+
+import asyncio as _asyncio
+import shutil as _shutil
+import subprocess as _subprocess
+from unittest.mock import patch as _patch
+
+
+def _wtloss_git(cwd: Path, *args: str) -> str:
+    return _subprocess.run(
+        ["git", *args], cwd=str(cwd), check=True, capture_output=True, text=True
+    ).stdout.strip()
+
+
+def _wtloss_build_repo(td: Path, session_id: str) -> tuple[Path, Path, str]:
+    """A real home repo on main, a feature branch carrying a commit, an
+    integration branch, and a real second worktree owning ``overnight/<id>``.
+
+    Returns ``(home, worktree, feature_branch)``.
+    """
+    home = td / "home"
+    home.mkdir()
+    branch = f"overnight/{session_id}"
+
+    _wtloss_git(home, "init", "-q", "-b", "main")
+    _wtloss_git(home, "config", "user.email", "t@example.com")
+    _wtloss_git(home, "config", "user.name", "Test")
+    _wtloss_git(home, "config", "commit.gpgsign", "false")
+    (home / "README.md").write_text("seed\n")
+    _wtloss_git(home, "add", "README.md")
+    _wtloss_git(home, "commit", "-q", "-m", "seed")
+
+    feature_branch = f"pipeline/{session_id}-feat"
+    _wtloss_git(home, "checkout", "-q", "-b", feature_branch)
+    (home / "feature.txt").write_text("feature work\n")
+    _wtloss_git(home, "add", "feature.txt")
+    _wtloss_git(home, "commit", "-q", "-m", "feature commit")
+
+    _wtloss_git(home, "checkout", "-q", "main")
+    _wtloss_git(home, "branch", branch, "main")
+
+    wt = td / "integration-worktree"
+    _wtloss_git(home, "worktree", "add", "-q", str(wt), branch)
+    _wtloss_git(home, "checkout", "-q", "main")
+
+    return home, wt, feature_branch
+
+
+def _wtloss_make_ctx(
+    *,
+    home: Path,
+    worktree: Path | None,
+    session_id: str,
+    feature: str,
+    feature_branch: str,
+    home_repo_path: Path | None,
+):
+    from cortex_command.overnight.orchestrator import BatchConfig, BatchResult
+    from cortex_command.overnight.outcome_router import OutcomeContext
+    from cortex_command.overnight.types import CircuitBreakerState
+
+    config = BatchConfig(
+        batch_id=1,
+        plan_path=home / "plan.md",
+        test_command=None,
+        base_branch=f"overnight/{session_id}",
+        overnight_state_path=home / "overnight-state.json",
+        overnight_events_path=home / "overnight-events.log",
+        result_dir=home,
+        pipeline_events_path=home / "pipeline-events.log",
+        session_id=session_id,
+    )
+    return OutcomeContext(
+        batch_result=BatchResult(batch_id=1),
+        lock=_asyncio.Lock(),
+        cb_state=CircuitBreakerState(consecutive_pauses=0),
+        recovery_attempts_map={},
+        worktree_paths={},
+        worktree_branches={feature: feature_branch},
+        repo_path_map={feature: None},
+        integration_worktrees={},
+        integration_branches={},
+        session_id=session_id,
+        backlog_ids={},
+        feature_names=[feature],
+        config=config,
+        home_worktree_path=worktree,
+        home_repo_path=home_repo_path,
+    )
+
+
+def _wtloss_drive_producer(td: Path, session_id: str, *, recoverable: bool) -> list[dict]:
+    """Drive the REAL outcome_router against a purged integration worktree and
+    return the events it wrote.
+
+    ``recoverable=True`` gives the resolver the home repo and its integration
+    branch, so it re-creates the worktree in place (Task 1). ``False`` withholds
+    the repo, so re-creation is impossible and the feature is deferred (Task 2).
+    """
+    from cortex_command.overnight.events import read_events
+    from cortex_command.overnight.outcome_router import apply_feature_result, set_backlog_dir
+    from cortex_command.overnight.state import _normalize_repo_key
+    from cortex_command.overnight.types import FeatureResult
+
+    feature = f"{session_id}-feat"
+    home, wt, feature_branch = _wtloss_build_repo(td, session_id)
+
+    ctx = _wtloss_make_ctx(
+        home=home,
+        worktree=wt,
+        session_id=session_id,
+        feature=feature,
+        feature_branch=feature_branch,
+        home_repo_path=home if recoverable else None,
+    )
+    if recoverable:
+        ctx.integration_branches[_normalize_repo_key(str(home))] = f"overnight/{session_id}"
+
+    # The purge: TMPDIR takes the integration worktree mid-session.
+    _shutil.rmtree(wt)
+
+    # Keep the backlog write-back inside the temp dir; the deferral terminus
+    # writes back unconditionally and must not touch the real backlog.
+    backlog_dir = td / "backlog"
+    backlog_dir.mkdir()
+    set_backlog_dir(backlog_dir)
+    try:
+        with (
+            _patch(
+                "cortex_command.overnight.outcome_router._get_changed_files",
+                return_value=["feature.txt"],
+            ),
+            _patch(
+                "cortex_command.overnight.outcome_router.requires_review",
+                return_value=False,
+            ),
+            _patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+            _patch(
+                "cortex_command.pipeline.merge._check_ci_status",
+                return_value="skipped",
+            ),
+        ):
+            _asyncio.run(
+                apply_feature_result(
+                    feature,
+                    FeatureResult(name=feature, status="completed"),
+                    ctx,
+                )
+            )
+    finally:
+        set_backlog_dir(None)  # type: ignore[arg-type]
+
+    return list(read_events(ctx.config.overnight_events_path))
+
+
+def _wtloss_section(report: str) -> str:
+    """Slice the Integration Worktree Loss section out of a full report."""
+    heading = "## Integration Worktree Loss"
+    assert heading in report, f"section heading missing from report:\n{report}"
+    start = report.index(heading)
+    rest = report[start + len(heading):]
+    end = rest.find("\n## ")
+    return heading + (rest if end == -1 else rest[:end])
+
+
+def test_worktree_loss_section_names_branch_not_a_rerun(tmp_path: Path) -> None:
+    """Req 8 — an unresolvable integration worktree defers the feature, and the
+    report names the pipeline branch its finished work is on rather than the
+    generic retry advice that would send the operator to rebuild it.
+
+    Producer-driven: the events come from the real Task-2 deferral terminus.
+    """
+    from cortex_command.overnight.report import ReportData, generate_report
+
+    session_id = "overnight-report-unresolved"
+    events = _wtloss_drive_producer(tmp_path, session_id, recoverable=False)
+
+    # The producer really did take the unrecoverable arm.
+    deferrals = [
+        e for e in events
+        if e["event"] == "feature_deferred"
+        and (e.get("details") or {}).get("unresolved_worktree") is True
+    ]
+    assert len(deferrals) == 1, f"producer emitted no unresolved-worktree deferral: {events}"
+    branch = deferrals[0]["details"]["branch"]
+    assert branch == f"pipeline/{session_id}-feat", f"got {branch!r}"
+
+    data = ReportData(session_id=session_id, date="2026-08-07", events=events)
+    section = _wtloss_section(generate_report(data))
+
+    assert branch in section, f"branch not named in section:\n{section}"
+    assert f"{session_id}-feat" in section, f"feature not named in section:\n{section}"
+    assert "retry or investigate" not in section, (
+        f"section advises the rebuild that discards the work:\n{section}"
+    )
+
+
+def test_worktree_loss_section_reports_rebuild_count(tmp_path: Path) -> None:
+    """Req 9 — a worktree that was successfully re-created in place is reported
+    as a rebuild count, so a recovered session is still visible in the morning.
+
+    Producer-driven: the events come from the real Task-1 merge-target resolver.
+    """
+    from cortex_command.overnight.report import ReportData, generate_report
+
+    session_id = "overnight-report-recreated"
+    events = _wtloss_drive_producer(tmp_path, session_id, recoverable=True)
+
+    # The producer really did take the recoverable arm.
+    rebuilds = [
+        e for e in events
+        if e["event"] == "integration_worktree_missing"
+        and (e.get("details") or {}).get("recreated") is True
+    ]
+    assert rebuilds, f"producer recorded no re-creation: {events}"
+    assert rebuilds[0]["details"]["context"] == "merge_target"
+
+    data = ReportData(session_id=session_id, date="2026-08-07", events=events)
+    section = _wtloss_section(generate_report(data))
+
+    assert f"{len(rebuilds)} time(s)" in section, f"rebuild count missing from:\n{section}"
+    assert "re-created" in section, f"rebuild line missing from:\n{section}"
+
+
+def test_worktree_loss_section_omitted_when_nothing_lost() -> None:
+    """No loss events at all — the section is omitted entirely."""
+    from cortex_command.overnight.report import (
+        ReportData,
+        render_integration_worktree_loss,
+    )
+
+    data = ReportData(session_id="s", date="2026-08-07", events=[
+        {"event": "feature_merged", "feature": "a", "details": {}},
+    ])
+    assert render_integration_worktree_loss(data) == ""
+
+
+def test_worktree_loss_renders_branch_not_recorded_when_absent() -> None:
+    """A deferral whose branch was never recorded renders an explicit marker
+    rather than an empty backtick pair the operator cannot act on."""
+    from cortex_command.overnight.report import (
+        ReportData,
+        render_integration_worktree_loss,
+    )
+
+    data = ReportData(session_id="s", date="2026-08-07", events=[
+        {
+            "event": "feature_deferred",
+            "feature": "feat-nobranch",
+            "details": {
+                "error": "integration worktree unresolved",
+                "unresolved_worktree": True,
+                "branch": None,
+            },
+        },
+    ])
+    section = render_integration_worktree_loss(data)
+
+    assert "branch not recorded" in section, f"got:\n{section}"
+    assert "retry or investigate" not in section, f"got:\n{section}"
+
+
+# ---------------------------------------------------------------------------
+# render_built_merge_blocked coverage (Req 11). The function is NOT modified by
+# this task; these tests are its first coverage, and they pin it as a
+# disposition DISTINCT from the unresolved-worktree deferral above — that path
+# deliberately records no recoverable_branch, so it must not leak in here.
+# ---------------------------------------------------------------------------
+
+def test_built_merge_blocked_names_recoverable_branch() -> None:
+    """A feature carrying recoverable_branch is named with its branch."""
+    from cortex_command.overnight.report import render_built_merge_blocked
+
+    data = _pytest_make_data({
+        "feat-conflicted": OvernightFeatureStatus(
+            status="deferred", recoverable_branch="pipeline/feat-conflicted-2"
+        ),
+    })
+
+    output = render_built_merge_blocked(data)
+
+    assert "## Built, Merge-Blocked (Recoverable)" in output, f"got:\n{output}"
+    assert "feat-conflicted" in output, f"got:\n{output}"
+    assert "pipeline/feat-conflicted-2" in output, f"got:\n{output}"
+
+
+def test_built_merge_blocked_omitted_for_unresolved_worktree_deferral(
+    tmp_path: Path,
+) -> None:
+    """An unresolved-worktree deferral is NOT a recoverable merge-block.
+
+    It records no recoverable_branch (the merge was never attempted, so the
+    branch is not a verified-mergeable recovery point), so the built-but-
+    merge-blocked section stays empty and its heading is absent from the full
+    report — while the worktree-loss section that owns this disposition renders.
+    """
+    from cortex_command.overnight.report import (
+        ReportData,
+        generate_report,
+        render_built_merge_blocked,
+    )
+
+    session_id = "overnight-report-distinct"
+    events = _wtloss_drive_producer(tmp_path, session_id, recoverable=False)
+    feature = f"{session_id}-feat"
+
+    data = ReportData(session_id=session_id, date="2026-08-07", events=events)
+    data.state = _pytest_make_state({
+        feature: OvernightFeatureStatus(status="deferred"),
+    })
+
+    assert render_built_merge_blocked(data) == "", (
+        "unresolved-worktree deferral leaked into the recoverable merge-block section"
+    )
+    report = generate_report(data)
+    assert "## Built, Merge-Blocked (Recoverable)" not in report, f"got:\n{report}"
+    assert "## Integration Worktree Loss" in report, f"got:\n{report}"
+
+
+def test_built_merge_blocked_empty_without_state() -> None:
+    """No state loaded at all — the section is omitted rather than crashing."""
+    from cortex_command.overnight.report import ReportData, render_built_merge_blocked
+
+    data = ReportData()
+    assert data.state is None
+    assert render_built_merge_blocked(data) == ""
