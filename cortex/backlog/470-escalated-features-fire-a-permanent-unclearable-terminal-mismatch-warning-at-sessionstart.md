@@ -2,13 +2,14 @@
 schema_version: "1"
 uuid: 07d372b2-4aa6-4bdb-80bb-66f17beb395d
 title: Escalated features fire a permanent unclearable terminal-mismatch warning at SessionStart
-status: backlog
+status: complete
 priority: low
 type: bug
 created: 2026-08-07
 updated: 2026-08-07
 tags: ['observability', 'lifecycle', 'escalation']
 areas: ['lifecycle']
+complexity: simple
 ---
 ## Why
 

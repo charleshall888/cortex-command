@@ -203,16 +203,37 @@ def _is_terminal_mismatch(
     The predicate is symmetric: ``events_terminal != backlog_terminal``
     fires in both directions. Pass ``backlog_status=None`` (no backlog
     row) and the predicate returns False — no mismatch claim without
-    evidence.
+    evidence. ``escalated`` is exempt from the comparison entirely: it
+    is terminal but pins no expected backlog status, so no divergence
+    can be claimed either way (see below).
     """
 
-    events_terminal = (
-        events_phase in ("complete", "escalated")
-        or events_phase.startswith("complete:")
-        or events_phase.startswith("escalated:")
-    )
     if backlog_status is None:
         return False
+
+    # Compare on the base state, so every discriminated form (`complete:
+    # awaiting-merge`, `escalated:rework-cap:2`, any later one) inherits its
+    # base's rule automatically — the discriminant narrates, it never changes
+    # terminality.
+    base = events_phase.split(":", 1)[0]
+
+    # `escalated` is terminal in the events vocabulary but pins no expected
+    # backlog status, so it is exempt from the comparison entirely (#470). The
+    # feature is stopped awaiting operator direction and is *not* done: leaving
+    # the ticket `in_progress` is correct, and closing it on a decision to
+    # abandon is equally correct. Neither is a divergence, so comparing would
+    # fire on every SessionStart with no action available that clears it —
+    # short of lying about the ticket status. Unclearable warnings on the
+    # highest-frequency operator surface train the operator to ignore it, which
+    # is what makes a real mismatch below easy to miss.
+    if base == "escalated":
+        return False
+
+    # `cancelled` is terminal and *does* pin one: an abandoned lifecycle
+    # expects a closed ticket, and `abandoned`/`wont-do` are in
+    # TERMINAL_STATUSES. Omitting it here inverted the bug — a correctly
+    # cancelled feature with a correctly closed ticket read as a mismatch.
+    events_terminal = base in ("complete", "cancelled")
     from cortex_command.common import TERMINAL_STATUSES
     backlog_terminal = backlog_status in TERMINAL_STATUSES
     return events_terminal != backlog_terminal
