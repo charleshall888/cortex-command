@@ -7,3 +7,8 @@
 {"ts": "2026-08-07T13:13:27Z", "event": "spec_approved", "feature": "concurrent-worktrees-allocate-colliding-adr-and", "decision": "approved"}
 {"ts": "2026-08-07T15:40:53Z", "event": "plan_approved", "feature": "concurrent-worktrees-allocate-colliding-adr-and", "dispatch_choice": "wait"}
 {"ts": "2026-08-07T15:40:53Z", "event": "feature_paused", "feature": "concurrent-worktrees-allocate-colliding-adr-and", "slug": "plan-approval", "kind": "relayed-consent"}
+{"ts": "2026-08-07T16:54:30Z", "event": "phase_transition", "feature": "concurrent-worktrees-allocate-colliding-adr-and", "from": "plan", "to": "implement"}
+{"ts": "2026-08-07T16:54:32Z", "event": "batch_dispatch", "feature": "concurrent-worktrees-allocate-colliding-adr-and", "batch": 0, "tasks": ["Task 1"]}
+{"ts": "2026-08-07T16:58:55Z", "event": "batch_dispatch", "feature": "concurrent-worktrees-allocate-colliding-adr-and", "batch": 1, "tasks": ["Task 2", "Task 3", "Task 5"]}
+{"ts": "2026-08-07T17:00:18Z", "event": "phase_transition", "feature": "concurrent-worktrees-allocate-colliding-adr-and", "from": "implement", "to": "complete", "tier": "moderate"}
+{"ts": "2026-08-07T17:00:30Z", "event": "feature_complete", "feature": "concurrent-worktrees-allocate-colliding-adr-and", "tasks_total": 5, "rework_cycles": 0, "merge_anchor": "merge"}
