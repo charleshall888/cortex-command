@@ -26,52 +26,20 @@
    (null-normalized), not ``lifecycle_phase``, which still carries the
    literal string "none" for some items. #}
 {% from "patterns/badge.html" import badge %}
+{% from "patterns/backlog_badges.html" import status_badge, priority_badge, type_badge %}
 <span class="sec-num"><strong>§ 02</strong>triage</span>
 {% set snap = state.backlog_snapshot %}
-
-{# The backlog status / priority / type vocabularies mapped to the badge
-   classes defined in base.html. Deliberately not backlog_panel.html's map,
-   whose values are CSS custom properties consumed as an inline ``--c`` and
-   would emit a class matching no rule; and deliberately not the
-   ``badge(status=…)`` path, whose map is the feature/run-outcome vocabulary.
-   All three vocabularies are open in practice — the item-creation verb
-   applies no restriction — so every lookup carries a fallback and the raw
-   value is always what gets displayed. #}
-{% set status_class = {
-  "backlog":     "badge-gray",
-  "open":        "badge-gray",
-  "proposed":    "badge-gray",
-  "archived":    "badge-gray",
-  "refined":     "badge-blue",
-  "in-progress": "badge-blue",
-  "in_progress": "badge-blue",
-  "deferred":    "badge-amber",
-  "on-hold":     "badge-amber",
-  "complete":    "badge-green",
-  "merged":      "badge-green",
-  "done":        "badge-green",
-  "abandoned":   "badge-red",
-  "superseded":  "badge-red",
-} %}
-{% set priority_class = {
-  "critical": "badge-red",
-  "high":     "badge-purple",
-  "medium":   "badge-gray",
-  "low":      "badge-gray",
-} %}
-{% set type_class = {"epic": "badge-purple"} %}
-{% set fallback_class = "badge-gray" %}
 
 {# One disclosure per ticket. Everything the row needs arrives as an explicit
    argument rather than by closure over template-level state, and the element
    id is ticket-derived so the sessionStorage restore in base.html reattaches
    to the same ticket across morphs — ``item_order`` re-sorts on any priority
    or status change, so a positional id would reopen the wrong rows. The row
-   carries no navigation affordance of any kind: the per-ticket reader is a
-   separate ticket, and dead placeholder links are the defect this panel's
-   epic exists to avoid. #}
+   itself carries no navigation affordance: the summary is the disclosure
+   toggle, and a live link there would compete with it for the click. The
+   link out to this ticket's own /tickets/{id} page lives in the expanded
+   area instead, alongside the classification block. #}
 {% macro ticket_row(item_id, record, ineligible, blockers, is_ready,
-                    status_class, priority_class, type_class, fallback_class,
                     row_class='', child_count=none) %}
 {% set status = record.get('status') or 'unknown' %}
 {% set priority = record.get('priority') or 'unset' %}
@@ -110,13 +78,13 @@
        in base.html instead — solid / outline / ghost — so the row reads as a
        hierarchy rather than three identical boxes. #}
     <span class="ticket-row__cell ticket-row__status">
-      {{ badge(css_class=status_class.get(status, fallback_class), label=status) }}
+      {{ status_badge(status) }}
     </span>
     <span class="ticket-row__cell ticket-row__prio">
-      {{ badge(css_class=priority_class.get(priority, fallback_class), label=priority) }}
+      {{ priority_badge(priority) }}
     </span>
     <span class="ticket-row__cell ticket-row__type">
-      {{ badge(css_class=type_class.get(kind, fallback_class), label=kind) }}
+      {{ type_badge(kind) }}
     </span>
     <span class="ticket-row__note">
       {# An epic heading carries both its child count and its own disposition;
@@ -154,8 +122,9 @@
      next tick while the row sat open.
 
      This is the one hx-get on a row, and it is not navigation: it loads the
-     ticket in place. The affordance the board still refuses is a link that
-     goes somewhere and a placeholder that goes nowhere. #}
+     ticket in place. The link out to the ticket's own page lives below,
+     alongside feature-detail, so it never competes with this fetch or with
+     the disclosure toggle in <summary>. #}
   <div class="ticket-desc"
        id="ticket-desc-{{ item_id }}"
        hx-preserve="true"
@@ -164,6 +133,11 @@
        hx-swap="innerHTML">
     <p class="empty-state">loading description</p>
   </div>
+
+  {# The link out to this ticket's own /tickets/{id} page. Placed here, in
+     the expanded area, rather than in <summary> — a live <a> there would
+     compete with the <details> disclosure toggle for the click. #}
+  <p class="ticket-row__open"><a href="/tickets/{{ item_id }}">open ticket &rarr;</a></p>
 
   <div class="feature-detail">
     <div class="feature-detail-block">
@@ -287,14 +261,12 @@
   <div class="epic-group mt-3">
     {{ ticket_row(epic_key, epic_item, ineligible_by_id.get(epic_key),
                   blocked_why.get(epic_key, []), epic_key in ready_ids,
-                  status_class, priority_class, type_class, fallback_class,
                   row_class='epic-head', child_count=epic_rows | length) }}
     {% if epic_rows %}
     <div class="feature-list epic-children">
       {% for item_id in epic_rows %}
         {{ ticket_row(item_id, snap_items.get(item_id, {}), ineligible_by_id.get(item_id),
-                      blocked_why.get(item_id, []), item_id in ready_ids,
-                      status_class, priority_class, type_class, fallback_class) }}
+                      blocked_why.get(item_id, []), item_id in ready_ids) }}
       {% endfor %}
     </div>
     {% else %}
@@ -331,8 +303,7 @@
   <div class="feature-list">
     {% for item_id in flat_ids %}
       {{ ticket_row(item_id, snap_items.get(item_id, {}), ineligible_by_id.get(item_id),
-                    blocked_why.get(item_id, []), item_id in ready_ids,
-                    status_class, priority_class, type_class, fallback_class) }}
+                    blocked_why.get(item_id, []), item_id in ready_ids) }}
     {% endfor %}
   </div>
   {% else %}

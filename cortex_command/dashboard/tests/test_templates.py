@@ -427,6 +427,12 @@ _BADGE_CLASS_RE = re.compile(r"^badge-(red|amber|gray|green|blue|purple)$")
 # being guarded. The guard did not weaken — `test_row_fetch_targets_a_live_
 # route` below asserts the thing the old blanket ban was standing in for,
 # namely that a row's fetch resolves to a real endpoint rather than "#".
+#
+# `href` is scoped to <summary> only, below, rather than dropped: a live link
+# there would compete with the <details> disclosure toggle for the click. R19
+# adds exactly one href outside <summary> — the link out to this ticket's own
+# /tickets/{id} page — which `test_row_links_out_to_its_own_ticket_page`
+# below asserts lands there and nowhere else.
 _NAVIGATION_ATTRS = ("href", "hx-push-url", "onclick")
 
 # One corpus exercising most of the board's joins at once, so the joins are
@@ -906,7 +912,8 @@ class TestTriageBoardBlockedState(unittest.TestCase):
 
 
 class TestTriageBoardRowIdentity(unittest.TestCase):
-    """Ticket-derived ids and the no-navigation rule (R13)."""
+    """Ticket-derived ids, the summary-only navigation rule (R13), and the
+    link out to the ticket page (R19)."""
 
     def test_row_ids_are_ticket_derived_and_survive_reordering(self):
         # item_order re-sorts on any priority or status change, so an
@@ -926,16 +933,35 @@ class TestTriageBoardRowIdentity(unittest.TestCase):
         # above would pass for a positional id too.
         self.assertNotEqual(forward, backward)
 
-    def test_rows_carry_no_navigation_affordance(self):
-        # Live href="#" placeholders are the exact defect this panel's epic
-        # cites. A row reads in place or not at all; it never moves the
-        # operator to another surface.
+    def test_summary_carries_no_navigation_affordance(self):
+        # A live link inside <summary> would compete with the <details>
+        # disclosure toggle for the click — the exact defect this panel's
+        # epic cites. The summary reads in place or not at all; it never
+        # moves the operator to another surface.
         html = _render_board(_board_snapshot(_BOARD_CORPUS))
         for item_id, row in _rows(html).items():
-            for element in [row, *row.find_all()]:
+            summary = row.find_all("summary")[0]
+            for element in [summary, *summary.find_all()]:
                 with self.subTest(item=item_id, tag=element.tag):
                     for attr in _NAVIGATION_ATTRS:
                         self.assertNotIn(attr, element.attrs)
+
+    def test_row_links_out_to_its_own_ticket_page(self):
+        # R19: the board connects to the per-ticket reader. The link lives in
+        # the expanded area, never in <summary> (covered above), and it is
+        # the row's only href — carrying that row's own id, never another's.
+        html = _render_board(_board_snapshot(_BOARD_CORPUS))
+        rows = _rows(html)
+        self.assertTrue(rows, "fixture must render at least one row")
+        self.assertIn('href="/tickets/412"', html)
+        for item_id, row in rows.items():
+            with self.subTest(item=item_id):
+                hrefs = [
+                    element.attrs["href"]
+                    for element in row.find_all()
+                    if "href" in element.attrs
+                ]
+                self.assertEqual(hrefs, [f"/tickets/{item_id}"])
 
     def test_row_fetch_targets_a_live_route(self):
         # What the blanket hx-get ban was really standing in for: a fetch on a

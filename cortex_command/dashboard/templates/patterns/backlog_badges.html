@@ -1,0 +1,38 @@
+{% from "patterns/badge.html" import badge %}
+
+{# The backlog status / priority / type vocabularies mapped to the badge
+   classes defined in base.html. Deliberately not backlog_panel.html's map,
+   whose values are CSS custom properties consumed as an inline ``--c`` and
+   would emit a class matching no rule; and deliberately not the
+   ``badge(status=…)`` path, whose map is the feature/run-outcome vocabulary.
+   All three vocabularies are open in practice — the item-creation verb
+   applies no restriction — so every lookup carries a fallback and the raw
+   value is always what gets displayed. #}
+{% set status_class = {
+  "backlog":     "badge-gray",
+  "open":        "badge-gray",
+  "proposed":    "badge-gray",
+  "archived":    "badge-gray",
+  "refined":     "badge-blue",
+  "in-progress": "badge-blue",
+  "in_progress": "badge-blue",
+  "deferred":    "badge-amber",
+  "on-hold":     "badge-amber",
+  "complete":    "badge-green",
+  "merged":      "badge-green",
+  "done":        "badge-green",
+  "abandoned":   "badge-red",
+  "superseded":  "badge-red",
+} %}
+{% set priority_class = {
+  "critical": "badge-red",
+  "high":     "badge-purple",
+  "medium":   "badge-gray",
+  "low":      "badge-gray",
+} %}
+{% set type_class = {"epic": "badge-purple"} %}
+{% set fallback_class = "badge-gray" %}
+
+{% macro status_badge(status) %}{{ badge(css_class=status_class.get(status, fallback_class), label=status) }}{% endmacro %}
+{% macro priority_badge(priority) %}{{ badge(css_class=priority_class.get(priority, fallback_class), label=priority) }}{% endmacro %}
+{% macro type_badge(kind) %}{{ badge(css_class=type_class.get(kind, fallback_class), label=kind) }}{% endmacro %}
