@@ -86,11 +86,31 @@ _ROUTE_NEXT = {
     "escalated": (
         "review.md is REJECTED — present the reviewer analysis and ask the user for direction."
     ),
+    # Not a route: the discriminated-phase key for the rework cap, whose route
+    # stays the bare ``escalated``. Selected by ``_next_for_route`` when the
+    # detected phase is the cap form, so the cap is not narrated as a rejection.
+    "escalated:rework-cap": (
+        "The rework cap was reached without a reviewer rejection — present the "
+        "review findings and ask the user for direction. The recorded way to "
+        "authorize another pass is the sanctioned override: cortex-lifecycle-event "
+        "log --event <name> --feature <slug> (the sanctioned out-of-band hand-append)."
+    ),
 }
 
 
-def _next_for_route(route: str, phase_overridden: bool) -> str:
-    base = _ROUTE_NEXT.get(route, f"Enter the {route} phase.")
+def _next_for_route(route: str, phase_overridden: bool, phase: Optional[str] = None) -> str:
+    key = route
+    # The cap discriminant rides ``phase`` only; ``route`` stays ``escalated``.
+    # An explicit --phase override decouples route from the detected phase, so
+    # the discriminant is only trusted when there is no override.
+    if (
+        not phase_overridden
+        and route == "escalated"
+        and phase is not None
+        and phase.startswith("escalated:rework-cap:")
+    ):
+        key = "escalated:rework-cap"
+    base = _ROUTE_NEXT.get(key, f"Enter the {route} phase.")
     if phase_overridden:
         return base + " (explicit phase override — warn if prerequisite artifacts are missing.)"
     return base
@@ -270,7 +290,7 @@ def _resolve_parsed(
         "tier": read_tier(feature, lifecycle_base),
         "staleness": lifecycle_staleness(feature_dir),
         "phase_override": bool(phase_override),
-        "next": _next_for_route(route, bool(phase_override)),
+        "next": _next_for_route(route, bool(phase_override), det["phase"]),
     }
     if resolved_from is not None:
         # Evidence trail: the invocation token that remapped onto the slug.

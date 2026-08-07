@@ -195,17 +195,25 @@ def _enter_command(feature: str, phase: str, backlog, root: Path) -> str:
     )
 
 
-def _terminal_directive(state: str) -> str:
+def _terminal_directive(state: str, phase: Optional[str] = None) -> str:
     """The fragment directive for a served state, terminal-aware.
 
     Reuses the resolver's ``_ROUTE_NEXT`` directives for the non-terminal
     routes (the same one-hop lookahead prose the loop already reads) and pins
     an explicit terminal directive for the event-only ``cancelled`` state,
     which the artifact reader has no route for.
+
+    *phase* is the resolver's discriminated phase when one is available. It
+    only refines the directive — the served *state* stays the bare table state,
+    so ``escalated:rework-cap:<n>`` selects the rework-cap directive instead of
+    the reviewer-rejection one while still being served as ``escalated``.
     """
     if state == "cancelled":
         return "Lifecycle cancelled (terminal) — no further transitions; nothing to enter."
-    return resolve_mod._ROUTE_NEXT.get(state, f"Enter the {state} phase.")
+    key = state
+    if state == "escalated" and phase is not None and phase.startswith("escalated:rework-cap:"):
+        key = "escalated:rework-cap"
+    return resolve_mod._ROUTE_NEXT.get(key, f"Enter the {state} phase.")
 
 
 def _evaluate_guard(transition: tt.Transition, discriminants: dict) -> dict:
@@ -291,6 +299,7 @@ def build_served_envelope(
     total: int = 0,
     at_resume: bool = True,
     explain: bool = False,
+    phase: Optional[str] = None,
 ) -> dict:
     """Build the served ``next`` envelope for a concrete transition-table *state*.
 
@@ -339,7 +348,7 @@ def build_served_envelope(
 
     fragment_ref = {
         "state": state,
-        "directive": _terminal_directive(state),
+        "directive": _terminal_directive(state, phase),
         "reference": None if st.terminal else f"{state}.md",
         "flavor": "selector",
     }
@@ -513,6 +522,7 @@ def next_state(
             total=int(resolved.get("total", 0)),
             at_resume=True,
             explain=explain,
+            phase=resolved.get("phase"),
         )
         envelope["feature"] = feature
         envelope["paused"] = bool(resolved.get("paused"))
