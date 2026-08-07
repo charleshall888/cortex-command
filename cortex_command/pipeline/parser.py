@@ -15,8 +15,32 @@ from typing import Optional
 
 # The accepted per-task complexity vocabulary. A present-but-out-of-vocabulary
 # value is normalized to ``complex`` (safe over-provision) at the parser
-# boundary; an absent field keeps the ``simple`` default.
+# boundary; an absent field resolves to ``_ABSENT_COMPLEXITY_DEFAULT``.
 VALID_COMPLEXITIES = frozenset({"simple", "moderate", "complex"})
+
+# What a task with no ``**Complexity**`` field dispatches at.
+#
+# This is a resource decision, not a classification: ``dispatch.TIER_CONFIG``
+# reads it for `max_turns`/`max_budget_usd` and `_EFFORT_MATRIX` reads it for
+# reasoning effort. The old default was ``simple`` — a $5 ceiling, 150 turns,
+# and `low` effort at low/medium criticality — for work nobody had classified.
+# Omission is clustered whole-plan rather than scattered (#461 measured 328 of
+# 5,713 tasks across four repos, with whole features at 17/17 and 11/11), so
+# the floor was applied to entire features at a time.
+#
+# ``moderate`` over ``complex``: raising to ``complex`` moves the ceiling 10x
+# ($5 -> $50) on a population whose real distribution is unknown, and the OOV
+# branch's ``complex`` was chosen for a different case — a value that WAS
+# stated and unrecognized. ``moderate`` is also the tier default documented
+# everywhere else in the lifecycle (`skills/build/SKILL.md`), so an unclassified
+# task now lands where an unstated tier lands elsewhere rather than at a value
+# invented for this one call site.
+#
+# Deliberately not a hard parse error: overnight runs unattended, so failing the
+# parse would convert a resourcing bug into a whole-session loss on 5.7% of
+# tasks. The omission is reported instead, via the same event the OOV branch
+# uses, so the producing plan gets corrected at source.
+_ABSENT_COMPLEXITY_DEFAULT = "moderate"
 
 
 # ---------------------------------------------------------------------------
@@ -390,15 +414,26 @@ def _parse_tasks(text: str, path: Path) -> tuple[list[FeatureTask], list[dict]]:
 
         files = _parse_field_files(task_body)
         depends_on = _parse_field_depends_on(task_body, task_num, path)
-        # An absent Complexity field keeps the ``simple`` default; only a
-        # present-but-out-of-vocabulary value normalizes to ``complex``
-        # (safe over-provision) and is recorded for the caller to surface.
-        complexity = _parse_field_string(task_body, "Complexity") or "simple"
-        if complexity not in VALID_COMPLEXITIES:
+        # Both unusable shapes over-provision and report; neither is silent.
+        # An ABSENT field is not a claim that the task is trivial — nobody
+        # classified it — so it resolves to ``moderate`` rather than the
+        # ``simple`` floor it used to take (see _ABSENT_COMPLEXITY_DEFAULT).
+        # A present-but-out-of-vocabulary value resolves to ``complex``: the
+        # author did state something, and an unrecognized statement is a
+        # stronger signal of mis-authoring than an omission.
+        raw_complexity = _parse_field_string(task_body, "Complexity")
+        if not raw_complexity:
+            complexity = _ABSENT_COMPLEXITY_DEFAULT
             normalized_complexities.append(
-                {"task": task_num, "original": complexity}
+                {"task": task_num, "original": None, "resolved": complexity}
             )
+        elif raw_complexity not in VALID_COMPLEXITIES:
             complexity = "complex"
+            normalized_complexities.append(
+                {"task": task_num, "original": raw_complexity, "resolved": complexity}
+            )
+        else:
+            complexity = raw_complexity
         status = _parse_field_status(task_body)
 
         tasks.append(FeatureTask(

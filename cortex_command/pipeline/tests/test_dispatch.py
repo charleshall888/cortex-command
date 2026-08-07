@@ -1241,7 +1241,9 @@ def test_normalized_plan_never_triggers_tier_guard(tmp_path):
     parsed = parse_feature_plan(plan)
 
     # Sanity: the parser recorded the OOV coercion and normalized to complex.
-    assert parsed.normalized_complexities == [{"task": 1, "original": "medium"}]
+    assert parsed.normalized_complexities == [
+        {"task": 1, "original": "medium", "resolved": "complex"}
+    ]
     task = parsed.tasks[0]
     assert task.complexity == "complex"
 

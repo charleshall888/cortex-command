@@ -2628,18 +2628,21 @@ def render_sandbox_denials(data: ReportData) -> str:
 
 
 def render_complexity_normalized(data: ReportData) -> str:
-    """Render the OOV-complexity-normalization section (backlog #278).
+    """Render the complexity-normalization section (backlog #278, #461).
 
     Scans ``data.events`` for ``complexity_normalized`` entries emitted by
-    ``feature_executor.execute_feature`` when ``parse_feature_plan`` coerced a
-    present-but-out-of-vocabulary per-task ``**Complexity**`` value to
-    ``complex``. Each entry carries the feature, the task number, and the
-    original OOV value so the mis-authored plan can be corrected at source.
+    ``feature_executor.execute_feature`` when ``parse_feature_plan`` could not
+    use a task's ``**Complexity**`` value. Two shapes land here: a
+    present-but-out-of-vocabulary value (coerced to ``complex``) and an absent
+    field (#461, resolved to ``moderate``), distinguished by ``original`` being
+    the offending string or ``None``. Each entry carries the feature, the task
+    number, the original value, and what it resolved to, so the mis-authored
+    plan can be corrected at source.
 
     ``execute_feature`` re-parses and re-emits each round, so a
     paused-then-resumed feature produces duplicate events for the same
-    ``(feature, task, original)`` normalization. This renderer de-duplicates by
-    that key and renders each unique normalization exactly once.
+    ``(feature, task, original, resolved)`` normalization. This renderer
+    de-duplicates by that key and renders each unique normalization once.
 
     Returns the empty string when no normalizations were recorded so the
     section is omitted entirely from the report.
@@ -2653,7 +2656,10 @@ def render_complexity_normalized(data: ReportData) -> str:
         details = evt.get("details", {}) or {}
         task = details.get("task")
         original = details.get("original")
-        key = (feature, task, original)
+        # Events written before #461 carry no `resolved`; they are all OOV
+        # normalizations, which resolved to `complex`.
+        resolved = details.get("resolved") or "complex"
+        key = (feature, task, original, resolved)
         if key in seen:
             continue
         seen.add(key)
@@ -2665,15 +2671,17 @@ def render_complexity_normalized(data: ReportData) -> str:
     total = len(rows)
     lines: list[str] = [f"## Complexity Normalizations ({total})", ""]
     lines.append(
-        "Each task below declared an out-of-vocabulary `**Complexity**` value "
-        "that was normalized to `complex` (safe over-provision) so the feature "
-        "could still run. Correct the plan.md at source so the mis-authoring "
-        "does not recur."
+        "Each task below carried no usable `**Complexity**` value and was "
+        "over-provisioned so the feature could still run — an out-of-vocabulary "
+        "value to `complex`, an absent field to `moderate`. Neither task was "
+        "dispatched at the resources its author intended. Correct the plan.md "
+        "at source so the mis-authoring does not recur."
     )
     lines.append("")
-    for feature, task, original in rows:
+    for feature, task, original, resolved in rows:
+        shown = f"`{original}`" if original else "*(absent)*"
         lines.append(
-            f"- **{feature}** task {task}: `{original}` -> `complex`"
+            f"- **{feature}** task {task}: {shown} -> `{resolved}`"
         )
     lines.append("")
     return "\n".join(lines)

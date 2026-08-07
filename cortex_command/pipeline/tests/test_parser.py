@@ -192,14 +192,65 @@ class TestOOVComplexityNormalization(unittest.TestCase):
         # (b) the returned plan records the original OOV value + task identity.
         self.assertEqual(
             plan.normalized_complexities,
-            [{"task": 1, "original": "medium"}],
+            [{"task": 1, "original": "medium", "resolved": "complex"}],
         )
 
-    def test_absent_complexity_keeps_simple_default_and_records_nothing(self):
-        """An absent ``**Complexity**`` field keeps ``simple`` (Edge: absent vs present)."""
+    def test_absent_complexity_resolves_to_moderate_and_records_the_omission(self):
+        """461: an absent ``**Complexity**`` field is an unclassified task, not a
+        trivial one, so it resolves to ``moderate`` and is reported.
+
+        The old ``simple`` default dispatched it at the cheapest ceiling — $5,
+        150 turns, `low` effort at low/medium criticality — silently and with no
+        record, while the adjacent out-of-vocabulary branch over-provisioned and
+        reported. Omission is clustered whole-plan, so the floor applied to
+        entire features at a time.
+        """
         plan = self._parse("### Task 1: Build the widget\n")
         self.assertEqual(len(plan.tasks), 1)
-        self.assertEqual(plan.tasks[0].complexity, "simple")
+        self.assertEqual(plan.tasks[0].complexity, "moderate")
+        # `original: None` is what distinguishes an omission from an OOV value
+        # downstream, in the event and in the report row.
+        self.assertEqual(
+            plan.normalized_complexities,
+            [{"task": 1, "original": None, "resolved": "moderate"}],
+        )
+
+    def test_absent_and_oov_resolve_differently_and_stay_distinguishable(self):
+        """461: the two unusable shapes do not collapse into one another.
+
+        A stated-but-unrecognized value is a stronger mis-authoring signal than
+        an omission, so it keeps its heavier `complex` over-provision; both are
+        recorded, and `original` tells them apart.
+        """
+        plan = self._parse(
+            _task_block("### Task 1: Stated but unrecognized", Complexity="medium")
+            + "### Task 2: Nothing stated\n"
+        )
+        self.assertEqual(
+            [t.complexity for t in plan.tasks], ["complex", "moderate"]
+        )
+        self.assertEqual(
+            plan.normalized_complexities,
+            [
+                {"task": 1, "original": "medium", "resolved": "complex"},
+                {"task": 2, "original": None, "resolved": "moderate"},
+            ],
+        )
+
+    def test_a_valid_complexity_is_never_recorded_as_normalized(self):
+        """461 guard: widening the recorded set must not make every task a row.
+
+        The report section exists to name plans needing correction; if correctly
+        authored tasks appeared in it, the section would stop being actionable.
+        """
+        plan = self._parse(
+            _task_block("### Task 1: A", Complexity="simple")
+            + _task_block("### Task 2: B", Complexity="moderate")
+            + _task_block("### Task 3: C", Complexity="complex")
+        )
+        self.assertEqual(
+            [t.complexity for t in plan.tasks], ["simple", "moderate", "complex"]
+        )
         self.assertEqual(plan.normalized_complexities, [])
 
 

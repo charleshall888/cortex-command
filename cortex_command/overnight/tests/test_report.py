@@ -819,6 +819,42 @@ def test_render_complexity_normalized_empty_when_no_events() -> None:
     assert render_complexity_normalized(data) == ""
 
 
+def test_render_complexity_normalized_distinguishes_absent_from_oov() -> None:
+    """461: an omitted field and an unrecognized value render as different rows.
+
+    They resolve to different tiers and call for different corrections, so a
+    renderer that showed both as `-> complex` (or showed the omission as the
+    literal `None`) would misreport what the operator has to fix.
+    """
+    data = ReportData()
+    data.events = [
+        {"event": "complexity_normalized", "round": 1, "feature": "oov-feature",
+         "details": {"task": 3, "original": "medium", "resolved": "complex"}},
+        {"event": "complexity_normalized", "round": 1, "feature": "absent-feature",
+         "details": {"task": 1, "original": None, "resolved": "moderate"}},
+    ]
+    output = render_complexity_normalized(data)
+
+    assert "## Complexity Normalizations (2)" in output, f"got: {output!r}"
+    assert "`medium` -> `complex`" in output, f"got: {output!r}"
+    assert "*(absent)* -> `moderate`" in output, f"got: {output!r}"
+    # The omission never renders as a Python None.
+    assert "None" not in output, f"got: {output!r}"
+
+
+def test_render_complexity_normalized_reads_pre_461_events() -> None:
+    """461: events written before `resolved` existed still render as `complex`.
+
+    A session log spanning the upgrade must not render its older rows with a
+    blank or missing target tier.
+    """
+    data = ReportData()
+    data.events = [_complexity_normalized_event("legacy-feature", 2, "medium")]
+    output = render_complexity_normalized(data)
+
+    assert "`medium` -> `complex`" in output, f"got: {output!r}"
+
+
 # ---------------------------------------------------------------------------
 # #313 R4/R5: effort-degradation rendering
 # ---------------------------------------------------------------------------
