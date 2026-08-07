@@ -12,3 +12,7 @@
 {"ts": "2026-08-07T15:54:31Z", "event": "phase_transition", "feature": "overnight-session-worktree-lives-in-tmpdir", "from": "implement", "to": "review", "tier": "complex"}
 {"ts": "2026-08-07T16:27:58Z", "event": "review_verdict", "feature": "overnight-session-worktree-lives-in-tmpdir", "verdict": "CHANGES_REQUESTED", "cycle": 1, "requirements_drift": "detected"}
 {"ts": "2026-08-07T16:27:58Z", "event": "phase_transition", "feature": "overnight-session-worktree-lives-in-tmpdir", "from": "review", "to": "implement-rework"}
+{"ts": "2026-08-07T16:36:07Z", "event": "phase_transition", "feature": "overnight-session-worktree-lives-in-tmpdir", "from": "implement-rework", "to": "review", "tier": "complex"}
+{"ts": "2026-08-07T16:45:09Z", "event": "review_verdict", "feature": "overnight-session-worktree-lives-in-tmpdir", "verdict": "APPROVED", "cycle": 2, "requirements_drift": "detected"}
+{"ts": "2026-08-07T16:45:09Z", "event": "phase_transition", "feature": "overnight-session-worktree-lives-in-tmpdir", "from": "review", "to": "complete"}
+{"ts": "2026-08-07T16:46:15Z", "event": "feature_complete", "feature": "overnight-session-worktree-lives-in-tmpdir", "tasks_total": 7, "rework_cycles": 1, "merge_anchor": "merge"}
