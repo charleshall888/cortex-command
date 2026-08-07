@@ -14,15 +14,11 @@ Ticket #452 asked whether lifecycle ceremony relief should come from the critica
 
 ## Requirements
 
-### Phase 1
+1. **An ADR records the decision and its evidence.** `cortex/adr/0035-ceremony-relief-is-not-taken-on-the-criticality-axis.md` states that ceremony relief will not be taken on the criticality axis, with the marginal-relief measurement as its evidence. Acceptance: that file exists and contains the strings `5.0%`, `2.6%`, `33.1%`, `24.7%`, and `9.4%`; **and** `bin/cortex-adr-citation-audit | python3 -c "import json,sys; assert not [f for f in json.load(sys.stdin)['findings'] if f['kind']=='duplicate_number']"` exits zero. The bare audit is **report-only and exits 0 on every path** (`justfile:470`), so "the audit passes" is not a check — the `duplicate_number` assertion is. It is also the only finding kind that *can* fire here: `unresolved` cannot (R1 creates the file) and `slug_mismatch` cannot (R2 cites the bare `ADR-NNNN` prefix, which carries no slug). **0035 is free as of 2026-08-06** — 0030 through 0034 are taken — but the number is a race against any concurrent lifecycle, which is why the assertion beats the note. **Phase**: Record the decision
 
-1. **An ADR records the decision and its evidence.** `cortex/adr/0035-ceremony-relief-is-not-taken-on-the-criticality-axis.md` states that ceremony relief will not be taken on the criticality axis, with the marginal-relief measurement as its evidence. Acceptance: that file exists and contains the strings `5.0%`, `2.6%`, `33.1%`, `24.7%`, and `9.4%`; `just adr-citation-audit` exits zero. **0035 is the next free number** — 0030 through 0034 are taken (`0030-mode-agnostic-interactive-dispatch.md` … `0034-fog-becomes-a-piece-and-dependents-declare-the-blocker.md`), and a duplicate ADR number is a named failure the citation audit exists to catch. **Phase**: Record the decision
-
-2. **The short-road constraint gains the ADR back-pointer it never had.** `cortex/requirements/project.md:40` ("The short road") currently carries no ADR reference and no ticket number. Acceptance: `grep -n 'ADR-00' cortex/requirements/project.md` returns a match on the "The short road" bullet naming R1's ADR. **Phase**: Record the decision
+2. **The short-road constraint gains the ADR back-pointer it never had.** `cortex/requirements/project.md:40` ("The short road") currently carries no ADR reference and no ticket number. Acceptance: `grep -c 'ADR-0035' cortex/requirements/project.md` returns ≥1, and the matching line also contains `The short road`. A bare `grep 'ADR-00'` is **not** a valid check — it already returns 8 matches on the unmodified file (`→ ADR-0001` at `:35`, `→ ADR-0003` at `:36`, among others), so it would pass without the edit. **Phase**: Record the decision
 
 3. **The ticket records the negative answer rather than closing silently.** Acceptance: `cortex/backlog/452-*.md` contains a section stating the decision and linking `cortex/lifecycle/criticality-pins-the-corpus-to-the/research.md`. **Phase**: Record the decision
-
-### Phase 2
 
 4. **`reconcile-clarify` accepts and persists an override reason.** `cortex-refine reconcile-clarify` gains optional `--criticality-reason` and `--tier-reason`; when supplied, the emitted `criticality_override` / `complexity_override` rows carry a `reason` key. Acceptance: run `cortex-refine reconcile-clarify` on a fixture lifecycle with `--criticality-reason "exposure: shared skill prose"`; the appended `criticality_override` row in `events.log` contains `"reason": "exposure: shared skill prose"`. Grounding: `cortex_command/refine.py:357-371` (emission site), `cortex_command/lifecycle_event.py:310-325` (the existing `--reason` contract to match). **Phase**: Persist the criticality reason
 
@@ -32,9 +28,15 @@ Ticket #452 asked whether lifecycle ceremony relief should come from the critica
 
 7. **The refine skill supplies the reason from Clarify's §5.3 output.** `skills/refine/SKILL.md` Step 4's `reconcile-clarify` invocation passes the criticality reasoning Clarify already states, tagged per R6. No new assessment work — the reasoning exists in-session and is currently discarded at the write. Acceptance: `Interactive/session-dependent: the reason is model-generated per lifecycle and cannot be pinned by a fixture.` Grounding: `skills/refine/references/clarify.md:34` (§5.3 already requires "brief reasoning"). **Phase**: Persist the criticality reason
 
-8. **The clause distribution is greppable without new tooling.** Acceptance: `grep -ho '"reason": "[a-z]*:' cortex/lifecycle/*/events.log | sort | uniq -c` returns per-clause counts. No measurement script, module, or CLI verb is added — `cortex/requirements/project.md:23` requires verifying with existing tools before building measurement tooling. **Phase**: Persist the criticality reason
+8. **The clause distribution is greppable without new tooling.** Acceptance: the following returns per-clause counts for `criticality_override` rows only, across the whole corpus:
 
-9. **Glossary entries exist for the terms this work turns on.** `cortex/requirements/glossary.md` gains entries for *tier*, *criticality*, and *short road*. Acceptance: each of the three appears as an entry in `cortex/requirements/glossary.md`. The glossary currently defines only *scene* and *cockpit*, so these concepts have no canonical definition anywhere. **Phase**: Persist the criticality reason
+    ```
+    find cortex/lifecycle -name events.log -exec cat {} + | python3 -c "import sys,json,collections; c=collections.Counter(); [c.update([r['reason'].split(':')[0]]) for l in sys.stdin for r in [json.loads(l)] if r.get('event')=='criticality_override' and r.get('reason')]; print(c)" 2>/dev/null
+    ```
+
+    A bare `grep … cortex/lifecycle/*/events.log` is **not** valid on two counts: the glob matches 188 of 353 `events.log` files, missing all of `archive/` — while the research's own reduction covered `archive/` — and `reason` already appears on **16 event types** (92 rows on `sentinel_absence`), with R4's `--tier-reason` writing the same key onto `complexity_override`, so an unscoped tally merges both axes. No measurement script, module, or CLI verb is added — `cortex/requirements/project.md:23` requires verifying with existing tools first. **Phase**: Persist the criticality reason
+
+9. **Glossary entries exist for the terms this work turns on.** `cortex/requirements/glossary.md` gains entries for *tier*, *criticality*, and *short road*. Acceptance: each of the three appears as an entry in `cortex/requirements/glossary.md`. The glossary currently defines only *scene* and *cockpit*, so these concepts have no canonical definition anywhere. Filed under Phase 1 because it is definitional documentation alongside the ADR, with no dependency on the reason-persistence work — Phase 2 is what the ADR defers a future rubric change behind, and unrelated docs there would blur what "Phase 2 shipped" licenses. **Phase**: Record the decision
 
 ## Non-Requirements
 
@@ -51,7 +53,7 @@ Ticket #452 asked whether lifecycle ceremony relief should come from the critica
 
 ## Edge Cases
 
-- **A reason is supplied but the ratchet suppresses the override** (the value already sits at or above the desired rank): no row is appended, so no reason is recorded. Expected: silent, matching today's suppression behavior — the reason describes an override, and none occurred.
+- **A ticket already carrying `criticality: high` is seeded high, so the ratchet never fires and there is no row to attach a reason to.** `reconcile-clarify` appends only when the desired rank exceeds the current one, so a lifecycle whose backlog frontmatter already says `high` produces no override row at all — and that `high` call stays unexplained, which is precisely the condition Phase 2 exists to close. **Measured bound: 10.5% (cortex-command, 4/38) and 16.7% (wild-light, 10/60) of modern-era (`lifecycle_start` ≥ 2026-07-01) final-`high` lifecycles are unreachable this way.** Expected: silent, matching today's suppression behavior. Accepted as a known blind spot rather than fixed here — closing it means recording a reason at `lifecycle_start`, a wider change than this ticket carries. A successor reading the clause distribution must subtract this population, not assume it absent.
 - **Both axes ratchet in one call**: each row carries its own reason; passing one flag records that one and leaves the other row without a `reason` key.
 - **A reason whose body contains a colon** (`exposure: consumed by overnight/: runner`): the tag is the prefix before the *first* colon; the remainder is recorded verbatim.
 - **Pre-existing rows without `reason`**: readers tolerate their absence permanently, consistent with the events-log compatibility rule that readers tolerate every prior shape forever.
