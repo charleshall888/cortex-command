@@ -93,7 +93,7 @@ Your `review.md` MUST follow this structure:
 ## Verdict
 
 ```json
-{"verdict": "APPROVED", "cycle": 1, "issues": [], "requirements_drift": "none"}
+{"verdict": "APPROVED", "cycle": {cycle number}, "issues": [], "requirements_drift": "none"}
 ```
 ```
 
