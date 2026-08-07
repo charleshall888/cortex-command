@@ -322,11 +322,14 @@ def test_statusline_ladder_matches_canonical(fixture_dir: Path) -> None:
     BARE "implement-rework" (no `:N` cycle suffix); that is acceptable.
     This exception does NOT extend to the `escalated:rework-cap:<n>` arm,
     which the ladder derives from a `review_verdict` row count in
-    events.log and emits with the cycle inline — none of this test's
-    fixtures land on that arm, so the comparison never exercises it here,
-    but the exclusion itself is not general. The R12a glue unit and R12c
-    hook end-to-end tests enforce cycle correctness from their respective
-    surfaces.
+    events.log and emits with the cycle inline. The
+    `review-changes-requested-cycle2` fixture DOES land on that arm, so
+    this comparison exercises it — and because the cycle rides inside the
+    phase string rather than the separate `cycle` field, the cycle is
+    compared there rather than excluded. Reverting the ladder's
+    `review_verdict` count fails this subtest on that fixture. The R12a
+    glue unit and R12c hook end-to-end tests enforce cycle correctness
+    from their respective surfaces.
     """
     canonical = detect_lifecycle_phase(fixture_dir)
     canonical_phase = canonical["phase"]
