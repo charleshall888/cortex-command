@@ -39,6 +39,8 @@ from typing import NamedTuple
 
 import markdown
 
+from cortex_command.backlog.build_epic_map import build_epic_map
+from cortex_command.backlog.generate_index import _parse_frontmatter, _parse_inline_str_list
 from cortex_command.common import normalize_status, resolve_lifecycle_phase, slugify
 
 
@@ -1210,7 +1212,10 @@ def parse_backlog_titles(backlog_dir: Path) -> BacklogTitles:
 
 #: Tags Python-Markdown emits for the extensions this dashboard enables, plus
 #: the inline formatting a ticket body legitimately uses. Anything outside this
-#: set is dropped from the rendered output.
+#: set is dropped from the rendered output — except an attribute-free
+#: unrecognized start tag (e.g. a bare `<slug>` placeholder), which is
+#: literalized as escaped text instead of vanishing; see
+#: _TicketBodySanitizer.handle_starttag.
 _TICKET_ALLOWED_TAGS = frozenset(
     """a blockquote br code del em h1 h2 h3 h4 h5 h6 hr li ol p pre strong
        sub sup table tbody td th thead tr ul""".split()
@@ -1320,26 +1325,23 @@ def _sanitize_ticket_html(html: str) -> str:
 TICKET_BODY_MAX_CHARS = 64_000
 
 
-def load_ticket_body(item_id: str, backlog_dir: Path) -> dict | None:
-    """Return ``{id, title, html, truncated}`` for one backlog ticket, or None.
+def _resolve_ticket_path(item_id: str, backlog_dir: Path) -> Path | None:
+    """Resolve a ticket id to its markdown file under ``backlog_dir``, or None.
 
-    Reads the markdown body of ``cortex/backlog/<item_id>-*.md`` — falling back
-    to ``archive/`` so a blocker pointing at a closed ticket is still readable —
-    strips the YAML frontmatter, and renders what remains to HTML.
-
-    This is a per-request read rather than part of the 30s snapshot on purpose.
-    Bodies are large relative to everything else the poller carries: this repo's
-    corpus is ~1.5 MB across 416 files, so folding them into the polled fragment
-    would morph hundreds of KB into the DOM twice a minute to display prose the
-    operator has usually not asked for. Only an opened row pays.
+    Shared file-resolution step behind every per-ticket loader in this
+    module: id validation, padding-agnostic matching, the ``archive/``
+    fallback, and the containment re-check, extracted from ``load_ticket_body``
+    so ``load_ticket_page`` and ``load_ticket_artifact`` reuse one resolver
+    instead of a second implementation.
 
     Args:
         item_id: The ticket's numeric id, as a string, straight off the URL.
         backlog_dir: Path to the ``cortex/backlog/`` directory.
 
     Returns:
-        A dict with the rendered body, or ``None`` when *item_id* is not a bare
-        integer, no file matches it, or the file cannot be read.
+        The resolved, existing :class:`Path`, or ``None`` when *item_id* is
+        not a bare integer, no file matches it, or the resolved file does not
+        sit under *backlog_dir*.
     """
     # The id arrives from the URL path, so it is validated as a bare integer
     # before it reaches any filesystem call. This rejects "..", absolute paths,
@@ -1348,7 +1350,6 @@ def load_ticket_body(item_id: str, backlog_dir: Path) -> dict | None:
         return None
 
     wanted = int(item_id)
-    normalized = str(wanted)
 
     # Filenames are zero-padded (``007-…``, ``042-…``) while every id the board
     # carries is unpadded — ``parse_backlog_titles`` keys them by
@@ -1379,8 +1380,41 @@ def load_ticket_body(item_id: str, backlog_dir: Path) -> dict | None:
         root = backlog_dir.resolve()
         if not resolved.is_relative_to(root):
             return None
-        text = resolved.read_text(encoding="utf-8")
+        return resolved
     except (OSError, ValueError):
+        return None
+
+
+def load_ticket_body(item_id: str, backlog_dir: Path) -> dict | None:
+    """Return ``{id, title, html, truncated}`` for one backlog ticket, or None.
+
+    Reads the markdown body of ``cortex/backlog/<item_id>-*.md`` — falling back
+    to ``archive/`` so a blocker pointing at a closed ticket is still readable —
+    strips the YAML frontmatter, and renders what remains to HTML.
+
+    This is a per-request read rather than part of the 30s snapshot on purpose.
+    Bodies are large relative to everything else the poller carries: this repo's
+    corpus is ~1.5 MB across 416 files, so folding them into the polled fragment
+    would morph hundreds of KB into the DOM twice a minute to display prose the
+    operator has usually not asked for. Only an opened row pays.
+
+    Args:
+        item_id: The ticket's numeric id, as a string, straight off the URL.
+        backlog_dir: Path to the ``cortex/backlog/`` directory.
+
+    Returns:
+        A dict with the rendered body, or ``None`` when *item_id* is not a bare
+        integer, no file matches it, or the file cannot be read.
+    """
+    resolved = _resolve_ticket_path(item_id, backlog_dir)
+    if resolved is None:
+        return None
+
+    normalized = str(int(item_id))
+
+    try:
+        text = resolved.read_text(encoding="utf-8")
+    except OSError:
         return None
 
     title = None
@@ -1410,6 +1444,276 @@ def load_ticket_body(item_id: str, backlog_dir: Path) -> dict | None:
     )
 
     return {"id": normalized, "title": title, "html": html, "truncated": truncated}
+
+
+#: Ceiling on a rendered artifact, in characters of source markdown. Measured
+#: over the real ``cortex/lifecycle/`` corpus (n=694 artifacts): median
+#: 19,166, p99 51,068, max 63,707. ``TICKET_BODY_MAX_CHARS`` (64,000, above)
+#: is the wrong cap to reuse here — the corpus max already sits at 99.5% of
+#: it, leaving essentially no headroom before a legitimate large spec or plan
+#: trips truncation. Truncation is reported to the reader, not silent.
+ARTIFACT_MAX_CHARS = 128_000
+
+#: The four artifact kinds a lifecycle feature directory may hold, in the
+#: order the page renders them.
+_ARTIFACT_KINDS = ("research", "spec", "plan", "review")
+
+
+def _opt_field(fm: dict[str, str], key: str) -> str | None:
+    """Return a stripped, unquoted frontmatter value, or None if absent/null.
+
+    Mirrors ``generate_index._opt``'s semantics without importing a second
+    module-private symbol from that module — only ``_parse_frontmatter`` and
+    ``_parse_inline_str_list`` are imported here.
+    """
+    v = fm.get(key, "").strip().strip("\"'")
+    return v if v and v.lower() != "null" else None
+
+
+def resolve_artifact_dir(fm: dict, lifecycle_dir: Path) -> Path | None:
+    """Resolve a ticket's lifecycle artifact directory via a two-key join.
+
+    Tries the ``spec:`` frontmatter value's parent directory first — resolved
+    under the repo root (``lifecycle_dir``'s grandparent, since
+    ``lifecycle_dir`` is ``<root>/cortex/lifecycle``) — then falls back to a
+    ``lifecycle_slug`` probe of ``lifecycle_dir/<slug>`` and
+    ``lifecycle_dir/archive/<slug>``. A ``spec:`` value pointing at a
+    directory that no longer exists (5 tickets in the corpus) falls through
+    to the probe rather than short-circuiting to None.
+
+    Each candidate must be a real directory *and* pass a ``resolve()`` +
+    containment check under ``lifecycle_dir`` before it is returned, so a
+    ``spec:`` value cannot be used as a traversal vector.
+
+    Args:
+        fm: Frontmatter dict with optional ``spec`` and ``lifecycle_slug``
+            keys (as produced by ``generate_index._parse_frontmatter``).
+        lifecycle_dir: Path to the ``cortex/lifecycle/`` directory.
+
+    Returns:
+        The resolved artifact directory, or ``None`` when neither key
+        resolves (150 of 448 tickets in the corpus at spec time).
+    """
+    try:
+        lifecycle_root = lifecycle_dir.resolve()
+    except OSError:
+        return None
+    repo_root = lifecycle_dir.parent.parent
+
+    def _valid(candidate: Path) -> Path | None:
+        try:
+            if not candidate.is_dir():
+                return None
+            resolved = candidate.resolve()
+            if not resolved.is_relative_to(lifecycle_root):
+                return None
+            return resolved
+        except (OSError, ValueError):
+            return None
+
+    spec = _opt_field(fm, "spec")
+    if spec:
+        found = _valid((repo_root / Path(spec)).parent)
+        if found is not None:
+            return found
+
+    slug = _opt_field(fm, "lifecycle_slug")
+    if slug:
+        for probe in (lifecycle_dir / slug, lifecycle_dir / "archive" / slug):
+            found = _valid(probe)
+            if found is not None:
+                return found
+
+    return None
+
+
+def _epic_children_corpus(backlog_dir: Path) -> list[dict]:
+    """Build the light corpus ``build_epic_map`` needs for one page's children.
+
+    Scans ``backlog_dir`` for files matching ``[0-9]*-*.md`` (non-recursive,
+    so ``archive/`` is out of scope by construction, matching
+    ``parse_backlog_counts``/``BacklogTitles``) and parses each into
+    ``{id, title, status, type, parent, spec}`` — enough for
+    ``build_epic_map``'s grouping and nothing else. Deliberately skips
+    ``collect_items``' per-item live phase detection, which this page has no
+    use for and which is the expensive part of a full-corpus scan.
+    """
+    corpus: list[dict] = []
+    try:
+        files = sorted(backlog_dir.glob("[0-9]*-*.md"))
+    except OSError:
+        return corpus
+
+    for filepath in files:
+        try:
+            text = filepath.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        fm = _parse_frontmatter(text)
+        if not fm:
+            continue
+        id_match = re.match(r"^(\d+)-", filepath.name)
+        if not id_match:
+            continue
+        corpus.append({
+            "id": int(id_match.group(1)),
+            "title": _opt_field(fm, "title"),
+            "status": _opt_field(fm, "status"),
+            "type": _opt_field(fm, "type"),
+            "parent": _opt_field(fm, "parent"),
+            "spec": _opt_field(fm, "spec"),
+        })
+    return corpus
+
+
+def _resolve_epic_children(item_id: str, backlog_dir: Path) -> list[dict]:
+    """Return ``{id, spec, status, title}`` children of the epic *item_id*.
+
+    Builds the light corpus and passes it to ``build_epic_map`` — the same
+    canonical grouping and ``normalize_parent`` handling the triage board
+    uses (``ticket_feed.py``'s ``_epic_map_for_board``) — with
+    ``strict_schema=False`` for the same reason: this corpus is not one this
+    process controls, and a schema-version bump elsewhere must not turn into
+    a 500 here. Children are already sorted by id ascending.
+    """
+    corpus = _epic_children_corpus(backlog_dir)
+    envelope = build_epic_map(corpus, strict_schema=False)
+    epic_key = str(int(item_id))
+    return envelope["epics"].get(epic_key, {}).get("children", [])
+
+
+def load_ticket_page(item_id: str, backlog_dir: Path, lifecycle_dir: Path) -> dict | None:
+    """Return the full read side of a ticket's ``/tickets/{id}`` page, or None.
+
+    Composes ``load_ticket_body`` (for the body — no second frontmatter-strip
+    or render, requirement 8) with a raw frontmatter read for the badge-strip
+    fields, the two-key artifact join, and epic-child resolution.
+
+    Args:
+        item_id: The ticket's numeric id, as a string, straight off the URL.
+        backlog_dir: Path to the ``cortex/backlog/`` directory.
+        lifecycle_dir: Path to the ``cortex/lifecycle/`` directory.
+
+    Returns:
+        ``None`` when *item_id* is not a bare integer or no ticket resolves
+        under *backlog_dir* — the route turns this into a 404. Otherwise a
+        dict with:
+
+        - ``id``, ``title`` -- from ``load_ticket_body``.
+        - ``status``, ``priority``, ``type``, ``parent``, ``areas`` -- the
+          frontmatter fields the badge strip needs. ``parent`` is ``None``
+          when absent; ``areas`` is a list, empty when absent.
+        - ``body`` (dict): ``load_ticket_body``'s return value verbatim.
+        - ``artifacts`` (list[str]): artifact kinds present in the resolved
+          artifact directory, in ``("research", "spec", "plan", "review")``
+          order; absent kinds are omitted, never rendered as empty shells.
+        - ``children`` (list[dict] | None): epic children when
+          ``type == "epic"``, else ``None`` — a non-epic page pays nothing
+          for the corpus scan.
+    """
+    resolved = _resolve_ticket_path(item_id, backlog_dir)
+    if resolved is None:
+        return None
+
+    try:
+        text = resolved.read_text(encoding="utf-8")
+    except OSError:
+        return None
+
+    body = load_ticket_body(item_id, backlog_dir)
+    if body is None:
+        return None
+
+    # _parse_frontmatter / _parse_inline_str_list are generate_index's
+    # module-private but canonical parser this package already reads backlog
+    # frontmatter with (see generate_index.collect_items) — reused here
+    # rather than a third hand-rolled scanner in this module.
+    fm = _parse_frontmatter(text)
+
+    ticket_type = _opt_field(fm, "type") or "feature"
+
+    artifact_dir = resolve_artifact_dir(fm, lifecycle_dir)
+    artifacts = [
+        kind for kind in _ARTIFACT_KINDS
+        if artifact_dir is not None and (artifact_dir / f"{kind}.md").is_file()
+    ]
+
+    children: list[dict] | None = None
+    if ticket_type == "epic":
+        children = _resolve_epic_children(item_id, backlog_dir)
+
+    return {
+        "id": body["id"],
+        "title": body["title"],
+        "status": _opt_field(fm, "status") or "open",
+        "priority": _opt_field(fm, "priority") or "medium",
+        "type": ticket_type,
+        "parent": _opt_field(fm, "parent"),
+        "areas": _parse_inline_str_list(fm.get("areas", "[]")),
+        "body": body,
+        "artifacts": artifacts,
+        "children": children,
+    }
+
+
+def load_ticket_artifact(
+    item_id: str, kind: str, backlog_dir: Path, lifecycle_dir: Path
+) -> dict | None:
+    """Return ``{"kind", "html", "truncated"}`` for one lifecycle artifact, or None.
+
+    Fetched when an artifact panel is expanded, one request per panel —
+    nothing here is cached, and the artifact directory is re-resolved through
+    ``resolve_artifact_dir`` on every call (``spec.md`` non-requirement: the
+    page is computed per request throughout).
+
+    Args:
+        item_id: The ticket's numeric id, as a string, straight off the URL.
+        kind: One of ``"research"``, ``"spec"``, ``"plan"``, ``"review"``.
+        backlog_dir: Path to the ``cortex/backlog/`` directory.
+        lifecycle_dir: Path to the ``cortex/lifecycle/`` directory.
+
+    Returns:
+        ``None`` when *kind* is not one of the four kinds, *item_id* does not
+        resolve to a ticket, the ticket has no resolvable artifact directory,
+        or that directory has no file for *kind*. Otherwise the rendered
+        artifact.
+    """
+    # Validated against the closed set before any filesystem call — the same
+    # posture as the id check in _resolve_ticket_path.
+    if kind not in _ARTIFACT_KINDS:
+        return None
+
+    resolved = _resolve_ticket_path(item_id, backlog_dir)
+    if resolved is None:
+        return None
+
+    try:
+        text = resolved.read_text(encoding="utf-8")
+    except OSError:
+        return None
+
+    fm = _parse_frontmatter(text)
+    artifact_dir = resolve_artifact_dir(fm, lifecycle_dir)
+    if artifact_dir is None:
+        return None
+
+    artifact_path = artifact_dir / f"{kind}.md"
+    try:
+        raw = artifact_path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+
+    raw = raw.strip()
+    truncated = len(raw) > ARTIFACT_MAX_CHARS
+    if truncated:
+        raw = raw[:ARTIFACT_MAX_CHARS]
+
+    # Same render + sanitize path Task 1 repaired — see load_ticket_body.
+    html = _sanitize_ticket_html(
+        markdown.markdown(raw, extensions=["fenced_code", "tables"])
+    )
+
+    return {"kind": kind, "html": html, "truncated": truncated}
 
 
 def parse_pipeline_dispatch(lifecycle_dir: Path) -> dict[str, dict]:

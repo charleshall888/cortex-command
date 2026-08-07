@@ -23,12 +23,15 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from cortex_command.dashboard.data import (
+    ARTIFACT_MAX_CHARS,
     TICKET_BODY_MAX_CHARS,
     _exit_report_sort_key,
     _lane_label_width_pct,
     _read_all_jsonl,
     build_swim_lane_data,
+    load_ticket_artifact,
     load_ticket_body,
+    load_ticket_page,
     parse_recent_session_events,
     compute_slow_flags,
     get_last_activity_ts,
@@ -43,6 +46,7 @@ from cortex_command.dashboard.data import (
     parse_pipeline_dispatch,
     parse_pipeline_state,
     parse_round_timestamps,
+    resolve_artifact_dir,
     tail_jsonl,
 )
 
@@ -1756,6 +1760,229 @@ class TestLoadTicketBody(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             self.assertIsNone(load_ticket_body("99999", self._corpus(tmp)))
             self.assertIsNone(load_ticket_body("42", Path(tmp) / "nope"))
+
+
+class TestTicketPageDataLayer(unittest.TestCase):
+    """load_ticket_page / load_ticket_artifact / resolve_artifact_dir — the
+    whole read side of the ``/tickets/{id}`` page (#413 Task 5)."""
+
+    def _write_ticket(
+        self, backlog_dir: Path, item_id: int, extra_fm: str = "", body: str = "Body.\n"
+    ) -> None:
+        backlog_dir.mkdir(parents=True, exist_ok=True)
+        (backlog_dir / f"{item_id}-ticket.md").write_text(
+            f"---\ntitle: Ticket {item_id}\nstatus: backlog\npriority: medium\n"
+            f"type: feature\n{extra_fm}---\n\n{body}",
+            encoding="utf-8",
+        )
+
+    def _write_artifacts(self, artifact_dir: Path, *kinds: str) -> None:
+        artifact_dir.mkdir(parents=True, exist_ok=True)
+        for kind in kinds:
+            (artifact_dir / f"{kind}.md").write_text(f"# {kind.title()}\n\nContent.\n", encoding="utf-8")
+
+    def test_spec_key_found_path(self):
+        """A `spec:` value whose parent directory exists resolves directly."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            backlog_dir = root / "cortex" / "backlog"
+            lifecycle_dir = root / "cortex" / "lifecycle"
+            self._write_ticket(
+                backlog_dir, 100,
+                extra_fm="spec: cortex/lifecycle/direct-slug/spec.md\n",
+            )
+            self._write_artifacts(
+                lifecycle_dir / "direct-slug", "research", "spec", "plan", "review"
+            )
+
+            page = load_ticket_page("100", backlog_dir, lifecycle_dir)
+
+            self.assertIsNotNone(page)
+            self.assertEqual(page["artifacts"], ["research", "spec", "plan", "review"])
+
+    def test_lifecycle_slug_fallback_path(self):
+        """No `spec:` key: falls back to lifecycle_dir/<lifecycle_slug>."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            backlog_dir = root / "cortex" / "backlog"
+            lifecycle_dir = root / "cortex" / "lifecycle"
+            self._write_ticket(
+                backlog_dir, 101, extra_fm="lifecycle_slug: plain-slug\n"
+            )
+            self._write_artifacts(lifecycle_dir / "plain-slug", "spec")
+
+            page = load_ticket_page("101", backlog_dir, lifecycle_dir)
+
+            self.assertIsNotNone(page)
+            self.assertEqual(page["artifacts"], ["spec"])
+
+    def test_lifecycle_slug_archive_fallback_path(self):
+        """No `spec:` key and the plain slug dir is absent: probes archive/<slug>."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            backlog_dir = root / "cortex" / "backlog"
+            lifecycle_dir = root / "cortex" / "lifecycle"
+            self._write_ticket(
+                backlog_dir, 102, extra_fm="lifecycle_slug: archived-slug\n"
+            )
+            self._write_artifacts(lifecycle_dir / "archive" / "archived-slug", "research")
+
+            page = load_ticket_page("102", backlog_dir, lifecycle_dir)
+
+            self.assertIsNotNone(page)
+            self.assertEqual(page["artifacts"], ["research"])
+
+    def test_neither_key_resolves_to_no_artifacts(self):
+        """A ticket with neither `spec:` nor `lifecycle_slug` gets an empty artifact list."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            backlog_dir = root / "cortex" / "backlog"
+            lifecycle_dir = root / "cortex" / "lifecycle"
+            self._write_ticket(backlog_dir, 103)
+
+            page = load_ticket_page("103", backlog_dir, lifecycle_dir)
+
+            self.assertIsNotNone(page)
+            self.assertEqual(page["artifacts"], [])
+
+    def test_stale_spec_falls_through_to_lifecycle_slug_probe(self):
+        """A `spec:` pointing at a vanished directory falls through, not short-circuits."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            backlog_dir = root / "cortex" / "backlog"
+            lifecycle_dir = root / "cortex" / "lifecycle"
+            self._write_ticket(
+                backlog_dir, 104,
+                extra_fm=(
+                    "spec: cortex/lifecycle/vanished-slug/spec.md\n"
+                    "lifecycle_slug: real-slug\n"
+                ),
+            )
+            self._write_artifacts(lifecycle_dir / "real-slug", "plan")
+            # vanished-slug is never created on disk.
+
+            page = load_ticket_page("104", backlog_dir, lifecycle_dir)
+
+            self.assertIsNotNone(page)
+            self.assertEqual(page["artifacts"], ["plan"])
+
+    def test_directory_holding_only_some_kinds_omits_the_rest(self):
+        """Absent kinds are omitted, never rendered as empty shells."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            backlog_dir = root / "cortex" / "backlog"
+            lifecycle_dir = root / "cortex" / "lifecycle"
+            self._write_ticket(
+                backlog_dir, 105, extra_fm="lifecycle_slug: partial-slug\n"
+            )
+            self._write_artifacts(lifecycle_dir / "partial-slug", "research", "plan")
+
+            page = load_ticket_page("105", backlog_dir, lifecycle_dir)
+
+            self.assertEqual(page["artifacts"], ["research", "plan"])
+
+    def test_load_ticket_artifact_rejects_unknown_kind_before_filesystem_call(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            backlog_dir = root / "cortex" / "backlog"
+            lifecycle_dir = root / "cortex" / "lifecycle"
+            self._write_ticket(
+                backlog_dir, 106, extra_fm="lifecycle_slug: some-slug\n"
+            )
+            self._write_artifacts(lifecycle_dir / "some-slug", "spec")
+
+            self.assertIsNone(
+                load_ticket_artifact("106", "notes", backlog_dir, lifecycle_dir)
+            )
+
+    def test_load_ticket_artifact_renders_the_present_kind(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            backlog_dir = root / "cortex" / "backlog"
+            lifecycle_dir = root / "cortex" / "lifecycle"
+            self._write_ticket(
+                backlog_dir, 107, extra_fm="lifecycle_slug: render-slug\n"
+            )
+            self._write_artifacts(lifecycle_dir / "render-slug", "spec")
+
+            got = load_ticket_artifact("107", "spec", backlog_dir, lifecycle_dir)
+
+            self.assertIsNotNone(got)
+            self.assertEqual(got["kind"], "spec")
+            self.assertIn("<h1>Spec</h1>", got["html"])
+            self.assertFalse(got["truncated"])
+
+    def test_oversized_artifact_is_truncated_and_flagged(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            backlog_dir = root / "cortex" / "backlog"
+            lifecycle_dir = root / "cortex" / "lifecycle"
+            self._write_ticket(
+                backlog_dir, 108, extra_fm="lifecycle_slug: huge-slug\n"
+            )
+            artifact_dir = lifecycle_dir / "huge-slug"
+            artifact_dir.mkdir(parents=True)
+            (artifact_dir / "plan.md").write_text(
+                "x" * (ARTIFACT_MAX_CHARS + 500), encoding="utf-8"
+            )
+
+            got = load_ticket_artifact("108", "plan", backlog_dir, lifecycle_dir)
+
+            self.assertTrue(got["truncated"])
+            self.assertLess(len(got["html"]), ARTIFACT_MAX_CHARS + 200)
+
+    def test_non_integer_id_returns_none(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            backlog_dir = root / "cortex" / "backlog"
+            lifecycle_dir = root / "cortex" / "lifecycle"
+            backlog_dir.mkdir(parents=True)
+
+            self.assertIsNone(load_ticket_page("42a", backlog_dir, lifecycle_dir))
+            self.assertIsNone(
+                load_ticket_artifact("42a", "spec", backlog_dir, lifecycle_dir)
+            )
+
+    def test_epic_children_resolved_for_an_epic(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            backlog_dir = root / "cortex" / "backlog"
+            lifecycle_dir = root / "cortex" / "lifecycle"
+            (backlog_dir / "109-epic.md").parent.mkdir(parents=True, exist_ok=True)
+            (backlog_dir / "109-epic.md").write_text(
+                "---\ntitle: The epic\nstatus: backlog\npriority: medium\n"
+                "type: epic\n---\n\nBody.\n",
+                encoding="utf-8",
+            )
+            (backlog_dir / "110-child.md").write_text(
+                "---\ntitle: Child one\nstatus: backlog\npriority: medium\n"
+                "type: feature\nparent: 109\n---\n\nBody.\n",
+                encoding="utf-8",
+            )
+            (backlog_dir / "111-child.md").write_text(
+                "---\ntitle: Child two\nstatus: backlog\npriority: medium\n"
+                "type: feature\nparent: 109\n---\n\nBody.\n",
+                encoding="utf-8",
+            )
+
+            page = load_ticket_page("109", backlog_dir, lifecycle_dir)
+
+            self.assertIsNotNone(page)
+            self.assertEqual(page["type"], "epic")
+            self.assertEqual([c["id"] for c in page["children"]], [110, 111])
+
+    def test_epic_children_absent_for_a_non_epic(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            backlog_dir = root / "cortex" / "backlog"
+            lifecycle_dir = root / "cortex" / "lifecycle"
+            self._write_ticket(backlog_dir, 112)
+
+            page = load_ticket_page("112", backlog_dir, lifecycle_dir)
+
+            self.assertIsNotNone(page)
+            self.assertEqual(page["type"], "feature")
+            self.assertIsNone(page["children"])
 
 
 if __name__ == "__main__":
