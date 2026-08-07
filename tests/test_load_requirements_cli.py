@@ -19,7 +19,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-from cortex_command.lifecycle.load_requirements_cli import resolve
+from cortex_command.lifecycle.load_requirements_cli import (
+    COVERAGE_MARKER_PREFIX,
+    resolve,
+)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -369,8 +372,15 @@ def test_no_stderr_string_claims_project_md_only(tmp_path):
 # ---------------------------------------------------------------------------
 
 def _is_path_line(line):
-    return line == line.strip() and (
-        line.endswith(" (skipped: file absent)") or " " not in line
+    # The COVERAGE marker is space-free and equals its own strip, so it would
+    # otherwise satisfy both clauses below and pass as a path. Rejecting it
+    # explicitly is what lets these assertions catch a marker *duplicated* onto
+    # stdout while stderr still carries it — a move is caught by the stderr
+    # assertions, but a duplication is invisible without this line (#333/#472).
+    return (
+        not line.startswith(COVERAGE_MARKER_PREFIX)
+        and line == line.strip()
+        and (line.endswith(" (skipped: file absent)") or " " not in line)
     )
 
 

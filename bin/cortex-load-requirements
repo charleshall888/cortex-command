@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # cortex-load-requirements — dual-channel wrapper for cortex_command.lifecycle.load_requirements_cli.
-# Prints the tag-relevant requirements file list (paths only) for the repo; read-only, emits no event.
+# Prints the area-relevant requirements file list (paths only) on stdout for the repo, plus one
+# COVERAGE:<state> marker line on stderr; read-only, emits no event.
 #
 # Branch order:
 #   (a) CORTEX_COMMAND_FORCE_SOURCE=1 → exec working-tree module directly via python3 -m
