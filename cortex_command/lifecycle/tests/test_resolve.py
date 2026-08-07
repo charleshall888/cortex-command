@@ -16,6 +16,9 @@ import pytest
 from cortex_command.lifecycle.protocol import PROTOCOL_VERSION
 from cortex_command.lifecycle.resolve import (
     KNOWN_STATES,
+    _PHASE_NEXT,
+    _ROUTE_NEXT,
+    _next_for_route,
     main,
     resolve_invocation,
 )
@@ -270,6 +273,73 @@ def test_remap_threads_phase_override(
     assert r["state"] == "resume"
     assert r["route"] == "review"
     assert r["phase_override"] is True
+
+
+# --- rework-cap discriminant (454) -----------------------------------------
+
+def _capped_feature(root: Path, slug: str) -> Path:
+    """A lifecycle whose ladder resolves to ``escalated:rework-cap:2``.
+
+    The cycle comes from the ``review_verdict`` row count in events.log; the
+    verdict comes from review.md. Two rows + CHANGES_REQUESTED = the cap.
+    """
+    d = _feature_dir(root, slug)
+    (d / "events.log").write_text(
+        "".join(
+            json.dumps(
+                {"event": "review_verdict", "feature": slug,
+                 "verdict": "CHANGES_REQUESTED", "cycle": n}
+            )
+            + "\n"
+            for n in (1, 2)
+        ),
+        encoding="utf-8",
+    )
+    (d / "review.md").write_text(
+        '{"verdict": "CHANGES_REQUESTED", "cycle": 2}\n', encoding="utf-8"
+    )
+    return d
+
+
+def test_rework_cap_resume_serves_the_phase_keyed_directive(root: Path) -> None:
+    """A capped resume routes on the bare ``escalated`` state but takes its
+    ``next`` from the phase-keyed table, so the operator is not told a reviewer
+    rejected work no reviewer rejected."""
+    _capped_feature(root, "capped")
+    r = resolve_invocation("capped", project_root=root)
+    assert r["state"] == "resume"
+    assert r["route"] == "escalated"  # the discriminant never reaches route
+    assert r["phase"] == "escalated:rework-cap:2"
+    assert "rework cap" in r["next"]
+    assert "REJECTED" not in r["next"]
+
+    # A real reviewer rejection still gets the route-keyed rejection directive.
+    d = _feature_dir(root, "rejected")
+    (d / "review.md").write_text('{"verdict": "REJECTED", "cycle": 1}\n', encoding="utf-8")
+    rj = resolve_invocation("rejected", project_root=root)
+    assert rj["route"] == "escalated"
+    assert rj["phase"] == "escalated"
+    assert "REJECTED" in rj["next"]
+    assert rj["next"] != r["next"]
+
+
+def test_rework_cap_directive_yields_to_an_explicit_phase_override() -> None:
+    """The cap discriminant is only trusted when the caller did not override the
+    phase: an override decouples ``route`` from the detected phase, so the
+    directive must be keyed on the route alone (the bare rejection)."""
+    overridden = _next_for_route("escalated", True, "escalated:rework-cap:2")
+    assert _ROUTE_NEXT["escalated"] in overridden
+    assert "REJECTED" in overridden
+    assert _PHASE_NEXT["escalated:rework-cap"] not in overridden
+    # The same inputs without the override take the phase-keyed directive.
+    assert (
+        _next_for_route("escalated", False, "escalated:rework-cap:2")
+        == _PHASE_NEXT["escalated:rework-cap"]
+    )
+    # A bare escalated phase is a rejection at any cycle, and an absent phase
+    # (the pre-discriminant call shape) keeps the route-keyed directive.
+    assert _next_for_route("escalated", False, "escalated") == _ROUTE_NEXT["escalated"]
+    assert _next_for_route("escalated", False) == _ROUTE_NEXT["escalated"]
 
 
 # --- contract guards -------------------------------------------------------

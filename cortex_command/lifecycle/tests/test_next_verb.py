@@ -141,6 +141,44 @@ def test_review_verdict_guard_holds_is_none_read_side(tmp_path: Path) -> None:
     assert "verdict" in edges["review.approved"]["reads"]
 
 
+# --- terminal directive, discriminated (454) --------------------------------
+
+
+def test_rework_cap_escalation_serves_a_non_rejection_directive(tmp_path: Path) -> None:
+    """454: the served ``escalated`` envelope narrates the rework cap when the
+    resolver's phase carries the discriminant, and the reviewer rejection when it
+    does not — while the served state stays the bare table state either way.
+
+    This is the ``next`` verb's operator-facing narration surface: without the
+    phase argument reaching ``_terminal_directive`` a capped feature is served
+    the route-keyed REJECTED directive, claiming a rejection that never happened.
+    """
+    events_log = tmp_path / "events.log"
+    events_log.write_text(
+        json.dumps({"event": "phase_transition", "from": "review", "to": "escalated"}) + "\n",
+        encoding="utf-8",
+    )
+    capped = build_served_envelope(
+        state="escalated", events_log=events_log, cycle=2, phase="escalated:rework-cap:2"
+    )
+    rejected = build_served_envelope(state="escalated", events_log=events_log, cycle=2)
+
+    cap_directive = capped["fragment_ref"]["directive"]
+    rej_directive = rejected["fragment_ref"]["directive"]
+    assert "rework cap" in cap_directive
+    assert "REJECTED" not in cap_directive
+    assert "cortex-lifecycle-event log" in cap_directive  # the sanctioned override
+    assert cap_directive != rej_directive
+    assert "REJECTED" in rej_directive
+
+    # The wire contract does not widen: the discriminant refines the directive
+    # only — served state, legacy projection, and terminality stay bare.
+    assert capped["state"] == "escalated"
+    assert capped["legacy_display_phase"] == "escalated"
+    assert capped["evidence_trace"][0]["terminal"] is True
+    assert capped["fragment_ref"]["state"] == "escalated"
+
+
 # --- protocol-skew ----------------------------------------------------------
 
 

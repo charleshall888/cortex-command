@@ -1203,6 +1203,30 @@ def test_interrupted_hint_paused() -> None:
     assert hint("review-paused", "my-feature") == ""
 
 
+def test_interrupted_hint_rework_cap() -> None:
+    """454: the rework-cap escalation gets its own hint, not the REJECTED one.
+
+    ``escalated:rework-cap:<cycle>`` means the cap was reached without a
+    reviewer rejection, so the SessionStart hint must name the cap and the
+    cycle it was reached at, point at review.md, and name the sanctioned
+    override — never narrate a rejection that did not happen. Without the
+    dedicated branch the cap string misses the ``== "escalated"`` arm
+    entirely and the operator gets no hint at all on a terminal state that
+    exists precisely to ask for direction.
+    """
+    hint = scan_lifecycle_mod._interrupted_hint
+    cap = hint("escalated:rework-cap:2", "my-feature")
+    rejected = hint("escalated", "my-feature")
+    assert cap != rejected
+    assert "REJECTED" not in cap
+    assert "rework cap" in cap
+    assert "review cycle 2" in cap
+    assert "cortex/lifecycle/my-feature/review.md" in cap
+    assert "cortex-lifecycle-event log" in cap
+    # The bare rejection arm is untouched and still names the verdict.
+    assert "REJECTED" in rejected
+
+
 # ---------------------------------------------------------------------------
 # T11: backlog index.json loader (single read per hook invocation)
 # ---------------------------------------------------------------------------

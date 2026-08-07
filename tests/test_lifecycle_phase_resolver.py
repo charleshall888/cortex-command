@@ -211,6 +211,40 @@ def test_resolver_terminal_events_vs_nonterminal_backlog_reports(tmp_path: Path)
     assert _is_terminal_mismatch(encoded, "in_progress") is True
 
 
+def test_resolver_rework_cap_phase_is_terminal_to_the_detector(tmp_path: Path) -> None:
+    """454: the discriminated `escalated:rework-cap:<n>` phase is held to the same
+    terminal rule as the bare `escalated` it sits beside.
+
+    The cap form is a terminal escalation — the feature is stopped waiting on
+    operator direction — so a backlog row still reading `in_progress` is a real
+    divergence. Without the detector's `startswith("escalated:")` clause the
+    discriminant reads as non-terminal and the mismatch is silently unreported.
+    """
+    fd = tmp_path / "feat"
+    # Cycle comes from the events.log review_verdict row count; review.md
+    # supplies the verdict. Two rows + CHANGES_REQUESTED = the rework cap.
+    _write_events(
+        fd,
+        [
+            {"ts": "2026-01-01T00:00:01Z", "event": "review_verdict", "verdict": "CHANGES_REQUESTED", "cycle": 1},
+            {"ts": "2026-01-01T00:00:02Z", "event": "review_verdict", "verdict": "CHANGES_REQUESTED", "cycle": 2},
+        ],
+    )
+    (fd / "review.md").write_text('{"verdict": "CHANGES_REQUESTED", "cycle": 2}\n', encoding="utf-8")
+
+    resolved = resolve_lifecycle_phase(fd)
+    encoded = _encode_phase(
+        resolved["phase"], int(resolved["checked"]), int(resolved["total"]), int(resolved["cycle"])
+    )
+    assert encoded == "escalated:rework-cap:2"
+    assert _is_terminal_mismatch(encoded, "in_progress") is True
+    # Same rule as the undiscriminated form: the discriminant changes the
+    # narration, never the terminality.
+    assert _is_terminal_mismatch("escalated", "in_progress") is True
+    # Symmetric control: a terminal backlog agrees, so no mismatch is claimed.
+    assert _is_terminal_mismatch(encoded, "complete") is False
+
+
 # ---------------------------------------------------------------------------
 # Drift tripwire — the resolver's machine-state set stays pinned to the table
 # ---------------------------------------------------------------------------
