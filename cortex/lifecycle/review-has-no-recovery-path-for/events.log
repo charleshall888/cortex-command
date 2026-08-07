@@ -11,3 +11,4 @@
 {"ts": "2026-08-07T21:28:01Z", "event": "review_dispatched", "feature": "review-has-no-recovery-path-for", "cycle": 1, "mode": "full", "baseline_sha": "71a719757513fcf143760917bdb5c54ab9eb7ce5"}
 {"ts": "2026-08-07T21:33:53Z", "event": "review_verdict", "feature": "review-has-no-recovery-path-for", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
 {"ts": "2026-08-07T21:33:53Z", "event": "phase_transition", "feature": "review-has-no-recovery-path-for", "from": "review", "to": "complete"}
+{"ts": "2026-08-07T21:50:22Z", "event": "feature_complete", "feature": "review-has-no-recovery-path-for", "tasks_total": 3, "rework_cycles": 0, "merge_anchor": "merge"}
