@@ -125,9 +125,23 @@ def test_fixture_negative_annotated_path_fails_lint(tmp_path: Path) -> None:
 
 
 def test_live_project_md_conditional_loading_paths_resolve() -> None:
-    """Every ``## Conditional Loading`` path in the real project.md must exist."""
-    diagnostics = _find_unresolvable_conditional_paths(
-        PROJECT_MD.read_text(encoding="utf-8"),
-        REPO_ROOT,
+    """Every ``## Conditional Loading`` path in the real project.md must exist.
+
+    The row-count assertion is not decoration. ``_find_unresolvable_conditional_paths``
+    returns ``[]`` both when every row resolves and when there are no rows at all, so
+    asserting only on the diagnostics list goes silently green if the
+    ``## Conditional Loading`` heading is renamed or its rows are deleted — every area
+    doc goes dark, which is a worse failure than the single unresolvable row (#454)
+    this guard was built to catch. Pinning a floor keeps the empty case red.
+    """
+    text = PROJECT_MD.read_text(encoding="utf-8")
+
+    rows = _parse_conditional_loading(text)
+    assert rows, (
+        "no ## Conditional Loading rows parsed from the real project.md — the "
+        "section was renamed, emptied, or its arrow separator changed. Every area "
+        "doc would silently stop loading."
     )
+
+    diagnostics = _find_unresolvable_conditional_paths(text, REPO_ROOT)
     assert diagnostics == [], "\n".join(diagnostics)

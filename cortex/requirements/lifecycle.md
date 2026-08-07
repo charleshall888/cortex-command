@@ -34,7 +34,7 @@ Owned by `cortex_command/lifecycle/transition_table.py`.
 
 ### Served verb class
 
-- `next` (read-only server), `advance` (the only sanctioned writer of a state move), and `describe` (table renderer) are a bounded, wheel-owned exception to ADR-0019's dumb-arg-actor rule: they read config, resolve identity, evaluate guards, and serve instructions from the closed transition table. `enter`, the entry composition verb, stays a dumb arg-actor with every discriminant caller-passed.
+- `next` (read-only server), `advance` (the only sanctioned writer of a state move), and `describe` (table renderer) are a bounded, wheel-owned exception to ADR-0019's dumb-arg-actor rule (ADR-0019 is **proposed**, so not binding): they read config, resolve identity, evaluate guards, and serve instructions from the closed transition table. `enter`, the entry composition verb, stays a dumb arg-actor with every discriminant caller-passed.
 - Every verb rejects an unsafe slug **before** any filesystem access.
 - `next` never writes: no log append, no backlog write-back. It serves the canonical slug in the commands it pre-binds, never the caller's raw token.
 - Every machine verb resolves a feature's `events.log` through the one pinned, worktree-aware resolver; two callers share a flock domain iff they resolve the same physical log, which is what makes the single lock domain structural.
@@ -96,7 +96,7 @@ A lifecycle's identity is the backlog item's canonical slug; numbers, uuid prefi
 - **Phase boundaries are session boundaries**: the default workflow splits sessions at lifecycle phase boundaries — a fresh session after refine (spec approval) runs plan+implement, and a plan that consumed heavy context hands implement to another fresh session; phase-keyed `resume` routing is the re-entry path. Rationale: session carry is superlinear in turns (measured 37–61% of orchestrator spend); a fresh session re-caches for ~50k tokens (~0.7% of one long session's cache-read).
 - Adding an operator-facing discriminant should be a display-phase suffix, not a new route value (`project.md` carries the normative phase/route rule).
 - Events are the authoritative phase source wherever machine rows exist (artifact derivation is the legacy fallback), which forfeits the cheap prose-side revert — so the standing exit is the roll-forward procedure at `docs/rollforward-exit.md`, not a revert. → ADR-0025 (**proposed**, so not binding).
-- The served-verb class does not reopen ADR-0019 for other helper verbs. A served envelope may name a skill to invoke only when that skill's invocation condition is machine-readable state.
+- The served-verb class does not reopen ADR-0019 (**proposed**, so not binding) for other helper verbs. A served envelope may name a skill to invoke only when that skill's invocation condition is machine-readable state.
 - **Consumer `EnterWorktree` authorization surface**: `cortex init` writes **no** clause to consumer `CLAUDE.md`; the lifecycle implement phase authorizes `EnterWorktree` via the user's live picker selection at implement time. → ADR-0008 (accepted): picker-selection authorizes `EnterWorktree` (supersedes ADR-0006).
 - The review phase's output-shape prescription is a protocol-governed served surface: `cortex-lifecycle-review-brief` emits it for both the interactive prose and the overnight pipeline, so a brief-shape change the prose depends on moves `PROTOCOL_VERSION` and `skills/build/references/protocol-expectation.txt` in the same commit. → ADR-0035 (accepted).
 - **Override-reason clause vocabulary**: the closed set an override `reason` may lead with (`reversibility`, `exposure`, `consequence`, `other`) is owned by `cortex_command/refine.py:_ALLOWED_REASON_CLAUSES` and restated for authors in `skills/refine/SKILL.md` Step 4 and `cortex/adr/0036-*.md`; adding a tag edits all three, and the wheel-side change must land before the skill prose that emits it (a consumer on an older wheel fails the reconcile loudly). Both writers of an override row — `lifecycle_event.py` (typed verbs) and `refine.py` (`reconcile-clarify`) — emit the same field order `from, to, reason, gate`, with `reason` omitted rather than nulled. → ADR-0036 (accepted).
@@ -106,7 +106,7 @@ A lifecycle's identity is the backlog item's canonical slug; numbers, uuid prefi
 
 - **Wheel-internal**: `cortex_command/common.py` (reducers, phase resolution, defaults), `cortex_command/lifecycle_event.py` (the locked append writer), `lifecycle_config.py`, `backlog/resolve_item.py`.
 - **Plugin-shipped**: `skills/build/` and `skills/refine/` — the prose loops consuming the served envelopes — and their reference files, including the kept-pause data.
-- **Backlog backend**: the spec-approval write-back is backend-gated; see `cortex/requirements/backlog.md` and ADR-0016.
+- **Backlog backend**: the spec-approval write-back is backend-gated; see `cortex/requirements/backlog.md` (the primary source) and ADR-0016 (**proposed**, so not binding).
 - **Consumers of this area's state**: `cortex/requirements/observability.md` (statusline, dashboard) and `cortex/requirements/pipeline.md`, whose transition-decision writers route through this area's table rather than deciding independently.
 - **External**: `git` and `gh` for the complete phase's PR open/merge hand-off.
 
