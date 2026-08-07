@@ -25,12 +25,15 @@ States:
                     byte-for-byte untouched (no ``updated:`` bump).
   no-index        — ``{root}/cortex/lifecycle/{feature}/index.md`` does not
                     exist; nothing was written.
-  error           — an unexpected exception (unresolvable project root, I/O
-                    failure, a non-UTF-8 index.md decode failure) surfaced as a
-                    state; ``message`` carries the diagnostic. ``register_artifact``
-                    self-handles the common cases and ``main`` wraps the call in a
-                    final never-crash net (matching the sibling verbs), so the CLI
-                    always emits JSON and exits 0.
+  error           — either a routine precondition failure (the artifact file
+                    named by ``--artifact`` does not exist or is zero-byte —
+                    nothing is written) or an unexpected exception (unresolvable
+                    project root, I/O failure, a non-UTF-8 index.md decode
+                    failure) surfaced as a state; ``message`` carries the
+                    diagnostic. ``register_artifact`` self-handles the common
+                    cases and ``main`` wraps the call in a final never-crash net
+                    (matching the sibling verbs), so the CLI always emits JSON
+                    and exits 0.
 
 The write root resolves via ``_resolve_user_project_root_from_cwd`` (the
 cwd-only resolver, matching this verb's Complete-phase-sibling call site) so
@@ -88,10 +91,12 @@ def register_artifact(
     """Append *artifact* to *feature*'s ``index.md`` ``artifacts:`` array.
 
     Skip-if-present: an artifact already in the array is a byte-level no-op.
-    Common failure modes (unresolvable root, I/O error) return an ``"error"``
-    state; an unexpected error (e.g. a non-UTF-8 ``index.md`` that raises
-    ``UnicodeDecodeError``) propagates to ``main``'s never-crash net (see the
-    module docstring).
+    A missing or zero-byte artifact file (``{artifact}.md`` next to
+    ``index.md``) also returns an ``"error"`` state and writes nothing.
+    Common failure modes (unresolvable root, I/O error) likewise return an
+    ``"error"`` state; an unexpected error (e.g. a non-UTF-8 ``index.md`` that
+    raises ``UnicodeDecodeError``) propagates to ``main``'s never-crash net
+    (see the module docstring).
     """
     try:
         if index_path is not None:
@@ -106,6 +111,18 @@ def register_artifact(
             return {"state": "no-index", "feature": feature, "artifact": artifact}
 
         rel = f"cortex/lifecycle/{feature}/index.md"
+
+        artifact_path = path.parent / f"{artifact}.md"
+        try:
+            artifact_missing_or_empty = artifact_path.stat().st_size == 0
+        except FileNotFoundError:
+            artifact_missing_or_empty = True
+        if artifact_missing_or_empty:
+            return {
+                "state": "error",
+                "message": f"artifact file does not exist or is empty: {artifact_path}",
+            }
+
         match = _ARTIFACTS_RE.search(text)
         if match is None:
             # No artifacts: line to append to — treat as a malformed index.
