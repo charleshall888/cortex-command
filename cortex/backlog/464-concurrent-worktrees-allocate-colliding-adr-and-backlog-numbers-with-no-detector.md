@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 54f7683e-a79a-4e22-b3d6-44d52f0d0deb
 title: Concurrent worktrees allocate colliding ADR and backlog numbers with no detector
-status: refined
+status: in_progress
 priority: low
 type: bug
 created: 2026-08-07
@@ -11,6 +11,7 @@ complexity: moderate
 criticality: low
 spec: cortex/lifecycle/concurrent-worktrees-allocate-colliding-adr-and/spec.md
 areas: ['docs', 'backlog']
+lifecycle_phase: research
 ---
 ## Why
 
@@ -31,13 +32,20 @@ differences that make the existing remedy inapplicable:
 
 1. **ADRs have no allocator at all.** There is no `cortex_command` code that assigns an
    ADR number. The number is chosen by the model writing the spec, from whatever it
-   observed in `cortex/adr/` at read time. `cortex-adr-citation-audit`
-   (`cortex_command/adr_citation_audit.py`, backlog #304) is report-only and audits
-   *citations*, not numbering — it does not detect duplicate ADR numbers.
-2. **#027's `O_CREAT | O_EXCL` remedy cannot reach across worktrees.** It makes the
-   filename claim atomic *within one directory*. Overnight worktrees each hold their own
-   checkout of `cortex/adr/`, so two agents claiming `0080` in two different directories
-   both succeed. Same-directory atomicity is structurally blind to the sibling worktree.
+   observed in `cortex/adr/` at read time. `detect_duplicates`
+   (`cortex_command/adr_citation_audit.py:128-142`, backlog #304) already emits a
+   `duplicate_number` finding for exactly this case — the gap is not detection, it's that
+   the audit is report-only and manually invoked, so nothing runs it before or during the
+   merge that lands the collision.
+2. **The race is decided at plan time in the home repo, not across worktrees.** Concurrent
+   plan-gen sub-agents (dispatched in Step 3b, results handled in Step 3c —
+   `cortex_command/overnight/prompts/orchestrator-round.md:474`) run in parallel against
+   the one shared home-repo `cortex/adr/`, each globbing it to pick the next number before
+   any per-feature worktree exists; the runner does not commit `plan.md` into each
+   feature's own integration worktree until after the round returns
+   (`orchestrator-round.md:483`). Both sub-agents read the same unchanged directory and
+   both bake `0080` into their plan text — a TOCTOU race on one shared glob at plan time,
+   not two directories each blind to the other.
 
 Backlog IDs are better off but not solved. `_get_next_id()`
 (`cortex_command/backlog/create_item.py:83`) is at least a tool-owned allocator, and every
@@ -46,8 +54,9 @@ the allocation itself is still `max(glob(...)) + 1` over a per-worktree director
 concurrent overnight features filing tickets will both land on the same NNN. The UUID
 means the collision is recoverable rather than silent data loss; it does not prevent it.
 
-So: **no existing solution for either.** ADRs have neither an allocator nor a detector;
-backlog has an allocator with the same race plus a UUID safety net.
+So: **no existing prevention for either.** ADRs have no allocator and no *enforced*
+detector — `detect_duplicates` exists but nothing arms it automatically; backlog has an
+allocator with the same race plus a UUID safety net.
 
 ## Role
 
@@ -79,6 +88,28 @@ time. That convention should inform, not substitute for, the fix.
 - A fix must not assume a shared filesystem lock is visible across worktrees.
 - Renumbering after the fact is not free — it rewrites every citation, so allocation
   should aim to be right the first time rather than repairable.
+
+## Rejected approaches
+
+Five candidate fixes were considered and rejected. Recorded here with the measurement
+that killed each, so a future session does not re-derive and re-reject them.
+
+- spec-time **claim-by-creating** (write a stub ADR file at spec time to reserve the
+  number): inverts gate-then-emit — the untracked stub itself blocks the merge that
+  later lands the real, filled-in ADR under the same path.
+- **post-merge allocation** with citation rewrite (let numbers collide, then renumber and
+  rewrite citations after the merge): the rewriting scanner covers `.md`/`.py` only, so
+  it half-applies and leaves thousands of `.gd`/`.json` citations pointing at the wrong
+  number.
+- arming the existing detector as-is: across two repos it currently produces 631
+  findings, 0 actioned, 5 of them sanctioned false positives — arming it unmodified would
+  fail merges on noise, not on the real defect class.
+- **slug-primary** or date/hash identity (drop the sequential NNN as the primary key):
+  permanently mixes the corpus's identity scheme, and the date-keyed variant does not
+  even prevent same-run collisions — two sub-agents in the same round still glob the same
+  date.
+- a blocking gate (fail the merge on any duplicate number): contradicts #304's ratified
+  report-only posture for ADR tooling.
 
 ## Touch-points
 
