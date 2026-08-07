@@ -46,6 +46,9 @@ def _encode_phase(phase: str, checked: int, total: int, cycle: int) -> str:
     * ``phase == "implement"`` and ``total == 0`` -> ``"implement:0/0"``
     * ``phase == "implement-rework"``             -> ``"implement-rework:<cycle>"``
     * any other phase                             -> bare ``phase`` string
+      (the discriminated ``"escalated:rework-cap:<cycle>"`` form is already
+      produced upstream by the phase resolvers, so it takes this pass-through
+      arm unchanged)
 
     Parameters
     ----------
@@ -106,6 +109,8 @@ def _interrupted_hint(encoded_phase: str, active_feature: str) -> str:
     * ``"implement:<checked>/<total>"`` with ``checked == 0`` or
       ``checked >= total`` -> empty (not-started or fully-done).
     * ``"implement-rework:<cycle>"`` -> "Interrupted: review cycle ..." hint.
+    * ``"escalated:rework-cap:<cycle>"`` -> "Action needed: rework cap
+      reached ..." hint (no ``REJECTED``; names the sanctioned override).
     * ``"escalated"`` -> "Action needed: review returned REJECTED ..." hint.
     * any other phase -> empty.
 
@@ -155,6 +160,15 @@ def _interrupted_hint(encoded_phase: str, active_feature: str) -> str:
             f"Re-enter implementation to address feedback. "
             f"Resume with /cortex-core:build {active_feature} (or /cortex-core:refine if it has no spec yet)."
         )
+    if encoded_phase.startswith("escalated:rework-cap:"):
+        cycle = encoded_phase[len("escalated:rework-cap:") :]
+        return (
+            f"Action needed: rework cap reached at review cycle {cycle}. See "
+            f"cortex/lifecycle/{active_feature}/review.md for analysis. "
+            f"Recorded way to authorize another pass: "
+            f"cortex-lifecycle-event log --event <name> --feature {active_feature} "
+            f"(the sanctioned out-of-band hand-append)."
+        )
     if encoded_phase == "escalated":
         return (
             f"Action needed: review returned REJECTED. See "
@@ -195,6 +209,7 @@ def _is_terminal_mismatch(
     events_terminal = (
         events_phase in ("complete", "escalated")
         or events_phase.startswith("complete:")
+        or events_phase.startswith("escalated:")
     )
     if backlog_status is None:
         return False
