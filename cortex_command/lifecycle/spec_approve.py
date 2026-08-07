@@ -121,7 +121,8 @@ KNOWN_STATES = (
 )
 
 # The reducer's documented defaults for an absent (but not corruption-unknowable)
-# axis — the same defaults implement_transition applies (criticality-matrix.md:24).
+# axis — the same defaults implement_transition applies (see
+# ``common.py:_read_tier_inner`` / ``_read_criticality_inner``).
 _DEFAULT_CRITICALITY = "medium"
 _DEFAULT_TIER = "simple"
 _LONG_ROAD_CRITICALITIES = frozenset({"high", "critical"})

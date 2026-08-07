@@ -251,8 +251,9 @@ gate_enabled = read_synthesizer_gate(Path("cortex/lifecycle.config.md"))
 # silently drops one OUT of the review-inclusive `critical_subset` into
 # single-agent.
 #
-# Fallback = single-agent, NEVER defer. criticality-matrix.md:26's "run the
-# critical-review / orchestrator-review gate" is the INTERACTIVE-context rule;
+# Fallback = single-agent, NEVER defer. The "run the critical-review /
+# orchestrator-review gate" rule (project.md, "Critical-review gates at spec
+# only") is the INTERACTIVE-context rule;
 # the overnight analog of "reviewed" is the morning-report surface (the warning
 # line emitted below), and "never defer" is the overriding constraint per the
 # failure-handling philosophy ("surface failures in the morning report; keep

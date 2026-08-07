@@ -189,8 +189,9 @@ def test_transition_corrupted_state_routes_to_review_with_complex_tier(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A torn line (skipped) leaving tier/criticality unknowable makes the
-    reduction corrupted; the cautious criticality-matrix.md:26 default routes to
-    review and stamps tier=complex."""
+    reduction corrupted; the cautious "corrupted reductions always take the long
+    road" default (project.md, "The short road") routes to review and stamps
+    tier=complex."""
     feature_dir = _scaffold(tmp_path, monkeypatch)
     # A JSON-unparseable line (skipped) with no valid lifecycle_start → both axes
     # missing AND skipped_lines non-empty → reduction.corrupted is True.

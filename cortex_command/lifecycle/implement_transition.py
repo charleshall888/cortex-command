@@ -27,8 +27,9 @@ Two independently-invocable modes (the caller picks via ``--mode`` / the args):
 ``"tier"``) and its computed ``.corrupted`` property:
 
   * ``corrupted`` (a torn/out-of-vocab line left tier OR criticality unknowable) →
-    route ``review``, emit ``tier: complex`` — the cautious criticality-matrix.md:26
-    default (treat as review-requiring rather than trusting a skip rule on unknowable
+    route ``review``, emit ``tier: complex`` — the cautious default stated at
+    ``cortex/requirements/project.md`` "The short road" ("Corrupted reductions always
+    take the long road"); treat as review-requiring rather than trusting a skip rule on unknowable
     input).
   * otherwise, apply the reducer's documented defaults for an absent axis yourself
     (``criticality=medium`` / ``tier=moderate``), then route ``review`` when
@@ -91,7 +92,7 @@ KNOWN_STATES = (
 _REWORK_STATE = "implement-rework"
 
 # The reducer's documented defaults for an absent (but not corruption-unknowable)
-# axis — the same defaults criticality-matrix.md:24 tells the prose to apply.
+# axis — see ``common.py:_read_tier_inner`` / ``_read_criticality_inner``.
 _DEFAULT_CRITICALITY = "medium"
 # The two-tier era defaulted to "simple", which meant what "moderate" now
 # means. Defaulting to "simple" would silently hand unlabelled features the
@@ -158,8 +159,9 @@ def _resolve_route(events_log: Path) -> tuple[str, str]:
     ``reduce_lifecycle_state`` reducer (never raw events.log parsing) and applies
     the routing rule:
 
-      * ``corrupted`` → ``("review", "complex")`` — the cautious
-        criticality-matrix.md:26 default when tier/criticality are unknowable.
+      * ``corrupted`` → ``("review", "complex")`` — the cautious "corrupted
+        reductions always take the long road" default (``project.md``, "The short
+        road") when tier/criticality are unknowable.
       * otherwise, default an absent axis (criticality=medium / tier=moderate) then
         route ``review`` when criticality ∈ {high, critical} OR tier == complex,
         else ``complete``; the emitted tier is the resolved tier.
