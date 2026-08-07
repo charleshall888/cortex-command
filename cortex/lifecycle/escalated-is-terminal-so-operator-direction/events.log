@@ -6,3 +6,11 @@
 {"ts": "2026-08-07T02:28:10Z", "event": "spec_approved", "feature": "escalated-is-terminal-so-operator-direction", "decision": "approved"}
 {"ts": "2026-08-07T11:09:04Z", "event": "plan_approved", "feature": "escalated-is-terminal-so-operator-direction", "dispatch_choice": "trunk"}
 {"ts": "2026-08-07T11:09:04Z", "event": "phase_transition", "feature": "escalated-is-terminal-so-operator-direction", "from": "plan", "to": "implement"}
+{"ts": "2026-08-07T11:26:02Z", "event": "batch_dispatch", "feature": "escalated-is-terminal-so-operator-direction", "batch": 0, "tasks": [1, 2, 3, 4, 5, 6, 7]}
+{"ts": "2026-08-07T12:20:34Z", "event": "phase_transition", "feature": "escalated-is-terminal-so-operator-direction", "from": "implement", "to": "review", "tier": "moderate"}
+{"ts": "2026-08-07T12:37:27Z", "event": "review_verdict", "feature": "escalated-is-terminal-so-operator-direction", "verdict": "CHANGES_REQUESTED", "cycle": 1, "requirements_drift": "detected"}
+{"ts": "2026-08-07T12:37:27Z", "event": "phase_transition", "feature": "escalated-is-terminal-so-operator-direction", "from": "review", "to": "implement-rework"}
+{"ts": "2026-08-07T13:00:49Z", "event": "phase_transition", "feature": "escalated-is-terminal-so-operator-direction", "from": "implement-rework", "to": "review", "tier": "moderate"}
+{"ts": "2026-08-07T13:16:44Z", "event": "review_verdict", "feature": "escalated-is-terminal-so-operator-direction", "verdict": "APPROVED", "cycle": 2, "requirements_drift": "none"}
+{"ts": "2026-08-07T13:16:44Z", "event": "phase_transition", "feature": "escalated-is-terminal-so-operator-direction", "from": "review", "to": "complete"}
+{"ts": "2026-08-07T13:16:59Z", "event": "feature_complete", "feature": "escalated-is-terminal-so-operator-direction", "tasks_total": 8, "rework_cycles": 1, "merge_anchor": "merge"}
