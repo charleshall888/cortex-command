@@ -1,0 +1,5 @@
+{"ts": "2026-08-07T01:22:32Z", "schema_version": 1, "event": "lifecycle_start", "feature": "criticality-pins-the-corpus-to-the", "tier": "simple", "criticality": "medium", "entry_point": "refine", "seeded": ["criticality", "tier"]}
+schema_version: 3, ts: 2026-08-06T00:00:00Z, event: clarify_critic, feature: criticality-pins-the-corpus-to-the, parent_epic_loaded: false, findings_count: 10, dispositions: {apply: 5, dismiss: 3, ask: 2}, applied_fixes_count: 5, dismissals_count: 3, status: "ok"
+{"ts": "2026-08-07T01:54:09Z", "event": "complexity_override", "feature": "criticality-pins-the-corpus-to-the", "from": "simple", "to": "complex", "gate": "clarify_reconcile", "from_seeded": true}
+{"ts": "2026-08-07T01:54:09Z", "event": "criticality_override", "feature": "criticality-pins-the-corpus-to-the", "from": "medium", "to": "high", "gate": "clarify_reconcile", "from_seeded": true}
+{"ts": "2026-08-07T02:47:36Z", "event": "spec_approved", "feature": "criticality-pins-the-corpus-to-the", "decision": "approved"}

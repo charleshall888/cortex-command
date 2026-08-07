@@ -2,13 +2,16 @@
 schema_version: "1"
 uuid: 3edd8d05-bce5-4b4e-9a8b-b82599c9962d
 title: Criticality pins the corpus to the long road, so tier relief is capped
-status: backlog
+status: refined
 priority: medium
 type: feature
 created: 2026-08-04
-updated: 2026-08-04
+updated: 2026-08-06
 tags: ['lifecycle', 'tiering', 'ceremony', 'criticality']
-areas: ['lifecycle']
+areas: ['lifecycle', 'skills']
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/criticality-pins-the-corpus-to-the/spec.md
 ---
 ## Why
 
