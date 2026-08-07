@@ -3,3 +3,5 @@
 {"ts": "2026-08-07T01:43:38Z", "event": "criticality_override", "feature": "add-tickets-id-pages-rendering-ticket", "from": "medium", "to": "high", "reason": "Research established the ticket must modify _TicketBodySanitizer, the XSS boundary on #412's shipped reader, not just add new routes"}
 {"ts": "2026-08-07T01:43:46Z", "event": "complexity_override", "feature": "add-tickets-id-pages-rendering-ticket", "from": "simple", "to": "moderate", "gate": "clarify_reconcile", "from_seeded": true}
 {"ts": "2026-08-07T01:59:56Z", "event": "spec_approved", "feature": "add-tickets-id-pages-rendering-ticket", "decision": "approved"}
+{"ts": "2026-08-07T02:22:54Z", "event": "plan_approved", "feature": "add-tickets-id-pages-rendering-ticket", "dispatch_choice": "wait"}
+{"ts": "2026-08-07T02:22:54Z", "event": "feature_paused", "feature": "add-tickets-id-pages-rendering-ticket", "slug": "plan-approval", "kind": "relayed-consent"}
