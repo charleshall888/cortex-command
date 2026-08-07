@@ -164,6 +164,7 @@ class TestWriterRouting:
             uuid=None,
             backlog_id=374,
             tags=[],
+            areas=[],
             created="2026-07-13",
             updated="2026-07-13",
             stem=None,
