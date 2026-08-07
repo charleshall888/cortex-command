@@ -25,6 +25,7 @@ def phase_label(encoded_phase: str | None) -> str:
     * ``"implement:<x>/<y>"``         -> ``"Implement (<x>/<y> tasks done)"``
     * ``"implement-rework:<n>"``      -> ``"Implement — rework (review cycle <n>)"``
     * ``"review"``                    -> ``"Review"``
+    * ``"escalated:rework-cap:<n>"``  -> ``"Escalated — rework cap reached (review cycle <n>)"``
     * ``"escalated"``                 -> ``"Escalated (REJECTED — needs user direction)"``
     * ``"complete:awaiting-merge"``   -> ``"Complete (awaiting merge)"``
     * ``"complete"``                  -> ``"Complete"``
@@ -70,6 +71,9 @@ def phase_label(encoded_phase: str | None) -> str:
         return f"Implement — rework (review cycle {cycle})"
     if encoded_phase == "review":
         return "Review"
+    if encoded_phase.startswith("escalated:rework-cap:"):
+        cycle = encoded_phase[len("escalated:rework-cap:") :]
+        return f"Escalated — rework cap reached (review cycle {cycle})"
     if encoded_phase == "escalated":
         return "Escalated (REJECTED — needs user direction)"
     if encoded_phase == "complete:awaiting-merge":
