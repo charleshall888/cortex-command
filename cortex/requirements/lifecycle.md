@@ -89,6 +89,7 @@ A lifecycle's identity is the backlog item's canonical slug; numbers, uuid prefi
 - **Auditability**: a feature's history is reconstructible from `events.log` alone, without a database.
 - **Token economy**: the served envelope replaces prose branching rather than supplementing it. This doc loads only on a tag match, so it must not restate what `project.md` and `glossary.md` load unconditionally. Measured on 2026-08-07, when seven lifecycle-only items relocated here behind pointer stubs: `project.md` 29,918 B → 26,387 B, a 3,531 B net shrink every non-lifecycle feature stops paying (29,731 B at the start of the relocation — the routing-row fix had already removed 187 B).
 - **Release-cadence coupling, conceded**: the transition matrix is wheel-owned while the loop body is plugin-shipped, so a gate change needs a wheel release and a skewed pair can disagree. Mitigated by the protocol handshake, not designed away.
+- **The area-doc load, measured**: a lifecycle-tagged feature loads `project.md` + `glossary.md` + this doc = 45,487 B, against 31,094 B before this doc existed — **+14,393 B**, well above the 33,400–36,400 B projected when the work was specced. Non-lifecycle features pay −3,531 B. The shrink's beneficiary is the non-lifecycle majority; this area pays for its own coverage.
 
 ## Architectural Constraints
 
