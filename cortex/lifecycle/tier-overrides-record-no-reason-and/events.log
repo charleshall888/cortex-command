@@ -5,3 +5,4 @@
 {"ts": "2026-08-07T19:13:38Z", "event": "spec_approved", "feature": "tier-overrides-record-no-reason-and", "decision": "approved"}
 {"ts": "2026-08-07T19:20:12Z", "event": "plan_approved", "feature": "tier-overrides-record-no-reason-and", "dispatch_choice": "worktree-interactive"}
 {"ts": "2026-08-07T19:20:12Z", "event": "phase_transition", "feature": "tier-overrides-record-no-reason-and", "from": "plan", "to": "implement"}
+{"ts": "2026-08-07T20:02:02Z", "event": "review_dispatched", "feature": "tier-overrides-record-no-reason-and", "cycle": 1, "mode": "full", "baseline_sha": "ab29161be2706e20c2606f1da9ae80cbbdf74f39"}
