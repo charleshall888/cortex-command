@@ -1092,23 +1092,64 @@ def lifecycle_state_corrupted(
 # requires_review
 # ---------------------------------------------------------------------------
 
-def requires_review(tier: str, criticality: str) -> bool:
-    """Determine whether a feature requires post-merge review.
+#: What an absent axis defaults to when a reduction did not carry it.
+#:
+#: Reconciled here by #463: three modules declared these privately and
+#: ``spec_approve`` defaulted the tier to ``"simple"`` where the other two used
+#: ``"moderate"``. The divergence was benign only because the predicate tests
+#: ``tier == "complex"`` — both spellings fall the same side of that — and would
+#: have become a live routing split the moment a band or a rank comparison
+#: landed. ``"moderate"`` wins: it is the default documented to operators
+#: (``skills/build/SKILL.md``), and it is what the two-tier era's ``"simple"``
+#: came to mean after the rename, so an unlabelled feature keeps the road it
+#: has been taking rather than quietly dropping to the lighter one.
+DEFAULT_TIER = "moderate"
+DEFAULT_CRITICALITY = "medium"
+
+#: The criticalities that force the long road on their own.
+LONG_ROAD_CRITICALITIES = frozenset({"high", "critical"})
+
+
+def requires_review(
+    tier: str,
+    criticality: str,
+    *,
+    corrupted: bool = False,
+) -> bool:
+    """The short-road predicate — the one place it is written.
+
+    This is the phase fork named in ``cortex/requirements/project.md``: one
+    predicate governs spec exit (Plan vs. straight to implement), implement exit
+    (Review vs. complete), the served-loop escalation, and the morning-review
+    gate before a feature is machine-marked complete. Before #463 those five
+    sites each carried their own copy, none importing this one; the copies had
+    already drifted on their absent-axis defaults, and no test could see a
+    change that missed one.
 
     Encodes the gating matrix:
-        - complex tier at any criticality -> review
-        - any tier at high or critical criticality -> review
-        - otherwise -> skip
+        - complex tier at any criticality -> long road
+        - any tier at high or critical criticality -> long road
+        - a corrupted reduction -> long road, whatever the axes say
+        - otherwise -> short road
 
     Args:
         tier: Feature tier ("simple", "moderate", or "complex").
         criticality: Feature criticality (e.g. "low", "medium",
             "high", "critical").
+        corrupted: The reduction's ``corrupted`` signal — tier/criticality are
+            unknowable. Part of the rule rather than a caller's concern:
+            project.md states corrupted reductions always take the long road,
+            and a caller that forgot the clause would route a feature whose
+            gate input cannot be trusted down the cheap path.
 
     Returns:
-        True if the feature should go through review.
+        True if the feature takes the long road (Plan / Review).
     """
-    return tier == "complex" or criticality in ("high", "critical")
+    return (
+        corrupted
+        or tier == "complex"
+        or criticality in LONG_ROAD_CRITICALITIES
+    )
 
 
 # ---------------------------------------------------------------------------

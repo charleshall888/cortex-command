@@ -104,8 +104,11 @@ from cortex_command.backlog.resolve_item import (
 )
 from cortex_command.backlog.update_item import update_item
 from cortex_command.common import (
+    DEFAULT_CRITICALITY,
+    DEFAULT_TIER,
     _resolve_user_project_root_from_cwd,
     reduce_lifecycle_state,
+    requires_review,
 )
 from cortex_command.lifecycle.protocol import PROTOCOL_VERSION
 from cortex_command.lifecycle_event import log_event
@@ -120,12 +123,9 @@ KNOWN_STATES = (
     "error",
 )
 
-# The reducer's documented defaults for an absent (but not corruption-unknowable)
-# axis — the same defaults implement_transition applies (see
-# ``common.py:_read_tier_inner`` / ``_read_criticality_inner``).
-_DEFAULT_CRITICALITY = "medium"
-_DEFAULT_TIER = "simple"
-_LONG_ROAD_CRITICALITIES = frozenset({"high", "critical"})
+# Defaults and the predicate come from ``common`` (#463) — this module's private
+# copies had drifted, defaulting the tier to "simple" where the other gate sites
+# used "moderate".
 
 
 def _resolve_spec_route(events_log: Path) -> tuple[str, str]:
@@ -138,10 +138,10 @@ def _resolve_spec_route(events_log: Path) -> tuple[str, str]:
       * ``corrupted`` → ``("plan", "complex")`` — the cautious default when
         tier/criticality are unknowable (mirror of the implement rule's
         default-to-review).
-      * otherwise, default an absent axis (criticality=medium / tier=simple)
-        then route ``plan`` when criticality ∈ {high, critical} OR
-        tier == complex, else ``implement`` (the short road); the returned
-        tier is the resolved tier.
+      * otherwise, default an absent axis (``common.DEFAULT_CRITICALITY`` /
+        ``common.DEFAULT_TIER``) then route on ``common.requires_review`` —
+        ``plan`` on the long road, else ``implement`` (the short road); the
+        returned tier is the resolved tier.
 
     Returns ``(route, tier)`` where ``route`` ∈ {"plan", "implement"} and
     ``tier`` ∈ {"simple", "moderate", "complex"}.
@@ -149,9 +149,9 @@ def _resolve_spec_route(events_log: Path) -> tuple[str, str]:
     reduction = reduce_lifecycle_state(events_log)
     if reduction.corrupted:
         return "plan", "complex"
-    criticality = reduction.state.get("criticality", _DEFAULT_CRITICALITY)
-    tier = reduction.state.get("tier", _DEFAULT_TIER)
-    if criticality in _LONG_ROAD_CRITICALITIES or tier == "complex":
+    criticality = reduction.state.get("criticality", DEFAULT_CRITICALITY)
+    tier = reduction.state.get("tier", DEFAULT_TIER)
+    if requires_review(tier, criticality):
         return "plan", tier
     return "implement", tier
 

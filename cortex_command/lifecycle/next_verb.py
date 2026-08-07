@@ -82,7 +82,11 @@ from pathlib import Path
 from typing import List, Optional
 
 from cortex_command.backlog import _telemetry
-from cortex_command.common import LifecycleStateReduction, reduce_lifecycle_state
+from cortex_command.common import (
+    LifecycleStateReduction,
+    reduce_lifecycle_state,
+    requires_review,
+)
 from cortex_command.lifecycle_config import resolve_backlog_backend
 from cortex_command.lifecycle import resolve as resolve_mod
 from cortex_command.lifecycle import transition_table as tt
@@ -250,7 +254,7 @@ def _evaluate_guard(transition: tt.Transition, discriminants: dict) -> dict:
         criticality = discriminants.get("criticality")
         tier = discriminants.get("tier")
         corrupted = bool(discriminants.get("corrupted"))
-        escalate = criticality in ("high", "critical") or tier == "complex" or corrupted
+        escalate = requires_review(tier, criticality, corrupted=corrupted)
         # implement.review holds on escalate; implement.complete is the else arm.
         holds = escalate if transition.to_state == "review" else not escalate
     else:

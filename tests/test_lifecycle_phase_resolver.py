@@ -211,14 +211,16 @@ def test_resolver_terminal_events_vs_nonterminal_backlog_reports(tmp_path: Path)
     assert _is_terminal_mismatch(encoded, "in_progress") is True
 
 
-def test_resolver_rework_cap_phase_is_terminal_to_the_detector(tmp_path: Path) -> None:
-    """454: the discriminated `escalated:rework-cap:<n>` phase is held to the same
-    terminal rule as the bare `escalated` it sits beside.
+def test_resolver_rework_cap_phase_is_exempt_from_the_detector(tmp_path: Path) -> None:
+    """454+470: the discriminated `escalated:rework-cap:<n>` phase is held to the
+    same rule as the bare `escalated` it sits beside — and that rule is *exempt*.
 
-    The cap form is a terminal escalation — the feature is stopped waiting on
-    operator direction — so a backlog row still reading `in_progress` is a real
-    divergence. Without the detector's `startswith("escalated:")` clause the
-    discriminant reads as non-terminal and the mismatch is silently unreported.
+    #454's R3 requirement stands unchanged: the discriminant narrates, it never
+    changes terminality, so both forms must answer identically. #470 corrected
+    which answer. An escalated feature is stopped awaiting operator direction and
+    is not done, so a ticket reading `in_progress` is correct rather than
+    divergent; the old `is True` fired on every SessionStart with no operator
+    action that could clear it. Both forms now answer False, in both directions.
     """
     fd = tmp_path / "feat"
     # Cycle comes from the events.log review_verdict row count; review.md
@@ -237,12 +239,67 @@ def test_resolver_rework_cap_phase_is_terminal_to_the_detector(tmp_path: Path) -
         resolved["phase"], int(resolved["checked"]), int(resolved["total"]), int(resolved["cycle"])
     )
     assert encoded == "escalated:rework-cap:2"
-    assert _is_terminal_mismatch(encoded, "in_progress") is True
+    assert _is_terminal_mismatch(encoded, "in_progress") is False
     # Same rule as the undiscriminated form: the discriminant changes the
     # narration, never the terminality.
-    assert _is_terminal_mismatch("escalated", "in_progress") is True
-    # Symmetric control: a terminal backlog agrees, so no mismatch is claimed.
+    assert _is_terminal_mismatch("escalated", "in_progress") is False
+    # Exempt in *both* directions — an operator who abandons an escalated
+    # feature and closes its ticket is equally correct, so neither state pairing
+    # is a divergence.
     assert _is_terminal_mismatch(encoded, "complete") is False
+    assert _is_terminal_mismatch("escalated", "complete") is False
+
+
+def test_cancelled_lifecycle_with_a_closed_ticket_is_not_a_mismatch(tmp_path: Path) -> None:
+    """470: `cancelled` is terminal and pins `abandoned` as its expected ticket
+    status, so the two agreeing must not read as divergence.
+
+    Before the fix `cancelled` was absent from the detector's terminal set while
+    present in `common._EVENTS_TERMINAL_STATES`, inverting the bug: a correctly
+    cancelled lifecycle whose ticket was correctly closed reported a mismatch,
+    and the only way to clear it was to reopen the ticket.
+    """
+    fd = tmp_path / "feat"
+    _write_events(
+        fd,
+        [
+            {"ts": "2026-01-01T00:00:01Z", "event": "lifecycle_cancelled"},
+        ],
+    )
+    resolved = resolve_lifecycle_phase(fd)
+    encoded = _encode_phase(
+        resolved["phase"], int(resolved["checked"]), int(resolved["total"]), int(resolved["cycle"])
+    )
+    assert encoded == "cancelled"
+    assert _is_terminal_mismatch(encoded, "abandoned") is False
+    assert _is_terminal_mismatch(encoded, "wont-do") is False
+    # Still actionable in the one direction that has an action: the lifecycle is
+    # abandoned but the ticket claims someone is on it. Closing it clears this.
+    assert _is_terminal_mismatch(encoded, "in_progress") is True
+
+
+def test_stale_complete_still_reports_after_the_escalated_exemption(tmp_path: Path) -> None:
+    """470 guard: exempting `escalated` must not cost the #075-shape.
+
+    The detector's original purpose — events say the feature finished, the ticket
+    still says it is being worked — is the case that must survive every narrowing
+    of the terminal set.
+    """
+    fd = tmp_path / "feat"
+    _write_events(
+        fd,
+        [
+            {"ts": "2026-01-01T00:00:01Z", "event": "feature_complete"},
+        ],
+    )
+    resolved = resolve_lifecycle_phase(fd)
+    encoded = _encode_phase(
+        resolved["phase"], int(resolved["checked"]), int(resolved["total"]), int(resolved["cycle"])
+    )
+    assert _is_terminal_mismatch(encoded, "in_progress") is True
+    assert _is_terminal_mismatch("complete:awaiting-merge", "in_progress") is True
+    # And the inverse #075 direction: mid-implement events, closed ticket.
+    assert _is_terminal_mismatch("implement", "complete") is True
 
 
 # ---------------------------------------------------------------------------
@@ -256,6 +313,42 @@ def test_resolver_machine_state_names_match_transition_table() -> None:
     growing a state fails loudly here rather than silently dropping events-authority
     for that state."""
     assert common._MACHINE_STATE_NAMES == tt.STATE_NAMES
+
+
+def test_resolver_terminal_event_map_key_set_is_pinned() -> None:
+    """`_TERMINAL_EVENT_TO_STATE`'s key set is the terminal-event vocabulary, pinned
+    as a golden literal.
+
+    Every current key already has behavioural coverage elsewhere (`feature_wontfix`
+    via the #210 parity tests, the other two via this module and `test_complete_route`),
+    so what this pin adds is structural: growing the dict a fourth key wires a new
+    event straight into events-authority, and no behavioural test can fail for a
+    branch nothing exercises yet. Editing this literal is the intended cost of
+    adding a terminal event.
+    """
+    assert set(common._TERMINAL_EVENT_TO_STATE) == {
+        "feature_complete",
+        "feature_wontfix",
+        "lifecycle_cancelled",
+    }
+
+
+def test_resolver_terminal_event_map_values_are_terminal_machine_states() -> None:
+    """Every state a terminal event pins must be both servable and terminal.
+
+    Two invariants the key-set pin above cannot catch, since repointing an existing
+    key leaves the key set intact:
+
+    - value in `_MACHINE_STATE_NAMES` — a state the resolver cannot serve would be
+      dropped by the same guard that ignores a malformed `phase_transition` target,
+      silently demoting the event to the artifact fallback;
+    - value in `_EVENTS_TERMINAL_STATES` — a terminal event pinning a non-terminal
+      state would take the `-paused` annotation path, narrating a finished feature
+      as paused.
+    """
+    values = set(common._TERMINAL_EVENT_TO_STATE.values())
+    assert values <= common._MACHINE_STATE_NAMES
+    assert values <= common._EVENTS_TERMINAL_STATES
 
 
 def test_resolver_ignores_unknown_transition_target(tmp_path: Path) -> None:

@@ -2,13 +2,14 @@
 schema_version: "1"
 uuid: 6ce97790-5385-4f95-8ef3-08cb55f0a0b8
 title: An omitted plan Complexity field silently under-resources every task in that plan
-status: backlog
+status: complete
 priority: medium
 type: bug
 created: 2026-08-06
-updated: 2026-08-06
+updated: 2026-08-07
 tags: ['overnight', 'pipeline', 'tiering']
 areas: ['overnight-runner']
+complexity: simple
 ---
 ## Why
 

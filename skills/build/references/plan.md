@@ -37,7 +37,7 @@ Use the criticality SKILL.md Step 2 carried forward; read it with `cortex-lifecy
 - **Files**: {exact paths to create or modify}
 - **What**: {what this accomplishes, 1-2 sentences}
 - **Depends on**: none
-- **Complexity**: trivial|simple|complex
+- **Complexity**: simple|moderate|complex
 - **Context**: {paths, signatures, type defs, pattern references}
 - **Verification**: one of (a) command + expected output + pass/fail; (b) file/pattern check (e.g. `grep -c 'keyword' path` = 1); (c) `Interactive/session-dependent: [one-sentence rationale]`
 - **Status**: [ ] pending
@@ -55,13 +55,13 @@ Prose-only Verification fails review — use (a), (b), or (c).
 
 **Task sizing** — a self-contained unit an implementer with no prior context can complete from the task text and its referenced files alone.
 
-**Complexity** drives model and turn-limit selection in the overnight pipeline: `trivial` = single-file edit, no side effects, no commit; `simple` = 1–3 files, commit required; `complex` = 4+ files, architectural change, new pattern, or multi-component integration. Anything creating files, modifying JSON settings, creating symlinks, setting permissions, or committing is `simple` **minimum** — a trivial turn budget exhausts before the commit step.
+**Complexity** drives turn and budget ceilings in the overnight pipeline, and the parser takes `simple`/`moderate`/`complex` only — any other value over-provisions to `complex`, an omitted one to `moderate`, and both are reported as mis-authoring. `simple` = 1–3 files, nothing to decide; `moderate` = orientation across several files, no design fork; `complex` = 4+ files, architectural change, new pattern, or multi-component integration.
 
 **Dependencies** — `**Depends on**` sits between **What** and **Context**: `[N, M]` or `none`. Implement parallelizes on it, so a missing or malformed field blocks parallelism.
 
 **Write-serialization edges** — an edge that only orders same-file writes takes the parenthetical dialect the parser strips: `**Depends on**: [12] (write-serialization: night_rig.gd)`. A trailing single-hyphen note is *not* stripped and fails overnight conformance. Ordering-only semantics: an executor with per-task isolation may relax it to not-before; none deletes it.
 
-**Graph shape** — prefer wide levels. A single-task level between multi-task levels, or a level count approaching half the task count, is a restructure signal; never merge tasks to shrink depth. Every edge counts at face value; write-serialization-annotated segments are dissolve-first candidates, not a depth discount. Don't co-batch a `complex` task with `trivial`/`simple` siblings at one level — give a heavy straggler its own wave.
+**Graph shape** — prefer wide levels. A single-task level between multi-task levels, or a level count approaching half the task count, is a restructure signal; never merge tasks to shrink depth. Every edge counts at face value; write-serialization-annotated segments are dissolve-first candidates, not a depth discount. Don't co-batch a `complex` task with `simple`/`moderate` siblings at one level — give a heavy straggler its own wave.
 
 **Hub-file seam** — when two tasks would edit one coordinator file, add a registration seam in an early task so later tasks add files instead of serializing edits. Where a seam can't apply (structural rework, deletions, re-pointing), the honest remedy is an annotated write-serialization edge.
 

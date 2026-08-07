@@ -20,6 +20,8 @@ if TYPE_CHECKING:
     from cortex_command.overnight.orchestrator import BatchResult, BatchConfig
 
 from cortex_command.common import (
+    DEFAULT_CRITICALITY,
+    DEFAULT_TIER,
     _resolve_lifecycle_base,
     _resolve_user_project_root,
     read_criticality,
@@ -130,6 +132,30 @@ def _effective_base_branch(
     return default
 
 
+# Stderr markers for a `git worktree add` that failed because a registration
+# already claims the branch or the path.  Probed directly against git 2.55.0
+# (#473); these are version-specific strings, and a git that rewords them
+# silently disables the recovery arm in `_ensure_worktree`, so
+# `test_git_still_words_registration_collisions_as_we_match` re-probes them
+# against the running git rather than trusting this comment.
+#
+#   "is already used by worktree at" — the branch is registered to some other
+#       path.  Emitted whether that registration is live (another worktree, or
+#       the main repo's own checkout) or stale (its directory was deleted out
+#       from under git).  Prune tells those apart; stderr does not.
+#   "missing but already registered" — the path is registered but its directory
+#       is gone, and we asked for that same path back.
+#   "already checked out at" — an older wording.  git 2.55 emits it for no
+#       collision shape; kept because this repo declares no minimum git version,
+#       so dropping it would silently narrow recovery on whatever older git a
+#       consumer runs.
+_WORKTREE_REGISTRATION_MARKERS = (
+    "is already used by worktree at",
+    "missing but already registered",
+    "already checked out at",
+)
+
+
 def _ensure_worktree(
     repo_path: Path,
     worktree_path: Path,
@@ -144,7 +170,9 @@ def _ensure_worktree(
     (``_merge_target_repo_path``), so both inherit the same ``git worktree
     add`` edge-case recovery: an "already exists" path collision, and the
     stale tracking left behind when the worktree directory is deleted out
-    from under git.
+    from under git — whether we ask for that same path back or a different
+    one (git words those two differently; see
+    ``_WORKTREE_REGISTRATION_MARKERS``).
 
     Args:
         repo_path: Repository the worktree is added from (``cwd`` for git).
@@ -194,12 +222,14 @@ def _ensure_worktree(
             f"{worktree_path} does not exist: {stderr}"
         )
 
-    # Stale git tracking left after the worktree directory was deleted out
-    # from under git (a TMPDIR purge).  Git words this two ways: the branch is
-    # "already checked out at" the dead path when we ask for a *different*
-    # path, and the path is "missing but already registered" when we ask for
-    # the same one back.  Both clear the same way — prune and retry once.
-    if "already checked out at" in stderr or "already registered" in stderr:
+    # A registration already claims this branch or path.  Prune is the
+    # discriminator, not the wording: `git worktree prune` clears exactly the
+    # registrations whose directory is gone and leaves live ones untouched, so
+    # a stale registration recovers on the retry and a live one fails it and
+    # raises below — which is the same outcome the unknown-failure arm gave,
+    # minus the false "unknown".  That is why every marker routes here rather
+    # than each shape being told apart from stderr first.
+    if any(marker in stderr for marker in _WORKTREE_REGISTRATION_MARKERS):
         subprocess.run(
             ["git", "worktree", "prune"],
             cwd=str(repo_path),
@@ -1202,9 +1232,9 @@ def _review_required(name: str) -> bool:
     could invert the fail-safe.
     """
     reduction = reduce_lifecycle_state(Path(f"cortex/lifecycle/{name}/events.log"))
-    tier = reduction.state.get("tier", "moderate")
-    criticality = reduction.state.get("criticality", "medium")
-    return requires_review(tier, criticality) or reduction.corrupted
+    tier = reduction.state.get("tier", DEFAULT_TIER)
+    criticality = reduction.state.get("criticality", DEFAULT_CRITICALITY)
+    return requires_review(tier, criticality, corrupted=reduction.corrupted)
 
 
 def _set_review_error_detail_flags(details: dict, *, merge_reverted: bool) -> None:

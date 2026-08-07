@@ -577,9 +577,11 @@ async def execute_feature(
             parse_error=True,
         )
 
-    # Surface every OOV complexity normalization (recorded by parse_feature_plan
-    # as {"task", "original"} dicts) as a loud, report-visible event so the
-    # mis-authored plan is corrected at source rather than silently over-provisioned.
+    # Surface every complexity normalization (recorded by parse_feature_plan as
+    # {"task", "original", "resolved"} dicts — `original` is None when the field
+    # was absent rather than out-of-vocabulary) as a loud, report-visible event
+    # so the mis-authored plan is corrected at source rather than silently
+    # over-provisioned.
     # execute_feature runs per-feature per round, so a paused-then-resumed feature
     # re-parses and re-emits the same (feature, task, original); the report renderer
     # de-duplicates by that key.
@@ -588,7 +590,11 @@ async def execute_feature(
             COMPLEXITY_NORMALIZED,
             config.batch_id,
             feature=feature,
-            details={"task": _norm["task"], "original": _norm["original"]},
+            details={
+                "task": _norm["task"],
+                "original": _norm["original"],
+                "resolved": _norm.get("resolved", "complex"),
+            },
             log_path=config.overnight_events_path,
         )
 

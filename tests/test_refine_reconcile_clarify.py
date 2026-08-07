@@ -601,3 +601,158 @@ def test_reconcile_clarify_accepts_a_colon_inside_the_reason_body(
 
     crit = _only(_override_rows(events_log), "criticality_override")
     assert crit["reason"] == reason
+
+
+def test_reconcile_clarify_records_tier_reason_per_axis(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A supplied ``--tier-reason`` lands on the complexity row and only there.
+
+    The mirror image of the criticality case: both axes ratchet, only the tier
+    reason is supplied. This is the surface's only consumer-side proof — without
+    it the tier axis of the reason feature has no test at all, so a deletion of
+    the ``--tier-reason`` argparse block would leave the suite green.
+    """
+    monkeypatch.chdir(tmp_path)
+    feature = "tier-reason-per-axis"
+    events_log = _seed_events(
+        tmp_path, feature, [_lifecycle_start_line(feature, "simple", "medium")]
+    )
+
+    rc = main(
+        [
+            "reconcile-clarify",
+            "--lifecycle-slug",
+            feature,
+            "--complexity",
+            "complex",
+            "--criticality",
+            "high",
+            "--tier-reason",
+            "consequence: touches every refine route",
+        ]
+    )
+    assert rc == 0
+
+    envelope = json.loads(capsys.readouterr().out.strip())
+    assert envelope["state"] == "ratcheted"
+    assert envelope["rows"] == 2
+
+    rows = _override_rows(events_log)
+    assert len(rows) == 2
+
+    tier = _only(rows, "complexity_override")
+    assert tier["reason"] == "consequence: touches every refine route"
+    assert list(tier.keys()) == [
+        "ts",
+        "event",
+        "feature",
+        "from",
+        "to",
+        "reason",
+        "gate",
+    ]
+
+    # Per-axis independence in the other direction: the untagged criticality
+    # row must not inherit the tier's reason.
+    crit = _only(rows, "criticality_override")
+    assert "reason" not in crit
+    assert list(crit.keys()) == ["ts", "event", "feature", "from", "to", "gate"]
+
+
+def test_reconcile_clarify_empty_tier_reason_omits_the_key(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """``--tier-reason ""`` still ratchets, but writes no ``reason`` key.
+
+    An empty string is not an axis a corpus tally can bucket on, so it is
+    dropped exactly as an omitted flag is — not recorded as ``"reason": ""``.
+    Asserted positively on ``from``/``to`` because "no reason key in this file"
+    is also true of a verb that appended nothing.
+    """
+    monkeypatch.chdir(tmp_path)
+    feature = "tier-reason-empty"
+    events_log = _seed_events(
+        tmp_path, feature, [_lifecycle_start_line(feature, "simple", "medium")]
+    )
+
+    rc = main(
+        [
+            "reconcile-clarify",
+            "--lifecycle-slug",
+            feature,
+            "--complexity",
+            "complex",
+            "--tier-reason",
+            "",
+        ]
+    )
+    assert rc == 0
+
+    envelope = json.loads(capsys.readouterr().out.strip())
+    assert envelope["state"] == "ratcheted"
+
+    tier = _only(_override_rows(events_log), "complexity_override")
+    assert (tier["from"], tier["to"]) == ("simple", "complex")
+    assert "reason" not in tier
+    assert list(tier.keys()) == ["ts", "event", "feature", "from", "to", "gate"]
+
+
+def test_reconcile_clarify_reports_both_bad_clause_tags_in_one_run(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Two bad tags produce two diagnostics, not one per re-run.
+
+    Validation of the two axes runs unconditionally rather than short-circuiting
+    on the first failure, so a caller that got both tags wrong learns both at
+    once. Each message is matched together with its own bogus tag, so a single
+    diagnostic printed twice cannot satisfy this.
+    """
+    monkeypatch.chdir(tmp_path)
+    feature = "both-bad-tags"
+    events_log = _seed_events(
+        tmp_path, feature, [_lifecycle_start_line(feature, "simple", "medium")]
+    )
+    before = events_log.read_bytes()
+
+    rc = main(
+        [
+            "reconcile-clarify",
+            "--lifecycle-slug",
+            feature,
+            "--complexity",
+            "complex",
+            "--criticality",
+            "high",
+            "--tier-reason",
+            "tierbogus: x",
+            "--criticality-reason",
+            "critbogus: y",
+        ]
+    )
+    assert rc == 2
+    assert events_log.read_bytes() == before
+
+    captured = capsys.readouterr()
+    assert captured.out.strip() == ""
+    err_lines = [line for line in captured.err.splitlines() if line.strip()]
+    assert len(err_lines) == 2
+    assert any(
+        "--tier-reason" in line and "tierbogus" in line for line in err_lines
+    ), captured.err
+    assert any(
+        "--criticality-reason" in line and "critbogus" in line for line in err_lines
+    ), captured.err
+
+
+def test_refine_skill_passes_the_tier_reason_flag() -> None:
+    """refine SKILL.md must spell ``--tier-reason`` on its reconcile calls.
+
+    Bare existence, because the omission fails silently: Clarify's tier
+    reasoning simply never reaches a ``complexity_override`` row, every such row
+    reads ``simple -> complex`` with no recorded why, and nothing — no exit
+    code, no diagnostic, no failing gate — surfaces that the reason was never
+    recorded. Only a corpus tally months later would show the gap.
+    """
+    body = _REFINE_SKILL.read_text(encoding="utf-8")
+    assert "--tier-reason" in body

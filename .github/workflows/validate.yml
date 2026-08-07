@@ -17,7 +17,11 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install pyyaml pytest
+        # uv is required by the L1-surface ratchet step below: its utility
+        # (bin/cortex-measure-l1-surface) carries a `uv run --script` shebang
+        # and the test invokes it by path, so without uv the step errors on a
+        # missing interpreter rather than reporting a real budget breach.
+        run: pip install pyyaml pytest uv
 
       # Every blocking step below carries `if: ${{ !cancelled() }}` so one red
       # step cannot mask the rest: GitHub Actions otherwise aborts the job at
@@ -73,6 +77,15 @@ jobs:
       - name: Reference-size ratchet tests (blocking)
         if: ${{ !cancelled() }}
         run: pytest tests/test_reference_size_ratchet.py
+
+      # The L1 surface (per-skill description: + when_to_use:) is resident in
+      # every session's boot context for every skill, so it is the most
+      # expensive byte in the harness. `just test` covers this locally, but
+      # nothing blocked a push until this step: the reference-size ratchet
+      # above was gated in CI while its L1 counterpart was not.
+      - name: L1 surface ratchet tests (blocking)
+        if: ${{ !cancelled() }}
+        run: pytest tests/test_l1_surface_ratchet.py
 
       - name: Dashboard route smoke test (fresh resolve, Starlette floored at >=1.0)
         if: ${{ !cancelled() }}

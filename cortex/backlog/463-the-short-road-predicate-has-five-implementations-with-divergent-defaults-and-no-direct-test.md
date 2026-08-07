@@ -2,13 +2,14 @@
 schema_version: "1"
 uuid: 9682402f-f8a0-4d23-9dbb-e126dac144eb
 title: The short-road predicate has five implementations with divergent defaults and no direct test
-status: backlog
+status: complete
 priority: medium
 type: chore
 created: 2026-08-06
-updated: 2026-08-06
+updated: 2026-08-07
 tags: ['lifecycle', 'predicate', 'tests', 'refactor']
 areas: ['lifecycle']
+complexity: simple
 ---
 ## Why
 

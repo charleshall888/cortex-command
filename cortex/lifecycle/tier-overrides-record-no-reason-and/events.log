@@ -1,0 +1,8 @@
+{"ts": "2026-08-07T18:45:12Z", "schema_version": 1, "event": "lifecycle_start", "feature": "tier-overrides-record-no-reason-and", "tier": "simple", "criticality": "medium", "entry_point": "refine", "seeded": ["criticality", "tier"]}
+{"ts": "2026-08-07T18:54:18Z", "event": "clarify_critic", "feature": "tier-overrides-record-no-reason-and", "schema_version": 3, "parent_epic_loaded": false, "findings_count": 14, "dispositions": {"apply": 12, "dismiss": 1, "ask": 1}, "applied_fixes_count": 12, "dismissals_count": 1, "status": "ok"}
+{"ts": "2026-08-07T19:09:01Z", "event": "complexity_override", "feature": "tier-overrides-record-no-reason-and", "from": "simple", "to": "moderate", "gate": "clarify_reconcile", "from_seeded": true}
+{"ts": "2026-08-07T19:09:01Z", "event": "criticality_override", "feature": "tier-overrides-record-no-reason-and", "from": "medium", "to": "high", "reason": "exposure: shared refine skill prose plus a wheel verb both ship to consumer repos", "gate": "clarify_reconcile", "from_seeded": true}
+{"ts": "2026-08-07T19:13:38Z", "event": "spec_approved", "feature": "tier-overrides-record-no-reason-and", "decision": "approved"}
+{"ts": "2026-08-07T19:20:12Z", "event": "plan_approved", "feature": "tier-overrides-record-no-reason-and", "dispatch_choice": "worktree-interactive"}
+{"ts": "2026-08-07T19:20:12Z", "event": "phase_transition", "feature": "tier-overrides-record-no-reason-and", "from": "plan", "to": "implement"}
+{"ts": "2026-08-07T20:02:02Z", "event": "review_dispatched", "feature": "tier-overrides-record-no-reason-and", "cycle": 1, "mode": "full", "baseline_sha": "ab29161be2706e20c2606f1da9ae80cbbdf74f39"}
