@@ -6,6 +6,7 @@ Tests cover:
   - Missing file returns ERROR result
   - Multiple JSON blocks returns the first match
   - cycle threading at review-fix dispatch sites
+  - the cycle-2 re-review prompt carrying the prior cycle's issue texts
 """
 
 from __future__ import annotations
@@ -13,6 +14,7 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from contextlib import ExitStack
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
@@ -273,6 +275,213 @@ class TestCycleThreading(unittest.IsolatedAsyncioTestCase):
             call2 = mock_dispatch.call_args_list[2]
             self.assertEqual(call2.kwargs["skill"], "review-fix")
             self.assertEqual(call2.kwargs["cycle"], 2)
+
+
+class TestCycleTwoPromptCarriesPriorIssues(unittest.IsolatedAsyncioTestCase):
+    """R14: the cycle-2 re-review prompt carries the cycle-1 issue texts.
+
+    The prompt used to be the cycle-1 template with one sentence appended, so
+    the re-reviewer re-read the whole spec and was handed none of the flagged
+    issues even though the cycle-1 list was already in scope. These tests pin
+    the contract — every prior-cycle issue text reaches the cycle-2 reviewer,
+    and a brief that cannot be constructed defers rather than raising — not any
+    particular brief wording.
+    """
+
+    # Distinctive enough that a match cannot be incidental: nothing else in the
+    # dispatch (spec excerpt, template prose, feature slug) contains them.
+    CYCLE1_ISSUES = [
+        "Requirement 3: the retry budget is never decremented on a timeout",
+        "orchestrator-note.md is written before the SHA circuit breaker runs",
+        "the loader swallows a malformed manifest instead of surfacing it",
+    ]
+
+    async def _run_rework(
+        self,
+        feature: str,
+        *,
+        cycle1_issues: list[str],
+        brief_error: BaseException | None = None,
+    ):
+        """Drive CHANGES_REQUESTED (cycle 1) -> fix -> re-merge -> cycle 2.
+
+        Returns ``(result, calls, deferrals)`` where *calls* is the kwargs of
+        each ``dispatch_task`` invocation and *deferrals* the text of each
+        deferral file written for *feature*. Both are read before the temporary
+        directory is torn down. When *brief_error* is set, the cycle-2 brief
+        builder raises it instead of returning a brief.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            lifecycle_base = tmp_path / "cortex" / "lifecycle"
+            feature_dir = lifecycle_base / feature
+            feature_dir.mkdir(parents=True)
+
+            spec_path = feature_dir / "spec.md"
+            spec_path.write_text("# Spec\n\nSpec content.\n", encoding="utf-8")
+
+            review_md_path = feature_dir / "review.md"
+            review_md_path.write_text(
+                "# Review\n\n```json\n"
+                + json.dumps({
+                    "verdict": "CHANGES_REQUESTED",
+                    "cycle": 1,
+                    "issues": cycle1_issues,
+                })
+                + "\n```\n",
+                encoding="utf-8",
+            )
+
+            deferred_dir = tmp_path / "deferred"
+
+            async def fake_dispatch(**kwargs) -> DispatchResult:
+                if kwargs.get("skill") == "review-fix" and kwargs.get("cycle") == 2:
+                    review_md_path.write_text(
+                        "# Review\n\n```json\n"
+                        + json.dumps(
+                            {"verdict": "APPROVED", "cycle": 2, "issues": []}
+                        )
+                        + "\n```\n",
+                        encoding="utf-8",
+                    )
+                return DispatchResult(success=True, output="ok", cost_usd=0.01)
+
+            mock_dispatch = AsyncMock(side_effect=fake_dispatch)
+
+            # Distinct before/after SHAs so the circuit breaker does not fire.
+            sha_counter = {"n": 0}
+
+            def fake_run(*args, **kwargs):
+                sha_counter["n"] += 1
+
+                class _Result:
+                    stdout = f"sha{sha_counter['n']}\n"
+                    stderr = ""
+                    returncode = 0
+
+                return _Result()
+
+            def fake_merge(*args, **kwargs) -> MergeResult:
+                return MergeResult(success=True, feature=feature, conflict=False)
+
+            with ExitStack() as stack:
+                stack.enter_context(patch.object(
+                    _review_dispatch_module, "dispatch_task", new=mock_dispatch,
+                ))
+                stack.enter_context(patch.object(
+                    _review_dispatch_module.subprocess, "run", side_effect=fake_run,
+                ))
+                stack.enter_context(patch.object(
+                    _review_dispatch_module, "merge_feature", side_effect=fake_merge,
+                ))
+                if brief_error is not None:
+                    stack.enter_context(patch.object(
+                        _review_dispatch_module, "build_rework_brief",
+                        side_effect=brief_error,
+                    ))
+                result = await dispatch_review(
+                    feature=feature,
+                    worktree_path=tmp_path / "worktree",
+                    branch=f"pipeline/{feature}",
+                    spec_path=spec_path,
+                    complexity="complex",
+                    criticality="high",
+                    lifecycle_base=lifecycle_base,
+                    deferred_dir=deferred_dir,
+                    base_branch="main",
+                )
+
+            calls = [call.kwargs for call in mock_dispatch.call_args_list]
+            deferrals = [
+                path.read_text(encoding="utf-8")
+                for path in sorted(deferred_dir.glob(f"{feature}-q*.md"))
+            ]
+            return result, calls, deferrals
+
+    async def test_cycle2_prompt_carries_each_cycle1_issue(self):
+        """Every issue the cycle-1 verdict raised appears in the cycle-2 prompt.
+
+        This is requirement 14's acceptance: the re-reviewer is handed the
+        checklist it must dispose of, not sent back through the whole spec.
+        """
+        result, calls, _ = await self._run_rework(
+            "feat-c2-issue-texts", cycle1_issues=self.CYCLE1_ISSUES,
+        )
+
+        # Sanity: the rework path ran to a cycle-2 verdict.
+        self.assertTrue(result.approved)
+        self.assertEqual(result.cycle, 2)
+        self.assertEqual(len(calls), 3, f"expected three dispatches; got {calls}")
+
+        cycle2_call = calls[2]
+        self.assertEqual(cycle2_call["skill"], "review-fix")
+        self.assertEqual(cycle2_call["cycle"], 2)
+
+        cycle2_prompt = cycle2_call["task"]
+        for issue in self.CYCLE1_ISSUES:
+            self.assertIn(
+                issue, cycle2_prompt,
+                f"cycle-1 issue {issue!r} never reached the cycle-2 reviewer",
+            )
+
+        # Discriminator: the initial-review prompt carries none of them, so the
+        # assertions above cannot pass on a prompt that merely contains
+        # everything the dispatch happens to have in scope.
+        initial_prompt = calls[0]["task"]
+        for issue in self.CYCLE1_ISSUES:
+            self.assertNotIn(issue, initial_prompt)
+
+    async def test_cycle2_prompt_carries_issues_when_only_one_was_raised(self):
+        """A single-item checklist reaches the cycle-2 reviewer intact.
+
+        Guards against a prompt that carries an issue *count* or the first item
+        only — the one-item case would otherwise pass either way.
+        """
+        issue = "Requirement 7: the events.log row is appended twice on replay"
+        _, calls, _ = await self._run_rework(
+            "feat-c2-single-issue", cycle1_issues=[issue],
+        )
+        self.assertEqual(len(calls), 3)
+        self.assertIn(issue, calls[2]["task"])
+
+    async def test_unconstructible_brief_defers_instead_of_raising(self):
+        """A brief the builder cannot produce writes the deferral, not a crash.
+
+        Both raise-shapes the cycle-2 construction guards against are exercised:
+        a contract violation (ValueError) and an I/O failure (OSError). The
+        cycle-2 review must not dispatch, and the cycle-1 issues must survive
+        into the deferral so the morning report still names what was flagged.
+        """
+        cases = [
+            ("valueerror", ValueError("issues checklist was empty")),
+            ("oserror", OSError("brief source unreadable")),
+        ]
+        for label, error in cases:
+            with self.subTest(error=label):
+                result, calls, deferrals = await self._run_rework(
+                    f"feat-c2-brief-{label}",
+                    cycle1_issues=self.CYCLE1_ISSUES,
+                    brief_error=error,
+                )
+
+                self.assertFalse(result.approved)
+                self.assertTrue(result.deferred)
+                self.assertEqual(result.verdict, "CHANGES_REQUESTED")
+
+                # Only the initial review and the cycle-1 fix dispatched: a
+                # brief that could not be built is never handed to a reviewer.
+                self.assertEqual(
+                    len(calls), 2,
+                    f"cycle-2 review dispatched despite an unbuildable brief: {calls}",
+                )
+
+                self.assertEqual(
+                    len(deferrals), 1,
+                    f"expected exactly one deferral file; found {len(deferrals)}",
+                )
+                for issue in self.CYCLE1_ISSUES:
+                    self.assertIn(issue, deferrals[0])
+                    self.assertIn(issue, result.issues)
 
 
 class TestCouldNotRunWritesDeferral(unittest.IsolatedAsyncioTestCase):
