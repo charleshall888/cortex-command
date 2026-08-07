@@ -54,7 +54,7 @@ instructs reading a file that was never written, and both size pins are green an
   (`cmp` exits 0). Repeat with `review.md` created by `touch` — same result. Repeat with `review.md`
   holding one line — prints `"state":"registered"` and `index.md` gains `[review]`. Invoke via `python3
   -m`, never the `cortex-*` binstub, which runs the installed wheel rather than the working tree.
-- **Status**: [ ] pending
+- **Status**: [x] done (c6dca432 2026-08-07T17:16:23-04:00)
 
 ### Task 2: Update and extend the register_artifact test suite
 - **Files**: `cortex_command/lifecycle/tests/test_register_artifact.py`
@@ -74,7 +74,7 @@ instructs reading a file that was never written, and both size pins are green an
   `cortex/lifecycle/{feature}/` path yields `error`.
 - **Verification**: `python3 -m pytest cortex_command/lifecycle/tests/test_register_artifact.py -q` exits
   0 with no failures; `grep -c 'error' cortex_command/lifecycle/tests/test_register_artifact.py` ≥ 4.
-- **Status**: [ ] pending
+- **Status**: [x] done (99e593d6 2026-08-07T17:26:00-04:00)
 
 ### Task 3: Give the review phase its defined response, and re-sync both size pins
 - **Files**: `skills/build/references/review.md`, `skills/build/references/size-pin.txt`,
@@ -99,7 +99,7 @@ instructs reading a file that was never written, and both size pins are green an
 - **Verification**: `python3 -m pytest tests/test_reference_size_ratchet.py -q` exits 0; `cmp
   skills/build/references/size-pin.txt plugins/cortex-core/skills/build/references/size-pin.txt` exits 0;
   `grep -c 'read the existing file' skills/build/references/review.md` = 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (0c79c1a7 2026-08-07T17:18:27-04:00)
 
 ## Risks
 
