@@ -54,6 +54,14 @@ _BAD_REASON_CLAUSE_MSG = (
     "cortex-refine: {flag} {value!r}: clause tag {tag!r} is not one of: {allowed}"
 )
 
+# A reason rides on the override row it annotates and nowhere else, so when the
+# rank comparison suppresses that row the text is simply dropped. Silence there
+# reads as "recorded" to a caller that only sees exit 0.
+_DISCARDED_REASON_MSG = (
+    "cortex-refine: {flag} {value!r} discarded: {field} stays at {current!r}, "
+    "so no override row was appended to carry it"
+)
+
 # Legacy complexity vocabulary, coerced with a stderr warning instead of
 # hard-failing (readers tolerate every prior shape — see clarify-critic.md's
 # event-schema rule). Clarify re-assesses and writes the reconciled value back
@@ -348,11 +356,16 @@ def _cmd_reconcile_clarify(args: argparse.Namespace) -> int:
     # Both reasons are validated up front — before the log directory is created
     # and before `rows` is built — so a rejected clause tag cannot leave a
     # half-written reconcile behind (R6: the append stays all-or-nothing).
+    # Both predicates run unconditionally rather than short-circuiting on the
+    # first failure: each prints its own diagnostic, so a caller that got both
+    # tags wrong sees both in one run instead of one per re-run.
     tier_reason: str | None = args.tier_reason
     criticality_reason: str | None = args.criticality_reason
-    if not _reason_clause_ok("--tier-reason", tier_reason) or not _reason_clause_ok(
+    tier_reason_ok = _reason_clause_ok("--tier-reason", tier_reason)
+    criticality_reason_ok = _reason_clause_ok(
         "--criticality-reason", criticality_reason
-    ):
+    )
+    if not tier_reason_ok or not criticality_reason_ok:
         return 2
 
     backlog_slug: str | None = args.backlog_slug
@@ -387,7 +400,8 @@ def _cmd_reconcile_clarify(args: argparse.Namespace) -> int:
     # The values the log will hold once these rows land — reported back so the
     # caller can route on the reconciled state without a second round-trip.
     new_tier, new_criticality = current_tier, current_criticality
-    if _TIER_RANK.get(desired_tier, -1) > _TIER_RANK.get(current_tier, -1):
+    tier_moved = _TIER_RANK.get(desired_tier, -1) > _TIER_RANK.get(current_tier, -1)
+    if tier_moved:
         new_tier = desired_tier
         rows.append(
             {
@@ -399,16 +413,21 @@ def _cmd_reconcile_clarify(args: argparse.Namespace) -> int:
                 # Key order mirrors lifecycle_event.py's declared field order
                 # for the typed override verbs (from, to, reason) so both
                 # writers of an override row produce the same shape; omission
-                # drops the key entirely rather than writing a null, matching
-                # that module's optional-field handling.
-                **({"reason": tier_reason} if tier_reason is not None else {}),
+                # drops the key entirely rather than writing a null. The
+                # omission TEST diverges from that module deliberately: it
+                # keys off truthiness, so an empty reason writes no key here,
+                # where lifecycle_event.py:364 still keys off `is not None`
+                # and would record `"reason": ""` — an empty string is not an
+                # axis a corpus tally can bucket on.
+                **({"reason": tier_reason} if tier_reason else {}),
                 "gate": "clarify_reconcile",
                 **({"from_seeded": True} if tier_from_seed else {}),
             }
         )
-    if _CRITICALITY_RANK.get(desired_criticality, -1) > _CRITICALITY_RANK.get(
+    crit_moved = _CRITICALITY_RANK.get(desired_criticality, -1) > _CRITICALITY_RANK.get(
         current_criticality, -1
-    ):
+    )
+    if crit_moved:
         new_criticality = desired_criticality
         rows.append(
             {
@@ -417,14 +436,35 @@ def _cmd_reconcile_clarify(args: argparse.Namespace) -> int:
                 "feature": lifecycle_slug,
                 "from": current_criticality,
                 "to": desired_criticality,
-                **(
-                    {"reason": criticality_reason}
-                    if criticality_reason is not None
-                    else {}
-                ),
+                **({"reason": criticality_reason} if criticality_reason else {}),
                 "gate": "clarify_reconcile",
                 **({"from_seeded": True} if crit_from_seed else {}),
             }
+        )
+
+    # A suppressed rank comparison leaves no row to carry the reason, so a
+    # supplied one is dropped on the floor. Warn per field before the no-op
+    # return below, which otherwise exits 0 indistinguishably from a run that
+    # recorded it.
+    if tier_reason and not tier_moved:
+        print(
+            _DISCARDED_REASON_MSG.format(
+                flag="--tier-reason",
+                value=tier_reason,
+                field="tier",
+                current=current_tier,
+            ),
+            file=sys.stderr,
+        )
+    if criticality_reason and not crit_moved:
+        print(
+            _DISCARDED_REASON_MSG.format(
+                flag="--criticality-reason",
+                value=criticality_reason,
+                field="criticality",
+                current=current_criticality,
+            ),
+            file=sys.stderr,
         )
 
     # State-based no-op: already reconciled (or a downgrade was suppressed).
