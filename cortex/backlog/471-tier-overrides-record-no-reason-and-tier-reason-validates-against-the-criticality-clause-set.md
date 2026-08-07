@@ -2,13 +2,16 @@
 schema_version: "1"
 uuid: 392984f6-c998-4e17-9a2d-128716e9f6e0
 title: Tier overrides record no reason, and --tier-reason validates against the criticality clause set
-status: backlog
+status: refined
 priority: medium
 type: feature
 created: 2026-08-07
 updated: 2026-08-07
 tags: ['lifecycle', 'tiering', 'criticality']
 areas: ['lifecycle', 'skills']
+complexity: moderate
+criticality: high
+spec: cortex/lifecycle/tier-overrides-record-no-reason-and/spec.md
 ---
 ## Why
 
