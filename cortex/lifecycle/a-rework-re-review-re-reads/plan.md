@@ -107,7 +107,7 @@ proof — and are not a signal that the decomposition needs restructuring.
   `grep -cE '^[[:space:]]*(from|import)[[:space:]]+cortex_command\.pipeline' cortex_command/lifecycle/review_brief.py` = 0
   (no import of the SDK-bearing module; the pattern is anchored to an import statement at line start, so citing
   `review_dispatch.py:202` in a docstring or comment cannot trip it).
-- **Status**: [x] done (4c61e56c 2026-08-07T08:56:46-04:00)
+- **Status**: [x] done (78905511 2026-08-07T10:20Z) — reworked cycle 1: brief headings aligned to the form they demand; the review_dispatched row now records the mode actually served (a degraded rework records `full`, so a `full` row at cycle >= 2 is exactly a degraded rework)
 
 ### Task 2: Deploy the verb (console script, bin wrapper, deployment row)
 - **Files**: `pyproject.toml`, `bin/cortex-lifecycle-review-brief`, `tests/test_lifecycle_verb_deployment.py`
@@ -150,7 +150,7 @@ proof — and are not a signal that the decomposition needs restructuring.
   `grep -c 'review_verdict' cortex_command/common.py` ≥ 1 in the docstring region;
   `grep -c 'review-cycle-\*' cortex_command/lifecycle/stage_artifacts.py` ≥ 1;
   `uv run pytest tests/test_stage_artifacts.py -q` passes.
-- **Status**: [x] done (64aa2f18 2026-08-07T09:30:56-04:00)
+- **Status**: [x] done (64aa2f18 2026-08-07T09:30:56-04:00) — NOTE: only the stage_artifacts half was implemented here. Requirement 17's common.py docstring was ALREADY correct at 4c61e56c^ (fixed out-of-lifecycle by 2a4fb715), so both its acceptance greps passed on the unmodified repo. Falsifiable guard added in rework: 9bd7b128
 
 ### Task 4: Give the new event a typed subcommand
 - **Files**: `cortex_command/lifecycle_event.py`, `tests/test_lifecycle_event_roundtrip.py`,
@@ -386,7 +386,7 @@ proof — and are not a signal that the decomposition needs restructuring.
 - **Verification**: `uv run pytest cortex_command/lifecycle/tests/test_review_brief_end_to_end.py -q` passes;
   and `Interactive/session-dependent: the disposition half is evidenced by this lifecycle's own review capture,
   which cannot exist until the review phase runs.`
-- **Status**: [x] done (914bc89d 2026-08-07T09:53:55-04:00)
+- **Status**: [x] done (914bc89d 2026-08-07T09:53:55-04:00) — reworked cycle 1: the plan's mandated throwaway-capture pre-step was skipped and is now performed and pinned in fcf01eac; the real cycle-2 capture is recorded at rework-review dispatch
 
 ## Risks
 
