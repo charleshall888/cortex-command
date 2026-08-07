@@ -144,9 +144,16 @@ def test_review_verdict_breach_interleaves_drift_row(tmp_path: Path) -> None:
 
 def test_spec_approve_emit_transition_short_road(tmp_path: Path) -> None:
     """spec-approve/approved with --emit-transition and no tier/criticality
-    recorded: the reducer defaults (simple/medium) take the short road —
+    recorded: the reducer defaults (moderate/medium) take the short road —
     spec_approved → phase_transition(specify→implement, tier-stamped), arm
-    approved-direct. Backend write-back is Task 14a (not core)."""
+    approved-direct. Backend write-back is Task 14a (not core).
+
+    The stamped tier was `simple` until #463, while the implement exit stamped
+    `moderate` for the same unlabelled feature — one feature, two tiers, in one
+    events log. The route was identical either way (both fall short of
+    `tier == "complex"`), so only the recorded value moved; the reducer does not
+    read `tier` off a `phase_transition` row.
+    """
     fd = _feature_dir(tmp_path)
     before = _specify_phase(fd)
     r = adv.advance(
@@ -157,7 +164,7 @@ def test_spec_approve_emit_transition_short_road(tmp_path: Path) -> None:
     assert _appended(fd, before) == ["spec_approved", "phase_transition"]
     edge = _rows(fd)[-1]
     assert edge["from"] == "specify" and edge["to"] == "implement"
-    assert edge["tier"] == "simple"
+    assert edge["tier"] == "moderate"
 
 
 def test_spec_approve_emit_transition_long_road_complex(tmp_path: Path) -> None:

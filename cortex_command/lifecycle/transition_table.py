@@ -133,7 +133,7 @@ PARAMETERS: dict[str, frozenset] = {
 
 # The default parameter selection — the byte-identical-to-today local behavior a
 # repo gets with no config overrides (mirrors the verbs' documented defaults:
-# implement_transition._DEFAULT_CRITICALITY / _DEFAULT_TIER,
+# common.DEFAULT_CRITICALITY / common.DEFAULT_TIER,
 # lifecycle_config._BACKLOG_BACKEND_DEFAULT / _COMMIT_ARTIFACTS_DEFAULT).
 DEFAULT_PARAMETERS: dict[str, object] = {
     "branch_mode": "trunk",

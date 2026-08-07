@@ -216,7 +216,12 @@ class TestReadCriticality:
 
 
 class TestRequiresReview:
-    """Tests for requires_review(): 2 tiers x 4 criticalities = 8 cells."""
+    """Tests for requires_review(): 2 tiers x 4 criticalities = 8 cells.
+
+    463 extended this to the full 3 x 4 x 2 grid below — the ``moderate`` tier
+    had no cell here at all despite being the default an absent axis resolves
+    to, and ``corrupted`` was only reachable through a caller.
+    """
 
     # simple tier: only high and critical trigger review
 
@@ -245,6 +250,119 @@ class TestRequiresReview:
 
     def test_complex_critical_requires_review(self):
         assert requires_review("complex", "critical") is True
+
+
+class TestShortRoadPredicateIsOneRule:
+    """463: `requires_review` is now the single implementation of the short-road
+    predicate, so the grid it answers on has to be pinned in full.
+
+    It was reimplemented at six sites (spec exit, implement exit, the served-loop
+    escalation, the morning-review gate, the overnight merge gate, and this
+    helper), none importing this one, and their absent-tier defaults had already
+    drifted — `spec_approve` used "simple" where the others used "moderate".
+    Benign only because the predicate tests `tier == "complex"`; a band or a rank
+    comparison would have split the routing. These tests are what a later edit
+    to the rule has to answer to.
+    """
+
+    TIERS = ("simple", "moderate", "complex")
+    CRITS = ("low", "medium", "high", "critical")
+
+    @pytest.mark.parametrize("tier", TIERS)
+    @pytest.mark.parametrize("criticality", CRITS)
+    @pytest.mark.parametrize("corrupted", (False, True))
+    def test_full_grid_matches_the_stated_rule(self, tier, criticality, corrupted):
+        """Every cell of 3 tiers x 4 criticalities x corrupted, against the rule
+        as project.md states it — not against a second copy of the code."""
+        expected = (
+            corrupted
+            or tier == "complex"
+            or criticality in ("high", "critical")
+        )
+        assert requires_review(tier, criticality, corrupted=corrupted) is expected
+
+    def test_moderate_tier_behaves_as_a_short_road_tier(self):
+        """The tier with no cell before 463, and the one an absent axis now
+        resolves to: moderate must route like simple, not like complex."""
+        for criticality in self.CRITS:
+            assert (
+                requires_review("moderate", criticality)
+                is requires_review("simple", criticality)
+            )
+        assert requires_review("moderate", "low") is False
+        assert requires_review("moderate", "medium") is False
+
+    def test_corrupted_forces_the_long_road_from_every_short_road_cell(self):
+        """project.md: corrupted reductions always take the long road. Pinned
+        from the cells that would otherwise be False, so the clause cannot be
+        dropped without failing."""
+        short_road = [
+            (t, c)
+            for t in self.TIERS
+            for c in self.CRITS
+            if not requires_review(t, c)
+        ]
+        assert short_road, "fixture guard: expected some short-road cells"
+        for tier, criticality in short_road:
+            assert requires_review(tier, criticality, corrupted=True) is True
+
+    def test_corrupted_defaults_to_false(self):
+        """The three callers that handle corruption by an early return rely on
+        omitting the argument, so the default must not silently escalate them."""
+        assert requires_review("simple", "low") is False
+
+    def test_defaults_are_single_sourced_and_short_road(self):
+        """The reconciled defaults: an unlabelled feature takes the short road.
+
+        `DEFAULT_TIER` moving from spec_approve's "simple" to "moderate" is a
+        no-op under the current predicate — this pins that it stays one.
+        """
+        from cortex_command.common import DEFAULT_CRITICALITY, DEFAULT_TIER
+
+        assert DEFAULT_TIER == "moderate"
+        assert DEFAULT_CRITICALITY == "medium"
+        assert requires_review(DEFAULT_TIER, DEFAULT_CRITICALITY) is False
+        assert requires_review("simple", DEFAULT_CRITICALITY) is requires_review(
+            DEFAULT_TIER, DEFAULT_CRITICALITY
+        )
+
+    def test_every_gate_site_routes_through_this_predicate(self):
+        """The consolidation itself: no gate site may re-derive the rule inline.
+
+        This is the check that fails when a sixth (or seventh) copy is written —
+        the failure mode 463 exists to close, since the previous guard was a
+        code comment reading "any future edit to either rule must change both".
+        """
+        import re
+        from pathlib import Path
+
+        repo_root = Path(__file__).resolve().parent.parent
+        gate_sites = [
+            "cortex_command/lifecycle/spec_approve.py",
+            "cortex_command/lifecycle/implement_transition.py",
+            "cortex_command/lifecycle/next_verb.py",
+            "cortex_command/overnight/advance_lifecycle.py",
+            "cortex_command/overnight/outcome_router.py",
+        ]
+        # An inline rebuild of the predicate: a complex-tier test adjacent to a
+        # high/critical criticality test, in either order.
+        inline = re.compile(
+            r'tier\s*[=!]=\s*[\'"]complex[\'"][^\n]*(high|critical)'
+            r'|(high|critical)[^\n]*tier\s*[=!]=\s*[\'"]complex[\'"]'
+        )
+        offenders = []
+        for rel in gate_sites:
+            body = (repo_root / rel).read_text(encoding="utf-8")
+            for lineno, line in enumerate(body.splitlines(), 1):
+                stripped = line.strip()
+                if stripped.startswith("#") or stripped.startswith("*"):
+                    continue  # prose, including the guard docs, is exempt
+                if inline.search(line):
+                    offenders.append(f"{rel}:{lineno}: {stripped}")
+        assert not offenders, (
+            "short-road predicate re-derived inline instead of calling "
+            "common.requires_review:\n  " + "\n  ".join(offenders)
+        )
 
 
 def test_requires_review_corrupt_routes_to_review(tmp_path, monkeypatch):

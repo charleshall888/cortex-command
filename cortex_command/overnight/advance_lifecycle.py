@@ -90,8 +90,11 @@ from typing import List, Optional
 
 from cortex_command.backlog import _telemetry
 from cortex_command.common import (
+    DEFAULT_CRITICALITY,
+    DEFAULT_TIER,
     _resolve_user_project_root_from_cwd,
     reduce_lifecycle_state,
+    requires_review,
 )
 from cortex_command.lifecycle.advance import advance
 from cortex_command.lifecycle.counters import count_rework_cycles, count_tasks
@@ -107,8 +110,6 @@ KNOWN_STATES = (
     "advance-refused",
     "error",
 )
-
-_HIGH_CRITICALITY = {"high", "critical"}
 
 
 def _read_events(events_path: Path) -> list[dict]:
@@ -251,8 +252,8 @@ def advance_lifecycle(feature: str, project_root: Optional[Path] = None) -> dict
         return {"state": "already-complete"}
 
     reduction = reduce_lifecycle_state(events_path)
-    tier = reduction.state.get("tier", "moderate")
-    criticality = reduction.state.get("criticality", "medium")
+    tier = reduction.state.get("tier", DEFAULT_TIER)
+    criticality = reduction.state.get("criticality", DEFAULT_CRITICALITY)
     # ``corrupted`` must be review-required, matching what the arm itself will
     # decide: ``implement_transition._resolve_route`` treats a corrupted
     # reduction as ("review", "complex"). When the two rules disagree, this
@@ -260,9 +261,11 @@ def advance_lifecycle(feature: str, project_root: Optional[Path] = None) -> dict
     # feature lands ``phase_transition{to: "review"}`` under an
     # ``advanced-complete`` report — and since ``_is_machine_complete`` matches
     # only ``to: "complete"``, every later run replays and reports completion
-    # forever. Any future edit to either rule must change both.
-    review_required = (
-        tier == "complex" or criticality in _HIGH_CRITICALITY or reduction.corrupted
+    # forever. The old comment here said "any future edit to either rule must
+    # change both" and had nothing behind it; #463 made them literally one rule
+    # instead.
+    review_required = requires_review(
+        tier, criticality, corrupted=reduction.corrupted
     )
 
     plan_path = feature_dir / "plan.md"

@@ -95,7 +95,8 @@ def test_approved_emit_transition_orders_spec_approved_then_transition(
     assert rows[0]["decision"] == "approved"
     assert rows[1]["from"] == "specify"
     assert rows[1]["to"] == "implement"
-    assert rows[1]["tier"] == "simple"
+    # 463: was "simple"; now agrees with the implement exit's default stamp.
+    assert rows[1]["tier"] == "moderate"
 
 
 def test_approved_emit_transition_complex_routes_plan(

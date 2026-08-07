@@ -20,6 +20,8 @@ if TYPE_CHECKING:
     from cortex_command.overnight.orchestrator import BatchResult, BatchConfig
 
 from cortex_command.common import (
+    DEFAULT_CRITICALITY,
+    DEFAULT_TIER,
     _resolve_lifecycle_base,
     _resolve_user_project_root,
     read_criticality,
@@ -1230,9 +1232,9 @@ def _review_required(name: str) -> bool:
     could invert the fail-safe.
     """
     reduction = reduce_lifecycle_state(Path(f"cortex/lifecycle/{name}/events.log"))
-    tier = reduction.state.get("tier", "moderate")
-    criticality = reduction.state.get("criticality", "medium")
-    return requires_review(tier, criticality) or reduction.corrupted
+    tier = reduction.state.get("tier", DEFAULT_TIER)
+    criticality = reduction.state.get("criticality", DEFAULT_CRITICALITY)
+    return requires_review(tier, criticality, corrupted=reduction.corrupted)
 
 
 def _set_review_error_detail_flags(details: dict, *, merge_reverted: bool) -> None:

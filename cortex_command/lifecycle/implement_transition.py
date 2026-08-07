@@ -64,8 +64,11 @@ from typing import List, Optional
 
 from cortex_command.backlog import _telemetry
 from cortex_command.common import (
+    DEFAULT_CRITICALITY,
+    DEFAULT_TIER,
     _resolve_user_project_root_from_cwd,
     reduce_lifecycle_state,
+    requires_review,
     resolve_lifecycle_phase,
 )
 from cortex_command.lifecycle.protocol import PROTOCOL_VERSION
@@ -91,14 +94,8 @@ KNOWN_STATES = (
 # for, which is the one outcome a rework cycle exists to prevent.
 _REWORK_STATE = "implement-rework"
 
-# The reducer's documented defaults for an absent (but not corruption-unknowable)
-# axis — see ``common.py:_read_tier_inner`` / ``_read_criticality_inner``.
-_DEFAULT_CRITICALITY = "medium"
-# The two-tier era defaulted to "simple", which meant what "moderate" now
-# means. Defaulting to "simple" would silently hand unlabelled features the
-# lighter road, so the default moves with the rename.
-_DEFAULT_TIER = "moderate"
-_REVIEW_CRITICALITIES = frozenset({"high", "critical"})
+# Defaults and the predicate come from ``common`` (#463); the rename rationale
+# that set the tier default to "moderate" now lives on ``common.DEFAULT_TIER``.
 
 
 def _reject_unsafe_slug(feature: str) -> Optional[dict]:
@@ -172,9 +169,9 @@ def _resolve_route(events_log: Path) -> tuple[str, str]:
     reduction = reduce_lifecycle_state(events_log)
     if reduction.corrupted:
         return "review", "complex"
-    criticality = reduction.state.get("criticality", _DEFAULT_CRITICALITY)
-    tier = reduction.state.get("tier", _DEFAULT_TIER)
-    if criticality in _REVIEW_CRITICALITIES or tier == "complex":
+    criticality = reduction.state.get("criticality", DEFAULT_CRITICALITY)
+    tier = reduction.state.get("tier", DEFAULT_TIER)
+    if requires_review(tier, criticality):
         return "review", tier
     return "complete", tier
 
