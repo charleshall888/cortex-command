@@ -238,6 +238,67 @@ _SPEC_APPROVED = '{"event": "spec_approved"}\n'
 _PLAN_APPROVED = '{"event": "plan_approved"}\n'
 
 
+def test_capped_resume_threads_the_discriminated_phase_into_the_envelope(
+    repo_root: Path,
+) -> None:
+    """``next_state`` carries the discriminated phase from the resolver into the
+    served envelope, so a capped feature is not told a reviewer rejected it.
+
+    This pins the ``phase=resolved.get("phase")`` argument at the
+    ``build_served_envelope`` call in the resume path — the SOLE production
+    wiring of that parameter (``build_served_envelope`` has exactly one call
+    site). Dropping it leaves every other test in this repo green while the CLI
+    serves a capped feature the REJECTED directive, which is precisely the bug
+    lifecycle 454 exists to fix. The cycle comes from the ``review_verdict`` row
+    count in events.log; the verdict value comes from review.md.
+    """
+    _seed_feature(
+        repo_root,
+        _SLUG,
+        {
+            "review.md": '{"verdict": "CHANGES_REQUESTED"}\n',
+            "events.log": (
+                _SPEC_APPROVED
+                + _PLAN_APPROVED
+                + '{"event": "review_verdict"}\n'
+                + '{"event": "review_verdict"}\n'
+                + '{"event": "phase_transition", "from": "review", "to": "escalated"}\n'
+            ),
+        },
+    )
+    r = next_state(_SLUG)
+
+    # The machine state stays bare — no new transition-table state was added.
+    assert r["state"] == "escalated"
+    assert r["legacy_display_phase"] == "escalated"
+
+    directive = r["fragment_ref"]["directive"]
+    assert "REJECTED" not in directive, directive
+    assert "rework cap" in directive, directive
+
+
+def test_rejected_resume_still_serves_the_rejection_directive(repo_root: Path) -> None:
+    """The control for the test above: a genuine reviewer REJECTED still names a
+    rejection, so the discriminant narrows the narration rather than removing it.
+    """
+    _seed_feature(
+        repo_root,
+        _SLUG,
+        {
+            "review.md": '{"verdict": "REJECTED"}\n',
+            "events.log": (
+                _SPEC_APPROVED
+                + _PLAN_APPROVED
+                + '{"event": "review_verdict"}\n'
+                + '{"event": "phase_transition", "from": "review", "to": "escalated"}\n'
+            ),
+        },
+    )
+    r = next_state(_SLUG)
+    assert r["state"] == "escalated"
+    assert "REJECTED" in r["fragment_ref"]["directive"]
+
+
 def test_resume_spec_only_serves_plan_state(repo_root: Path) -> None:
     """A feature dir with an approved spec resolves to the ``plan`` state and
     serves the plan envelope pinned to the main-root log."""

@@ -130,11 +130,13 @@ def test_hook_glue(
 # to be: the `escalated:rework-cap:<n>` form in that same case block DOES
 # read cycle, counting `review_verdict` rows in events.log (mirroring
 # Python's `review_verdict_count`) and emitting the count inline once it
-# reaches 2. None of the fixtures this parametrized test runs against land
-# on that arm, so the ladder-vs-canonical comparison below still never
-# compares cycle in practice — but that is fixture coverage, not a
-# statement that the ladder is cycle-blind in general. R12a (glue unit) and
-# R12c (hook end-to-end) enforce cycle correctness from the other side.
+# reaches 2. The `review-changes-requested-cycle2` fixture DOES land on that
+# arm, so the ladder-vs-canonical comparison below exercises it and DOES
+# compare the cycle there — the cycle rides inside the compared phase string
+# (`escalated:rework-cap:2`) rather than the separate `cycle` field, which is
+# what stays excluded. Neutralising the ladder's `review_verdict` count fails
+# that subtest on that fixture. R12a (glue unit) and R12c (hook end-to-end)
+# enforce cycle correctness from the other side.
 
 
 def _extract_statusline_ladder() -> str:
