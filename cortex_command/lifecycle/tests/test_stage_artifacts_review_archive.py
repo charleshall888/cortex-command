@@ -18,6 +18,15 @@ review-brief verb writes at every rework dispatch.
   ``review.md`` yet), ``escalated:rework-cap:2`` (cycle 2 also came back
   CHANGES_REQUESTED), and ``complete`` (cycle 2 approved).
 
+* **Capture rig** (``test_captures_*``) — the evidence side of the same staging
+  engine. ``review.md`` and the scoped brief a rework cycle produces are archived
+  under ``cortex/lifecycle/{slug}/captures/``, and the phase artifacts cite them by
+  path; ``_capture_files`` is appended *outside* the per-phase branch in
+  ``collect_paths``, so the claim these tests pin is that a capture reaches
+  ``staged_paths`` at **every** phase the verb accepts, not just ``complete``. The
+  nested-file and dot-entry cases pin the two enumeration rules the docstring
+  states, and a no-captures control keeps the assertion discriminating.
+
 **Memoization hazard, and how these tests defeat it.** ``detect_lifecycle_phase``
 memoizes on ``(feature_dir_str, *five _stat_key tuples)``, and ``review.md`` is one of
 those five (``common.py:484``). Writing ``review-cycle-1.md`` changes *none* of those
@@ -208,6 +217,89 @@ def test_complete_without_archives_names_none(tmp_path: Path) -> None:
 
     assert not [p for p in result["staged_paths"] if "review-cycle-" in p]
     assert f"{LC}/review.md" in result["staged_paths"]
+
+
+# ---------------------------------------------------------------------------
+# Capture rig — captures/ reaches staged_paths at every phase
+# ---------------------------------------------------------------------------
+
+# The phases ``--phase`` accepts. ``collect_paths`` appends ``_capture_files``
+# after the per-phase branch, so all three must carry a capture.
+_STAGING_PHASES = ["complete", "plan", "refine"]
+
+
+def _repo_with_lifecycle(root: Path, **kwargs) -> None:
+    """Init a repo with one committed file and an uncommitted lifecycle tree."""
+    _new_repo(root)
+    _write(root, "README.md", "base\n")
+    _git("add", "README.md", cwd=root)
+    _git("commit", "-m", "Initial commit", cwd=root)
+    _write_lifecycle(root, SLUG, **kwargs)
+
+
+@pytest.mark.parametrize("phase", _STAGING_PHASES)
+def test_captures_reach_staged_paths(tmp_path: Path, phase: str) -> None:
+    """A file under ``captures/`` is staged, at every phase the verb accepts.
+
+    The evidence is what the phase's own prose cites by path, so a capture that
+    does not stage leaves a committed artifact pointing at an uncommitted file.
+    Asserted against a real git index — the verb's self-report and
+    ``git status --porcelain`` must agree that nothing was left untracked.
+    """
+    root = tmp_path
+    _repo_with_lifecycle(
+        root, verdict="CHANGES_REQUESTED", review_verdicts=1, archives=1
+    )
+    capture = f"{LC}/captures/review-cycle-2-brief.md"
+    _write(root, capture, "# Scoped rework brief\n")
+
+    result = stage(phase, SLUG, root)
+
+    assert capture in result["staged_paths"], result["staged_paths"]
+    assert result["signal"] == "staged"
+    # Scoped to captures/ — the non-capture allowlist differs per phase (``plan``
+    # and ``refine`` stage no review.md), and that is not what this test pins.
+    untracked = [
+        line for line in _porcelain(root, f"{LC}/captures/") if line.startswith("??")
+    ]
+    assert untracked == [], f"capture left untracked: {untracked}"
+
+    _git("commit", "-m", "Record the capture", cwd=root)
+    committed = _git("log", "--name-only", "--format=", "-1", cwd=root).stdout.split()
+    assert capture in committed
+
+
+@pytest.mark.parametrize("phase", _STAGING_PHASES)
+def test_captures_absent_stages_no_capture_path(tmp_path: Path, phase: str) -> None:
+    """Discriminating control: no ``captures/`` tree, no capture path staged."""
+    root = tmp_path
+    _repo_with_lifecycle(
+        root, verdict="CHANGES_REQUESTED", review_verdicts=1, archives=1
+    )
+
+    result = stage(phase, SLUG, root)
+
+    assert not [p for p in result["staged_paths"] if "/captures/" in p]
+
+
+def test_captures_recurse_but_skip_dot_entries(tmp_path: Path) -> None:
+    """Nested captures stage; dot-entries at any level never do.
+
+    Pins both enumeration rules ``_capture_files`` documents — the tree is walked
+    with ``rglob`` so a manifest in a subdirectory is carried, while any
+    dot-prefixed path component keeps local-only session markers untrackable.
+    """
+    root = tmp_path
+    _repo_with_lifecycle(root, verdict="APPROVED", review_verdicts=2, archives=1)
+    nested = f"{LC}/captures/cycle-2/review.md"
+    _write(root, nested, "# Archived review\n")
+    _write(root, f"{LC}/captures/.session-owner", "local-only\n")
+    _write(root, f"{LC}/captures/.hidden/manifest.json", "{}\n")
+
+    result = stage("complete", SLUG, root)
+
+    assert nested in result["staged_paths"]
+    assert not [p for p in result["staged_paths"] if "/." in p]
 
 
 # ---------------------------------------------------------------------------
