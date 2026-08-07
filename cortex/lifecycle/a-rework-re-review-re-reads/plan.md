@@ -107,7 +107,7 @@ proof — and are not a signal that the decomposition needs restructuring.
   `grep -cE '^[[:space:]]*(from|import)[[:space:]]+cortex_command\.pipeline' cortex_command/lifecycle/review_brief.py` = 0
   (no import of the SDK-bearing module; the pattern is anchored to an import statement at line start, so citing
   `review_dispatch.py:202` in a docstring or comment cannot trip it).
-- **Status**: [ ] pending
+- **Status**: [x] done (4c61e56c 2026-08-07T08:56:46-04:00)
 
 ### Task 2: Deploy the verb (console script, bin wrapper, deployment row)
 - **Files**: `pyproject.toml`, `bin/cortex-lifecycle-review-brief`, `tests/test_lifecycle_verb_deployment.py`
@@ -125,7 +125,7 @@ proof — and are not a signal that the decomposition needs restructuring.
   hook rebuilds from staged blobs; never stage it by hand.
 - **Verification**: `test -x bin/cortex-lifecycle-review-brief` exits 0; `uv run pytest tests/test_lifecycle_verb_deployment.py -q` passes;
   `uv run cortex-check-contract` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (cf246363 2026-08-07T09:29:35-04:00)
 
 ### Task 3: Commit the archive and correct the stale cycle docstring
 - **Files**: `cortex_command/lifecycle/stage_artifacts.py`, `cortex_command/common.py`,
@@ -150,7 +150,7 @@ proof — and are not a signal that the decomposition needs restructuring.
   `grep -c 'review_verdict' cortex_command/common.py` ≥ 1 in the docstring region;
   `grep -c 'review-cycle-\*' cortex_command/lifecycle/stage_artifacts.py` ≥ 1;
   `uv run pytest tests/test_stage_artifacts.py -q` passes.
-- **Status**: [ ] pending
+- **Status**: [x] done (64aa2f18 2026-08-07T09:30:56-04:00)
 
 ### Task 4: Give the new event a typed subcommand
 - **Files**: `cortex_command/lifecycle_event.py`, `tests/test_lifecycle_event_roundtrip.py`,
@@ -169,7 +169,7 @@ proof — and are not a signal that the decomposition needs restructuring.
   enumerate the subcommand table and so need a row for the new subcommand.
 - **Verification**: `uv run cortex-lifecycle-event review-dispatched --help` exits 0;
   `uv run pytest tests/test_lifecycle_event_roundtrip.py cortex_command/tests/test_lifecycle_event.py -q` passes.
-- **Status**: [ ] pending
+- **Status**: [x] done (d58a4fa2 2026-08-07T09:30:44-04:00)
 
 ### Task 5: Declare the brief protocol-governed
 - **Files**: `cortex_command/lifecycle/protocol.py`
@@ -184,7 +184,7 @@ proof — and are not a signal that the decomposition needs restructuring.
   description to say the brief is one of the served surfaces it governs.
 - **Verification**: `grep -c 'review-brief' cortex_command/lifecycle/protocol.py` ≥ 1;
   `uv run pytest tests/test_protocol_parity.py -q` passes.
-- **Status**: [ ] pending
+- **Status**: [x] done (67db2f28 2026-08-07T09:30:02-04:00)
 
 ### Task 6: Record ADR 0035
 - **Files**: `cortex/adr/0035-reviewer-brief-emitted-by-verb-not-reference-prose.md`
@@ -197,7 +197,7 @@ proof — and are not a signal that the decomposition needs restructuring.
   this plan's Overview as a consequence, so the next reader does not re-derive it. `cortex-adr-citation-audit`
   checks ADR citations; run it.
 - **Verification**: `uv run cortex-adr-citation-audit` exits 0; `ls cortex/adr/0035-*.md` lists exactly one file.
-- **Status**: [ ] pending
+- **Status**: [x] done (291a2338 2026-08-07T09:30:40-04:00)
 
 ### Task 7: Build overnight's cycle-2 prompt from the shared brief
 - **Files**: `cortex_command/pipeline/review_dispatch.py`,
@@ -219,7 +219,7 @@ proof — and are not a signal that the decomposition needs restructuring.
 - **Verification**: `grep -c 'Focus on whether the flagged issues were resolved' cortex_command/pipeline/review_dispatch.py` = 0;
   `grep -c 'build_rework_brief' cortex_command/pipeline/review_dispatch.py` ≥ 1;
   `uv run pytest cortex_command/pipeline/tests/test_review_dispatch.py -q` passes.
-- **Status**: [ ] pending
+- **Status**: [x] done (13fc03c2 2026-08-07T09:33:31-04:00)
 
 ### Task 8: Stop the overnight template biasing the reported cycle
 - **Files**: `cortex_command/pipeline/prompts/review.md`
@@ -236,7 +236,7 @@ proof — and are not a signal that the decomposition needs restructuring.
 - **Verification**: `grep -c '"cycle": 1' cortex_command/pipeline/prompts/review.md` = 0;
   `grep -c '{cycle number}' cortex_command/pipeline/prompts/review.md` = 1 (the placeholder is present in the
   worked example).
-- **Status**: [ ] pending
+- **Status**: [x] done (6a922cd5 2026-08-07T09:30:27-04:00)
 
 ### Task 9: Test the archive, mode selection, and the fail-open contract
 - **Files**: `cortex_command/lifecycle/tests/test_review_brief_cli.py`
@@ -253,7 +253,7 @@ proof — and are not a signal that the decomposition needs restructuring.
   archive with an empty `issues` array, and no prior `review_dispatched` row — each must exit 3, write a
   **full** brief to stdout, name the reason on stderr, and emit **no** scoped-brief markers.
 - **Verification**: `uv run pytest cortex_command/lifecycle/tests/test_review_brief_cli.py -q` passes.
-- **Status**: [ ] pending
+- **Status**: [x] done (a7cdcb6c 2026-08-07T09:36:35-04:00)
 
 ### Task 10: Test brief content, carry-forward, baseline rule, and the SHA
 - **Files**: `cortex_command/lifecycle/tests/test_review_brief_content.py`
@@ -270,7 +270,7 @@ proof — and are not a signal that the decomposition needs restructuring.
   `cortex/lifecycle/{feature}/events.log` → `re-run`; any source path → `re-run`. SHA (req 13): the rework
   brief matches `\b[0-9a-f]{40}\b` and `git cat-file -e <sha>^{commit}` exits 0.
 - **Verification**: `uv run pytest cortex_command/lifecycle/tests/test_review_brief_content.py -q` passes.
-- **Status**: [ ] pending
+- **Status**: [x] done (089260fd 2026-08-07T09:37:35-04:00)
 
 ### Task 11: Test archive staging and phase-detection invariance
 - **Files**: `cortex_command/lifecycle/tests/test_stage_artifacts_review_archive.py`
@@ -286,7 +286,7 @@ proof — and are not a signal that the decomposition needs restructuring.
   phase for the same tree with and without archives present, including the `implement-rework` case, since
   `_stat_key(review.md)` (`common.py:467`) is a memoization key over that exact path.
 - **Verification**: `uv run pytest cortex_command/lifecycle/tests/test_stage_artifacts_review_archive.py -q` passes.
-- **Status**: [ ] pending
+- **Status**: [x] done (4798fb65 2026-08-07T09:37:02-04:00)
 
 ### Task 12: Test the overnight cycle-2 prompt
 - **Files**: `cortex_command/pipeline/tests/test_review_dispatch.py`
@@ -299,7 +299,7 @@ proof — and are not a signal that the decomposition needs restructuring.
   handed to the second `dispatch_task` call and assert each cycle-1 issue string appears in it. Also assert the
   brief-construction failure path still writes the deferral rather than raising.
 - **Verification**: `uv run pytest cortex_command/pipeline/tests/test_review_dispatch.py -q` passes.
-- **Status**: [ ] pending
+- **Status**: [x] done (3b172cf8 2026-08-07T09:36:43-04:00)
 
 ### Task 13: Restructure review.md prose onto the verb
 - **Files**: `skills/build/references/review.md`, `skills/build/references/size-pin.txt`,
@@ -337,7 +337,7 @@ proof — and are not a signal that the decomposition needs restructuring.
   prints a value ≤ 57964; `grep -c '# raised:' skills/build/references/size-pin.txt` = 2 (unchanged);
   `uv run pytest tests/test_reference_size_ratchet.py tests/test_dual_source_reference_parity.py tests/test_plugin_mirror_parity.py tests/test_check_skill_path.py -q` passes;
   `uv run cortex-check-contract` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (a6a4478d 2026-08-07T09:42:08-04:00)
 
 ### Task 14: Ratchet the prompts directory
 - **Files**: `scripts/ratchet_refs.py`, `cortex_command/pipeline/prompts/size-pin.txt`,
@@ -360,7 +360,7 @@ proof — and are not a signal that the decomposition needs restructuring.
   file makes `classify` report the missing-pin error.
 - **Verification**: `uv run pytest tests/test_reference_size_ratchet.py -q` passes and
   `uv run python scripts/ratchet_refs.py` prints a `pinned` line naming `cortex_command/pipeline/prompts`.
-- **Status**: [ ] pending
+- **Status**: [x] done (7dcff0f3 2026-08-07T09:34:30-04:00)
 
 ### Task 15: Prove the scoped path actually runs end to end
 - **Files**: `cortex_command/lifecycle/tests/test_review_brief_end_to_end.py`,
@@ -386,7 +386,7 @@ proof — and are not a signal that the decomposition needs restructuring.
 - **Verification**: `uv run pytest cortex_command/lifecycle/tests/test_review_brief_end_to_end.py -q` passes;
   and `Interactive/session-dependent: the disposition half is evidenced by this lifecycle's own review capture,
   which cannot exist until the review phase runs.`
-- **Status**: [ ] pending
+- **Status**: [x] done (914bc89d 2026-08-07T09:53:55-04:00)
 
 ## Risks
 
