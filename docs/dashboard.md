@@ -101,6 +101,8 @@ Surfaces worker-to-orchestrator escalations for the active session — open ques
 
 One card per feature in the session. Each card shows the feature title, status badge, model tier, and complexity. Running features display the current phase and a task progress bar. Failed features show the error message and recovery attempt count. Alert badges surface deferred questions, stalls, rework, and failures at a glance.
 
+An expanded card's artifact row links to the feature's ticket page — `backlog #N` to `/tickets/{id}`, and `spec.md` / `plan.md` to that page's `#spec` and `#plan` panels. All three depend on the feature's `backlog_id`, which is legitimately absent for a feature not sourced from a numbered backlog file; those labels then render without a link rather than pointing nowhere, since the page is keyed on an id and a bare lifecycle path carries only a slug.
+
 ### 4. Recent Activity Stream
 
 Tails the most recent entries from `overnight-events.log`, surfacing the live event stream so operators can see what the runner is doing right now without scanning the full log.
@@ -145,11 +147,27 @@ Status, priority, and type each occupy a fixed column, so each vocabulary is sca
 
 **Ticket descriptions.** Expanding a row renders that ticket's markdown body — headings, fenced code, and tables — above its classification and readiness fields. The body is fetched once per row per page load from `/partials/ticket/{id}`, not carried in the 30 s snapshot: this repo's backlog is ~1.5 MB across 416 files, so embedding bodies would morph hundreds of KB into the DOM twice a minute to show prose nobody asked for. Only an opened row pays. The loaded description is `hx-preserve`d, so a poll landing while the row is open does not replace it with the placeholder.
 
-Rows remain non-navigational — the fetch renders in place and moves the operator nowhere. Ids resolve padding-agnostically (`7` finds `007-*.md`) and fall back to `cortex/backlog/archive/`, so a blocker pointing at a closed ticket is still readable. The route is behind the same backend gate as every other backlog read.
+The row's own summary stays non-navigational — the fetch renders in place, so opening a row moves the operator nowhere. The expanded area carries one link out, to that ticket's `/tickets/{id}` page, which is where the lifecycle artifacts live; the two surfaces are connected rather than divergent readers of the same ticket. Ids resolve padding-agnostically (`7` finds `007-*.md`) and fall back to `cortex/backlog/archive/`, so a blocker pointing at a closed ticket is still readable. The route is behind the same backend gate as every other backlog read.
 
 Rendered HTML is filtered to an allowlist of the tags Markdown emits, dropping raw HTML carried in from the file. Ticket bodies routinely quote material the repo did not author — pasted error output, a GitHub issue, a tool transcript — and Python-Markdown has no safe mode, so an injected `<script>` would otherwise run with the dashboard's origin. Filtering happens after rendering rather than by escaping the source, because escaping first double-escapes every fenced code block.
 
+An unrecognized tag carrying no attributes — the bare `<slug>`, `<path>`, `<ts>` placeholders specs and plans write in prose — survives as escaped literal text rather than being dropped. Deleting it was silent: the filter emitted no error and the reader saw `cortex/lifecycle//research.md` with no indication anything was missing, across 5% of lifecycle artifacts and 1.1% of ticket bodies. An *attributed* unrecognized tag is still dropped, which is what keeps `<img src=x onerror=…>` and `<div onclick=…>` from reaching the page as text.
+
 An epic's own row **is** its group's heading, so each active ticket renders exactly once. (An epic is nobody's child, so a children-only exclusion previously left it in the flat list as well — rendering the same ticket twice, the second time labelled "Unparented", which a group-heading epic is not.) The heading carries the epic's own status, priority, and disposition alongside its active-child count.
+
+---
+
+## Ticket page (`/tickets/{id}`)
+
+A detail page for one ticket, reached by link rather than from the nav — the same shape as `/sessions/{id}`, which is likewise absent from the masthead. It renders a frontmatter badge strip (status, priority, type, plus parent and areas where present), the ticket body through the same loader the board's expandable row uses, and, on an epic, its children as links to their own pages. An unknown id returns 404; a non-local backlog backend renders an unavailable state rather than raising.
+
+Badges here use the backlog vocabulary (`complete`, `refined`, `backlog`, `wontfix`, `superseded`, …), not the overnight feature-pipeline vocabulary the feature cards use — the two sets differ, and the page shares the board's mapping through `templates/patterns/backlog_badges.html` rather than carrying a third copy.
+
+**Lifecycle artifacts.** Research, spec, plan, and review each get a `<details>` panel, fetched from `/partials/ticket/{id}/artifact/{kind}` when that panel is opened. Only the kinds actually present get a panel; absent ones are not rendered as empty shells. Opening the page fetches no artifact at all — rendering all five documents eagerly measured 77.8 ms against a 7.5 ms median per artifact, so the operator pays only for what they open. Arriving with a `#spec` or `#plan` anchor opens that one panel, which is what makes the feature cards' artifact links land somewhere.
+
+The directory holding those artifacts is found by a two-key join: the `spec:` frontmatter value's parent directory first, then a `lifecycle_slug` probe of `cortex/lifecycle/<slug>/` and `cortex/lifecycle/archive/<slug>/`. Measured over this repo's corpus, the two keys together resolve 290 tickets where `spec:` alone resolves 262; a stale `spec:` pointing at a deleted directory falls through to the probe instead of dead-ending. Tickets carrying neither key render body and badges with no artifact section.
+
+Both routes are declared as plain `def` rather than `async def`. The dashboard's other handlers are coroutines doing synchronous disk work, which holds the event loop for the render's full duration; Starlette dispatches a non-coroutine handler to a threadpool instead. Measured against a 50 ms-tick background loop, a 300 ms handler starved the tick to a 306 ms gap as `async def` versus 52 ms as `def`. These are the first routes rendering artifact-sized documents, so they are the first where it shows.
 
 ---
 
