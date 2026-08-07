@@ -1,3 +1,3 @@
-57185
+57183
 # raised: implement.md SS3 must route its Review return through SS4 and SS4 must list the rework-review state, because the prescribed rework loop was previously unrepresentable in the state machine, lifecycle-id=433, date=2026-08-03
 # raised: review.md must state which tier each stage runs at, because its opening line claimed complex-tier-only while the SKILL.md gate table forced the phase at high criticality — the two disagreed and nothing resolved them, lifecycle-id=449, date=2026-08-04

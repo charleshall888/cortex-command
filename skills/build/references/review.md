@@ -22,9 +22,9 @@ Dispatch one read-only reviewer, choosing its model yourself. Hand it the brief,
 
 **Single-writer rule** — only the reviewer role writes `review.md`: this sub-task plus §3's missing-drift re-dispatch and §3a's cap-2 re-dispatches. Any sub-agent the reviewer spawns is read-only and returns findings as a message envelope.
 
-**Verdict contract** — the brief prescribes the rest of the output shape, but this block is prose because §3 parses it. Hand it along with the brief; the review ends with it:
+**Verdict contract** — the brief prescribes the rest of the output shape, but this block is prose because §3 parses it. Hand it with the brief; the review ends with it:
 
-```
+```json
 {"verdict": "APPROVED"|"CHANGES_REQUESTED"|"REJECTED", "cycle": <int>, "issues": [<strings>], "requirements_drift": "none"|"detected"}
 ```
 
