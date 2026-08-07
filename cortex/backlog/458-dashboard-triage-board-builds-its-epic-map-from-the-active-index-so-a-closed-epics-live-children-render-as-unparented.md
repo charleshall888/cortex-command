@@ -2,13 +2,14 @@
 schema_version: "1"
 uuid: 214f63da-2ab6-4497-81b1-fd76f8523c53
 title: Dashboard triage board builds its epic map from the active index, so a closed epic's live children render as Unparented
-status: backlog
+status: complete
 priority: low
 type: bug
 created: 2026-08-06
 updated: 2026-08-06
 tags: ['dashboard', 'triage', 'epic-map']
 areas: ['dashboard']
+complexity: moderate
 ---
 ## Why
 

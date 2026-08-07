@@ -746,6 +746,47 @@ class TestTriageBoardEpicMap(unittest.TestCase):
         epic_group = dom.find_all("div", "epic-group")[0]
         self.assertEqual(set(_row_ids(epic_group)), {"410", "411", "412"})
 
+    def test_live_child_of_a_closed_epic_renders_in_its_group(self):
+        # #458: the rendered symptom. build_epic_map detects an epic by
+        # scanning the list it is handed for `type: epic`, so feeding it the
+        # active slice made the closed epic invisible as an epic — and its live
+        # child dropped through the child-id exclusion into "Standalone",
+        # asserting it had no parent when it plainly does.
+        snapshot = _board_snapshot([
+            {"id": 600, "title": "Closed epic", "type": "epic",
+             "status": "complete"},
+            {"id": 601, "title": "Late child", "status": "backlog",
+             "parent": "600"},
+            {"id": 900, "title": "Genuinely unparented", "status": "backlog"},
+        ])
+        dom = _parse(_render_board(snapshot))
+
+        groups = dom.find_all("div", "epic-group")
+        self.assertEqual(len(groups), 1)
+        # The heading IS the epic's own row, so both ids live in the group.
+        self.assertEqual(set(_row_ids(groups[0])), {"600", "601"})
+        self.assertIn("Closed epic", groups[0].text)
+
+        flat = dom.find_all("div", "flat-group")[0]
+        self.assertEqual(set(_row_ids(flat)), {"900"})
+
+    def test_closed_epic_without_live_children_renders_no_group(self):
+        # The other half of #458's gate. Detection widened to the whole corpus;
+        # the rendered set did not. Every finished epic would otherwise open a
+        # "no active children" group — 34 of them on this repo.
+        snapshot = _board_snapshot([
+            {"id": 610, "title": "Finished and empty", "type": "epic",
+             "status": "complete"},
+            {"id": 611, "title": "Also done", "status": "complete",
+             "parent": "610"},
+            {"id": 901, "title": "Unparented", "status": "backlog"},
+        ])
+        dom = _parse(_render_board(snapshot))
+
+        self.assertEqual(snapshot["epics"]["epics"], {})
+        self.assertEqual(len(dom.find_all("div", "epic-group")), 0)
+        self.assertEqual(set(_row_ids(dom.find_all("div", "flat-group")[0])), {"901"})
+
     def test_epic_with_zero_active_children_says_so(self):
         # R15: build_epic_map seeds its map with every epic id, zero-child
         # ones included, so this is reachable the moment a non-terminal epic's

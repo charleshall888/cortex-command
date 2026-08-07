@@ -22,8 +22,11 @@ docstring without reading the code that fills it.
                                         # a prior snapshot
       "items":       {"<id>": {<collect_items record>, "deferred_status": bool,
                                "deferred_tag": bool, "phase": "<str>|null"}},
+                                        # active items, PLUS any closed epic
+                                        # that still heads a group in "epics"
       "item_order":  ["<id>", ...],     # collect_items' priority-then-id order
-      "epics":       {<build_epic_map envelope verbatim>},
+      "epics":       {<build_epic_map envelope, epics pruned and children
+                       filtered — see _epic_map_for_board>},
       "ready":       ["<id>", ...],
       "ineligible":  [{"id": "<id>", "reason": "<str>", "kind": "status"|"blocker"}],
       "blocked_why": {"<id>": [{"ref": "<str>", "kind": "internal"|"external"|"not_found",
@@ -39,6 +42,17 @@ Shape notes that are load-bearing for consumers:
   rather than a scan. Ids are stringified everywhere they are used as keys;
   ``active_ids``/``archive_ids`` stay integers because they are identity
   sets, not lookups.
+* ``items`` is not the active set — ``item_order`` is. It carries one extra
+  class of record: a closed epic that still has active children, because the
+  group heading is that epic's own ticket row and it needs something to render.
+  Anything deriving "what is active" must read ``item_order`` (or
+  ``active_ids``), never ``items``' keys or length; the flat Standalone list is
+  ``item_order``'s complement and the active count is its length.
+* ``epics`` is no longer ``build_epic_map``'s output verbatim. Epics are
+  *detected* over the whole non-archived corpus so a closed epic still heads
+  its group, then children are filtered to active ids and childless closed
+  epics are dropped. Every id in a ``children`` list is therefore resolvable
+  in ``items``; an epic key is too.
 * Status, type, and priority are carried through raw. All three vocabularies
   are documented as closed enums but are open in practice — the item-creation
   verb applies no restriction — so every display switch needs a default branch.
@@ -60,7 +74,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from cortex_command.backlog.build_epic_map import build_epic_map
-from cortex_command.backlog.generate_index import collect_items
+from cortex_command.backlog.generate_index import collect_items, full_corpus
 from cortex_command.backlog.readiness import (
     _build_status_lookup,
     _looks_like_uuid,
@@ -153,6 +167,63 @@ def _resolve_blockers(
     return resolved
 
 
+def _display_record(record: dict) -> dict:
+    """Enrich one ``collect_items`` record with the three board-only fields."""
+    return {
+        **record,
+        "deferred_status": record.get("status") == "deferred",
+        "deferred_tag": _has_deferred_tag(record),
+        "phase": _normalize_phase(record.get("lifecycle_phase")),
+    }
+
+
+def _epic_map_for_board(corpus: list[dict], active_ids: set[int]) -> dict:
+    """Build the board's epic map: full-corpus detection, active-only children.
+
+    Two rules that pull in opposite directions, both necessary.
+
+    *Detection* spans the whole non-archived corpus. ``build_epic_map``
+    identifies an epic by scanning the list it is handed for ``type: epic``, so
+    passing the active slice meant a **closed** epic was not recognized as an
+    epic at all — and its still-active children, the late-arriving children
+    #438 exists because of, fell through the template's child-id exclusion into
+    the Standalone list, asserting they had no parent.
+
+    *Children* are then filtered back to active ids, because every per-row field
+    on the board resolves through ``items``, which stays active-only. A closed
+    child would subscript to a Jinja ``Undefined`` and render as a blank row
+    rather than raise — the silent-failure mode ``triage_board.html``'s
+    docstring exists to prevent.
+
+    A closed epic is kept only when it still has an active child. Without that
+    gate, full-corpus detection would seed a "no active children" group for
+    every epic ever finished — 34 of them on this repo, 19 on wild-light. An
+    *active* epic is kept regardless, zero children included: that empty group
+    is how the board says a live epic has nothing left in flight.
+
+    ``strict_schema=False`` is not a preference: the default raises on any
+    schema version this code did not write, which in a repo whose corpus this
+    process does not control means one future bump kills the poll permanently.
+    """
+    envelope = build_epic_map(corpus, strict_schema=False)
+    kept: dict[str, dict] = {}
+    for epic_id, epic in envelope.get("epics", {}).items():
+        children = [
+            child for child in epic.get("children", [])
+            if child.get("id") in active_ids
+        ]
+        try:
+            epic_is_active = int(epic_id) in active_ids
+        except (TypeError, ValueError):
+            # A non-numeric epic key cannot be matched against the active set;
+            # keep it if it has active children, exactly as the numeric path
+            # would, rather than dropping the group on an id-shape surprise.
+            epic_is_active = False
+        if children or epic_is_active:
+            kept[epic_id] = {**epic, "children": children}
+    return {**envelope, "epics": kept}
+
+
 def build_backlog_snapshot(
     backlog_dir: Path,
     lifecycle_dir: Path,
@@ -195,11 +266,8 @@ def build_backlog_snapshot(
         treat_external_blockers_as="blocking",
     )
 
-    # strict_schema=False is not a preference: the default raises on any
-    # schema version this code did not write, which in a repo whose corpus
-    # this process does not control means one future bump kills the poll
-    # permanently.
-    epics = build_epic_map(active_items, strict_schema=False)
+    corpus = full_corpus(all_items)
+    epics = _epic_map_for_board(corpus, active_ids)
 
     status_by_id = _build_status_lookup(all_items_ns)
 
@@ -210,16 +278,23 @@ def build_backlog_snapshot(
     for record in active_items:
         item_id = str(record["id"])
         item_order.append(item_id)
-        items[item_id] = {
-            **record,
-            "deferred_status": record.get("status") == "deferred",
-            "deferred_tag": _has_deferred_tag(record),
-            "phase": _normalize_phase(record.get("lifecycle_phase")),
-        }
+        items[item_id] = _display_record(record)
 
         blockers = _resolve_blockers(record, status_by_id, titles_by_id)
         if blockers:
             blocked_why[item_id] = blockers
+
+    # A closed epic that still heads a group needs a record to render with: the
+    # board's group heading IS the epic's own ticket row. These are added to
+    # `items` but deliberately NOT to `item_order` — that list is the board's
+    # active set, `backlog_panel.html:54` reads its length as the active count,
+    # and the flat Standalone list is its complement, so an entry here would
+    # both inflate the count and reappear as a standalone row.
+    by_id = {str(record["id"]): record for record in corpus}
+    for epic_id in epics["epics"]:
+        if epic_id in items or epic_id not in by_id:
+            continue
+        items[epic_id] = _display_record(by_id[epic_id])
 
     return {
         "schema_version": SCHEMA_VERSION,

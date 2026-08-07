@@ -1260,10 +1260,11 @@ def render(item: dict) -> str:
 # ``lifecycle_slug``, ``spec``, ``extra_tags``, ``body``, ``archived``.
 #
 # The roster is a coverage matrix, not a sample: between them these records
-# carry an epic with children, a child pointing at a non-epic parent, a
-# terminal status, all four blocker outcomes (internal non-terminal, internal
-# terminal, external, and not-found), both deferral vocabularies, a resolvable
-# lifecycle slug, a deliberately unresolvable one, and an archived id.
+# carry an epic with children, a CLOSED epic with a still-active child, a child
+# pointing at a non-epic parent, a terminal status, all four blocker outcomes
+# (internal non-terminal, internal terminal, external, and not-found), both
+# deferral vocabularies, a resolvable lifecycle slug, a deliberately
+# unresolvable one, and an archived id.
 #
 # IDs are ordinary low numbers: fixtures reach no real backlog any more, so
 # nothing needs a reserved band to stay out of an allocator's way.
@@ -1423,6 +1424,33 @@ _BACKLOG_ITEMS: list[dict] = [
         "title": "Retire the v1 metrics exporter",
         "archived": True,
     },
+    # 015 — a CLOSED epic. Terminal, so it is filtered out of the active items,
+    # which is exactly why it belongs here: the epic map is built by scanning
+    # for `type: epic`, and scanning the active slice made this one invisible
+    # as an epic at all. Its live child 016 then rendered as Standalone. Do NOT
+    # "fix" this by reopening it — an epic closing before its children are all
+    # done is the normal end state (the parent-closing cascade fires on the
+    # last child, and #438 documents epic 9 absorbing a child 39 days later),
+    # and this pair is the corpus's only coverage of it.
+    {
+        "id": 15,
+        "slug": "seed-epic-closed",
+        "status": "complete",
+        "priority": "medium",
+        "type": "epic",
+        "title": "Ship the v1 telemetry pipeline",
+    },
+    # 016 — the late-arriving child: filed against 015 after it closed, and
+    # still active. It must render inside 015's group, never as Standalone.
+    {
+        "id": 16,
+        "slug": "seed-late-child-of-closed-epic",
+        "status": "backlog",
+        "priority": "high",
+        "type": "bug",
+        "title": "Telemetry exporter drops the final batch on shutdown",
+        "parent": "015",
+    },
 ]
 
 # Deterministic UUIDs for seed backlog items so reruns don't churn frontmatter.
@@ -1444,6 +1472,8 @@ _BACKLOG_UUIDS = {
     "seed-deferred-tag":          "5eed0012-0000-4000-8000-000000000012",
     "seed-dangling-artifact":     "5eed0013-0000-4000-8000-000000000013",
     "seed-archived-item":         "5eed0014-0000-4000-8000-000000000014",
+    "seed-epic-closed":           "5eed0015-0000-4000-8000-000000000015",
+    "seed-late-child-of-closed-epic": "5eed0016-0000-4000-8000-000000000016",
 }
 
 

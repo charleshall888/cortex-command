@@ -330,6 +330,82 @@ class TestFeedSnapshot(_RootTestCase):
             sorted(child["id"] for child in epics["6"]["children"]), [7, 8]
         )
 
+    def test_closed_epic_still_heads_a_group_for_its_live_child(self):
+        """#458: an epic that closed before its last child must still group it.
+
+        ``build_epic_map`` detects an epic by scanning the list it is handed for
+        ``type: epic``. Handing it the *active* slice made 015 invisible as an
+        epic, so 016's ``parent`` matched nothing and it fell into the flat
+        Standalone list — asserting it had no parent when it plainly does.
+        """
+        epics = self.snapshot["epics"]["epics"]
+
+        self.assertIn("15", epics)
+        self.assertEqual([child["id"] for child in epics["15"]["children"]], [16])
+        self.assertEqual(self.snapshot["items"]["15"]["status"], "complete")
+
+    def test_closed_epic_heading_a_group_is_renderable_but_not_active(self):
+        """It reaches ``items`` so the heading row renders, and stops there.
+
+        The board's group heading *is* the epic's own ticket row, so a group
+        with no record behind it renders blank rather than raising. But
+        ``item_order`` is the board's active set — ``backlog_panel.html`` reads
+        its length as the active count and the Standalone list is its
+        complement — so a closed epic in there would both inflate the count and
+        reappear as a standalone row.
+        """
+        self.assertIn("15", self.snapshot["items"])
+        self.assertNotIn("15", self.snapshot["item_order"])
+        self.assertNotIn(15, self.snapshot["active_ids"])
+        self.assertEqual(
+            self.snapshot["counts"]["active"], len(self.snapshot["item_order"])
+        )
+
+    def test_every_epic_key_and_child_id_resolves_in_items(self):
+        """The map may name only ids the board can actually render.
+
+        This is the invariant that makes full-corpus *detection* safe. A closed
+        child, or an epic key with no record, subscripts to a Jinja
+        ``Undefined`` and renders as a blank row instead of raising — the silent
+        failure ``triage_board.html``'s docstring exists to prevent.
+        """
+        items = self.snapshot["items"]
+        for epic_id, epic in self.snapshot["epics"]["epics"].items():
+            self.assertIn(epic_id, items, f"epic {epic_id} has no record")
+            for child in epic["children"]:
+                self.assertIn(
+                    str(child["id"]), items, f"child {child['id']} has no record"
+                )
+
+    def test_no_epic_carries_a_terminal_child(self):
+        """Children are filtered to the active set, closed epics included.
+
+        Terminal item 003 and archived 014 exist in the corpus; neither may
+        reach a children list, or the board would render a blank row for it.
+        """
+        terminal_ids = {3, 14, 15}
+        for epic in self.snapshot["epics"]["epics"].values():
+            for child in epic["children"]:
+                self.assertNotIn(child["id"], terminal_ids)
+
+    def test_childless_closed_epics_do_not_seed_empty_groups(self):
+        """Detection widened to the full corpus; the rendered set did not.
+
+        Every finished epic in a mature repo would otherwise open a "no active
+        children" group — 34 of them on cortex-command. Only a closed epic with
+        live work in it earns a group; an *active* epic keeps its empty one,
+        which is how the board says a live epic has nothing left in flight.
+        """
+        items = self.snapshot["items"]
+        for epic_id, epic in self.snapshot["epics"]["epics"].items():
+            if epic["children"]:
+                continue
+            self.assertIn(
+                int(epic_id), self.snapshot["active_ids"],
+                f"closed epic {epic_id} ({items[epic_id]['title']}) opened an "
+                "empty group",
+            )
+
     def test_snapshot_drops_a_child_whose_parent_is_not_an_epic(self):
         # 009 names 001 — a feature — as its parent, so the epic map drops the
         # relationship silently while the raw frontmatter keeps it.
