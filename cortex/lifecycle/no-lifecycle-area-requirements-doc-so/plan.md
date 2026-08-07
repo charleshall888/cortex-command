@@ -38,19 +38,34 @@ Author `cortex/requirements/lifecycle.md` as a template-conformant area doc and 
   4. `grep -n '0018\|0020\|0022' cortex/requirements/lifecycle.md | grep -c 'ratif'` = `0`, and each of `0018`, `0020`, `0022` appears on at least one line also containing `proposed`.
   5. `grep -c 'cortex/requirements/observability.md' cortex/requirements/lifecycle.md` ≥ 1 and `grep -c 'cortex/requirements/pipeline.md' cortex/requirements/lifecycle.md` ≥ 1.
   6. `grep -Fc 'cortex/requirements/glossary.md' cortex/requirements/lifecycle.md` ≥ 1; each of `grep -Fc '(simple / moderate / complex)'`, `grep -Fc '(low / medium / high / critical)'`, `grep -Fc 'criticality ∈ {high, critical} OR tier == complex'` against the same file = `0`.
-- **Status**: [ ] pending
+- **Status**: [x] done (e11203df 2026-08-07T15:45:13-04:00)
+
+### Task 1a: Trim `cortex/requirements/lifecycle.md` to ~10 KB
+- **Files**: `cortex/requirements/lifecycle.md` (modify)
+- **What**: Cuts the doc from 19,223 B to ~10,000 B while keeping every R1–R5 acceptance intact, so a lifecycle-tagged load lands near 41 KB rather than 51 KB. Added at implement time by operator ruling after Task 1 measured ~15 KB above the spec's projection.
+- **Depends on**: [1]
+- **Complexity**: simple
+- **Context**:
+  - **Why this exists.** The spec's "Who pays and who benefits" block projected a lifecycle-tagged load of 33,400–36,400 B. Measured after Task 1: 50,130 B, and ~51,039 B once Task 2 relocates 4,370 B in. The non-lifecycle side matched its projection exactly; only the area-doc side missed. The operator ruled to trim rather than accept or to cut Task 2.
+  - **The template records are the cost, not the ADR citations.** Seven `## Functional Requirements` H3s each carrying `**Description**`, `**Inputs**`, `**Outputs**`, `**Acceptance criteria**`, `**Priority**` is where the bytes are; the seven ADR citations are ~7 lines. Cut by consolidating or dropping capability records down to the load-bearing transition rules and invariants — a state machine's requirements are invariants, not capability inventories. Do not buy the reduction by dropping ADR citations.
+  - **Every Task 1 acceptance must survive** — the seven verbatim H2s, the header/`> Last gathered:`/backlink triple, all seven ADR citations with `0018`/`0020`/`0022` marked `proposed` and never `ratif`-adjacent, both boundary attributions, the `glossary.md` pointer, and the three absence literals.
+  - **Leave room for Task 2.** Task 2 appends ~4,370 B of relocated content, so ~10 KB here lands the doc near 14.4 KB.
+  - `## Architectural Constraints` stays section-addressable and thin enough that Task 2's relocated bullets land cleanly under it.
+- **Verification**: `wc -c cortex/requirements/lifecycle.md` reports ≤ `11000`. Then Task 1's verification checks 1 and 3–6 re-run and all still pass unchanged.
+- **Status**: [x] partial (77f1d8ec 2026-08-07T15:59:20-04:00) — **byte gate MISSED**: 13,787 B against ≤11,000. Task 1's checks 1 and 3–6 all re-verified passing. The builder stopped rather than close the last 2,787 B, because doing so means deleting whole invariant families — the `### Served verb class` operational rules (guards advisory vs act-time, `advance` idempotency by parsed field, unsafe-slug-before-filesystem, protocol-skew, `enter` returning `needs-decision`), `### Lifecycle configuration`, and the kept-pause enforcement scoping. Those are the rules a builder violates by accident, so cutting them trades the doc's whole purpose for its size. Deviation accepted at implement time; the compensating lever is Task 2 merging rather than appending. Recorded rather than resolved by lowering the gate.
 
 ### Task 2: Relocate seven `project.md` items behind pointer stubs and record the measured shrink
 - **Files**: `cortex/requirements/project.md` (modify), `cortex/requirements/lifecycle.md` (modify)
 - **What**: Moves the detail of seven uncontested lifecycle-only items out of `project.md`, leaving a one-line pointer for each, lands that detail in `lifecycle.md`, and records the measured before/after byte figure in `lifecycle.md`. Discharges R6, R7, R8.
-- **Depends on**: [1]
+- **Depends on**: [1a]
 - **Complexity**: simple
 - **Context**:
   - **The seven that relocate**, with current sizes measured in research: `Multi-step lifecycle phases` (line 29, 467 B), `Kept user pauses are a marked taxonomy` (31, 1,333 B), `Phase boundaries are session boundaries` (37, 492 B), `Served lifecycle verb class` (49, 726 B), `` Consumer `EnterWorktree` authorization surface `` (50, 308 B), `The reviewer brief is a protocol-governed served surface` (63, 365 B), `Override-reason clause vocabulary` (64, 679 B). Total 4,370 B out. Lines 29 and 31 sit under `## Philosophy of Work`; the rest under `## Architectural Constraints`.
   - **The five that stay in full** (R7 — a preservation criterion that passes at HEAD and exists to catch over-relocation): lines 38 `Critical-review gates at spec only`, 40 `The short road`, 59 `Lifecycle identity is the canonical slug`, 61 `Lifecycle phase vocabulary`, 65 `The lifecycle events corpus is mixed-format`. The rationale is in the spec and is binding: 40 duplicates the unconditionally-loaded glossary; 59, 61, and 65 carry normative clauses with real cross-area readers that would go dark for any feature whose tags miss the lifecycle trigger; 38 is genuinely split between lifecycle and dispatch policy and `multi-agent.md` does not cover it today.
   - **Stub shape**: keep the identifying phrase verbatim so R6's `grep -F` still finds exactly one line, add a one-clause summary of the constraint, and end with the path `cortex/requirements/lifecycle.md`. Point at the constraint, never at a section anchor — nothing validates cross-doc pointer targets, so a rename in `lifecycle.md` must not be able to break a stub.
   - **Byte arithmetic is a hard constraint, not a target.** R6 caps each stub line at 200 B (`grep -F "<phrase>" project.md | wc -c` ≤ 200) and R8 requires ≥3,000 B net shrink. Seven stubs at the 200 B ceiling would return 1,400 B and land the net at 2,970 — **failing R8**. Stubs must total ≤1,370 B; the spec's drafted stubs measured 124–138 B each (~909 B total), which is the working target.
-  - **Landing sites in `lifecycle.md`**: the five `## Architectural Constraints` items belong under that H2; the two `## Philosophy of Work` items belong wherever Task 1's structure best fits them (`## Overview` or a `## Functional Requirements` capability). Content is relocated, not rewritten — the wording is already prose-shaped, and re-authoring it would break the "the removed detail appears in `lifecycle.md`" acceptance.
+  - **Landing sites in `lifecycle.md`**: the five `## Architectural Constraints` items belong under that H2; the two `## Philosophy of Work` items belong wherever the doc's structure best fits them (`## Overview` or a `## Functional Requirements` invariant group).
+  - **Merge, do not blind-append.** Task 1a established that three relocating bullets overlap material the doc already states after its trim — `Served lifecycle verb class` overlaps `### Served verb class`, `The reviewer brief is a protocol-governed served surface` overlaps the doc's ADR-0035 constraint, and `Kept user pauses are a marked taxonomy` overlaps its kept-pause intro. Fold each into the existing statement so the doc says it once, rather than appending a second copy. Where there is no overlap, the content lands as-is: relocated, not re-authored, since re-writing it would break the "the removed detail appears in `lifecycle.md`" acceptance. Merging is also the compensating lever for Task 1a's missed byte gate — the doc should grow by materially less than the 4,370 B removed from `project.md`.
   - **Relocation must not break Task 1's acceptance.** Relocated text cites ADR-0024/0025/0035/0036, none of which are in the proposed-status set, but re-run Task 1's checks 3–6 after the move regardless.
   - **Measurement record (R8)**: state the before/after figure in `lifecycle.md` in a greppable form, e.g. `29,918 B → <measured> B`. Recording it only in the commit body leaves nothing to verify later.
   - Do **not** touch the `## Conditional Loading` section — Task 1 owns its one edit and Task 3's test reads it.
@@ -60,7 +75,7 @@ Author `cortex/requirements/lifecycle.md` as a template-conformant area doc and 
   3. `wc -c cortex/requirements/project.md` reports ≤ `26918`.
   4. `grep -c '29,918' cortex/requirements/lifecycle.md` ≥ 1 (the recorded before/after figure).
   5. Task 1's verification checks 1 and 3–6 re-run clean against the modified `lifecycle.md`.
-- **Status**: [ ] pending
+- **Status**: [x] done (06998f3c 2026-08-07T16:21:53-04:00) — `project.md` 29,731 → 26,387 B (≤26,918, and 3,531 B below the 29,918 B spec baseline); `lifecycle.md` 13,787 → 17,542 B, i.e. +3,755 B against 4,370 B removed, so the merge lever recovered 615 B. Seven stubs at 131–159 B, total 1,026 B, all under the 200 B cap and the 1,370 B ceiling. R7's five bullets verified untouched by diff against `e11203df`. **This task's context carried a false claim** — it asserted ADR-0024/0025 were not proposed; both are `status: proposed`, confirmed by frontmatter. The builder caught it by reading rather than trusting, and marked them proposed in the merged text. No check keyed on it, so nothing went red.
 
 ### Task 3: Regression test pinning that every `## Conditional Loading` path resolves
 - **Files**: `tests/test_conditional_loading_paths_resolve.py` (create), `cortex/requirements/project.md` (transient mutation, reverted)
@@ -76,7 +91,7 @@ Author `cortex/requirements/lifecycle.md` as a template-conformant area doc and 
   - **Scope is `## Conditional Loading` only.** `## Global Context` is out of scope by design: `skills/requirements/SKILL.md` states that listing a Global Context path before its file exists is valid, so asserting on it would be wrong.
   - Assert `(REPO_ROOT / path).is_file()` per parsed `(trigger, path)` pair; on failure report the offending trigger and path.
 - **Verification**: `just test -k conditional_loading_paths_resolve` passes. Then the mutation, run and reported: append ` (annotation)` to the lifecycle row in the real `cortex/requirements/project.md`, re-run — the test must go **red**; revert the append, re-run — it must go **green**, and `git diff cortex/requirements/project.md` must show the file unchanged from Task 2's output. A test that stays green under the mutation fails this task. Finally `just test` passes in full.
-- **Status**: [ ] pending
+- **Status**: [x] done (1c2b3cab 2026-08-07T16:13:54-04:00) — mutation re-run independently by the orchestrator: red under ` (annotation)` naming the #454 shape, green and byte-clean after revert. Deviation: `just test -k <expr>` is not runnable (`test` is an argument-less recipe), so targeted runs used `uv run pytest tests/test_conditional_loading_paths_resolve.py -q`. Full-suite check: 2550 passed, 0 failures; the three `just test` recipe failures are confined to `test_worktree_seatbelt.py` and `test-init`, pre-existing worktree-environment failures outside this feature's files.
 
 ## Risks
 
