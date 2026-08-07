@@ -16,9 +16,13 @@ Layer 12b — Statusline ladder + parser vs canonical Python
     upstream phase-detection block (the `_lc_phase=""` ladder) emits a
     wire-format string equivalent to what the canonical
     `detect_lifecycle_phase()` returns for the same fixture directory,
-    excluding the cycle dimension (statusline-side cycle-blindness is
-    structural — see R11 / Non-Requirements). The "parser" sub-test
-    asserts that the downstream wire-format parser block (the
+    excluding the cycle dimension for the bare `implement-rework` arm
+    (statusline-side cycle-blindness there is structural — see R11 /
+    Non-Requirements). That exclusion does NOT hold for the
+    `escalated:rework-cap:<n>` arm: the ladder counts `review_verdict`
+    rows in events.log (mirroring Python's `review_verdict_count`) and
+    emits the cycle inline once the count reaches 2. The "parser"
+    sub-test asserts that the downstream wire-format parser block (the
     `_lc_single_phase` case statement) handles every R12a wire-format
     value without crashing or producing malformed output.
 
@@ -117,11 +121,20 @@ def test_hook_glue(
 #   Ladder (upstream):  fixture dir → wire-format string  vs  canonical Python
 #   Parser (downstream): wire-format string → render output (must not crash)
 #
-# The cycle dimension is excluded from the upstream comparison because the
-# statusline ladder reads only `verdict`, never `cycle` (verified at
-# claude/statusline.sh L394-401). This is the documented statusline-side
-# cycle-blindness exception. R12a (glue unit) and R12c (hook end-to-end)
-# enforce cycle correctness from the other side.
+# The cycle dimension is excluded from the upstream comparison for the bare
+# `implement-rework` arm, where the statusline ladder reads only `verdict`,
+# never `cycle` (verified at the CHANGES_REQUESTED case arm in
+# claude/statusline.sh, currently ~L427-452 — re-locate by content, e.g. the
+# `case "$_lc_verdict" in` block, if this drifts). That is the documented
+# statusline-side cycle-blindness exception, and it is narrower than it used
+# to be: the `escalated:rework-cap:<n>` form in that same case block DOES
+# read cycle, counting `review_verdict` rows in events.log (mirroring
+# Python's `review_verdict_count`) and emitting the count inline once it
+# reaches 2. None of the fixtures this parametrized test runs against land
+# on that arm, so the ladder-vs-canonical comparison below still never
+# compares cycle in practice — but that is fixture coverage, not a
+# statement that the ladder is cycle-blind in general. R12a (glue unit) and
+# R12c (hook end-to-end) enforce cycle correctness from the other side.
 
 
 def _extract_statusline_ladder() -> str:
@@ -263,8 +276,13 @@ def _parse_statusline_phase(emitted: str) -> tuple[str, int, int]:
       - "implement:N/M" with progress fraction, or "implement-paused:N/M"
         with the same progress payload on a paused implement feature.
 
-    Cycle is NOT emitted by the ladder (structural cycle-blindness); the
-    caller compares against the canonical detector's dict EXCLUDING cycle.
+    Cycle is NOT emitted by the ladder for the bare `implement-rework` arm
+    (structural cycle-blindness there); the caller compares against the
+    canonical detector's dict EXCLUDING cycle for that arm. The
+    `escalated:rework-cap:<n>` arm is the exception: it carries its cycle
+    inline in the wire string itself, so this parser returns the whole
+    discriminated string as `emitted` rather than stripping it down to a
+    bare "escalated".
     """
     if emitted.startswith("implement:") or emitted.startswith("implement-paused:"):
         prefix = "implement-paused:" if emitted.startswith("implement-paused:") else "implement:"
@@ -297,12 +315,18 @@ def test_statusline_ladder_matches_canonical(fixture_dir: Path) -> None:
     parses the resulting `_lc_phase` wire-format string, and asserts the
     parsed (phase, checked, total) tuple matches the canonical detector.
 
-    Documented exception: the statusline ladder does not extract `cycle`
-    from review.md (only `verdict`), so cycle is excluded from the
-    comparison. When the canonical detector returns "implement-rework",
-    the statusline emits BARE "implement-rework" (no `:N` cycle suffix);
-    that is acceptable. The R12a glue unit and R12c hook end-to-end tests
-    enforce cycle correctness from their respective surfaces.
+    Documented exception: for the bare `implement-rework` arm, the
+    statusline ladder does not extract `cycle` from review.md (only
+    `verdict`), so cycle is excluded from the comparison there. When the
+    canonical detector returns "implement-rework", the statusline emits
+    BARE "implement-rework" (no `:N` cycle suffix); that is acceptable.
+    This exception does NOT extend to the `escalated:rework-cap:<n>` arm,
+    which the ladder derives from a `review_verdict` row count in
+    events.log and emits with the cycle inline — none of this test's
+    fixtures land on that arm, so the comparison never exercises it here,
+    but the exclusion itself is not general. The R12a glue unit and R12c
+    hook end-to-end tests enforce cycle correctness from their respective
+    surfaces.
     """
     canonical = detect_lifecycle_phase(fixture_dir)
     canonical_phase = canonical["phase"]
