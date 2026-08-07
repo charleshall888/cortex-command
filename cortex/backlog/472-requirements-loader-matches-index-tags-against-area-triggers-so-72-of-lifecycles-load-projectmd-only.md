@@ -2,13 +2,16 @@
 schema_version: "1"
 uuid: b293c58a-0fa8-451e-ab7d-7b5b19f4b4ef
 title: Requirements loader matches index tags against area triggers, so 72% of lifecycles load project.md only
-status: backlog
+status: refined
 priority: medium
 type: bug
 created: 2026-08-07
 updated: 2026-08-07
 tags: ['requirements-loading']
 areas: ['lifecycle', 'requirements']
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/requirements-loader-matches-index-tags-against/spec.md
 ---
 ## Why
 
