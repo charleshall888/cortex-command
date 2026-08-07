@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import inspect
+import json
 import os
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -15,6 +18,7 @@ from cortex_command.common import (
     _resolve_user_project_root,
     _resolve_user_project_root_from_cwd,
     compute_dependency_batches,
+    detect_lifecycle_phase,
     mark_task_done_in_plan,
     reduce_lifecycle_events,
 )
@@ -334,3 +338,123 @@ class TestReduceFeaturePausedKind(unittest.TestCase):
             [{"event": "lifecycle_start", "tier": "simple", "criticality": "medium"}]
         )
         self.assertNotIn("pause_kind", state)
+
+
+# ---------------------------------------------------------------------------
+# detect_lifecycle_phase — the `cycle` key counts review_verdict EVENTS (#455 R17)
+#
+# review.md is overwritten every cycle, so regex-counting its verdicts stuck at
+# 1 forever; the count moved to the append-only events.log. The pair of classes
+# below guards both halves of that end state — the behaviour, and the docstring
+# that documents it — so a rewrite reintroducing the review.md-regex description
+# fails rather than silently rotting the contract.
+# ---------------------------------------------------------------------------
+
+
+_CYCLE_DOC_BULLET = re.compile(
+    r"^[ \t]*-\s*cycle:(?P<body>.*?)(?=^[ \t]*-\s|\Z)",
+    re.MULTILINE | re.DOTALL,
+)
+
+
+def _cycle_doc_bullet() -> str | None:
+    """Return the `cycle:` bullet of detect_lifecycle_phase's Returns section.
+
+    Scoped to that one bullet rather than the whole docstring: the docstring
+    legitimately names review.md elsewhere (the verdict-extraction step), so a
+    whole-docstring search could neither confirm nor refute what `cycle` counts.
+    """
+    doc = inspect.getdoc(detect_lifecycle_phase) or ""
+    match = _CYCLE_DOC_BULLET.search(doc)
+    return match.group("body") if match else None
+
+
+def _feature_dir(*, verdict_events: int, review_md_verdicts: int) -> Path:
+    """Build a lifecycle feature dir with independently-varied verdict counts.
+
+    ``verdict_events`` review_verdict rows land in events.log; a *different*
+    number of `"verdict"` matches land in review.md. The two counts disagree on
+    purpose — that is what separates counting events from regexing review.md.
+    """
+    d = Path(tempfile.mkdtemp())
+    rows = [{"event": "lifecycle_start", "tier": "simple"}]
+    rows += [{"event": "review_verdict", "verdict": "CHANGES_REQUESTED"}] * verdict_events
+    rows.append({"event": "plan_approved"})
+    (d / "events.log").write_text(
+        "".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8"
+    )
+    (d / "review.md").write_text(
+        "".join('{"verdict": "CHANGES_REQUESTED"}\n' for _ in range(review_md_verdicts)),
+        encoding="utf-8",
+    )
+    return d
+
+
+class TestCycleCountsReviewVerdictEvents(unittest.TestCase):
+    """The observable half: `cycle` tracks events.log's review_verdict rows and
+    is unmoved by how many verdicts review.md happens to contain."""
+
+    def test_cycle_follows_events_log_not_review_md(self) -> None:
+        """Three review_verdict rows against a single-verdict review.md yields
+        cycle 3 — the old review.md regex count would have said 1."""
+        result = detect_lifecycle_phase(
+            _feature_dir(verdict_events=3, review_md_verdicts=1)
+        )
+        self.assertEqual(result["cycle"], 3)
+        # cycle is load-bearing, not decorative: it discriminates the phase.
+        self.assertEqual(result["phase"], "escalated:rework-cap:3")
+
+    def test_extra_review_md_verdicts_do_not_inflate_cycle(self) -> None:
+        """The converse: a review.md stuffed with verdicts cannot push cycle
+        past the single review_verdict row in events.log."""
+        result = detect_lifecycle_phase(
+            _feature_dir(verdict_events=1, review_md_verdicts=5)
+        )
+        self.assertEqual(result["cycle"], 1)
+        self.assertEqual(result["phase"], "implement-rework")
+
+    def test_cycle_floors_at_one_without_verdict_events(self) -> None:
+        """No review_verdict rows -> cycle is floored at 1, never 0, even with
+        verdicts present in review.md."""
+        result = detect_lifecycle_phase(
+            _feature_dir(verdict_events=0, review_md_verdicts=2)
+        )
+        self.assertEqual(result["cycle"], 1)
+
+
+class TestCycleDocstringDescribesEventCount(unittest.TestCase):
+    """The documented half: detect_lifecycle_phase's `cycle` bullet must
+    describe the behaviour the class above proves."""
+
+    def test_cycle_bullet_exists(self) -> None:
+        """A rewrite that drops the bullet entirely must fail here rather than
+        vacuously pass the content assertions below."""
+        self.assertIsNotNone(
+            _cycle_doc_bullet(),
+            "detect_lifecycle_phase's docstring no longer documents a `cycle:` "
+            "key in its Returns section",
+        )
+
+    def test_cycle_bullet_names_review_verdict_events(self) -> None:
+        """The bullet must name review_verdict as what cycle counts."""
+        bullet = _cycle_doc_bullet() or ""
+        self.assertIn("review_verdict", bullet)
+
+    def test_cycle_bullet_does_not_describe_a_review_md_regex_count(self) -> None:
+        """The stale description ("the number of regex matches in review.md")
+        must not come back — it documents a behaviour the code does not have."""
+        bullet = (_cycle_doc_bullet() or "").lower()
+        self.assertNotIn("review.md", bullet)
+        self.assertNotIn("regex", bullet)
+
+    def test_documented_source_matches_observed_behaviour(self) -> None:
+        """Couple the two halves: the bullet claims events.log/review_verdict,
+        and on a fixture where the two candidate sources disagree the observed
+        cycle equals the events.log count, not review.md's."""
+        bullet = (_cycle_doc_bullet() or "").lower()
+        self.assertIn("review_verdict", bullet)
+        self.assertIn("events.log", bullet)
+        result = detect_lifecycle_phase(
+            _feature_dir(verdict_events=4, review_md_verdicts=2)
+        )
+        self.assertEqual(result["cycle"], 4)
