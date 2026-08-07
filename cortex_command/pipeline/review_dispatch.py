@@ -34,6 +34,14 @@ from typing import Optional
 # and the events-first gate compares it against the same oracle every other
 # caller uses. Deriving it here from artifacts is what broke these arms.
 from cortex_command.lifecycle.advance import advance
+# The shared reviewer brief (ADR-0035). The import direction is load-bearing:
+# this module imports ``review_brief``, never the reverse — ``review_brief``
+# must stay free of the Claude Agent SDK, an optional extra this module pulls.
+from cortex_command.lifecycle.review_brief import (
+    RE_RUN,
+    build_full_brief,
+    build_rework_brief,
+)
 from cortex_command.overnight.deferral import DeferralQuestion, write_deferral
 from cortex_command.pipeline.dispatch import dispatch_task
 from cortex_command.pipeline.merge import merge_feature
@@ -593,25 +601,50 @@ async def dispatch_review(
                 issues=issues + [f"Re-merge failed: {remerge_result.error}"],
             )
 
-        # (9f) Dispatch cycle 2 review
+        # (9f) Dispatch cycle 2 review. R14: the prompt is the shared rework
+        # brief, built IN-PROCESS from the cycle-1 issues already held in
+        # memory — not the cycle-1 template with a sentence appended, which
+        # sent the re-reviewer back through the whole spec and carried none of
+        # the flagged issues. Overnight deliberately does not go through the
+        # ``cortex-lifecycle-review-brief`` CLI: that entry point exists to
+        # archive the prior review.md and re-read a checklist off disk, and
+        # overnight needs neither.
         try:
-            cycle2_prompt = _load_review_prompt(
-                feature=feature,
-                spec_excerpt=spec_excerpt,
-                worktree_path=worktree_path,
-                branch_name=branch,
-                review_md_path=str(review_md_path),
-            )
-            cycle2_prompt += (
-                "\n\nNote: This is review cycle 2. A previous review returned "
-                "CHANGES_REQUESTED and a fix agent has addressed the feedback. "
-                "Focus on whether the flagged issues were resolved."
-            )
-        except (FileNotFoundError, OSError) as exc:
-            logger.error("Cannot load review prompt for cycle 2: %s", exc)
+            if issues:
+                cycle2_prompt = build_rework_brief(
+                    feature=feature,
+                    cycle=2,
+                    issues=[str(issue) for issue in issues],
+                    # The circuit-breaker SHA captured at (9b), before the fix
+                    # agent ran: the whole of the rework is before_sha..HEAD.
+                    baseline_sha=before_sha,
+                    # Same string the cycle-1 seam renders, so the main-repo
+                    # write target does not re-resolve against the worktree.
+                    review_path=str(review_md_path),
+                    # Overnight states its own decision rather than inheriting
+                    # a path-derived one: the re-merge at (9e) re-runs the suite
+                    # when a test_command is configured, and no cycle-1 baseline
+                    # is handed forward for the reviewer to reuse.
+                    baseline_decision=RE_RUN,
+                )
+            else:
+                # An empty checklist is never emitted as a scoped brief: it is
+                # indistinguishable from "the prior cycle found nothing", and a
+                # reviewer handed it has no signal to widen its reading. Fail
+                # open to a full review naming the reason, as the verb does.
+                cycle2_prompt = build_full_brief(
+                    feature=feature,
+                    cycle=2,
+                    review_path=str(review_md_path),
+                    degraded_reason=(
+                        "the cycle-1 verdict carried an empty issues array"
+                    ),
+                )
+        except (FileNotFoundError, OSError, ValueError) as exc:
+            logger.error("Cannot build the cycle-2 review brief: %s", exc)
             _write_review_deferral(
                 feature, "CHANGES_REQUESTED", cycle,
-                issues + [f"Cycle 2 prompt template not readable: {exc}"],
+                issues + [f"Cycle 2 review brief not constructible: {exc}"],
                 deferred_dir,
             )
             return ReviewResult(
@@ -619,7 +652,7 @@ async def dispatch_review(
                 deferred=True,
                 verdict="CHANGES_REQUESTED",
                 cycle=cycle,
-                issues=issues + [f"Cycle 2 prompt template not readable: {exc}"],
+                issues=issues + [f"Cycle 2 review brief not constructible: {exc}"],
             )
 
         cycle2_result = await dispatch_task(
