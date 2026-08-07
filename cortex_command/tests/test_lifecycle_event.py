@@ -831,6 +831,13 @@ class TestEventSubcommands:
             ["log", "--event", "batch_dispatch",
              "--set-json", "batch=0", "--set-json", 'tasks=["3a", "3b"]'],
         ),
+        (
+            ["review-dispatched", "--cycle", "1", "--mode", "full",
+             "--baseline-sha", "a" * 40],
+            ["log", "--event", "review_dispatched",
+             "--set-json", "cycle=1", "--set", "mode=full",
+             "--set", "baseline_sha=" + "a" * 40],
+        ),
     ]
 
     @pytest.mark.parametrize("new_tail,old_tail", PARITY_CASES)

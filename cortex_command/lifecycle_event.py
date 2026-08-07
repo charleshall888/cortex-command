@@ -326,6 +326,17 @@ _EVENT_SUBCOMMANDS: dict[str, tuple[str, list]] = {
         ("--batch", "batch", _JSON, True, None),
         ("--tasks", "tasks", _JSON, True, None),
     ]),
+    # Recorded once per review dispatch by cortex-lifecycle-review-brief (via
+    # log_event_at, not this CLI) so the rework baseline SHA has a row to read
+    # back from — events.log otherwise carries no SHA and no event fires at
+    # dispatch. Declared here so the field contract (names, order, types) is
+    # owned once in the ADR-0020 uniform shape rather than living only inside
+    # that verb. Not in the ADR-0020 hand-written exempt set.
+    "review-dispatched": ("review_dispatched", [
+        ("--cycle", "cycle", _JSON, True, None),
+        ("--mode", "mode", _STR, True, ("full", "rework")),
+        ("--baseline-sha", "baseline_sha", _STR, True, None),
+    ]),
 }
 
 

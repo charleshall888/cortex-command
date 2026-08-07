@@ -375,6 +375,14 @@ GOLDEN_CASES: list[tuple[str, str, list[str], str]] = [
         [],
         '{"ts": "%s", "event": "feature_complete", "feature": "f"}' % FIXED_TS,
     ),
+    (
+        "review_dispatched",
+        "review_dispatched",
+        ["--set-json", "cycle=1", "--set", "mode=full",
+         "--set", "baseline_sha=" + "a" * 40],
+        '{"ts": "%s", "event": "review_dispatched", "feature": "f", '
+        '"cycle": 1, "mode": "full", "baseline_sha": "%s"}' % (FIXED_TS, "a" * 40),
+    ),
 ]
 
 
