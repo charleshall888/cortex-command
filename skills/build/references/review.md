@@ -8,25 +8,25 @@ Read `spec.md` and `plan.md`, and identify the files changed during implementati
 
 Load requirements: `cortex-load-requirements --feature {feature}`, read every listed non-skipped path, record the printed list for the reviewer prompt. Its no-match note (`no area docs matched`) is a **warning, not a routine fallback** — the drift check narrows to project.md, leaving any area doc governing this feature unassessed. Surface it before dispatching; the usual cause is an index.md that never received its backlog tags, repaired by re-running `cortex-lifecycle-enter` with the served backlog filename.
 
-**Test baseline** — run the configured `test-command` once, capturing a pass/fail summary and a log path, never the full transcript. If commits land after the baseline, re-run once and replace it. The reviewer and anything it spawns consume this baseline and never re-run the suite.
+**Test baseline** — run the configured `test-command` once, capturing a pass/fail summary and a log path, never the full transcript. If commits land after the baseline, re-run once and replace it. The reviewer and anything it spawns consume this baseline and never re-run the suite. On a rework the §2 brief states its own reuse/re-run decision — refresh the baseline before dispatch when it says re-run.
 
 ## 2. Dispatch
 
-Dispatch one read-only reviewer, choosing its model yourself. Hand it the absolute spec path to read, the §1 requirements path list (or the verb's no-match note), the changed-file list, and the §1 test baseline — summary and log path only, never the transcript. It modifies no source file and never re-runs the suite.
+```bash
+cortex-lifecycle-review-brief --feature {feature}
+```
+
+It archives the prior cycle's `review.md`, selects full or rework-scoped mode, records the dispatch baseline, and emits the brief — hand it to the reviewer verbatim. Non-zero exit or no output → run a **full** review against the Verdict contract below and report the degradation; never dispatch a scoped review on a missing or empty checklist.
+
+Dispatch one read-only reviewer, choosing its model yourself. Hand it the brief, the absolute spec path to read, §1's requirements path list (or its no-match note), the changed-file list, and §1's test baseline.
 
 **Single-writer rule** — only the reviewer role writes `review.md`: this sub-task plus §3's missing-drift re-dispatch and §3a's cap-2 re-dispatches. Any sub-agent the reviewer spawns is read-only and returns findings as a message envelope.
 
-**Stage 1 — spec compliance**: per requirement, read the relevant source, check acceptance criteria, rate PASS / FAIL / PARTIAL. Any FAIL skips Stage 2. **Stage 2 — code quality** (only when no FAIL; complex only): naming consistency, error handling, whether the plan's verification steps were executed, pattern consistency. **Requirements drift** is an observation that does not affect the verdict: `none` when the implementation matches the requirements and adds no unreflected behavior, `detected` when it introduces or changes behavior they don't capture.
-
-It writes `cortex/lifecycle/{feature}/review.md` with a `## Requirements Drift` section carrying **State** (`none` | `detected`), **Findings** (one bullet per drifted item, or "None"), and **Update needed** (a requirements file path, or "None"). On `detected` it adds `## Suggested Requirements Update`, one entry per drifted file, each naming **File**, **Section** (an existing heading), and **Content** — the exact 1–3 lines to append, written as they should appear rather than described.
-
-It ends with a Verdict JSON object using exactly these field names — not "overall"/"result"/"status", and not the Stage-1 PASS/FAIL values:
+**Verdict contract** — the brief prescribes the rest of the output shape, but this block is prose because §3 parses it. Hand it along with the brief; the review ends with it:
 
 ```
 {"verdict": "APPROVED"|"CHANGES_REQUESTED"|"REJECTED", "cycle": <int>, "issues": [<strings>], "requirements_drift": "none"|"detected"}
 ```
-
-Flag minor code-quality issues as PARTIAL with notes. When uncertain about drift, log `detected` — a false positive auto-applies a small update, a false negative silently hides drift.
 
 ## 3. Process the verdict
 
@@ -40,7 +40,7 @@ Read `verdict`, `cycle`, and `requirements_drift` — the discriminants §3a and
 
 When drift is `"detected"`, before §4: parse `## Suggested Requirements Update` (`File` / `Section` / `Content`), append `Content` at the end of the named `Section` in the target file, and report what changed.
 
-Section missing or unparseable → re-dispatch the reviewer to append it in the §2 format without touching anything else, cap 2 retries. Still failing → the drift-apply has **breached**: do **not** block verdict processing. Carry `--breach --retries 2` into §4 so it surfaces in the morning report rather than vanishing, without applying the unparseable update.
+Section missing or unparseable → re-dispatch the reviewer to append it in the brief's format without touching anything else, cap 2 retries. Still failing → the drift-apply has **breached**: do **not** block verdict processing. Carry `--breach --retries 2` into §4 so it surfaces in the morning report rather than vanishing, without applying the unparseable update.
 
 ## 4. Transition
 
