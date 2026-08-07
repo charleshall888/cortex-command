@@ -6,7 +6,7 @@ Two-stage review: spec compliance, then code quality. Stage 1 runs at complex ti
 
 Read `spec.md` and `plan.md`, and identify the files changed during implementation (git log since the lifecycle started, or plan.md's file lists).
 
-Load requirements: `cortex-load-requirements --feature {feature}`, read every listed non-skipped path, record the printed list for the reviewer prompt. Its no-match note (`no area docs matched`) is a **warning, not a routine fallback** — the drift check narrows to project.md, leaving any area doc governing this feature unassessed. Surface it before dispatching; the usual cause is an index.md that never received its backlog tags, repaired by re-running `cortex-lifecycle-enter` with the served backlog filename.
+Load requirements: `cortex-load-requirements --feature {feature}`, read every listed non-skipped path, record the printed list for the reviewer prompt. Its stderr carries a `COVERAGE:` marker — `loaded`, `doc-missing`, `unmapped`, or `no-area`. Anything but `loaded` is a **warning, not a routine fallback**: the drift check narrows to project.md, leaving any area doc governing this feature unassessed. Hand it to the reviewer with the path list, and surface it before dispatching.
 
 **Test baseline** — run the configured `test-command` once, capturing a pass/fail summary and a log path, never the full transcript. If commits land after the baseline, re-run once and replace it. The reviewer and anything it spawns consume this baseline and never re-run the suite. On a rework the §2 brief states its own reuse/re-run decision — refresh the baseline before dispatch when it says re-run.
 

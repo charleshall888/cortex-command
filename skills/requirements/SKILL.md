@@ -60,8 +60,8 @@ Preserve existing prose wherever the user's answer confirms it — refine in pla
 3. `## Architectural Constraints` — strategic constraints only; operational detail lives in CLAUDE.md.
 4. `## Quality Attributes` — the non-functional bar.
 5. `## Project Boundaries` — H3s `### In Scope`, `### Out of Scope`, `### Deferred`.
-6. `## Conditional Loading` — `{trigger phrase} → cortex/requirements/{area}.md` lines; trigger phrases must intersect real lifecycle `index.md` `tags:` words.
-7. `## Global Context` — bare paths under `cortex/requirements/` that every consumer loads on every invocation regardless of tag matches. No trigger phrases, no conditional prose. Absent paths are silently skipped, so listing one before its file exists is valid.
+6. `## Conditional Loading` — an explicit many-to-one area→doc map, `{area key}/{synonym key} → cortex/requirements/{area}.md` per line. Keys are matched by exact lookup against a lifecycle `index.md`'s `areas:` values, so every key must be a real area name; a doc gains reach by listing more synonym keys, never by wording.
+7. `## Global Context` — bare paths under `cortex/requirements/` that every consumer loads on every invocation regardless of area matches. No keys, no conditional prose. Absent paths are silently skipped, so listing one before its file exists is valid.
 8. `## Optional` — prunable; first line states the prunability convention. Token budget ≤1,200 (`cl100k_base`); overflow goes here or into an area doc, never into new top-level H2s.
 
 **Area template** — `# Requirements: {area-name}` + `> Last gathered:` + a backlink written verbatim as `**Parent doc**: [requirements/project.md](project.md)`, then seven H2s in order: `## Overview`, `## Functional Requirements` (one H3 per capability, with `**Description**`, `**Inputs**`, `**Outputs**`, nested `**Acceptance criteria**`, `**Priority**`), `## Non-Functional Requirements`, `## Architectural Constraints`, `## Dependencies`, `## Edge Cases` (`**Condition**: behavior`), `## Open Questions` (`- None` when nothing is open). No token budget; the parent backlink is the only navigation element.
