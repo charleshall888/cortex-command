@@ -98,13 +98,17 @@ Agentic workflow toolkit for AI-assisted software development on Claude Code: sk
 
 ## Conditional Loading
 
-- statusline/dashboard/notifications → cortex/requirements/observability.md
-- pipeline/overnight runner/conflict resolution/deferral → cortex/requirements/pipeline.md
-- remote access/tmux/mosh/Tailscale → cortex/requirements/remote-access.md
-- agent spawning/subagents/multi-agent/parallel dispatch/worktrees/model selection → cortex/requirements/multi-agent.md
-- backlog/ticketing/issue tracker/backlog backend → cortex/requirements/backlog.md
-- training/workshop/presentation/scene deck → cortex/requirements/training.md
-- lifecycle state machine/phase vocabulary/served verbs (next, advance, enter)/escalation → cortex/requirements/lifecycle.md
+An explicit many-to-one area-to-doc map: comma-separated area **keys** on the left of the separator, one bare repo-relative doc path on the right. A lifecycle's `index.md` `areas:` values are matched against these keys by **exact** lookup after kebab-normalizing both sides (lowercase, spaces and underscores to hyphens) — never by substring, so a doc gains reach by listing another synonym key, never by rewording. Prose in this section must not contain the separator character; a line that does is read as a map row.
+
+- statusline, dashboard, notifications → cortex/requirements/observability.md
+- pipeline, overnight-runner, conflict-resolution, deferral → cortex/requirements/pipeline.md
+- remote-access, tmux, mosh, tailscale → cortex/requirements/remote-access.md
+- agent-spawning, subagents, multi-agent, parallel-dispatch, worktrees, model-selection → cortex/requirements/multi-agent.md
+- backlog, ticketing, issue-tracker, backlog-backend → cortex/requirements/backlog.md
+- training, workshop, presentation, scene-deck → cortex/requirements/training.md
+- lifecycle, lifecycle-state-machine, phase-vocabulary, served-verbs, escalation → cortex/requirements/lifecycle.md
+
+`served-verbs` covers the lifecycle-serving verbs `next`, `advance`, and `enter`.
 
 ## Global Context
 

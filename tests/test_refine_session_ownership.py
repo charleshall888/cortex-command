@@ -228,15 +228,18 @@ def test_refine_start_creates_the_index(
     assert "render" in index.read_text()
 
 
-def test_requirements_load_sees_area_docs_after_refine_start(
+def test_requirements_coverage_is_verified_after_refine_start(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Clarify's requirements-alignment rating is made against real coverage.
 
     Before the fix the index could not exist until `enter`, so a fresh refine
-    loaded project.md alone even for a ticket carrying area tags — and that
-    rating feeds the critical-review gate.
+    rated coverage from a loader run that could only report UNVERIFIED — and
+    that rating feeds the critical-review gate. What refine owns is the index
+    existing by the time Clarify reads it; *which* area docs that index then
+    selects is the loader's contract, pinned in
+    ``tests/test_load_requirements_cli.py``.
     """
     (tmp_path / "cortex" / "requirements").mkdir(parents=True)
     (tmp_path / "cortex" / "requirements" / "project.md").write_text(
@@ -252,18 +255,22 @@ def test_requirements_load_sees_area_docs_after_refine_start(
 
     # Before: no lifecycle at all — the note must say coverage is unverified,
     # not that the feature has no area docs.
-    lines_before, note_before = load_requirements(tmp_path, "render-perf-spike")
+    lines_before, note_before, coverage_before = load_requirements(
+        tmp_path, "render-perf-spike"
+    )
     assert lines_before == ["cortex/requirements/project.md"]
     assert "UNVERIFIED" in note_before
+    assert coverage_before == "no-area"
 
     _start(tmp_path, monkeypatch)
     capsys.readouterr()
 
-    lines_after, note_after = load_requirements(tmp_path, "render-perf-spike")
+    _, note_after, _ = load_requirements(tmp_path, "render-perf-spike")
 
-    assert note_after is None
-    assert "cortex/requirements/engineering-rendering-perf.md" in lines_after
-    assert "cortex/requirements/engineering-quality-gates.md" in lines_after
+    # The index now exists, so coverage is a determined result rather than an
+    # unverified one — whatever tier it lands in.
+    assert (tmp_path / "cortex" / "lifecycle" / "render-perf-spike" / "index.md").is_file()
+    assert "UNVERIFIED" not in (note_after or "")
 
 
 def test_refine_start_is_idempotent_on_resume(

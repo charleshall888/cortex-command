@@ -1,24 +1,23 @@
-"""cortex-load-requirements — emit the tag-relevant requirements file list.
+"""cortex-load-requirements — emit the area-relevant requirements file list.
 
 Deterministic selection verb that replaced a hand-executed prose algorithm
 in the lifecycle skill (that reference is retired). Reads project.md's
-``## Conditional Loading`` + ``## Global Context`` sections and a feature's
-``index.md`` ``tags:``, then prints the resolved repo-relative path list
-(paths only, never file contents) to stdout and a no-match fallback note to
-stderr. The verb selects the minimal tag-relevant requirements set, avoiding
+``## Conditional Loading`` area-to-doc map + ``## Global Context`` section and
+a feature's ``index.md`` ``areas:``, then prints the resolved repo-relative
+path list (paths only, never file contents) to stdout and a coverage report to
+stderr. The verb selects the minimal area-relevant requirements set, avoiding
 both under-loading (missed constraints) and over-loading (token bloat); the
 model still reads the listed file bodies into its own context.
 
-Selection (the prose's *intended* set, with two documented corrections):
+Selection:
 
   1. ``cortex/requirements/project.md`` first (always; ``(skipped: file
      absent)`` suffix if absent on disk — the verb never directs reading a
      non-existent file).
   2. every ``## Global Context`` path, in file order, resolved literally
      against repo root (absent → ``(skipped: file absent)``).
-  3. area docs whose ``## Conditional Loading`` trigger — the text *left* of
-     the U+2192 separator — ASCII-casefold-substring-matches any tag, in
-     section order.
+  3. area docs whose ``## Conditional Loading`` row declares a key equal to one
+     of the feature's areas, in section order.
 
 Dedup is by resolved path: each path is emitted once. A Global Context entry
 that also matches as an area doc keeps its Global Context position (placement
@@ -26,19 +25,24 @@ wins); a Global Context entry equal to ``project.md`` collapses into the
 unconditional first line; an intra-Global-Context duplicate is emitted at its
 first occurrence.
 
-Matching semantics: pure ASCII-casefold substring (``tag.lower() in
-trigger.lower()``) — a short tag that is a substring of a longer trigger token
-DOES match (e.g. ``pipe`` matches ``pipeline``); this is intentional substring,
-NOT word-boundary. "Whole-tag" means the tag string is used whole as the search
-needle (``harness-adaptation`` is not split into ``harness`` + ``adaptation``).
+Matching semantics: **exact key lookup**, not substring. Each row's left half
+is a list of area keys separated by ``,`` or ``/``; a key matches an area only
+when both kebab-normalize (ASCII-lowercase, spaces and underscores to hyphens)
+to the same string. ``pipe`` therefore does NOT select ``pipeline.md``, and
+``overnight-runner`` and ``overnight runner`` are the same key. ``index.md``
+``tags:`` no longer participates in selection.
 
-Corrections to prose defects (documented, not silent drift):
-  (i)  empty/whitespace tags are stripped before matching — the prose's bare
-       substring rule treats ``""`` as a substring of every trigger, which
-       would load all area docs;
+Corrections to the retired prose's defects (documented, not silent drift):
+  (i)  empty/whitespace areas are stripped before matching;
   (ii) Global Context is loaded in the no-match fallback too — reconciling the
-       prose's step-1 ("always loaded regardless of tag matches") vs step-5
+       prose's step-1 ("always loaded regardless of matches") vs step-5
        ("load project.md only") self-contradiction in favor of step 1.
+
+Coverage: every run emits exactly one ``COVERAGE:<state>`` line on stderr —
+``loaded`` (an area selected a doc present on disk), ``doc-missing`` (an area
+selected a doc absent from disk), ``unmapped`` (areas declared, none in the
+map), or ``no-area`` (nothing declared). A human-readable detail line precedes
+the marker in every state but ``loaded``. Stdout is unchanged by the marker.
 
 The verb writes nothing to ``events.log`` and registers no event.
 """
@@ -58,18 +62,38 @@ from cortex_command.common import (
 PROJECT_MD_RELPATH = "cortex/requirements/project.md"
 SKIPPED_SUFFIX = " (skipped: file absent)"
 ARROW = "→"  # → separator in Conditional Loading bullets
+KEY_SEPARATORS = ",/"  # both accepted between area keys on a map row
+
+# Machine-parseable coverage states, one emitted per run on stderr.
+COVERAGE_MARKER_PREFIX = "COVERAGE:"
+COVERAGE_LOADED = "loaded"
+COVERAGE_DOC_MISSING = "doc-missing"
+COVERAGE_UNMAPPED = "unmapped"
+COVERAGE_NO_AREA = "no-area"
+
 FALLBACK_NOTE_TEMPLATE = (
-    "no area docs matched for tags: {tags}; loaded project.md only"
+    "no areas declared for this feature; loaded project.md + Global Context "
+    "only"
 )
-# Distinct note for the case where there were no tags to match *because the
+# Distinct note for the case where there were no areas to match *because the
 # index does not exist yet*. Collapsing this into the template above made a
 # bare project.md result indistinguishable from "this feature genuinely has no
 # area docs" — at the one phase (a fresh refine, before the index is written)
 # where the index cannot exist. Coverage there is UNVERIFIED, not empty, and
 # the rating built on it feeds the critical-review gate.
 NO_INDEX_NOTE_TEMPLATE = (
-    "no lifecycle index at {path}, so no tags were available; loaded "
-    "project.md only — area coverage is UNVERIFIED, not empty"
+    "no lifecycle index at {path}, so no areas were available; loaded "
+    "project.md + Global Context only — area coverage is UNVERIFIED, not empty"
+)
+DOC_MISSING_NOTE_TEMPLATE = (
+    "area doc absent from disk: {details} — the map row resolves but the file "
+    "is not there"
+)
+# Deliberately ONE terse line naming the areas together: `unmapped` is the
+# most common non-`loaded` state and is an expected outcome, not a defect. A
+# per-area report here would train operators to ignore the whole signal.
+UNMAPPED_NOTE_TEMPLATE = (
+    "no area doc is mapped for {areas} — expected for areas that have none"
 )
 
 
@@ -92,26 +116,27 @@ def _unquote(value: str) -> str:
     return value
 
 
-def _extract_tags(block: List[str]) -> List[str]:
-    """Extract the ``tags:`` list from frontmatter lines (stdlib-only).
+def _extract_list_field(block: List[str], field: str) -> List[str]:
+    """Extract a scalar-list frontmatter field (stdlib-only).
 
-    Handles the inline flow form (``tags: [a, b, c]`` / ``tags: []``) and the
-    block-sequence form (``tags:`` then indented ``- a`` lines). Avoids a YAML
+    Handles the inline flow form (``f: [a, b, c]`` / ``f: []``) and the
+    block-sequence form (``f:`` then indented ``- a`` lines). Avoids a YAML
     dependency so the read-only verb stays stdlib-only and runs under the
     dual-channel wrapper's system-``python3`` branch.
     """
+    prefix = field + ":"
     for i, line in enumerate(block):
         stripped = line.strip()
-        if not (stripped == "tags:" or stripped.startswith("tags:")):
+        if not stripped.startswith(prefix):
             continue
-        value = stripped[len("tags:"):].strip()
+        value = stripped[len(prefix):].strip()
         if value.startswith("[") and value.endswith("]"):
             inner = value[1:-1].strip()
             if not inner:
                 return []
             return [_unquote(p.strip()) for p in inner.split(",")]
         if value:
-            return [_unquote(value)]  # inline scalar (unusual) — single tag
+            return [_unquote(value)]  # inline scalar (unusual) — single entry
         # Block-sequence form: collect subsequent ``- item`` lines.
         items: List[str] = []
         for sub in block[i + 1:]:
@@ -126,14 +151,30 @@ def _extract_tags(block: List[str]) -> List[str]:
     return []
 
 
+def _extract_tags(block: List[str]) -> List[str]:
+    """Extract the ``tags:`` list from frontmatter lines.
+
+    Inert for selection since the switch to ``areas:``; kept because the index
+    still carries ``tags:`` and other readers round-trip it through here.
+    """
+    return _extract_list_field(block, "tags")
+
+
+def _extract_areas(block: List[str]) -> List[str]:
+    """Extract the ``areas:`` list from frontmatter lines — the selection key."""
+    return _extract_list_field(block, "areas")
+
+
 def _index_path(project_root: Path, feature_slug: str) -> Path:
     return project_root / "cortex" / "lifecycle" / feature_slug / "index.md"
 
 
-def _read_tags(project_root: Path, feature_slug: Optional[str]) -> List[str]:
-    """Return the feature's ``tags:`` list, empty/whitespace entries stripped.
+def _read_field(
+    project_root: Path, feature_slug: Optional[str], field: str
+) -> List[str]:
+    """Return a feature index's list field, empty/whitespace entries stripped.
 
-    Omitted ``feature_slug`` or an absent/tag-less ``index.md`` ⇒ ``[]`` (the
+    Omitted ``feature_slug`` or an absent/field-less ``index.md`` ⇒ ``[]`` (the
     fallback path). Never raises.
     """
     if not feature_slug:
@@ -146,8 +187,31 @@ def _read_tags(project_root: Path, feature_slug: Optional[str]) -> List[str]:
     block = _frontmatter_lines(text)
     if block is None:
         return []
-    # Correction (i): strip empty/whitespace tags before matching.
-    return [t.strip() for t in _extract_tags(block) if t.strip()]
+    # Correction (i): strip empty/whitespace entries before matching.
+    return [v.strip() for v in _extract_list_field(block, field) if v.strip()]
+
+
+def _read_tags(project_root: Path, feature_slug: Optional[str]) -> List[str]:
+    """Return the feature's ``tags:`` list — inert for selection, see above."""
+    return _read_field(project_root, feature_slug, "tags")
+
+
+def _read_areas(project_root: Path, feature_slug: Optional[str]) -> List[str]:
+    """Return the feature's ``areas:`` list — what selection matches on."""
+    return _read_field(project_root, feature_slug, "areas")
+
+
+def _normalize_key(value: str) -> str:
+    """Kebab-normalize an area key or declared area for exact comparison."""
+    return value.strip().lower().replace(" ", "-").replace("_", "-")
+
+
+def _split_keys(key_text: str) -> List[str]:
+    """Split a map row's left half into normalized, non-empty area keys."""
+    for sep in KEY_SEPARATORS[1:]:
+        key_text = key_text.replace(sep, KEY_SEPARATORS[0])
+    keys = (_normalize_key(k) for k in key_text.split(KEY_SEPARATORS[0]))
+    return [k for k in keys if k]
 
 
 def _section_lines(text: str, heading: str) -> List[str]:
@@ -167,20 +231,23 @@ def _section_lines(text: str, heading: str) -> List[str]:
 
 
 def _parse_conditional_loading(project_md: str) -> List[Tuple[str, str]]:
-    """Return ``(trigger, path)`` pairs in file order.
+    """Return ``(key_text, path)`` pairs in file order.
 
     Splits each bullet on the FIRST U+2192; a bullet with no separator
-    (comment, sub-bullet, blank) is skipped — never an ``IndexError``.
+    (comment, sub-bullet, blank) is skipped — never an ``IndexError``. The path
+    is the FIRST whitespace-delimited token to the right of the separator, so a
+    trailing editorial parenthetical can never become part of the path (#454).
+    Prose that must sit in this section therefore has to avoid the separator.
     """
     pairs: List[Tuple[str, str]] = []
     for line in _section_lines(project_md, "## Conditional Loading"):
         if ARROW not in line:
             continue
-        trigger_part, _, path_part = line.partition(ARROW)
-        trigger = trigger_part.lstrip().lstrip("-").strip()
-        path = path_part.strip()
-        if trigger and path:
-            pairs.append((trigger, path))
+        key_part, _, path_part = line.partition(ARROW)
+        key_text = key_part.lstrip().lstrip("-").strip()
+        path_tokens = path_part.split()
+        if key_text and path_tokens:
+            pairs.append((key_text, path_tokens[0]))
     return pairs
 
 
@@ -199,16 +266,17 @@ def _parse_global_context(project_md: str) -> List[str]:
 
 def resolve(
     project_root: Path, feature_slug: Optional[str] = None
-) -> Tuple[List[str], Optional[str]]:
+) -> Tuple[List[str], Optional[str], str]:
     """Resolve the requirements selection for ``feature_slug`` under ``project_root``.
 
-    Returns ``(lines, fallback_note)`` where ``lines`` is the newline-ready
+    Returns ``(lines, note, coverage)``. ``lines`` is the newline-ready
     repo-relative path list (project.md first, Global Context in file order,
     then matched area docs; absent paths carry the skip-suffix; deduped by
-    resolved path with Global Context placement winning) and ``fallback_note``
-    is the stderr note string when no area docs matched, else ``None``.
+    resolved path with Global Context placement winning). ``coverage`` is one
+    of the four ``COVERAGE_*`` states and ``note`` its human-readable detail,
+    ``None`` in the ``loaded`` state where the path list says it all.
     """
-    tags = _read_tags(project_root, feature_slug)
+    areas = _read_areas(project_root, feature_slug)
     try:
         project_md_text = (project_root / PROJECT_MD_RELPATH).read_text(
             encoding="utf-8"
@@ -219,13 +287,20 @@ def resolve(
     global_context = _parse_global_context(project_md_text)
     conditional = _parse_conditional_loading(project_md_text)
 
+    declared: List[str] = []  # normalized, order-preserving, deduped
+    for area in areas:
+        key = _normalize_key(area)
+        if key and key not in declared:
+            declared.append(key)
+
     matched: List[str] = []
-    for trigger, path in conditional:
-        trigger_lower = trigger.lower()
-        for tag in tags:
-            if tag.lower() in trigger_lower:
-                matched.append(path)
-                break
+    hits: List[Tuple[str, str]] = []  # (declared area, path) in row order
+    for key_text, path in conditional:
+        keys = set(_split_keys(key_text))
+        hit = next((a for a in declared if a in keys), None)
+        if hit is not None:
+            matched.append(path)
+            hits.append((hit, path))
 
     lines: List[str] = []
     seen: Set[str] = set()
@@ -245,38 +320,52 @@ def resolve(
     for path in matched:  # section order; GC placement wins on a dup
         emit(path)
 
-    fallback_note: Optional[str] = None
-    if not matched:
-        # An absent index is a different failure from an index whose tags match
-        # nothing: the first means coverage was never determined, the second
-        # that it was determined to be empty. Only the first is a defect the
-        # caller can repair.
+    # Coverage precedence: a doc that actually loaded outranks every partial
+    # failure, so a feature with one good area doc and one unmapped area is
+    # `loaded` — the drift check has something to run against.
+    present = [(area, path) for area, path in hits if (project_root / path).exists()]
+    note: Optional[str] = None
+    if present:
+        coverage = COVERAGE_LOADED
+    elif hits:
+        coverage = COVERAGE_DOC_MISSING
+        note = DOC_MISSING_NOTE_TEMPLATE.format(
+            details="; ".join(f"{area} → {path}" for area, path in hits)
+        )
+    elif declared:
+        coverage = COVERAGE_UNMAPPED
+        note = UNMAPPED_NOTE_TEMPLATE.format(areas=", ".join(declared))
+    else:
+        coverage = COVERAGE_NO_AREA
+        # An absent index is a different failure from an index that declares no
+        # areas: the first means coverage was never determined, the second that
+        # it was determined to be empty. Only the first is a defect the caller
+        # can repair.
         index_absent = bool(feature_slug) and not _index_path(
             project_root, feature_slug
         ).is_file()
         if index_absent:
-            fallback_note = NO_INDEX_NOTE_TEMPLATE.format(
+            note = NO_INDEX_NOTE_TEMPLATE.format(
                 path=f"cortex/lifecycle/{feature_slug}/index.md"
             )
         else:
-            fallback_note = FALLBACK_NOTE_TEMPLATE.format(
-                tags="[" + ", ".join(tags) + "]"
-            )
+            note = FALLBACK_NOTE_TEMPLATE
 
-    return lines, fallback_note
+    return lines, note, coverage
 
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="cortex-load-requirements",
         description=(
-            "Emit the tag-relevant requirements file list (paths only) for a "
-            "repo. Reads project.md's Conditional Loading + Global Context and "
-            "the feature index.md tags; prints repo-relative paths to stdout "
-            "(project.md first, absent files suffixed ' (skipped: file "
-            "absent)') and a no-match fallback note to stderr. Read-only; "
-            "matches tags case-insensitively as whole-tag substrings against "
-            "each Conditional Loading trigger; emits no event."
+            "Emit the area-relevant requirements file list (paths only) for a "
+            "repo. Reads project.md's Conditional Loading area-to-doc map + "
+            "Global Context and the feature index.md areas; prints "
+            "repo-relative paths to stdout (project.md first, absent files "
+            "suffixed ' (skipped: file absent)') and a coverage report plus "
+            "one COVERAGE:<state> marker line to stderr. Read-only; matches "
+            "areas by exact kebab-normalized key lookup, never substring; "
+            "emits no event."
         ),
     )
     parser.add_argument(
@@ -284,9 +373,9 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         help=(
             "Lifecycle feature slug; reads cortex/lifecycle/<slug>/index.md "
-            "tags. An absent/tag-less index or omitted --feature falls back to "
-            "project.md + Global Context only (byte-identical to omitting "
-            "--feature). Never errors on a missing index."
+            "areas. An absent/area-less index or omitted --feature falls back "
+            "to project.md + Global Context only (stdout byte-identical to "
+            "omitting --feature). Never errors on a missing index."
         ),
     )
     return parser
@@ -298,11 +387,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         project_root = _resolve_user_project_root()
     except CortexProjectRootError:
         project_root = Path.cwd()
-    lines, fallback_note = resolve(project_root, args.feature)
+    lines, note, coverage = resolve(project_root, args.feature)
     if lines:
         sys.stdout.write("\n".join(lines) + "\n")
-    if fallback_note is not None:
-        sys.stderr.write(fallback_note + "\n")
+    if note is not None:
+        sys.stderr.write(note + "\n")
+    sys.stderr.write(COVERAGE_MARKER_PREFIX + coverage + "\n")
     return 0
 
 

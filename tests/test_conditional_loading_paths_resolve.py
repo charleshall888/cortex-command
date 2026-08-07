@@ -3,17 +3,18 @@
 Spec: cortex/lifecycle/no-lifecycle-area-requirements-doc-so/spec.md (R9).
 
 ``cortex/requirements/project.md`` routes area docs with bullets of the form
-``<trigger> → <path>``. The loader
+``<area keys> → <path>``. The loader
 (``cortex_command.lifecycle.load_requirements_cli``) splits each bullet on the
-FIRST U+2192 and existence-checks **all** the text to the right of the arrow,
-verbatim. A row whose path carries any trailing decoration — an editorial
-parenthetical, a note, a stray comment — therefore never resolves; the loader
-silently emits it with the ``(skipped: file absent)`` suffix and the area doc is
-never read.
+FIRST U+2192 and takes the first whitespace-delimited token to its right as the
+path. A row pointing at a file that is not on disk therefore never resolves;
+the loader silently emits it with the ``(skipped: file absent)`` suffix and the
+area doc is never read.
 
 Named failure this gate prevents: #454 shipped the routing row
 ``... → cortex/requirements/lifecycle.md (NOT YET WRITTEN — ...)``. The path
-could never resolve, and no test could see it.
+could never resolve, and no test could see it. #472 closed the annotation half
+of that shape at the parser (the trailing text is no longer part of the path);
+the absent-file half is what this lint still guards.
 
 The helper deliberately calls the loader's own ``_parse_conditional_loading``
 rather than re-implementing the split. Parser parity is what makes the defect
@@ -94,19 +95,19 @@ def test_fixture_positive_existing_area_doc_passes_lint(tmp_path: Path) -> None:
     assert _find_unresolvable_conditional_paths(text, tmp_path) == []
 
 
-def test_fixture_negative_annotated_path_fails_lint(tmp_path: Path) -> None:
-    """A trailing parenthetical makes the path unresolvable and is reported.
+def test_fixture_negative_missing_area_doc_fails_lint(tmp_path: Path) -> None:
+    """A row routing to a file that does not exist is reported.
 
-    This is the #454 shape verbatim: the file exists, but the annotated row
-    still cannot resolve because the loader keeps everything right of the arrow.
+    This is the surviving half of the #454 shape. The other half — a trailing
+    editorial parenthetical swallowed into the path — is now structurally
+    impossible: `_parse_conditional_loading` takes the FIRST whitespace-
+    delimited token right of the arrow, so an annotated row resolves to its
+    bare path. `test_fixture_positive_annotation_no_longer_breaks_the_path`
+    below pins that, and this case keeps the absent-file failure red.
     """
     text = _seed_project_md(
         tmp_path,
-        "- lifecycle state machine → cortex/requirements/lifecycle.md "
-        "(NOT YET WRITTEN — see #469)\n",
-    )
-    (tmp_path / "cortex" / "requirements" / "lifecycle.md").write_text(
-        "# Requirements: lifecycle\n", encoding="utf-8"
+        "- lifecycle → cortex/requirements/lifecycle.md\n",
     )
 
     diagnostics = _find_unresolvable_conditional_paths(text, tmp_path)
@@ -114,8 +115,24 @@ def test_fixture_negative_annotated_path_fails_lint(tmp_path: Path) -> None:
     assert len(diagnostics) == 1, diagnostics
     msg = diagnostics[0]
     assert "UNRESOLVABLE_AREA_DOC_PATH" in msg
-    assert "lifecycle state machine" in msg
-    assert "NOT YET WRITTEN" in msg
+    assert "lifecycle" in msg
+    assert "cortex/requirements/lifecycle.md" in msg
+
+
+def test_fixture_positive_annotation_no_longer_breaks_the_path(
+    tmp_path: Path,
+) -> None:
+    """The #454 row shape now resolves — the path stops at the first token."""
+    text = _seed_project_md(
+        tmp_path,
+        "- lifecycle → cortex/requirements/lifecycle.md "
+        "(NOT YET WRITTEN — see #469)\n",
+    )
+    (tmp_path / "cortex" / "requirements" / "lifecycle.md").write_text(
+        "# Requirements: lifecycle\n", encoding="utf-8"
+    )
+
+    assert _find_unresolvable_conditional_paths(text, tmp_path) == []
 
 
 # ---------------------------------------------------------------------------
