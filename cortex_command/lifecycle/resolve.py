@@ -86,9 +86,14 @@ _ROUTE_NEXT = {
     "escalated": (
         "review.md is REJECTED — present the reviewer analysis and ask the user for direction."
     ),
-    # Not a route: the discriminated-phase key for the rework cap, whose route
-    # stays the bare ``escalated``. Selected by ``_next_for_route`` when the
-    # detected phase is the cap form, so the cap is not narrated as a rejection.
+}
+
+# Discriminated-PHASE keys, deliberately separate from ``_ROUTE_NEXT``: these are
+# not machine states, so they must never enter a route-keyed table (the transition
+# table pins every ``_ROUTE_NEXT`` key as a real state). The rework cap's route
+# stays the bare ``escalated``; only ``phase`` carries the discriminant, which
+# ``_next_for_route`` matches by prefix so the cap is not narrated as a rejection.
+_PHASE_NEXT = {
     "escalated:rework-cap": (
         "The rework cap was reached without a reviewer rejection — present the "
         "review findings and ask the user for direction. The recorded way to "
@@ -99,7 +104,6 @@ _ROUTE_NEXT = {
 
 
 def _next_for_route(route: str, phase_overridden: bool, phase: Optional[str] = None) -> str:
-    key = route
     # The cap discriminant rides ``phase`` only; ``route`` stays ``escalated``.
     # An explicit --phase override decouples route from the detected phase, so
     # the discriminant is only trusted when there is no override.
@@ -109,8 +113,9 @@ def _next_for_route(route: str, phase_overridden: bool, phase: Optional[str] = N
         and phase is not None
         and phase.startswith("escalated:rework-cap:")
     ):
-        key = "escalated:rework-cap"
-    base = _ROUTE_NEXT.get(key, f"Enter the {route} phase.")
+        base = _PHASE_NEXT["escalated:rework-cap"]
+    else:
+        base = _ROUTE_NEXT.get(route, f"Enter the {route} phase.")
     if phase_overridden:
         return base + " (explicit phase override — warn if prerequisite artifacts are missing.)"
     return base

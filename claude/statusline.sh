@@ -621,8 +621,10 @@ if [ -d "$_lc_base" ]; then
           plan)                    _lc_display="Plan" ;;
           implement)               _lc_display="Implement" ;;
           implement-rework)        _lc_display="Implement (rework)" ;;
+          # No escalated:rework-cap:* arm here: the group-key normalization above
+          # rewrites every escalated:* form to bare "escalated", so a grouped
+          # capped feature renders as "N Escalated" by design.
           escalated)               _lc_display="Escalated" ;;
-          escalated:rework-cap:*)  _lc_display="Escalated (rework cap)" ;;
           complete:awaiting-merge) _lc_display="Complete (awaiting merge)" ;;
           *)                       _lc_display="$_lc_phase_key" ;;
         esac

@@ -205,15 +205,15 @@ def _terminal_directive(state: str, phase: Optional[str] = None) -> str:
 
     *phase* is the resolver's discriminated phase when one is available. It
     only refines the directive — the served *state* stays the bare table state,
-    so ``escalated:rework-cap:<n>`` selects the rework-cap directive instead of
-    the reviewer-rejection one while still being served as ``escalated``.
+    so ``escalated:rework-cap:<n>`` selects the rework-cap directive from the
+    resolver's phase-keyed table instead of the reviewer-rejection one from the
+    route-keyed one, while still being served as ``escalated``.
     """
     if state == "cancelled":
         return "Lifecycle cancelled (terminal) — no further transitions; nothing to enter."
-    key = state
     if state == "escalated" and phase is not None and phase.startswith("escalated:rework-cap:"):
-        key = "escalated:rework-cap"
-    return resolve_mod._ROUTE_NEXT.get(key, f"Enter the {state} phase.")
+        return resolve_mod._PHASE_NEXT["escalated:rework-cap"]
+    return resolve_mod._ROUTE_NEXT.get(state, f"Enter the {state} phase.")
 
 
 def _evaluate_guard(transition: tt.Transition, discriminants: dict) -> dict:
