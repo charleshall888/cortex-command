@@ -3,3 +3,5 @@
 {"ts": "2026-08-07T01:50:22Z", "event": "complexity_override", "feature": "a-rework-re-review-re-reads", "from": "simple", "to": "complex", "gate": "clarify_reconcile", "from_seeded": true}
 {"ts": "2026-08-07T01:50:22Z", "event": "criticality_override", "feature": "a-rework-re-review-re-reads", "from": "medium", "to": "high", "gate": "clarify_reconcile", "from_seeded": true}
 {"ts": "2026-08-07T02:23:04Z", "event": "spec_approved", "feature": "a-rework-re-review-re-reads", "decision": "approved"}
+{"ts": "2026-08-07T11:24:20Z", "event": "plan_approved", "feature": "a-rework-re-review-re-reads", "dispatch_choice": "wait"}
+{"ts": "2026-08-07T11:24:20Z", "event": "feature_paused", "feature": "a-rework-re-review-re-reads", "slug": "plan-approval", "kind": "relayed-consent"}
