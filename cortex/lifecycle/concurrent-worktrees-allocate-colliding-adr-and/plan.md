@@ -39,7 +39,7 @@ cross-worktree race or a missing detector.
   anywhere — the spec measured it drifting 41/25 → 41/33 → 41/34 across the refine session
   alone. Run from the repo root so the auditor's default `--root` is correct.
 - **Verification**: `uv run python -m cortex_command.adr_citation_audit | python3 -c "import json,sys,collections;print(sorted(collections.Counter(f['kind'] for f in json.load(sys.stdin)['findings']).items()))" | tee <baseline-path>` — passes when the file exists and holds a non-empty sorted list of `(kind, count)` pairs.
-- **Status**: [ ] pending
+- **Status**: [x] done (no commit — scratchpad-only artifact; baseline `[('slug_mismatch', 43), ('unresolved', 23)]`)
 
 ### Task 2: Change the `superseded_by` contract in the ADR README
 - **Files**: `cortex/adr/README.md`
@@ -60,7 +60,7 @@ cross-worktree race or a missing detector.
   own (`:49`) and is not part of the corpus index, so editing it cannot alter the auditor's ADR
   index — only its citations, of which this edit adds none.
 - **Verification**: `grep -c "superseded_by: NNNN" cortex/adr/README.md` returns 0 (returns 2 on unmodified HEAD) **and** `grep -c "four-digit number" cortex/adr/README.md` returns 0 (returns 2 on HEAD). Both must be 0 to pass.
-- **Status**: [ ] pending
+- **Status**: [x] done (ccaa134d 2026-08-07T12:55:50-04:00)
 
 ### Task 3: Migrate the two live `superseded_by` pointers
 - **Files**: `cortex/adr/0006-cortex-init-consumer-claude-md-authorization-surface.md`, `cortex/adr/0023-route-core-research-fanout-to-sonnet-searcher-tier.md`
@@ -75,7 +75,7 @@ cross-worktree race or a missing detector.
   file — no status change, no body change. The stem carries no `.md` suffix, matching the
   contract Task 2 writes.
 - **Verification**: `grep -h "^superseded_by:" cortex/adr/*.md` emits exactly `superseded_by: 0008-picker-selection-authorizes-enterworktree` and `superseded_by: 0032-cortex-selects-no-model` (plus the README's template line), and `grep -cE "^superseded_by: [0-9]{4}$" cortex/adr/*.md` reports 0 for every file (reports 1 for two files on HEAD).
-- **Status**: [ ] pending
+- **Status**: [x] done (2fd39956 2026-08-07T12:56:14-04:00)
 
 ### Task 4: Verify pointer resolution and auditor non-regression
 - **Files**: `cortex/adr/0006-cortex-init-consumer-claude-md-authorization-surface.md`, `cortex/adr/0023-route-core-research-fanout-to-sonnet-searcher-tier.md`, `/private/tmp/claude-501/-Users-charliehall-Workspaces-cortex-command/a7c28512-de61-41f8-8ce3-d8213e4e32b3/scratchpad/adr-audit-baseline.txt`
@@ -90,7 +90,7 @@ cross-worktree race or a missing detector.
   3 are the detecting criteria. Task 5 is a dependency because it edits a `.md` file inside the
   auditor's scan scope, so its citations must be inside the compared window.
 - **Verification**: (a) `grep -h "^superseded_by:" cortex/adr/[0-9]*.md | awk '{print $2}' | while read s; do test -f "cortex/adr/$s.md" || echo "DANGLING: $s"; done` prints nothing; (b) re-running Task 1's kind-count one-liner yields, for every kind, a count equal to or lower than the same kind's baseline entry, with no kind present that was absent from the baseline.
-- **Status**: [ ] pending
+- **Status**: [x] done (no commit — read-only check; (a) empty, (b) 43/23 vs baseline 43/23)
 
 ### Task 5: Correct ticket #464's premise and record the refuted mechanisms
 - **Files**: `cortex/backlog/464-concurrent-worktrees-allocate-colliding-adr-and-backlog-numbers-with-no-detector.md`
@@ -120,7 +120,7 @@ cross-worktree race or a missing detector.
   the existing text already does. Leave frontmatter untouched — status and `lifecycle_phase` are
   lifecycle-owned.
 - **Verification**: `grep -c "claim-by-creating\|post-merge allocation\|slug-primary" cortex/backlog/464-*.md` returns 3 or more (returns 0 on HEAD); `grep -c "plan time" cortex/backlog/464-*.md` returns 1 or more (returns 0 on HEAD); and `grep -c "^## " cortex/backlog/464-*.md` grows by exactly 1 versus HEAD, with the new heading naming the rejected approaches.
-- **Status**: [ ] pending
+- **Status**: [x] done (0a9db378 2026-08-07T12:58:10-04:00)
 
 ## Risks
 
