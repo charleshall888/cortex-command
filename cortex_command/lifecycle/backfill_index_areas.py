@@ -45,7 +45,7 @@ import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 from cortex_command.backlog import _telemetry
 from cortex_command.backlog.resolve_item import _parse_frontmatter, _resolve_numeric
@@ -122,10 +122,19 @@ def backfill_index_areas(root: Path) -> dict:
     unchanged = 0
     unlinked = 0
     skipped = 0
+    malformed: List[str] = []
 
     for index_path in sorted(lifecycle_dir.glob("*/index.md")):
         total += 1
-        fm = _parse_frontmatter(index_path)
+        try:
+            fm = _parse_frontmatter(index_path)
+        except Exception:
+            # A hand-edited index with malformed frontmatter must not abort a
+            # whole-tree sweep partway and leave the migration half-applied with
+            # no summary. It gets its own bucket rather than folding into
+            # `skipped`, so a file needing repair stays visible in the output.
+            malformed.append(str(index_path.relative_to(root)))
+            continue
         backlog_id = fm.get("parent_backlog_id")
         if backlog_id is None:
             unlinked += 1
@@ -156,6 +165,7 @@ def backfill_index_areas(root: Path) -> dict:
         "unchanged": unchanged,
         "unlinked": unlinked,
         "skipped": skipped,
+        "malformed": malformed,
     }
 
 

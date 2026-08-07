@@ -98,6 +98,7 @@ def test_linked_index_gains_areas_from_item(tmp_path):
         "unchanged": 0,
         "unlinked": 0,
         "skipped": 0,
+        "malformed": [],
     }
     # created/artifacts/body preserved; updated: bumped for the real change.
     assert f"created: {DATE}\n" in content
@@ -128,6 +129,7 @@ def test_second_run_is_byte_identical(tmp_path):
         "unchanged": 1,
         "unlinked": 0,
         "skipped": 0,
+        "malformed": [],
     }
     assert index.read_text() == after_first
 
@@ -260,3 +262,32 @@ def test_sweeps_multiple_indexes_and_aggregates_counts(tmp_path):
     assert result["total"] == 2
     assert result["updated"] == 1
     assert result["unlinked"] == 1
+
+
+def test_malformed_index_does_not_abort_the_sweep(tmp_path):
+    """A hand-edited index must not leave a whole-tree migration half-applied.
+
+    The malformed file sorts before the well-formed one, so an uncaught parse
+    error here would abort the sweep and `later` would never be written --
+    silently, with no summary emitted at all.
+    """
+    root = _repo(tmp_path)
+    _write_ticket(root, "042-later.md", areas="['pipeline']")
+    _write_index(root, "later", parent_backlog_id=42)
+
+    broken = root / "cortex" / "lifecycle" / "aaa-broken"
+    broken.mkdir(parents=True)
+    (broken / "index.md").write_text(
+        "---\nfeature: aaa-broken\ntags: [unclosed\n  bad: : :\n---\n\n# broken\n",
+        encoding="utf-8",
+    )
+
+    result = backfill_index_areas(root)
+
+    assert result["malformed"] == ["cortex/lifecycle/aaa-broken/index.md"]
+    assert result["total"] == 2
+    # The well-formed index after the broken one was still processed.
+    assert result["updated"] == 1
+    assert "areas: [pipeline]" in (
+        root / "cortex" / "lifecycle" / "later" / "index.md"
+    ).read_text(encoding="utf-8")
