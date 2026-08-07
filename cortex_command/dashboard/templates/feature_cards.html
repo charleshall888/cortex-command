@@ -223,9 +223,9 @@
 
           <h3 class="mt-3">artifacts</h3>
           <div class="card-row flex-wrap gap-2">
-            {% if feat.spec_path %}<a class="card-link" href="#" title="{{ feat.spec_path }}">spec.md</a>{% endif %}
-            {% if feat.plan_path %}<a class="card-link" href="#" title="{{ feat.plan_path }}">plan.md</a>{% endif %}
-            {% if feat.backlog_id %}<a class="card-link" href="#" title="backlog item">backlog #{{ feat.backlog_id }}</a>{% endif %}
+            {% if feat.spec_path %}{% if feat.backlog_id %}<a class="card-link" href="/tickets/{{ feat.backlog_id }}#spec" title="{{ feat.spec_path }}">spec.md</a>{% else %}<span class="card-link" title="{{ feat.spec_path }}">spec.md</span>{% endif %}{% endif %}
+            {% if feat.plan_path %}{% if feat.backlog_id %}<a class="card-link" href="/tickets/{{ feat.backlog_id }}#plan" title="{{ feat.plan_path }}">plan.md</a>{% else %}<span class="card-link" title="{{ feat.plan_path }}">plan.md</span>{% endif %}{% endif %}
+            {% if feat.backlog_id %}<a class="card-link" href="/tickets/{{ feat.backlog_id }}" title="backlog item">backlog #{{ feat.backlog_id }}</a>{% endif %}
           </div>
         </div>
       </div>
