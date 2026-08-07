@@ -184,3 +184,35 @@ def test_pipeline_prompts_missing_pin_is_reported(tmp_path) -> None:
     assert len(errors) == 1, errors
     assert "has no size-pin.txt" in errors[0]
     assert "just ratchet-refs" in errors[0]
+
+
+def test_lowering_a_pin_preserves_its_raised_provenance(tmp_path) -> None:
+    """Lowering must not erase the `# raised:` lines.
+
+    Lowering is the ratchet's common operation, and rewriting the pin file as a
+    bare byte count wiped the provenance `parse_pin` validates. Observed
+    2026-08-07 (#455): one `just ratchet-refs` took skills/build/references/
+    from two markers to zero, breaking the same lifecycle's own acceptance
+    criterion that the `# raised:` count was unchanged.
+    """
+    fixture = FIXTURES_ROOT / "valid-raise-marker" / "references"
+    copied = tmp_path / "references"
+    shutil.copytree(fixture, copied)
+
+    pin_path = copied / ratchet_refs.PIN_FILENAME
+    original = pin_path.read_text(encoding="utf-8").splitlines()
+    markers = [line for line in original[1:] if line.startswith("# raised:")]
+    assert markers, "fixture must carry at least one raised marker"
+
+    # Shrink the measured content so the next write takes the lowering branch.
+    content = sorted(p for p in copied.iterdir() if p.name != ratchet_refs.PIN_FILENAME)
+    content[0].write_text("", encoding="utf-8")
+    lowered = ratchet_refs.measure(copied)
+    assert lowered < int(original[0]), "content must actually shrink"
+
+    ratchet_refs._write_pin(pin_path, lowered)
+
+    rewritten = pin_path.read_text(encoding="utf-8").splitlines()
+    assert rewritten[0] == str(lowered), "byte count must be updated"
+    assert rewritten[1:] == original[1:], "provenance lines must survive verbatim"
+    assert ratchet_refs.classify(copied) == [], "the rewritten pin must still parse"

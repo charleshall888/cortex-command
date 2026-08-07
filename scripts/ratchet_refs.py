@@ -110,6 +110,23 @@ def measure(directory: Path) -> int:
     )
 
 
+def _write_pin(pin_path: Path, measured: int) -> None:
+    """Write *measured* as the pin, preserving every line after the first.
+
+    Those lines are the ``# raised:`` provenance ``parse_pin`` validates — the
+    record of why a pin was once raised above a prior floor. Lowering is the
+    ratchet's common operation, so rewriting the file as a bare byte count
+    erased that record on nearly every run: observed 2026-08-07 (#455), where a
+    single ``just ratchet-refs`` took ``skills/build/references/size-pin.txt``
+    from two markers to zero, breaking the very ``# raised:`` count that the
+    lifecycle's own acceptance criterion asserted was unchanged.
+    """
+    tail: list[str] = []
+    if pin_path.is_file():
+        tail = pin_path.read_text(encoding="utf-8").splitlines()[1:]
+    pin_path.write_text("\n".join([str(measured), *tail]) + "\n", encoding="utf-8")
+
+
 def parse_pin(directory: Path) -> tuple[int | None, list[str]]:
     """Parse ``size-pin.txt``. Returns ``(pin_bytes, errors)``.
 
@@ -187,10 +204,10 @@ def ratchet_write(root: Path) -> int:
                 print(error, file=sys.stderr)
             growth += 1
         elif pin is None:
-            pin_path.write_text(f"{measured}\n", encoding="utf-8")
+            _write_pin(pin_path, measured)
             print(f"seeded  {rel}: {measured}")
         elif measured < pin:
-            pin_path.write_text(f"{measured}\n", encoding="utf-8")
+            _write_pin(pin_path, measured)
             print(f"lowered {rel}: {pin} -> {measured}")
         elif measured > pin:
             print(
