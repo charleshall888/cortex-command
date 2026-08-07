@@ -7,3 +7,4 @@
 - **tier**: the complexity axis (simple / moderate / complex), rubric at skills/refine/references/clarify.md §5.2; feeds the short-road predicate, and gates Review's Stage 2
 - **criticality**: the risk axis (low / medium / high / critical), rubric at skills/refine/references/clarify.md §5.3; feeds the short-road predicate
 - **short road**: the phase-fork predicate: criticality ∈ {high, critical} OR tier == complex takes the long road, everything else the short one → ADR-0036
+- **area**: the backlog-item `areas:` vocabulary, matched by exact key against project.md's `## Conditional Loading` map to select which requirements docs load → ADR-0037
