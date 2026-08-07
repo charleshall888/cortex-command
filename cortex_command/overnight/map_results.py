@@ -119,6 +119,9 @@ def _map_results_to_state(
         # Built-but-merge-blocked recoverable sub-case carries its branch here;
         # genuine question-deferrals lack the key and stay None.
         fs.recoverable_branch = entry.get("recoverable_branch")
+        # Unresolved-integration-worktree deferrals carry an error here;
+        # genuine question-deferrals lack the key and stay None.
+        fs.error = entry.get("error")
 
     # Failed features — has "name" and "error"
     for entry in results.get("features_failed", []):

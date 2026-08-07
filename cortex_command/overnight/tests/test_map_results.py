@@ -528,5 +528,61 @@ class TestRecoverableBranchCarrier(unittest.TestCase):
         self.assertIsNone(fs.recoverable_branch)
 
 
+class TestDeferredErrorCarrier(unittest.TestCase):
+    """_map_results_to_state copies error from deferred entries."""
+
+    def setUp(self):
+        self._tmpdir = tempfile.TemporaryDirectory()
+        self._tmp = Path(self._tmpdir.name)
+        self._state_path = self._tmp / "overnight-state.json"
+        state = _make_state(
+            features={
+                "feat-unresolved": OvernightFeatureStatus(status="pending"),
+                "feat-question": OvernightFeatureStatus(status="pending"),
+            }
+        )
+        _write_state(state, self._state_path)
+
+    def tearDown(self):
+        self._tmpdir.cleanup()
+
+    def test_error_copied_from_unresolved_worktree_deferral(self):
+        """A deferred entry with an error persists it onto the status."""
+        results = {
+            "features_merged": [],
+            "features_paused": [],
+            "features_deferred": [
+                {
+                    "name": "feat-unresolved",
+                    "question_count": 0,
+                    "error": "integration worktree unresolved",
+                },
+            ],
+            "features_failed": [],
+        }
+        _map_results_to_state(results, self._state_path, batch_id=1)
+        state = load_state(self._state_path)
+        fs = state.features["feat-unresolved"]
+        self.assertEqual(fs.status, "deferred")
+        self.assertEqual(fs.error, "integration worktree unresolved")
+        self.assertIsNone(fs.recoverable_branch)
+
+    def test_error_none_for_question_deferral(self):
+        """A deferred entry without the key leaves error None."""
+        results = {
+            "features_merged": [],
+            "features_paused": [],
+            "features_deferred": [
+                {"name": "feat-question", "question_count": 2},
+            ],
+            "features_failed": [],
+        }
+        _map_results_to_state(results, self._state_path, batch_id=1)
+        state = load_state(self._state_path)
+        fs = state.features["feat-question"]
+        self.assertEqual(fs.status, "deferred")
+        self.assertIsNone(fs.error)
+
+
 if __name__ == "__main__":
     unittest.main()
