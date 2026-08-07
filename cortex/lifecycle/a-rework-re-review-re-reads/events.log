@@ -16,3 +16,8 @@
 {"ts": "2026-08-07T14:03:37Z", "event": "review_dispatched", "feature": "a-rework-re-review-re-reads", "cycle": 1, "mode": "full", "baseline_sha": "914bc89df4b429149b0a1d5627141e67a150210a"}
 {"ts": "2026-08-07T14:13:37Z", "event": "review_verdict", "feature": "a-rework-re-review-re-reads", "verdict": "CHANGES_REQUESTED", "cycle": 1, "requirements_drift": "detected"}
 {"ts": "2026-08-07T14:13:37Z", "event": "phase_transition", "feature": "a-rework-re-review-re-reads", "from": "review", "to": "implement-rework"}
+{"ts": "2026-08-07T14:24:57Z", "event": "phase_transition", "feature": "a-rework-re-review-re-reads", "from": "implement-rework", "to": "review", "tier": "complex"}
+{"ts": "2026-08-07T14:25:16Z", "event": "review_dispatched", "feature": "a-rework-re-review-re-reads", "cycle": 2, "mode": "rework", "baseline_sha": "1e80c857aad4e46f65e4ee7099e479fac6e274c2"}
+{"ts": "2026-08-07T14:35:01Z", "event": "review_verdict", "feature": "a-rework-re-review-re-reads", "verdict": "APPROVED", "cycle": 2, "requirements_drift": "none"}
+{"ts": "2026-08-07T14:35:01Z", "event": "phase_transition", "feature": "a-rework-re-review-re-reads", "from": "review", "to": "complete"}
+{"ts": "2026-08-07T14:35:16Z", "event": "feature_complete", "feature": "a-rework-re-review-re-reads", "tasks_total": 15, "rework_cycles": 1, "merge_anchor": "merge"}
