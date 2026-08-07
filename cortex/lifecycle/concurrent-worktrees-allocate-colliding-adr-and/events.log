@@ -5,3 +5,5 @@
 {"ts": "2026-08-07T12:49:04Z", "event": "complexity_override", "feature": "concurrent-worktrees-allocate-colliding-adr-and", "from": "complex", "to": "moderate", "reason": "Critical review refuted every prevention mechanism; scope collapsed to a README contract + 2 frontmatter lines, no code"}
 {"ts": "2026-08-07T12:49:16Z", "event": "criticality_override", "feature": "concurrent-worktrees-allocate-colliding-adr-and", "from": "high", "to": "low", "reason": "Scope collapsed to 3 markdown files; no code, no skills/, trivially reversible"}
 {"ts": "2026-08-07T13:13:27Z", "event": "spec_approved", "feature": "concurrent-worktrees-allocate-colliding-adr-and", "decision": "approved"}
+{"ts": "2026-08-07T15:40:53Z", "event": "plan_approved", "feature": "concurrent-worktrees-allocate-colliding-adr-and", "dispatch_choice": "wait"}
+{"ts": "2026-08-07T15:40:53Z", "event": "feature_paused", "feature": "concurrent-worktrees-allocate-colliding-adr-and", "slug": "plan-approval", "kind": "relayed-consent"}
