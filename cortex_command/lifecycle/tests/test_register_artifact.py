@@ -22,8 +22,22 @@ def _index_path(root, feature="feat"):
     return root / "cortex" / "lifecycle" / feature / "index.md"
 
 
-def _write_index(root, artifacts_line, *, feature="feat", updated="2026-01-01"):
-    """Write a byte-faithful index.md with the given artifacts line."""
+_ALL_ARTIFACTS = ("research", "spec", "plan", "review")
+
+
+def _write_index(
+    root, artifacts_line, *, feature="feat", updated="2026-01-01", write_artifacts=True
+):
+    """Write a byte-faithful index.md with the given artifacts line.
+
+    Since commit c6dca432, register_artifact refuses (state "error") unless a
+    non-empty ``{artifact}.md`` sits beside index.md. By default this also
+    writes a non-empty sibling file for every known artifact kind, so callers
+    exercising any of research/spec/plan/review clear the precondition
+    without each test having to know which one it needs. Pass
+    write_artifacts=False for tests that specifically exercise the
+    missing/empty-artifact refusal path.
+    """
     path = _index_path(root, feature)
     path.parent.mkdir(parents=True, exist_ok=True)
     content = (
@@ -38,6 +52,9 @@ def _write_index(root, artifacts_line, *, feature="feat", updated="2026-01-01"):
         "---\n"
     )
     path.write_text(content, encoding="utf-8")
+    if write_artifacts:
+        for name in _ALL_ARTIFACTS:
+            (path.parent / f"{name}.md").write_text("placeholder\n", encoding="utf-8")
     return path
 
 
@@ -135,6 +152,7 @@ def test_index_without_artifacts_line_returns_no_index(tmp_path) -> None:
     path = _index_path(tmp_path)
     path.parent.mkdir(parents=True)
     path.write_text("---\nfeature: feat\n---\n", encoding="utf-8")
+    (path.parent / "research.md").write_text("content\n", encoding="utf-8")
     r = ra.register_artifact("feat", "research", index_path=path)
     assert r["state"] == "no-index"
 
@@ -159,6 +177,87 @@ def test_io_failure_returns_error_state_not_traceback(tmp_path, monkeypatch) -> 
     r = ra.register_artifact("feat", "research", index_path=path)
     assert r["state"] == "error"
     assert "disk full" in r["message"]
+
+
+# ---------------------------------------------------------------------------
+# Artifact existence precondition (commit c6dca432)
+# ---------------------------------------------------------------------------
+
+
+def test_missing_artifact_file_returns_error(tmp_path) -> None:
+    """No {artifact}.md next to index.md at all: refuses with "error" and
+    writes nothing (the array stays exactly as it was)."""
+    path = _write_index(tmp_path, "artifacts: []", write_artifacts=False)
+    assert not (path.parent / "research.md").exists()
+
+    r = ra.register_artifact("feat", "research", index_path=path)
+    assert r["state"] == "error"
+    assert "research.md" in r["message"]
+    assert "artifacts: []" in path.read_text(encoding="utf-8")
+
+
+def test_zero_byte_artifact_file_returns_error(tmp_path) -> None:
+    """A {artifact}.md that exists but is zero-byte is treated the same as
+    missing: "error", nothing written."""
+    path = _write_index(tmp_path, "artifacts: []", write_artifacts=False)
+    (path.parent / "research.md").write_text("", encoding="utf-8")
+
+    r = ra.register_artifact("feat", "research", index_path=path)
+    assert r["state"] == "error"
+    assert "artifacts: []" in path.read_text(encoding="utf-8")
+
+
+def test_neither_index_nor_artifact_returns_no_index_not_error(tmp_path) -> None:
+    """R8 precedence: index.md is checked before the artifact precondition,
+    so a feature with neither an index nor an artifact is "no-index" — the
+    artifact check never runs, and "error" must not leak through here."""
+    path = _index_path(tmp_path)
+    assert not path.exists()
+
+    r = ra.register_artifact("feat", "research", index_path=path)
+    assert r["state"] == "no-index"
+
+
+def test_artifact_check_anchors_to_index_parent_not_feature_slug(
+    tmp_path, monkeypatch
+) -> None:
+    """artifact_path is derived from index_path.parent, not from
+    cortex/lifecycle/{feature}/ (R3). A mismatched directory name on
+    index_path is irrelevant as long as the artifact sits beside it; an
+    artifact placed only at the feature-derived cortex/lifecycle/{feature}/
+    path does not satisfy the check when index_path points elsewhere."""
+    monkeypatch.setattr(ra, "_today", lambda: "2026-07-10")
+
+    odd_dir = tmp_path / "unrelated-dir-name"
+    odd_dir.mkdir()
+
+    # Case A: artifact beside the real index_path, even though the
+    # containing directory's name doesn't match feature="feat" -> registered.
+    index_path = odd_dir / "index.md"
+    index_path.write_text(
+        "---\nfeature: feat\nartifacts: []\nupdated: 2026-01-01\n---\n",
+        encoding="utf-8",
+    )
+    (odd_dir / "research.md").write_text("content\n", encoding="utf-8")
+
+    r = ra.register_artifact("feat", "research", index_path=index_path)
+    assert r["state"] == "registered"
+
+    # Case B: same odd directory, but the only artifact present is under the
+    # cwd-derived cortex/lifecycle/feat/ path (matching the feature slug)
+    # rather than beside index_path -> the check still looks beside
+    # index_path, so this refuses with "error".
+    index_path2 = odd_dir / "index2.md"
+    index_path2.write_text(
+        "---\nfeature: feat\nartifacts: []\nupdated: 2026-01-01\n---\n",
+        encoding="utf-8",
+    )
+    feature_dir = tmp_path / "cortex" / "lifecycle" / "feat"
+    feature_dir.mkdir(parents=True)
+    (feature_dir / "spec.md").write_text("content\n", encoding="utf-8")
+
+    r2 = ra.register_artifact("feat", "spec", index_path=index_path2)
+    assert r2["state"] == "error"
 
 
 # ---------------------------------------------------------------------------
