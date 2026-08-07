@@ -4,7 +4,10 @@ The served next/advance loop is a **two-sided** system: a wheel (these Python
 verbs, installed as a distribution) serves JSON payloads, and a prose loop (the
 cortex-core plugin's skill markdown) consumes them. When the installed wheel and
 the plugin prose drift out of sync — a *distribution-lag* phenomenon, since both
-sides move together in this repo — the loop must be able to detect it.
+sides move together in this repo — the loop must be able to detect it. The
+reviewer brief served by ``cortex-lifecycle-review-brief`` is one of the served
+surfaces this governs: its shape is part of the wheel↔prose contract like any
+other verb payload.
 
 The mechanism is a single additive ``protocol`` integer stamped into every verb
 payload. The integer is declared **once per layer**:
@@ -38,6 +41,14 @@ from typing import Any, Literal, Mapping
 # 3: next serves ``enter_command`` (the pre-bound Step-2 entry, #402) on resume
 #    and new envelopes; prose consuming it requires >= 3 (older wheels serve no
 #    such field, so the plugin floor moves to 3 in the same commit).
+#
+# Governance note: ``cortex-lifecycle-review-brief`` (cortex_command/lifecycle/
+# review_brief.py) is protocol-governed the same as any other served verb. Its
+# stdout brief is the single source the reviewer prose depends on for both the
+# interactive and overnight paths; a future change to that brief's shape is a
+# floor bump — move PROTOCOL_VERSION and the plugin expectation range together
+# in the same commit, per the module docstring above. Introducing the verb
+# itself did not change any served payload shape, so it did not bump the floor.
 PROTOCOL_VERSION = 3
 
 # --- Wheel-side compat evaluator (R7 substrate) ---------------------------------
