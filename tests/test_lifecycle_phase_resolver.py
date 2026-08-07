@@ -315,6 +315,42 @@ def test_resolver_machine_state_names_match_transition_table() -> None:
     assert common._MACHINE_STATE_NAMES == tt.STATE_NAMES
 
 
+def test_resolver_terminal_event_map_key_set_is_pinned() -> None:
+    """`_TERMINAL_EVENT_TO_STATE`'s key set is the terminal-event vocabulary, pinned
+    as a golden literal.
+
+    Every current key already has behavioural coverage elsewhere (`feature_wontfix`
+    via the #210 parity tests, the other two via this module and `test_complete_route`),
+    so what this pin adds is structural: growing the dict a fourth key wires a new
+    event straight into events-authority, and no behavioural test can fail for a
+    branch nothing exercises yet. Editing this literal is the intended cost of
+    adding a terminal event.
+    """
+    assert set(common._TERMINAL_EVENT_TO_STATE) == {
+        "feature_complete",
+        "feature_wontfix",
+        "lifecycle_cancelled",
+    }
+
+
+def test_resolver_terminal_event_map_values_are_terminal_machine_states() -> None:
+    """Every state a terminal event pins must be both servable and terminal.
+
+    Two invariants the key-set pin above cannot catch, since repointing an existing
+    key leaves the key set intact:
+
+    - value in `_MACHINE_STATE_NAMES` — a state the resolver cannot serve would be
+      dropped by the same guard that ignores a malformed `phase_transition` target,
+      silently demoting the event to the artifact fallback;
+    - value in `_EVENTS_TERMINAL_STATES` — a terminal event pinning a non-terminal
+      state would take the `-paused` annotation path, narrating a finished feature
+      as paused.
+    """
+    values = set(common._TERMINAL_EVENT_TO_STATE.values())
+    assert values <= common._MACHINE_STATE_NAMES
+    assert values <= common._EVENTS_TERMINAL_STATES
+
+
 def test_resolver_ignores_unknown_transition_target(tmp_path: Path) -> None:
     """A phase_transition `to` outside the table's state set never overrides the
     artifact fallback (a malformed row must not corrupt the derivation)."""
