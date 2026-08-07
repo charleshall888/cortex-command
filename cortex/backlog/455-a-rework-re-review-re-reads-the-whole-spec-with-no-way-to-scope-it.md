@@ -2,11 +2,15 @@
 schema_version: "1"
 uuid: 1a50e528-0277-4078-8ae6-b1d0bf2f4d66
 title: A rework re-review re-reads the whole spec with no way to scope it
-status: backlog
+status: refined
 priority: medium
 type: feature
 tags: ['lifecycle', 'review', 'rework', 'cost']
-areas: ['lifecycle']
+areas: ['lifecycle', 'skills']
+complexity: complex
+criticality: high
+updated: 2026-08-06
+spec: cortex/lifecycle/a-rework-re-review-re-reads/spec.md
 ---
 ## Why
 

@@ -1,0 +1,5 @@
+{"ts": "2026-08-07T01:22:23Z", "schema_version": 1, "event": "lifecycle_start", "feature": "a-rework-re-review-re-reads", "tier": "simple", "criticality": "medium", "entry_point": "refine", "seeded": ["criticality", "tier"]}
+{"ts": "2026-08-07T01:25:25Z", "event": "clarify_critic", "feature": "a-rework-re-review-re-reads", "parent_epic_loaded": false, "findings_count": 0, "dispositions": {"apply": 0, "dismiss": 0, "ask": 0}, "applied_fixes_count": 0, "dismissals_count": 0, "status": "failed"}
+{"ts": "2026-08-07T01:50:22Z", "event": "complexity_override", "feature": "a-rework-re-review-re-reads", "from": "simple", "to": "complex", "gate": "clarify_reconcile", "from_seeded": true}
+{"ts": "2026-08-07T01:50:22Z", "event": "criticality_override", "feature": "a-rework-re-review-re-reads", "from": "medium", "to": "high", "gate": "clarify_reconcile", "from_seeded": true}
+{"ts": "2026-08-07T02:23:04Z", "event": "spec_approved", "feature": "a-rework-re-review-re-reads", "decision": "approved"}
