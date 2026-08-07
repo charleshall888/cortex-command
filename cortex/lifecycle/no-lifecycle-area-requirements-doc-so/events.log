@@ -3,3 +3,5 @@ schema_version: 3, ts: 2026-08-07T18:51:07Z, event: clarify_critic, feature: no-
 {"ts": "2026-08-07T19:06:47Z", "event": "complexity_override", "feature": "no-lifecycle-area-requirements-doc-so", "from": "moderate", "to": "complex", "reason": "research surfaced a direct Codebase/Adversarial contradiction on the relocation inventory, plus precedent-setting for the unwritten area docs"}
 {"ts": "2026-08-07T19:07:21Z", "event": "criticality_override", "feature": "no-lifecycle-area-requirements-doc-so", "from": "medium", "to": "high", "reason": "exposure: project.md is read unconditionally on every refine/build/review run, and the failure mode is a constraint silently ceasing to be visible", "gate": "clarify_reconcile", "from_seeded": true}
 {"ts": "2026-08-07T19:19:54Z", "event": "spec_approved", "feature": "no-lifecycle-area-requirements-doc-so", "decision": "approved"}
+{"ts": "2026-08-07T19:32:00Z", "event": "plan_approved", "feature": "no-lifecycle-area-requirements-doc-so", "dispatch_choice": "worktree-interactive"}
+{"ts": "2026-08-07T19:32:00Z", "event": "phase_transition", "feature": "no-lifecycle-area-requirements-doc-so", "from": "plan", "to": "implement"}
