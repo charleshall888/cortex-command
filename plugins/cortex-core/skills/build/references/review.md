@@ -20,7 +20,7 @@ It archives the prior cycle's `review.md`, selects full or rework-scoped mode, r
 
 Dispatch one read-only reviewer, choosing its model yourself. Hand it the brief, the absolute spec path to read, §1's requirements path list (or its no-match note), the changed-file list, and §1's test baseline.
 
-**Single-writer rule** — only the reviewer role writes `review.md`: this sub-task plus §3's missing-drift re-dispatch and §3a's cap-2 re-dispatches. Any sub-agent the reviewer spawns is read-only and returns findings as a message envelope.
+**Single-writer rule** — only the reviewer role writes `review.md`: this sub-task, resuming that reviewer, and §3's and §3a's re-dispatches. Any sub-agent the reviewer spawns is read-only and returns findings as a message envelope.
 
 **Verdict contract** — the brief prescribes the rest of the output shape, but this block is prose because §3 parses it. Hand it with the brief; the review ends with it:
 
@@ -30,7 +30,7 @@ Dispatch one read-only reviewer, choosing its model yourself. Hand it the brief,
 
 ## 3. Process the verdict
 
-Downstream parsing depends only on the Verdict JSON block. If review.md lacks `## Requirements Drift` (the reviewer ran out of context), re-dispatch once — "review.md is missing the ## Requirements Drift section; read the existing file and append it in the correct format, modifying nothing else." Still absent → escalate.
+Downstream parsing depends only on the Verdict JSON block. No review.md at all → resume the original reviewer and await its return; never re-check immediately. If it lacks `## Requirements Drift` (the reviewer ran out of context), re-dispatch once — "review.md is missing the ## Requirements Drift section; append it in the correct format, modifying nothing else." Still absent → escalate.
 
 Register it: `cortex-lifecycle-register-artifact --feature {feature} --artifact review`.
 
