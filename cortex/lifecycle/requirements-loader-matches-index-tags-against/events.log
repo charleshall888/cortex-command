@@ -3,3 +3,5 @@ schema_version: 3, ts: 2026-08-07T18:41:19Z, event: clarify_critic, feature: req
 {"ts": "2026-08-07T19:01:11Z", "event": "complexity_override", "feature": "requirements-loader-matches-index-tags-against", "from": "moderate", "to": "complex", "reason": "research: source-of-truth fork unsettled \u2014 spec-approve ordering vs ADR-0019 boundary, see research.md Open Questions 1"}
 {"ts": "2026-08-07T19:01:20Z", "event": "criticality_override", "feature": "requirements-loader-matches-index-tags-against", "from": "medium", "to": "high", "reason": "exposure: the verb's output feeds spec authoring and the Review drift check on every refine and build run", "gate": "clarify_reconcile", "from_seeded": true}
 {"ts": "2026-08-07T19:31:58Z", "event": "spec_approved", "feature": "requirements-loader-matches-index-tags-against", "decision": "approved"}
+{"ts": "2026-08-07T19:45:02Z", "event": "plan_approved", "feature": "requirements-loader-matches-index-tags-against", "dispatch_choice": "wait"}
+{"ts": "2026-08-07T19:45:02Z", "event": "feature_paused", "feature": "requirements-loader-matches-index-tags-against", "slug": "plan-approval", "kind": "relayed-consent"}
