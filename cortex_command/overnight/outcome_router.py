@@ -49,6 +49,7 @@ from cortex_command.overnight.events import (
     FEATURE_FAILED,
     FEATURE_MERGED,
     FEATURE_PAUSED,
+    INTEGRATION_WORKTREE_MISSING,
     MERGE_RECOVERY_FAILED,
     MERGE_RECOVERY_FLAKY,
     MERGE_RECOVERY_START,
@@ -85,6 +86,10 @@ class OutcomeContext:
     feature_names: list[str]
     config: BatchConfig
     home_worktree_path: Path | None = None
+    # Absolute path to the home repository itself (``OvernightState.project_root``).
+    # Needed to re-create ``home_worktree_path`` when it has been purged from
+    # under a running session; ``None`` makes the loss unrecoverable.
+    home_repo_path: Path | None = None
     # Per-feature backlog ``uuid``, when the item carries one. Preferred over
     # backlog_ids at write-back time: a uuid survives a renumbering of the
     # backlog files, whereas the numeric id resolves on the filename prefix.
@@ -123,6 +128,109 @@ def _effective_base_branch(
     if repo_path is not None and _normalize_repo_key(str(repo_path)) in integration_branches:
         return integration_branches[_normalize_repo_key(str(repo_path))]
     return default
+
+
+def _ensure_worktree(
+    repo_path: Path,
+    worktree_path: Path,
+    branch: str,
+    *,
+    on_exists_fallback: Path | None = None,
+) -> Path:
+    """Create ``worktree_path`` as a git worktree of ``repo_path`` on ``branch``.
+
+    Shared by the cross-repo lazy-creation path
+    (``_effective_merge_repo_path``) and the home-repo re-creation path
+    (``_merge_target_repo_path``), so both inherit the same ``git worktree
+    add`` edge-case recovery: an "already exists" path collision, and the
+    stale tracking left behind when the worktree directory is deleted out
+    from under git.
+
+    Args:
+        repo_path: Repository the worktree is added from (``cwd`` for git).
+        worktree_path: Where the worktree should live.  Used verbatim — the
+            caller owns any naming scheme.
+        branch: Branch the worktree checks out.
+        on_exists_fallback: Path to return instead when git reports a path
+            collision.  Lets the cross-repo caller prefer its cached worktree
+            over the colliding path; when None, the collision resolves to
+            ``worktree_path`` if it exists on disk, else raises.
+
+    Returns:
+        Path to the usable worktree.
+
+    Raises:
+        RuntimeError: If the worktree could not be created or resolved.
+    """
+    # Build env without GIT_DIR to prevent git from inheriting an override.
+    env = {k: v for k, v in os.environ.items() if k != "GIT_DIR"}
+
+    result = subprocess.run(
+        ["git", "worktree", "add", str(worktree_path), branch],
+        cwd=str(repo_path),
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    if result.returncode == 0:
+        logger.warning(
+            "Lazily created integration worktree for %s at %s",
+            repo_path,
+            worktree_path,
+        )
+        return Path(worktree_path)
+
+    stderr = result.stderr
+
+    # Path collision — concurrent creation already placed a worktree here.
+    if "already exists" in stderr:
+        if on_exists_fallback is not None:
+            return Path(on_exists_fallback)
+        if worktree_path.exists():
+            return worktree_path
+        raise RuntimeError(
+            f"Worktree path collision for {repo_path!s} but path "
+            f"{worktree_path} does not exist: {stderr}"
+        )
+
+    # Stale git tracking left after the worktree directory was deleted out
+    # from under git (a TMPDIR purge).  Git words this two ways: the branch is
+    # "already checked out at" the dead path when we ask for a *different*
+    # path, and the path is "missing but already registered" when we ask for
+    # the same one back.  Both clear the same way — prune and retry once.
+    if "already checked out at" in stderr or "already registered" in stderr:
+        subprocess.run(
+            ["git", "worktree", "prune"],
+            cwd=str(repo_path),
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        retry = subprocess.run(
+            ["git", "worktree", "add", str(worktree_path), branch],
+            cwd=str(repo_path),
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        if retry.returncode == 0:
+            logger.warning(
+                "Lazily created integration worktree for %s at %s "
+                "(after pruning stale tracking)",
+                repo_path,
+                worktree_path,
+            )
+            return Path(worktree_path)
+        raise RuntimeError(
+            f"Failed to create worktree for {repo_path!s} after pruning: "
+            f"{retry.stderr}"
+        )
+
+    # Unknown failure.
+    raise RuntimeError(
+        f"Failed to create integration worktree for {repo_path!s}: {stderr}"
+    )
 
 
 def _effective_merge_repo_path(
@@ -187,75 +295,19 @@ def _effective_merge_repo_path(
     repo_dir_name = Path(repo_path).name
     worktree_path = Path(tmpdir) / "overnight-worktrees" / f"{session_id}-lazy-{repo_dir_name}"
 
-    # Build env without GIT_DIR to prevent git from inheriting an override.
-    env = {k: v for k, v in os.environ.items() if k != "GIT_DIR"}
-
-    result = subprocess.run(
-        ["git", "worktree", "add", str(worktree_path), branch],
-        cwd=str(repo_path),
-        capture_output=True,
-        text=True,
-        env=env,
+    resolved = _ensure_worktree(
+        repo_path,
+        worktree_path,
+        branch,
+        # Preserve cache-first ordering on a path collision: a worktree already
+        # recorded for this repo wins over the colliding path.
+        on_exists_fallback=(
+            Path(integration_worktrees[key]) if integration_worktrees.get(key) else None
+        ),
     )
-
-    if result.returncode == 0:
-        logger.warning(
-            "Lazily created integration worktree for %s at %s",
-            repo_path,
-            worktree_path,
-        )
+    if resolved == worktree_path:
         integration_worktrees[key] = str(worktree_path)
-        return Path(worktree_path)
-
-    stderr = result.stderr
-
-    # Path collision — concurrent creation already placed a worktree here.
-    if "already exists" in stderr:
-        cached = integration_worktrees.get(key)
-        if cached:
-            return Path(cached)
-        if worktree_path.exists():
-            return worktree_path
-        raise RuntimeError(
-            f"Worktree path collision for {repo_path!s} but path "
-            f"{worktree_path} does not exist: {stderr}"
-        )
-
-    # Stale git tracking — branch registered to a now-deleted path after
-    # TMPDIR was cleared.  Prune and retry once.
-    if "already checked out at" in stderr:
-        prune_result = subprocess.run(
-            ["git", "worktree", "prune"],
-            cwd=str(repo_path),
-            capture_output=True,
-            text=True,
-            env=env,
-        )
-        retry = subprocess.run(
-            ["git", "worktree", "add", str(worktree_path), branch],
-            cwd=str(repo_path),
-            capture_output=True,
-            text=True,
-            env=env,
-        )
-        if retry.returncode == 0:
-            logger.warning(
-                "Lazily created integration worktree for %s at %s "
-                "(after pruning stale tracking)",
-                repo_path,
-                worktree_path,
-            )
-            integration_worktrees[key] = str(worktree_path)
-            return Path(worktree_path)
-        raise RuntimeError(
-            f"Failed to create worktree for {repo_path!s} after pruning: "
-            f"{retry.stderr}"
-        )
-
-    # Unknown failure.
-    raise RuntimeError(
-        f"Failed to create integration worktree for {repo_path!s}: {stderr}"
-    )
+    return resolved
 
 
 def _merge_target_repo_path(ctx: OutcomeContext, name: str) -> Path | None:
@@ -267,15 +319,67 @@ def _merge_target_repo_path(ctx: OutcomeContext, name: str) -> Path | None:
     ``overnight/<session_id>`` instead of the user's live working tree.
     Cross-repo features delegate byte-for-byte to
     ``_effective_merge_repo_path``.
+
+    The recorded home worktree can vanish mid-session (a TMPDIR purge takes it
+    with everything else in there), which strands finished work on a branch no
+    longer checked out anywhere.  When that happens this re-creates the
+    worktree **at the same path** from ``ctx.home_repo_path`` so the session
+    continues against the same location every other caller already holds, and
+    returns None only when re-creation is impossible.  The loss is logged
+    either way, so a recovered session is still visible in the morning.
     """
-    if ctx.repo_path_map.get(name) is None:
-        return ctx.home_worktree_path
-    return _effective_merge_repo_path(
-        ctx.repo_path_map.get(name),
-        ctx.integration_worktrees,
-        ctx.integration_branches,
-        ctx.session_id,
-    )
+    if ctx.repo_path_map.get(name) is not None:
+        return _effective_merge_repo_path(
+            ctx.repo_path_map.get(name),
+            ctx.integration_worktrees,
+            ctx.integration_branches,
+            ctx.session_id,
+        )
+
+    home_worktree = ctx.home_worktree_path
+    if home_worktree is None or home_worktree.exists():
+        return home_worktree
+
+    # The home integration worktree is gone. Re-create it in place when we can
+    # name both the repo it came from and the branch it owned.
+    resolved: Path | None = None
+    if ctx.home_repo_path is not None:
+        branch = ctx.integration_branches.get(
+            _normalize_repo_key(str(ctx.home_repo_path))
+        ) or ctx.integration_branches.get(str(ctx.home_repo_path))
+        if branch:
+            try:
+                resolved = _ensure_worktree(
+                    ctx.home_repo_path, home_worktree, branch
+                )
+            except (RuntimeError, OSError):
+                resolved = None
+
+    # Surface the loss once per detection, recovered or not.
+    try:
+        overnight_log_event(
+            INTEGRATION_WORKTREE_MISSING,
+            ctx.config.batch_id,
+            feature=name,
+            details={
+                "session_id": ctx.session_id,
+                "feature": name,
+                "worktree_path": str(home_worktree),
+                "context": "merge_target",
+                "recreated": resolved is not None,
+            },
+            log_path=ctx.config.overnight_events_path,
+        )
+    except Exception:
+        pass  # Don't let event-write failure block resolution
+    try:
+        _deg_state = load_state(ctx.config.overnight_state_path)
+        _deg_state.integration_degraded = True
+        save_state(_deg_state, ctx.config.overnight_state_path)
+    except Exception:
+        pass  # Don't let state-write failure block resolution
+
+    return resolved
 
 
 # ---------------------------------------------------------------------------

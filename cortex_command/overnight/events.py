@@ -97,6 +97,11 @@ ORCHESTRATOR_CRASH_RECOVERED = "orchestrator_crash_recovered"
 # (orchestrator-round Step 3b.1). Replaces the former SYNTHESIZER_ERROR reuse so
 # the morning report can surface it under its own heading (backlog #377 Item B).
 CRITICALITY_READ_CORRUPTED = "criticality_read_corrupted"
+# An exception that escaped a feature coroutine and was caught by run_batch's
+# ``asyncio.gather(return_exceptions=True)``. Carries the formatted traceback so
+# the fault is diagnosable from the log alone — the FeatureResult that follows
+# only carries ``str(exc)``.
+FEATURE_EXCEPTION = "feature_exception"
 
 EVENT_TYPES = (
     SESSION_START,
@@ -159,6 +164,7 @@ EVENT_TYPES = (
     COMPLEXITY_NORMALIZED,
     ORCHESTRATOR_CRASH_RECOVERED,
     CRITICALITY_READ_CORRUPTED,
+    FEATURE_EXCEPTION,
 )
 
 

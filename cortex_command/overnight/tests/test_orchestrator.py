@@ -37,6 +37,16 @@ from cortex_command.overnight.orchestrator import BatchConfig
 from cortex_command.overnight.types import CircuitBreakerState, FeatureResult
 
 
+class _UniqueFeatureFault(RuntimeError):
+    """Distinctively-named fault so the traceback assertion cannot match by
+    accident."""
+
+
+def _raise_unique_feature_fault() -> None:
+    """Named helper whose frame must survive into the logged traceback."""
+    raise _UniqueFeatureFault("feature coroutine blew up")
+
+
 class TestOrchestratorRunBatch(unittest.IsolatedAsyncioTestCase):
     """Integration coverage for ``orchestrator.run_batch``."""
 
@@ -88,13 +98,16 @@ class TestOrchestratorRunBatch(unittest.IsolatedAsyncioTestCase):
         return info
 
     def _make_state(self, feature_names: list[str]):
+        self._home_integration_wt = self._tmp / "home-integration-wt"
+        self._home_integration_wt.mkdir(exist_ok=True)
         return self._OvernightState(
             session_id="s1",
             plan_ref="plan.md",
             # Home features resolve their merge target to this integration
             # worktree; without it the unresolved-home pause guard fires for
-            # completed home features that should merge.
-            worktree_path=str(self._tmp / "home-integration-wt"),
+            # completed home features that should merge. The resolver reads the
+            # directory off disk, so the fixture creates it for real.
+            worktree_path=str(self._home_integration_wt),
             features={
                 n: self._OvernightFeatureStatus(recovery_attempts=0)
                 for n in feature_names
@@ -108,6 +121,7 @@ class TestOrchestratorRunBatch(unittest.IsolatedAsyncioTestCase):
         execute_return,
         mock_manager: MagicMock | None = None,
         patch_create_task: bool = True,
+        patch_log_event: bool = True,
     ) -> dict:
         """Patch every orchestrator-module dependency used by ``run_batch``.
 
@@ -128,7 +142,10 @@ class TestOrchestratorRunBatch(unittest.IsolatedAsyncioTestCase):
         self._start_patch("cortex_command.overnight.orchestrator.save_state")
         self._start_patch("cortex_command.overnight.orchestrator.save_batch_result")
         self._start_patch("cortex_command.overnight.orchestrator.transition")
-        self._start_patch("cortex_command.overnight.orchestrator.overnight_log_event")
+        if patch_log_event:
+            self._start_patch(
+                "cortex_command.overnight.orchestrator.overnight_log_event"
+            )
         self._start_patch(
             "cortex_command.overnight.orchestrator.load_throttle_config",
             return_value=MagicMock(),
@@ -222,6 +239,39 @@ class TestOrchestratorRunBatch(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(called_features, ["feat-a", "feat-b"])
         # apply_feature_result fired once per feature (no budget abort).
         self.assertEqual(mocks["apply_feature_result"].await_count, 2)
+
+    # ------------------------------------------------------------------
+    # Scenario 7 — an exception escaping a feature coroutine keeps its
+    # traceback
+    # ------------------------------------------------------------------
+
+    async def test_escaped_exception_logs_traceback(self):
+        """``FeatureResult.error`` keeps only the exception's message, which
+        names neither the raising frame nor the file. The events log has to
+        carry the formatted traceback or the failure is unattributable."""
+        from cortex_command.overnight.orchestrator import run_batch
+
+        def _boom(*args, **kwargs):
+            _raise_unique_feature_fault()
+
+        mocks = self._install_base_patches(
+            feature_names=["feat-a"],
+            execute_return=FeatureResult(name="feat-a", status="completed"),
+            patch_log_event=False,
+        )
+        mocks["execute_feature"].side_effect = _boom
+
+        await run_batch(self._config)
+
+        faults = [
+            e for e in read_events(self._config.overnight_events_path)
+            if e["event"] == "feature_exception"
+        ]
+        self.assertEqual(len(faults), 1)
+        self.assertEqual(faults[0]["feature"], "feat-a")
+        tb = faults[0]["details"]["traceback"]
+        self.assertIn("_raise_unique_feature_fault", tb)
+        self.assertIn("_UniqueFeatureFault", tb)
 
     # ------------------------------------------------------------------
     # Scenario 2 — concurrency semaphore

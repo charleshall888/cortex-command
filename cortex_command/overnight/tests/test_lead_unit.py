@@ -36,6 +36,12 @@ from cortex_command.overnight.outcome_router import (
 from cortex_command.overnight.feature_executor import _read_learnings
 
 
+# A real directory standing in for the home integration worktree. The
+# merge-target resolver reads it off disk, so a bare /tmp/<name> literal would
+# read as a purged worktree and route every mocked test down the loss path.
+_HOME_WORKTREE_STUB = Path(tempfile.mkdtemp(prefix="test-home-integration-worktree-"))
+
+
 def _make_outcome_ctx(
     config,
     batch_result,
@@ -81,10 +87,11 @@ def _make_outcome_ctx(
         feature_names=list(feature_names),
         config=config,
         # Home features in production always have an integration worktree
-        # (plan.py creates it); a non-None value keeps the merge-target
-        # resolver's unresolved-home pause guard from firing in these
-        # merge_feature-mocked unit tests.
-        home_worktree_path=Path("/tmp/test-home-integration-worktree"),
+        # (plan.py creates it); a path that exists on disk keeps the
+        # merge-target resolver's unresolved-home pause guard from firing in
+        # these merge_feature-mocked unit tests. The resolver treats a
+        # missing directory as a lost worktree, so this must be a real one.
+        home_worktree_path=_HOME_WORKTREE_STUB,
     )
 from cortex_command.overnight.events import (
     FEATURE_COMPLETE,
@@ -378,11 +385,16 @@ class TestRecoveryDispatchPersistence(unittest.IsolatedAsyncioTestCase):
         tmp = self._tmpdir.name
         state_path = Path(tmp) / "overnight-state.json"
 
+        # The merge-target resolver reads the home integration worktree off
+        # disk, so it has to exist or the loss path fires instead of recovery.
+        home_wt = Path(tmp) / "home-wt"
+        home_wt.mkdir()
+
         # Write real state file with recovery_attempts=0
         initial_state = OvernightState(
             session_id="s-persist",
             plan_ref="plan.md",
-            worktree_path=str(Path(tmp) / "home-wt"),
+            worktree_path=str(home_wt),
             features={feat_name: OvernightFeatureStatus(recovery_attempts=0)},
         )
         save_state(initial_state, state_path)
@@ -1503,7 +1515,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
             # Home features resolve their merge target to this integration
             # worktree; without it the unresolved-home pause guard fires for
             # completed home features that should merge.
-            worktree_path="/tmp/test-home-integration-worktree",
+            worktree_path=str(_HOME_WORKTREE_STUB),
             features={
                 n: self._OvernightFeatureStatus(recovery_attempts=0)
                 for n in feature_names

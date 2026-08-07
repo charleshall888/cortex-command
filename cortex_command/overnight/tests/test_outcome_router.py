@@ -9,6 +9,7 @@ so these tests continue to pass after batch_runner's copies are removed.
 from __future__ import annotations
 
 import asyncio
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -17,16 +18,24 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from cortex_command.overnight.constants import CIRCUIT_BREAKER_THRESHOLD, SYSTEMIC_FAILURE_THRESHOLD
+from cortex_command.overnight.events import read_events
 from cortex_command.overnight.outcome_router import (
     OutcomeContext,
     _apply_feature_result,
     _find_backlog_item_path,
     _guard_review_flag_coherence,
+    _merge_target_repo_path,
     _write_back_to_backlog,
     apply_feature_result,
     set_backlog_dir,
 )
 from cortex_command.overnight.types import CircuitBreakerState, FeatureResult
+
+
+# A real directory standing in for the home integration worktree. The
+# merge-target resolver reads it off disk, so a bare /tmp/<name> literal would
+# read as a purged worktree and route every mocked test down the loss path.
+_HOME_WORKTREE_STUB = Path(tempfile.mkdtemp(prefix="unused-home-integration-worktree-"))
 
 
 def _make_ctx(pauses: int | None = None) -> OutcomeContext:
@@ -65,7 +74,7 @@ def _make_ctx(pauses: int | None = None) -> OutcomeContext:
         backlog_ids={},
         feature_names=["feat-a"],
         config=config,
-        home_worktree_path=Path("/tmp/unused-home-integration-worktree"),
+        home_worktree_path=_HOME_WORKTREE_STUB,
     )
 
 
@@ -1790,6 +1799,87 @@ class TestHomeMergeWorktreeCollision(unittest.IsolatedAsyncioTestCase):
             # No home-tree merge ran: the home main HEAD is unchanged.
             home_main_after = self._git(home, "rev-parse", "main")
             self.assertEqual(home_main_before, home_main_after)
+
+    def test_purged_home_worktree_recreated_in_place(self):
+        """A home integration worktree deleted out from under the session is
+        re-created at the SAME path on the SAME branch — not under a new
+        ``-lazy-`` name that every other caller's recorded path would miss.
+
+        Runs against a real git repo: the recovery goes through
+        ``git worktree add``, which fails with "already checked out at"
+        against the stale tracking the deletion left behind, so the
+        prune-and-retry arm has to run for real."""
+        from cortex_command.overnight.state import _normalize_repo_key
+
+        with tempfile.TemporaryDirectory() as _td:
+            td = Path(_td)
+            session_id = "overnight-test-purged"
+            feature = f"{session_id}-feat"
+            home, wt, feature_branch, _ = self._build_repo(td, session_id)
+            base_branch = f"overnight/{session_id}"
+
+            ctx = self._make_ctx(
+                home=home,
+                worktree=wt,
+                session_id=session_id,
+                feature=feature,
+                feature_branch=feature_branch,
+            )
+            ctx.home_repo_path = home
+            ctx.integration_branches[_normalize_repo_key(str(home))] = base_branch
+
+            # The purge.
+            shutil.rmtree(wt)
+            self.assertFalse(wt.exists())
+
+            resolved = _merge_target_repo_path(ctx, feature)
+
+            self.assertEqual(resolved, ctx.home_worktree_path)
+            self.assertNotIn("-lazy-", str(resolved))
+            self.assertEqual(
+                self._git(resolved, "rev-parse", "--abbrev-ref", "HEAD"),
+                base_branch,
+            )
+
+            # The loss is still reported, recovered or not.
+            missing = [
+                e for e in read_events(ctx.config.overnight_events_path)
+                if e["event"] == "integration_worktree_missing"
+            ]
+            self.assertEqual(len(missing), 1)
+            self.assertEqual(missing[0]["details"]["context"], "merge_target")
+            self.assertIs(missing[0]["details"]["recreated"], True)
+
+
+class TestHomeMergeTargetUnresolvable(unittest.TestCase):
+    """A purged home integration worktree that cannot be re-created resolves
+    to None, rather than handing callers a path that is not on disk."""
+
+    def test_missing_home_worktree_without_branch_returns_none(self):
+        """No integration branch is recorded for the home repo, so there is
+        nothing to check the re-created worktree out to."""
+        with tempfile.TemporaryDirectory() as _td:
+            td = Path(_td)
+            ctx = _make_ctx()
+            ctx.config.overnight_events_path = td / "overnight-events.log"
+            ctx.config.overnight_state_path = td / "state.json"
+            ctx.repo_path_map = {"feat-a": None}
+            ctx.home_repo_path = td / "home"
+            ctx.home_worktree_path = td / "purged-worktree"  # never created
+            ctx.integration_branches = {}
+
+            self.assertIsNone(_merge_target_repo_path(ctx, "feat-a"))
+
+            missing = [
+                e for e in read_events(ctx.config.overnight_events_path)
+                if e["event"] == "integration_worktree_missing"
+            ]
+            self.assertEqual(len(missing), 1)
+            self.assertEqual(missing[0]["details"]["context"], "merge_target")
+            self.assertEqual(
+                missing[0]["details"]["worktree_path"], str(td / "purged-worktree")
+            )
+            self.assertIs(missing[0]["details"]["recreated"], False)
 
 
 class TestReviewNonApprovedRevertsLiveSha(unittest.IsolatedAsyncioTestCase):

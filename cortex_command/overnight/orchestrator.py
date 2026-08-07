@@ -17,6 +17,7 @@ import asyncio
 import json
 import logging
 import os
+import traceback
 from asyncio import create_task
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -44,6 +45,7 @@ from cortex_command.overnight.events import (
     BATCH_ASSIGNED,
     BATCH_BUDGET_EXHAUSTED,
     BATCH_COMPLETE,
+    FEATURE_EXCEPTION,
     FEATURE_START,
     HEARTBEAT,
     SESSION_BUDGET_EXHAUSTED,
@@ -267,12 +269,18 @@ async def run_batch(config: BatchConfig) -> BatchResult:
     integration_worktrees: dict[str, str] = {}
     session_id: str = os.environ.get("LIFECYCLE_SESSION_ID", "manual")
     home_worktree_path: Path | None = None
+    home_repo_path: Path | None = None
     try:
         overnight_state = load_state(config.overnight_state_path)
         session_id = overnight_state.session_id
         integration_branches = overnight_state.integration_branches
         integration_worktrees = overnight_state.integration_worktrees
         home_worktree_path = Path(overnight_state.worktree_path) if overnight_state.worktree_path else None
+        home_repo_path = (
+            Path(overnight_state.project_root).expanduser()
+            if overnight_state.project_root
+            else _resolve_user_project_root()
+        )
         if overnight_state.worktree_path:
             outcome_router.set_backlog_dir(Path(overnight_state.worktree_path) / "cortex" / "backlog")
         for name in feature_names:
@@ -447,6 +455,7 @@ async def run_batch(config: BatchConfig) -> BatchResult:
             feature_names=feature_names,
             config=config,
             home_worktree_path=home_worktree_path,
+            home_repo_path=home_repo_path,
         )
         await outcome_router.apply_feature_result(name, result, ctx)
 
@@ -501,6 +510,25 @@ async def run_batch(config: BatchConfig) -> BatchResult:
         pass
     for n, exc in zip(eligible, gather_results):
         if isinstance(exc, Exception):
+            # Preserve the traceback: ``failed_result.error`` carries only
+            # ``str(exc)``, which for a bare exception type is empty.
+            try:
+                overnight_log_event(
+                    FEATURE_EXCEPTION,
+                    config.batch_id,
+                    feature=n,
+                    details={
+                        "error": str(exc),
+                        "traceback": "".join(
+                            traceback.format_exception(
+                                type(exc), exc, exc.__traceback__
+                            )
+                        ),
+                    },
+                    log_path=config.overnight_events_path,
+                )
+            except Exception:
+                pass  # A logging failure must not mask the original fault
             failed_result = FeatureResult(
                 name=n,
                 status="failed",
@@ -540,6 +568,7 @@ async def run_batch(config: BatchConfig) -> BatchResult:
                 feature_names=feature_names,
                 config=config,
                 home_worktree_path=home_worktree_path,
+                home_repo_path=home_repo_path,
             )
             await outcome_router.apply_feature_result(n, failed_result, ctx)
 
