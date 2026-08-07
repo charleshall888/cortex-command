@@ -2,16 +2,17 @@
 schema_version: "1"
 uuid: 3edd8d05-bce5-4b4e-9a8b-b82599c9962d
 title: Criticality pins the corpus to the long road, so tier relief is capped
-status: refined
+status: in_progress
 priority: medium
 type: feature
 created: 2026-08-04
-updated: 2026-08-06
+updated: 2026-08-07
 tags: ['lifecycle', 'tiering', 'ceremony', 'criticality']
 areas: ['lifecycle', 'skills']
 complexity: complex
 criticality: high
 spec: cortex/lifecycle/criticality-pins-the-corpus-to-the/spec.md
+lifecycle_phase: research
 ---
 ## Why
 
@@ -56,3 +57,7 @@ There is a structural gap: `low` is "trivially reversible, no downstream deps", 
 - `skills/build/SKILL.md` — the criticality gate table
 - `cortex/lifecycle/nearly-all-work-is-rated-complex/research.md` — the measurement
 - Commits `c6528012` (partial split), `b854bbf3` (reverted narrowing), `#449`
+
+## Decision
+
+**No.** This ticket's Role asked whether ceremony relief should come from the criticality axis. The research — `cortex/lifecycle/criticality-pins-the-corpus-to-the/research.md` — inverts the ticket's own premise: measured **marginal** relief from dropping the criticality clause entirely is **5.0%** (cortex-command) / **2.6%** (wild-light), against **10.7%** / **33.1%** for dropping the tier clause — the tier axis is worth ~12.7x more on the representative corpus. The Plan-skip half of the modelled benefit has never fired in ~650 lifecycle logs. Review's measured catch rate is **6.5–15.7%**, and per-class breakdown shows criticality does not predict it (`complex/high` 16.0% vs `complex/medium` 12.8%). Recorded as `ADR-0036` (`cortex/adr/0036-ceremony-relief-is-not-taken-on-the-criticality-axis.md`). What shipped instead of the ticket's proposed relief is the reason-persistence half (Phase 2).
