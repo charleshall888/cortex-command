@@ -8,3 +8,6 @@
 {"ts": "2026-08-07T21:16:07Z", "event": "batch_dispatch", "feature": "review-has-no-recovery-path-for", "batch": 0, "tasks": ["1", "3"]}
 {"ts": "2026-08-07T21:20:13Z", "event": "batch_dispatch", "feature": "review-has-no-recovery-path-for", "batch": 1, "tasks": ["2"]}
 {"ts": "2026-08-07T21:27:15Z", "event": "phase_transition", "feature": "review-has-no-recovery-path-for", "from": "implement", "to": "review", "tier": "moderate"}
+{"ts": "2026-08-07T21:28:01Z", "event": "review_dispatched", "feature": "review-has-no-recovery-path-for", "cycle": 1, "mode": "full", "baseline_sha": "71a719757513fcf143760917bdb5c54ab9eb7ce5"}
+{"ts": "2026-08-07T21:33:53Z", "event": "review_verdict", "feature": "review-has-no-recovery-path-for", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
+{"ts": "2026-08-07T21:33:53Z", "event": "phase_transition", "feature": "review-has-no-recovery-path-for", "from": "review", "to": "complete"}

@@ -112,6 +112,14 @@ def register_artifact(
 
         rel = f"cortex/lifecycle/{feature}/index.md"
 
+        match = _ARTIFACTS_RE.search(text)
+        if match is None:
+            # No artifacts: line to append to — treat as a malformed index.
+            return {"state": "no-index", "feature": feature, "artifact": artifact}
+
+        # Both ``no-index`` arms above win over the artifact precondition: an index
+        # that is absent OR malformed is the more actionable diagnostic, and naming
+        # a missing artifact would mask it.
         artifact_path = path.parent / f"{artifact}.md"
         try:
             artifact_missing_or_empty = artifact_path.stat().st_size == 0
@@ -122,11 +130,6 @@ def register_artifact(
                 "state": "error",
                 "message": f"artifact file does not exist or is empty: {artifact_path}",
             }
-
-        match = _ARTIFACTS_RE.search(text)
-        if match is None:
-            # No artifacts: line to append to — treat as a malformed index.
-            return {"state": "no-index", "feature": feature, "artifact": artifact}
 
         raw_entries = [e.strip() for e in match.group(2).split(",") if e.strip()]
         normalized = [e.strip("'\"") for e in raw_entries]

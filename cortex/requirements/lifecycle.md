@@ -43,6 +43,8 @@ Owned by `cortex_command/lifecycle/transition_table.py`.
 - `enter` never self-resolves the backend or re-derives new-vs-resume, and never auto-closes an already-complete backlog item — it returns `needs-decision` with no side effect.
 - Legacy typed transition subcommands stay callable through a coexistence window closed only by an operator-decided protocol-floor bump. → ADR-0024 (**proposed**, so not binding).
 - The invocation grammar is owned by a structural parser, not by prose spread across drifting surfaces. → ADR-0018 (**proposed**, so not binding).
+- `register-artifact` refuses to record an artifact whose `{artifact}.md` is absent or zero-byte, returning the existing `error` state and writing nothing, so `index.md`'s `artifacts:` array can never claim an artifact that was never produced. The checked file is resolved beside the index that was resolved, not from the feature slug.
+- That refusal sits behind the missing-index check: a feature with no `index.md` still returns `no-index`, keeping a missing index distinguishable from a missing artifact.
 
 ### Event emission and events-as-phase authority
 

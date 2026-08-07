@@ -157,6 +157,22 @@ def test_index_without_artifacts_line_returns_no_index(tmp_path) -> None:
     assert r["state"] == "no-index"
 
 
+def test_malformed_index_outranks_missing_artifact(tmp_path) -> None:
+    """A malformed index wins over the artifact precondition.
+
+    Both ``no-index`` arms — absent index and index with no ``artifacts:`` line —
+    are more actionable than "artifact missing", so neither may be masked when the
+    artifact is *also* missing. Without this ordering the caller is told to produce
+    an artifact when the real fault is the index.
+    """
+    path = _index_path(tmp_path)
+    path.parent.mkdir(parents=True)
+    path.write_text("---\nfeature: feat\n---\n", encoding="utf-8")
+    # No research.md written: both faults present at once.
+    r = ra.register_artifact("feat", "research", index_path=path)
+    assert r["state"] == "no-index"
+
+
 def test_project_root_error_returns_state_not_traceback(monkeypatch) -> None:
     def _raise():
         raise CortexProjectRootError("no cortex/ found")

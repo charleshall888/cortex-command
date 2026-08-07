@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 2f6c1172-fb64-4ee3-a622-a20eacea07eb
 title: Review has no recovery path for a reviewer that wrote no artifact at all
-status: refined
+status: complete
 priority: medium
 type: bug
 created: 2026-08-06
@@ -12,6 +12,7 @@ areas: ['lifecycle']
 complexity: moderate
 criticality: high
 spec: cortex/lifecycle/review-has-no-recovery-path-for/spec.md
+lifecycle_phase: complete
 ---
 ## Why
 

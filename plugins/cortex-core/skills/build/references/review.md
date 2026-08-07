@@ -30,7 +30,7 @@ Dispatch one read-only reviewer, choosing its model yourself. Hand it the brief,
 
 ## 3. Process the verdict
 
-Downstream parsing depends only on the Verdict JSON block. No review.md at all → resume the original reviewer and await its return; never re-check immediately. If it lacks `## Requirements Drift` (the reviewer ran out of context), re-dispatch once — "review.md is missing the ## Requirements Drift section; append it in the correct format, modifying nothing else." Still absent → escalate.
+Downstream parsing depends only on the Verdict JSON block. No review.md at all → resume the original reviewer and await its return; never re-check immediately. Still nothing → re-dispatch under §3a's cap, then escalate. If it lacks `## Requirements Drift` (the reviewer ran out of context), re-dispatch once — "review.md is missing the ## Requirements Drift section; append it in the correct format, modifying nothing else." Still absent → escalate.
 
 Register it: `cortex-lifecycle-register-artifact --feature {feature} --artifact review`.
 
