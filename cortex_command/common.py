@@ -355,20 +355,25 @@ def _detect_lifecycle_phase_inner(
     cycle = review_verdict_count if review_verdict_count > 0 else 1
     paused = last_significant_event == "feature_paused"
 
-    def _result(phase: str) -> dict[str, str | int]:
+    def _result(phase: str, route: str | None = None) -> dict[str, str | int]:
         """Wrap a phase string into the dict result.
 
-        ``route`` is the base phase for routing-table lookup. ``phase`` also
-        carries the ``-paused`` suffix for non-terminal phases when the last
-        significant event is feature_paused (terminal phases — complete,
-        escalated — are never suffixed). ``paused`` is the boolean that suffix
-        encodes. Consumers route on ``route`` and annotate with ``paused``
-        rather than re-deriving either from ``phase`` by string surgery.
+        ``route`` is the base phase for routing-table lookup; it defaults to
+        ``phase`` and is passed explicitly only for a discriminated phase form
+        (e.g. ``escalated:rework-cap:<n>``, whose route stays the bare machine
+        state ``escalated``). ``phase`` also carries the ``-paused`` suffix for
+        non-terminal phases when the last significant event is feature_paused
+        (terminal phases — complete, escalated — are never suffixed; the
+        terminality test reads ``route``, so a discriminated terminal form is
+        never suffixed either). ``paused`` is the boolean that suffix encodes.
+        Consumers route on ``route`` and annotate with ``paused`` rather than
+        re-deriving either from ``phase`` by string surgery.
         """
-        is_paused = paused and phase not in ("complete", "escalated")
+        route = route or phase
+        is_paused = paused and route not in ("complete", "escalated")
         return {
             "phase": f"{phase}-paused" if is_paused else phase,
-            "route": phase,
+            "route": route,
             "paused": is_paused,
             "checked": checked,
             "total": total,
@@ -405,8 +410,16 @@ def _detect_lifecycle_phase_inner(
         if verdict == "APPROVED":
             return _result("complete")
         elif verdict == "CHANGES_REQUESTED":
+            # Cycle >= 2 is the rework cap: the feature escalates for operator
+            # direction without a reviewer rejection. The discriminant rides
+            # ``phase`` only — ``route`` stays the bare machine state — which
+            # aligns this artifact fallback with review_verdict._route_target.
+            if cycle >= 2:
+                return _result(f"escalated:rework-cap:{cycle}", route="escalated")
             return _result("implement-rework")
         elif verdict == "REJECTED":
+            # A reviewer's explicit rejection is the stronger signal, so it wins
+            # regardless of cycle — no cap branch here.
             return _result("escalated")
 
     # Step 3: plan.md task completion (gated by plan_approved or migration sentinel)
@@ -440,8 +453,10 @@ def detect_lifecycle_phase(feature_dir: Path) -> dict[str, str | int]:
       1. events.log contains "feature_complete" -> "complete"
       2. review.md has verdict:
            APPROVED          -> "complete"
-           CHANGES_REQUESTED -> "implement-rework"
-           REJECTED          -> "escalated"
+           CHANGES_REQUESTED -> cycle 1  -> "implement-rework"
+                                cycle >=2 -> "escalated:rework-cap:<cycle>"
+                                (the rework cap; route stays "escalated")
+           REJECTED          -> "escalated" (a rejection wins at any cycle)
       3. plan.md exists:
            all **Status**: [x] (and at least one) -> "review"
            otherwise                              -> "implement"
@@ -456,11 +471,13 @@ def detect_lifecycle_phase(feature_dir: Path) -> dict[str, str | int]:
     Returns:
         A dict with keys:
           - phase: one of "research", "specify", "plan", "implement",
-            "implement-rework", "review", "complete", "escalated".
+            "implement-rework", "review", "complete", "escalated", or the
+            discriminated form "escalated:rework-cap:<cycle>" (whose ``route``
+            is the bare "escalated").
           - checked: integer count of completed plan tasks (0 when no plan.md).
           - total: integer count of total plan tasks (0 when no plan.md).
-          - cycle: integer review-cycle number (1 when no review.md, otherwise
-            the count of `verdict` regex matches in review.md).
+          - cycle: integer review-cycle number (1-based, never 0) — the count of
+            `review_verdict` rows in events.log, floored at 1.
     """
     events_key = _stat_key(feature_dir / "events.log")
     plan_key = _stat_key(feature_dir / "plan.md")
@@ -621,8 +638,18 @@ def resolve_lifecycle_phase(feature_dir: Path) -> dict[str, str | int]:
         # Legacy fallback: no machine row, artifact derivation is authoritative.
         return artifact
     is_paused = raw_paused and machine_state not in _EVENTS_TERMINAL_STATES
+    # An events-authoritative ``escalated`` adopts the artifact detector's
+    # discriminant (``escalated:rework-cap:<n>``) as the served ``phase`` when
+    # the artifact ladder agrees the feature is escalated. ``route`` and the
+    # paused test keep reading the bare ``machine_state``, so no ``-paused``
+    # suffix can attach to the discriminated form. A missing or unparseable
+    # review.md leaves the artifact route non-escalated, falling through to the
+    # bare state.
+    served_phase = machine_state
+    if machine_state == "escalated" and artifact["route"] == "escalated":
+        served_phase = str(artifact["phase"])
     return {
-        "phase": f"{machine_state}-paused" if is_paused else machine_state,
+        "phase": f"{served_phase}-paused" if is_paused else served_phase,
         "route": machine_state,
         "paused": is_paused,
         "checked": artifact["checked"],
