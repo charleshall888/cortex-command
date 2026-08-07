@@ -125,10 +125,19 @@ def test_criticality_partition_uses_shared_reducer():
     )
 
     # The single-agent-not-defer rationale comment is present, anchored on the
-    # criticality-matrix.md:26 interactive rule and the never-defer constraint.
-    assert "criticality-matrix.md:26" in out, (
-        "the single-agent-not-defer rationale comment (citing criticality-matrix.md:26) "
-        "must be present in the criticality block"
+    # interactive-context gate rule and the never-defer constraint. The anchor
+    # was criticality-matrix.md:26 until f8ed220f repointed it: that file was
+    # deleted in 3feec553 and the rule now lives in project.md. Pin the live
+    # source, so this keeps failing if the rationale itself goes missing.
+    # Matched on the fragment that survives the comment's line wrap — the
+    # citation itself breaks across two prompt lines.
+    assert 'project.md, "Critical-review gates at spec' in out, (
+        'the single-agent-not-defer rationale comment (citing project.md\'s '
+        '"Critical-review gates at spec only") must be present in the criticality block'
+    )
+    assert "INTERACTIVE-context rule" in out, (
+        "the rationale must still say the gate rule is the INTERACTIVE-context one, "
+        "which is what makes single-agent the correct overnight fallback"
     )
     assert "never defer" in out.lower(), (
         "the never-defer fallback rationale must be documented in the prompt"
