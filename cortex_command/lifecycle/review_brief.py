@@ -41,9 +41,12 @@ What one invocation does
    suppresses the append. events.log carries no SHA and no existing event fires
    at review dispatch, so this row is what gives requirements 7, 11 and 13 one
    mechanism. The rework baseline is the ``baseline_sha`` of the ``cycle N-1``
-   row. ``mode`` is the mode actually **served**, so a rework that degrades to a
-   full brief records ``full``; a ``full`` row at cycle >= 2 is therefore exactly
-   a degraded rework.
+   row. ``mode`` is the mode served by the **first** dispatch of that cycle, so a
+   rework that degrades to a full brief records ``full``. Read a ``full`` row at
+   cycle >= 2 as "this cycle's first dispatch degraded", not as "this cycle was
+   never served a scoped brief" — the one-row-per-cycle guard that pins
+   ``baseline_sha`` also freezes ``mode``, so a degrade that is fixed and
+   re-dispatched still reads ``full``.
 4. Emits the brief on stdout.
 
 Fail-open contract
@@ -628,10 +631,21 @@ def main(argv: Optional[list[str]] = None) -> int:
         """Record the dispatch with the mode actually *served*, not the mode the
         rework counter selected. A degraded rework serves a full brief and so
         records ``full``; since ``mode`` is ``rework`` for exactly the cycles
-        ``>= 2``, a ``full`` row at cycle >= 2 is precisely a degraded rework,
-        which keeps the field a two-value enum matching ``lifecycle_event``'s
-        ``review-dispatched`` subcommand while still answering "did any rework
-        silently degrade?" from events.log alone.
+        ``>= 2``, a ``full`` row at cycle >= 2 answers "did this cycle's first
+        dispatch silently degrade?" from events.log alone, while keeping the
+        field a two-value enum matching ``lifecycle_event``'s
+        ``review-dispatched`` subcommand.
+
+        Bound worth knowing (cycle-2 review of #455): ``_record_baseline``'s
+        one-row-per-cycle guard exists to pin ``baseline_sha`` to the first
+        dispatch, and ``mode`` rides that same guard with the opposite update
+        policy — it wants to describe the latest serve. So a degrade that is
+        diagnosed, fixed, and re-dispatched at the same cycle serves a scoped
+        brief while the row still says ``full``. Left as-is deliberately: no
+        code reads the field, the error direction is safe (it over-reports
+        degradation, prompting a look rather than hiding one), and the
+        alternatives cost more than the bug — a second row breaks the
+        baseline pin, and rewriting the row breaks the append-only log.
         """
         _record_baseline(events_log, rows, feature, cycle, served_mode, root)
 
