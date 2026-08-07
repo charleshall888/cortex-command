@@ -413,7 +413,13 @@ def test_a_blocker_that_shipped_no_longer_blocks() -> None:
 
 
 def test_unresolvable_blocker_is_reported_and_withheld_from_build() -> None:
-    """A cross-repo reference cannot be resolved here, so it is shown verbatim."""
+    """A cross-repo reference cannot be resolved here, so it is shown verbatim.
+
+    Nothing is startable, so neither the build line nor the overnight offer may
+    fire: overnight runs the same readiness scan and would select nothing, and
+    an epic that is fully refined but wholly blocked otherwise satisfies the
+    offer's "no refine work left, no ideas" condition.
+    """
     items = [
         _item(id=220, title="Epic", type="epic", status="refined",
               spec="cortex/lifecycle/e/spec.md"),
@@ -426,6 +432,50 @@ def test_unresolvable_blocker_is_reported_and_withheld_from_build() -> None:
 
     assert "[blocked by acme/repo#12]" in blocks
     assert "Build" not in blocks
+    assert "/cortex-overnight:overnight" not in blocks
+
+
+@pytest.mark.parametrize(
+    "cycle,expected",
+    [
+        pytest.param(
+            {231: [232], 232: [231]},
+            "Circular `blocked_by` among 231 · 232 — none can start until that "
+            "is edited.",
+            id="mutual",
+        ),
+        pytest.param(
+            {231: [231], 232: []},
+            "231 lists itself in `blocked_by` — it cannot start until that is "
+            "edited.",
+            id="self-referential",
+        ),
+    ],
+)
+def test_a_dependency_cycle_is_named_and_never_called_startable(
+    cycle, expected
+) -> None:
+    """A cycle must not be laundered into a wave that claims parallel-safety.
+
+    Kahn layering stalls with nothing schedulable. Appending the remainder as a
+    final wave would have rendered two mutually-blocking children as ``231 ·
+    232`` — the separator that means "start these together" — and reading
+    ``startable`` off that wave would have offered both for build.
+    """
+    items = [
+        _item(id=230, title="Epic", type="epic", status="refined",
+              spec="cortex/lifecycle/e/spec.md"),
+        _item(id=231, title="A", status="refined", parent=230,
+              spec="cortex/lifecycle/a/spec.md", blocked_by=cycle[231]),
+        _item(id=232, title="B", status="refined", parent=230,
+              spec="cortex/lifecycle/b/spec.md", blocked_by=cycle[232]),
+    ]
+
+    blocks, _ = render(items, build_epic_map(items))
+
+    assert expected in blocks
+    assert "Build in parallel" not in blocks
+    assert "Build: 231" not in blocks
 
 
 def test_flat_ready_rows_render_with_and_without_spec() -> None:

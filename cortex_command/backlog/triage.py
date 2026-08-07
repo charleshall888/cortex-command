@@ -196,14 +196,20 @@ def _open_blockers(
     return internal, foreign
 
 
-def _waves(ids: list[int], deps: dict[int, set[int]]) -> list[list[int]]:
-    """Kahn-layer *ids* into successive parallel-safe waves.
+def _waves(
+    ids: list[int], deps: dict[int, set[int]]
+) -> tuple[list[list[int]], list[int]]:
+    """Kahn-layer *ids* into parallel-safe waves; return ``(waves, cyclic)``.
 
     Wave *n* is everything whose dependencies all land in waves ``< n``, so a
-    wave is exactly the set that can be started at once. A dependency cycle
-    stalls the loop with nothing schedulable; the remainder is emitted as one
-    final wave rather than dropped, because a triage board that silently omits
-    tickets is the failure this whole ticket is about.
+    wave is exactly the set that can be started at once.
+
+    A dependency cycle — including an item that blocks itself — stalls the loop
+    with nothing schedulable. The remainder is returned separately rather than
+    appended as a final wave: a wave *claims* its members are parallel-safe, and
+    a cycle is the one case where that claim is false. Silently folding it in
+    would emit a confident recommendation over broken data, which is the failure
+    class this whole renderer exists to remove.
     """
     remaining = list(ids)
     settled: set[int] = set()
@@ -211,12 +217,11 @@ def _waves(ids: list[int], deps: dict[int, set[int]]) -> list[list[int]]:
     while remaining:
         layer = [i for i in remaining if deps.get(i, set()) <= settled]
         if not layer:
-            waves.append(remaining)
-            break
+            return waves, remaining
         waves.append(layer)
         settled.update(layer)
         remaining = [i for i in remaining if i not in settled]
-    return waves
+    return waves, []
 
 
 def _counts(buckets: dict[str, list[dict]]) -> str:
@@ -303,10 +308,13 @@ def _render_epic_block(
     if not workable:
         return lines
 
-    waves = _waves(workable_ids, deps)
+    # Startable is read off the dependency map directly, not off `_waves`'
+    # first layer: a cycle has no schedulable layer at all, and taking wave 0
+    # on faith would have reported two mutually-blocking children as ready to
+    # start together.
     startable = [
-        cid for cid in waves[0] if not blockers[cid][1]
-    ]  # wave 0 minus anything held by an unresolvable foreign ref
+        cid for cid in workable_ids if not deps[cid] and not blockers[cid][1]
+    ]
     is_idea = {c["id"]: c.get("type", "feature") == "idea" for c in workable}
     refined = {c["id"]: _is_refined(c) for c in workable}
 
@@ -331,24 +339,36 @@ def _render_epic_block(
     # carried no ordering information at all.
     connected = {cid for cid, d in deps.items() if d}
     connected.update(b for d in deps.values() for b in d)
-    chain = _waves([i for i in workable_ids if i in connected], deps)
+    chain, cyclic = _waves([i for i in workable_ids if i in connected], deps)
     if len(chain) > 1:
         footer.append("Order: " + " → ".join(_join(w) for w in chain))
+    if len(cyclic) == 1:
+        # A lone straggler can only have stalled on itself: every other id
+        # settled, so its one unsettled dependency is its own.
+        footer.append(
+            f"{cyclic[0]} lists itself in `blocked_by` — it cannot start until "
+            "that is edited."
+        )
+    elif cyclic:
+        # Wider than the cycle itself: anything downstream of it stalls too, and
+        # is equally unstartable.
+        footer.append(
+            f"Circular `blocked_by` among {_join(sorted(cyclic))} — none can "
+            "start until that is edited."
+        )
     if buildable:
         verb = "Build in parallel" if len(buildable) > 1 else "Build"
         # Folded onto the build line rather than given its own: both name the
         # same set, and the offer is an alternative to building them by hand.
+        # Withheld when nothing is startable — overnight's own readiness scan
+        # would select nothing, so offering it there is a dead instruction.
         tail = (
-            " — or `/cortex-overnight:overnight` to auto-select them"
+            " — or `/cortex-overnight:overnight` to auto-select "
+            + ("them" if len(buildable) > 1 else "it")
             if overnight
             else ""
         )
         footer.append(f"{verb}: {_join(buildable)}{tail}")
-    elif overnight:
-        footer.append(
-            "Run `/cortex-overnight:overnight` — it will auto-select them via "
-            "its own readiness scan."
-        )
     if unrefined:
         # Every wave, not just wave 0: `Order:` constrains *building*. Writing a
         # spec for a ticket whose blocker has not shipped is fine, so refine
