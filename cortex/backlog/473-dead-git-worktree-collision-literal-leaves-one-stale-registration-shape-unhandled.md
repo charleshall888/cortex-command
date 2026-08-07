@@ -2,13 +2,14 @@
 schema_version: "1"
 uuid: 542b7b55-bf88-4fc9-a990-94d867bff7e9
 title: Dead git worktree collision literal leaves one stale-registration shape unhandled
-status: backlog
+status: complete
 priority: low
 type: bug
 created: 2026-08-07
 updated: 2026-08-07
 tags: ['worktree-recovery']
 areas: ['overnight-runner']
+complexity: simple
 ---
 ## Why
 

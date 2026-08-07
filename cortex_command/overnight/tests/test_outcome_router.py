@@ -21,7 +21,9 @@ from cortex_command.overnight.constants import CIRCUIT_BREAKER_THRESHOLD, SYSTEM
 from cortex_command.overnight.events import read_events
 from cortex_command.overnight.outcome_router import (
     OutcomeContext,
+    _WORKTREE_REGISTRATION_MARKERS,
     _apply_feature_result,
+    _ensure_worktree,
     _find_backlog_item_path,
     _guard_review_flag_coherence,
     _merge_target_repo_path,
@@ -3973,6 +3975,128 @@ class TestCouldNotRunPreservesMerge(unittest.IsolatedAsyncioTestCase):
         ]
         self.assertEqual(len(reset_calls), 0)
         self.assertNotIn("feat-a", ctx.batch_result.features_merged)
+
+
+class TestWorktreeRegistrationMarkers(unittest.TestCase):
+    """#473 — the stderr markers `_ensure_worktree` recovers on are probed
+    against the running git, not asserted from a comment.
+
+    These strings are git-version-specific and match nothing structural. A git
+    release that rewords them turns the recovery arm into a silent no-op:
+    `_ensure_worktree` raises the unknown-failure RuntimeError,
+    `_merge_target_repo_path` maps that to None, and every affected feature
+    defers as "integration worktree unresolved" — a recoverable session taking
+    the unrecoverable path, at exit 0, with nothing pointing at git. Probing
+    real git here is what makes that upgrade fail loudly instead.
+    """
+
+    def _git(self, cwd: Path, *args: str) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            ["git", *args], cwd=str(cwd), capture_output=True, text=True,
+        )
+
+    def _repo(self, td: Path) -> Path:
+        repo = td / "repo"
+        repo.mkdir(parents=True)
+        self._git(repo, "init", "-b", "main")
+        self._git(repo, "config", "user.email", "t@t.t")
+        self._git(repo, "config", "user.name", "t")
+        (repo / "f.txt").write_text("x\n", encoding="utf-8")
+        self._git(repo, "add", "f.txt")
+        self._git(repo, "commit", "-m", "init")
+        self._git(repo, "branch", "topic")
+        return repo
+
+    def _add_fails_with(self, repo: Path, path: Path, branch: str) -> str:
+        r = self._git(repo, "worktree", "add", str(path), branch)
+        self.assertNotEqual(r.returncode, 0, f"expected failure, got: {r.stdout}")
+        return r.stderr
+
+    def _assert_matched(self, stderr: str, shape: str) -> None:
+        self.assertTrue(
+            any(m in stderr for m in _WORKTREE_REGISTRATION_MARKERS),
+            f"git reworded the {shape} collision — no marker in _WORKTREE_"
+            f"REGISTRATION_MARKERS matches:\n{stderr}",
+        )
+
+    def test_git_still_words_registration_collisions_as_we_match(self):
+        """All four collision shapes stay matched by some marker."""
+        with tempfile.TemporaryDirectory() as _td:
+            td = Path(_td)
+
+            # 1. Branch live in another worktree, ask for a different path.
+            repo = self._repo(td / "a")
+            self._git(repo, "worktree", "add", str(td / "a" / "wt1"), "topic")
+            self._assert_matched(
+                self._add_fails_with(repo, td / "a" / "wt2", "topic"),
+                "branch-live-elsewhere",
+            )
+
+            # 2. Branch checked out in the main repo, ask for a worktree.
+            repo2 = self._repo(td / "b")
+            self._assert_matched(
+                self._add_fails_with(repo2, td / "b" / "wt", "main"),
+                "branch-checked-out-in-main-repo",
+            )
+
+            # 3. Worktree directory deleted (stale), ask for a DIFFERENT path.
+            #    This is the shape that matched no marker before #473 and fell
+            #    through to the unknown-failure raise.
+            repo3 = self._repo(td / "c")
+            dead = td / "c" / "wt-dead"
+            self._git(repo3, "worktree", "add", str(dead), "topic")
+            shutil.rmtree(dead)
+            self._assert_matched(
+                self._add_fails_with(repo3, td / "c" / "wt-new", "topic"),
+                "stale-registration-different-path",
+            )
+
+            # 4. Worktree directory deleted (stale), ask for the SAME path back.
+            repo4 = self._repo(td / "d")
+            same = td / "d" / "wt"
+            self._git(repo4, "worktree", "add", str(same), "topic")
+            shutil.rmtree(same)
+            self._assert_matched(
+                self._add_fails_with(repo4, same, "topic"),
+                "stale-registration-same-path",
+            )
+
+    def test_stale_registration_at_a_different_path_recovers(self):
+        """Shape 3 end-to-end through `_ensure_worktree`: prune-and-retry now
+        fires for it, where before it raised."""
+        with tempfile.TemporaryDirectory() as _td:
+            td = Path(_td)
+            repo = self._repo(td)
+            dead = td / "wt-dead"
+            self._git(repo, "worktree", "add", str(dead), "topic")
+            shutil.rmtree(dead)
+
+            fresh = td / "wt-new"
+            resolved = _ensure_worktree(repo, fresh, "topic")
+
+            self.assertEqual(resolved, fresh)
+            self.assertTrue(fresh.exists())
+            self.assertEqual(
+                self._git(fresh, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip(),
+                "topic",
+            )
+
+    def test_a_live_registration_still_raises_rather_than_looping(self):
+        """Prune is the discriminator: a LIVE registration survives the prune,
+        the retry fails again, and the caller gets a RuntimeError naming git's
+        reason — not a silent success or an unbounded retry."""
+        with tempfile.TemporaryDirectory() as _td:
+            td = Path(_td)
+            repo = self._repo(td)
+            live = td / "wt-live"
+            self._git(repo, "worktree", "add", str(live), "topic")
+
+            with self.assertRaises(RuntimeError) as caught:
+                _ensure_worktree(repo, td / "wt-other", "topic")
+
+            self.assertIn("after pruning", str(caught.exception))
+            # The live worktree was not collateral damage.
+            self.assertTrue(live.exists())
 
 
 if __name__ == "__main__":
