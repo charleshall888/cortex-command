@@ -1,6 +1,6 @@
 ---
 status: superseded
-superseded_by: 0008
+superseded_by: 0008-picker-selection-authorizes-enterworktree
 ---
 
 # `cortex init` consumer `CLAUDE.md` authorization surface

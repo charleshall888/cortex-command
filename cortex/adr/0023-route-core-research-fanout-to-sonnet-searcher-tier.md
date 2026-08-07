@@ -1,6 +1,6 @@
 ---
 status: superseded
-superseded_by: 0032
+superseded_by: 0032-cortex-selects-no-model
 ---
 
 # 0023 — Route the core research fan-out to a Sonnet `searcher` tier
