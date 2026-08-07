@@ -4,9 +4,15 @@
 (``cortex-read-backlog-backend`` → ``cortex-generate-backlog-index`` →
 ``cortex-build-epic-map`` → read the dev-skill triage reference) with one
 call that also *renders* both triage blocks. The rendering is fully
-mechanical — grouping, badge selection, and the per-epic recommendation
-sentence are decided by item status and the presence of ``spec:`` — so it
-belongs in a verb rather than in prose the model re-reads on every triage.
+mechanical — grouping, badge selection, the dependency waves, and the per-epic
+recommendation sentences are decided by item status, ``blocked_by``, and the
+presence of ``spec:`` — so it belongs in a verb rather than in prose the model
+re-reads on every triage.
+
+An epic section shows only what can still be acted on. Closed children are
+reduced to a count on the section's summary line; they carry no route mark and
+appear in no footer, because a route mark on shipped work is a direct
+instruction to redo it.
 
 Output is one JSON object::
 
@@ -29,13 +35,39 @@ from types import SimpleNamespace
 from cortex_command.backlog import _telemetry
 from cortex_command.backlog.build_epic_map import build_epic_map, normalize_parent
 from cortex_command.backlog.generate_index import _is_deferred
-from cortex_command.common import _resolve_user_project_root_from_cwd
+from cortex_command.common import TERMINAL_STATUSES, _resolve_user_project_root_from_cwd
 from cortex_command.lifecycle_config import resolve_backlog_backend
 from cortex_command.backlog.readiness import is_item_ready
 
 
 _PRIORITY_ORDER = ("critical", "high", "medium", "low")
-_HELD_STATUSES = frozenset({"in_progress", "implementing", "review", "in-progress"})
+
+
+def _norm_status(item: dict) -> str:
+    """Normalize an item's status to lowercase, hyphen-spelled.
+
+    The corpus carries both spellings of every multi-word status
+    (``in_progress``/``in-progress``) because two writers disagree upstream.
+    Collapsing here means every status set below is written once, in one
+    spelling, instead of each set carrying its own variant list — the failure
+    mode that let ``complete``/``done`` half-work.
+    """
+    return str(item.get("status") or "").strip().lower().replace("_", "-")
+
+
+#: In-flight: someone is on it. Not pickable, but resumable, so still listed.
+_HELD_STATUSES = frozenset({"in-progress", "implementing", "review"})
+#: Finished. Normalized from the canonical set so ``done`` and ``complete``
+#: — both live in real data — can never be classified differently.
+_CLOSED_STATUSES = frozenset(
+    s.strip().lower().replace("_", "-") for s in TERMINAL_STATUSES
+)
+
+WORKABLE, HELD, PARKED, CLOSED = "workable", "in flight", "parked", "closed"
+#: Row order within an epic, and the order of the counts line. ``CLOSED`` is
+#: absent from the row groups on purpose — it is counted, never listed.
+_ROW_GROUPS = (WORKABLE, HELD, PARKED)
+_COUNT_GROUPS = (WORKABLE, HELD, PARKED, CLOSED)
 
 
 def _ready_set(items: list[dict]) -> list[dict]:
@@ -81,10 +113,34 @@ def _recommendation(item: dict) -> str:
     ``idea`` is checked first because it is a readiness statement — an idea has
     nothing to spec yet. Every other type is governed by ``spec:`` presence, so
     the flat Ready row and the per-child epic mark can never disagree.
+
+    Status is deliberately absent: both callers hand this only ``WORKABLE``
+    items — the epic block classifies first and never routes a closed, held, or
+    parked child, and ``_ready_set`` restricts the flat block to
+    ``refined``/``backlog``/``open``/``blocked``. Re-checking status here would
+    duplicate a gate that has to exist upstream anyway, since a closed child
+    must not be *listed* either.
     """
     if item.get("type", "feature") == "idea":
         return "`/cortex-core:discovery`"
     return "`/cortex-core:build`" if _is_refined(item) else "`/cortex-core:refine`"
+
+
+def _classify(item: dict) -> str:
+    """Bucket one child into ``WORKABLE``/``HELD``/``PARKED``/``CLOSED``.
+
+    Precedence is closed → held → parked → workable. Closed wins over a stray
+    ``deferred`` tag: a finished ticket that was once parked is history, not a
+    parked decision.
+    """
+    status = _norm_status(item)
+    if status in _CLOSED_STATUSES:
+        return CLOSED
+    if status in _HELD_STATUSES:
+        return HELD
+    if _is_deferred(item):
+        return PARKED
+    return WORKABLE
 
 
 def _resolve_child(child: dict, by_id: dict[int, dict]) -> dict:
@@ -92,86 +148,255 @@ def _resolve_child(child: dict, by_id: dict[int, dict]) -> dict:
     return by_id.get(child["id"]) or child
 
 
-def _render_epic_block(epic_id: str, epic: dict, by_id: dict[int, dict]) -> list[str]:
-    """Render one epic section: the non-workable title, every child, a verdict."""
-    title = epic.get("title") or by_id.get(int(epic_id), {}).get("title", "")
-    lines = [f"### Epic {epic_id} — {title} _(epic, not directly workable)_", ""]
+def _blocker_lookup(items: list[dict]) -> dict[str, dict]:
+    """Index items by every spelling a ``blocked_by`` ref may use.
 
-    children = epic.get("children", [])
+    Mirrors ``readiness._build_status_lookup``: bare id, zero-padded id, and
+    uuid. Values are the whole record rather than the status so callers can
+    classify with :func:`_classify` instead of re-deriving terminality.
+    """
+    lookup: dict[str, dict] = {}
+    for item in items:
+        item_id = str(item.get("id"))
+        lookup[item_id] = item
+        lookup[item_id.zfill(3)] = item
+        uuid = item.get("uuid")
+        if uuid:
+            lookup[str(uuid)] = item
+    return lookup
+
+
+def _open_blockers(
+    item: dict, lookup: dict[str, dict]
+) -> tuple[list[int], list[str]]:
+    """Return ``(internal_ids, foreign_refs)`` of this item's *unresolved* blockers.
+
+    A blocker that resolved to a closed item is dropped — it is satisfied, and
+    the old renderer's "any ``blocked_by`` entry means blocked" rule marked
+    items blocked forever behind work that had shipped. ``foreign_refs`` holds
+    refs that resolve to nothing local (cross-repo references, dangling ids);
+    they are unresolvable here, so they are reported verbatim rather than
+    guessed at.
+    """
+    internal: list[int] = []
+    foreign: list[str] = []
+    for ref in item.get("blocked_by") or []:
+        ref_s = str(ref).strip()
+        if not ref_s:
+            continue
+        target = lookup.get(ref_s)
+        if target is None and ref_s.isdigit():
+            target = lookup.get(ref_s.zfill(3))
+        if target is None:
+            foreign.append(ref_s)
+            continue
+        if _classify(target) == CLOSED:
+            continue
+        internal.append(target["id"])
+    return internal, foreign
+
+
+def _waves(ids: list[int], deps: dict[int, set[int]]) -> list[list[int]]:
+    """Kahn-layer *ids* into successive parallel-safe waves.
+
+    Wave *n* is everything whose dependencies all land in waves ``< n``, so a
+    wave is exactly the set that can be started at once. A dependency cycle
+    stalls the loop with nothing schedulable; the remainder is emitted as one
+    final wave rather than dropped, because a triage board that silently omits
+    tickets is the failure this whole ticket is about.
+    """
+    remaining = list(ids)
+    settled: set[int] = set()
+    waves: list[list[int]] = []
+    while remaining:
+        layer = [i for i in remaining if deps.get(i, set()) <= settled]
+        if not layer:
+            waves.append(remaining)
+            break
+        waves.append(layer)
+        settled.update(layer)
+        remaining = [i for i in remaining if i not in settled]
+    return waves
+
+
+def _counts(buckets: dict[str, list[dict]]) -> str:
+    """Summarize the whole child set in one line — the progress signal.
+
+    Filtering closed children out of the rows would otherwise delete the
+    "how far along is this epic" reading that the full list used to carry.
+    """
+    return " · ".join(
+        f"{len(buckets[group])} {group}" for group in _COUNT_GROUPS if buckets[group]
+    )
+
+
+def _join(ids: list[int]) -> str:
+    """Join parallel-safe ids with the legend's ``·`` separator."""
+    return " · ".join(str(i) for i in ids)
+
+
+def _render_epic_block(
+    epic_id: str, epic: dict, by_id: dict[int, dict], lookup: dict[str, dict]
+) -> list[str]:
+    """Render one epic section: a counts line, pickable rows, an ordering footer.
+
+    Closed children are counted and never listed — a shipped ticket carrying a
+    route mark in a pick-your-next-task prompt is a direct instruction to redo
+    finished work. ``deferred`` children *are* listed but never routed: parked
+    is a decision to revisit, not work to pick up, so an operator scanning the
+    epic should see it without being told to refine it.
+    """
+    title = epic.get("title") or by_id.get(int(epic_id), {}).get("title", "")
+    lines = [f"### Epic {epic_id} — {title}"]
+
+    children = [_resolve_child(c, by_id) for c in epic.get("children", [])]
+    buckets: dict[str, list[dict]] = {g: [] for g in _COUNT_GROUPS}
     for child in children:
-        full = by_id.get(child["id"], {})
-        marks = [_recommendation(_resolve_child(child, by_id))]
-        if full.get("status") == "blocked" or full.get("blocked_by"):
+        buckets[_classify(child)].append(child)
+    for group in _COUNT_GROUPS:
+        buckets[group].sort(key=lambda c: c.get("id") or 0)
+
+    if not children:
+        return lines + [
+            "",
+            "No child tickets — consider `/cortex-core:discovery` to decompose "
+            "this epic.",
+        ]
+
+    lines += ["", _counts(buckets)]
+    if not any(buckets[g] for g in _ROW_GROUPS):
+        # Every child closed. The epic *was* decomposed, so the discovery line
+        # above would misread; what is actually actionable is closing the epic.
+        return lines + ["", "Nothing left to pick up — this epic looks finished."]
+
+    workable = buckets[WORKABLE]
+    workable_ids = [c["id"] for c in workable]
+    blockers = {c["id"]: _open_blockers(c, lookup) for c in workable}
+    within = set(workable_ids)
+    deps = {
+        cid: {b for b in internal if b in within}
+        for cid, (internal, _foreign) in blockers.items()
+    }
+
+    lines.append("")
+    for child in workable:
+        internal, foreign = blockers[child["id"]]
+        marks = [_recommendation(child)]
+        refs = [str(i) for i in internal] + foreign
+        if refs:
+            marks.append(f"[blocked by {', '.join(refs)}]")
+        elif _norm_status(child) == "blocked":
             marks.append("[blocked]")
         lines.append(
-            f"- **{child['id']}** {child['title']} — {child.get('status', '?')} "
+            f"- **{child['id']}** {child['title']} — {_norm_status(child) or '?'} "
             + " ".join(marks)
         )
+    for child in buckets[HELD] + buckets[PARKED]:
+        status = _norm_status(child)
+        # No route verb: neither an in-flight nor a parked child is something to
+        # pick up. The status word usually says which it is on its own; the mark
+        # exists for the tag-parked item whose status still reads `backlog`.
+        self_describing = status in _HELD_STATUSES or status == "deferred"
+        mark = "" if self_describing else f" [{_classify(child)}]"
+        lines.append(f"- **{child['id']}** {child['title']} — {status or '?'}{mark}")
 
-    recommendable = [
-        c for c in children
-        if c.get("status") not in _HELD_STATUSES
-        and not (by_id.get(c["id"], {}).get("status") == "blocked"
-                 or by_id.get(c["id"], {}).get("blocked_by"))
-    ]
-    active = [c for c in children if c.get("status") not in _HELD_STATUSES]
-    lines.append("")
-    if not active:
-        lines.append(
-            "No active child tickets — consider `/cortex-core:discovery` to "
-            "decompose this epic."
-        )
+    if not workable:
         return lines
 
-    blocked_n = len(active) - len(recommendable)
-    if blocked_n:
-        lines.append(
-            f"Note: {blocked_n} blocked — recommendations apply to the "
-            f"remaining {len(recommendable)}."
+    waves = _waves(workable_ids, deps)
+    startable = [
+        cid for cid in waves[0] if not blockers[cid][1]
+    ]  # wave 0 minus anything held by an unresolvable foreign ref
+    is_idea = {c["id"]: c.get("type", "feature") == "idea" for c in workable}
+    refined = {c["id"]: _is_refined(c) for c in workable}
+
+    # Idea-ness is evaluated over EVERY workable child, not just the unrefined
+    # ones, so these footers apply `_recommendation`'s own precedence: `idea` is
+    # a readiness statement checked BEFORE `spec:` presence. A refined idea — an
+    # idea carrying a spec — still routes to `/cortex-core:discovery` on its
+    # row, so partitioning on refinement first would drop it out of the idea
+    # bucket and let it license an overnight sentence its own row contradicts.
+    # Overnight's readiness scan will not honor a discovery topic at any
+    # refinement level.
+    unrefined = [c["id"] for c in workable if not refined[c["id"]] and not is_idea[c["id"]]]
+    buildable = [i for i in startable if refined[i] and not is_idea[i]]
+    # Ideas are not overnight-routable at any refinement level, so their
+    # absence — not merely the absence of refine work — licenses the offer.
+    overnight = not unrefined and not any(is_idea.values())
+
+    footer: list[str] = []
+    # Only the dependency-connected subgraph is worth drawing. Every other
+    # workable child is a wave-0 singleton, so including them made the line a
+    # second copy of the row list — on a 13-child epic, eleven of the ids
+    # carried no ordering information at all.
+    connected = {cid for cid, d in deps.items() if d}
+    connected.update(b for d in deps.values() for b in d)
+    chain = _waves([i for i in workable_ids if i in connected], deps)
+    if len(chain) > 1:
+        footer.append("Order: " + " → ".join(_join(w) for w in chain))
+    if buildable:
+        verb = "Build in parallel" if len(buildable) > 1 else "Build"
+        # Folded onto the build line rather than given its own: both name the
+        # same set, and the offer is an alternative to building them by hand.
+        tail = (
+            " — or `/cortex-overnight:overnight` to auto-select them"
+            if overnight
+            else ""
         )
-    if not recommendable:
-        return lines
-    # Idea-ness is evaluated over EVERY recommendable child, not just the
-    # unrefined ones, so this footer applies `_recommendation`'s own precedence:
-    # `idea` is a readiness statement checked BEFORE `spec:` presence. A refined
-    # idea — an idea carrying a spec — still routes to `/cortex-core:discovery`
-    # on its row, so partitioning on refinement first would drop it out of the
-    # idea bucket and let it license an overnight sentence its own row
-    # contradicts. Overnight's readiness scan will not honor a discovery topic
-    # at any refinement level.
-    is_idea = {
-        c["id"]: _resolve_child(c, by_id).get("type", "feature") == "idea"
-        for c in recommendable
-    }
-    ideas = [c for c in recommendable if is_idea[c["id"]]]
-    unrefined_work = [
-        c for c in recommendable if not is_idea[c["id"]] and not _is_refined(c)
-    ]
-    if unrefined_work:
-        listed = ", ".join(f"{c['id']} {c['title']}" for c in unrefined_work)
-        lines.append(
-            "Run `/cortex-core:refine` on each unrefined child, one at a time "
-            f"(each needs interactive spec approval before the next): {listed}."
-        )
-    elif not ideas:
-        # Ideas are not overnight-routable at any refinement level, so their
-        # absence — not merely the absence of refine work — licenses the
-        # overnight sentence.
-        lines.append(
+        footer.append(f"{verb}: {_join(buildable)}{tail}")
+    elif overnight:
+        footer.append(
             "Run `/cortex-overnight:overnight` — it will auto-select them via "
             "its own readiness scan."
         )
+    if unrefined:
+        # Every wave, not just wave 0: `Order:` constrains *building*. Writing a
+        # spec for a ticket whose blocker has not shipped is fine, so refine
+        # targets carry no ordering among themselves — the parallelism the
+        # legend promises.
+        verb = "Refine in parallel" if len(unrefined) > 1 else "Refine"
+        # When every row is a refine target the ids are a verbatim repeat of the
+        # rows; the only thing the line still adds is the parallel-safety claim,
+        # which needs no list to make.
+        listed = (
+            "every workable row above"
+            if len(unrefined) == len(workable) and len(unrefined) > 1
+            else _join(unrefined)
+        )
+        footer.append(f"{verb}: {listed}")
+    if footer:
+        lines += [""] + footer
     return lines
+
+
+#: Prepended once above the epic sections. Every clause here used to be paid
+#: per epic — the "not directly workable" title suffix on each heading, and the
+#: spec-approval caveat inside each refine sentence.
+_EPIC_LEGEND = (
+    "Pick a child, not the epic. `·` separates ids that can run in parallel, "
+    "`→` sequences them. Closed children are counted, not listed. `Refine` "
+    "targets carry no ordering — parallelize them across sessions, though one "
+    "session must approve each spec before starting the next."
+)
 
 
 def render(items: list[dict], epic_map: dict) -> tuple[str, list[dict]]:
     """Render both triage blocks and return ``(markdown, flat_items)``.
 
     Block 1 is one section per epic present in the ready set, in priority
-    order, listing every child regardless of status. Block 2 is the remaining
-    ready items minus epics and minus anything already shown as a child.
+    order, listing the children that can still be acted on — workable, in
+    flight, or parked — with the closed ones reduced to a count. Block 2 is the
+    remaining ready items minus epics and minus anything already shown as a
+    child.
+
+    *items* should be the full non-archived corpus, not the active-only index:
+    every closed child then resolves to a real record, so ``type`` reaches
+    ``_recommendation`` and a ``blocked_by`` pointing at shipped work resolves
+    as satisfied instead of as an unknown external blocker. Passing the
+    active-only index still works — it just restores both blind spots.
     """
     by_id = {i["id"]: i for i in items}
+    lookup = _blocker_lookup(items)
     ready = _ready_set(items)
     epics = epic_map.get("epics", {})
 
@@ -193,9 +418,9 @@ def render(items: list[dict], epic_map: dict) -> tuple[str, list[dict]]:
         for c in epics[epic_id].get("children", [])
     }
     if ready_epic_ids:
-        lines += ["## Epics", ""]
+        lines += ["## Epics", "", _EPIC_LEGEND, ""]
         for epic_id in ready_epic_ids:
-            lines += _render_epic_block(epic_id, epics[epic_id], by_id)
+            lines += _render_epic_block(epic_id, epics[epic_id], by_id, lookup)
             lines.append("")
 
     flat = [
@@ -310,7 +535,13 @@ def main(argv: list[str] | None = None) -> int:
     except Exception:  # noqa: BLE001 — a bad map degrades to the flat list
         epic_map = {"epics": {}}
 
-    blocks, flat = render(items, epic_map)
+    # Rendered over the full corpus, not `items`: the epic map's child envelope
+    # carries no `type` and no `blocked_by`, so an active-only `by_id` left
+    # every closed child unresolvable — silently disabling the `idea` route and
+    # making a satisfied blocker look like an unknown external one. `_ready_set`
+    # gates on status, so widening the input cannot widen either block's
+    # membership.
+    blocks, flat = render(full_items, epic_map)
     sys.stdout.write(
         json.dumps(
             {

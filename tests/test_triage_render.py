@@ -23,7 +23,14 @@ import re
 import pytest
 
 from cortex_command.backlog.build_epic_map import build_epic_map
-from cortex_command.backlog.triage import _render_epic_block, render
+from cortex_command.backlog.triage import _EPIC_LEGEND, _render_epic_block, render
+
+
+#: The once-per-board preamble above the epic sections. Imported rather than
+#: restated: its wording is not the contract — the rows and footers below it
+#: are — and pinning the prose in nine places would make every reword a
+#: nine-file edit.
+_EPICS = f"## Epics\n\n{_EPIC_LEGEND}\n\n"
 
 
 # ---------------------------------------------------------------------------
@@ -88,9 +95,8 @@ def _guard_fixture(item_type: str) -> tuple[dict, list[dict]]:
 
     The child is individually ready (``status: refined``) and carries a
     ``spec:``, and the parent epic is ready too, so the same record is
-    renderable in both blocks. Restricted to the ready subset deliberately:
-    the epic block renders every child regardless of status, while ``## Ready``
-    holds only ``_ready_set()`` survivors.
+    renderable in both blocks — the only way to compare the two routings on
+    one record, since neither block will render a closed, held, or parked one.
     """
     epic = _item(
         id=7000,
@@ -180,8 +186,8 @@ def test_render_computes_no_recommendation_inline() -> None:
 # Requirement 8 — exact rendered output for the structural cases.
 # ---------------------------------------------------------------------------
 
-def test_ready_epic_renders_all_children_across_types_and_readiness() -> None:
-    """A ready epic lists every child, spanning both readiness states and all types."""
+def test_ready_epic_lists_workable_children_across_types_and_readiness() -> None:
+    """A ready epic lists its workable children, spanning readiness and all types."""
     items = [
         _item(id=100, title="Platform epic", type="epic", status="refined",
               priority="high", spec="cortex/lifecycle/platform/spec.md"),
@@ -198,20 +204,228 @@ def test_ready_epic_renders_all_children_across_types_and_readiness() -> None:
     blocks, flat = render(items, build_epic_map(items))
 
     assert blocks == (
-        "## Epics\n"
+        _EPICS
+        + "### Epic 100 — Platform epic\n"
         "\n"
-        "### Epic 100 — Platform epic _(epic, not directly workable)_\n"
+        "4 workable\n"
         "\n"
         "- **101** Fix crash — refined `/cortex-core:build`\n"
         "- **102** Bump deps — backlog `/cortex-core:refine`\n"
         "- **103** Maybe caching — backlog `/cortex-core:discovery`\n"
         "- **104** New export — refined `/cortex-core:build`\n"
         "\n"
-        "Run `/cortex-core:refine` on each unrefined child, one at a time "
-        "(each needs interactive spec approval before the next): 102 Bump deps.\n"
+        "Build in parallel: 101 · 104\n"
+        "Refine: 102\n"
     )
     # Children shown in the epic block are not repeated in ## Ready.
     assert flat == []
+
+
+# ---------------------------------------------------------------------------
+# Ticket #456 — closed children are counted, never listed and never routed.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("closed_status", ["complete", "done", "abandoned",
+                                           "superseded", "wont-do"])
+def test_closed_child_is_counted_but_never_listed_or_routed(closed_status) -> None:
+    """No terminal status may reach a row, a route mark, or a footer.
+
+    Parametrized across the vocabulary because the corpus genuinely carries
+    several spellings of "finished" — ``345`` is ``done`` while ``348`` is
+    ``complete`` — and a set that covers only one of them half-works, which is
+    exactly how the held-status set failed before this ticket.
+    """
+    items = [
+        _item(id=900, title="Epic", type="epic", status="refined",
+              spec="cortex/lifecycle/e/spec.md"),
+        _item(id=901, title="Shipped work", status=closed_status, parent=900,
+              spec="cortex/lifecycle/shipped/spec.md"),
+        _item(id=902, title="Live work", status="backlog", parent=900),
+    ]
+
+    blocks, _ = render(items, build_epic_map(items))
+
+    assert "901" not in blocks
+    assert "Shipped work" not in blocks
+    assert "1 workable · 1 closed" in blocks
+    assert "- **902** Live work — backlog `/cortex-core:refine`" in blocks
+    assert "Refine: 902" in blocks
+
+
+def test_closed_child_with_a_spec_is_not_offered_for_build() -> None:
+    """The pre-fix failure mode: ``spec:`` archaeology routing finished work.
+
+    A ticket closed *with* a lifecycle spec read ``complete /cortex-core:build``
+    and a ticket closed without it read ``complete /cortex-core:refine`` — the
+    verb was decided by whether the finished work happened to leave an artifact
+    behind, never by whether it was finished.
+    """
+    items = [
+        _item(id=910, title="Epic", type="epic", status="refined",
+              spec="cortex/lifecycle/e/spec.md"),
+        _item(id=911, title="Closed with spec", status="complete", parent=910,
+              spec="cortex/lifecycle/withspec/spec.md"),
+        _item(id=912, title="Closed without spec", status="done", parent=910),
+        _item(id=913, title="Live", status="backlog", parent=910),
+    ]
+
+    blocks, _ = render(items, build_epic_map(items))
+
+    assert "/cortex-core:build" not in blocks
+    assert "911" not in blocks and "912" not in blocks
+
+
+def test_epic_with_every_child_closed_does_not_offer_decomposition() -> None:
+    """A fully-shipped epic reads as finished, not as never-decomposed.
+
+    The discovery line is reserved for an epic that genuinely has no children;
+    firing it here told the operator to decompose an epic that had already been
+    decomposed and delivered.
+    """
+    items = [
+        _item(id=920, title="Delivered epic", type="epic", status="backlog"),
+        _item(id=921, title="A", status="complete", parent=920),
+        _item(id=922, title="B", status="done", parent=920),
+    ]
+
+    blocks, _ = render(items, build_epic_map(items))
+
+    assert blocks == (
+        _EPICS
+        + "### Epic 920 — Delivered epic\n"
+        "\n"
+        "2 closed\n"
+        "\n"
+        "Nothing left to pick up — this epic looks finished.\n"
+    )
+
+
+def test_childless_epic_still_offers_decomposition() -> None:
+    """The discovery line survives where it is actually true."""
+    items = [_item(id=930, title="Undecomposed", type="epic", status="backlog")]
+
+    blocks, _ = render(items, build_epic_map(items))
+
+    assert "No child tickets — consider `/cortex-core:discovery`" in blocks
+
+
+def test_deferred_child_is_listed_but_never_routed() -> None:
+    """Parked is a decision to revisit, not work to pick up.
+
+    It stays visible — an operator scanning the epic should see it — but it
+    carries no route verb and appears in no footer. The tag-parked variant
+    needs the explicit mark; the status-parked one already says ``deferred``.
+    """
+    items = [
+        _item(id=940, title="Epic", type="epic", status="refined",
+              spec="cortex/lifecycle/e/spec.md"),
+        _item(id=941, title="Parked by status", status="deferred", parent=940),
+        _item(id=942, title="Parked by tag", status="backlog", parent=940,
+              tags=["deferred"]),
+        _item(id=943, title="Live", status="backlog", parent=940),
+    ]
+
+    blocks, _ = render(items, build_epic_map(items))
+
+    assert "1 workable · 2 parked" in blocks
+    assert "- **941** Parked by status — deferred\n" in blocks
+    assert "- **942** Parked by tag — backlog [parked]\n" in blocks
+    assert "Refine: 943" in blocks  # not "943 · 941", and not "every workable"
+
+
+# ---------------------------------------------------------------------------
+# Dependency waves — the parallel/sequential signal.
+# ---------------------------------------------------------------------------
+
+def _chain_fixture() -> list[dict]:
+    """A four-child epic: a two-step chain plus two independent children."""
+    spec = "cortex/lifecycle/x/spec.md"
+    return [
+        _item(id=200, title="Chained epic", type="epic", status="refined",
+              spec=spec),
+        _item(id=201, title="Foundation", status="refined", parent=200, spec=spec),
+        _item(id=202, title="On top", status="refined", parent=200, spec=spec,
+              blocked_by=[201]),
+        _item(id=203, title="Independent", status="refined", parent=200, spec=spec),
+        _item(id=204, title="Unrefined behind the chain", status="backlog",
+              parent=200, blocked_by=[202]),
+    ]
+
+
+def test_dependency_chain_renders_as_waves() -> None:
+    """The ``Order:`` line sequences the dependency-connected subgraph only.
+
+    Independent children are wave-0 singletons carrying no ordering
+    information, so listing them would make the line a second copy of the row
+    list rather than a dependency chain.
+    """
+    items = _chain_fixture()
+
+    blocks, _ = render(items, build_epic_map(items))
+
+    assert "Order: 201 → 202 → 204\n" in blocks
+    assert "203" not in blocks.split("Order:")[1].split("\n")[0]
+
+
+def test_build_offers_only_the_unblocked_wave_and_marks_the_rest() -> None:
+    """Only wave 0 is startable; a later wave says what it waits on."""
+    items = _chain_fixture()
+
+    blocks, _ = render(items, build_epic_map(items))
+
+    assert "Build in parallel: 201 · 203\n" in blocks
+    assert "- **202** On top — refined `/cortex-core:build` [blocked by 201]\n" in blocks
+
+
+def test_refine_ignores_the_execution_order() -> None:
+    """A blocked child is still refinable — ordering constrains building only.
+
+    Writing a spec for a ticket whose blocker has not shipped costs nothing and
+    unblocks the moment the blocker lands, so refine targets are drawn from
+    every wave. The old renderer excluded blocked children from the footer
+    entirely, which serialized refinement behind execution for no reason.
+    """
+    items = _chain_fixture()
+
+    blocks, _ = render(items, build_epic_map(items))
+
+    assert "Refine: 204\n" in blocks
+
+
+def test_a_blocker_that_shipped_no_longer_blocks() -> None:
+    """``blocked_by`` pointing at closed work is satisfied, not pending.
+
+    The old rule — any ``blocked_by`` entry means blocked — held children
+    behind work that had already landed, permanently.
+    """
+    items = [
+        _item(id=210, title="Epic", type="epic", status="refined",
+              spec="cortex/lifecycle/e/spec.md"),
+        _item(id=211, title="Shipped blocker", status="complete", parent=210),
+        _item(id=212, title="Freed", status="refined", parent=210,
+              spec="cortex/lifecycle/freed/spec.md", blocked_by=[211]),
+    ]
+
+    blocks, _ = render(items, build_epic_map(items))
+
+    assert "[blocked" not in blocks
+    assert "Build: 212" in blocks
+
+
+def test_unresolvable_blocker_is_reported_and_withheld_from_build() -> None:
+    """A cross-repo reference cannot be resolved here, so it is shown verbatim."""
+    items = [
+        _item(id=220, title="Epic", type="epic", status="refined",
+              spec="cortex/lifecycle/e/spec.md"),
+        _item(id=221, title="Waiting on someone else", status="refined",
+              parent=220, spec="cortex/lifecycle/w/spec.md",
+              blocked_by=["acme/repo#12"]),
+    ]
+
+    blocks, _ = render(items, build_epic_map(items))
+
+    assert "[blocked by acme/repo#12]" in blocks
+    assert "Build" not in blocks
 
 
 def test_flat_ready_rows_render_with_and_without_spec() -> None:
@@ -234,8 +448,13 @@ def test_flat_ready_rows_render_with_and_without_spec() -> None:
     assert [i["id"] for i in flat] == [201, 202]
 
 
-def test_epic_with_no_active_children_recommends_discovery() -> None:
-    """Every child held in flight leaves the epic with nothing to recommend."""
+def test_in_flight_child_is_listed_without_a_route_verb() -> None:
+    """Every child held in flight leaves the epic with nothing to recommend.
+
+    The row survives — in-flight work is resumable, which is a real action —
+    but it carries no verb: routing ``in_progress`` work to ``refine`` told the
+    operator to re-spec something already being implemented.
+    """
     items = [
         _item(id=300, title="Stalled epic", type="epic", status="refined",
               spec="cortex/lifecycle/stalled/spec.md"),
@@ -245,14 +464,12 @@ def test_epic_with_no_active_children_recommends_discovery() -> None:
     blocks, flat = render(items, build_epic_map(items))
 
     assert blocks == (
-        "## Epics\n"
+        _EPICS
+        + "### Epic 300 — Stalled epic\n"
         "\n"
-        "### Epic 300 — Stalled epic _(epic, not directly workable)_\n"
+        "1 in flight\n"
         "\n"
-        "- **301** Work in flight — in_progress `/cortex-core:refine`\n"
-        "\n"
-        "No active child tickets — consider `/cortex-core:discovery` to "
-        "decompose this epic.\n"
+        "- **301** Work in flight — in-progress\n"
     )
     assert flat == []
 
@@ -337,15 +554,18 @@ def test_unrefined_idea_child_licenses_neither_refine_nor_overnight() -> None:
     blocks, _ = render(items, build_epic_map(items))
 
     assert blocks == (
-        "## Epics\n"
+        _EPICS
+        + "### Epic 600 — Idea-bearing epic\n"
         "\n"
-        "### Epic 600 — Idea-bearing epic _(epic, not directly workable)_\n"
+        "3 workable\n"
         "\n"
         "- **601** Unrefined idea — backlog `/cortex-core:discovery`\n"
         "- **602** Refined feature — refined `/cortex-core:build`\n"
         "- **603** Refined bug — refined `/cortex-core:build`\n"
+        "\n"
+        "Build in parallel: 602 · 603\n"
     )
-    assert "Run `/cortex-core:refine` on each unrefined child" not in blocks
+    assert "\nRefine" not in blocks  # footer lines only; the legend names it too
     assert "/cortex-overnight:overnight" not in blocks
 
 
@@ -372,16 +592,19 @@ def test_refined_idea_child_also_withholds_the_overnight_sentence() -> None:
     blocks, _ = render(items, build_epic_map(items))
 
     assert blocks == (
-        "## Epics\n"
+        _EPICS
+        + "### Epic 700 — Refined-idea epic\n"
         "\n"
-        "### Epic 700 — Refined-idea epic _(epic, not directly workable)_\n"
+        "2 workable\n"
         "\n"
         "- **701** Refined idea — refined `/cortex-core:discovery`\n"
         "- **702** Refined feature — refined `/cortex-core:build`\n"
+        "\n"
+        "Build: 702\n"
     )
     assert "/cortex-overnight:overnight" not in blocks
     # The idea is not refine work either — it must not be listed for refining.
-    assert "Run `/cortex-core:refine` on each unrefined child" not in blocks
+    assert "\nRefine" not in blocks
 
 
 def test_overnight_sentence_still_fires_with_no_idea_children() -> None:
@@ -401,7 +624,12 @@ def test_overnight_sentence_still_fires_with_no_idea_children() -> None:
 
     blocks, _ = render(items, build_epic_map(items))
 
-    assert "Run `/cortex-overnight:overnight`" in blocks
+    # Folded onto the build line: both name the same set, and handing the epic
+    # to overnight is an alternative to building those ids by hand.
+    assert (
+        "Build in parallel: 801 · 802 — or `/cortex-overnight:overnight` "
+        "to auto-select them\n"
+    ) in blocks
 
 
 # ---------------------------------------------------------------------------
@@ -479,4 +707,4 @@ def test_ready_child_of_rendered_epic_is_not_duplicated() -> None:
     blocks, flat = render(items, build_epic_map(items))
 
     assert [i["id"] for i in flat] == []
-    assert blocks.count("8882") == 1
+    assert "## Ready" not in blocks
