@@ -10,3 +10,4 @@ schema_version: 3, ts: 2026-08-07T18:41:19Z, event: clarify_critic, feature: req
 {"ts": "2026-08-07T22:15:45Z", "event": "batch_dispatch", "feature": "requirements-loader-matches-index-tags-against", "batch": 1, "tasks": [6]}
 {"ts": "2026-08-07T22:23:50Z", "event": "batch_dispatch", "feature": "requirements-loader-matches-index-tags-against", "batch": 2, "tasks": [7]}
 {"ts": "2026-08-07T22:47:10Z", "event": "phase_transition", "feature": "requirements-loader-matches-index-tags-against", "from": "implement", "to": "review", "tier": "complex"}
+{"ts": "2026-08-07T22:49:43Z", "event": "review_dispatched", "feature": "requirements-loader-matches-index-tags-against", "cycle": 1, "mode": "full", "baseline_sha": "13913c4f730e987f7d638cb74857c72da810fbf4"}
