@@ -130,7 +130,7 @@ session contains the `pipeline/*` branch name and not the fallback advice.
   str(returned)`; (c) **Req 3** — a feature coroutine raises a uniquely-named exception from a
   named helper, and the helper's function name appears in the `traceback` detail of a
   `feature_exception` entry in the events log written to `tmp_path`.
-- **Status**: [ ] pending
+- **Status**: [x] done (dac36ef8 2026-08-07T11:31:06-04:00)
 
 ### Task 2: Unresolvable worktree defers the feature instead of pausing it
 
@@ -162,9 +162,17 @@ session contains the `pipeline/*` branch name and not the fallback advice.
     `overnight_log_event(FEATURE_DEFERRED, ctx.config.batch_id, feature=name, details={"error":
     error, "conflict": False, "unresolved_worktree": True, "branch":
     ctx.worktree_branches.get(name)}, log_path=ctx.config.overnight_events_path)`;
-    `_write_back_to_backlog(name, "deferred", ctx.config.batch_id,
+    `_write_back_to_backlog(name, "paused", ctx.config.batch_id,
     ctx.config.overnight_events_path, backlog_id=ctx.backlog_ids.get(name),
     backlog_uuid=ctx.backlog_uuids.get(name))`.
+    **Approval-time scope decision (2026-08-07): pass `"paused"`, not `"deferred"`**, so the
+    `_OVERNIGHT_TO_BACKLOG` mapping writes `status: in_progress` rather than `status: backlog`.
+    Writing `backlog` would return the item to the from-scratch-rebuild pool — the exact harm
+    Requirement 7 names, displaced by one session — and would contradict the morning report's
+    Task 4 advice to verify the named branch rather than re-run. This stays inside Requirement 7,
+    which constrains `recoverable_branch` and the **runtime** disposition; the runtime disposition
+    is still `deferred` (the `features_deferred` append and the `FEATURE_DEFERRED` event are
+    unchanged), only the backlog mapping differs. See the first Risks entry.
     **Do not pass `recoverable_branch`** and do not include the key in the `features_deferred`
     dict — `map_results._map_results_to_state` reads it with `entry.get("recoverable_branch")`
     (`map_results.py:117`), so its absence leaves `fs.recoverable_branch` `None`, which is what
@@ -188,8 +196,11 @@ session contains the `pipeline/*` branch name and not the fallback advice.
   `apply_feature_result` produces no `features_failed` entry and no error string containing
   `"unexpected exception"`; (c) **Req 5** — a clean feature whose worktree was deleted and
   successfully re-created (real git fixture) reaches `"merged"`, and `grep -c "recoverable_branch
-  = " cortex_command/overnight/outcome_router.py` == 1, pinning `:841` as the sole writer.
-- **Status**: [ ] pending
+  = " cortex_command/overnight/outcome_router.py` == 1, pinning `:841` as the sole writer;
+  (d) **scope decision** — a real `cortex/backlog/` item on disk, driven through the same
+  unresolvable-worktree path, ends at `status: in_progress` and **not** `status: backlog`, so the
+  item is not returned to the from-scratch-rebuild pool.
+- **Status**: [x] done (01bef807 2026-08-07T11:37:57-04:00)
 
 ### Task 3: Carry the deferral error onto feature state
 
@@ -215,7 +226,7 @@ session contains the `pipeline/*` branch name and not the fallback advice.
   "error": "integration worktree unresolved"}` produces `state.features["f"].status ==
   "deferred"`, `.error == "integration worktree unresolved"`, and `.recoverable_branch is None`,
   while a question-deferral entry without an `error` key still yields `.error is None`.
-- **Status**: [ ] pending
+- **Status**: [x] done (39d6c118 2026-08-07T11:41:44-04:00)
 
 ### Task 4: Morning report names the branch to verify instead of advising a re-run
 
@@ -268,7 +279,7 @@ session contains the `pipeline/*` branch name and not the fallback advice.
   emit. Assert (a) **Req 8** — the rendered section contains the feature's `pipeline/*` branch
   name and `"retry or investigate"` does not appear in that section; (b) **Req 9** — for a session
   whose worktree was re-created, the report contains the rebuild line with its count.
-- **Status**: [ ] pending
+- **Status**: [x] done (4a6f3c23 2026-08-07T11:44:27-04:00)
 
 ### Task 5: PR gating pinned for the recovered and deferred session shapes
 
@@ -291,7 +302,7 @@ session contains the `pipeline/*` branch name and not the fallback advice.
 - **Verification**: `uv run pytest cortex_command/overnight/tests/test_runner_pr_gating.py -q`
   exits 0 with the two new tests present, and `grep -c "ZERO PROGRESS"
   cortex_command/overnight/tests/test_runner_pr_gating.py` ≥ 3.
-- **Status**: [ ] pending
+- **Status**: [x] done (927e41a1 2026-08-07T11:41:10-04:00)
 
 ### Task 6: Multi-round backlog write-back survives the loss
 
@@ -320,7 +331,7 @@ session contains the `pipeline/*` branch name and not the fallback advice.
 - **Verification**: `uv run pytest cortex_command/overnight/tests/test_orchestrator.py -q` exits
   0; the new test asserts `[e for e in events if e["event"] == "backlog_write_failed"] == []`
   across both rounds and that the backlog item's `status` field was updated on disk.
-- **Status**: [ ] pending
+- **Status**: [x] done (700a6c76 2026-08-07T11:47:53-04:00)
 
 ### Task 7: Document mid-session integration worktree loss
 
@@ -344,7 +355,7 @@ session contains the `pipeline/*` branch name and not the fallback advice.
     commitment leaves them accurate.
 - **Verification**: `grep -c "mid-session" cortex/requirements/pipeline.md` ≥ 1 (0 at HEAD) and
   `grep -c "genuine merge conflict" cortex/requirements/pipeline.md` == 2 (unchanged from HEAD).
-- **Status**: [ ] pending
+- **Status**: [x] done (c79a37a5 2026-08-07T11:41:03-04:00)
 
 ## Risks
 
@@ -356,8 +367,11 @@ session contains the `pipeline/*` branch name and not the fallback advice.
   names, displaced by one session rather than eliminated. The plan implements the spec literally.
   The alternative, entirely within Requirement 7's letter (it constrains `recoverable_branch` and
   the runtime disposition, not the backlog mapping), is to write `status: in_progress` — the
-  `paused` mapping — which keeps the item out of the pool without claiming recoverability. **This
-  is a scope call for you at approval**; say the word and Task 2 writes `in_progress` instead.
+  `paused` mapping — which keeps the item out of the pool without claiming recoverability.
+  **RESOLVED at approval (2026-08-07): take the alternative — Task 2 passes `"paused"` to
+  `_write_back_to_backlog` so the item lands at `status: in_progress`.** Writing `backlog` would
+  reproduce the harm this feature exists to fix and would contradict Task 4's report advice to
+  verify the named branch. The runtime disposition remains `deferred`.
 - **Requirement 1's acceptance criterion is unstable as literally written.** It asserts
   `_merge_target_repo_path(ctx, name) is None` for a deleted directory, but Requirement 4 makes
   the resolver *re-create* in that situation — so the criterion can only hold for the sub-case

@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 4d90ab14-c32d-4c17-b52d-48007767d9d6
 title: Overnight session worktree lives in $TMPDIR, so a purge strands finished work and reports it as feature failure
-status: refined
+status: in_progress
 priority: low
 type: bug
 created: 2026-08-07
@@ -11,6 +11,7 @@ complexity: complex
 criticality: high
 spec: cortex/lifecycle/overnight-session-worktree-lives-in-tmpdir/spec.md
 areas: ['overnight-runner', 'report']
+lifecycle_phase: research
 ---
 ## Why
 

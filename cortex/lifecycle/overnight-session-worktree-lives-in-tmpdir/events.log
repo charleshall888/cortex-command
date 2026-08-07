@@ -5,3 +5,7 @@
 {"ts": "2026-08-07T12:25:24Z", "event": "spec_approved", "feature": "overnight-session-worktree-lives-in-tmpdir", "decision": "approved"}
 {"ts": "2026-08-07T15:06:29Z", "event": "plan_approved", "feature": "overnight-session-worktree-lives-in-tmpdir", "dispatch_choice": "wait"}
 {"ts": "2026-08-07T15:06:29Z", "event": "feature_paused", "feature": "overnight-session-worktree-lives-in-tmpdir", "slug": "plan-approval", "kind": "relayed-consent"}
+{"ts": "2026-08-07T15:22:35Z", "event": "phase_transition", "feature": "overnight-session-worktree-lives-in-tmpdir", "from": "plan", "to": "implement"}
+{"ts": "2026-08-07T15:23:55Z", "event": "batch_dispatch", "feature": "overnight-session-worktree-lives-in-tmpdir", "batch": 0, "tasks": [1]}
+{"ts": "2026-08-07T15:33:08Z", "event": "batch_dispatch", "feature": "overnight-session-worktree-lives-in-tmpdir", "batch": 1, "tasks": [2]}
+{"ts": "2026-08-07T15:40:21Z", "event": "batch_dispatch", "feature": "overnight-session-worktree-lives-in-tmpdir", "batch": 2, "tasks": [3, 4, 5, 6, 7]}
