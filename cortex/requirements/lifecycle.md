@@ -30,10 +30,11 @@ Owned by `cortex_command/lifecycle/transition_table.py`.
 - Both forks — spec exit and implement exit — are governed by one predicate, the short road (see glossary), on the same discriminants. A corrupted reduction takes the long road.
 - `implement-rework` has exactly one exit, to `review`, taken unconditionally: a rework is always re-reviewed and the fork predicate is not re-run.
 - `escalated` is terminal, reached from `review` on a rejected verdict at any cycle or changes-requested at cycle ≥ 2.
+- A lifecycle phase may be multi-step with a user-driven re-invocation point. The Complete phase is the canonical example — it creates a PR, exits with a handoff message, and finalizes only on re-invocation after the PR is merged on GitHub. Merge (not PR-open) is the terminal event for "Done", recorded in the `feature_complete` event with `merge_anchor: "merge"`. → ADR-0004 (accepted): multi-step Complete + interactive-worktree lifecycle.
 
 ### Served verb class
 
-- `next` (read-only server), `advance` (the only sanctioned writer of a state move), and `describe` (table renderer) are a bounded, wheel-owned exception to ADR-0019's dumb-arg-actor rule: they read config, resolve identity, evaluate guards, and serve instructions. `enter`, the entry composition verb, stays a dumb arg-actor with every discriminant caller-passed.
+- `next` (read-only server), `advance` (the only sanctioned writer of a state move), and `describe` (table renderer) are a bounded, wheel-owned exception to ADR-0019's dumb-arg-actor rule: they read config, resolve identity, evaluate guards, and serve instructions from the closed transition table. `enter`, the entry composition verb, stays a dumb arg-actor with every discriminant caller-passed.
 - Every verb rejects an unsafe slug **before** any filesystem access.
 - `next` never writes: no log append, no backlog write-back. It serves the canonical slug in the commands it pre-binds, never the caller's raw token.
 - Every machine verb resolves a feature's `events.log` through the one pinned, worktree-aware resolver; two callers share a flock domain iff they resolve the same physical log, which is what makes the single lock domain structural.
@@ -54,9 +55,9 @@ Owned by `cortex_command/lifecycle/transition_table.py`.
 
 ### Kept-pause taxonomy
 
-`project.md` states the taxonomy and its four kinds; this area owns the behavior consuming it.
+The kept user pauses are a marked taxonomy of the deliberate, in-scope user-facing pauses across the lifecycle and refine skills. Each pause carries a `kind` — `question` (a phase blocks for an interactive answer), `phase-exit-wait` (a phase exits cleanly and waits for the user to re-invoke after an out-of-band action, e.g. merging a PR on GitHub), `config-conditional` (a pause a config key can suppress), or `relayed-consent` (a substantive approval surface whose consent overnight relays pre-authorized) — plus an orthogonal optional `suppressed_by` (a `lifecycle.config.md` key, or `judgment` for model-conditional rendering). The durable source of truth is `skills/build/references/kept-pauses-data.toml` (one row per `<!-- pause: <slug> <kind> -->` marker in skill prose); `cortex-generate-kept-pauses` renders the human-readable `skills/build/references/kept-pauses.md` from it, and `tests/test_lifecycle_kept_pauses_parity.py` is the enforcement pair — asserting marker/data set-equality, inventory freshness, and per-kind semantic anchors.
 
-- The served subset is exactly the rows naming a served-from state. Three-way set-equality between those rows, the table's pause specs, and the served envelopes is enforced, so no layer drifts.
+- The served subset is exactly the rows naming a served-from state: the `next` verb serves each state's pause spec in its envelope and the interactive loop renders it via AskUserQuestion, so the taxonomy is read at runtime and not only by the parity test. Three-way set-equality between those rows, the table's pause specs, and the served envelopes is enforced, so no layer drifts.
 - Enforcement is scoped: `advance` refuses to cross an active event-backed pause of an enforcement-bearing kind it did not itself author, and never refuses on a judgment- or config-conditional kind — those are describe-only metadata.
 - A pause's owning arm crosses its own pause; that crossing is the typed resume.
 - The plan gate is a single surface: the branch/dispatch modes *are* the approval options, and the chosen mode rides to implement as a field on the approval event rather than a second prompt. → ADR-0012 (accepted) ratifies the merged surface, including the demotion of request-changes and cancel to the free-text escape.
@@ -86,15 +87,18 @@ A lifecycle's identity is the backlog item's canonical slug; numbers, uuid prefi
 
 - **Never-crash verbs**: every machine verb exits 0 with a `{"state": …}` envelope; a traceback reaching the prose loop is a defect, because the loop cannot route on one.
 - **Auditability**: a feature's history is reconstructible from `events.log` alone, without a database.
-- **Token economy**: the served envelope replaces prose branching rather than supplementing it. This doc loads only on a tag match, so it must not restate what `project.md` and `glossary.md` load unconditionally.
+- **Token economy**: the served envelope replaces prose branching rather than supplementing it. This doc loads only on a tag match, so it must not restate what `project.md` and `glossary.md` load unconditionally. Measured on 2026-08-07, when seven lifecycle-only items relocated here behind pointer stubs: `project.md` 29,918 B → 26,387 B, a 3,531 B net shrink every non-lifecycle feature stops paying (29,731 B at the start of the relocation — the routing-row fix had already removed 187 B).
 - **Release-cadence coupling, conceded**: the transition matrix is wheel-owned while the loop body is plugin-shipped, so a gate change needs a wheel release and a skewed pair can disagree. Mitigated by the protocol handshake, not designed away.
 
 ## Architectural Constraints
 
+- **Phase boundaries are session boundaries**: the default workflow splits sessions at lifecycle phase boundaries — a fresh session after refine (spec approval) runs plan+implement, and a plan that consumed heavy context hands implement to another fresh session; phase-keyed `resume` routing is the re-entry path. Rationale: session carry is superlinear in turns (measured 37–61% of orchestrator spend); a fresh session re-caches for ~50k tokens (~0.7% of one long session's cache-read).
 - Adding an operator-facing discriminant should be a display-phase suffix, not a new route value (`project.md` carries the normative phase/route rule).
-- Events-first phase authority forfeits a cheap prose-side revert (→ ADR-0001): the standing exit is roll-forward, not revert.
+- Events are the authoritative phase source wherever machine rows exist (artifact derivation is the legacy fallback), which forfeits the cheap prose-side revert — so the standing exit is the roll-forward procedure at `docs/rollforward-exit.md`, not a revert. → ADR-0025 (**proposed**, so not binding).
 - The served-verb class does not reopen ADR-0019 for other helper verbs. A served envelope may name a skill to invoke only when that skill's invocation condition is machine-readable state.
-- The review phase's output-shape prescription is a protocol-governed served surface (→ ADR-0035): a brief-shape change moves the protocol version and its expectation pin in the same commit.
+- **Consumer `EnterWorktree` authorization surface**: `cortex init` writes **no** clause to consumer `CLAUDE.md`; the lifecycle implement phase authorizes `EnterWorktree` via the user's live picker selection at implement time. → ADR-0008 (accepted): picker-selection authorizes `EnterWorktree` (supersedes ADR-0006).
+- The review phase's output-shape prescription is a protocol-governed served surface: `cortex-lifecycle-review-brief` emits it for both the interactive prose and the overnight pipeline, so a brief-shape change the prose depends on moves `PROTOCOL_VERSION` and `skills/build/references/protocol-expectation.txt` in the same commit. → ADR-0035 (accepted).
+- **Override-reason clause vocabulary**: the closed set an override `reason` may lead with (`reversibility`, `exposure`, `consequence`, `other`) is owned by `cortex_command/refine.py:_ALLOWED_REASON_CLAUSES` and restated for authors in `skills/refine/SKILL.md` Step 4 and `cortex/adr/0036-*.md`; adding a tag edits all three, and the wheel-side change must land before the skill prose that emits it (a consumer on an older wheel fails the reconcile loudly). Both writers of an override row — `lifecycle_event.py` (typed verbs) and `refine.py` (`reconcile-clarify`) — emit the same field order `from, to, reason, gate`, with `reason` omitted rather than nulled. → ADR-0036 (accepted).
 - Operational detail — how to run the verbs, which recipe rebuilds mirrors, how to commit — lives in `CLAUDE.md` and `docs/`, not here.
 
 ## Dependencies
