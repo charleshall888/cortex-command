@@ -5,3 +5,13 @@ schema_version: 3, ts: 2026-08-06T00:00:00Z, event: clarify_critic, feature: cri
 {"ts": "2026-08-07T02:47:36Z", "event": "spec_approved", "feature": "criticality-pins-the-corpus-to-the", "decision": "approved"}
 {"ts": "2026-08-07T13:45:16Z", "event": "plan_approved", "feature": "criticality-pins-the-corpus-to-the", "dispatch_choice": "wait"}
 {"ts": "2026-08-07T13:45:16Z", "event": "feature_paused", "feature": "criticality-pins-the-corpus-to-the", "slug": "plan-approval", "kind": "relayed-consent"}
+{"ts": "2026-08-07T14:45:51Z", "event": "phase_transition", "feature": "criticality-pins-the-corpus-to-the", "from": "plan", "to": "implement"}
+{"ts": "2026-08-07T14:47:02Z", "event": "batch_dispatch", "feature": "criticality-pins-the-corpus-to-the", "batch": 0, "tasks": ["1", "5"]}
+{"ts": "2026-08-07T14:52:10Z", "event": "batch_dispatch", "feature": "criticality-pins-the-corpus-to-the", "batch": 1, "tasks": ["2", "3", "4", "6", "7"]}
+{"ts": "2026-08-07T14:55:36Z", "event": "phase_transition", "feature": "criticality-pins-the-corpus-to-the", "from": "implement", "to": "review", "tier": "complex"}
+{"ts": "2026-08-07T15:10:33Z", "event": "review_verdict", "feature": "criticality-pins-the-corpus-to-the", "verdict": "CHANGES_REQUESTED", "cycle": 1, "requirements_drift": "detected"}
+{"ts": "2026-08-07T15:10:33Z", "event": "phase_transition", "feature": "criticality-pins-the-corpus-to-the", "from": "review", "to": "implement-rework"}
+{"ts": "2026-08-07T15:12:46Z", "event": "phase_transition", "feature": "criticality-pins-the-corpus-to-the", "from": "implement-rework", "to": "review", "tier": "complex"}
+{"ts": "2026-08-07T15:23:24Z", "event": "review_verdict", "feature": "criticality-pins-the-corpus-to-the", "verdict": "APPROVED", "cycle": 2, "requirements_drift": "detected"}
+{"ts": "2026-08-07T15:23:24Z", "event": "phase_transition", "feature": "criticality-pins-the-corpus-to-the", "from": "review", "to": "complete"}
+{"ts": "2026-08-07T15:23:52Z", "event": "feature_complete", "feature": "criticality-pins-the-corpus-to-the", "tasks_total": 7, "rework_cycles": 1, "merge_anchor": "merge"}

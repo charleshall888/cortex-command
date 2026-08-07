@@ -31,7 +31,7 @@ Record the negative decision — ceremony relief is not taken on the criticality
   - `cortex/adr/README.md` no-content-duplication rule: the ADR is the canonical home; other docs link by number only (this is why Task 2 is a back-pointer, not a restatement).
   - Three-criteria gate is met: hard to reverse (it gates future rubric/predicate work behind recorded data), surprising without context (the intuitive read is that criticality pins 48–75% so relief belongs there), real trade-off (four routes considered and rejected, stated in Non-Requirements).
 - **Verification**: `test -f cortex/adr/0036-ceremony-relief-is-not-taken-on-the-criticality-axis.md && for s in '5.0%' '2.6%' '33.1%' '24.7%' '9.4%'; do grep -qF "$s" cortex/adr/0036-ceremony-relief-is-not-taken-on-the-criticality-axis.md || { echo "MISSING $s"; exit 1; }; done && bin/cortex-adr-citation-audit | python3 -c "import json,sys; d=[f for f in json.load(sys.stdin)['findings'] if f['kind']=='duplicate_number']; assert not d, d" && echo PASS` → prints `PASS`, exit 0. (Baseline on HEAD: the file is absent, so the first `test -f` fails. The `duplicate_number` set is empty on HEAD, so that clause is a non-regression guard against re-taking a number, not the discriminating check — file existence and the five strings are.)
-- **Status**: [ ] pending
+- **Status**: [x] done (44059571 2026-08-07T11:12:05-04:00) (rework: R8 recipe hardened; original 2b842b72)
 
 ### Task 2: Back-point `project.md`'s "The short road" at ADR-0036
 - **Files**: `cortex/requirements/project.md`
@@ -43,7 +43,7 @@ Record the negative decision — ceremony relief is not taken on the criticality
   - Append the pointer to the existing bullet; do **not** restate the decision body (`cortex/adr/README.md` § No-content-duplication discipline rule).
   - `project.md` has no written amendment procedure — every historical amendment rode inside the implementing ticket's commit (`983c98ae`, `57efb93c`, `e3aef4e5`), which is how this lands.
 - **Verification**: `grep -n 'ADR-0036' cortex/requirements/project.md | grep -c 'The short road'` = `1`. Baseline on HEAD: `grep -c 'ADR-0036' cortex/requirements/project.md` = `0`, so the check discriminates. (A bare `grep 'ADR-00'` is invalid — it returns 8 matches on the unmodified file.)
-- **Status**: [ ] pending
+- **Status**: [x] done (c440c24b 2026-08-07T10:51:25-04:00)
 
 ### Task 3: Add glossary entries for *tier*, *criticality*, and *short road*
 - **Files**: `cortex/requirements/glossary.md`
@@ -55,7 +55,7 @@ Record the negative decision — ceremony relief is not taken on the criticality
   - Existing entry style (`cortex/requirements/glossary.md`): `- **term**: lowercase definition, no trailing period`.
   - Definition sources — *tier* = the complexity axis (`simple` / `moderate` / `complex`), rubric at `skills/refine/references/clarify.md` §5.2, decides how deep ceremony reads; *criticality* = the risk axis (`low` / `medium` / `high` / `critical`), rubric at §5.3, decides whether Review runs; *short road* = the phase-fork predicate at `project.md`'s "The short road" bullet — `criticality ∈ {high, critical} OR tier == complex` takes the long road, everything else the short one. The *short road* entry should carry `→ ADR-0036` rather than the rationale.
 - **Verification**: `grep -c '^- \*\*\(tier\|criticality\|short road\)\*\*:' cortex/requirements/glossary.md` = `3`. Baseline on HEAD: `0`.
-- **Status**: [ ] pending
+- **Status**: [x] done (e3614141 2026-08-07T10:51:34-04:00)
 
 ### Task 4: Record the negative answer on ticket #452
 - **Files**: `cortex/backlog/452-criticality-pins-the-corpus-to-the-long-road-so-tier-relief-is-capped.md`
@@ -67,7 +67,7 @@ Record the negative decision — ceremony relief is not taken on the criticality
   - Content: the ticket's own premise is inverted — marginal relief from dropping the criticality clause is 5.0% / 2.6% against 10.7% / 33.1% for the tier clause; the Plan-skip half of the modelled benefit has never fired in ~650 logs; Review's catch rate is 6.5–15.7% and criticality does not predict it. What shipped instead is the reason-persistence half (Phase 2).
   - Do **not** touch frontmatter — `status` and `lifecycle_phase` are the Complete phase's write, via its own verb.
 - **Verification**: `grep -c 'cortex/lifecycle/criticality-pins-the-corpus-to-the/research.md' cortex/backlog/452-*.md` ≥ `1` **and** `grep -c 'ADR-0036' cortex/backlog/452-*.md` ≥ `1`. Baseline on HEAD: both `0`.
-- **Status**: [ ] pending
+- **Status**: [x] done (58372777 2026-08-07T10:51:55-04:00)
 
 ### Task 5: Give `reconcile-clarify` optional clause-tagged reason flags
 - **Files**: `cortex_command/refine.py`
@@ -103,10 +103,12 @@ Record the negative decision — ceremony relief is not taken on the criticality
   run reconcile-clarify --lifecycle-slug g --backend none --criticality high >/dev/null
   grep -q '"reason"' cortex/lifecycle/g/events.log || echo "PASS d"
   # (e) R8: the documented recipe tallies criticality clauses only and reaches archive/
+  # NOTE (review cycle 1): this bare form works only on the clean synthetic corpus below. It aborts on the
+  # real cortex/lifecycle/ corpus; the shipped recipe in ADR-0036 adds a non-'{' line filter and try/except.
   mkdir -p cortex/lifecycle/f/archive; cp cortex/lifecycle/f/events.log cortex/lifecycle/f/archive/events.log
   find cortex/lifecycle -name events.log -exec cat {} + | python3 -c "import sys,json,collections; c=collections.Counter(); [c.update([r['reason'].split(':')[0]]) for l in sys.stdin for r in [json.loads(l)] if r.get('event')=='criticality_override' and r.get('reason')]; print('PASS e' if c['exposure']==2 and c['plain text']==2 and set(c)=={'exposure','plain text'} else ('FAIL',c))"
   ```
-- **Status**: [ ] pending
+- **Status**: [x] done (2d8e2575 2026-08-07T10:49:19-04:00)
 
 ### Task 6: Pin the reason flags with tests
 - **Files**: `tests/test_refine_reconcile_clarify.py`
@@ -119,7 +121,7 @@ Record the negative decision — ceremony relief is not taken on the criticality
   - Do **not** modify the existing tests — R5 requires them to pass unmodified.
   - The SKILL.md invocation strings are pinned by `test_refine_non_local_reconcile_branch_is_value_aware` at `:319` in this same file; Task 7 must satisfy it, this task must not relax it.
 - **Verification**: `uv run pytest tests/test_refine_reconcile_clarify.py tests/test_refine_module.py tests/test_refine_reconcile_wiring.py -q` → exit 0, no failures, and the new tests appear in the collected count (baseline before this task: 5 tests in `test_refine_reconcile_clarify.py`). `tests/test_refine_module.py` and `tests/test_refine_reconcile_wiring.py` are outside this task's **Files** and are run read-only as a regression gate — a failure in either indicates a Task 5 defect and is reported as blocked rather than patched, because R5 requires the pre-existing tests to pass unmodified.
-- **Status**: [ ] pending
+- **Status**: [x] done (22ed33b0 2026-08-07T10:54:06-04:00)
 
 ### Task 7: Carry Clarify's criticality reasoning into the refine Step 4 call
 - **Files**: `skills/refine/SKILL.md`
@@ -134,7 +136,7 @@ Record the negative decision — ceremony relief is not taken on the criticality
   - Constraint: `skills/refine/references/` is at exactly zero ratchet headroom (20568/20568). `SKILL.md` is **not** reference-dir-pinned, so keep the change in `SKILL.md`; any spillover into `references/` needs an annotated `# raised:` exception carrying this lifecycle's id. `SKILL.md` is 92/500 lines against `tests/test_skill_size_budget.py`.
   - The `plugins/cortex-core/skills/refine/SKILL.md` mirror is rebuilt from the staged blob by `.githooks/pre-commit` Phase 3 — never stage it by hand, and expect it in the commit.
 - **Verification**: `grep -c 'criticality-reason' skills/refine/SKILL.md` ≥ `1` (baseline `0`) **and** `uv run pytest tests/test_refine_reconcile_clarify.py tests/test_refine_reconcile_wiring.py tests/test_refine_skill.py tests/test_skill_size_budget.py -q` → exit 0. (The reason's *content* is `Interactive/session-dependent: model-generated per lifecycle and unpinnable by a fixture` — the flag's presence in the call is what is checkable.) All four pytest files are outside this task's **Files** and are run read-only as a regression gate — a failure in any of them indicates a Task 5 defect and is reported as blocked rather than patched, because R5 requires the pre-existing tests to pass unmodified.
-- **Status**: [ ] pending
+- **Status**: [x] done (5fbd32d9 2026-08-07T10:53:01-04:00)
 
 ## Risks
 
