@@ -1259,7 +1259,11 @@ class _TicketBodySanitizer(HTMLParser):
         if tag in _TICKET_VOID_CONTENT_TAGS:
             self._suppress_depth += 1
             return
-        if self._suppress_depth or tag not in _TICKET_ALLOWED_TAGS:
+        if tag not in _TICKET_ALLOWED_TAGS:
+            if not self._suppress_depth and not attrs:
+                self.out.append(escape(self.get_starttag_text()))
+            return
+        if self._suppress_depth:
             return
         allowed = _TICKET_ALLOWED_ATTRS.get(tag, set())
         rendered = ""
@@ -1279,7 +1283,11 @@ class _TicketBodySanitizer(HTMLParser):
         if tag in _TICKET_VOID_CONTENT_TAGS:
             self._suppress_depth = max(0, self._suppress_depth - 1)
             return
-        if self._suppress_depth or tag not in _TICKET_ALLOWED_TAGS:
+        if tag not in _TICKET_ALLOWED_TAGS:
+            if not self._suppress_depth:
+                self.out.append(escape(f"</{tag}>"))
+            return
+        if self._suppress_depth:
             return
         self.out.append(f"</{tag}>")
 

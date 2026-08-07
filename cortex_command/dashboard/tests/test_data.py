@@ -1677,6 +1677,36 @@ class TestLoadTicketBody(unittest.TestCase):
             self.assertIn("-&gt; str", html)
             self.assertIn("&lt; 3", html)
 
+    def test_unrecognized_placeholder_tag_in_prose_is_escaped_not_dropped(self):
+        # Regression: a bare `<slug>`-style placeholder in prose reads as an
+        # HTML tag to Python-Markdown, and the old sanitizer dropped any tag
+        # outside its allowlist with no trace — turning
+        # `cortex/lifecycle/<slug>/research.md` into `cortex/lifecycle//research.md`.
+        with tempfile.TemporaryDirectory() as tmp:
+            backlog = self._corpus(tmp)
+            (backlog / "504-placeholder.md").write_text(
+                "---\ntitle: Placeholder\n---\n\n"
+                "Path pattern: cortex/lifecycle/<slug>/research.md\n",
+                encoding="utf-8",
+            )
+            html = load_ticket_body("504", backlog)["html"]
+            self.assertIn("cortex/lifecycle/&lt;slug&gt;/research.md", html)
+            self.assertNotIn("<slug>", html)
+
+    def test_unrecognized_placeholder_tag_in_a_fence_is_not_double_escaped(self):
+        # The same token inside a fenced block never reaches tag parsing —
+        # Markdown escapes it as code text — so it must not be re-escaped.
+        with tempfile.TemporaryDirectory() as tmp:
+            backlog = self._corpus(tmp)
+            (backlog / "505-placeholder-fence.md").write_text(
+                "---\ntitle: Placeholder fence\n---\n\n"
+                "```\ncortex/lifecycle/<slug>/research.md\n```\n",
+                encoding="utf-8",
+            )
+            html = load_ticket_body("505", backlog)["html"]
+            self.assertIn("cortex/lifecycle/&lt;slug&gt;/research.md", html)
+            self.assertNotIn("&amp;lt;", html)
+
     def test_markdown_structure_and_safe_links_survive_sanitising(self):
         with tempfile.TemporaryDirectory() as tmp:
             backlog = self._corpus(tmp)
