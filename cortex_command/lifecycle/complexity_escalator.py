@@ -245,8 +245,10 @@ def _build_parser() -> argparse.ArgumentParser:
             "Evaluate a complexity-escalation gate for a lifecycle feature. "
             "Reads research.md (--gate research_open_questions) or spec.md "
             "(--gate specify_open_decisions), counts top-level bullets in the "
-            "relevant section, and on threshold append a complexity_override "
-            "event with read-after-write verification."
+            "relevant section, and on threshold prints a one-line "
+            "recommendation to stdout. Advisory: it writes nothing. The "
+            "caller re-assesses and records any change itself via "
+            "cortex-lifecycle-event complexity-override."
         ),
     )
     parser.add_argument(
