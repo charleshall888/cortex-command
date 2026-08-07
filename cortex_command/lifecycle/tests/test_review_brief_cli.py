@@ -155,8 +155,8 @@ def _tree_digest(d: Path) -> list[tuple[str, str]]:
 _SCOPED_MARKERS = (
     "rework re-review (scoped)",
     "## Reading scope",
-    "## Prior-cycle checklist",
-    "## Out-of-scope findings",
+    "## Prior-Cycle Checklist",
+    "## Out-of-Scope Findings",
     "## Test baseline",
     "## Carry-forward",
     review_brief.REUSE_BASELINE,
@@ -379,3 +379,92 @@ def test_degrades_when_no_prior_dispatch_row_supplies_a_baseline(
     code, out, err = _run(repo, slug, monkeypatch, capsys)
 
     _assert_degraded(code, out, err, "no review_dispatched row for cycle 1")
+
+
+# --- the dispatch row records the mode actually served ----------------------
+
+def _dispatched_rows(d: Path) -> list[dict]:
+    """The ``review_dispatched`` rows in the lifecycle's events.log, in order."""
+    rows = []
+    for raw in (d / "events.log").read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if line:
+            row = json.loads(line)
+            if row.get("event") == "review_dispatched":
+                rows.append(row)
+    return rows
+
+
+def _typed_mode_choices() -> tuple[str, ...]:
+    """``--mode``'s allowed values, read from the typed subcommand table itself.
+
+    Derived rather than restated so the row this verb appends cannot drift out
+    of the vocabulary ``cortex-lifecycle-event review-dispatched`` accepts.
+    """
+    from cortex_command import lifecycle_event
+
+    _, specs = lifecycle_event._EVENT_SUBCOMMANDS["review-dispatched"]
+    choices = next(spec[4] for spec in specs if spec[0] == "--mode")
+    assert choices, "review-dispatched --mode declares no choices"
+    return tuple(choices)
+
+
+def test_a_degraded_rework_records_the_full_mode_it_actually_served(
+    repo, monkeypatch, capsys
+):
+    """A rework that falls through to a full brief must not record ``rework``."""
+    slug = "feat"
+    sha = _head(repo)
+    d = _make_lifecycle(
+        repo, slug, rows=[_verdict_row(slug), _dispatched_row(slug, 1, sha)]
+    )
+
+    code, out, err = _run(repo, slug, monkeypatch, capsys)
+
+    _assert_degraded(code, out, err, "missing or unreadable")
+    cycle2 = [r for r in _dispatched_rows(d) if r["cycle"] == 2]
+    assert len(cycle2) == 1, _dispatched_rows(d)
+    assert cycle2[0]["mode"] == "full", (
+        "a degraded dispatch served a full brief but recorded "
+        f"{cycle2[0]['mode']!r}"
+    )
+    assert cycle2[0]["baseline_sha"] == sha
+    assert cycle2[0]["mode"] in _typed_mode_choices()
+
+
+def test_a_served_rework_records_the_rework_mode(repo, monkeypatch, capsys):
+    slug = "feat"
+    sha = _head(repo)
+    d = _make_lifecycle(
+        repo,
+        slug,
+        rows=[_verdict_row(slug), _dispatched_row(slug, 1, sha)],
+        review=_review_text(["issue one"]),
+    )
+
+    code, _out, _err = _run(repo, slug, monkeypatch, capsys)
+
+    assert code == 0
+    cycle2 = [r for r in _dispatched_rows(d) if r["cycle"] == 2]
+    assert len(cycle2) == 1, _dispatched_rows(d)
+    assert cycle2[0]["mode"] == "rework"
+    assert cycle2[0]["mode"] in _typed_mode_choices()
+
+
+def test_a_redispatched_degraded_cycle_appends_no_second_row(
+    repo, monkeypatch, capsys
+):
+    """Idempotency survives the move: one row per cycle, the original preserved."""
+    slug = "feat"
+    sha = _head(repo)
+    d = _make_lifecycle(
+        repo, slug, rows=[_verdict_row(slug), _dispatched_row(slug, 1, sha)]
+    )
+
+    first_code, _, _ = _run(repo, slug, monkeypatch, capsys)
+    after_first = _dispatched_rows(d)
+    second_code, _, _ = _run(repo, slug, monkeypatch, capsys)
+
+    assert (first_code, second_code) == (3, 3)
+    assert _dispatched_rows(d) == after_first
+    assert len([r for r in after_first if r["cycle"] == 2]) == 1

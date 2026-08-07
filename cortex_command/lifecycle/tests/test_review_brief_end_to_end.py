@@ -288,7 +288,7 @@ def test_cycle_one_dispatch_serves_a_full_brief_and_records_its_baseline(flow):
     """Cycle 1 has no prior cycle: a full brief, and a baseline row at HEAD."""
     assert flow.dispatch1.returncode == 0, flow.dispatch1.stderr
     assert "cycle 1 · full review" in flow.dispatch1.stdout
-    assert "## Prior-cycle checklist" not in flow.dispatch1.stdout
+    assert "## Prior-Cycle Checklist" not in flow.dispatch1.stdout
 
     dispatched = [r for r in _events(flow) if r.get("event") == "review_dispatched"]
     cycle1 = [r for r in dispatched if r.get("cycle") == 1]
@@ -338,8 +338,8 @@ def test_cycle_two_brief_is_scoped_and_carries_the_prior_cycle_issues(flow):
 
     brief = flow.dispatch2.stdout
     assert "cycle 2 · rework re-review (scoped)" in brief
-    assert "## Prior-cycle checklist" in brief
-    assert "## Out-of-scope findings" in brief
+    assert "## Prior-Cycle Checklist" in brief
+    assert "## Out-of-Scope Findings" in brief
     for issue in ISSUES:
         assert issue in brief, f"cycle-1 issue missing from the cycle-2 brief: {issue}"
 

@@ -315,10 +315,57 @@ def test_nothing_found_must_still_be_stated_affirmatively(
 ) -> None:
     """Req 8: an empty findings section is stated, never omitted."""
     brief, _root, _sha0 = _rework_brief(tmp_path, monkeypatch, capsys)
-    section = _section(brief, "Out-of-scope findings")
+    section = _section(brief, "Out-of-Scope Findings")
     assert re.search(r"affirmativ", section, re.IGNORECASE), section
     assert re.search(r"\bempty\b", section, re.IGNORECASE), section
     assert re.search(r"never omitted|not be omitted", section, re.IGNORECASE), section
+
+
+_RENDERED_HEADING_RE = re.compile(r"^(##+ .+?)\s*$", re.MULTILINE)
+_DEMANDED_HEADING_RE = re.compile(r"`(##+ [^`]+?)`")
+
+
+def _heading_spellings(brief: str) -> dict[str, set[str]]:
+    """Group every heading string in *brief* by its case-folded form.
+
+    Both sides come from the brief itself — the headings it *renders* as its own
+    section titles and the headings it *demands* the reviewer write, quoted in
+    backticks. Nothing here is hardcoded, so the invariant below cannot be
+    satisfied by editing the test to match a drifted heading.
+    """
+    groups: dict[str, set[str]] = {}
+    for heading in _RENDERED_HEADING_RE.findall(brief) + _DEMANDED_HEADING_RE.findall(
+        brief
+    ):
+        groups.setdefault(heading.casefold(), set()).add(heading)
+    return groups
+
+
+@pytest.mark.parametrize("mode", ["rework", "full"])
+def test_rendered_headings_match_the_headings_they_demand(
+    isolated_git, tmp_path, monkeypatch, capsys, mode: str
+) -> None:
+    """A heading the brief renders and the same heading it demands are one string.
+
+    A reviewer mirrors the casing it can see. When the brief renders
+    ``## Prior-cycle checklist`` while demanding ``## Prior-Cycle Checklist``,
+    the review carries the wrong spelling and a presence check on the demanded
+    form silently misses — the quiet loss of coverage this feature exists to
+    prevent.
+    """
+    if mode == "rework":
+        brief, _root, _sha0 = _rework_brief(tmp_path, monkeypatch, capsys)
+    else:
+        brief = rb.build_full_brief(
+            feature=FEATURE, cycle=1, review_path="/tmp/review.md"
+        )
+
+    drifted = {
+        folded: sorted(spellings)
+        for folded, spellings in _heading_spellings(brief).items()
+        if len(spellings) > 1
+    }
+    assert not drifted, f"the brief spells the same heading two ways: {drifted}"
 
 
 # ---------------------------------------------------------------------------
@@ -384,7 +431,7 @@ def test_brief_demands_one_disposition_per_prior_issue(
 ) -> None:
     """Req 18: three issues, three demanded dispositions, none droppable."""
     brief, _root, _sha0 = _rework_brief(tmp_path, monkeypatch, capsys)
-    section = _section(brief, "Prior-cycle checklist")
+    section = _section(brief, "Prior-Cycle Checklist")
 
     assert "## Prior-Cycle Checklist" in section, (
         "the brief does not name the section the review must carry:\n" + section
@@ -404,7 +451,7 @@ def test_brief_forbids_re_emitting_resolved_issues_as_new_problems(
 ) -> None:
     """Req 18: dedup — a resolved item is not re-reported under new problems."""
     brief, _root, _sha0 = _rework_brief(tmp_path, monkeypatch, capsys)
-    section = _section(brief, "Prior-cycle checklist")
+    section = _section(brief, "Prior-Cycle Checklist")
     assert re.search(
         r"resolved must not be re-emitted|not be re-emitted", section, re.IGNORECASE
     ), section

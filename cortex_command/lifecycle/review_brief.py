@@ -41,7 +41,9 @@ What one invocation does
    suppresses the append. events.log carries no SHA and no existing event fires
    at review dispatch, so this row is what gives requirements 7, 11 and 13 one
    mechanism. The rework baseline is the ``baseline_sha`` of the ``cycle N-1``
-   row.
+   row. ``mode`` is the mode actually **served**, so a rework that degrades to a
+   full brief records ``full``; a ``full`` row at cycle >= 2 is therefore exactly
+   a degraded rework.
 4. Emits the brief on stdout.
 
 Fail-open contract
@@ -342,7 +344,7 @@ exposed something outside the checklist, report it."""
 
     checklist = "\n".join(f"{i}. {text}" for i, text in enumerate(issues, start=1))
     parts.append(
-        f"""## Prior-cycle checklist
+        f"""## Prior-Cycle Checklist
 
 Your review must contain a `## Prior-Cycle Checklist` section giving **one explicit disposition per item
 below** — resolved / not resolved / partially resolved, each with the evidence you saw. No item may be
@@ -355,7 +357,7 @@ Issues raised in cycle {prior}:
     )
 
     parts.append(
-        """## Out-of-scope findings
+        """## Out-of-Scope Findings
 
 Your review must contain a `## Out-of-Scope Findings` heading, and it must be filled **affirmatively even
 when empty** — "None found outside the checklist" — never omitted. An omitted section is indistinguishable
@@ -621,9 +623,20 @@ def main(argv: Optional[list[str]] = None) -> int:
     _archive_prior_cycle(feature_dir, cycle)
 
     rows = _read_events(events_log)
-    _record_baseline(events_log, rows, feature, cycle, mode, root)
+
+    def _record(served_mode: str) -> None:
+        """Record the dispatch with the mode actually *served*, not the mode the
+        rework counter selected. A degraded rework serves a full brief and so
+        records ``full``; since ``mode`` is ``rework`` for exactly the cycles
+        ``>= 2``, a ``full`` row at cycle >= 2 is precisely a degraded rework,
+        which keeps the field a two-value enum matching ``lifecycle_event``'s
+        ``review-dispatched`` subcommand while still answering "did any rework
+        silently degrade?" from events.log alone.
+        """
+        _record_baseline(events_log, rows, feature, cycle, served_mode, root)
 
     def _degrade(reason: str) -> int:
+        _record("full")
         sys.stdout.write(
             build_full_brief(
                 feature=feature,
@@ -636,6 +649,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         return 3
 
     if mode == "full":
+        _record("full")
         sys.stdout.write(
             build_full_brief(feature=feature, cycle=cycle, review_path=review_path)
         )
@@ -681,6 +695,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         RE_RUN if changed is None else decide_test_baseline(changed, feature)
     )
 
+    _record("rework")
     sys.stdout.write(
         build_rework_brief(
             feature=feature,
