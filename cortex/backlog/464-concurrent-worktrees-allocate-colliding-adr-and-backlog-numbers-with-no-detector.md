@@ -2,11 +2,15 @@
 schema_version: "1"
 uuid: 54f7683e-a79a-4e22-b3d6-44d52f0d0deb
 title: Concurrent worktrees allocate colliding ADR and backlog numbers with no detector
-status: should-have
+status: refined
 priority: low
 type: bug
 created: 2026-08-07
 updated: 2026-08-07
+complexity: moderate
+criticality: low
+spec: cortex/lifecycle/concurrent-worktrees-allocate-colliding-adr-and/spec.md
+areas: ['docs', 'backlog']
 ---
 ## Why
 
