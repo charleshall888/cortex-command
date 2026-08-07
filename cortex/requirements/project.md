@@ -104,7 +104,7 @@ Agentic workflow toolkit for AI-assisted software development on Claude Code: sk
 - agent spawning/subagents/multi-agent/parallel dispatch/worktrees/model selection → cortex/requirements/multi-agent.md
 - backlog/ticketing/issue tracker/backlog backend → cortex/requirements/backlog.md
 - training/workshop/presentation/scene deck → cortex/requirements/training.md
-- lifecycle state machine/phase vocabulary/served verbs (next, advance, enter)/escalation → cortex/requirements/lifecycle.md (NOT YET WRITTEN — `areas: ['lifecycle']` tickets currently load project.md only; statusline/dashboard narration of lifecycle phase is governed by cortex/requirements/observability.md)
+- lifecycle state machine/phase vocabulary/served verbs (next, advance, enter)/escalation → cortex/requirements/lifecycle.md
 
 ## Global Context
 
