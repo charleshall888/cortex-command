@@ -4,8 +4,10 @@ Pins the byte shape of the lifecycle ``index.md`` the
 ``cortex_command.lifecycle.create_index`` verb writes, across the two template
 shapes (backlog-linked Shape A and ad-hoc Shape B), the skip-if-exists no-op,
 the ``CORTEX_REPO_ROOT`` write-root precedence (#319 / Req 5), the
-basename-input regression (the critical-review A-fix), and the
-non-empty-but-missing ``--backlog-file`` contract violation.
+basename-input regression (the critical-review A-fix), the
+non-empty-but-missing ``--backlog-file`` contract violation, and the #472
+``areas:`` field — copied at creation and refreshed on re-entry against an
+already-linked index.
 
 The date seam ``create_index._today`` is monkeypatched to a fixed value so the
 golden bytes are deterministic. Each golden carries a negative control (a
@@ -23,7 +25,10 @@ import pytest
 
 from cortex_command.lifecycle import create_index as ci
 from cortex_command.lifecycle.create_index import create_index, main
-from cortex_command.lifecycle.load_requirements_cli import _extract_tags
+from cortex_command.lifecycle.load_requirements_cli import (
+    _extract_tags,
+    _frontmatter_lines,
+)
 
 # ---------------------------------------------------------------------------
 # Fixture constants
@@ -50,6 +55,7 @@ GOLDEN_A = (
     "parent_backlog_id: 326\n"
     "artifacts: []\n"
     "tags: [lifecycle, cli-verbs]\n"
+    "areas: []\n"
     f"created: {DATE}\n"
     f"updated: {DATE}\n"
     "---\n"
@@ -65,6 +71,7 @@ GOLDEN_B = (
     "parent_backlog_id: null\n"
     "artifacts: []\n"
     "tags: []\n"
+    "areas: []\n"
     f"created: {DATE}\n"
     f"updated: {DATE}\n"
     "---\n"
@@ -88,12 +95,16 @@ def _write_ticket(
     *,
     uuid: str | None = UUID,
     tags: str = "[lifecycle, cli-verbs]",
+    areas: str | None = None,
     title: str = TITLE,
 ) -> None:
     lines = ["---", f"title: '{title}'"]
     if uuid is not None:
         lines.append(f"uuid: {uuid}")
-    lines += [f"tags: {tags}", "status: refined", "---", "", "Body.", ""]
+    lines.append(f"tags: {tags}")
+    if areas is not None:
+        lines.append(f"areas: {areas}")
+    lines += ["status: refined", "---", "", "Body.", ""]
     (root / "cortex" / "backlog" / name).write_text("\n".join(lines))
 
 
@@ -106,6 +117,29 @@ def _tags_line(content: str) -> str:
         if line.startswith("tags:"):
             return line
     raise AssertionError("no tags: line found")
+
+
+def _areas_line(content: str) -> str:
+    for line in content.splitlines():
+        if line.startswith("areas:"):
+            return line
+    raise AssertionError("no areas: line found")
+
+
+def _read_areas(content: str) -> list[str]:
+    """Parse the index's ``areas:`` with the loader's own stdlib reader.
+
+    ``load_requirements_cli`` supplies the frontmatter block reader
+    (``_frontmatter_lines``) and the inline-flow value parser
+    (``_extract_tags``); the parser is keyed to the literal ``tags:``, so the
+    line is re-keyed before being handed to it. What that pins is the thing
+    that matters: the ``areas:`` value is rendered in exactly the flow shape
+    that reader accepts, byte for byte.
+    """
+    block = _frontmatter_lines(content)
+    assert block is not None, "index.md has no well-formed frontmatter block"
+    line = next(l for l in block if l.startswith("areas:"))
+    return _extract_tags([line.replace("areas:", "tags:", 1)])
 
 
 @pytest.fixture(autouse=True)
@@ -403,3 +437,126 @@ def test_repair_is_bounded_to_the_frontmatter_block(tmp_path, monkeypatch):
     assert repaired.endswith(quoted)  # body untouched, still quoting the defaults
     fm_part = repaired.split("---\n")[1]
     assert "tags: [lifecycle, cli-verbs]" in fm_part  # frontmatter repaired
+
+
+# ---------------------------------------------------------------------------
+# (h) #472 — index.md carries areas:, copied at creation and refreshed on
+# re-entry, so requirements selection reads a current value
+# ---------------------------------------------------------------------------
+
+
+def test_areas_copied_at_creation_and_read_by_the_loaders_reader(tmp_path):
+    root = _repo(tmp_path)
+    _write_ticket(root, areas="['pipeline']")
+
+    create_index(SLUG, TICKET, root)
+    content = _read_index(root)
+
+    # Unquoted inline flow, in the template's field order (after tags:).
+    assert _areas_line(content) == "areas: [pipeline]"
+    assert _read_areas(content) == ["pipeline"]
+    # Negative control: not the quoted form the flow parser would hand back
+    # with its quotes intact were they doubled up by a PyYAML dump.
+    assert _areas_line(content) != 'areas: ["pipeline"]'
+    assert content.index("areas:") > content.index("tags:")
+
+
+def test_areas_absent_from_item_renders_empty_flow(tmp_path):
+    root = _repo(tmp_path)
+    _write_ticket(root)  # no areas: on the ticket
+
+    create_index(SLUG, TICKET, root)
+
+    assert _areas_line(_read_index(root)) == "areas: []"
+    assert _read_areas(_read_index(root)) == []
+
+
+def test_linked_index_refreshes_stale_areas_and_is_idempotent(tmp_path, monkeypatch):
+    """Requirements 2 + 3: an already-linked index — the arm the #400 repair
+    guard rejects — tracks its item's current areas, and the second run is a
+    byte-identical no-op rather than a date-only churn write."""
+    root = _repo(tmp_path)
+    monkeypatch.chdir(root)
+    _write_ticket(root, areas="['backlog']")
+    assert create_index(SLUG, TICKET, root)["signal"] == "created"
+
+    # Registered artifacts + a body the refresh must not disturb.
+    index = root / "cortex" / "lifecycle" / SLUG / "index.md"
+    index.write_text(
+        _read_index(root).replace("artifacts: []", "artifacts: [research, spec]")
+        + "\nOperator notes.\n"
+    )
+    before = index.read_text()
+    assert _read_areas(before) == ["backlog"]
+
+    # spec-approve since moved the item to a different area.
+    _write_ticket(root, areas="['pipeline']")
+    monkeypatch.setattr(ci, "_today", lambda: DATE2)
+
+    assert create_index(SLUG, TICKET, root)["signal"] == "repaired"
+    after = index.read_text()
+    assert _read_areas(after) == ["pipeline"]
+    assert _areas_line(after) == "areas: [pipeline]"
+    # Everything else is preserved: created, artifacts, body.
+    assert f"created: {DATE}\n" in after
+    assert "artifacts: [research, spec]\n" in after
+    assert after.endswith("\nOperator notes.\n")
+    assert after.count("areas:") == 1  # replaced in place, never appended twice
+    # Only areas: and updated: moved.
+    assert after == before.replace("areas: [backlog]", "areas: [pipeline]").replace(
+        f"updated: {DATE}", f"updated: {DATE2}"
+    )
+
+    # Second run: nothing to change, so nothing is written.
+    assert create_index(SLUG, TICKET, root)["signal"] == "skipped"
+    assert index.read_text() == after  # byte-identical
+
+
+def test_linked_index_without_an_areas_field_gains_one(tmp_path, monkeypatch):
+    """The 190 pre-#472 indexes carry no areas: line at all — the refresh
+    inserts one rather than skipping for want of a target."""
+    root = _repo(tmp_path)
+    monkeypatch.chdir(root)
+    _write_ticket(root, areas="['pipeline']")
+    lc = root / "cortex" / "lifecycle" / SLUG
+    lc.mkdir(parents=True, exist_ok=True)
+    legacy = GOLDEN_A.replace("areas: []\n", "")  # the pre-#472 7-field shape
+    (lc / "index.md").write_text(legacy)
+
+    assert create_index(SLUG, TICKET, root)["signal"] == "repaired"
+    content = _read_index(root)
+
+    assert _areas_line(content) == "areas: [pipeline]"
+    assert content.index("areas:") > content.index("tags:")  # inserted after tags:
+    assert content.endswith(f"Feature lifecycle for [[{STEM}]].\n")  # body intact
+
+
+def test_unlinked_hand_edited_index_gains_no_areas(tmp_path, monkeypatch):
+    """An unlinked Shape-B index has no parent to read from: the hand-edit
+    disarms the linkage repair, and the areas refresh must not fire in its
+    place (Requirement 4 skips these in the backfill for the same reason)."""
+    root = _repo(tmp_path)
+    monkeypatch.chdir(root)
+    _write_ticket(root, areas="['pipeline']")
+    lc = root / "cortex" / "lifecycle" / SLUG
+    lc.mkdir(parents=True, exist_ok=True)
+    hand = GOLDEN_B.replace("tags: []", "tags: [hand-picked]")
+    (lc / "index.md").write_text(hand)
+
+    assert create_index(SLUG, TICKET, root)["signal"] == "skipped"
+    assert _read_index(root) == hand  # byte-identical; areas: [] not backfilled
+
+
+def test_repair_of_unlinked_shape_b_also_fills_areas(tmp_path, monkeypatch):
+    """The #400 linkage repair links the index to its parent, so it owes the
+    same areas: copy creation does."""
+    root = _repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert create_index(SLUG, "", root)["signal"] == "created"
+    _write_ticket(root, areas="['pipeline']")
+
+    assert create_index(SLUG, TICKET, root)["signal"] == "repaired"
+    content = _read_index(root)
+
+    assert _read_areas(content) == ["pipeline"]
+    assert content.count("areas:") == 1

@@ -1,7 +1,7 @@
 """Byte-faithful ``index.md`` creation verb for the lifecycle Step 2 bootstrap.
 
 ``cortex-lifecycle-create-index --feature {slug} --backlog-file {basename|""}``
-owns the 7-field lifecycle ``index.md`` creation template that
+owns the 8-field lifecycle ``index.md`` creation template that
 ``discovery-bootstrap.md`` previously narrated as hand-executed prose. It writes
 ``{root}/cortex/lifecycle/{feature}/index.md`` (skip-if-exists, with the one
 repair carve-out below) and emits a single compact-JSON signal on stdout::
@@ -14,25 +14,33 @@ Two shapes:
   ``326-foo.md``) — the backlog-linked form. The file is located via the
   canonical backlog dir (``{root}/cortex/backlog/<basename>``; the Step-1
   resolver emits only a basename, never a ``cortex/backlog/…`` path), its
-  frontmatter re-parsed for ``uuid``/``tags``/``title``. ``parent_backlog_id``
-  derives from the basename's ``^(\\d+)-`` prefix and the wikilink stem from the
-  basename ``.stem``. A non-empty ``--backlog-file`` whose resolved path does
-  not exist is a contract violation (``return 1``), **never** a silent
-  fall-back to Shape B.
+  frontmatter re-parsed for ``uuid``/``tags``/``areas``/``title``.
+  ``parent_backlog_id`` derives from the basename's ``^(\\d+)-`` prefix and the
+  wikilink stem from the basename ``.stem``. A non-empty ``--backlog-file``
+  whose resolved path does not exist is a contract violation (``return 1``),
+  **never** a silent fall-back to Shape B.
 * **Shape B** (``--backlog-file ""``) — the ad-hoc form: bare unquoted ``null``
-  for ``parent_backlog_uuid``/``parent_backlog_id``, ``tags: []``, and no
-  heading/body.
+  for ``parent_backlog_uuid``/``parent_backlog_id``, ``tags: []``,
+  ``areas: []``, and no heading/body.
 
 **Repair carve-out (#400):** a non-empty ``--backlog-file`` against an EXISTING
 index that is still an unlinked Shape B — its ``parent_backlog_uuid``,
 ``parent_backlog_id``, and ``tags`` lines all byte-match the Shape-B defaults —
-rewrites exactly those three lines (plus ``updated:``) from the backlog item and
-reports ``repaired``. Without this, an index created before the backlog match was
-known (e.g. a resume that passed ``""``) kept ``tags: []`` forever, silently
-narrowing every ``cortex-load-requirements`` load to ``project.md``. Anything
-that does NOT byte-match all three defaults — a hand-edited or already-linked
-index — is left untouched (``skipped``); ``artifacts``/``created``/body are
-never rewritten either way.
+rewrites exactly those three lines (plus ``areas:`` and ``updated:``) from the
+backlog item and reports ``repaired``. Without this, an index created before the
+backlog match was known (e.g. a resume that passed ``""``) kept ``tags: []``
+forever, silently narrowing every ``cortex-load-requirements`` load to
+``project.md``. An index that does NOT byte-match all three defaults but is
+still unlinked (``parent_backlog_id: null``) is a hand-edit and stays untouched
+(``skipped``).
+
+**Areas refresh (#472):** requirements selection reads ``areas:``, which
+``spec-approve`` can change on the backlog item *after* the index was written,
+so a create-time copy goes stale. Every ``--backlog-file`` invocation against an
+already-**linked** index — the arm the repair carve-out rejects — re-renders its
+``areas:`` from the parent item (``repaired``), or writes nothing at all when
+the value already matches (``skipped``), which is what makes re-entry
+idempotent. ``artifacts``/``created``/body are never rewritten on any path.
 
 The template is rendered as a manual f-string (atomic temp + ``os.replace``,
 pinned trailing newline): PyYAML cannot reproduce the ordered-block +
@@ -94,6 +102,10 @@ def _render_tags(tags: list) -> str:
     ``load_requirements_cli._extract_tags``; a tag containing ``:`` or ``[`` is
     quoted. A comma-bearing tag is NOT supported (``_extract_tags`` splits on
     comma before unquoting) — out of scope, not a target.
+
+    Also renders ``areas:``, which the requirements loader reads with the same
+    stdlib inline-flow parser — hence the shared helper rather than a second
+    (PyYAML) writer whose quoting that parser would not survive.
     """
     if not tags:
         return "[]"
@@ -113,6 +125,7 @@ def _render(
     uuid: Optional[str],
     backlog_id: Optional[int],
     tags: list,
+    areas: list,
     created: str,
     updated: str,
     stem: Optional[str],
@@ -132,6 +145,7 @@ def _render(
         f"parent_backlog_id: {id_val}\n"
         "artifacts: []\n"
         f"tags: {_render_tags(tags)}\n"
+        f"areas: {_render_tags(areas)}\n"
         f"created: {created}\n"
         f"updated: {updated}\n"
         "---\n"
@@ -159,6 +173,66 @@ def _atomic_write(target: Path, content: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Frontmatter-scoped editing (shared by the repair path and the #472 backfill)
+# ---------------------------------------------------------------------------
+
+# ``areas:`` plus any block-sequence items that belong to it, so replacing the
+# key cannot leave orphaned ``- item`` lines behind a new inline-flow value.
+_AREAS_BLOCK = re.compile(r"^areas:[^\n]*(?:\n[ \t]*-[^\n]*)*$", re.MULTILINE)
+_TAGS_LINE = re.compile(r"^tags:[^\n]*$", re.MULTILINE)
+
+
+def _split_frontmatter(text: str) -> Optional[tuple[str, str]]:
+    """Split *text* into ``(frontmatter, body)`` at the leading ``---`` block.
+
+    *frontmatter* includes both fences; *body* is everything after the closing
+    one. Returns ``None`` when there is no well-formed leading block — the
+    signal callers use to leave a hand-edited file alone rather than guess.
+    """
+    if not text.startswith("---\n"):
+        return None
+    closing = text.find("\n---\n", 4)
+    if closing == -1:
+        return None
+    split = closing + len("\n---\n")
+    return text[:split], text[split:]
+
+
+def upsert_areas(text: str, areas: list) -> Optional[str]:
+    """Return *text* with its frontmatter ``areas:`` set to *areas*.
+
+    Inserts the field when absent (after ``tags:``, matching the creation
+    template's field order; before the closing fence when there is no ``tags:``
+    either) and replaces it when present. The edit is bounded to the leading
+    frontmatter block, so a body line that looks like ``areas:`` is never
+    rewritten. Returns ``None`` when *text* has no well-formed frontmatter, and
+    returns *text* unchanged when the rendered value already matches — the
+    caller compares identity to decide whether a write is warranted, which is
+    what keeps re-entry and the backfill idempotent.
+
+    Module-level because the #472 one-shot backfill verb shares this exact
+    upsert; a second implementation there would be a second byte contract.
+    """
+    parts = _split_frontmatter(text)
+    if parts is None:
+        return None
+    frontmatter, body = parts
+    line = f"areas: {_render_tags(areas)}"
+
+    if _AREAS_BLOCK.search(frontmatter):
+        frontmatter = _AREAS_BLOCK.sub(lambda _m: line, frontmatter, count=1)
+    else:
+        tags_match = _TAGS_LINE.search(frontmatter)
+        if tags_match:
+            end = tags_match.end()
+            frontmatter = frontmatter[:end] + "\n" + line + frontmatter[end:]
+        else:
+            # Splice in immediately above the closing fence.
+            frontmatter = frontmatter[: -len("---\n")] + line + "\n---\n"
+    return frontmatter + body
+
+
+# ---------------------------------------------------------------------------
 # Core
 # ---------------------------------------------------------------------------
 
@@ -166,13 +240,16 @@ def _atomic_write(target: Path, content: str) -> None:
 def _repair_unlinked_index(
     target: Path, backlog_file: str, root: Path, rel: str
 ) -> dict:
-    """Repair an EXISTING index that is still an unlinked Shape B.
+    """Repair an EXISTING index, or refresh a linked one's ``areas:``.
 
-    Fires only when the ``parent_backlog_uuid``/``parent_backlog_id``/``tags``
-    lines ALL byte-match the Shape-B defaults — a hand-edited or already-linked
-    index never matches and is skipped, so the repair cannot clobber one. Only
-    those three lines (plus ``updated:``) are rewritten; ``artifacts``,
-    ``created``, and any body are preserved byte-for-byte.
+    The three-line linkage repair fires only when the
+    ``parent_backlog_uuid``/``parent_backlog_id``/``tags`` lines ALL byte-match
+    the Shape-B defaults, so a hand-edited or already-linked index can never be
+    clobbered by it. An index that misses that guard while still unlinked
+    (``parent_backlog_id: null``) is a hand-edit and is skipped outright; one
+    that misses it *because it is linked* takes the ``areas:``-refresh arm,
+    which rewrites nothing else. On both arms ``artifacts``, ``created``, and
+    any body are preserved byte-for-byte.
     """
     try:
         text = target.read_text(encoding="utf-8")
@@ -183,13 +260,10 @@ def _repair_unlinked_index(
     # happens to contain a default-looking line must neither arm the repair
     # nor be touched by it. A file without a well-formed leading frontmatter
     # block is a hand-edit — skip.
-    if not text.startswith("---\n"):
+    parts = _split_frontmatter(text)
+    if parts is None:
         return {"signal": "skipped", "path": rel}
-    closing = text.find("\n---\n", 4)
-    if closing == -1:
-        return {"signal": "skipped", "path": rel}
-    split = closing + len("\n---\n")
-    frontmatter, body = text[:split], text[split:]
+    frontmatter, body = parts
 
     defaults = (
         "parent_backlog_uuid: null\n",
@@ -197,12 +271,17 @@ def _repair_unlinked_index(
         "tags: []\n",
     )
     if not all(line in frontmatter for line in defaults):
-        return {"signal": "skipped", "path": rel}
+        if defaults[1] in frontmatter:
+            # Unlinked but hand-edited: no parent to read from, and the
+            # divergence is the operator's.
+            return {"signal": "skipped", "path": rel}
+        return _refresh_linked_areas(target, text, backlog_file, root, rel)
 
     backlog_path = root / "cortex" / "backlog" / Path(backlog_file).name
     fm = _parse_frontmatter(backlog_path)  # raises OSError if absent (exit 1)
     uuid = fm.get("uuid")
     tags = fm.get("tags") or []
+    areas = fm.get("areas") or []
     match = _ID_PREFIX.match(Path(backlog_file).name)
     backlog_id = int(match.group(1)) if match else None
 
@@ -214,13 +293,41 @@ def _repair_unlinked_index(
     frontmatter = re.sub(
         r"^updated: .*$", f"updated: {_today()}", frontmatter, count=1, flags=re.MULTILINE
     )
+    # The index this repair just linked also carries its parent's areas —
+    # pre-#472 indexes have no such field at all, so this inserts one.
+    _atomic_write(target, upsert_areas(frontmatter + body, areas))
+    return {"signal": "repaired", "path": rel}
+
+
+def _refresh_linked_areas(
+    target: Path, text: str, backlog_file: str, root: Path, rel: str
+) -> dict:
+    """Re-render an already-linked index's ``areas:`` from its parent item.
+
+    The create-time copy goes stale whenever the item's ``areas:`` changes
+    after the index was written — which is the ordinary case, since
+    ``spec-approve`` writes areas onto a ticket whose index already exists.
+    Writes only when the rendered value actually differs (plus the ``updated:``
+    bump that goes with a real change), so a second run is a byte-identical
+    no-op rather than a date-only churn commit.
+    """
+    backlog_path = root / "cortex" / "backlog" / Path(backlog_file).name
+    fm = _parse_frontmatter(backlog_path)  # raises OSError if absent (exit 1)
+    updated = upsert_areas(text, fm.get("areas") or [])
+    if updated is None or updated == text:
+        return {"signal": "skipped", "path": rel}
+    frontmatter, body = _split_frontmatter(updated)
+    frontmatter = re.sub(
+        r"^updated: .*$", f"updated: {_today()}", frontmatter, count=1, flags=re.MULTILINE
+    )
     _atomic_write(target, frontmatter + body)
     return {"signal": "repaired", "path": rel}
 
 
 def create_index(feature: str, backlog_file: str, root: Path) -> dict:
     """Create ``{root}/cortex/lifecycle/{feature}/index.md`` (skip-if-exists,
-    except the unlinked-Shape-B repair carve-out — see the module docstring).
+    except the unlinked-Shape-B repair carve-out and the linked-index ``areas:``
+    refresh — see the module docstring).
 
     Returns a ``{"signal", "path"}`` dict. Raises ``OSError`` when *backlog_file*
     is non-empty but its resolved path under ``cortex/backlog/`` is absent — a
@@ -241,6 +348,7 @@ def create_index(feature: str, backlog_file: str, root: Path) -> dict:
         fm = _parse_frontmatter(backlog_path)  # raises OSError if absent
         uuid = fm.get("uuid")
         tags = fm.get("tags") or []
+        areas = fm.get("areas") or []
         title = _item_title(backlog_path, fm)
         stem = Path(backlog_file).stem
         match = _ID_PREFIX.match(Path(backlog_file).name)
@@ -250,6 +358,7 @@ def create_index(feature: str, backlog_file: str, root: Path) -> dict:
             uuid=uuid,
             backlog_id=backlog_id,
             tags=tags,
+            areas=areas,
             created=today,
             updated=today,
             stem=stem,
@@ -262,6 +371,7 @@ def create_index(feature: str, backlog_file: str, root: Path) -> dict:
             uuid=None,
             backlog_id=None,
             tags=[],
+            areas=[],
             created=today,
             updated=today,
             stem=None,
@@ -281,10 +391,11 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="cortex-lifecycle-create-index",
         description=(
-            "Create the lifecycle index.md from its byte-faithful 7-field "
+            "Create the lifecycle index.md from its byte-faithful 8-field "
             "creation template (skip-if-exists; a non-empty --backlog-file "
-            "repairs an existing unlinked Shape-B index in place) and emit a "
-            "{signal, path} JSON verdict on stdout."
+            "repairs an existing unlinked Shape-B index in place and refreshes "
+            "a linked index's areas:) and emit a {signal, path} JSON verdict "
+            "on stdout."
         ),
     )
     parser.add_argument(
