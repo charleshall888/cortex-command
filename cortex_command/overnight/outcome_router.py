@@ -657,6 +657,55 @@ def _write_back_to_backlog(
         )
 
 
+def _defer_unresolved_worktree(ctx: "OutcomeContext", name: str) -> None:
+    """Route a home feature with an unresolvable integration worktree to ``deferred``.
+
+    The degraded path (TMPDIR purged, or a resumed session whose worktree the
+    resolver could neither find nor re-create) leaves finished work sitting on
+    the feature branch with nothing checked out at it. That is not a pause: a
+    pause auto-retries and feeds the systemic circuit breaker, and neither
+    helps — re-running the feature rebuilds from scratch and discards the work.
+
+    So the disposition is ``deferred``, mirroring the conflict terminus minus
+    its recoverable claim. **No** ``recoverable_branch`` is recorded: the merge
+    was never attempted, so the branch is not a verified-mergeable recovery
+    point, and its absence is what keeps ``_count_built_merge_blocked_home_repo``
+    from counting the feature as progress.
+
+    The backlog write-back is deliberately ``"paused"`` (→ ``in_progress``) and
+    not ``"deferred"``: the ``deferred → backlog`` mapping would return the item
+    to the from-scratch-rebuild pool, which is the loss this whole path exists
+    to prevent. Only the backlog mapping differs — the runtime disposition
+    (``features_deferred`` + ``FEATURE_DEFERRED``) is deferral throughout.
+
+    Callers hold ``ctx.lock`` (or run in sync context under it); this is sync.
+    """
+    error = "integration worktree unresolved"
+    ctx.batch_result.features_deferred.append({
+        "name": name,
+        "question_count": 0,
+        "error": error,
+    })
+    overnight_log_event(
+        FEATURE_DEFERRED,
+        ctx.config.batch_id,
+        feature=name,
+        details={
+            "error": error,
+            "conflict": False,
+            "unresolved_worktree": True,
+            "branch": ctx.worktree_branches.get(name),
+        },
+        log_path=ctx.config.overnight_events_path,
+    )
+    _write_back_to_backlog(
+        name, "paused", ctx.config.batch_id,
+        ctx.config.overnight_events_path,
+        backlog_id=ctx.backlog_ids.get(name),
+        backlog_uuid=ctx.backlog_uuids.get(name),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Sync outcome dispatcher: _apply_feature_result
 # ---------------------------------------------------------------------------
@@ -685,26 +734,11 @@ def _apply_feature_result(
         repo = _merge_target_repo_path(ctx, name)
         if ctx.repo_path_map.get(name) is None and repo is None:
             # Home feature whose integration worktree could not be resolved
-            # (degraded path: TMPDIR wiped / resumed session). Pause and surface
+            # (degraded path: TMPDIR wiped / resumed session). Defer and surface
             # rather than falling back to Path.cwd() / the home working tree,
             # whose git checkout overnight/<id> would collide with the
             # integration worktree that already owns that branch.
-            error = "integration worktree unresolved"
-            ctx.batch_result.features_paused.append({"name": name, "error": error})
-            ctx.cb_state.consecutive_pauses += 1
-            overnight_log_event(
-                FEATURE_PAUSED,
-                ctx.config.batch_id,
-                feature=name,
-                details={"error": error},
-                log_path=ctx.config.overnight_events_path,
-            )
-            _write_back_to_backlog(
-                name, "paused", ctx.config.batch_id,
-                ctx.config.overnight_events_path,
-                backlog_id=ctx.backlog_ids.get(name),
-                backlog_uuid=ctx.backlog_uuids.get(name),
-            )
+            _defer_unresolved_worktree(ctx, name)
             return
         subprocess.run(
             ["git", "checkout", ctx.config.base_branch],
@@ -819,25 +853,10 @@ def _apply_feature_result(
         merge_target = _merge_target_repo_path(ctx, name)
         if ctx.repo_path_map.get(name) is None and merge_target is None:
             # Home feature whose integration worktree could not be resolved
-            # (degraded path: TMPDIR wiped / resumed session). Pause and surface
+            # (degraded path: TMPDIR wiped / resumed session). Defer and surface
             # rather than passing repo_path=None onward and falling back to the
             # home working tree, which would re-create the worktree collision.
-            error = "integration worktree unresolved"
-            ctx.batch_result.features_paused.append({"name": name, "error": error})
-            ctx.cb_state.consecutive_pauses += 1
-            overnight_log_event(
-                FEATURE_PAUSED,
-                ctx.config.batch_id,
-                feature=name,
-                details={"error": error},
-                log_path=ctx.config.overnight_events_path,
-            )
-            _write_back_to_backlog(
-                name, "paused", ctx.config.batch_id,
-                ctx.config.overnight_events_path,
-                backlog_id=ctx.backlog_ids.get(name),
-                backlog_uuid=ctx.backlog_uuids.get(name),
-            )
+            _defer_unresolved_worktree(ctx, name)
             return
         merge_result = merge_feature(
             feature=name,
@@ -1569,26 +1588,11 @@ async def _repair_completed_review_gate(
     repo = _merge_target_repo_path(ctx, name)
     if ctx.repo_path_map.get(name) is None and repo is None:
         # Home feature whose integration worktree could not be resolved
-        # (degraded path: TMPDIR wiped / resumed session). Pause and surface
+        # (degraded path: TMPDIR wiped / resumed session). Defer and surface
         # rather than falling back to Path.cwd() / the home working tree,
         # whose git checkout overnight/<id> would collide with the
         # integration worktree that already owns that branch.
-        error = "integration worktree unresolved"
-        ctx.batch_result.features_paused.append({"name": name, "error": error})
-        ctx.cb_state.consecutive_pauses += 1
-        overnight_log_event(
-            FEATURE_PAUSED,
-            ctx.config.batch_id,
-            feature=name,
-            details={"error": error},
-            log_path=ctx.config.overnight_events_path,
-        )
-        _write_back_to_backlog(
-            name, "paused", ctx.config.batch_id,
-            ctx.config.overnight_events_path,
-            backlog_id=ctx.backlog_ids.get(name),
-            backlog_uuid=ctx.backlog_uuids.get(name),
-        )
+        _defer_unresolved_worktree(ctx, name)
         return
 
     subprocess.run(
@@ -1985,25 +1989,10 @@ async def apply_feature_result(
         merge_target = _merge_target_repo_path(ctx, name)
         if ctx.repo_path_map.get(name) is None and merge_target is None:
             # Home feature whose integration worktree could not be resolved
-            # (degraded path: TMPDIR wiped / resumed session). Pause and surface
+            # (degraded path: TMPDIR wiped / resumed session). Defer and surface
             # rather than passing repo_path=None onward and falling back to the
             # home working tree, which would re-create the worktree collision.
-            error = "integration worktree unresolved"
-            ctx.batch_result.features_paused.append({"name": name, "error": error})
-            ctx.cb_state.consecutive_pauses += 1
-            overnight_log_event(
-                FEATURE_PAUSED,
-                ctx.config.batch_id,
-                feature=name,
-                details={"error": error},
-                log_path=ctx.config.overnight_events_path,
-            )
-            _write_back_to_backlog(
-                name, "paused", ctx.config.batch_id,
-                ctx.config.overnight_events_path,
-                backlog_id=ctx.backlog_ids.get(name),
-                backlog_uuid=ctx.backlog_uuids.get(name),
-            )
+            _defer_unresolved_worktree(ctx, name)
             return
         merge_result = merge_feature(
             feature=name,
@@ -2395,26 +2384,11 @@ async def apply_feature_result(
         merge_target = _merge_target_repo_path(ctx, name)
         if ctx.repo_path_map.get(name) is None and merge_target is None:
             # Home feature whose integration worktree could not be resolved
-            # (degraded path: TMPDIR wiped / resumed session). Pause and surface
+            # (degraded path: TMPDIR wiped / resumed session). Defer and surface
             # rather than passing repo_path=None onward to the recovery precheck
             # (cwd=None falls back to the home working tree).
-            error = "integration worktree unresolved"
             async with ctx.lock:
-                ctx.batch_result.features_paused.append({"name": name, "error": error})
-                ctx.cb_state.consecutive_pauses += 1
-                overnight_log_event(
-                    FEATURE_PAUSED,
-                    ctx.config.batch_id,
-                    feature=name,
-                    details={"error": error},
-                    log_path=ctx.config.overnight_events_path,
-                )
-                _write_back_to_backlog(
-                    name, "paused", ctx.config.batch_id,
-                    ctx.config.overnight_events_path,
-                    backlog_id=ctx.backlog_ids.get(name),
-                    backlog_uuid=ctx.backlog_uuids.get(name),
-                )
+                _defer_unresolved_worktree(ctx, name)
             return
         # Re-acquire the lock to cover the recovery re-merge ITSELF (the
         # `git checkout` + `git merge --no-ff` inside recover_test_failure that

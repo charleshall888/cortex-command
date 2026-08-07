@@ -1754,9 +1754,9 @@ class TestHomeMergeWorktreeCollision(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(resolved, expected)
             self.assertEqual(resolved, cross_wt)
 
-    async def test_unresolved_home_worktree_pauses(self):
+    async def test_unresolved_home_worktree_defers(self):
         """A home feature (repo_path=None) whose home worktree is unresolved
-        (home_worktree_path=None) is surfaced as PAUSED with the
+        (home_worktree_path=None) is surfaced as DEFERRED with the
         'integration worktree unresolved' error — and NO home-tree merge runs
         (the home tree is never advanced)."""
         with tempfile.TemporaryDirectory() as _td:
@@ -1789,10 +1789,11 @@ class TestHomeMergeWorktreeCollision(unittest.IsolatedAsyncioTestCase):
                     ctx,
                 )
 
-            # Surfaced as paused with the unresolved-worktree error.
+            # Surfaced as deferred with the unresolved-worktree error.
             self.assertEqual(ctx.batch_result.features_merged, [])
-            self.assertEqual(len(ctx.batch_result.features_paused), 1)
-            entry = ctx.batch_result.features_paused[0]
+            self.assertEqual(ctx.batch_result.features_paused, [])
+            self.assertEqual(len(ctx.batch_result.features_deferred), 1)
+            entry = ctx.batch_result.features_deferred[0]
             self.assertEqual(entry["name"], feature)
             self.assertEqual(entry["error"], "integration worktree unresolved")
 
@@ -1850,6 +1851,62 @@ class TestHomeMergeWorktreeCollision(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(missing[0]["details"]["context"], "merge_target")
             self.assertIs(missing[0]["details"]["recreated"], True)
 
+    async def test_recreated_worktree_still_merges(self):
+        """Req 5 — a recoverable purge is NOT collateral damage of the deferral
+        routing: a clean feature whose worktree was deleted and successfully
+        re-created still reaches ``merged``, against the real merge path."""
+        from cortex_command.overnight.state import _normalize_repo_key
+
+        with tempfile.TemporaryDirectory() as _td:
+            td = Path(_td)
+            session_id = "overnight-test-recreated-merge"
+            feature = f"{session_id}-feat"
+            home, wt, feature_branch, feature_sha = self._build_repo(td, session_id)
+            base_branch = f"overnight/{session_id}"
+
+            ctx = self._make_ctx(
+                home=home,
+                worktree=wt,
+                session_id=session_id,
+                feature=feature,
+                feature_branch=feature_branch,
+            )
+            ctx.home_repo_path = home
+            ctx.integration_branches[_normalize_repo_key(str(home))] = base_branch
+
+            # The purge — recoverable, because the repo and its branch are known.
+            shutil.rmtree(wt)
+
+            with (
+                patch(
+                    "cortex_command.overnight.outcome_router._get_changed_files",
+                    return_value=["feature.txt"],
+                ),
+                patch(
+                    "cortex_command.overnight.outcome_router.requires_review",
+                    return_value=False,
+                ),
+                patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+                patch(
+                    "cortex_command.pipeline.merge._check_ci_status",
+                    return_value="skipped",
+                ),
+            ):
+                await apply_feature_result(
+                    feature,
+                    FeatureResult(name=feature, status="completed"),
+                    ctx,
+                )
+
+            self.assertIn(feature, ctx.batch_result.features_merged)
+            self.assertEqual(ctx.batch_result.features_deferred, [])
+            self.assertEqual(ctx.batch_result.features_paused, [])
+
+            # Observable git effect: the re-created worktree's integration
+            # branch now contains the feature commit.
+            self.assertTrue(wt.exists())
+            self.assertIn(feature_sha, self._git(wt, "rev-list", "HEAD").splitlines())
+
 
 class TestHomeMergeTargetUnresolvable(unittest.TestCase):
     """A purged home integration worktree that cannot be re-created resolves
@@ -1880,6 +1937,224 @@ class TestHomeMergeTargetUnresolvable(unittest.TestCase):
                 missing[0]["details"]["worktree_path"], str(td / "purged-worktree")
             )
             self.assertIs(missing[0]["details"]["recreated"], False)
+
+
+class TestUnresolvedWorktreeDefers(unittest.IsolatedAsyncioTestCase):
+    """Task 2 — an unresolvable integration worktree DEFERS, never pauses.
+
+    The work is finished and sitting on the feature branch; a pause would
+    auto-retry it (rebuilding from scratch and discarding the work) and would
+    feed the systemic circuit breaker. So the disposition is ``deferred`` with
+    NO ``recoverable_branch`` — the merge was never attempted, so the branch is
+    not a verified-mergeable recovery point, and its absence keeps
+    ``_count_built_merge_blocked_home_repo`` from counting the feature as
+    progress.
+    """
+
+    ERROR = "integration worktree unresolved"
+
+    def _ctx_with_purged_worktree(self, td: Path, feature: str):
+        """A home-repo feature whose integration worktree directory was created
+        and then deleted, with no ``home_repo_path`` to re-create it from —
+        the unrecoverable arm of the resolver."""
+        purged = td / "purged-integration-worktree"
+        purged.mkdir()
+        shutil.rmtree(purged)
+
+        ctx = _make_ctx(pauses=0)
+        ctx.config.overnight_events_path = td / "overnight-events.log"
+        ctx.config.overnight_state_path = td / "state.json"
+        ctx.config.pipeline_events_path = td / "pipeline-events.log"
+        ctx.feature_names = [feature]
+        ctx.repo_path_map = {feature: None}
+        ctx.worktree_branches = {feature: f"pipeline/{feature}-2"}
+        ctx.home_worktree_path = purged
+        ctx.home_repo_path = None  # nothing to re-create from
+        return ctx
+
+    def _deferral_events(self, ctx):
+        return [
+            e for e in read_events(ctx.config.overnight_events_path)
+            if e["event"] == "feature_deferred"
+        ]
+
+    async def test_unrecoverable_worktree_defers_without_recoverable_branch(self):
+        """Req 7 — deferred (not paused), no recoverable_branch key, and
+        neither circuit-breaker counter moves."""
+        with tempfile.TemporaryDirectory() as _td:
+            td = Path(_td)
+            feature = "unresolved-feat"
+            ctx = self._ctx_with_purged_worktree(td, feature)
+
+            with (
+                patch(
+                    "cortex_command.overnight.outcome_router._get_changed_files",
+                    return_value=["src/a.py"],
+                ),
+                patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+            ):
+                await apply_feature_result(
+                    feature,
+                    FeatureResult(name=feature, status="completed"),
+                    ctx,
+                )
+
+            self.assertEqual(len(ctx.batch_result.features_deferred), 1)
+            entry = ctx.batch_result.features_deferred[0]
+            self.assertEqual(entry["name"], feature)
+            self.assertEqual(entry["error"], self.ERROR)
+            self.assertNotIn("recoverable_branch", entry)
+
+            self.assertEqual(ctx.batch_result.features_paused, [])
+            self.assertEqual(ctx.batch_result.features_merged, [])
+            self.assertEqual(ctx.cb_state.consecutive_pauses, 0)
+            self.assertEqual(ctx.cb_state.systemic_pauses_in_batch, 0)
+
+            # Inter-task contract read by the state mapper and morning report.
+            deferrals = self._deferral_events(ctx)
+            self.assertEqual(len(deferrals), 1)
+            details = deferrals[0]["details"]
+            self.assertIs(details["unresolved_worktree"], True)
+            self.assertEqual(details["error"], self.ERROR)
+            self.assertIs(details["conflict"], False)
+            self.assertEqual(details["branch"], f"pipeline/{feature}-2")
+
+            # No pause event was emitted alongside it.
+            paused = [
+                e for e in read_events(ctx.config.overnight_events_path)
+                if e["event"] == "feature_paused"
+            ]
+            self.assertEqual(paused, [])
+
+    def test_sync_repair_completed_site_defers(self):
+        """The sync ``repair_completed`` guard routes through the same helper —
+        the five degraded-path sites share one disposition."""
+        with tempfile.TemporaryDirectory() as _td:
+            td = Path(_td)
+            feature = "unresolved-repair-feat"
+            ctx = self._ctx_with_purged_worktree(td, feature)
+
+            _apply_feature_result(
+                feature,
+                FeatureResult(
+                    name=feature,
+                    status="repair_completed",
+                    repair_branch=f"repair/{feature}",
+                ),
+                ctx,
+            )
+
+            self.assertEqual(ctx.batch_result.features_paused, [])
+            self.assertEqual(len(ctx.batch_result.features_deferred), 1)
+            self.assertEqual(ctx.batch_result.features_deferred[0]["error"], self.ERROR)
+            self.assertNotIn(
+                "recoverable_branch", ctx.batch_result.features_deferred[0]
+            )
+            self.assertEqual(ctx.cb_state.consecutive_pauses, 0)
+
+    async def test_unrecoverable_worktree_is_not_a_failure(self):
+        """Req 2 — the degraded path is a clean deferral, not a crash: nothing
+        lands in features_failed and no error reads as an escaped exception."""
+        with tempfile.TemporaryDirectory() as _td:
+            td = Path(_td)
+            feature = "unresolved-nofail-feat"
+            ctx = self._ctx_with_purged_worktree(td, feature)
+
+            with (
+                patch(
+                    "cortex_command.overnight.outcome_router._get_changed_files",
+                    return_value=["src/a.py"],
+                ),
+                patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
+            ):
+                await apply_feature_result(
+                    feature,
+                    FeatureResult(name=feature, status="completed"),
+                    ctx,
+                )
+
+            self.assertEqual(ctx.batch_result.features_failed, [])
+            errors = [
+                d.get("error", "")
+                for d in (
+                    ctx.batch_result.features_deferred
+                    + ctx.batch_result.features_paused
+                    + ctx.batch_result.features_failed
+                )
+            ]
+            for err in errors:
+                self.assertNotIn("unexpected exception", err)
+
+    def test_conflict_terminus_is_the_sole_recoverable_branch_writer(self):
+        """Req 5 — the deferral helper must not have introduced a second
+        ``recoverable_branch`` assignment; the conflict terminus stays the only
+        place a recovery branch is claimed."""
+        source = Path(
+            __file__
+        ).resolve().parent.parent / "outcome_router.py"
+        text = source.read_text(encoding="utf-8")
+        self.assertEqual(text.count("recoverable_branch = "), 1)
+
+
+class TestUnresolvedWorktreeBacklogWriteBack(unittest.TestCase):
+    """Task 2 scope decision — the backlog write-back is ``paused``
+    (→ ``in_progress``), NOT ``deferred`` (→ ``backlog``).
+
+    The ``deferred → backlog`` mapping would return the item to the
+    from-scratch-rebuild pool, which is the loss this path exists to prevent.
+    Only the backlog mapping differs; the runtime disposition stays deferral.
+    """
+
+    SLUG = "unresolved-worktree-feat"
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.backlog_dir = Path(self._tmp.name)
+        self.item = self.backlog_dir / f"010-{self.SLUG}.md"
+        self.item.write_text(
+            "---\n"
+            "uuid: 0123abcd-aaaa-bbbb-cccc-000000000011\n"
+            "title: Unresolved worktree feature\n"
+            f"lifecycle_slug: {self.SLUG}\n"
+            "status: implementing\n"
+            "---\n"
+            "Body.\n",
+            encoding="utf-8",
+        )
+        set_backlog_dir(self.backlog_dir)
+
+    def tearDown(self) -> None:
+        set_backlog_dir(None)  # type: ignore[arg-type]
+        self._tmp.cleanup()
+
+    def test_deferred_item_stays_out_of_the_rebuild_pool(self) -> None:
+        purged = self.backlog_dir / "purged-integration-worktree"
+        purged.mkdir()
+        shutil.rmtree(purged)
+
+        ctx = _make_ctx(pauses=0)
+        ctx.config.overnight_events_path = self.backlog_dir / "overnight-events.log"
+        ctx.config.overnight_state_path = self.backlog_dir / "state.json"
+        ctx.feature_names = [self.SLUG]
+        ctx.repo_path_map = {self.SLUG: None}
+        ctx.worktree_branches = {self.SLUG: f"pipeline/{self.SLUG}"}
+        ctx.home_worktree_path = purged
+        ctx.home_repo_path = None
+
+        _apply_feature_result(
+            self.SLUG,
+            FeatureResult(
+                name=self.SLUG,
+                status="repair_completed",
+                repair_branch=f"repair/{self.SLUG}",
+            ),
+            ctx,
+        )
+
+        self.assertEqual(len(ctx.batch_result.features_deferred), 1)
+        text = self.item.read_text(encoding="utf-8")
+        self.assertRegex(text, r"(?m)^status: in_progress$")
+        self.assertNotRegex(text, r"(?m)^status: backlog$")
 
 
 class TestReviewNonApprovedRevertsLiveSha(unittest.IsolatedAsyncioTestCase):
