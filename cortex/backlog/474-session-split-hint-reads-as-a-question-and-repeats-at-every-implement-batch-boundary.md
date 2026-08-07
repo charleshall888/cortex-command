@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 52164303-54b2-47a0-abd3-3fbcbbec0f53
 title: Session-split hint reads as a question and repeats at every implement batch boundary
-status: open
+status: complete
 priority: medium
 type: bug
 created: 2026-08-07
@@ -10,6 +10,7 @@ updated: 2026-08-07
 tags: ['session-split', 'build-skill']
 areas: ['lifecycle']
 complexity: simple
+criticality: high
 ---
 ## Why
 
