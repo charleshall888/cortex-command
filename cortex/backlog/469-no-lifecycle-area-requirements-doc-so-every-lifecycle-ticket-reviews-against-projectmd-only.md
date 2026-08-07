@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 288b9a46-1393-4797-9191-d397abdd610e
 title: No lifecycle area requirements doc, so every lifecycle ticket reviews against project.md only
-status: in_progress
+status: complete
 priority: medium
 type: chore
 created: 2026-08-07
@@ -12,7 +12,7 @@ areas: ['lifecycle', 'tests']
 complexity: complex
 criticality: high
 spec: cortex/lifecycle/no-lifecycle-area-requirements-doc-so/spec.md
-lifecycle_phase: research
+lifecycle_phase: complete
 ---
 ## Why
 
