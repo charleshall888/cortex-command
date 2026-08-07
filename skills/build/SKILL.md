@@ -77,7 +77,7 @@ Override at any time with `cortex-lifecycle-event criticality-override --feature
 | high | forced at every tier; Stage 2 at complex only | active at all boundaries | single plan |
 | critical | forced at every tier; Stage 2 at complex only | active at all boundaries | competing plans |
 
-Criticality decides whether Review runs; tier decides how deep it reads. Forcing the full two-stage read at every tier was what kept a lighter tier from costing less, since criticality lands `high` for most non-trivial work.
+Either axis can force Review; only its Stage 2 is tier-gated. Forcing the full two-stage read at every tier was what kept a lighter tier from costing less, since criticality lands `high` for most non-trivial work.
 
 Model choice is the dispatching agent's call at each site, never this table's. The implement→{review|complete} routing rule lives in its verb, not in prose.
 

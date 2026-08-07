@@ -2,13 +2,14 @@
 schema_version: "1"
 uuid: 39cf022b-e3f7-426c-8004-1e31886122a7
 title: SKILL.md's criticality summary line contradicts its own table and the code
-status: backlog
+status: complete
 priority: medium
 type: bug
 created: 2026-08-06
-updated: 2026-08-06
+updated: 2026-08-07
 tags: ['skills', 'lifecycle', 'criticality', 'docs']
 areas: ['skills']
+complexity: simple
 ---
 ## Why
 
