@@ -125,10 +125,22 @@ a zero-headroom byte ratchet.
   the non-empty test strictly dominates a bare stat but does not close the race, and no cheap check does.
 - **Artifact written after a refusal** — re-running the verb registers normally. The refusal is stateless
   and the flow converges; nothing must be undone.
-- **cwd changes between brief and register** — `review_brief.py:607` and `register_artifact.py:100` share
+- **Worktree / root-resolution split** — `review_brief.py:607` and `register_artifact.py:100` share
   `_resolve_user_project_root_from_cwd`, so the reviewer's absolute `review_path` (`review_brief.py:618`)
-  and the checked path agree by construction. Only a cwd change *between* the two calls (e.g. entering a
-  worktree mid-phase) could split them; treated as a precondition, not guarded.
+  and the checked path agree *when both run from the same cwd*. This is **not** the documented
+  `enter`-vs-`register-artifact` divergence (`enter` honours `CORTEX_REPO_ROOT`) — `enter` is not the
+  writer, so that divergence does not sit on this path. The live hazard is narrower but **not
+  hypothetical**: the interactive branch-mode flow runs in worktrees under `.claude/worktrees/`, and two
+  are checked out right now. If the reviewer subagent writes into a different tree than the orchestrator's
+  cwd resolves to, the check false-refuses on a `review.md` that exists. **The implementer must confirm
+  which tree the reviewer writes into under branch mode before shipping Phase 1**, and pin
+  `--project-root` at the call site if they diverge. This is the single most likely source of a false
+  refusal.
+- **Resume race** — R9 permits resuming an idle reviewer via SendMessage. A resumed agent may be several
+  turns from flushing `review.md`, so an orchestrator that re-checks immediately re-triggers the halt and
+  can loop. The response to a refusal is therefore resume-then-*wait-for-the-agent's-return*, never
+  resume-then-immediately-recheck. No timer or backoff is specified — the agent's own return is the
+  signal.
 - **`index.md` absent** — returns `no-index` as today (R8), not the new refusal.
 - **Non-`review` artifacts** — `plan`, `spec`, and `research` call sites inherit the refusal. This is
   intended, not incidental: `research-phase.md:23` already wants the check, and artifact-conditional logic
@@ -154,10 +166,18 @@ a zero-headroom byte ratchet.
 - Adding a **new state value** would bump `PROTOCOL_VERSION` — `protocol.py`'s history sets the precedent
   ("2: spec-approve may return state `approved-direct` … prose predating the fork has no route for that
   state") — and a floor bump strands out-of-repo consumers. Reusing `error` avoids this.
-- The gate must **not** land in `advance review-verdict`: the overnight pipeline imports and calls
-  `advance` directly (`cortex_command/pipeline/review_dispatch.py:36`, `_advance_review_complete:108`), so
-  a refusal there leaks into the out-of-scope overnight path and threatens ADR-0015's preserve-and-flag
-  arm. That arm has prior refusal-cascade history (`review_dispatch.py:57-63`).
+- The gate must **not** land in `advance review-verdict`, for two verified reasons — **note the original
+  reason was wrong and is corrected here.** *Withdrawn:* an earlier draft claimed a refusal there leaks
+  into the overnight path. It does not. The overnight pipeline does import and call `advance`
+  (`review_dispatch.py:36`), but `_advance_review_complete` is reached only at `:414` and `:703`, both
+  guarded by `verdict_str == "APPROVED"`, and `parse_verdict` runs first — a missing `review.md` yields
+  the `_ERROR_RESULT` sentinel, which can never equal `APPROVED`. An existence gate would never fire on
+  that path. *The reasons that do hold:* (i) `skills/build/SKILL.md:61`'s generic `refused` handling
+  prescribes "re-run `cortex-lifecycle-next` and re-invoke threading
+  `advance_contract.expected_from_state`" — a remedy for a *gate-mismatch* refusal that does nothing to
+  make `review.md` appear, so siting here needs a prose disambiguation anyway; and (ii) in the real skill
+  sequence `register-artifact` runs first (`review.md:35` before `:48`), so `advance` is strictly the
+  later, weaker interception point.
 - `skills/build/references/` is at **zero** ratchet headroom (pin 57175, measured 57175), with a
   byte-identical mirror pin under `plugins/cortex-core/`. Per the known sync sequence, editing
   `skills/*/references/` runs ratchet-refs → build-plugin → ratchet-refs, and the mirror pin is the one

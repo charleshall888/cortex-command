@@ -62,23 +62,32 @@ deliberate: the CLI "always emits JSON and exits 0", "matching the sibling verbs
 never-crash net. Making it exit non-zero would break a contract shared across the verb family, not just
 this verb.
 
-### Option B (refuse inside `advance review-verdict`) is unsafe — reject
+### Option B (refuse inside `advance review-verdict`) — reject, on corrected grounds
 
-The overnight pipeline imports and calls `advance` directly:
-`cortex_command/pipeline/review_dispatch.py:36` (`from cortex_command.lifecycle.advance import
-advance`), used by `_advance_to_review:87` and `_advance_review_complete:108`. A refusal added to the
-`review-verdict` arm therefore **leaks into the overnight path**, which this ticket scopes out
-explicitly, and directly threatens ADR-0015's `could_not_run` preserve-and-flag arm — the arm that by
-definition runs when no parseable `review.md` exists.
+> **Correction (post-approval, verified).** An earlier revision of this file argued that a refusal here
+> "leaks into the overnight path and threatens ADR-0015's preserve-and-flag arm." **That was wrong**, and
+> a late-returning research agent caught it. The overnight pipeline *does* import and call `advance`
+> (`review_dispatch.py:36`), but `_advance_review_complete` is reached only at `:414` and `:703`, both
+> guarded by `verdict_str == "APPROVED"`. `parse_verdict` runs first, and a missing `review.md` returns
+> the `_ERROR_RESULT` sentinel, which can never equal `APPROVED`. An existence gate would therefore never
+> fire on the overnight path. `_advance_or_warn` (`:52-86`) additionally treats `refused` as best-effort.
 
-This is not hypothetical. `review_dispatch.py:57-63` records the prior occurrence of exactly this
-class: "the review-verdict arm was refused on every APPROVED … `cortex-morning-review-advance-lifecycle`
-reporting `missing-review`". `_advance_or_warn` exists specifically to make such refusals audible.
+The two reasons that survive verification:
 
-Separately, `advance.py:1054-1069` documents the no-machine-rows deadlock ("no row → fallback → refuse →
-still no row", observed in session `overnight-2026-07-29-0145`). An artifact check is orthogonal to
-from-state gating so it would not reintroduce *that* exact loop, but it adds a second independent
-refusal reason to a verb whose refusals have already caused a silent cascade once.
+1. **The generic `refused` remedy is wrong for this refusal.** `advance.py:184` carries a `refused`
+   state whose `refusal:` discriminant has exactly one value today, `gate-mismatch` (`:1082`).
+   `skills/build/SKILL.md:61` prescribes the remedy for it — "re-run `cortex-lifecycle-next` and
+   re-invoke threading `advance_contract.expected_from_state`" — which does nothing to make `review.md`
+   appear. Siting here needs prose disambiguation regardless, erasing the "no prose change" advantage.
+2. **It intercepts later than necessary.** In the real skill sequence `register-artifact` runs first
+   (`review.md:35`) and `advance` second (`review.md:48`), so Option B can only ever catch what Option C
+   already caught.
+
+The `advance.py:1054-1069` no-machine-rows deadlock ("no row → fallback → refuse → still no row",
+session `overnight-2026-07-29-0145`) is **not** reintroduced by either option: that loop was
+self-perpetuating because the gate consulted `resolve_lifecycle_phase`, which degrades to the
+artifact-presence legacy fallback. A bare filesystem stat consults neither, and stops refusing the
+moment the file is written.
 
 ### An in-repo convention for this check already exists
 
@@ -92,7 +101,7 @@ the review phase simply omits it.
 | Option | Protocol cost | Load-bearing? | Verdict |
 |---|---|---|---|
 | **A** — new `artifact-missing` state on `register_artifact` | Floor bump (see Requirements) | No — no prose reads states | Reject: pays the highest cost for no effect |
-| **B** — refusal in `advance review-verdict` | None (reuses existing exit-3 refusal shape) | Yes, unbypassable | **Reject** — leaks into overnight via `review_dispatch.py:36`; endangers ADR-0015 |
+| **B** — refusal in `advance review-verdict` | None (reuses existing `refused` state) | Yes, unbypassable | **Reject** — but see the correction below; the original reason was wrong |
 | **C** — `register_artifact` **refuses to register** an absent-or-empty artifact, returning the existing `error` state with a diagnostic `message` | None | **Yes** — enforcement is the withheld write, not a read return value | **Recommended** (as revised by Adversarial finding 1) |
 | **D** — prose-only check in `review.md` §3, matching `research-phase.md:23` | None | Weakest — prose-only enforcement, and the failure class *is* the orchestrator not noticing | Fallback only |
 
@@ -215,6 +224,30 @@ mechanism that changes state without requiring anyone to read anything.
 `review.md` defeats every option here. Detection of *bad* reviews is out of scope and stays out — but
 the spec should say so, because "review.md exists and is non-empty" reads like a stronger guarantee than
 it is.
+
+### Findings from the late-returning adversarial agent
+
+The dispatched agent returned after approval. Three findings, dispositioned:
+
+**6. Worktrees make the root-resolution risk live — ACCEPTED, spec strengthened.** The agent's stated
+mechanism is wrong (it named the documented `enter`-vs-`register-artifact` divergence, but `enter` is not
+the writer and does not sit on this path). Its underlying risk is right and was understated here: the
+interactive branch-mode flow runs in worktrees under `.claude/worktrees/`, and two were checked out at
+the time of writing. If the reviewer subagent writes into a different tree than the orchestrator's cwd
+resolves to, the gate false-refuses on a file that exists. Promoted from "a precondition" to an
+implementer obligation in the spec's Edge Cases.
+
+**7. "Just copy `research-phase.md:23`'s prose pattern, zero code changes" — REJECTED, with reason.**
+The agent argues a prose-only pre-check is cheaper on every axis. It is cheaper, but it does not do the
+same job: it leaves `index.md` recording `artifacts: [review]` for a review that does not exist. The
+verb refusal fixes that data corruption independently of whether any prose is read, and the failure class
+under study is precisely an orchestrator not reading carefully (Adversarial finding 4). The agent does
+not address the false-index.md-claim argument.
+
+**8. Resume race — ACCEPTED, added to spec Edge Cases.** A resumed reviewer may be several turns from
+flushing `review.md`; an orchestrator that re-checks immediately re-triggers the halt and can loop. The
+spec now states that the response to a refusal is resume-then-await-the-agent's-return, never
+resume-then-immediately-recheck.
 
 ## Open Questions
 
