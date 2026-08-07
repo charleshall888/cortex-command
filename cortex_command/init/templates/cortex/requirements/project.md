@@ -42,6 +42,7 @@ attribute with a sentence explaining what it means in practice.
 ## Conditional Loading
 
 TODO: Per-area requirements files that should be loaded when working in a
-specific area of the codebase. Example:
+specific area of the codebase. Each row maps one or more comma-separated
+area keys to a single repo-relative path. Example:
 
-Working on <area> -> requirements/<area>.md
+- <area>, <alias> → cortex/requirements/<area>.md
