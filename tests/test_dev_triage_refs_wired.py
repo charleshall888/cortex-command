@@ -19,6 +19,7 @@ than self-sealing.
 from __future__ import annotations
 
 import inspect
+import json
 import pathlib
 
 from cortex_command.backlog import triage as triage_mod
@@ -103,6 +104,47 @@ def test_verb_renders_the_blocks() -> None:
         assert token in render_src, (
             f"the renderer lost the {token!r} anchor — the block protocol regressed"
         )
+
+
+def test_envelope_carries_no_unread_structured_mirrors(
+    tmp_path, monkeypatch, capsys
+) -> None:
+    """``blocks`` is the product; ``epics``/``flat`` mirrors must not come back.
+
+    Both were emitted beside ``blocks`` and read by nothing: every version of
+    ``skills/dev/SKILL.md`` acts on ``state`` and prints ``blocks``. On a
+    467-item repo they were 45,891 of the envelope's 54,046 chars — the caller
+    parsed 6.9x what it used — and ``epics`` had drifted into contradicting
+    ``blocks``, still carrying the closed children the rendering drops.
+
+    Asserted against the emitted JSON rather than ``main``'s source: the first
+    cut of this guard grepped for ``"epics"`` and matched the degraded
+    epic-map fallback ``{"epics": {}}``, an internal literal with nothing to do
+    with the envelope. Re-adding a structured field is not forbidden; adding one
+    with no consumer is.
+    """
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
+    (tmp_path / ".git").mkdir()
+    items = [
+        {"schema_version": "1", "id": 1, "title": "Ready thing", "status": "backlog",
+         "priority": "high", "type": "feature", "spec": None, "parent": None,
+         "blocked_by": [], "tags": [], "uuid": None},
+    ]
+    (backlog / "index.json").write_text(json.dumps(items), encoding="utf-8")
+    (backlog / "index-full.json").write_text(json.dumps(items), encoding="utf-8")
+    monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+
+    assert triage_mod.main(["--no-regen"]) == 0
+    envelope = json.loads(capsys.readouterr().out)
+
+    assert envelope["state"] == "ok"
+    assert set(envelope) == {"state", "backend", "index", "blocks"}, (
+        "cortex-backlog-triage grew an envelope field — name its consumer, or "
+        "the caller parses JSON nothing reads"
+    )
+    assert "Ready thing" in envelope["blocks"]
 
 
 def test_stub_headings_survive() -> None:

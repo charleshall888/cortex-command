@@ -492,6 +492,8 @@ def test_flat_ready_rows_render_with_and_without_spec() -> None:
     assert blocks == (
         "## Ready\n"
         "\n"
+        "No ordering — any of these can be picked up in parallel.\n"
+        "\n"
         "- `critical` `feature` **201** Refined feature → `/cortex-core:build`\n"
         "- `low` `feature` **202** Unrefined feature → `/cortex-core:refine`\n"
     )
@@ -573,6 +575,8 @@ def test_idea_routes_to_discovery_with_and_without_spec() -> None:
 
     assert blocks == (
         "## Ready\n"
+        "\n"
+        "No ordering — any of these can be picked up in parallel.\n"
         "\n"
         "- `medium` `idea` **501** Idea no spec → `/cortex-core:discovery`\n"
         "- `medium` `idea` **502** Idea with spec → `/cortex-core:discovery`\n"

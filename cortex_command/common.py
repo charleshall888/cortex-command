@@ -175,8 +175,8 @@ def _resolve_user_project_root_from_cwd() -> Path:
 # shell should use "wont-do" (no apostrophe) — the apostrophe in "won't-do"
 # will be misinterpreted by the shell if not carefully quoted.
 #
-# This set and _STATUS_MAP below are the only two declarations of the status
-# vocabulary. Everything else is a narrower gate over them: overnight's
+# This set, HELD_STATUSES below, and _STATUS_MAP are the only declarations of
+# the status vocabulary. Everything else is a narrower gate over them: overnight's
 # ELIGIBLE_STATUSES selects what a run may pick up, and ready.py's
 # _ELIGIBLE_STATUSES mirrors it. Nothing validates `status` on write, so this
 # is not an allow-list — unrecognized values reach every reader unchanged.
@@ -197,6 +197,35 @@ TERMINAL_STATUSES: frozenset[str] = frozenset({
     "wont-do",
     "superseded",
 })
+
+
+# ---------------------------------------------------------------------------
+# HELD_STATUSES — canonical set of "someone is already on it" statuses
+# ---------------------------------------------------------------------------
+# Spelled in normalized form only; route raw frontmatter through
+# normalize_status_spelling before the lookup rather than adding the
+# underscore variants back. This replaces the identical four-element literal
+# that generate_index.py and backlog/triage.py each carried inline — and it is
+# the shape #456 exists because of, where one such hand-maintained set was
+# missing members the other had.
+
+HELD_STATUSES: frozenset[str] = frozenset({
+    "in-progress",
+    "implementing",
+    "review",
+})
+
+
+def normalize_status_spelling(raw: str | None) -> str:
+    """Collapse a status to lowercase, hyphen-spelled — spelling only.
+
+    Deliberately narrower than :func:`normalize_status`, which maps to the
+    canonical *vocabulary* and in doing so folds ``blocked`` into ``backlog``
+    and ``done`` into ``complete``. A reader that must keep those distinctions —
+    the triage board has to render a blocked item as blocked — needs the
+    spelling collapsed without the vocabulary rewritten.
+    """
+    return str(raw or "").strip().lower().replace("_", "-")
 
 
 # ---------------------------------------------------------------------------

@@ -16,8 +16,15 @@ instruction to redo it.
 
 Output is one JSON object::
 
-    {"state": "ok", "backend": ..., "blocks": "<markdown>", "epics": {...},
-     "flat": [...], "index": "regenerated"|"stale"}
+    {"state": "ok", "backend": ..., "blocks": "<markdown>",
+     "index": "regenerated"|"stale"}
+
+``blocks`` is the whole product. Structured ``epics``/``flat`` mirrors were
+emitted alongside it until nothing was found to read them: every version of
+``skills/dev/SKILL.md`` acts on ``state`` and prints ``blocks``. They cost 46 KB
+of the 54 KB envelope on a 467-item repo — 6.9x what the caller used — and
+``epics`` had begun to *contradict* ``blocks``, still carrying the closed
+children the rendering deliberately drops.
 
 The caller prints ``blocks`` and asks which item to pick up. Non-local
 backends short-circuit with ``state: "external-backend"`` — the local index is
@@ -35,7 +42,12 @@ from types import SimpleNamespace
 from cortex_command.backlog import _telemetry
 from cortex_command.backlog.build_epic_map import build_epic_map, normalize_parent
 from cortex_command.backlog.generate_index import _is_deferred
-from cortex_command.common import TERMINAL_STATUSES, _resolve_user_project_root_from_cwd
+from cortex_command.common import (
+    HELD_STATUSES,
+    TERMINAL_STATUSES,
+    _resolve_user_project_root_from_cwd,
+    normalize_status_spelling,
+)
 from cortex_command.lifecycle_config import resolve_backlog_backend
 from cortex_command.backlog.readiness import is_item_ready
 
@@ -52,15 +64,13 @@ def _norm_status(item: dict) -> str:
     spelling, instead of each set carrying its own variant list — the failure
     mode that let ``complete``/``done`` half-work.
     """
-    return str(item.get("status") or "").strip().lower().replace("_", "-")
+    return normalize_status_spelling(item.get("status"))
 
 
-#: In-flight: someone is on it. Not pickable, but resumable, so still listed.
-_HELD_STATUSES = frozenset({"in-progress", "implementing", "review"})
 #: Finished. Normalized from the canonical set so ``done`` and ``complete``
 #: — both live in real data — can never be classified differently.
 _CLOSED_STATUSES = frozenset(
-    s.strip().lower().replace("_", "-") for s in TERMINAL_STATUSES
+    normalize_status_spelling(s) for s in TERMINAL_STATUSES
 )
 
 WORKABLE, HELD, PARKED, CLOSED = "workable", "in flight", "parked", "closed"
@@ -136,7 +146,7 @@ def _classify(item: dict) -> str:
     status = _norm_status(item)
     if status in _CLOSED_STATUSES:
         return CLOSED
-    if status in _HELD_STATUSES:
+    if status in HELD_STATUSES:
         return HELD
     if _is_deferred(item):
         return PARKED
@@ -304,7 +314,7 @@ def _render_epic_block(
         # No route verb: neither an in-flight nor a parked child is something to
         # pick up. The status word usually says which it is on its own; the mark
         # exists for the tag-parked item whose status still reads `backlog`.
-        self_describing = status in _HELD_STATUSES or status == "deferred"
+        self_describing = status in HELD_STATUSES or status == "deferred"
         mark = "" if self_describing else f" [{_classify(child)}]"
         lines.append(
             f"- **{child['id']}** {child['title']} — "
@@ -454,7 +464,13 @@ def render(items: list[dict], epic_map: dict) -> tuple[str, list[dict]]:
         if i.get("type") != "epic" and i["id"] not in child_ids
     ]
     if flat:
+        # Every row here is startable: `_ready_set` runs `is_item_ready`, which
+        # rejects an item with any unresolved blocker, so this block has no
+        # ordering to draw — only the parallel-safety claim the epic legend
+        # makes explicit and this block was leaving implicit.
         lines += ["## Ready", ""]
+        if len(flat) > 1:
+            lines += ["No ordering — any of these can be picked up in parallel.", ""]
         for item in flat:
             lines.append(
                 f"- `{item.get('priority', '?')}` `{item.get('type', '?')}` "
@@ -567,7 +583,7 @@ def main(argv: list[str] | None = None) -> int:
     # making a satisfied blocker look like an unknown external one. `_ready_set`
     # gates on status, so widening the input cannot widen either block's
     # membership.
-    blocks, flat = render(full_items, epic_map)
+    blocks, _flat = render(full_items, epic_map)
     sys.stdout.write(
         json.dumps(
             {
@@ -575,12 +591,6 @@ def main(argv: list[str] | None = None) -> int:
                 "backend": backend,
                 "index": index_state,
                 "blocks": blocks,
-                "flat": [
-                    {"id": i["id"], "title": i["title"], "type": i.get("type"),
-                     "priority": i.get("priority"), "refined": _is_refined(i)}
-                    for i in flat
-                ],
-                "epics": epic_map.get("epics", {}),
             }
         )
         + "\n"

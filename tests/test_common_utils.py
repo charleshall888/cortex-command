@@ -524,3 +524,52 @@ def test_resolve_user_project_root_searched_paths_in_diagnostic(
     assert "Searched: " in msg
     assert str(leaf.resolve()) in msg
     assert str(repo.resolve()) in msg
+
+
+# ---------------------------------------------------------------------------
+# HELD_STATUSES / normalize_status_spelling — the shared held vocabulary.
+# ---------------------------------------------------------------------------
+
+def test_normalize_status_spelling_collapses_without_rewriting_vocabulary() -> None:
+    """Spelling only: ``blocked`` and ``done`` must survive as themselves.
+
+    This is the whole reason the helper exists next to ``normalize_status``
+    rather than being replaced by it — that one maps ``blocked`` to ``backlog``
+    and ``done`` to ``complete``, which a triage board cannot tolerate: it has
+    to render a blocked item as blocked.
+    """
+    from cortex_command.common import normalize_status_spelling
+
+    assert normalize_status_spelling("In_Progress") == "in-progress"
+    assert normalize_status_spelling("  REVIEW ") == "review"
+    assert normalize_status_spelling(None) == ""
+    # Vocabulary untouched, unlike normalize_status.
+    assert normalize_status_spelling("blocked") == "blocked"
+    assert normalize_status_spelling("done") == "done"
+
+
+def test_held_status_literal_is_not_reinlined_by_its_consumers() -> None:
+    """Neither consumer may carry its own copy of the in-flight status list.
+
+    Both ``generate_index`` and ``backlog.triage`` held the identical
+    four-element literal inline. That shape is what #456 was: one such
+    hand-maintained set was missing members the other had, and nothing could
+    see the divergence.
+    """
+    import inspect
+
+    from cortex_command.backlog import generate_index, triage
+
+    for module in (generate_index, triage):
+        source = inspect.getsource(module)
+        assert '"implementing"' not in source, (
+            f"{module.__name__} re-inlines the held-status vocabulary; it "
+            "belongs to cortex_command.common.HELD_STATUSES"
+        )
+
+
+def test_held_and_terminal_statuses_are_disjoint() -> None:
+    """A status cannot mean both "someone is on it" and "finished"."""
+    from cortex_command.common import HELD_STATUSES, TERMINAL_STATUSES
+
+    assert not (HELD_STATUSES & TERMINAL_STATUSES)

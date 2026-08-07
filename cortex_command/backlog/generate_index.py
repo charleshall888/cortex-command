@@ -21,10 +21,12 @@ from cortex_command.backlog import _telemetry
 from cortex_command.backlog.frontmatter_quote import _YAML_NULL_TOKENS
 from cortex_command.backlog.readiness import is_item_ready
 from cortex_command.common import (
+    HELD_STATUSES,
     TERMINAL_STATUSES,
     _resolve_user_project_root,
     atomic_write,
     normalize_status,
+    normalize_status_spelling,
     resolve_lifecycle_phase,
     slugify,
 )
@@ -331,7 +333,7 @@ def generate_md(
     # --- In-Progress section ---
     lines += ["", "## In-Progress", ""]
     for item in items:
-        if item["status"] in ("in_progress", "implementing", "review", "in-progress"):
+        if normalize_status_spelling(item["status"]) in HELD_STATUSES:
             lines.append(f"- **{item['id']}** {item['title']} ({item['status']})")
 
     # --- Warnings section ---
