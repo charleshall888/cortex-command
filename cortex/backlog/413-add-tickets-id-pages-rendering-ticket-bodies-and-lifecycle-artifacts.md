@@ -2,15 +2,18 @@
 schema_version: "1"
 uuid: 112a84c9-3321-43f7-acc5-ef15c6b759d3
 title: Add /tickets/{id} pages rendering ticket bodies and lifecycle artifacts
-status: backlog
+status: refined
 priority: medium
 type: feature
 created: 2026-07-21
-updated: 2026-07-21
+updated: 2026-08-06
 discovery_source: cortex/research/dashboard-command-station/research.md
 parent: "410"
 tags: ['dashboard-command-station', 'dashboard']
 areas: ['dashboard']
+complexity: moderate
+criticality: high
+spec: cortex/lifecycle/add-tickets-id-pages-rendering-ticket/spec.md
 ---
 ## Why
 

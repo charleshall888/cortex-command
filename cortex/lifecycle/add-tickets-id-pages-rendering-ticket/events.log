@@ -1,0 +1,5 @@
+{"ts": "2026-08-07T01:25:48Z", "schema_version": 1, "event": "lifecycle_start", "feature": "add-tickets-id-pages-rendering-ticket", "tier": "simple", "criticality": "medium", "entry_point": "refine", "seeded": ["criticality", "tier"]}
+{"ts": "2026-08-07T01:33:57Z", "event": "clarify_critic", "feature": "add-tickets-id-pages-rendering-ticket", "parent_epic_loaded": "true", "findings_count": "9", "dispositions.apply": "7", "dispositions.dismiss": "0", "dispositions.ask": "2", "applied_fixes_count": "7", "dismissals_count": "0", "status": "ok"}
+{"ts": "2026-08-07T01:43:38Z", "event": "criticality_override", "feature": "add-tickets-id-pages-rendering-ticket", "from": "medium", "to": "high", "reason": "Research established the ticket must modify _TicketBodySanitizer, the XSS boundary on #412's shipped reader, not just add new routes"}
+{"ts": "2026-08-07T01:43:46Z", "event": "complexity_override", "feature": "add-tickets-id-pages-rendering-ticket", "from": "simple", "to": "moderate", "gate": "clarify_reconcile", "from_seeded": true}
+{"ts": "2026-08-07T01:59:56Z", "event": "spec_approved", "feature": "add-tickets-id-pages-rendering-ticket", "decision": "approved"}
