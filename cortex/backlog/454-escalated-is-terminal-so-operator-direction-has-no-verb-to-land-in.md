@@ -2,11 +2,15 @@
 schema_version: "1"
 uuid: 090b867c-c631-4b46-9df6-8e6784b723eb
 title: escalated is terminal, so operator direction has no verb to land in
-status: backlog
+status: refined
 priority: high
 type: bug
 tags: ['lifecycle', 'review', 'escalation', 'state-machine']
 areas: ['lifecycle']
+complexity: complex
+criticality: high
+updated: 2026-08-06
+spec: cortex/lifecycle/escalated-is-terminal-so-operator-direction/spec.md
 ---
 ## Why
 
