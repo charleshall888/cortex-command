@@ -58,7 +58,7 @@ idempotent on re-run.
   through `load_requirements_cli`'s frontmatter reader, and a new case running the refresh twice
   against a linked index whose item changed from `['backlog']` to `['pipeline']` — second run
   byte-identical, `created`/`artifacts`/body unchanged.
-- **Status**: [ ] pending
+- **Status**: [x] done (91a5b92b 2026-08-07T18:07:52-04:00)
 
 ### Task 2: Area→doc map replaces trigger-substring selection, with a coverage marker
 - **Files**: `cortex/requirements/project.md`, `cortex_command/lifecycle/load_requirements_cli.py`,
@@ -117,7 +117,7 @@ idempotent on re-run.
   stdout byte-identical to HEAD's shape. Plus:
   `uv run python -c "from cortex_command.lifecycle.load_requirements_cli import _parse_conditional_loading as p; from pathlib import Path; rows=p(Path('cortex/requirements/project.md').read_text()); assert rows and all(' ' not in path for _, path in rows), rows; print(len(rows))"`
   exits 0 (fails at HEAD — the `lifecycle` row yields a 180-character path containing its parenthetical).
-- **Status**: [ ] pending
+- **Status**: [x] done (affd88f3 2026-08-07T18:14:10-04:00)
 
 ### Task 3: Consumer-repo scaffold teaches a parseable separator
 - **Files**: `cortex_command/init/templates/cortex/requirements/project.md`
@@ -136,7 +136,7 @@ idempotent on re-run.
 - **Verification**:
   `uv run python -c "from cortex_command.lifecycle.load_requirements_cli import _parse_conditional_loading; from pathlib import Path; print(_parse_conditional_loading(Path('cortex_command/init/templates/cortex/requirements/project.md').read_text()))"`
   prints a non-empty list. Verified at HEAD: prints `[]`.
-- **Status**: [ ] pending
+- **Status**: [x] done (ccdbd86f 2026-08-07T18:02:56-04:00)
 
 ### Task 4: `glossary.md` defines "area"
 - **Files**: `cortex/requirements/glossary.md`
@@ -151,7 +151,7 @@ idempotent on re-run.
   file is `## Global Context` and loads on **every** invocation of the verb, including the fallback
   path — one line is the whole budget.
 - **Verification**: `grep -c '\*\*area\*\*' cortex/requirements/glossary.md` returns ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] done (ad845eb6 2026-08-07T18:02:39-04:00)
 
 ### Task 5: Retire the stale mechanism prose and wire `review.md` §1 to the marker
 - **Files**: `skills/build/references/review.md`, `skills/requirements/SKILL.md`,
@@ -194,7 +194,7 @@ idempotent on re-run.
   `plugins/cortex-core/skills/requirements/SKILL.md`; **and** `grep -c 'COVERAGE:'` returns ≥ 1 for both
   `skills/build/references/review.md` and `plugins/cortex-core/skills/build/references/review.md`;
   **and** `python3 scripts/ratchet_refs.py` prints "all directories within their pins".
-- **Status**: [ ] pending
+- **Status**: [x] done (5aca8df8 2026-08-07T18:05:09-04:00)
 
 ### Task 6: One-shot backfill verb for existing indexes
 - **Files**: `cortex_command/lifecycle/backfill_index_areas.py` (new), `pyproject.toml`,
@@ -223,7 +223,7 @@ idempotent on re-run.
   a linked index gaining `areas:` from its item; a second run producing byte-identical output; an
   unlinked Shape-B index left without an `areas:` field; and an index whose item declares no `areas:`
   left untouched.
-- **Status**: [ ] pending
+- **Status**: [x] done (0d26e1a4 2026-08-07T18:22:40-04:00)
 
 ### Task 7: Run the backfill on the live tree and prove the coverage floor
 - **Files**: `cortex/lifecycle/*/index.md`
@@ -267,7 +267,7 @@ idempotent on re-run.
   cannot see this change. `resolve(...)[0]` indexes the line list positionally rather than unpacking, so
   it stays correct after Task 2 adds a coverage value to the return. **And**: a second backfill run
   leaves `git diff --stat -- cortex/lifecycle` empty.
-- **Status**: [ ] pending
+- **Status**: [x] done (3db19174 2026-08-07T18:25:31-04:00)
 
 ## Risks
 

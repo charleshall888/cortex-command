@@ -5,3 +5,8 @@ schema_version: 3, ts: 2026-08-07T18:41:19Z, event: clarify_critic, feature: req
 {"ts": "2026-08-07T19:31:58Z", "event": "spec_approved", "feature": "requirements-loader-matches-index-tags-against", "decision": "approved"}
 {"ts": "2026-08-07T19:45:02Z", "event": "plan_approved", "feature": "requirements-loader-matches-index-tags-against", "dispatch_choice": "wait"}
 {"ts": "2026-08-07T19:45:02Z", "event": "feature_paused", "feature": "requirements-loader-matches-index-tags-against", "slug": "plan-approval", "kind": "relayed-consent"}
+{"ts": "2026-08-07T22:02:53Z", "event": "phase_transition", "feature": "requirements-loader-matches-index-tags-against", "from": "plan", "to": "implement"}
+{"ts": "2026-08-07T22:02:55Z", "event": "batch_dispatch", "feature": "requirements-loader-matches-index-tags-against", "batch": 0, "tasks": [1, 2, 3, 4, 5]}
+{"ts": "2026-08-07T22:15:45Z", "event": "batch_dispatch", "feature": "requirements-loader-matches-index-tags-against", "batch": 1, "tasks": [6]}
+{"ts": "2026-08-07T22:23:50Z", "event": "batch_dispatch", "feature": "requirements-loader-matches-index-tags-against", "batch": 2, "tasks": [7]}
+{"ts": "2026-08-07T22:47:10Z", "event": "phase_transition", "feature": "requirements-loader-matches-index-tags-against", "from": "implement", "to": "review", "tier": "complex"}
