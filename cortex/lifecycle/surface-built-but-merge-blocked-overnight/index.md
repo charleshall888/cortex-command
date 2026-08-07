@@ -4,8 +4,9 @@ parent_backlog_uuid: f04521e4-474d-447e-9035-c9d46a2176eb
 parent_backlog_id: 284
 artifacts: ["research", "spec", "plan", "review"]
 tags: []
+areas: [overnight-runner]
 created: 2026-06-02
-updated: 2026-06-02
+updated: 2026-08-07
 ---
 
 # [[284-surface-built-but-merge-blocked-overnight-features-as-recoverable-not-failed-zero-progress-split-from-281-phase-2|Surface built-but-merge-blocked overnight features as recoverable]]

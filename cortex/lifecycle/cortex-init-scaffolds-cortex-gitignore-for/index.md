@@ -4,8 +4,9 @@ parent_backlog_uuid: 2cfdcb31-bca3-489e-a0b6-0ca7e84cf9b9
 parent_backlog_id: 289
 artifacts: [research, spec, plan, review]
 tags: [cortex-init, install, gitignore, distribution]
+areas: [install]
 created: 2026-06-03
-updated: 2026-06-03
+updated: 2026-08-07
 ---
 # [[289-cortex-init-scaffolds-cortex-gitignore-for-umbrella-transient-artifacts|cortex init scaffolds cortex/.gitignore for umbrella transient artifacts]]
 

@@ -4,8 +4,9 @@ parent_backlog_uuid: 6da37238-e1c0-4e2d-8f11-24b9cb57d101
 parent_backlog_id: 181
 artifacts: ["research", "spec", "plan", "review"]
 tags: [tests, skill-design, lifecycle, refine, critical-review, discovery, vertical-planning]
+areas: [tests]
 created: 2026-05-06
-updated: 2026-05-06
+updated: 2026-08-07
 ---
 
 # Skill-design test infrastructure (description snapshots + cross-skill handoff + ref-file path resolution + skill-size budget)

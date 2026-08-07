@@ -4,8 +4,9 @@ parent_backlog_uuid: 0604375c-04bf-4ea3-914d-e4a01676f732
 parent_backlog_id: 352
 artifacts: [research, spec, plan]
 tags: [skill-value-scorecard]
+areas: [lifecycle]
 created: 2026-07-02
-updated: 2026-07-02
+updated: 2026-08-07
 ---
 # [[352-delete-lifecycle-config-normalization-narration-with-template-asset-sync|Trim lifecycle config instance: delete narration, lazy-load Branch Mode blocks]]
 

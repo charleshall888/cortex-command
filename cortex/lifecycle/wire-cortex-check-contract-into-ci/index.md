@@ -4,8 +4,9 @@ parent_backlog_uuid: ab06b8e4-de55-4fca-92d3-0a62634ce663
 parent_backlog_id: 283
 artifacts: ["research", "spec", "plan"]
 tags: []
+areas: [tests]
 created: 2026-06-02
-updated: 2026-06-02
+updated: 2026-08-07
 ---
 
 # [[283-wire-cortex-check-contract-into-ci-run-contract-fixtures-audit-source-mode-in-validateyml|Wire cortex-check-contract into CI: run contract fixtures + --audit (source mode) in validate.yml]]

@@ -4,6 +4,7 @@ parent_backlog_uuid: af87592d-32ef-4c41-98e9-49ef90e7b3d9
 parent_backlog_id: 323
 artifacts: [research, spec, plan, review]
 tags: []
+areas: [overnight-runner, skills]
 created: 2026-06-29
-updated: 2026-06-30
+updated: 2026-08-07
 ---

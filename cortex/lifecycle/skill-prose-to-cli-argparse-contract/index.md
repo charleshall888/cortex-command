@@ -4,8 +4,9 @@ parent_backlog_uuid: 80dd19af-d75c-4d64-90c0-eddb18f9b2e1
 parent_backlog_id: 253
 artifacts: ["research", "spec", "plan"]
 tags: [harness, skill-authoring, parity-lint]
+areas: [hooks]
 created: 2026-05-25
-updated: 2026-05-25
+updated: 2026-08-07
 ---
 
 # [[253-skill-prose-to-cli-argparse-contract-lint|Skill-prose to CLI argparse contract lint]]

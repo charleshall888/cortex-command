@@ -4,8 +4,9 @@ parent_backlog_uuid: f6d3637e-b27b-426b-9978-5ecfeb740238
 parent_backlog_id: 191
 artifacts: [research, spec, plan, review]
 tags: [boot-context, claude-md, skill-md, descriptions, skill-routing, workflow-trimming]
+areas: [skills]
 created: 2026-05-11
-updated: 2026-05-11
+updated: 2026-08-07
 ---
 
 # [[191-reduce-boot-context-surface-claudemd-and-skillmd|Reduce boot-context surface (CLAUDE.md + SKILL.md)]]

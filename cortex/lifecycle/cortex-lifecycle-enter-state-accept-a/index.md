@@ -4,8 +4,9 @@ parent_backlog_uuid: d6860b1b-f56a-465f-812c-37650a123379
 parent_backlog_id: 379
 artifacts: [research, spec, plan, review]
 tags: [lifecycle, cli, slug-resolution]
+areas: [lifecycle]
 created: 2026-07-16
-updated: 2026-07-17
+updated: 2026-08-07
 ---
 # [[379-cortex-lifecycle-enter-state-accept-a-numeric-feature-and-create-a-shadow-lifecycle-dir-instead-of-resolving-or-rejecting|cortex-lifecycle-enter/state accept a numeric feature and create a shadow lifecycle dir instead of resolving or rejecting]]
 

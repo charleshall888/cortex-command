@@ -4,11 +4,12 @@ backlog: 276-make-cortex-resolve-backlog-item-ambiguous-parity-fixture-robust-to
 parent_backlog_uuid: 43a366cf-e5f4-499e-90cb-0bbddec77bf7
 parent_backlog_id: 276
 tags: []
+areas: [tests]
 tier: complex
 criticality: medium
 artifacts: ["research", "spec", "plan", "review"]
 created: 2026-06-01
-updated: 2026-06-01
+updated: 2026-08-07
 ---
 
 # [[276-make-cortex-resolve-backlog-item-ambiguous-parity-fixture-robust-to-backlog-drift|Make cortex-resolve-backlog-item ambiguous parity fixture robust to backlog drift]]

@@ -4,8 +4,9 @@ parent_backlog_uuid: 9486d024-5a83-4382-874c-6c3f4448bfdc
 parent_backlog_id: 281
 artifacts: ["research", "spec", "plan", "review"]
 tags: []
+areas: [overnight-runner]
 created: 2026-06-02
-updated: 2026-06-03
+updated: 2026-08-07
 ---
 
 # [[281-overnight-merge-recovery-strands-a-successfully-built-feature-dirty-base-branch-after-revert-0-attempts-round-2-branch-already-used-by-worktree-collision|Overnight merge-recovery strands a successfully-built feature]]

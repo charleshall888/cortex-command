@@ -4,8 +4,9 @@ parent_backlog_uuid: 6c945638-4fc4-4f1b-ad68-1c1e102c24b4
 parent_backlog_id: 250
 artifacts: ["research", "spec", "plan", "review"]
 tags: [lifecycle, worktree-interactive]
+areas: [skills]
 created: 2026-05-25
-updated: 2026-05-25
+updated: 2026-08-07
 ---
 
 # [[250-lifecycle-implement-auto-enter-worktree-deferred|Lifecycle implement: auto-enter worktree via EnterWorktree (Approach A, deferred design surface)]]

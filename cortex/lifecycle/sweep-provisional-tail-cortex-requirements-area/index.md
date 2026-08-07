@@ -4,8 +4,9 @@ parent_backlog_uuid: 3b24f21f-de4f-46e4-b1f3-bd40d613cb24
 parent_backlog_id: 358
 artifacts: ["research", "spec", "plan", "review"]
 tags: [skill-value-scorecard]
+areas: [docs]
 created: 2026-07-02
-updated: 2026-07-02
+updated: 2026-08-07
 ---
 
 # [[358-sweep-provisional-tail-cortex-requirements-area-files-editorial|Sweep provisional tail: cortex/requirements area files (editorial)]]

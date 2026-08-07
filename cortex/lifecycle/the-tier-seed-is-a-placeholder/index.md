@@ -4,6 +4,7 @@ parent_backlog_uuid: 35e98229-e90a-4874-8e23-2655a215b4fa
 parent_backlog_id: 453
 artifacts: [research]
 tags: [lifecycle, tiering, backlog-verbs]
+areas: [backlog]
 created: 2026-08-07
 updated: 2026-08-07
 ---

@@ -4,8 +4,9 @@ parent_backlog_uuid: 4fed271e-9fd8-4e86-98b1-3c5efec3800f
 parent_backlog_id: 345
 artifacts: [research, spec, plan, review]
 tags: []
+areas: [skills]
 created: 2026-07-02
-updated: 2026-07-02
+updated: 2026-08-07
 ---
 # [[345-add-observed-merge-auto-close-for-morning-review-already-merged-exit|Add observed-merge auto-close for morning-review already-merged exit]]
 

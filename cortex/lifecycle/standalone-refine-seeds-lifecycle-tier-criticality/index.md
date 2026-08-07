@@ -4,8 +4,9 @@ parent_backlog_uuid: f83a53ca-7f6f-43ca-b5b8-e03c6cf968cf
 parent_backlog_id: 285
 artifacts: ["research", "spec", "plan", "review"]
 tags: []
+areas: [skills]
 created: 2026-06-02
-updated: 2026-06-02
+updated: 2026-08-07
 ---
 
 # [[285-standalone-refine-seeds-lifecycle-tier-criticality-pre-clarify-and-never-reconciles-silently-skipping-the-3b-critical-review-gate-for-complex-features|Standalone /refine seeds lifecycle tier/criticality pre-Clarify and never reconciles, silently skipping the §3b critical-review gate for complex features]]

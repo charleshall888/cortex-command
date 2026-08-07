@@ -4,8 +4,9 @@ parent_backlog_uuid: 892d71bb-a435-40b7-8b26-296baa4795de
 parent_backlog_id: 174
 artifacts: ["research", "spec", "plan", "review"]
 tags: [lifecycle, refine, dual-source, deduplication, vertical-planning]
+areas: [skills]
 created: 2026-05-06
-updated: 2026-05-06
+updated: 2026-08-07
 ---
 
 # [[174-collapse-byte-identical-refine-references-files-orchestrator-review-and-specify|Collapse byte-identical refine/references files (orchestrator-review.md + specify.md → lifecycle canonical)]]

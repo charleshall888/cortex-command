@@ -4,8 +4,9 @@ parent_backlog_uuid: 79d84275-ae0a-4ace-8398-ac14fca43497
 parent_backlog_id: 175
 artifacts: [research, spec, plan, review]
 tags: [lifecycle, refine, dual-source, schema-migration, clarify-critic, vertical-planning]
+areas: [skills]
 created: 2026-05-06
-updated: 2026-05-06
+updated: 2026-08-07
 ---
 
 # [[175-promote-refine-clarify-critic-to-canonical-with-schema-aware-migration|Promote refine/references/clarify-critic.md to canonical with schema-aware migration]]

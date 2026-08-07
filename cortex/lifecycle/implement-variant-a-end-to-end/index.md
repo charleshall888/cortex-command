@@ -4,8 +4,9 @@ parent_backlog_uuid: cfc426e7-5325-4a05-b6a0-bc1a97ee50c3
 parent_backlog_id: 240
 artifacts: ["research", "spec", "plan", "review"]
 tags: [lifecycle, worktree-interactive, daytime-swap, refactor, pr]
+areas: [lifecycle]
 created: 2026-05-18
-updated: 2026-05-19
+updated: 2026-08-07
 ---
 
 # [[240-implement-variant-a-end-to-end-interaction-and-pr|Implement Variant A end-to-end (interaction model + PR-creation hook)]]

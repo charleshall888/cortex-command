@@ -4,8 +4,9 @@ parent_backlog_uuid: a66a9fe8-67c4-4243-8f31-f80e289a6528
 parent_backlog_id: 273
 artifacts: ["research", "spec", "plan", "review"]
 tags: [cortex-init, distribution, sandbox, in-session]
+areas: [skills]
 created: 2026-05-29
-updated: 2026-05-29
+updated: 2026-08-07
 ---
 # [[273-rescope-cortex-init-ensure-to-never-write-claude|Rescope cortex init --ensure to never write ~/.claude/]]
 

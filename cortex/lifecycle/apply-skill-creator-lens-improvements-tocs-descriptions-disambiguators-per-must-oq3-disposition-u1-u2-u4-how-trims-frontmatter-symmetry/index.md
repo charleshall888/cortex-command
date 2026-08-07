@@ -4,8 +4,9 @@ parent_backlog_uuid: a978360e-228a-4b86-b9c5-bf059ab8c5a2
 parent_backlog_id: 178
 artifacts: [research, spec, plan, review]
 tags: [lifecycle, refine, critical-review, discovery, skill-design, descriptions, oq3, vertical-planning]
+areas: [skills]
 created: 2026-05-06
-updated: 2026-05-06
+updated: 2026-08-07
 ---
 
 # [[178-apply-skill-creator-lens-improvements-tocs-descriptions-oq3-frontmatter|Apply skill-creator-lens improvements (TOCs, descriptions + disambiguators, per-MUST OQ3 disposition, U1/U2/U4 HOW trims, frontmatter symmetry)]]

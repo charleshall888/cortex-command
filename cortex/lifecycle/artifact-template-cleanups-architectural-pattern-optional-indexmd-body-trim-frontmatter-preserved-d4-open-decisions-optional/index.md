@@ -4,8 +4,9 @@ parent_backlog_uuid: a5e3d90f-7e20-49ab-8be8-c9fd6bbe45b6
 parent_backlog_id: 180
 artifacts: [research, spec, plan, review]
 tags: [lifecycle, plan-template, spec-template, indexmd, artifact-densification, vertical-planning]
+areas: [skills]
 created: 2026-05-11
-updated: 2026-05-11
+updated: 2026-08-07
 ---
 
 # [[180-artifact-template-cleanups-architectural-pattern-scope-boundaries-indexmd|Artifact template cleanups (Architectural Pattern optional, index.md body-trim + frontmatter preserved, D4 Open Decisions optional)]]

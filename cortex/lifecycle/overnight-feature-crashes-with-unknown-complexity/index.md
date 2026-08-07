@@ -4,11 +4,12 @@ backlog: 278-overnight-feature-crashes-with-unknown-complexity-tier-medium-backl
 parent_backlog_uuid: bdefeb63-516d-4ddc-9508-fe8a0b263d3c
 parent_backlog_id: 278
 tags: []
+areas: [overnight-runner]
 tier: complex
 criticality: high
 artifacts: ["research", "spec", "plan", "review"]
 created: 2026-06-01
-updated: 2026-06-01
+updated: 2026-08-07
 ---
 
 # [[278-overnight-feature-crashes-with-unknown-complexity-tier-medium-backlog-lookup-failure-defaults-criticality-which-mis-routes-into-the-complexity-arg|Overnight feature crashes with 'Unknown complexity tier medium']]

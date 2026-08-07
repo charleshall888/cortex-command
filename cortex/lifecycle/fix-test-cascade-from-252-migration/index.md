@@ -4,8 +4,9 @@ parent_backlog_uuid: fa775672-f8c2-47ef-9bf3-933a1ba75ec3
 parent_backlog_id: 261
 artifacts: [research, spec, plan, review]
 tags: []
+areas: [tests]
 created: 2026-05-25
-updated: 2026-05-25
+updated: 2026-08-07
 phase: review
 ---
 # [[261-fix-test-cascade-from-252-migration-sourcefileloader-subprocess-patterns|Fix test cascade from #252 migration (SourceFileLoader + subprocess patterns)]]

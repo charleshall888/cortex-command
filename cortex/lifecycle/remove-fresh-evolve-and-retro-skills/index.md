@@ -4,8 +4,9 @@ parent_backlog_uuid: 79b9e087-25bd-49fa-93ec-55e2aed015b6
 parent_backlog_id: 171
 artifacts: [research, spec, plan, review]
 tags: [skills, cleanup, deprecation]
+areas: [skills]
 created: 2026-05-06
-updated: 2026-05-06
+updated: 2026-08-07
 ---
 
 # [[171-remove-fresh-evolve-and-retro-skills|Remove /fresh, /evolve, and /retro skills]]

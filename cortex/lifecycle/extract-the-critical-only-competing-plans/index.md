@@ -4,8 +4,9 @@ parent_backlog_uuid: 562ec957-4c0e-44f1-b408-a9316932d37e
 parent_backlog_id: 341
 artifacts: [research, spec, plan, review]
 tags: [skill-efficiency-remaining-work]
+areas: [lifecycle]
 created: 2026-06-30
-updated: 2026-06-30
+updated: 2026-08-07
 ---
 # [[341-extract-the-critical-only-competing-plans-block-to-a-lazy-reference|Extract the critical-only competing-plans block to a lazy reference]]
 

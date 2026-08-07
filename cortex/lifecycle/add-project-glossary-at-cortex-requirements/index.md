@@ -4,8 +4,9 @@ parent_backlog_uuid: 4badee5f-3e18-401e-ae82-e1f1d69d6cd9
 parent_backlog_id: 223
 artifacts: ["research", "spec"]
 tags: [requirements, vocabulary, grill-me-with-docs-learnings]
+areas: [skills]
 created: 2026-05-15
-updated: 2026-05-16
+updated: 2026-08-07
 ---
 
 # [[223-add-project-glossary|Add project glossary at cortex/requirements/glossary.md]]

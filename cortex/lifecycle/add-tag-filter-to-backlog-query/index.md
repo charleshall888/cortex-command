@@ -4,8 +4,9 @@ parent_backlog_uuid: 1288aefd-5f4a-4007-b8b6-8b999eb4b45d
 parent_backlog_id: 233
 artifacts: ["research", "spec", "plan", "review"]
 tags: [tooling-gap]
+areas: [backlog, cli]
 created: 2026-05-18
-updated: 2026-05-18
+updated: 2026-08-07
 phase: complete
 ---
 

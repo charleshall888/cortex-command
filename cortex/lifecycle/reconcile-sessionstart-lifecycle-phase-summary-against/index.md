@@ -4,8 +4,9 @@ parent_backlog_uuid: 69a8b0fc-c833-42ba-a317-a597c6bbd79b
 parent_backlog_id: 259
 artifacts: ["research", "spec", "plan", "review"]
 tags: [harness, hook, observability, lifecycle]
+areas: [hooks]
 created: 2026-05-25
-updated: 2026-05-25
+updated: 2026-08-07
 ---
 # [[259-reconcile-sessionstart-lifecycle-phase-summary-against-on-disk-truth|Reconcile SessionStart lifecycle-phase summary against on-disk truth]]
 

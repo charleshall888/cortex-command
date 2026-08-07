@@ -4,6 +4,7 @@ parent_backlog_uuid: b293c58a-0fa8-451e-ab7d-7b5b19f4b4ef
 parent_backlog_id: 472
 artifacts: [research, spec, plan]
 tags: [requirements-loading]
+areas: [lifecycle, requirements]
 created: 2026-08-07
 updated: 2026-08-07
 ---

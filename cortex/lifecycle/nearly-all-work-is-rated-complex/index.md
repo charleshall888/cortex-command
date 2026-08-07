@@ -4,8 +4,9 @@ parent_backlog_uuid: dfeb6b8c-7b48-4de6-a3ef-61e4328e7ae2
 parent_backlog_id: 451
 artifacts: [research, spec, plan, review]
 tags: [lifecycle, tiering, ceremony]
+areas: [lifecycle]
 created: 2026-08-04
-updated: 2026-08-04
+updated: 2026-08-07
 ---
 # [[451-nearly-all-work-is-rated-complex-so-the-tier-axis-cannot-relieve-ceremony|Nearly all work is rated complex, so the tier axis cannot relieve ceremony]]
 

@@ -4,8 +4,9 @@ parent_backlog_uuid: 97c7ed31-edd1-4ec2-bc2a-df579b92d1c4
 parent_backlog_id: 173
 artifacts: ["research", "spec", "plan", "review"]
 tags: [lifecycle, refine, bugs, stale-references, vertical-planning]
+areas: [skills]
 created: 2026-05-06
-updated: 2026-05-06
+updated: 2026-08-07
 ---
 
 # [[173-fix-duplicated-block-bug-in-refine-skillmd-and-5-stale-skill-references|Fix duplicated-block bug in refine/SKILL.md + 5 stale skill references]]

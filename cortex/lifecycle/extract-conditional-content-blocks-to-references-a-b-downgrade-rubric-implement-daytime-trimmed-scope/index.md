@@ -4,8 +4,9 @@ parent_backlog_uuid: cc130eb5-8439-4012-a52e-1b7c39ee08e8
 parent_backlog_id: 179
 artifacts: [research, spec, plan, review]
 tags: [lifecycle, refine, critical-review, conditional-extraction, hot-path-context, vertical-planning]
+areas: [skills]
 created: 2026-05-11
-updated: 2026-05-11
+updated: 2026-08-07
 last_review_cycle: 1
 ---
 

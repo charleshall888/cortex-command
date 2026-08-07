@@ -4,6 +4,7 @@ parent_backlog_uuid: 090b867c-c631-4b46-9df6-8e6784b723eb
 parent_backlog_id: 454
 artifacts: [research, spec, plan, review]
 tags: [lifecycle, review, escalation, state-machine]
+areas: [lifecycle]
 created: 2026-08-07
 updated: 2026-08-07
 ---

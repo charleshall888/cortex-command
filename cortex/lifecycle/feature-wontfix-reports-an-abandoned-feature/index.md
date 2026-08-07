@@ -4,6 +4,7 @@ parent_backlog_uuid: bd73ae5b-578e-4ca8-b1f6-84aea79dcadb
 parent_backlog_id: 468
 artifacts: []
 tags: [lifecycle, phase-vocabulary, observability]
+areas: [lifecycle]
 created: 2026-08-07
 updated: 2026-08-07
 ---

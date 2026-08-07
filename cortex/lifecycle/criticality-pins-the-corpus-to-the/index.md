@@ -4,6 +4,7 @@ parent_backlog_uuid: 3edd8d05-bce5-4b4e-9a8b-b82599c9962d
 parent_backlog_id: 452
 artifacts: [research, spec, plan, review]
 tags: [lifecycle, tiering, ceremony, criticality]
+areas: [lifecycle, skills]
 created: 2026-08-07
 updated: 2026-08-07
 ---

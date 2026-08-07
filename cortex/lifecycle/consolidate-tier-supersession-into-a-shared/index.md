@@ -4,8 +4,9 @@ parent_backlog_uuid: caa4a81c-97ae-490a-8716-302d4bbd81bc
 parent_backlog_id: 301
 artifacts: ["research", "spec", "plan", "review"]
 tags: []
+areas: [lifecycle]
 created: 2026-06-13
-updated: 2026-06-13
+updated: 2026-08-07
 ---
 
 # [[301-consolidate-tier-supersession-into-a-shared-pure-events-reducer|Consolidate tier supersession into a shared pure-events reducer]]

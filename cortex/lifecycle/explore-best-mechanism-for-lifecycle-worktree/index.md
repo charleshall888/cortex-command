@@ -4,8 +4,9 @@ parent_backlog_uuid: dc4fee16-1ced-4158-98dd-d70634b71d00
 parent_backlog_id: 288
 artifacts: [research, spec, plan, review]
 tags: [cortex-init, distribution, claude-md, worktree-auth, exploration]
+areas: [lifecycle]
 created: 2026-06-03
-updated: 2026-06-03
+updated: 2026-08-07
 ---
 # [[288-explore-best-mechanism-for-lifecycle-worktree-entry-without-cortex-writing-to-consumer-claudemd|Explore: best mechanism for lifecycle worktree entry without cortex writing to consumer CLAUDE.md]]
 

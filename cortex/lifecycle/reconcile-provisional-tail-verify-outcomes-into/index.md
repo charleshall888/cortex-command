@@ -4,8 +4,9 @@ parent_backlog_uuid: 8b39eaa5-881b-4430-8dca-022a82480f5a
 parent_backlog_id: 363
 artifacts: ["research", "spec", "plan", "review"]
 tags: [skill-value-scorecard]
+areas: [skills]
 created: 2026-07-03
-updated: 2026-07-03
+updated: 2026-08-07
 ---
 
 # [[363-reconcile-provisional-tail-verify-outcomes-into-master-candidatesjson-key-on-fileid|Reconcile provisional-tail verify outcomes into master_candidates.json (key on file,id)]]
