@@ -494,5 +494,55 @@ class TestFeedSnapshot(_RootTestCase):
             self.assertNotIn(archived_id, self.snapshot["active_ids"])
 
 
+class TestFeatureBacklogIds(_RootTestCase):
+    """``backlog_id`` must be a real ticket id, not the feature slug.
+
+    ``_feature_entry`` used to write the feature *slug* into ``backlog_id``
+    against a declared ``Optional[int]`` (``overnight/state.py``), so every
+    "backlog #N" card link would 404. This pins the corrected shape and that
+    each int actually resolves to a backlog file the seeder wrote.
+    """
+
+    def test_backlog_id_is_int_or_none_and_resolves_to_a_written_file(self):
+        self.seed(self.root)
+        state = json.loads(
+            (self.root / "cortex" / "lifecycle" / "overnight-state.json")
+            .read_text(encoding="utf-8")
+        )
+        backlog_names = {
+            p.name for p in (self.root / "cortex" / "backlog").glob("*.md")
+        }
+
+        saw_int = False
+        for slug, feature in state["features"].items():
+            backlog_id = feature["backlog_id"]
+            self.assertTrue(
+                backlog_id is None or isinstance(backlog_id, int),
+                f"{slug} backlog_id is {backlog_id!r}, neither int nor None",
+            )
+            if backlog_id is not None:
+                saw_int = True
+                self.assertTrue(
+                    any(
+                        name.startswith(f"{backlog_id:03d}-")
+                        for name in backlog_names
+                    ),
+                    f"{slug} backlog_id {backlog_id} matches no backlog file",
+                )
+        self.assertTrue(saw_int, "no seeded feature carried an int backlog_id")
+
+
+class TestFeatureArtifactCompleteness(_RootTestCase):
+    """The delta lifecycle directory holds all four reader-renderable kinds."""
+
+    def test_delta_directory_holds_all_four_artifact_kinds(self):
+        self.seed(self.root)
+        delta_dir = self.root / "cortex" / "lifecycle" / "seed-feature-delta"
+        for name in ("research.md", "spec.md", "plan.md", "review.md"):
+            self.assertTrue(
+                (delta_dir / name).is_file(), f"missing {name} in delta directory"
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

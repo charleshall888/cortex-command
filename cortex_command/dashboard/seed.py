@@ -141,9 +141,24 @@ _FEATURES = [
     ("seed-feature-zeta",  "deferred", 43, 25, None),
 ]
 
+# The backlog ticket each seeded feature corresponds to, by slug — the
+# ``_BACKLOG_ITEMS`` records for the first five feature slugs carry ids 1-5.
+# ``seed-feature-zeta`` has no ticket and stays ``None``, which is legitimate
+# per ``overnight/state.py``'s ``backlog_id: Optional[int]`` and is the
+# corpus's only coverage of the inert-link edge case.
+_FEATURE_BACKLOG_IDS = {
+    "seed-feature-alpha":   1,
+    "seed-feature-beta":    2,
+    "seed-feature-gamma":   3,
+    "seed-feature-delta":   4,
+    "seed-feature-epsilon": 5,
+    "seed-feature-zeta":    None,
+}
+
 
 def _feature_entry(slug: str, status: str, round_assigned: int,
-                   started_offset: float, completed_offset, error) -> dict:
+                   started_offset: float, completed_offset, error,
+                   backlog_id) -> dict:
     """Build a single feature entry for the overnight state features dict."""
     return {
         "status": status,
@@ -154,7 +169,7 @@ def _feature_entry(slug: str, status: str, round_assigned: int,
         "deferred_questions": 0,
         "spec_path": f"cortex/lifecycle/{slug}/spec.md",
         "plan_path": f"cortex/lifecycle/{slug}/plan.md",
-        "backlog_id": slug,
+        "backlog_id": backlog_id,
     }
 
 
@@ -187,6 +202,7 @@ def write_overnight_state(root: Path, session_dir: Path, session_id: str) -> Non
             started_offset,
             completed_offset,
             error,
+            _FEATURE_BACKLOG_IDS[slug],
         )
 
     # Round history: 3 entries
@@ -631,6 +647,105 @@ until the pool times out.
 Whether the quota is per-endpoint or shared across the API surface. Section 3.2
 of the source ticket references both, and the acceptance scaffolding assumes
 the opposite of what the plan task does — escalated rather than guessed.
+""",
+        "review.md": """\
+# Review: Implement rate limiting for export endpoints
+
+## Summary
+
+The token-bucket middleware skeleton is in place and covers the clock-skew
+edge case from the spec, but the per-endpoint-vs-shared-pool decision was
+never resolved before implementation paused, so the review stops short of a
+verdict on the open requirement.
+
+## Findings
+
+- **Monotonic refill source** — buckets refill against `time.monotonic()`
+  rather than wall time, matching the spec's clock-skew requirement.
+- **Budget header** — responses carry the remaining-budget header the spec
+  calls for, but only on the per-endpoint code path; the shared-pool path has
+  no equivalent yet, which is downstream of the same ambiguity the escalation
+  raised.
+- **Config-reload semantics** — a reload correctly leaves in-flight budget
+  untouched and applies the new ceiling from the next refill, as specified.
+
+## Verdict
+
+Held pending the escalation's answer. Re-review once the per-endpoint vs.
+shared-pool decision lands and the budget header is applied consistently
+across both paths.
+""",
+    },
+    "seed-feature-beta": {
+        "research.md": """\
+# Research: Migrate database schema to v2
+
+## Problem
+
+The v1 schema stores per-tenant configuration as a single JSON blob column,
+so any query that filters on a configuration field falls back to a full
+table scan. Three services now read that column, and each has grown its own
+ad hoc parsing of it.
+
+## Prior Art
+
+The ingest pipeline's v1-to-v1.1 migration (skills/migrate) used a dual-write
+period with a backfill job running alongside live traffic; it shipped without
+downtime and is the closest precedent to what this schema change would need.
+No prior migration in this codebase has changed a column's shape underneath
+three concurrent readers, which is what makes the backfill ordering the open
+question here.
+
+## Options Considered
+
+- **Big-bang migration** — take a maintenance window, migrate the table, cut
+  over all readers at once. Simplest to reason about; unacceptable downtime
+  for a tenant-facing table.
+- **Dual-write with backfill** — write both shapes during a transition
+  window, backfill history in the background, cut readers over once the
+  backfill catches up. More moving parts, but matches the ingest precedent
+  and needs no downtime.
+
+## Open Questions
+
+Whether the three existing readers can be cut over independently or must
+switch atomically is still open — the dual-write window has to stay open
+until the slowest reader migrates either way.
+""",
+        "spec.md": """\
+# Specification: Migrate database schema to v2
+
+## Problem Statement
+
+Per-tenant configuration lives in a single JSON blob column, so no query that
+filters on a configuration field can use an index; three services parse the
+blob independently, and each has drifted slightly from the others.
+
+## Requirements
+
+1. **Configuration fields promote to real columns.** The v2 table exposes
+   the fields every current reader filters on as first-class, indexed
+   columns rather than paths into a blob.
+2. **The migration is dual-write and backfilled**, not a single cutover: v1
+   and v2 shapes are written together for the duration of the migration, and
+   a background job backfills v2 from existing v1 rows.
+3. **Each reader cuts over independently.** No reader's migration blocks
+   another's; the dual-write window stays open until the last reader has
+   switched.
+
+## Edge Cases
+
+- **Backfill racing a live write** — the backfill job skips any row whose v1
+  update timestamp is newer than the backfill's own read, so a live write
+  never gets overwritten by stale backfilled data.
+- **A reader that never migrates** — the dual-write window has no forced end
+  date; v1 stays the source of truth until every reader has confirmed its
+  cutover.
+
+## Open Decisions
+
+None outstanding at spec time — this is the fixture that shows a spec with no
+carried-forward ambiguity, as against delta's escalated one.
 """,
     },
 }
@@ -1279,7 +1394,11 @@ _BACKLOG_ITEMS: list[dict] = [
         "title": "Add authentication to API gateway",
         "areas": ["dashboard", "docs"],
     },
-    # 002 — non-terminal blocker target for 007.
+    # 002 — non-terminal blocker target for 007. Also the fixture for the
+    # primary (``spec:``) artifact-join key: it points straight at a real
+    # spec.md rather than through lifecycle_slug probing, and — with no
+    # review.md — covers "directory holds only some kinds" alongside delta's
+    # full four-kind set.
     {
         "id": 2,
         "slug": "seed-feature-beta",
@@ -1287,6 +1406,7 @@ _BACKLOG_ITEMS: list[dict] = [
         "priority": "high",
         "type": "feature",
         "title": "Migrate database schema to v2",
+        "spec": "cortex/lifecycle/seed-feature-beta/spec.md",
     },
     # 003 — terminal status: present on disk, filtered out of active items.
     {
