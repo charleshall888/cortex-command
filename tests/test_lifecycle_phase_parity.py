@@ -64,6 +64,9 @@ GLUE_FIXTURES: list[tuple[str, int, int, int, str]] = [
     ("review", 5, 5, 1, "review"),
     ("complete", 5, 5, 1, "complete"),
     ("escalated", 0, 0, 1, "escalated"),
+    # The rework-cap discriminant is derived upstream in the detector, so the
+    # glue sees it as an already-discriminated base and passes it through whole.
+    ("escalated:rework-cap:2", 0, 0, 2, "escalated:rework-cap:2"),
     ("plan", 0, 0, 1, "plan"),
     ("specify", 0, 0, 1, "specify"),
 ]
@@ -343,6 +346,7 @@ _PARSER_WIRE_VALUES: list[str] = [
     "review",
     "complete",
     "escalated",
+    "escalated:rework-cap:2",
     "plan",
     "specify",
 ]
@@ -455,6 +459,10 @@ def _label_to_wire(label: str) -> str:
     m = re.fullmatch(r"Implement — rework \(review cycle (\d+)\)", label)
     if m:
         return f"implement-rework{paused_suffix}:{m.group(1)}"
+    # escalated:rework-cap:K -> "Escalated — rework cap reached (review cycle K)"
+    m = re.fullmatch(r"Escalated — rework cap reached \(review cycle (\d+)\)", label)
+    if m:
+        return f"escalated:rework-cap{paused_suffix}:{m.group(1)}"
     # Bare phase labels.
     bare = {
         "Research": "research",

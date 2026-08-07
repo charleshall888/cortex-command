@@ -36,6 +36,10 @@ class TestPhaseLabelNone(unittest.TestCase):
             ("implement-rework:2", "Implement — rework (review cycle 2)"),
             ("review", "Review"),
             ("escalated", "Escalated (REJECTED — needs user direction)"),
+            (
+                "escalated:rework-cap:2",
+                "Escalated — rework cap reached (review cycle 2)",
+            ),
             ("complete:awaiting-merge", "Complete (awaiting merge)"),
             ("complete", "Complete"),
             ("plan-paused", "Plan — paused"),

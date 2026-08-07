@@ -124,7 +124,14 @@ def test_plan_migration_sentinel_unlocks_in_flight(tmp_path: Path) -> None:
 
 
 def test_cycle_2_changes_requested_escalates(tmp_path: Path) -> None:
-    """Two review_verdict events with CHANGES_REQUESTED → cycle 2, phase=implement-rework."""
+    """Two review_verdict events with CHANGES_REQUESTED → cycle 2, the rework cap.
+
+    Cycle 2 is the rework cap, so the artifact fallback no longer routes a
+    second CHANGES_REQUESTED back into rework — it escalates, matching what
+    `review_verdict._route_target` has always routed. The discriminated
+    `escalated:rework-cap:<n>` phase records that this is a cap, not a
+    reviewer REJECTED verdict; `route` stays the bare machine state.
+    """
     fdir = tmp_path / "feature"
     fdir.mkdir()
     (fdir / "spec.md").write_text("spec body")
@@ -141,8 +148,9 @@ def test_cycle_2_changes_requested_escalates(tmp_path: Path) -> None:
     )
     result = detect_lifecycle_phase(fdir)
     assert result["cycle"] == 2
-    # review.md verdict drives the phase routing; CHANGES_REQUESTED → implement-rework.
-    assert result["phase"] == "implement-rework"
+    # At the cap, CHANGES_REQUESTED escalates — narrated as a cap, not a rejection.
+    assert result["phase"] == "escalated:rework-cap:2"
+    assert result["route"] == "escalated"
 
 
 def test_cycle_counter_ignores_review_md(tmp_path: Path) -> None:

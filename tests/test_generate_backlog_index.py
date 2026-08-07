@@ -306,3 +306,83 @@ class TestStatusSideParking:
         """A parked item is genuinely unfinished and must not read as terminal."""
         from cortex_command.common import TERMINAL_STATUSES
         assert "deferred" not in TERMINAL_STATUSES
+
+
+# ---------------------------------------------------------------------------
+# index.json `lifecycle_phase` stores the resolver's `route`, not its `phase`
+#
+# The live-detection branch (generate_index.py:199) is the only place a phase
+# value enters index.json from disk. It must read `route` — the bare machine
+# state — because two docs pin `lifecycle_phase` as a closed eight-value set
+# and downstream readers (morning-review report, dashboard merges) join on it.
+# A discriminated phase such as `escalated:rework-cap:2` would add a ninth
+# value. The classes above only ever exercise the terminal branch, so without
+# this class the `["route"]` read has zero coverage and a revert to `["phase"]`
+# would leak silently.
+# ---------------------------------------------------------------------------
+
+class TestLifecyclePhaseStoresRoute:
+    """A live lifecycle resolving to a discriminated phase indexes as its route."""
+
+    @staticmethod
+    def _rework_cap_corpus(tmp_path):
+        """Stage a non-terminal item whose lifecycle is at the rework cap.
+
+        Two `review_verdict` rows put the events-derived cycle at 2 — the cap —
+        so the resolver reports phase `escalated:rework-cap:2` with route
+        `escalated`. Mirrors the fixture in tests/test_lifecycle_auto_advance.py.
+        """
+        backlog_dir = tmp_path / "backlog"
+        backlog_dir.mkdir()
+        (backlog_dir / "1-capped-item.md").write_text(
+            "---\n"
+            "id: 1\n"
+            "title: Capped Item\n"
+            "status: in_progress\n"
+            "lifecycle_slug: capped-item\n"
+            "---\n\nbody\n",
+            encoding="utf-8",
+        )
+
+        lifecycle_dir = tmp_path / "lifecycle"
+        fdir = lifecycle_dir / "capped-item"
+        fdir.mkdir(parents=True)
+        (fdir / "spec.md").write_text("spec body", encoding="utf-8")
+        (fdir / "plan.md").write_text("- **Status**: [x]\n", encoding="utf-8")
+        (fdir / "review.md").write_text('{"verdict": "CHANGES_REQUESTED"}', encoding="utf-8")
+        (fdir / "events.log").write_text(
+            "\n".join(
+                json.dumps(row)
+                for row in (
+                    {"event": "spec_approved", "feature": "capped-item"},
+                    {"event": "plan_approved", "feature": "capped-item"},
+                    {"event": "review_verdict", "verdict": "CHANGES_REQUESTED", "cycle": 1},
+                    {"event": "review_verdict", "verdict": "CHANGES_REQUESTED", "cycle": 2},
+                )
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        return backlog_dir, lifecycle_dir, fdir
+
+    def test_fixture_actually_reaches_the_discriminated_phase(self, tmp_path):
+        """Guard the guard: if the resolver stops reporting the cap form here,
+        the assertion below would pass vacuously against a bare `escalated`."""
+        from cortex_command.common import resolve_lifecycle_phase
+        _, _, fdir = self._rework_cap_corpus(tmp_path)
+        resolved = resolve_lifecycle_phase(fdir)
+        assert resolved["phase"] == "escalated:rework-cap:2"
+        assert resolved["route"] == "escalated"
+
+    def test_indexed_phase_is_the_bare_route_not_the_discriminant(self, tmp_path):
+        """index.json carries `escalated`, keeping the closed set at eight values."""
+        backlog_dir, lifecycle_dir, _ = self._rework_cap_corpus(tmp_path)
+        active, _, _, _ = _gen_index.collect_items(backlog_dir, lifecycle_dir)
+        assert len(active) == 1
+        assert active[0]["lifecycle_phase"] == "escalated"
+
+    def test_indexed_phase_carries_no_discriminant_suffix(self, tmp_path):
+        """Stated as an absence too, so a future third form fails here as well."""
+        backlog_dir, lifecycle_dir, _ = self._rework_cap_corpus(tmp_path)
+        active, _, _, _ = _gen_index.collect_items(backlog_dir, lifecycle_dir)
+        assert ":" not in (active[0]["lifecycle_phase"] or "")
