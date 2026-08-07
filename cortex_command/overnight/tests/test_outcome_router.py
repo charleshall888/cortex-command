@@ -1807,9 +1807,11 @@ class TestHomeMergeWorktreeCollision(unittest.IsolatedAsyncioTestCase):
         ``-lazy-`` name that every other caller's recorded path would miss.
 
         Runs against a real git repo: the recovery goes through
-        ``git worktree add``, which fails with "already checked out at"
-        against the stale tracking the deletion left behind, so the
-        prune-and-retry arm has to run for real."""
+        ``git worktree add``, which fails with "missing but already registered"
+        against the stale tracking the deletion left behind, so the recovery
+        arm has to run for real. (Asking for the SAME path back is the shape
+        that emits that wording; git 2.55 does not emit "already checked out
+        at" for any collision shape.)"""
         from cortex_command.overnight.state import _normalize_repo_key
 
         with tempfile.TemporaryDirectory() as _td:
@@ -1828,6 +1830,24 @@ class TestHomeMergeWorktreeCollision(unittest.IsolatedAsyncioTestCase):
             )
             ctx.home_repo_path = home
             ctx.integration_branches[_normalize_repo_key(str(home))] = base_branch
+
+            # The degraded-flag write reads and re-saves the state file; with
+            # no file on disk it raises into the producer's bare
+            # ``except Exception: pass`` and the flag is silently never set.
+            from cortex_command.overnight.state import (
+                OvernightState,
+                load_state,
+                save_state,
+            )
+
+            save_state(
+                OvernightState(
+                    session_id=session_id,
+                    plan_ref="plan.md",
+                    worktree_path=str(wt),
+                ),
+                ctx.config.overnight_state_path,
+            )
 
             # The purge.
             shutil.rmtree(wt)
@@ -1850,6 +1870,16 @@ class TestHomeMergeWorktreeCollision(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(len(missing), 1)
             self.assertEqual(missing[0]["details"]["context"], "merge_target")
             self.assertIs(missing[0]["details"]["recreated"], True)
+
+            # Spec Req 9's producer half: the session is marked degraded even
+            # though re-creation succeeded, so a self-healed run stays
+            # distinguishable from a clean one. The write lives in a bare
+            # ``except Exception: pass``, so without this assertion a
+            # regression there is silent to the suite.
+            self.assertIs(
+                load_state(ctx.config.overnight_state_path).integration_degraded,
+                True,
+            )
 
     async def test_recreated_worktree_still_merges(self):
         """Req 5 — a recoverable purge is NOT collateral damage of the deferral
