@@ -519,7 +519,7 @@ def test_in_flight_child_is_listed_without_a_route_verb() -> None:
         "\n"
         "1 in flight\n"
         "\n"
-        "- **301** Work in flight — in-progress\n"
+        "- **301** Work in flight — in_progress\n"
     )
     assert flat == []
 

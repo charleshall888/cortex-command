@@ -293,17 +293,23 @@ def _render_epic_block(
         elif _norm_status(child) == "blocked":
             marks.append("[blocked]")
         lines.append(
-            f"- **{child['id']}** {child['title']} — {_norm_status(child) or '?'} "
+            f"- **{child['id']}** {child['title']} — {child.get('status') or '?'} "
             + " ".join(marks)
         )
     for child in buckets[HELD] + buckets[PARKED]:
+        # Classify on the normalized status, display the raw one: an operator
+        # comparing a row against the ticket's frontmatter must see the same
+        # string in both places.
         status = _norm_status(child)
         # No route verb: neither an in-flight nor a parked child is something to
         # pick up. The status word usually says which it is on its own; the mark
         # exists for the tag-parked item whose status still reads `backlog`.
         self_describing = status in _HELD_STATUSES or status == "deferred"
         mark = "" if self_describing else f" [{_classify(child)}]"
-        lines.append(f"- **{child['id']}** {child['title']} — {status or '?'}{mark}")
+        lines.append(
+            f"- **{child['id']}** {child['title']} — "
+            f"{child.get('status') or '?'}{mark}"
+        )
 
     if not workable:
         return lines
