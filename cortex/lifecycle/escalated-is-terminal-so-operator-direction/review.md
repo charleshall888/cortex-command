@@ -1,237 +1,135 @@
-# Review: escalated-is-terminal-so-operator-direction (cycle 1)
+# Review: escalated-is-terminal-so-operator-direction (cycle 2)
 
 **Tier**: moderate → Stage 1 (spec compliance) only. Stage 2 (code quality) is complex-only and was **skipped**.
-**Diff base**: `dfe213b9`. Feature commits: `a16d8be1`, `41b9590c`, `957a1a86`, `e1009a2a`, `7b08ccb2`, `0727cf75`, `2a4fb715`, `7e2db067`, `1e2c780c`, `e2c517b4`, `c4ce1a69`, `2abba4f4`. The concurrent session's commits (`fcda6ae6`, `86d18c90`, `a1318376`, `ad818a65`) and files (`cortex/backlog/464-467*`, `cortex/lifecycle/a-rework-re-review-re-reads/*`) were excluded and not reviewed.
-**Test baseline (consumed, not re-run)**: `just test` → `Test suite: 8/8 passed`, zero `[FAIL]` lines.
-**Requirements loaded**: `project.md`, `glossary.md` (auto), plus `observability.md` read manually — see Requirements Drift for why the auto-load missed an area doc.
+**Scope**: narrow re-review of cycle 1's two additive issues. Rework commits reviewed: `24aa71aa`, `211948de`, `64fff4bb`.
+**Test baseline (consumed, not re-run)**: `just test` → `Test suite: 8/8 passed`, zero `[FAIL]`, exit 0.
 
 ---
 
-## Stage 1 — Spec compliance
-
-Every acceptance clause below was executed against the working tree. Where an "at base" column appears, the same check was re-run against the pre-feature code extracted with `git show dfe213b9:<path>` into a scratchpad and loaded via `importlib`, so a PASS is only recorded when the check demonstrably discriminates.
-
-### R1 — The encoder distinguishes the two intents — **PASS**
-
-Ran (the spec's literal command passes a `str`; `detect_lifecycle_phase` requires a `Path`, so a `Path` was substituted — cosmetic):
+## Source is unchanged, so R1–R9 stand
 
 ```
-uv run python -c "from pathlib import Path; from cortex_command.common import detect_lifecycle_phase; ..."
-  cap fixture   -> phase=escalated:rework-cap:2  route=escalated  cycle=2
-  REJECTED x2   -> phase=escalated               route=escalated  cycle=2
-  cycle-1 CR    -> phase=implement-rework        route=implement-rework  cycle=1
-```
+git diff --name-only cdcf9be3..HEAD
+  cortex_command/lifecycle/review_brief.py          <- NOT this feature (see below)
+  cortex_command/lifecycle/tests/test_next_verb.py
+  cortex_command/lifecycle/tests/test_resolve.py
+  tests/test_hooks_scan_lifecycle.py
+  tests/test_lifecycle_phase_parity.py
+  tests/test_lifecycle_phase_resolver.py
 
-The two strings differ. **Could it have failed?** Yes — at `dfe213b9` the same cap fixture returns `phase=implement-rework, route=implement-rework, cycle=2`, so the criterion fails at base. Non-vacuous.
-
-Design note: the discriminant rides `phase` only; `route` stays the bare machine state (`common.py` `_result(phase, route=None)`), which is what makes R3 hold structurally.
-
-### R2 — The machine state is unchanged — **PASS (vacuous by construction, independently corroborated)**
-
-```
-git diff --stat dfe213b9 -- cortex_command/lifecycle/transition_table.py cortex_command/lifecycle/review_verdict.py
+git diff --stat cdcf9be3..HEAD -- cortex_command/common.py \
+  cortex_command/hooks/scan_lifecycle.py cortex_command/phase_labels.py \
+  cortex_command/lifecycle/resolve.py cortex_command/lifecycle/next_verb.py \
+  claude/statusline.sh cortex_command/backlog/generate_index.py plugins/
   -> (empty)
-git diff --stat -- <same two files>            # working tree vs HEAD
-  -> (empty)
-uv run pytest tests/test_transition_table.py cortex_command/lifecycle/tests/test_transition_table.py -q
-  -> 40 passed
 ```
 
-**Could it have failed?** Not as written — an absence assertion holds at base by construction, exactly as flagged. Corroborated three other ways rather than relying on it: (a) both files are byte-identical to `dfe213b9`; (b) the end-to-end `next` envelope on a capped feature still reports `"state": "escalated"`, `evidence_trace[0].terminal = true`, `path_overview.outgoing = []` — one terminal state, zero outgoing edges; (c) `next_verb.KNOWN_STATES` (`:125`) and `_MACHINE_STATE_NAMES` (`common.py:543`) are untouched and the resolver tests that pin them equal to the table pass. No state added, no `terminal` flag flipped, no transition row touched.
+Every source file this feature edits is byte-identical to the tree that cycle 1 rated all-PASS. R1–R9 therefore stand as rated and were not re-audited.
 
-### R3 — Every exact-match consumer of the bare `escalated` string still matches — **PASS**
-
-Clause 1:
-```
-uv run python -c "from cortex_command.hooks.scan_lifecycle import _is_terminal_mismatch; ..."
-  -> True True
-```
-**Could it have failed?** Yes — at base the same call prints `False True`. The `or events_phase.startswith("escalated:")` clause (`scan_lifecycle.py:211`) is load-bearing.
-
-Clause 2 (`-paused` suppression), run on a cap fixture that also carries a `feature_paused` row after a `phase_transition to=escalated`:
-```
-uv run python -c "... resolve_lifecycle_phase(Path(d))['phase'].endswith('-paused')"
-  -> False        (phase=escalated:rework-cap:2, route=escalated, paused=False)
-uv run pytest tests/test_lifecycle_phase_resolver.py -q  -> 9 passed
-```
-**Could it have failed?** Two answers, and both matter:
-- **Against the base commit: no.** At `dfe213b9` the same input yields `phase='escalated'`, which also does not end in `-paused`. `escalated` ∈ `_EVENTS_TERMINAL_STATES` (`frozenset({'complete','escalated','cancelled'})`), so `is_paused` is unconditionally `False` on this path. The suspicion in the review brief is **confirmed** for the base tree.
-- **Against a plausible alternative implementation: yes.** The clause is not structurally unreachable — it is guarded by a specific choice. I built a variant of the current `common.py` computing `is_paused = raw_paused and served_phase not in _EVENTS_TERMINAL_STATES` (i.e. testing the discriminated string rather than `machine_state`) and the same input yields `phase='escalated:rework-cap:2-paused'`. So the criterion does discriminate between the implementation shipped and an easy mis-implementation of it; it just cannot discriminate against "no change at all."
-- The bash mirror is falsifiable outright: with the `escalated:*` arm removed from the paused-eligibility case (`statusline.sh:500`), the ladder emits `escalated-paused:rework-cap:2`. With it, `escalated:rework-cap:2`. The spec's Edge Case ("the `-paused` suffix starts being appended to a terminal state") was a real hazard on the bash side and is genuinely closed there.
-
-Sweep residue (the interactive/session-dependent half). `rg -n '"escalated"' --type py cortex_command/ hooks/` and the single-quoted variant return no hit outside the set the plan pre-analysed. Every remaining non-test hit is correctly left exact: `transition_table.py:104/364/366` and `review_verdict.py:89/163/169` (machine-state names; R2 forbids edits), `next_verb.py:125` (`KNOWN_STATES`, bare states only), `common.py:373` (now reads `route`), `common.py:543/550` (`_MACHINE_STATE_NAMES` / `_EVENTS_TERMINAL_STATES`, both tested against `machine_state`, which stays bare), `common.py:649` (the new guard itself). `advance.py` carries no `"escalated"` literal at all (the plan's cited `:280`/`:1070` from-state gate does not name it), so there is nothing to normalize there. One consumer beyond the spec's named two was found and fixed as its own requirement-adjacent task — `generate_index.py`, see R7 note below. I found no missed consumer.
-
-### R4 — A cycle-≥2 `CHANGES_REQUESTED` fixture exists — **PASS**
-
-```
-tests/fixtures/lifecycle_phase_parity/review-changes-requested-cycle2/
-  events.log  : 2 x {"event": "review_verdict"}, 0 x phase_transition/feature_complete/feature_wontfix/feature_paused
-  review.md   : 1 x "verdict" (CHANGES_REQUESTED, cycle 2)
-  ls          : exactly `events.log review.md`
-uv run pytest tests/test_lifecycle_phase_parity.py -q  -> 55 passed
-uv run pytest tests/test_lifecycle_phase_parity.py -q -k review-changes-requested-cycle2  -> 2 passed
-```
-
-**Could it have failed?** Yes, and it did once: the fixture as first committed (`a16d8be1`) carried no `events.log`, resolved to cycle 1, and could never reach the cap form. It was amended in `0727cf75` after the cycle-source correction. The `-k` selection returning exactly `2 passed` confirms the `iterdir()` parametrization picked the new directory up in both fixture-parametrized subtests (ladder + hook end-to-end) with no registration.
-
-### R5 — `phase_labels.phase_label` renders both cases distinctly — **PASS**
-
-```
-uv run python -c "from cortex_command.phase_labels import phase_label as p; ..."
-  'Escalated — rework cap reached (review cycle 2)'
-  'Escalated (REJECTED — needs user direction)'
-  differ=True  verbatim=False  'REJECTED' in cap=False  'REJECTED' in bare=True
-```
-
-Both non-empty, neither describes the other's cause, neither is the raw wire value. The module stays import-free and pure (no new imports in the diff; `phase_labels.py` gained 4 lines, all string logic). **Could it have failed?** Yes — the branch is new (`phase_labels.py:74-76`); at base the cap string falls through to the verbatim arm and returns `'escalated:rework-cap:2'`.
-
-### R6 — `scan_lifecycle`'s SessionStart hint names the real cause — **PASS (spec command names a nonexistent symbol)**
-
-The spec's acceptance command calls `scan_lifecycle._next_step_hint`, which does not exist in the repo — confirmed: `hasattr(scan_lifecycle, '_next_step_hint')` is `False`. The function at the cited lines is `_interrupted_hint`. The plan recorded this as a spec defect and used the real name; R6's *intent* is therefore testable and was tested, but its *literal* command is not runnable.
-
-```
-uv run python -c "from cortex_command.hooks.scan_lifecycle import _interrupted_hint as h; ..."
-  CAP: Action needed: rework cap reached at review cycle 2. See cortex/lifecycle/demo/review.md
-       for analysis. Recorded way to authorize another pass: cortex-lifecycle-event log
-       --event <name> --feature demo (the sanctioned out-of-band hand-append).
-  REJ: Action needed: review returned REJECTED. See cortex/lifecycle/demo/review.md for analysis.
-  differ=True  'REJECTED' in cap=False  cycle named=True
-```
-
-Two different hints; the cap hint contains no `REJECTED`, names the cycle, points at `review.md`, and names the sanctioned override — matching the shape of the `implement-rework:` hint above it. The rejection branch is byte-unchanged. **Could it have failed?** Yes — the branch is new; at base the cap string reaches the `== "escalated"` arm and produces the REJECTED text verbatim.
-
-### R7 — `claude/statusline.sh` mirrors the Python canon — **PASS**
-
-```
-uv run pytest tests/test_lifecycle_phase_parity.py -q  -> 55 passed
-```
-
-The acceptance clause as written ("the parity test passes") holds trivially on a tree with no fixture, so I verified the substance directly through the test's own ladder harness:
-
-```
-HEAD ladder, 2 review_verdict rows   -> escalated:rework-cap:2
-HEAD ladder, 1 row                   -> implement-rework
-HEAD ladder, no events.log at all    -> implement-rework      (absent-file guard holds under set -euo pipefail)
-HEAD ladder, REJECTED x2             -> escalated             (rejection wins at any cycle)
-HEAD ladder, R4 fixture              -> escalated:rework-cap:2
-BASE ladder, R4 fixture              -> implement-rework
-```
-
-The last two lines are the proof the criterion is not vacuous: with the base `statusline.sh` and the new Python encoder, `test_statusline_ladder_matches_canonical[review-changes-requested-cycle2]` compares `implement-rework` against `escalated:rework-cap:2` and **fails**. The bash edit is load-bearing and the parity invariant is genuinely exercised, exactly as R7 claims. Downstream renders confirmed too: parser emits `Escalated (rework cap)` for the cap form and `Escalated` for bare, so no raw wire value reaches the `*)` arm; the icon arm (`escalated|escalated:*`) and the group-key normalization (`escalated:*) → escalated`) are both present. Measured statusline invocation: **116 ms** — comfortably inside observability.md's 500 ms budget despite the added `grep -c` per feature.
-
-Cycle counted from `events.log` `review_verdict` rows on both sides, so bash and Python cannot desync — the correction recorded in the plan's Risks was applied here.
-
-### R8 — `resolve.py`'s served directive names the real cause — **PASS, and the end-to-end wiring is genuinely proven**
-
-This was the flagged weak spot: every task verification exercised private helpers (`_next_for_route`, `_terminal_directive`) with hand-supplied phase strings, never R8's actual acceptance. I ran R8 as written. Built two throwaway lifecycles in a scratchpad git repo (nothing created under `cortex/lifecycle/`):
-
-```
-cd <scratchpad>/r8repo
-uv run python -m cortex_command.lifecycle.next_verb capped-demo
-  state: escalated
-  fragment_ref.directive: "The rework cap was reached without a reviewer rejection — present
-    the review findings and ask the user for direction. The recorded way to authorize another
-    pass is the sanctioned override: cortex-lifecycle-event log --event <name> --feature <slug>
-    (the sanctioned out-of-band hand-append)."
-  'REJECTED' in directive: False
-
-uv run python -m cortex_command.lifecycle.next_verb rejected-demo
-  state: escalated
-  fragment_ref.directive: "review.md is REJECTED — present the reviewer analysis and ask the
-    user for direction."
-  'REJECTED' in directive: True
-```
-
-**The wiring really does thread the discriminated phase through** — not only the helpers. The full chain is live: `resolve_invocation` → `resolved["phase"]` → `build_served_envelope(phase=...)` (`next_verb.py:522`) → `_terminal_directive(state, phase)` → `resolve_mod._PHASE_NEXT`. Served `state` stays the bare `escalated` and `legacy_display_phase` stays `escalated`, so no wire contract widened. Verified against both the events-authoritative path (a `phase_transition to=escalated` row present) and the artifact-only legacy fallback (no machine rows) — both serve the cap directive.
-
-**Could it have failed?** Yes. `_PHASE_NEXT` does not exist at `dfe213b9` and `_terminal_directive` took no phase argument, so `capped-demo` would have served the `_ROUTE_NEXT["escalated"]` REJECTED text. Also verified the `--phase` override guard: `_next_for_route('escalated', True, 'escalated:rework-cap:2')` falls back to the route-keyed REJECTED directive, as the plan specified.
-
-### R9 — The dashboard's phase filter renders both — **PASS**
-
-```
-uv run pytest cortex_command/dashboard/tests/ -q  -> 311 passed, 154 subtests passed
-```
-
-Traced the actual dashboard data path rather than relying on R5: `dashboard/data.py:319` calls `resolve_lifecycle_phase(feature_dir)` and sets `current_phase = detector["phase"]` — the discriminated string — which the three templates render through the `phase_label` filter registered at `app.py:212-213`.
-
-```
-parse_feature_events('review-changes-requested-cycle2', <parity fixtures>)
-  current_phase        -> escalated:rework-cap:2
-  templates.env.filters['phase_label'](current_phase)
-                       -> 'Escalated — rework cap reached (review cycle 2)'
-  is verbatim?         -> False
-```
-
-Filter resolves to `cortex_command.phase_labels.phase_label`. No raw wire value reaches the operator. The one other `current_phase` consumer, the slow-phase classifier (`data.py:1829`), strips `-paused` and matches on `implement`/`implement-rework`/`review`; the cap form falls to its `continue` arm exactly as bare `escalated` already did — no behaviour change there.
+**The one non-test file in the range is not this feature's and does not invalidate the narrow scope.** `cortex_command/lifecycle/review_brief.py` arrives whole in `4c61e56c` ("Add the review-brief module behind the new lifecycle verb", 699 insertions / 0 deletions) — the concurrent session's ticket 455 work, explicitly out of scope. It is a brand-new module, `pyproject.toml` is unchanged, and `grep -rn review_brief` finds **zero importers** anywhere in `cortex_command/`, `hooks/`, `bin/`, `claude/`, or `tests/`. It cannot reach any surface R1–R9 rate. Flagging it because the instruction demanded it be flagged loudly, not because it moves the verdict.
 
 ---
 
-## Plan-execution audit
+## Issue 1 — five uncovered branches: **RESOLVED**
 
-**Per-task Verification steps: all eight re-executed and all hold.** Task 1 (three detector cases + three resolver booleans), Task 2 (four fixture greps: 2 / 0 / ≥1 / exactly two files), Task 3, Task 4, Task 5 (both halves — `next_verb` three booleans and `resolve` two), Task 6 (three ladder cases), Task 7 (`route` read = 1, `removesuffix("-paused")` = 0), Task 8 (suite green, targeted pytest green, `-k` selection = `2 passed`, R2 diff empty). No task's Verification is claimed-but-false.
+Mutation-tested independently. Method: `git archive HEAD | tar -x` into a scratchpad copy, so **no mutation ever touched the live repo** (a concurrent session is active). Each source revert was applied to the copy with a targeted Python string replace and restored by re-materialising the blob from `git show HEAD:<path>`; every restore was verified with `diff <(git show HEAD:<path>) <copy>`. Baseline in the copy: 159 passed across the five test files.
 
-**The mid-implement correction left no task inconsistent with the final code.** The cycle source was corrected in `7b08ccb2` (plan) before Tasks 1, 2-amended, and 6 landed (`2a4fb715`, `0727cf75`, `1e2c780c`), and all three read `review_verdict` rows from `events.log`. The one commit built on the wrong premise (`a16d8be1`, the events-log-free fixture) was superseded by `0727cf75`. Task 5 was split across `7e2db067` and `e2c517b4` ("Key the rework-cap directive by phase, not by route"), and the final shape matches the plan's amended Context. Two residues of the correction were **not** cleaned up — see issue 2 below.
+| Cycle-1 branch | Mutation applied | Result |
+| --- | --- | --- |
+| `_interrupted_hint` rework-cap branch | deleted the whole `startswith("escalated:rework-cap:")` block | **FAILED** `test_interrupted_hint_rework_cap` (1 failed, 42 passed) |
+| `_is_terminal_mismatch`'s `startswith("escalated:")` | deleted that `or` clause | **FAILED** `test_resolver_rework_cap_phase_is_terminal_to_the_detector` (1 failed, 52 passed) |
+| `resolve._PHASE_NEXT` | (a) lookup → `_ROUTE_NEXT.get(route, …)`; (b) symbol deleted outright | (a) **FAILED** both new `test_resolve.py` tests; (b) **COLLECTION ERROR** on `test_resolve.py` (the import pins the symbol) |
+| `_next_for_route`'s third `phase` parameter | (a) dropped the 3rd arg at the `resolve.py:298` call site; (b) removed the parameter from the signature | (a) **FAILED** `test_rework_cap_resume_serves_the_phase_keyed_directive`; (b) **TypeError → FAILED** both new tests |
+| `_terminal_directive`'s `phase` argument | `_terminal_directive(state, phase)` → `_terminal_directive(state)` | **FAILED** `test_rework_cap_escalation_serves_a_non_rejection_directive` |
 
-**Behaviour change beyond the spec's letter, correctly flagged in the plan's Risks and worth restating here:** Task 1 modifies an existing rung. A cycle-≥2 `CHANGES_REQUESTED` feature on the legacy artifact-fallback path (no machine rows) previously resolved to the non-terminal `implement-rework` and now resolves to terminal `escalated` with zero outgoing edges — confirmed end-to-end on an artifact-only lifecycle. This is compelled by R1's acceptance and aligns the fallback with what `review_verdict._route_target` has always routed, so I read it as correct; but the spec's *Changes to Existing Behavior* describes it only as "the encoder emits a discriminated form," which understates it. Not a defect in the code.
+Cycle 1's stated bar — "a revert of any of the five lands the suite green" — is no longer true for any of the five. The commit's mutation claims are accurate as written.
 
-**Residual risk: five of the change's new branches have zero automated coverage.** Confirmed by grep across the whole test corpus:
+**Assertion quality: good, not merely deletion-detecting.** Four *plausible-wrong-implementation* mutations (not reverts) were also run, and all four were caught:
 
-| Branch | Covered by a test? |
+| Plausible wrong implementation | Result |
 | --- | --- |
-| detector cap rung (`common.py:418`) | yes — `test_lifecycle_auto_advance.py:152`, parity glue/ladder/e2e |
-| resolver discriminant adoption (`common.py:649`) | yes — `test_generate_backlog_index.py:374` |
-| `phase_label` cap branch | yes — `test_phase_labels_none.py:40`, `_label_to_wire` round-trip |
-| `generate_index` `route` read | yes — new `TestLifecyclePhaseStoresRoute` class |
-| statusline ladder + parser + paused guard | yes — parity ladder / `_PARSER_WIRE_VALUES` |
-| **`_interrupted_hint` cap branch** | **no** |
-| **`_is_terminal_mismatch`'s `startswith("escalated:")`** | **no** — no test passes an `escalated:` value to it |
-| **`resolve._PHASE_NEXT`** | **no** |
-| **`_next_for_route`'s third parameter** | **no** |
-| **`_terminal_directive`'s `phase` argument** | **no** |
+| `_PHASE_NEXT` cap text replaced by the rejection text (copy-paste error) | **3 tests FAILED** |
+| override guard dropped (`not phase_overridden` removed — discriminant trusted under `--phase`) | **FAILED** `test_rework_cap_directive_yields_to_an_explicit_phase_override` |
+| `_terminal_directive` returns the cap directive unconditionally | **FAILED** `test_rework_cap_escalation_serves_a_non_rejection_directive` |
+| cap hint drops the cycle number from its text | **FAILED** `test_interrupted_hint_rework_cap` |
 
-The two uncovered narration surfaces are the SessionStart hint and the served `next` directive — two of the four surfaces this ticket exists to fix, and among the highest-frequency operator surfaces in the harness. A revert of any of the five lands green. The implementer applied exactly the opposite standard one task earlier, writing a bespoke test class for `generate_index` on the stated reasoning that "without this class the `["route"]` read has zero coverage and a revert to `["phase"]` would leak silently." That reasoning transfers verbatim and was not applied.
+**Self-sealing check.** `test_rework_cap_directive_yields_to_an_explicit_phase_override` does contain three clauses that compare the implementation against itself (`_ROUTE_NEXT["escalated"] in overridden`, `_PHASE_NEXT["escalated:rework-cap"] not in overridden`, and an `== _PHASE_NEXT[...]` equality). Each is paired with a content-anchored assertion in the same test, and the copy-paste mutation above proves the pairing holds — that test failed on Q1, so it is not self-sealing in practice. `test_resolve`'s resume test and `test_next_verb`'s envelope test both anchor on literal content (`"rework cap" in`, `"REJECTED" not in`) rather than on the tables, which is the right choice.
+
+**Residual (new, not cycle 1's): a sixth branch on the same path has zero coverage.** `next_verb.py:525` — `phase=resolved.get("phase")` inside the `build_served_envelope(...)` call — is the *only* wiring that carries the discriminated phase from `resolve_invocation` into the served envelope. Deleting that one line:
+
+```
+uv run pytest cortex_command/lifecycle/tests/ tests/test_hooks_scan_lifecycle.py \
+  tests/test_lifecycle_phase_resolver.py tests/test_lifecycle_phase_parity.py -q
+  -> 567 passed          (green)
+
+# but at the CLI, on a real capped lifecycle:
+HEAD:  state=escalated | REJECTED in directive: False | "rework cap" in directive: True
+Q5:    state=escalated | REJECTED in directive: True  | "rework cap" in directive: False
+```
+
+`build_served_envelope` has exactly two references (its `def` and this one call), so this is the sole production path and removing the argument reinstates the precise bug ticket 454 exists to fix, silently. The new `test_next_verb` test covers `build_served_envelope(phase=…)` → `_terminal_directive`, and the new `test_resolve` test covers `resolve_invocation` → `next`, but nothing covers the hop between them. Cycle 1 did not name this branch and the code is correct (cycle 1 proved it end-to-end by hand), so this is a coverage follow-up, not a ship blocker — recorded in `issues` below.
+
+---
+
+## Issue 2 — stale cycle-blindness prose: **RESOLVED, with an incomplete correction**
+
+All three locations cycle 1 named are now accurate: the module docstring (`:19-27`), the R12b comment block's exclusion statement (`:124-132`), and both test docstrings (`:279-285`, `:318-332`).
+
+**The orchestrator's correction (`64fff4bb`) is accurate in every clause, verified independently.**
+
+- *"the `review-changes-requested-cycle2` fixture DOES land on that arm"* — true. The fixture is in `_ladder_fixture_dirs` (an `iterdir()` sweep), and `detect_lifecycle_phase` returns `escalated:rework-cap:2` for it.
+- *"the cycle is compared there rather than excluded"* — true, and for the stated reason. The test's only phase assertion is `parsed_phase == canonical_phase`; `_parse_statusline_phase` returns bare-phase wire strings whole, so the `:2` suffix is inside the compared value. The `cycle` *field* is still never compared — the docstring says exactly that ("because the cycle rides inside the phase string rather than the separate `cycle` field"), so this is precise, not overstated.
+- *"Reverting the ladder's `review_verdict` count fails this subtest on that fixture"* — **re-run and confirmed, two ways.** Deleting the `[ "$_lc_cycle" -ge 2 ]` branch, and separately neutralising just the `grep -c '"event"…"review_verdict"'` capture, each produce `FAILED tests/test_lifecycle_phase_parity.py::test_statusline_ladder_matches_canonical[review-changes-requested-cycle2]` (1 failed, 14 passed) with the diagnostic `emitted 'implement-rework' … canonical returned 'escalated:rework-cap:2'`. `claude/statusline.sh` restored and diff-verified clean.
+
+**But `64fff4bb` fixed only one of the two places `211948de` introduced the false claim.** The R12b comment block still says, at `:133-136`:
+
+```
+# reaches 2. None of the fixtures this parametrized test runs against land
+# on that arm, so the ladder-vs-canonical comparison below still never
+# compares cycle in practice — but that is fixture coverage, not a
+# statement that the ladder is cycle-blind in general.
+```
+
+That is the same sentence the orchestrator identified as false and corrected 180 lines lower, and the mutation above disproves it directly: the cycle2 fixture does land on that arm, and the ladder-vs-canonical comparison does compare the cycle. The file now contradicts itself — an accurate docstring at `:326` and a false comment at `:133`. Its harm is the mirror image of the original stale prose: an author trusting `:133-136` would conclude the parity ladder does not cover the cap arm and could delete the fixture or add redundant coverage. Comment-only, four lines, one-line fix; recorded in `issues` rather than escalated.
+
+**No other stale cycle-blindness prose remains.** `grep -rn 'cycle-blind' / 'never .cycle' / 'reads only'` across `tests/`, `cortex_command/`, `claude/`, `docs/`, `hooks/`, `skills/`, `plugins/` returns only: the four correctly-narrowed hits in `test_lifecycle_phase_parity.py`; `cortex_command/overnight/outcome_router.py:2038` ("keys off the verdict string, never `cycle`"), which is about the outcome router's ERROR-vs-REJECTED discrimination and is unrelated and still true; and four unrelated "reads only" hits (`test_skill_handoff.py`, `session_marker.py`, `transition_table.py`, `dashboard/tests/test_templates.py`).
+
+**Accepted, recorded residue (not an issue):** `spec.md:60`'s Technical Constraint ("Any part of the discriminant derived from `events.log` rather than `review.md` would be invisible to it") remains wrong in its rationale, by operator decision. `plan.md:124` records the correction and why R7's acceptance still holds.
+
+---
+
+## Regressions
+
+**None.** Verified rather than assumed:
+
+- `24aa71aa` is `166 insertions, 0 deletions` across four test files — purely additive, no existing test touched.
+- `211948de` + `64fff4bb` are comment- and docstring-only. Filtering the parity diff to non-comment, non-docstring-prose lines returns nothing; no `assert`, `def`, `parametrize`, `GLUE_FIXTURES`, or `_PARSER_WIRE_VALUES` line was added, removed, or altered; the only `assert`-matching deletion in the whole range is the prose word "asserts" inside a reflowed docstring sentence. No fixture file changed.
+- Targeted re-runs in the pristine copy: 159 passed across the five changed test files; 567 passed across `cortex_command/lifecycle/tests/` + the three `tests/` files; `tests/test_lifecycle_phase_parity.py` 55 passed. No weakened or deleted pre-existing assertion.
+- Live repo confirmed untouched by this review: `git diff --stat -- cortex_command/ claude/ tests/ hooks/ skills/ plugins/ bin/` is empty, and nothing is staged. The only working-tree changes are the concurrent session's backlog edits and this feature's `events.log`.
 
 ---
 
 ## Requirements Drift
 
-- **State**: `detected`
+- **State**: `none`
 - **Findings**:
-  - **No `cortex/requirements/lifecycle.md` exists, and `project.md`'s `## Conditional Loading` map has no lifecycle route.** Ticket 454 declares `areas: ['lifecycle']`; `cortex-load-requirements --feature escalated-is-terminal-so-operator-direction` printed `no area docs matched for tags: [lifecycle, review, escalation, state-machine]; loaded project.md only`. This is a silent gap, not a benign fallback: the lifecycle state machine, phase vocabulary, and served-verb class — the subsystem this whole feature edits — are governed only by scattered bullets in `project.md`'s Architectural Constraints. `observability.md` *does* govern part of the change (it names `claude/statusline.sh` as its Statusline subsystem) and was not loaded either, because no tag routes to it. Every other area in the repo has a doc and a Conditional Loading row.
-  - **The `phase` / `route` split and the discriminated-phase form are load-bearing across six surfaces with no requirements-level statement.** `phase` may now carry a discriminant (`escalated:rework-cap:<n>`); `route` is always a bare machine state. That invariant is what keeps `next_verb.KNOWN_STATES`, `advance`'s from-state gate, `_EVENTS_TERMINAL_STATES` membership, and the `index.json` closed set working, and it is currently recorded only in code comments and this lifecycle's plan. `project.md` carries an exactly analogous clause for the *backlog status* vocabulary ("Backlog status vocabulary": where the canonical set lives and what an extension must update) but nothing for the lifecycle phase vocabulary. A future author adding a second discriminant has no requirement telling them `route` must stay bare.
-  - **Assessed and NOT drift** (recorded so a later pass does not re-derive it): `observability.md`'s Statusline acceptance criteria all still hold. "Active lifecycle feature name and phase match `events.log`" is *improved* — the ladder now reads the review cycle from `events.log`, the same rows Python counts, where before it read no cycle at all and rendered a capped feature as active rework. `events.log` is already in the declared Inputs list, so the new read adds no undeclared input. Latency measured at 116 ms against the < 500 ms budget; the 3-line output contract is untouched (the new `Escalated (rework cap)` label is shorter than the existing `Complete (awaiting merge)` arm). Separately, the Statusline **Inputs** list omits `review.md` and `plan.md`, which the ladder has read since before this feature — a pre-existing inaccuracy, not introduced here, and left out of the update below deliberately.
-  - **Also assessed and NOT drift**: the eight-value closed `lifecycle_phase` set documented in `docs/backlog.md:28` and `skills/backlog/references/schema.md:15` is preserved, because Task 7 writes the resolver's `route`. No doc update is owed there.
-- **Update needed**: `cortex/requirements/project.md` (both findings). Creating `cortex/requirements/lifecycle.md` is the durable fix for the first finding but is a separate piece of work — the update below adds the routing row so the area is at least reachable and the gap is visible.
-
-## Suggested Requirements Update
-
-- **File**: `cortex/requirements/project.md`
-  **Section**: `## Conditional Loading` (existing heading, line 94)
-  **Content** (append as a new bullet in the list):
-  ```
-  - lifecycle state machine/phase vocabulary/served verbs (next, advance, enter)/escalation → cortex/requirements/lifecycle.md (NOT YET WRITTEN — `areas: ['lifecycle']` tickets currently load project.md only; statusline/dashboard narration of lifecycle phase is governed by cortex/requirements/observability.md)
-  ```
-
-- **File**: `cortex/requirements/project.md`
-  **Section**: `## Architectural Constraints` (existing heading, line 33)
-  **Content** (append as a new bullet in the list):
-  ```
-  - **Lifecycle phase vocabulary — `phase` may be discriminated, `route` may not**: the resolvers in `cortex_command/common.py` return both. `route` is always a bare transition-table state name (the eight in `transition_table.py` plus `cancelled`), and every membership or equality test that gates machine behaviour — `next_verb.KNOWN_STATES`, `advance`'s from-state gate, `_EVENTS_TERMINAL_STATES`, `index.json`'s `lifecycle_phase` — reads `route`. `phase` additionally carries operator-facing detail as a suffix (`implement:<n>/<m>`, `implement-rework:<n>`, `escalated:rework-cap:<n>`, `-paused`) and is what narration surfaces render through `phase_labels.phase_label`. Adding a discriminant means one new `phase` form and zero new `route` values; adding a `route` value means a transition-table row and the enumerating-surface cost priced in lifecycle 454's spec Non-Requirements. Bash parity is pinned by `tests/test_lifecycle_phase_parity.py`.
-  ```
+  - Cycle 1's two drift clauses are **present and accurate** in `cortex/requirements/project.md`. Clause 1 at `:103` under `## Conditional Loading` (the `lifecycle.md` NOT-YET-WRITTEN routing row); clause 2 at `:61` under `## Architectural Constraints` (the `phase` may be discriminated / `route` may not invariant). Both match the cycle-1 suggested text, and clause 2's factual claims still hold against the unchanged source: `route` remains bare in every gating read, `_PHASE_NEXT` is keyed off `phase` only, and `tests/test_lifecycle_phase_parity.py` still pins bash parity (mutation-verified above).
+  - The rework changed only tests, comments, and docstrings, so no new requirement is implicated. No new drift.
+- **Update needed**: none.
 
 ---
 
 ## Verdict rationale
 
-All nine requirements pass, and eight of the nine were shown to discriminate against the pre-feature tree (R2 cannot, being an absence assertion; R3's `-paused` clause cannot against base but does against a plausible mis-implementation, demonstrated above). The two flagged weak spots resolved in opposite directions: **R8 is genuinely wired end-to-end**, not merely helper-proven — that suspicion is refuted; **the `_PHASE_NEXT` / `_terminal_directive` coverage gap is real** and extends to three further branches including the SessionStart hint.
+Source is byte-identical to the tree that passed all nine requirements, so nothing shipping-facing changed. Cycle 1's stated bar for Issue 1 is met on all five branches under my own mutations, and the assertions catch plausible wrong implementations rather than only deletions. Cycle 1's three stale-prose locations are all corrected, the orchestrator's correction is accurate in every clause I could test, and its mutation claim reproduces. The suite is green.
 
-Changes requested are additive only — test rows and comment corrections. No source change is needed, and no requirement is unmet.
+Two residual items remain, both comment-or-coverage grade and neither a defect in shipped behaviour: an incompletely-propagated comment correction (four lines, in the same file as its accurate replacement) and a sixth uncovered wiring line that cycle 1 did not name. At the rework cap, escalating the feature and stopping automation for either would be disproportionate to a follow-up. **APPROVED.**
 
-**Issues**
+**Issues** (residual observations, not blockers)
 
-1. **Add regression coverage for the five uncovered branches** (table above). Minimum: assert `_interrupted_hint('escalated:rework-cap:2', 'x')` differs from the bare-`escalated` hint and contains no `REJECTED` (`tests/test_hooks_scan_lifecycle.py`); assert `_is_terminal_mismatch('escalated:rework-cap:2', 'in_progress') is True` (`tests/test_lifecycle_phase_resolver.py`, next to the existing `complete:` case); assert the served `fragment_ref.directive` on a capped feature contains no `REJECTED` while a rejected feature's does (`cortex_command/lifecycle/tests/`, which already stages lifecycle dirs). The narration these branches produce is the entire deliverable of ticket 454, and today a revert of any of them lands the suite green.
-2. **Correct the now-false cycle-blindness prose in `tests/test_lifecycle_phase_parity.py`.** Three places still assert an invariant Task 6 deliberately narrowed: `:120-124` ("the statusline ladder reads only `verdict`, never `cycle`"), `:266-267` ("Cycle is NOT emitted by the ladder (structural cycle-blindness)"), and `:300-303` in `test_statusline_ladder_matches_canonical`'s docstring. The ladder now emits `escalated:rework-cap:<n>` with the cycle inline, counted from `events.log`. This is more than cosmetic in a parity test: a future author trusting `:120-124` would read the new `grep -c '"review_verdict"'` as dead code and remove it, silently restoring the bug. The exclusion remains correct for `implement-rework`, which is still emitted bare — say that instead. Optionally also amend `spec.md:60`, whose Technical Constraint ("Any part of the discriminant derived from `events.log` rather than `review.md` would be invisible to it") the plan's Risks already records as wrong in its rationale.
+1. `tests/test_lifecycle_phase_parity.py:133-136` still carries the false coverage claim that `64fff4bb` corrected at `:326` — "None of the fixtures this parametrized test runs against land on that arm". The `review-changes-requested-cycle2` fixture does land on it; neutralising the ladder's `review_verdict` count fails that subtest on that fixture. One-line fix, and the file currently contradicts itself.
+2. `cortex_command/lifecycle/next_verb.py:525` (`phase=resolved.get("phase")`) has zero coverage: deleting it leaves 567 targeted tests green while the CLI serves a capped feature the REJECTED directive. It is the sole hop between the two newly-covered halves and the only production wiring of `build_served_envelope`.
 
 ```
-{"verdict": "CHANGES_REQUESTED", "cycle": 1, "issues": ["Five new branches have zero automated coverage — _interrupted_hint's rework-cap hint, _is_terminal_mismatch's startswith(\"escalated:\") clause, resolve._PHASE_NEXT, _next_for_route's phase parameter, and _terminal_directive's phase argument. Two of them are the SessionStart hint and the served next directive, i.e. two of the four narration surfaces this ticket exists to fix; a revert of any of the five lands the suite green. Add the three assertions named in issue 1 of the review.", "tests/test_lifecycle_phase_parity.py still documents a statusline cycle-blindness invariant that Task 6 deliberately narrowed, at :120-124, :266-267, and :300-303. The ladder now emits escalated:rework-cap:<n> with the cycle inline from events.log. An author trusting the stale comment would read the new grep -c '\"review_verdict\"' as dead code and remove it, restoring the bug. Optionally also amend spec.md:60, which the plan's Risks already records as wrong in its rationale."], "requirements_drift": "detected"}
+{"verdict": "APPROVED", "cycle": 2, "issues": ["tests/test_lifecycle_phase_parity.py:133-136 still carries the false coverage claim that commit 64fff4bb corrected at :326 — 'None of the fixtures this parametrized test runs against land on that arm'. The review-changes-requested-cycle2 fixture DOES land on it, and neutralising the ladder's review_verdict count fails test_statusline_ladder_matches_canonical on that fixture (re-verified two ways). The file now contradicts itself: accurate docstring at :326, false comment at :133. One-line fix; comment-only, so recorded rather than escalated.", "cortex_command/lifecycle/next_verb.py:525 (phase=resolved.get(\"phase\") in the build_served_envelope call) has zero automated coverage — deleting it leaves 567 targeted tests green while the CLI serves a capped feature the REJECTED directive, reinstating the exact bug ticket 454 exists to fix. build_served_envelope has only that one call site, so it is the sole production wiring, and it is the untested hop between the two halves the rework did cover. Cycle 1 did not name this branch; the code is correct, so this is a coverage follow-up."], "requirements_drift": "none"}
 ```
