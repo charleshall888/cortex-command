@@ -29,7 +29,7 @@ Add a deep-linkable `/tickets/{id}` reading page and a per-artifact HTMX partial
 - **Complexity**: simple
 - **Context**: `data.py:1236-1304` (`_TicketBodySanitizer`), `data.py:1216-1234` (`_TICKET_ALLOWED_TAGS`, `_TICKET_VOID_CONTENT_TAGS`, `_TICKET_ALLOWED_ATTRS`). The literalization rule is **attribute-free unrecognized start tags only**, and never a void-content tag: `handle_starttag` emits `escape(self.get_starttag_text())` when `tag not in _TICKET_ALLOWED_TAGS`, `tag not in _TICKET_VOID_CONTENT_TAGS`, `not attrs`, and `not self._suppress_depth`; `handle_endtag` mirrors it for the same tag names (`</slug>`); everything else keeps today's drop-and-unwrap behavior. The attribute test is what keeps the shipped hostile-HTML assertions true: `test_raw_html_in_a_body_is_stripped_not_executed` (`tests/test_data.py:1637`) asserts `"onerror"` and `"onclick"` are absent from the output, and both arrive on attributed tags (`<img src=x onerror=…>`, `<div onclick=…>`) that must keep being dropped rather than echoed as text. `handle_data`/`handle_entityref`/`handle_charref` are untouched, so nothing on the code-span or fenced-code path changes. New tests go in `TestLoadTicketBody` (`tests/test_data.py:1586`), one method per case, following that class's `_corpus(tmp)` fixture idiom: a bare `<slug>` in prose asserted to appear escaped in `got["html"]`, and the same token inside a fenced block asserted to still render through the code path without double-escaping (`&amp;lt;` absent).
 - **Verification**: (a) `uv run pytest cortex_command/dashboard/tests/test_data.py -k TestLoadTicketBody` exits 0 with the two new tests present and every pre-existing method unmodified; and (b) a one-off corpus check — render the ten largest files under `cortex/lifecycle/` through `markdown.markdown(..., extensions=["fenced_code","tables"])` + `_sanitize_ticket_html` and print the counts of `&amp;lt;`, `&amp;gt;`, `&amp;amp;`; expected `0` for all three (requirement 3), and a non-zero count of `&lt;` tokens proving placeholders now survive.
-- **Status**: [ ] pending
+- **Status**: [x] done (d29b0e5f 2026-08-06T22:26:19-04:00)
 
 ### Task 2: Share the backlog badge vocabulary and link the board out to the page
 - **Files**: `cortex_command/dashboard/templates/patterns/backlog_badges.html` (new), `cortex_command/dashboard/templates/triage_board.html`, `cortex_command/dashboard/tests/test_templates.py`
@@ -38,7 +38,7 @@ Add a deep-linkable `/tickets/{id}` reading page and a per-artifact HTMX partial
 - **Complexity**: simple
 - **Context**: The three maps and the fallback live at `templates/triage_board.html:32-63` and are consumed at `:113`, `:116`, `:119` inside per-cell wrappers. Extract them into `patterns/backlog_badges.html` as three macros (`status_badge(status)`, `priority_badge(priority)`, `type_badge(kind)`) that each wrap the existing `patterns/badge.html` `badge(css_class=…, label=…)` call with the same lookup-and-fallback; carry the explanatory comment at `:32-39` with them. The board then imports the pattern and calls the macros inside its unchanged `ticket-row__cell` spans — **rendered output must be byte-identical**, which the existing triage-board template tests pin. Both the raw value and the fallback behavior are preserved: status is displayed verbatim, only the class lookup consults the map. Separately, the row's link-out goes in the **expanded** area (alongside the `feature-detail` block at `:167-185`), never inside `<summary>`, where an `<a>` competes with the disclosure toggle; it targets `/tickets/{{ item_id }}`. The comment at `:64-70` claiming the row "carries no navigation affordance of any kind" becomes false with this change and must be rewritten, not left. Test assertions go in `tests/test_templates.py` in the style of `TestStructuralElements` (`:293`), using the file's existing corpus-through-`build_backlog_snapshot` idiom rather than a hand-written snapshot.
 - **Verification**: `uv run pytest cortex_command/dashboard/tests/test_templates.py` exits 0, including a new assertion that a rendered board row contains `href="/tickets/` for its item id.
-- **Status**: [ ] pending
+- **Status**: [x] done (3ac1b74e 2026-08-06T22:28:36-04:00)
 
 ### Task 3: Fix the seed's backlog_id type and complete one artifact set
 - **Files**: `cortex_command/dashboard/seed.py`, `cortex_command/dashboard/tests/test_seed.py`
@@ -47,7 +47,7 @@ Add a deep-linkable `/tickets/{id}` reading page and a per-artifact HTMX partial
 - **Complexity**: simple
 - **Context**: `seed.py:145-158` (`_feature_entry`) and its caller list `_FEATURES` (`:136-143`). The five seeded backlog items 1-5 are named for the first five feature slugs (`seed-feature-alpha` … `seed-feature-epsilon`, `seed.py:1274-1322`); `seed-feature-zeta` has no ticket and must keep `backlog_id: None`, which is legitimate per `overnight/state.py:83` and is what covers the inert-link edge case. Add a slug→id mapping next to `_FEATURES` and pass the id through `_feature_entry`. For the artifact set: `_FEATURE_ARTIFACTS` (`seed.py:568-634`) gives `seed-feature-delta` a `research.md` and `spec.md`, and `write_feature_files` (`:771`) writes its `plan.md`; add a `review.md` body in the same `##`-sectioned prose style so the directory holds all four kinds. Backlog fixture #4 (`:1303-1312`) already points at it through `lifecycle_slug` and needs no change — it is the corpus's only `lifecycle_slug`-resolves-to-a-real-directory case and must stay that way. To also exercise the **primary** (`spec:`) key on a live directory, add a `spec: cortex/lifecycle/seed-feature-beta/spec.md` key to fixture #2 plus a two-file (`research.md`, `spec.md`) `_FEATURE_ARTIFACTS` entry for `seed-feature-beta`; with its auto-written `plan.md` and no `review.md` that fixture also covers the "directory holds only some kinds" edge case. Do not renumber or reorder existing records. `test_seed.py` currently asserts nothing about `backlog_id`; add assertions that every seeded feature's `backlog_id` is an `int` or `None`, that each int matches a written backlog filename, and that the delta directory holds all four artifact filenames.
 - **Verification**: `uv run pytest cortex_command/dashboard/tests/test_seed.py` exits 0, and seeding a throwaway root then `grep -c '"backlog_id": [0-9]' <root>/cortex/lifecycle/overnight-state.json` returns 5.
-- **Status**: [ ] pending
+- **Status**: [x] done (2b241c9e 2026-08-06T22:27:28-04:00)
 
 ### Task 4: Give the feature-card artifact links real targets
 - **Files**: `cortex_command/dashboard/templates/feature_cards.html`
@@ -56,7 +56,7 @@ Add a deep-linkable `/tickets/{id}` reading page and a per-artifact HTMX partial
 - **Complexity**: simple
 - **Context**: `templates/feature_cards.html:224-229`. Values come straight from `overnight-state.json` via `OvernightFeatureStatus` (`overnight/state.py:106-108`); `backlog_id` is legitimately `None` (`state.py:83`). Inter-task URL contract, fixed here and consumed by Task 6: the page is `/tickets/{id}`, and each artifact panel is a `<details>` whose element id is the bare artifact kind, so the anchors are `/tickets/{id}#spec` and `/tickets/{id}#plan`. Both `spec_path` and `plan_path` links are therefore conditional on `feat.backlog_id`; when it is absent, keep the label rendered but not as a link (no broken target, no vanished affordance), and keep the existing `title="{{ feat.spec_path }}"` tooltips. This lands hrefs to a route that arrives in Task 6 — intended, and covered by that task's smoke test.
 - **Verification**: `grep -c 'href="#"' cortex_command/dashboard/templates/feature_cards.html` = 0, and `grep -c '/tickets/' cortex_command/dashboard/templates/feature_cards.html` = 3.
-- **Status**: [ ] pending
+- **Status**: [x] done (36b2a96b 2026-08-06T22:25:54-04:00)
 
 ### Task 5: Add the ticket-page data layer
 - **Files**: `cortex_command/dashboard/data.py`, `cortex_command/dashboard/tests/test_data.py`
@@ -73,7 +73,7 @@ Add a deep-linkable `/tickets/{id}` reading page and a per-artifact HTMX partial
 
   Tests go in `tests/test_data.py` as a new class in the style of `tests/test_sessions.py`'s `TestSessionDetail` (`:117`), building a corpus on disk rather than transcribing dicts: the `spec:`-found path, the `spec:`-missing/`lifecycle_slug`-fallback path (both the plain and `archive/` probe), the neither-key path, a stale `spec:` falling through to the probe, a directory holding only some kinds, an unknown `kind` rejected, an oversized artifact truncated and flagged, a non-integer id, and epic children resolved for an epic and absent for a non-epic.
 - **Verification**: (a) `uv run pytest cortex_command/dashboard/tests/test_data.py` exits 0; and (b) a one-off corpus check over the real `cortex/backlog/` + `cortex/lifecycle/` printing how many tickets resolve under `spec:` alone versus under `resolve_artifact_dir` — the two-key count must be strictly greater (measured 286 vs 259 at spec time) and no ticket may raise.
-- **Status**: [ ] pending
+- **Status**: [x] done (282c3be3 2026-08-06T22:35:08-04:00)
 
 ### Task 6: Add the page route, the artifact partial, and their templates
 - **Files**: `cortex_command/dashboard/app.py`, `cortex_command/dashboard/templates/ticket_page.html` (new), `cortex_command/dashboard/templates/ticket_artifact.html` (new), `cortex_command/dashboard/tests/test_routes_smoke.py`, `cortex_command/dashboard/tests/test_templates.py`
@@ -89,7 +89,7 @@ Add a deep-linkable `/tickets/{id}` reading page and a per-artifact HTMX partial
 
   Tests: `test_routes_smoke.py`'s `fixture_root` (`:68-80`) creates no `cortex/backlog/`, so seed one ticket file there and add `/tickets/<that id>` to `PAGE_ROUTES` (`:62`) and `/partials/ticket/<id>/artifact/spec` to `PARTIAL_ROUTES` (`:40-57`); add a 404 case for an unseeded numeric id following `test_missing_session_returns_404` (`:102-105`). `test_templates.py` gains badge-strip and artifact-panel structural assertions plus a non-local-backend assertion for both templates, in the style of `TestStructuralElements` (`:293`) and `TestBacklogPanelBackendGate` (`:317`).
 - **Verification**: (a) `uv run pytest cortex_command/dashboard/tests/` exits 0; and (b) a `starlette.testclient.TestClient` check against a seeded fixture root asserting `/tickets/{seeded}` → 200 with one `hx-get=".../artifact/"` occurrence per present artifact kind and zero artifact prose in the page HTML, `/tickets/999999` → 404, and `/partials/ticket/{seeded}/artifact/spec` → 200 containing the artifact's rendered prose.
-- **Status**: [ ] pending
+- **Status**: [x] done (ef2fe2b7 2026-08-06T22:43:22-04:00)
 
 ## Risks
 
