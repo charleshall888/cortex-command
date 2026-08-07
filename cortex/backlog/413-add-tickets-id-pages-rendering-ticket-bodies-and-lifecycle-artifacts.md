@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 112a84c9-3321-43f7-acc5-ef15c6b759d3
 title: Add /tickets/{id} pages rendering ticket bodies and lifecycle artifacts
-status: refined
+status: complete
 priority: medium
 type: feature
 created: 2026-07-21
@@ -14,6 +14,7 @@ areas: ['dashboard']
 complexity: moderate
 criticality: high
 spec: cortex/lifecycle/add-tickets-id-pages-rendering-ticket/spec.md
+lifecycle_phase: complete
 ---
 ## Why
 
