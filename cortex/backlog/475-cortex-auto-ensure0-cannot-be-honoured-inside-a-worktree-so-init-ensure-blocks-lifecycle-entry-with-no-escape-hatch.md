@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: fcbf4c15-f86d-4a37-846e-3ef46f50fdd0
 title: CORTEX_AUTO_ENSURE=0 cannot be honoured inside a worktree, so init-ensure blocks lifecycle entry with no escape hatch
-status: in_progress
+status: complete
 priority: medium
 type: bug
 created: 2026-08-07
@@ -12,7 +12,7 @@ areas: ['lifecycle', 'install', 'tests']
 complexity: moderate
 criticality: high
 spec: cortex/lifecycle/cortex-auto-ensure0-cannot-be-honoured/spec.md
-lifecycle_phase: research
+lifecycle_phase: complete
 ---
 ## Why
 

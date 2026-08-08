@@ -8,3 +8,8 @@
 {"ts": "2026-08-08T19:23:27Z", "event": "batch_dispatch", "feature": "cortex-auto-ensure0-cannot-be-honoured", "batch": 0, "tasks": ["1", "2", "3", "5"]}
 {"ts": "2026-08-08T19:26:18Z", "event": "batch_dispatch", "feature": "cortex-auto-ensure0-cannot-be-honoured", "batch": 1, "tasks": ["4"]}
 {"ts": "2026-08-08T19:27:33Z", "event": "batch_dispatch", "feature": "cortex-auto-ensure0-cannot-be-honoured", "batch": 2, "tasks": ["6", "7"]}
+{"ts": "2026-08-08T19:39:27Z", "event": "phase_transition", "feature": "cortex-auto-ensure0-cannot-be-honoured", "from": "implement", "to": "review", "tier": "moderate"}
+{"ts": "2026-08-08T19:39:50Z", "event": "review_dispatched", "feature": "cortex-auto-ensure0-cannot-be-honoured", "cycle": 1, "mode": "full", "baseline_sha": "7dae58bf487496465e1dceacf92beaffeb90efc1"}
+{"ts": "2026-08-08T19:41:32Z", "event": "review_verdict", "feature": "cortex-auto-ensure0-cannot-be-honoured", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-08-08T19:41:32Z", "event": "phase_transition", "feature": "cortex-auto-ensure0-cannot-be-honoured", "from": "review", "to": "complete"}
+{"ts": "2026-08-08T19:41:41Z", "event": "feature_complete", "feature": "cortex-auto-ensure0-cannot-be-honoured", "tasks_total": 7, "rework_cycles": 0, "merge_anchor": "merge"}
