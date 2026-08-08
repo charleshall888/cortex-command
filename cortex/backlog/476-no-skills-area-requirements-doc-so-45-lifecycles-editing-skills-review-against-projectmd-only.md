@@ -6,9 +6,11 @@ status: backlog
 priority: medium
 type: feature
 created: 2026-08-07
-updated: 2026-08-07
+updated: 2026-08-08
 tags: ['requirements', 'skills', 'process']
 areas: ['skills', 'requirements']
+complexity: complex
+criticality: high
 ---
 # No skills area requirements doc, so 45 lifecycles editing skills review against project.md only
 
