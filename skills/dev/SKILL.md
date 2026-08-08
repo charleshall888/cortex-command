@@ -14,7 +14,7 @@ First match wins.
 1. **No arguments, or "what should I work on" / "what's next"** → backlog triage (Step 3).
 2. **Three or more distinct features, or a batch** → classify each as `simple` or above by rule 4's test. All above simple → `/cortex-overnight:overnight` with the feature list. All simple → implement each in this conversation. Mixed → present a table of task/routing/justification and confirm before proceeding.
 3. **Vague topic** ("not sure how to approach", "explore", "investigate") → `/cortex-core:discovery <topic>`.
-4. **`simple` change** (you know the approach, or one read confirms it; nothing to decide — size is not the test) → implement it here, commit, and close any backlog item it resolved: `cortex-update-item {slug} --status complete --complexity simple` (skip when there's no item or the backend is external).
+4. **`simple` change** (you know the approach, or one read confirms it; nothing to decide — size is not the test) → implement it here, commit, and close any backlog item it resolved: `cortex-update-item {slug} --status complete` (skip when there's no item or the backend is external). Do not write a `--complexity` here — a tier recorded outside Clarify has no reader and no assessment event behind it.
 5. **Otherwise** → assess criticality (Step 2), then route by the ticket's readiness: no `spec:` field (or no ticket at all) → `/cortex-core:refine <feature-name>` with the criticality context; `status: refined` with a `spec:` → `/cortex-core:build <feature-name>`. When unsure, `cortex-lifecycle-next <feature>` reports the served phase — `research`/`specify` means refine, anything later means build.
 
 Never use built-in `EnterPlanMode` as a substitute for `/cortex-core:build`.

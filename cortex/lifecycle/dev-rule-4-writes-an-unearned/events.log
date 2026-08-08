@@ -1,0 +1,2 @@
+{"ts": "2026-08-08T15:46:44Z", "schema_version": 1, "event": "lifecycle_start", "feature": "dev-rule-4-writes-an-unearned", "tier": "simple", "criticality": "medium", "entry_point": "refine", "seeded": ["criticality", "tier"]}
+{"ts": "2026-08-08T15:53:32Z", "event": "lifecycle_cancelled", "feature": "dev-rule-4-writes-an-unearned"}
