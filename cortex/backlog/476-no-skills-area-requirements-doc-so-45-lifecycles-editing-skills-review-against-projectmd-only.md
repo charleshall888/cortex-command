@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: fd9f2faa-8218-4e07-b16f-29be03ace64a
 title: No skills area requirements doc, so 45 lifecycles editing skills review against project.md only
-status: backlog
+status: wontfix
 priority: medium
 type: feature
 created: 2026-08-07
@@ -11,6 +11,7 @@ tags: ['requirements', 'skills', 'process']
 areas: ['skills', 'requirements']
 complexity: complex
 criticality: high
+lifecycle_phase: wontfix
 ---
 # No skills area requirements doc, so 45 lifecycles editing skills review against project.md only
 
