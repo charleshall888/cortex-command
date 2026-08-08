@@ -2,13 +2,14 @@
 schema_version: "1"
 uuid: 53ea7e79-7754-4708-ae4f-ebeae99abdc0
 title: No sound join between tickets and lifecycles, so no tier analysis is currently trustworthy
-status: backlog
+status: wontfix
 priority: medium
 type: bug
 created: 2026-08-06
-updated: 2026-08-06
+updated: 2026-08-08
 tags: ['lifecycle', 'backlog', 'measurement']
 areas: ['lifecycle']
+lifecycle_phase: wontfix
 ---
 ## Why
 
@@ -40,6 +41,20 @@ Roughly independent pieces, each useful alone:
 - Not every lifecycle should have a ticket. Context B is a supported path; do not "fix" orphans by inventing tickets for them.
 - Backfilling 200 dirs and 296 tickets may not be worth it — going-forward correctness plus an honest statement of the pre-fix cutoff may be the cheaper and equally useful outcome.
 - Deletion bias: this is measurement infrastructure and must clear the same bar. Its evidence is the two invalidated analyses above, not a hypothetical future one.
+
+## Resolution: wontfix (2026-08-08, refuted at Clarify)
+
+Every claim in the Why was re-measured at refine. The premise does not hold; no work was done.
+
+**The join is sound.** Over the 322 tickets that entered refine (`complexity:` present): `lifecycle_slug` on 159 (49%), joinable via the `spec:` path on a further 134 (42%) — **91% forward-joinable**, not 34%. The reverse direction is 555/758 lifecycle dirs (73%) through `index.md`'s `parent_backlog_uuid`/`parent_backlog_id`, and it is not hypothetical: `cortex_command/lifecycle/wontfix_cli.py:66-73` executes that join today, and `create_index.py:144,290` writes the keys. So "the reverse join is impossible" is false, and carrying a backlog key on `lifecycle_start` would add a third redundant key.
+
+**The gating measurement never needed the join.** `cortex/lifecycle/nearly-all-work-is-rated-complex/research.md` Open Question 1 — the line this ticket cites as "the measurement this gates" — states it is "answerable by an existing-tools reduction over backlog frontmatter." Taken here in one script: **260/320 = 81.2% complex** on the backlog-ticket denominator (that OQ recorded 75%). The Why's claim that it "has not been taken, because it cannot be taken on this corpus" contradicts its own citation.
+
+**Absence is a handled fallback, not a break.** `backlog/resolve_item.py:113` documents the chain `lifecycle_slug` → spec/research dirname → `slugify(title)`, and every consumer is null-tolerant: `overnight/backlog.py:337` (`or None`), `dashboard/data.py:1520` (`_opt_field`), `hooks/scan_lifecycle.py:279` (`.get`). Nothing turns red when the field is missing, so under `project.md`'s Deletion bias the surface carries the presumption of removal — writing it more often is unearned machinery.
+
+**Scope errors, for the record.** The header "Measured across `cortex-command`, `wild-light`, …" is false for the first three bullets: 153/449, 200/353 and 185 rows are all cortex-command alone (the source research says "in this repo"); five-repo figures are 310/1044, 449/758 and 672. Bullets 1 and 2 are one measurement — 353 − 153 = 200 is its arithmetic complement. The YAML bullet's "nobody has measured what is in them" is answered by `cortex/requirements/project.md:65`, which holds the line census *and* fixes the reader remedy; only 20 of the 79 files are wholly YAML (59 are mixed and partly read), and the tier-relevant loss is 25 of 697 `lifecycle_start` rows (~3.6%). Integration piece 1 already exists: `cortex_command/lifecycle/start_sync.py:110-112`. The Touch point below is also wrong — `_cmd_emit_lifecycle_start` begins at `refine.py:528`; 430-523 is inside `_cmd_reconcile_clarify`.
+
+**What is real but not worth a ticket.** `cortex-refine start` does not perform the `lifecycle_slug` write-back that `cortex-lifecycle-enter` does, so per-month coverage fell from 79% (April) to 5% (August) as refine displaced `enter`. Harmless given the fallback chain and the 91% join. Sibling ticket `#459` was refuted at refine the same day on the same premise.
 
 ## Touch points
 
