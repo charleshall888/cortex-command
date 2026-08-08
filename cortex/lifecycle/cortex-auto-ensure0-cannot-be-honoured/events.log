@@ -3,3 +3,5 @@
 {"ts": "2026-08-08T16:10:52Z", "event": "complexity_override", "feature": "cortex-auto-ensure0-cannot-be-honoured", "from": "simple", "to": "moderate", "reason": "other: needed orientation across two duplicated probes and a spec-vs-spec ordering conflict, but research settled the fork with no surviving competing design", "gate": "clarify_reconcile", "from_seeded": true}
 {"ts": "2026-08-08T16:10:52Z", "event": "criticality_override", "feature": "cortex-auto-ensure0-cannot-be-honoured", "from": "medium", "to": "high", "reason": "exposure: every worktree build and the overnight runner traverse this path, and the change deletes a safeguard", "gate": "clarify_reconcile", "from_seeded": true}
 {"ts": "2026-08-08T16:16:14Z", "event": "spec_approved", "feature": "cortex-auto-ensure0-cannot-be-honoured", "decision": "approved"}
+{"ts": "2026-08-08T19:22:18Z", "event": "plan_approved", "feature": "cortex-auto-ensure0-cannot-be-honoured", "dispatch_choice": "trunk"}
+{"ts": "2026-08-08T19:22:18Z", "event": "phase_transition", "feature": "cortex-auto-ensure0-cannot-be-honoured", "from": "plan", "to": "implement"}

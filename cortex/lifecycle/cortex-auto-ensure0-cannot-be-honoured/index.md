@@ -2,7 +2,7 @@
 feature: cortex-auto-ensure0-cannot-be-honoured
 parent_backlog_uuid: fcbf4c15-f86d-4a37-846e-3ef46f50fdd0
 parent_backlog_id: 475
-artifacts: [research, spec]
+artifacts: [research, spec, plan]
 tags: [lifecycle, worktree, init-ensure]
 areas: [lifecycle, install, tests]
 created: 2026-08-08
