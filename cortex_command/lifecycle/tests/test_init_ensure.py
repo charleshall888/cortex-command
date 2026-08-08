@@ -1,6 +1,6 @@
-"""Phase-3 acceptance tests for the skill-helper module + worktree refusal.
+"""Phase-3 acceptance tests for the skill-helper module.
 
-Covers three acceptance bundles from the spec:
+Covers two acceptance bundles from the spec:
 
 R9 — console-script and ``python3 -m cortex_command.lifecycle.init_ensure``
      invoke the same code path with identical Namespace shapes.
@@ -12,11 +12,14 @@ R10 — ``cortex-lifecycle-enter`` (the Step-2 wrapper that composes init-ensure
       dual-source-drift test suite exits 0. (The corpus-trim wave-2 rewiring
       replaced the standalone ``cortex-lifecycle-init-ensure`` prose call with
       the ``cortex-lifecycle-enter`` composition; the init-ensure binary and its
-      R9/R11 module tests are unchanged.)
+      R9 module tests are unchanged.)
 
-R11 — the helper refuses when invoked inside a ``git worktree add`` attached
-      worktree (exit 2 + diagnostic on stderr); a regular-checkout baseline
-      passes through to ``handler.main`` without triggering the refusal.
+The R11 attached-worktree refusal this module used to pin was deleted with the
+probe itself (#475): the guard's data-loss premise died when #273 turned the
+bootstrap arm into a refusal, and the ambient-CWD probe blocked every lifecycle
+phase run from a worktree. The replacement pin lives in
+``cortex_command/init/tests/test_handler_ensure.py`` and asserts CWD
+independence rather than refusal.
 """
 
 from __future__ import annotations
@@ -291,144 +294,3 @@ def test_r10c_dual_source_drift_test_exits_0() -> None:
         f"stdout:\n{result.stdout}\n"
         f"stderr:\n{result.stderr}"
     )
-
-
-# ---------------------------------------------------------------------------
-# R11(a) — worktree-attached refusal: exit 2 + diagnostic on stderr.
-# ---------------------------------------------------------------------------
-
-
-def test_r11a_worktree_attached_refusal(tmp_path: Path) -> None:
-    """R11(a): helper exits 2 with diagnostic when invoked inside an attached git worktree."""
-    import os as _os
-
-    primary = tmp_path / "primary"
-    primary.mkdir()
-
-    # Initialize git repo and make an initial commit so worktree add works.
-    subprocess.run(["git", "init", str(primary)], check=True, capture_output=True)
-    subprocess.run(
-        ["git", "config", "commit.gpgsign", "false"],
-        cwd=str(primary),
-        check=True,
-        capture_output=True,
-    )
-    base_env = dict(_os.environ)
-    base_env.update({
-        "GIT_AUTHOR_NAME": "Test",
-        "GIT_AUTHOR_EMAIL": "t@t.com",
-        "GIT_COMMITTER_NAME": "Test",
-        "GIT_COMMITTER_EMAIL": "t@t.com",
-    })
-    (primary / "placeholder.txt").write_text("placeholder\n", encoding="utf-8")
-    subprocess.run(
-        ["git", "add", "placeholder.txt"],
-        cwd=str(primary),
-        check=True,
-        capture_output=True,
-        env=base_env,
-    )
-    subprocess.run(
-        ["git", "commit", "-m", "init"],
-        cwd=str(primary),
-        check=True,
-        capture_output=True,
-        env=base_env,
-    )
-
-    wt = tmp_path / "wt"
-    subprocess.run(
-        ["git", "worktree", "add", str(wt), "HEAD"],
-        cwd=str(primary),
-        check=True,
-        capture_output=True,
-        env=base_env,
-    )
-    assert wt.is_dir(), f"worktree directory not created: {wt}"
-
-    # Invoke the helper from inside the attached worktree.
-    result = subprocess.run(
-        [sys.executable, "-m", "cortex_command.lifecycle.init_ensure"],
-        cwd=str(wt),
-        capture_output=True,
-        text=True,
-        env=base_env,
-    )
-
-    assert result.returncode == 2, (
-        f"Expected exit 2 (worktree refusal); got {result.returncode}; "
-        f"stderr={result.stderr!r}; stdout={result.stdout!r}"
-    )
-    # Spec R11 diagnostic phrase.
-    assert "cortex-lifecycle-init-ensure" in result.stderr, (
-        f"Expected R11 diagnostic on stderr; got: {result.stderr!r}"
-    )
-    assert "worktree" in result.stderr.lower(), (
-        f"Expected 'worktree' in diagnostic; got: {result.stderr!r}"
-    )
-
-
-# ---------------------------------------------------------------------------
-# R11(b) — regular-checkout baseline: probe passes through without worktree refusal.
-# ---------------------------------------------------------------------------
-
-
-def test_r11b_regular_checkout_baseline(tmp_path: Path) -> None:
-    """R11(b): helper exits 0 from primary worktree with CORTEX_AUTO_ENSURE=0.
-
-    This test proves the worktree-detection probe does NOT mis-classify a
-    normal (primary) checkout as an attached worktree.  CORTEX_AUTO_ENSURE=0
-    is set so the helper short-circuits immediately after the probe passes —
-    no real scaffolding writes occur.
-    """
-    import os as _os
-
-    primary = tmp_path / "primary"
-    primary.mkdir()
-
-    subprocess.run(["git", "init", str(primary)], check=True, capture_output=True)
-    subprocess.run(
-        ["git", "config", "commit.gpgsign", "false"],
-        cwd=str(primary),
-        check=True,
-        capture_output=True,
-    )
-    base_env = dict(_os.environ)
-    base_env.update({
-        "GIT_AUTHOR_NAME": "Test",
-        "GIT_AUTHOR_EMAIL": "t@t.com",
-        "GIT_COMMITTER_NAME": "Test",
-        "GIT_COMMITTER_EMAIL": "t@t.com",
-        "CORTEX_AUTO_ENSURE": "0",
-    })
-    (primary / "placeholder.txt").write_text("placeholder\n", encoding="utf-8")
-    subprocess.run(
-        ["git", "add", "placeholder.txt"],
-        cwd=str(primary),
-        check=True,
-        capture_output=True,
-        env=base_env,
-    )
-    subprocess.run(
-        ["git", "commit", "-m", "init"],
-        cwd=str(primary),
-        check=True,
-        capture_output=True,
-        env=base_env,
-    )
-
-    # Invoke the helper from the primary worktree (no attached worktrees added).
-    result = subprocess.run(
-        [sys.executable, "-m", "cortex_command.lifecycle.init_ensure"],
-        cwd=str(primary),
-        capture_output=True,
-        text=True,
-        env=base_env,
-    )
-
-    assert result.returncode == 0, (
-        f"Expected exit 0 from primary worktree with CORTEX_AUTO_ENSURE=0; "
-        f"got {result.returncode}; stderr={result.stderr!r}; stdout={result.stdout!r}"
-    )
-    # No worktree diagnostic should appear.
-    assert "cortex-lifecycle-init-ensure: invoked inside a git worktree" not in result.stderr

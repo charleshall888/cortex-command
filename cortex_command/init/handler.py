@@ -123,8 +123,8 @@ def _run_ensure(args: argparse.Namespace) -> int:
     ordered gate sequence described in spec R4–R8.
 
     Raises:
-        ScaffoldError: On worktree-attached refusal, install-in-progress
-            timeout, marker provenance failure, marker-absent clean-repo
+        ScaffoldError: On install-in-progress timeout, marker provenance
+            failure, marker-absent clean-repo
             refusal (#273: directs the user to terminal ``cortex init``),
             or R19/R5 foreign-content decline. A marker-absent repo whose
             ``cortex/`` carries cortex signature templates is adopted
@@ -141,13 +141,7 @@ def _run_ensure(args: argparse.Namespace) -> int:
     if os.environ.get("CORTEX_AUTO_ENSURE") == "0":
         return 0
 
-    # (b) Worktree-attached refusal (R11 CLI-surface mirror).
-    # Mirrors the probe in Task 7's skill-helper module — duplication is
-    # intentional structural defense-in-depth (``cortex init --ensure`` is
-    # reachable from the bare CLI surface before Task 8 wires the helper).
-    _check_not_attached_worktree()
-
-    # (c) Install-in-progress lock-check (R6).
+    # (b) Install-in-progress lock-check (R6).
     _wait_for_install_complete()
 
     # R2/R3: resolve the repo root (same as the standard init path).
@@ -156,7 +150,7 @@ def _run_ensure(args: argparse.Namespace) -> int:
     # R13: symlink-safety gate.
     scaffold.check_symlink_safety(repo_root)
 
-    # (d) Compute the installed hash and read marker provenance (R1, R8).
+    # (c) Compute the installed hash and read marker provenance (R1, R8).
     installed_hash = scaffold._compute_init_artifacts_hash()
     marker_hash, cortex_version = scaffold._read_marker_provenance(repo_root)
     # _read_marker_provenance raises ScaffoldError on JSON parse failure or
@@ -164,7 +158,7 @@ def _run_ensure(args: argparse.Namespace) -> int:
 
     cortex_dir = repo_root / "cortex"
 
-    # (e) Five-case dispatch.
+    # (d) Five-case dispatch.
     if marker_hash is not None:
         # Case (i): marker-present + hash-matches → no-op.
         if marker_hash == installed_hash:
@@ -262,57 +256,6 @@ def _run_ensure(args: argparse.Namespace) -> int:
     return 0
 
 
-def _check_not_attached_worktree() -> None:
-    """Refuse if the CWD is inside an attached ``git worktree add`` worktree.
-
-    Mirrors the probe in ``cortex_command/lifecycle/init_ensure.py`` (Task 7).
-    Duplication is intentional structural defense-in-depth per spec R11: the
-    CLI surface is reachable before the skill-helper is wired (Task 8), so both
-    layers independently enforce the worktree guard.
-
-    Raises:
-        ScaffoldError: when CWD is inside an attached worktree (not the primary
-            worktree).  The message names the F9 data-loss diagnostic.
-    """
-    common_dir_proc = subprocess.run(
-        ["git", "rev-parse", "--git-common-dir"],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    if common_dir_proc.returncode != 0:
-        # Not inside a git repo at all; _resolve_repo_root will surface R2.
-        return
-
-    git_dir_proc = subprocess.run(
-        ["git", "rev-parse", "--git-dir"],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    if git_dir_proc.returncode != 0:
-        return
-
-    common_dir = Path(common_dir_proc.stdout.strip()).resolve()
-    git_dir = Path(git_dir_proc.stdout.strip()).resolve()
-
-    # In the primary worktree, ``--git-common-dir`` == ``--git-dir`` (both
-    # resolve to ``<repo>/.git``).  In an attached worktree, ``--git-dir``
-    # resolves to ``<repo>/.git/worktrees/<name>`` while ``--git-common-dir``
-    # still resolves to ``<repo>/.git``.
-    if common_dir != git_dir:
-        # Resolve the worktree root for the diagnostic.
-        worktree_root = git_dir.parent.parent.parent  # .git/worktrees/<name>/../../../
-        primary_root = common_dir.parent  # .git/..
-        raise ScaffoldError(
-            f"`cortex init --ensure`: invoked inside a git worktree "
-            f"({worktree_root}); run from the primary worktree ({primary_root}) "
-            "to bootstrap or refresh cortex/. Scaffolding inside an attached "
-            "worktree risks data loss (F9): cortex/ content written here will "
-            "be silently destroyed when the worktree is removed."
-        )
-
-
 def _wait_for_install_complete() -> None:
     """Poll until the install-in-progress marker is absent or stale (R6).
 
@@ -380,10 +323,9 @@ def _run(args: argparse.Namespace) -> int:
     # Step 0d: --ensure early-branch (R4–R8). Hash-compare dispatch for
     # automated drift recovery. Ordered gate sequence:
     # (a) CORTEX_AUTO_ENSURE=0 opt-out → silent no-op (R7).
-    # (b) Worktree-attached refusal (R11 CLI-surface mirror).
-    # (c) Install-in-progress lock-check (R6).
-    # (d) Hash computation + marker-provenance read (R1, R8).
-    # (e) Five-case dispatch (R4 + R8 recovery case).
+    # (b) Install-in-progress lock-check (R6).
+    # (c) Hash computation + marker-provenance read (R1, R8).
+    # (d) Five-case dispatch (R4 + R8 recovery case).
     if getattr(args, "ensure", False):
         return _run_ensure(args)
 
