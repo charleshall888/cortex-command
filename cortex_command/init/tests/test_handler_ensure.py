@@ -1061,3 +1061,76 @@ def test_cortex_gitignore_ensure_preserves_hand_edit(
 
     # Never auto-overwritten on --ensure, even when the refresh scaffold pass ran.
     assert gitignore.read_text(encoding="utf-8") == hand_edited
+
+
+# ---------------------------------------------------------------------------
+# CWD independence (#475) — anti-revert pin for the deleted worktree probe.
+# ---------------------------------------------------------------------------
+
+
+def test_ensure_is_cwd_independent_from_attached_worktree(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """--ensure operates on its target repo regardless of the process CWD.
+
+    Anti-revert pin for the probe deleted in #475. That probe shelled out to
+    ``git rev-parse`` with no ``cwd=``, so it read the ambient process CWD and
+    refused whenever pytest (or a lifecycle phase) was launched from inside an
+    attached worktree — even though ``--ensure`` was targeting an entirely
+    unrelated repo. Reintroducing any ambient-CWD probe must fail here rather
+    than silently returning exit 2.
+
+    Two repos are deliberately distinct: ``host`` supplies the hostile CWD via
+    an attached worktree, and ``repo`` is the initialized target ``--ensure``
+    actually operates on.
+    """
+    # The target repo: initialized, marker present, entirely unrelated to the
+    # worktree the process will be sitting in.
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git_init(repo)
+    _isolate_home(monkeypatch, tmp_path)
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg-state"))
+    assert init_main(_make_update_args(repo)) == 0
+
+    # The host repo, whose attached worktree becomes the process CWD. It needs
+    # a real commit before `git worktree add` will accept it.
+    host = tmp_path / "host"
+    host.mkdir()
+    _git_init(host)
+    git_env = {
+        **os.environ,
+        "GIT_AUTHOR_NAME": "Test",
+        "GIT_AUTHOR_EMAIL": "t@t.com",
+        "GIT_COMMITTER_NAME": "Test",
+        "GIT_COMMITTER_EMAIL": "t@t.com",
+    }
+    subprocess.run(
+        ["git", "config", "commit.gpgsign", "false"],
+        cwd=str(host),
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "commit", "--allow-empty", "-m", "init"],
+        cwd=str(host),
+        check=True,
+        capture_output=True,
+        env=git_env,
+    )
+    worktree = tmp_path / "host-wt"
+    subprocess.run(
+        ["git", "worktree", "add", str(worktree), "HEAD"],
+        cwd=str(host),
+        check=True,
+        capture_output=True,
+        env=git_env,
+    )
+    assert worktree.is_dir(), f"worktree not created: {worktree}"
+
+    # monkeypatch.chdir restores the original CWD on teardown; a bare os.chdir
+    # would leak into every later test in the session.
+    monkeypatch.chdir(worktree)
+
+    assert _run_ensure(_make_ensure_args(repo)) == 0
