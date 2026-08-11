@@ -791,6 +791,151 @@ def test_reconcile_clarify_reports_both_bad_clause_tags_in_one_run(
     ), captured.err
 
 
+def test_reconcile_clarify_canonicalizes_the_tier_clause_tag(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """``--tier-reason " Exposure: …"`` lands as ``exposure: …`` on the row.
+
+    The whole-ticket acceptance is that a reason canonicalizes *from either
+    writer*; the typed verbs are pinned in ``test_lifecycle_event.py``, and this
+    is the refine writer's half. Deleting the ``canonicalize_reason`` call on
+    this axis leaves the row reading `` Exposure: …``, so a corpus tally that
+    buckets on ``reason.split(":")[0]`` splits one axis across three spellings.
+
+    The body is asserted byte-for-byte, not just the prefix: canonicalization
+    rewrites the tag only, so any change to the text after the first colon is a
+    defect this must catch.
+    """
+    monkeypatch.chdir(tmp_path)
+    feature = "tier-reason-canonical"
+    events_log = _seed_events(
+        tmp_path, feature, [_lifecycle_start_line(feature, "simple", "medium")]
+    )
+
+    rc = main(
+        [
+            "reconcile-clarify",
+            "--lifecycle-slug",
+            feature,
+            "--complexity",
+            "complex",
+            "--tier-reason",
+            " Exposure: it feeds spec authoring",
+        ]
+    )
+    assert rc == 0
+
+    envelope = json.loads(capsys.readouterr().out.strip())
+    assert envelope["state"] == "ratcheted"
+
+    tier = _only(_override_rows(events_log), "complexity_override")
+    assert tier["reason"].startswith("exposure: ")
+    assert tier["reason"] == "exposure: it feeds spec authoring"
+
+
+def test_reconcile_clarify_canonicalizes_the_criticality_clause_tag(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The mirror of the tier case: the criticality row canonicalizes too.
+
+    Written out per axis rather than folded into one call because the refine
+    writer canonicalizes each reason separately — a deletion on one axis alone
+    would leave a single both-axes test failing for the wrong reason, and would
+    leave the surviving axis unpinned.
+    """
+    monkeypatch.chdir(tmp_path)
+    feature = "crit-reason-canonical"
+    events_log = _seed_events(
+        tmp_path, feature, [_lifecycle_start_line(feature, "simple", "medium")]
+    )
+
+    rc = main(
+        [
+            "reconcile-clarify",
+            "--lifecycle-slug",
+            feature,
+            "--criticality",
+            "high",
+            "--criticality-reason",
+            " Exposure: it feeds spec authoring",
+        ]
+    )
+    assert rc == 0
+
+    envelope = json.loads(capsys.readouterr().out.strip())
+    assert envelope["state"] == "ratcheted"
+
+    crit = _only(_override_rows(events_log), "criticality_override")
+    assert crit["reason"].startswith("exposure: ")
+    assert crit["reason"] == "exposure: it feeds spec authoring"
+
+
+@pytest.mark.parametrize(
+    ("case", "reason"),
+    [
+        ("multi-word-prefix", "blast radius: unbounded"),
+        ("inner-colon-body", "exposure: it feeds A: B"),
+        ("no-space-after-colon", "other:x"),
+    ],
+)
+def test_reconcile_clarify_leaves_these_reasons_byte_identical(
+    case: str,
+    reason: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Canonicalization rewrites the clause tag and nothing else.
+
+    Three shapes that a tag-rewriting bug would plausibly damage, each asserted
+    on both axes in one call:
+
+    - ``blast radius: unbounded`` — a multi-word prefix claims no tag at all, so
+      it is untagged prose and must not be lowercased or re-spaced into one.
+    - ``exposure: it feeds A: B`` — a recognized tag whose body carries further
+      colons; splitting on every colon would truncate the body.
+    - ``other:x`` — a recognized tag with no space after the colon; the rewrite
+      must not normalize spacing it was never asked to touch.
+
+    Asserted positively on ``from``/``to`` as well, because "the reason came
+    back unchanged" is also vacuously true of a row that was never appended.
+    """
+    monkeypatch.chdir(tmp_path)
+    feature = f"reason-verbatim-{case}"
+    events_log = _seed_events(
+        tmp_path, feature, [_lifecycle_start_line(feature, "simple", "medium")]
+    )
+
+    rc = main(
+        [
+            "reconcile-clarify",
+            "--lifecycle-slug",
+            feature,
+            "--complexity",
+            "complex",
+            "--criticality",
+            "high",
+            "--tier-reason",
+            reason,
+            "--criticality-reason",
+            reason,
+        ]
+    )
+    assert rc == 0
+
+    envelope = json.loads(capsys.readouterr().out.strip())
+    assert envelope["state"] == "ratcheted"
+    assert envelope["rows"] == 2
+
+    rows = _override_rows(events_log)
+    tier = _only(rows, "complexity_override")
+    crit = _only(rows, "criticality_override")
+    assert (tier["from"], tier["to"]) == ("simple", "complex")
+    assert (crit["from"], crit["to"]) == ("medium", "high")
+    assert tier["reason"] == reason
+    assert crit["reason"] == reason
+
+
 def test_refine_skill_passes_the_tier_reason_flag() -> None:
     """refine SKILL.md must spell ``--tier-reason`` on its reconcile calls.
 
