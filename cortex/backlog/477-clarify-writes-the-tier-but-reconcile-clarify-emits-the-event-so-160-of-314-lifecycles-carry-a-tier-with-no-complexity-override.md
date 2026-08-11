@@ -2,13 +2,15 @@
 schema_version: "1"
 uuid: 4cdc489b-1d76-4de5-8d26-e7a34ebfe834
 title: Clarify writes the tier but reconcile-clarify emits the event, so 160 of 314 lifecycles carry a tier with no complexity_override
-status: backlog
+status: complete
 priority: medium
 type: bug
 created: 2026-08-08
-updated: 2026-08-08
+updated: 2026-08-11
 tags: ['lifecycle', 'tiering', 'telemetry']
 areas: ['lifecycle']
+complexity: simple
+criticality: low
 ---
 ## Why
 
@@ -42,3 +44,20 @@ Weigh against Deletion bias before adding an emission: `#447` (wontfix) conclude
 - `skills/refine/SKILL.md` Step 2 vs Step 4 — where the tier is written vs where the event fires
 - `cortex_command/backlog/update_item.py:625` — writes `complexity:`, emits nothing
 - `cortex/backlog/450-*.md` — the detector sentence this either rescues or retires
+
+## Resolution (2026-08-11)
+
+Closed on the Role's **second** arm — the detector was retired in `#450`, and no emission was added. The core diagnosis held; the quantification and three supporting claims did not.
+
+**Held.** Clarify writes the tier at Step 2 while `reconcile-clarify` emits at Step 4, so a lifecycle stopping before Specify carries an assessed tier with no event, and `#450`'s Edge asserting such a ticket "will have both a tier and a matching `complexity_override` event" was false. That sentence is now corrected in place.
+
+**Did not hold.**
+
+- *The populations are disjoint.* `#450`'s detector runs over backlog tickets carrying a tier; its observed case had "no lifecycle directory, no `events.jsonl`, and no `complexity_override` event". This ticket measured lifecycles that already carry a `lifecycle_start`. Of 472 backlog tickets, 323 carry `complexity:` but **0 at `status: backlog` do** — the detector's population is empty, so the "~51% false-positive" rate was computed against a set it never runs on.
+- *The Edge's simple-stop assumption is backwards.* The no-event population splits **119 `complex` / 40 `simple`**, not the "majority case" of simple stops the Edge predicted.
+- *The Integration's retire-if-unread test never fires.* It is a conditional; `complexity_override` has readers (`common.py:982`'s tier reducer, `complexity_escalator.py:101`, `dashboard/data.py:2114` via `poller.py:297`, pipeline metrics' `initial_tier`), so the antecedent is false and the ticket was left with no criterion for choosing between its arms. None of those readers clears `project.md:23`'s discharge bar anyway — the dashboard is display, the escalator is "Advisory — it writes nothing", the reducer feeds a report verb — so Deletion bias's burden on adding the emission stayed undischarged. That is why this closed unbuilt.
+- *Citations drifted.* `refine.py:141` is `seeded.add("criticality")`, not the frontmatter read (that is `:135`); `update_item.py:625` is `("--complexity", None)`, an argparse `_SCALAR_FLAGS` entry, not a write site.
+
+**Unmentioned and relevant.** `lifecycle_start` already carries a `seeded` key (`refine.py:551`) and the override row a `from_seeded` flag (`:407`). They separate a *defaulted* tier from a *frontmatter-derived* one — but not an assessed tier from an unearned one, which is `#450`'s actual complaint — and `seeded` is present on only 19 of 330 rows, a field era rather than a bypass.
+
+**Left open.** The 119 lifecycles holding an unassessed `complex` tier that no `seeded` key can identify is a real corpus finding this ticket surfaced but does not address. File separately if it earns a ticket; it is not the detector problem.

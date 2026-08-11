@@ -1,0 +1,2 @@
+{"ts": "2026-08-11T13:01:24Z", "schema_version": 1, "event": "lifecycle_start", "feature": "clarify-writes-the-tier-but-reconcile", "tier": "simple", "criticality": "medium", "entry_point": "refine", "seeded": ["criticality", "tier"]}
+{"ts": "2026-08-11T13:09:19Z", "event": "clarify_critic", "feature": "clarify-writes-the-tier-but-reconcile", "schema_version": "3", "parent_epic_loaded": "false", "findings_count": "10", "applied_fixes_count": "10", "dismissals_count": "0", "status": "ok"}
