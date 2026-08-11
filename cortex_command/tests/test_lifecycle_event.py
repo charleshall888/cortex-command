@@ -911,3 +911,158 @@ class TestEventSubcommands:
         exempt = {"clarify_critic", "pr_opened"}
         emitted = {ev for ev, _specs in _EVENT_SUBCOMMANDS.values()}
         assert emitted.isdisjoint(exempt), emitted & exempt
+
+
+# ---------------------------------------------------------------------------
+# (g) Override ``--reason`` clause validation on the typed verbs
+# ---------------------------------------------------------------------------
+
+
+class TestOverrideReasonClause:
+    """``--reason`` on the two typed override verbs, end to end through argv.
+
+    The clause predicate itself is unit-tested in ``tests/test_override_reason.py``;
+    what is pinned here is the *binding* — that ``_clause_arg`` is actually wired
+    onto both override verbs' ``--reason`` at parse time, so a bogus tag is
+    refused before any row is built and a recognized tag is canonicalized on the
+    way to disk.
+
+    Every case runs against a throwaway project root with CWD moved into it:
+    ``log_event`` resolves its log path from CWD, so a case left in the repo tree
+    would append to the real ``cortex/lifecycle/``.
+    """
+
+    OVERRIDE_VERBS = ("criticality-override", "complexity-override")
+
+    def _root(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+        root = _setup_cortex_root(tmp_path)
+        monkeypatch.chdir(root)
+        monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+        return root
+
+    def _log_path(self, root: Path, feature: str = "f") -> Path:
+        return root / "cortex" / "lifecycle" / feature / "events.log"
+
+    def _read_row(self, root: Path, feature: str = "f", index: int = 0) -> dict:
+        return json.loads(
+            self._log_path(root, feature)
+            .read_text(encoding="utf-8")
+            .splitlines()[index]
+        )
+
+    @pytest.mark.parametrize("verb", OVERRIDE_VERBS)
+    def test_bogus_clause_tag_rejected_on_both_axes(
+        self, verb: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """R7: one vocabulary — ``design-fork:`` is refused on either axis.
+
+        Exit 2 (argparse usage error) and no events.log at all, since the
+        rejection happens before the row is built.
+        """
+        root = self._root(tmp_path, monkeypatch)
+
+        with pytest.raises(SystemExit) as exc:
+            _run([
+                verb, "--feature", "f", "--from", "moderate", "--to", "complex",
+                "--reason", "design-fork: two options",
+            ])
+        assert exc.value.code == 2
+        assert not self._log_path(root).exists()
+
+    def test_rejected_tag_leaves_the_log_byte_identical(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """R9: a refused ``--reason`` appends nothing to an existing log."""
+        root = self._root(tmp_path, monkeypatch)
+
+        assert _run([
+            "criticality-override", "--feature", "f",
+            "--from", "low", "--to", "high", "--reason", "exposure: prior row",
+        ]) == 0
+        before = self._log_path(root).read_bytes()
+
+        with pytest.raises(SystemExit) as exc:
+            _run([
+                "criticality-override", "--feature", "f",
+                "--from", "high", "--to", "critical", "--reason", "zzz: y",
+            ])
+        assert exc.value.code == 2
+        assert self._log_path(root).read_bytes() == before
+
+    def test_recognized_tag_is_canonicalized_on_disk(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """R6: ``' Exposure: …'`` lands with the exact bytes ``exposure: ``."""
+        root = self._root(tmp_path, monkeypatch)
+
+        assert _run([
+            "complexity-override", "--feature", "f",
+            "--from", "simple", "--to", "moderate",
+            "--reason", " Exposure: it feeds spec authoring",
+        ]) == 0
+        reason = self._read_row(root)["reason"]
+        assert reason.startswith("exposure: "), reason
+        assert reason == "exposure: it feeds spec authoring"
+
+    def test_untagged_prose_is_stored_byte_for_byte(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """R6: a multi-word prefix claims no tag, so nothing is rewritten."""
+        root = self._root(tmp_path, monkeypatch)
+
+        assert _run([
+            "criticality-override", "--feature", "f",
+            "--from", "low", "--to", "medium",
+            "--reason", "blast radius: unbounded",
+        ]) == 0
+        assert self._read_row(root)["reason"] == "blast radius: unbounded"
+
+    @pytest.mark.parametrize("blank", ["", "   "])
+    def test_blank_reason_drops_the_key_entirely(
+        self, blank: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """R10: an empty or whitespace-only reason writes no ``reason`` key."""
+        root = self._root(tmp_path, monkeypatch)
+
+        assert _run([
+            "criticality-override", "--feature", "f",
+            "--from", "low", "--to", "medium", "--reason", blank,
+        ]) == 0
+        row = self._read_row(root)
+        assert "reason" not in row, row
+        assert set(row) == {"ts", "event", "feature", "from", "to"}
+
+    def test_falsy_json_fields_still_emit(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """R11: the blank-string drop must not swallow a legitimate ``0``."""
+        root = self._root(tmp_path, monkeypatch)
+
+        assert _run([
+            "feature-complete", "--feature", "f",
+            "--tasks-total", "0", "--rework-cycles", "0",
+        ]) == 0
+        row = self._read_row(root)
+        assert row["tasks_total"] == 0 and isinstance(row["tasks_total"], int)
+        assert row["rework_cycles"] == 0 and isinstance(row["rework_cycles"], int)
+
+    def test_rejection_names_the_invoking_verb(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture,
+    ) -> None:
+        """R4: the diagnostic names this CLI and the offending tag, not refine.
+
+        Asserted on substance only — the exact prefix shape is argparse's and is
+        not this test's to pin.
+        """
+        self._root(tmp_path, monkeypatch)
+
+        with pytest.raises(SystemExit):
+            _run([
+                "criticality-override", "--feature", "f",
+                "--from", "low", "--to", "high", "--reason", "zzz: y",
+            ])
+        err = capsys.readouterr().err
+        assert "cortex-lifecycle-event" in err, err
+        assert "zzz" in err, err
+        assert "cortex-refine" not in err, err
