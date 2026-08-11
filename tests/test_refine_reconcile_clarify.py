@@ -698,6 +698,52 @@ def test_reconcile_clarify_empty_tier_reason_omits_the_key(
     assert list(tier.keys()) == ["ts", "event", "feature", "from", "to", "gate"]
 
 
+def test_reconcile_clarify_whitespace_only_reasons_omit_the_key(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A whitespace-only reason is dropped on both axes, as an empty one is.
+
+    ``lifecycle_event._emit_subcommand`` drops an optional field whose value is
+    blank after ``.strip()``, so a plain truthiness test here would make the two
+    writers of an override row disagree on ``"   "`` alone — one omitting the
+    key, the other writing ``"reason": "   "``. Both axes are exercised because
+    the guard is written out twice, once per row builder.
+    """
+    monkeypatch.chdir(tmp_path)
+    feature = "reason-whitespace-only"
+    events_log = _seed_events(
+        tmp_path, feature, [_lifecycle_start_line(feature, "simple", "medium")]
+    )
+
+    rc = main(
+        [
+            "reconcile-clarify",
+            "--lifecycle-slug",
+            feature,
+            "--complexity",
+            "complex",
+            "--criticality",
+            "high",
+            "--tier-reason",
+            "   ",
+            "--criticality-reason",
+            "   ",
+        ]
+    )
+    assert rc == 0
+
+    envelope = json.loads(capsys.readouterr().out.strip())
+    assert envelope["state"] == "ratcheted"
+
+    rows = _override_rows(events_log)
+    tier = _only(rows, "complexity_override")
+    crit = _only(rows, "criticality_override")
+    assert (tier["from"], tier["to"]) == ("simple", "complex")
+    assert (crit["from"], crit["to"]) == ("medium", "high")
+    assert list(tier.keys()) == ["ts", "event", "feature", "from", "to", "gate"]
+    assert list(crit.keys()) == ["ts", "event", "feature", "from", "to", "gate"]
+
+
 def test_reconcile_clarify_reports_both_bad_clause_tags_in_one_run(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:

@@ -396,12 +396,13 @@ def _cmd_reconcile_clarify(args: argparse.Namespace) -> int:
                 # differs is the `gate` key appended below, which those verbs
                 # have no equivalent of. On omission the two writers AGREE:
                 # `_emit_subcommand` drops an optional field whose value is
-                # None or a blank string, and the truthiness test here drops
-                # an empty reason the same way, writing no key rather than
-                # `"reason": ""` — an empty string is not an axis a corpus
-                # tally can bucket on. The residual gap is a whitespace-only
-                # reason, which that module drops and truthiness here writes.
-                **({"reason": tier_reason} if tier_reason else {}),
+                # None or a blank string, and the blank-aware test here drops
+                # a None, empty, or whitespace-only reason the same way,
+                # writing no key rather than `"reason": ""` — neither is an
+                # axis a corpus tally can bucket on. Do not narrow this back
+                # to plain truthiness or to `is not None`: the first writes
+                # `"reason": "   "`, the second writes `"reason": ""`.
+                **({"reason": tier_reason} if (tier_reason or "").strip() else {}),
                 "gate": "clarify_reconcile",
                 **({"from_seeded": True} if tier_from_seed else {}),
             }
@@ -418,7 +419,11 @@ def _cmd_reconcile_clarify(args: argparse.Namespace) -> int:
                 "feature": lifecycle_slug,
                 "from": current_criticality,
                 "to": desired_criticality,
-                **({"reason": criticality_reason} if criticality_reason else {}),
+                **(
+                    {"reason": criticality_reason}
+                    if (criticality_reason or "").strip()
+                    else {}
+                ),
                 "gate": "clarify_reconcile",
                 **({"from_seeded": True} if crit_from_seed else {}),
             }
