@@ -1,0 +1,84 @@
+{# § 04 THE KEY & CENSUS — the legend that *is* the distribution readout.
+
+   This replaces a stacked distribution bar rather than restyling it. Merging
+   the census into the key deletes a whole element and puts each count against
+   the glyph and border style it explains, which is where a reader needs it.
+
+   The border-style key is not decorative redundancy: it is the channel that
+   survives monochrome and colour-blindness, and it is stated in words here so
+   the contract is printed rather than remembered. Any tint elsewhere on these
+   surfaces is redundant with band position and with the printed count — never
+   the only channel.
+
+   The reconciliation line is the rendered half of an assertion the test suite
+   also makes. Records are routed into eleven bands by a rule table; a routing
+   miss would drop a ticket off a read-only board silently, which is the worst
+   failure this surface has available to it. Printing the sum makes the failure
+   visible to the operator on the same page the test makes it visible to CI. #}
+
+{% macro census_block(census, slice_total) %}
+<div class="census">
+  <table class="nav-table">
+    <caption class="nav-table__caption">every record on this board, by disposition</caption>
+    <thead>
+      <tr>
+        <th scope="col">bands</th>
+        <th scope="col">disposition</th>
+        <th scope="col" class="nav-table__pts">count</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for group in census.groups %}
+      <tr>
+        <th scope="row" class="census__keys">
+          <span class="census__swatch census__swatch--{{ group.border_style }}" aria-hidden="true"></span>{{ group.bands | join(' ') }}
+        </th>
+        <td>{{ group.gloss }}</td>
+        <td class="nav-table__pts">{{ group.count }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <table class="nav-table">
+    <caption class="nav-table__caption">border style — the channel that works without colour</caption>
+    <thead>
+      <tr>
+        <th scope="col">style</th>
+        <th scope="col">what it claims</th>
+        <th scope="col" class="nav-table__pts">count</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for border in census.borders %}
+      <tr>
+        <th scope="row" class="census__keys">
+          <span class="census__swatch census__swatch--{{ border.style }}" aria-hidden="true"></span>{{ border.style }}
+        </th>
+        <td>{{ border.gloss }}</td>
+        <td class="nav-table__pts">{{ border.count }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if census.corpus %}
+  {# The other half of the retired ledger bar. Stated in words with its counts
+     adjacent, rather than as a stacked bar whose only key was a hover. #}
+  <p class="census__corpus">
+    scope · {{ census.corpus.active }} active {{ 'record' if census.corpus.active == 1 else 'records' }} on this board
+    · {{ census.corpus.archived }} archived out of scope for every count above
+    · records closed in place are counted by neither
+  </p>
+  {% endif %}
+
+  {% if census.reconciliation %}
+  <p class="recon{% if not census.reconciliation.ok %} recon--broken{% endif %}">
+    {{ census.reconciliation.sum }} = {{ census.reconciliation.total }}
+    {% if census.reconciliation.ok %}· every one of the {{ slice_total }} records on this board is in exactly one band · nothing dropped, nothing truncated
+    {% else %}· {{ census.reconciliation.total }} banded against {{ census.reconciliation.slice_total }} in the slice — records are missing from this page
+    {% endif %}
+  </p>
+  {% endif %}
+</div>
+{% endmacro %}

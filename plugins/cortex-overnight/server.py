@@ -1688,6 +1688,30 @@ class StatusOutput(BaseModel):
     paused_reason: str | None = None
 
 
+# dashboard_open ------------------------------------------------------------
+
+
+class DashboardOpenInput(BaseModel):
+    """Input for the ``dashboard_open`` tool."""
+
+    port: int | None = None
+    root: str | None = None
+    also_root: list[str] | None = None
+
+
+class DashboardOpenOutput(BaseModel):
+    """Output for the ``dashboard_open`` tool."""
+
+    model_config = _FORWARD_COMPAT
+
+    status: str
+    url: str | None = None
+    port: int | None = None
+    pid: int | None = None
+    roots: list[str] = Field(default_factory=list)
+    error: str | None = None
+
+
 # overnight_logs ------------------------------------------------------------
 
 
@@ -2543,6 +2567,88 @@ async def overnight_list_sessions(
     :data:`_CORTEX_CLI_MISSING_ERROR` graceful-degrade path (S5.2).
     """
     return _delegate_overnight_list_sessions(payload)
+
+
+def _delegate_dashboard_open(
+    payload: DashboardOpenInput,
+) -> DashboardOpenOutput | str:
+    """Subprocess delegation for ``dashboard_open``.
+
+    The dashboard is the one surface in this stack that answers "what is going
+    on" without spending tokens, and until now the only way to raise it was a
+    blocking shell command the operator had to run themselves. This tool exists
+    so the answer to "show me the board" is a URL rather than an instruction.
+
+    Delegates like every other tool here: argv plus versioned JSON, no
+    ``cortex_command`` import (R1). The verb is idempotent, so calling this
+    twice is safe and returns the running server rather than a second one.
+
+    The launch waits for the port to accept a connection before returning, so
+    the URL handed back is one that already serves.
+    """
+
+    _gate_dispatch()
+
+    argv: list[str] = ["dashboard", "--background", "--format", "json"]
+    if payload.port is not None:
+        argv += ["--port", str(payload.port)]
+    if payload.root:
+        argv += ["--root", payload.root]
+    for extra in payload.also_root or []:
+        argv += ["--also-root", extra]
+
+    cli_retry_budget: list[int] = [1]
+    try:
+        completed = _retry_on_cli_missing(
+            cli_retry_budget,
+            _run_cortex,
+            argv,
+            # Generous next to the other verbs: this one deliberately blocks
+            # until the port answers, and the verb's own ceiling is 15s.
+            timeout=45.0,
+        )
+    except CortexCliMissing:
+        return _CORTEX_CLI_MISSING_ERROR
+
+    # A non-zero exit here means the verb reported a launch failure on stdout
+    # as well, so the payload is still the better error to surface — it names
+    # what went wrong, where a bare exit code does not. Parse first and only
+    # raise if there is nothing usable.
+    if completed.returncode != 0 and not completed.stdout.strip():
+        raise RuntimeError(
+            f"dashboard_open: cortex exited "
+            f"{completed.returncode}; stderr={completed.stderr!r}"
+        )
+
+    parsed = _parse_json_payload(completed, verb="dashboard_open")
+
+    return DashboardOpenOutput(
+        status=str(parsed.get("status") or "unknown"),
+        url=parsed.get("url"),
+        port=parsed.get("port"),
+        pid=parsed.get("pid"),
+        roots=list(parsed.get("roots") or []),
+        error=parsed.get("error"),
+    )
+
+
+@server.tool(
+    name="dashboard_open",
+    description=(
+        "Start the cortex dashboard in the background (or report the one "
+        "already running) and return its URL. Idempotent. Optionally tracks "
+        "several repositories in one process, with a switcher in the UI."
+    ),
+)
+async def dashboard_open(
+    payload: DashboardOpenInput,
+) -> DashboardOpenOutput | str:
+    """Open the dashboard via subprocess delegation.
+
+    Return type union with ``str`` accommodates the
+    :data:`_CORTEX_CLI_MISSING_ERROR` graceful-degrade path (S5.2).
+    """
+    return _delegate_dashboard_open(payload)
 
 
 def main() -> None:

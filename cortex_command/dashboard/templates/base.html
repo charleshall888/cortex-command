@@ -429,6 +429,34 @@
         transition: color 0.2s ease, border-color 0.2s ease;
       }
       .nav-link:hover { color: var(--color-ochre); border-color: var(--color-ochre); }
+      /* Repo switcher. Sits under the view nav because it changes a different
+         axis: the view nav moves within a repo, this moves between them. The
+         current repo is marked by weight and an underline as well as colour,
+         since colour alone is not a channel this dashboard uses. */
+      .repo-switch {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 10px;
+        margin-top: 6px;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .repo-switch__label { color: var(--color-ink-4); }
+      .repo-switch__item {
+        color: var(--color-ink-3);
+        text-decoration: none;
+        border-bottom: 1px solid transparent;
+        padding-bottom: 1px;
+      }
+      .repo-switch__item:hover { color: var(--color-ochre); }
+      .repo-switch__item--on {
+        color: var(--color-ink-1);
+        font-weight: var(--font-weight-bold);
+        border-bottom-color: var(--color-ochre);
+      }
       .nav-link-active {
         color: var(--color-ink);
         border-bottom: 1px solid var(--color-ink);
@@ -2593,6 +2621,610 @@
         letter-spacing: 0.08em;
       }
 
+      /* ── Backlog navigator (surface A) & epic map (surface B) ────────
+         Two read-only surfaces sharing one vocabulary. Every colour here is a
+         token; the load-bearing channels are border STYLE and position, and
+         tint is only ever redundant with a printed count or a band letter —
+         the contract is stated in the § 04 key so it is checkable rather than
+         remembered. */
+
+      .sec-lede {
+        font-family: var(--font-serif);
+        font-size: 14px;
+        line-height: 1.6;
+        color: var(--color-ink-2);
+        max-width: 68ch;
+        margin: 0 0 14px;
+      }
+      .sec-lede--tight { margin-bottom: 8px; font-family: var(--font-mono); font-size: 11px; color: var(--color-ink-faint); }
+      .sec-lede code {
+        font-family: var(--font-mono);
+        font-size: 0.9em;
+        color: var(--color-ochre);
+      }
+
+      /* ── § 01 the pick ──────────────────────────────────────────── */
+      .nav-hero {
+        border-left: 3px solid var(--color-ochre);
+        padding-left: 18px;
+        margin-top: 6px;
+      }
+      .nav-hero__rank {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: var(--register);
+        text-transform: uppercase;
+        color: var(--color-ink-faint);
+        margin: 0 0 4px;
+      }
+      .nav-hero__head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 12px;
+        margin: 0 0 8px;
+        font-family: var(--font-serif);
+        font-weight: 400;
+        font-size: 24px;
+        line-height: 1.25;
+        letter-spacing: -0.012em;
+        color: var(--color-ink-1);
+      }
+      .nav-hero__id, .alt__id, .epic-frame__id {
+        font-family: var(--font-mono);
+        font-size: 0.72em;
+        color: var(--color-ochre);
+        text-decoration: none;
+        border-bottom: 1px solid color-mix(in srgb, var(--color-ochre) 45%, transparent);
+      }
+      .nav-hero__id:hover, .alt__id:hover, .epic-frame__id:hover { color: var(--color-ochre-soft); }
+      .nav-hero__title { flex: 1 1 20ch; }
+
+      .nav-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+      .nav-chip {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.04em;
+        text-transform: lowercase;
+        color: var(--color-ink-3);
+        border: 1px solid var(--color-rule-soft);
+        padding: 2px 7px;
+      }
+      .nav-chip--lev { color: var(--color-ochre); border-color: color-mix(in srgb, var(--color-ochre) 50%, transparent); }
+      /* Disclosure chip: the ranking rests on a status cortex does not know.
+         Dashed border is the second channel — the chip reads as provisional
+         without relying on hue, which the colour-blind contract requires. */
+      .nav-chip--warn {
+        color: var(--color-ochre);
+        border-style: dashed;
+        border-color: color-mix(in srgb, var(--color-ochre) 65%, transparent);
+      }
+
+      /* ── Epic-map hover card ────────────────────────────────────────────
+         Fixed-position so it escapes .epic-pan's overflow clip — a card
+         absolutely positioned inside the pan container would be cut off by
+         the very scroll box the node lives in. pointer-events:none so the
+         card can never sit between the pointer and the node it describes and
+         start a mouseout/mouseover flicker loop. */
+      .hovercard {
+        position: fixed;
+        z-index: 60;
+        max-width: 440px;
+        padding: 12px 14px 10px;
+        background: var(--color-parchment-3);
+        border: 1px solid var(--color-rule-soft);
+        border-radius: 3px;
+        box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
+        pointer-events: none;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        line-height: 1.5;
+      }
+      .hovercard[hidden] { display: none; }
+      .hovercard__title {
+        font-family: var(--font-serif);
+        font-size: 14px;
+        line-height: 1.35;
+        color: var(--color-ink-1);
+        margin: 0 0 8px;
+      }
+      .hovercard__id { color: var(--color-ochre); font-family: var(--font-mono); font-size: 12px; }
+      .hovercard__chips { display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 8px; }
+      /* An empty chip is a fact the ticket does not carry; drawing its border
+         anyway would read as a value that failed to load. */
+      .hovercard__chips .nav-chip:empty { display: none; }
+      .hovercard__why {
+        margin: 0;
+        color: var(--color-ink-3);
+        border-top: 1px dotted var(--color-rule-soft);
+        padding-top: 7px;
+      }
+      .hovercard__why:empty { display: none; }
+      .hovercard__hint {
+        margin: 7px 0 0;
+        color: var(--color-ink-4);
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      /* ── Ticket modal ───────────────────────────────────────────────────
+         A native <dialog>, so Esc, the top layer, focus trapping and inertness
+         of the page behind it are the browser's job rather than script this
+         dashboard would have to carry and get right. */
+      .ticket-modal {
+        width: min(860px, 92vw);
+        max-height: 86vh;
+        padding: 0;
+        background: var(--color-parchment-2);
+        border: 1px solid var(--color-rule-soft);
+        border-radius: 3px;
+        color: var(--color-ink-2);
+      }
+      .ticket-modal::backdrop { background: rgba(10, 10, 12, 0.72); }
+      .ticket-modal__dismiss {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        display: flex;
+        justify-content: flex-end;
+        padding: 10px 14px 0;
+        background: linear-gradient(var(--color-parchment-2) 72%, transparent);
+      }
+      .ticket-modal__dismiss button {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        color: var(--color-ink-3);
+        background: none;
+        border: 1px solid var(--color-rule-soft);
+        border-radius: 2px;
+        padding: 4px 9px;
+        cursor: pointer;
+      }
+      .ticket-modal__dismiss button:hover { color: var(--color-ink-1); border-color: var(--color-ink-4); }
+      .ticket-modal__body { padding: 4px 30px 26px; overflow-y: auto; max-height: calc(86vh - 44px); }
+      .ticket-card__head { border-bottom: 1px solid var(--color-rule-soft); padding-bottom: 14px; margin-bottom: 16px; }
+      .ticket-card__title { font-family: var(--font-serif); font-size: 21px; line-height: 1.3; color: var(--color-ink-1); margin: 0; }
+      .ticket-card__id { color: var(--color-ochre); font-family: var(--font-mono); font-size: 15px; }
+      .ticket-card__badges { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; margin-top: 11px; }
+      .ticket-card__artifacts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 12px 0 0; }
+      .ticket-card__lede { font-family: var(--font-mono); font-size: 12px; color: var(--color-ink-3); margin: 18px 0; }
+      .ticket-card__out {
+        margin: 20px 0 0;
+        padding-top: 12px;
+        border-top: 1px dotted var(--color-rule-soft);
+        font-family: var(--font-mono);
+        font-size: 11px;
+      }
+
+      /* The node keeps a visible hover state of its own. The card explains the
+         ticket; this says which box the card is about — on a frame of nine
+         near-identical boxes the card alone does not. */
+      .node-link:hover .node { stroke: var(--color-ochre); stroke-width: 2; }
+      .node-link { cursor: pointer; }
+      .nav-chip--pts {
+        color: var(--color-ink-1);
+        border-color: var(--color-ink-3);
+        font-variant-numeric: tabular-nums slashed-zero;
+      }
+
+      .nav-arg {
+        font-family: var(--font-serif);
+        font-size: 16px;
+        line-height: 1.65;
+        color: var(--color-ink-1);
+        max-width: 74ch;
+        margin: 0 0 16px;
+      }
+
+      /* ── the two-way counterfactual ─────────────────────────────── */
+      .cf {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 18px;
+        border-top: 1px dashed var(--color-rule-soft);
+        border-bottom: 1px dashed var(--color-rule-soft);
+        padding: 14px 0;
+        margin-bottom: 16px;
+      }
+      .cf__head {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: var(--register);
+        text-transform: uppercase;
+        color: var(--color-ink-faint);
+        margin: 0 0 6px;
+        font-weight: 500;
+      }
+      .cf__body {
+        font-family: var(--font-serif);
+        font-size: 13.5px;
+        line-height: 1.55;
+        color: var(--color-ink-2);
+        margin: 0 0 8px;
+      }
+      .cf__body--none { font-style: italic; color: var(--color-ink-faint); }
+      .cf__body--minor { font-size: 12px; color: var(--color-ink-faint); }
+      .cf__body a, .epic-tail__members a, .band__blocker {
+        font-family: var(--font-mono);
+        font-size: 0.92em;
+        color: var(--color-ochre);
+        text-decoration: none;
+      }
+      .cf__body a:hover, .epic-tail__members a:hover, .band__blocker:hover { color: var(--color-ochre-soft); }
+
+      /* ── the ledger ─────────────────────────────────────────────── */
+      .ledger {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        line-height: 1.55;
+        color: var(--color-ink-2);
+      }
+      .ledger__caption, .nav-table__caption {
+        caption-side: top;
+        text-align: left;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: var(--register);
+        text-transform: uppercase;
+        color: var(--color-ink-faint);
+        padding-bottom: 6px;
+      }
+      /* Present for assistive technology, absent on screen. Not `display:none`
+         and not `visibility:hidden` — both remove it from the accessibility
+         tree as well, which is the opposite of the intent. */
+      .nav-table__caption--vh {
+        position: absolute;
+        width: 1px; height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+      .census__corpus {
+        grid-column: 1 / -1;
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        font-variant-numeric: tabular-nums slashed-zero;
+        color: var(--color-ink-faint);
+        margin: 0;
+      }
+      .ledger th, .ledger td {
+        text-align: left;
+        padding: 6px 10px;
+        border-bottom: 1px dotted var(--color-rule-soft);
+        vertical-align: top;
+      }
+      .ledger thead th {
+        font-size: 9.5px;
+        letter-spacing: var(--register);
+        text-transform: uppercase;
+        color: var(--color-ink-faint);
+        font-weight: 500;
+        border-bottom: 1px solid var(--color-rule-soft);
+      }
+      .ledger tbody th { font-weight: 400; color: var(--color-ink-1); white-space: nowrap; }
+      .ledger__pts {
+        text-align: right;
+        font-variant-numeric: tabular-nums slashed-zero;
+        white-space: nowrap;
+      }
+      .ledger__raw { color: var(--color-ink-3); word-break: break-word; }
+      .ledger__note { display: block; font-size: 10px; color: var(--color-ink-faint); font-style: italic; }
+      /* A zero-contribution term is dimmed, never dropped: the ledger's claim
+         is that six named terms sum to the printed total. */
+      .ledger__row--zero th, .ledger__row--zero td { color: var(--color-ink-faint); }
+      .ledger tfoot th, .ledger tfoot td {
+        border-top: 3px double var(--color-rule-soft);
+        border-bottom: none;
+        color: var(--color-ink-1);
+        font-weight: 500;
+        padding-top: 8px;
+      }
+      .ledger__swatch {
+        display: inline-block;
+        width: 8px; height: 8px;
+        margin-right: 7px;
+        background: var(--swatch, var(--color-ink-faint));
+      }
+      .t-pri { --swatch: var(--color-blue); }
+      .t-lev { --swatch: var(--color-ochre); }
+      .t-fly { --swatch: var(--c-state-running); }
+      .t-epi { --swatch: var(--color-ochre-soft); }
+      .t-def { --swatch: var(--c-state-failed); }
+      .t-stl { --swatch: var(--color-ink-mute); }
+
+      /* ── § 02 alternates ────────────────────────────────────────── */
+      .alt-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+        gap: 20px;
+      }
+      .alt {
+        border-left: 2px solid var(--color-rule-soft);
+        padding-left: 16px;
+      }
+      .alt__rank {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: var(--register);
+        text-transform: uppercase;
+        color: var(--color-ink-faint);
+        margin: 0 0 4px;
+      }
+      .alt__head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 10px;
+        margin: 0 0 8px;
+        font-family: var(--font-serif);
+        font-weight: 400;
+        font-size: 17px;
+        line-height: 1.3;
+        color: var(--color-ink-1);
+      }
+      .alt__swap {
+        font-family: var(--font-serif);
+        font-size: 14px;
+        line-height: 1.6;
+        color: var(--color-ink-1);
+        margin: 0 0 8px;
+      }
+      .alt__deltas { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+      .alt__delta {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--color-ink-faint);
+        font-variant-numeric: tabular-nums slashed-zero;
+      }
+      .alt__delta--up { color: var(--color-ochre); }
+      .alt__delta--down { color: var(--color-ink-3); }
+      .alt__ledger > summary {
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        letter-spacing: 0.04em;
+        color: var(--color-ink-faint);
+        cursor: pointer;
+        padding: 4px 0;
+        border-top: 1px dotted var(--color-rule-soft);
+      }
+      .alt__ledger > summary:hover { color: var(--color-ochre); }
+      .alt__ledger[open] > summary { color: var(--color-ink-2); }
+
+      /* ── § 03 the board ─────────────────────────────────────────── */
+      .band {
+        margin: 0 0 22px;
+        padding-left: 14px;
+        border-left-width: 3px;
+        border-left-color: var(--color-rule-soft);
+      }
+      /* Border style is the fourth channel and the one that survives
+         monochrome. It groups band CLASSES — startable, not-a-task, held,
+         lapsed — because four values cannot carry eleven distinctions and
+         pretending otherwise would make the channel decorative. */
+      .band--solid  { border-left-style: solid;  border-left-color: var(--color-blue); }
+      .band--dotted { border-left-style: dotted; border-left-color: var(--color-ochre); }
+      .band--dashed { border-left-style: dashed; border-left-color: var(--color-ink-3); }
+      .band--ghost  { border-left-style: solid;  border-left-color: color-mix(in srgb, var(--color-ink-faint) 40%, transparent); }
+      .band__head {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 6px;
+      }
+      .band__letter {
+        font-family: var(--font-serif);
+        font-size: 22px;
+        line-height: 1;
+        color: var(--color-ochre);
+        min-width: 1.4em;
+      }
+      .band__label {
+        margin: 0;
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        font-weight: 500;
+        letter-spacing: var(--register);
+        text-transform: uppercase;
+        color: var(--color-ink-1);
+      }
+      .band__count {
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        font-variant-numeric: tabular-nums slashed-zero;
+        color: var(--color-ink-2);
+        border: 1px solid var(--color-rule-soft);
+        padding: 0 6px;
+      }
+      .band__rationale {
+        flex: 1 1 20ch;
+        text-align: right;
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-size: 12.5px;
+        color: var(--color-ink-faint);
+      }
+      .band__blockers { display: inline-flex; gap: 8px; margin-left: 8px; }
+      .band__blocker--lapsed { color: var(--color-ink-faint); text-decoration: line-through; }
+
+      /* ── the row tables, shared by every list on both surfaces ──── */
+      .nav-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        line-height: 1.55;
+        color: var(--color-ink-2);
+        margin-bottom: 10px;
+      }
+      .nav-table th, .nav-table td {
+        text-align: left;
+        padding: 5px 10px;
+        border-bottom: 1px dotted var(--color-rule-soft);
+        vertical-align: top;
+      }
+      .nav-table thead th {
+        font-size: 9.5px;
+        font-weight: 500;
+        letter-spacing: var(--register);
+        text-transform: uppercase;
+        color: var(--color-ink-faint);
+        border-bottom: 1px solid var(--color-rule-soft);
+      }
+      .nav-table tbody tr:last-child td { border-bottom: none; }
+      .nav-table tbody tr:hover td { background: color-mix(in srgb, var(--color-blue) 6%, transparent); }
+      .nav-table__rank, .nav-table__id, .nav-table__pts { white-space: nowrap; width: 1%; }
+      .nav-table__rank { color: var(--color-ink-faint); font-variant-numeric: tabular-nums slashed-zero; }
+      .nav-table__pts { text-align: right; font-variant-numeric: tabular-nums slashed-zero; }
+      .nav-table__id a { color: var(--color-ochre); text-decoration: none; }
+      .nav-table__id a:hover { color: var(--color-ochre-soft); }
+      /* No width and no ellipsis: the full title prints. Titles vary by more
+         than forty characters here, and a fixed column would be a width guess
+         against an unbundled face. */
+      .nav-table__title {
+        font-family: var(--font-serif);
+        font-size: 13px;
+        color: var(--color-ink-1);
+        width: auto;
+      }
+      .nav-table__why { color: var(--color-ink-faint); font-size: 10.5px; }
+      .nav-table--tight { font-size: 10.5px; margin-top: 8px; }
+
+      /* ── § 04 key & census ──────────────────────────────────────── */
+      .census {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+        gap: 22px;
+      }
+      .census__keys { white-space: nowrap; font-weight: 400; color: var(--color-ink-1); }
+      .census__swatch {
+        display: inline-block;
+        width: 22px; height: 0;
+        margin-right: 8px;
+        vertical-align: middle;
+        border-top-width: 2px;
+      }
+      .census__swatch--solid  { border-top-style: solid;  border-top-color: var(--color-blue); }
+      .census__swatch--dotted { border-top-style: dotted; border-top-color: var(--color-ochre); }
+      .census__swatch--dashed { border-top-style: dashed; border-top-color: var(--color-ink-3); }
+      .census__swatch--ghost  { border-top-style: solid;  border-top-color: color-mix(in srgb, var(--color-ink-faint) 40%, transparent); }
+      .recon {
+        grid-column: 1 / -1;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        font-variant-numeric: tabular-nums slashed-zero;
+        color: var(--color-ink-2);
+        border-top: 3px double var(--color-rule-soft);
+        padding-top: 8px;
+        margin: 0;
+      }
+      .recon--broken { color: var(--c-state-failed); }
+
+      /* ── surface B: the epic frames ─────────────────────────────── */
+      .epic-frame {
+        margin: 0 0 30px;
+        padding-bottom: 24px;
+        border-bottom: 1px dashed var(--color-rule-soft);
+      }
+      .epic-frame:last-child { border-bottom: none; }
+      .epic-frame__head {
+        display: flex;
+        align-items: baseline;
+        gap: 14px;
+        flex-wrap: wrap;
+      }
+      .epic-frame__title {
+        margin: 0;
+        font-family: var(--font-serif);
+        font-weight: 400;
+        font-size: 18px;
+        line-height: 1.3;
+        color: var(--color-ink-1);
+        display: flex;
+        gap: 10px;
+        align-items: baseline;
+        flex-wrap: wrap;
+      }
+      .epic-frame__meta {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: var(--register);
+        text-transform: uppercase;
+        color: var(--color-ink-faint);
+      }
+      .epic-verdict {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        color: var(--color-ink-3);
+        margin: 6px 0 4px;
+      }
+      .epic-verdict--partial { color: var(--color-ochre); }
+      .epic-caption {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: var(--register);
+        text-transform: uppercase;
+        color: var(--color-ink-faint);
+        margin: 0 0 10px;
+      }
+      /* Horizontal pan only. The server already knows the frame's exact width
+         and height, so nothing reflows on a morph swap and no JS recomputes a
+         coordinate. */
+      .epic-pan { overflow-x: auto; overflow-y: hidden; padding-bottom: 6px; }
+      .epic-svg { display: block; max-width: none; }
+
+      .node { fill: var(--color-parchment-3); stroke-width: 1.5; stroke: var(--color-rule-soft); }
+      .node--solid  { stroke: var(--color-blue); stroke-dasharray: none; }
+      .node--dotted { stroke: var(--color-ochre); stroke-dasharray: 1 3; }
+      .node--dashed { stroke: var(--color-ink-3); stroke-dasharray: 6 4; }
+      .node--ghost  { stroke: var(--color-ink-faint); stroke-opacity: 0.45; fill: none; }
+      .node-link:hover .node { fill: color-mix(in srgb, var(--color-blue) 12%, var(--color-parchment-3)); }
+      /* The only strings drawn as SVG text: an id and a one-word state, both
+         inside a 244x68 box at 14px in from its left edge. Nothing here is
+         positioned from a measured or guessed character advance. */
+      .node-id {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        fill: var(--color-ochre);
+      }
+      .node-state {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        fill: var(--color-ink-faint);
+      }
+      .pool-box {
+        fill: none;
+        stroke: var(--color-ink-3);
+        stroke-width: 1;
+        stroke-dasharray: 7 5;
+      }
+      .pool-label {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        fill: var(--color-ink-faint);
+      }
+      .edge { fill: none; stroke-width: 1.5; }
+      .edge--live { stroke: var(--color-ochre); }
+      .edge--external { stroke: var(--color-ink-3); stroke-dasharray: 5 4; }
+      .edge--discharged { stroke: var(--color-ink-faint); stroke-opacity: 0.5; stroke-dasharray: 2 4; }
+      .epic-arrow { fill: var(--color-ochre); }
+      .epic-roster__ext td, .epic-tail__off td { color: var(--color-ink-faint); }
+      .epic-tail__members { font-size: 10.5px; color: var(--color-ink-3); }
+      .epic-tail__state { color: var(--color-ink-faint); }
+
       /* ── Drop italic-WONK header treatment on deep sections ──────── */
       section#activity-stream h2 em,
       section#fleet-panel h2 em,
@@ -2632,70 +3264,91 @@
          does not set it keeps the original masthead. #}
       {% set view = view | default('overnight') %}
       <div class="manuscript-meta">
-        <span>§ 00 · {% if view == 'backlog' %}backlog ledger · queue{% elif view == 'history' %}session archive · read-only{% else %}overnight runner · live{% endif %}</span>
+        <span>§ 00 · {% if view == 'backlog' %}backlog navigator · read-only{% elif view == 'epics' %}epic map · read-only{% elif view == 'history' %}session archive · read-only{% else %}overnight runner · live{% endif %}</span>
         <span class="reg-divider"></span>
         <span>doc · cortex-command/dashboard</span>
         {% if view == 'overnight' %}<span>rev R{% if state is defined and state.overnight %}{{ state.overnight.current_round }}{% else %}0{% endif %}</span>{% endif %}
       </div>
-      <h1>cortex <em>{% if view == 'backlog' %}backlog{% elif view == 'history' %}history{% else %}overnight{% endif %}</em></h1>
+      <h1>cortex <em>{% if view == 'backlog' %}backlog{% elif view == 'epics' %}epics{% elif view == 'history' %}history{% else %}overnight{% endif %}</em></h1>
       <div class="crest">
         <nav>
-          <a href="/" class="nav-link {% if request.url.path == '/' %}nav-link-active{% endif %}">Overnight</a>
-          <a href="/backlog" class="nav-link {% if request.url.path.startswith('/backlog') %}nav-link-active{% endif %}">Backlog</a>
-          <a href="/sessions" class="nav-link {% if request.url.path.startswith('/sessions') %}nav-link-active{% endif %}">History</a>
+          {# Every nav link carries the current repo, so switching view keeps
+             the repo and switching repo keeps the view. `repo_query` is empty
+             whenever one repo is tracked, which leaves these URLs exactly as
+             they were before the registry existed. #}
+          <a href="/{{ repo_query }}" class="nav-link {% if request.url.path == '/' %}nav-link-active{% endif %}">Overnight</a>
+          <a href="/backlog{{ repo_query }}" class="nav-link {% if request.url.path.startswith('/backlog') %}nav-link-active{% endif %}">Backlog</a>
+          <a href="/epics{{ repo_query }}" class="nav-link {% if request.url.path.startswith('/epics') %}nav-link-active{% endif %}">Epics</a>
+          <a href="/sessions{{ repo_query }}" class="nav-link {% if request.url.path.startswith('/sessions') %}nav-link-active{% endif %}">History</a>
         </nav>
+        {# The repo switcher appears only when there is a choice to make. A
+           chooser offering one option is furniture, and most repos track one
+           checkout. Rendered as links rather than a <select> so it needs no
+           script, survives the morph swap, and each repo is a real URL the
+           operator can bookmark or open in a second tab — which is the whole
+           point of serving several from one process. #}
+        {% if repo_multi %}
+        <nav class="repo-switch" aria-label="Repository">
+          <span class="repo-switch__label">repo</span>
+          {% for r in repos %}
+          <a href="{{ request.url.path }}?repo={{ r.slug }}"
+             class="repo-switch__item{% if repo and r.slug == repo.slug %} repo-switch__item--on{% endif %}"
+             {% if repo and r.slug == repo.slug %}aria-current="true"{% endif %}>{{ r.label }}</a>
+          {% endfor %}
+        </nav>
+        {% endif %}
         <span id="live-indicator" class="live-indicator">{% if state is defined and state.overnight and state.overnight.phase == 'executing' %}<span class="live-dot"></span> Live{% else %}No session · idle{% endif %}</span>
       </div>
     </header>
 
     <main id="main-content" tabindex="-1">
       {% block page_main %}
-      <section id="alerts-banner" role="alert" aria-live="assertive" hx-get="/partials/alerts-banner" hx-trigger="load, every 5s" hx-swap="morph"></section>
+      <section id="alerts-banner" role="alert" aria-live="assertive" hx-get="/partials/alerts-banner{{ repo_query }}" hx-trigger="load, every 5s" hx-swap="morph"></section>
 
-      <section id="session-panel" class="section-primary" aria-live="polite" hx-get="/partials/session-panel" hx-trigger="load, every 5s" hx-swap="morph">
+      <section id="session-panel" class="section-primary" aria-live="polite" hx-get="/partials/session-panel{{ repo_query }}" hx-trigger="load, every 5s" hx-swap="morph">
         <span class="sec-num"><strong>§ 01</strong>session</span>
         <p class="empty-state">loading session frontmatter</p>
       </section>
 
-      <section id="escalations-panel" class="section-attention" aria-live="polite" hx-get="/partials/escalations" hx-trigger="load, every 5s" hx-swap="morph">
+      <section id="escalations-panel" class="section-attention" aria-live="polite" hx-get="/partials/escalations{{ repo_query }}" hx-trigger="load, every 5s" hx-swap="morph">
         <span class="sec-num"><strong>§ 02</strong>open questions</span>
         <p class="empty-state">loading escalations</p>
       </section>
 
-      <section id="feature-cards" class="section-primary" aria-live="polite" aria-busy="false" hx-get="/partials/feature-cards" hx-trigger="load, every 5s" hx-swap="morph">
+      <section id="feature-cards" class="section-primary" aria-live="polite" aria-busy="false" hx-get="/partials/feature-cards{{ repo_query }}" hx-trigger="load, every 5s" hx-swap="morph">
         <span class="sec-num"><strong>§ 03</strong>features</span>
         <p class="empty-state">loading feature ledger</p>
       </section>
 
       <div class="dash-grid">
         <div class="dash-grid-main">
-          <section id="activity-stream" aria-label="Recent activity" aria-live="polite" aria-busy="false" hx-get="/partials/activity-stream" hx-trigger="load, every 3s" hx-swap="morph">
+          <section id="activity-stream" aria-label="Recent activity" aria-live="polite" aria-busy="false" hx-get="/partials/activity-stream{{ repo_query }}" hx-trigger="load, every 3s" hx-swap="morph">
             <span class="sec-num"><strong>§ 04</strong>recent activity</span>
             <p class="empty-state">loading activity stream</p>
           </section>
         </div>
 
         <div class="dash-grid-side">
-          <section id="fleet-panel" aria-label="Agent fleet" aria-live="polite" aria-busy="false" hx-get="/partials/fleet-panel" hx-trigger="load, every 5s" hx-swap="morph">
+          <section id="fleet-panel" aria-label="Agent fleet" aria-live="polite" aria-busy="false" hx-get="/partials/fleet-panel{{ repo_query }}" hx-trigger="load, every 5s" hx-swap="morph">
             <span class="sec-num"><strong>§ 05</strong>fleet</span>
             <p class="empty-state">loading roster</p>
           </section>
         </div>
       </div>
 
-      <section id="swim-lane" aria-label="Timing diagram" aria-live="polite" hx-get="/partials/swim-lane" hx-trigger="load, every 5s" hx-swap="morph">
+      <section id="swim-lane" aria-label="Timing diagram" aria-live="polite" hx-get="/partials/swim-lane{{ repo_query }}" hx-trigger="load, every 5s" hx-swap="morph">
         <span class="sec-num"><strong>§ 06</strong>timing</span>
         <h2>Timeline <span class="phase-tag">scrub · per-feature</span></h2>
         <p class="empty-state">loading timing diagram</p>
       </section>
 
-      <section id="metrics-baseline" aria-label="Phase baselines" aria-live="polite" hx-get="/partials/metrics" hx-trigger="load, every 30s" hx-swap="morph">
+      <section id="metrics-baseline" aria-label="Phase baselines" aria-live="polite" hx-get="/partials/metrics{{ repo_query }}" hx-trigger="load, every 30s" hx-swap="morph">
         <span class="sec-num"><strong>§ 07</strong>metrics</span>
         <h2>Phase <em>baselines</em></h2>
         <p class="empty-state">loading baseline metrics</p>
       </section>
 
-      <section id="round-history" aria-label="Round history" aria-live="polite" hx-get="/partials/round-history" hx-trigger="load, every 5s" hx-swap="morph">
+      <section id="round-history" aria-label="Round history" aria-live="polite" hx-get="/partials/round-history{{ repo_query }}" hx-trigger="load, every 5s" hx-swap="morph">
         <span class="sec-num"><strong>§ 08</strong>rounds</span>
         <p class="empty-state">loading round ledger</p>
       </section>
@@ -2761,6 +3414,152 @@
       document.addEventListener('DOMContentLoaded', restoreAll);
       // Re-apply after every htmx swap (idiomorph fires afterSettle).
       document.body.addEventListener('htmx:afterSettle', restoreAll);
+    })();
+
+    // Epic-map hover card and ticket modal.
+    //
+    // Every listener is delegated from document, never bound to a node. The
+    // epic map morph-swaps its whole panel every 30s, so per-node handlers
+    // would have to be rebound on afterSettle and would leak one closure per
+    // node per poll. Delegation makes the swap a non-event.
+    //
+    // The anchors keep working as anchors. Only an unmodified left-click is
+    // intercepted; cmd/ctrl/shift/alt-click, middle-click, the context menu
+    // and keyboard activation all fall through to /tickets/{id}, which is
+    // also the whole no-JS story.
+    (function () {
+      var card = document.getElementById('epic-hover');
+      var modal = document.getElementById('ticket-modal');
+      if (!card) return;
+
+      var GAP = 16;          // pointer clearance, both axes
+      var fields = {
+        id: card.querySelector('.hovercard__id'),
+        name: card.querySelector('.hovercard__name'),
+        status: card.querySelector('.hovercard__status'),
+        priority: card.querySelector('.hovercard__priority'),
+        type: card.querySelector('.hovercard__type'),
+        unblocks: card.querySelector('.hovercard__unblocks'),
+        points: card.querySelector('.hovercard__points'),
+        why: card.querySelector('.hovercard__why')
+      };
+
+      function hide() { card.hidden = true; }
+
+      function place(x, y) {
+        // Measure after filling, then flip rather than clamp: a card pinned to
+        // the viewport edge sits under the pointer, and under the pointer is
+        // where the node is.
+        var box = card.getBoundingClientRect();
+        var left = x + GAP;
+        var top = y + GAP;
+        if (left + box.width > window.innerWidth - 8) left = x - box.width - GAP;
+        if (top + box.height > window.innerHeight - 8) top = y - box.height - GAP;
+        card.style.left = Math.max(8, left) + 'px';
+        card.style.top = Math.max(8, top) + 'px';
+      }
+
+      function show(el, x, y) {
+        var pts = el.getAttribute('data-t-points');
+        fields.id.textContent = '#' + (el.getAttribute('data-ticket') || '');
+        fields.name.textContent = el.getAttribute('data-t-title') || '';
+        fields.status.textContent = 'status · ' + (el.getAttribute('data-t-status') || '');
+        fields.priority.textContent = 'priority · ' + (el.getAttribute('data-t-priority') || '');
+        fields.type.textContent = 'type · ' + (el.getAttribute('data-t-type') || '');
+        fields.unblocks.textContent = 'unblocks · ' + (el.getAttribute('data-t-unblocks') || '');
+        // An off-slice blocker has no score. Blanking the chip empties it, and
+        // :empty hides it — a "0 pts" there would be a number we did not compute.
+        fields.points.textContent = pts === null ? '' : pts + ' pts';
+        fields.why.textContent = el.getAttribute('data-t-why') || '';
+        card.hidden = false;
+        place(x, y);
+      }
+
+      document.addEventListener('mouseover', function (ev) {
+        if (modal && modal.open) return;
+        var el = ev.target.closest && ev.target.closest('.js-ticket');
+        if (el) show(el, ev.clientX, ev.clientY); else hide();
+      });
+
+      document.addEventListener('mousemove', function (ev) {
+        if (card.hidden) return;
+        var el = ev.target.closest && ev.target.closest('.js-ticket');
+        if (el) place(ev.clientX, ev.clientY); else hide();
+      });
+
+      // A scroll moves the node out from under a card positioned in viewport
+      // coordinates, so the card stops describing what it points at.
+      window.addEventListener('scroll', hide, true);
+
+      if (!modal || typeof modal.showModal !== 'function') return;
+
+      var body = document.getElementById('ticket-modal-body');
+      // Both, because they answer different halves of "put me back".
+      //
+      // The element is exact: one ticket appears twice on this page, as a node
+      // in the frame and as a row in the roster beneath it, and returning a
+      // roster click to the diagram is not where the operator was. The id is
+      // the durable fallback — the map morph-swaps every 30s, so a reference
+      // held across an open modal may be detached by the time it closes, and
+      // the node for that ticket is still the right place to land.
+      var openerEl = null;
+      var openerId = null;
+
+      document.addEventListener('click', function (ev) {
+        if (ev.defaultPrevented || ev.button !== 0) return;
+        if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
+        var el = ev.target.closest && ev.target.closest('.js-ticket');
+        if (!el) return;
+        var id = el.getAttribute('data-ticket');
+        if (!id) return;
+        ev.preventDefault();
+        hide();
+        openerEl = el;
+        openerId = id;
+        body.innerHTML = '<p class="empty-state">loading ticket</p>';
+        modal.showModal();
+        window.htmx.ajax('GET', '/partials/ticket-card/' + encodeURIComponent(id), {
+          target: '#ticket-modal-body',
+          swap: 'innerHTML'
+        });
+      });
+
+      // Click outside the card closes it. <dialog> counts the backdrop as the
+      // dialog itself for hit-testing, so "the target is the dialog" means the
+      // pointer was on the backdrop and not on any child.
+      modal.addEventListener('click', function (ev) {
+        if (ev.target === modal) modal.close();
+      });
+
+      // Return focus to the node that opened it, so keyboard and screen-reader
+      // users land back where they were instead of at the top of the document.
+      // Re-queried by id rather than held as a reference: after a morph swap
+      // the original element is detached, but the node for that ticket is
+      // still on the page and is where the operator expects to be.
+      // Focus restoration, driven off the `open` attribute rather than the
+      // `close` event.
+      //
+      // Two platform behaviours this dashboard's browser does not provide were
+      // measured here, and both of the obvious implementations depend on them:
+      // `close()` fires no `close` event, and closing does not restore focus to
+      // whatever held it before `showModal()`. Left alone, focus stays on the
+      // dialog's own close button inside a now-hidden subtree — a keyboard user
+      // is stranded on an element they cannot see.
+      //
+      // The attribute is the one signal every close path shares: the button's
+      // form submit, Esc, a backdrop click, and a programmatic close() all
+      // remove it. Re-queried by id for the reason `openerId` is an id at all.
+      new MutationObserver(function () {
+        if (modal.hasAttribute('open')) return;
+        var el = openerEl;
+        var id = openerId;
+        openerEl = null;
+        openerId = null;
+        var back = el && el.isConnected
+          ? el
+          : (id && document.querySelector('.js-ticket[data-ticket="' + id + '"]'));
+        if (back && back.focus) back.focus();
+      }).observe(modal, { attributes: true, attributeFilter: ['open'] });
     })();
   </script>
 </body>

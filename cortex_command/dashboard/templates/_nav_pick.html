@@ -1,0 +1,125 @@
+{# § 01 THE PICK and § 02 ALTERNATES — the two ranked shapes.
+
+   One macro each, because they differ in exactly two ways and it is worth
+   being able to see that they do not differ in any others: the hero's ledger
+   is open and the alternate's sits behind a disclosure, and the alternate
+   carries a swap condition the hero has nothing to be swapped against.
+
+   The hero has NO disclosure. It is the one thing the page exists to say, and
+   a surface whose answer is behind a click is a surface that has not answered.
+
+   Every sentence rendered below was computed in ``backlog/view.py`` — no ticket
+   id, epic id or corpus count is written here. Copy that named a ticket would
+   go on naming it after the ranking moved on. #}
+{% from "_nav_ledger.html" import ledger %}
+
+{# Chips: the three facts that qualify a pick, in one run. Not badges — the
+   badge vocabulary belongs to the ticket's own status/priority/type triple and
+   these are a mix of that and derived leverage, so borrowing the badge classes
+   would assert a kinship that is not there. #}
+{% macro chips(entry) %}
+<p class="nav-chips">
+  <span class="nav-chip">priority · {{ entry.priority }}</span>
+  <span class="nav-chip">type · {{ entry.type }}</span>
+  {# Present only when the status is outside cortex's own vocabulary. The board
+     still ranks such a record — consumer repos run their own statuses — but it
+     says so where the rank-1 claim is made rather than only in the band row. #}
+  {% if entry.status_note %}<span class="nav-chip nav-chip--warn">{{ entry.status_note }}</span>{% endif %}
+  {% if entry.phase %}<span class="nav-chip">phase · {{ entry.phase }}</span>{% endif %}
+  <span class="nav-chip nav-chip--lev">unblocks · {{ entry.unblocks }}</span>
+  <span class="nav-chip nav-chip--pts">{{ entry.points }} pts</span>
+</p>
+{% endmacro %}
+
+{# The two-way counterfactual. Both halves render, always: "if you skip it" is
+   what makes the leverage claim falsifiable from the page, and a pick that
+   frees nothing has to be able to say so. #}
+{% macro counterfactual(cf) %}
+<div class="cf">
+  <div class="cf__col">
+    <h3 class="cf__head">if this lands</h3>
+    {% if cf.freed %}
+    <p class="cf__body">these become startable the moment it closes —
+      {% for ref in cf.freed %}<a href="{{ ref.href }}">#{{ ref.id }}</a> {{ ref.title }}{% if not loop.last %} · {% endif %}{% endfor %}</p>
+    {% else %}
+    <p class="cf__body cf__body--none">nothing becomes startable — no ticket on this board names it as its only live blocker.</p>
+    {% endif %}
+    {% if cf.still_held %}
+    <p class="cf__body cf__body--minor">still held by something else afterwards —
+      {% for ref in cf.still_held %}<a href="{{ ref.href }}">#{{ ref.id }}</a>{% if not loop.last %} · {% endif %}{% endfor %}</p>
+    {% endif %}
+    {% if cf.new_top3 %}
+    <table class="nav-table nav-table--tight">
+      <caption class="nav-table__caption">the board that results, re-ranked</caption>
+      <thead>
+        <tr>
+          <th scope="col">rank</th>
+          <th scope="col">id</th>
+          <th scope="col">title</th>
+          <th scope="col" class="nav-table__pts">pts</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ref in cf.new_top3 %}
+        <tr>
+          <td class="nav-table__rank">{{ loop.index }}</td>
+          <td class="nav-table__id"><a href="{{ ref.href }}">#{{ ref.id }}</a></td>
+          <td class="nav-table__title">{{ ref.title }}</td>
+          <td class="nav-table__pts">{{ ref.points }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  </div>
+  <div class="cf__col">
+    <h3 class="cf__head">if you skip it</h3>
+    {% if cf.freed %}
+    <p class="cf__body">these stay frozen for as long as it does —
+      {% for ref in cf.freed %}<a href="{{ ref.href }}">#{{ ref.id }}</a> {{ ref.title }}{% if not loop.last %} · {% endif %}{% endfor %}</p>
+    {% else %}
+    <p class="cf__body cf__body--none">nothing freezes. Skipping it costs this board no reachability at all — only its own points.</p>
+    {% endif %}
+  </div>
+</div>
+{% endmacro %}
+
+{# § 01 — the hero. Full width, no disclosure, ledger open. #}
+{% macro hero(entry) %}
+<div class="nav-hero">
+  <p class="nav-hero__rank">rank 1 of the startable field</p>
+  <h2 class="nav-hero__head">
+    <a class="nav-hero__id" href="{{ entry.href }}">#{{ entry.id }}</a>
+    <span class="nav-hero__title">{{ entry.title }}</span>
+  </h2>
+  {{ chips(entry) }}
+  <p class="nav-arg">{{ entry.argument }}</p>
+  {{ counterfactual(entry.counterfactual) }}
+  {{ ledger(entry.ledger, entry.points, 'how the rank was reached') }}
+</div>
+{% endmacro %}
+
+{# § 02 — one alternate. The ledger goes behind an id-stable <details>, which
+   is the one legitimate disclosure on this surface: the swap condition above
+   it is the answer, and the ledger is the working. The id is keyed on the
+   ticket, never on its position, so idiomorph reattaches the open state to the
+   same ticket after a re-rank. #}
+{% macro alternate(entry) %}
+<div class="alt">
+  <p class="alt__rank">rank {{ entry.rank }}</p>
+  <h3 class="alt__head">
+    <a class="alt__id" href="{{ entry.href }}">#{{ entry.id }}</a>
+    <span class="alt__title">{{ entry.title }}</span>
+  </h3>
+  {{ chips(entry) }}
+  <p class="alt__swap">{{ entry.swap.sentence }}</p>
+  <p class="alt__deltas">
+    {% for delta in entry.swap.deltas %}<span class="alt__delta{% if delta.delta > 0 %} alt__delta--up{% else %} alt__delta--down{% endif %}">{{ '%+d' % delta.delta }} {{ delta.label | lower }}</span>{% endfor %}
+    {% if not entry.swap.deltas %}<span class="alt__delta">every term is identical to the pick's</span>{% endif %}
+  </p>
+  <details class="alt__ledger" id="{{ entry.details_id }}">
+    <summary>the full ledger for #{{ entry.id }}</summary>
+    {{ ledger(entry.ledger, entry.points, 'how this rank was reached') }}
+  </details>
+</div>
+{% endmacro %}

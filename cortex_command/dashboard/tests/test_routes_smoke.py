@@ -10,8 +10,8 @@ raises ``TypeError: unhashable type: 'dict'`` -> HTTP 500. Only a route test
 that drives each handler through the real ASGI app + ``TemplateResponse`` layer
 can guard against that regression.
 
-This test drives ``GET /``, ``/sessions``, ``/health``, ``/tickets/{id}``, and
-each of the thirteen ``/partials/*`` routes and asserts 200, plus
+This test drives ``GET /``, ``/sessions``, ``/epics``, ``/health``,
+``/tickets/{id}``, and each of the ``/partials/*`` routes and asserts 200, plus
 ``GET /sessions/{missing}`` -> 404 and ``GET /tickets/{missing}`` -> 404 (the
 ``status_code`` path). On the dev venv (Starlette 0.52.1) both call forms
 return 200, so locally this proves only well-formedness; it becomes
@@ -37,7 +37,7 @@ from starlette.testclient import TestClient
 
 from cortex_command.dashboard.app import app
 
-# The thirteen HTMX partial routes, in the order documented by the spec.
+# The HTMX partial routes, in the order documented by the spec.
 PARTIAL_ROUTES = [
     "/partials/fleet-panel",
     "/partials/alerts-banner",
@@ -46,10 +46,14 @@ PARTIAL_ROUTES = [
     "/partials/round-history",
     "/partials/escalations",
     "/partials/activity-stream",
-    "/partials/backlog",
     "/partials/metrics",
     "/partials/swim-lane",
-    "/partials/triage-board",
+    # The two navigator surfaces. Both rebuild a graph, a ranking and a band
+    # partition per request, and both must render their empty arm against a
+    # fixture root whose poller never ran — the snapshot is None there, which
+    # is the same state a non-local backlog backend leaves behind.
+    "/partials/navigator",
+    "/partials/epic-map",
     # Path-parameterised. Renders its "description unavailable" arm against the
     # fixture root, which has no cortex/backlog/ — a missing ticket is a normal
     # render, not a status code, because the fragment lands inside a row the
@@ -61,11 +65,11 @@ PARTIAL_ROUTES = [
     "/partials/ticket/1/artifact/spec",
 ]
 
-# Page + health routes that must render 200. ``/backlog`` is the Backlog
-# view — a peer page of ``/``, not a fragment — so it goes through the same
-# TemplateResponse path this module exists to guard. ``/tickets/1`` is the
+# Page + health routes that must render 200. ``/backlog`` and ``/epics`` are
+# the two navigator pages — peers of ``/``, not fragments — so they go through
+# the same TemplateResponse path this module exists to guard. ``/tickets/1`` is the
 # seeded ticket from fixture_root below.
-PAGE_ROUTES = ["/", "/backlog", "/sessions", "/health", "/tickets/1"]
+PAGE_ROUTES = ["/", "/backlog", "/epics", "/sessions", "/health", "/tickets/1"]
 
 ALL_OK_ROUTES = PAGE_ROUTES + PARTIAL_ROUTES
 

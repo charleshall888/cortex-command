@@ -1,0 +1,130 @@
+{# One epic frame. Consumes ``layout_epic``'s geometry verbatim — every x, y,
+   width, height and path `d` below was computed in Python and no coordinate is
+   derived here.
+
+   The SVG-text rule, which is the one thing not to relax in this file: text is
+   drawn only as a label of at most three words, inside a box with at least
+   8px of padding. Node boxes carry `#id` and a one-word state; the dashed
+   enclosure carries a two-word name. Everything longer — full titles, the
+   enclosure's gloss, the external-blocker heading — is HTML, either in the
+   caption above the frame or in the roster table beneath it. The fonts are not
+   bundled, Georgia is what renders, and a box sized to a guessed character
+   advance is what produced the collisions in three of the five prototypes.
+
+   The arrowhead marker id is namespaced per epic. A shared id makes every
+   frame after the first depend on the first staying in the DOM, and on a page
+   that morph-swaps its panels the first frame will leave.
+
+   Node anchors wrap the rect and its two text lines. There is no anchor inside
+   them, so nothing here can nest. #}
+
+{% macro frame(f) %}
+<div class="epic-frame">
+  <div class="epic-frame__head">
+    <h3 class="epic-frame__title">
+      <a class="epic-frame__id" href="{{ f.href }}">ε#{{ f.id }}</a>
+      <span>{{ f.title }}</span>
+    </h3>
+    <span class="epic-frame__meta">{{ f.total }} {{ 'child' if f.total == 1 else 'children' }} · {{ f.status }}</span>
+  </div>
+
+  {# The verdict is computed and prints the epic's own numbers. The paragraph
+     that explains what the verdict means is printed once, in the section lede
+     — repeating it per epic is what made the losing prototype's densest body
+     copy carry the least information per line. #}
+  <p class="epic-verdict{% if f.constrained %} epic-verdict--partial{% endif %}">{{ f.verdict }}</p>
+
+  <p class="epic-caption">
+    {% if f.pool %}<span>undeclared order · any of these may be taken first</span>{% endif %}
+    {% if f.externals %}<span>left column · external blockers, outside this epic</span>{% endif %}
+    {% if f.wrapped %}<span>pool wrapped beneath the spine — it did not fit beside it</span>{% endif %}
+  </p>
+
+  {# Stable id so the horizontal scroll position survives an idiomorph swap:
+     the element is matched by id and preserved rather than replaced. #}
+  <div class="epic-pan" id="{{ f.pan_id }}">
+    <svg class="epic-svg" viewBox="0 0 {{ f.width }} {{ f.height }}" width="{{ f.width }}" height="{{ f.height }}"
+         role="img" aria-label="dependency frame for epic {{ f.id }} — {{ f.constrained }} of {{ f.total }} children constrained by a sibling">
+      <defs>
+        <marker id="{{ f.marker_id }}" viewBox="0 0 8 8" refX="7" refY="4"
+                markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path class="epic-arrow" d="M 0 0 L 8 4 L 0 8 z"></path>
+        </marker>
+      </defs>
+
+      {% if f.pool_box %}
+      <rect class="pool-box" x="{{ f.pool_box[0] }}" y="{{ f.pool_box[1] }}"
+            width="{{ f.pool_box[2] }}" height="{{ f.pool_box[3] }}" rx="2"></rect>
+      <text class="pool-label" x="{{ f.pool_label.x }}" y="{{ f.pool_label.y }}">UNDECLARED ORDER</text>
+      {% endif %}
+
+      {% for e in f.elbows %}
+      <path class="edge edge--{{ e.kind }}" d="{{ e.path }}" marker-end="url(#{{ f.marker_id }})"></path>
+      {% endfor %}
+
+      {% for n in f.nodes %}
+      {# The href stays real and stays first. The card and the modal are
+         progressive enhancement over it: a middle-click, a cmd-click, a
+         right-click "open in new tab", a keyboard Enter and a browser with no
+         JS all still reach /tickets/{id}. The script intercepts only the plain
+         left-click.
+
+         The preview travels as data- attributes rather than being fetched on
+         hover: every value here was computed for this frame already, so the
+         card can paint on the first mousemove instead of chasing the pointer
+         with a request. The <title> child stays for the accessible name — it
+         is what a screen reader announces, and the visual card is not. #}
+      <a href="{{ n.href }}" class="node-link js-ticket"
+         data-ticket="{{ n.id }}"
+         data-t-title="{{ n.title }}"
+         data-t-state="{{ n.state }}"
+         data-t-status="{{ n.preview.status }}"
+         data-t-priority="{{ n.preview.priority }}"
+         data-t-type="{{ n.preview.type }}"
+         {% if n.preview.points is not none %}data-t-points="{{ n.preview.points }}"{% endif %}
+         data-t-unblocks="{{ n.preview.unblocks }}"
+         data-t-why="{{ n.preview.why }}">
+        <title>#{{ n.id }} {{ n.title }}</title>
+        <rect class="node node--{{ n.border_style }}" x="{{ n.x }}" y="{{ n.y }}" width="244" height="68" rx="2"></rect>
+        <text class="node-id" x="{{ n.x + 14 }}" y="{{ n.y + 28 }}">#{{ n.id }}</text>
+        <text class="node-state" x="{{ n.x + 14 }}" y="{{ n.y + 48 }}">{{ n.state }}</text>
+      </a>
+      {% endfor %}
+    </svg>
+  </div>
+
+  {# The names live here, as HTML, in the frame's own reading order. This is
+     the half of the frame an operator actually reads titles from; the diagram
+     answers "what holds what", the table answers "what are they". #}
+  <table class="nav-table epic-roster">
+    <caption class="nav-table__caption">the nodes above, in frame order</caption>
+    <thead>
+      <tr>
+        <th scope="col" class="nav-table__id">id</th>
+        <th scope="col" class="nav-table__title">title</th>
+        <th scope="col">state</th>
+        <th scope="col" class="nav-table__pts">pts</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for member in f.roster %}
+      <tr{% if member.external %} class="epic-roster__ext"{% endif %}>
+        <td class="nav-table__id"><a href="{{ member.href }}" class="js-ticket"
+          data-ticket="{{ member.id }}"
+          data-t-title="{{ member.title }}"
+          data-t-state="{{ 'external blocker' if member.external else member.state }}"
+          data-t-status="{{ member.preview.status }}"
+          data-t-priority="{{ member.preview.priority }}"
+          data-t-type="{{ member.preview.type }}"
+          {% if member.preview.points is not none %}data-t-points="{{ member.preview.points }}"{% endif %}
+          data-t-unblocks="{{ member.preview.unblocks }}"
+          data-t-why="{{ member.preview.why }}">#{{ member.id }}</a></td>
+        <td class="nav-table__title">{{ member.title }}</td>
+        <td>{{ 'external blocker' if member.external else member.state }}</td>
+        <td class="nav-table__pts">{{ member.points }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endmacro %}

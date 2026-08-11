@@ -349,10 +349,10 @@ class TestFeedSnapshot(_RootTestCase):
 
         The board's group heading *is* the epic's own ticket row, so a group
         with no record behind it renders blank rather than raising. But
-        ``item_order`` is the board's active set — ``backlog_panel.html`` reads
-        its length as the active count and the Standalone list is its
-        complement — so a closed epic in there would both inflate the count and
-        reappear as a standalone row.
+        ``item_order`` is the board's active set — the navigator partitions
+        exactly that set and reconciles against its size, and the Standalone
+        list is its complement — so a closed epic in there would both inflate
+        the count and reappear as a standalone row.
         """
         self.assertIn("15", self.snapshot["items"])
         self.assertNotIn("15", self.snapshot["item_order"])
@@ -367,7 +367,7 @@ class TestFeedSnapshot(_RootTestCase):
         This is the invariant that makes full-corpus *detection* safe. A closed
         child, or an epic key with no record, subscripts to a Jinja
         ``Undefined`` and renders as a blank row instead of raising — the silent
-        failure ``triage_board.html``'s docstring exists to prevent.
+        failure ``ticket_feed``'s module docstring warns consumers about.
         """
         items = self.snapshot["items"]
         for epic_id, epic in self.snapshot["epics"]["epics"].items():

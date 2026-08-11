@@ -1,0 +1,65 @@
+{# One band of § 03 THE BOARD.
+
+   Four channels before colour is consulted: the band letter, the spelled
+   label, the live count, and the border style. That is the whole reason this
+   replaced a stack of six identical closed disclosures — a band renders every
+   one of its records on first paint, at correct relative weight, with no click
+   and no hover.
+
+   The rows are a real <table>. Not a styling preference: the title column is
+   `table-layout` free and carries the full untruncated title, and the points
+   column is tabular-nums, so a reader can compare fifty rows down a column
+   that a flex run could never hold still. A row's position is never computed
+   from a character advance — the fonts are not bundled and Georgia is what
+   renders.
+
+   Exactly one <a> per row, on the id cell. The blocker links in the last cell
+   are siblings of it, never descendants: nested anchors are invalid HTML and
+   they shattered 41% of one prototype's board. #}
+
+{% macro band_block(band) %}
+<div class="band band--{{ band.border_style }}" id="nav-band-{{ band.slug }}">
+  <div class="band__head">
+    <span class="band__letter" aria-hidden="true">{{ band.key }}</span>
+    <h3 class="band__label">{{ band.label }}</h3>
+    <span class="band__count">{{ band.count }}</span>
+    <em class="band__rationale">{{ band.rationale }}</em>
+  </div>
+  <table class="nav-table">
+    {# Visually hidden, not omitted: the band header above already prints the
+       letter, the label and the count, so a visible caption would be the same
+       line twice — but a table lifted out of context by a screen reader has no
+       header, and an unnamed table is the one that gets skipped. #}
+    <caption class="nav-table__caption nav-table__caption--vh">band {{ band.key }} · {{ band.label | lower }}</caption>
+    <thead>
+      <tr>
+        {# Band D and E carry no rank column at all. With roughly thirteen
+           distinct scores over forty-eight startable rows a per-row rank there
+           is decoration dressed as a measurement; the band label is the
+           ordering claim and the points column is the evidence. #}
+        {% if band.show_rank %}<th scope="col" class="nav-table__rank">rank</th>{% endif %}
+        <th scope="col" class="nav-table__id">id</th>
+        <th scope="col" class="nav-table__title">title</th>
+        <th scope="col" class="nav-table__pts">pts</th>
+        <th scope="col">why it sits here</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in band.rows %}
+      <tr>
+        {% if band.show_rank %}<td class="nav-table__rank">{{ row.rank if row.rank is not none else '—' }}</td>{% endif %}
+        <td class="nav-table__id"><a href="{{ row.href }}">#{{ row.id }}</a></td>
+        <td class="nav-table__title">{{ row.title }}</td>
+        <td class="nav-table__pts">{{ row.points }}</td>
+        <td class="nav-table__why">
+          {{ row.why }}
+          {% if row.blockers %}
+          <span class="band__blockers">{% for blocker in row.blockers %}<a class="band__blocker{% if blocker.discharged %} band__blocker--lapsed{% endif %}" href="{{ blocker.href }}">#{{ blocker.id }}</a>{% endfor %}</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endmacro %}

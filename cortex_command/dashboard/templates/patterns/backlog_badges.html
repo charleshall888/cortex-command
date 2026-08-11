@@ -1,9 +1,9 @@
 {% from "patterns/badge.html" import badge %}
 
 {# The backlog status / priority / type vocabularies mapped to the badge
-   classes defined in base.html. Deliberately not backlog_panel.html's map,
-   whose values are CSS custom properties consumed as an inline ``--c`` and
-   would emit a class matching no rule; and deliberately not the
+   classes defined in base.html. The values here are class names on purpose: a
+   map of CSS custom properties, the shape a swatch or a bar wants for an
+   inline ``--c``, would emit a class matching no rule; and deliberately not the
    ``badge(status=…)`` path, whose map is the feature/run-outcome vocabulary.
    All three vocabularies are open in practice — the item-creation verb
    applies no restriction — so every lookup carries a fallback and the raw

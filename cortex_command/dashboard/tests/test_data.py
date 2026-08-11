@@ -5,8 +5,6 @@ Tests cover:
   - tail_jsonl: second call with saved offset returns only new lines
   - tail_jsonl: malformed JSON lines are skipped
   - tail_jsonl: absent file returns ([], 0)
-  - parse_backlog_counts: counts by status field from YAML frontmatter
-  - parse_backlog_counts: skips malformed/missing frontmatter files
   - parse_backlog_titles: one pass yields both slug→title and id→title
   - parse_overnight_state: returns None for absent path
   - parse_overnight_state: returns None for JSON decode error
@@ -35,7 +33,6 @@ from cortex_command.dashboard.data import (
     parse_recent_session_events,
     compute_slow_flags,
     get_last_activity_ts,
-    parse_backlog_counts,
     parse_backlog_titles,
     parse_feature_cost_delta,
     parse_feature_timestamps,
@@ -200,118 +197,6 @@ class TestTailJsonl(unittest.TestCase):
 
             self.assertEqual(len(events), 2)
             self.assertEqual([e["ok"] for e in events], [1, 2])
-
-
-# ---------------------------------------------------------------------------
-# Tests: parse_backlog_counts
-# ---------------------------------------------------------------------------
-
-class TestParseBacklogCounts(unittest.TestCase):
-    """Tests for parse_backlog_counts YAML status extraction."""
-
-    def _write_backlog_file(self, directory: Path, filename: str, frontmatter: str) -> None:
-        """Helper to write a backlog file with YAML frontmatter."""
-        content = f"---\n{frontmatter}---\n\nBody text.\n"
-        (directory / filename).write_text(content, encoding="utf-8")
-
-    def test_counts_by_status(self):
-        """Counts items grouped by status field."""
-        with tempfile.TemporaryDirectory() as tmp:
-            backlog_dir = Path(tmp)
-            self._write_backlog_file(backlog_dir, "001-alpha.md", "status: open\n")
-            self._write_backlog_file(backlog_dir, "002-beta.md", "status: open\n")
-            self._write_backlog_file(backlog_dir, "003-gamma.md", "status: done\n")
-
-            result = parse_backlog_counts(backlog_dir)
-
-            self.assertEqual(result, {"backlog": 2, "complete": 1})
-
-    def test_missing_status_defaults_to_open(self):
-        """Items without a status field default to 'open'."""
-        with tempfile.TemporaryDirectory() as tmp:
-            backlog_dir = Path(tmp)
-            self._write_backlog_file(backlog_dir, "001-item.md", "title: Something\n")
-
-            result = parse_backlog_counts(backlog_dir)
-
-            self.assertEqual(result, {"backlog": 1})
-
-    def test_skips_files_without_frontmatter(self):
-        """Files without --- frontmatter are skipped."""
-        with tempfile.TemporaryDirectory() as tmp:
-            backlog_dir = Path(tmp)
-            # File with no frontmatter
-            (backlog_dir / "001-no-fm.md").write_text(
-                "# Just a heading\nNo frontmatter here.\n",
-                encoding="utf-8",
-            )
-            # File with valid frontmatter
-            self._write_backlog_file(backlog_dir, "002-valid.md", "status: wip\n")
-
-            result = parse_backlog_counts(backlog_dir)
-
-            self.assertEqual(result, {"wip": 1})
-
-    def test_skips_files_with_unclosed_frontmatter(self):
-        """Files with opening --- but no closing --- are skipped."""
-        with tempfile.TemporaryDirectory() as tmp:
-            backlog_dir = Path(tmp)
-            (backlog_dir / "001-broken.md").write_text(
-                "---\nstatus: open\n# No closing marker\n",
-                encoding="utf-8",
-            )
-            self._write_backlog_file(backlog_dir, "002-good.md", "status: done\n")
-
-            result = parse_backlog_counts(backlog_dir)
-
-            self.assertEqual(result, {"complete": 1})
-
-    def test_absent_directory_returns_empty_dict(self):
-        """Returns {} when the backlog directory does not exist."""
-        with tempfile.TemporaryDirectory() as tmp:
-            backlog_dir = Path(tmp) / "nonexistent"
-
-            result = parse_backlog_counts(backlog_dir)
-
-            self.assertEqual(result, {})
-
-    def test_ignores_non_matching_filenames(self):
-        """Only files matching [0-9]*-*.md are processed."""
-        with tempfile.TemporaryDirectory() as tmp:
-            backlog_dir = Path(tmp)
-            # Should be ignored
-            (backlog_dir / "README.md").write_text(
-                "---\nstatus: open\n---\n",
-                encoding="utf-8",
-            )
-            (backlog_dir / "notes.md").write_text(
-                "---\nstatus: open\n---\n",
-                encoding="utf-8",
-            )
-            # Should be counted
-            self._write_backlog_file(backlog_dir, "001-valid.md", "status: active\n")
-
-            result = parse_backlog_counts(backlog_dir)
-
-            self.assertEqual(result, {"active": 1})
-
-    def test_status_with_quotes_is_stripped(self):
-        """Quoted status values have their quotes stripped."""
-        with tempfile.TemporaryDirectory() as tmp:
-            backlog_dir = Path(tmp)
-            self._write_backlog_file(backlog_dir, "001-a.md", 'status: "open"\n')
-            self._write_backlog_file(backlog_dir, "002-b.md", "status: 'done'\n")
-
-            result = parse_backlog_counts(backlog_dir)
-
-            self.assertEqual(result, {"backlog": 1, "complete": 1})
-
-    def test_empty_directory_returns_empty_dict(self):
-        """Returns {} when the backlog directory exists but has no matching files."""
-        with tempfile.TemporaryDirectory() as tmp:
-            result = parse_backlog_counts(Path(tmp))
-
-            self.assertEqual(result, {})
 
 
 # ---------------------------------------------------------------------------
@@ -1615,6 +1500,49 @@ class TestLoadTicketBody(unittest.TestCase):
             self.assertIn("<table>", got["html"])
             self.assertIn("<code>code span</code>", got["html"])
             self.assertFalse(got["truncated"])
+
+    def test_a_line_leading_ticket_ref_is_not_a_heading(self):
+        """``#331`` opening a line is a cross-reference, not an ``<h1>``.
+
+        Python-Markdown does not require a space after ``#`` for an ATX
+        heading, so every line opening with a ticket id rendered as the largest
+        type on the page. Measured on the wild-light corpus before the fix: 156
+        such lines across 109 of 512 tickets. Cross-referencing a ticket at the
+        start of a sentence is ordinary in this corpus, and the four prefixes
+        below are the shapes it actually takes there.
+        """
+        prefixes = {
+            "bare": "#331 is the prerequisite.",
+            "blockquote": "> #331 is the prerequisite.",
+            "bullet": "- #331 is the prerequisite.",
+            "ordered": "1. #331 is the prerequisite.",
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            backlog = self._corpus(tmp)
+            for name, line in prefixes.items():
+                (backlog / ("05%d-ref.md" % len(name))).write_text(
+                    "---\ntitle: Ref\n---\n\n" + line + "\n", encoding="utf-8"
+                )
+                got = load_ticket_body("05%d" % len(name), backlog)
+                with self.subTest(prefix=name):
+                    self.assertNotIn("<h1>", got["html"])
+                    self.assertIn("#331", got["html"])
+
+    def test_real_headings_still_render(self):
+        # The guard against over-correcting: the fix keys on a digit directly
+        # after the hash, so every heading with a space or a second hash is
+        # untouched. Without this, escaping every leading hash would silently
+        # flatten the Why/Role/Integration/Edges template the whole corpus uses.
+        with tempfile.TemporaryDirectory() as tmp:
+            backlog = self._corpus(tmp)
+            (backlog / "060-headings.md").write_text(
+                "---\ntitle: Headings\n---\n\n# Why\n\n## Role\n\n### 1. A step\n",
+                encoding="utf-8",
+            )
+            got = load_ticket_body("60", backlog)
+            self.assertIn("<h1>Why</h1>", got["html"])
+            self.assertIn("<h2>Role</h2>", got["html"])
+            self.assertIn("<h3>1. A step</h3>", got["html"])
 
     def test_frontmatter_is_stripped_from_the_body(self):
         # The reader shows the description, not the fields the row already has.

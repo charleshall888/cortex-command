@@ -512,6 +512,46 @@ def _dispatch_dashboard(args: argparse.Namespace) -> int:
             Path(args.root).expanduser().resolve()
         )
 
+    # Extra roots travel by env for the same reason ``--root`` does: the app is
+    # handed to uvicorn by import string, so there is no call frame to pass
+    # them through. Appended to whatever the environment already carried, so an
+    # exported CORTEX_DASHBOARD_ROOTS and repeated --also-root compose rather
+    # than one silently winning.
+    also_root = getattr(args, "also_root", None)
+    if also_root:
+        from cortex_command.dashboard.repos import ROOTS_ENV
+
+        existing = os.environ.get(ROOTS_ENV, "")
+        parts = [p for p in existing.split(os.pathsep) if p.strip()]
+        parts.extend(also_root)
+        os.environ[ROOTS_ENV] = os.pathsep.join(parts)
+
+    url = "http://127.0.0.1:%d" % port
+    roots = [os.environ.get("CORTEX_REPO_ROOT", "")] + list(also_root or [])
+    roots = [r for r in roots if r]
+
+    if getattr(args, "background", False):
+        return _dispatch_dashboard_background(
+            port=port, url=url, roots=roots, as_json=args.format == "json"
+        )
+
+    import socket
+
+    # Pre-bind check, where this module's own docstring has always said it
+    # belongs ("Pre-bind availability checks belong in the verb (cli.py) before
+    # uvicorn.run()"). Without it a second launch on a taken port starts the
+    # application, fails to bind, and takes the running server's PID file with
+    # it on the way out — the app now guards that removal, but half-starting a
+    # server to discover a port is busy is still the wrong shape, and the docs
+    # already described the behaviour implemented here.
+    if _port_is_serving(port):
+        print(
+            "A dashboard is already serving %s — leaving it alone." % url,
+            file=sys.stderr,
+        )
+        print(url)
+        return 0
+
     uvicorn.run(
         "cortex_command.dashboard.app:app",
         host="127.0.0.1",
@@ -519,6 +559,122 @@ def _dispatch_dashboard(args: argparse.Namespace) -> int:
         log_level="info",
     )
     return 0
+
+
+def _port_is_serving(port: int, timeout: float = 0.4) -> bool:
+    """Whether something already accepts connections on *port* on loopback.
+
+    This is the whole liveness question the dashboard verb has: not "does a pid
+    file exist" but "is the URL I am about to hand back live?". A pid file
+    answers a different question and answers it worse — it can name a dead
+    process, it cannot name the port, and it is global while ports are not, so
+    it refuses a second dashboard on a *different* port for no reason.
+    """
+    import socket
+
+    with socket.socket() as probe:
+        probe.settimeout(timeout)
+        return probe.connect_ex(("127.0.0.1", port)) == 0
+
+
+def _dispatch_dashboard_background(
+    *, port: int, url: str, roots: list[str], as_json: bool
+) -> int:
+    """Start (or report) a detached dashboard and describe it on stdout.
+
+    The reason this exists: ``cortex dashboard`` blocks, which is correct for a
+    terminal and useless to any caller that wants to open the dashboard and
+    carry on — an agent answering "show me the board", the MCP tool that wraps
+    this verb. Those callers need a process that outlives the command and a
+    machine-readable answer saying where it went.
+
+    Idempotent by design. A second invocation while one is already up reports
+    the existing server rather than racing it for the port, because the common
+    case is asking twice, not wanting two.
+    """
+    import json as _json
+    import subprocess
+    import time
+
+    from cortex_command.overnight.cli_handler import _JSON_SCHEMA_VERSION
+
+    def emit(payload: dict) -> int:
+        if as_json:
+            print(_json.dumps(payload))
+        else:
+            print("%s  %s" % (payload["status"], payload.get("url", "")))
+        return 0 if payload["status"] != "failed" else 1
+
+    # The port is the whole check. An earlier draft recorded the live server's
+    # port and roots in a sidecar file so this branch could report a server
+    # running on some *other* port — machinery for a case never observed, and
+    # a second piece of persistent state that can go stale. Asking the port
+    # the caller actually named answers the only question that has a caller.
+    if _port_is_serving(port):
+        return emit(
+            {
+                "schema_version": _JSON_SCHEMA_VERSION,
+                "status": "already_running",
+                "port": port,
+                "url": url,
+            }
+        )
+
+    argv = [
+        sys.executable, "-m", "cortex_command.cli", "dashboard", "--port", str(port),
+    ]
+    if roots:
+        argv += ["--root", roots[0]]
+    for extra in roots[1:]:
+        argv += ["--also-root", extra]
+
+    # start_new_session detaches the child into its own process group, so it
+    # survives this command's exit and a Ctrl-C in the launching terminal does
+    # not take the dashboard with it.
+    child = subprocess.Popen(
+        argv,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+
+    # Wait for the port to actually accept a connection rather than reporting
+    # a URL the caller would race. An agent that opens this immediately should
+    # get a page, not a refused connection.
+    deadline = time.monotonic() + 15.0
+    while time.monotonic() < deadline:
+        if child.poll() is not None:
+            return emit(
+                {
+                    "schema_version": _JSON_SCHEMA_VERSION,
+                    "status": "failed",
+                    "error": "the dashboard exited during startup (exit %s)"
+                    % child.returncode,
+                    "port": port,
+                }
+            )
+        if _port_is_serving(port):
+            return emit(
+                {
+                    "schema_version": _JSON_SCHEMA_VERSION,
+                    "status": "started",
+                    "pid": child.pid,
+                    "port": port,
+                    "url": url,
+                    "roots": roots,
+                }
+            )
+        time.sleep(0.25)
+
+    return emit(
+        {
+            "schema_version": _JSON_SCHEMA_VERSION,
+            "status": "failed",
+            "error": "the dashboard did not begin serving within 15s",
+            "pid": child.pid,
+            "port": port,
+        }
+    )
 
 
 def _dispatch_upgrade(_args: argparse.Namespace) -> int:
@@ -1254,6 +1410,34 @@ def _build_parser() -> argparse.ArgumentParser:
             "Set in-process for this server only — use it to view a seeded "
             "fixture root without exporting CORTEX_REPO_ROOT into your shell."
         ),
+    )
+    dashboard.add_argument(
+        "--also-root",
+        action="append",
+        default=None,
+        metavar="PATH",
+        dest="also_root",
+        help=(
+            "Additional project root to track, repeatable. The dashboard "
+            "serves all of them from one process and shows a repo switcher; "
+            "--root stays the default. Also readable from "
+            "CORTEX_DASHBOARD_ROOTS as a path-separated list."
+        ),
+    )
+    dashboard.add_argument(
+        "--background",
+        action="store_true",
+        help=(
+            "Start the dashboard detached and return immediately with its URL "
+            "instead of blocking. Idempotent: reports the existing server if "
+            "one is already running rather than racing it for the port."
+        ),
+    )
+    dashboard.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format for --background (default: text).",
     )
     dashboard.set_defaults(func=_dispatch_dashboard)
 

@@ -1,0 +1,84 @@
+{# Surface A, the polled fragment: § 01 THE PICK through § 04 KEY & CENSUS.
+
+   The page shell in ``backlog.html`` owns the poll target and nothing else, so
+   the four sections arrive together on every swap and cannot drift out of
+   agreement with each other — the census reconciles against the same partition
+   the board rendered, in the same render.
+
+   Every value below comes from ``view.build_navigator``. This template does no
+   arithmetic, resolves no ids and knows no vocabulary — so the two silent
+   lookup traps in ``ticket_feed``'s docstring (dotted access to a snapshot's
+   ``items`` resolving to the bound dict METHOD; int child ids against a
+   str-keyed map) cannot reach here, because nothing in this file touches a
+   snapshot. That is the point of the view-model, not a happy accident. #}
+{% from "_nav_pick.html" import hero, alternate %}
+{% from "_nav_band.html" import band_block %}
+{% from "_nav_census.html" import census_block %}
+
+{% if nav.backend != 'cortex-backlog' %}
+{# The same gate every other backlog read sits behind. Under a non-local
+   backend there is no cortex/backlog/ to read and the surface stands down
+   rather than reporting an empty corpus it never looked at. #}
+<section class="section-primary" aria-label="Backlog navigator">
+  <span class="sec-num"><strong>§ 01</strong>navigator</span>
+  <h2>What should I <em>work on</em> <span class="phase-tag">{{ 'disabled' if nav.backend == 'none' else 'external' }}</span></h2>
+  <p class="empty-state">{% if nav.backend == 'none' %}backlog tracking disabled{% else %}backlog tracked externally via `{{ nav.backend }}`{% endif %}</p>
+</section>
+
+{% elif not nav.available %}
+<section class="section-primary" aria-label="Backlog navigator">
+  <span class="sec-num"><strong>§ 01</strong>navigator</span>
+  <h2>What should I <em>work on</em> <span class="phase-tag">awaiting first poll</span></h2>
+  <p class="empty-state">loading the navigator</p>
+</section>
+
+{% else %}
+<section id="nav-pick" class="section-primary" aria-label="The pick">
+  <span class="sec-num"><strong>§ 01</strong>the pick</span>
+  <h2>What should I <em>work on</em> <span class="phase-tag">{{ nav.contender_count }} startable of {{ nav.slice_total }}</span></h2>
+  <div class="stream-line">
+    <span>doc · cortex/backlog/*.md frontmatter</span>
+    <span>rank · leverage over declared priority</span>
+    {# The corpus's own "today". The staleness term is measured against the
+       latest `updated` anywhere in the slice and never against the wall clock,
+       which is both what makes an unchanged poll render byte-identically and
+       what a reader needs in order to check a "sat untouched" number. #}
+    <span>as of · {{ nav.as_of or 'no dated record' }}</span>
+    {% if nav.stale %}<span>stale · frozen at {{ nav.polled_ts | format_elapsed }}</span>{% endif %}
+    <span class="ml-auto">refresh · 30s</span>
+  </div>
+
+  {% if nav.pick %}
+  {{ hero(nav.pick) }}
+  {% else %}
+  <p class="empty-state">nothing on this board is startable — every record is held, deferred, closed or untriaged</p>
+  {% endif %}
+</section>
+
+{% if nav.alternates %}
+<section id="nav-alternates" aria-label="Alternates">
+  {# "next best" rather than "alternates": the register mark sits in a ~60px
+     margin column and wraps at spaces, so a single long token breaks mid-word
+     ("ALTERNATE / S"). Two short words wrap cleanly. #}
+  <span class="sec-num"><strong>§ 02</strong>next best</span>
+  <h2>If not <em>that one</em> <span class="phase-tag">{% if nav.alternates | length == 1 %}rank 2{% else %}ranks 2–{{ nav.alternates | length + 1 }}{% endif %}</span></h2>
+  <p class="sec-lede">{% if nav.alternates | length == 1 %}This row states{% else %}Each row states{% endif %} the condition under which it beats the pick, derived from the differences between the two ledgers. The ledger itself is one click away; the condition is not.</p>
+  <div class="alt-grid">
+    {% for entry in nav.alternates %}{{ alternate(entry) }}{% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section id="nav-board" aria-label="The board">
+  <span class="sec-num"><strong>§ 03</strong>the board</span>
+  <h2>The <em>board</em> <span class="phase-tag">{{ nav.slice_total }} records · {{ nav.bands | length }} bands</span></h2>
+  <p class="sec-lede">Every record on the board, in the first band whose rule it satisfies. The last band is unconditional, so an unrecognised status cannot fall off the page. Nothing here is behind a disclosure.</p>
+  {% for band in nav.bands %}{{ band_block(band) }}{% endfor %}
+</section>
+
+<section id="nav-census" aria-label="Key and census">
+  <span class="sec-num"><strong>§ 04</strong>key &amp; census</span>
+  <h2>Key &amp; <em>census</em> <span class="phase-tag">{{ nav.slice_total }} records</span></h2>
+  {{ census_block(nav.census, nav.slice_total) }}
+</section>
+{% endif %}

@@ -66,6 +66,27 @@ Shape notes that are load-bearing for consumers:
   distinctly from a deferred *status*.
 * An absent corpus yields a schema-complete envelope with empty collections,
   which is a different fact from a snapshot of ``None`` (never polled).
+
+Two lookup traps govern every template that reads this snapshot, and both fail
+*silently* — they render a blank rather than raising, so a broken join looks
+like missing data:
+
+* Jinja tries ``getattr`` before ``__getitem__``, so dotted access to a key
+  named ``items`` resolves to the bound ``dict.items`` METHOD and never to the
+  snapshot's data. Every snapshot key must be read with a subscript. The same
+  trap applies to any per-item key named keys / values / get / update / copy /
+  pop.
+* ``epics`` is ``build_epic_map``'s two-key envelope, so the epic id map lives
+  one level in at ``snap['epics']['epics']``; iterating the outer dict yields
+  the literal keys ``schema_version`` and ``epics`` and zero epic ids. Child
+  ids inside it are **ints** while ``items`` is str-keyed, so a child id must
+  be stringified before the join.
+
+(Recorded here rather than in a template because the template that documented
+them — the retired ``triage_board.html`` — was not the only consumer, and a
+trap description that lives in one consumer dies with it. Templates that
+consume the *view-models* in ``backlog/view.py`` are exempt: no template
+touches a snapshot on those surfaces.)
 """
 
 from __future__ import annotations
@@ -192,8 +213,8 @@ def _epic_map_for_board(corpus: list[dict], active_ids: set[int]) -> dict:
     *Children* are then filtered back to active ids, because every per-row field
     on the board resolves through ``items``, which stays active-only. A closed
     child would subscript to a Jinja ``Undefined`` and render as a blank row
-    rather than raise — the silent-failure mode ``triage_board.html``'s
-    docstring exists to prevent.
+    rather than raise — the silent-failure mode this module's own docstring
+    warns consumers about.
 
     A closed epic is kept only when it still has an active child. Without that
     gate, full-corpus detection would seed a "no active children" group for
@@ -287,9 +308,10 @@ def build_backlog_snapshot(
     # A closed epic that still heads a group needs a record to render with: the
     # board's group heading IS the epic's own ticket row. These are added to
     # `items` but deliberately NOT to `item_order` — that list is the board's
-    # active set, `backlog_panel.html:54` reads its length as the active count,
-    # and the flat Standalone list is its complement, so an entry here would
-    # both inflate the count and reappear as a standalone row.
+    # active set, the navigator partitions exactly that set and reconciles its
+    # band counts against the size of it, and the flat Standalone list is its
+    # complement, so an entry here would both inflate the count and reappear as
+    # a standalone row.
     by_id = {str(record["id"]): record for record in corpus}
     for epic_id in epics["epics"]:
         if epic_id in items or epic_id not in by_id:

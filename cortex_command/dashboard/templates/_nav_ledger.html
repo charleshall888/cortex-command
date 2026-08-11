@@ -1,0 +1,50 @@
+{# The score ledger — six rows, one per term, zeros included.
+
+   The whole argument for a rank is here: every row reprints the raw input the
+   term read, so a reader can disagree with the number line by line without
+   opening a file. That is the reason the zero rows stay — a ledger that hid
+   them would be showing a different arithmetic from the one that ranked the
+   row, and the reader could no longer check that six terms summed to the
+   total printed at the foot.
+
+   Emits no `id` attributes at all. This macro renders twice on the page (the
+   hero's ledger and each alternate's), so anything id-bearing in here would
+   duplicate by construction — the disclosure that wraps an alternate's copy
+   carries the stable id instead. #}
+
+{% macro ledger(rows, total, caption) %}
+<table class="ledger">
+  <caption class="ledger__caption">{{ caption }}</caption>
+  <thead>
+    <tr>
+      <th scope="col">term</th>
+      <th scope="col">raw input this term read</th>
+      <th scope="col" class="ledger__pts">pts</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+    <tr class="ledger__row{% if row.zero %} ledger__row--zero{% endif %}">
+      <th scope="row">
+        <span class="ledger__swatch {{ row.swatch }}" aria-hidden="true"></span>{{ row.label }}
+      </th>
+      <td class="ledger__raw">
+        {{ row.raw }}
+        {# The note is the arithmetic breakdown or the open-vocabulary caveat.
+           It sits under the raw input rather than beside the points, because
+           it explains the input and not the number. #}
+        {% if row.note %}<span class="ledger__note">{{ row.note }}</span>{% endif %}
+      </td>
+      <td class="ledger__pts">{{ '%+d' % row.points }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr>
+      <th scope="row">total</th>
+      <td></td>
+      <td class="ledger__pts">{{ total }}</td>
+    </tr>
+  </tfoot>
+</table>
+{% endmacro %}

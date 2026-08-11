@@ -25,7 +25,6 @@ from cortex_command.dashboard.alerts import evaluate_alerts, fire_notifications
 from cortex_command.dashboard.data import (
     _read_all_jsonl,
     compute_slow_flags,
-    parse_backlog_counts,
     parse_backlog_titles,
     parse_batches_per_round,
     parse_checkpoints_per_feature,
@@ -77,7 +76,6 @@ class DashboardState:
             additional ``plan_progress`` key — a ``(checked, total)``
             tuple sourced from the canonical detector when ``plan.md``
             exists, else ``None``.
-        backlog_counts: Status -> count mapping from cortex/backlog/ directory.
         backlog_snapshot: The ticket-feed snapshot documented in
             ``cortex_command.dashboard.ticket_feed``, or None when the
             backlog has never been polled locally. None is a distinct fact
@@ -96,7 +94,6 @@ class DashboardState:
     alerts: dict = field(default_factory=dict)
     circuit_breaker_active: bool = False
     circuit_breaker_notified: bool = False
-    backlog_counts: dict = field(default_factory=dict)
     backlog_snapshot: dict | None = None
     backlog_titles: dict = field(default_factory=dict)
     backlog_backend: str = "cortex-backlog"
@@ -383,7 +380,6 @@ async def _poll_slow(state: DashboardState, root: Path) -> None:
             backend = resolve_backlog_backend(root)
             state.backlog_backend = backend
             if backend == "cortex-backlog":
-                state.backlog_counts = parse_backlog_counts(backlog_dir)
                 titles = parse_backlog_titles(backlog_dir)
                 state.backlog_titles = titles.by_slug
 
@@ -415,8 +411,7 @@ async def _poll_slow(state: DashboardState, root: Path) -> None:
                 state.backlog_snapshot = snapshot
             else:
                 # Non-local backend: stand down — never surface stale local
-                # counts/titles as authoritative.
-                state.backlog_counts = {}
+                # titles as authoritative.
                 state.backlog_titles = {}
                 state.backlog_snapshot = None
 

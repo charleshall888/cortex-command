@@ -13,10 +13,12 @@
 {% block title %}Cortex · Ticket {{ item_id }}{% endblock %}
 
 {% block page_main %}
-{# Three-arm body — gated / not-found / found — mirroring backlog_panel.html's
-   backend-aware three-way (R5, R6c). `ticket` is None in both the gated and
-   not-found arms; `backend` alone tells them apart, which is what makes each
-   arm assertable from a direct-Jinja template test without a live route. #}
+{# Three-arm body — gated / not-found / found. The split is backend-aware
+   because "no such ticket" and "this repo does not track tickets here" are
+   different answers and must not render as one. `ticket` is None in both the
+   gated and not-found arms; `backend` alone tells them apart, which is what
+   makes each arm assertable from a direct-Jinja template test without a live
+   route. #}
 {% if backend != "cortex-backlog" %}
 <section>
   <span class="sec-num"><strong>§ —</strong>ticket</span>
@@ -91,7 +93,7 @@
    shells. Each panel's id is the bare kind (`spec`, `plan`, …), matching
    feature_cards.html's `/tickets/{id}#spec` anchors, and fetches its own
    prose exactly once, on first open — `toggle once from:closest details` is
-   triage_board.html's lazy idiom, minus `hx-preserve`: nothing on this page
+   the retired triage board's lazy idiom, minus `hx-preserve`: nothing here
    re-renders this row out from under an open panel the way the 30s board
    poll does. An unhashed page load issues zero of these requests (R10);
    `{% block body_extra %}` below is what opens the matching panel when the
@@ -104,7 +106,7 @@
   <details id="{{ kind }}" class="ticket-artifact">
     <summary>{{ kind }}.md</summary>
     <div class="ticket-artifact__panel"
-         hx-get="/partials/ticket/{{ item_id }}/artifact/{{ kind }}"
+         hx-get="/partials/ticket/{{ item_id }}/artifact/{{ kind }}{{ repo_query }}"
          hx-trigger="toggle once from:closest details"
          hx-swap="innerHTML">
       <p class="empty-state">loading {{ kind }}</p>

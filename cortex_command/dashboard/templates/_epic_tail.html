@@ -1,0 +1,39 @@
+{# THE TAIL — every parent group that does not earn a frame.
+
+   Two kinds land here, and each row says which it is rather than leaving the
+   reader to infer it from the count: a group of one child (a diagram of one
+   node states nothing about ordering), and a group whose parent is not on this
+   board at all (there is no title, status or link to head a frame with). The
+   second kind is the reason this table exists — those groups are real, their
+   children are on the board, and dropping them silently is the failure mode
+   the whole surface is built against.
+
+   One row per group, one <a> per cell, no SVG. #}
+
+{% macro tail(rows) %}
+<table class="nav-table">
+  <caption class="nav-table__caption">groups too small, or too far off-board, for a frame</caption>
+  <thead>
+    <tr>
+      <th scope="col" class="nav-table__id">epic</th>
+      <th scope="col" class="nav-table__title">title</th>
+      <th scope="col" class="nav-table__pts">children</th>
+      <th scope="col">membership</th>
+      <th scope="col">why it is here</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+    <tr{% if not row.on_board %} class="epic-tail__off"{% endif %}>
+      <td class="nav-table__id"><a href="{{ row.href }}">ε#{{ row.id }}</a></td>
+      <td class="nav-table__title">{{ row.title }}</td>
+      <td class="nav-table__pts">{{ row.count }}</td>
+      <td class="epic-tail__members">
+        {% for child in row.children %}<a href="{{ child.href }}">#{{ child.id }}</a> {{ child.title }} <span class="epic-tail__state">{{ child.state }}</span>{% if not loop.last %} · {% endif %}{% endfor %}
+      </td>
+      <td>{{ row.note }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endmacro %}

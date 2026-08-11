@@ -16,7 +16,31 @@ Both launch paths bind `127.0.0.1` (loopback only) by default: the shipped `cort
 cortex dashboard
 ```
 
-Opens at `http://localhost:8080` (or `$DASHBOARD_PORT` if set, or `--port <int>`). Includes a PID check — if an instance is already running, the command prints the URL and exits without starting a second server.
+Opens at `http://localhost:8080` (or `$DASHBOARD_PORT` if set, or `--port <int>`). If something is already serving that port, the command prints the URL and exits without starting a second server.
+
+### Launching it in the background
+
+```
+cortex dashboard --background
+```
+
+Starts a detached server and returns immediately with its URL instead of blocking the terminal. Idempotent — a second invocation reports the running server rather than racing it for the port. `--format json` emits a versioned envelope (`status` of `started` / `already_running` / `failed`, plus `url` and `port`; a `started` result also carries `pid` and `roots`), which is what the `dashboard_open` MCP tool consumes.
+
+"Already running" means *something is serving that port*, which is the only question with a caller — not whether a PID file exists. A PID file names a process that may be dead, cannot name a port, and is global where ports are not, so it would refuse a second dashboard on a different port for no reason.
+
+The launch waits for the port to accept a connection before returning, so the URL it hands back is one that already serves.
+
+### Tracking several repositories
+
+```
+cortex dashboard --root ~/Workspaces/wild-light --also-root ~/Workspaces/cortex-command
+```
+
+`--root` is the default repo; each `--also-root` adds another, and the flag repeats. `CORTEX_DASHBOARD_ROOTS` holds the same list as a path-separated string and composes with the flags rather than being overridden by them.
+
+One process serves them all, each with its own polling loop writing into its own state — a slow disk under one repo cannot stall another's poll. A repo switcher appears in the masthead, and every link and 30s poll on the page carries the repo it belongs to, so switching view keeps the repo and switching repo keeps the view. The switcher is suppressed entirely when one repo is tracked, which is the common case.
+
+An `--also-root` that does not resolve to a directory is dropped: those are typos rather than empty repos, and a switcher entry leading to a permanently blank page is worse than no entry. The primary `--root` is always kept even without a `cortex/` directory, since a freshly-initialised repo is a legitimate thing to point at.
 
 **Prerequisite**: `cortex dashboard` requires a cortex-registered project — run `cortex init` once in your project before launching the dashboard, or set `CORTEX_REPO_ROOT` to point at a registered project. The verb fails with a `RuntimeError` if `.claude/` is not present in the resolved root.
 

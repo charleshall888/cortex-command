@@ -19,12 +19,11 @@ from unittest import mock
 from cortex_command.dashboard.poller import DashboardState, run_polling
 
 
-# Fixture: a repo with leftover backlog items whose known statuses make the
-# cortex-backlog arm produce {"backlog": 2, "complete": 1} (normalize_status
-# keeps both verbatim). The leftover items are load-bearing — a clean-empty
-# fixture would pass even a broken gate (both dicts already default to {}).
+# Fixture: a repo with leftover backlog items whose known statuses put the two
+# non-terminal ones in the snapshot and leave the complete one out. The
+# leftovers are load-bearing — a clean-empty fixture would pass even a broken
+# gate, because every field the gate clears already defaults to empty.
 _BACKLOG_ITEMS = [("001-a.md", "backlog"), ("002-b.md", "backlog"), ("003-c.md", "complete")]
-_EXPECTED_COUNTS = {"backlog": 2, "complete": 1}
 
 
 def _write_repo(root: Path, backend: str | None) -> None:
@@ -53,7 +52,6 @@ class TestDashboardStateDefaults(unittest.TestCase):
         self.assertIsInstance(state.overnight_events, list)
         self.assertEqual(state.overnight_events_offset, 0)
         self.assertIsInstance(state.feature_states, dict)
-        self.assertIsInstance(state.backlog_counts, dict)
         self.assertEqual(state.backlog_backend, "cortex-backlog")
         self.assertEqual(state.last_updated, "")
 
@@ -228,8 +226,6 @@ class TestPollSlowBackendGate(unittest.IsolatedAsyncioTestCase):
                 root = Path(tmp)
                 _write_repo(root, backend)
                 with mock.patch(
-                    "cortex_command.dashboard.poller.parse_backlog_counts"
-                ) as spy_counts, mock.patch(
                     "cortex_command.dashboard.poller.parse_backlog_titles"
                 ) as spy_titles, mock.patch(
                     "cortex_command.dashboard.poller.build_backlog_snapshot"
@@ -240,9 +236,7 @@ class TestPollSlowBackendGate(unittest.IsolatedAsyncioTestCase):
                 # "cortex-backlog") and for a poller that forgets the assign.
                 self.assertEqual(state.backlog_backend, backend)
                 # (b) Local reads skipped even with leftover items present.
-                self.assertEqual(state.backlog_counts, {})
                 self.assertEqual(state.backlog_titles, {})
-                spy_counts.assert_not_called()
                 spy_titles.assert_not_called()
                 spy_feed.assert_not_called()
 
@@ -278,23 +272,20 @@ class TestPollSlowBackendGate(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(sorted(state.backlog_snapshot["items"]), ["1", "2"])
         self.assertTrue(state.backlog_snapshot["polled_ts"])
 
-    async def test_cortex_backlog_arm_reads_known_counts(self):
-        """Positive control: known-value dict (NOT == parse_backlog_counts(dir))."""
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            _write_repo(root, "cortex-backlog")
-            state = await self._run_one_cycle(root)
-        self.assertEqual(state.backlog_backend, "cortex-backlog")
-        self.assertEqual(state.backlog_counts, _EXPECTED_COUNTS)
-
     async def test_absent_config_resolves_local(self):
-        """Absent lifecycle.config.md → cortex-backlog → today's behavior."""
+        """Absent lifecycle.config.md → cortex-backlog → today's behavior.
+
+        Asserts the snapshot's known membership, not merely that one exists:
+        the local arm has to have actually read the leftover fixture for the
+        two non-terminal items to appear.
+        """
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             _write_repo(root, None)
             state = await self._run_one_cycle(root)
         self.assertEqual(state.backlog_backend, "cortex-backlog")
-        self.assertEqual(state.backlog_counts, _EXPECTED_COUNTS)
+        self.assertIsNotNone(state.backlog_snapshot)
+        self.assertEqual(sorted(state.backlog_snapshot["items"]), ["1", "2"])
 
 
 class TestTicketFeedBulkhead(unittest.IsolatedAsyncioTestCase):
@@ -447,26 +438,40 @@ class TestLifespanStartupResolution(unittest.IsolatedAsyncioTestCase):
     """
 
     async def test_backend_resolved_before_any_poll(self):
+        """Asserted against the registry, which is where startup state now lives.
+
+        The lifespan builds a ``RepoRegistry`` and resolves each repo's backend
+        into that repo's own ``DashboardState``, so the module-level singleton
+        this test used to patch is no longer what startup writes. The property
+        under test is unchanged: resolution happens before ``yield``, closing
+        the window where a request landing ahead of the first 30s poll would
+        render the cortex-backlog default for a repo that does not use it.
+        """
         from cortex_command.dashboard import app as app_mod
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             _write_repo(root, "none")
-            fresh = DashboardState()
 
             async def _noop_run_polling(state, r):  # no pollers spawned
                 return None
 
-            with mock.patch.object(app_mod, "_root", return_value=root), \
+            with mock.patch.object(
+                     app_mod, "_resolve_user_project_root", return_value=root
+                 ), \
                  mock.patch.object(app_mod, "run_polling", _noop_run_polling), \
-                 mock.patch.object(app_mod, "_pid_file", root / "dash.pid"), \
-                 mock.patch.object(app_mod, "state", fresh):
-                # Sanity: the singleton defaults to the local arm before startup.
-                self.assertEqual(fresh.backlog_backend, "cortex-backlog")
+                 mock.patch.object(app_mod, "_pid_file", root / "dash.pid"):
                 async with app_mod.lifespan(app_mod.app):
                     # Resolution ran synchronously before `yield` — assert here,
                     # before any poll cycle has had a chance to run.
-                    self.assertEqual(fresh.backlog_backend, "none")
+                    default = app_mod.registry.default
+                    self.assertIsNotNone(default)
+                    self.assertEqual(default.root, root.resolve())
+                    resolved = app_mod.registry.state_for(default)
+                    self.assertEqual(resolved.backlog_backend, "none")
+                    # And the module attribute still tracks the default repo,
+                    # which is the single-repo view this module used to have.
+                    self.assertIs(app_mod.state, resolved)
                     await asyncio.sleep(0)  # drain the no-op polling task
 
 

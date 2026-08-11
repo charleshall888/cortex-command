@@ -27,6 +27,7 @@ from fastapi.templating import Jinja2Templates
 
 from cortex_command.common import _resolve_user_project_root
 from cortex_command.lifecycle_config import resolve_backlog_backend
+from cortex_command.dashboard.backlog.view import build_epic_map, build_navigator
 from cortex_command.dashboard.data import (
     build_swim_lane_data,
     load_ticket_artifact,
@@ -37,11 +38,24 @@ from cortex_command.dashboard.data import (
     parse_session_list,
 )
 from cortex_command.dashboard.poller import DashboardState, run_polling
+from cortex_command.dashboard.repos import (
+    Repo,
+    RepoRegistry,
+    build_registry,
+    resolve_roots,
+)
 
 # ---------------------------------------------------------------------------
 # Module-level singletons: created at import time so routes can reference them
 # ---------------------------------------------------------------------------
 
+#: The tracked repos and their per-repo state. Populated by the lifespan,
+#: which is also where the polling loops are started — one per repo.
+registry: RepoRegistry = RepoRegistry()
+
+#: The default repo's state, kept as a module attribute because it is the
+#: single-repo answer and several helpers still want a zero-argument view.
+#: Every *route* resolves its state per request instead; see `_state()`.
 state: DashboardState = DashboardState()
 
 
@@ -51,8 +65,70 @@ def _root() -> Path:
     Spec R3c forbids module-level capture of `_resolve_user_project_root()`;
     every consumer must invoke this function so the user's project root is
     resolved at the moment the path is needed.
+
+    Still the *default* root, and still env-resolved when the registry is
+    empty — which is what direct-template tests and any importer that never
+    ran the lifespan get.
     """
-    return _resolve_user_project_root()
+    default = registry.default
+    return default.root if default is not None else _resolve_user_project_root()
+
+
+def _repo(request: Request) -> Repo | None:
+    """Resolve which repo a request addressed, from its ``repo`` query param.
+
+    The parameter travels on the page URL and on every htmx partial the page
+    polls, so a fragment can never be rendered against a different root than
+    the shell that asked for it.
+    """
+    return registry.resolve(request.query_params.get("repo"))
+
+
+def _state(request: Request) -> DashboardState:
+    """Return the polled state belonging to *request*'s repo."""
+    repo = _repo(request)
+    if repo is None:
+        return state
+    return registry.state_for(repo)
+
+
+def _root_of(request: Request) -> Path:
+    """Return the filesystem root belonging to *request*'s repo."""
+    repo = _repo(request)
+    return repo.root if repo is not None else _root()
+
+
+def _ctx(request: Request, **extra: object) -> dict:
+    """The template context every page and fragment is rendered with.
+
+    Centralised so the repo a request addressed reaches the template on every
+    route by construction. Threading it per call site is the version where one
+    forgotten route renders the switcher against the default repo while its
+    panels show another, and that page looks correct.
+    """
+    context: dict = {"request": request, "state": _state(request)}
+    context.update(_repo_context(request))
+    context.update(extra)
+    return context
+
+
+def _repo_context(request: Request) -> dict:
+    """The switcher's view-model, carried by every page and fragment.
+
+    ``repo_query`` is the suffix a template appends to an ``hx-get`` so the
+    30s poll keeps asking about the repo the operator is looking at. It is
+    empty in the single-repo case, which keeps every existing URL byte-identical
+    and the rendered page unchanged for repos that track one checkout.
+    """
+    current = _repo(request)
+    return {
+        "repos": registry.repos,
+        "repo": current,
+        "repo_multi": registry.multi,
+        "repo_query": (
+            "?repo=%s" % current.slug if registry.multi and current else ""
+        ),
+    }
 
 # ---------------------------------------------------------------------------
 # Jinja2 templates
@@ -251,24 +327,74 @@ async def lifespan(app: FastAPI):
     # Pre-bind availability checks belong in the verb (cli.py) before
     # ``uvicorn.run()`` is invoked.
 
-    root = _root()
-    if not (root / ".claude").exists():
+    global registry, state
+
+    roots = resolve_roots(_resolve_user_project_root())
+    registry = build_registry(roots)
+
+    # The primary root keeps the strict check: a process started against a
+    # directory that is not a cortex checkout is misconfigured and should say
+    # so at startup rather than serve empty panels. Additional roots do not
+    # get it — they are opt-in extras, and one bad entry in a tracked list
+    # must not take the whole dashboard down with it.
+    primary = registry.default
+    if primary is None or not (primary.root / ".claude").exists():
         raise RuntimeError(
-            f"Dashboard lifecycle root appears wrong: {root}. "
+            f"Dashboard lifecycle root appears wrong: "
+            f"{primary.root if primary else '<none>'}. "
             "Check module installation."
         )
 
     _pid_file.write_text(str(os.getpid()), encoding="utf-8")
-    atexit.register(lambda: _pid_file.unlink(missing_ok=True))
 
-    # Resolve the backlog backend synchronously at startup so the first served
-    # render reflects the real backend. The slow poller is fire-and-forget
-    # (the task below runs after `yield`), so without this a non-local repo
-    # would render the default cortex-backlog arm until the first 30s poll.
-    state.backlog_backend = resolve_backlog_backend(root)
+    # Remove the PID file only when it still names *this* process.
+    #
+    # Unconditional removal is a live bug when two servers overlap: uvicorn
+    # runs the lifespan before it binds, so a second launch on a taken port
+    # writes its pid, fails to bind, and its atexit hook then deletes the file
+    # belonging to the server that is still serving. Measured: after one such
+    # collision the PID file was gone entirely while the original process was
+    # still listening — so every liveness reader (the overnight probe, the
+    # justfile recipe, `--background`'s idempotency check) concluded nothing
+    # was running.
+    owner_pid = os.getpid()
 
-    asyncio.create_task(run_polling(state, root))
-    yield
+    def _release_pid_file() -> None:
+        try:
+            if _pid_file.read_text(encoding="utf-8").strip() == str(owner_pid):
+                _pid_file.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+    atexit.register(_release_pid_file)
+
+    for repo in registry.repos:
+        repo_state = registry.state_for(repo)
+        # Resolve the backlog backend synchronously so the first served render
+        # reflects the real backend. The slow poller is fire-and-forget (the
+        # task below runs after `yield`), so without this a non-local repo
+        # would render the default cortex-backlog arm until the first 30s poll.
+        repo_state.backlog_backend = resolve_backlog_backend(repo.root)
+        # One loop per repo, each writing only into its own state. Sharing a
+        # loop would serialise every repo behind the slowest disk, and a slow
+        # 30s backlog scan under one checkout would stall the 1s event tail of
+        # the one the operator is actually watching.
+        asyncio.create_task(run_polling(repo_state, repo.root))
+
+    # The module attribute stays bound to the default repo's state so the
+    # single-repo view of this module is unchanged.
+    previous_state = state
+    state = registry.state_for(primary)
+    try:
+        yield
+    finally:
+        # The lifespan owns the registry's lifetime, so shutdown returns the
+        # module to how it was found. Leaving a populated registry behind means
+        # every later consumer resolves roots against whatever this process was
+        # started with — in-process that is a stale root pointing at a torn-down
+        # temp directory, and the pages it serves are not empty, they are wrong.
+        registry = RepoRegistry()
+        state = previous_state
 
 
 # ---------------------------------------------------------------------------
@@ -287,50 +413,72 @@ async def health() -> JSONResponse:
 @app.get("/")
 async def index(request: Request):
     """Render the main dashboard page."""
-    last_session = parse_last_session(_root() / "cortex" / "lifecycle")
+    last_session = parse_last_session(_root_of(request) / "cortex" / "lifecycle")
     return templates.TemplateResponse(
         request,
         "base.html",
-        {"request": request, "state": state, "last_session": last_session},
+        _ctx(request, last_session=last_session),
     )
 
 
 @app.get("/backlog")
 async def backlog_view(request: Request):
-    """Render the backlog view — the ledger and triage board as a peer page.
+    """Render the backlog navigator — surface A, as a peer page.
 
-    Both panels are served by the existing ``/partials/backlog`` and
-    ``/partials/triage-board`` fragments, so this handler only supplies the
-    page shell; the 30s HTMX poll fills it exactly as it did when the two
-    sections sat at the bottom of the overnight page.
+    Shell only. All four navigator sections arrive from
+    ``/partials/navigator`` on the same 30s poll the panels used when they sat
+    at the bottom of the overnight page. The separate ledger panel is gone —
+    graft G5 folded it into the § 04 census, on the grounds that a distribution
+    bar states its counts further from the glyphs that explain them. The census
+    is not a like-for-like replacement and does not claim to be: it describes
+    the active slice, where the bar described every file in ``cortex/backlog/``
+    by frontmatter status. What that drops is the terminal tail — records
+    closed in place, which the census counts as neither active nor archived and
+    says so in its own copy. Deliberate: summing the two into a repo total
+    would print a number wrong by an order of magnitude.
     """
     return templates.TemplateResponse(
         request,
         "backlog.html",
-        {"request": request, "state": state},
+        _ctx(request),
+    )
+
+
+@app.get("/epics")
+async def epics_view(request: Request):
+    """Render the epic map — surface B, a peer page of the navigator.
+
+    Shell only, for the same reason ``/backlog`` is: the frames are geometry
+    computed from the 30s snapshot, so they belong to the polled fragment and
+    not to a page render that would freeze them until a reload.
+    """
+    return templates.TemplateResponse(
+        request,
+        "epics.html",
+        _ctx(request),
     )
 
 
 @app.get("/sessions")
 async def sessions_list(request: Request):
     """Render the session history list page."""
-    sessions = parse_session_list(_root() / "cortex" / "lifecycle")
+    sessions = parse_session_list(_root_of(request) / "cortex" / "lifecycle")
     return templates.TemplateResponse(
         request,
         "sessions_list.html",
-        {"request": request, "sessions": sessions},
+        _ctx(request, sessions=sessions),
     )
 
 
 @app.get("/sessions/{session_id}")
 async def session_detail(session_id: str, request: Request):
     """Render the detail page for a single session."""
-    detail = parse_session_detail(session_id, _root() / "cortex" / "lifecycle")
+    detail = parse_session_detail(session_id, _root_of(request) / "cortex" / "lifecycle")
     status_code = 404 if detail is None else 200
     return templates.TemplateResponse(
         request,
         "session_detail.html",
-        {"request": request, "detail": detail},
+        _ctx(request, detail=detail),
         status_code=status_code,
     )
 
@@ -352,7 +500,7 @@ def ticket_page(request: Request, item_id: str):
     gated arm instead of the not-found one. See ``ticket_page.html`` for the
     three-arm body this feeds.
     """
-    root = _root()
+    root = _root_of(request)
     backend = resolve_backlog_backend(root)
     ticket = (
         load_ticket_page(item_id, root / "cortex" / "backlog", root / "cortex" / "lifecycle")
@@ -363,7 +511,7 @@ def ticket_page(request: Request, item_id: str):
     return templates.TemplateResponse(
         request,
         "ticket_page.html",
-        {"request": request, "item_id": item_id, "ticket": ticket, "backend": backend},
+        _ctx(request, item_id=item_id, ticket=ticket, backend=backend),
         status_code=status_code,
     )
 
@@ -374,7 +522,7 @@ async def fleet_panel(request: Request):
     return templates.TemplateResponse(
         request,
         "fleet-panel.html",
-        {"request": request, "state": state},
+        _ctx(request),
     )
 
 
@@ -384,18 +532,18 @@ async def alerts_banner(request: Request):
     return templates.TemplateResponse(
         request,
         "alerts_banner.html",
-        {"request": request, "state": state},
+        _ctx(request),
     )
 
 
 @app.get("/partials/session-panel")
 async def session_panel(request: Request):
     """Return the session panel HTML fragment for HTMX polling."""
-    last_session = parse_last_session(_root() / "cortex" / "lifecycle")
+    last_session = parse_last_session(_root_of(request) / "cortex" / "lifecycle")
     return templates.TemplateResponse(
         request,
         "session_panel.html",
-        {"request": request, "state": state, "last_session": last_session},
+        _ctx(request, last_session=last_session),
     )
 
 
@@ -405,7 +553,7 @@ async def feature_cards(request: Request):
     return templates.TemplateResponse(
         request,
         "feature_cards.html",
-        {"request": request, "state": state},
+        _ctx(request),
     )
 
 
@@ -415,7 +563,7 @@ async def round_history(request: Request):
     return templates.TemplateResponse(
         request,
         "round_history.html",
-        {"request": request, "state": state},
+        _ctx(request),
     )
 
 
@@ -425,7 +573,7 @@ async def escalations_panel(request: Request):
     return templates.TemplateResponse(
         request,
         "escalations_panel.html",
-        {"request": request, "state": state},
+        _ctx(request),
     )
 
 
@@ -435,17 +583,7 @@ async def activity_stream(request: Request):
     return templates.TemplateResponse(
         request,
         "activity_stream.html",
-        {"request": request, "state": state},
-    )
-
-
-@app.get("/partials/backlog")
-async def backlog_panel(request: Request):
-    """Return the backlog ledger panel for HTMX polling."""
-    return templates.TemplateResponse(
-        request,
-        "backlog_panel.html",
-        {"request": request, "state": state},
+        _ctx(request),
     )
 
 
@@ -455,7 +593,7 @@ async def metrics_baseline(request: Request):
     return templates.TemplateResponse(
         request,
         "metrics_baseline.html",
-        {"request": request, "state": state},
+        _ctx(request),
     )
 
 
@@ -466,7 +604,7 @@ async def swim_lane(request: Request):
         state.overnight,
         state.overnight_events,
         state.feature_states,
-        _root() / "cortex" / "lifecycle",
+        _root_of(request) / "cortex" / "lifecycle",
     )
     return templates.TemplateResponse(
         request,
@@ -481,13 +619,42 @@ async def swim_lane(request: Request):
     )
 
 
-@app.get("/partials/triage-board")
-async def triage_board(request: Request):
-    """Return the triage board panel for HTMX polling."""
+@app.get("/partials/navigator")
+def navigator_panel(request: Request):
+    """Return surface A — the pick, its alternates, the board and the census.
+
+    Declared ``def``, not ``async def``, for the reason ``ticket_page`` gives:
+    Starlette dispatches a non-coroutine handler to the threadpool, and this
+    one rebuilds a dependency graph, a ranking and an eleven-band partition
+    over the whole active slice on every 30s poll for every open tab. That is
+    pure CPU with no await in it, so on the event loop it would block the four
+    polling loops for its whole duration.
+
+    Sits behind the same backend gate as every other backlog read: the poller
+    clears the snapshot to ``None`` under a non-local backend, and the
+    view-model carries the resolved backend so the fragment renders the gated
+    arm rather than an empty board it never looked at.
+    """
     return templates.TemplateResponse(
         request,
-        "triage_board.html",
-        {"request": request, "state": state},
+        "navigator.html",
+        _ctx(request, nav=build_navigator(_state(request), _root_of(request),
+                                 link_suffix=_repo_context(request)["repo_query"])),
+    )
+
+
+@app.get("/partials/epic-map")
+def epic_map_panel(request: Request):
+    """Return surface B — the epic frames and the tail table.
+
+    Declared ``def`` for the same reason as ``navigator_panel`` above: the
+    layout for every frame on the page is computed here, per poll.
+    """
+    return templates.TemplateResponse(
+        request,
+        "epic_map.html",
+        _ctx(request, epics=build_epic_map(_state(request), _root_of(request),
+                                link_suffix=_repo_context(request)["repo_query"])),
     )
 
 
@@ -501,7 +668,7 @@ async def ticket_body(request: Request, item_id: str):
     ``cortex/backlog/`` to read and the panel stands down rather than
     reporting a missing file as an error.
     """
-    root = _root()
+    root = _root_of(request)
     if resolve_backlog_backend(root) != "cortex-backlog":
         ticket = None
     else:
@@ -510,6 +677,46 @@ async def ticket_body(request: Request, item_id: str):
         request,
         "ticket_body.html",
         {"request": request, "ticket": ticket},
+    )
+
+
+@app.get("/partials/ticket-card/{item_id}")
+def ticket_card(request: Request, item_id: str):
+    """Return one ticket as a modal card for the epic map.
+
+    Declared ``def``, not ``async def``, for the reason ``ticket_page`` gives:
+    ``load_ticket_page`` does disk reads and a markdown render, and Starlette
+    dispatches a non-coroutine handler to the threadpool, which is what keeps
+    that work off the four polling loops.
+
+    Composes the *same* ``load_ticket_page`` the deep-link page composes rather
+    than a lighter loader of its own. Two loaders would be two answers about
+    one ticket, and the cheaper one would be the one that drifts.
+
+    Always 200. The fragment lands inside a dialog the operator has already
+    opened, and its three arms — gated, not-found, found — each render a
+    readable card; a 404 status here would only give htmx a reason to leave the
+    dialog empty. The deep-link route keeps its 404, because that one is a
+    page you can bookmark.
+    """
+    root = _root_of(request)
+    backend = resolve_backlog_backend(root)
+    ticket = (
+        load_ticket_page(
+            item_id, root / "cortex" / "backlog", root / "cortex" / "lifecycle"
+        )
+        if backend == "cortex-backlog"
+        else None
+    )
+    return templates.TemplateResponse(
+        request,
+        "_ticket_card.html",
+        {
+            "request": request,
+            "item_id": item_id,
+            "ticket": ticket,
+            "backend": backend,
+        },
     )
 
 
@@ -525,7 +732,7 @@ def ticket_artifact_partial(request: Request, item_id: str, kind: str):
     unresolved artifact directory, or a missing kind — see
     ``ticket_artifact.html``.
     """
-    root = _root()
+    root = _root_of(request)
     if resolve_backlog_backend(root) != "cortex-backlog":
         artifact = None
     else:

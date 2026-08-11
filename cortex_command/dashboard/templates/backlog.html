@@ -1,26 +1,49 @@
 {% extends "base.html" %}
-{# The Backlog view — a peer of the Overnight view, not a section of it.
+{# The Backlog view — the navigator, a peer of the Overnight view.
 
-   Both panels here read the same 30s slow-poll snapshot the overnight page
-   used to render at its very bottom (§ 10 and § 11 of eleven). They answer a
-   different question from every other panel in this dashboard: not "what is
-   the runner doing right now" but "what is queued, what is ready, and what is
-   blocked on what" — a question that outlives any single session and that an
-   operator asks while no session is running at all.
+   This page answers one question: what should I work on next, and why that.
+   The old triage board answered a different one — it printed the whole active
+   slice in `priority then id` order behind six disclosures and left the
+   ranking to the reader. It has been retired; § 03 renders every record it
+   rendered, on first paint, banded.
+
+   The ledger bar that used to head this page is gone too, folded into § 04:
+   it was a stacked distribution bar with a hover-only key, and the census
+   states its counts against the band letters and border styles that explain
+   them. One element deleted rather than restyled.
+
+   Not a like-for-like swap, and § 04 does not claim to be one. The bar counted
+   every file in `cortex/backlog/` by frontmatter status; the census describes
+   the active slice. The difference is the terminal tail — records closed in
+   place, which § 04 counts as neither active nor archived and says so in its
+   own copy. Left out deliberately: adding the two scope numbers together
+   would print a repo total wrong by an order of magnitude.
+
+   The page shell owns the navigator's poll target and nothing else. All four
+   sections arrive in one fragment so the census cannot reconcile against a
+   partition a different swap produced.
 
    Section numbering restarts at § 01 because the register is per-view. #}
 {% set view = 'backlog' %}
 {% block title %}Cortex · Backlog{% endblock %}
 {% block page_main %}
-<section id="backlog-panel" class="section-primary" aria-label="Backlog ledger" aria-live="polite" hx-get="/partials/backlog" hx-trigger="load, every 30s" hx-swap="morph">
-  <span class="sec-num"><strong>§ 01</strong>ledger</span>
-  <p class="empty-state">loading backlog ledger</p>
-</section>
+{# One poll target, four sections inside it. A <div> rather than a <section>
+   because the fragment emits real <section> elements of its own, each with its
+   own register mark in the editorial margin, and a section nested inside a
+   section would inherit that margin twice. The id is stable across swaps so
+   idiomorph keys on it. #}
+<div id="navigator-panel" aria-label="Backlog navigator" aria-live="polite"
+     hx-get="/partials/navigator{{ repo_query }}" hx-trigger="load, every 30s" hx-swap="morph">
+  <section class="section-primary">
+    <span class="sec-num"><strong>§ 01</strong>the pick</span>
+    <p class="empty-state">loading the navigator</p>
+  </section>
+</div>
 
-<section id="triage-board" class="section-primary" aria-label="Triage board" aria-live="polite" hx-get="/partials/triage-board" hx-trigger="load, every 30s" hx-swap="morph">
-  <span class="sec-num"><strong>§ 02</strong>triage</span>
-  <p class="empty-state">loading triage board</p>
-</section>
+<div class="handoff">
+  <span>epic structure lives in the <a href="/epics" class="text-brand-primary">epic map</a></span>
+  <span class="phase-label">which epics declare an order, which only look like they do</span>
+</div>
 
 <div class="handoff">
   <span>live session state lives in the <a href="/" class="text-brand-primary">overnight view</a></span>
@@ -28,7 +51,7 @@
 </div>
 
 <div class="colophon">
-  <span>cortex-command · backlog ledger</span>
-  <span><em>the standing queue · refresh every 30s</em></span>
+  <span>cortex-command · backlog navigator</span>
+  <span><em>read-only · every number computed from frontmatter · refresh every 30s</em></span>
 </div>
 {% endblock %}

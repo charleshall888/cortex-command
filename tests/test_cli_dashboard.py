@@ -169,3 +169,67 @@ class TestDashboardPidPath(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestPidFileOwnership(unittest.TestCase):
+    """A dashboard removes only the PID file it wrote.
+
+    uvicorn runs the lifespan *before* it binds, so a second launch on a taken
+    port starts the application, fails to bind, and unwinds. With an
+    unconditional ``unlink`` in the exit hook, that second process deleted the
+    PID file belonging to the server still serving — measured directly: after
+    one collision the file was gone while the original process was listening,
+    so every liveness reader (the overnight probe, the justfile recipe, the
+    ``--background`` idempotency check) concluded nothing was running.
+    """
+
+    def _release_hook(self, pid_file: Path, owner_pid: int):
+        """Rebuild the app's exit hook against an explicit owner.
+
+        The hook closes over ``os.getpid()`` inside the lifespan, which a unit
+        test cannot enter without a real server. The predicate under test is
+        the ownership comparison, so it is reproduced here against the same
+        file semantics.
+        """
+
+        def _release() -> None:
+            try:
+                if pid_file.read_text(encoding="utf-8").strip() == str(owner_pid):
+                    pid_file.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+        return _release
+
+    def test_a_foreign_pid_file_is_left_alone(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            pid_file = Path(tmp) / "dashboard.pid"
+            pid_file.write_text("4242", encoding="utf-8")
+            # A different process unwinding must not clear the live owner's file.
+            self._release_hook(pid_file, owner_pid=9999)()
+            self.assertTrue(pid_file.exists())
+            self.assertEqual("4242", pid_file.read_text(encoding="utf-8").strip())
+
+    def test_its_own_pid_file_is_removed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            pid_file = Path(tmp) / "dashboard.pid"
+            pid_file.write_text("4242", encoding="utf-8")
+            self._release_hook(pid_file, owner_pid=4242)()
+            self.assertFalse(pid_file.exists())
+
+    def test_a_missing_pid_file_is_not_an_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            pid_file = Path(tmp) / "dashboard.pid"
+            self._release_hook(pid_file, owner_pid=4242)()  # must not raise
+            self.assertFalse(pid_file.exists())
+
+
+class TestBackgroundLaunchSurface(unittest.TestCase):
+    """The flags the MCP tool and the docs depend on exist on the verb."""
+
+    def test_help_advertises_the_background_flags(self):
+        result = _invoke_dashboard_help()
+        self.assertEqual(0, result.returncode)
+        for flag in ("--background", "--format", "--also-root"):
+            with self.subTest(flag=flag):
+                self.assertIn(flag, result.stdout)

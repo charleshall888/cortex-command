@@ -16,7 +16,6 @@ Functions:
     parse_last_session     -- summary of the most recently completed session
     parse_session_list     -- summary rows for all completed sessions
     parse_session_detail   -- all data for a single session detail page
-    parse_backlog_counts   -- counts backlog items by status
     parse_backlog_titles   -- one corpus pass yielding both slug→title and id→title
     _read_all_jsonl        -- reads all JSONL events from byte 0 (initial-read primitive)
     parse_feature_cost_delta -- incremental cost delta and new byte offset for a feature
@@ -1058,63 +1057,6 @@ def parse_session_detail(session_id: str, lifecycle_dir: Path) -> dict | None:
     }
 
 
-def parse_backlog_counts(backlog_dir: Path) -> dict[str, int]:
-    """Count backlog items grouped by their ``status`` frontmatter field.
-
-    Scans ``backlog_dir`` for files matching the pattern
-    ``[0-9]*-*.md``, reads the YAML frontmatter between ``---``
-    markers, and extracts the ``status`` field.  Files with missing or
-    malformed frontmatter are skipped.  Items with no ``status`` field
-    default to ``"open"``.
-
-    Args:
-        backlog_dir: Path to the ``cortex/backlog/`` directory.
-
-    Returns:
-        Dict mapping status string to count.  Returns ``{}`` if
-        ``backlog_dir`` is absent or no matching files are found.
-    """
-    counts: dict[str, int] = {}
-    try:
-        files = sorted(backlog_dir.glob("[0-9]*-*.md"))
-    except OSError:
-        return counts
-
-    for filepath in files:
-        try:
-            text = filepath.read_text(encoding="utf-8")
-        except OSError:
-            continue
-
-        lines = text.splitlines()
-        # Frontmatter must start on the first line with "---"
-        if not lines or lines[0].strip() != "---":
-            continue
-
-        # Find the closing "---"
-        end_idx = None
-        for i in range(1, len(lines)):
-            if lines[i].strip() == "---":
-                end_idx = i
-                break
-
-        if end_idx is None:
-            continue
-
-        frontmatter_lines = lines[1:end_idx]
-        status = "open"
-        for fm_line in frontmatter_lines:
-            match = re.match(r"^status\s*:\s*(.+)$", fm_line)
-            if match:
-                status = match.group(1).strip().strip("\"'")
-                break
-
-        status = normalize_status(status)
-        counts[status] = counts.get(status, 0) + 1
-
-    return counts
-
-
 class BacklogTitles(NamedTuple):
     """Both title lookups produced by one pass over ``cortex/backlog/``.
 
@@ -1385,6 +1327,38 @@ def _resolve_ticket_path(item_id: str, backlog_dir: Path) -> Path | None:
         return None
 
 
+#: A ticket reference at the start of a block — ``#331`` — behind any mix of
+#: indentation, blockquote markers and a list bullet. Python-Markdown does not
+#: require a space after ``#`` for an ATX heading (CommonMark does), so every
+#: such line renders as an ``<h1>``.
+#:
+#: The list-marker arm is not an edge case: ``1. #129 (…)`` opens a new block
+#: inside the ``<li>``, so an implementation-order list — a common shape in
+#: this corpus — renders every one of its steps as the largest type on the
+#: page. Measured on wild-light: 156 lines across 109 of 512 tickets (21%),
+#: of which 28 sit behind a list marker.
+#:
+#: Cross-referencing other tickets by id at the start of a sentence is ordinary
+#: here, so this is not something the corpus can be spelled around.
+_LINE_START_TICKET_REF = re.compile(
+    r"(?m)^([ \t]*(?:>[ \t]*)*(?:(?:[-*+]|\d+[.)])[ \t]+)?)#(?=\d)"
+)
+
+
+def _escape_ticket_refs(body: str) -> str:
+    """Backslash-escape a line-leading ``#`` that introduces a ticket id.
+
+    Only ``#`` immediately followed by a digit is touched, so real headings are
+    untouched: ``# Why`` has a space, ``## Role`` has a second ``#``, and
+    neither matches. A mid-line ``#331`` was never a heading and is left alone.
+
+    Escaping the source rather than post-processing the HTML keeps the fix on
+    the same side of the render as the existing angle-bracket escaping, so the
+    sanitizer downstream still sees exactly what Python-Markdown emitted.
+    """
+    return _LINE_START_TICKET_REF.sub(r"\1\\#", body)
+
+
 def load_ticket_body(item_id: str, backlog_dir: Path) -> dict | None:
     """Return ``{id, title, html, truncated}`` for one backlog ticket, or None.
 
@@ -1440,7 +1414,9 @@ def load_ticket_body(item_id: str, backlog_dir: Path) -> dict | None:
     # seeded fixture corpus is written to exercise. Rendered first, then
     # filtered to an allowlist — see _TicketBodySanitizer for why that order.
     html = _sanitize_ticket_html(
-        markdown.markdown(body, extensions=["fenced_code", "tables"])
+        markdown.markdown(
+            _escape_ticket_refs(body), extensions=["fenced_code", "tables"]
+        )
     )
 
     return {"id": normalized, "title": title, "html": html, "truncated": truncated}
@@ -1532,7 +1508,7 @@ def _epic_children_corpus(backlog_dir: Path) -> list[dict]:
 
     Scans ``backlog_dir`` for files matching ``[0-9]*-*.md`` (non-recursive,
     so ``archive/`` is out of scope by construction, matching
-    ``parse_backlog_counts``/``BacklogTitles``) and parses each into
+    ``BacklogTitles``) and parses each into
     ``{id, title, status, type, parent, spec}`` — enough for
     ``build_epic_map``'s grouping and nothing else. Deliberately skips
     ``collect_items``' per-item live phase detection, which this page has no
