@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 94d53134-9112-4416-99fb-a052faef07c8
 title: Overhaul the dashboard into a read-only project command station
-status: backlog
+status: complete
 priority: medium
 type: epic
 created: 2026-07-21
-updated: 2026-07-21
+updated: 2026-08-06
 discovery_source: cortex/research/dashboard-command-station/research.md
 tags: ['dashboard-command-station', 'dashboard']
 areas: ['dashboard']
