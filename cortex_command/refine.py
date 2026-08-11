@@ -27,6 +27,11 @@ from cortex_command.lifecycle import session_marker
 from cortex_command.lifecycle.create_index import create_index
 from cortex_command.lifecycle_config import resolve_backlog_backend
 from cortex_command.lifecycle_event import log_event_at
+from cortex_command.override_reason import (
+    ALLOWED_REASON_CLAUSES,
+    canonicalize_reason,
+    reason_clause_ok,
+)
 
 
 # Every subcommand below builds a filesystem path from --lifecycle-slug, which
@@ -42,17 +47,6 @@ _UNSAFE_SLUG_MSG = (
 # ``cortex_command/common.py:_read_criticality_inner`` and ``_read_tier_inner``.
 _ALLOWED_CRITICALITY: frozenset[str] = frozenset({"low", "medium", "high", "critical"})
 _ALLOWED_COMPLEXITY: frozenset[str] = frozenset({"simple", "moderate", "complex"})
-
-# Optional clause tags an override reason may lead with. A free-text reason is
-# still accepted verbatim (a reason with no ``:`` is never parsed), but when a
-# clause IS claimed it must be one the corpus can tally — an open vocabulary
-# makes `reason.split(":")[0]` a histogram of typos rather than of axes.
-_ALLOWED_REASON_CLAUSES: frozenset[str] = frozenset(
-    {"reversibility", "exposure", "consequence", "other"}
-)
-_BAD_REASON_CLAUSE_MSG = (
-    "cortex-refine: {flag} {value!r}: clause tag {tag!r} is not one of: {allowed}"
-)
 
 # A reason rides on the override row it annotates and nowhere else, so when the
 # rank comparison suppresses that row the text is simply dropped. Silence there
@@ -304,30 +298,6 @@ def _fields_already_overridden(events_log: Path) -> frozenset[str]:
     return frozenset(found)
 
 
-def _reason_clause_ok(flag: str, value: str | None) -> bool:
-    """Whether an override ``--*-reason`` value carries an acceptable clause tag.
-
-    Untagged (no ``:``) reasons pass through verbatim; a tagged one is checked
-    against :data:`_ALLOWED_REASON_CLAUSES` on the text before the FIRST colon,
-    unstripped, because that is exactly the key a corpus tally buckets on.
-    """
-    if value is None or ":" not in value:
-        return True
-    tag = value.split(":", 1)[0]
-    if tag in _ALLOWED_REASON_CLAUSES:
-        return True
-    print(
-        _BAD_REASON_CLAUSE_MSG.format(
-            flag=flag,
-            value=value,
-            tag=tag,
-            allowed=", ".join(sorted(_ALLOWED_REASON_CLAUSES)),
-        ),
-        file=sys.stderr,
-    )
-    return False
-
-
 def _cmd_reconcile_clarify(args: argparse.Namespace) -> int:
     """Reconcile ``events.log`` to the Clarify-determined tier/criticality.
 
@@ -361,12 +331,22 @@ def _cmd_reconcile_clarify(args: argparse.Namespace) -> int:
     # tags wrong sees both in one run instead of one per re-run.
     tier_reason: str | None = args.tier_reason
     criticality_reason: str | None = args.criticality_reason
-    tier_reason_ok = _reason_clause_ok("--tier-reason", tier_reason)
-    criticality_reason_ok = _reason_clause_ok(
-        "--criticality-reason", criticality_reason
+    tier_reason_ok = reason_clause_ok("--tier-reason", tier_reason, "cortex-refine")
+    criticality_reason_ok = reason_clause_ok(
+        "--criticality-reason", criticality_reason, "cortex-refine"
     )
     if not tier_reason_ok or not criticality_reason_ok:
         return 2
+
+    # Canonicalize only after the gate: a rejected reason is never rewritten,
+    # and the append stays all-or-nothing (R6). Downstream rows therefore carry
+    # the lowercased clause tag the corpus tally buckets on.
+    tier_reason = canonicalize_reason(tier_reason) if tier_reason else tier_reason
+    criticality_reason = (
+        canonicalize_reason(criticality_reason)
+        if criticality_reason
+        else criticality_reason
+    )
 
     backlog_slug: str | None = args.backlog_slug
     backlog_slug = _apply_backend_guard(args.backend.strip(), backlog_slug)
@@ -936,7 +916,7 @@ def _build_parser() -> argparse.ArgumentParser:
             "Optional one-line justification recorded on the emitted "
             "criticality_override row. May lead with a clause tag "
             "('<clause>: text') from: "
-            + ", ".join(sorted(_ALLOWED_REASON_CLAUSES))
+            + ", ".join(sorted(ALLOWED_REASON_CLAUSES))
             + ". Untagged text is recorded verbatim; an unknown tag is "
             "rejected and nothing is appended. Omit rather than filling in "
             "a placeholder — an absent reason is honest, a filler one reads "
