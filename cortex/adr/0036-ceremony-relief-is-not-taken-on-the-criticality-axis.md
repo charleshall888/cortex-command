@@ -51,6 +51,7 @@ is greppable without new tooling:
 ```
 find cortex/lifecycle -name events.log -exec cat {} + | python3 -c "
 import sys, json, collections
+TAGS = {'reversibility', 'exposure', 'consequence', 'other'}
 c = collections.Counter()
 for line in sys.stdin:
     line = line.strip()
@@ -61,7 +62,9 @@ for line in sys.stdin:
     except ValueError:
         continue
     if r.get('event') == 'criticality_override' and r.get('reason'):
-        c.update([r['reason'].split(':')[0]])
+        prefix = r['reason'].split(':', 1)[0].strip() if ':' in r['reason'] else ''
+        tag = prefix.lower() if prefix and not any(ch.isspace() for ch in prefix) else ''
+        c.update([tag if tag in TAGS else 'untagged'])
 print(c)
 "
 ```
@@ -71,10 +74,14 @@ The line filter and the `except` are load-bearing, not defensive padding: ~4,600
 `json.loads` per line aborts on the first one. Do not silence stderr here — a suppressed traceback reads
 identically to "no clause data yet".
 
-Note that pre-existing `reason` values are **untagged free prose**, so the tally buckets each row by its
-entire first clause (seven whole-sentence buckets today, e.g. `Clarify rubric`, `clarify-critic`,
-`Per clarify.md §5 default`) rather than by one of the four tags — do not mistake those buckets for clause
-tags.
+The `TAGS` membership test is what keeps whole sentences out of the clause distribution, and it mirrors the
+writers' own rule (`cortex_command/override_reason.py`'s `claimed_tag`): a tag is claimed only when the text
+before the first colon is, stripped, non-empty and whitespace-free, and it is then lowercased. Everything
+else is untagged prose written verbatim — pre-existing `reason` values (`Clarify rubric`, `clarify-critic`,
+`Per clarify.md §5 default`), and multi-word prefixes such as `blast radius: unbounded` — and all of it lands
+in the single `untagged` bucket. Without that test those rows would surface as whole-sentence buckets that
+read like clause tags but are not. A large `untagged` count is therefore the expected early reading rather
+than a sign of miscounting.
 
 A bare `grep … cortex/lifecycle/*/events.log` is **not** valid on two counts: the glob matches 188 of 353
 `events.log` files, missing all of `archive/` — while the research behind this decision covered `archive/` —
