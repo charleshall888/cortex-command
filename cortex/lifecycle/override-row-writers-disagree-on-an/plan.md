@@ -66,7 +66,7 @@ leaves the two mirrored SKILL.md files with zero drift.
 - **Verification**: `uv run python -c "import cortex_command.override_reason as m; print(sorted(m.ALLOWED_REASON_CLAUSES))"`
   prints `['consequence', 'exposure', 'other', 'reversibility']`; `grep -c "^from cortex_command\|^import cortex_command" cortex_command/override_reason.py`
   returns `0`.
-- **Status**: [ ] pending
+- **Status**: [x] done (bd1000e5 2026-08-10T21:52:04-04:00)
 
 ### Task 2: Re-point `refine.py` at the relocated module
 - **Files**: `cortex_command/refine.py`
@@ -102,7 +102,7 @@ leaves the two mirrored SKILL.md files with zero drift.
   prints `1`; `uv run python -m pytest tests/test_refine_reconcile_clarify.py` exits 0; and
   `uv run python -m cortex_command.refine reconcile-clarify --lifecycle-slug zzz-nonexistent-probe --complexity moderate --criticality low --tier-reason 'badA: x' --criticality-reason 'badB: y'`
   exits 2 printing exactly two stderr lines, one naming each flag.
-- **Status**: [ ] pending
+- **Status**: [x] done (4e51dc59 2026-08-10T21:57:11-04:00)
 
 ### Task 3: Unit-test the tag-claim rule and the canonicalizer
 - **Files**: `tests/test_override_reason.py` (new), `cortex_command/override_reason.py` (mutation check only —
@@ -127,7 +127,7 @@ leaves the two mirrored SKILL.md files with zero drift.
   **and** the suite is falsifiable rather than self-sealing — with `canonicalize_reason` temporarily stubbed to
   `return value`, the run fails on the `" Exposure: it feeds spec authoring"` case, and with `claimed_tag`'s
   whitespace check removed it fails on `blast radius: unbounded`. Report both mutant runs' failure counts.
-- **Status**: [ ] pending
+- **Status**: [x] done (c757c1c7 2026-08-10T22:01:00-04:00)
 
 ### Task 4: Bind clause validation and the empty-drop to the typed verbs
 - **Files**: `cortex_command/lifecycle_event.py`
@@ -164,7 +164,7 @@ leaves the two mirrored SKILL.md files with zero drift.
     `--set reason=` → `""` and must stay green (it is ADR-0020's escape hatch, a stated Non-Requirement).
 - **Verification**: `uv run python -m pytest cortex_command/tests/test_lifecycle_event.py tests/test_lifecycle_event_roundtrip.py`
   exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (c728f9c2 2026-08-10T21:58:21-04:00)
 
 ### Task 5: Test the typed override verbs end to end
 - **Files**: `cortex_command/tests/test_lifecycle_event.py`, `cortex_command/lifecycle_event.py` (mutation check
@@ -190,7 +190,7 @@ leaves the two mirrored SKILL.md files with zero drift.
     `cortex-refine`.
 - **Verification**: `uv run python -m pytest cortex_command/tests/test_lifecycle_event.py` exits 0; deleting the
   `_clause_arg` binding from `_build_parser` turns the requirement-7 case red.
-- **Status**: [ ] pending
+- **Status**: [x] done (15059794 2026-08-10T22:04:52-04:00)
 
 ### Task 6: Amend ADR-0036's tally recipe
 - **Files**: `cortex/adr/0036-ceremony-relief-is-not-taken-on-the-criticality-axis.md`
@@ -209,7 +209,7 @@ leaves the two mirrored SKILL.md files with zero drift.
   `blast radius: c`, yields exactly one `exposure` bucket of count 2 plus one untagged bucket, where the HEAD recipe
   yields three buckets of count 1. Capture that run in the task's report, using a fixture written under the
   scratchpad.
-- **Status**: [ ] pending
+- **Status**: [x] done (c8764a56 2026-08-10T22:00:41-04:00)
 
 ### Task 7: Correct the governing requirement bullet
 - **Files**: `cortex/requirements/lifecycle.md`
@@ -236,7 +236,7 @@ leaves the two mirrored SKILL.md files with zero drift.
   `BULLET | grep -c 'ADR-0020'` prints `1`; `BULLET | grep -c 'skills/build/SKILL\.md'` prints `1`;
   `BULLET | grep -c 'all four'` prints `1`; `BULLET | grep -c 'all three'` prints `0`;
   `BULLET | grep -c 'widening'` prints `1`; `BULLET | grep -c 'narrowing'` prints `1`.
-- **Status**: [ ] pending
+- **Status**: [x] done (9162cfdd 2026-08-10T22:01:46-04:00)
 
 ### Task 8: Name the clause vocabulary at both CLI override call sites
 - **Files**: `skills/refine/SKILL.md`, `skills/build/SKILL.md`, `plugins/cortex-core/skills/refine/SKILL.md`,
@@ -262,7 +262,7 @@ leaves the two mirrored SKILL.md files with zero drift.
   `awk '/complexity-override/' skills/refine/SKILL.md | grep -c 'reversibility'` prints `1`;
   `uv run python -m pytest tests/test_l1_surface_ratchet.py tests/test_refine_skill.py` exits 0; and
   `just build-plugin` leaves `plugins/cortex-core/skills/{refine,build}/SKILL.md` reconciled with zero drift.
-- **Status**: [ ] pending
+- **Status**: [x] done (3b05a2c7 2026-08-10T22:05:05-04:00)
 
 ### Task 9: File the tier-vocabulary successor ticket
 - **Files**: `cortex/backlog/` (one new `NNN-*.md`), `cortex/backlog/index.json`, `cortex/backlog/index.md`
@@ -280,7 +280,50 @@ leaves the two mirrored SKILL.md files with zero drift.
   hypothetical.
 - **Verification**: `grep -rl 'tier-overrides-record-no-reason-and/spec.md:32' cortex/backlog/` returns exactly one
   new file, and `just backlog-index` regenerates cleanly with it present.
-- **Status**: [ ] pending
+- **Status**: [x] done (6895c9b9 2026-08-10T21:54:50-04:00)
+
+### Task 10: Correct the now-false divergence comment in `refine.py`
+- **Files**: `cortex_command/refine.py`
+- **What**: Added during Implement, not at plan time. Task 4 widened `_emit_subcommand`'s optional-field drop to
+  discard empty and whitespace-only strings, which inverted a comment Task 2 left standing at
+  `refine.py:393-402`: it still tells the reader the omission test "diverges from that module deliberately" because
+  `lifecycle_event.py` "still keys off `is not None` and would record `"reason": ""`". After `c728f9c2` the two
+  writers **agree**, so the comment is false about live code in the same commit range that made it false.
+- **Depends on**: [2, 4]
+- **Complexity**: simple
+- **Context**: Discovered by Task 7's builder while reading the shipped code to check whether its own rewritten
+  requirement bullet was true. No test can observe a comment, so neither Task 2's nor Task 4's verification could
+  have caught this, and Review reading artifacts rather than running them would likely miss it too. Rewrite the
+  comment to state the agreement and what still differs (`refine.py` appends its own `gate` key; the two share
+  `from, to, reason` order), and keep the load-bearing half — that an empty string is not an axis a corpus tally
+  can bucket on. Do not restate the `--set` escape hatch here; `cortex/requirements/lifecycle.md:104` owns that.
+- **Verification**: `grep -c 'is not None' cortex_command/refine.py` returns no match inside that comment block, and
+  `uv run python -m pytest tests/test_refine_reconcile_clarify.py` exits 0. Quote the rewritten comment in the
+  report so the claim can be read against `lifecycle_event.py`'s actual drop condition.
+- **Status**: [x] done (5c81a92b 2026-08-10T22:04:45-04:00)
+
+### Task 11: Close the residual whitespace-only disagreement in `refine.py`
+- **Files**: `cortex_command/refine.py`, `tests/test_refine_reconcile_clarify.py`
+- **What**: Added during Implement, not at plan time. Task 10 established that the two writers still disagree on a
+  whitespace-only reason: `_emit_subcommand` drops it (`not value.strip()`), while `refine.py`'s row builders gate on
+  plain truthiness, so `--tier-reason "   "` is truthy and lands as `"reason": "   "`. The spec's Edge Cases state
+  the behavior unscoped — *"`--reason` is whitespace only (`"   "`): treated as empty; the key is omitted"* — and the
+  ticket's own title is that the writers disagree on an empty reason, so a residual disagreement leaves the headline
+  half-closed.
+- **Depends on**: [2, 10]
+- **Complexity**: simple
+- **Context**: Requirement 10 is phase-scoped to the typed verbs and its acceptance names only
+  `cortex-lifecycle-event`, so this is not a requirement-10 violation — it is the Edge Cases line and the ticket
+  premise that this task serves. Change both row builders' `reason` guards from truthiness to a blank-aware test so
+  `""` and `"   "` are both omitted, matching `_emit_subcommand` exactly. Do not reintroduce an `is not None` test —
+  #471 moved these off that deliberately. Task 10's comment at `:393-403` ends by naming this exact residual gap;
+  once closed, that closing sentence must be removed or the comment becomes false in the other direction.
+- **Verification**: a `reconcile-clarify` run with `--tier-reason "   "` and `--criticality-reason "   "` on a
+  throwaway lifecycle under the scratchpad appends rows with no `reason` key (assert via
+  `python3 -c "import json,sys; print('reason' in json.loads(...))"` printing `False`); a new case in
+  `tests/test_refine_reconcile_clarify.py` pins it; `uv run python -m pytest tests/test_refine_reconcile_clarify.py`
+  exits 0; and reverting the guard turns the new case red — report that failure count.
+- **Status**: [x] done (01dbc4d3 2026-08-10T22:08:13-04:00)
 
 ## Risks
 

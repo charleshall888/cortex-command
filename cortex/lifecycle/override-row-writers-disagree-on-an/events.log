@@ -6,3 +6,12 @@
 {"ts": "2026-08-08T18:20:10Z", "event": "phase_transition", "feature": "override-row-writers-disagree-on-an", "from": "specify", "to": "plan"}
 {"ts": "2026-08-08T19:13:11Z", "event": "plan_approved", "feature": "override-row-writers-disagree-on-an", "dispatch_choice": "trunk"}
 {"ts": "2026-08-08T19:13:11Z", "event": "phase_transition", "feature": "override-row-writers-disagree-on-an", "from": "plan", "to": "implement"}
+{"ts": "2026-08-11T01:51:29Z", "event": "batch_dispatch", "feature": "override-row-writers-disagree-on-an", "batch": 0, "tasks": ["1", "9"]}
+{"ts": "2026-08-11T01:56:34Z", "event": "batch_dispatch", "feature": "override-row-writers-disagree-on-an", "batch": 1, "tasks": ["2", "4"]}
+{"ts": "2026-08-11T02:00:02Z", "event": "batch_dispatch", "feature": "override-row-writers-disagree-on-an", "batch": 2, "tasks": ["3", "6", "7"]}
+{"ts": "2026-08-11T02:04:01Z", "event": "batch_dispatch", "feature": "override-row-writers-disagree-on-an", "batch": 3, "tasks": ["5", "8", "10"]}
+{"ts": "2026-08-11T02:09:41Z", "event": "phase_transition", "feature": "override-row-writers-disagree-on-an", "from": "implement", "to": "review", "tier": "complex"}
+{"ts": "2026-08-11T02:15:14Z", "event": "review_dispatched", "feature": "override-row-writers-disagree-on-an", "cycle": 1, "mode": "full", "baseline_sha": "01dbc4d346c35e62d1c8867e8cab86de9fe809e8"}
+{"ts": "2026-08-11T02:28:24Z", "event": "review_verdict", "feature": "override-row-writers-disagree-on-an", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
+{"ts": "2026-08-11T02:28:24Z", "event": "phase_transition", "feature": "override-row-writers-disagree-on-an", "from": "review", "to": "complete"}
+{"ts": "2026-08-11T02:28:36Z", "event": "feature_complete", "feature": "override-row-writers-disagree-on-an", "tasks_total": 11, "rework_cycles": 0, "merge_anchor": "merge"}

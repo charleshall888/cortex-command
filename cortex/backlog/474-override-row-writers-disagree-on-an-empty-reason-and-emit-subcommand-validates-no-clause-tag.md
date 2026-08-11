@@ -2,16 +2,16 @@
 schema_version: "1"
 uuid: c0feada9-b95c-4ca4-9b30-98ae7b4e41be
 title: Override-row writers disagree on an empty reason, and _emit_subcommand validates no clause tag
-status: in_progress
+status: complete
 priority: medium
 type: bug
 created: 2026-08-07
-updated: 2026-08-08
+updated: 2026-08-10
 tags: ['lifecycle', 'events', 'criticality']
 areas: ['lifecycle']
 complexity: complex
 criticality: high
-lifecycle_phase: research
+lifecycle_phase: complete
 spec: cortex/lifecycle/override-row-writers-disagree-on-an/spec.md
 ---
 ## Why
