@@ -49,7 +49,7 @@ Re-run at 60 days (2026-10-06) or once 50 further rows have accumulated, whichev
 
 ## Role
 
-Define the tier axis's own clause vocabulary from `skills/refine/references/clarify.md:32` (§5.2) and apply it on the
+Define the tier axis's own clause vocabulary from `skills/refine/references/clarify.md:33` (§5.2) and apply it on the
 tier axis only.
 
 ## Integration
@@ -86,7 +86,7 @@ overlap — they describe design-uncertainty scope, not downstream-breakage risk
 - `cortex_command/override_reason.py` — `ALLOWED_REASON_CLAUSES`, the shared set both writers import
 - `cortex_command/refine.py` — `reconcile-clarify`'s `--tier-reason` parser
 - `cortex_command/lifecycle_event.py` — `complexity-override --reason`
-- `skills/refine/references/clarify.md:32` (§5.2) — source of the tier vocabulary; read, not edited
+- `skills/refine/references/clarify.md:33` (§5.2) — source of the tier vocabulary; read, not edited
 - `cortex/requirements/project.md:64` → `cortex/requirements/lifecycle.md` — the closed-set constraint and its co-edit sites
 - `cortex/adr/0036-ceremony-relief-is-not-taken-on-the-criticality-axis.md` — the clause-distribution recipe and its re-open trigger
 - `cortex/lifecycle/tier-overrides-record-no-reason-and/spec.md:32` — the deferral, the classification finding, and the trigger quoted above
