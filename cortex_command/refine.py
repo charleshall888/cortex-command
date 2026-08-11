@@ -392,14 +392,15 @@ def _cmd_reconcile_clarify(args: argparse.Namespace) -> int:
                 "to": desired_tier,
                 # Key order mirrors lifecycle_event.py's declared field order
                 # for the typed override verbs (from, to, reason) so both
-                # writers of an override row produce the same shape; omission
-                # drops the key entirely rather than writing a null. The
-                # omission TEST diverges from that module deliberately: it
-                # keys off truthiness, so an empty reason writes no key here,
-                # where lifecycle_event.py's `_emit_subcommand` optional-flag
-                # drop still keys off `is not None` and would record
+                # writers of an override row produce the same shape; what
+                # differs is the `gate` key appended below, which those verbs
+                # have no equivalent of. On omission the two writers AGREE:
+                # `_emit_subcommand` drops an optional field whose value is
+                # None or a blank string, and the truthiness test here drops
+                # an empty reason the same way, writing no key rather than
                 # `"reason": ""` — an empty string is not an axis a corpus
-                # tally can bucket on.
+                # tally can bucket on. The residual gap is a whitespace-only
+                # reason, which that module drops and truthiness here writes.
                 **({"reason": tier_reason} if tier_reason else {}),
                 "gate": "clarify_reconcile",
                 **({"from_seeded": True} if tier_from_seed else {}),
