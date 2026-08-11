@@ -47,6 +47,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+from cortex_command import override_reason
 from cortex_command.common import (
     CortexProjectRootError,
     _resolve_user_project_root_from_cwd,
@@ -246,11 +247,13 @@ class _SetFieldAction(argparse.Action):
 # FieldSpec is ``(flag, emit_key, kind, required, choices)``: ``flag`` is the
 # argparse option, ``emit_key`` the row key it writes (they differ only where
 # the flag is an ergonomic alias — e.g. ``--drift`` → ``requirements_drift``),
-# ``kind`` is ``"str"`` (literal) or ``"json"`` (``json.loads``-parsed, the old
-# ``--set-json``), ``choices`` validates the enum or is ``None``.
+# ``kind`` is ``"str"`` (literal), ``"json"`` (``json.loads``-parsed, the old
+# ``--set-json``), or ``"clause"`` (a literal string validated and canonicalized
+# by ``_clause_arg``), ``choices`` validates the enum or is ``None``.
 
 _STR = "str"
 _JSON = "json"
+_CLAUSE = "clause"
 
 _CRITICALITY = ("low", "medium", "high", "critical")
 
@@ -310,7 +313,7 @@ _EVENT_SUBCOMMANDS: dict[str, tuple[str, list]] = {
     "criticality-override": ("criticality_override", [
         ("--from", "from", _STR, True, None),
         ("--to", "to", _STR, True, None),
-        ("--reason", "reason", _STR, False, None),
+        ("--reason", "reason", _CLAUSE, False, None),
     ]),
     # The symmetric half of criticality-override. Without it the ONLY writer of
     # complexity_override was cortex-complexity-escalator, so a bullet count —
@@ -320,7 +323,7 @@ _EVENT_SUBCOMMANDS: dict[str, tuple[str, list]] = {
     "complexity-override": ("complexity_override", [
         ("--from", "from", _STR, True, None),
         ("--to", "to", _STR, True, None),
-        ("--reason", "reason", _STR, False, None),
+        ("--reason", "reason", _CLAUSE, False, None),
     ]),
     "batch-dispatch": ("batch_dispatch", [
         ("--batch", "batch", _JSON, True, None),
@@ -350,6 +353,39 @@ def _json_arg(value: str) -> object:
         )
 
 
+def _clause_arg(value: str) -> str:
+    """argparse ``type=`` for the override ``--reason`` fields.
+
+    Rejects a claimed clause tag that falls outside
+    ``override_reason.ALLOWED_REASON_CLAUSES``, and canonicalizes a recognized
+    one so the stored value and a corpus tally bucket on the same bytes.
+    Untagged prose passes through verbatim.
+
+    Raising here rather than checking inside ``_emit_subcommand`` is what makes
+    the rejection atomic: argparse exits 2 before any row is built, so a bad tag
+    can never land a partial row.
+    """
+    tag = override_reason.claimed_tag(value)
+    if tag is not None and tag not in override_reason.ALLOWED_REASON_CLAUSES:
+        # ``{prog}`` is filled empty and its separator dropped: argparse already
+        # prefixes an ArgumentTypeError with the parser's own prog
+        # (``cortex-lifecycle-event <subcommand>: error: argument --reason: …``),
+        # which is what names the invoking verb. Hardcoding a program name here
+        # would double that prefix — and reintroduce the wrong one.
+        raise argparse.ArgumentTypeError(
+            override_reason.BAD_REASON_CLAUSE_MSG.format(
+                prog="",
+                flag="--reason",
+                value=value,
+                tag=tag,
+                allowed=", ".join(
+                    sorted(override_reason.ALLOWED_REASON_CLAUSES)
+                ),
+            ).removeprefix(": ")
+        )
+    return override_reason.canonicalize_reason(value)
+
+
 def _flag_dest(flag: str) -> str:
     """Derive argparse's dest from an option flag (``--tasks-total`` → ``tasks_total``)."""
     return flag[2:].replace("-", "_")
@@ -361,8 +397,17 @@ def _emit_subcommand(command: str, args: argparse.Namespace) -> int:
     fields: list[tuple[str, str, object]] = []
     for flag, emit_key, kind, required, _choices in specs:
         value = getattr(args, _flag_dest(flag))
-        if value is None and not required:
-            continue  # optional flag omitted — drop the field entirely
+        if not required and (
+            value is None or (isinstance(value, str) and not value.strip())
+        ):
+            # Optional flag omitted, or given an empty/whitespace-only string —
+            # drop the field entirely rather than write ``""``, which is not an
+            # axis a corpus tally can bucket on. The empty-string half has ZERO
+            # observed instances in 554 corpus rows: it rides on contract
+            # coherence, not on measured harm. The ``isinstance`` guard keeps
+            # falsy JSON values (``--tasks-total 0``, ``--rework-cycles 0``,
+            # ``--cycle 0``) emitting.
+            continue
         fields.append((kind, emit_key, value))
     try:
         log_event(event=event_name, feature=args.feature, fields=fields)
@@ -395,6 +440,8 @@ def _build_parser() -> argparse.ArgumentParser:
                 kwargs["metavar"] = emit_key.upper()
             if kind == _JSON:
                 kwargs["type"] = _json_arg
+            elif kind == _CLAUSE:
+                kwargs["type"] = _clause_arg
             event_p.add_argument(flag, **kwargs)
 
     log_p = sub.add_parser("log", help="Append one event row to events.log")
