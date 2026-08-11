@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 9589303b-4ce4-43b6-9841-aa432b068550
 title: task_git_state captures every untracked file at task exit and nothing reads it, so an unstaged new file reaches main unflagged
-status: should-have
+status: wontfix
 priority: low
 type: bug
 created: 2026-08-07
@@ -12,6 +12,7 @@ areas: ['pipeline']
 complexity: moderate
 criticality: high
 lifecycle_slug: verification-runs-in-the-dirty-worktree
+lifecycle_phase: wontfix
 ---
 ## Why
 
@@ -95,8 +96,51 @@ for gaggimate, Team-Builder-Bot, or hall-dental.
 Adding a *reader* for an event the runner already writes is close to free and is the version this
 ticket should be judged on. Adding a new gate is not, and does not clear the bar on this evidence.
 
+## Resolution (2026-08-11) — closed unbuilt; the noise source was deleted instead
+
+Research (`cortex/lifecycle/archive/verification-runs-in-the-dirty-worktree/research.md`) refuted the
+re-aimed proposal too. **No consumer was added.** What shipped is a 4-line deletion.
+
+**Both candidate consumers were unreachable in the source incident.** All three features in
+`overnight-2026-08-07-0252` ended `feature_failed` (×2) or `feature_deferred` (×1); zero reached
+`result.status == "completed"`, zero `feature_merged`, and `merge_start: 2` against
+`merge_complete: 0`. The proposed pre-merge gate sits inside the `completed` arm
+(`outcome_router.py:850`, `:1996`) and the report annotation renders only for merged features. The
+defect reached `main` via a human `git merge`, a path no proposed consumer sits on.
+
+**100% of the noise came from dead code.** `pipeline/worktree.py:324-327` symlinked `.venv` into
+every non-cross-repo worktree "so runner.sh's venv check succeeds" — and `runner.sh` was retired in
+`3cbf00ed`. Those four lines were the only remaining `venv` reference in `overnight/` or `pipeline/`,
+and `.gitignore`'s `.venv/` (trailing slash = directories only) cannot match a symlink, so every
+worktree reported `?? .venv`: 28/28 events in wild-light, 34/34 in cortex-command.
+
+Verified by running the real `create_worktree` before and after against a throwaway repo whose
+`.gitignore` carries `.venv/`:
+
+| | `.venv` in worktree | `git status --short` |
+|---|---|---|
+| before | symlink | `?? .venv` |
+| after | absent | *(clean)* |
+
+`project.md:23` gives a surface with no failing consumer the presumption of removal, so the deletion
+carries itself. A gate would first have required amending `project.md:41` to name a failure the gate
+provably would not have caught, against `pipeline.md:42`'s fail-forward posture — and in
+cortex-command's own corpus 6/6 features would have hit it, every one on `.venv`.
+
+**Not carried forward.** The persistence discriminator (untracked path survives to a feature's last
+`task_git_state`) is 1/1 on the single observation it was fitted to, and `task_git_state` is written
+per-task inside `asyncio.gather`, so events arrive in completion order over a shared worktree — a
+path "vanishing" reflects which sibling task sampled next, not the path's fate.
+
+**Left open, unfiled.** After this deletion `task_git_state`'s only consumer is a smoke-test print,
+so `project.md:23` now puts the presumption of removal on the **writer**. That is a separate
+decision. Also unfiled: arming `test_command` through `runner.py:3259` (vestigial dead code, and
+parsing `test-command` violates no recorded decision — the `_DORMANT_KEYS` guard does not cover it),
+which is worth doing on its own merits but is blind to a feature's own new deliverable.
+
 ## Touch points
 
+- `cortex_command/pipeline/worktree.py:324-327` — **deleted**; the symlink that manufactured the noise
 - `cortex_command/overnight/feature_executor.py:726-753` — the sweep that already runs
 - `cortex_command/overnight/smoke_test.py:213-219` — the only consumer today
 - `cortex_command/pipeline/merge.py:193` — post-merge test-and-revert, unarmed

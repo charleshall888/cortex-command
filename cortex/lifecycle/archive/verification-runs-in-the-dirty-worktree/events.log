@@ -1,2 +1,3 @@
 {"ts": "2026-08-11T13:49:23Z", "schema_version": 1, "event": "lifecycle_start", "feature": "verification-runs-in-the-dirty-worktree", "tier": "simple", "criticality": "medium", "entry_point": "refine", "seeded": ["criticality", "tier"]}
 {"ts": "2026-08-11T13:58:52Z", "event": "clarify_critic", "feature": "verification-runs-in-the-dirty-worktree", "schema_version": "3", "parent_epic_loaded": "false", "findings_count": "13", "applied_fixes_count": "13", "dismissals_count": "0", "status": "ok"}
+{"ts": "2026-08-11T14:34:08Z", "event": "feature_wontfix", "feature": "verification-runs-in-the-dirty-worktree", "reason": "Both candidate consumers unreachable in the source incident; noise source was 4 lines of dead code, deleted instead"}

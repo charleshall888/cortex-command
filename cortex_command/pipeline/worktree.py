@@ -321,11 +321,6 @@ def create_worktree(
             (worktree_path / ".claude").mkdir(parents=True, exist_ok=True)
             shutil.copy2(local_settings, worktree_path / ".claude" / "settings.local.json")
 
-        # Symlink .venv so runner.sh's venv check succeeds in worktrees.
-        repo_venv = repo / ".venv"
-        if repo_venv.exists():
-            (worktree_path / ".venv").symlink_to(repo_venv)
-
     return WorktreeInfo(feature=feature, path=worktree_path, branch=branch, exists=True)
 
 
