@@ -12,7 +12,7 @@ Subcommand: $ARGUMENTS (first word = subcommand, remainder = args). Bare invocat
 
 ### add
 
-`cortex-create-backlog-item --title "{{title}}" --status backlog --type {{type}} --priority {{priority}}` (defaults `feature`/`medium`; `--parent NNN`, `--tags`, `--areas` when specified), then open the created file for review.
+`cortex-create-backlog-item --title "{{title}}" --status backlog --type {{type}} --priority {{priority}}` (defaults `feature`/`medium`; `--parent NNN`, `--blocked-by NNN...`, `--blocks NNN...`, `--tags`, `--areas` when specified), then open the created file for review.
 
 ### new
 

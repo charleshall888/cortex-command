@@ -37,6 +37,26 @@ from cortex_command.common import (
 )
 
 
+def _id_list(refs: list[str] | None) -> str:
+    """Render dependency refs as the inline ``[a, b]`` form the parser needs.
+
+    Ids are normalised to bare integers. The corpus carries every spelling —
+    ``["013"]``, ``[016]``, a bare ``170``, ``null`` — because these have only
+    ever been hand-edited; emitting one shape is how that stops spreading.
+    A ref that is not a number is passed through rather than dropped, so a
+    typo stays visible in the file instead of vanishing on write.
+    """
+    if not refs:
+        return "[]"
+    out: list[str] = []
+    for ref in refs:
+        token = str(ref).strip().strip("\"'")
+        if not token:
+            continue
+        out.append(str(int(token)) if token.isdigit() else token)
+    return "[" + ", ".join(out) + "]"
+
+
 def _warn_if_parent_closed(parent: str | None, backlog_dir: Path) -> None:
     """Say so when a new item is filed under an already-closed epic.
 
@@ -171,9 +191,25 @@ def create_item(
     parent: str | None = None,
     tags: list[str] | None = None,
     areas: list[str] | None = None,
+    blocked_by: list[str] | None = None,
+    blocks: list[str] | None = None,
     body: str | None = None,
 ) -> Path:
-    """Create a new backlog item atomically and return its path."""
+    """Create a new backlog item atomically and return its path.
+
+    ``blocked_by`` and ``blocks`` are written on every item, empty list and
+    all — unlike ``tags``/``areas``, which are omitted when unset. That
+    asymmetry is deliberate and it is the point of the pair existing here.
+
+    ``references/schema.md`` has always specified that "optional arrays default
+    to ``[]``", and this verb has never emitted either field. Measured on the
+    wild-light corpus: of 453 items carrying a ``uuid`` (so, tool-created), 316
+    had no ``blocked-by`` key at all and only 16 (3.5%) declared a real
+    dependency, against 20.8% of the 48 hand-authored items — a six-fold gap
+    on the same backlog. An absent key is not a neutral default: there is
+    nothing on the page to fill in, so ordering that exists in the author's
+    head goes unrecorded and the dashboard's epic map has nothing to draw.
+    """
     if backlog_dir is None:
         raise TypeError("backlog_dir is required")
 
@@ -206,6 +242,11 @@ def create_item(
         lines.append(f"tags: {tags}\n")
     if areas is not None:
         lines.append(f"areas: {areas}\n")
+    # Always written, in the hyphenated spelling ``collect_items`` reads. The
+    # underscored ``blocked_by`` parses to [] in silence, which is the failure
+    # this pair is here to stop being invisible.
+    lines.append(f"blocked-by: {_id_list(blocked_by)}\n")
+    lines.append(f"blocks: {_id_list(blocks)}\n")
     lines.append("---\n")
     if body is not None:
         lines.append(body)
@@ -252,6 +293,14 @@ def main() -> int:
     parser.add_argument("--rework-of", dest="rework_of", default=None,
                         help="ID of the original item this reworks")
     parser.add_argument("--parent", default=None, help="Parent epic ID")
+    parser.add_argument(
+        "--blocked-by", dest="blocked_by", nargs="*", default=None,
+        help="Item IDs that must land before this one (space-separated)",
+    )
+    parser.add_argument(
+        "--blocks", nargs="*", default=None,
+        help="Item IDs this one must land before (space-separated)",
+    )
     parser.add_argument("--tags", nargs="*", default=None, help="Tags (space-separated)")
     parser.add_argument("--areas", nargs="*", default=None, help="Areas (space-separated)")
     parser.add_argument("--body", default=None, help="Markdown body content to append after frontmatter")
@@ -273,6 +322,8 @@ def main() -> int:
             parent=args.parent,
             tags=args.tags,
             areas=args.areas,
+            blocked_by=args.blocked_by,
+            blocks=args.blocks,
             body=args.body,
         )
         print(str(item_path))

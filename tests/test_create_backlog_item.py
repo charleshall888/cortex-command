@@ -150,6 +150,107 @@ def test_create_item_writes_tags_and_areas(
     assert fm["areas"] == ["skills", "docs"]
 
 
+def test_create_item_always_writes_both_dependency_fields(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``blocked-by``/``blocks`` are emitted even when empty.
+
+    Unlike ``tags``/``areas``, which are omitted when unset. ``schema.md`` has
+    always specified that optional arrays default to ``[]``, and this verb
+    never emitted either key: 316 of the 453 tool-created items in the
+    wild-light corpus had no ``blocked-by`` line at all. An absent key gives an
+    author nothing to fill in, which is the measured difference between
+    tool-created items declaring a dependency 3.5% of the time and
+    hand-authored ones doing it 20.8% of the time.
+    """
+    from cortex_command.backlog import create_item
+
+    monkeypatch.setattr(create_item.subprocess, "run", lambda *a, **k: None)
+
+    item_path = create_item.create_item(
+        title="no dependencies",
+        status="backlog",
+        item_type="chore",
+        backlog_dir=tmp_path,
+    )
+
+    text = item_path.read_text(encoding="utf-8")
+    assert "blocked-by: []" in text
+    assert "blocks: []" in text
+
+
+def test_create_item_writes_dependency_ids_normalized(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Refs land as bare integers in the inline form the parser reads.
+
+    The corpus carries ``["013"]``, ``[016]`` and bare ``170`` because these
+    fields have only ever been hand-edited. ``016`` is the dangerous one: YAML
+    1.1 reads a leading-zero integer as octal, so the spelling a human writes
+    is not always the id they meant.
+    """
+    from cortex_command.backlog import create_item, resolve_item
+
+    monkeypatch.setattr(create_item.subprocess, "run", lambda *a, **k: None)
+
+    item_path = create_item.create_item(
+        title="with dependencies",
+        status="backlog",
+        item_type="chore",
+        backlog_dir=tmp_path,
+        blocked_by=["013", "16"],
+        blocks=[42],
+    )
+
+    text = item_path.read_text(encoding="utf-8")
+    assert "blocked-by: [13, 16]" in text
+    assert "blocks: [42]" in text
+    # And it round-trips through the parser the rest of the toolchain uses.
+    fm = resolve_item._parse_frontmatter(item_path)
+    assert fm["blocked-by"] == [13, 16]
+
+
+def test_create_item_dependency_flags_reach_the_writer(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``--blocked-by`` / ``--blocks`` exist on the CLI and are wired through.
+
+    The flags were absent entirely, so ``decompose.md``'s instruction to set
+    ``blocked-by: [<ids>]`` at creation named a capability the canonical verb
+    did not have. Argparse rejected the flag outright — a failure the contract
+    lint could not see, because the skill described writing frontmatter rather
+    than passing a flag.
+    """
+    import sys
+
+    from cortex_command.backlog import create_item, resolve_item
+
+    monkeypatch.setattr(create_item.subprocess, "run", lambda *a, **k: None)
+    monkeypatch.setattr(
+        create_item, "_resolve_user_project_root", lambda: tmp_path
+    )
+    (tmp_path / "cortex" / "backlog").mkdir(parents=True)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "cortex-create-backlog-item",
+            "--title", "cli dependencies",
+            "--status", "backlog",
+            "--type", "chore",
+            "--blocked-by", "7", "8",
+            "--blocks", "9",
+        ],
+    )
+
+    assert create_item.main() == 0
+
+    created = next((tmp_path / "cortex" / "backlog").glob("*.md"))
+    fm = resolve_item._parse_frontmatter(created)
+    assert fm["blocked-by"] == [7, 8]
+    assert fm["blocks"] == [9]
+
+
 def test_create_item_omits_tags_and_areas_when_not_passed(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

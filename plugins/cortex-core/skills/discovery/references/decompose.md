@@ -42,7 +42,7 @@ cortex-discovery emit-checkpoint-response --topic <topic> --checkpoint decompose
 
 ### 6. Backend Routing and Creation
 
-After `approve-all`, resolve the backend (SKILL.md § Backend routing). Under `cortex-backlog`, create the epic first so children have its ID. Frontmatter: `parent: <epic-id>` on children (omit on an epic or a lone ticket), `blocked-by: [<ids>]` from Integration-shape dependencies, `tags: [<topic>]`, and `discovery_source: cortex/research/{topic}/research.md` — lifecycle reads that first, with `research:` as the hand-authored fallback.
+After `approve-all`, resolve the backend (SKILL.md § Backend routing). Under `cortex-backlog`, create the epic first so children have its ID. Pass `--parent <epic-id>` on children (omit on an epic or a lone ticket), `--blocked-by <ids>` from Integration-shape dependencies, `--tags <topic>`, and `discovery_source: cortex/research/{topic}/research.md` — lifecycle reads that first, with `research:` as the hand-authored fallback.
 
 ### 6a. Write Decomposition Record
 

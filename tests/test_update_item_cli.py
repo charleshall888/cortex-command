@@ -255,3 +255,56 @@ def test_parse_inline_str_list_reads_null_sentinel_as_empty(
     readiness treats as a blocker referencing a nonexistent item.
     """
     assert _parse_inline_str_list(raw) == expected
+
+
+def test_blocks_flag_sets_the_upstream_half_of_a_dependency(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``--blocks`` writes the ``blocks`` key.
+
+    ``--blocked-by`` was always settable here; ``--blocks`` did not exist, so
+    a dependency could only be declared from the downstream side. The two are
+    not redundant to whoever is writing: the ticket that knows it unlocks four
+    others is usually the one in hand, and it had no field to say so in.
+    """
+    import types
+
+    from cortex_command.backlog import create_item, resolve_item, update_item
+
+    # Both modules import the same `subprocess` module object, so this one
+    # patch covers create_item's index kick and update_item's regeneration —
+    # which inspects `.returncode`, hence a stub rather than None.
+    monkeypatch.setattr(
+        create_item.subprocess,
+        "run",
+        lambda *a, **k: types.SimpleNamespace(returncode=0, stderr=b"", stdout=b""),
+    )
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
+    (tmp_path / "cortex" / "lifecycle").mkdir(parents=True)
+    created = create_item.create_item(
+        title="upstream", status="backlog", item_type="chore", backlog_dir=backlog
+    )
+
+    monkeypatch.setattr(
+        update_item, "_resolve_user_project_root", lambda: tmp_path
+    )
+    monkeypatch.setattr(
+        sys, "argv", ["cortex-update-item", "001", "--blocks", "[2, 3]"]
+    )
+    assert update_item.main() == 0
+
+    fm = resolve_item._parse_frontmatter(created)
+    assert fm["blocks"] == [2, 3]
+
+
+def test_both_dependency_directions_are_settable() -> None:
+    """Both halves of the pair reach a frontmatter key.
+
+    A bare mapping assertion, kept because the failure it guards is silent:
+    a flag registered in ``_SCALAR_FLAGS`` but missing from
+    ``_DEST_TO_FRONTMATTER_KEY`` parses fine and writes nothing at all.
+    """
+    assert _DEST_TO_FRONTMATTER_KEY["blocked_by"] == "blocked-by"
+    assert _DEST_TO_FRONTMATTER_KEY["blocks"] == "blocks"
+    assert {"blocked_by", "blocks"} <= _SCALAR_DESTS

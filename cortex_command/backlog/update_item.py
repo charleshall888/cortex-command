@@ -630,6 +630,12 @@ _SCALAR_FLAGS: tuple[tuple[str, str | None], ...] = (
     ("--session-id", "session_id"),
     ("--parent", None),
     ("--blocked-by", "blocked_by"),
+    # The other half of the dependency pair. ``--blocked-by`` has always been
+    # settable here; ``--blocks`` was not, so an edge could only ever be
+    # declared from the downstream side. That matters because the two are not
+    # redundant to a reader: the ticket that knows it unlocks four others is
+    # usually the one being written, and its author had no field to say so in.
+    ("--blocks", None),
     ("--rework-of", "rework_of"),
 )
 
@@ -647,6 +653,7 @@ _DEST_TO_FRONTMATTER_KEY: dict[str, str] = {
     "lifecycle_phase": "lifecycle_phase",
     "parent": "parent",
     "blocked_by": "blocked-by",
+    "blocks": "blocks",
     "rework_of": "rework_of",
     "areas": "areas",
     "tags": "tags",
@@ -665,6 +672,7 @@ _SCALAR_DESTS: frozenset[str] = frozenset(
         "lifecycle_phase",
         "parent",
         "blocked_by",
+        "blocks",
         "rework_of",
     }
 )
