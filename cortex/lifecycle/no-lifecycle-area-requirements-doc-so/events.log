@@ -15,3 +15,4 @@ schema_version: 3, ts: 2026-08-07T18:51:07Z, event: clarify_critic, feature: no-
 {"ts": "2026-08-07T20:37:32Z", "event": "review_verdict", "feature": "no-lifecycle-area-requirements-doc-so", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
 {"ts": "2026-08-07T20:37:32Z", "event": "phase_transition", "feature": "no-lifecycle-area-requirements-doc-so", "from": "review", "to": "complete"}
 {"ts": "2026-08-07T20:38:58Z", "event": "feature_complete", "feature": "no-lifecycle-area-requirements-doc-so", "tasks_total": 4, "rework_cycles": 0, "merge_anchor": "merge"}
+{"ts": "2026-08-11T14:41:32.935150+00:00", "event": "interactive_lock_released", "feature": "no-lifecycle-area-requirements-doc-so", "session_id": "1c6f6017-9a80-4dd5-9823-bc46052e8abb", "was_present": true}

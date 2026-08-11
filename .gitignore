@@ -2,6 +2,13 @@
 .claude/worktrees/
 worktrees/
 
+# Local dev-server registry: machine-specific absolute paths, some pointing at
+# per-session scratchpad dirs that do not outlive the session that wrote them.
+.claude/launch.json
+
+# Per-feature interactive session locks — runtime state, never committed
+cortex/lifecycle/*/interactive.pid
+
 # Runtime logs
 claude/statusline.sh.log
 claude/statusline.log

@@ -16,3 +16,4 @@
 {"ts": "2026-08-07T20:22:30Z", "event": "review_verdict", "feature": "tier-overrides-record-no-reason-and", "verdict": "APPROVED", "cycle": 2, "requirements_drift": "none"}
 {"ts": "2026-08-07T20:22:30Z", "event": "phase_transition", "feature": "tier-overrides-record-no-reason-and", "from": "review", "to": "complete"}
 {"ts": "2026-08-07T20:42:38Z", "event": "feature_complete", "feature": "tier-overrides-record-no-reason-and", "tasks_total": 3, "rework_cycles": 0, "merge_anchor": "merge"}
+{"ts": "2026-08-11T14:41:32.959737+00:00", "event": "interactive_lock_released", "feature": "tier-overrides-record-no-reason-and", "session_id": "1c6f6017-9a80-4dd5-9823-bc46052e8abb", "was_present": true}
