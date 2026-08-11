@@ -60,7 +60,7 @@ Follow `${CLAUDE_SKILL_DIR}/references/research-phase.md`. At the Research → S
 cortex-complexity-escalator <feature> --gate research_open_questions
 ```
 
-**Advisory — it writes nothing.** Output means the unresolved-question count is unusually high; empty means it isn't. Either way *you* re-assess the tier now, with the research in hand, against Step 2's rubric. Only if your assessment changed, record it: `cortex-lifecycle-event complexity-override --feature <feature> --from <old> --to <new> --reason "<one line>"` (either direction). The reason is what research surfaced to move you — a pointer that makes the argument in `research.md` findable, not the argument itself. Non-zero exit → surface stderr and halt.
+**Advisory — it writes nothing.** Output means the unresolved-question count is unusually high; empty means it isn't. Either way *you* re-assess the tier now, with the research in hand, against Step 2's rubric. Only if your assessment changed, record it: `cortex-lifecycle-event complexity-override --feature <feature> --from <old> --to <new> --reason "{tag}: <one line>"` (either direction). The reason is what research surfaced to move you — a pointer that makes the argument in `research.md` findable, not the argument itself — led by an optional `{tag}` from `reversibility:`, `exposure:`, `consequence:`, `other:`. An unknown tag is rejected and the whole row, `from`/`to` included, is discarded: retag and re-run. Any other non-zero exit → surface stderr and halt.
 
 ## Step 4: Spec
 

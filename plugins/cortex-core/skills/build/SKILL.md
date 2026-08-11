@@ -68,7 +68,7 @@ A boundary fires on its gate condition (e.g. `plan.md` all tasks `[x]`), not use
 
 ## Criticality
 
-Override at any time with `cortex-lifecycle-event criticality-override --feature <name> --from <old> --to <new> --reason "<one line>"`, which supersedes the monotonic-up-only Clarify reconciliation. Carry the reason — an override recorded as an outcome alone leaves the next reader re-deriving it from the artifacts. `cortex-lifecycle-state --feature {feature}` (or `--field <x>`) reduces the event log to current values, omitting absent keys — apply the defaults `criticality=medium` / `tier=moderate` yourself. **`"corrupted": true`** means tier/criticality are unknowable: treat the feature as *requiring* review rather than applying the skip rule.
+Override at any time with `cortex-lifecycle-event criticality-override --feature <name> --from <old> --to <new> --reason "{tag}: <one line>"`, which supersedes the monotonic-up-only Clarify reconciliation. Carry the reason — an override recorded as an outcome alone leaves the next reader re-deriving it from the artifacts — led by an optional `{tag}` from `reversibility:`, `exposure:`, `consequence:`, `other:`; an unknown tag is rejected and the whole row is discarded, so retag and re-run. `cortex-lifecycle-state --feature {feature}` (or `--field <x>`) reduces the event log to current values, omitting absent keys — apply the defaults `criticality=medium` / `tier=moderate` yourself. **`"corrupted": true`** means tier/criticality are unknowable: treat the feature as *requiring* review rather than applying the skip rule.
 
 | Criticality | Review phase | Orchestrator review | Planning |
 |-------------|-------------|--------------------|---------|
