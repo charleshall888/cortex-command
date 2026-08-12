@@ -140,10 +140,10 @@ _READY_KEYS = ("A", "B", "C", "D", "E", "E*", "G′")
 # be a label no row can carry — the same unreachable-arm defect as the
 # "discharged blocker" markup this table's rows used to render.
 _TAIL_PANELS: tuple[tuple[str, str, str], ...] = (
-    ("deferred", "held by decision", "somebody chose to park these"),
+    ("deferred", "deferred", ""),
     ("untriaged", "untriaged", "status: new — set a status and they rank"),
     ("offboard", "off the board", "absent from the board's ordering"),
-    ("unruled", "matched no rule", "a status or priority the bands do not recognise"),
+    ("unruled", "unrecognised status", "not a status or priority the bands know"),
 )
 
 
@@ -932,15 +932,26 @@ def _navigator_model(state: object) -> dict:
         live_edges=graph.live,
         discharged_edges=graph.discharged,
     )
-    # Largest first: the epic holding nine children is the one a reader came
-    # for, and burying it under a two-child group because its id sorts earlier
-    # is an ordering with no claim behind it. Ties break on how much of the
-    # group is startable, then on id, so the order is total and stable.
+    # Startable groups first, then largest first.
+    #
+    # Size alone put a group with five deferred children above four groups that
+    # had ready work, because ``count`` dominated the key — a group nobody can
+    # start outranking every group somebody can, on the strength of being big.
+    # ``ready`` is the count of children in a startable band, so the leading
+    # term is "does this group offer anything today", which is the question the
+    # section is read to answer. Held-only groups demote by the same term and
+    # for the same reason: their summary already says "2 held".
+    #
+    # Within each half, largest first — the epic holding nine children is the
+    # one a reader came for, and burying it under a two-child group because its
+    # id sorts earlier is an ordering with no claim behind it. Ties break on
+    # how much of the group is startable, then on id, so the order is total and
+    # stable.
     epics = [
         _epic(epic_id, parents[epic_id], ctx, items, band_of, layout_ctx, active, offslice)
         for epic_id in sorted(parents, key=_id_key)
     ]
-    epics.sort(key=lambda e: (-e["count"], -e["ready"], _id_key(e["id"])))
+    epics.sort(key=lambda e: (0 if e["ready"] else 1, -e["count"], -e["ready"], _id_key(e["id"])))
 
     # The half of the board the eleven bands cannot see. Deliberately NOT
     # summed into a repo total: the snapshot counts active files and archived

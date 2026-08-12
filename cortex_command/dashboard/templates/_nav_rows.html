@@ -122,7 +122,10 @@ data-ticket="{{ row.id }}"
        filter can restore this cell exactly rather than re-counting rows it has
        already hidden. #}
     <span class="nav-tail__count" data-panel-count data-total="{{ panel.count }}">{{ panel.count }}</span>
-    <span class="nav-tail__gloss">{{ panel.gloss }}</span>
+    {# Omitted, not rendered empty: a panel whose label already says the whole
+       thing ("deferred") gets no gloss, and an empty span is a flex child that
+       still takes its gap. #}
+    {% if panel.gloss %}<span class="nav-tail__gloss">{{ panel.gloss }}</span>{% endif %}
   </summary>
   {{ row_table(panel.rows, panel.label) }}
 </details>

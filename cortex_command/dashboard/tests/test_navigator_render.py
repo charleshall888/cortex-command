@@ -1730,6 +1730,56 @@ class TestEpicsLeadThePage(_Fixture):
         self.assertEqual(list(range(1, len(marks) + 1)), marks)
 
 
+class TestStartableGroupsSortAboveParkedOnes(unittest.TestCase):
+    """A group nobody can start never outranks one somebody can.
+
+    The key was ``(-count, -ready, id)``, so size decided first and a group of
+    five deferred children sat above four groups that had ready work — measured
+    on the wild-light board, where a parked five-child epic ranked fourth of
+    thirteen while three epics with ready children ranked below it.
+
+    Both halves matter and the second is the one a naive fix drops: inside the
+    startable half the order is still largest-first, because "offers something
+    today" is a tiebreaker's worth of information once every group has it.
+    """
+
+    def _epics(self, items):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        nav = build_navigator(_state_for(items, Path(tmp.name)), None)
+        return [epic["id"] for epic in nav["epics"]]
+
+    @staticmethod
+    def _group(head, kids, status):
+        """One epic head plus *kids* children, all carrying *status*."""
+        out = [{"id": head, "title": "Epic %s" % head, "type": "epic",
+                "status": "backlog", "priority": "medium"}]
+        out += [
+            {"id": "%s%02d" % (head, n), "title": "Child %d" % n, "type": "chore",
+             "status": status, "priority": "medium", "parent": head}
+            for n in range(1, kids + 1)
+        ]
+        return out
+
+    def test_a_big_deferred_group_sorts_below_a_small_startable_one(self):
+        items = self._group("1", 5, "deferred") + self._group("2", 2, "backlog")
+        self.assertEqual(["2", "1"], self._epics(items))
+
+    def test_a_held_only_group_demotes_by_the_same_term(self):
+        # Blocked-only groups are not a special case: nothing in them is
+        # startable, which is the one thing the leading term asks.
+        items = self._group("1", 4, "backlog") + self._group("2", 2, "backlog")
+        items[1]["blocked_by"] = ["201"]
+        items[2]["blocked_by"] = ["201"]
+        items[3]["blocked_by"] = ["201"]
+        items[4]["blocked_by"] = ["201"]
+        self.assertEqual(["2", "1"], self._epics(items))
+
+    def test_largest_first_still_decides_among_startable_groups(self):
+        items = self._group("1", 2, "backlog") + self._group("2", 5, "backlog")
+        self.assertEqual(["2", "1"], self._epics(items))
+
+
 class TestTailPanelsNameOneReasonEach(_Fixture):
     """Every tail panel is one reason, and the reason is its label.
 

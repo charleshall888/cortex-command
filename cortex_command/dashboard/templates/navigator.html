@@ -154,16 +154,16 @@
 {% endif %}
 
 {% if nav.tail %}
-<section id="nav-tail" aria-label="Not competing">
-  {{ sec_num('not competing') }}
-  <h2>Not competing <span class="phase-tag">{{ nav.tail | sum(attribute='count') }} records</span></h2>
+<section id="nav-tail" aria-label="Not ranked">
+  {{ sec_num('not ranked') }}
+  <h2>Not ranked <span class="phase-tag">{{ nav.tail | sum(attribute='count') }} records</span></h2>
   {# One panel per reason, and the reason is the panel's label.
 
      The lede used to end "nothing here is a candidate for today", which is
      true of the deferred panel and false of the untriaged one: band H tests
      ``status: new`` before any startability rule runs, so those rows are out
      on their status alone and can be the highest-pointed work on the board. #}
-  <p class="sec-lede">Off the ranking, one panel per reason. Untriaged rows are out on their status, not on merit.</p>
+  <p class="sec-lede">One panel per reason. Untriaged rows are out on their status, not on merit.</p>
   <div class="nav-tail-list">
     {% for panel in nav.tail %}{{ tail_panel(panel) }}{% endfor %}
   </div>
@@ -202,7 +202,7 @@
   {{ nav.recon.children }} inside epics ·
   {{ nav.recon.heads }} epic heads ·
   {{ nav.recon.blocked }} blocked ·
-  {{ nav.recon.tail }} not competing
+  {{ nav.recon.tail }} not ranked
   {%- if nav.recon.ok %} ✓{% else %} — records are missing from this page{% endif %}
   {% if nav.corpus and nav.corpus.archived %}<span class="recon__corpus">beyond this board · {{ nav.corpus.archived }} archived · records closed in place are counted by neither</span>{% endif %}
 </p>

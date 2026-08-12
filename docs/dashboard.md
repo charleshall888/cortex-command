@@ -164,7 +164,7 @@ there is no pick, no alternate, no swap condition, no counterfactual and no
 ledger. Ranking by points and drawing the dependency structure is the whole job;
 choosing is `/cortex-core:dev`'s.
 
-**Epics lead the page.** The order is Epics, Ready, Blocked, Not competing.
+**Epics lead the page.** The order is Epics, Ready, Blocked, Not ranked.
 Structure before list: the groups say what the board is made of, and a reader
 who scrolls past thirty loose rows to reach them has already formed the wrong
 picture of the board. On a corpus with no epic the section does not exist and
@@ -184,11 +184,17 @@ moving it into a phantom epic named after the typo and off the board entirely.
 
 ### 1. Epics
 
-One collapsed `<details>` per parent group, largest first. The head line carries
-the only things that could make you open it: how many children are ready, held
-or deferred, and — when it applies — that the epic's own head has closed while
-its children are still live, which is a grooming finding rather than something
-to bury.
+One collapsed `<details>` per parent group. Groups with startable children come
+first, and largest first within each half — size alone had put a group of five
+deferred children above four groups that had ready work. A group with nothing
+startable keeps its place in this list rather than moving to a section of its
+own: it is already one shut line whose summary says "5 deferred", and the fix
+for a bad ordering is the ordering.
+
+The head line carries the only things that could make you open it: how many
+children are ready, held or deferred, and — when it applies — that the epic's
+own head has closed while its children are still live, which is a grooming
+finding rather than something to bury.
 
 Opening a group draws its children exactly once, in one of two ways:
 
@@ -267,11 +273,16 @@ waits on a live blocker" is a finding about the board and the count is what
 proves it. Empty-because-elsewhere and empty-because-none are different facts
 and only the first one loses its section.
 
-### 4. Not competing
+### 4. Not ranked
 
 Collapsed panels for what is on the board and out of the running, **one panel
-per reason**: held by decision, untriaged, off the board, matched no rule. Each
+per reason**: deferred, untriaged, off the board, unrecognised status. Each
 count is readable without opening a panel.
+
+A panel is labelled with the thing it holds. "Held by decision" was a coined
+phrase for `status: deferred`, and a reader had to translate it back; a label
+that restates the status costs nothing to read and cannot drift from it. Where
+the label is the whole fact, the gloss beside it is omitted rather than made up.
 
 Out of the running is not the same as not worth doing. Band H tests
 `status: new` before any startability rule, so an untriaged row is excluded on
@@ -347,7 +358,7 @@ keyboard has the same capability the pointer does.
 ### The reconciliation footer
 
 `78 on this board · 32 ready · 30 inside epics · 5 epic heads · 0 blocked · 11
-not competing ✓`
+not ranked ✓`
 
 Decomposed by **where on the page a reader can find the record**, so it doubles
 as the table of contents the page otherwise lacks. It compares the set of ids
