@@ -1,8 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(cortex-resolve-backlog-item *)"
-    ]
+      "Bash(cortex-resolve-backlog-item *)",
+      "Bash(just *)",
+      "Bash(just)"
+    ],
+    "deny": [
+      "Bash(just dangerous)"
+    ],
+    "ask": []
   },
   "hooks": {
     "PostToolUse": [
